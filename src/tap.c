@@ -46,15 +46,17 @@ static void tap_vbucket_state_listener(libmembase_server_t *server)
 
     size_t bodylen = (size_t)total * 2 + 6;
     protocol_binary_request_tap_connect req = {
-        .message.header.request = {
-            .magic = PROTOCOL_BINARY_REQ,
-            .opcode = PROTOCOL_BINARY_CMD_TAP_CONNECT,
-            .extlen = 4,
-            .datatype = PROTOCOL_BINARY_RAW_BYTES,
-            .bodylen = htonl((uint32_t)bodylen)
-        },
-        .message.body = {
-            .flags = htonl(TAP_CONNECT_FLAG_LIST_VBUCKETS)
+        .message = {
+            .header.request = {
+                .magic = PROTOCOL_BINARY_REQ,
+                .opcode = PROTOCOL_BINARY_CMD_TAP_CONNECT,
+                .extlen = 4,
+                .datatype = PROTOCOL_BINARY_RAW_BYTES,
+                .bodylen = htonl((uint32_t)bodylen)
+            },
+            .body = {
+                .flags = htonl(TAP_CONNECT_FLAG_LIST_VBUCKETS)
+            }
         }
     };
 

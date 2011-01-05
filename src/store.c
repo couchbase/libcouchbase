@@ -43,18 +43,20 @@ libmembase_error_t libmembase_store(libmembase_t instance,
     libmembase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
     protocol_binary_request_set req = {
-        .message.header.request = {
-            .magic = PROTOCOL_BINARY_REQ,
-            .keylen = ntohs((uint16_t)nkey),
-            .extlen = 8,
-            .datatype = PROTOCOL_BINARY_RAW_BYTES,
-            .vbucket = ntohs(vb),
-            .opaque = ++instance->seqno,
-            .cas = cas
-        },
-        .message.body = {
-            .flags = flags,
-            .expiration = htonl((uint32_t)exp)
+        .message = {
+            .header.request = {
+                .magic = PROTOCOL_BINARY_REQ,
+                .keylen = ntohs((uint16_t)nkey),
+                .extlen = 8,
+                .datatype = PROTOCOL_BINARY_RAW_BYTES,
+                .vbucket = ntohs(vb),
+                .opaque = ++instance->seqno,
+                .cas = cas
+            },
+            .body = {
+                .flags = flags,
+                .expiration = htonl((uint32_t)exp)
+            }
         }
     };
 

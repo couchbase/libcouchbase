@@ -38,20 +38,22 @@ libmembase_error_t libmembase_arithmetic(libmembase_t instance,
     libmembase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
     protocol_binary_request_incr req = {
-        .message.header.request = {
-            .magic = PROTOCOL_BINARY_REQ,
-            .opcode = PROTOCOL_BINARY_CMD_INCREMENT,
-            .keylen = ntohs((uint16_t)nkey),
-            .extlen = 20,
-            .datatype = PROTOCOL_BINARY_RAW_BYTES,
-            .vbucket = ntohs(vb),
-            .bodylen = ntohl((uint32_t)(nkey + 20)),
-            .opaque = ++instance->seqno
-        },
-        .message.body = {
-            .delta = ntohll((uint64_t)(delta)),
-            .initial = ntohll(initial),
-            .expiration = ntohl((uint32_t)exp)
+        .message = {
+            .header.request = {
+                .magic = PROTOCOL_BINARY_REQ,
+                .opcode = PROTOCOL_BINARY_CMD_INCREMENT,
+                .keylen = ntohs((uint16_t)nkey),
+                .extlen = 20,
+                .datatype = PROTOCOL_BINARY_RAW_BYTES,
+                .vbucket = ntohs(vb),
+                .bodylen = ntohl((uint32_t)(nkey + 20)),
+                .opaque = ++instance->seqno
+            },
+            .body = {
+                .delta = ntohll((uint64_t)(delta)),
+                .initial = ntohll(initial),
+                .expiration = ntohl((uint32_t)exp)
+            }
         }
     };
 
