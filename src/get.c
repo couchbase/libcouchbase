@@ -52,13 +52,10 @@ libmembase_error_t libmembase_mget(libmembase_t instance,
                 .opaque = ++instance->seqno
             }
         };
-        grow_buffer(&server->output, sizeof(req.bytes) + nkey[ii]);
-        memcpy(server->output.data + server->output.avail,
-               &req, sizeof(req.bytes));
-        server->output.avail += sizeof(req.bytes);
-        memcpy(server->output.data + server->output.avail,
-               keys[ii], nkey[ii]);
-        server->output.avail += nkey[ii];
+
+        libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+        libmembase_server_write_packet(server, keys[ii], nkey[ii]);
+        libmembase_server_end_packet(server);
     }
 
     for (size_t ii = 0; ii < instance->nservers; ++ii) {
@@ -72,10 +69,8 @@ libmembase_error_t libmembase_mget(libmembase_t instance,
                     .opaque = ++instance->seqno
                 }
             };
-            grow_buffer(&server->output, sizeof(req.bytes));
-            memcpy(server->output.data + server->output.avail,
-                   &req, sizeof(req.bytes));
-            server->output.avail += sizeof(req.bytes);
+            libmembase_server_complete_packet(server, req.bytes,
+                                              sizeof(req.bytes));
             libmembase_server_event_handler(0, EV_WRITE, server);
         }
     }

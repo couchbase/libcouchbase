@@ -86,13 +86,10 @@ libmembase_error_t libmembase_store(libmembase_t instance,
     size_t bodylen = nkey + nbytes + req.message.header.request.extlen;
     req.message.header.request.bodylen = htonl((uint32_t)bodylen);
 
-    grow_buffer(&server->output, headersize + bodylen);
-    memcpy(server->output.data + server->output.avail, &req, headersize);
-    server->output.avail += headersize;
-    memcpy(server->output.data + server->output.avail, key, nkey);
-    server->output.avail += nkey;
-    memcpy(server->output.data + server->output.avail, bytes, nbytes);
-    server->output.avail += nbytes;
+    libmembase_server_start_packet(server, &req, headersize);
+    libmembase_server_write_packet(server, key, nkey);
+    libmembase_server_write_packet(server, bytes, nbytes);
+    libmembase_server_end_packet(server);
 
     // @todo we might want to wait to flush the buffers..
     libmembase_server_event_handler(0, EV_WRITE, server);

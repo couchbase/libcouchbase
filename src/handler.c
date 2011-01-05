@@ -220,15 +220,10 @@ static void sasl_list_mech_response_handler(libmembase_server_t *server,
             .bodylen = ntohl((uint32_t)(bodysize))
         }
     };
-    size_t size = sizeof(req.bytes + bodysize);
-    grow_buffer(&server->output, size);
-    memcpy(server->output.data + server->output.avail, req.bytes,
-           sizeof(req.bytes));
-    server->output.avail += sizeof(req.bytes);
-    char *p = server->output.data + server->output.avail;
-    memcpy(p, chosenmech, keylen);
-    memcpy(p + keylen, data, len);
-    server->output.avail += bodysize;
+    libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+    libmembase_server_write_packet(server, chosenmech, keylen);
+    libmembase_server_write_packet(server, data, len);
+    libmembase_server_end_packet(server);
 
     // send the data and add it to libevent..
     libmembase_server_event_handler(0, EV_WRITE, server);

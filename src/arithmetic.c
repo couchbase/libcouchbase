@@ -65,11 +65,9 @@ libmembase_error_t libmembase_arithmetic(libmembase_t instance,
                sizeof(req.message.body.expiration));
     }
 
-    grow_buffer(&server->output, sizeof(req.bytes) + nkey);
-    memcpy(server->output.data + server->output.avail, &req, sizeof(req.bytes));
-    server->output.avail += sizeof(req.bytes);
-    memcpy(server->output.data + server->output.avail, key, nkey);
-    server->output.avail += nkey;
+    libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+    libmembase_server_write_packet(server, key, nkey);
+    libmembase_server_end_packet(server);
 
     // @todo we might want to wait to flush the buffers..
     libmembase_server_event_handler(0, EV_WRITE, server);

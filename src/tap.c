@@ -58,22 +58,17 @@ static void tap_vbucket_state_listener(libmembase_server_t *server)
         }
     };
 
-    buffer_t *buf = &server->output;
-    grow_buffer(buf, bodylen + sizeof(req.bytes));
-    memcpy(buf->data + buf->avail, &req, sizeof(req.bytes));
-    buf->avail += sizeof(req.bytes);
+    libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
 
     uint16_t val = htons(total);
-    memcpy(buf->data + buf->avail, &val, 2);
-    buf->avail += 2;
-
+    libmembase_server_write_packet(server, &val, sizeof(val));
     for (int ii = 0; ii < instance->nvbuckets; ++ii) {
         if (instance->vb_server_map[ii] == idx) {
             val = htons((uint16_t)ii);
-            memcpy(buf->data + buf->avail, &val, 2);
-            buf->avail += 2;
+            libmembase_server_write_packet(server, &val, sizeof(val));
         }
     }
+    libmembase_server_end_packet(server);
 
     // send the data and add it to libevent..
     libmembase_server_event_handler(0, EV_WRITE, server);

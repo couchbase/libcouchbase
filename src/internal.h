@@ -141,6 +141,8 @@ extern "C" {
         /** The sent buffer for this server so that we can resend the
          * command to another server if the bucket is moved... */
         buffer_t cmd_log;
+        /** offset to the beginning of the packet being built */
+        size_t current_packet;
         /** The input buffer for this server */
         buffer_t input;
         /** The SASL object used for this server */
@@ -155,6 +157,38 @@ extern "C" {
         libmembase_t instance;
     };
 
+    /**
+     * Initiate a new packet to be sent
+     * @param c the server connection to send it to
+     * @param data pointer to data to include in the packet
+     * @param size the size of the data to include
+     */
+    void libmembase_server_start_packet(libmembase_server_t *c,
+                                        const void *data,
+                                        size_t size);
+    /**
+     * Write data to the current packet
+     * @param c the server connection to send it to
+     * @param data pointer to data to include in the packet
+     * @param size the size of the data to include
+     */
+    void libmembase_server_write_packet(libmembase_server_t *c,
+                                        const void *data,
+                                        size_t size);
+    /**
+     * Mark this packet complete
+     */
+    void libmembase_server_end_packet(libmembase_server_t *c);
+
+    /**
+     * Create a complete packet (to avoid calling start + end)
+     * @param c the server connection to send it to
+     * @param data pointer to data to include in the packet
+     * @param size the size of the data to include
+     */
+    void libmembase_server_complete_packet(libmembase_server_t *c,
+                                           const void *data,
+                                           size_t size);
 
     void libmembase_server_update_event(libmembase_server_t *c, short flags,
                                         EVENT_HANDLER handler);

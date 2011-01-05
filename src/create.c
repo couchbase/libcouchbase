@@ -137,12 +137,7 @@ static void start_sasl_auth_server(libmembase_server_t *server)
             .datatype = PROTOCOL_BINARY_RAW_BYTES
         }
     };
-    size_t size = sizeof(req.bytes);
-    grow_buffer(&server->output, size);
-    memcpy(server->output.data + server->output.avail, req.bytes,
-           sizeof(req.bytes));
-    server->output.avail += sizeof(req.bytes);
-
+    libmembase_server_complete_packet(server, req.bytes, sizeof(req.bytes));
     // send the data and add it to libevent..
     libmembase_server_event_handler(0, EV_WRITE, server);
 }
@@ -303,6 +298,8 @@ static void libmembase_update_serverlist(libmembase_t instance)
 
     for (size_t ii = 0; ii < num; ++ii) {
         servers[ii].instance = instance;
+        servers[ii].current_packet = (size_t)-1;
+
         struct addrinfo hints = {
             .ai_flags = AI_PASSIVE,
             .ai_socktype = SOCK_STREAM,

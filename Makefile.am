@@ -41,6 +41,7 @@ libmembase_la_SOURCES = \
                         src/execute.c \
                         src/get.c \
                         src/handler.c \
+                        src/packet.c \
                         src/store.c \
                         src/tap.c \
                         src/utilities.c
