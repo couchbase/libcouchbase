@@ -178,6 +178,21 @@ extern "C" {
                                              int64_t delta, time_t exp,
                                              bool create, uint64_t initial);
 
+    /**
+     * Spool a remove operation to the cluster. The operation <b>may</b> be
+     * sent immediately, but you won't be sure (or get the result) until you
+     * run the event loop (or call libmembase_execute).
+     *
+     * @param instance the handle to libmembase
+     * @param key the key to delete
+     * @param nkey the number of bytes in the key
+     * @param cas the cas value for the object (or 0 if you don't care)
+     * @return Status of the operation.
+     */
+    libmembase_error_t libmembase_remove(libmembase_t instance,
+                                         const void *key, size_t nkey,
+                                         uint64_t cas);
+
 #ifdef __cplusplus
 }
 #endif

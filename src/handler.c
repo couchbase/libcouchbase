@@ -74,6 +74,25 @@ static void getq_response_handler(libmembase_server_t *server,
     }
 }
 
+static void delete_response_handler(libmembase_server_t *server,
+                                     protocol_binary_response_header *res)
+{
+    libmembase_t root = server->instance;
+    protocol_binary_request_header *req = (void*)server->cmd_log.data;
+    assert(req->request.opaque == res->response.opaque);
+
+    const char *key = (void*)(req + 1);
+    key += req->request.extlen;
+    size_t nkey = ntohs(req->request.keylen);
+    uint16_t status = ntohs(res->response.status);
+
+    if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        root->callbacks.remove(root, LIBMEMBASE_SUCCESS, key, nkey);
+    } else {
+        root->callbacks.remove(root, LIBMEMBASE_ERROR, key, nkey);
+    }
+}
+
 static void storage_response_handler(libmembase_server_t *server,
                                      protocol_binary_response_header *res)
 {
@@ -370,6 +389,7 @@ void libmembase_initialize_packet_handlers(libmembase_t instance)
 
     instance->response_handler[PROTOCOL_BINARY_CMD_GETQ] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_ADD] = storage_response_handler;
+    instance->response_handler[PROTOCOL_BINARY_CMD_DELETE] = delete_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_REPLACE] = storage_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_SET] = storage_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_APPEND] = storage_response_handler;

@@ -42,6 +42,7 @@ libmembase_la_SOURCES = \
                         src/handler.c \
                         src/instance.c \
                         src/packet.c \
+                        src/remove.c \
                         src/server.c \
                         src/store.c \
                         src/tap.c \
@@ -64,7 +65,8 @@ memcached_packet_debug_la_LDFLAGS= -avoid-version -shared -module -no-undefined
 noinst_PROGRAMS = \
                example/memcat \
                example/memcp \
-               example/memdump
+               example/memdump \
+               example/memrm
 
 example_memcat_SOURCES = example/memcat.c
 example_memcat_LDADD = libmembase.la
@@ -78,3 +80,6 @@ example_memdump_SOURCES = example/memdump.c
 example_memdump_LDADD = libmembase.la
 example_memdump_LDFLAGS = $(LTLIBEVENT)
 
+example_memrm_SOURCES = example/memrm.c
+example_memrm_LDADD = libmembase.la
+example_memrm_LDFLAGS = $(LTLIBEVENT)
