@@ -133,15 +133,26 @@ extern "C" {
      * The structure representing each membase server
      */
     struct libmembase_server_st {
+        /** The name of the server */
+        char *hostname;
+        /** The servers port */
+        char *port;
         /** The socket to the server */
         evutil_socket_t sock;
-        /** The address information for this server */
-        struct addrinfo *ai;
+        /** The address information for this server (the one to release) */
+        struct addrinfo *root_ai;
+        /** The address information for this server (the one we're trying) */
+        struct addrinfo *curr_ai;
         /** The output buffer for this server */
         buffer_t output;
         /** The sent buffer for this server so that we can resend the
          * command to another server if the bucket is moved... */
         buffer_t cmd_log;
+        /**
+         * The pending buffer where we write data until we're in a
+         * connected state;
+         */
+        buffer_t pending;
         /** offset to the beginning of the packet being built */
         size_t current_packet;
         /** The input buffer for this server */
@@ -152,11 +163,39 @@ extern "C" {
         struct event ev_event;
         /** The curret set of flags */
         short ev_flags;
+        /** Is this server in a connected state (done with sasl auth) */
+        bool connected;
         /** The current event handler */
         EVENT_HANDLER ev_handler;
         /* Pointer back to the instance */
         libmembase_t instance;
     };
+
+    void libmembase_server_destroy(libmembase_server_t *server);
+    void libmembase_server_connected(libmembase_server_t *server);
+
+    void libmembase_server_initialize(libmembase_server_t *server,
+                                      int servernum);
+
+
+
+    void libmembase_server_buffer_start_packet(libmembase_server_t *c,
+                                               buffer_t *buff,
+                                               const void *data,
+                                               size_t size);
+
+    void libmembase_server_buffer_write_packet(libmembase_server_t *c,
+                                               buffer_t *buff,
+                                               const void *data,
+                                               size_t size);
+
+    void libmembase_server_buffer_end_packet(libmembase_server_t *c,
+                                             buffer_t *buff);
+
+    void libmembase_server_buffer_complete_packet(libmembase_server_t *c,
+                                                  buffer_t *buff,
+                                                  const void *data,
+                                                  size_t size);
 
     /**
      * Initiate a new packet to be sent
@@ -190,6 +229,14 @@ extern "C" {
     void libmembase_server_complete_packet(libmembase_server_t *c,
                                            const void *data,
                                            size_t size);
+    /**
+     * Start sending packets
+     * @param server the server to start send data to
+     */
+    void libmembase_server_send_packets(libmembase_server_t *server);
+
+
+
 
     void libmembase_server_update_event(libmembase_server_t *c, short flags,
                                         EVENT_HANDLER handler);

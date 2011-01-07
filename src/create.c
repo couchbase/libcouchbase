@@ -70,36 +70,6 @@ libmembase_t libmembase_create(const char *host,
     return ret;
 }
 
-/**
- * Release all allocated resources for this server instance
- * @param server the server to destroy
- */
-static void libmembase_destroy_server(libmembase_server_t *server)
-{
-    if (server->sasl_conn != NULL) {
-        sasl_dispose(&server->sasl_conn);
-    }
-
-    if (server->ev_flags != 0) {
-        if (event_del(&server->ev_event) == -1) {
-            abort();
-        }
-    }
-
-    if (server->sock != INVALID_SOCKET) {
-        EVUTIL_CLOSESOCKET(server->sock);
-    }
-
-    if (server->ai != NULL) {
-        freeaddrinfo(server->ai);
-    }
-
-    free(server->output.data);
-    free(server->cmd_log.data);
-    free(server->input.data);
-    memset(server, 0xff, sizeof(*server));
-}
-
 LIBMEMBASE_API
 void libmembase_destroy(libmembase_t instance)
 {
@@ -121,31 +91,12 @@ void libmembase_destroy(libmembase_t instance)
     }
 
     for (size_t ii = 0; ii < instance->nservers; ++ii) {
-        libmembase_destroy_server(instance->servers + ii);
+        libmembase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
 
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
-}
-
-/**
- * Start the SASL auth for a given server by sending the SASL_LIST_MECHS
- * packet to the server.
- * @param server the server object to auth agains
- */
-static void start_sasl_auth_server(libmembase_server_t *server)
-{
-    protocol_binary_request_no_extras req = {
-        .message.header.request = {
-            .magic = PROTOCOL_BINARY_REQ,
-            .opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS,
-            .datatype = PROTOCOL_BINARY_RAW_BYTES
-        }
-    };
-    libmembase_server_complete_packet(server, req.bytes, sizeof(req.bytes));
-    // send the data and add it to libevent..
-    libmembase_server_event_handler(0, EV_WRITE, server);
 }
 
 /**
@@ -196,60 +147,6 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
 }
 
 /**
- * Get the name of the local endpoint
- * @param sock The socket to query the name for
- * @param buffer The destination buffer
- * @param buffz The size of the output buffer
- * @return true if success, false otherwise
- */
-static bool get_local_address(evutil_socket_t sock,
-                              char *buffer,
-                              size_t bufsz)
-{
-    char h[NI_MAXHOST];
-    char p[NI_MAXSERV];
-    struct sockaddr_storage saddr;
-    socklen_t salen = sizeof(saddr);
-
-    if ((getsockname(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-        (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                     p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-        (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Get the name of the remote enpoint
- * @param sock The socket to query the name for
- * @param buffer The destination buffer
- * @param buffz The size of the output buffer
- * @return true if success, false otherwise
- */
-static bool get_remote_address(evutil_socket_t sock,
-                               char *buffer,
-                               size_t bufsz)
-{
-    char h[NI_MAXHOST];
-    char p[NI_MAXSERV];
-    struct sockaddr_storage saddr;
-    socklen_t salen = sizeof(saddr);
-
-    if ((getpeername(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-        (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                     p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-        (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-    {
-        return false;
-    }
-
-    return true;
-}
-
-/**
  * Update the list of servers and connect to the new ones
  * @param instance the instance to update the serverlist for.
  *
@@ -272,9 +169,8 @@ static void libmembase_update_serverlist(libmembase_t instance)
 
     // @todo we shouldn't kill all of them, but fix that later on (remember
     // to cancel all ongoing crap etc..
-    libmembase_server_t *servers = instance->servers;
     for (size_t ii = 0; ii < instance->nservers; ++ii) {
-        libmembase_destroy_server(instance->servers + ii);
+        libmembase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
     instance->servers = NULL;
@@ -283,7 +179,7 @@ static void libmembase_update_serverlist(libmembase_t instance)
     uint16_t max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
     size_t num = (size_t)vbucket_config_get_num_servers(instance->vbucket_config);
     instance->nservers = num;
-    servers = calloc(num, sizeof(libmembase_server_t));
+    instance->servers = calloc(num, sizeof(libmembase_server_t));
 
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
@@ -302,61 +198,6 @@ static void libmembase_update_serverlist(libmembase_t instance)
     };
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
-    for (size_t ii = 0; ii < num; ++ii) {
-        servers[ii].instance = instance;
-        servers[ii].current_packet = (size_t)-1;
-
-        struct addrinfo hints = {
-            .ai_flags = AI_PASSIVE,
-            .ai_socktype = SOCK_STREAM,
-            .ai_family = AF_UNSPEC
-        };
-
-        char *h;
-        h = strdup(vbucket_config_get_server(instance->vbucket_config, (int)ii));
-        char *p = strchr(h, ':');
-        *p = '\0';
-        ++p;
-
-        int error = getaddrinfo(h, p, &hints, &servers[ii].ai);
-        if (error == 0) {
-            /* @todo make the connects non-blocking */
-            struct addrinfo *ai = servers[ii].ai;
-            while (ai != NULL) {
-                servers[ii].sock = socket(ai->ai_family,
-                                          ai->ai_socktype,
-                                          ai->ai_protocol);
-                if (servers[ii].sock != -1) {
-                    if (connect(servers[ii].sock, ai->ai_addr,
-                                ai->ai_addrlen) != -1 &&
-                        evutil_make_socket_nonblocking(servers[ii].sock) == 0) {
-
-                        char local[NI_MAXHOST + NI_MAXSERV + 2];
-                        char remote[NI_MAXHOST + NI_MAXSERV + 2];
-
-                        get_local_address(servers[ii].sock, local,
-                                          sizeof(local));
-
-                        get_remote_address(servers[ii].sock, remote,
-                                           sizeof(remote));
-
-                        int ret = sasl_client_new("membase", h,
-                                                  local, remote,
-                                                  instance->sasl.callbacks, 0,
-                                                  &servers[ii].sasl_conn);
-                        assert(ret == SASL_OK);
-                        break;
-                    }
-                    EVUTIL_CLOSESOCKET(servers[ii].sock);
-                    servers[ii].sock = -1;
-                }
-                ai = ai->ai_next;
-            }
-        } else {
-            servers[ii].sock = -1;
-            servers[ii].ai = NULL;
-        }
-    }
 
     /*
      * Run through all of the vbuckets and build a map of what they need.
@@ -371,18 +212,16 @@ static void libmembase_update_serverlist(libmembase_t instance)
         instance->vb_server_map[ii] = (uint16_t)idx;
     }
 
-    instance->servers = servers;
+    /* Now initialize the servers */
+    for (size_t ii = 0; ii < num; ++ii) {
+        instance->servers[ii].instance = instance;
+        libmembase_server_initialize(instance->servers + ii, (int)ii);
+    }
 
-    if (vbucket_config_get_user(instance->vbucket_config) == NULL) {
-        if (instance->vbucket_state_listener != NULL) {
-            for (size_t ii = 0; ii < instance->nservers; ++ii) {
-                // fire notifications!
-                instance->vbucket_state_listener(instance->servers + ii);
-            }
-        }
-    } else {
+    /* Notify anyone interested in this event... */
+    if (instance->vbucket_state_listener != NULL) {
         for (size_t ii = 0; ii < instance->nservers; ++ii) {
-            start_sasl_auth_server(instance->servers + ii);
+            instance->vbucket_state_listener(instance->servers + ii);
         }
     }
 }

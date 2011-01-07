@@ -70,9 +70,7 @@ libmembase_error_t libmembase_arithmetic(libmembase_t instance,
     libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
     libmembase_server_write_packet(server, key, nkey);
     libmembase_server_end_packet(server);
-
-    // @todo we might want to wait to flush the buffers..
-    libmembase_server_event_handler(0, EV_WRITE, server);
+    libmembase_server_send_packets(server);
 
     return LIBMEMBASE_SUCCESS;
 }

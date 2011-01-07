@@ -220,10 +220,12 @@ static void sasl_list_mech_response_handler(libmembase_server_t *server,
             .bodylen = ntohl((uint32_t)(bodysize))
         }
     };
-    libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
-    libmembase_server_write_packet(server, chosenmech, keylen);
-    libmembase_server_write_packet(server, data, len);
-    libmembase_server_end_packet(server);
+    libmembase_server_buffer_start_packet(server, &server->output,
+                                          req.bytes, sizeof(req.bytes));
+    libmembase_server_buffer_write_packet(server, &server->output,
+                                          chosenmech, keylen);
+    libmembase_server_buffer_write_packet(server, &server->output, data, len);
+    libmembase_server_buffer_end_packet(server, &server->output);
 
     // send the data and add it to libevent..
     libmembase_server_event_handler(0, EV_WRITE, server);
@@ -234,12 +236,9 @@ static void sasl_auth_response_handler(libmembase_server_t *server,
 {
     uint16_t ret = ntohs(res->response.status);
     if (ret == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        // I should put the server to the notification!
-        if (server->instance->vbucket_state_listener != NULL) {
-            server->instance->vbucket_state_listener(server);
-        }
         sasl_dispose(&server->sasl_conn);
         server->sasl_conn = NULL;
+        libmembase_server_connected(server);
     } else if (ret == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
         // I don't know how to step yet ;-)
         abort();

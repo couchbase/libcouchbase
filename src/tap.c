@@ -72,8 +72,7 @@ static void tap_vbucket_state_listener(libmembase_server_t *server)
     }
     libmembase_server_end_packet(server);
 
-    // send the data and add it to libevent..
-    libmembase_server_event_handler(0, EV_WRITE, server);
+    libmembase_server_send_packets(server);
 }
 
 LIBMEMBASE_API

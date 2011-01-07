@@ -127,6 +127,9 @@ static void do_send_data(libmembase_server_t *c)
                 return;
             default:
                 // FIXME!
+                fprintf(stderr, "Failed to write data: %s\n",
+                        strerror(errno));
+                fflush(stderr);
                 abort();
             }
         } else {
@@ -159,11 +162,11 @@ void libmembase_server_event_handler(evutil_socket_t sock, short which, void *ar
     }
 
     if (c->output.avail == 0) {
-         libmembase_server_update_event(c, EV_READ,
-                                        libmembase_server_event_handler);
+        libmembase_server_update_event(c, EV_READ,
+                                       libmembase_server_event_handler);
     } else {
-         libmembase_server_update_event(c, EV_READ | EV_WRITE,
-                                        libmembase_server_event_handler);
+        libmembase_server_update_event(c, EV_READ | EV_WRITE,
+                                       libmembase_server_event_handler);
     }
 
     if (c->instance->execute) {

@@ -60,7 +60,7 @@ libmembase_error_t libmembase_mget(libmembase_t instance,
 
     for (size_t ii = 0; ii < instance->nservers; ++ii) {
         libmembase_server_t *server = instance->servers + ii;
-        if (server->output.avail > 0) {
+        if (server->output.avail > 0 || server->pending.avail > 0) {
             protocol_binary_request_noop req = {
                 .message.header.request = {
                     .magic = PROTOCOL_BINARY_REQ,
@@ -71,7 +71,7 @@ libmembase_error_t libmembase_mget(libmembase_t instance,
             };
             libmembase_server_complete_packet(server, req.bytes,
                                               sizeof(req.bytes));
-            libmembase_server_event_handler(0, EV_WRITE, server);
+            libmembase_server_send_packets(server);
         }
     }
 
