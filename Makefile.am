@@ -25,7 +25,7 @@
 #
 ACLOCAL_AMFLAGS = -I m4 --force
 
-lib_LTLIBRARIES = libmembase.la
+lib_LTLIBRARIES = libmembase.la memcached_packet_debug.la
 
 pkginclude_HEADERS = \
                      include/libmembase/callbacks.h \
@@ -52,6 +52,11 @@ libmembase_la_SOURCES = \
 libmembase_la_LDFLAGS=$(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2) \
                       -version-info 0:0:0
 libmembase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBMEMBASE_INTERNAL=1
+
+memcached_packet_debug_la_SOURCES= src/packet_debug.c \
+                                   src/utilities.c
+
+memcached_packet_debug_la_LDFLAGS= -avoid-version -shared -module -no-undefined
 
 #
 # Example programs using the library
