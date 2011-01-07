@@ -23,8 +23,10 @@
  */
 #include "internal.h"
 
-static bool default_packet_filter(const void *data)
+static bool default_packet_filter(libmembase_t instance, const void *data)
 {
+    (void)instance;
+    (void)data;
     return true;
 }
 

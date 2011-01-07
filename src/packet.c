@@ -97,7 +97,7 @@ void libmembase_server_end_packet(libmembase_server_t *c)
         buff = &c->pending;
     }
 
-    if (!c->instance->packet_filter(buff->data + c->current_packet)) {
+    if (!c->instance->packet_filter(c->instance, buff->data + c->current_packet)) {
         buff->avail = c->current_packet;
     }
     assert(c->current_packet != (size_t)-1);
@@ -109,7 +109,7 @@ void libmembase_server_complete_packet(libmembase_server_t *c,
                                        size_t size)
 {
     assert(c->current_packet == (size_t)-1);
-    if (c->instance->packet_filter(data)) {
+    if (c->instance->packet_filter(c->instance, data)) {
         if (c->connected) {
             libmembase_server_buffer_complete_packet(c, &c->output, data, size);
         } else {

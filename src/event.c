@@ -60,7 +60,7 @@ static void do_read_data(libmembase_server_t *c)
                c->input.avail >= sizeof(*req) &&
                c->input.avail >= (ntohl(req->request.bodylen) + sizeof(*req))) {
 
-            if (c->instance->packet_filter(c->input.data)) {
+            if (c->instance->packet_filter(c->instance, c->input.data)) {
                 switch (req->request.magic) {
                 case PROTOCOL_BINARY_REQ:
                     c->instance->request_handler[req->request.opcode](c, req);

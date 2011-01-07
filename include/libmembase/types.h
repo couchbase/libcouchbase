@@ -85,7 +85,8 @@ extern "C" {
      */
     typedef void* libmembase_tap_filter_t;
 
-    typedef bool (*libmembase_packet_filter_t)(const void *packet);
+    typedef bool (*libmembase_packet_filter_t)(libmembase_t instance,
+                                               const void *packet);
 
 
 #ifdef __cplusplus
