@@ -59,23 +59,26 @@ static void do_read_data(libmembase_server_t *c)
         while (++operations < operations_per_call &&
                c->input.avail >= sizeof(*req) &&
                c->input.avail >= (ntohl(req->request.bodylen) + sizeof(*req))) {
-            switch (req->request.magic) {
-            case PROTOCOL_BINARY_REQ:
-                c->instance->request_handler[req->request.opcode](c, req);
-                break;
-            case PROTOCOL_BINARY_RES:
-                purge_implicit_responses(c, res->response.opaque);
-                c->instance->response_handler[res->response.opcode](c, res);
-                req = (void*)c->cmd_log.data;
-                processed = ntohl(req->request.bodylen) + sizeof(*req);
-                assert(c->cmd_log.avail >= processed);
-                memmove(c->cmd_log.data, c->cmd_log.data + processed,
-                        c->cmd_log.avail - processed);
-                c->cmd_log.avail -= processed;
-                req = (void*)c->input.data;
-                break;
-            default:
-                abort();
+
+            if (c->instance->packet_filter(c->input.data)) {
+                switch (req->request.magic) {
+                case PROTOCOL_BINARY_REQ:
+                    c->instance->request_handler[req->request.opcode](c, req);
+                    break;
+                case PROTOCOL_BINARY_RES:
+                    purge_implicit_responses(c, res->response.opaque);
+                    c->instance->response_handler[res->response.opcode](c, res);
+                    req = (void*)c->cmd_log.data;
+                    processed = ntohl(req->request.bodylen) + sizeof(*req);
+                    assert(c->cmd_log.avail >= processed);
+                    memmove(c->cmd_log.data, c->cmd_log.data + processed,
+                            c->cmd_log.avail - processed);
+                    c->cmd_log.avail -= processed;
+                    req = (void*)c->input.data;
+                    break;
+                default:
+                    abort();
+                }
             }
 
             processed = ntohl(req->request.bodylen) + sizeof(*req);

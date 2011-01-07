@@ -82,6 +82,14 @@ extern "C" {
     const void *libmembase_get_cookie(libmembase_t instance);
 
     /**
+     * Set the packet filter for this instance
+     * @param instance the instance of libmembase
+     * @param filter the new packet filter to associate with this instance
+     */
+    void libmembase_set_packet_filter(libmembase_t instance,
+                                      libmembase_packet_filter_t filter);
+
+    /**
      * Set the command handlers
      * @param instance the instance of libmembase
      * @param callback the new set of callbacks

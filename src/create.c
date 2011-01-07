@@ -23,6 +23,11 @@
  */
 #include "internal.h"
 
+static bool default_packet_filter(const void *data)
+{
+    return true;
+}
+
 LIBMEMBASE_API
 libmembase_t libmembase_create(const char *host,
                                const char *user,
@@ -60,6 +65,7 @@ libmembase_t libmembase_create(const char *host,
 
     ret->sock = -1;
     ret->ev_base = base;
+    ret->packet_filter = default_packet_filter;
 
     return ret;
 }
@@ -682,3 +688,10 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
     return LIBMEMBASE_SUCCESS;
 }
 
+
+LIBMEMBASE_API
+void libmembase_set_packet_filter(libmembase_t instance,
+                                  libmembase_packet_filter_t filter)
+{
+    instance->packet_filter = filter;
+}

@@ -28,39 +28,42 @@ void libmembase_server_start_packet(libmembase_server_t *c,
                                     const void *data,
                                     size_t size)
 {
-   assert(c->current_packet == (size_t)-1);
-   c->current_packet = c->output.avail;
+    assert(c->current_packet == (size_t)-1);
+    c->current_packet = c->output.avail;
 
-   if (size != 0) {
-      grow_buffer(&c->output, size);
-      memcpy(c->output.data + c->output.avail, data, size);
-      c->output.avail += size;
-   }
+    if (size != 0) {
+        grow_buffer(&c->output, size);
+        memcpy(c->output.data + c->output.avail, data, size);
+        c->output.avail += size;
+    }
 }
 
 void libmembase_server_write_packet(libmembase_server_t *c,
                                     const void *data,
                                     size_t size)
 {
-   grow_buffer(&c->output, size);
-   memcpy(c->output.data + c->output.avail, data, size);
-   c->output.avail += size;
+    grow_buffer(&c->output, size);
+    memcpy(c->output.data + c->output.avail, data, size);
+    c->output.avail += size;
 }
 
 void libmembase_server_end_packet(libmembase_server_t *c)
 {
-   assert(c->current_packet != (size_t)-1);
-   c->current_packet = (size_t)-1;
+    if (!c->instance->packet_filter(c->output.data + c->current_packet)) {
+        c->output.avail = c->current_packet;
+    }
+    assert(c->current_packet != (size_t)-1);
+    c->current_packet = (size_t)-1;
 }
 
 void libmembase_server_complete_packet(libmembase_server_t *c,
                                        const void *data,
                                        size_t size)
 {
-   assert(c->current_packet == (size_t)-1);
-   if (size != 0) {
-      grow_buffer(&c->output, size);
-      memcpy(c->output.data + c->output.avail, data, size);
-   }
-   c->output.avail += size;
+    assert(c->current_packet == (size_t)-1);
+    if (c->instance->packet_filter(data)) {
+        grow_buffer(&c->output, size);
+        memcpy(c->output.data + c->output.avail, data, size);
+        c->output.avail += size;
+    }
 }
