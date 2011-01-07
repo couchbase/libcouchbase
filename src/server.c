@@ -177,6 +177,8 @@ static void try_next_server_connect(libmembase_server_t *server);
 
 static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
 {
+    (void)sock;
+    (void)which;
     libmembase_server_t *server = arg;
     if (!server_connect(server)) {
         try_next_server_connect(server);

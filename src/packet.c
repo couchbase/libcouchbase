@@ -29,6 +29,7 @@ void libmembase_server_buffer_start_packet(libmembase_server_t *c,
                                            const void *data,
                                            size_t size)
 {
+    (void)c;
     if (size > 0) {
         grow_buffer(buff, size);
         memcpy(buff->data + buff->avail, data, size);
@@ -41,6 +42,7 @@ void libmembase_server_buffer_write_packet(libmembase_server_t *c,
                                            const void *data,
                                            size_t size)
 {
+    (void)c;
     grow_buffer(buff, size);
     memcpy(buff->data + buff->avail, data, size);
     buff->avail += size;
@@ -49,6 +51,8 @@ void libmembase_server_buffer_write_packet(libmembase_server_t *c,
 void libmembase_server_buffer_end_packet(libmembase_server_t *c,
                                          buffer_t *buff)
 {
+    (void)c;
+    (void)buff;
     // NOOP
 }
 
@@ -57,6 +61,7 @@ void libmembase_server_buffer_complete_packet(libmembase_server_t *c,
                                               const void *data,
                                               size_t size)
 {
+    (void)c;
     grow_buffer(buff, size);
     memcpy(buff->data + buff->avail, data, size);
     buff->avail += size;
