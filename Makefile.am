@@ -36,11 +36,11 @@ libmembase_la_SOURCES = \
                         src/arithmetic.c \
                         src/base64.c \
                         src/cookie.c \
-                        src/create.c \
                         src/event.c \
                         src/execute.c \
                         src/get.c \
                         src/handler.c \
+                        src/instance.c \
                         src/packet.c \
                         src/server.c \
                         src/store.c \
