@@ -23,30 +23,6 @@
  */
 #include "internal.h"
 
-static void purge_implicit_responses(libmembase_server_t *c, uint32_t seqno)
-{
-    protocol_binary_request_header *req = (void*)c->cmd_log.data;
-    while (c->cmd_log.avail >= sizeof(*req) &&
-           c->cmd_log.avail >= (ntohl(req->request.bodylen) + sizeof(*req)) &&
-           req->request.opaque < seqno) {
-        switch (req->request.opcode) {
-        case PROTOCOL_BINARY_CMD_GETQ:
-            c->instance->callbacks.get(c->instance, LIBMEMBASE_KEY_ENOENT,
-                                       (void*)(req + 1),
-                                       ntohs(req->request.keylen),
-                                       NULL, 0, 0, 0);
-            break;
-        default:
-            abort();
-        }
-
-        size_t processed = ntohl(req->request.bodylen) + sizeof(*req);
-        memmove(c->cmd_log.data, c->cmd_log.data + processed,
-                c->cmd_log.avail - processed);
-        c->cmd_log.avail -= processed;
-    }
-}
-
 static void do_read_data(libmembase_server_t *c)
 {
     size_t processed;
@@ -66,7 +42,7 @@ static void do_read_data(libmembase_server_t *c)
                     c->instance->request_handler[req->request.opcode](c, req);
                     break;
                 case PROTOCOL_BINARY_RES:
-                    purge_implicit_responses(c, res->response.opaque);
+                    libmembase_server_purge_implicit_responses(c, res->response.opaque);
                     c->instance->response_handler[res->response.opcode](c, res);
                     req = (void*)c->cmd_log.data;
                     processed = ntohl(req->request.bodylen) + sizeof(*req);

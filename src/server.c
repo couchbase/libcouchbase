@@ -30,6 +30,9 @@
  */
 void libmembase_server_destroy(libmembase_server_t *server)
 {
+    /* Cancel all pending commands */
+    libmembase_server_purge_implicit_responses(server, server->instance->seqno);
+
     if (server->sasl_conn != NULL) {
         sasl_dispose(&server->sasl_conn);
     }
@@ -278,5 +281,29 @@ void libmembase_server_send_packets(libmembase_server_t *server)
     if (server->connected) {
         libmembase_server_update_event(server, EV_READ|EV_WRITE,
                                        libmembase_server_event_handler);
+    }
+}
+
+void libmembase_server_purge_implicit_responses(libmembase_server_t *c, uint32_t seqno)
+{
+    protocol_binary_request_header *req = (void*)c->cmd_log.data;
+    while (c->cmd_log.avail >= sizeof(*req) &&
+           c->cmd_log.avail >= (ntohl(req->request.bodylen) + sizeof(*req)) &&
+           req->request.opaque < seqno) {
+        switch (req->request.opcode) {
+        case PROTOCOL_BINARY_CMD_GETQ:
+            c->instance->callbacks.get(c->instance, LIBMEMBASE_KEY_ENOENT,
+                                       (void*)(req + 1),
+                                       ntohs(req->request.keylen),
+                                       NULL, 0, 0, 0);
+            break;
+        default:
+            abort();
+        }
+
+        size_t processed = ntohl(req->request.bodylen) + sizeof(*req);
+        memmove(c->cmd_log.data, c->cmd_log.data + processed,
+                c->cmd_log.avail - processed);
+        c->cmd_log.avail -= processed;
     }
 }

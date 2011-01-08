@@ -171,6 +171,8 @@ extern "C" {
         libmembase_t instance;
     };
 
+    void libmembase_server_purge_implicit_responses(libmembase_server_t *c,
+                                                    uint32_t seqno);
     void libmembase_server_destroy(libmembase_server_t *server);
     void libmembase_server_connected(libmembase_server_t *server);
 
