@@ -61,7 +61,7 @@ extern "C" {
     } buffer_t;
     bool grow_buffer(buffer_t *buffer, size_t min_free);
 
-    typedef void (*vbucket_state_listener)(libmembase_server_t *server);
+    typedef void (*vbucket_state_listener_t)(libmembase_server_t *server);
 
     struct libmembase_st {
         /** The membase host */
@@ -103,7 +103,7 @@ extern "C" {
         /** A map from the vbucket to the server hosting the vbucket */
         uint16_t *vb_server_map;
 
-        vbucket_state_listener vbucket_state_listener;
+        vbucket_state_listener_t vbucket_state_listener;
         RESPONSE_HANDLER response_handler[0x100];
         REQUEST_HANDLER request_handler[0x100];
         libmembase_packet_filter_t packet_filter;

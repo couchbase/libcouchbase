@@ -61,7 +61,13 @@
 #define ntohll(a) libmembase_byteswap64(a)
 #define htonll(a) libmembase_byteswap64(a)
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern uint64_t libmembase_byteswap64(uint64_t val);
+#ifdef __cplusplus
+}
+#endif
 #endif
 #endif
 

@@ -29,8 +29,8 @@ static void do_read_data(libmembase_server_t *c)
     const int operations_per_call = 1000;
     int operations = 0;
     grow_buffer(&c->input, 8192);
-    protocol_binary_response_header *res = (void*)c->input.data;
-    protocol_binary_request_header *req = (void*)c->input.data;
+    protocol_binary_response_header *res = (protocol_binary_response_header*)c->input.data;
+    protocol_binary_request_header *req = (protocol_binary_request_header*)c->input.data;
     do {
         while (++operations < operations_per_call &&
                c->input.avail >= sizeof(*req) &&
@@ -44,13 +44,13 @@ static void do_read_data(libmembase_server_t *c)
                 case PROTOCOL_BINARY_RES:
                     libmembase_server_purge_implicit_responses(c, res->response.opaque);
                     c->instance->response_handler[res->response.opcode](c, res);
-                    req = (void*)c->cmd_log.data;
+                    req = (protocol_binary_request_header*)c->cmd_log.data;
                     processed = ntohl(req->request.bodylen) + sizeof(*req);
                     assert(c->cmd_log.avail >= processed);
                     memmove(c->cmd_log.data, c->cmd_log.data + processed,
                             c->cmd_log.avail - processed);
                     c->cmd_log.avail -= processed;
-                    req = (void*)c->input.data;
+                    req = (protocol_binary_request_header*)c->input.data;
                     break;
                 default:
                     abort();
@@ -127,7 +127,7 @@ static void do_send_data(libmembase_server_t *c)
 
 void libmembase_server_event_handler(evutil_socket_t sock, short which, void *arg) {
     (void)sock;
-    libmembase_server_t *c = arg;
+    libmembase_server_t *c = (libmembase_server_t *)arg;
 
     if (which & EV_READ) {
         do_read_data(c);
@@ -190,7 +190,7 @@ static void breakout_vbucket_state_listener(libmembase_server_t *server)
 void libmembase_ensure_vbucket_config(libmembase_t instance)
 {
     if (instance->vbucket_config == NULL) {
-        vbucket_state_listener old = instance->vbucket_state_listener;
+        vbucket_state_listener_t old = instance->vbucket_state_listener;
         instance->vbucket_state_listener = breakout_vbucket_state_listener;
         event_base_loop(instance->ev_base, 0);
         instance->vbucket_state_listener = old;

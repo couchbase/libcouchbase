@@ -61,23 +61,17 @@ libmembase_error_t libmembase_store_by_key(libmembase_t instance,
 
     libmembase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
-    protocol_binary_request_set req = {
-        .message = {
-            .header.request = {
-                .magic = PROTOCOL_BINARY_REQ,
-                .keylen = ntohs((uint16_t)nkey),
-                .extlen = 8,
-                .datatype = PROTOCOL_BINARY_RAW_BYTES,
-                .vbucket = ntohs(vb),
-                .opaque = ++instance->seqno,
-                .cas = cas
-            },
-            .body = {
-                .flags = flags,
-                .expiration = htonl((uint32_t)exp)
-            }
-        }
-    };
+    protocol_binary_request_set req;
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.keylen = ntohs((uint16_t)nkey);
+    req.message.header.request.extlen = 8;
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.vbucket = ntohs(vb);
+    req.message.header.request.opaque = ++instance->seqno;
+    req.message.header.request.cas = cas;
+    req.message.body.flags = flags;
+    req.message.body.expiration = htonl((uint32_t)exp);
 
     size_t headersize = sizeof(req.bytes);
     switch (operation) {

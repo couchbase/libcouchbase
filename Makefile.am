@@ -26,6 +26,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libmembase.la memcached_packet_debug.la
+noinst_LTLIBRARIES = libmembase_cc.la
 
 pkginclude_HEADERS = \
                      include/libmembase/callbacks.h \
@@ -47,6 +48,9 @@ libmembase_la_SOURCES = \
                         src/store.c \
                         src/tap.c \
                         src/utilities.c
+
+libmembase_cc_la_SOURCES = src/cplusplus.cc
+libmembase_cc_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBMEMBASE_INTERNAL=1
 
 # Please remember to update the version info before each release if you
 # add / remove functions.

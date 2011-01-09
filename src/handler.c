@@ -50,11 +50,11 @@ static void getq_response_handler(libmembase_server_t *server,
                                   protocol_binary_response_header *res)
 {
     libmembase_t root = server->instance;
-    protocol_binary_response_getq *getq = (void*)res;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
+    protocol_binary_response_getq *getq = (protocol_binary_response_getq*)res;
+    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
 
     assert(req->request.opaque == res->response.opaque);
-    const char *key = (void*)(req + 1);
+    const char *key = (const char *)(req + 1);
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
 
@@ -62,7 +62,7 @@ static void getq_response_handler(libmembase_server_t *server,
     nbytes -= nkey - res->response.extlen;
 
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        char *bytes = (void*)res;
+        const char *bytes = (const char *)res;
         bytes += sizeof(getq->bytes);
         root->callbacks.get(root, LIBMEMBASE_SUCCESS, key, nkey,
                             bytes, nbytes,
@@ -78,10 +78,10 @@ static void delete_response_handler(libmembase_server_t *server,
                                      protocol_binary_response_header *res)
 {
     libmembase_t root = server->instance;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
+    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
     assert(req->request.opaque == res->response.opaque);
 
-    const char *key = (void*)(req + 1);
+    const char *key = (const char *)(req + 1);
     key += req->request.extlen;
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
@@ -97,11 +97,11 @@ static void storage_response_handler(libmembase_server_t *server,
                                      protocol_binary_response_header *res)
 {
     libmembase_t root = server->instance;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
+    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
 
     assert(req->request.opaque == res->response.opaque);
 
-    const char *key = (void*)(req + 1);
+    const char *key = (const char*)(req + 1);
     key += req->request.extlen;
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
@@ -119,10 +119,10 @@ static void arithmetic_response_handler(libmembase_server_t *server,
                                         protocol_binary_response_header *res)
 {
     libmembase_t root = server->instance;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
+    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
     assert(req->request.opaque == res->response.opaque);
 
-    const char *key = (void*)(req + 1);
+    const char *key = (const char *)(req + 1);
     key += req->request.extlen;
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
@@ -144,8 +144,8 @@ static void tap_mutation_handler(libmembase_server_t *server,
                                  protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
-    char *packet = (void*)req;
-    protocol_binary_request_tap_mutation *mutation = (void*)req;
+    char *packet = (char*)req;
+    protocol_binary_request_tap_mutation *mutation = (protocol_binary_request_tap_mutation*)req;
     uint32_t flags = ntohl(mutation->message.body.item.flags);
     uint32_t exp = ntohl(mutation->message.body.item.expiration);
     uint16_t nkey = ntohs(req->request.keylen);
@@ -165,8 +165,8 @@ static void tap_deletion_handler(libmembase_server_t *server,
                                  protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
-    char *packet = (void*)req;
-    protocol_binary_request_tap_delete *deletion = (void*)req;
+    char *packet = (char*)req;
+    protocol_binary_request_tap_delete *deletion = (protocol_binary_request_tap_delete*)req;
     uint16_t nkey = ntohs(req->request.keylen);
     char *es = packet + sizeof(deletion->bytes);
     uint16_t nes = ntohs(deletion->message.body.tap.enginespecific_length);
@@ -179,8 +179,8 @@ static void tap_flush_handler(libmembase_server_t *server,
                               protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
-    char *packet = (void*)req;
-    protocol_binary_request_tap_flush *flush = (void*)req;
+    char *packet = (char*)req;
+    protocol_binary_request_tap_flush *flush = (protocol_binary_request_tap_flush*)req;
     char *es = packet + sizeof(flush->bytes);
     uint16_t nes = ntohs(flush->message.body.tap.enginespecific_length);
     libmembase_t root = server->instance;
@@ -191,8 +191,8 @@ static void tap_opaque_handler(libmembase_server_t *server,
                                protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
-    char *packet = (void*)req;
-    protocol_binary_request_tap_opaque *opaque = (void*)req;
+    char *packet = (char*)req;
+    protocol_binary_request_tap_opaque *opaque = (protocol_binary_request_tap_opaque*)req;
     char *es = packet + sizeof(opaque->bytes);
     uint16_t nes = ntohs(opaque->message.body.tap.enginespecific_length);
     libmembase_t root = server->instance;
@@ -203,8 +203,8 @@ static void tap_vbucket_set_handler(libmembase_server_t *server,
                                     protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
-    char *packet = (void*)req;
-    protocol_binary_request_tap_vbucket_set *vbset = (void*)req;
+    char *packet = (char*)req;
+    protocol_binary_request_tap_vbucket_set *vbset = (protocol_binary_request_tap_vbucket_set*)req;
     char *es = packet + sizeof(vbset->bytes);
     uint16_t nes = ntohs(vbset->message.body.tap.enginespecific_length);
     uint32_t state;
@@ -212,7 +212,7 @@ static void tap_vbucket_set_handler(libmembase_server_t *server,
     state = ntohl(state);
     libmembase_t root = server->instance;
     root->callbacks.tap_vbucket_set(root, ntohs(req->request.vbucket),
-                                    state, es, nes);
+                                    (vbucket_state_t)state, es, nes);
 }
 
 static void sasl_list_mech_response_handler(libmembase_server_t *server,
@@ -230,15 +230,14 @@ static void sasl_list_mech_response_handler(libmembase_server_t *server,
     size_t keylen = strlen(chosenmech);
     size_t bodysize = keylen + len;
 
-    protocol_binary_request_no_extras req = {
-        .message.header.request = {
-            .magic = PROTOCOL_BINARY_REQ,
-            .opcode = PROTOCOL_BINARY_CMD_SASL_AUTH,
-            .keylen = ntohs((uint16_t)keylen),
-            .datatype = PROTOCOL_BINARY_RAW_BYTES,
-            .bodylen = ntohl((uint32_t)(bodysize))
-        }
-    };
+    protocol_binary_request_no_extras req;
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_AUTH;
+    req.message.header.request.keylen = ntohs((uint16_t)keylen);
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.bodylen = ntohl((uint32_t)(bodysize));
+
     libmembase_server_buffer_start_packet(server, &server->output,
                                           req.bytes, sizeof(req.bytes));
     libmembase_server_buffer_write_packet(server, &server->output,
@@ -274,11 +273,12 @@ static void sasl_step_response_handler(libmembase_server_t *server,
 
     // I don't have sasl step support yet ;-)
     abort();
-
+#if 0
     // I should put the server to the notification!
     if (server->instance->vbucket_state_listener != NULL) {
         server->instance->vbucket_state_listener(server);
     }
+#endif
 }
 
 static void dummy_tap_mutation_callback(libmembase_t instance,

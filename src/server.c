@@ -121,13 +121,12 @@ static bool get_remote_address(evutil_socket_t sock,
  */
 static void start_sasl_auth_server(libmembase_server_t *server)
 {
-    protocol_binary_request_no_extras req = {
-        .message.header.request = {
-            .magic = PROTOCOL_BINARY_REQ,
-            .opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS,
-            .datatype = PROTOCOL_BINARY_RAW_BYTES
-        }
-    };
+    protocol_binary_request_no_extras req;
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS;
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+
     libmembase_server_buffer_complete_packet(server, &server->output,
                                              req.bytes, sizeof(req.bytes));
     // send the data and add it to libevent..
@@ -182,7 +181,7 @@ static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
 {
     (void)sock;
     (void)which;
-    libmembase_server_t *server = arg;
+    libmembase_server_t *server = (libmembase_server_t*)arg;
     if (!server_connect(server)) {
         try_next_server_connect(server);
     }
@@ -259,11 +258,11 @@ void libmembase_server_initialize(libmembase_server_t *server, int servernum)
     *p = '\0';
     server->port = p + 1;
 
-    struct addrinfo hints = {
-        .ai_flags = AI_PASSIVE,
-        .ai_socktype = SOCK_STREAM,
-        .ai_family = AF_UNSPEC
-    };
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_family = AF_UNSPEC;
 
     int error = getaddrinfo(server->hostname, server->port,
                             &hints, &server->root_ai);
@@ -286,7 +285,7 @@ void libmembase_server_send_packets(libmembase_server_t *server)
 
 void libmembase_server_purge_implicit_responses(libmembase_server_t *c, uint32_t seqno)
 {
-    protocol_binary_request_header *req = (void*)c->cmd_log.data;
+    protocol_binary_request_header *req = (protocol_binary_request_header*)c->cmd_log.data;
     while (c->cmd_log.avail >= sizeof(*req) &&
            c->cmd_log.avail >= (ntohl(req->request.bodylen) + sizeof(*req)) &&
            req->request.opaque < seqno) {

@@ -39,7 +39,7 @@ libmembase_t libmembase_create(const char *host,
 {
     assert(sasl_client_init(NULL) == SASL_OK);
 
-    libmembase_t ret = calloc(1, sizeof(*ret));
+    libmembase_t ret = (libmembase_t)calloc(1, sizeof(*ret));
 
     if (ret == NULL) {
         return NULL;
@@ -47,7 +47,7 @@ libmembase_t libmembase_create(const char *host,
     libmembase_initialize_packet_handlers(ret);
 
     ret->host = strdup(host);
-    char *p = strchr(host, ':');
+    char *p = (char*)strchr(host, ':');
     if (p == NULL) {
         ret->port = "8091";
     } else {
@@ -118,7 +118,7 @@ static int sasl_get_username(void *context, int id, const char **result,
         return SASL_BADPARAM;
     }
 
-    libmembase_t instance = context;
+    libmembase_t instance = (libmembase_t)context;
     *result = instance->sasl.name;
     if (len) {
         *len = (unsigned int)strlen(*result);
@@ -143,7 +143,7 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
         return SASL_BADPARAM;
     }
 
-    libmembase_t instance = context;
+    libmembase_t instance = (libmembase_t)context;
     *psecret = &instance->sasl.password.secret;
     return SASL_OK;
 }
@@ -181,7 +181,7 @@ static void libmembase_update_serverlist(libmembase_t instance)
     uint16_t max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
     size_t num = (size_t)vbucket_config_get_num_servers(instance->vbucket_config);
     instance->nservers = num;
-    instance->servers = calloc(num, sizeof(libmembase_server_t));
+    instance->servers = (libmembase_server_t*)calloc(num, sizeof(libmembase_server_t));
 
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
@@ -208,7 +208,7 @@ static void libmembase_update_serverlist(libmembase_t instance)
      */
     instance->nvbuckets = max;
     free(instance->vb_server_map);
-    instance->vb_server_map = calloc(max, sizeof(uint16_t));
+    instance->vb_server_map = (uint16_t*)calloc(max, sizeof(uint16_t));
     for (int ii = 0; ii < max; ++ii) {
         int idx = vbucket_get_master(instance->vbucket_config, ii);
         instance->vb_server_map[ii] = (uint16_t)idx;
@@ -333,7 +333,7 @@ bool grow_buffer(buffer_t *buffer, size_t min_free) {
             next <<= 1;
         }
 
-        char *ptr = realloc(buffer->data, next + 1);
+        char *ptr = (char*)realloc(buffer->data, next + 1);
         if (ptr == NULL) {
             return false;
         }
@@ -356,7 +356,7 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
     assert(sock != INVALID_SOCKET);
     assert((which & EV_WRITE) == 0);
 
-    libmembase_t instance = arg;
+    libmembase_t instance = (libmembase_t)arg;
 
     ssize_t nr;
     size_t avail;
@@ -385,7 +385,7 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
             /* Socket closed! */
             fprintf(stderr, "vbucket stream socket is closed!\n");
             exit(1);
-            return ;
+            /* return ; */
         }
         buffer->avail += (size_t)nr;
         buffer->data[buffer->avail] = '\0';
@@ -454,11 +454,11 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
     offset += snprintf(buffer + offset, sizeof(buffer) - (size_t)offset,
                        "\r\n");
 
-    struct addrinfo hints = {
-        .ai_flags = AI_PASSIVE,
-        .ai_socktype = SOCK_STREAM,
-        .ai_family = AF_UNSPEC
-    };
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_family = AF_UNSPEC;
 
     int error = getaddrinfo(instance->host, instance->port,
                             &hints, &instance->ai);

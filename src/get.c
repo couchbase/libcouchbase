@@ -62,31 +62,26 @@ libmembase_error_t libmembase_mget_by_key(libmembase_t instance,
             server = instance->servers + instance->vb_server_map[vb];
         }
 
-        protocol_binary_request_get req = {
-            .message.header.request = {
-                .magic = PROTOCOL_BINARY_REQ,
-                .opcode = PROTOCOL_BINARY_CMD_GETQ,
-                .keylen = ntohs((uint16_t)nkey[ii]),
-                .datatype = PROTOCOL_BINARY_RAW_BYTES,
-                .vbucket = ntohs(vb),
-                .bodylen = ntohl((uint32_t)(nkey[ii])),
-                .opaque = ++instance->seqno
-            }
-        };
+        protocol_binary_request_get req;
+        memset(&req, 0, sizeof(req));
+        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
+        req.message.header.request.keylen = ntohs((uint16_t)nkey[ii]);
+        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        req.message.header.request.vbucket = ntohs(vb);
+        req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]));
+        req.message.header.request.opaque = ++instance->seqno;
 
         libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
         libmembase_server_write_packet(server, keys[ii], nkey[ii]);
         libmembase_server_end_packet(server);
     }
 
-    protocol_binary_request_noop noop = {
-        .message.header.request = {
-            .magic = PROTOCOL_BINARY_REQ,
-            .opcode = PROTOCOL_BINARY_CMD_NOOP,
-            .datatype = PROTOCOL_BINARY_RAW_BYTES,
-            .opaque = ++instance->seqno
-        }
-    };
+    protocol_binary_request_noop noop;
+    memset(&noop, 0, sizeof(noop));
+    noop.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    noop.message.header.request.opcode = PROTOCOL_BINARY_CMD_NOOP;
+    noop.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
     if (nhashkey == 0) {
         // We don't know which server we sent the data to, so examine
@@ -94,12 +89,14 @@ libmembase_error_t libmembase_mget_by_key(libmembase_t instance,
         for (size_t ii = 0; ii < instance->nservers; ++ii) {
             server = instance->servers + ii;
             if (server->output.avail > 0 || server->pending.avail > 0) {
+                noop.message.header.request.opaque = ++instance->seqno;
                 libmembase_server_complete_packet(server, noop.bytes,
                                                   sizeof(noop.bytes));
                 libmembase_server_send_packets(server);
             }
         }
     } else {
+        noop.message.header.request.opaque = ++instance->seqno;
         libmembase_server_complete_packet(server, noop.bytes,
                                           sizeof(noop.bytes));
         libmembase_server_send_packets(server);

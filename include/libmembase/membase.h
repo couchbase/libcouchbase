@@ -25,11 +25,16 @@
 
 #include <stdint.h>
 #include <stddef.h>
+
+#ifndef __cplusplus
 #include <stdbool.h>
+#endif
+
 #include <memcached/vbucket.h>
 #include <libmembase/types.h>
 #include <libmembase/callbacks.h>
-#include <event.h>
+
+struct event_base;
 
 #ifdef __cplusplus
 extern "C" {

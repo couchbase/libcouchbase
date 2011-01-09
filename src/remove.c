@@ -53,21 +53,17 @@ libmembase_error_t libmembase_remove_by_key(libmembase_t instance,
 
     libmembase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
-    protocol_binary_request_delete req = {
-        .message = {
-            .header.request = {
-                .magic = PROTOCOL_BINARY_REQ,
-                .opcode = PROTOCOL_BINARY_CMD_DELETE,
-                .keylen = ntohs((uint16_t)nkey),
-                .extlen = 0,
-                .datatype = PROTOCOL_BINARY_RAW_BYTES,
-                .vbucket = ntohs(vb),
-                .bodylen = ntohl((uint32_t)nkey),
-                .opaque = ++instance->seqno,
-                .cas = cas
-            },
-        }
-    };
+    protocol_binary_request_delete req;
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
+    req.message.header.request.keylen = ntohs((uint16_t)nkey);
+    req.message.header.request.extlen = 0;
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.vbucket = ntohs(vb);
+    req.message.header.request.bodylen = ntohl((uint32_t)nkey);
+    req.message.header.request.opaque = ++instance->seqno;
+    req.message.header.request.cas = cas;
 
     libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
     libmembase_server_write_packet(server, key, nkey);

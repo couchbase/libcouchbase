@@ -31,6 +31,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <assert.h>
+#include <event.h>
 
 #include <libmembase/membase.h>
 

@@ -29,6 +29,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <string.h>
+#include <event.h>
 
 #include <libmembase/membase.h>
 

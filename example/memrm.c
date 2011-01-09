@@ -35,6 +35,7 @@
 #include <inttypes.h>
 #include <assert.h>
 #include <sys/mman.h>
+#include <event.h>
 #include <libmembase/membase.h>
 
 static void usage(char cmd, const void *arg, void *cookie);
