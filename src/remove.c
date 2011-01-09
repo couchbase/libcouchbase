@@ -28,13 +28,29 @@ libmembase_error_t libmembase_remove(libmembase_t instance,
                                      const void *key, size_t nkey,
                                      uint64_t cas)
 {
+    return libmembase_remove_by_key(instance, NULL, 0, key, nkey, cas);
+}
+
+LIBMEMBASE_API
+libmembase_error_t libmembase_remove_by_key(libmembase_t instance,
+                                            const void *hashkey,
+                                            size_t nhashkey,
+                                            const void *key, size_t nkey,
+                                            uint64_t cas)
+{
     // we need a vbucket config before we can start removing the item..
     libmembase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
     uint16_t vb;
-    vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                              key, nkey);
+    if (nhashkey != 0) {
+        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                                  hashkey, nhashkey);
+    } else {
+        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                                  key, nkey);
+    }
+
     libmembase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
     protocol_binary_request_delete req = {

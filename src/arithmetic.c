@@ -28,13 +28,31 @@ libmembase_error_t libmembase_arithmetic(libmembase_t instance,
                                          int64_t delta, time_t exp,
                                          bool create, uint64_t initial)
 {
+    return libmembase_arithmetic_by_key(instance, NULL, 0, key, nkey,
+                                        delta, exp, create, initial);
+}
+
+LIBMEMBASE_API
+libmembase_error_t libmembase_arithmetic_by_key(libmembase_t instance,
+                                                const void *hashkey,
+                                                size_t nhashkey,
+                                                const void *key, size_t nkey,
+                                                int64_t delta, time_t exp,
+                                                bool create, uint64_t initial)
+{
     // we need a vbucket config before we can start getting data..
     libmembase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
     uint16_t vb;
-    vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                              key, nkey);
+    if (nhashkey != 0) {
+        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                                  hashkey, nhashkey);
+    } else {
+        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                                  key, nkey);
+    }
+
     libmembase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
     protocol_binary_request_incr req = {

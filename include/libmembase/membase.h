@@ -131,6 +131,25 @@ extern "C" {
                                        const void * const *keys,
                                        const size_t *nkey);
 
+    /**
+     * Get a number of values from the cache. You need to run the
+     * event loop yourself (or call libmembase_execute) to retrieve
+     * the data.
+     *
+     * @param instance the instance used to batch the requests from
+     * @param hashkey the key to use for hashing
+     * @param nhashkey the number of bytes in hashkey
+     * @param num_keys the number of keys to get
+     * @param keys the array containing the keys to get
+     * @param nkey the array containing the lengths of the keys
+     * @return The status of the operation
+     */
+    libmembase_error_t libmembase_mget_by_key(libmembase_t instance,
+                                              const void *hashkey,
+                                              size_t nhashkey,
+                                              size_t num_keys,
+                                              const void * const *keys,
+                                              const size_t *nkey);
 
     /**
      * Spool a store operation to the cluster. The operation <b>may</b> be
@@ -159,6 +178,36 @@ extern "C" {
                                         uint64_t cas);
 
     /**
+     * Spool a store operation to the cluster. The operation <b>may</b> be
+     * sent immediately, but you won't be sure (or get the result) until you
+     * run the event loop (or call libmembase_execute).
+     *
+     * @param instance the handle to libmembase
+     * @param operation constraints for the storage operation (add/replace etc)
+     * @param hashkey the key to use for hashing
+     * @param nhashkey the number of bytes in hashkey
+     * @param key the key to set
+     * @param nkey the number of bytes in the key
+     * @param bytes the value to set
+     * @param nbytes the size of the value
+     * @param flags the user-defined flag section for the item
+     * @param exp When the object should expire
+     * @param cas the cas identifier for the existing object if you want to
+     *            ensure that you're only replacing/append/prepending a
+     *            specific object. Specify 0 if you don't want to limit to
+     *            any cas value.
+     * @return Status of the operation.
+     */
+    libmembase_error_t libmembase_store_by_key(libmembase_t instance,
+                                               libmembase_storage_t operation,
+                                               const void *hashkey,
+                                               size_t nhashkey,
+                                               const void *key, size_t nkey,
+                                               const void *bytes, size_t nbytes,
+                                               uint32_t flags, time_t exp,
+                                               uint64_t cas);
+
+    /**
      * Spool an arithmetic operation to the cluster. The operation <b>may</b> be
      * sent immediately, but you won't be sure (or get the result) until you
      * run the event loop (or call libmembase_execute).
@@ -179,6 +228,32 @@ extern "C" {
                                              bool create, uint64_t initial);
 
     /**
+     * Spool an arithmetic operation to the cluster. The operation <b>may</b> be
+     * sent immediately, but you won't be sure (or get the result) until you
+     * run the event loop (or call libmembase_execute).
+     *
+     * @param instance the handle to libmembase
+     * @param hashkey the key to use for hashing
+     * @param nhashkey the number of bytes in hashkey
+     * @param key the key to set
+     * @param nkey the number of bytes in the key
+     * @param delta The amount to add / subtract
+     * @param exp When the object should expire
+     * @param create set to true if you want the object to be created if it
+     *               doesn't exist.
+     * @param initial The initial value of the object if we create it
+     * @return Status of the operation.
+     */
+    libmembase_error_t libmembase_arithmetic_by_key(libmembase_t instance,
+                                                    const void *hashkey,
+                                                    size_t nhashkey,
+                                                    const void *key,
+                                                    size_t nkey,
+                                                    int64_t delta, time_t exp,
+                                                    bool create,
+                                                    uint64_t initial);
+
+    /**
      * Spool a remove operation to the cluster. The operation <b>may</b> be
      * sent immediately, but you won't be sure (or get the result) until you
      * run the event loop (or call libmembase_execute).
@@ -192,6 +267,25 @@ extern "C" {
     libmembase_error_t libmembase_remove(libmembase_t instance,
                                          const void *key, size_t nkey,
                                          uint64_t cas);
+
+    /**
+     * Spool a remove operation to the cluster. The operation <b>may</b> be
+     * sent immediately, but you won't be sure (or get the result) until you
+     * run the event loop (or call libmembase_execute).
+     *
+     * @param instance the handle to libmembase
+     * @param hashkey the key to use for hashing
+     * @param nhashkey the number of bytes in hashkey
+     * @param key the key to delete
+     * @param nkey the number of bytes in the key
+     * @param cas the cas value for the object (or 0 if you don't care)
+     * @return Status of the operation.
+     */
+    libmembase_error_t libmembase_remove_by_key(libmembase_t instance,
+                                                const void *hashkey,
+                                                size_t nhashkey,
+                                                const void *key, size_t nkey,
+                                                uint64_t cas);
 
 #ifdef __cplusplus
 }

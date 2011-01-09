@@ -31,16 +31,37 @@ libmembase_error_t libmembase_mget(libmembase_t instance,
                                    const void * const *keys,
                                    const size_t *nkey)
 {
+    return libmembase_mget_by_key(instance, NULL, 0, num_keys, keys, nkey);
+}
+
+LIBMEMBASE_API
+libmembase_error_t libmembase_mget_by_key(libmembase_t instance,
+                                          const void *hashkey,
+                                          size_t nhashkey,
+                                          size_t num_keys,
+                                          const void * const *keys,
+                                          const size_t *nkey)
+{
     // we need a vbucket config before we can start getting data..
     libmembase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
-    for (size_t ii = 0; ii < num_keys; ++ii) {
-        uint16_t vb;
+    uint16_t vb;
+    libmembase_server_t *server;
+
+    if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                                  keys[ii], nkey[ii]);
-        libmembase_server_t *server;
+                                                  hashkey, nhashkey);
         server = instance->servers + instance->vb_server_map[vb];
+    }
+
+    for (size_t ii = 0; ii < num_keys; ++ii) {
+        if (nhashkey == 0) {
+            vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                                      keys[ii], nkey[ii]);
+            server = instance->servers + instance->vb_server_map[vb];
+        }
+
         protocol_binary_request_get req = {
             .message.header.request = {
                 .magic = PROTOCOL_BINARY_REQ,
@@ -58,21 +79,30 @@ libmembase_error_t libmembase_mget(libmembase_t instance,
         libmembase_server_end_packet(server);
     }
 
-    for (size_t ii = 0; ii < instance->nservers; ++ii) {
-        libmembase_server_t *server = instance->servers + ii;
-        if (server->output.avail > 0 || server->pending.avail > 0) {
-            protocol_binary_request_noop req = {
-                .message.header.request = {
-                    .magic = PROTOCOL_BINARY_REQ,
-                    .opcode = PROTOCOL_BINARY_CMD_NOOP,
-                    .datatype = PROTOCOL_BINARY_RAW_BYTES,
-                    .opaque = ++instance->seqno
-                }
-            };
-            libmembase_server_complete_packet(server, req.bytes,
-                                              sizeof(req.bytes));
-            libmembase_server_send_packets(server);
+    protocol_binary_request_noop noop = {
+        .message.header.request = {
+            .magic = PROTOCOL_BINARY_REQ,
+            .opcode = PROTOCOL_BINARY_CMD_NOOP,
+            .datatype = PROTOCOL_BINARY_RAW_BYTES,
+            .opaque = ++instance->seqno
         }
+    };
+
+    if (nhashkey == 0) {
+        // We don't know which server we sent the data to, so examine
+        // where to send the noop
+        for (size_t ii = 0; ii < instance->nservers; ++ii) {
+            server = instance->servers + ii;
+            if (server->output.avail > 0 || server->pending.avail > 0) {
+                libmembase_server_complete_packet(server, noop.bytes,
+                                                  sizeof(noop.bytes));
+                libmembase_server_send_packets(server);
+            }
+        }
+    } else {
+        libmembase_server_complete_packet(server, noop.bytes,
+                                          sizeof(noop.bytes));
+        libmembase_server_send_packets(server);
     }
 
     return LIBMEMBASE_SUCCESS;
