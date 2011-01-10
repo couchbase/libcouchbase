@@ -227,6 +227,8 @@ int main(int argc, char **argv)
     }
 
     libmembase_execute(instance);
+    free(keys);
+    free(nkey);
 
     return 0;
 }
