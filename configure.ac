@@ -43,6 +43,7 @@ AC_SEARCH_LIBS(gethostbyname, nsl)
 
 AC_CHECK_HEADERS_ONCE([sys/socket.h
                        netinet/in.h
+                       inttypes.h
                        netdb.h
                        unistd.h
                        ws2tcpip.h

@@ -32,6 +32,10 @@
 #include <netinet/in.h>
 #endif
 
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
+
 #ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
