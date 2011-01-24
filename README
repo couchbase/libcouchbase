@@ -31,14 +31,6 @@ try to poke at the internals, because that will _MOST LIKELY_ cause
 your application to crash when I'm changing the internals (and you
 can be pretty sure that they will change between versions).
 
-I want to be able to build the code with Microsoft Visual Studio,
-and that means that I can't use any of the constructs in C99. I'm
-not going to compile everything on Windows from day to day, so my
-solution to try to keep the code as compatible as possible is to
-try to compile everything with a C++ compiler. That means that
-I need to add explicit casts instead of using void pointers :(
-
-
 Cheers,
 
 Trond Norbye
