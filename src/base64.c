@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ static void encode(const char *s, char *d, size_t num) {
  * @param sz size of destination buffer
  * @return 0 if success, -1 if the destination buffer isn't big enough
  */
-int libmembase_base64_encode(const char *src, char *dst, size_t sz) {
+int libcouchbase_base64_encode(const char *src, char *dst, size_t sz) {
     size_t len = strlen(src);
     size_t triplets = len / 3;
     size_t rest = len % 3;

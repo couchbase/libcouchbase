@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@
 
 #include "internal.h"
 
-void libmembase_server_buffer_start_packet(libmembase_server_t *c,
-                                           buffer_t *buff,
-                                           const void *data,
-                                           size_t size)
+void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
+                                             buffer_t *buff,
+                                             const void *data,
+                                             size_t size)
 {
     (void)c;
     if (size > 0) {
@@ -37,10 +37,10 @@ void libmembase_server_buffer_start_packet(libmembase_server_t *c,
     }
 }
 
-void libmembase_server_buffer_write_packet(libmembase_server_t *c,
-                                           buffer_t *buff,
-                                           const void *data,
-                                           size_t size)
+void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
+                                             buffer_t *buff,
+                                             const void *data,
+                                             size_t size)
 {
     (void)c;
     grow_buffer(buff, size);
@@ -48,18 +48,18 @@ void libmembase_server_buffer_write_packet(libmembase_server_t *c,
     buff->avail += size;
 }
 
-void libmembase_server_buffer_end_packet(libmembase_server_t *c,
-                                         buffer_t *buff)
+void libcouchbase_server_buffer_end_packet(libcouchbase_server_t *c,
+                                           buffer_t *buff)
 {
     (void)c;
     (void)buff;
     // NOOP
 }
 
-void libmembase_server_buffer_complete_packet(libmembase_server_t *c,
-                                              buffer_t *buff,
-                                              const void *data,
-                                              size_t size)
+void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
+                                                buffer_t *buff,
+                                                const void *data,
+                                                size_t size)
 {
     (void)c;
     grow_buffer(buff, size);
@@ -67,32 +67,32 @@ void libmembase_server_buffer_complete_packet(libmembase_server_t *c,
     buff->avail += size;
 }
 
-void libmembase_server_start_packet(libmembase_server_t *c,
-                                    const void *data,
-                                    size_t size)
+void libcouchbase_server_start_packet(libcouchbase_server_t *c,
+                                      const void *data,
+                                      size_t size)
 {
     assert(c->current_packet == (size_t)-1);
     if (c->connected) {
         c->current_packet = c->output.avail;
-        libmembase_server_buffer_start_packet(c, &c->output, data, size);
+        libcouchbase_server_buffer_start_packet(c, &c->output, data, size);
     } else {
         c->current_packet = c->pending.avail;
-        libmembase_server_buffer_start_packet(c, &c->pending, data, size);
+        libcouchbase_server_buffer_start_packet(c, &c->pending, data, size);
     }
 }
 
-void libmembase_server_write_packet(libmembase_server_t *c,
-                                    const void *data,
-                                    size_t size)
+void libcouchbase_server_write_packet(libcouchbase_server_t *c,
+                                      const void *data,
+                                      size_t size)
 {
     if (c->connected) {
-        libmembase_server_buffer_write_packet(c, &c->output, data, size);
+        libcouchbase_server_buffer_write_packet(c, &c->output, data, size);
     } else {
-        libmembase_server_buffer_write_packet(c, &c->pending, data, size);
+        libcouchbase_server_buffer_write_packet(c, &c->pending, data, size);
     }
 }
 
-void libmembase_server_end_packet(libmembase_server_t *c)
+void libcouchbase_server_end_packet(libcouchbase_server_t *c)
 {
     buffer_t *buff;
 
@@ -109,17 +109,17 @@ void libmembase_server_end_packet(libmembase_server_t *c)
     c->current_packet = (size_t)-1;
 }
 
-void libmembase_server_complete_packet(libmembase_server_t *c,
-                                       const void *data,
-                                       size_t size)
+void libcouchbase_server_complete_packet(libcouchbase_server_t *c,
+                                         const void *data,
+                                         size_t size)
 {
     assert(c->current_packet == (size_t)-1);
     if (c->instance->packet_filter(c->instance, data)) {
         if (c->connected) {
-            libmembase_server_buffer_complete_packet(c, &c->output, data, size);
+            libcouchbase_server_buffer_complete_packet(c, &c->output, data, size);
         } else {
-            libmembase_server_buffer_complete_packet(c, &c->pending,
-                                                     data, size);
+            libcouchbase_server_buffer_complete_packet(c, &c->pending,
+                                                       data, size);
         }
     }
 }

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#ifndef LIBMEMBASE_INTERNAL_H
-#define LIBMEMBASE_INTERNAL_H 1
+#ifndef LIBCOUCHBASE_INTERNAL_H
+#define LIBCOUCHBASE_INTERNAL_H 1
 
 #include "config.h"
 
@@ -31,7 +31,7 @@
 #include <sys/types.h>
 #include <memcached/protocol_binary.h>
 #include <libvbucket/vbucket.h>
-#include <libmembase/membase.h>
+#include <libcouchbase/couchbase.h>
 #include <sasl/sasl.h>
 
 /*
@@ -45,13 +45,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-    struct libmembase_server_st;
-    typedef struct libmembase_server_st libmembase_server_t;
+    struct libcouchbase_server_st;
+    typedef struct libcouchbase_server_st libcouchbase_server_t;
 
     typedef void (*EVENT_HANDLER)(evutil_socket_t fd, short which, void *arg);
 
-    typedef void (*REQUEST_HANDLER)(libmembase_server_t *instance, protocol_binary_request_header *req);
-    typedef void (*RESPONSE_HANDLER)(libmembase_server_t *instance,
+    typedef void (*REQUEST_HANDLER)(libcouchbase_server_t *instance, protocol_binary_request_header *req);
+    typedef void (*RESPONSE_HANDLER)(libcouchbase_server_t *instance,
                                      protocol_binary_response_header *res);
 
     typedef struct {
@@ -61,12 +61,12 @@ extern "C" {
     } buffer_t;
     bool grow_buffer(buffer_t *buffer, size_t min_free);
 
-    typedef void (*vbucket_state_listener_t)(libmembase_server_t *server);
+    typedef void (*vbucket_state_listener_t)(libcouchbase_server_t *server);
 
-    struct libmembase_st {
-        /** The membase host */
+    struct libcouchbase_st {
+        /** The couchbase host */
         char *host;
-        /** The port of the membase server */
+        /** The port of the couchbase server */
         const char *port;
         /** The username to connect with */
         char *user;
@@ -93,10 +93,10 @@ extern "C" {
         evutil_socket_t sock;
         struct addrinfo *ai;
 
-        /** The number of membase server in the configuration */
+        /** The number of couchbase server in the configuration */
         size_t nservers;
-        /** The array of the membase servers */
-        libmembase_server_t *servers;
+        /** The array of the couchbase servers */
+        libcouchbase_server_t *servers;
 
         /** The number of vbuckets */
         uint16_t nvbuckets;
@@ -106,7 +106,7 @@ extern "C" {
         vbucket_state_listener_t vbucket_state_listener;
         RESPONSE_HANDLER response_handler[0x100];
         REQUEST_HANDLER request_handler[0x100];
-        libmembase_packet_filter_t packet_filter;
+        libcouchbase_packet_filter_t packet_filter;
 
         struct {
             const char *name;
@@ -118,11 +118,11 @@ extern "C" {
         } sasl;
 
         struct {
-            libmembase_tap_filter_t filter;
+            libcouchbase_tap_filter_t filter;
         } tap;
 
 
-        libmembase_callback_t callbacks;
+        libcouchbase_callback_t callbacks;
 
         uint32_t seqno;
         bool execute;
@@ -130,9 +130,9 @@ extern "C" {
     };
 
     /**
-     * The structure representing each membase server
+     * The structure representing each couchbase server
      */
-    struct libmembase_server_st {
+    struct libcouchbase_server_st {
         /** The name of the server */
         char *hostname;
         /** The servers port */
@@ -168,36 +168,36 @@ extern "C" {
         /** The current event handler */
         EVENT_HANDLER ev_handler;
         /* Pointer back to the instance */
-        libmembase_t instance;
+        libcouchbase_t instance;
     };
 
-    void libmembase_server_purge_implicit_responses(libmembase_server_t *c,
-                                                    uint32_t seqno);
-    void libmembase_server_destroy(libmembase_server_t *server);
-    void libmembase_server_connected(libmembase_server_t *server);
+    void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
+                                                      uint32_t seqno);
+    void libcouchbase_server_destroy(libcouchbase_server_t *server);
+    void libcouchbase_server_connected(libcouchbase_server_t *server);
 
-    void libmembase_server_initialize(libmembase_server_t *server,
-                                      int servernum);
+    void libcouchbase_server_initialize(libcouchbase_server_t *server,
+                                        int servernum);
 
 
 
-    void libmembase_server_buffer_start_packet(libmembase_server_t *c,
-                                               buffer_t *buff,
-                                               const void *data,
-                                               size_t size);
+    void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
+                                                 buffer_t *buff,
+                                                 const void *data,
+                                                 size_t size);
 
-    void libmembase_server_buffer_write_packet(libmembase_server_t *c,
-                                               buffer_t *buff,
-                                               const void *data,
-                                               size_t size);
+    void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
+                                                 buffer_t *buff,
+                                                 const void *data,
+                                                 size_t size);
 
-    void libmembase_server_buffer_end_packet(libmembase_server_t *c,
-                                             buffer_t *buff);
+    void libcouchbase_server_buffer_end_packet(libcouchbase_server_t *c,
+                                               buffer_t *buff);
 
-    void libmembase_server_buffer_complete_packet(libmembase_server_t *c,
-                                                  buffer_t *buff,
-                                                  const void *data,
-                                                  size_t size);
+    void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
+                                                    buffer_t *buff,
+                                                    const void *data,
+                                                    size_t size);
 
     /**
      * Initiate a new packet to be sent
@@ -205,22 +205,22 @@ extern "C" {
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
-    void libmembase_server_start_packet(libmembase_server_t *c,
-                                        const void *data,
-                                        size_t size);
+    void libcouchbase_server_start_packet(libcouchbase_server_t *c,
+                                          const void *data,
+                                          size_t size);
     /**
      * Write data to the current packet
      * @param c the server connection to send it to
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
-    void libmembase_server_write_packet(libmembase_server_t *c,
-                                        const void *data,
-                                        size_t size);
+    void libcouchbase_server_write_packet(libcouchbase_server_t *c,
+                                          const void *data,
+                                          size_t size);
     /**
      * Mark this packet complete
      */
-    void libmembase_server_end_packet(libmembase_server_t *c);
+    void libcouchbase_server_end_packet(libcouchbase_server_t *c);
 
     /**
      * Create a complete packet (to avoid calling start + end)
@@ -228,32 +228,32 @@ extern "C" {
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
-    void libmembase_server_complete_packet(libmembase_server_t *c,
-                                           const void *data,
-                                           size_t size);
+    void libcouchbase_server_complete_packet(libcouchbase_server_t *c,
+                                             const void *data,
+                                             size_t size);
     /**
      * Start sending packets
      * @param server the server to start send data to
      */
-    void libmembase_server_send_packets(libmembase_server_t *server);
+    void libcouchbase_server_send_packets(libcouchbase_server_t *server);
 
 
 
 
-    void libmembase_server_update_event(libmembase_server_t *c, short flags,
-                                        EVENT_HANDLER handler);
-    void libmembase_server_event_handler(evutil_socket_t sock, short which, void *arg);
+    void libcouchbase_server_update_event(libcouchbase_server_t *c, short flags,
+                                          EVENT_HANDLER handler);
+    void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *arg);
 
-    void libmembase_initialize_packet_handlers(libmembase_t instance);
+    void libcouchbase_initialize_packet_handlers(libcouchbase_t instance);
 
-    void libmembase_ensure_vbucket_config(libmembase_t instance);
+    void libcouchbase_ensure_vbucket_config(libcouchbase_t instance);
 
-    int libmembase_base64_encode(const char *src, char *dst, size_t sz);
+    int libcouchbase_base64_encode(const char *src, char *dst, size_t sz);
 
 #ifdef __cplusplus
 }
 #endif
 
-#include <libmembase/membase.h>
+#include <libcouchbase/couchbase.h>
 
 #endif

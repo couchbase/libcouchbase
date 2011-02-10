@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -16,35 +16,35 @@
  */
 
 /**
- * This file contains the functions to create / destroy the libmembase instance
+ * This file contains the functions to create / destroy the libcouchbase instance
  *
  * @author Trond Norbye
  * @todo add more documentation
  */
 #include "internal.h"
 
-static bool default_packet_filter(libmembase_t instance, const void *data)
+static bool default_packet_filter(libcouchbase_t instance, const void *data)
 {
     (void)instance;
     (void)data;
     return true;
 }
 
-LIBMEMBASE_API
-libmembase_t libmembase_create(const char *host,
-                               const char *user,
-                               const char *passwd,
-                               const char *bucket,
-                               struct event_base *base)
+LIBCOUCHBASE_API
+libcouchbase_t libcouchbase_create(const char *host,
+                                   const char *user,
+                                   const char *passwd,
+                                   const char *bucket,
+                                   struct event_base *base)
 {
     assert(sasl_client_init(NULL) == SASL_OK);
 
-    libmembase_t ret = (libmembase_t)calloc(1, sizeof(*ret));
+    libcouchbase_t ret = (libcouchbase_t)calloc(1, sizeof(*ret));
 
     if (ret == NULL) {
         return NULL;
     }
-    libmembase_initialize_packet_handlers(ret);
+    libcouchbase_initialize_packet_handlers(ret);
 
     ret->host = strdup(host);
     char *p = (char*)strchr(host, ':');
@@ -61,7 +61,7 @@ libmembase_t libmembase_create(const char *host,
 
     if (ret->host == NULL || ret->user == NULL || ret->passwd == NULL ||
         ret->bucket == NULL) {
-        libmembase_destroy(ret);
+        libcouchbase_destroy(ret);
         return NULL;
     }
 
@@ -72,8 +72,8 @@ libmembase_t libmembase_create(const char *host,
     return ret;
 }
 
-LIBMEMBASE_API
-void libmembase_destroy(libmembase_t instance)
+LIBCOUCHBASE_API
+void libcouchbase_destroy(libcouchbase_t instance)
 {
     free(instance->host);
     free(instance->user);
@@ -93,7 +93,7 @@ void libmembase_destroy(libmembase_t instance)
     }
 
     for (size_t ii = 0; ii < instance->nservers; ++ii) {
-        libmembase_server_destroy(instance->servers + ii);
+        libcouchbase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
 
@@ -105,7 +105,7 @@ void libmembase_destroy(libmembase_t instance)
  * Callback functions called from libsasl to get the username to use for
  * authentication.
  *
- * @param context ponter to the libmembase_t instance running the sasl bits
+ * @param context ponter to the libcouchbase_t instance running the sasl bits
  * @param id the piece of information libsasl wants
  * @param result where to store the result (OUT)
  * @param len The length of the data returned (OUT)
@@ -118,7 +118,7 @@ static int sasl_get_username(void *context, int id, const char **result,
         return SASL_BADPARAM;
     }
 
-    libmembase_t instance = (libmembase_t)context;
+    libcouchbase_t instance = (libcouchbase_t)context;
     *result = instance->sasl.name;
     if (len) {
         *len = (unsigned int)strlen(*result);
@@ -131,19 +131,19 @@ static int sasl_get_username(void *context, int id, const char **result,
  * Callback functions called from libsasl to get the password to use for
  * authentication.
  *
- * @param context ponter to the libmembase_t instance running the sasl bits
+ * @param context ponter to the libcouchbase_t instance running the sasl bits
  * @param id the piece of information libsasl wants
  * @param psecret where to store the result (OUT)
  * @return SASL_OK if succes
  */
 static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
-                        sasl_secret_t **psecret)
+                             sasl_secret_t **psecret)
 {
     if (!conn || ! psecret || id != SASL_CB_PASS) {
         return SASL_BADPARAM;
     }
 
-    libmembase_t instance = (libmembase_t)context;
+    libcouchbase_t instance = (libcouchbase_t)context;
     *psecret = &instance->sasl.password.secret;
     return SASL_OK;
 }
@@ -156,7 +156,7 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
  * @todo try to reshuffle all pending operations!
  * @todo use the diff functionality to avoid reshuffle all of the pending ops
  */
-static void libmembase_update_serverlist(libmembase_t instance)
+static void libcouchbase_update_serverlist(libcouchbase_t instance)
 {
     if (instance->vbucket_config != NULL) {
         vbucket_config_destroy(instance->vbucket_config);
@@ -172,7 +172,7 @@ static void libmembase_update_serverlist(libmembase_t instance)
     // @todo we shouldn't kill all of them, but fix that later on (remember
     // to cancel all ongoing crap etc..
     for (size_t ii = 0; ii < instance->nservers; ++ii) {
-        libmembase_server_destroy(instance->servers + ii);
+        libcouchbase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
     instance->servers = NULL;
@@ -181,7 +181,7 @@ static void libmembase_update_serverlist(libmembase_t instance)
     uint16_t max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
     size_t num = (size_t)vbucket_config_get_num_servers(instance->vbucket_config);
     instance->nservers = num;
-    instance->servers = (libmembase_server_t*)calloc(num, sizeof(libmembase_server_t));
+    instance->servers = (libcouchbase_server_t*)calloc(num, sizeof(libcouchbase_server_t));
 
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
@@ -217,7 +217,7 @@ static void libmembase_update_serverlist(libmembase_t instance)
     /* Now initialize the servers */
     for (size_t ii = 0; ii < num; ++ii) {
         instance->servers[ii].instance = instance;
-        libmembase_server_initialize(instance->servers + ii, (int)ii);
+        libcouchbase_server_initialize(instance->servers + ii, (int)ii);
     }
 
     /* Notify anyone interested in this event... */
@@ -234,7 +234,7 @@ static void libmembase_update_serverlist(libmembase_t instance)
  * @param instance the instance containing the data
  * @return true if we got all the data we need, false otherwise
  */
-static bool parse_chunk(libmembase_t instance)
+static bool parse_chunk(libcouchbase_t instance)
 {
     buffer_t *buffer = &instance->vbucket_stream.input;
 
@@ -270,7 +270,7 @@ static bool parse_chunk(libmembase_t instance)
  * @param instance the instance containing the data
  * @return 0 success, 1 we need more data, -1 incorrect response
  */
-static int parse_header(libmembase_t instance)
+static int parse_header(libcouchbase_t instance)
 {
     buffer_t *buffer = &instance->vbucket_stream.input;
     char *ptr = strstr(buffer->data, "\r\n\r\n");
@@ -349,14 +349,14 @@ bool grow_buffer(buffer_t *buffer, size_t min_free) {
  * Callback from libevent when we read from the REST socket
  * @param sock the readable socket
  * @param which what kind of events we may do
- * @param arg pointer to the libmembase instance
+ * @param arg pointer to the libcouchbase instance
  */
 static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 {
     assert(sock != INVALID_SOCKET);
     assert((which & EV_WRITE) == 0);
 
-    libmembase_t instance = (libmembase_t)arg;
+    libcouchbase_t instance = (libcouchbase_t)arg;
 
     ssize_t nr;
     size_t avail;
@@ -404,7 +404,7 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
             done = true;
             if (parse_chunk(instance)) {
                 if (*instance->vbucket_stream.input.data == '{') {
-                    libmembase_update_serverlist(instance);
+                    libcouchbase_update_serverlist(instance);
                 } else if (instance->vbucket_stream.chunk_size != 6 &&
                            memcmp(instance->vbucket_stream.input.data,
                                   "\n\n\n\n", 4 == 0)) {
@@ -430,8 +430,8 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 /**
  * @todo use async connects etc
  */
-LIBMEMBASE_API
-libmembase_error_t libmembase_connect(libmembase_t instance)
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 {
     char buffer[1024];
     ssize_t offset;
@@ -443,8 +443,8 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
         char cred[256];
         snprintf(cred, sizeof(cred), "%s:%s", instance->user, instance->passwd);
         char base64[256];
-        if (libmembase_base64_encode(cred, base64, sizeof(base64)) == -1) {
-            return LIBMEMBASE_E2BIG;
+        if (libcouchbase_base64_encode(cred, base64, sizeof(base64)) == -1) {
+            return LIBCOUCHBASE_E2BIG;
         }
 
         offset += snprintf(buffer + offset, sizeof(buffer) - (size_t)offset,
@@ -463,7 +463,7 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
     int error = getaddrinfo(instance->host, instance->port,
                             &hints, &instance->ai);
     if (error != 0) {
-        return LIBMEMBASE_UNKNOWN_HOST;
+        return LIBCOUCHBASE_UNKNOWN_HOST;
     }
 
     struct addrinfo *ai = instance->ai;
@@ -495,7 +495,7 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
     }
 
     if (instance->sock == -1) {
-        return LIBMEMBASE_UNKNOWN_HOST;
+        return LIBCOUCHBASE_UNKNOWN_HOST;
     }
 
     ssize_t len = offset;
@@ -506,7 +506,7 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
         if (nw == -1) {
             if (errno != EINTR) {
                 EVUTIL_CLOSESOCKET(instance->sock);
-                return LIBMEMBASE_NETWORK_ERROR;
+                return LIBCOUCHBASE_NETWORK_ERROR;
             }
         } else {
             offset += nw;
@@ -515,7 +515,7 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
 
     if (evutil_make_socket_nonblocking(instance->sock) != 0) {
         EVUTIL_CLOSESOCKET(instance->sock);
-        return LIBMEMBASE_NETWORK_ERROR;
+        return LIBCOUCHBASE_NETWORK_ERROR;
     }
 
     instance->ev_flags = EV_READ | EV_PERSIST;
@@ -523,16 +523,16 @@ libmembase_error_t libmembase_connect(libmembase_t instance)
               instance->ev_flags, vbucket_stream_handler, instance);
     event_base_set(instance->ev_base, &instance->ev_event);
     if (event_add(&instance->ev_event, NULL) == -1) {
-        return LIBMEMBASE_LIBEVENT_ERROR;
+        return LIBCOUCHBASE_LIBEVENT_ERROR;
     }
 
-    return LIBMEMBASE_SUCCESS;
+    return LIBCOUCHBASE_SUCCESS;
 }
 
 
-LIBMEMBASE_API
-void libmembase_set_packet_filter(libmembase_t instance,
-                                  libmembase_packet_filter_t filter)
+LIBCOUCHBASE_API
+void libcouchbase_set_packet_filter(libcouchbase_t instance,
+                                    libcouchbase_packet_filter_t filter)
 {
     instance->packet_filter = filter;
 }

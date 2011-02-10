@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -347,13 +347,13 @@ static void debug_sasl_auth_request(protocol_binary_request_header *req)
 
     uint8_t *ptr = (void*)(req + 1);
     printf("Mechanisms   (%02d-%02d): ",
-               nextbyte, nextbyte + keylen - 1);
+           nextbyte, nextbyte + keylen - 1);
     print_string(ptr, keylen);
     printf("\n");
     ptr += keylen;
     nextbyte += keylen;
     printf("Auth token   (%02d-%02d): ",
-               nextbyte, nextbyte + value - 1);
+           nextbyte, nextbyte + value - 1);
     print_string(ptr, value);
     printf("\n");
 }
@@ -620,8 +620,8 @@ static void dump_bytes(uint8_t *bytes, size_t len)
     }
 }
 
-LIBMEMBASE_API
-bool libmembase_packet_debug(libmembase_t instance, const void *ptr)
+LIBCOUCHBASE_API
+bool libcouchbase_packet_debug(libcouchbase_t instance, const void *ptr)
 {
     (void)instance;
     const protocol_binary_request_header *req = ptr;

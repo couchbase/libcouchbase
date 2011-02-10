@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
  */
 #include "internal.h"
 
-static void do_read_data(libmembase_server_t *c)
+static void do_read_data(libcouchbase_server_t *c)
 {
     size_t processed;
     const int operations_per_call = 1000;
@@ -42,7 +42,7 @@ static void do_read_data(libmembase_server_t *c)
                     c->instance->request_handler[req->request.opcode](c, req);
                     break;
                 case PROTOCOL_BINARY_RES:
-                    libmembase_server_purge_implicit_responses(c, res->response.opaque);
+                    libcouchbase_server_purge_implicit_responses(c, res->response.opaque);
                     c->instance->response_handler[res->response.opcode](c, res);
                     req = (protocol_binary_request_header*)c->cmd_log.data;
                     processed = ntohl(req->request.bodylen) + sizeof(*req);
@@ -90,7 +90,7 @@ static void do_read_data(libmembase_server_t *c)
     } while (true);
 }
 
-static void do_send_data(libmembase_server_t *c)
+static void do_send_data(libcouchbase_server_t *c)
 {
     do {
         ssize_t nw = send(c->sock, c->output.data, c->output.avail, 0);
@@ -125,9 +125,9 @@ static void do_send_data(libmembase_server_t *c)
     } while (c->output.avail > 0);
 }
 
-void libmembase_server_event_handler(evutil_socket_t sock, short which, void *arg) {
+void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *arg) {
     (void)sock;
-    libmembase_server_t *c = (libmembase_server_t *)arg;
+    libcouchbase_server_t *c = (libcouchbase_server_t *)arg;
 
     if (which & EV_READ) {
         do_read_data(c);
@@ -138,16 +138,16 @@ void libmembase_server_event_handler(evutil_socket_t sock, short which, void *ar
     }
 
     if (c->output.avail == 0) {
-        libmembase_server_update_event(c, EV_READ,
-                                       libmembase_server_event_handler);
+        libcouchbase_server_update_event(c, EV_READ,
+                                         libcouchbase_server_event_handler);
     } else {
-        libmembase_server_update_event(c, EV_READ | EV_WRITE,
-                                       libmembase_server_event_handler);
+        libcouchbase_server_update_event(c, EV_READ | EV_WRITE,
+                                         libcouchbase_server_event_handler);
     }
 
     if (c->instance->execute) {
         bool done = true;
-        libmembase_t instance = c->instance;
+        libcouchbase_t instance = c->instance;
         for (size_t ii = 0; ii < instance->nservers; ++ii) {
             c = instance->servers + ii;
             if (c->cmd_log.avail || c->output.avail || c->input.avail) {
@@ -161,8 +161,8 @@ void libmembase_server_event_handler(evutil_socket_t sock, short which, void *ar
     }
 }
 
-void libmembase_server_update_event(libmembase_server_t *c, short flags,
-                                    EVENT_HANDLER handler) {
+void libcouchbase_server_update_event(libcouchbase_server_t *c, short flags,
+                                      EVENT_HANDLER handler) {
     if (c->ev_flags == flags && c->ev_handler == handler) {
         /* no change */
         return;
@@ -182,12 +182,12 @@ void libmembase_server_update_event(libmembase_server_t *c, short flags,
     }
 }
 
-static void breakout_vbucket_state_listener(libmembase_server_t *server)
+static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
 {
     event_base_loopbreak(server->instance->ev_base);
 }
 
-void libmembase_ensure_vbucket_config(libmembase_t instance)
+void libcouchbase_ensure_vbucket_config(libcouchbase_t instance)
 {
     if (instance->vbucket_config == NULL) {
         vbucket_state_listener_t old = instance->vbucket_state_listener;

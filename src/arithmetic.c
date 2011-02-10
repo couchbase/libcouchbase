@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -22,26 +22,26 @@
  * @author Trond Norbye
  * @todo add documentation
  */
-LIBMEMBASE_API
-libmembase_error_t libmembase_arithmetic(libmembase_t instance,
-                                         const void *key, size_t nkey,
-                                         int64_t delta, time_t exp,
-                                         bool create, uint64_t initial)
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
+                                             const void *key, size_t nkey,
+                                             int64_t delta, time_t exp,
+                                             bool create, uint64_t initial)
 {
-    return libmembase_arithmetic_by_key(instance, NULL, 0, key, nkey,
-                                        delta, exp, create, initial);
+    return libcouchbase_arithmetic_by_key(instance, NULL, 0, key, nkey,
+                                          delta, exp, create, initial);
 }
 
-LIBMEMBASE_API
-libmembase_error_t libmembase_arithmetic_by_key(libmembase_t instance,
-                                                const void *hashkey,
-                                                size_t nhashkey,
-                                                const void *key, size_t nkey,
-                                                int64_t delta, time_t exp,
-                                                bool create, uint64_t initial)
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
+                                                    const void *hashkey,
+                                                    size_t nhashkey,
+                                                    const void *key, size_t nkey,
+                                                    int64_t delta, time_t exp,
+                                                    bool create, uint64_t initial)
 {
     // we need a vbucket config before we can start getting data..
-    libmembase_ensure_vbucket_config(instance);
+    libcouchbase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
     uint16_t vb;
@@ -53,7 +53,7 @@ libmembase_error_t libmembase_arithmetic_by_key(libmembase_t instance,
                                                   key, nkey);
     }
 
-    libmembase_server_t *server;
+    libcouchbase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
     protocol_binary_request_incr req;
     memset(&req, 0, sizeof(req));
@@ -79,10 +79,10 @@ libmembase_error_t libmembase_arithmetic_by_key(libmembase_t instance,
                sizeof(req.message.body.expiration));
     }
 
-    libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
-    libmembase_server_write_packet(server, key, nkey);
-    libmembase_server_end_packet(server);
-    libmembase_server_send_packets(server);
+    libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+    libcouchbase_server_write_packet(server, key, nkey);
+    libcouchbase_server_end_packet(server);
+    libcouchbase_server_send_packets(server);
 
-    return LIBMEMBASE_SUCCESS;
+    return LIBCOUCHBASE_SUCCESS;
 }

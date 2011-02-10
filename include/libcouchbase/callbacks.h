@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@
  *
  * @author Trond Norbye
  */
-#ifndef LIBMEMBASE_CALLBACKS_H
-#define LIBMEMBASE_CALLBACKS_H 1
+#ifndef LIBCOUCHBASE_CALLBACKS_H
+#define LIBCOUCHBASE_CALLBACKS_H 1
 
-#ifndef LIBMEMBASE_MEMBASE_H
-#error "Include libmembase/membase.h instead"
+#ifndef LIBCOUCHBASE_COUCHBASE_H
+#error "Include libcouchbase/couchbase.h instead"
 #endif
 
 #ifdef __cplusplus
@@ -33,23 +33,23 @@ extern "C" {
 #endif
 
     typedef struct {
-        void (*get)(libmembase_t instance,
-                    libmembase_error_t error,
+        void (*get)(libcouchbase_t instance,
+                    libcouchbase_error_t error,
                     const void *key, size_t nkey,
                     const void *bytes, size_t nbytes,
                     uint32_t flags, uint64_t cas);
-        void (*storage)(libmembase_t instance,
-                        libmembase_error_t error,
+        void (*storage)(libcouchbase_t instance,
+                        libcouchbase_error_t error,
                         const void *key, size_t nkey,
                         uint64_t cas);
-        void (*arithmetic)(libmembase_t instance,
-                           libmembase_error_t error,
+        void (*arithmetic)(libcouchbase_t instance,
+                           libcouchbase_error_t error,
                            const void *key, size_t nkey,
                            uint64_t value, uint64_t cas);
-        void (*remove)(libmembase_t instance,
-                       libmembase_error_t error,
+        void (*remove)(libcouchbase_t instance,
+                       libcouchbase_error_t error,
                        const void *key, size_t nkey);
-        void (*tap_mutation)(libmembase_t instance,
+        void (*tap_mutation)(libcouchbase_t instance,
                              const void *key,
                              size_t nkey,
                              const void *data,
@@ -58,23 +58,23 @@ extern "C" {
                              uint32_t exp,
                              const void *es,
                              size_t nes);
-        void (*tap_deletion)(libmembase_t instance,
+        void (*tap_deletion)(libcouchbase_t instance,
                              const void *key,
                              size_t nkey,
                              const void *es,
                              size_t nes);
-        void (*tap_flush)(libmembase_t instance,
+        void (*tap_flush)(libcouchbase_t instance,
                           const void *es,
                           size_t nes);
-        void (*tap_opaque)(libmembase_t instance,
+        void (*tap_opaque)(libcouchbase_t instance,
                            const void *es,
                            size_t nes);
-        void (*tap_vbucket_set)(libmembase_t instance,
+        void (*tap_vbucket_set)(libcouchbase_t instance,
                                 uint16_t vbid,
                                 vbucket_state_t state,
                                 const void *es,
                                 size_t nes);
-    } libmembase_callback_t;
+    } libcouchbase_callback_t;
 
 #ifdef __cplusplus
 }

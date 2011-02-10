@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,36 +18,36 @@
 #include "internal.h"
 
 /**
- * libmembase_mget use the GETQ command followed by a NOOP command to avoid
+ * libcouchbase_mget use the GETQ command followed by a NOOP command to avoid
  * transferring not-found responses. All of the not-found callbacks are
  * generated implicit by receiving a successful get or the NOOP.
  *
  * @author Trond Norbye
  * @todo improve the error handling
  */
-LIBMEMBASE_API
-libmembase_error_t libmembase_mget(libmembase_t instance,
-                                   size_t num_keys,
-                                   const void * const *keys,
-                                   const size_t *nkey)
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
+                                       size_t num_keys,
+                                       const void * const *keys,
+                                       const size_t *nkey)
 {
-    return libmembase_mget_by_key(instance, NULL, 0, num_keys, keys, nkey);
+    return libcouchbase_mget_by_key(instance, NULL, 0, num_keys, keys, nkey);
 }
 
-LIBMEMBASE_API
-libmembase_error_t libmembase_mget_by_key(libmembase_t instance,
-                                          const void *hashkey,
-                                          size_t nhashkey,
-                                          size_t num_keys,
-                                          const void * const *keys,
-                                          const size_t *nkey)
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
+                                              const void *hashkey,
+                                              size_t nhashkey,
+                                              size_t num_keys,
+                                              const void * const *keys,
+                                              const size_t *nkey)
 {
     // we need a vbucket config before we can start getting data..
-    libmembase_ensure_vbucket_config(instance);
+    libcouchbase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
     uint16_t vb;
-    libmembase_server_t *server;
+    libcouchbase_server_t *server;
 
     if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
@@ -72,9 +72,9 @@ libmembase_error_t libmembase_mget_by_key(libmembase_t instance,
         req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]));
         req.message.header.request.opaque = ++instance->seqno;
 
-        libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
-        libmembase_server_write_packet(server, keys[ii], nkey[ii]);
-        libmembase_server_end_packet(server);
+        libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+        libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
+        libcouchbase_server_end_packet(server);
     }
 
     protocol_binary_request_noop noop;
@@ -90,17 +90,17 @@ libmembase_error_t libmembase_mget_by_key(libmembase_t instance,
             server = instance->servers + ii;
             if (server->output.avail > 0 || server->pending.avail > 0) {
                 noop.message.header.request.opaque = ++instance->seqno;
-                libmembase_server_complete_packet(server, noop.bytes,
-                                                  sizeof(noop.bytes));
-                libmembase_server_send_packets(server);
+                libcouchbase_server_complete_packet(server, noop.bytes,
+                                                    sizeof(noop.bytes));
+                libcouchbase_server_send_packets(server);
             }
         }
     } else {
         noop.message.header.request.opaque = ++instance->seqno;
-        libmembase_server_complete_packet(server, noop.bytes,
-                                          sizeof(noop.bytes));
-        libmembase_server_send_packets(server);
+        libcouchbase_server_complete_packet(server, noop.bytes,
+                                            sizeof(noop.bytes));
+        libcouchbase_server_send_packets(server);
     }
 
-    return LIBMEMBASE_SUCCESS;
+    return LIBCOUCHBASE_SUCCESS;
 }

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 
 
 #if !defined(HAVE_HTONLL) && !defined(WORDS_BIGENDIAN)
-extern uint64_t libmembase_byteswap64(uint64_t val)
+extern uint64_t libcouchbase_byteswap64(uint64_t val)
 {
     uint64_t ret = 0;
     for (size_t ii = 0; ii < sizeof(uint64_t); ii++) {

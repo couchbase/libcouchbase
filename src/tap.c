@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@
 
 #include "internal.h"
 
-static void tap_vbucket_state_listener(libmembase_server_t *server)
+static void tap_vbucket_state_listener(libcouchbase_server_t *server)
 {
-    libmembase_t instance = server->instance;
+    libcouchbase_t instance = server->instance;
     // Locate this index:
     size_t idx;
     for (idx = 0; idx < instance->nservers; ++idx) {
@@ -54,25 +54,25 @@ static void tap_vbucket_state_listener(libmembase_server_t *server)
     req.message.header.request.bodylen = htonl((uint32_t)bodylen);
     req.message.body.flags = htonl(TAP_CONNECT_FLAG_LIST_VBUCKETS);
 
-    libmembase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+    libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
 
     uint16_t val = htons(total);
-    libmembase_server_write_packet(server, &val, sizeof(val));
+    libcouchbase_server_write_packet(server, &val, sizeof(val));
     for (int ii = 0; ii < instance->nvbuckets; ++ii) {
         if (instance->vb_server_map[ii] == idx) {
             val = htons((uint16_t)ii);
-            libmembase_server_write_packet(server, &val, sizeof(val));
+            libcouchbase_server_write_packet(server, &val, sizeof(val));
         }
     }
-    libmembase_server_end_packet(server);
+    libcouchbase_server_end_packet(server);
 
-    libmembase_server_send_packets(server);
+    libcouchbase_server_send_packets(server);
 }
 
-LIBMEMBASE_API
-void libmembase_tap_cluster(libmembase_t instance,
-                            libmembase_tap_filter_t filter,
-                            bool block)
+LIBCOUCHBASE_API
+void libcouchbase_tap_cluster(libcouchbase_t instance,
+                              libcouchbase_tap_filter_t filter,
+                              bool block)
 {
     // connect to the upstream server.
     instance->vbucket_state_listener = tap_vbucket_state_listener;

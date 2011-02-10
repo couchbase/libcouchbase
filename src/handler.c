@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@
 
 #include "internal.h"
 
-static void dummy_request_handler(libmembase_server_t *server,
-                                 protocol_binary_request_header *req)
+static void dummy_request_handler(libcouchbase_server_t *server,
+                                  protocol_binary_request_header *req)
 {
 #ifdef DEBUG
     fprintf(stderr, "Received request packet %02x\n", req->request.opcode);
@@ -35,7 +35,7 @@ static void dummy_request_handler(libmembase_server_t *server,
     (void)req;
 }
 
-static void dummy_response_handler(libmembase_server_t *server,
+static void dummy_response_handler(libcouchbase_server_t *server,
                                    protocol_binary_response_header *res)
 {
 #ifdef DEBUG
@@ -46,10 +46,10 @@ static void dummy_response_handler(libmembase_server_t *server,
     (void)res;
 }
 
-static void getq_response_handler(libmembase_server_t *server,
+static void getq_response_handler(libcouchbase_server_t *server,
                                   protocol_binary_response_header *res)
 {
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     protocol_binary_response_getq *getq = (protocol_binary_response_getq*)res;
     protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
 
@@ -64,20 +64,20 @@ static void getq_response_handler(libmembase_server_t *server,
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         const char *bytes = (const char *)res;
         bytes += sizeof(getq->bytes);
-        root->callbacks.get(root, LIBMEMBASE_SUCCESS, key, nkey,
+        root->callbacks.get(root, LIBCOUCHBASE_SUCCESS, key, nkey,
                             bytes, nbytes,
                             ntohl(getq->message.body.flags),
                             res->response.cas);
     } else {
-        root->callbacks.get(root, LIBMEMBASE_KEY_ENOENT, key, nkey,
+        root->callbacks.get(root, LIBCOUCHBASE_KEY_ENOENT, key, nkey,
                             NULL, 0, 0, 0);
     }
 }
 
-static void delete_response_handler(libmembase_server_t *server,
-                                     protocol_binary_response_header *res)
+static void delete_response_handler(libcouchbase_server_t *server,
+                                    protocol_binary_response_header *res)
 {
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
     assert(req->request.opaque == res->response.opaque);
 
@@ -87,16 +87,16 @@ static void delete_response_handler(libmembase_server_t *server,
     uint16_t status = ntohs(res->response.status);
 
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        root->callbacks.remove(root, LIBMEMBASE_SUCCESS, key, nkey);
+        root->callbacks.remove(root, LIBCOUCHBASE_SUCCESS, key, nkey);
     } else {
-        root->callbacks.remove(root, LIBMEMBASE_ERROR, key, nkey);
+        root->callbacks.remove(root, LIBCOUCHBASE_ERROR, key, nkey);
     }
 }
 
-static void storage_response_handler(libmembase_server_t *server,
+static void storage_response_handler(libcouchbase_server_t *server,
                                      protocol_binary_response_header *res)
 {
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
 
     assert(req->request.opaque == res->response.opaque);
@@ -107,18 +107,18 @@ static void storage_response_handler(libmembase_server_t *server,
     uint16_t status = ntohs(res->response.status);
 
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        root->callbacks.storage(root, LIBMEMBASE_SUCCESS, key, nkey,
+        root->callbacks.storage(root, LIBCOUCHBASE_SUCCESS, key, nkey,
                                 res->response.cas);
     } else {
-        root->callbacks.storage(root, LIBMEMBASE_ERROR, key, nkey,
+        root->callbacks.storage(root, LIBCOUCHBASE_ERROR, key, nkey,
                                 res->response.cas);
     }
 }
 
-static void arithmetic_response_handler(libmembase_server_t *server,
+static void arithmetic_response_handler(libcouchbase_server_t *server,
                                         protocol_binary_response_header *res)
 {
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
     assert(req->request.opaque == res->response.opaque);
 
@@ -131,16 +131,16 @@ static void arithmetic_response_handler(libmembase_server_t *server,
         uint64_t value;
         memcpy(&value, res + 1, sizeof(value));
         value = ntohll(value);
-        root->callbacks.arithmetic(root, LIBMEMBASE_SUCCESS, key, nkey,
+        root->callbacks.arithmetic(root, LIBCOUCHBASE_SUCCESS, key, nkey,
                                    value,
                                    res->response.cas);
     } else {
-        root->callbacks.arithmetic(root, LIBMEMBASE_ERROR, key, nkey,
+        root->callbacks.arithmetic(root, LIBCOUCHBASE_ERROR, key, nkey,
                                    0, 0);
     }
 }
 
-static void tap_mutation_handler(libmembase_server_t *server,
+static void tap_mutation_handler(libcouchbase_server_t *server,
                                  protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
@@ -156,12 +156,12 @@ static void tap_mutation_handler(libmembase_server_t *server,
     void *data = key + nkey;
     uint32_t nbytes = ntohl(req->request.bodylen) - req->request.extlen - nes - nkey;
 
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     root->callbacks.tap_mutation(root, key, nkey, data, nbytes,
                                  flags, exp, es, nes);
 }
 
-static void tap_deletion_handler(libmembase_server_t *server,
+static void tap_deletion_handler(libcouchbase_server_t *server,
                                  protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
@@ -171,11 +171,11 @@ static void tap_deletion_handler(libmembase_server_t *server,
     char *es = packet + sizeof(deletion->bytes);
     uint16_t nes = ntohs(deletion->message.body.tap.enginespecific_length);
     char *key = es + nes;
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     root->callbacks.tap_deletion(root, key, nkey, es, nes);
 }
 
-static void tap_flush_handler(libmembase_server_t *server,
+static void tap_flush_handler(libcouchbase_server_t *server,
                               protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
@@ -183,11 +183,11 @@ static void tap_flush_handler(libmembase_server_t *server,
     protocol_binary_request_tap_flush *flush = (protocol_binary_request_tap_flush*)req;
     char *es = packet + sizeof(flush->bytes);
     uint16_t nes = ntohs(flush->message.body.tap.enginespecific_length);
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     root->callbacks.tap_flush(root, es, nes);
 }
 
-static void tap_opaque_handler(libmembase_server_t *server,
+static void tap_opaque_handler(libcouchbase_server_t *server,
                                protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
@@ -195,11 +195,11 @@ static void tap_opaque_handler(libmembase_server_t *server,
     protocol_binary_request_tap_opaque *opaque = (protocol_binary_request_tap_opaque*)req;
     char *es = packet + sizeof(opaque->bytes);
     uint16_t nes = ntohs(opaque->message.body.tap.enginespecific_length);
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     root->callbacks.tap_opaque(root, es, nes);
 }
 
-static void tap_vbucket_set_handler(libmembase_server_t *server,
+static void tap_vbucket_set_handler(libcouchbase_server_t *server,
                                     protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
@@ -210,12 +210,12 @@ static void tap_vbucket_set_handler(libmembase_server_t *server,
     uint32_t state;
     memcpy(&state, es + nes, sizeof(state));
     state = ntohl(state);
-    libmembase_t root = server->instance;
+    libcouchbase_t root = server->instance;
     root->callbacks.tap_vbucket_set(root, ntohs(req->request.vbucket),
                                     (vbucket_state_t)state, es, nes);
 }
 
-static void sasl_list_mech_response_handler(libmembase_server_t *server,
+static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
                                             protocol_binary_response_header *res)
 {
     assert(ntohs(res->response.status) == PROTOCOL_BINARY_RESPONSE_SUCCESS);
@@ -238,25 +238,25 @@ static void sasl_list_mech_response_handler(libmembase_server_t *server,
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     req.message.header.request.bodylen = ntohl((uint32_t)(bodysize));
 
-    libmembase_server_buffer_start_packet(server, &server->output,
-                                          req.bytes, sizeof(req.bytes));
-    libmembase_server_buffer_write_packet(server, &server->output,
-                                          chosenmech, keylen);
-    libmembase_server_buffer_write_packet(server, &server->output, data, len);
-    libmembase_server_buffer_end_packet(server, &server->output);
+    libcouchbase_server_buffer_start_packet(server, &server->output,
+                                            req.bytes, sizeof(req.bytes));
+    libcouchbase_server_buffer_write_packet(server, &server->output,
+                                            chosenmech, keylen);
+    libcouchbase_server_buffer_write_packet(server, &server->output, data, len);
+    libcouchbase_server_buffer_end_packet(server, &server->output);
 
     // send the data and add it to libevent..
-    libmembase_server_event_handler(0, EV_WRITE, server);
+    libcouchbase_server_event_handler(0, EV_WRITE, server);
 }
 
-static void sasl_auth_response_handler(libmembase_server_t *server,
+static void sasl_auth_response_handler(libcouchbase_server_t *server,
                                        protocol_binary_response_header *res)
 {
     uint16_t ret = ntohs(res->response.status);
     if (ret == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         sasl_dispose(&server->sasl_conn);
         server->sasl_conn = NULL;
-        libmembase_server_connected(server);
+        libcouchbase_server_connected(server);
     } else if (ret == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
         // I don't know how to step yet ;-)
         abort();
@@ -265,7 +265,7 @@ static void sasl_auth_response_handler(libmembase_server_t *server,
     }
 }
 
-static void sasl_step_response_handler(libmembase_server_t *server,
+static void sasl_step_response_handler(libcouchbase_server_t *server,
                                        protocol_binary_response_header *res)
 {
     (void)server;
@@ -281,7 +281,7 @@ static void sasl_step_response_handler(libmembase_server_t *server,
 #endif
 }
 
-static void dummy_tap_mutation_callback(libmembase_t instance,
+static void dummy_tap_mutation_callback(libcouchbase_t instance,
                                         const void *key,
                                         size_t nkey,
                                         const void *data,
@@ -295,7 +295,7 @@ static void dummy_tap_mutation_callback(libmembase_t instance,
     (void)flags; (void)exp; (void)es; (void)nes;
 }
 
-static void dummy_tap_deletion_callback(libmembase_t instance,
+static void dummy_tap_deletion_callback(libcouchbase_t instance,
                                         const void *key,
                                         size_t nkey,
                                         const void *es,
@@ -305,20 +305,20 @@ static void dummy_tap_deletion_callback(libmembase_t instance,
 
 }
 
-static void dummy_tap_flush_callback(libmembase_t instance,
+static void dummy_tap_flush_callback(libcouchbase_t instance,
                                      const void *es,
                                      size_t nes)
 {
     (void)instance; (void)es; (void)nes;
 }
 
-static void dummy_tap_opaque_callback(libmembase_t instance,
+static void dummy_tap_opaque_callback(libcouchbase_t instance,
                                       const void *es,
                                       size_t nes)
 {
     (void)instance; (void)es; (void)nes;
 }
-static void dummy_tap_vbucket_set_callback(libmembase_t instance,
+static void dummy_tap_vbucket_set_callback(libcouchbase_t instance,
                                            uint16_t vbid,
                                            vbucket_state_t state,
                                            const void *es,
@@ -327,8 +327,8 @@ static void dummy_tap_vbucket_set_callback(libmembase_t instance,
     (void)instance; (void)vbid; (void)state; (void)es; (void)nes;
 }
 
-static void dummy_get_callback(libmembase_t instance,
-                               libmembase_error_t error,
+static void dummy_get_callback(libcouchbase_t instance,
+                               libcouchbase_error_t error,
                                const void *key, size_t nkey,
                                const void *bytes, size_t nbytes,
                                uint32_t flags, uint64_t cas)
@@ -337,8 +337,8 @@ static void dummy_get_callback(libmembase_t instance,
     (void)bytes; (void)nbytes; (void)flags; (void)cas;
 }
 
-static void dummy_storage_callback(libmembase_t instance,
-                                   libmembase_error_t error,
+static void dummy_storage_callback(libcouchbase_t instance,
+                                   libcouchbase_error_t error,
                                    const void *key, size_t nkey,
                                    uint64_t cas)
 {
@@ -346,8 +346,8 @@ static void dummy_storage_callback(libmembase_t instance,
     (void)cas;
 }
 
-static void dummy_arithmetic_callback(libmembase_t instance,
-                                      libmembase_error_t error,
+static void dummy_arithmetic_callback(libcouchbase_t instance,
+                                      libcouchbase_error_t error,
                                       const void *key, size_t nkey,
                                       uint64_t value, uint64_t cas)
 {
@@ -355,15 +355,15 @@ static void dummy_arithmetic_callback(libmembase_t instance,
     (void)value; (void)cas;
 }
 
-static void dummy_remove_callback(libmembase_t instance,
-                                  libmembase_error_t error,
+static void dummy_remove_callback(libcouchbase_t instance,
+                                  libcouchbase_error_t error,
                                   const void *key, size_t nkey)
 {
     (void)instance; (void)error; (void)key; (void)nkey;
 }
 
 
-void libmembase_initialize_packet_handlers(libmembase_t instance)
+void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 {
     for (int ii = 0; ii < 0x100; ++ii) {
         instance->request_handler[ii] = dummy_request_handler;
@@ -403,9 +403,9 @@ void libmembase_initialize_packet_handlers(libmembase_t instance)
     instance->response_handler[PROTOCOL_BINARY_CMD_SASL_STEP] = sasl_step_response_handler;
 }
 
-LIBMEMBASE_API
-void libmembase_set_callbacks(libmembase_t instance,
-                              libmembase_callback_t *callbacks)
+LIBCOUCHBASE_API
+void libcouchbase_set_callbacks(libcouchbase_t instance,
+                                libcouchbase_callback_t *callbacks)
 {
     if (callbacks->get != NULL) {
         instance->callbacks.get = callbacks->get;

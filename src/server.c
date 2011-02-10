@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@
  * Release all allocated resources for this server instance
  * @param server the server to destroy
  */
-void libmembase_server_destroy(libmembase_server_t *server)
+void libcouchbase_server_destroy(libcouchbase_server_t *server)
 {
     /* Cancel all pending commands */
-    libmembase_server_purge_implicit_responses(server, server->instance->seqno);
+    libcouchbase_server_purge_implicit_responses(server, server->instance->seqno);
 
     if (server->sasl_conn != NULL) {
         sasl_dispose(&server->sasl_conn);
@@ -80,9 +80,9 @@ static bool get_local_address(evutil_socket_t sock,
         (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
         (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-    {
-        return false;
-    }
+        {
+            return false;
+        }
 
     return true;
 }
@@ -107,9 +107,9 @@ static bool get_remote_address(evutil_socket_t sock,
         (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
         (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-    {
-        return false;
-    }
+        {
+            return false;
+        }
 
     return true;
 }
@@ -119,7 +119,7 @@ static bool get_remote_address(evutil_socket_t sock,
  * packet to the server.
  * @param server the server object to auth agains
  */
-static void start_sasl_auth_server(libmembase_server_t *server)
+static void start_sasl_auth_server(libcouchbase_server_t *server)
 {
     protocol_binary_request_no_extras req;
     memset(&req, 0, sizeof(req));
@@ -127,13 +127,13 @@ static void start_sasl_auth_server(libmembase_server_t *server)
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
-    libmembase_server_buffer_complete_packet(server, &server->output,
-                                             req.bytes, sizeof(req.bytes));
+    libcouchbase_server_buffer_complete_packet(server, &server->output,
+                                               req.bytes, sizeof(req.bytes));
     // send the data and add it to libevent..
-    libmembase_server_event_handler(0, EV_WRITE, server);
+    libcouchbase_server_event_handler(0, EV_WRITE, server);
 }
 
-void libmembase_server_connected(libmembase_server_t *server)
+void libcouchbase_server_connected(libcouchbase_server_t *server)
 {
     server->connected = true;
 
@@ -145,11 +145,11 @@ void libmembase_server_connected(libmembase_server_t *server)
         server->output.avail += server->pending.avail;
         server->pending.avail = 0;
         // Send the pending data!
-        libmembase_server_event_handler(0, EV_WRITE, server);
+        libcouchbase_server_event_handler(0, EV_WRITE, server);
     }
 }
 
-static void socket_connected(libmembase_server_t *server)
+static void socket_connected(libcouchbase_server_t *server)
 {
     char local[NI_MAXHOST + NI_MAXSERV + 2];
     char remote[NI_MAXHOST + NI_MAXSERV + 2];
@@ -157,37 +157,37 @@ static void socket_connected(libmembase_server_t *server)
     get_local_address(server->sock, local, sizeof(local));
     get_remote_address(server->sock, remote, sizeof(remote));
 
-    assert(sasl_client_new("membase", server->hostname, local, remote,
+    assert(sasl_client_new("couchbase", server->hostname, local, remote,
                            server->instance->sasl.callbacks, 0,
                            &server->sasl_conn) == SASL_OK);
 
     if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
         // No SASL AUTH needed
-        libmembase_server_connected(server);
+        libcouchbase_server_connected(server);
     } else {
         start_sasl_auth_server(server);
     }
 
     // Set the correct event handler
-    libmembase_server_update_event(server, EV_READ,
-                                   libmembase_server_event_handler);
+    libcouchbase_server_update_event(server, EV_READ,
+                                     libcouchbase_server_event_handler);
 }
 
-static bool server_connect(libmembase_server_t *server);
-static void try_next_server_connect(libmembase_server_t *server);
+static bool server_connect(libcouchbase_server_t *server);
+static void try_next_server_connect(libcouchbase_server_t *server);
 
 
 static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
 {
     (void)sock;
     (void)which;
-    libmembase_server_t *server = (libmembase_server_t*)arg;
+    libcouchbase_server_t *server = (libcouchbase_server_t*)arg;
     if (!server_connect(server)) {
         try_next_server_connect(server);
     }
 }
 
-static bool server_connect(libmembase_server_t *server) {
+static bool server_connect(libcouchbase_server_t *server) {
     bool retry;
     do {
         retry = false;
@@ -205,9 +205,9 @@ static bool server_connect(libmembase_server_t *server) {
                 socket_connected(server);
                 return true;
             case EINPROGRESS: /* First call to connect */
-                libmembase_server_update_event(server,
-                                               EV_WRITE,
-                                               server_connect_handler);
+                libcouchbase_server_update_event(server,
+                                                 EV_WRITE,
+                                                 server_connect_handler);
                 return true;
             case EALREADY: /* Subsequent calls to connect */
                 return true;
@@ -224,7 +224,7 @@ static bool server_connect(libmembase_server_t *server) {
     return false;
 }
 
-static void try_next_server_connect(libmembase_server_t *server) {
+static void try_next_server_connect(libcouchbase_server_t *server) {
     while (server->curr_ai != NULL) {
         server->sock = socket(server->curr_ai->ai_family,
                               server->curr_ai->ai_socktype,
@@ -247,7 +247,7 @@ static void try_next_server_connect(libmembase_server_t *server) {
 }
 
 
-void libmembase_server_initialize(libmembase_server_t *server, int servernum)
+void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum)
 {
     /* Initialize all members */
     server->current_packet = (size_t)-1;
@@ -275,15 +275,15 @@ void libmembase_server_initialize(libmembase_server_t *server, int servernum)
     }
 }
 
-void libmembase_server_send_packets(libmembase_server_t *server)
+void libcouchbase_server_send_packets(libcouchbase_server_t *server)
 {
     if (server->connected) {
-        libmembase_server_update_event(server, EV_READ|EV_WRITE,
-                                       libmembase_server_event_handler);
+        libcouchbase_server_update_event(server, EV_READ|EV_WRITE,
+                                         libcouchbase_server_event_handler);
     }
 }
 
-void libmembase_server_purge_implicit_responses(libmembase_server_t *c, uint32_t seqno)
+void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint32_t seqno)
 {
     protocol_binary_request_header *req = (protocol_binary_request_header*)c->cmd_log.data;
     while (c->cmd_log.avail >= sizeof(*req) &&
@@ -291,7 +291,7 @@ void libmembase_server_purge_implicit_responses(libmembase_server_t *c, uint32_t
            req->request.opaque < seqno) {
         switch (req->request.opcode) {
         case PROTOCOL_BINARY_CMD_GETQ:
-            c->instance->callbacks.get(c->instance, LIBMEMBASE_KEY_ENOENT,
+            c->instance->callbacks.get(c->instance, LIBCOUCHBASE_KEY_ENOENT,
                                        (void*)(req + 1),
                                        ntohs(req->request.keylen),
                                        NULL, 0, 0, 0);

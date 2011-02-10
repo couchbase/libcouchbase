@@ -1,5 +1,5 @@
 #
-#     Copyright 2010 Membase, Inc.
+#     Copyright 2010 Couchbase, Inc.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #
 
 #
-# Configure script to check for all dependencies needed by libmembase.
+# Configure script to check for all dependencies needed by libcouchbase.
 # I prefer using the macros from the "pandora build system" where I can
 # since they adds increased flexibility for searching for libraries and
 # support multi-isa target systems.
@@ -24,7 +24,7 @@
 #
 AC_PREREQ(2.60)
 #m4_include([m4/version.m4])
-AC_INIT(libmembase, VERSION_NUMBER, trond.norbye@gmail.com)
+AC_INIT(libcouchbase, VERSION_NUMBER, trond.norbye@gmail.com)
 AC_CONFIG_SRCDIR([src/internal.h])
 AC_CONFIG_AUX_DIR(config)
 
@@ -69,7 +69,7 @@ AH_TOP([
 #define CONFIG_H
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.

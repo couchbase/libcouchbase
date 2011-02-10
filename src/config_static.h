@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@
  *
  * @author Trond Norbye
  */
-#ifndef LIBMEMBASE_CONFIG_STATIC_H
-#define LIBMEMBASE_CONFIG_STATIC_H 1
+#ifndef LIBCOUCHBASE_CONFIG_STATIC_H
+#define LIBCOUCHBASE_CONFIG_STATIC_H 1
 
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
@@ -62,13 +62,13 @@
 #define ntohll(a) a
 #define htonll(a) a
 #else
-#define ntohll(a) libmembase_byteswap64(a)
-#define htonll(a) libmembase_byteswap64(a)
+#define ntohll(a) libcouchbase_byteswap64(a)
+#define htonll(a) libcouchbase_byteswap64(a)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-extern uint64_t libmembase_byteswap64(uint64_t val);
+    extern uint64_t libcouchbase_byteswap64(uint64_t val);
 #ifdef __cplusplus
 }
 #endif
@@ -76,11 +76,11 @@ extern uint64_t libmembase_byteswap64(uint64_t val);
 #endif
 
 #if defined (__SUNPRO_C) && (__SUNPRO_C >= 0x550)
-#define LIBMEMBASE_API __global
+#define LIBCOUCHBASE_API __global
 #elif defined __GNUC__
-#define LIBMEMBASE_API __attribute__ ((visibility("default")))
+#define LIBCOUCHBASE_API __attribute__ ((visibility("default")))
 #else
-#define LIBMEMBASE_API
+#define LIBCOUCHBASE_API
 #endif
 
 #endif

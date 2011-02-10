@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  *   limitations under the License.
  */
 
-#ifndef LIBMEMBASE_SRC_PACKET_DEBUG_H
-#define LIBMEMBASE_SRC_PACKET_DEBUG_H 1
+#ifndef LIBCOUCHBASE_SRC_PACKET_DEBUG_H
+#define LIBCOUCHBASE_SRC_PACKET_DEBUG_H 1
 
-bool libmembase_packet_debug(libmembase_t instance, const void *ptr);
+bool libcouchbase_packet_debug(libcouchbase_t instance, const void *ptr);
 
 #endif

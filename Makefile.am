@@ -1,5 +1,5 @@
 #
-#     Copyright 2010 Membase, Inc.
+#     Copyright 2010 Couchbase, Inc.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 #
 
 #
-# Automake file used to build libmembase. Please avoid using propritary
+# Automake file used to build libcouchbase. Please avoid using propritary
 # make constructs, but keep the syntax portable. To reduce the posibility
 # for merge conflicts all list of files should be sorted aphabetically
 # (If everyone always add their files to the end of the list that line will
@@ -25,14 +25,14 @@
 #
 ACLOCAL_AMFLAGS = -I m4 --force
 
-lib_LTLIBRARIES = libmembase.la memcached_packet_debug.la
+lib_LTLIBRARIES = libcouchbase.la memcached_packet_debug.la
 
 pkginclude_HEADERS = \
-                     include/libmembase/callbacks.h \
-                     include/libmembase/membase.h \
-                     include/libmembase/types.h
+                     include/libcouchbase/callbacks.h \
+                     include/libcouchbase/couchbase.h \
+                     include/libcouchbase/types.h
 
-libmembase_la_SOURCES = \
+libcouchbase_la_SOURCES = \
                         src/arithmetic.c \
                         src/base64.c \
                         src/cookie.c \
@@ -50,9 +50,9 @@ libmembase_la_SOURCES = \
 
 # Please remember to update the version info before each release if you
 # add / remove functions.
-libmembase_la_LDFLAGS=$(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2) \
+libcouchbase_la_LDFLAGS=$(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2) \
                       -version-info 0:0:0
-libmembase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBMEMBASE_INTERNAL=1
+libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
 memcached_packet_debug_la_SOURCES= src/packet_debug.c \
                                    src/utilities.c
@@ -69,17 +69,17 @@ noinst_PROGRAMS = \
                example/memrm
 
 example_memcat_SOURCES = example/memcat.c
-example_memcat_LDADD = libmembase.la
+example_memcat_LDADD = libcouchbase.la
 example_memcat_LDFLAGS = $(LTLIBEVENT)
 
 example_memcp_SOURCES = example/memcp.c
-example_memcp_LDADD = libmembase.la
+example_memcp_LDADD = libcouchbase.la
 example_memcp_LDFLAGS = $(LTLIBEVENT)
 
 example_memdump_SOURCES = example/memdump.c
-example_memdump_LDADD = libmembase.la
+example_memdump_LDADD = libcouchbase.la
 example_memdump_LDFLAGS = $(LTLIBEVENT)
 
 example_memrm_SOURCES = example/memrm.c
-example_memrm_LDADD = libmembase.la
+example_memrm_LDADD = libcouchbase.la
 example_memrm_LDFLAGS = $(LTLIBEVENT)

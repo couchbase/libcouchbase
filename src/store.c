@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,29 +25,29 @@
  * @todo we might want to wait to write the data to the sockets if the
  *       user want to run a batch of store requests?
  */
-LIBMEMBASE_API
-libmembase_error_t libmembase_store(libmembase_t instance,
-                                    libmembase_storage_t operation,
-                                    const void *key, size_t nkey,
-                                    const void *bytes, size_t nbytes,
-                                    uint32_t flags, time_t exp,
-                                    uint64_t cas)
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
+                                        libcouchbase_storage_t operation,
+                                        const void *key, size_t nkey,
+                                        const void *bytes, size_t nbytes,
+                                        uint32_t flags, time_t exp,
+                                        uint64_t cas)
 {
-    return libmembase_store_by_key(instance, operation, NULL, 0, key, nkey,
-                                   bytes, nbytes, flags, exp, cas);
+    return libcouchbase_store_by_key(instance, operation, NULL, 0, key, nkey,
+                                     bytes, nbytes, flags, exp, cas);
 }
 
-libmembase_error_t libmembase_store_by_key(libmembase_t instance,
-                                           libmembase_storage_t operation,
-                                           const void *hashkey,
-                                           size_t nhashkey,
-                                           const void *key, size_t nkey,
-                                           const void *bytes, size_t nbytes,
-                                           uint32_t flags, time_t exp,
-                                           uint64_t cas)
+libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
+                                               libcouchbase_storage_t operation,
+                                               const void *hashkey,
+                                               size_t nhashkey,
+                                               const void *key, size_t nkey,
+                                               const void *bytes, size_t nbytes,
+                                               uint32_t flags, time_t exp,
+                                               uint64_t cas)
 {
     // we need a vbucket config before we can start getting data..
-    libmembase_ensure_vbucket_config(instance);
+    libcouchbase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
     uint16_t vb;
@@ -59,7 +59,7 @@ libmembase_error_t libmembase_store_by_key(libmembase_t instance,
                                                   key, nkey);
     }
 
-    libmembase_server_t *server;
+    libcouchbase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
     protocol_binary_request_set req;
     memset(&req, 0, sizeof(req));
@@ -75,21 +75,21 @@ libmembase_error_t libmembase_store_by_key(libmembase_t instance,
 
     size_t headersize = sizeof(req.bytes);
     switch (operation) {
-    case LIBMEMBASE_ADD:
+    case LIBCOUCHBASE_ADD:
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_ADD;
         break;
-    case LIBMEMBASE_REPLACE:
+    case LIBCOUCHBASE_REPLACE:
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_REPLACE;
         break;
-    case LIBMEMBASE_SET:
+    case LIBCOUCHBASE_SET:
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SET;
         break;
-    case LIBMEMBASE_APPEND:
+    case LIBCOUCHBASE_APPEND:
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_APPEND;
         req.message.header.request.extlen = 0;
         headersize -= 8;
         break;
-    case LIBMEMBASE_PREPEND:
+    case LIBCOUCHBASE_PREPEND:
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_PREPEND;
         req.message.header.request.extlen = 0;
         headersize -= 8;
@@ -101,11 +101,11 @@ libmembase_error_t libmembase_store_by_key(libmembase_t instance,
     size_t bodylen = nkey + nbytes + req.message.header.request.extlen;
     req.message.header.request.bodylen = htonl((uint32_t)bodylen);
 
-    libmembase_server_start_packet(server, &req, headersize);
-    libmembase_server_write_packet(server, key, nkey);
-    libmembase_server_write_packet(server, bytes, nbytes);
-    libmembase_server_end_packet(server);
-    libmembase_server_send_packets(server);
+    libcouchbase_server_start_packet(server, &req, headersize);
+    libcouchbase_server_write_packet(server, key, nkey);
+    libcouchbase_server_write_packet(server, bytes, nbytes);
+    libcouchbase_server_end_packet(server);
+    libcouchbase_server_send_packets(server);
 
-    return LIBMEMBASE_SUCCESS;
+    return LIBCOUCHBASE_SUCCESS;
 }

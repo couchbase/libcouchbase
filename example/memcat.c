@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  */
 
 /**
- * Example program using libmembase_mget.
+ * Example program using libcouchbase_mget.
  *
  * @author Trond Norbye
  * @todo add documentation
@@ -33,7 +33,7 @@
 #include <assert.h>
 #include <event.h>
 
-#include <libmembase/membase.h>
+#include <libcouchbase/couchbase.h>
 
 static void usage(char cmd, const void *arg, void *cookie);
 static void set_char_ptr(char cmd, const void *arg, void *cookie) {
@@ -163,15 +163,15 @@ static void handle_options(int argc, char **argv) {
 
 FILE *output;
 
-static void get_callback(libmembase_t instance,
-                         libmembase_error_t error,
+static void get_callback(libcouchbase_t instance,
+                         libcouchbase_error_t error,
                          const void *key, size_t nkey,
                          const void *bytes, size_t nbytes,
                          uint32_t flags, uint64_t cas)
 {
     (void)instance;
     (void)bytes;
-    fprintf(output, "%s <", error == LIBMEMBASE_SUCCESS ? "Found" : "Missing");
+    fprintf(output, "%s <", error == LIBCOUCHBASE_SUCCESS ? "Found" : "Missing");
     fwrite(key, nkey, 1, output);
     fprintf(output, "> size: %zu flags %04x cas: %"PRIu64"\n",
             nbytes, flags, cas);
@@ -202,31 +202,31 @@ int main(int argc, char **argv)
     }
 
     struct event_base *evbase = event_init();
-    libmembase_t instance = libmembase_create(host, username,
-                                              passwd, bucket, evbase);
+    libcouchbase_t instance = libcouchbase_create(host, username,
+                                                  passwd, bucket, evbase);
     if (instance == NULL) {
-        fprintf(stderr, "Failed to create libmembase instance\n");
+        fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
     }
 
-    if (libmembase_connect(instance) != LIBMEMBASE_SUCCESS) {
-        fprintf(stderr, "Failed to connect libmembase instance to server\n");
+    if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
+        fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
         return 1;
     }
 
-    libmembase_callback_t callbacks = {
+    libcouchbase_callback_t callbacks = {
         .get = get_callback
     };
-    libmembase_set_callbacks(instance, &callbacks);
+    libcouchbase_set_callbacks(instance, &callbacks);
 
-    if (libmembase_mget(instance, jj,
-                        (const void * const *)keys,
-                        nkey) != LIBMEMBASE_SUCCESS) {
+    if (libcouchbase_mget(instance, jj,
+                          (const void * const *)keys,
+                          nkey) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to send requests\n");
         return 1;
     }
 
-    libmembase_execute(instance);
+    libcouchbase_execute(instance);
     free(keys);
     free(nkey);
 

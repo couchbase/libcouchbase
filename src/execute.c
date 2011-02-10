@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Membase, Inc.
+ *     Copyright 2010 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@
  *
  * @author Trond Norbye
  */
-LIBMEMBASE_API
-void libmembase_execute(libmembase_t instance)
+LIBCOUCHBASE_API
+void libcouchbase_execute(libcouchbase_t instance)
 {
     /*
      * The API is designed for you to run your own event loop,
