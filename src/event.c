@@ -28,10 +28,15 @@ static void do_read_data(libcouchbase_server_t *c)
     size_t processed;
     const int operations_per_call = 1000;
     int operations = 0;
+    protocol_binary_response_header *res;
+    protocol_binary_request_header *req;
+
     grow_buffer(&c->input, 8192);
-    protocol_binary_response_header *res = (protocol_binary_response_header*)c->input.data;
-    protocol_binary_request_header *req = (protocol_binary_request_header*)c->input.data;
+    res = (void*)c->input.data;
+    req = (void*)c->input.data;
+
     do {
+        ssize_t nr;
         while (++operations < operations_per_call &&
                c->input.avail >= sizeof(*req) &&
                c->input.avail >= (ntohl(req->request.bodylen) + sizeof(*req))) {
@@ -68,10 +73,10 @@ static void do_read_data(libcouchbase_server_t *c)
             return ;
         }
 
-        ssize_t nr = recv(c->sock,
-                          c->input.data + c->input.avail,
-                          c->input.size - c->input.avail,
-                          0);
+        nr = recv(c->sock,
+                  c->input.data + c->input.avail,
+                  c->input.size - c->input.avail,
+                  0);
 
         if (nr == -1) {
             switch (errno) {
@@ -126,8 +131,8 @@ static void do_send_data(libcouchbase_server_t *c)
 }
 
 void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *arg) {
+    libcouchbase_server_t *c = arg;
     (void)sock;
-    libcouchbase_server_t *c = (libcouchbase_server_t *)arg;
 
     if (which & EV_READ) {
         do_read_data(c);
@@ -148,7 +153,8 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
     if (c->instance->execute) {
         bool done = true;
         libcouchbase_t instance = c->instance;
-        for (size_t ii = 0; ii < instance->nservers; ++ii) {
+        size_t ii;
+        for (ii = 0; ii < instance->nservers; ++ii) {
             c = instance->servers + ii;
             if (c->cmd_log.avail || c->output.avail || c->input.avail) {
                 done = false;

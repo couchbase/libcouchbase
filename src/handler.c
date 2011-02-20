@@ -28,11 +28,11 @@
 static void dummy_request_handler(libcouchbase_server_t *server,
                                   protocol_binary_request_header *req)
 {
+    (void)server;
+    (void)req;
 #ifdef DEBUG
     fprintf(stderr, "Received request packet %02x\n", req->request.opcode);
 #endif
-    (void)server;
-    (void)req;
 }
 
 static void dummy_response_handler(libcouchbase_server_t *server,
@@ -50,17 +50,15 @@ static void getq_response_handler(libcouchbase_server_t *server,
                                   protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_response_getq *getq = (protocol_binary_response_getq*)res;
-    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
-
-    assert(req->request.opaque == res->response.opaque);
+    protocol_binary_response_getq *getq = (void*)res;
+    protocol_binary_request_header *req = (void*)server->cmd_log.data;
     const char *key = (const char *)(req + 1);
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
-
     size_t nbytes = ntohl(res->response.bodylen);
     nbytes -= nkey - res->response.extlen;
 
+    assert(req->request.opaque == res->response.opaque);
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         const char *bytes = (const char *)res;
         bytes += sizeof(getq->bytes);
@@ -78,14 +76,13 @@ static void delete_response_handler(libcouchbase_server_t *server,
                                     protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
-    assert(req->request.opaque == res->response.opaque);
-
+    protocol_binary_request_header *req = (void*)server->cmd_log.data;
     const char *key = (const char *)(req + 1);
-    key += req->request.extlen;
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
+    key += req->request.extlen;
 
+    assert(req->request.opaque == res->response.opaque);
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         root->callbacks.remove(root, LIBCOUCHBASE_SUCCESS, key, nkey);
     } else {
@@ -97,15 +94,15 @@ static void storage_response_handler(libcouchbase_server_t *server,
                                      protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
+    protocol_binary_request_header *req = (void*)server->cmd_log.data;
 
-    assert(req->request.opaque == res->response.opaque);
 
     const char *key = (const char*)(req + 1);
-    key += req->request.extlen;
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
+    key += req->request.extlen;
 
+    assert(req->request.opaque == res->response.opaque);
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         root->callbacks.storage(root, LIBCOUCHBASE_SUCCESS, key, nkey,
                                 res->response.cas);
@@ -119,14 +116,13 @@ static void arithmetic_response_handler(libcouchbase_server_t *server,
                                         protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_request_header *req = (protocol_binary_request_header*)server->cmd_log.data;
-    assert(req->request.opaque == res->response.opaque);
-
+    protocol_binary_request_header *req = (void*)server->cmd_log.data;
     const char *key = (const char *)(req + 1);
-    key += req->request.extlen;
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
+    key += req->request.extlen;
 
+    assert(req->request.opaque == res->response.opaque);
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         uint64_t value;
         memcpy(&value, res + 1, sizeof(value));
@@ -145,7 +141,7 @@ static void tap_mutation_handler(libcouchbase_server_t *server,
 {
     // @todo verify that the size is correct!
     char *packet = (char*)req;
-    protocol_binary_request_tap_mutation *mutation = (protocol_binary_request_tap_mutation*)req;
+    protocol_binary_request_tap_mutation *mutation = (void*)req;
     uint32_t flags = ntohl(mutation->message.body.item.flags);
     uint32_t exp = ntohl(mutation->message.body.item.expiration);
     uint16_t nkey = ntohs(req->request.keylen);
@@ -166,7 +162,7 @@ static void tap_deletion_handler(libcouchbase_server_t *server,
 {
     // @todo verify that the size is correct!
     char *packet = (char*)req;
-    protocol_binary_request_tap_delete *deletion = (protocol_binary_request_tap_delete*)req;
+    protocol_binary_request_tap_delete *deletion = (void*)req;
     uint16_t nkey = ntohs(req->request.keylen);
     char *es = packet + sizeof(deletion->bytes);
     uint16_t nes = ntohs(deletion->message.body.tap.enginespecific_length);
@@ -180,7 +176,7 @@ static void tap_flush_handler(libcouchbase_server_t *server,
 {
     // @todo verify that the size is correct!
     char *packet = (char*)req;
-    protocol_binary_request_tap_flush *flush = (protocol_binary_request_tap_flush*)req;
+    protocol_binary_request_tap_flush *flush = (void*)req;
     char *es = packet + sizeof(flush->bytes);
     uint16_t nes = ntohs(flush->message.body.tap.enginespecific_length);
     libcouchbase_t root = server->instance;
@@ -192,7 +188,7 @@ static void tap_opaque_handler(libcouchbase_server_t *server,
 {
     // @todo verify that the size is correct!
     char *packet = (char*)req;
-    protocol_binary_request_tap_opaque *opaque = (protocol_binary_request_tap_opaque*)req;
+    protocol_binary_request_tap_opaque *opaque = (void*)req;
     char *es = packet + sizeof(opaque->bytes);
     uint16_t nes = ntohs(opaque->message.body.tap.enginespecific_length);
     libcouchbase_t root = server->instance;
@@ -203,14 +199,14 @@ static void tap_vbucket_set_handler(libcouchbase_server_t *server,
                                     protocol_binary_request_header *req)
 {
     // @todo verify that the size is correct!
+    libcouchbase_t root = server->instance;
     char *packet = (char*)req;
-    protocol_binary_request_tap_vbucket_set *vbset = (protocol_binary_request_tap_vbucket_set*)req;
+    protocol_binary_request_tap_vbucket_set *vbset = (void*)req;
     char *es = packet + sizeof(vbset->bytes);
     uint16_t nes = ntohs(vbset->message.body.tap.enginespecific_length);
     uint32_t state;
     memcpy(&state, es + nes, sizeof(state));
     state = ntohl(state);
-    libcouchbase_t root = server->instance;
     root->callbacks.tap_vbucket_set(root, ntohs(req->request.vbucket),
                                     (vbucket_state_t)state, es, nes);
 }
@@ -218,19 +214,23 @@ static void tap_vbucket_set_handler(libcouchbase_server_t *server,
 static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
                                             protocol_binary_response_header *res)
 {
-    assert(ntohs(res->response.status) == PROTOCOL_BINARY_RESPONSE_SUCCESS);
-
-
     const char *data;
     const char *chosenmech;
     unsigned int len;
-    assert(sasl_client_start(server->sasl_conn, (const char *)(res + 1),
-                             NULL, &data, &len, &chosenmech) == SASL_OK);
-
-    size_t keylen = strlen(chosenmech);
-    size_t bodysize = keylen + len;
-
     protocol_binary_request_no_extras req;
+    size_t keylen;
+    size_t bodysize;
+
+    assert(ntohs(res->response.status) == PROTOCOL_BINARY_RESPONSE_SUCCESS);
+    if (sasl_client_start(server->sasl_conn, (const char *)(res + 1),
+                          NULL, &data, &len, &chosenmech) != SASL_OK) {
+        // @fixme!
+        abort();
+    }
+
+    keylen = strlen(chosenmech);
+    bodysize = keylen + len;
+
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_AUTH;
@@ -365,7 +365,8 @@ static void dummy_remove_callback(libcouchbase_t instance,
 
 void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 {
-    for (int ii = 0; ii < 0x100; ++ii) {
+    int ii;
+    for (ii = 0; ii < 0x100; ++ii) {
         instance->request_handler[ii] = dummy_request_handler;
         instance->response_handler[ii] = dummy_response_handler;
     }

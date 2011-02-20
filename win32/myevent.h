@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Couchbase, Inc.
+ *     Copyright 2011 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,25 +15,26 @@
  *   limitations under the License.
  */
 
-#include "internal.h"
-
-/**
- * This file contains multiple utility functions that some obscure platforms
- * don't supply
+/*
+ * This file contains dummy macros right now so that I can get the rest
+ * of libcouchbase compiled. I need to figure out how I want the event
+ * stuff to work..
+ *
+ * @author Trond Norbye
  */
+#ifndef MYEVENT_H
+#define MYEVENT_H
+
+struct event {
+   int a;
+};
+
+#define EV_WRITE 0
+#define EV_READ 0
+#define EV_PERSIST 0
 
 
-#if !defined(HAVE_HTONLL) && !defined(WORDS_BIGENDIAN)
-extern uint64_t libcouchbase_byteswap64(uint64_t val)
-{
-    size_t ii;
-    uint64_t ret = 0;
-    for (ii = 0; ii < sizeof(uint64_t); ii++) {
-        ret <<= 8;
-        ret |= val & 0xff;
-        val >>= 8;
-    }
-    return ret;
-}
+/* int event_base_set(struct event_base *, struct event *); */
+
+#define EVUTIL_CLOSESOCKET(a) closesocket(a)
 #endif
-

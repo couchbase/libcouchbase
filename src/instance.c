@@ -37,18 +37,20 @@ libcouchbase_t libcouchbase_create(const char *host,
                                    const char *bucket,
                                    struct event_base *base)
 {
-    assert(sasl_client_init(NULL) == SASL_OK);
+    libcouchbase_t ret;
+    char *p;
 
-    libcouchbase_t ret = (libcouchbase_t)calloc(1, sizeof(*ret));
+    if (sasl_client_init(NULL) != SASL_OK) {
+        return NULL;
+    }
 
-    if (ret == NULL) {
+    if ((ret = calloc(1, sizeof(*ret))) == NULL) {
         return NULL;
     }
     libcouchbase_initialize_packet_handlers(ret);
 
     ret->host = strdup(host);
-    char *p = (char*)strchr(host, ':');
-    if (p == NULL) {
+    if ((p = strchr(host, ':')) == NULL) {
         ret->port = "8091";
     } else {
         *p = '\0';
@@ -75,6 +77,7 @@ libcouchbase_t libcouchbase_create(const char *host,
 LIBCOUCHBASE_API
 void libcouchbase_destroy(libcouchbase_t instance)
 {
+    size_t ii;
     free(instance->host);
     free(instance->user);
     free(instance->passwd);
@@ -92,7 +95,7 @@ void libcouchbase_destroy(libcouchbase_t instance)
         vbucket_config_destroy(instance->vbucket_config);
     }
 
-    for (size_t ii = 0; ii < instance->nservers; ++ii) {
+    for (ii = 0; ii < instance->nservers; ++ii) {
         libcouchbase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
@@ -114,11 +117,11 @@ void libcouchbase_destroy(libcouchbase_t instance)
 static int sasl_get_username(void *context, int id, const char **result,
                              unsigned int *len)
 {
+    libcouchbase_t instance = context;
     if (!context || !result || (id != SASL_CB_USER && id != SASL_CB_AUTHNAME)) {
         return SASL_BADPARAM;
     }
 
-    libcouchbase_t instance = (libcouchbase_t)context;
     *result = instance->sasl.name;
     if (len) {
         *len = (unsigned int)strlen(*result);
@@ -139,11 +142,11 @@ static int sasl_get_username(void *context, int id, const char **result,
 static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
                              sasl_secret_t **psecret)
 {
+    libcouchbase_t instance = context;
     if (!conn || ! psecret || id != SASL_CB_PASS) {
         return SASL_BADPARAM;
     }
 
-    libcouchbase_t instance = (libcouchbase_t)context;
     *psecret = &instance->sasl.password.secret;
     return SASL_OK;
 }
@@ -158,6 +161,18 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
  */
 static void libcouchbase_update_serverlist(libcouchbase_t instance)
 {
+    size_t ii;
+    uint16_t max;
+    size_t num;
+    const char *passwd;
+
+    sasl_callback_t sasl_callbacks[4] = {
+        { SASL_CB_USER, (int(*)(void))&sasl_get_username, instance },
+        { SASL_CB_AUTHNAME, (int(*)(void))&sasl_get_username, instance },
+        { SASL_CB_PASS, (int(*)(void))&sasl_get_password, instance },
+        { SASL_CB_LIST_END, NULL, NULL }
+    };
+
     if (instance->vbucket_config != NULL) {
         vbucket_config_destroy(instance->vbucket_config);
     }
@@ -171,35 +186,29 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
 
     // @todo we shouldn't kill all of them, but fix that later on (remember
     // to cancel all ongoing crap etc..
-    for (size_t ii = 0; ii < instance->nservers; ++ii) {
+    for (ii = 0; ii < instance->nservers; ++ii) {
         libcouchbase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
     instance->servers = NULL;
     instance->nservers = 0;
 
-    uint16_t max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
-    size_t num = (size_t)vbucket_config_get_num_servers(instance->vbucket_config);
+    max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
+    num = (size_t)vbucket_config_get_num_servers(instance->vbucket_config);
+
     instance->nservers = num;
-    instance->servers = (libcouchbase_server_t*)calloc(num, sizeof(libcouchbase_server_t));
+    instance->servers = calloc(num, sizeof(libcouchbase_server_t));
 
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
            sizeof(instance->sasl.password.buffer));
-    const char *passwd = vbucket_config_get_password(instance->vbucket_config);
+    passwd = vbucket_config_get_password(instance->vbucket_config);
     if (passwd) {
         instance->sasl.password.secret.len = strlen(passwd);
         strcpy((char*)instance->sasl.password.secret.data, passwd);
     }
 
-    sasl_callback_t sasl_callbacks[4] = {
-        { SASL_CB_USER, (int(*)(void))&sasl_get_username, instance },
-        { SASL_CB_AUTHNAME, (int(*)(void))&sasl_get_username, instance },
-        { SASL_CB_PASS, (int(*)(void))&sasl_get_password, instance },
-        { SASL_CB_LIST_END, NULL, NULL }
-    };
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
-
 
     /*
      * Run through all of the vbuckets and build a map of what they need.
@@ -208,21 +217,21 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
      */
     instance->nvbuckets = max;
     free(instance->vb_server_map);
-    instance->vb_server_map = (uint16_t*)calloc(max, sizeof(uint16_t));
-    for (int ii = 0; ii < max; ++ii) {
+    instance->vb_server_map = calloc(max, sizeof(uint16_t));
+    for (ii = 0; ii < max; ++ii) {
         int idx = vbucket_get_master(instance->vbucket_config, ii);
         instance->vb_server_map[ii] = (uint16_t)idx;
     }
 
     /* Now initialize the servers */
-    for (size_t ii = 0; ii < num; ++ii) {
+    for (ii = 0; ii < (size_t)num; ++ii) {
         instance->servers[ii].instance = instance;
         libcouchbase_server_initialize(instance->servers + ii, (int)ii);
     }
 
     /* Notify anyone interested in this event... */
     if (instance->vbucket_state_listener != NULL) {
-        for (size_t ii = 0; ii < instance->nservers; ++ii) {
+        for (ii = 0; ii < instance->nservers; ++ii) {
             instance->vbucket_state_listener(instance->servers + ii);
         }
     }
@@ -240,13 +249,13 @@ static bool parse_chunk(libcouchbase_t instance)
 
     if (instance->vbucket_stream.chunk_size == (size_t)-1) {
         char *ptr = strstr(buffer->data, "\r\n");
+        long val;
         if (ptr == NULL) {
             // We need more data!
             return false;
         }
         ptr += 2;
-
-        long val = strtol(buffer->data, NULL, 16);
+        val = strtol(buffer->data, NULL, 16);
         val += 2;
         instance->vbucket_stream.chunk_size = (size_t)val;
         buffer->avail -= (size_t)(ptr - buffer->data);
@@ -328,12 +337,13 @@ bool grow_buffer(buffer_t *buffer, size_t min_free) {
 
     if (buffer->size - buffer->avail < min_free) {
         size_t next = buffer->size ? buffer->size << 1 : min_buffer_size;
+        char *ptr;
 
         while ((next - buffer->avail) < min_free) {
             next <<= 1;
         }
 
-        char *ptr = (char*)realloc(buffer->data, next + 1);
+        ptr = realloc(buffer->data, next + 1);
         if (ptr == NULL) {
             return false;
         }
@@ -353,14 +363,13 @@ bool grow_buffer(buffer_t *buffer, size_t min_free) {
  */
 static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 {
-    assert(sock != INVALID_SOCKET);
-    assert((which & EV_WRITE) == 0);
-
-    libcouchbase_t instance = (libcouchbase_t)arg;
-
+    libcouchbase_t instance = arg;
     ssize_t nr;
     size_t avail;
     buffer_t *buffer = &instance->vbucket_stream.input;
+    assert(sock != INVALID_SOCKET);
+    assert((which & EV_WRITE) == 0);
+
     do {
         if (!grow_buffer(buffer, 1)) {
             // ERROR MEMORY ALLOCATION!
@@ -435,14 +444,18 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 {
     char buffer[1024];
     ssize_t offset;
+    struct addrinfo hints;
+    struct addrinfo *ai;
+    int error;
+    ssize_t len;
 
     offset = snprintf(buffer, sizeof(buffer),
                       "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
                       instance->bucket ? instance->bucket : "");
     if (instance->user) {
         char cred[256];
-        snprintf(cred, sizeof(cred), "%s:%s", instance->user, instance->passwd);
         char base64[256];
+        snprintf(cred, sizeof(cred), "%s:%s", instance->user, instance->passwd);
         if (libcouchbase_base64_encode(cred, base64, sizeof(base64)) == -1) {
             return LIBCOUCHBASE_E2BIG;
         }
@@ -451,22 +464,19 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
                            "Authorization: Basic %s\r\n", base64);
     }
 
-    offset += snprintf(buffer + offset, sizeof(buffer) - (size_t)offset,
-                       "\r\n");
+    offset += snprintf(buffer + offset, sizeof(buffer)-(size_t)offset, "\r\n");
 
-    struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_family = AF_UNSPEC;
 
-    int error = getaddrinfo(instance->host, instance->port,
-                            &hints, &instance->ai);
+    error = getaddrinfo(instance->host, instance->port, &hints, &instance->ai);
     if (error != 0) {
         return LIBCOUCHBASE_UNKNOWN_HOST;
     }
 
-    struct addrinfo *ai = instance->ai;
+    ai = instance->ai;
     while (ai != NULL) {
         instance->sock = socket(ai->ai_family,
                                 ai->ai_socktype,
@@ -498,10 +508,10 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
         return LIBCOUCHBASE_UNKNOWN_HOST;
     }
 
-    ssize_t len = offset;
+    len = offset;
     offset = 0;
-    ssize_t nw;
     do {
+        ssize_t nw;
         nw = send(instance->sock, buffer + offset, (size_t)(len - offset), 0);
         if (nw == -1) {
             if (errno != EINTR) {

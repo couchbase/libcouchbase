@@ -1,6 +1,7 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Couchbase, Inc.
+ * Copyright (C) 2011 Couchbase, Inc
+ * All rights reserved.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -14,26 +15,29 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+#ifndef LIBCOUCHBASE_VISIBILITY_H
+#define LIBCOUCHBASE_VISIBILITY_H
 
-#include "internal.h"
+#if defined(LIBCOUCHBASE_INTERNAL)
 
-/**
- * This file contains multiple utility functions that some obscure platforms
- * don't supply
- */
-
-
-#if !defined(HAVE_HTONLL) && !defined(WORDS_BIGENDIAN)
-extern uint64_t libcouchbase_byteswap64(uint64_t val)
-{
-    size_t ii;
-    uint64_t ret = 0;
-    for (ii = 0; ii < sizeof(uint64_t); ii++) {
-        ret <<= 8;
-        ret |= val & 0xff;
-        val >>= 8;
-    }
-    return ret;
-}
+#ifdef __SUNPRO_C
+#define LIBCOUCHBASE_API __global
+#elif defined(HAVE_VISIBILITY) && HAVE_VISIBILITY
+#define LIBCOUCHBASE_API __attribute__ ((visibility("default")))
+#elif defined(_MSC_VER)
+#define LIBCOUCHBASE_API extern __declspec(dllexport)
+#else
+#define LIBCOUCHBASE_API
 #endif
 
+#else
+
+#ifdef _MSC_VER
+#define LIBCOUCHBASE_API extern __declspec(dllimport)
+#else
+#define LIBCOUCHBASE_API
+#endif
+
+#endif
+
+#endif

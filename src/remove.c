@@ -38,11 +38,14 @@ libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
                                                 const void *key, size_t nkey,
                                                 uint64_t cas)
 {
+    uint16_t vb;
+    libcouchbase_server_t *server;
+    protocol_binary_request_delete req;
+
     // we need a vbucket config before we can start removing the item..
     libcouchbase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
-    uint16_t vb;
     if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
                                                   hashkey, nhashkey);
@@ -51,9 +54,7 @@ libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
                                                   key, nkey);
     }
 
-    libcouchbase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
-    protocol_binary_request_delete req;
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DELETE;

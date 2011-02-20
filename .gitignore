@@ -3,6 +3,7 @@
 *.dirstamp
 *.exe
 *.l[ao]
+*.obj
 *~
 .deps/
 .libs/
@@ -25,6 +26,8 @@
 /config/plugin.ac
 /configure
 /example/memdump
+/libcouchbase.exp
+/libcouchbase.lib
 /libtool
 /m4/libtool.m4
 /m4/ltoptions.m4
@@ -35,3 +38,4 @@
 /src/config.h
 /src/config.h.in
 /src/stamp-h1
+/vc100.pdb

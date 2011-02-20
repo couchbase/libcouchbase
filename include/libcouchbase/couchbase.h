@@ -31,6 +31,7 @@
 #endif
 
 #include <memcached/vbucket.h>
+#include <libcouchbase/visibility.h>
 #include <libcouchbase/types.h>
 #include <libcouchbase/callbacks.h>
 
@@ -50,6 +51,7 @@ extern "C" {
      * @param base the libevent base we're for this instance
      * @return A handle to libcouchbase, or NULL if an error occured.
      */
+    LIBCOUCHBASE_API
     libcouchbase_t libcouchbase_create(const char *host,
                                        const char *user,
                                        const char *passwd,
@@ -64,11 +66,13 @@ extern "C" {
      *
      * @param instance the instance to destroy.
      */
+    LIBCOUCHBASE_API
     void libcouchbase_destroy(libcouchbase_t instance);
 
     /**
      * Connect to the server and get the vbucket and serverlist.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance);
 
     /**
@@ -76,6 +80,7 @@ extern "C" {
      * @param instance the instance to associate the cookie to
      * @param cookie the cookie to associate with this instance.
      */
+    LIBCOUCHBASE_API
     void libcouchbase_set_cookie(libcouchbase_t instance, const void *cookie);
 
 
@@ -84,6 +89,7 @@ extern "C" {
      * @param instance the instance of libcouchbase
      * @return The cookie associated with this instance or NULL
      */
+    LIBCOUCHBASE_API
     const void *libcouchbase_get_cookie(libcouchbase_t instance);
 
     /**
@@ -91,6 +97,7 @@ extern "C" {
      * @param instance the instance of libcouchbase
      * @param filter the new packet filter to associate with this instance
      */
+    LIBCOUCHBASE_API
     void libcouchbase_set_packet_filter(libcouchbase_t instance,
                                         libcouchbase_packet_filter_t filter);
 
@@ -99,6 +106,7 @@ extern "C" {
      * @param instance the instance of libcouchbase
      * @param callback the new set of callbacks
      */
+    LIBCOUCHBASE_API
     void libcouchbase_set_callbacks(libcouchbase_t instance,
                                     libcouchbase_callback_t *callbacks);
 
@@ -110,6 +118,7 @@ extern "C" {
      * @param block set to true if you want libcouchbase to run the event
      *              dispatcher loop
      */
+    LIBCOUCHBASE_API
     void libcouchbase_tap_cluster(libcouchbase_t instance,
                                   libcouchbase_tap_filter_t filter,
                                   bool block);
@@ -118,6 +127,7 @@ extern "C" {
      * Execute all of the batched requests
      * @param instance the instance containing the requests
      */
+    LIBCOUCHBASE_API
     void libcouchbase_execute(libcouchbase_t instance);
 
     /**
@@ -131,6 +141,7 @@ extern "C" {
      * @param nkey the array containing the lengths of the keys
      * @return The status of the operation
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
                                            size_t num_keys,
                                            const void * const *keys,
@@ -149,6 +160,7 @@ extern "C" {
      * @param nkey the array containing the lengths of the keys
      * @return The status of the operation
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                                   const void *hashkey,
                                                   size_t nhashkey,
@@ -175,6 +187,7 @@ extern "C" {
      *            any cas value.
      * @return Status of the operation.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
                                             libcouchbase_storage_t operation,
                                             const void *key, size_t nkey,
@@ -203,6 +216,7 @@ extern "C" {
      *            any cas value.
      * @return Status of the operation.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
                                                    libcouchbase_storage_t operation,
                                                    const void *hashkey,
@@ -230,6 +244,7 @@ extern "C" {
      * @param initial The initial value of the object if we create it
      * @return Status of the operation.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
                                                  const void *key, size_t nkey,
                                                  int64_t delta, time_t exp,
@@ -252,6 +267,7 @@ extern "C" {
      * @param initial The initial value of the object if we create it
      * @return Status of the operation.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
                                                         const void *hashkey,
                                                         size_t nhashkey,
@@ -273,6 +289,7 @@ extern "C" {
      * @param cas the cas value for the object (or 0 if you don't care)
      * @return Status of the operation.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
                                              const void *key, size_t nkey,
                                              uint64_t cas);
@@ -290,6 +307,7 @@ extern "C" {
      * @param cas the cas value for the object (or 0 if you don't care)
      * @return Status of the operation.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
                                                     const void *hashkey,
                                                     size_t nhashkey,

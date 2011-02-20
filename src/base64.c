@@ -69,10 +69,12 @@ int libcouchbase_base64_encode(const char *src, char *dst, size_t sz) {
     size_t len = strlen(src);
     size_t triplets = len / 3;
     size_t rest = len % 3;
+    size_t ii;
+
     if (sz < (size_t)((triplets + 1) * 4)) {
         return -1;
     }
-    for (size_t ii = 0; ii < triplets; ++ii) {
+    for (ii = 0; ii < triplets; ++ii) {
         encode(src, dst, 3);
         src += 3;
         dst += 4;

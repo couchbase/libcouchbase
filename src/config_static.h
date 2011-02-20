@@ -75,12 +75,4 @@ extern "C" {
 #endif
 #endif
 
-#if defined (__SUNPRO_C) && (__SUNPRO_C >= 0x550)
-#define LIBCOUCHBASE_API __global
-#elif defined __GNUC__
-#define LIBCOUCHBASE_API __attribute__ ((visibility("default")))
-#else
-#define LIBCOUCHBASE_API
-#endif
-
 #endif

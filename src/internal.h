@@ -21,7 +21,11 @@
 
 #include <assert.h>
 #include <errno.h>
+#ifndef WIN32
 #include <event.h>
+#else
+#include "myevent.h"
+#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>

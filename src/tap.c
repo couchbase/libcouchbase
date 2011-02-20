@@ -29,6 +29,12 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     libcouchbase_t instance = server->instance;
     // Locate this index:
     size_t idx;
+    size_t bodylen;
+    uint16_t total = 0;
+    protocol_binary_request_tap_connect req;
+    int ii;
+    uint16_t val;
+
     for (idx = 0; idx < instance->nservers; ++idx) {
         if (server == instance->servers + idx) {
             break;
@@ -37,15 +43,13 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     assert(idx != instance->nservers);
 
     // Count the numbers of vbuckets for this server:
-    uint16_t total = 0;
-    for (int ii = 0; ii < instance->nvbuckets; ++ii) {
+    for (ii = 0; ii < instance->nvbuckets; ++ii) {
         if (instance->vb_server_map[ii] == idx) {
             ++total;
         }
     }
 
-    size_t bodylen = (size_t)total * 2 + 6;
-    protocol_binary_request_tap_connect req;
+    bodylen = (size_t)total * 2 + 6;
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_TAP_CONNECT;
@@ -56,9 +60,9 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
 
     libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
 
-    uint16_t val = htons(total);
+    val = htons(total);
     libcouchbase_server_write_packet(server, &val, sizeof(val));
-    for (int ii = 0; ii < instance->nvbuckets; ++ii) {
+    for (ii = 0; ii < instance->nvbuckets; ++ii) {
         if (instance->vb_server_map[ii] == idx) {
             val = htons((uint16_t)ii);
             libcouchbase_server_write_packet(server, &val, sizeof(val));

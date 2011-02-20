@@ -31,7 +31,8 @@
 void libcouchbase_server_destroy(libcouchbase_server_t *server)
 {
     /* Cancel all pending commands */
-    libcouchbase_server_purge_implicit_responses(server, server->instance->seqno);
+    libcouchbase_server_purge_implicit_responses(server,
+                                                 server->instance->seqno);
 
     if (server->sasl_conn != NULL) {
         sasl_dispose(&server->sasl_conn);
@@ -80,9 +81,9 @@ static bool get_local_address(evutil_socket_t sock,
         (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
         (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-        {
-            return false;
-        }
+    {
+        return false;
+    }
 
     return true;
 }
@@ -107,9 +108,9 @@ static bool get_remote_address(evutil_socket_t sock,
         (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
         (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-        {
-            return false;
-        }
+    {
+        return false;
+    }
 
     return true;
 }
@@ -179,9 +180,9 @@ static void try_next_server_connect(libcouchbase_server_t *server);
 
 static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
 {
+    libcouchbase_server_t *server = arg;
     (void)sock;
     (void)which;
-    libcouchbase_server_t *server = (libcouchbase_server_t*)arg;
     if (!server_connect(server)) {
         try_next_server_connect(server);
     }
@@ -250,22 +251,24 @@ static void try_next_server_connect(libcouchbase_server_t *server) {
 void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum)
 {
     /* Initialize all members */
-    server->current_packet = (size_t)-1;
+    char *p;
+    int error;
+    struct addrinfo hints;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
+    server->current_packet = (size_t)-1;
     server->hostname = strdup(n);
-    char *p = strchr(server->hostname, ':');
+    p = strchr(server->hostname, ':');
     *p = '\0';
     server->port = p + 1;
 
-    struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_family = AF_UNSPEC;
 
-    int error = getaddrinfo(server->hostname, server->port,
-                            &hints, &server->root_ai);
+    error = getaddrinfo(server->hostname, server->port,
+                        &hints, &server->root_ai);
     server->curr_ai = server->root_ai;
     if (error == 0) {
         try_next_server_connect(server);
@@ -285,10 +288,11 @@ void libcouchbase_server_send_packets(libcouchbase_server_t *server)
 
 void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint32_t seqno)
 {
-    protocol_binary_request_header *req = (protocol_binary_request_header*)c->cmd_log.data;
+    protocol_binary_request_header *req = (void*)c->cmd_log.data;
     while (c->cmd_log.avail >= sizeof(*req) &&
            c->cmd_log.avail >= (ntohl(req->request.bodylen) + sizeof(*req)) &&
            req->request.opaque < seqno) {
+        size_t processed;
         switch (req->request.opcode) {
         case PROTOCOL_BINARY_CMD_GETQ:
             c->instance->callbacks.get(c->instance, LIBCOUCHBASE_KEY_ENOENT,
@@ -300,7 +304,7 @@ void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint
             abort();
         }
 
-        size_t processed = ntohl(req->request.bodylen) + sizeof(*req);
+        processed = ntohl(req->request.bodylen) + sizeof(*req);
         memmove(c->cmd_log.data, c->cmd_log.data + processed,
                 c->cmd_log.avail - processed);
         c->cmd_log.avail -= processed;

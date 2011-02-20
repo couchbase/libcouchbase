@@ -46,11 +46,16 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
                                                uint32_t flags, time_t exp,
                                                uint64_t cas)
 {
+    uint16_t vb;
+    libcouchbase_server_t *server;
+    protocol_binary_request_set req;
+    size_t headersize;
+    size_t bodylen;
+
     // we need a vbucket config before we can start getting data..
     libcouchbase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
 
-    uint16_t vb;
     if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
                                                   hashkey, nhashkey);
@@ -59,9 +64,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
                                                   key, nkey);
     }
 
-    libcouchbase_server_t *server;
     server = instance->servers + instance->vb_server_map[vb];
-    protocol_binary_request_set req;
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.keylen = ntohs((uint16_t)nkey);
@@ -73,7 +76,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
     req.message.body.flags = flags;
     req.message.body.expiration = htonl((uint32_t)exp);
 
-    size_t headersize = sizeof(req.bytes);
+    headersize = sizeof(req.bytes);
     switch (operation) {
     case LIBCOUCHBASE_ADD:
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_ADD;
@@ -98,7 +101,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
         abort();
     }
 
-    size_t bodylen = nkey + nbytes + req.message.header.request.extlen;
+    bodylen = nkey + nbytes + req.message.header.request.extlen;
     req.message.header.request.bodylen = htonl((uint32_t)bodylen);
 
     libcouchbase_server_start_packet(server, &req, headersize);

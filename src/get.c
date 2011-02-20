@@ -42,12 +42,14 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                               const void * const *keys,
                                               const size_t *nkey)
 {
+    uint16_t vb;
+    libcouchbase_server_t *server;
+    protocol_binary_request_noop noop;
+    size_t ii;
+
     // we need a vbucket config before we can start getting data..
     libcouchbase_ensure_vbucket_config(instance);
     assert(instance->vbucket_config);
-
-    uint16_t vb;
-    libcouchbase_server_t *server;
 
     if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
@@ -55,14 +57,14 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
         server = instance->servers + instance->vb_server_map[vb];
     }
 
-    for (size_t ii = 0; ii < num_keys; ++ii) {
+    for (ii = 0; ii < num_keys; ++ii) {
+        protocol_binary_request_get req;
         if (nhashkey == 0) {
             vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
                                                       keys[ii], nkey[ii]);
             server = instance->servers + instance->vb_server_map[vb];
         }
 
-        protocol_binary_request_get req;
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
@@ -77,7 +79,6 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
         libcouchbase_server_end_packet(server);
     }
 
-    protocol_binary_request_noop noop;
     memset(&noop, 0, sizeof(noop));
     noop.message.header.request.magic = PROTOCOL_BINARY_REQ;
     noop.message.header.request.opcode = PROTOCOL_BINARY_CMD_NOOP;
@@ -86,7 +87,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     if (nhashkey == 0) {
         // We don't know which server we sent the data to, so examine
         // where to send the noop
-        for (size_t ii = 0; ii < instance->nservers; ++ii) {
+        for (ii = 0; ii < instance->nservers; ++ii) {
             server = instance->servers + ii;
             if (server->output.avail > 0 || server->pending.avail > 0) {
                 noop.message.header.request.opaque = ++instance->seqno;

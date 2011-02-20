@@ -1,0 +1,102 @@
+# libcouchbase
+# Copyright (C) 2011 Couchbase, Inc
+# All rights reserved.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+# Description: Build libcouchbase as a dll on Microsoft Windows
+# Author     : Trond Norbye <trond.norbye@gmail.com>
+
+TARGETOS=WINNT
+!include <win32.mak>
+
+INSTALL=c:\local
+INSTALLDIRS=$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin
+
+COMPILE=$(cc) $(cdebug) $(cflags) $(cvarsdll) -DLIBCOUCHBASE_INTERNAL=1 -I$(INSTALL)\include -Iwin32 -Isrc -Iinclude
+
+OBJS=arithmetic.obj \
+     base64.obj \
+     cookie.obj \
+     execute.obj \
+     event.obj \
+     get.obj \
+     handler.obj \
+     instance.obj \
+     packet.obj \
+     remove.obj \
+     server.obj \
+     store.obj \
+     tap.obj \
+     utilities.obj
+
+libcouchbase.dll: $(OBJS)
+	$(link) $(dlllflags)  /LIBPATH:$(INSTALL)\lib libvbucket.lib \
+                libsasl.lib ws2_32.lib \
+                -out:libcouchbase.dll -version:1.0 $(OBJS)
+
+arithmetic.obj: src\arithmetic.c
+	$(COMPILE) src\arithmetic.c
+
+base64.obj: src\base64.c
+	$(COMPILE) src\base64.c
+
+cookie.obj: src\cookie.c
+	$(COMPILE) src\cookie.c
+
+event.obj: src\event.c
+	$(COMPILE) src\event.c
+
+execute.obj: src\execute.c
+	$(COMPILE) src\execute.c
+
+get.obj: src\get.c
+	$(COMPILE) src\get.c
+
+handler.obj: src\handler.c
+	$(COMPILE) src\handler.c
+
+instance.obj: src\instance.c
+	$(COMPILE) src\instance.c
+
+packet_debug.obj: src\packet_debug.c
+	$(COMPILE) src\packet_debug.c
+
+packet.obj: src\packet.c
+	$(COMPILE) src\packet.c
+
+remove.obj: src\remove.c
+	$(COMPILE) src\remove.c
+
+server.obj: src\server.c
+	$(COMPILE) src\server.c
+
+store.obj: src\store.c
+	$(COMPILE) src\store.c
+
+tap.obj: src\tap.c
+	$(COMPILE) src\tap.c
+
+utilities.obj: src\utilities.c
+	$(COMPILE) src\utilities.c
+
+
+install: $(INSTALLDIRS) libcouchbase.dll
+	@copy include\libcouchbase\*.h $(INSTALL)\include\libcouchbase
+	@copy libcouchbase.dll $(INSTALL)\lib
+	@copy libcouchbase.dll $(INSTALL)\bin
+	@copy libcouchbase.exp $(INSTALL)\lib
+	@copy libcouchbase.lib $(INSTALL)\lib
+
+clean:
+	-@del $(OBJS) libcouchbase.dll libcouchbase.exp libcouchbase.lib vc100.pdb
