@@ -49,6 +49,9 @@ extern "C" {
         void (*remove)(libcouchbase_t instance,
                        libcouchbase_error_t error,
                        const void *key, size_t nkey);
+        void (*touch)(libcouchbase_t instance,
+                      libcouchbase_error_t error,
+                      const void *key, size_t nkey);
         void (*tap_mutation)(libcouchbase_t instance,
                              const void *key,
                              size_t nkey,

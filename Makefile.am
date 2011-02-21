@@ -46,6 +46,7 @@ libcouchbase_la_SOURCES = \
                         src/server.c \
                         src/store.c \
                         src/tap.c \
+                        src/touch.c \
                         src/utilities.c
 
 # Please remember to update the version info before each release if you

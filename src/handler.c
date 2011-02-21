@@ -281,6 +281,24 @@ static void sasl_step_response_handler(libcouchbase_server_t *server,
 #endif
 }
 
+static void touch_response_handler(libcouchbase_server_t *server,
+                                    protocol_binary_response_header *res)
+{
+    libcouchbase_t root = server->instance;
+    protocol_binary_request_header *req = (void*)server->cmd_log.data;
+    const char *key = (const char *)(req + 1);
+    size_t nkey = ntohs(req->request.keylen);
+    uint16_t status = ntohs(res->response.status);
+    key += req->request.extlen;
+
+    assert(req->request.opaque == res->response.opaque);
+    if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        root->callbacks.touch(root, LIBCOUCHBASE_SUCCESS, key, nkey);
+    } else {
+        root->callbacks.touch(root, LIBCOUCHBASE_ERROR, key, nkey);
+    }
+}
+
 static void dummy_tap_mutation_callback(libcouchbase_t instance,
                                         const void *key,
                                         size_t nkey,
@@ -362,6 +380,12 @@ static void dummy_remove_callback(libcouchbase_t instance,
     (void)instance; (void)error; (void)key; (void)nkey;
 }
 
+static void dummy_touch_callback(libcouchbase_t instance,
+                                 libcouchbase_error_t error,
+                                 const void *key, size_t nkey)
+{
+    (void)instance; (void)error; (void)key; (void)nkey;
+}
 
 void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 {
@@ -380,6 +404,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.storage = dummy_storage_callback;
     instance->callbacks.arithmetic = dummy_arithmetic_callback;
     instance->callbacks.remove = dummy_remove_callback;
+    instance->callbacks.touch = dummy_touch_callback;
 
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_MUTATION] = tap_mutation_handler;
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_DELETE] = tap_deletion_handler;
@@ -389,6 +414,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 
 
     instance->response_handler[PROTOCOL_BINARY_CMD_GETQ] = getq_response_handler;
+    instance->response_handler[PROTOCOL_BINARY_CMD_GATQ] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_ADD] = storage_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_DELETE] = delete_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_REPLACE] = storage_response_handler;
@@ -402,6 +428,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->response_handler[PROTOCOL_BINARY_CMD_SASL_LIST_MECHS] = sasl_list_mech_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = sasl_auth_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_SASL_STEP] = sasl_step_response_handler;
+    instance->response_handler[PROTOCOL_BINARY_CMD_TOUCH] = touch_response_handler;
 }
 
 LIBCOUCHBASE_API
@@ -422,6 +449,10 @@ void libcouchbase_set_callbacks(libcouchbase_t instance,
 
     if (callbacks->remove != NULL) {
         instance->callbacks.remove = callbacks->remove;
+    }
+
+    if (callbacks->touch != NULL) {
+        instance->callbacks.touch = callbacks->touch;
     }
 
     if (callbacks->tap_mutation != NULL) {

@@ -38,6 +38,7 @@ OBJS=arithmetic.obj \
      server.obj \
      store.obj \
      tap.obj \
+     touch.obj \
      utilities.obj
 
 libcouchbase.dll: $(OBJS)
@@ -86,6 +87,9 @@ store.obj: src\store.c
 
 tap.obj: src\tap.c
 	$(COMPILE) src\tap.c
+
+touch.obj: src\touch.c
+	$(COMPILE) src\touch.c
 
 utilities.obj: src\utilities.c
 	$(COMPILE) src\utilities.c

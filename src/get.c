@@ -29,9 +29,11 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
                                        size_t num_keys,
                                        const void * const *keys,
-                                       const size_t *nkey)
+                                       const size_t *nkey,
+                                       const time_t *exp)
 {
-    return libcouchbase_mget_by_key(instance, NULL, 0, num_keys, keys, nkey);
+    return libcouchbase_mget_by_key(instance, NULL, 0, num_keys,
+                                    keys, nkey, exp);
 }
 
 LIBCOUCHBASE_API
@@ -40,7 +42,8 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                               size_t nhashkey,
                                               size_t num_keys,
                                               const void * const *keys,
-                                              const size_t *nkey)
+                                              const size_t *nkey,
+                                              const time_t *exp)
 {
     uint16_t vb;
     libcouchbase_server_t *server;
@@ -58,7 +61,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     }
 
     for (ii = 0; ii < num_keys; ++ii) {
-        protocol_binary_request_get req;
+        protocol_binary_request_gat req;
         if (nhashkey == 0) {
             vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
                                                       keys[ii], nkey[ii]);
@@ -67,14 +70,23 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
 
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
         req.message.header.request.keylen = ntohs((uint16_t)nkey[ii]);
         req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
         req.message.header.request.vbucket = ntohs(vb);
         req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]));
         req.message.header.request.opaque = ++instance->seqno;
 
-        libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+        if (exp) {
+            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
+            libcouchbase_server_start_packet(server, req.bytes,
+                                             sizeof(req.bytes) - 4);
+        } else {
+            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GATQ;
+            req.message.header.request.extlen = 4;
+            req.message.body.expiration = ntohl((uint32_t)exp[ii]);
+            libcouchbase_server_start_packet(server, req.bytes,
+                                             sizeof(req.bytes));
+        }
         libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
         libcouchbase_server_end_packet(server);
     }

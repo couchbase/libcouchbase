@@ -133,24 +133,32 @@ extern "C" {
     /**
      * Get a number of values from the cache. You need to run the
      * event loop yourself (or call libcouchbase_execute) to retrieve
-     * the data.
+     * the data. You might want to alter the expiry time for the object
+     * you're fetcing, and to do so you should specify the new expirty
+     * time in the exp parameter. To use an ordinary mget use NULL
+     * for the exp parameter.
      *
      * @param instance the instance used to batch the requests from
      * @param num_keys the number of keys to get
      * @param keys the array containing the keys to get
      * @param nkey the array containing the lengths of the keys
+     * @param exp the new expiration time for the object
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
                                            size_t num_keys,
                                            const void * const *keys,
-                                           const size_t *nkey);
+                                           const size_t *nkey,
+                                           const time_t *exp);
 
     /**
      * Get a number of values from the cache. You need to run the
      * event loop yourself (or call libcouchbase_execute) to retrieve
-     * the data.
+     * the data. You might want to alter the expiry time for the object
+     * you're fetcing, and to do so you should specify the new expirty
+     * time in the exp parameter. To use an ordinary mget use NULL
+     * for the exp parameter.
      *
      * @param instance the instance used to batch the requests from
      * @param hashkey the key to use for hashing
@@ -166,7 +174,53 @@ extern "C" {
                                                   size_t nhashkey,
                                                   size_t num_keys,
                                                   const void * const *keys,
-                                                  const size_t *nkey);
+                                                  const size_t *nkey,
+                                                  const time_t *exp);
+
+
+    /**
+     * Touch (set expiration time) on a number of values in the cache
+     * You need to run the event loop yourself (or call
+     * libcouchbase_execute) to retrieve the results of the operations.
+     *
+     * @param instance the instance used to batch the requests from
+     * @param num_keys the number of keys to get
+     * @param keys the array containing the keys to get
+     * @param nkey the array containing the lengths of the keys
+     * @return The status of the operation
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
+                                             size_t num_keys,
+                                             const void * const *keys,
+                                             const size_t *nkey,
+                                             const time_t *exp);
+
+    /**
+     * Touch (set expiration time) on a number of values in the cache
+     * You need to run the event loop yourself (or call
+     * libcouchbase_execute) to retrieve the results of the operations.
+     *
+     * Set <code>nhashkey</code> to 0 if you want to hash each individual
+     * key.
+     *
+     * @param instance the instance used to batch the requests from
+     * @param hashkey the key to use for hashing
+     * @param nhashkey the number of bytes in hashkey
+     * @param num_keys the number of keys to get
+     * @param keys the array containing the keys to get
+     * @param nkey the array containing the lengths of the keys
+     * @param exp the new expiration time for the items
+     * @return The status of the operation
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
+                                                    const void *hashkey,
+                                                    size_t nhashkey,
+                                                    size_t num_keys,
+                                                    const void * const *keys,
+                                                    const size_t *nkey,
+                                                    const time_t *exp);
 
     /**
      * Spool a store operation to the cluster. The operation <b>may</b> be

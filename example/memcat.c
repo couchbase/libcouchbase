@@ -221,7 +221,7 @@ int main(int argc, char **argv)
 
     if (libcouchbase_mget(instance, jj,
                           (const void * const *)keys,
-                          nkey) != LIBCOUCHBASE_SUCCESS) {
+                          nkey, NULL) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to send requests\n");
         return 1;
     }
