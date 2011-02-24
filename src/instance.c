@@ -40,6 +40,10 @@ libcouchbase_t libcouchbase_create(const char *host,
     libcouchbase_t ret;
     char *p;
 
+    if (host == NULL || user == NULL || passwd == NULL || bucket == NULL) {
+        return NULL;
+    }
+
     if (sasl_client_init(NULL) != SASL_OK) {
         return NULL;
     }
