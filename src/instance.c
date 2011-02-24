@@ -50,7 +50,7 @@ libcouchbase_t libcouchbase_create(const char *host,
     libcouchbase_initialize_packet_handlers(ret);
 
     ret->host = strdup(host);
-    if ((p = strchr(host, ':')) == NULL) {
+    if ((p = strchr(ret->host, ':')) == NULL) {
         ret->port = "8091";
     } else {
         *p = '\0';
