@@ -76,7 +76,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
         req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]));
         req.message.header.request.opaque = ++instance->seqno;
 
-        if (exp) {
+        if (!exp) {
             req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
             libcouchbase_server_start_packet(server, req.bytes,
                                              sizeof(req.bytes) - 4);
