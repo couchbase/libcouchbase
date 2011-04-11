@@ -75,4 +75,13 @@ extern "C" {
 #endif
 #endif
 
+
+#ifdef linux
+#undef ntohs
+#undef ntohl
+#undef htons
+#undef htonl
+#endif
+
+
 #endif

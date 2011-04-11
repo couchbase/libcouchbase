@@ -45,8 +45,8 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                                                 const size_t *nkey,
                                                 const time_t *exp)
 {
-    uint16_t vb;
-    libcouchbase_server_t *server;
+    uint16_t vb = 0;
+    libcouchbase_server_t *server = NULL;
     size_t ii;
 
     // we need a vbucket config before we can start getting data..

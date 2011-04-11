@@ -219,7 +219,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
     free(instance->vb_server_map);
     instance->vb_server_map = calloc(max, sizeof(uint16_t));
     for (ii = 0; ii < max; ++ii) {
-        int idx = vbucket_get_master(instance->vbucket_config, ii);
+        int idx = vbucket_get_master(instance->vbucket_config, (int)ii);
         instance->vb_server_map[ii] = (uint16_t)idx;
     }
 
@@ -493,9 +493,9 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
                  * be dropped ;-)
                  */
                 int val = 1;
-                socklen_t len = sizeof(val);
+                socklen_t length = sizeof(val);
                 setsockopt(instance->sock, SOL_SOCKET, SO_KEEPALIVE,
-                           &val, len);
+                           &val, length);
                 break;
             }
             EVUTIL_CLOSESOCKET(instance->sock);

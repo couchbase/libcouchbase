@@ -45,8 +45,8 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                               const size_t *nkey,
                                               const time_t *exp)
 {
-    uint16_t vb;
-    libcouchbase_server_t *server;
+    uint16_t vb = 0;
+    libcouchbase_server_t *server = NULL;
     protocol_binary_request_noop noop;
     size_t ii;
 
