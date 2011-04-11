@@ -25,7 +25,10 @@
 /config/pandora_vc_revinfo
 /config/plugin.ac
 /configure
+/example/memcat
+/example/memcp
 /example/memdump
+/example/memrm
 /libcouchbase.exp
 /libcouchbase.lib
 /libtool
