@@ -40,8 +40,12 @@ libcouchbase_t libcouchbase_create(const char *host,
     libcouchbase_t ret;
     char *p;
 
-    if (host == NULL || bucket == NULL) {
-        return NULL;
+    if (host == NULL) {
+        host = "localhost";
+    }
+
+    if (bucket == NULL) {
+        bucket = "default";
     }
 
     if (sasl_client_init(NULL) != SASL_OK) {
