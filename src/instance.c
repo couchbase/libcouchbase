@@ -40,7 +40,7 @@ libcouchbase_t libcouchbase_create(const char *host,
     libcouchbase_t ret;
     char *p;
 
-    if (host == NULL || user == NULL || passwd == NULL || bucket == NULL) {
+    if (host == NULL || bucket == NULL) {
         return NULL;
     }
 
@@ -61,12 +61,12 @@ libcouchbase_t libcouchbase_create(const char *host,
         ret->port = p + 1;
     }
 
-    ret->user = strdup(user);
-    ret->passwd = strdup(passwd);
+    ret->user = user ? strdup(user) : NULL;
+    ret->passwd = passwd ? strdup(passwd) : NULL;
     ret->bucket = strdup(bucket);
 
-    if (ret->host == NULL || ret->user == NULL || ret->passwd == NULL ||
-        ret->bucket == NULL) {
+    if (ret->host == NULL || (ret->user == NULL && user != NULL) ||
+        (ret->passwd == NULL && passwd != NULL) || ret->bucket == NULL) {
         libcouchbase_destroy(ret);
         return NULL;
     }
