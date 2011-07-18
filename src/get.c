@@ -84,6 +84,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
             req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GATQ;
             req.message.header.request.extlen = 4;
             req.message.body.expiration = ntohl((uint32_t)exp[ii]);
+            req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]) + 4);
             libcouchbase_server_start_packet(server, req.bytes,
                                              sizeof(req.bytes));
         }

@@ -294,9 +294,10 @@ void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint
            req->request.opaque < seqno) {
         size_t processed;
         switch (req->request.opcode) {
+        case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GETQ:
             c->instance->callbacks.get(c->instance, LIBCOUCHBASE_KEY_ENOENT,
-                                       (void*)(req + 1),
+                                       (char*)(req + 1) + req->request.extlen,
                                        ntohs(req->request.keylen),
                                        NULL, 0, 0, 0);
             break;

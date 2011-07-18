@@ -52,12 +52,11 @@ static void getq_response_handler(libcouchbase_server_t *server,
     libcouchbase_t root = server->instance;
     protocol_binary_response_getq *getq = (void*)res;
     protocol_binary_request_header *req = (void*)server->cmd_log.data;
-    const char *key = (const char *)(req + 1);
+    const char *key = (const char *)(req + 1) + req->request.extlen;
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
     size_t nbytes = ntohl(res->response.bodylen);
-    nbytes -= nkey - res->response.extlen;
-
+    nbytes -= res->response.extlen;
     assert(req->request.opaque == res->response.opaque);
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         const char *bytes = (const char *)res;

@@ -171,10 +171,16 @@ static void get_callback(libcouchbase_t instance,
 {
     (void)instance;
     (void)bytes;
-    fprintf(output, "%s <", error == LIBCOUCHBASE_SUCCESS ? "Found" : "Missing");
-    fwrite(key, nkey, 1, output);
-    fprintf(output, "> size: %zu flags %04x cas: %"PRIu64"\n",
-            nbytes, flags, cas);
+    if (error == LIBCOUCHBASE_SUCCESS) {
+        fprintf(output, "Found <");
+        fwrite(key, nkey, 1, output);
+        fprintf(output, "> size: %zu flags %04x cas: %"PRIu64"\n",
+                nbytes, flags, cas);
+    } else {
+        fprintf(output, "Missing <");
+        fwrite(key, nkey, 1, output);
+        fprintf(output, ">\n");
+    }
 }
 
 
