@@ -34,6 +34,7 @@
 #include <libcouchbase/visibility.h>
 #include <libcouchbase/types.h>
 #include <libcouchbase/callbacks.h>
+#include <libcouchbase/tap_filter.h>
 
 struct event_base;
 

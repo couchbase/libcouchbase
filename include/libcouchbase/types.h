@@ -77,16 +77,11 @@ extern "C" {
         LIBCOUCHBASE_PREPEND
     } libcouchbase_storage_t;
 
-    /**
-     * We might want to tap just a subset of the bucket. Right now
-     * it's not supported...
-     * @todo come up with how I want the filters to look like
-     */
-    typedef void* libcouchbase_tap_filter_t;
+    struct  libcouchbase_tap_filter_st;
+    typedef struct libcouchbase_tap_filter_st* libcouchbase_tap_filter_t;
 
     typedef bool (*libcouchbase_packet_filter_t)(libcouchbase_t instance,
                                                  const void *packet);
-
 
 #ifdef __cplusplus
 }
