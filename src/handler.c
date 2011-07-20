@@ -431,46 +431,93 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 }
 
 LIBCOUCHBASE_API
-void libcouchbase_set_callbacks(libcouchbase_t instance,
-                                libcouchbase_callback_t *callbacks)
+libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t instance,
+                                                        libcouchbase_get_callback cb)
 {
-    if (callbacks->get != NULL) {
-        instance->callbacks.get = callbacks->get;
-    }
-
-    if (callbacks->storage != NULL) {
-        instance->callbacks.storage = callbacks->storage;
-    }
-
-    if (callbacks->arithmetic != NULL) {
-        instance->callbacks.arithmetic = callbacks->arithmetic;
-    }
-
-    if (callbacks->remove != NULL) {
-        instance->callbacks.remove = callbacks->remove;
-    }
-
-    if (callbacks->touch != NULL) {
-        instance->callbacks.touch = callbacks->touch;
-    }
-
-    if (callbacks->tap_mutation != NULL) {
-        instance->callbacks.tap_mutation = callbacks->tap_mutation;
-    }
-
-    if (callbacks->tap_deletion != NULL) {
-        instance->callbacks.tap_deletion = callbacks->tap_deletion;
-    }
-
-    if (callbacks->tap_flush != NULL) {
-        instance->callbacks.tap_flush = callbacks->tap_flush;
-    }
-
-    if (callbacks->tap_opaque != NULL) {
-        instance->callbacks.tap_opaque = callbacks->tap_opaque;
-    }
-
-    if (callbacks->tap_vbucket_set != NULL) {
-        instance->callbacks.tap_vbucket_set = callbacks->tap_vbucket_set;
-    }
+    libcouchbase_get_callback ret = instance->callbacks.get;
+    instance->callbacks.get = cb;
+    return ret;
 }
+
+LIBCOUCHBASE_API
+libcouchbase_storage_callback libcouchbase_set_storage_callback(libcouchbase_t instance,
+                                                                libcouchbase_storage_callback cb)
+{
+    libcouchbase_storage_callback ret = instance->callbacks.storage;
+    instance->callbacks.storage = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_arithmetic_callback libcouchbase_set_arithmetic_callback(libcouchbase_t instance,
+                                                                      libcouchbase_arithmetic_callback cb)
+{
+    libcouchbase_arithmetic_callback ret = instance->callbacks.arithmetic;
+    instance->callbacks.arithmetic = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_remove_callback libcouchbase_set_remove_callback(libcouchbase_t instance,
+                                                              libcouchbase_remove_callback cb)
+{
+    libcouchbase_remove_callback ret = instance->callbacks.remove;
+    instance->callbacks.remove = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_touch_callback libcouchbase_set_touch_callback(libcouchbase_t instance,
+                                                            libcouchbase_touch_callback cb)
+{
+    libcouchbase_touch_callback ret = instance->callbacks.touch;
+    instance->callbacks.touch = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_tap_mutation_callback libcouchbase_set_tap_mutation_callback(libcouchbase_t instance,
+                                                                          libcouchbase_tap_mutation_callback cb)
+{
+    libcouchbase_tap_mutation_callback ret = instance->callbacks.tap_mutation;
+    instance->callbacks.tap_mutation = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_tap_deletion_callback libcouchbase_set_tap_deletion_callback(libcouchbase_t instance,
+                                                                          libcouchbase_tap_deletion_callback cb)
+{
+    libcouchbase_tap_deletion_callback ret = instance->callbacks.tap_deletion;
+    instance->callbacks.tap_deletion = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_tap_flush_callback libcouchbase_set_tap_flush_callback(libcouchbase_t instance,
+                                                                    libcouchbase_tap_flush_callback cb)
+{
+    libcouchbase_tap_flush_callback ret = instance->callbacks.tap_flush;
+    instance->callbacks.tap_flush = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_tap_opaque_callback libcouchbase_set_tap_opaque_callback(libcouchbase_t instance,
+                                                                      libcouchbase_tap_opaque_callback cb)
+{
+    libcouchbase_tap_opaque_callback ret = instance->callbacks.tap_opaque;
+    instance->callbacks.tap_opaque = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_tap_vbucket_set_callback libcouchbase_set_tap_vbucket_set_callback(libcouchbase_t instance,
+                                                                                libcouchbase_tap_vbucket_set_callback cb)
+{
+    libcouchbase_tap_vbucket_set_callback ret = instance->callbacks.tap_vbucket_set;
+    instance->callbacks.tap_vbucket_set = cb;
+    return ret;
+}
+
+

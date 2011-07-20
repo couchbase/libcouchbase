@@ -102,19 +102,9 @@ extern "C" {
                                         libcouchbase_packet_filter_t filter);
 
     /**
-     * Set the command handlers
-     * @param instance the instance of libcouchbase
-     * @param callback the new set of callbacks
-     */
-    LIBCOUCHBASE_API
-    void libcouchbase_set_callbacks(libcouchbase_t instance,
-                                    libcouchbase_callback_t *callbacks);
-
-    /**
      * Use the TAP protocol to tap the cluster
      * @param instance the instance to tap
      * @param filter the tap filter to use
-     * @param callbacks the calback to use
      * @param block set to true if you want libcouchbase to run the event
      *              dispatcher loop
      */

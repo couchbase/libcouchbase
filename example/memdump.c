@@ -210,10 +210,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    libcouchbase_callback_t callbacks = {
-        .tap_mutation = tap_mutation,
-    };
-    libcouchbase_set_callbacks(instance, &callbacks);
+    (void)libcouchbase_set_tap_mutation_callback(instance, tap_mutation);
     libcouchbase_tap_cluster(instance, NULL, true);
 
     return 0;

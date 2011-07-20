@@ -206,10 +206,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    libcouchbase_callback_t callbacks = {
-        .storage = storage_callback
-    };
-    libcouchbase_set_callbacks(instance, &callbacks);
+    (void)libcouchbase_set_storage_callback(instance, storage_callback);
 
     for (int ii = optind; ii < argc; ++ii) {
         const char *key = argv[ii];

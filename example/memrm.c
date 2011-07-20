@@ -183,10 +183,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    libcouchbase_callback_t callbacks = {
-        .remove = remove_callback
-    };
-    libcouchbase_set_callbacks(instance, &callbacks);
+    (void)libcouchbase_set_remove_callback(instance, remove_callback);
 
     for (int ii = optind; ii < argc; ++ii) {
         libcouchbase_remove(instance, argv[ii], strlen(argv[ii]), 0);

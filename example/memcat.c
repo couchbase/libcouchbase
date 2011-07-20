@@ -220,10 +220,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    libcouchbase_callback_t callbacks = {
-        .get = get_callback
-    };
-    libcouchbase_set_callbacks(instance, &callbacks);
+    (void)libcouchbase_set_get_callback(instance, get_callback);
 
     if (libcouchbase_mget(instance, jj,
                           (const void * const *)keys,
