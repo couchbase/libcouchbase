@@ -38,14 +38,10 @@ extern "C" {
      * Clients of the library should not know the size or the internal
      * layout of the per instance handle. Sharing knowledge about the
      * internal layout makes it a lot harder to keep binary compatibility
-     * (if people tries to use it's sice etc).
+     * (if people tries to use it's size etc).
      */
-#ifdef LIBCOUCHBASE_INTERNAL
     struct libcouchbase_st;
     typedef struct libcouchbase_st* libcouchbase_t;
-#else
-    typedef void* libcouchbase_t;
-#endif
 
     /**
      * Define the error codes in use by the library
