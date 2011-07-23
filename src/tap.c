@@ -122,8 +122,7 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     int ii;
     uint16_t val;
     uint32_t flags = TAP_CONNECT_FLAG_LIST_VBUCKETS;
-    uint64_t backfill = 0;
-    uint64_t backfilln;
+    uint64_t backfill;
     size_t backfill_size = 0;
 
     for (idx = 0; idx < instance->nservers; ++idx) {
@@ -165,8 +164,7 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
 
     // Write the backfill value.
     if (filter && filter->backfill != 0) {
-        backfilln = htonll(backfill);
-        libcouchbase_server_write_packet(server, &backfilln, sizeof(backfilln));
+        libcouchbase_server_write_packet(server, &backfill, sizeof(backfill));
     }
 
     // Write the vbucket list.
