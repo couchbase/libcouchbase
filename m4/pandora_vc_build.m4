@@ -47,6 +47,7 @@ AC_DEFUN([PANDORA_BUILDING_FROM_VC],[
     PANDORA_VC_BRANCH="bzr-export"
 
     if test "${pandora_building_from_bzr}" = "yes"; then
+      pandora_scm_support=yes
       echo "# Grabbing changelog and version information from bzr"
       PANDORA_BZR_REVNO=`bzr revno`
       if test "x$PANDORA_BZR_REVNO" != "x${PANDORA_VC_REVNO}" ; then
@@ -56,11 +57,23 @@ AC_DEFUN([PANDORA_BUILDING_FROM_VC],[
       fi
     fi
 
+    if test "${pandora_building_from_git}" = "yes"; then
+      pandora_scm_support=yes
+      echo "# Grabbing changelog and version information from git"
+      PANDORA_VC_BRANCH=`git branch | cut -f 2 -d \ `
+      PANDORA_GIT_DESCRIBE=`git describe`
+      PANDORA_VC_REVID=`git rev-parse HEAD`
+
+      if test "x$PANDORA_GIT_DESCRIBE" != "x" ; then
+        PANDORA_VC_REVNO=`echo $PANDORA_GIT_DESCRIBE | cut -f 2 -d -`
+      fi
+    fi
+
     if ! test -d config ; then
       mkdir -p config
     fi
 
-    if test "${pandora_building_from_bzr}" = "yes" -o ! -f config/pandora_vc_revinfo ; then 
+    if test "${pandora_scm_support}" = "yes" -o ! -f config/pandora_vc_revinfo ; then
       cat > config/pandora_vc_revinfo.tmp <<EOF
 PANDORA_VC_REVNO=${PANDORA_VC_REVNO}
 PANDORA_VC_REVID=${PANDORA_VC_REVID}
@@ -100,11 +113,12 @@ AC_DEFUN([PANDORA_VC_VERSION],[
   ],[
     PANDORA_RELEASE_COMMENT="trunk"
   ])
-    
+
   PANDORA_RELEASE_VERSION="${PANDORA_RELEASE_DATE}.${PANDORA_VC_REVNO}"
   PANDORA_RELEASE_ID="${PANDORA_RELEASE_NODOTS_DATE}${PANDORA_VC_REVNO}"
 
-  VERSION="${PANDORA_RELEASE_VERSION}"
+  # Don't override VERSION.. people may want to use another release name scheme..
+  # VERSION="${PANDORA_RELEASE_VERSION}"
   AC_DEFINE_UNQUOTED([PANDORA_RELEASE_VERSION],["${PANDORA_RELEASE_VERSION}"],
                      [The real version of the software])
   AC_SUBST(PANDORA_VC_REVNO)

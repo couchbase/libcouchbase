@@ -29,6 +29,7 @@
 /example/memcp
 /example/memdump
 /example/memrm
+/include/libcouchbase/configuration.h
 /libcouchbase.exp
 /libcouchbase.lib
 /libtool

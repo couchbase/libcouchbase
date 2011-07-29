@@ -30,6 +30,7 @@ lib_LTLIBRARIES = libcouchbase.la
 
 pkginclude_HEADERS = \
                      include/libcouchbase/callbacks.h \
+                     include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
                      include/libcouchbase/types.h
 
@@ -85,3 +86,5 @@ example_memdump_LDFLAGS = $(LTLIBEVENT)
 example_memrm_SOURCES = example/memrm.c
 example_memrm_LDADD = libcouchbase.la
 example_memrm_LDFLAGS = $(LTLIBEVENT)
+
+extra_DIST = include/libcouchbase/configuration.h.in
