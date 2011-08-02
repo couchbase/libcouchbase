@@ -126,7 +126,7 @@ extern "C" {
      * Get a number of values from the cache. You need to run the
      * event loop yourself (or call libcouchbase_execute) to retrieve
      * the data. You might want to alter the expiry time for the object
-     * you're fetcing, and to do so you should specify the new expirty
+     * you're fetching, and to do so you should specify the new expiry
      * time in the exp parameter. To use an ordinary mget use NULL
      * for the exp parameter.
      *
@@ -148,7 +148,7 @@ extern "C" {
      * Get a number of values from the cache. You need to run the
      * event loop yourself (or call libcouchbase_execute) to retrieve
      * the data. You might want to alter the expiry time for the object
-     * you're fetcing, and to do so you should specify the new expirty
+     * you're fetching, and to do so you should specify the new expiry
      * time in the exp parameter. To use an ordinary mget use NULL
      * for the exp parameter.
      *
