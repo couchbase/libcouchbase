@@ -17,7 +17,7 @@
 #include "internal.h"
 
 /*
- * Function to base64 encode a text string as described in RFC 3548
+ * Function to base64 encode a text string as described in RFC 4648
  *
  * @author Trond Norbye
  */
@@ -34,28 +34,40 @@ static const char code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
  * @param d pointer to the output stream
  * @param num the number of characters from s to encode
  */
-static void encode(const char *s, char *d, size_t num) {
+static inline void encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
     uint32_t val = 0;
+
     switch (num) {
-    case 3: val = (uint32_t)((*s << 16) | (*(s + 1) << 8) | (*(s + 2))); break;
     case 2: val = (uint32_t)((*s << 16) | (*(s + 1) << 8)); break;
     case 1: val = (uint32_t)((*s << 16)); break;
     default:
         abort();
     }
 
-    *(d+3) = '=';
-    *(d+2) = '=';
+    d[3] = '=';
 
-    if (num == 3) {
-        *(d+3) =  code[val & 63] ;
-    }
-    if (num != 1) {
-        *(d+2) = code[(val >> 6) & 63];
+    if (num == 2) {
+        d[2] = code[(val >> 6) & 63];
+    } else {
+        d[2] = '=';
     }
 
-    *(d+1) = code[(val >> 12) & 63];
-    *d = code[(val >> 18) & 63];
+    d[1] = code[(val >> 12) & 63];
+    d[0] = code[(val >> 18) & 63];
+}
+
+/**
+ * Encode 3 characters to 4 output character.
+ *
+ * @param s pointer to the input stream
+ * @param d pointer to the output stream
+ */
+static inline void encode_triplet(const uint8_t *s, uint8_t *d) {
+    uint32_t val = (uint32_t)((*s << 16) | (*(s + 1) << 8) | (*(s + 2)));
+    d[3] = code[val & 63] ;
+    d[2] = code[(val >> 6) & 63];
+    d[1] = code[(val >> 12) & 63];
+    d[0] = code[(val >> 18) & 63];
 }
 
 /**
@@ -70,19 +82,24 @@ int libcouchbase_base64_encode(const char *src, char *dst, size_t sz) {
     size_t triplets = len / 3;
     size_t rest = len % 3;
     size_t ii;
+    const uint8_t *in = (const uint8_t*)src;
+    uint8_t *out = (uint8_t*)dst;
 
     if (sz < (size_t)((triplets + 1) * 4)) {
         return -1;
     }
+
     for (ii = 0; ii < triplets; ++ii) {
-        encode(src, dst, 3);
-        src += 3;
-        dst += 4;
+        encode_triplet(in, out);
+        in += 3;
+        out += 4;
     }
+
     if (rest > 0) {
-        encode(src, dst, rest);
+        encode_rest(in, out, rest);
+        out += 4;
     }
-    dst += 4;
-    *dst = '\0';
+    *out = '\0';
+
     return 0;
 }

@@ -88,3 +88,8 @@ example_memrm_LDADD = libcouchbase.la
 example_memrm_LDFLAGS = $(LTLIBEVENT)
 
 extra_DIST = include/libcouchbase/configuration.h.in
+
+check_PROGRAMS=base64-test
+
+base64_test_SOURCES = tests/base64-test.c src/base64.c
+TESTS=${check_PROGRAMS}
