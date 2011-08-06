@@ -25,10 +25,14 @@ extern int libcouchbase_base64_encode(const char *src, char *dst, size_t sz);
 static void validate(const char *src, const char *result) {
     char dest[1024];
 
-    if (libcouchbase_base64_encode(src, dest, sizeof(dest)) == -1)
-    if (strcmp(result, dest) != 0) {
-        fprintf(stderr, "FAIL: Input <%s>: Expected: <%s> got <%s>\n", src, result, dest);
+    if (libcouchbase_base64_encode(src, dest, sizeof(dest)) == -1) {
+        fprintf(stderr, "Failed to convert the string:\n<%s>\n", src);
         error = 1;
+    } else {
+        if (strcmp(result, dest) != 0) {
+            fprintf(stderr, "FAIL: Input <%s>: Expected: <%s> got <%s>\n", src, result, dest);
+            error = 1;
+        }
     }
 }
 
@@ -67,13 +71,19 @@ int main(int argc, char **argv)
     validate("asure.", "YXN1cmUu");
     validate("sure.", "c3VyZS4=");
 
-    /* Dummy test data */
+    /* Dummy test data. It looks like the "base64" command line utility from gnu
+     * coreutils adds the "\n" to the encoded data...
+     */
     validate("Administrator:password", "QWRtaW5pc3RyYXRvcjpwYXNzd29yZA==");
-    validate("@", "QAo=");
-    validate("@@", "QEAK");
-    validate("@@@", "QEBACg==");
-    validate("@@@@", "QEBAQAo=");
-    validate("blahblah:bla@@h", "YmxhaGJsYWg6YmxhQEBoCg==");
-
+    validate("@", "QA==");
+    validate("@\n", "QAo=");
+    validate("@@", "QEA=");
+    validate("@@\n", "QEAK");
+    validate("@@@", "QEBA");
+    validate("@@@\n", "QEBACg==");
+    validate("@@@@", "QEBAQA==");
+    validate("@@@@\n", "QEBAQAo=");
+    validate("blahblah:bla@@h", "YmxhaGJsYWg6YmxhQEBo");
+    validate("blahblah:bla@@h\n", "YmxhaGJsYWg6YmxhQEBoCg==");
     return error;
 }
