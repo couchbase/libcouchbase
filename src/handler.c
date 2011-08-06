@@ -25,6 +25,49 @@
 
 #include "internal.h"
 
+static libcouchbase_error_t map_error(protocol_binary_response_status in) {
+    switch (in) {
+    case PROTOCOL_BINARY_RESPONSE_SUCCESS:
+        return LIBCOUCHBASE_SUCCESS;
+    case PROTOCOL_BINARY_RESPONSE_KEY_ENOENT:
+        return LIBCOUCHBASE_KEY_ENOENT;
+    case PROTOCOL_BINARY_RESPONSE_E2BIG:
+        return LIBCOUCHBASE_E2BIG;
+    case PROTOCOL_BINARY_RESPONSE_ENOMEM:
+        return LIBCOUCHBASE_ENOMEM;
+    case PROTOCOL_BINARY_RESPONSE_KEY_EEXISTS:
+        return LIBCOUCHBASE_KEY_EEXISTS;
+    case PROTOCOL_BINARY_RESPONSE_EINVAL:
+        return LIBCOUCHBASE_EINVAL;
+    case PROTOCOL_BINARY_RESPONSE_NOT_STORED:
+        return LIBCOUCHBASE_NOT_STORED;
+    case PROTOCOL_BINARY_RESPONSE_DELTA_BADVAL:
+        return LIBCOUCHBASE_DELTA_BADVAL;
+    case PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET:
+        return LIBCOUCHBASE_NOT_MY_VBUCKET;
+    case PROTOCOL_BINARY_RESPONSE_AUTH_ERROR:
+        return LIBCOUCHBASE_AUTH_ERROR;
+    case PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE:
+        return LIBCOUCHBASE_AUTH_CONTINUE;
+    case PROTOCOL_BINARY_RESPONSE_ERANGE:
+        return LIBCOUCHBASE_ERANGE;
+    case PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND:
+        return LIBCOUCHBASE_UNKNOWN_COMMAND;
+    case PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED:
+        return LIBCOUCHBASE_NOT_SUPPORTED;
+    case PROTOCOL_BINARY_RESPONSE_EINTERNAL:
+        return LIBCOUCHBASE_EINTERNAL;
+    case PROTOCOL_BINARY_RESPONSE_EBUSY:
+        return LIBCOUCHBASE_EBUSY;
+    case PROTOCOL_BINARY_RESPONSE_ETMPFAIL:
+        return LIBCOUCHBASE_ETMPFAIL;
+    default:
+        return LIBCOUCHBASE_ERROR;
+
+    }
+}
+
+
 static void dummy_request_handler(libcouchbase_server_t *server,
                                   protocol_binary_request_header *req)
 {
@@ -85,7 +128,7 @@ static void delete_response_handler(libcouchbase_server_t *server,
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         root->callbacks.remove(root, LIBCOUCHBASE_SUCCESS, key, nkey);
     } else {
-        root->callbacks.remove(root, LIBCOUCHBASE_ERROR, key, nkey);
+        root->callbacks.remove(root, map_error(status), key, nkey);
     }
 }
 
@@ -106,7 +149,7 @@ static void storage_response_handler(libcouchbase_server_t *server,
         root->callbacks.storage(root, LIBCOUCHBASE_SUCCESS, key, nkey,
                                 res->response.cas);
     } else {
-        root->callbacks.storage(root, LIBCOUCHBASE_ERROR, key, nkey,
+        root->callbacks.storage(root, map_error(status), key, nkey,
                                 res->response.cas);
     }
 }
@@ -130,7 +173,7 @@ static void arithmetic_response_handler(libcouchbase_server_t *server,
                                    value,
                                    res->response.cas);
     } else {
-        root->callbacks.arithmetic(root, LIBCOUCHBASE_ERROR, key, nkey,
+        root->callbacks.arithmetic(root, map_error(status), key, nkey,
                                    0, 0);
     }
 }
@@ -294,7 +337,7 @@ static void touch_response_handler(libcouchbase_server_t *server,
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         root->callbacks.touch(root, LIBCOUCHBASE_SUCCESS, key, nkey);
     } else {
-        root->callbacks.touch(root, LIBCOUCHBASE_ERROR, key, nkey);
+        root->callbacks.touch(root, map_error(status), key, nkey);
     }
 }
 
