@@ -92,6 +92,7 @@ void libcouchbase_destroy(libcouchbase_t instance)
     free(instance->bucket);
 
     if (instance->sock != INVALID_SOCKET) {
+        event_del(&instance->ev_event);
         EVUTIL_CLOSESOCKET(instance->sock);
     }
 
