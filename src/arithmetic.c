@@ -75,7 +75,7 @@ libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
         req.message.body.delta = ntohll((uint64_t)(delta * -1));
     }
 
-    if (create) {
+    if (!create) {
         memset(&req.message.body.expiration, 0xff,
                sizeof(req.message.body.expiration));
     }
