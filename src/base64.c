@@ -25,7 +25,7 @@
 /**
  * An array of the legal charracters used for direct lookup
  */
-static const char code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const uint8_t code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /**
  * Encode up to 3 characters to 4 output character.

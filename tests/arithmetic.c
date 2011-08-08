@@ -17,6 +17,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <event.h>
 #include <libcouchbase/couchbase.h>
