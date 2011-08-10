@@ -106,12 +106,15 @@ extern "C" {
     /**
      * Use the TAP protocol to tap the cluster
      * @param instance the instance to tap
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param filter the tap filter to use
      * @param block set to true if you want libcouchbase to run the event
      *              dispatcher loop
      */
     LIBCOUCHBASE_API
     void libcouchbase_tap_cluster(libcouchbase_t instance,
+                                  const void *command_cookie,
                                   libcouchbase_tap_filter_t filter,
                                   bool block);
 
@@ -131,6 +134,8 @@ extern "C" {
      * for the exp parameter.
      *
      * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param num_keys the number of keys to get
      * @param keys the array containing the keys to get
      * @param nkey the array containing the lengths of the keys
@@ -139,6 +144,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
+                                           const void *command_cookie,
                                            size_t num_keys,
                                            const void * const *keys,
                                            const size_t *nkey,
@@ -153,6 +159,8 @@ extern "C" {
      * for the exp parameter.
      *
      * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param hashkey the key to use for hashing
      * @param nhashkey the number of bytes in hashkey
      * @param num_keys the number of keys to get
@@ -162,6 +170,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
+                                                  const void *command_cookie,
                                                   const void *hashkey,
                                                   size_t nhashkey,
                                                   size_t num_keys,
@@ -176,6 +185,8 @@ extern "C" {
      * libcouchbase_execute) to retrieve the results of the operations.
      *
      * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param num_keys the number of keys to get
      * @param keys the array containing the keys to get
      * @param nkey the array containing the lengths of the keys
@@ -183,6 +194,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
+                                  const void *command_cookie,
                                              size_t num_keys,
                                              const void * const *keys,
                                              const size_t *nkey,
@@ -197,6 +209,8 @@ extern "C" {
      * key.
      *
      * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param hashkey the key to use for hashing
      * @param nhashkey the number of bytes in hashkey
      * @param num_keys the number of keys to get
@@ -207,6 +221,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
+                                                    const void *command_cookie,
                                                     const void *hashkey,
                                                     size_t nhashkey,
                                                     size_t num_keys,
@@ -220,6 +235,8 @@ extern "C" {
      * run the event loop (or call libcouchbase_execute).
      *
      * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param operation constraints for the storage operation (add/replace etc)
      * @param key the key to set
      * @param nkey the number of bytes in the key
@@ -235,6 +252,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
+                                            const void *command_cookie,
                                             libcouchbase_storage_t operation,
                                             const void *key, size_t nkey,
                                             const void *bytes, size_t nbytes,
@@ -247,6 +265,8 @@ extern "C" {
      * run the event loop (or call libcouchbase_execute).
      *
      * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param operation constraints for the storage operation (add/replace etc)
      * @param hashkey the key to use for hashing
      * @param nhashkey the number of bytes in hashkey
@@ -264,6 +284,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
+                                                   const void *command_cookie,
                                                    libcouchbase_storage_t operation,
                                                    const void *hashkey,
                                                    size_t nhashkey,
@@ -281,6 +302,8 @@ extern "C" {
      * run the event loop (or call libcouchbase_execute).
      *
      * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param key the key to set
      * @param nkey the number of bytes in the key
      * @param delta The amount to add / subtract
@@ -292,6 +315,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
+                                                 const void *command_cookie,
                                                  const void *key, size_t nkey,
                                                  int64_t delta, time_t exp,
                                                  bool create, uint64_t initial);
@@ -302,6 +326,8 @@ extern "C" {
      * run the event loop (or call libcouchbase_execute).
      *
      * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param hashkey the key to use for hashing
      * @param nhashkey the number of bytes in hashkey
      * @param key the key to set
@@ -315,6 +341,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
+                                                        const void *command_cookie,
                                                         const void *hashkey,
                                                         size_t nhashkey,
                                                         const void *key,
@@ -330,6 +357,8 @@ extern "C" {
      * run the event loop (or call libcouchbase_execute).
      *
      * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param key the key to delete
      * @param nkey the number of bytes in the key
      * @param cas the cas value for the object (or 0 if you don't care)
@@ -337,6 +366,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
+                                             const void *command_cookie,
                                              const void *key, size_t nkey,
                                              uint64_t cas);
 
@@ -346,6 +376,8 @@ extern "C" {
      * run the event loop (or call libcouchbase_execute).
      *
      * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param hashkey the key to use for hashing
      * @param nhashkey the number of bytes in hashkey
      * @param key the key to delete
@@ -355,6 +387,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
+                                                    const void *command_cookie,
                                                     const void *hashkey,
                                                     size_t nhashkey,
                                                     const void *key,

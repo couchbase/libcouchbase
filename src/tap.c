@@ -160,7 +160,8 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     req.message.header.request.bodylen = htonl((uint32_t)bodylen);
     req.message.body.flags = htonl(flags);
 
-    libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+    libcouchbase_server_start_packet(server, NULL, req.bytes,
+                                     sizeof(req.bytes));
 
     // Write the backfill value.
     if (filter && filter->backfill != 0) {
@@ -183,9 +184,11 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
 
 LIBCOUCHBASE_API
 void libcouchbase_tap_cluster(libcouchbase_t instance,
+                              const void *command_cookie,
                               libcouchbase_tap_filter_t filter,
                               bool block)
 {
+    (void)command_cookie;
     // connect to the upstream server.
     instance->vbucket_state_listener = tap_vbucket_state_listener;
     instance->tap.filter = filter;

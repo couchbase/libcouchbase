@@ -25,12 +25,13 @@
 uint64_t val = 0;
 
 static void storage_callback(libcouchbase_t instance,
+                             const void *cookie,
                              libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
                              const void *key, size_t nkey,
                              uint64_t cas)
 {
-    (void)instance; (void)operation; (void)cas;
+    (void)instance; (void)operation; (void)cas; (void)cookie;
     assert(nkey == 7);
     assert(memcmp(key, "counter", 7) == 0);
     assert(error == LIBCOUCHBASE_SUCCESS);
@@ -61,7 +62,7 @@ static void initialize_counter(const char *host, const char *user,
 
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
 
-    libcouchbase_store(instance, LIBCOUCHBASE_SET, "counter", 7,
+    libcouchbase_store(instance, NULL, LIBCOUCHBASE_SET, "counter", 7,
                        "0", 1, 0, 0, 0);
     libcouchbase_execute(instance);
     libcouchbase_destroy(instance);
@@ -69,6 +70,7 @@ static void initialize_counter(const char *host, const char *user,
 }
 
 static void arithmetic_callback(libcouchbase_t instance,
+                                const void *cookie,
                                 libcouchbase_error_t error,
                                 const void *key, size_t nkey,
                                 uint64_t value, uint64_t cas)
@@ -80,6 +82,7 @@ static void arithmetic_callback(libcouchbase_t instance,
     val = value;
     (void)cas;
     (void)instance;
+    (void)cookie;
 }
 
 static void do_run_arithmetic(const char *host, const char *user,
@@ -109,7 +112,7 @@ static void do_run_arithmetic(const char *host, const char *user,
                                                arithmetic_callback);
 
     for (int ii = 0; ii < 10; ++ii) {
-        libcouchbase_arithmetic(instance, "counter", 7, 1, 0, true, 0);
+        libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, true, 0);
         libcouchbase_execute(instance);
     }
 

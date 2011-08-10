@@ -164,12 +164,14 @@ static void handle_options(int argc, char **argv) {
 FILE *output;
 
 static void get_callback(libcouchbase_t instance,
+                         const void *cookie,
                          libcouchbase_error_t error,
                          const void *key, size_t nkey,
                          const void *bytes, size_t nbytes,
                          uint32_t flags, uint64_t cas)
 {
     (void)instance;
+    (void)cookie;
     (void)bytes;
     if (error == LIBCOUCHBASE_SUCCESS) {
         fprintf(output, "Found <");
@@ -222,7 +224,7 @@ int main(int argc, char **argv)
 
     (void)libcouchbase_set_get_callback(instance, get_callback);
 
-    if (libcouchbase_mget(instance, jj,
+    if (libcouchbase_mget(instance, NULL, jj,
                           (const void * const *)keys,
                           nkey, NULL) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to send requests\n");

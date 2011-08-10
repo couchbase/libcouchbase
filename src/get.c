@@ -27,17 +27,19 @@
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
+                                       const void *command_cookie,
                                        size_t num_keys,
                                        const void * const *keys,
                                        const size_t *nkey,
                                        const time_t *exp)
 {
-    return libcouchbase_mget_by_key(instance, NULL, 0, num_keys,
+    return libcouchbase_mget_by_key(instance, command_cookie, NULL, 0, num_keys,
                                     keys, nkey, exp);
 }
 
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
+                                              const void *command_cookie,
                                               const void *hashkey,
                                               size_t nhashkey,
                                               size_t num_keys,
@@ -78,14 +80,14 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
 
         if (!exp) {
             req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
-            libcouchbase_server_start_packet(server, req.bytes,
+            libcouchbase_server_start_packet(server, command_cookie, req.bytes,
                                              sizeof(req.bytes) - 4);
         } else {
             req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GATQ;
             req.message.header.request.extlen = 4;
             req.message.body.expiration = ntohl((uint32_t)exp[ii]);
             req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]) + 4);
-            libcouchbase_server_start_packet(server, req.bytes,
+            libcouchbase_server_start_packet(server, command_cookie, req.bytes,
                                              sizeof(req.bytes));
         }
         libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
@@ -104,14 +106,15 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
             server = instance->servers + ii;
             if (server->output.avail > 0 || server->pending.avail > 0) {
                 noop.message.header.request.opaque = ++instance->seqno;
-                libcouchbase_server_complete_packet(server, noop.bytes,
+                libcouchbase_server_complete_packet(server, command_cookie,
+                                                    noop.bytes,
                                                     sizeof(noop.bytes));
                 libcouchbase_server_send_packets(server);
             }
         }
     } else {
         noop.message.header.request.opaque = ++instance->seqno;
-        libcouchbase_server_complete_packet(server, noop.bytes,
+        libcouchbase_server_complete_packet(server, command_cookie, noop.bytes,
                                             sizeof(noop.bytes));
         libcouchbase_server_send_packets(server);
     }

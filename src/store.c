@@ -27,17 +27,19 @@
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
+                                        const void *command_cookie,
                                         libcouchbase_storage_t operation,
                                         const void *key, size_t nkey,
                                         const void *bytes, size_t nbytes,
                                         uint32_t flags, time_t exp,
                                         uint64_t cas)
 {
-    return libcouchbase_store_by_key(instance, operation, NULL, 0, key, nkey,
-                                     bytes, nbytes, flags, exp, cas);
+    return libcouchbase_store_by_key(instance, command_cookie, operation, NULL, 0,
+                                     key, nkey, bytes, nbytes, flags, exp, cas);
 }
 
 libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
+                                               const void *command_cookie,
                                                libcouchbase_storage_t operation,
                                                const void *hashkey,
                                                size_t nhashkey,
@@ -104,7 +106,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
     bodylen = nkey + nbytes + req.message.header.request.extlen;
     req.message.header.request.bodylen = htonl((uint32_t)bodylen);
 
-    libcouchbase_server_start_packet(server, &req, headersize);
+    libcouchbase_server_start_packet(server, command_cookie, &req, headersize);
     libcouchbase_server_write_packet(server, key, nkey);
     libcouchbase_server_write_packet(server, bytes, nbytes);
     libcouchbase_server_end_packet(server);

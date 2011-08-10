@@ -24,16 +24,18 @@
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
+                                             const void *command_cookie,
                                              const void *key, size_t nkey,
                                              int64_t delta, time_t exp,
                                              bool create, uint64_t initial)
 {
-    return libcouchbase_arithmetic_by_key(instance, NULL, 0, key, nkey,
-                                          delta, exp, create, initial);
+    return libcouchbase_arithmetic_by_key(instance, command_cookie, NULL, 0, key,
+                                          nkey, delta, exp, create, initial);
 }
 
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
+                                                    const void *command_cookie,
                                                     const void *hashkey,
                                                     size_t nhashkey,
                                                     const void *key, size_t nkey,
@@ -80,7 +82,7 @@ libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
                sizeof(req.message.body.expiration));
     }
 
-    libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+    libcouchbase_server_start_packet(server, command_cookie, req.bytes, sizeof(req.bytes));
     libcouchbase_server_write_packet(server, key, nkey);
     libcouchbase_server_end_packet(server);
     libcouchbase_server_send_packets(server);

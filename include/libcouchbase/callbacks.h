@@ -33,26 +33,32 @@ extern "C" {
 #endif
 
     typedef void (*libcouchbase_get_callback)(libcouchbase_t instance,
+                                              const void *cookie,
                                               libcouchbase_error_t error,
                                               const void *key, size_t nkey,
                                               const void *bytes, size_t nbytes,
                                               uint32_t flags, uint64_t cas);
     typedef void (*libcouchbase_storage_callback)(libcouchbase_t instance,
+                                                  const void *cookie,
                                                   libcouchbase_storage_t operation,
                                                   libcouchbase_error_t error,
                                                   const void *key, size_t nkey,
                                                   uint64_t cas);
     typedef void (*libcouchbase_arithmetic_callback)(libcouchbase_t instance,
+                                                     const void *cookie,
                                                      libcouchbase_error_t error,
                                                      const void *key, size_t nkey,
                                                      uint64_t value, uint64_t cas);
     typedef void (*libcouchbase_remove_callback)(libcouchbase_t instance,
+                                                 const void *cookie,
                                                  libcouchbase_error_t error,
                                                  const void *key, size_t nkey);
     typedef void (*libcouchbase_touch_callback)(libcouchbase_t instance,
+                                                const void *cookie,
                                                 libcouchbase_error_t error,
                                                 const void *key, size_t nkey);
     typedef void (*libcouchbase_tap_mutation_callback)(libcouchbase_t instance,
+                                                       const void *cookie,
                                                        const void *key,
                                                        size_t nkey,
                                                        const void *data,
@@ -62,17 +68,21 @@ extern "C" {
                                                        const void *es,
                                                        size_t nes);
     typedef void (*libcouchbase_tap_deletion_callback)(libcouchbase_t instance,
+                                                       const void *cookie,
                                                        const void *key,
                                                        size_t nkey,
                                                        const void *es,
                                                        size_t nes);
     typedef void (*libcouchbase_tap_flush_callback)(libcouchbase_t instance,
+                                                    const void *cookie,
                                                     const void *es,
                                                     size_t nes);
     typedef void (*libcouchbase_tap_opaque_callback)(libcouchbase_t instance,
+                                                     const void *cookie,
                                                      const void *es,
                                                      size_t nes);
     typedef void (*libcouchbase_tap_vbucket_set_callback)(libcouchbase_t instance,
+                                                          const void *cookie,
                                                           uint16_t vbid,
                                                           vbucket_state_t state,
                                                           const void *es,

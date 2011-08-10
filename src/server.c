@@ -128,7 +128,8 @@ static void start_sasl_auth_server(libcouchbase_server_t *server)
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
-    libcouchbase_server_buffer_complete_packet(server, &server->output,
+    libcouchbase_server_buffer_complete_packet(server, NULL, &server->output,
+                                               &server->output_cookies,
                                                req.bytes, sizeof(req.bytes));
     // send the data and add it to libevent..
     libcouchbase_server_event_handler(0, EV_WRITE, server);
@@ -145,6 +146,13 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
                server->pending.data, server->pending.avail);
         server->output.avail += server->pending.avail;
         server->pending.avail = 0;
+
+        grow_buffer(&server->output_cookies, server->pending_cookies.avail);
+        memcpy(server->output_cookies.data + server->output_cookies.avail,
+               server->pending_cookies.data, server->pending_cookies.avail);
+        server->output_cookies.avail += server->pending_cookies.avail;
+        server->pending_cookies.avail = 0;
+
         // Send the pending data!
         libcouchbase_server_event_handler(0, EV_WRITE, server);
     }
@@ -295,6 +303,10 @@ void libcouchbase_server_send_packets(libcouchbase_server_t *server)
 void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint32_t seqno)
 {
     protocol_binary_request_header *req = (void*)c->cmd_log.data;
+    const void *command_cookie;
+    const char *cptr = c->output_cookies.data;
+    const char *end = c->output_cookies.data + c->output_cookies.avail;
+
     while (c->cmd_log.avail >= sizeof(*req) &&
            c->cmd_log.avail >= (ntohl(req->request.bodylen) + sizeof(*req)) &&
            req->request.opaque < seqno) {
@@ -302,7 +314,11 @@ void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint
         switch (req->request.opcode) {
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GETQ:
-            c->instance->callbacks.get(c->instance, LIBCOUCHBASE_KEY_ENOENT,
+            assert(cptr < end);
+            memcpy(&command_cookie, cptr, sizeof(command_cookie));
+            cptr += sizeof(command_cookie);
+
+            c->instance->callbacks.get(c->instance, command_cookie, LIBCOUCHBASE_KEY_ENOENT,
                                        (char*)(req + 1) + req->request.extlen,
                                        ntohs(req->request.keylen),
                                        NULL, 0, 0, 0);
@@ -315,5 +331,8 @@ void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint
         memmove(c->cmd_log.data, c->cmd_log.data + processed,
                 c->cmd_log.avail - processed);
         c->cmd_log.avail -= processed;
+
+        memmove(c->output_cookies.data, cptr, end - cptr);
+        c->output_cookies.avail = (end - cptr);
     }
 }

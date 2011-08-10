@@ -162,6 +162,7 @@ static void handle_options(int argc, char **argv) {
 FILE *output;
 
 static void tap_mutation(libcouchbase_t instance,
+                         const void *cookie,
                          const void *key,
                          size_t nkey,
                          const void *data,
@@ -174,6 +175,7 @@ static void tap_mutation(libcouchbase_t instance,
     fwrite(key, nkey, 1, output);
     fprintf(output, " 0x%04X\r\n", (unsigned int)nbytes);
     (void)instance;
+    (void)cookie;
     (void)data;
     (void)flags;
     (void)exp;
@@ -211,7 +213,7 @@ int main(int argc, char **argv)
     }
 
     (void)libcouchbase_set_tap_mutation_callback(instance, tap_mutation);
-    libcouchbase_tap_cluster(instance, NULL, true);
+    libcouchbase_tap_cluster(instance, NULL, NULL, true);
 
     return 0;
 }

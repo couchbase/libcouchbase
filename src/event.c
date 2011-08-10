@@ -42,13 +42,24 @@ static void do_read_data(libcouchbase_server_t *c)
                c->input.avail >= (ntohl(req->request.bodylen) + sizeof(*req))) {
 
             if (c->instance->packet_filter(c->instance, c->input.data)) {
+                const void *command_cookie;
+                const char *cptr = c->output_cookies.data;
+                const char *end = c->output_cookies.data + c->output_cookies.avail;
+                assert(cptr < end);
+                memcpy(&command_cookie, cptr, sizeof(command_cookie));
+                cptr += sizeof(command_cookie);
+
                 switch (req->request.magic) {
                 case PROTOCOL_BINARY_REQ:
-                    c->instance->request_handler[req->request.opcode](c, req);
+                    c->instance->request_handler[req->request.opcode](c,
+                                                                      command_cookie,
+                                                                      req);
                     break;
                 case PROTOCOL_BINARY_RES:
                     libcouchbase_server_purge_implicit_responses(c, res->response.opaque);
-                    c->instance->response_handler[res->response.opcode](c, res);
+                    c->instance->response_handler[res->response.opcode](c,
+                                                                        command_cookie,
+                                                                        res);
                     req = (protocol_binary_request_header*)c->cmd_log.data;
                     processed = ntohl(req->request.bodylen) + sizeof(*req);
                     assert(c->cmd_log.avail >= processed);
@@ -56,6 +67,9 @@ static void do_read_data(libcouchbase_server_t *c)
                             c->cmd_log.avail - processed);
                     c->cmd_log.avail -= processed;
                     req = (protocol_binary_request_header*)c->input.data;
+
+                    memmove(c->output_cookies.data, cptr, end - cptr);
+                    c->output_cookies.avail -= sizeof(command_cookie);
                     break;
                 default:
                     abort();

@@ -157,10 +157,11 @@ static void handle_options(int argc, char **argv) {
 }
 
 static void remove_callback(libcouchbase_t instance,
+                            const void *cookie,
                             libcouchbase_error_t error,
                             const void *key, size_t nkey)
 {
-    (void)instance;
+    (void)instance; (void)cookie;
     fprintf(stdout, "Remove <");
     fwrite(key, nkey, 1, stdout);
     fprintf(stdout, "> %s\n", error == LIBCOUCHBASE_SUCCESS ? "OK" : "Failed");
@@ -186,7 +187,7 @@ int main(int argc, char **argv)
     (void)libcouchbase_set_remove_callback(instance, remove_callback);
 
     for (int ii = optind; ii < argc; ++ii) {
-        libcouchbase_remove(instance, argv[ii], strlen(argv[ii]), 0);
+        libcouchbase_remove(instance, NULL, argv[ii], strlen(argv[ii]), 0);
     }
 
 

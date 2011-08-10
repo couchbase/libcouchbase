@@ -25,14 +25,17 @@
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
+                                         const void *command_cookie,
                                          const void *key, size_t nkey,
                                          uint64_t cas)
 {
-    return libcouchbase_remove_by_key(instance, NULL, 0, key, nkey, cas);
+    return libcouchbase_remove_by_key(instance, command_cookie, NULL, 0, key,
+                                      nkey, cas);
 }
 
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
+                                                const void *command_cookie,
                                                 const void *hashkey,
                                                 size_t nhashkey,
                                                 const void *key, size_t nkey,
@@ -66,7 +69,8 @@ libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
     req.message.header.request.opaque = ++instance->seqno;
     req.message.header.request.cas = cas;
 
-    libcouchbase_server_start_packet(server, req.bytes, sizeof(req.bytes));
+    libcouchbase_server_start_packet(server, command_cookie,
+                                     req.bytes, sizeof(req.bytes));
     libcouchbase_server_write_packet(server, key, nkey);
     libcouchbase_server_end_packet(server);
     libcouchbase_server_send_packets(server);

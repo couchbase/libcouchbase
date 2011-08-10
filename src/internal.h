@@ -54,8 +54,11 @@ extern "C" {
 
     typedef void (*EVENT_HANDLER)(evutil_socket_t fd, short which, void *arg);
 
-    typedef void (*REQUEST_HANDLER)(libcouchbase_server_t *instance, protocol_binary_request_header *req);
+    typedef void (*REQUEST_HANDLER)(libcouchbase_server_t *instance,
+                                    const void *command_cookie,
+                                    protocol_binary_request_header *req);
     typedef void (*RESPONSE_HANDLER)(libcouchbase_server_t *instance,
+                                     const void *command_cookie,
                                      protocol_binary_response_header *res);
 
     typedef struct {
@@ -162,6 +165,7 @@ extern "C" {
         struct addrinfo *curr_ai;
         /** The output buffer for this server */
         buffer_t output;
+        buffer_t output_cookies;
         /** The sent buffer for this server so that we can resend the
          * command to another server if the bucket is moved... */
         buffer_t cmd_log;
@@ -170,6 +174,7 @@ extern "C" {
          * connected state;
          */
         buffer_t pending;
+        buffer_t pending_cookies;
         /** offset to the beginning of the packet being built */
         size_t current_packet;
         /** The input buffer for this server */
@@ -199,7 +204,9 @@ extern "C" {
 
 
     void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
+                                                 const void *command_cookie,
                                                  buffer_t *buff,
+                                                 buffer_t *buff_cookie,
                                                  const void *data,
                                                  size_t size);
 
@@ -212,17 +219,21 @@ extern "C" {
                                                buffer_t *buff);
 
     void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
+                                                    const void *command_cookie,
                                                     buffer_t *buff,
+                                                    buffer_t *buff_cookie,
                                                     const void *data,
                                                     size_t size);
 
     /**
      * Initiate a new packet to be sent
      * @param c the server connection to send it to
+     * @param command_cookie the cookie belonging to this command
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
     void libcouchbase_server_start_packet(libcouchbase_server_t *c,
+                                          const void *command_cookie,
                                           const void *data,
                                           size_t size);
     /**
@@ -242,10 +253,12 @@ extern "C" {
     /**
      * Create a complete packet (to avoid calling start + end)
      * @param c the server connection to send it to
+     * @param command_cookie the cookie belonging to this command
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
     void libcouchbase_server_complete_packet(libcouchbase_server_t *c,
+                                             const void *command_cookie,
                                              const void *data,
                                              size_t size);
     /**
