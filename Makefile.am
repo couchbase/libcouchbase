@@ -32,7 +32,9 @@ pkginclude_HEADERS = \
                      include/libcouchbase/callbacks.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
-                     include/libcouchbase/types.h
+                     include/libcouchbase/tap_filter.h \
+                     include/libcouchbase/types.h \
+                     include/libcouchbase/visibility.h
 
 libcouchbase_la_SOURCES = \
                         src/arithmetic.c \
