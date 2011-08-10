@@ -68,51 +68,16 @@ extern "C" {
     typedef void (*vbucket_state_listener_t)(libcouchbase_server_t *server);
 
     struct libcouchbase_callback_st {
-        void (*get)(libcouchbase_t instance,
-                    libcouchbase_error_t error,
-                    const void *key, size_t nkey,
-                    const void *bytes, size_t nbytes,
-                    uint32_t flags, uint64_t cas);
-        void (*storage)(libcouchbase_t instance,
-                        libcouchbase_storage_t operation,
-                        libcouchbase_error_t error,
-                        const void *key, size_t nkey,
-                        uint64_t cas);
-        void (*arithmetic)(libcouchbase_t instance,
-                           libcouchbase_error_t error,
-                           const void *key, size_t nkey,
-                           uint64_t value, uint64_t cas);
-        void (*remove)(libcouchbase_t instance,
-                       libcouchbase_error_t error,
-                       const void *key, size_t nkey);
-        void (*touch)(libcouchbase_t instance,
-                      libcouchbase_error_t error,
-                      const void *key, size_t nkey);
-        void (*tap_mutation)(libcouchbase_t instance,
-                             const void *key,
-                             size_t nkey,
-                             const void *data,
-                             size_t nbytes,
-                             uint32_t flags,
-                             uint32_t exp,
-                             const void *es,
-                             size_t nes);
-        void (*tap_deletion)(libcouchbase_t instance,
-                             const void *key,
-                             size_t nkey,
-                             const void *es,
-                             size_t nes);
-        void (*tap_flush)(libcouchbase_t instance,
-                          const void *es,
-                          size_t nes);
-        void (*tap_opaque)(libcouchbase_t instance,
-                           const void *es,
-                           size_t nes);
-        void (*tap_vbucket_set)(libcouchbase_t instance,
-                                uint16_t vbid,
-                                vbucket_state_t state,
-                                const void *es,
-                                size_t nes);
+        libcouchbase_get_callback get;
+        libcouchbase_storage_callback storage;
+        libcouchbase_arithmetic_callback arithmetic;
+        libcouchbase_remove_callback remove;
+        libcouchbase_touch_callback touch;
+        libcouchbase_tap_mutation_callback tap_mutation;
+        libcouchbase_tap_deletion_callback tap_deletion;
+        libcouchbase_tap_flush_callback tap_flush;
+        libcouchbase_tap_opaque_callback tap_opaque;
+        libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
     };
 
     struct libcouchbase_st {
