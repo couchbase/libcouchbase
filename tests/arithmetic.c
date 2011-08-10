@@ -25,11 +25,12 @@
 uint64_t val = 0;
 
 static void storage_callback(libcouchbase_t instance,
+                             libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
                              const void *key, size_t nkey,
                              uint64_t cas)
 {
-    (void)instance; (void)cas;
+    (void)instance; (void)operation; (void)cas;
     assert(nkey == 7);
     assert(memcmp(key, "counter", 7) == 0);
     assert(error == LIBCOUCHBASE_SUCCESS);

@@ -144,14 +144,30 @@ static void storage_response_handler(libcouchbase_server_t *server,
     uint16_t status = ntohs(res->response.status);
     key += req->request.extlen;
 
-    assert(req->request.opaque == res->response.opaque);
-    if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        root->callbacks.storage(root, LIBCOUCHBASE_SUCCESS, key, nkey,
-                                res->response.cas);
-    } else {
-        root->callbacks.storage(root, map_error(status), key, nkey,
-                                res->response.cas);
+    libcouchbase_storage_t op;
+    switch (res->response.opcode) {
+    case PROTOCOL_BINARY_CMD_ADD:
+        op = LIBCOUCHBASE_ADD;
+        break;
+    case PROTOCOL_BINARY_CMD_REPLACE:
+        op = LIBCOUCHBASE_REPLACE;
+        break;
+    case PROTOCOL_BINARY_CMD_SET:
+        op = LIBCOUCHBASE_SET;
+        break;
+    case PROTOCOL_BINARY_CMD_APPEND:
+        op = LIBCOUCHBASE_APPEND;
+        break;
+    case PROTOCOL_BINARY_CMD_PREPEND:
+        op = LIBCOUCHBASE_PREPEND;
+        break;
+    default:
+        abort();
     }
+
+    assert(req->request.opaque == res->response.opaque);
+    root->callbacks.storage(root, op, map_error(status), key, nkey,
+                            res->response.cas);
 }
 
 static void arithmetic_response_handler(libcouchbase_server_t *server,
@@ -398,12 +414,13 @@ static void dummy_get_callback(libcouchbase_t instance,
 }
 
 static void dummy_storage_callback(libcouchbase_t instance,
+                                   libcouchbase_storage_t operation,
                                    libcouchbase_error_t error,
                                    const void *key, size_t nkey,
                                    uint64_t cas)
 {
-    (void)instance; (void)error; (void)key; (void)nkey;
-    (void)cas;
+    (void)instance; (void)operation, (void)error; (void)key;
+    (void)nkey; (void)cas;
 }
 
 static void dummy_arithmetic_callback(libcouchbase_t instance,

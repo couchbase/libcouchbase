@@ -74,6 +74,7 @@ extern "C" {
                     const void *bytes, size_t nbytes,
                     uint32_t flags, uint64_t cas);
         void (*storage)(libcouchbase_t instance,
+                        libcouchbase_storage_t operation,
                         libcouchbase_error_t error,
                         const void *key, size_t nkey,
                         uint64_t cas);

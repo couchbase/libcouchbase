@@ -167,11 +167,12 @@ static void handle_options(int argc, char **argv) {
 FILE *output;
 
 static void storage_callback(libcouchbase_t instance,
+                             libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
                              const void *key, size_t nkey,
                              uint64_t cas)
 {
-    (void)instance;
+    (void)instance; (void)operation;
     fprintf(output, "%sstore <",
             error == LIBCOUCHBASE_SUCCESS ? "" : "Failed to ");
     fwrite(key, nkey, 1, output);
