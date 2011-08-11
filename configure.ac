@@ -41,13 +41,22 @@ ac_cv_func_realloc_0_nonnull=yes
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(gethostbyname, nsl)
 
-AC_CHECK_HEADERS_ONCE([sys/socket.h
+AC_CHECK_HEADERS_ONCE([memcached/vbucket.h
+                       memcached/protocol_binary.h
+                       sys/socket.h
                        netinet/in.h
                        inttypes.h
                        netdb.h
                        unistd.h
                        ws2tcpip.h
                        winsock2.h])
+
+AS_IF([test "x$ac_cv_header_memcached_protocol_binary_h" != "xyes"],
+      [AC_MSG_ERROR(Failed to locate memcached/protocol_binary.h)])
+
+AS_IF([test "x$ac_cv_header_memcached_vbucket_h" != "xyes"],
+      [AC_MSG_ERROR(Failed to locate memcached/vbucket.h)])
+
 
 AC_CACHE_CHECK([for htonll], [ac_cv_have_htonll],
     [AC_TRY_LINK([
