@@ -306,12 +306,14 @@ static int parse_header(libcouchbase_t instance)
 
     /* parse the headers I care about... */
     if (memcmp(buffer->data, "HTTP/1.1 200 OK", strlen("HTTP/1.1 200 OK")) != 0) {
+        fprintf(stderr, "Unsupported response:\n%s\n", buffer->data);
         /* incorrect response */
         return -1;
     }
 
     if (strstr(buffer->data, "Transfer-Encoding: chunked") == NULL) {
-        fprintf(stderr, "Unsupported format\n");
+        fprintf(stderr, "Unsupported Transfer-Encoding:\n%s\n",
+                buffer->data);
         return -1;
     }
 
@@ -411,8 +413,9 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 
     if (instance->vbucket_stream.header == NULL) {
         if (parse_header(instance) == -1) {
-            fprintf(stderr, "Illegal syntax!\n");
-            abort();
+            // @todo we need to fix this... we should
+            // trigger an error callback
+            exit(1);
         }
     }
 
