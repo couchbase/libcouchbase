@@ -175,7 +175,6 @@ static void socket_connected(libcouchbase_server_t *server)
 }
 
 static bool server_connect(libcouchbase_server_t *server);
-static void try_next_server_connect(libcouchbase_server_t *server);
 
 
 static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
@@ -183,14 +182,33 @@ static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
     libcouchbase_server_t *server = arg;
     (void)sock;
     (void)which;
-    if (!server_connect(server)) {
-        try_next_server_connect(server);
-    }
+
+    server_connect(server);
 }
 
 static bool server_connect(libcouchbase_server_t *server) {
     bool retry;
     do {
+        if (server->sock == INVALID_SOCKET) {
+            // Try to get a socket..
+            while (server->curr_ai != NULL) {
+                server->sock = socket(server->curr_ai->ai_family,
+                                      server->curr_ai->ai_socktype,
+                                      server->curr_ai->ai_protocol);
+                if (server->sock != -1) {
+                    if (evutil_make_socket_nonblocking(server->sock) == 0) {
+                        break;
+                    }
+                    EVUTIL_CLOSESOCKET(server->sock);
+                }
+                server->curr_ai = server->curr_ai->ai_next;
+            }
+        }
+
+        if (server->curr_ai == NULL) {
+            return false;
+        }
+
         retry = false;
         if (connect(server->sock, server->curr_ai->ai_addr,
                     server->curr_ai->ai_addrlen) == 0) {
@@ -214,39 +232,26 @@ static bool server_connect(libcouchbase_server_t *server) {
                 return true;
 
             default:
-                fprintf(stderr, "connect fail: %s\n",
-                        strerror(errno));
+                if (errno == ECONNREFUSED) {
+                    retry = true;
+                    server->curr_ai = server->curr_ai->ai_next;
+                } else {
+                    fprintf(stderr, "Connection failed: %s", strerror(errno));
+                }
+                if (server->ev_flags != 0) {
+                    if (event_del(&server->ev_event) == -1) {
+                        abort();
+                    }
+                    server->ev_flags = 0;
+                }
                 EVUTIL_CLOSESOCKET(server->sock);
-                return false;
+                server->sock = INVALID_SOCKET;
             }
         }
     } while (retry);
     // not reached
     return false;
 }
-
-static void try_next_server_connect(libcouchbase_server_t *server) {
-    while (server->curr_ai != NULL) {
-        server->sock = socket(server->curr_ai->ai_family,
-                              server->curr_ai->ai_socktype,
-                              server->curr_ai->ai_protocol);
-        if (server->sock != -1) {
-            if (evutil_make_socket_nonblocking(server->sock) != 0) {
-                EVUTIL_CLOSESOCKET(server->sock);
-                server->curr_ai = server->curr_ai->ai_next;
-                continue;
-            }
-
-            if (server_connect(server)) {
-                return ;
-            }
-        }
-        server->curr_ai = server->curr_ai->ai_next;
-    }
-
-    // @todo notify the lib if we failed to connect to all ports..
-}
-
 
 void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum)
 {
@@ -271,9 +276,10 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
                         &hints, &server->root_ai);
     server->curr_ai = server->root_ai;
     if (error == 0) {
-        try_next_server_connect(server);
+        server->sock = INVALID_SOCKET;
+        server_connect(server);
     } else {
-        server->sock = -1;
+        server->sock = INVALID_SOCKET;
         server->root_ai = NULL;
     }
 }
