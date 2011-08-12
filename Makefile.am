@@ -26,6 +26,8 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
+
+noinst_LTLIBRARIES =
 #memcached_packet_debug.la
 
 pkginclude_HEADERS = \
@@ -59,6 +61,10 @@ libcouchbase_la_LDFLAGS=$(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2)
                       -version-info 0:0:0
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
+libmockserver_la_SOURCES = \
+                         tests/server.c tests/server.h
+
+
 #memcached_packet_debug_la_SOURCES= src/packet_debug.c \
 #                                   src/utilities.c
 
@@ -91,13 +97,18 @@ example_memrm_LDFLAGS = $(LTLIBEVENT)
 
 extra_DIST = include/libcouchbase/configuration.h.in
 
-check_PROGRAMS = base64-test \
-                 arithmetic-test
+check_PROGRAMS = base64-test
+
+if HAVE_COUCHBASEMOCK
+noinst_LTLIBRARIES += libmockserver.la
+check_PROGRAMS += arithmetic-test
+endif
 
 base64_test_SOURCES = tests/base64-test.c src/base64.c
 
 arithmetic_test_SOURCES = tests/arithmetic.c
-arithmetic_test_LDADD = libcouchbase.la
+arithmetic_test_LDADD = libcouchbase.la libmockserver.la
 arithmetic_test_LDFLAGS = $(LTLIBEVENT)
+arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 TESTS=${check_PROGRAMS}

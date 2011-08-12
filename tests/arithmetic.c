@@ -22,6 +22,8 @@
 #include <event.h>
 #include <libcouchbase/couchbase.h>
 
+#include "server.h"
+
 uint64_t val = 0;
 
 static void storage_callback(libcouchbase_t instance,
@@ -123,25 +125,20 @@ static void do_run_arithmetic(const char *host, const char *user,
 int main(int argc, char **argv)
 {
     (void)argc; (void)argv;
-    const char *host = getenv("LIBCOUCHBASE_CLUSTER");
-    if (host == NULL) {
-        fprintf(stdout, "Skipping test.. \n"
-                "set LIBCOUCHBASE_CLUSTER to the location of your cluster\n"
-                "    LIBCOUCHBASE_USER if you want to auth as a user\n"
-                "    LIBCOUCHBASE_PASSWD for the auth passwd\n"
-                "    LIBCOUCHBASE_BUCKET to use a given bucket\n");
-        return 0;
+
+    const void *mock = start_mock_server(NULL);
+    if (mock == NULL) {
+        fprintf(stderr, "Failed to start mock server\n");
+        return 1;
     }
 
-    const char *user = getenv("LIBCOUCHBASE_USER");
-    const char *passwd = getenv("LIBCOUCHBASE_PASSWD");
-    const char *bucket = getenv("LIBCOUCHBASE_BUCKET");
-
-    initialize_counter(host, user, passwd, bucket);
+    const char *http = get_mock_http_server(mock);
+    initialize_counter(http, "Administrator", "password", NULL);
 
     for (int ii = 0; ii < 10; ++ii) {
-        do_run_arithmetic(host, user, passwd, bucket);
+        do_run_arithmetic(http, "Administrator", "password", NULL);
     }
 
+    shutdown_mock_server(mock);
     return 0;
 }

@@ -72,13 +72,21 @@ return htonll(0);
 AS_IF([test "x$ac_cv_have_htonll" = "xyes"],[
        AC_DEFINE([HAVE_HTONLL], [1], [Have ntohll])])
 
+AC_CACHE_CHECK([for CouchbaseMock], [ac_cv_couchbasemock],
+  [
+    AS_IF([test -f tests/CouchbaseMock-1.0.jar],
+          [ac_cv_couchbasemock=yes],
+          [ac_cv_couchbasemock=no])
+  ])
+
+AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_couchbasemock}" = "xyes"])
 
 AH_TOP([
 #ifndef CONFIG_H
 #define CONFIG_H
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Couchbase, Inc.
+ *     Copyright 2010, 2011 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
