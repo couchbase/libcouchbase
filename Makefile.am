@@ -27,8 +27,7 @@ ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
 
-noinst_LTLIBRARIES =
-#memcached_packet_debug.la
+noinst_LTLIBRARIES = memcached_packet_debug.la
 
 pkginclude_HEADERS = \
                      include/libcouchbase/callbacks.h \
@@ -65,10 +64,10 @@ libmockserver_la_SOURCES = \
                          tests/server.c tests/server.h
 
 
-#memcached_packet_debug_la_SOURCES= src/packet_debug.c \
-#                                   src/utilities.c
+memcached_packet_debug_la_SOURCES= src/packet_debug.c \
+                                   src/utilities.c
 
-#memcached_packet_debug_la_LDFLAGS= -avoid-version -shared -module -no-undefined
+memcached_packet_debug_la_LDFLAGS= -avoid-version -shared -module -no-undefined
 
 #
 # Example programs using the library
