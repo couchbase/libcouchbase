@@ -37,32 +37,34 @@ static int do_read_data(libcouchbase_server_t *c)
 
     do {
         ssize_t nr;
+        hrtime_t stop = gethrtime();
         while (++operations < operations_per_call &&
                c->input.avail >= sizeof(*req) &&
                c->input.avail >= (ntohl(req->request.bodylen) + sizeof(*req))) {
 
             if (c->instance->packet_filter(c->instance, c->input.data)) {
-                const void *command_cookie;
-                const char *cptr = c->output_cookies.data;
-                const char *end = c->output_cookies.data + c->output_cookies.avail;
-                assert(cptr < end);
-                memcpy(&command_cookie, cptr, sizeof(command_cookie));
-                cptr += sizeof(command_cookie);
+                struct libcouchbase_command_data_st *ct = (void*)c->output_cookies.data;
 
                 switch (req->request.magic) {
                 case PROTOCOL_BINARY_REQ:
                     c->instance->request_handler[req->request.opcode](c,
-                                                                      command_cookie,
+                                                                      ct->cookie,
                                                                       req);
                     break;
                 case PROTOCOL_BINARY_RES:
-                    if (libcouchbase_server_purge_implicit_responses(c, res->response.opaque) != 0) {
+                    if (libcouchbase_server_purge_implicit_responses(c, res->response.opaque, stop) != 0) {
                         // TODO: Print an error message here.
                         return -1;
                     }
+                    if (ct->start != 0 && c->instance->histogram) {
+                        libcouchbase_record_metrics(c->instance,
+                                                    stop - ct->start,
+                                                    res->response.opcode);
+                    }
                     c->instance->response_handler[res->response.opcode](c,
-                                                                        command_cookie,
+                                                                        ct->cookie,
                                                                         res);
+
                     req = (protocol_binary_request_header*)c->cmd_log.data;
                     processed = ntohl(req->request.bodylen) + sizeof(*req);
                     assert(c->cmd_log.avail >= processed);
@@ -70,9 +72,10 @@ static int do_read_data(libcouchbase_server_t *c)
                             c->cmd_log.avail - processed);
                     c->cmd_log.avail -= processed;
                     req = (protocol_binary_request_header*)c->input.data;
-
-                    memmove(c->output_cookies.data, cptr, (size_t)(end - cptr));
-                    c->output_cookies.avail -= sizeof(command_cookie);
+                    c->output_cookies.avail -= sizeof(*ct);
+                    memmove(c->output_cookies.data,
+                            c->output_cookies.data + sizeof(*ct),
+                            c->output_cookies.avail);
                     break;
                 default:
                     // TODO: Print an error message here.

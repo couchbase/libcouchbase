@@ -36,6 +36,7 @@
 #include <libcouchbase/types.h>
 #include <libcouchbase/callbacks.h>
 #include <libcouchbase/tap_filter.h>
+#include <libcouchbase/timings.h>
 
 struct event_base;
 

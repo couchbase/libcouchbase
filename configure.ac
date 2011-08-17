@@ -41,7 +41,8 @@ ac_cv_func_realloc_0_nonnull=yes
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(gethostbyname, nsl)
 
-AC_CHECK_HEADERS_ONCE([memcached/vbucket.h
+AC_CHECK_HEADERS_ONCE([mach/mach_time.h
+                       memcached/vbucket.h
                        memcached/protocol_binary.h
                        sys/socket.h
                        netinet/in.h
@@ -92,6 +93,9 @@ Try add --disable-couchbasemock
 ])])])
 
 AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xyes"])
+
+AC_CHECK_FUNCS_ONCE(gethrtime clock_gettime gettimeofday)
+AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
 
 AH_TOP([
 #ifndef CONFIG_H

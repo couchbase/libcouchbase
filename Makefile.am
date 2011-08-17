@@ -34,6 +34,7 @@ pkginclude_HEADERS = \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
                      include/libcouchbase/tap_filter.h \
+                     include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
                      include/libcouchbase/visibility.h
 
@@ -52,8 +53,14 @@ libcouchbase_la_SOURCES = \
                         src/server.c \
                         src/store.c \
                         src/tap.c \
+                        src/timings.c \
                         src/touch.c \
                         src/utilities.c
+
+if !HAVE_GETHRTIME
+libcouchbase_la_SOURCES += src/gethrtime.c
+endif
+
 
 # Please remember to update the version info before each release if you
 # add / remove functions.
@@ -105,7 +112,7 @@ example_memrm_LDFLAGS = $(LTLIBEVENT)
 
 extra_DIST = include/libcouchbase/configuration.h.in
 
-check_PROGRAMS = base64-test
+check_PROGRAMS = base64-test timings-test
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
@@ -113,6 +120,9 @@ check_PROGRAMS += arithmetic-test
 endif
 
 base64_test_SOURCES = tests/base64-test.c src/base64.c
+timings_test_SOURCES = tests/timings-test.c
+timings_test_LDADD = libcouchbase.la libmockserver.la
+timings_test_LDFLAGS = $(LTLIBEVENT)
 
 arithmetic_test_SOURCES = tests/arithmetic.c
 arithmetic_test_LDADD = libcouchbase.la libmockserver.la

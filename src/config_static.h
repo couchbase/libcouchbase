@@ -83,5 +83,10 @@ extern "C" {
 #undef htonl
 #endif
 
+#ifndef HAVE_GETHRTIME
+#include <stdint.h>
+typedef uint64_t hrtime_t;
+extern hrtime_t gethrtime(void);
+#endif
 
 #endif

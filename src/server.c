@@ -32,7 +32,8 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
 {
     /* Cancel all pending commands */
     libcouchbase_server_purge_implicit_responses(server,
-                                                 server->instance->seqno);
+                                                 server->instance->seqno,
+                                                 gethrtime());
 
     if (server->sasl_conn != NULL) {
         sasl_dispose(&server->sasl_conn);
@@ -311,28 +312,30 @@ void libcouchbase_server_send_packets(libcouchbase_server_t *server)
     }
 }
 
-int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint32_t seqno)
+int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
+                                                  uint32_t seqno,
+                                                  hrtime_t end)
 {
     protocol_binary_request_header *req = (void*)c->cmd_log.data;
-    const void *command_cookie;
-    const char *cptr = c->output_cookies.data;
-    const char *end = c->output_cookies.data + c->output_cookies.avail;
+
+    struct libcouchbase_command_data_st *ct = (void*)c->output_cookies.data;
 
     while (c->cmd_log.avail >= sizeof(*req) &&
            c->cmd_log.avail >= (ntohl(req->request.bodylen) + sizeof(*req)) &&
            req->request.opaque < seqno) {
+
         size_t processed;
         switch (req->request.opcode) {
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GETQ:
-            assert(cptr < end);
-            memcpy(&command_cookie, cptr, sizeof(command_cookie));
-            cptr += sizeof(command_cookie);
-
-            c->instance->callbacks.get(c->instance, command_cookie, LIBCOUCHBASE_KEY_ENOENT,
+            if (ct->start != 0 && c->instance->histogram) {
+                libcouchbase_record_metrics(c->instance, end - ct->start, req->request.opcode);
+            }
+            c->instance->callbacks.get(c->instance, ct->cookie, LIBCOUCHBASE_KEY_ENOENT,
                                        (char*)(req + 1) + req->request.extlen,
                                        ntohs(req->request.keylen),
                                        NULL, 0, 0, 0);
+            ct++;
             break;
         default:
             return -1;
@@ -343,8 +346,9 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint3
                 c->cmd_log.avail - processed);
         c->cmd_log.avail -= processed;
 
-        memmove(c->output_cookies.data, cptr, (size_t)(end - cptr));
-        c->output_cookies.avail = (size_t)(end - cptr);
+        c->output_cookies.avail -= sizeof(*ct);
+        memmove(c->output_cookies.data, c->output_cookies.data + sizeof(*ct),
+                c->output_cookies.avail);
     }
 
     return 0;

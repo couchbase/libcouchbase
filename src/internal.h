@@ -68,6 +68,16 @@ extern "C" {
     } buffer_t;
     bool grow_buffer(buffer_t *buffer, size_t min_free);
 
+    /**
+     * Data stored per command in the command-cookie buffer...
+     */
+    struct libcouchbase_command_data_st {
+        hrtime_t start;
+        const void *cookie;
+    };
+
+    struct libcouchbase_histogram_st;
+
     typedef void (*vbucket_state_listener_t)(libcouchbase_server_t *server);
 
     struct libcouchbase_callback_st {
@@ -144,6 +154,7 @@ extern "C" {
 
 
         struct libcouchbase_callback_st callbacks;
+        struct libcouchbase_histogram_st *histogram;
 
         uint32_t seqno;
         bool execute;
@@ -201,7 +212,8 @@ extern "C" {
                                                     const char *errinfo);
 
     int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
-                                                     uint32_t seqno);
+                                                      uint32_t seqno,
+                                                     hrtime_t delta);
     void libcouchbase_server_destroy(libcouchbase_server_t *server);
     void libcouchbase_server_connected(libcouchbase_server_t *server);
 
@@ -286,6 +298,10 @@ extern "C" {
     void libcouchbase_ensure_vbucket_config(libcouchbase_t instance);
 
     int libcouchbase_base64_encode(const char *src, char *dst, size_t sz);
+
+    void libcouchbase_record_metrics(libcouchbase_t instance,
+                                     hrtime_t delta,
+                                     uint8_t opcode);
 
 #ifdef __cplusplus
 }
