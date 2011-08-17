@@ -332,7 +332,7 @@ void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint
                 c->cmd_log.avail - processed);
         c->cmd_log.avail -= processed;
 
-        memmove(c->output_cookies.data, cptr, end - cptr);
-        c->output_cookies.avail = (end - cptr);
+        memmove(c->output_cookies.data, cptr, (size_t)(end - cptr));
+        c->output_cookies.avail = (size_t)(end - cptr);
     }
 }

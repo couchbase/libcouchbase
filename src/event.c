@@ -68,7 +68,7 @@ static void do_read_data(libcouchbase_server_t *c)
                     c->cmd_log.avail -= processed;
                     req = (protocol_binary_request_header*)c->input.data;
 
-                    memmove(c->output_cookies.data, cptr, end - cptr);
+                    memmove(c->output_cookies.data, cptr, (size_t)(end - cptr));
                     c->output_cookies.avail -= sizeof(command_cookie);
                     break;
                 default:
