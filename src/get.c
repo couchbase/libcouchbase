@@ -17,6 +17,14 @@
 
 #include "internal.h"
 
+static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
+                                                    const void *command_cookie,
+                                                    const void *hashkey,
+                                                    size_t nhashkey,
+                                                    const void *key,
+                                                    const size_t nkey,
+                                                    const time_t *exp);
+
 /**
  * libcouchbase_mget use the GETQ command followed by a NOOP command to avoid
  * transferring not-found responses. All of the not-found callbacks are
@@ -47,6 +55,11 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                               const size_t *nkey,
                                               const time_t *exp)
 {
+    if (num_keys == 1) {
+        return libcouchbase_single_get(instance, command_cookie, hashkey,
+                                       nhashkey, keys[0], nkey[0], exp);
+    }
+
     uint16_t vb = 0;
     libcouchbase_server_t *server = NULL;
     protocol_binary_request_noop noop;
@@ -118,6 +131,57 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                             sizeof(noop.bytes));
         libcouchbase_server_send_packets(server);
     }
+
+    return LIBCOUCHBASE_SUCCESS;
+}
+
+static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
+                                                    const void *command_cookie,
+                                                    const void *hashkey,
+                                                    size_t nhashkey,
+                                                    const void * key,
+                                                    const size_t nkey,
+                                                    const time_t *exp)
+{
+    uint16_t vb = 0;
+
+    // we need a vbucket config before we can start getting data..
+    libcouchbase_ensure_vbucket_config(instance);
+    assert(instance->vbucket_config);
+
+    if (nhashkey != 0) {
+        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                                  hashkey, nhashkey);
+    } else {
+        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                                  key, nkey);
+    }
+    libcouchbase_server_t *server = instance->servers + instance->vb_server_map[vb];
+
+    protocol_binary_request_gat req;
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.keylen = ntohs((uint16_t)nkey);
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.vbucket = ntohs(vb);
+    req.message.header.request.bodylen = ntohl((uint32_t)(nkey));
+    req.message.header.request.opaque = ++instance->seqno;
+
+    if (!exp) {
+        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GET;
+        libcouchbase_server_start_packet(server, command_cookie, req.bytes,
+                                         sizeof(req.bytes) - 4);
+    } else {
+        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GAT;
+        req.message.header.request.extlen = 4;
+        req.message.body.expiration = ntohl((uint32_t)exp[0]);
+        req.message.header.request.bodylen = ntohl((uint32_t)(nkey) + 4);
+        libcouchbase_server_start_packet(server, command_cookie, req.bytes,
+                                         sizeof(req.bytes));
+    }
+    libcouchbase_server_write_packet(server, key, nkey);
+    libcouchbase_server_end_packet(server);
+    libcouchbase_server_send_packets(server);
 
     return LIBCOUCHBASE_SUCCESS;
 }

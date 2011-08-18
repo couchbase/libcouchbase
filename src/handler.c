@@ -496,6 +496,8 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 
     instance->response_handler[PROTOCOL_BINARY_CMD_GETQ] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_GATQ] = getq_response_handler;
+    instance->response_handler[PROTOCOL_BINARY_CMD_GET] = getq_response_handler;
+    instance->response_handler[PROTOCOL_BINARY_CMD_GAT] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_ADD] = storage_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_DELETE] = delete_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_REPLACE] = storage_response_handler;
