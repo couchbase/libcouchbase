@@ -102,9 +102,15 @@ static void do_read_data(libcouchbase_server_t *c)
                 abort();
             }
         } else if (nr == 0) {
+            assert(c->input.avail != c->input.size);
             abort();
         } else {
             c->input.avail += (size_t)nr;
+            if (c->input.avail == c->input.size) {
+                grow_buffer(&c->input, 8192);
+                res = (void*)c->input.data;
+                req = (void*)c->input.data;
+            }
         }
     } while (true);
 }
