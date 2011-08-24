@@ -40,7 +40,9 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
 
     if (server->ev_flags != 0) {
         if (event_del(&server->ev_event) == -1) {
-            abort();
+            fprintf(stderr, "Error releasing event\n");
+            libcouchbase_error_handler(server->instance, LIBCOUCHBASE_LIBEVENT_ERROR,
+                                       "Failed to delete instance from libevent");
         }
     }
 
@@ -245,10 +247,19 @@ static bool server_connect(libcouchbase_server_t *server) {
                     server->curr_ai = server->curr_ai->ai_next;
                 } else {
                     fprintf(stderr, "Connection failed: %s", strerror(errno));
+                    // TODO: Is there a better error for this?
+                    libcouchbase_error_handler(server->instance,
+                                               LIBCOUCHBASE_NETWORK_ERROR,
+                                               "Connection failed");
+                    return false;
                 }
                 if (server->ev_flags != 0) {
                     if (event_del(&server->ev_event) == -1) {
-                        abort();
+                        fprintf(stderr, "Error releasing event\n");
+                        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_LIBEVENT_ERROR,
+                                                   "Failed delete event from libevent");
+                        // TODO: Even though this is probably a memory leak, why might want to
+                        //       continue anyway (as it is doing here).
                     }
                     server->ev_flags = 0;
                 }
@@ -300,7 +311,7 @@ void libcouchbase_server_send_packets(libcouchbase_server_t *server)
     }
 }
 
-void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint32_t seqno)
+int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint32_t seqno)
 {
     protocol_binary_request_header *req = (void*)c->cmd_log.data;
     const void *command_cookie;
@@ -324,7 +335,7 @@ void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint
                                        NULL, 0, 0, 0);
             break;
         default:
-            abort();
+            return -1;
         }
 
         processed = ntohl(req->request.bodylen) + sizeof(*req);
@@ -335,4 +346,6 @@ void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c, uint
         memmove(c->output_cookies.data, cptr, (size_t)(end - cptr));
         c->output_cookies.avail = (size_t)(end - cptr);
     }
+
+    return 0;
 }

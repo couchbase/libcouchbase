@@ -43,7 +43,8 @@ static const char *get_vbucket_state(uint32_t s)
     case vbucket_state_pending: return "pending";
     case vbucket_state_dead: return "dead";
     default:
-        abort();
+        fprintf(stderr, "Unknown vbucket state: %"PRIu32"\n", state);
+        return "Illegal state";
     }
 }
 

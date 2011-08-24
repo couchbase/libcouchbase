@@ -33,15 +33,16 @@ static const uint8_t code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
  * @param s pointer to the input stream
  * @param d pointer to the output stream
  * @param num the number of characters from s to encode
+ * @return 0 upon success, -1 otherwise.
  */
-static inline void encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
+static inline int encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
     uint32_t val = 0;
 
     switch (num) {
     case 2: val = (uint32_t)((*s << 16) | (*(s + 1) << 8)); break;
     case 1: val = (uint32_t)((*s << 16)); break;
     default:
-        abort();
+        return -1;
     }
 
     d[3] = '=';
@@ -54,6 +55,8 @@ static inline void encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
 
     d[1] = code[(val >> 12) & 63];
     d[0] = code[(val >> 18) & 63];
+
+    return 0;
 }
 
 /**
@@ -62,12 +65,14 @@ static inline void encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
  * @param s pointer to the input stream
  * @param d pointer to the output stream
  */
-static inline void encode_triplet(const uint8_t *s, uint8_t *d) {
+static inline int encode_triplet(const uint8_t *s, uint8_t *d) {
     uint32_t val = (uint32_t)((*s << 16) | (*(s + 1) << 8) | (*(s + 2)));
     d[3] = code[val & 63] ;
     d[2] = code[(val >> 6) & 63];
     d[1] = code[(val >> 12) & 63];
     d[0] = code[(val >> 18) & 63];
+
+    return 0;
 }
 
 /**
@@ -90,13 +95,17 @@ int libcouchbase_base64_encode(const char *src, char *dst, size_t sz) {
     }
 
     for (ii = 0; ii < triplets; ++ii) {
-        encode_triplet(in, out);
+        if (encode_triplet(in, out) != 0) {
+            return -1;
+        }
         in += 3;
         out += 4;
     }
 
     if (rest > 0) {
-        encode_rest(in, out, rest);
+        if (encode_rest(in, out, rest) != 0) {
+            return -1;
+        }
         out += 4;
     }
     *out = '\0';

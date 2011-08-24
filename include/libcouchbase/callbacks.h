@@ -87,6 +87,9 @@ extern "C" {
                                                           vbucket_state_t state,
                                                           const void *es,
                                                           size_t nes);
+    typedef void (*libcouchbase_error_callback)(libcouchbase_t instance,
+                                                libcouchbase_error_t error,
+                                                const char *errinfo);
 
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
@@ -125,6 +128,10 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_tap_vbucket_set_callback libcouchbase_set_tap_vbucket_set_callback(libcouchbase_t,
                                                                                     libcouchbase_tap_vbucket_set_callback);
+
+    LIBCOUCHBASE_API
+    libcouchbase_error_callback libcouchbase_set_error_callback(libcouchbase_t,
+                                                                libcouchbase_error_callback);
 
 #ifdef __cplusplus
 }

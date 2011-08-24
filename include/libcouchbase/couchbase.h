@@ -78,6 +78,14 @@ extern "C" {
     libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance);
 
     /**
+     * Returns the last error that was seen within libcoubhase.
+     *
+     * @param instance the connection whose last error should be returned.
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance);
+
+    /**
      * Associate a cookie with an instance of libcouchbase
      * @param instance the instance to associate the cookie to
      * @param cookie the cookie to associate with this instance.

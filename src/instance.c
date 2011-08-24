@@ -79,6 +79,9 @@ libcouchbase_t libcouchbase_create(const char *host,
     ret->ev_base = base;
     ret->packet_filter = default_packet_filter;
 
+    // No error has occurred yet.
+    ret->last_error = LIBCOUCHBASE_SUCCESS;
+
     return ret;
 }
 
@@ -413,9 +416,12 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 
     if (instance->vbucket_stream.header == NULL) {
         if (parse_header(instance) == -1) {
-            // @todo we need to fix this... we should
-            // trigger an error callback
-            exit(1);
+            fprintf(stderr, "An unknown error has occurred parsing a packet header.\n");
+            // TODO: Is this really a NETWORK_ERROR?
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       "Failed to parse document returned from"
+                                       " the REST interface");
+            return;
         }
     }
 
@@ -446,6 +452,9 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
             }
         } while (!done);
     }
+
+    // Make it known that this was a success.
+    libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
 /**
@@ -469,7 +478,9 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
         char base64[256];
         snprintf(cred, sizeof(cred), "%s:%s", instance->user, instance->passwd);
         if (libcouchbase_base64_encode(cred, base64, sizeof(base64)) == -1) {
-            return LIBCOUCHBASE_E2BIG;
+            return libcouchbase_error_handler(instance, LIBCOUCHBASE_E2BIG,
+                                              "Username and password exceeds"
+                                              " 256 bytes...");
         }
 
         offset += snprintf(buffer + offset, sizeof(buffer) - (size_t)offset,
@@ -485,7 +496,11 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 
     error = getaddrinfo(instance->host, instance->port, &hints, &instance->ai);
     if (error != 0) {
-        return LIBCOUCHBASE_UNKNOWN_HOST;
+        char errinfo[1024];
+        snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
+                 instance->host, instance->port);
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_UNKNOWN_HOST,
+                                          errinfo);
     }
 
     ai = instance->ai;
@@ -517,7 +532,11 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
     }
 
     if (instance->sock == -1) {
-        return LIBCOUCHBASE_UNKNOWN_HOST;
+        char errinfo[1024];
+        snprintf(errinfo, sizeof(errinfo), "Failed to connect to \"%s:%s\"",
+                 instance->host, instance->port);
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_UNKNOWN_HOST,
+                                          errinfo);
     }
 
     len = offset;
@@ -528,7 +547,8 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
         if (nw == -1) {
             if (errno != EINTR) {
                 EVUTIL_CLOSESOCKET(instance->sock);
-                return LIBCOUCHBASE_NETWORK_ERROR;
+                return libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                                  "Failed to send data");
             }
         } else {
             offset += nw;
@@ -537,7 +557,8 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 
     if (evutil_make_socket_nonblocking(instance->sock) != 0) {
         EVUTIL_CLOSESOCKET(instance->sock);
-        return LIBCOUCHBASE_NETWORK_ERROR;
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                          "Failed to make socket nonblocking");
     }
 
     instance->ev_flags = EV_READ | EV_PERSIST;
@@ -545,10 +566,12 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
               instance->ev_flags, vbucket_stream_handler, instance);
     event_base_set(instance->ev_base, &instance->ev_event);
     if (event_add(&instance->ev_event, NULL) == -1) {
-        return LIBCOUCHBASE_LIBEVENT_ERROR;
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_LIBEVENT_ERROR,
+                                          "Failed to add socket to libevent");
     }
 
-    return LIBCOUCHBASE_SUCCESS;
+    // Make it known that this was a success.
+    return libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
 

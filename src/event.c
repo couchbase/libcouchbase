@@ -23,7 +23,7 @@
  */
 #include "internal.h"
 
-static void do_read_data(libcouchbase_server_t *c)
+static int do_read_data(libcouchbase_server_t *c)
 {
     size_t processed;
     const int operations_per_call = 1000;
@@ -56,7 +56,10 @@ static void do_read_data(libcouchbase_server_t *c)
                                                                       req);
                     break;
                 case PROTOCOL_BINARY_RES:
-                    libcouchbase_server_purge_implicit_responses(c, res->response.opaque);
+                    if (libcouchbase_server_purge_implicit_responses(c, res->response.opaque) != 0) {
+                        // TODO: Print an error message here.
+                        return -1;
+                    }
                     c->instance->response_handler[res->response.opcode](c,
                                                                         command_cookie,
                                                                         res);
@@ -72,7 +75,8 @@ static void do_read_data(libcouchbase_server_t *c)
                     c->output_cookies.avail -= sizeof(command_cookie);
                     break;
                 default:
-                    abort();
+                    // TODO: Print an error message here.
+                    return -1;
                 }
             }
 
@@ -84,7 +88,7 @@ static void do_read_data(libcouchbase_server_t *c)
 
         if (operations == operations_per_call) {
             // allow some other connections to process some data as well
-            return ;
+            return 0;
         }
 
         nr = recv(c->sock,
@@ -97,13 +101,15 @@ static void do_read_data(libcouchbase_server_t *c)
             case EINTR:
                 break;
             case EWOULDBLOCK:
-                return;
+                return 0;
             default:
-                abort();
+                // TODO: Print an error message here.
+                return -1;
             }
         } else if (nr == 0) {
             assert(c->input.avail != c->input.size);
-            abort();
+            // TODO: Print an error message here.
+            return -1;
         } else {
             c->input.avail += (size_t)nr;
             if (c->input.avail == c->input.size) {
@@ -113,9 +119,11 @@ static void do_read_data(libcouchbase_server_t *c)
             }
         }
     } while (true);
+
+    return 0;
 }
 
-static void do_send_data(libcouchbase_server_t *c)
+static int do_send_data(libcouchbase_server_t *c)
 {
     do {
         ssize_t nw = send(c->sock, c->output.data, c->output.avail, 0);
@@ -125,13 +133,13 @@ static void do_send_data(libcouchbase_server_t *c)
                 // retry
                 break;
             case EWOULDBLOCK:
-                return;
+                return 0;
             default:
                 // FIXME!
                 fprintf(stderr, "Failed to write data: %s\n",
                         strerror(errno));
                 fflush(stderr);
-                abort();
+                return -1;
             }
         } else {
             grow_buffer(&c->cmd_log, (size_t)nw);
@@ -148,6 +156,8 @@ static void do_send_data(libcouchbase_server_t *c)
             }
         }
     } while (c->output.avail > 0);
+
+    return 0;
 }
 
 void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *arg) {
@@ -155,11 +165,27 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
     (void)sock;
 
     if (which & EV_READ) {
-        do_read_data(c);
+        if (do_read_data(c) != 0) {
+            // TODO: Is there a better error for this?
+            char errinfo[1024];
+            snprintf(errinfo, sizeof(errinfo), "Failed to read from connection"
+                     " to \"%s:%s\"", c->hostname, c->port);
+            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       errinfo);
+            return;
+        }
     }
 
     if (which & EV_WRITE) {
-        do_send_data(c);
+        if (do_send_data(c) != 0) {
+            char errinfo[1024];
+            snprintf(errinfo, sizeof(errinfo), "Failed to send to the "
+                     "connection to \"%s:%s\"", c->hostname, c->port);
+            // TODO: Is there a better error for this?
+            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       errinfo);
+            return;
+        }
     }
 
     if (c->output.avail == 0) {
@@ -185,6 +211,9 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
             event_base_loopbreak(instance->ev_base);
         }
     }
+
+    // Make it known that this was a success.
+    libcouchbase_error_handler(c->instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
 void libcouchbase_server_update_event(libcouchbase_server_t *c, short flags,
@@ -197,14 +226,16 @@ void libcouchbase_server_update_event(libcouchbase_server_t *c, short flags,
 
     if (c->ev_flags != 0) {
         if (event_del(&c->ev_event) == -1) {
-            abort();
+            fprintf(stderr, "Failed to release event\n");
+            // Continue anyway.
         }
     }
     c->ev_flags = flags;
     event_set(&c->ev_event, c->sock, flags | EV_PERSIST, handler, c);
     event_base_set(c->instance->ev_base, &c->ev_event);
     if (event_add(&c->ev_event, NULL) == -1) {
-        abort();
+        fprintf(stderr, "Failed to add event\n");
+        return; // Don't continue.
     }
 }
 

@@ -41,6 +41,7 @@ libcouchbase_la_SOURCES = \
                         src/arithmetic.c \
                         src/base64.c \
                         src/cookie.c \
+                        src/error.c \
                         src/event.c \
                         src/execute.c \
                         src/get.c \

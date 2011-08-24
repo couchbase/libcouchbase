@@ -100,8 +100,13 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
         headersize -= 8;
         break;
     default:
-        abort();
+        // We were given an unknown storage operation.
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_EINVAL,
+                                          "Invalid value passed as storage operation");
     }
+
+    // Make it known that this was a success.
+    libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
 
     bodylen = nkey + nbytes + req.message.header.request.extlen;
     req.message.header.request.bodylen = htonl((uint32_t)bodylen);

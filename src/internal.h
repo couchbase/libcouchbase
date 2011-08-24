@@ -81,6 +81,7 @@ extern "C" {
         libcouchbase_tap_flush_callback tap_flush;
         libcouchbase_tap_opaque_callback tap_opaque;
         libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
+        libcouchbase_error_callback error;
     };
 
     struct libcouchbase_st {
@@ -147,6 +148,8 @@ extern "C" {
         uint32_t seqno;
         bool execute;
         const void *cookie;
+
+        libcouchbase_error_t last_error;
     };
 
     /**
@@ -193,8 +196,12 @@ extern "C" {
         libcouchbase_t instance;
     };
 
-    void libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
-                                                      uint32_t seqno);
+    libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance,
+                                                    libcouchbase_error_t error,
+                                                    const char *errinfo);
+
+    int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
+                                                     uint32_t seqno);
     void libcouchbase_server_destroy(libcouchbase_server_t *server);
     void libcouchbase_server_connected(libcouchbase_server_t *server);
 

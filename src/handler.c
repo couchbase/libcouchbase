@@ -165,8 +165,17 @@ static void storage_response_handler(libcouchbase_server_t *server,
         op = LIBCOUCHBASE_PREPEND;
         break;
     default:
+        // It is impossible to get here (since we're called from our
+        // lookup table... If we _DO_ get here, it must be a development
+        // version where the developer isn't done yet (and should be
+        // forced to think about what to do...)
+        libcouchbase_error_handler(root, LIBCOUCHBASE_EINTERNAL,
+                                   "Internal error. Received an illegal command opcode");
         abort();
     }
+
+    // Make it known that this was a success.
+    libcouchbase_error_handler(root, LIBCOUCHBASE_SUCCESS, NULL);
 
     assert(req->request.opaque == res->response.opaque);
     root->callbacks.storage(root, command_cookie, op, map_error(status), key, nkey,
@@ -292,8 +301,9 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
     assert(ntohs(res->response.status) == PROTOCOL_BINARY_RESPONSE_SUCCESS);
     if (sasl_client_start(server->sasl_conn, (const char *)(res + 1),
                           NULL, &data, &len, &chosenmech) != SASL_OK) {
-        // @fixme!
-        abort();
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_AUTH_ERROR,
+                                   "Unable to start sasl client");
+        return;
     }
 
     keylen = strlen(chosenmech);
@@ -316,6 +326,9 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
 
     // send the data and add it to libevent..
     libcouchbase_server_event_handler(0, EV_WRITE, server);
+
+    // Make it known that this was a success.
+    libcouchbase_error_handler(server->instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
 static void sasl_auth_response_handler(libcouchbase_server_t *server,
@@ -330,10 +343,16 @@ static void sasl_auth_response_handler(libcouchbase_server_t *server,
         libcouchbase_server_connected(server);
     } else if (ret == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
         // I don't know how to step yet ;-)
-        abort();
+        libcouchbase_error_handler(server->instance,
+                                   LIBCOUCHBASE_NOT_SUPPORTED,
+                                   "We don't support sasl authentication that requires \"SASL STEP\" yet");
     } else {
-        abort();
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_AUTH_ERROR,
+                                   "SASL authentication failed");
     }
+
+    // Make it known that this was a success.
+    libcouchbase_error_handler(server->instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
 static void sasl_step_response_handler(libcouchbase_server_t *server,
@@ -345,7 +364,9 @@ static void sasl_step_response_handler(libcouchbase_server_t *server,
     (void)command_cookie;
 
     // I don't have sasl step support yet ;-)
-    abort();
+    libcouchbase_error_handler(server->instance, LIBCOUCHBASE_NOT_SUPPORTED,
+                               "SASL AUTH CONTINUE not supported yet");
+
 #if 0
     // I should put the server to the notification!
     if (server->instance->vbucket_state_listener != NULL) {
@@ -419,6 +440,12 @@ static void dummy_tap_vbucket_set_callback(libcouchbase_t instance,
 {
     (void)instance; (void)cookie; (void)vbid; (void)state; (void)es; (void)nes;
 }
+static void dummy_error_callback(libcouchbase_t instance,
+                                 libcouchbase_error_t error,
+                                 const char *errinfo)
+{
+    (void)instance; (void)error; (void)errinfo;
+}
 
 static void dummy_get_callback(libcouchbase_t instance,
                                const void *cookie,
@@ -486,6 +513,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.arithmetic = dummy_arithmetic_callback;
     instance->callbacks.remove = dummy_remove_callback;
     instance->callbacks.touch = dummy_touch_callback;
+    instance->callbacks.error = dummy_error_callback;
 
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_MUTATION] = tap_mutation_handler;
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_DELETE] = tap_deletion_handler;
@@ -604,4 +632,11 @@ libcouchbase_tap_vbucket_set_callback libcouchbase_set_tap_vbucket_set_callback(
     return ret;
 }
 
-
+LIBCOUCHBASE_API
+libcouchbase_error_callback libcouchbase_set_error_callback(libcouchbase_t instance,
+                                                            libcouchbase_error_callback cb)
+{
+    libcouchbase_error_callback ret = instance->callbacks.error;
+    instance->callbacks.error = cb;
+    return ret;
+}
