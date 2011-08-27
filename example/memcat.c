@@ -174,14 +174,15 @@ static void get_callback(libcouchbase_t instance,
     (void)cookie;
     (void)bytes;
     if (error == LIBCOUCHBASE_SUCCESS) {
-        fprintf(output, "Found <");
-        fwrite(key, nkey, 1, output);
-        fprintf(output, "> size: %zu flags %04x cas: %"PRIu64"\n",
+        fprintf(stdout, "Found <");
+        fwrite(key, nkey, 1, stdout);
+        fprintf(stdout, "> size: %zu flags %04x cas: %"PRIu64"\n",
                 nbytes, flags, cas);
+        fwrite(bytes, nbytes, 1, output);
     } else {
-        fprintf(output, "Missing <");
-        fwrite(key, nkey, 1, output);
-        fprintf(output, ">\n");
+        fprintf(stderr, "Missing <");
+        fwrite(key, nkey, 1, stderr);
+        fprintf(stderr, ">\n");
     }
 }
 
