@@ -79,15 +79,15 @@ extern "C" {
      */
     typedef enum {
         /** Add the item to the cache, but fail if the object exists alread */
-        LIBCOUCHBASE_ADD,
+        LIBCOUCHBASE_ADD = 0x01,
         /** Replace the existing object in the cache */
-        LIBCOUCHBASE_REPLACE,
+        LIBCOUCHBASE_REPLACE = 0x02,
         /** Unconditionally set the object in the cache */
-        LIBCOUCHBASE_SET,
+        LIBCOUCHBASE_SET = 0x03,
         /** Append this object to the existing object */
-        LIBCOUCHBASE_APPEND,
+        LIBCOUCHBASE_APPEND = 0x04,
         /** Prepend this  object to the existing object */
-        LIBCOUCHBASE_PREPEND
+        LIBCOUCHBASE_PREPEND = 0x05
     } libcouchbase_storage_t;
 
     struct  libcouchbase_tap_filter_st;
