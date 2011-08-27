@@ -403,6 +403,19 @@ extern "C" {
                                                     size_t nkey,
                                                     uint64_t cas);
 
+
+    /**
+     * Get a textual descrtiption for the given error code
+     * @param instance the instance the error code belongs to (you might
+     *                 want different localizations for the different instances)
+     * @param error the error code
+     * @return A textual description of the error message. The caller should
+     *         <b>not</b> release the memory returned from this function.
+     */
+    LIBCOUCHBASE_API
+    const char *libcouchbase_strerror(libcouchbase_t instance,
+                                      libcouchbase_error_t error);
+
 #ifdef __cplusplus
 }
 #endif

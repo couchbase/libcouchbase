@@ -52,6 +52,7 @@ libcouchbase_la_SOURCES = \
                         src/remove.c \
                         src/server.c \
                         src/store.c \
+                        src/strerror.c \
                         src/tap.c \
                         src/timings.c \
                         src/touch.c \
@@ -112,7 +113,9 @@ example_memrm_LDFLAGS = $(LTLIBEVENT)
 
 extra_DIST = include/libcouchbase/configuration.h.in
 
-check_PROGRAMS = base64-test timings-test
+check_PROGRAMS = base64-test \
+                 strerror-test \
+                 timings-test
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
@@ -123,6 +126,9 @@ base64_test_SOURCES = tests/base64-test.c src/base64.c
 timings_test_SOURCES = tests/timings-test.c
 timings_test_LDADD = libcouchbase.la libmockserver.la
 timings_test_LDFLAGS = $(LTLIBEVENT)
+
+strerror_test_SOURCES = tests/strerror-test.c
+strerror_test_LDADD = ${libcouchbase_la_OBJECTS} $(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2)
 
 arithmetic_test_SOURCES = tests/arithmetic.c
 arithmetic_test_LDADD = libcouchbase.la libmockserver.la
