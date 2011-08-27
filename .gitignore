@@ -5,6 +5,7 @@
 *.l[ao]
 *.obj
 *~
+._*
 .deps/
 .libs/
 /*-test
