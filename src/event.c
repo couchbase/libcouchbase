@@ -119,8 +119,6 @@ static int do_read_data(libcouchbase_server_t *c)
             }
         }
     } while (true);
-
-    return 0;
 }
 
 static int do_send_data(libcouchbase_server_t *c)
