@@ -1,0 +1,62 @@
+'\" te
+.\"
+.\"     Copyright 2011 Couchbase, Inc.
+.\"
+.\"   Licensed under the Apache License, Version 2.0 (the "License");
+.\"   you may not use this file except in compliance with the License.
+.\"   You may obtain a copy of the License at
+.\"
+.\"       http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\"   Unless required by applicable law or agreed to in writing, software
+.\"   distributed under the License is distributed on an "AS IS" BASIS,
+.\"   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\"   See the License for the specific language governing permissions and
+.\"   limitations under the License.
+.\"
+.TH libcouchbase_set_packet_filter 3couchbase "29 August 2011" "Couchbase 2.0" "Couchbase Library Functions"
+.SH NAME
+libcouchbase_set_packet_filter \- Set the packet filter
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag \&.\|.\|.\fR ] \fIfile\fR\&.\|.\|. \fB-lcouchbase\fR [ \fIlibrary \&.\|.\|.\fR ]
+.sp
+#include <libcouchbase/couchbase.h>
+.sp
+\fBvoid\fR \fBlibcouchbase_set_packet_filter\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_packet_filter_t\fR filter);
+.fi
+
+.sp
+
+.SH DESCRIPTION
+.sp
+.LP
+Specify the packet filter to use for the given \fIinstance\fR.
+.sp
+.LP
+\fBNote that this functionality is\fR \fInot\fR \fBready for use yet..\fR
+
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityUncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBlibcouchbase\fR(3lib), \fBcouchbase.h\fR(3head), \fBattributes\fR(5)
+.sp

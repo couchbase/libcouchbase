@@ -98,6 +98,18 @@ AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xye
 AC_CHECK_FUNCS_ONCE(gethrtime clock_gettime gettimeofday)
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
 
+AC_CACHE_CHECK([man is capable of using a structured layout], [ac_cv_braindead_man],
+  [
+     ac_cv_braindead_man=no
+     man -M `pwd`/man -s 3head couchbase > /dev/zero 2>&1
+     if test $? -ne 0
+     then
+        ac_cv_braindead_man=yes
+     fi
+  ])
+
+AM_CONDITIONAL(USE_STRUCTURED_MANPAGES, [test "x${ac_cv_braindead_man}" = "xno"])
+
 AH_TOP([
 #ifndef CONFIG_H
 #define CONFIG_H

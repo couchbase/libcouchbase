@@ -1,0 +1,113 @@
+'\" te
+.\"
+.\"     Copyright 2011 Couchbase, Inc.
+.\"
+.\"   Licensed under the Apache License, Version 2.0 (the "License");
+.\"   you may not use this file except in compliance with the License.
+.\"   You may obtain a copy of the License at
+.\"
+.\"       http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\"   Unless required by applicable law or agreed to in writing, software
+.\"   distributed under the License is distributed on an "AS IS" BASIS,
+.\"   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\"   See the License for the specific language governing permissions and
+.\"   limitations under the License.
+.\"
+.TH libcouchbase_callbacks 3couchbase "29 August 2011" "Couchbase 2.0" "Couchbase Library Functions"
+.SH NAME
+libcouchbase_set_arithmetic_callback, libcouchbase_set_error_callback, libcouchbase_set_get_callback, libcouchbase_set_remove_callback, libcouchbase_set_storage_callback, libcouchbase_set_tap_deletion_callback, libcouchbase_set_tap_flush_callback, libcouchbase_set_tap_mutation_callback, libcouchbase_set_tap_opaque_callback, libcouchbase_set_tap_vbucket_set_callback, libcouchbase_set_touch_callback \- Operation to specify callback functions
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag \&.\|.\|.\fR ] \fIfile\fR\&.\|.\|. \fB-lcouchbase\fR [ \fIlibrary \&.\|.\|.\fR ]
+.sp
+#include <libcouchbase/couchbase.h>
+
+\fBlibcouchbase_get_callback\fR \fBlibcouchbase_set_get_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_get_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_storage_callback\fR \fBlibcouchbase_set_storage_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_storage_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_arithmetic_callback\fR \fBlibcouchbase_set_arithmetic_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_arithmetic_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_remove_callback\fR \fBlibcouchbase_set_remove_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_remove_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_touch_callback\fR \fBlibcouchbase_set_touch_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_touch_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_tap_mutation_callback\fR \fBlibcouchbase_set_tap_mutation_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_tap_mutation_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_tap_deletion_callback\fR \fBlibcouchbase_set_tap_deletion_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_tap_deletion_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_tap_flush_callback\fR \fBlibcouchbase_set_tap_flush_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_tap_flush_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_tap_opaque_callback\fR \fBlibcouchbase_set_tap_opaque_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_tap_opaque_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_tap_vbucket_set_callback\fR \fBlibcouchbase_set_tap_vbucket_set_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_tap_vbucket_set_callback\fR \fIdisposition\fR);
+.fi
+
+.LP
+.nf
+\fBlibcouchbase_error_callback\fR \fBlibcouchbase_set_error_callback\fR(\fBlibcouchbase_t\fR \fIinstance\fR, \fBlibcouchbase_error_callback\fR \fIdisposition\fR);
+.fi
+.sp
+
+.SH DESCRIPTION
+.sp
+.LP
+These functions is used to specify the function libcouchbase should call during completion of a request.
+
+.SH RETURN VALUES
+.sp
+.LP
+All functions returns the previous callback function.
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBlibcouchbase\fR(3lib), \fBcouchbase.h\fR(3head), \fBattributes\fR(5)
+.sp

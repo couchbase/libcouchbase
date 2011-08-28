@@ -1,0 +1,64 @@
+'\" te
+.\"
+.\"     Copyright 2011 Couchbase, Inc.
+.\"
+.\"   Licensed under the Apache License, Version 2.0 (the "License");
+.\"   you may not use this file except in compliance with the License.
+.\"   You may obtain a copy of the License at
+.\"
+.\"       http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\"   Unless required by applicable law or agreed to in writing, software
+.\"   distributed under the License is distributed on an "AS IS" BASIS,
+.\"   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\"   See the License for the specific language governing permissions and
+.\"   limitations under the License.
+.\"
+.TH libcouchbase_get_last_error 3couchbase "29 August 2011" "Couchbase 2.0" "Couchbase Library Functions"
+.SH NAME
+libcouchbase_get_last_error \- Get the last error seen by the library
+.SH SYNOPSIS
+.LP
+.nf
+cc [ \fIflag \&.\|.\|.\fR ] \fIfile\fR\&.\|.\|. \fB-lcouchbase\fR [ \fIlibrary \&.\|.\|.\fR ]
+.sp
+#include <libcouchbase/couchbase.h>
+.sp
+\fBlibcouchbase_error_t\fR \fBlibcouchbase_get_last_error\fR(\fBlibcouchbase_t\fR \fIinstance\fR);
+.fi
+
+.sp
+
+.SH DESCRIPTION
+.sp
+.LP
+\fBlibcouchbase_get_last_error\fR returns the last error set for the given \fIinstance\fR.
+
+.SH RETURN VALUES
+.sp
+.LP
+The last error set for the instance.
+.sp
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityCommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBlibcouchbase\fR(3lib), \fBcouchbase.h\fR(3head), \fBattributes\fR(5)
+.sp

@@ -1,0 +1,318 @@
+'\" te
+.\"
+.\"     Copyright 2011 Couchbase, Inc.
+.\"
+.\"   Licensed under the Apache License, Version 2.0 (the "License");
+.\"   you may not use this file except in compliance with the License.
+.\"   You may obtain a copy of the License at
+.\"
+.\"       http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\"   Unless required by applicable law or agreed to in writing, software
+.\"   distributed under the License is distributed on an "AS IS" BASIS,
+.\"   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\"   See the License for the specific language governing permissions and
+.\"   limitations under the License.
+.\"
+.TH couchbase.h 3HEAD "28 August 2011" "Couchbase 2.0" "Headers"
+.SH NAME
+couchbase.h \- Functions, constants and types needed to access a Couchbase cluster
+.SH SYNOPSIS
+.LP
+.nf
+#include <libcouchbase/couchbase.h>
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+The <\fBlibcouchbase/couchbase.h\fR> header file defines the functions, constants and types needed in order to access a Couchbase cluster.
+.SS "Version Test Macros"
+.sp
+.LP
+The following symbolic constants are defined (with fixed values):
+.sp
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_VERSION\fR\fR
+.ad
+.RS 33n
+.rt
+An hexadecimal integer value containing the version of the library.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_VERSION_STRING\fR\fR
+.ad
+.RS 33n
+.rt
+A textual representation of the version.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_VERSION_CHANGESET\fR\fR
+.ad
+.RS 33n
+.rt
+The actual changeset the library is built of.
+.RE
+
+.SS "Data types"
+.sp
+.LP
+<\fBlibcuchbase/couchbase.h\fR> exports the following opaque datatypes. They are created and destroyed by calling functions from the library.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBlibcouchbase_t\fR\fR
+.ad
+.RS 33n
+.rt
+A handle to an instance of the library.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBlibcouchbase_tap_filter_t\fR\fR
+.ad
+.RS 33n
+.rt
+A handle to a tap filter.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBlibcouchbase_error_t\fR\fR
+.ad
+.RS 33n
+.rt
+An error code returned by libcouchbase if it encounter some sort of problem. See the section "\fBError codes\fR" for a description of the different values.
+.RE
+.na
+\fB\fBlibcouchbase_storage_t\fR\fR
+.ad
+.RS 33n
+.rt
+How the data is to be stored (add/replace/set etc). See \fBlibcouchbase_store\fR(3libcouchbase) for more information.
+.RE
+
+.SS "Error codes (libcouchbase_error_t)"
+.sp
+.LP
+The following error codes are defined.
+.sp
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_SUCCESS\fR\fR
+.ad
+.RS 30n
+.rt
+Success.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_AUTH_CONTINUE\fR\fR
+.ad
+.RS 30n
+.rt
+If an error occured during SASL AUTH.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_AUTH_ERROR\fR\fR
+.ad
+.RS 30n
+.rt
+SASL authentication failed.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_DELTA_BADVAL\fR\fR
+.ad
+.RS 30n
+.rt
+The value used with incr / decr wasn't accepted by the server.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_E2BIG\fR\fR
+.ad
+.RS 30n
+.rt
+The object is too big.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_EBUSY\fR\fR
+.ad
+.RS 30n
+.rt
+The server is too busy right now. Try again later.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_EINTERNAL\fR\fR
+.ad
+.RS 30n
+.rt
+An internal error occured within the server or inside libcouchbase.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_EINVAL\fR\fR
+.ad
+.RS 30n
+.rt
+Invalid arguments.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_ENOMEM\fR\fR
+.ad
+.RS 30n
+.rt
+Server (or client) is out of memory.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_ERANGE\fR\fR
+.ad
+.RS 30n
+.rt
+The object is outside the legal range.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_ERROR\fR\fR
+.ad
+.RS 30n
+.rt
+An unknown problem occured within the library.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_ETMPFAIL\fR\fR
+.ad
+.RS 30n
+.rt
+A temporary error occurred. The operation may be retried. The retry should be after a random wait interval. This may be encountered if the server needs clients to back off while performing internal housekeeping.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_KEY_EEXISTS\fR\fR
+.ad
+.RS 30n
+.rt
+The key already exists.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_KEY_ENOENT\fR\fR
+.ad
+.RS 30n
+.rt
+No such key.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_LIBEVENT_ERROR\fR\fR
+.ad
+.RS 30n
+.rt
+A problem occured while trying to use libevent.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_NETWORK_ERROR\fR\fR
+.ad
+.RS 30n
+.rt
+A network error occured (read/write).
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_NOT_MY_VBUCKET\fR\fR
+.ad
+.RS 30n
+.rt
+The virtual bucket has moved to another server, and the client isn't up to date yet.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_NOT_STORED\fR\fR
+.ad
+.RS 30n
+.rt
+The object was not stored on the server.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_NOT_SUPPORTED\fR\fR
+.ad
+.RS 30n
+.rt
+The requested operation is currently not supported.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_UNKNOWN_COMMAND\fR\fR
+.ad
+.RS 30n
+.rt
+The command is unknown to the server.
+.RE
+.ne 2
+.mk
+.na
+\fB\fBLIBCOUCHBASE_UNKNOWN_HOST\fR\fR
+.ad
+.RS 30n
+.rt
+Failed to resolve the hostname.
+.RE
+
+.SH ATTRIBUTES
+.sp
+.LP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+
+.sp
+.TS
+tab() box;
+cw(2.75i) |cw(2.75i)
+lw(2.75i) |lw(2.75i)
+.
+ATTRIBUTE TYPEATTRIBUTE VALUE
+_
+Interface StabilityUncommitted
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBlibcouchbase\fR(3LIB), \fBattributes\fR(5)
