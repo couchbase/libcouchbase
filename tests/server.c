@@ -36,6 +36,13 @@
 
 #include <event.h>
 
+#ifdef linux
+#undef ntohs
+#undef ntohl
+#undef htons
+#undef htonl
+#endif
+
 struct mock_server_info {
     pid_t pid;
     char *http;
@@ -46,8 +53,6 @@ struct mock_server_info {
 };
 
 static bool create_monitor(struct mock_server_info *info) {
-    int sfd;
-    struct addrinfo *next;
     struct addrinfo hints = { .ai_flags = AI_PASSIVE,
                               .ai_family = AF_UNSPEC,
                               .ai_socktype = SOCK_STREAM };
@@ -66,9 +71,9 @@ static bool create_monitor(struct mock_server_info *info) {
     }
 
     for (struct addrinfo *next = ai; next; next = next->ai_next) {
-        if (info->sock = socket(next->ai_family,
-                                next->ai_socktype,
-                                next->ai_protocol) == -1) {
+        if ((info->sock = socket(next->ai_family,
+                                 next->ai_socktype,
+                                 next->ai_protocol)) == -1) {
             continue;
         }
 
@@ -106,7 +111,6 @@ static bool create_monitor(struct mock_server_info *info) {
 
 
 static void wait_for_server(const char *port) {
-    struct addrinfo *next;
     struct addrinfo hints = { .ai_flags = AI_PASSIVE,
                               .ai_family = AF_UNSPEC,
                               .ai_socktype = SOCK_STREAM };
@@ -126,9 +130,9 @@ static void wait_for_server(const char *port) {
 
     while (true) {
         for (struct addrinfo *next = ai; next; next = next->ai_next) {
-            if (sock = socket(next->ai_family,
-                              next->ai_socktype,
-                              next->ai_protocol) == -1) {
+            if ((sock = socket(next->ai_family,
+                               next->ai_socktype,
+                               next->ai_protocol)) == -1) {
                 continue;
             }
 
@@ -144,7 +148,7 @@ static void wait_for_server(const char *port) {
     }
 }
 
-const void *start_mock_server(const char *cmdline) {
+const void *start_mock_server(char **cmdline) {
     struct mock_server_info *info = calloc(1, sizeof(*info));
     if (info == NULL) {
         return NULL;
@@ -162,10 +166,18 @@ const void *start_mock_server(const char *cmdline) {
         /* Child */
         char *argv[1024];
         int arg = 0;
-        argv[arg++] = "./tests/start_mock.sh";
+        argv[arg++] = (char*)"./tests/start_mock.sh";
         char monitor[1024];
         sprintf(monitor, "--harakiri-monitor=localhost:%d", info->port);
         argv[arg++] = monitor;
+
+        if (cmdline != NULL) {
+            int ii = 0;
+            while (cmdline[ii] != NULL && arg < 1022) {
+                argv[arg++] = cmdline[ii++];
+            }
+        }
+
         argv[arg++] = NULL;
         assert(execv(argv[0], argv) != -1);
     }
@@ -175,8 +187,8 @@ const void *start_mock_server(const char *cmdline) {
     assert(info->client != -1);
     // Get the port number of the http server
     char buffer[1024];
-    int offset = sprintf(buffer, "localhost:");
-    int nr = recv(info->client, buffer + offset, sizeof(buffer) - offset - 1, 0);
+    ssize_t offset = snprintf(buffer, sizeof(buffer), "localhost:");
+    ssize_t nr = recv(info->client, buffer + offset, sizeof(buffer) - (size_t)offset - 1, 0);
     assert(nr > 0);
     buffer[nr + offset] = '\0';
     info->http = strdup(buffer);
