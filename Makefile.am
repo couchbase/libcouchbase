@@ -61,6 +61,14 @@ libcouchbase_la_LDFLAGS=$(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2)
                       -version-info 0:0:0
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
+tests/CouchbaseMock.jar:
+	@echo "+---------------------------------------------+"
+	@echo "| Download CouchbaseMock for functional tests |"
+	@echo "+---------------------------------------------+"
+	${WGET} -nv http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20110830.073020-1.jar
+	mv CouchbaseMock-0.5-20110830.073020-1.jar tests/CouchbaseMock.jar
+
+libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
                          tests/server.c tests/server.h
 

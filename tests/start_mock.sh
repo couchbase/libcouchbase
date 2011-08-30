@@ -19,7 +19,7 @@
 # We could have started it directly from the C code, but by using
 # a script it's a bit easier to test it manually ;)
 exec java \
-       -jar tests/CouchbaseMock-1.0.jar \
+       -jar tests/CouchbaseMock.jar \
         --nodes=10 \
         --host=localhost \
         --port=0 \

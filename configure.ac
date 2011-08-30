@@ -72,14 +72,26 @@ return htonll(0);
 AS_IF([test "x$ac_cv_have_htonll" = "xyes"],[
        AC_DEFINE([HAVE_HTONLL], [1], [Have ntohll])])
 
-AC_CACHE_CHECK([for CouchbaseMock], [ac_cv_couchbasemock],
-  [
-    AS_IF([test -f tests/CouchbaseMock-1.0.jar],
-          [ac_cv_couchbasemock=yes],
-          [ac_cv_couchbasemock=no])
-  ])
+AC_PATH_PROG(WGET, wget, no)
+AC_PATH_PROG(JAVA, java, no)
 
-AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_couchbasemock}" = "xyes"])
+AC_ARG_ENABLE([couchbasemock],
+    [AS_HELP_STRING([--disable-couchbasemock],
+            [Build tests that use couchbasemock. @<:@default=on@:>@])],
+    [ac_cv_enable_couchbasemock="$enableval"],
+    [ac_cv_enable_couchbasemock="yes"])
+
+AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
+      [AS_IF([test "x$WGET" = "xno"],
+             [AC_MSG_ERROR([You need wget in path to download the mock server.
+Try add --disable-couchbasemock
+])])
+       AS_IF([test "x$JAVA" = "xno"],
+             [AC_MSG_ERROR([You need java in path to run the mock server.
+Try add --disable-couchbasemock
+])])])
+
+AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xyes"])
 
 AH_TOP([
 #ifndef CONFIG_H
