@@ -140,14 +140,13 @@ static void storage_response_handler(libcouchbase_server_t *server,
 {
     libcouchbase_t root = server->instance;
     protocol_binary_request_header *req = (void*)server->cmd_log.data;
-
+    libcouchbase_storage_t op;
 
     const char *key = (const char*)(req + 1);
     size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
     key += req->request.extlen;
 
-    libcouchbase_storage_t op;
     switch (res->response.opcode) {
     case PROTOCOL_BINARY_CMD_ADD:
         op = LIBCOUCHBASE_ADD;
@@ -335,7 +334,6 @@ static void sasl_auth_response_handler(libcouchbase_server_t *server,
                                        const void *command_cookie,
                                        protocol_binary_response_header *res)
 {
-    (void)command_cookie;
     uint16_t ret = ntohs(res->response.status);
     if (ret == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         sasl_dispose(&server->sasl_conn);
@@ -353,6 +351,7 @@ static void sasl_auth_response_handler(libcouchbase_server_t *server,
 
     // Make it known that this was a success.
     libcouchbase_error_handler(server->instance, LIBCOUCHBASE_SUCCESS, NULL);
+    (void)command_cookie;
 }
 
 static void sasl_step_response_handler(libcouchbase_server_t *server,

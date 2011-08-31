@@ -35,7 +35,7 @@ static const uint8_t code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
  * @param num the number of characters from s to encode
  * @return 0 upon success, -1 otherwise.
  */
-static inline int encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
+static int encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
     uint32_t val = 0;
 
     switch (num) {
@@ -65,7 +65,7 @@ static inline int encode_rest(const uint8_t *s, uint8_t *d, size_t num) {
  * @param s pointer to the input stream
  * @param d pointer to the output stream
  */
-static inline int encode_triplet(const uint8_t *s, uint8_t *d) {
+static int encode_triplet(const uint8_t *s, uint8_t *d) {
     uint32_t val = (uint32_t)((*s << 16) | (*(s + 1) << 8) | (*(s + 2)));
     d[3] = code[val & 63] ;
     d[2] = code[(val >> 6) & 63];

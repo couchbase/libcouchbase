@@ -55,15 +55,15 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                               const size_t *nkey,
                                               const time_t *exp)
 {
-    if (num_keys == 1) {
-        return libcouchbase_single_get(instance, command_cookie, hashkey,
-                                       nhashkey, keys[0], nkey[0], exp);
-    }
-
     uint16_t vb = 0;
     libcouchbase_server_t *server = NULL;
     protocol_binary_request_noop noop;
     size_t ii;
+
+    if (num_keys == 1) {
+        return libcouchbase_single_get(instance, command_cookie, hashkey,
+                                       nhashkey, keys[0], nkey[0], exp);
+    }
 
     // we need a vbucket config before we can start getting data..
     libcouchbase_ensure_vbucket_config(instance);
@@ -144,6 +144,8 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
                                                     const time_t *exp)
 {
     uint16_t vb = 0;
+    libcouchbase_server_t *server;
+    protocol_binary_request_gat req;
 
     // we need a vbucket config before we can start getting data..
     libcouchbase_ensure_vbucket_config(instance);
@@ -156,9 +158,8 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
                                                   key, nkey);
     }
-    libcouchbase_server_t *server = instance->servers + instance->vb_server_map[vb];
+    server = instance->servers + instance->vb_server_map[vb];
 
-    protocol_binary_request_gat req;
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.keylen = ntohs((uint16_t)nkey);
