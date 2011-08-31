@@ -52,6 +52,10 @@
 #include <ws2tcpip.h>
 #endif
 
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+
 #ifndef WIN32
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1

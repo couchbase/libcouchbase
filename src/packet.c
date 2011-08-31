@@ -31,14 +31,18 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
                                              const void *data,
                                              size_t size)
 {
+    struct libcouchbase_command_data_st ct;
     (void)c;
     grow_buffer(buff, size);
     memcpy(buff->data + buff->avail, data, size);
     buff->avail += size;
 
-    struct libcouchbase_command_data_st ct = { .start = c->instance->histogram != 0 ? gethrtime() : 0,
-                                               .cookie = command_cookie };
-
+    if (c->instance->histogram != 0) {
+        ct.start = gethrtime();
+    } else {
+        ct.start = 0;
+    }
+    ct.cookie = command_cookie;
     grow_buffer(buff_cookie, sizeof(ct));
     memcpy(buff_cookie->data + buff_cookie->avail, &ct, sizeof(ct));
     buff_cookie->avail += sizeof(ct);
@@ -70,14 +74,18 @@ void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
                                                 const void *data,
                                                 size_t size)
 {
+    struct libcouchbase_command_data_st ct;
     (void)c;
     grow_buffer(buff, size);
     memcpy(buff->data + buff->avail, data, size);
     buff->avail += size;
 
-    struct libcouchbase_command_data_st ct = { .start = c->instance->histogram != 0 ? gethrtime() : 0,
-                                               .cookie = command_cookie };
-
+    if (c->instance->histogram != 0) {
+        ct.start = gethrtime();
+    } else {
+        ct.start = 0;
+    }
+    ct.cookie = command_cookie;
     grow_buffer(buff_cookie, sizeof(ct));
     memcpy(buff_cookie->data + buff_cookie->avail, &ct, sizeof(ct));
     buff_cookie->avail += sizeof(ct);

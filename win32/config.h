@@ -32,6 +32,7 @@
 
 #define HAVE_WINSOCK2_H 1
 #define HAVE_WS2TCPIP_H 1
+#define HAVE_QUERYPERFORMANCECOUNTER 1
 
 typedef int ssize_t;
 

@@ -74,11 +74,16 @@ libcouchbase_error_t libcouchbase_get_timings(libcouchbase_t instance,
                                               const void *cookie,
                                               libcouchbase_timings_callback callback)
 {
+    uint32_t max;
+    uint32_t start;
+    uint32_t ii;
+    uint32_t end;
+
     if (instance->histogram == NULL) {
         return LIBCOUCHBASE_KEY_ENOENT;
     }
 
-    uint32_t max = instance->histogram->max;
+    max = instance->histogram->max;
     // @todo I should merge "empty" sets.. currently I'm only going to report the
     // nonzero ones...
     if (instance->histogram->nsec) {
@@ -86,9 +91,9 @@ libcouchbase_error_t libcouchbase_get_timings(libcouchbase_t instance,
                  instance->histogram->nsec, max);
     }
 
-    uint32_t start = 1;
-    for (uint32_t ii = 0; ii < 100; ++ii) {
-        uint32_t end = (ii + 1) * 10 - 1;
+    start = 1;
+    for (ii = 0; ii < 100; ++ii) {
+        end = (ii + 1) * 10 - 1;
         if (instance->histogram->usec[ii]) {
             callback(instance, cookie, LIBCOUCHBASE_TIMEUNIT_USEC, start, end,
                      instance->histogram->usec[ii], max);
@@ -97,8 +102,8 @@ libcouchbase_error_t libcouchbase_get_timings(libcouchbase_t instance,
     }
 
     start = 1;
-    for (uint32_t ii = 0; ii < 100; ++ii) {
-        uint32_t end = (ii + 1) * 10 - 1;
+    for (ii = 0; ii < 100; ++ii) {
+        end = (ii + 1) * 10 - 1;
         if (instance->histogram->msec[ii]) {
             callback(instance, cookie, LIBCOUCHBASE_TIMEUNIT_MSEC, start, end,
                      instance->histogram->msec[ii], max);
@@ -107,8 +112,8 @@ libcouchbase_error_t libcouchbase_get_timings(libcouchbase_t instance,
     }
 
     start = 1;
-    for (uint32_t ii = 0; ii < 9; ++ii) {
-        uint32_t end = ii + 1;
+    for (ii = 0; ii < 9; ++ii) {
+        end = ii + 1;
         if (instance->histogram->sec[ii]) {
             callback(instance, cookie, LIBCOUCHBASE_TIMEUNIT_SEC, start, end,
                      instance->histogram->sec[ii], max);
@@ -127,12 +132,13 @@ void libcouchbase_record_metrics(libcouchbase_t instance,
                                  hrtime_t delta,
                                  uint8_t opcode)
 {
+    int ii;
     (void)opcode;
     if (instance->histogram == NULL) {
         return;
     }
 
-    int ii = 0;
+    ii = 0;
     while (delta > 1000 && ii < 4) {
         ++ii;
         delta /= 1000;

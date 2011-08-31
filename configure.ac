@@ -45,6 +45,7 @@ AC_CHECK_HEADERS_ONCE([mach/mach_time.h
                        memcached/vbucket.h
                        memcached/protocol_binary.h
                        sys/socket.h
+                       sys/time.h
                        netinet/in.h
                        inttypes.h
                        netdb.h

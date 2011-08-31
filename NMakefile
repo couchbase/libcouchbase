@@ -28,9 +28,11 @@ COMPILE=$(cc) $(cdebug) $(cflags) $(cvarsdll) -DLIBCOUCHBASE_INTERNAL=1 -I$(INST
 OBJS=arithmetic.obj \
      base64.obj \
      cookie.obj \
-     execute.obj \
+     error.obj \
      event.obj \
+     execute.obj \
      get.obj \
+     gethrtime.obj \
      handler.obj \
      instance.obj \
      packet.obj \
@@ -38,6 +40,7 @@ OBJS=arithmetic.obj \
      server.obj \
      store.obj \
      tap.obj \
+     timings.obj \
      touch.obj \
      utilities.obj
 
@@ -58,11 +61,17 @@ cookie.obj: src\cookie.c
 event.obj: src\event.c
 	$(COMPILE) src\event.c
 
+error.obj: src\error.c
+	$(COMPILE) src\error.c
+
 execute.obj: src\execute.c
 	$(COMPILE) src\execute.c
 
 get.obj: src\get.c
 	$(COMPILE) src\get.c
+
+gethrtime.obj: src\gethrtime.c
+	$(COMPILE) src\gethrtime.c
 
 handler.obj: src\handler.c
 	$(COMPILE) src\handler.c
@@ -87,6 +96,9 @@ store.obj: src\store.c
 
 tap.obj: src\tap.c
 	$(COMPILE) src\tap.c
+
+timings.obj: src\timings.c
+	$(COMPILE) src\timings.c
 
 touch.obj: src\touch.c
 	$(COMPILE) src\touch.c
