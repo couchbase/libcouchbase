@@ -28,13 +28,19 @@
  * @author Trond Norbye
  */
 
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdint.h>
+#include <string.h>
 
 #define HAVE_WINSOCK2_H 1
 #define HAVE_WS2TCPIP_H 1
 #define HAVE_QUERYPERFORMANCECOUNTER 1
 
 typedef int ssize_t;
+
+#define snprintf _snprintf
+#undef strdup
+#define strdup _strdup
 
 #include "config_static.h"
 #endif
