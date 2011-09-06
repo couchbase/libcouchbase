@@ -55,6 +55,7 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
         freeaddrinfo(server->root_ai);
     }
 
+    free(server->couch_api_base);
     free(server->hostname);
     free(server->output.data);
     free(server->cmd_log.data);
@@ -286,6 +287,10 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     p = strchr(server->hostname, ':');
     *p = '\0';
     server->port = p + 1;
+
+    n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
+                                          servernum);
+    server->couch_api_base = strdup(n);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;

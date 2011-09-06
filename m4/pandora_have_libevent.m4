@@ -17,12 +17,18 @@ AC_DEFUN([_PANDORA_SEARCH_LIBEVENT],[
     #include <sys/time.h>
     #include <stdlib.h>
     #include <event.h>
+    #include <event2/http.h>
   ],[
     struct bufferevent bev;
+    struct evbuffer* buf;
+
+    buf = evbuffer_new();
+    evbuffer_add_printf(buf, "foo");
+
     bufferevent_settimeout(&bev, 1, 1);
     event_init();
     event_loop(EVLOOP_ONCE);
-  ]) 
+  ])
 
   AM_CONDITIONAL(HAVE_LIBEVENT, [test "x${ac_cv_libevent}" = "xyes"])
 
@@ -32,6 +38,7 @@ AC_DEFUN([_PANDORA_SEARCH_LIBEVENT],[
     AC_CHECK_FUNCS(event_base_new)
     AC_CHECK_FUNCS(event_base_free)
     AC_CHECK_FUNCS(event_base_get_method)
+    AC_CHECK_FUNCS(evhttp_request_new)
     LIBS="$save_LIBS"
   ])
 ])
@@ -57,7 +64,7 @@ AC_DEFUN([_PANDORA_REQUIRE_LIBEVENT],[
   _PANDORA_SEARCH_LIBEVENT
 
   AS_IF([test x$ac_cv_libevent = xno],[
-    AC_MSG_ERROR([libevent is required for ${PACKAGE}. On Debian this can be found in libevent-dev. On RedHat this can be found in libevent-devel.])
+    AC_MSG_ERROR([libevent2 is required for ${PACKAGE}.])
   ])
 ])
 

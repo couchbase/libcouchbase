@@ -32,6 +32,7 @@ PANDORA_CANONICAL_TARGET(warnings-always-on)
 PANDORA_REQUIRE_LIBVBUCKET
 PANDORA_REQUIRE_LIBEVENT
 PANDORA_REQUIRE_SASL
+PANDORA_HAVE_LIBYAJL
 
 dnl The malloc tests seems to be broken for cross compilation. I'm pretty
 dnl sure that all interesting platforms got a working malloc these days.

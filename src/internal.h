@@ -92,6 +92,8 @@ extern "C" {
         libcouchbase_tap_opaque_callback tap_opaque;
         libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
         libcouchbase_error_callback error;
+        libcouchbase_view_complete_callback view_complete;
+        libcouchbase_view_data_callback view_data;
     };
 
     struct libcouchbase_st {
@@ -171,6 +173,8 @@ extern "C" {
         char *hostname;
         /** The servers port */
         char *port;
+        /** The CouchDB API endpoint base */
+        char *couch_api_base;
         /** The socket to the server */
         evutil_socket_t sock;
         /** The address information for this server (the one to release) */

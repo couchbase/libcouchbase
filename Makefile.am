@@ -58,6 +58,7 @@ libcouchbase_la_SOURCES = \
                         src/tap.c \
                         src/timings.c \
                         src/touch.c \
+                        src/views.c \
                         src/utilities.c
 
 if !HAVE_GETHRTIME
@@ -96,7 +97,8 @@ noinst_PROGRAMS = \
                example/memcat \
                example/memcp \
                example/memdump \
-               example/memrm
+               example/memrm \
+               example/couchview
 
 example_memcat_SOURCES = example/memcat.c
 example_memcat_LDADD = libcouchbase.la
@@ -113,6 +115,17 @@ example_memdump_LDFLAGS = $(LTLIBEVENT)
 example_memrm_SOURCES = example/memrm.c
 example_memrm_LDADD = libcouchbase.la
 example_memrm_LDFLAGS = $(LTLIBEVENT)
+
+example_couchview_SOURCES = example/couchview.c
+example_couchview_LDADD = libcouchbase.la
+example_couchview_LDFLAGS = $(LTLIBEVENT)
+
+if HAVE_LIBYAJL
+noinst_PROGRAMS += example/couchview_yajl
+example_couchview_yajl_SOURCES = example/couchview_yajl.c
+example_couchview_yajl_LDADD = libcouchbase.la
+example_couchview_yajl_LDFLAGS = $(LTLIBEVENT) $(LTLIBYAJL)
+endif
 
 check_PROGRAMS = base64-test \
                  strerror-test \

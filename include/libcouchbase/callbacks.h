@@ -91,6 +91,29 @@ extern "C" {
                                                 libcouchbase_error_t error,
                                                 const char *errinfo);
 
+    /**
+     * view_complete_callback will notify that view execution was completed
+     * and libcouchbase will pass response body to this callback unless
+     * view_data_callback set up.
+     */
+    typedef void (*libcouchbase_view_complete_callback)(libcouchbase_t instance,
+                                                        const void *cookie,
+                                                        libcouchbase_error_t error,
+                                                        const char *uri,
+                                                        const void *bytes, size_t nbytes);
+
+    /**
+     * view_data_callback switch the view operation into the 'chunked' mode
+     * and it will call this callback each time the data received from the
+     * socket. *note* it doesn't collect whole response anymore. It returns
+     * NULL for bytes and zero for nbytes to signal that request was
+     * completed.
+     */
+    typedef void (*libcouchbase_view_data_callback)(libcouchbase_t instance,
+                                                    const void *cookie,
+                                                    libcouchbase_error_t error,
+                                                    const char *uri,
+                                                    const void *bytes, size_t nbytes);
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
                                                             libcouchbase_get_callback);
@@ -132,6 +155,14 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_error_callback libcouchbase_set_error_callback(libcouchbase_t,
                                                                 libcouchbase_error_callback);
+
+    LIBCOUCHBASE_API
+    libcouchbase_view_complete_callback libcouchbase_set_view_complete_callback(libcouchbase_t,
+                                                                                libcouchbase_view_complete_callback);
+
+    LIBCOUCHBASE_API
+    libcouchbase_view_data_callback libcouchbase_set_view_data_callback(libcouchbase_t,
+                                                                        libcouchbase_view_data_callback);
 
 #ifdef __cplusplus
 }

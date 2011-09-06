@@ -416,6 +416,34 @@ extern "C" {
     const char *libcouchbase_strerror(libcouchbase_t instance,
                                       libcouchbase_error_t error);
 
+
+    /**
+     * Execute CouchDB view matching given path and yield JSON result object.
+     * The client should setup view_complete callback in order to fetch the
+     * result. Also he can setup view_data callback to fetch response body
+     * in chunks as soon as possible, it will be called each time the library
+     * receive a data chunk from socket. The empty <tt>bytes</tt> argument
+     * (NULL pointer and zero size) is the sign of end of response. Chunked
+     * callback allows to save memory on large datasets.
+     *
+     * It doesn't automatically breakout like other operations when you use
+     * libcouchbase_execute().
+     *
+     * @param instance The handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param body The POST body for CouchDB view request. If the body
+     *             parameter is NULL, function will use GET request.
+     * @param nbody Size of body
+     * @param path A view path string with optional query params (e.g. skip,
+     *             limit etc.)
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_view_execute(libcouchbase_t instance,
+                                                   const void *command_cookie,
+                                                   const char *path,
+                                                   const void *body,
+                                                   size_t nbody);
 #ifdef __cplusplus
 }
 #endif
