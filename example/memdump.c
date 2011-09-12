@@ -227,7 +227,7 @@ static void usage(char cmd, const void *arg, void *cookie)
     fprintf(stderr, "Usage: ./memdump [options]\n");
     for (int ii = 0; ii < 256; ++ii) {
         if (my_options[ii].name != NULL) {
-            fprintf(stderr, "%s\n", my_options[ii++].description);
+            fprintf(stderr, "%s\n", my_options[ii].description);
         }
     }
     exit(EXIT_FAILURE);
