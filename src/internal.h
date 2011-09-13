@@ -21,11 +21,6 @@
 
 #include <assert.h>
 #include <errno.h>
-#ifndef WIN32
-#include <event.h>
-#else
-#include "myevent.h"
-#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -101,18 +96,14 @@ extern "C" {
         char *host;
         /** The port of the couchbase server */
         const char *port;
-        /** The username to connect with */
-        char *user;
-        /** The password to connect with */
-        char *passwd;
-        /** The bucket to use */
-        char *bucket;
-        /** The event base this instance is connected to */
-        struct event_base *ev_base;
+
+        /** The URL request to send to the server */
+        char *http_uri;
+        ssize_t n_http_uri_sent;
+
+
         /** The event item representing _this_ object */
-        struct event ev_event;
-        /** The curret set of flags */
-        short ev_flags;
+        void *event;
 
         /** The current vbucket config handle */
         VBUCKET_CONFIG_HANDLE vbucket_config;
@@ -123,8 +114,11 @@ extern "C" {
             size_t chunk_size;
         } vbucket_stream;
 
+        struct libcouchbase_io_opt_st *io;
+
         evutil_socket_t sock;
         struct addrinfo *ai;
+        struct addrinfo *curr_ai;
 
         /** The number of couchbase server in the configuration */
         size_t nservers;
@@ -159,7 +153,7 @@ extern "C" {
         struct libcouchbase_histogram_st *histogram;
 
         uint32_t seqno;
-        bool execute;
+        bool wait;
         const void *cookie;
 
         libcouchbase_error_t last_error;
@@ -200,9 +194,7 @@ extern "C" {
         /** The SASL object used for this server */
         sasl_conn_t *sasl_conn;
         /** The event item representing _this_ object */
-        struct event ev_event;
-        /** The curret set of flags */
-        short ev_flags;
+        void *event;
         /** Is this server in a connected state (done with sasl auth) */
         bool connected;
         /** The current event handler */
@@ -291,15 +283,9 @@ extern "C" {
     void libcouchbase_server_send_packets(libcouchbase_server_t *server);
 
 
-
-
-    void libcouchbase_server_update_event(libcouchbase_server_t *c, short flags,
-                                          EVENT_HANDLER handler);
     void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *arg);
 
     void libcouchbase_initialize_packet_handlers(libcouchbase_t instance);
-
-    void libcouchbase_ensure_vbucket_config(libcouchbase_t instance);
 
     int libcouchbase_base64_encode(const char *src, char *dst, size_t sz);
 

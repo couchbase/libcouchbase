@@ -23,26 +23,45 @@ TARGETOS=WINNT
 INSTALL=c:\local
 INSTALLDIRS=$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin
 
-COMPILE=$(cc) $(cdebug) $(cflags) $(cvarsdll) -DLIBCOUCHBASE_INTERNAL=1 -I$(INSTALL)\include -Iwin32 -Isrc -Iinclude
+DBGFLG=-Zi
+
+COMPILE=$(cc) $(cdebug) $(cflags) $(DBGFLG) -I$(INSTALL)\include -Iwin32 -Isrc -Iinclude
+
+DLLCOMPILE=$(cc) $(cdebug) $(cflags) $(cvarsdll) $(DBGFLG) -DLIBCOUCHBASE_INTERNAL=1 -I$(INSTALL)\include -Iwin32 -Isrc -Iinclude
 
 OBJS=arithmetic.obj \
      base64.obj \
      cookie.obj \
      error.obj \
      event.obj \
-     execute.obj \
      get.obj \
      gethrtime.obj \
      handler.obj \
      instance.obj \
+     iofactory_win32.obj \
      packet.obj \
+     plugin-win32.obj \
      remove.obj \
      server.obj \
      store.obj \
+     strerror.obj \
      tap.obj \
      timings.obj \
      touch.obj \
-     utilities.obj
+     utilities.obj \
+     wait.obj
+
+
+example\memcat.exe: example\memcat.obj win32\getopt.obj libcouchbase.dll
+	$(link) -out:example\memcat.exe example\memcat.obj \
+                win32\getopt.obj libcouchbase.lib
+
+example\memcat.obj: example\memcat.c
+	$(COMPILE) -Foexample\memcat.obj example\memcat.c
+
+win32\getopt.obj: win32\getopt.c win32\getopt.h
+	$(COMPILE) -Fowin32\getopt.obj win32\getopt.c
+
 
 libcouchbase.dll: $(OBJS)
 	$(link) $(dlllflags)  /LIBPATH:$(INSTALL)\lib libvbucket.lib \
@@ -50,61 +69,70 @@ libcouchbase.dll: $(OBJS)
                 -out:libcouchbase.dll -version:1.0 $(OBJS)
 
 arithmetic.obj: src\arithmetic.c
-	$(COMPILE) src\arithmetic.c
+	$(DLLCOMPILE) src\arithmetic.c
 
 base64.obj: src\base64.c
-	$(COMPILE) src\base64.c
+	$(DLLCOMPILE) src\base64.c
 
 cookie.obj: src\cookie.c
-	$(COMPILE) src\cookie.c
+	$(DLLCOMPILE) src\cookie.c
 
 event.obj: src\event.c
-	$(COMPILE) src\event.c
+	$(DLLCOMPILE) src\event.c
 
 error.obj: src\error.c
-	$(COMPILE) src\error.c
+	$(DLLCOMPILE) src\error.c
 
-execute.obj: src\execute.c
-	$(COMPILE) src\execute.c
+wait.obj: src\wait.c
+	$(DLLCOMPILE) src\wait.c
 
 get.obj: src\get.c
-	$(COMPILE) src\get.c
+	$(DLLCOMPILE) src\get.c
 
 gethrtime.obj: src\gethrtime.c
-	$(COMPILE) src\gethrtime.c
+	$(DLLCOMPILE) src\gethrtime.c
 
 handler.obj: src\handler.c
-	$(COMPILE) src\handler.c
+	$(DLLCOMPILE) src\handler.c
 
 instance.obj: src\instance.c
-	$(COMPILE) src\instance.c
+	$(DLLCOMPILE) src\instance.c
+
+iofactory_win32.obj: src\iofactory_win32.c
+	$(DLLCOMPILE) src\iofactory_win32.c
 
 packet_debug.obj: src\packet_debug.c
-	$(COMPILE) src\packet_debug.c
+	$(DLLCOMPILE) src\packet_debug.c
 
 packet.obj: src\packet.c
-	$(COMPILE) src\packet.c
+	$(DLLCOMPILE) src\packet.c
+
+plugin-win32.obj: src\plugin-win32.c
+	$(DLLCOMPILE) src\plugin-win32.c
 
 remove.obj: src\remove.c
-	$(COMPILE) src\remove.c
+	$(DLLCOMPILE) src\remove.c
 
 server.obj: src\server.c
-	$(COMPILE) src\server.c
+	$(DLLCOMPILE) src\server.c
 
 store.obj: src\store.c
-	$(COMPILE) src\store.c
+	$(DLLCOMPILE) src\store.c
+
+strerror.obj: src\strerror.c
+	$(DLLCOMPILE) src\strerror.c
 
 tap.obj: src\tap.c
-	$(COMPILE) src\tap.c
+	$(DLLCOMPILE) src\tap.c
 
 timings.obj: src\timings.c
-	$(COMPILE) src\timings.c
+	$(DLLCOMPILE) src\timings.c
 
 touch.obj: src\touch.c
-	$(COMPILE) src\touch.c
+	$(DLLCOMPILE) src\touch.c
 
 utilities.obj: src\utilities.c
-	$(COMPILE) src\utilities.c
+	$(DLLCOMPILE) src\utilities.c
 
 
 install: $(INSTALLDIRS) libcouchbase.dll
@@ -115,4 +143,4 @@ install: $(INSTALLDIRS) libcouchbase.dll
 	@copy libcouchbase.lib $(INSTALL)\lib
 
 clean:
-	-@del $(OBJS) libcouchbase.dll libcouchbase.exp libcouchbase.lib vc100.pdb
+	-@del $(OBJS) libcouchbase.dll libcouchbase.exp libcouchbase.lib vc100.pdb example\memcat.obj example\memcat.exe win32\getopt.obj

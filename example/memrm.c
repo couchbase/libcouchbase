@@ -35,7 +35,6 @@
 #include <inttypes.h>
 #include <assert.h>
 #include <sys/mman.h>
-#include <event.h>
 #include <libcouchbase/couchbase.h>
 
 static void usage(char cmd, const void *arg, void *cookie);
@@ -171,9 +170,14 @@ int main(int argc, char **argv)
 {
     handle_options(argc, argv);
 
-    struct event_base *evbase = event_init();
+    struct libcouchbase_io_opt_st *io;
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    if (io == NULL) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        return 1;
+    }
     libcouchbase_t instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, evbase);
+                                                  passwd, bucket, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
@@ -183,6 +187,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
         return 1;
     }
+    // Wait for the connect to compelete
+    libcouchbase_wait(instance);
 
     (void)libcouchbase_set_remove_callback(instance, remove_callback);
 
@@ -191,7 +197,7 @@ int main(int argc, char **argv)
     }
 
 
-    libcouchbase_execute(instance);
+    libcouchbase_wait(instance);
 
     return 0;
 }

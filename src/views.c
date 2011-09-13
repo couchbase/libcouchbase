@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include <event.h>
 #include <event2/http.h>
 #include <event2/http_struct.h>
 
@@ -156,8 +157,9 @@ libcouchbase_error_t libcouchbase_view_execute(libcouchbase_t instance,
     libcouchbase_server_t server;
 
     /* ensure vbucket config is ready */
-    libcouchbase_ensure_vbucket_config(instance);
-    assert(instance->vbucket_config);
+    if (instance->vbucket_config == NULL) {
+        return LIBCOUCHBASE_ETMPFAIL;
+    }
     if (instance->nservers < 1) {
         return LIBCOUCHBASE_EINTERNAL;
     }
@@ -200,7 +202,8 @@ libcouchbase_error_t libcouchbase_view_execute(libcouchbase_t instance,
         return LIBCOUCHBASE_EINTERNAL;
     }
 
-    ctx->conn = evhttp_connection_base_new(instance->ev_base, NULL, hostname, (uint16_t)port);
+    // @TODO FIXME!
+    ctx->conn = evhttp_connection_base_new(instance->io->cookie, NULL, hostname, (uint16_t)port);
     if (!ctx->conn) {
         view_context_free(ctx);
         return LIBCOUCHBASE_EINTERNAL;

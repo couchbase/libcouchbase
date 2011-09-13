@@ -48,8 +48,14 @@ static void initialize_counter(const char *host, const char *user,
         exit(1);
     }
 
+    struct libcouchbase_io_opt_st *io;
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
+    if (io == NULL) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        exit(1);
+    }
     libcouchbase_t instance = libcouchbase_create(host, user, passwd, bucket,
-                                                  evbase);
+                                                  io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         event_base_free(evbase);
@@ -62,11 +68,14 @@ static void initialize_counter(const char *host, const char *user,
         exit(1);
     }
 
+    // Wait for the connect to compelete
+    libcouchbase_wait(instance);
+
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
 
     libcouchbase_store(instance, NULL, LIBCOUCHBASE_SET, "counter", 7,
                        "0", 1, 0, 0, 0);
-    libcouchbase_execute(instance);
+    libcouchbase_wait(instance);
     libcouchbase_destroy(instance);
     event_base_free(evbase);
 }
@@ -96,8 +105,14 @@ static void do_run_arithmetic(const char *host, const char *user,
         exit(1);
     }
 
+    struct libcouchbase_io_opt_st *io;
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
+    if (io == NULL) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        exit(1);
+    }
     libcouchbase_t instance = libcouchbase_create(host, user, passwd, bucket,
-                                                  evbase);
+                                                  io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         event_base_free(evbase);
@@ -110,12 +125,15 @@ static void do_run_arithmetic(const char *host, const char *user,
         exit(1);
     }
 
+    // Wait for the connect to compelete
+    libcouchbase_wait(instance);
+
     (void)libcouchbase_set_arithmetic_callback(instance,
                                                arithmetic_callback);
 
     for (int ii = 0; ii < 10; ++ii) {
         libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, true, 0);
-        libcouchbase_execute(instance);
+        libcouchbase_wait(instance);
     }
 
     libcouchbase_destroy(instance);

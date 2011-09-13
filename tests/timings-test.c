@@ -93,8 +93,14 @@ int main(int argc, char **argv)
 
     const char *http = get_mock_http_server(mock);
 
+    struct libcouchbase_io_opt_st *io;
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
+    if (io == NULL) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        return 1;
+    }
     libcouchbase_t instance = libcouchbase_create(http, "Administrator",
-                                                  "password", NULL, evbase);
+                                                  "password", NULL, io);
 
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
@@ -108,13 +114,16 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    // Wait for the connect to compelete
+    libcouchbase_wait(instance);
+
     libcouchbase_enable_timings(instance);
     libcouchbase_store(instance, NULL, LIBCOUCHBASE_SET, "counter", 7,
                        "0", 1, 0, 0, 0);
-    libcouchbase_execute(instance);
+    libcouchbase_wait(instance);
     for (int ii = 0; ii < 100; ++ii) {
         libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, true, 0);
-        libcouchbase_execute(instance);
+        libcouchbase_wait(instance);
     }
     fprintf(fp, "              +---------+---------+\n");
     libcouchbase_get_timings(instance, fp, timings_callback);

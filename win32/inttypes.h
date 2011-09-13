@@ -21,13 +21,9 @@
  *
  * @author Trond Norbye <trond.norbye@gmail.com>
  */
-#ifndef STDBOOL_H
-#define STDBOOL_H
+#ifndef INTTYPES_H
+#define INTTYPES_H
 
-#include <inttypes.h>
-
-typedef uint8_t bool;
-#define true 1
-#define false 0
+#include <stdint.h>
 
 #endif

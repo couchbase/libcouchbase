@@ -25,7 +25,7 @@
 #
 ACLOCAL_AMFLAGS = -I m4 --force
 
-lib_LTLIBRARIES = libcouchbase.la
+lib_LTLIBRARIES = libcouchbase.la libcouchbase_libevent.la
 
 noinst_LTLIBRARIES = memcached_packet_debug.la
 
@@ -33,10 +33,12 @@ pkginclude_HEADERS = \
                      include/libcouchbase/callbacks.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
+                     include/libcouchbase/libevent_io_opts.h \
                      include/libcouchbase/tap_filter.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
-                     include/libcouchbase/visibility.h
+                     include/libcouchbase/visibility.h \
+                     include/libcouchbase/winsock_io_opts.h
 
 libcouchbase_la_SOURCES = \
                         src/arithmetic.c \
@@ -45,11 +47,11 @@ libcouchbase_la_SOURCES = \
                         src/cookie.c \
                         src/error.c \
                         src/event.c \
-                        src/execute.c \
                         src/get.c \
                         src/handler.c \
                         src/instance.c \
                         src/internal.h \
+                        src/iofactory.c \
                         src/packet.c \
                         src/remove.c \
                         src/server.c \
@@ -58,8 +60,9 @@ libcouchbase_la_SOURCES = \
                         src/tap.c \
                         src/timings.c \
                         src/touch.c \
+                        src/utilities.c \
                         src/views.c \
-                        src/utilities.c
+                        src/wait.c
 
 if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c
@@ -68,9 +71,14 @@ endif
 
 # Please remember to update the version info before each release if you
 # add / remove functions.
-libcouchbase_la_LDFLAGS=$(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2) \
+libcouchbase_la_LDFLAGS=$(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2) \
                       -version-info 0:0:0
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
+
+
+libcouchbase_libevent_la_SOURCES = src/plugin-libevent.c
+libcouchbase_libevent_la_LDFLAGS=$(LTLIBEVENT) -version-info 1:0:0
+libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
 tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
@@ -122,10 +130,11 @@ example_couchview_LDFLAGS = $(LTLIBEVENT)
 
 if HAVE_LIBYAJL
 noinst_PROGRAMS += example/couchview_yajl
+endif
+
 example_couchview_yajl_SOURCES = example/couchview_yajl.c
 example_couchview_yajl_LDADD = libcouchbase.la
 example_couchview_yajl_LDFLAGS = $(LTLIBEVENT) $(LTLIBYAJL)
-endif
 
 check_PROGRAMS = base64-test \
                  strerror-test \
@@ -160,10 +169,10 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_arithmetic_by_key.3couchbase \
    man/man3couchbase/libcouchbase_connect.3couchbase \
    man/man3couchbase/libcouchbase_create.3couchbase \
+   man/man3couchbase/libcouchbase_create_io_ops.3couchbase \
    man/man3couchbase/libcouchbase_destroy.3couchbase \
    man/man3couchbase/libcouchbase_disable_timings.3couchbase \
    man/man3couchbase/libcouchbase_enable_timings.3couchbase \
-   man/man3couchbase/libcouchbase_execute.3couchbase \
    man/man3couchbase/libcouchbase_get_cookie.3couchbase \
    man/man3couchbase/libcouchbase_get_last_error.3couchbase \
    man/man3couchbase/libcouchbase_get_timings.3couchbase \
@@ -199,6 +208,7 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_tap_filter_set_backfill.3couchbase \
    man/man3couchbase/libcouchbase_tap_filter_set_keys_only.3couchbase \
    man/man3couchbase/libcouchbase_view_execute.3couchbase \
+   man/man3couchbase/libcouchbase_wait.3couchbase \
    man/man3couchbase/missing.3couchbase
 
 # Manual pages!
@@ -218,4 +228,5 @@ EXTRA_DIST = \
              NMakefile \
              include/libcouchbase/configuration.h.in \
              man \
+             src/iofactory_win32.c \
              win32

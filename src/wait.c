@@ -16,6 +16,11 @@
  */
 #include "internal.h"
 
+static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
+{
+    server->instance->io->stop_event_loop(server->instance->io);
+}
+
 /**
  * Run the event loop until we've got a response for all of our spooled
  * commands. You should not call this function from within your callbacks.
@@ -25,16 +30,21 @@
  * @author Trond Norbye
  */
 LIBCOUCHBASE_API
-void libcouchbase_execute(libcouchbase_t instance)
+void libcouchbase_wait(libcouchbase_t instance)
 {
     /*
      * The API is designed for you to run your own event loop,
      * but should also work if you don't do that.. In order to be
      * able to know when to break out of the event loop, we're setting
-     * the execute flag to true
+     * the wait flag to true
      */
-    instance->execute = true;
-
-    /* Start the event loop and let it run until we're out of commands */
-    event_base_loop(instance->ev_base, 0);
+    instance->wait = true;
+    if (instance->vbucket_config == NULL) {
+        vbucket_state_listener_t old = instance->vbucket_state_listener;
+        instance->vbucket_state_listener = breakout_vbucket_state_listener;
+        instance->io->run_event_loop(instance->io);
+        instance->vbucket_state_listener = old;
+    } else {
+        instance->io->run_event_loop(instance->io);
+    }
 }

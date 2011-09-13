@@ -21,7 +21,10 @@
  * @author Trond Norbye
  * @todo add documentation
  */
-#include <unistd.h>
+
+// @todo figure out what I need to include for win32 in the headers!
+#include "config.h"
+
 #include <getopt.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -31,15 +34,42 @@
 #include <string.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <event.h>
 
 #include <libcouchbase/couchbase.h>
+#ifdef WIN32
+#define PRIu64 "llu"
+
+static bool isatty(int a) {
+    (void)a;
+    return true;
+}
+
+static char *getpass(const char *prompt)
+{
+    size_t len;
+    static char buffer[1024];
+    fprintf(stdout, "%s", prompt);
+    fflush(stdout);
+
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        return NULL;
+    }
+
+    len = strlen(buffer) - 1;
+    while (buffer[len] == '\r' || buffer[len] == '\n') {
+        buffer[len] = '\0';
+        --len;
+    }
+
+    return buffer;
+}
+#endif
 
 static void usage(char cmd, const void *arg, void *cookie);
 static void set_char_ptr(char cmd, const void *arg, void *cookie) {
-    (void)cmd;
     const char **myptr = cookie;
     *myptr = arg;
+    (void)cmd;
 }
 
 const char *host = "localhost:8091";
@@ -60,11 +90,12 @@ static void set_auth_data(char cmd, const void *arg, void *cookie) {
             exit(EXIT_FAILURE);
         }
     } else {
+        size_t len;
         char buffer[80];
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
             exit(EXIT_FAILURE);
         }
-        size_t len = strlen(buffer) - 1;
+        len = strlen(buffer) - 1;
         while (len > 0 && isspace(buffer[len])) {
             buffer[len] = '\0';
             --len;
@@ -84,46 +115,39 @@ static struct {
     char letter;
     OPTION_HANDLER handler;
     void *cookie;
-} my_options[256] = {
-    ['?'] = {
-        .name = "help",
-        .description = "\t-?\tPrint program usage information",
-        .argument = false,
-        .letter = '?',
-        .handler = usage
-    },
-    ['u'] = {
-        .name = "username",
-        .description = "\t-u nm\tSpecify username",
-        .argument = true,
-        .letter = 'u',
-        .handler = set_auth_data
-    },
-    ['h'] = {
-        .name = "host",
-        .description = "\t-h host\tHost to read configuration from",
-        .argument = true,
-        .letter = 'h',
-        .handler = set_char_ptr,
-        .cookie = &host
-    },
-    ['b'] = {
-        .name = "bucket",
-        .description = "\t-b bucket\tThe bucket to connect to",
-        .argument = true,
-        .letter = 'b',
-        .handler = set_char_ptr,
-        .cookie = &bucket
-    },
-    ['o'] = {
-        .name = "file",
-        .description = "\t-o filename\tSend the output to this file",
-        .argument = true,
-        .letter = 'o',
-        .handler = set_char_ptr,
-        .cookie = &filename
-    },
-};
+} my_options[256];
+
+static void setup_options(void)
+{
+    my_options['?'].name = "help";
+    my_options['?'].description = "\t-?\tPrint program usage information";
+    my_options['?'].argument = false;
+    my_options['?'].letter = '?';
+    my_options['?'].handler = usage;
+    my_options['u'].name = "username";
+    my_options['u'].description = "\t-u nm\tSpecify username";
+    my_options['u'].argument = true;
+    my_options['u'].letter = 'u';
+    my_options['u'].handler = set_auth_data;
+    my_options['h'].name = "host";
+    my_options['h'].description = "\t-h host\tHost to read configuration from";
+    my_options['h'].argument = true;
+    my_options['h'].letter = 'h';
+    my_options['h'].handler = set_char_ptr;
+    my_options['h'].cookie = &host;
+    my_options['b'].name = "bucket";
+    my_options['b'].description = "\t-b bucket\tThe bucket to connect to";
+    my_options['b'].argument = true;
+    my_options['b'].letter = 'b';
+    my_options['b'].handler = set_char_ptr;
+    my_options['b'].cookie = &bucket;
+    my_options['o'].name = "file";
+    my_options['o'].description = "\t-o filename\tSend the output to this file";
+    my_options['o'].argument = true;
+    my_options['o'].letter = 'o';
+    my_options['o'].handler = set_char_ptr;
+    my_options['o'].cookie = &filename;
+}
 
 /**
  * Handle all of the command line options the user passed on the command line.
@@ -133,25 +157,30 @@ static struct {
  * @param argv Argument vector
  */
 static void handle_options(int argc, char **argv) {
-    struct option opts[256] =  { [0] = { .name = NULL } };
+    struct option opts[256];
     int ii = 0;
-    char shortopts[128] = { 0 };
+    char shortopts[128];
     int jj = 0;
     int kk = 0;
+    int c;
+
+    memset(opts, 0, sizeof(opts));
+    memset(shortopts, 0, sizeof(shortopts));
+    setup_options();
+
     for (ii = 0; ii < 256; ++ii) {
         if (my_options[ii].name != NULL) {
             opts[jj].name = (char*)my_options[ii].name;
             opts[jj].has_arg = my_options[ii].argument ? required_argument : no_argument;
             opts[jj].val = my_options[ii].letter;
 
-            shortopts[kk++] = (char)opts[jj].val;
+            shortopts[kk++] = (char)opts[jj++].val;
             if (my_options[ii].argument) {
                 shortopts[kk++] = ':';
             }
         }
     }
 
-    int c;
     while ((c = getopt_long(argc, argv, shortopts, opts, NULL)) != EOF) {
         if (my_options[c].handler != NULL) {
             my_options[c].handler((char)c, optarg, my_options[c].cookie);
@@ -189,6 +218,15 @@ static void get_callback(libcouchbase_t instance,
 
 int main(int argc, char **argv)
 {
+    struct libcouchbase_io_opt_st *io;
+    libcouchbase_t instance;
+    char** keys;
+    size_t* nkey;
+    size_t jj;
+    int ii;
+    libcouchbase_error_t ret;
+
+
     handle_options(argc, argv);
 
     if (strcmp(filename, "-") == 0) {
@@ -202,26 +240,34 @@ int main(int argc, char **argv)
         }
     }
 
-    char** keys = calloc((size_t)(argc - optind), sizeof(char*));;
-    size_t* nkey = calloc((size_t)(argc - optind), sizeof(size_t));;
-    size_t jj = 0;
-    for (int ii = optind; ii < argc; ++ii, ++jj) {
+    keys = calloc((size_t)(argc - optind), sizeof(char*));;
+    nkey = calloc((size_t)(argc - optind), sizeof(size_t));;
+    jj = 0;
+    for (ii = optind; ii < argc; ++ii, ++jj) {
         keys[jj] = argv[ii];
         nkey[jj] = strlen(keys[jj]);
     }
 
-    struct event_base *evbase = event_init();
-    libcouchbase_t instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, evbase);
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    if (io == NULL) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        return 1;
+    }
+    instance = libcouchbase_create(host, username,
+                                   passwd, bucket, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
     }
 
-    if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
-        fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
+    ret = libcouchbase_connect(instance);
+    if (ret != LIBCOUCHBASE_SUCCESS) {
+        fprintf(stderr, "Failed to connect libcouchbase instance to server: %s\n",
+                libcouchbase_strerror(instance, ret));
         return 1;
     }
+    // Wait for the connect to compelete
+    libcouchbase_wait(instance);
 
     (void)libcouchbase_set_get_callback(instance, get_callback);
 
@@ -232,7 +278,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    libcouchbase_execute(instance);
+    libcouchbase_wait(instance);
     free(keys);
     free(nkey);
 
@@ -241,12 +287,13 @@ int main(int argc, char **argv)
 
 static void usage(char cmd, const void *arg, void *cookie)
 {
+    int ii;
     (void)cmd;
     (void)arg;
     (void)cookie;
 
     fprintf(stderr, "Usage: ./memcat [options] keys\n");
-    for (int ii = 0; ii < 256; ++ii) {
+    for (ii = 0; ii < 256; ++ii) {
         if (my_options[ii].name != NULL) {
             fprintf(stderr, "%s\n", my_options[ii].description);
         }

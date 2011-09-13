@@ -39,16 +39,12 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
         sasl_dispose(&server->sasl_conn);
     }
 
-    if (server->ev_flags != 0) {
-        if (event_del(&server->ev_event) == -1) {
-            fprintf(stderr, "Error releasing event\n");
-            libcouchbase_error_handler(server->instance, LIBCOUCHBASE_LIBEVENT_ERROR,
-                                       "Failed to delete instance from libevent");
-        }
-    }
+    // Delete the event structure itself
+    server->instance->io->destroy_event(server->instance->io,
+                                        server->event);
 
     if (server->sock != INVALID_SOCKET) {
-        EVUTIL_CLOSESOCKET(server->sock);
+        server->instance->io->close(server->instance->io, server->sock);
     }
 
     if (server->root_ai != NULL) {
@@ -136,7 +132,8 @@ static void start_sasl_auth_server(libcouchbase_server_t *server)
                                                &server->output_cookies,
                                                req.bytes, sizeof(req.bytes));
     // send the data and add it to libevent..
-    libcouchbase_server_event_handler(0, EV_WRITE, server);
+    libcouchbase_server_event_handler(server->sock, LIBCOUCHBASE_WRITE_EVENT,
+                                      server);
 }
 
 void libcouchbase_server_connected(libcouchbase_server_t *server)
@@ -158,7 +155,8 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
         server->pending_cookies.avail = 0;
 
         // Send the pending data!
-        libcouchbase_server_event_handler(0, EV_WRITE, server);
+        libcouchbase_server_event_handler(server->sock,
+                                          LIBCOUCHBASE_WRITE_EVENT, server);
     }
 }
 
@@ -182,8 +180,9 @@ static void socket_connected(libcouchbase_server_t *server)
     }
 
     // Set the correct event handler
-    libcouchbase_server_update_event(server, EV_READ,
-                                     libcouchbase_server_event_handler);
+    server->instance->io->update_event(server->instance->io, server->sock,
+                                       server->event, LIBCOUCHBASE_READ_EVENT,
+                                       server, libcouchbase_server_event_handler);
 }
 
 static bool server_connect(libcouchbase_server_t *server);
@@ -204,14 +203,12 @@ static bool server_connect(libcouchbase_server_t *server) {
         if (server->sock == INVALID_SOCKET) {
             // Try to get a socket..
             while (server->curr_ai != NULL) {
-                server->sock = socket(server->curr_ai->ai_family,
-                                      server->curr_ai->ai_socktype,
-                                      server->curr_ai->ai_protocol);
-                if (server->sock != -1) {
-                    if (evutil_make_socket_nonblocking(server->sock) == 0) {
-                        break;
-                    }
-                    EVUTIL_CLOSESOCKET(server->sock);
+                server->sock = server->instance->io->socket(server->instance->io,
+                                                            server->curr_ai->ai_family,
+                                                            server->curr_ai->ai_socktype,
+                                                            server->curr_ai->ai_protocol);
+                if (server->sock != INVALID_SOCKET) {
+                    break;
                 }
                 server->curr_ai = server->curr_ai->ai_next;
             }
@@ -222,23 +219,29 @@ static bool server_connect(libcouchbase_server_t *server) {
         }
 
         retry = false;
-        if (connect(server->sock, server->curr_ai->ai_addr,
-                    server->curr_ai->ai_addrlen) == 0) {
+        if (server->instance->io->connect(server->instance->io,
+                                          server->sock,
+                                          server->curr_ai->ai_addr,
+                                          (int)server->curr_ai->ai_addrlen) == 0) {
             // connected
             socket_connected(server);
             return true;
         } else {
-            switch (errno) {
+            switch (server->instance->io->error) {
             case EINTR:
                 retry = true;
                 break;
             case EISCONN:
                 socket_connected(server);
                 return true;
+            case EWOULDBLOCK:
             case EINPROGRESS: /* First call to connect */
-                libcouchbase_server_update_event(server,
-                                                 EV_WRITE,
-                                                 server_connect_handler);
+                server->instance->io->update_event(server->instance->io,
+                                                   server->sock,
+                                                   server->event,
+                                                   LIBCOUCHBASE_WRITE_EVENT,
+                                                   server,
+                                                   server_connect_handler);
                 return true;
             case EALREADY: /* Subsequent calls to connect */
                 return true;
@@ -248,24 +251,18 @@ static bool server_connect(libcouchbase_server_t *server) {
                     retry = true;
                     server->curr_ai = server->curr_ai->ai_next;
                 } else {
-                    fprintf(stderr, "Connection failed: %s", strerror(errno));
+                    fprintf(stderr, "Connection failed: %s", strerror(server->instance->io->error));
                     // TODO: Is there a better error for this?
                     libcouchbase_error_handler(server->instance,
                                                LIBCOUCHBASE_NETWORK_ERROR,
                                                "Connection failed");
                     return false;
                 }
-                if (server->ev_flags != 0) {
-                    if (event_del(&server->ev_event) == -1) {
-                        fprintf(stderr, "Error releasing event\n");
-                        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_LIBEVENT_ERROR,
-                                                   "Failed delete event from libevent");
-                        // TODO: Even though this is probably a memory leak, why might want to
-                        //       continue anyway (as it is doing here).
-                    }
-                    server->ev_flags = 0;
-                }
-                EVUTIL_CLOSESOCKET(server->sock);
+
+                server->instance->io->delete_event(server->instance->io,
+                                                   server->sock,
+                                                   server->event);
+                server->instance->io->close(server->instance->io, server->sock);
                 server->sock = INVALID_SOCKET;
             }
         }
@@ -297,6 +294,7 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_family = AF_UNSPEC;
 
+    server->event = server->instance->io->create_event(server->instance->io);
     error = getaddrinfo(server->hostname, server->port,
                         &hints, &server->root_ai);
     server->curr_ai = server->root_ai;
@@ -312,8 +310,12 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
 void libcouchbase_server_send_packets(libcouchbase_server_t *server)
 {
     if (server->connected) {
-        libcouchbase_server_update_event(server, EV_READ|EV_WRITE,
-                                         libcouchbase_server_event_handler);
+        server->instance->io->update_event(server->instance->io,
+                                           server->sock,
+                                           server->event,
+                                           LIBCOUCHBASE_RW_EVENT,
+                                           server,
+                                           libcouchbase_server_event_handler);
     }
 }
 

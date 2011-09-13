@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <time.h>
 
 #ifndef __cplusplus
 #include <stdbool.h>
@@ -44,6 +45,21 @@ struct event_base;
 extern "C" {
 #endif
 
+
+    /**
+     * Create a new instance of one of the library-supplied io ops types.
+     * @param type The predefined type you want to create
+     * @param cookie Extra cookie-information supplied to the creation
+     *               of the io ops type
+     * @param error Where to store information about why creation failed
+     * @return pointer to a newly created io ops structure
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_io_opt_t* libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
+                                                      void *cookie,
+                                                      libcouchbase_error_t *error);
+
+
     /**
      * Create an instance of libcouchbase
      * @param host The host (with optional port) to connect to retrieve the
@@ -51,7 +67,7 @@ extern "C" {
      * @param user the username to use
      * @param passwd The password
      * @param bucket The bucket to connect to
-     * @param base the libevent base we're for this instance
+     * @param io the io handle to use
      * @return A handle to libcouchbase, or NULL if an error occured.
      */
     LIBCOUCHBASE_API
@@ -59,7 +75,7 @@ extern "C" {
                                        const char *user,
                                        const char *passwd,
                                        const char *bucket,
-                                       struct event_base *base);
+                                       struct libcouchbase_io_opt_st *io);
 
 
     /**
@@ -128,11 +144,11 @@ extern "C" {
                                   bool block);
 
     /**
-     * Execute all of the batched requests
+     * Wait for the execution of all batched requests
      * @param instance the instance containing the requests
      */
     LIBCOUCHBASE_API
-    void libcouchbase_execute(libcouchbase_t instance);
+    void libcouchbase_wait(libcouchbase_t instance);
 
     /**
      * Get a number of values from the cache. You need to run the

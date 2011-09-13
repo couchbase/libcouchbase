@@ -60,14 +60,15 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     protocol_binary_request_noop noop;
     size_t ii;
 
+    // we need a vbucket config before we can start getting data..
+    if (instance->vbucket_config == NULL) {
+        return LIBCOUCHBASE_ETMPFAIL;
+    }
+
     if (num_keys == 1) {
         return libcouchbase_single_get(instance, command_cookie, hashkey,
                                        nhashkey, keys[0], nkey[0], exp);
     }
-
-    // we need a vbucket config before we can start getting data..
-    libcouchbase_ensure_vbucket_config(instance);
-    assert(instance->vbucket_config);
 
     if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
@@ -146,10 +147,6 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
     uint16_t vb = 0;
     libcouchbase_server_t *server;
     protocol_binary_request_gat req;
-
-    // we need a vbucket config before we can start getting data..
-    libcouchbase_ensure_vbucket_config(instance);
-    assert(instance->vbucket_config);
 
     if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,

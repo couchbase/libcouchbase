@@ -24,7 +24,7 @@ cc [ \fIflag \&.\|.\|.\fR ] \fIfile\fR\&.\|.\|. \fB-lcouchbase\fR [ \fIlibrary \
 .sp
 #include <libcouchbase/couchbase.h>
 .sp
-\fBlibcouchbase_t\fR \fBlibcouchbase_create\fR(\fBconst char *\fR\fIhost\fR, \fBconst char *\fR\fIuser\fR, \fBconst char *\fR\fIpasswd\fR, \fBconst char *\fR\fIbucket\fR, \fBstruct event_base \fR\fI*base\fR);
+\fBlibcouchbase_t\fR \fBlibcouchbase_create\fR(\fBconst char *\fR\fIhost\fR, \fBconst char *\fR\fIuser\fR, \fBconst char *\fR\fIpasswd\fR, \fBconst char *\fR\fIbucket\fR, \fBlibcouchbase_io_ops_t*\fR \fIiops\fR);
 .fi
 
 .LP
@@ -37,7 +37,7 @@ cc [ \fIflag \&.\|.\|.\fR ] \fIfile\fR\&.\|.\|. \fB-lcouchbase\fR [ \fIlibrary \
 .SH DESCRIPTION
 .sp
 .LP
-\fBlibcouchbase_create\fR allocate and initialize an instance of libcouchbase. No connection attempt is at this time. \fIhost\fR may be specified as "host:port" and is the administration port you would navigate your web browser to (default: "localhost:8091"). \fIuser\fR and \fIpasswd\fR is the username/password combination you want to authenticate as. \fIbucket\fR specifies the bucket you would like to connect to. \fIbase\fR allows you to specify the event base you would like libcouchbase to use. NULL is a legal value for all parameters.
+\fBlibcouchbase_create\fR allocate and initialize an instance of libcouchbase. No connection attempt is at this time. \fIhost\fR may be specified as "host:port" and is the administration port you would navigate your web browser to (default: "localhost:8091"). \fIuser\fR and \fIpasswd\fR is the username/password combination you want to authenticate as. \fIbucket\fR specifies the bucket you would like to connect to. \fIopps\fR is the io operation structure to use (see \fBlibcouchbase_create_io_ops\fR).
 
 .sp
 .LP
@@ -69,5 +69,5 @@ Interface StabilityCommitted
 .SH SEE ALSO
 .sp
 .LP
-\fBlibcouchbase_destroy\fR(3couchbase), \fBlibcouchbase\fR(3lib), \fBcouchbase.h\fR(3head), \fBattributes\fR(5)
+\fBlibcouchbase_create_io_iops\fR(3couchbase), \fBlibcouchbase_destroy\fR(3couchbase), \fBlibcouchbase\fR(3lib), \fBcouchbase.h\fR(3head), \fBattributes\fR(5)
 .sp

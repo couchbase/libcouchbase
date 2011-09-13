@@ -14,20 +14,35 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+#ifndef WIN32_GETOPT_H
+#define WIN32_GETOPT_H 1
 
-/**
- * AFAIK Microsoft doesn't have a compiler with support for C99, so
- * this file just help us reduce the number of #ifdefs in the code.
- *
- * @author Trond Norbye <trond.norbye@gmail.com>
- */
-#ifndef STDBOOL_H
-#define STDBOOL_H
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
-#include <inttypes.h>
+#define no_argument 0
+#define required_argument 1
+#define optional_argument 2
 
-typedef uint8_t bool;
-#define true 1
-#define false 0
+struct option {
+   const char *name;
+   int has_arg;
+   int *flag;
+   int val;
+};
+
+extern char *optarg;
+extern int opterr;
+extern int optind;
+extern int optopt;
+
+extern int getopt_long(int argc, char **argv, const char *optstring,
+                       const struct option *longopts, int *longindex);
+
+#ifdef  __cplusplus
+}
+#endif
+
 
 #endif

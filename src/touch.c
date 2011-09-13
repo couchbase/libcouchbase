@@ -52,8 +52,9 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
     size_t ii;
 
     // we need a vbucket config before we can start getting data..
-    libcouchbase_ensure_vbucket_config(instance);
-    assert(instance->vbucket_config);
+    if (instance->vbucket_config == NULL) {
+        return LIBCOUCHBASE_ETMPFAIL;
+    }
 
     if (nhashkey != 0) {
         vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,

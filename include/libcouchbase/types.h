@@ -93,6 +93,80 @@ extern "C" {
     typedef bool (*libcouchbase_packet_filter_t)(libcouchbase_t instance,
                                                  const void *packet);
 
+#ifdef WIN32
+    typedef SOCKET libcouchbase_socket_t;
+#else
+    typedef int libcouchbase_socket_t;
+#endif
+
+    typedef enum {
+        LIBCOUCHBASE_IO_OPS_DEFAULT = 0x01,
+        LIBCOUCHBASE_IO_OPS_LIBEVENT = 0x02,
+        LIBCOUCHBASE_IO_OPS_WINSOCK = 0x03
+    } libcouchbase_io_ops_type_t;
+
+    #define LIBCOUCHBASE_READ_EVENT 0x02
+    #define LIBCOUCHBASE_WRITE_EVENT 0x04
+    #define LIBCOUCHBASE_RW_EVENT (LIBCOUCHBASE_READ_EVENT|LIBCOUCHBASE_WRITE_EVENT)
+
+    struct sockaddr;
+
+    typedef struct libcouchbase_io_opt_st {
+        uint64_t version;
+        void *cookie;
+        int error;
+
+        void (*destructor)(struct libcouchbase_io_opt_st *iops);
+
+        /**
+         * Create a non-blocking socket.
+         */
+        libcouchbase_socket_t (*socket)(struct libcouchbase_io_opt_st *iops,
+                                        int domain,
+                                        int type,
+                                        int protocol);
+        int (*connect)(struct libcouchbase_io_opt_st *iops,
+                       libcouchbase_socket_t sock,
+                       const struct sockaddr *name,
+                       int namelen);
+
+        ssize_t (*recv)(struct libcouchbase_io_opt_st *iops,
+                        libcouchbase_socket_t sock,
+                        void *buffer,
+                        size_t len,
+                        int flags);
+        ssize_t (*send)(struct libcouchbase_io_opt_st *iops,
+                        libcouchbase_socket_t sock,
+                        const void *msg,
+                        size_t len,
+                        int flags);
+        void (*close)(struct libcouchbase_io_opt_st *iops,
+                      libcouchbase_socket_t sock);
+
+
+        void *(*create_event)(struct libcouchbase_io_opt_st *iops);
+        void (*destroy_event)(struct libcouchbase_io_opt_st *iops,
+                              void *event);
+
+        int (*update_event)(struct libcouchbase_io_opt_st *iops,
+                            libcouchbase_socket_t sock,
+                            void *event,
+                            short flags,
+                            void *cb_data,
+                            void (*handler)(libcouchbase_socket_t sock,
+                                            short which,
+                                            void *cb_data));
+
+        void (*delete_event)(struct libcouchbase_io_opt_st *iops,
+                             libcouchbase_socket_t sock,
+                             void *event);
+
+        void (*stop_event_loop)(struct libcouchbase_io_opt_st *iops);
+        void (*run_event_loop)(struct libcouchbase_io_opt_st *iops);
+
+
+    } libcouchbase_io_opt_t;
+
 #ifdef __cplusplus
 }
 #endif

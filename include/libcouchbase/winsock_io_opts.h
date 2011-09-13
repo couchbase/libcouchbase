@@ -16,18 +16,33 @@
  */
 
 /**
- * AFAIK Microsoft doesn't have a compiler with support for C99, so
- * this file just help us reduce the number of #ifdefs in the code.
+ * libcouchbase_create_winsock_io_opts() allows you to create an instance
+ * of the ioopts that will utilize windows sockets (and use windows events
+ * as a notification). It is currently not possible to plug it into another
+ * event loop.
  *
- * @author Trond Norbye <trond.norbye@gmail.com>
+ * @author Trond Norbye
  */
-#ifndef STDBOOL_H
-#define STDBOOL_H
+#ifndef LIBCOUCHBASE_WINSOCK_IO_OPTS_H
+#define LIBCOUCHBASE_WINSOCK_IO_OPTS_H 1
 
-#include <inttypes.h>
+#include <libcouchbase/couchbase.h>
 
-typedef uint8_t bool;
-#define true 1
-#define false 0
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * Create an instance of an event handler that utilize winsock for
+ * event notification.
+ *
+ * @return a pointer to a newly created and initialized event handler
+ */
+LIBCOUCHBASE_API
+struct libcouchbase_io_opt_st *libcouchbase_create_winsock_io_opts(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

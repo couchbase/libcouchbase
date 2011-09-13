@@ -43,7 +43,7 @@ lw(2.75i) lw(2.75i)
 .
 \fBlibcouchbase_arithmetic\fR\fBlibcouchbase_arithmetic_by_key\fR
 \fBlibcouchbase_connect\fR\fBlibcouchbase_create\fR
-\fBlibcouchbase_destroy\fR\fBlibcouchbase_execute\fR
+\fBlibcouchbase_destroy\fR\fBlibcouchbase_wait\fR
 \fBlibcouchbase_get_cookie\fR\fBlibcouchbase_get_last_error\fR
 \fBlibcouchbase_mget\fR\fBlibcouchbase_mget_by_key\fR
 \fBlibcouchbase_mtouch\fR\fBlibcouchbase_mtouch_by_key\fR
@@ -59,6 +59,7 @@ lw(2.75i) lw(2.75i)
 \fBlibcouchbase_tap_filter_create\fR\fBlibcouchbase_tap_filter_destroy\fR
 \fBlibcouchbase_tap_filter_get_backfill\fR\fBlibcouchbase_tap_filter_get_keys_only\fR
 \fBlibcouchbase_tap_filter_set_backfill\fR\fBlibcouchbase_tap_filter_set_keys_only\fR
+\fBlibcouchbase_create_io_ops\fR
 .TE
 
 .SH EXAMPLES
@@ -118,9 +119,10 @@ int main(int argc, char **argv)
 
     \|.\|.\|.
 
-    struct event_base *evbase = event_init();
+    struct libcouchbase_io_opt_st *io;
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
     libcouchbase_t instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, evbase);
+                                                  passwd, bucket, io);
     libcouchbase_connect(instance);
     libcouchbase_set_storage_callback(instance, storage_callback);
     libcouchbase_set_get_callback(instance, get_callback);
@@ -137,7 +139,7 @@ int main(int argc, char **argv)
                       nkey, NULL);
 
     /* Wait until all of the operations complete */
-    libcouchbase_execute(instance);
+    libcouchbase_wait(instance);
     libcouchbase_destroy(instance);
 
     return 0;

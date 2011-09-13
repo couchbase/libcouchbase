@@ -195,6 +195,6 @@ void libcouchbase_tap_cluster(libcouchbase_t instance,
 
     /* Start the event loop and dump everything */
     if (block) {
-        event_base_loop(instance->ev_base, 0);
+        instance->io->run_event_loop(instance->io);
     }
 }

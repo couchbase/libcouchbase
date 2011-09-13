@@ -393,9 +393,14 @@ int main(int argc, char **argv)
     cookie.parser = yajl_alloc(&parser_callbacks, &parser_cfg, NULL, (void *)cookie.gen);
 
     cookie.evbase = event_base_new();
-
+    struct libcouchbase_io_opt_st *io;
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, cookie.evbase, NULL);
+    if (io == NULL) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        return 1;
+    }
     libcouchbase_t instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, cookie.evbase);
+                                                  passwd, bucket, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
@@ -405,6 +410,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
         return 1;
     }
+
+    // Wait for the connect to compelete
+    libcouchbase_wait(instance);
 
     if (chunked) {
         (void)libcouchbase_set_view_data_callback(instance, view_data_callback);

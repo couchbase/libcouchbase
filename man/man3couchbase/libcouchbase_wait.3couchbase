@@ -14,9 +14,9 @@
 .\"   See the License for the specific language governing permissions and
 .\"   limitations under the License.
 .\"
-.TH libcouchbase_execute 3couchbase "29 August 2011" "Couchbase 2.0" "Couchbase Library Functions"
+.TH libcouchbase_wait 3couchbase "29 August 2011" "Couchbase 2.0" "Couchbase Library Functions"
 .SH NAME
-libcouchbase_execute \- Wait for all commands to be executed
+libcouchbase_wait \- Wait for all commands to be executed
 .SH SYNOPSIS
 .LP
 .nf
@@ -24,14 +24,14 @@ cc [ \fIflag \&.\|.\|.\fR ] \fIfile\fR\&.\|.\|. \fB-lcouchbase\fR [ \fIlibrary \
 .sp
 #include <libcouchbase/couchbase.h>
 .sp
-\fBvoid\fR \fBlibcouchbase_execute\fR(\fBlibcouchbase_t\fR \fIinstance\fR);
+\fBvoid\fR \fBlibcouchbase_wait\fR(\fBlibcouchbase_t\fR \fIinstance\fR);
 .fi
 .sp
 
 .SH DESCRIPTION
 .sp
 .LP
-\fBlibcouchbase_execute\fR cause the execution to block until all of the requests are complete.
+\fBlibcouchbase_wait\fR cause the execution to block until all of the requests are complete.
 .sp
 .LP
 Expect the prototype to change!

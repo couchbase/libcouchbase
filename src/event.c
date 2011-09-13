@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010 Couchbase, Inc.
+ *     Copyright 2010, 2011 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -94,13 +94,13 @@ static int do_read_data(libcouchbase_server_t *c)
             return 0;
         }
 
-        nr = recv(c->sock,
-                  c->input.data + c->input.avail,
-                  c->input.size - c->input.avail,
+        nr = c->instance->io->recv(c->instance->io, c->sock,
+                                   c->input.data + c->input.avail,
+                                   c->input.size - c->input.avail,
                   0);
 
         if (nr == -1) {
-            switch (errno) {
+            switch (c->instance->io->error) {
             case EINTR:
                 break;
             case EWOULDBLOCK:
@@ -127,9 +127,11 @@ static int do_read_data(libcouchbase_server_t *c)
 static int do_send_data(libcouchbase_server_t *c)
 {
     do {
-        ssize_t nw = send(c->sock, c->output.data, c->output.avail, 0);
+        ssize_t nw = c->instance->io->send(c->instance->io,
+                                           c->sock, c->output.data,
+                                           c->output.avail, 0);
         if (nw == -1) {
-            switch (errno) {
+            switch (c->instance->io->error) {
             case EINTR:
                 // retry
                 break;
@@ -138,7 +140,7 @@ static int do_send_data(libcouchbase_server_t *c)
             default:
                 // FIXME!
                 fprintf(stderr, "Failed to write data: %s\n",
-                        strerror(errno));
+                        strerror(c->instance->io->error));
                 fflush(stderr);
                 return -1;
             }
@@ -165,7 +167,7 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
     libcouchbase_server_t *c = arg;
     (void)sock;
 
-    if (which & EV_READ) {
+    if (which & LIBCOUCHBASE_READ_EVENT) {
         if (do_read_data(c) != 0) {
             // TODO: Is there a better error for this?
             char errinfo[1024];
@@ -177,7 +179,7 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
         }
     }
 
-    if (which & EV_WRITE) {
+    if (which & LIBCOUCHBASE_WRITE_EVENT) {
         if (do_send_data(c) != 0) {
             char errinfo[1024];
             snprintf(errinfo, sizeof(errinfo), "Failed to send to the "
@@ -190,14 +192,16 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
     }
 
     if (c->output.avail == 0) {
-        libcouchbase_server_update_event(c, EV_READ,
-                                         libcouchbase_server_event_handler);
+        c->instance->io->update_event(c->instance->io, c->sock,
+                                      c->event, LIBCOUCHBASE_READ_EVENT,
+                                      c, libcouchbase_server_event_handler);
     } else {
-        libcouchbase_server_update_event(c, EV_READ | EV_WRITE,
-                                         libcouchbase_server_event_handler);
+        c->instance->io->update_event(c->instance->io, c->sock,
+                                      c->event, LIBCOUCHBASE_RW_EVENT,
+                                      c, libcouchbase_server_event_handler);
     }
 
-    if (c->instance->execute) {
+    if (c->instance->wait) {
         bool done = true;
         libcouchbase_t instance = c->instance;
         size_t ii;
@@ -208,49 +212,12 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
                 break;
             }
         }
+
         if (done) {
-            event_base_loopbreak(instance->ev_base);
+            c->instance->io->stop_event_loop(c->instance->io);
         }
     }
 
     // Make it known that this was a success.
     libcouchbase_error_handler(c->instance, LIBCOUCHBASE_SUCCESS, NULL);
-}
-
-void libcouchbase_server_update_event(libcouchbase_server_t *c, short flags,
-                                      EVENT_HANDLER handler) {
-    if (c->ev_flags == flags && c->ev_handler == handler) {
-        /* no change */
-        return;
-    }
-    c->ev_handler = handler;
-
-    if (c->ev_flags != 0) {
-        if (event_del(&c->ev_event) == -1) {
-            fprintf(stderr, "Failed to release event\n");
-            // Continue anyway.
-        }
-    }
-    c->ev_flags = flags;
-    event_set(&c->ev_event, c->sock, flags | EV_PERSIST, handler, c);
-    event_base_set(c->instance->ev_base, &c->ev_event);
-    if (event_add(&c->ev_event, NULL) == -1) {
-        fprintf(stderr, "Failed to add event\n");
-        return; // Don't continue.
-    }
-}
-
-static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
-{
-    event_base_loopbreak(server->instance->ev_base);
-}
-
-void libcouchbase_ensure_vbucket_config(libcouchbase_t instance)
-{
-    if (instance->vbucket_config == NULL) {
-        vbucket_state_listener_t old = instance->vbucket_state_listener;
-        instance->vbucket_state_listener = breakout_vbucket_state_listener;
-        event_base_loop(instance->ev_base, 0);
-        instance->vbucket_state_listener = old;
-    }
 }

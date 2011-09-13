@@ -323,8 +323,8 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
     libcouchbase_server_buffer_write_packet(server, &server->output, data, len);
     libcouchbase_server_buffer_end_packet(server, &server->output);
 
-    // send the data and add it to libevent..
-    libcouchbase_server_event_handler(0, EV_WRITE, server);
+    // send the data and add a write handler
+    libcouchbase_server_event_handler(0, LIBCOUCHBASE_WRITE_EVENT, server);
 
     // Make it known that this was a success.
     libcouchbase_error_handler(server->instance, LIBCOUCHBASE_SUCCESS, NULL);

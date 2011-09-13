@@ -35,10 +35,17 @@ libcouchbase_t libcouchbase_create(const char *host,
                                    const char *user,
                                    const char *passwd,
                                    const char *bucket,
-                                   struct event_base *base)
+                                   struct libcouchbase_io_opt_st *io)
 {
+    char buffer[1024];
+    ssize_t offset;
     libcouchbase_t ret;
     char *p;
+
+    if (io == NULL) {
+        // You can't initialize the library without a io-handler!
+        return NULL;
+    }
 
     if (host == NULL) {
         host = "localhost";
@@ -65,22 +72,38 @@ libcouchbase_t libcouchbase_create(const char *host,
         ret->port = p + 1;
     }
 
-    ret->user = user ? strdup(user) : NULL;
-    ret->passwd = passwd ? strdup(passwd) : NULL;
-    ret->bucket = strdup(bucket);
+    offset = snprintf(buffer, sizeof(buffer),
+                      "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
+                      bucket);
 
-    if (ret->host == NULL || (ret->user == NULL && user != NULL) ||
-        (ret->passwd == NULL && passwd != NULL) || ret->bucket == NULL) {
+    if (user && passwd) {
+        char cred[256];
+        char base64[256];
+        snprintf(cred, sizeof(cred), "%s:%s", user, passwd);
+        if (libcouchbase_base64_encode(cred, base64, sizeof(base64)) == -1) {
+            libcouchbase_destroy(ret);
+            return NULL;
+        }
+
+        offset += snprintf(buffer + offset, sizeof(buffer) - (size_t)offset,
+                           "Authorization: Basic %s\r\n", base64);
+    }
+    offset += snprintf(buffer + offset, sizeof(buffer)-(size_t)offset, "\r\n");
+    ret->http_uri = strdup(buffer);
+
+    if (ret->host == NULL || ret->http_uri == NULL) {
         libcouchbase_destroy(ret);
         return NULL;
     }
 
     ret->sock = -1;
-    ret->ev_base = base;
     ret->packet_filter = default_packet_filter;
 
     // No error has occurred yet.
     ret->last_error = LIBCOUCHBASE_SUCCESS;
+
+    // setup io iops!
+    ret->io = io;
 
     return ret;
 }
@@ -90,13 +113,13 @@ void libcouchbase_destroy(libcouchbase_t instance)
 {
     size_t ii;
     free(instance->host);
-    free(instance->user);
-    free(instance->passwd);
-    free(instance->bucket);
+    free(instance->http_uri);
 
     if (instance->sock != INVALID_SOCKET) {
-        event_del(&instance->ev_event);
-        EVUTIL_CLOSESOCKET(instance->sock);
+        instance->io->delete_event(instance->io, instance->sock,
+                                   instance->event);
+        instance->io->destroy_event(instance->io, instance->event);
+        instance->io->close(instance->io, instance->sock);
     }
 
     if (instance->ai != NULL) {
@@ -111,6 +134,10 @@ void libcouchbase_destroy(libcouchbase_t instance)
         libcouchbase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
+
+    if (instance->io && instance->io->destructor) {
+        instance->io->destructor(instance->io);
+    }
 
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
@@ -382,7 +409,33 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
     size_t avail;
     buffer_t *buffer = &instance->vbucket_stream.input;
     assert(sock != INVALID_SOCKET);
-    assert((which & EV_WRITE) == 0);
+
+    if ((which & LIBCOUCHBASE_WRITE_EVENT) == LIBCOUCHBASE_WRITE_EVENT) {
+        ssize_t nw;
+        nw = instance->io->send(instance->io, instance->sock,
+                                instance->http_uri + instance->n_http_uri_sent,
+                                (size_t)((ssize_t)strlen(instance->http_uri) - instance->n_http_uri_sent),
+                                0);
+        if (nw == -1) {
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       "Failed to send data to REST server");
+            instance->io->delete_event(instance->io, instance->sock,
+                                       instance->event);
+            return;
+
+        }
+
+        instance->n_http_uri_sent += nw;
+        if (instance->n_http_uri_sent == (ssize_t)strlen(instance->http_uri)) {
+            instance->io->update_event(instance->io, instance->sock,
+                                       instance->event, LIBCOUCHBASE_READ_EVENT,
+                                       instance, vbucket_stream_handler);
+        }
+    }
+
+    if ((which & LIBCOUCHBASE_READ_EVENT) == 0) {
+        return;
+    }
 
     do {
         if (!grow_buffer(buffer, 1)) {
@@ -392,16 +445,17 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
         }
 
         avail = (buffer->size - buffer->avail);
-        nr = recv(instance->sock, buffer->data + buffer->avail, avail, 0);
+        nr = instance->io->recv(instance->io, instance->sock,
+                                buffer->data + buffer->avail, avail, 0);
         if (nr < 0) {
-            switch (errno) {
+            switch (instance->io->error) {
             case EINTR:
                 break;
             case EWOULDBLOCK:
                 return ;
             default:
                 /* ERROR READING SOCKET!! */
-                fprintf(stderr, "Failed to read from socket: %s\n", strerror(errno));
+                fprintf(stderr, "Failed to read from socket: %s\n", strerror(instance->io->error));
                 return ;
             }
         } else if (nr == 0) {
@@ -457,37 +511,102 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
     libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
+static void libcouchbase_instance_connected(libcouchbase_t instance)
+{
+    instance->io->update_event(instance->io, instance->sock,
+                               instance->event, LIBCOUCHBASE_RW_EVENT,
+                               instance, vbucket_stream_handler);
+}
+
+static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
+                                                   short which,
+                                                   void *arg) {
+    (void)sock;
+    (void)which;
+    libcouchbase_t instance = arg;
+    bool retry;
+
+    do {
+        if (instance->sock == INVALID_SOCKET) {
+            // Try to get a socket..
+            while (instance->curr_ai != NULL) {
+                instance->sock = instance->io->socket(instance->io,
+                                                      instance->curr_ai->ai_family,
+                                                      instance->curr_ai->ai_socktype,
+                                                      instance->curr_ai->ai_protocol);
+                if (instance->sock != INVALID_SOCKET) {
+                    break;
+                }
+                instance->curr_ai = instance->curr_ai->ai_next;
+            }
+        }
+
+        if (instance->curr_ai == NULL) {
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       "Failed to lookup host!\n");
+            return ;
+        }
+
+        retry = false;
+        if (instance->io->connect(instance->io,
+                                  instance->sock,
+                                  instance->curr_ai->ai_addr,
+                                  (int)instance->curr_ai->ai_addrlen) == 0) {
+            // connected
+            libcouchbase_instance_connected(instance);
+            return ;
+        } else {
+            switch (instance->io->error) {
+            case EINTR:
+                retry = true;
+                break;
+            case EISCONN:
+                libcouchbase_instance_connected(instance);
+                return ;
+            case EWOULDBLOCK:
+            case EINPROGRESS: /* First call to connect */
+                instance->io->update_event(instance->io,
+                                           instance->sock,
+                                           instance->event,
+                                           LIBCOUCHBASE_WRITE_EVENT,
+                                           instance,
+                                           libchouchbase_instance_connect_handler);
+                return ;
+            case EALREADY: /* Subsequent calls to connect */
+                return ;
+
+            default:
+                if (errno != ECONNREFUSED) {
+                    char buffer[1024];
+                    snprintf(buffer, sizeof(buffer), "Connection failed: %s",
+                             strerror(instance->io->error));
+                    libcouchbase_error_handler(instance,
+                                               LIBCOUCHBASE_NETWORK_ERROR,
+                                               buffer);
+                    return ;
+                }
+
+                retry = true;
+                instance->curr_ai = instance->curr_ai->ai_next;
+                instance->io->delete_event(instance->io,
+                                           instance->sock,
+                                           instance->event);
+                instance->io->close(instance->io, instance->sock);
+                instance->sock = INVALID_SOCKET;
+
+            }
+        }
+    } while (retry);
+}
+
 /**
  * @todo use async connects etc
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 {
-    char buffer[1024];
-    ssize_t offset;
     struct addrinfo hints;
-    struct addrinfo *ai;
     int error;
-    ssize_t len;
-
-    offset = snprintf(buffer, sizeof(buffer),
-                      "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
-                      instance->bucket ? instance->bucket : "");
-    if (instance->user) {
-        char cred[256];
-        char base64[256];
-        snprintf(cred, sizeof(cred), "%s:%s", instance->user, instance->passwd);
-        if (libcouchbase_base64_encode(cred, base64, sizeof(base64)) == -1) {
-            return libcouchbase_error_handler(instance, LIBCOUCHBASE_E2BIG,
-                                              "Username and password exceeds"
-                                              " 256 bytes...");
-        }
-
-        offset += snprintf(buffer + offset, sizeof(buffer) - (size_t)offset,
-                           "Authorization: Basic %s\r\n", base64);
-    }
-
-    offset += snprintf(buffer + offset, sizeof(buffer)-(size_t)offset, "\r\n");
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
@@ -503,77 +622,13 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
                                           errinfo);
     }
 
-    ai = instance->ai;
-    while (ai != NULL) {
-        instance->sock = socket(ai->ai_family,
-                                ai->ai_socktype,
-                                ai->ai_protocol);
+    instance->curr_ai = instance->ai;
+    instance->event = instance->io->create_event(instance->io);
+    instance->last_error = LIBCOUCHBASE_SUCCESS;
+    libchouchbase_instance_connect_handler(INVALID_SOCKET, 0, instance);
 
-        if (instance->sock != -1) {
-            if (connect(instance->sock, ai->ai_addr,
-                        ai->ai_addrlen) != -1) {
-                /*
-                 * Connected!
-                 * The REST socket may be idle for a _looooong_ time,
-                 * so let's enable SO_KEEPALIVE. We don't care if this
-                 * function fail, it just means that the connection may
-                 * be dropped ;-)
-                 */
-                int val = 1;
-                socklen_t length = sizeof(val);
-                setsockopt(instance->sock, SOL_SOCKET, SO_KEEPALIVE,
-                           &val, length);
-                break;
-            }
-            EVUTIL_CLOSESOCKET(instance->sock);
-            instance->sock = -1;
-        }
-        ai = ai->ai_next;
-    }
-
-    if (instance->sock == -1) {
-        char errinfo[1024];
-        snprintf(errinfo, sizeof(errinfo), "Failed to connect to \"%s:%s\"",
-                 instance->host, instance->port);
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_UNKNOWN_HOST,
-                                          errinfo);
-    }
-
-    len = offset;
-    offset = 0;
-    do {
-        ssize_t nw;
-        nw = send(instance->sock, buffer + offset, (size_t)(len - offset), 0);
-        if (nw == -1) {
-            if (errno != EINTR) {
-                EVUTIL_CLOSESOCKET(instance->sock);
-                return libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                                  "Failed to send data");
-            }
-        } else {
-            offset += nw;
-        }
-    } while (offset < len);
-
-    if (evutil_make_socket_nonblocking(instance->sock) != 0) {
-        EVUTIL_CLOSESOCKET(instance->sock);
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                          "Failed to make socket nonblocking");
-    }
-
-    instance->ev_flags = EV_READ | EV_PERSIST;
-    event_set(&instance->ev_event, instance->sock,
-              instance->ev_flags, vbucket_stream_handler, instance);
-    event_base_set(instance->ev_base, &instance->ev_event);
-    if (event_add(&instance->ev_event, NULL) == -1) {
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_LIBEVENT_ERROR,
-                                          "Failed to add socket to libevent");
-    }
-
-    // Make it known that this was a success.
-    return libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
+    return instance->last_error;
 }
-
 
 LIBCOUCHBASE_API
 void libcouchbase_set_packet_filter(libcouchbase_t instance,
