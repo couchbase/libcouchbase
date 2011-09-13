@@ -41,6 +41,7 @@ pkginclude_HEADERS = \
 libcouchbase_la_SOURCES = \
                         src/arithmetic.c \
                         src/base64.c \
+                        src/config_static.h \
                         src/cookie.c \
                         src/error.c \
                         src/event.c \
@@ -48,6 +49,7 @@ libcouchbase_la_SOURCES = \
                         src/get.c \
                         src/handler.c \
                         src/instance.c \
+                        src/internal.h \
                         src/packet.c \
                         src/remove.c \
                         src/server.c \
@@ -82,6 +84,7 @@ libmockserver_la_SOURCES = \
 
 
 memcached_packet_debug_la_SOURCES= src/packet_debug.c \
+                                   src/packet_debug.h \
                                    src/utilities.c
 
 memcached_packet_debug_la_LDFLAGS= -avoid-version -shared -module -no-undefined
@@ -110,8 +113,6 @@ example_memdump_LDFLAGS = $(LTLIBEVENT)
 example_memrm_SOURCES = example/memrm.c
 example_memrm_LDADD = libcouchbase.la
 example_memrm_LDFLAGS = $(LTLIBEVENT)
-
-extra_DIST = include/libcouchbase/configuration.h.in
 
 check_PROGRAMS = base64-test \
                  strerror-test \
@@ -196,3 +197,9 @@ man3couchbase_DATA = $(FUNCMANPAGE)
 else
 man_MANS = $(HEADMANPAGE) $(LIBMANPAGE) $(FUNCMANPAGE)
 endif
+
+EXTRA_DIST = \
+             NMakefile \
+             include/libcouchbase/configuration.h.in \
+             man \
+             win32
