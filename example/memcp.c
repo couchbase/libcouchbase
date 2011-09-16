@@ -220,13 +220,12 @@ int main(int argc, char **argv)
             void *bytes = mmap(NULL, (size_t)st.st_size, PROT_READ,
                                MAP_NORESERVE | MAP_PRIVATE, fileno(fp), 0);
             if (bytes != NULL) {
-                libcouchbase_error_t err;
-                err = libcouchbase_store(instance,
-                                         NULL,
-                                         LIBCOUCHBASE_SET,
-                                         key, nkey,
-                                         bytes, (size_t)st.st_size,
-                                         0, 0, 0);
+                libcouchbase_store(instance,
+                                   NULL,
+                                   LIBCOUCHBASE_SET,
+                                   key, nkey,
+                                   bytes, (size_t)st.st_size,
+                                   0, 0, 0);
                 libcouchbase_execute(instance);
                 munmap(bytes, (size_t)st.st_size);
                 fclose(fp);
