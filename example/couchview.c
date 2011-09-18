@@ -38,8 +38,6 @@
 
 #include <libcouchbase/couchbase.h>
 
-#include "config.h"
-
 static void usage(char cmd, const void *arg, void *cookie);
 static void set_flag(char cmd, const void *arg, void *cookie) {
     (void)cmd; (void)arg;
