@@ -290,7 +290,7 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
 
     n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
                                           servernum);
-    server->couch_api_base = strdup(n);
+    server->couch_api_base = (n != NULL) ? strdup(n) : NULL;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
