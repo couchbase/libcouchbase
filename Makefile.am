@@ -155,9 +155,9 @@ LIBMANPAGE = man/man3lib/libcouchbase.3lib
 HEADMANPAGE = man/man3head/couchbase.3head \
               man/man3head/couchbase.h.3head
 FUNCMANPAGE = \
-   man/man3couchbase/libcouchbase_arithmetic_by_key.3couchbase \
-   man/man3couchbase/libcouchbase_arithmetic.3couchbase \
    man/man3couchbase/callbacks.3couchbase \
+   man/man3couchbase/libcouchbase_arithmetic.3couchbase \
+   man/man3couchbase/libcouchbase_arithmetic_by_key.3couchbase \
    man/man3couchbase/libcouchbase_connect.3couchbase \
    man/man3couchbase/libcouchbase_create.3couchbase \
    man/man3couchbase/libcouchbase_destroy.3couchbase \
@@ -167,12 +167,12 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_get_cookie.3couchbase \
    man/man3couchbase/libcouchbase_get_last_error.3couchbase \
    man/man3couchbase/libcouchbase_get_timings.3couchbase \
-   man/man3couchbase/libcouchbase_mget_by_key.3couchbase \
    man/man3couchbase/libcouchbase_mget.3couchbase \
-   man/man3couchbase/libcouchbase_mtouch_by_key.3couchbase \
+   man/man3couchbase/libcouchbase_mget_by_key.3couchbase \
    man/man3couchbase/libcouchbase_mtouch.3couchbase \
-   man/man3couchbase/libcouchbase_remove_by_key.3couchbase \
+   man/man3couchbase/libcouchbase_mtouch_by_key.3couchbase \
    man/man3couchbase/libcouchbase_remove.3couchbase \
+   man/man3couchbase/libcouchbase_remove_by_key.3couchbase \
    man/man3couchbase/libcouchbase_set_arithmetic_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_cookie.3couchbase \
    man/man3couchbase/libcouchbase_set_error_callback.3couchbase \
@@ -186,8 +186,10 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_set_tap_opaque_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_tap_vbucket_set_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_touch_callback.3couchbase \
-   man/man3couchbase/libcouchbase_store_by_key.3couchbase \
+   man/man3couchbase/libcouchbase_set_view_complete_callback.3couchbase \
+   man/man3couchbase/libcouchbase_set_view_data_callback.3couchbase \
    man/man3couchbase/libcouchbase_store.3couchbase \
+   man/man3couchbase/libcouchbase_store_by_key.3couchbase \
    man/man3couchbase/libcouchbase_strerror.3couchbase \
    man/man3couchbase/libcouchbase_tap_cluster.3couchbase \
    man/man3couchbase/libcouchbase_tap_filter_create.3couchbase \
@@ -196,6 +198,7 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_tap_filter_get_keys_only.3couchbase \
    man/man3couchbase/libcouchbase_tap_filter_set_backfill.3couchbase \
    man/man3couchbase/libcouchbase_tap_filter_set_keys_only.3couchbase \
+   man/man3couchbase/libcouchbase_view_execute.3couchbase \
    man/man3couchbase/missing.3couchbase
 
 # Manual pages!
