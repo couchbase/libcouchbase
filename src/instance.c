@@ -521,8 +521,6 @@ static void libcouchbase_instance_connected(libcouchbase_t instance)
 static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
                                                    short which,
                                                    void *arg) {
-    (void)sock;
-    (void)which;
     libcouchbase_t instance = arg;
     bool retry;
 
@@ -597,6 +595,8 @@ static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
             }
         }
     } while (retry);
+    (void)sock;
+    (void)which;
 }
 
 /**
