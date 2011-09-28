@@ -38,7 +38,6 @@
 #include <string.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <event.h>
 
 #include <libcouchbase/couchbase.h>
 
@@ -68,7 +67,7 @@ int minify = 0;
 int force_utf8 = 0;
 
 struct cookie_st {
-    struct event_base *evbase;
+    struct libcouchbase_io_opt_st *io;
     yajl_handle parser;
     yajl_gen gen;
 };
@@ -307,7 +306,7 @@ static void view_data_callback(libcouchbase_t instance,
             unsigned char *str = yajl_get_error(c->parser, 1, bytes, (unsigned int)nbytes);
             fprintf(stderr, "%s", (const char *) str);
             yajl_free_error(c->parser, str);
-            event_base_loopexit(c->evbase, 0);
+            c->io->stop_event_loop(c->io);
         }
     } else { /* end of response */
         st = yajl_parse_complete(c->parser);
@@ -322,7 +321,7 @@ static void view_data_callback(libcouchbase_t instance,
             fwrite(buf, 1, len, output);
             yajl_gen_clear(c->gen);
         }
-        event_base_loopexit(c->evbase, 0);
+        c->io->stop_event_loop(c->io);
     }
 }
 
@@ -355,7 +354,7 @@ static void view_complete_callback(libcouchbase_t instance,
         fprintf(stderr, "FAIL\n");
         fwrite(bytes, nbytes, 1, output);
     }
-    event_base_loopexit(c->evbase, 0);
+    c->io->stop_event_loop(c->io);
 }
 
 int main(int argc, char **argv)
@@ -391,16 +390,13 @@ int main(int argc, char **argv)
     }
     cookie.gen = yajl_gen_alloc(&gen_cfg, NULL);
     cookie.parser = yajl_alloc(&parser_callbacks, &parser_cfg, NULL, (void *)cookie.gen);
-
-    cookie.evbase = event_base_new();
-    struct libcouchbase_io_opt_st *io;
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, cookie.evbase, NULL);
-    if (io == NULL) {
+    cookie.io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    if (cookie.io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
     }
     libcouchbase_t instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, io);
+                                                  passwd, bucket, cookie.io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
@@ -433,7 +429,7 @@ int main(int argc, char **argv)
 
     /* Start the event loop and let it run until request will be completed
      * with success or failure (see view callbacks)  */
-    event_base_loop(cookie.evbase, 0);
+    cookie.io->run_event_loop(cookie.io);
 
     yajl_free(cookie.parser);
     yajl_gen_free(cookie.gen);

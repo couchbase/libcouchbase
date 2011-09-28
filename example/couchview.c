@@ -34,7 +34,6 @@
 #include <string.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <event.h>
 
 #include <libcouchbase/couchbase.h>
 
@@ -59,7 +58,7 @@ const char *post_data= NULL;
 int chunked = 0;
 
 struct cookie_st {
-    struct event_base *evbase;
+    struct libcouchbase_io_opt_st *io;
 };
 
 static void set_auth_data(char cmd, const void *arg, void *cookie) {
@@ -205,7 +204,7 @@ static void view_data_callback(libcouchbase_t instance,
 
     fwrite(bytes, nbytes, 1, output);
     if (bytes == NULL) { /* end of response */
-        event_base_loopexit(c->evbase, 0);
+        c->io->stop_event_loop(c->io);
     }
 }
 
@@ -226,7 +225,7 @@ static void view_complete_callback(libcouchbase_t instance,
         fprintf(stderr, "FAIL\n");
         fwrite(bytes, nbytes, 1, output);
     }
-    event_base_loopexit(c->evbase, 0);
+    c->io->stop_event_loop(c->io);
 }
 
 int main(int argc, char **argv)
@@ -253,15 +252,13 @@ int main(int argc, char **argv)
         usage(0, NULL, NULL);
     }
 
-    cookie.evbase = event_base_new();
-    struct libcouchbase_io_opt_st *io;
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, cookie.evbase, NULL);
-    if (io == NULL) {
+    cookie.io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    if (cookie.io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
     }
     libcouchbase_t instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, io);
+                                                  passwd, bucket, cookie.io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
@@ -294,7 +291,7 @@ int main(int argc, char **argv)
 
     /* Start the event loop and let it run until request will be completed
      * with success or failure (see view callbacks)  */
-    event_base_loop(cookie.evbase, 0);
+    cookie.io->run_event_loop(cookie.io);
 
     return 0;
 }
