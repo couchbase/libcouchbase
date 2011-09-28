@@ -27,6 +27,8 @@ ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la libcouchbase_libevent.la
 noinst_LTLIBRARIES =
+bin_PROGRAMS =
+
 
 pkginclude_HEADERS = \
                      include/libcouchbase/callbacks.h \
@@ -105,7 +107,8 @@ noinst_PROGRAMS = \
                example/memdump \
                example/memflush \
                example/memrm \
-               example/memstat
+               example/memstat \
+               example/pillowfight
 
 #if HAVE_LIBEVENT2
 #noinst_PROGRAMS += example/couchview
@@ -191,6 +194,9 @@ tests_flags_test_LDFLAGS = -levent
 tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 TESTS=${check_PROGRAMS}
+
+example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
+example_pillowfight_LDADD = libcouchbase.la
 
 EXTRA_DIST = \
              LICENSE \

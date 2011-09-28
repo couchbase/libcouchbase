@@ -34,6 +34,7 @@
 /example/memflush
 /example/memrm
 /example/memstat
+/example/pillowfight
 /include/libcouchbase/configuration.h
 /include/memcached/protocol_binary.h
 /include/memcached/vbucket.h
