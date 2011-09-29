@@ -47,4 +47,5 @@ void libcouchbase_wait(libcouchbase_t instance)
     } else {
         instance->io->run_event_loop(instance->io);
     }
+    instance->wait = false;
 }
