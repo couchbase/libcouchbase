@@ -182,6 +182,19 @@ static void tap_mutation(libcouchbase_t instance,
     (void)nes;
 }
 
+static void error_callback(libcouchbase_t instance,
+                           libcouchbase_error_t error,
+                           const char *errinfo)
+{
+    (void)instance;
+    fprintf(stderr, "Error %d", error);
+    if (errinfo) {
+        fprintf(stderr, ": %s", errinfo);
+    }
+    fprintf(stderr, "\n");
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
     handle_options(argc, argv);
@@ -209,6 +222,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
     }
+
+    (void)libcouchbase_set_error_callback(instance, error_callback);
 
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");

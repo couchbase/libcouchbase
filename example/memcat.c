@@ -215,6 +215,19 @@ static void get_callback(libcouchbase_t instance,
     }
 }
 
+static void error_callback(libcouchbase_t instance,
+                           libcouchbase_error_t error,
+                           const char *errinfo)
+{
+    (void)instance;
+    fprintf(stderr, "Error %d", error);
+    if (errinfo) {
+        fprintf(stderr, ": %s", errinfo);
+    }
+    fprintf(stderr, "\n");
+    exit(EXIT_FAILURE);
+}
+
 
 int main(int argc, char **argv)
 {
@@ -259,6 +272,8 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
     }
+
+    (void)libcouchbase_set_error_callback(instance, error_callback);
 
     ret = libcouchbase_connect(instance);
     if (ret != LIBCOUCHBASE_SUCCESS) {
