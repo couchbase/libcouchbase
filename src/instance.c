@@ -540,8 +540,11 @@ static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
         }
 
         if (instance->curr_ai == NULL) {
+            char errinfo[1024];
+            snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
+                     instance->host, instance->port);
             libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                       "Failed to lookup host!\n");
+                                       errinfo);
             return ;
         }
 
