@@ -39,16 +39,18 @@ libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance)
  * This returns the error it was given so you can return it from a function
  * in 1 line:
  *
- *     return libcouchbase_error_handler(instance, LIBCOUCHBASE_ERROR);
+ *     return libcouchbase_error_handler(instance, LIBCOUCHBASE_ERROR,
+ *                                       "Something was wrong");
  *
  * rather than 3:
  *
  *     libcouchbase_error_t error = LIBCOUCHBASE_ERROR;
- *     libcouchbase_error_handler(instance, error);
+ *     libcouchbase_error_handler(instance, error, "Something was wrong");
  *     return error;
  *
  * @param instance the connection the error occurred on.
  * @param error the error that occurred.
+ * @param errinfo the error description
  * @return the error that occurred.
  */
 libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance, libcouchbase_error_t error, const char *errinfo)
