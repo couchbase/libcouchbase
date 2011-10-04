@@ -43,8 +43,12 @@ libcouchbase_t libcouchbase_create(const char *host,
     char *p;
 
     if (io == NULL) {
-        // You can't initialize the library without a io-handler!
-        return NULL;
+        io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT,
+                                        NULL, NULL);
+        if (io == NULL) {
+            // You can't initialize the library without a io-handler!
+            return NULL;
+        }
     }
 
     if (host == NULL) {
