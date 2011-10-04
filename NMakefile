@@ -134,6 +134,8 @@ utilities.obj: src\utilities.c
 	$(DLLCOMPILE) src\utilities.c
 
 
+$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin:; -@mkdir $@
+
 install: $(INSTALLDIRS) libcouchbase.dll
 	@copy include\libcouchbase\*.h $(INSTALL)\include\libcouchbase
 	@copy libcouchbase.dll $(INSTALL)\lib
