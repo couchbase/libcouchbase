@@ -33,6 +33,9 @@
 #include <libcouchbase/couchbase.h>
 #include <sasl/sasl.h>
 
+#include "ringbuffer.h"
+
+
 /*
  * libevent2 define evutil_socket_t so that it'll automagically work
  * on windows
@@ -175,22 +178,23 @@ extern "C" {
         struct addrinfo *root_ai;
         /** The address information for this server (the one we're trying) */
         struct addrinfo *curr_ai;
+
         /** The output buffer for this server */
-        buffer_t output;
-        buffer_t output_cookies;
+        ringbuffer_t output;
         /** The sent buffer for this server so that we can resend the
          * command to another server if the bucket is moved... */
-        buffer_t cmd_log;
+        ringbuffer_t cmd_log;
+        ringbuffer_t output_cookies;
         /**
          * The pending buffer where we write data until we're in a
          * connected state;
          */
-        buffer_t pending;
-        buffer_t pending_cookies;
-        /** offset to the beginning of the packet being built */
-        size_t current_packet;
+        ringbuffer_t pending;
+        ringbuffer_t pending_cookies;
+
         /** The input buffer for this server */
-        buffer_t input;
+        ringbuffer_t input;
+
         /** The SASL object used for this server */
         sasl_conn_t *sasl_conn;
         /** The event item representing _this_ object */
@@ -220,23 +224,23 @@ extern "C" {
 
     void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
                                                  const void *command_cookie,
-                                                 buffer_t *buff,
-                                                 buffer_t *buff_cookie,
+                                                 ringbuffer_t *buff,
+                                                 ringbuffer_t *buff_cookie,
                                                  const void *data,
                                                  size_t size);
 
     void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
-                                                 buffer_t *buff,
+                                                 ringbuffer_t *buff,
                                                  const void *data,
                                                  size_t size);
 
     void libcouchbase_server_buffer_end_packet(libcouchbase_server_t *c,
-                                               buffer_t *buff);
+                                               ringbuffer_t *buff);
 
     void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
                                                     const void *command_cookie,
-                                                    buffer_t *buff,
-                                                    buffer_t *buff_cookie,
+                                                    ringbuffer_t *buff,
+                                                    ringbuffer_t *buff_cookie,
                                                     const void *data,
                                                     size_t size);
 

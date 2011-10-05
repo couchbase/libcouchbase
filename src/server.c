@@ -31,9 +31,11 @@
 void libcouchbase_server_destroy(libcouchbase_server_t *server)
 {
     /* Cancel all pending commands */
-    libcouchbase_server_purge_implicit_responses(server,
-                                                 server->instance->seqno,
-                                                 gethrtime());
+    if (server->cmd_log.nbytes) {
+        libcouchbase_server_purge_implicit_responses(server,
+                                                     server->instance->seqno,
+                                                     gethrtime());
+    }
 
     if (server->sasl_conn != NULL) {
         sasl_dispose(&server->sasl_conn);
@@ -53,10 +55,10 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
 
     free(server->couch_api_base);
     free(server->hostname);
-    free(server->output.data);
-    free(server->cmd_log.data);
-    free(server->pending.data);
-    free(server->input.data);
+    libcouchbase_ringbuffer_destruct(&server->output);
+    libcouchbase_ringbuffer_destruct(&server->cmd_log);
+    libcouchbase_ringbuffer_destruct(&server->pending);
+    libcouchbase_ringbuffer_destruct(&server->input);
     memset(server, 0xff, sizeof(*server));
 }
 
@@ -140,23 +142,22 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
 {
     server->connected = true;
 
-    // move all pending data!
-    if (server->pending.avail > 0) {
-        grow_buffer(&server->output, server->pending.avail);
-        memcpy(server->output.data + server->output.avail,
-               server->pending.data, server->pending.avail);
-        server->output.avail += server->pending.avail;
-        server->pending.avail = 0;
-
-        grow_buffer(&server->output_cookies, server->pending_cookies.avail);
-        memcpy(server->output_cookies.data + server->output_cookies.avail,
-               server->pending_cookies.data, server->pending_cookies.avail);
-        server->output_cookies.avail += server->pending_cookies.avail;
-        server->pending_cookies.avail = 0;
+    if (server->pending.nbytes > 0) {
+        // @todo we might want to do this a bit more optimal later on..
+        //       We're only using the pending ringbuffer while we're
+        //       doing the SASL auth, so it shouldn't contain that
+        //       much data..
+        if (!libcouchbase_ringbuffer_append(&server->pending, &server->output) ||
+            !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies)) {
+            libcouchbase_error_handler(server->instance,
+                                       LIBCOUCHBASE_ENOMEM,
+                                       NULL);
+        }
 
         // Send the pending data!
         libcouchbase_server_event_handler(server->sock,
                                           LIBCOUCHBASE_WRITE_EVENT, server);
+
     }
 }
 
@@ -279,7 +280,6 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     struct addrinfo hints;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
-    server->current_packet = (size_t)-1;
     server->hostname = strdup(n);
     p = strchr(server->hostname, ':');
     *p = '\0';
@@ -320,42 +320,71 @@ void libcouchbase_server_send_packets(libcouchbase_server_t *server)
 }
 
 int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
-                                                  uint32_t seqno,
-                                                  hrtime_t end)
+                                                 uint32_t seqno,
+                                                 hrtime_t end)
 {
-    protocol_binary_request_header *req = (void*)c->cmd_log.data;
+    protocol_binary_request_header req;
+    size_t nr =  libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes,
+                                              sizeof(req));
+    // There should at _LEAST_ be _ONE_ message in here!
+    assert(nr == sizeof(req));
+    while (req.request.opaque < seqno) {
+        struct libcouchbase_command_data_st ct;
+        char *packet = c->cmd_log.read_head;
+        uint32_t packetsize = ntohl(req.request.bodylen) + (uint32_t)sizeof(req);
+        char *keyptr;
 
-    struct libcouchbase_command_data_st *ct = (void*)c->output_cookies.data;
+        nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
+        assert(nr == sizeof(ct));
 
-    while (c->cmd_log.avail >= sizeof(*req) &&
-           c->cmd_log.avail >= (ntohl(req->request.bodylen) + sizeof(*req)) &&
-           req->request.opaque < seqno) {
-
-        size_t processed;
-        switch (req->request.opcode) {
+        switch (req.request.opcode) {
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GETQ:
-            if (ct->start != 0 && c->instance->histogram) {
-                libcouchbase_record_metrics(c->instance, end - ct->start, req->request.opcode);
+            if (ct.start != 0 && c->instance->histogram) {
+                libcouchbase_record_metrics(c->instance, end - ct.start,
+                                            req.request.opcode);
             }
-            c->instance->callbacks.get(c->instance, ct->cookie, LIBCOUCHBASE_KEY_ENOENT,
-                                       (char*)(req + 1) + req->request.extlen,
-                                       ntohs(req->request.keylen),
+
+
+            if (!libcouchbase_ringbuffer_is_continous(&c->cmd_log,
+                                                      RINGBUFFER_READ,
+                                                      packetsize)) {
+                packet = malloc(packetsize);
+                if (packet == NULL) {
+                    libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+                    return -1;
+                }
+
+                nr = libcouchbase_ringbuffer_peek(&c->cmd_log, packet, packetsize);
+                if (nr != packetsize) {
+                    libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
+                                               NULL);
+                    free(packet);
+                    return -1;
+                }
+            }
+
+            keyptr = packet + sizeof(req) + req.request.extlen;
+            c->instance->callbacks.get(c->instance, ct.cookie,
+                                       LIBCOUCHBASE_KEY_ENOENT,
+                                       keyptr, ntohs(req.request.keylen),
                                        NULL, 0, 0, 0);
-            ct++;
+            if (packet != c->cmd_log.read_head) {
+                free(packet);
+            }
             break;
         default:
+            libcouchbase_error_handler(c->instance,
+                                       LIBCOUCHBASE_EINTERNAL,
+                                       "Received an implicit msg I don't support");
             return -1;
         }
 
-        processed = ntohl(req->request.bodylen) + sizeof(*req);
-        memmove(c->cmd_log.data, c->cmd_log.data + processed,
-                c->cmd_log.avail - processed);
-        c->cmd_log.avail -= processed;
-
-        c->output_cookies.avail -= sizeof(*ct);
-        memmove(c->output_cookies.data, c->output_cookies.data + sizeof(*ct),
-                c->output_cookies.avail);
+        libcouchbase_ringbuffer_consumed(&c->cmd_log, packetsize);
+        nr =  libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes,
+                                           sizeof(req));
+        // The current message should also be there...
+        assert(nr == sizeof(req));
     }
 
     return 0;

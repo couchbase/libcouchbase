@@ -23,113 +23,185 @@
  */
 #include "internal.h"
 
-static int do_read_data(libcouchbase_server_t *c)
+static int do_fill_input_buffer(libcouchbase_server_t *c)
 {
-    size_t processed;
-    const int operations_per_call = 1000;
-    int operations = 0;
-    protocol_binary_response_header *res;
-    protocol_binary_request_header *req;
+    struct libcouchbase_iovec_st iov[2];
+    ssize_t nr;
 
-    grow_buffer(&c->input, 8192);
-    res = (void*)c->input.data;
-    req = (void*)c->input.data;
+    if (!libcouchbase_ringbuffer_ensure_capacity(&c->input, 8192)) {
+        libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+        return -1;
+    }
 
-    do {
-        ssize_t nr;
-        hrtime_t stop = gethrtime();
-        while (++operations < operations_per_call &&
-               c->input.avail >= sizeof(*req) &&
-               c->input.avail >= (ntohl(req->request.bodylen) + sizeof(*req))) {
+    libcouchbase_ringbuffer_get_iov(&c->input, RINGBUFFER_WRITE, iov);
 
-            if (c->instance->packet_filter(c->instance, c->input.data)) {
-                struct libcouchbase_command_data_st *ct = (void*)c->output_cookies.data;
-
-                switch (req->request.magic) {
-                case PROTOCOL_BINARY_REQ:
-                    c->instance->request_handler[req->request.opcode](c,
-                                                                      ct->cookie,
-                                                                      req);
-                    break;
-                case PROTOCOL_BINARY_RES:
-                    if (libcouchbase_server_purge_implicit_responses(c, res->response.opaque, stop) != 0) {
-                        // TODO: Print an error message here.
-                        return -1;
-                    }
-                    if (ct->start != 0 && c->instance->histogram) {
-                        libcouchbase_record_metrics(c->instance,
-                                                    stop - ct->start,
-                                                    res->response.opcode);
-                    }
-                    c->instance->response_handler[res->response.opcode](c,
-                                                                        ct->cookie,
-                                                                        res);
-
-                    req = (protocol_binary_request_header*)c->cmd_log.data;
-                    processed = ntohl(req->request.bodylen) + sizeof(*req);
-                    assert(c->cmd_log.avail >= processed);
-                    memmove(c->cmd_log.data, c->cmd_log.data + processed,
-                            c->cmd_log.avail - processed);
-                    c->cmd_log.avail -= processed;
-                    req = (protocol_binary_request_header*)c->input.data;
-                    c->output_cookies.avail -= sizeof(*ct);
-                    memmove(c->output_cookies.data,
-                            c->output_cookies.data + sizeof(*ct),
-                            c->output_cookies.avail);
-                    break;
-                default:
-                    // TODO: Print an error message here.
-                    return -1;
-                }
-            }
-
-            processed = ntohl(req->request.bodylen) + sizeof(*req);
-            memmove(c->input.data, c->input.data + processed,
-                    c->input.avail - processed);
-            c->input.avail -= processed;
-        }
-
-        if (operations == operations_per_call) {
-            // allow some other connections to process some data as well
+    nr = c->instance->io->recvv(c->instance->io, c->sock, iov, 2);
+    if (nr == -1) {
+        switch (c->instance->io->error) {
+        case EINTR:
+            break;
+        case EWOULDBLOCK:
             return 0;
+        default:
+            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       NULL);
+            return -1;
+        }
+    } else if (nr == 0) {
+        assert((iov[0].iov_len + iov[1].iov_len) != 0);
+        libcouchbase_error_handler(c->instance,
+                                   LIBCOUCHBASE_NETWORK_ERROR,
+                                   "Connection closed... we should resend to other nodes or reconnect!!");
+        return -1;
+    } else {
+        libcouchbase_ringbuffer_produced(&c->input, (size_t)nr);
+    }
+
+    return 1;
+}
+
+
+
+static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
+{
+    protocol_binary_response_header header;
+    size_t nr;
+    char *packet;
+    uint32_t packetsize;
+
+    nr = libcouchbase_ringbuffer_peek(&c->input, header.bytes, sizeof(header));
+    if (nr < sizeof(header)) {
+        return 0;
+    }
+
+    packetsize = ntohl(header.response.bodylen) + (uint32_t)sizeof(header);
+    if (c->input.nbytes < packetsize) {
+        return 0;
+    }
+
+    packet = c->input.read_head;
+    // we have everything!
+
+    if (!libcouchbase_ringbuffer_is_continous(&c->input, RINGBUFFER_READ,
+                                              packetsize)) {
+        // The buffer isn't continous.. for now just copy it out and
+        // operate on the copy ;)
+        if ((packet = malloc(packetsize)) == NULL) {
+            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+            return -1;
+        }
+        nr = libcouchbase_ringbuffer_read(&c->input, packet, packetsize);
+        if (nr != packetsize) {
+            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
+                                       NULL);
+            free(packet);
+            return -1;
+        }
+    }
+
+    if (c->instance->packet_filter(c->instance, packet)) {
+        struct libcouchbase_command_data_st ct;
+        nr = libcouchbase_ringbuffer_peek(&c->output_cookies, &ct, sizeof(ct));
+        if (nr < sizeof(ct)) {
+            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
+                                       NULL);
+            if (packet != c->input.read_head) {
+                free(packet);
+            }
+            return -1;
         }
 
-        nr = c->instance->io->recv(c->instance->io, c->sock,
-                                   c->input.data + c->input.avail,
-                                   c->input.size - c->input.avail,
-                  0);
-
-        if (nr == -1) {
-            switch (c->instance->io->error) {
-            case EINTR:
-                break;
-            case EWOULDBLOCK:
-                return 0;
-            default:
-                // TODO: Print an error message here.
+        switch (header.response.magic) {
+        case PROTOCOL_BINARY_REQ:
+            c->instance->request_handler[header.response.opcode](c,ct.cookie,
+                                                                 (void*)packet);
+            break;
+        case PROTOCOL_BINARY_RES:
+            if (libcouchbase_server_purge_implicit_responses(c,
+                                                             header.response.opaque, stop) != 0) {
+                if (packet != c->input.read_head) {
+                    free(packet);
+                }
                 return -1;
             }
-        } else if (nr == 0) {
-            assert(c->input.avail != c->input.size);
-            // TODO: Print an error message here.
-            return -1;
-        } else {
-            c->input.avail += (size_t)nr;
-            if (c->input.avail == c->input.size) {
-                grow_buffer(&c->input, 8192);
-                res = (void*)c->input.data;
-                req = (void*)c->input.data;
+
+
+            nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
+            assert(nr == sizeof(ct));
+            if (ct.start != 0 && c->instance->histogram) {
+                libcouchbase_record_metrics(c->instance, stop - ct.start,
+                                            header.response.opcode);
             }
+
+            c->instance->response_handler[header.response.opcode](c,
+                                                                  ct.cookie,
+                                                                  (void*)packet);
+            nr = libcouchbase_ringbuffer_read(&c->cmd_log, header.bytes,
+                                              sizeof(header));
+            assert(nr == sizeof(header));
+            libcouchbase_ringbuffer_consumed(&c->cmd_log,
+                                             ntohl(header.response.bodylen));
+            break;
+
+        default:
+            libcouchbase_error_handler(c->instance,
+                                       LIBCOUCHBASE_PROTOCOL_ERROR,
+                                       NULL);
+            if (packet != c->input.read_head) {
+                free(packet);
+            }
+            return -1;
         }
-    } while (true);
+    }
+
+    if (packet != c->input.read_head) {
+        free(packet);
+    } else {
+        libcouchbase_ringbuffer_consumed(&c->input, packetsize);
+    }
+    return 1;
+}
+
+
+static int do_read_data(libcouchbase_server_t *c)
+{
+    // Loop and try to parse the data... We don't want to lock up the
+    // event loop completely, so set a max number of packets to process
+    // before backing off..
+    size_t processed = 0;
+    // @todo Make the backoff number tunable from the instance
+    const size_t operations_per_call = 1000;
+    int rv = 0;
+    // The timers isn't supposed to be _that_ accurate.. it's better
+    // to shave off system calls :)
+    hrtime_t stop = gethrtime();
+
+    while (processed < operations_per_call) {
+        switch ((rv = parse_single(c, stop))) {
+        case -1:
+            return -1;
+        case 0:
+            // need more data
+            if ((rv = do_fill_input_buffer(c)) < 1) {
+                // error or would block ;)
+                return rv;
+            }
+            break;
+        default:
+            ++processed;
+        }
+    }
+
+    return rv;
 }
 
 static int do_send_data(libcouchbase_server_t *c)
 {
     do {
-        ssize_t nw = c->instance->io->send(c->instance->io,
-                                           c->sock, c->output.data,
-                                           c->output.avail, 0);
+        struct libcouchbase_iovec_st iov[2];
+        ssize_t nw;
+        libcouchbase_ringbuffer_get_iov(&c->output, RINGBUFFER_READ, iov);
+        nw = c->instance->io->sendv(c->instance->io, c->sock, iov, 2);
         if (nw == -1) {
             switch (c->instance->io->error) {
             case EINTR:
@@ -138,27 +210,26 @@ static int do_send_data(libcouchbase_server_t *c)
             case EWOULDBLOCK:
                 return 0;
             default:
-                // FIXME!
-                fprintf(stderr, "Failed to write data: %s\n",
-                        strerror(c->instance->io->error));
-                fflush(stderr);
+                libcouchbase_error_handler(c->instance,
+                                           LIBCOUCHBASE_NETWORK_ERROR, NULL);
                 return -1;
             }
         } else {
-            grow_buffer(&c->cmd_log, (size_t)nw);
-            memcpy(c->cmd_log.data + c->cmd_log.avail,
-                   c->output.data, (size_t)nw);
-            c->cmd_log.avail += (size_t)nw;
-
-            if ((size_t)nw == c->output.avail) {
-                c->output.avail = 0;
-            } else {
-                memmove(c->output.data, c->output.data + nw,
-                        c->output.avail - (size_t)nw);
-                c->output.avail -= (size_t)nw;
+            int ii = 0;
+            if (!libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, (size_t)nw)) {
+                libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+                return -1;
             }
+            libcouchbase_ringbuffer_consumed(&c->output, (size_t)nw);
+            do {
+                size_t nb = (size_t)nw < iov[ii].iov_len ? (size_t)nw : iov[ii].iov_len;
+                libcouchbase_ringbuffer_write(&c->cmd_log, iov[ii].iov_base,
+                                              nb);
+                nw -= (ssize_t)nb;
+                ++ii;
+            } while (nw > 0);
         }
-    } while (c->output.avail > 0);
+    } while (c->output.nbytes > 0);
 
     return 0;
 }
@@ -191,7 +262,7 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
         }
     }
 
-    if (c->output.avail == 0) {
+    if (c->output.nbytes == 0) {
         c->instance->io->update_event(c->instance->io, c->sock,
                                       c->event, LIBCOUCHBASE_READ_EVENT,
                                       c, libcouchbase_server_event_handler);
@@ -207,7 +278,7 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
         size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
             c = instance->servers + ii;
-            if (c->cmd_log.avail || c->output.avail || c->input.avail) {
+            if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes) {
                 done = false;
                 break;
             }

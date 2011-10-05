@@ -25,6 +25,8 @@
 
 #include <libcouchbase/libevent_io_opts.h>
 #include <event.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 static ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
@@ -39,6 +41,32 @@ static ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
     return ret;
 }
 
+static ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
+                                     libcouchbase_socket_t sock,
+                                     struct libcouchbase_iovec_st *iov,
+                                     size_t niov)
+{
+    struct msghdr msg;
+    struct iovec vec[2];
+    ssize_t ret;
+
+    assert(niov == 2);
+    memset(&msg, 0, sizeof(msg));
+    msg.msg_iov = vec;
+    msg.msg_iovlen = iov[1].iov_len ? 2 : 1;
+    msg.msg_iov[0].iov_base = iov[0].iov_base;
+    msg.msg_iov[0].iov_len = iov[0].iov_len;
+    msg.msg_iov[1].iov_base = iov[1].iov_base;
+    msg.msg_iov[1].iov_len = iov[1].iov_len;
+    ret = recvmsg(sock, &msg, 0);
+
+    if (ret < 0) {
+        iops->error = errno;
+    }
+
+    return ret;
+}
+
 static ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
                                     const void *msg,
@@ -46,6 +74,31 @@ static ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
                                     int flags)
 {
     ssize_t ret = send(sock, msg, len, flags);
+    if (ret < 0) {
+        iops->error = errno;
+    }
+    return ret;
+}
+
+static ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
+                                     libcouchbase_socket_t sock,
+                                     struct libcouchbase_iovec_st *iov,
+                                     size_t niov)
+{
+    struct msghdr msg;
+    struct iovec vec[2];
+    ssize_t ret;
+
+    assert(niov == 2);
+    memset(&msg, 0, sizeof(msg));
+    msg.msg_iov = vec;
+    msg.msg_iovlen = iov[1].iov_len ? 2 : 1;
+    msg.msg_iov[0].iov_base = iov[0].iov_base;
+    msg.msg_iov[0].iov_len = iov[0].iov_len;
+    msg.msg_iov[1].iov_base = iov[1].iov_base;
+    msg.msg_iov[1].iov_len = iov[1].iov_len;
+    ret = sendmsg(sock, &msg, 0);
+
     if (ret < 0) {
         iops->error = errno;
     }
@@ -167,6 +220,8 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
     // setup io iops!
     ret->recv = libcouchbase_io_recv;
     ret->send = libcouchbase_io_send;
+    ret->recvv = libcouchbase_io_recvv;
+    ret->sendv = libcouchbase_io_sendv;
     ret->socket = libcouchbase_io_socket;
     ret->close = libcouchbase_io_close;
     ret->connect = libcouchbase_io_connect;

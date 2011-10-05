@@ -130,6 +130,36 @@ static ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
     return (ssize_t)nr;
 }
 
+static ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
+                                     libcouchbase_socket_t sock,
+                                     struct libcouchbase_iovec_st *iov,
+                                     size_t niov)
+{
+    DWORD fl = 0;
+    DWORD nr;
+    WSABUF wsabuf[2];
+
+    assert(niov == 2);
+    wsabuf[0].buf = iov[0].iov_base;
+    wsabuf[0].len = iov[0].iov_len;
+    wsabuf[1].buf = iov[1].iov_base;
+    wsabuf[1].len = iov[1].iov_len;
+
+    if (WSARecv(sock, wsabuf, iov[1].iov_len ? 2 : 1,
+                &nr, &fl, NULL, NULL) == SOCKET_ERROR) {
+        iops->error = getError();
+
+        // recv on a closed socket should return 0
+        if (iops->error == ECONNRESET) {
+            return 0;
+        }
+        return -1;
+    }
+
+    return (ssize_t)nr;
+}
+
+
 static ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
                                     const void *msg,
@@ -142,6 +172,30 @@ static ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
     (void)flags;
 
     if (WSASend(sock, &wsabuf, 1, &nw, fl, NULL, NULL) == SOCKET_ERROR) {
+        iops->error = getError();
+        return -1;
+    }
+
+    return (ssize_t)nw;
+}
+
+static ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
+                                     libcouchbase_socket_t sock,
+                                     struct libcouchbase_iovec_st *iov,
+                                     size_t niov)
+{
+    DWORD fl = 0;
+    DWORD nw;
+    WSABUF wsabuf[2];
+
+    assert(niov == 2);
+    wsabuf[0].buf = iov[0].iov_base;
+    wsabuf[0].len = iov[0].iov_len;
+    wsabuf[1].buf = iov[1].iov_base;
+    wsabuf[1].len = iov[1].iov_len;
+
+    if (WSASend(sock, wsabuf, iov[1].iov_len ? 2 : 1,
+                &nw, fl, NULL, NULL) == SOCKET_ERROR) {
         iops->error = getError();
         return -1;
     }
@@ -325,6 +379,8 @@ struct libcouchbase_io_opt_st *libcouchbase_create_winsock_io_opts(void)
     // setup io iops!
     ret->recv = libcouchbase_io_recv;
     ret->send = libcouchbase_io_send;
+    ret->recvv = libcouchbase_io_recvv;
+    ret->sendv = libcouchbase_io_sendv;
     ret->socket = libcouchbase_io_socket;
     ret->close = libcouchbase_io_close;
     ret->connect = libcouchbase_io_connect;

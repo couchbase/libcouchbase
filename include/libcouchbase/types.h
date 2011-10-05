@@ -67,7 +67,8 @@ extern "C" {
         LIBCOUCHBASE_NOT_STORED = 0x11,
         LIBCOUCHBASE_NOT_SUPPORTED = 0x12,
         LIBCOUCHBASE_UNKNOWN_COMMAND = 0x13,
-        LIBCOUCHBASE_UNKNOWN_HOST = 0x14
+        LIBCOUCHBASE_UNKNOWN_HOST = 0x14,
+        LIBCOUCHBASE_PROTOCOL_ERROR = 0x15
     } libcouchbase_error_t;
 
     /**
@@ -111,6 +112,11 @@ extern "C" {
 
     struct sockaddr;
 
+    struct libcouchbase_iovec_st {
+        char *iov_base;
+        size_t iov_len;
+    };
+
     typedef struct libcouchbase_io_opt_st {
         uint64_t version;
         void *cookie;
@@ -140,6 +146,18 @@ extern "C" {
                         const void *msg,
                         size_t len,
                         int flags);
+
+        ssize_t (*recvv)(struct libcouchbase_io_opt_st *iops,
+                         libcouchbase_socket_t sock,
+                         struct libcouchbase_iovec_st *iov,
+                         size_t niov);
+
+        ssize_t (*sendv)(struct libcouchbase_io_opt_st *iops,
+                         libcouchbase_socket_t sock,
+                         struct libcouchbase_iovec_st *iov,
+                         size_t niov);
+
+
         void (*close)(struct libcouchbase_io_opt_st *iops,
                       libcouchbase_socket_t sock);
 

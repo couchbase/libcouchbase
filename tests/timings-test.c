@@ -30,6 +30,20 @@
 
 int error = 0;
 
+static void error_callback(libcouchbase_t instance,
+                           libcouchbase_error_t error,
+                           const char *errinfo)
+{
+    (void)instance;
+    fprintf(stderr, "Error %s", libcouchbase_strerror(instance, error));
+    if (errinfo) {
+        fprintf(stderr, ": %s", errinfo);
+    }
+    fprintf(stderr, "\n");
+    abort();
+    exit(EXIT_FAILURE);
+}
+
 static void timings_callback(libcouchbase_t instance,
                              const void *cookie,
                              libcouchbase_timeunit_t timeunit,
@@ -108,6 +122,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    (void)libcouchbase_set_error_callback(instance, error_callback);
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
         event_base_free(evbase);

@@ -54,6 +54,8 @@ libcouchbase_la_SOURCES = \
                         src/iofactory.c \
                         src/packet.c \
                         src/remove.c \
+                        src/ringbuffer.c \
+                        src/ringbuffer.h \
                         src/server.c \
                         src/store.c \
                         src/strerror.c \
@@ -137,6 +139,7 @@ example_couchview_yajl_LDADD = libcouchbase.la
 example_couchview_yajl_LDFLAGS = $(LTLIBEVENT) $(LTLIBYAJL)
 
 check_PROGRAMS = base64-test \
+                 ringbuffer-test \
                  strerror-test \
                  timings-test
 
@@ -146,6 +149,9 @@ check_PROGRAMS += arithmetic-test
 endif
 
 base64_test_SOURCES = tests/base64-test.c src/base64.c
+
+ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
+
 timings_test_SOURCES = tests/timings-test.c
 timings_test_LDADD = libcouchbase.la libmockserver.la
 timings_test_LDFLAGS = $(LTLIBEVENT)

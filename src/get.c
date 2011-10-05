@@ -118,7 +118,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
         // where to send the noop
         for (ii = 0; ii < instance->nservers; ++ii) {
             server = instance->servers + ii;
-            if (server->output.avail > 0 || server->pending.avail > 0) {
+            if (server->output.nbytes > 0 || server->pending.nbytes > 0) {
                 noop.message.header.request.opaque = ++instance->seqno;
                 libcouchbase_server_complete_packet(server, command_cookie,
                                                     noop.bytes,

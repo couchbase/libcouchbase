@@ -93,30 +93,78 @@ static void dummy_response_handler(libcouchbase_server_t *server,
     (void)command_cookie;
 }
 
+
+static const char *get_key(libcouchbase_server_t *server, uint16_t *nkey,
+                           char **packet)
+{
+    protocol_binary_request_header req;
+    size_t nr = libcouchbase_ringbuffer_peek(&server->cmd_log,
+                                             req.bytes, sizeof(req));
+    uint32_t packetsize = ntohl(req.request.bodylen) + (uint32_t)sizeof(req);
+    char *keyptr;
+    *packet = server->cmd_log.read_head;
+    assert(nr == sizeof(req));
+
+    if (!libcouchbase_ringbuffer_is_continous(&server->cmd_log,
+                                              RINGBUFFER_READ,
+                                              packetsize)) {
+        *packet = malloc(packetsize);
+        if (*packet == NULL) {
+            libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM,
+                                       NULL);
+            return NULL;
+        }
+
+        nr = libcouchbase_ringbuffer_peek(&server->cmd_log, *packet, packetsize);
+        if (nr != packetsize) {
+            libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                       NULL);
+            free(*packet);
+            return NULL;
+        }
+    }
+
+    *nkey = ntohs(req.request.keylen);
+    keyptr = *packet + sizeof(req) + req.request.extlen;
+    return keyptr;
+}
+
+static void release_key(libcouchbase_server_t *server, char *packet)
+{
+    if (packet != server->cmd_log.read_head) {
+        free(packet);
+    }
+}
+
 static void getq_response_handler(libcouchbase_server_t *server,
                                   const void *command_cookie,
                                   protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
     protocol_binary_response_getq *getq = (void*)res;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
-    const char *key = (const char *)(req + 1) + req->request.extlen;
-    size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
     size_t nbytes = ntohl(res->response.bodylen);
+    char *packet;
+    uint16_t nkey;
+    const char *key = get_key(server, &nkey, &packet);
+
     nbytes -= res->response.extlen;
-    assert(req->request.opaque == res->response.opaque);
-    if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+    if (key == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+        return;
+    } else if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         const char *bytes = (const char *)res;
         bytes += sizeof(getq->bytes);
-        root->callbacks.get(root, command_cookie, LIBCOUCHBASE_SUCCESS, key, nkey,
-                            bytes, nbytes,
+        root->callbacks.get(root, command_cookie, LIBCOUCHBASE_SUCCESS,
+                            key, nkey, bytes, nbytes,
                             ntohl(getq->message.body.flags),
                             res->response.cas);
     } else {
         root->callbacks.get(root, command_cookie, map_error(status), key, nkey,
                             NULL, 0, 0, 0);
     }
+    release_key(server, packet);
 }
 
 static void delete_response_handler(libcouchbase_server_t *server,
@@ -124,14 +172,19 @@ static void delete_response_handler(libcouchbase_server_t *server,
                                     protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
-    const char *key = (const char *)(req + 1);
-    size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
-    key += req->request.extlen;
+    char *packet;
+    uint16_t nkey;
+    const char *key = get_key(server, &nkey, &packet);
 
-    assert(req->request.opaque == res->response.opaque);
-    root->callbacks.remove(root, command_cookie, map_error(status), key, nkey);
+    if (key == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+    } else {
+        root->callbacks.remove(root, command_cookie, map_error(status),
+                               key, nkey);
+        release_key(server, packet);
+    }
 }
 
 static void storage_response_handler(libcouchbase_server_t *server,
@@ -139,13 +192,14 @@ static void storage_response_handler(libcouchbase_server_t *server,
                                      protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
     libcouchbase_storage_t op;
 
-    const char *key = (const char*)(req + 1);
-    size_t nkey = ntohs(req->request.keylen);
+    char *packet;
+    uint16_t nkey;
+    const char *key = get_key(server, &nkey, &packet);
+
+
     uint16_t status = ntohs(res->response.status);
-    key += req->request.extlen;
 
     switch (res->response.opcode) {
     case PROTOCOL_BINARY_CMD_ADD:
@@ -173,12 +227,14 @@ static void storage_response_handler(libcouchbase_server_t *server,
         abort();
     }
 
-    // Make it known that this was a success.
-    libcouchbase_error_handler(root, LIBCOUCHBASE_SUCCESS, NULL);
-
-    assert(req->request.opaque == res->response.opaque);
-    root->callbacks.storage(root, command_cookie, op, map_error(status), key, nkey,
-                            res->response.cas);
+    if (key == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+    } else {
+        root->callbacks.storage(root, command_cookie, op, map_error(status),
+                                key, nkey, res->response.cas);
+        release_key(server, packet);
+    }
 }
 
 static void arithmetic_response_handler(libcouchbase_server_t *server,
@@ -186,24 +242,26 @@ static void arithmetic_response_handler(libcouchbase_server_t *server,
                                         protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
-    const char *key = (const char *)(req + 1);
-    size_t nkey = ntohs(req->request.keylen);
     uint16_t status = ntohs(res->response.status);
-    key += req->request.extlen;
+    char *packet;
+    uint16_t nkey;
+    const char *key = get_key(server, &nkey, &packet);
 
-    assert(req->request.opaque == res->response.opaque);
-    if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+    if (key == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+        return ;
+    } else if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         uint64_t value;
         memcpy(&value, res + 1, sizeof(value));
         value = ntohll(value);
-        root->callbacks.arithmetic(root, command_cookie, LIBCOUCHBASE_SUCCESS, key, nkey,
-                                   value,
-                                   res->response.cas);
+        root->callbacks.arithmetic(root, command_cookie, LIBCOUCHBASE_SUCCESS,
+                                   key, nkey, value, res->response.cas);
     } else {
-        root->callbacks.arithmetic(root,command_cookie, map_error(status), key, nkey,
-                                   0, 0);
+        root->callbacks.arithmetic(root,command_cookie, map_error(status),
+                                   key, nkey, 0, 0);
     }
+    release_key(server, packet);
 }
 
 static void tap_mutation_handler(libcouchbase_server_t *server,
@@ -379,14 +437,19 @@ static void touch_response_handler(libcouchbase_server_t *server,
                                    protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
-    protocol_binary_request_header *req = (void*)server->cmd_log.data;
-    const char *key = (const char *)(req + 1);
-    size_t nkey = ntohs(req->request.keylen);
+    char *packet;
+    uint16_t nkey;
+    const char *key = get_key(server, &nkey, &packet);
     uint16_t status = ntohs(res->response.status);
-    key += req->request.extlen;
 
-    assert(req->request.opaque == res->response.opaque);
-    root->callbacks.touch(root, command_cookie, map_error(status), key, nkey);
+   if (key == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+   } else {
+       root->callbacks.touch(root, command_cookie, map_error(status),
+                             key, nkey);
+       release_key(server, packet);
+   }
 }
 
 static void dummy_tap_mutation_callback(libcouchbase_t instance,

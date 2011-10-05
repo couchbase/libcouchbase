@@ -72,7 +72,8 @@ const char *libcouchbase_strerror(libcouchbase_t instance,
         return "Unknown host";
     case LIBCOUCHBASE_ERROR:
         return "Generic error";
-
+    case LIBCOUCHBASE_PROTOCOL_ERROR:
+        return "Protocol error";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }
