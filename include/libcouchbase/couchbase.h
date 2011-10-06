@@ -120,15 +120,6 @@ extern "C" {
     const void *libcouchbase_get_cookie(libcouchbase_t instance);
 
     /**
-     * Set the packet filter for this instance
-     * @param instance the instance of libcouchbase
-     * @param filter the new packet filter to associate with this instance
-     */
-    LIBCOUCHBASE_API
-    void libcouchbase_set_packet_filter(libcouchbase_t instance,
-                                        libcouchbase_packet_filter_t filter);
-
-    /**
      * Use the TAP protocol to tap the cluster
      * @param instance the instance to tap
      * @param command_cookie A cookie passed to all of the notifications

@@ -23,13 +23,6 @@
  */
 #include "internal.h"
 
-static bool default_packet_filter(libcouchbase_t instance, const void *data)
-{
-    (void)instance;
-    (void)data;
-    return true;
-}
-
 LIBCOUCHBASE_API
 libcouchbase_t libcouchbase_create(const char *host,
                                    const char *user,
@@ -101,7 +94,6 @@ libcouchbase_t libcouchbase_create(const char *host,
     }
 
     ret->sock = -1;
-    ret->packet_filter = default_packet_filter;
 
     // No error has occurred yet.
     ret->last_error = LIBCOUCHBASE_SUCCESS;
@@ -635,11 +627,4 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
     libchouchbase_instance_connect_handler(INVALID_SOCKET, 0, instance);
 
     return instance->last_error;
-}
-
-LIBCOUCHBASE_API
-void libcouchbase_set_packet_filter(libcouchbase_t instance,
-                                    libcouchbase_packet_filter_t filter)
-{
-    instance->packet_filter = filter;
 }

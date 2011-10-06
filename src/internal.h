@@ -136,7 +136,6 @@ extern "C" {
         vbucket_state_listener_t vbucket_state_listener;
         RESPONSE_HANDLER response_handler[0x100];
         REQUEST_HANDLER request_handler[0x100];
-        libcouchbase_packet_filter_t packet_filter;
 
         struct {
             const char *name;

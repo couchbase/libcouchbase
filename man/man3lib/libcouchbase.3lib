@@ -50,7 +50,7 @@ lw(2.75i) lw(2.75i)
 \fBlibcouchbase_remove\fR\fBlibcouchbase_remove_by_key\fR
 \fBlibcouchbase_set_arithmetic_callback\fR\fBlibcouchbase_set_cookie\fR
 \fBlibcouchbase_set_error_callback\fR\fBlibcouchbase_set_get_callback\fR
-\fBlibcouchbase_set_packet_filter\fR\fBlibcouchbase_set_remove_callback\fR
+fBlibcouchbase_set_remove_callback\fR
 \fBlibcouchbase_set_storage_callback\fR\fBlibcouchbase_set_tap_deletion_callback\fR
 \fBlibcouchbase_set_tap_flush_callback\fR\fBlibcouchbase_set_tap_mutation_callback\fR
 \fBlibcouchbase_set_tap_opaque_callback\fR\fBlibcouchbase_set_tap_vbucket_set_callback\fR

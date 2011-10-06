@@ -68,6 +68,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
     size_t nr;
     char *packet;
     uint32_t packetsize;
+    struct libcouchbase_command_data_st ct;
 
     nr = libcouchbase_ringbuffer_peek(&c->input, header.bytes, sizeof(header));
     if (nr < sizeof(header)) {
@@ -99,59 +100,56 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         }
     }
 
-    if (c->instance->packet_filter(c->instance, packet)) {
-        struct libcouchbase_command_data_st ct;
-        nr = libcouchbase_ringbuffer_peek(&c->output_cookies, &ct, sizeof(ct));
-        if (nr < sizeof(ct)) {
-            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
-                                       NULL);
+    nr = libcouchbase_ringbuffer_peek(&c->output_cookies, &ct, sizeof(ct));
+    if (nr < sizeof(ct)) {
+        libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+        if (packet != c->input.read_head) {
+            free(packet);
+        }
+        return -1;
+    }
+
+    switch (header.response.magic) {
+    case PROTOCOL_BINARY_REQ:
+        c->instance->request_handler[header.response.opcode](c,ct.cookie,
+                                                             (void*)packet);
+        break;
+    case PROTOCOL_BINARY_RES:
+        if (libcouchbase_server_purge_implicit_responses(c,
+                                                         header.response.opaque, stop) != 0) {
             if (packet != c->input.read_head) {
                 free(packet);
             }
             return -1;
         }
 
-        switch (header.response.magic) {
-        case PROTOCOL_BINARY_REQ:
-            c->instance->request_handler[header.response.opcode](c,ct.cookie,
-                                                                 (void*)packet);
-            break;
-        case PROTOCOL_BINARY_RES:
-            if (libcouchbase_server_purge_implicit_responses(c,
-                                                             header.response.opaque, stop) != 0) {
-                if (packet != c->input.read_head) {
-                    free(packet);
-                }
-                return -1;
-            }
 
-
-            nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
-            assert(nr == sizeof(ct));
-            if (ct.start != 0 && c->instance->histogram) {
-                libcouchbase_record_metrics(c->instance, stop - ct.start,
-                                            header.response.opcode);
-            }
-
-            c->instance->response_handler[header.response.opcode](c,
-                                                                  ct.cookie,
-                                                                  (void*)packet);
-            nr = libcouchbase_ringbuffer_read(&c->cmd_log, header.bytes,
-                                              sizeof(header));
-            assert(nr == sizeof(header));
-            libcouchbase_ringbuffer_consumed(&c->cmd_log,
-                                             ntohl(header.response.bodylen));
-            break;
-
-        default:
-            libcouchbase_error_handler(c->instance,
-                                       LIBCOUCHBASE_PROTOCOL_ERROR,
-                                       NULL);
-            if (packet != c->input.read_head) {
-                free(packet);
-            }
-            return -1;
+        nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
+        assert(nr == sizeof(ct));
+        if (ct.start != 0 && c->instance->histogram) {
+            libcouchbase_record_metrics(c->instance, stop - ct.start,
+                                        header.response.opcode);
         }
+
+        c->instance->response_handler[header.response.opcode](c,
+                                                              ct.cookie,
+                                                              (void*)packet);
+        nr = libcouchbase_ringbuffer_read(&c->cmd_log, header.bytes,
+                                          sizeof(header));
+        assert(nr == sizeof(header));
+        libcouchbase_ringbuffer_consumed(&c->cmd_log,
+                                         ntohl(header.response.bodylen));
+        break;
+
+    default:
+        libcouchbase_error_handler(c->instance,
+                                   LIBCOUCHBASE_PROTOCOL_ERROR,
+                                   NULL);
+        if (packet != c->input.read_head) {
+            free(packet);
+        }
+        return -1;
     }
 
     if (packet != c->input.read_head) {

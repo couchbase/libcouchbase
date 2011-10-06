@@ -91,9 +91,6 @@ extern "C" {
     struct  libcouchbase_tap_filter_st;
     typedef struct libcouchbase_tap_filter_st* libcouchbase_tap_filter_t;
 
-    typedef bool (*libcouchbase_packet_filter_t)(libcouchbase_t instance,
-                                                 const void *packet);
-
 #ifdef WIN32
     typedef SOCKET libcouchbase_socket_t;
 #else

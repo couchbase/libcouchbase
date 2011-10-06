@@ -26,8 +26,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la libcouchbase_libevent.la
-
-noinst_LTLIBRARIES = memcached_packet_debug.la
+noinst_LTLIBRARIES =
 
 pkginclude_HEADERS = \
                      include/libcouchbase/callbacks.h \
@@ -93,12 +92,6 @@ libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
                          tests/server.c tests/server.h
 
-
-memcached_packet_debug_la_SOURCES= src/packet_debug.c \
-                                   src/packet_debug.h \
-                                   src/utilities.c
-
-memcached_packet_debug_la_LDFLAGS= -avoid-version -shared -module -no-undefined
 
 #
 # Example programs using the library
@@ -192,7 +185,6 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_set_cookie.3couchbase \
    man/man3couchbase/libcouchbase_set_error_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_get_callback.3couchbase \
-   man/man3couchbase/libcouchbase_set_packet_filter.3couchbase \
    man/man3couchbase/libcouchbase_set_remove_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_storage_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_tap_deletion_callback.3couchbase \
