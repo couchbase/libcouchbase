@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+#include "config.h"
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
@@ -24,8 +25,9 @@ int error;
 
 int main(int argc, char **argv)
 {
+    int ii;
     (void)argc; (void)argv;
-    for (int ii = 0; ii < 0xffff; ++ii) {
+    for (ii = 0; ii < 0xffff; ++ii) {
         if (libcouchbase_strerror(NULL, (libcouchbase_error_t)ii) == NULL) {
             fprintf(stderr, "Error code %d returned NULL!\n", ii);
             ++error;

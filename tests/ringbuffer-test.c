@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 
+#include "config.h"
 #include <stdbool.h>
 #include <sys/types.h>
 #include <stdio.h>

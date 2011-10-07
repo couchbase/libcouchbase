@@ -55,8 +55,37 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
 
 all: libcouchbase.dll test
 
-test: tests\getopt-test.exe
+
+test: tests\base64-test.exe tests\getopt-test.exe tests\ringbuffer-test.exe \
+      tests\strerror-test.exe
+	tests\base64-test.exe
 	tests\getopt-test.exe
+	tests\ringbuffer-test.exe
+	tests\strerror-test.exe
+
+#
+# The test programs
+#
+tests\base64-test.exe: tests\base64-test.obj tests\base64.obj
+	$(link) -out:tests\base64-test.exe tests\base64-test.obj \
+                tests\base64.obj
+
+tests\base64-test.obj: tests\base64-test.c
+	$(COMPILE) -Fotests\base64-test.obj tests\base64-test.c
+
+tests\base64.obj: src\base64.c
+	$(COMPILE) -Fotests\base64.obj src\base64.c
+
+
+tests\ringbuffer-test.exe: tests\ringbuffer-test.obj tests\ringbuffer.obj
+	$(link) -out:tests\ringbuffer-test.exe tests\ringbuffer-test.obj \
+                tests\ringbuffer.obj
+
+tests\ringbuffer-test.obj: tests\ringbuffer-test.c
+	$(COMPILE) -Fotests\ringbuffer-test.obj tests\ringbuffer-test.c
+
+tests\ringbuffer.obj: src\ringbuffer.c
+	$(COMPILE) -Fotests\ringbuffer.obj src\ringbuffer.c
 
 tests\getopt-test.exe: tests\getopt-test.obj win32\getopt.obj
 	$(link) -out:tests\getopt-test.exe tests\getopt-test.obj \
@@ -64,6 +93,13 @@ tests\getopt-test.exe: tests\getopt-test.obj win32\getopt.obj
 
 tests\getopt-test.obj: tests\getopt-test.cc
 	$(COMPILE) -Fotests\getopt-test.obj tests\getopt-test.cc
+
+tests\strerror-test.exe: tests\strerror-test.obj libcouchbase.dll
+	$(link) -out:tests\strerror-test.exe tests\strerror-test.obj \
+                libcouchbase.lib
+
+tests\strerror-test.obj: tests\strerror-test.c
+	$(COMPILE) -Fotests\strerror-test.obj tests\strerror-test.c
 
 example\memcat.exe: example\memcat.obj win32\getopt.obj libcouchbase.dll
 	$(link) -out:example\memcat.exe example\memcat.obj \
