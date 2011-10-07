@@ -53,6 +53,16 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      utilities.obj \
      wait.obj
 
+test: tests\getopt-test.exe
+	tests\getopt-test.exe
+
+tests\getopt-test.exe: tests\getopt-test.obj win32\getopt.obj
+	$(link) -out:tests\getopt-test.exe tests\getopt-test.obj \
+                win32\getopt.obj
+
+tests\getopt-test.obj: tests\getopt-test.cc
+	$(COMPILE) -Fotests\getopt-test.obj tests\getopt-test.cc
+
 example\memcat.exe: example\memcat.obj win32\getopt.obj libcouchbase.dll
 	$(link) -out:example\memcat.exe example\memcat.obj \
                 win32\getopt.obj libcouchbase.lib

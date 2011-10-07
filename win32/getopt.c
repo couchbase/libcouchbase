@@ -32,6 +32,7 @@ static int parse_longopt(int argc, char **argv,
     const struct option *p;
     char *name = argv[optind] + 2;
     if (*name == '\0') {
+        ++optind;
         return -1;
     }
 
@@ -52,9 +53,10 @@ static int parse_longopt(int argc, char **argv,
                 if (optarg == argv[optind + 1]) {
                     ++optind;
                 }
-                if (optarg == NULL) {
-                    fprintf(stderr, "Option --%s required an argument!\n", name);
-                    return -1;
+                if (optarg == NULL || optind >= argc) {
+                    fprintf(stderr, "%s: option requires an argument -- %s\n",
+                            argv[0], name);
+                    return '?';
                 }
 
             } else {
@@ -86,10 +88,12 @@ int getopt_long(int argc, char **argv, const char *optstring,
         return parse_longopt(argc, argv, longopts, longindex);
     } else if (argv[optind][2] != '\0') {
         fprintf(stderr, "You can't specify multiple options with this implementation\n");
-        return -1;
+        return '?';
     } else {
         // this is a short option
         const char *p = strchr(optstring, argv[optind][1]);
+        int idx = optind;
+
         if (p == NULL) {
             return '?';
         }
@@ -97,14 +101,14 @@ int getopt_long(int argc, char **argv, const char *optstring,
         if (*(p + 1) == ':') {
             optind++;
             optarg = argv[optind];
-            if (optarg == NULL) {
-                fprintf(stderr, "Option -%c required an argument!\n",
-                        argv[optind][1]);
-                return -1;
+            if (optarg == NULL || optind >= argc) {
+                fprintf(stderr, "%s: option requires an argument -- %s\n",
+                        argv[0], argv[idx] + 1);
+                return '?';
             }
         } else {
             optarg = NULL;
         }
-        return argv[optind][1];
+        return argv[idx][1];
     }
 }

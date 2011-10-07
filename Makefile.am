@@ -132,6 +132,7 @@ example_couchview_yajl_LDADD = libcouchbase.la
 example_couchview_yajl_LDFLAGS = $(LTLIBEVENT) $(LTLIBYAJL)
 
 check_PROGRAMS = base64-test \
+                 getopt-test \
                  ringbuffer-test \
                  strerror-test \
                  timings-test
@@ -142,6 +143,7 @@ check_PROGRAMS += arithmetic-test
 endif
 
 base64_test_SOURCES = tests/base64-test.c src/base64.c
+getopt_test_SOURCES = tests/getopt-test.cc
 
 ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
 
