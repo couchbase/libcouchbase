@@ -53,6 +53,8 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      utilities.obj \
      wait.obj
 
+all: libcouchbase.dll test
+
 test: tests\getopt-test.exe
 	tests\getopt-test.exe
 
