@@ -53,7 +53,7 @@ static ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
     assert(niov == 2);
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
-    msg.msg_iovlen = iov[1].iov_len ? 2 : 1;
+    msg.msg_iovlen = iov[1].iov_len ? (size_t)2 : (size_t)1;
     msg.msg_iov[0].iov_base = iov[0].iov_base;
     msg.msg_iov[0].iov_len = iov[0].iov_len;
     msg.msg_iov[1].iov_base = iov[1].iov_base;
@@ -92,7 +92,7 @@ static ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
     assert(niov == 2);
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
-    msg.msg_iovlen = iov[1].iov_len ? 2 : 1;
+    msg.msg_iovlen = iov[1].iov_len ? (size_t)2 : (size_t)1;
     msg.msg_iov[0].iov_base = iov[0].iov_base;
     msg.msg_iov[0].iov_len = iov[0].iov_len;
     msg.msg_iov[1].iov_base = iov[1].iov_base;
