@@ -451,6 +451,18 @@ extern "C" {
                                                    const char *path,
                                                    const void *body,
                                                    size_t nbody);
+
+    /**
+     * Flush the entire couchbase cluster!
+     *
+     * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @return Status of the operation.
+     */
+    libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
+                                            const void* cookie);
+
 #ifdef __cplusplus
 }
 #endif

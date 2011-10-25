@@ -31,6 +31,7 @@
 /example/memcat
 /example/memcp
 /example/memdump
+/example/memflush
 /example/memrm
 /example/couchview
 /example/couchview_yajl

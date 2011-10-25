@@ -35,6 +35,7 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      cookie.obj \
      error.obj \
      event.obj \
+     flush.obj \
      get.obj \
      gethrtime.obj \
      handler.obj \
@@ -133,6 +134,9 @@ error.obj: src\error.c
 
 wait.obj: src\wait.c
 	$(DLLCOMPILE) src\wait.c
+
+flush.obj: src\flush.c
+	$(DLLCOMPILE) src\flush.c
 
 get.obj: src\get.c
 	$(DLLCOMPILE) src\get.c

@@ -84,6 +84,7 @@ extern "C" {
         libcouchbase_arithmetic_callback arithmetic;
         libcouchbase_remove_callback remove;
         libcouchbase_touch_callback touch;
+        libcouchbase_flush_callback flush;
         libcouchbase_tap_mutation_callback tap_mutation;
         libcouchbase_tap_deletion_callback tap_deletion;
         libcouchbase_tap_flush_callback tap_flush;

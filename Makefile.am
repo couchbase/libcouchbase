@@ -46,6 +46,7 @@ libcouchbase_la_SOURCES = \
                         src/cookie.c \
                         src/error.c \
                         src/event.c \
+                        src/flush.c \
                         src/get.c \
                         src/handler.c \
                         src/instance.c \
@@ -100,6 +101,7 @@ noinst_PROGRAMS = \
                example/memcat \
                example/memcp \
                example/memdump \
+               example/memflush \
                example/memrm \
                example/couchview
 
@@ -114,6 +116,10 @@ example_memcp_LDFLAGS = $(LTLIBEVENT)
 example_memdump_SOURCES = example/memdump.c
 example_memdump_LDADD = libcouchbase.la
 example_memdump_LDFLAGS = $(LTLIBEVENT)
+
+example_memflush_SOURCES = example/memflush.c
+example_memflush_LDADD = libcouchbase.la
+example_memflush_LDFLAGS = $(LTLIBEVENT)
 
 example_memrm_SOURCES = example/memrm.c
 example_memrm_LDADD = libcouchbase.la

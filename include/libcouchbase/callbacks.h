@@ -91,6 +91,10 @@ extern "C" {
                                                 libcouchbase_error_t error,
                                                 const char *errinfo);
 
+    typedef void (*libcouchbase_flush_callback)(libcouchbase_t instance,
+                                                const void* cookie,
+                                                libcouchbase_error_t error);
+
     /**
      * view_complete_callback will notify that view execution was completed
      * and libcouchbase will pass response body to this callback unless
@@ -163,6 +167,10 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_view_data_callback libcouchbase_set_view_data_callback(libcouchbase_t,
                                                                         libcouchbase_view_data_callback);
+
+    LIBCOUCHBASE_API
+    libcouchbase_flush_callback libcouchbase_set_flush_callback(libcouchbase_t,
+                                                                libcouchbase_flush_callback);
 
 #ifdef __cplusplus
 }

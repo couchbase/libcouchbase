@@ -452,6 +452,15 @@ static void touch_response_handler(libcouchbase_server_t *server,
    }
 }
 
+static void flush_response_handler(libcouchbase_server_t *server,
+                                  const void *command_cookie,
+                                  protocol_binary_response_header *res)
+{
+    libcouchbase_t root = server->instance;
+    uint16_t status = ntohs(res->response.status);
+    root->callbacks.flush(root, command_cookie, map_error(status));
+}
+
 static void dummy_tap_mutation_callback(libcouchbase_t instance,
                                         const void *cookie,
                                         const void *key,
@@ -567,6 +576,15 @@ static void dummy_view_complete_callback(libcouchbase_t instance,
     (void)bytes; (void)nbytes;
 }
 
+static void dummy_flush_callback(libcouchbase_t instance,
+                                 const void *cookie,
+                                 libcouchbase_error_t error)
+{
+    (void)instance;
+    (void)cookie;
+    (void)error;
+}
+
 void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 {
     int ii;
@@ -588,6 +606,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.error = dummy_error_callback;
     instance->callbacks.view_complete = dummy_view_complete_callback;
     instance->callbacks.view_data = NULL;
+    instance->callbacks.flush = dummy_flush_callback;
 
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_MUTATION] = tap_mutation_handler;
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_DELETE] = tap_deletion_handler;
@@ -595,7 +614,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_OPAQUE] = tap_opaque_handler;
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_VBUCKET_SET] = tap_vbucket_set_handler;
 
-
+    instance->response_handler[PROTOCOL_BINARY_CMD_FLUSH] = flush_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_GETQ] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_GATQ] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_GET] = getq_response_handler;
@@ -730,5 +749,14 @@ libcouchbase_view_data_callback libcouchbase_set_view_data_callback(libcouchbase
 {
     libcouchbase_view_data_callback ret = instance->callbacks.view_data;
     instance->callbacks.view_data = cb;
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_flush_callback libcouchbase_set_flush_callback(libcouchbase_t instance,
+                                                            libcouchbase_flush_callback cb)
+{
+    libcouchbase_flush_callback ret = instance->callbacks.flush;
+    instance->callbacks.flush = cb;
     return ret;
 }
