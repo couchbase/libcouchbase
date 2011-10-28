@@ -55,6 +55,7 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
 
     free(server->couch_api_base);
     free(server->hostname);
+    free(server->authority);
     libcouchbase_ringbuffer_destruct(&server->output);
     libcouchbase_ringbuffer_destruct(&server->cmd_log);
     libcouchbase_ringbuffer_destruct(&server->pending);
@@ -280,6 +281,7 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     struct addrinfo hints;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
+    server->authority = strdup(n);
     server->hostname = strdup(n);
     p = strchr(server->hostname, ':');
     *p = '\0';

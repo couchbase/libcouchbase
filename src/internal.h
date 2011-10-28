@@ -83,6 +83,7 @@ extern "C" {
         libcouchbase_storage_callback storage;
         libcouchbase_arithmetic_callback arithmetic;
         libcouchbase_remove_callback remove;
+        libcouchbase_stat_callback stat;
         libcouchbase_touch_callback touch;
         libcouchbase_flush_callback flush;
         libcouchbase_tap_mutation_callback tap_mutation;
@@ -170,6 +171,8 @@ extern "C" {
         char *hostname;
         /** The servers port */
         char *port;
+        /** The server endpoint as hostname:port */
+        char *authority;
         /** The CouchDB API endpoint base */
         char *couch_api_base;
         /** The socket to the server */

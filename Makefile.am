@@ -57,6 +57,7 @@ libcouchbase_la_SOURCES = \
                         src/ringbuffer.c \
                         src/ringbuffer.h \
                         src/server.c \
+                        src/stats.c \
                         src/store.c \
                         src/strerror.c \
                         src/tap.c \
@@ -103,6 +104,7 @@ noinst_PROGRAMS = \
                example/memdump \
                example/memflush \
                example/memrm \
+               example/memstat \
                example/couchview
 
 example_memcat_SOURCES = example/memcat.c
@@ -124,6 +126,10 @@ example_memflush_LDFLAGS = $(LTLIBEVENT)
 example_memrm_SOURCES = example/memrm.c
 example_memrm_LDADD = libcouchbase.la
 example_memrm_LDFLAGS = $(LTLIBEVENT)
+
+example_memstat_SOURCES = example/memstat.c
+example_memstat_LDADD = libcouchbase.la
+example_memstat_LDFLAGS = $(LTLIBEVENT)
 
 example_couchview_SOURCES = example/couchview.c
 example_couchview_LDADD = libcouchbase.la

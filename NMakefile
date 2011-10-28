@@ -45,6 +45,7 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      plugin-win32.obj \
      remove.obj \
      ringbuffer.obj \
+     stats.obj \
      server.obj \
      store.obj \
      strerror.obj \
@@ -167,6 +168,9 @@ remove.obj: src\remove.c
 
 ringbuffer.obj: src\ringbuffer.c
 	$(DLLCOMPILE) src\ringbuffer.c
+
+stats.obj: src\stats.c
+	$(DLLCOMPILE) src\stats.c
 
 server.obj: src\server.c
 	$(DLLCOMPILE) src\server.c

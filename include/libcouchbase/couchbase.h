@@ -245,6 +245,33 @@ extern "C" {
                                                     const size_t *nkey,
                                                     const time_t *exp);
 
+
+    /**
+     * Request server statistics. Without a key specified the server will
+     * respond with a "default" set of statistics information. Each piece of
+     * statistical information is returned in its own packet (key contains
+     * the name of the statistical item and the body contains the value in
+     * ASCII format). The sequence of return packets is terminated with a
+     * packet that contains no key and no value.
+     *
+     * The command will signal about transfer completion by passing NULL as
+     * the server endpoint and 0 for key length. Note that key length will
+     * be zero when some server responds with error. In latter case server
+     * endpoint argument will indicate the server address.
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie a cookie passed to all of the notifications
+     *                       from this command
+     * @param arg the argument of the STATS command.
+     * @param narg the number of bytes in the argument.
+     * @return The status of the operation
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
+                                                   const void* command_cookie,
+                                                   const void* arg,
+                                                   size_t narg);
+
     /**
      * Spool a store operation to the cluster. The operation <b>may</b> be
      * sent immediately, but you won't be sure (or get the result) until you

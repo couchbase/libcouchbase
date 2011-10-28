@@ -33,6 +33,7 @@
 /example/memdump
 /example/memflush
 /example/memrm
+/example/memstat
 /example/couchview
 /example/couchview_yajl
 /include/libcouchbase/configuration.h

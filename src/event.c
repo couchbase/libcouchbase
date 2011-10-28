@@ -125,7 +125,6 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         }
 
 
-        nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
         if (ct.start != 0 && c->instance->histogram) {
             libcouchbase_record_metrics(c->instance, stop - ct.start,
@@ -135,11 +134,14 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         c->instance->response_handler[header.response.opcode](c,
                                                               ct.cookie,
                                                               (void*)packet);
-        nr = libcouchbase_ringbuffer_read(&c->cmd_log, header.bytes,
-                                          sizeof(header));
-        assert(nr == sizeof(header));
-        libcouchbase_ringbuffer_consumed(&c->cmd_log,
-                                         ntohl(header.response.bodylen));
+
+        /* keep command and cookie until we get complete STAT response */
+        if (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0) {
+            nr = libcouchbase_ringbuffer_read(&c->cmd_log, header.bytes, sizeof(header));
+            assert(nr == sizeof(header));
+            libcouchbase_ringbuffer_consumed(&c->cmd_log, ntohl(header.response.bodylen));
+            libcouchbase_ringbuffer_consumed(&c->output_cookies, sizeof(ct));
+        }
         break;
 
     default:
