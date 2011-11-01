@@ -230,6 +230,12 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
             }
             break;
 
+        case CMD_OBSERVE:
+            root->callbacks.observe(root, ct.cookie, error,
+                                    LIBCOUCHBASE_OBSERVE_MAX,
+                                    NULL, 0, 0, 0, 0, 0);
+            break;
+
         default:
             abort();
         }

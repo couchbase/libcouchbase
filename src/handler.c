@@ -226,6 +226,54 @@ static void delete_response_handler(libcouchbase_server_t *server,
     }
 }
 
+static void observe_response_handler(libcouchbase_server_t *server,
+                                     const void *command_cookie,
+                                     protocol_binary_response_header *res)
+{
+    libcouchbase_t root = server->instance;
+    libcouchbase_uint16_t status = ntohs(res->response.status);
+    libcouchbase_uint32_t ttp;
+    libcouchbase_uint32_t ttr;
+    VBUCKET_CONFIG_HANDLE config;
+    const char *end, *ptr = (const char *)&res->response.cas;
+
+    memcpy(&ttp, ptr, sizeof(ttp));
+    ttp = ntohl(ttp);
+    memcpy(&ttr, ptr + sizeof(ttp), sizeof(ttr));
+    ttr = ntohl(ttr);
+
+    ptr = (const char *)res + sizeof(res->bytes);
+    end = ptr + ntohl(res->response.bodylen);
+    config = root->vbucket_config;
+    while (ptr < end) {
+        libcouchbase_cas_t cas;
+        libcouchbase_uint8_t obs;
+        libcouchbase_uint16_t nkey, vb;
+        const char *key;
+
+        vb = ntohs(*((libcouchbase_uint16_t *)ptr));
+        ptr += sizeof(vb);
+        nkey = ntohs(*((libcouchbase_uint16_t *)ptr));
+        ptr += sizeof(nkey);
+        key = (const char *)ptr;
+        ptr += nkey;
+        obs = *((libcouchbase_uint8_t *)ptr);
+        ptr += sizeof(obs);
+        cas = *((libcouchbase_cas_t *)ptr);
+        ptr += sizeof(cas);
+        root->callbacks.observe(root, command_cookie, map_error(status),
+                                obs, key, nkey, cas,
+                                server->index == vbucket_get_master(config, vb),
+                                ttp, ttr);
+    }
+    /* run callback with null-null-null to signal the end of transfer */
+    if (libcouchbase_lookup_server_with_command(root, CMD_OBSERVE,
+                                                res->response.opaque, server) < 0) {
+        root->callbacks.observe(root, command_cookie, map_error(status),
+                                0, NULL, 0, 0, 0, 0, 0);
+    }
+}
+
 static void storage_response_handler(libcouchbase_server_t *server,
                                      const void *command_cookie,
                                      protocol_binary_response_header *res)
@@ -914,6 +962,29 @@ static void dummy_configuration_callback(libcouchbase_t instance,
     (void)val;
 }
 
+static void dummy_observe_callback(libcouchbase_t instance,
+                                   const void *cookie,
+                                   libcouchbase_error_t error,
+                                   libcouchbase_observe_t status,
+                                   const void *key,
+                                   libcouchbase_size_t nkey,
+                                   libcouchbase_cas_t cas,
+                                   int is_master,
+                                   libcouchbase_time_t ttp,
+                                   libcouchbase_time_t ttr)
+{
+    (void)instance;
+    (void)cookie;
+    (void)error;
+    (void)status;
+    (void)key;
+    (void)nkey;
+    (void)cas;
+    (void)is_master;
+    (void)ttp;
+    (void)ttr;
+}
+
 void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 {
     int ii;
@@ -942,6 +1013,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.flush = dummy_flush_callback;
     instance->callbacks.unlock = dummy_unlock_callback;
     instance->callbacks.configuration = dummy_configuration_callback;
+    instance->callbacks.observe = dummy_observe_callback;
 
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_MUTATION] = tap_mutation_handler;
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_DELETE] = tap_deletion_handler;
@@ -972,6 +1044,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->response_handler[PROTOCOL_BINARY_CMD_TOUCH] = touch_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_STAT] = stat_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_VERSION] = version_response_handler;
+    instance->response_handler[CMD_OBSERVE] = observe_response_handler;
 }
 
 LIBCOUCHBASE_API
@@ -1004,6 +1077,15 @@ libcouchbase_arithmetic_callback libcouchbase_set_arithmetic_callback(libcouchba
     if (cb != NULL) {
         instance->callbacks.arithmetic = cb;
     }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_observe_callback libcouchbase_set_observe_callback(libcouchbase_t instance,
+                                                                libcouchbase_observe_callback cb)
+{
+    libcouchbase_observe_callback ret = instance->callbacks.observe;
+    instance->callbacks.observe = cb;
     return ret;
 }
 

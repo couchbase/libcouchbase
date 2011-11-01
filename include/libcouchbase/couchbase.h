@@ -575,6 +575,12 @@ extern "C" {
                                                         libcouchbase_time_t exp,
                                                         int create,
                                                         libcouchbase_uint64_t initial);
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
+                                              const void *command_cookie,
+                                              libcouchbase_size_t num_keys,
+                                              const void *const *keys,
+                                              const libcouchbase_size_t *nkey);
 
     /**
      * Spool a remove operation to the cluster. The operation <b>may</b> be

@@ -99,6 +99,19 @@ extern "C" {
         LIBCOUCHBASE_PREPEND = 0x05
     } libcouchbase_storage_t;
 
+    /**
+     * Possible statuses for keys in OBSERVE response
+     */
+    typedef enum {
+        /** The item found in the memory, but not yet on the disk */
+        LIBCOUCHBASE_OBSERVE_FOUND = 0x00,
+        /** The item hit the disk */
+        LIBCOUCHBASE_OBSERVE_PERSISTED = 0x01,
+        /** The item missing on the disk and the memory */
+        LIBCOUCHBASE_OBSERVE_NOT_FOUND = 0x80,
+        LIBCOUCHBASE_OBSERVE_MAX = 0x81
+    } libcouchbase_observe_t;
+
     struct  libcouchbase_tap_filter_st;
     typedef struct libcouchbase_tap_filter_st *libcouchbase_tap_filter_t;
 

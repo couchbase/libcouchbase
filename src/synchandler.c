@@ -267,6 +267,25 @@ static void flush_callback(libcouchbase_t instance,
     libcouchbase_maybe_breakout(instance);
 }
 
+static void observe_callback(libcouchbase_t instance,
+                             const void *cookie,
+                             libcouchbase_error_t error,
+                             libcouchbase_observe_t status,
+                             const void *key,
+                             libcouchbase_size_t nkey,
+                             libcouchbase_cas_t cas,
+                             int is_master,
+                             libcouchbase_time_t ttp,
+                             libcouchbase_time_t ttr)
+{
+    struct user_cookie *c = (void *)instance->cookie;
+
+    restore_user_env(instance);
+    c->callbacks.observe(instance, cookie, error, status,
+                         key, nkey, cas, is_master, ttp, ttr);
+    restore_wrapping_env(instance, c, error);
+    libcouchbase_maybe_breakout(instance);
+}
 
 static void restore_user_env(libcouchbase_t instance)
 {
@@ -297,6 +316,7 @@ static void restore_wrapping_env(libcouchbase_t instance,
     instance->callbacks.error = error_callback;
     instance->callbacks.couch_complete = couch_complete_callback;
     instance->callbacks.couch_data = couch_data_callback;
+    instance->callbacks.observe = observe_callback;
 
     user->cookie = (void *)instance->cookie;
     user->retcode = error;

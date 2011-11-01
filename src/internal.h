@@ -107,6 +107,7 @@ extern "C" {
         libcouchbase_get_callback get;
         libcouchbase_storage_callback storage;
         libcouchbase_arithmetic_callback arithmetic;
+        libcouchbase_observe_callback observe;
         libcouchbase_remove_callback remove;
         libcouchbase_stat_callback stat;
         libcouchbase_version_callback version;
@@ -480,6 +481,7 @@ extern "C" {
 
     libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance,
                                                            VBUCKET_CONFIG_HANDLE config);
+
 
 #ifdef __cplusplus
 }

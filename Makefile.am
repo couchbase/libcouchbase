@@ -69,6 +69,7 @@ libcouchbase_la_SOURCES = \
                         src/hashset.h \
                         src/instance.c \
                         src/internal.h \
+                        src/observe.c \
                         src/packet.c \
                         src/remove.c \
                         src/ringbuffer.c \

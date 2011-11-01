@@ -55,6 +55,16 @@ extern "C" {
                                                      libcouchbase_size_t nkey,
                                                      libcouchbase_uint64_t value,
                                                      libcouchbase_cas_t cas);
+    typedef void (*libcouchbase_observe_callback)(libcouchbase_t instance,
+                                                  const void *cookie,
+                                                  libcouchbase_error_t error,
+                                                  libcouchbase_observe_t status,
+                                                  const void *key,
+                                                  libcouchbase_size_t nkey,
+                                                  libcouchbase_cas_t cas,
+                                                  int from_master,          /* zero if key came from replica */
+                                                  libcouchbase_time_t ttp,  /* time to persist */
+                                                  libcouchbase_time_t ttr); /* time to replicate */
     typedef void (*libcouchbase_remove_callback)(libcouchbase_t instance,
                                                  const void *cookie,
                                                  libcouchbase_error_t error,
@@ -175,6 +185,10 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_arithmetic_callback libcouchbase_set_arithmetic_callback(libcouchbase_t,
                                                                           libcouchbase_arithmetic_callback);
+
+    LIBCOUCHBASE_API
+    libcouchbase_observe_callback libcouchbase_set_observe_callback(libcouchbase_t,
+                                                                    libcouchbase_observe_callback);
 
     LIBCOUCHBASE_API
     libcouchbase_remove_callback libcouchbase_set_remove_callback(libcouchbase_t,

@@ -60,7 +60,8 @@ enum cbc_command_t {
     cbc_view,
     cbc_admin,
     cbc_bucket_create,
-    cbc_bucket_delete
+    cbc_bucket_delete,
+    cbc_observe
 };
 
 extern "C" {
@@ -321,6 +322,53 @@ extern "C" {
         }
         cout.flush();
     }
+
+
+    static void observe_callback(libcouchbase_t instance,
+                                 const void *,
+                                 libcouchbase_error_t error,
+                                 libcouchbase_observe_t status,
+                                 const void *key,
+                                 libcouchbase_size_t nkey,
+                                 libcouchbase_cas_t cas,
+                                 int is_master,
+                                 libcouchbase_time_t ttp,
+                                 libcouchbase_time_t ttr)
+    {
+        if (key == NULL) {
+            return; /* end of packet */
+        }
+        if (error == LIBCOUCHBASE_SUCCESS) {
+            switch (status) {
+            case LIBCOUCHBASE_OBSERVE_FOUND:
+                cerr << "FOUND";
+                break;
+            case LIBCOUCHBASE_OBSERVE_PERSISTED:
+                cerr << "PERSISTED";
+                break;
+            case LIBCOUCHBASE_OBSERVE_NOT_FOUND:
+                cerr << "NOT_FOUND";
+                break;
+            default:
+                cerr << "UNKNOWN";
+                break;
+            }
+            cerr << " \"";
+            cerr.write(static_cast<const char *>(key), nkey);
+            if (status == LIBCOUCHBASE_OBSERVE_FOUND ||
+                    status == LIBCOUCHBASE_OBSERVE_PERSISTED) {
+                cerr << "\" CAS:" << std::hex << cas;
+            }
+            cerr << " IsMaster:" << std::boolalpha << (bool)is_master
+                 << std::dec << " TimeToPersist:" << ttp
+                 << " TimeToReplicate:" << ttr << endl;
+        } else {
+            cerr << "Failed to observe: " << libcouchbase_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
+            *err = true;
+        }
+    }
 }
 
 static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json)
@@ -443,6 +491,37 @@ static bool cat_impl(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
+static bool observe_impl(libcouchbase_t instance, list<string> &keys)
+{
+    if (keys.empty()) {
+        cerr << "ERROR: you need to specify the key to observe" << endl;
+        return false;
+    }
+
+    const char* *k = new const char*[keys.size()];
+    libcouchbase_size_t *s = new libcouchbase_size_t[keys.size()];
+
+    int idx = 0;
+    for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter, ++idx) {
+        k[idx] = iter->c_str();
+        s[idx] = iter->length();
+    }
+
+    libcouchbase_error_t err = libcouchbase_observe(instance, NULL, idx,
+                                                    (const void * const *)k, s);
+
+    delete []k;
+    delete []s;
+
+    if (err != LIBCOUCHBASE_SUCCESS) {
+        cerr << "Failed to send requests:" << endl
+             << libcouchbase_strerror(instance, err) << endl;
+        return false;
+    }
+
+    return true;
+}
+
 static bool hash_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
@@ -516,7 +595,7 @@ static bool bucket_delete_impl(libcouchbase_t instance, list<string> &names)
                                              false, &rc);
         if (rc != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to send requests: " << endl
-                << libcouchbase_strerror(instance, rc) << endl;
+                 << libcouchbase_strerror(instance, rc) << endl;
             return false;
         }
     }
@@ -728,7 +807,8 @@ static void loadKeys(list<string> &keys)
     }
 }
 
-static bool isValidBucketName(const char *n) {
+static bool isValidBucketName(const char *n)
+{
     bool rv = strlen(n) > 0;
     for (; *n; n++) {
         rv &= isalpha(*n) || isdigit(*n) || *n == '.' || *n == '%' || *n == '_' || *n == '-';
@@ -983,6 +1063,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)libcouchbase_set_stat_callback(instance, stat_callback);
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
     (void)libcouchbase_set_unlock_callback(instance, unlock_callback);
+    (void)libcouchbase_set_observe_callback(instance, observe_callback);
     (void)libcouchbase_set_couch_data_callback(instance, data_callback);
     (void)libcouchbase_set_couch_complete_callback(instance, complete_callback);
     (void)libcouchbase_set_management_data_callback(instance, data_callback);
@@ -1081,7 +1162,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                          sasl_password, replica_num, proxy_port);
         } else {
             cerr << "Bucket name can only contain characters in range A-Z, "
-                "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
+                 "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
         }
         break;
     case cbc_bucket_delete:
@@ -1089,8 +1170,11 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
             success = bucket_delete_impl(instance, getopt.arguments);
         } else {
             cerr << "Bucket name can only contain characters in range A-Z, "
-                "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
+                 "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
         }
+        break;
+    case cbc_observe:
+        success = observe_impl(instance, getopt.arguments);
         break;
     default:
         cerr << "Not implemented" << endl;
@@ -1161,6 +1245,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_bucket_create;
     } else if (name.find("cbc-bucket-delete") != string::npos) {
         return cbc_bucket_delete;
+    } else if (name.find("cbc-observe") != string::npos) {
+        return cbc_observe;
     }
 
     return cbc_illegal;
@@ -1174,6 +1260,7 @@ static void printHelp()
          << "   cat             output keys to stdout" << endl
          << "   cp              store files to the cluster" << endl
          << "   create          store files with options" << endl
+         << "   observe         observe key state" << endl
          << "   flush           remove all keys from the cluster" << endl
          << "   hash            hash key(s) and print out useful info" << endl
          << "   lock            lock keys" << endl
