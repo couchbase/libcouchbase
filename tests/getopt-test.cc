@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: CPP; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2011 Couchbase, Inc.
  *
@@ -142,7 +142,7 @@ class Getopt {
     std::vector<CommandLineOption*> options;
 };
 
-void setup(Getopt &getopt) {
+static void setup(Getopt &getopt) {
     getopt.addOption(new CommandLineOption('a', "alpha", true)).
         addOption(new CommandLineOption('b', "bravo", false)).
         addOption(new CommandLineOption('c', "charlie", false));

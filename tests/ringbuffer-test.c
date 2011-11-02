@@ -39,6 +39,7 @@ int main(int argc, char **argv)
     ringbuffer_t ring;
     char buffer[1024];
     int ii;
+    (void)argc; (void)argv;
 
     if (!libcouchbase_ringbuffer_initialize(&ring, 16)) {
         err_exit("Failed to create a 16 byte ringbuffer");

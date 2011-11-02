@@ -31,11 +31,11 @@
 int error = 0;
 
 static void error_callback(libcouchbase_t instance,
-                           libcouchbase_error_t error,
+                           libcouchbase_error_t err,
                            const char *errinfo)
 {
     (void)instance;
-    fprintf(stderr, "Error %s", libcouchbase_strerror(instance, error));
+    fprintf(stderr, "Error %s", libcouchbase_strerror(instance, err));
     if (errinfo) {
         fprintf(stderr, ": %s", errinfo);
     }
