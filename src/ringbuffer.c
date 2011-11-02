@@ -113,7 +113,7 @@ size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
 
     if (buffer->write_head >= buffer->read_head) {
         // write up to the end with data..
-        space = buffer->size - buffer->nbytes - (size_t)(buffer->write_head - buffer->root);
+        space = buffer->size - (size_t)(buffer->write_head - buffer->root);
         toWrite = minimum(space, nb);
 
         if (src != NULL) {
@@ -133,7 +133,7 @@ size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
         }
 
         nb -= toWrite;
-        s += nb;
+        s += toWrite;
     }
 
     // Copy data up until we catch up with the read head
@@ -168,9 +168,12 @@ size_t libcouchbase_ringbuffer_read(ringbuffer_t *buffer, void *dest, size_t nb)
     size_t space;
     size_t toRead;
 
+    if (buffer->nbytes == 0) {
+        return 0;
+    }
     if (buffer->read_head >= buffer->write_head) {
         // read up to the wrap point
-        space = buffer->nbytes - (size_t)(buffer->read_head - buffer->root);
+        space = buffer->size - (size_t)(buffer->read_head - buffer->root);
         toRead = minimum(space, nb);
 
         if (dest != NULL) {
@@ -201,7 +204,7 @@ size_t libcouchbase_ringbuffer_read(ringbuffer_t *buffer, void *dest, size_t nb)
     }
     buffer->nbytes -= toRead;
     buffer->read_head += toRead;
-    nr = toRead;
+    nr += toRead;
 
     if (buffer->read_head == (buffer->root + buffer->size)) {
         buffer->read_head = buffer->root;

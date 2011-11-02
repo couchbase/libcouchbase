@@ -25,13 +25,109 @@
 #include <libcouchbase/couchbase.h>
 #include "ringbuffer.h"
 
-static void err_exit(const char *msg) {
-    fprintf(stderr, "%s\n", msg);
 #ifdef DO_ABORT
-    abort();
+#  define fail abort()
 #else
-    exit(EXIT_FAILURE);
+#  define fail exit(EXIT_FAILURE)
 #endif
+
+#define QUOTE_(x) #x
+#define QUOTE(x) QUOTE_(x)
+#define AT "[" __FILE__ ":" QUOTE(__LINE__) "] "
+#define err_exit(...)  \
+    fprintf(stderr, AT __VA_ARGS__);  \
+    fprintf(stderr, "\n");  \
+    fail;
+
+static void dump_buffer(ringbuffer_t *ring)
+{
+    char *begin = libcouchbase_ringbuffer_get_start(ring);
+    char *end = begin + libcouchbase_ringbuffer_get_size(ring);
+    char *rd = libcouchbase_ringbuffer_get_read_head(ring);
+    char *wr = libcouchbase_ringbuffer_get_write_head(ring);
+    char *cur;
+
+    /* write head */
+    fprintf(stderr, " ");
+    for(cur = begin; cur < end; cur++) {
+        if (cur == wr) {
+            fprintf(stderr, "w");
+        } else {
+            fprintf(stderr, " ");
+        }
+    }
+    fprintf(stderr, "\n");
+
+    /* the buffer contents */
+    fprintf(stderr, "|");
+    for(cur = begin; cur < end; cur++) {
+        fprintf(stderr, "%c", *cur ? *cur : '-');
+    }
+    fprintf(stderr, "|\n");
+
+    /* the read head */
+    fprintf(stderr, " ");
+    for(cur = begin; cur < end; cur++) {
+        if (cur == rd) {
+            fprintf(stderr, "r");
+        } else {
+            fprintf(stderr, " ");
+        }
+    }
+    fprintf(stderr, "\n");
+}
+
+static void wrapped_buffer_test(void)
+{
+    ringbuffer_t ring;
+    char buffer[128];
+
+    if (!libcouchbase_ringbuffer_initialize(&ring, 10)) {
+        err_exit("Failed to create a 10 byte ringbuffer");
+    }
+    memset(libcouchbase_ringbuffer_get_start(&ring), 0, 10);
+    /*  w
+     * |----------|
+     *  r
+     */
+
+    /* put 8 chars into the buffer */
+    if (libcouchbase_ringbuffer_write(&ring, "01234567", 8) != 8) {
+        err_exit("Failed to write 10 characters to buffer");
+    }
+    /*          w
+     * |01234567--|
+     *  r
+     */
+
+    /* consume first 5 chars */
+    if (libcouchbase_ringbuffer_read(&ring, buffer, 5) != 5 ||
+        memcmp(buffer, "01234", 5) != 0) {
+        err_exit("Failed to consume first 5 characters");
+    }
+    /*          w
+     * |-----567--|
+     *       r
+     */
+
+    /* wrapped write: write 5 more chars */
+    if (libcouchbase_ringbuffer_write(&ring, "abcde", 5) != 5) {
+        err_exit("Failed to write to wrapped buffer");
+    }
+    /*     w
+     * |cde--567ab|
+     *       r
+     */
+
+    /* wrapped read: read 6 chars */
+    if (libcouchbase_ringbuffer_read(&ring, buffer, 6) != 6 ||
+        memcmp(buffer, "567abc", 6) != 0) {
+        err_exit("Failed to read wrapped buffer");
+    }
+    /*     w
+     * |-de-------|
+     *   r
+     */
 }
 
 int main(int argc, char **argv)
@@ -39,6 +135,9 @@ int main(int argc, char **argv)
     ringbuffer_t ring;
     char buffer[1024];
     int ii;
+
+    /* use dump_buffer() to display buffer contents */
+    (void)dump_buffer;
     (void)argc; (void)argv;
 
     if (!libcouchbase_ringbuffer_initialize(&ring, 16)) {
@@ -97,6 +196,7 @@ int main(int argc, char **argv)
         err_exit("I'm not getting the data I'm expecting...");
     }
 
+    wrapped_buffer_test();
 
     return 0;
 }
