@@ -235,4 +235,6 @@ EXTRA_DIST = \
              include/libcouchbase/configuration.h.in \
              man \
              src/iofactory_win32.c \
+             tests/check-mans.sh \
+             tests/start_mock.sh \
              win32
