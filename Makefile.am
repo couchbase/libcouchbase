@@ -183,6 +183,7 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_get_cookie.3couchbase \
    man/man3couchbase/libcouchbase_get_last_error.3couchbase \
    man/man3couchbase/libcouchbase_get_timings.3couchbase \
+   man/man3couchbase/libcouchbase_flush.3couchbase \
    man/man3couchbase/libcouchbase_mget.3couchbase \
    man/man3couchbase/libcouchbase_mget_by_key.3couchbase \
    man/man3couchbase/libcouchbase_mtouch.3couchbase \
@@ -193,6 +194,7 @@ FUNCMANPAGE = \
    man/man3couchbase/libcouchbase_set_cookie.3couchbase \
    man/man3couchbase/libcouchbase_set_error_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_get_callback.3couchbase \
+   man/man3couchbase/libcouchbase_set_flush_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_remove_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_storage_callback.3couchbase \
    man/man3couchbase/libcouchbase_set_tap_deletion_callback.3couchbase \
