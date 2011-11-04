@@ -184,12 +184,14 @@ static void handle_options(int argc, char **argv) {
 
 static void flush_callback(libcouchbase_t instance,
                            const void* cookie,
+                           const char* server_endpoint,
                            libcouchbase_error_t error)
 {
     if (error != LIBCOUCHBASE_SUCCESS) {
-        fprintf(stderr, "Failed to flush cluster: %s\n",
+        *((int *)cookie) += 1;
+        fprintf(stderr, "Failed to flush node '%s': %s\n",
+                server_endpoint,
                 libcouchbase_strerror(instance, error));
-        (void)cookie;
     }
 }
 
@@ -212,7 +214,7 @@ int main(int argc, char **argv)
 {
     struct libcouchbase_io_opt_st *io;
     libcouchbase_t instance;
-    libcouchbase_error_t ret;
+    libcouchbase_error_t ret, failures = 0;
 
     handle_options(argc, argv);
 
@@ -241,14 +243,19 @@ int main(int argc, char **argv)
 
     (void)libcouchbase_set_flush_callback(instance, flush_callback);
 
-    if (libcouchbase_flush(instance, NULL) != LIBCOUCHBASE_SUCCESS) {
+    if (libcouchbase_flush(instance, &failures) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to send the flush request\n");
         return 1;
     }
 
     libcouchbase_wait(instance);
 
-    return 0;
+    if (failures > 0) {
+        fprintf(stderr, "Failed to flush whole cluster."
+                " %d node(s) responded with error.\n", failures);
+    }
+
+    return EXIT_SUCCESS;
 }
 
 static void usage(char cmd, const void *arg, void *cookie)

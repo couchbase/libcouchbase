@@ -34,10 +34,10 @@ libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
     flush.message.header.request.magic = PROTOCOL_BINARY_REQ;
     flush.message.header.request.opcode = PROTOCOL_BINARY_CMD_FLUSH;
     flush.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    flush.message.header.request.opaque = ++instance->seqno;
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
-        flush.message.header.request.opaque = ++instance->seqno;
         libcouchbase_server_complete_packet(server, command_cookie,
                                             flush.bytes,
                                             sizeof(flush.bytes));

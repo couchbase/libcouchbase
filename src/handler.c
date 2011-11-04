@@ -140,7 +140,7 @@ static int lookup_server_with_command(libcouchbase_t instance,
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
-        nr = libcouchbase_ringbuffer_peek(&server->cmd_log, &cmd, sizeof(cmd));
+        nr = libcouchbase_ringbuffer_peek(&server->cmd_log, cmd.bytes, sizeof(cmd));
         if (nr == sizeof(cmd) &&
             cmd.request.opcode == opcode &&
             cmd.request.opaque == opaque &&
@@ -519,7 +519,13 @@ static void flush_response_handler(libcouchbase_server_t *server,
 {
     libcouchbase_t root = server->instance;
     uint16_t status = ntohs(res->response.status);
-    root->callbacks.flush(root, command_cookie, map_error(status));
+    root->callbacks.flush(root, command_cookie, server->authority,
+                          map_error(status));
+    if (lookup_server_with_command(root, PROTOCOL_BINARY_CMD_FLUSH,
+                                   res->response.opaque, server) < 0) {
+        root->callbacks.flush(root, command_cookie, NULL,
+                              LIBCOUCHBASE_SUCCESS);
+    }
 }
 
 static void dummy_tap_mutation_callback(libcouchbase_t instance,
@@ -652,10 +658,12 @@ static void dummy_view_complete_callback(libcouchbase_t instance,
 
 static void dummy_flush_callback(libcouchbase_t instance,
                                  const void *cookie,
+                                 const char *server_endpoint,
                                  libcouchbase_error_t error)
 {
     (void)instance;
     (void)cookie;
+    (void)server_endpoint;
     (void)error;
 }
 

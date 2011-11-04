@@ -101,6 +101,7 @@ extern "C" {
 
     typedef void (*libcouchbase_flush_callback)(libcouchbase_t instance,
                                                 const void* cookie,
+                                                const char* server_endpoint,
                                                 libcouchbase_error_t error);
 
     /**
