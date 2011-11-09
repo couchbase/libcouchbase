@@ -148,6 +148,7 @@ example_couchview_yajl_LDADD = libcouchbase.la
 example_couchview_yajl_LDFLAGS = $(LTLIBEVENT) $(LTLIBYAJL)
 
 check_PROGRAMS = base64-test \
+                 config-test \
                  getopt-test \
                  ringbuffer-test \
                  strerror-test \
@@ -160,6 +161,10 @@ endif
 
 base64_test_SOURCES = tests/base64-test.c src/base64.c
 getopt_test_SOURCES = tests/getopt-test.cc
+
+config_test_SOURCES = tests/test.h tests/config-test.c
+config_test_LDADD = libcouchbase.la libmockserver.la
+config_test_LDFLAGS = -ldl $(LTLIBEVENT) $(LTLIBVBUCKET)
 
 ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
 

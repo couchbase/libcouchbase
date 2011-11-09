@@ -14,16 +14,22 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#ifndef LIBCOUCHBASE_TEST_SERVER_H
-#define LIBCOUCHBASE_TEST_SERVER_H 1
 
-#include <stdbool.h>
+#ifndef LIBCOUCHBASE_TESTS_TEST_H
+#define LIBCOUCHBASE_TESTS_TEST_H 1
 
-const void *start_mock_server(char **cmdline);
-const char *get_mock_http_server(const void *);
-void shutdown_mock_server(const void *);
+#ifdef DO_ABORT
+#  define fail abort()
+#else
+#  define fail exit(EXIT_FAILURE)
+#endif
 
-void failover_node(const void *handle, int idx);
-void respawn_node(const void *handle, int idx);
+#define QUOTE_(x) #x
+#define QUOTE(x) QUOTE_(x)
+#define AT "[" __FILE__ ":" QUOTE(__LINE__) "] "
+#define err_exit(...)  \
+    fprintf(stderr, AT __VA_ARGS__);  \
+    fprintf(stderr, "\n");  \
+    fail;
 
 #endif

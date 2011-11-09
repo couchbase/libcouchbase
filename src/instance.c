@@ -186,21 +186,12 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
     return SASL_OK;
 }
 
-/**
- * Update the list of servers and connect to the new ones
- * @param instance the instance to update the serverlist for.
- *
- * @todo use non-blocking connects and timeouts
- * @todo try to reshuffle all pending operations!
- * @todo use the diff functionality to avoid reshuffle all of the pending ops
- */
-static void libcouchbase_update_serverlist(libcouchbase_t instance)
+static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE config)
 {
     size_t ii;
     uint16_t max;
     size_t num;
     const char *passwd;
-
     sasl_callback_t sasl_callbacks[4] = {
         { SASL_CB_USER, (int(*)(void))&sasl_get_username, instance },
         { SASL_CB_AUTHNAME, (int(*)(void))&sasl_get_username, instance },
@@ -208,33 +199,14 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
         { SASL_CB_LIST_END, NULL, NULL }
     };
 
-    if (instance->vbucket_config != NULL) {
-        vbucket_config_destroy(instance->vbucket_config);
-    }
-
-    instance->vbucket_config = vbucket_config_parse_string(instance->vbucket_stream.input.data);
-    if (instance->vbucket_config == NULL) {
-        // ERROR SYNTAX ERROR
-        fprintf(stdout, "Syntax Error [%s]\n", instance->vbucket_stream.input.data);
-        return;
-    }
-    instance->vbucket_stream.input.avail = 0;
-
-    // @todo we shouldn't kill all of them, but fix that later on (remember
-    // to cancel all ongoing crap etc..
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        libcouchbase_server_destroy(instance->servers + ii);
-    }
-    free(instance->servers);
-    instance->servers = NULL;
-    instance->nservers = 0;
-
-    max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
-    num = (size_t)vbucket_config_get_num_servers(instance->vbucket_config);
-
+    num = (size_t)vbucket_config_get_num_servers(config);
     instance->nservers = num;
     instance->servers = calloc(num, sizeof(libcouchbase_server_t));
-
+    instance->vbucket_config = config;
+    for (ii = 0; ii < (size_t)num; ++ii) {
+        instance->servers[ii].instance = instance;
+        libcouchbase_server_initialize(instance->servers + ii, (int)ii);
+    }
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
            sizeof(instance->sasl.password.buffer));
@@ -243,7 +215,6 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
         instance->sasl.password.secret.len = strlen(passwd);
         strcpy((char*)instance->sasl.password.secret.data, passwd);
     }
-
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
     /*
@@ -251,6 +222,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
      * It would have been nice if I could query libvbucket for the number
      * of vbuckets a server got, but there isn't at the moment..
      */
+    max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
     instance->nvbuckets = max;
     free(instance->vb_server_map);
     instance->vb_server_map = calloc(max, sizeof(uint16_t));
@@ -258,17 +230,99 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
         int idx = vbucket_get_master(instance->vbucket_config, (int)ii);
         instance->vb_server_map[ii] = (uint16_t)idx;
     }
+}
 
-    /* Now initialize the servers */
-    for (ii = 0; ii < (size_t)num; ++ii) {
-        instance->servers[ii].instance = instance;
-        libcouchbase_server_initialize(instance->servers + ii, (int)ii);
+static void relocate_packets(ringbuffer_t *src,
+                             ringbuffer_t *src_cookies,
+                             libcouchbase_t dst)
+{
+    struct libcouchbase_command_data_st ct;
+    protocol_binary_request_header cmd;
+    libcouchbase_server_t *server;
+    uint32_t nbody, nkey;
+    char *body, *key;
+    uint16_t vb;
+    size_t nr;
+
+    while ((nr = libcouchbase_ringbuffer_read(src, cmd.bytes, sizeof(cmd.bytes)))) {
+        nkey = ntohs(cmd.request.keylen);
+        nbody = ntohl(cmd.request.bodylen); /* extlen + nkey + nval */
+        body = malloc(nbody);
+        nr = libcouchbase_ringbuffer_read(src, body, nbody);
+        assert(nr == nbody);
+        key = body + cmd.request.extlen;
+        vb = (uint16_t)vbucket_get_vbucket_by_key(dst->vbucket_config,
+                                                  key, nkey);
+        server = dst->servers + dst->vb_server_map[vb];
+        nr = libcouchbase_ringbuffer_read(src_cookies, &ct, sizeof(ct));
+        assert(nr == sizeof(ct));
+        libcouchbase_server_start_packet(server, ct.cookie,
+                                         cmd.bytes, sizeof(cmd.bytes));
+        libcouchbase_server_write_packet(server, body, nbody);
+        libcouchbase_server_end_packet(server);
+        free(body);
     }
+}
 
-    /* Notify anyone interested in this event... */
-    if (instance->vbucket_state_listener != NULL) {
-        for (ii = 0; ii < instance->nservers; ++ii) {
-            instance->vbucket_state_listener(instance->servers + ii);
+/**
+ * Update the list of servers and connect to the new ones
+ * @param instance the instance to update the serverlist for.
+ *
+ * @todo use non-blocking connects and timeouts
+ */
+static void libcouchbase_update_serverlist(libcouchbase_t instance)
+{
+    size_t ii;
+    VBUCKET_CONFIG_HANDLE next_config, curr_config;
+    VBUCKET_CONFIG_DIFF* diff = NULL;
+    size_t nservers;
+    libcouchbase_server_t *servers, *ss;
+
+    curr_config = instance->vbucket_config;
+    next_config = vbucket_config_parse_string(instance->vbucket_stream.input.data);
+    if (next_config == NULL) {
+        // ERROR SYNTAX ERROR
+        fprintf(stderr, "Syntax Error \n%s\n", instance->vbucket_stream.input.data);
+        return;
+    }
+    instance->vbucket_stream.input.avail = 0;
+
+    if (curr_config) {
+        diff = vbucket_compare(curr_config, next_config);
+        if (diff && diff->sequence_changed) {
+            nservers = instance->nservers;
+            servers = instance->servers;
+            apply_vbucket_config(instance, next_config);
+            for (ii = 0; ii < nservers; ++ii) {
+                ss = servers + ii;
+                /* commands that were failed to be sent */
+                relocate_packets(&ss->cmd_log, &ss->output_cookies, instance);
+                /* commands that are going to be sent */
+                relocate_packets(&ss->output, &ss->output_cookies, instance);
+                /* commands that are pending because of delayed socket connection */
+                relocate_packets(&ss->pending, &ss->pending_cookies, instance);
+                libcouchbase_server_destroy(ss);
+            }
+            /* Destroy old config */
+            vbucket_config_destroy(curr_config);
+
+            /* Notify anyone interested in this event... */
+            if (instance->vbucket_state_listener != NULL) {
+                for (ii = 0; ii < instance->nservers; ++ii) {
+                    instance->vbucket_state_listener(instance->servers + ii);
+                }
+            }
+        }
+    } else {
+        assert(instance->servers == NULL);
+        assert(instance->nservers == 0);
+        apply_vbucket_config(instance, next_config);
+
+        /* Notify anyone interested in this event... */
+        if (instance->vbucket_state_listener != NULL) {
+            for (ii = 0; ii < instance->nservers; ++ii) {
+                instance->vbucket_state_listener(instance->servers + ii);
+            }
         }
     }
 }
