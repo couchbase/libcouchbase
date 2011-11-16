@@ -117,6 +117,7 @@ extern "C" {
             char *header;
             buffer_t input;
             size_t chunk_size;
+            buffer_t chunk;
         } vbucket_stream;
 
         struct libcouchbase_io_opt_st *io;

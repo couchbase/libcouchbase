@@ -218,6 +218,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
         fprintf(stdout, "Syntax Error [%s]\n", instance->vbucket_stream.input.data);
         return;
     }
+    instance->vbucket_stream.input.avail = 0;
 
     // @todo we shouldn't kill all of them, but fix that later on (remember
     // to cancel all ongoing crap etc..
@@ -280,8 +281,9 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
  */
 static bool parse_chunk(libcouchbase_t instance)
 {
-    buffer_t *buffer = &instance->vbucket_stream.input;
+    assert (instance->vbucket_stream.chunk_size != 0);
 
+    buffer_t *buffer = &instance->vbucket_stream.chunk;
     if (instance->vbucket_stream.chunk_size == (size_t)-1) {
         char *ptr = strstr(buffer->data, "\r\n");
         long val;
@@ -303,8 +305,6 @@ static bool parse_chunk(libcouchbase_t instance)
         return false;
     }
 
-    // I've got everything, but there is a trailing \r\n I don't want..
-    buffer->data[instance->vbucket_stream.chunk_size - 2] = '\0';
     return true;
 }
 
@@ -316,7 +316,7 @@ static bool parse_chunk(libcouchbase_t instance)
  */
 static int parse_header(libcouchbase_t instance)
 {
-    buffer_t *buffer = &instance->vbucket_stream.input;
+    buffer_t *buffer = &instance->vbucket_stream.chunk;
     char *ptr = strstr(buffer->data, "\r\n\r\n");
 
     if (ptr != NULL) {
@@ -337,7 +337,8 @@ static int parse_header(libcouchbase_t instance)
         return -1;
     }
 
-    if (strstr(buffer->data, "Transfer-Encoding: chunked") == NULL) {
+    if (strstr(buffer->data, "Transfer-Encoding: chunked") == NULL &&
+        strstr(buffer->data, "Transfer-encoding: chunked") == NULL) {
         fprintf(stderr, "Unsupported Transfer-Encoding:\n%s\n",
                 buffer->data);
         return -1;
@@ -403,7 +404,7 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
     libcouchbase_t instance = arg;
     ssize_t nr;
     size_t avail;
-    buffer_t *buffer = &instance->vbucket_stream.input;
+    buffer_t *buffer = &instance->vbucket_stream.chunk;
     assert(sock != INVALID_SOCKET);
 
     if ((which & LIBCOUCHBASE_WRITE_EVENT) == LIBCOUCHBASE_WRITE_EVENT) {
@@ -480,23 +481,32 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
         do {
             done = true;
             if (parse_chunk(instance)) {
-                if (*instance->vbucket_stream.input.data == '{') {
-                    libcouchbase_update_serverlist(instance);
-                } else if (instance->vbucket_stream.chunk_size != 6 &&
-                           memcmp(instance->vbucket_stream.input.data,
-                                  "\n\n\n\n", 4 == 0)) {
-                    fprintf(stderr, "Ignore unknown chunk: [%s]\n",
-                            instance->vbucket_stream.input.data);
+                // @todo copy the data over to the input buffer there..
+                char *term;
+                if (!grow_buffer(&instance->vbucket_stream.input,
+                                 instance->vbucket_stream.chunk_size)) {
+                    abort();
                 }
-                // prepare for the next update from the upsteam server:
-                instance->vbucket_stream.input.avail -= instance->vbucket_stream.chunk_size;
+                memcpy(instance->vbucket_stream.input.data + instance->vbucket_stream.input.avail,
+                       buffer->data, instance->vbucket_stream.chunk_size);
+                instance->vbucket_stream.input.avail += instance->vbucket_stream.chunk_size;
+                // the chunk includes the \r\n at the end.. We shouldn't add that..
+                instance->vbucket_stream.input.avail -= 2;
+                instance->vbucket_stream.input.data[instance->vbucket_stream.input.avail] = '\0';
 
-                memmove(instance->vbucket_stream.input.data,
-                        instance->vbucket_stream.input.data + instance->vbucket_stream.chunk_size,
-                        instance->vbucket_stream.input.avail);
-                instance->vbucket_stream.input.data[ instance->vbucket_stream.input.avail] = '\0';
+                // realign buffer
+                memmove(buffer->data, buffer->data + instance->vbucket_stream.chunk_size,
+                        buffer->avail - instance->vbucket_stream.chunk_size);
+                buffer->avail -= instance->vbucket_stream.chunk_size;
+                term = strstr(instance->vbucket_stream.input.data, "\n\n\n\n");
+                if (term != NULL) {
+                    *term = '\0';
+                    instance->vbucket_stream.input.avail -= 4;
+                    libcouchbase_update_serverlist(instance);
+                }
+
                 instance->vbucket_stream.chunk_size = (size_t)-1;
-                if (instance->vbucket_stream.input.avail > 0) {
+                if (buffer->avail > 0) {
                     done = false;
                 }
             }
