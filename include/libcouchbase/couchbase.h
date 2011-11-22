@@ -487,6 +487,7 @@ extern "C" {
      *                       from this command
      * @return Status of the operation.
      */
+    LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
                                             const void* cookie);
 

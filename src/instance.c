@@ -281,9 +281,9 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
  */
 static bool parse_chunk(libcouchbase_t instance)
 {
-    assert (instance->vbucket_stream.chunk_size != 0);
-
     buffer_t *buffer = &instance->vbucket_stream.chunk;
+    assert(instance->vbucket_stream.chunk_size != 0);
+
     if (instance->vbucket_stream.chunk_size == (size_t)-1) {
         char *ptr = strstr(buffer->data, "\r\n");
         long val;

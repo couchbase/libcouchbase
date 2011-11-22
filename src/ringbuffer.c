@@ -66,12 +66,13 @@ bool libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer, size_t size)
         return false;
     } else {
         // copy the data over :)
+        char *old;
         size_t nbytes = buffer->nbytes;
         size_t nr = libcouchbase_ringbuffer_read(buffer, new_root, nbytes);
         if (nr != nbytes) {
             abort();
         }
-        char *old = buffer->root;
+        old = buffer->root;
         buffer->size = new_size;
         buffer->root = new_root;
         buffer->nbytes = nbytes;
