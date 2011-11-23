@@ -28,6 +28,71 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#ifndef HAVE_LIBEVENT2
+/* libevent 1.x compatibility layer */
+
+typedef void (*event_callback_fn)(evutil_socket_t, short, void *);
+
+static int
+event_assign(struct event *ev,
+             struct event_base *base,
+             evutil_socket_t fd,
+             short events,
+             event_callback_fn callback,
+             void *arg)
+{
+    event_base_set(base, ev);
+    ev->ev_callback = callback;
+    ev->ev_arg = arg;
+    ev->ev_fd = fd;
+    ev->ev_events = events;
+    ev->ev_res = 0;
+    ev->ev_flags = EVLIST_INIT;
+    ev->ev_ncalls = 0;
+    ev->ev_pncalls = NULL;
+
+    return 0;
+}
+
+static struct event *
+event_new(struct event_base *base,
+          evutil_socket_t fd,
+          short events,
+          event_callback_fn cb,
+          void *arg)
+{
+    struct event *ev;
+    ev = malloc(sizeof(struct event));
+    if (ev == NULL) {
+        return NULL;
+    }
+    if (event_assign(ev, base, fd, events, cb, arg) < 0) {
+        free(ev);
+        return NULL;
+    }
+    return ev;
+}
+
+static void
+event_free(struct event *ev)
+{
+    /* make sure that this event won't be coming back to haunt us. */
+    event_del(ev);
+    free(ev);
+
+}
+static short
+event_get_events(const struct event *ev)
+{
+    return ev->ev_events;
+}
+
+static event_callback_fn
+event_get_callback(const struct event *ev)
+{
+    return ev->ev_callback;
+}
+#endif
 static ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
                                     void *buffer,

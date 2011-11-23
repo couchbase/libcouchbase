@@ -41,6 +41,7 @@ ac_cv_func_realloc_0_nonnull=yes
 
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(gethostbyname, nsl)
+AC_SEARCH_LIBS(dlopen, dl)
 
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h
                        memcached/vbucket.h

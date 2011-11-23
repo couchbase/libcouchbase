@@ -64,13 +64,15 @@ libcouchbase_la_SOURCES = \
                         src/timings.c \
                         src/touch.c \
                         src/utilities.c \
-                        src/views.c \
                         src/wait.c
 
 if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c
 endif
 
+if HAVE_LIBEVENT2
+libcouchbase_la_SOURCES += src/views.c
+endif
 
 # Please remember to update the version info before each release if you
 # add / remove functions.
@@ -104,8 +106,14 @@ noinst_PROGRAMS = \
                example/memdump \
                example/memflush \
                example/memrm \
-               example/memstat \
-               example/couchview
+               example/memstat
+
+if HAVE_LIBEVENT2
+noinst_PROGRAMS += example/couchview
+if HAVE_LIBYAJL
+noinst_PROGRAMS += example/couchview_yajl
+endif
+endif
 
 example_memcat_SOURCES = example/memcat.c
 example_memcat_LDADD = libcouchbase.la
@@ -134,10 +142,6 @@ example_memstat_LDFLAGS = $(LTLIBEVENT)
 example_couchview_SOURCES = example/couchview.c
 example_couchview_LDADD = libcouchbase.la
 example_couchview_LDFLAGS = $(LTLIBEVENT)
-
-if HAVE_LIBYAJL
-noinst_PROGRAMS += example/couchview_yajl
-endif
 
 example_couchview_yajl_SOURCES = example/couchview_yajl.c
 example_couchview_yajl_LDADD = libcouchbase.la
