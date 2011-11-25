@@ -103,7 +103,7 @@ class Getopt {
             return false;
         }
         struct option opts[256];
-        char *av[256];
+        char *av[256] = {};
         int argc = populateArgv(argv, av);
         memset(opts, 0, 256 * sizeof(*opts));
         std::stringstream ss;
