@@ -89,8 +89,8 @@ tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	@echo "| Download CouchbaseMock for functional tests |"
 	@echo "+---------------------------------------------+"
-	${WGET} -nv http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20110830.073020-1.jar
-	mv CouchbaseMock-0.5-20110830.073020-1.jar tests/CouchbaseMock.jar
+	${WGET} -nv http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20111128.191335-3.jar
+	mv CouchbaseMock-0.5-20111128.191335-3.jar tests/CouchbaseMock.jar
 
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
