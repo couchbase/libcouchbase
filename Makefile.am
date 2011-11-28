@@ -151,6 +151,7 @@ check_PROGRAMS = base64-test \
                  config-test \
                  getopt-test \
                  ringbuffer-test \
+                 smoke-test \
                  strerror-test \
                  timings-test
 
@@ -171,6 +172,10 @@ ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
 timings_test_SOURCES = tests/timings-test.c
 timings_test_LDADD = libcouchbase.la libmockserver.la
 timings_test_LDFLAGS = $(LTLIBEVENT)
+
+smoke_test_SOURCES = tests/test.h tests/smoke-test.c
+smoke_test_LDADD = libcouchbase.la libmockserver.la
+smoke_test_LDFLAGS = $(LTLIBEVENT)
 
 strerror_test_SOURCES = tests/strerror-test.c
 strerror_test_LDADD = ${libcouchbase_la_OBJECTS} $(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2)
