@@ -1,10 +1,18 @@
 #! /bin/sh
+
+MAN="man -s"
+man -s1 man > /dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    MAN="man -S"
+fi
+
 MANPATH=`pwd`/man
 export MANPATH
 
 exitcode=0
 check_manpage() {
-  man -s$1 $2 > /dev/null 2>&1
+   ${MAN}$1 $2 > /dev/null 2>&1
    if [ $? -ne 0 ]
    then
       echo "Missing: $2($1)" >&2
