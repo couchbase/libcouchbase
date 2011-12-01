@@ -148,16 +148,16 @@ example_couchview_yajl_LDADD = libcouchbase.la
 example_couchview_yajl_LDFLAGS = $(LTLIBEVENT) $(LTLIBYAJL)
 
 check_PROGRAMS = base64-test \
-                 config-test \
                  getopt-test \
                  ringbuffer-test \
-                 smoke-test \
-                 strerror-test \
-                 timings-test
+                 strerror-test
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
-check_PROGRAMS += arithmetic-test
+check_PROGRAMS += arithmetic-test \
+                  timings-test \
+                  config-test \
+                  smoke-test
 endif
 
 base64_test_SOURCES = tests/base64-test.c src/base64.c
