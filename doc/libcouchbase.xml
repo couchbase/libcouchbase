@@ -27,6 +27,23 @@
       <m_title>I/O operation structure</m_title>
       <langtype id="c" type="libcouchbase_io_ops_*"/>
     </argument>
+
+    <argument id="cookie" type="const void*">
+      <m_title>Client cookie</m_title>
+      <description>
+        This is a cookie the client may attach to all requests that will be
+        included in all callbacks. Use NULL if you don't want to use it.
+      </description>
+      <langtype id="c" type="const void*"/>
+    </argument>
+
+    <argument id="instance" type="libcouchbase_t">
+      <m_title>Instance handle</m_title>
+      <description>
+        The handle to the couchbase instance.
+      </description>
+      <langtype id="c" type="libcouchbase_t"/>
+    </argument>
   </argbase>
 
   <returnbase>
@@ -87,6 +104,36 @@
           </error>
           <error errortype="NULL">
             <errdesc>on failure</errdesc>
+          </error>
+        </errors>
+      </dcall>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_flush" mansection="3couchbase">
+    <m_title>Flush the entire cluster</m_title>
+    <description>
+       libcouchbase_flush may be used to remove all key/value pairs
+       from the entire cluster.
+    </description>
+
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+    </args>
+
+    <derivative lang="c">
+      <seealso id="libcouchbase"/>
+      <!-- @todo add reference to the callback -->
+      <return inherit="libcouchbase_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_flush" inherit="all">
+        <errors>
+          <error errortype="LIBCOUCHBASE_ETMPFAIL">
+            <errdesc>No vbucket configuration available</errdesc>
+          </error>
+          <error errortype="LIBCOUCHBASE_SUCCESS">
+            <errdesc>Command successfully scheduled</errdesc>
           </error>
         </errors>
       </dcall>
