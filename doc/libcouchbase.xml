@@ -3,84 +3,59 @@
 <apicalls>
 
   <argbase>
-
     <argument id="host" type="string">
-
       <m_title>Hostname</m_title>
-
       <langtype id="c" type="const char *"/>
-
     </argument>
 
     <argument id="user" type="string">
-
       <m_title>Username</m_title>
-
       <langtype id="c" type="const char *"/>
-
     </argument>
 
     <argument id="passwd" type="string">
-
       <m_title>Password</m_title>
-
       <langtype id="c" type="const char *"/>
-
     </argument>
 
     <argument id="bucket" type="string">
-
       <m_title>Bucket name</m_title>
-
       <langtype id="c" type="const char *"/>
-
     </argument>
 
     <argument id="iops" type="object">
-
       <m_title>I/O operation structure</m_title>
-
       <langtype id="c" type="libcouchbase_io_ops_*"/>
-
     </argument>
-
   </argbase>
 
   <returnbase>
-
     <return id="libcouchbase_t" type="object">
-
       <m_title>libcouchbase instance</m_title>
-
       <langtype id="c" type="libcouchbase_t"/>
-
     </return>
-
   </returnbase>
 
   <langs>
-
-    <lang id="c" arch="functional" format="OP(ARGS)" argstyle="comma" typereq="yes" errortype="return">
-
+    <lang id="c"
+          arch="functional"
+          format="OP(ARGS)"
+          argstyle="comma"
+          typereq="yes"
+          errortype="return">
       <m_title>C</m_title>
-
     </lang>
-
   </langs>
 
-  <apicall id="libcouchbase_create_io_iops" class="connection" mansection="3couchbase">
-
-    <derivative lang="c">
-      </derivative>
-
+  <apicall id="libcouchbase_create_io_iops"
+           class="connection"
+           mansection="3couchbase">
+    <derivative lang="c" />
   </apicall>
 
   <apicall id="libcouchbase_create" class="connection" mansection="3couchbase">
-
     <m_title>Create libcouchbase instances</m_title>
-
     <description>
-
        libcouchbase_create allocates and initializes an instance of
        libcouchbase.  No connection attempt is at this time. host may
        be specified as "host:port" and is the administration port you
@@ -89,55 +64,33 @@
        combination you want to authenticate as. bucket specifies the
        bucket you would like to connect to. opps is the io operation
        structure to use (see libcouchbase_create_io_ops).
-
     </description>
 
     <args>
-
       <argument inherit="host"/>
-
       <argument inherit="user"/>
-
       <argument inherit="passwd"/>
-
       <argument inherit="bucket"/>
-
       <argument inherit="iops"/>
-
     </args>
 
     <derivative lang="c">
-
       <seealso id="libcouchbase_create_io_iops"/>
       <seealso id="libcouchbase_destroy"/>
       <seealso id="libcouchbase"/>
-
       <return inherit="libcouchbase_t"/>
-
       <attribute type="Interface Stability" value="Committed"/>
-
       <dcall id="libcouchbase_create" inherit="all">
-
         <errors>
-
           <error errortype="libcouchbase_t">
-
             <errdesc>an instance of libcouchbase on success</errdesc>
-
           </error>
-
           <error errortype="NULL">
-
             <errdesc>on failure</errdesc>
-
           </error>
-
         </errors>
-
       </dcall>
-
     </derivative>
-
   </apicall>
 
 </apicalls>
