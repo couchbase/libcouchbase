@@ -28,6 +28,8 @@ AC_INIT(libcouchbase, VERSION_NUMBER, trond.norbye@gmail.com)
 AC_CONFIG_SRCDIR([src/internal.h])
 AC_CONFIG_AUX_DIR(config)
 
+AM_INIT_AUTOMAKE([tar-pax])
+
 PANDORA_CANONICAL_TARGET(warnings-always-on)
 PANDORA_REQUIRE_LIBVBUCKET
 PANDORA_REQUIRE_LIBEVENT
