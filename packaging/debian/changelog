@@ -1,0 +1,17 @@
+libcouchbase (0.3.0) unstable; urgency=low
+
+  [Trond Norbye]
+  * Add flush command
+  * Add a getopt test for win32
+  * Remove packet filter
+  * Add a ringbuffer to use instead of the buffer_t
+  * Improve win32 compatibility
+  * Create an instance of the default io ops if you don't specify one
+  * Refactor: Let the client specify the IO framework
+
+  [Sergey Avseyev]
+  * Fix ringbuffer for wrapped write/read operations
+  * Fix wait flag in libcouchbase_wait()
+  * CCBC-11 The interface to access views
+
+ -- Sergey Avseyev <sergey.avseyev@gmail.com>  Mon, 05 Dec 2011 13:33:39 +0300

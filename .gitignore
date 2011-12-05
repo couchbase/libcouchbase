@@ -39,6 +39,10 @@
 /include/libcouchbase/configuration.h
 /include/memcached/protocol_binary.h
 /include/memcached/vbucket.h
+/libcouchbase*.changes
+/libcouchbase*.deb
+/libcouchbase*.dsc
+/libcouchbase*.tar.gz
 /libcouchbase.exp
 /libcouchbase.lib
 /libtool

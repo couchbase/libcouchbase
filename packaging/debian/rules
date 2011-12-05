@@ -1,0 +1,10 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_strip:
+	dh_strip --dbg-package=libcouchbase0-dbg
+
+override_dh_auto_configure:
+	dh_auto_configure -- --disable-couchbasemock --with-memcached-headers-url=https://raw.github.com/membase/memcached/engine/include/memcached

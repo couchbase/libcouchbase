@@ -261,3 +261,5 @@ EXTRA_DIST = \
              tests/check-mans.sh \
              tests/start_mock.sh \
              win32
+
+sinclude packaging/*/package.mk
