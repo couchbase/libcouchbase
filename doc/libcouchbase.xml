@@ -44,13 +44,113 @@
       </description>
       <langtype id="c" type="libcouchbase_t"/>
     </argument>
+
+    <argument id="key" type="const void*">
+      <m_title>An identifier in the database</m_title>
+      <langtype id="c" type="const void*"/>
+    </argument>
+
+    <argument id="nkey" type="size_t">
+      <m_title>Number of bytes in the key</m_title>
+      <langtype id="c" type="size_t"/>
+    </argument>
+
+    <argument id="delta" type="int64_t">
+      <m_title>The delta to increment/decrement</m_title>
+      <langtype id="c" type="int64_t"/>
+    </argument>
+
+    <argument id="exptime" type="time_t">
+      <m_title>The expiry time for the object</m_title>
+      <langtype id="c" type="time_t"/>
+    </argument>
+
+    <argument id="create" type="bool">
+      <m_title>Should the key be created if non-existent?</m_title>
+      <langtype id="c" type="bool"/>
+    </argument>
+
+    <argument id="initial" type="uint64_t">
+      <m_title>The initial value for the key if created</m_title>
+      <langtype id="c" type="uint64_t"/>
+    </argument>
+
+    <argument id="hashkey" type="const void*">
+      <m_title>An alternative key used to locate the server</m_title>
+      <langtype id="c" type="const void*"/>
+    </argument>
+
+    <argument id="nhashkey" type="size_t">
+      <m_title>The number of bytes in the alternative key</m_title>
+      <langtype id="c" type="size_t"/>
+    </argument>
+
+    <argument id="num_keys" type="size_t">
+      <m_title>number of keys</m_title>
+      <langtype id="c" type="size_t"/>
+    </argument>
+
+    <argument id="keys" type="const void * const*">
+      <m_title>Pointer to the array of keys</m_title>
+      <langtype id="c" type="const void * const*"/>
+    </argument>
+
+    <argument id="nkeys" type="const size_t*">
+      <m_title>Pointer to the array with the length of the keys</m_title>
+      <langtype id="c" type="const size_t*"/>
+    </argument>
+
+    <argument id="exp" type="const time_t*">
+      <m_title>Pointer to the expiry time</m_title>
+      <langtype id="c" type="const time_t*"/>
+    </argument>
+
+    <argument id="cas" type="uint64_t">
+      <m_title>Object version</m_title>
+      <description>
+	The cas value for an object is guaranteed to be
+      unique for each value of a given key.
+      </description>
+      <langtype id="c" type="uint64_t"/>
+    </argument>
+
+    <argument id="store_operation" type="libcouchbase_storage_t">
+      <m_title>The kind of storage operation (set/replace/add etc)</m_title>
+      <langtype id="c" type="libcouchbase_storage_t"/>
+    </argument>
+
+    <argument id="bytes" type="const void*">
+      <m_title>A pointer to a memory area containing data</m_title>
+      <langtype id="c" type="const void*"/>
+    </argument>
+
+    <argument id="nbytes" type="size_t">
+      <m_title>Number of bytes used</m_title>
+      <langtype id="c" type="size_t"/>
+    </argument>
+
+
   </argbase>
 
   <returnbase>
-    <return id="libcouchbase_t" type="object">
+    <return id="libcouchbase_error_t" type="enum">
       <m_title>libcouchbase instance</m_title>
+      <langtype id="c" type="libcouchbase_error_t"/>
+    </return>
+
+    <return id="libcouchbase_t" type="libcouchbase_t">
+      <m_title>Instance handle</m_title>
+      <description>
+        The handle to the couchbase instance.
+      </description>
       <langtype id="c" type="libcouchbase_t"/>
     </return>
+
+    <return id="voidptr" type="const void*">
+      <m_title>Pointer to data</m_title>
+      <langtype id="c" type="const void*"/>
+    </return>
+
   </returnbase>
 
   <langs>
@@ -64,10 +164,118 @@
     </lang>
   </langs>
 
-  <apicall id="libcouchbase_create_io_iops"
-           class="connection"
-           mansection="3couchbase">
-    <derivative lang="c" />
+  <apicall id="libcouchbase_arithmetic" mansection="3couchbase">
+    <m_title>Perform an arithmetic operation</m_title>
+    <description>
+      Spool an arithmetic operation to the cluster. The operation may be
+      sent immediately, but you won't be sure (or get the result) until you
+      run the event loop (or call libcouchbase_wait).
+    </description>
+
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="key"/>
+      <argument inherit="nkey"/>
+      <argument inherit="delta"/>
+      <argument inherit="exptime"/>
+      <argument inherit="create"/>
+      <argument inherit="initial"/>
+    </args>
+
+    <derivative lang="c">
+      <seealso id="libcouchbase_wait"/>
+      <seealso id="libcouchbase_set_arithmetic_callback"/>
+      <seealso id="libcouchbase_set_error_callback"/>
+      <seealso id="libcouchbase_arithmetic_by_key"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_arithmetic" inherit="all">
+        <errors>
+          <error errortype="LIBCOUCHBASE_ETMPFAIL">
+            <errdesc>No vbucket configuration available</errdesc>
+          </error>
+          <error errortype="LIBCOUCHBASE_SUCCESS">
+            <errdesc>Command successfully scheduled</errdesc>
+          </error>
+        </errors>
+      </dcall>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_arithmetic_by_key" mansection="3couchbase">
+    <m_title>Perform an arithmetic operation</m_title>
+    <description>
+      Spool an arithmetic operation to the cluster, but use another
+      key to locate the server. The operation may be sent immediately,
+      but you won't be sure (or get the result) until you run the
+      event loop (or call libcouchbase_wait).
+    </description>
+
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="hashkey"/>
+      <argument inherit="nhashkey"/>
+      <argument inherit="key"/>
+      <argument inherit="nkey"/>
+      <argument inherit="delta"/>
+      <argument inherit="exptime"/>
+      <argument inherit="create"/>
+      <argument inherit="initial"/>
+    </args>
+
+    <derivative lang="c">
+      <seealso id="libcouchbase_wait"/>
+      <seealso id="libcouchbase_set_arithmetic_callback"/>
+      <seealso id="libcouchbase_set_error_callback"/>
+      <seealso id="libcouchbase_arithmetic"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_arithmetic_by_key" inherit="all">
+        <errors>
+          <error errortype="LIBCOUCHBASE_ETMPFAIL">
+            <errdesc>No vbucket configuration available</errdesc>
+          </error>
+          <error errortype="LIBCOUCHBASE_SUCCESS">
+            <errdesc>Command successfully scheduled</errdesc>
+          </error>
+        </errors>
+      </dcall>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_connect" mansection="3couchbase">
+    <m_title>Initiate a connect attemt to the Couchbase cluster.</m_title>
+    <description>
+      Initiate a connect attemt to the Couchbase cluster to get the
+      serverlist.  Please note that this method is asynchronous, so you
+      need to call libcouchbase_wait to wait for the method to
+      compete.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+
+    <derivative lang="c">
+      <seealso id="libcouchbase_wait"/>
+      <seealso id="libcouchbase_set_error_callback"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_connect" inherit="all">
+        <errors>
+          <error errortype="LIBCOUCHBASE_SUCCESS">
+            <errdesc>Command successfully scheduled</errdesc>
+          </error>
+          <error errortype="LIBCOUCHBASE_UNKNOWN_HOST">
+            <errdesc>Failed to lookup host name</errdesc>
+          </error>
+          <error errortype="LIBCOUCHBASE_NETWORK_ERROR">
+            <errdesc>If an IO error occurred</errdesc>
+          </error>
+        </errors>
+      </dcall>
+    </derivative>
   </apicall>
 
   <apicall id="libcouchbase_create" class="connection" mansection="3couchbase">
@@ -92,7 +300,7 @@
     </args>
 
     <derivative lang="c">
-      <seealso id="libcouchbase_create_io_iops"/>
+      <seealso id="libcouchbase_create_io_ops"/>
       <seealso id="libcouchbase_destroy"/>
       <seealso id="libcouchbase"/>
       <return inherit="libcouchbase_t"/>
@@ -110,6 +318,70 @@
     </derivative>
   </apicall>
 
+  <apicall id="libcouchbase_create_io_ops" mansection="3couchbase">
+    <m_title>Create a new instance of one of the library-supplied io ops types</m_title>
+    <description>
+      todo: fixme
+    </description>
+    <derivative lang="c">
+      <dcall id="libcouchbase_create_io_ops" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_destroy" mansection="3couchbase">
+    <m_title>Destroy a libcouchbase instance</m_title>
+    <description>
+      libcouchbase_destory release all allocated resources and
+      invalidates the libcouchbase instance.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_create"/>
+      <seealso id="libcouchbase"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_destroy" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_disable_timings" mansection="3couchbase">
+    <m_title>Stop recording timing metrics</m_title>
+    <description>
+      Stop recoring of timing metrics and release all resources
+      allocated for timing metrics.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_enable_timings"/>
+      <seealso id="libcouchbase_get_timings"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_disable_timings" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_enable_timings" mansection="3couchbase">
+    <m_title>Start recording timing metrics</m_title>
+    <description>
+      Start recoring of timing metrics for operations towards the
+      cluster.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_disable_timings"/>
+      <seealso id="libcouchbase_get_timings"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_enable_timings" inherit="all"/>
+    </derivative>
+  </apicall>
+
   <apicall id="libcouchbase_flush" mansection="3couchbase">
     <m_title>Flush the entire cluster</m_title>
     <description>
@@ -124,8 +396,7 @@
 
     <derivative lang="c">
       <seealso id="libcouchbase"/>
-      <!-- @todo add reference to the callback -->
-      <return inherit="libcouchbase_t"/>
+      <return inherit="libcouchbase_error_t"/>
       <attribute type="Interface Stability" value="Committed"/>
       <dcall id="libcouchbase_flush" inherit="all">
         <errors>
@@ -137,6 +408,661 @@
           </error>
         </errors>
       </dcall>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_get_cookie" mansection="3couchbase">
+    <m_title>Retrieve the cookie associated with this instance</m_title>
+    <description>
+      Each libcochbase instance may have a single pointer (cookie)
+      associated with it. libcouchbaes_get_cookie retrieves this
+      cookie.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_set_cookie"/>
+      <return inherit="voidptr"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_get_cookie" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_get_last_error" mansection="3couchbase">
+    <m_title>Get the last error code seen by this instance</m_title>
+    <description>
+      Returns the last error that was seen within libcoubhase
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_get_last_error" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_get_timings" mansection="3couchbase">
+    <m_title>Retrieve the timing metrics from libcouchbase</m_title>
+    <description>
+      Retrieve the timing metrics from libcouchbase. TODO fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_enable_timings"/>
+      <seealso id="libcouchbase_disable_timings"/>
+      <dcall id="libcouchbase_get_timings" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_mget" mansection="3couchbase">
+    <m_title>Get multiple values from the cluster</m_title>
+    <description>
+      Get a number of values from the cache. You need to run the event
+      loop yourself (or call libcouchbase_execute) to retrieve the
+      data. You might want to alter the expiry time for the object
+      you're fetching, and to do so you should specify the new expiry
+      time in the exp parameter. To use an ordinary mget use NULL for
+      the exp parameter.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="num_keys"/>
+      <argument inherit="keys"/>
+      <argument inherit="nkeys"/>
+      <argument inherit="exp"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_mget_by_key"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_mget" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_mget_by_key" mansection="3couchbase">
+    <m_title>Get multiple values from the cluster</m_title>
+    <description>
+      Get a number of values from the cache. You need to run the event
+      loop yourself (or call libcouchbase_execute) to retrieve the
+      data. You might want to alter the expiry time for the object
+      you're fetching, and to do so you should specify the new expiry
+      time in the exp parameter. To use an ordinary mget use NULL for
+      the exp parameter.
+
+      libcouchbase_mget_by_key differs from libcouchbase_mget that you
+      may use another key to look up the server to retrieve the objects
+      from.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="hashkey"/>
+      <argument inherit="nhashkey"/>
+      <argument inherit="num_keys"/>
+      <argument inherit="keys"/>
+      <argument inherit="nkeys"/>
+      <argument inherit="exp"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_mget"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_mget_by_key" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_mtouch" mansection="3couchbase">
+    <m_title>Set the expiration time on a number of items in the cache</m_title>
+    <description>
+      Touch (set expiration time) on a number of values in the cache
+      You need to run the event loop yourself (or call
+      libcouchbase_wait) to retrieve the results of the operations.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="num_keys"/>
+      <argument inherit="keys"/>
+      <argument inherit="nkeys"/>
+      <argument inherit="exp"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_mtouch_by_key"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_mtouch" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_mtouch_by_key" mansection="3couchbase">
+    <m_title>Set the expiration time on a number of items in the cache</m_title>
+    <description>
+      Touch (set expiration time) on a number of values in the cache
+      You need to run the event loop yourself (or call
+      libcouchbase_wait) to retrieve the results of the operations.
+
+      libcouchbase_mtouch_by_key differs from libcouchbase_mtouch that you
+      may use another key to look up the server for the keys.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="hashkey"/>
+      <argument inherit="nhashkey"/>
+      <argument inherit="keys"/>
+      <argument inherit="nkeys"/>
+      <argument inherit="exp"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_mtouch"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_mtouch_by_key" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_remove" mansection="3couchbase">
+    <m_title>Remove a KV pair from the cache</m_title>
+    <description>
+      Spool a remove operation to the cluster. The operation <b>may</b> be
+      sent immediately, but you won't be sure (or get the result) until you
+      run the event loop (or call libcouchbase_wait).
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="key"/>
+      <argument inherit="nkey"/>
+      <argument inherit="cas"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_remove_by_key"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_remove" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_remove_by_key" mansection="3couchbase">
+    <m_title>Remove a KV pair from the cache</m_title>
+    <description>
+      Spool a remove operation to the cluster. The operation <b>may</b> be
+      sent immediately, but you won't be sure (or get the result) until you
+      run the event loop (or call libcouchbase_wait).
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="hashkey"/>
+      <argument inherit="nhashkey"/>
+      <argument inherit="key"/>
+      <argument inherit="nkey"/>
+      <argument inherit="cas"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_remove"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_remove_by_key" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_server_stats" mansection="3couchbase">
+    <m_title>Request server statistics</m_title>
+    <description>
+      Request server statistics. Without a key specified the server will
+      respond with a "default" set of statistics information. Each piece of
+      statistical information is returned in its own packet (key contains
+      the name of the statistical item and the body contains the value in
+      ASCII format). The sequence of return packets is terminated with a
+      packet that contains no key and no value.
+
+      The command will signal about transfer completion by passing NULL as
+      the server endpoint and 0 for key length. Note that key length will
+      be zero when some server responds with error. In latter case server
+      endpoint argument will indicate the server address.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="key"/>
+      <argument inherit="nkey"/>
+    </args>
+    <derivative lang="c">
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_server_stats" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_arithmetic_callback" mansection="3couchbase">
+    <m_title>Set the callback used for arithmetic operations</m_title>
+    <description>
+      @todo fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_arithmetic_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_cookie" mansection="3couchbase">
+    <m_title>Associate a cookie with an instance of libcouchbase</m_title>
+    <description>
+      Each libcochbase instance may have a single pointer (cookie)
+      associated with it.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+    </args>
+    <derivative lang="c">
+     <attribute type="Interface Stability" value="Committed"/>
+       <dcall id="libcouchbase_set_cookie" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_error_callback" mansection="3couchbase">
+    <m_title>Set the eror callback</m_title>
+    <description>
+      @todo fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_error_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_flush_callback" mansection="3couchbase">
+    <m_title>Set the flush callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_flush_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_get_callback" mansection="3couchbase">
+    <m_title>Set the get callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_get_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_remove_callback" mansection="3couchbase">
+    <m_title>Set the remove callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_remove_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_stat_callback" mansection="3couchbase">
+    <m_title>Set the statistics callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_stat_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_storage_callback" mansection="3couchbase">
+    <m_title>Set the storage callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_storage_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_tap_deletion_callback" mansection="3couchbase">
+    <m_title>Set the tap delete callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_tap_deletion_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_tap_flush_callback" mansection="3couchbase">
+    <m_title>Set the tap flush callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_tap_flush_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_tap_mutation_callback" mansection="3couchbase">
+    <m_title>Set the tap mutation callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_tap_mutation_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_tap_opaque_callback" mansection="3couchbase">
+    <m_title>Set the tap opaque callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_tap_opaque_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_tap_vbucket_set_callback" mansection="3couchbase">
+    <m_title>set the tap vbucket set callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_tap_vbucket_set_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_touch_callback" mansection="3couchbase">
+    <m_title>Set the touch callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_touch_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_view_complete_callback" mansection="3couchbase">
+    <m_title>Set the view complete callback</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_view_complete_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_set_view_data_callback" mansection="3couchbase">
+    <m_title>Set the view data callback</m_title>
+      @fixme
+    <description>
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_set_view_data_callback" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_store" mansection="3couchbase">
+    <m_title>Store an object in the cache</m_title>
+    <description>
+      Spool a store operation to the cluster. The operation may be
+      sent immediately, but you won't be sure (or get the result)
+      until you run the event loop (or call libcouchbase_wait).
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="store_operation"/>
+      <argument inherit="key"/>
+      <argument inherit="nkey"/>
+      <argument inherit="bytes"/>
+      <argument inherit="nbytes"/>
+      <argument inherit="flags"/>
+      <argument inherit="exptime"/>
+      <argument inherit="cas"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_store_by_key"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_store" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_store_by_key" mansection="3couchbase">
+    <m_title>Store an object in the cache</m_title>
+    <description>
+      Spool a store operation to the cluster. The operation may be
+      sent immediately, but you won't be sure (or get the result)
+      until you run the event loop (or call libcouchbase_wait).
+    </description>
+    <args>
+      <argument inherit="instance"/>
+      <argument inherit="cookie"/>
+      <argument inherit="store_operation"/>
+      <argument inherit="hashkey"/>
+      <argument inherit="nhashkey"/>
+      <argument inherit="key"/>
+      <argument inherit="nkey"/>
+      <argument inherit="bytes"/>
+      <argument inherit="nbytes"/>
+      <argument inherit="flags"/>
+      <argument inherit="exptime"/>
+      <argument inherit="cas"/>
+    </args>
+    <derivative lang="c">
+      <seealso id="libcouchbase_store"/>
+      <return inherit="libcouchbase_error_t"/>
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_store_by_key" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_strerror" mansection="3couchbase">
+    <m_title>Convert a status code to textual description</m_title>
+    <description>
+      Convert the error code to human readable form.
+      @todo fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_strerror" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_tap_cluster" mansection="3couchbase">
+    <m_title>Run TAP on the cluster</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_tap_cluster" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_tap_filter_create" mansection="3couchbase">
+    <m_title>Create a tap filter</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_tap_filter_create" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_tap_filter_destroy" mansection="3couchbase">
+    <m_title>Destroy a tap filter</m_title>
+    <description>
+      Invalidate the filter.. @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_tap_filter_destroy" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_tap_filter_get_backfill" mansection="3couchbase">
+    <m_title>@fixme</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_tap_filter_get_backfill" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_tap_filter_get_keys_only" mansection="3couchbase">
+    <m_title>@fixme</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_tap_filter_get_keys_only" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_tap_filter_set_backfill" mansection="3couchbase">
+    <m_title>@fixme</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_tap_filter_set_backfill" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_tap_filter_set_keys_only" mansection="3couchbase">
+    <m_title>@fixme</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_tap_filter_set_keys_only" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_view_execute" mansection="3couchbase">
+    <m_title>@fixme</m_title>
+    <description>
+      @fixme
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_view_execute" inherit="all"/>
+    </derivative>
+  </apicall>
+
+  <apicall id="libcouchbase_wait" mansection="3couchbase">
+    <m_title>Wait for operations to complete</m_title>
+    <description>
+      libcouchbase_wait cause the calling thread to block and
+      wait until all spooled operations (and their callbacks)
+      is completed.
+    </description>
+    <args>
+      <argument inherit="instance"/>
+    </args>
+    <derivative lang="c">
+      <attribute type="Interface Stability" value="Committed"/>
+      <dcall id="libcouchbase_wait" inherit="all"/>
     </derivative>
   </apicall>
 
