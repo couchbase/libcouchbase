@@ -253,6 +253,7 @@ man_MANS = $(HEADMANPAGE) $(LIBMANPAGE) $(FUNCMANPAGE)
 endif
 
 EXTRA_DIST = \
+             LICENSE \
              NMakefile \
              include/libcouchbase/configuration.h.in \
              man \
