@@ -5,27 +5,27 @@
   <argbase>
     <argument id="host" type="string">
       <m_title>Hostname</m_title>
-      <langtype id="c" type="const char *"/>
+      <langtype id="c" type="const char*"/>
     </argument>
 
     <argument id="user" type="string">
       <m_title>Username</m_title>
-      <langtype id="c" type="const char *"/>
+      <langtype id="c" type="const char*"/>
     </argument>
 
     <argument id="passwd" type="string">
       <m_title>Password</m_title>
-      <langtype id="c" type="const char *"/>
+      <langtype id="c" type="const char*"/>
     </argument>
 
     <argument id="bucket" type="string">
       <m_title>Bucket name</m_title>
-      <langtype id="c" type="const char *"/>
+      <langtype id="c" type="const char*"/>
     </argument>
 
     <argument id="iops" type="object">
       <m_title>I/O operation structure</m_title>
-      <langtype id="c" type="libcouchbase_io_ops_*"/>
+      <langtype id="c" type="libcouchbase_io_ops_t*"/>
     </argument>
 
     <argument id="cookie" type="const void*">
