@@ -1,0 +1,80 @@
+%define _topdir %(pwd)/rpmbuild
+
+Summary: Couchbase Client & Protocol Library
+Name: libcouchbase
+Version: @VERSION@
+Release: @RELEASE@
+Vendor: Couchbase, Inc.
+Packager: Couchbase SDK Team <support@couchbase.com>
+License: Apache-2
+Group: System Environment/Libraries
+BuildRequires: libvbucket-devel >= 1.7.2, libevent-devel >= 2.0
+URL: https://github.com/couchbase/libcouchbase
+Source: %{name}-%{version}_%{release}.tar.gz
+BuildRoot: build/%{name}-%{version}_%{release}
+
+%description
+This is the client and protocol library for Couchbase project.
+
+%package -n %{name}0
+Group: System Environment/Libraries
+Summary: Couchbase Client & Protocol Library
+Requires: %{name}0, libvbucket >= 1.7.2, libevent >= 2.0
+
+%description -n %{name}0
+This is the client and protocol library for Couchbase project.
+
+%package devel
+Group: Development/Libraries
+Summary: Couchbase Client & Protocol Library - Header files
+Requires: %{name}0
+
+%description devel
+Development files for the Couchbase Client & Protocol Library
+
+%prep
+%setup -q -n %{name}-%{version}_%{release}
+%configure --disable-couchbasemock --with-memcached-headers-url=https://raw.github.com/membase/memcached/engine/include/memcached
+
+%build
+%{__make} %{_smp_mflags}
+
+%install
+%{__make} install DESTDIR="%{buildroot}" AM_INSTALL_PROGRAM_FLAGS=""
+
+%clean
+%{__rm} -rf %{buildroot}
+
+%post -n %{name}0 -p /sbin/ldconfig
+
+%postun -n %{name}0 -p /sbin/ldconfig
+
+%files -n %{name}0
+%defattr(-, root, root)
+%{_libdir}/libcouchbase.so.*
+%{_libdir}/libcouchbase_libevent.so.*
+
+%files devel
+%defattr(-, root, root)
+%doc README AUTHORS LICENSE
+%{_includedir}/libcouchbase
+%{_libdir}/libcouchbase.la
+%{_libdir}/libcouchbase.so
+%{_libdir}/libcouchbase_libevent.la
+%{_libdir}/libcouchbase_libevent.so
+%{_mandir}/**/*
+
+%changelog
+* Mon Dec 05 2011 Sergey Avseyev <sergey.avseyev@gmail.com> - 0.3.0
+[Trond Norbye]
+- Add flush command
+- Add a getopt test for win32
+- Remove packet filter
+- Add a ringbuffer to use instead of the buffer_t
+- Improve win32 compatibility
+- Create an instance of the default io ops if you don't specify one
+- Refactor: Let the client specify the IO framework
+[Sergey Avseyev]
+- Fix ringbuffer for wrapped write/read operations
+- Fix wait flag in libcouchbase_wait()
+- CCBC-11 The interface to access views

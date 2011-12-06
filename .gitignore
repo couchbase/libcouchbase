@@ -42,6 +42,7 @@
 /libcouchbase*.changes
 /libcouchbase*.deb
 /libcouchbase*.dsc
+/libcouchbase*.rpm
 /libcouchbase*.tar.gz
 /libcouchbase.exp
 /libcouchbase.lib
