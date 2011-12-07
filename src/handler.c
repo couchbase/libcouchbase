@@ -724,7 +724,9 @@ libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t instance,
                                                         libcouchbase_get_callback cb)
 {
     libcouchbase_get_callback ret = instance->callbacks.get;
-    instance->callbacks.get = cb;
+    if (cb != NULL) {
+        instance->callbacks.get = cb;
+    }
     return ret;
 }
 
@@ -733,7 +735,9 @@ libcouchbase_storage_callback libcouchbase_set_storage_callback(libcouchbase_t i
                                                                 libcouchbase_storage_callback cb)
 {
     libcouchbase_storage_callback ret = instance->callbacks.storage;
-    instance->callbacks.storage = cb;
+    if (cb != NULL) {
+        instance->callbacks.storage = cb;
+    }
     return ret;
 }
 
@@ -742,7 +746,9 @@ libcouchbase_arithmetic_callback libcouchbase_set_arithmetic_callback(libcouchba
                                                                       libcouchbase_arithmetic_callback cb)
 {
     libcouchbase_arithmetic_callback ret = instance->callbacks.arithmetic;
-    instance->callbacks.arithmetic = cb;
+    if (cb != NULL) {
+        instance->callbacks.arithmetic = cb;
+    }
     return ret;
 }
 
@@ -751,7 +757,9 @@ libcouchbase_remove_callback libcouchbase_set_remove_callback(libcouchbase_t ins
                                                               libcouchbase_remove_callback cb)
 {
     libcouchbase_remove_callback ret = instance->callbacks.remove;
-    instance->callbacks.remove = cb;
+    if (cb != NULL) {
+        instance->callbacks.remove = cb;
+    }
     return ret;
 }
 
@@ -760,7 +768,9 @@ libcouchbase_touch_callback libcouchbase_set_touch_callback(libcouchbase_t insta
                                                             libcouchbase_touch_callback cb)
 {
     libcouchbase_touch_callback ret = instance->callbacks.touch;
-    instance->callbacks.touch = cb;
+    if (cb != NULL) {
+        instance->callbacks.touch = cb;
+    }
     return ret;
 }
 
@@ -769,7 +779,9 @@ libcouchbase_tap_mutation_callback libcouchbase_set_tap_mutation_callback(libcou
                                                                           libcouchbase_tap_mutation_callback cb)
 {
     libcouchbase_tap_mutation_callback ret = instance->callbacks.tap_mutation;
-    instance->callbacks.tap_mutation = cb;
+    if (cb != NULL) {
+        instance->callbacks.tap_mutation = cb;
+    }
     return ret;
 }
 
@@ -778,7 +790,9 @@ libcouchbase_tap_deletion_callback libcouchbase_set_tap_deletion_callback(libcou
                                                                           libcouchbase_tap_deletion_callback cb)
 {
     libcouchbase_tap_deletion_callback ret = instance->callbacks.tap_deletion;
-    instance->callbacks.tap_deletion = cb;
+    if (cb != NULL) {
+        instance->callbacks.tap_deletion = cb;
+    }
     return ret;
 }
 
@@ -787,7 +801,9 @@ libcouchbase_tap_flush_callback libcouchbase_set_tap_flush_callback(libcouchbase
                                                                     libcouchbase_tap_flush_callback cb)
 {
     libcouchbase_tap_flush_callback ret = instance->callbacks.tap_flush;
-    instance->callbacks.tap_flush = cb;
+    if (cb != NULL) {
+        instance->callbacks.tap_flush = cb;
+    }
     return ret;
 }
 
@@ -796,7 +812,9 @@ libcouchbase_tap_opaque_callback libcouchbase_set_tap_opaque_callback(libcouchba
                                                                       libcouchbase_tap_opaque_callback cb)
 {
     libcouchbase_tap_opaque_callback ret = instance->callbacks.tap_opaque;
-    instance->callbacks.tap_opaque = cb;
+    if (cb != NULL) {
+        instance->callbacks.tap_opaque = cb;
+    }
     return ret;
 }
 
@@ -805,7 +823,9 @@ libcouchbase_tap_vbucket_set_callback libcouchbase_set_tap_vbucket_set_callback(
                                                                                 libcouchbase_tap_vbucket_set_callback cb)
 {
     libcouchbase_tap_vbucket_set_callback ret = instance->callbacks.tap_vbucket_set;
-    instance->callbacks.tap_vbucket_set = cb;
+    if (cb != NULL) {
+        instance->callbacks.tap_vbucket_set = cb;
+    }
     return ret;
 }
 
@@ -814,7 +834,9 @@ libcouchbase_stat_callback libcouchbase_set_stat_callback(libcouchbase_t instanc
                                                           libcouchbase_stat_callback cb)
 {
     libcouchbase_stat_callback ret = instance->callbacks.stat;
-    instance->callbacks.stat = cb;
+    if (cb != NULL) {
+        instance->callbacks.stat = cb;
+    }
     return ret;
 }
 
@@ -823,7 +845,9 @@ libcouchbase_error_callback libcouchbase_set_error_callback(libcouchbase_t insta
                                                             libcouchbase_error_callback cb)
 {
     libcouchbase_error_callback ret = instance->callbacks.error;
-    instance->callbacks.error = cb;
+    if (cb != NULL) {
+        instance->callbacks.error = cb;
+    }
     return ret;
 }
 
@@ -850,6 +874,8 @@ libcouchbase_flush_callback libcouchbase_set_flush_callback(libcouchbase_t insta
                                                             libcouchbase_flush_callback cb)
 {
     libcouchbase_flush_callback ret = instance->callbacks.flush;
-    instance->callbacks.flush = cb;
+    if (cb != NULL) {
+        instance->callbacks.flush = cb;
+    }
     return ret;
 }
