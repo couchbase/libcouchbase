@@ -290,11 +290,11 @@ static yajl_callbacks parser_callbacks = {
     reformat_end_array
 };
 
-static void view_data_callback(libcouchbase_t instance,
-                               const void *cookie,
-                               libcouchbase_error_t error,
-                               const char *uri,
-                               const void *bytes, size_t nbytes)
+static void data_callback(libcouchbase_t instance,
+                          const void *cookie,
+                          libcouchbase_error_t error,
+                          const char *uri,
+                          const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
     yajl_status st;
@@ -325,11 +325,11 @@ static void view_data_callback(libcouchbase_t instance,
     }
 }
 
-static void view_complete_callback(libcouchbase_t instance,
-                                   const void *cookie,
-                                   libcouchbase_error_t error,
-                                   const char *uri,
-                                   const void *bytes, size_t nbytes)
+static void complete_callback(libcouchbase_t instance,
+                              const void *cookie,
+                              libcouchbase_error_t error,
+                              const char *uri,
+                              const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
     yajl_status st;
@@ -378,6 +378,7 @@ int main(int argc, char **argv)
     struct cookie_st cookie;
     yajl_parser_config parser_cfg = {1, 1}; /* { allowComments, checkUTF8 } */
     yajl_gen_config gen_cfg = {1, "  "};    /* { beautify, indentString } */
+    libcouchbase_error_t rc;
     handle_options(argc, argv);
 
     if (strcmp(filename, "-") == 0) {
@@ -416,6 +417,8 @@ int main(int argc, char **argv)
     }
 
     (void)libcouchbase_set_error_callback(instance, error_callback);
+    (void)libcouchbase_set_doc_data_callback(instance, data_callback);
+    (void)libcouchbase_set_doc_complete_callback(instance, complete_callback);
 
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
@@ -425,19 +428,15 @@ int main(int argc, char **argv)
     // Wait for the connect to compelete
     libcouchbase_wait(instance);
 
-    if (chunked) {
-        (void)libcouchbase_set_view_data_callback(instance, view_data_callback);
-    } else {
-        (void)libcouchbase_set_view_complete_callback(instance, view_complete_callback);
-    }
-
-
     bytes = post_data;
     if (bytes) {
         nbytes = strlen(bytes);
     }
 
-    if (libcouchbase_view_execute(instance, (void *)&cookie, uri, bytes, nbytes) != LIBCOUCHBASE_SUCCESS) {
+    rc = libcouchbase_make_doc_request(instance, (void *)&cookie,
+                                       uri, LIBCOUCHBASE_HTTP_METHOD_GET,
+                                       bytes, nbytes, chunked);
+    if (rc != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to execute view\n");
         return 1;
     }

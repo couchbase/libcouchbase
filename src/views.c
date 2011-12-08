@@ -29,7 +29,7 @@ struct view_context_st
     struct evhttp_connection *conn;
     struct evhttp_request *request;
     struct evhttp_uri *evuri;
-    enum evhttp_cmd_type method;
+    libcouchbase_http_method_t method;
     int chunked;
 };
 
@@ -97,11 +97,11 @@ static void on_complete_cb(struct evhttp_request *req, void *arg)
     bytes = evbuffer_pullup(req->input_buffer, -1);
     nbytes = evbuffer_get_length(req->input_buffer);
     if (ctx->chunked) {
-        ctx->instance->callbacks.view_data(ctx->instance, ctx->cookie, rc,
-                                           ctx->uri, bytes, nbytes);
+        ctx->instance->callbacks.doc_data(ctx->instance, ctx->cookie, rc,
+                                          ctx->uri, bytes, nbytes);
     } else {
-        ctx->instance->callbacks.view_complete(ctx->instance, ctx->cookie, rc,
-                                               ctx->uri, bytes, nbytes);
+        ctx->instance->callbacks.doc_complete(ctx->instance, ctx->cookie, rc,
+                                              ctx->uri, bytes, nbytes);
     }
 
     /* and free resources we captured earlier in the context */
@@ -120,35 +120,40 @@ static void on_data_cb(struct evhttp_request *req, void *arg)
     libcouchbase_error_t rc = translate_response_code(req->response_code);
     bytes = evbuffer_pullup(req->input_buffer, -1);
     nbytes = evbuffer_get_length(req->input_buffer);
-    ctx->instance->callbacks.view_data(ctx->instance, ctx->cookie,
-                                       rc, ctx->uri, bytes, nbytes);
+    ctx->instance->callbacks.doc_data(ctx->instance, ctx->cookie,
+                                      rc, ctx->uri, bytes, nbytes);
 }
 
 /* Execute CouchDB view using URI part with design document id, view name and
  * optional query parameters. To access the result client must setup at least
  * one of view callbacks:
  *
- *  * libcouchbase_view_complete_callback() -- yields whole response body.
- *  * libcouchbase_view_data_callback() -- yields view response chunk by
+ *  * libcouchbase_doc_complete_callback() -- yields whole response body.
+ *  * libcouchbase_doc_data_callback() -- yields view response chunk by
  *    chunk. Useful when it needed to parse results as soon as they appear in
  *    the stream.
  *
  * @example Fetch first 10 docs from the bucket
  *
- *    libcouchbase_view_execute(instance, NULL, "_all_docs?limit=10", NULL, 0);
+ *    libcouchbase_make_doc_request(instance, NULL, "_all_docs?limit=10",
+ *                                  LIBCOUCHBASE_HTTP_METHOD_GET,
+ *                                  NULL, 0, true);
  *
  * @example Filter first 10 docs using POST request
  *
  *    const char body[] = "{\"keys\": [\"test_1000\", \"test_10002\"]}"
- *    libcouchbase_view_execute(instance, NULL, "_all_docs?limit=10",
- *                              body, sizeof(body));
+ *    libcouchbase_make_doc_request(instance, NULL, "_all_docs?limit=10",
+ *                                  LIBCOUCHBASE_HTTP_METHOD_GET,
+ *                                  body, sizeof(body), true);
  */
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_view_execute(libcouchbase_t instance,
-                                               const void *command_cookie,
-                                               const char *path,
-                                               const void *body,
-                                               size_t nbody)
+libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
+                                                   const void *command_cookie,
+                                                   const char *path,
+                                                   libcouchbase_http_method_t method,
+                                                   const void *body,
+                                                   size_t nbody,
+                                                   bool chunked)
 {
     struct view_context_st *ctx;
     const char *hostname;
@@ -218,21 +223,19 @@ libcouchbase_error_t libcouchbase_view_execute(libcouchbase_t instance,
     /* setup chunked callback if the client ready to handle response as a
      * stream. it will be called each time libevent will put something in
      * input buffer */
-    if (instance->callbacks.view_data) {
-        ctx->chunked = true;
+    ctx->chunked = chunked;
+    if (chunked) {
         evhttp_request_set_chunked_cb(ctx->request, on_data_cb);
     }
     evhttp_add_header(ctx->request->output_headers, "User-Agent", "libcouchbase/"LIBCOUCHBASE_VERSION_STRING);
     evhttp_add_header(ctx->request->output_headers, "Host", hostname);
     evhttp_add_header(ctx->request->output_headers, "Accept", "application/json");
 
+    ctx->method = method;
     if (body) {
-        ctx->method = EVHTTP_REQ_POST;
         evbuffer_add(ctx->request->output_buffer, body, nbody);
-    } else {
-        ctx->method = EVHTTP_REQ_GET;
     }
-    if (evhttp_make_request(ctx->conn, ctx->request, ctx->method, ctx->uri) < 0) {
+    if (evhttp_make_request(ctx->conn, ctx->request, (enum evhttp_cmd_type)ctx->method, ctx->uri) < 0) {
         view_context_free(ctx);
         return LIBCOUCHBASE_EINTERNAL;
     }

@@ -92,8 +92,8 @@ extern "C" {
         libcouchbase_tap_opaque_callback tap_opaque;
         libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
         libcouchbase_error_callback error;
-        libcouchbase_view_complete_callback view_complete;
-        libcouchbase_view_data_callback view_data;
+        libcouchbase_doc_complete_callback doc_complete;
+        libcouchbase_doc_data_callback doc_data;
     };
 
     struct libcouchbase_st {

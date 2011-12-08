@@ -107,6 +107,24 @@ extern "C" {
     #define LIBCOUCHBASE_WRITE_EVENT 0x04
     #define LIBCOUCHBASE_RW_EVENT (LIBCOUCHBASE_READ_EVENT|LIBCOUCHBASE_WRITE_EVENT)
 
+    /**
+     * This numbering schema is compatible with enum evhttp_cmd_type from
+     * event2/http.h. The values represent bit positions for easy building
+     * bitmask of allowed methods for server implementations based on
+     * libevent.
+     */
+    typedef enum {
+        LIBCOUCHBASE_HTTP_METHOD_GET     = 1 << 0,
+        LIBCOUCHBASE_HTTP_METHOD_POST    = 1 << 1,
+        LIBCOUCHBASE_HTTP_METHOD_HEAD    = 1 << 2,
+        LIBCOUCHBASE_HTTP_METHOD_PUT     = 1 << 3,
+        LIBCOUCHBASE_HTTP_METHOD_DELETE  = 1 << 4,
+        LIBCOUCHBASE_HTTP_METHOD_OPTIONS = 1 << 5,
+        LIBCOUCHBASE_HTTP_METHOD_TRACE   = 1 << 6,
+        LIBCOUCHBASE_HTTP_METHOD_CONNECT = 1 << 7,
+        LIBCOUCHBASE_HTTP_METHOD_PATCH   = 1 << 8
+    } libcouchbase_http_method_t;
+
     struct sockaddr;
 
     struct libcouchbase_iovec_st {

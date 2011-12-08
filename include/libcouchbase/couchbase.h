@@ -466,18 +466,24 @@ extern "C" {
      * @param instance The handle to libcouchbase
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
+     * @param path A view path string with optional query params (e.g. skip,
+     *             limit etc.)
+     * @param method HTTP message type to be sent to server
      * @param body The POST body for CouchDB view request. If the body
      *             parameter is NULL, function will use GET request.
      * @param nbody Size of body
-     * @param path A view path string with optional query params (e.g. skip,
-     *             limit etc.)
+     * @param chunked If true the client will use libcouchbase_doc_data_callback
+     *                to notify about response and libcouchbase_doc_complete
+     *                otherwise.
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_view_execute(libcouchbase_t instance,
-                                                   const void *command_cookie,
-                                                   const char *path,
-                                                   const void *body,
-                                                   size_t nbody);
+    libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
+                                                       const void *command_cookie,
+                                                       const char *path,
+                                                       libcouchbase_http_method_t method,
+                                                       const void *body,
+                                                       size_t nbody,
+                                                       bool chunked);
 
     /**
      * Flush the entire couchbase cluster!
