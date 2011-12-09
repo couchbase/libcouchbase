@@ -195,7 +195,7 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
     ctx->evuri = evhttp_uri_parse(ctx->uri);
     if (!ctx->evuri) {
         view_context_free(ctx);
-        return LIBCOUCHBASE_EINTERNAL;
+        return LIBCOUCHBASE_EINVAL;
     }
 
     hostname = evhttp_uri_get_host(ctx->evuri);
@@ -204,14 +204,14 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
     /* it will return NULL when buffer is too small */
     if (!evhttp_uri_join(ctx->evuri, ctx->uri, 1024)) {
         view_context_free(ctx);
-        return LIBCOUCHBASE_EINTERNAL;
+        return LIBCOUCHBASE_EINVAL;
     }
 
     // @TODO FIXME!
     ctx->conn = evhttp_connection_base_new(instance->io->cookie, NULL, hostname, (uint16_t)port);
     if (!ctx->conn) {
         view_context_free(ctx);
-        return LIBCOUCHBASE_EINTERNAL;
+        return LIBCOUCHBASE_NETWORK_ERROR;
     }
     /* create request object and setup on-complete callback */
     ctx->request = evhttp_request_new(on_complete_cb, ctx);
