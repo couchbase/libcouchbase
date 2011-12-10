@@ -281,8 +281,8 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
     curr_config = instance->vbucket_config;
     next_config = vbucket_config_parse_string(instance->vbucket_stream.input.data);
     if (next_config == NULL) {
-        // ERROR SYNTAX ERROR
-        fprintf(stderr, "Syntax Error \n%s\n", instance->vbucket_stream.input.data);
+        libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
+                                   instance->vbucket_stream.input.data);
         return;
     }
     instance->vbucket_stream.input.avail = 0;
@@ -386,15 +386,16 @@ static int parse_header(libcouchbase_t instance)
 
     /* parse the headers I care about... */
     if (memcmp(buffer->data, "HTTP/1.1 200 OK", strlen("HTTP/1.1 200 OK")) != 0) {
-        fprintf(stderr, "Unsupported response:\n%s\n", buffer->data);
+        libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
+                                   buffer->data);
         /* incorrect response */
         return -1;
     }
 
     if (strstr(buffer->data, "Transfer-Encoding: chunked") == NULL &&
         strstr(buffer->data, "Transfer-encoding: chunked") == NULL) {
-        fprintf(stderr, "Unsupported Transfer-Encoding:\n%s\n",
-                buffer->data);
+        libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
+                                   buffer->data);
         return -1;
     }
 
@@ -491,7 +492,8 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
     do {
         if (!grow_buffer(buffer, 1)) {
             // ERROR MEMORY ALLOCATION!
-            fprintf(stderr, "Failed to allocate memory\n");
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM,
+                                       "Failed to allocate memory");
             return ;
         }
 
@@ -506,14 +508,15 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
                 return ;
             default:
                 /* ERROR READING SOCKET!! */
-                fprintf(stderr, "Failed to read from socket: %s\n", strerror(instance->io->error));
+                libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                           strerror(instance->io->error));
                 return ;
             }
         } else if (nr == 0) {
             /* Socket closed! */
-            fprintf(stderr, "vbucket stream socket is closed!\n");
-            exit(1);
-            /* return ; */
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       "vbucket stream socket is closed!\n");
+            return ;
         }
         buffer->avail += (size_t)nr;
         buffer->data[buffer->avail] = '\0';
@@ -521,11 +524,7 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 
     if (instance->vbucket_stream.header == NULL) {
         if (parse_header(instance) == -1) {
-            fprintf(stderr, "An unknown error has occurred parsing a packet header.\n");
-            // TODO: Is this really a NETWORK_ERROR?
-            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                       "Failed to parse document returned from"
-                                       " the REST interface");
+            // error already reported
             return;
         }
     }
