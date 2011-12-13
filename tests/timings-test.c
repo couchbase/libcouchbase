@@ -14,8 +14,10 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-// Include config.h to get the definition of hrtime_t for
-// platforms without it...
+
+/* Include config.h to get the definition of hrtime_t for platforms
+** without it...
+*/
 #include "config.h"
 
 #include <string.h>
@@ -53,6 +55,8 @@ static void timings_callback(libcouchbase_t instance,
                              uint32_t maxtotal)
 {
     FILE *fp = (void*)cookie;
+    int num, ii;
+
     fprintf(fp, "[%3u - %3u]", min, max);
     switch (timeunit) {
     case LIBCOUCHBASE_TIMEUNIT_NSEC:
@@ -71,10 +75,10 @@ static void timings_callback(libcouchbase_t instance,
         ;
     }
 
-    int num = (int)((float)20.0 * (float)total / (float)maxtotal);
+    num = (int)((float)20.0 * (float)total / (float)maxtotal);
 
     fprintf(fp, " |");
-    for (int ii = 0; ii < num; ++ii) {
+    for (ii = 0; ii < num; ++ii) {
         fprintf(fp, "#");
     }
 
@@ -86,36 +90,42 @@ static void timings_callback(libcouchbase_t instance,
 
 int main(int argc, char **argv)
 {
+    FILE *fp;
+    struct event_base *evbase;
+    const void *mock;
+    const char *http;
+    struct libcouchbase_io_opt_st *io;
+    libcouchbase_t instance;
+    int ii;
+
     (void)argc; (void)argv;
 
-    FILE *fp = stdout;
+    fp = stdout;
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
         fp = fopen("/dev/null", "w");
     }
 
-    struct event_base *evbase = event_base_new();
+    evbase = event_base_new();
     if (evbase == NULL) {
         fprintf(stderr, "Failed to create event base\n");
         return 1;
     }
 
-    const void *mock = start_mock_server(NULL);
+    mock = start_mock_server(NULL);
     if (mock == NULL) {
         fprintf(stderr, "Failed to start mock server\n");
         return 1;
     }
 
-    const char *http = get_mock_http_server(mock);
+    http = get_mock_http_server(mock);
 
-    struct libcouchbase_io_opt_st *io;
     io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
     }
-    libcouchbase_t instance = libcouchbase_create(http, "Administrator",
-                                                  "password", NULL, io);
-
+    instance = libcouchbase_create(http, "Administrator",
+                                   "password", NULL, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         event_base_free(evbase);
@@ -129,15 +139,15 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // Wait for the connect to compelete
+    /* Wait for the connect to compelete */
     libcouchbase_wait(instance);
 
     libcouchbase_enable_timings(instance);
     libcouchbase_store(instance, NULL, LIBCOUCHBASE_SET, "counter", 7,
                        "0", 1, 0, 0, 0);
     libcouchbase_wait(instance);
-    for (int ii = 0; ii < 100; ++ii) {
-        libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, true, 0);
+    for (ii = 0; ii < 100; ++ii) {
+        libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, 1, 0);
         libcouchbase_wait(instance);
     }
     fprintf(fp, "              +---------+---------+\n");

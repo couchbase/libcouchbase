@@ -64,7 +64,6 @@ void libcouchbase_server_buffer_end_packet(libcouchbase_server_t *c,
 {
     (void)c;
     (void)buff;
-    // NOOP
 }
 
 void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,

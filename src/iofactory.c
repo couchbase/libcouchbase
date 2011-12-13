@@ -29,16 +29,18 @@ typedef libcouchbase_io_opt_t* (*create_func)(struct event_base *base);
 
 static create_func get_create_func(const char *image,
                                    libcouchbase_error_t *error) {
+    union my_hack {
+        create_func create;
+        void* voidptr;
+    } my_create ;
+
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
     if (dlhandle == NULL) {
         set_error(error, LIBCOUCHBASE_ERROR);
         return NULL;
     }
 
-    union my_hack {
-        create_func create;
-        void* voidptr;
-    } my_create = { .create = NULL };
+    my_create.create = NULL;
     my_create.voidptr = dlsym(dlhandle, "libcouchbase_create_libevent_io_opts");
     if (my_create.voidptr == NULL) {
         dlclose(dlhandle);

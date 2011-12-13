@@ -52,14 +52,17 @@ struct mock_server_info {
     int client;
 };
 
-static bool create_monitor(struct mock_server_info *info) {
-    struct addrinfo hints = { .ai_flags = AI_PASSIVE,
-                              .ai_family = AF_UNSPEC,
-                              .ai_socktype = SOCK_STREAM };
-    info->sock = -1;
+static int create_monitor(struct mock_server_info *info) {
+    struct addrinfo hints, *next, *ai;
+    int error;
 
-    struct addrinfo *ai;
-    int error = getaddrinfo(NULL, "0", &hints, &ai);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    info->sock = -1;
+    error = getaddrinfo(NULL, "0", &hints, &ai);
     if (error != 0) {
         if (error != EAI_SYSTEM) {
             fprintf(stderr, "getaddrinfo failed: %s\n",
@@ -67,17 +70,19 @@ static bool create_monitor(struct mock_server_info *info) {
         } else {
             perror("getaddrinfo failed:");
         }
-        return false;
+        return 0;
     }
 
-    for (struct addrinfo *next = ai; next; next = next->ai_next) {
+    for (next = ai; next; next = next->ai_next) {
+        int flags = 1;
+        socklen_t len;
+
         if ((info->sock = socket(next->ai_family,
                                  next->ai_socktype,
                                  next->ai_protocol)) == -1) {
             continue;
         }
 
-        int flags = 1;
         setsockopt(info->sock, SOL_SOCKET, SO_REUSEADDR,
                    (void *)&flags, sizeof(flags));
 
@@ -91,8 +96,8 @@ static bool create_monitor(struct mock_server_info *info) {
             continue;
         }
 
-        // Ok, I've got a working socket :)
-        socklen_t len = sizeof(info->storage);
+        /* Ok, I've got a working socket :) */
+        len = sizeof(info->storage);
         if (getsockname(info->sock, (struct sockaddr*)&info->storage, &len) == -1) {
             close(info->sock);
             info->sock = -1;
@@ -109,15 +114,17 @@ static bool create_monitor(struct mock_server_info *info) {
     return info->sock != -1;
 }
 
-
 static void wait_for_server(const char *port) {
-    struct addrinfo hints = { .ai_flags = AI_PASSIVE,
-                              .ai_family = AF_UNSPEC,
-                              .ai_socktype = SOCK_STREAM };
+    struct addrinfo hints, *next, *ai;
     int sock = -1;
+    int error;
 
-    struct addrinfo *ai;
-    int error = getaddrinfo("localhost", port, &hints, &ai);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    error = getaddrinfo("localhost", port, &hints, &ai);
     if (error != 0) {
         if (error != EAI_SYSTEM) {
             fprintf(stderr, "getaddrinfo failed: %s\n",
@@ -128,8 +135,8 @@ static void wait_for_server(const char *port) {
         abort();
     }
 
-    while (true) {
-        for (struct addrinfo *next = ai; next; next = next->ai_next) {
+    while (1) {
+        for (next = ai; next; next = next->ai_next) {
             if ((sock = socket(next->ai_family,
                                next->ai_socktype,
                                next->ai_protocol)) == -1) {
@@ -164,10 +171,10 @@ const void *start_mock_server(char **cmdline) {
 
     if (info->pid == 0) {
         /* Child */
+        char monitor[1024];
         char *argv[1024];
         int arg = 0;
         argv[arg++] = (char*)"./tests/start_mock.sh";
-        char monitor[1024];
         sprintf(monitor, "--harakiri-monitor=localhost:%d", info->port);
         argv[arg++] = monitor;
 
@@ -179,20 +186,25 @@ const void *start_mock_server(char **cmdline) {
         }
 
         argv[arg++] = NULL;
-        assert(execv(argv[0], argv) != -1);
-    }
+        execv(argv[0], argv);
+        abort();
+    } else {
+        char buffer[1024];
+        ssize_t offset;
+        ssize_t nr;
 
-    // wait until the server connects
-    info->client = accept(info->sock, NULL, NULL);
-    assert(info->client != -1);
-    // Get the port number of the http server
-    char buffer[1024];
-    ssize_t offset = snprintf(buffer, sizeof(buffer), "localhost:");
-    ssize_t nr = recv(info->client, buffer + offset, sizeof(buffer) - (size_t)offset - 1, 0);
-    assert(nr > 0);
-    buffer[nr + offset] = '\0';
-    info->http = strdup(buffer);
-    wait_for_server(buffer + offset);
+        /* wait until the server connects */
+        info->client = accept(info->sock, NULL, NULL);
+        assert(info->client != -1);
+        /* Get the port number of the http server */
+        offset = snprintf(buffer, sizeof(buffer), "localhost:");
+        nr = recv(info->client, buffer + offset,
+                  sizeof(buffer) - (size_t)offset - 1, 0);
+        assert(nr > 0);
+        buffer[nr + offset] = '\0';
+        info->http = strdup(buffer);
+        wait_for_server(buffer + offset);
+    }
     return info;
 }
 

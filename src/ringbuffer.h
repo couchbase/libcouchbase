@@ -34,9 +34,9 @@ extern "C" {
         RINGBUFFER_WRITE = 0x02
     } libcouchbase_ringbuffer_direction_t;
 
-    bool libcouchbase_ringbuffer_initialize(ringbuffer_t *buffer, size_t size);
+    int libcouchbase_ringbuffer_initialize(ringbuffer_t *buffer, size_t size);
     void libcouchbase_ringbuffer_destruct(ringbuffer_t *buffer);
-    bool libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer, size_t size);
+    int libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer, size_t size);
     size_t libcouchbase_ringbuffer_get_size(ringbuffer_t *buffer);
     void *libcouchbase_ringbuffer_get_start(ringbuffer_t *buffer);
     void *libcouchbase_ringbuffer_get_read_head(ringbuffer_t *buffer);
@@ -52,11 +52,11 @@ extern "C" {
     void libcouchbase_ringbuffer_produced(ringbuffer_t *buffer, size_t nb);
     void libcouchbase_ringbuffer_consumed(ringbuffer_t *buffer, size_t nb);
     size_t libcouchbase_ringbuffer_get_nbytes(ringbuffer_t *buffer);
-    bool libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
+    int libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
                                               libcouchbase_ringbuffer_direction_t direction,
                                               size_t nb);
 
-    bool libcouchbase_ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest);
+    int libcouchbase_ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest);
 
 #ifdef __cplusplus
 }

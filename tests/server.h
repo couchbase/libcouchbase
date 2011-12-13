@@ -17,8 +17,6 @@
 #ifndef LIBCOUCHBASE_TEST_SERVER_H
 #define LIBCOUCHBASE_TEST_SERVER_H 1
 
-#include <stdbool.h>
-
 const void *start_mock_server(char **cmdline);
 const char *get_mock_http_server(const void *);
 void shutdown_mock_server(const void *);

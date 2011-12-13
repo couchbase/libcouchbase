@@ -51,7 +51,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
     libcouchbase_server_t *server = NULL;
     size_t ii;
 
-    // we need a vbucket config before we can start getting data..
+    /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return LIBCOUCHBASE_ETMPFAIL;
     }
@@ -79,7 +79,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
         req.message.header.request.vbucket = ntohs(vb);
         req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]) + 4);
         req.message.header.request.opaque = ++instance->seqno;
-        // @todo fix the relative time!
+        /* @todo fix the relative time! */
         req.message.body.expiration = htonl((uint32_t)exp[ii]);
         libcouchbase_server_start_packet(server, command_cookie,
                                          req.bytes, sizeof(req.bytes));

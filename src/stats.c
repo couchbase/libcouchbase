@@ -32,7 +32,7 @@ libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
     protocol_binary_request_stats req;
     size_t ii;
 
-    // we need a vbucket config before we can start getting data..
+    /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return LIBCOUCHBASE_ETMPFAIL;
     }

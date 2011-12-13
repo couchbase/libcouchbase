@@ -41,7 +41,7 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
         sasl_dispose(&server->sasl_conn);
     }
 
-    // Delete the event structure itself
+    /* Delete the event structure itself */
     server->instance->io->destroy_event(server->instance->io,
                                         server->event);
 
@@ -69,9 +69,9 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
  * @param sock The socket to query the name for
  * @param buffer The destination buffer
  * @param buffz The size of the output buffer
- * @return true if success, false otherwise
+ * @return 1 if success, 0 otherwise
  */
-static bool get_local_address(evutil_socket_t sock,
+static int get_local_address(evutil_socket_t sock,
                               char *buffer,
                               size_t bufsz)
 {
@@ -85,10 +85,10 @@ static bool get_local_address(evutil_socket_t sock,
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
         (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
     {
-        return false;
+        return 0;
     }
 
-    return true;
+    return 1;
 }
 
 /**
@@ -96,9 +96,9 @@ static bool get_local_address(evutil_socket_t sock,
  * @param sock The socket to query the name for
  * @param buffer The destination buffer
  * @param buffz The size of the output buffer
- * @return true if success, false otherwise
+ * @return 1 if success, 0 otherwise
  */
-static bool get_remote_address(evutil_socket_t sock,
+static int get_remote_address(evutil_socket_t sock,
                                char *buffer,
                                size_t bufsz)
 {
@@ -112,10 +112,10 @@ static bool get_remote_address(evutil_socket_t sock,
                      p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
         (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
     {
-        return false;
+        return 0;
     }
 
-    return true;
+    return 1;
 }
 
 /**
@@ -134,20 +134,22 @@ static void start_sasl_auth_server(libcouchbase_server_t *server)
     libcouchbase_server_buffer_complete_packet(server, NULL, &server->output,
                                                &server->output_cookies,
                                                req.bytes, sizeof(req.bytes));
-    // send the data and add it to libevent..
+    /* send the data and add it to libevent.. */
     libcouchbase_server_event_handler(server->sock, LIBCOUCHBASE_WRITE_EVENT,
                                       server);
 }
 
 void libcouchbase_server_connected(libcouchbase_server_t *server)
 {
-    server->connected = true;
+    server->connected = 1;
 
     if (server->pending.nbytes > 0) {
-        // @todo we might want to do this a bit more optimal later on..
-        //       We're only using the pending ringbuffer while we're
-        //       doing the SASL auth, so it shouldn't contain that
-        //       much data..
+        /*
+        ** @todo we might want to do this a bit more optimal later on..
+        **       We're only using the pending ringbuffer while we're
+        **       doing the SASL auth, so it shouldn't contain that
+        **       much data..
+        */
         if (!libcouchbase_ringbuffer_append(&server->pending, &server->output) ||
             !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies)) {
             libcouchbase_error_handler(server->instance,
@@ -155,7 +157,7 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
                                        NULL);
         }
 
-        // Send the pending data!
+        /* Send the pending data! */
         libcouchbase_server_event_handler(server->sock,
                                           LIBCOUCHBASE_WRITE_EVENT, server);
 
@@ -175,19 +177,19 @@ static void socket_connected(libcouchbase_server_t *server)
                            &server->sasl_conn) == SASL_OK);
 
     if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
-        // No SASL AUTH needed
+        /* No SASL AUTH needed */
         libcouchbase_server_connected(server);
     } else {
         start_sasl_auth_server(server);
     }
 
-    // Set the correct event handler
+    /* Set the correct event handler */
     server->instance->io->update_event(server->instance->io, server->sock,
                                        server->event, LIBCOUCHBASE_READ_EVENT,
                                        server, libcouchbase_server_event_handler);
 }
 
-static bool server_connect(libcouchbase_server_t *server);
+static int server_connect(libcouchbase_server_t *server);
 
 
 static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
@@ -199,11 +201,11 @@ static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
     server_connect(server);
 }
 
-static bool server_connect(libcouchbase_server_t *server) {
-    bool retry;
+static int server_connect(libcouchbase_server_t *server) {
+    int retry;
     do {
         if (server->sock == INVALID_SOCKET) {
-            // Try to get a socket..
+            /* Try to get a socket.. */
             while (server->curr_ai != NULL) {
                 server->sock = server->instance->io->socket(server->instance->io,
                                                             server->curr_ai->ai_family,
@@ -217,25 +219,25 @@ static bool server_connect(libcouchbase_server_t *server) {
         }
 
         if (server->curr_ai == NULL) {
-            return false;
+            return 0;
         }
 
-        retry = false;
+        retry = 0;
         if (server->instance->io->connect(server->instance->io,
                                           server->sock,
                                           server->curr_ai->ai_addr,
                                           (int)server->curr_ai->ai_addrlen) == 0) {
-            // connected
+            /* connected */
             socket_connected(server);
-            return true;
+            return 1;
         } else {
             switch (server->instance->io->error) {
             case EINTR:
-                retry = true;
+                retry = 1;
                 break;
             case EISCONN:
                 socket_connected(server);
-                return true;
+                return 1;
             case EWOULDBLOCK:
             case EINPROGRESS: /* First call to connect */
                 server->instance->io->update_event(server->instance->io,
@@ -244,21 +246,21 @@ static bool server_connect(libcouchbase_server_t *server) {
                                                    LIBCOUCHBASE_WRITE_EVENT,
                                                    server,
                                                    server_connect_handler);
-                return true;
+                return 1;
             case EALREADY: /* Subsequent calls to connect */
-                return true;
+                return 1;
 
             default:
                 if (errno == ECONNREFUSED) {
-                    retry = true;
+                    retry = 1;
                     server->curr_ai = server->curr_ai->ai_next;
                 } else {
                     fprintf(stderr, "Connection failed: %s", strerror(server->instance->io->error));
-                    // TODO: Is there a better error for this?
+                    /* TODO: Is there a better error for this? */
                     libcouchbase_error_handler(server->instance,
                                                LIBCOUCHBASE_NETWORK_ERROR,
                                                "Connection failed");
-                    return false;
+                    return 0;
                 }
 
                 server->instance->io->delete_event(server->instance->io,
@@ -269,8 +271,8 @@ static bool server_connect(libcouchbase_server_t *server) {
             }
         }
     } while (retry);
-    // not reached
-    return false;
+    /* not reached */
+    return 0;
 }
 
 void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum)
@@ -328,7 +330,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
     protocol_binary_request_header req;
     size_t nr =  libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes,
                                               sizeof(req));
-    // There should at _LEAST_ be _ONE_ message in here!
+    /* There should at _LEAST_ be _ONE_ message in here! */
     assert(nr == sizeof(req));
     while (req.request.opaque < seqno) {
         struct libcouchbase_command_data_st ct;
@@ -385,7 +387,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
         libcouchbase_ringbuffer_consumed(&c->cmd_log, packetsize);
         nr =  libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes,
                                            sizeof(req));
-        // The current message should also be there...
+        /* The current message should also be there... */
         assert(nr == sizeof(req));
     }
 

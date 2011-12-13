@@ -45,7 +45,7 @@ libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
     libcouchbase_server_t *server;
     protocol_binary_request_delete req;
 
-    // we need a vbucket config before we can start removing the item..
+    /* we need a vbucket config before we can start removing the item.. */
     if (instance->vbucket_config == NULL) {
         return LIBCOUCHBASE_ETMPFAIL;
     }

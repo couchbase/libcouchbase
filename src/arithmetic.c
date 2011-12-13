@@ -27,7 +27,7 @@ libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
                                              const void *command_cookie,
                                              const void *key, size_t nkey,
                                              int64_t delta, time_t exp,
-                                             bool create, uint64_t initial)
+                                             int create, uint64_t initial)
 {
     return libcouchbase_arithmetic_by_key(instance, command_cookie, NULL, 0, key,
                                           nkey, delta, exp, create, initial);
@@ -40,13 +40,13 @@ libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
                                                     size_t nhashkey,
                                                     const void *key, size_t nkey,
                                                     int64_t delta, time_t exp,
-                                                    bool create, uint64_t initial)
+                                                    int create, uint64_t initial)
 {
     uint16_t vb;
     libcouchbase_server_t *server;
     protocol_binary_request_incr req;
 
-    // we need a vbucket config before we can start getting data..
+    /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return LIBCOUCHBASE_ETMPFAIL;
     }

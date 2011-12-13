@@ -29,7 +29,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
@@ -44,9 +43,9 @@ static void set_flag(char cmd, const void *arg, void *cookie) {
 }
 
 static void set_char_ptr(char cmd, const void *arg, void *cookie) {
-    (void)cmd;
     const char **myptr = cookie;
     *myptr = arg;
+    (void)cmd;
 }
 
 const char *host = "localhost:8091";
@@ -74,10 +73,11 @@ static void set_auth_data(char cmd, const void *arg, void *cookie) {
         }
     } else {
         char buffer[80];
+        size_t len;
         if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
             exit(EXIT_FAILURE);
         }
-        size_t len = strlen(buffer) - 1;
+        len = strlen(buffer) - 1;
         while (len > 0 && isspace(buffer[len])) {
             buffer[len] = '\0';
             --len;
@@ -93,7 +93,7 @@ typedef void (*OPTION_HANDLER)(char cmd, const void *arg, void *cookie);
 static struct {
     const char *name;
     const char *description;
-    bool argument;
+    int argument;
     char letter;
     OPTION_HANDLER handler;
     void *cookie;
@@ -101,21 +101,21 @@ static struct {
     ['?'] = {
         .name = "help",
         .description = "\t-?\t\tPrint program usage information",
-        .argument = false,
+        .argument = 0,
         .letter = '?',
         .handler = usage
     },
     ['u'] = {
         .name = "username",
         .description = "\t-u name\t\tSpecify username",
-        .argument = true,
+        .argument = 1,
         .letter = 'u',
         .handler = set_auth_data
     },
     ['h'] = {
         .name = "host",
         .description = "\t-h host\t\tHost to read configuration from",
-        .argument = true,
+        .argument = 1,
         .letter = 'h',
         .handler = set_char_ptr,
         .cookie = &host
@@ -123,7 +123,7 @@ static struct {
     ['b'] = {
         .name = "bucket",
         .description = "\t-b bucket\tThe bucket to connect to",
-        .argument = true,
+        .argument = 1,
         .letter = 'b',
         .handler = set_char_ptr,
         .cookie = &bucket
@@ -131,7 +131,7 @@ static struct {
     ['o'] = {
         .name = "file",
         .description = "\t-o filename\tSend the output to this file",
-        .argument = true,
+        .argument = 1,
         .letter = 'o',
         .handler = set_char_ptr,
         .cookie = &filename
@@ -139,7 +139,7 @@ static struct {
     ['c'] = {
         .name = "chunked",
         .description = "\t-c\t\tUse chunked callback to stream the data",
-        .argument = false,
+        .argument = 0,
         .letter = 'c',
         .handler = set_flag,
         .cookie = &chunked
@@ -147,7 +147,7 @@ static struct {
     ['d'] = {
         .name = "data",
         .description = "\t-d\t\tPOST data, e.g. {\"keys\": [\"key1\", \"key2\", ...]}",
-        .argument = true,
+        .argument = 1,
         .letter = 'd',
         .handler = set_char_ptr,
         .cookie = &post_data
@@ -167,6 +167,7 @@ static void handle_options(int argc, char **argv) {
     char shortopts[128] = { 0 };
     int jj = 0;
     int kk = 0;
+    int c;
     for (ii = 0; ii < 256; ++ii) {
         if (my_options[ii].name != NULL) {
             opts[jj].name = (char*)my_options[ii].name;
@@ -180,7 +181,6 @@ static void handle_options(int argc, char **argv) {
         }
     }
 
-    int c;
     while ((c = getopt_long(argc, argv, shortopts, opts, NULL)) != EOF) {
         if (my_options[c].handler != NULL) {
             my_options[c].handler((char)c, optarg, my_options[c].cookie);
@@ -250,6 +250,8 @@ int main(int argc, char **argv)
     size_t nbytes = 0;
     struct cookie_st cookie;
     libcouchbase_error_t rc;
+    libcouchbase_t instance;
+
     handle_options(argc, argv);
 
     if (strcmp(filename, "-") == 0) {
@@ -273,7 +275,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
     }
-    libcouchbase_t instance = libcouchbase_create(host, username,
+    instance = libcouchbase_create(host, username,
                                                   passwd, bucket, cookie.io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
@@ -289,7 +291,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    // Wait for the connect to compelete
+    /* Wait for the connect to compelete */
     libcouchbase_wait(instance);
 
     bytes = post_data;
@@ -314,12 +316,14 @@ int main(int argc, char **argv)
 
 static void usage(char cmd, const void *arg, void *cookie)
 {
+    int ii;
+
     (void)cmd;
     (void)arg;
     (void)cookie;
 
     fprintf(stderr, "Usage: ./couchview [options] viewid\n");
-    for (int ii = 0; ii < 256; ++ii) {
+    for (ii = 0; ii < 256; ++ii) {
         if (my_options[ii].name != NULL) {
             fprintf(stderr, "%s\n", my_options[ii].description);
         }

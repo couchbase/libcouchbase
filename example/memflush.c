@@ -22,14 +22,13 @@
  * @todo add documentation
  */
 
-// @todo figure out what I need to include for win32 in the headers!
+/* @todo figure out what I need to include for win32 in the headers! */
 #include "config.h"
 
 #include <getopt.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <errno.h>
 #include <string.h>
 #include <inttypes.h>
@@ -38,9 +37,9 @@
 #include <libcouchbase/couchbase.h>
 #ifdef WIN32
 
-static bool isatty(int a) {
+static int isatty(int a) {
     (void)a;
-    return true;
+    return 1;
 }
 
 static char *getpass(const char *prompt)
@@ -109,7 +108,7 @@ typedef void (*OPTION_HANDLER)(char cmd, const void *arg, void *cookie);
 static struct {
     const char *name;
     const char *description;
-    bool argument;
+    int argument;
     char letter;
     OPTION_HANDLER handler;
     void *cookie;
@@ -119,23 +118,23 @@ static void setup_options(void)
 {
     my_options['?'].name = "help";
     my_options['?'].description = "\t-?\tPrint program usage information";
-    my_options['?'].argument = false;
+    my_options['?'].argument = 0;
     my_options['?'].letter = '?';
     my_options['?'].handler = usage;
     my_options['u'].name = "username";
     my_options['u'].description = "\t-u nm\tSpecify username";
-    my_options['u'].argument = true;
+    my_options['u'].argument = 1;
     my_options['u'].letter = 'u';
     my_options['u'].handler = set_auth_data;
     my_options['h'].name = "host";
     my_options['h'].description = "\t-h host\tHost to read configuration from";
-    my_options['h'].argument = true;
+    my_options['h'].argument = 1;
     my_options['h'].letter = 'h';
     my_options['h'].handler = set_char_ptr;
     my_options['h'].cookie = &host;
     my_options['b'].name = "bucket";
     my_options['b'].description = "\t-b bucket\tThe bucket to connect to";
-    my_options['b'].argument = true;
+    my_options['b'].argument = 1;
     my_options['b'].letter = 'b';
     my_options['b'].handler = set_char_ptr;
     my_options['b'].cookie = &bucket;
@@ -238,7 +237,7 @@ int main(int argc, char **argv)
                 libcouchbase_strerror(instance, ret));
         return 1;
     }
-    // Wait for the connect to compelete
+    /* Wait for the connect to compelete */
     libcouchbase_wait(instance);
 
     (void)libcouchbase_set_flush_callback(instance, flush_callback);

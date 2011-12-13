@@ -42,20 +42,20 @@ static void storage_callback(libcouchbase_t instance,
 static void initialize_counter(const char *host, const char *user,
                                const char *passwd, const char *bucket)
 {
+    libcouchbase_t instance;
+    struct libcouchbase_io_opt_st *io;
     struct event_base *evbase = event_base_new();
     if (evbase == NULL) {
         fprintf(stderr, "Failed to create event base\n");
         exit(1);
     }
 
-    struct libcouchbase_io_opt_st *io;
     io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
     }
-    libcouchbase_t instance = libcouchbase_create(host, user, passwd, bucket,
-                                                  io);
+    instance = libcouchbase_create(host, user, passwd, bucket, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         event_base_free(evbase);
@@ -68,7 +68,7 @@ static void initialize_counter(const char *host, const char *user,
         exit(1);
     }
 
-    // Wait for the connect to compelete
+    /* Wait for the connect to compelete */
     libcouchbase_wait(instance);
 
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
@@ -99,20 +99,21 @@ static void arithmetic_callback(libcouchbase_t instance,
 static void do_run_arithmetic(const char *host, const char *user,
                               const char *passwd, const char *bucket)
 {
+    int ii;
+    libcouchbase_t instance;
+    struct libcouchbase_io_opt_st *io;
     struct event_base *evbase = event_base_new();
     if (evbase == NULL) {
         fprintf(stderr, "Failed to create event base\n");
         exit(1);
     }
 
-    struct libcouchbase_io_opt_st *io;
     io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
     }
-    libcouchbase_t instance = libcouchbase_create(host, user, passwd, bucket,
-                                                  io);
+    instance = libcouchbase_create(host, user, passwd, bucket, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         event_base_free(evbase);
@@ -125,14 +126,14 @@ static void do_run_arithmetic(const char *host, const char *user,
         exit(1);
     }
 
-    // Wait for the connect to compelete
+    /* Wait for the connect to compelete */
     libcouchbase_wait(instance);
 
     (void)libcouchbase_set_arithmetic_callback(instance,
                                                arithmetic_callback);
 
-    for (int ii = 0; ii < 10; ++ii) {
-        libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, true, 0);
+    for (ii = 0; ii < 10; ++ii) {
+        libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, 1, 0);
         libcouchbase_wait(instance);
     }
 
@@ -142,18 +143,22 @@ static void do_run_arithmetic(const char *host, const char *user,
 
 int main(int argc, char **argv)
 {
+    const void *mock;
+    const char *http;
+    int ii;
+
     (void)argc; (void)argv;
 
-    const void *mock = start_mock_server(NULL);
+    mock = start_mock_server(NULL);
     if (mock == NULL) {
         fprintf(stderr, "Failed to start mock server\n");
         return 1;
     }
 
-    const char *http = get_mock_http_server(mock);
+    http = get_mock_http_server(mock);
     initialize_counter(http, "Administrator", "password", NULL);
 
-    for (int ii = 0; ii < 10; ++ii) {
+    for (ii = 0; ii < 10; ++ii) {
         do_run_arithmetic(http, "Administrator", "password", NULL);
     }
 

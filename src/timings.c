@@ -84,8 +84,10 @@ libcouchbase_error_t libcouchbase_get_timings(libcouchbase_t instance,
     }
 
     max = instance->histogram->max;
-    // @todo I should merge "empty" sets.. currently I'm only going to report the
-    // nonzero ones...
+    /*
+    ** @todo I should merge "empty" sets.. currently I'm only going to
+    ** report the nonzero ones...
+    */
     if (instance->histogram->nsec) {
         callback(instance, cookie, LIBCOUCHBASE_TIMEUNIT_NSEC, 0, 999,
                  instance->histogram->nsec, max);

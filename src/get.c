@@ -60,7 +60,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     protocol_binary_request_noop noop;
     size_t ii;
 
-    // we need a vbucket config before we can start getting data..
+    /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return LIBCOUCHBASE_ETMPFAIL;
     }
@@ -114,8 +114,10 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     noop.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
     if (nhashkey == 0) {
-        // We don't know which server we sent the data to, so examine
-        // where to send the noop
+        /*
+        ** We don't know which server we sent the data to, so examine
+        ** where to send the noop
+        */
         for (ii = 0; ii < instance->nservers; ++ii) {
             server = instance->servers + ii;
             if (server->output.nbytes > 0 || server->pending.nbytes > 0) {

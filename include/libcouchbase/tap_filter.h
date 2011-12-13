@@ -69,7 +69,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     void libcouchbase_tap_filter_set_keys_only(libcouchbase_tap_filter_t instance,
-                                               bool keys_only);
+                                               int keys_only);
 
     /**
      * Get whether you are interested in keys and values, or only keys in your
@@ -77,7 +77,7 @@ extern "C" {
      * @param instance the tap filter instance to retrieve the value from.
      */
     LIBCOUCHBASE_API
-    bool libcouchbase_tap_filter_get_keys_only(libcouchbase_tap_filter_t instance);
+    int libcouchbase_tap_filter_get_keys_only(libcouchbase_tap_filter_t instance);
 
 #ifdef __cplusplus
 }

@@ -36,9 +36,9 @@ void libcouchbase_wait(libcouchbase_t instance)
      * The API is designed for you to run your own event loop,
      * but should also work if you don't do that.. In order to be
      * able to know when to break out of the event loop, we're setting
-     * the wait flag to true
+     * the wait flag to 1
      */
-    instance->wait = true;
+    instance->wait = 1;
     if (instance->vbucket_config == NULL) {
         vbucket_state_listener_t old = instance->vbucket_state_listener;
         instance->vbucket_state_listener = breakout_vbucket_state_listener;
@@ -47,5 +47,5 @@ void libcouchbase_wait(libcouchbase_t instance)
     } else {
         instance->io->run_event_loop(instance->io);
     }
-    instance->wait = false;
+    instance->wait = 0;
 }

@@ -226,7 +226,7 @@ static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
     flags |= EV_PERSIST;
     if (flags == event_get_events(event) &&
         handler == event_get_callback(event)) {
-        // no change!
+        /* no change! */
         return 0;
     }
 
@@ -282,7 +282,7 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
         return NULL;
     }
 
-    // setup io iops!
+    /* setup io iops! */
     ret->recv = libcouchbase_io_recv;
     ret->send = libcouchbase_io_send;
     ret->recvv = libcouchbase_io_recvv;

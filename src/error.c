@@ -55,12 +55,14 @@ libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance)
  */
 libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance, libcouchbase_error_t error, const char *errinfo)
 {
-    // Set the last error value so it can be access without needing an error callback.
+    /* Set the last error value so it can be access without needing an
+    ** error callback.
+    */
     instance->last_error = error;
 
-    // TODO: Should we call the callback anyway, even if it's a SUCCESS?
+    /* TODO: Should we call the callback anyway, even if it's a SUCCESS? */
     if (error != LIBCOUCHBASE_SUCCESS) {
-        // Call the user's error callback.
+        /* Call the user's error callback. */
         instance->callbacks.error(instance, error, errinfo);
     }
 

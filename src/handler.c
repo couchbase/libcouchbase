@@ -240,10 +240,12 @@ static void storage_response_handler(libcouchbase_server_t *server,
         op = LIBCOUCHBASE_PREPEND;
         break;
     default:
-        // It is impossible to get here (since we're called from our
-        // lookup table... If we _DO_ get here, it must be a development
-        // version where the developer isn't done yet (and should be
-        // forced to think about what to do...)
+        /*
+        ** It is impossible to get here (since we're called from our
+        ** lookup table... If we _DO_ get here, it must be a development
+        ** version where the developer isn't done yet (and should be
+        ** forced to think about what to do...)
+        */
         libcouchbase_error_handler(root, LIBCOUCHBASE_EINTERNAL,
                                    "Internal error. Received an illegal command opcode");
         abort();
@@ -329,7 +331,7 @@ static void tap_mutation_handler(libcouchbase_server_t *server,
                                  const void *command_cookie,
                                  protocol_binary_request_header *req)
 {
-    // @todo verify that the size is correct!
+    /* @todo verify that the size is correct! */
     char *packet = (char*)req;
     protocol_binary_request_tap_mutation *mutation = (void*)req;
     uint32_t flags = ntohl(mutation->message.body.item.flags);
@@ -351,7 +353,7 @@ static void tap_deletion_handler(libcouchbase_server_t *server,
                                  const void *command_cookie,
                                  protocol_binary_request_header *req)
 {
-    // @todo verify that the size is correct!
+    /* @todo verify that the size is correct! */
     char *packet = (char*)req;
     protocol_binary_request_tap_delete *deletion = (void*)req;
     uint16_t nkey = ntohs(req->request.keylen);
@@ -366,7 +368,7 @@ static void tap_flush_handler(libcouchbase_server_t *server,
                               const void *command_cookie,
                               protocol_binary_request_header *req)
 {
-    // @todo verify that the size is correct!
+    /* @todo verify that the size is correct! */
     char *packet = (char*)req;
     protocol_binary_request_tap_flush *flush = (void*)req;
     char *es = packet + sizeof(flush->bytes);
@@ -379,7 +381,7 @@ static void tap_opaque_handler(libcouchbase_server_t *server,
                                const void *command_cookie,
                                protocol_binary_request_header *req)
 {
-    // @todo verify that the size is correct!
+    /* @todo verify that the size is correct! */
     char *packet = (char*)req;
     protocol_binary_request_tap_opaque *opaque = (void*)req;
     char *es = packet + sizeof(opaque->bytes);
@@ -392,7 +394,7 @@ static void tap_vbucket_set_handler(libcouchbase_server_t *server,
                                     const void *command_cookie,
                                     protocol_binary_request_header *req)
 {
-    // @todo verify that the size is correct!
+    /* @todo verify that the size is correct! */
     libcouchbase_t root = server->instance;
     char *packet = (char*)req;
     protocol_binary_request_tap_vbucket_set *vbset = (void*)req;
@@ -442,10 +444,10 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
     libcouchbase_server_buffer_write_packet(server, &server->output, data, len);
     libcouchbase_server_buffer_end_packet(server, &server->output);
 
-    // send the data and add a write handler
+    /* send the data and add a write handler */
     libcouchbase_server_event_handler(0, LIBCOUCHBASE_WRITE_EVENT, server);
 
-    // Make it known that this was a success.
+    /* Make it known that this was a success. */
     libcouchbase_error_handler(server->instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
@@ -459,7 +461,7 @@ static void sasl_auth_response_handler(libcouchbase_server_t *server,
         server->sasl_conn = NULL;
         libcouchbase_server_connected(server);
     } else if (ret == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
-        // I don't know how to step yet ;-)
+        /* I don't know how to step yet ;-) */
         libcouchbase_error_handler(server->instance,
                                    LIBCOUCHBASE_NOT_SUPPORTED,
                                    "We don't support sasl authentication that requires \"SASL STEP\" yet");
@@ -468,7 +470,7 @@ static void sasl_auth_response_handler(libcouchbase_server_t *server,
                                    "SASL authentication failed");
     }
 
-    // Make it known that this was a success.
+    /* Make it known that this was a success. */
     libcouchbase_error_handler(server->instance, LIBCOUCHBASE_SUCCESS, NULL);
     (void)command_cookie;
 }
@@ -481,7 +483,7 @@ static void sasl_step_response_handler(libcouchbase_server_t *server,
     (void)res;
     (void)command_cookie;
 
-    // I don't have sasl step support yet ;-)
+    /* I don't have sasl step support yet ;-) */
     libcouchbase_error_handler(server->instance, LIBCOUCHBASE_NOT_SUPPORTED,
                                "SASL AUTH CONTINUE not supported yet");
 

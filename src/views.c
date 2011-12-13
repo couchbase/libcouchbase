@@ -125,14 +125,14 @@ static void on_data_cb(struct evhttp_request *req, void *arg)
  *
  *    libcouchbase_make_doc_request(instance, NULL, "_all_docs?limit=10",
  *                                  LIBCOUCHBASE_HTTP_METHOD_GET,
- *                                  NULL, 0, true);
+ *                                  NULL, 0, 1);
  *
  * @example Filter first 10 docs using POST request
  *
  *    const char body[] = "{\"keys\": [\"test_1000\", \"test_10002\"]}"
  *    libcouchbase_make_doc_request(instance, NULL, "_all_docs?limit=10",
  *                                  LIBCOUCHBASE_HTTP_METHOD_GET,
- *                                  body, sizeof(body), true);
+ *                                  body, sizeof(body), 1);
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
@@ -141,7 +141,7 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
                                                    libcouchbase_http_method_t method,
                                                    const void *body,
                                                    size_t nbody,
-                                                   bool chunked)
+                                                   int chunked)
 {
     struct view_context_st *ctx;
     const char *hostname;
@@ -195,7 +195,7 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
         return LIBCOUCHBASE_EINVAL;
     }
 
-    // @TODO FIXME!
+    /* @TODO FIXME! */
     ctx->conn = evhttp_connection_base_new(instance->io->cookie, NULL, hostname, (uint16_t)port);
     if (!ctx->conn) {
         view_context_free(ctx);

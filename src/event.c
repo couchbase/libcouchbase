@@ -81,12 +81,13 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
     }
 
     packet = c->input.read_head;
-    // we have everything!
+    /* we have everything! */
 
     if (!libcouchbase_ringbuffer_is_continous(&c->input, RINGBUFFER_READ,
                                               packetsize)) {
-        // The buffer isn't continous.. for now just copy it out and
-        // operate on the copy ;)
+        /* The buffer isn't continous.. for now just copy it out and
+        ** operate on the copy ;)
+        */
         if ((packet = malloc(packetsize)) == NULL) {
             libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
             return -1;
@@ -165,15 +166,19 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
 
 static int do_read_data(libcouchbase_server_t *c)
 {
-    // Loop and try to parse the data... We don't want to lock up the
-    // event loop completely, so set a max number of packets to process
-    // before backing off..
+    /*
+    ** Loop and try to parse the data... We don't want to lock up the
+    ** event loop completely, so set a max number of packets to process
+    ** before backing off..
+    */
     size_t processed = 0;
-    // @todo Make the backoff number tunable from the instance
+    /* @todo Make the backoff number tunable from the instance */
     const size_t operations_per_call = 1000;
     int rv = 0;
-    // The timers isn't supposed to be _that_ accurate.. it's better
-    // to shave off system calls :)
+    /*
+    ** The timers isn't supposed to be _that_ accurate.. it's better
+    ** to shave off system calls :)
+    */
     hrtime_t stop = gethrtime();
 
     while (processed < operations_per_call) {
@@ -181,9 +186,9 @@ static int do_read_data(libcouchbase_server_t *c)
         case -1:
             return -1;
         case 0:
-            // need more data
+            /* need more data */
             if ((rv = do_fill_input_buffer(c)) < 1) {
-                // error or would block ;)
+                /* error or would block ;) */
                 return rv;
             }
             break;
@@ -205,7 +210,7 @@ static int do_send_data(libcouchbase_server_t *c)
         if (nw == -1) {
             switch (c->instance->io->error) {
             case EINTR:
-                // retry
+                /* retry */
                 break;
             case EWOULDBLOCK:
                 return 0;
@@ -240,7 +245,7 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
 
     if (which & LIBCOUCHBASE_READ_EVENT) {
         if (do_read_data(c) != 0) {
-            // TODO: Is there a better error for this?
+            /* TODO: Is there a better error for this? */
             char errinfo[1024];
             snprintf(errinfo, sizeof(errinfo), "Failed to read from connection"
                      " to \"%s:%s\"", c->hostname, c->port);
@@ -255,7 +260,7 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
             char errinfo[1024];
             snprintf(errinfo, sizeof(errinfo), "Failed to send to the "
                      "connection to \"%s:%s\"", c->hostname, c->port);
-            // TODO: Is there a better error for this?
+            /* TODO: Is there a better error for this? */
             libcouchbase_error_handler(c->instance, LIBCOUCHBASE_NETWORK_ERROR,
                                        errinfo);
             return;
@@ -273,13 +278,13 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
     }
 
     if (c->instance->wait) {
-        bool done = true;
+        int done = 1;
         libcouchbase_t instance = c->instance;
         size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
             c = instance->servers + ii;
             if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes) {
-                done = false;
+                done = 0;
                 break;
             }
         }
@@ -289,6 +294,6 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
         }
     }
 
-    // Make it known that this was a success.
+    /* Make it known that this was a success. */
     libcouchbase_error_handler(c->instance, LIBCOUCHBASE_SUCCESS, NULL);
 }

@@ -39,7 +39,7 @@ libcouchbase_t libcouchbase_create(const char *host,
         io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT,
                                         NULL, NULL);
         if (io == NULL) {
-            // You can't initialize the library without a io-handler!
+            /* You can't initialize the library without a io-handler! */
             return NULL;
         }
     }
@@ -95,10 +95,10 @@ libcouchbase_t libcouchbase_create(const char *host,
 
     ret->sock = -1;
 
-    // No error has occurred yet.
+    /* No error has occurred yet. */
     ret->last_error = LIBCOUCHBASE_SUCCESS;
 
-    // setup io iops!
+    /* setup io iops! */
     ret->io = io;
 
     return ret;
@@ -331,9 +331,9 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
  * Try to parse the piece of data we've got available to see if we got all
  * the data for this "chunk"
  * @param instance the instance containing the data
- * @return true if we got all the data we need, false otherwise
+ * @return 1 if we got all the data we need, 0 otherwise
  */
-static bool parse_chunk(libcouchbase_t instance)
+static int parse_chunk(libcouchbase_t instance)
 {
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     assert(instance->vbucket_stream.chunk_size != 0);
@@ -342,8 +342,8 @@ static bool parse_chunk(libcouchbase_t instance)
         char *ptr = strstr(buffer->data, "\r\n");
         long val;
         if (ptr == NULL) {
-            // We need more data!
-            return false;
+            /* We need more data! */
+            return 0;
         }
         ptr += 2;
         val = strtol(buffer->data, NULL, 16);
@@ -355,11 +355,11 @@ static bool parse_chunk(libcouchbase_t instance)
     }
 
     if (buffer->avail < instance->vbucket_stream.chunk_size) {
-        // need more data!
-        return false;
+        /* need more data! */
+        return 0;
     }
 
-    return true;
+    return 1;
 }
 
 /**
@@ -400,7 +400,7 @@ static int parse_header(libcouchbase_t instance)
     }
 
     instance->vbucket_stream.header = strdup(buffer->data);
-    // realign remaining data..
+    /* realign remaining data.. */
     buffer->avail -= (size_t)(ptr - buffer->data);
     memmove(buffer->data, ptr, buffer->avail);
     buffer->data[buffer->avail] = '\0';
@@ -419,12 +419,14 @@ const size_t min_buffer_size = 2048;
  *
  * @param buffer the buffer to grow
  * @param min_free the minimum amount of free space I need
- * @return true if success, false otherwise
+ * @return 1 if success, 0 otherwise
  */
-bool grow_buffer(buffer_t *buffer, size_t min_free) {
+int grow_buffer(buffer_t *buffer, size_t min_free) {
     if (min_free == 0) {
-        // no minimum size requested, just ensure that there is at least
-        // one byte there...
+        /*
+        ** no minimum size requested, just ensure that there is at least
+        ** one byte there...
+        */
         min_free = 1;
     }
 
@@ -438,14 +440,14 @@ bool grow_buffer(buffer_t *buffer, size_t min_free) {
 
         ptr = realloc(buffer->data, next + 1);
         if (ptr == NULL) {
-            return false;
+            return 0;
         }
         ptr[next] = '\0';
         buffer->data = ptr;
         buffer->size = next;
     }
 
-    return true;
+    return 1;
 }
 
 /**
@@ -491,7 +493,6 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 
     do {
         if (!grow_buffer(buffer, 1)) {
-            // ERROR MEMORY ALLOCATION!
             libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM,
                                        "Failed to allocate memory");
             return ;
@@ -507,7 +508,6 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
             case EWOULDBLOCK:
                 return ;
             default:
-                /* ERROR READING SOCKET!! */
                 libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
                                            strerror(instance->io->error));
                 return ;
@@ -524,17 +524,17 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 
     if (instance->vbucket_stream.header == NULL) {
         if (parse_header(instance) == -1) {
-            // error already reported
+            /* error already reported */
             return;
         }
     }
 
     if (instance->vbucket_stream.header != NULL) {
-        bool done;
+        int done;
         do {
-            done = true;
+            done = 1;
             if (parse_chunk(instance)) {
-                // @todo copy the data over to the input buffer there..
+                /* @todo copy the data over to the input buffer there.. */
                 char *term;
                 if (!grow_buffer(&instance->vbucket_stream.input,
                                  instance->vbucket_stream.chunk_size)) {
@@ -543,11 +543,13 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
                 memcpy(instance->vbucket_stream.input.data + instance->vbucket_stream.input.avail,
                        buffer->data, instance->vbucket_stream.chunk_size);
                 instance->vbucket_stream.input.avail += instance->vbucket_stream.chunk_size;
-                // the chunk includes the \r\n at the end.. We shouldn't add that..
+                /* the chunk includes the \r\n at the end.. We shouldn't add
+                ** that..
+                */
                 instance->vbucket_stream.input.avail -= 2;
                 instance->vbucket_stream.input.data[instance->vbucket_stream.input.avail] = '\0';
 
-                // realign buffer
+                /* realign buffer */
                 memmove(buffer->data, buffer->data + instance->vbucket_stream.chunk_size,
                         buffer->avail - instance->vbucket_stream.chunk_size);
                 buffer->avail -= instance->vbucket_stream.chunk_size;
@@ -560,13 +562,13 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
 
                 instance->vbucket_stream.chunk_size = (size_t)-1;
                 if (buffer->avail > 0) {
-                    done = false;
+                    done = 0;
                 }
             }
         } while (!done);
     }
 
-    // Make it known that this was a success.
+    /* Make it known that this was a success. */
     libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
@@ -581,11 +583,11 @@ static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
                                                    short which,
                                                    void *arg) {
     libcouchbase_t instance = arg;
-    bool retry;
+    int retry;
 
     do {
         if (instance->sock == INVALID_SOCKET) {
-            // Try to get a socket..
+            /* Try to get a socket.. */
             while (instance->curr_ai != NULL) {
                 instance->sock = instance->io->socket(instance->io,
                                                       instance->curr_ai->ai_family,
@@ -607,18 +609,17 @@ static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
             return ;
         }
 
-        retry = false;
+        retry = 0;
         if (instance->io->connect(instance->io,
                                   instance->sock,
                                   instance->curr_ai->ai_addr,
                                   (int)instance->curr_ai->ai_addrlen) == 0) {
-            // connected
             libcouchbase_instance_connected(instance);
             return ;
         } else {
             switch (instance->io->error) {
             case EINTR:
-                retry = true;
+                retry = 1;
                 break;
             case EISCONN:
                 libcouchbase_instance_connected(instance);
@@ -646,7 +647,7 @@ static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
                     return ;
                 }
 
-                retry = true;
+                retry = 1;
                 instance->curr_ai = instance->curr_ai->ai_next;
                 instance->io->delete_event(instance->io,
                                            instance->sock,

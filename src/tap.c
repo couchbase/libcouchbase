@@ -28,7 +28,7 @@ struct libcouchbase_tap_filter_st {
     /** Represents the oldest entry (from epoch) you're interested in */
     uint64_t backfill;
     /** If true, notifies the tap server that we don't care about values */
-    bool keys_only;
+    int keys_only;
 };
 
 /**
@@ -43,9 +43,9 @@ libcouchbase_tap_filter_t libcouchbase_tap_filter_create()
         return NULL;
     }
 
-    // Set the defaults.
+    /* Set the defaults. */
     ret->backfill = 0;
-    ret->keys_only = false;
+    ret->keys_only = 0;
 
     return ret;
 }
@@ -89,12 +89,12 @@ uint64_t libcouchbase_tap_filter_get_backfill(libcouchbase_tap_filter_t instance
  * Set whether you are interested in keys and values, or only keys in your
  * tap stream.
  * @param instance the tap filter instance to modify.
- * @param keys_only true if you are only interested in keys, false if
+ * @param keys_only 1 if you are only interested in keys, 0 if
  *                  you also want values.
  */
 LIBCOUCHBASE_API
 void libcouchbase_tap_filter_set_keys_only(libcouchbase_tap_filter_t instance,
-                                           bool keys_only)
+                                           int keys_only)
 {
     instance->keys_only = keys_only;
 }
@@ -105,7 +105,7 @@ void libcouchbase_tap_filter_set_keys_only(libcouchbase_tap_filter_t instance,
  * @param instance the tap filter instance to retrieve the value from.
  */
 LIBCOUCHBASE_API
-bool libcouchbase_tap_filter_get_keys_only(libcouchbase_tap_filter_t instance)
+int libcouchbase_tap_filter_get_keys_only(libcouchbase_tap_filter_t instance)
 {
     return instance->keys_only;
 }
@@ -114,7 +114,7 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
 {
     libcouchbase_t instance = server->instance;
     libcouchbase_tap_filter_t filter = instance->tap.filter;
-    // Locate this index:
+    /* Locate this index: */
     size_t idx;
     size_t bodylen;
     uint16_t total = 0;
@@ -132,7 +132,7 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     }
     assert(idx != instance->nservers);
 
-    // Count the numbers of vbuckets for this server:
+    /* Count the numbers of vbuckets for this server: */
     for (ii = 0; ii < instance->nvbuckets; ++ii) {
         if (instance->vb_server_map[ii] == idx) {
             ++total;
@@ -163,12 +163,12 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     libcouchbase_server_start_packet(server, NULL, req.bytes,
                                      sizeof(req.bytes));
 
-    // Write the backfill value.
+    /* Write the backfill value. */
     if (filter && filter->backfill != 0) {
         libcouchbase_server_write_packet(server, &backfill, sizeof(backfill));
     }
 
-    // Write the vbucket list.
+    /* Write the vbucket list. */
     val = htons(total);
     libcouchbase_server_write_packet(server, &val, sizeof(val));
     for (ii = 0; ii < instance->nvbuckets; ++ii) {
@@ -186,10 +186,10 @@ LIBCOUCHBASE_API
 void libcouchbase_tap_cluster(libcouchbase_t instance,
                               const void *command_cookie,
                               libcouchbase_tap_filter_t filter,
-                              bool block)
+                              int block)
 {
     (void)command_cookie;
-    // connect to the upstream server.
+    /* connect to the upstream server. */
     instance->vbucket_state_listener = tap_vbucket_state_listener;
     instance->tap.filter = filter;
 

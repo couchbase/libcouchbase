@@ -27,10 +27,6 @@
 #include <stddef.h>
 #include <time.h>
 
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
-
 #include <libcouchbase/configuration.h>
 #include <libcouchbase/visibility.h>
 #include <libcouchbase/types.h>
@@ -131,7 +127,7 @@ extern "C" {
     void libcouchbase_tap_cluster(libcouchbase_t instance,
                                   const void *command_cookie,
                                   libcouchbase_tap_filter_t filter,
-                                  bool block);
+                                  int block);
 
     /**
      * Wait for the execution of all batched requests
@@ -360,7 +356,7 @@ extern "C" {
                                                  const void *command_cookie,
                                                  const void *key, size_t nkey,
                                                  int64_t delta, time_t exp,
-                                                 bool create, uint64_t initial);
+                                                 int create, uint64_t initial);
 
     /**
      * Spool an arithmetic operation to the cluster. The operation <b>may</b> be
@@ -390,7 +386,7 @@ extern "C" {
                                                         size_t nkey,
                                                         int64_t delta,
                                                         time_t exp,
-                                                        bool create,
+                                                        int create,
                                                         uint64_t initial);
 
     /**
@@ -482,7 +478,7 @@ extern "C" {
                                                        libcouchbase_http_method_t method,
                                                        const void *body,
                                                        size_t nbody,
-                                                       bool chunked);
+                                                       int chunked);
 
     /**
      * Flush the entire couchbase cluster!

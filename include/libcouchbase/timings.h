@@ -43,7 +43,7 @@ extern "C" {
         LIBCOUCHBASE_TIMEUNIT_NSEC = 0,
         LIBCOUCHBASE_TIMEUNIT_USEC = 1,
         LIBCOUCHBASE_TIMEUNIT_MSEC = 2,
-        LIBCOUCHBASE_TIMEUNIT_SEC = 3,
+        LIBCOUCHBASE_TIMEUNIT_SEC = 3
     } libcouchbase_timeunit_t;
 
     /**

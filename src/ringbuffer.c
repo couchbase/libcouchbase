@@ -22,17 +22,17 @@ static size_t minimum(size_t a, size_t b)
     return (a < b) ? a : b;
 }
 
-bool libcouchbase_ringbuffer_initialize(ringbuffer_t *buffer, size_t size)
+int libcouchbase_ringbuffer_initialize(ringbuffer_t *buffer, size_t size)
 {
     memset(buffer, 0, sizeof(ringbuffer_t));
     buffer->root = malloc(size);
     if (buffer->root == NULL) {
-        return false;
+        return 0;
     }
     buffer->size = size;
     buffer->write_head = buffer->root;
     buffer->read_head = buffer->root;
-    return true;
+    return 1;
 }
 
 void libcouchbase_ringbuffer_destruct(ringbuffer_t *buffer)
@@ -42,7 +42,7 @@ void libcouchbase_ringbuffer_destruct(ringbuffer_t *buffer)
     buffer->size = buffer->nbytes = 0;
 }
 
-bool libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer, size_t size)
+int libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer, size_t size)
 {
     char *new_root;
     size_t new_size = buffer->size << 1;
@@ -51,21 +51,21 @@ bool libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer, size_t size)
     }
 
     if (size < (buffer->size - buffer->nbytes)) {
-        // we've got capacity!
-        return true;
+        /* we've got capacity! */
+        return 1;
     }
 
-    // determine the new buffer size...
+    /* determine the new buffer size... */
     while ((new_size - buffer->nbytes) < size) {
         new_size <<= 1;
     }
 
-    // go ahead and allocate a bigger block
+    /* go ahead and allocate a bigger block */
     if ((new_root = malloc(new_size)) == NULL) {
-        // Allocation failed!
-        return false;
+        /* Allocation failed! */
+        return 0;
     } else {
-        // copy the data over :)
+        /* copy the data over :) */
         char *old;
         size_t nbytes = buffer->nbytes;
         size_t nr = libcouchbase_ringbuffer_read(buffer, new_root, nbytes);
@@ -79,7 +79,7 @@ bool libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer, size_t size)
         buffer->read_head = buffer->root;
         buffer->write_head = buffer->root + nbytes;
         free(old);
-        return true;
+        return 1;
     }
 }
 
@@ -113,7 +113,7 @@ size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
     size_t toWrite;
 
     if (buffer->write_head >= buffer->read_head) {
-        // write up to the end with data..
+        /* write up to the end with data.. */
         space = buffer->size - (size_t)(buffer->write_head - buffer->root);
         toWrite = minimum(space, nb);
 
@@ -129,7 +129,7 @@ size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
         }
 
         if (nw == nb) {
-            // everything is written to the buffer..
+            /* everything is written to the buffer.. */
             return nw;
         }
 
@@ -137,7 +137,7 @@ size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
         s += toWrite;
     }
 
-    // Copy data up until we catch up with the read head
+    /* Copy data up until we catch up with the read head */
     space = (size_t)(buffer->read_head - buffer->write_head);
     toWrite = minimum(space, nb);
     if (src != NULL) {
@@ -173,7 +173,7 @@ size_t libcouchbase_ringbuffer_read(ringbuffer_t *buffer, void *dest, size_t nb)
         return 0;
     }
     if (buffer->read_head >= buffer->write_head) {
-        // read up to the wrap point
+        /* read up to the wrap point */
         space = buffer->size - (size_t)(buffer->read_head - buffer->root);
         toRead = minimum(space, nb);
 
@@ -274,11 +274,11 @@ void libcouchbase_ringbuffer_get_iov(ringbuffer_t *buffer,
     }
 }
 
-bool libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
+int libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
                                           libcouchbase_ringbuffer_direction_t direction,
                                           size_t nb)
 {
-    bool ret;
+    int ret;
 
     if (direction == RINGBUFFER_READ) {
         ret = (nb <= buffer->nbytes);
@@ -286,7 +286,7 @@ bool libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
         if (buffer->read_head >= buffer->write_head) {
             ptrdiff_t chunk = buffer->root + buffer->size - buffer->read_head;
             if (buffer->nbytes > (size_t)chunk) {
-                ret = false;
+                ret = 0;
             }
         }
     } else {
@@ -294,14 +294,14 @@ bool libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
         if (buffer->write_head >= buffer->read_head) {
             ptrdiff_t chunk = buffer->root + buffer->size - buffer->write_head;
             if (buffer->nbytes > (size_t)chunk) {
-                ret = false;
+                ret = 0;
             }
         }
     }
     return ret;
 }
 
-bool libcouchbase_ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest)
+int libcouchbase_ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest)
 {
     char buffer[1024];
     size_t nr, nw;
@@ -310,15 +310,15 @@ bool libcouchbase_ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest)
                                               sizeof(buffer))) != 0) {
         if (!libcouchbase_ringbuffer_ensure_capacity(dest, nr)) {
             abort();
-            return false;
+            return 0;
         }
 
         nw = libcouchbase_ringbuffer_write(dest, buffer, nr);
         if (nw != nr) {
             abort();
-            return false;
+            return 0;
         }
     }
 
-    return true;
+    return 1;
 }

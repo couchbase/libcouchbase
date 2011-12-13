@@ -21,7 +21,6 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,7 +63,7 @@ extern "C" {
         size_t size;
         size_t avail;
     } buffer_t;
-    bool grow_buffer(buffer_t *buffer, size_t min_free);
+    int grow_buffer(buffer_t *buffer, size_t min_free);
 
     /**
      * Data stored per command in the command-cookie buffer...
@@ -158,7 +157,7 @@ extern "C" {
         struct libcouchbase_histogram_st *histogram;
 
         uint32_t seqno;
-        bool wait;
+        int wait;
         const void *cookie;
 
         libcouchbase_error_t last_error;
@@ -204,7 +203,7 @@ extern "C" {
         /** The event item representing _this_ object */
         void *event;
         /** Is this server in a connected state (done with sasl auth) */
-        bool connected;
+        int connected;
         /** The current event handler */
         EVENT_HANDLER ev_handler;
         /* Pointer back to the instance */
