@@ -31,7 +31,6 @@
 #include <stdbool.h>
 #endif
 
-#include <memcached/vbucket.h>
 #include <libcouchbase/configuration.h>
 #include <libcouchbase/visibility.h>
 #include <libcouchbase/types.h>

@@ -92,7 +92,7 @@ extern "C" {
     typedef void (*libcouchbase_tap_vbucket_set_callback)(libcouchbase_t instance,
                                                           const void *cookie,
                                                           uint16_t vbid,
-                                                          vbucket_state_t state,
+                                                          libcouchbase_vbucket_state_t state,
                                                           const void *es,
                                                           size_t nes);
     typedef void (*libcouchbase_error_callback)(libcouchbase_t instance,

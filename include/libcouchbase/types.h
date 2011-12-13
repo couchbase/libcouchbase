@@ -125,6 +125,13 @@ extern "C" {
         LIBCOUCHBASE_HTTP_METHOD_PATCH   = 1 << 8
     } libcouchbase_http_method_t;
 
+    typedef enum {
+        LIBCOUCHBASE_VBUCKET_STATE_ACTIVE = 1,   /* Actively servicing a vbucket. */
+        LIBCOUCHBASE_VBUCKET_STATE_REPLICA,      /* Servicing a vbucket as a replica only. */
+        LIBCOUCHBASE_VBUCKET_STATE_PENDING,      /* Pending active. */
+        LIBCOUCHBASE_VBUCKET_STATE_DEAD          /* Not in use, pending deletion. */
+    } libcouchbase_vbucket_state_t;
+
     struct sockaddr;
 
     struct libcouchbase_iovec_st {

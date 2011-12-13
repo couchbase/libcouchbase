@@ -402,7 +402,7 @@ static void tap_vbucket_set_handler(libcouchbase_server_t *server,
     memcpy(&state, es + nes, sizeof(state));
     state = ntohl(state);
     root->callbacks.tap_vbucket_set(root, command_cookie, ntohs(req->request.vbucket),
-                                    (vbucket_state_t)state, es, nes);
+                                    (libcouchbase_vbucket_state_t)state, es, nes);
 }
 
 static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
@@ -572,7 +572,7 @@ static void dummy_tap_opaque_callback(libcouchbase_t instance,
 static void dummy_tap_vbucket_set_callback(libcouchbase_t instance,
                                            const void *cookie,
                                            uint16_t vbid,
-                                           vbucket_state_t state,
+                                           libcouchbase_vbucket_state_t state,
                                            const void *es,
                                            size_t nes)
 {

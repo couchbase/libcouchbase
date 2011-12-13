@@ -52,7 +52,7 @@ AC_PATH_PROG(CURL, curl, no)
 dnl Enable to specify external source for memcached headers. For example:
 dnl https://raw.github.com/memcached/memcached/engine-pu/include/memcached/
 AC_ARG_WITH([memcached-headers-url],
-    [AC_HELP_STRING([--with-memcached-headers-url], [Download protocol_header.h from given location.])],
+    [AC_HELP_STRING([--with-memcached-headers-url], [Download protocol_binary.h from given location.])],
     [
         AS_IF([test "x${WGET}" != "xno"],
               [DOWNLOAD="${WGET} -q -O"],
@@ -60,14 +60,13 @@ AC_ARG_WITH([memcached-headers-url],
                       [DOWNLOAD="${CURL} -s -o"],
                       [AC_MSG_ERROR([You need wget or curl in path to download the headers.])])])
         mkdir -p include/memcached && \
-        ${DOWNLOAD} include/memcached/protocol_binary.h ${withval}/protocol_binary.h && \
+        ${DOWNLOAD} include/memcached/protocol_binary.h ${withval}/protocol_binary.h  && \
         ${DOWNLOAD} include/memcached/vbucket.h ${withval}/vbucket.h
         CFLAGS="${CFLAGS} -Iinclude"
     ]
 )
 
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h
-                       memcached/vbucket.h
                        memcached/protocol_binary.h
                        sys/socket.h
                        sys/time.h
@@ -80,10 +79,6 @@ AC_CHECK_HEADERS_ONCE([mach/mach_time.h
 
 AS_IF([test "x$ac_cv_header_memcached_protocol_binary_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate memcached/protocol_binary.h)])
-
-AS_IF([test "x$ac_cv_header_memcached_vbucket_h" != "xyes"],
-      [AC_MSG_ERROR(Failed to locate memcached/vbucket.h)])
-
 
 AC_CACHE_CHECK([for htonll], [ac_cv_have_htonll],
     [AC_TRY_LINK([
