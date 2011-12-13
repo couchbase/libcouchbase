@@ -649,21 +649,23 @@ static void dummy_touch_callback(libcouchbase_t instance,
 static void dummy_doc_complete_callback(libcouchbase_t instance,
                                         const void *cookie,
                                         libcouchbase_error_t error,
+                                        libcouchbase_http_status_t status,
                                         const char *uri,
                                         const void *bytes, size_t nbytes)
 {
     (void)instance; (void)cookie; (void)error; (void)uri;
-    (void)bytes; (void)nbytes;
+    (void)bytes; (void)nbytes; (void)status;
 }
 
 static void dummy_doc_data_callback(libcouchbase_t instance,
                                     const void *cookie,
                                     libcouchbase_error_t error,
+                                    libcouchbase_http_status_t status,
                                     const char *uri,
                                     const void *bytes, size_t nbytes)
 {
     (void)instance; (void)cookie; (void)error; (void)uri;
-    (void)bytes; (void)nbytes;
+    (void)bytes; (void)nbytes; (void)status;
 }
 
 static void dummy_flush_callback(libcouchbase_t instance,

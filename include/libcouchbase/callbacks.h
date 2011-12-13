@@ -112,6 +112,7 @@ extern "C" {
     typedef void (*libcouchbase_doc_complete_callback)(libcouchbase_t instance,
                                                        const void *cookie,
                                                        libcouchbase_error_t error,
+                                                       libcouchbase_http_status_t status,
                                                        const char *uri,
                                                        const void *bytes, size_t nbytes);
 
@@ -125,6 +126,7 @@ extern "C" {
     typedef void (*libcouchbase_doc_data_callback)(libcouchbase_t instance,
                                                    const void *cookie,
                                                    libcouchbase_error_t error,
+                                                   libcouchbase_http_status_t status,
                                                    const char *uri,
                                                    const void *bytes, size_t nbytes);
     LIBCOUCHBASE_API

@@ -55,27 +55,12 @@ static void view_context_free(struct view_context_st *ctx)
 
 static libcouchbase_error_t translate_response_code(int response_code)
 {
-    /* TODO perhaps they could me mapped more accurately */
-    switch(response_code)
-    {
-    case HTTP_OK:                   /* 200 request completed ok */
-    case HTTP_NOCONTENT:            /* 204 request does not have content */
-            return LIBCOUCHBASE_SUCCESS;
-
-    case HTTP_NOTFOUND:             /* 404 could not find content for uri */
-            return LIBCOUCHBASE_KEY_ENOENT;
-
-    case HTTP_MOVEPERM:             /* 301 the uri moved permanently */
-    case HTTP_MOVETEMP:             /* 302 the uri moved temporarily */
-    case HTTP_NOTMODIFIED:          /* 304 page was not modified from last */
-    case HTTP_BADMETHOD:            /* 405 method not allowed for this uri */
-    case HTTP_ENTITYTOOLARGE:       /* 413 */
-    case HTTP_EXPECTATIONFAILED:    /* 417 we can't handle this expectation */
-    case HTTP_INTERNAL:             /* 500 internal error */
-    case HTTP_NOTIMPLEMENTED:       /* 501 not implemented */
-    case HTTP_SERVUNAVAIL:          /* 503 the server is not available */
-    default:
-            return LIBCOUCHBASE_EINTERNAL;
+    if (response_code < 400) {
+        return LIBCOUCHBASE_SUCCESS;
+    } else if (response_code == LIBCOUCHBASE_HTTP_STATUS_NOT_FOUND) {
+        return LIBCOUCHBASE_KEY_ENOENT;
+    } else {
+        return LIBCOUCHBASE_PROTOCOL_ERROR;
     }
 }
 
@@ -98,10 +83,12 @@ static void on_complete_cb(struct evhttp_request *req, void *arg)
     nbytes = evbuffer_get_length(req->input_buffer);
     if (ctx->chunked) {
         ctx->instance->callbacks.doc_data(ctx->instance, ctx->cookie, rc,
-                                          ctx->uri, bytes, nbytes);
+                                          req->response_code, ctx->uri,
+                                          bytes, nbytes);
     } else {
         ctx->instance->callbacks.doc_complete(ctx->instance, ctx->cookie, rc,
-                                              ctx->uri, bytes, nbytes);
+                                              req->response_code, ctx->uri,
+                                              bytes, nbytes);
     }
 
     /* and free resources we captured earlier in the context */
@@ -121,7 +108,8 @@ static void on_data_cb(struct evhttp_request *req, void *arg)
     bytes = evbuffer_pullup(req->input_buffer, -1);
     nbytes = evbuffer_get_length(req->input_buffer);
     ctx->instance->callbacks.doc_data(ctx->instance, ctx->cookie,
-                                      rc, ctx->uri, bytes, nbytes);
+                                      rc, req->response_code, ctx->uri,
+                                      bytes, nbytes);
 }
 
 /* Execute CouchDB view using URI part with design document id, view name and

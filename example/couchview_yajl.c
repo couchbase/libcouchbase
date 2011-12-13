@@ -293,12 +293,12 @@ static yajl_callbacks parser_callbacks = {
 static void data_callback(libcouchbase_t instance,
                           const void *cookie,
                           libcouchbase_error_t error,
+                          libcouchbase_http_status_t status,
                           const char *uri,
                           const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
     yajl_status st;
-    (void)instance; (void)uri; (void)error;
 
     if (bytes) {
         st = yajl_parse(c->parser, bytes, (unsigned int)nbytes);
@@ -323,11 +323,13 @@ static void data_callback(libcouchbase_t instance,
         }
         c->io->stop_event_loop(c->io);
     }
+    (void)instance; (void)uri; (void)error; (void)status;
 }
 
 static void complete_callback(libcouchbase_t instance,
                               const void *cookie,
                               libcouchbase_error_t error,
+                              libcouchbase_http_status_t status,
                               const char *uri,
                               const void *bytes, size_t nbytes)
 {
@@ -351,7 +353,7 @@ static void complete_callback(libcouchbase_t instance,
             yajl_gen_clear(c->gen);
         }
     } else {
-        fprintf(stderr, "FAIL\n");
+        fprintf(stderr, "FAIL(%d)\n", status);
         fwrite(bytes, nbytes, 1, output);
     }
     c->io->stop_event_loop(c->io);

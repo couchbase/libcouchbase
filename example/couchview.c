@@ -196,21 +196,23 @@ FILE *output;
 static void data_callback(libcouchbase_t instance,
                           const void *cookie,
                           libcouchbase_error_t error,
+                          libcouchbase_http_status_t status,
                           const char *uri,
                           const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
-    (void)instance; (void)uri; (void)error;
 
     fwrite(bytes, nbytes, 1, output);
     if (bytes == NULL) { /* end of response */
         c->io->stop_event_loop(c->io);
     }
+    (void)instance; (void)uri; (void)error; (void)status;
 }
 
 static void complete_callback(libcouchbase_t instance,
                               const void *cookie,
                               libcouchbase_error_t error,
+                              libcouchbase_http_status_t status,
                               const char *uri,
                               const void *bytes, size_t nbytes)
 {
@@ -222,7 +224,7 @@ static void complete_callback(libcouchbase_t instance,
         fprintf(stderr, "OK\n");
         fwrite(bytes, nbytes, 1, output);
     } else {
-        fprintf(stderr, "FAIL\n");
+        fprintf(stderr, "FAIL(%d)\n", status);
         fwrite(bytes, nbytes, 1, output);
     }
     c->io->stop_event_loop(c->io);
