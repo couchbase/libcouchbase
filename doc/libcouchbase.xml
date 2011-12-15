@@ -32,7 +32,8 @@
       <m_title>Client cookie</m_title>
       <description>
         This is a cookie the client may attach to all requests that will be
-        included in all callbacks. Use NULL if you don't want to use it.
+        included in all callbacks. It is not required and may be NULL if
+        you have no need for it.
       </description>
       <langtype id="c" type="const void*"/>
     </argument>
@@ -66,7 +67,7 @@
     </argument>
 
     <argument id="create" type="bool">
-      <m_title>Should the key be created if non-existent?</m_title>
+      <m_title>Should the key be created if it does not exist?</m_title>
       <langtype id="c" type="bool"/>
     </argument>
 
@@ -77,6 +78,13 @@
 
     <argument id="hashkey" type="const void*">
       <m_title>An alternative key used to locate the server</m_title>
+      <description>
+        This alternate hashkey allows a client application to group a
+        set of unique keys together to a given server though the keys
+        themselves may be unique.  For example, you may wish to use the
+        hashkey "user" for the two data keys "user:name" and
+        "user:birthdate".  Note that not all clients support this option
+        so it may not be interoperable between clients.
       <langtype id="c" type="const void*"/>
     </argument>
 
@@ -86,7 +94,7 @@
     </argument>
 
     <argument id="num_keys" type="size_t">
-      <m_title>number of keys</m_title>
+      <m_title>Number of keys</m_title>
       <langtype id="c" type="size_t"/>
     </argument>
 
@@ -109,13 +117,15 @@
       <m_title>Object version</m_title>
       <description>
 	The cas value for an object is guaranteed to be
-      unique for each value of a given key.
+        unique for each value of a given key. This value is used to provide
+        simple optimistic concurrency control when multiple clients or threads
+        try to update an item simultaneously.
       </description>
       <langtype id="c" type="uint64_t"/>
     </argument>
 
     <argument id="store_operation" type="libcouchbase_storage_t">
-      <m_title>The kind of storage operation (set/replace/add etc)</m_title>
+      <m_title>The kind of storage operation (set/replace/add etc.)</m_title>
       <langtype id="c" type="libcouchbase_storage_t"/>
     </argument>
 
@@ -246,9 +256,9 @@
   </apicall>
 
   <apicall id="libcouchbase_connect" mansection="3couchbase">
-    <m_title>Initiate a connect attemt to the Couchbase cluster.</m_title>
+    <m_title>Initiate a connect attempt to the Couchbase cluster.</m_title>
     <description>
-      Initiate a connect attemt to the Couchbase cluster to get the
+      Initiate a connect attempt to the Couchbase cluster to get the
       serverlist.  Please note that this method is asynchronous, so you
       need to call libcouchbase_wait to wait for the method to
       compete.
@@ -283,12 +293,13 @@
     <description>
        libcouchbase_create allocates and initializes an instance of
        libcouchbase.  No connection attempt is at this time. host may
-       be specified as "host:port" and is the administration port you
-       would navigate your web browser to (default:
-       "localhost:8091"). user and passwd is the user- name/password
+       be specified as "host:port" and is the REST interface port
+       for the cluster (default:
+       "localhost:8091"). user and password are the username/password
        combination you want to authenticate as. bucket specifies the
        bucket you would like to connect to. opps is the io operation
-       structure to use (see libcouchbase_create_io_ops).
+       structure to use (see libcouchbase_create_io_ops). The bucket name
+       and the username are commonly the same.
     </description>
 
     <args>
@@ -349,7 +360,7 @@
   <apicall id="libcouchbase_disable_timings" mansection="3couchbase">
     <m_title>Stop recording timing metrics</m_title>
     <description>
-      Stop recoring of timing metrics and release all resources
+      Stop recording of timing metrics and release all resources
       allocated for timing metrics.
     </description>
     <args>
@@ -367,7 +378,7 @@
   <apicall id="libcouchbase_enable_timings" mansection="3couchbase">
     <m_title>Start recording timing metrics</m_title>
     <description>
-      Start recoring of timing metrics for operations towards the
+      Start recording of timing metrics for operations against the
       cluster.
     </description>
     <args>
@@ -617,15 +628,15 @@
     <m_title>Request server statistics</m_title>
     <description>
       Request server statistics. Without a key specified the server will
-      respond with a "default" set of statistics information. Each piece of
-      statistical information is returned in its own packet (key contains
+      respond with a "default" set of statistical information. Each
+      statistic is returned in its own packet (key contains
       the name of the statistical item and the body contains the value in
       ASCII format). The sequence of return packets is terminated with a
       packet that contains no key and no value.
 
       The command will signal about transfer completion by passing NULL as
       the server endpoint and 0 for key length. Note that key length will
-      be zero when some server responds with error. In latter case server
+      be zero when some server responds with error. In the latter case server
       endpoint argument will indicate the server address.
     </description>
     <args>
@@ -955,6 +966,8 @@
   <apicall id="libcouchbase_tap_filter_create" mansection="3couchbase">
     <m_title>Create a tap filter</m_title>
     <description>
+      tap filters are on the client side only, so data still needs to
+      be transferred across the network
       @fixme
     </description>
     <args>
@@ -1055,7 +1068,7 @@
     <description>
       libcouchbase_wait cause the calling thread to block and
       wait until all spooled operations (and their callbacks)
-      is completed.
+      have completed.
     </description>
     <args>
       <argument inherit="instance"/>
