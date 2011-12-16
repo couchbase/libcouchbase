@@ -3,31 +3,6 @@
 <apicalls>
 
   <argbase>
-    <argument id="host" type="string">
-      <m_title>Hostname</m_title>
-      <langtype id="c" type="const char*"/>
-    </argument>
-
-    <argument id="user" type="string">
-      <m_title>Username</m_title>
-      <langtype id="c" type="const char*"/>
-    </argument>
-
-    <argument id="passwd" type="string">
-      <m_title>Password</m_title>
-      <langtype id="c" type="const char*"/>
-    </argument>
-
-    <argument id="bucket" type="string">
-      <m_title>Bucket name</m_title>
-      <langtype id="c" type="const char*"/>
-    </argument>
-
-    <argument id="iops" type="object">
-      <m_title>I/O operation structure</m_title>
-      <langtype id="c" type="libcouchbase_io_ops_t*"/>
-    </argument>
-
     <argument id="cookie" type="const void*">
       <m_title>Client cookie</m_title>
       <description>
@@ -139,8 +114,6 @@
       <m_title>Number of bytes used</m_title>
       <langtype id="c" type="size_t"/>
     </argument>
-
-
   </argbase>
 
   <returnbase>
@@ -303,6 +276,33 @@
        and the username are commonly the same.
     </description>
 
+    <argbase>
+      <argument id="host" type="string">
+	<m_title>Hostname</m_title>
+	<langtype id="c" type="const char*"/>
+      </argument>
+
+      <argument id="user" type="string">
+	<m_title>Username</m_title>
+	<langtype id="c" type="const char*"/>
+      </argument>
+
+      <argument id="passwd" type="string">
+	<m_title>Password</m_title>
+	<langtype id="c" type="const char*"/>
+      </argument>
+
+      <argument id="bucket" type="string">
+	<m_title>Bucket name</m_title>
+	<langtype id="c" type="const char*"/>
+      </argument>
+
+      <argument id="iops" type="object">
+	<m_title>I/O operation structure</m_title>
+	<langtype id="c" type="libcouchbase_io_ops_t*"/>
+      </argument>
+    </argbase>
+
     <args>
       <argument inherit="host"/>
       <argument inherit="user"/>
@@ -324,10 +324,10 @@
           </error>
           <error errortype="NULL">
             <errdesc>on failure</errdesc>
-          </error>
+            </error>
         </errors>
       </dcall>
-    </derivative>
+      </derivative>
   </apicall>
 
   <apicall id="libcouchbase_create_io_ops" mansection="3couchbase">
@@ -656,12 +656,33 @@
   <apicall id="libcouchbase_set_arithmetic_callback" mansection="3couchbase">
     <m_title>Set the callback used for arithmetic operations</m_title>
     <description>
-      @todo fixme
+      Specify the callback to be used for all arithmetic
+      operations. The callback will be called whenever the operation
+      completes, and the parameters to the callback will describe the
+      result of the operation.
     </description>
+
+    <argbase>
+      <argument id="callback" type="libcouchbase_arithmetic_callback">
+	<m_title>The callback function</m_title>
+	<langtype id="c" type="libcouchbase_arithmetic_callback"/>
+      </argument>
+    </argbase>
+
+    <returnbase>
+      <return id="libcouchbase_arithmetic_callback"
+	      type="libcouchbase_arithmetic_callback">
+	<m_title>The previous callback function</m_title>
+	<langtype id="c" type="libcouchbase_arithmetic_callback"/>
+      </return>
+    </returnbase>
+
     <args>
       <argument inherit="instance"/>
+      <argument inherit="callback"/>
     </args>
     <derivative lang="c">
+      <return inherit="libcouchbase_arithmetic_callback"/>
       <attribute type="Interface Stability" value="Committed"/>
       <dcall id="libcouchbase_set_arithmetic_callback" inherit="all"/>
     </derivative>
@@ -686,12 +707,34 @@
   <apicall id="libcouchbase_set_error_callback" mansection="3couchbase">
     <m_title>Set the eror callback</m_title>
     <description>
-      @todo fixme
+      Set the callback function to be used by libcouchbase to report
+      errors back to the client. Due to the asyncronous nature of
+      libcouchbase errors may occur outside of the normal access
+      pattern and such problems will be reported through this error
+      handler.
     </description>
+
+    <argbase>
+      <argument id="callback" type="libcouchbase_error_callback">
+	<m_title>The callback function</m_title>
+	<langtype id="c" type="libcouchbase_error_callback"/>
+      </argument>
+    </argbase>
+
+    <returnbase>
+      <return id="libcouchbase_error_callback"
+	      type="libcouchbase_error_callback">
+	<m_title>The previous callback function</m_title>
+	<langtype id="c" type="libcouchbase_error_callback"/>
+      </return>
+    </returnbase>
+
     <args>
       <argument inherit="instance"/>
+      <argument inherit="callback"/>
     </args>
     <derivative lang="c">
+      <return inherit="libcouchbase_error_callback"/>
       <attribute type="Interface Stability" value="Committed"/>
       <dcall id="libcouchbase_set_error_callback" inherit="all"/>
     </derivative>
@@ -1047,20 +1090,6 @@
     <derivative lang="c">
       <attribute type="Interface Stability" value="Committed"/>
       <dcall id="libcouchbase_tap_filter_set_keys_only" inherit="all"/>
-    </derivative>
-  </apicall>
-
-  <apicall id="libcouchbase_view_execute" mansection="3couchbase">
-    <m_title>@fixme</m_title>
-    <description>
-      @fixme
-    </description>
-    <args>
-      <argument inherit="instance"/>
-    </args>
-    <derivative lang="c">
-      <attribute type="Interface Stability" value="Committed"/>
-      <dcall id="libcouchbase_view_execute" inherit="all"/>
     </derivative>
   </apicall>
 
