@@ -48,32 +48,30 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
                                                uint32_t flags, time_t exp,
                                                uint64_t cas)
 {
-    uint16_t vb;
     libcouchbase_server_t *server;
     protocol_binary_request_set req;
     size_t headersize;
     size_t bodylen;
+    int vb, idx;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return LIBCOUCHBASE_ETMPFAIL;
     }
 
-    if (nhashkey != 0) {
-        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                                  hashkey, nhashkey);
-    } else {
-        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                                  key, nkey);
+    if (nhashkey == 0) {
+        nhashkey = nkey;
+        hashkey = key;
     }
+    (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
+    server = instance->servers + (size_t)idx;
 
-    server = instance->servers + instance->vb_server_map[vb];
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.keylen = ntohs((uint16_t)nkey);
     req.message.header.request.extlen = 8;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.vbucket = ntohs(vb);
+    req.message.header.request.vbucket = ntohs((uint16_t)vb);
     req.message.header.request.opaque = ++instance->seqno;
     req.message.header.request.cas = cas;
     req.message.body.flags = htonl(flags);

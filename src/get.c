@@ -55,10 +55,10 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                               const size_t *nkey,
                                               const time_t *exp)
 {
-    uint16_t vb = 0;
     libcouchbase_server_t *server = NULL;
     protocol_binary_request_noop noop;
     size_t ii;
+    int vb, idx;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
@@ -71,24 +71,22 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     }
 
     if (nhashkey != 0) {
-        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                                  hashkey, nhashkey);
-        server = instance->servers + instance->vb_server_map[vb];
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
+        server = instance->servers + (size_t)idx;
     }
 
     for (ii = 0; ii < num_keys; ++ii) {
         protocol_binary_request_gat req;
         if (nhashkey == 0) {
-            vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                                      keys[ii], nkey[ii]);
-            server = instance->servers + instance->vb_server_map[vb];
+            (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &vb, &idx);
+            server = instance->servers + (size_t)idx;
         }
 
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
         req.message.header.request.keylen = ntohs((uint16_t)nkey[ii]);
         req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs(vb);
+        req.message.header.request.vbucket = ntohs((uint16_t)vb);
         req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]));
         req.message.header.request.opaque = ++instance->seqno;
 
@@ -146,24 +144,22 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
                                                     const size_t nkey,
                                                     const time_t *exp)
 {
-    uint16_t vb = 0;
     libcouchbase_server_t *server;
     protocol_binary_request_gat req;
+    int vb, idx;
 
-    if (nhashkey != 0) {
-        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                                  hashkey, nhashkey);
-    } else {
-        vb = (uint16_t)vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                                  key, nkey);
+    if (nhashkey == 0) {
+        nhashkey = nkey;
+        hashkey = key;
     }
-    server = instance->servers + instance->vb_server_map[vb];
+    (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
+    server = instance->servers + (size_t)idx;
 
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.keylen = ntohs((uint16_t)nkey);
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.vbucket = ntohs(vb);
+    req.message.header.request.vbucket = ntohs((uint16_t)vb);
     req.message.header.request.bodylen = ntohl((uint32_t)(nkey));
     req.message.header.request.opaque = ++instance->seqno;
 

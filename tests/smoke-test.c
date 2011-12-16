@@ -210,7 +210,7 @@ static void test_get1(void)
 
 int main(int argc, char **argv)
 {
-    const char *args[] = {"--nodes", "5", NULL};
+    const char *args[] = {"--nodes", "5", "--buckets=default::memcache", NULL};
 
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
         freopen("/dev/null", "w", stdout);
@@ -223,6 +223,17 @@ int main(int argc, char **argv)
     test_get1();
 
     teardown();
+
+    args[3] = NULL;
+    setup((char **)args);
+
+    test_set1();
+    test_set2();
+    test_get1();
+
+    teardown();
+
+
     (void)argc; (void)argv;
     return EXIT_SUCCESS;
 }

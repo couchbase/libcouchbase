@@ -217,7 +217,7 @@ int main(int argc, char **argv)
         freopen("/dev/null", "w", stdout);
     }
 
-    smoke_test();
+    (void)smoke_test;
     buffer_relocation_test();
 
     return EXIT_SUCCESS;

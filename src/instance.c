@@ -241,8 +241,8 @@ static void relocate_packets(ringbuffer_t *src,
     libcouchbase_server_t *server;
     uint32_t nbody, nkey;
     char *body, *key;
-    uint16_t vb;
     size_t nr;
+    int vb, idx;
 
     while ((nr = libcouchbase_ringbuffer_read(src, cmd.bytes, sizeof(cmd.bytes)))) {
         nkey = ntohs(cmd.request.keylen);
@@ -251,9 +251,8 @@ static void relocate_packets(ringbuffer_t *src,
         nr = libcouchbase_ringbuffer_read(src, body, nbody);
         assert(nr == nbody);
         key = body + cmd.request.extlen;
-        vb = (uint16_t)vbucket_get_vbucket_by_key(dst->vbucket_config,
-                                                  key, nkey);
-        server = dst->servers + dst->vb_server_map[vb];
+        (void)vbucket_map(dst->vbucket_config, key, nkey, &vb, &idx);
+        server = dst->servers + (size_t)idx;
         nr = libcouchbase_ringbuffer_read(src_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
         libcouchbase_server_start_packet(server, ct.cookie,
