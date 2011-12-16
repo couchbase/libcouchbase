@@ -123,12 +123,12 @@ static void smoke_test(void)
     assert(config_cnt == 20);
 
     config_cnt = 0;
-    failover_node(mock, 0);
+    failover_node(mock, 0, NULL);
     io->run_event_loop(io);
     assert(config_cnt == 19);
 
     config_cnt = 0;
-    respawn_node(mock, 0);
+    respawn_node(mock, 0, NULL);
     io->run_event_loop(io);
     assert(config_cnt == 20);
 
@@ -185,7 +185,7 @@ static void buffer_relocation_test(void)
     idx = instance->vb_server_map[vb];
 
     /* switch off that server */
-    failover_node(mock, idx);
+    failover_node(mock, idx, NULL);
 
     /* execute event loop to reconfigure client and execute operation */
     config_cnt = 0;

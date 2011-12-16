@@ -23,7 +23,7 @@ const void *start_mock_server(char **cmdline);
 const char *get_mock_http_server(const void *);
 void shutdown_mock_server(const void *);
 
-void failover_node(const void *handle, int idx);
-void respawn_node(const void *handle, int idx);
+void failover_node(const void *handle, int idx, const char *bucket);
+void respawn_node(const void *handle, int idx, const char *bucket);
 
 #endif

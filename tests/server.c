@@ -196,20 +196,20 @@ const void *start_mock_server(char **cmdline) {
     return info;
 }
 
-void failover_node(const void *handle, int idx)
+void failover_node(const void *handle, int idx, const char *bucket)
 {
     struct mock_server_info *info = (void*)handle;
     char buffer[1024];
-    int nb = snprintf(buffer, 1024, "failover,%d,default\n", idx);
+    int nb = snprintf(buffer, 1024, "failover,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
     assert(nw == nb);
 }
 
-void respawn_node(const void *handle, int idx)
+void respawn_node(const void *handle, int idx, const char *bucket)
 {
     struct mock_server_info *info = (void*)handle;
     char buffer[1024];
-    int nb = snprintf(buffer, 1024, "respawn,%d,default\n", idx);
+    int nb = snprintf(buffer, 1024, "respawn,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
     assert(nw == nb);
 }
