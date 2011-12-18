@@ -76,7 +76,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
     req.message.header.request.vbucket = ntohs(vb);
     req.message.header.request.opaque = ++instance->seqno;
     req.message.header.request.cas = cas;
-    req.message.body.flags = flags;
+    req.message.body.flags = htonl(flags);
     req.message.body.expiration = htonl((uint32_t)exp);
 
     headersize = sizeof(req.bytes);

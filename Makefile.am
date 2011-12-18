@@ -155,6 +155,7 @@ check_PROGRAMS = base64-test \
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
 check_PROGRAMS += arithmetic-test \
+                  flags-test \
                   timings-test \
                   config-test \
                   smoke-test
@@ -184,6 +185,11 @@ arithmetic_test_SOURCES = tests/arithmetic.c
 arithmetic_test_LDADD = libcouchbase.la libmockserver.la
 arithmetic_test_LDFLAGS = $(LTLIBEVENT)
 arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
+
+flags_test_SOURCES = tests/flags-test.c
+flags_test_LDADD = libcouchbase.la libmockserver.la
+flags_test_LDFLAGS = $(LTLIBEVENT)
+flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 TESTS=${check_PROGRAMS} tests/check-mans.sh
 
