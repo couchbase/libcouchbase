@@ -25,7 +25,6 @@
 /config/ltmain.sh
 /config/missing
 /config/mkinstalldirs
-/config/pandora_vc_revinfo
 /config/plugin.ac
 /configure
 /example/couchview

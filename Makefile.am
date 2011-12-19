@@ -76,13 +76,13 @@ endif
 
 # Please remember to update the version info before each release if you
 # add / remove functions.
-libcouchbase_la_LDFLAGS=$(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2) \
+libcouchbase_la_LDFLAGS=-lvbucket $(LIBSASL)  \
                       -version-info 0:0:0
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
 
 libcouchbase_libevent_la_SOURCES = src/plugin-libevent.c
-libcouchbase_libevent_la_LDFLAGS=$(LTLIBEVENT) -version-info 1:0:0
+libcouchbase_libevent_la_LDFLAGS=-levent -version-info 1:0:0
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
 tests/CouchbaseMock.jar:
@@ -117,35 +117,35 @@ endif
 
 example_memcat_SOURCES = example/memcat.c
 example_memcat_LDADD = libcouchbase.la
-example_memcat_LDFLAGS = $(LTLIBEVENT)
+example_memcat_LDFLAGS = -levent
 
 example_memcp_SOURCES = example/memcp.c
 example_memcp_LDADD = libcouchbase.la
-example_memcp_LDFLAGS = $(LTLIBEVENT)
+example_memcp_LDFLAGS = -levent
 
 example_memdump_SOURCES = example/memdump.c
 example_memdump_LDADD = libcouchbase.la
-example_memdump_LDFLAGS = $(LTLIBEVENT)
+example_memdump_LDFLAGS = -levent
 
 example_memflush_SOURCES = example/memflush.c
 example_memflush_LDADD = libcouchbase.la
-example_memflush_LDFLAGS = $(LTLIBEVENT)
+example_memflush_LDFLAGS = -levent
 
 example_memrm_SOURCES = example/memrm.c
 example_memrm_LDADD = libcouchbase.la
-example_memrm_LDFLAGS = $(LTLIBEVENT)
+example_memrm_LDFLAGS = -levent
 
 example_memstat_SOURCES = example/memstat.c
 example_memstat_LDADD = libcouchbase.la
-example_memstat_LDFLAGS = $(LTLIBEVENT)
+example_memstat_LDFLAGS = -levent
 
 example_couchview_SOURCES = example/couchview.c
 example_couchview_LDADD = libcouchbase.la
-example_couchview_LDFLAGS = $(LTLIBEVENT)
+example_couchview_LDFLAGS = -levent
 
 example_couchview_yajl_SOURCES = example/couchview_yajl.c
 example_couchview_yajl_LDADD = libcouchbase.la
-example_couchview_yajl_LDFLAGS = $(LTLIBEVENT) $(LTLIBYAJL)
+example_couchview_yajl_LDFLAGS = -levent -lyajl
 
 check_PROGRAMS = base64-test \
                  getopt-test \
@@ -166,29 +166,29 @@ getopt_test_SOURCES = tests/getopt-test.cc
 
 config_test_SOURCES = tests/test.h tests/config-test.c
 config_test_LDADD = libcouchbase.la libmockserver.la
-config_test_LDFLAGS = -ldl $(LTLIBEVENT) $(LTLIBVBUCKET)
+config_test_LDFLAGS = -ldl -levent -lvbucket
 
 ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
 
 timings_test_SOURCES = tests/timings-test.c
 timings_test_LDADD = libcouchbase.la libmockserver.la
-timings_test_LDFLAGS = $(LTLIBEVENT)
+timings_test_LDFLAGS = -levent
 
 smoke_test_SOURCES = tests/test.h tests/smoke-test.c
 smoke_test_LDADD = libcouchbase.la libmockserver.la
-smoke_test_LDFLAGS = $(LTLIBEVENT)
+smoke_test_LDFLAGS = -levent
 
 strerror_test_SOURCES = tests/strerror-test.c
-strerror_test_LDADD = ${libcouchbase_la_OBJECTS} $(LTLIBEVENT) $(LTLIBVBUCKET) $(LTLIBSASL) $(LTLIBSASL2)
+strerror_test_LDADD = ${libcouchbase_la_OBJECTS} -levent -lvbucket $(LIBSASL)
 
 arithmetic_test_SOURCES = tests/arithmetic.c
 arithmetic_test_LDADD = libcouchbase.la libmockserver.la
-arithmetic_test_LDFLAGS = $(LTLIBEVENT)
+arithmetic_test_LDFLAGS = -levent
 arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 flags_test_SOURCES = tests/flags-test.c
 flags_test_LDADD = libcouchbase.la libmockserver.la
-flags_test_LDFLAGS = $(LTLIBEVENT)
+flags_test_LDFLAGS = -levent
 flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 TESTS=${check_PROGRAMS}
