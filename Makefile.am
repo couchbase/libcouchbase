@@ -76,13 +76,13 @@ endif
 
 # Please remember to update the version info before each release if you
 # add / remove functions.
-libcouchbase_la_LDFLAGS=-lvbucket $(LIBSASL)  \
-                      -version-info 0:0:0
+libcouchbase_la_LDFLAGS=-version-info 0:0:0
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-
+libcouchbase_la_LIBADD=-lvbucket $(LIBSASL)
 
 libcouchbase_libevent_la_SOURCES = src/plugin-libevent.c
-libcouchbase_libevent_la_LDFLAGS=-levent -version-info 1:0:0
+libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0
+libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
 tests/CouchbaseMock.jar:
