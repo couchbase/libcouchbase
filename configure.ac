@@ -15,7 +15,7 @@
 #
 AC_PREREQ(2.60)
 m4_include([m4/version.m4])
-AC_INIT(libcouchbase, GIT_VERSION_NUMBER, support@couchbase.com)
+AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
 AC_CONFIG_SRCDIR([src/internal.h])
 AC_CONFIG_AUX_DIR(config)
 AC_USE_SYSTEM_EXTENSIONS
