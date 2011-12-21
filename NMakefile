@@ -55,7 +55,21 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      utilities.obj \
      wait.obj
 
-all: libcouchbase.dll test
+EXAMPLES_OBJS= \
+          example\memcat.obj \
+          example\memcp.obj \
+          example\memdump.obj \
+          example\memrm.obj \
+          example\memstat.obj
+
+EXAMPLES= \
+          example\memcat.exe \
+          example\memcp.exe \
+          example\memdump.exe \
+          example\memrm.exe \
+          example\memstat.exe
+
+all: libcouchbase.dll $(EXAMPLES) test
 
 
 test: tests\base64-test.exe tests\getopt-test.exe tests\ringbuffer-test.exe \
@@ -103,12 +117,40 @@ tests\strerror-test.exe: tests\strerror-test.obj libcouchbase.dll
 tests\strerror-test.obj: tests\strerror-test.c
 	$(COMPILE) -Fotests\strerror-test.obj tests\strerror-test.c
 
+example\memstat.exe: example\memstat.obj win32\getopt.obj libcouchbase.dll
+	$(link) -out:example\memstat.exe example\memstat.obj \
+                win32\getopt.obj libcouchbase.lib
+
+example\memstat.obj: example\memstat.c
+	$(COMPILE) -Foexample\memstat.obj example\memstat.c
+
 example\memcat.exe: example\memcat.obj win32\getopt.obj libcouchbase.dll
 	$(link) -out:example\memcat.exe example\memcat.obj \
                 win32\getopt.obj libcouchbase.lib
 
 example\memcat.obj: example\memcat.c
 	$(COMPILE) -Foexample\memcat.obj example\memcat.c
+
+example\memcp.exe: example\memcp.obj win32\getopt.obj libcouchbase.dll
+	$(link) -out:example\memcp.exe example\memcp.obj \
+                win32\getopt.obj libcouchbase.lib
+
+example\memcp.obj: example\memcp.c
+	$(COMPILE) -Foexample\memcp.obj example\memcp.c
+
+example\memrm.exe: example\memrm.obj win32\getopt.obj libcouchbase.dll
+	$(link) -out:example\memrm.exe example\memrm.obj \
+                win32\getopt.obj libcouchbase.lib
+
+example\memrm.obj: example\memrm.c
+	$(COMPILE) -Foexample\memrm.obj example\memrm.c
+
+example\memdump.exe: example\memdump.obj win32\getopt.obj libcouchbase.dll
+	$(link) -out:example\memdump.exe example\memdump.obj \
+                win32\getopt.obj libcouchbase.lib
+
+example\memdump.obj: example\memdump.c
+	$(COMPILE) -Foexample\memdump.obj example\memdump.c
 
 win32\getopt.obj: win32\getopt.c win32\getopt.h
 	$(COMPILE) -Fowin32\getopt.obj win32\getopt.c
@@ -204,4 +246,12 @@ install: $(INSTALLDIRS) libcouchbase.dll
 	@copy libcouchbase.lib $(INSTALL)\lib
 
 clean:
-	-@del $(LIBCOUCHBASE_OBJS) libcouchbase.dll libcouchbase.exp libcouchbase.lib vc100.pdb example\memcat.obj example\memcat.exe win32\getopt.obj
+	-@del \
+              $(EXAMPLES) \
+              $(EXAMPLES_OBJS) \
+              $(LIBCOUCHBASE_OBJS) \
+              libcouchbase.dll \
+              libcouchbase.exp \
+              libcouchbase.lib \
+              vc100.pdb \
+              win32\getopt.obj

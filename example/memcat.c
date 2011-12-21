@@ -133,19 +133,19 @@ static void setup_options(void)
     my_options['h'].argument = 1;
     my_options['h'].letter = 'h';
     my_options['h'].handler = set_char_ptr;
-    my_options['h'].cookie = &host;
+    my_options['h'].cookie = (void*)&host;
     my_options['b'].name = "bucket";
     my_options['b'].description = "\t-b bucket\tThe bucket to connect to";
     my_options['b'].argument = 1;
     my_options['b'].letter = 'b';
     my_options['b'].handler = set_char_ptr;
-    my_options['b'].cookie = &bucket;
+    my_options['b'].cookie = (void*)&bucket;
     my_options['o'].name = "file";
     my_options['o'].description = "\t-o filename\tSend the output to this file";
     my_options['o'].argument = 1;
     my_options['o'].letter = 'o';
     my_options['o'].handler = set_char_ptr;
-    my_options['o'].cookie = &filename;
+    my_options['o'].cookie = (void*)&filename;
 }
 
 /**

@@ -131,13 +131,13 @@ static void setup_options(void)
     my_options['h'].argument = 1;
     my_options['h'].letter = 'h';
     my_options['h'].handler = set_char_ptr;
-    my_options['h'].cookie = &host;
+    my_options['h'].cookie = (void*)&host;
     my_options['b'].name = "bucket";
     my_options['b'].description = "\t-b bucket\tThe bucket to connect to";
     my_options['b'].argument = 1;
     my_options['b'].letter = 'b';
     my_options['b'].handler = set_char_ptr;
-    my_options['b'].cookie = &bucket;
+    my_options['b'].cookie = (void*)&bucket;
 }
 
 /**

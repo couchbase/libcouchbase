@@ -21,10 +21,10 @@
  * @author Trond Norbye
  * @todo add documentation
  */
+#include "config.h"
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -33,8 +33,36 @@
 #include <string.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <sys/mman.h>
 #include <libcouchbase/couchbase.h>
+
+#ifdef WIN32
+#define PRIu64 "llu"
+
+static int isatty(int a) {
+    (void)a;
+    return 1;
+}
+
+static char *getpass(const char *prompt)
+{
+    size_t len;
+    static char buffer[1024];
+    fprintf(stdout, "%s", prompt);
+    fflush(stdout);
+
+    if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+        return NULL;
+    }
+
+    len = strlen(buffer) - 1;
+    while (buffer[len] == '\r' || buffer[len] == '\n') {
+        buffer[len] = '\0';
+        --len;
+    }
+
+    return buffer;
+}
+#endif
 
 static void usage(char cmd, const void *arg, void *cookie);
 static void set_char_ptr(char cmd, const void *arg, void *cookie) {
@@ -86,37 +114,32 @@ static struct {
     char letter;
     OPTION_HANDLER handler;
     void *cookie;
-} my_options[256] = {
-    ['?'] = {
-        .name = "help",
-        .description = "\t-?\tPrint program usage information",
-        .argument = 0,
-        .letter = '?',
-        .handler = usage
-    },
-    ['u'] = {
-        .name = "username",
-        .description = "\t-u nm\tSpecify username",
-        .argument = 1,
-        .letter = 'u',
-        .handler = set_auth_data
-    },
-    ['h'] = {
-        .name = "host",
-        .description = "\t-h host\tHost to read configuration from",
-        .argument = 1,
-        .letter = 'h',
-        .handler = set_char_ptr,
-        .cookie = &host
-    },
-    ['b'] = {
-        .name = "bucket",
-        .description = "\t-b bucket\tThe bucket to connect to",
-        .argument = 1,
-        .letter = 'b',
-        .handler = set_char_ptr,
-        .cookie = &bucket
-    },
+} my_options[256];
+
+static void setup_options(void)
+{
+    my_options['?'].name = "help";
+    my_options['?'].description = "\t-?\tPrint program usage information";
+    my_options['?'].argument = 0;
+    my_options['?'].letter = '?';
+    my_options['?'].handler = usage;
+    my_options['u'].name = "username";
+    my_options['u'].description = "\t-u nm\tSpecify username";
+    my_options['u'].argument = 1;
+    my_options['u'].letter = 'u';
+    my_options['u'].handler = set_auth_data;
+    my_options['h'].name = "host";
+    my_options['h'].description = "\t-h host\tHost to read configuration from";
+    my_options['h'].argument = 1;
+    my_options['h'].letter = 'h';
+    my_options['h'].handler = set_char_ptr;
+    my_options['h'].cookie = (void*)&host;
+    my_options['b'].name = "bucket";
+    my_options['b'].description = "\t-b bucket\tThe bucket to connect to";
+    my_options['b'].argument = 1;
+    my_options['b'].letter = 'b';
+    my_options['b'].handler = set_char_ptr;
+    my_options['b'].cookie = (void*)&bucket;
 };
 
 /**
@@ -127,12 +150,17 @@ static struct {
  * @param argv Argument vector
  */
 static void handle_options(int argc, char **argv) {
-    struct option opts[256] =  { [0] = { .name = NULL } };
+    struct option opts[256];
     int ii = 0;
-    char shortopts[128] = { 0 };
+    char shortopts[128];
     int jj = 0;
     int kk = 0;
     int c;
+
+    memset(opts, 0, sizeof(opts));
+    memset(shortopts, 0, sizeof(shortopts));
+    setup_options();
+
     for (ii = 0; ii < 256; ++ii) {
         if (my_options[ii].name != NULL) {
             opts[jj].name = (char*)my_options[ii].name;
