@@ -34,8 +34,6 @@
 #include <libcouchbase/tap_filter.h>
 #include <libcouchbase/timings.h>
 
-struct event_base;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
