@@ -70,9 +70,9 @@ if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c
 endif
 
-if HAVE_LIBEVENT2
-libcouchbase_la_SOURCES += src/views.c
-endif
+#if HAVE_LIBEVENT2
+#libcouchbase_la_SOURCES += src/views.c
+#endif
 
 # Please remember to update the version info before each release if you
 # add / remove functions.
@@ -108,12 +108,12 @@ noinst_PROGRAMS = \
                example/memrm \
                example/memstat
 
-if HAVE_LIBEVENT2
-noinst_PROGRAMS += example/couchview
-if HAVE_LIBYAJL
-noinst_PROGRAMS += example/couchview_yajl
-endif
-endif
+#if HAVE_LIBEVENT2
+#noinst_PROGRAMS += example/couchview
+#if HAVE_LIBYAJL
+#noinst_PROGRAMS += example/couchview_yajl
+#endif
+#endif
 
 example_memcat_SOURCES = example/memcat.c
 example_memcat_LDADD = libcouchbase.la
@@ -139,13 +139,13 @@ example_memstat_SOURCES = example/memstat.c
 example_memstat_LDADD = libcouchbase.la
 example_memstat_LDFLAGS = -levent
 
-example_couchview_SOURCES = example/couchview.c
-example_couchview_LDADD = libcouchbase.la
-example_couchview_LDFLAGS = -levent
+#example_couchview_SOURCES = example/couchview.c
+#example_couchview_LDADD = libcouchbase.la
+#example_couchview_LDFLAGS = -levent
 
-example_couchview_yajl_SOURCES = example/couchview_yajl.c
-example_couchview_yajl_LDADD = libcouchbase.la
-example_couchview_yajl_LDFLAGS = -levent -lyajl
+#example_couchview_yajl_SOURCES = example/couchview_yajl.c
+#example_couchview_yajl_LDADD = libcouchbase.la
+#example_couchview_yajl_LDFLAGS = -levent -lyajl
 
 check_PROGRAMS = base64-test \
                  getopt-test \

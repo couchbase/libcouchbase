@@ -894,34 +894,6 @@
     </derivative>
   </apicall>
 
-  <apicall id="libcouchbase_set_view_complete_callback" mansection="3couchbase">
-    <m_title>Set the view complete callback</m_title>
-    <description>
-      @fixme
-    </description>
-    <args>
-      <argument inherit="instance"/>
-    </args>
-    <derivative lang="c">
-      <attribute type="Interface Stability" value="Committed"/>
-      <dcall id="libcouchbase_set_view_complete_callback" inherit="all"/>
-    </derivative>
-  </apicall>
-
-  <apicall id="libcouchbase_set_view_data_callback" mansection="3couchbase">
-    <m_title>Set the view data callback</m_title>
-      @fixme
-    <description>
-    </description>
-    <args>
-      <argument inherit="instance"/>
-    </args>
-    <derivative lang="c">
-      <attribute type="Interface Stability" value="Committed"/>
-      <dcall id="libcouchbase_set_view_data_callback" inherit="all"/>
-    </derivative>
-  </apicall>
-
   <apicall id="libcouchbase_store" mansection="3couchbase">
     <m_title>Store an object in the cache</m_title>
     <description>

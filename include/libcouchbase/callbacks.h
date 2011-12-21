@@ -176,14 +176,6 @@ extern "C" {
                                                                 libcouchbase_error_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_doc_complete_callback libcouchbase_set_doc_complete_callback(libcouchbase_t,
-                                                                              libcouchbase_doc_complete_callback);
-
-    LIBCOUCHBASE_API
-    libcouchbase_doc_data_callback libcouchbase_set_doc_data_callback(libcouchbase_t,
-                                                                      libcouchbase_doc_data_callback);
-
-    LIBCOUCHBASE_API
     libcouchbase_flush_callback libcouchbase_set_flush_callback(libcouchbase_t,
                                                                 libcouchbase_flush_callback);
 
