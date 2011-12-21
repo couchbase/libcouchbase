@@ -103,7 +103,7 @@ typedef void (*OPTION_HANDLER)(char cmd, const void *arg, void *cookie);
 static struct {
     const char *name;
     const char *description;
-    bool argument;
+    int argument;
     char letter;
     OPTION_HANDLER handler;
     void *cookie;
@@ -111,21 +111,21 @@ static struct {
     ['?'] = {
         .name = "help",
         .description = "\t-?\t\tPrint program usage information",
-        .argument = false,
+        .argument = 0,
         .letter = '?',
         .handler = usage
     },
     ['u'] = {
         .name = "username",
         .description = "\t-u name\t\tSpecify username",
-        .argument = true,
+        .argument = 1,
         .letter = 'u',
         .handler = set_auth_data
     },
     ['h'] = {
         .name = "host",
         .description = "\t-h host\t\tHost to read configuration from",
-        .argument = true,
+        .argument = 1,
         .letter = 'h',
         .handler = set_char_ptr,
         .cookie = &host
@@ -133,7 +133,7 @@ static struct {
     ['b'] = {
         .name = "bucket",
         .description = "\t-b bucket\tThe bucket to connect to",
-        .argument = true,
+        .argument = 1,
         .letter = 'b',
         .handler = set_char_ptr,
         .cookie = &bucket
@@ -141,7 +141,7 @@ static struct {
     ['o'] = {
         .name = "file",
         .description = "\t-o filename\tSend the output to this file",
-        .argument = true,
+        .argument = 1,
         .letter = 'o',
         .handler = set_char_ptr,
         .cookie = &filename
@@ -149,7 +149,7 @@ static struct {
     ['c'] = {
         .name = "chunked",
         .description = "\t-c\t\tUse chunked callback to stream the data",
-        .argument = false,
+        .argument = 0,
         .letter = 'c',
         .handler = set_flag,
         .cookie = &chunked
@@ -157,7 +157,7 @@ static struct {
     ['d'] = {
         .name = "data",
         .description = "\t-d\t\tPOST data, e.g. {\"keys\": [\"key1\", \"key2\", ...]}",
-        .argument = true,
+        .argument = 1,
         .letter = 'd',
         .handler = set_char_ptr,
         .cookie = &post_data
@@ -165,7 +165,7 @@ static struct {
     ['m'] = {
         .name = "minify",
         .description = "\t-m\t\tMinify JSON rather than beautify",
-        .argument = false,
+        .argument = 0,
         .letter = 'm',
         .handler = set_flag,
         .cookie = &minify
@@ -173,7 +173,7 @@ static struct {
     ['f'] = {
         .name = "force-utf8",
         .description = "\t-f\t\tForce utf-8, i.e. allow invalid characters inside strings during parsing",
-        .argument = false,
+        .argument = 0,
         .letter = 'u',
         .handler = set_flag,
         .cookie = &force_utf8
