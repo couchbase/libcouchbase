@@ -1,7 +1,7 @@
 Source: libcouchbase
 Priority: optional
 Maintainer: Couchbase SDK Team <support@couchbase.com>
-Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libvbucket-dev (>= 1.7.2), libevent-dev (>= 2.0)
+Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libvbucket-dev (>= 1.7.2), libevent-dev (>= 1.4), libsasl2-dev
 Standards-Version: 3.9.2
 Section: libs
 Homepage: http://www.couchbase.org
@@ -29,7 +29,7 @@ Description: library for the Couchbase protocol, debug symbols
 
 Package: libcouchbase0
 Architecture: any
-Depends: libvbucket1 (>= 1.7.2), libevent-2.0-5 (>= 2.0), ${shlibs:Depends}, ${misc:Depends}
+Depends: libvbucket1 (>= 1.7.2), libevent-1.4-2 (>= 1.4) | libevent-2.0-5 (>= 2.0), libsasl2-2 (>= 2.1), ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol
  libcouchbase is a library implementing Couchbase protocol.
  .

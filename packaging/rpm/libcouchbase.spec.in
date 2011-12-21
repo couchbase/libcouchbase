@@ -8,7 +8,7 @@ Vendor: Couchbase, Inc.
 Packager: Couchbase SDK Team <support@couchbase.com>
 License: Apache-2
 Group: System Environment/Libraries
-BuildRequires: libvbucket-devel >= 1.7.2, libevent-devel >= 2.0
+BuildRequires: libvbucket-devel >= 1.7.2, libevent-devel >= 1.4, cyrus-sasl-devel >= 2.0
 URL: https://github.com/couchbase/libcouchbase
 Source: %{name}-%{version}_%{release}.tar.gz
 BuildRoot: build/%{name}-%{version}_%{release}
@@ -19,7 +19,7 @@ This is the client and protocol library for Couchbase project.
 %package -n %{name}0
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library
-Requires: %{name}0, libvbucket >= 1.7.2, libevent >= 2.0
+Requires: %{name}0, libvbucket1 >= 1.7.2, libevent >= 1.4, cyrus-sasl >= 2.0
 
 %description -n %{name}0
 This is the client and protocol library for Couchbase project.
@@ -62,7 +62,6 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase.so
 %{_libdir}/libcouchbase_libevent.la
 %{_libdir}/libcouchbase_libevent.so
-%{_mandir}/**/*
 
 %changelog
 * Mon Dec 05 2011 Sergey Avseyev <sergey.avseyev@gmail.com> - 0.3.0
