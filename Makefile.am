@@ -147,49 +147,49 @@ example_memstat_LDFLAGS = -levent
 #example_couchview_yajl_LDADD = libcouchbase.la
 #example_couchview_yajl_LDFLAGS = -levent -lyajl
 
-check_PROGRAMS = base64-test \
-                 getopt-test \
-                 ringbuffer-test \
-                 strerror-test
+check_PROGRAMS = tests/base64-test \
+                 tests/getopt-test \
+                 tests/ringbuffer-test \
+                 tests/strerror-test
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
-check_PROGRAMS += arithmetic-test \
-                  flags-test \
-                  timings-test \
-                  config-test \
-                  smoke-test
+check_PROGRAMS += tests/arithmetic-test \
+                  tests/flags-test \
+                  tests/timings-test \
+                  tests/config-test \
+                  tests/smoke-test
 endif
 
-base64_test_SOURCES = tests/base64-test.c src/base64.c
-getopt_test_SOURCES = tests/getopt-test.cc
+tests_base64_test_SOURCES = tests/base64-test.c src/base64.c
+tests_getopt_test_SOURCES = tests/getopt-test.cc
 
-config_test_SOURCES = tests/test.h tests/config-test.c
-config_test_LDADD = libcouchbase.la libmockserver.la
-config_test_LDFLAGS = -ldl -levent -lvbucket
+tests_config_test_SOURCES = tests/test.h tests/config-test.c
+tests_config_test_LDADD = libcouchbase.la libmockserver.la
+tests_config_test_LDFLAGS = -ldl -levent -lvbucket
 
-ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
+tests_ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
 
-timings_test_SOURCES = tests/timings-test.c
-timings_test_LDADD = libcouchbase.la libmockserver.la
-timings_test_LDFLAGS = -levent
+tests_timings_test_SOURCES = tests/timings-test.c
+tests_timings_test_LDADD = libcouchbase.la libmockserver.la
+tests_timings_test_LDFLAGS = -levent
 
-smoke_test_SOURCES = tests/test.h tests/smoke-test.c
-smoke_test_LDADD = libcouchbase.la libmockserver.la
-smoke_test_LDFLAGS = -levent
+tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c
+tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
+tests_smoke_test_LDFLAGS = -levent
 
-strerror_test_SOURCES = tests/strerror-test.c
-strerror_test_LDADD = ${libcouchbase_la_OBJECTS} -levent -lvbucket $(LIBSASL)
+tests_strerror_test_SOURCES = tests/strerror-test.c
+tests_strerror_test_LDADD = ${libcouchbase_la_OBJECTS} -levent -lvbucket $(LIBSASL)
 
-arithmetic_test_SOURCES = tests/arithmetic.c
-arithmetic_test_LDADD = libcouchbase.la libmockserver.la
-arithmetic_test_LDFLAGS = -levent
-arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
+tests_arithmetic_test_SOURCES = tests/arithmetic.c
+tests_arithmetic_test_LDADD = libcouchbase.la libmockserver.la
+tests_arithmetic_test_LDFLAGS = -levent
+tests_arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
-flags_test_SOURCES = tests/flags-test.c
-flags_test_LDADD = libcouchbase.la libmockserver.la
-flags_test_LDFLAGS = -levent
-flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
+tests_flags_test_SOURCES = tests/flags-test.c
+tests_flags_test_LDADD = libcouchbase.la libmockserver.la
+tests_flags_test_LDFLAGS = -levent
+tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 TESTS=${check_PROGRAMS}
 

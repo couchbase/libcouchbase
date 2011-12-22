@@ -8,7 +8,6 @@
 ._*
 .deps/
 .libs/
-/*-test
 /INSTALL
 /Makefile
 /Makefile.in
@@ -55,5 +54,6 @@
 /src/config.h
 /src/config.h.in
 /src/stamp-h1
+/tests/*-test
 /tests/CouchbaseMock.jar
 /vc100.pdb
