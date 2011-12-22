@@ -146,7 +146,7 @@ static void setup_options(void)
     my_options['o'].letter = 'o';
     my_options['o'].handler = set_char_ptr;
     my_options['o'].cookie = (void*)&filename;
-};
+}
 
 /**
  * Handle all of the command line options the user passed on the command line.
@@ -271,7 +271,7 @@ int main(int argc, char **argv)
             void *bytes = malloc((size_t)st.st_size);
 
             if (bytes != NULL) {
-                if (fread(bytes, st.st_size, 1, fp) != st.st_size) {
+                if (fread(bytes, st.st_size, 1, fp) != (size_t)st.st_size) {
                     fprintf(stderr, "Failed to read the data from the file\n");
                 } else {
                     libcouchbase_store(instance,

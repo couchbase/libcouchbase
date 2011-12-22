@@ -142,7 +142,7 @@ static void setup_options(void)
     my_options['o'].letter = 'o';
     my_options['o'].handler = set_char_ptr;
     my_options['o'].cookie = (void*)&filename;
-};
+}
 
 /**
  * Handle all of the command line options the user passed on the command line.
