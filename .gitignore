@@ -57,4 +57,5 @@
 /src/stamp-h1
 /tests/*-test
 /tests/CouchbaseMock.jar
+/tools/cbc
 /vc100.pdb

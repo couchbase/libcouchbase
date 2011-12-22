@@ -20,6 +20,7 @@
 
 #include <getopt.h>
 #include <vector>
+#include <list>
 #include <sstream>
 
 class CommandLineOption
@@ -42,11 +43,12 @@ public:
 };
 
 class Getopt {
- public:
+public:
     Getopt &addOption(CommandLineOption* option);
     bool parse(int argc, char **argv);
     void usage(const char *name) const;
     std::vector<CommandLineOption*> options;
+    std::list<std::string> arguments;
 };
 
 #endif

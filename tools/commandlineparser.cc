@@ -106,5 +106,9 @@ bool Getopt::parse(int argc, char **argv)
         }
     }
 
+    for (ii = optind; ii < argc; ++ii) {
+        arguments.push_back(argv[ii]);
+    }
+
     return true;
 }

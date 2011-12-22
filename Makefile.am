@@ -27,7 +27,7 @@ ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la libcouchbase_libevent.la
 noinst_LTLIBRARIES =
-bin_PROGRAMS =
+bin_PROGRAMS = tools/cbc
 
 
 pkginclude_HEADERS = \
@@ -192,6 +192,11 @@ tests_flags_test_SOURCES = tests/flags-test.c
 tests_flags_test_LDADD = libcouchbase.la libmockserver.la
 tests_flags_test_LDFLAGS = -levent
 tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
+
+tools_cbc_LDADD = libcouchbase.la
+tools_cbc_SOURCES = tools/cbc.cc tools/commandlineparser.cc             \
+                    tools/commandlineparser.hh tools/configuration.cc   \
+                    tools/configuration.h
 
 TESTS=${check_PROGRAMS}
 
