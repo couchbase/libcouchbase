@@ -230,3 +230,28 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
 
     return LIBCOUCHBASE_SUCCESS;
 }
+
+/* src/handler.c */
+
+LIBCOUCHBASE_API
+libcouchbase_doc_complete_callback libcouchbase_set_doc_complete_callback(libcouchbase_t instance,
+                                                                          libcouchbase_doc_complete_callback cb)
+{
+    libcouchbase_doc_complete_callback ret = instance->callbacks.doc_complete;
+    if (cb != NULL) {
+        instance->callbacks.doc_complete = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_doc_data_callback libcouchbase_set_doc_data_callback(libcouchbase_t instance,
+                                                                  libcouchbase_doc_data_callback cb)
+{
+    libcouchbase_doc_data_callback ret = instance->callbacks.doc_data;
+    if (cb != NULL) {
+        instance->callbacks.doc_data = cb;
+    }
+    return ret;
+}
+
