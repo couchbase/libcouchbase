@@ -124,9 +124,8 @@ AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
       ])
     LIBS="$saved_libs"
   ])
-
-AM_CONDITIONAL(HAVE_LIBEVENT2, [test "$x{ac_cv_have_libevent2=}" != "no"])
-AS_IF([test "$x{ac_cv_header_event2_event_h}" != "no"],
+AM_CONDITIONAL(HAVE_LIBEVENT2, [test "x${ac_cv_have_libevent2}" = "xyes"])
+AS_IF([test "x${ac_cv_have_libevent2}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEVENT2], [1], [We have libevent2])])
 
 dnl Check if we've got libyajl
