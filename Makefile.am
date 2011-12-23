@@ -178,6 +178,12 @@ TESTS=${check_PROGRAMS}
 example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
 example_pillowfight_LDADD = libcouchbase.la
 
+CBC_LINKS=cbc-cat cbc-rm cbc-cp cbc-stat cbc-flush
+install-exec-hook:
+	cd $(DESTDIR)$(bindir) && \
+               $(RM) $(CBC_LINKS) && \
+               for f in $(CBC_LINKS); do $(LN_S) cbc$(EXEEXT) $$f$(EXEEXT); done
+
 EXTRA_DIST = \
              LICENSE \
              NMakefile \
