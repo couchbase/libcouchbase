@@ -102,12 +102,7 @@ libmockserver_la_SOURCES = \
 # Example programs using the library
 #
 noinst_PROGRAMS = \
-               example/memcat \
-               example/memcp \
                example/memdump \
-               example/memflush \
-               example/memrm \
-               example/memstat \
                example/pillowfight
 
 #if HAVE_LIBEVENT2
@@ -117,29 +112,9 @@ noinst_PROGRAMS = \
 #endif
 #endif
 
-example_memcat_SOURCES = example/memcat.c
-example_memcat_LDADD = libcouchbase.la
-example_memcat_LDFLAGS = -levent
-
-example_memcp_SOURCES = example/memcp.c
-example_memcp_LDADD = libcouchbase.la
-example_memcp_LDFLAGS = -levent
-
 example_memdump_SOURCES = example/memdump.c
 example_memdump_LDADD = libcouchbase.la
 example_memdump_LDFLAGS = -levent
-
-example_memflush_SOURCES = example/memflush.c
-example_memflush_LDADD = libcouchbase.la
-example_memflush_LDFLAGS = -levent
-
-example_memrm_SOURCES = example/memrm.c
-example_memrm_LDADD = libcouchbase.la
-example_memrm_LDFLAGS = -levent
-
-example_memstat_SOURCES = example/memstat.c
-example_memstat_LDADD = libcouchbase.la
-example_memstat_LDFLAGS = -levent
 
 #example_couchview_SOURCES = example/couchview.c
 #example_couchview_LDADD = libcouchbase.la

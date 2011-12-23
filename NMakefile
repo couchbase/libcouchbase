@@ -56,18 +56,10 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      wait.obj
 
 EXAMPLES_OBJS= \
-          example\memcat.obj \
-          example\memcp.obj \
-          example\memdump.obj \
-          example\memrm.obj \
-          example\memstat.obj
+          example\memdump.obj
 
 EXAMPLES= \
-          example\memcat.exe \
-          example\memcp.exe \
-          example\memdump.exe \
-          example\memrm.exe \
-          example\memstat.exe
+          example\memdump.exe
 
 all: libcouchbase.dll $(EXAMPLES) test
 
@@ -115,34 +107,6 @@ tests\strerror-test.exe: tests\strerror-test.obj libcouchbase.dll
 
 tests\strerror-test.obj: tests\strerror-test.c
 	$(COMPILE) -Fotests\strerror-test.obj tests\strerror-test.c
-
-example\memstat.exe: example\memstat.obj win32\getopt.obj libcouchbase.dll
-	$(link) -out:example\memstat.exe example\memstat.obj \
-                win32\getopt.obj libcouchbase.lib
-
-example\memstat.obj: example\memstat.c
-	$(COMPILE) -Foexample\memstat.obj example\memstat.c
-
-example\memcat.exe: example\memcat.obj win32\getopt.obj libcouchbase.dll
-	$(link) -out:example\memcat.exe example\memcat.obj \
-                win32\getopt.obj libcouchbase.lib
-
-example\memcat.obj: example\memcat.c
-	$(COMPILE) -Foexample\memcat.obj example\memcat.c
-
-example\memcp.exe: example\memcp.obj win32\getopt.obj libcouchbase.dll
-	$(link) -out:example\memcp.exe example\memcp.obj \
-                win32\getopt.obj libcouchbase.lib
-
-example\memcp.obj: example\memcp.c
-	$(COMPILE) -Foexample\memcp.obj example\memcp.c
-
-example\memrm.exe: example\memrm.obj win32\getopt.obj libcouchbase.dll
-	$(link) -out:example\memrm.exe example\memrm.obj \
-                win32\getopt.obj libcouchbase.lib
-
-example\memrm.obj: example\memrm.c
-	$(COMPILE) -Foexample\memrm.obj example\memrm.c
 
 example\memdump.exe: example\memdump.obj win32\getopt.obj libcouchbase.dll
 	$(link) -out:example\memdump.exe example\memdump.obj \
