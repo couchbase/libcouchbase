@@ -51,6 +51,7 @@ Development files for the Couchbase Client & Protocol Library
 
 %files -n %{name}0
 %defattr(-, root, root)
+%{_bindir}/cbc*
 %{_libdir}/libcouchbase.so.*
 %{_libdir}/libcouchbase_libevent.so.*
 
