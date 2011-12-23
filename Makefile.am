@@ -143,7 +143,7 @@ tests_getopt_test_SOURCES = tests/getopt-test.cc
 
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_LDADD = libcouchbase.la libmockserver.la
-tests_config_test_LDFLAGS = -ldl -levent -lvbucket
+tests_config_test_LDFLAGS = -levent -lvbucket
 
 tests_ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
 
