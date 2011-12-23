@@ -170,7 +170,7 @@ tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tools_cbc_LDADD = libcouchbase.la
 tools_cbc_SOURCES = tools/cbc.cc tools/commandlineparser.cc             \
-                    tools/commandlineparser.hh tools/configuration.cc   \
+                    tools/commandlineparser.h tools/configuration.cc    \
                     tools/configuration.h
 
 TESTS=${check_PROGRAMS}
