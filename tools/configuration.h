@@ -33,7 +33,9 @@ public:
     void setBucket(const char *b);
     const char *getBucket() const;
 
-private:
+protected:
+    void loadCbcRc(void);
+
     std::string host;
     std::string user;
     std::string passwd;

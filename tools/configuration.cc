@@ -16,10 +16,16 @@
  */
 
 #include <cstdlib>
+#include <sstream>
+#include <cstdio>
+#include <map>
+
 #include "tools/configuration.h"
 
+using namespace std;
+
 Configuration::Configuration() {
-    using namespace std;
+    loadCbcRc();
     setHost(getenv("COUCHBASE_CLUSTER_URI"));
     setUser(getenv("COUCHBASE_CLUSTER_USER"));
     setPassword(getenv("COUCHBASE_CLUSTER_PASSWORD"));
@@ -79,4 +85,69 @@ const char *Configuration::getBucket() const {
         return bucket.c_str();
     }
     return NULL;
+}
+
+static string trim(const char *ptr) {
+
+    // skip leading blanks
+    while (isspace(*ptr)) {
+        ++ptr;
+    }
+
+    string ret(ptr);
+    int ii = ret.length() - 1;
+    while (ii > 0 && isspace(ret[ii])) {
+        ret.resize(ii);
+    }
+
+    return ret;
+}
+
+bool split(const string &line, string &key, string &value) {
+    string::size_type idx = line.find('=');
+    if (idx == string::npos) {
+        return false;
+    }
+
+    key.assign(trim(line.substr(0, idx).c_str()));
+    value.assign(trim(line.substr(idx + 1).c_str()));
+    return true;
+}
+
+void Configuration::loadCbcRc(void) {
+    stringstream ss;
+
+    if (getenv("HOME") != NULL) {
+        ss << getenv("HOME");
+#ifdef WIN32
+        ss << "\\";
+#else
+        ss << "/";
+#endif
+    }
+    ss << ".cbcrc";
+    string fname(ss.str());
+    FILE *fp = fopen(ss.str().c_str(), "r");
+    if (fp == NULL) {
+        return;
+    }
+
+    map<string, string> tokens;
+    char buffer[256];
+    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+        string line = trim(buffer);
+        if (!line.empty() && line[0] != '#') {
+            string key;
+            string value;
+            if (split(line, key, value)) {
+                tokens[key] = value;
+            }
+        }
+    }
+    fclose(fp);
+
+    setHost(tokens["uri"].c_str());
+    setUser(tokens["user"].c_str());
+    setPassword(tokens["password"].c_str());
+    setBucket(tokens["bucket"].c_str());
 }
