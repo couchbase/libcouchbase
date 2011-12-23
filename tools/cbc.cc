@@ -167,6 +167,42 @@ extern "C" {
             *err = true;
         }
     }
+
+    static void timings_callback(libcouchbase_t, const void *,
+                                 libcouchbase_timeunit_t timeunit,
+                                 uint32_t min, uint32_t max,
+                                 uint32_t total, uint32_t maxtotal) {
+        char buffer[1024];
+        int offset = sprintf(buffer, "[%3u - %3u]", min, max);
+        switch (timeunit) {
+        case LIBCOUCHBASE_TIMEUNIT_NSEC:
+            offset += sprintf(buffer + offset, "ns");
+            break;
+        case LIBCOUCHBASE_TIMEUNIT_USEC:
+            offset += sprintf(buffer + offset, "us");
+            break;
+        case LIBCOUCHBASE_TIMEUNIT_MSEC:
+            offset += sprintf(buffer + offset, "ms");
+            break;
+        case LIBCOUCHBASE_TIMEUNIT_SEC:
+            offset += sprintf(buffer + offset, "s");
+            break;
+        default:
+            ;
+        }
+
+        int num = static_cast<int>(static_cast<float>(40.0) *
+                                   static_cast<float>(total) /
+                                   static_cast<float>(maxtotal));
+
+        offset += sprintf(buffer + offset, " |");
+        for (int ii = 0; ii < num; ++ii) {
+            offset += sprintf(buffer + offset, "#");
+        }
+
+        offset += sprintf(buffer + offset, " - %u\n", total);
+        cerr << buffer;
+    }
 }
 
 static bool cp(libcouchbase_t instance, list<string> &keys)
@@ -314,6 +350,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Username for the rest port"));
     getopt.addOption(new CommandLineOption('P', "password", true,
                                            "password for the rest port"));
+    getopt.addOption(new CommandLineOption('T', "enable-timings", false,
+                                           "Enable command timings"));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -338,6 +376,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             case 'P' :
                 config.setPassword((*iter)->argument);
+                break;
+
+            case 'T' :
+                config.setTimingsEnabled(true);
                 break;
 
             case '?':
@@ -376,6 +418,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     bool error = false;
     libcouchbase_set_cookie(instance, static_cast<void*>(&error));
 
+    if (config.isTimingsEnabled()) {
+        libcouchbase_enable_timings(instance);
+    }
+
     bool success;
     switch (cmd) {
     case cbc_cat:
@@ -402,6 +448,11 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         error = true;
     } else {
         libcouchbase_wait(instance);
+        if (config.isTimingsEnabled()) {
+            libcouchbase_get_timings(instance, NULL,
+                                     timings_callback);
+            libcouchbase_disable_timings(instance);
+        }
     }
 
     libcouchbase_destroy(instance);

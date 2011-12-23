@@ -24,7 +24,7 @@
 
 using namespace std;
 
-Configuration::Configuration() {
+Configuration::Configuration() : timings(false) {
     loadCbcRc();
     setHost(getenv("COUCHBASE_CLUSTER_URI"));
     setUser(getenv("COUCHBASE_CLUSTER_USER"));
@@ -85,6 +85,14 @@ const char *Configuration::getBucket() const {
         return bucket.c_str();
     }
     return NULL;
+}
+
+void Configuration::setTimingsEnabled(bool n) {
+    timings = n;
+}
+
+bool Configuration::isTimingsEnabled() const {
+    return timings;
 }
 
 static string trim(const char *ptr) {

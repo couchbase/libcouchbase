@@ -32,6 +32,8 @@ public:
     const char *getPassword() const;
     void setBucket(const char *b);
     const char *getBucket() const;
+    void setTimingsEnabled(bool n);
+    bool isTimingsEnabled() const;
 
 protected:
     void loadCbcRc(void);
@@ -40,6 +42,7 @@ protected:
     std::string user;
     std::string passwd;
     std::string bucket;
+    bool timings;
 };
 
 #endif
