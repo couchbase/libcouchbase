@@ -20,7 +20,7 @@
 #include <cstdio>
 #include <map>
 
-#include "tools/configuration.h"
+#include "configuration.h"
 
 using namespace std;
 
