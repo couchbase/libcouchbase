@@ -34,8 +34,8 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   GCC_WERROR="-Werror"
   GCC_C_OPTIMIZE="-O3"
   GCC_CXX_OPTIMIZE="-O3"
-  GCC_C_DEBUG="-g"
-  GCC_CXX_DEBUG="-g"
+  GCC_C_DEBUG="-O0 -g3"
+  GCC_CXX_DEBUG="-O0 -g3"
   GCC_VISIBILITY=-fvisibility=hidden
   GCC_CPPFLAGS="-pthread -pipe -D_THREAD_SAFE"
   GCC_CFLAGS="-std=gnu99"
