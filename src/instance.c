@@ -288,7 +288,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
 
     if (curr_config) {
         diff = vbucket_compare(curr_config, next_config);
-        if (diff && diff->sequence_changed) {
+        if (diff && (diff->sequence_changed || diff->n_vb_changes > 0)) {
             nservers = instance->nservers;
             servers = instance->servers;
             apply_vbucket_config(instance, next_config);
