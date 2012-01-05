@@ -76,9 +76,7 @@ endif
 #libcouchbase_la_SOURCES += src/views.c
 #endif
 
-# Please remember to update the version info before each release if you
-# add / remove functions.
-libcouchbase_la_LDFLAGS=-version-info 0:0:0
+libcouchbase_la_LDFLAGS= -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 libcouchbase_la_LIBADD=-lvbucket $(LIBSASL)
 

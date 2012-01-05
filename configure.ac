@@ -35,10 +35,27 @@ ac_cv_func_realloc_0_nonnull=yes
 
 COUCHBASE_GENERIC_COMPILER(c99)
 AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src"
-VERSION_NUMBER_HEX=GIT_VERSION_NUMBER_HEX
 CHANGESET=GIT_CHANGESET
-AC_SUBST(VERSION_NUMBER_HEX)
 AC_SUBST(CHANGESET)
+
+#
+# To ensure that we don't break applications in mysterious ways we need
+# to version our library. For a detailed description, check out:
+# http://www.gnu.org/software/libtool/manual/libtool.html#Libtool-versioning
+#
+LIBCOUCHBASE_API_CURRENT=1
+LIBCOUCHBASE_API_REVISION=0
+LIBCOUCHBASE_API_AGE=0
+AC_SUBST(LIBCOUCHBASE_API_CURRENT)
+AC_SUBST(LIBCOUCHBASE_API_REVISION)
+AC_SUBST(LIBCOUCHBASE_API_AGE)
+
+# The actual version numbers for the developers ;)
+LIBCOUCHBASE_VERSION="1.0.0"
+LIBCOUCHBASE_VERSION_HEX=`echo ${LIBCOUCHBASE_VERSION} | awk -F. '{printf "0x%0.2d%0.2d%0.2d", $1, $2, $3}'`
+AC_SUBST(LIBCOUCHBASE_VERSION)
+AC_SUBST(LIBCOUCHBASE_VERSION_HEX)
+
 
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(gethostbyname, nsl)
@@ -272,6 +289,5 @@ AH_BOTTOM([
 ])
 
 dnl ----------------------------------------------------------------------------
-#PANDORA_VC_VERSION
 AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h])
 AC_OUTPUT
