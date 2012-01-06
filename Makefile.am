@@ -178,7 +178,7 @@ TESTS=${check_PROGRAMS}
 example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
 example_pillowfight_LDADD = libcouchbase.la
 
-CBC_LINKS=cbc-cat cbc-rm cbc-cp cbc-stat cbc-flush
+CBC_LINKS=cbc-cat cbc-rm cbc-cp cbc-stat cbc-flush cbc-create
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \
                $(RM) $(CBC_LINKS) && \

@@ -40,9 +40,10 @@ enum cbc_command_t {
     cbc_illegal,
     cbc_cat,
     cbc_cp,
+    cbc_create,
+    cbc_flush,
     cbc_rm,
-    cbc_stat,
-    cbc_flush
+    cbc_stat
 };
 
 extern "C" {
@@ -338,6 +339,59 @@ static bool flush(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
+static bool spool(string &data) {
+    stringstream ss;
+    char buffer[1024];
+    size_t nr;
+    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != -1) {
+        if (nr == 0) {
+            break;
+        }
+        ss.write(buffer, nr);
+    }
+    data.assign(ss.str());
+    return nr == 0 || feof(stdin) != 0;
+}
+
+static bool create(libcouchbase_t instance, list<string> &keys,
+                   uint32_t exptime, uint32_t flags, bool add)
+{
+    if (keys.size() != 1) {
+        cerr << "Usage: You need to specify a single key" << endl;
+        return false;
+    }
+
+    string &key = keys.front();
+
+    string data;
+    if (!spool(data)) {
+        cerr << "Failed to read input data: " << strerror(errno)
+             << endl;
+        return false;
+    }
+
+    libcouchbase_storage_t operation;
+    if (add) {
+        operation = LIBCOUCHBASE_ADD;
+    } else {
+        operation = LIBCOUCHBASE_SET;
+    }
+
+    libcouchbase_error_t err;
+    err = libcouchbase_store(instance, NULL, operation,
+                             key.c_str(), key.length(),
+                             data.data(), data.length(),
+                             flags, exptime, 0);
+
+    if (err != LIBCOUCHBASE_SUCCESS) {
+        cerr << "Failed to store object: " << endl
+             << libcouchbase_strerror(instance, err) << endl;
+        return false;
+    }
+
+    return true;
+}
+
 static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **argv)
 {
     Configuration config;
@@ -355,6 +409,18 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     getopt.addOption(new CommandLineOption('T', "enable-timings", false,
                                            "Enable command timings"));
 
+    uint32_t flags = 0;
+    uint32_t exptime = 0;
+    bool add = false;
+    if (cmd == cbc_create) {
+        getopt.addOption(new CommandLineOption('f', "flag", true,
+                                               "Flag for the new object"));
+        getopt.addOption(new CommandLineOption('e', "exptime", true,
+                                               "Expiry time for the new object"));
+        getopt.addOption(new CommandLineOption('a', "add", false,
+                                               "Fail if the object exists"));
+    }
+
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -363,6 +429,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     vector<CommandLineOption*>::iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->found) {
+            bool unknownOpt = true;
             switch ((*iter)->shortopt) {
             case 'h' :
                 config.setHost((*iter)->argument);
@@ -386,8 +453,27 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             case '?':
             default:
-                getopt.usage(argv[0]);
-                exit(EXIT_FAILURE);
+                if (cmd == cbc_create) {
+                    unknownOpt = false;
+                    switch ((*iter)->shortopt) {
+                    case 'f':
+                        flags = (uint32_t)atoi((*iter)->argument);
+                        break;
+                    case 'e':
+                        flags = (uint32_t)atoi((*iter)->argument);
+                        break;
+                    case 'a':
+                        add = true;
+                        break;
+                    default:
+                        unknownOpt = true;
+                    }
+                }
+
+                if (unknownOpt) {
+                    getopt.usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
             }
         }
     }
@@ -441,6 +527,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     case cbc_flush:
         success = flush(instance, getopt.arguments);
         break;
+    case cbc_create:
+        success = create(instance, getopt.arguments, exptime, flags, add);
+        break;
     default:
         cerr << "Not implemented" << endl;
         success = false;
@@ -478,6 +567,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_cat;
     } else if (name.find("cbc-cp") != string::npos) {
         return cbc_cp;
+    } else if (name.find("cbc-create") != string::npos) {
+        return cbc_create;
     } else if (name.find("cbc-rm") != string::npos) {
         return cbc_rm;
     } else if (name.find("cbc-stat") != string::npos) {
@@ -506,6 +597,8 @@ int main(int argc, char **argv)
                 cmd = cbc_cat;
             } else if (strcmp(argv[1], "cp") == 0) {
                 cmd = cbc_cp;
+            } else if (strcmp(argv[1], "create") == 0) {
+                cmd = cbc_create;
             } else if (strcmp(argv[1], "rm") == 0) {
                 cmd = cbc_rm;
             } else if (strcmp(argv[1], "stat") == 0) {
@@ -515,7 +608,7 @@ int main(int argc, char **argv)
             }
         } else {
             std::cerr << "Usage: cbc command [options]" << std::endl
-                      << "\tcommand may be: cat, cp, rm, stat, flush" << std::endl;
+                      << "\tcommand may be: cat, cp, create, rm, stat, flush" << std::endl;
             exit(EXIT_FAILURE);
         }
 
