@@ -224,7 +224,7 @@ AC_ARG_ENABLE([couchbasemock],
     [ac_cv_enable_couchbasemock="yes"])
 
 AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
-      [AS_IF([test "x${DOWNLOAD}" == "xno"],
+      [AS_IF([test "x${DOWNLOAD}" = "xno"],
              [AC_MSG_ERROR([You need wget or curl in path to download the mock server. Use --disable-couchbasemock to avoid downloading of the mock server])])
        AS_IF([test "x$JAVA" = "xno"],
              [AC_MSG_ERROR([You need java in path to run the mock server.
