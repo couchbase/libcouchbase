@@ -48,20 +48,33 @@ AC_PATH_PROG(JAVA, java, no)
 AC_PATH_PROG(WGET, wget, no)
 AC_PATH_PROG(CURL, curl, no)
 
+AS_IF([test "x${WGET}" != "xno"],
+      [DOWNLOAD="${WGET} -q -O"],
+      [ AS_IF([test "x${CURL}" != "xno"],
+              [DOWNLOAD="${CURL} -s -o"],
+              [DOWNLOAD="no"])
+
+        AS_IF([test "x${WGET}" != "xno"],
+              [DOWNLOAD="${WGET} -q -O"],
+              [ AS_IF([test "x${CURL}" != "xno"],
+                      [DOWNLOAD="${CURL} -s -o"],
+                      [AC_MSG_ERROR([You need wget or curl in path to download the headers.])])])])
+
+AC_SUBST(DOWNLOAD)
+
 dnl Enable to specify external source for memcached headers. For example:
 dnl https://raw.github.com/memcached/memcached/engine-pu/include/memcached/
 AC_ARG_WITH([memcached-headers-url],
     [AC_HELP_STRING([--with-memcached-headers-url], [Download protocol_binary.h from given location.])],
     [
-        AS_IF([test "x${WGET}" != "xno"],
-              [DOWNLOAD="${WGET} -q -O"],
-              [ AS_IF([test "x${CURL}" != "xno"],
-                      [DOWNLOAD="${CURL} -s -o"],
-                      [AC_MSG_ERROR([You need wget or curl in path to download the headers.])])])
-        mkdir -p include/memcached && \
-        ${DOWNLOAD} include/memcached/protocol_binary.h ${withval}/protocol_binary.h  && \
-        ${DOWNLOAD} include/memcached/vbucket.h ${withval}/vbucket.h
-        CFLAGS="${CFLAGS} -Iinclude"
+        AS_IF([test "x${DOWNLOAD}" != "xno"],
+              [
+                    mkdir -p include/memcached && \
+                    ${DOWNLOAD} include/memcached/protocol_binary.h ${withval}/protocol_binary.h  && \
+                    ${DOWNLOAD} include/memcached/vbucket.h ${withval}/vbucket.h
+                    CFLAGS="${CFLAGS} -Iinclude"
+              ],
+              [AC_MSG_ERROR([You need wget or curl in path to download the headers.])])
     ]
 )
 
@@ -208,10 +221,8 @@ AC_ARG_ENABLE([couchbasemock],
     [ac_cv_enable_couchbasemock="yes"])
 
 AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
-      [AS_IF([test "x$WGET" = "xno"],
-             [AC_MSG_ERROR([You need wget in path to download the mock server.
-Try add --disable-couchbasemock
-])])
+      [AS_IF([test "x${DOWNLOAD}" == "xno"],
+             [AC_MSG_ERROR([You need wget or curl in path to download the mock server. Use --disable-couchbasemock to avoid downloading of the mock server])])
        AS_IF([test "x$JAVA" = "xno"],
              [AC_MSG_ERROR([You need java in path to run the mock server.
 Try add --disable-couchbasemock
