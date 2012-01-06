@@ -86,6 +86,9 @@ AC_CHECK_HEADERS_ONCE([mach/mach_time.h memcached/protocol_binary.h
 AS_IF([test "x$ac_cv_header_memcached_protocol_binary_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate memcached/protocol_binary.h)])
 
+AS_IF([test "x$ac_cv_header_libvbucket_vbucket_h" != "xyes"],
+      [AC_MSG_ERROR(Failed to locate libvbucket/vbucket.h)])
+
 dnl Check that we're able to find a usable libvbucket
 AC_CACHE_CHECK([for libvbucket], [ac_cv_have_libvbucket],
   [ saved_libs="$LIBS"
