@@ -300,6 +300,11 @@ extern "C" {
      * sent immediately, but you won't be sure (or get the result) until you
      * run the event loop (or call libcouchbase_execute).
      *
+     * This _store_by_key function differs from the _store function in that
+     * you can specify a different value for hashkey to specify a different
+     * character string for the client to use when hashing to the proper
+     * location in the cluster.
+     *
      * @param instance the handle to libcouchbase
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
