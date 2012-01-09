@@ -239,20 +239,19 @@ static void relocate_packets(ringbuffer_t *src,
     struct libcouchbase_command_data_st ct;
     protocol_binary_request_header cmd;
     libcouchbase_server_t *server;
-    uint32_t nbody, nkey;
-    char *body, *key;
-    size_t nr;
-    int vb, idx;
+    uint32_t nbody;
+    char *body;
+    size_t nr, idx;
+    uint16_t vb;
 
     while ((nr = libcouchbase_ringbuffer_read(src, cmd.bytes, sizeof(cmd.bytes)))) {
-        nkey = ntohs(cmd.request.keylen);
         nbody = ntohl(cmd.request.bodylen); /* extlen + nkey + nval */
         body = malloc(nbody);
         nr = libcouchbase_ringbuffer_read(src, body, nbody);
         assert(nr == nbody);
-        key = body + cmd.request.extlen;
-        (void)vbucket_map(dst->vbucket_config, key, nkey, &vb, &idx);
-        server = dst->servers + (size_t)idx;
+        vb = ntohs(cmd.request.vbucket);
+        idx = (size_t)vbucket_get_master(dst->vbucket_config, vb);
+        server = dst->servers + idx;
         nr = libcouchbase_ringbuffer_read(src_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
         libcouchbase_server_start_packet(server, ct.cookie,
