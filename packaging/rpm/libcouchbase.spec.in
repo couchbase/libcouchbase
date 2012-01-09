@@ -11,7 +11,7 @@ Group: System Environment/Libraries
 BuildRequires: libvbucket-devel >= 1.7.2, libevent-devel >= 1.4, cyrus-sasl-devel >= 2.0
 URL: https://github.com/couchbase/libcouchbase
 Source: %{name}-%{version}_%{release}.tar.gz
-BuildRoot: build/%{name}-%{version}_%{release}
+BuildRoot: %{_topdir}/build/%{name}-%{version}_%{release}
 
 %description
 This is the client and protocol library for Couchbase project.
