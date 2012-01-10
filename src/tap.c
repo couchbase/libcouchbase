@@ -183,18 +183,31 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
 }
 
 LIBCOUCHBASE_API
-void libcouchbase_tap_cluster(libcouchbase_t instance,
-                              const void *command_cookie,
-                              libcouchbase_tap_filter_t filter,
-                              int block)
+libcouchbase_error_t libcouchbase_tap_cluster(libcouchbase_t instance,
+                                              const void *command_cookie,
+                                              libcouchbase_tap_filter_t filter,
+                                              int block)
 {
+    size_t ii;
     (void)command_cookie;
-    /* connect to the upstream server. */
-    instance->vbucket_state_listener = tap_vbucket_state_listener;
+
+    /* we need a vbucket config before we can start tap'ing the cluster.. */
+    if (instance->vbucket_config == NULL) {
+        return LIBCOUCHBASE_ETMPFAIL;
+    }
+
+    /* /\* connect to the upstream server. *\/ */
+    /* instance->vbucket_state_listener = tap_vbucket_state_listener; */
     instance->tap.filter = filter;
+
+    for (ii = 0; ii < instance->nservers; ++ii) {
+        tap_vbucket_state_listener(instance->servers + ii);
+    }
 
     /* Start the event loop and dump everything */
     if (block) {
         instance->io->run_event_loop(instance->io);
     }
+
+    return LIBCOUCHBASE_SUCCESS;
 }

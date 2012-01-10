@@ -169,7 +169,9 @@ tests_flags_test_LDFLAGS = -levent
 tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tools_cbc_LDADD = libcouchbase.la
-tools_cbc_SOURCES = tools/cbc.cc tools/commandlineparser.cc             \
+tools_cbc_SOURCES = tools/cbc.cc tools/cbc-receive.cc                   \
+                    tools/cbc-send.cc tools/cbc-util.cc                 \
+                    tools/cbc-util.h tools/commandlineparser.cc         \
                     tools/commandlineparser.h tools/configuration.cc    \
                     tools/configuration.h
 
@@ -178,7 +180,9 @@ TESTS=${check_PROGRAMS}
 example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
 example_pillowfight_LDADD = libcouchbase.la
 
-CBC_LINKS=cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create cbc-version
+CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create	\
+            cbc-send cbc-receive cbc-version
+
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \
                $(RM) $(CBC_LINKS) && \

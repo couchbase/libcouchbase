@@ -134,10 +134,10 @@ extern "C" {
      *              dispatcher loop
      */
     LIBCOUCHBASE_API
-    void libcouchbase_tap_cluster(libcouchbase_t instance,
-                                  const void *command_cookie,
-                                  libcouchbase_tap_filter_t filter,
-                                  int block);
+    libcouchbase_error_t libcouchbase_tap_cluster(libcouchbase_t instance,
+                                                  const void *command_cookie,
+                                                  libcouchbase_tap_filter_t filter,
+                                                  int block);
 
     /**
      * Wait for the execution of all batched requests

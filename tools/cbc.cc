@@ -42,8 +42,10 @@ enum cbc_command_t {
     cbc_cp,
     cbc_create,
     cbc_flush,
+    cbc_receive,
     cbc_rm,
     cbc_stats,
+    cbc_send,
     cbc_version
 };
 
@@ -292,7 +294,7 @@ static bool cat(libcouchbase_t instance, list<string> &keys)
         cerr << "Failed to send requests:" << endl
              << libcouchbase_strerror(instance, err) << endl;
         return false;
-    }
+   }
 
     return true;
 }
@@ -392,6 +394,9 @@ static bool create(libcouchbase_t instance, list<string> &keys,
 
     return true;
 }
+
+extern bool receive(libcouchbase_t instance, list<string> &keys);
+extern bool send(libcouchbase_t instance, list<string> &keys);
 
 static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **argv)
 {
@@ -523,8 +528,14 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     case cbc_rm:
         success = rm(instance, getopt.arguments);
         break;
+    case cbc_receive:
+        success = receive(instance, getopt.arguments);
+        break;
     case cbc_stats:
         success = stats(instance, getopt.arguments);
+        break;
+    case cbc_send:
+        success = send(instance, getopt.arguments);
         break;
     case cbc_flush:
         success = flush(instance, getopt.arguments);
@@ -571,8 +582,12 @@ static cbc_command_t getBuiltin(string name)
         return cbc_cp;
     } else if (name.find("cbc-create") != string::npos) {
         return cbc_create;
+    } else if (name.find("cbc-receive") != string::npos) {
+        return cbc_receive;
     } else if (name.find("cbc-rm") != string::npos) {
         return cbc_rm;
+    } else if (name.find("cbc-send") != string::npos) {
+        return cbc_send;
     } else if (name.find("cbc-stats") != string::npos) {
         return cbc_stats;
     } else if (name.find("cbc-flush") != string::npos) {
@@ -603,8 +618,12 @@ int main(int argc, char **argv)
                 cmd = cbc_cp;
             } else if (strcmp(argv[1], "create") == 0) {
                 cmd = cbc_create;
+            } else if (strcmp(argv[1], "receive") == 0) {
+                cmd = cbc_receive;
             } else if (strcmp(argv[1], "rm") == 0) {
                 cmd = cbc_rm;
+            } else if (strcmp(argv[1], "send") == 0) {
+                cmd = cbc_send;
             } else if (strcmp(argv[1], "stats") == 0) {
                 cmd = cbc_stats;
             } else if (strcmp(argv[1], "flush") == 0) {
