@@ -3,7 +3,7 @@
 RPM_WORKSPACE=$(shell pwd)/build
 RPM_DIR=$(RPM_WORKSPACE)/rpmbuild
 RPM_VER=$(shell echo $(VERSION) | awk -F_ '{ print $$1 }')
-RPM_REL=$(shell echo $(VERSION) | awk -F_ '{ print $$2"_"$$3 }')
+RPM_REL=$(shell echo $(VERSION) | awk -F_ '{ sub(/g/, "", $$3); print $$2"_"$$3 }')
 
 dist-rpm: dist
 	rm -rf $(RPM_WORKSPACE)
