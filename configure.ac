@@ -51,7 +51,7 @@ AC_PATH_PROG(CURL, curl, no)
 AS_IF([test "x${WGET}" != "xno"],
       [DOWNLOAD="${WGET} -q -O"],
       [AS_IF([test "x${CURL}" != "xno"],
-             [DOWNLOAD="${CURL} -s -o -L"],
+             [DOWNLOAD="${CURL} -s -L -o"],
              [AC_MSG_ERROR([You need wget or curl in path to download the headers.])])])
 
 AC_SUBST(DOWNLOAD)
