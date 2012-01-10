@@ -195,6 +195,8 @@ static void tap_mutation(libcouchbase_t instance,
                          size_t nbytes,
                          uint32_t flags,
                          uint32_t exp,
+                         uint64_t cas,
+                         uint16_t vbucket,
                          const void *es,
                          size_t nes)
 {
@@ -205,6 +207,8 @@ static void tap_mutation(libcouchbase_t instance,
     (void)data;
     (void)flags;
     (void)exp;
+    (void)cas;
+    (void)vbucket;
     (void)es;
     (void)nes;
 }

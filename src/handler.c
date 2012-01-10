@@ -345,8 +345,10 @@ static void tap_mutation_handler(libcouchbase_server_t *server,
     uint32_t nbytes = ntohl(req->request.bodylen) - req->request.extlen - nes - nkey;
 
     libcouchbase_t root = server->instance;
-    root->callbacks.tap_mutation(root, command_cookie, key, nkey, data, nbytes,
-                                 flags, exp, es, nes);
+    root->callbacks.tap_mutation(root, command_cookie, key, nkey, data,
+                                 nbytes, flags, exp, req->request.cas,
+                                 ntohs(req->request.vbucket),
+                                 es, nes);
 }
 
 static void tap_deletion_handler(libcouchbase_server_t *server,
@@ -361,7 +363,9 @@ static void tap_deletion_handler(libcouchbase_server_t *server,
     uint16_t nes = ntohs(deletion->message.body.tap.enginespecific_length);
     char *key = es + nes;
     libcouchbase_t root = server->instance;
-    root->callbacks.tap_deletion(root, command_cookie, key, nkey, es, nes);
+    root->callbacks.tap_deletion(root, command_cookie, key, nkey,
+                                 req->request.cas,
+                                 ntohs(req->request.vbucket), es, nes);
 }
 
 static void tap_flush_handler(libcouchbase_server_t *server,
@@ -538,22 +542,27 @@ static void dummy_tap_mutation_callback(libcouchbase_t instance,
                                         size_t nbytes,
                                         uint32_t flags,
                                         uint32_t exp,
+                                        uint64_t cas,
+                                        uint16_t vbucket,
                                         const void *es,
                                         size_t nes)
 {
     (void)instance; (void)cookie; (void)key; (void)nkey; (void)data;
-    (void)nbytes; (void)flags; (void)exp; (void)es; (void)nes;
+    (void)nbytes; (void)flags; (void)cas; (void)vbucket;
+    (void)exp; (void)es; (void)nes;
 }
 
 static void dummy_tap_deletion_callback(libcouchbase_t instance,
                                         const void *cookie,
                                         const void *key,
                                         size_t nkey,
+                                        uint64_t cas,
+                                        uint16_t vbucket,
                                         const void *es,
                                         size_t nes)
 {
-    (void)instance; (void)cookie; (void)key; (void)nkey; (void)es; (void)nes;
-
+    (void)instance; (void)cookie; (void)key; (void)nkey; (void)cas;
+    (void)vbucket; (void)es; (void)nes;
 }
 
 static void dummy_tap_flush_callback(libcouchbase_t instance,

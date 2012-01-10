@@ -73,12 +73,16 @@ extern "C" {
                                                        size_t nbytes,
                                                        uint32_t flags,
                                                        uint32_t exp,
+                                                       uint64_t cas,
+                                                       uint16_t vbucket,
                                                        const void *es,
                                                        size_t nes);
     typedef void (*libcouchbase_tap_deletion_callback)(libcouchbase_t instance,
                                                        const void *cookie,
                                                        const void *key,
                                                        size_t nkey,
+                                                       uint64_t cas,
+                                                       uint16_t vbucket,
                                                        const void *es,
                                                        size_t nes);
     typedef void (*libcouchbase_tap_flush_callback)(libcouchbase_t instance,
