@@ -58,6 +58,7 @@ libcouchbase_la_SOURCES = \
                         src/compat.c \
                         src/config_static.h \
                         src/cookie.c \
+                        src/couch.c \
                         src/error.c \
                         src/event.c \
                         src/flush.c \
@@ -90,10 +91,6 @@ endif
 if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c
 endif
-
-#if HAVE_LIBEVENT2
-#libcouchbase_la_SOURCES += src/views.c
-#endif
 
 libcouchbase_la_LDFLAGS= -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
@@ -143,24 +140,17 @@ libmockserver_la_SOURCES = \
 # Example programs using the library
 #
 if BUILD_TOOLS
-noinst_PROGRAMS = \
-               example/pillowfight
+noinst_PROGRAMS = example/pillowfight example/couchview
+if HAVE_LIBYAJL2
+noinst_PROGRAMS += example/couchview_yajl
+endif
 endif
 
-#if HAVE_LIBEVENT2
-#noinst_PROGRAMS += example/couchview
-#if HAVE_LIBYAJL2
-#noinst_PROGRAMS += example/couchview_yajl
-#endif
-#endif
+example_couchview_SOURCES = example/couchview.c
+example_couchview_LDADD = libcouchbase.la
 
-#example_couchview_SOURCES = example/couchview.c
-#example_couchview_LDADD = libcouchbase.la
-#example_couchview_LDFLAGS = -levent
-
-#example_couchview_yajl_SOURCES = example/couchview_yajl.c
-#example_couchview_yajl_LDADD = libcouchbase.la
-#example_couchview_yajl_LDFLAGS = -levent -lyajl
+example_couchview_yajl_SOURCES = example/couchview_yajl.c
+example_couchview_yajl_LDADD = libcouchbase.la -lyajl
 
 check_PROGRAMS = tests/base64-test \
                  tests/hashset-test \

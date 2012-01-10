@@ -216,36 +216,40 @@ static void touch_callback(libcouchbase_t instance,
     libcouchbase_maybe_breakout(instance);
 }
 
-static void doc_complete_callback(libcouchbase_t instance,
-                                  const void *cookie,
-                                  libcouchbase_error_t error,
-                                  libcouchbase_http_status_t status,
-                                  const char *uri,
-                                  const void *bytes,
-                                  libcouchbase_size_t nbytes)
+static void couch_complete_callback(libcouchbase_couch_request_t request,
+                                    libcouchbase_t instance,
+                                    const void *cookie,
+                                    libcouchbase_error_t error,
+                                    libcouchbase_http_status_t status,
+                                    const char *path,
+                                    libcouchbase_size_t npath,
+                                    const void *bytes,
+                                    libcouchbase_size_t nbytes)
 {
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.doc_complete(instance, cookie, error, status,
-                              uri, bytes, nbytes);
+    c->callbacks.couch_complete(request, instance, cookie, error,
+                                status, path, npath, bytes, nbytes);
     restore_wrapping_env(instance, c, error);
     libcouchbase_maybe_breakout(instance);
 }
 
-static void doc_data_callback(libcouchbase_t instance,
-                              const void *cookie,
-                              libcouchbase_error_t error,
-                              libcouchbase_http_status_t status,
-                              const char *uri,
-                              const void *bytes,
-                              libcouchbase_size_t nbytes)
+static void couch_data_callback(libcouchbase_couch_request_t request,
+                                libcouchbase_t instance,
+                                const void *cookie,
+                                libcouchbase_error_t error,
+                                libcouchbase_http_status_t status,
+                                const char *path,
+                                libcouchbase_size_t npath,
+                                const void *bytes,
+                                libcouchbase_size_t nbytes)
 {
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.doc_data(instance, cookie, error, status,
-                          uri, bytes, nbytes);
+    c->callbacks.couch_data(request, instance, cookie, error,
+                            status, path, npath, bytes, nbytes);
     restore_wrapping_env(instance, c, error);
     libcouchbase_maybe_breakout(instance);
 }
@@ -291,8 +295,8 @@ static void restore_wrapping_env(libcouchbase_t instance,
     instance->callbacks.tap_opaque = tap_opaque_callback;
     instance->callbacks.tap_vbucket_set = tap_vbucket_set_callback;
     instance->callbacks.error = error_callback;
-    instance->callbacks.doc_complete = doc_complete_callback;
-    instance->callbacks.doc_data = doc_data_callback;
+    instance->callbacks.couch_complete = couch_complete_callback;
+    instance->callbacks.couch_data = couch_data_callback;
 
     user->cookie = (void *)instance->cookie;
     user->retcode = error;

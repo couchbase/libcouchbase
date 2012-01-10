@@ -35,7 +35,9 @@
 #include "isasl.h"
 #endif
 
+#include "http_parser/http_parser.h"
 #include "ringbuffer.h"
+#include "hashset.h"
 #include "debug.h"
 
 /*
@@ -110,8 +112,8 @@ extern "C" {
         libcouchbase_tap_opaque_callback tap_opaque;
         libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
         libcouchbase_error_callback error;
-        libcouchbase_doc_complete_callback doc_complete;
-        libcouchbase_doc_data_callback doc_data;
+        libcouchbase_couch_complete_callback couch_complete;
+        libcouchbase_couch_data_callback couch_data;
     };
 
     struct libcouchbase_st {
@@ -243,6 +245,9 @@ extern "C" {
         /** The input buffer for this server */
         ringbuffer_t input;
 
+        /** The set of the pointers to CouchDB requests */
+        hashset_t couch_requests;
+
         /** The SASL object used for this server */
         sasl_conn_t *sasl_conn;
         /** The event item representing _this_ object */
@@ -255,6 +260,54 @@ extern "C" {
         libcouchbase_t instance;
 
         hrtime_t next_timeout;
+    };
+
+    struct libcouchbase_couch_request_st {
+        /** The socket to the server */
+        evutil_socket_t sock;
+        struct libcouchbase_io_opt_st *io;
+        /** The origin node */
+        libcouchbase_server_t *server;
+        /** Short ref to instance (server->instance) */
+        libcouchbase_t instance;
+        /** The URL buffer */
+        char *url;
+        libcouchbase_size_t nurl;
+        /** The URL info */
+        struct http_parser_url url_info;
+        /** The hostname of the server */
+        char *host;
+        /** The string representation of the port number (binary is url_info.port) */
+        char *port;
+        /** The requested path (without couch api endpoint) */
+        const char *path;
+        libcouchbase_size_t npath;
+        /** The type of HTTP request */
+        libcouchbase_http_method_t method;
+        /** The HTTP response parser */
+        http_parser *parser;
+        http_parser_settings parser_settings;
+        /** The address information for this server (the one to release) */
+        struct addrinfo *root_ai;
+        /** The address information for this server (the one we're trying) */
+        struct addrinfo *curr_ai;
+        /** The event item representing _this_ object */
+        void *event;
+        /** Non-zero if caller would like to receive response in chunks */
+        int chunked;
+        /** This callback will be executed when the whole response will be
+         * transferred */
+        libcouchbase_couch_complete_callback on_complete;
+        /** This callback will be executed for each chunk of the response */
+        libcouchbase_couch_data_callback on_data;
+        /** The outgoing buffer for this request */
+        ringbuffer_t output;
+        /** The incoming buffer for this request */
+        ringbuffer_t input;
+        /** The accumulator for result (when chunked mode disabled) */
+        ringbuffer_t result;
+        /** The cookie belonging to this request */
+        const void *command_cookie;
     };
 
     libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, libcouchbase_error_t retcode);

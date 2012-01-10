@@ -543,6 +543,61 @@ extern "C" {
     libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
                                             const void *cookie);
 
+    /**
+     * Execute CouchDB view matching given path and yield JSON result object.
+     * The client should setup view_complete callback in order to fetch the
+     * result. Also he can setup view_data callback to fetch response body
+     * in chunks as soon as possible, it will be called each time the library
+     * receive a data chunk from socket. The empty <tt>bytes</tt> argument
+     * (NULL pointer and zero size) is the sign of end of response. Chunked
+     * callback allows to save memory on large datasets.
+     *
+     * It doesn't automatically breakout like other operations when you use
+     * libcouchbase_execute().
+     *
+     * @param instance The handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param path A view path string with optional query params (e.g. skip,
+     *             limit etc.)
+     * @param npath Size of path
+     * @param body The POST body for CouchDB view request. If the body
+     *             parameter is NULL, function will use GET request.
+     * @param nbody Size of body
+     * @param method HTTP message type to be sent to server
+     * @param chunked If true the client will use libcouchbase_couch_data_callback
+     *                to notify about response and libcouchbase_couch_complete
+     *                otherwise.
+     *
+     * @example Fetch first 10 docs from the bucket
+     *    const char path[] = "_all_docs?limit=10";
+     *    libcouchbase_make_couch_request(instance, NULL, path, npath
+     *                                    NULL, 0, LIBCOUCHBASE_HTTP_METHOD_GET, 1);
+     *
+     * @example Filter first 10 docs using POST request
+     *    const char path[] = "_all_docs?limit=10";
+     *    const char body[] = "{\"keys\": [\"test_1000\", \"test_10002\"]}"
+     *    libcouchbase_make_couch_request(instance, NULL, path, npath
+     *                                    body, sizeof(body),
+     *                                    LIBCOUCHBASE_HTTP_METHOD_GET, 1);
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_make_couch_request(libcouchbase_t instance,
+                                                         const void *command_cookie,
+                                                         const char *path,
+                                                         libcouchbase_size_t npath,
+                                                         const void *body,
+                                                         libcouchbase_size_t nbody,
+                                                         libcouchbase_http_method_t method,
+                                                         int chunked);
+
+    /**
+     * Cancel view request. This function could be called from the callback
+     * to stop the request.
+     */
+    LIBCOUCHBASE_API
+    void libcouchbase_cancel_couch_request(libcouchbase_couch_request_t request);
+
 #ifdef __cplusplus
 }
 #endif

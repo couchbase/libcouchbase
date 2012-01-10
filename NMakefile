@@ -37,7 +37,7 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\store.c src\strerror.c src\synchandler.c src\tap.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
     src\wait.c src\gethrtime.c src\plugin-win32.c src\isasl.c \
-    src\compat.c contrib\http_parser\http_parser.c
+    src\compat.c contrib\http_parser\http_parser.c src\couch.c
 
 # Unfortunately nmake is a bit limited in its substitute functions.
 # Work around that by using dobj to represent debug object files ;)
@@ -180,7 +180,6 @@ uninstall:
          $(INSTALL)\include\libcouchbase\callbacks.h \
          $(INSTALL)\include\libcouchbase\configuration.h \
          $(INSTALL)\include\libcouchbase\couchbase.h \
-         $(INSTALL)\include\libcouchbase\doc.h \
          $(INSTALL)\include\libcouchbase\libevent_io_opts.h \
          $(INSTALL)\include\libcouchbase\tap_filter.h \
          $(INSTALL)\include\libcouchbase\timings.h \

@@ -24,6 +24,7 @@
  *
  * @author Sergey Avseyev
  */
+#include "config.h"
 #include <unistd.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -198,44 +199,51 @@ static void handle_options(int argc, char **argv)
 FILE *output;
 
 
-static void data_callback(libcouchbase_t instance,
+static void data_callback(libcouchbase_couch_request_t request,
+                          libcouchbase_t instance,
                           const void *cookie,
                           libcouchbase_error_t error,
                           libcouchbase_http_status_t status,
-                          const char *uri,
+                          const char *path, size_t npath,
                           const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
 
-    fwrite(bytes, nbytes, 1, output);
+    fwrite(bytes, nbytes, sizeof(char), output);
     if (bytes == NULL) { /* end of response */
         c->io->stop_event_loop(c->io);
     }
+    (void)request;
     (void)instance;
-    (void)uri;
+    (void)path;
+    (void)npath;
     (void)error;
     (void)status;
 }
 
-static void complete_callback(libcouchbase_t instance,
+static void complete_callback(libcouchbase_couch_request_t request,
+                              libcouchbase_t instance,
                               const void *cookie,
                               libcouchbase_error_t error,
                               libcouchbase_http_status_t status,
-                              const char *uri,
+                              const char *path, size_t npath,
                               const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
-    (void)instance;
 
-    fprintf(stderr, "View %s ... ", uri);
+    fprintf(stderr, "\"");
+    fwrite(path, npath, sizeof(char), stderr);
+    fprintf(stderr, "\": ");
     if (error == LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "OK\n");
-        fwrite(bytes, nbytes, 1, output);
+        fwrite(bytes, nbytes, sizeof(char), output);
     } else {
-        fprintf(stderr, "FAIL(%d)\n", status);
-        fwrite(bytes, nbytes, 1, output);
+        fprintf(stderr, "FAIL(%d): %s, HTTP code: %d\n",
+                error, libcouchbase_strerror(instance, error), status);
+        fwrite(bytes, nbytes, sizeof(char), output);
     }
     c->io->stop_event_loop(c->io);
+    (void)request;
 }
 
 static void error_callback(libcouchbase_t instance,
@@ -291,8 +299,8 @@ int main(int argc, char **argv)
     }
 
     (void)libcouchbase_set_error_callback(instance, error_callback);
-    (void)libcouchbase_set_doc_data_callback(instance, data_callback);
-    (void)libcouchbase_set_doc_complete_callback(instance, complete_callback);
+    (void)libcouchbase_set_couch_data_callback(instance, data_callback);
+    (void)libcouchbase_set_couch_complete_callback(instance, complete_callback);
 
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
@@ -307,11 +315,13 @@ int main(int argc, char **argv)
         nbytes = strlen(bytes);
     }
 
-    rc = libcouchbase_make_doc_request(instance, (void *)&cookie,
-                                       uri, LIBCOUCHBASE_HTTP_METHOD_GET,
-                                       bytes, nbytes, chunked);
+    rc = libcouchbase_make_couch_request(instance, (void *)&cookie,
+                                         uri, strlen(uri), bytes, nbytes,
+                                         bytes ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
+                                         chunked);
+
     if (rc != LIBCOUCHBASE_SUCCESS) {
-        fprintf(stderr, "Failed to execute view\n");
+        fprintf(stderr, "Failed to execute view: %s\n", libcouchbase_strerror(instance, rc));
         return 1;
     }
 
