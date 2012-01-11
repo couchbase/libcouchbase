@@ -102,7 +102,6 @@ libmockserver_la_SOURCES = \
 # Example programs using the library
 #
 noinst_PROGRAMS = \
-               example/memdump \
                example/pillowfight
 
 #if HAVE_LIBEVENT2
@@ -111,10 +110,6 @@ noinst_PROGRAMS = \
 #noinst_PROGRAMS += example/couchview_yajl
 #endif
 #endif
-
-example_memdump_SOURCES = example/memdump.c
-example_memdump_LDADD = libcouchbase.la
-example_memdump_LDFLAGS = -levent
 
 #example_couchview_SOURCES = example/couchview.c
 #example_couchview_LDADD = libcouchbase.la

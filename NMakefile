@@ -55,12 +55,6 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      utilities.obj \
      wait.obj
 
-EXAMPLES_OBJS= \
-          example\memdump.obj
-
-EXAMPLES= \
-          example\memdump.exe
-
 PROGRAMS= \
           tools\cbc.exe
 
@@ -110,13 +104,6 @@ tests\strerror-test.exe: tests\strerror-test.obj libcouchbase.dll
 
 tests\strerror-test.obj: tests\strerror-test.c
 	$(COMPILE) -Fotests\strerror-test.obj tests\strerror-test.c
-
-example\memdump.exe: example\memdump.obj win32\getopt.obj libcouchbase.dll
-	$(link) -out:example\memdump.exe example\memdump.obj \
-                win32\getopt.obj libcouchbase.lib
-
-example\memdump.obj: example\memdump.c
-	$(COMPILE) -Foexample\memdump.obj example\memdump.c
 
 win32\getopt.obj: win32\getopt.c win32\getopt.h
 	$(COMPILE) -Fowin32\getopt.obj win32\getopt.c

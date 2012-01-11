@@ -28,7 +28,6 @@
 /configure
 /example/couchview
 /example/couchview_yajl
-/example/memdump
 /example/pillowfight
 /include/libcouchbase/configuration.h
 /include/memcached/protocol_binary.h
