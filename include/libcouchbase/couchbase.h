@@ -38,6 +38,18 @@
 extern "C" {
 #endif
 
+    /**
+     * Get the version of the library.
+     *
+     * @param version where to store the numeric representation of the
+     *         version (or NULL if you don't care)
+     *
+     * @return the textual description of the version ('\0'
+     *          terminated). Do <b>not</b> try to release this string.
+     *
+     */
+    LIBCOUCHBASE_API
+    const char *libcouchbase_get_version(uint32_t *version);
 
     /**
      * Create a new instance of one of the library-supplied io ops types.

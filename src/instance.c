@@ -23,6 +23,26 @@
  */
 #include "internal.h"
 
+/**
+ * Get the version of the library.
+ *
+ * @param version where to store the numeric representation of the
+ *         version (or NULL if you don't care)
+ *
+ * @return the textual description of the version ('\0'
+ *          terminated). Do <b>not</b> try to release this string.
+ *
+ */
+LIBCOUCHBASE_API
+const char *libcouchbase_get_version(uint32_t *version)
+{
+    if (version != NULL) {
+        *version = (uint32_t)LIBCOUCHBASE_VERSION;
+    }
+
+    return LIBCOUCHBASE_VERSION_STRING;
+}
+
 LIBCOUCHBASE_API
 libcouchbase_t libcouchbase_create(const char *host,
                                    const char *user,
