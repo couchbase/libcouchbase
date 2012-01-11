@@ -43,7 +43,8 @@ enum cbc_command_t {
     cbc_create,
     cbc_flush,
     cbc_rm,
-    cbc_stat
+    cbc_stat,
+    cbc_version
 };
 
 extern "C" {
@@ -339,6 +340,12 @@ static bool flush(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
+static bool version()
+{
+    cout << "cbc built from " << PACKAGE_STRING << endl;
+    return true;
+}
+
 static bool spool(string &data) {
     stringstream ss;
     char buffer[1024];
@@ -396,6 +403,12 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 {
     Configuration config;
     Getopt getopt;
+
+    if (cmd == cbc_version) {
+        version();
+        exit(EXIT_SUCCESS);
+    }
+
     getopt.addOption(new CommandLineOption('?', "help", false,
                                            "Print this help text"));
     getopt.addOption(new CommandLineOption('h', "host", true,
@@ -575,6 +588,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_stat;
     } else if (name.find("cbc-flush") != string::npos) {
         return cbc_flush;
+    } else if (name.find("cbc-version") != string::npos) {
+        return cbc_version;
     }
 
     return cbc_illegal;
@@ -605,6 +620,8 @@ int main(int argc, char **argv)
                 cmd = cbc_stat;
             } else if (strcmp(argv[1], "flush") == 0) {
                 cmd = cbc_flush;
+            } else if (strcmp(argv[1], "version") == 0) {
+                cmd = cbc_version;
             }
         } else {
             std::cerr << "Usage: cbc command [options]" << std::endl
