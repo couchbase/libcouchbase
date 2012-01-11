@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <libcouchbase/couchbase.h>
 #include "ringbuffer.h"
@@ -129,6 +130,26 @@ static void wrapped_buffer_test(void)
      */
 }
 
+// This is a crash I noticed while I was debugging the tap code
+static void my_regression_1_test(void)
+{
+    ringbuffer_t ring;
+    ring.root = (void*)0x477a80;
+    ring.read_head = (void*)0x47b0a3;
+    ring.write_head =(void*)0x47b555;
+    ring.size = 16384;
+    ring.nbytes = 1202;
+
+    struct libcouchbase_iovec_st iov[2];
+    libcouchbase_ringbuffer_get_iov(&ring, RINGBUFFER_WRITE, iov);
+    // up to the end
+    assert(iov[0].iov_base == ring.write_head);
+    assert(iov[0].iov_len == 1323);
+    // then from the beginning
+    assert(iov[1].iov_base == ring.root);
+    assert(iov[1].iov_len == 13859);
+}
+
 int main(int argc, char **argv)
 {
     ringbuffer_t ring;
@@ -196,6 +217,8 @@ int main(int argc, char **argv)
     }
 
     wrapped_buffer_test();
+
+    my_regression_1_test();
 
     return 0;
 }
