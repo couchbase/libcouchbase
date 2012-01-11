@@ -340,12 +340,6 @@ static bool flush(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool version()
-{
-    cout << "cbc built from " << PACKAGE_STRING << endl;
-    return true;
-}
-
 static bool spool(string &data) {
     stringstream ss;
     char buffer[1024];
@@ -403,11 +397,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 {
     Configuration config;
     Getopt getopt;
-
-    if (cmd == cbc_version) {
-        version();
-        exit(EXIT_SUCCESS);
-    }
 
     getopt.addOption(new CommandLineOption('?', "help", false,
                                            "Print this help text"));
@@ -625,7 +614,7 @@ int main(int argc, char **argv)
             }
         } else {
             std::cerr << "Usage: cbc command [options]" << std::endl
-                      << "\tcommand may be: cat, cp, create, rm, stat, flush" << std::endl;
+                      << "\tcommand may be: cat, cp, create, rm, stat, flush, version" << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -637,6 +626,13 @@ int main(int argc, char **argv)
         ++argv;
     }
 
-    handleCommandLineOptions(cmd, argc, argv);
+    if (cmd == cbc_version) {
+        cout << "cbc built from: " << PACKAGE_STRING << endl
+             << "    using libcouchbase: " << libcouchbase_get_version(NULL)
+             << endl;
+    } else {
+        handleCommandLineOptions(cmd, argc, argv);
+    }
+
     return EXIT_SUCCESS;
 }
