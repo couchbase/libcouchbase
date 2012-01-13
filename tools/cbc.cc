@@ -43,7 +43,7 @@ enum cbc_command_t {
     cbc_create,
     cbc_flush,
     cbc_rm,
-    cbc_stat,
+    cbc_stats,
     cbc_version
 };
 
@@ -297,7 +297,7 @@ static bool cat(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool stat(libcouchbase_t instance, list<string> &keys)
+static bool stats(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         libcouchbase_error_t err;
@@ -523,8 +523,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     case cbc_rm:
         success = rm(instance, getopt.arguments);
         break;
-    case cbc_stat:
-        success = stat(instance, getopt.arguments);
+    case cbc_stats:
+        success = stats(instance, getopt.arguments);
         break;
     case cbc_flush:
         success = flush(instance, getopt.arguments);
@@ -573,8 +573,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_create;
     } else if (name.find("cbc-rm") != string::npos) {
         return cbc_rm;
-    } else if (name.find("cbc-stat") != string::npos) {
-        return cbc_stat;
+    } else if (name.find("cbc-stats") != string::npos) {
+        return cbc_stats;
     } else if (name.find("cbc-flush") != string::npos) {
         return cbc_flush;
     } else if (name.find("cbc-version") != string::npos) {
@@ -605,8 +605,8 @@ int main(int argc, char **argv)
                 cmd = cbc_create;
             } else if (strcmp(argv[1], "rm") == 0) {
                 cmd = cbc_rm;
-            } else if (strcmp(argv[1], "stat") == 0) {
-                cmd = cbc_stat;
+            } else if (strcmp(argv[1], "stats") == 0) {
+                cmd = cbc_stats;
             } else if (strcmp(argv[1], "flush") == 0) {
                 cmd = cbc_flush;
             } else if (strcmp(argv[1], "version") == 0) {
@@ -614,7 +614,7 @@ int main(int argc, char **argv)
             }
         } else {
             std::cerr << "Usage: cbc command [options]" << std::endl
-                      << "\tcommand may be: cat, cp, create, rm, stat, flush, version" << std::endl;
+                      << "\tcommand may be: cat, cp, create, rm, stats, flush, version" << std::endl;
             exit(EXIT_FAILURE);
         }
 
