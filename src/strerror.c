@@ -39,7 +39,7 @@ const char *libcouchbase_strerror(libcouchbase_t instance,
     case LIBCOUCHBASE_ENOMEM:
         return "Out of memory";
     case LIBCOUCHBASE_KEY_EEXISTS:
-        return "Key already exists";
+        return "Key already exists (with a different CAS value)";
     case LIBCOUCHBASE_EINVAL:
         return "Invalid arguments";
     case LIBCOUCHBASE_NOT_STORED:
