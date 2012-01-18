@@ -17,7 +17,7 @@
 
 /**
  * This file contains the implementation of the method(s) needed to
- * convert an error constant to a textual representation.K the callback handlers
+ * convert an error constant to a textual representation.
  *
  * @author Trond Norbye
  * @todo Localize the function..
