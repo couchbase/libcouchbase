@@ -134,13 +134,13 @@ static void wrapped_buffer_test(void)
 static void my_regression_1_test(void)
 {
     ringbuffer_t ring;
+    struct libcouchbase_iovec_st iov[2];
     ring.root = (void*)0x477a80;
     ring.read_head = (void*)0x47b0a3;
     ring.write_head =(void*)0x47b555;
     ring.size = 16384;
     ring.nbytes = 1202;
 
-    struct libcouchbase_iovec_st iov[2];
     libcouchbase_ringbuffer_get_iov(&ring, RINGBUFFER_WRITE, iov);
     // up to the end
     assert(iov[0].iov_base == ring.write_head);
