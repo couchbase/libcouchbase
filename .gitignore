@@ -39,6 +39,7 @@
 /libcouchbase*.tar.gz
 /libcouchbase.exp
 /libcouchbase.lib
+/libcouchbase.dll
 /libtool
 /m4/libtool.m4
 /m4/ltoptions.m4
