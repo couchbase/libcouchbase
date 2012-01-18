@@ -108,13 +108,27 @@ tests\strerror-test.obj: tests\strerror-test.c
 win32\getopt.obj: win32\getopt.c win32\getopt.h
 	$(COMPILE) -Fowin32\getopt.obj win32\getopt.c
 
-tools\cbc.exe: tools\cbc.obj tools\commandlineparser.obj \
-               tools\configuration.obj
-	$(link) -out:tools\cbc.exe tools\cbc.obj tools\commandlineparser.obj \
-               tools\configuration.obj win32\getopt.obj libcouchbase.lib
+tools\cbc.exe: tools\cbc.obj tools\cbc-send.obj tools\cbc-receive.obj   \
+               tools\cbc-util.obj                                       \
+               tools\commandlineparser.obj tools\configuration.obj      \
+               win32\getopt.obj
+	$(link) -out:tools\cbc.exe tools\cbc.obj                \
+               tools\commandlineparser.obj tools\cbc-send.obj   \
+               tools\cbc-receive.obj tools\cbc-util.obj         \
+               tools\configuration.obj win32\getopt.obj         \
+               libcouchbase.lib ws2_32.lib
 
 tools\cbc.obj: tools\cbc.cc tools\configuration.h tools\commandlineparser.h
 	$(COMPILE) -Fotools\cbc.obj tools\cbc.cc
+
+tools\cbc-send.obj: tools\cbc-send.cc tools\configuration.h tools\commandlineparser.h
+	$(COMPILE) -Fotools\cbc-send.obj tools\cbc-send.cc
+
+tools\cbc-receive.obj: tools\cbc-receive.cc tools\configuration.h tools\commandlineparser.h
+	$(COMPILE) -Fotools\cbc-receive.obj tools\cbc-receive.cc
+
+tools\cbc-util.obj: tools\cbc-util.cc tools\configuration.h tools\commandlineparser.h
+	$(COMPILE) -Fotools\cbc-util.obj tools\cbc-util.cc
 
 tools\commandlineparser.obj: tools\commandlineparser.cc tools\commandlineparser.h
 	$(COMPILE) -Fotools\commandlineparser.obj tools\commandlineparser.cc
@@ -125,7 +139,6 @@ tools\configuration.obj: tools\configuration.cc tools\configuration.h
 #
 # Library
 #
-
 libcouchbase.dll: $(LIBCOUCHBASE_OBJS)
 	$(link) $(dlllflags)  /LIBPATH:$(INSTALL)\lib libvbucket.lib \
                 libsasl.lib ws2_32.lib \
