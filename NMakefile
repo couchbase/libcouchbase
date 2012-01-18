@@ -26,7 +26,7 @@ INSTALLDIRS=$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INST
 DBGFLG=-Zi
 
 
-INCPATH=-I$(INSTALL)\include -Iwin32 -Isrc -Iinclude
+INCPATH= -Iwin32 -Isrc -Iinclude -I. -I$(INSTALL)\include
 COMPILE=$(cc) $(cdebug) $(cflags) $(DBGFLG) $(INCPATH)
 DLLCOMPILE=$(cc) $(cdebug) $(cflags) $(cvarsdll) $(DBGFLG) $(INCPATH) -DLIBCOUCHBASE_INTERNAL=1
 
