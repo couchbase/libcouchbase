@@ -83,7 +83,6 @@ typedef bool (*packetHandler)(libcouchbase_t instance,
 static bool setHandler(libcouchbase_t instance,
                        protocol_binary_request_header &header)
 {
-    bool ret = true;
     uint32_t bodylen = ntohl(header.request.bodylen);
     uint16_t keylen = ntohl(header.request.keylen);
 
@@ -93,7 +92,10 @@ static bool setHandler(libcouchbase_t instance,
     }
 
     uint8_t *data = new uint8_t[bodylen];
-    ret = readIt(data, bodylen);
+    if (!readIt(data, bodylen)) {
+        cerr << "Incomplete read" << endl;
+        return false;
+    }
 
     libcouchbase_error_t err;
     uint32_t flags;
@@ -129,7 +131,6 @@ static bool setHandler(libcouchbase_t instance,
 static bool deleteHandler(libcouchbase_t instance,
                           protocol_binary_request_header &header)
 {
-    bool ret = true;
     uint32_t bodylen = ntohl(header.request.bodylen);
     uint16_t keylen = ntohl(header.request.keylen);
 
@@ -139,7 +140,9 @@ static bool deleteHandler(libcouchbase_t instance,
     }
 
     uint8_t *data = new uint8_t[bodylen];
-    ret = readIt(data, bodylen);
+    if (!readIt(data, bodylen)) {
+        cerr << "Incomplete read" << endl;
+    }
 
     libcouchbase_error_t err;
     err = libcouchbase_remove(instance, NULL,
