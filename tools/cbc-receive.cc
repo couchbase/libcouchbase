@@ -211,11 +211,7 @@ bool receive(libcouchbase_t instance, list<string> &keys)
         cerr << "Ignoring arguments." << endl;
     }
 
-#ifdef WIN32
-    // Windows defaults to text mode, but we're going to read
-    // binary data...
-    _setmode(_fileno(stdin), _O_BINARY);
-#endif
+    setBinaryIO();
 
     // override the handlers..
     (void)libcouchbase_set_remove_callback(instance, remove_callback);

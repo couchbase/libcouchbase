@@ -130,11 +130,7 @@ bool send(libcouchbase_t instance, list<string> &keys)
         cerr << "Ignoring arguments." << endl;
     }
 
-#ifdef WIN32
-    // Windows defaults to text mode, but we're going to send
-    // binary data...
-    _setmode(_fileno(stdout), _O_BINARY);
-#endif
+    setBinaryIO();
 
     (void)libcouchbase_set_tap_mutation_callback(instance,
                                                  cbc_tap_mutation_callback);

@@ -16,6 +16,11 @@
  */
 #include "config.h"
 
+#ifdef WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
+
 #include <string>
 #include <list>
 #include <iostream>
@@ -67,3 +72,13 @@ bool readIt(uint8_t *ptr, size_t size)
 
     return true;
 }
+
+#ifdef WIN32
+void setBinaryIO(void)
+{
+    // Windows defaults to text mode, but we're going to read/write
+    // binary data...
+    _setmode(_fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stdin), _O_BINARY);
+}
+#endif

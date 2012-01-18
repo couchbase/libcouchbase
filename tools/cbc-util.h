@@ -20,4 +20,10 @@
 void sendIt(const uint8_t *ptr, size_t size);
 bool readIt(uint8_t *ptr, size_t size);
 
+#ifdef WIN32
+void setBinaryIO(void);
+#else
+#define setBinaryIO()
+#endif
+
 #endif
