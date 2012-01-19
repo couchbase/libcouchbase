@@ -597,9 +597,10 @@ static void libcouchbase_instance_connected(libcouchbase_t instance)
                                instance, vbucket_stream_handler);
 }
 
-static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
-                                                   short which,
-                                                   void *arg) {
+static void libcouchbase_instance_connect_handler(evutil_socket_t sock,
+                                                  short which,
+                                                  void *arg)
+{
     libcouchbase_t instance = arg;
     int retry;
 
@@ -649,7 +650,7 @@ static void libchouchbase_instance_connect_handler(evutil_socket_t sock,
                                            instance->event,
                                            LIBCOUCHBASE_WRITE_EVENT,
                                            instance,
-                                           libchouchbase_instance_connect_handler);
+                                           libcouchbase_instance_connect_handler);
                 return ;
             case EALREADY: /* Subsequent calls to connect */
                 return ;
@@ -706,7 +707,7 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
     instance->curr_ai = instance->ai;
     instance->event = instance->io->create_event(instance->io);
     instance->last_error = LIBCOUCHBASE_SUCCESS;
-    libchouchbase_instance_connect_handler(INVALID_SOCKET, 0, instance);
+    libcouchbase_instance_connect_handler(INVALID_SOCKET, 0, instance);
 
     return instance->last_error;
 }
