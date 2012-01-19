@@ -95,6 +95,30 @@ extern "C" {
     void libcouchbase_destroy(libcouchbase_t instance);
 
     /**
+     * Set the number of usec the library should allow an operation to
+     * be vaild.
+     *
+     * Please note that the timeouts are <b>not</b> that accurate,
+     * because they may be delayed by the application code before it
+     * drives the event loop.
+     *
+     * Please note that timeouts is not stored on a per operation
+     * base, but on the instance. That means you <b>can't</b> pipeline
+     * two requests after eachother with different timeout values.
+     *
+     * @param instance the instance to set the timeout for
+     * @param usec the new timeout value.
+     */
+    LIBCOUCHBASE_API
+    void libcouchbase_set_timeout(libcouchbase_t instance, uint32_t usec);
+
+    /**
+     * Get the current timeout value used by this instance (in usec)
+     */
+    LIBCOUCHBASE_API
+    uint32_t libcouchbase_get_timeout(libcouchbase_t instance);
+
+    /**
      * Connect to the server and get the vbucket and serverlist.
      */
     LIBCOUCHBASE_API

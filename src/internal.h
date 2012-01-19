@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010, 2011 Couchbase, Inc.
+ *     Copyright 2010, 2011, 2012 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@
 #ifndef evutil_socket_t
 #define evutil_socket_t int
 #endif
+
+#define LIBCOUCHBASE_DEFAULT_TIMEOUT 2500000
 
 #ifdef __cplusplus
 extern "C" {
@@ -164,6 +166,13 @@ extern "C" {
         const void *cookie;
 
         libcouchbase_error_t last_error;
+
+        struct {
+            hrtime_t next;
+            void *event;
+            uint32_t usec;
+        } timeout;
+
     };
 
     /**
@@ -211,6 +220,8 @@ extern "C" {
         EVENT_HANDLER ev_handler;
         /* Pointer back to the instance */
         libcouchbase_t instance;
+
+        hrtime_t next_timeout;
     };
 
     libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, libcouchbase_error_t retcode);
@@ -304,6 +315,28 @@ extern "C" {
     void libcouchbase_record_metrics(libcouchbase_t instance,
                                      hrtime_t delta,
                                      uint8_t opcode);
+
+    void libcouchbase_update_timer(libcouchbase_t instance);
+    void libcouchbase_purge_timedout(libcouchbase_t instance);
+
+
+    int libcouchbase_lookup_server_with_command(libcouchbase_t instance,
+                                                protocol_binary_command opcode,
+                                                uint32_t opaque,
+                                                libcouchbase_server_t *exc);
+
+    void libcouchbase_purge_single_server(libcouchbase_server_t *server,
+                                          ringbuffer_t *stream,
+                                          ringbuffer_t *cookies,
+                                          hrtime_t tmo,
+                                          hrtime_t now,
+                                          libcouchbase_error_t error);
+
+    libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
+                                                     libcouchbase_error_t error,
+                                                     const char *errinfo);
+
+    void libcouchbase_maybe_breakout(libcouchbase_t instance);
 
 #ifdef __cplusplus
 }

@@ -24,6 +24,276 @@
 
 #include "internal.h"
 
+void libcouchbase_purge_single_server(libcouchbase_server_t *server,
+                                      ringbuffer_t *stream,
+                                      ringbuffer_t *cookies,
+                                      hrtime_t tmo,
+                                      hrtime_t now,
+                                      libcouchbase_error_t error)
+{
+    protocol_binary_request_header req;
+    struct libcouchbase_command_data_st ct;
+    size_t nr;
+    char *packet;
+    uint32_t packetsize;
+    char *keyptr;
+    libcouchbase_t root = server->instance;
+    int writing = (stream == &server->cmd_log);
+    ringbuffer_t rest;
+    size_t send_size = libcouchbase_ringbuffer_get_nbytes(&server->output);
+    size_t stream_size = libcouchbase_ringbuffer_get_nbytes(stream);
+
+    assert(libcouchbase_ringbuffer_initialize(&rest, 1024));
+
+    do {
+        int allocated = 0;
+        nr = libcouchbase_ringbuffer_peek(cookies, &ct, sizeof(ct));
+        if (nr != sizeof(ct) || ct.start + tmo > now) {
+            break;
+        }
+        nr = libcouchbase_ringbuffer_peek(stream, req.bytes, sizeof(req));
+        if (nr != sizeof(req)) {
+            break;
+        }
+
+        libcouchbase_ringbuffer_consumed(cookies, sizeof(ct));
+
+        assert(nr == sizeof(req));
+        packet = stream->read_head;
+        packetsize = ntohl(req.request.bodylen) + (uint32_t)sizeof(req);
+
+        if (server->instance->histogram) {
+            libcouchbase_record_metrics(server->instance, now - ct.start,
+                                        req.request.opcode);
+        }
+
+        if (writing && (stream_size > send_size) &&
+            ((stream_size - packetsize) < send_size)) {
+            /* Copy the rest of the current packet into the
+               temporary stream */
+
+            /* I do believe I have some IOV functions to do that? */
+            size_t nbytes = packetsize - (stream_size - send_size);
+            assert(libcouchbase_ringbuffer_memcpy(&rest,
+                                                  &server->output,
+                                                  nbytes) == 0);
+            libcouchbase_ringbuffer_consumed(&server->output, nbytes);
+            send_size -= nbytes;
+        }
+        stream_size -= packetsize;
+        /* @todo fixme.. I don't need the value to be in the continous part.. */
+        if (!libcouchbase_ringbuffer_is_continous(stream,
+                                                  RINGBUFFER_READ,
+                                                  packetsize)) {
+            packet = malloc(packetsize);
+            if (packet == NULL) {
+                libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM, NULL);
+                abort();
+            }
+
+            nr = libcouchbase_ringbuffer_peek(stream, packet, packetsize);
+            if (nr != packetsize) {
+                libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                           NULL);
+                free(packet);
+                abort();
+            }
+            allocated = 1;
+        }
+
+        keyptr = packet + sizeof(req) + req.request.extlen;
+        /* It would have been awesome if we could have a generic error */
+        /* handler we could call */
+        switch (req.request.opcode) {
+        case PROTOCOL_BINARY_CMD_GAT:
+        case PROTOCOL_BINARY_CMD_GATQ:
+        case PROTOCOL_BINARY_CMD_GET:
+        case PROTOCOL_BINARY_CMD_GETQ:
+            root->callbacks.get(root, ct.cookie,
+                                error,
+                                keyptr, ntohs(req.request.keylen),
+                                NULL, 0, 0, 0);
+            break;
+        case PROTOCOL_BINARY_CMD_FLUSH:
+            root->callbacks.flush(root,
+                                  ct.cookie,
+                                  server->authority,
+                                  error);
+            if (libcouchbase_lookup_server_with_command(root,
+                                                        PROTOCOL_BINARY_CMD_FLUSH,
+                                                        req.request.opaque,
+                                                        server) < 0) {
+                root->callbacks.flush(root,
+                                      ct.cookie,
+                                      NULL,
+                                      error);
+            }
+            break;
+        case PROTOCOL_BINARY_CMD_ADD:
+            root->callbacks.storage(root, ct.cookie,
+                                    LIBCOUCHBASE_ADD,
+                                    error,
+                                    keyptr, ntohs(req.request.keylen),
+                                    req.request.cas);
+            break;
+        case PROTOCOL_BINARY_CMD_REPLACE:
+            root->callbacks.storage(root, ct.cookie,
+                                    LIBCOUCHBASE_REPLACE,
+                                    error,
+                                    keyptr, ntohs(req.request.keylen),
+                                    req.request.cas);
+            break;
+        case PROTOCOL_BINARY_CMD_SET:
+            root->callbacks.storage(root, ct.cookie,
+                                    LIBCOUCHBASE_SET,
+                                    error,
+                                    keyptr, ntohs(req.request.keylen),
+                                    req.request.cas);
+            break;
+        case PROTOCOL_BINARY_CMD_APPEND:
+            root->callbacks.storage(root, ct.cookie,
+                                    LIBCOUCHBASE_APPEND,
+                                    error,
+                                    keyptr, ntohs(req.request.keylen),
+                                    req.request.cas);
+            break;
+        case PROTOCOL_BINARY_CMD_PREPEND:
+            root->callbacks.storage(root, ct.cookie,
+                                    LIBCOUCHBASE_PREPEND,
+                                    error,
+                                    keyptr, ntohs(req.request.keylen),
+                                    req.request.cas);
+            break;
+        case PROTOCOL_BINARY_CMD_DELETE:
+            root->callbacks.remove(root, ct.cookie,
+                                   error,
+                                   keyptr, ntohs(req.request.keylen));
+             break;
+
+        case PROTOCOL_BINARY_CMD_INCREMENT:
+        case PROTOCOL_BINARY_CMD_DECREMENT:
+            root->callbacks.arithmetic(root,ct.cookie,
+                                       error,
+                                       keyptr, ntohs(req.request.keylen), 0, 0);
+            break;
+        case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
+            abort();
+            break;
+
+        case PROTOCOL_BINARY_CMD_SASL_AUTH:
+            abort();
+            break;
+
+        case PROTOCOL_BINARY_CMD_SASL_STEP:
+            abort();
+            break;
+
+        case PROTOCOL_BINARY_CMD_TOUCH:
+            root->callbacks.touch(root, ct.cookie,
+                                  error,
+                                  keyptr, ntohs(req.request.keylen));
+            break;
+
+        case PROTOCOL_BINARY_CMD_STAT:
+            root->callbacks.stat(root, ct.cookie, server->authority,
+                                 error, NULL, 0, NULL, 0);
+
+            if (libcouchbase_lookup_server_with_command(root,
+                                                        PROTOCOL_BINARY_CMD_STAT,
+                                                        req.request.opaque,
+                                                        server) < 0) {
+                root->callbacks.stat(root, ct.cookie, NULL,
+                                     error, NULL, 0, NULL, 0);
+            }
+            break;
+        default:
+            abort();
+        }
+
+        if (allocated) {
+            free(packet);
+        }
+
+        libcouchbase_ringbuffer_consumed(stream, packetsize);
+    } while (1); /* CONSTCOND */
+
+    if (writing) {
+        /* Preserve the rest of the stream */
+        size_t nbytes = libcouchbase_ringbuffer_get_nbytes(stream);
+        send_size = libcouchbase_ringbuffer_get_nbytes(&server->output);
+
+        if (send_size >= nbytes) {
+            libcouchbase_ringbuffer_consumed(&server->output,
+                                             send_size - nbytes);
+            assert(libcouchbase_ringbuffer_memcpy(&rest,
+                                                  &server->output, nbytes) == 0);
+        }
+        libcouchbase_ringbuffer_reset(&server->output);
+        libcouchbase_ringbuffer_append(&rest, &server->output);
+    }
+
+    server->next_timeout = 0;
+    if (libcouchbase_ringbuffer_peek(cookies, &ct, sizeof(ct)) == sizeof(ct)) {
+        server->next_timeout = ct.start;
+    }
+}
+
+libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
+                                                libcouchbase_error_t error,
+                                                const char *errinfo)
+{
+    char errmsg[1024];
+    if (server->connected) {
+        libcouchbase_purge_single_server(server, &server->cmd_log,
+                                         &server->output_cookies,
+                                         0, gethrtime() + 1, error);
+    } else {
+        libcouchbase_purge_single_server(server, &server->pending,
+                                         &server->pending_cookies,
+                                         0, gethrtime() + 1, error);
+    }
+
+    libcouchbase_ringbuffer_reset(&server->output);
+    libcouchbase_ringbuffer_reset(&server->input);
+    libcouchbase_ringbuffer_reset(&server->cmd_log);
+    libcouchbase_ringbuffer_reset(&server->output_cookies);
+    libcouchbase_ringbuffer_reset(&server->pending);
+    libcouchbase_ringbuffer_reset(&server->pending_cookies);
+
+    server->connected = 0;
+
+    if (error == LIBCOUCHBASE_CONNECT_ERROR) {
+        if (errinfo) {
+            snprintf(errmsg, sizeof(errmsg), "Connection failed: <%s:%s>: %s",
+                     server->hostname, server->port, errinfo);
+        } else {
+            snprintf(errmsg, sizeof(errmsg), "Connection failed: <%s:%s>",
+                     server->hostname, server->port);
+        }
+    } else {
+        server->instance->io->delete_event(server->instance->io,
+                                           server->sock, server->event);
+        if (errinfo) {
+            snprintf(errmsg, sizeof(errmsg), "Network error: %s", errinfo);
+        } else {
+            errmsg[0] = '\0';
+        }
+    }
+
+    if (server->sock != INVALID_SOCKET) {
+        server->instance->io->close(server->instance->io, server->sock);
+        server->sock = INVALID_SOCKET;
+    }
+
+    if (errmsg[0] != '\0') {
+        libcouchbase_error_handler(server->instance, error, errmsg);
+    } else {
+        libcouchbase_error_handler(server->instance, error, NULL);
+    }
+
+    return error;
+}
+
 /**
  * Release all allocated resources for this server instance
  * @param server the server to destroy
@@ -150,17 +420,28 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
         **       doing the SASL auth, so it shouldn't contain that
         **       much data..
         */
+        ringbuffer_t copy = server->pending;
+        libcouchbase_ringbuffer_reset(&server->cmd_log);
         if (!libcouchbase_ringbuffer_append(&server->pending, &server->output) ||
-            !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies)) {
+            !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
+            !libcouchbase_ringbuffer_append(&copy, &server->cmd_log)) {
             libcouchbase_error_handler(server->instance,
                                        LIBCOUCHBASE_ENOMEM,
                                        NULL);
         }
 
+        libcouchbase_ringbuffer_reset(&server->pending);
+        libcouchbase_ringbuffer_reset(&server->pending_cookies);
+
         /* Send the pending data! */
         libcouchbase_server_event_handler(server->sock,
                                           LIBCOUCHBASE_WRITE_EVENT, server);
 
+    } else {
+        /* Set the correct event handler */
+        server->instance->io->update_event(server->instance->io, server->sock,
+                                           server->event, LIBCOUCHBASE_READ_EVENT,
+                                           server, libcouchbase_server_event_handler );
     }
 }
 
@@ -182,14 +463,9 @@ static void socket_connected(libcouchbase_server_t *server)
     } else {
         start_sasl_auth_server(server);
     }
-
-    /* Set the correct event handler */
-    server->instance->io->update_event(server->instance->io, server->sock,
-                                       server->event, LIBCOUCHBASE_READ_EVENT,
-                                       server, libcouchbase_server_event_handler);
 }
 
-static int server_connect(libcouchbase_server_t *server);
+static void server_connect(libcouchbase_server_t *server);
 
 
 static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
@@ -201,7 +477,7 @@ static void server_connect_handler(evutil_socket_t sock, short which, void *arg)
     server_connect(server);
 }
 
-static int server_connect(libcouchbase_server_t *server) {
+static void server_connect(libcouchbase_server_t *server) {
     int retry;
     do {
         if (server->sock == INVALID_SOCKET) {
@@ -219,7 +495,11 @@ static int server_connect(libcouchbase_server_t *server) {
         }
 
         if (server->curr_ai == NULL) {
-            return 0;
+            /* this means we're not going to retry!! add an error here! */
+            libcouchbase_failout_server(server,
+                                        LIBCOUCHBASE_CONNECT_ERROR,
+                                        NULL);
+            return ;
         }
 
         retry = 0;
@@ -229,7 +509,7 @@ static int server_connect(libcouchbase_server_t *server) {
                                           (int)server->curr_ai->ai_addrlen) == 0) {
             /* connected */
             socket_connected(server);
-            return 1;
+            return ;
         } else {
             switch (server->instance->io->error) {
             case EINTR:
@@ -237,7 +517,7 @@ static int server_connect(libcouchbase_server_t *server) {
                 break;
             case EISCONN:
                 socket_connected(server);
-                return 1;
+                return ;
             case EWOULDBLOCK:
             case EINPROGRESS: /* First call to connect */
                 server->instance->io->update_event(server->instance->io,
@@ -246,21 +526,19 @@ static int server_connect(libcouchbase_server_t *server) {
                                                    LIBCOUCHBASE_WRITE_EVENT,
                                                    server,
                                                    server_connect_handler);
-                return 1;
+                return ;
             case EALREADY: /* Subsequent calls to connect */
-                return 1;
+                return ;
 
             default:
                 if (errno == ECONNREFUSED) {
                     retry = 1;
                     server->curr_ai = server->curr_ai->ai_next;
                 } else {
-                    fprintf(stderr, "Connection failed: %s", strerror(server->instance->io->error));
-                    /* TODO: Is there a better error for this? */
-                    libcouchbase_error_handler(server->instance,
-                                               LIBCOUCHBASE_NETWORK_ERROR,
-                                               "Connection failed");
-                    return 0;
+                    libcouchbase_failout_server(server,
+                                               LIBCOUCHBASE_CONNECT_ERROR,
+                                                strerror(errno));
+                    return ;
                 }
 
                 server->instance->io->delete_event(server->instance->io,
@@ -272,7 +550,7 @@ static int server_connect(libcouchbase_server_t *server) {
         }
     } while (retry);
     /* not reached */
-    return 0;
+    return ;
 }
 
 void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum)
@@ -302,12 +580,9 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     error = getaddrinfo(server->hostname, server->port,
                         &hints, &server->root_ai);
     server->curr_ai = server->root_ai;
-    if (error == 0) {
-        server->sock = INVALID_SOCKET;
-        server_connect(server);
-    } else {
-        server->sock = INVALID_SOCKET;
-        server->root_ai = NULL;
+    server->sock = INVALID_SOCKET;
+    if (error != 0) {
+       server->curr_ai = server->root_ai = NULL;
     }
 }
 
@@ -320,6 +595,8 @@ void libcouchbase_server_send_packets(libcouchbase_server_t *server)
                                            LIBCOUCHBASE_RW_EVENT,
                                            server,
                                            libcouchbase_server_event_handler);
+    } else {
+        server_connect(server);
     }
 }
 
@@ -341,15 +618,14 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
         nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
 
+        if (c->instance->histogram) {
+            libcouchbase_record_metrics(c->instance, end - ct.start,
+                                        req.request.opcode);
+        }
+
         switch (req.request.opcode) {
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GETQ:
-            if (ct.start != 0 && c->instance->histogram) {
-                libcouchbase_record_metrics(c->instance, end - ct.start,
-                                            req.request.opcode);
-            }
-
-
             if (!libcouchbase_ringbuffer_is_continous(&c->cmd_log,
                                                       RINGBUFFER_READ,
                                                       packetsize)) {

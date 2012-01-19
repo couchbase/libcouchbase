@@ -52,6 +52,7 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      strerror.obj \
      synchandler.obj \
      tap.obj \
+     timeout.obj \
      timings.obj \
      touch.obj \
      utilities.obj \
@@ -220,6 +221,9 @@ tap.obj: src\tap.c
 
 timings.obj: src\timings.c
 	$(DLLCOMPILE) src\timings.c
+
+timeout.obj: src\timeout.c
+	$(DLLCOMPILE) src\timeout.c
 
 touch.obj: src\touch.c
 	$(DLLCOMPILE) src\touch.c

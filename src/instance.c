@@ -121,6 +121,10 @@ libcouchbase_t libcouchbase_create(const char *host,
 
     /* setup io iops! */
     ret->io = io;
+    ret->timeout.event = ret->io->create_timer(ret->io);
+    assert(ret->timeout.event);
+
+    libcouchbase_set_timeout(ret, LIBCOUCHBASE_DEFAULT_TIMEOUT);
 
     return ret;
 }
@@ -137,6 +141,11 @@ void libcouchbase_destroy(libcouchbase_t instance)
                                    instance->event);
         instance->io->destroy_event(instance->io, instance->event);
         instance->io->close(instance->io, instance->sock);
+    }
+
+    if (instance->timeout.event != NULL) {
+        instance->io->delete_timer(instance->io, instance->timeout.event);
+        instance->io->destroy_timer(instance->io, instance->timeout.event);
     }
 
     if (instance->ai != NULL) {
@@ -322,13 +331,18 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                 relocate_packets(&ss->pending, &ss->pending_cookies, instance);
                 libcouchbase_server_destroy(ss);
             }
+
             /* Destroy old config */
             vbucket_config_destroy(curr_config);
 
-            /* Notify anyone interested in this event... */
-            if (instance->vbucket_state_listener != NULL) {
-                for (ii = 0; ii < instance->nservers; ++ii) {
-                    instance->vbucket_state_listener(instance->servers + ii);
+            /* Send data and notify listeners */
+            for (ii = 0; ii < instance->nservers; ++ii) {
+                ss = instance->servers + ii;
+                if (instance->vbucket_state_listener != NULL) {
+                    instance->vbucket_state_listener(ss);
+                }
+                if (ss->cmd_log.nbytes != 0) {
+                    libcouchbase_server_send_packets(ss);
                 }
             }
         }

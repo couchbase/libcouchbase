@@ -142,10 +142,10 @@ static const char *get_key(libcouchbase_server_t *server, uint16_t *nkey,
     return keyptr;
 }
 
-static int lookup_server_with_command(libcouchbase_t instance,
-                                      protocol_binary_command opcode,
-                                      uint32_t opaque,
-                                      libcouchbase_server_t *exc)
+int libcouchbase_lookup_server_with_command(libcouchbase_t instance,
+                                            protocol_binary_command opcode,
+                                            uint32_t opaque,
+                                            libcouchbase_server_t *exc)
 {
     protocol_binary_request_header cmd;
     libcouchbase_server_t *server;
@@ -317,8 +317,8 @@ static void stat_response_handler(libcouchbase_server_t *server,
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         nkey = ntohs(res->response.keylen);
         if (nkey == 0) {
-            if (lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
-                                           res->response.opaque, server) < 0) {
+            if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
+                                                        res->response.opaque, server) < 0) {
                 /* notify client that data is ready */
                 root->callbacks.stat(root, command_cookie, NULL,
                                      LIBCOUCHBASE_SUCCESS, NULL, 0, NULL, 0);
@@ -335,8 +335,8 @@ static void stat_response_handler(libcouchbase_server_t *server,
                              map_error(status), NULL, 0, NULL, 0);
 
         /* run callback with null-null-null to signal the end of transfer */
-        if (lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
-                                       res->response.opaque, server) < 0) {
+        if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
+                                                    res->response.opaque, server) < 0) {
             root->callbacks.stat(root, command_cookie, NULL,
                                  LIBCOUCHBASE_SUCCESS, NULL, 0, NULL, 0);
         }
@@ -543,8 +543,8 @@ static void flush_response_handler(libcouchbase_server_t *server,
     uint16_t status = ntohs(res->response.status);
     root->callbacks.flush(root, command_cookie, server->authority,
                           map_error(status));
-    if (lookup_server_with_command(root, PROTOCOL_BINARY_CMD_FLUSH,
-                                   res->response.opaque, server) < 0) {
+    if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_FLUSH,
+                                                res->response.opaque, server) < 0) {
         root->callbacks.flush(root, command_cookie, NULL,
                               LIBCOUCHBASE_SUCCESS);
     }

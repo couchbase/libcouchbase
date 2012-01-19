@@ -35,6 +35,12 @@ int libcouchbase_ringbuffer_initialize(ringbuffer_t *buffer, size_t size)
     return 1;
 }
 
+void libcouchbase_ringbuffer_reset(ringbuffer_t *buffer)
+{
+    libcouchbase_ringbuffer_consumed(buffer,
+                                     libcouchbase_ringbuffer_get_nbytes(buffer));
+}
+
 void libcouchbase_ringbuffer_destruct(ringbuffer_t *buffer)
 {
     free(buffer->root);
@@ -321,4 +327,33 @@ int libcouchbase_ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest)
     }
 
     return 1;
+}
+
+int libcouchbase_ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
+                                   size_t nbytes)
+{
+    ringbuffer_t copy = *src;
+    struct libcouchbase_iovec_st iov[2];
+    int ii = 0;
+    size_t towrite = nbytes;
+
+    if (nbytes > libcouchbase_ringbuffer_get_nbytes(src)) {
+        /* EINVAL */
+        return -1;
+    }
+
+    if (!libcouchbase_ringbuffer_ensure_capacity(dst, nbytes)) {
+        /* Failed to allocate space */
+        return -1;
+    }
+
+    libcouchbase_ringbuffer_get_iov(dst, RINGBUFFER_WRITE, iov);
+    do {
+        assert(ii < 2);
+        towrite -= libcouchbase_ringbuffer_read(&copy, iov[ii].iov_base,
+                                                iov[ii].iov_len);
+        ++ii;
+    } while (towrite > 0);
+    libcouchbase_ringbuffer_produced(dst, nbytes);
+    return 0;
 }

@@ -68,7 +68,9 @@ extern "C" {
         LIBCOUCHBASE_NOT_SUPPORTED = 0x12,
         LIBCOUCHBASE_UNKNOWN_COMMAND = 0x13,
         LIBCOUCHBASE_UNKNOWN_HOST = 0x14,
-        LIBCOUCHBASE_PROTOCOL_ERROR = 0x15
+        LIBCOUCHBASE_PROTOCOL_ERROR = 0x15,
+        LIBCOUCHBASE_ETIMEDOUT = 0x16,
+        LIBCOUCHBASE_CONNECT_ERROR = 0x17
     } libcouchbase_error_t;
 
     /**
@@ -233,6 +235,18 @@ extern "C" {
         void (*close)(struct libcouchbase_io_opt_st *iops,
                       libcouchbase_socket_t sock);
 
+        void *(*create_timer)(struct libcouchbase_io_opt_st *iops);
+        void (*destroy_timer)(struct libcouchbase_io_opt_st *iops,
+                              void *timer);
+        void (*delete_timer)(struct libcouchbase_io_opt_st *iops,
+                             void *timer);
+        int (*update_timer)(struct libcouchbase_io_opt_st *iops,
+                            void *timer,
+                            uint32_t usec,
+                            void *cb_data,
+                            void (*handler)(libcouchbase_socket_t sock,
+                                            short which,
+                                            void *cb_data));
 
         void *(*create_event)(struct libcouchbase_io_opt_st *iops);
         void (*destroy_event)(struct libcouchbase_io_opt_st *iops,

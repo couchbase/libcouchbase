@@ -1,5 +1,5 @@
 #
-#     Copyright 2010, 2011 Couchbase, Inc.
+#     Copyright 2010, 2011, 2012 Couchbase, Inc.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -66,6 +66,7 @@ libcouchbase_la_SOURCES = \
                         src/strerror.c \
                         src/synchandler.c \
                         src/tap.c \
+                        src/timeout.c \
                         src/timings.c \
                         src/touch.c \
                         src/utilities.c \
@@ -92,7 +93,7 @@ tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	@echo "| Download CouchbaseMock for functional tests |"
 	@echo "+---------------------------------------------+"
-	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20111222.182721-7.jar
+	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20120103.162550-11.jar
 
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
@@ -131,6 +132,7 @@ check_PROGRAMS += tests/arithmetic-test \
                   tests/double-free-test \
                   tests/flags-test \
                   tests/timings-test \
+                  tests/timeout-test \
                   tests/config-test \
                   tests/smoke-test
 endif
@@ -168,6 +170,11 @@ tests_flags_test_SOURCES = tests/flags-test.c
 tests_flags_test_LDADD = libcouchbase.la libmockserver.la
 tests_flags_test_LDFLAGS = -levent
 tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
+
+tests_timeout_test_SOURCES = tests/timeout-test.c
+tests_timeout_test_LDADD = libcouchbase.la libmockserver.la
+tests_timeout_test_LDFLAGS = -levent
+tests_timeout_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tools_cbc_LDADD = libcouchbase.la
 tools_cbc_SOURCES = tools/cbc.cc tools/cbc-receive.cc                   \

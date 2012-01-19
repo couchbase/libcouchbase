@@ -32,16 +32,22 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
                                              size_t size)
 {
     struct libcouchbase_command_data_st ct;
-    if (c->instance->histogram != 0) {
-        ct.start = gethrtime();
-    } else {
-        ct.start = 0;
-    }
+    /* @todo we don't want to call gethrtime for each operation, */
+    /* so I need to pass it down the chain so that a large */
+    /* multiget can reuse the same timer... */
+    ct.start = gethrtime();
     ct.cookie = command_cookie;
 
+    if (libcouchbase_ringbuffer_get_nbytes(buff_cookie) == 0) {
+        c->next_timeout = ct.start;
+        libcouchbase_update_timer(c->instance);
+    }
+
     if (!libcouchbase_ringbuffer_ensure_capacity(buff, size) ||
-        !libcouchbase_ringbuffer_ensure_capacity(buff_cookie, size) ||
+        !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
+        !libcouchbase_ringbuffer_ensure_capacity(buff_cookie, sizeof(ct)) ||
         libcouchbase_ringbuffer_write(buff, data, size) != size ||
+        libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size ||
         libcouchbase_ringbuffer_write(buff_cookie, &ct, sizeof(ct)) != sizeof(ct)) {
         abort();
     }
@@ -54,7 +60,9 @@ void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
 {
     (void)c;
     if (!libcouchbase_ringbuffer_ensure_capacity(buff, size) ||
-        libcouchbase_ringbuffer_write(buff, data, size) != size) {
+        !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
+        libcouchbase_ringbuffer_write(buff, data, size) != size ||
+        libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size) {
         abort();
     }
 }

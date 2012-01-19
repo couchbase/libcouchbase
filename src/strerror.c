@@ -74,6 +74,10 @@ const char *libcouchbase_strerror(libcouchbase_t instance,
         return "Generic error";
     case LIBCOUCHBASE_PROTOCOL_ERROR:
         return "Protocol error";
+    case LIBCOUCHBASE_ETIMEDOUT:
+        return "Operation timed out";
+    case LIBCOUCHBASE_CONNECT_ERROR:
+        return "Connection failure";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

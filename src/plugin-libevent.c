@@ -238,11 +238,48 @@ static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
     return event_add(event, NULL);
 }
 
+
+static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
+                                         void *event)
+{
+    (void)iops;
+    if (event_del(event) == -1) {
+        fprintf(stderr, "Failed to release timer\n");
+    }
+    event_assign(event, iops->cookie, -1, 0, NULL, NULL);
+}
+
+static int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
+                                        void *timer,
+                                        uint32_t usec,
+                                        void *cb_data,
+                                        void (*handler)(libcouchbase_socket_t sock,
+                                                        short which,
+                                                        void *cb_data))
+{
+    short flags = EV_TIMEOUT | EV_PERSIST;
+    struct timeval tmo;
+    if (flags == event_get_events(timer) &&
+        handler == event_get_callback(timer)) {
+        /* no change! */
+        return 0;
+    }
+
+    if (event_pending(timer, EV_TIMEOUT, 0)) {
+        event_del(timer);
+    }
+
+    event_assign(timer, iops->cookie, -1, flags, handler, cb_data);
+    tmo.tv_sec = usec / 1000000;
+    tmo.tv_usec = usec % 1000000;
+    return event_add(timer, &tmo);
+}
+
 static void libcouchbase_io_destroy_event(struct libcouchbase_io_opt_st *iops,
                                           void *event)
 {
     (void)iops;
-    if (event_pending(event, EV_READ|EV_WRITE, 0)) {
+    if (event_pending(event, EV_READ|EV_WRITE|EV_TIMEOUT, 0)) {
         event_del(event);
     }
     event_free(event);
@@ -294,6 +331,12 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
     ret->destroy_event = libcouchbase_io_destroy_event;
     ret->create_event = libcouchbase_io_create_event;
     ret->update_event = libcouchbase_io_update_event;
+
+    ret->delete_timer = libcouchbase_io_delete_timer;
+    ret->destroy_timer = libcouchbase_io_destroy_event;
+    ret->create_timer = libcouchbase_io_create_event;
+    ret->update_timer = libcouchbase_io_update_timer;
+
     ret->run_event_loop = libcouchbase_io_run_event_loop;
     ret->stop_event_loop = libcouchbase_io_stop_event_loop;
     ret->destructor = libcouchbase_destroy_io_opts;
