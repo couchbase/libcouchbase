@@ -108,6 +108,14 @@ extern "C" {
     libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance);
 
     /**
+     * Try to send/receive data buffered on the servers
+     *
+     * @param instance the handle to libcouchbase
+     */
+    LIBCOUCHBASE_API
+    void libcouchbase_flush_buffers(libcouchbase_t instance, const void* cookie);
+
+    /**
      * Associate a cookie with an instance of libcouchbase
      * @param instance the instance to associate the cookie to
      * @param cookie the cookie to associate with this instance.
