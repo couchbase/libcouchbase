@@ -68,7 +68,7 @@ libcouchbase_t libcouchbase_create(const char *host,
         host = "localhost";
     }
 
-    if (bucket == NULL) {
+    if (bucket == NULL || strlen(bucket) == 0) {
         bucket = "default";
     }
 
