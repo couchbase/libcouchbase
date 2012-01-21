@@ -257,6 +257,11 @@ extern "C" {
 
     } libcouchbase_io_opt_t;
 
+    typedef enum {
+        LIBCOUCHBASE_ASYNCHRONOUS = 0x00,
+        LIBCOUCHBASE_SYNCHRONOUS = 0xff
+    } libcouchbase_syncmode_t;
+
 #ifdef __cplusplus
 }
 #endif

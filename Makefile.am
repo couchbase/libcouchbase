@@ -31,6 +31,7 @@ bin_PROGRAMS = tools/cbc
 
 
 pkginclude_HEADERS = \
+                     include/libcouchbase/behavior.h \
                      include/libcouchbase/callbacks.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
@@ -44,6 +45,7 @@ pkginclude_HEADERS = \
 libcouchbase_la_SOURCES = \
                         src/arithmetic.c \
                         src/base64.c \
+                        src/behavior.c \
                         src/config_static.h \
                         src/cookie.c \
                         src/error.c \
@@ -62,6 +64,7 @@ libcouchbase_la_SOURCES = \
                         src/stats.c \
                         src/store.c \
                         src/strerror.c \
+                        src/synchandler.c \
                         src/tap.c \
                         src/timings.c \
                         src/touch.c \

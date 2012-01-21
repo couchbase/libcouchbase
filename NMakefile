@@ -32,6 +32,7 @@ DLLCOMPILE=$(cc) $(cdebug) $(cflags) $(cvarsdll) $(DBGFLG) $(INCPATH) -DLIBCOUCH
 
 LIBCOUCHBASE_OBJS=arithmetic.obj \
      base64.obj \
+     behavior.obj \
      cookie.obj \
      error.obj \
      event.obj \
@@ -49,6 +50,7 @@ LIBCOUCHBASE_OBJS=arithmetic.obj \
      server.obj \
      store.obj \
      strerror.obj \
+     synchandler.obj \
      tap.obj \
      timings.obj \
      touch.obj \
@@ -150,6 +152,9 @@ arithmetic.obj: src\arithmetic.c
 base64.obj: src\base64.c
 	$(DLLCOMPILE) src\base64.c
 
+behavior.obj: src\behavior.c
+	$(DLLCOMPILE) src\behavior.c
+
 cookie.obj: src\cookie.c
 	$(DLLCOMPILE) src\cookie.c
 
@@ -206,6 +211,9 @@ store.obj: src\store.c
 
 strerror.obj: src\strerror.c
 	$(DLLCOMPILE) src\strerror.c
+
+synchandler.obj: src\synchandler.c
+	$(DLLCOMPILE) src\synchandler.c
 
 tap.obj: src\tap.c
 	$(DLLCOMPILE) src\tap.c

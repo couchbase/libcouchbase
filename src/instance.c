@@ -80,6 +80,7 @@ libcouchbase_t libcouchbase_create(const char *host,
         return NULL;
     }
     libcouchbase_initialize_packet_handlers(ret);
+    libcouchbase_behavior_set_syncmode(ret, LIBCOUCHBASE_ASYNCHRONOUS);
 
     ret->host = strdup(host);
     if ((p = strchr(ret->host, ':')) == NULL) {

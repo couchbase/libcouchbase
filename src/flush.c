@@ -27,7 +27,7 @@ libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return LIBCOUCHBASE_ETMPFAIL;
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
     }
 
     memset(&flush, 0, sizeof(flush));
@@ -44,5 +44,5 @@ libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
         libcouchbase_server_send_packets(server);
     }
 
-    return LIBCOUCHBASE_SUCCESS;
+    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
 }

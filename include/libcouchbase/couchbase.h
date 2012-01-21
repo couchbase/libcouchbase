@@ -30,6 +30,7 @@
 #include <libcouchbase/configuration.h>
 #include <libcouchbase/visibility.h>
 #include <libcouchbase/types.h>
+#include <libcouchbase/behavior.h>
 #include <libcouchbase/callbacks.h>
 #include <libcouchbase/tap_filter.h>
 #include <libcouchbase/timings.h>

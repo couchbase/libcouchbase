@@ -56,7 +56,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return LIBCOUCHBASE_ETMPFAIL;
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
     }
 
     if (nhashkey == 0) {
@@ -100,8 +100,9 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
         break;
     default:
         /* We were given an unknown storage operation. */
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_EINVAL,
-                                          "Invalid value passed as storage operation");
+        return libcouchbase_synchandler_return(instance,
+                                               libcouchbase_error_handler(instance, LIBCOUCHBASE_EINVAL,
+                                                                          "Invalid value passed as storage operation"));
     }
 
     /* Make it known that this was a success. */
@@ -116,5 +117,5 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
     libcouchbase_server_end_packet(server);
     libcouchbase_server_send_packets(server);
 
-    return LIBCOUCHBASE_SUCCESS;
+    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
 }

@@ -121,6 +121,9 @@ extern "C" {
 
         struct libcouchbase_io_opt_st *io;
 
+        /* The current synchronous mode */
+        libcouchbase_syncmode_t syncmode;
+
         evutil_socket_t sock;
         struct addrinfo *ai;
         struct addrinfo *curr_ai;
@@ -209,6 +212,8 @@ extern "C" {
         /* Pointer back to the instance */
         libcouchbase_t instance;
     };
+
+    libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, libcouchbase_error_t retcode);
 
     libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance,
                                                     libcouchbase_error_t error,
