@@ -19,7 +19,7 @@ This is the client and protocol library for Couchbase project.
 %package -n %{name}1
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library
-Requires: %{name}0, libvbucket1 >= 1.7.2, libevent >= 1.4, cyrus-sasl >= 2.0
+Requires: %{name}1, libvbucket1 >= 1.7.2, libevent >= 1.4, cyrus-sasl >= 2.0
 
 %description -n %{name}1
 This is the client and protocol library for Couchbase project.
