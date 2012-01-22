@@ -128,6 +128,7 @@ check_PROGRAMS = tests/base64-test \
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
 check_PROGRAMS += tests/arithmetic-test \
+                  tests/double-free-test \
                   tests/flags-test \
                   tests/timings-test \
                   tests/config-test \
@@ -158,6 +159,10 @@ tests_arithmetic_test_SOURCES = tests/arithmetic.c
 tests_arithmetic_test_LDADD = libcouchbase.la libmockserver.la
 tests_arithmetic_test_LDFLAGS = -levent
 tests_arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
+
+tests_double_free_test_SOURCES = tests/test.h tests/double-free-test.c
+tests_double_free_test_LDADD = libcouchbase.la libmockserver.la
+tests_double_free_test_LDFLAGS = -levent
 
 tests_flags_test_SOURCES = tests/flags-test.c
 tests_flags_test_LDADD = libcouchbase.la libmockserver.la

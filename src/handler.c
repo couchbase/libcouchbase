@@ -93,7 +93,17 @@ static void dummy_response_handler(libcouchbase_server_t *server,
     (void)command_cookie;
 }
 
-
+/**
+ * Get a pointer to the key. If the buffer isn't continous we need to
+ * allocate a temporary chunk of memory and copy the packet over there.
+ * packet will return the pointer to the newly allocated packet or
+ * NULL if we didn't have to allocate anything.
+ *
+ * @param server the server owning the key
+ * @param nkey the number of bytes in the key
+ * @param packet where to store the result
+ * @return pointer to the key
+ */
 static const char *get_key(libcouchbase_server_t *server, uint16_t *nkey,
                            char **packet)
 {
@@ -104,6 +114,10 @@ static const char *get_key(libcouchbase_server_t *server, uint16_t *nkey,
     char *keyptr;
     *packet = server->cmd_log.read_head;
     assert(nr == sizeof(req));
+
+    *nkey = ntohs(req.request.keylen);
+    keyptr = *packet + sizeof(req) + req.request.extlen;
+    *packet = NULL;
 
     if (!libcouchbase_ringbuffer_is_continous(&server->cmd_log,
                                               RINGBUFFER_READ,
@@ -122,10 +136,9 @@ static const char *get_key(libcouchbase_server_t *server, uint16_t *nkey,
             free(*packet);
             return NULL;
         }
+        keyptr = *packet + sizeof(req) + req.request.extlen;
     }
 
-    *nkey = ntohs(req.request.keylen);
-    keyptr = *packet + sizeof(req) + req.request.extlen;
     return keyptr;
 }
 
@@ -153,9 +166,12 @@ static int lookup_server_with_command(libcouchbase_t instance,
 
 static void release_key(libcouchbase_server_t *server, char *packet)
 {
-    if (packet != server->cmd_log.read_head) {
-        free(packet);
-    }
+    /*
+     * Packet is a NIL pointer if we didn't allocate a temporary
+     * object.
+     */
+    free(packet);
+    (void)server;
 }
 
 static void getq_response_handler(libcouchbase_server_t *server,
