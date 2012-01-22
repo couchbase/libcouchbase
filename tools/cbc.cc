@@ -346,7 +346,7 @@ static bool spool(string &data) {
     stringstream ss;
     char buffer[1024];
     size_t nr;
-    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != -1) {
+    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != (size_t)-1) {
         if (nr == 0) {
             break;
         }

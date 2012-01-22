@@ -65,6 +65,7 @@ libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, li
     cookie.error = instance->callbacks.error;
     cookie.cookie = (void*)instance->cookie;
     instance->cookie = &cookie;
+    instance->callbacks.error = error_callback;
 
     libcouchbase_wait(instance);
     /* Restore the environment */

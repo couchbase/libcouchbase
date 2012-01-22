@@ -242,7 +242,7 @@ static int do_send_data(libcouchbase_server_t *c)
 LIBCOUCHBASE_API
 void libcouchbase_flush_buffers(libcouchbase_t instance, const void* cookie)
 {
-    int ii;
+    size_t ii;
     for (ii = 0; ii < instance->nservers; ++ii) {
         libcouchbase_server_t *c = instance->servers + ii;
         if (c->connected) {
@@ -251,6 +251,7 @@ void libcouchbase_flush_buffers(libcouchbase_t instance, const void* cookie)
                                               c);
         }
     }
+    (void)cookie;
 }
 
 void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *arg) {
