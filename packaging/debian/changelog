@@ -1,3 +1,122 @@
+libcouchbase (1.0.0) stable; urgency=low
+
+  [Jan Lehnardt]
+  * Use curl if wget isn't found to download CouchbaseMock.
+
+  [Matt Ingenthron]
+  * Added docbook based manual page for libcouchbase_create.
+  * Man page documentation additions and enhancements.
+  * Mentioned store_by_key uses hashkey in comment.
+  * Bring debian packaging back to compat 7.
+  * Added tmppath to RPM spec to be able to generate as non-root.
+  * Revert "Remove 'g' prefix from the version". CCBC-50
+  * Fixed minor packing dependency issue.
+
+  [Sergey Avseyev]
+  * Add stats command
+  * Aggregate flush responses
+  * rename man page for stats command
+  * Allow libcouchbase build with libevent 1.x (validated for 1.4.14)
+  * Use 'man -S' when 'man -s' unavailable (FreeBSD)
+  * Fix getopt_long tests
+  * Gracefully update vbucket configuration
+  * Add smoke tests for get and set operations
+  * Use modern tar format to allow long names
+  * Allow download memcached headers from remote host
+  * Separate mock-dependent tests
+  * Rename license file and add it to distribution
+  * Add packaging notes
+  * Build DEB package for Debian, Ubuntu, etc.
+  * Build RPM package for CentOS, RedHat etc.
+  * Do not sign deb packages for now
+  * Generalize views function
+  * debian/control: fix typo in build dependencies
+  * Remove <memcached/vbucket.h> dependency
+  * Use more specific error codes
+  * Expose HTTP status code for users
+  * Allow to select bucket for node failover/respawn
+  * Fix typo in configure.ac
+  * Fix build with libevent1
+  * Fix pedantic warnings
+  * Move doc handlers to views.c until 2.0 release
+  * Update package dependencies: libevent and libsasl2
+  * Update link to CouchbaseMock.jar
+  * Fix memcache comatibility
+  * Do not use -ldl expicitly (it breaks BSD)
+  * Fix 'make dist' task
+  * Update install rules in rpm and deb packages
+  * Disable optimization and increase debug level
+  * Fix buffer relocation during rebalance
+  * Uncomment smoke test
+  * Fix condition
+  * Take vbucket from the packet during relocation
+  * Force curl to follow redirects
+  * Fix curl syntax
+  * cbc: add version command
+  * Rename 'cbc-stat' to 'cbc-stats' for consistency
+  * Remove 'g' prefix from the version
+  * Update library versions
+
+  [Trond Norbye]
+  * Fix the chunked mode to allow multiple chunks
+  * Fix compile problems on win32
+  * Updated the mock server to use for testing
+  * Removed blank lines to make the xml easier to read
+  * Added initial documentation for libcouchbase_flush
+  * Fixup xml documentation
+  * Added a lot of documentation
+  * Don't accept NULL as a valid "callback"
+  * Use the error handler instead of printing to stderr
+  * Fixup xml
+  * Doc fixes
+  * convert flags to network byte order
+  * Remove obsolete man pages
+  * Remove pandora autoconf macros
+  * Fix the order of ldflags
+  * Step one on our way to C89
+  * Fixup build failures in couchview_yajl.c
+  * Disable view code
+  * Update copyright year
+  * We no longer need tar-pax
+  * Remove forward decl of event_base
+  * Build all examples on windows
+  * Refactor: Move tests programs to tests subdir
+  * Put the object files in the directory they belong
+  * Start pillowfight!
+  * New command cbc
+  * Remove obsolete memNNNN programs
+  * Create symbolic links for cbc programs
+  * CCBC-37 allow config to be read from .cbcrc
+  * Add -T to enable timings for cbc
+  * Build cbc for win32
+  * Bail out if we can't locate libvbucket/vbucket.h
+  * Added cbc-create to create a key
+  * Bail out if you can't find memcached/vbucket.h
+  * Added libcouchbase_get_version
+  * Print out libcouchbase version for cbc version
+  * Fix up get_iov for write
+  * The tap callbacks need cas+vbid
+  * Add cbc send and receive
+  * Remove memdump
+  * Set library version to 1.0.0
+  * Changed error text for EEXISTS
+  * Fixup comment
+  * Drop "already" from the error text
+  * Fix unused-but-set-variable
+  * Add libcouchbase.dll to gitignore
+  * Update versions for win32 (@todo find a better way)
+  * Update NMakefile
+  * Change search order for headerfiles for win32
+  * Fix compile errors in cbc for setting binary stdin/stdout
+  * Fix compile failure for ringbuffer test
+  * Fixed typo
+  * Add function to flush buffers
+  * "empty" bucket name should be treated as NULL
+  * Allow the user to specify sync mode on an instance
+  * Fixup compile warnings
+
+ -- Matt Ingenthron <matt@couchbase.com>  Sun, 22 Jan 2012 17:02:10 -0800
+
 libcouchbase (0.3.0) unstable; urgency=low
 
   [Trond Norbye]
