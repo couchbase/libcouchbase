@@ -15,6 +15,11 @@
 #   limitations under the License.
 #
 
+# We don't want to run memory debugging on java ;)
+unset LD_PRELOAD
+unset MALLOC_DEBUG
+unset UMEM_DEBUG
+
 # This is a wrapper script to start the Couchbase Mock server.
 # We could have started it directly from the C code, but by using
 # a script it's a bit easier to test it manually ;)
