@@ -10,8 +10,8 @@ License: Apache-2
 Group: System Environment/Libraries
 BuildRequires: libvbucket-devel >= 1.7.2, libevent-devel >= 1.4, cyrus-sasl-devel >= 2.0
 URL: https://github.com/couchbase/libcouchbase
-Source: %{name}-%{version}_%{release}.tar.gz
-BuildRoot: %{_topdir}/build/%{name}-%{version}_%{release}
+Source: @TARREDAS@.tar.gz
+BuildRoot: %{_topdir}/build/@TARREDAS@
 
 %description
 This is the client and protocol library for Couchbase project.
@@ -33,7 +33,7 @@ Requires: %{name}1
 Development files for the Couchbase Client & Protocol Library
 
 %prep
-%setup -q -n %{name}-%{version}_%{release}
+%setup -q -n @TARREDAS@
 %configure --disable-couchbasemock --with-memcached-headers-url=https://raw.github.com/membase/memcached/engine/include/memcached
 
 %build
