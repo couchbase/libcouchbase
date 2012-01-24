@@ -24,11 +24,11 @@
 
 
 #if !defined(HAVE_HTONLL) && !defined(WORDS_BIGENDIAN)
-extern uint64_t libcouchbase_byteswap64(uint64_t val)
+extern libcouchbase_uint64_t libcouchbase_byteswap64(libcouchbase_uint64_t val)
 {
-    size_t ii;
-    uint64_t ret = 0;
-    for (ii = 0; ii < sizeof(uint64_t); ii++) {
+    libcouchbase_size_t ii;
+    libcouchbase_uint64_t ret = 0;
+    for (ii = 0; ii < sizeof(libcouchbase_uint64_t); ii++) {
         ret <<= 8;
         ret |= val & 0xff;
         val >>= 8;

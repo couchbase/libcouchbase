@@ -114,10 +114,10 @@ static int getError() {
     return EINVAL;
 }
 
-static ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
+static libcouchbase_ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
                                     void *buffer,
-                                    size_t len,
+                                    libcouchbase_size_t len,
                                     int flags)
 {
     DWORD fl = 0;
@@ -135,13 +135,13 @@ static ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
         return -1;
     }
 
-    return (ssize_t)nr;
+    return (libcouchbase_ssize_t)nr;
 }
 
-static ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
-                                     libcouchbase_socket_t sock,
-                                     struct libcouchbase_iovec_st *iov,
-                                     size_t niov)
+static libcouchbase_ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
+                                                  libcouchbase_socket_t sock,
+                                                  struct libcouchbase_iovec_st *iov,
+                                                  libcouchbase_size_t niov)
 {
     DWORD fl = 0;
     DWORD nr;
@@ -164,14 +164,14 @@ static ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
         return -1;
     }
 
-    return (ssize_t)nr;
+    return (libcouchbase_ssize_t)nr;
 }
 
 
-static ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
+static libcouchbase_ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
                                     const void *msg,
-                                    size_t len,
+                                    libcouchbase_size_t len,
                                     int flags)
 {
     DWORD fl = 0;
@@ -184,13 +184,13 @@ static ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
         return -1;
     }
 
-    return (ssize_t)nw;
+    return (libcouchbase_ssize_t)nw;
 }
 
-static ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
+static libcouchbase_ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
                                      libcouchbase_socket_t sock,
                                      struct libcouchbase_iovec_st *iov,
-                                     size_t niov)
+                                     libcouchbase_size_t niov)
 {
     DWORD fl = 0;
     DWORD nw;
@@ -208,7 +208,7 @@ static ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
         return -1;
     }
 
-    return (ssize_t)nw;
+    return (libcouchbase_ssize_t)nw;
 }
 
 static libcouchbase_socket_t libcouchbase_io_socket(struct libcouchbase_io_opt_st *iops,
@@ -330,7 +330,7 @@ void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
 
 int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
                                  void *timer,
-                                 uint32_t usec,
+                                 libcouchbase_uint32_t usec,
                                  void *cb_data,
                                  void (*handler)(libcouchbase_socket_t sock,
                                                  short which,
@@ -342,6 +342,7 @@ int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
     me->timer->cb_data = cb_data;
     me->timer->handler = handler;
     me->timer->active = 1;
+    return 0;
 }
 
 static void libcouchbase_io_stop_event_loop(struct libcouchbase_io_opt_st *iops)
@@ -364,7 +365,7 @@ static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
         FD_ZERO(instance->readfds);
         FD_ZERO(instance->writefds);
         FD_ZERO(instance->exceptfds);
-
+        nevents = 0;
 
         for (n = instance->events; n != NULL; n = n->next) {
             if (n->flags != 0) {
@@ -392,7 +393,7 @@ static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
             if (now < instance->timer->exptime) {
                 hrtime_t delta = instance->timer->exptime - now;
                 delta /= 1000;
-                tmo.tv_sec = delta / 1000000;
+                tmo.tv_sec = (long)(delta / 1000000);
                 tmo.tv_usec = delta % 1000000;
             }
             t = &tmo;
@@ -404,7 +405,7 @@ static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
 
         if (ret == SOCKET_ERROR) {
             fprintf(stderr, "ERROR!!!\n");
-            return 0;
+            return ;
         }
 
         if (ret == 0) {

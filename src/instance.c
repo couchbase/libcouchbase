@@ -34,10 +34,10 @@
  *
  */
 LIBCOUCHBASE_API
-const char *libcouchbase_get_version(uint32_t *version)
+const char *libcouchbase_get_version(libcouchbase_uint32_t *version)
 {
     if (version != NULL) {
-        *version = (uint32_t)LIBCOUCHBASE_VERSION;
+        *version = (libcouchbase_uint32_t)LIBCOUCHBASE_VERSION;
     }
 
     return LIBCOUCHBASE_VERSION_STRING;
@@ -51,7 +51,7 @@ libcouchbase_t libcouchbase_create(const char *host,
                                    struct libcouchbase_io_opt_st *io)
 {
     char buffer[1024];
-    ssize_t offset;
+    libcouchbase_ssize_t offset;
     libcouchbase_t ret;
     char *p;
 
@@ -103,10 +103,10 @@ libcouchbase_t libcouchbase_create(const char *host,
             return NULL;
         }
 
-        offset += snprintf(buffer + offset, sizeof(buffer) - (size_t)offset,
+        offset += snprintf(buffer + offset, sizeof(buffer) - (libcouchbase_size_t)offset,
                            "Authorization: Basic %s\r\n", base64);
     }
-    offset += snprintf(buffer + offset, sizeof(buffer)-(size_t)offset, "\r\n");
+    offset += snprintf(buffer + offset, sizeof(buffer)-(libcouchbase_size_t)offset, "\r\n");
     ret->http_uri = strdup(buffer);
 
     if (ret->host == NULL || ret->http_uri == NULL) {
@@ -132,7 +132,7 @@ libcouchbase_t libcouchbase_create(const char *host,
 LIBCOUCHBASE_API
 void libcouchbase_destroy(libcouchbase_t instance)
 {
-    size_t ii;
+    libcouchbase_size_t ii;
     free(instance->host);
     free(instance->http_uri);
 
@@ -218,9 +218,8 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
 
 static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE config)
 {
-    size_t ii;
-    uint16_t max;
-    size_t num;
+    libcouchbase_uint16_t ii, max;
+    libcouchbase_size_t num;
     const char *passwd;
     sasl_callback_t sasl_callbacks[4] = {
         { SASL_CB_USER, (int(*)(void))&sasl_get_username, instance },
@@ -229,11 +228,11 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
         { SASL_CB_LIST_END, NULL, NULL }
     };
 
-    num = (size_t)vbucket_config_get_num_servers(config);
+    num = (libcouchbase_size_t)vbucket_config_get_num_servers(config);
     instance->nservers = num;
     instance->servers = calloc(num, sizeof(libcouchbase_server_t));
     instance->vbucket_config = config;
-    for (ii = 0; ii < (size_t)num; ++ii) {
+    for (ii = 0; ii < (libcouchbase_size_t)num; ++ii) {
         instance->servers[ii].instance = instance;
         libcouchbase_server_initialize(instance->servers + ii, (int)ii);
     }
@@ -252,13 +251,12 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
      * It would have been nice if I could query libvbucket for the number
      * of vbuckets a server got, but there isn't at the moment..
      */
-    max = (uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
+    max = (libcouchbase_uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
     instance->nvbuckets = max;
     free(instance->vb_server_map);
-    instance->vb_server_map = calloc(max, sizeof(uint16_t));
+    instance->vb_server_map = calloc(max, sizeof(libcouchbase_vbucket_t));
     for (ii = 0; ii < max; ++ii) {
-        int idx = vbucket_get_master(instance->vbucket_config, (int)ii);
-        instance->vb_server_map[ii] = (uint16_t)idx;
+        instance->vb_server_map[ii] = vbucket_get_master(instance->vbucket_config, ii);
     }
 }
 
@@ -269,10 +267,10 @@ static void relocate_packets(ringbuffer_t *src,
     struct libcouchbase_command_data_st ct;
     protocol_binary_request_header cmd;
     libcouchbase_server_t *server;
-    uint32_t nbody;
+    libcouchbase_uint32_t nbody;
     char *body;
-    size_t nr, idx;
-    uint16_t vb;
+    libcouchbase_size_t nr, idx;
+    libcouchbase_vbucket_t vb;
 
     while ((nr = libcouchbase_ringbuffer_read(src, cmd.bytes, sizeof(cmd.bytes)))) {
         nbody = ntohl(cmd.request.bodylen); /* extlen + nkey + nval */
@@ -280,7 +278,7 @@ static void relocate_packets(ringbuffer_t *src,
         nr = libcouchbase_ringbuffer_read(src, body, nbody);
         assert(nr == nbody);
         vb = ntohs(cmd.request.vbucket);
-        idx = (size_t)vbucket_get_master(dst->vbucket_config, vb);
+        idx = (libcouchbase_size_t)vbucket_get_master(dst->vbucket_config, vb);
         server = dst->servers + idx;
         nr = libcouchbase_ringbuffer_read(src_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
@@ -300,10 +298,10 @@ static void relocate_packets(ringbuffer_t *src,
  */
 static void libcouchbase_update_serverlist(libcouchbase_t instance)
 {
-    size_t ii;
+    libcouchbase_size_t ii;
     VBUCKET_CONFIG_HANDLE next_config, curr_config;
     VBUCKET_CONFIG_DIFF* diff = NULL;
-    size_t nservers;
+    libcouchbase_size_t nservers;
     libcouchbase_server_t *servers, *ss;
 
     curr_config = instance->vbucket_config;
@@ -371,7 +369,7 @@ static int parse_chunk(libcouchbase_t instance)
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     assert(instance->vbucket_stream.chunk_size != 0);
 
-    if (instance->vbucket_stream.chunk_size == (size_t)-1) {
+    if (instance->vbucket_stream.chunk_size == (libcouchbase_size_t)-1) {
         char *ptr = strstr(buffer->data, "\r\n");
         long val;
         if (ptr == NULL) {
@@ -381,8 +379,8 @@ static int parse_chunk(libcouchbase_t instance)
         ptr += 2;
         val = strtol(buffer->data, NULL, 16);
         val += 2;
-        instance->vbucket_stream.chunk_size = (size_t)val;
-        buffer->avail -= (size_t)(ptr - buffer->data);
+        instance->vbucket_stream.chunk_size = (libcouchbase_size_t)val;
+        buffer->avail -= (libcouchbase_size_t)(ptr - buffer->data);
         memmove(buffer->data, ptr, buffer->avail);
         buffer->data[buffer->avail] = '\0';
     }
@@ -434,16 +432,16 @@ static int parse_header(libcouchbase_t instance)
 
     instance->vbucket_stream.header = strdup(buffer->data);
     /* realign remaining data.. */
-    buffer->avail -= (size_t)(ptr - buffer->data);
+    buffer->avail -= (libcouchbase_size_t)(ptr - buffer->data);
     memmove(buffer->data, ptr, buffer->avail);
     buffer->data[buffer->avail] = '\0';
-    instance->vbucket_stream.chunk_size = (size_t)-1;
+    instance->vbucket_stream.chunk_size = (libcouchbase_size_t)-1;
 
     return 0;
 }
 
 /** Don't create any buffers less than 2k */
-const size_t min_buffer_size = 2048;
+const libcouchbase_size_t min_buffer_size = 2048;
 
 /**
  * Grow a buffer so that it got at least a minimum size of available space.
@@ -454,7 +452,7 @@ const size_t min_buffer_size = 2048;
  * @param min_free the minimum amount of free space I need
  * @return 1 if success, 0 otherwise
  */
-int grow_buffer(buffer_t *buffer, size_t min_free) {
+int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free) {
     if (min_free == 0) {
         /*
         ** no minimum size requested, just ensure that there is at least
@@ -464,7 +462,7 @@ int grow_buffer(buffer_t *buffer, size_t min_free) {
     }
 
     if (buffer->size - buffer->avail < min_free) {
-        size_t next = buffer->size ? buffer->size << 1 : min_buffer_size;
+        libcouchbase_size_t next = buffer->size ? buffer->size << 1 : min_buffer_size;
         char *ptr;
 
         while ((next - buffer->avail) < min_free) {
@@ -489,19 +487,19 @@ int grow_buffer(buffer_t *buffer, size_t min_free) {
  * @param which what kind of events we may do
  * @param arg pointer to the libcouchbase instance
  */
-static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
+static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void *arg)
 {
     libcouchbase_t instance = arg;
-    ssize_t nr;
-    size_t avail;
+    libcouchbase_ssize_t nr;
+    libcouchbase_size_t avail;
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     assert(sock != INVALID_SOCKET);
 
     if ((which & LIBCOUCHBASE_WRITE_EVENT) == LIBCOUCHBASE_WRITE_EVENT) {
-        ssize_t nw;
+        libcouchbase_ssize_t nw;
         nw = instance->io->send(instance->io, instance->sock,
                                 instance->http_uri + instance->n_http_uri_sent,
-                                (size_t)((ssize_t)strlen(instance->http_uri) - instance->n_http_uri_sent),
+                                (libcouchbase_size_t)((libcouchbase_ssize_t)strlen(instance->http_uri) - instance->n_http_uri_sent),
                                 0);
         if (nw == -1) {
             libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
@@ -513,7 +511,7 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
         }
 
         instance->n_http_uri_sent += nw;
-        if (instance->n_http_uri_sent == (ssize_t)strlen(instance->http_uri)) {
+        if (instance->n_http_uri_sent == (libcouchbase_ssize_t)strlen(instance->http_uri)) {
             instance->io->update_event(instance->io, instance->sock,
                                        instance->event, LIBCOUCHBASE_READ_EVENT,
                                        instance, vbucket_stream_handler);
@@ -551,9 +549,9 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
                                        "vbucket stream socket is closed!\n");
             return ;
         }
-        buffer->avail += (size_t)nr;
+        buffer->avail += (libcouchbase_size_t)nr;
         buffer->data[buffer->avail] = '\0';
-    } while ((size_t)nr == avail);
+    } while ((libcouchbase_size_t)nr == avail);
 
     if (instance->vbucket_stream.header == NULL) {
         if (parse_header(instance) == -1) {
@@ -593,7 +591,7 @@ static void vbucket_stream_handler(evutil_socket_t sock, short which, void *arg)
                     libcouchbase_update_serverlist(instance);
                 }
 
-                instance->vbucket_stream.chunk_size = (size_t)-1;
+                instance->vbucket_stream.chunk_size = (libcouchbase_size_t)-1;
                 if (buffer->avail > 0) {
                     done = 0;
                 }
@@ -612,7 +610,7 @@ static void libcouchbase_instance_connected(libcouchbase_t instance)
                                instance, vbucket_stream_handler);
 }
 
-static void libcouchbase_instance_connect_handler(evutil_socket_t sock,
+static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                                                   short which,
                                                   void *arg)
 {

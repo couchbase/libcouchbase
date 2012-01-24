@@ -54,7 +54,7 @@ static void storage_callback(libcouchbase_t instance,
                              const void *cookie,
                              libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
-                             const void *key, size_t nkey,
+                             const void *key, libcouchbase_size_t nkey,
                              libcouchbase_cas_t cas)
 {
     libcouchbase_io_opt_t *io = (libcouchbase_io_opt_t *)cookie;
@@ -76,14 +76,14 @@ static void stat_callback(libcouchbase_t instance,
                           const char *server_endpoint,
                           libcouchbase_error_t error,
                           const void *key,
-                          size_t nkey,
+                          libcouchbase_size_t nkey,
                           const void *bytes,
-                          size_t nbytes)
+                          libcouchbase_size_t nbytes)
 {
     libcouchbase_error_t err;
     libcouchbase_io_opt_t *io = (libcouchbase_io_opt_t *)cookie;
     char *statkey;
-    size_t nstatkey;
+    libcouchbase_size_t nstatkey;
 
     assert(error == LIBCOUCHBASE_SUCCESS);
     if (server_endpoint != NULL) {

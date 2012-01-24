@@ -68,7 +68,7 @@ extern "C" {
                                  const void *,
                                  libcouchbase_storage_t,
                                  libcouchbase_error_t error,
-                                 const void *key, size_t nkey,
+                                 const void *key, libcouchbase_size_t nkey,
                                  libcouchbase_cas_t cas)
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
@@ -90,7 +90,7 @@ extern "C" {
     static void remove_callback(libcouchbase_t instance,
                                 const void *,
                                 libcouchbase_error_t error,
-                                const void *key, size_t nkey)
+                                const void *key, libcouchbase_size_t nkey)
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "Removed \"";
@@ -110,9 +110,9 @@ extern "C" {
     static void get_callback(libcouchbase_t instance,
                              const void *,
                              libcouchbase_error_t error,
-                             const void *key, size_t nkey,
-                             const void *bytes, size_t nbytes,
-                             uint32_t flags, libcouchbase_cas_t cas)
+                             const void *key, libcouchbase_size_t nkey,
+                             const void *bytes, libcouchbase_size_t nbytes,
+                             libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "\"";
@@ -137,9 +137,9 @@ extern "C" {
                               const char* server_endpoint,
                               libcouchbase_error_t error,
                               const void* key,
-                              size_t nkey,
+                              libcouchbase_size_t nkey,
                               const void* value,
-                              size_t nvalue)
+                              libcouchbase_size_t nvalue)
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             if (nkey > 0) {
@@ -176,8 +176,8 @@ extern "C" {
 
     static void timings_callback(libcouchbase_t, const void *,
                                  libcouchbase_timeunit_t timeunit,
-                                 uint32_t min, uint32_t max,
-                                 uint32_t total, uint32_t maxtotal) {
+                                 libcouchbase_uint32_t min, libcouchbase_uint32_t max,
+                                 libcouchbase_uint32_t total, libcouchbase_uint32_t maxtotal) {
         char buffer[1024];
         int offset = sprintf(buffer, "[%3u - %3u]", min, max);
         switch (timeunit) {
@@ -217,7 +217,7 @@ static bool cp(libcouchbase_t instance, list<string> &keys)
         std::string key = *ii;
         struct stat st;
         if (stat(key.c_str(), &st) == 0) {
-            char *bytes = new char[(size_t)st.st_size];
+            char *bytes = new char[(libcouchbase_size_t)st.st_size];
             if (bytes != NULL) {
                 ifstream file(key.c_str(), ios::binary);
                 if (file.good() && file.read(bytes, st.st_size) && file.good()) {
@@ -225,7 +225,7 @@ static bool cp(libcouchbase_t instance, list<string> &keys)
                                        NULL,
                                        LIBCOUCHBASE_SET,
                                        key.c_str(), key.length(),
-                                       bytes, (size_t)st.st_size,
+                                       bytes, (libcouchbase_size_t)st.st_size,
                                        0, 0, 0);
                     delete []bytes;
                 } else {
@@ -275,7 +275,7 @@ static bool cat(libcouchbase_t instance, list<string> &keys)
     }
 
     const char* *k = new const char*[keys.size()];
-    size_t *s = new size_t[keys.size()];
+    libcouchbase_size_t *s = new libcouchbase_size_t[keys.size()];
 
     int idx = 0;
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter, ++idx) {
@@ -345,8 +345,8 @@ static bool flush(libcouchbase_t instance, list<string> &keys)
 static bool spool(string &data) {
     stringstream ss;
     char buffer[1024];
-    size_t nr;
-    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != (size_t)-1) {
+    libcouchbase_size_t nr;
+    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != (libcouchbase_size_t)-1) {
         if (nr == 0) {
             break;
         }
@@ -357,7 +357,7 @@ static bool spool(string &data) {
 }
 
 static bool create(libcouchbase_t instance, list<string> &keys,
-                   uint32_t exptime, uint32_t flags, bool add)
+                   libcouchbase_uint32_t exptime, libcouchbase_uint32_t flags, bool add)
 {
     if (keys.size() != 1) {
         cerr << "Usage: You need to specify a single key" << endl;
@@ -416,8 +416,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     getopt.addOption(new CommandLineOption('T', "enable-timings", false,
                                            "Enable command timings"));
 
-    uint32_t flags = 0;
-    uint32_t exptime = 0;
+    libcouchbase_uint32_t flags = 0;
+    libcouchbase_uint32_t exptime = 0;
     bool add = false;
     if (cmd == cbc_create) {
         getopt.addOption(new CommandLineOption('f', "flag", true,
@@ -464,10 +464,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'f':
-                        flags = (uint32_t)atoi((*iter)->argument);
+                        flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
                         break;
                     case 'e':
-                        flags = (uint32_t)atoi((*iter)->argument);
+                        flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
                         break;
                     case 'a':
                         add = true;
@@ -565,9 +565,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
 static void lowercase(string &str)
 {
-    ssize_t len = str.length();
+    libcouchbase_ssize_t len = str.length();
     stringstream ss;
-    for (ssize_t ii = 0; ii < len; ++ii) {
+    for (libcouchbase_ssize_t ii = 0; ii < len; ++ii) {
         ss << static_cast<char>(tolower(str[ii]));
     }
     str.assign(ss.str());

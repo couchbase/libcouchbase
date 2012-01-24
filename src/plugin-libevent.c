@@ -93,32 +93,32 @@ event_get_callback(const struct event *ev)
     return ev->ev_callback;
 }
 #endif
-static ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
+static libcouchbase_ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
                                     void *buffer,
-                                    size_t len,
+                                    libcouchbase_size_t len,
                                     int flags)
 {
-    ssize_t ret = recv(sock, buffer, len, flags);
+    libcouchbase_ssize_t ret = recv(sock, buffer, len, flags);
     if (ret < 0) {
         iops->error = errno;
     }
     return ret;
 }
 
-static ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
+static libcouchbase_ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
                                      libcouchbase_socket_t sock,
                                      struct libcouchbase_iovec_st *iov,
-                                     size_t niov)
+                                     libcouchbase_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
-    ssize_t ret;
+    libcouchbase_ssize_t ret;
 
     assert(niov == 2);
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
-    msg.msg_iovlen = iov[1].iov_len ? (size_t)2 : (size_t)1;
+    msg.msg_iovlen = iov[1].iov_len ? (libcouchbase_size_t)2 : (libcouchbase_size_t)1;
     msg.msg_iov[0].iov_base = iov[0].iov_base;
     msg.msg_iov[0].iov_len = iov[0].iov_len;
     msg.msg_iov[1].iov_base = iov[1].iov_base;
@@ -132,32 +132,32 @@ static ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
     return ret;
 }
 
-static ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
+static libcouchbase_ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
                                     libcouchbase_socket_t sock,
                                     const void *msg,
-                                    size_t len,
+                                    libcouchbase_size_t len,
                                     int flags)
 {
-    ssize_t ret = send(sock, msg, len, flags);
+    libcouchbase_ssize_t ret = send(sock, msg, len, flags);
     if (ret < 0) {
         iops->error = errno;
     }
     return ret;
 }
 
-static ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
+static libcouchbase_ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
                                      libcouchbase_socket_t sock,
                                      struct libcouchbase_iovec_st *iov,
-                                     size_t niov)
+                                     libcouchbase_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
-    ssize_t ret;
+    libcouchbase_ssize_t ret;
 
     assert(niov == 2);
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
-    msg.msg_iovlen = iov[1].iov_len ? (size_t)2 : (size_t)1;
+    msg.msg_iovlen = iov[1].iov_len ? (libcouchbase_size_t)2 : (libcouchbase_size_t)1;
     msg.msg_iov[0].iov_base = iov[0].iov_base;
     msg.msg_iov[0].iov_len = iov[0].iov_len;
     msg.msg_iov[1].iov_base = iov[1].iov_base;
@@ -251,7 +251,7 @@ static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
 
 static int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
                                         void *timer,
-                                        uint32_t usec,
+                                        libcouchbase_uint32_t usec,
                                         void *cb_data,
                                         void (*handler)(libcouchbase_socket_t sock,
                                                         short which,

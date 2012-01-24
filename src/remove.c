@@ -26,7 +26,7 @@
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
                                          const void *command_cookie,
-                                         const void *key, size_t nkey,
+                                         const void *key, libcouchbase_size_t nkey,
                                          libcouchbase_cas_t cas)
 {
     return libcouchbase_remove_by_key(instance, command_cookie, NULL, 0, key,
@@ -37,8 +37,8 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
                                                 const void *command_cookie,
                                                 const void *hashkey,
-                                                size_t nhashkey,
-                                                const void *key, size_t nkey,
+                                                libcouchbase_size_t nhashkey,
+                                                const void *key, libcouchbase_size_t nkey,
                                                 libcouchbase_cas_t cas)
 {
     libcouchbase_server_t *server;
@@ -55,16 +55,16 @@ libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
         hashkey = key;
     }
     (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-    server = instance->servers + (size_t)idx;
+    server = instance->servers + (libcouchbase_size_t)idx;
 
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
-    req.message.header.request.keylen = ntohs((uint16_t)nkey);
+    req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey);
     req.message.header.request.extlen = 0;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.vbucket = ntohs((uint16_t)vb);
-    req.message.header.request.bodylen = ntohl((uint32_t)nkey);
+    req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
+    req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)nkey);
     req.message.header.request.opaque = ++instance->seqno;
     req.message.header.request.cas = cas;
 

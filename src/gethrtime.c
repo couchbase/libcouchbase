@@ -36,16 +36,16 @@
 
 #define CLOCK_MONOTONIC 192996728
 
-static void mach_absolute_difference(uint64_t start, uint64_t end,
+static void mach_absolute_difference(libcouchbase_uint64_t start, libcouchbase_uint64_t end,
                                      struct timespec *tp) {
-    uint64_t difference = end - start;
+    libcouchbase_uint64_t difference = end - start;
     static mach_timebase_info_data_t info = {0,0};
 
     if (info.denom == 0) {
         mach_timebase_info(&info);
     }
 
-    uint64_t elapsednano = difference * (info.numer / info.denom);
+    libcouchbase_uint64_t elapsednano = difference * (info.numer / info.denom);
 
     tp->tv_sec = elapsednano * 1e-9;
     tp->tv_nsec = elapsednano - (tp->tv_sec * 1e9);
@@ -54,13 +54,13 @@ static void mach_absolute_difference(uint64_t start, uint64_t end,
 static int clock_gettime(int which, struct timespec *tp) {
     assert(which == CLOCK_MONOTONIC);
 
-    static uint64_t epoch = 0;
+    static libcouchbase_uint64_t epoch = 0;
 
     if (epoch == 0) {
         epoch = mach_absolute_time();
     }
 
-    uint64_t now = mach_absolute_time();
+    libcouchbase_uint64_t now = mach_absolute_time();
 
     mach_absolute_difference(epoch, now, tp);
 

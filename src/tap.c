@@ -26,7 +26,7 @@
 
 struct libcouchbase_tap_filter_st {
     /** Represents the oldest entry (from epoch) you're interested in */
-    uint64_t backfill;
+    libcouchbase_uint64_t backfill;
     /** If true, notifies the tap server that we don't care about values */
     int keys_only;
 };
@@ -70,7 +70,7 @@ void libcouchbase_tap_filter_destroy(libcouchbase_tap_filter_t instance)
  */
 LIBCOUCHBASE_API
 void libcouchbase_tap_filter_set_backfill(libcouchbase_tap_filter_t instance,
-                                          uint64_t backfill)
+                                          libcouchbase_uint64_t backfill)
 {
     instance->backfill = backfill;
 }
@@ -80,7 +80,7 @@ void libcouchbase_tap_filter_set_backfill(libcouchbase_tap_filter_t instance,
  * @param instance the tap filter instance to retrieve the value from.
  */
 LIBCOUCHBASE_API
-uint64_t libcouchbase_tap_filter_get_backfill(libcouchbase_tap_filter_t instance)
+libcouchbase_uint64_t libcouchbase_tap_filter_get_backfill(libcouchbase_tap_filter_t instance)
 {
     return instance->backfill;
 }
@@ -115,15 +115,15 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     libcouchbase_t instance = server->instance;
     libcouchbase_tap_filter_t filter = instance->tap.filter;
     /* Locate this index: */
-    size_t idx;
-    size_t bodylen;
-    uint16_t total = 0;
+    libcouchbase_size_t idx;
+    libcouchbase_size_t bodylen;
+    libcouchbase_uint16_t total = 0;
     protocol_binary_request_tap_connect req;
     int ii;
-    uint16_t val;
-    uint32_t flags = TAP_CONNECT_FLAG_LIST_VBUCKETS;
-    uint64_t backfill;
-    size_t backfill_size = 0;
+    libcouchbase_vbucket_t val;
+    libcouchbase_uint32_t flags = TAP_CONNECT_FLAG_LIST_VBUCKETS;
+    libcouchbase_uint64_t backfill;
+    libcouchbase_size_t backfill_size = 0;
 
     for (idx = 0; idx < instance->nservers; ++idx) {
         if (server == instance->servers + idx) {
@@ -151,13 +151,13 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
         }
     }
 
-    bodylen = ((size_t)total * 2 + 6) + backfill_size;
+    bodylen = ((libcouchbase_size_t)total * 2 + 6) + backfill_size;
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_TAP_CONNECT;
     req.message.header.request.extlen = 4;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.bodylen = htonl((uint32_t)bodylen);
+    req.message.header.request.bodylen = htonl((libcouchbase_uint32_t)bodylen);
     req.message.body.flags = htonl(flags);
 
     libcouchbase_server_start_packet(server, NULL, req.bytes,
@@ -173,7 +173,7 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     libcouchbase_server_write_packet(server, &val, sizeof(val));
     for (ii = 0; ii < instance->nvbuckets; ++ii) {
         if (instance->vb_server_map[ii] == idx) {
-            val = htons((uint16_t)ii);
+            val = htons((libcouchbase_vbucket_t)ii);
             libcouchbase_server_write_packet(server, &val, sizeof(val));
         }
     }
@@ -188,7 +188,7 @@ libcouchbase_error_t libcouchbase_tap_cluster(libcouchbase_t instance,
                                               libcouchbase_tap_filter_t filter,
                                               int block)
 {
-    size_t ii;
+    libcouchbase_size_t ii;
     (void)command_cookie;
 
     /* we need a vbucket config before we can start tap'ing the cluster.. */

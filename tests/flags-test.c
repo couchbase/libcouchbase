@@ -48,7 +48,7 @@ static void storage_callback(libcouchbase_t instance,
                              const void *cookie,
                              libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
-                             const void *key, size_t nkey,
+                             const void *key, libcouchbase_size_t nkey,
                              libcouchbase_cas_t cas)
 {
     (void)instance; (void)operation; (void)cas; (void)cookie;
@@ -60,9 +60,9 @@ static void storage_callback(libcouchbase_t instance,
 static void get_callback(libcouchbase_t instance,
                          const void *cookie,
                          libcouchbase_error_t error,
-                         const void *key, size_t nkey,
-                         const void *bytes, size_t nbytes,
-                         uint32_t flags, libcouchbase_cas_t cas)
+                         const void *key, libcouchbase_size_t nkey,
+                         const void *bytes, libcouchbase_size_t nbytes,
+                         libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
 {
     (void)instance; (void)cookie; (void)cas;
     assert(nkey == 5);
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
 {
     (void)argc; (void)argv;
     const char * keys[1];
-    size_t nkeys[1];
+    libcouchbase_size_t nkeys[1];
     struct event_base *evbase;
     const void *mock;
     const char *http;

@@ -34,29 +34,29 @@ extern "C" {
     static void cbc_tap_mutation_callback(libcouchbase_t,
                                           const void *,
                                           const void *key,
-                                          size_t nkey,
+                                          libcouchbase_size_t nkey,
                                           const void *data,
-                                          size_t nbytes,
-                                          uint32_t flags,
-                                          uint32_t exp,
+                                          libcouchbase_size_t nbytes,
+                                          libcouchbase_uint32_t flags,
+                                          libcouchbase_time_t exp,
                                           libcouchbase_cas_t cas,
-                                          uint16_t vbucket,
+                                          libcouchbase_vbucket_t vbucket,
                                           const void *,
-                                          size_t)
+                                          libcouchbase_size_t)
     {
         protocol_binary_request_set req;
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SET;
-        req.message.header.request.keylen = ntohs((uint16_t)nkey);
+        req.message.header.request.keylen = ntohs((libcouchbase_vbucket_t)nkey);
         req.message.header.request.extlen = 8;
         req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
         req.message.header.request.cas = cas;
         req.message.header.request.vbucket = htons(vbucket);
         req.message.body.flags = flags;
-        req.message.body.expiration = htonl((uint32_t)exp);
-        uint32_t bodylen = nkey + nbytes + 8 + nbytes;
-        req.message.header.request.bodylen = htonl((uint32_t)bodylen);
+        req.message.body.expiration = htonl((libcouchbase_uint32_t)exp);
+        libcouchbase_uint32_t bodylen = nkey + nbytes + 8 + nbytes;
+        req.message.header.request.bodylen = htonl((libcouchbase_uint32_t)bodylen);
         sendIt(req.bytes, sizeof(req.bytes));
         sendIt((const uint8_t*)key, nkey);
         sendIt((const uint8_t*)data, nbytes);
@@ -65,23 +65,23 @@ extern "C" {
     static void cbc_tap_deletion_callback(libcouchbase_t,
                                           const void *,
                                           const void *key,
-                                          size_t nkey,
+                                          libcouchbase_size_t nkey,
                                           libcouchbase_cas_t cas,
-                                          uint16_t vbucket,
+                                          libcouchbase_vbucket_t vbucket,
                                           const void *,
-                                          size_t)
+                                          libcouchbase_size_t)
     {
         protocol_binary_request_delete req;
 
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
-        req.message.header.request.keylen = ntohs((uint16_t)nkey);
+        req.message.header.request.keylen = ntohs((libcouchbase_vbucket_t)nkey);
         req.message.header.request.extlen = 0;
         req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
         req.message.header.request.cas = cas;
         req.message.header.request.vbucket = htons(vbucket);
-        req.message.header.request.bodylen = ntohl((uint32_t)nkey);
+        req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)nkey);
         sendIt(req.bytes, sizeof(req.bytes));
         sendIt((const uint8_t*)key, nkey);
     }
@@ -89,7 +89,7 @@ extern "C" {
     static void cbc_tap_flush_callback(libcouchbase_t,
                                        const void *,
                                        const void *,
-                                       size_t)
+                                       libcouchbase_size_t)
     {
         protocol_binary_request_flush req;
         memset(req.bytes, 0, sizeof(req.bytes));
@@ -100,17 +100,17 @@ extern "C" {
     }
 
     static void cbc_tap_opaque_callback(libcouchbase_t, const void *,
-                                        const void *, size_t)
+                                        const void *, libcouchbase_size_t)
     {
         // We don't have an alternative for this. Just swallow the message
     }
 
     static void cbc_tap_vbucket_set_callback(libcouchbase_t,
                                              const void *,
-                                             uint16_t vbucket,
+                                             libcouchbase_vbucket_t vbucket,
                                              libcouchbase_vbucket_state_t state,
                                              const void *,
-                                             size_t)
+                                             libcouchbase_size_t)
     {
         protocol_binary_request_set_vbucket req;
         memset(req.bytes, 0, sizeof(req.bytes));

@@ -18,19 +18,19 @@
 #include "internal.h"
 
 LIBCOUCHBASE_API
-void libcouchbase_set_timeout(libcouchbase_t instance, uint32_t usec)
+void libcouchbase_set_timeout(libcouchbase_t instance, libcouchbase_uint32_t usec)
 {
     instance->timeout.usec = usec;
     libcouchbase_update_timer(instance);
 }
 
 LIBCOUCHBASE_API
-uint32_t libcouchbase_get_timeout(libcouchbase_t instance)
+libcouchbase_uint32_t libcouchbase_get_timeout(libcouchbase_t instance)
 {
     return instance->timeout.usec;
 }
 
-static void libcouchbase_timeout_handler(evutil_socket_t sock,
+static void libcouchbase_timeout_handler(libcouchbase_socket_t sock,
                                          short which,
                                          void *arg)
 {
@@ -52,10 +52,10 @@ void libcouchbase_update_timer(libcouchbase_t instance)
     /* Run through all of the server instances and figure out the first */
     /* operation there. */
     hrtime_t next = 0;
-    size_t idx;
+    libcouchbase_size_t idx;
 
     for (idx = 0; idx < instance->nservers; ++idx) {
-        libcouchbase_server_t *server = instance->servers + (size_t)idx;
+        libcouchbase_server_t *server = instance->servers + (libcouchbase_size_t)idx;
 
         if (next == 0) {
             next = server->next_timeout;
@@ -83,12 +83,12 @@ void libcouchbase_update_timer(libcouchbase_t instance)
 void libcouchbase_purge_timedout(libcouchbase_t instance)
 {
     hrtime_t now = gethrtime();
-    size_t idx;
+    libcouchbase_size_t idx;
     hrtime_t tmo = instance->timeout.usec;
     tmo *= 1000;
 
     for (idx = 0; idx < instance->nservers; ++idx) {
-        libcouchbase_server_t *server = instance->servers + (size_t)idx;
+        libcouchbase_server_t *server = instance->servers + (libcouchbase_size_t)idx;
         if (server->next_timeout != 0 && (now > (tmo + server->next_timeout))) {
             if (server->connected) {
                 libcouchbase_purge_single_server(server,

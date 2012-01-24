@@ -47,14 +47,14 @@ struct rvbuf
 {
     libcouchbase_error_t error;
     const char *bytes;
-    size_t nbytes;
+    libcouchbase_size_t nbytes;
 };
 
 static void storage_callback(libcouchbase_t instance,
                              const void *cookie,
                              libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
-                             const void *key, size_t nkey,
+                             const void *key, libcouchbase_size_t nkey,
                              libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
@@ -72,9 +72,9 @@ static void storage_callback(libcouchbase_t instance,
 static void get_callback(libcouchbase_t instance,
                          const void *cookie,
                          libcouchbase_error_t error,
-                         const void *key, size_t nkey,
-                         const void *bytes, size_t nbytes,
-                         uint32_t flags, libcouchbase_cas_t cas)
+                         const void *key, libcouchbase_size_t nkey,
+                         const void *bytes, libcouchbase_size_t nbytes,
+                         libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
@@ -146,7 +146,7 @@ static void buffer_relocation_test(void)
     libcouchbase_error_t err;
     struct rvbuf rv;
     const char *key = "foo", *val = "bar";
-    size_t nkey = strlen(key), nval = strlen(val);
+    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
     int vb, idx;
 
     mock = start_mock_server((char **)argv);

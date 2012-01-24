@@ -49,10 +49,10 @@ static void error_callback(libcouchbase_t instance,
 static void timings_callback(libcouchbase_t instance,
                              const void *cookie,
                              libcouchbase_timeunit_t timeunit,
-                             uint32_t min,
-                             uint32_t max,
-                             uint32_t total,
-                             uint32_t maxtotal)
+                             libcouchbase_uint32_t min,
+                             libcouchbase_uint32_t max,
+                             libcouchbase_uint32_t total,
+                             libcouchbase_uint32_t maxtotal)
 {
     FILE *fp = (void*)cookie;
     int num, ii;

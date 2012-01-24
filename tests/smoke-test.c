@@ -82,20 +82,20 @@ struct rvbuf
     libcouchbase_error_t error;
     libcouchbase_storage_t operation;
     const char *key;
-    size_t nkey;
+    libcouchbase_size_t nkey;
     const char *bytes;
-    size_t nbytes;
+    libcouchbase_size_t nbytes;
     libcouchbase_cas_t cas;
-    uint32_t flags;
+    libcouchbase_uint32_t flags;
     int32_t counter;
-    uint32_t errors;
+    libcouchbase_uint32_t errors;
 };
 
 static void store_callback(libcouchbase_t instance,
                            const void *cookie,
                            libcouchbase_storage_t operation,
                            libcouchbase_error_t error,
-                           const void *key, size_t nkey,
+                           const void *key, libcouchbase_size_t nkey,
                            libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
@@ -113,7 +113,7 @@ static void mstore_callback(libcouchbase_t instance,
                             const void *cookie,
                             libcouchbase_storage_t operation,
                             libcouchbase_error_t error,
-                            const void *key, size_t nkey,
+                            const void *key, libcouchbase_size_t nkey,
                             libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
@@ -133,9 +133,9 @@ static void mstore_callback(libcouchbase_t instance,
 static void get_callback(libcouchbase_t instance,
                          const void *cookie,
                          libcouchbase_error_t error,
-                         const void *key, size_t nkey,
-                         const void *bytes, size_t nbytes,
-                         uint32_t flags, libcouchbase_cas_t cas)
+                         const void *key, libcouchbase_size_t nkey,
+                         const void *bytes, libcouchbase_size_t nbytes,
+                         libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
@@ -155,7 +155,7 @@ static void test_set1(void)
     libcouchbase_error_t err;
     struct rvbuf rv;
     const char *key = "foo", *val = "bar";
-    size_t nkey = strlen(key), nval = strlen(val);
+    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
 
     (void)libcouchbase_set_storage_callback(session, store_callback);
     err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, key, nkey, val, nval, 0, 0, 0);
@@ -171,7 +171,7 @@ static void test_set2(void)
     libcouchbase_error_t err;
     struct rvbuf rv;
     const char *key = "foo", *val = "bar";
-    size_t ii, nkey = strlen(key), nval = strlen(val);
+    libcouchbase_size_t ii, nkey = strlen(key), nval = strlen(val);
 
     (void)libcouchbase_set_storage_callback(session, mstore_callback);
     rv.errors = 0;
@@ -189,7 +189,7 @@ static void test_get1(void)
     libcouchbase_error_t err;
     struct rvbuf rv;
     const char *key = "foo", *val = "bar";
-    size_t nkey = strlen(key), nval = strlen(val);
+    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
 
     (void)libcouchbase_set_storage_callback(session, store_callback);
     (void)libcouchbase_set_get_callback(session, get_callback);

@@ -26,11 +26,11 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
                                                const void* command_cookie,
                                                const void* arg,
-                                               size_t narg)
+                                               libcouchbase_size_t narg)
 {
     libcouchbase_server_t *server;
     protocol_binary_request_stats req;
-    size_t ii;
+    libcouchbase_size_t ii;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
@@ -41,8 +41,8 @@ libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
     req.message.header.request.magic= PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode= PROTOCOL_BINARY_CMD_STAT;
     req.message.header.request.datatype= PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.keylen = ntohs((uint16_t)narg);
-    req.message.header.request.bodylen = ntohl((uint32_t)narg);
+    req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)narg);
+    req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)narg);
     req.message.header.request.opaque = ++instance->seqno;
 
     for (ii = 0; ii < instance->nservers; ++ii) {

@@ -51,14 +51,14 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     void libcouchbase_tap_filter_set_backfill(libcouchbase_tap_filter_t instance,
-                                              uint64_t backfill);
+                                              libcouchbase_uint64_t backfill);
 
     /**
      * Get the backfill value for your tap stream.
      * @param instance the tap filter instance to retrieve the value from.
      */
     LIBCOUCHBASE_API
-    uint64_t libcouchbase_tap_filter_get_backfill(libcouchbase_tap_filter_t instance);
+    libcouchbase_uint64_t libcouchbase_tap_filter_get_backfill(libcouchbase_tap_filter_t instance);
 
     /**
      * Set whether you are interested in keys and values, or only keys in your

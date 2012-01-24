@@ -26,24 +26,24 @@ struct libcouchbase_histogram_st {
     /**
      * The highest value in all of the buckets
      */
-    uint32_t max;
+    libcouchbase_uint32_t max;
     /**
      * The first bucket is the nano-second batches.. it contains
      * all operations that was completed in < 1usec..
      */
-    uint32_t nsec;
+    libcouchbase_uint32_t nsec;
     /**
      * We're collecting measurements on a per 10 usec
      */
-    uint32_t usec[100];
+    libcouchbase_uint32_t usec[100];
     /**
      * We're collecting measurements on a per 10 msec
      */
-    uint32_t msec[100];
+    libcouchbase_uint32_t msec[100];
     /**
      * Seconds are collected per sec
      */
-    uint32_t sec[10];
+    libcouchbase_uint32_t sec[10];
 };
 
 LIBCOUCHBASE_API
@@ -74,10 +74,10 @@ libcouchbase_error_t libcouchbase_get_timings(libcouchbase_t instance,
                                               const void *cookie,
                                               libcouchbase_timings_callback callback)
 {
-    uint32_t max;
-    uint32_t start;
-    uint32_t ii;
-    uint32_t end;
+    libcouchbase_uint32_t max;
+    libcouchbase_uint32_t start;
+    libcouchbase_uint32_t ii;
+    libcouchbase_uint32_t end;
 
     if (instance->histogram == NULL) {
         return LIBCOUCHBASE_KEY_ENOENT;

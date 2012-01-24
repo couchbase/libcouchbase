@@ -55,7 +55,7 @@ extern "C" {
                                                        const char *path,
                                                        libcouchbase_http_method_t method,
                                                        const void *body,
-                                                       size_t nbody,
+                                                       libcouchbase_size_t nbody,
                                                        int chunked);
 
     LIBCOUCHBASE_API

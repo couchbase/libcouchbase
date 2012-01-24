@@ -23,7 +23,7 @@ libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
 {
     libcouchbase_server_t *server;
     protocol_binary_request_no_extras flush;
-    size_t ii;
+    libcouchbase_size_t ii;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {

@@ -24,13 +24,13 @@
 
 #include "server.h"
 
-uint64_t val = 0;
+libcouchbase_uint64_t val = 0;
 
 static void storage_callback(libcouchbase_t instance,
                              const void *cookie,
                              libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
-                             const void *key, size_t nkey,
+                             const void *key, libcouchbase_size_t nkey,
                              libcouchbase_cas_t cas)
 {
     (void)instance; (void)operation; (void)cas; (void)cookie;
@@ -83,8 +83,8 @@ static void initialize_counter(const char *host, const char *user,
 static void arithmetic_callback(libcouchbase_t instance,
                                 const void *cookie,
                                 libcouchbase_error_t error,
-                                const void *key, size_t nkey,
-                                uint64_t value, libcouchbase_cas_t cas)
+                                const void *key, libcouchbase_size_t nkey,
+                                libcouchbase_uint64_t value, libcouchbase_cas_t cas)
 {
     assert(nkey == 7);
     assert(memcmp(key, "counter", 7) == 0);

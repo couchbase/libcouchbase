@@ -34,10 +34,10 @@
 
 using namespace std;
 
-void sendIt(const uint8_t *ptr, size_t size)
+void sendIt(const uint8_t *ptr, libcouchbase_size_t size)
 {
     do {
-        size_t nw = fwrite(ptr, 1, size, stdout);
+        libcouchbase_size_t nw = fwrite(ptr, 1, size, stdout);
         switch (nw) {
         case 0:
         case -1:
@@ -51,10 +51,10 @@ void sendIt(const uint8_t *ptr, size_t size)
     } while (size > 0);
 }
 
-bool readIt(uint8_t *ptr, size_t size)
+bool readIt(uint8_t *ptr, libcouchbase_size_t size)
 {
     do {
-        size_t nw = fread(ptr, 1, size, stdin);
+        libcouchbase_size_t nw = fread(ptr, 1, size, stdin);
         switch (nw) {
         case 0:
         case -1:

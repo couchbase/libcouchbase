@@ -45,8 +45,8 @@ extern "C" {
                                  const void *,
                                  libcouchbase_storage_t,
                                  libcouchbase_error_t error,
-                                 const void *key, size_t nkey,
-                                 uint64_t)
+                                 const void *key, libcouchbase_size_t nkey,
+                                 libcouchbase_uint64_t)
     {
         if (error != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to store \"";
@@ -63,7 +63,7 @@ extern "C" {
     static void remove_callback(libcouchbase_t instance,
                                 const void *,
                                 libcouchbase_error_t error,
-                                const void *key, size_t nkey)
+                                const void *key, libcouchbase_size_t nkey)
     {
         if (error != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to remove \"";
@@ -83,8 +83,8 @@ typedef bool (*packetHandler)(libcouchbase_t instance,
 static bool setHandler(libcouchbase_t instance,
                        protocol_binary_request_header &header)
 {
-    uint32_t bodylen = ntohl(header.request.bodylen);
-    uint16_t keylen = ntohl(header.request.keylen);
+    libcouchbase_uint32_t bodylen = ntohl(header.request.bodylen);
+    libcouchbase_uint16_t keylen = ntohl(header.request.keylen);
 
     if (bodylen <= 0 || keylen <= 0) {
         cerr << "Protocol error for the set command" << endl;
@@ -98,8 +98,8 @@ static bool setHandler(libcouchbase_t instance,
     }
 
     libcouchbase_error_t err;
-    uint32_t flags;
-    uint32_t exptime;
+    libcouchbase_uint32_t flags;
+    libcouchbase_uint32_t exptime;
 
     memcpy(&flags, data, sizeof(flags));
     memcpy(&exptime, data + sizeof(flags), sizeof(exptime));
@@ -131,8 +131,8 @@ static bool setHandler(libcouchbase_t instance,
 static bool deleteHandler(libcouchbase_t instance,
                           protocol_binary_request_header &header)
 {
-    uint32_t bodylen = ntohl(header.request.bodylen);
-    uint16_t keylen = ntohl(header.request.keylen);
+    libcouchbase_uint32_t bodylen = ntohl(header.request.bodylen);
+    libcouchbase_uint16_t keylen = ntohl(header.request.keylen);
 
     if (bodylen <= 0 || keylen <= 0) {
         cerr << "Protocol error for the delete command" << endl;
@@ -167,7 +167,7 @@ static bool unknownHandler(libcouchbase_t,
                            protocol_binary_request_header &header)
 {
     bool ret = true;
-    uint32_t bodylen = ntohl(header.request.bodylen);
+    libcouchbase_uint32_t bodylen = ntohl(header.request.bodylen);
     if (bodylen > 0) {
         uint8_t *data = new uint8_t[bodylen];
         ret = readIt(data, bodylen);

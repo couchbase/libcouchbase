@@ -29,7 +29,7 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
                                              ringbuffer_t *buff,
                                              ringbuffer_t *buff_cookie,
                                              const void *data,
-                                             size_t size)
+                                             libcouchbase_size_t size)
 {
     struct libcouchbase_command_data_st ct;
     /* @todo we don't want to call gethrtime for each operation, */
@@ -56,7 +56,7 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
 void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
                                              ringbuffer_t *buff,
                                              const void *data,
-                                             size_t size)
+                                             libcouchbase_size_t size)
 {
     (void)c;
     if (!libcouchbase_ringbuffer_ensure_capacity(buff, size) ||
@@ -79,7 +79,7 @@ void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
                                                 ringbuffer_t *buff,
                                                 ringbuffer_t *buff_cookie,
                                                 const void *data,
-                                                size_t size)
+                                                libcouchbase_size_t size)
 {
 
     libcouchbase_server_buffer_start_packet(c, command_cookie,
@@ -90,7 +90,7 @@ void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
 void libcouchbase_server_start_packet(libcouchbase_server_t *c,
                                       const void *command_cookie,
                                       const void *data,
-                                      size_t size)
+                                      libcouchbase_size_t size)
 {
     if (c->connected) {
         libcouchbase_server_buffer_start_packet(c, command_cookie,
@@ -107,7 +107,7 @@ void libcouchbase_server_start_packet(libcouchbase_server_t *c,
 
 void libcouchbase_server_write_packet(libcouchbase_server_t *c,
                                       const void *data,
-                                      size_t size)
+                                      libcouchbase_size_t size)
 {
     if (c->connected) {
         libcouchbase_server_buffer_write_packet(c, &c->output, data, size);
@@ -124,7 +124,7 @@ void libcouchbase_server_end_packet(libcouchbase_server_t *c)
 void libcouchbase_server_complete_packet(libcouchbase_server_t *c,
                                          const void *command_cookie,
                                          const void *data,
-                                         size_t size)
+                                         libcouchbase_size_t size)
 {
     if (c->connected) {
         libcouchbase_server_buffer_complete_packet(c, command_cookie,

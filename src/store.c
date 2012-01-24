@@ -29,9 +29,9 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
                                         const void *command_cookie,
                                         libcouchbase_storage_t operation,
-                                        const void *key, size_t nkey,
-                                        const void *bytes, size_t nbytes,
-                                        uint32_t flags, time_t exp,
+                                        const void *key, libcouchbase_size_t nkey,
+                                        const void *bytes, libcouchbase_size_t nbytes,
+                                        libcouchbase_uint32_t flags, libcouchbase_time_t exp,
                                         libcouchbase_cas_t cas)
 {
     return libcouchbase_store_by_key(instance, command_cookie, operation, NULL, 0,
@@ -42,16 +42,16 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
                                                const void *command_cookie,
                                                libcouchbase_storage_t operation,
                                                const void *hashkey,
-                                               size_t nhashkey,
-                                               const void *key, size_t nkey,
-                                               const void *bytes, size_t nbytes,
-                                               uint32_t flags, time_t exp,
+                                               libcouchbase_size_t nhashkey,
+                                               const void *key, libcouchbase_size_t nkey,
+                                               const void *bytes, libcouchbase_size_t nbytes,
+                                               libcouchbase_uint32_t flags, libcouchbase_time_t exp,
                                                libcouchbase_cas_t cas)
 {
     libcouchbase_server_t *server;
     protocol_binary_request_set req;
-    size_t headersize;
-    size_t bodylen;
+    libcouchbase_size_t headersize;
+    libcouchbase_size_t bodylen;
     int vb, idx;
 
     /* we need a vbucket config before we can start getting data.. */
@@ -64,18 +64,18 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
         hashkey = key;
     }
     (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-    server = instance->servers + (size_t)idx;
+    server = instance->servers + (libcouchbase_size_t)idx;
 
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.keylen = ntohs((uint16_t)nkey);
+    req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey);
     req.message.header.request.extlen = 8;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.vbucket = ntohs((uint16_t)vb);
+    req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
     req.message.header.request.opaque = ++instance->seqno;
     req.message.header.request.cas = cas;
     req.message.body.flags = htonl(flags);
-    req.message.body.expiration = htonl((uint32_t)exp);
+    req.message.body.expiration = htonl((libcouchbase_uint32_t)exp);
 
     headersize = sizeof(req.bytes);
     switch (operation) {
@@ -109,7 +109,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
     libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
 
     bodylen = nkey + nbytes + req.message.header.request.extlen;
-    req.message.header.request.bodylen = htonl((uint32_t)bodylen);
+    req.message.header.request.bodylen = htonl((libcouchbase_uint32_t)bodylen);
 
     libcouchbase_server_start_packet(server, command_cookie, &req, headersize);
     libcouchbase_server_write_packet(server, key, nkey);

@@ -25,9 +25,9 @@
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
                                              const void *command_cookie,
-                                             const void *key, size_t nkey,
-                                             int64_t delta, time_t exp,
-                                             int create, uint64_t initial)
+                                             const void *key, libcouchbase_size_t nkey,
+                                             int64_t delta, libcouchbase_time_t exp,
+                                             int create, libcouchbase_uint64_t initial)
 {
     return libcouchbase_arithmetic_by_key(instance, command_cookie, NULL, 0, key,
                                           nkey, delta, exp, create, initial);
@@ -37,10 +37,10 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
                                                     const void *command_cookie,
                                                     const void *hashkey,
-                                                    size_t nhashkey,
-                                                    const void *key, size_t nkey,
-                                                    int64_t delta, time_t exp,
-                                                    int create, uint64_t initial)
+                                                    libcouchbase_size_t nhashkey,
+                                                    const void *key, libcouchbase_size_t nkey,
+                                                    int64_t delta, libcouchbase_time_t exp,
+                                                    int create, libcouchbase_uint64_t initial)
 {
     libcouchbase_server_t *server;
     protocol_binary_request_incr req;
@@ -56,24 +56,24 @@ libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
         hashkey = key;
     }
     (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-    server = instance->servers + (size_t)idx;
+    server = instance->servers + (libcouchbase_size_t)idx;
 
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_INCREMENT;
-    req.message.header.request.keylen = ntohs((uint16_t)nkey);
+    req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey);
     req.message.header.request.extlen = 20;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.vbucket = ntohs((uint16_t)vb);
-    req.message.header.request.bodylen = ntohl((uint32_t)(nkey + 20));
+    req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
+    req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)(nkey + 20));
     req.message.header.request.opaque = ++instance->seqno;
-    req.message.body.delta = ntohll((uint64_t)(delta));
+    req.message.body.delta = ntohll((libcouchbase_uint64_t)(delta));
     req.message.body.initial = ntohll(initial);
-    req.message.body.expiration = ntohl((uint32_t)exp);
+    req.message.body.expiration = ntohl((libcouchbase_uint32_t)exp);
 
     if (delta < 0) {
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DECREMENT;
-        req.message.body.delta = ntohll((uint64_t)(delta * -1));
+        req.message.body.delta = ntohll((libcouchbase_uint64_t)(delta * -1));
     }
 
     if (!create) {

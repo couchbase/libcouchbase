@@ -62,10 +62,10 @@ extern "C" {
 
     typedef struct {
         char *data;
-        size_t size;
-        size_t avail;
+        libcouchbase_size_t size;
+        libcouchbase_size_t avail;
     } buffer_t;
-    int grow_buffer(buffer_t *buffer, size_t min_free);
+    int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free);
 
     /**
      * Data stored per command in the command-cookie buffer...
@@ -136,9 +136,9 @@ extern "C" {
         libcouchbase_server_t *servers;
 
         /** The number of vbuckets */
-        uint16_t nvbuckets;
+        libcouchbase_uint16_t nvbuckets;
         /** A map from the vbucket to the server hosting the vbucket */
-        uint16_t *vb_server_map;
+        libcouchbase_vbucket_t *vb_server_map;
 
         vbucket_state_listener_t vbucket_state_listener;
         RESPONSE_HANDLER response_handler[0x100];
@@ -161,7 +161,7 @@ extern "C" {
         struct libcouchbase_callback_st callbacks;
         struct libcouchbase_histogram_st *histogram;
 
-        uint32_t seqno;
+        libcouchbase_uint32_t seqno;
         int wait;
         const void *cookie;
 
@@ -170,7 +170,7 @@ extern "C" {
         struct {
             hrtime_t next;
             void *event;
-            uint32_t usec;
+            libcouchbase_uint32_t usec;
         } timeout;
 
     };
@@ -231,7 +231,7 @@ extern "C" {
                                                     const char *errinfo);
 
     int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
-                                                      uint32_t seqno,
+                                                     libcouchbase_uint32_t seqno,
                                                      hrtime_t delta);
     void libcouchbase_server_destroy(libcouchbase_server_t *server);
     void libcouchbase_server_connected(libcouchbase_server_t *server);
@@ -246,12 +246,12 @@ extern "C" {
                                                  ringbuffer_t *buff,
                                                  ringbuffer_t *buff_cookie,
                                                  const void *data,
-                                                 size_t size);
+                                                 libcouchbase_size_t size);
 
     void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
                                                  ringbuffer_t *buff,
                                                  const void *data,
-                                                 size_t size);
+                                                 libcouchbase_size_t size);
 
     void libcouchbase_server_buffer_end_packet(libcouchbase_server_t *c,
                                                ringbuffer_t *buff);
@@ -261,7 +261,7 @@ extern "C" {
                                                     ringbuffer_t *buff,
                                                     ringbuffer_t *buff_cookie,
                                                     const void *data,
-                                                    size_t size);
+                                                    libcouchbase_size_t size);
 
     /**
      * Initiate a new packet to be sent
@@ -273,7 +273,7 @@ extern "C" {
     void libcouchbase_server_start_packet(libcouchbase_server_t *c,
                                           const void *command_cookie,
                                           const void *data,
-                                          size_t size);
+                                          libcouchbase_size_t size);
     /**
      * Write data to the current packet
      * @param c the server connection to send it to
@@ -282,7 +282,7 @@ extern "C" {
      */
     void libcouchbase_server_write_packet(libcouchbase_server_t *c,
                                           const void *data,
-                                          size_t size);
+                                          libcouchbase_size_t size);
     /**
      * Mark this packet complete
      */
@@ -298,7 +298,7 @@ extern "C" {
     void libcouchbase_server_complete_packet(libcouchbase_server_t *c,
                                              const void *command_cookie,
                                              const void *data,
-                                             size_t size);
+                                             libcouchbase_size_t size);
     /**
      * Start sending packets
      * @param server the server to start send data to
@@ -306,15 +306,15 @@ extern "C" {
     void libcouchbase_server_send_packets(libcouchbase_server_t *server);
 
 
-    void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *arg);
+    void libcouchbase_server_event_handler(libcouchbase_socket_t sock, short which, void *arg);
 
     void libcouchbase_initialize_packet_handlers(libcouchbase_t instance);
 
-    int libcouchbase_base64_encode(const char *src, char *dst, size_t sz);
+    int libcouchbase_base64_encode(const char *src, char *dst, libcouchbase_size_t sz);
 
     void libcouchbase_record_metrics(libcouchbase_t instance,
                                      hrtime_t delta,
-                                     uint8_t opcode);
+                                     libcouchbase_uint8_t opcode);
 
     void libcouchbase_update_timer(libcouchbase_t instance);
     void libcouchbase_purge_timedout(libcouchbase_t instance);
@@ -322,7 +322,7 @@ extern "C" {
 
     int libcouchbase_lookup_server_with_command(libcouchbase_t instance,
                                                 protocol_binary_command opcode,
-                                                uint32_t opaque,
+                                                libcouchbase_uint32_t opaque,
                                                 libcouchbase_server_t *exc);
 
     void libcouchbase_purge_single_server(libcouchbase_server_t *server,

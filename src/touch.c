@@ -28,10 +28,10 @@
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
                                          const void *command_cookie,
-                                         size_t num_keys,
+                                         libcouchbase_size_t num_keys,
                                          const void * const *keys,
-                                         const size_t *nkey,
-                                         const time_t *exp)
+                                         const libcouchbase_size_t *nkey,
+                                         const libcouchbase_time_t *exp)
 {
     return libcouchbase_mtouch_by_key(instance, command_cookie, NULL, 0, num_keys,
                                       keys, nkey, exp);
@@ -41,14 +41,14 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                                                 const void *command_cookie,
                                                 const void *hashkey,
-                                                size_t nhashkey,
-                                                size_t num_keys,
+                                                libcouchbase_size_t nhashkey,
+                                                libcouchbase_size_t num_keys,
                                                 const void * const *keys,
-                                                const size_t *nkey,
-                                                const time_t *exp)
+                                                const libcouchbase_size_t *nkey,
+                                                const libcouchbase_time_t *exp)
 {
     libcouchbase_server_t *server = NULL;
-    size_t ii;
+    libcouchbase_size_t ii;
     int vb, idx;
 
     /* we need a vbucket config before we can start getting data.. */
@@ -58,27 +58,27 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
 
     if (nhashkey != 0) {
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-        server = instance->servers + (size_t)idx;
+        server = instance->servers + (libcouchbase_size_t)idx;
     }
 
     for (ii = 0; ii < num_keys; ++ii) {
         protocol_binary_request_touch req;
         if (nhashkey == 0) {
             (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &vb, &idx);
-            server = instance->servers + (size_t)idx;
+            server = instance->servers + (libcouchbase_size_t)idx;
         }
 
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_TOUCH;
         req.message.header.request.extlen = 4;
-        req.message.header.request.keylen = ntohs((uint16_t)nkey[ii]);
+        req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey[ii]);
         req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((uint32_t)(nkey[ii]) + 4);
+        req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
+        req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)(nkey[ii]) + 4);
         req.message.header.request.opaque = ++instance->seqno;
         /* @todo fix the relative time! */
-        req.message.body.expiration = htonl((uint32_t)exp[ii]);
+        req.message.body.expiration = htonl((libcouchbase_uint32_t)exp[ii]);
         libcouchbase_server_start_packet(server, command_cookie,
                                          req.bytes, sizeof(req.bytes));
         libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);

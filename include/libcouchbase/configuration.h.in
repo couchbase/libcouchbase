@@ -24,8 +24,35 @@
 #ifndef LIBCOUCHBASE_CONFIGURATION_H
 #define LIBCOUCHBASE_CONFIGURATION_H 1
 
+#ifndef LIBCOUCHBASE_COUCHBASE_H
+#error "Include libcouchbase/couchbase.h instead"
+#endif
+
+#include <stdint.h>
+#include <stddef.h>
+#include <time.h>
+
 #define LIBCOUCHBASE_VERSION_STRING "@LIBCOUCHBASE_VERSION@"
 #define LIBCOUCHBASE_VERSION @LIBCOUCHBASE_VERSION_HEX@
 #define LIBCOUCHBASE_VERSION_CHANGESET @CHANGESET@
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    typedef int64_t libcouchbase_int64_t;
+    typedef size_t libcouchbase_size_t;
+    typedef ssize_t libcouchbase_ssize_t;
+    typedef uint16_t libcouchbase_vbucket_t;
+    typedef uint8_t libcouchbase_uint8_t;
+    typedef uint16_t libcouchbase_uint16_t;
+    typedef uint32_t libcouchbase_uint32_t;
+    typedef uint64_t libcouchbase_cas_t;
+    typedef uint64_t libcouchbase_uint64_t;
+    typedef time_t libcouchbase_time_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

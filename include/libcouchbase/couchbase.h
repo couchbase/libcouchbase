@@ -50,7 +50,7 @@ extern "C" {
      *
      */
     LIBCOUCHBASE_API
-    const char *libcouchbase_get_version(uint32_t *version);
+    const char *libcouchbase_get_version(libcouchbase_uint32_t *version);
 
     /**
      * Create a new instance of one of the library-supplied io ops types.
@@ -110,13 +110,13 @@ extern "C" {
      * @param usec the new timeout value.
      */
     LIBCOUCHBASE_API
-    void libcouchbase_set_timeout(libcouchbase_t instance, uint32_t usec);
+    void libcouchbase_set_timeout(libcouchbase_t instance, libcouchbase_uint32_t usec);
 
     /**
      * Get the current timeout value used by this instance (in usec)
      */
     LIBCOUCHBASE_API
-    uint32_t libcouchbase_get_timeout(libcouchbase_t instance);
+    libcouchbase_uint32_t libcouchbase_get_timeout(libcouchbase_t instance);
 
     /**
      * Connect to the server and get the vbucket and serverlist.
@@ -199,10 +199,10 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
                                            const void *command_cookie,
-                                           size_t num_keys,
+                                           libcouchbase_size_t num_keys,
                                            const void * const *keys,
-                                           const size_t *nkey,
-                                           const time_t *exp);
+                                           const libcouchbase_size_t *nkey,
+                                           const libcouchbase_time_t *exp);
 
     /**
      * Get a number of values from the cache. You need to run the
@@ -226,11 +226,11 @@ extern "C" {
     libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                                   const void *command_cookie,
                                                   const void *hashkey,
-                                                  size_t nhashkey,
-                                                  size_t num_keys,
+                                                  libcouchbase_size_t nhashkey,
+                                                  libcouchbase_size_t num_keys,
                                                   const void * const *keys,
-                                                  const size_t *nkey,
-                                                  const time_t *exp);
+                                                  const libcouchbase_size_t *nkey,
+                                                  const libcouchbase_time_t *exp);
 
 
     /**
@@ -248,11 +248,11 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
-                                  const void *command_cookie,
-                                             size_t num_keys,
+                                             const void *command_cookie,
+                                             libcouchbase_size_t num_keys,
                                              const void * const *keys,
-                                             const size_t *nkey,
-                                             const time_t *exp);
+                                             const libcouchbase_size_t *nkey,
+                                             const libcouchbase_time_t *exp);
 
     /**
      * Touch (set expiration time) on a number of values in the cache
@@ -277,11 +277,11 @@ extern "C" {
     libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                                                     const void *command_cookie,
                                                     const void *hashkey,
-                                                    size_t nhashkey,
-                                                    size_t num_keys,
+                                                    libcouchbase_size_t nhashkey,
+                                                    libcouchbase_size_t num_keys,
                                                     const void * const *keys,
-                                                    const size_t *nkey,
-                                                    const time_t *exp);
+                                                    const libcouchbase_size_t *nkey,
+                                                    const libcouchbase_time_t *exp);
 
 
     /**
@@ -308,7 +308,7 @@ extern "C" {
     libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
                                                    const void* command_cookie,
                                                    const void* arg,
-                                                   size_t narg);
+                                                   libcouchbase_size_t narg);
 
     /**
      * Spool a store operation to the cluster. The operation <b>may</b> be
@@ -335,9 +335,9 @@ extern "C" {
     libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
                                             const void *command_cookie,
                                             libcouchbase_storage_t operation,
-                                            const void *key, size_t nkey,
-                                            const void *bytes, size_t nbytes,
-                                            uint32_t flags, time_t exp,
+                                            const void *key, libcouchbase_size_t nkey,
+                                            const void *bytes, libcouchbase_size_t nbytes,
+                                            libcouchbase_uint32_t flags, libcouchbase_time_t exp,
                                             libcouchbase_cas_t cas);
 
     /**
@@ -373,13 +373,13 @@ extern "C" {
                                                    const void *command_cookie,
                                                    libcouchbase_storage_t operation,
                                                    const void *hashkey,
-                                                   size_t nhashkey,
+                                                   libcouchbase_size_t nhashkey,
                                                    const void *key,
-                                                   size_t nkey,
+                                                   libcouchbase_size_t nkey,
                                                    const void *bytes,
-                                                   size_t nbytes,
-                                                   uint32_t flags,
-                                                   time_t exp,
+                                                   libcouchbase_size_t nbytes,
+                                                   libcouchbase_uint32_t flags,
+                                                   libcouchbase_time_t exp,
                                                    libcouchbase_cas_t cas);
 
     /**
@@ -402,9 +402,12 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
                                                  const void *command_cookie,
-                                                 const void *key, size_t nkey,
-                                                 int64_t delta, time_t exp,
-                                                 int create, uint64_t initial);
+                                                 const void *key,
+                                                 libcouchbase_size_t nkey,
+                                                 libcouchbase_int64_t delta,
+                                                 libcouchbase_time_t exp,
+                                                 int create,
+                                                 libcouchbase_uint64_t initial);
 
     /**
      * Spool an arithmetic operation to the cluster. The operation <b>may</b> be
@@ -429,13 +432,13 @@ extern "C" {
     libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
                                                         const void *command_cookie,
                                                         const void *hashkey,
-                                                        size_t nhashkey,
+                                                        libcouchbase_size_t nhashkey,
                                                         const void *key,
-                                                        size_t nkey,
-                                                        int64_t delta,
-                                                        time_t exp,
+                                                        libcouchbase_size_t nkey,
+                                                        libcouchbase_int64_t delta,
+                                                        libcouchbase_time_t exp,
                                                         int create,
-                                                        uint64_t initial);
+                                                        libcouchbase_uint64_t initial);
 
     /**
      * Spool a remove operation to the cluster. The operation <b>may</b> be
@@ -453,7 +456,8 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
                                              const void *command_cookie,
-                                             const void *key, size_t nkey,
+                                             const void *key,
+                                             libcouchbase_size_t nkey,
                                              libcouchbase_cas_t cas);
 
     /**
@@ -475,9 +479,9 @@ extern "C" {
     libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
                                                     const void *command_cookie,
                                                     const void *hashkey,
-                                                    size_t nhashkey,
+                                                    libcouchbase_size_t nhashkey,
                                                     const void *key,
-                                                    size_t nkey,
+                                                    libcouchbase_size_t nkey,
                                                     libcouchbase_cas_t cas);
 
 

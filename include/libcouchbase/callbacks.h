@@ -35,70 +35,78 @@ extern "C" {
     typedef void (*libcouchbase_get_callback)(libcouchbase_t instance,
                                               const void *cookie,
                                               libcouchbase_error_t error,
-                                              const void *key, size_t nkey,
-                                              const void *bytes, size_t nbytes,
-                                              uint32_t flags, libcouchbase_cas_t cas);
+                                              const void *key,
+                                              libcouchbase_size_t nkey,
+                                              const void *bytes,
+                                              libcouchbase_size_t nbytes,
+                                              libcouchbase_uint32_t flags,
+                                              libcouchbase_cas_t cas);
     typedef void (*libcouchbase_storage_callback)(libcouchbase_t instance,
                                                   const void *cookie,
                                                   libcouchbase_storage_t operation,
                                                   libcouchbase_error_t error,
-                                                  const void *key, size_t nkey,
+                                                  const void *key,
+                                                  libcouchbase_size_t nkey,
                                                   libcouchbase_cas_t cas);
     typedef void (*libcouchbase_arithmetic_callback)(libcouchbase_t instance,
                                                      const void *cookie,
                                                      libcouchbase_error_t error,
-                                                     const void *key, size_t nkey,
-                                                     uint64_t value, libcouchbase_cas_t cas);
+                                                     const void *key,
+                                                     libcouchbase_size_t nkey,
+                                                     libcouchbase_uint64_t value,
+                                                     libcouchbase_cas_t cas);
     typedef void (*libcouchbase_remove_callback)(libcouchbase_t instance,
                                                  const void *cookie,
                                                  libcouchbase_error_t error,
-                                                 const void *key, size_t nkey);
+                                                 const void *key,
+                                                 libcouchbase_size_t nkey);
     typedef void (*libcouchbase_stat_callback)(libcouchbase_t instance,
                                                const void* cookie,
                                                const char* server_endpoint,
                                                libcouchbase_error_t error,
                                                const void* key,
-                                               size_t nkey,
+                                               libcouchbase_size_t nkey,
                                                const void* bytes,
-                                               size_t nbytes);
+                                               libcouchbase_size_t nbytes);
     typedef void (*libcouchbase_touch_callback)(libcouchbase_t instance,
                                                 const void *cookie,
                                                 libcouchbase_error_t error,
-                                                const void *key, size_t nkey);
+                                                const void *key,
+                                                libcouchbase_size_t nkey);
     typedef void (*libcouchbase_tap_mutation_callback)(libcouchbase_t instance,
                                                        const void *cookie,
                                                        const void *key,
-                                                       size_t nkey,
+                                                       libcouchbase_size_t nkey,
                                                        const void *data,
-                                                       size_t nbytes,
-                                                       uint32_t flags,
-                                                       uint32_t exp,
+                                                       libcouchbase_size_t nbytes,
+                                                       libcouchbase_uint32_t flags,
+                                                       libcouchbase_time_t exp,
                                                        libcouchbase_cas_t cas,
-                                                       uint16_t vbucket,
+                                                       libcouchbase_vbucket_t vbucket,
                                                        const void *es,
-                                                       size_t nes);
+                                                       libcouchbase_size_t nes);
     typedef void (*libcouchbase_tap_deletion_callback)(libcouchbase_t instance,
                                                        const void *cookie,
                                                        const void *key,
-                                                       size_t nkey,
+                                                       libcouchbase_size_t nkey,
                                                        libcouchbase_cas_t cas,
-                                                       uint16_t vbucket,
+                                                       libcouchbase_vbucket_t vbucket,
                                                        const void *es,
-                                                       size_t nes);
+                                                       libcouchbase_size_t nes);
     typedef void (*libcouchbase_tap_flush_callback)(libcouchbase_t instance,
                                                     const void *cookie,
                                                     const void *es,
-                                                    size_t nes);
+                                                    libcouchbase_size_t nes);
     typedef void (*libcouchbase_tap_opaque_callback)(libcouchbase_t instance,
                                                      const void *cookie,
                                                      const void *es,
-                                                     size_t nes);
+                                                     libcouchbase_size_t nes);
     typedef void (*libcouchbase_tap_vbucket_set_callback)(libcouchbase_t instance,
                                                           const void *cookie,
-                                                          uint16_t vbid,
+                                                          libcouchbase_vbucket_t vbid,
                                                           libcouchbase_vbucket_state_t state,
                                                           const void *es,
-                                                          size_t nes);
+                                                          libcouchbase_size_t nes);
     typedef void (*libcouchbase_error_callback)(libcouchbase_t instance,
                                                 libcouchbase_error_t error,
                                                 const char *errinfo);
@@ -118,7 +126,8 @@ extern "C" {
                                                        libcouchbase_error_t error,
                                                        libcouchbase_http_status_t status,
                                                        const char *uri,
-                                                       const void *bytes, size_t nbytes);
+                                                       const void *bytes,
+                                                       libcouchbase_size_t nbytes);
 
     /**
      * doc_data_callback switch the view operation into the 'chunked' mode
@@ -132,13 +141,17 @@ extern "C" {
                                                    libcouchbase_error_t error,
                                                    libcouchbase_http_status_t status,
                                                    const char *uri,
-                                                   const void *bytes, size_t nbytes);
+                                                   const void *bytes,
+                                                   libcouchbase_size_t nbytes);
+
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
                                                             libcouchbase_get_callback);
+
     LIBCOUCHBASE_API
     libcouchbase_storage_callback libcouchbase_set_storage_callback(libcouchbase_t,
                                                                     libcouchbase_storage_callback);
+
     LIBCOUCHBASE_API
     libcouchbase_arithmetic_callback libcouchbase_set_arithmetic_callback(libcouchbase_t,
                                                                           libcouchbase_arithmetic_callback);

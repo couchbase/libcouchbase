@@ -73,7 +73,7 @@ static void on_complete_cb(struct evhttp_request *req, void *arg)
 {
     struct view_context_st *ctx = arg;
     const unsigned char *bytes;
-    size_t nbytes;
+    libcouchbase_size_t nbytes;
     libcouchbase_error_t rc = translate_response_code(req->response_code);
 
     /* notify the client with error code and response body. if client
@@ -101,7 +101,7 @@ static void on_data_cb(struct evhttp_request *req, void *arg)
 {
     struct view_context_st *ctx = arg;
     const unsigned char *bytes;
-    size_t nbytes;
+    libcouchbase_size_t nbytes;
 
     /* notify the client with error code and a chunck of response body */
     libcouchbase_error_t rc = translate_response_code(req->response_code);
@@ -140,13 +140,13 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
                                                    const char *path,
                                                    libcouchbase_http_method_t method,
                                                    const void *body,
-                                                   size_t nbody,
+                                                   libcouchbase_size_t nbody,
                                                    int chunked)
 {
     struct view_context_st *ctx;
     const char *hostname;
     int port;
-    size_t nn;
+    libcouchbase_size_t nn;
     libcouchbase_server_t server;
 
     /* ensure vbucket config is ready */
@@ -157,7 +157,7 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
         return LIBCOUCHBASE_EINTERNAL;
     }
     /* pick random server */
-    nn = (size_t)(gethrtime() >> 10) % instance->nservers;
+    nn = (libcouchbase_size_t)(gethrtime() >> 10) % instance->nservers;
     server = instance->servers[nn];
 
     if (!server.couch_api_base) {
@@ -196,7 +196,7 @@ libcouchbase_error_t libcouchbase_make_doc_request(libcouchbase_t instance,
     }
 
     /* @TODO FIXME! */
-    ctx->conn = evhttp_connection_base_new(instance->io->cookie, NULL, hostname, (uint16_t)port);
+    ctx->conn = evhttp_connection_base_new(instance->io->cookie, NULL, hostname, (libcouchbase_uint16_t)port);
     if (!ctx->conn) {
         view_context_free(ctx);
         return LIBCOUCHBASE_NETWORK_ERROR;

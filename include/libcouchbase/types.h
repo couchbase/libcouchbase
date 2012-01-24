@@ -33,7 +33,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
     /**
      * Clients of the library should not know the size or the internal
      * layout of the per instance handle. Sharing knowledge about the
@@ -188,11 +187,11 @@ extern "C" {
 
     struct libcouchbase_iovec_st {
         char *iov_base;
-        size_t iov_len;
+        libcouchbase_size_t iov_len;
     };
 
     typedef struct libcouchbase_io_opt_st {
-        uint64_t version;
+        libcouchbase_uint64_t version;
         void *cookie;
         int error;
 
@@ -210,26 +209,26 @@ extern "C" {
                        const struct sockaddr *name,
                        int namelen);
 
-        ssize_t (*recv)(struct libcouchbase_io_opt_st *iops,
-                        libcouchbase_socket_t sock,
-                        void *buffer,
-                        size_t len,
-                        int flags);
-        ssize_t (*send)(struct libcouchbase_io_opt_st *iops,
-                        libcouchbase_socket_t sock,
-                        const void *msg,
-                        size_t len,
-                        int flags);
+        libcouchbase_ssize_t (*recv)(struct libcouchbase_io_opt_st *iops,
+                                     libcouchbase_socket_t sock,
+                                     void *buffer,
+                                     libcouchbase_size_t len,
+                                     int flags);
+        libcouchbase_ssize_t (*send)(struct libcouchbase_io_opt_st *iops,
+                                     libcouchbase_socket_t sock,
+                                     const void *msg,
+                                     libcouchbase_size_t len,
+                                     int flags);
 
-        ssize_t (*recvv)(struct libcouchbase_io_opt_st *iops,
-                         libcouchbase_socket_t sock,
-                         struct libcouchbase_iovec_st *iov,
-                         size_t niov);
+        libcouchbase_ssize_t (*recvv)(struct libcouchbase_io_opt_st *iops,
+                                      libcouchbase_socket_t sock,
+                                      struct libcouchbase_iovec_st *iov,
+                                      libcouchbase_size_t niov);
 
-        ssize_t (*sendv)(struct libcouchbase_io_opt_st *iops,
-                         libcouchbase_socket_t sock,
-                         struct libcouchbase_iovec_st *iov,
-                         size_t niov);
+        libcouchbase_ssize_t (*sendv)(struct libcouchbase_io_opt_st *iops,
+                                      libcouchbase_socket_t sock,
+                                      struct libcouchbase_iovec_st *iov,
+                                      libcouchbase_size_t niov);
 
 
         void (*close)(struct libcouchbase_io_opt_st *iops,
@@ -242,7 +241,7 @@ extern "C" {
                              void *timer);
         int (*update_timer)(struct libcouchbase_io_opt_st *iops,
                             void *timer,
-                            uint32_t usec,
+                            libcouchbase_uint32_t usec,
                             void *cb_data,
                             void (*handler)(libcouchbase_socket_t sock,
                                             short which,
@@ -275,8 +274,6 @@ extern "C" {
         LIBCOUCHBASE_ASYNCHRONOUS = 0x00,
         LIBCOUCHBASE_SYNCHRONOUS = 0xff
     } libcouchbase_syncmode_t;
-
-    typedef uint64_t libcouchbase_cas_t;
 
 #ifdef __cplusplus
 }

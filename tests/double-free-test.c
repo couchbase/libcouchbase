@@ -88,7 +88,7 @@ static void store_callback1(libcouchbase_t instance,
                             const void *cookie,
                             libcouchbase_storage_t operation,
                             libcouchbase_error_t error,
-                            const void *key, size_t nkey,
+                            const void *key, libcouchbase_size_t nkey,
                             libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
@@ -106,7 +106,7 @@ static void store_callback2(libcouchbase_t instance,
                             const void *cookie,
                             libcouchbase_storage_t operation,
                             libcouchbase_error_t error,
-                            const void *key, size_t nkey,
+                            const void *key, libcouchbase_size_t nkey,
                             libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
@@ -123,13 +123,13 @@ static void store_callback2(libcouchbase_t instance,
 static void get_callback(libcouchbase_t instance,
                          const void *cookie,
                          libcouchbase_error_t error,
-                         const void *key, size_t nkey,
-                         const void *bytes, size_t nbytes,
-                         uint32_t flags, libcouchbase_cas_t cas)
+                         const void *key, libcouchbase_size_t nkey,
+                         const void *bytes, libcouchbase_size_t nbytes,
+                         libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     const char *val = "{\"bar\"=>1, \"baz\"=>2}";
-    size_t nval = strlen(val);
+    libcouchbase_size_t nval = strlen(val);
     libcouchbase_error_t err;
 
     rv->error = error;
@@ -148,7 +148,7 @@ static void reproduce_double_free_error(void)
     libcouchbase_error_t err;
     struct rvbuf rv;
     const char *key = "test_compare_and_swap_async_", *val = "{\"bar\" => 1}";
-    size_t nkey = strlen(key), nval = strlen(val);
+    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
 
     /* prefill the bucket */
     (void)libcouchbase_set_storage_callback(session, store_callback1);
