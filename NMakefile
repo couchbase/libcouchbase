@@ -249,6 +249,7 @@ tools\pillowfight.obj: tools\pillowfight.cc tools\commandlineparser.h
 $(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin:; -@mkdir $@
 
 install: $(INSTALLDIRS) libcouchbase.dll
+	@copy win32\libcouchbase\configuration.h $(INSTALL)\include\libcouchbase
 	@copy include\libcouchbase\*.h $(INSTALL)\include\libcouchbase
 	@copy libcouchbase.dll $(INSTALL)\lib
 	@copy libcouchbase.dll $(INSTALL)\bin
