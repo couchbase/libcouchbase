@@ -239,10 +239,8 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
 }
 
 libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
-                                                libcouchbase_error_t error,
-                                                const char *errinfo)
+                                                 libcouchbase_error_t error)
 {
-    char errmsg[1024];
     if (server->connected) {
         libcouchbase_purge_single_server(server, &server->cmd_log,
                                          &server->output_cookies,
@@ -262,33 +260,14 @@ libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
 
     server->connected = 0;
 
-    if (error == LIBCOUCHBASE_CONNECT_ERROR) {
-        if (errinfo) {
-            snprintf(errmsg, sizeof(errmsg), "Connection failed: <%s:%s>: %s",
-                     server->hostname, server->port, errinfo);
-        } else {
-            snprintf(errmsg, sizeof(errmsg), "Connection failed: <%s:%s>",
-                     server->hostname, server->port);
-        }
-    } else {
+    if (error != LIBCOUCHBASE_CONNECT_ERROR) {
         server->instance->io->delete_event(server->instance->io,
                                            server->sock, server->event);
-        if (errinfo) {
-            snprintf(errmsg, sizeof(errmsg), "Network error: %s", errinfo);
-        } else {
-            errmsg[0] = '\0';
-        }
     }
 
     if (server->sock != INVALID_SOCKET) {
         server->instance->io->close(server->instance->io, server->sock);
         server->sock = INVALID_SOCKET;
-    }
-
-    if (errmsg[0] != '\0') {
-        libcouchbase_error_handler(server->instance, error, errmsg);
-    } else {
-        libcouchbase_error_handler(server->instance, error, NULL);
     }
 
     return error;
@@ -496,9 +475,7 @@ static void server_connect(libcouchbase_server_t *server) {
 
         if (server->curr_ai == NULL) {
             /* this means we're not going to retry!! add an error here! */
-            libcouchbase_failout_server(server,
-                                        LIBCOUCHBASE_CONNECT_ERROR,
-                                        NULL);
+            libcouchbase_failout_server(server, LIBCOUCHBASE_CONNECT_ERROR);
             return ;
         }
 
@@ -536,8 +513,7 @@ static void server_connect(libcouchbase_server_t *server) {
                     server->curr_ai = server->curr_ai->ai_next;
                 } else {
                     libcouchbase_failout_server(server,
-                                               LIBCOUCHBASE_CONNECT_ERROR,
-                                                strerror(errno));
+                                                LIBCOUCHBASE_CONNECT_ERROR);
                     return ;
                 }
 

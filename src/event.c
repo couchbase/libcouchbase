@@ -43,16 +43,14 @@ static int do_fill_input_buffer(libcouchbase_server_t *c)
         case EWOULDBLOCK:
             return 0;
         default:
-            libcouchbase_failout_server(c,
-                                        LIBCOUCHBASE_NETWORK_ERROR,
-                                        NULL);
+            libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR);
             return -1;
         }
     } else if (nr == 0) {
         assert((iov[0].iov_len + iov[1].iov_len) != 0);
-        libcouchbase_error_handler(c->instance,
-                                   LIBCOUCHBASE_NETWORK_ERROR,
-                                   "Connection closed... we should resend to other nodes or reconnect!!");
+        /* TODO stash error message somewhere
+         * "Connection closed... we should resend to other nodes or reconnect!!" */
+        libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR);
         return -1;
     } else {
         libcouchbase_ringbuffer_produced(&c->input, (size_t)nr);
@@ -226,8 +224,7 @@ static int do_send_data(libcouchbase_server_t *c)
             case EWOULDBLOCK:
                 return 0;
             default:
-                libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR,
-                                            NULL);
+                libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR);
                 return -1;
             }
         } else {
@@ -259,12 +256,9 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
 
     if (which & LIBCOUCHBASE_READ_EVENT) {
         if (do_read_data(c) != 0) {
-            /* TODO: Is there a better error for this? */
-            char errinfo[1024];
-            snprintf(errinfo, sizeof(errinfo), "Failed to read from connection"
-                     " to \"%s:%s\"", c->hostname, c->port);
-            libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR,
-                                        errinfo);
+            /* TODO stash error message somewhere
+             * "Failed to read from connection to \"%s:%s\"", c->hostname, c->port */
+            libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR);
             return;
         }
     }
@@ -284,12 +278,9 @@ void libcouchbase_server_event_handler(evutil_socket_t sock, short which, void *
         }
 
         if (do_send_data(c) != 0) {
-            char errinfo[1024];
-            snprintf(errinfo, sizeof(errinfo), "Failed to send to the "
-                     "connection to \"%s:%s\"", c->hostname, c->port);
-            /* TODO: Is there a better error for this? */
-            libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR,
-                                        errinfo);
+            /* TODO stash error message somewhere
+             * "Failed to send to the connection to \"%s:%s\"", c->hostname, c->port */
+            libcouchbase_failout_server(c, LIBCOUCHBASE_NETWORK_ERROR);
             return;
         }
     }

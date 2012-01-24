@@ -333,8 +333,7 @@ extern "C" {
                                           libcouchbase_error_t error);
 
     libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
-                                                     libcouchbase_error_t error,
-                                                     const char *errinfo);
+                                                     libcouchbase_error_t error);
 
     void libcouchbase_maybe_breakout(libcouchbase_t instance);
 

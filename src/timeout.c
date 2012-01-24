@@ -43,7 +43,6 @@ static void libcouchbase_timeout_handler(evutil_socket_t sock,
 
     libcouchbase_maybe_breakout(instance);
 
-    libcouchbase_error_handler(instance, LIBCOUCHBASE_ETIMEDOUT, NULL);
     (void)sock;
     (void)which;
 }
