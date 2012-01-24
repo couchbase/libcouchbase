@@ -558,7 +558,7 @@ static void dummy_tap_mutation_callback(libcouchbase_t instance,
                                         size_t nbytes,
                                         uint32_t flags,
                                         uint32_t exp,
-                                        uint64_t cas,
+                                        libcouchbase_cas_t cas,
                                         uint16_t vbucket,
                                         const void *es,
                                         size_t nes)
@@ -572,7 +572,7 @@ static void dummy_tap_deletion_callback(libcouchbase_t instance,
                                         const void *cookie,
                                         const void *key,
                                         size_t nkey,
-                                        uint64_t cas,
+                                        libcouchbase_cas_t cas,
                                         uint16_t vbucket,
                                         const void *es,
                                         size_t nes)
@@ -630,7 +630,7 @@ static void dummy_get_callback(libcouchbase_t instance,
                                libcouchbase_error_t error,
                                const void *key, size_t nkey,
                                const void *bytes, size_t nbytes,
-                               uint32_t flags, uint64_t cas)
+                               uint32_t flags, libcouchbase_cas_t cas)
 {
     (void)instance; (void)cookie; (void)error; (void)key; (void)nkey;
     (void)bytes; (void)nbytes; (void)flags; (void)cas;
@@ -641,7 +641,7 @@ static void dummy_storage_callback(libcouchbase_t instance,
                                    libcouchbase_storage_t operation,
                                    libcouchbase_error_t error,
                                    const void *key, size_t nkey,
-                                   uint64_t cas)
+                                   libcouchbase_cas_t cas)
 {
     (void)instance; (void)cookie; (void)operation, (void)error; (void)key;
     (void)nkey; (void)cas;
@@ -651,7 +651,7 @@ static void dummy_arithmetic_callback(libcouchbase_t instance,
                                       const void *cookie,
                                       libcouchbase_error_t error,
                                       const void *key, size_t nkey,
-                                      uint64_t value, uint64_t cas)
+                                      uint64_t value, libcouchbase_cas_t cas)
 {
     (void)instance; (void)cookie; (void)error; (void)key; (void)nkey;
     (void)value; (void)cas;

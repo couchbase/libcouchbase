@@ -37,18 +37,18 @@ extern "C" {
                                               libcouchbase_error_t error,
                                               const void *key, size_t nkey,
                                               const void *bytes, size_t nbytes,
-                                              uint32_t flags, uint64_t cas);
+                                              uint32_t flags, libcouchbase_cas_t cas);
     typedef void (*libcouchbase_storage_callback)(libcouchbase_t instance,
                                                   const void *cookie,
                                                   libcouchbase_storage_t operation,
                                                   libcouchbase_error_t error,
                                                   const void *key, size_t nkey,
-                                                  uint64_t cas);
+                                                  libcouchbase_cas_t cas);
     typedef void (*libcouchbase_arithmetic_callback)(libcouchbase_t instance,
                                                      const void *cookie,
                                                      libcouchbase_error_t error,
                                                      const void *key, size_t nkey,
-                                                     uint64_t value, uint64_t cas);
+                                                     uint64_t value, libcouchbase_cas_t cas);
     typedef void (*libcouchbase_remove_callback)(libcouchbase_t instance,
                                                  const void *cookie,
                                                  libcouchbase_error_t error,
@@ -73,7 +73,7 @@ extern "C" {
                                                        size_t nbytes,
                                                        uint32_t flags,
                                                        uint32_t exp,
-                                                       uint64_t cas,
+                                                       libcouchbase_cas_t cas,
                                                        uint16_t vbucket,
                                                        const void *es,
                                                        size_t nes);
@@ -81,7 +81,7 @@ extern "C" {
                                                        const void *cookie,
                                                        const void *key,
                                                        size_t nkey,
-                                                       uint64_t cas,
+                                                       libcouchbase_cas_t cas,
                                                        uint16_t vbucket,
                                                        const void *es,
                                                        size_t nes);

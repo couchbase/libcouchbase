@@ -27,7 +27,7 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
                                          const void *command_cookie,
                                          const void *key, size_t nkey,
-                                         uint64_t cas)
+                                         libcouchbase_cas_t cas)
 {
     return libcouchbase_remove_by_key(instance, command_cookie, NULL, 0, key,
                                       nkey, cas);
@@ -39,7 +39,7 @@ libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
                                                 const void *hashkey,
                                                 size_t nhashkey,
                                                 const void *key, size_t nkey,
-                                                uint64_t cas)
+                                                libcouchbase_cas_t cas)
 {
     libcouchbase_server_t *server;
     protocol_binary_request_delete req;

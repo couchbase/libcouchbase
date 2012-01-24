@@ -32,7 +32,7 @@ libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
                                         const void *key, size_t nkey,
                                         const void *bytes, size_t nbytes,
                                         uint32_t flags, time_t exp,
-                                        uint64_t cas)
+                                        libcouchbase_cas_t cas)
 {
     return libcouchbase_store_by_key(instance, command_cookie, operation, NULL, 0,
                                      key, nkey, bytes, nbytes, flags, exp, cas);
@@ -46,7 +46,7 @@ libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
                                                const void *key, size_t nkey,
                                                const void *bytes, size_t nbytes,
                                                uint32_t flags, time_t exp,
-                                               uint64_t cas)
+                                               libcouchbase_cas_t cas)
 {
     libcouchbase_server_t *server;
     protocol_binary_request_set req;

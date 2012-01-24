@@ -31,7 +31,7 @@ static void storage_callback(libcouchbase_t instance,
                              libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
                              const void *key, size_t nkey,
-                             uint64_t cas)
+                             libcouchbase_cas_t cas)
 {
     (void)instance; (void)operation; (void)cas; (void)cookie;
     assert(nkey == 7);
@@ -84,7 +84,7 @@ static void arithmetic_callback(libcouchbase_t instance,
                                 const void *cookie,
                                 libcouchbase_error_t error,
                                 const void *key, size_t nkey,
-                                uint64_t value, uint64_t cas)
+                                uint64_t value, libcouchbase_cas_t cas)
 {
     assert(nkey == 7);
     assert(memcmp(key, "counter", 7) == 0);

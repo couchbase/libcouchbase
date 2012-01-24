@@ -338,7 +338,7 @@ extern "C" {
                                             const void *key, size_t nkey,
                                             const void *bytes, size_t nbytes,
                                             uint32_t flags, time_t exp,
-                                            uint64_t cas);
+                                            libcouchbase_cas_t cas);
 
     /**
      * Spool a store operation to the cluster. The operation <b>may</b> be
@@ -380,7 +380,7 @@ extern "C" {
                                                    size_t nbytes,
                                                    uint32_t flags,
                                                    time_t exp,
-                                                   uint64_t cas);
+                                                   libcouchbase_cas_t cas);
 
     /**
      * Spool an arithmetic operation to the cluster. The operation <b>may</b> be
@@ -454,7 +454,7 @@ extern "C" {
     libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
                                              const void *command_cookie,
                                              const void *key, size_t nkey,
-                                             uint64_t cas);
+                                             libcouchbase_cas_t cas);
 
     /**
      * Spool a remove operation to the cluster. The operation <b>may</b> be
@@ -478,7 +478,7 @@ extern "C" {
                                                     size_t nhashkey,
                                                     const void *key,
                                                     size_t nkey,
-                                                    uint64_t cas);
+                                                    libcouchbase_cas_t cas);
 
 
     /**

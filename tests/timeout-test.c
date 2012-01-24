@@ -55,7 +55,7 @@ static void storage_callback(libcouchbase_t instance,
                              libcouchbase_storage_t operation,
                              libcouchbase_error_t error,
                              const void *key, size_t nkey,
-                             uint64_t cas)
+                             libcouchbase_cas_t cas)
 {
     libcouchbase_io_opt_t *io = (libcouchbase_io_opt_t *)cookie;
 

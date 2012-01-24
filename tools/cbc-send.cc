@@ -39,7 +39,7 @@ extern "C" {
                                           size_t nbytes,
                                           uint32_t flags,
                                           uint32_t exp,
-                                          uint64_t cas,
+                                          libcouchbase_cas_t cas,
                                           uint16_t vbucket,
                                           const void *,
                                           size_t)
@@ -66,7 +66,7 @@ extern "C" {
                                           const void *,
                                           const void *key,
                                           size_t nkey,
-                                          uint64_t cas,
+                                          libcouchbase_cas_t cas,
                                           uint16_t vbucket,
                                           const void *,
                                           size_t)

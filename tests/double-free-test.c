@@ -32,8 +32,8 @@ struct libcouchbase_io_opt_st *io = NULL;
 struct rvbuf
 {
     libcouchbase_error_t error;
-    uint64_t cas1;
-    uint64_t cas2;
+    libcouchbase_cas_t cas1;
+    libcouchbase_cas_t cas2;
 };
 
 static void error_callback(libcouchbase_t instance,
@@ -89,7 +89,7 @@ static void store_callback1(libcouchbase_t instance,
                             libcouchbase_storage_t operation,
                             libcouchbase_error_t error,
                             const void *key, size_t nkey,
-                            uint64_t cas)
+                            libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
@@ -107,7 +107,7 @@ static void store_callback2(libcouchbase_t instance,
                             libcouchbase_storage_t operation,
                             libcouchbase_error_t error,
                             const void *key, size_t nkey,
-                            uint64_t cas)
+                            libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
@@ -125,7 +125,7 @@ static void get_callback(libcouchbase_t instance,
                          libcouchbase_error_t error,
                          const void *key, size_t nkey,
                          const void *bytes, size_t nbytes,
-                         uint32_t flags, uint64_t cas)
+                         uint32_t flags, libcouchbase_cas_t cas)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     const char *val = "{\"bar\"=>1, \"baz\"=>2}";

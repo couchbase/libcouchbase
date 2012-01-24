@@ -276,6 +276,8 @@ extern "C" {
         LIBCOUCHBASE_SYNCHRONOUS = 0xff
     } libcouchbase_syncmode_t;
 
+    typedef uint64_t libcouchbase_cas_t;
+
 #ifdef __cplusplus
 }
 #endif

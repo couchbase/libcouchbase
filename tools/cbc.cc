@@ -69,7 +69,7 @@ extern "C" {
                                  libcouchbase_storage_t,
                                  libcouchbase_error_t error,
                                  const void *key, size_t nkey,
-                                 uint64_t cas)
+                                 libcouchbase_cas_t cas)
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "Stored \"";
@@ -112,7 +112,7 @@ extern "C" {
                              libcouchbase_error_t error,
                              const void *key, size_t nkey,
                              const void *bytes, size_t nbytes,
-                             uint32_t flags, uint64_t cas)
+                             uint32_t flags, libcouchbase_cas_t cas)
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "\"";
