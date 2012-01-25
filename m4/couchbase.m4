@@ -59,8 +59,8 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   SPRO_C89="-Xt -xc99=none"
   SPRO_C99="-D_XOPEN_SOURCE=600 -xc99=all"
   SPRO_CFLAGS=""
-  SPRO_CPP_WARNINGS="-errhdr=%user -errfmt=error -errshort=full -errtags -v "
-  SPRO_C_COMPILER_WARNINGS=""
+  SPRO_CPP_WARNINGS="-errhdr=%user -errfmt=error -errshort=full -errtags "
+  SPRO_C_COMPILER_WARNINGS="-v"
   SPRO_CXX_COMPILER_WARNINGS="+w +w2"
   SPRO_LDFLAGS="-mt=yes"
 
