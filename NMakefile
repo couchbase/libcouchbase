@@ -240,9 +240,6 @@ pillowfight.exe: exammple\pillowfight.obj libcouchbase.dll win32\getopt.obj \
                 tools\commandlineparser.obj \
                 win32\getopt.obj libcouchbase.lib
 
-tools\commandlineparser.obj: tools\commandlineparser.cc tools\commandlineparser.h
-	$(COMPILE) -Fotools\commandlineparser.obj tools\commandlineparser.cc
-
 tools\pillowfight.obj: tools\pillowfight.cc tools\commandlineparser.h
 	$(COMPILE) -Fotools\pillowfight.obj tools\pillowfight.cc
 
