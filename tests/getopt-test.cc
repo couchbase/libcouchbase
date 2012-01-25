@@ -71,6 +71,10 @@ class CommandLineOption {
 
 class Getopt {
  public:
+    Getopt() {
+        verbose = getenv("LIBCOUCHBASE_VERBOSE_TESTS") != 0;
+    }
+
     Getopt &addOption(CommandLineOption* option) {
         options.push_back(option);
         return *this;
@@ -81,18 +85,24 @@ class Getopt {
         av[0] = const_cast<char*>("getopt-test");
         int ii = 1;
 
-        std::cout << "parse: { ";
+        if (verbose) {
+            std::cout << "parse: { ";
+        }
         bool needcomma = false;
 
         for (it = argv.begin(); it != argv.end(); ++it, ++ii) {
             av[ii] = const_cast<char*>(it->c_str());
-            if (needcomma) {
-                std::cout << ", ";
+            if (verbose) {
+                if (needcomma) {
+                    std::cout << ", ";
+                }
+                std::cout << it->c_str();
             }
-            std::cout << it->c_str();
             needcomma = true;
         }
-        std::cout << " }" << std::endl;
+        if (verbose) {
+            std::cout << " }" << std::endl;
+        }
         return ii;
     }
 
@@ -139,6 +149,7 @@ class Getopt {
         return true;
     }
 
+    bool verbose;
     std::vector<CommandLineOption*> options;
 };
 
