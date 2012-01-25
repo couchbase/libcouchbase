@@ -134,7 +134,8 @@ check_PROGRAMS += tests/arithmetic-test \
                   tests/timings-test \
                   tests/timeout-test \
                   tests/config-test \
-                  tests/smoke-test
+                  tests/smoke-test \
+                  tests/syncmode-test
 endif
 
 tests_base64_test_SOURCES = tests/base64-test.c src/base64.c
@@ -156,6 +157,10 @@ tests_smoke_test_LDFLAGS = -levent
 
 tests_strerror_test_SOURCES = tests/strerror-test.c
 tests_strerror_test_LDADD = ${libcouchbase_la_OBJECTS} -levent -lvbucket $(LIBSASL)
+
+tests_syncmode_test_SOURCES = tests/test.h tests/syncmode-test.c
+tests_syncmode_test_LDADD = libcouchbase.la libmockserver.la
+tests_syncmode_test_LDFLAGS = -levent
 
 tests_arithmetic_test_SOURCES = tests/arithmetic.c
 tests_arithmetic_test_LDADD = libcouchbase.la libmockserver.la
