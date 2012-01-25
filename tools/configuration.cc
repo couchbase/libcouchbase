@@ -103,7 +103,7 @@ static string trim(const char *ptr) {
     }
 
     string ret(ptr);
-    int ii = ret.length() - 1;
+    int ii = (int)ret.length() - 1;
     while (ii > 0 && isspace(ret[ii])) {
         ret.resize(ii);
     }
@@ -142,7 +142,7 @@ void Configuration::loadCbcRc(void) {
 
     map<string, string> tokens;
     char buffer[256];
-    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+    while (fgets(buffer, (int)sizeof(buffer), fp) != NULL) {
         string line = trim(buffer);
         if (!line.empty() && line[0] != '#') {
             string key;

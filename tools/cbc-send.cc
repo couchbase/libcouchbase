@@ -55,7 +55,7 @@ extern "C" {
         req.message.header.request.vbucket = htons(vbucket);
         req.message.body.flags = flags;
         req.message.body.expiration = htonl((libcouchbase_uint32_t)exp);
-        libcouchbase_uint32_t bodylen = nkey + nbytes + 8 + nbytes;
+        libcouchbase_uint32_t bodylen = (libcouchbase_uint32_t)(nkey + nbytes + 8 + nbytes);
         req.message.header.request.bodylen = htonl((libcouchbase_uint32_t)bodylen);
         sendIt(req.bytes, sizeof(req.bytes));
         sendIt((const uint8_t*)key, nkey);
