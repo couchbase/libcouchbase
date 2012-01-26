@@ -317,17 +317,25 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
     if (curr_config) {
         diff = vbucket_compare(curr_config, next_config);
         if (diff && (diff->sequence_changed || diff->n_vb_changes > 0)) {
+            VBUCKET_DISTRIBUTION_TYPE dist_t = vbucket_config_get_distribution_type(next_config);
             nservers = instance->nservers;
             servers = instance->servers;
             apply_vbucket_config(instance, next_config);
             for (ii = 0; ii < nservers; ++ii) {
                 ss = servers + ii;
-                /* commands that were failed to be sent */
-                relocate_packets(&ss->cmd_log, &ss->output_cookies, instance);
-                /* commands that are going to be sent */
-                relocate_packets(&ss->output, &ss->output_cookies, instance);
-                /* commands that are pending because of delayed socket connection */
-                relocate_packets(&ss->pending, &ss->pending_cookies, instance);
+                if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
+                    /* commands that were failed to be sent */
+                    relocate_packets(&ss->cmd_log, &ss->output_cookies, instance);
+                    /* commands that are going to be sent */
+                    relocate_packets(&ss->output, &ss->output_cookies, instance);
+                    /* commands that are pending because of delayed socket connection */
+                    relocate_packets(&ss->pending, &ss->pending_cookies, instance);
+                } else {
+                    /* other distribution types (ketama) are relying on
+                     * hashing key, therefore return TMPFAIL and force users
+                     * to retry */
+                    libcouchbase_failout_server(ss, LIBCOUCHBASE_ETMPFAIL);
+                }
                 libcouchbase_server_destroy(ss);
             }
 
