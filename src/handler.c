@@ -433,18 +433,28 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
 {
     const char *data;
     const char *chosenmech;
+    char *mechlist;
     unsigned int len;
     protocol_binary_request_no_extras req;
     libcouchbase_size_t keylen;
     libcouchbase_size_t bodysize;
 
     assert(ntohs(res->response.status) == PROTOCOL_BINARY_RESPONSE_SUCCESS);
-    if (sasl_client_start(server->sasl_conn, (const char *)(res + 1),
+    bodysize = ntohl(res->response.bodylen);
+    mechlist = calloc(bodysize + 1, sizeof(char));
+    if (mechlist == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM, NULL);
+        return;
+    }
+    memcpy(mechlist, (const char *)(res + 1), bodysize);
+    if (sasl_client_start(server->sasl_conn, mechlist,
                           NULL, &data, &len, &chosenmech) != SASL_OK) {
+        free(mechlist);
         libcouchbase_error_handler(server->instance, LIBCOUCHBASE_AUTH_ERROR,
                                    "Unable to start sasl client");
         return;
     }
+    free(mechlist);
 
     keylen = strlen(chosenmech);
     bodysize = keylen + len;
