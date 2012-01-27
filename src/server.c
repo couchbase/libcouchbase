@@ -401,6 +401,8 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
         */
         ringbuffer_t copy = server->pending;
         libcouchbase_ringbuffer_reset(&server->cmd_log);
+        libcouchbase_ringbuffer_reset(&server->output_cookies);
+        libcouchbase_ringbuffer_reset(&server->output);
         if (!libcouchbase_ringbuffer_append(&server->pending, &server->output) ||
             !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
             !libcouchbase_ringbuffer_append(&copy, &server->cmd_log)) {

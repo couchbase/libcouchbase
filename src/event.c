@@ -83,7 +83,8 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
     /* Is it already timed out? */
     nr = libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
     if (nr < sizeof(req) || /* the command log doesn't know about it */
-        header.response.opaque < req.request.opaque) {
+        (header.response.opaque < req.request.opaque &&
+         header.response.opaque > 0)) { /* sasl comes with zero opaque */
         /* already processed. */
         libcouchbase_ringbuffer_consumed(&c->input, packetsize);
         return 1;
@@ -125,7 +126,8 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         c->instance->request_handler[header.response.opcode](c,ct.cookie,
                                                              (void*)packet);
         break;
-    case PROTOCOL_BINARY_RES:
+    case PROTOCOL_BINARY_RES: {
+        int was_connected = c->connected;
         if (libcouchbase_server_purge_implicit_responses(c,
                                                          header.response.opaque, stop) != 0) {
             if (packet != c->input.read_head) {
@@ -146,13 +148,15 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
                                                               (void*)packet);
 
         /* keep command and cookie until we get complete STAT response */
-        if (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0) {
+        if(was_connected &&
+           (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0)) {
             nr = libcouchbase_ringbuffer_read(&c->cmd_log, header.bytes, sizeof(header));
             assert(nr == sizeof(header));
             libcouchbase_ringbuffer_consumed(&c->cmd_log, ntohl(header.response.bodylen));
             libcouchbase_ringbuffer_consumed(&c->output_cookies, sizeof(ct));
         }
         break;
+    }
 
     default:
         libcouchbase_error_handler(c->instance,
