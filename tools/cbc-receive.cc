@@ -84,7 +84,7 @@ static bool setHandler(libcouchbase_t instance,
                        protocol_binary_request_header &header)
 {
     libcouchbase_uint32_t bodylen = ntohl(header.request.bodylen);
-    libcouchbase_uint16_t keylen = ntohl(header.request.keylen);
+    libcouchbase_uint16_t keylen = ntohs(header.request.keylen);
 
     if (bodylen <= 0 || keylen <= 0) {
         cerr << "Protocol error for the set command" << endl;
@@ -132,7 +132,7 @@ static bool deleteHandler(libcouchbase_t instance,
                           protocol_binary_request_header &header)
 {
     libcouchbase_uint32_t bodylen = ntohl(header.request.bodylen);
-    libcouchbase_uint16_t keylen = ntohl(header.request.keylen);
+    libcouchbase_uint16_t keylen = ntohs(header.request.keylen);
 
     if (bodylen <= 0 || keylen <= 0) {
         cerr << "Protocol error for the delete command" << endl;
@@ -181,7 +181,7 @@ static bool unknownHandler(libcouchbase_t,
 static bool processNextPacket(libcouchbase_t instance)
 {
     protocol_binary_request_header header;
-    if (!readIt(header.bytes, sizeof(header.bytes))) {
+    if (!readIt(header.bytes, (libcouchbase_size_t)sizeof(header.bytes))) {
         return false;
     }
 

@@ -34,7 +34,7 @@
 
 using namespace std;
 
-void sendIt(const uint8_t *ptr, libcouchbase_size_t size)
+void sendIt(const libcouchbase_uint8_t *ptr, libcouchbase_size_t size)
 {
     do {
         libcouchbase_size_t nw = fwrite(ptr, 1, size, stdout);
@@ -51,7 +51,7 @@ void sendIt(const uint8_t *ptr, libcouchbase_size_t size)
     } while (size > 0);
 }
 
-bool readIt(uint8_t *ptr, libcouchbase_size_t size)
+bool readIt(libcouchbase_uint8_t *ptr, libcouchbase_size_t size)
 {
     do {
         libcouchbase_size_t nw = fread(ptr, 1, size, stdin);

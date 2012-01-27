@@ -17,8 +17,8 @@
 #ifndef TOOLS_CBC_UTIL_H
 #define TOOLS_CBC_UTIL_H 1
 
-void sendIt(const uint8_t *ptr, size_t size);
-bool readIt(uint8_t *ptr, size_t size);
+void sendIt(const libcouchbase_uint8_t *ptr, libcouchbase_size_t size);
+bool readIt(libcouchbase_uint8_t *ptr, libcouchbase_size_t size);
 
 #ifdef WIN32
 void setBinaryIO(void);
