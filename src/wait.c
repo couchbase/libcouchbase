@@ -18,7 +18,12 @@
 
 static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
 {
-    server->instance->io->stop_event_loop(server->instance->io);
+    if(server->instance->vbucket_state_listener_last) {
+        server->instance->vbucket_state_listener =
+                server->instance->vbucket_state_listener_last;
+        server->instance->vbucket_state_listener_last = NULL;
+    }
+    libcouchbase_maybe_breakout(server->instance);
 }
 
 /**
@@ -40,12 +45,14 @@ void libcouchbase_wait(libcouchbase_t instance)
      */
     instance->wait = 1;
     if (instance->vbucket_config == NULL) {
-        vbucket_state_listener_t old = instance->vbucket_state_listener;
+        instance->vbucket_state_listener_last =
+            instance->vbucket_state_listener;
         instance->vbucket_state_listener = breakout_vbucket_state_listener;
-        instance->io->run_event_loop(instance->io);
-        instance->vbucket_state_listener = old;
-    } else {
-        instance->io->run_event_loop(instance->io);
     }
-    instance->wait = 0;
+    instance->io->run_event_loop(instance->io);
+
+    /*
+     * something else will call libcouchbase_maybe_breakout with a corresponding
+     * stop_event_loop()
+     */
 }

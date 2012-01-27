@@ -312,13 +312,15 @@ void libcouchbase_maybe_breakout(libcouchbase_t instance)
         libcouchbase_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
             libcouchbase_server_t *c = instance->servers + ii;
-            if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes) {
+            if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes ||
+                    c->pending.nbytes) {
                 done = 0;
                 break;
             }
         }
 
         if (done) {
+            instance->wait = 0;
             instance->io->stop_event_loop(instance->io);
         }
     }

@@ -141,6 +141,11 @@ extern "C" {
         libcouchbase_vbucket_t *vb_server_map;
 
         vbucket_state_listener_t vbucket_state_listener;
+
+        /** for initial configuration.
+         * see breakout_vbucket_state_listener in wait.c*/
+        vbucket_state_listener_t vbucket_state_listener_last;
+
         RESPONSE_HANDLER response_handler[0x100];
         REQUEST_HANDLER request_handler[0x100];
 
