@@ -44,6 +44,18 @@ const char *libcouchbase_get_version(libcouchbase_uint32_t *version)
 }
 
 LIBCOUCHBASE_API
+const char *libcouchbase_get_host(libcouchbase_t instance)
+{
+    return instance->host;
+}
+
+LIBCOUCHBASE_API
+const char *libcouchbase_get_port(libcouchbase_t instance)
+{
+    return instance->port;
+}
+
+LIBCOUCHBASE_API
 libcouchbase_t libcouchbase_create(const char *host,
                                    const char *user,
                                    const char *passwd,
@@ -114,7 +126,7 @@ libcouchbase_t libcouchbase_create(const char *host,
         return NULL;
     }
 
-    ret->sock = -1;
+    ret->sock = INVALID_SOCKET;
 
     /* No error has occurred yet. */
     ret->last_error = LIBCOUCHBASE_SUCCESS;
@@ -161,9 +173,14 @@ void libcouchbase_destroy(libcouchbase_t instance)
         libcouchbase_server_destroy(instance->servers + ii);
     }
     free(instance->servers);
+    free(instance->backup_nodes);
 
     if (instance->io && instance->io->destructor) {
         instance->io->destructor(instance->io);
+    }
+    if (instance->vbucket_stream.header) {
+        free(instance->vbucket_stream.header);
+        instance->vbucket_stream.header = NULL;
     }
 
     memset(instance, 0xff, sizeof(*instance));
@@ -222,6 +239,7 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
     libcouchbase_uint16_t ii, max;
     libcouchbase_size_t num;
     const char *passwd;
+    char *curnode;
     sasl_callback_t sasl_callbacks[4] = {
         { SASL_CB_USER, (int(*)(void))&sasl_get_username, instance },
         { SASL_CB_AUTHNAME, (int(*)(void))&sasl_get_username, instance },
@@ -233,10 +251,29 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
     instance->nservers = num;
     instance->servers = calloc(num, sizeof(libcouchbase_server_t));
     instance->vbucket_config = config;
+    if (instance->backup_nodes) {
+        free(instance->backup_nodes);
+    }
+    instance->backup_nodes = calloc(num, sizeof(char *));
+    curnode = strdup(instance->host);
+    strcat(curnode, instance->port);
     for (ii = 0; ii < (libcouchbase_size_t)num; ++ii) {
         instance->servers[ii].instance = instance;
         libcouchbase_server_initialize(instance->servers + ii, (int)ii);
+        if (strcmp(curnode, instance->servers[ii].rest_api_server) == 0) {
+            instance->backup_nodes[ii] = NULL;
+        } else {
+            instance->backup_nodes[ii] = instance->servers[ii].rest_api_server;
+        }
+        /* swap with random position < ii */
+        if (ii > 0) {
+            libcouchbase_size_t nn = (libcouchbase_size_t)(gethrtime() >> 10) % ii;
+            char *pp = instance->backup_nodes[ii];
+            instance->backup_nodes[ii] = instance->backup_nodes[nn];
+            instance->backup_nodes[nn] = pp;
+        }
     }
+    free(curnode);
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
            sizeof(instance->sasl.password.buffer));
@@ -514,6 +551,53 @@ int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free) {
     return 1;
 }
 
+static void libcouchbase_switch_to_backup_node(libcouchbase_t instance,
+                                               libcouchbase_error_t error,
+                                               const char *reason)
+{
+    libcouchbase_size_t nn;
+    char *pp;
+    int connected;
+
+    if (instance->backup_nodes == NULL) {
+        libcouchbase_error_handler(instance, error, reason);
+        return;
+    }
+    connected = 0;
+    nn = 0;
+    while (!connected) {
+        char *oldhost = instance->host;
+        libcouchbase_error_t rc;
+
+        while (instance->backup_nodes[nn] == NULL && nn < instance->nservers) {
+            nn++;
+        }
+        if (instance->backup_nodes[nn] == NULL) {
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
+                                       "failed to get config. All known nodes are dead.");
+            return;
+        }
+        instance->host = strdup(instance->backup_nodes[nn]);
+        instance->backup_nodes[nn] = NULL;
+        if ((pp = strchr(instance->host, ':')) == NULL) {
+            instance->port = "80";
+        } else {
+            *pp = '\0';
+            instance->port = pp + 1;
+        }
+        free(oldhost);
+        if (instance->vbucket_stream.header) {
+            free(instance->vbucket_stream.header);
+            instance->vbucket_stream.header = NULL;
+        }
+        instance->n_http_uri_sent = 0;
+
+        /* try to connect to next node */
+        rc = libcouchbase_connect(instance);
+        connected = (rc == LIBCOUCHBASE_SUCCESS);
+    }
+}
+
 /**
  * Callback from libevent when we read from the REST socket
  * @param sock the readable socket
@@ -577,10 +661,11 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
                 return ;
             }
         } else if (nr == 0) {
-            /* Socket closed! */
-            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                       "vbucket stream socket is closed!\n");
-            return ;
+            /* Socket closed. Pick up next server and try to connect */
+            libcouchbase_switch_to_backup_node(instance,
+                                               LIBCOUCHBASE_NETWORK_ERROR,
+                                               NULL);
+            return;
         }
         buffer->avail += (libcouchbase_size_t)nr;
         buffer->data[buffer->avail] = '\0';
@@ -670,8 +755,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
             char errinfo[1024];
             snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
                      instance->host, instance->port);
-            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                       errinfo);
+            libcouchbase_switch_to_backup_node(instance, LIBCOUCHBASE_NETWORK_ERROR, errinfo);
             return ;
         }
 
@@ -704,12 +788,12 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
 
             default:
                 if (errno != ECONNREFUSED) {
-                    char buffer[1024];
-                    snprintf(buffer, sizeof(buffer), "Connection failed: %s",
+                    char errinfo[1024];
+                    snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
                              strerror(instance->io->error));
-                    libcouchbase_error_handler(instance,
-                                               LIBCOUCHBASE_NETWORK_ERROR,
-                                               buffer);
+                    libcouchbase_switch_to_backup_node(instance,
+                                                       LIBCOUCHBASE_NETWORK_ERROR,
+                                                       errinfo);
                     return ;
                 }
 
@@ -736,6 +820,16 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 {
     struct addrinfo hints;
     int error;
+
+    if (instance->sock != INVALID_SOCKET) {
+        instance->io->delete_event(instance->io, instance->sock, instance->event);
+        instance->io->destroy_event(instance->io, instance->event);
+        instance->io->close(instance->io, instance->sock);
+        instance->sock = INVALID_SOCKET;
+    }
+    if (instance->ai != NULL) {
+        freeaddrinfo(instance->ai);
+    }
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;

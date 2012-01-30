@@ -119,6 +119,18 @@ extern "C" {
     libcouchbase_uint32_t libcouchbase_get_timeout(libcouchbase_t instance);
 
     /**
+     * Get the current host
+     */
+    LIBCOUCHBASE_API
+    const char *libcouchbase_get_host(libcouchbase_t instance);
+
+    /**
+     * Get the current port
+     */
+    LIBCOUCHBASE_API
+    const char *libcouchbase_get_port(libcouchbase_t instance);
+
+    /**
      * Connect to the server and get the vbucket and serverlist.
      */
     LIBCOUCHBASE_API

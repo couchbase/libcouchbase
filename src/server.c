@@ -269,6 +269,8 @@ libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
         server->instance->io->close(server->instance->io, server->sock);
         server->sock = INVALID_SOCKET;
     }
+    /* reset address info for future attempts */
+    server->curr_ai = server->root_ai;
 
     return error;
 }
@@ -303,6 +305,7 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
         freeaddrinfo(server->root_ai);
     }
 
+    free(server->rest_api_server);
     free(server->couch_api_base);
     free(server->hostname);
     free(server->authority);
@@ -554,7 +557,9 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
                                           servernum);
     server->couch_api_base = (n != NULL) ? strdup(n) : NULL;
-
+    n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
+                                           servernum);
+    server->rest_api_server = strdup(n);
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;

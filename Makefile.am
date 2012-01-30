@@ -93,7 +93,7 @@ tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	@echo "| Download CouchbaseMock for functional tests |"
 	@echo "+---------------------------------------------+"
-	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20120103.162550-11.jar
+	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20120202.071818-12.jar
 
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \

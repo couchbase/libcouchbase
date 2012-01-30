@@ -135,6 +135,9 @@ extern "C" {
         /** The array of the couchbase servers */
         libcouchbase_server_t *servers;
 
+        /** The array of last known nodes as hostname:port */
+        char **backup_nodes;
+
         /** The number of vbuckets */
         libcouchbase_uint16_t nvbuckets;
         /** A map from the vbucket to the server hosting the vbucket */
@@ -192,6 +195,8 @@ extern "C" {
         char *authority;
         /** The CouchDB API endpoint base */
         char *couch_api_base;
+        /** The REST API server as hostname:port */
+        char *rest_api_server;
         /** The socket to the server */
         evutil_socket_t sock;
         /** The address information for this server (the one to release) */
