@@ -261,33 +261,47 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
     }
 }
 
-static void relocate_packets(ringbuffer_t *src,
-                             ringbuffer_t *src_cookies,
-                             libcouchbase_t dst)
+static void relocate_packets(libcouchbase_server_t *src,
+                             libcouchbase_t dst_instance)
 {
     struct libcouchbase_command_data_st ct;
     protocol_binary_request_header cmd;
-    libcouchbase_server_t *server;
-    libcouchbase_uint32_t nbody;
+    libcouchbase_server_t *dst;
+    libcouchbase_uint32_t nbody, npacket;
     char *body;
-    libcouchbase_size_t nr, idx;
+    libcouchbase_size_t idx;
     libcouchbase_vbucket_t vb;
 
-    while ((nr = libcouchbase_ringbuffer_read(src, cmd.bytes, sizeof(cmd.bytes)))) {
+    while (libcouchbase_ringbuffer_read(&src->cmd_log, cmd.bytes, sizeof(cmd.bytes))) {
         nbody = ntohl(cmd.request.bodylen); /* extlen + nkey + nval */
+        npacket = sizeof(cmd.bytes) + nbody;
         body = malloc(nbody);
-        nr = libcouchbase_ringbuffer_read(src, body, nbody);
-        assert(nr == nbody);
+        if (body == NULL) {
+            libcouchbase_error_handler(dst_instance, LIBCOUCHBASE_ENOMEM,
+                                       "Failed to allocate memory");
+            return;
+        }
+        assert(libcouchbase_ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
         vb = ntohs(cmd.request.vbucket);
-        idx = (libcouchbase_size_t)vbucket_get_master(dst->vbucket_config, vb);
-        server = dst->servers + idx;
-        nr = libcouchbase_ringbuffer_read(src_cookies, &ct, sizeof(ct));
-        assert(nr == sizeof(ct));
-        libcouchbase_server_start_packet(server, ct.cookie,
-                                         cmd.bytes, sizeof(cmd.bytes));
-        libcouchbase_server_write_packet(server, body, nbody);
-        libcouchbase_server_end_packet(server);
+        idx = (libcouchbase_size_t)vbucket_get_master(dst_instance->vbucket_config, vb);
+        dst = dst_instance->servers + idx;
+        assert(libcouchbase_ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
+
+        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
+        assert(libcouchbase_ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
+        assert(libcouchbase_ringbuffer_write(&dst->cmd_log, body, nbody) == nbody);
+        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->output_cookies, sizeof(ct)));
+        assert(libcouchbase_ringbuffer_write(&dst->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
+
+        assert(!dst->connected);
+        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->pending, npacket));
+        assert(libcouchbase_ringbuffer_write(&dst->pending, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
+        assert(libcouchbase_ringbuffer_write(&dst->pending, body, nbody) == nbody);
+        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->pending_cookies, sizeof(ct)));
+        assert(libcouchbase_ringbuffer_write(&dst->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
+
         free(body);
+        libcouchbase_server_send_packets(dst);
     }
 }
 
@@ -324,12 +338,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
             for (ii = 0; ii < nservers; ++ii) {
                 ss = servers + ii;
                 if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
-                    /* commands that were failed to be sent */
-                    relocate_packets(&ss->cmd_log, &ss->output_cookies, instance);
-                    /* commands that are going to be sent */
-                    relocate_packets(&ss->output, &ss->output_cookies, instance);
-                    /* commands that are pending because of delayed socket connection */
-                    relocate_packets(&ss->pending, &ss->pending_cookies, instance);
+                    relocate_packets(ss, instance);
                 } else {
                     /* other distribution types (ketama) are relying on
                      * hashing key, therefore return TMPFAIL and force users
