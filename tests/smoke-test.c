@@ -28,6 +28,7 @@
 libcouchbase_t session = NULL;
 const void *mock = NULL;
 struct libcouchbase_io_opt_st *io = NULL;
+libcouchbase_error_t global_error = -1;
 
 static void error_callback(libcouchbase_t instance,
                            libcouchbase_error_t err,
@@ -36,7 +37,17 @@ static void error_callback(libcouchbase_t instance,
     err_exit("Error %s: %s", libcouchbase_strerror(instance, err), errinfo);
 }
 
-static void setup(char **argv)
+static void error_callback2(libcouchbase_t instance,
+                            libcouchbase_error_t err,
+                            const char *errinfo)
+{
+    global_error = err;
+    (void)instance;
+    (void)errinfo;
+}
+
+static void setup(char **argv, const char *username, const char *password,
+                  const char *bucket)
 {
     const char *endpoint;
 
@@ -55,7 +66,7 @@ static void setup(char **argv)
     }
 
     endpoint = get_mock_http_server(mock);
-    session = libcouchbase_create(endpoint, "Administrator", "password", NULL, io);
+    session = libcouchbase_create(endpoint, username, password, bucket, io);
     if (session == NULL) {
         err_exit("Failed to create libcouchbase session");
     }
@@ -208,6 +219,50 @@ static void test_get1(void)
     assert(memcmp(rv.bytes, "bar", 3) == 0);
 }
 
+static libcouchbase_error_t test_connect(char **argv, const char *username,
+                                         const char *password,
+                                         const char *bucket)
+{
+    const char *endpoint;
+    libcouchbase_error_t rc;
+
+    assert(session == NULL);
+    assert(mock == NULL);
+    assert(io == NULL);
+
+    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    if (io == NULL) {
+        err_exit("Failed to create IO session");
+    }
+
+    mock = start_mock_server(argv);
+    if (mock == NULL) {
+        err_exit("Failed to start mock server");
+    }
+
+    endpoint = get_mock_http_server(mock);
+    session = libcouchbase_create(endpoint, username, password, bucket, io);
+    if (session == NULL) {
+        err_exit("Failed to create libcouchbase session");
+    }
+
+    (void)libcouchbase_set_error_callback(session, error_callback2);
+
+    if (libcouchbase_connect(session) != LIBCOUCHBASE_SUCCESS) {
+        err_exit("Failed to connect to server");
+    }
+    libcouchbase_wait(session);
+    rc = global_error;
+
+    libcouchbase_destroy(session);
+    session = NULL;
+    io = NULL;
+    shutdown_mock_server(mock);
+    mock = NULL;
+
+    return rc;
+}
+
 int main(int argc, char **argv)
 {
     const char *args[] = {"--nodes", "5", "--buckets=default::memcache", NULL};
@@ -216,23 +271,23 @@ int main(int argc, char **argv)
         freopen("/dev/null", "w", stdout);
     }
 
-    setup((char **)args);
-
+    setup((char **)args, "Administrator", "password", "default");
     test_set1();
     test_set2();
     test_get1();
-
     teardown();
 
     args[2] = NULL;
-    setup((char **)args);
-
+    setup((char **)args, "Administrator", "password", "default");
     test_set1();
     test_set2();
     test_get1();
-
     teardown();
 
+    assert(test_connect((char **)args, "Administrator", "password", "missing") == LIBCOUCHBASE_BUCKET_ENOENT);
+
+    args[2] = "--buckets=protected:secret";
+    assert(test_connect((char **)args, "protected", "incorrect", "protected") == LIBCOUCHBASE_AUTH_ERROR);
 
     (void)argc; (void)argv;
     return EXIT_SUCCESS;

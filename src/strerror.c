@@ -78,6 +78,8 @@ const char *libcouchbase_strerror(libcouchbase_t instance,
         return "Operation timed out";
     case LIBCOUCHBASE_CONNECT_ERROR:
         return "Connection failure";
+    case LIBCOUCHBASE_BUCKET_ENOENT:
+        return "No such bucket";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

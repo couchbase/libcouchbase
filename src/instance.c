@@ -402,6 +402,8 @@ static int parse_chunk(libcouchbase_t instance)
  */
 static int parse_header(libcouchbase_t instance)
 {
+    int response_code;
+
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     char *ptr = strstr(buffer->data, "\r\n\r\n");
 
@@ -417,10 +419,23 @@ static int parse_header(libcouchbase_t instance)
     }
 
     /* parse the headers I care about... */
-    if (memcmp(buffer->data, "HTTP/1.1 200 OK", strlen("HTTP/1.1 200 OK")) != 0) {
+    if(sscanf(buffer->data, "HTTP/1.1 %d", &response_code) != 1) {
         libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
                                    buffer->data);
-        /* incorrect response */
+    } else if(response_code != 200) {
+        libcouchbase_error_t err;
+        switch(response_code) {
+        case 401:
+            err = LIBCOUCHBASE_AUTH_ERROR;
+            break;
+        case 404:
+            err = LIBCOUCHBASE_BUCKET_ENOENT;
+            break;
+        default:
+            err = LIBCOUCHBASE_PROTOCOL_ERROR;
+            break;
+        }
+        libcouchbase_error_handler(instance, err, buffer->data);
         return -1;
     }
 
@@ -557,6 +572,7 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
     if (instance->vbucket_stream.header == NULL) {
         if (parse_header(instance) == -1) {
             /* error already reported */
+            libcouchbase_maybe_breakout(instance);
             return;
         }
     }
