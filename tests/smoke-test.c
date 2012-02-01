@@ -224,7 +224,7 @@ int main(int argc, char **argv)
 
     teardown();
 
-    args[3] = NULL;
+    args[2] = NULL;
     setup((char **)args);
 
     test_set1();
