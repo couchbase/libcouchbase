@@ -77,7 +77,6 @@ static void
 event_free(struct event *ev)
 {
     /* make sure that this event won't be coming back to haunt us. */
-    event_del(ev);
     free(ev);
 
 }
@@ -243,7 +242,7 @@ static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
                                          void *event)
 {
     (void)iops;
-    if (event_del(event) == -1) {
+    if(event_pending(event, EV_TIMEOUT, 0) != 0 && event_del(event) == -1) {
         fprintf(stderr, "Failed to release timer\n");
     }
     event_assign(event, iops->cookie, -1, 0, NULL, NULL);

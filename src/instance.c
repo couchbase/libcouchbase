@@ -146,6 +146,7 @@ void libcouchbase_destroy(libcouchbase_t instance)
     if (instance->timeout.event != NULL) {
         instance->io->delete_timer(instance->io, instance->timeout.event);
         instance->io->destroy_timer(instance->io, instance->timeout.event);
+        instance->timeout.event = NULL;
     }
 
     if (instance->ai != NULL) {
