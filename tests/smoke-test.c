@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
-#include "libcouchbase/couchbase.h"
+#include "internal.h" /* to look at the internals to check if sasl ok */
 #include "server.h"
 #include "test.h"
 
@@ -263,6 +263,39 @@ static libcouchbase_error_t test_connect(char **argv, const char *username,
     return rc;
 }
 
+RESPONSE_HANDLER old_sasl_auth_response_handler;
+libcouchbase_error_t sasl_auth_rc;
+
+static void sasl_auth_response_handler(libcouchbase_server_t *server,
+                                       const void *command_cookie,
+                                       protocol_binary_response_header *res)
+{
+    sasl_auth_rc = ntohs(res->response.status);
+    old_sasl_auth_response_handler(server, command_cookie, res);
+}
+
+static void test_set3(void)
+{
+    libcouchbase_error_t err;
+    struct rvbuf rv;
+    const char *key = "foo", *val = "bar";
+    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+
+    old_sasl_auth_response_handler = session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH];
+    session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = sasl_auth_response_handler;
+    sasl_auth_rc = -1;
+
+    (void)libcouchbase_set_storage_callback(session, store_callback);
+    err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, key, nkey, val, nval, 0, 0, 0);
+    assert(err == LIBCOUCHBASE_SUCCESS);
+    io->run_event_loop(io);
+    assert(rv.error == LIBCOUCHBASE_SUCCESS);
+    assert(rv.operation == LIBCOUCHBASE_SET);
+    assert(memcmp(rv.key, "foo", 3) == 0);
+    assert(sasl_auth_rc == LIBCOUCHBASE_SUCCESS);
+    session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = old_sasl_auth_response_handler;
+}
+
 int main(int argc, char **argv)
 {
     const char *args[] = {"--nodes", "5", "--buckets=default::memcache", NULL};
@@ -288,6 +321,9 @@ int main(int argc, char **argv)
 
     args[2] = "--buckets=protected:secret";
     assert(test_connect((char **)args, "protected", "incorrect", "protected") == LIBCOUCHBASE_AUTH_ERROR);
+    setup((char **)args, "protected", "secret", "protected");
+    test_set3();
+    teardown();
 
     (void)argc; (void)argv;
     return EXIT_SUCCESS;
