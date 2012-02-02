@@ -288,6 +288,7 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
 
     if (server->sasl_conn != NULL) {
         sasl_dispose(&server->sasl_conn);
+        server->sasl_conn = NULL;
     }
 
     /* Delete the event structure itself */
@@ -430,19 +431,24 @@ static void socket_connected(libcouchbase_server_t *server)
 {
     char local[NI_MAXHOST + NI_MAXSERV + 2];
     char remote[NI_MAXHOST + NI_MAXSERV + 2];
+    int sasl_in_progress = (server->sasl_conn != NULL);
 
     get_local_address(server->sock, local, sizeof(local));
     get_remote_address(server->sock, remote, sizeof(remote));
 
-    assert(sasl_client_new("couchbase", server->hostname, local, remote,
-                           server->instance->sasl.callbacks, 0,
-                           &server->sasl_conn) == SASL_OK);
+    if (!sasl_in_progress) {
+        assert(sasl_client_new("couchbase", server->hostname, local, remote,
+                               server->instance->sasl.callbacks, 0,
+                               &server->sasl_conn) == SASL_OK);
+    }
 
     if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
         /* No SASL AUTH needed */
         libcouchbase_server_connected(server);
     } else {
-        start_sasl_auth_server(server);
+        if (!sasl_in_progress) {
+            start_sasl_auth_server(server);
+        }
     }
 }
 
@@ -562,6 +568,8 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     if (error != 0) {
        server->curr_ai = server->root_ai = NULL;
     }
+
+    server->sasl_conn = NULL;
 }
 
 void libcouchbase_server_send_packets(libcouchbase_server_t *server)

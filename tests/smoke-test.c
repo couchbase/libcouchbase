@@ -296,6 +296,41 @@ static void test_set3(void)
     session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = old_sasl_auth_response_handler;
 }
 
+static void test_spurious_saslerr(void)
+{
+    const char *key = "KEY";
+    int iterations = 50;
+    struct rvbuf rvs[50];
+    int i;
+    libcouchbase_error_t err;
+    libcouchbase_set_storage_callback(session, mstore_callback);
+
+    memset(rvs, 0, sizeof(rvs));
+
+    for (i = 0; i < iterations; i++) {
+        rvs[i].counter = 999; /*don't trigger a stop_event_loop*/
+        err = libcouchbase_store(session, rvs + i, LIBCOUCHBASE_SET, key, 3, key, 3, 0, 0, 0);
+        if (err != LIBCOUCHBASE_SUCCESS) {
+            err_exit("Store operation failed");
+        }
+    }
+    libcouchbase_wait(session);
+
+    for (i = 0; i < iterations; i++) {
+        char *errinfo = NULL;
+        if (rvs[i].errors != LIBCOUCHBASE_SUCCESS) {
+            errinfo = "Did not get success response";
+        } else if (rvs[i].nkey != 3) {
+            errinfo = "Did not get expected key length";
+        } else if (memcmp(rvs[i].key, key, 3) != 0) {
+            errinfo = "Weird key size";
+        }
+        if (errinfo) {
+            err_exit(errinfo);
+        }
+    }
+}
+
 int main(int argc, char **argv)
 {
     const char *args[] = {"--nodes", "5", "--buckets=default::memcache", NULL};
@@ -323,6 +358,7 @@ int main(int argc, char **argv)
     assert(test_connect((char **)args, "protected", "incorrect", "protected") == LIBCOUCHBASE_AUTH_ERROR);
     setup((char **)args, "protected", "secret", "protected");
     test_set3();
+    test_spurious_saslerr();
     teardown();
 
     (void)argc; (void)argv;

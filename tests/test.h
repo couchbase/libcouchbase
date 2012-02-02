@@ -28,7 +28,8 @@
 #define QUOTE(x) QUOTE_(x)
 #define AT "[" __FILE__ ":" QUOTE(__LINE__) "] "
 #define err_exit(...)  \
-    fprintf(stderr, AT __VA_ARGS__);  \
+    fprintf(stderr, AT);  \
+    fprintf(stderr, __VA_ARGS__); \
     fprintf(stderr, "\n");  \
     fail;
 
