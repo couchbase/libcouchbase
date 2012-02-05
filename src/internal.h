@@ -187,6 +187,8 @@ extern "C" {
      * The structure representing each couchbase server
      */
     struct libcouchbase_server_st {
+        /** The server index in the list */
+        size_t index;
         /** The name of the server */
         char *hostname;
         /** The servers port */
@@ -258,6 +260,13 @@ extern "C" {
                                                  const void *data,
                                                  libcouchbase_size_t size);
 
+    void libcouchbase_server_buffer_retry_packet(libcouchbase_server_t *c,
+                                                 struct libcouchbase_command_data_st *ct,
+                                                 ringbuffer_t *buff,
+                                                 ringbuffer_t *buff_cookie,
+                                                 const void *data,
+                                                 libcouchbase_size_t size);
+
     void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
                                                  ringbuffer_t *buff,
                                                  const void *data,
@@ -282,6 +291,11 @@ extern "C" {
      */
     void libcouchbase_server_start_packet(libcouchbase_server_t *c,
                                           const void *command_cookie,
+                                          const void *data,
+                                          libcouchbase_size_t size);
+
+    void libcouchbase_server_retry_packet(libcouchbase_server_t *c,
+                                          struct libcouchbase_command_data_st *ct,
                                           const void *data,
                                           libcouchbase_size_t size);
     /**

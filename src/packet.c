@@ -53,6 +53,29 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
     }
 }
 
+void libcouchbase_server_buffer_retry_packet(libcouchbase_server_t *c,
+                                             struct libcouchbase_command_data_st *ct,
+                                             ringbuffer_t *buff,
+                                             ringbuffer_t *buff_cookie,
+                                             const void *data,
+                                             libcouchbase_size_t size)
+{
+    libcouchbase_size_t ct_size = sizeof(struct libcouchbase_command_data_st);
+    if (libcouchbase_ringbuffer_get_nbytes(buff_cookie) == 0) {
+        c->next_timeout = ct->start;
+        libcouchbase_update_timer(c->instance);
+    }
+
+    if (!libcouchbase_ringbuffer_ensure_capacity(buff, size) ||
+        !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
+        !libcouchbase_ringbuffer_ensure_capacity(buff_cookie, ct_size) ||
+        libcouchbase_ringbuffer_write(buff, data, size) != size ||
+        libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size ||
+        libcouchbase_ringbuffer_write(buff_cookie, ct, ct_size) != ct_size) {
+        abort();
+    }
+}
+
 void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
                                              ringbuffer_t *buff,
                                              const void *data,
@@ -85,6 +108,24 @@ void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
     libcouchbase_server_buffer_start_packet(c, command_cookie,
                                             buff, buff_cookie, data, size);
     libcouchbase_server_buffer_end_packet(c, buff);
+}
+
+void libcouchbase_server_retry_packet(libcouchbase_server_t *c,
+                                      struct libcouchbase_command_data_st *command_data,
+                                      const void *data,
+                                      libcouchbase_size_t size)
+{
+    if (c->connected) {
+        libcouchbase_server_buffer_retry_packet(c, command_data,
+                                                &c->output,
+                                                &c->output_cookies,
+                                                data, size);
+    } else {
+        libcouchbase_server_buffer_retry_packet(c, command_data,
+                                                &c->pending,
+                                                &c->pending_cookies,
+                                                data, size);
+    }
 }
 
 void libcouchbase_server_start_packet(libcouchbase_server_t *c,

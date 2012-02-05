@@ -59,8 +59,6 @@ static int do_fill_input_buffer(libcouchbase_server_t *c)
     return 1;
 }
 
-
-
 static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
 {
     protocol_binary_request_header req;
@@ -112,7 +110,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
     }
 
     nr = libcouchbase_ringbuffer_peek(&c->output_cookies, &ct, sizeof(ct));
-    if (nr < sizeof(ct)) {
+    if (nr != sizeof(ct)) {
         libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
                                    NULL);
         if (packet != c->input.read_head) {
@@ -143,17 +141,48 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
                                         header.response.opcode);
         }
 
-        c->instance->response_handler[header.response.opcode](c,
-                                                              ct.cookie,
-                                                              (void*)packet);
-
-        /* keep command and cookie until we get complete STAT response */
-        if(was_connected &&
-           (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0)) {
+        if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
+            c->instance->response_handler[header.response.opcode](c,
+                                                                  ct.cookie,
+                                                                  (void*)packet);
+            /* keep command and cookie until we get complete STAT response */
+            if(was_connected &&
+               (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0)) {
+                nr = libcouchbase_ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
+                assert(nr == sizeof(req));
+                libcouchbase_ringbuffer_consumed(&c->cmd_log, ntohl(req.request.bodylen));
+                libcouchbase_ringbuffer_consumed(&c->output_cookies, sizeof(ct));
+            }
+        } else {
+            libcouchbase_vbucket_t new_vb;
+            char *body;
+            libcouchbase_size_t nbody;
+            /* re-schedule command with new vbucket id */
             nr = libcouchbase_ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
             assert(nr == sizeof(req));
-            libcouchbase_ringbuffer_consumed(&c->cmd_log, ntohl(req.request.bodylen));
-            libcouchbase_ringbuffer_consumed(&c->output_cookies, sizeof(ct));
+            new_vb = vbucket_found_incorrect_master(c->instance->vbucket_config,
+                                                    ntohs(req.request.vbucket),
+                                                    c->index);
+            req.request.vbucket = new_vb;
+            req.request.opaque = ++c->instance->seqno;
+            nbody = ntohl(req.request.bodylen);
+            body = malloc(nbody);
+            if (body == NULL) {
+                libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+                return -1;
+            }
+            nr = libcouchbase_ringbuffer_read(&c->cmd_log, body, nbody);
+            assert(nr == nbody);
+            nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
+            assert(nr == sizeof(ct));
+            /* Preserve the cookie and timestamp for the command. This means
+             * that the library will retry the command until its time will
+             * out and the client will get LIBCOUCHBASE_ETIMEDOUT error in
+             * command callback */
+            libcouchbase_server_retry_packet(c, &ct, &req, sizeof(req));
+            libcouchbase_server_write_packet(c, body, nbody);
+            libcouchbase_server_end_packet(c);
+            free(body);
         }
         break;
     }

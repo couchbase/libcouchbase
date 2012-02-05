@@ -548,6 +548,7 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     struct addrinfo hints;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
+    server->index = servernum;
     server->authority = strdup(n);
     server->hostname = strdup(n);
     p = strchr(server->hostname, ':');
