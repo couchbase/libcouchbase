@@ -150,9 +150,9 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         /* keep command and cookie until we get complete STAT response */
         if(was_connected &&
            (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0)) {
-            nr = libcouchbase_ringbuffer_read(&c->cmd_log, header.bytes, sizeof(header));
-            assert(nr == sizeof(header));
-            libcouchbase_ringbuffer_consumed(&c->cmd_log, ntohl(header.response.bodylen));
+            nr = libcouchbase_ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
+            assert(nr == sizeof(req));
+            libcouchbase_ringbuffer_consumed(&c->cmd_log, ntohl(req.request.bodylen));
             libcouchbase_ringbuffer_consumed(&c->output_cookies, sizeof(ct));
         }
         break;
