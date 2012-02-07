@@ -23,7 +23,11 @@
 #ifndef LIBCOUCHBASE_COUCHBASE_H
 #define LIBCOUCHBASE_COUCHBASE_H 1
 
-#include <stdint.h>
+#if !defined HAVE_STDINT_H && defined WIN32
+# include "win_stdint.h"
+#else
+# include <stdint.h>
+#endif
 #include <stddef.h>
 #include <time.h>
 

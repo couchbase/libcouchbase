@@ -29,7 +29,13 @@
  */
 
 #define _CRT_SECURE_NO_WARNINGS
-#include <stdint.h>
+
+#if !defined HAVE_STDINT_H && defined WIN32
+# include "win_stdint.h"
+#else
+# include <stdint.h>
+#endif
+
 #include <string.h>
 
 #define HAVE_WINSOCK2_H 1
