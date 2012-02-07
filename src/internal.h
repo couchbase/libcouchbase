@@ -37,7 +37,7 @@
 #include <sasl/sasl.h>
 
 #include "ringbuffer.h"
-
+#include "win32/win_errno_sock.h"
 /*
  * libevent2 define evutil_socket_t so that it'll automagically work
  * on windows
