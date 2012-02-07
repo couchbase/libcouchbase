@@ -63,33 +63,7 @@
 #endif
 
 #ifdef _WIN32
-/* winsock error map */
-#include <errno.h>
-#ifndef ECONNRESET
-#define ECONNRESET WSAECONNRESET
-#endif
-#ifndef EWOULDBLOCK
-#define EWOULDBLOCK WSAEWOULDBLOCK
-#endif
-#ifndef EINVAL
-#define EINVAL WSAEINVAL
-#endif
-#ifndef EINPROGRESS
-#define EINPROGRESS WSAEINPROGRESS
-#endif
-#ifndef EALREADY
-#define EALREADY WSAEALREADY
-#endif
-#ifndef EISCONN
-#define EISCONN WSAEISCONN
-#endif
-#ifndef ENOTCONN
-#define ENOTCONN WSAENOTCONN
-#endif
-#ifndef ECONNREFUSED
-#define ECONNREFUSED WSAECONNREFUSED
-#endif
-
+#include "win32/win_errno_sock.h"
 typedef int ssize_t;
 #define snprintf _snprintf
 #undef strdup
