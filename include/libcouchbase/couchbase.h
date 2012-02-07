@@ -23,7 +23,6 @@
 #ifndef LIBCOUCHBASE_COUCHBASE_H
 #define LIBCOUCHBASE_COUCHBASE_H 1
 
-#include <stdint.h>
 #include <stddef.h>
 #include <time.h>
 

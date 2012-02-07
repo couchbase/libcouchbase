@@ -16,7 +16,6 @@
  */
 #include "config.h"
 #include <sys/types.h>
-#include <stdint.h>
 #include <libcouchbase/couchbase.h>
 
 #include <iostream>

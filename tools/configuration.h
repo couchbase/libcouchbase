@@ -18,8 +18,8 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H 1
 
+#include "config.h"
 #include <string>
-#include <stdint.h>
 
 class Configuration {
 public:

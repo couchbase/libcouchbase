@@ -28,7 +28,11 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
-#include <stdint.h>
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include <string.h>
 
 #define HAVE_WINSOCK2_H 1

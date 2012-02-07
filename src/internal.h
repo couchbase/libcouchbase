@@ -24,7 +24,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 #include <memcached/protocol_binary.h>
@@ -33,7 +32,6 @@
 #include <sasl/sasl.h>
 
 #include "ringbuffer.h"
-
 
 /*
  * libevent2 define evutil_socket_t so that it'll automagically work

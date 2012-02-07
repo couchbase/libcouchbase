@@ -28,7 +28,6 @@
 #error "Include libcouchbase/couchbase.h instead"
 #endif
 
-#include <stdint.h>
 #include <stddef.h>
 #include <time.h>
 

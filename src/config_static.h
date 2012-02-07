@@ -24,6 +24,12 @@
 #ifndef LIBCOUCHBASE_CONFIG_STATIC_H
 #define LIBCOUCHBASE_CONFIG_STATIC_H 1
 
+#if !defined HAVE_STDINT_H && defined WIN32
+# include "win_stdint.h"
+#else
+# include <stdint.h>
+#endif
+
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif

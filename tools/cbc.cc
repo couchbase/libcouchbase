@@ -26,7 +26,6 @@
 #include <sstream>
 #include <fstream>
 #include <string.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <cerrno>
 #include <libcouchbase/couchbase.h>
