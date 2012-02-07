@@ -243,7 +243,7 @@ static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
 {
     (void)iops;
     if(event_pending(event, EV_TIMEOUT, 0) != 0 && event_del(event) == -1) {
-        fprintf(stderr, "Failed to release timer\n");
+        iops->error = EINVAL;
     }
     event_assign(event, iops->cookie, -1, 0, NULL, NULL);
 }
@@ -290,7 +290,7 @@ static void libcouchbase_io_delete_event(struct libcouchbase_io_opt_st *iops,
 {
     (void)iops; (void)sock;
     if (event_del(event) == -1) {
-        fprintf(stderr, "Failed to release event\n");
+        iops->error = EINVAL;
     }
     event_assign(event, iops->cookie, -1, 0, NULL, NULL);
 }
