@@ -551,9 +551,9 @@ int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free) {
     return 1;
 }
 
-static void libcouchbase_switch_to_backup_node(libcouchbase_t instance,
-                                               libcouchbase_error_t error,
-                                               const char *reason)
+static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
+                                              libcouchbase_error_t error,
+                                              const char *reason)
 {
     libcouchbase_size_t nn;
     char *pp;
@@ -561,7 +561,7 @@ static void libcouchbase_switch_to_backup_node(libcouchbase_t instance,
 
     if (instance->backup_nodes == NULL) {
         libcouchbase_error_handler(instance, error, reason);
-        return;
+        return -1;
     }
     connected = 0;
     nn = 0;
@@ -575,7 +575,7 @@ static void libcouchbase_switch_to_backup_node(libcouchbase_t instance,
         if (instance->backup_nodes[nn] == NULL) {
             libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
                                        "failed to get config. All known nodes are dead.");
-            return;
+            return -1;
         }
         instance->host = strdup(instance->backup_nodes[nn]);
         instance->backup_nodes[nn] = NULL;
@@ -596,7 +596,43 @@ static void libcouchbase_switch_to_backup_node(libcouchbase_t instance,
         rc = libcouchbase_connect(instance);
         connected = (rc == LIBCOUCHBASE_SUCCESS);
     }
+    return 0;
 }
+
+static void libcouchbase_instance_connerr(libcouchbase_t instance,
+                                          libcouchbase_error_t err,
+                                          const char *errinfo)
+{
+    /* We try and see if the connection attempt can be relegated to another
+     * REST API entry point. If we can, the following should return something
+     * other than -1...
+     */
+
+    if (libcouchbase_switch_to_backup_node(instance, err, errinfo) != -1) {
+        return;
+    }
+
+    /* ..otherwise, we have a currently irrecoverable error. bail out all the
+     * pending commands, if applicable and/or deliver a final failure for
+     * initial connect attempts.
+     */
+
+    if (!instance->vbucket_config) {
+        /* Initial connection, no pending commands, and connect timer */
+        instance->io->delete_timer(instance->io, instance->timeout.event);
+    } else {
+        libcouchbase_size_t ii;
+        for (ii = 0; ii < instance->nservers; ++ii) {
+            libcouchbase_failout_server(instance->servers + ii, err);
+        }
+    }
+
+    /* check to see if we can breakout of the event loop. don't hang on REST
+     * API connection attempts.
+     */
+    libcouchbase_maybe_breakout(instance);
+}
+
 
 /**
  * Callback from libevent when we read from the REST socket
@@ -662,9 +698,9 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
             }
         } else if (nr == 0) {
             /* Socket closed. Pick up next server and try to connect */
-            libcouchbase_switch_to_backup_node(instance,
-                                               LIBCOUCHBASE_NETWORK_ERROR,
-                                               NULL);
+            (void)libcouchbase_instance_connerr(instance,
+                                                LIBCOUCHBASE_NETWORK_ERROR,
+                                                NULL);
             return;
         }
         buffer->avail += (libcouchbase_size_t)nr;
@@ -755,7 +791,9 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
             char errinfo[1024];
             snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
                      instance->host, instance->port);
-            libcouchbase_switch_to_backup_node(instance, LIBCOUCHBASE_NETWORK_ERROR, errinfo);
+            libcouchbase_instance_connerr(instance,
+                                          LIBCOUCHBASE_NETWORK_ERROR,
+                                          errinfo);
             return ;
         }
 
@@ -791,9 +829,9 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                     char errinfo[1024];
                     snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
                              strerror(instance->io->error));
-                    libcouchbase_switch_to_backup_node(instance,
-                                                       LIBCOUCHBASE_NETWORK_ERROR,
-                                                       errinfo);
+                    libcouchbase_instance_connerr(instance,
+                                                  LIBCOUCHBASE_NETWORK_ERROR,
+                                                  errinfo);
                     return ;
                 }
 

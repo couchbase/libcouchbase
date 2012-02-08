@@ -23,7 +23,38 @@ static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
                 server->instance->vbucket_state_listener_last;
         server->instance->vbucket_state_listener_last = NULL;
     }
+    server->instance->io->delete_timer(server->instance->io,
+                                       server->instance->timeout.event);
     libcouchbase_maybe_breakout(server->instance);
+}
+
+static void initial_connect_timeout_handler(libcouchbase_socket_t sock,
+                                            short which,
+                                            void *arg)
+{
+    libcouchbase_t instance = arg;
+    libcouchbase_error_handler(instance, LIBCOUCHBASE_CONNECT_ERROR,
+            "Could not connect to server within allotted time");
+
+    if (instance->sock != INVALID_SOCKET) {
+        /* Do we need to delete the event? */
+        instance->io->delete_event(instance->io,
+                                   instance->sock,
+                                   instance->event);
+        instance->io->close(instance->io, instance->sock);
+        instance->sock = INVALID_SOCKET;
+    }
+
+    instance->io->delete_timer(instance->io, instance->timeout.event);
+    instance->timeout.next = 0;
+    libcouchbase_maybe_breakout(instance);
+
+    (void)sock;
+    (void)which;
+    /* Notice we do not re-set the vbucket_state_listener. This is by design,
+     * as we are still in the same state, and are just reporting an error
+     * back to the user
+     */
 }
 
 /**
@@ -45,9 +76,17 @@ void libcouchbase_wait(libcouchbase_t instance)
      */
     instance->wait = 1;
     if (instance->vbucket_config == NULL) {
+        /* Initial configuration. Set a timer */
         instance->vbucket_state_listener_last =
             instance->vbucket_state_listener;
         instance->vbucket_state_listener = breakout_vbucket_state_listener;
+
+        /* Initial connection timeout */
+        instance->io->update_timer(instance->io,
+                                   instance->timeout.event,
+                                   instance->timeout.usec,
+                                   instance,
+                                   initial_connect_timeout_handler);
     }
     instance->io->run_event_loop(instance->io);
 
