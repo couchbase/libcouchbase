@@ -49,7 +49,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
 {
     libcouchbase_server_t *server = NULL;
     libcouchbase_size_t ii;
-    int vb, idx;
+    int vb, idx, *indices = NULL;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
@@ -58,14 +58,30 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
 
     if (nhashkey != 0) {
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
+        if (idx < 0 || (libcouchbase_size_t)idx > instance->nservers) {
+            /* the config says that there is no server yet at that position (-1) */
+            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
+        }
         server = instance->servers + (libcouchbase_size_t)idx;
+    } else {
+        indices = malloc(num_keys * sizeof(int));
+        if (indices == NULL) {
+            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+        }
+        for (ii = 0; ii < num_keys; ++ii) {
+            (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &vb, indices + ii);
+            if (indices[ii] < 0 || (libcouchbase_size_t)indices[ii] > instance->nservers) {
+                /* the config says that there is no server yet at that position (-1) */
+                free(indices);
+                return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
+            }
+        }
     }
 
     for (ii = 0; ii < num_keys; ++ii) {
         protocol_binary_request_touch req;
         if (nhashkey == 0) {
-            (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &vb, &idx);
-            server = instance->servers + (libcouchbase_size_t)idx;
+            server = instance->servers + (libcouchbase_size_t)indices[ii];
         }
 
         memset(&req, 0, sizeof(req));
@@ -84,6 +100,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
         libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
         libcouchbase_server_end_packet(server);
     }
+    free(indices);
 
     libcouchbase_server_send_packets(server);
 
