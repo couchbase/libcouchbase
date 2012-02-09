@@ -22,6 +22,13 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
     [ac_cv_enable_debug="yes"],
     [ac_cv_enable_debug="no"])
 
+  AC_CACHE_CHECK([whether the C++ compiler works], [ac_cv_prog_cxx_works], [
+    AC_LANG_PUSH([C++])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
+      [ac_cv_prog_cxx_works=yes],
+      [ac_cv_prog_cxx_works=no])
+    AC_LANG_POP([C++])])
+
   C_LANGUAGE_SPEC=c99
   m4_foreach([arg], [$*],
              [

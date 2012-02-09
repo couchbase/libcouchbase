@@ -27,7 +27,9 @@ ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la libcouchbase_libevent.la
 noinst_LTLIBRARIES =
+if BUILD_TOOLS
 bin_PROGRAMS = tools/cbc
+endif
 
 
 pkginclude_HEADERS = \
@@ -103,8 +105,10 @@ libmockserver_la_SOURCES = \
 #
 # Example programs using the library
 #
+if BUILD_TOOLS
 noinst_PROGRAMS = \
                example/pillowfight
+endif
 
 #if HAVE_LIBEVENT2
 #noinst_PROGRAMS += example/couchview
@@ -122,7 +126,6 @@ noinst_PROGRAMS = \
 #example_couchview_yajl_LDFLAGS = -levent -lyajl
 
 check_PROGRAMS = tests/base64-test \
-                 tests/getopt-test \
                  tests/ringbuffer-test \
                  tests/strerror-test
 
@@ -136,6 +139,11 @@ check_PROGRAMS += tests/arithmetic-test \
                   tests/config-test \
                   tests/smoke-test \
                   tests/syncmode-test
+endif
+
+if BUILD_TOOLS
+# and therefore have C++ compiler to build this test
+check_PROGRAMS += tests/getopt-test
 endif
 
 tests_base64_test_SOURCES = tests/base64-test.c src/base64.c
@@ -193,6 +201,7 @@ TESTS=${check_PROGRAMS}
 example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
 example_pillowfight_LDADD = libcouchbase.la
 
+if BUILD_TOOLS
 CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create	\
             cbc-send cbc-receive cbc-version
 
@@ -200,6 +209,7 @@ install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \
                $(RM) $(CBC_LINKS) && \
                for f in $(CBC_LINKS); do $(LN_S) cbc$(EXEEXT) $$f$(EXEEXT); done
+endif
 
 EXTRA_DIST = \
              LICENSE \

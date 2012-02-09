@@ -248,6 +248,18 @@ Try add --disable-couchbasemock
 
 AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xyes"])
 
+AC_ARG_ENABLE([tools],
+    [AS_HELP_STRING([--disable-tools],
+            [Build tools. @<:@default=on@:>@])],
+    [ac_cv_enable_tools="$enableval"],
+    [ac_cv_enable_tools="yes"])
+
+AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
+      [AS_IF([test "x${ac_cv_prog_cxx_works}" != "xyes"],
+             [AC_MSG_ERROR([You need C++ compiler to build tools. Try add --disable-tools])])])
+
+AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
+
 AC_CHECK_FUNCS_ONCE(gethrtime clock_gettime gettimeofday)
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
 
