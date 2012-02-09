@@ -553,6 +553,18 @@ int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free) {
     return 1;
 }
 
+/* This function does any resetting of various book-keeping related with the
+ * current REST API socket.
+ */
+static void libcouchbase_instance_reset_stream_state(libcouchbase_t instance)
+{
+    free(instance->vbucket_stream.input.data);
+    free(instance->vbucket_stream.chunk.data);
+    free(instance->vbucket_stream.header);
+    memset(&instance->vbucket_stream, 0, sizeof(instance->vbucket_stream));
+    instance->n_http_uri_sent = 0;
+}
+
 static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
                                               libcouchbase_error_t error,
                                               const char *reason)
@@ -588,11 +600,6 @@ static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
             instance->port = pp + 1;
         }
         free(oldhost);
-        if (instance->vbucket_stream.header) {
-            free(instance->vbucket_stream.header);
-            instance->vbucket_stream.header = NULL;
-        }
-        instance->n_http_uri_sent = 0;
 
         /* try to connect to next node */
         rc = libcouchbase_connect(instance);
@@ -787,6 +794,9 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                 }
                 instance->curr_ai = instance->curr_ai->ai_next;
             }
+
+            /* Reset the stream state, we run this only during a new socket. */
+            libcouchbase_instance_reset_stream_state(instance);
         }
 
         if (instance->curr_ai == NULL) {
