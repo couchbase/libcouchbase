@@ -28,6 +28,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+struct libevent_cookie {
+    struct event_base *base;
+    int allocated;
+};
+
+
 #ifndef HAVE_LIBEVENT2
 /* libevent 1.x compatibility layer */
 
@@ -210,7 +216,8 @@ static int libcouchbase_io_connect(struct libcouchbase_io_opt_st *iops,
 
 static void *libcouchbase_io_create_event(struct libcouchbase_io_opt_st *iops)
 {
-    return event_new(iops->cookie, INVALID_SOCKET, 0, NULL, NULL);
+    return event_new(((struct libevent_cookie *)iops->cookie)->base,
+                     INVALID_SOCKET, 0, NULL, NULL);
 }
 
 static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
@@ -233,7 +240,7 @@ static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
         event_del(event);
     }
 
-    event_assign(event, iops->cookie, sock, flags, handler, cb_data);
+    event_assign(event, ((struct libevent_cookie *)iops->cookie)->base, sock, flags, handler, cb_data);
     return event_add(event, NULL);
 }
 
@@ -245,7 +252,7 @@ static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
     if(event_pending(event, EV_TIMEOUT, 0) != 0 && event_del(event) == -1) {
         iops->error = EINVAL;
     }
-    event_assign(event, iops->cookie, -1, 0, NULL, NULL);
+    event_assign(event, ((struct libevent_cookie *)iops->cookie)->base, -1, 0, NULL, NULL);
 }
 
 static int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
@@ -268,7 +275,7 @@ static int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
         event_del(timer);
     }
 
-    event_assign(timer, iops->cookie, -1, flags, handler, cb_data);
+    event_assign(timer, ((struct libevent_cookie *)iops->cookie)->base, -1, flags, handler, cb_data);
     tmo.tv_sec = usec / 1000000;
     tmo.tv_usec = usec % 1000000;
     return event_add(timer, &tmo);
@@ -292,29 +299,36 @@ static void libcouchbase_io_delete_event(struct libcouchbase_io_opt_st *iops,
     if (event_del(event) == -1) {
         iops->error = EINVAL;
     }
-    event_assign(event, iops->cookie, -1, 0, NULL, NULL);
+    event_assign(event, ((struct libevent_cookie *)iops->cookie)->base, -1, 0, NULL, NULL);
 }
 
 static void libcouchbase_io_stop_event_loop(struct libcouchbase_io_opt_st *iops)
 {
-    event_base_loopbreak(iops->cookie);
+    event_base_loopbreak(((struct libevent_cookie *)iops->cookie)->base);
 }
 
 static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
 {
-     event_base_loop(iops->cookie, 0);
+     event_base_loop(((struct libevent_cookie *)iops->cookie)->base, 0);
 }
 
 static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *instance)
 {
+    if (((struct libevent_cookie *)instance->cookie)->allocated) {
+        event_base_free(((struct libevent_cookie *)instance->cookie)->base);
+    }
+    free(instance->cookie);
     free(instance);
 }
 
 LIBCOUCHBASE_API
 struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event_base *base)
 {
-    struct libcouchbase_io_opt_st *ret;
-    if ((ret = calloc(1, sizeof(*ret))) == NULL) {
+    struct libcouchbase_io_opt_st *ret = calloc(1, sizeof(*ret));
+    struct libevent_cookie *cookie = calloc(1, sizeof(*cookie));
+    if (ret == NULL || cookie == NULL) {
+        free(ret);
+        free(cookie);
         return NULL;
     }
 
@@ -339,15 +353,19 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
     ret->run_event_loop = libcouchbase_io_run_event_loop;
     ret->stop_event_loop = libcouchbase_io_stop_event_loop;
     ret->destructor = libcouchbase_destroy_io_opts;
+
     if (base == NULL) {
-        ret->cookie = event_base_new();
-        if (ret->cookie == NULL) {
+        if ((cookie->base = event_base_new()) == NULL) {
             free(ret);
-            ret = NULL;
+            free(cookie);
+            return NULL;
         }
+        cookie->allocated = 1;
     } else {
-        ret->cookie = base;
+        cookie->base = base;
+        cookie->allocated = 0;
     }
+    ret->cookie = cookie;
 
     return ret;
 }
