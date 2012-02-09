@@ -260,12 +260,9 @@ libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
 
     server->connected = 0;
 
-    if (error != LIBCOUCHBASE_CONNECT_ERROR) {
-        server->instance->io->delete_event(server->instance->io,
-                                           server->sock, server->event);
-    }
-
     if (server->sock != INVALID_SOCKET) {
+        server->instance->io->delete_event(server->instance->io, server->sock,
+                                           server->event);
         server->instance->io->close(server->instance->io, server->sock);
         server->sock = INVALID_SOCKET;
     }
