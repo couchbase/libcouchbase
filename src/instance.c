@@ -178,10 +178,12 @@ void libcouchbase_destroy(libcouchbase_t instance)
     if (instance->io && instance->io->destructor) {
         instance->io->destructor(instance->io);
     }
-    if (instance->vbucket_stream.header) {
-        free(instance->vbucket_stream.header);
-        instance->vbucket_stream.header = NULL;
-    }
+
+    free(instance->vbucket_stream.input.data);
+    free(instance->vbucket_stream.chunk.data);
+    free(instance->vbucket_stream.header);
+    free(instance->vb_server_map);
+    free(instance->histogram);
 
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
@@ -239,7 +241,7 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
     libcouchbase_uint16_t ii, max;
     libcouchbase_size_t num;
     const char *passwd;
-    char *curnode;
+    char curnode[NI_MAXHOST + NI_MAXSERV + 2];
     sasl_callback_t sasl_callbacks[4] = {
         { SASL_CB_USER, (int(*)(void))&sasl_get_username, instance },
         { SASL_CB_AUTHNAME, (int(*)(void))&sasl_get_username, instance },
@@ -255,8 +257,7 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
         free(instance->backup_nodes);
     }
     instance->backup_nodes = calloc(num, sizeof(char *));
-    curnode = strdup(instance->host);
-    strcat(curnode, instance->port);
+    sprintf(curnode, "%s:%s", instance->host, instance->port);
     for (ii = 0; ii < (libcouchbase_size_t)num; ++ii) {
         instance->servers[ii].instance = instance;
         libcouchbase_server_initialize(instance->servers + ii, (int)ii);
@@ -273,7 +274,6 @@ static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE 
             instance->backup_nodes[nn] = pp;
         }
     }
-    free(curnode);
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
            sizeof(instance->sasl.password.buffer));
@@ -398,6 +398,8 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                     libcouchbase_server_send_packets(ss);
                 }
             }
+        } else {
+            vbucket_config_destroy(next_config);
         }
     } else {
         assert(instance->servers == NULL);

@@ -310,8 +310,10 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
     free(server->hostname);
     free(server->authority);
     libcouchbase_ringbuffer_destruct(&server->output);
+    libcouchbase_ringbuffer_destruct(&server->output_cookies);
     libcouchbase_ringbuffer_destruct(&server->cmd_log);
     libcouchbase_ringbuffer_destruct(&server->pending);
+    libcouchbase_ringbuffer_destruct(&server->pending_cookies);
     libcouchbase_ringbuffer_destruct(&server->input);
     memset(server, 0xff, sizeof(*server));
 }
