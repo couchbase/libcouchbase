@@ -79,7 +79,8 @@ all: $(lib_LTLIBRARIES) \
      $(example_PROGRAMS)
 
 check: $(check_PROGRAMS)
-    @echo "Todo: port the tests and run them"
+    set PATH=$(INSTALL)\bin
+    for %%t in ($(check_PROGRAMS)) do %t
 
 libcouchbase.dll: $(libcouchbase_la_OBJECTS)
 	$(LD) $(LDFLAGS) $(DLLLDFLAGS) /out:libcouchbase.dll \
