@@ -164,6 +164,24 @@ static void get_callback(libcouchbase_t instance,
     (void)instance;
 }
 
+static void touch_callback(libcouchbase_t instance,
+                           const void *cookie,
+                           libcouchbase_error_t error,
+                           const void *key, libcouchbase_size_t nkey)
+{
+    struct rvbuf *rv = (struct rvbuf *)cookie;
+    rv->error = error;
+    assert(error == LIBCOUCHBASE_SUCCESS);
+    rv->key = key;
+    rv->nkey = nkey;
+    rv->counter--;
+    if (rv->counter <= 0) {
+        assert(io);
+        io->stop_event_loop(io);
+    }
+    (void)instance;
+}
+
 static void test_set1(void)
 {
     libcouchbase_error_t err;
@@ -260,6 +278,58 @@ static void test_get2(void)
     assert(rv.error == LIBCOUCHBASE_SUCCESS);
     assert(rv.nbytes == nval);
     assert(memcmp(rv.bytes, "bar", 3) == 0);
+    for (ii = 0; ii < 26; ii++) {
+        free(keys[ii]);
+    }
+    free(keys);
+    free(nkeys);
+}
+
+static void test_touch1(void)
+{
+    libcouchbase_error_t err;
+    struct rvbuf rv;
+    char *key = "fooX", *val = "bar";
+    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    char **keys;
+    libcouchbase_size_t *nkeys, ii;
+    libcouchbase_time_t *ttls;
+
+    (void)libcouchbase_set_storage_callback(session, store_callback);
+    (void)libcouchbase_set_touch_callback(session, touch_callback);
+
+    keys = malloc(26 * sizeof(char *));
+    nkeys = malloc(26 * sizeof(libcouchbase_size_t));
+    ttls = malloc(26 * sizeof(libcouchbase_time_t));
+    if (keys == NULL || nkeys == NULL || ttls == NULL) {
+        err_exit("Failed to allocate memory for keys");
+    }
+    for (ii = 0; ii < 26; ii++) {
+        nkeys[ii] = nkey;
+        keys[ii] = strdup(key);
+        ttls[ii] = 1;
+        if (keys[ii] == NULL) {
+            err_exit("Failed to allocate memory for key");
+        }
+        keys[ii][3] = (char)ii + 'a';
+        err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, keys[ii], nkeys[ii], val, nval, 0, 0, 0);
+        assert(err == LIBCOUCHBASE_SUCCESS);
+        io->run_event_loop(io);
+        assert(rv.error == LIBCOUCHBASE_SUCCESS);
+        memset(&rv, 0, sizeof(rv));
+    }
+
+    rv.counter = 26;
+    err = libcouchbase_mtouch(session, &rv, 26, (const void * const *)keys, nkeys, ttls);
+    assert(err == LIBCOUCHBASE_SUCCESS);
+    io->run_event_loop(io);
+    assert(rv.error == LIBCOUCHBASE_SUCCESS);
+    for (ii = 0; ii < 26; ii++) {
+        free(keys[ii]);
+    }
+    free(keys);
+    free(ttls);
+    free(nkeys);
 }
 
 static libcouchbase_error_t test_connect(char **argv, const char *username,
@@ -395,6 +465,7 @@ int main(int argc, char **argv)
     test_set2();
     test_get1();
     test_get2();
+    test_touch1();
     teardown();
 
     assert(test_connect((char **)args, "Administrator", "password", "missing") == LIBCOUCHBASE_BUCKET_ENOENT);

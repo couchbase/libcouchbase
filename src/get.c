@@ -62,7 +62,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
 {
     libcouchbase_server_t *server = NULL;
     protocol_binary_request_noop noop;
-    libcouchbase_size_t ii;
+    libcouchbase_size_t ii, *affected_servers = NULL;
     int vb, idx;
     struct server_info_st *servers = NULL;
 
@@ -76,6 +76,10 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                                        nhashkey, keys[0], nkey[0], exp);
     }
 
+    affected_servers = calloc(instance->nservers, sizeof(libcouchbase_size_t));
+    if (affected_servers == NULL) {
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+    }
     if (nhashkey != 0) {
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
         if (idx < 0 || (libcouchbase_size_t)idx > instance->nservers) {
@@ -83,6 +87,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
             return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
         }
         server = instance->servers + (libcouchbase_size_t)idx;
+        affected_servers[idx]++;
     } else {
         servers = malloc(num_keys * sizeof(struct server_info_st));
         if (servers == NULL) {
@@ -95,6 +100,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
                 free(servers);
                 return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
             }
+            affected_servers[servers[ii].idx]++;
         }
     }
 
@@ -135,27 +141,20 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     noop.message.header.request.opcode = PROTOCOL_BINARY_CMD_NOOP;
     noop.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
-    if (nhashkey == 0) {
-        /*
-        ** We don't know which server we sent the data to, so examine
-        ** where to send the noop
-        */
-        for (ii = 0; ii < instance->nservers; ++ii) {
+    /*
+     ** We don't know which server we sent the data to, so examine
+     ** where to send the noop
+     */
+    for (ii = 0; ii < instance->nservers; ++ii) {
+        if (affected_servers[ii]) {
             server = instance->servers + ii;
-            if (server->output.nbytes > 0 || server->pending.nbytes > 0) {
-                noop.message.header.request.opaque = ++instance->seqno;
-                libcouchbase_server_complete_packet(server, command_cookie,
-                                                    noop.bytes,
-                                                    sizeof(noop.bytes));
-                libcouchbase_server_send_packets(server);
-            }
+            noop.message.header.request.opaque = ++instance->seqno;
+            libcouchbase_server_complete_packet(server, command_cookie,
+                                                noop.bytes, sizeof(noop.bytes));
+            libcouchbase_server_send_packets(server);
         }
-    } else {
-        noop.message.header.request.opaque = ++instance->seqno;
-        libcouchbase_server_complete_packet(server, command_cookie, noop.bytes,
-                                            sizeof(noop.bytes));
-        libcouchbase_server_send_packets(server);
     }
+    free(affected_servers);
 
     return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
 }

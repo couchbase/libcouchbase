@@ -256,6 +256,9 @@ extern "C" {
      * @param num_keys the number of keys to get
      * @param keys the array containing the keys to get
      * @param nkey the array containing the lengths of the keys
+     * @param exp the array containing the expiry times for each key. Values
+     *            larger than 30*24*60*60 seconds (30 days) are interpreted
+     *            as absolute times (from the epoch).
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
