@@ -130,15 +130,17 @@ public:
 extern "C" {
     static void storageCallback(libcouchbase_t, const void *,
                                 libcouchbase_storage_t , libcouchbase_error_t,
-                                const void *, size_t, uint64_t);
+                                const void *, libcouchbase_size_t, libcouchbase_cas_t);
 
     static void getCallback(libcouchbase_t, const void *,
-                            libcouchbase_error_t, const void *, size_t,
-                            const void *, size_t, uint32_t, uint64_t);
+                            libcouchbase_error_t, const void *, libcouchbase_size_t,
+                            const void *, libcouchbase_size_t, libcouchbase_uint32_t,
+                            libcouchbase_cas_t);
 
     static void timingsCallback(libcouchbase_t, const void *,
-                                libcouchbase_timeunit_t, uint32_t, uint32_t,
-                                uint32_t, uint32_t);
+                                libcouchbase_timeunit_t, libcouchbase_uint32_t,
+                                libcouchbase_uint32_t, libcouchbase_uint32_t,
+                                libcouchbase_uint32_t);
 }
 
 class ThreadContext {
@@ -207,19 +209,20 @@ public:
                 std::string key;
                 generateKey(key);
 
-                uint32_t flags = 0;
-                time_t exp = 0;
+                libcouchbase_uint32_t flags = 0;
+                libcouchbase_uint32_t exp = 0;
 
                 if (config.setprc > 0 && (nextSeqno() % 100) < config.setprc) {
                     libcouchbase_store(instance, this, LIBCOUCHBASE_SET,
-                                       key.c_str(), key.length(), config.data,
+                                       key.c_str(), (libcouchbase_size_t)key.length(),
+                                       config.data,
                                        config.maxSize, flags,
                                        exp, 0);
                 } else {
                     const char* keys[1];
-                    size_t nkey[1];
+                    libcouchbase_size_t nkey[1];
                     keys[0] = key.c_str();
-                    nkey[0] = key.length();
+                    nkey[0] = (libcouchbase_size_t)key.length();
                     if (libcouchbase_mget(instance, this, 1,
                                           reinterpret_cast<const void * const *>(keys), nkey, NULL)
                         != LIBCOUCHBASE_SUCCESS) {
@@ -262,7 +265,9 @@ public:
 
             error = libcouchbase_store(instance,
                                        reinterpret_cast<void*> (this), LIBCOUCHBASE_SET,
-                                       key.c_str(), key.length(), config.data, config.maxSize, 0, 0, 0);
+                                       key.c_str(),
+                                       (libcouchbase_size_t)key.length(),
+                                       config.data, config.maxSize, 0, 0, 0);
             if (error != LIBCOUCHBASE_SUCCESS) {
                 std::cerr << "Failed to store item: "
                           << libcouchbase_strerror(instance, error) << std::endl;
@@ -285,11 +290,12 @@ public:
 protected:
     // the callback methods needs to be able to set the error handler..
     friend void storageCallback(libcouchbase_t, const void *,
-                                libcouchbase_storage_t, libcouchbase_error_t,
-                                const void *, size_t, uint64_t);
+                                libcouchbase_storage_t , libcouchbase_error_t,
+                                const void *, libcouchbase_size_t, libcouchbase_cas_t);
     friend void getCallback(libcouchbase_t, const void *,
-                            libcouchbase_error_t, const void *, size_t,
-                            const void *, size_t, uint32_t, uint64_t);
+                            libcouchbase_error_t, const void *, libcouchbase_size_t,
+                            const void *, libcouchbase_size_t, libcouchbase_uint32_t,
+                            libcouchbase_cas_t);
 
     void setError(libcouchbase_error_t e) {
         error = e;
@@ -336,15 +342,17 @@ private:
 
 static void storageCallback(libcouchbase_t, const void *cookie,
                             libcouchbase_storage_t, libcouchbase_error_t error,
-                            const void *, size_t, uint64_t) {
+                            const void *, libcouchbase_size_t, libcouchbase_cas_t) {
     ThreadContext *tc;
     tc = const_cast<ThreadContext*>(reinterpret_cast<const ThreadContext*>(cookie));
     tc->setError(error);
 }
 
 static void getCallback(libcouchbase_t, const void *cookie,
-                        libcouchbase_error_t error, const void *, size_t,
-                        const void *, size_t, uint32_t, uint64_t) {
+                        libcouchbase_error_t error, const void *,
+                        libcouchbase_size_t, const void *,
+                        libcouchbase_size_t, libcouchbase_uint32_t,
+                        libcouchbase_cas_t) {
     ThreadContext *tc;
     tc = const_cast<ThreadContext*>(reinterpret_cast<const ThreadContext*>(cookie));
     tc->setError(error);
@@ -352,8 +360,11 @@ static void getCallback(libcouchbase_t, const void *cookie,
 }
 
 static void timingsCallback(libcouchbase_t instance, const void *cookie,
-                            libcouchbase_timeunit_t timeunit, uint32_t min, uint32_t max,
-                            uint32_t total, uint32_t maxtotal) {
+                            libcouchbase_timeunit_t timeunit,
+                            libcouchbase_uint32_t min,
+                            libcouchbase_uint32_t max,
+                            libcouchbase_uint32_t total,
+                            libcouchbase_uint32_t maxtotal) {
     std::stringstream *ss =
         const_cast<std::stringstream*> (reinterpret_cast<const std::stringstream*> (cookie));
     char buffer[1024];
