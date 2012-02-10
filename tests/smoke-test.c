@@ -156,8 +156,11 @@ static void get_callback(libcouchbase_t instance,
     rv->nkey = nkey;
     rv->cas = cas;
     rv->flags = flags;
-    assert(io);
-    io->stop_event_loop(io);
+    rv->counter--;
+    if (rv->counter <= 0) {
+        assert(io);
+        io->stop_event_loop(io);
+    }
     (void)instance;
 }
 
@@ -212,6 +215,46 @@ static void test_get1(void)
 
     memset(&rv, 0, sizeof(rv));
     err = libcouchbase_mget(session, &rv, 1, (const void * const *)&key, &nkey, NULL);
+    assert(err == LIBCOUCHBASE_SUCCESS);
+    io->run_event_loop(io);
+    assert(rv.error == LIBCOUCHBASE_SUCCESS);
+    assert(rv.nbytes == nval);
+    assert(memcmp(rv.bytes, "bar", 3) == 0);
+}
+
+static void test_get2(void)
+{
+    libcouchbase_error_t err;
+    struct rvbuf rv;
+    char *key = "fooX", *val = "bar";
+    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    char **keys;
+    libcouchbase_size_t *nkeys, ii;
+
+    (void)libcouchbase_set_storage_callback(session, store_callback);
+    (void)libcouchbase_set_get_callback(session, get_callback);
+
+    keys = malloc(26 * sizeof(char *));
+    nkeys = malloc(26 * sizeof(libcouchbase_size_t));
+    if (keys == NULL || nkeys == NULL) {
+        err_exit("Failed to allocate memory for keys");
+    }
+    for (ii = 0; ii < 26; ii++) {
+        nkeys[ii] = nkey;
+        keys[ii] = strdup(key);
+        if (keys[ii] == NULL) {
+            err_exit("Failed to allocate memory for key");
+        }
+        keys[ii][3] = (char)ii + 'a';
+        err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, keys[ii], nkeys[ii], val, nval, 0, 0, 0);
+        assert(err == LIBCOUCHBASE_SUCCESS);
+        io->run_event_loop(io);
+        assert(rv.error == LIBCOUCHBASE_SUCCESS);
+        memset(&rv, 0, sizeof(rv));
+    }
+
+    rv.counter = 26;
+    err = libcouchbase_mget(session, &rv, 26, (const void * const *)keys, nkeys, NULL);
     assert(err == LIBCOUCHBASE_SUCCESS);
     io->run_event_loop(io);
     assert(rv.error == LIBCOUCHBASE_SUCCESS);
@@ -343,6 +386,7 @@ int main(int argc, char **argv)
     test_set1();
     test_set2();
     test_get1();
+    test_get2();
     teardown();
 
     args[2] = NULL;
@@ -350,6 +394,7 @@ int main(int argc, char **argv)
     test_set1();
     test_set2();
     test_get1();
+    test_get2();
     teardown();
 
     assert(test_connect((char **)args, "Administrator", "password", "missing") == LIBCOUCHBASE_BUCKET_ENOENT);

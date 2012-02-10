@@ -37,6 +37,11 @@ libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
                                       keys, nkey, exp);
 }
 
+struct server_info_st {
+    int vb;
+    int idx;
+};
+
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                                                 const void *command_cookie,
@@ -49,7 +54,8 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
 {
     libcouchbase_server_t *server = NULL;
     libcouchbase_size_t ii;
-    int vb, idx, *indices = NULL;
+    int vb, idx;
+    struct server_info_st *servers = NULL;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
@@ -64,15 +70,15 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
         }
         server = instance->servers + (libcouchbase_size_t)idx;
     } else {
-        indices = malloc(num_keys * sizeof(int));
-        if (indices == NULL) {
+        servers = malloc(num_keys * sizeof(struct server_info_st));
+        if (servers == NULL) {
             return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
         }
         for (ii = 0; ii < num_keys; ++ii) {
-            (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &vb, indices + ii);
-            if (indices[ii] < 0 || (libcouchbase_size_t)indices[ii] > instance->nservers) {
+            (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &servers[ii].vb, &servers[ii].idx);
+            if (servers[ii].idx < 0 || (libcouchbase_size_t)servers[ii].idx > instance->nservers) {
                 /* the config says that there is no server yet at that position (-1) */
-                free(indices);
+                free(servers);
                 return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
             }
         }
@@ -81,7 +87,8 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
     for (ii = 0; ii < num_keys; ++ii) {
         protocol_binary_request_touch req;
         if (nhashkey == 0) {
-            server = instance->servers + (libcouchbase_size_t)indices[ii];
+            server = instance->servers + (libcouchbase_size_t)servers[ii].idx;
+            vb = servers[ii].vb;
         }
 
         memset(&req, 0, sizeof(req));
@@ -100,7 +107,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
         libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
         libcouchbase_server_end_packet(server);
     }
-    free(indices);
+    free(servers);
 
     libcouchbase_server_send_packets(server);
 
