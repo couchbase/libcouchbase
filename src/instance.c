@@ -594,7 +594,7 @@ static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
         instance->host = strdup(instance->backup_nodes[nn]);
         instance->backup_nodes[nn] = NULL;
         if ((pp = strchr(instance->host, ':')) == NULL) {
-            instance->port = "80";
+            instance->port = "8091";
         } else {
             *pp = '\0';
             instance->port = pp + 1;
