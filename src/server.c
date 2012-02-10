@@ -581,15 +581,17 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
 
 void libcouchbase_server_send_packets(libcouchbase_server_t *server)
 {
-    if (server->connected) {
-        server->instance->io->update_event(server->instance->io,
-                                           server->sock,
-                                           server->event,
-                                           LIBCOUCHBASE_RW_EVENT,
-                                           server,
-                                           libcouchbase_server_event_handler);
-    } else {
-        server_connect(server);
+    if (server->pending.nbytes > 0 || server->output.nbytes > 0) {
+        if (server->connected) {
+            server->instance->io->update_event(server->instance->io,
+                                               server->sock,
+                                               server->event,
+                                               LIBCOUCHBASE_RW_EVENT,
+                                               server,
+                                               libcouchbase_server_event_handler);
+        } else {
+            server_connect(server);
+        }
     }
 }
 

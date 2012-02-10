@@ -53,7 +53,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                                                 const libcouchbase_time_t *exp)
 {
     libcouchbase_server_t *server = NULL;
-    libcouchbase_size_t ii, *affected_servers = NULL;
+    libcouchbase_size_t ii;
     int vb, idx;
     struct server_info_st *servers = NULL;
 
@@ -62,10 +62,6 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
         return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
     }
 
-    affected_servers = calloc(instance->nservers, sizeof(libcouchbase_size_t));
-    if (affected_servers == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
-    }
     if (nhashkey != 0) {
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
         if (idx < 0 || (libcouchbase_size_t)idx > instance->nservers) {
@@ -73,7 +69,6 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
             return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
         }
         server = instance->servers + (libcouchbase_size_t)idx;
-        affected_servers[idx]++;
     } else {
         servers = malloc(num_keys * sizeof(struct server_info_st));
         if (servers == NULL) {
@@ -86,7 +81,6 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                 free(servers);
                 return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
             }
-            affected_servers[servers[ii].idx]++;
         }
     }
 
@@ -112,15 +106,9 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                                          req.bytes, sizeof(req.bytes));
         libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
         libcouchbase_server_end_packet(server);
+        libcouchbase_server_send_packets(server);
     }
     free(servers);
-
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        if (affected_servers[ii]) {
-            libcouchbase_server_send_packets(instance->servers + ii);
-        }
-    }
-    free(affected_servers);
 
     return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
 }
