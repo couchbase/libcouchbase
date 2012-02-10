@@ -28,7 +28,6 @@
  * @author Trond Norbye
  */
 
-#define _CRT_SECURE_NO_WARNINGS
 #include <stdint.h>
 #include <string.h>
 

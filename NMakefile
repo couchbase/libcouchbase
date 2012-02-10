@@ -1,5 +1,5 @@
 # libcouchbase
-# Copyright (C) 2011 Couchbase, Inc
+# Copyright (C) 2010 - 1012 Couchbase, Inc
 # All rights reserved.
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,253 +13,167 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-#
-# Description: Build libcouchbase as a dll on Microsoft Windows
-# Author     : Trond Norbye <trond.norbye@gmail.com>
 
-TARGETOS=WINNT
-!include <win32.mak>
+INSTALL=..\deps
+CC_NODEBUG = cl.exe /O2 /DNDEBUG /MD /LD
+CC_DEBUG = cl.exe /Od /D_DEBUG /RTC1 /Z7 /LDd /W3 /MDd
+CFLAGS = /Iinclude /Iwin32 /I$(INSTALL)\include /Isrc /I. /nologo /W3 /EHsc /DWIN32 /FD /c -D_CRT_SECURE_NO_WARNINGS -DLIBCOUCHBASE_INTERNAL=1
+DLLLDFLAGS = /dll /incremental:no /opt:ref,icf /version:1.1
+LDFLAGS =  /nologo /LIBPATH:$(INSTALL)\lib
+LD = link.exe
+RM = del
 
-INSTALL=c:\local
-INSTALLDIRS=$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin
+lib_LTLIBRARIES = libcouchbase.dll libcouchbase_debug.dll
+check_PROGRAMS = tests\base64-test.exe tests\getopt-test.exe \
+      tests\ringbuffer-test.exe tests\strerror-test.exe
+bin_PROGRAMS = tools\cbc.exe
+example_PROGRAMS = example\pillowfight.exe
 
-DBGFLG=-Zi
+libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
+    src\cookie.c src\error.c src\event.c src\flush.c src\get.c \
+    src\handler.c src\instance.c src\iofactory_win32.c src\packet.c \
+    src\remove.c src\ringbuffer.c src\server.c src\stats.c \
+    src\store.c src\strerror.c src\synchandler.c src\tap.c \
+    src\timeout.c src\timings.c src\touch.c src\utilities.c \
+    src\wait.c src\gethrtime.c src\plugin-win32.c
 
+# Unfortunately nmake is a bit limited in its substitute functions.
+# Work around that by using dobj to represent debug object files ;)
+libcouchbase_la_OBJECTS=$(libcouchbase_SOURCES:.c=.obj)
+libcouchbase_la_debug_OBJECTS=$(libcouchbase_SOURCES:.c=.dobj)
 
-INCPATH= -Iwin32 -Isrc -Iinclude -I. -I$(INSTALL)\include
-COMPILE=$(cc) $(cdebug) $(cflags) $(DBGFLG) $(INCPATH)
-DLLCOMPILE=$(cc) $(cdebug) $(cflags) $(cvarsdll) $(DBGFLG) $(INCPATH) -DLIBCOUCHBASE_INTERNAL=1
+tests_base64_test_SOURCES = tests\base64-test.c src\base64.c
+tests_base64_test_OBJECTS=$(tests_base64_test_SOURCES:.c=.dobj)
 
-LIBCOUCHBASE_OBJS=arithmetic.obj \
-     base64.obj \
-     behavior.obj \
-     cookie.obj \
-     error.obj \
-     event.obj \
-     flush.obj \
-     get.obj \
-     gethrtime.obj \
-     handler.obj \
-     instance.obj \
-     iofactory_win32.obj \
-     packet.obj \
-     plugin-win32.obj \
-     remove.obj \
-     ringbuffer.obj \
-     stats.obj \
-     server.obj \
-     store.obj \
-     strerror.obj \
-     synchandler.obj \
-     tap.obj \
-     timeout.obj \
-     timings.obj \
-     touch.obj \
-     utilities.obj \
-     wait.obj
+tests_getopt_test_CXX_SOURCES = tests\getopt-test.cc
+tests_getopt_test_C_SOURCES = win32\getopt.c
+tests_getopt_test_OBJECTS = $(tests_getopt_test_C_SOURCES:.c=.dobj) \
+                            $(tests_getopt_test_CXX_SOURCES:.cc=.dobj)
 
-PROGRAMS= \
-          tools\cbc.exe
+tests_ringbuffer_test_SOURCES = tests\ringbuffer-test.c src\ringbuffer.c
+tests_ringbuffer_test_OBJECTS = $(tests_ringbuffer_test_SOURCES:.c=.dobj)
 
-all: libcouchbase.dll $(EXAMPLES) $(PROGRAMS) test
+tests_strerror_test_SOURCES = tests\strerror-test.c
+tests_strerror_test_OBJECTS = $(tests_strerror_test_SOURCES:.c=.dobj)
 
-test: tests\base64-test.exe tests\getopt-test.exe tests\ringbuffer-test.exe \
-      tests\strerror-test.exe
-	tests\base64-test.exe
-	tests\getopt-test.exe
-	tests\ringbuffer-test.exe
-	tests\strerror-test.exe
+tools_cbc_CXX_SOURCES = tools\cbc.cc tools\cbc-receive.cc tools\cbc-send.cc \
+     tools\cbc-util.cc tools\commandlineparser.cc tools\configuration.cc
+tools_cbc_C_SOURCES = win32\getopt.c
+tools_cbc_OBJECTS = $(tools_cbc_CXX_SOURCES:.cc=.obj) \
+                    $(tools_cbc_C_SOURCES:.c=.obj)
 
-#
-# The test programs
-#
-tests\base64-test.exe: tests\base64-test.obj tests\base64.obj
-	$(link) -out:tests\base64-test.exe tests\base64-test.obj \
-                tests\base64.obj
+example_pillowfight_CXX_SOURCES =  tools\commandlineparser.cc example\pillowfight.cc
+example_pillowfight_C_SOURCES = win32\getopt.c
+example_pillowfight_OBJECTS = $(example_pillowfight_CXX_SOURCES:.cc=.obj) \
+                              $(example_pillowfight_C_SOURCES:.c=.obj)
 
-tests\base64-test.obj: tests\base64-test.c
-	$(COMPILE) -Fotests\base64-test.obj tests\base64-test.c
+all_OBJS=$(libcouchbase_la_OBJECTS) $(libcouchbase_la_debug_OBJECTS) \
+   $(tests_base64_test_OBJECTS) $(tests_getopt_test_OBJECTS)  \
+   $(tests_ringbuffer_test_OBJECTS) $(tests_strerror_test_OBJECTS) \
+   $(tools_cbc_OBJECTS) $(example_pillowfight_OBJECTS)
 
-tests\base64.obj: src\base64.c
-	$(COMPILE) -Fotests\base64.obj src\base64.c
+all: $(lib_LTLIBRARIES) \
+     libcouchbase.dll \
+     $(bin_PROGRAMS) \
+     $(check_PROGRAMS) \
+     $(example_PROGRAMS)
 
+check: $(check_PROGRAMS)
+    @echo "Todo: port the tests and run them"
 
-tests\ringbuffer-test.exe: tests\ringbuffer-test.obj tests\ringbuffer.obj
-	$(link) -out:tests\ringbuffer-test.exe tests\ringbuffer-test.obj \
-                tests\ringbuffer.obj
+libcouchbase.dll: $(libcouchbase_la_OBJECTS)
+	$(LD) $(LDFLAGS) $(DLLLDFLAGS) /out:libcouchbase.dll \
+          $(libcouchbase_la_OBJECTS) \
+          libvbucket.lib \
+          libsasl.lib \
+          ws2_32.lib
 
-tests\ringbuffer-test.obj: tests\ringbuffer-test.c
-	$(COMPILE) -Fotests\ringbuffer-test.obj tests\ringbuffer-test.c
+libcouchbase_debug.dll: $(libcouchbase_la_debug_OBJECTS)
+	$(LD) $(LDFLAGS)  $(DLLLDFLAGS) /out:libcouchbase_debug.dll \
+          $(libcouchbase_la_debug_OBJECTS) \
+          libvbucket_debug.lib \
+          libsasl_debug.lib \
+          ws2_32.lib
 
-tests\ringbuffer.obj: src\ringbuffer.c
-	$(COMPILE) -Fotests\ringbuffer.obj src\ringbuffer.c
+tests\base64-test.exe: $(tests_base64_test_OBJECTS)
+	$(LD) $(LDFLAGS) -out:tests\base64-test.exe $(tests_base64_test_OBJECTS)
 
-tests\getopt-test.exe: tests\getopt-test.obj win32\getopt.obj
-	$(link) -out:tests\getopt-test.exe tests\getopt-test.obj \
-                win32\getopt.obj
+tests\getopt-test.exe: $(tests_getopt_test_OBJECTS)
+	$(LD) $(LDFLAGS) -out:tests\getopt-test.exe $(tests_getopt_test_OBJECTS)
 
-tests\getopt-test.obj: tests\getopt-test.cc
-	$(COMPILE) -Fotests\getopt-test.obj tests\getopt-test.cc
+tests\ringbuffer-test.exe: $(tests_ringbuffer_test_OBJECTS)
+	$(LD) $(LDFLAGS) -out:tests\ringbuffer-test.exe $(tests_ringbuffer_test_OBJECTS)
 
-tests\strerror-test.exe: tests\strerror-test.obj libcouchbase.dll
-	$(link) -out:tests\strerror-test.exe tests\strerror-test.obj \
-                libcouchbase.lib
+tests\strerror-test.exe: $(tests_strerror_test_OBJECTS) libcouchbase_debug.dll
+	$(LD) $(LDFLAGS) -out:tests\strerror-test.exe $(tests_strerror_test_OBJECTS) libcouchbase_debug.lib
 
-tests\strerror-test.obj: tests\strerror-test.c
-	$(COMPILE) -Fotests\strerror-test.obj tests\strerror-test.c
+tools\cbc.exe: $(tools_cbc_OBJECTS) libcouchbase.dll
+	$(LD) $(LDFLAGS) -out:tools\cbc.exe $(tools_cbc_OBJECTS) \
+          libcouchbase.lib ws2_32.lib
 
-win32\getopt.obj: win32\getopt.c win32\getopt.h
-	$(COMPILE) -Fowin32\getopt.obj win32\getopt.c
+example\pillowfight.exe: $(example_pillowfight_OBJECTS) libcouchbase_debug.dll
+	$(LD) $(LDFLAGS) -out:example\pillowfight.exe $(example_pillowfight_OBJECTS) \
+          libcouchbase_debug.lib ws2_32.lib
 
-tools\cbc.exe: tools\cbc.obj tools\cbc-send.obj tools\cbc-receive.obj   \
-               tools\cbc-util.obj                                       \
-               tools\commandlineparser.obj tools\configuration.obj      \
-               win32\getopt.obj
-	$(link) -out:tools\cbc.exe tools\cbc.obj                \
-               tools\commandlineparser.obj tools\cbc-send.obj   \
-               tools\cbc-receive.obj tools\cbc-util.obj         \
-               tools\configuration.obj win32\getopt.obj         \
-               libcouchbase.lib ws2_32.lib
+.SUFFIXES: .c .cc .obj .dobj .res
 
-tools\cbc.obj: tools\cbc.cc tools\configuration.h tools\commandlineparser.h
-	$(COMPILE) -Fotools\cbc.obj tools\cbc.cc
+.c.dobj:
+	$(CC_DEBUG) $(CFLAGS) /Fo"$@"  $<
 
-tools\cbc-send.obj: tools\cbc-send.cc tools\configuration.h tools\commandlineparser.h
-	$(COMPILE) -Fotools\cbc-send.obj tools\cbc-send.cc
+.c.obj:
+	$(CC_NODEBUG) $(CFLAGS) /Fo"$@"  $<
 
-tools\cbc-receive.obj: tools\cbc-receive.cc tools\configuration.h tools\commandlineparser.h
-	$(COMPILE) -Fotools\cbc-receive.obj tools\cbc-receive.cc
+.cc.dobj:
+	$(CC_DEBUG) $(CFLAGS) /Fo"$@"  $<
 
-tools\cbc-util.obj: tools\cbc-util.cc tools\configuration.h tools\commandlineparser.h
-	$(COMPILE) -Fotools\cbc-util.obj tools\cbc-util.cc
+.cc.obj:
+	$(CC_NODEBUG) $(CFLAGS) /Fo"$@"  $<
 
-tools\commandlineparser.obj: tools\commandlineparser.cc tools\commandlineparser.h
-	$(COMPILE) -Fotools\commandlineparser.obj tools\commandlineparser.cc
-
-tools\configuration.obj: tools\configuration.cc tools\configuration.h
-	$(COMPILE) -Fotools\configuration.obj tools\configuration.cc
-
-#
-# Library
-#
-libcouchbase.dll: $(LIBCOUCHBASE_OBJS)
-	$(link) $(dlllflags)  /LIBPATH:$(INSTALL)\lib libvbucket.lib \
-                libsasl.lib ws2_32.lib \
-                -out:libcouchbase.dll -version:1.0 $(LIBCOUCHBASE_OBJS)
-
-arithmetic.obj: src\arithmetic.c
-	$(DLLCOMPILE) src\arithmetic.c
-
-base64.obj: src\base64.c
-	$(DLLCOMPILE) src\base64.c
-
-behavior.obj: src\behavior.c
-	$(DLLCOMPILE) src\behavior.c
-
-cookie.obj: src\cookie.c
-	$(DLLCOMPILE) src\cookie.c
-
-event.obj: src\event.c
-	$(DLLCOMPILE) src\event.c
-
-error.obj: src\error.c
-	$(DLLCOMPILE) src\error.c
-
-wait.obj: src\wait.c
-	$(DLLCOMPILE) src\wait.c
-
-flush.obj: src\flush.c
-	$(DLLCOMPILE) src\flush.c
-
-get.obj: src\get.c
-	$(DLLCOMPILE) src\get.c
-
-gethrtime.obj: src\gethrtime.c
-	$(DLLCOMPILE) src\gethrtime.c
-
-handler.obj: src\handler.c
-	$(DLLCOMPILE) src\handler.c
-
-instance.obj: src\instance.c
-	$(DLLCOMPILE) src\instance.c
-
-iofactory_win32.obj: src\iofactory_win32.c
-	$(DLLCOMPILE) src\iofactory_win32.c
-
-packet_debug.obj: src\packet_debug.c
-	$(DLLCOMPILE) src\packet_debug.c
-
-packet.obj: src\packet.c
-	$(DLLCOMPILE) src\packet.c
-
-plugin-win32.obj: src\plugin-win32.c
-	$(DLLCOMPILE) src\plugin-win32.c
-
-remove.obj: src\remove.c
-	$(DLLCOMPILE) src\remove.c
-
-ringbuffer.obj: src\ringbuffer.c
-	$(DLLCOMPILE) src\ringbuffer.c
-
-stats.obj: src\stats.c
-	$(DLLCOMPILE) src\stats.c
-
-server.obj: src\server.c
-	$(DLLCOMPILE) src\server.c
-
-store.obj: src\store.c
-	$(DLLCOMPILE) src\store.c
-
-strerror.obj: src\strerror.c
-	$(DLLCOMPILE) src\strerror.c
-
-synchandler.obj: src\synchandler.c
-	$(DLLCOMPILE) src\synchandler.c
-
-tap.obj: src\tap.c
-	$(DLLCOMPILE) src\tap.c
-
-timings.obj: src\timings.c
-	$(DLLCOMPILE) src\timings.c
-
-timeout.obj: src\timeout.c
-	$(DLLCOMPILE) src\timeout.c
-
-touch.obj: src\touch.c
-	$(DLLCOMPILE) src\touch.c
-
-utilities.obj: src\utilities.c
-	$(DLLCOMPILE) src\utilities.c
-
-#
-# Application programs
-#
-pillowfight.exe: exammple\pillowfight.obj libcouchbase.dll win32\getopt.obj \
-                 tools\commandlineparser.obj
-	$(link) -out:pillowfight.exe example\pillowfight.obj \
-                tools\commandlineparser.obj \
-                win32\getopt.obj libcouchbase.lib
-
-tools\pillowfight.obj: tools\pillowfight.cc tools\commandlineparser.h
-	$(COMPILE) -Fotools\pillowfight.obj tools\pillowfight.cc
-
-$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin:; -@mkdir $@
-
-install: $(INSTALLDIRS) libcouchbase.dll
-	@copy win32\libcouchbase\configuration.h $(INSTALL)\include\libcouchbase
-	@copy include\libcouchbase\*.h $(INSTALL)\include\libcouchbase
-	@copy libcouchbase.dll $(INSTALL)\lib
-	@copy libcouchbase.dll $(INSTALL)\bin
-	@copy libcouchbase.exp $(INSTALL)\lib
-	@copy libcouchbase.lib $(INSTALL)\lib
 
 clean:
-	-@del \
-              $(EXAMPLES) \
-              $(EXAMPLES_OBJS) \
-              $(LIBCOUCHBASE_OBJS) \
-              libcouchbase.dll \
-              libcouchbase.exp \
-              libcouchbase.lib \
-              vc100.pdb \
-              win32\getopt.obj
+	-del $(all_OBJS) \
+		 libcouchbase.dll libcouchbase.exp libcouchbase.lib \
+		 libcouchbase_debug.dll libcouchbase_debug.exp libcouchbase_debug.lib \
+		 vc100.idb vc100.pdb \
+         $(bin_PROGRAMS) $(check_PROGRAMS)
+
+INSTALLDIRS=$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin
+
+install: $(INSTALLDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
+	copy include\libcouchbase\** $(INSTALL)\include\libcouchbase
+    -del $(INSTALL)\include\libcouchbase\configuration.h.in
+    copy win32\libcouchbase\configuration.h $(INSTALL)\include\libcouchbase
+	copy libcouchbase.dll $(INSTALL)\lib
+	copy libcouchbase.dll $(INSTALL)\bin
+	copy libcouchbase.exp $(INSTALL)\lib
+	copy libcouchbase.lib $(INSTALL)\lib
+	copy libcouchbase_debug.dll $(INSTALL)\lib
+	copy libcouchbase_debug.dll $(INSTALL)\bin
+	copy libcouchbase_debug.exp $(INSTALL)\lib
+	copy libcouchbase_debug.lib $(INSTALL)\lib
+    copy tools\cbc.exe $(INSTALL)\bin
+
+uninstall:
+	-del $(INSTALL)\lib\libcouchbase_debug.dll \
+         $(INSTALL)\bin\libcouchbase_debug.dll \
+         $(INSTALL)\lib\libcouchbase_debug.exp \
+         $(INSTALL)\lib\libcouchbase_debug.lib \
+         $(INSTALL)\lib\libcouchbase.dll \
+         $(INSTALL)\bin\libcouchbase.dll \
+         $(INSTALL)\lib\libcouchbase.exp \
+         $(INSTALL)\lib\libcouchbase.lib \
+         $(INSTALL)\include\libcouchbase\behavior.h \
+         $(INSTALL)\include\libcouchbase\callbacks.h \
+         $(INSTALL)\include\libcouchbase\configuration.h \
+         $(INSTALL)\include\libcouchbase\couchbase.h \
+         $(INSTALL)\include\libcouchbase\doc.h \
+         $(INSTALL)\include\libcouchbase\libevent_io_opts.h \
+         $(INSTALL)\include\libcouchbase\tap_filter.h \
+         $(INSTALL)\include\libcouchbase\timings.h \
+         $(INSTALL)\include\libcouchbase\types.h \
+         $(INSTALL)\include\libcouchbase\visibility.h \
+         $(INSTALL)\include\libcouchbase\winsock_io_opts.h \
+         $(INSTALL)\bin\cbc.exe
+	-rmdir $(INSTALL)\lib $(INSTALL)\bin $(INSTALL)\include\libcouchbase $(INSTALL)\include $(INSTALL)
+
+$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin:; -@mkdir $@

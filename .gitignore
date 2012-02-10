@@ -1,8 +1,12 @@
 # Keep the entries sorted to reduce the risk for a merge conflict
 *.[ao]
 *.dirstamp
+*.dll
+*.dobj
 *.exe
+*.exp
 *.l[ao]
+*.lib
 *.obj
 *~
 ._*
@@ -37,9 +41,6 @@
 /libcouchbase*.dsc
 /libcouchbase*.rpm
 /libcouchbase*.tar.gz
-/libcouchbase.exp
-/libcouchbase.lib
-/libcouchbase.dll
 /libtool
 /m4/libtool.m4
 /m4/ltoptions.m4
@@ -54,3 +55,4 @@
 /tests/CouchbaseMock.jar
 /tools/cbc
 /vc100.pdb
+/vc100.idb
