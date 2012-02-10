@@ -105,6 +105,8 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         /* It would have been awesome if we could have a generic error */
         /* handler we could call */
         switch (req.request.opcode) {
+        case PROTOCOL_BINARY_CMD_NOOP:
+            break;
         case PROTOCOL_BINARY_CMD_GAT:
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GET:
