@@ -24,7 +24,11 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
+#if !defined HAVE_STDINT_H && defined WIN32
+# include "win_stdint.h"
+#else
+# include <stdint.h>
+#endif
 #include <string.h>
 #include <sys/types.h>
 #include <memcached/protocol_binary.h>
@@ -33,8 +37,7 @@
 #include <sasl/sasl.h>
 
 #include "ringbuffer.h"
-
-
+#include "win32/win_errno_sock.h"
 /*
  * libevent2 define evutil_socket_t so that it'll automagically work
  * on windows

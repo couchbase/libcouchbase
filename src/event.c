@@ -21,6 +21,7 @@
  * @author Trond Norbye
  * @todo add more documentation
  */
+
 #include "internal.h"
 
 static int do_fill_input_buffer(libcouchbase_server_t *c)

@@ -88,7 +88,13 @@ extern "C" {
 #endif
 
 #ifndef HAVE_GETHRTIME
-#include <stdint.h>
+
+#if !defined HAVE_STDINT_H && defined WIN32
+# include "win_stdint.h"
+#else
+# include <stdint.h>
+#endif
+
 typedef uint64_t hrtime_t;
 extern hrtime_t gethrtime(void);
 #endif
