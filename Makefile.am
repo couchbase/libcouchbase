@@ -25,7 +25,7 @@
 #
 ACLOCAL_AMFLAGS = -I m4 --force
 
-lib_LTLIBRARIES = libcouchbase.la libcouchbase_libevent.la
+lib_LTLIBRARIES = libcouchbase.la
 noinst_LTLIBRARIES =
 if BUILD_TOOLS
 bin_PROGRAMS = tools/cbc
@@ -86,10 +86,20 @@ libcouchbase_la_LDFLAGS= -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBAS
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 libcouchbase_la_LIBADD=-lvbucket $(LIBSASL)
 
+if LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
+libcouchbase_la_SOURCES += src/plugin-libevent.c
+libcouchbase_la_LIBADD += -levent
+libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
+
+else
+lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = src/plugin-libevent.c
 libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
+
+endif
+
 
 tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"

@@ -18,6 +18,10 @@
 #include "internal.h"
 #include <dlfcn.h>
 
+#ifdef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
+#include <libcouchbase/libevent_io_opts.h>
+#endif
+
 static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code) {
     if (error != NULL) {
         *error = code;
@@ -33,7 +37,6 @@ static create_func get_create_func(const char *image,
         create_func create;
         void* voidptr;
     } my_create ;
-
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
     if (dlhandle == NULL) {
         set_error(error, LIBCOUCHBASE_ERROR);
@@ -56,14 +59,19 @@ libcouchbase_io_opt_t* libcouchbase_create_io_ops(libcouchbase_io_ops_type_t typ
 {
     libcouchbase_io_opt_t *ret = NULL;
     if (type == LIBCOUCHBASE_IO_OPS_DEFAULT || type == LIBCOUCHBASE_IO_OPS_LIBEVENT) {
-        create_func c = get_create_func(NULL, error);
+        create_func c;
+#ifdef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
+        c = libcouchbase_create_libevent_io_opts;
+#else
+        c = get_create_func(NULL, error);
         if (c == NULL) {
 #ifdef __APPLE__
             c = get_create_func("libcouchbase_libevent.1.dylib", error);
 #else
             c = get_create_func("libcouchbase_libevent.so.1", error);
-#endif
+#endif /* __APPLE__ */
         }
+#endif /* LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED */
 
         if (c != NULL) {
             ret = c(cookie);

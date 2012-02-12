@@ -263,6 +263,17 @@ AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
 AC_CHECK_FUNCS_ONCE(gethrtime clock_gettime gettimeofday)
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
 
+
+AC_ARG_ENABLE([embed-libevent-plugin],
+    [AS_HELP_STRING([--enable-embed-libevent-plugin],
+                    [embed libevent plugin into libcouchbase rather
+                     than dynamically loading it at runtime.
+                    @<:@default=off@:>@])],
+    [ac_cv_embed_libevent_plugin="$enableval"])
+
+AM_CONDITIONAL(LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED,
+               [test "x${ac_cv_embed_libevent_plugin}" = "xyes"])
+
 AH_TOP([
 #ifndef CONFIG_H
 #define CONFIG_H
