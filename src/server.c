@@ -648,11 +648,21 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
                 free(packet);
             }
             break;
-        default:
+        case PROTOCOL_BINARY_CMD_NOOP:
+            if (packet != c->cmd_log.read_head) {
+                free(packet);
+            }
+            return -1;
+
+        default: {
+            char errinfo[128] = { '\0' };
+            snprintf(errinfo, 128, "Unknown implicit send message op=%0x", req.request.opcode);
             libcouchbase_error_handler(c->instance,
                                        LIBCOUCHBASE_EINTERNAL,
-                                       "Received an implicit msg I don't support");
+                                       errinfo);
             return -1;
+
+            }
         }
 
         libcouchbase_ringbuffer_consumed(&c->cmd_log, packetsize);
