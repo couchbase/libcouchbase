@@ -89,6 +89,18 @@ AC_ARG_WITH([memcached-headers-url],
     ]
 )
 
+AC_ARG_WITH([couchbasemock],
+    [AC_HELP_STRING([--with-couchbasemock], [Use the specified file as the test mock server])],
+    [
+        AS_IF([test -f ${withval}],
+              [
+                    rm -f tests/CouchbaseMock.jar
+                    ln -s ${withval} tests/CouchbaseMock.jar
+              ],
+              [AC_MSG_ERROR([${withval} is not a file I can use as a mock server])])
+    ]
+)
+
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h memcached/protocol_binary.h
                        memcached/vbucket.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
