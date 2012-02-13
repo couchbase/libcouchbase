@@ -357,10 +357,16 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
     libcouchbase_server_t *servers, *ss;
 
     curr_config = instance->vbucket_config;
-    next_config = vbucket_config_parse_string(instance->vbucket_stream.input.data);
+    next_config = vbucket_config_create();
     if (next_config == NULL) {
+        libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM,
+                                   "Failed to allocate memory for config");
+        return;
+    }
+    if (vbucket_config_parse(next_config, LIBVBUCKET_SOURCE_MEMORY,
+                             instance->vbucket_stream.input.data) != 0) {
         libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
-                                   instance->vbucket_stream.input.data);
+                                   vbucket_get_error_message(next_config));
         return;
     }
     instance->vbucket_stream.input.avail = 0;
