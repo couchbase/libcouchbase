@@ -192,9 +192,25 @@ const void *start_mock_server(char **cmdline) {
         char buffer[1024];
         ssize_t offset;
         ssize_t nr;
+        int ii;
 
         /* wait until the server connects */
-        info->client = accept(info->sock, NULL, NULL);
+        for (ii = 0; ii < 10; ii++) {
+            info->client = accept(info->sock, NULL, NULL);
+            if (info->client == -1) {
+                /* running this in gdb on OS X, I got an EINTR a few times */
+                if (errno == EINTR) {
+                    fprintf(stderr, "start_mock_server: Sleeping 1 second on EINTR\n");
+                    sleep(1);
+                } else {
+                    perror("start_mock_server");
+                    abort();
+                }
+            } else {
+                break;
+            }
+        }
+
         assert(info->client != -1);
         /* Get the port number of the http server */
         offset = snprintf(buffer, sizeof(buffer), "localhost:");
