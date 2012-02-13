@@ -612,6 +612,12 @@ static void libcouchbase_instance_connerr(libcouchbase_t instance,
                                           libcouchbase_error_t err,
                                           const char *errinfo)
 {
+    if(instance->sock != INVALID_SOCKET) {
+        instance->io->delete_event(instance->io, instance->sock, instance->event);
+        instance->io->close(instance->io, instance->sock);
+        instance->sock = INVALID_SOCKET;
+    }
+
     /* We try and see if the connection attempt can be relegated to another
      * REST API entry point. If we can, the following should return something
      * other than -1...
@@ -780,6 +786,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
 {
     libcouchbase_t instance = arg;
     int retry;
+    int first_try = (sock == INVALID_SOCKET);
 
     do {
         if (instance->sock == INVALID_SOCKET) {
@@ -803,6 +810,12 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
             char errinfo[1024];
             snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
                      instance->host, instance->port);
+            if (first_try && instance->sock != INVALID_SOCKET) {
+                /* Ensure our connerr function doesn't try to delete a
+                 * nonexistent event */
+                instance->io->close(instance->io, instance->sock);
+                instance->sock = INVALID_SOCKET;
+            }
             libcouchbase_instance_connerr(instance,
                                           LIBCOUCHBASE_NETWORK_ERROR,
                                           errinfo);
@@ -836,8 +849,22 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
             case EALREADY: /* Subsequent calls to connect */
                 return ;
 
-            default:
-                if (errno != ECONNREFUSED) {
+            default: {
+                /* Save errno because of possible subsequent errors */
+                int save_errno = instance->io->error;
+
+                if (instance->sock != INVALID_SOCKET) {
+                    if (!first_try) {
+                        /* Event updated */
+                        instance->io->delete_event(instance->io,
+                                                   instance->sock,
+                                                   instance->event);
+                    }
+                    instance->io->close(instance->io, instance->sock);
+                    instance->sock = INVALID_SOCKET;
+                }
+
+                if (save_errno != ECONNREFUSED) {
                     char errinfo[1024];
                     snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
                              strerror(instance->io->error));
@@ -849,11 +876,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
 
                 retry = 1;
                 instance->curr_ai = instance->curr_ai->ai_next;
-                instance->io->delete_event(instance->io,
-                                           instance->sock,
-                                           instance->event);
-                instance->io->close(instance->io, instance->sock);
-                instance->sock = INVALID_SOCKET;
+            }
 
             }
         }
