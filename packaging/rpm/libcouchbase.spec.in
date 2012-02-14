@@ -8,7 +8,7 @@ Vendor: Couchbase, Inc.
 Packager: Couchbase SDK Team <support@couchbase.com>
 License: Apache-2
 Group: System Environment/Libraries
-BuildRequires: libvbucket-devel >= 1.7.2, libevent-devel >= 1.4, cyrus-sasl-devel >= 2.0
+BuildRequires: libvbucket-devel >= 1.8.0.2, libevent-devel >= 1.4, cyrus-sasl-devel >= 2.0
 URL: https://github.com/couchbase/libcouchbase
 Source: @TARREDAS@.tar.gz
 BuildRoot: %{_topdir}/build/@TARREDAS@
@@ -19,7 +19,7 @@ This is the client and protocol library for Couchbase project.
 %package -n %{name}1
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library
-Requires: %{name}1, libvbucket1 >= 1.7.2, libevent >= 1.4, cyrus-sasl >= 2.0
+Requires: %{name}1, libvbucket1 >= 1.8.0.2, libevent >= 1.4, cyrus-sasl >= 2.0
 
 %description -n %{name}1
 This is the client and protocol library for Couchbase project.
@@ -65,6 +65,63 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Mon Feb 13 2012 Matt Ingenthron <matt@couchbase.com> - 1.0.1
+[Sergey Avseyev]
+- Port double free error to C test
+- Backport rpm fix from libvbucket
+- Do not notify user about the same error twice
+- Fix sasl_list_mech_response_handler()
+- Fix smoke test
+- Add test for SASL
+- Relocate buffers only for vbucket distribution
+- Fix relocation of the buffers after config update
+- Use alternate nodes when current is dead (CCBC-38)
+- cmd_log buffer stores protocol_binary_request_header structs
+- Handle PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET
+- Don't do output in library code
+- Check server index before using (CCBC-51)
+- Allow to build without tools which require C++ compiler
+- Fix multi-{get,touch} requests handling when nkeys > 1
+- Ignore NOOP command on server purge
+- Call libcouchbase_server_send_packets() when it needed
+- Simplify server checks in libcouchbase_mtouch_by_key
+- Ignore coredumps
+
+[Trond Norbye]
+- Disable memory debug on the java vm from make check
+- Implement operation timeouts (CCBC-20)
+- Install configuration.h for win32
+- Remove indentation for '=' to ease merging of patches
+- Refactor: typedef libcouchbase_cas_t for cas value
+- Remove duplicate make rule
+- Refactor: use libcouchbase_xxxx for the datatypes
+- Don't pass -v to SPRO CC
+- Fix warnings reported by SPRO CC with full warnings
+- Don't print out that much from the getopt-test
+- Fix the sync mode and add a unit test
+- Fix errors reported on win32
+- Release allocated resources
+- Destroy event base if we created it
+- Fix pillowfight source
+- Fix NMakefile
+- Run test cases for make check
+- Fix default port for backup nodes
+- Add --with-couchbasemock
+
+[Mark Nunberg]
+- Fixed SASL handling
+- Allow for notification on initial vbucket config
+- Fixed segfaults and memory access errors on libevent1.4
+- Finer grained error reporting for basic REST errors
+- Do not attempt SASL when SASL already in progress
+- Fix connect timeouts
+- Segfault when delete_event called on invalid socket
+- Reset stream state on new instance socket.
+- Add option for embedding libevent io options
+- better instance socket cleanup handling
+- purge_implicit_responses handling of NOOP
+- changed server tests to wait a bit on EINTR
+
 * Sun Jan 22 2012 Matt Ingenthron <matt@couchbase.com> - 1.0.0
 [Jan Lehnardt]
 - Use curl if wget isn't found to download CouchbaseMock.
