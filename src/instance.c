@@ -55,6 +55,71 @@ const char *libcouchbase_get_port(libcouchbase_t instance)
     return instance->port;
 }
 
+static void setup_current_host(libcouchbase_t instance, const char *host)
+{
+    char *ptr;
+    snprintf(instance->host, sizeof(instance->host), "%s", host);
+    if ((ptr = strchr(instance->host, ':')) == NULL) {
+        strcpy(instance->port, "8091");
+    } else {
+        *ptr = '\0';
+        snprintf(instance->port, sizeof(instance->port), "%s", ptr + 1);
+    }
+}
+
+static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
+{
+    const char *ptr = host;
+    int num = 0;
+    int ii;
+
+    while ((ptr = strchr(ptr, ';')) != NULL) {
+        ++ptr;
+        ++num;
+    }
+
+    /* Let's allocate the buffer space and copy the pointers */
+    if ((ret->backup_nodes = calloc(num + 2, sizeof(char *))) == NULL) {
+        return -1;
+    }
+
+    ptr = host;
+    ii = 0;
+    do {
+        char nm[NI_MAXHOST + NI_MAXSERV + 2];
+        const char *start = ptr;
+        ptr = strchr(ptr, ';');
+        if (ptr == NULL) {
+            /* this is the last part */
+            ret->backup_nodes[ii] = strdup(start);
+            ptr = NULL;
+        } else {
+            /* copy everything up to ';' */
+            unsigned long size = (unsigned long)ptr - (unsigned long)start;
+            if (size < sizeof(nm)) {
+                memcpy(nm, start, ptr - start);
+                *(nm + size) = '\0';
+            } else {
+                /* skipping the hostname because it's too long */
+            }
+            ++ptr;
+            ret->backup_nodes[ii] = strdup(nm);
+        }
+        if (ret->backup_nodes[ii] == NULL) {
+            do {
+                free(ret->backup_nodes[ii--]);
+            } while (ii > -1);
+            return -1;
+        }
+        ++ii;
+    } while (ptr != NULL);
+
+    ret->backup_idx = 0;
+    setup_current_host(ret, ret->backup_nodes[0]);
+
+    return 0;
+}
+
 LIBCOUCHBASE_API
 libcouchbase_t libcouchbase_create(const char *host,
                                    const char *user,
@@ -65,7 +130,6 @@ libcouchbase_t libcouchbase_create(const char *host,
     char buffer[1024];
     libcouchbase_ssize_t offset;
     libcouchbase_t ret;
-    char *p;
 
     if (io == NULL) {
         io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT,
@@ -94,12 +158,9 @@ libcouchbase_t libcouchbase_create(const char *host,
     libcouchbase_initialize_packet_handlers(ret);
     libcouchbase_behavior_set_syncmode(ret, LIBCOUCHBASE_ASYNCHRONOUS);
 
-    ret->host = strdup(host);
-    if ((p = strchr(ret->host, ':')) == NULL) {
-        ret->port = "8091";
-    } else {
-        *p = '\0';
-        ret->port = p + 1;
+    if (setup_boostrap_hosts(ret, host) == -1) {
+        free(ret);
+        return NULL;
     }
 
     offset = snprintf(buffer, sizeof(buffer),
@@ -121,7 +182,7 @@ libcouchbase_t libcouchbase_create(const char *host,
     offset += snprintf(buffer + offset, sizeof(buffer)-(libcouchbase_size_t)offset, "\r\n");
     ret->http_uri = strdup(buffer);
 
-    if (ret->host == NULL || ret->http_uri == NULL) {
+    if (ret->http_uri == NULL) {
         libcouchbase_destroy(ret);
         return NULL;
     }
@@ -145,7 +206,6 @@ LIBCOUCHBASE_API
 void libcouchbase_destroy(libcouchbase_t instance)
 {
     libcouchbase_size_t ii;
-    free(instance->host);
     free(instance->http_uri);
 
     if (instance->sock != INVALID_SOCKET) {
@@ -575,41 +635,29 @@ static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
                                               libcouchbase_error_t error,
                                               const char *reason)
 {
-    libcouchbase_size_t nn;
-    char *pp;
-    int connected;
+    int connected = 0;
 
     if (instance->backup_nodes == NULL) {
         libcouchbase_error_handler(instance, error, reason);
         return -1;
     }
-    connected = 0;
-    nn = 0;
-    while (!connected) {
-        char *oldhost = instance->host;
-        libcouchbase_error_t rc;
 
-        while (instance->backup_nodes[nn] == NULL && nn < instance->nservers) {
-            nn++;
-        }
-        if (instance->backup_nodes[nn] == NULL) {
+    ++instance->backup_idx;
+    if (instance->backup_nodes[instance->backup_idx] == NULL) {
+        --instance->backup_idx;
+        libcouchbase_error_handler(instance, error, reason);
+        return -1;
+    }
+
+    while (!connected) {
+        /* Keep on trying the nodes until all of them failed ;-) */
+        libcouchbase_error_t rc = libcouchbase_connect(instance);
+        connected = (rc == LIBCOUCHBASE_SUCCESS);
+        if (!connected && instance->backup_nodes[instance->backup_idx] == NULL) {
             libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
                                        "failed to get config. All known nodes are dead.");
             return -1;
         }
-        instance->host = strdup(instance->backup_nodes[nn]);
-        instance->backup_nodes[nn] = NULL;
-        if ((pp = strchr(instance->host, ':')) == NULL) {
-            instance->port = "8091";
-        } else {
-            *pp = '\0';
-            instance->port = pp + 1;
-        }
-        free(oldhost);
-
-        /* try to connect to next node */
-        rc = libcouchbase_connect(instance);
-        connected = (rc == LIBCOUCHBASE_SUCCESS);
     }
     return 0;
 }
@@ -781,6 +829,7 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
 
 static void libcouchbase_instance_connected(libcouchbase_t instance)
 {
+    instance->backup_idx = 0;
     instance->io->update_event(instance->io, instance->sock,
                                instance->event, LIBCOUCHBASE_RW_EVENT,
                                instance, vbucket_stream_handler);
@@ -915,14 +964,29 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_family = AF_UNSPEC;
 
-    error = getaddrinfo(instance->host, instance->port, &hints, &instance->ai);
-    if (error != 0) {
-        char errinfo[1024];
-        snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
-                 instance->host, instance->port);
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_UNKNOWN_HOST,
-                                          errinfo);
-    }
+    do {
+        setup_current_host(instance,
+                           instance->backup_nodes[instance->backup_idx]);
+        error = getaddrinfo(instance->host, instance->port,
+                            &hints, &instance->ai);
+        if (error != 0) {
+            /* Ok, we failed to look up that server.. look up the next
+             * in the list
+             */
+            instance->backup_idx++;
+            if (instance->backup_nodes[instance->backup_idx] == NULL) {
+                char errinfo[1024];
+                snprintf(errinfo, sizeof(errinfo),
+                         "Failed to look up \"%s:%s\"",
+                         instance->host, instance->port);
+                return libcouchbase_error_handler(instance,
+                                                  LIBCOUCHBASE_UNKNOWN_HOST,
+                                                  errinfo);
+            }
+            setup_current_host(instance,
+                               instance->backup_nodes[instance->backup_idx]);
+        }
+    } while (error != 0);
 
     instance->curr_ai = instance->ai;
     instance->event = instance->io->create_event(instance->io);

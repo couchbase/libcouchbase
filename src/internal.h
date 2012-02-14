@@ -99,9 +99,9 @@ extern "C" {
 
     struct libcouchbase_st {
         /** The couchbase host */
-        char *host;
+        char host[NI_MAXHOST + 1];
         /** The port of the couchbase server */
-        const char *port;
+        char port[NI_MAXSERV + 1];
 
         /** The URL request to send to the server */
         char *http_uri;
@@ -137,6 +137,8 @@ extern "C" {
 
         /** The array of last known nodes as hostname:port */
         char **backup_nodes;
+        /** The current connect index */
+        int backup_idx;
 
         /** The number of vbuckets */
         libcouchbase_uint16_t nvbuckets;

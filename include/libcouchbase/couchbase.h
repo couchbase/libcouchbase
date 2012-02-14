@@ -67,9 +67,13 @@ extern "C" {
 
 
     /**
-     * Create an instance of libcouchbase
-     * @param host The host (with optional port) to connect to retrieve the
-     *             vbucket list from
+     * Create an instance of libcouchbase.
+     *
+     * @param hosts A list of hosts:port separated by ';' to the
+     *              administration port of the couchbase cluster. (ex:
+     *              "host1;host2:9000;host3" would try to connect to
+     *              host1 on port 8091, if that fails it'll connect to
+     *              host2 on port 9000 etc).
      * @param user the username to use
      * @param passwd The password
      * @param bucket The bucket to connect to

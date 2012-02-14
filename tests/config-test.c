@@ -15,6 +15,9 @@
  *   limitations under the License.
  */
 
+#include "internal.h" /* libcouchbase_t definition */
+
+
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
@@ -22,7 +25,6 @@
 #include <stdlib.h>
 #include <event.h>
 
-#include "internal.h" /* libcouchbase_t definition */
 #include "server.h"
 #include "test.h"
 
