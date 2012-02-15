@@ -56,10 +56,42 @@
 #include <sys/time.h>
 #endif
 
-#ifndef WIN32
+#ifdef _WIN32
+/* winsock error map */
+#include <errno.h>
+#ifndef ECONNRESET
+#define ECONNRESET WSAECONNRESET
+#endif
+#ifndef EWOULDBLOCK
+#define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
+#ifndef EINVAL
+#define EINVAL WSAEINVAL
+#endif
+#ifndef EINPROGRESS
+#define EINPROGRESS WSAEINPROGRESS
+#endif
+#ifndef EALREADY
+#define EALREADY WSAEALREADY
+#endif
+#ifndef EISCONN
+#define EISCONN WSAEISCONN
+#endif
+#ifndef ENOTCONN
+#define ENOTCONN WSAENOTCONN
+#endif
+#ifndef ECONNREFUSED
+#define ECONNREFUSED WSAECONNREFUSED
+#endif
+
+typedef int ssize_t;
+#define snprintf _snprintf
+#undef strdup
+#define strdup _strdup
+#else
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
-#endif
+#endif /* _WIN32 */
 
 #ifndef HAVE_HTONLL
 #ifdef WORDS_BIGENDIAN
@@ -76,8 +108,8 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif
-#endif
+#endif /* WORDS_BIGENDIAN */
+#endif /* HAVE_HTONLL */
 
 
 #ifdef linux
@@ -88,9 +120,8 @@ extern "C" {
 #endif
 
 #ifndef HAVE_GETHRTIME
-#include <stdint.h>
 typedef uint64_t hrtime_t;
 extern hrtime_t gethrtime(void);
 #endif
 
-#endif
+#endif /* LIBCOUCHBASE_CONFIG_STATIC_H */

@@ -135,6 +135,24 @@ AC_CACHE_CHECK([for libvbucket], [ac_cv_have_libvbucket],
 AS_IF([test "x${ac_cv_have_libvbucket}" != "xyes" -o "x$ac_cv_header_libvbucket_vbucket_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate libvbucket)])
 
+dnl Check that we can use winsock2 plugin
+AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
+  [ saved_libs="$LIBS"
+    LIBS=-lws2_32
+    AC_TRY_LINK([
+      #include <winsock2.h>
+      #include <ws2tcpip.h>
+            ],[
+      DWORD error = WSAGetLastError();
+            ],[
+      ac_cv_have_winsock2="yes"
+            ], [
+      ac_cv_have_winsock2="no"
+      ])
+    LIBS="$saved_libs"
+  ])
+AM_CONDITIONAL(HAVE_WINSOCK2, [test "$ac_cv_have_winsock2" = "yes"])
+
 dnl Check that we've got a usable libevent
 AC_CACHE_CHECK([for libevent], [ac_cv_have_libevent],
   [ saved_libs="$LIBS"
@@ -150,8 +168,10 @@ AC_CACHE_CHECK([for libevent], [ac_cv_have_libevent],
       ])
     LIBS="$saved_libs"
   ])
+AM_CONDITIONAL(HAVE_LIBEVENT, [test "x${ac_cv_have_libevent}" = "xyes"])
 
-AS_IF([test "x${ac_cv_have_libevent}" != "xyes" -o "x$ac_cv_header_event_h" != "xyes"],
+dnl Fail if libevent is the only networking backend accessible
+AS_IF([test "x${ac_cv_have_winsock2}" != "xyes" -a \( "x${ac_cv_have_libevent}" != "xyes" -o "x$ac_cv_header_event_h" != "xyes" \)],
       [AC_MSG_ERROR(Failed to locate libevent)])
 
 AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
@@ -198,7 +218,7 @@ AC_CACHE_CHECK([for libsasl], [ac_cv_have_libsasl],
       #include <stdlib.h>
       #include <sasl/sasl.h>
             ],[
-      sasl_server_init(NULL, NULL);
+      sasl_client_init(NULL);
             ],[
       ac_cv_have_libsasl="yes"
             ], [
@@ -215,7 +235,7 @@ AS_IF([test "$ac_cv_have_libsasl" = no], [
         #include <stdlib.h>
         #include <sasl/sasl.h>
               ],[
-        sasl_server_init(NULL, NULL);
+        sasl_client_init(NULL);
               ],[
         ac_cv_have_libsasl2="yes"
               ], [
@@ -272,9 +292,8 @@ AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
 
 AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
 
-AC_CHECK_FUNCS_ONCE(gethrtime clock_gettime gettimeofday)
+AC_CHECK_FUNCS_ONCE(gethrtime clock_gettime gettimeofday QueryPerformanceCounter)
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
-
 
 AC_ARG_ENABLE([embed-libevent-plugin],
     [AS_HELP_STRING([--enable-embed-libevent-plugin],

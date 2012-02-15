@@ -93,7 +93,7 @@ extern "C" {
     struct  libcouchbase_tap_filter_st;
     typedef struct libcouchbase_tap_filter_st* libcouchbase_tap_filter_t;
 
-#ifdef WIN32
+#ifdef _WIN32
     typedef SOCKET libcouchbase_socket_t;
 #else
     typedef int libcouchbase_socket_t;

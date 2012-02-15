@@ -32,15 +32,16 @@
 #include <stddef.h>
 #include <time.h>
 
-#define LIBCOUCHBASE_VERSION_STRING "1.0.0"
-#define LIBCOUCHBASE_VERSION 0x010000
+#define LIBCOUCHBASE_VERSION_STRING "1.0.1"
+#define LIBCOUCHBASE_VERSION 0x010001
 #define LIBCOUCHBASE_VERSION_CHANGESET unknown
-#define PACKAGE_STRING "libcouchbase 1.8.0"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#ifdef _WIN32
+#define PACKAGE_STRING "libcouchbase 1.0.1"
     typedef __int64 libcouchbase_int64_t;
     typedef unsigned long libcouchbase_size_t;
     typedef long libcouchbase_ssize_t;
@@ -51,6 +52,18 @@ extern "C" {
     typedef unsigned __int64 libcouchbase_cas_t;
     typedef unsigned __int64 libcouchbase_uint64_t;
     typedef time_t libcouchbase_time_t;
+#else
+    typedef int64_t libcouchbase_int64_t;
+    typedef size_t libcouchbase_size_t;
+    typedef ssize_t libcouchbase_ssize_t;
+    typedef uint16_t libcouchbase_vbucket_t;
+    typedef uint8_t libcouchbase_uint8_t;
+    typedef uint16_t libcouchbase_uint16_t;
+    typedef uint32_t libcouchbase_uint32_t;
+    typedef uint64_t libcouchbase_cas_t;
+    typedef uint64_t libcouchbase_uint64_t;
+    typedef time_t libcouchbase_time_t;
+#endif
 
 #ifdef __cplusplus
 }

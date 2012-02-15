@@ -16,7 +16,7 @@
  */
 #include "config.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
 #endif
@@ -73,7 +73,7 @@ bool readIt(libcouchbase_uint8_t *ptr, libcouchbase_size_t size)
     return true;
 }
 
-#ifdef WIN32
+#ifdef _WIN32
 void setBinaryIO(void)
 {
     // Windows defaults to text mode, but we're going to read/write

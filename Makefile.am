@@ -57,7 +57,6 @@ libcouchbase_la_SOURCES = \
                         src/handler.c \
                         src/instance.c \
                         src/internal.h \
-                        src/iofactory.c \
                         src/packet.c \
                         src/remove.c \
                         src/ringbuffer.c \
@@ -86,20 +85,25 @@ libcouchbase_la_LDFLAGS= -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBAS
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 libcouchbase_la_LIBADD=-lvbucket $(LIBSASL)
 
+if HAVE_WINSOCK2
+if !HAVE_LIBEVENT
+libcouchbase_la_SOURCES += src/plugin-win32.c src/iofactory_win32.c
+libcouchbase_la_CPPFLAGS += -Iwin32
+endif
+else
+libcouchbase_la_SOURCES += src/iofactory.c
 if LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
 libcouchbase_la_SOURCES += src/plugin-libevent.c
 libcouchbase_la_LIBADD += -levent
 libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-
 else
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = src/plugin-libevent.c
 libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-
 endif
-
+endif
 
 tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"

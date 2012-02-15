@@ -20,7 +20,7 @@
 void sendIt(const libcouchbase_uint8_t *ptr, libcouchbase_size_t size);
 bool readIt(libcouchbase_uint8_t *ptr, libcouchbase_size_t size);
 
-#ifdef WIN32
+#ifdef _WIN32
 void setBinaryIO(void);
 #else
 #define setBinaryIO()
