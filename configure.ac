@@ -195,22 +195,26 @@ AM_CONDITIONAL(HAVE_LIBEVENT2, [test "x${ac_cv_have_libevent2}" = "xyes"])
 AS_IF([test "x${ac_cv_have_libevent2}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEVENT2], [1], [We have libevent2])])
 
-dnl Check if we've got libyajl
-AC_CACHE_CHECK([for libyajl], [ac_cv_have_libyajl],
+dnl Check if we've got libyajl2
+AC_CACHE_CHECK([for libyajl], [ac_cv_have_libyajl2],
   [ saved_libs="$LIBS"
     LIBS=-lyajl
     AC_TRY_LINK([
       #include <yajl/yajl_parse.h>
+      #include <yajl/yajl_tree.h>
             ],[
-      yajl_handle parser = yajl_alloc(0, 0, 0, 0);
+      yajl_handle parser = yajl_alloc(0, 0, 0);
+      yajl_val json = yajl_tree_parse(0, 0, 0);
             ],[
-      ac_cv_have_libyajl="yes"
+      ac_cv_have_libyajl2="yes"
             ], [
-      ac_cv_have_libyajl="no"
+      ac_cv_have_libyajl2="no"
       ])
     LIBS="$saved_libs"
   ])
-AM_CONDITIONAL(HAVE_LIBYAJL, [test "$ac_cv_have_libyajl" = "yes"])
+AM_CONDITIONAL(HAVE_LIBYAJL2, [test "x${ac_cv_have_libyajl2}" = "xyes"])
+AS_IF([test "x${ac_cv_have_libyajl2}" = "xyes"],
+      [AC_DEFINE([HAVE_LIBYAJL2], [1], [We have libyajl2])])
 
 AC_ARG_ENABLE([system-libsasl],
     [AS_HELP_STRING([--enable-system-libsasl],

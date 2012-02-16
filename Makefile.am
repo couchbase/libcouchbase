@@ -138,7 +138,7 @@ endif
 
 #if HAVE_LIBEVENT2
 #noinst_PROGRAMS += example/couchview
-#if HAVE_LIBYAJL
+#if HAVE_LIBYAJL2
 #noinst_PROGRAMS += example/couchview_yajl
 #endif
 #endif
@@ -216,6 +216,9 @@ tests_timeout_test_LDFLAGS = -levent
 tests_timeout_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tools_cbc_LDADD = libcouchbase.la
+if HAVE_LIBYAJL2
+tools_cbc_LDADD += -lyajl
+endif
 tools_cbc_SOURCES = tools/cbc.cc tools/cbc-receive.cc                   \
                     tools/cbc-send.cc tools/cbc-util.cc                 \
                     tools/cbc-util.h tools/commandlineparser.cc         \

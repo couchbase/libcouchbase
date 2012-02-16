@@ -33,6 +33,12 @@
 #include "configuration.h"
 #include "commandlineparser.h"
 
+#ifdef HAVE_LIBYAJL2
+#include <yajl/yajl_version.h>
+#include <yajl/yajl_parse.h>
+#include <yajl/yajl_tree.h>
+#endif
+
 using namespace std;
 
 enum cbc_command_t {
@@ -254,17 +260,40 @@ extern "C" {
     }
 }
 
-static bool cp(libcouchbase_t instance, list<string> &keys)
+static bool cp(libcouchbase_t instance, list<string> &keys, bool json)
 {
     libcouchbase_size_t currsz = 0;
     for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
         string key = *ii;
         struct stat st;
         if (stat(key.c_str(), &st) == 0) {
-            char *bytes = new char[(libcouchbase_size_t)st.st_size];
+            char *bytes = new char[(libcouchbase_size_t)st.st_size + 1];
             if (bytes != NULL) {
                 ifstream file(key.c_str(), ios::binary);
                 if (file.good() && file.read(bytes, st.st_size) && file.good()) {
+                    bytes[st.st_size] = '\0';
+#ifdef HAVE_LIBYAJL2
+                    if (json) {
+                        yajl_val obj, id;
+                        const char *path[] = {"_id", NULL};
+                        if ((obj = yajl_tree_parse(bytes, NULL, 0)) == NULL) {
+                            cerr << "Failed to parse file \"" << key << "\" as JSON." << endl;
+                            delete []bytes;
+                            return false;
+                        }
+                        id = yajl_tree_get(obj, path, yajl_t_string);
+                        if (id == NULL) {
+                            cerr << "Failed to validate file \"" << key
+                                << "\" as document (no '_id' attribute)." << endl;
+                            delete []bytes;
+                            return false;
+                        }
+                        key.assign(id->u.string);
+                        yajl_tree_free(obj);
+                    }
+#else
+                    (void)json;
+#endif
                     libcouchbase_store(instance,
                                        NULL,
                                        LIBCOUCHBASE_SET,
@@ -501,6 +530,13 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                                "Fail if the object exists"));
     }
 
+    bool json = false;
+#ifdef HAVE_LIBYAJL2
+    if (cmd == cbc_cp) {
+        getopt.addOption(new CommandLineOption('j', "json", false,
+                                               "Treat value as JSON document (take key from '_id' attribute)"));
+    }
+#endif
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -556,6 +592,19 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     default:
                         unknownOpt = true;
                     }
+                    break;
+#ifdef HAVE_LIBYAJL2
+                } else if (cmd == cbc_cp) {
+                    unknownOpt = false;
+                    switch ((*iter)->shortopt) {
+                    case 'j':
+                        json = true;
+                        break;
+                    default:
+                        unknownOpt = true;
+                    }
+                    break;
+#endif
                 }
 
                 if (unknownOpt) {
@@ -612,9 +661,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     case cbc_cp:
         if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
             loadKeys(keys);
-            success = cp(instance, keys);
+            success = cp(instance, keys, json);
         } else {
-            success = cp(instance, getopt.arguments);
+            success = cp(instance, getopt.arguments, json);
         }
         break;
     case cbc_rm:
@@ -762,6 +811,13 @@ int main(int argc, char **argv)
         cout << "cbc built from: " << PACKAGE_STRING << endl
              << "    using libcouchbase: " << libcouchbase_get_version(NULL)
              << endl;
+#ifdef HAVE_LIBYAJL2
+        int version = yajl_version();
+        cout << "    using libyajl: "
+             << version / 10000 << "."
+             << (version / 100) % 100 << "."
+             << version % 100 << endl;
+#endif
     } else {
         handleCommandLineOptions(cmd, argc, argv);
     }
