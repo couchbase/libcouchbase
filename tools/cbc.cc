@@ -512,7 +512,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                                   config.getPassword(),
                                                   config.getBucket(),
                                                   NULL);
-    if (instance == 0) {
+    if (instance == NULL) {
         cerr << "Failed to create couchbase instance" << endl;
         exit(EXIT_FAILURE);
     }
