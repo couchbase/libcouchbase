@@ -213,6 +213,7 @@ extern "C" {
 
 static bool cp(libcouchbase_t instance, list<string> &keys)
 {
+    libcouchbase_size_t currsz = 0;
     for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
         std::string key = *ii;
         struct stat st;
@@ -228,6 +229,14 @@ static bool cp(libcouchbase_t instance, list<string> &keys)
                                        bytes, (libcouchbase_size_t)st.st_size,
                                        0, 0, 0);
                     delete []bytes;
+                    currsz += (libcouchbase_size_t)st.st_size;
+
+                    // To avoid too much buffering flush at a regular
+                    // interval
+                    if (currsz > (2 * 1024 * 1024)) {
+                        libcouchbase_wait(instance);
+                        currsz = 0;
+                    }
                 } else {
                     cerr << "Failed to read file \"" << key << "\": "
                          << strerror(errno) << endl;
@@ -395,6 +404,19 @@ static bool create(libcouchbase_t instance, list<string> &keys,
     return true;
 }
 
+void loadKeys(list<string> &keys)
+{
+    char buffer[1024];
+    while (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+        int idx = strlen(buffer);
+        while (idx > 0 && isspace(buffer[idx - 1])) {
+            --idx;
+        }
+        buffer[idx] = '\0';
+        keys.push_back(buffer);
+    }
+}
+
 extern bool receive(libcouchbase_t instance, list<string> &keys);
 extern bool send(libcouchbase_t instance, list<string> &keys);
 
@@ -517,13 +539,20 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         libcouchbase_enable_timings(instance);
     }
 
+    list<string> keys;
+
     bool success;
     switch (cmd) {
     case cbc_cat:
         success = cat(instance, getopt.arguments);
         break;
     case cbc_cp:
-        success = cp(instance, getopt.arguments);
+        if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
+            loadKeys(keys);
+            success = cp(instance, keys);
+        } else {
+            success = cp(instance, getopt.arguments);
+        }
         break;
     case cbc_rm:
         success = rm(instance, getopt.arguments);
