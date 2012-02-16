@@ -41,7 +41,6 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
-#define PACKAGE_STRING "@PACKAGE_STRING@"
     typedef __int64 libcouchbase_int64_t;
     typedef unsigned long libcouchbase_size_t;
     typedef long libcouchbase_ssize_t;
