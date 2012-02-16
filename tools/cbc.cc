@@ -46,7 +46,8 @@ enum cbc_command_t {
     cbc_rm,
     cbc_stats,
     cbc_send,
-    cbc_version
+    cbc_version,
+    cbc_verify
 };
 
 extern "C" {
@@ -122,6 +123,49 @@ extern "C" {
             cerr.flush();
             cout.write(static_cast<const char*>(bytes), nbytes);
             cout.flush();
+        } else {
+            cerr << "Failed to get \"";
+            cerr.write(static_cast<const char*>(key), nkey);
+            cerr << "\": " << libcouchbase_strerror(instance, error) << endl;
+            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool*>(cookie);
+            *err = true;
+        }
+    }
+
+    static void verify_callback(libcouchbase_t instance,
+                                const void *,
+                                libcouchbase_error_t error,
+                                const void *key, libcouchbase_size_t nkey,
+                                const void *bytes, libcouchbase_size_t nbytes,
+                                libcouchbase_uint32_t, libcouchbase_cas_t)
+    {
+        if (error == LIBCOUCHBASE_SUCCESS) {
+            char fnm[FILENAME_MAX];
+            memcpy(fnm, key, nkey);
+            fnm[nkey] = '\0';
+            struct stat st;
+            if (stat(fnm, &st) == -1) {
+                cerr << "Failed to look up: \"" << fnm << "\"" << endl;
+            } else if ((libcouchbase_size_t)st.st_size != nbytes) {
+                cerr << "Incorrect size for: \"" << fnm << "\"" << endl;
+            } else {
+                char *dta = new char[(libcouchbase_size_t)st.st_size];
+                if (dta == NULL) {
+                    cerr << "Failed to allocate memory to compare: \""
+                         << fnm << "\"" << endl;
+                } else {
+                    ifstream file(fnm, ios::binary);
+                    if (file.good() && file.read(dta, st.st_size) && file.good()) {
+                        if (memcmp(dta, bytes, nbytes) != 0) {
+                            cerr << "Content differ: \"" << fnm << "\"" << endl;
+                        }
+                    } else {
+                        cerr << "Failed to read \""  << fnm << "\"" << endl;
+                    }
+                    delete []dta;
+                }
+            }
         } else {
             cerr << "Failed to get \"";
             cerr.write(static_cast<const char*>(key), nkey);
@@ -404,6 +448,12 @@ static bool create(libcouchbase_t instance, list<string> &keys,
     return true;
 }
 
+static bool verify(libcouchbase_t instance, list<string> &keys)
+{
+    (void)libcouchbase_set_get_callback(instance, verify_callback);
+    return cat(instance, keys);
+}
+
 void loadKeys(list<string> &keys)
 {
     char buffer[1024];
@@ -586,6 +636,14 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     case cbc_create:
         success = create(instance, getopt.arguments, exptime, flags, add);
         break;
+    case cbc_verify:
+        if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
+            loadKeys(keys);
+            success = verify(instance, keys);
+        } else {
+            success = verify(instance, getopt.arguments);
+        }
+        break;
     default:
         cerr << "Not implemented" << endl;
         success = false;
@@ -637,6 +695,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_flush;
     } else if (name.find("cbc-version") != string::npos) {
         return cbc_version;
+    } else if (name.find("cbc-verify") != string::npos) {
+        return cbc_verify;
     }
 
     return cbc_illegal;
@@ -673,6 +733,8 @@ int main(int argc, char **argv)
                 cmd = cbc_flush;
             } else if (strcmp(argv[1], "version") == 0) {
                 cmd = cbc_version;
+            } else if (strcmp(argv[1], "verify") == 0) {
+                cmd = cbc_verify;
             }
         } else {
             std::cerr << "Usage: cbc command [options]" << std::endl
@@ -684,6 +746,7 @@ int main(int argc, char **argv)
                       << "   stats      show stats" << std::endl
                       << "   flush      remove all keys from the cluster" << std::endl
                       << "   version    show version" << std::endl
+                      << "   verify     verify content in cache with files" << endl
                       << "Use 'cbc command --help' to show the options" << std::endl;
             exit(EXIT_FAILURE);
         }
