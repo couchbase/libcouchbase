@@ -662,7 +662,15 @@ int main(int argc, char **argv)
             }
         } else {
             std::cerr << "Usage: cbc command [options]" << std::endl
-                      << "\tcommand may be: cat, cp, create, rm, stats, flush, version" << std::endl;
+                      << "command may be:" << std::endl
+                      << "   cat        output keys to stdout" << std::endl
+                      << "   cp         store files to the cluster" << std::endl
+                      << "   create     store files with options" << std::endl
+                      << "   rm         remove keys" << std::endl
+                      << "   stats      show stats" << std::endl
+                      << "   flush      remove all keys from the cluster" << std::endl
+                      << "   version    show version" << std::endl
+                      << "Use 'cbc command --help' to show the options" << std::endl;
             exit(EXIT_FAILURE);
         }
 
