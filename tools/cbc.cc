@@ -481,6 +481,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 break;
 
             case '?':
+                getopt.usage(argv[0]);
+                exit(EXIT_SUCCESS);
+                break;
+
             default:
                 if (cmd == cbc_create) {
                     unknownOpt = false;
