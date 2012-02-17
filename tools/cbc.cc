@@ -437,6 +437,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "password for the rest port"));
     getopt.addOption(new CommandLineOption('T', "enable-timings", false,
                                            "Enable command timings"));
+    getopt.addOption(new CommandLineOption('t', "timeout", true,
+                                           "Specify timeout value"));
 
     libcouchbase_uint32_t flags = 0;
     libcouchbase_uint32_t exptime = 0;
@@ -474,6 +476,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             case 'P' :
                 config.setPassword((*iter)->argument);
+                break;
+
+            case 't' :
+                config.setTimeout((*iter)->argument);
                 break;
 
             case 'T' :
@@ -527,6 +533,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)libcouchbase_set_remove_callback(instance, remove_callback);
     (void)libcouchbase_set_stat_callback(instance, stat_callback);
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
+
+    if (config.getTimeout() != 0) {
+        libcouchbase_set_timeout(instance, config.getTimeout());
+    }
 
     libcouchbase_error_t ret = libcouchbase_connect(instance);
     if (ret != LIBCOUCHBASE_SUCCESS) {

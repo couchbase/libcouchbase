@@ -24,7 +24,7 @@
 
 using namespace std;
 
-Configuration::Configuration() : timings(false) {
+Configuration::Configuration() : timings(false), timeout(0) {
     loadCbcRc();
     setHost(getenv("COUCHBASE_CLUSTER_URI"));
     setUser(getenv("COUCHBASE_CLUSTER_USER"));
@@ -95,6 +95,18 @@ bool Configuration::isTimingsEnabled() const {
     return timings;
 }
 
+void Configuration::setTimeout(const char *t) {
+    setTimeout((uint32_t)atoi(t));
+}
+
+void Configuration::setTimeout(uint32_t t) {
+    timeout = t;
+}
+
+uint32_t Configuration::getTimeout() {
+    return timeout;
+}
+
 static string trim(const char *ptr) {
 
     // skip leading blanks
@@ -158,4 +170,5 @@ void Configuration::loadCbcRc(void) {
     setUser(tokens["user"].c_str());
     setPassword(tokens["password"].c_str());
     setBucket(tokens["bucket"].c_str());
+    setTimeout(tokens["timeout"].c_str());
 }

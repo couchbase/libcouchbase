@@ -34,6 +34,9 @@ public:
     const char *getBucket() const;
     void setTimingsEnabled(bool n);
     bool isTimingsEnabled() const;
+    void setTimeout(const char *t);
+    void setTimeout(uint32_t t);
+    uint32_t getTimeout(void);
 
 protected:
     void loadCbcRc(void);
@@ -43,6 +46,7 @@ protected:
     std::string passwd;
     std::string bucket;
     bool timings;
+    uint32_t timeout;
 };
 
 #endif
