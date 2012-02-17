@@ -105,7 +105,10 @@ AC_CHECK_HEADERS_ONCE([mach/mach_time.h memcached/protocol_binary.h
                        memcached/vbucket.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
                        ws2tcpip.h winsock2.h libvbucket/vbucket.h
-                       event.h])
+                       event.h stdint.h])
+
+AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
+      [AC_MSG_ERROR(Failed to locate stdint.h)])
 
 AS_IF([test "x$ac_cv_header_memcached_protocol_binary_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate memcached/protocol_binary.h)])
