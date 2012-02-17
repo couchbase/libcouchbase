@@ -19,6 +19,7 @@
 #define CONFIGURATION_H 1
 
 #include <string>
+#include <stdint.h>
 
 class Configuration {
 public:
