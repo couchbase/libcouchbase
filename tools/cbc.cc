@@ -259,7 +259,7 @@ static bool cp(libcouchbase_t instance, list<string> &keys)
 {
     libcouchbase_size_t currsz = 0;
     for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
-        std::string key = *ii;
+        string key = *ii;
         struct stat st;
         if (stat(key.c_str(), &st) == 0) {
             char *bytes = new char[(libcouchbase_size_t)st.st_size];
@@ -308,7 +308,7 @@ static bool rm(libcouchbase_t instance, list<string> &keys)
     }
 
     for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
-        std::string key = *ii;
+        string key = *ii;
         libcouchbase_error_t err;
         err = libcouchbase_remove(instance, NULL, key.c_str(), key.length(), 0);
         if (err != LIBCOUCHBASE_SUCCESS) {
@@ -364,7 +364,7 @@ static bool stats(libcouchbase_t instance, list<string> &keys)
         }
     } else {
         for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
-            std::string key = *ii;
+            string key = *ii;
             libcouchbase_error_t err;
             err = libcouchbase_server_stats(instance, NULL, key.c_str(), key.length());
             if (err != LIBCOUCHBASE_SUCCESS) {
@@ -737,22 +737,22 @@ int main(int argc, char **argv)
                 cmd = cbc_verify;
             }
         } else {
-            std::cerr << "Usage: cbc command [options]" << std::endl
-                      << "command may be:" << std::endl
-                      << "   cat        output keys to stdout" << std::endl
-                      << "   cp         store files to the cluster" << std::endl
-                      << "   create     store files with options" << std::endl
-                      << "   rm         remove keys" << std::endl
-                      << "   stats      show stats" << std::endl
-                      << "   flush      remove all keys from the cluster" << std::endl
-                      << "   version    show version" << std::endl
+            cerr << "Usage: cbc command [options]" << endl
+                      << "command may be:" << endl
+                      << "   cat        output keys to stdout" << endl
+                      << "   cp         store files to the cluster" << endl
+                      << "   create     store files with options" << endl
+                      << "   rm         remove keys" << endl
+                      << "   stats      show stats" << endl
+                      << "   flush      remove all keys from the cluster" << endl
+                      << "   version    show version" << endl
                       << "   verify     verify content in cache with files" << endl
-                      << "Use 'cbc command --help' to show the options" << std::endl;
+                      << "Use 'cbc command --help' to show the options" << endl;
             exit(EXIT_FAILURE);
         }
 
         if (cmd == cbc_illegal) {
-            std::cerr << "Error: Unknown command \""<< argv[1] << "\"" << std::endl;
+            cerr << "Error: Unknown command \""<< argv[1] << "\"" << endl;
             exit(EXIT_FAILURE);
         }
         --argc;
