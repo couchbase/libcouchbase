@@ -55,3 +55,36 @@ libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
     }
     return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
 }
+
+
+/**
+ * Get the servers' versions using the VERSION command.
+ *
+ */
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_server_versions(libcouchbase_t instance,
+                                                  const void *command_cookie)
+{
+    libcouchbase_server_t *server;
+    protocol_binary_request_version req;
+    libcouchbase_size_t ii;
+
+    if (instance->vbucket_config == NULL) {
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+    }
+
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_VERSION;
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.opaque = ++instance->seqno;
+
+    for (ii = 0; ii < instance->nservers; ++ii) {
+        server = instance->servers + ii;
+        libcouchbase_server_complete_packet(server, command_cookie,
+                                                 req.bytes, sizeof(req.bytes));
+        libcouchbase_server_send_packets(server);
+    }
+
+    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+}

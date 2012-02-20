@@ -29,6 +29,8 @@ libcouchbase_t session = NULL;
 const void *mock = NULL;
 struct libcouchbase_io_opt_st *io = NULL;
 libcouchbase_error_t global_error = -1;
+int total_node_count = -1;
+
 
 static void error_callback(libcouchbase_t instance,
                            libcouchbase_error_t err,
@@ -179,6 +181,37 @@ static void touch_callback(libcouchbase_t instance,
         assert(io);
         io->stop_event_loop(io);
     }
+    (void)instance;
+}
+
+static void version_callback(libcouchbase_t instance,
+                             const void *cookie,
+                             const char *server_endpoint,
+                             libcouchbase_error_t error,
+                             const char *vstring,
+                             libcouchbase_size_t nvstring)
+{
+    struct rvbuf *rv = (struct rvbuf *)cookie;
+    rv->error = error;
+    char *str;
+
+    assert(error == LIBCOUCHBASE_SUCCESS);
+
+    if (server_endpoint == NULL) {
+        assert(rv->counter == 0);
+        io->stop_event_loop(io);
+        return;
+    }
+
+    rv->counter--;
+
+    /*copy the key to an allocated buffer and ensure the key read from vstring
+     * will not segfault
+     */
+    str = malloc(nvstring);
+    memcpy(str, vstring, nvstring);
+    free(str);
+
     (void)instance;
 }
 
@@ -409,6 +442,24 @@ static void test_set3(void)
     session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = old_sasl_auth_response_handler;
 }
 
+static void test_version1(void)
+{
+    libcouchbase_error_t err;
+    struct rvbuf rv;
+
+    (void)libcouchbase_set_version_callback(session, version_callback);
+    err = libcouchbase_server_versions(session, &rv);
+
+    assert(err == LIBCOUCHBASE_SUCCESS);
+
+    rv.counter = total_node_count;
+
+    io->run_event_loop(io);
+
+    /* Ensure all version responses have been received */
+    assert(rv.counter == 0);
+}
+
 static void test_spurious_saslerr(void)
 {
     const char *key = "KEY";
@@ -446,17 +497,24 @@ static void test_spurious_saslerr(void)
 
 int main(int argc, char **argv)
 {
-    const char *args[] = {"--nodes", "5", "--buckets=default::memcache", NULL};
+    char str_node_count[16];
+    const char *args[] = {"--nodes", "",
+                           "--buckets=default::memcache", NULL};
 
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
         freopen("/dev/null", "w", stdout);
     }
+
+    total_node_count = 5;
+    snprintf(str_node_count, 16, "%d", total_node_count);
+    args[1] = str_node_count;
 
     setup((char **)args, "Administrator", "password", "default");
     test_set1();
     test_set2();
     test_get1();
     test_get2();
+    test_version1();
     teardown();
 
     args[2] = NULL;
@@ -466,6 +524,7 @@ int main(int argc, char **argv)
     test_get1();
     test_get2();
     test_touch1();
+    test_version1();
     teardown();
 
     assert(test_connect((char **)args, "Administrator", "password", "missing") == LIBCOUCHBASE_BUCKET_ENOENT);

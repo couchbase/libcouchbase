@@ -343,6 +343,31 @@ static void stat_response_handler(libcouchbase_server_t *server,
     }
 }
 
+static void version_response_handler(libcouchbase_server_t *server,
+                                     const void *command_cookie,
+                                     protocol_binary_response_header *res)
+{
+    libcouchbase_t root = server->instance;
+    libcouchbase_uint16_t status = ntohs(res->response.status);
+    libcouchbase_uint32_t nvstring = ntohl(res->response.bodylen);
+    const char *vstring;
+
+    if (nvstring) {
+       vstring = (const char *)res + sizeof(res->bytes);
+    } else {
+        vstring = NULL;
+    }
+
+    root->callbacks.version(root, command_cookie, server->authority, map_error(status),
+                            vstring, nvstring);
+
+    if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_VERSION,
+                                                res->response.opaque, server) < 0) {
+        root->callbacks.version(root, command_cookie, NULL, LIBCOUCHBASE_SUCCESS, NULL, 0);
+    }
+
+}
+
 static void tap_mutation_handler(libcouchbase_server_t *server,
                                  const void *command_cookie,
                                  protocol_binary_request_header *req)
@@ -635,6 +660,17 @@ static void dummy_stat_callback(libcouchbase_t instance,
     (void)key; (void)nkey; (void)value; (void)nvalue;
 }
 
+static void dummy_version_callback(libcouchbase_t instance,
+                                   const void *command_cookie,
+                                   const char *server_endpoint,
+                                   libcouchbase_error_t error,
+                                   const char *vstring,
+                                   libcouchbase_size_t nvstring)
+{
+    (void)instance; (void)command_cookie; (void)server_endpoint; (void)error;
+    (void)vstring; (void)nvstring;
+}
+
 static void dummy_get_callback(libcouchbase_t instance,
                                const void *cookie,
                                libcouchbase_error_t error,
@@ -736,6 +772,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.touch = dummy_touch_callback;
     instance->callbacks.error = dummy_error_callback;
     instance->callbacks.stat = dummy_stat_callback;
+    instance->callbacks.version = dummy_version_callback;
     instance->callbacks.doc_complete = dummy_doc_complete_callback;
     instance->callbacks.doc_data = dummy_doc_data_callback;
     instance->callbacks.flush = dummy_flush_callback;
@@ -766,6 +803,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->response_handler[PROTOCOL_BINARY_CMD_SASL_STEP] = sasl_step_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_TOUCH] = touch_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_STAT] = stat_response_handler;
+    instance->response_handler[PROTOCOL_BINARY_CMD_VERSION] = version_response_handler;
 }
 
 LIBCOUCHBASE_API
@@ -885,6 +923,17 @@ libcouchbase_stat_callback libcouchbase_set_stat_callback(libcouchbase_t instanc
     libcouchbase_stat_callback ret = instance->callbacks.stat;
     if (cb != NULL) {
         instance->callbacks.stat = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_version_callback libcouchbase_set_version_callback(libcouchbase_t instance,
+                                                                libcouchbase_version_callback cb)
+{
+    libcouchbase_version_callback ret = instance->callbacks.version;
+    if (cb != NULL) {
+        instance->callbacks.version = cb;
     }
     return ret;
 }

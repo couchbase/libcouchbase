@@ -330,6 +330,20 @@ extern "C" {
                                                    libcouchbase_size_t narg);
 
     /**
+     * Request server versions. The callback will be invoked with the
+     * instance, server address, version string, and version string length.
+     *
+     * When all server versions have been received, the callback is invoked
+     * with the server endpoint argument set to NULL
+     *
+     * @param instance the handle to libcouchbase
+     * @param command_cookie a cookie passed to each invocation of the callback
+     *                          from this command
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_server_versions(libcouchbase_t instance,
+                                                      const void *command_cookie);
+    /**
      * Spool a store operation to the cluster. The operation <b>may</b> be
      * sent immediately, but you won't be sure (or get the result) until you
      * run the event loop (or call libcouchbase_execute).

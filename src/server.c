@@ -208,6 +208,18 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
                                      error, NULL, 0, NULL, 0);
             }
             break;
+
+        case PROTOCOL_BINARY_CMD_VERSION:
+            root->callbacks.version(root, ct.cookie, server->authority,
+                                    error, NULL, 0);
+            if (libcouchbase_lookup_server_with_command(root,
+                                                        PROTOCOL_BINARY_CMD_VERSION,
+                                                        req.request.opaque,
+                                                        server) < 0) {
+                root->callbacks.version(root, ct.cookie, NULL, error, NULL, 0);
+            }
+            break;
+
         default:
             abort();
         }

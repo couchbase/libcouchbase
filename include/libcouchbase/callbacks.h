@@ -68,6 +68,12 @@ extern "C" {
                                                libcouchbase_size_t nkey,
                                                const void* bytes,
                                                libcouchbase_size_t nbytes);
+    typedef void (*libcouchbase_version_callback)(libcouchbase_t instance,
+                                                  const void *cookie,
+                                                  const char *server_endpoint,
+                                                  libcouchbase_error_t error,
+                                                  const char *vstring,
+                                                  libcouchbase_size_t nvstring);
     typedef void (*libcouchbase_touch_callback)(libcouchbase_t instance,
                                                 const void *cookie,
                                                 libcouchbase_error_t error,
@@ -163,6 +169,10 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_stat_callback libcouchbase_set_stat_callback(libcouchbase_t instance,
                                                               libcouchbase_stat_callback cb);
+
+    LIBCOUCHBASE_API
+    libcouchbase_version_callback libcouchbase_set_version_callback(libcouchbase_t instance,
+                                                                    libcouchbase_version_callback cb);
 
     LIBCOUCHBASE_API
     libcouchbase_touch_callback libcouchbase_set_touch_callback(libcouchbase_t,
