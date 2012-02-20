@@ -312,13 +312,13 @@ static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
      event_base_loop(((struct libevent_cookie *)iops->cookie)->base, 0);
 }
 
-static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *instance)
+static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *iops)
 {
-    if (((struct libevent_cookie *)instance->cookie)->allocated) {
-        event_base_free(((struct libevent_cookie *)instance->cookie)->base);
+    if (((struct libevent_cookie *)iops->cookie)->allocated) {
+        event_base_free(((struct libevent_cookie *)iops->cookie)->base);
     }
-    free(instance->cookie);
-    free(instance);
+    free(iops->cookie);
+    free(iops);
 }
 
 LIBCOUCHBASE_API
