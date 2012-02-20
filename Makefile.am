@@ -73,6 +73,7 @@ libcouchbase_la_SOURCES = \
                         src/utilities.c \
                         src/wait.c
 
+
 if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c
 endif
@@ -84,6 +85,14 @@ endif
 libcouchbase_la_LDFLAGS= -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 libcouchbase_la_LIBADD=-lvbucket $(LIBSASL)
+
+if LIBCOUCHBASE_ENABLE_TRACE
+libcouchbase_la_SOURCES += \
+                        src/debug.c \
+                        src/debug.h
+
+libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_DEBUG_NOCTX
+endif
 
 if HAVE_WINSOCK2
 if !HAVE_LIBEVENT

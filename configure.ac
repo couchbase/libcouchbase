@@ -308,6 +308,15 @@ AC_ARG_ENABLE([embed-libevent-plugin],
 AM_CONDITIONAL(LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED,
                [test "x${ac_cv_embed_libevent_plugin}" = "xyes"])
 
+AC_ARG_ENABLE([trace],
+    [AS_HELP_STRING([--enable-trace],
+                    [enable trace routines, mainly useful for libcouchbase development
+                    @<:@default=off@:>@])],
+    [ac_cv_enable_trace="$enableval"])
+
+AM_CONDITIONAL(LIBCOUCHBASE_ENABLE_TRACE,
+               [test "x${ac_cv_enable_trace}" = "xyes"])
+
 AH_TOP([
 #ifndef CONFIG_H
 #define CONFIG_H

@@ -32,6 +32,7 @@
 #include <sasl/sasl.h>
 
 #include "ringbuffer.h"
+#include "debug.h"
 
 /*
  * libevent2 define evutil_socket_t so that it'll automagically work
@@ -180,7 +181,9 @@ extern "C" {
             void *event;
             libcouchbase_uint32_t usec;
         } timeout;
-
+#ifdef LIBCOUCHBASE_DEBUG
+        libcouchbase_debug_st debug;
+#endif
     };
 
     /**
