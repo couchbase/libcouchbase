@@ -31,6 +31,7 @@ static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code) {
 
 typedef libcouchbase_io_opt_t* (*create_func)(struct event_base *base);
 
+#ifndef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
 static create_func get_create_func(const char *image,
                                    libcouchbase_error_t *error) {
     union my_hack {
@@ -51,6 +52,7 @@ static create_func get_create_func(const char *image,
 
     return my_create.create;
 }
+#endif
 
 LIBCOUCHBASE_API
 libcouchbase_io_opt_t* libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,

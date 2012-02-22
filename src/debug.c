@@ -142,7 +142,7 @@ void libcouchbase_logger(libcouchbase_debug_st *debugp,
     fprintf(debugp->out,
             "[%s%s%s] " /*title, prefix, reset color*/
             "%s" /*line color format*/
-            "%s:%s ", /*__func__, __LINE__*/
+            "%s:%d ", /*__func__, __LINE__*/
             title_fmt, debugp->prefix, reset_fmt,
             line_fmt,
             fn, line);
@@ -185,7 +185,7 @@ void libcouchbase_dump_packet(const void *header, libcouchbase_size_t nheader,
     protocol_binary_request_header *req = (void*)header;
 
     if (payload == NULL && nheader > sizeof(protocol_binary_request_header)) {
-        payload = header + sizeof(protocol_binary_request_header);
+        payload = (char*)header + sizeof(protocol_binary_request_header);
         npayload = nheader;
     }
 
@@ -216,13 +216,13 @@ void libcouchbase_dump_packet(const void *header, libcouchbase_size_t nheader,
 
     if (req->request.keylen) {
         fprintf(stderr, "\tKey:\n");
-        libcouchbase_hex_dump(payload + req->request.extlen,
+        libcouchbase_hex_dump((char*)payload + req->request.extlen,
                               ntohs(req->request.keylen));
     }
 
     if (req->request.bodylen) {
         fprintf(stderr, "\tBody:\n");
-        libcouchbase_hex_dump(payload + req->request.extlen + ntohs(req->request.keylen),
+        libcouchbase_hex_dump((char*)payload + req->request.extlen + ntohs(req->request.keylen),
                               ntohl(req->request.bodylen));
     }
 }
@@ -247,7 +247,8 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
     for(n = 1;n <= size; n++) {
         if (n%16 == 1) {
             /* store address for this line */
-            snprintf(addrstr, sizeof(addrstr), "%.4x",
+            snprintf(addrstr, sizeof(addrstr), "%.4lx",
+               (unsigned long)
                ((libcouchbase_size_t)p-(libcouchbase_size_t)data) );
         }
 
@@ -294,7 +295,7 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
         opcode_match(base) opcode_match(base ## Q)
 
 /* I'm sure i've left out some commands here */
-const char* libcouchbase_stropcode(uint8_t opcode)
+const char* libcouchbase_stropcode(libcouchbase_uint8_t opcode)
 {
     switch(opcode){
     opcode_matchq2(SET)
@@ -343,7 +344,7 @@ const char* libcouchbase_stropcode(uint8_t opcode)
         case PROTOCOL_BINARY_RESPONSE_ ## base: { \
             return #base; break; \
         }
-const char* libcouchbase_strstatus(uint16_t status)
+const char* libcouchbase_strstatus(libcouchbase_uint16_t status)
 {
     switch (status) {
     status_match(SUCCESS)
@@ -367,7 +368,7 @@ const char* libcouchbase_strstatus(uint16_t status)
 
 #undef status_match
 
-const char *libcouchbase_strmagic(uint8_t magic)
+const char *libcouchbase_strmagic(libcouchbase_uint8_t magic)
 {
     if (magic == PROTOCOL_BINARY_REQ) {
         return "REQ";
@@ -386,14 +387,12 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
     libcouchbase_size_t ret;
     protocol_binary_request_header *req;
     protocol_binary_response_header *res;
-    char *dstp = dst;
-    char *valuestr = NULL;
 
     /* Dynamic pointers */
     const char *vbstatus_title, *vbstatus_value, *opstr, *magicstr;
 
     /* Memory for our sprintf("%x") stuff */
-    char a_vbstatus_title[16], a_vbstatus_value[16], a_opstr[16], a_magicstr[16];
+    char a_vbstatus_value[16], a_opstr[16], a_magicstr[16];
 
     if (nbytes < sizeof(protocol_binary_request_header)) {
         return 0;
@@ -431,14 +430,15 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
                    "OP=%s "
                    "%s=%s "
                    "KLEN=%d EXTLEN=%x "
-                   "NBODY=%lu "
-                   "OPAQUE=%0lx CAS=%0llx",
+                   "NBODY=%" PRIu32 " "
+                   "OPAQUE=%0" PRIx32 " CAS=%0" PRIx64,
                    magicstr,
                    opstr,
                    vbstatus_title, vbstatus_value,
                    ntohs(req->request.keylen), req->request.extlen,
-                   (unsigned long)ntohl(req->request.bodylen),
-                   req->request.opaque, req->request.cas);
+                   (libcouchbase_uint32_t)ntohl(req->request.bodylen),
+                   (libcouchbase_uint32_t)req->request.opaque,
+                   (libcouchbase_uint64_t)req->request.cas);
 
     return ret;
 }

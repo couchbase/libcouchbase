@@ -120,17 +120,17 @@ typedef struct {
  * Returns a string representation of the requested opcode, or NULL if
  * not found
  */
-const char *libcouchbase_stropcode(uint8_t opcode);
+const char *libcouchbase_stropcode(libcouchbase_uint8_t opcode);
 
 /**
  * Returns the string representation of a packet's  'magic' field, or NULL
  */
-const char *libcouchbase_strmagic(uint8_t magic);
+const char *libcouchbase_strmagic(libcouchbase_uint8_t magic);
 
 /**
  * returns a string representation of the packet's response status, or NULL
  */
-const char *libcouchbase_strstatus(uint16_t status);
+const char *libcouchbase_strstatus(libcouchbase_uint16_t status);
 
 
 /**
