@@ -28,8 +28,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <cerrno>
+#include <cstdlib>
 #include <libcouchbase/couchbase.h>
-
 #include "configuration.h"
 #include "commandlineparser.h"
 
