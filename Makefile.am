@@ -73,6 +73,9 @@ libcouchbase_la_SOURCES = \
                         src/utilities.c \
                         src/wait.c
 
+if !HAVE_SYSTEM_LIBSASL
+libcouchbase_la_SOURCES += src/isasl.c src/isasl.h
+endif
 
 if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c

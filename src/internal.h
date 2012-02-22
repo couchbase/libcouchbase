@@ -29,7 +29,11 @@
 #include <memcached/protocol_binary.h>
 #include <libvbucket/vbucket.h>
 #include <libcouchbase/couchbase.h>
+#ifdef HAVE_SYSTEM_LIBSASL
 #include <sasl/sasl.h>
+#else
+#include "isasl.h"
+#endif
 
 #include "ringbuffer.h"
 #include "debug.h"

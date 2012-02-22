@@ -35,7 +35,7 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\remove.c src\ringbuffer.c src\server.c src\stats.c \
     src\store.c src\strerror.c src\synchandler.c src\tap.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
-    src\wait.c src\gethrtime.c src\plugin-win32.c
+    src\wait.c src\gethrtime.c src\plugin-win32.c src\isasl.c
 
 # Unfortunately nmake is a bit limited in its substitute functions.
 # Work around that by using dobj to represent debug object files ;)
@@ -86,14 +86,12 @@ libcouchbase.dll: $(libcouchbase_la_OBJECTS)
 	$(LD) $(LDFLAGS) $(DLLLDFLAGS) /out:libcouchbase.dll \
           $(libcouchbase_la_OBJECTS) \
           libvbucket.lib \
-          libsasl.lib \
           ws2_32.lib
 
 libcouchbase_debug.dll: $(libcouchbase_la_debug_OBJECTS)
 	$(LD) $(LDFLAGS)  $(DLLLDFLAGS) /out:libcouchbase_debug.dll \
           $(libcouchbase_la_debug_OBJECTS) \
           libvbucket_debug.lib \
-          libsasl_debug.lib \
           ws2_32.lib
 
 tests\base64-test.exe: $(tests_base64_test_OBJECTS)
