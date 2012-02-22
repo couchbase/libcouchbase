@@ -519,21 +519,20 @@ static void server_connect(libcouchbase_server_t *server) {
             case EALREADY: /* Subsequent calls to connect */
                 return ;
 
-            default:
-                if (errno == ECONNREFUSED) {
-                    retry = 1;
-                    server->curr_ai = server->curr_ai->ai_next;
-                } else {
-                    libcouchbase_failout_server(server,
-                                                LIBCOUCHBASE_CONNECT_ERROR);
-                    return ;
-                }
-
+            case ECONNREFUSED:
+            case EINVAL:
+                retry = 1;
+                server->curr_ai = server->curr_ai->ai_next;
                 server->instance->io->delete_event(server->instance->io,
                                                    server->sock,
                                                    server->event);
                 server->instance->io->close(server->instance->io, server->sock);
                 server->sock = INVALID_SOCKET;
+                break;
+
+            default:
+                libcouchbase_failout_server(server, LIBCOUCHBASE_CONNECT_ERROR);
+                return;
             }
         }
     } while (retry);

@@ -919,7 +919,18 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                     instance->sock = INVALID_SOCKET;
                 }
 
-                if (save_errno != ECONNREFUSED) {
+                switch(save_errno) {
+                /* Here we handle 'medium-type' errors which are not a hard
+                 * failure, but mean that we need to retry the connect() with
+                 * different parameters.
+                 */
+                case ECONNREFUSED:
+                case EINVAL:
+                    retry = 1;
+                    instance->curr_ai = instance->curr_ai->ai_next;
+                    break;
+
+                default: {
                     char errinfo[1024];
                     snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
                              strerror(instance->io->error));
@@ -928,9 +939,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                                                   errinfo);
                     return ;
                 }
-
-                retry = 1;
-                instance->curr_ai = instance->curr_ai->ai_next;
+                }
             }
 
             }
