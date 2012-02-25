@@ -63,6 +63,19 @@ extern "C" {
                                      const void *command_cookie,
                                      protocol_binary_response_header *res);
 
+    /**
+     * Define constants for connection attemptts
+     */
+    typedef enum {
+        LIBCOUCHBASE_CONNECT_OK = 0,
+        LIBCOUCHBASE_CONNECT_EINPROGRESS,
+        LIBCOUCHBASE_CONNECT_EALREADY,
+        LIBCOUCHBASE_CONNECT_EISCONN,
+        LIBCOUCHBASE_CONNECT_EINTR,
+        LIBCOUCHBASE_CONNECT_EFAIL,
+        LIBCOUCHBASE_CONNECT_EUNHANDLED,
+    } libcouchbase_connect_status_t;
+
     typedef struct {
         char *data;
         libcouchbase_size_t size;
@@ -367,6 +380,20 @@ extern "C" {
                                                      libcouchbase_error_t error);
 
     void libcouchbase_maybe_breakout(libcouchbase_t instance);
+
+    libcouchbase_connect_status_t libcouchbase_connect_status(int err);
+
+    void libcouchbase_sockconn_errinfo(int connerr,
+                                            const char *hostname,
+                                            const char *port,
+                                            const struct addrinfo *root_ai,
+                                            char *buf,
+                                            libcouchbase_size_t nbuf,
+                                            libcouchbase_error_t *uerr);
+
+    evutil_socket_t libcouchbase_gai2sock(libcouchbase_t instance,
+                                             struct addrinfo **curr_ai,
+                                             int *connerr);
 
 #ifdef __cplusplus
 }

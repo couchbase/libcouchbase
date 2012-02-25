@@ -842,20 +842,14 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
     libcouchbase_t instance = arg;
     int retry;
     int first_try = (sock == INVALID_SOCKET);
-
+    libcouchbase_connect_status_t connstatus = LIBCOUCHBASE_CONNECT_OK;
+    int save_errno;
     do {
         if (instance->sock == INVALID_SOCKET) {
             /* Try to get a socket.. */
-            while (instance->curr_ai != NULL) {
-                instance->sock = instance->io->socket(instance->io,
-                                                      instance->curr_ai->ai_family,
-                                                      instance->curr_ai->ai_socktype,
-                                                      instance->curr_ai->ai_protocol);
-                if (instance->sock != INVALID_SOCKET) {
-                    break;
-                }
-                instance->curr_ai = instance->curr_ai->ai_next;
-            }
+            instance->sock = libcouchbase_gai2sock(instance,
+                                                      &instance->curr_ai,
+                                                      &save_errno);
 
             /* Reset the stream state, we run this only during a new socket. */
             libcouchbase_instance_reset_stream_state(instance);
@@ -863,17 +857,23 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
 
         if (instance->curr_ai == NULL) {
             char errinfo[1024];
-            snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
-                     instance->host, instance->port);
+            libcouchbase_error_t our_errno;
+            libcouchbase_sockconn_errinfo(save_errno,
+                                          instance->host,
+                                          instance->port,
+                                          instance->ai,
+                                          errinfo,
+                                          sizeof(errinfo),
+                                          &our_errno);
+
             if (first_try && instance->sock != INVALID_SOCKET) {
                 /* Ensure our connerr function doesn't try to delete a
                  * nonexistent event */
                 instance->io->close(instance->io, instance->sock);
                 instance->sock = INVALID_SOCKET;
             }
-            libcouchbase_instance_connerr(instance,
-                                          LIBCOUCHBASE_NETWORK_ERROR,
-                                          errinfo);
+
+            libcouchbase_instance_connerr(instance, our_errno, errinfo);
             return ;
         }
 
@@ -885,15 +885,17 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
             libcouchbase_instance_connected(instance);
             return ;
         } else {
-            switch (instance->io->error) {
-            case EINTR:
+            save_errno = instance->io->error;
+            connstatus = libcouchbase_connect_status(save_errno);
+
+            switch (connstatus) {
+            case LIBCOUCHBASE_CONNECT_EINTR:
                 retry = 1;
                 break;
-            case EISCONN:
+            case LIBCOUCHBASE_CONNECT_EISCONN:
                 libcouchbase_instance_connected(instance);
                 return ;
-            case EWOULDBLOCK:
-            case EINPROGRESS: /* First call to connect */
+            case LIBCOUCHBASE_CONNECT_EINPROGRESS:
                 instance->io->update_event(instance->io,
                                            instance->sock,
                                            instance->event,
@@ -901,13 +903,11 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                                            instance,
                                            libcouchbase_instance_connect_handler);
                 return ;
-            case EALREADY: /* Subsequent calls to connect */
+            case LIBCOUCHBASE_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return ;
 
             default: {
                 /* Save errno because of possible subsequent errors */
-                int save_errno = instance->io->error;
-
                 if (instance->sock != INVALID_SOCKET) {
                     if (!first_try) {
                         /* Event updated */
@@ -918,27 +918,23 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                     instance->io->close(instance->io, instance->sock);
                     instance->sock = INVALID_SOCKET;
                 }
-
-                switch(save_errno) {
-                /* Here we handle 'medium-type' errors which are not a hard
-                 * failure, but mean that we need to retry the connect() with
-                 * different parameters.
-                 */
-                case ECONNREFUSED:
-                case EINVAL:
+                if (connstatus == LIBCOUCHBASE_CONNECT_EFAIL &&
+                        instance->curr_ai->ai_next) {
+                    /* Here we handle 'medium-type' errors which are not a hard
+                     * failure, but mean that we need to retry the connect() with
+                     * different parameters.
+                     */
                     retry = 1;
                     instance->curr_ai = instance->curr_ai->ai_next;
                     break;
-
-                default: {
+                } else {
                     char errinfo[1024];
                     snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
                              strerror(instance->io->error));
                     libcouchbase_instance_connerr(instance,
-                                                  LIBCOUCHBASE_NETWORK_ERROR,
+                                                  LIBCOUCHBASE_CONNECT_ERROR,
                                                   errinfo);
                     return ;
-                }
                 }
             }
 

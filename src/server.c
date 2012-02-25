@@ -470,22 +470,19 @@ static void server_connect_handler(libcouchbase_socket_t sock, short which, void
 
 static void server_connect(libcouchbase_server_t *server) {
     int retry;
+    int save_errno;
+
     do {
         if (server->sock == INVALID_SOCKET) {
             /* Try to get a socket.. */
-            while (server->curr_ai != NULL) {
-                server->sock = server->instance->io->socket(server->instance->io,
-                                                            server->curr_ai->ai_family,
-                                                            server->curr_ai->ai_socktype,
-                                                            server->curr_ai->ai_protocol);
-                if (server->sock != INVALID_SOCKET) {
-                    break;
-                }
-                server->curr_ai = server->curr_ai->ai_next;
-            }
+            server->sock = libcouchbase_gai2sock(server->instance,
+                                                    &server->curr_ai,
+                                                    &save_errno);
         }
 
         if (server->curr_ai == NULL) {
+            /*TODO: Maybe check save_errno now? */
+
             /* this means we're not going to retry!! add an error here! */
             libcouchbase_failout_server(server, LIBCOUCHBASE_CONNECT_ERROR);
             return ;
@@ -500,15 +497,16 @@ static void server_connect(libcouchbase_server_t *server) {
             socket_connected(server);
             return ;
         } else {
-            switch (server->instance->io->error) {
-            case EINTR:
+            libcouchbase_connect_status_t connstatus =
+                    libcouchbase_connect_status(server->instance->io->error);
+            switch (connstatus) {
+            case LIBCOUCHBASE_CONNECT_EINTR:
                 retry = 1;
                 break;
-            case EISCONN:
+            case LIBCOUCHBASE_CONNECT_EISCONN:
                 socket_connected(server);
                 return ;
-            case EWOULDBLOCK:
-            case EINPROGRESS: /* First call to connect */
+            case LIBCOUCHBASE_CONNECT_EINPROGRESS: /*first call to connect*/
                 server->instance->io->update_event(server->instance->io,
                                                    server->sock,
                                                    server->event,
@@ -516,19 +514,20 @@ static void server_connect(libcouchbase_server_t *server) {
                                                    server,
                                                    server_connect_handler);
                 return ;
-            case EALREADY: /* Subsequent calls to connect */
+            case LIBCOUCHBASE_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return ;
 
-            case ECONNREFUSED:
-            case EINVAL:
-                retry = 1;
-                server->curr_ai = server->curr_ai->ai_next;
-                server->instance->io->delete_event(server->instance->io,
-                                                   server->sock,
-                                                   server->event);
-                server->instance->io->close(server->instance->io, server->sock);
-                server->sock = INVALID_SOCKET;
-                break;
+            case LIBCOUCHBASE_CONNECT_EFAIL:
+                if (server->curr_ai->ai_next) {
+                    retry = 1;
+                    server->curr_ai = server->curr_ai->ai_next;
+                    server->instance->io->delete_event(server->instance->io,
+                            server->sock,
+                            server->event);
+                    server->instance->io->close(server->instance->io, server->sock);
+                    server->sock = INVALID_SOCKET;
+                    break;
+                } /* Else, we fallthrough */
 
             default:
                 libcouchbase_failout_server(server, LIBCOUCHBASE_CONNECT_ERROR);
