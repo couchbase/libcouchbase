@@ -34,7 +34,7 @@ Development files for the Couchbase Client & Protocol Library
 
 %prep
 %setup -q -n @TARREDAS@
-%configure --disable-couchbasemock --with-memcached-headers-url=https://raw.github.com/membase/memcached/engine/include/memcached
+%configure --disable-couchbasemock
 
 %build
 %{__make} %{_smp_mflags}

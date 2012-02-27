@@ -73,22 +73,6 @@ AS_IF([test "x${WGET}" != "xno"],
 
 AC_SUBST(DOWNLOAD)
 
-dnl Enable to specify external source for memcached headers. For example:
-dnl https://raw.github.com/memcached/memcached/engine-pu/include/memcached/
-AC_ARG_WITH([memcached-headers-url],
-    [AC_HELP_STRING([--with-memcached-headers-url], [Download protocol_binary.h from given location.])],
-    [
-        AS_IF([test "x${DOWNLOAD}" != "xno"],
-              [
-                    mkdir -p include/memcached && \
-                    ${DOWNLOAD} include/memcached/protocol_binary.h ${withval}/protocol_binary.h  && \
-                    ${DOWNLOAD} include/memcached/vbucket.h ${withval}/vbucket.h
-                    CFLAGS="${CFLAGS} -Iinclude"
-              ],
-              [AC_MSG_ERROR([You need wget or curl in path to download the headers.])])
-    ]
-)
-
 AC_ARG_WITH([couchbasemock],
     [AC_HELP_STRING([--with-couchbasemock], [Use the specified file as the test mock server])],
     [
@@ -101,20 +85,13 @@ AC_ARG_WITH([couchbasemock],
     ]
 )
 
-AC_CHECK_HEADERS_ONCE([mach/mach_time.h memcached/protocol_binary.h
-                       memcached/vbucket.h sys/socket.h sys/time.h
+AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
                        ws2tcpip.h winsock2.h libvbucket/vbucket.h
                        event.h stdint.h])
 
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
-
-AS_IF([test "x$ac_cv_header_memcached_protocol_binary_h" != "xyes"],
-      [AC_MSG_ERROR(Failed to locate memcached/protocol_binary.h)])
-
-AS_IF([test "x$ac_cv_header_memcached_vbucket_h" != "xyes"],
-      [AC_MSG_ERROR(Failed to locate memcached/vbucket.h)])
 
 AS_IF([test "x$ac_cv_header_libvbucket_vbucket_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate libvbucket/vbucket.h)])

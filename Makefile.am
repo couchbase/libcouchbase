@@ -45,6 +45,8 @@ pkginclude_HEADERS = \
                      include/libcouchbase/winsock_io_opts.h
 
 libcouchbase_la_SOURCES = \
+                        include/memcached/protocol_binary.h \
+                        include/memcached/vbucket.h \
                         src/arithmetic.c \
                         src/base64.c \
                         src/behavior.c \
