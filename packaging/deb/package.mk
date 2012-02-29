@@ -45,7 +45,7 @@ DEB_VERSION=$(shell echo $(VERSION) | sed "s/_\([0-9]\+\)_g\([0-9a-z]\+\)/+\1~\2
 dist-deb: dist
 	rm -rf $(DEB_WORKSPACE)
 	mkdir -p $(DEB_DIR)
-	cp -r packaging/debian $(DEB_DIR)
+	cp -r packaging/deb $(DEB_DIR)/debian
 	cp $(PACKAGE)-$(VERSION).tar.gz $(DEB_WORKSPACE)/$(PACKAGE)_$(DEB_VERSION).orig.tar.gz
 	(cd $(DEB_WORKSPACE); tar zxvf $(PACKAGE)_$(DEB_VERSION).orig.tar.gz)
 	(cd $(DEB_DIR); \
