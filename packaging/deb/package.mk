@@ -50,6 +50,6 @@ dist-deb: dist
 	(cd $(DEB_WORKSPACE); tar zxvf $(PACKAGE)_$(DEB_VERSION).orig.tar.gz)
 	(cd $(DEB_DIR); \
 	dch --no-auto-nmu --newversion "$(DEB_VERSION)-1" "Released debian package for version $(DEB_VERSION)" && \
-	dpkg-buildpackage -uc -us -rfakeroot)
+	dpkg-buildpackage -rfakeroot ${DEB_FLAGS})
 	mv $(DEB_WORKSPACE)/*.{changes,deb,dsc,tar.gz} `pwd`
 	rm -rf $(DEB_WORKSPACE)
