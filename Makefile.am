@@ -250,4 +250,25 @@ EXTRA_DIST = \
              tests/start_mock.sh \
              win32
 
+reformat:
+	astyle --mode=c \
+               --quiet \
+               --style=1tbs \
+               --indent=spaces=4 \
+               --indent-namespaces \
+               --indent-col1-comments \
+               --max-instatement-indent=78 \
+               --pad-oper \
+               --pad-header \
+               --add-brackets \
+               --align-pointer=name \
+               --align-reference=name \
+               $(top_srcdir)/include/libcouchbase/*.[ch] \
+               $(top_srcdir)/src/*.[ch] \
+               $(top_srcdir)/example/*.cc  \
+               $(top_srcdir)/example/*.[ch]  \
+               $(top_srcdir)/tools/*.cc \
+               $(top_srcdir)/tools/*.h \
+               $(top_srcdir)/win32/*.[ch]
+
 sinclude packaging/*/package.mk

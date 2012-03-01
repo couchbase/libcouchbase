@@ -8,6 +8,7 @@
 *.l[ao]
 *.lib
 *.obj
+*.orig
 *~
 ._*
 .deps/
