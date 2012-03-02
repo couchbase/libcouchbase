@@ -439,7 +439,7 @@ static void test_spurious_saslerr(void)
             errinfo = "Weird key size";
         }
         if (errinfo) {
-            err_exit(errinfo);
+            err_exit("%s", errinfo);
         }
     }
 }
