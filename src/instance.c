@@ -296,7 +296,7 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
     return SASL_OK;
 }
 
-static void apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE config)
+void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE config)
 {
     libcouchbase_uint16_t ii, max;
     libcouchbase_size_t num;
@@ -437,7 +437,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
             VBUCKET_DISTRIBUTION_TYPE dist_t = vbucket_config_get_distribution_type(next_config);
             nservers = instance->nservers;
             servers = instance->servers;
-            apply_vbucket_config(instance, next_config);
+            libcouchbase_apply_vbucket_config(instance, next_config);
             for (ii = 0; ii < nservers; ++ii) {
                 ss = servers + ii;
                 if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
@@ -470,7 +470,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
     } else {
         assert(instance->servers == NULL);
         assert(instance->nservers == 0);
-        apply_vbucket_config(instance, next_config);
+        libcouchbase_apply_vbucket_config(instance, next_config);
 
         /* Notify anyone interested in this event... */
         if (instance->vbucket_state_listener != NULL) {

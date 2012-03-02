@@ -35,6 +35,7 @@ endif
 pkginclude_HEADERS = \
                      include/libcouchbase/behavior.h \
                      include/libcouchbase/callbacks.h \
+                     include/libcouchbase/compat.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
                      include/libcouchbase/libevent_io_opts.h \
@@ -50,6 +51,7 @@ libcouchbase_la_SOURCES = \
                         src/arithmetic.c \
                         src/base64.c \
                         src/behavior.c \
+                        src/compat.c \
                         src/config_static.h \
                         src/cookie.c \
                         src/error.c \
@@ -154,6 +156,7 @@ endif
 #example_couchview_yajl_LDFLAGS = -levent -lyajl
 
 check_PROGRAMS = tests/base64-test \
+                 tests/memcached_compat-test \
                  tests/ringbuffer-test \
                  tests/strerror-test
 
@@ -180,6 +183,9 @@ tests_getopt_test_SOURCES = tests/getopt-test.cc
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_LDADD = libcouchbase.la libmockserver.la
 tests_config_test_LDFLAGS = -levent -lvbucket
+
+tests_memcached_compat_test_SOURCES = tests/memcached_compat-test.c
+tests_memcached_compat_test_LDADD = libcouchbase.la
 
 tests_ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
 

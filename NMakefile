@@ -25,7 +25,8 @@ RM = del
 
 lib_LTLIBRARIES = libcouchbase.dll libcouchbase_debug.dll
 check_PROGRAMS = tests\base64-test.exe tests\getopt-test.exe \
-      tests\ringbuffer-test.exe tests\strerror-test.exe
+      tests\ringbuffer-test.exe tests\strerror-test.exe \
+      tests\memcached-compat-test.exe
 bin_PROGRAMS = tools\cbc.exe
 example_PROGRAMS = example\pillowfight.exe
 
@@ -35,7 +36,8 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\remove.c src\ringbuffer.c src\server.c src\stats.c \
     src\store.c src\strerror.c src\synchandler.c src\tap.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
-    src\wait.c src\gethrtime.c src\plugin-win32.c src\isasl.c
+    src\wait.c src\gethrtime.c src\plugin-win32.c src\isasl.c \
+    src\compat.c
 
 # Unfortunately nmake is a bit limited in its substitute functions.
 # Work around that by using dobj to represent debug object files ;)
@@ -55,6 +57,9 @@ tests_ringbuffer_test_OBJECTS = $(tests_ringbuffer_test_SOURCES:.c=.dobj)
 
 tests_strerror_test_SOURCES = tests\strerror-test.c
 tests_strerror_test_OBJECTS = $(tests_strerror_test_SOURCES:.c=.dobj)
+
+tests_memcached_compat_test_SOURCES = tests\memcached_compat.c
+tests_memcached_compat_test_OBJECTS = $(tests_strerror_test_SOURCES:.c=.dobj)
 
 tools_cbc_CXX_SOURCES = tools\cbc.cc tools\cbc-receive.cc tools\cbc-send.cc \
      tools\cbc-util.cc tools\commandlineparser.cc tools\configuration.cc
@@ -105,6 +110,9 @@ tests\ringbuffer-test.exe: $(tests_ringbuffer_test_OBJECTS)
 
 tests\strerror-test.exe: $(tests_strerror_test_OBJECTS) libcouchbase_debug.dll
 	$(LD) $(LDFLAGS) -out:tests\strerror-test.exe $(tests_strerror_test_OBJECTS) libcouchbase_debug.lib
+
+tests\memcached-compat-test.exe: $(tests_memcached_compat_test_OBJECTS) libcouchbase_debug.dll
+	$(LD) $(LDFLAGS) -out:tests\memcached-compat-test.exe $(tests_memcached_compat_test_OBJECTS) libcouchbase_debug.lib
 
 tools\cbc.exe: $(tools_cbc_OBJECTS) libcouchbase.dll
 	$(LD) $(LDFLAGS) -out:tools\cbc.exe $(tools_cbc_OBJECTS) \
