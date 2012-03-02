@@ -35,13 +35,14 @@ libcouchbase_error_t libcouchbase_create_compat(libcouchbase_cluster_t type,
                                                 struct libcouchbase_io_opt_st *io)
 {
     libcouchbase_error_t ret = LIBCOUCHBASE_NOT_SUPPORTED;
+    VBUCKET_CONFIG_HANDLE config;
 
     *instance = libcouchbase_create(NULL, NULL, NULL, NULL, io);
     if (*instance == NULL) {
         return LIBCOUCHBASE_ENOMEM;
     }
 
-    VBUCKET_CONFIG_HANDLE config = vbucket_config_create();
+    config = vbucket_config_create();
     if (config == NULL) {
         libcouchbase_destroy(*instance);
         *instance = NULL;
