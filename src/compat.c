@@ -152,7 +152,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
 
     /* Now let's parse the config! */
     fail = vbucket_config_parse(vbconfig, LIBVBUCKET_SOURCE_MEMORY,
-                                (char*)libcouchbase_ringbuffer_get_read_head(&buffer));
+                                (char *)libcouchbase_ringbuffer_get_read_head(&buffer));
     free(copy);
     libcouchbase_ringbuffer_destruct(&buffer);
 

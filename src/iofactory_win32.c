@@ -18,7 +18,8 @@
 #include "internal.h"
 #include <libcouchbase/winsock_io_opts.h>
 
-static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code) {
+static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code)
+{
     if (error != NULL) {
         *error = code;
     }
@@ -26,7 +27,7 @@ static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code) {
 
 
 LIBCOUCHBASE_API
-libcouchbase_io_opt_t* libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
+libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
                                                   void *cookie,
                                                   libcouchbase_error_t *error)
 {

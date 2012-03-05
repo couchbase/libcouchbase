@@ -21,8 +21,7 @@
 #include <event2/http_struct.h>
 
 /* The internal context for libevent HTTP client callbacks */
-struct view_context_st
-{
+struct view_context_st {
     libcouchbase_t instance;
     char *uri;                  /* verified view URI */
     const void *cookie;         /* opaque command cookie */

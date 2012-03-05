@@ -52,7 +52,8 @@ int sasl_client_new(const char *service,
     return SASL_OK;
 }
 
-void sasl_dispose(sasl_conn_t **pconn) {
+void sasl_dispose(sasl_conn_t **pconn)
+{
     free((*pconn)->userdata);
     free(*pconn);
     *pconn = NULL;
@@ -62,8 +63,9 @@ int sasl_client_start(sasl_conn_t *conn,
                       const char *mechlist,
                       void **prompt_need,
                       const char **clientout,
-                      unsigned int*clientoutlen,
-                      const char **mech) {
+                      unsigned int *clientoutlen,
+                      const char **mech)
+{
     const char *usernm = NULL;
     unsigned int usernmlen;
     int i = 0;
@@ -81,7 +83,7 @@ int sasl_client_start(sasl_conn_t *conn,
         if (conn->callbacks[i].id == SASL_CB_USER) {
             int r;
             union {
-                int (*get)(void*, int, const char **, unsigned int*);
+                int (*get)(void *, int, const char **, unsigned int *);
                 int (*proc)(void);
             } hack;
 
@@ -150,7 +152,12 @@ void sasl_done(void)
 int sasl_client_step(sasl_conn_t *a, const void *b, unsigned int c,
                      void *d, const void *e, void *f)
 {
-    (void)a;(void)b;(void)c;(void)d;(void)e;(void)f;
+    (void)a;
+    (void)b;
+    (void)c;
+    (void)d;
+    (void)e;
+    (void)f;
     return SASL_ERROR;
 }
 

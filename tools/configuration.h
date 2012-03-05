@@ -21,7 +21,8 @@
 #include "config.h"
 #include <string>
 
-class Configuration {
+class Configuration
+{
 public:
     Configuration();
     ~Configuration();

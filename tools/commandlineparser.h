@@ -42,12 +42,13 @@ public:
     char *argument;
 };
 
-class Getopt {
+class Getopt
+{
 public:
-    Getopt &addOption(CommandLineOption* option);
+    Getopt &addOption(CommandLineOption *option);
     bool parse(int argc, char **argv);
     void usage(const char *name) const;
-    std::vector<CommandLineOption*> options;
+    std::vector<CommandLineOption *> options;
     std::list<std::string> arguments;
 };
 

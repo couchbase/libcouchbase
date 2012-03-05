@@ -24,54 +24,54 @@
 extern "C" {
 #endif
 
-typedef struct {
-    unsigned long len;
-    unsigned char data[1];
-} sasl_secret_t;
+    typedef struct {
+        unsigned long len;
+        unsigned char data[1];
+    } sasl_secret_t;
 
-typedef struct {
-    unsigned long id;
-    int (*proc)(void);
-    void *context;
-} sasl_callback_t;
+    typedef struct {
+        unsigned long id;
+        int (*proc)(void);
+        void *context;
+    } sasl_callback_t;
 
-/* define the different callback id's we support */
+    /* define the different callback id's we support */
 #define SASL_CB_USER 1
 #define SASL_CB_AUTHNAME 2
 #define SASL_CB_PASS 3
 #define SASL_CB_LIST_END 4
 
-/* Define the error codes we support */
+    /* Define the error codes we support */
 #define SASL_OK 1
 #define SASL_CONTINUE 2
 #define SASL_ERROR 3
 #define SASL_BADPARAM 4
 
-typedef struct sasl_conn sasl_conn_t;
+    typedef struct sasl_conn sasl_conn_t;
 
-int sasl_client_init(const sasl_callback_t *callbacks);
+    int sasl_client_init(const sasl_callback_t *callbacks);
 
-void sasl_done(void);
+    void sasl_done(void);
 
-int sasl_client_new(const char *service,
-                    const char *serverFQDN,
-                    const char *iplocalport,
-                    const char *ipremoteport,
-                    const sasl_callback_t *prompt_supp,
-                    unsigned int flags,
-                    sasl_conn_t **pconn);
+    int sasl_client_new(const char *service,
+                        const char *serverFQDN,
+                        const char *iplocalport,
+                        const char *ipremoteport,
+                        const sasl_callback_t *prompt_supp,
+                        unsigned int flags,
+                        sasl_conn_t **pconn);
 
-void sasl_dispose(sasl_conn_t **pconn);
+    void sasl_dispose(sasl_conn_t **pconn);
 
-int sasl_client_start(sasl_conn_t *conn,
-                      const char *mechlist,
-                      void **prompt_need,
-                      const char **clientout,
-                      unsigned int *clientoutlen,
-                      const char **mech);
+    int sasl_client_start(sasl_conn_t *conn,
+                          const char *mechlist,
+                          void **prompt_need,
+                          const char **clientout,
+                          unsigned int *clientoutlen,
+                          const char **mech);
 
-int sasl_client_step(sasl_conn_t *a, const void *b, unsigned int c,
-                     void *d, const void *e, void *f);
+    int sasl_client_step(sasl_conn_t *a, const void *b, unsigned int c,
+                         void *d, const void *e, void *f);
 
 #ifdef __cplusplus
 }

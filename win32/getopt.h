@@ -25,20 +25,20 @@ extern "C" {
 #define required_argument 1
 #define optional_argument 2
 
-struct option {
-   const char *name;
-   int has_arg;
-   int *flag;
-   int val;
-};
+    struct option {
+        const char *name;
+        int has_arg;
+        int *flag;
+        int val;
+    };
 
-extern char *optarg;
-extern int opterr;
-extern int optind;
-extern int optopt;
+    extern char *optarg;
+    extern int opterr;
+    extern int optind;
+    extern int optopt;
 
-extern int getopt_long(int argc, char **argv, const char *optstring,
-                       const struct option *longopts, int *longindex);
+    extern int getopt_long(int argc, char **argv, const char *optstring,
+                           const struct option *longopts, int *longindex);
 
 #ifdef  __cplusplus
 }

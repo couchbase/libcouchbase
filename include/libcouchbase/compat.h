@@ -31,9 +31,10 @@
 extern "C" {
 #endif
 
-    typedef enum {
+    enum libcouchbase_cluster_t {
         LIBCOUCHBASE_MEMCACHED_CLUSTER = 0x00
-    } libcouchbase_cluster_t;
+    };
+    typedef enum libcouchbase_cluster_t libcouchbase_cluster_t;
 
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_create_compat(libcouchbase_cluster_t type,

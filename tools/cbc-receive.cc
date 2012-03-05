@@ -50,12 +50,12 @@ extern "C" {
     {
         if (error != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to store \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\":" << endl
-                      << libcouchbase_strerror(instance, error) << endl;
+                 << libcouchbase_strerror(instance, error) << endl;
 
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *e = static_cast<bool*>(cookie);
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *e = static_cast<bool *>(cookie);
             *e = true;
         }
     }
@@ -67,11 +67,11 @@ extern "C" {
     {
         if (error != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to remove \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\":" << endl
-                      << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *err = static_cast<bool*>(cookie);
+                 << libcouchbase_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
@@ -108,9 +108,9 @@ static bool setHandler(libcouchbase_t instance,
     err = libcouchbase_store(instance,
                              NULL,
                              LIBCOUCHBASE_SET,
-                             (const void*)(data + header.request.extlen),
+                             (const void *)(data + header.request.extlen),
                              keylen,
-                             (const void*)(data + header.request.extlen + keylen),
+                             (const void *)(data + header.request.extlen + keylen),
                              bodylen - header.request.extlen - keylen,
                              flags, exptime, 0);
 
@@ -146,7 +146,7 @@ static bool deleteHandler(libcouchbase_t instance,
 
     libcouchbase_error_t err;
     err = libcouchbase_remove(instance, NULL,
-                              (const void*)(data + header.request.extlen),
+                              (const void *)(data + header.request.extlen),
                               keylen, 0);
     delete []data;
 

@@ -37,12 +37,15 @@
 #include <libcouchbase/couchbase.h>
 
 static void usage(char cmd, const void *arg, void *cookie);
-static void set_flag(char cmd, const void *arg, void *cookie) {
-    (void)cmd; (void)arg;
+static void set_flag(char cmd, const void *arg, void *cookie)
+{
+    (void)cmd;
+    (void)arg;
     *((int *)cookie) = 1;
 }
 
-static void set_char_ptr(char cmd, const void *arg, void *cookie) {
+static void set_char_ptr(char cmd, const void *arg, void *cookie)
+{
     const char **myptr = cookie;
     *myptr = arg;
     (void)cmd;
@@ -53,14 +56,15 @@ const char *username = NULL;
 const char *passwd = NULL;
 const char *bucket = NULL;
 const char *filename = "-";
-const char *post_data= NULL;
+const char *post_data = NULL;
 int chunked = 0;
 
 struct cookie_st {
     struct libcouchbase_io_opt_st *io;
 };
 
-static void set_auth_data(char cmd, const void *arg, void *cookie) {
+static void set_auth_data(char cmd, const void *arg, void *cookie)
+{
     (void)cmd;
     (void)cookie;
     username = arg;
@@ -161,7 +165,8 @@ static struct {
  * @param argc Argument count
  * @param argv Argument vector
  */
-static void handle_options(int argc, char **argv) {
+static void handle_options(int argc, char **argv)
+{
     struct option opts[256] =  { [0] = { .name = NULL } };
     int ii = 0;
     char shortopts[128] = { 0 };
@@ -170,7 +175,7 @@ static void handle_options(int argc, char **argv) {
     int c;
     for (ii = 0; ii < 256; ++ii) {
         if (my_options[ii].name != NULL) {
-            opts[jj].name = (char*)my_options[ii].name;
+            opts[jj].name = (char *)my_options[ii].name;
             opts[jj].has_arg = my_options[ii].argument ? required_argument : no_argument;
             opts[jj].val = my_options[ii].letter;
 
@@ -206,7 +211,10 @@ static void data_callback(libcouchbase_t instance,
     if (bytes == NULL) { /* end of response */
         c->io->stop_event_loop(c->io);
     }
-    (void)instance; (void)uri; (void)error; (void)status;
+    (void)instance;
+    (void)uri;
+    (void)error;
+    (void)status;
 }
 
 static void complete_callback(libcouchbase_t instance,
@@ -276,7 +284,7 @@ int main(int argc, char **argv)
         return 1;
     }
     instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, cookie.io);
+                                   passwd, bucket, cookie.io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;

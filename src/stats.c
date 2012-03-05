@@ -24,8 +24,8 @@
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
-                                               const void* command_cookie,
-                                               const void* arg,
+                                               const void *command_cookie,
+                                               const void *arg,
                                                libcouchbase_size_t narg)
 {
     libcouchbase_server_t *server;
@@ -38,9 +38,9 @@ libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
     }
 
     memset(&req, 0, sizeof(req));
-    req.message.header.request.magic= PROTOCOL_BINARY_REQ;
-    req.message.header.request.opcode= PROTOCOL_BINARY_CMD_STAT;
-    req.message.header.request.datatype= PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_STAT;
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)narg);
     req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)narg);
     req.message.header.request.opaque = ++instance->seqno;
@@ -82,7 +82,7 @@ libcouchbase_error_t libcouchbase_server_versions(libcouchbase_t instance,
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
         libcouchbase_server_complete_packet(server, command_cookie,
-                                                 req.bytes, sizeof(req.bytes));
+                                            req.bytes, sizeof(req.bytes));
         libcouchbase_server_send_packets(server);
     }
 

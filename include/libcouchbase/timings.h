@@ -39,12 +39,13 @@ extern "C" {
     /**
      * The stats API may report time in different units
      */
-    typedef enum {
+    enum libcouchbase_timeunit_t {
         LIBCOUCHBASE_TIMEUNIT_NSEC = 0,
         LIBCOUCHBASE_TIMEUNIT_USEC = 1,
         LIBCOUCHBASE_TIMEUNIT_MSEC = 2,
         LIBCOUCHBASE_TIMEUNIT_SEC = 3
-    } libcouchbase_timeunit_t;
+    };
+    typedef enum libcouchbase_timeunit_t libcouchbase_timeunit_t;
 
     /**
      * Start recording timing metrics for the different operations.

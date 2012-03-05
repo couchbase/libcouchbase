@@ -18,9 +18,9 @@
 
 static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
 {
-    if(server->instance->vbucket_state_listener_last) {
+    if (server->instance->vbucket_state_listener_last) {
         server->instance->vbucket_state_listener =
-                server->instance->vbucket_state_listener_last;
+            server->instance->vbucket_state_listener_last;
         server->instance->vbucket_state_listener_last = NULL;
     }
     server->instance->io->delete_timer(server->instance->io,
@@ -34,7 +34,7 @@ static void initial_connect_timeout_handler(libcouchbase_socket_t sock,
 {
     libcouchbase_t instance = arg;
     libcouchbase_error_handler(instance, LIBCOUCHBASE_CONNECT_ERROR,
-            "Could not connect to server within allotted time");
+                               "Could not connect to server within allotted time");
 
     if (instance->sock != INVALID_SOCKET) {
         /* Do we need to delete the event? */

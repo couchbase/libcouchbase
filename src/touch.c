@@ -29,7 +29,7 @@ LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
                                          const void *command_cookie,
                                          libcouchbase_size_t num_keys,
-                                         const void * const *keys,
+                                         const void *const *keys,
                                          const libcouchbase_size_t *nkey,
                                          const libcouchbase_time_t *exp)
 {
@@ -48,7 +48,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
                                                 const void *hashkey,
                                                 libcouchbase_size_t nhashkey,
                                                 libcouchbase_size_t num_keys,
-                                                const void * const *keys,
+                                                const void *const *keys,
                                                 const libcouchbase_size_t *nkey,
                                                 const libcouchbase_time_t *exp)
 {

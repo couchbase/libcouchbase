@@ -40,7 +40,7 @@ extern "C" {
      * (if people tries to use it's size etc).
      */
     struct libcouchbase_st;
-    typedef struct libcouchbase_st* libcouchbase_t;
+    typedef struct libcouchbase_st *libcouchbase_t;
 
     /**
      * Define the error codes in use by the library
@@ -91,7 +91,7 @@ extern "C" {
     } libcouchbase_storage_t;
 
     struct  libcouchbase_tap_filter_st;
-    typedef struct libcouchbase_tap_filter_st* libcouchbase_tap_filter_t;
+    typedef struct libcouchbase_tap_filter_st *libcouchbase_tap_filter_t;
 
 #ifdef _WIN32
     typedef SOCKET libcouchbase_socket_t;
@@ -105,9 +105,9 @@ extern "C" {
         LIBCOUCHBASE_IO_OPS_WINSOCK = 0x03
     } libcouchbase_io_ops_type_t;
 
-    #define LIBCOUCHBASE_READ_EVENT 0x02
-    #define LIBCOUCHBASE_WRITE_EVENT 0x04
-    #define LIBCOUCHBASE_RW_EVENT (LIBCOUCHBASE_READ_EVENT|LIBCOUCHBASE_WRITE_EVENT)
+#define LIBCOUCHBASE_READ_EVENT 0x02
+#define LIBCOUCHBASE_WRITE_EVENT 0x04
+#define LIBCOUCHBASE_RW_EVENT (LIBCOUCHBASE_READ_EVENT|LIBCOUCHBASE_WRITE_EVENT)
 
     /**
      * This numbering schema is compatible with enum evhttp_cmd_type from

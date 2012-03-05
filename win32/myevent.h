@@ -26,7 +26,7 @@
 #define MYEVENT_H
 
 struct event {
-   int a;
+    int a;
 };
 
 #define EV_WRITE 0

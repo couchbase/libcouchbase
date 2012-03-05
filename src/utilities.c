@@ -50,7 +50,7 @@ extern libcouchbase_uint64_t libcouchbase_byteswap64(libcouchbase_uint64_t val)
  */
 libcouchbase_connect_status_t libcouchbase_connect_status(int err)
 {
-    switch(err) {
+    switch (err) {
     case 0:
         return LIBCOUCHBASE_CONNECT_OK;
 
@@ -135,7 +135,7 @@ void libcouchbase_sockconn_errinfo(int connerr,
     }
 
     snprintf(buf, nbuf, "Failed to connect to \"%s:%s\": %s",
-              hostname, port, errextra);
+             hostname, port, errextra);
 }
 
 /**

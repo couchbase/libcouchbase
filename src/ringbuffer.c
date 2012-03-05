@@ -110,8 +110,8 @@ void *libcouchbase_ringbuffer_get_write_head(ringbuffer_t *buffer)
 }
 
 libcouchbase_size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
-                                     const void *src,
-                                     libcouchbase_size_t nb)
+                                                  const void *src,
+                                                  libcouchbase_size_t nb)
 {
     const char *s = src;
     libcouchbase_size_t nw = 0;
@@ -160,7 +160,8 @@ libcouchbase_size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
     return nw;
 }
 
-static void maybe_reset(ringbuffer_t *buffer) {
+static void maybe_reset(ringbuffer_t *buffer)
+{
     if (buffer->nbytes == 0) {
         buffer->write_head = buffer->root;
         buffer->read_head = buffer->root;
@@ -281,8 +282,8 @@ void libcouchbase_ringbuffer_get_iov(ringbuffer_t *buffer,
 }
 
 int libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
-                                          libcouchbase_ringbuffer_direction_t direction,
-                                          libcouchbase_size_t nb)
+                                         libcouchbase_ringbuffer_direction_t direction,
+                                         libcouchbase_size_t nb)
 {
     int ret;
 

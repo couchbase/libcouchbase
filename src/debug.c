@@ -174,7 +174,7 @@ void libcouchbase_dump_header(const void *data, libcouchbase_size_t nbytes)
     }
 
     if (libcouchbase_strpacket(strbuf, 1024, data, nbytes)) {
-       fprintf(stderr, "%s\n", strbuf);
+        fprintf(stderr, "%s\n", strbuf);
     }
 
 }
@@ -182,10 +182,10 @@ void libcouchbase_dump_header(const void *data, libcouchbase_size_t nbytes)
 void libcouchbase_dump_packet(const void *header, libcouchbase_size_t nheader,
                               const void *payload, libcouchbase_size_t npayload)
 {
-    protocol_binary_request_header *req = (void*)header;
+    protocol_binary_request_header *req = (void *)header;
 
     if (payload == NULL && nheader > sizeof(protocol_binary_request_header)) {
-        payload = (char*)header + sizeof(protocol_binary_request_header);
+        payload = (char *)header + sizeof(protocol_binary_request_header);
         npayload = nheader;
     }
 
@@ -216,13 +216,13 @@ void libcouchbase_dump_packet(const void *header, libcouchbase_size_t nheader,
 
     if (req->request.keylen) {
         fprintf(stderr, "\tKey:\n");
-        libcouchbase_hex_dump((char*)payload + req->request.extlen,
+        libcouchbase_hex_dump((char *)payload + req->request.extlen,
                               ntohs(req->request.keylen));
     }
 
     if (req->request.bodylen) {
         fprintf(stderr, "\tBody:\n");
-        libcouchbase_hex_dump((char*)payload + req->request.extlen + ntohs(req->request.keylen),
+        libcouchbase_hex_dump((char *)payload + req->request.extlen + ntohs(req->request.keylen),
                               ntohl(req->request.bodylen));
     }
 }
@@ -235,21 +235,21 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
      * (in a single line of course)
      */
 
-    unsigned char *p = (unsigned char*)data;
+    unsigned char *p = (unsigned char *)data;
     unsigned char c;
     libcouchbase_size_t n;
 
     char bytestr[4] = {0};
     char addrstr[10] = {0};
-    char hexstr[ 16*3 + 5] = {0};
-    char charstr[16*1 + 5] = {0};
+    char hexstr[ 16 * 3 + 5] = {0};
+    char charstr[16 * 1 + 5] = {0};
 
-    for(n = 1;n <= size; n++) {
-        if (n%16 == 1) {
+    for (n = 1; n <= size; n++) {
+        if (n % 16 == 1) {
             /* store address for this line */
             snprintf(addrstr, sizeof(addrstr), "%.4lx",
-               (unsigned long)
-               ((libcouchbase_size_t)p-(libcouchbase_size_t)data) );
+                     (unsigned long)
+                     ((libcouchbase_size_t)p - (libcouchbase_size_t)data) );
         }
 
         c = *p;
@@ -259,21 +259,21 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
 
         /* store hex str (for left side) */
         snprintf(bytestr, sizeof(bytestr), "%02X ", *p);
-        strncat(hexstr, bytestr, sizeof(hexstr)-strlen(hexstr)-1);
+        strncat(hexstr, bytestr, sizeof(hexstr) - strlen(hexstr) - 1);
 
         /* store char str (for right side) */
         snprintf(bytestr, sizeof(bytestr), "%c", c);
-        strncat(charstr, bytestr, sizeof(charstr)-strlen(charstr)-1);
+        strncat(charstr, bytestr, sizeof(charstr) - strlen(charstr) - 1);
 
-        if(n%16 == 0) {
+        if (n % 16 == 0) {
             /* line completed */
             printf("[%4.4s]   %-50.50s  %s\n", addrstr, hexstr, charstr);
             hexstr[0] = 0;
             charstr[0] = 0;
-        } else if(n%8 == 0) {
+        } else if (n % 8 == 0) {
             /* half line: add whitespaces */
-            strncat(hexstr, "  ", sizeof(hexstr)-strlen(hexstr)-1);
-            strncat(charstr, " ", sizeof(charstr)-strlen(charstr)-1);
+            strncat(hexstr, "  ", sizeof(hexstr) - strlen(hexstr) - 1);
+            strncat(charstr, " ", sizeof(charstr) - strlen(charstr) - 1);
         }
         p++; /* next byte */
     }
@@ -295,44 +295,44 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
         opcode_match(base) opcode_match(base ## Q)
 
 /* I'm sure i've left out some commands here */
-const char* libcouchbase_stropcode(libcouchbase_uint8_t opcode)
+const char *libcouchbase_stropcode(libcouchbase_uint8_t opcode)
 {
-    switch(opcode){
-    opcode_matchq2(SET)
-    opcode_matchq2(GET)
-    opcode_matchq2(GETK)
-    opcode_matchq2(GAT)
-    opcode_matchq2(APPEND)
-    opcode_matchq2(PREPEND)
-    opcode_matchq2(REPLACE)
-    opcode_matchq2(DELETE)
-    opcode_matchq2(QUIT)
-    opcode_matchq2(FLUSH)
+    switch (opcode) {
+        opcode_matchq2(SET)
+        opcode_matchq2(GET)
+        opcode_matchq2(GETK)
+        opcode_matchq2(GAT)
+        opcode_matchq2(APPEND)
+        opcode_matchq2(PREPEND)
+        opcode_matchq2(REPLACE)
+        opcode_matchq2(DELETE)
+        opcode_matchq2(QUIT)
+        opcode_matchq2(FLUSH)
 
-    opcode_match(TOUCH)
+        opcode_match(TOUCH)
 
-    opcode_match(SASL_LIST_MECHS)
-    opcode_match(SASL_AUTH)
-    opcode_match(SASL_STEP)
+        opcode_match(SASL_LIST_MECHS)
+        opcode_match(SASL_AUTH)
+        opcode_match(SASL_STEP)
 
-    opcode_match(NOOP)
+        opcode_match(NOOP)
 
 
-    opcode_match(STAT)
-    opcode_match(VERSION)
+        opcode_match(STAT)
+        opcode_match(VERSION)
 
-    opcode_match(VERBOSITY)
+        opcode_match(VERBOSITY)
 
-    opcode_match(TAP_CONNECT)
-    opcode_match(TAP_MUTATION)
-    opcode_match(TAP_DELETE)
-    opcode_match(TAP_FLUSH)
-    opcode_match(TAP_OPAQUE)
-    opcode_match(TAP_VBUCKET_SET)
-    opcode_match(TAP_CHECKPOINT_START)
-    opcode_match(TAP_CHECKPOINT_END)
+        opcode_match(TAP_CONNECT)
+        opcode_match(TAP_MUTATION)
+        opcode_match(TAP_DELETE)
+        opcode_match(TAP_FLUSH)
+        opcode_match(TAP_OPAQUE)
+        opcode_match(TAP_VBUCKET_SET)
+        opcode_match(TAP_CHECKPOINT_START)
+        opcode_match(TAP_CHECKPOINT_END)
 
-    opcode_match(SCRUB)
+        opcode_match(SCRUB)
     default:
         return NULL;
     }
@@ -344,23 +344,23 @@ const char* libcouchbase_stropcode(libcouchbase_uint8_t opcode)
         case PROTOCOL_BINARY_RESPONSE_ ## base: { \
             return #base; break; \
         }
-const char* libcouchbase_strstatus(libcouchbase_uint16_t status)
+const char *libcouchbase_strstatus(libcouchbase_uint16_t status)
 {
     switch (status) {
-    status_match(SUCCESS)
-    status_match(AUTH_ERROR)
-    status_match(EINVAL)
-    status_match(KEY_ENOENT)
-    status_match(E2BIG)
-    status_match(NOT_STORED)
-    status_match(DELTA_BADVAL)
-    status_match(NOT_MY_VBUCKET)
-    status_match(AUTH_CONTINUE)
-    status_match(UNKNOWN_COMMAND)
-    status_match(EBUSY)
-    status_match(ETMPFAIL)
-    status_match(KEY_EEXISTS)
-    status_match(NOT_SUPPORTED)
+        status_match(SUCCESS)
+        status_match(AUTH_ERROR)
+        status_match(EINVAL)
+        status_match(KEY_ENOENT)
+        status_match(E2BIG)
+        status_match(NOT_STORED)
+        status_match(DELTA_BADVAL)
+        status_match(NOT_MY_VBUCKET)
+        status_match(AUTH_CONTINUE)
+        status_match(UNKNOWN_COMMAND)
+        status_match(EBUSY)
+        status_match(ETMPFAIL)
+        status_match(KEY_EEXISTS)
+        status_match(NOT_SUPPORTED)
     default:
         return NULL;
     }
@@ -398,8 +398,8 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
         return 0;
     }
 
-    req = (protocol_binary_request_header*)bytes;
-    res = (protocol_binary_response_header*)bytes;
+    req = (protocol_binary_request_header *)bytes;
+    res = (protocol_binary_response_header *)bytes;
 
     if ( (magicstr = libcouchbase_strmagic(req->request.magic)) == NULL ) {
         sprintf(a_magicstr, "%0x", req->request.magic);

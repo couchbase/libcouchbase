@@ -85,7 +85,8 @@ static void unlink_event(struct winsock_io_cookie *instance,
     }
 }
 
-static int getError() {
+static int getError()
+{
     DWORD error = WSAGetLastError();
     switch (error) {
     case WSAECONNRESET:
@@ -115,10 +116,10 @@ static int getError() {
 }
 
 static libcouchbase_ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
-                                    libcouchbase_socket_t sock,
-                                    void *buffer,
-                                    libcouchbase_size_t len,
-                                    int flags)
+                                                 libcouchbase_socket_t sock,
+                                                 void *buffer,
+                                                 libcouchbase_size_t len,
+                                                 int flags)
 {
     DWORD fl = 0;
     DWORD nr;
@@ -169,14 +170,14 @@ static libcouchbase_ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st 
 
 
 static libcouchbase_ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
-                                    libcouchbase_socket_t sock,
-                                    const void *msg,
-                                    libcouchbase_size_t len,
-                                    int flags)
+                                                 libcouchbase_socket_t sock,
+                                                 const void *msg,
+                                                 libcouchbase_size_t len,
+                                                 int flags)
 {
     DWORD fl = 0;
     DWORD nw;
-    WSABUF wsabuf = { len, (char*)msg };
+    WSABUF wsabuf = { len, (char *)msg };
     (void)flags;
 
     if (WSASend(sock, &wsabuf, 1, &nw, fl, NULL, NULL) == SOCKET_ERROR) {
@@ -188,9 +189,9 @@ static libcouchbase_ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *
 }
 
 static libcouchbase_ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
-                                     libcouchbase_socket_t sock,
-                                     struct libcouchbase_iovec_st *iov,
-                                     libcouchbase_size_t niov)
+                                                  libcouchbase_socket_t sock,
+                                                  struct libcouchbase_iovec_st *iov,
+                                                  libcouchbase_size_t niov)
 {
     DWORD fl = 0;
     DWORD nw;
@@ -269,7 +270,7 @@ static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
                                                         short which,
                                                         void *cb_data))
 {
-    int mask= 0;
+    int mask = 0;
     struct winsock_event *ev = event;
     ev->sock = sock;
     ev->handler = handler;
@@ -287,8 +288,8 @@ static void libcouchbase_io_destroy_event(struct libcouchbase_io_opt_st *iops,
 }
 
 static void libcouchbase_io_delete_event(struct libcouchbase_io_opt_st *iops,
-                                          libcouchbase_socket_t sock,
-                                          void *event)
+                                         libcouchbase_socket_t sock,
+                                         void *event)
 {
     struct winsock_event *ev = event;
     ev->flags = 0;
@@ -440,13 +441,12 @@ static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *instance
 
 
 LIBCOUCHBASE_API
-struct libcouchbase_io_opt_st *libcouchbase_create_winsock_io_opts(void)
-{
+struct libcouchbase_io_opt_st *libcouchbase_create_winsock_io_opts(void) {
     struct libcouchbase_io_opt_st *ret;
     WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2,0), &wsaData) != 0) {
-       fprintf(stderr, "Socket Initialization Error. Program aborted\n");
-       return NULL;
+    if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) {
+        fprintf(stderr, "Socket Initialization Error. Program aborted\n");
+        return NULL;
     }
 
     if ((ret = calloc(1, sizeof(*ret))) == NULL) {

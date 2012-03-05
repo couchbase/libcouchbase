@@ -42,7 +42,7 @@ static void tap_mutation_callback(libcouchbase_t instance,
                                   const void *es,
                                   libcouchbase_size_t nes)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.tap_mutation(instance, cookie, key, nkey, data,
@@ -61,7 +61,7 @@ static void tap_deletion_callback(libcouchbase_t instance,
                                   const void *es,
                                   libcouchbase_size_t nes)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.tap_deletion(instance, cookie, key, nkey,
@@ -75,7 +75,7 @@ static void tap_flush_callback(libcouchbase_t instance,
                                const void *es,
                                libcouchbase_size_t nes)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.tap_flush(instance, cookie, es, nes);
@@ -88,7 +88,7 @@ static void tap_opaque_callback(libcouchbase_t instance,
                                 const void *es,
                                 libcouchbase_size_t nes)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.tap_opaque(instance, cookie, es, nes);
@@ -103,7 +103,7 @@ static void tap_vbucket_set_callback(libcouchbase_t instance,
                                      const void *es,
                                      libcouchbase_size_t nes)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.tap_vbucket_set(instance, cookie, vbid, state, es, nes);
@@ -115,7 +115,7 @@ static void error_callback(libcouchbase_t instance,
                            libcouchbase_error_t error,
                            const char *errinfo)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.error(instance, error, errinfo);
@@ -124,15 +124,15 @@ static void error_callback(libcouchbase_t instance,
 }
 
 static void stat_callback(libcouchbase_t instance,
-                          const void* command_cookie,
-                          const char* server_endpoint,
+                          const void *command_cookie,
+                          const char *server_endpoint,
                           libcouchbase_error_t error,
-                          const void* key,
+                          const void *key,
                           libcouchbase_size_t nkey,
-                          const void* value,
+                          const void *value,
                           libcouchbase_size_t nvalue)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.stat(instance, command_cookie, server_endpoint,
@@ -148,7 +148,7 @@ static void get_callback(libcouchbase_t instance,
                          const void *bytes, libcouchbase_size_t nbytes,
                          libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.get(instance, cookie, error, key, nkey, bytes, nbytes,
@@ -164,7 +164,7 @@ static void storage_callback(libcouchbase_t instance,
                              const void *key, libcouchbase_size_t nkey,
                              libcouchbase_cas_t cas)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.storage(instance, cookie, operation, error, key,
@@ -181,7 +181,7 @@ static void arithmetic_callback(libcouchbase_t instance,
                                 libcouchbase_uint64_t value,
                                 libcouchbase_cas_t cas)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.arithmetic(instance, cookie, error, key, nkey,
@@ -195,7 +195,7 @@ static void remove_callback(libcouchbase_t instance,
                             libcouchbase_error_t error,
                             const void *key, libcouchbase_size_t nkey)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.remove(instance, cookie, error, key, nkey);
@@ -208,7 +208,7 @@ static void touch_callback(libcouchbase_t instance,
                            libcouchbase_error_t error,
                            const void *key, libcouchbase_size_t nkey)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.touch(instance, cookie, error, key, nkey);
@@ -224,7 +224,7 @@ static void doc_complete_callback(libcouchbase_t instance,
                                   const void *bytes,
                                   libcouchbase_size_t nbytes)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.doc_complete(instance, cookie, error, status,
@@ -241,7 +241,7 @@ static void doc_data_callback(libcouchbase_t instance,
                               const void *bytes,
                               libcouchbase_size_t nbytes)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.doc_data(instance, cookie, error, status,
@@ -255,7 +255,7 @@ static void flush_callback(libcouchbase_t instance,
                            const char *server_endpoint,
                            libcouchbase_error_t error)
 {
-    struct user_cookie *c = (void*)instance->cookie;
+    struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
     c->callbacks.flush(instance, cookie, server_endpoint, error);
@@ -266,7 +266,7 @@ static void flush_callback(libcouchbase_t instance,
 
 static void restore_user_env(libcouchbase_t instance)
 {
-    struct user_cookie *cookie = (void*)instance->cookie;
+    struct user_cookie *cookie = (void *)instance->cookie;
     /* Restore the users environment */
     instance->cookie = cookie->cookie;
     instance->callbacks = cookie->callbacks;
@@ -294,7 +294,7 @@ static void restore_wrapping_env(libcouchbase_t instance,
     instance->callbacks.doc_complete = doc_complete_callback;
     instance->callbacks.doc_data = doc_data_callback;
 
-    user->cookie = (void*)instance->cookie;
+    user->cookie = (void *)instance->cookie;
     user->retcode = error;
     instance->cookie = user;
 }
@@ -306,7 +306,7 @@ libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance,
     struct user_cookie cookie;
 
     if (instance->syncmode == LIBCOUCHBASE_ASYNCHRONOUS ||
-        retcode != LIBCOUCHBASE_SUCCESS) {
+            retcode != LIBCOUCHBASE_SUCCESS) {
         return retcode;
     }
 

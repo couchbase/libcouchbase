@@ -50,11 +50,11 @@
 // or compiler give many errors like this:
 //   error C2733: second C linkage of overloaded function 'wmemchr' not allowed
 #if (_MSC_VER < 1300) && defined(__cplusplus)
-   extern "C++" {
+extern "C++" {
 #endif
 #     include <wchar.h>
 #if (_MSC_VER < 1300) && defined(__cplusplus)
-   }
+}
 #endif
 
 // Define _W64 macros to mark types changing their size, like intptr_t.
@@ -113,11 +113,11 @@ typedef uint64_t  uint_fast64_t;
 
 // 7.18.1.4 Integer types capable of holding object pointers
 #ifdef _WIN64 // [
-   typedef __int64           intptr_t;
-   typedef unsigned __int64  uintptr_t;
+typedef __int64           intptr_t;
+typedef unsigned __int64  uintptr_t;
 #else // _WIN64 ][
-   typedef _W64 int               intptr_t;
-   typedef _W64 unsigned int      uintptr_t;
+typedef _W64 int               intptr_t;
+typedef _W64 unsigned int      uintptr_t;
 #endif // _WIN64 ]
 
 // 7.18.1.5 Greatest-width integer types
@@ -245,7 +245,7 @@ typedef uint64_t  uintmax_t;
 #if _MSC_VER < 1600
 static __inline int64_t llabs(int64_t i)
 {
-	return i >= 0 ? i: -i;
+    return i >= 0 ? i : -i;
 }
 #endif
 

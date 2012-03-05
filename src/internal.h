@@ -385,16 +385,16 @@ extern "C" {
     libcouchbase_connect_status_t libcouchbase_connect_status(int err);
 
     void libcouchbase_sockconn_errinfo(int connerr,
-                                            const char *hostname,
-                                            const char *port,
-                                            const struct addrinfo *root_ai,
-                                            char *buf,
-                                            libcouchbase_size_t nbuf,
-                                            libcouchbase_error_t *uerr);
+                                       const char *hostname,
+                                       const char *port,
+                                       const struct addrinfo *root_ai,
+                                       char *buf,
+                                       libcouchbase_size_t nbuf,
+                                       libcouchbase_error_t *uerr);
 
     evutil_socket_t libcouchbase_gai2sock(libcouchbase_t instance,
-                                             struct addrinfo **curr_ai,
-                                             int *connerr);
+                                          struct addrinfo **curr_ai,
+                                          int *connerr);
 
     void libcouchbase_apply_vbucket_config(libcouchbase_t instance,
                                            VBUCKET_CONFIG_HANDLE config);

@@ -79,16 +79,16 @@ extern "C" {
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "Stored \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\" CAS 0x" << hex << cas << endl;
         } else {
             cerr << "Failed to store \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\":" << endl
-                      << libcouchbase_strerror(instance, error) << endl;
+                 << libcouchbase_strerror(instance, error) << endl;
 
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *e = static_cast<bool*>(cookie);
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *e = static_cast<bool *>(cookie);
             *e = true;
         }
     }
@@ -100,15 +100,15 @@ extern "C" {
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "Removed \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\"" << endl;
         } else {
             cerr << "Failed to remove \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\":" << endl
-                      << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *err = static_cast<bool*>(cookie);
+                 << libcouchbase_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
@@ -122,18 +122,18 @@ extern "C" {
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "\"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\" Size " << nbytes << " Flags 0x" << std::hex
                  << flags << " CAS 0x" << cas << endl;
             cerr.flush();
-            cout.write(static_cast<const char*>(bytes), nbytes);
+            cout.write(static_cast<const char *>(bytes), nbytes);
             cout.flush();
         } else {
             cerr << "Failed to get \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\": " << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *err = static_cast<bool*>(cookie);
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
@@ -173,52 +173,52 @@ extern "C" {
             }
         } else {
             cerr << "Failed to get \"";
-            cerr.write(static_cast<const char*>(key), nkey);
+            cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\": " << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *err = static_cast<bool*>(cookie);
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
     static void stat_callback(libcouchbase_t instance,
-                              const void*,
-                              const char* server_endpoint,
+                              const void *,
+                              const char *server_endpoint,
                               libcouchbase_error_t error,
-                              const void* key,
+                              const void *key,
                               libcouchbase_size_t nkey,
-                              const void* value,
+                              const void *value,
                               libcouchbase_size_t nvalue)
     {
         if (error == LIBCOUCHBASE_SUCCESS) {
             if (nkey > 0) {
                 cout << server_endpoint << "\t";
-                cout.write(static_cast<const char*>(key), nkey);
+                cout.write(static_cast<const char *>(key), nkey);
                 cout << "\t";
-                cout.write(static_cast<const char*>(value), nvalue);
+                cout.write(static_cast<const char *>(value), nvalue);
                 cout << endl;
             }
         } else {
             cerr << "Failure requesting stats:" << endl
                  << libcouchbase_strerror(instance, error) << endl;
 
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *err = static_cast<bool*>(cookie);
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
     static void flush_callback(libcouchbase_t instance,
-                               const void*,
-                               const char* server_endpoint,
+                               const void *,
+                               const char *server_endpoint,
                                libcouchbase_error_t error)
     {
         if (error != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to flush node \"" << server_endpoint
                  << "\": " << libcouchbase_strerror(instance, error)
                  << endl;
-            void *cookie = const_cast<void*>(libcouchbase_get_cookie(instance));
-            bool *err = static_cast<bool*>(cookie);
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
@@ -226,7 +226,8 @@ extern "C" {
     static void timings_callback(libcouchbase_t, const void *,
                                  libcouchbase_timeunit_t timeunit,
                                  libcouchbase_uint32_t min, libcouchbase_uint32_t max,
-                                 libcouchbase_uint32_t total, libcouchbase_uint32_t maxtotal) {
+                                 libcouchbase_uint32_t total, libcouchbase_uint32_t maxtotal)
+    {
         char buffer[1024];
         int offset = sprintf(buffer, "[%3u - %3u]", min, max);
         switch (timeunit) {
@@ -284,7 +285,7 @@ static bool cp(libcouchbase_t instance, list<string> &keys, bool json)
                         id = yajl_tree_get(obj, path, yajl_t_string);
                         if (id == NULL) {
                             cerr << "Failed to validate file \"" << key
-                                << "\" as document (no '_id' attribute)." << endl;
+                                 << "\" as document (no '_id' attribute)." << endl;
                             delete []bytes;
                             return false;
                         }
@@ -375,7 +376,7 @@ static bool cat(libcouchbase_t instance, list<string> &keys)
         cerr << "Failed to send requests:" << endl
              << libcouchbase_strerror(instance, err) << endl;
         return false;
-   }
+    }
 
     return true;
 }
@@ -423,11 +424,12 @@ static bool flush(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool spool(string &data) {
+static bool spool(string &data)
+{
     stringstream ss;
     char buffer[1024];
     libcouchbase_size_t nr;
-    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != (libcouchbase_size_t)-1) {
+    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != (libcouchbase_size_t) - 1) {
         if (nr == 0) {
             break;
         }
@@ -542,7 +544,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         exit(EXIT_FAILURE);
     }
 
-    vector<CommandLineOption*>::iterator iter;
+    vector<CommandLineOption *>::iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->found) {
             bool unknownOpt = true;
@@ -639,13 +641,13 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     libcouchbase_error_t ret = libcouchbase_connect(instance);
     if (ret != LIBCOUCHBASE_SUCCESS) {
         cerr << "Failed to connect libcouchbase instance to server:" << endl
-                  << "\t\"" << libcouchbase_strerror(instance, ret) << "\"" << endl;
+             << "\t\"" << libcouchbase_strerror(instance, ret) << "\"" << endl;
         exit(EXIT_FAILURE);
     }
     libcouchbase_wait(instance);
 
     bool error = false;
-    libcouchbase_set_cookie(instance, static_cast<void*>(&error));
+    libcouchbase_set_cookie(instance, static_cast<void *>(&error));
 
     if (config.isTimingsEnabled()) {
         libcouchbase_enable_timings(instance);
@@ -786,21 +788,21 @@ int main(int argc, char **argv)
             }
         } else {
             cerr << "Usage: cbc command [options]" << endl
-                      << "command may be:" << endl
-                      << "   cat        output keys to stdout" << endl
-                      << "   cp         store files to the cluster" << endl
-                      << "   create     store files with options" << endl
-                      << "   rm         remove keys" << endl
-                      << "   stats      show stats" << endl
-                      << "   flush      remove all keys from the cluster" << endl
-                      << "   version    show version" << endl
-                      << "   verify     verify content in cache with files" << endl
-                      << "Use 'cbc command --help' to show the options" << endl;
+                 << "command may be:" << endl
+                 << "   cat        output keys to stdout" << endl
+                 << "   cp         store files to the cluster" << endl
+                 << "   create     store files with options" << endl
+                 << "   rm         remove keys" << endl
+                 << "   stats      show stats" << endl
+                 << "   flush      remove all keys from the cluster" << endl
+                 << "   version    show version" << endl
+                 << "   verify     verify content in cache with files" << endl
+                 << "Use 'cbc command --help' to show the options" << endl;
             exit(EXIT_FAILURE);
         }
 
         if (cmd == cbc_illegal) {
-            cerr << "Error: Unknown command \""<< argv[1] << "\"" << endl;
+            cerr << "Error: Unknown command \"" << argv[1] << "\"" << endl;
             exit(EXIT_FAILURE);
         }
         --argc;

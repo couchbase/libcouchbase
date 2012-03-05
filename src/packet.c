@@ -44,11 +44,11 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
     }
 
     if (!libcouchbase_ringbuffer_ensure_capacity(buff, size) ||
-        !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
-        !libcouchbase_ringbuffer_ensure_capacity(buff_cookie, sizeof(ct)) ||
-        libcouchbase_ringbuffer_write(buff, data, size) != size ||
-        libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size ||
-        libcouchbase_ringbuffer_write(buff_cookie, &ct, sizeof(ct)) != sizeof(ct)) {
+            !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
+            !libcouchbase_ringbuffer_ensure_capacity(buff_cookie, sizeof(ct)) ||
+            libcouchbase_ringbuffer_write(buff, data, size) != size ||
+            libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size ||
+            libcouchbase_ringbuffer_write(buff_cookie, &ct, sizeof(ct)) != sizeof(ct)) {
         abort();
     }
 }
@@ -67,11 +67,11 @@ void libcouchbase_server_buffer_retry_packet(libcouchbase_server_t *c,
     }
 
     if (!libcouchbase_ringbuffer_ensure_capacity(buff, size) ||
-        !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
-        !libcouchbase_ringbuffer_ensure_capacity(buff_cookie, ct_size) ||
-        libcouchbase_ringbuffer_write(buff, data, size) != size ||
-        libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size ||
-        libcouchbase_ringbuffer_write(buff_cookie, ct, ct_size) != ct_size) {
+            !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
+            !libcouchbase_ringbuffer_ensure_capacity(buff_cookie, ct_size) ||
+            libcouchbase_ringbuffer_write(buff, data, size) != size ||
+            libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size ||
+            libcouchbase_ringbuffer_write(buff_cookie, ct, ct_size) != ct_size) {
         abort();
     }
 }
@@ -83,9 +83,9 @@ void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
 {
     (void)c;
     if (!libcouchbase_ringbuffer_ensure_capacity(buff, size) ||
-        !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
-        libcouchbase_ringbuffer_write(buff, data, size) != size ||
-        libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size) {
+            !libcouchbase_ringbuffer_ensure_capacity(&c->cmd_log, size) ||
+            libcouchbase_ringbuffer_write(buff, data, size) != size ||
+            libcouchbase_ringbuffer_write(&c->cmd_log, data, size) != size) {
         abort();
     }
 }

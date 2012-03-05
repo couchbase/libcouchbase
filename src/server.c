@@ -68,7 +68,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         }
 
         if (writing && (stream_size > send_size) &&
-            ((stream_size - packetsize) < send_size)) {
+                ((stream_size - packetsize) < send_size)) {
             /* Copy the rest of the current packet into the
                temporary stream */
 
@@ -170,11 +170,11 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
             root->callbacks.remove(root, ct.cookie,
                                    error,
                                    keyptr, ntohs(req.request.keylen));
-             break;
+            break;
 
         case PROTOCOL_BINARY_CMD_INCREMENT:
         case PROTOCOL_BINARY_CMD_DECREMENT:
-            root->callbacks.arithmetic(root,ct.cookie,
+            root->callbacks.arithmetic(root, ct.cookie,
                                        error,
                                        keyptr, ntohs(req.request.keylen), 0, 0);
             break;
@@ -347,10 +347,9 @@ static int get_local_address(libcouchbase_socket_t sock,
     socklen_t salen = sizeof(saddr);
 
     if ((getsockname(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-        (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                     p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-        (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-    {
+            (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
+                         p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
+            (snprintf(buffer, bufsz, "%s;%s", h, p) < 0)) {
         return 0;
     }
 
@@ -374,10 +373,9 @@ static int get_remote_address(libcouchbase_socket_t sock,
     socklen_t salen = sizeof(saddr);
 
     if ((getpeername(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-        (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                     p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-        (snprintf(buffer, bufsz, "%s;%s", h, p) < 0))
-    {
+            (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
+                         p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
+            (snprintf(buffer, bufsz, "%s;%s", h, p) < 0)) {
         return 0;
     }
 
@@ -421,8 +419,8 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
         libcouchbase_ringbuffer_reset(&server->output_cookies);
         libcouchbase_ringbuffer_reset(&server->output);
         if (!libcouchbase_ringbuffer_append(&server->pending, &server->output) ||
-            !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
-            !libcouchbase_ringbuffer_append(&copy, &server->cmd_log)) {
+                !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
+                !libcouchbase_ringbuffer_append(&copy, &server->cmd_log)) {
             libcouchbase_error_handler(server->instance,
                                        LIBCOUCHBASE_ENOMEM,
                                        NULL);
@@ -480,7 +478,8 @@ static void server_connect_handler(libcouchbase_socket_t sock, short which, void
     server_connect(server);
 }
 
-static void server_connect(libcouchbase_server_t *server) {
+static void server_connect(libcouchbase_server_t *server)
+{
     int retry;
     int save_errno;
 
@@ -488,8 +487,8 @@ static void server_connect(libcouchbase_server_t *server) {
         if (server->sock == INVALID_SOCKET) {
             /* Try to get a socket.. */
             server->sock = libcouchbase_gai2sock(server->instance,
-                                                    &server->curr_ai,
-                                                    &save_errno);
+                                                 &server->curr_ai,
+                                                 &save_errno);
         }
 
         if (server->curr_ai == NULL) {
@@ -510,7 +509,7 @@ static void server_connect(libcouchbase_server_t *server) {
             return ;
         } else {
             libcouchbase_connect_status_t connstatus =
-                    libcouchbase_connect_status(server->instance->io->error);
+                libcouchbase_connect_status(server->instance->io->error);
             switch (connstatus) {
             case LIBCOUCHBASE_CONNECT_EINTR:
                 retry = 1;
@@ -534,8 +533,8 @@ static void server_connect(libcouchbase_server_t *server) {
                     retry = 1;
                     server->curr_ai = server->curr_ai->ai_next;
                     server->instance->io->delete_event(server->instance->io,
-                            server->sock,
-                            server->event);
+                                                       server->sock,
+                                                       server->event);
                     server->instance->io->close(server->instance->io, server->sock);
                     server->sock = INVALID_SOCKET;
                     break;
@@ -583,7 +582,7 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     server->curr_ai = server->root_ai;
     server->sock = INVALID_SOCKET;
     if (error != 0) {
-       server->curr_ai = server->root_ai = NULL;
+        server->curr_ai = server->root_ai = NULL;
     }
 
     server->sasl_conn = NULL;
@@ -611,7 +610,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
 {
     protocol_binary_request_header req;
     libcouchbase_size_t nr =  libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes,
-                                              sizeof(req));
+                                                           sizeof(req));
     /* There should at _LEAST_ be _ONE_ message in here! */
     assert(nr == sizeof(req));
     while (req.request.opaque < seqno) {
@@ -672,7 +671,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
                                        errinfo);
             return -1;
 
-            }
+        }
         }
 
         libcouchbase_ringbuffer_consumed(&c->cmd_log, packetsize);

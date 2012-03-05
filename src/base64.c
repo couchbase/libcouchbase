@@ -35,12 +35,17 @@ static const uint8_t code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
  * @param num the number of characters from s to encode
  * @return 0 upon success, -1 otherwise.
  */
-static int encode_rest(const uint8_t *s, uint8_t *d, libcouchbase_size_t num) {
+static int encode_rest(const uint8_t *s, uint8_t *d, libcouchbase_size_t num)
+{
     libcouchbase_uint32_t val = 0;
 
     switch (num) {
-    case 2: val = (libcouchbase_uint32_t)((*s << 16) | (*(s + 1) << 8)); break;
-    case 1: val = (libcouchbase_uint32_t)((*s << 16)); break;
+    case 2:
+        val = (libcouchbase_uint32_t)((*s << 16) | (*(s + 1) << 8));
+        break;
+    case 1:
+        val = (libcouchbase_uint32_t)((*s << 16));
+        break;
     default:
         return -1;
     }
@@ -65,7 +70,8 @@ static int encode_rest(const uint8_t *s, uint8_t *d, libcouchbase_size_t num) {
  * @param s pointer to the input stream
  * @param d pointer to the output stream
  */
-static int encode_triplet(const uint8_t *s, uint8_t *d) {
+static int encode_triplet(const uint8_t *s, uint8_t *d)
+{
     libcouchbase_uint32_t val = (libcouchbase_uint32_t)((*s << 16) | (*(s + 1) << 8) | (*(s + 2)));
     d[3] = code[val & 63] ;
     d[2] = code[(val >> 6) & 63];
@@ -82,13 +88,14 @@ static int encode_triplet(const uint8_t *s, uint8_t *d) {
  * @param sz size of destination buffer
  * @return 0 if success, -1 if the destination buffer isn't big enough
  */
-int libcouchbase_base64_encode(const char *src, char *dst, libcouchbase_size_t sz) {
+int libcouchbase_base64_encode(const char *src, char *dst, libcouchbase_size_t sz)
+{
     libcouchbase_size_t len = strlen(src);
     libcouchbase_size_t triplets = len / 3;
     libcouchbase_size_t rest = len % 3;
     libcouchbase_size_t ii;
-    const uint8_t *in = (const uint8_t*)src;
-    uint8_t *out = (uint8_t*)dst;
+    const uint8_t *in = (const uint8_t *)src;
+    uint8_t *out = (uint8_t *)dst;
 
     if (sz < (libcouchbase_size_t)((triplets + 1) * 4)) {
         return -1;

@@ -34,16 +34,18 @@ CommandLineOption::CommandLineOption(char s, const char *l, bool arg, const char
     // Empty
 }
 
-CommandLineOption::~CommandLineOption() {
+CommandLineOption::~CommandLineOption()
+{
     free(longopt);
 }
 
-void CommandLineOption::set(char *arg) {
+void CommandLineOption::set(char *arg)
+{
     argument = arg;
 }
 
 
-Getopt& Getopt::addOption(CommandLineOption* option)
+Getopt &Getopt::addOption(CommandLineOption *option)
 {
     options.push_back(option);
     return *this;
@@ -51,7 +53,7 @@ Getopt& Getopt::addOption(CommandLineOption* option)
 
 void Getopt::usage(const char *name) const
 {
-    vector<CommandLineOption*>::const_iterator iter;
+    vector<CommandLineOption *>::const_iterator iter;
     cerr << "Usage: " << name << " [options] [arguments]" << endl << endl;
 
     for (iter = options.begin(); iter != options.end(); ++iter) {
@@ -76,7 +78,7 @@ bool Getopt::parse(int argc, char **argv)
     struct option opts[256];
     memset(opts, 0, 256 * sizeof(*opts));
     stringstream ss;
-    vector<CommandLineOption*>::iterator iter;
+    vector<CommandLineOption *>::iterator iter;
     int ii = 0;
     for (iter = options.begin(); iter != options.end(); ++iter, ++ii) {
         opts[ii].name = (*iter)->longopt;

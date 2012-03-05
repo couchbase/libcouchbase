@@ -61,12 +61,12 @@ extern "C" {
                                                  const void *key,
                                                  libcouchbase_size_t nkey);
     typedef void (*libcouchbase_stat_callback)(libcouchbase_t instance,
-                                               const void* cookie,
-                                               const char* server_endpoint,
+                                               const void *cookie,
+                                               const char *server_endpoint,
                                                libcouchbase_error_t error,
-                                               const void* key,
+                                               const void *key,
                                                libcouchbase_size_t nkey,
-                                               const void* bytes,
+                                               const void *bytes,
                                                libcouchbase_size_t nbytes);
     typedef void (*libcouchbase_version_callback)(libcouchbase_t instance,
                                                   const void *cookie,
@@ -118,8 +118,8 @@ extern "C" {
                                                 const char *errinfo);
 
     typedef void (*libcouchbase_flush_callback)(libcouchbase_t instance,
-                                                const void* cookie,
-                                                const char* server_endpoint,
+                                                const void *cookie,
+                                                const char *server_endpoint,
                                                 libcouchbase_error_t error);
 
     /**
@@ -188,7 +188,7 @@ extern "C" {
 
     LIBCOUCHBASE_API
     libcouchbase_tap_flush_callback libcouchbase_set_tap_flush_callback(libcouchbase_t,
-                                                                    libcouchbase_tap_flush_callback);
+                                                                        libcouchbase_tap_flush_callback);
 
     LIBCOUCHBASE_API
     libcouchbase_tap_opaque_callback libcouchbase_set_tap_opaque_callback(libcouchbase_t,
@@ -196,7 +196,7 @@ extern "C" {
 
     LIBCOUCHBASE_API
     libcouchbase_tap_vbucket_set_callback libcouchbase_set_tap_vbucket_set_callback(libcouchbase_t,
-                                                                                    libcouchbase_tap_vbucket_set_callback);
+            libcouchbase_tap_vbucket_set_callback);
 
     LIBCOUCHBASE_API
     libcouchbase_error_callback libcouchbase_set_error_callback(libcouchbase_t,

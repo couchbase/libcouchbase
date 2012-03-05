@@ -153,13 +153,13 @@ void libcouchbase_record_metrics(libcouchbase_t instance,
         }
         break;
     case 1:
-        if (++instance->histogram->usec[delta/10] > instance->histogram->max) {
-            instance->histogram->max = instance->histogram->usec[delta/10];
+        if (++instance->histogram->usec[delta / 10] > instance->histogram->max) {
+            instance->histogram->max = instance->histogram->usec[delta / 10];
         }
         break;
     case 2:
-        if (++instance->histogram->msec[delta/10] > instance->histogram->max) {
-            instance->histogram->max = instance->histogram->msec[delta/10];
+        if (++instance->histogram->msec[delta / 10] > instance->histogram->max) {
+            instance->histogram->max = instance->histogram->msec[delta / 10];
         }
         break;
     default:

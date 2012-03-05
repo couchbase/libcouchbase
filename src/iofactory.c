@@ -22,21 +22,23 @@
 #include <libcouchbase/libevent_io_opts.h>
 #endif
 
-static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code) {
+static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code)
+{
     if (error != NULL) {
         *error = code;
     }
 }
 
 
-typedef libcouchbase_io_opt_t* (*create_func)(struct event_base *base);
+typedef libcouchbase_io_opt_t *(*create_func)(struct event_base *base);
 
 #ifndef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
 static create_func get_create_func(const char *image,
-                                   libcouchbase_error_t *error) {
+                                   libcouchbase_error_t *error)
+{
     union my_hack {
         create_func create;
-        void* voidptr;
+        void *voidptr;
     } my_create ;
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
     if (dlhandle == NULL) {
@@ -55,7 +57,7 @@ static create_func get_create_func(const char *image,
 #endif
 
 LIBCOUCHBASE_API
-libcouchbase_io_opt_t* libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
+libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
                                                   void *cookie,
                                                   libcouchbase_error_t *error)
 {

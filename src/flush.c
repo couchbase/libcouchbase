@@ -19,7 +19,7 @@
 
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
-                                        const void* command_cookie)
+                                        const void *command_cookie)
 {
     libcouchbase_server_t *server;
     protocol_binary_request_no_extras flush;

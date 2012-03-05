@@ -71,7 +71,8 @@ static int parse_longopt(int argc, char **argv,
 
 
 int getopt_long(int argc, char **argv, const char *optstring,
-                const struct option *longopts, int *longindex) {
+                const struct option *longopts, int *longindex)
+{
 
     if (optind + 1 >= argc) {
         // EOF

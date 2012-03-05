@@ -61,7 +61,7 @@ extern "C" {
      * @return pointer to a newly created io ops structure
      */
     LIBCOUCHBASE_API
-    libcouchbase_io_opt_t* libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
+    libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
                                                       void *cookie,
                                                       libcouchbase_error_t *error);
 
@@ -154,7 +154,7 @@ extern "C" {
      * @param instance the handle to libcouchbase
      */
     LIBCOUCHBASE_API
-    void libcouchbase_flush_buffers(libcouchbase_t instance, const void* cookie);
+    void libcouchbase_flush_buffers(libcouchbase_t instance, const void *cookie);
 
     /**
      * Associate a cookie with an instance of libcouchbase
@@ -216,7 +216,7 @@ extern "C" {
     libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
                                            const void *command_cookie,
                                            libcouchbase_size_t num_keys,
-                                           const void * const *keys,
+                                           const void *const *keys,
                                            const libcouchbase_size_t *nkey,
                                            const libcouchbase_time_t *exp);
 
@@ -244,7 +244,7 @@ extern "C" {
                                                   const void *hashkey,
                                                   libcouchbase_size_t nhashkey,
                                                   libcouchbase_size_t num_keys,
-                                                  const void * const *keys,
+                                                  const void *const *keys,
                                                   const libcouchbase_size_t *nkey,
                                                   const libcouchbase_time_t *exp);
 
@@ -269,7 +269,7 @@ extern "C" {
     libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
                                              const void *command_cookie,
                                              libcouchbase_size_t num_keys,
-                                             const void * const *keys,
+                                             const void *const *keys,
                                              const libcouchbase_size_t *nkey,
                                              const libcouchbase_time_t *exp);
 
@@ -298,7 +298,7 @@ extern "C" {
                                                     const void *hashkey,
                                                     libcouchbase_size_t nhashkey,
                                                     libcouchbase_size_t num_keys,
-                                                    const void * const *keys,
+                                                    const void *const *keys,
                                                     const libcouchbase_size_t *nkey,
                                                     const libcouchbase_time_t *exp);
 
@@ -325,8 +325,8 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
-                                                   const void* command_cookie,
-                                                   const void* arg,
+                                                   const void *command_cookie,
+                                                   const void *arg,
                                                    libcouchbase_size_t narg);
 
     /**
@@ -541,7 +541,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
-                                            const void* cookie);
+                                            const void *cookie);
 
 #ifdef __cplusplus
 }

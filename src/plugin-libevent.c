@@ -65,8 +65,7 @@ event_new(struct event_base *base,
           evutil_socket_t fd,
           short events,
           event_callback_fn cb,
-          void *arg)
-{
+          void *arg) {
     struct event *ev;
     ev = malloc(sizeof(struct event));
     if (ev == NULL) {
@@ -99,10 +98,10 @@ event_get_callback(const struct event *ev)
 }
 #endif
 static libcouchbase_ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
-                                    libcouchbase_socket_t sock,
-                                    void *buffer,
-                                    libcouchbase_size_t len,
-                                    int flags)
+                                                 libcouchbase_socket_t sock,
+                                                 void *buffer,
+                                                 libcouchbase_size_t len,
+                                                 int flags)
 {
     libcouchbase_ssize_t ret = recv(sock, buffer, len, flags);
     if (ret < 0) {
@@ -112,9 +111,9 @@ static libcouchbase_ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *
 }
 
 static libcouchbase_ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
-                                     libcouchbase_socket_t sock,
-                                     struct libcouchbase_iovec_st *iov,
-                                     libcouchbase_size_t niov)
+                                                  libcouchbase_socket_t sock,
+                                                  struct libcouchbase_iovec_st *iov,
+                                                  libcouchbase_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
@@ -138,10 +137,10 @@ static libcouchbase_ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st 
 }
 
 static libcouchbase_ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
-                                    libcouchbase_socket_t sock,
-                                    const void *msg,
-                                    libcouchbase_size_t len,
-                                    int flags)
+                                                 libcouchbase_socket_t sock,
+                                                 const void *msg,
+                                                 libcouchbase_size_t len,
+                                                 int flags)
 {
     libcouchbase_ssize_t ret = send(sock, msg, len, flags);
     if (ret < 0) {
@@ -151,9 +150,9 @@ static libcouchbase_ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *
 }
 
 static libcouchbase_ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
-                                     libcouchbase_socket_t sock,
-                                     struct libcouchbase_iovec_st *iov,
-                                     libcouchbase_size_t niov)
+                                                  libcouchbase_socket_t sock,
+                                                  struct libcouchbase_iovec_st *iov,
+                                                  libcouchbase_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
@@ -231,12 +230,12 @@ static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
 {
     flags |= EV_PERSIST;
     if (flags == event_get_events(event) &&
-        handler == event_get_callback(event)) {
+            handler == event_get_callback(event)) {
         /* no change! */
         return 0;
     }
 
-    if (event_pending(event, EV_READ|EV_WRITE, 0)) {
+    if (event_pending(event, EV_READ | EV_WRITE, 0)) {
         event_del(event);
     }
 
@@ -249,7 +248,7 @@ static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
                                          void *event)
 {
     (void)iops;
-    if(event_pending(event, EV_TIMEOUT, 0) != 0 && event_del(event) == -1) {
+    if (event_pending(event, EV_TIMEOUT, 0) != 0 && event_del(event) == -1) {
         iops->error = EINVAL;
     }
     event_assign(event, ((struct libevent_cookie *)iops->cookie)->base, -1, 0, NULL, NULL);
@@ -266,7 +265,7 @@ static int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
     short flags = EV_TIMEOUT | EV_PERSIST;
     struct timeval tmo;
     if (flags == event_get_events(timer) &&
-        handler == event_get_callback(timer)) {
+            handler == event_get_callback(timer)) {
         /* no change! */
         return 0;
     }
@@ -285,17 +284,18 @@ static void libcouchbase_io_destroy_event(struct libcouchbase_io_opt_st *iops,
                                           void *event)
 {
     (void)iops;
-    if (event_pending(event, EV_READ|EV_WRITE|EV_TIMEOUT, 0)) {
+    if (event_pending(event, EV_READ | EV_WRITE | EV_TIMEOUT, 0)) {
         event_del(event);
     }
     event_free(event);
 }
 
 static void libcouchbase_io_delete_event(struct libcouchbase_io_opt_st *iops,
-                                          libcouchbase_socket_t sock,
-                                          void *event)
+                                         libcouchbase_socket_t sock,
+                                         void *event)
 {
-    (void)iops; (void)sock;
+    (void)iops;
+    (void)sock;
     if (event_del(event) == -1) {
         iops->error = EINVAL;
     }
@@ -309,7 +309,7 @@ static void libcouchbase_io_stop_event_loop(struct libcouchbase_io_opt_st *iops)
 
 static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
 {
-     event_base_loop(((struct libevent_cookie *)iops->cookie)->base, 0);
+    event_base_loop(((struct libevent_cookie *)iops->cookie)->base, 0);
 }
 
 static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *iops)
@@ -322,8 +322,7 @@ static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *iops)
 }
 
 LIBCOUCHBASE_API
-struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event_base *base)
-{
+struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event_base *base) {
     struct libcouchbase_io_opt_st *ret = calloc(1, sizeof(*ret));
     struct libevent_cookie *cookie = calloc(1, sizeof(*cookie));
     if (ret == NULL || cookie == NULL) {

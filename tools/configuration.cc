@@ -24,7 +24,8 @@
 
 using namespace std;
 
-Configuration::Configuration() : timings(false), timeout(0) {
+Configuration::Configuration() : timings(false), timeout(0)
+{
     loadCbcRc();
     setHost(getenv("COUCHBASE_CLUSTER_URI"));
     setUser(getenv("COUCHBASE_CLUSTER_USER"));
@@ -32,82 +33,97 @@ Configuration::Configuration() : timings(false), timeout(0) {
     setBucket(getenv("COUCHBASE_CLUSTER_BUCKET"));
 }
 
-Configuration::~Configuration() {
+Configuration::~Configuration()
+{
 }
 
-void Configuration::setHost(const char *h) {
+void Configuration::setHost(const char *h)
+{
     if (h != NULL) {
         host.assign(h);
     }
 }
 
-const char *Configuration::getHost() const {
+const char *Configuration::getHost() const
+{
     if (host.length() > 0) {
         return host.c_str();
     }
     return NULL;
 }
 
-void Configuration::setUser(const char *u) {
+void Configuration::setUser(const char *u)
+{
     if (u) {
         user.assign(u);
     }
 }
 
-const char *Configuration::getUser() const {
+const char *Configuration::getUser() const
+{
     if (user.length() > 0) {
         return user.c_str();
     }
     return NULL;
 }
 
-void Configuration::setPassword(const char *p) {
+void Configuration::setPassword(const char *p)
+{
     if (p) {
         passwd.assign(p);
     }
 }
 
-const char *Configuration::getPassword() const {
+const char *Configuration::getPassword() const
+{
     if (passwd.length() > 0) {
         return passwd.c_str();
     }
     return NULL;
 }
 
-void Configuration::setBucket(const char *b) {
+void Configuration::setBucket(const char *b)
+{
     if (b)  {
         bucket.assign(b);
     }
 }
 
-const char *Configuration::getBucket() const {
+const char *Configuration::getBucket() const
+{
     if (bucket.length() > 0) {
         return bucket.c_str();
     }
     return NULL;
 }
 
-void Configuration::setTimingsEnabled(bool n) {
+void Configuration::setTimingsEnabled(bool n)
+{
     timings = n;
 }
 
-bool Configuration::isTimingsEnabled() const {
+bool Configuration::isTimingsEnabled() const
+{
     return timings;
 }
 
-void Configuration::setTimeout(const char *t) {
+void Configuration::setTimeout(const char *t)
+{
     setTimeout((uint32_t)atoi(t));
 }
 
-void Configuration::setTimeout(uint32_t t) {
+void Configuration::setTimeout(uint32_t t)
+{
     timeout = t;
 }
 
-uint32_t Configuration::getTimeout() {
+uint32_t Configuration::getTimeout()
+{
     return timeout;
 }
 
-static string trim(const char *ptr) {
+static string trim(const char *ptr)
+{
 
     // skip leading blanks
     while (isspace(*ptr)) {
@@ -123,7 +139,8 @@ static string trim(const char *ptr) {
     return ret;
 }
 
-bool split(const string &line, string &key, string &value) {
+bool split(const string &line, string &key, string &value)
+{
     string::size_type idx = line.find('=');
     if (idx == string::npos) {
         return false;
@@ -134,7 +151,8 @@ bool split(const string &line, string &key, string &value) {
     return true;
 }
 
-void Configuration::loadCbcRc(void) {
+void Configuration::loadCbcRc(void)
+{
     stringstream ss;
 
     if (getenv("HOME") != NULL) {

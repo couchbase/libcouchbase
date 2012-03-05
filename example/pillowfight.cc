@@ -30,23 +30,23 @@
 
 using namespace std;
 
-class Configuration {
+class Configuration
+{
 public:
- Configuration() : host(),
+    Configuration() : host(),
         maxKey(1000),
         iterations(1000),
         fixedSize(true),
         setprc(33),
         prefix(""),
         maxSize(1024),
-        numThreads(1)
-    {
+        numThreads(1) {
         // @todo initialize the random sequence in seqno
-        data = static_cast<void*>(new char[maxSize]);
+        data = static_cast<void *>(new char[maxSize]);
     }
 
     ~Configuration() {
-        delete []static_cast<char*>(data);
+        delete []static_cast<char *>(data);
     }
 
     const char *getHost() const {
@@ -142,7 +142,8 @@ extern "C" {
                                 libcouchbase_uint32_t);
 }
 
-class ThreadContext {
+class ThreadContext
+{
 public:
     ThreadContext() :
         currSeqno(0), instance(NULL) {
@@ -218,13 +219,13 @@ public:
                                        config.maxSize, flags,
                                        exp, 0);
                 } else {
-                    const char* keys[1];
+                    const char *keys[1];
                     libcouchbase_size_t nkey[1];
                     keys[0] = key.c_str();
                     nkey[0] = (libcouchbase_size_t)key.length();
                     if (libcouchbase_mget(instance, this, 1,
-                                          reinterpret_cast<const void * const *>(keys), nkey, NULL)
-                        != LIBCOUCHBASE_SUCCESS) {
+                                          reinterpret_cast<const void *const *>(keys), nkey, NULL)
+                            != LIBCOUCHBASE_SUCCESS) {
                         // @error
                     }
                 }
@@ -263,7 +264,7 @@ public:
             generateKey(key, ii);
 
             error = libcouchbase_store(instance,
-                                       reinterpret_cast<void*> (this), LIBCOUCHBASE_SET,
+                                       reinterpret_cast<void *> (this), LIBCOUCHBASE_SET,
                                        key.c_str(),
                                        (libcouchbase_size_t)key.length(),
                                        config.data, config.maxSize, 0, 0, 0);
@@ -304,7 +305,7 @@ protected:
         std::stringstream ss;
         ss << header << std::endl;
         ss << "              +---------+---------+---------+---------+" << std::endl;
-        libcouchbase_get_timings(instance, reinterpret_cast<void*> (&ss),
+        libcouchbase_get_timings(instance, reinterpret_cast<void *> (&ss),
                                  timingsCallback);
         ss << "              +----------------------------------------" << endl;
         std::cout << ss.str();
@@ -341,9 +342,10 @@ private:
 
 static void storageCallback(libcouchbase_t, const void *cookie,
                             libcouchbase_storage_t, libcouchbase_error_t error,
-                            const void *, libcouchbase_size_t, libcouchbase_cas_t) {
+                            const void *, libcouchbase_size_t, libcouchbase_cas_t)
+{
     ThreadContext *tc;
-    tc = const_cast<ThreadContext*>(reinterpret_cast<const ThreadContext*>(cookie));
+    tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(cookie));
     tc->setError(error);
 }
 
@@ -351,9 +353,10 @@ static void getCallback(libcouchbase_t, const void *cookie,
                         libcouchbase_error_t error, const void *,
                         libcouchbase_size_t, const void *,
                         libcouchbase_size_t, libcouchbase_uint32_t,
-                        libcouchbase_cas_t) {
+                        libcouchbase_cas_t)
+{
     ThreadContext *tc;
-    tc = const_cast<ThreadContext*>(reinterpret_cast<const ThreadContext*>(cookie));
+    tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(cookie));
     tc->setError(error);
 
 }
@@ -363,9 +366,10 @@ static void timingsCallback(libcouchbase_t instance, const void *cookie,
                             libcouchbase_uint32_t min,
                             libcouchbase_uint32_t max,
                             libcouchbase_uint32_t total,
-                            libcouchbase_uint32_t maxtotal) {
+                            libcouchbase_uint32_t maxtotal)
+{
     std::stringstream *ss =
-        const_cast<std::stringstream*> (reinterpret_cast<const std::stringstream*> (cookie));
+        const_cast<std::stringstream *> (reinterpret_cast<const std::stringstream *> (cookie));
     char buffer[1024];
     int offset = sprintf(buffer, "[%3u - %3u]", min, max);
 
@@ -400,7 +404,8 @@ static void timingsCallback(libcouchbase_t instance, const void *cookie,
     (void)instance;
 }
 
-static void handle_options(int argc, char **argv) {
+static void handle_options(int argc, char **argv)
+{
     Getopt getopt;
     getopt.addOption(new CommandLineOption('?', "help", false,
                                            "Print this help text"));
@@ -424,7 +429,7 @@ static void handle_options(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    std::vector<CommandLineOption*>::iterator iter;
+    std::vector<CommandLineOption *>::iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->found) {
             switch ((*iter)->shortopt) {
@@ -477,7 +482,8 @@ static void handle_options(int argc, char **argv) {
  * @param argv argument vector
  * @return 0 success, 1 failure
  */
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     handle_options(argc, argv);
 
     ThreadContext ctx;

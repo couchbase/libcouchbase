@@ -27,7 +27,8 @@
 
 LIBCOUCHBASE_API
 const char *libcouchbase_strerror(libcouchbase_t instance,
-                                  libcouchbase_error_t error) {
+                                  libcouchbase_error_t error)
+{
     (void)instance;
     switch (error) {
     case LIBCOUCHBASE_SUCCESS:

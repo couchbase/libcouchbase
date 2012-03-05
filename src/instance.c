@@ -179,7 +179,7 @@ libcouchbase_t libcouchbase_create(const char *host,
         offset += snprintf(buffer + offset, sizeof(buffer) - (libcouchbase_size_t)offset,
                            "Authorization: Basic %s\r\n", base64);
     }
-    offset += snprintf(buffer + offset, sizeof(buffer)-(libcouchbase_size_t)offset, "\r\n");
+    offset += snprintf(buffer + offset, sizeof(buffer) - (libcouchbase_size_t)offset, "\r\n");
     ret->http_uri = strdup(buffer);
 
     if (ret->http_uri == NULL) {
@@ -303,9 +303,9 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     const char *passwd;
     char curnode[NI_MAXHOST + NI_MAXSERV + 2];
     sasl_callback_t sasl_callbacks[4] = {
-        { SASL_CB_USER, (int(*)(void))&sasl_get_username, instance },
-        { SASL_CB_AUTHNAME, (int(*)(void))&sasl_get_username, instance },
-        { SASL_CB_PASS, (int(*)(void))&sasl_get_password, instance },
+        { SASL_CB_USER, (int( *)(void)) &sasl_get_username, instance },
+        { SASL_CB_AUTHNAME, (int( *)(void)) &sasl_get_username, instance },
+        { SASL_CB_PASS, (int( *)(void)) &sasl_get_password, instance },
         { SASL_CB_LIST_END, NULL, NULL }
     };
 
@@ -340,7 +340,7 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     passwd = vbucket_config_get_password(instance->vbucket_config);
     if (passwd) {
         instance->sasl.password.secret.len = strlen(passwd);
-        strcpy((char*)instance->sasl.password.secret.data, passwd);
+        strcpy((char *)instance->sasl.password.secret.data, passwd);
     }
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
@@ -412,7 +412,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
 {
     libcouchbase_size_t ii;
     VBUCKET_CONFIG_HANDLE next_config, curr_config;
-    VBUCKET_CONFIG_DIFF* diff = NULL;
+    VBUCKET_CONFIG_DIFF *diff = NULL;
     libcouchbase_size_t nservers;
     libcouchbase_server_t *servers, *ss;
 
@@ -492,7 +492,7 @@ static int parse_chunk(libcouchbase_t instance)
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     assert(instance->vbucket_stream.chunk_size != 0);
 
-    if (instance->vbucket_stream.chunk_size == (libcouchbase_size_t)-1) {
+    if (instance->vbucket_stream.chunk_size == (libcouchbase_size_t) - 1) {
         char *ptr = strstr(buffer->data, "\r\n");
         long val;
         if (ptr == NULL) {
@@ -541,12 +541,12 @@ static int parse_header(libcouchbase_t instance)
     }
 
     /* parse the headers I care about... */
-    if(sscanf(buffer->data, "HTTP/1.1 %d", &response_code) != 1) {
+    if (sscanf(buffer->data, "HTTP/1.1 %d", &response_code) != 1) {
         libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
                                    buffer->data);
-    } else if(response_code != 200) {
+    } else if (response_code != 200) {
         libcouchbase_error_t err;
-        switch(response_code) {
+        switch (response_code) {
         case 401:
             err = LIBCOUCHBASE_AUTH_ERROR;
             break;
@@ -562,7 +562,7 @@ static int parse_header(libcouchbase_t instance)
     }
 
     if (strstr(buffer->data, "Transfer-Encoding: chunked") == NULL &&
-        strstr(buffer->data, "Transfer-encoding: chunked") == NULL) {
+            strstr(buffer->data, "Transfer-encoding: chunked") == NULL) {
         libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
                                    buffer->data);
         return -1;
@@ -573,7 +573,7 @@ static int parse_header(libcouchbase_t instance)
     buffer->avail -= (libcouchbase_size_t)(ptr - buffer->data);
     memmove(buffer->data, ptr, buffer->avail);
     buffer->data[buffer->avail] = '\0';
-    instance->vbucket_stream.chunk_size = (libcouchbase_size_t)-1;
+    instance->vbucket_stream.chunk_size = (libcouchbase_size_t) - 1;
 
     return 0;
 }
@@ -590,7 +590,8 @@ const libcouchbase_size_t min_buffer_size = 2048;
  * @param min_free the minimum amount of free space I need
  * @return 1 if success, 0 otherwise
  */
-int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free) {
+int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free)
+{
     if (min_free == 0) {
         /*
         ** no minimum size requested, just ensure that there is at least
@@ -666,7 +667,7 @@ static void libcouchbase_instance_connerr(libcouchbase_t instance,
                                           libcouchbase_error_t err,
                                           const char *errinfo)
 {
-    if(instance->sock != INVALID_SOCKET) {
+    if (instance->sock != INVALID_SOCKET) {
         instance->io->delete_event(instance->io, instance->sock, instance->event);
         instance->io->close(instance->io, instance->sock);
         instance->sock = INVALID_SOCKET;
@@ -815,7 +816,7 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
                     libcouchbase_update_serverlist(instance);
                 }
 
-                instance->vbucket_stream.chunk_size = (libcouchbase_size_t)-1;
+                instance->vbucket_stream.chunk_size = (libcouchbase_size_t) - 1;
                 if (buffer->avail > 0) {
                     done = 0;
                 }
@@ -848,8 +849,8 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
         if (instance->sock == INVALID_SOCKET) {
             /* Try to get a socket.. */
             instance->sock = libcouchbase_gai2sock(instance,
-                                                      &instance->curr_ai,
-                                                      &save_errno);
+                                                   &instance->curr_ai,
+                                                   &save_errno);
 
             /* Reset the stream state, we run this only during a new socket. */
             libcouchbase_instance_reset_stream_state(instance);

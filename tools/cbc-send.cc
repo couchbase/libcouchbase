@@ -58,8 +58,8 @@ extern "C" {
         libcouchbase_uint32_t bodylen = (libcouchbase_uint32_t)(nkey + nbytes + 8 + nbytes);
         req.message.header.request.bodylen = htonl((libcouchbase_uint32_t)bodylen);
         sendIt(req.bytes, sizeof(req.bytes));
-        sendIt((const uint8_t*)key, nkey);
-        sendIt((const uint8_t*)data, nbytes);
+        sendIt((const uint8_t *)key, nkey);
+        sendIt((const uint8_t *)data, nbytes);
     }
 
     static void cbc_tap_deletion_callback(libcouchbase_t,
@@ -83,7 +83,7 @@ extern "C" {
         req.message.header.request.vbucket = htons(vbucket);
         req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)nkey);
         sendIt(req.bytes, sizeof(req.bytes));
-        sendIt((const uint8_t*)key, nkey);
+        sendIt((const uint8_t *)key, nkey);
     }
 
     static void cbc_tap_flush_callback(libcouchbase_t,
