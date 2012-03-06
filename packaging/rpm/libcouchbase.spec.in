@@ -65,6 +65,50 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Tue Mar 06 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.2
+[Mark Nunberg]
+- Added internal debugging/logging routines
+- Fixed some compiler warnings and tidy types
+- include <cstdlib> in cbc.cc (provides EXIT_*)
+- Handle EINVAL for connects
+- Refactor connection error handling
+- implement PROTOCOL_BINARY_CMD_VERSION
+
+[Pierre Joye]
+- Fix windows build (MSVC9): stdint header
+- Fix windows build (MSVC9): define E* if missing
+
+[Sergey Avseyev]
+- Fix mingw cross build
+- cbc.cc: check for NULL result of libcouchbase_create()
+- Add cheatsheet for cbc command
+- Do not expose PACKAGE_STRING
+- Fix command help
+- Include <stdint.h> for tools
+- Raise error if <stdint.h> missing
+- Rename argument to make it more consistent
+- Add JSON support for cp function
+- Rename packaging/{debian,deb}
+- Always sign deb packages and allow to pass PGP key
+- Reduce package dependencies (use internal SASL client)
+- debhelper required to build deb packages
+- make reformat
+
+[Trond Norbye]
+- Use 127.0.0.1 instead of localhost
+- Added support for '-' to cp
+- Add option to set timeout for cbc
+- Added "verify"
+- Don't use std:: (we're using namespace std anyway)
+- Add support for multiple hosts for the bootstrap URL
+- Bundle sasl client implementation
+- Bundle the protocol definitions for memcached to make it easier to build
+- Add astyle rules
+- Fix compile error in smoke-test (-Wformat-security)
+- Allow use of libcouchbase to pure memcached clusters
+- Fix buildbreak on win32
+- Update library version
+
 * Mon Feb 13 2012 Matt Ingenthron <matt@couchbase.com> - 1.0.1
 [Sergey Avseyev]
 - Port double free error to C test
