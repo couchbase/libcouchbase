@@ -32,40 +32,40 @@ extern "C" {
     typedef enum {
         RINGBUFFER_READ = 0x01,
         RINGBUFFER_WRITE = 0x02
-    } libcouchbase_ringbuffer_direction_t;
+    } ringbuffer_direction_t;
 
-    int libcouchbase_ringbuffer_initialize(ringbuffer_t *buffer,
-                                           libcouchbase_size_t size);
-    void libcouchbase_ringbuffer_reset(ringbuffer_t *buffer);
-    void libcouchbase_ringbuffer_destruct(ringbuffer_t *buffer);
-    int libcouchbase_ringbuffer_ensure_capacity(ringbuffer_t *buffer,
-                                                libcouchbase_size_t size);
-    libcouchbase_size_t libcouchbase_ringbuffer_get_size(ringbuffer_t *buffer);
-    void *libcouchbase_ringbuffer_get_start(ringbuffer_t *buffer);
-    void *libcouchbase_ringbuffer_get_read_head(ringbuffer_t *buffer);
-    void *libcouchbase_ringbuffer_get_write_head(ringbuffer_t *buffer);
-    libcouchbase_size_t libcouchbase_ringbuffer_write(ringbuffer_t *buffer,
-                                                      const void *src,
-                                                      libcouchbase_size_t nb);
-    libcouchbase_size_t libcouchbase_ringbuffer_read(ringbuffer_t *buffer,
-                                                     void *dest,
-                                                     libcouchbase_size_t nb);
-    libcouchbase_size_t libcouchbase_ringbuffer_peek(ringbuffer_t *buffer,
-                                                     void *dest,
-                                                     libcouchbase_size_t nb);
-    void libcouchbase_ringbuffer_get_iov(ringbuffer_t *buffer,
-                                         libcouchbase_ringbuffer_direction_t direction,
-                                         struct libcouchbase_iovec_st *iov);
-    void libcouchbase_ringbuffer_produced(ringbuffer_t *buffer, libcouchbase_size_t nb);
-    void libcouchbase_ringbuffer_consumed(ringbuffer_t *buffer, libcouchbase_size_t nb);
-    libcouchbase_size_t libcouchbase_ringbuffer_get_nbytes(ringbuffer_t *buffer);
-    int libcouchbase_ringbuffer_is_continous(ringbuffer_t *buffer,
-                                             libcouchbase_ringbuffer_direction_t direction,
-                                             libcouchbase_size_t nb);
+    int ringbuffer_initialize(ringbuffer_t *buffer,
+                              libcouchbase_size_t size);
+    void ringbuffer_reset(ringbuffer_t *buffer);
+    void ringbuffer_destruct(ringbuffer_t *buffer);
+    int ringbuffer_ensure_capacity(ringbuffer_t *buffer,
+                                   libcouchbase_size_t size);
+    libcouchbase_size_t ringbuffer_get_size(ringbuffer_t *buffer);
+    void *ringbuffer_get_start(ringbuffer_t *buffer);
+    void *ringbuffer_get_read_head(ringbuffer_t *buffer);
+    void *ringbuffer_get_write_head(ringbuffer_t *buffer);
+    libcouchbase_size_t ringbuffer_write(ringbuffer_t *buffer,
+                                         const void *src,
+                                         libcouchbase_size_t nb);
+    libcouchbase_size_t ringbuffer_read(ringbuffer_t *buffer,
+                                        void *dest,
+                                        libcouchbase_size_t nb);
+    libcouchbase_size_t ringbuffer_peek(ringbuffer_t *buffer,
+                                        void *dest,
+                                        libcouchbase_size_t nb);
+    void ringbuffer_get_iov(ringbuffer_t *buffer,
+                            ringbuffer_direction_t direction,
+                            struct libcouchbase_iovec_st *iov);
+    void ringbuffer_produced(ringbuffer_t *buffer, libcouchbase_size_t nb);
+    void ringbuffer_consumed(ringbuffer_t *buffer, libcouchbase_size_t nb);
+    libcouchbase_size_t ringbuffer_get_nbytes(ringbuffer_t *buffer);
+    int ringbuffer_is_continous(ringbuffer_t *buffer,
+                                ringbuffer_direction_t direction,
+                                libcouchbase_size_t nb);
 
-    int libcouchbase_ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest);
-    int libcouchbase_ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
-                                       libcouchbase_size_t nbytes);
+    int ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest);
+    int ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
+                          libcouchbase_size_t nbytes);
 
 #ifdef __cplusplus
 }

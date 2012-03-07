@@ -79,7 +79,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
         return LIBCOUCHBASE_ENOMEM;
     }
 
-    if (libcouchbase_ringbuffer_initialize(&buffer, 1024) == -1) {
+    if (ringbuffer_initialize(&buffer, 1024) == -1) {
         free(copy);
         return LIBCOUCHBASE_ENOMEM;
     }
@@ -101,7 +101,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
     }
 
     offset += sprintf(head + offset, "%s", "\"nodes\": [");
-    libcouchbase_ringbuffer_write(&buffer, head, strlen(head));
+    ringbuffer_write(&buffer, head, strlen(head));
 
     /* Let's add the hosts... */
     first = 1;
@@ -129,12 +129,12 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
                           first ? ' ' : ',', ptr, port);
         first = 0;
 
-        if (libcouchbase_ringbuffer_ensure_capacity(&buffer, length) == -1) {
+        if (ringbuffer_ensure_capacity(&buffer, length) == -1) {
             free(copy);
             return LIBCOUCHBASE_ENOMEM;
         }
 
-        libcouchbase_ringbuffer_write(&buffer, head, length);
+        ringbuffer_write(&buffer, head, length);
 
         if (next != NULL) {
             ptr = next + 1;
@@ -143,18 +143,18 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
         }
     } while (ptr != NULL);
 
-    if (libcouchbase_ringbuffer_ensure_capacity(&buffer, 3) == -1) {
+    if (ringbuffer_ensure_capacity(&buffer, 3) == -1) {
         free(copy);
         return LIBCOUCHBASE_ENOMEM;
     }
 
-    libcouchbase_ringbuffer_write(&buffer, "]}", 3); /* Include '\0' */
+    ringbuffer_write(&buffer, "]}", 3); /* Include '\0' */
 
     /* Now let's parse the config! */
     fail = vbucket_config_parse(vbconfig, LIBVBUCKET_SOURCE_MEMORY,
-                                (char *)libcouchbase_ringbuffer_get_read_head(&buffer));
+                                (char *)ringbuffer_get_read_head(&buffer));
     free(copy);
-    libcouchbase_ringbuffer_destruct(&buffer);
+    ringbuffer_destruct(&buffer);
 
     if (fail) {
         /* Hmm... internal error! */

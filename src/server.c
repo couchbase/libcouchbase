@@ -40,23 +40,23 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
     libcouchbase_t root = server->instance;
     int writing = (stream == &server->cmd_log);
     ringbuffer_t rest;
-    libcouchbase_size_t send_size = libcouchbase_ringbuffer_get_nbytes(&server->output);
-    libcouchbase_size_t stream_size = libcouchbase_ringbuffer_get_nbytes(stream);
+    libcouchbase_size_t send_size = ringbuffer_get_nbytes(&server->output);
+    libcouchbase_size_t stream_size = ringbuffer_get_nbytes(stream);
 
-    assert(libcouchbase_ringbuffer_initialize(&rest, 1024));
+    assert(ringbuffer_initialize(&rest, 1024));
 
     do {
         int allocated = 0;
-        nr = libcouchbase_ringbuffer_peek(cookies, &ct, sizeof(ct));
+        nr = ringbuffer_peek(cookies, &ct, sizeof(ct));
         if (nr != sizeof(ct) || ct.start + tmo > now) {
             break;
         }
-        nr = libcouchbase_ringbuffer_peek(stream, req.bytes, sizeof(req));
+        nr = ringbuffer_peek(stream, req.bytes, sizeof(req));
         if (nr != sizeof(req)) {
             break;
         }
 
-        libcouchbase_ringbuffer_consumed(cookies, sizeof(ct));
+        ringbuffer_consumed(cookies, sizeof(ct));
 
         assert(nr == sizeof(req));
         packet = stream->read_head;
@@ -74,24 +74,24 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
 
             /* I do believe I have some IOV functions to do that? */
             libcouchbase_size_t nbytes = packetsize - (stream_size - send_size);
-            assert(libcouchbase_ringbuffer_memcpy(&rest,
-                                                  &server->output,
-                                                  nbytes) == 0);
-            libcouchbase_ringbuffer_consumed(&server->output, nbytes);
+            assert(ringbuffer_memcpy(&rest,
+                                     &server->output,
+                                     nbytes) == 0);
+            ringbuffer_consumed(&server->output, nbytes);
             send_size -= nbytes;
         }
         stream_size -= packetsize;
         /* @todo fixme.. I don't need the value to be in the continous part.. */
-        if (!libcouchbase_ringbuffer_is_continous(stream,
-                                                  RINGBUFFER_READ,
-                                                  packetsize)) {
+        if (!ringbuffer_is_continous(stream,
+                                     RINGBUFFER_READ,
+                                     packetsize)) {
             packet = malloc(packetsize);
             if (packet == NULL) {
                 libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM, NULL);
                 abort();
             }
 
-            nr = libcouchbase_ringbuffer_peek(stream, packet, packetsize);
+            nr = ringbuffer_peek(stream, packet, packetsize);
             if (nr != packetsize) {
                 libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
                                            NULL);
@@ -228,26 +228,26 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
             free(packet);
         }
 
-        libcouchbase_ringbuffer_consumed(stream, packetsize);
+        ringbuffer_consumed(stream, packetsize);
     } while (1); /* CONSTCOND */
 
     if (writing) {
         /* Preserve the rest of the stream */
-        libcouchbase_size_t nbytes = libcouchbase_ringbuffer_get_nbytes(stream);
-        send_size = libcouchbase_ringbuffer_get_nbytes(&server->output);
+        libcouchbase_size_t nbytes = ringbuffer_get_nbytes(stream);
+        send_size = ringbuffer_get_nbytes(&server->output);
 
         if (send_size >= nbytes) {
-            libcouchbase_ringbuffer_consumed(&server->output,
-                                             send_size - nbytes);
-            assert(libcouchbase_ringbuffer_memcpy(&rest,
-                                                  &server->output, nbytes) == 0);
+            ringbuffer_consumed(&server->output,
+                                send_size - nbytes);
+            assert(ringbuffer_memcpy(&rest,
+                                     &server->output, nbytes) == 0);
         }
-        libcouchbase_ringbuffer_reset(&server->output);
-        libcouchbase_ringbuffer_append(&rest, &server->output);
+        ringbuffer_reset(&server->output);
+        ringbuffer_append(&rest, &server->output);
     }
 
     server->next_timeout = 0;
-    if (libcouchbase_ringbuffer_peek(cookies, &ct, sizeof(ct)) == sizeof(ct)) {
+    if (ringbuffer_peek(cookies, &ct, sizeof(ct)) == sizeof(ct)) {
         server->next_timeout = ct.start;
     }
 }
@@ -265,12 +265,12 @@ libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
                                          0, gethrtime() + 1, error);
     }
 
-    libcouchbase_ringbuffer_reset(&server->output);
-    libcouchbase_ringbuffer_reset(&server->input);
-    libcouchbase_ringbuffer_reset(&server->cmd_log);
-    libcouchbase_ringbuffer_reset(&server->output_cookies);
-    libcouchbase_ringbuffer_reset(&server->pending);
-    libcouchbase_ringbuffer_reset(&server->pending_cookies);
+    ringbuffer_reset(&server->output);
+    ringbuffer_reset(&server->input);
+    ringbuffer_reset(&server->cmd_log);
+    ringbuffer_reset(&server->output_cookies);
+    ringbuffer_reset(&server->pending);
+    ringbuffer_reset(&server->pending_cookies);
 
     server->connected = 0;
 
@@ -320,12 +320,12 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
     free(server->couch_api_base);
     free(server->hostname);
     free(server->authority);
-    libcouchbase_ringbuffer_destruct(&server->output);
-    libcouchbase_ringbuffer_destruct(&server->output_cookies);
-    libcouchbase_ringbuffer_destruct(&server->cmd_log);
-    libcouchbase_ringbuffer_destruct(&server->pending);
-    libcouchbase_ringbuffer_destruct(&server->pending_cookies);
-    libcouchbase_ringbuffer_destruct(&server->input);
+    ringbuffer_destruct(&server->output);
+    ringbuffer_destruct(&server->output_cookies);
+    ringbuffer_destruct(&server->cmd_log);
+    ringbuffer_destruct(&server->pending);
+    ringbuffer_destruct(&server->pending_cookies);
+    ringbuffer_destruct(&server->input);
     memset(server, 0xff, sizeof(*server));
 }
 
@@ -415,19 +415,19 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
         **       much data..
         */
         ringbuffer_t copy = server->pending;
-        libcouchbase_ringbuffer_reset(&server->cmd_log);
-        libcouchbase_ringbuffer_reset(&server->output_cookies);
-        libcouchbase_ringbuffer_reset(&server->output);
-        if (!libcouchbase_ringbuffer_append(&server->pending, &server->output) ||
-                !libcouchbase_ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
-                !libcouchbase_ringbuffer_append(&copy, &server->cmd_log)) {
+        ringbuffer_reset(&server->cmd_log);
+        ringbuffer_reset(&server->output_cookies);
+        ringbuffer_reset(&server->output);
+        if (!ringbuffer_append(&server->pending, &server->output) ||
+                !ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
+                !ringbuffer_append(&copy, &server->cmd_log)) {
             libcouchbase_error_handler(server->instance,
                                        LIBCOUCHBASE_ENOMEM,
                                        NULL);
         }
 
-        libcouchbase_ringbuffer_reset(&server->pending);
-        libcouchbase_ringbuffer_reset(&server->pending_cookies);
+        ringbuffer_reset(&server->pending);
+        ringbuffer_reset(&server->pending_cookies);
 
         /* Send the pending data! */
         libcouchbase_server_event_handler(server->sock,
@@ -609,8 +609,8 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
                                                  hrtime_t end)
 {
     protocol_binary_request_header req;
-    libcouchbase_size_t nr =  libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes,
-                                                           sizeof(req));
+    libcouchbase_size_t nr =  ringbuffer_peek(&c->cmd_log, req.bytes,
+                                              sizeof(req));
     /* There should at _LEAST_ be _ONE_ message in here! */
     assert(nr == sizeof(req));
     while (req.request.opaque < seqno) {
@@ -619,7 +619,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
         libcouchbase_uint32_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
         char *keyptr;
 
-        nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
+        nr = ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
 
         if (c->instance->histogram) {
@@ -630,16 +630,16 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
         switch (req.request.opcode) {
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GETQ:
-            if (!libcouchbase_ringbuffer_is_continous(&c->cmd_log,
-                                                      RINGBUFFER_READ,
-                                                      packetsize)) {
+            if (!ringbuffer_is_continous(&c->cmd_log,
+                                         RINGBUFFER_READ,
+                                         packetsize)) {
                 packet = malloc(packetsize);
                 if (packet == NULL) {
                     libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
                     return -1;
                 }
 
-                nr = libcouchbase_ringbuffer_peek(&c->cmd_log, packet, packetsize);
+                nr = ringbuffer_peek(&c->cmd_log, packet, packetsize);
                 if (nr != packetsize) {
                     libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
                                                NULL);
@@ -674,9 +674,9 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
         }
         }
 
-        libcouchbase_ringbuffer_consumed(&c->cmd_log, packetsize);
-        nr =  libcouchbase_ringbuffer_peek(&c->cmd_log, req.bytes,
-                                           sizeof(req));
+        ringbuffer_consumed(&c->cmd_log, packetsize);
+        nr =  ringbuffer_peek(&c->cmd_log, req.bytes,
+                              sizeof(req));
         /* The current message should also be there... */
         assert(nr == sizeof(req));
     }

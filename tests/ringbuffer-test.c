@@ -41,10 +41,10 @@
 
 static void dump_buffer(ringbuffer_t *ring)
 {
-    char *begin = libcouchbase_ringbuffer_get_start(ring);
-    char *end = begin + libcouchbase_ringbuffer_get_size(ring);
-    char *rd = libcouchbase_ringbuffer_get_read_head(ring);
-    char *wr = libcouchbase_ringbuffer_get_write_head(ring);
+    char *begin = ringbuffer_get_start(ring);
+    char *end = begin + ringbuffer_get_size(ring);
+    char *rd = ringbuffer_get_read_head(ring);
+    char *wr = ringbuffer_get_write_head(ring);
     char *cur;
 
     /* write head */
@@ -82,17 +82,17 @@ static void wrapped_buffer_test(void)
     ringbuffer_t ring;
     char buffer[128];
 
-    if (!libcouchbase_ringbuffer_initialize(&ring, 10)) {
+    if (!ringbuffer_initialize(&ring, 10)) {
         err_exit("Failed to create a 10 byte ringbuffer");
     }
-    memset(libcouchbase_ringbuffer_get_start(&ring), 0, 10);
+    memset(ringbuffer_get_start(&ring), 0, 10);
     /*  w
      * |----------|
      *  r
      */
 
     /* put 8 chars into the buffer */
-    if (libcouchbase_ringbuffer_write(&ring, "01234567", 8) != 8) {
+    if (ringbuffer_write(&ring, "01234567", 8) != 8) {
         err_exit("Failed to write 10 characters to buffer");
     }
     /*          w
@@ -101,7 +101,7 @@ static void wrapped_buffer_test(void)
      */
 
     /* consume first 5 chars */
-    if (libcouchbase_ringbuffer_read(&ring, buffer, 5) != 5 ||
+    if (ringbuffer_read(&ring, buffer, 5) != 5 ||
         memcmp(buffer, "01234", 5) != 0) {
         err_exit("Failed to consume first 5 characters");
     }
@@ -111,7 +111,7 @@ static void wrapped_buffer_test(void)
      */
 
     /* wrapped write: write 5 more chars */
-    if (libcouchbase_ringbuffer_write(&ring, "abcde", 5) != 5) {
+    if (ringbuffer_write(&ring, "abcde", 5) != 5) {
         err_exit("Failed to write to wrapped buffer");
     }
     /*     w
@@ -120,7 +120,7 @@ static void wrapped_buffer_test(void)
      */
 
     /* wrapped read: read 6 chars */
-    if (libcouchbase_ringbuffer_read(&ring, buffer, 6) != 6 ||
+    if (ringbuffer_read(&ring, buffer, 6) != 6 ||
         memcmp(buffer, "567abc", 6) != 0) {
         err_exit("Failed to read wrapped buffer");
     }
@@ -141,7 +141,7 @@ static void my_regression_1_test(void)
     ring.size = 16384;
     ring.nbytes = 1202;
 
-    libcouchbase_ringbuffer_get_iov(&ring, RINGBUFFER_WRITE, iov);
+    ringbuffer_get_iov(&ring, RINGBUFFER_WRITE, iov);
     // up to the end
     assert(iov[0].iov_base == ring.write_head);
     assert(iov[0].iov_len == 1323);
@@ -160,43 +160,43 @@ int main(int argc, char **argv)
     (void)dump_buffer;
     (void)argc; (void)argv;
 
-    if (!libcouchbase_ringbuffer_initialize(&ring, 16)) {
+    if (!ringbuffer_initialize(&ring, 16)) {
         err_exit("Failed to create a 16 byte ringbuffer");
     }
 
-    if (libcouchbase_ringbuffer_read(&ring, buffer, 1) != 0) {
+    if (ringbuffer_read(&ring, buffer, 1) != 0) {
         err_exit("Read from an empty buffer should return 0");
     }
 
-    if (libcouchbase_ringbuffer_write(&ring, "01234567891234567", 17) != 16) {
+    if (ringbuffer_write(&ring, "01234567891234567", 17) != 16) {
         err_exit("Buffer overflow!!!");
     }
 
     for (ii = 0; ii < 2; ++ii) {
         memset(buffer, 0, sizeof(buffer));
-        if (libcouchbase_ringbuffer_peek(&ring, buffer, 16) != 16 ||
+        if (ringbuffer_peek(&ring, buffer, 16) != 16 ||
             memcmp(buffer, "01234567891234567", 16) != 0) {
             err_exit("We just filled the buffer with 16 bytes.. peek failed");
         }
     }
 
-    if (libcouchbase_ringbuffer_read(&ring, buffer, 16) != 16) {
+    if (ringbuffer_read(&ring, buffer, 16) != 16) {
         err_exit("We just filled the buffer with 16 bytes");
     }
 
-    if (libcouchbase_ringbuffer_read(&ring, buffer, 1) != 0) {
+    if (ringbuffer_read(&ring, buffer, 1) != 0) {
         err_exit("Read from an empty buffer should return 0");
     }
 
-    if (libcouchbase_ringbuffer_write(&ring, "01234567891234567", 17) != 16) {
+    if (ringbuffer_write(&ring, "01234567891234567", 17) != 16) {
         err_exit("Buffer overflow!!!");
     }
 
-    if (libcouchbase_ringbuffer_read(&ring, buffer, 8) != 8) {
+    if (ringbuffer_read(&ring, buffer, 8) != 8) {
         err_exit("We just filled the buffer with 16 bytes");
     }
 
-    if (!libcouchbase_ringbuffer_ensure_capacity(&ring, 9)) {
+    if (!ringbuffer_ensure_capacity(&ring, 9)) {
         err_exit("I failed to grow the buffer");
     }
 
@@ -208,7 +208,7 @@ int main(int argc, char **argv)
         err_exit("I expected the data to be realigned");
     }
 
-    if (libcouchbase_ringbuffer_read(&ring, buffer, 8) != 8) {
+    if (ringbuffer_read(&ring, buffer, 8) != 8) {
         err_exit("We should still have 8 bytes left");
     }
 

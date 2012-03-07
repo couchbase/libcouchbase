@@ -369,7 +369,7 @@ static void relocate_packets(libcouchbase_server_t *src,
     libcouchbase_size_t idx;
     libcouchbase_vbucket_t vb;
 
-    while (libcouchbase_ringbuffer_read(&src->cmd_log, cmd.bytes, sizeof(cmd.bytes))) {
+    while (ringbuffer_read(&src->cmd_log, cmd.bytes, sizeof(cmd.bytes))) {
         nbody = ntohl(cmd.request.bodylen); /* extlen + nkey + nval */
         npacket = sizeof(cmd.bytes) + nbody;
         body = malloc(nbody);
@@ -378,24 +378,24 @@ static void relocate_packets(libcouchbase_server_t *src,
                                        "Failed to allocate memory");
             return;
         }
-        assert(libcouchbase_ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
+        assert(ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
         vb = ntohs(cmd.request.vbucket);
         idx = (libcouchbase_size_t)vbucket_get_master(dst_instance->vbucket_config, vb);
         dst = dst_instance->servers + idx;
-        assert(libcouchbase_ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
-        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
-        assert(libcouchbase_ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
-        assert(libcouchbase_ringbuffer_write(&dst->cmd_log, body, nbody) == nbody);
-        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->output_cookies, sizeof(ct)));
-        assert(libcouchbase_ringbuffer_write(&dst->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        assert(ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
+        assert(ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
+        assert(ringbuffer_write(&dst->cmd_log, body, nbody) == nbody);
+        assert(ringbuffer_ensure_capacity(&dst->output_cookies, sizeof(ct)));
+        assert(ringbuffer_write(&dst->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         assert(!dst->connected);
-        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->pending, npacket));
-        assert(libcouchbase_ringbuffer_write(&dst->pending, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
-        assert(libcouchbase_ringbuffer_write(&dst->pending, body, nbody) == nbody);
-        assert(libcouchbase_ringbuffer_ensure_capacity(&dst->pending_cookies, sizeof(ct)));
-        assert(libcouchbase_ringbuffer_write(&dst->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        assert(ringbuffer_ensure_capacity(&dst->pending, npacket));
+        assert(ringbuffer_write(&dst->pending, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
+        assert(ringbuffer_write(&dst->pending, body, nbody) == nbody);
+        assert(ringbuffer_ensure_capacity(&dst->pending_cookies, sizeof(ct)));
+        assert(ringbuffer_write(&dst->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         free(body);
         libcouchbase_server_send_packets(dst);

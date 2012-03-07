@@ -109,8 +109,8 @@ static const char *get_key(libcouchbase_server_t *server, libcouchbase_uint16_t 
                            char **packet)
 {
     protocol_binary_request_header req;
-    libcouchbase_size_t nr = libcouchbase_ringbuffer_peek(&server->cmd_log,
-                                                          req.bytes, sizeof(req));
+    libcouchbase_size_t nr = ringbuffer_peek(&server->cmd_log,
+                                             req.bytes, sizeof(req));
     libcouchbase_uint32_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
     char *keyptr;
     *packet = server->cmd_log.read_head;
@@ -120,9 +120,9 @@ static const char *get_key(libcouchbase_server_t *server, libcouchbase_uint16_t 
     keyptr = *packet + sizeof(req) + req.request.extlen;
     *packet = NULL;
 
-    if (!libcouchbase_ringbuffer_is_continous(&server->cmd_log,
-                                              RINGBUFFER_READ,
-                                              packetsize)) {
+    if (!ringbuffer_is_continous(&server->cmd_log,
+                                 RINGBUFFER_READ,
+                                 packetsize)) {
         *packet = malloc(packetsize);
         if (*packet == NULL) {
             libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM,
@@ -130,7 +130,7 @@ static const char *get_key(libcouchbase_server_t *server, libcouchbase_uint16_t 
             return NULL;
         }
 
-        nr = libcouchbase_ringbuffer_peek(&server->cmd_log, *packet, packetsize);
+        nr = ringbuffer_peek(&server->cmd_log, *packet, packetsize);
         if (nr != packetsize) {
             libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
                                        NULL);
@@ -154,7 +154,7 @@ int libcouchbase_lookup_server_with_command(libcouchbase_t instance,
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
-        nr = libcouchbase_ringbuffer_peek(&server->cmd_log, cmd.bytes, sizeof(cmd));
+        nr = ringbuffer_peek(&server->cmd_log, cmd.bytes, sizeof(cmd));
         if (nr == sizeof(cmd) &&
                 cmd.request.opcode == opcode &&
                 cmd.request.opaque == opaque &&
