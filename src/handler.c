@@ -376,7 +376,7 @@ static void tap_mutation_handler(libcouchbase_server_t *server,
     /* @todo verify that the size is correct! */
     char *packet = (char *)req;
     protocol_binary_request_tap_mutation *mutation = (void *)req;
-    libcouchbase_uint32_t flags = ntohl(mutation->message.body.item.flags);
+    libcouchbase_uint32_t flags = mutation->message.body.item.flags;
     libcouchbase_time_t exp = (libcouchbase_time_t)ntohl(mutation->message.body.item.expiration);
     libcouchbase_uint16_t nkey = ntohs(req->request.keylen);
 
@@ -387,6 +387,12 @@ static void tap_mutation_handler(libcouchbase_server_t *server,
     libcouchbase_uint32_t nbytes = ntohl(req->request.bodylen) - req->request.extlen - nes - nkey;
 
     libcouchbase_t root = server->instance;
+    libcouchbase_uint16_t tap_flags = ntohs(mutation->message.body.tap.flags);
+
+    if (tap_flags & TAP_FLAG_NETWORK_BYTE_ORDER) {
+        flags = ntohl(flags);
+    }
+
     root->callbacks.tap_mutation(root, command_cookie, key, nkey, data,
                                  nbytes, flags, exp, req->request.cas,
                                  ntohs(req->request.vbucket),

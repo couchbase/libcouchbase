@@ -594,6 +594,14 @@ extern "C"
                  * the tap server will maintain its checkpoint cursor permanently.
                  */
 #define TAP_CONNECT_REGISTERED_CLIENT 0x80
+
+                /**
+                 * The initial TAP implementation convert flags to/from network
+                 * byte order, but the values isn't stored in host local order
+                 * causing them to change if you mix platforms..
+                 */
+#define TAP_CONNECT_TAP_FIX_FLAG_BYTEORDER 0x100
+
             } body;
         } message;
         uint8_t bytes[sizeof(protocol_binary_request_header) + 4];
@@ -618,6 +626,11 @@ extern "C"
                      * The value for the key is not included in the packet
                      */
 #define TAP_FLAG_NO_VALUE 0x02
+                    /**
+                     * The flags are in network byte order
+                     */
+#define TAP_FLAG_NETWORK_BYTE_ORDER 0x04
+
                     uint16_t flags;
                     uint8_t  ttl;
                     uint8_t  res1;

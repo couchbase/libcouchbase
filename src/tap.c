@@ -125,6 +125,8 @@ static void tap_vbucket_state_listener(libcouchbase_server_t *server)
     libcouchbase_uint64_t backfill;
     libcouchbase_size_t backfill_size = 0;
 
+    flags |= TAP_CONNECT_TAP_FIX_FLAG_BYTEORDER;
+
     for (idx = 0; idx < instance->nservers; ++idx) {
         if (server == instance->servers + idx) {
             break;
