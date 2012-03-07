@@ -342,7 +342,7 @@ const char *libcouchbase_stropcode(libcouchbase_uint8_t opcode)
 
 #define status_match(base) \
         case PROTOCOL_BINARY_RESPONSE_ ## base: { \
-            return #base; break; \
+            return #base; \
         }
 const char *libcouchbase_strstatus(libcouchbase_uint16_t status)
 {

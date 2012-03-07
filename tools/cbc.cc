@@ -487,8 +487,8 @@ static bool verify(libcouchbase_t instance, list<string> &keys)
 void loadKeys(list<string> &keys)
 {
     char buffer[1024];
-    while (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-        int idx = strlen(buffer);
+    while (fgets(buffer, (int)sizeof(buffer), stdin) != NULL) {
+        libcouchbase_size_t idx = strlen(buffer);
         while (idx > 0 && isspace(buffer[idx - 1])) {
             --idx;
         }
@@ -576,7 +576,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
             case '?':
                 getopt.usage(argv[0]);
                 exit(EXIT_SUCCESS);
-                break;
+                // NOTREACHED
 
             default:
                 if (cmd == cbc_create) {
