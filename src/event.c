@@ -65,7 +65,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
     protocol_binary_response_header header;
     libcouchbase_size_t nr;
     char *packet;
-    libcouchbase_uint32_t packetsize;
+    libcouchbase_size_t packetsize;
     struct libcouchbase_command_data_st ct;
 
     nr = ringbuffer_peek(&c->input, header.bytes, sizeof(header));

@@ -273,9 +273,9 @@ void ringbuffer_get_iov(ringbuffer_t *buffer,
         iov[0].iov_base = buffer->write_head;
         iov[0].iov_len = buffer->size - buffer->nbytes;
         if (buffer->write_head >= buffer->read_head) {
-            // I may write all the way to the end!
+            /* I may write all the way to the end! */
             iov[0].iov_len = (buffer->root + buffer->size) - buffer->write_head;
-            // And all the way up to the read head
+            /* And all the way up to the read head */
             iov[1].iov_len = buffer->read_head - buffer->root;
         }
     }

@@ -73,7 +73,7 @@ extern "C" {
         LIBCOUCHBASE_CONNECT_EISCONN,
         LIBCOUCHBASE_CONNECT_EINTR,
         LIBCOUCHBASE_CONNECT_EFAIL,
-        LIBCOUCHBASE_CONNECT_EUNHANDLED,
+        LIBCOUCHBASE_CONNECT_EUNHANDLED
     } libcouchbase_connect_status_t;
 
     typedef struct {

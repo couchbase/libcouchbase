@@ -16,7 +16,7 @@
  */
 #include "internal.h"
 
-// @todo add static prototypes
+/* @todo add static prototypes */
 
 struct user_cookie {
     void *cookie;
@@ -277,7 +277,7 @@ static void restore_wrapping_env(libcouchbase_t instance,
                                  libcouchbase_error_t error)
 {
     user->callbacks = instance->callbacks;
-    // Install new callbacks */
+    /* Install new callbacks */
     instance->callbacks.get = get_callback;
     instance->callbacks.storage = storage_callback;
     instance->callbacks.arithmetic = arithmetic_callback;

@@ -35,7 +35,7 @@ struct libcouchbase_tap_filter_st {
  * Create an instance of a libcouchbase tap filter (libcouchbase_tap_filter_t).
  */
 LIBCOUCHBASE_API
-libcouchbase_tap_filter_t libcouchbase_tap_filter_create()
+libcouchbase_tap_filter_t libcouchbase_tap_filter_create(void)
 {
     libcouchbase_tap_filter_t ret;
 
