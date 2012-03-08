@@ -5,7 +5,7 @@
 *.dobj
 *.exe
 *.exp
-*.l[ao]
+*.l[aon]
 *.lib
 *.obj
 *.orig

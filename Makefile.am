@@ -256,6 +256,12 @@ EXTRA_DIST = \
              tests/start_mock.sh \
              win32
 
+LINTFLAGS=-b -c -errchk=%all -erroff=E_INCL_NUSD  \
+          -errtags=yes -errhdr=%user \
+          -errsecurity=extended -fd -Ncheck=%all -Nlevel=4 -n -Xc99=none
+lint:
+	$(LINT.c) $(libcouchbase_la_SOURCES)
+
 reformat:
 	astyle --mode=c \
                --quiet \
