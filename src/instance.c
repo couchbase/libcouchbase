@@ -70,7 +70,7 @@ static void setup_current_host(libcouchbase_t instance, const char *host)
 static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
 {
     const char *ptr = host;
-    int num = 0;
+    libcouchbase_size_t num = 0;
     int ii;
 
     while ((ptr = strchr(ptr, ';')) != NULL) {
@@ -96,11 +96,10 @@ static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
         } else {
             /* copy everything up to ';' */
             unsigned long size = (unsigned long)ptr - (unsigned long)start;
+            /* skip the entry if it's too long */
             if (size < sizeof(nm)) {
                 memcpy(nm, start, ptr - start);
                 *(nm + size) = '\0';
-            } else {
-                /* skipping the hostname because it's too long */
             }
             ++ptr;
             ret->backup_nodes[ii] = strdup(nm);
@@ -317,8 +316,8 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
         free(instance->backup_nodes);
     }
     instance->backup_nodes = calloc(num, sizeof(char *));
-    sprintf(curnode, "%s:%s", instance->host, instance->port);
-    for (ii = 0; ii < (libcouchbase_size_t)num; ++ii) {
+    snprintf(curnode, sizeof(curnode), "%s:%s", instance->host, instance->port);
+    for (ii = 0; ii < num; ++ii) {
         instance->servers[ii].instance = instance;
         libcouchbase_server_initialize(instance->servers + ii, (int)ii);
         if (strcmp(curnode, instance->servers[ii].rest_api_server) == 0) {
@@ -354,7 +353,7 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     free(instance->vb_server_map);
     instance->vb_server_map = calloc(max, sizeof(libcouchbase_vbucket_t));
     for (ii = 0; ii < max; ++ii) {
-        instance->vb_server_map[ii] = vbucket_get_master(instance->vbucket_config, ii);
+        instance->vb_server_map[ii] = (libcouchbase_uint16_t)vbucket_get_master(instance->vbucket_config, ii);
     }
 }
 
@@ -364,7 +363,7 @@ static void relocate_packets(libcouchbase_server_t *src,
     struct libcouchbase_command_data_st ct;
     protocol_binary_request_header cmd;
     libcouchbase_server_t *dst;
-    libcouchbase_uint32_t nbody, npacket;
+    libcouchbase_size_t nbody, npacket;
     char *body;
     libcouchbase_size_t idx;
     libcouchbase_vbucket_t vb;
@@ -722,7 +721,7 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
         libcouchbase_ssize_t nw;
         nw = instance->io->send(instance->io, instance->sock,
                                 instance->http_uri + instance->n_http_uri_sent,
-                                (libcouchbase_size_t)((libcouchbase_ssize_t)strlen(instance->http_uri) - instance->n_http_uri_sent),
+                                strlen(instance->http_uri) - instance->n_http_uri_sent,
                                 0);
         if (nw == -1) {
             libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
@@ -734,7 +733,7 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
         }
 
         instance->n_http_uri_sent += nw;
-        if (instance->n_http_uri_sent == (libcouchbase_ssize_t)strlen(instance->http_uri)) {
+        if (instance->n_http_uri_sent == strlen(instance->http_uri)) {
             instance->io->update_event(instance->io, instance->sock,
                                        instance->event, LIBCOUCHBASE_READ_EVENT,
                                        instance, vbucket_stream_handler);
@@ -882,7 +881,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
         if (instance->io->connect(instance->io,
                                   instance->sock,
                                   instance->curr_ai->ai_addr,
-                                  (int)instance->curr_ai->ai_addrlen) == 0) {
+                                  (unsigned int)instance->curr_ai->ai_addrlen) == 0) {
             libcouchbase_instance_connected(instance);
             return ;
         } else {

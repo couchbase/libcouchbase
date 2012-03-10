@@ -208,7 +208,7 @@ extern "C" {
         int (*connect)(struct libcouchbase_io_opt_st *iops,
                        libcouchbase_socket_t sock,
                        const struct sockaddr *name,
-                       int namelen);
+                       unsigned int namelen);
 
         libcouchbase_ssize_t (*recv)(struct libcouchbase_io_opt_st *iops,
                                      libcouchbase_socket_t sock,

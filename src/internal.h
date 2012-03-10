@@ -122,7 +122,7 @@ extern "C" {
 
         /** The URL request to send to the server */
         char *http_uri;
-        ssize_t n_http_uri_sent;
+        size_t n_http_uri_sent;
 
 
         /** The event item representing _this_ object */
@@ -209,7 +209,7 @@ extern "C" {
      */
     struct libcouchbase_server_st {
         /** The server index in the list */
-        size_t index;
+        int index;
         /** The name of the server */
         char *hostname;
         /** The servers port */

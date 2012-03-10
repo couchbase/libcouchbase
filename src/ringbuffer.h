@@ -47,6 +47,8 @@ extern "C" {
     libcouchbase_size_t ringbuffer_write(ringbuffer_t *buffer,
                                          const void *src,
                                          libcouchbase_size_t nb);
+    libcouchbase_size_t ringbuffer_strcat(ringbuffer_t *buffer,
+                                          const char *str);
     libcouchbase_size_t ringbuffer_read(ringbuffer_t *buffer,
                                         void *dest,
                                         libcouchbase_size_t nb);

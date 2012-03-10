@@ -73,7 +73,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
     int first;
     char *ptr = copy;
     int fail;
-    int offset = 0;
+    libcouchbase_ssize_t offset = 0;
 
     if (copy == NULL) {
         return LIBCOUCHBASE_ENOMEM;
@@ -85,22 +85,31 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
     }
 
     head[0] = '\0';
-    offset += sprintf(head + offset, "%s", "{");
-    offset += sprintf(head + offset, "%s", "\"bucketType\":\"memcached\",");
-    offset += sprintf(head + offset, "%s", "\"nodeLocator\":\"ketama\",");
+    offset += snprintf(head + offset, sizeof(head) - offset, "%s", "{");
+    offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                       "\"bucketType\":\"memcached\",");
+    offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                       "\"nodeLocator\":\"ketama\",");
     if (user->username != NULL) {
-        offset += sprintf(head + offset, "%s", "\"authType\":\"sasl\",");
-        offset += sprintf(head + offset, "%s", "\"name\":\"");
-        offset += sprintf(head + offset, "%s", user->username);
-        offset += sprintf(head + offset, "%s", "\",");
+        offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                           "\"authType\":\"sasl\",");
+        offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                           "\"name\":\"");
+        offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                           user->username);
+        offset += snprintf(head + offset, sizeof(head) - offset, "%s", "\",");
         if (user->password != NULL) {
-            offset += sprintf(head + offset, "%s", "\"saslPassword\":\"");
-            offset += sprintf(head + offset, "%s", user->password);
-            offset += sprintf(head + offset, "%s", "\",");
+            offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                               "\"saslPassword\":\"");
+            offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                               user->password);
+            offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                               "\",");
         }
     }
 
-    offset += sprintf(head + offset, "%s", "\"nodes\": [");
+    offset += snprintf(head + offset, sizeof(head) - offset, "%s",
+                       "\"nodes\": [");
     ringbuffer_write(&buffer, head, strlen(head));
 
     /* Let's add the hosts... */
@@ -109,7 +118,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
         char *tok;
         char *next = strchr(ptr, ';');
         const char *port = "11211";
-        size_t length;
+        libcouchbase_ssize_t length;
 
         if (next != NULL) {
             *next = '\0';

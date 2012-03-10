@@ -111,7 +111,7 @@ static const char *get_key(libcouchbase_server_t *server, libcouchbase_uint16_t 
     protocol_binary_request_header req;
     libcouchbase_size_t nr = ringbuffer_peek(&server->cmd_log,
                                              req.bytes, sizeof(req));
-    libcouchbase_uint32_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
+    libcouchbase_size_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
     char *keyptr;
     *packet = server->cmd_log.read_head;
     assert(nr == sizeof(req));

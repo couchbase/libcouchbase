@@ -242,7 +242,7 @@ static void libcouchbase_io_close(struct libcouchbase_io_opt_st *iops,
 static int libcouchbase_io_connect(struct libcouchbase_io_opt_st *iops,
                                    libcouchbase_socket_t sock,
                                    const struct sockaddr *name,
-                                   int namelen)
+                                   unsigned int namelen)
 {
     int ret = WSAConnect(sock, name, namelen, NULL, NULL, NULL, NULL);
     if (ret == SOCKET_ERROR) {

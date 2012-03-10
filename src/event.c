@@ -154,7 +154,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
                 ringbuffer_consumed(&c->output_cookies, sizeof(ct));
             }
         } else {
-            libcouchbase_vbucket_t new_vb;
+            int new_vb;
             char *body;
             libcouchbase_size_t nbody;
             /* re-schedule command with new vbucket id */
@@ -162,8 +162,8 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
             assert(nr == sizeof(req));
             new_vb = vbucket_found_incorrect_master(c->instance->vbucket_config,
                                                     ntohs(req.request.vbucket),
-                                                    c->index);
-            req.request.vbucket = new_vb;
+                                                    (int)c->index);
+            req.request.vbucket = ntohs((uint16_t)new_vb);
             req.request.opaque = ++c->instance->seqno;
             nbody = ntohl(req.request.bodylen);
             body = malloc(nbody);

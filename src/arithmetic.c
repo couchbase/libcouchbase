@@ -56,11 +56,11 @@ libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
         hashkey = key;
     }
     (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-    if (idx < 0 || (libcouchbase_size_t)idx > instance->nservers) {
+    if (idx < 0 || idx > (int)instance->nservers) {
         /* the config says that there is no server yet at that position (-1) */
         return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
     }
-    server = instance->servers + (libcouchbase_size_t)idx;
+    server = instance->servers + idx;
 
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;

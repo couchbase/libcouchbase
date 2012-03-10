@@ -384,7 +384,7 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
                                            const void *bytes,
                                            libcouchbase_size_t nbytes)
 {
-    libcouchbase_size_t ret;
+    libcouchbase_ssize_t ret;
     protocol_binary_request_header *req;
     protocol_binary_response_header *res;
 
@@ -440,5 +440,5 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
                    (libcouchbase_uint32_t)req->request.opaque,
                    (libcouchbase_uint64_t)req->request.cas);
 
-    return ret;
+    return (libcouchbase_size_t)ret;
 }

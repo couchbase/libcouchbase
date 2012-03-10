@@ -35,7 +35,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
     struct libcouchbase_command_data_st ct;
     libcouchbase_size_t nr;
     char *packet;
-    libcouchbase_uint32_t packetsize;
+    libcouchbase_size_t packetsize;
     char *keyptr;
     libcouchbase_t root = server->instance;
     int writing = (stream == &server->cmd_log);
@@ -229,7 +229,8 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         }
 
         ringbuffer_consumed(stream, packetsize);
-    } while (1); /* CONSTCOND */
+        /* CONSTCOND */
+    } while (1);
 
     if (writing) {
         /* Preserve the rest of the stream */
@@ -503,7 +504,7 @@ static void server_connect(libcouchbase_server_t *server)
         if (server->instance->io->connect(server->instance->io,
                                           server->sock,
                                           server->curr_ai->ai_addr,
-                                          (int)server->curr_ai->ai_addrlen) == 0) {
+                                          (unsigned int)server->curr_ai->ai_addrlen) == 0) {
             /* connected */
             socket_connected(server);
             return ;
@@ -616,7 +617,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
     while (req.request.opaque < seqno) {
         struct libcouchbase_command_data_st ct;
         char *packet = c->cmd_log.read_head;
-        libcouchbase_uint32_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
+        libcouchbase_size_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
         char *keyptr;
 
         nr = ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));

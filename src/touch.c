@@ -64,11 +64,11 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
 
     if (nhashkey != 0) {
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-        if (idx < 0 || (libcouchbase_size_t)idx > instance->nservers) {
+        if (idx < 0 || idx > (int)instance->nservers) {
             /* the config says that there is no server yet at that position (-1) */
             return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
         }
-        server = instance->servers + (libcouchbase_size_t)idx;
+        server = instance->servers + idx;
     } else {
         servers = malloc(num_keys * sizeof(struct server_info_st));
         if (servers == NULL) {
@@ -76,7 +76,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
         }
         for (ii = 0; ii < num_keys; ++ii) {
             (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &servers[ii].vb, &servers[ii].idx);
-            if (servers[ii].idx < 0 || (libcouchbase_size_t)servers[ii].idx > instance->nservers) {
+            if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
                 /* the config says that there is no server yet at that position (-1) */
                 free(servers);
                 return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
@@ -87,7 +87,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
     for (ii = 0; ii < num_keys; ++ii) {
         protocol_binary_request_touch req;
         if (nhashkey == 0) {
-            server = instance->servers + (libcouchbase_size_t)servers[ii].idx;
+            server = instance->servers + servers[ii].idx;
             vb = servers[ii].vb;
         }
 

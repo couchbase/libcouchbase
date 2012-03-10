@@ -256,7 +256,8 @@ EXTRA_DIST = \
              tests/start_mock.sh \
              win32
 
-LINTFLAGS=-b -c -errchk=%all -erroff=E_INCL_NUSD  \
+LINTFLAGS=-Iinclude -b -c -errchk=%all \
+          -erroff=E_INCL_NUSD,E_CAST_INT_TO_SMALL_INT,E_PTRDIFF_OVERFLOW  \
           -errtags=yes -errhdr=%user \
           -errsecurity=extended -fd -Ncheck=%all -Nlevel=4 -n -Xc99=none
 lint:
