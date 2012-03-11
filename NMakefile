@@ -26,14 +26,14 @@ RM = del
 lib_LTLIBRARIES = libcouchbase.dll libcouchbase_debug.dll
 check_PROGRAMS = tests\base64-test.exe tests\getopt-test.exe \
       tests\ringbuffer-test.exe tests\strerror-test.exe \
-      tests\memcached-compat-test.exe
+      tests\memcached-compat-test.exe tests\hashset-test.exe
 bin_PROGRAMS = tools\cbc.exe
 example_PROGRAMS = example\pillowfight.exe
 
 libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\cookie.c src\error.c src\event.c src\flush.c src\get.c \
     src\handler.c src\instance.c src\iofactory_win32.c src\packet.c \
-    src\remove.c src\ringbuffer.c src\server.c src\stats.c \
+    src\remove.c src\ringbuffer.c src\hashset.c src\server.c src\stats.c \
     src\store.c src\strerror.c src\synchandler.c src\tap.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
     src\wait.c src\gethrtime.c src\plugin-win32.c src\isasl.c \
@@ -55,6 +55,9 @@ tests_getopt_test_OBJECTS = $(tests_getopt_test_C_SOURCES:.c=.dobj) \
 tests_ringbuffer_test_SOURCES = tests\ringbuffer-test.c src\ringbuffer.c
 tests_ringbuffer_test_OBJECTS = $(tests_ringbuffer_test_SOURCES:.c=.dobj)
 
+tests_hashset_test_SOURCES = tests\hashset-test.c src\hashset.c
+tests_hashset_test_OBJECTS = $(tests_hashset_test_SOURCES:.c=.dobj)
+
 tests_strerror_test_SOURCES = tests\strerror-test.c
 tests_strerror_test_OBJECTS = $(tests_strerror_test_SOURCES:.c=.dobj)
 
@@ -75,7 +78,8 @@ example_pillowfight_OBJECTS = $(example_pillowfight_CXX_SOURCES:.cc=.obj) \
 all_OBJS=$(libcouchbase_la_OBJECTS) $(libcouchbase_la_debug_OBJECTS) \
    $(tests_base64_test_OBJECTS) $(tests_getopt_test_OBJECTS)  \
    $(tests_ringbuffer_test_OBJECTS) $(tests_strerror_test_OBJECTS) \
-   $(tools_cbc_OBJECTS) $(example_pillowfight_OBJECTS)
+   $(tools_cbc_OBJECTS) $(example_pillowfight_OBJECTS) \
+   $(tests_hashset_test_OBJECTS)
 
 all: $(lib_LTLIBRARIES) \
      libcouchbase.dll \
@@ -107,6 +111,9 @@ tests\getopt-test.exe: $(tests_getopt_test_OBJECTS)
 
 tests\ringbuffer-test.exe: $(tests_ringbuffer_test_OBJECTS)
 	$(LD) $(LDFLAGS) -out:tests\ringbuffer-test.exe $(tests_ringbuffer_test_OBJECTS)
+
+tests\hashset-test.exe: $(tests_hashset_test_OBJECTS)
+	$(LD) $(LDFLAGS) -out:tests\hashset-test.exe $(tests_hashset_test_OBJECTS)
 
 tests\strerror-test.exe: $(tests_strerror_test_OBJECTS) libcouchbase_debug.dll
 	$(LD) $(LDFLAGS) -out:tests\strerror-test.exe $(tests_strerror_test_OBJECTS) libcouchbase_debug.lib

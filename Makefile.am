@@ -63,6 +63,8 @@ libcouchbase_la_SOURCES = \
                         src/flush.c \
                         src/get.c \
                         src/handler.c \
+                        src/hashset.c \
+                        src/hashset.h \
                         src/instance.c \
                         src/internal.h \
                         src/packet.c \
@@ -161,6 +163,7 @@ endif
 #example_couchview_yajl_LDFLAGS = -levent -lyajl
 
 check_PROGRAMS = tests/base64-test \
+                 tests/hashset-test \
                  tests/memcached_compat-test \
                  tests/ringbuffer-test \
                  tests/strerror-test
@@ -193,6 +196,8 @@ tests_memcached_compat_test_SOURCES = tests/memcached_compat-test.c
 tests_memcached_compat_test_LDADD = libcouchbase.la
 
 tests_ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
+
+tests_hashset_test_SOURCES = tests/hashset-test.c src/hashset.c
 
 tests_timings_test_SOURCES = tests/timings-test.c
 tests_timings_test_LDADD = libcouchbase.la libmockserver.la
