@@ -198,7 +198,7 @@ tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
 tests_smoke_test_LDFLAGS = -levent
 
 tests_strerror_test_SOURCES = tests/strerror-test.c
-tests_strerror_test_LDADD = ${libcouchbase_la_OBJECTS} -levent -lvbucket $(LIBSASL)
+tests_strerror_test_LDADD = libcouchbase.la
 
 tests_syncmode_test_SOURCES = tests/test.h tests/syncmode-test.c
 tests_syncmode_test_LDADD = libcouchbase.la libmockserver.la
