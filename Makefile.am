@@ -26,7 +26,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
-noinst_LTLIBRARIES =
+noinst_LTLIBRARIES = libhttpparser.la
 if BUILD_TOOLS
 bin_PROGRAMS = tools/cbc
 endif
@@ -44,6 +44,10 @@ pkginclude_HEADERS = \
                      include/libcouchbase/types.h \
                      include/libcouchbase/visibility.h \
                      include/libcouchbase/winsock_io_opts.h
+
+libhttpparser_la_SOURCES = \
+                        contrib/http_parser/http_parser.c \
+                        contrib/http_parser/http_parser.h
 
 libcouchbase_la_SOURCES = \
                         include/memcached/protocol_binary.h \
@@ -91,7 +95,8 @@ endif
 
 libcouchbase_la_LDFLAGS= -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-libcouchbase_la_LIBADD=-lvbucket $(LIBSASL)
+libcouchbase_la_DEPENDENCIES=libhttpparser.la
+libcouchbase_la_LIBADD=libhttpparser.la -lvbucket $(LIBSASL)
 
 if LIBCOUCHBASE_ENABLE_TRACE
 libcouchbase_la_SOURCES += \

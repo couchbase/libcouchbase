@@ -34,7 +34,7 @@ ac_cv_func_malloc_0_nonnull=yes
 ac_cv_func_realloc_0_nonnull=yes
 
 COUCHBASE_GENERIC_COMPILER(c99)
-AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src"
+AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib"
 CHANGESET=GIT_CHANGESET
 AC_SUBST(CHANGESET)
 

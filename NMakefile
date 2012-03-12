@@ -17,7 +17,7 @@
 INSTALL=..\deps
 CC_NODEBUG = cl.exe /O2 /DNDEBUG /MD /LD
 CC_DEBUG = cl.exe /Od /D_DEBUG /RTC1 /Z7 /LDd /W3 /MDd
-CFLAGS = /Iinclude /Iwin32 /I$(INSTALL)\include /Isrc /I. /nologo /W3 /EHsc /DWIN32 /FD /c -D_CRT_SECURE_NO_WARNINGS -DLIBCOUCHBASE_INTERNAL=1
+CFLAGS = /Iinclude /Iwin32 /Icontrib /I$(INSTALL)\include /Isrc /I. /nologo /W3 /EHsc /DWIN32 /FD /c -D_CRT_SECURE_NO_WARNINGS -DLIBCOUCHBASE_INTERNAL=1
 DLLLDFLAGS = /dll /incremental:no /opt:ref,icf /version:1.1
 LDFLAGS =  /nologo /LIBPATH:$(INSTALL)\lib
 LD = link.exe
@@ -37,7 +37,7 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\store.c src\strerror.c src\synchandler.c src\tap.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
     src\wait.c src\gethrtime.c src\plugin-win32.c src\isasl.c \
-    src\compat.c
+    src\compat.c contrib\http_parser\http_parser.c
 
 # Unfortunately nmake is a bit limited in its substitute functions.
 # Work around that by using dobj to represent debug object files ;)
