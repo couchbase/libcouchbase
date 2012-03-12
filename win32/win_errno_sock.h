@@ -17,6 +17,8 @@
 #ifndef LIBCOUCHBASE_WIN_ERRNO_SOCK_H
 #define LIBCOUCHBASE_WIN_ERRNO_SOCK_H 1
 
+#include <errno.h>
+
 #ifndef EWOULDBLOCK
 #define EWOULDBLOCK             WSAEWOULDBLOCK
 #endif
