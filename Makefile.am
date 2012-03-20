@@ -133,7 +133,7 @@ tests/CouchbaseMock.jar:
 
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
-                         tests/server.c tests/server.h
+                         tests/server.c tests/loopfactory.c tests/server.h
 
 
 #
@@ -180,7 +180,7 @@ tests_getopt_test_SOURCES = tests/getopt-test.cc
 
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_LDADD = libcouchbase.la libmockserver.la
-tests_config_test_LDFLAGS = -levent -lvbucket
+tests_config_test_LDFLAGS = -lvbucket
 
 tests_memcached_compat_test_SOURCES = tests/memcached_compat-test.c
 tests_memcached_compat_test_LDADD = libcouchbase.la
@@ -191,36 +191,29 @@ tests_hashset_test_SOURCES = tests/hashset-test.c src/hashset.c
 
 tests_timings_test_SOURCES = tests/timings-test.c
 tests_timings_test_LDADD = libcouchbase.la libmockserver.la
-tests_timings_test_LDFLAGS = -levent
 
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
-tests_smoke_test_LDFLAGS = -levent
 
 tests_strerror_test_SOURCES = tests/strerror-test.c
 tests_strerror_test_LDADD = libcouchbase.la
 
 tests_syncmode_test_SOURCES = tests/test.h tests/syncmode-test.c
 tests_syncmode_test_LDADD = libcouchbase.la libmockserver.la
-tests_syncmode_test_LDFLAGS = -levent
 
 tests_arithmetic_test_SOURCES = tests/arithmetic.c
 tests_arithmetic_test_LDADD = libcouchbase.la libmockserver.la
-tests_arithmetic_test_LDFLAGS = -levent
 tests_arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tests_double_free_test_SOURCES = tests/test.h tests/double-free-test.c
 tests_double_free_test_LDADD = libcouchbase.la libmockserver.la
-tests_double_free_test_LDFLAGS = -levent
 
 tests_flags_test_SOURCES = tests/flags-test.c
 tests_flags_test_LDADD = libcouchbase.la libmockserver.la
-tests_flags_test_LDFLAGS = -levent
 tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tests_timeout_test_SOURCES = tests/timeout-test.c
 tests_timeout_test_LDADD = libcouchbase.la libmockserver.la
-tests_timeout_test_LDFLAGS = -levent
 tests_timeout_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tools_cbc_LDADD = libcouchbase.la

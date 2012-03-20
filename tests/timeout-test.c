@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
-#include <event.h>
 #include <libcouchbase/couchbase.h>
 
 #include "server.h"
@@ -115,7 +114,7 @@ int main(int argc, char **argv)
     }
     http = get_mock_http_server(mock);
 
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    io = get_test_io_opts();
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;

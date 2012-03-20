@@ -19,7 +19,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <event.h>
 #include <libcouchbase/couchbase.h>
 
 #include "server.h"
@@ -44,13 +43,8 @@ static void initialize_counter(const char *host, const char *user,
 {
     libcouchbase_t instance;
     struct libcouchbase_io_opt_st *io;
-    struct event_base *evbase = event_base_new();
-    if (evbase == NULL) {
-        fprintf(stderr, "Failed to create event base\n");
-        exit(1);
-    }
 
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
+    io = get_test_io_opts();
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
@@ -58,13 +52,11 @@ static void initialize_counter(const char *host, const char *user,
     instance = libcouchbase_create(host, user, passwd, bucket, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
-        event_base_free(evbase);
         exit(1);
     }
 
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
-        event_base_free(evbase);
         exit(1);
     }
 
@@ -77,7 +69,6 @@ static void initialize_counter(const char *host, const char *user,
                        "0", 1, 0, 0, 0);
     libcouchbase_wait(instance);
     libcouchbase_destroy(instance);
-    event_base_free(evbase);
 }
 
 static void arithmetic_callback(libcouchbase_t instance,
@@ -102,13 +93,8 @@ static void do_run_arithmetic(const char *host, const char *user,
     int ii;
     libcouchbase_t instance;
     struct libcouchbase_io_opt_st *io;
-    struct event_base *evbase = event_base_new();
-    if (evbase == NULL) {
-        fprintf(stderr, "Failed to create event base\n");
-        exit(1);
-    }
 
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
+    io = get_test_io_opts();
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
@@ -116,13 +102,11 @@ static void do_run_arithmetic(const char *host, const char *user,
     instance = libcouchbase_create(host, user, passwd, bucket, io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
-        event_base_free(evbase);
         exit(1);
     }
 
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
-        event_base_free(evbase);
         exit(1);
     }
 
@@ -138,7 +122,6 @@ static void do_run_arithmetic(const char *host, const char *user,
     }
 
     libcouchbase_destroy(instance);
-    event_base_free(evbase);
 }
 
 int main(int argc, char **argv)

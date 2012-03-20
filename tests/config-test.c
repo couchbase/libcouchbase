@@ -23,7 +23,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
-#include <event.h>
 
 #include "server.h"
 #include "test.h"
@@ -103,7 +102,7 @@ static void smoke_test(void)
         err_exit("Failed to start mock server");
     }
 
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    io = get_test_io_opts();
     if (io == NULL) {
         err_exit("Failed to create IO instance");
     }
@@ -156,7 +155,7 @@ static void buffer_relocation_test(void)
         err_exit("Failed to start mock server");
     }
 
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    io = get_test_io_opts();
     if (io == NULL) {
         err_exit("Failed to create IO instance");
     }

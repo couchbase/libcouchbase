@@ -34,8 +34,6 @@
 #include <fcntl.h>
 #include <ctype.h>
 
-#include <event.h>
-
 #ifdef linux
 #undef ntohs
 #undef ntohl

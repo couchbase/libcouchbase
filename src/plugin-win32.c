@@ -481,3 +481,8 @@ struct libcouchbase_io_opt_st *libcouchbase_create_winsock_io_opts(void) {
 
     return ret;
 }
+
+LIBCOUCHBASE_API
+struct libcouchbase_io_opt_st *libcouchbase_create_test_loop(void) {
+    return libcouchbase_create_winsock_io_opts();
+}

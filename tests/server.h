@@ -24,4 +24,6 @@ void shutdown_mock_server(const void *);
 void failover_node(const void *handle, int idx, const char *bucket);
 void respawn_node(const void *handle, int idx, const char *bucket);
 
+struct libcouchbase_io_opt_st *get_test_io_opts(void);
+
 #endif

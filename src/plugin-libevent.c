@@ -28,6 +28,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+LIBCOUCHBASE_API
+struct libcouchbase_io_opt_st *libcouchbase_create_test_loop(void);
+
 struct libevent_cookie {
     struct event_base *base;
     int allocated;
@@ -367,4 +370,10 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
     ret->cookie = cookie;
 
     return ret;
+}
+
+LIBCOUCHBASE_API
+struct libcouchbase_io_opt_st *libcouchbase_create_test_loop(void)
+{
+    return libcouchbase_create_libevent_io_opts(NULL);
 }

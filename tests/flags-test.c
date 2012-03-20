@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
-#include <event.h>
 #include <libcouchbase/couchbase.h>
 
 #include "server.h"
@@ -78,17 +77,10 @@ int main(int argc, char **argv)
     (void)argc; (void)argv;
     const char * keys[1];
     libcouchbase_size_t nkeys[1];
-    struct event_base *evbase;
     const void *mock;
     const char *http;
     struct libcouchbase_io_opt_st *io;
     libcouchbase_t instance;
-
-    evbase = event_base_new();
-    if (evbase == NULL) {
-        fprintf(stderr, "Failed to create event base\n");
-        return 1;
-    }
 
     mock = start_mock_server(NULL);
     if (mock == NULL) {
@@ -97,7 +89,7 @@ int main(int argc, char **argv)
     }
     http = get_mock_http_server(mock);
 
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_LIBEVENT, evbase, NULL);
+    io = get_test_io_opts();
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
@@ -107,7 +99,6 @@ int main(int argc, char **argv)
 
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
-        event_base_free(evbase);
         return 1;
     }
 
@@ -117,7 +108,6 @@ int main(int argc, char **argv)
 
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
-        event_base_free(evbase);
         return 1;
     }
 

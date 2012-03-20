@@ -51,7 +51,7 @@ static void setup(char **argv)
     assert(mock == NULL);
     assert(io == NULL);
 
-    io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    io = get_test_io_opts();
     if (io == NULL) {
         err_exit("Failed to create IO session");
     }
