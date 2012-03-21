@@ -808,6 +808,7 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
                 memmove(buffer->data, buffer->data + instance->vbucket_stream.chunk_size,
                         buffer->avail - instance->vbucket_stream.chunk_size);
                 buffer->avail -= instance->vbucket_stream.chunk_size;
+                buffer->data[buffer->avail] = '\0';
                 term = strstr(instance->vbucket_stream.input.data, "\n\n\n\n");
                 if (term != NULL) {
                     *term = '\0';
