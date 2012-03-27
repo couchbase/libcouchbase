@@ -381,7 +381,11 @@ static void relocate_packets(libcouchbase_server_t *src,
         vb = ntohs(cmd.request.vbucket);
         idx = (libcouchbase_size_t)vbucket_get_master(dst_instance->vbucket_config, vb);
         dst = dst_instance->servers + idx;
-        assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        if (src->connected) {
+            assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        } else {
+            assert(ringbuffer_read(&src->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        }
 
         assert(ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
         assert(ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
