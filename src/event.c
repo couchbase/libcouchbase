@@ -154,16 +154,18 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
                 ringbuffer_consumed(&c->output_cookies, sizeof(ct));
             }
         } else {
-            int new_vb;
+            int idx;
             char *body;
             libcouchbase_size_t nbody;
-            /* re-schedule command with new vbucket id */
+            libcouchbase_server_t *new_srv;
+            /* re-schedule command to new server */
             nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
             assert(nr == sizeof(req));
-            new_vb = vbucket_found_incorrect_master(c->instance->vbucket_config,
-                                                    ntohs(req.request.vbucket),
-                                                    (int)c->index);
-            req.request.vbucket = ntohs((uint16_t)new_vb);
+            idx = vbucket_found_incorrect_master(c->instance->vbucket_config,
+                                                 ntohs(req.request.vbucket),
+                                                 (int)c->index);
+            assert((libcouchbase_size_t)idx < c->instance->nservers);
+            new_srv = c->instance->servers + idx;
             req.request.opaque = ++c->instance->seqno;
             nbody = ntohl(req.request.bodylen);
             body = malloc(nbody);
@@ -179,9 +181,9 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
              * that the library will retry the command until its time will
              * out and the client will get LIBCOUCHBASE_ETIMEDOUT error in
              * command callback */
-            libcouchbase_server_retry_packet(c, &ct, &req, sizeof(req));
-            libcouchbase_server_write_packet(c, body, nbody);
-            libcouchbase_server_end_packet(c);
+            libcouchbase_server_retry_packet(new_srv, &ct, &req, sizeof(req));
+            libcouchbase_server_write_packet(new_srv, body, nbody);
+            libcouchbase_server_end_packet(new_srv);
             free(body);
         }
         break;
