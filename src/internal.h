@@ -308,6 +308,7 @@ extern "C" {
         ringbuffer_t result;
         /** The cookie belonging to this request */
         const void *command_cookie;
+        int cancelled;
     };
 
     libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, libcouchbase_error_t retcode);

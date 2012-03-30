@@ -186,7 +186,11 @@ static int request_do_read(libcouchbase_couch_request_t req)
         if (HTTP_PARSER_ERRNO(req->parser) != HPE_OK) {
             return -1;
         }
-        return nb;
+        if (req->cancelled) {
+            return 0;
+        } else {
+            return nb;
+        }
     }
     return 0;
 }
@@ -567,5 +571,5 @@ LIBCOUCHBASE_API
 void libcouchbase_cancel_couch_request(libcouchbase_couch_request_t request)
 {
     hashset_remove(request->server->couch_requests, request);
-    libcouchbase_destroy_couch_request(request);
+    request->cancelled = 1;
 }
