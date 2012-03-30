@@ -439,7 +439,7 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
         /* Set the correct event handler */
         server->instance->io->update_event(server->instance->io, server->sock,
                                            server->event, LIBCOUCHBASE_READ_EVENT,
-                                           server, libcouchbase_server_event_handler );
+                                           server, libcouchbase_server_event_handler);
     }
 }
 

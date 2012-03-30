@@ -101,7 +101,7 @@ hrtime_t gethrtime(void)
     static double freq;
     LARGE_INTEGER currtime;
 
-    if (pf.QuadPart == 0 ) {
+    if (pf.QuadPart == 0) {
         if (QueryPerformanceFrequency(&pf)) {
             assert(pf.QuadPart != 0);
             freq = 1.0e9 / (double)pf.QuadPart;

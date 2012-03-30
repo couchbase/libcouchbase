@@ -224,7 +224,7 @@ public:
                     keys[0] = key.c_str();
                     nkey[0] = (libcouchbase_size_t)key.length();
                     if (libcouchbase_mget(instance, this, 1,
-                                          reinterpret_cast<const void *const *>(keys), nkey, NULL)
+                                          reinterpret_cast<const void * const *>(keys), nkey, NULL)
                             != LIBCOUCHBASE_SUCCESS) {
                         // @error
                     }
@@ -264,7 +264,7 @@ public:
             generateKey(key, ii);
 
             error = libcouchbase_store(instance,
-                                       reinterpret_cast<void *> (this), LIBCOUCHBASE_SET,
+                                       reinterpret_cast<void *>(this), LIBCOUCHBASE_SET,
                                        key.c_str(),
                                        (libcouchbase_size_t)key.length(),
                                        config.data, config.maxSize, 0, 0, 0);
@@ -305,7 +305,7 @@ protected:
         std::stringstream ss;
         ss << header << std::endl;
         ss << "              +---------+---------+---------+---------+" << std::endl;
-        libcouchbase_get_timings(instance, reinterpret_cast<void *> (&ss),
+        libcouchbase_get_timings(instance, reinterpret_cast<void *>(&ss),
                                  timingsCallback);
         ss << "              +----------------------------------------" << endl;
         std::cout << ss.str();
@@ -369,7 +369,7 @@ static void timingsCallback(libcouchbase_t instance, const void *cookie,
                             libcouchbase_uint32_t maxtotal)
 {
     std::stringstream *ss =
-        const_cast<std::stringstream *> (reinterpret_cast<const std::stringstream *> (cookie));
+        const_cast<std::stringstream *>(reinterpret_cast<const std::stringstream *>(cookie));
     char buffer[1024];
     int offset = sprintf(buffer, "[%3u - %3u]", min, max);
 

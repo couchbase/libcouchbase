@@ -249,7 +249,7 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
             /* store address for this line */
             snprintf(addrstr, sizeof(addrstr), "%.4lx",
                      (unsigned long)
-                     ((libcouchbase_size_t)p - (libcouchbase_size_t)data) );
+                     ((libcouchbase_size_t)p - (libcouchbase_size_t)data));
         }
 
         c = *p;
@@ -401,12 +401,12 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
     req = (protocol_binary_request_header *)bytes;
     res = (protocol_binary_response_header *)bytes;
 
-    if ( (magicstr = libcouchbase_strmagic(req->request.magic)) == NULL ) {
+    if ((magicstr = libcouchbase_strmagic(req->request.magic)) == NULL) {
         sprintf(a_magicstr, "%0x", req->request.magic);
         magicstr = a_magicstr;
     }
 
-    if ( (opstr = libcouchbase_stropcode(req->request.opcode)) == NULL) {
+    if ((opstr = libcouchbase_stropcode(req->request.opcode)) == NULL) {
         sprintf(a_opstr, "%0x", req->request.opcode);
         opstr = a_opstr;
     }
