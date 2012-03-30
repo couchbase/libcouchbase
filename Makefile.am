@@ -267,6 +267,7 @@ reformat:
                --pad-oper \
                --pad-header \
                --add-brackets \
+               --unpad-paren \
                --align-pointer=name \
                --align-reference=name \
                $(top_srcdir)/include/libcouchbase/*.[ch] \
