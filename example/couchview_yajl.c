@@ -448,10 +448,10 @@ int main(int argc, char **argv)
         nbytes = strlen(bytes);
     }
 
-    rc = libcouchbase_make_couch_request(instance, (void *)&cookie,
-                                         uri, strlen(uri), bytes, nbytes,
-                                         bytes ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
-                                         chunked);
+    (void)libcouchbase_make_couch_request(instance, (void *)&cookie,
+                                          uri, strlen(uri), bytes, nbytes,
+                                          bytes ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
+                                          chunked, &rc);
     if (rc != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to execute view\n");
         return 1;

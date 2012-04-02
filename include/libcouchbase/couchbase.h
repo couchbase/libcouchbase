@@ -568,6 +568,7 @@ extern "C" {
      * @param chunked If true the client will use libcouchbase_couch_data_callback
      *                to notify about response and libcouchbase_couch_complete
      *                otherwise.
+     * @param error Where to store information about why creation failed
      *
      * @example Fetch first 10 docs from the bucket
      *    const char path[] = "_all_docs?limit=10";
@@ -582,14 +583,15 @@ extern "C" {
      *                                    LIBCOUCHBASE_HTTP_METHOD_GET, 1);
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_make_couch_request(libcouchbase_t instance,
-                                                         const void *command_cookie,
-                                                         const char *path,
-                                                         libcouchbase_size_t npath,
-                                                         const void *body,
-                                                         libcouchbase_size_t nbody,
-                                                         libcouchbase_http_method_t method,
-                                                         int chunked);
+    libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
+                                                                const void *command_cookie,
+                                                                const char *path,
+                                                                libcouchbase_size_t npath,
+                                                                const void *body,
+                                                                libcouchbase_size_t nbody,
+                                                                libcouchbase_http_method_t method,
+                                                                int chunked,
+                                                                libcouchbase_error_t *error);
 
     /**
      * Cancel view request. This function could be called from the callback
