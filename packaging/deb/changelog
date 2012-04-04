@@ -1,3 +1,38 @@
+libcouchbase (1.1.0dp) stable; urgency=low
+
+  [Mark Nunberg]
+  * Null-terminate unhandled vbucket-stream chunk data
+  * Allow tests to use user-defined event loop for iops
+
+  [Sergey Avseyev]
+  * Check for newer libvbucket
+  * Bundle HTTP parser from https://github.com/joyent/http-parser
+  * Fix pedantic warnings
+  * Build HTTP parser as separate library
+  * Implement hash set data structure
+  * Use libcouchbase IO layer for views
+  * vbucket_found_incorrect_master() returns server index
+  * Pick up cookies from pending buffer unless node connected
+  * Gracefully cancel couch request
+  * Return reference to request struct from constructor
+  * Fix formatting: use typedef as return type
+  * Fix several segfaults
+  * Update library version
+
+  [Trond Norbye]
+  * Fix build breaks with --enable-werror with SPRO
+  * Refactor: rename libcouchbase_ringbuffer_ to ringbuffer_
+  * Add lint rule
+  * MB-4834: Request the tap bytes in a known byte order
+  * Fix errors reported by lint
+  * Clean up warnings reported by lint
+  * Don't try to be smart linking the strerror test
+  * Include errno.h to ensure that the macros should be set first
+  * Add --unpad-paren to remove the ugly if ( asdf )
+  * Updates according to coding style
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 04 Apr 2012 21:39:25 +0300
+
 libcouchbase (1.0.2) stable; urgency=low
 
   [Mark Nunberg]
