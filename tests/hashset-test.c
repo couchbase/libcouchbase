@@ -43,6 +43,7 @@ static void trivial(void)
     assert(hashset_is_member(set, missing) == 0);
 
     assert(hashset_remove(set, items[1]) == 1);
+    assert(hashset_num_items(set) == 3);
     assert(hashset_remove(set, items[1]) == 0);
 
     assert(hashset_add(set, foo) == 1);
