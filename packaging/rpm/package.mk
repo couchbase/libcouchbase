@@ -21,7 +21,7 @@ dist-rpm: dist
 	mkdir $(RPM_DIR)/SRPMS
 	cp $(PACKAGE)-$(VERSION).tar.gz $(RPM_DIR)/SOURCES
 	sed 's/@VERSION@/$(RPM_VER)/g;s/@RELEASE@/$(RPM_REL)/g;s/@TARREDAS@/$(TARPREFIX)/g' < packaging/rpm/$(PACKAGE).spec.in > $(RPM_WORKSPACE)/$(PACKAGE).spec
-	(cd $(RPM_WORKSPACE); rpmbuild -ba $(PACKAGE).spec)
+	(cd $(RPM_WORKSPACE); rpmbuild ${RPM_FLAGS} -ba $(PACKAGE).spec)
 	mv $(RPM_DIR)/RPMS/*/*.rpm `pwd`
 	mv $(RPM_DIR)/SRPMS/*.rpm `pwd`
 	rm -rf $(RPM_WORKSPACE)
