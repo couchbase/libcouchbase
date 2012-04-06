@@ -339,7 +339,7 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     passwd = vbucket_config_get_password(instance->vbucket_config);
     if (passwd) {
         instance->sasl.password.secret.len = strlen(passwd);
-        strcpy((char *)instance->sasl.password.secret.data, passwd);
+        strcpy((char *)(instance->sasl.password.buffer + sizeof(instance->sasl.password.secret.len)), passwd);
     }
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
