@@ -88,7 +88,11 @@ void libcouchbase_wait(libcouchbase_t instance)
                                    instance,
                                    initial_connect_timeout_handler);
     }
-    instance->io->run_event_loop(instance->io);
+    if (instance->vbucket_config == NULL || libcouchbase_has_data_in_buffers(instance)) {
+        instance->io->run_event_loop(instance->io);
+    } else {
+        instance->wait = 0;
+    }
 
     /*
      * something else will call libcouchbase_maybe_breakout with a corresponding

@@ -495,6 +495,16 @@ static void test_spurious_saslerr(void)
     }
 }
 
+/* libcouchbase_wait() blocks forever if there is nothing queued */
+static void test_issue_59(void)
+{
+    libcouchbase_wait(session);
+    libcouchbase_wait(session);
+    libcouchbase_wait(session);
+    libcouchbase_wait(session);
+    libcouchbase_wait(session);
+}
+
 int main(int argc, char **argv)
 {
     char str_node_count[16];
@@ -515,6 +525,7 @@ int main(int argc, char **argv)
     test_get1();
     test_get2();
     test_version1();
+    test_issue_59();
     teardown();
 
     args[2] = NULL;

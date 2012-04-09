@@ -434,6 +434,8 @@ extern "C" {
     libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
                                                      libcouchbase_error_t error);
 
+    int libcouchbase_has_data_in_buffers(libcouchbase_t instance);
+
     void libcouchbase_maybe_breakout(libcouchbase_t instance);
 
     libcouchbase_connect_status_t libcouchbase_connect_status(int err);

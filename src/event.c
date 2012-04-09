@@ -337,21 +337,24 @@ void libcouchbase_server_event_handler(libcouchbase_socket_t sock, short which, 
     libcouchbase_error_handler(c->instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
+int libcouchbase_has_data_in_buffers(libcouchbase_t instance)
+{
+    libcouchbase_size_t ii;
+
+    for (ii = 0; ii < instance->nservers; ++ii) {
+        libcouchbase_server_t *c = instance->servers + ii;
+        if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes ||
+            c->pending.nbytes) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void libcouchbase_maybe_breakout(libcouchbase_t instance)
 {
     if (instance->wait) {
-        int done = 1;
-        libcouchbase_size_t ii;
-        for (ii = 0; ii < instance->nservers; ++ii) {
-            libcouchbase_server_t *c = instance->servers + ii;
-            if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes ||
-                    c->pending.nbytes) {
-                done = 0;
-                break;
-            }
-        }
-
-        if (done) {
+        if (!libcouchbase_has_data_in_buffers(instance)) {
             instance->wait = 0;
             instance->io->stop_event_loop(instance->io);
         }
