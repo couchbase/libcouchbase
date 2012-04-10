@@ -65,6 +65,13 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Tue Apr 10 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp2
+[Sergey Avseyev]
+- Allow to pass additional arguments to RPM builder
+- Fix segfault while authorizing on protected buckets
+- Don't define size_t and ssize_t for VS2008
+- Don't wait for empty buffers (CCBC-59)
+
 * Wed Apr 04 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp
 [Mark Nunberg]
 - Null-terminate unhandled vbucket-stream chunk data

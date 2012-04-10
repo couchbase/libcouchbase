@@ -1,3 +1,13 @@
+libcouchbase (1.1.0dp2) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Allow to pass additional arguments to RPM builder
+  * Fix segfault while authorizing on protected buckets
+  * Don't define size_t and ssize_t for VS2008
+  * Don't wait for empty buffers (CCBC-59)
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Tue, 10 Apr 2012 11:05:07 +0300
+
 libcouchbase (1.1.0dp) stable; urgency=low
 
   [Mark Nunberg]
