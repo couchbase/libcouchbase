@@ -218,7 +218,7 @@ extern "C" {
         char *port;
         /** The server endpoint as hostname:port */
         char *authority;
-        /** The CouchDB API endpoint base */
+        /** The Couchbase Views API endpoint base */
         char *couch_api_base;
         /** The REST API server as hostname:port */
         char *rest_api_server;
@@ -245,7 +245,7 @@ extern "C" {
         /** The input buffer for this server */
         ringbuffer_t input;
 
-        /** The set of the pointers to CouchDB requests */
+        /** The set of the pointers to Couchbase View requests */
         hashset_t couch_requests;
 
         /** The SASL object used for this server */

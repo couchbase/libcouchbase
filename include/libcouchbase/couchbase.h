@@ -544,7 +544,7 @@ extern "C" {
                                             const void *cookie);
 
     /**
-     * Execute CouchDB view matching given path and yield JSON result object.
+     * Execute Couchbase View matching given path and yield JSON result object.
      * The client should setup view_complete callback in order to fetch the
      * result. Also he can setup view_data callback to fetch response body
      * in chunks as soon as possible, it will be called each time the library
@@ -561,8 +561,7 @@ extern "C" {
      * @param path A view path string with optional query params (e.g. skip,
      *             limit etc.)
      * @param npath Size of path
-     * @param body The POST body for CouchDB view request. If the body
-     *             parameter is NULL, function will use GET request.
+     * @param body The POST body for Couchbase View request.
      * @param nbody Size of body
      * @param method HTTP message type to be sent to server
      * @param chunked If true the client will use libcouchbase_couch_data_callback
