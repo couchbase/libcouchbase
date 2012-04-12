@@ -36,7 +36,10 @@ void hashset_destroy(hashset_t set);
 
 size_t hashset_num_items(hashset_t set);
 
-/* add item into the hashset
+/* add item into the hashset.
+ *
+ * @note 0 and 1 is special values, meaning nil and deleted items. the
+ *       function will return -1 indicating error.
  *
  * returns zero if the item already in the set and non-zero otherwise
  */

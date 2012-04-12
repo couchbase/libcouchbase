@@ -27,7 +27,7 @@ hashset_t hashset_create()
     if (set == NULL) {
         return NULL;
     }
-    set->nbits = 2;
+    set->nbits = 3;
     set->capacity = 1 << set->nbits;
     set->mask = set->capacity - 1;
     set->items = calloc(set->capacity, sizeof(size_t));
@@ -55,9 +55,15 @@ void hashset_destroy(hashset_t set)
 static int hashset_add_member(hashset_t set, void *item)
 {
     size_t value = (size_t)item;
-    size_t ii = set->mask & (prime_1 * value);
+    size_t ii;
 
-    while (set->items[ii] != 0) {
+    if (value == 0 || value == 1) {
+        return -1;
+    }
+
+    ii = set->mask & (prime_1 * value);
+
+    while (set->items[ii] != 0 && set->items[ii] != 1) {
         if (set->items[ii] == value) {
             return 0;
         } else {
@@ -106,7 +112,7 @@ int hashset_remove(hashset_t set, void *item)
 
     while (set->items[ii] != 0) {
         if (set->items[ii] == value) {
-            set->items[ii] = 0;
+            set->items[ii] = 1;
             set->nitems--;
             return 1;
         } else {
