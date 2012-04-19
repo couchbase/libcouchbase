@@ -109,6 +109,13 @@ static void wrapped_buffer_test(void)
      * |-----567--|
      *       r
      */
+    if (ringbuffer_is_continous(&ring, RINGBUFFER_WRITE, 5) != 0) {
+        err_exit("The buffer must not be continuous in write direction for 5 bytes");
+    }
+    if (ringbuffer_is_continous(&ring, RINGBUFFER_WRITE, 2) == 0) {
+        err_exit("The buffer must be continuous in write direction for 2 bytes");
+    }
+
 
     /* wrapped write: write 5 more chars */
     if (ringbuffer_write(&ring, "abcde", 5) != 5) {
@@ -118,6 +125,13 @@ static void wrapped_buffer_test(void)
      * |cde--567ab|
      *       r
      */
+
+    if (ringbuffer_is_continous(&ring, RINGBUFFER_READ, 7) != 0) {
+        err_exit("The buffer must not be continuous in read direction for 7 bytes");
+    }
+    if (ringbuffer_is_continous(&ring, RINGBUFFER_READ, 2) == 0) {
+        err_exit("The buffer must be continuous in read direction for 2 bytes");
+    }
 
     /* wrapped read: read 6 chars */
     if (ringbuffer_read(&ring, buffer, 6) != 6 ||
@@ -217,7 +231,6 @@ int main(int argc, char **argv)
     }
 
     wrapped_buffer_test();
-
     my_regression_1_test();
 
     return 0;

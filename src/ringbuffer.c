@@ -292,7 +292,7 @@ int ringbuffer_is_continous(ringbuffer_t *buffer,
 
         if (buffer->read_head >= buffer->write_head) {
             ptrdiff_t chunk = buffer->root + buffer->size - buffer->read_head;
-            if (buffer->nbytes > (libcouchbase_size_t)chunk) {
+            if (nb > (libcouchbase_size_t)chunk) {
                 ret = 0;
             }
         }
@@ -300,7 +300,7 @@ int ringbuffer_is_continous(ringbuffer_t *buffer,
         ret = (nb <= buffer->size - buffer->nbytes);
         if (buffer->write_head >= buffer->read_head) {
             ptrdiff_t chunk = buffer->root + buffer->size - buffer->write_head;
-            if (buffer->nbytes > (libcouchbase_size_t)chunk) {
+            if (nb > (libcouchbase_size_t)chunk) {
                 ret = 0;
             }
         }
