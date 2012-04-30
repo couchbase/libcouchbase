@@ -398,8 +398,8 @@ extern "C" {
                                           struct addrinfo **curr_ai,
                                           int *connerr);
 
-    void libcouchbase_apply_vbucket_config(libcouchbase_t instance,
-                                           VBUCKET_CONFIG_HANDLE config);
+    libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance,
+                                                           VBUCKET_CONFIG_HANDLE config);
 
 #ifdef __cplusplus
 }
