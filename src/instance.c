@@ -340,7 +340,12 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     passwd = vbucket_config_get_password(instance->vbucket_config);
     if (passwd) {
         instance->sasl.password.secret.len = strlen(passwd);
-        strcpy((char *)instance->sasl.password.secret.data, passwd);
+        if (instance->sasl.password.secret.len < sizeof(instance->sasl.password.buffer) - offsetof(sasl_secret_t, data)) {
+            memcpy(instance->sasl.password.secret.data, passwd, instance->sasl.password.secret.len);
+        } else {
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_EINVAL, "Password too long");
+            return;
+        }
     }
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
