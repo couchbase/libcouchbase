@@ -65,6 +65,12 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Wed Apr 02 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.3
+[Sergey Avseyev]
+- RCBC-33 Fix buffer overflow vulnerability
+- [backport] Pick up cookies from pending buffer unless node connected
+- [backport] Fix ringbuffer_is_continous()
+
 * Tue Mar 06 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.2
 [Mark Nunberg]
 - Added internal debugging/logging routines

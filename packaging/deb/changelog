@@ -1,3 +1,12 @@
+libcouchbase (1.0.3) stable; urgency=low
+
+  [Sergey Avseyev]
+  * RCBC-33 Fix buffer overflow vulnerability
+  * [backport] Pick up cookies from pending buffer unless node connected
+  * [backport] Fix ringbuffer_is_continous()
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 02 May 2012 23:07:40 +0300
+
 libcouchbase (1.0.2) stable; urgency=low
 
   [Mark Nunberg]
