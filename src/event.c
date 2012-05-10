@@ -184,6 +184,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
             libcouchbase_server_retry_packet(new_srv, &ct, &req, sizeof(req));
             libcouchbase_server_write_packet(new_srv, body, nbody);
             libcouchbase_server_end_packet(new_srv);
+            libcouchbase_server_send_packets(new_srv);
             free(body);
         }
         break;
