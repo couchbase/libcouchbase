@@ -260,6 +260,8 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
     if (libcouchbase_ringbuffer_peek(cookies, &ct, sizeof(ct)) == sizeof(ct)) {
         server->next_timeout = ct.start;
     }
+
+    libcouchbase_maybe_breakout(server->instance);
 }
 
 libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
