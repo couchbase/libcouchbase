@@ -375,8 +375,6 @@ extern "C" {
                                                 libcouchbase_server_t *exc);
 
     void libcouchbase_purge_single_server(libcouchbase_server_t *server,
-                                          ringbuffer_t *stream,
-                                          ringbuffer_t *cookies,
                                           hrtime_t tmo,
                                           hrtime_t now,
                                           libcouchbase_error_t error);

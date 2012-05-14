@@ -306,11 +306,7 @@ void libcouchbase_server_event_handler(libcouchbase_socket_t sock, short which, 
             hrtime_t tmo = c->instance->timeout.usec;
             tmo *= 1000;
             if (c->next_timeout != 0 && (now > (tmo + c->next_timeout))) {
-                libcouchbase_purge_single_server(c,
-                                                 &c->cmd_log,
-                                                 &c->output_cookies,
-                                                 tmo, now,
-                                                 LIBCOUCHBASE_ETIMEDOUT);
+                libcouchbase_purge_single_server(c, tmo, now, LIBCOUCHBASE_ETIMEDOUT);
             }
         }
 
