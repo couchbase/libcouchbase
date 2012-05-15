@@ -420,7 +420,7 @@ extern "C" {
 
 
     int libcouchbase_lookup_server_with_command(libcouchbase_t instance,
-                                                protocol_binary_command opcode,
+                                                libcouchbase_uint8_t opcode,
                                                 libcouchbase_uint32_t opaque,
                                                 libcouchbase_server_t *exc);
 
