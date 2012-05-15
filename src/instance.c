@@ -23,6 +23,8 @@
  */
 #include "internal.h"
 
+/* private function to safely free backup_nodes*/
+static void free_backup_nodes(libcouchbase_t instance);
 /**
  * Get the version of the library.
  *
@@ -82,6 +84,9 @@ static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
     if ((ret->backup_nodes = calloc(num + 2, sizeof(char *))) == NULL) {
         return -1;
     }
+
+    ret->nbackup_nodes = num + 2;
+    ret->should_free_backup_nodes = 1;
 
     ptr = host;
     ii = 0;
@@ -232,8 +237,9 @@ void libcouchbase_destroy(libcouchbase_t instance)
     for (ii = 0; ii < instance->nservers; ++ii) {
         libcouchbase_server_destroy(instance->servers + ii);
     }
+
+    free_backup_nodes(instance);
     free(instance->servers);
-    free(instance->backup_nodes);
 
     if (instance->io && instance->io->destructor) {
         instance->io->destructor(instance->io);
@@ -313,10 +319,11 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     instance->nservers = num;
     instance->servers = calloc(num, sizeof(libcouchbase_server_t));
     instance->vbucket_config = config;
-    if (instance->backup_nodes) {
-        free(instance->backup_nodes);
-    }
+
+    free_backup_nodes(instance);
     instance->backup_nodes = calloc(num, sizeof(char *));
+    instance->nbackup_nodes = num;
+
     sprintf(curnode, "%s:%s", instance->host, instance->port);
     for (ii = 0; ii < (libcouchbase_size_t)num; ++ii) {
         instance->servers[ii].instance = instance;
@@ -1009,4 +1016,17 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
     libcouchbase_instance_connect_handler(INVALID_SOCKET, 0, instance);
 
     return instance->last_error;
+}
+
+static void free_backup_nodes(libcouchbase_t instance)
+{
+    if (instance->should_free_backup_nodes) {
+        libcouchbase_size_t ii;
+        for (ii = 0; ii < instance->nbackup_nodes; ++ii) {
+            free(instance->backup_nodes[ii]);
+        }
+        instance->should_free_backup_nodes = 0;
+    }
+
+    free(instance->backup_nodes);
 }
