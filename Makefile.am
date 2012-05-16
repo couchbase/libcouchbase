@@ -125,6 +125,21 @@ libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTE
 endif
 endif
 
+tests_unit_tests_SOURCES = tests/unit_tests.cc
+
+if HAVE_GOOGLETEST_SRC
+noinst_LTLIBRARIES += libgtest.la
+libgtest_la_SOURCES = tests/gtest-sources.cc
+libgtest_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
+                       $(NO_WERROR)
+tests_unit_tests_DEPENDENCIES = libgtest.la
+tests_unit_tests_LDADD = libgtest.la
+endif
+
+if !HAVE_GOOGLETEST_SRC
+tests_unit_tests_LDADD = -lgtest -lpthread
+endif
+
 tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	@echo "| Download CouchbaseMock for functional tests |"
@@ -158,6 +173,11 @@ check_PROGRAMS = tests/base64-test \
                  tests/memcached_compat-test \
                  tests/ringbuffer-test \
                  tests/strerror-test
+
+if BUILD_TOOLS
+# we can't build the test program without a C++ compiler
+check_PROGRAMS += tests/unit-tests
+endif
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la

@@ -56,7 +56,7 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   GCC_C_DEBUG="-O0 -g3"
   GCC_CXX_DEBUG="-O0 -g3"
   GCC_VISIBILITY="-DHAVE_VISIBILITY=1 -fvisibility=hidden"
-  GCC_CPPFLAGS="-pipe"
+  GCC_CPPFLAGS="-pipe -pthread"
   GCC_CFLAGS="-std=gnu99"
   GCC_CXXFLAGS=""
   GCC_C89=-std=c89

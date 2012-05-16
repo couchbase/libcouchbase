@@ -55,6 +55,7 @@
 /src/config.h.in
 /src/stamp-h1
 /tests/*-test
+/tests/unit-tests
 /tests/CouchbaseMock.jar
 /tools/cbc
 /vc100.idb
