@@ -92,7 +92,7 @@ if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c
 endif
 
-libcouchbase_la_LDFLAGS= -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined
+libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 libcouchbase_la_DEPENDENCIES=libhttpparser.la
 libcouchbase_la_LIBADD=libhttpparser.la -lvbucket $(LIBSASL)
@@ -119,7 +119,7 @@ libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
 else
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = src/plugin-libevent.c
-libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0
+libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0 $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 endif
@@ -131,6 +131,7 @@ tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20120202.071818-12.jar
 
+libmockserver_la_LDFLAGS = $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
                          tests/server.c tests/loopfactory.c tests/server.h
@@ -180,7 +181,7 @@ tests_getopt_test_SOURCES = tests/getopt-test.cc
 
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_LDADD = libcouchbase.la libmockserver.la
-tests_config_test_LDFLAGS = -lvbucket
+tests_config_test_LDFLAGS = $(AM_LDFLAGS) -lvbucket
 
 tests_memcached_compat_test_SOURCES = tests/memcached_compat-test.c
 tests_memcached_compat_test_LDADD = libcouchbase.la

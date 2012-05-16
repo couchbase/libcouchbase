@@ -22,6 +22,18 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
     [ac_cv_enable_debug="yes"],
     [ac_cv_enable_debug="no"])
 
+  AC_ARG_ENABLE([gcov],
+    [AS_HELP_STRING([--enable-gcov],
+            [Enable gcov build (code coverage). @<:@default=off@:>@])],
+    [ac_cv_enable_gcov="yes"],
+    [ac_cv_enable_gcov="no"])
+
+  AC_ARG_ENABLE([tcov],
+    [AS_HELP_STRING([--enable-tcov],
+            [Enable tcov build (code coverage). @<:@default=off@:>@])],
+    [ac_cv_enable_tcov="yes"],
+    [ac_cv_enable_tcov="no"])
+
   AC_CACHE_CHECK([whether the C++ compiler works], [ac_cv_prog_cxx_works], [
     AC_LANG_PUSH([C++])
     AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
@@ -143,6 +155,24 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
            AM_CFLAGS="$AM_CFLAGS $C_OPTIMIZE"
            AM_CXXFLAGS="$AM_CXXFLAGS $CXX_OPTIMIZE"
         ])
+
+  dnl gcov settings
+  AS_IF([test "$ac_cv_enable_gcov" = "yes"],
+        [
+           AM_CPPFLAGS="$AM_CPPFLAGS -fprofile-arcs -ftest-coverage"
+           AM_LDFLAGS="$AM_LDFLAGS -lgcov"
+        ])
+
+  dnl tcov settings
+  AS_IF([test "$ac_cv_enable_tcov" = "yes"],
+        [
+           AM_CPPFLAGS="$AM_CPPFLAGS -xprofile=tcov"
+           AM_LDFLAGS="$AM_LDFLAGS -xprofile=tcov"
+           dnl due to the stupid libtool it's dropping -xprofile when
+           dnl building shared objects.. let's fool it..
+	   AM_PROFILE_SOLDFLAGS="-Wc,-xprofile=tcov"
+        ])
+  AC_SUBST(AM_PROFILE_SOLDFLAGS)
 
   dnl Export GCC variables
   AC_SUBST(GCC_NO_WERROR)
