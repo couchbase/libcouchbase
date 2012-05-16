@@ -1,6 +1,6 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2011 Couchbase, Inc.
+ *     Copyright 2012 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -14,39 +14,26 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include <string.h>
-#include <assert.h>
-#include <stdio.h>
+#include "config.h"
+#include <gtest/gtest.h>
 
-int error = 0;
-
-extern int libcouchbase_base64_encode(const char *src, char *dst, size_t sz);
-
-static void validate(const char *src, const char *result) {
-    char dest[1024];
-
-    if (libcouchbase_base64_encode(src, dest, sizeof(dest)) == -1) {
-        fprintf(stderr, "Failed to convert the string:\n<%s>\n", src);
-        error = 1;
-    } else {
-        if (strcmp(result, dest) != 0) {
-            fprintf(stderr, "FAIL: Input <%s>: Expected: <%s> got <%s>\n", src, result, dest);
-            error = 1;
-        }
-    }
+extern "C" {
+    extern int libcouchbase_base64_encode(const char *src, char *dst,
+                                          size_t sz);
 }
 
-/**
- * Test program to validate that the base64 encoding conforms to RFC 4648
- * @param argc not used
- * @param argv not used
- * @return 0 all tests pass, 1 if one (or more) of the tests fail
- */
-int main(int argc, char **argv)
+class Base64 : public ::testing::Test
 {
-    (void)argc; (void)argv;
+protected:
+    void validate(const char *src, const char *result) {
+        char dest[1024];
+        ASSERT_NE(-1, libcouchbase_base64_encode(src, dest, sizeof(dest)));
+        EXPECT_STREQ(result, dest);
+    }
+};
 
-    /* Test cases from RFC 4648 */
+TEST_F(Base64, testRFC4648)
+{
     validate("", "");
     validate("f", "Zg==");
     validate("fo", "Zm8=");
@@ -54,7 +41,10 @@ int main(int argc, char **argv)
     validate("foob", "Zm9vYg==");
     validate("fooba", "Zm9vYmE=");
     validate("foobar", "Zm9vYmFy");
+}
 
+TEST_F(Base64, testWikipediaExample)
+{
     /* Examples from http://en.wikipedia.org/wiki/Base64 */
     validate("Man is distinguished, not only by his reason, but by this singular "
              "passion from other animals, which is a lust of the mind, that by a "
@@ -70,10 +60,13 @@ int main(int argc, char **argv)
     validate("easure.", "ZWFzdXJlLg==");
     validate("asure.", "YXN1cmUu");
     validate("sure.", "c3VyZS4=");
+}
 
-    /* Dummy test data. It looks like the "base64" command line utility from gnu
-     * coreutils adds the "\n" to the encoded data...
-     */
+
+TEST_F(Base64, testStuff)
+{
+    // Dummy test data. It looks like the "base64" command line
+    // utility from gnu coreutils adds the "\n" to the encoded data...
     validate("Administrator:password", "QWRtaW5pc3RyYXRvcjpwYXNzd29yZA==");
     validate("@", "QA==");
     validate("@\n", "QAo=");
@@ -85,5 +78,4 @@ int main(int argc, char **argv)
     validate("@@@@\n", "QEBAQAo=");
     validate("blahblah:bla@@h", "YmxhaGJsYWg6YmxhQEBo");
     validate("blahblah:bla@@h\n", "YmxhaGJsYWg6YmxhQEBoCg==");
-    return error;
 }

@@ -125,19 +125,28 @@ libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTE
 endif
 endif
 
-tests_unit_tests_SOURCES = tests/unit_tests.cc
+tests_unit_tests_SOURCES = tests/unit_tests.cc \
+                           tests/base64-unit-test.cc src/base64.c \
+                           tests/hashset-unit-test.cc src/hashset.c \
+                           tests/strerror-unit-test.cc \
+                           tests/memcached-compat-unit-test.cc \
+                           tests/ringbuffer-unit-test.cc src/ringbuffer.c
+
+
+tests_unit_tests_DEPENDENCIES = libcouchbase.la
+tests_unit_tests_LDADD = libcouchbase.la
 
 if HAVE_GOOGLETEST_SRC
 noinst_LTLIBRARIES += libgtest.la
 libgtest_la_SOURCES = tests/gtest-sources.cc
 libgtest_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
                        $(NO_WERROR)
-tests_unit_tests_DEPENDENCIES = libgtest.la
-tests_unit_tests_LDADD = libgtest.la
+tests_unit_tests_DEPENDENCIES += libgtest.la
+tests_unit_tests_LDADD += libgtest.la
 endif
 
 if !HAVE_GOOGLETEST_SRC
-tests_unit_tests_LDADD = -lgtest -lpthread
+tests_unit_tests_LDADD += -lgtest -lpthread
 endif
 
 tests/CouchbaseMock.jar:
@@ -168,11 +177,7 @@ example_couchview_LDADD = libcouchbase.la
 example_couchview_yajl_SOURCES = example/couchview_yajl.c
 example_couchview_yajl_LDADD = libcouchbase.la -lyajl
 
-check_PROGRAMS = tests/base64-test \
-                 tests/hashset-test \
-                 tests/memcached_compat-test \
-                 tests/ringbuffer-test \
-                 tests/strerror-test
+check_PROGRAMS =
 
 if BUILD_TOOLS
 # we can't build the test program without a C++ compiler
@@ -196,28 +201,17 @@ if BUILD_TOOLS
 check_PROGRAMS += tests/getopt-test
 endif
 
-tests_base64_test_SOURCES = tests/base64-test.c src/base64.c
 tests_getopt_test_SOURCES = tests/getopt-test.cc
 
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_LDADD = libcouchbase.la libmockserver.la
 tests_config_test_LDFLAGS = $(AM_LDFLAGS) -lvbucket
 
-tests_memcached_compat_test_SOURCES = tests/memcached_compat-test.c
-tests_memcached_compat_test_LDADD = libcouchbase.la
-
-tests_ringbuffer_test_SOURCES = tests/ringbuffer-test.c src/ringbuffer.c
-
-tests_hashset_test_SOURCES = tests/hashset-test.c src/hashset.c
-
 tests_timings_test_SOURCES = tests/timings-test.c
 tests_timings_test_LDADD = libcouchbase.la libmockserver.la
 
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
-
-tests_strerror_test_SOURCES = tests/strerror-test.c
-tests_strerror_test_LDADD = libcouchbase.la
 
 tests_syncmode_test_SOURCES = tests/test.h tests/syncmode-test.c
 tests_syncmode_test_LDADD = libcouchbase.la libmockserver.la

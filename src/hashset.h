@@ -17,6 +17,13 @@
 
 #include <stdlib.h>
 
+#ifndef LIBCOUCHBASE_HASHSET_H
+#define LIBCOUCHBASE_HASHSET_H 1
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct hashset_st {
     size_t nbits;
     size_t mask;
@@ -57,3 +64,9 @@ int hashset_remove(hashset_t set, void *item);
  * returns non-zero if the item exists and zero otherwise
  */
 int hashset_is_member(hashset_t set, void *item);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

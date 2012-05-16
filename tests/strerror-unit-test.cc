@@ -15,23 +15,20 @@
  *   limitations under the License.
  */
 #include "config.h"
-#include <string.h>
-#include <assert.h>
-#include <stdio.h>
-#include <sys/types.h>
+#include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
 
-int error;
 
-int main(int argc, char **argv)
+class Strerror : public ::testing::Test
 {
-    int ii;
-    (void)argc; (void)argv;
-    for (ii = 0; ii < 0xffff; ++ii) {
-        if (libcouchbase_strerror(NULL, (libcouchbase_error_t)ii) == NULL) {
-            fprintf(stderr, "Error code %d returned NULL!\n", ii);
-            ++error;
-        }
+};
+
+TEST_F(Strerror, testNoCrash)
+{
+    for (int ii = -10; ii < 0xffff; ++ii) {
+        EXPECT_NE((const char*)NULL,
+                  libcouchbase_strerror(NULL, (libcouchbase_error_t)ii));
     }
-    return error;
 }
+
+// @todo add error test cases that verifies the error messages!

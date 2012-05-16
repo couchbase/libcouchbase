@@ -15,34 +15,26 @@
  *   limitations under the License.
  */
 
-/**
- * Example program showing how to use libcouchbase towards a pure
- * memcached cluster
- */
 #include "config.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
 
-int main(void)
+
+class MemcachedCompatibility : public ::testing::Test
+{
+};
+
+TEST_F(MemcachedCompatibility, createInstance)
 {
     struct libcouchbase_memcached_st memcached;
     libcouchbase_t instance;
-    libcouchbase_error_t err;
 
     memset(&memcached, 0, sizeof(memcached));
     memcached.serverlist = "localhost:11211;localhost:11212";
 
-    err = libcouchbase_create_compat(LIBCOUCHBASE_MEMCACHED_CLUSTER, &memcached,
-                                     &instance, NULL);
-
-    if (err != LIBCOUCHBASE_SUCCESS) {
-        fprintf(stderr,
-                "Failed to create an instance for a memcached cluster\n");
-        exit(EXIT_FAILURE);
-    }
-
+    EXPECT_EQ(LIBCOUCHBASE_SUCCESS,
+              libcouchbase_create_compat(LIBCOUCHBASE_MEMCACHED_CLUSTER,
+                                         &memcached,
+                                         &instance, NULL));
     libcouchbase_destroy(instance);
-    exit(EXIT_SUCCESS);
 }
