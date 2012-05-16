@@ -5,6 +5,9 @@
 *.dobj
 *.exe
 *.exp
+*.gcda
+*.gcno
+*.gcov
 *.l[aon]
 *.lib
 *.obj
