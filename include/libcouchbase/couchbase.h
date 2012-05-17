@@ -356,8 +356,13 @@ extern "C" {
      * @param nkey the number of bytes in the key
      * @param bytes the value to set
      * @param nbytes the size of the value
-     * @param flags the user-defined flag section for the item
-     * @param exp When the object should expire
+     * @param flags the user-defined flag section for the item (doesn't have
+     *              any meaning to Couchbase server)
+     * @param exp When the object should expire. The expiration time is
+     *            either an offset into the future.. OR an absolute
+     *            timestamp, depending on how large (numerically) the
+     *            expiration is. if the expiration exceeds 30 months
+     *            (i.e. 24 * 3600 * 30) then it's an absolute timestamp.
      * @param cas the cas identifier for the existing object if you want to
      *            ensure that you're only replacing/append/prepending a
      *            specific object. Specify 0 if you don't want to limit to
