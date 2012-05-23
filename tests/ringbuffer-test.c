@@ -93,7 +93,7 @@ static void wrapped_buffer_test(void)
 
     /* put 8 chars into the buffer */
     if (libcouchbase_ringbuffer_write(&ring, "01234567", 8) != 8) {
-        err_exit("Failed to write 10 characters to buffer");
+        err_exit("Failed to write 8 characters to buffer");
     }
     /*          w
      * |01234567--|
@@ -164,6 +164,34 @@ static void my_regression_1_test(void)
     assert(iov[1].iov_len == 13859);
 }
 
+
+static void memcpy_test(void)
+{
+    char buffer[1024];
+    ringbuffer_t src, dst;
+
+    if (!libcouchbase_ringbuffer_initialize(&src, 16)) {
+        err_exit("Failed to create a 16 byte ringbuffer");
+    }
+    if (libcouchbase_ringbuffer_write(&src, "01234567", 8) != 8) {
+        err_exit("Failed to write 8 characters to buffer");
+    }
+
+    if (!libcouchbase_ringbuffer_initialize(&dst, 16)) {
+        err_exit("Failed to create a 16 byte ringbuffer");
+    }
+    if (libcouchbase_ringbuffer_memcpy(&dst, &src, 4) != 0) {
+        err_exit("Failed to copy 4 characters to buffer");
+    }
+    if (dst.nbytes != 4) {
+        err_exit("The buffer should contain 4 bytes instead of %d", (int)dst.nbytes);
+    }
+    if (libcouchbase_ringbuffer_read(&dst, buffer, 4) != 4 ||
+        memcmp(buffer, "0123", 4) != 0) {
+        err_exit("Failed to read dest buffer");
+    }
+}
+
 int main(int argc, char **argv)
 {
     ringbuffer_t ring;
@@ -232,6 +260,7 @@ int main(int argc, char **argv)
 
     wrapped_buffer_test();
     my_regression_1_test();
+    memcpy_test();
 
     return 0;
 }

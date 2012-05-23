@@ -337,6 +337,7 @@ int libcouchbase_ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
     struct libcouchbase_iovec_st iov[2];
     int ii = 0;
     libcouchbase_size_t towrite = nbytes;
+    libcouchbase_size_t toread, nb;
 
     if (nbytes > libcouchbase_ringbuffer_get_nbytes(src)) {
         /* EINVAL */
@@ -349,10 +350,12 @@ int libcouchbase_ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
     }
 
     libcouchbase_ringbuffer_get_iov(dst, RINGBUFFER_WRITE, iov);
+    toread = minimum(iov[ii].iov_len, nbytes);
     do {
         assert(ii < 2);
-        towrite -= libcouchbase_ringbuffer_read(&copy, iov[ii].iov_base,
-                                                iov[ii].iov_len);
+        nb = libcouchbase_ringbuffer_read(&copy, iov[ii].iov_base, toread);
+        toread -= nb;
+        towrite -= nb;
         ++ii;
     } while (towrite > 0);
     libcouchbase_ringbuffer_produced(dst, nbytes);
