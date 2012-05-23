@@ -63,12 +63,15 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         if (nr != sizeof(req)) {
             break;
         }
+        packetsize = (libcouchbase_uint32_t)sizeof(req) + ntohl(req.request.bodylen);
+        if (libcouchbase_ringbuffer_get_nbytes(stream) < packetsize) {
+            break;
+        }
 
         libcouchbase_ringbuffer_consumed(cookies, sizeof(ct));
 
         assert(nr == sizeof(req));
         packet = stream->read_head;
-        packetsize = (libcouchbase_uint32_t)sizeof(req) + ntohl(req.request.bodylen);
 
         if (server->instance->histogram) {
             libcouchbase_record_metrics(server->instance, now - ct.start,
