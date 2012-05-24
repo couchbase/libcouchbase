@@ -59,6 +59,9 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
     libcouchbase_error_t rc;
     libcouchbase_couch_request_t req = p->data;
 
+    if (!hashset_is_member(req->server->couch_requests, req)) {
+        return 0;
+    }
     if (req->chunked) {
         rc = (p->status_code / 100 == 2) ?  LIBCOUCHBASE_SUCCESS : LIBCOUCHBASE_PROTOCOL_ERROR;
         req->on_data(req, req->instance,
@@ -85,6 +88,9 @@ static int http_parser_complete_cb(http_parser *p)
     char *bytes = NULL;
     libcouchbase_size_t np = 0, nbytes = 0;
 
+    if (!hashset_is_member(req->server->couch_requests, req)) {
+        return 0;
+    }
     rc = (p->status_code / 100 == 2) ?  LIBCOUCHBASE_SUCCESS : LIBCOUCHBASE_PROTOCOL_ERROR;
     if (!req->chunked) {
         nbytes = req->result.nbytes;
