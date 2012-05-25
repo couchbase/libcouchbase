@@ -29,8 +29,7 @@ static const char http_version[] = " HTTP/1.1\r\n";
 static const char headers[] = "User-Agent: libcouchbase/"LIBCOUCHBASE_VERSION_STRING"\r\n"
                               "Accept: application/json\r\n";
 
-static
-void libcouchbase_destroy_couch_request(libcouchbase_couch_request_t req)
+void libcouchbase_couch_request_destroy(libcouchbase_couch_request_t req)
 {
     if (req) {
         if (req->io) {
@@ -254,7 +253,7 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
         } else {
             /* considering request was completed and release it */
             hashset_remove(server->couch_requests, req);
-            libcouchbase_destroy_couch_request(req);
+            libcouchbase_couch_request_destroy(req);
         }
     }
     if (which & LIBCOUCHBASE_WRITE_EVENT) {
@@ -422,7 +421,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
 
 #define BUFF_APPEND(dst, src, len)                                                      \
         if (len != ringbuffer_write(dst, src, len)) {                                   \
-            libcouchbase_destroy_couch_request(req);                                    \
+            libcouchbase_couch_request_destroy(req);                                    \
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINTERNAL); \
             return NULL;                                                                \
         }
@@ -433,14 +432,14 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         libcouchbase_size_t nbase;
 
         if (ringbuffer_initialize(&urlbuf, 1024) == -1) {
-            libcouchbase_destroy_couch_request(req);
+            libcouchbase_couch_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
         nbase = strlen(server->couch_api_base);
         if (!ringbuffer_ensure_capacity(&urlbuf, nbase + npath + 1)) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_destroy_couch_request(req);
+            libcouchbase_couch_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
@@ -453,14 +452,14 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         req->url = calloc(req->nurl + 1, sizeof(char));
         if (req->url == NULL) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_destroy_couch_request(req);
+            libcouchbase_couch_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
         nn = ringbuffer_read(&urlbuf, req->url, req->nurl);
         if (nn != req->nurl) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_destroy_couch_request(req);
+            libcouchbase_couch_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINTERNAL);
             return NULL;
         }
@@ -475,7 +474,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         if (http_parser_parse_url(req->url, req->nurl, 0, &req->url_info)
                 || (req->url_info.field_set & required_fields) != required_fields) {
             /* parse error or missing URL part */
-            libcouchbase_destroy_couch_request(req);
+            libcouchbase_couch_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
             return NULL;
         }
@@ -492,7 +491,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
               req->url_info.field_data[UF_PORT].len; /* Host: example.com:666\r\n\r\n */
 
         if (!ringbuffer_ensure_capacity(&req->output, nn)) {
-            libcouchbase_destroy_couch_request(req);
+            libcouchbase_couch_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
@@ -500,7 +499,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
 #define EXTRACT_URL_PART(field, dst, len)                                               \
         dst = malloc((len + 1) * sizeof(char));                                         \
         if (dst == NULL) {                                                              \
-            libcouchbase_destroy_couch_request(req);                                    \
+            libcouchbase_couch_request_destroy(req);                                    \
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);    \
             return NULL;                                                                \
         }                                                                               \
@@ -530,14 +529,14 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         if (method != LIBCOUCHBASE_HTTP_METHOD_GET && nbody) {
             char *post_headers = calloc(512, sizeof(char));
             if (post_headers == NULL) {
-                libcouchbase_destroy_couch_request(req);
+                libcouchbase_couch_request_destroy(req);
                 *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
                 return NULL;
             }
             nn = snprintf(post_headers, 512, "\r\nContent-Type: application/json\r\n"
                           "Content-Length: %ld\r\n\r\n", (long)nbody);
             if (!ringbuffer_ensure_capacity(&req->output, nbody + nn)) {
-                libcouchbase_destroy_couch_request(req);
+                libcouchbase_couch_request_destroy(req);
                 *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
                 return NULL;
             }
@@ -554,7 +553,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
     /* Initialize HTTP parser */
     req->parser = malloc(sizeof(http_parser));
     if (req->parser == NULL) {
-        libcouchbase_destroy_couch_request(req);
+        libcouchbase_couch_request_destroy(req);
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
         return NULL;
     }

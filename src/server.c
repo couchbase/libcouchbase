@@ -293,6 +293,8 @@ libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
  */
 void libcouchbase_server_destroy(libcouchbase_server_t *server)
 {
+    libcouchbase_size_t ii;
+
     /* Cancel all pending commands */
     if (server->cmd_log.nbytes) {
         libcouchbase_server_purge_implicit_responses(server,
@@ -327,6 +329,11 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
     ringbuffer_destruct(&server->pending);
     ringbuffer_destruct(&server->pending_cookies);
     ringbuffer_destruct(&server->input);
+    for (ii = 0; ii < server->couch_requests->capacity; ++ii) {
+        if (server->couch_requests->items[ii] > 1) {
+            libcouchbase_couch_request_destroy((libcouchbase_couch_request_t)server->couch_requests->items[ii]);
+        }
+    }
     hashset_destroy(server->couch_requests);
     memset(server, 0xff, sizeof(*server));
 }

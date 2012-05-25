@@ -311,6 +311,9 @@ extern "C" {
         int cancelled;
     };
 
+    void libcouchbase_couch_request_destroy(libcouchbase_couch_request_t req);
+
+
     libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, libcouchbase_error_t retcode);
 
     libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance,
