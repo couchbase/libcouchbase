@@ -224,11 +224,11 @@ public:
                     keys[0] = key.c_str();
                     nkey[0] = (libcouchbase_size_t)key.length();
                     error = libcouchbase_mget(instance, this, 1,
-                                              reinterpret_cast<const void * const *>(keys),
+                                              reinterpret_cast<const void *const *>(keys),
                                               nkey, NULL);
                     if (error != LIBCOUCHBASE_SUCCESS) {
                         std::cerr << "Failed to get item: "
-                            << libcouchbase_strerror(instance, error) << std::endl;
+                                  << libcouchbase_strerror(instance, error) << std::endl;
                     }
                 }
 

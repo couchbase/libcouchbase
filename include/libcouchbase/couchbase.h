@@ -588,14 +588,14 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
-                                                                const void *command_cookie,
-                                                                const char *path,
-                                                                libcouchbase_size_t npath,
-                                                                const void *body,
-                                                                libcouchbase_size_t nbody,
-                                                                libcouchbase_http_method_t method,
-                                                                int chunked,
-                                                                libcouchbase_error_t *error);
+                                                                 const void *command_cookie,
+                                                                 const char *path,
+                                                                 libcouchbase_size_t npath,
+                                                                 const void *body,
+                                                                 libcouchbase_size_t nbody,
+                                                                 libcouchbase_http_method_t method,
+                                                                 int chunked,
+                                                                 libcouchbase_error_t *error);
 
     /**
      * Cancel view request. This function could be called from the callback
