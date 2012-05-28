@@ -79,19 +79,19 @@ static int hashset_add_member(hashset_t set, void *item)
 static void maybe_rehash(hashset_t set)
 {
     size_t *old_items;
-    size_t old_nitems, ii;
+    size_t old_capacity, ii;
 
 
     if ((float)set->nitems >= set->capacity * 0.85) {
         old_items = set->items;
-        old_nitems = set->nitems;
+        old_capacity = set->capacity;
         set->nbits++;
         set->capacity = 1 << set->nbits;
         set->mask = set->capacity - 1;
         set->items = calloc(set->capacity, sizeof(size_t));
         set->nitems = 0;
         assert(set->items);
-        for (ii = 0; ii < old_nitems; ii++) {
+        for (ii = 0; ii < old_capacity; ii++) {
             hashset_add_member(set, (void *)old_items[ii]);
         }
         free(old_items);
