@@ -19,7 +19,7 @@ AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
 AC_CONFIG_SRCDIR([src/internal.h])
 AC_CONFIG_AUX_DIR(config)
 AC_USE_SYSTEM_EXTENSIONS
-AM_INIT_AUTOMAKE(subdir-objects)
+AM_INIT_AUTOMAKE(subdir-objects foreign)
 AC_PROG_CXX
 AC_PROG_CC
 AM_PROG_CC_C_O
