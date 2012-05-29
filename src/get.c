@@ -190,6 +190,60 @@ libcouchbase_error_t libcouchbase_getl(libcouchbase_t instance,
                                     nkey, exp);
 }
 
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_unlock_by_key(libcouchbase_t instance,
+                                                const void *command_cookie,
+                                                const void *hashkey,
+                                                libcouchbase_size_t nhashkey,
+                                                const void *key,
+                                                libcouchbase_size_t nkey,
+                                                libcouchbase_cas_t cas)
+{
+    libcouchbase_server_t *server;
+    protocol_binary_request_no_extras req;
+    int vb, idx;
+    libcouchbase_size_t nbytes;
+
+    if (nhashkey == 0) {
+        nhashkey = nkey;
+        hashkey = key;
+    }
+    (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
+    if (idx < 0 || idx > (int)instance->nservers) {
+        /* the config says that there is no server yet at that position (-1) */
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
+    }
+    server = instance->servers + idx;
+
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey);
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
+    req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)(nkey));
+    req.message.header.request.cas = cas;
+    req.message.header.request.opaque = ++instance->seqno;
+    req.message.header.request.opcode = CMD_UNLOCK_KEY;
+
+    libcouchbase_server_start_packet(server, command_cookie, req.bytes, sizeof(req.bytes));
+    libcouchbase_server_write_packet(server, key, nkey);
+    libcouchbase_server_end_packet(server);
+    libcouchbase_server_send_packets(server);
+
+    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+}
+
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_unlock(libcouchbase_t instance,
+                                         const void *command_cookie,
+                                         const void *key,
+                                         libcouchbase_size_t nkey,
+                                         libcouchbase_cas_t cas)
+{
+    return libcouchbase_unlock_by_key(instance, command_cookie, NULL, 0, key,
+                                      nkey, cas);
+}
+
 static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
                                                     const void *command_cookie,
                                                     const void *hashkey,

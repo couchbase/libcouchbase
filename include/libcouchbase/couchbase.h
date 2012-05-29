@@ -301,6 +301,49 @@ extern "C" {
                                                   const void *key,
                                                   libcouchbase_size_t nkey,
                                                   libcouchbase_time_t *exp);
+
+    /**
+     * Unlock the key locked with GETL.
+     *
+     * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param key the key to delete
+     * @param nkey the number of bytes in the key
+     * @param cas the cas value for the object
+     * @return Status of the operation. LIBCOUCHBASE_ETMPFAIL if the key
+     *         cannot be unlocked (wrong CAS or non-locked).
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_unlock(libcouchbase_t instance,
+                                             const void *command_cookie,
+                                             const void *key,
+                                             libcouchbase_size_t nkey,
+                                             libcouchbase_cas_t cas);
+
+    /**
+     * Unlock the key locked with GETL. Use hashkey to locate the vbucket.
+     *
+     * @param instance the handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param hashkey the key to use for hashing
+     * @param nhashkey the number of bytes in hashkey
+     * @param key the key to delete
+     * @param nkey the number of bytes in the key
+     * @param cas the cas value for the object
+     * @return Status of the operation. LIBCOUCHBASE_ETMPFAIL if the key
+     *         cannot be unlocked (wrong CAS or non-locked).
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_unlock_by_key(libcouchbase_t instance,
+                                                    const void *command_cookie,
+                                                    const void *hashkey,
+                                                    libcouchbase_size_t nhashkey,
+                                                    const void *key,
+                                                    libcouchbase_size_t nkey,
+                                                    libcouchbase_cas_t cas);
+
     /**
      * Touch (set expiration time) on a number of values in the cache
      * You need to run the event loop yourself (or call

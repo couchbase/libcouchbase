@@ -592,6 +592,26 @@ static void flush_response_handler(libcouchbase_server_t *server,
     }
 }
 
+static void unlock_response_handler(libcouchbase_server_t *server,
+                                    const void *command_cookie,
+                                    protocol_binary_response_header *res)
+{
+    libcouchbase_t root = server->instance;
+    libcouchbase_uint16_t status = ntohs(res->response.status);
+    char *packet;
+    libcouchbase_uint16_t nkey;
+    const char *key = get_key(server, &nkey, &packet);
+
+    if (key == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+    } else {
+        root->callbacks.unlock(root, command_cookie, map_error(status),
+                               key, nkey);
+        release_key(server, packet);
+    }
+}
+
 static void dummy_tap_mutation_callback(libcouchbase_t instance,
                                         const void *cookie,
                                         const void *key,
@@ -837,6 +857,18 @@ static void dummy_couch_data_callback(libcouchbase_couch_request_t request,
     (void)status;
 }
 
+static void dummy_unlock_callback(libcouchbase_t instance,
+                                  const void *cookie,
+                                  libcouchbase_error_t error,
+                                  const void *key, libcouchbase_size_t nkey)
+{
+    (void)instance;
+    (void)cookie;
+    (void)error;
+    (void)key;
+    (void)nkey;
+}
+
 void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 {
     int ii;
@@ -861,6 +893,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.couch_complete = dummy_couch_complete_callback;
     instance->callbacks.couch_data = dummy_couch_data_callback;
     instance->callbacks.flush = dummy_flush_callback;
+    instance->callbacks.unlock = dummy_unlock_callback;
 
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_MUTATION] = tap_mutation_handler;
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_DELETE] = tap_deletion_handler;
@@ -874,6 +907,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->response_handler[PROTOCOL_BINARY_CMD_GET] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_GAT] = getq_response_handler;
     instance->response_handler[CMD_GET_LOCKED] = getq_response_handler;
+    instance->response_handler[CMD_UNLOCK_KEY] = unlock_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_ADD] = storage_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_DELETE] = delete_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_REPLACE] = storage_response_handler;
@@ -1064,6 +1098,17 @@ libcouchbase_couch_data_callback libcouchbase_set_couch_data_callback(libcouchba
     libcouchbase_couch_data_callback ret = instance->callbacks.couch_data;
     if (cb != NULL) {
         instance->callbacks.couch_data = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_unlock_callback libcouchbase_set_unlock_callback(libcouchbase_t instance,
+                                                              libcouchbase_unlock_callback cb)
+{
+    libcouchbase_unlock_callback ret = instance->callbacks.unlock;
+    if (cb != NULL) {
+        instance->callbacks.unlock = cb;
     }
     return ret;
 }

@@ -154,6 +154,12 @@ extern "C" {
                                                      const void *bytes,
                                                      libcouchbase_size_t nbytes);
 
+    typedef void (*libcouchbase_unlock_callback)(libcouchbase_t instance,
+                                                 const void *cookie,
+                                                 libcouchbase_error_t error,
+                                                 const void *key,
+                                                 libcouchbase_size_t nkey);
+
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
                                                             libcouchbase_get_callback);
@@ -217,6 +223,10 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_couch_data_callback libcouchbase_set_couch_data_callback(libcouchbase_t instance,
                                                                           libcouchbase_couch_data_callback cb);
+
+    LIBCOUCHBASE_API
+    libcouchbase_unlock_callback libcouchbase_set_unlock_callback(libcouchbase_t,
+                                                                  libcouchbase_unlock_callback);
 
 #ifdef __cplusplus
 }

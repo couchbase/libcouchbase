@@ -52,6 +52,7 @@ enum cbc_command_t {
     cbc_rm,
     cbc_send,
     cbc_stats,
+    cbc_unlock,
     cbc_verify,
     cbc_version
 };
@@ -105,6 +106,26 @@ extern "C" {
             cerr << "\"" << endl;
         } else {
             cerr << "Failed to remove \"";
+            cerr.write(static_cast<const char *>(key), nkey);
+            cerr << "\":" << endl
+                 << libcouchbase_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
+            *err = true;
+        }
+    }
+
+    static void unlock_callback(libcouchbase_t instance,
+                                const void *,
+                                libcouchbase_error_t error,
+                                const void *key, libcouchbase_size_t nkey)
+    {
+        if (error == LIBCOUCHBASE_SUCCESS) {
+            cerr << "Unlocked \"";
+            cerr.write(static_cast<const char *>(key), nkey);
+            cerr << "\"" << endl;
+        } else {
+            cerr << "Failed to unlock \"";
             cerr.write(static_cast<const char *>(key), nkey);
             cerr << "\":" << endl
                  << libcouchbase_strerror(instance, error) << endl;
@@ -405,6 +426,36 @@ static bool lock(libcouchbase_t instance, list<string> &keys, libcouchbase_time_
     return true;
 }
 
+static bool unlock(libcouchbase_t instance, list<string> &keys)
+{
+    if (keys.empty()) {
+        cerr << "ERROR: you need to specify the key to unlock" << endl;
+        return false;
+    }
+
+    if (keys.size() % 2 != 0) {
+        cerr << "ERROR: you need to specify key-cas pairs, "
+             << "therefore argument list should be odd" << endl;
+        return false;
+    }
+
+    for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
+        string key = *iter;
+        libcouchbase_cas_t cas = strtoull((++iter)->c_str(), NULL, 16);
+        libcouchbase_error_t err = libcouchbase_unlock(instance, NULL,
+                                                       (const void *)key.c_str(),
+                                                       (libcouchbase_size_t)key.length(), cas);
+
+        if (err != LIBCOUCHBASE_SUCCESS) {
+            cerr << "Failed to send requests:" << endl
+                 << libcouchbase_strerror(instance, err) << endl;
+            return false;
+        }
+
+    }
+    return true;
+}
+
 static bool stats(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
@@ -667,6 +718,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)libcouchbase_set_remove_callback(instance, remove_callback);
     (void)libcouchbase_set_stat_callback(instance, stat_callback);
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
+    (void)libcouchbase_set_unlock_callback(instance, unlock_callback);
 
     if (config.getTimeout() != 0) {
         libcouchbase_set_timeout(instance, config.getTimeout());
@@ -696,6 +748,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         break;
     case cbc_lock:
         success = lock(instance, getopt.arguments, exptime);
+        break;
+    case cbc_unlock:
+        success = unlock(instance, getopt.arguments);
         break;
     case cbc_cp:
         if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
@@ -782,6 +837,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_flush;
     } else if (name.find("cbc-lock") != string::npos) {
         return cbc_lock;
+    } else if (name.find("cbc-unlock") != string::npos) {
+        return cbc_unlock;
     } else if (name.find("cbc-version") != string::npos) {
         return cbc_version;
     } else if (name.find("cbc-verify") != string::npos) {
@@ -822,6 +879,8 @@ int main(int argc, char **argv)
                 cmd = cbc_flush;
             } else if (strcmp(argv[1], "lock") == 0) {
                 cmd = cbc_lock;
+            } else if (strcmp(argv[1], "unlock") == 0) {
+                cmd = cbc_unlock;
             } else if (strcmp(argv[1], "version") == 0) {
                 cmd = cbc_version;
             } else if (strcmp(argv[1], "verify") == 0) {
@@ -835,6 +894,7 @@ int main(int argc, char **argv)
                  << "   create     store files with options" << endl
                  << "   flush      remove all keys from the cluster" << endl
                  << "   lock       lock keys" << endl
+                 << "   unlock     unlock keys" << endl
                  << "   rm         remove keys" << endl
                  << "   stats      show stats" << endl
                  << "   verify     verify content in cache with files" << endl
