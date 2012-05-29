@@ -23,7 +23,8 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
                                                     libcouchbase_size_t nhashkey,
                                                     const void *key,
                                                     const libcouchbase_size_t nkey,
-                                                    const libcouchbase_time_t *exp);
+                                                    const libcouchbase_time_t *exp,
+                                                    int lock);
 
 /**
  * libcouchbase_mget use the GETQ command followed by a NOOP command to avoid
@@ -73,7 +74,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
 
     if (num_keys == 1) {
         return libcouchbase_single_get(instance, command_cookie, hashkey,
-                                       nhashkey, keys[0], nkey[0], exp);
+                                       nhashkey, keys[0], nkey[0], exp, 0);
     }
 
     affected_servers = calloc(instance->nservers, sizeof(libcouchbase_size_t));
@@ -159,17 +160,49 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
 }
 
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_getl_by_key(libcouchbase_t instance,
+                                              const void *command_cookie,
+                                              const void *hashkey,
+                                              libcouchbase_size_t nhashkey,
+                                              const void *key,
+                                              libcouchbase_size_t nkey,
+                                              libcouchbase_time_t *exp)
+{
+    /* we need a vbucket config before we can start getting data.. */
+    if (instance->vbucket_config == NULL) {
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+    }
+
+    return libcouchbase_single_get(instance, command_cookie, hashkey,
+                                   nhashkey, key, nkey, exp, 1);
+
+}
+
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_getl(libcouchbase_t instance,
+                                       const void *command_cookie,
+                                       const void *key,
+                                       libcouchbase_size_t nkey,
+                                       libcouchbase_time_t *exp)
+{
+    return libcouchbase_getl_by_key(instance, command_cookie, NULL, 0, key,
+                                    nkey, exp);
+}
+
 static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
                                                     const void *command_cookie,
                                                     const void *hashkey,
                                                     libcouchbase_size_t nhashkey,
                                                     const void *key,
                                                     const libcouchbase_size_t nkey,
-                                                    const libcouchbase_time_t *exp)
+                                                    const libcouchbase_time_t *exp,
+                                                    int lock)
 {
     libcouchbase_server_t *server;
     protocol_binary_request_gat req;
     int vb, idx;
+    libcouchbase_size_t nbytes;
 
     if (nhashkey == 0) {
         nhashkey = nkey;
@@ -192,16 +225,19 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
 
     if (!exp) {
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GET;
-        libcouchbase_server_start_packet(server, command_cookie, req.bytes,
-                                         sizeof(req.bytes) - 4);
+        nbytes = sizeof(req.bytes) - 4;
     } else {
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GAT;
         req.message.header.request.extlen = 4;
         req.message.body.expiration = ntohl((libcouchbase_uint32_t)exp[0]);
         req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)(nkey) + 4);
-        libcouchbase_server_start_packet(server, command_cookie, req.bytes,
-                                         sizeof(req.bytes));
+        nbytes = sizeof(req.bytes);
     }
+    if (lock) {
+        /* the expiration is optional for GETL command */
+        req.message.header.request.opcode = CMD_GET_LOCKED;
+    }
+    libcouchbase_server_start_packet(server, command_cookie, req.bytes, nbytes);
     libcouchbase_server_write_packet(server, key, nkey);
     libcouchbase_server_end_packet(server);
     libcouchbase_server_send_packets(server);

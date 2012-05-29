@@ -47,12 +47,13 @@ enum cbc_command_t {
     cbc_cp,
     cbc_create,
     cbc_flush,
+    cbc_lock,
     cbc_receive,
     cbc_rm,
-    cbc_stats,
     cbc_send,
-    cbc_version,
-    cbc_verify
+    cbc_stats,
+    cbc_verify,
+    cbc_version
 };
 
 extern "C" {
@@ -381,6 +382,29 @@ static bool cat(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
+static bool lock(libcouchbase_t instance, list<string> &keys, libcouchbase_time_t exptime)
+{
+    if (keys.empty()) {
+        cerr << "ERROR: you need to specify the key to lock" << endl;
+        return false;
+    }
+
+    for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
+        libcouchbase_error_t err = libcouchbase_getl(instance, NULL,
+                                                     (const void *)iter->c_str(),
+                                                     (libcouchbase_size_t)iter->length(),
+                                                     &exptime);
+
+        if (err != LIBCOUCHBASE_SUCCESS) {
+            cerr << "Failed to send requests:" << endl
+                 << libcouchbase_strerror(instance, err) << endl;
+            return false;
+        }
+
+    }
+    return true;
+}
+
 static bool stats(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
@@ -532,6 +556,11 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                                "Fail if the object exists"));
     }
 
+    if (cmd == cbc_lock) {
+        getopt.addOption(new CommandLineOption('e', "exptime", true,
+                                               "Expiry time for the lock"));
+    }
+
     bool json = false;
 #ifdef HAVE_LIBYAJL2
     if (cmd == cbc_cp) {
@@ -594,7 +623,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     default:
                         unknownOpt = true;
                     }
-                    break;
 #ifdef HAVE_LIBYAJL2
                 } else if (cmd == cbc_cp) {
                     unknownOpt = false;
@@ -605,8 +633,14 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     default:
                         unknownOpt = true;
                     }
-                    break;
 #endif
+                } else if (cmd == cbc_lock) {
+                    unknownOpt = false;
+                    switch ((*iter)->shortopt) {
+                    case 'e':
+                        flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
+                        break;
+                    }
                 }
 
                 if (unknownOpt) {
@@ -659,6 +693,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     switch (cmd) {
     case cbc_cat:
         success = cat(instance, getopt.arguments);
+        break;
+    case cbc_lock:
+        success = lock(instance, getopt.arguments, exptime);
         break;
     case cbc_cp:
         if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
@@ -743,6 +780,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_stats;
     } else if (name.find("cbc-flush") != string::npos) {
         return cbc_flush;
+    } else if (name.find("cbc-lock") != string::npos) {
+        return cbc_lock;
     } else if (name.find("cbc-version") != string::npos) {
         return cbc_version;
     } else if (name.find("cbc-verify") != string::npos) {
@@ -781,6 +820,8 @@ int main(int argc, char **argv)
                 cmd = cbc_stats;
             } else if (strcmp(argv[1], "flush") == 0) {
                 cmd = cbc_flush;
+            } else if (strcmp(argv[1], "lock") == 0) {
+                cmd = cbc_lock;
             } else if (strcmp(argv[1], "version") == 0) {
                 cmd = cbc_version;
             } else if (strcmp(argv[1], "verify") == 0) {
@@ -792,11 +833,12 @@ int main(int argc, char **argv)
                  << "   cat        output keys to stdout" << endl
                  << "   cp         store files to the cluster" << endl
                  << "   create     store files with options" << endl
+                 << "   flush      remove all keys from the cluster" << endl
+                 << "   lock       lock keys" << endl
                  << "   rm         remove keys" << endl
                  << "   stats      show stats" << endl
-                 << "   flush      remove all keys from the cluster" << endl
-                 << "   version    show version" << endl
                  << "   verify     verify content in cache with files" << endl
+                 << "   version    show version" << endl
                  << "Use 'cbc command --help' to show the options" << endl;
             exit(EXIT_FAILURE);
         }

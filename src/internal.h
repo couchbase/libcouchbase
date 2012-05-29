@@ -27,6 +27,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <memcached/protocol_binary.h>
+#include <ep-engine/command_ids.h>
 #include <libvbucket/vbucket.h>
 #include <libcouchbase/couchbase.h>
 #ifdef HAVE_SYSTEM_LIBSASL

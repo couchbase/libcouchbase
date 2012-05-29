@@ -50,6 +50,7 @@ libhttpparser_la_SOURCES = \
                         contrib/http_parser/http_parser.h
 
 libcouchbase_la_SOURCES = \
+                        include/ep-engine/command_ids.h \
                         include/memcached/protocol_binary.h \
                         include/memcached/vbucket.h \
                         src/arithmetic.c \
@@ -248,7 +249,7 @@ example_pillowfight_LDADD = libcouchbase.la
 
 if BUILD_TOOLS
 CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create	\
-            cbc-send cbc-receive cbc-version cbc-verify
+            cbc-send cbc-receive cbc-version cbc-verify cbc-lock
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \

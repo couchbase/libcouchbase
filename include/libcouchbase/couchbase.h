@@ -248,11 +248,64 @@ extern "C" {
                                                   const libcouchbase_size_t *nkey,
                                                   const libcouchbase_time_t *exp);
 
+    /**
+     * Get an item with a lock that has a timeout. It can then be unlocked
+     * with either a CAS operation or with an explicit unlock command.
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param key the key to get
+     * @param nkey the length of the key
+     * @param exp the expiration time for the lock. If exp is NULL, the
+     *            Couchbase will use default value (usually 15 seconds, but
+     *            could be configured). Default value will be used if
+     *            specified value is larger than allowed maximum (usually
+     *            29, but could be configured on server).
+     * @return The status of the operation
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_getl(libcouchbase_t instance,
+                                           const void *command_cookie,
+                                           const void *key,
+                                           libcouchbase_size_t nkey,
+                                           libcouchbase_time_t *exp);
 
+    /**
+     * Get an item with a lock that has a timeout. Use hashkey argument to
+     * locate the vbucket. It can then be unlocked with either a CAS
+     * operation or with an explicit unlock command. All mutation commands
+     * will return LIBCOUCHBASE_ETMPFAIL for locked keys.
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param hashkey the key to use for hashing
+     * @param nhashkey the number of bytes in hashkey
+     * @param key the key to get
+     * @param nkey the length of the key
+     * @param exp the expiration time for the lock. If exp is NULL, the
+     *            Couchbase will use default value (usually 15 seconds, but
+     *            could be configured). Default value will be used if
+     *            specified value is larger than allowed maximum (usually
+     *            29, but could be configured on server).
+     * @return The status of the operation. Returns LIBCOUCHBASE_ETMPFAIL if
+     *         the lock was unsuccessful or LIBCOUCHBASE_KEY_ENOENT for
+     *         missing key.
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_getl_by_key(libcouchbase_t instance,
+                                                  const void *command_cookie,
+                                                  const void *hashkey,
+                                                  libcouchbase_size_t nhashkey,
+                                                  const void *key,
+                                                  libcouchbase_size_t nkey,
+                                                  libcouchbase_time_t *exp);
     /**
      * Touch (set expiration time) on a number of values in the cache
      * You need to run the event loop yourself (or call
-     * libcouchbase_execute) to retrieve the results of the operations.
+     * libcouchbase_execute) to retrieve the results of the operations. All
+     * mutation commands will return LIBCOUCHBASE_ETMPFAIL for locked keys.
      *
      * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
@@ -263,7 +316,9 @@ extern "C" {
      * @param exp the array containing the expiry times for each key. Values
      *            larger than 30*24*60*60 seconds (30 days) are interpreted
      *            as absolute times (from the epoch).
-     * @return The status of the operation
+     * @return The status of the operation. Returns LIBCOUCHBASE_ETMPFAIL if
+     *         the lock was unsuccessful or LIBCOUCHBASE_KEY_ENOENT for
+     *         missing key.
      */
     LIBCOUCHBASE_API
     libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
