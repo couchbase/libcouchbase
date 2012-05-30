@@ -57,7 +57,7 @@ Development files for the Couchbase Client & Protocol Library
 
 %files devel
 %defattr(-, root, root)
-%doc README AUTHORS LICENSE
+%doc README.markdown AUTHORS LICENSE
 %{_includedir}/libcouchbase
 %{_libdir}/libcouchbase.la
 %{_libdir}/libcouchbase.so

@@ -260,6 +260,7 @@ install-exec-hook:
 endif
 
 EXTRA_DIST = \
+             README.markdown \
              LICENSE \
              NMakefile \
              include/libcouchbase/configuration.h.in \
