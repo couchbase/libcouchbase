@@ -202,7 +202,6 @@ libcouchbase_error_t libcouchbase_unlock_by_key(libcouchbase_t instance,
     libcouchbase_server_t *server;
     protocol_binary_request_no_extras req;
     int vb, idx;
-    libcouchbase_size_t nbytes;
 
     if (nhashkey == 0) {
         nhashkey = nkey;
