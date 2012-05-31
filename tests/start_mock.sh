@@ -24,6 +24,7 @@ unset UMEM_DEBUG
 # We could have started it directly from the C code, but by using
 # a script it's a bit easier to test it manually ;)
 exec java \
+       -client \
        -jar tests/CouchbaseMock.jar \
         --nodes=10 \
         --host=127.0.0.1 \
