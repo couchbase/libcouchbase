@@ -249,6 +249,50 @@ libcouchbase_size_t libcouchbase_ringbuffer_get_nbytes(ringbuffer_t *buffer)
     return buffer->nbytes;
 }
 
+libcouchbase_size_t libcouchbase_ringbuffer_update(ringbuffer_t *buffer,
+                                                   libcouchbase_ringbuffer_direction_t direction,
+                                                   void *src, libcouchbase_size_t nb)
+{
+    char *s = src;
+    libcouchbase_size_t nw, ret = 0;
+
+    if (direction == RINGBUFFER_READ) {
+        if (buffer->read_head <= buffer->write_head) {
+            nw = minimum(nb, buffer->nbytes);
+            memcpy(buffer->read_head, s, nw);
+            ret += nw;
+        } else {
+            nw = minimum(nb, buffer->size - (libcouchbase_size_t)(buffer->read_head - buffer->root));
+            memcpy(buffer->read_head, s, nw);
+            nb -= nw;
+            s += nw;
+            ret += nw;
+            if (nb) {
+                nw = minimum(nb, (libcouchbase_size_t)(buffer->write_head - buffer->root));
+                memcpy(buffer->root, s, nw);
+                ret += nw;
+            }
+        }
+    } else {
+        if (buffer->write_head >= buffer->read_head) {
+            nw = minimum(nb, buffer->nbytes);
+            memcpy(buffer->write_head - nw, s, nw);
+            ret += nw;
+        } else {
+            nb = minimum(nb, buffer->nbytes);
+            nw = minimum(nb, (libcouchbase_size_t)(buffer->write_head - buffer->root));
+            memcpy(buffer->write_head - nw, s + nb - nw, nw);
+            nb -= nw;
+            ret += nw;
+            if (nb) {
+                nw = minimum(nb, buffer->size - (libcouchbase_size_t)(buffer->read_head - buffer->root));
+                memcpy(buffer->root + buffer->size - nw, s, nw);
+                ret += nw;
+            }
+        }
+    }
+    return ret;
+}
 
 
 void libcouchbase_ringbuffer_get_iov(ringbuffer_t *buffer,

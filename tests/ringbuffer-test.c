@@ -164,6 +164,103 @@ static void my_regression_1_test(void)
     assert(iov[1].iov_len == 13859);
 }
 
+static void replace_test(void)
+{
+    ringbuffer_t rb;
+
+    if (!libcouchbase_ringbuffer_initialize(&rb, 16)) {
+        err_exit("Failed to create a 16 byte ringbuffer");
+    }
+    if (libcouchbase_ringbuffer_write(&rb, "01234567", 8) != 8 ||
+        memcmp(rb.root, "01234567\0\0\0\0\0\0\0\0", rb.size) != 0) {
+        err_exit("Failed to write 8 characters to buffer");
+    }
+    /*          w
+     * |01234567--------|
+     *  r
+     */
+
+    if (libcouchbase_ringbuffer_update(&rb, RINGBUFFER_READ, "ab", 2) != 2 ||
+        rb.nbytes != 8 || memcmp(rb.root, "ab234567\0\0\0\0\0\0\0\0", rb.size) != 0) {
+        err_exit("Failed to replace 2 characters at READ end of the buffer");
+    }
+    /*          w
+     * |ab234567--------|
+     *  r
+     */
+
+    if (libcouchbase_ringbuffer_update(&rb, RINGBUFFER_WRITE, "cd", 2) != 2 ||
+        rb.nbytes != 8 || memcmp(rb.root, "ab2345cd\0\0\0\0\0\0\0\0", rb.size) != 0) {
+        err_exit("Failed to replace 2 characters at WRITE end of the buffer");
+    }
+    /*          w
+     * |ab2345cd--------|
+     *  r
+     */
+
+    libcouchbase_ringbuffer_consumed(&rb, 3);
+    if (rb.nbytes != 5 || rb.read_head != rb.root + 3) {
+        err_exit("Failed to read 3 characters from the buffer");
+    }
+    /*          w
+     * |ab2345cd--------|
+     *     r
+     */
+
+    if (libcouchbase_ringbuffer_update(&rb, RINGBUFFER_READ, "efghij", 6) != 5 ||
+        rb.nbytes != 5 || memcmp(rb.root, "ab2efghi\0\0\0\0\0\0\0\0", rb.size) != 0) {
+        err_exit("Failed to replace 5 characters at READ end of the buffer");
+    }
+    /*          w
+     * |ab2efghi--------|
+     *     r
+     */
+
+    if (libcouchbase_ringbuffer_update(&rb, RINGBUFFER_WRITE, "klmnop", 6) != 5 ||
+        rb.nbytes != 5 || memcmp(rb.root, "ab2klmno\0\0\0\0\0\0\0\0", rb.size) != 0) {
+        err_exit("Failed to replace 5 characters at WRITE end of the buffer");
+    }
+    /*          w
+     * |ab2klmno--------|
+     *     r
+     */
+
+    if (libcouchbase_ringbuffer_write(&rb, "0123456789", 10) != 10 ||
+        rb.nbytes != 15 || memcmp(rb.root, "892klmno01234567", rb.size) != 0) {
+        err_exit("Failed to write 10 characters into the buffer");
+    }
+    /*    w
+     * |892klmno01234567|
+     *     r
+     */
+
+    if (libcouchbase_ringbuffer_update(&rb, RINGBUFFER_WRITE, "abcdefghij", 10) != 10 ||
+        rb.nbytes != 15 || memcmp(rb.root, "ij2klmnoabcdefgh", rb.size) != 0) {
+        err_exit("Failed to replace 10 characters at WRITE end of the buffer");
+    }
+    /*    w
+     * |ij2klmnoabcdefgh|
+     *     r
+     */
+
+    libcouchbase_ringbuffer_consumed(&rb, 6);
+    if (rb.nbytes != 9 || rb.read_head != rb.root + 9) {
+        err_exit("Failed to read 6 characters from the buffer");
+    }
+    /*    w
+     * |ij2klmnoabcdefgh|
+     *           r
+     */
+
+    if (libcouchbase_ringbuffer_update(&rb, RINGBUFFER_READ, "12345678", 8) != 8 ||
+        rb.nbytes != 9 || memcmp(rb.root, "8j2klmnoa1234567", rb.size) != 0) {
+        err_exit("Failed to replace 10 characters at READ end of the buffer");
+    }
+    /*    w
+     * |8j2klmnoa1234567|
+     *           r
+     */
+}
 
 static void memcpy_test(void)
 {
@@ -261,6 +358,7 @@ int main(int argc, char **argv)
     wrapped_buffer_test();
     my_regression_1_test();
     memcpy_test();
+    replace_test();
 
     return 0;
 }

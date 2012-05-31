@@ -53,6 +53,10 @@ extern "C" {
     libcouchbase_size_t libcouchbase_ringbuffer_peek(ringbuffer_t *buffer,
                                                      void *dest,
                                                      libcouchbase_size_t nb);
+    /* replace +nb+ bytes on +direction+ end of the buffer with src */
+    libcouchbase_size_t libcouchbase_ringbuffer_update(ringbuffer_t *buffer,
+                                                       libcouchbase_ringbuffer_direction_t direction,
+                                                       void *src, libcouchbase_size_t nb);
     void libcouchbase_ringbuffer_get_iov(ringbuffer_t *buffer,
                                          libcouchbase_ringbuffer_direction_t direction,
                                          struct libcouchbase_iovec_st *iov);
