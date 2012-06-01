@@ -80,7 +80,8 @@ static void get_callback(libcouchbase_t instance,
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
-    rv->bytes = bytes;
+    rv->bytes = malloc(nbytes);
+    memcpy(rv->bytes, bytes, nbytes);
     rv->nbytes = nbytes;
     instance->io->stop_event_loop(instance->io);
 
