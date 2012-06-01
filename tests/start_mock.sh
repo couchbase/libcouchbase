@@ -27,6 +27,6 @@ exec java \
        -client \
        -jar tests/CouchbaseMock.jar \
         --nodes=10 \
-        --host=127.0.0.1 \
+        --host=localhost \
         --port=0 \
         "$@"
