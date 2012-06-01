@@ -134,14 +134,14 @@ AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
 AM_CONDITIONAL(HAVE_WINSOCK2, [test "$ac_cv_have_winsock2" = "yes"])
 
 dnl Check that we've got a usable libevent
-AC_CACHE_CHECK([for libevent], [ac_cv_have_libevent],
+AC_CACHE_CHECK([for libevent >= 1.4], [ac_cv_have_libevent],
   [ saved_libs="$LIBS"
     LIBS=-levent
     AC_TRY_LINK([
       #include <sys/types.h>
       #include <event.h>
             ],[
-      event_init();
+      event_base_new();
             ],[
       ac_cv_have_libevent="yes"
             ], [
