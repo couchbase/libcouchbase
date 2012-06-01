@@ -88,7 +88,7 @@ AC_ARG_WITH([couchbasemock],
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
                        ws2tcpip.h winsock2.h libvbucket/vbucket.h
-                       event.h stdint.h])
+                       event.h stdint.h sys/types.h])
 
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
@@ -138,6 +138,7 @@ AC_CACHE_CHECK([for libevent], [ac_cv_have_libevent],
   [ saved_libs="$LIBS"
     LIBS=-levent
     AC_TRY_LINK([
+      #include <sys/types.h>
       #include <event.h>
             ],[
       event_init();
@@ -158,6 +159,7 @@ AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
   [ saved_libs="$LIBS"
     LIBS=-levent
     AC_TRY_LINK([
+      #include <sys/types.h>
       #include <event2/event.h>
             ],[
       event_new(NULL, 0, 0, NULL, NULL);
