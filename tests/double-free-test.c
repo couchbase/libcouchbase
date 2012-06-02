@@ -29,8 +29,7 @@ libcouchbase_t session = NULL;
 const void *mock = NULL;
 struct libcouchbase_io_opt_st *io = NULL;
 
-struct rvbuf
-{
+struct rvbuf {
     libcouchbase_error_t error;
     libcouchbase_cas_t cas1;
     libcouchbase_cas_t cas2;
@@ -188,6 +187,7 @@ int main(int argc, char **argv)
 
     teardown();
 
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
     return EXIT_SUCCESS;
 }

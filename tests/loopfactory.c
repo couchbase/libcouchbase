@@ -24,8 +24,7 @@ static loop_generator_func get_loop_generator(const char *plugin_name);
 
 
 
-static struct libcouchbase_io_opt_st *default_loop_generator(void)
-{
+static struct libcouchbase_io_opt_st *default_loop_generator(void) {
     libcouchbase_error_t err;
     struct libcouchbase_io_opt_st *ret;
     ret = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, &err);
@@ -49,7 +48,7 @@ static void my_err_exit_win32(const char *operation, const char *arg, DWORD errc
         errcode,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPTSTR) &errbuf,
-        0, NULL );
+        0, NULL);
     fprintf(stderr, "%s(%s) failed: code=%d: %s\n", operation, arg, errcode, errbuf);
     abort();
 }
@@ -79,8 +78,8 @@ static loop_generator_func get_loop_generator(const char *libname)
     char fq_libname[2048];
     void *handle;
     union c99hack {
-       void *sym;
-       loop_generator_func ret;
+        void *sym;
+        loop_generator_func ret;
     } hack;
 
     snprintf(fq_libname, sizeof(fq_libname), "%s.so", libname);
@@ -102,8 +101,7 @@ static loop_generator_func get_loop_generator(const char *libname)
 
 
 
-struct libcouchbase_io_opt_st *get_test_io_opts(void)
-{
+struct libcouchbase_io_opt_st *get_test_io_opts(void) {
     const char *plugin_base_name;
     char plugin_full_name[2048];
 

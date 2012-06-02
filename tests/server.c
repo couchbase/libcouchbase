@@ -50,7 +50,8 @@ struct mock_server_info {
     int client;
 };
 
-static int create_monitor(struct mock_server_info *info) {
+static int create_monitor(struct mock_server_info *info)
+{
     struct addrinfo hints, *next, *ai;
     int error;
 
@@ -96,7 +97,7 @@ static int create_monitor(struct mock_server_info *info) {
 
         /* Ok, I've got a working socket :) */
         len = sizeof(info->storage);
-        if (getsockname(info->sock, (struct sockaddr*)&info->storage, &len) == -1) {
+        if (getsockname(info->sock, (struct sockaddr *)&info->storage, &len) == -1) {
             close(info->sock);
             info->sock = -1;
             continue;
@@ -112,7 +113,8 @@ static int create_monitor(struct mock_server_info *info) {
     return info->sock != -1;
 }
 
-static void wait_for_server(const char *port) {
+static void wait_for_server(const char *port)
+{
     struct addrinfo hints, *next, *ai;
     int sock = -1;
     int error;
@@ -153,7 +155,8 @@ static void wait_for_server(const char *port) {
     }
 }
 
-const void *start_mock_server(char **cmdline) {
+const void *start_mock_server(char **cmdline)
+{
     struct mock_server_info *info = calloc(1, sizeof(*info));
     if (info == NULL) {
         return NULL;
@@ -225,7 +228,7 @@ const void *start_mock_server(char **cmdline) {
 
 void failover_node(const void *handle, int idx, const char *bucket)
 {
-    struct mock_server_info *info = (void*)handle;
+    struct mock_server_info *info = (void *)handle;
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "failover,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
@@ -234,23 +237,25 @@ void failover_node(const void *handle, int idx, const char *bucket)
 
 void respawn_node(const void *handle, int idx, const char *bucket)
 {
-    struct mock_server_info *info = (void*)handle;
+    struct mock_server_info *info = (void *)handle;
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "respawn,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
     assert(nw == nb);
 }
 
-void shutdown_mock_server(const void *handle) {
-    struct mock_server_info *info = (void*)handle;
+void shutdown_mock_server(const void *handle)
+{
+    struct mock_server_info *info = (void *)handle;
     free(info->http);
     close(info->client);
     close(info->sock);
     kill(info->pid, SIGTERM);
-    free((void*)handle);
+    free((void *)handle);
 }
 
-const char* get_mock_http_server(const void *handle) {
-    struct mock_server_info *info = (void*)handle;
+const char *get_mock_http_server(const void *handle)
+{
+    struct mock_server_info *info = (void *)handle;
     return info->http;
 }

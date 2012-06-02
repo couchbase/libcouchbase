@@ -37,10 +37,11 @@ protected:
 
 TEST_F(Hashset, trivial)
 {
-    char *missing = (char*)"missing";
-    char * items[] = {(char*)"zero", (char*)"one",
-                      (char*)"two", (char*)"three", NULL};
-    char *foo = (char*)"foo";
+    char *missing = (char *)"missing";
+    char *items[] = {(char *)"zero", (char *)"one",
+                     (char *)"two", (char *)"three", NULL
+                    };
+    char *foo = (char *)"foo";
     size_t ii, nitems = 4;
 
     for (ii = 0; ii < nitems; ++ii) {

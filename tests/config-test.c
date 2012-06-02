@@ -44,8 +44,7 @@ static void vbucket_state_callback(libcouchbase_server_t *server)
     server->instance->io->stop_event_loop(server->instance->io);
 }
 
-struct rvbuf
-{
+struct rvbuf {
     libcouchbase_error_t error;
     const char *bytes;
     libcouchbase_size_t nbytes;
@@ -179,7 +178,7 @@ static void buffer_relocation_test(void)
 
     /* schedule SET operation */
     err = libcouchbase_store(instance, &rv, LIBCOUCHBASE_SET,
-                            key, nkey, val, nval, 0, 0, 0);
+                             key, nkey, val, nval, 0, 0, 0);
     assert(err == LIBCOUCHBASE_SUCCESS);
 
     /* determine what server should receive that operation */
@@ -213,7 +212,8 @@ static void buffer_relocation_test(void)
 
 int main(int argc, char **argv)
 {
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
 
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
         freopen("/dev/null", "w", stdout);

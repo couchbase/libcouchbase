@@ -88,7 +88,7 @@ static void stat_callback(libcouchbase_t instance,
     if (server_endpoint != NULL) {
         nstatkey = strlen(server_endpoint) + nkey + 2;
         statkey = malloc(nstatkey);
-        snprintf(statkey, nstatkey, "%s-%s", server_endpoint, (const char*)key);
+        snprintf(statkey, nstatkey, "%s-%s", server_endpoint, (const char *)key);
         err = libcouchbase_store(instance, io, LIBCOUCHBASE_SET,
                                  statkey, nstatkey,
                                  bytes, nbytes, 0, 0, 0);
@@ -141,6 +141,7 @@ int main(int argc, char **argv)
 
     shutdown_mock_server(mock);
 
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
     return 0;
 }

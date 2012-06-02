@@ -53,7 +53,7 @@ static void timings_callback(libcouchbase_t instance,
                              libcouchbase_uint32_t total,
                              libcouchbase_uint32_t maxtotal)
 {
-    FILE *fp = (void*)cookie;
+    FILE *fp = (void *)cookie;
     int num, ii;
 
     fprintf(fp, "[%3u - %3u]", min, max);
@@ -96,7 +96,8 @@ int main(int argc, char **argv)
     libcouchbase_t instance;
     int ii;
 
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
 
     fp = stdout;
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {

@@ -295,6 +295,7 @@ reformat:
                $(top_srcdir)/example/*.[ch]  \
                $(top_srcdir)/tools/*.cc \
                $(top_srcdir)/tools/*.h \
+               $(top_srcdir)/tests/*.{cc,c,h} \
                $(top_srcdir)/win32/*.[ch]
 
 sinclude packaging/*/package.mk

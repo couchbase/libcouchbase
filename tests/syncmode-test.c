@@ -41,7 +41,7 @@ static void store_callback(libcouchbase_t instance,
                            const void *key, libcouchbase_size_t nkey,
                            libcouchbase_cas_t cas)
 {
-    int *status = (int*)cookie;
+    int *status = (int *)cookie;
     *status = error;
     (void)instance;
     (void)operation;

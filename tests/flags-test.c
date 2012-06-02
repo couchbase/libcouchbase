@@ -50,7 +50,10 @@ static void storage_callback(libcouchbase_t instance,
                              const void *key, libcouchbase_size_t nkey,
                              libcouchbase_cas_t cas)
 {
-    (void)instance; (void)operation; (void)cas; (void)cookie;
+    (void)instance;
+    (void)operation;
+    (void)cas;
+    (void)cookie;
     assert(nkey == 5);
     assert(memcmp(key, "flags", 5) == 0);
     assert(error == LIBCOUCHBASE_SUCCESS);
@@ -63,7 +66,9 @@ static void get_callback(libcouchbase_t instance,
                          const void *bytes, libcouchbase_size_t nbytes,
                          libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
 {
-    (void)instance; (void)cookie; (void)cas;
+    (void)instance;
+    (void)cookie;
+    (void)cas;
     assert(nkey == 5);
     assert(memcmp(key, "flags", 5) == 0);
     assert(error == LIBCOUCHBASE_SUCCESS);
@@ -74,8 +79,9 @@ static void get_callback(libcouchbase_t instance,
 
 int main(int argc, char **argv)
 {
-    (void)argc; (void)argv;
-    const char * keys[1];
+    (void)argc;
+    (void)argv;
+    const char *keys[1];
     libcouchbase_size_t nkeys[1];
     const void *mock;
     const char *http;
@@ -122,7 +128,7 @@ int main(int argc, char **argv)
     // Wait for it to be persisted
     libcouchbase_wait(instance);
 
-    assert(libcouchbase_mget(instance, NULL, 1, (const void*const*)keys,
+    assert(libcouchbase_mget(instance, NULL, 1, (const void * const *)keys,
                              nkeys, NULL) == LIBCOUCHBASE_SUCCESS);
 
     // Wait for it to be received

@@ -32,7 +32,10 @@ static void storage_callback(libcouchbase_t instance,
                              const void *key, libcouchbase_size_t nkey,
                              libcouchbase_cas_t cas)
 {
-    (void)instance; (void)operation; (void)cas; (void)cookie;
+    (void)instance;
+    (void)operation;
+    (void)cas;
+    (void)cookie;
     assert(nkey == 7);
     assert(memcmp(key, "counter", 7) == 0);
     assert(error == LIBCOUCHBASE_SUCCESS);
@@ -130,7 +133,8 @@ int main(int argc, char **argv)
     const char *http;
     int ii;
 
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
 
     mock = start_mock_server(NULL);
     if (mock == NULL) {

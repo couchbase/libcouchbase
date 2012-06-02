@@ -90,8 +90,7 @@ static void teardown(void)
     mock = NULL;
 }
 
-struct rvbuf
-{
+struct rvbuf {
     libcouchbase_error_t error;
     libcouchbase_storage_t operation;
     const char *key;
@@ -509,7 +508,8 @@ int main(int argc, char **argv)
 {
     char str_node_count[16];
     const char *args[] = {"--nodes", "",
-                           "--buckets=default::memcache", NULL};
+                          "--buckets=default::memcache", NULL
+                         };
 
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
         freopen("/dev/null", "w", stdout);
@@ -547,6 +547,7 @@ int main(int argc, char **argv)
     test_spurious_saslerr();
     teardown();
 
-    (void)argc; (void)argv;
+    (void)argc;
+    (void)argv;
     return EXIT_SUCCESS;
 }

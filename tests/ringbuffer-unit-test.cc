@@ -28,17 +28,16 @@ class Ringbuffer : public ::testing::Test
 {
 protected:
     // Helper function used for debugging ;)
-    void dump_buffer(ringbuffer_t *ring)
-    {
-        const char *begin = (const char*)ringbuffer_get_start(ring);
+    void dump_buffer(ringbuffer_t *ring) {
+        const char *begin = (const char *)ringbuffer_get_start(ring);
         const char *end = begin + ringbuffer_get_size(ring);
-        const char *rd = (const char*)ringbuffer_get_read_head(ring);
-        const char *wr = (const char*)ringbuffer_get_write_head(ring);
+        const char *rd = (const char *)ringbuffer_get_read_head(ring);
+        const char *wr = (const char *)ringbuffer_get_write_head(ring);
         const char *cur;
 
         /* write head */
         fprintf(stderr, " ");
-        for(cur = begin; cur < end; cur++) {
+        for (cur = begin; cur < end; cur++) {
             if (cur == wr) {
                 fprintf(stderr, "w");
             } else {
@@ -49,14 +48,14 @@ protected:
 
         /* the buffer contents */
         fprintf(stderr, "|");
-        for(cur = begin; cur < end; cur++) {
+        for (cur = begin; cur < end; cur++) {
             fprintf(stderr, "%c", *cur ? *cur : '-');
         }
         fprintf(stderr, "|\n");
 
         /* the read head */
         fprintf(stderr, " ");
-        for(cur = begin; cur < end; cur++) {
+        for (cur = begin; cur < end; cur++) {
             if (cur == rd) {
                 fprintf(stderr, "r");
             } else {
@@ -155,9 +154,9 @@ TEST_F(Ringbuffer, regression1)
 {
     ringbuffer_t ring;
     struct libcouchbase_iovec_st iov[2];
-    ring.root = (char*)0x477a80;
-    ring.read_head = (char*)0x47b0a3;
-    ring.write_head =(char*)0x47b555;
+    ring.root = (char *)0x477a80;
+    ring.read_head = (char *)0x47b0a3;
+    ring.write_head = (char *)0x47b555;
     ring.size = 16384;
     ring.nbytes = 1202;
 
