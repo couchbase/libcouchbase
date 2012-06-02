@@ -1,3 +1,37 @@
+libcouchbase (1.1.0dp3) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Fix up mentions about CouchDB
+  * Fix removing items from hashset
+  * Fix ringbuffer_is_continous()
+  * CCBC-61 Assign result of the operation
+  * Don't depend on protocol_binary_command type
+  * Remove extra commas
+  * Update AUTHORS file from git log
+  * ignore gcov files
+  * Update docs for store operation
+  * Do not call couch callbacks for cancelled requests
+  * Reformat sources
+  * Destroy couch_requests items when server get destroyed
+  * hashset.c: iterate over whole set on rehashing
+  * Implement GET_LOCKED (GETL) command
+  * Implement UNLOCK_KEY (UNL) command
+  * Unit tests need gtest headers
+  * Update build scripts with new README
+  * Allow to customize suffix for .deb package
+  * Use localhost instead of 127.0.0.1 start_mock.sh
+  * Reorder changelog entries: RPM requires descending chronological order
+
+  [Trond Norbye]
+  * CBD-161: Beef up the readme
+  * CCBC-66: Add support for [tg]cov
+  * CCBC-67: Add gtest infrastructure
+  * CCBC-67: Move tests from standalone programs to gtest
+  * CCBC-69: Use autoreconf instead of invoking each tool myself
+  * Remove unused variable
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Sun, 03 Jun 2012 20:06:39 +0300
+
 libcouchbase (1.1.0dp2) stable; urgency=low
 
   [Sergey Avseyev]
