@@ -49,7 +49,8 @@ dist-deb: dist
 	cp $(PACKAGE)-$(VERSION).tar.gz $(DEB_WORKSPACE)/$(PACKAGE)_$(DEB_VERSION).orig.tar.gz
 	(cd $(DEB_WORKSPACE); tar zxvf $(PACKAGE)_$(DEB_VERSION).orig.tar.gz)
 	(cd $(DEB_DIR); \
-	dch --no-auto-nmu --newversion "$(DEB_VERSION)-1" "Released debian package for version $(DEB_VERSION)" && \
+	if [ "x$${DEB_SUFFIX}" = "x" ]; then DEB_SUFFIX=1; fi; \
+	dch --no-auto-nmu --newversion "$(DEB_VERSION)-$${DEB_SUFFIX}" "Released debian package for version $(DEB_VERSION)" && \
 	dpkg-buildpackage -rfakeroot ${DEB_FLAGS})
 	mv $(DEB_WORKSPACE)/*.{changes,deb,dsc,tar.gz} `pwd`
 	rm -rf $(DEB_WORKSPACE)
