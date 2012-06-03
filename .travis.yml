@@ -1,0 +1,19 @@
+# there no C language yet
+language: python
+
+before_install:
+  - sudo rm -rf /etc/apt/sources.list.d/couchdb-ppa-source.list
+  - sudo rm -rf /etc/apt/sources.list.d/mongodb.list
+  - sudo rm -rf /etc/apt/sources.list.d/datastax-source.list
+  - sudo rm -rf /etc/apt/sources.list.d/rabbitmq-source.list
+  - sudo rm -rf /etc/apt/sources.list.d/mapopa-source.list
+  - sudo rm -rf /etc/apt/sources.list.d/webupd8team-java-ppa-source.list
+  - sudo rm -rf /etc/apt/sources.list.d/maven3-ppa-source.list
+  - wget -O- http://packages.couchbase.com/ubuntu/couchbase.key | sudo apt-key add -
+  - echo deb http://packages.couchbase.com/snapshot/ubuntu oneiric oneiric/main | sudo tee /etc/apt/sources.list.d/couchbase.list
+  - sudo apt-get update
+  - sudo apt-get -y install libevent-dev libvbucket-dev libgtest-dev
+
+script: |
+  export GTEST_ROOT=/usr/src/gtest
+  ./config/autorun.sh && ./configure && make check
