@@ -184,6 +184,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
             libcouchbase_server_retry_packet(new_srv, &ct, &req, sizeof(req));
             libcouchbase_server_write_packet(new_srv, body, nbody);
             libcouchbase_server_end_packet(new_srv);
+            libcouchbase_server_send_packets(new_srv);
             free(body);
         }
         break;
@@ -305,11 +306,7 @@ void libcouchbase_server_event_handler(libcouchbase_socket_t sock, short which, 
             hrtime_t tmo = c->instance->timeout.usec;
             tmo *= 1000;
             if (c->next_timeout != 0 && (now > (tmo + c->next_timeout))) {
-                libcouchbase_purge_single_server(c,
-                                                 &c->cmd_log,
-                                                 &c->output_cookies,
-                                                 tmo, now,
-                                                 LIBCOUCHBASE_ETIMEDOUT);
+                libcouchbase_purge_single_server(c, tmo, now, LIBCOUCHBASE_ETIMEDOUT);
             }
         }
 

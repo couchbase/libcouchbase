@@ -156,6 +156,10 @@ extern "C" {
         /** The array of the couchbase servers */
         libcouchbase_server_t *servers;
 
+        /** if non-zero, backup_nodes entries should be freed before freeing the pointer itself */
+        int should_free_backup_nodes;
+        /** The size of the backup_nodes array */
+        size_t nbackup_nodes;
         /** The array of last known nodes as hostname:port */
         char **backup_nodes;
         /** The current connect index */
@@ -430,8 +434,6 @@ extern "C" {
                                                 libcouchbase_server_t *exc);
 
     void libcouchbase_purge_single_server(libcouchbase_server_t *server,
-                                          ringbuffer_t *stream,
-                                          ringbuffer_t *cookies,
                                           hrtime_t tmo,
                                           hrtime_t now,
                                           libcouchbase_error_t error);
@@ -457,8 +459,8 @@ extern "C" {
                                           struct addrinfo **curr_ai,
                                           int *connerr);
 
-    void libcouchbase_apply_vbucket_config(libcouchbase_t instance,
-                                           VBUCKET_CONFIG_HANDLE config);
+    libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance,
+                                                           VBUCKET_CONFIG_HANDLE config);
 
 #ifdef __cplusplus
 }

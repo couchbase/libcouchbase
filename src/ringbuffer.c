@@ -249,6 +249,50 @@ libcouchbase_size_t ringbuffer_get_nbytes(ringbuffer_t *buffer)
     return buffer->nbytes;
 }
 
+libcouchbase_size_t ringbuffer_update(ringbuffer_t *buffer,
+                                      ringbuffer_direction_t direction,
+                                      const void *src, libcouchbase_size_t nb)
+{
+    char *s = src;
+    libcouchbase_size_t nw, ret = 0;
+
+    if (direction == RINGBUFFER_READ) {
+        if (buffer->read_head <= buffer->write_head) {
+            nw = minimum(nb, buffer->nbytes);
+            memcpy(buffer->read_head, s, nw);
+            ret += nw;
+        } else {
+            nw = minimum(nb, buffer->size - (libcouchbase_size_t)(buffer->read_head - buffer->root));
+            memcpy(buffer->read_head, s, nw);
+            nb -= nw;
+            s += nw;
+            ret += nw;
+            if (nb) {
+                nw = minimum(nb, (libcouchbase_size_t)(buffer->write_head - buffer->root));
+                memcpy(buffer->root, s, nw);
+                ret += nw;
+            }
+        }
+    } else {
+        if (buffer->write_head >= buffer->read_head) {
+            nw = minimum(nb, buffer->nbytes);
+            memcpy(buffer->write_head - nw, s, nw);
+            ret += nw;
+        } else {
+            nb = minimum(nb, buffer->nbytes);
+            nw = minimum(nb, (libcouchbase_size_t)(buffer->write_head - buffer->root));
+            memcpy(buffer->write_head - nw, s + nb - nw, nw);
+            nb -= nw;
+            ret += nw;
+            if (nb) {
+                nw = minimum(nb, buffer->size - (libcouchbase_size_t)(buffer->read_head - buffer->root));
+                memcpy(buffer->root + buffer->size - nw, s, nw);
+                ret += nw;
+            }
+        }
+    }
+    return ret;
+}
 
 
 void ringbuffer_get_iov(ringbuffer_t *buffer,
@@ -337,6 +381,7 @@ int ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
     struct libcouchbase_iovec_st iov[2];
     int ii = 0;
     libcouchbase_size_t towrite = nbytes;
+    libcouchbase_size_t toread, nb;
 
     if (nbytes > ringbuffer_get_nbytes(src)) {
         /* EINVAL */
@@ -349,10 +394,12 @@ int ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
     }
 
     ringbuffer_get_iov(dst, RINGBUFFER_WRITE, iov);
+    toread = minimum(iov[ii].iov_len, nbytes);
     do {
         assert(ii < 2);
-        towrite -= ringbuffer_read(&copy, iov[ii].iov_base,
-                                   iov[ii].iov_len);
+        nb = ringbuffer_read(&copy, iov[ii].iov_base, toread);
+        toread -= nb;
+        towrite -= nb;
         ++ii;
     } while (towrite > 0);
     ringbuffer_produced(dst, nbytes);

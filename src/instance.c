@@ -23,6 +23,8 @@
  */
 #include "internal.h"
 
+/* private function to safely free backup_nodes*/
+static void free_backup_nodes(libcouchbase_t instance);
 /**
  * Get the version of the library.
  *
@@ -82,6 +84,9 @@ static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
     if ((ret->backup_nodes = calloc(num + 2, sizeof(char *))) == NULL) {
         return -1;
     }
+
+    ret->nbackup_nodes = num + 2;
+    ret->should_free_backup_nodes = 1;
 
     ptr = host;
     ii = 0;
@@ -231,8 +236,9 @@ void libcouchbase_destroy(libcouchbase_t instance)
     for (ii = 0; ii < instance->nservers; ++ii) {
         libcouchbase_server_destroy(instance->servers + ii);
     }
+
+    free_backup_nodes(instance);
     free(instance->servers);
-    free(instance->backup_nodes);
 
     if (instance->io && instance->io->destructor) {
         instance->io->destructor(instance->io);
@@ -295,7 +301,7 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
     return SASL_OK;
 }
 
-void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE config)
+libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE config)
 {
     libcouchbase_uint16_t ii, max;
     libcouchbase_size_t num;
@@ -308,14 +314,20 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
         { SASL_CB_LIST_END, NULL, NULL }
     };
 
-    num = (libcouchbase_size_t)vbucket_config_get_num_servers(config);
-    instance->nservers = num;
-    instance->servers = calloc(num, sizeof(libcouchbase_server_t));
     instance->vbucket_config = config;
-    if (instance->backup_nodes) {
-        free(instance->backup_nodes);
+    num = (libcouchbase_size_t)vbucket_config_get_num_servers(config);
+    /* servers array should be freed in the caller */
+    instance->servers = calloc(num, sizeof(libcouchbase_server_t));
+    if (instance->servers == NULL) {
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM, "Failed to allocate memory");
     }
+    instance->nservers = num;
+    free_backup_nodes(instance);
     instance->backup_nodes = calloc(num, sizeof(char *));
+    if (instance->backup_nodes == NULL) {
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM, "Failed to allocate memory");
+    }
+    instance->nbackup_nodes = num;
     snprintf(curnode, sizeof(curnode), "%s:%s", instance->host, instance->port);
     for (ii = 0; ii < num; ++ii) {
         instance->servers[ii].instance = instance;
@@ -339,7 +351,11 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     passwd = vbucket_config_get_password(instance->vbucket_config);
     if (passwd) {
         instance->sasl.password.secret.len = strlen(passwd);
-        strcpy((char *)(instance->sasl.password.buffer + sizeof(instance->sasl.password.secret.len)), passwd);
+        if (instance->sasl.password.secret.len < sizeof(instance->sasl.password.buffer) - offsetof(sasl_secret_t, data)) {
+            memcpy(instance->sasl.password.secret.data, passwd, instance->sasl.password.secret.len);
+        } else {
+            return libcouchbase_error_handler(instance, LIBCOUCHBASE_EINVAL, "Password too long");
+        }
     }
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
@@ -352,9 +368,13 @@ void libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_H
     instance->nvbuckets = max;
     free(instance->vb_server_map);
     instance->vb_server_map = calloc(max, sizeof(libcouchbase_vbucket_t));
+    if (instance->vb_server_map == NULL) {
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM, "Failed to allocate memory");
+    }
     for (ii = 0; ii < max; ++ii) {
         instance->vb_server_map[ii] = (libcouchbase_uint16_t)vbucket_get_master(instance->vbucket_config, ii);
     }
+    return LIBCOUCHBASE_SUCCESS;
 }
 
 static void relocate_packets(libcouchbase_server_t *src,
@@ -430,6 +450,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                              instance->vbucket_stream.input.data) != 0) {
         libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
                                    vbucket_get_error_message(next_config));
+        vbucket_config_destroy(next_config);
         return;
     }
     instance->vbucket_stream.input.avail = 0;
@@ -440,7 +461,11 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
             VBUCKET_DISTRIBUTION_TYPE dist_t = vbucket_config_get_distribution_type(next_config);
             nservers = instance->nservers;
             servers = instance->servers;
-            libcouchbase_apply_vbucket_config(instance, next_config);
+            if (libcouchbase_apply_vbucket_config(instance, next_config) != LIBCOUCHBASE_SUCCESS) {
+                vbucket_free_diff(diff);
+                vbucket_config_destroy(next_config);
+                return;
+            }
             for (ii = 0; ii < nservers; ++ii) {
                 ss = servers + ii;
                 if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
@@ -453,6 +478,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                 }
                 libcouchbase_server_destroy(ss);
             }
+            free(servers);
 
             /* Destroy old config */
             vbucket_config_destroy(curr_config);
@@ -470,10 +496,16 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
         } else {
             vbucket_config_destroy(next_config);
         }
+        if (diff) {
+            vbucket_free_diff(diff);
+        }
     } else {
         assert(instance->servers == NULL);
         assert(instance->nservers == 0);
-        libcouchbase_apply_vbucket_config(instance, next_config);
+        if (libcouchbase_apply_vbucket_config(instance, next_config) != LIBCOUCHBASE_SUCCESS) {
+            vbucket_config_destroy(next_config);
+            return;
+        }
 
         /* Notify anyone interested in this event... */
         if (instance->vbucket_state_listener != NULL) {
@@ -1004,4 +1036,17 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
     libcouchbase_instance_connect_handler(INVALID_SOCKET, 0, instance);
 
     return instance->last_error;
+}
+
+static void free_backup_nodes(libcouchbase_t instance)
+{
+    if (instance->should_free_backup_nodes) {
+        libcouchbase_size_t ii;
+        for (ii = 0; ii < instance->nbackup_nodes; ++ii) {
+            free(instance->backup_nodes[ii]);
+        }
+        instance->should_free_backup_nodes = 0;
+    }
+
+    free(instance->backup_nodes);
 }

@@ -219,6 +219,7 @@ const void *start_mock_server(char **cmdline) {
         info->http = strdup(buffer);
         wait_for_server(buffer + offset);
     }
+    sleep(1); /* give it a bit time to initialize itself */
     return info;
 }
 

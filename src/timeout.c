@@ -90,19 +90,7 @@ void libcouchbase_purge_timedout(libcouchbase_t instance)
     for (idx = 0; idx < instance->nservers; ++idx) {
         libcouchbase_server_t *server = instance->servers + (libcouchbase_size_t)idx;
         if (server->next_timeout != 0 && (now > (tmo + server->next_timeout))) {
-            if (server->connected) {
-                libcouchbase_purge_single_server(server,
-                                                 &server->cmd_log,
-                                                 &server->output_cookies,
-                                                 tmo, now,
-                                                 LIBCOUCHBASE_ETIMEDOUT);
-            } else {
-                libcouchbase_purge_single_server(server,
-                                                 &server->pending,
-                                                 &server->pending_cookies,
-                                                 tmo, now,
-                                                 LIBCOUCHBASE_ETIMEDOUT);
-            }
+            libcouchbase_purge_single_server(server, tmo, now, LIBCOUCHBASE_ETIMEDOUT);
         }
     }
 }

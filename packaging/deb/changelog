@@ -43,6 +43,34 @@ libcouchbase (1.1.0dp) stable; urgency=low
 
  -- Sergey Avseyev <sergey@couchbase.com>  Wed, 04 Apr 2012 21:39:25 +0300
 
+libcouchbase (1.0.4) stable; urgency=low
+
+  [Sergey Avseyev]
+  * [backport] vbucket_found_incorrect_master() returns server index
+  * CCBC-64 Send the retry-packet to new server
+  * [CCBC-65] Memory leak in libcouchbase_create / libcouchbase_destroy
+  * Always use cmd_log for server purge
+  * CCBC-62 Check for breakout condition after purging servers
+  * Fix ringbuffer_memcpy()
+  * Check return value of libcouchbase_apply_vbucket_config()
+  * Do not consume the cookie for incomplete packet
+  * Give CouchbaseMock.jar a bit more time to warm up
+  * Include <sys/type.h> header for libevent check
+  * Be more specific about libevent version
+  * Fix config test: copy value in get callback
+  * Implement ringbuffer_update()
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Fri, 01 Jun 2012 21:19:27 +0300
+
+libcouchbase (1.0.3) stable; urgency=low
+
+  [Sergey Avseyev]
+  * RCBC-33 Fix buffer overflow vulnerability
+  * [backport] Pick up cookies from pending buffer unless node connected
+  * [backport] Fix ringbuffer_is_continous()
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 02 May 2012 23:07:40 +0300
+
 libcouchbase (1.0.2) stable; urgency=low
 
   [Mark Nunberg]
