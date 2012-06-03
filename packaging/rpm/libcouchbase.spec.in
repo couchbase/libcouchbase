@@ -65,6 +65,22 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Fri Jun 01 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.4
+[Sergey Avseyev]
+- [backport] vbucket_found_incorrect_master() returns server index
+- CCBC-64 Send the retry-packet to new server
+- [CCBC-65] Memory leak in libcouchbase_create / libcouchbase_destroy
+- Always use cmd_log for server purge
+- CCBC-62 Check for breakout condition after purging servers
+- Fix ringbuffer_memcpy()
+- Check return value of libcouchbase_apply_vbucket_config()
+- Do not consume the cookie for incomplete packet
+- Give CouchbaseMock.jar a bit more time to warm up
+- Include <sys/type.h> header for libevent check
+- Be more specific about libevent version
+- Fix config test: copy value in get callback
+- Implement ringbuffer_update()
+
 * Tue Apr 10 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp2
 [Sergey Avseyev]
 - Allow to pass additional arguments to RPM builder
@@ -103,22 +119,6 @@ Development files for the Couchbase Client & Protocol Library
 - Include errno.h to ensure that the macros should be set first
 - Add --unpad-paren to remove the ugly if ( asdf )
 - Updates according to coding style
-
-* Fri Jun 01 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.4
-[Sergey Avseyev]
-- [backport] vbucket_found_incorrect_master() returns server index
-- CCBC-64 Send the retry-packet to new server
-- [CCBC-65] Memory leak in libcouchbase_create / libcouchbase_destroy
-- Always use cmd_log for server purge
-- CCBC-62 Check for breakout condition after purging servers
-- Fix ringbuffer_memcpy()
-- Check return value of libcouchbase_apply_vbucket_config()
-- Do not consume the cookie for incomplete packet
-- Give CouchbaseMock.jar a bit more time to warm up
-- Include <sys/type.h> header for libevent check
-- Be more specific about libevent version
-- Fix config test: copy value in get callback
-- Implement ringbuffer_update()
 
 * Wed Apr 02 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.3
 [Sergey Avseyev]
