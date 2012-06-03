@@ -17,3 +17,8 @@ before_install:
 script: |
   export GTEST_ROOT=/usr/src/gtest
   ./config/autorun.sh && ./configure && make check
+
+notifications:
+  email:
+    - sdk_dev@couchbase.com
+
