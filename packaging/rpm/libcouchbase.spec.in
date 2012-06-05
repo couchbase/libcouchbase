@@ -65,6 +65,15 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Tue Jun 05 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp4
+[Sergey Avseyev]
+- Add Travis-CI integration
+- Set email for travis-ci notifications
+
+[Trond Norbye]
+- Fix compile warnings due to constness
+- strtoull doesn't exist on win32
+
 * Sun Jun 03 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp3
 [Sergey Avseyev]
 - Fix up mentions about CouchDB

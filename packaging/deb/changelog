@@ -1,3 +1,15 @@
+libcouchbase (1.1.0dp4) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Add Travis-CI integration
+  * Set email for travis-ci notifications
+
+  [Trond Norbye]
+  * Fix compile warnings due to constness
+  * strtoull doesn't exist on win32
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Tue, 05 Jun 2012 13:04:19 +0300
+
 libcouchbase (1.1.0dp3) stable; urgency=low
 
   [Sergey Avseyev]
