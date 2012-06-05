@@ -65,6 +65,12 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+
+* Wed Jun 06 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp5
+[Sergey Avseyev]
+- Implement 'cbc-hash' to match server/vbucket for given key
+- The library doesn't depend on pthreads
+
 * Tue Jun 05 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp4
 [Sergey Avseyev]
 - Add Travis-CI integration

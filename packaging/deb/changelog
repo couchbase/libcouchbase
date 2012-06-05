@@ -1,3 +1,11 @@
+libcouchbase (1.1.0dp5) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Implement 'cbc-hash' to match server/vbucket for given key
+  * The library doesn't depend on pthreads
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 06 Jun 2012 00:27:25 +0300
+
 libcouchbase (1.1.0dp4) stable; urgency=low
 
   [Sergey Avseyev]
