@@ -143,7 +143,7 @@ libgtest_la_SOURCES = tests/gtest-sources.cc
 libgtest_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
                        $(NO_WERROR)
 tests_unit_tests_DEPENDENCIES += libgtest.la
-tests_unit_tests_LDADD += libgtest.la
+tests_unit_tests_LDADD += libgtest.la -lpthread
 tests_unit_tests_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
 endif
 
