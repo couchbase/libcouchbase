@@ -233,7 +233,7 @@ tests_timeout_test_SOURCES = tests/timeout-test.c
 tests_timeout_test_LDADD = libcouchbase.la libmockserver.la
 tests_timeout_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
-tools_cbc_LDADD = libcouchbase.la
+tools_cbc_LDADD = libcouchbase.la -lvbucket
 if HAVE_LIBYAJL2
 tools_cbc_LDADD += -lyajl
 endif
@@ -251,7 +251,7 @@ example_pillowfight_LDADD = libcouchbase.la
 if BUILD_TOOLS
 CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create	\
             cbc-send cbc-receive cbc-version cbc-verify cbc-lock 	\
-            cbc-unlock
+            cbc-unlock cbc-hash
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \

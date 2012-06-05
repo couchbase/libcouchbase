@@ -30,6 +30,7 @@
 #include <cerrno>
 #include <cstdlib>
 #include <libcouchbase/couchbase.h>
+#include "internal.h"
 #include "configuration.h"
 #include "commandlineparser.h"
 
@@ -54,7 +55,8 @@ enum cbc_command_t {
     cbc_stats,
     cbc_unlock,
     cbc_verify,
-    cbc_version
+    cbc_version,
+    cbc_hash
 };
 
 extern "C" {
@@ -398,6 +400,38 @@ static bool cat(libcouchbase_t instance, list<string> &keys)
         cerr << "Failed to send requests:" << endl
              << libcouchbase_strerror(instance, err) << endl;
         return false;
+    }
+
+    return true;
+}
+
+static bool hash(libcouchbase_t instance, list<string> &keys)
+{
+    if (keys.empty()) {
+        cerr << "ERROR: you need to specify the key to hash" << endl;
+        return false;
+    }
+
+    for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
+        int vbucket_id, idx;
+        (void)vbucket_map(instance->vbucket_config, iter->c_str(), iter->length(), &vbucket_id, &idx);
+        libcouchbase_server_t *server = instance->servers + idx;
+        cout << "\"" << *iter << "\"\t" << "vBucket: " << vbucket_id
+             << ", Server: \"" << server->authority << "\"";
+        if (server->couch_api_base) {
+            cout << ", Couch API: \"" << server->couch_api_base << "\"";
+        }
+        libcouchbase_size_t nrepl = (libcouchbase_size_t)vbucket_config_get_num_replicas(instance->vbucket_config);
+        if (nrepl > 0) {
+            cout << ", Replicas: ";
+            for (libcouchbase_size_t ii = 0; ii < nrepl; ++ii) {
+                cout << "\"" << instance->servers[ii].authority << "\"";
+                if (ii != nrepl - 1) {
+                    cout << ", ";
+                }
+            }
+        }
+        cout << endl;
     }
 
     return true;
@@ -788,6 +822,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
             success = verify(instance, getopt.arguments);
         }
         break;
+    case cbc_hash:
+        success = hash(instance, getopt.arguments);
+        break;
     default:
         cerr << "Not implemented" << endl;
         success = false;
@@ -845,6 +882,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_version;
     } else if (name.find("cbc-verify") != string::npos) {
         return cbc_verify;
+    } else if (name.find("cbc-hash") != string::npos) {
+        return cbc_hash;
     }
 
     return cbc_illegal;
@@ -887,6 +926,8 @@ int main(int argc, char **argv)
                 cmd = cbc_version;
             } else if (strcmp(argv[1], "verify") == 0) {
                 cmd = cbc_verify;
+            } else if (strcmp(argv[1], "hash") == 0) {
+                cmd = cbc_hash;
             }
         } else {
             cerr << "Usage: cbc command [options]" << endl
@@ -895,6 +936,7 @@ int main(int argc, char **argv)
                  << "   cp         store files to the cluster" << endl
                  << "   create     store files with options" << endl
                  << "   flush      remove all keys from the cluster" << endl
+                 << "   hash       hash key(s) and print out useful info" << endl
                  << "   lock       lock keys" << endl
                  << "   unlock     unlock keys" << endl
                  << "   rm         remove keys" << endl
