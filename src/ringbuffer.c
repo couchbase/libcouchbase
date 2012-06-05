@@ -253,7 +253,7 @@ libcouchbase_size_t ringbuffer_update(ringbuffer_t *buffer,
                                       ringbuffer_direction_t direction,
                                       const void *src, libcouchbase_size_t nb)
 {
-    char *s = src;
+    const char *s = src;
     libcouchbase_size_t nw, ret = 0;
 
     if (direction == RINGBUFFER_READ) {
