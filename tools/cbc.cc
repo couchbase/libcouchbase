@@ -440,8 +440,10 @@ static bool unlock(libcouchbase_t instance, list<string> &keys)
     }
 
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
+        libcouchbase_cas_t cas;
         string key = *iter;
-        libcouchbase_cas_t cas = strtoull((++iter)->c_str(), NULL, 16);
+        stringstream ss(key);
+        ss >> hex >> cas;
         libcouchbase_error_t err = libcouchbase_unlock(instance, NULL,
                                                        (const void *)key.c_str(),
                                                        (libcouchbase_size_t)key.length(), cas);
