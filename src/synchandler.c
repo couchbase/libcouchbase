@@ -216,7 +216,7 @@ static void touch_callback(libcouchbase_t instance,
     libcouchbase_maybe_breakout(instance);
 }
 
-static void couch_complete_callback(libcouchbase_couch_request_t request,
+static void couch_complete_callback(libcouchbase_http_request_t request,
                                     libcouchbase_t instance,
                                     const void *cookie,
                                     libcouchbase_error_t error,
@@ -235,7 +235,7 @@ static void couch_complete_callback(libcouchbase_couch_request_t request,
     libcouchbase_maybe_breakout(instance);
 }
 
-static void couch_data_callback(libcouchbase_couch_request_t request,
+static void couch_data_callback(libcouchbase_http_request_t request,
                                 libcouchbase_t instance,
                                 const void *cookie,
                                 libcouchbase_error_t error,

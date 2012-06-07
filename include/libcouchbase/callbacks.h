@@ -127,7 +127,7 @@ extern "C" {
      * and libcouchbase will pass response body to this callback unless
      * couch_data_callback set up.
      */
-    typedef void (*libcouchbase_couch_complete_callback)(libcouchbase_couch_request_t request,
+    typedef void (*libcouchbase_couch_complete_callback)(libcouchbase_http_request_t request,
                                                          libcouchbase_t instance,
                                                          const void *cookie,
                                                          libcouchbase_error_t error,
@@ -144,7 +144,7 @@ extern "C" {
      * NULL for bytes and zero for nbytes to signal that request was
      * completed.
      */
-    typedef void (*libcouchbase_couch_data_callback)(libcouchbase_couch_request_t request,
+    typedef void (*libcouchbase_couch_data_callback)(libcouchbase_http_request_t request,
                                                      libcouchbase_t instance,
                                                      const void *cookie,
                                                      libcouchbase_error_t error,

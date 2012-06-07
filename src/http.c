@@ -29,7 +29,7 @@ static const char http_version[] = " HTTP/1.1\r\n";
 static const char headers[] = "User-Agent: libcouchbase/"LIBCOUCHBASE_VERSION_STRING"\r\n"
                               "Accept: application/json\r\n";
 
-void libcouchbase_couch_request_destroy(libcouchbase_couch_request_t req)
+void libcouchbase_http_request_destroy(libcouchbase_http_request_t req)
 {
     if (req) {
         if (req->io) {
@@ -49,16 +49,16 @@ void libcouchbase_couch_request_destroy(libcouchbase_couch_request_t req)
         ringbuffer_destruct(&req->output);
         ringbuffer_destruct(&req->result);
     }
-    memset(req, 0xff, sizeof(struct libcouchbase_couch_request_st));
+    memset(req, 0xff, sizeof(struct libcouchbase_http_request_st));
     free(req);
 }
 
 static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
 {
     libcouchbase_error_t rc;
-    libcouchbase_couch_request_t req = p->data;
+    libcouchbase_http_request_t req = p->data;
 
-    if (!hashset_is_member(req->server->couch_requests, req)) {
+    if (!hashset_is_member(req->server->http_requests, req)) {
         return 0;
     }
     if (req->chunked) {
@@ -83,11 +83,11 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
 static int http_parser_complete_cb(http_parser *p)
 {
     libcouchbase_error_t rc;
-    libcouchbase_couch_request_t req = p->data;
+    libcouchbase_http_request_t req = p->data;
     char *bytes = NULL;
     libcouchbase_size_t np = 0, nbytes = 0;
 
-    if (!hashset_is_member(req->server->couch_requests, req)) {
+    if (!hashset_is_member(req->server->http_requests, req)) {
         return 0;
     }
     rc = (p->status_code / 100 == 2) ?  LIBCOUCHBASE_SUCCESS : LIBCOUCHBASE_PROTOCOL_ERROR;
@@ -123,7 +123,7 @@ static int http_parser_complete_cb(http_parser *p)
     return 0;
 }
 
-static int request_do_fill_input_buffer(libcouchbase_couch_request_t req)
+static int request_do_fill_input_buffer(libcouchbase_http_request_t req)
 {
     struct libcouchbase_iovec_st iov[2];
     libcouchbase_ssize_t nr;
@@ -157,7 +157,7 @@ static int request_do_fill_input_buffer(libcouchbase_couch_request_t req)
     return 0;
 }
 
-static int request_do_read(libcouchbase_couch_request_t req)
+static int request_do_read(libcouchbase_http_request_t req)
 {
     libcouchbase_size_t nb = 0, np = 0;
     char *bytes;
@@ -200,7 +200,7 @@ static int request_do_read(libcouchbase_couch_request_t req)
     return 0;
 }
 
-static int request_do_write(libcouchbase_couch_request_t req)
+static int request_do_write(libcouchbase_http_request_t req)
 {
     do {
         struct libcouchbase_iovec_st iov[2];
@@ -232,7 +232,7 @@ static int request_do_write(libcouchbase_couch_request_t req)
 
 static void request_event_handler(libcouchbase_socket_t sock, short which, void *arg)
 {
-    libcouchbase_couch_request_t req = arg;
+    libcouchbase_http_request_t req = arg;
     libcouchbase_t instance = req->instance;
     libcouchbase_server_t *server = req->server;
     int rv;
@@ -252,8 +252,8 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
             return;
         } else {
             /* considering request was completed and release it */
-            hashset_remove(server->couch_requests, req);
-            libcouchbase_couch_request_destroy(req);
+            hashset_remove(server->http_requests, req);
+            libcouchbase_http_request_destroy(req);
         }
     }
     if (which & LIBCOUCHBASE_WRITE_EVENT) {
@@ -274,7 +274,7 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
                                        req, request_event_handler);
         }
     }
-    if (instance->wait && hashset_num_items(server->couch_requests) == 0) {
+    if (instance->wait && hashset_num_items(server->http_requests) == 0) {
         instance->wait = 0;
         instance->io->stop_event_loop(instance->io);
     }
@@ -282,24 +282,24 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
     libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
 }
 
-static libcouchbase_error_t request_connect(libcouchbase_couch_request_t req);
+static libcouchbase_error_t request_connect(libcouchbase_http_request_t req);
 
 static void request_connect_handler(libcouchbase_socket_t sock, short which, void *arg)
 {
-    request_connect((libcouchbase_couch_request_t)arg);
+    request_connect((libcouchbase_http_request_t)arg);
     (void)sock;
     (void)which;
 }
 
 
-static void request_connected(libcouchbase_couch_request_t req)
+static void request_connected(libcouchbase_http_request_t req)
 {
     req->io->update_event(req->io, req->sock,
                           req->event, LIBCOUCHBASE_WRITE_EVENT,
                           req, request_event_handler);
 }
 
-static libcouchbase_error_t request_connect(libcouchbase_couch_request_t req)
+static libcouchbase_error_t request_connect(libcouchbase_http_request_t req)
 {
     int retry;
     int save_errno;
@@ -370,20 +370,21 @@ static libcouchbase_error_t request_connect(libcouchbase_couch_request_t req)
     return LIBCOUCHBASE_SUCCESS;
 }
 
-LIBCOUCHBASE_API
-libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
-                                                             const void *command_cookie,
-                                                             const char *path,
-                                                             libcouchbase_size_t npath,
-                                                             const void *body,
-                                                             libcouchbase_size_t nbody,
-                                                             libcouchbase_http_method_t method,
-                                                             int chunked,
-                                                             libcouchbase_error_t *error)
+static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instance,
+                                                                   const void *command_cookie,
+                                                                   libcouchbase_server_t *server,
+                                                                   const char *base,
+                                                                   libcouchbase_size_t nbase,
+                                                                   const char *path,
+                                                                   libcouchbase_size_t npath,
+                                                                   const void *body,
+                                                                   libcouchbase_size_t nbody,
+                                                                   libcouchbase_http_method_t method,
+                                                                   int chunked,
+                                                                   libcouchbase_error_t *error)
 {
     libcouchbase_size_t nn;
-    libcouchbase_server_t *server;
-    libcouchbase_couch_request_t req;
+    libcouchbase_http_request_t req;
 
     if (method >= LIBCOUCHBASE_HTTP_METHOD_MAX) {
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
@@ -394,17 +395,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
         return NULL;
     }
-    /* pick random server */
-    nn = (libcouchbase_size_t)(gethrtime() >> 10) % instance->nservers;
-    server = instance->servers + nn;
-
-    /* memcached buckets don't support views */
-    if (!server->couch_api_base) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
-        return NULL;
-    }
-
-    req = calloc(1, sizeof(struct libcouchbase_couch_request_st));
+    req = calloc(1, sizeof(struct libcouchbase_http_request_st));
     if (!req) {
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
         return NULL;
@@ -421,7 +412,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
 
 #define BUFF_APPEND(dst, src, len)                                                      \
         if (len != ringbuffer_write(dst, src, len)) {                                   \
-            libcouchbase_couch_request_destroy(req);                                    \
+            libcouchbase_http_request_destroy(req);                                    \
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINTERNAL); \
             return NULL;                                                                \
         }
@@ -429,21 +420,19 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
     {
         /* Build URL */
         ringbuffer_t urlbuf;
-        libcouchbase_size_t nbase;
 
         if (ringbuffer_initialize(&urlbuf, 1024) == -1) {
-            libcouchbase_couch_request_destroy(req);
+            libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
-        nbase = strlen(server->couch_api_base);
         if (!ringbuffer_ensure_capacity(&urlbuf, nbase + npath + 1)) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_couch_request_destroy(req);
+            libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
-        BUFF_APPEND(&urlbuf, server->couch_api_base, nbase);
+        BUFF_APPEND(&urlbuf, base, nbase);
         if (path[0] != '/') {
             BUFF_APPEND(&urlbuf, "/", 1);
         }
@@ -452,14 +441,14 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         req->url = calloc(req->nurl + 1, sizeof(char));
         if (req->url == NULL) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_couch_request_destroy(req);
+            libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
         nn = ringbuffer_read(&urlbuf, req->url, req->nurl);
         if (nn != req->nurl) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_couch_request_destroy(req);
+            libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINTERNAL);
             return NULL;
         }
@@ -474,7 +463,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         if (http_parser_parse_url(req->url, req->nurl, 0, &req->url_info)
                 || (req->url_info.field_set & required_fields) != required_fields) {
             /* parse error or missing URL part */
-            libcouchbase_couch_request_destroy(req);
+            libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
             return NULL;
         }
@@ -491,7 +480,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
               req->url_info.field_data[UF_PORT].len; /* Host: example.com:666\r\n\r\n */
 
         if (!ringbuffer_ensure_capacity(&req->output, nn)) {
-            libcouchbase_couch_request_destroy(req);
+            libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
@@ -499,7 +488,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
 #define EXTRACT_URL_PART(field, dst, len)                                               \
         dst = malloc((len + 1) * sizeof(char));                                         \
         if (dst == NULL) {                                                              \
-            libcouchbase_couch_request_destroy(req);                                    \
+            libcouchbase_http_request_destroy(req);                                    \
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);    \
             return NULL;                                                                \
         }                                                                               \
@@ -529,14 +518,14 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
         if (method != LIBCOUCHBASE_HTTP_METHOD_GET && nbody) {
             char *post_headers = calloc(512, sizeof(char));
             if (post_headers == NULL) {
-                libcouchbase_couch_request_destroy(req);
+                libcouchbase_http_request_destroy(req);
                 *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
                 return NULL;
             }
             nn = snprintf(post_headers, 512, "\r\nContent-Type: application/json\r\n"
                           "Content-Length: %ld\r\n\r\n", (long)nbody);
             if (!ringbuffer_ensure_capacity(&req->output, nbody + nn)) {
-                libcouchbase_couch_request_destroy(req);
+                libcouchbase_http_request_destroy(req);
                 *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
                 return NULL;
             }
@@ -553,7 +542,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
     /* Initialize HTTP parser */
     req->parser = malloc(sizeof(http_parser));
     if (req->parser == NULL) {
-        libcouchbase_couch_request_destroy(req);
+        libcouchbase_http_request_destroy(req);
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
         return NULL;
     }
@@ -565,7 +554,7 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
 
 
     /* Store request reference in the server struct */
-    hashset_add(server->couch_requests, req);
+    hashset_add(server->http_requests, req);
 
     {
         /* Get server socket address */
@@ -590,8 +579,40 @@ libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t inst
 }
 
 LIBCOUCHBASE_API
-void libcouchbase_cancel_couch_request(libcouchbase_couch_request_t request)
+libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
+                                                             const void *command_cookie,
+                                                             const char *path,
+                                                             libcouchbase_size_t npath,
+                                                             const void *body,
+                                                             libcouchbase_size_t nbody,
+                                                             libcouchbase_http_method_t method,
+                                                             int chunked,
+                                                             libcouchbase_error_t *error)
 {
-    hashset_remove(request->server->couch_requests, request);
+    const char *base = NULL;
+    libcouchbase_size_t nn, nbase;
+    libcouchbase_server_t *server;
+
+    /* pick random server */
+    nn = (libcouchbase_size_t)(gethrtime() >> 10) % instance->nservers;
+    server = instance->servers + nn;
+
+    /* memcached buckets don't support views */
+    if (!server->couch_api_base) {
+        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
+        return NULL;
+    }
+    base = server->couch_api_base;
+    nbase = strlen(base);
+
+    return libcouchbase_make_http_request(instance, command_cookie, server,
+                                          base, nbase, path, npath, body,
+                                          nbody, method, chunked, error);
+}
+
+LIBCOUCHBASE_API
+void libcouchbase_cancel_http_request(libcouchbase_http_request_t request)
+{
+    hashset_remove(request->server->http_requests, request);
     request->cancelled = 1;
 }

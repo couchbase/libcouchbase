@@ -59,7 +59,7 @@ libcouchbase_la_SOURCES = \
                         src/compat.c \
                         src/config_static.h \
                         src/cookie.c \
-                        src/couch.c \
+                        src/http.c \
                         src/error.c \
                         src/event.c \
                         src/flush.c \

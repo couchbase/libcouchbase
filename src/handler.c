@@ -819,7 +819,7 @@ static void dummy_flush_callback(libcouchbase_t instance,
     (void)error;
 }
 
-static void dummy_couch_complete_callback(libcouchbase_couch_request_t request,
+static void dummy_couch_complete_callback(libcouchbase_http_request_t request,
                                           libcouchbase_t instance,
                                           const void *cookie,
                                           libcouchbase_error_t error,
@@ -838,7 +838,7 @@ static void dummy_couch_complete_callback(libcouchbase_couch_request_t request,
     (void)status;
 }
 
-static void dummy_couch_data_callback(libcouchbase_couch_request_t request,
+static void dummy_couch_data_callback(libcouchbase_http_request_t request,
                                       libcouchbase_t instance,
                                       const void *cookie,
                                       libcouchbase_error_t error,

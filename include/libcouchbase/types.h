@@ -42,8 +42,8 @@ extern "C" {
     struct libcouchbase_st;
     typedef struct libcouchbase_st *libcouchbase_t;
 
-    struct libcouchbase_couch_request_st;
-    typedef struct libcouchbase_couch_request_st *libcouchbase_couch_request_t;
+    struct libcouchbase_http_request_st;
+    typedef struct libcouchbase_http_request_st *libcouchbase_http_request_t;
 
     /**
      * Define the error codes in use by the library

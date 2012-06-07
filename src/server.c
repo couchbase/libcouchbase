@@ -335,12 +335,12 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
     ringbuffer_destruct(&server->pending);
     ringbuffer_destruct(&server->pending_cookies);
     ringbuffer_destruct(&server->input);
-    for (ii = 0; ii < server->couch_requests->capacity; ++ii) {
-        if (server->couch_requests->items[ii] > 1) {
-            libcouchbase_couch_request_destroy((libcouchbase_couch_request_t)server->couch_requests->items[ii]);
+    for (ii = 0; ii < server->http_requests->capacity; ++ii) {
+        if (server->http_requests->items[ii] > 1) {
+            libcouchbase_http_request_destroy((libcouchbase_http_request_t)server->http_requests->items[ii]);
         }
     }
-    hashset_destroy(server->couch_requests);
+    hashset_destroy(server->http_requests);
     memset(server, 0xff, sizeof(*server));
 }
 
@@ -583,7 +583,7 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
                                           servernum);
     server->couch_api_base = (n != NULL) ? strdup(n) : NULL;
-    server->couch_requests = hashset_create();
+    server->http_requests = hashset_create();
     n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
                                            servernum);
     server->rest_api_server = strdup(n);

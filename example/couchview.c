@@ -199,7 +199,7 @@ static void handle_options(int argc, char **argv)
 FILE *output;
 
 
-static void data_callback(libcouchbase_couch_request_t request,
+static void data_callback(libcouchbase_http_request_t request,
                           libcouchbase_t instance,
                           const void *cookie,
                           libcouchbase_error_t error,
@@ -221,7 +221,7 @@ static void data_callback(libcouchbase_couch_request_t request,
     (void)status;
 }
 
-static void complete_callback(libcouchbase_couch_request_t request,
+static void complete_callback(libcouchbase_http_request_t request,
                               libcouchbase_t instance,
                               const void *cookie,
                               libcouchbase_error_t error,

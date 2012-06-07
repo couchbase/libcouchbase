@@ -685,22 +685,22 @@ extern "C" {
      *                                    LIBCOUCHBASE_HTTP_METHOD_GET, 1);
      */
     LIBCOUCHBASE_API
-    libcouchbase_couch_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
-                                                                 const void *command_cookie,
-                                                                 const char *path,
-                                                                 libcouchbase_size_t npath,
-                                                                 const void *body,
-                                                                 libcouchbase_size_t nbody,
-                                                                 libcouchbase_http_method_t method,
-                                                                 int chunked,
-                                                                 libcouchbase_error_t *error);
+    libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
+                                                                const void *command_cookie,
+                                                                const char *path,
+                                                                libcouchbase_size_t npath,
+                                                                const void *body,
+                                                                libcouchbase_size_t nbody,
+                                                                libcouchbase_http_method_t method,
+                                                                int chunked,
+                                                                libcouchbase_error_t *error);
 
     /**
-     * Cancel view request. This function could be called from the callback
-     * to stop the request.
+     * Cancel HTTP request (view or management API). This function could be
+     * called from the callback to stop the request.
      */
     LIBCOUCHBASE_API
-    void libcouchbase_cancel_couch_request(libcouchbase_couch_request_t request);
+    void libcouchbase_cancel_http_request(libcouchbase_http_request_t request);
 
 #ifdef __cplusplus
 }

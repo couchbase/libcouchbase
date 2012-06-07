@@ -256,8 +256,9 @@ extern "C" {
         /** The input buffer for this server */
         ringbuffer_t input;
 
-        /** The set of the pointers to Couchbase View requests */
-        hashset_t couch_requests;
+        /** The set of the pointers to HTTP requests to couchbase (Views and
+         * Management API) */
+        hashset_t http_requests;
 
         /** The SASL object used for this server */
         sasl_conn_t *sasl_conn;
@@ -273,7 +274,7 @@ extern "C" {
         hrtime_t next_timeout;
     };
 
-    struct libcouchbase_couch_request_st {
+    struct libcouchbase_http_request_st {
         /** The socket to the server */
         evutil_socket_t sock;
         struct libcouchbase_io_opt_st *io;
@@ -322,7 +323,7 @@ extern "C" {
         int cancelled;
     };
 
-    void libcouchbase_couch_request_destroy(libcouchbase_couch_request_t req);
+    void libcouchbase_http_request_destroy(libcouchbase_http_request_t req);
 
 
     libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, libcouchbase_error_t retcode);
