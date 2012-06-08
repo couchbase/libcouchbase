@@ -59,31 +59,27 @@
 #define ESOCKTNOSUPPORT         WSAESOCKTNOSUPPORT
 #endif
 
-#ifndef ENOPROTOOPT
+#ifndef EOPNOTSUPP
 #define EOPNOTSUPP              WSAEOPNOTSUPP
 #endif
 
-#ifndef EPROTONOSUPPORT
+#ifndef ENOPROTOOPT
 #define ENOPROTOOPT             WSAENOPROTOOPT
 #endif
 
-#ifndef ESOCKTNOSUPPORT
+#ifndef EPROTONOSUPPORT
 #define EPROTONOSUPPORT         WSAEPROTONOSUPPORT
 #endif
 
-#ifndef EOPNOTSUPP
+#ifndef ESOCKTNOSUPPORT
 #define ESOCKTNOSUPPORT         WSAESOCKTNOSUPPORT
 #endif
 
 #ifndef EPFNOSUPPORT
-#define EOPNOTSUPP              WSAEOPNOTSUPP
-#endif
-
-#ifndef EAFNOSUPPORT
 #define EPFNOSUPPORT            WSAEPFNOSUPPORT
 #endif
 
-#ifndef EADDRINUSE
+#ifndef EAFNOSUPPORT
 #define EAFNOSUPPORT            WSAEAFNOSUPPORT
 #endif
 
