@@ -285,7 +285,7 @@ extern "C" {
     }
 }
 
-static bool cp(libcouchbase_t instance, list<string> &keys, bool json)
+static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json)
 {
     libcouchbase_size_t currsz = 0;
     for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
@@ -353,7 +353,7 @@ static bool cp(libcouchbase_t instance, list<string> &keys, bool json)
     return true;
 }
 
-static bool rm(libcouchbase_t instance, list<string> &keys)
+static bool rm_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to delete" << endl;
@@ -373,7 +373,7 @@ static bool rm(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool cat(libcouchbase_t instance, list<string> &keys)
+static bool cat_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to get" << endl;
@@ -405,7 +405,7 @@ static bool cat(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool hash(libcouchbase_t instance, list<string> &keys)
+static bool hash_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to hash" << endl;
@@ -437,7 +437,7 @@ static bool hash(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool lock(libcouchbase_t instance, list<string> &keys, libcouchbase_time_t exptime)
+static bool lock_impl(libcouchbase_t instance, list<string> &keys, libcouchbase_time_t exptime)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to lock" << endl;
@@ -460,7 +460,7 @@ static bool lock(libcouchbase_t instance, list<string> &keys, libcouchbase_time_
     return true;
 }
 
-static bool unlock(libcouchbase_t instance, list<string> &keys)
+static bool unlock_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to unlock" << endl;
@@ -492,7 +492,7 @@ static bool unlock(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool stats(libcouchbase_t instance, list<string> &keys)
+static bool stats_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         libcouchbase_error_t err;
@@ -518,7 +518,7 @@ static bool stats(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool flush(libcouchbase_t instance, list<string> &keys)
+static bool flush_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (!keys.empty()) {
         cerr << "Ignoring arguments." << endl;
@@ -550,8 +550,8 @@ static bool spool(string &data)
     return nr == 0 || feof(stdin) != 0;
 }
 
-static bool create(libcouchbase_t instance, list<string> &keys,
-                   libcouchbase_uint32_t exptime, libcouchbase_uint32_t flags, bool add)
+static bool create_impl(libcouchbase_t instance, list<string> &keys,
+                        libcouchbase_uint32_t exptime, libcouchbase_uint32_t flags, bool add)
 {
     if (keys.size() != 1) {
         cerr << "Usage: You need to specify a single key" << endl;
@@ -589,10 +589,10 @@ static bool create(libcouchbase_t instance, list<string> &keys,
     return true;
 }
 
-static bool verify(libcouchbase_t instance, list<string> &keys)
+static bool verify_impl(libcouchbase_t instance, list<string> &keys)
 {
     (void)libcouchbase_set_get_callback(instance, verify_callback);
-    return cat(instance, keys);
+    return cat_impl(instance, keys);
 }
 
 void loadKeys(list<string> &keys)
@@ -608,8 +608,8 @@ void loadKeys(list<string> &keys)
     }
 }
 
-extern bool receive(libcouchbase_t instance, list<string> &keys);
-extern bool send(libcouchbase_t instance, list<string> &keys);
+extern bool receive_impl(libcouchbase_t instance, list<string> &keys);
+extern bool send_impl(libcouchbase_t instance, list<string> &keys);
 
 static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **argv)
 {
@@ -780,50 +780,50 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     bool success;
     switch (cmd) {
     case cbc_cat:
-        success = cat(instance, getopt.arguments);
+        success = cat_impl(instance, getopt.arguments);
         break;
     case cbc_lock:
-        success = lock(instance, getopt.arguments, exptime);
+        success = lock_impl(instance, getopt.arguments, exptime);
         break;
     case cbc_unlock:
-        success = unlock(instance, getopt.arguments);
+        success = unlock_impl(instance, getopt.arguments);
         break;
     case cbc_cp:
         if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
             loadKeys(keys);
-            success = cp(instance, keys, json);
+            success = cp_impl(instance, keys, json);
         } else {
-            success = cp(instance, getopt.arguments, json);
+            success = cp_impl(instance, getopt.arguments, json);
         }
         break;
     case cbc_rm:
-        success = rm(instance, getopt.arguments);
+        success = rm_impl(instance, getopt.arguments);
         break;
     case cbc_receive:
-        success = receive(instance, getopt.arguments);
+        success = receive_impl(instance, getopt.arguments);
         break;
     case cbc_stats:
-        success = stats(instance, getopt.arguments);
+        success = stats_impl(instance, getopt.arguments);
         break;
     case cbc_send:
-        success = send(instance, getopt.arguments);
+        success = send_impl(instance, getopt.arguments);
         break;
     case cbc_flush:
-        success = flush(instance, getopt.arguments);
+        success = flush_impl(instance, getopt.arguments);
         break;
     case cbc_create:
-        success = create(instance, getopt.arguments, exptime, flags, add);
+        success = create_impl(instance, getopt.arguments, exptime, flags, add);
         break;
     case cbc_verify:
         if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
             loadKeys(keys);
-            success = verify(instance, keys);
+            success = verify_impl(instance, keys);
         } else {
-            success = verify(instance, getopt.arguments);
+            success = verify_impl(instance, getopt.arguments);
         }
         break;
     case cbc_hash:
-        success = hash(instance, getopt.arguments);
+        success = hash_impl(instance, getopt.arguments);
         break;
     default:
         cerr << "Not implemented" << endl;

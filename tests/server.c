@@ -175,7 +175,7 @@ const void *start_mock_server(char **cmdline)
         char monitor[1024];
         char *argv[1024];
         int arg = 0;
-        argv[arg++] = (char*)"./tests/start_mock.sh";
+        argv[arg++] = (char *)"./tests/start_mock.sh";
         sprintf(monitor, "--harakiri-monitor=localhost:%d", info->port);
         argv[arg++] = monitor;
 

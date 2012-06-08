@@ -205,7 +205,7 @@ static bool processNextPacket(libcouchbase_t instance)
     return handler(instance, header);
 }
 
-bool receive(libcouchbase_t instance, list<string> &keys)
+bool receive_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (!keys.empty()) {
         cerr << "Ignoring arguments." << endl;

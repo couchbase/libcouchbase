@@ -124,7 +124,7 @@ extern "C" {
     }
 }
 
-bool send(libcouchbase_t instance, list<string> &keys)
+bool send_impl(libcouchbase_t instance, list<string> &keys)
 {
     if (!keys.empty()) {
         cerr << "Ignoring arguments." << endl;
