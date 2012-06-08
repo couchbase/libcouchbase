@@ -17,6 +17,11 @@
 #ifndef LIBCOUCHBASE_INTERNAL_H
 #define LIBCOUCHBASE_INTERNAL_H 1
 
+/* We're currently doing a lot of logic inside our asserts, causing the
+ * library to behave "weird" if you try to build with -DNDEBUG
+ */
+#undef NDEBUG
+
 #include "config.h"
 
 #include <assert.h>
