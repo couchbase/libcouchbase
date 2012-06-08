@@ -89,6 +89,7 @@ tests\getopt-test.exe: $(tests_getopt_test_OBJECTS)
 
 tools\cbc.exe: $(tools_cbc_OBJECTS) libcouchbase.dll
 	$(LD) $(LDFLAGS) -out:tools\cbc.exe $(tools_cbc_OBJECTS) \
+          libvbucket.lib \
           libcouchbase.lib ws2_32.lib
 
 example\pillowfight.exe: $(example_pillowfight_OBJECTS) libcouchbase_debug.dll
