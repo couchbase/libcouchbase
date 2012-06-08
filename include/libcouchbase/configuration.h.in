@@ -28,9 +28,13 @@
 #error "Include libcouchbase/couchbase.h instead"
 #endif
 
+#include <sys/types.h>
 #include <stdint.h>
-#include <stddef.h>
 #include <time.h>
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#include <stddef.h>
+#endif
 
 #define LIBCOUCHBASE_VERSION_STRING "@LIBCOUCHBASE_VERSION@"
 #define LIBCOUCHBASE_VERSION @LIBCOUCHBASE_VERSION_HEX@
