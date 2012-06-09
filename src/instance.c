@@ -22,6 +22,9 @@
  * @todo add more documentation
  */
 #include "internal.h"
+#ifndef _win32
+#include <dlfcn.h>
+#endif
 
 /* private function to safely free backup_nodes*/
 static void free_backup_nodes(libcouchbase_t instance);
@@ -240,8 +243,21 @@ void libcouchbase_destroy(libcouchbase_t instance)
     free_backup_nodes(instance);
     free(instance->servers);
 
-    if (instance->io && instance->io->destructor) {
-        instance->io->destructor(instance->io);
+    if (instance->io) {
+#ifndef _WIN32
+        void *dlhandle = NULL;
+        if (instance->io->version == 1) {
+            dlhandle = instance->io->dlhandle;
+        }
+#endif
+        if (instance->io->destructor) {
+            instance->io->destructor(instance->io);
+        }
+#ifndef _WIN32
+        if (dlhandle) {
+            dlclose(dlhandle);
+        }
+#endif
     }
 
     free(instance->vbucket_stream.input.data);

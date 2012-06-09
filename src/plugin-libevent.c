@@ -335,6 +335,8 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
     }
 
     /* setup io iops! */
+    ret->version = 1;
+    ret->dlhandle = NULL;
     ret->recv = libcouchbase_io_recv;
     ret->send = libcouchbase_io_send;
     ret->recvv = libcouchbase_io_recvv;

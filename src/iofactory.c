@@ -32,27 +32,33 @@ static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code)
 
 typedef libcouchbase_io_opt_t *(*create_func)(struct event_base *base);
 
-#ifndef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-static create_func get_create_func(const char *image,
-                                   libcouchbase_error_t *error)
-{
-    union my_hack {
+struct plugin_st {
+    void *dlhandle;
+    union {
         create_func create;
         void *voidptr;
-    } my_create ;
+    } func;
+};
+
+#ifndef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
+static void get_create_func(const char *image,
+                            struct plugin_st *plugin,
+                            libcouchbase_error_t *error)
+{
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
     if (dlhandle == NULL) {
         set_error(error, LIBCOUCHBASE_ERROR);
-        return NULL;
+        return;
     }
 
-    my_create.create = NULL;
-    my_create.voidptr = dlsym(dlhandle, "libcouchbase_create_libevent_io_opts");
-    if (my_create.voidptr == NULL) {
+    plugin->func.create = NULL;
+    plugin->func.voidptr = dlsym(dlhandle, "libcouchbase_create_libevent_io_opts");
+    if (plugin->func.voidptr == NULL) {
         dlclose(dlhandle);
+        dlhandle = NULL;
+    } else {
+        plugin->dlhandle = dlhandle;
     }
-
-    return my_create.create;
 }
 #endif
 
@@ -63,24 +69,27 @@ libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t typ
 {
     libcouchbase_io_opt_t *ret = NULL;
     if (type == LIBCOUCHBASE_IO_OPS_DEFAULT || type == LIBCOUCHBASE_IO_OPS_LIBEVENT) {
-        create_func c;
+        struct plugin_st plugin;
+        memset(&plugin, 0, sizeof(plugin));
 #ifdef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-        c = libcouchbase_create_libevent_io_opts;
+        plugin.func.create = libcouchbase_create_libevent_io_opts;
 #else
-        c = get_create_func(NULL, error);
-        if (c == NULL) {
+        get_create_func(NULL, &plugin, error);
+        if (plugin.func.create == NULL) {
 #ifdef __APPLE__
-            c = get_create_func("libcouchbase_libevent.1.dylib", error);
+            get_create_func("libcouchbase_libevent.1.dylib", &plugin, error);
 #else
-            c = get_create_func("libcouchbase_libevent.so.1", error);
+            get_create_func("libcouchbase_libevent.so.1", &plugin, error);
 #endif /* __APPLE__ */
         }
 #endif /* LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED */
 
-        if (c != NULL) {
-            ret = c(cookie);
+        if (plugin.func.create != NULL) {
+            ret = plugin.func.create(cookie);
             if (ret == NULL) {
                 set_error(error, LIBCOUCHBASE_ENOMEM);
+            } else {
+                ret->dlhandle = plugin.dlhandle;
             }
         }
 

@@ -261,7 +261,8 @@ extern "C" {
         void (*stop_event_loop)(struct libcouchbase_io_opt_st *iops);
         void (*run_event_loop)(struct libcouchbase_io_opt_st *iops);
 
-
+        /* Version 1 of the struct also includes the following members */
+        void *dlhandle;
     } libcouchbase_io_opt_t;
 
     typedef enum {
