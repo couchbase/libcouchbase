@@ -82,6 +82,10 @@
 #include <strings.h>
 #endif
 
+#ifdef HAVE_FCNTL_H
+#include <fcntl.h>
+#endif
+
 #ifdef _WIN32
 #include "win32/win_errno_sock.h"
 typedef int ssize_t;

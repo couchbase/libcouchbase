@@ -42,6 +42,7 @@ pkginclude_HEADERS = \
                      include/libcouchbase/types.h \
                      include/libcouchbase/arguments.h \
                      include/libcouchbase/visibility.h \
+                     plugins/io/libev/libev_io_opts.h \
                      plugins/io/libevent/libevent_io_opts.h \
                      plugins/io/win32/winsock_io_opts.h
 
@@ -153,6 +154,15 @@ if BUILD_EXAMPLES
 noinst_PROGRAMS += example/libeventdirect/eventloop
 endif
 endif
+
+if HAVE_LIBEV
+lib_LTLIBRARIES += libcouchbase_libev.la
+libcouchbase_libev_la_SOURCES = plugins/io/libev/plugin-libev.c
+libcouchbase_libev_la_LDFLAGS=-version-info 1:0:0 $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
+libcouchbase_libev_la_LIBADD=-lev
+libcouchbase_libev_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
+endif
+
 endif
 
 tests_unit_tests_SOURCES = \

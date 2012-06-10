@@ -164,7 +164,7 @@ AC_ARG_WITH([couchbasemock],
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
                        ws2tcpip.h winsock2.h event.h stdint.h
-                       sys/uio.h sys/types.h])
+                       sys/uio.h sys/types.h fcntl.h])
 
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
@@ -187,6 +187,27 @@ AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
   ])
 AM_CONDITIONAL(HAVE_WINSOCK2, [test "$ac_cv_have_winsock2" = "yes"])
 
+dnl Check that we've got a usable libev
+AC_CACHE_CHECK([for libev], [ac_cv_have_libev],
+  [ saved_libs="$LIBS"
+    LIBS=-lev
+    AC_TRY_LINK([
+      #include <sys/types.h>
+      #include <ev.h>
+            ],[
+      struct ev_loop *loop = ev_default_loop (0);
+      ev_run(loop, 0);
+            ],[
+      ac_cv_have_libev="yes"
+            ], [
+      ac_cv_have_libev="no"
+      ])
+    LIBS="$saved_libs"
+  ])
+AM_CONDITIONAL(HAVE_LIBEV, [test "x${ac_cv_have_libev}" = "xyes"])
+AS_IF([test "x${ac_cv_have_libev}" = "xyes"],
+      [AC_DEFINE([HAVE_LIBEV], [1], [We have libev])])
+
 dnl Check that we've got a usable libevent
 AC_CACHE_CHECK([for libevent >= 1.4], [ac_cv_have_libevent],
   [ saved_libs="$LIBS"
@@ -204,6 +225,8 @@ AC_CACHE_CHECK([for libevent >= 1.4], [ac_cv_have_libevent],
     LIBS="$saved_libs"
   ])
 AM_CONDITIONAL(HAVE_LIBEVENT, [test "x${ac_cv_have_libevent}" = "xyes"])
+AS_IF([test "x${ac_cv_have_libevent}" = "xyes"],
+      [AC_DEFINE([HAVE_LIBEVENT], [1], [We have libevent])])
 
 dnl Fail if libevent is the only networking backend accessible
 AS_IF([test "x${ac_cv_have_winsock2}" != "xyes" -a \( "x${ac_cv_have_libevent}" != "xyes" -o "x$ac_cv_header_event_h" != "xyes" \)],

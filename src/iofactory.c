@@ -64,6 +64,8 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
     lcb_error_t ret = LCB_SUCCESS;
     lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;
     void *cookie = NULL;
+    const char *sofile;
+    const char *symbol;
 
     if (options != NULL) {
         if (options->version != 0) {
@@ -73,19 +75,42 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
         cookie = options->v.v0.cookie;
     }
 
+    if (type == LCB_IO_OPS_DEFAULT) {
+#if defined(HAVE_LIBEVENT) || defined(HAVE_LIBEVENT2)
+        type = LCB_IO_OPS_LIBEVENT;
+#elif defined(HAVE_LIBEV)
+        type = LCB_IO_OPS_LIBEV;
+#endif
+    }
+
+    switch (type) {
+    case LCB_IO_OPS_LIBEVENT:
+        sofile = PLUGIN_SO("libevent");
+        symbol = PLUGIN_SYMBOL("libevent");
+        break;
+    case LCB_IO_OPS_LIBEV:
+        sofile = PLUGIN_SO("libev");
+        symbol = PLUGIN_SYMBOL("libev");
+
+        // TROND: Disabled until we've fixed it..
+        return LCB_NOT_SUPPORTED;
+
+        /* break; */
+    default:
+        return LCB_NOT_SUPPORTED;
+    }
+
     if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_LIBEVENT) {
         struct plugin_st plugin;
         struct lcb_io_opt_st *iop = NULL;
 
         memset(&plugin, 0, sizeof(plugin));
         /* search definition in main program */
-        ret = get_create_func(NULL, PLUGIN_SYMBOL("libevent"), &plugin);
+        ret = get_create_func(NULL, symbol, &plugin);
 
         if (ret != LCB_SUCCESS) {
             if (plugin.func.create == NULL) {
-                ret = get_create_func(PLUGIN_SO("libevent"),
-                                      PLUGIN_SYMBOL("libevent"),
-                                      &plugin);
+                ret = get_create_func(sofile, symbol, &plugin);
             }
             if (ret != LCB_SUCCESS) {
                 return ret;
