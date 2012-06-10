@@ -56,7 +56,8 @@ enum cbc_command_t {
     cbc_unlock,
     cbc_verify,
     cbc_version,
-    cbc_hash
+    cbc_hash,
+    cbc_help
 };
 
 extern "C" {
@@ -884,9 +885,30 @@ static cbc_command_t getBuiltin(string name)
         return cbc_verify;
     } else if (name.find("cbc-hash") != string::npos) {
         return cbc_hash;
+    } else if (name.find("cbc-help") != string::npos) {
+        return cbc_help;
     }
 
     return cbc_illegal;
+}
+
+static void printHelp()
+{
+    cerr << "Usage: cbc command [options]" << endl
+        << "command may be:" << endl
+        << "   help       show this help or for given command" << endl
+        << "   cat        output keys to stdout" << endl
+        << "   cp         store files to the cluster" << endl
+        << "   create     store files with options" << endl
+        << "   flush      remove all keys from the cluster" << endl
+        << "   hash       hash key(s) and print out useful info" << endl
+        << "   lock       lock keys" << endl
+        << "   unlock     unlock keys" << endl
+        << "   rm         remove keys" << endl
+        << "   stats      show stats" << endl
+        << "   verify     verify content in cache with files" << endl
+        << "   version    show version" << endl
+        << "Use 'cbc command --help' to show the options" << endl;
 }
 
 /**
@@ -897,65 +919,43 @@ static cbc_command_t getBuiltin(string name)
  */
 int main(int argc, char **argv)
 {
-    cbc_command_t cmd = getBuiltin(argv[0]);
+    string cmdstr(argv[0]);
+    cbc_command_t cmd = getBuiltin(cmdstr);
+
     if (cmd == cbc_illegal) {
         if (argc > 1) {
-            if (strcmp(argv[1], "cat") == 0) {
-                cmd = cbc_cat;
-            } else if (strcmp(argv[1], "cat") == 0) {
-                cmd = cbc_cat;
-            } else if (strcmp(argv[1], "cp") == 0) {
-                cmd = cbc_cp;
-            } else if (strcmp(argv[1], "create") == 0) {
-                cmd = cbc_create;
-            } else if (strcmp(argv[1], "receive") == 0) {
-                cmd = cbc_receive;
-            } else if (strcmp(argv[1], "rm") == 0) {
-                cmd = cbc_rm;
-            } else if (strcmp(argv[1], "send") == 0) {
-                cmd = cbc_send;
-            } else if (strcmp(argv[1], "stats") == 0) {
-                cmd = cbc_stats;
-            } else if (strcmp(argv[1], "flush") == 0) {
-                cmd = cbc_flush;
-            } else if (strcmp(argv[1], "lock") == 0) {
-                cmd = cbc_lock;
-            } else if (strcmp(argv[1], "unlock") == 0) {
-                cmd = cbc_unlock;
-            } else if (strcmp(argv[1], "version") == 0) {
-                cmd = cbc_version;
-            } else if (strcmp(argv[1], "verify") == 0) {
-                cmd = cbc_verify;
-            } else if (strcmp(argv[1], "hash") == 0) {
-                cmd = cbc_hash;
-            }
-        } else {
-            cerr << "Usage: cbc command [options]" << endl
-                 << "command may be:" << endl
-                 << "   cat        output keys to stdout" << endl
-                 << "   cp         store files to the cluster" << endl
-                 << "   create     store files with options" << endl
-                 << "   flush      remove all keys from the cluster" << endl
-                 << "   hash       hash key(s) and print out useful info" << endl
-                 << "   lock       lock keys" << endl
-                 << "   unlock     unlock keys" << endl
-                 << "   rm         remove keys" << endl
-                 << "   stats      show stats" << endl
-                 << "   verify     verify content in cache with files" << endl
-                 << "   version    show version" << endl
-                 << "Use 'cbc command --help' to show the options" << endl;
-            exit(EXIT_FAILURE);
+            cmdstr.assign("cbc-");
+            cmdstr.append(argv[1]);
+            cmd = getBuiltin(cmdstr);
         }
-
         if (cmd == cbc_illegal) {
-            cerr << "Error: Unknown command \"" << argv[1] << "\"" << endl;
+            if (cmdstr != argv[0]) {
+                cerr << "Error: Unknown command \"" << cmdstr << "\"" << endl;
+            }
+            printHelp();
             exit(EXIT_FAILURE);
         }
         --argc;
         ++argv;
     }
 
-    if (cmd == cbc_version) {
+    if (cmd == cbc_help) {
+        if (argc > 1) {
+            cmdstr.assign("cbc-");
+            cmdstr.append(argv[1]);
+            cmd = getBuiltin(cmdstr);
+            if (cmd == cbc_illegal) {
+                cerr << "Error: Unknown command \"" << cmdstr << "\"" << endl;
+                printHelp();
+                exit(EXIT_FAILURE);
+            } else {
+                const char *help_argv[] = {argv[1], "-?", NULL};
+                handleCommandLineOptions(cmd, 2, (char **)help_argv);
+            }
+        } else {
+            printHelp();
+        }
+    } else if (cmd == cbc_version) {
         cout << "cbc built from: " << PACKAGE_STRING << endl
              << "    using libcouchbase: " << libcouchbase_get_version(NULL)
              << endl;
