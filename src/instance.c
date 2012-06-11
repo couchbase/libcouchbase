@@ -22,7 +22,7 @@
  * @todo add more documentation
  */
 #include "internal.h"
-#ifndef _win32
+#ifndef _WIN32
 #include <dlfcn.h>
 #endif
 
