@@ -136,6 +136,7 @@ tests_unit_tests_SOURCES = tests/unit_tests.cc \
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
 tests_unit_tests_LDADD = libcouchbase.la
+tests_unit_tests_CPPFLAGS = $(AM_CPPFLAGS)
 
 if HAVE_GOOGLETEST_SRC
 noinst_LTLIBRARIES += libgtest.la
@@ -144,7 +145,7 @@ libgtest_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
                        $(NO_WERROR)
 tests_unit_tests_DEPENDENCIES += libgtest.la
 tests_unit_tests_LDADD += libgtest.la -lpthread
-tests_unit_tests_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
+tests_unit_tests_CPPFLAGS += -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
 endif
 
 if !HAVE_GOOGLETEST_SRC
