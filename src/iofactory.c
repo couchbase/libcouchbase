@@ -40,7 +40,6 @@ struct plugin_st {
     } func;
 };
 
-#ifndef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
 static void get_create_func(const char *image,
                             struct plugin_st *plugin,
                             libcouchbase_error_t *error)
@@ -60,6 +59,11 @@ static void get_create_func(const char *image,
         plugin->dlhandle = dlhandle;
     }
 }
+
+#ifdef __APPLE__
+#define PLUGIN_SO(NAME) "libcouchbase_"NAME".1.dylib"
+#else
+#define PLUGIN_SO(NAME) "libcouchbase_"NAME".so.1"
 #endif
 
 LIBCOUCHBASE_API
@@ -71,18 +75,14 @@ libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t typ
     if (type == LIBCOUCHBASE_IO_OPS_DEFAULT || type == LIBCOUCHBASE_IO_OPS_LIBEVENT) {
         struct plugin_st plugin;
         memset(&plugin, 0, sizeof(plugin));
-#ifdef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-        plugin.func.create = libcouchbase_create_libevent_io_opts;
-#else
+        /* search definition in main program */
         get_create_func(NULL, &plugin, error);
+
+#ifndef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
         if (plugin.func.create == NULL) {
-#ifdef __APPLE__
-            get_create_func("libcouchbase_libevent.1.dylib", &plugin, error);
-#else
-            get_create_func("libcouchbase_libevent.so.1", &plugin, error);
-#endif /* __APPLE__ */
+            get_create_func(PLUGIN_SO("libevent"), &plugin, error);
         }
-#endif /* LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED */
+#endif
 
         if (plugin.func.create != NULL) {
             ret = plugin.func.create(cookie);
@@ -99,3 +99,4 @@ libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t typ
 
     return ret;
 }
+#undef PLUGIN_SO
