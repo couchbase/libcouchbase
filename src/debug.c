@@ -85,7 +85,6 @@ static void init_logging(libcouchbase_debug_st *debugp)
         }
     } else {
         debugp->level = LIBCOUCHBASE_LOGLVL_WARN;
-        return;
     }
 
     if (getenv(LIBCOUCHBASE_DEBUG_ENV_COLOR_ENABLE)) {
