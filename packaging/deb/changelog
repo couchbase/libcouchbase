@@ -1,3 +1,24 @@
+libcouchbase (1.1.0dp6) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Fix guards for socket errno macros
+  * [cbc] Add suffix to command implementations
+  * cbc tool is depending on libvbucket now
+  * Define size_t types to fix MSVC 9 build
+  * MSVC 9 isn't C99, but has stddef.h, so just include it
+  * CCBC-71 Implement 'help' command for cbc tool
+  * CCBC-70 Close dynamic libraries
+  * Fix windows build
+  * Simplify embedding of the plugins
+  * Allow to use colors when debug level isn't set
+
+  [Trond Norbye]
+  * CCBC-63 Include types definitions for POSIX systems
+  * Undefine NDEBUG to avoid asserts to be optimized out
+  * CCBC-72: Fix compilation on macosx with gtest from homebrew
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 13 Jun 2012 20:32:35 +0300
+
 libcouchbase (1.1.0dp5) stable; urgency=low
 
   [Sergey Avseyev]
