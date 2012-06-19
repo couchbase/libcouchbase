@@ -667,9 +667,9 @@ extern "C" {
      * @param body The POST body for Couchbase View request.
      * @param nbody Size of body
      * @param method HTTP message type to be sent to server
-     * @param chunked If true the client will use libcouchbase_couch_data_callback
-     *                to notify about response and libcouchbase_couch_complete
-     *                otherwise.
+     * @param chunked If true the client will use libcouchbase_http_data_callback
+     *                to notify about response and will call
+     *                libcouchbase_http_complete with empty data eventually.
      * @param error Where to store information about why creation failed
      *
      * @example Fetch first 10 docs from the bucket
@@ -696,8 +696,40 @@ extern "C" {
                                                                 libcouchbase_error_t *error);
 
     /**
+     * Execute request using management protocol. Using this function you
+     * can configure the cluster, add/remove buckets, rebalance etc. It
+     * behaves like libcouchbase_make_couch_request() but works with another
+     * endpoint.
+     *
+     * @param instance The handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param path A view path string with optional query paramsh
+     * @param npath Size of path
+     * @param body The POST body for request.
+     * @param nbody Size of body
+     * @param method HTTP message type to be sent to server
+     * @param chunked If true the client will use libcouchbase_http_data_callback
+     *                to notify about response and will call
+     *                libcouchbase_http_complete with empty data eventually.
+     * @param error Where to store information about why creation failed
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_http_request_t libcouchbase_make_management_request(libcouchbase_t instance,
+                                                                     const void *command_cookie,
+                                                                     const char *path,
+                                                                     libcouchbase_size_t npath,
+                                                                     const void *body,
+                                                                     libcouchbase_size_t nbody,
+                                                                     libcouchbase_http_method_t method,
+                                                                     int chunked,
+                                                                     libcouchbase_error_t *error);
+
+    /**
      * Cancel HTTP request (view or management API). This function could be
      * called from the callback to stop the request.
+     *
+     * @param request The request handle
      */
     LIBCOUCHBASE_API
     void libcouchbase_cancel_http_request(libcouchbase_http_request_t request);
