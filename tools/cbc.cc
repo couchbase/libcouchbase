@@ -895,20 +895,20 @@ static cbc_command_t getBuiltin(string name)
 static void printHelp()
 {
     cerr << "Usage: cbc command [options]" << endl
-        << "command may be:" << endl
-        << "   help       show this help or for given command" << endl
-        << "   cat        output keys to stdout" << endl
-        << "   cp         store files to the cluster" << endl
-        << "   create     store files with options" << endl
-        << "   flush      remove all keys from the cluster" << endl
-        << "   hash       hash key(s) and print out useful info" << endl
-        << "   lock       lock keys" << endl
-        << "   unlock     unlock keys" << endl
-        << "   rm         remove keys" << endl
-        << "   stats      show stats" << endl
-        << "   verify     verify content in cache with files" << endl
-        << "   version    show version" << endl
-        << "Use 'cbc command --help' to show the options" << endl;
+         << "command may be:" << endl
+         << "   help       show this help or for given command" << endl
+         << "   cat        output keys to stdout" << endl
+         << "   cp         store files to the cluster" << endl
+         << "   create     store files with options" << endl
+         << "   flush      remove all keys from the cluster" << endl
+         << "   hash       hash key(s) and print out useful info" << endl
+         << "   lock       lock keys" << endl
+         << "   unlock     unlock keys" << endl
+         << "   rm         remove keys" << endl
+         << "   stats      show stats" << endl
+         << "   verify     verify content in cache with files" << endl
+         << "   version    show version" << endl
+         << "Use 'cbc command --help' to show the options" << endl;
 }
 
 /**
