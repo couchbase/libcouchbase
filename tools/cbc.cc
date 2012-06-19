@@ -85,7 +85,7 @@ extern "C" {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "Stored \"";
             cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\" CAS 0x" << hex << cas << endl;
+            cerr << "\" CAS:" << hex << cas << endl;
         } else {
             cerr << "Failed to store \"";
             cerr.write(static_cast<const char *>(key), nkey);
@@ -148,8 +148,8 @@ extern "C" {
         if (error == LIBCOUCHBASE_SUCCESS) {
             cerr << "\"";
             cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\" Size " << nbytes << " Flags 0x" << std::hex
-                 << flags << " CAS 0x" << cas << endl;
+            cerr << "\" Size:" << nbytes << " Flags:" << std::hex
+                 << flags << " CAS:" << cas << endl;
             cerr.flush();
             cout.write(static_cast<const char *>(bytes), nbytes);
             cout.flush();
@@ -417,18 +417,18 @@ static bool hash_impl(libcouchbase_t instance, list<string> &keys)
         int vbucket_id, idx;
         (void)vbucket_map(instance->vbucket_config, iter->c_str(), iter->length(), &vbucket_id, &idx);
         libcouchbase_server_t *server = instance->servers + idx;
-        cout << "\"" << *iter << "\"\t" << "vBucket: " << vbucket_id
-             << ", Server: \"" << server->authority << "\"";
+        cout << "\"" << *iter << "\"\t" << "vBucket:" << vbucket_id
+             << " Server:\"" << server->authority << "\"";
         if (server->couch_api_base) {
-            cout << ", Couch API: \"" << server->couch_api_base << "\"";
+            cout << " CouchAPI:\"" << server->couch_api_base << "\"";
         }
         libcouchbase_size_t nrepl = (libcouchbase_size_t)vbucket_config_get_num_replicas(instance->vbucket_config);
         if (nrepl > 0) {
-            cout << ", Replicas: ";
+            cout << " Replicas:";
             for (libcouchbase_size_t ii = 0; ii < nrepl; ++ii) {
                 cout << "\"" << instance->servers[ii].authority << "\"";
                 if (ii != nrepl - 1) {
-                    cout << ", ";
+                    cout << ",";
                 }
             }
         }
