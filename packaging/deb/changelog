@@ -1,3 +1,16 @@
+libcouchbase (1.1.0dp7) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Extract HTTP client
+  * Implement function to execution management requests
+  * Reformat the cbc.cc
+
+  [Trond Norbye]
+  * Add support for notification callbacks for configuration changes
+  * Fix win32 make
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Tue, 19 Jun 2012 19:54:14 +0300
+
 libcouchbase (1.1.0dp6) stable; urgency=low
 
   [Sergey Avseyev]

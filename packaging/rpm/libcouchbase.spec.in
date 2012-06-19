@@ -65,6 +65,16 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Tue Jun 19 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp7
+[Sergey Avseyev]
+- Extract HTTP client
+- Implement function to execution management requests
+- Reformat the cbc.cc
+
+[Trond Norbye]
+- Add support for notification callbacks for configuration changes
+- Fix win32 make
+
 * Wed Jun 13 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp6
 [Sergey Avseyev]
 - Fix guards for socket errno macros
