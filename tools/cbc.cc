@@ -477,7 +477,7 @@ static bool unlock_impl(libcouchbase_t instance, list<string> &keys)
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
         libcouchbase_cas_t cas;
         string key = *iter;
-        stringstream ss(key);
+        stringstream ss(*(++iter));
         ss >> hex >> cas;
         libcouchbase_error_t err = libcouchbase_unlock(instance, NULL,
                                                        (const void *)key.c_str(),
