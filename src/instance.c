@@ -509,7 +509,12 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                     libcouchbase_server_send_packets(ss);
                 }
             }
+            instance->callbacks.configuration(instance,
+                                              LIBCOUCHBASE_CONFIGURATION_CHANGED);
+
         } else {
+            instance->callbacks.configuration(instance,
+                                              LIBCOUCHBASE_CONFIGURATION_UNCHANGED);
             vbucket_config_destroy(next_config);
         }
         if (diff) {
@@ -529,6 +534,8 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                 instance->vbucket_state_listener(instance->servers + ii);
             }
         }
+        instance->callbacks.configuration(instance,
+                                          LIBCOUCHBASE_CONFIGURATION_NEW);
     }
 }
 

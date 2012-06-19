@@ -869,6 +869,13 @@ static void dummy_unlock_callback(libcouchbase_t instance,
     (void)nkey;
 }
 
+static void dummy_configuration_callback(libcouchbase_t instance,
+                                         libcouchbase_configuration_t val)
+{
+    (void)instance;
+    (void)val;
+}
+
 void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 {
     int ii;
@@ -894,6 +901,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.couch_data = dummy_couch_data_callback;
     instance->callbacks.flush = dummy_flush_callback;
     instance->callbacks.unlock = dummy_unlock_callback;
+    instance->callbacks.configuration = dummy_configuration_callback;
 
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_MUTATION] = tap_mutation_handler;
     instance->request_handler[PROTOCOL_BINARY_CMD_TAP_DELETE] = tap_deletion_handler;
@@ -1109,6 +1117,17 @@ libcouchbase_unlock_callback libcouchbase_set_unlock_callback(libcouchbase_t ins
     libcouchbase_unlock_callback ret = instance->callbacks.unlock;
     if (cb != NULL) {
         instance->callbacks.unlock = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_configuration_callback libcouchbase_set_configuration_callback(libcouchbase_t instance,
+                                                                            libcouchbase_configuration_callback cb)
+{
+    libcouchbase_configuration_callback ret = instance->callbacks.configuration;
+    if (cb != NULL) {
+        instance->callbacks.configuration = cb;
     }
     return ret;
 }

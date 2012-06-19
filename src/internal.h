@@ -121,6 +121,7 @@ extern "C" {
         libcouchbase_couch_complete_callback couch_complete;
         libcouchbase_couch_data_callback couch_data;
         libcouchbase_unlock_callback unlock;
+        libcouchbase_configuration_callback configuration;
     };
 
     struct libcouchbase_st {

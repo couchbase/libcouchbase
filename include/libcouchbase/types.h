@@ -76,6 +76,12 @@ extern "C" {
         LIBCOUCHBASE_BUCKET_ENOENT = 0x18
     } libcouchbase_error_t;
 
+    typedef enum {
+        LIBCOUCHBASE_CONFIGURATION_NEW = 0x00,
+        LIBCOUCHBASE_CONFIGURATION_CHANGED = 0x01,
+        LIBCOUCHBASE_CONFIGURATION_UNCHANGED = 0x02
+    } libcouchbase_configuration_t;
+
     /**
      * Storing an item in couchbase is only one operation with a different
      * set of attributes / constraints.

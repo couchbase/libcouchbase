@@ -160,6 +160,10 @@ extern "C" {
                                                  const void *key,
                                                  libcouchbase_size_t nkey);
 
+    typedef void (*libcouchbase_configuration_callback)(libcouchbase_t instance,
+                                                        libcouchbase_configuration_t val);
+
+
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
                                                             libcouchbase_get_callback);
@@ -227,6 +231,11 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_unlock_callback libcouchbase_set_unlock_callback(libcouchbase_t,
                                                                   libcouchbase_unlock_callback);
+
+    LIBCOUCHBASE_API
+    libcouchbase_configuration_callback libcouchbase_set_configuration_callback(libcouchbase_t,
+                                                                                libcouchbase_configuration_callback);
+
 
 #ifdef __cplusplus
 }
