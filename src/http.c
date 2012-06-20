@@ -423,17 +423,24 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
     {
         /* Build URL */
         ringbuffer_t urlbuf;
+        libcouchbase_size_t nmisc = 1;
 
         if (ringbuffer_initialize(&urlbuf, 1024) == -1) {
             libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
         }
-        if (!ringbuffer_ensure_capacity(&urlbuf, nbase + npath + 1)) {
+        if (memcmp(base, "http://", 7) != 0) {
+            nmisc += 7;
+        }
+        if (!ringbuffer_ensure_capacity(&urlbuf, nbase + npath + nmisc)) {
             ringbuffer_destruct(&urlbuf);
             libcouchbase_http_request_destroy(req);
             *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
             return NULL;
+        }
+        if (nmisc > 1) {
+            BUFF_APPEND(&urlbuf, "http://", 7);
         }
         BUFF_APPEND(&urlbuf, base, nbase);
         if (path[0] != '/') {
