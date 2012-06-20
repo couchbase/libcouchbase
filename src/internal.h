@@ -120,6 +120,8 @@ extern "C" {
         libcouchbase_error_callback error;
         libcouchbase_http_complete_callback couch_complete;
         libcouchbase_http_data_callback couch_data;
+        libcouchbase_http_complete_callback management_complete;
+        libcouchbase_http_data_callback management_data;
         libcouchbase_unlock_callback unlock;
         libcouchbase_configuration_callback configuration;
     };

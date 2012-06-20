@@ -229,6 +229,14 @@ extern "C" {
                                                                          libcouchbase_http_data_callback cb);
 
     LIBCOUCHBASE_API
+    libcouchbase_http_complete_callback libcouchbase_set_management_complete_callback(libcouchbase_t instance,
+                                                                                      libcouchbase_http_complete_callback cb);
+
+    LIBCOUCHBASE_API
+    libcouchbase_http_data_callback libcouchbase_set_management_data_callback(libcouchbase_t instance,
+                                                                              libcouchbase_http_data_callback cb);
+
+    LIBCOUCHBASE_API
     libcouchbase_unlock_callback libcouchbase_set_unlock_callback(libcouchbase_t,
                                                                   libcouchbase_unlock_callback);
 
