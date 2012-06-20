@@ -384,6 +384,7 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
                                                                   int chunked,
                                                                   const char *username,
                                                                   const char *password,
+                                                                  const char *content_type,
                                                                   libcouchbase_http_data_callback data_cb,
                                                                   libcouchbase_http_complete_callback complete_cb,
                                                                   libcouchbase_error_t *error)
@@ -495,7 +496,6 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
             }
             nauth = strlen(auth);
         }
-
         nn = strlen(method_strings[method]) + req->url_info.field_data[UF_PATH].len + sizeof(http_version);
         if (req->url_info.field_set & UF_QUERY) {
             nn += req->url_info.field_data[UF_QUERY].len + 1;
@@ -506,6 +506,12 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
         }
         nn += 10 + req->url_info.field_data[UF_HOST].len +
               req->url_info.field_data[UF_PORT].len; /* Host: example.com:666\r\n\r\n */
+        if (nbody) {
+            if (content_type == NULL) {
+                content_type = "application/json";
+            }
+            nn += strlen(content_type);
+        }
 
         if (!ringbuffer_ensure_capacity(&req->output, nn)) {
             libcouchbase_http_request_destroy(req);
@@ -555,8 +561,8 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
                 *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
                 return NULL;
             }
-            nn = snprintf(post_headers, 512, "\r\nContent-Type: application/json\r\n"
-                          "Content-Length: %ld\r\n\r\n", (long)nbody);
+            nn = snprintf(post_headers, 512, "\r\nContent-Type: %s\r\n"
+                          "Content-Length: %ld\r\n\r\n", content_type, (long)nbody);
             if (!ringbuffer_ensure_capacity(&req->output, nbody + nn)) {
                 libcouchbase_http_request_destroy(req);
                 *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
@@ -641,7 +647,7 @@ libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t insta
     return libcouchbase_make_http_request(instance, command_cookie, server,
                                           base, nbase, path, npath, body,
                                           nbody, method, chunked,
-                                          NULL, NULL,
+                                          NULL, NULL, "application/json",
                                           instance->callbacks.couch_data,
                                           instance->callbacks.couch_complete,
                                           error);
@@ -678,6 +684,7 @@ libcouchbase_http_request_t libcouchbase_make_management_request(libcouchbase_t 
                                           nbody, method, chunked,
                                           instance->username,
                                           instance->password,
+                                          "application/x-www-form-urlencoded",
                                           instance->callbacks.management_data,
                                           instance->callbacks.management_complete,
                                           error);
