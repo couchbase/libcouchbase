@@ -58,7 +58,8 @@ enum cbc_command_t {
     cbc_version,
     cbc_hash,
     cbc_help,
-    cbc_view
+    cbc_view,
+    cbc_admin
 };
 
 extern "C" {
@@ -488,6 +489,21 @@ static bool view_impl(libcouchbase_t instance, string &query, string &data,
     return true;
 }
 
+static bool admin_impl(libcouchbase_t instance, string &query, string &data,
+                       bool chunked, libcouchbase_http_method_t method)
+{
+    libcouchbase_error_t rc;
+
+    libcouchbase_make_management_request(instance, NULL, query.c_str(), query.length(),
+                                         data.c_str(), data.length(), method, chunked, &rc);
+    if (rc != LIBCOUCHBASE_SUCCESS) {
+        cerr << "Failed to send requests: " << endl
+             << libcouchbase_strerror(instance, rc) << endl;
+        return false;
+    }
+    return true;
+}
+
 static bool lock_impl(libcouchbase_t instance, list<string> &keys, libcouchbase_time_t exptime)
 {
     if (keys.empty()) {
@@ -710,7 +726,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     bool chunked = false;
     string data;
     libcouchbase_http_method_t method = LIBCOUCHBASE_HTTP_METHOD_GET;
-    if (cmd == cbc_view) {
+    if (cmd == cbc_view || cmd == cbc_admin) {
         getopt.addOption(new CommandLineOption('c', "chunked", false,
                                                "Use chunked callback to stream the data"));
         getopt.addOption(new CommandLineOption('d', "data", true,
@@ -791,7 +807,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
                         break;
                     }
-                } else if (cmd == cbc_view) {
+                } else if (cmd == cbc_view || cmd == cbc_admin) {
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'c':
@@ -844,6 +860,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)libcouchbase_set_unlock_callback(instance, unlock_callback);
     (void)libcouchbase_set_couch_data_callback(instance, data_callback);
     (void)libcouchbase_set_couch_complete_callback(instance, complete_callback);
+    (void)libcouchbase_set_management_data_callback(instance, data_callback);
+    (void)libcouchbase_set_management_complete_callback(instance, complete_callback);
 
     if (config.getTimeout() != 0) {
         libcouchbase_set_timeout(instance, config.getTimeout());
@@ -915,8 +933,13 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         success = hash_impl(instance, getopt.arguments);
         break;
     case cbc_view:
+    case cbc_admin:
         if (getopt.arguments.size() == 1) {
-            success = view_impl(instance, getopt.arguments.front(), data, chunked, method);
+            if (cmd == cbc_view) {
+                success = view_impl(instance, getopt.arguments.front(), data, chunked, method);
+            } else {
+                success = admin_impl(instance, getopt.arguments.front(), data, chunked, method);
+            }
         } else {
             cerr << "There must be only one view endpoint specified" << endl;
         }
@@ -984,6 +1007,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_help;
     } else if (name.find("cbc-view") != string::npos) {
         return cbc_view;
+    } else if (name.find("cbc-admin") != string::npos) {
+        return cbc_admin;
     }
 
     return cbc_illegal;
@@ -1006,6 +1031,7 @@ static void printHelp()
          << "   verify     verify content in cache with files" << endl
          << "   version    show version" << endl
          << "   view       execute couchbase view (aka map/reduce) request" << endl
+         << "   admin      execute request to management REST API" << endl
          << "Use 'cbc command --help' to show the options" << endl;
 }
 
