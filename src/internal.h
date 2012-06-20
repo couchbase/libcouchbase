@@ -118,8 +118,8 @@ extern "C" {
         libcouchbase_tap_opaque_callback tap_opaque;
         libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
         libcouchbase_error_callback error;
-        libcouchbase_couch_complete_callback couch_complete;
-        libcouchbase_couch_data_callback couch_data;
+        libcouchbase_http_complete_callback couch_complete;
+        libcouchbase_http_data_callback couch_data;
         libcouchbase_unlock_callback unlock;
         libcouchbase_configuration_callback configuration;
     };
@@ -310,9 +310,9 @@ extern "C" {
         int chunked;
         /** This callback will be executed when the whole response will be
          * transferred */
-        libcouchbase_couch_complete_callback on_complete;
+        libcouchbase_http_complete_callback on_complete;
         /** This callback will be executed for each chunk of the response */
-        libcouchbase_couch_data_callback on_data;
+        libcouchbase_http_data_callback on_data;
         /** The outgoing buffer for this request */
         ringbuffer_t output;
         /** The incoming buffer for this request */

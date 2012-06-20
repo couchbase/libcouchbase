@@ -127,15 +127,15 @@ extern "C" {
      * and libcouchbase will pass response body to this callback unless
      * couch_data_callback set up.
      */
-    typedef void (*libcouchbase_couch_complete_callback)(libcouchbase_http_request_t request,
-                                                         libcouchbase_t instance,
-                                                         const void *cookie,
-                                                         libcouchbase_error_t error,
-                                                         libcouchbase_http_status_t status,
-                                                         const char *path,
-                                                         libcouchbase_size_t npath,
-                                                         const void *bytes,
-                                                         libcouchbase_size_t nbytes);
+    typedef void (*libcouchbase_http_complete_callback)(libcouchbase_http_request_t request,
+                                                        libcouchbase_t instance,
+                                                        const void *cookie,
+                                                        libcouchbase_error_t error,
+                                                        libcouchbase_http_status_t status,
+                                                        const char *path,
+                                                        libcouchbase_size_t npath,
+                                                        const void *bytes,
+                                                        libcouchbase_size_t nbytes);
 
     /**
      * couch_data_callback switch the view operation into the 'chunked' mode
@@ -144,15 +144,15 @@ extern "C" {
      * NULL for bytes and zero for nbytes to signal that request was
      * completed.
      */
-    typedef void (*libcouchbase_couch_data_callback)(libcouchbase_http_request_t request,
-                                                     libcouchbase_t instance,
-                                                     const void *cookie,
-                                                     libcouchbase_error_t error,
-                                                     libcouchbase_http_status_t status,
-                                                     const char *path,
-                                                     libcouchbase_size_t npath,
-                                                     const void *bytes,
-                                                     libcouchbase_size_t nbytes);
+    typedef void (*libcouchbase_http_data_callback)(libcouchbase_http_request_t request,
+                                                    libcouchbase_t instance,
+                                                    const void *cookie,
+                                                    libcouchbase_error_t error,
+                                                    libcouchbase_http_status_t status,
+                                                    const char *path,
+                                                    libcouchbase_size_t npath,
+                                                    const void *bytes,
+                                                    libcouchbase_size_t nbytes);
 
     typedef void (*libcouchbase_unlock_callback)(libcouchbase_t instance,
                                                  const void *cookie,
@@ -221,12 +221,12 @@ extern "C" {
                                                                 libcouchbase_flush_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_couch_complete_callback libcouchbase_set_couch_complete_callback(libcouchbase_t instance,
-                                                                                  libcouchbase_couch_complete_callback cb);
+    libcouchbase_http_complete_callback libcouchbase_set_couch_complete_callback(libcouchbase_t instance,
+                                                                                 libcouchbase_http_complete_callback cb);
 
     LIBCOUCHBASE_API
-    libcouchbase_couch_data_callback libcouchbase_set_couch_data_callback(libcouchbase_t instance,
-                                                                          libcouchbase_couch_data_callback cb);
+    libcouchbase_http_data_callback libcouchbase_set_couch_data_callback(libcouchbase_t instance,
+                                                                         libcouchbase_http_data_callback cb);
 
     LIBCOUCHBASE_API
     libcouchbase_unlock_callback libcouchbase_set_unlock_callback(libcouchbase_t,
