@@ -473,13 +473,13 @@ static bool hash_impl(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool view_impl(libcouchbase_t instance, string &query, string &data, bool chunked)
+static bool view_impl(libcouchbase_t instance, string &query, string &data,
+                      bool chunked, libcouchbase_http_method_t method)
 {
     libcouchbase_error_t rc;
 
-    libcouchbase_make_couch_request(instance, NULL, query.c_str(), query.length(), data.c_str(), data.length(),
-                                    data.length() ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
-                                    chunked, &rc);
+    libcouchbase_make_couch_request(instance, NULL, query.c_str(), query.length(),
+                                    data.c_str(), data.length(), method, chunked, &rc);
     if (rc != LIBCOUCHBASE_SUCCESS) {
         cerr << "Failed to send requests:" << endl
              << libcouchbase_strerror(instance, rc) << endl;
@@ -709,11 +709,14 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     bool chunked = false;
     string data;
+    libcouchbase_http_method_t method = LIBCOUCHBASE_HTTP_METHOD_GET;
     if (cmd == cbc_view) {
         getopt.addOption(new CommandLineOption('c', "chunked", false,
                                                "Use chunked callback to stream the data"));
         getopt.addOption(new CommandLineOption('d', "data", true,
-                                               "POST data, e.g. {\"keys\": [\"key1\", \"key2\", ...]}"));
+                                               "HTTP body data for POST or PUT requests, e.g. {\"keys\": [\"key1\", \"key2\", ...]}"));
+        getopt.addOption(new CommandLineOption('X', "request", true,
+                                               "HTTP request method, possible values GET, POST, PUT, DELETE (default GET)"));
     }
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -797,6 +800,20 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     case 'd':
                         data = (*iter)->argument;
                         break;
+                    case 'X':
+                        {
+                            string method_str = (*iter)->argument;
+                            if (method_str == "GET") {
+                                method = LIBCOUCHBASE_HTTP_METHOD_GET;
+                            } else if (method_str == "POST") {
+                                method = LIBCOUCHBASE_HTTP_METHOD_POST;
+                            } else if (method_str == "PUT") {
+                                method = LIBCOUCHBASE_HTTP_METHOD_PUT;
+                            } else if (method_str == "DELETE") {
+                                method = LIBCOUCHBASE_HTTP_METHOD_DELETE;
+                            }
+                            break;
+                        }
                     }
                 }
 
@@ -899,7 +916,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         break;
     case cbc_view:
         if (getopt.arguments.size() == 1) {
-            success = view_impl(instance, getopt.arguments.front(), data, chunked);
+            success = view_impl(instance, getopt.arguments.front(), data, chunked, method);
         } else {
             cerr << "There must be only one view endpoint specified" << endl;
         }
