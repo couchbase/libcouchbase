@@ -168,14 +168,11 @@ libmockserver_la_SOURCES = \
 # Example programs using the library
 #
 if BUILD_TOOLS
-noinst_PROGRAMS = example/pillowfight example/couchview
+noinst_PROGRAMS = example/pillowfight
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/couchview_yajl
 endif
 endif
-
-example_couchview_SOURCES = example/couchview.c
-example_couchview_LDADD = libcouchbase.la
 
 example_couchview_yajl_SOURCES = example/couchview_yajl.c
 example_couchview_yajl_LDADD = libcouchbase.la -lyajl
