@@ -341,7 +341,7 @@ int libcouchbase_has_data_in_buffers(libcouchbase_t instance)
     for (ii = 0; ii < instance->nservers; ++ii) {
         libcouchbase_server_t *c = instance->servers + ii;
         if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes ||
-                c->pending.nbytes) {
+                c->pending.nbytes || hashset_num_items(c->http_requests)) {
             return 1;
         }
     }
