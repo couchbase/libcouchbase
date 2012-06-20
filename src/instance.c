@@ -183,6 +183,8 @@ libcouchbase_t libcouchbase_create(const char *host,
             return NULL;
         }
 
+        ret->username = strdup(user);
+        ret->password = strdup(passwd);
         offset += snprintf(buffer + offset, sizeof(buffer) - (libcouchbase_size_t)offset,
                            "Authorization: Basic %s\r\n", base64);
     }
@@ -265,6 +267,8 @@ void libcouchbase_destroy(libcouchbase_t instance)
     free(instance->vbucket_stream.header);
     free(instance->vb_server_map);
     free(instance->histogram);
+    free(instance->username);
+    free(instance->password);
 
     memset(instance, 0xff, sizeof(*instance));
     free(instance);

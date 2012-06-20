@@ -187,6 +187,10 @@ extern "C" {
         RESPONSE_HANDLER response_handler[0x100];
         REQUEST_HANDLER request_handler[0x100];
 
+        /* credentials needed to operate cluster via REST API */
+        char *username;
+        char *password;
+
         struct {
             const char *name;
             union {
