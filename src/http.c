@@ -382,6 +382,8 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
                                                                   libcouchbase_size_t nbody,
                                                                   libcouchbase_http_method_t method,
                                                                   int chunked,
+                                                                  libcouchbase_http_data_callback data_cb,
+                                                                  libcouchbase_http_complete_callback complete_cb,
                                                                   libcouchbase_error_t *error)
 {
     libcouchbase_size_t nn;
@@ -407,8 +409,8 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
     req->command_cookie = command_cookie;
     req->path = path;
     req->npath = npath;
-    req->on_complete = instance->callbacks.couch_complete;
-    req->on_data = instance->callbacks.couch_data;
+    req->on_complete = complete_cb;
+    req->on_data = data_cb;
     req->chunked = chunked;
 
 #define BUFF_APPEND(dst, src, len)                                                      \
@@ -608,7 +610,10 @@ libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t insta
 
     return libcouchbase_make_http_request(instance, command_cookie, server,
                                           base, nbase, path, npath, body,
-                                          nbody, method, chunked, error);
+                                          nbody, method, chunked,
+                                          instance->callbacks.couch_data,
+                                          instance->callbacks.couch_complete,
+                                          error);
 }
 
 LIBCOUCHBASE_API
@@ -640,7 +645,10 @@ libcouchbase_http_request_t libcouchbase_make_management_request(libcouchbase_t 
 
     return libcouchbase_make_http_request(instance, command_cookie, server,
                                           base, nbase, path, npath, body,
-                                          nbody, method, chunked, error);
+                                          nbody, method, chunked,
+                                          instance->callbacks.management_data,
+                                          instance->callbacks.management_complete,
+                                          error);
 }
 
 LIBCOUCHBASE_API
