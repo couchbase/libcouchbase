@@ -87,6 +87,7 @@ static int http_parser_complete_cb(http_parser *p)
     char *bytes = NULL;
     libcouchbase_size_t np = 0, nbytes = 0;
 
+    req->completed = 1;
     if (!hashset_is_member(req->server->http_requests, req)) {
         return 0;
     }
@@ -191,7 +192,7 @@ static int request_do_read(libcouchbase_http_request_t req)
         if (HTTP_PARSER_ERRNO(req->parser) != HPE_OK) {
             return -1;
         }
-        if (req->cancelled) {
+        if (req->cancelled || req->completed) {
             return 0;
         } else {
             return nb;
@@ -239,7 +240,7 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
     (void)sock;
 
     if (which & LIBCOUCHBASE_READ_EVENT) {
-        rv =  request_do_read(req);
+        rv = request_do_read(req);
         if (rv > 0) {
             instance->io->update_event(instance->io, req->sock,
                                        req->event, LIBCOUCHBASE_READ_EVENT,

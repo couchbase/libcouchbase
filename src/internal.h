@@ -322,6 +322,8 @@ extern "C" {
         /** The cookie belonging to this request */
         const void *command_cookie;
         int cancelled;
+        /** Is HTTP parser completed its work */
+        int completed;
     };
 
     void libcouchbase_http_request_destroy(libcouchbase_http_request_t req);
