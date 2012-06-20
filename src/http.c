@@ -382,6 +382,8 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
                                                                   libcouchbase_size_t nbody,
                                                                   libcouchbase_http_method_t method,
                                                                   int chunked,
+                                                                  const char *username,
+                                                                  const char *password,
                                                                   libcouchbase_http_data_callback data_cb,
                                                                   libcouchbase_http_complete_callback complete_cb,
                                                                   libcouchbase_error_t *error)
@@ -481,11 +483,27 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
 
     {
         /* Render HTTP request */
+        char auth[256];
+        libcouchbase_size_t nauth = 0;
+        if (username && password) {
+            char cred[256];
+            snprintf(cred, sizeof(cred), "%s:%s", username, password);
+            if (libcouchbase_base64_encode(cred, auth, sizeof(auth)) == -1) {
+                *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+                libcouchbase_http_request_destroy(req);
+                return NULL;
+            }
+            nauth = strlen(auth);
+        }
+
         nn = strlen(method_strings[method]) + req->url_info.field_data[UF_PATH].len + sizeof(http_version);
         if (req->url_info.field_set & UF_QUERY) {
             nn += req->url_info.field_data[UF_QUERY].len + 1;
         }
         nn += sizeof(headers);
+        if (nauth) {
+            nn += 23 + nauth; /* Authorization: Basic ... */
+        }
         nn += 10 + req->url_info.field_data[UF_HOST].len +
               req->url_info.field_data[UF_PORT].len; /* Host: example.com:666\r\n\r\n */
 
@@ -517,6 +535,11 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
         BUFF_APPEND(&req->output, http_version, nn);
         nn = strlen(headers);
         BUFF_APPEND(&req->output, headers, nn);
+        if (nauth) {
+            BUFF_APPEND(&req->output, "Authorization: Basic ", 21);
+            BUFF_APPEND(&req->output, auth, nauth);
+            BUFF_APPEND(&req->output, "\r\n", 2);
+        }
         BUFF_APPEND(&req->output, "Host: ", 6);
         nn = req->url_info.field_data[UF_HOST].len;
         EXTRACT_URL_PART(UF_HOST, req->host, nn);
@@ -618,6 +641,7 @@ libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t insta
     return libcouchbase_make_http_request(instance, command_cookie, server,
                                           base, nbase, path, npath, body,
                                           nbody, method, chunked,
+                                          NULL, NULL,
                                           instance->callbacks.couch_data,
                                           instance->callbacks.couch_complete,
                                           error);
@@ -649,10 +673,11 @@ libcouchbase_http_request_t libcouchbase_make_management_request(libcouchbase_t 
     }
     base = server->rest_api_server;
     nbase = strlen(base);
-
     return libcouchbase_make_http_request(instance, command_cookie, server,
                                           base, nbase, path, npath, body,
                                           nbody, method, chunked,
+                                          instance->username,
+                                          instance->password,
                                           instance->callbacks.management_data,
                                           instance->callbacks.management_complete,
                                           error);
