@@ -57,7 +57,8 @@ enum cbc_command_t {
     cbc_verify,
     cbc_version,
     cbc_hash,
-    cbc_help
+    cbc_help,
+    cbc_view
 };
 
 extern "C" {
@@ -284,6 +285,40 @@ extern "C" {
         offset += sprintf(buffer + offset, " - %u\n", total);
         cerr << buffer;
     }
+
+    static void data_callback(libcouchbase_http_request_t, libcouchbase_t,
+                              const void *, libcouchbase_error_t,
+                              libcouchbase_http_status_t,
+                              const char *, size_t,
+                              const void *bytes, size_t nbytes)
+    {
+        cout.write(static_cast<const char *>(bytes), nbytes);
+        cout.flush();
+    }
+
+    static void complete_callback(libcouchbase_http_request_t,
+                                  libcouchbase_t instance,
+                                  const void *,
+                                  libcouchbase_error_t error,
+                                  libcouchbase_http_status_t status,
+                                  const char *path, size_t npath,
+                                  const void *bytes, size_t nbytes)
+    {
+        cerr << "\"";
+        cerr.write(static_cast<const char *>(path), npath);
+        cerr << "\": ";
+        if (error == LIBCOUCHBASE_SUCCESS) {
+            cerr << "OK Size:" << nbytes << endl;
+            cout.write(static_cast<const char *>(bytes), nbytes);
+        } else {
+            cerr << "FAIL(" << error << ") "
+                 << libcouchbase_strerror(instance, error)
+                 << " Status:" << status
+                 << " Size:" << nbytes << endl;
+            cout.write(static_cast<const char *>(bytes), nbytes);
+        }
+        cout.flush();
+    }
 }
 
 static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json)
@@ -435,6 +470,21 @@ static bool hash_impl(libcouchbase_t instance, list<string> &keys)
         cout << endl;
     }
 
+    return true;
+}
+
+static bool view_impl(libcouchbase_t instance, string &query, string &data, bool chunked)
+{
+    libcouchbase_error_t rc;
+
+    libcouchbase_make_couch_request(instance, NULL, query.c_str(), query.length(), data.c_str(), data.length(),
+                                    data.length() ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
+                                    chunked, &rc);
+    if (rc != LIBCOUCHBASE_SUCCESS) {
+        cerr << "Failed to send requests:" << endl
+             << libcouchbase_strerror(instance, rc) << endl;
+        return false;
+    }
     return true;
 }
 
@@ -656,6 +706,15 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                                "Treat value as JSON document (take key from '_id' attribute)"));
     }
 #endif
+
+    bool chunked = false;
+    string data;
+    if (cmd == cbc_view) {
+        getopt.addOption(new CommandLineOption('c', "chunked", false,
+                                               "Use chunked callback to stream the data"));
+        getopt.addOption(new CommandLineOption('d', "data", true,
+                                               "POST data, e.g. {\"keys\": [\"key1\", \"key2\", ...]}"));
+    }
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -729,6 +788,16 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
                         break;
                     }
+                } else if (cmd == cbc_view) {
+                    unknownOpt = false;
+                    switch ((*iter)->shortopt) {
+                    case 'c':
+                        chunked = true;
+                        break;
+                    case 'd':
+                        data = (*iter)->argument;
+                        break;
+                    }
                 }
 
                 if (unknownOpt) {
@@ -756,6 +825,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)libcouchbase_set_stat_callback(instance, stat_callback);
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
     (void)libcouchbase_set_unlock_callback(instance, unlock_callback);
+    (void)libcouchbase_set_couch_data_callback(instance, data_callback);
+    (void)libcouchbase_set_couch_complete_callback(instance, complete_callback);
 
     if (config.getTimeout() != 0) {
         libcouchbase_set_timeout(instance, config.getTimeout());
@@ -778,7 +849,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     list<string> keys;
 
-    bool success;
+    bool success = false;
     switch (cmd) {
     case cbc_cat:
         success = cat_impl(instance, getopt.arguments);
@@ -825,6 +896,13 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         break;
     case cbc_hash:
         success = hash_impl(instance, getopt.arguments);
+        break;
+    case cbc_view:
+        if (getopt.arguments.size() == 1) {
+            success = view_impl(instance, getopt.arguments.front(), data, chunked);
+        } else {
+            cerr << "There must be only one view endpoint specified" << endl;
+        }
         break;
     default:
         cerr << "Not implemented" << endl;
@@ -887,6 +965,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_hash;
     } else if (name.find("cbc-help") != string::npos) {
         return cbc_help;
+    } else if (name.find("cbc-view") != string::npos) {
+        return cbc_view;
     }
 
     return cbc_illegal;
@@ -908,6 +988,7 @@ static void printHelp()
          << "   stats      show stats" << endl
          << "   verify     verify content in cache with files" << endl
          << "   version    show version" << endl
+         << "   view       execute couchbase view (aka map/reduce) request" << endl
          << "Use 'cbc command --help' to show the options" << endl;
 }
 
