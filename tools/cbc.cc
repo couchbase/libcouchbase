@@ -809,6 +809,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     }
                 } else if (cmd == cbc_view || cmd == cbc_admin) {
                     unknownOpt = false;
+                    string arg = (*iter)->argument;
                     switch ((*iter)->shortopt) {
                     case 'c':
                         chunked = true;
@@ -817,19 +818,21 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         data = (*iter)->argument;
                         break;
                     case 'X':
-                        {
-                            string method_str = (*iter)->argument;
-                            if (method_str == "GET") {
-                                method = LIBCOUCHBASE_HTTP_METHOD_GET;
-                            } else if (method_str == "POST") {
-                                method = LIBCOUCHBASE_HTTP_METHOD_POST;
-                            } else if (method_str == "PUT") {
-                                method = LIBCOUCHBASE_HTTP_METHOD_PUT;
-                            } else if (method_str == "DELETE") {
-                                method = LIBCOUCHBASE_HTTP_METHOD_DELETE;
-                            }
-                            break;
+                        if (arg == "GET") {
+                            method = LIBCOUCHBASE_HTTP_METHOD_GET;
+                        } else if (arg == "POST") {
+                            method = LIBCOUCHBASE_HTTP_METHOD_POST;
+                        } else if (arg == "PUT") {
+                            method = LIBCOUCHBASE_HTTP_METHOD_PUT;
+                        } else if (arg == "DELETE") {
+                            method = LIBCOUCHBASE_HTTP_METHOD_DELETE;
+                        } else {
+                            unknownOpt = true;
+                            cerr << "Usupported HTTP method: " << arg << endl;
                         }
+                        break;
+                    default:
+                        unknownOpt = true;
                     }
                 }
 
