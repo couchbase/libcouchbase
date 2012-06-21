@@ -23,7 +23,6 @@
 #include <getopt.h>
 #include <vector>
 #include <iostream>
-#include <sstream>
 #include <fstream>
 #include <string.h>
 #include <sys/stat.h>
@@ -59,7 +58,8 @@ enum cbc_command_t {
     cbc_hash,
     cbc_help,
     cbc_view,
-    cbc_admin
+    cbc_admin,
+    cbc_bucket_create
 };
 
 extern "C" {
@@ -504,6 +504,40 @@ static bool admin_impl(libcouchbase_t instance, string &query, string &data,
     return true;
 }
 
+static bool bucket_create_impl(libcouchbase_t instance, list<string> &names,
+                               string &bucket_type, string &auth_type, int ram_quota,
+                               string &sasl_password, int replica_num, int proxy_port)
+{
+    libcouchbase_error_t rc;
+    const char query[] = "/pools/default/buckets";
+
+    if (names.empty()) {
+        cerr << "ERROR: you need to specify at least on bucket name" << endl;
+        return false;
+    }
+    for (list<string>::iterator iter = names.begin(); iter != names.end(); ++iter) {
+        stringstream data;
+        data << "name=" << *iter
+             << "&bucketType=" << bucket_type
+             << "&ramQuotaMB=" << ram_quota
+             << "&replicaNumber=" << replica_num
+             << "&authType=" << auth_type
+             << "&saslPassword=" << sasl_password;
+        if (proxy_port > 0) {
+            data << "&proxyPort=" << proxy_port;
+        }
+        libcouchbase_make_management_request(instance, NULL, query, sizeof(query) - 1,
+                                             data.str().c_str(), data.str().length(),
+                                             LIBCOUCHBASE_HTTP_METHOD_POST, false, &rc);
+        if (rc != LIBCOUCHBASE_SUCCESS) {
+            cerr << "Failed to send requests: " << endl
+                 << libcouchbase_strerror(instance, rc) << endl;
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool lock_impl(libcouchbase_t instance, list<string> &keys, libcouchbase_time_t exptime)
 {
     if (keys.empty()) {
@@ -662,7 +696,7 @@ static bool verify_impl(libcouchbase_t instance, list<string> &keys)
     return cat_impl(instance, keys);
 }
 
-void loadKeys(list<string> &keys)
+static void loadKeys(list<string> &keys)
 {
     char buffer[1024];
     while (fgets(buffer, (int)sizeof(buffer), stdin) != NULL) {
@@ -673,6 +707,24 @@ void loadKeys(list<string> &keys)
         buffer[idx] = '\0';
         keys.push_back(buffer);
     }
+}
+
+static bool isValidBucketName(const char *n) {
+    bool rv = strlen(n) > 0;
+    for (; *n; n++) {
+        rv &= isalpha(*n) || isdigit(*n) || *n == '.' || *n == '%' || *n == '_' || *n == '-';
+    }
+    return rv;
+}
+
+static bool verifyBucketNames(list<string> &names)
+{
+    for (list<string>::iterator ii = names.begin(); ii != names.end(); ++ii) {
+        if (!isValidBucketName(ii->c_str())) {
+            return false;
+        }
+    }
+    return true;
 }
 
 extern bool receive_impl(libcouchbase_t instance, list<string> &keys);
@@ -733,6 +785,27 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                                "HTTP body data for POST or PUT requests, e.g. {\"keys\": [\"key1\", \"key2\", ...]}"));
         getopt.addOption(new CommandLineOption('X', "request", true,
                                                "HTTP request method, possible values GET, POST, PUT, DELETE (default GET)"));
+    }
+    string bucket_type = "membase";
+    string auth_type = "sasl";
+    int ram_quota = 100;
+    string sasl_password;
+    int replica_num = 1;
+    int proxy_port = 0;
+    if (cmd == cbc_bucket_create) {
+        getopt.addOption(new CommandLineOption('B', "bucket-type", true,
+                                               "Bucket type, possible values are: membase (with alias couchbase), memcached) (default: membase)"));
+        getopt.addOption(new CommandLineOption('q', "ram-quota", true,
+                                               "RAM quota in megabytes (default: 100)"));
+        getopt.addOption(new CommandLineOption('a', "auth-type", true,
+                                               "Type of bucket authentication, possible values are: none, sasl (default: sasl)."
+                                               " Note you should specify free port for 'none'"));
+        getopt.addOption(new CommandLineOption('s', "sasl-passord", true,
+                                               "Password for SASL (default: '')"));
+        getopt.addOption(new CommandLineOption('r', "replica-number", true,
+                                               "Number of the nodes each key should be replicated, allowed values 0-3 (default 1)"));
+        getopt.addOption(new CommandLineOption('p', "proxy-port", true,
+                                               "Proxy port (default 11211)"));
     }
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -832,6 +905,34 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                             unknownOpt = true;
                             cerr << "Usupported HTTP method: " << arg << endl;
                         }
+                        break;
+                    default:
+                        unknownOpt = true;
+                    }
+                } else if (cmd == cbc_bucket_create) {
+                    string arg = (*iter)->argument;
+                    switch ((*iter)->shortopt) {
+                    case 'B':
+                        if (arg == "couchbase") {
+                            bucket_type = "membase";
+                        } else {
+                            bucket_type = arg;
+                        }
+                        break;
+                    case 'q':
+                        ram_quota = atoi((*iter)->argument);
+                        break;
+                    case 'a':
+                        auth_type = arg;
+                        break;
+                    case 's':
+                        sasl_password = arg;
+                        break;
+                    case 'r':
+                        replica_num = atoi((*iter)->argument);
+                        break;
+                    case 'p':
+                        proxy_port = atoi((*iter)->argument);
                         break;
                     default:
                         unknownOpt = true;
@@ -954,6 +1055,16 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
             cerr << "There must be only one endpoint specified" << endl;
         }
         break;
+    case cbc_bucket_create:
+        if (verifyBucketNames(getopt.arguments)) {
+            success = bucket_create_impl(instance, getopt.arguments,
+                                         bucket_type, auth_type, ram_quota,
+                                         sasl_password, replica_num, proxy_port);
+        } else {
+            cerr << "Bucket name can only contain characters in range A-Z, "
+                "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
+        }
+        break;
     default:
         cerr << "Not implemented" << endl;
         success = false;
@@ -1019,6 +1130,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_view;
     } else if (name.find("cbc-admin") != string::npos) {
         return cbc_admin;
+    } else if (name.find("cbc-bucket-create") != string::npos) {
+        return cbc_bucket_create;
     }
 
     return cbc_illegal;
@@ -1028,20 +1141,21 @@ static void printHelp()
 {
     cerr << "Usage: cbc command [options]" << endl
          << "command may be:" << endl
-         << "   help       show this help or for given command" << endl
-         << "   cat        output keys to stdout" << endl
-         << "   cp         store files to the cluster" << endl
-         << "   create     store files with options" << endl
-         << "   flush      remove all keys from the cluster" << endl
-         << "   hash       hash key(s) and print out useful info" << endl
-         << "   lock       lock keys" << endl
-         << "   unlock     unlock keys" << endl
-         << "   rm         remove keys" << endl
-         << "   stats      show stats" << endl
-         << "   verify     verify content in cache with files" << endl
-         << "   version    show version" << endl
-         << "   view       execute couchbase view (aka map/reduce) request" << endl
-         << "   admin      execute request to management REST API" << endl
+         << "   help            show this help or for given command" << endl
+         << "   cat             output keys to stdout" << endl
+         << "   cp              store files to the cluster" << endl
+         << "   create          store files with options" << endl
+         << "   flush           remove all keys from the cluster" << endl
+         << "   hash            hash key(s) and print out useful info" << endl
+         << "   lock            lock keys" << endl
+         << "   unlock          unlock keys" << endl
+         << "   rm              remove keys" << endl
+         << "   stats           show stats" << endl
+         << "   verify          verify content in cache with files" << endl
+         << "   version         show version" << endl
+         << "   view            execute couchbase view (aka map/reduce) request" << endl
+         << "   admin           execute request to management REST API" << endl
+         << "   bucket-create   create data bucket on the cluster" << endl
          << "Use 'cbc command --help' to show the options" << endl;
 }
 
