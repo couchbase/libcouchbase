@@ -59,7 +59,8 @@ enum cbc_command_t {
     cbc_help,
     cbc_view,
     cbc_admin,
-    cbc_bucket_create
+    cbc_bucket_create,
+    cbc_bucket_delete
 };
 
 extern "C" {
@@ -500,6 +501,24 @@ static bool admin_impl(libcouchbase_t instance, string &query, string &data,
         cerr << "Failed to send requests: " << endl
              << libcouchbase_strerror(instance, rc) << endl;
         return false;
+    }
+    return true;
+}
+
+static bool bucket_delete_impl(libcouchbase_t instance, list<string> &names)
+{
+    libcouchbase_error_t rc;
+
+    for (list<string>::iterator iter = names.begin(); iter != names.end(); ++iter) {
+        string query = "/pools/default/buckets/" + *iter;
+        libcouchbase_make_management_request(instance, NULL, query.c_str(), query.length(),
+                                             NULL, 0, LIBCOUCHBASE_HTTP_METHOD_DELETE,
+                                             false, &rc);
+        if (rc != LIBCOUCHBASE_SUCCESS) {
+            cerr << "Failed to send requests: " << endl
+                << libcouchbase_strerror(instance, rc) << endl;
+            return false;
+        }
     }
     return true;
 }
@@ -1065,6 +1084,14 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
         }
         break;
+    case cbc_bucket_delete:
+        if (verifyBucketNames(getopt.arguments)) {
+            success = bucket_delete_impl(instance, getopt.arguments);
+        } else {
+            cerr << "Bucket name can only contain characters in range A-Z, "
+                "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
+        }
+        break;
     default:
         cerr << "Not implemented" << endl;
         success = false;
@@ -1132,6 +1159,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_admin;
     } else if (name.find("cbc-bucket-create") != string::npos) {
         return cbc_bucket_create;
+    } else if (name.find("cbc-bucket-delete") != string::npos) {
+        return cbc_bucket_delete;
     }
 
     return cbc_illegal;
@@ -1156,6 +1185,7 @@ static void printHelp()
          << "   view            execute couchbase view (aka map/reduce) request" << endl
          << "   admin           execute request to management REST API" << endl
          << "   bucket-create   create data bucket on the cluster" << endl
+         << "   bucket-delete   delete data bucket" << endl
          << "Use 'cbc command --help' to show the options" << endl;
 }
 

@@ -247,9 +247,10 @@ example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
 example_pillowfight_LDADD = libcouchbase.la
 
 if BUILD_TOOLS
-CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create	\
-            cbc-send cbc-receive cbc-version cbc-verify cbc-lock 	\
-            cbc-unlock cbc-hash cbc-view cbc-admin cbc-bucket-create
+CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create        \
+            cbc-send cbc-receive cbc-version cbc-verify cbc-lock        \
+            cbc-unlock cbc-hash cbc-view cbc-admin cbc-bucket-create    \
+            cbc-bucket-delete
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \
