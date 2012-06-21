@@ -806,6 +806,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     case 'e':
                         flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
                         break;
+                    default:
+                        unknownOpt = true;
                     }
                 } else if (cmd == cbc_view || cmd == cbc_admin) {
                     unknownOpt = false;
