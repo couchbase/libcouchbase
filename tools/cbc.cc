@@ -937,14 +937,19 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         break;
     case cbc_view:
     case cbc_admin:
-        if (getopt.arguments.size() == 1) {
+        switch (getopt.arguments.size()) {
+        case 1:
             if (cmd == cbc_view) {
                 success = view_impl(instance, getopt.arguments.front(), data, chunked, method);
             } else {
                 success = admin_impl(instance, getopt.arguments.front(), data, chunked, method);
             }
-        } else {
-            cerr << "There must be only one view endpoint specified" << endl;
+            break;
+        case 0:
+            cerr << "Missing endpoint" << endl;
+            break;
+        default:
+            cerr << "There must be only one endpoint specified" << endl;
         }
         break;
     default:
