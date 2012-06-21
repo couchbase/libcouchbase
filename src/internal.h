@@ -299,7 +299,7 @@ extern "C" {
         /** The string representation of the port number (binary is url_info.port) */
         char *port;
         /** The requested path (without couch api endpoint) */
-        const char *path;
+        char *path;
         libcouchbase_size_t npath;
         /** The type of HTTP request */
         libcouchbase_http_method_t method;

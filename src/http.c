@@ -43,6 +43,7 @@ void libcouchbase_http_request_destroy(libcouchbase_http_request_t req)
         if (req->root_ai) {
             freeaddrinfo(req->root_ai);
         }
+        free(req->path);
         free(req->url);
         free(req->host);
         ringbuffer_destruct(&req->input);
@@ -410,7 +411,7 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
     req->io = instance->io;
     req->server = server;
     req->command_cookie = command_cookie;
-    req->path = path;
+    req->path = strdup(path);
     req->npath = npath;
     req->on_complete = complete_cb;
     req->on_data = data_cb;
