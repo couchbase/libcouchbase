@@ -291,8 +291,8 @@ extern "C" {
     static void data_callback(libcouchbase_http_request_t, libcouchbase_t,
                               const void *, libcouchbase_error_t,
                               libcouchbase_http_status_t,
-                              const char *, size_t,
-                              const void *bytes, size_t nbytes)
+                              const char *, libcouchbase_size_t,
+                              const void *bytes, libcouchbase_size_t nbytes)
     {
         cout.write(static_cast<const char *>(bytes), nbytes);
         cout.flush();
@@ -303,8 +303,8 @@ extern "C" {
                                   const void *,
                                   libcouchbase_error_t error,
                                   libcouchbase_http_status_t status,
-                                  const char *path, size_t npath,
-                                  const void *bytes, size_t nbytes)
+                                  const char *path, libcouchbase_size_t npath,
+                                  const void *bytes, libcouchbase_size_t nbytes)
     {
         cerr << "\"";
         cerr.write(static_cast<const char *>(path), npath);
