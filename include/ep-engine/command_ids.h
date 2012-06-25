@@ -40,9 +40,7 @@
 #define CMD_EVICT_KEY         0x93
 #define CMD_GET_LOCKED        0x94
 #define CMD_UNLOCK_KEY        0x95
-
-#define CMD_OBSERVE           0xb1
-#define CMD_UNOBSERVE         0xb2
+#define CMD_OBSERVE           0x96
 
 /**
  * Return the last closed checkpoint Id for a given VBucket.
@@ -153,6 +151,18 @@
  * extended or not.
  */
 #define CMD_EXTEND_CHECKPOINT 0xab
+
+#define CMD_NOTIFY_VBUCKET_UPDATE 0xac
+
+/**
+ * Command to change the vbucket filter for a given TAP producer.
+ */
+#define CMD_CHANGE_VB_FILTER 0xb0
+
+/**
+ * Command to enable data traffic after completion of warm
+ */
+#define CMD_ENABLE_TRAFFIC 0xad
 
 /*
  * Parameter types of CMD_SET_PARAM command.
@@ -269,8 +279,6 @@ typedef protocol_binary_response_no_extras protocol_binary_response_set_with_met
 
 typedef protocol_binary_request_touch protocol_binary_request_observe;
 typedef protocol_binary_request_header protocol_binary_request_unobserve;
-
-#define CMD_NOTIFY_VBUCKET_UPDATE 0xaa
 
 typedef union {
     struct {
