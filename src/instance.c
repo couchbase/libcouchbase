@@ -380,6 +380,7 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
     instance->nreplicas = vbucket_config_get_num_replicas(instance->vbucket_config);
+    instance->dist_type = vbucket_config_get_distribution_type(instance->vbucket_config);
     /*
      * Run through all of the vbuckets and build a map of what they need.
      * It would have been nice if I could query libvbucket for the number

@@ -173,6 +173,8 @@ extern "C" {
         /** The current connect index */
         int backup_idx;
 
+        /** The type of the key distribution */
+        VBUCKET_DISTRIBUTION_TYPE dist_type;
         /** The number of replicas */
         libcouchbase_uint16_t nreplicas;
         /** The number of vbuckets */
