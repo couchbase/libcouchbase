@@ -22,6 +22,7 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <vector>
+#include <map>
 #include <iostream>
 #include <fstream>
 #include <string.h>
@@ -64,6 +65,19 @@ enum cbc_command_t {
     cbc_observe
 };
 
+struct cp_params {
+    list<string> *keys;
+    map<string, vector<libcouchbase_cas_t> > results;
+    libcouchbase_size_t sent;
+    bool need_persisted;
+    int need_replicated;
+    int total_persisted;
+    int total_replicated;
+    int max_tries;
+    int tries;
+    libcouchbase_uint32_t timeout;
+};
+
 extern "C" {
     // libcouchbase use a C linkage!
 
@@ -78,27 +92,78 @@ extern "C" {
         exit(EXIT_FAILURE);
     }
 
+    void observe_timer_callback(libcouchbase_timer_t timer,
+                                libcouchbase_t instance,
+                                const void *cookie)
+    {
+        // perform observe query
+        struct cp_params *params = (struct cp_params *)cookie;
+        int idx = 0;
+        libcouchbase_error_t err;
+        const char* *k = new const char*[params->keys->size()];
+        libcouchbase_size_t *s = new libcouchbase_size_t[params->keys->size()];
+
+        for (list<string>::iterator iter = params->keys->begin();
+                iter != params->keys->end(); ++iter, ++idx) {
+            k[idx] = iter->c_str();
+            s[idx] = iter->length();
+        }
+        err = libcouchbase_observe(instance, static_cast<const void *>(params), idx, (const void * const *)k, s);
+        if (err != LIBCOUCHBASE_SUCCESS) {
+            // report the issue and exit
+            error_callback(instance, err, "Failed to schedule observe query");
+        }
+        delete []k;
+        delete []s;
+        (void)timer;
+    }
+
+    void schedule_observe(libcouchbase_t instance, struct cp_params *params)
+    {
+        libcouchbase_error_t err;
+        if (params->tries > params->max_tries) {
+            error_callback(instance, LIBCOUCHBASE_ETIMEDOUT, "Exceeded number of tries");
+        }
+        libcouchbase_timer_create(instance, params, params->timeout, 0,
+                                  observe_timer_callback, &err);
+        if (err != LIBCOUCHBASE_SUCCESS) {
+            // report the issue and exit
+            error_callback(instance, err, "Failed to setup timer for observe");
+        }
+        params->timeout *= 2;
+        params->tries++;
+        params->total_persisted = params->total_replicated = 0;
+    }
 
     static void storage_callback(libcouchbase_t instance,
-                                 const void *,
+                                 const void *cookie,
                                  libcouchbase_storage_t,
                                  libcouchbase_error_t error,
                                  const void *key, libcouchbase_size_t nkey,
                                  libcouchbase_cas_t cas)
     {
-        if (error == LIBCOUCHBASE_SUCCESS) {
-            cerr << "Stored \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\" CAS:" << hex << cas << endl;
+        struct cp_params *params = static_cast<struct cp_params *>(const_cast<void *>(cookie));
+        if (params->need_persisted || params->need_replicated > 0) {
+            params->sent++;
+            // if it is the latest key in the series
+            if (params->sent == params->keys->size()) {
+                schedule_observe(instance, params);
+            }
         } else {
-            cerr << "Failed to store \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\":" << endl
-                 << libcouchbase_strerror(instance, error) << endl;
+            if (error == LIBCOUCHBASE_SUCCESS) {
+                cerr << "Stored \"";
+                cerr.write(static_cast<const char *>(key), nkey);
+                cerr << "\" CAS:" << hex << cas << endl;
+            } else {
+                cerr << "Failed to store \"";
+                cerr.write(static_cast<const char *>(key), nkey);
+                cerr << "\":" << endl
+                     << libcouchbase_strerror(instance, error) << endl;
 
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
-            bool *e = static_cast<bool *>(cookie);
-            *e = true;
+                void *instance_cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+                bool *e = static_cast<bool *>(instance_cookie);
+                *e = true;
+            }
         }
     }
 
@@ -323,9 +388,8 @@ extern "C" {
         cout.flush();
     }
 
-
     static void observe_callback(libcouchbase_t instance,
-                                 const void *,
+                                 const void *cookie,
                                  libcouchbase_error_t error,
                                  libcouchbase_observe_t status,
                                  const void *key,
@@ -335,45 +399,131 @@ extern "C" {
                                  libcouchbase_time_t ttp,
                                  libcouchbase_time_t ttr)
     {
-        if (key == NULL) {
-            return; /* end of packet */
-        }
-        if (error == LIBCOUCHBASE_SUCCESS) {
-            switch (status) {
-            case LIBCOUCHBASE_OBSERVE_FOUND:
-                cerr << "FOUND";
-                break;
-            case LIBCOUCHBASE_OBSERVE_PERSISTED:
-                cerr << "PERSISTED";
-                break;
-            case LIBCOUCHBASE_OBSERVE_NOT_FOUND:
-                cerr << "NOT_FOUND";
-                break;
-            default:
-                cerr << "UNKNOWN";
-                break;
+        void *instance_cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+        bool *err = static_cast<bool *>(instance_cookie);
+
+        if (cookie) {
+            struct cp_params *params = (struct cp_params *)cookie;
+            if (key) {
+                string key_str = string(static_cast<const char *>(key), nkey);
+                vector<libcouchbase_cas_t> &res = params->results[key_str];
+                if (res.size() == 0) {
+                    res.resize(1);
+                }
+                if (status == LIBCOUCHBASE_OBSERVE_PERSISTED) {
+                    if (is_master) {
+                        params->total_persisted++;
+                        res[0] = cas;
+                    } else {
+                        params->total_replicated++;
+                        res.push_back(cas);
+                    }
+                } else {
+                    cas = 0;
+                }
+            } else {
+                // check persistence conditions
+                int nkeys = params->keys->size();
+                bool ok = true;
+
+                if (params->need_persisted) {
+                    ok &= params->total_persisted == nkeys;
+                }
+                if (params->need_replicated > 0) {
+                    ok &= params->total_replicated == (nkeys * params->need_replicated);
+                }
+                if (ok) {
+                    map<string, libcouchbase_cas_t> done;
+                    for (list<string>::iterator ii = params->keys->begin();
+                            ii != params->keys->end(); ++ii) {
+                        string kk = *ii;
+                        vector<libcouchbase_cas_t> &res = params->results[kk];
+                        libcouchbase_cas_t cc = res[0];
+                        if (cc == 0) {
+                            // the key wasn't persisted on master, but
+                            // replicas might have old version persisted
+                            schedule_observe(instance, params);
+                            return;
+                        } else {
+                            if (params->need_replicated > 0) {
+                                int matching_cas = 0;
+                                for (vector<libcouchbase_cas_t>::iterator jj = res.begin() + 1;
+                                        jj != res.end(); ++jj) {
+                                    if (*jj == cc) {
+                                        matching_cas++;
+                                    }
+                                }
+                                if (matching_cas != params->need_replicated) {
+                                    // some replicas has old value => retry
+                                    schedule_observe(instance, params);
+                                    return;
+                                }
+                            }
+                            done[kk] = cc;
+                        }
+                    }
+                    // all or nothing
+                    if (done.size() == params->keys->size()) {
+                        for (map<string, libcouchbase_cas_t>::iterator ii = done.begin();
+                                ii != done.end(); ++ii) {
+                            cerr << "Stored \"" << ii->first << "\" CAS:" << hex << ii->second << endl;
+                        }
+                    } else {
+                        schedule_observe(instance, params);
+                    }
+                } else {
+                    schedule_observe(instance, params);
+                }
             }
-            cerr << " \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            if (status == LIBCOUCHBASE_OBSERVE_FOUND ||
-                    status == LIBCOUCHBASE_OBSERVE_PERSISTED) {
-                cerr << "\" CAS:" << std::hex << cas;
-            }
-            cerr << " IsMaster:" << std::boolalpha << (bool)is_master
-                 << std::dec << " TimeToPersist:" << ttp
-                 << " TimeToReplicate:" << ttr << endl;
         } else {
-            cerr << "Failed to observe: " << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
-            bool *err = static_cast<bool *>(cookie);
-            *err = true;
+            if (key == NULL) {
+                return; /* end of packet */
+            }
+            if (error == LIBCOUCHBASE_SUCCESS) {
+                switch (status) {
+                case LIBCOUCHBASE_OBSERVE_FOUND:
+                    cerr << "FOUND";
+                    break;
+                case LIBCOUCHBASE_OBSERVE_PERSISTED:
+                    cerr << "PERSISTED";
+                    break;
+                case LIBCOUCHBASE_OBSERVE_NOT_FOUND:
+                    cerr << "NOT_FOUND";
+                    break;
+                default:
+                    cerr << "UNKNOWN";
+                    break;
+                }
+                cerr << " \"";
+                cerr.write(static_cast<const char *>(key), nkey);
+                if (status == LIBCOUCHBASE_OBSERVE_FOUND ||
+                        status == LIBCOUCHBASE_OBSERVE_PERSISTED) {
+                    cerr << "\" CAS:" << std::hex << cas;
+                }
+                cerr << " IsMaster:" << std::boolalpha << (bool)is_master
+                     << std::dec << " TimeToPersist:" << ttp
+                     << " TimeToReplicate:" << ttr << endl;
+            } else {
+                cerr << "Failed to observe: " << libcouchbase_strerror(instance, error) << endl;
+                *err = true;
+            }
         }
     }
 }
 
-static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json)
+static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json, bool persisted, int replicated, int max_tries)
 {
     libcouchbase_size_t currsz = 0;
+    struct cp_params *cookie = new struct cp_params();
+
+    cookie->results = map<string, vector<libcouchbase_cas_t> >();
+    cookie->keys = &keys;
+    cookie->need_persisted = persisted;
+    cookie->need_replicated = replicated;
+    cookie->max_tries = max_tries;
+    cookie->timeout = 100000; // initial timeout: 100ms
+    cookie->total_persisted = cookie->total_replicated = cookie->tries = 0;
+
     for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
         string key = *ii;
         struct stat st;
@@ -406,7 +556,7 @@ static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json)
                     (void)json;
 #endif
                     libcouchbase_store(instance,
-                                       NULL,
+                                       static_cast<void *>(cookie),
                                        LIBCOUCHBASE_SET,
                                        key.c_str(), key.length(),
                                        bytes, (libcouchbase_size_t)st.st_size,
@@ -867,12 +1017,21 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     }
 
     bool json = false;
-#ifdef HAVE_LIBYAJL2
+    bool persisted = false;
+    int replicated = 0;
+    int max_tries = 5;
     if (cmd == cbc_cp) {
+        getopt.addOption(new CommandLineOption('p', "persisted", false,
+                                               "Ensure that key has been persisted to master node"));
+        getopt.addOption(new CommandLineOption('r', "replicated", true,
+                                               "Ensure that key has been replicated and persisted to given number of replicas"));
+        getopt.addOption(new CommandLineOption('m', "max-tries", true,
+                                               "The number of attempts for observing keys (default: 5)"));
+#ifdef HAVE_LIBYAJL2
         getopt.addOption(new CommandLineOption('j', "json", false,
                                                "Treat value as JSON document (take key from '_id' attribute)"));
-    }
 #endif
+    }
 
     bool chunked = false;
     string data;
@@ -961,17 +1120,26 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     default:
                         unknownOpt = true;
                     }
-#ifdef HAVE_LIBYAJL2
                 } else if (cmd == cbc_cp) {
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
+                    case 'p':
+                        persisted = true;
+                        break;
+                    case 'r':
+                        replicated = atoi((*iter)->argument);
+                        break;
+                    case 'm':
+                        max_tries = atoi((*iter)->argument);
+                        break;
+#ifdef HAVE_LIBYAJL2
                     case 'j':
                         json = true;
                         break;
+#endif
                     default:
                         unknownOpt = true;
                     }
-#endif
                 } else if (cmd == cbc_lock) {
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
@@ -1102,11 +1270,16 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         success = unlock_impl(instance, getopt.arguments);
         break;
     case cbc_cp:
+        if (replicated < 0) {
+            cerr << "Number of replicas must be positive integer" << endl;
+            success = false;
+            break;
+        }
         if (getopt.arguments.size() == 1 && getopt.arguments.front() == "-") {
             loadKeys(keys);
-            success = cp_impl(instance, keys, json);
+            success = cp_impl(instance, keys, json, persisted, replicated, max_tries);
         } else {
-            success = cp_impl(instance, getopt.arguments, json);
+            success = cp_impl(instance, getopt.arguments, json, persisted, replicated, max_tries);
         }
         break;
     case cbc_rm:
