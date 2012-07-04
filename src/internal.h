@@ -173,6 +173,8 @@ extern "C" {
         /** The current connect index */
         int backup_idx;
 
+        /** The number of replicas */
+        libcouchbase_uint16_t nreplicas;
         /** The number of vbuckets */
         libcouchbase_uint16_t nvbuckets;
         /** A map from the vbucket to the server hosting the vbucket */
