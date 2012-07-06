@@ -37,10 +37,10 @@
 
  */
 
+#define CMD_OBSERVE           0x92
 #define CMD_EVICT_KEY         0x93
 #define CMD_GET_LOCKED        0x94
 #define CMD_UNLOCK_KEY        0x95
-#define CMD_OBSERVE           0x96
 
 /**
  * Return the last closed checkpoint Id for a given VBucket.
@@ -155,14 +155,27 @@
 #define CMD_NOTIFY_VBUCKET_UPDATE 0xac
 
 /**
+ * Command to enable data traffic after completion of warm
+ */
+#define CMD_ENABLE_TRAFFIC 0xad
+
+/**
  * Command to change the vbucket filter for a given TAP producer.
  */
 #define CMD_CHANGE_VB_FILTER 0xb0
 
+
 /**
- * Command to enable data traffic after completion of warm
+ * TAP OPAQUE command list
  */
-#define CMD_ENABLE_TRAFFIC 0xad
+#define TAP_OPAQUE_ENABLE_AUTO_NACK 0
+#define TAP_OPAQUE_INITIAL_VBUCKET_STREAM 1
+#define TAP_OPAQUE_ENABLE_CHECKPOINT_SYNC 2
+#define TAP_OPAQUE_OPEN_CHECKPOINT 3
+#define TAP_OPAQUE_COMPLETE_VB_FILTER_CHANGE 4
+#define TAP_OPAQUE_CLOSE_TAP_STREAM 7
+#define TAP_OPAQUE_CLOSE_BACKFILL 8
+
 
 /*
  * Parameter types of CMD_SET_PARAM command.
@@ -237,13 +250,6 @@ typedef union {
     } message;
     uint8_t bytes[sizeof(protocol_binary_request_header) + 12];
 } protocol_binary_request_set_with_meta;
-
-/**
- * CMD_DEL_WITH_META is used to delete a kv-pair with additional meta
- * information.
- */
-#define CMD_DEL_WITH_META 0xa8
-#define CMD_DELQ_WITH_META 0xa9
 
 /**
  * The physical layout for the CMD_DEL_WITH_META looks like the the normal
