@@ -209,6 +209,8 @@ extern "C" {
             libcouchbase_tap_filter_t filter;
         } tap;
 
+        /** The set of the timers */
+        hashset_t timers;
 
         struct libcouchbase_callback_st callbacks;
         struct libcouchbase_histogram_st *histogram;
@@ -284,6 +286,15 @@ extern "C" {
         libcouchbase_t instance;
 
         hrtime_t next_timeout;
+    };
+
+    struct libcouchbase_timer_st {
+        libcouchbase_uint32_t usec;
+        int periodic;
+        void *event;
+        const void *cookie;
+        libcouchbase_timer_callback callback;
+        libcouchbase_t instance;
     };
 
     struct libcouchbase_http_request_st {

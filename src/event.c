@@ -351,7 +351,8 @@ int libcouchbase_has_data_in_buffers(libcouchbase_t instance)
 void libcouchbase_maybe_breakout(libcouchbase_t instance)
 {
     if (instance->wait) {
-        if (!libcouchbase_has_data_in_buffers(instance)) {
+        if (!libcouchbase_has_data_in_buffers(instance)
+                && hashset_num_items(instance->timers) == 0) {
             instance->wait = 0;
             instance->io->stop_event_loop(instance->io);
         }

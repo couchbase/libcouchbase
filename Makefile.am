@@ -59,7 +59,6 @@ libcouchbase_la_SOURCES = \
                         src/compat.c \
                         src/config_static.h \
                         src/cookie.c \
-                        src/http.c \
                         src/error.c \
                         src/event.c \
                         src/flush.c \
@@ -67,6 +66,7 @@ libcouchbase_la_SOURCES = \
                         src/handler.c \
                         src/hashset.c \
                         src/hashset.h \
+                        src/http.c \
                         src/instance.c \
                         src/internal.h \
                         src/observe.c \
@@ -81,6 +81,7 @@ libcouchbase_la_SOURCES = \
                         src/synchandler.c \
                         src/tap.c \
                         src/timeout.c \
+                        src/timer.c \
                         src/timings.c \
                         src/touch.c \
                         src/utilities.c \

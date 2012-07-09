@@ -132,6 +132,10 @@ extern "C" {
                                                 const char *server_endpoint,
                                                 libcouchbase_error_t error);
 
+    typedef void (*libcouchbase_timer_callback)(libcouchbase_timer_t timer,
+                                                libcouchbase_t instance,
+                                                const void *cookie);
+
     /**
      * couch_complete_callback will notify that view execution was completed
      * and libcouchbase will pass response body to this callback unless
@@ -257,7 +261,6 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_configuration_callback libcouchbase_set_configuration_callback(libcouchbase_t,
                                                                                 libcouchbase_configuration_callback);
-
 
 #ifdef __cplusplus
 }

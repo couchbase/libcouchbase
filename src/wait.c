@@ -88,7 +88,8 @@ void libcouchbase_wait(libcouchbase_t instance)
                                    instance,
                                    initial_connect_timeout_handler);
     }
-    if (instance->vbucket_config == NULL || libcouchbase_has_data_in_buffers(instance)) {
+    if (instance->vbucket_config == NULL || libcouchbase_has_data_in_buffers(instance)
+            || hashset_num_items(instance->timers) > 0) {
         instance->io->run_event_loop(instance->io);
     } else {
         instance->wait = 0;

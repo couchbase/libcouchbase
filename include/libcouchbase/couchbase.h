@@ -740,6 +740,38 @@ extern "C" {
     LIBCOUCHBASE_API
     void libcouchbase_cancel_http_request(libcouchbase_http_request_t request);
 
+    /**
+     * Create timer event. The user will be notified through timer callback.
+     *
+     * @param instance The handle to libcouchbase
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param usec The timespan in microseconds
+     * @param periodic Should the library re-schedule the timer
+     * @param callback The callback to notify the caller
+     * @param error Where to store information about why creation failed
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_timer_t libcouchbase_timer_create(libcouchbase_t instance,
+                                                   const void *command_cookie,
+                                                   libcouchbase_uint32_t usec,
+                                                   int periodic,
+                                                   libcouchbase_timer_callback callback,
+                                                   libcouchbase_error_t *error);
+
+    /**
+     * Destroy the timer. All non-periodic timers will be sweeped
+     * automatically. All timers will be sweeped when the connection
+     * instance will be destroyed. It is safe to call this function several
+     * times for given timer.
+     *
+     * @param instance The handle to libcouchbase
+     * @param timer the timer handle
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_timer_destroy(libcouchbase_t instance,
+                                                    libcouchbase_timer_t timer);
+
 #ifdef __cplusplus
 }
 #endif

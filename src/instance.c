@@ -195,6 +195,7 @@ libcouchbase_t libcouchbase_create(const char *host,
         libcouchbase_destroy(ret);
         return NULL;
     }
+    ret->timers = hashset_create();
 
     ret->sock = INVALID_SOCKET;
 
@@ -217,6 +218,13 @@ void libcouchbase_destroy(libcouchbase_t instance)
     libcouchbase_size_t ii;
     free(instance->http_uri);
 
+    for (ii = 0; ii < instance->timers->capacity; ++ii) {
+        if (instance->timers->items[ii] > 1) {
+            libcouchbase_timer_destroy(instance,
+                                       (libcouchbase_timer_t)instance->timers->items[ii]);
+        }
+    }
+    hashset_destroy(instance->timers);
     if (instance->sock != INVALID_SOCKET) {
         instance->io->delete_event(instance->io, instance->sock,
                                    instance->event);
@@ -269,7 +277,6 @@ void libcouchbase_destroy(libcouchbase_t instance)
     free(instance->histogram);
     free(instance->username);
     free(instance->password);
-
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }
