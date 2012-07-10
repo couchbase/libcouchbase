@@ -70,6 +70,8 @@ extern "C" {
     struct libcouchbase_command_data_st {
         hrtime_t start;
         const void *cookie;
+        int replica;
+        libcouchbase_uint16_t vbucket;
     };
 
     typedef void (*REQUEST_HANDLER)(libcouchbase_server_t *instance,

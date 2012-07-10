@@ -344,6 +344,22 @@ extern "C" {
                                                     libcouchbase_size_t nkey,
                                                     libcouchbase_cas_t cas);
 
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_get_replica_by_key(libcouchbase_t instance,
+                                                         const void *command_cookie,
+                                                         const void *hashkey,
+                                                         libcouchbase_size_t nhashkey,
+                                                         libcouchbase_size_t num_keys,
+                                                         const void *const *keys,
+                                                         const libcouchbase_size_t *nkey);
+
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_get_replica(libcouchbase_t instance,
+                                                  const void *command_cookie,
+                                                  libcouchbase_size_t num_keys,
+                                                  const void *const *keys,
+                                                  const libcouchbase_size_t *nkey);
+
     /**
      * Touch (set expiration time) on a number of values in the cache
      * You need to run the event loop yourself (or call

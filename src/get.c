@@ -254,7 +254,7 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
 {
     libcouchbase_server_t *server;
     protocol_binary_request_gat req;
-    int vb, idx;
+    int vb, idx, ii;
     libcouchbase_size_t nbytes;
 
     if (nhashkey == 0) {
@@ -296,4 +296,76 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
     libcouchbase_server_send_packets(server);
 
     return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+}
+
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_get_replica_by_key(libcouchbase_t instance,
+                                                     const void *command_cookie,
+                                                     const void *hashkey,
+                                                     libcouchbase_size_t nhashkey,
+                                                     libcouchbase_size_t num_keys,
+                                                     const void *const *keys,
+                                                     const libcouchbase_size_t *nkey)
+{
+    libcouchbase_server_t *server;
+    protocol_binary_request_get req;
+    int vb, idx;
+    libcouchbase_size_t ii, *affected_servers = NULL;
+
+    /* we need a vbucket config before we can start getting data.. */
+    if (instance->vbucket_config == NULL) {
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+    }
+
+    affected_servers = calloc(instance->nservers, sizeof(libcouchbase_size_t));
+    if (affected_servers == NULL) {
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+    }
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.opcode = CMD_GET_REPLICA;
+    for (ii = 0; ii < num_keys; ++ii) {
+        if (nhashkey == 0) {
+            nhashkey = nkey[ii];
+            hashkey = keys[ii];
+        }
+        vb = vbucket_get_vbucket_by_key(instance->vbucket_config, hashkey, nhashkey);
+        idx = vbucket_get_replica(instance->vbucket_config, vb, 0);
+        if (idx < 0 || idx > (int)instance->nservers) {
+            /* the config says that there is no server yet at that position (-1) */
+            free(affected_servers);
+            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
+        }
+        affected_servers[idx]++;
+        server = instance->servers + idx;
+        req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey[ii]);
+        req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
+        req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)nkey[ii]);
+        req.message.header.request.opaque = ++instance->seqno;
+        libcouchbase_server_start_packet(server, command_cookie, req.bytes, sizeof(req.bytes));
+        libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
+        libcouchbase_server_end_packet(server);
+    }
+
+    for (ii = 0; ii < instance->nservers; ++ii) {
+        if (affected_servers[ii]) {
+            server = instance->servers + ii;
+            libcouchbase_server_send_packets(server);
+        }
+    }
+
+    free(affected_servers);
+    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+}
+
+LIBCOUCHBASE_API
+libcouchbase_error_t libcouchbase_get_replica(libcouchbase_t instance,
+                                              const void *command_cookie,
+                                              libcouchbase_size_t num_keys,
+                                              const void *const *keys,
+                                              const libcouchbase_size_t *nkey)
+{
+    return libcouchbase_get_replica_by_key(instance, command_cookie,
+                                           NULL, 0, num_keys, keys, nkey);
 }

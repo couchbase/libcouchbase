@@ -206,6 +206,70 @@ static void getq_response_handler(libcouchbase_server_t *server,
     release_key(server, packet);
 }
 
+static void get_replica_response_handler(libcouchbase_server_t *server,
+                                         struct libcouchbase_command_data_st *command_data,
+                                         protocol_binary_response_header *res)
+{
+    libcouchbase_t root = server->instance;
+    protocol_binary_response_get *get = (void *)res;
+    libcouchbase_uint16_t status = ntohs(res->response.status);
+    libcouchbase_size_t nbytes = ntohl(res->response.bodylen);
+    char *packet;
+    libcouchbase_uint16_t nkey;
+    const char *key = get_key(server, &nkey, &packet);
+
+    nbytes -= res->response.extlen;
+    if (key == NULL) {
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+        return;
+    } else if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        const char *bytes = (const char *)res;
+        bytes += sizeof(get->bytes);
+        root->callbacks.get(root, command_data->cookie, LIBCOUCHBASE_SUCCESS,
+                            key, nkey, bytes, nbytes,
+                            ntohl(get->message.body.flags),
+                            res->response.cas);
+    } else {
+        if (status == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
+            /* the config was updated, start from first replica */
+            command_data->replica = 0;
+        } else {
+            command_data->replica++;
+        }
+        if (command_data->replica < root->nreplicas) {
+            /* try next replica */
+            protocol_binary_request_get req;
+            int idx = vbucket_get_replica(root->vbucket_config, command_data->vbucket, 0);
+            if (idx < 0 || idx > (int)root->nservers) {
+                libcouchbase_error_handler(root, LIBCOUCHBASE_NETWORK_ERROR,
+                                           "GET_REPLICA: missing server");
+                return;
+            }
+            server = root->servers + idx;
+            memset(&req, 0, sizeof(req));
+            req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+            req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+            req.message.header.request.opcode = CMD_GET_REPLICA;
+            req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey);
+            req.message.header.request.vbucket = ntohs(command_data->vbucket);
+            req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)nkey);
+            req.message.header.request.opaque = ++root->seqno;
+            libcouchbase_server_start_packet(server, command_data->cookie,
+                                             req.bytes, sizeof(req.bytes));
+            libcouchbase_server_write_packet(server, key, nkey);
+            libcouchbase_server_end_packet(server);
+            libcouchbase_server_send_packets(server);
+        } else {
+            /* give up and report the error */
+            root->callbacks.get(root, command_data->cookie,
+                                map_error(status), key, nkey,
+                                NULL, 0, 0, 0);
+        }
+    }
+    release_key(server, packet);
+}
+
 static void delete_response_handler(libcouchbase_server_t *server,
                                     struct libcouchbase_command_data_st *command_data,
                                     protocol_binary_response_header *res)
@@ -1027,6 +1091,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->response_handler[PROTOCOL_BINARY_CMD_GET] = getq_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_GAT] = getq_response_handler;
     instance->response_handler[CMD_GET_LOCKED] = getq_response_handler;
+    instance->response_handler[CMD_GET_REPLICA] = get_replica_response_handler;
     instance->response_handler[CMD_UNLOCK_KEY] = unlock_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_ADD] = storage_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_DELETE] = delete_response_handler;

@@ -118,6 +118,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         }
         return -1;
     }
+    ct.vbucket = ntohs(req.request.vbucket);
 
     switch (header.response.magic) {
     case PROTOCOL_BINARY_REQ:
@@ -132,14 +133,13 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
             return -1;
         }
 
-
-        assert(nr == sizeof(ct));
         if (c->instance->histogram) {
             libcouchbase_record_metrics(c->instance, stop - ct.start,
                                         header.response.opcode);
         }
 
-        if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
+        if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET
+            || header.response.opcode == CMD_GET_REPLICA) {
             c->instance->response_handler[header.response.opcode](c, &ct, (void *)packet);
             /* keep command and cookie until we get complete STAT response */
             if (was_connected &&

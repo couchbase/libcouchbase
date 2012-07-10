@@ -32,6 +32,7 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
                                              libcouchbase_size_t size)
 {
     struct libcouchbase_command_data_st ct;
+    memset(&ct, 0, sizeof(struct libcouchbase_command_data_st));
     /* @todo we don't want to call gethrtime for each operation, */
     /* so I need to pass it down the chain so that a large */
     /* multiget can reuse the same timer... */

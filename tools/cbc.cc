@@ -609,7 +609,7 @@ static bool rm_impl(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool cat_impl(libcouchbase_t instance, list<string> &keys)
+static bool cat_impl(libcouchbase_t instance, list<string> &keys, bool replica)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to get" << endl;
@@ -618,20 +618,23 @@ static bool cat_impl(libcouchbase_t instance, list<string> &keys)
 
     const char* *k = new const char*[keys.size()];
     libcouchbase_size_t *s = new libcouchbase_size_t[keys.size()];
-
     int idx = 0;
+    libcouchbase_error_t err;
+
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter, ++idx) {
         k[idx] = iter->c_str();
         s[idx] = iter->length();
     }
-
-    libcouchbase_error_t err = libcouchbase_mget(instance, NULL, idx,
-                                                 (const void * const *)k,
-                                                 s, NULL);
-
+    if (replica) {
+        err = libcouchbase_get_replica(instance, NULL, idx,
+                                       (const void * const *)k, s);
+    } else {
+        err = libcouchbase_mget(instance, NULL, idx,
+                                (const void * const *)k,
+                                s, NULL);
+    }
     delete []k;
     delete []s;
-
     if (err != LIBCOUCHBASE_SUCCESS) {
         cerr << "Failed to send requests:" << endl
              << libcouchbase_strerror(instance, err) << endl;
@@ -941,7 +944,7 @@ static bool create_impl(libcouchbase_t instance, list<string> &keys,
 static bool verify_impl(libcouchbase_t instance, list<string> &keys)
 {
     (void)libcouchbase_set_get_callback(instance, verify_callback);
-    return cat_impl(instance, keys);
+    return cat_impl(instance, keys, false);
 }
 
 static void loadKeys(list<string> &keys)
@@ -998,6 +1001,12 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Enable command timings"));
     getopt.addOption(new CommandLineOption('t', "timeout", true,
                                            "Specify timeout value"));
+
+    bool replica = false;
+    if (cmd == cbc_cat) {
+        getopt.addOption(new CommandLineOption('r', "replica", false,
+                                               "Read key(s) from replicas"));
+    }
 
     libcouchbase_uint32_t flags = 0;
     libcouchbase_uint32_t exptime = 0;
@@ -1105,7 +1114,16 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 // NOTREACHED
 
             default:
-                if (cmd == cbc_create) {
+                if (cmd == cbc_cat) {
+                    unknownOpt = false;
+                    switch ((*iter)->shortopt) {
+                    case 'r':
+                        replica = true;
+                        break;
+                    default:
+                        unknownOpt = true;
+                    }
+                } else if (cmd == cbc_create) {
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'f':
@@ -1261,7 +1279,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     bool success = false;
     switch (cmd) {
     case cbc_cat:
-        success = cat_impl(instance, getopt.arguments);
+        success = cat_impl(instance, getopt.arguments, replica);
         break;
     case cbc_lock:
         success = lock_impl(instance, getopt.arguments, exptime);
