@@ -412,11 +412,11 @@ RESPONSE_HANDLER old_sasl_auth_response_handler;
 libcouchbase_error_t sasl_auth_rc;
 
 static void sasl_auth_response_handler(libcouchbase_server_t *server,
-                                       const void *command_cookie,
+                                       struct libcouchbase_command_data_st *command_data,
                                        protocol_binary_response_header *res)
 {
     sasl_auth_rc = ntohs(res->response.status);
-    old_sasl_auth_response_handler(server, command_cookie, res);
+    old_sasl_auth_response_handler(server, command_data, res);
 }
 
 static void test_set3(void)

@@ -64,11 +64,19 @@ extern "C" {
 
     typedef void (*EVENT_HANDLER)(evutil_socket_t fd, short which, void *arg);
 
+    /**
+     * Data stored per command in the command-cookie buffer...
+     */
+    struct libcouchbase_command_data_st {
+        hrtime_t start;
+        const void *cookie;
+    };
+
     typedef void (*REQUEST_HANDLER)(libcouchbase_server_t *instance,
-                                    const void *command_cookie,
+                                    struct libcouchbase_command_data_st *command_data,
                                     protocol_binary_request_header *req);
     typedef void (*RESPONSE_HANDLER)(libcouchbase_server_t *instance,
-                                     const void *command_cookie,
+                                     struct libcouchbase_command_data_st *command_data,
                                      protocol_binary_response_header *res);
 
     /**
@@ -90,14 +98,6 @@ extern "C" {
         libcouchbase_size_t avail;
     } buffer_t;
     int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free);
-
-    /**
-     * Data stored per command in the command-cookie buffer...
-     */
-    struct libcouchbase_command_data_st {
-        hrtime_t start;
-        const void *cookie;
-    };
 
     struct libcouchbase_histogram_st;
 

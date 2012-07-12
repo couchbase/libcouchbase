@@ -121,13 +121,11 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
 
     switch (header.response.magic) {
     case PROTOCOL_BINARY_REQ:
-        c->instance->request_handler[header.response.opcode](c, ct.cookie,
-                                                             (void *)packet);
+        c->instance->request_handler[header.response.opcode](c, &ct, (void *)packet);
         break;
     case PROTOCOL_BINARY_RES: {
         int was_connected = c->connected;
-        if (libcouchbase_server_purge_implicit_responses(c,
-                                                         header.response.opaque, stop) != 0) {
+        if (libcouchbase_server_purge_implicit_responses(c, header.response.opaque, stop) != 0) {
             if (packet != c->input.read_head) {
                 free(packet);
             }
@@ -142,9 +140,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         }
 
         if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
-            c->instance->response_handler[header.response.opcode](c,
-                                                                  ct.cookie,
-                                                                  (void *)packet);
+            c->instance->response_handler[header.response.opcode](c, &ct, (void *)packet);
             /* keep command and cookie until we get complete STAT response */
             if (was_connected &&
                     (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0)) {

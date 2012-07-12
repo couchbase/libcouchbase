@@ -70,19 +70,19 @@ static libcouchbase_error_t map_error(protocol_binary_response_status in)
 
 
 static void dummy_request_handler(libcouchbase_server_t *server,
-                                  const void *command_cookie,
+                                  struct libcouchbase_command_data_st *command_data,
                                   protocol_binary_request_header *req)
 {
     (void)server;
     (void)req;
-    (void)command_cookie;
+    (void)command_data;
 #ifdef DEBUG
     fprintf(stderr, "Received request packet %02x\n", req->request.opcode);
 #endif
 }
 
 static void dummy_response_handler(libcouchbase_server_t *server,
-                                   const void *command_cookie,
+                                   struct libcouchbase_command_data_st *command_data,
                                    protocol_binary_response_header *res)
 {
 #ifdef DEBUG
@@ -91,7 +91,7 @@ static void dummy_response_handler(libcouchbase_server_t *server,
 #endif
     (void)server;
     (void)res;
-    (void)command_cookie;
+    (void)command_data;
 }
 
 /**
@@ -176,7 +176,7 @@ static void release_key(libcouchbase_server_t *server, char *packet)
 }
 
 static void getq_response_handler(libcouchbase_server_t *server,
-                                  const void *command_cookie,
+                                  struct libcouchbase_command_data_st *command_data,
                                   protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -195,19 +195,19 @@ static void getq_response_handler(libcouchbase_server_t *server,
     } else if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         const char *bytes = (const char *)res;
         bytes += sizeof(getq->bytes);
-        root->callbacks.get(root, command_cookie, LIBCOUCHBASE_SUCCESS,
+        root->callbacks.get(root, command_data->cookie, LIBCOUCHBASE_SUCCESS,
                             key, nkey, bytes, nbytes,
                             ntohl(getq->message.body.flags),
                             res->response.cas);
     } else {
-        root->callbacks.get(root, command_cookie, map_error(status), key, nkey,
+        root->callbacks.get(root, command_data->cookie, map_error(status), key, nkey,
                             NULL, 0, 0, 0);
     }
     release_key(server, packet);
 }
 
 static void delete_response_handler(libcouchbase_server_t *server,
-                                    const void *command_cookie,
+                                    struct libcouchbase_command_data_st *command_data,
                                     protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -220,14 +220,14 @@ static void delete_response_handler(libcouchbase_server_t *server,
         libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
                                    NULL);
     } else {
-        root->callbacks.remove(root, command_cookie, map_error(status),
+        root->callbacks.remove(root, command_data->cookie, map_error(status),
                                key, nkey);
         release_key(server, packet);
     }
 }
 
 static void observe_response_handler(libcouchbase_server_t *server,
-                                     const void *command_cookie,
+                                     struct libcouchbase_command_data_st *command_data,
                                      protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -261,7 +261,7 @@ static void observe_response_handler(libcouchbase_server_t *server,
         ptr += sizeof(obs);
         cas = *((libcouchbase_cas_t *)ptr);
         ptr += sizeof(cas);
-        root->callbacks.observe(root, command_cookie, map_error(status),
+        root->callbacks.observe(root, command_data->cookie, map_error(status),
                                 obs, key, nkey, cas,
                                 server->index == vbucket_get_master(config, vb),
                                 ttp, ttr);
@@ -269,13 +269,13 @@ static void observe_response_handler(libcouchbase_server_t *server,
     /* run callback with null-null-null to signal the end of transfer */
     if (libcouchbase_lookup_server_with_command(root, CMD_OBSERVE,
                                                 res->response.opaque, server) < 0) {
-        root->callbacks.observe(root, command_cookie, map_error(status),
+        root->callbacks.observe(root, command_data->cookie, map_error(status),
                                 0, NULL, 0, 0, 0, 0, 0);
     }
 }
 
 static void storage_response_handler(libcouchbase_server_t *server,
-                                     const void *command_cookie,
+                                     struct libcouchbase_command_data_st *command_data,
                                      protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -320,14 +320,14 @@ static void storage_response_handler(libcouchbase_server_t *server,
         libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
                                    NULL);
     } else {
-        root->callbacks.storage(root, command_cookie, op, map_error(status),
+        root->callbacks.storage(root, command_data->cookie, op, map_error(status),
                                 key, nkey, res->response.cas);
         release_key(server, packet);
     }
 }
 
 static void arithmetic_response_handler(libcouchbase_server_t *server,
-                                        const void *command_cookie,
+                                        struct libcouchbase_command_data_st *command_data,
                                         protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -344,17 +344,17 @@ static void arithmetic_response_handler(libcouchbase_server_t *server,
         libcouchbase_uint64_t value;
         memcpy(&value, res + 1, sizeof(value));
         value = ntohll(value);
-        root->callbacks.arithmetic(root, command_cookie, LIBCOUCHBASE_SUCCESS,
+        root->callbacks.arithmetic(root, command_data->cookie, LIBCOUCHBASE_SUCCESS,
                                    key, nkey, value, res->response.cas);
     } else {
-        root->callbacks.arithmetic(root, command_cookie, map_error(status),
+        root->callbacks.arithmetic(root, command_data->cookie, map_error(status),
                                    key, nkey, 0, 0);
     }
     release_key(server, packet);
 }
 
 static void stat_response_handler(libcouchbase_server_t *server,
-                                  const void *command_cookie,
+                                  struct libcouchbase_command_data_st *command_data,
                                   protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -369,7 +369,7 @@ static void stat_response_handler(libcouchbase_server_t *server,
             if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
                                                         res->response.opaque, server) < 0) {
                 /* notify client that data is ready */
-                root->callbacks.stat(root, command_cookie, NULL,
+                root->callbacks.stat(root, command_data->cookie, NULL,
                                      LIBCOUCHBASE_SUCCESS, NULL, 0, NULL, 0);
             }
             return;
@@ -377,23 +377,23 @@ static void stat_response_handler(libcouchbase_server_t *server,
         key = (const char *)res + sizeof(res->bytes);
         nvalue = ntohl(res->response.bodylen) - nkey;
         value = key + nkey;
-        root->callbacks.stat(root, command_cookie, server->authority,
+        root->callbacks.stat(root, command_data->cookie, server->authority,
                              map_error(status), key, nkey, value, nvalue);
     } else {
-        root->callbacks.stat(root, command_cookie, server->authority,
+        root->callbacks.stat(root, command_data->cookie, server->authority,
                              map_error(status), NULL, 0, NULL, 0);
 
         /* run callback with null-null-null to signal the end of transfer */
         if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
                                                     res->response.opaque, server) < 0) {
-            root->callbacks.stat(root, command_cookie, NULL,
+            root->callbacks.stat(root, command_data->cookie, NULL,
                                  LIBCOUCHBASE_SUCCESS, NULL, 0, NULL, 0);
         }
     }
 }
 
 static void version_response_handler(libcouchbase_server_t *server,
-                                     const void *command_cookie,
+                                     struct libcouchbase_command_data_st *command_data,
                                      protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -407,18 +407,18 @@ static void version_response_handler(libcouchbase_server_t *server,
         vstring = NULL;
     }
 
-    root->callbacks.version(root, command_cookie, server->authority, map_error(status),
+    root->callbacks.version(root, command_data->cookie, server->authority, map_error(status),
                             vstring, nvstring);
 
     if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_VERSION,
                                                 res->response.opaque, server) < 0) {
-        root->callbacks.version(root, command_cookie, NULL, LIBCOUCHBASE_SUCCESS, NULL, 0);
+        root->callbacks.version(root, command_data->cookie, NULL, LIBCOUCHBASE_SUCCESS, NULL, 0);
     }
 
 }
 
 static void tap_mutation_handler(libcouchbase_server_t *server,
-                                 const void *command_cookie,
+                                 struct libcouchbase_command_data_st *command_data,
                                  protocol_binary_request_header *req)
 {
     /* @todo verify that the size is correct! */
@@ -441,14 +441,14 @@ static void tap_mutation_handler(libcouchbase_server_t *server,
         flags = ntohl(flags);
     }
 
-    root->callbacks.tap_mutation(root, command_cookie, key, nkey, data,
+    root->callbacks.tap_mutation(root, command_data->cookie, key, nkey, data,
                                  nbytes, flags, exp, req->request.cas,
                                  ntohs(req->request.vbucket),
                                  es, nes);
 }
 
 static void tap_deletion_handler(libcouchbase_server_t *server,
-                                 const void *command_cookie,
+                                 struct libcouchbase_command_data_st *command_data,
                                  protocol_binary_request_header *req)
 {
     /* @todo verify that the size is correct! */
@@ -459,13 +459,13 @@ static void tap_deletion_handler(libcouchbase_server_t *server,
     libcouchbase_uint16_t nes = ntohs(deletion->message.body.tap.enginespecific_length);
     char *key = es + nes;
     libcouchbase_t root = server->instance;
-    root->callbacks.tap_deletion(root, command_cookie, key, nkey,
+    root->callbacks.tap_deletion(root, command_data->cookie, key, nkey,
                                  req->request.cas,
                                  ntohs(req->request.vbucket), es, nes);
 }
 
 static void tap_flush_handler(libcouchbase_server_t *server,
-                              const void *command_cookie,
+                              struct libcouchbase_command_data_st *command_data,
                               protocol_binary_request_header *req)
 {
     /* @todo verify that the size is correct! */
@@ -474,11 +474,11 @@ static void tap_flush_handler(libcouchbase_server_t *server,
     char *es = packet + sizeof(flush->bytes);
     libcouchbase_uint16_t nes = ntohs(flush->message.body.tap.enginespecific_length);
     libcouchbase_t root = server->instance;
-    root->callbacks.tap_flush(root, command_cookie, es, nes);
+    root->callbacks.tap_flush(root, command_data->cookie, es, nes);
 }
 
 static void tap_opaque_handler(libcouchbase_server_t *server,
-                               const void *command_cookie,
+                               struct libcouchbase_command_data_st *command_data,
                                protocol_binary_request_header *req)
 {
     /* @todo verify that the size is correct! */
@@ -487,11 +487,11 @@ static void tap_opaque_handler(libcouchbase_server_t *server,
     char *es = packet + sizeof(opaque->bytes);
     libcouchbase_uint16_t nes = ntohs(opaque->message.body.tap.enginespecific_length);
     libcouchbase_t root = server->instance;
-    root->callbacks.tap_opaque(root, command_cookie, es, nes);
+    root->callbacks.tap_opaque(root, command_data->cookie, es, nes);
 }
 
 static void tap_vbucket_set_handler(libcouchbase_server_t *server,
-                                    const void *command_cookie,
+                                    struct libcouchbase_command_data_st *command_data,
                                     protocol_binary_request_header *req)
 {
     /* @todo verify that the size is correct! */
@@ -503,12 +503,12 @@ static void tap_vbucket_set_handler(libcouchbase_server_t *server,
     libcouchbase_uint32_t state;
     memcpy(&state, es + nes, sizeof(state));
     state = ntohl(state);
-    root->callbacks.tap_vbucket_set(root, command_cookie, ntohs(req->request.vbucket),
+    root->callbacks.tap_vbucket_set(root, command_data->cookie, ntohs(req->request.vbucket),
                                     (libcouchbase_vbucket_state_t)state, es, nes);
 }
 
 static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
-                                            const void *command_cookie,
+                                            struct libcouchbase_command_data_st *command_data,
                                             protocol_binary_response_header *res)
 {
     const char *data;
@@ -546,7 +546,7 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)(bodysize));
 
-    libcouchbase_server_buffer_start_packet(server, command_cookie, &server->output,
+    libcouchbase_server_buffer_start_packet(server, command_data->cookie, &server->output,
                                             &server->output_cookies,
                                             req.bytes, sizeof(req.bytes));
     libcouchbase_server_buffer_write_packet(server, &server->output,
@@ -562,7 +562,7 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
 }
 
 static void sasl_auth_response_handler(libcouchbase_server_t *server,
-                                       const void *command_cookie,
+                                       struct libcouchbase_command_data_st *command_data,
                                        protocol_binary_response_header *res)
 {
     libcouchbase_uint16_t ret = ntohs(res->response.status);
@@ -582,16 +582,16 @@ static void sasl_auth_response_handler(libcouchbase_server_t *server,
 
     /* Make it known that this was a success. */
     libcouchbase_error_handler(server->instance, LIBCOUCHBASE_SUCCESS, NULL);
-    (void)command_cookie;
+    (void)command_data;
 }
 
 static void sasl_step_response_handler(libcouchbase_server_t *server,
-                                       const void *command_cookie,
+                                       struct libcouchbase_command_data_st *command_data,
                                        protocol_binary_response_header *res)
 {
     (void)server;
     (void)res;
-    (void)command_cookie;
+    (void)command_data;
 
     /* I don't have sasl step support yet ;-) */
     libcouchbase_error_handler(server->instance, LIBCOUCHBASE_NOT_SUPPORTED,
@@ -606,7 +606,7 @@ static void sasl_step_response_handler(libcouchbase_server_t *server,
 }
 
 static void touch_response_handler(libcouchbase_server_t *server,
-                                   const void *command_cookie,
+                                   struct libcouchbase_command_data_st *command_data,
                                    protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -619,29 +619,29 @@ static void touch_response_handler(libcouchbase_server_t *server,
         libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
                                    NULL);
     } else {
-        root->callbacks.touch(root, command_cookie, map_error(status),
+        root->callbacks.touch(root, command_data->cookie, map_error(status),
                               key, nkey);
         release_key(server, packet);
     }
 }
 
 static void flush_response_handler(libcouchbase_server_t *server,
-                                   const void *command_cookie,
+                                   struct libcouchbase_command_data_st *command_data,
                                    protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
     libcouchbase_uint16_t status = ntohs(res->response.status);
-    root->callbacks.flush(root, command_cookie, server->authority,
+    root->callbacks.flush(root, command_data->cookie, server->authority,
                           map_error(status));
     if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_FLUSH,
                                                 res->response.opaque, server) < 0) {
-        root->callbacks.flush(root, command_cookie, NULL,
+        root->callbacks.flush(root, command_data->cookie, NULL,
                               LIBCOUCHBASE_SUCCESS);
     }
 }
 
 static void unlock_response_handler(libcouchbase_server_t *server,
-                                    const void *command_cookie,
+                                    struct libcouchbase_command_data_st *command_data,
                                     protocol_binary_response_header *res)
 {
     libcouchbase_t root = server->instance;
@@ -654,7 +654,7 @@ static void unlock_response_handler(libcouchbase_server_t *server,
         libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
                                    NULL);
     } else {
-        root->callbacks.unlock(root, command_cookie, map_error(status),
+        root->callbacks.unlock(root, command_data->cookie, map_error(status),
                                key, nkey);
         release_key(server, packet);
     }
@@ -751,7 +751,7 @@ static void dummy_error_callback(libcouchbase_t instance,
 }
 
 static void dummy_stat_callback(libcouchbase_t instance,
-                                const void *command_cookie,
+                                const void *cookie,
                                 const char *server_endpoint,
                                 libcouchbase_error_t error,
                                 const void *key,
@@ -761,7 +761,7 @@ static void dummy_stat_callback(libcouchbase_t instance,
 {
     (void)instance;
     (void)error;
-    (void)command_cookie;
+    (void)cookie;
     (void)server_endpoint;
     (void)key;
     (void)nkey;
@@ -770,14 +770,14 @@ static void dummy_stat_callback(libcouchbase_t instance,
 }
 
 static void dummy_version_callback(libcouchbase_t instance,
-                                   const void *command_cookie,
+                                   const void *cookie,
                                    const char *server_endpoint,
                                    libcouchbase_error_t error,
                                    const char *vstring,
                                    libcouchbase_size_t nvstring)
 {
     (void)instance;
-    (void)command_cookie;
+    (void)cookie;
     (void)server_endpoint;
     (void)error;
     (void)vstring;
