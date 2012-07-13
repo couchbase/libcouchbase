@@ -44,11 +44,12 @@ struct winsock_timer {
     hrtime_t exptime;
     void *cb_data;
     void (*handler)(libcouchbase_socket_t sock, short which, void *cb_data);
+    struct winsock_timer *next;
 };
 
 struct winsock_io_cookie {
     struct winsock_event *events;
-    struct winsock_timer *timer;
+    struct winsock_timer *timers;
 
     fd_set readfds[FD_SETSIZE];
     fd_set writefds[FD_SETSIZE];
@@ -78,6 +79,34 @@ static void unlink_event(struct winsock_io_cookie *instance,
         struct winsock_event *next;
         for (next = prev->next; next != NULL; next = next->next) {
             if (event == next) {
+                prev->next = next->next;
+                return;
+            }
+        }
+    }
+}
+
+static void link_timer(struct winsock_io_cookie *instance,
+                       struct winsock_timer *timer)
+{
+    if (instance->timers == NULL) {
+        instance->timers = timer;
+    } else {
+        instance->timers->next = timer;
+        timer->next = NULL;
+    }
+}
+
+static void unlink_timer(struct winsock_io_cookie *instance,
+                         struct winsock_timer *timer)
+{
+    if (instance->timers == timer) {
+        instance->timers = timer->next;
+    } else {
+        struct winsock_timer *prev = instance->timers;
+        struct winsock_timer *next;
+        for (next = prev->next; next != NULL; next = next->next) {
+            if (timer == next) {
                 prev->next = next->next;
                 return;
             }
@@ -299,34 +328,27 @@ static void libcouchbase_io_delete_event(struct libcouchbase_io_opt_st *iops,
 
 void *libcouchbase_io_create_timer(struct libcouchbase_io_opt_st *iops)
 {
-    struct winsock_io_cookie *me = iops->cookie;
-    struct winsock_timer *ret;
-
-    assert(me->timer == NULL);
-    ret = calloc(1, sizeof(*ret));
-    if (ret != NULL) {
-        me->timer = ret;
+    struct winsock_timer *timer;
+    timer = calloc(1, sizeof(*timer));
+    if (timer != NULL) {
+        link_timer(iops->cookie, timer);
     }
-
-    return ret;
+    return timer;
 }
 
 void libcouchbase_io_destroy_timer(struct libcouchbase_io_opt_st *iops,
                                    void *timer)
 {
-    struct winsock_io_cookie *me = iops->cookie;
-    assert(me->timer == timer);
-    free(timer);
-    me->timer = NULL;
+    struct winsock_timer *tm = timer;
+    unlink_timer(iops->cookie, tm);
+    free(tm);
 }
 
 void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
                                   void *timer)
 {
-    struct winsock_io_cookie *me = iops->cookie;
-    assert(me->timer == timer);
-    me->timer->active = 0;
-
+    struct winsock_timer *tm = timer;
+    tm->active = 0;
 }
 
 int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
@@ -337,12 +359,11 @@ int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
                                                  short which,
                                                  void *cb_data))
 {
-    struct winsock_io_cookie *me = iops->cookie;
-    assert(me->timer == timer);
-    me->timer->exptime = gethrtime() + (usec * (hrtime_t)1000);
-    me->timer->cb_data = cb_data;
-    me->timer->handler = handler;
-    me->timer->active = 1;
+    struct winsock_timer *tm = timer;
+    tm->exptime = gethrtime() + (usec * (hrtime_t)1000);
+    tm->cb_data = cb_data;
+    tm->handler = handler;
+    tm->active = 1;
     return 0;
 }
 
@@ -360,6 +381,7 @@ static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
 
     instance->event_loop = 1;
     do {
+        struct winsock_timer *tm;
         struct timeval tmo, *t;
         int ret;
 
@@ -386,31 +408,42 @@ static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
             return;
         }
 
-        if (instance->timer != NULL && instance->timer->active) {
+        t = NULL;
+        if (instance->timers != NULL) {
             hrtime_t now = gethrtime();
+            hrtime_t min = 0;
             tmo.tv_sec = 0;
             tmo.tv_usec = 0;
 
-            if (now < instance->timer->exptime) {
-                hrtime_t delta = instance->timer->exptime - now;
+            for (tm = instance->timers; tm != NULL; tm = tm->next) {
+                if (tm->active && now < tm->exptime
+                        && (min == 0 || min > tm->exptime)) {
+                    min = tm->exptime;
+                }
+            }
+            if (min > 0) {
+                hrtime_t delta = min - now;
                 delta /= 1000;
                 tmo.tv_sec = (long)(delta / 1000000);
                 tmo.tv_usec = delta % 1000000;
+                t = &tmo;
             }
-            t = &tmo;
-        } else {
-            t = NULL;
         }
         ret = select(FD_SETSIZE, instance->readfds, instance->writefds,
                      instance->exceptfds, t);
 
         if (ret == SOCKET_ERROR) {
-            fprintf(stderr, "ERROR!!!\n");
+            fprintf(stderr, "libcouchbase_io_run_event_loop: select() call returned SOCKET_ERROR\n");
             return ;
         }
 
         if (ret == 0) {
-            instance->timer->handler(-1, 0, instance->timer->cb_data);
+            hrtime_t now = gethrtime();
+            for (tm = instance->timers; tm != NULL; tm = tm->next) {
+                if (tm->active && now > tm->exptime) {
+                    tm->handler(-1, 0, tm->cb_data);
+                }
+            }
         } else {
             for (n = instance->events; n != NULL; n = n->next) {
                 if (n->flags != 0) {
