@@ -254,7 +254,7 @@ static libcouchbase_error_t libcouchbase_single_get(libcouchbase_t instance,
 {
     libcouchbase_server_t *server;
     protocol_binary_request_gat req;
-    int vb, idx, ii;
+    int vb, idx;
     libcouchbase_size_t nbytes;
 
     if (nhashkey == 0) {
