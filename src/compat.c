@@ -39,14 +39,14 @@ libcouchbase_error_t libcouchbase_create_compat(libcouchbase_cluster_t type,
 
     *instance = libcouchbase_create(NULL, NULL, NULL, NULL, io);
     if (*instance == NULL) {
-        return LIBCOUCHBASE_ENOMEM;
+        return LIBCOUCHBASE_CLIENT_ENOMEM;
     }
 
     config = vbucket_config_create();
     if (config == NULL) {
         libcouchbase_destroy(*instance);
         *instance = NULL;
-        return LIBCOUCHBASE_ENOMEM;
+        return LIBCOUCHBASE_CLIENT_ENOMEM;
     }
 
     if (type == LIBCOUCHBASE_MEMCACHED_CLUSTER) {
@@ -76,12 +76,12 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
     libcouchbase_ssize_t offset = 0;
 
     if (copy == NULL) {
-        return LIBCOUCHBASE_ENOMEM;
+        return LIBCOUCHBASE_CLIENT_ENOMEM;
     }
 
     if (ringbuffer_initialize(&buffer, 1024) == -1) {
         free(copy);
-        return LIBCOUCHBASE_ENOMEM;
+        return LIBCOUCHBASE_CLIENT_ENOMEM;
     }
 
     head[0] = '\0';
@@ -140,7 +140,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
 
         if (ringbuffer_ensure_capacity(&buffer, length) == -1) {
             free(copy);
-            return LIBCOUCHBASE_ENOMEM;
+            return LIBCOUCHBASE_CLIENT_ENOMEM;
         }
 
         ringbuffer_write(&buffer, head, length);
@@ -154,7 +154,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
 
     if (ringbuffer_ensure_capacity(&buffer, 3) == -1) {
         free(copy);
-        return LIBCOUCHBASE_ENOMEM;
+        return LIBCOUCHBASE_CLIENT_ENOMEM;
     }
 
     ringbuffer_write(&buffer, "]}", 3); /* Include '\0' */

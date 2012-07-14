@@ -29,7 +29,7 @@ static int do_fill_input_buffer(libcouchbase_server_t *c)
     libcouchbase_ssize_t nr;
 
     if (!ringbuffer_ensure_capacity(&c->input, 8192)) {
-        libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+        libcouchbase_error_handler(c->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
         return -1;
     }
 
@@ -97,7 +97,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         ** operate on the copy ;)
         */
         if ((packet = malloc(packetsize)) == NULL) {
-            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+            libcouchbase_error_handler(c->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
             return -1;
         }
         nr = ringbuffer_read(&c->input, packet, packetsize);
@@ -166,7 +166,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
             nbody = ntohl(req.request.bodylen);
             body = malloc(nbody);
             if (body == NULL) {
-                libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+                libcouchbase_error_handler(c->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
                 return -1;
             }
             nr = ringbuffer_read(&c->cmd_log, body, nbody);

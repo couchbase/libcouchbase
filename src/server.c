@@ -97,7 +97,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
                                      headersize)) {
             packet = malloc(headersize);
             if (packet == NULL) {
-                libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM, NULL);
+                libcouchbase_error_handler(server->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
                 abort();
             }
 
@@ -443,7 +443,7 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
                 !ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
                 !ringbuffer_append(&copy, &server->cmd_log)) {
             libcouchbase_error_handler(server->instance,
-                                       LIBCOUCHBASE_ENOMEM,
+                                       LIBCOUCHBASE_CLIENT_ENOMEM,
                                        NULL);
         }
 
@@ -657,7 +657,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
                                          packetsize)) {
                 packet = malloc(packetsize);
                 if (packet == NULL) {
-                    libcouchbase_error_handler(c->instance, LIBCOUCHBASE_ENOMEM, NULL);
+                    libcouchbase_error_handler(c->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
                     return -1;
                 }
 

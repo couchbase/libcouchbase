@@ -54,7 +54,7 @@ libcouchbase_error_t libcouchbase_enable_timings(libcouchbase_t instance)
     }
 
     instance->histogram = calloc(1, sizeof(*instance->histogram));
-    return instance->histogram == NULL ? LIBCOUCHBASE_ENOMEM : LIBCOUCHBASE_SUCCESS;
+    return instance->histogram == NULL ? LIBCOUCHBASE_CLIENT_ENOMEM : LIBCOUCHBASE_SUCCESS;
 }
 
 LIBCOUCHBASE_API

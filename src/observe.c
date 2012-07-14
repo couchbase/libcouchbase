@@ -97,7 +97,7 @@ libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
             if (!rr->allocated) {
                 if (!init_request(rr)) {
                     destroy_requests(requests, instance->nservers);
-                    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+                    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
                 }
                 rr->req.message.header.request.magic = PROTOCOL_BINARY_REQ;
                 rr->req.message.header.request.opcode = CMD_OBSERVE;
@@ -130,7 +130,7 @@ libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
                 if (!tmp) {
                     /* FIXME by this time some of requests might be scheduled */
                     destroy_requests(requests, instance->nservers);
-                    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+                    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
                 } else {
                     ringbuffer_read(&rr->body, tmp, rr->nbody);
                     libcouchbase_server_write_packet(server, tmp, rr->nbody);

@@ -79,7 +79,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
 
     affected_servers = calloc(instance->nservers, sizeof(libcouchbase_size_t));
     if (affected_servers == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
     }
     if (nhashkey != 0) {
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
@@ -92,7 +92,7 @@ libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
     } else {
         servers = malloc(num_keys * sizeof(struct server_info_st));
         if (servers == NULL) {
-            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
         }
         for (ii = 0; ii < num_keys; ++ii) {
             (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &servers[ii].vb, &servers[ii].idx);
@@ -319,7 +319,7 @@ libcouchbase_error_t libcouchbase_get_replica_by_key(libcouchbase_t instance,
 
     affected_servers = calloc(instance->nservers, sizeof(libcouchbase_size_t));
     if (affected_servers == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
     }
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;

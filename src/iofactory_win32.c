@@ -36,7 +36,7 @@ libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t typ
     if (type == LIBCOUCHBASE_IO_OPS_DEFAULT || type == LIBCOUCHBASE_IO_OPS_WINSOCK) {
         ret = libcouchbase_create_winsock_io_opts();
         if (ret == NULL) {
-            set_error(error, LIBCOUCHBASE_ENOMEM);
+            set_error(error, LIBCOUCHBASE_CLIENT_ENOMEM);
         }
     } else {
         set_error(error, LIBCOUCHBASE_NOT_SUPPORTED);

@@ -87,7 +87,7 @@ libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t typ
         if (plugin.func.create != NULL) {
             ret = plugin.func.create(cookie);
             if (ret == NULL) {
-                set_error(error, LIBCOUCHBASE_ENOMEM);
+                set_error(error, LIBCOUCHBASE_CLIENT_ENOMEM);
             } else {
                 ret->dlhandle = plugin.dlhandle;
             }

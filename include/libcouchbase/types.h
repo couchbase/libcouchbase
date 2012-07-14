@@ -76,8 +76,12 @@ extern "C" {
         LIBCOUCHBASE_PROTOCOL_ERROR = 0x15,
         LIBCOUCHBASE_ETIMEDOUT = 0x16,
         LIBCOUCHBASE_CONNECT_ERROR = 0x17,
-        LIBCOUCHBASE_BUCKET_ENOENT = 0x18
+        LIBCOUCHBASE_BUCKET_ENOENT = 0x18,
+        LIBCOUCHBASE_CLIENT_ENOMEM = 0x19
     } libcouchbase_error_t;
+
+#define libcouchbase_is_error_enomem(a) ((a == LIBCOUCHBASE_CLIENT_ENOMEM) || \
+                                         (a == LIBCOUCHBASE_ENOMEM))
 
     typedef enum {
         LIBCOUCHBASE_CONFIGURATION_NEW = 0x00,

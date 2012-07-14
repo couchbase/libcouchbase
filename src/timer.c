@@ -44,7 +44,7 @@ libcouchbase_timer_t libcouchbase_timer_create(libcouchbase_t instance,
 {
     libcouchbase_timer_t tmr = calloc(1, sizeof(struct libcouchbase_timer_st));
     if (!tmr) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
         return NULL;
     }
     if (!callback) {
@@ -60,7 +60,7 @@ libcouchbase_timer_t libcouchbase_timer_create(libcouchbase_t instance,
     tmr->event = instance->io->create_timer(instance->io);
     if (tmr->event == NULL) {
         free(tmr);
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
         return NULL;
     }
     instance->io->update_timer(instance->io, tmr->event, tmr->usec,

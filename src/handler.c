@@ -125,7 +125,7 @@ static const char *get_key(libcouchbase_server_t *server, libcouchbase_uint16_t 
                                  packetsize)) {
         *packet = malloc(packetsize);
         if (*packet == NULL) {
-            libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM,
+            libcouchbase_error_handler(server->instance, LIBCOUCHBASE_CLIENT_ENOMEM,
                                        NULL);
             return NULL;
         }
@@ -587,7 +587,7 @@ static void sasl_list_mech_response_handler(libcouchbase_server_t *server,
     bodysize = ntohl(res->response.bodylen);
     mechlist = calloc(bodysize + 1, sizeof(char));
     if (mechlist == NULL) {
-        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_ENOMEM, NULL);
+        libcouchbase_error_handler(server->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
         return;
     }
     memcpy(mechlist, (const char *)(res + 1), bodysize);

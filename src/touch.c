@@ -72,7 +72,7 @@ libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
     } else {
         servers = malloc(num_keys * sizeof(struct server_info_st));
         if (servers == NULL) {
-            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ENOMEM);
+            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
         }
         for (ii = 0; ii < num_keys; ++ii) {
             (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &servers[ii].vb, &servers[ii].idx);

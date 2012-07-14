@@ -81,6 +81,8 @@ const char *libcouchbase_strerror(libcouchbase_t instance,
         return "Connection failure";
     case LIBCOUCHBASE_BUCKET_ENOENT:
         return "No such bucket";
+    case LIBCOUCHBASE_CLIENT_ENOMEM:
+        return "Out of memory on the client";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

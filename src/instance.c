@@ -346,13 +346,13 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
     /* servers array should be freed in the caller */
     instance->servers = calloc(num, sizeof(libcouchbase_server_t));
     if (instance->servers == NULL) {
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM, "Failed to allocate memory");
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM, "Failed to allocate memory");
     }
     instance->nservers = num;
     free_backup_nodes(instance);
     instance->backup_nodes = calloc(num, sizeof(char *));
     if (instance->backup_nodes == NULL) {
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM, "Failed to allocate memory");
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM, "Failed to allocate memory");
     }
     instance->nbackup_nodes = num;
     snprintf(curnode, sizeof(curnode), "%s:%s", instance->host, instance->port);
@@ -398,7 +398,7 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
     free(instance->vb_server_map);
     instance->vb_server_map = calloc(max, sizeof(libcouchbase_vbucket_t));
     if (instance->vb_server_map == NULL) {
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM, "Failed to allocate memory");
+        return libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM, "Failed to allocate memory");
     }
     for (ii = 0; ii < max; ++ii) {
         instance->vb_server_map[ii] = (libcouchbase_uint16_t)vbucket_get_master(instance->vbucket_config, ii);
@@ -422,7 +422,7 @@ static void relocate_packets(libcouchbase_server_t *src,
         npacket = sizeof(cmd.bytes) + nbody;
         body = malloc(nbody);
         if (body == NULL) {
-            libcouchbase_error_handler(dst_instance, LIBCOUCHBASE_ENOMEM,
+            libcouchbase_error_handler(dst_instance, LIBCOUCHBASE_CLIENT_ENOMEM,
                                        "Failed to allocate memory");
             return;
         }
@@ -471,7 +471,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
     curr_config = instance->vbucket_config;
     next_config = vbucket_config_create();
     if (next_config == NULL) {
-        libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM,
+        libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM,
                                    "Failed to allocate memory for config");
         return;
     }
@@ -818,7 +818,7 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
 
     do {
         if (!grow_buffer(buffer, 1)) {
-            libcouchbase_error_handler(instance, LIBCOUCHBASE_ENOMEM,
+            libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM,
                                        "Failed to allocate memory");
             return ;
         }
