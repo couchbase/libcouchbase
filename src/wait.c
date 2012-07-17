@@ -79,6 +79,9 @@ int libcouchbase_is_waiting(libcouchbase_t instance)
 LIBCOUCHBASE_API
 void libcouchbase_wait(libcouchbase_t instance)
 {
+    if (instance->wait != 0) {
+        return;
+    }
     /*
      * The API is designed for you to run your own event loop,
      * but should also work if you don't do that.. In order to be
