@@ -58,6 +58,17 @@ static void initial_connect_timeout_handler(libcouchbase_socket_t sock,
 }
 
 /**
+ * Returns non zero if the event loop is running now
+ *
+ * @param instance the instance to run the event loop for.
+ */
+LIBCOUCHBASE_API
+int libcouchbase_is_waiting(libcouchbase_t instance)
+{
+    return instance->wait != 0;
+}
+
+/**
  * Run the event loop until we've got a response for all of our spooled
  * commands. You should not call this function from within your callbacks.
  *
