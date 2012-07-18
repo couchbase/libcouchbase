@@ -28,6 +28,7 @@ static void timer_callback(libcouchbase_socket_t sock,
         instance->io->delete_timer(instance->io, timer->event);
         libcouchbase_timer_destroy(instance, timer);
     }
+    libcouchbase_maybe_breakout(timer->instance);
 
     (void)sock;
     (void)which;
