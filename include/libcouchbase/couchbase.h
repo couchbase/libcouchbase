@@ -205,6 +205,14 @@ extern "C" {
     int libcouchbase_is_waiting(libcouchbase_t instance);
 
     /**
+     * Stop event loop. Might be useful to breakout the event loop
+     *
+     * @param instance the instance to run the event loop for.
+     */
+    LIBCOUCHBASE_API
+    void libcouchbase_breakout(libcouchbase_t instance);
+
+    /**
      * Get a number of values from the cache. You need to run the
      * event loop yourself (or call libcouchbase_execute) to retrieve
      * the data. You might want to alter the expiry time for the object

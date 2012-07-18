@@ -114,3 +114,17 @@ void libcouchbase_wait(libcouchbase_t instance)
      * stop_event_loop()
      */
 }
+
+/**
+ * Stop event loop
+ *
+ * @param instance the instance to run the event loop for.
+ */
+LIBCOUCHBASE_API
+void libcouchbase_breakout(libcouchbase_t instance)
+{
+    if (instance->wait) {
+        instance->io->stop_event_loop(instance->io);
+        instance->wait = 0;
+    }
+}
