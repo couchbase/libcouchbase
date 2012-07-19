@@ -213,19 +213,17 @@ static void get_replica_response_handler(libcouchbase_server_t *server,
     libcouchbase_t root = server->instance;
     protocol_binary_response_get *get = (void *)res;
     libcouchbase_uint16_t status = ntohs(res->response.status);
-    libcouchbase_size_t nbytes = ntohl(res->response.bodylen);
-    char *packet;
-    libcouchbase_uint16_t nkey;
-    const char *key = get_key(server, &nkey, &packet);
+    libcouchbase_uint16_t nkey = ntohs(res->response.keylen);
+    const char *key = (const char *)res;
 
-    nbytes -= res->response.extlen;
+    key += sizeof(get->bytes);
     if (key == NULL) {
         libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
                                    NULL);
         return;
     } else if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        const char *bytes = (const char *)res;
-        bytes += sizeof(get->bytes);
+        const char *bytes = key + nkey;
+        libcouchbase_size_t nbytes = ntohl(res->response.bodylen) - nkey - res->response.extlen;
         root->callbacks.get(root, command_data->cookie, LIBCOUCHBASE_SUCCESS,
                             key, nkey, bytes, nbytes,
                             ntohl(get->message.body.flags),
@@ -267,7 +265,6 @@ static void get_replica_response_handler(libcouchbase_server_t *server,
                                 NULL, 0, 0, 0);
         }
     }
-    release_key(server, packet);
 }
 
 static void delete_response_handler(libcouchbase_server_t *server,
