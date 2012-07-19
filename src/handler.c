@@ -238,7 +238,9 @@ static void get_replica_response_handler(libcouchbase_server_t *server,
         if (command_data->replica < root->nreplicas) {
             /* try next replica */
             protocol_binary_request_get req;
-            int idx = vbucket_get_replica(root->vbucket_config, command_data->vbucket, 0);
+            int idx = vbucket_get_replica(root->vbucket_config,
+                                          command_data->vbucket,
+                                          command_data->replica);
             if (idx < 0 || idx > (int)root->nservers) {
                 libcouchbase_error_handler(root, LIBCOUCHBASE_NETWORK_ERROR,
                                            "GET_REPLICA: missing server");
