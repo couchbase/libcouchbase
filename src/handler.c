@@ -253,7 +253,7 @@ static void get_replica_response_handler(libcouchbase_server_t *server,
             req.message.header.request.vbucket = ntohs(command_data->vbucket);
             req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)nkey);
             req.message.header.request.opaque = ++root->seqno;
-            libcouchbase_server_start_packet(server, command_data->cookie,
+            libcouchbase_server_retry_packet(server, &command_data,
                                              req.bytes, sizeof(req.bytes));
             libcouchbase_server_write_packet(server, key, nkey);
             libcouchbase_server_end_packet(server);
