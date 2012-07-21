@@ -203,6 +203,13 @@ extern "C" {
         LIBCOUCHBASE_VBUCKET_STATE_DEAD          /* Not in use, pending deletion. */
     } libcouchbase_vbucket_state_t;
 
+    typedef enum {
+        LIBCOUCHBASE_VERBOSITY_DETAIL = 0x00,
+        LIBCOUCHBASE_VERBOSITY_DEBUG = 0x01,
+        LIBCOUCHBASE_VERBOSITY_INFO = 0x02,
+        LIBCOUCHBASE_VERBOSITY_WARNING = 0x03
+    } libcouchbase_verbosity_level_t;
+
     struct sockaddr;
 
     struct libcouchbase_iovec_st {

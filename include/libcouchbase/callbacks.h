@@ -177,6 +177,10 @@ extern "C" {
     typedef void (*libcouchbase_configuration_callback)(libcouchbase_t instance,
                                                         libcouchbase_configuration_t val);
 
+    typedef void (*libcouchbase_verbosity_callback)(libcouchbase_t instance,
+                                                    const void *cookie,
+                                                    const char *server_endpoint,
+                                                    libcouchbase_error_t error);
 
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
@@ -261,6 +265,10 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_configuration_callback libcouchbase_set_configuration_callback(libcouchbase_t,
                                                                                 libcouchbase_configuration_callback);
+
+    LIBCOUCHBASE_API
+    libcouchbase_verbosity_callback libcouchbase_set_verbosity_callback(libcouchbase_t,
+                                                                        libcouchbase_verbosity_callback);
 
 #ifdef __cplusplus
 }

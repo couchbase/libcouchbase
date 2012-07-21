@@ -85,6 +85,7 @@ libcouchbase_la_SOURCES = \
                         src/timings.c \
                         src/touch.c \
                         src/utilities.c \
+                        src/verbosity.c \
                         src/wait.c
 
 if !HAVE_SYSTEM_LIBSASL
@@ -158,7 +159,7 @@ tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	@echo "| Download CouchbaseMock for functional tests |"
 	@echo "+---------------------------------------------+"
-	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20120202.071818-12.jar
+	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20120726.220757-19.jar
 
 libmockserver_la_LDFLAGS = $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
@@ -252,7 +253,7 @@ if BUILD_TOOLS
 CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create        \
             cbc-send cbc-receive cbc-version cbc-verify cbc-lock        \
             cbc-unlock cbc-hash cbc-view cbc-admin cbc-bucket-create    \
-            cbc-bucket-delete
+            cbc-bucket-delete cbc-verbosity
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \

@@ -62,7 +62,8 @@ enum cbc_command_t {
     cbc_admin,
     cbc_bucket_create,
     cbc_bucket_delete,
-    cbc_observe
+    cbc_observe,
+    cbc_verbosity
 };
 
 struct cp_params {
@@ -509,6 +510,20 @@ extern "C" {
             }
         }
     }
+
+    static void verbosity_callback(libcouchbase_t instance,
+                                   const void *,
+                                   const char *endpoint,
+                                   libcouchbase_error_t error)
+    {
+        if (error != LIBCOUCHBASE_SUCCESS) {
+            cerr << "Failed to set verbosity level on \"" << endpoint << "\": "
+                 << libcouchbase_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            bool *err = static_cast<bool *>(cookie);
+            *err = true;
+        }
+    }
 }
 
 static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json, bool persisted, int replicated, int max_tries)
@@ -670,6 +685,55 @@ static bool observe_impl(libcouchbase_t instance, list<string> &keys)
         cerr << "Failed to send requests:" << endl
              << libcouchbase_strerror(instance, err) << endl;
         return false;
+    }
+
+    return true;
+}
+
+static bool verbosity_impl(libcouchbase_t instance, list<string> &args)
+{
+    if (args.empty()) {
+        cerr << "ERROR: You need to specify the verbosity level" << endl;
+        return false;
+    }
+
+    libcouchbase_verbosity_level_t level;
+    string &s = args.front();
+
+    if (s == "detail") {
+        level = LIBCOUCHBASE_VERBOSITY_DETAIL;
+    } else if (s == "debug") {
+        level = LIBCOUCHBASE_VERBOSITY_DEBUG;
+    } else if (s == "info") {
+        level = LIBCOUCHBASE_VERBOSITY_INFO;
+    } else if (s == "warning") {
+        level = LIBCOUCHBASE_VERBOSITY_WARNING;
+    } else {
+        cerr << "ERROR: Unknown verbosity level [detail,debug,info,warning]: "
+             << s << endl;
+        return false;
+    }
+    args.pop_front();
+
+    libcouchbase_error_t err;
+    if (args.empty()) {
+        err = libcouchbase_set_verbosity(instance, NULL, NULL, level);
+        if (err != LIBCOUCHBASE_SUCCESS) {
+            cerr << "Failed to set verbosity : " << endl
+                 << libcouchbase_strerror(instance, err) << endl;
+            return false;
+        }
+    } else {
+        list<string>::iterator iter;
+        for (iter = args.begin(); iter != args.end(); ++iter) {
+            err = libcouchbase_set_verbosity(instance, NULL,
+                                             iter->c_str(), level);
+            if (err != LIBCOUCHBASE_SUCCESS) {
+                cerr << "Failed to set verbosity : " << endl
+                     << libcouchbase_strerror(instance, err) << endl;
+                return false;
+            }
+        }
     }
 
     return true;
@@ -1254,6 +1318,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)libcouchbase_set_couch_complete_callback(instance, complete_callback);
     (void)libcouchbase_set_management_data_callback(instance, data_callback);
     (void)libcouchbase_set_management_complete_callback(instance, complete_callback);
+    (void)libcouchbase_set_verbosity_callback(instance, verbosity_callback);
 
     if (config.getTimeout() != 0) {
         libcouchbase_set_timeout(instance, config.getTimeout());
@@ -1367,6 +1432,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     case cbc_observe:
         success = observe_impl(instance, getopt.arguments);
         break;
+    case cbc_verbosity:
+        success = verbosity_impl(instance, getopt.arguments);
+        break;
     default:
         cerr << "Not implemented" << endl;
         success = false;
@@ -1438,6 +1506,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_bucket_delete;
     } else if (name.find("cbc-observe") != string::npos) {
         return cbc_observe;
+    } else if (name.find("cbc-verbosity") != string::npos) {
+        return cbc_verbosity;
     }
 
     return cbc_illegal;
@@ -1460,6 +1530,7 @@ static void printHelp()
          << "   stats           show stats" << endl
          << "   verify          verify content in cache with files" << endl
          << "   version         show version" << endl
+         << "   verbosity       specify server verbosity level" << endl
          << "   view            execute couchbase view (aka map/reduce) request" << endl
          << "   admin           execute request to management REST API" << endl
          << "   bucket-create   create data bucket on the cluster" << endl

@@ -218,6 +218,17 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
             }
             break;
 
+        case PROTOCOL_BINARY_CMD_VERBOSITY:
+            root->callbacks.verbosity(root, ct.cookie, server->authority, error);
+
+            if (libcouchbase_lookup_server_with_command(root,
+                                                        PROTOCOL_BINARY_CMD_VERBOSITY,
+                                                        req.request.opaque,
+                                                        server) < 0) {
+                root->callbacks.verbosity(root, ct.cookie, NULL, error);
+            }
+            break;
+
         case PROTOCOL_BINARY_CMD_VERSION:
             root->callbacks.version(root, ct.cookie, server->authority,
                                     error, NULL, 0);

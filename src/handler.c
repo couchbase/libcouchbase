@@ -455,6 +455,24 @@ static void stat_response_handler(libcouchbase_server_t *server,
     }
 }
 
+static void verbosity_response_handler(libcouchbase_server_t *server,
+                                       struct libcouchbase_command_data_st *command_data,
+                                       protocol_binary_response_header *res)
+{
+    libcouchbase_t root = server->instance;
+    libcouchbase_uint16_t status = ntohs(res->response.status);
+
+    root->callbacks.verbosity(root, command_data->cookie, server->authority,
+                              map_error(status));
+
+    /* run callback with null-null-null to signal the end of transfer */
+    if (libcouchbase_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_VERBOSITY,
+                                                res->response.opaque, server) < 0) {
+        root->callbacks.verbosity(root, command_data->cookie, NULL,
+                                  LIBCOUCHBASE_SUCCESS);
+    }
+}
+
 static void version_response_handler(libcouchbase_server_t *server,
                                      struct libcouchbase_command_data_st *command_data,
                                      protocol_binary_response_header *res)
@@ -1108,6 +1126,7 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->response_handler[PROTOCOL_BINARY_CMD_TOUCH] = touch_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_STAT] = stat_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_VERSION] = version_response_handler;
+    instance->response_handler[PROTOCOL_BINARY_CMD_VERBOSITY] = verbosity_response_handler;
     instance->response_handler[CMD_OBSERVE] = observe_response_handler;
 }
 
@@ -1336,6 +1355,17 @@ libcouchbase_configuration_callback libcouchbase_set_configuration_callback(libc
     libcouchbase_configuration_callback ret = instance->callbacks.configuration;
     if (cb != NULL) {
         instance->callbacks.configuration = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_verbosity_callback libcouchbase_set_verbosity_callback(libcouchbase_t instance,
+                                                                            libcouchbase_verbosity_callback cb)
+{
+    libcouchbase_verbosity_callback ret = instance->callbacks.verbosity;
+    if (cb != NULL) {
+        instance->callbacks.verbosity = cb;
     }
     return ret;
 }

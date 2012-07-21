@@ -127,6 +127,7 @@ extern "C" {
         libcouchbase_http_data_callback management_data;
         libcouchbase_unlock_callback unlock;
         libcouchbase_configuration_callback configuration;
+        libcouchbase_verbosity_callback verbosity;
     };
 
     struct libcouchbase_st {

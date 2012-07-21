@@ -680,6 +680,23 @@ extern "C" {
 
 
     /**
+     * Set the loglevel on the servers
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param server The server to set the verbosity level on (NULL == all servers)
+     * @param level the new verbosity level to set on the desired memcached servers
+     *              in the cluster
+     * @return The status of the operation.
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_error_t libcouchbase_set_verbosity(libcouchbase_t instance,
+                                                    const void *command_cookie,
+                                                    const char *server,
+                                                    libcouchbase_verbosity_level_t level);
+
+    /**
      * Flush the entire couchbase cluster!
      *
      * @param instance the handle to libcouchbase

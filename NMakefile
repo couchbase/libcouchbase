@@ -36,7 +36,7 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
     src\wait.c src\gethrtime.c src\plugin-win32.c src\isasl.c \
     src\compat.c contrib\http_parser\http_parser.c src\http.c \
-    src\observe.c src\timer.c
+    src\observe.c src\timer.c src\verbosity.c
 
 # Unfortunately nmake is a bit limited in its substitute functions.
 # Work around that by using dobj to represent debug object files ;)
