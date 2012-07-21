@@ -423,7 +423,7 @@ extern "C" {
                 }
             } else {
                 // check persistence conditions
-                int nkeys = params->keys->size();
+                size_t nkeys = params->keys->size();
                 bool ok = true;
 
                 if (params->need_persisted) {
