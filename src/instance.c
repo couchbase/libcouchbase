@@ -60,6 +60,17 @@ const char *libcouchbase_get_port(libcouchbase_t instance)
     return instance->port;
 }
 
+
+LIBCOUCHBASE_API
+libcouchbase_int32_t libcouchbase_get_num_replicas(libcouchbase_t instance)
+{
+    if (instance->vbucket_config) {
+        return instance->nreplicas;
+    } else {
+        return -1;
+    }
+}
+
 static void setup_current_host(libcouchbase_t instance, const char *host)
 {
     char *ptr;

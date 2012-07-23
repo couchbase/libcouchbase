@@ -42,6 +42,7 @@ extern "C" {
 #ifdef _WIN32
 #define PACKAGE_STRING "libcouchbase 1.1.0dp7"
     typedef __int64 libcouchbase_int64_t;
+    typedef __int32 libcouchbase_int32_t;
     typedef unsigned long libcouchbase_size_t;
     typedef long libcouchbase_ssize_t;
     typedef unsigned __int8 libcouchbase_uint8_t;
@@ -53,6 +54,7 @@ extern "C" {
     typedef time_t libcouchbase_time_t;
 #else
     typedef int64_t libcouchbase_int64_t;
+    typedef int32_t libcouchbase_int32_t;
     typedef size_t libcouchbase_size_t;
     typedef ssize_t libcouchbase_ssize_t;
     typedef uint16_t libcouchbase_vbucket_t;

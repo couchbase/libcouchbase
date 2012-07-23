@@ -805,6 +805,16 @@ extern "C" {
     libcouchbase_error_t libcouchbase_timer_destroy(libcouchbase_t instance,
                                                     libcouchbase_timer_t timer);
 
+    /**
+     * Get the number of the replicas in the cluster
+     *
+     * @param instance The handle to libcouchbase
+     *
+     * @return -1 if the cluster wasn't configured yet, and number of
+     *         replicas otherwise.
+     */
+    LIBCOUCHBASE_API
+    libcouchbase_int32_t libcouchbase_get_num_replicas(libcouchbase_t instance);
 #ifdef __cplusplus
 }
 #endif
