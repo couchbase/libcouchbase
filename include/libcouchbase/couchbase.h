@@ -217,8 +217,14 @@ extern "C" {
      * event loop yourself (or call libcouchbase_execute) to retrieve
      * the data. You might want to alter the expiry time for the object
      * you're fetching, and to do so you should specify the new expiry
-     * time in the exp parameter. To use an ordinary mget use NULL
-     * for the exp parameter.
+     * time in the exp parameter (refer to the documentation on
+     * libcouchbase_store to see the meaning of the expiration)
+     *
+     * NOTE: The semantics of the expiration parameter differs slightly
+     * from its use in libcouchbase_store. To specify that the expiration
+     * time should not be modified, pass NULL for the expiration array.
+     * Passing an array of zeroes will actually cause the key to be expired
+     * immediately.
      *
      * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
@@ -226,7 +232,7 @@ extern "C" {
      * @param num_keys the number of keys to get
      * @param keys the array containing the keys to get
      * @param nkey the array containing the lengths of the keys
-     * @param exp the new expiration time for the object
+     * @param exp the array containing the expiration times, or NULL
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
