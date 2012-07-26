@@ -21,7 +21,6 @@ LIBCOUCHBASE_API
 void libcouchbase_set_timeout(libcouchbase_t instance, libcouchbase_uint32_t usec)
 {
     instance->timeout.usec = usec;
-    libcouchbase_update_timer(instance);
 }
 
 LIBCOUCHBASE_API
@@ -30,67 +29,29 @@ libcouchbase_uint32_t libcouchbase_get_timeout(libcouchbase_t instance)
     return instance->timeout.usec;
 }
 
-static void libcouchbase_timeout_handler(libcouchbase_socket_t sock,
+static void libcouchbase_server_timeout_handler(libcouchbase_socket_t sock,
                                          short which,
                                          void *arg)
 {
-    libcouchbase_t instance = arg;
-    /* Remove the timer */
-    instance->io->delete_timer(instance->io, instance->timeout.event);
-    instance->timeout.next = 0;
-    libcouchbase_purge_timedout(instance);
-    libcouchbase_update_timer(instance);
+    libcouchbase_server_t *server = arg;
 
-    libcouchbase_maybe_breakout(instance);
+    libcouchbase_purge_single_server(server, LIBCOUCHBASE_ETIMEDOUT);
+    libcouchbase_update_server_timer(server);
+    libcouchbase_maybe_breakout(server->instance);
 
     (void)sock;
     (void)which;
 }
 
-void libcouchbase_update_timer(libcouchbase_t instance)
+void libcouchbase_update_server_timer(libcouchbase_server_t *server)
 {
-    /* Run through all of the server instances and figure out the first */
-    /* operation there. */
-    hrtime_t next = 0;
-    libcouchbase_size_t idx;
+    libcouchbase_t instance = server->instance;
 
-    for (idx = 0; idx < instance->nservers; ++idx) {
-        libcouchbase_server_t *server = instance->servers + (libcouchbase_size_t)idx;
-
-        if (next == 0) {
-            next = server->next_timeout;
-        } else if (server->next_timeout < next) {
-            next = server->next_timeout;
-        }
+    if (server->timer) {
+        instance->io->delete_timer(instance->io, server->timer);
     }
-
-    if (next != instance->timeout.next) {
-        if (next == 0) {
-            instance->io->delete_timer(instance->io,
-                                       instance->timeout.event);
-        } else {
-            /* update the timer */
-            instance->io->update_timer(instance->io,
-                                       instance->timeout.event,
-                                       instance->timeout.usec,
-                                       instance,
-                                       libcouchbase_timeout_handler);
-            instance->timeout.next = next;
-        }
-    }
+    instance->io->update_timer(instance->io, server->timer,
+                               instance->timeout.usec, server,
+                               libcouchbase_server_timeout_handler);
 }
 
-void libcouchbase_purge_timedout(libcouchbase_t instance)
-{
-    hrtime_t now = gethrtime();
-    libcouchbase_size_t idx;
-    hrtime_t tmo = instance->timeout.usec;
-    tmo *= 1000;
-
-    for (idx = 0; idx < instance->nservers; ++idx) {
-        libcouchbase_server_t *server = instance->servers + (libcouchbase_size_t)idx;
-        if (server->next_timeout != 0 && (now > (tmo + server->next_timeout))) {
-            libcouchbase_purge_single_server(server, tmo, now, LIBCOUCHBASE_ETIMEDOUT);
-        }
-    }
-}

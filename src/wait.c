@@ -104,6 +104,11 @@ void libcouchbase_wait(libcouchbase_t instance)
     }
     if (instance->vbucket_config == NULL || libcouchbase_has_data_in_buffers(instance)
             || hashset_num_items(instance->timers) > 0) {
+        libcouchbase_size_t idx;
+        /* update timers on all servers */
+        for (idx = 0; idx < instance->nservers; ++idx) {
+            libcouchbase_update_server_timer(instance->servers + idx);
+        }
         instance->io->run_event_loop(instance->io);
     } else {
         instance->wait = 0;

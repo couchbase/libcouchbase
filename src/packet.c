@@ -39,11 +39,6 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
     ct.start = gethrtime();
     ct.cookie = command_cookie;
 
-    if (ringbuffer_get_nbytes(buff_cookie) == 0) {
-        c->next_timeout = ct.start;
-        libcouchbase_update_timer(c->instance);
-    }
-
     if (!ringbuffer_ensure_capacity(buff, size) ||
             !ringbuffer_ensure_capacity(&c->cmd_log, size) ||
             !ringbuffer_ensure_capacity(buff_cookie, sizeof(ct)) ||
@@ -62,10 +57,6 @@ void libcouchbase_server_buffer_retry_packet(libcouchbase_server_t *c,
                                              libcouchbase_size_t size)
 {
     libcouchbase_size_t ct_size = sizeof(struct libcouchbase_command_data_st);
-    if (ringbuffer_get_nbytes(buff_cookie) == 0) {
-        c->next_timeout = ct->start;
-        libcouchbase_update_timer(c->instance);
-    }
 
     if (!ringbuffer_ensure_capacity(buff, size) ||
             !ringbuffer_ensure_capacity(&c->cmd_log, size) ||

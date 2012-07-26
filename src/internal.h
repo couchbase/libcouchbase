@@ -280,14 +280,14 @@ extern "C" {
         sasl_conn_t *sasl_conn;
         /** The event item representing _this_ object */
         void *event;
+        /** The timer bound to the socket to implement timeouts */
+        void *timer;
         /** Is this server in a connected state (done with sasl auth) */
         int connected;
         /** The current event handler */
         EVENT_HANDLER ev_handler;
         /* Pointer back to the instance */
         libcouchbase_t instance;
-
-        hrtime_t next_timeout;
     };
 
     struct libcouchbase_timer_st {
@@ -457,7 +457,6 @@ extern "C" {
                                      hrtime_t delta,
                                      libcouchbase_uint8_t opcode);
 
-    void libcouchbase_update_timer(libcouchbase_t instance);
     void libcouchbase_purge_timedout(libcouchbase_t instance);
 
 
@@ -466,9 +465,9 @@ extern "C" {
                                                 libcouchbase_uint32_t opaque,
                                                 libcouchbase_server_t *exc);
 
+    void libcouchbase_update_server_timer(libcouchbase_server_t *server);
+
     void libcouchbase_purge_single_server(libcouchbase_server_t *server,
-                                          hrtime_t tmo,
-                                          hrtime_t now,
                                           libcouchbase_error_t error);
 
     libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,

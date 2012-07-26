@@ -287,6 +287,7 @@ void libcouchbase_server_event_handler(libcouchbase_socket_t sock, short which, 
     libcouchbase_server_t *c = arg;
     (void)sock;
 
+    libcouchbase_update_server_timer(c);
     if (which & LIBCOUCHBASE_READ_EVENT) {
         if (do_read_data(c) != 0) {
             /* TODO stash error message somewhere
@@ -297,15 +298,6 @@ void libcouchbase_server_event_handler(libcouchbase_socket_t sock, short which, 
     }
 
     if (which & LIBCOUCHBASE_WRITE_EVENT) {
-        if (c->connected) {
-            hrtime_t now = gethrtime();
-            hrtime_t tmo = c->instance->timeout.usec;
-            tmo *= 1000;
-            if (c->next_timeout != 0 && (now > (tmo + c->next_timeout))) {
-                libcouchbase_purge_single_server(c, tmo, now, LIBCOUCHBASE_ETIMEDOUT);
-            }
-        }
-
         if (do_send_data(c) != 0) {
             /* TODO stash error message somewhere
              * "Failed to send to the connection to \"%s:%s\"", c->hostname, c->port */

@@ -25,8 +25,6 @@
 #include "internal.h"
 
 void libcouchbase_purge_single_server(libcouchbase_server_t *server,
-                                      hrtime_t tmo,
-                                      hrtime_t now,
                                       libcouchbase_error_t error)
 {
     protocol_binary_request_header req;
@@ -42,6 +40,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
     ringbuffer_t *mirror = NULL; /* mirror buffer should be purged with main stream */
     libcouchbase_size_t send_size = ringbuffer_get_nbytes(&server->output);
     libcouchbase_size_t stream_size = ringbuffer_get_nbytes(stream);
+    hrtime_t now = gethrtime();
 
     if (server->connected) {
         cookies = &server->output_cookies;
@@ -56,7 +55,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         int allocated = 0;
         libcouchbase_uint32_t headersize;
         nr = ringbuffer_peek(cookies, &ct, sizeof(ct));
-        if (nr != sizeof(ct) || ct.start + tmo > now) {
+        if (nr != sizeof(ct)) {
             break;
         }
         nr = ringbuffer_peek(stream, req.bytes, sizeof(req));
@@ -265,18 +264,13 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         ringbuffer_append(&rest, &server->output);
     }
 
-    server->next_timeout = 0;
-    if (ringbuffer_peek(cookies, &ct, sizeof(ct)) == sizeof(ct)) {
-        server->next_timeout = ct.start;
-    }
-
     libcouchbase_maybe_breakout(server->instance);
 }
 
 libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
                                                  libcouchbase_error_t error)
 {
-    libcouchbase_purge_single_server(server, 0, gethrtime() + 1, error);
+    libcouchbase_purge_single_server(server, error);
 
     ringbuffer_reset(&server->output);
     ringbuffer_reset(&server->input);
@@ -599,6 +593,7 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     hints.ai_family = AF_UNSPEC;
 
     server->event = server->instance->io->create_event(server->instance->io);
+    assert(server->event);
     error = getaddrinfo(server->hostname, server->port,
                         &hints, &server->root_ai);
     server->curr_ai = server->root_ai;
@@ -606,6 +601,8 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     if (error != 0) {
         server->curr_ai = server->root_ai = NULL;
     }
+    server->timer = server->instance->io->create_timer(server->instance->io);
+    assert(server->timer);
 
     server->sasl_conn = NULL;
 }
