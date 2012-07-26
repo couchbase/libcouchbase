@@ -317,6 +317,9 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
     server->instance->io->destroy_event(server->instance->io,
                                         server->event);
 
+    server->instance->io->destroy_timer(server->instance->io,
+                                        server->timer);
+
     if (server->sock != INVALID_SOCKET) {
         server->instance->io->close(server->instance->io, server->sock);
     }
