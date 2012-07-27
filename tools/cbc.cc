@@ -144,7 +144,7 @@ extern "C" {
                                  libcouchbase_cas_t cas)
     {
         struct cp_params *params = static_cast<struct cp_params *>(const_cast<void *>(cookie));
-        if (params->need_persisted || params->need_replicated > 0) {
+        if (params && (params->need_persisted || params->need_replicated > 0)) {
             params->sent++;
             // if it is the latest key in the series
             if (params->sent == params->keys->size()) {
