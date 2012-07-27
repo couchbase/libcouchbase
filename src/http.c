@@ -383,8 +383,6 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
                                                                   libcouchbase_size_t nbody,
                                                                   libcouchbase_http_method_t method,
                                                                   int chunked,
-                                                                  const char *username,
-                                                                  const char *password,
                                                                   const char *content_type,
                                                                   libcouchbase_http_data_callback data_cb,
                                                                   libcouchbase_http_complete_callback complete_cb,
@@ -487,9 +485,9 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
         /* Render HTTP request */
         char auth[256];
         libcouchbase_size_t nauth = 0;
-        if (username && password) {
+        if (instance->username && instance->password) {
             char cred[256];
-            snprintf(cred, sizeof(cred), "%s:%s", username, password);
+            snprintf(cred, sizeof(cred), "%s:%s", instance->username, instance->password);
             if (libcouchbase_base64_encode(cred, auth, sizeof(auth)) == -1) {
                 *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
                 libcouchbase_http_request_destroy(req);
@@ -648,7 +646,7 @@ libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t insta
     return libcouchbase_make_http_request(instance, command_cookie, server,
                                           base, nbase, path, npath, body,
                                           nbody, method, chunked,
-                                          NULL, NULL, "application/json",
+                                          "application/json",
                                           instance->callbacks.couch_data,
                                           instance->callbacks.couch_complete,
                                           error);
@@ -683,8 +681,6 @@ libcouchbase_http_request_t libcouchbase_make_management_request(libcouchbase_t 
     return libcouchbase_make_http_request(instance, command_cookie, server,
                                           base, nbase, path, npath, body,
                                           nbody, method, chunked,
-                                          instance->username,
-                                          instance->password,
                                           "application/x-www-form-urlencoded",
                                           instance->callbacks.management_data,
                                           instance->callbacks.management_complete,
