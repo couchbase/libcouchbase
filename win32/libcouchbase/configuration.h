@@ -31,7 +31,7 @@
 #include <stddef.h>
 #include <time.h>
 
-#define LIBCOUCHBASE_VERSION_STRING "1.1.0dp7"
+#define LIBCOUCHBASE_VERSION_STRING "1.1.0dp8"
 #define LIBCOUCHBASE_VERSION 0x010100
 #define LIBCOUCHBASE_VERSION_CHANGESET unknown
 
@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
-#define PACKAGE_STRING "libcouchbase 1.1.0dp7"
+#define PACKAGE_STRING "libcouchbase 1.1.0dp8"
     typedef __int64 libcouchbase_int64_t;
     typedef __int32 libcouchbase_int32_t;
     typedef unsigned long libcouchbase_size_t;

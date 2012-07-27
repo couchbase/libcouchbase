@@ -65,6 +65,62 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Fri Jul 27 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp8
+[Mark Nunberg]
+- Clarify exp usage in mget
+
+[Sergey Avseyev]
+- Fix 'cbc-unlock' argument parser
+- Remove spaces from output to simplify parsing
+- Set completed flag when HTTP parser done its work
+- Implement cbc-view command
+- Remove couchview example: see cbc-view command
+- Claim that server has data in buffers if there are HTTP requests pending
+- Allow to specify HTTP method for cbc-view
+- Rename HTTP callback
+- Define separate pair of callbacks for management HTTP requests
+- Separate HTTP callbacks for couch and management requests
+- Fix the case when base doesn't has schema
+- Preserve credentials for REST API
+- Use credentials if they accessible
+- Allow to specify content type for HTTP request
+- Implement cbc-admin command
+- Method fixup: return error for unsupported method
+- Print more detailed message for HTTP endpoints
+- Report unknown options for cbc-unlock command
+- Add cbc-bucket-create command
+- Add cbc-bucket-delete command
+- Copy path because it could be deallocated by caller
+- Fix signatures for microsoft compiler
+- Update ep-engine/command_ids.h to get OBSERVE definition
+- Store number of replicas
+- Store distribution type
+- Sync ep-engine/command_ids.h: CMD_OBSERVE now 0x92
+- Add observe command
+- Implement multiple timers for windows
+- Implement general purpose timers
+- Add -p and -r options to cbc-cp to control persistence
+- Allow handlers to use command_data_st struct
+- Read replica implementation
+- Let users detect if the event loop running already
+- Make libcouchbase_wait() re-entrable
+- Check for breakout condition in timer callback
+- Allow to breakout from event loop
+- GET_REPLICA response includes the key
+- Preserve command_data between attempts
+- Use replica incremented replica number
+- Pass pointer to command_data properly
+- Allow user to get number of replicas
+- Bind timeouts to server sockets instead of commands
+- Destroy the timer with the server
+- cbc.cc: check cookie for NULL in storage callback
+
+[Trond Norbye]
+- CCBC-77: Use unique error code for ENOMEM on the client
+- Remove unused variable
+- Fixed warning about possible overflow
+- Allow client to specify the verbosity level on the servers
+
 * Tue Jun 19 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp7
 [Sergey Avseyev]
 - Extract HTTP client

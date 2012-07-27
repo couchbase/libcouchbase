@@ -43,7 +43,7 @@ AC_SUBST(CHANGESET)
 # to version our library. For a detailed description, check out:
 # http://www.gnu.org/software/libtool/manual/libtool.html#Libtool-versioning
 #
-LIBCOUCHBASE_API_CURRENT=6
+LIBCOUCHBASE_API_CURRENT=7
 LIBCOUCHBASE_API_REVISION=0
 LIBCOUCHBASE_API_AGE=0
 AC_SUBST(LIBCOUCHBASE_API_CURRENT)
@@ -51,7 +51,7 @@ AC_SUBST(LIBCOUCHBASE_API_REVISION)
 AC_SUBST(LIBCOUCHBASE_API_AGE)
 
 # The actual version numbers for the developers ;)
-LIBCOUCHBASE_VERSION="1.1.0dp7"
+LIBCOUCHBASE_VERSION="1.1.0dp8"
 LIBCOUCHBASE_VERSION_HEX=`echo ${LIBCOUCHBASE_VERSION} | awk -F. '{printf "0x%0.2d%0.2d%0.2d", $1, $2, $3}'`
 AC_SUBST(LIBCOUCHBASE_VERSION)
 AC_SUBST(LIBCOUCHBASE_VERSION_HEX)
