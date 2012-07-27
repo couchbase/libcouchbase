@@ -1,3 +1,10 @@
+libcouchbase (1.1.0dp9) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Render auth credentials for View requests
+
+ -- Sergey Avseyev <sergey@couchbase.com> Fri, 27 Jul 2012 23:52:41 +0300
+
 libcouchbase (1.1.0dp8) stable; urgency=low
 
   [Mark Nunberg]

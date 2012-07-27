@@ -65,6 +65,10 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Fri Jul 27 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp9
+[Sergey Avseyev]
+- Render auth credentials for View requests
+
 * Fri Jul 27 2012 Sergey Avseyev <sergey@couchbase.com> - 1.1.0dp8
 [Mark Nunberg]
 - Clarify exp usage in mget
