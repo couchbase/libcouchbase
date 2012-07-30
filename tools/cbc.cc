@@ -72,8 +72,8 @@ struct cp_params {
     libcouchbase_size_t sent;
     bool need_persisted;
     int need_replicated;
-    int total_persisted;
-    int total_replicated;
+    size_t total_persisted;
+    size_t total_replicated;
     int max_tries;
     int tries;
     libcouchbase_uint32_t timeout;
