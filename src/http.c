@@ -46,6 +46,8 @@ void libcouchbase_http_request_destroy(libcouchbase_http_request_t req)
         free(req->path);
         free(req->url);
         free(req->host);
+        free(req->port);
+        free(req->parser);
         ringbuffer_destruct(&req->input);
         ringbuffer_destruct(&req->output);
         ringbuffer_destruct(&req->result);
@@ -569,6 +571,7 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
             }
             BUFF_APPEND(&req->output, post_headers, nn);
             BUFF_APPEND(&req->output, body, nbody);
+            free(post_headers);
         } else {
             BUFF_APPEND(&req->output, "\r\n\r\n", 4);
         }
