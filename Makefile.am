@@ -189,14 +189,13 @@ endif
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
-check_PROGRAMS += tests/arithmetic-test \
-                  tests/double-free-test \
-                  tests/flags-test \
-                  tests/timings-test \
-                  tests/timeout-test \
+tests_unit_tests_SOURCES += \
+                            tests/mock-unit-test.cc tests/mock-unit-test.h \
+                            tests/server.c tests/server.h tests/loopfactory.c
+
+check_PROGRAMS += \
                   tests/config-test \
-                  tests/smoke-test \
-                  tests/syncmode-test
+                  tests/smoke-test
 endif
 
 if BUILD_TOOLS
@@ -210,29 +209,11 @@ tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_LDADD = libcouchbase.la libmockserver.la
 tests_config_test_LDFLAGS = $(AM_LDFLAGS) -lvbucket
 
-tests_timings_test_SOURCES = tests/timings-test.c
-tests_timings_test_LDADD = libcouchbase.la libmockserver.la
-
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
 
-tests_syncmode_test_SOURCES = tests/test.h tests/syncmode-test.c
-tests_syncmode_test_LDADD = libcouchbase.la libmockserver.la
-
-tests_arithmetic_test_SOURCES = tests/arithmetic.c
-tests_arithmetic_test_LDADD = libcouchbase.la libmockserver.la
-tests_arithmetic_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
-
 tests_double_free_test_SOURCES = tests/test.h tests/double-free-test.c
 tests_double_free_test_LDADD = libcouchbase.la libmockserver.la
-
-tests_flags_test_SOURCES = tests/flags-test.c
-tests_flags_test_LDADD = libcouchbase.la libmockserver.la
-tests_flags_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
-
-tests_timeout_test_SOURCES = tests/timeout-test.c
-tests_timeout_test_LDADD = libcouchbase.la libmockserver.la
-tests_timeout_test_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -Itests
 
 tools_cbc_LDADD = libcouchbase.la -lvbucket
 if HAVE_LIBYAJL2

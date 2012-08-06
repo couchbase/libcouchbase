@@ -214,25 +214,6 @@ static void version_callback(libcouchbase_t instance,
     (void)instance;
 }
 
-static void verbosity_callback(libcouchbase_t instance,
-                               const void *cookie,
-                               const char *server_endpoint,
-                               libcouchbase_error_t error)
-{
-    struct rvbuf *rv = (struct rvbuf *)cookie;
-    rv->error = error;
-    assert(error == LIBCOUCHBASE_SUCCESS);
-
-    if (server_endpoint == NULL) {
-        assert(rv->counter == 0);
-        io->stop_event_loop(io);
-        return;
-    }
-
-    rv->counter--;
-    (void)instance;
-}
-
 static void test_set1(void)
 {
     libcouchbase_error_t err;
@@ -478,25 +459,6 @@ static void test_version1(void)
     assert(rv.counter == 0);
 }
 
-static void test_verbosity(void)
-{
-    libcouchbase_error_t err;
-    struct rvbuf rv;
-
-    (void)libcouchbase_set_verbosity_callback(session, verbosity_callback);
-    err = libcouchbase_set_verbosity(session, &rv, NULL,
-                                     LIBCOUCHBASE_VERBOSITY_DEBUG);
-
-    assert(err == LIBCOUCHBASE_SUCCESS);
-
-    rv.counter = total_node_count;
-
-    io->run_event_loop(io);
-
-    /* Ensure all version responses have been received */
-    assert(rv.counter == 0);
-}
-
 static void test_spurious_saslerr(void)
 {
     const char *key = "KEY";
@@ -532,16 +494,6 @@ static void test_spurious_saslerr(void)
     }
 }
 
-/* libcouchbase_wait() blocks forever if there is nothing queued */
-static void test_issue_59(void)
-{
-    libcouchbase_wait(session);
-    libcouchbase_wait(session);
-    libcouchbase_wait(session);
-    libcouchbase_wait(session);
-    libcouchbase_wait(session);
-}
-
 int main(int argc, char **argv)
 {
     char str_node_count[16];
@@ -558,13 +510,11 @@ int main(int argc, char **argv)
     args[1] = str_node_count;
 
     setup((char **)args, "Administrator", "password", "default");
-    test_verbosity();
     test_set1();
     test_set2();
     test_get1();
     test_get2();
     test_version1();
-    test_issue_59();
     teardown();
 
     args[2] = NULL;
