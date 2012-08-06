@@ -19,11 +19,6 @@
 #include <libcouchbase/couchbase.h>
 #include "ringbuffer.h"
 
-extern "C" {
-    extern int libcouchbase_base64_encode(const char *src, char *dst,
-                                          size_t sz);
-}
-
 class Ringbuffer : public ::testing::Test
 {
 protected:
