@@ -72,7 +72,7 @@ libcouchbase_error_t libcouchbase_set_verbosity(libcouchbase_t instance,
         found = 1;
     }
 
-    if (server && found ==0) {
+    if (server && found == 0) {
         return libcouchbase_synchandler_return(instance,
                                                LIBCOUCHBASE_UNKNOWN_HOST);
     }

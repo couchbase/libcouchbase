@@ -139,7 +139,7 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
         }
 
         if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET
-            || header.response.opcode == CMD_GET_REPLICA) {
+                || header.response.opcode == CMD_GET_REPLICA) {
             c->instance->response_handler[header.response.opcode](c, &ct, (void *)packet);
             /* keep command and cookie until we get complete STAT response */
             if (was_connected &&

@@ -30,8 +30,8 @@ libcouchbase_uint32_t libcouchbase_get_timeout(libcouchbase_t instance)
 }
 
 static void libcouchbase_server_timeout_handler(libcouchbase_socket_t sock,
-                                         short which,
-                                         void *arg)
+                                                short which,
+                                                void *arg)
 {
     libcouchbase_server_t *server = arg;
 
