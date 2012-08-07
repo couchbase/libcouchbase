@@ -111,18 +111,18 @@ endif
 
 if HAVE_WINSOCK2
 if !HAVE_LIBEVENT
-libcouchbase_la_SOURCES += src/plugin-win32.c src/iofactory_win32.c
+libcouchbase_la_SOURCES += plugins/io/win32/plugin-win32.c src/iofactory_win32.c
 libcouchbase_la_CPPFLAGS += -Iwin32
 endif
 else
 libcouchbase_la_SOURCES += src/iofactory.c
 if LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-libcouchbase_la_SOURCES += src/plugin-libevent.c
+libcouchbase_la_SOURCES += plugins/io/libevent/plugin-libevent.c
 libcouchbase_la_LIBADD += -levent
 libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
 else
 lib_LTLIBRARIES += libcouchbase_libevent.la
-libcouchbase_libevent_la_SOURCES = src/plugin-libevent.c
+libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
 libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0 $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
@@ -277,6 +277,7 @@ reformat:
                $(top_srcdir)/tools/*.cc \
                $(top_srcdir)/tools/*.h \
                $(top_srcdir)/tests/*.{cc,c,h} \
+               $(top_srcdir)/plugins/io/*/*.[ch] \
                $(top_srcdir)/win32/*.[ch]
 
 sinclude packaging/*/package.mk
