@@ -170,8 +170,6 @@ extern "C" {
 
         /** if non-zero, backup_nodes entries should be freed before freeing the pointer itself */
         int should_free_backup_nodes;
-        /** The size of the backup_nodes array */
-        size_t nbackup_nodes;
         /** The array of last known nodes as hostname:port */
         char **backup_nodes;
         /** The current connect index */

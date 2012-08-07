@@ -95,11 +95,10 @@ static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
     }
 
     /* Let's allocate the buffer space and copy the pointers */
-    if ((ret->backup_nodes = calloc(num + 2, sizeof(char *))) == NULL) {
+    if ((ret->backup_nodes = calloc(num + 1, sizeof(char *))) == NULL) {
         return -1;
     }
 
-    ret->nbackup_nodes = num + 2;
     ret->should_free_backup_nodes = 1;
 
     ptr = host;
@@ -361,11 +360,10 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
     }
     instance->nservers = num;
     free_backup_nodes(instance);
-    instance->backup_nodes = calloc(num, sizeof(char *));
+    instance->backup_nodes = calloc(num + 1, sizeof(char *));
     if (instance->backup_nodes == NULL) {
         return libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM, "Failed to allocate memory");
     }
-    instance->nbackup_nodes = num;
     snprintf(curnode, sizeof(curnode), "%s:%s", instance->host, instance->port);
     for (ii = 0; ii < num; ++ii) {
         instance->servers[ii].instance = instance;
@@ -718,9 +716,8 @@ static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
                                               libcouchbase_error_t error,
                                               const char *reason)
 {
-    int connected = 0;
-
     if (instance->backup_nodes == NULL) {
+        /* No known backup nodes */
         libcouchbase_error_handler(instance, error, reason);
         return -1;
     }
@@ -728,21 +725,20 @@ static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
     ++instance->backup_idx;
     if (instance->backup_nodes[instance->backup_idx] == NULL) {
         --instance->backup_idx;
+        /* All known nodes are dead */
         libcouchbase_error_handler(instance, error, reason);
         return -1;
     }
 
-    while (!connected) {
+    do {
         /* Keep on trying the nodes until all of them failed ;-) */
-        libcouchbase_error_t rc = libcouchbase_connect(instance);
-        connected = (rc == LIBCOUCHBASE_SUCCESS);
-        if (!connected && instance->backup_nodes[instance->backup_idx] == NULL) {
-            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                       "failed to get config. All known nodes are dead.");
-            return -1;
+        if (libcouchbase_connect(instance) == LIBCOUCHBASE_SUCCESS) {
+            return 0;
         }
-    }
-    return 0;
+    } while (instance->backup_nodes[instance->backup_idx] == NULL);
+    /* All known nodes are dead */
+    libcouchbase_error_handler(instance, error, reason);
+    return -1;
 }
 
 static void libcouchbase_instance_connerr(libcouchbase_t instance,
@@ -1088,12 +1084,12 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 static void free_backup_nodes(libcouchbase_t instance)
 {
     if (instance->should_free_backup_nodes) {
-        libcouchbase_size_t ii;
-        for (ii = 0; ii < instance->nbackup_nodes; ++ii) {
-            free(instance->backup_nodes[ii]);
+        char **ptr = instance->backup_nodes;
+        while (*ptr != NULL) {
+            free(*ptr);
+            ptr++;
         }
         instance->should_free_backup_nodes = 0;
     }
-
     free(instance->backup_nodes);
 }
