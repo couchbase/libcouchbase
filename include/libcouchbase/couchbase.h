@@ -498,7 +498,7 @@ extern "C" {
      * @param exp When the object should expire. The expiration time is
      *            either an offset into the future.. OR an absolute
      *            timestamp, depending on how large (numerically) the
-     *            expiration is. if the expiration exceeds 30 months
+     *            expiration is. if the expiration exceeds 30 days
      *            (i.e. 24 * 3600 * 30) then it's an absolute timestamp.
      * @param cas the cas identifier for the existing object if you want to
      *            ensure that you're only replacing/append/prepending a
