@@ -18,10 +18,6 @@
 #include "internal.h"
 #include <dlfcn.h>
 
-#ifdef LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-#include <libcouchbase/libevent_io_opts.h>
-#endif
-
 static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code)
 {
     if (error != NULL) {
