@@ -257,11 +257,15 @@ install-exec-hook:
                for f in $(CBC_LINKS); do $(LN_S) cbc$(EXEEXT) $$f$(EXEEXT); done
 endif
 
+CLEANFILES = tests/CouchbaseMock.jar
 EXTRA_DIST = \
              README.markdown \
              LICENSE \
              NMakefile \
              include/libcouchbase/configuration.h.in \
+             include/memcached/COPYING \
+             include/memcached/README \
+             include/ep-engine/README \
              src/iofactory_win32.c \
              contrib/libvbucket/rfc1321 \
              tests/start_mock.sh \

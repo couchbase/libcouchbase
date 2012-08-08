@@ -157,6 +157,20 @@ static void wait_for_server(const char *port)
 
 const void *start_mock_server(char **cmdline)
 {
+    const char *srcdir = getenv("srcdir");
+    char wrapper[1024];
+
+    if (srcdir == NULL) {
+        srcdir = ".";
+    }
+    snprintf(wrapper, sizeof(wrapper), "%s/tests/start_mock.sh", srcdir);
+
+    if (access(wrapper, X_OK) == -1) {
+        fprintf(stderr, "Failed to locate \"./tests/start_mock.sh\": %s\n",
+                strerror(errno));
+        return NULL;
+    }
+
     struct mock_server_info *info = calloc(1, sizeof(*info));
     if (info == NULL) {
         return NULL;
@@ -175,7 +189,7 @@ const void *start_mock_server(char **cmdline)
         char monitor[1024];
         char *argv[1024];
         int arg = 0;
-        argv[arg++] = (char *)"./tests/start_mock.sh";
+        argv[arg++] = (char *)wrapper;
         sprintf(monitor, "--harakiri-monitor=localhost:%d", info->port);
         argv[arg++] = monitor;
 
