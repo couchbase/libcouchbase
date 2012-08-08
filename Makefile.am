@@ -26,11 +26,10 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
-noinst_LTLIBRARIES = libhttpparser.la
+noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
 if BUILD_TOOLS
 bin_PROGRAMS = tools/cbc
 endif
-
 
 pkginclude_HEADERS = \
                      include/libcouchbase/behavior.h \
@@ -48,6 +47,22 @@ pkginclude_HEADERS = \
 libhttpparser_la_SOURCES = \
                         contrib/http_parser/http_parser.c \
                         contrib/http_parser/http_parser.h
+
+libvbucket_la_SOURCES = \
+                        include/libvbucket/vbucket.h \
+                        include/libvbucket/visibility.h \
+                        contrib/libvbucket/hash.h \
+                        contrib/libvbucket/cJSON.c \
+                        contrib/libvbucket/cJSON.h \
+                        contrib/libvbucket/vbucket.c
+libvbucket_la_LIBADD = libketama.la libcrc32.la
+libvbucket_la_DEPENDENCIES = libketama.la libcrc32.la
+
+libketama_la_SOURCES = contrib/libvbucket/ketama.c
+libketama_la_CFLAGS =  $(AM_CFLAGS) ${NO_WERROR}
+
+libcrc32_la_SOURCES = contrib/libvbucket/crc32.c
+libcrc32_la_CFLAGS = $(AM_CFLAGS) ${NO_WERROR}
 
 libcouchbase_la_SOURCES = \
                         include/ep-engine/command_ids.h \
@@ -98,8 +113,8 @@ endif
 
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-libcouchbase_la_DEPENDENCIES=libhttpparser.la
-libcouchbase_la_LIBADD=libhttpparser.la -lvbucket $(LIBSASL)
+libcouchbase_la_DEPENDENCIES=libhttpparser.la libvbucket.la
+libcouchbase_la_LIBADD=libhttpparser.la libvbucket.la $(LIBSASL)
 
 if LIBCOUCHBASE_ENABLE_TRACE
 libcouchbase_la_SOURCES += \
@@ -206,13 +221,15 @@ endif
 tests_getopt_test_SOURCES = tests/getopt-test.cc
 
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
-tests_config_test_LDADD = libcouchbase.la libmockserver.la
-tests_config_test_LDFLAGS = $(AM_LDFLAGS) -lvbucket
+tests_config_test_DEPENDENCIES = libcouchbase.la libmockserver.la libvbucket.la
+tests_config_test_LDADD = $(tests_config_test_DEPENDENCIES)
+tests_config_test_LDFLAGS = $(AM_LDFLAGS)
 
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
 
-tools_cbc_LDADD = libcouchbase.la
+tools_cbc_LDADD = libcouchbase.la libvbucket.la
+tools_cbc_DEPENDENCIES = $(tools_cbc_LDADD)
 
 if HAVE_LIBYAJL2
 tools_cbc_LDADD += -lyajl
@@ -246,6 +263,7 @@ EXTRA_DIST = \
              NMakefile \
              include/libcouchbase/configuration.h.in \
              src/iofactory_win32.c \
+             contrib/libvbucket/rfc1321 \
              tests/start_mock.sh \
              win32
 

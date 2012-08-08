@@ -60,6 +60,9 @@ AC_SUBST(LIBCOUCHBASE_VERSION_HEX)
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(gethostbyname, nsl)
 AC_SEARCH_LIBS(dlopen, dl)
+AC_SEARCH_LIBS(floor, m)
+AC_SEARCH_LIBS(pow, m)
+AC_SEARCH_LIBS(fabs, m)
 
 AC_PATH_PROG(JAVA, java, no)
 AC_PATH_PROG(WGET, wget, no)
@@ -87,33 +90,10 @@ AC_ARG_WITH([couchbasemock],
 
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
-                       ws2tcpip.h winsock2.h libvbucket/vbucket.h
-                       event.h stdint.h sys/types.h])
+                       ws2tcpip.h winsock2.h event.h stdint.h sys/types.h])
 
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
-
-AS_IF([test "x$ac_cv_header_libvbucket_vbucket_h" != "xyes"],
-      [AC_MSG_ERROR(Failed to locate libvbucket/vbucket.h)])
-
-dnl Check that we're able to find a usable libvbucket
-AC_CACHE_CHECK([for libvbucket >= 1.8.0.2], [ac_cv_have_libvbucket],
-  [ saved_libs="$LIBS"
-    LIBS=-lvbucket
-    AC_TRY_LINK([
-      #include <libvbucket/vbucket.h>
-            ],[
-      VBUCKET_CONFIG_HANDLE config = vbucket_config_create();
-            ],[
-      ac_cv_have_libvbucket="yes"
-            ], [
-      ac_cv_have_libvbucket="no"
-      ])
-    LIBS="$saved_libs"
-  ])
-
-AS_IF([test "x${ac_cv_have_libvbucket}" != "xyes" -o "x$ac_cv_header_libvbucket_vbucket_h" != "xyes"],
-      [AC_MSG_ERROR(Failed to locate libvbucket >= 1.8.0.2)])
 
 dnl Check that we can use winsock2 plugin
 AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
