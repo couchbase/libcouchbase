@@ -37,12 +37,12 @@ pkginclude_HEADERS = \
                      include/libcouchbase/compat.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
-                     include/libcouchbase/libevent_io_opts.h \
                      include/libcouchbase/tap_filter.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
                      include/libcouchbase/visibility.h \
-                     include/libcouchbase/winsock_io_opts.h
+                     plugins/io/libevent/libevent_io_opts.h \
+                     plugins/io/win32/winsock_io_opts.h
 
 libhttpparser_la_SOURCES = \
                         contrib/http_parser/http_parser.c \

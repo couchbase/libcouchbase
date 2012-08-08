@@ -28,7 +28,7 @@
  */
 
 #include "internal.h"
-#include <libcouchbase/winsock_io_opts.h>
+#include "winsock_io_opts.h"
 
 struct winsock_event {
     WSAEVENT event;

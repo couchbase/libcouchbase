@@ -23,7 +23,7 @@
  */
 #include "internal.h"
 
-#include <libcouchbase/libevent_io_opts.h>
+#include "libevent_io_opts.h"
 #include <event.h>
 #include <sys/types.h>
 #include <sys/socket.h>
