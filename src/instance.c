@@ -94,8 +94,11 @@ static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
         ++num;
     }
 
-    /* Let's allocate the buffer space and copy the pointers */
-    if ((ret->backup_nodes = calloc(num + 1, sizeof(char *))) == NULL) {
+    /* Let's allocate the buffer space and copy the pointers
+     * (the +2 and not +1 is because of the way we count the number of
+     * bootstrap hosts (num == 0 means that we've got a single host etc)
+     */
+    if ((ret->backup_nodes = calloc(num + 2, sizeof(char *))) == NULL) {
         return -1;
     }
 
@@ -1092,4 +1095,5 @@ static void free_backup_nodes(libcouchbase_t instance)
         instance->should_free_backup_nodes = 0;
     }
     free(instance->backup_nodes);
+    instance->backup_nodes = NULL;
 }
