@@ -205,7 +205,7 @@ static void buffer_relocation_test(void)
     io->run_event_loop(io);
     assert(rv.error == LIBCOUCHBASE_SUCCESS);
     assert(memcmp(rv.bytes, "bar", 3) == 0);
-
+    free((void*)rv.bytes);
     libcouchbase_destroy(instance);
     shutdown_mock_server(mock);
 }
