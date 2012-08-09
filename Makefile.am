@@ -156,6 +156,13 @@ tests_unit_tests_DEPENDENCIES = libcouchbase.la
 tests_unit_tests_LDADD = libcouchbase.la
 tests_unit_tests_CPPFLAGS = $(AM_CPPFLAGS)
 
+gtest-1.6.0.zip:
+	@echo "+--------------------------------+"
+	@echo "| Download Google test framework |"
+	@echo "+--------------------------------+"
+	${DOWNLOAD} gtest-1.6.0.zip http://googletest.googlecode.com/files/gtest-1.6.0.zip
+
+
 if HAVE_GOOGLETEST_SRC
 noinst_LTLIBRARIES += libgtest.la
 libgtest_la_SOURCES = tests/gtest-sources.cc
@@ -163,8 +170,20 @@ libgtest_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
                        $(NO_WERROR)
 tests_unit_tests_DEPENDENCIES += libgtest.la
 tests_unit_tests_LDADD += libgtest.la -lpthread
-tests_unit_tests_CPPFLAGS += -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
+tests_unit_tests_CPPFLAGS += -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include $(NO_WERROR)
 endif
+
+CLEANFILES = tests/CouchbaseMock.jar
+BUILT_SOURCES=
+if DOWNLOAD_GTEST
+gtest-1.6.0: gtest-1.6.0.zip
+	${UNZIP} -o -qq gtest-1.6.0.zip
+BUILT_SOURCES += gtest-1.6.0
+CLEANFILES += gtest-1.6.0.zip
+endif
+
+distclean-local:
+	@rm -rf gtest-1.6.0
 
 if !HAVE_GOOGLETEST_SRC
 tests_unit_tests_LDADD += -lgtest -lpthread
@@ -259,7 +278,6 @@ install-exec-hook:
                for f in $(CBC_LINKS); do $(LN_S) cbc$(EXEEXT) $$f$(EXEEXT); done
 endif
 
-CLEANFILES = tests/CouchbaseMock.jar
 EXTRA_DIST = \
              README.markdown \
              LICENSE \

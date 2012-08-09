@@ -117,6 +117,9 @@ AC_SEARCH_LIBS(fabs, m)
 AC_PATH_PROG(JAVA, java, no)
 AC_PATH_PROG(WGET, wget, no)
 AC_PATH_PROG(CURL, curl, no)
+AC_PATH_PROG(UNZIP, unzip, no)
+
+AC_SUBST(UNZIP)
 
 AS_IF([test "x${WGET}" != "xno"],
       [DOWNLOAD="${WGET} -q -O"],
@@ -374,6 +377,13 @@ return 0;
  ])
 ])
 
+AS_IF([test "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no" -a "x$DOWNLOAD" != "x" -a "x$UNZIP" != "xno"], [
+      ac_cv_download_gtest=yes
+      GTEST_ROOT=gtest-1.6.0
+      ac_cv_have_gtest_src=yes
+])
+
+AM_CONDITIONAL(DOWNLOAD_GTEST, [test "x$ac_cv_download_gtest" = "xyes"])
 AM_CONDITIONAL(HAVE_GOOGLETEST_SRC, [test "$ac_cv_have_gtest_src" = "yes"])
 AM_CONDITIONAL(HAVE_GOOGLETEST, [test "$ac_cv_have_gtest" = "yes" -o \
                                  "$ac_cv_have_gtest_src" = "yes"])
@@ -425,14 +435,22 @@ dnl ----------------------------------------------------------------------------
 AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h])
 AC_OUTPUT
 AS_IF([test "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no"],
-      [
-        echo "*****"
-        echo "*"
-        echo "*  WARNING: I couldn't find the googletest testsuite framework."
-        echo "*           This means you cannot run the test suite to verify"
-        echo "*           that the library works as expected."
-        echo "*           You should consider installing it from:"
-        echo "*           http://code.google.com/p/googletest/"
-        echo "*"
-        echo "*****"
-      ])
+      [AS_IF([test "x$DOWNLOAD" = "x" -o "x$UNZIP" = "xno"],
+             [echo "*****"
+              echo "*"
+              echo "*  WARNING: You need to install unzip command and either"
+              echo "*           curl or wget in order to download googletest"
+              echo "*           library automatically."
+              echo "*"
+              echo "*****"
+             ],
+             [echo "*****"
+              echo "*"
+              echo "*  WARNING: I couldn't find the googletest testsuite framework."
+              echo "*           This means you cannot run the test suite to verify"
+              echo "*           that the library works as expected."
+              echo "*           You should consider installing it from:"
+              echo "*           http://code.google.com/p/googletest/"
+              echo "*"
+              echo "*****"
+              ])])

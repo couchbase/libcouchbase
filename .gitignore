@@ -40,6 +40,8 @@
 /example/couchview
 /example/couchview_yajl
 /example/pillowfight
+/gtest-1.6.0
+/gtest-1.6.0.zip
 /include/libcouchbase/configuration.h
 /libcouchbase*.changes
 /libcouchbase*.deb
