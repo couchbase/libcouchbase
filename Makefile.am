@@ -198,8 +198,10 @@ example_couchview_yajl_LDADD = libcouchbase.la -lyajl
 check_PROGRAMS =
 
 if BUILD_TOOLS
+if HAVE_GOOGLETEST
 # we can't build the test program without a C++ compiler
 check_PROGRAMS += tests/unit-tests
+endif
 endif
 
 if HAVE_COUCHBASEMOCK
