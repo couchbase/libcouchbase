@@ -13,6 +13,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+
+# Preserve what the user specified as CFLAGS/CXXFLAGS/CPPFLAGS/LDFLAGS
+SAVE_CFLAGS="$CFLAGS"
+SAVE_CXXFLAGS="$CXXFLAGS"
+SAVE_CPPFLAGS="$CPPFLAGS"
+SAVE_LDFLAGS="$LDFLAGS"
+
 AC_PREREQ(2.60)
 m4_include([m4/version.m4])
 AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
@@ -56,6 +63,28 @@ LIBCOUCHBASE_VERSION_HEX=`echo ${LIBCOUCHBASE_VERSION} | awk -F. '{printf "0x%0.
 AC_SUBST(LIBCOUCHBASE_VERSION)
 AC_SUBST(LIBCOUCHBASE_VERSION_HEX)
 
+AC_ARG_ENABLE([m32],
+    [AS_HELP_STRING([--enable-m32],
+                    [Pass -m32 to the compiler and linker @<:@default=off@:>@])],
+    [ac_cv_m32="$enableval"])
+AC_ARG_ENABLE([m64],
+    [AS_HELP_STRING([--enable-m64],
+                    [Pass -m64 to the compiler and linker @<:@default=off@:>@])],
+    [ac_cv_m64="$enableval"])
+
+AS_IF([test "x$ac_cv_m32" = "xyes"],
+      [ AM_CPPFLAGS="$AM_CPPFLAGS -m32"
+        AM_LDFLAGS="$AM_LDFLAGS -m32"
+        CPPFLAGS="$CPPFLAGS -m32"
+        LDFLAGS="$LDFLAGS -m32"
+        AS_IF([test "x$ac_cv_m64" = "xyes"],
+              [ AC_MSG_ERROR([You can't specify -m32 and -m64. Pick one of them]) ]) ],
+      [ AS_IF([test "x$ac_cv_m64" = "xyes"],
+              [ AM_CPPFLAGS="$AM_CPPFLAGS -m64"
+                AM_LDFLAGS="$AM_LDFLAGS -m64"
+                CPPFLAGS="$CPPFLAGS -m64"
+                LDFLAGS="$LDFLAGS -m64"
+              ]) ])
 
 AC_SEARCH_LIBS(socket, socket)
 AC_SEARCH_LIBS(gethostbyname, nsl)
@@ -364,6 +393,12 @@ AH_BOTTOM([
 #include "config_static.h"
 #endif
 ])
+
+dnl restore CFLAGS, CPPFLAGS, CXXFLAGS and LDFLAGS
+CFLAGS="$SAVE_CFLAGS"
+CXXFLAGS="$SAVE_CXXFLAGS"
+CPPFLAGS="$SAVE_CPPFLAGS"
+LDFLAGS="$SAVE_LDFLAGS"
 
 dnl ----------------------------------------------------------------------------
 AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h])
