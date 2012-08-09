@@ -20,6 +20,15 @@ SAVE_CXXFLAGS="$CXXFLAGS"
 SAVE_CPPFLAGS="$CPPFLAGS"
 SAVE_LDFLAGS="$LDFLAGS"
 
+# The stupid automake system thinks it is a good idea to inject
+# -g -O2 to C(XX)FLAGS if it isn't set..
+# Why I don't like this? Well -g is in conflict with -g3 that I'm
+# adding for Sun Studio
+AS_IF([test "x$CFLAGS" = "x" ],
+      [CFLAGS="-I."])
+AS_IF([test "x$CXXFLAGS" = "x" ],
+      [CXXFLAGS="-I."])
+
 AC_PREREQ(2.60)
 m4_include([m4/version.m4])
 AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
@@ -36,11 +45,19 @@ AC_PROG_LIBTOOL
 AM_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
+# Restore CFLAGS/CXXFLAGS now that I've prevented automake
+# to inject the extra options ;)
+AS_IF([test "x$CFLAGS" = "x-I." ],
+      [CFLAGS=""])
+AS_IF([test "x$CXXFLAGS" = "x-I." ],
+      [CXXFLAGS=""])
+
 # the malloc tests seems to be broken for cross compilation.. ignore them
 ac_cv_func_malloc_0_nonnull=yes
 ac_cv_func_realloc_0_nonnull=yes
 
 COUCHBASE_GENERIC_COMPILER(c99)
+
 AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib"
 CHANGESET=GIT_CHANGESET
 AC_SUBST(CHANGESET)
