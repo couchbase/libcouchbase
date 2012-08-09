@@ -228,8 +228,8 @@ tests_config_test_LDFLAGS = $(AM_LDFLAGS)
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
 
-tools_cbc_LDADD = libcouchbase.la libvbucket.la
-tools_cbc_DEPENDENCIES = $(tools_cbc_LDADD)
+tools_cbc_DEPENDENCIES = libcouchbase.la libvbucket.la
+tools_cbc_LDADD = $(tools_cbc_DEPENDENCIES)
 
 if HAVE_LIBYAJL2
 tools_cbc_LDADD += -lyajl
