@@ -13,6 +13,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
+AC_PREREQ(2.60)
+m4_include([m4/version.m4])
+AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
+AC_CONFIG_SRCDIR([src/internal.h])
+AC_CONFIG_AUX_DIR(config)
 
 # Preserve what the user specified as CFLAGS/CXXFLAGS/CPPFLAGS/LDFLAGS
 SAVE_CFLAGS="$CFLAGS"
@@ -28,12 +33,9 @@ AS_IF([test "x$CFLAGS" = "x" ],
       [CFLAGS="-I."])
 AS_IF([test "x$CXXFLAGS" = "x" ],
       [CXXFLAGS="-I."])
+AS_IF([test "x$CPPFLAGS" = "x" ],
+      [CPPFLAGS="-I."])
 
-AC_PREREQ(2.60)
-m4_include([m4/version.m4])
-AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
-AC_CONFIG_SRCDIR([src/internal.h])
-AC_CONFIG_AUX_DIR(config)
 AC_USE_SYSTEM_EXTENSIONS
 AM_INIT_AUTOMAKE(subdir-objects foreign)
 AC_PROG_CXX
@@ -51,6 +53,8 @@ AS_IF([test "x$CFLAGS" = "x-I." ],
       [CFLAGS=""])
 AS_IF([test "x$CXXFLAGS" = "x-I." ],
       [CXXFLAGS=""])
+AS_IF([test "x$CPPFLAGS" = "x-I." ],
+      [CPPFLAGS=""])
 
 # the malloc tests seems to be broken for cross compilation.. ignore them
 ac_cv_func_malloc_0_nonnull=yes
