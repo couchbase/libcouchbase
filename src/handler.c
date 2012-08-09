@@ -314,15 +314,17 @@ static void observe_response_handler(libcouchbase_server_t *server,
         libcouchbase_uint16_t nkey, vb;
         const char *key;
 
-        vb = ntohs(*((libcouchbase_uint16_t *)ptr));
+        memcpy(&vb, ptr, sizeof(vb));
+        vb = ntohs(vb);
         ptr += sizeof(vb);
-        nkey = ntohs(*((libcouchbase_uint16_t *)ptr));
+        memcpy(&nkey, ptr, sizeof(nkey));
+        nkey = ntohs(nkey);
         ptr += sizeof(nkey);
         key = (const char *)ptr;
         ptr += nkey;
         obs = *((libcouchbase_uint8_t *)ptr);
         ptr += sizeof(obs);
-        cas = *((libcouchbase_cas_t *)ptr);
+        memcpy(&cas, ptr, sizeof(cas));
         ptr += sizeof(cas);
         root->callbacks.observe(root, command_data->cookie, map_error(status),
                                 obs, key, nkey, cas,
