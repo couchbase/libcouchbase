@@ -73,6 +73,9 @@ extern "C" {
     int ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
                           libcouchbase_size_t nbytes);
 
+    /* Align the read head of the ringbuffer for platforms where it's needed */
+    int ringbuffer_ensure_alignment(ringbuffer_t *src);
+
 #ifdef __cplusplus
 }
 #endif

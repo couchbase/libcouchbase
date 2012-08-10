@@ -68,6 +68,12 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
     libcouchbase_size_t packetsize;
     struct libcouchbase_command_data_st ct;
 
+    if (ringbuffer_ensure_alignment(&c->input) != 0) {
+        libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
+                                   NULL);
+        return -1;
+    }
+
     nr = ringbuffer_peek(&c->input, header.bytes, sizeof(header));
     if (nr < sizeof(header)) {
         return 0;

@@ -405,3 +405,23 @@ int ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
     ringbuffer_produced(dst, nbytes);
     return 0;
 }
+
+int ringbuffer_ensure_alignment(ringbuffer_t *c)
+{
+#ifdef __sparc
+    intptr_t addr = (intptr_t)c->read_head;
+
+    if (addr % 8 != 0) {
+        ringbuffer_t copy;
+        if (ringbuffer_initialize(&copy, c->size) == 0 ||
+            ringbuffer_memcpy(&copy, c, ringbuffer_get_nbytes(c)) == -1) {
+            return -1;
+        }
+        ringbuffer_destruct(c);
+        *c = copy;
+    }
+#else
+    (void)c;
+#endif
+    return 0;
+}
