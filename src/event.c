@@ -177,10 +177,10 @@ static int parse_single(libcouchbase_server_t *c, hrtime_t stop)
             assert(nr == nbody);
             nr = libcouchbase_ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
             assert(nr == sizeof(ct));
-            /* Preserve the cookie and timestamp for the command. This means
-             * that the library will retry the command until its time will
-             * out and the client will get LIBCOUCHBASE_ETIMEDOUT error in
-             * command callback */
+            /* Preserve the cookie and reset timestamp for the command. This
+             * means that the library will retry the command until it will
+             * get code different from LIBCOUCHBASE_NOT_MY_VBUCKET */
+            ct.start = gethrtime();
             libcouchbase_server_retry_packet(new_srv, &ct, &req, sizeof(req));
             libcouchbase_server_write_packet(new_srv, body, nbody);
             libcouchbase_server_end_packet(new_srv);
