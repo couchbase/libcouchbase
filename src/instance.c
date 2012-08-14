@@ -725,10 +725,7 @@ static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
         return -1;
     }
 
-    ++instance->backup_idx;
     if (instance->backup_nodes[instance->backup_idx] == NULL) {
-        --instance->backup_idx;
-        /* All known nodes are dead */
         libcouchbase_error_handler(instance, error, reason);
         return -1;
     }
@@ -1054,14 +1051,13 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 
     do {
         setup_current_host(instance,
-                           instance->backup_nodes[instance->backup_idx]);
+                           instance->backup_nodes[instance->backup_idx++]);
         error = getaddrinfo(instance->host, instance->port,
                             &hints, &instance->ai);
         if (error != 0) {
             /* Ok, we failed to look up that server.. look up the next
              * in the list
              */
-            instance->backup_idx++;
             if (instance->backup_nodes[instance->backup_idx] == NULL) {
                 char errinfo[1024];
                 snprintf(errinfo, sizeof(errinfo),
@@ -1071,8 +1067,6 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
                                                   LIBCOUCHBASE_UNKNOWN_HOST,
                                                   errinfo);
             }
-            setup_current_host(instance,
-                               instance->backup_nodes[instance->backup_idx]);
         }
     } while (error != 0);
 
