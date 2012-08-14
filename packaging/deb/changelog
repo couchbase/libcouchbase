@@ -1,3 +1,11 @@
+libcouchbase (1.0.5) stable; urgency=low
+
+  [Sergey Avseyev]
+  * CCBC-91 Reset timer for commands with NOT_MY_VBUCKET response
+  * CCBC-91 Fix switching to backup node in case of server outage
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Tue, 14 Aug 2012 23:14:36 +0300
+
 libcouchbase (1.0.4) stable; urgency=low
 
   [Sergey Avseyev]

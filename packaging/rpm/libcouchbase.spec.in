@@ -65,6 +65,11 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Tue Aug 14 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.5
+[Sergey Avseyev]
+- CCBC-91 Reset timer for commands with NOT_MY_VBUCKET response
+- CCBC-91 Fix switching to backup node in case of server outage
+
 * Fri Jun 01 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.4
 [Sergey Avseyev]
 - [backport] vbucket_found_incorrect_master() returns server index
