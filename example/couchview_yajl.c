@@ -432,8 +432,8 @@ int main(int argc, char **argv)
     }
 
     (void)libcouchbase_set_error_callback(instance, error_callback);
-    (void)libcouchbase_set_couch_data_callback(instance, data_callback);
-    (void)libcouchbase_set_couch_complete_callback(instance, complete_callback);
+    (void)libcouchbase_set_view_data_callback(instance, data_callback);
+    (void)libcouchbase_set_view_complete_callback(instance, complete_callback);
 
     if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
@@ -448,10 +448,11 @@ int main(int argc, char **argv)
         nbytes = strlen(bytes);
     }
 
-    (void)libcouchbase_make_couch_request(instance, (void *)&cookie,
-                                          uri, strlen(uri), bytes, nbytes,
-                                          bytes ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
-                                          chunked, &rc);
+    (void)libcouchbase_make_http_request(instance, (void *)&cookie,
+                                         LIBCOUCHBASE_HTTP_TYPE_VIEW,
+                                         uri, strlen(uri), bytes, nbytes,
+                                         bytes ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
+                                         chunked, "application/json", &rc);
     if (rc != LIBCOUCHBASE_SUCCESS) {
         fprintf(stderr, "Failed to execute view\n");
         return 1;

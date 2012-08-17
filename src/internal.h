@@ -121,8 +121,8 @@ extern "C" {
         libcouchbase_tap_opaque_callback tap_opaque;
         libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
         libcouchbase_error_callback error;
-        libcouchbase_http_complete_callback couch_complete;
-        libcouchbase_http_data_callback couch_data;
+        libcouchbase_http_complete_callback view_complete;
+        libcouchbase_http_data_callback view_data;
         libcouchbase_http_complete_callback management_complete;
         libcouchbase_http_data_callback management_data;
         libcouchbase_unlock_callback unlock;

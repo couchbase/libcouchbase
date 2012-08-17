@@ -243,12 +243,12 @@ extern "C" {
                                                                 libcouchbase_flush_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_http_complete_callback libcouchbase_set_couch_complete_callback(libcouchbase_t instance,
-                                                                                 libcouchbase_http_complete_callback cb);
+    libcouchbase_http_complete_callback libcouchbase_set_view_complete_callback(libcouchbase_t instance,
+                                                                                libcouchbase_http_complete_callback cb);
 
     LIBCOUCHBASE_API
-    libcouchbase_http_data_callback libcouchbase_set_couch_data_callback(libcouchbase_t instance,
-                                                                         libcouchbase_http_data_callback cb);
+    libcouchbase_http_data_callback libcouchbase_set_view_data_callback(libcouchbase_t instance,
+                                                                        libcouchbase_http_data_callback cb);
 
     LIBCOUCHBASE_API
     libcouchbase_http_complete_callback libcouchbase_set_management_complete_callback(libcouchbase_t instance,

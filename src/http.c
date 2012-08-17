@@ -374,26 +374,33 @@ static libcouchbase_error_t request_connect(libcouchbase_http_request_t req)
     return LIBCOUCHBASE_SUCCESS;
 }
 
-static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instance,
-                                                                  const void *command_cookie,
-                                                                  libcouchbase_server_t *server,
-                                                                  const char *base,
-                                                                  libcouchbase_size_t nbase,
-                                                                  const char *path,
-                                                                  libcouchbase_size_t npath,
-                                                                  const void *body,
-                                                                  libcouchbase_size_t nbody,
-                                                                  libcouchbase_http_method_t method,
-                                                                  int chunked,
-                                                                  const char *content_type,
-                                                                  libcouchbase_http_data_callback data_cb,
-                                                                  libcouchbase_http_complete_callback complete_cb,
-                                                                  libcouchbase_error_t *error)
+LIBCOUCHBASE_API
+libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instance,
+                                                           const void *command_cookie,
+                                                           libcouchbase_http_type_t type,
+                                                           const char *path,
+                                                           libcouchbase_size_t npath,
+                                                           const void *body,
+                                                           libcouchbase_size_t nbody,
+                                                           libcouchbase_http_method_t method,
+                                                           int chunked,
+                                                           const char *content_type,
+                                                           libcouchbase_error_t *error)
 {
-    libcouchbase_size_t nn;
     libcouchbase_http_request_t req;
+    const char *base = NULL;
+    libcouchbase_size_t nn, nbase;
+    libcouchbase_server_t *server;
 
     if (method >= LIBCOUCHBASE_HTTP_METHOD_MAX) {
+        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+        return NULL;
+    }
+    if (type >= LIBCOUCHBASE_HTTP_TYPE_MAX) {
+        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+        return NULL;
+    }
+    if (content_type == NULL) {
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
         return NULL;
     }
@@ -402,9 +409,38 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
         return NULL;
     }
+    /* pick random server */
+    nn = (libcouchbase_size_t)(gethrtime() >> 10) % instance->nservers;
+    server = instance->servers + nn;
     req = calloc(1, sizeof(struct libcouchbase_http_request_st));
     if (!req) {
         *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+        return NULL;
+    }
+    switch (type) {
+    case LIBCOUCHBASE_HTTP_TYPE_VIEW:
+        if (!server->couch_api_base) {
+            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
+            return NULL;
+        }
+        base = server->couch_api_base;
+        nbase = strlen(base);
+        req->on_complete = instance->callbacks.view_complete;
+        req->on_data = instance->callbacks.view_data;
+        break;
+    case LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT:
+        if (!server->rest_api_server) {
+            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
+            return NULL;
+        }
+        base = server->rest_api_server;
+        nbase = strlen(base);
+        req->on_complete = instance->callbacks.management_complete;
+        req->on_data = instance->callbacks.management_data;
+        break;
+    default:
+        libcouchbase_http_request_destroy(req);                                    \
+        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
         return NULL;
     }
     req->instance = instance;
@@ -413,8 +449,6 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
     req->command_cookie = command_cookie;
     req->path = strdup(path);
     req->npath = npath;
-    req->on_complete = complete_cb;
-    req->on_data = data_cb;
     req->chunked = chunked;
 
 #define BUFF_APPEND(dst, src, len)                                                      \
@@ -617,77 +651,6 @@ static libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t
 
     *error = libcouchbase_synchandler_return(instance, request_connect(req));
     return req;
-}
-
-LIBCOUCHBASE_API
-libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
-                                                            const void *command_cookie,
-                                                            const char *path,
-                                                            libcouchbase_size_t npath,
-                                                            const void *body,
-                                                            libcouchbase_size_t nbody,
-                                                            libcouchbase_http_method_t method,
-                                                            int chunked,
-                                                            libcouchbase_error_t *error)
-{
-    const char *base = NULL;
-    libcouchbase_size_t nn, nbase;
-    libcouchbase_server_t *server;
-
-    /* pick random server */
-    nn = (libcouchbase_size_t)(gethrtime() >> 10) % instance->nservers;
-    server = instance->servers + nn;
-
-    /* memcached buckets don't support views */
-    if (!server->couch_api_base) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
-        return NULL;
-    }
-    base = server->couch_api_base;
-    nbase = strlen(base);
-
-    return libcouchbase_make_http_request(instance, command_cookie, server,
-                                          base, nbase, path, npath, body,
-                                          nbody, method, chunked,
-                                          "application/json",
-                                          instance->callbacks.couch_data,
-                                          instance->callbacks.couch_complete,
-                                          error);
-}
-
-LIBCOUCHBASE_API
-libcouchbase_http_request_t libcouchbase_make_management_request(libcouchbase_t instance,
-                                                                 const void *command_cookie,
-                                                                 const char *path,
-                                                                 libcouchbase_size_t npath,
-                                                                 const void *body,
-                                                                 libcouchbase_size_t nbody,
-                                                                 libcouchbase_http_method_t method,
-                                                                 int chunked,
-                                                                 libcouchbase_error_t *error)
-{
-    const char *base = NULL;
-    libcouchbase_size_t nn, nbase;
-    libcouchbase_server_t *server;
-
-    /* pick random server */
-    nn = (libcouchbase_size_t)(gethrtime() >> 10) % instance->nservers;
-    server = instance->servers + nn;
-
-    /* memcached buckets don't support views */
-    if (!server->rest_api_server) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
-        return NULL;
-    }
-    base = server->rest_api_server;
-    nbase = strlen(base);
-    return libcouchbase_make_http_request(instance, command_cookie, server,
-                                          base, nbase, path, npath, body,
-                                          nbody, method, chunked,
-                                          "application/x-www-form-urlencoded",
-                                          instance->callbacks.management_data,
-                                          instance->callbacks.management_complete,
-                                          error);
 }
 
 LIBCOUCHBASE_API

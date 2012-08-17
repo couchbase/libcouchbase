@@ -776,8 +776,11 @@ static bool view_impl(libcouchbase_t instance, string &query, string &data,
 {
     libcouchbase_error_t rc;
 
-    libcouchbase_make_couch_request(instance, NULL, query.c_str(), query.length(),
-                                    data.c_str(), data.length(), method, chunked, &rc);
+    libcouchbase_make_http_request(instance, NULL,
+                                   LIBCOUCHBASE_HTTP_TYPE_VIEW,
+                                   query.c_str(), query.length(),
+                                   data.c_str(), data.length(), method,
+                                   chunked, "application/json", &rc);
     if (rc != LIBCOUCHBASE_SUCCESS) {
         cerr << "Failed to send requests:" << endl
              << libcouchbase_strerror(instance, rc) << endl;
@@ -791,8 +794,11 @@ static bool admin_impl(libcouchbase_t instance, string &query, string &data,
 {
     libcouchbase_error_t rc;
 
-    libcouchbase_make_management_request(instance, NULL, query.c_str(), query.length(),
-                                         data.c_str(), data.length(), method, chunked, &rc);
+    libcouchbase_make_http_request(instance, NULL,
+                                   LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT,
+                                   query.c_str(), query.length(),
+                                   data.c_str(), data.length(), method, chunked,
+                                   "application/x-www-form-urlencoded", &rc);
     if (rc != LIBCOUCHBASE_SUCCESS) {
         cerr << "Failed to send requests: " << endl
              << libcouchbase_strerror(instance, rc) << endl;
@@ -807,9 +813,11 @@ static bool bucket_delete_impl(libcouchbase_t instance, list<string> &names)
 
     for (list<string>::iterator iter = names.begin(); iter != names.end(); ++iter) {
         string query = "/pools/default/buckets/" + *iter;
-        libcouchbase_make_management_request(instance, NULL, query.c_str(), query.length(),
-                                             NULL, 0, LIBCOUCHBASE_HTTP_METHOD_DELETE,
-                                             false, &rc);
+        libcouchbase_make_http_request(instance, NULL,
+                                       LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT,
+                                       query.c_str(), query.length(),
+                                       NULL, 0, LIBCOUCHBASE_HTTP_METHOD_DELETE, false,
+                                       "application/x-www-form-urlencoded", &rc);
         if (rc != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to send requests: " << endl
                  << libcouchbase_strerror(instance, rc) << endl;
@@ -841,9 +849,12 @@ static bool bucket_create_impl(libcouchbase_t instance, list<string> &names,
         if (proxy_port > 0) {
             data << "&proxyPort=" << proxy_port;
         }
-        libcouchbase_make_management_request(instance, NULL, query, sizeof(query) - 1,
-                                             data.str().c_str(), data.str().length(),
-                                             LIBCOUCHBASE_HTTP_METHOD_POST, false, &rc);
+        libcouchbase_make_http_request(instance, NULL,
+                                       LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT,
+                                       query, sizeof(query) - 1,
+                                       data.str().c_str(), data.str().length(),
+                                       LIBCOUCHBASE_HTTP_METHOD_POST, false,
+                                       "application/x-www-form-urlencoded", &rc);
         if (rc != LIBCOUCHBASE_SUCCESS) {
             cerr << "Failed to send requests: " << endl
                  << libcouchbase_strerror(instance, rc) << endl;
@@ -1314,8 +1325,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)libcouchbase_set_storage_callback(instance, storage_callback);
     (void)libcouchbase_set_unlock_callback(instance, unlock_callback);
     (void)libcouchbase_set_observe_callback(instance, observe_callback);
-    (void)libcouchbase_set_couch_data_callback(instance, data_callback);
-    (void)libcouchbase_set_couch_complete_callback(instance, complete_callback);
+    (void)libcouchbase_set_view_data_callback(instance, data_callback);
+    (void)libcouchbase_set_view_complete_callback(instance, complete_callback);
     (void)libcouchbase_set_management_data_callback(instance, data_callback);
     (void)libcouchbase_set_management_complete_callback(instance, complete_callback);
     (void)libcouchbase_set_verbosity_callback(instance, verbosity_callback);

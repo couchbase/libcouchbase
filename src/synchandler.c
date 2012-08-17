@@ -216,40 +216,40 @@ static void touch_callback(libcouchbase_t instance,
     libcouchbase_maybe_breakout(instance);
 }
 
-static void couch_complete_callback(libcouchbase_http_request_t request,
-                                    libcouchbase_t instance,
-                                    const void *cookie,
-                                    libcouchbase_error_t error,
-                                    libcouchbase_http_status_t status,
-                                    const char *path,
-                                    libcouchbase_size_t npath,
-                                    const void *bytes,
-                                    libcouchbase_size_t nbytes)
+static void view_complete_callback(libcouchbase_http_request_t request,
+                                   libcouchbase_t instance,
+                                   const void *cookie,
+                                   libcouchbase_error_t error,
+                                   libcouchbase_http_status_t status,
+                                   const char *path,
+                                   libcouchbase_size_t npath,
+                                   const void *bytes,
+                                   libcouchbase_size_t nbytes)
 {
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.couch_complete(request, instance, cookie, error,
-                                status, path, npath, bytes, nbytes);
+    c->callbacks.view_complete(request, instance, cookie, error,
+                               status, path, npath, bytes, nbytes);
     restore_wrapping_env(instance, c, error);
     libcouchbase_maybe_breakout(instance);
 }
 
-static void couch_data_callback(libcouchbase_http_request_t request,
-                                libcouchbase_t instance,
-                                const void *cookie,
-                                libcouchbase_error_t error,
-                                libcouchbase_http_status_t status,
-                                const char *path,
-                                libcouchbase_size_t npath,
-                                const void *bytes,
-                                libcouchbase_size_t nbytes)
+static void view_data_callback(libcouchbase_http_request_t request,
+                               libcouchbase_t instance,
+                               const void *cookie,
+                               libcouchbase_error_t error,
+                               libcouchbase_http_status_t status,
+                               const char *path,
+                               libcouchbase_size_t npath,
+                               const void *bytes,
+                               libcouchbase_size_t nbytes)
 {
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.couch_data(request, instance, cookie, error,
-                            status, path, npath, bytes, nbytes);
+    c->callbacks.view_data(request, instance, cookie, error,
+                           status, path, npath, bytes, nbytes);
     restore_wrapping_env(instance, c, error);
     libcouchbase_maybe_breakout(instance);
 }
@@ -314,8 +314,8 @@ static void restore_wrapping_env(libcouchbase_t instance,
     instance->callbacks.tap_opaque = tap_opaque_callback;
     instance->callbacks.tap_vbucket_set = tap_vbucket_set_callback;
     instance->callbacks.error = error_callback;
-    instance->callbacks.couch_complete = couch_complete_callback;
-    instance->callbacks.couch_data = couch_data_callback;
+    instance->callbacks.view_complete = view_complete_callback;
+    instance->callbacks.view_data = view_data_callback;
     instance->callbacks.observe = observe_callback;
 
     user->cookie = (void *)instance->cookie;
@@ -330,7 +330,7 @@ libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance,
     struct user_cookie cookie;
 
     if (instance->syncmode == LIBCOUCHBASE_ASYNCHRONOUS ||
-            retcode != LIBCOUCHBASE_SUCCESS) {
+        retcode != LIBCOUCHBASE_SUCCESS) {
         return retcode;
     }
 

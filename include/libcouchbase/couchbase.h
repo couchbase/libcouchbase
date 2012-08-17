@@ -709,20 +709,28 @@ extern "C" {
                                             const void *cookie);
 
     /**
-     * Execute Couchbase View matching given path and yield JSON result object.
-     * The client should setup view_complete callback in order to fetch the
-     * result. Also he can setup view_data callback to fetch response body
-     * in chunks as soon as possible, it will be called each time the library
-     * receive a data chunk from socket. The empty <tt>bytes</tt> argument
-     * (NULL pointer and zero size) is the sign of end of response. Chunked
-     * callback allows to save memory on large datasets.
+     * Execute HTTP request matching given path and yield JSON result object.
+     * Depending on type it could be:
      *
-     * It doesn't automatically breakout like other operations when you use
-     * libcouchbase_execute().
+     * - LIBCOUCHBASE_HTTP_TYPE_VIEW
+     *
+     *   The client should setup view_complete callback in order to fetch
+     *   the result. Also he can setup view_data callback to fetch response
+     *   body in chunks as soon as possible, it will be called each time the
+     *   library receive a data chunk from socket. The empty <tt>bytes</tt>
+     *   argument (NULL pointer and zero size) is the sign of end of
+     *   response. Chunked callback allows to save memory on large datasets.
+     *
+     * - LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT
+     *
+     *   Management requests allow you to configure the cluster, add/remove
+     *   buckets, rebalance etc. The result will be passed to management
+     *   callbacks (data/complete).
      *
      * @param instance The handle to libcouchbase
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
+     * @param type The type of the request needed.
      * @param path A view path string with optional query params (e.g. skip,
      *             limit etc.)
      * @param npath Size of path
@@ -732,60 +740,40 @@ extern "C" {
      * @param chunked If true the client will use libcouchbase_http_data_callback
      *                to notify about response and will call
      *                libcouchbase_http_complete with empty data eventually.
+     * @param content_type The 'Content-Type' header for request. For view
+     *                     requests it is usually "application/json", for
+     *                     management -- "application/x-www-form-urlencoded".
      * @param error Where to store information about why creation failed
      *
      * @example Fetch first 10 docs from the bucket
      *    const char path[] = "_all_docs?limit=10";
-     *    libcouchbase_make_couch_request(instance, NULL, path, npath
-     *                                    NULL, 0, LIBCOUCHBASE_HTTP_METHOD_GET, 1);
+     *    libcouchbase_error_t err;
+     *    libcouchbase_make_http_request(instance, LIBCOUCHBASE_HTTP_TYPE_VIEW,
+     *                                   NULL, path, npath, NULL, 0,
+     *                                   LIBCOUCHBASE_HTTP_METHOD_GET, 1,
+     *                                   "application/json", &err);
      *
      * @example Filter first 10 docs using POST request
      *    const char path[] = "_all_docs?limit=10";
      *    const char body[] = "{\"keys\": [\"test_1000\", \"test_10002\"]}"
-     *    libcouchbase_make_couch_request(instance, NULL, path, npath
-     *                                    body, sizeof(body),
-     *                                    LIBCOUCHBASE_HTTP_METHOD_GET, 1);
+     *    libcouchbase_make_http_request(instance, LIBCOUCHBASE_HTTP_TYPE_VIEW,
+     *                                   NULL, path, npath, body, sizeof(body),
+     *                                   LIBCOUCHBASE_HTTP_METHOD_POST, 1,
+     *                                   "application/json", &err);
      */
     LIBCOUCHBASE_API
-    libcouchbase_http_request_t libcouchbase_make_couch_request(libcouchbase_t instance,
-                                                                const void *command_cookie,
-                                                                const char *path,
-                                                                libcouchbase_size_t npath,
-                                                                const void *body,
-                                                                libcouchbase_size_t nbody,
-                                                                libcouchbase_http_method_t method,
-                                                                int chunked,
-                                                                libcouchbase_error_t *error);
+    libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instance,
+                                                               const void *command_cookie,
+                                                               libcouchbase_http_type_t type,
+                                                               const char *path,
+                                                               libcouchbase_size_t npath,
+                                                               const void *body,
+                                                               libcouchbase_size_t nbody,
+                                                               libcouchbase_http_method_t method,
+                                                               int chunked,
+                                                               const char *content_type,
+                                                               libcouchbase_error_t *error);
 
-    /**
-     * Execute request using management protocol. Using this function you
-     * can configure the cluster, add/remove buckets, rebalance etc. It
-     * behaves like libcouchbase_make_couch_request() but works with another
-     * endpoint.
-     *
-     * @param instance The handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param path A view path string with optional query paramsh
-     * @param npath Size of path
-     * @param body The POST body for request.
-     * @param nbody Size of body
-     * @param method HTTP message type to be sent to server
-     * @param chunked If true the client will use libcouchbase_http_data_callback
-     *                to notify about response and will call
-     *                libcouchbase_http_complete with empty data eventually.
-     * @param error Where to store information about why creation failed
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_http_request_t libcouchbase_make_management_request(libcouchbase_t instance,
-                                                                     const void *command_cookie,
-                                                                     const char *path,
-                                                                     libcouchbase_size_t npath,
-                                                                     const void *body,
-                                                                     libcouchbase_size_t nbody,
-                                                                     libcouchbase_http_method_t method,
-                                                                     int chunked,
-                                                                     libcouchbase_error_t *error);
 
     /**
      * Cancel HTTP request (view or management API). This function could be

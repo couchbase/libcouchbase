@@ -950,13 +950,13 @@ static void dummy_flush_callback(libcouchbase_t instance,
     (void)error;
 }
 
-static void dummy_couch_complete_callback(libcouchbase_http_request_t request,
-                                          libcouchbase_t instance,
-                                          const void *cookie,
-                                          libcouchbase_error_t error,
-                                          libcouchbase_http_status_t status,
-                                          const char *path, libcouchbase_size_t npath,
-                                          const void *bytes, libcouchbase_size_t nbytes)
+static void dummy_view_complete_callback(libcouchbase_http_request_t request,
+                                         libcouchbase_t instance,
+                                         const void *cookie,
+                                         libcouchbase_error_t error,
+                                         libcouchbase_http_status_t status,
+                                         const char *path, libcouchbase_size_t npath,
+                                         const void *bytes, libcouchbase_size_t nbytes)
 {
     (void)request;
     (void)instance;
@@ -1007,13 +1007,13 @@ static void dummy_management_complete_callback(libcouchbase_http_request_t reque
     (void)status;
 }
 
-static void dummy_couch_data_callback(libcouchbase_http_request_t request,
-                                      libcouchbase_t instance,
-                                      const void *cookie,
-                                      libcouchbase_error_t error,
-                                      libcouchbase_http_status_t status,
-                                      const char *path, libcouchbase_size_t npath,
-                                      const void *bytes, libcouchbase_size_t nbytes)
+static void dummy_view_data_callback(libcouchbase_http_request_t request,
+                                     libcouchbase_t instance,
+                                     const void *cookie,
+                                     libcouchbase_error_t error,
+                                     libcouchbase_http_status_t status,
+                                     const char *path, libcouchbase_size_t npath,
+                                     const void *bytes, libcouchbase_size_t nbytes)
 {
     (void)request;
     (void)instance;
@@ -1089,8 +1089,8 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
     instance->callbacks.error = dummy_error_callback;
     instance->callbacks.stat = dummy_stat_callback;
     instance->callbacks.version = dummy_version_callback;
-    instance->callbacks.couch_complete = dummy_couch_complete_callback;
-    instance->callbacks.couch_data = dummy_couch_data_callback;
+    instance->callbacks.view_complete = dummy_view_complete_callback;
+    instance->callbacks.view_data = dummy_view_data_callback;
     instance->callbacks.management_complete = dummy_management_complete_callback;
     instance->callbacks.management_data = dummy_management_data_callback;
     instance->callbacks.flush = dummy_flush_callback;
@@ -1296,23 +1296,23 @@ libcouchbase_flush_callback libcouchbase_set_flush_callback(libcouchbase_t insta
 }
 
 LIBCOUCHBASE_API
-libcouchbase_http_complete_callback libcouchbase_set_couch_complete_callback(libcouchbase_t instance,
+libcouchbase_http_complete_callback libcouchbase_set_view_complete_callback(libcouchbase_t instance,
                                                                              libcouchbase_http_complete_callback cb)
 {
-    libcouchbase_http_complete_callback ret = instance->callbacks.couch_complete;
+    libcouchbase_http_complete_callback ret = instance->callbacks.view_complete;
     if (cb != NULL) {
-        instance->callbacks.couch_complete = cb;
+        instance->callbacks.view_complete = cb;
     }
     return ret;
 }
 
 LIBCOUCHBASE_API
-libcouchbase_http_data_callback libcouchbase_set_couch_data_callback(libcouchbase_t instance,
+libcouchbase_http_data_callback libcouchbase_set_view_data_callback(libcouchbase_t instance,
                                                                      libcouchbase_http_data_callback cb)
 {
-    libcouchbase_http_data_callback ret = instance->callbacks.couch_data;
+    libcouchbase_http_data_callback ret = instance->callbacks.view_data;
     if (cb != NULL) {
-        instance->callbacks.couch_data = cb;
+        instance->callbacks.view_data = cb;
     }
     return ret;
 }
