@@ -300,6 +300,7 @@ static void data_callback(libcouchbase_http_request_t request,
                           libcouchbase_error_t error,
                           libcouchbase_http_status_t status,
                           const char *path, size_t npath,
+                          const char * const *headers,
                           const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
@@ -334,6 +335,7 @@ static void data_callback(libcouchbase_http_request_t request,
     (void)npath;
     (void)error;
     (void)status;
+    (void)headers;
 }
 
 static void complete_callback(libcouchbase_http_request_t request,
@@ -342,12 +344,19 @@ static void complete_callback(libcouchbase_http_request_t request,
                               libcouchbase_error_t error,
                               libcouchbase_http_status_t status,
                               const char *path, size_t npath,
+                              const char * const *headers,
                               const void *bytes, size_t nbytes)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
     yajl_status st;
     (void)instance;
 
+    if (headers) {
+        libcouchbase_size_t ii;
+        for (ii = 1; *headers != NULL; ++ii, ++headers) {
+            fprintf(stderr, "%s%s", *headers, (ii % 2 == 0) ? "\n" : ": ");
+        }
+    }
     fprintf(stderr, "\"");
     fwrite(path, npath, sizeof(char), stderr);
     fprintf(stderr, "\": ");
