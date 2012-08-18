@@ -51,9 +51,56 @@ void libcouchbase_http_request_destroy(libcouchbase_http_request_t req)
         ringbuffer_destruct(&req->input);
         ringbuffer_destruct(&req->output);
         ringbuffer_destruct(&req->result);
+        {
+            struct libcouchbase_http_header_st *tmp, *hdr = req->headers_list;
+            while (hdr) {
+                tmp = hdr->next;
+                free(hdr);
+                hdr = tmp;
+            }
+        }
     }
     memset(req, 0xff, sizeof(struct libcouchbase_http_request_st));
     free(req);
+}
+
+static int http_parser_header_cb(http_parser *p, const char *bytes, size_t nbytes)
+{
+    libcouchbase_http_request_t req = p->data;
+    struct libcouchbase_http_header_st *item;
+
+    item = calloc(1, sizeof(struct libcouchbase_http_header_st));
+    if (item == NULL) {
+        libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM,
+                                   "Failed to allocate buffer");
+        return -1;
+    }
+    item->data = malloc(nbytes + 1);
+    if (item->data == NULL) {
+        libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM,
+                                   "Failed to allocate buffer");
+        return -1;
+    }
+    memcpy(item->data, bytes, nbytes);
+    item->data[nbytes] = '\0';
+    item->next = req->headers_list;
+    req->headers_list = item;
+    req->nheaders++;
+    return 0;
+}
+
+static int http_parser_headers_complete_cb(http_parser *p)
+{
+    libcouchbase_http_request_t req = p->data;
+    struct libcouchbase_http_header_st *hdr;
+    libcouchbase_size_t ii;
+
+    /* +1 pointer for NULL-terminator */
+    req->headers = calloc(req->nheaders + 1, sizeof(const char *));
+    for (ii = req->nheaders - 1, hdr = req->headers_list; hdr; --ii, hdr = hdr->next) {
+        req->headers[ii] = hdr->data;
+    }
+    return 0;
 }
 
 static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
@@ -71,6 +118,7 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
                      rc, p->status_code,
                      req->path,
                      req->npath,
+                     req->headers,
                      bytes, nbytes);
     } else {
         if (!ringbuffer_ensure_capacity(&req->result, nbytes)) {
@@ -117,6 +165,7 @@ static int http_parser_complete_cb(http_parser *p)
                      rc, p->status_code,
                      req->path,
                      req->npath,
+                     req->headers,
                      bytes, nbytes);
     if (!req->chunked) {
         ringbuffer_consumed(&req->result, nbytes);
@@ -151,7 +200,7 @@ static int request_do_fill_input_buffer(libcouchbase_http_request_t req)
             req->on_complete(req, req->instance,
                              req->command_cookie,
                              LIBCOUCHBASE_NETWORK_ERROR,
-                             0, req->path, req->npath, NULL, 0);
+                             0, req->path, req->npath, NULL, NULL, 0);
             return -1;
         }
     } else {
@@ -223,7 +272,7 @@ static int request_do_write(libcouchbase_http_request_t req)
                 req->on_complete(req, req->instance,
                                  req->command_cookie,
                                  LIBCOUCHBASE_NETWORK_ERROR,
-                                 0, req->path, req->npath, NULL, 0);
+                                 0, req->path, req->npath, NULL, NULL, 0);
                 return -1;
             }
         } else {
@@ -252,7 +301,7 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
             req->on_complete(req, instance,
                              req->command_cookie,
                              LIBCOUCHBASE_NETWORK_ERROR,
-                             0, req->path, req->npath, NULL, 0);
+                             0, req->path, req->npath, NULL, NULL, 0);
             return;
         } else {
             /* considering request was completed and release it */
@@ -265,7 +314,7 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
             req->on_complete(req, instance,
                              req->command_cookie,
                              LIBCOUCHBASE_NETWORK_ERROR,
-                             0, req->path, req->npath, NULL, 0);
+                             0, req->path, req->npath, NULL, NULL, 0);
             return;
         }
         if (req->output.nbytes == 0) {
@@ -320,7 +369,7 @@ static libcouchbase_error_t request_connect(libcouchbase_http_request_t req)
             req->on_complete(req, req->instance,
                              req->command_cookie,
                              LIBCOUCHBASE_CONNECT_ERROR,
-                             0, req->path, req->npath, NULL, 0);
+                             0, req->path, req->npath, NULL, NULL, 0);
             return LIBCOUCHBASE_CONNECT_ERROR;
         }
 
@@ -365,7 +414,7 @@ static libcouchbase_error_t request_connect(libcouchbase_http_request_t req)
                 req->on_complete(req, req->instance,
                                  req->command_cookie,
                                  LIBCOUCHBASE_CONNECT_ERROR,
-                                 0, req->path, req->npath, NULL, 0);
+                                 0, req->path, req->npath, NULL, NULL, 0);
                 return LIBCOUCHBASE_CONNECT_ERROR;
             }
         }
@@ -626,7 +675,9 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
     req->parser->data = req;
     req->parser_settings.on_body = http_parser_body_cb;
     req->parser_settings.on_message_complete = http_parser_complete_cb;
-
+    req->parser_settings.on_header_field = http_parser_header_cb;
+    req->parser_settings.on_header_value = http_parser_header_cb;
+    req->parser_settings.on_headers_complete = http_parser_headers_complete_cb;
 
     /* Store request reference in the server struct */
     hashset_add(server->http_requests, req);

@@ -956,6 +956,7 @@ static void dummy_view_complete_callback(libcouchbase_http_request_t request,
                                          libcouchbase_error_t error,
                                          libcouchbase_http_status_t status,
                                          const char *path, libcouchbase_size_t npath,
+                                         const char * const*headers,
                                          const void *bytes, libcouchbase_size_t nbytes)
 {
     (void)request;
@@ -964,6 +965,7 @@ static void dummy_view_complete_callback(libcouchbase_http_request_t request,
     (void)error;
     (void)path;
     (void)npath;
+    (void)headers;
     (void)bytes;
     (void)nbytes;
     (void)status;
@@ -975,6 +977,7 @@ static void dummy_management_data_callback(libcouchbase_http_request_t request,
                                            libcouchbase_error_t error,
                                            libcouchbase_http_status_t status,
                                            const char *path, libcouchbase_size_t npath,
+                                           const char * const *headers,
                                            const void *bytes, libcouchbase_size_t nbytes)
 {
     (void)request;
@@ -983,6 +986,7 @@ static void dummy_management_data_callback(libcouchbase_http_request_t request,
     (void)error;
     (void)path;
     (void)npath;
+    (void)headers;
     (void)bytes;
     (void)nbytes;
     (void)status;
@@ -994,6 +998,7 @@ static void dummy_management_complete_callback(libcouchbase_http_request_t reque
                                                libcouchbase_error_t error,
                                                libcouchbase_http_status_t status,
                                                const char *path, libcouchbase_size_t npath,
+                                               const char * const *headers,
                                                const void *bytes, libcouchbase_size_t nbytes)
 {
     (void)request;
@@ -1002,6 +1007,7 @@ static void dummy_management_complete_callback(libcouchbase_http_request_t reque
     (void)error;
     (void)path;
     (void)npath;
+    (void)headers;
     (void)bytes;
     (void)nbytes;
     (void)status;
@@ -1013,6 +1019,7 @@ static void dummy_view_data_callback(libcouchbase_http_request_t request,
                                      libcouchbase_error_t error,
                                      libcouchbase_http_status_t status,
                                      const char *path, libcouchbase_size_t npath,
+                                     const char * const *headers,
                                      const void *bytes, libcouchbase_size_t nbytes)
 {
     (void)request;
@@ -1021,6 +1028,7 @@ static void dummy_view_data_callback(libcouchbase_http_request_t request,
     (void)error;
     (void)path;
     (void)npath;
+    (void)headers;
     (void)bytes;
     (void)nbytes;
     (void)status;

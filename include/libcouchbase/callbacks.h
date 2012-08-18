@@ -148,6 +148,7 @@ extern "C" {
                                                         libcouchbase_http_status_t status,
                                                         const char *path,
                                                         libcouchbase_size_t npath,
+                                                        const char * const *headers,
                                                         const void *bytes,
                                                         libcouchbase_size_t nbytes);
 
@@ -165,6 +166,7 @@ extern "C" {
                                                     libcouchbase_http_status_t status,
                                                     const char *path,
                                                     libcouchbase_size_t npath,
+                                                    const char * const *headers,
                                                     const void *bytes,
                                                     libcouchbase_size_t nbytes);
 

@@ -223,6 +223,7 @@ static void view_complete_callback(libcouchbase_http_request_t request,
                                    libcouchbase_http_status_t status,
                                    const char *path,
                                    libcouchbase_size_t npath,
+                                   const char * const* headers,
                                    const void *bytes,
                                    libcouchbase_size_t nbytes)
 {
@@ -230,7 +231,7 @@ static void view_complete_callback(libcouchbase_http_request_t request,
 
     restore_user_env(instance);
     c->callbacks.view_complete(request, instance, cookie, error,
-                               status, path, npath, bytes, nbytes);
+                               status, path, npath, headers, bytes, nbytes);
     restore_wrapping_env(instance, c, error);
     libcouchbase_maybe_breakout(instance);
 }
@@ -242,6 +243,7 @@ static void view_data_callback(libcouchbase_http_request_t request,
                                libcouchbase_http_status_t status,
                                const char *path,
                                libcouchbase_size_t npath,
+                               const char * const* headers,
                                const void *bytes,
                                libcouchbase_size_t nbytes)
 {
@@ -249,7 +251,7 @@ static void view_data_callback(libcouchbase_http_request_t request,
 
     restore_user_env(instance);
     c->callbacks.view_data(request, instance, cookie, error,
-                           status, path, npath, bytes, nbytes);
+                           status, path, npath, headers, bytes, nbytes);
     restore_wrapping_env(instance, c, error);
     libcouchbase_maybe_breakout(instance);
 }

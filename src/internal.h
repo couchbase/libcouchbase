@@ -298,6 +298,11 @@ extern "C" {
         libcouchbase_t instance;
     };
 
+    struct libcouchbase_http_header_st {
+        struct libcouchbase_http_header_st *next;
+        char *data;
+    };
+
     struct libcouchbase_http_request_st {
         /** The socket to the server */
         evutil_socket_t sock;
@@ -347,6 +352,12 @@ extern "C" {
         int cancelled;
         /** Is HTTP parser completed its work */
         int completed;
+        /** Linked list of headers */
+        struct libcouchbase_http_header_st *headers_list;
+        /** Headers array for passing to callbacks */
+        const char **headers;
+        /** Number of headers **/
+        libcouchbase_size_t nheaders;
     };
 
     void libcouchbase_http_request_destroy(libcouchbase_http_request_t req);

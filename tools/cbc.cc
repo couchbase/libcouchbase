@@ -359,6 +359,7 @@ extern "C" {
                               const void *, libcouchbase_error_t,
                               libcouchbase_http_status_t,
                               const char *, libcouchbase_size_t,
+                              const char * const *,
                               const void *bytes, libcouchbase_size_t nbytes)
     {
         cout.write(static_cast<const char *>(bytes), nbytes);
@@ -371,8 +372,15 @@ extern "C" {
                                   libcouchbase_error_t error,
                                   libcouchbase_http_status_t status,
                                   const char *path, libcouchbase_size_t npath,
+                                  const char * const *headers,
                                   const void *bytes, libcouchbase_size_t nbytes)
     {
+        if (headers) {
+            for (size_t ii = 1; *headers != NULL; ++ii, ++headers) {
+                cerr << *headers;
+                cerr << ((ii % 2 == 0) ? "\n" : ": ");
+            }
+        }
         cerr << "\"";
         cerr.write(static_cast<const char *>(path), npath);
         cerr << "\": ";
