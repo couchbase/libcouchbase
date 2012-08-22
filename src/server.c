@@ -120,10 +120,13 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GET:
         case PROTOCOL_BINARY_CMD_GETQ:
-            root->callbacks.get(root, ct.cookie,
-                                error,
-                                keyptr, ntohs(req.request.keylen),
-                                NULL, 0, 0, 0);
+            {
+                struct libcouchbase_item_st it;
+                memset(&it, 0, sizeof(it));
+                it.v0.key = keyptr;
+                it.v0.nkey = ntohs(req.request.keylen);
+                root->callbacks.get(root, ct.cookie, error, &it);
+            }
             break;
         case PROTOCOL_BINARY_CMD_FLUSH:
             root->callbacks.flush(root,
@@ -651,6 +654,7 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
         char *packet = c->cmd_log.read_head;
         libcouchbase_size_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
         char *keyptr;
+        struct libcouchbase_item_st it;
 
         nr = ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
@@ -682,10 +686,13 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
             }
 
             keyptr = packet + sizeof(req) + req.request.extlen;
+            memset(&it, 0, sizeof(it));
+            it.v0.key = keyptr;
+            it.v0.nkey = ntohs(req.request.keylen);
             c->instance->callbacks.get(c->instance, ct.cookie,
                                        LIBCOUCHBASE_KEY_ENOENT,
-                                       keyptr, ntohs(req.request.keylen),
-                                       NULL, 0, 0, 0);
+                                       &it);
+
             if (packet != c->cmd_log.read_head) {
                 free(packet);
             }

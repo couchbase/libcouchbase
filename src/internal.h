@@ -106,7 +106,8 @@ extern "C" {
     typedef void (*vbucket_state_listener_t)(libcouchbase_server_t *server);
 
     struct libcouchbase_callback_st {
-        libcouchbase_get_callback get;
+        libcouchbase_extended_get_callback get;
+        libcouchbase_get_callback old_get;
         libcouchbase_storage_callback storage;
         libcouchbase_arithmetic_callback arithmetic;
         libcouchbase_observe_callback observe;

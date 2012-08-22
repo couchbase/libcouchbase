@@ -151,11 +151,25 @@ static void get_callback(libcouchbase_t instance,
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.get(instance, cookie, error, key, nkey, bytes, nbytes,
-                     flags, cas);
+    c->callbacks.old_get(instance, cookie, error, key, nkey, bytes, nbytes,
+                         flags, cas);
     restore_wrapping_env(instance, c, error);
     libcouchbase_maybe_breakout(instance);
 }
+
+static void extended_get_callback(libcouchbase_t instance,
+                                  const void *cookie,
+                                  libcouchbase_error_t error,
+                                  struct libcouchbase_item_st *item)
+{
+    struct user_cookie *c = (void *)instance->cookie;
+
+    restore_user_env(instance);
+    c->callbacks.get(instance, cookie, error, item);
+    restore_wrapping_env(instance, c, error);
+    libcouchbase_maybe_breakout(instance);
+}
+
 
 static void storage_callback(libcouchbase_t instance,
                              const void *cookie,
@@ -303,7 +317,8 @@ static void restore_wrapping_env(libcouchbase_t instance,
 {
     user->callbacks = instance->callbacks;
     /* Install new callbacks */
-    instance->callbacks.get = get_callback;
+    instance->callbacks.get = extended_get_callback;
+    instance->callbacks.old_get = get_callback;
     instance->callbacks.storage = storage_callback;
     instance->callbacks.arithmetic = arithmetic_callback;
     instance->callbacks.remove = remove_callback;

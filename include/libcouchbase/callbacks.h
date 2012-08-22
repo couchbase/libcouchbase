@@ -32,6 +32,11 @@
 extern "C" {
 #endif
 
+    typedef void (*libcouchbase_extended_get_callback)(libcouchbase_t instance,
+                                                       const void *cookie,
+                                                       libcouchbase_error_t error,
+                                                       struct libcouchbase_item_st *item);
+
     typedef void (*libcouchbase_get_callback)(libcouchbase_t instance,
                                               const void *cookie,
                                               libcouchbase_error_t error,
@@ -184,6 +189,9 @@ extern "C" {
                                                     const char *server_endpoint,
                                                     libcouchbase_error_t error);
 
+    LIBCOUCHBASE_API
+    libcouchbase_get_callback libcouchbase_set_extended_get_callback(libcouchbase_t,
+                                                                     libcouchbase_extended_get_callback);
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
                                                             libcouchbase_get_callback);

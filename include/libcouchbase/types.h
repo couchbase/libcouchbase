@@ -48,6 +48,24 @@ extern "C" {
     struct libcouchbase_timer_st;
     typedef struct libcouchbase_timer_st *libcouchbase_timer_t;
 
+
+    typedef uint8_t libcouchbase_datatype_t;
+
+    struct libcouchbase_item_st {
+        int version; /* struct layout version */
+        union {
+            struct {
+                const void *key;
+                libcouchbase_size_t nkey;
+                const void *bytes;
+                libcouchbase_size_t nbytes;
+                libcouchbase_uint32_t flags;
+                libcouchbase_cas_t cas;
+                libcouchbase_datatype_t datatype;
+            } v0;
+        };
+    };
+
     /**
      * Define the error codes in use by the library
      */
