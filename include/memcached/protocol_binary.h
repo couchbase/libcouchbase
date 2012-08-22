@@ -36,6 +36,7 @@
 #ifndef PROTOCOL_BINARY_H
 #define PROTOCOL_BINARY_H
 
+#include <stdint.h>
 #include <memcached/vbucket.h>
 
 /**
@@ -167,16 +168,28 @@ extern "C"
         PROTOCOL_BINARY_CMD_LAST_RESERVED = 0x8f,
 
         /* Scrub the data */
-        PROTOCOL_BINARY_CMD_SCRUB = 0xf0
+        PROTOCOL_BINARY_CMD_SCRUB = 0xf0,
+        /* Refresh the ISASL data */
+        PROTOCOL_BINARY_CMD_ISASL_REFRESH = 0xf1
     } protocol_binary_command;
 
     /**
      * Definition of the data types in the packet
      * See section 3.4 Data Types
+     * If you specify a value != 0 you should interpret the byte
+     * as a "bitmask".
+     *   .... ...0 = Format: raw bytes
+     *   .... .00. = Compression: none
+     *   0000 0... = Reserved
      */
     typedef enum {
         PROTOCOL_BINARY_RAW_BYTES = 0x00
+#define PROTOCOL_BINARY_DATATYPE_JSON 0x01
+#define PROTOCOL_BINARY_DATATYPE_GZIP 0x02
+#define PROTOCOL_BINARY_DATATYPE_BZIP 0x04
+#define PROTOCOL_BINARY_DATATYPE_LZO  0x06
     } protocol_binary_datatypes;
+
 
     /**
      * Definition of the header structure for a request packet.
