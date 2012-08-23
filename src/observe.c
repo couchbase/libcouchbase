@@ -17,12 +17,11 @@
 
 #include "internal.h"
 
-struct observe_st
-{
+struct observe_st {
     int allocated;
     protocol_binary_request_no_extras req;
     ringbuffer_t body;
-    libcouchbase_size_t nbody;
+    lcb_size_t nbody;
 };
 
 static void destroy_request(struct observe_st *req)
@@ -43,9 +42,9 @@ static int init_request(struct observe_st *req)
     return 1;
 }
 
-static void destroy_requests(struct observe_st *req, libcouchbase_size_t nreq)
+static void destroy_requests(struct observe_st *req, lcb_size_t nreq)
 {
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
 
     for (ii = 0; ii < nreq; ++ii) {
         destroy_request(req + ii);
@@ -54,31 +53,33 @@ static void destroy_requests(struct observe_st *req, libcouchbase_size_t nreq)
 }
 
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
-                                          const void *command_cookie,
-                                          libcouchbase_size_t num_keys,
-                                          const void *const *keys,
-                                          const libcouchbase_size_t *nkey)
+lcb_error_t lcb_observe(lcb_t instance,
+                        const void *command_cookie,
+                        lcb_size_t num,
+                        const lcb_observe_cmd_t *const *items)
 {
     int vbid, idx, jj;
-    libcouchbase_size_t ii;
-    libcouchbase_uint32_t opaque;
+    lcb_size_t ii;
+    lcb_uint32_t opaque;
     struct observe_st *requests;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
     if (instance->dist_type != VBUCKET_DISTRIBUTION_VBUCKET) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
+        return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
     }
 
     /* the list of pointers to body buffers for each server */
     requests = calloc(instance->nservers, sizeof(struct observe_st));
     opaque = ++instance->seqno;
-    for (ii = 0; ii < num_keys; ++ii) {
-        vbid = vbucket_get_vbucket_by_key(instance->vbucket_config, keys[ii], nkey[ii]);
+    for (ii = 0; ii < num; ++ii) {
+        const void *key = items[ii]->v.v0.key;
+        uint16_t nkey = items[ii]->v.v0.nkey;
+
+        vbid = vbucket_get_vbucket_by_key(instance->vbucket_config, key, nkey);
         for (jj = -1; jj < instance->nreplicas; ++jj) {
             struct observe_st *rr;
             /* it will increment jj to get server index, so (-1 + 1) = 0 (master) */
@@ -88,7 +89,7 @@ libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
                 if (jj == -1) {
                     /* master node must be available */
                     destroy_requests(requests, instance->nservers);
-                    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
+                    return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
                 } else {
                     continue;
                 }
@@ -97,7 +98,7 @@ libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
             if (!rr->allocated) {
                 if (!init_request(rr)) {
                     destroy_requests(requests, instance->nservers);
-                    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 }
                 rr->req.message.header.request.magic = PROTOCOL_BINARY_REQ;
                 rr->req.message.header.request.opcode = CMD_OBSERVE;
@@ -106,41 +107,41 @@ libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
             }
 
             {
-                libcouchbase_uint16_t vb = htons(vbid);
-                libcouchbase_uint16_t len = htons((libcouchbase_uint16_t)nkey[ii]);
-                ringbuffer_ensure_capacity(&rr->body, sizeof(vb) + sizeof(len) + nkey[ii]);
+                lcb_uint16_t vb = htons(vbid);
+                lcb_uint16_t len = htons((lcb_uint16_t)nkey);
+                ringbuffer_ensure_capacity(&rr->body, sizeof(vb) + sizeof(len) + nkey);
                 rr->nbody += ringbuffer_write(&rr->body, &vb, sizeof(vb));
                 rr->nbody += ringbuffer_write(&rr->body, &len, sizeof(len));
-                rr->nbody += ringbuffer_write(&rr->body, keys[ii], nkey[ii]);
+                rr->nbody += ringbuffer_write(&rr->body, key, nkey);
             }
         }
     }
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         struct observe_st *rr = requests + ii;
-        libcouchbase_server_t *server = instance->servers + ii;
+        lcb_server_t *server = instance->servers + ii;
 
         if (rr->allocated) {
-            rr->req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)rr->nbody);
-            libcouchbase_server_start_packet(server, command_cookie, rr->req.bytes, sizeof(rr->req.bytes));
+            rr->req.message.header.request.bodylen = ntohl((lcb_uint32_t)rr->nbody);
+            lcb_server_start_packet(server, command_cookie, rr->req.bytes, sizeof(rr->req.bytes));
             if (ringbuffer_is_continous(&rr->body, RINGBUFFER_READ, rr->nbody)) {
-                libcouchbase_server_write_packet(server, ringbuffer_get_read_head(&rr->body), rr->nbody);
+                lcb_server_write_packet(server, ringbuffer_get_read_head(&rr->body), rr->nbody);
             } else {
                 char *tmp = malloc(ringbuffer_get_nbytes(&rr->body));
                 if (!tmp) {
                     /* FIXME by this time some of requests might be scheduled */
                     destroy_requests(requests, instance->nservers);
-                    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 } else {
                     ringbuffer_read(&rr->body, tmp, rr->nbody);
-                    libcouchbase_server_write_packet(server, tmp, rr->nbody);
+                    lcb_server_write_packet(server, tmp, rr->nbody);
                 }
             }
-            libcouchbase_server_end_packet(server);
-            libcouchbase_server_send_packets(server);
+            lcb_server_end_packet(server);
+            lcb_server_send_packets(server);
         }
     }
 
     destroy_requests(requests, instance->nservers);
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

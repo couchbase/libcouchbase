@@ -17,26 +17,25 @@
 #include "internal.h"
 
 LIBCOUCHBASE_API
-void libcouchbase_behavior_set_syncmode(libcouchbase_t instance, libcouchbase_syncmode_t syncmode)
+void lcb_behavior_set_syncmode(lcb_t instance, lcb_syncmode_t syncmode)
 {
     instance->syncmode = syncmode;
 }
 
 LIBCOUCHBASE_API
-libcouchbase_syncmode_t libcouchbase_behavior_get_syncmode(libcouchbase_t instance)
+lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t instance)
 {
     return instance->syncmode;
 }
 
 LIBCOUCHBASE_API
-void libcouchbase_behavior_set_ipv6(libcouchbase_t instance,
-                                    libcouchbase_ipv6_t mode)
+void lcb_behavior_set_ipv6(lcb_t instance, lcb_ipv6_t mode)
 {
     instance->ipv6 = mode;
 }
 
 LIBCOUCHBASE_API
-libcouchbase_ipv6_t libcouchbase_behavior_get_ipv6(libcouchbase_t instance)
+lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance)
 {
     return instance->ipv6;
 }

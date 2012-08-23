@@ -24,22 +24,22 @@
 
 #include "internal.h"
 
-void libcouchbase_purge_single_server(libcouchbase_server_t *server,
-                                      libcouchbase_error_t error)
+void lcb_purge_single_server(lcb_server_t *server,
+                             lcb_error_t error)
 {
     protocol_binary_request_header req;
-    struct libcouchbase_command_data_st ct;
-    libcouchbase_size_t nr;
+    struct lcb_command_data_st ct;
+    lcb_size_t nr;
     char *packet;
-    libcouchbase_size_t packetsize;
+    lcb_size_t packetsize;
     char *keyptr;
-    libcouchbase_t root = server->instance;
+    lcb_t root = server->instance;
     ringbuffer_t rest;
     ringbuffer_t *stream = &server->cmd_log;
     ringbuffer_t *cookies;
     ringbuffer_t *mirror = NULL; /* mirror buffer should be purged with main stream */
-    libcouchbase_size_t send_size = ringbuffer_get_nbytes(&server->output);
-    libcouchbase_size_t stream_size = ringbuffer_get_nbytes(stream);
+    lcb_size_t send_size = ringbuffer_get_nbytes(&server->output);
+    lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
     hrtime_t now = gethrtime();
 
     if (server->connected) {
@@ -53,7 +53,18 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
 
     do {
         int allocated = 0;
-        libcouchbase_uint32_t headersize;
+        lcb_uint32_t headersize;
+        lcb_uint16_t nkey;
+        union {
+            lcb_get_resp_t get;
+            lcb_store_resp_t store;
+            lcb_remove_resp_t remove;
+            lcb_touch_resp_t touch;
+            lcb_unlock_resp_t unlock;
+            lcb_arithmetic_resp_t arithmetic;
+            lcb_observe_resp_t observe;
+        } resp;
+
         nr = ringbuffer_peek(cookies, &ct, sizeof(ct));
         if (nr != sizeof(ct)) {
             break;
@@ -62,7 +73,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         if (nr != sizeof(req)) {
             break;
         }
-        packetsize = (libcouchbase_uint32_t)sizeof(req) + ntohl(req.request.bodylen);
+        packetsize = (lcb_uint32_t)sizeof(req) + ntohl(req.request.bodylen);
         if (stream->nbytes < packetsize) {
             break;
         }
@@ -73,8 +84,8 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         packet = stream->read_head;
 
         if (server->instance->histogram) {
-            libcouchbase_record_metrics(server->instance, now - ct.start,
-                                        req.request.opcode);
+            lcb_record_metrics(server->instance, now - ct.start,
+                               req.request.opcode);
         }
 
         if (server->connected && stream_size > send_size && (stream_size - packetsize) < send_size) {
@@ -82,7 +93,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
                temporary stream */
 
             /* I do believe I have some IOV functions to do that? */
-            libcouchbase_size_t nbytes = packetsize - (stream_size - send_size);
+            lcb_size_t nbytes = packetsize - (stream_size - send_size);
             assert(ringbuffer_memcpy(&rest,
                                      &server->output,
                                      nbytes) == 0);
@@ -90,20 +101,17 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
             send_size -= nbytes;
         }
         stream_size -= packetsize;
-        headersize = (libcouchbase_uint32_t)sizeof(req) + req.request.extlen + htons(req.request.keylen);
-        if (!ringbuffer_is_continous(stream,
-                                     RINGBUFFER_READ,
-                                     headersize)) {
+        headersize = (lcb_uint32_t)sizeof(req) + req.request.extlen + htons(req.request.keylen);
+        if (!ringbuffer_is_continous(stream, RINGBUFFER_READ, headersize)) {
             packet = malloc(headersize);
             if (packet == NULL) {
-                libcouchbase_error_handler(server->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
+                lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
                 abort();
             }
 
             nr = ringbuffer_peek(stream, packet, headersize);
             if (nr != headersize) {
-                libcouchbase_error_handler(server->instance, LIBCOUCHBASE_EINTERNAL,
-                                           NULL);
+                lcb_error_handler(server->instance, LCB_EINTERNAL, NULL);
                 free(packet);
                 abort();
             }
@@ -111,6 +119,8 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         }
 
         keyptr = packet + sizeof(req) + req.request.extlen;
+        nkey = ntohs(req.request.keylen);
+
         /* It would have been awesome if we could have a generic error */
         /* handler we could call */
         switch (req.request.opcode) {
@@ -120,75 +130,52 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GET:
         case PROTOCOL_BINARY_CMD_GETQ:
-            {
-                struct libcouchbase_item_st it;
-                memset(&it, 0, sizeof(it));
-                it.v.v0.key = keyptr;
-                it.v.v0.nkey = ntohs(req.request.keylen);
-                root->callbacks.get(root, ct.cookie, error, &it);
-            }
+            setup_lcb_get_resp_t(&resp.get, keyptr, nkey, NULL, 0, 0, 0, 0);
+            root->callbacks.get(root, ct.cookie, error, &resp.get);
             break;
         case PROTOCOL_BINARY_CMD_FLUSH:
-            root->callbacks.flush(root,
-                                  ct.cookie,
-                                  server->authority,
-                                  error);
-            if (libcouchbase_lookup_server_with_command(root,
-                                                        PROTOCOL_BINARY_CMD_FLUSH,
-                                                        req.request.opaque,
-                                                        server) < 0) {
-                root->callbacks.flush(root,
-                                      ct.cookie,
-                                      NULL,
-                                      error);
+            root->callbacks.flush(root, ct.cookie, server->authority, error);
+            if (lcb_lookup_server_with_command(root,
+                                               PROTOCOL_BINARY_CMD_FLUSH,
+                                               req.request.opaque,
+                                               server) < 0) {
+                root->callbacks.flush(root, ct.cookie, NULL, error);
             }
             break;
         case PROTOCOL_BINARY_CMD_ADD:
-            root->callbacks.storage(root, ct.cookie,
-                                    LIBCOUCHBASE_ADD,
-                                    error,
-                                    keyptr, ntohs(req.request.keylen),
-                                    req.request.cas);
+            setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            root->callbacks.store(root, ct.cookie, LCB_ADD, error, &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_REPLACE:
-            root->callbacks.storage(root, ct.cookie,
-                                    LIBCOUCHBASE_REPLACE,
-                                    error,
-                                    keyptr, ntohs(req.request.keylen),
-                                    req.request.cas);
+            setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            root->callbacks.store(root, ct.cookie, LCB_REPLACE, error,
+                                  &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_SET:
-            root->callbacks.storage(root, ct.cookie,
-                                    LIBCOUCHBASE_SET,
-                                    error,
-                                    keyptr, ntohs(req.request.keylen),
-                                    req.request.cas);
+            setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            root->callbacks.store(root, ct.cookie, LCB_SET, error, &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_APPEND:
-            root->callbacks.storage(root, ct.cookie,
-                                    LIBCOUCHBASE_APPEND,
-                                    error,
-                                    keyptr, ntohs(req.request.keylen),
-                                    req.request.cas);
+            setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            root->callbacks.store(root, ct.cookie, LCB_APPEND, error,
+                                  &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_PREPEND:
-            root->callbacks.storage(root, ct.cookie,
-                                    LIBCOUCHBASE_PREPEND,
-                                    error,
-                                    keyptr, ntohs(req.request.keylen),
-                                    req.request.cas);
+            setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            root->callbacks.store(root, ct.cookie, LCB_PREPEND, error,
+                                  &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_DELETE:
-            root->callbacks.remove(root, ct.cookie,
-                                   error,
-                                   keyptr, ntohs(req.request.keylen));
+            setup_lcb_remove_resp_t(&resp.remove, keyptr, nkey);
+            root->callbacks.remove(root, ct.cookie, error, &resp.remove);
             break;
 
         case PROTOCOL_BINARY_CMD_INCREMENT:
         case PROTOCOL_BINARY_CMD_DECREMENT:
-            root->callbacks.arithmetic(root, ct.cookie,
-                                       error,
-                                       keyptr, ntohs(req.request.keylen), 0, 0);
+            setup_lcb_arithmetic_resp_t(&resp.arithmetic, keyptr, nkey, 0, 0);
+
+            root->callbacks.arithmetic(root, ct.cookie, error,
+                                       &resp.arithmetic);
             break;
         case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
             abort();
@@ -203,19 +190,18 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
             break;
 
         case PROTOCOL_BINARY_CMD_TOUCH:
-            root->callbacks.touch(root, ct.cookie,
-                                  error,
-                                  keyptr, ntohs(req.request.keylen));
+            setup_lcb_touch_resp_t(&resp.touch, keyptr, nkey, 0);
+            root->callbacks.touch(root, ct.cookie, error, &resp.touch);
             break;
 
         case PROTOCOL_BINARY_CMD_STAT:
             root->callbacks.stat(root, ct.cookie, server->authority,
                                  error, NULL, 0, NULL, 0);
 
-            if (libcouchbase_lookup_server_with_command(root,
-                                                        PROTOCOL_BINARY_CMD_STAT,
-                                                        req.request.opaque,
-                                                        server) < 0) {
+            if (lcb_lookup_server_with_command(root,
+                                               PROTOCOL_BINARY_CMD_STAT,
+                                               req.request.opaque,
+                                               server) < 0) {
                 root->callbacks.stat(root, ct.cookie, NULL,
                                      error, NULL, 0, NULL, 0);
             }
@@ -224,10 +210,10 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         case PROTOCOL_BINARY_CMD_VERBOSITY:
             root->callbacks.verbosity(root, ct.cookie, server->authority, error);
 
-            if (libcouchbase_lookup_server_with_command(root,
-                                                        PROTOCOL_BINARY_CMD_VERBOSITY,
-                                                        req.request.opaque,
-                                                        server) < 0) {
+            if (lcb_lookup_server_with_command(root,
+                                               PROTOCOL_BINARY_CMD_VERBOSITY,
+                                               req.request.opaque,
+                                               server) < 0) {
                 root->callbacks.verbosity(root, ct.cookie, NULL, error);
             }
             break;
@@ -235,18 +221,18 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         case PROTOCOL_BINARY_CMD_VERSION:
             root->callbacks.version(root, ct.cookie, server->authority,
                                     error, NULL, 0);
-            if (libcouchbase_lookup_server_with_command(root,
-                                                        PROTOCOL_BINARY_CMD_VERSION,
-                                                        req.request.opaque,
-                                                        server) < 0) {
+            if (lcb_lookup_server_with_command(root,
+                                               PROTOCOL_BINARY_CMD_VERSION,
+                                               req.request.opaque,
+                                               server) < 0) {
                 root->callbacks.version(root, ct.cookie, NULL, error, NULL, 0);
             }
             break;
 
         case CMD_OBSERVE:
-            root->callbacks.observe(root, ct.cookie, error,
-                                    LIBCOUCHBASE_OBSERVE_MAX,
-                                    NULL, 0, 0, 0, 0, 0);
+            setup_lcb_observe_resp_t(&resp.observe, NULL, 0, LCB_OBSERVE_MAX,
+                                     0, 0, 0, 0);
+            root->callbacks.observe(root, ct.cookie, error, &resp.observe);
             break;
 
         default:
@@ -265,7 +251,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
 
     if (server->connected) {
         /* Preserve the rest of the stream */
-        libcouchbase_size_t nbytes = ringbuffer_get_nbytes(stream);
+        lcb_size_t nbytes = ringbuffer_get_nbytes(stream);
         send_size = ringbuffer_get_nbytes(&server->output);
 
         if (send_size >= nbytes) {
@@ -279,13 +265,13 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
     }
 
     ringbuffer_destruct(&rest);
-    libcouchbase_maybe_breakout(server->instance);
+    lcb_maybe_breakout(server->instance);
 }
 
-libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
-                                                 libcouchbase_error_t error)
+lcb_error_t lcb_failout_server(lcb_server_t *server,
+                               lcb_error_t error)
 {
-    libcouchbase_purge_single_server(server, error);
+    lcb_purge_single_server(server, error);
 
     ringbuffer_reset(&server->output);
     ringbuffer_reset(&server->input);
@@ -312,15 +298,15 @@ libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
  * Release all allocated resources for this server instance
  * @param server the server to destroy
  */
-void libcouchbase_server_destroy(libcouchbase_server_t *server)
+void lcb_server_destroy(lcb_server_t *server)
 {
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
 
     /* Cancel all pending commands */
     if (server->cmd_log.nbytes) {
-        libcouchbase_server_purge_implicit_responses(server,
-                                                     server->instance->seqno,
-                                                     gethrtime());
+        lcb_server_purge_implicit_responses(server,
+                                            server->instance->seqno,
+                                            gethrtime());
     }
 
     if (server->sasl_conn != NULL) {
@@ -355,7 +341,7 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
     ringbuffer_destruct(&server->input);
     for (ii = 0; ii < server->http_requests->capacity; ++ii) {
         if (server->http_requests->items[ii] > 1) {
-            libcouchbase_http_request_destroy((libcouchbase_http_request_t)server->http_requests->items[ii]);
+            lcb_http_request_destroy((lcb_http_request_t)server->http_requests->items[ii]);
         }
     }
     hashset_destroy(server->http_requests);
@@ -370,9 +356,9 @@ void libcouchbase_server_destroy(libcouchbase_server_t *server)
  * @param buffz The size of the output buffer
  * @return 1 if success, 0 otherwise
  */
-static int get_local_address(libcouchbase_socket_t sock,
+static int get_local_address(lcb_socket_t sock,
                              char *buffer,
-                             libcouchbase_size_t bufsz)
+                             lcb_size_t bufsz)
 {
     char h[NI_MAXHOST];
     char p[NI_MAXSERV];
@@ -396,9 +382,9 @@ static int get_local_address(libcouchbase_socket_t sock,
  * @param buffz The size of the output buffer
  * @return 1 if success, 0 otherwise
  */
-static int get_remote_address(libcouchbase_socket_t sock,
+static int get_remote_address(lcb_socket_t sock,
                               char *buffer,
-                              libcouchbase_size_t bufsz)
+                              lcb_size_t bufsz)
 {
     char h[NI_MAXHOST];
     char p[NI_MAXSERV];
@@ -420,7 +406,7 @@ static int get_remote_address(libcouchbase_socket_t sock,
  * packet to the server.
  * @param server the server object to auth agains
  */
-static void start_sasl_auth_server(libcouchbase_server_t *server)
+static void start_sasl_auth_server(lcb_server_t *server)
 {
     protocol_binary_request_no_extras req;
     memset(&req, 0, sizeof(req));
@@ -428,15 +414,15 @@ static void start_sasl_auth_server(libcouchbase_server_t *server)
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
-    libcouchbase_server_buffer_complete_packet(server, NULL, &server->output,
-                                               &server->output_cookies,
-                                               req.bytes, sizeof(req.bytes));
+    lcb_server_buffer_complete_packet(server, NULL, &server->output,
+                                      &server->output_cookies,
+                                      req.bytes, sizeof(req.bytes));
     /* send the data and add it to libevent.. */
-    libcouchbase_server_event_handler(server->sock, LIBCOUCHBASE_WRITE_EVENT,
-                                      server);
+    lcb_server_event_handler(server->sock, LCB_WRITE_EVENT,
+                             server);
 }
 
-void libcouchbase_server_connected(libcouchbase_server_t *server)
+void lcb_server_connected(lcb_server_t *server)
 {
     server->connected = 1;
 
@@ -454,27 +440,27 @@ void libcouchbase_server_connected(libcouchbase_server_t *server)
         if (!ringbuffer_append(&server->pending, &server->output) ||
                 !ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
                 !ringbuffer_append(&copy, &server->cmd_log)) {
-            libcouchbase_error_handler(server->instance,
-                                       LIBCOUCHBASE_CLIENT_ENOMEM,
-                                       NULL);
+            lcb_error_handler(server->instance,
+                              LCB_CLIENT_ENOMEM,
+                              NULL);
         }
 
         ringbuffer_reset(&server->pending);
         ringbuffer_reset(&server->pending_cookies);
 
         /* Send the pending data! */
-        libcouchbase_server_event_handler(server->sock,
-                                          LIBCOUCHBASE_WRITE_EVENT, server);
+        lcb_server_event_handler(server->sock,
+                                 LCB_WRITE_EVENT, server);
 
     } else {
         /* Set the correct event handler */
         server->instance->io->update_event(server->instance->io, server->sock,
-                                           server->event, LIBCOUCHBASE_READ_EVENT,
-                                           server, libcouchbase_server_event_handler);
+                                           server->event, LCB_READ_EVENT,
+                                           server, lcb_server_event_handler);
     }
 }
 
-static void socket_connected(libcouchbase_server_t *server)
+static void socket_connected(lcb_server_t *server)
 {
     char local[NI_MAXHOST + NI_MAXSERV + 2];
     char remote[NI_MAXHOST + NI_MAXSERV + 2];
@@ -491,7 +477,7 @@ static void socket_connected(libcouchbase_server_t *server)
 
     if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
         /* No SASL AUTH needed */
-        libcouchbase_server_connected(server);
+        lcb_server_connected(server);
     } else {
         if (!sasl_in_progress) {
             start_sasl_auth_server(server);
@@ -499,19 +485,19 @@ static void socket_connected(libcouchbase_server_t *server)
     }
 }
 
-static void server_connect(libcouchbase_server_t *server);
+static void server_connect(lcb_server_t *server);
 
 
-static void server_connect_handler(libcouchbase_socket_t sock, short which, void *arg)
+static void server_connect_handler(lcb_socket_t sock, short which, void *arg)
 {
-    libcouchbase_server_t *server = arg;
+    lcb_server_t *server = arg;
     (void)sock;
     (void)which;
 
     server_connect(server);
 }
 
-static void server_connect(libcouchbase_server_t *server)
+static void server_connect(lcb_server_t *server)
 {
     int retry;
     int save_errno;
@@ -519,16 +505,16 @@ static void server_connect(libcouchbase_server_t *server)
     do {
         if (server->sock == INVALID_SOCKET) {
             /* Try to get a socket.. */
-            server->sock = libcouchbase_gai2sock(server->instance,
-                                                 &server->curr_ai,
-                                                 &save_errno);
+            server->sock = lcb_gai2sock(server->instance,
+                                        &server->curr_ai,
+                                        &save_errno);
         }
 
         if (server->curr_ai == NULL) {
             /*TODO: Maybe check save_errno now? */
 
             /* this means we're not going to retry!! add an error here! */
-            libcouchbase_failout_server(server, LIBCOUCHBASE_CONNECT_ERROR);
+            lcb_failout_server(server, LCB_CONNECT_ERROR);
             return ;
         }
 
@@ -541,27 +527,27 @@ static void server_connect(libcouchbase_server_t *server)
             socket_connected(server);
             return ;
         } else {
-            libcouchbase_connect_status_t connstatus =
-                libcouchbase_connect_status(server->instance->io->error);
+            lcb_connect_status_t connstatus =
+                lcb_connect_status(server->instance->io->error);
             switch (connstatus) {
-            case LIBCOUCHBASE_CONNECT_EINTR:
+            case LCB_CONNECT_EINTR:
                 retry = 1;
                 break;
-            case LIBCOUCHBASE_CONNECT_EISCONN:
+            case LCB_CONNECT_EISCONN:
                 socket_connected(server);
                 return ;
-            case LIBCOUCHBASE_CONNECT_EINPROGRESS: /*first call to connect*/
+            case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
                 server->instance->io->update_event(server->instance->io,
                                                    server->sock,
                                                    server->event,
-                                                   LIBCOUCHBASE_WRITE_EVENT,
+                                                   LCB_WRITE_EVENT,
                                                    server,
                                                    server_connect_handler);
                 return ;
-            case LIBCOUCHBASE_CONNECT_EALREADY: /* Subsequent calls to connect */
+            case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return ;
 
-            case LIBCOUCHBASE_CONNECT_EFAIL:
+            case LCB_CONNECT_EFAIL:
                 if (server->curr_ai->ai_next) {
                     retry = 1;
                     server->curr_ai = server->curr_ai->ai_next;
@@ -574,7 +560,7 @@ static void server_connect(libcouchbase_server_t *server)
                 } /* Else, we fallthrough */
 
             default:
-                libcouchbase_failout_server(server, LIBCOUCHBASE_CONNECT_ERROR);
+                lcb_failout_server(server, LCB_CONNECT_ERROR);
                 return;
             }
         }
@@ -583,7 +569,7 @@ static void server_connect(libcouchbase_server_t *server)
     return ;
 }
 
-void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum)
+void lcb_server_initialize(lcb_server_t *server, int servernum)
 {
     /* Initialize all members */
     char *p;
@@ -619,44 +605,51 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     server->sasl_conn = NULL;
 }
 
-void libcouchbase_server_send_packets(libcouchbase_server_t *server)
+void lcb_server_send_packets(lcb_server_t *server)
 {
     if (server->pending.nbytes > 0 || server->output.nbytes > 0) {
         if (server->connected) {
             server->instance->io->update_event(server->instance->io,
                                                server->sock,
                                                server->event,
-                                               LIBCOUCHBASE_RW_EVENT,
+                                               LCB_RW_EVENT,
                                                server,
-                                               libcouchbase_server_event_handler);
+                                               lcb_server_event_handler);
         } else {
             server_connect(server);
         }
     }
 }
 
-int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
-                                                 libcouchbase_uint32_t seqno,
-                                                 hrtime_t end)
+int lcb_server_purge_implicit_responses(lcb_server_t *c,
+                                        lcb_uint32_t seqno,
+                                        hrtime_t end)
 {
     protocol_binary_request_header req;
-    libcouchbase_size_t nr =  ringbuffer_peek(&c->cmd_log, req.bytes,
-                                              sizeof(req));
+    lcb_size_t nr =  ringbuffer_peek(&c->cmd_log, req.bytes,
+                                     sizeof(req));
     /* There should at _LEAST_ be _ONE_ message in here! */
     assert(nr == sizeof(req));
     while (req.request.opaque < seqno) {
-        struct libcouchbase_command_data_st ct;
+        struct lcb_command_data_st ct;
         char *packet = c->cmd_log.read_head;
-        libcouchbase_size_t packetsize = ntohl(req.request.bodylen) + (libcouchbase_uint32_t)sizeof(req);
+        lcb_size_t packetsize = ntohl(req.request.bodylen) + (lcb_uint32_t)sizeof(req);
         char *keyptr;
-        struct libcouchbase_item_st it;
-
+        union {
+            lcb_get_resp_t get;
+            lcb_store_resp_t store;
+            lcb_remove_resp_t remove;
+            lcb_touch_resp_t touch;
+            lcb_unlock_resp_t unlock;
+            lcb_arithmetic_resp_t arithmetic;
+            lcb_observe_resp_t observe;
+        } resp;
         nr = ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
         assert(nr == sizeof(ct));
 
         if (c->instance->histogram) {
-            libcouchbase_record_metrics(c->instance, end - ct.start,
-                                        req.request.opcode);
+            lcb_record_metrics(c->instance, end - ct.start,
+                               req.request.opcode);
         }
 
         switch (req.request.opcode) {
@@ -667,26 +660,25 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
                                          packetsize)) {
                 packet = malloc(packetsize);
                 if (packet == NULL) {
-                    libcouchbase_error_handler(c->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
+                    lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
                     return -1;
                 }
 
                 nr = ringbuffer_peek(&c->cmd_log, packet, packetsize);
                 if (nr != packetsize) {
-                    libcouchbase_error_handler(c->instance, LIBCOUCHBASE_EINTERNAL,
-                                               NULL);
+                    lcb_error_handler(c->instance, LCB_EINTERNAL,
+                                      NULL);
                     free(packet);
                     return -1;
                 }
             }
 
             keyptr = packet + sizeof(req) + req.request.extlen;
-            memset(&it, 0, sizeof(it));
-            it.v.v0.key = keyptr;
-            it.v.v0.nkey = ntohs(req.request.keylen);
+            setup_lcb_get_resp_t(&resp.get, keyptr, ntohs(req.request.keylen),
+                                 NULL, 0, 0, 0, 0);
             c->instance->callbacks.get(c->instance, ct.cookie,
-                                       LIBCOUCHBASE_KEY_ENOENT,
-                                       &it);
+                                       LCB_KEY_ENOENT,
+                                       &resp.get);
 
             if (packet != c->cmd_log.read_head) {
                 free(packet);
@@ -701,9 +693,9 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
         default: {
             char errinfo[128] = { '\0' };
             snprintf(errinfo, 128, "Unknown implicit send message op=%0x", req.request.opcode);
-            libcouchbase_error_handler(c->instance,
-                                       LIBCOUCHBASE_EINTERNAL,
-                                       errinfo);
+            lcb_error_handler(c->instance,
+                              LCB_EINTERNAL,
+                              errinfo);
             return -1;
 
         }

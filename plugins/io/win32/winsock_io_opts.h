@@ -39,7 +39,7 @@ extern "C" {
      * @return a pointer to a newly created and initialized event handler
      */
     LIBCOUCHBASE_API
-    struct libcouchbase_io_opt_st *libcouchbase_create_winsock_io_opts(void);
+    struct lcb_io_opt_st *lcb_create_winsock_io_opts(void);
 
 #ifdef __cplusplus
 }

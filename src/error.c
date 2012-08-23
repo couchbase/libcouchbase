@@ -28,7 +28,7 @@
  * @param instance the connection whose last error should be returned.
  */
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance)
+lcb_error_t lcb_get_last_error(lcb_t instance)
 {
     return instance->last_error;
 }
@@ -39,13 +39,13 @@ libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance)
  * This returns the error it was given so you can return it from a function
  * in 1 line:
  *
- *     return libcouchbase_error_handler(instance, LIBCOUCHBASE_ERROR,
+ *     return lcb_error_handler(instance, LCB_ERROR,
  *                                       "Something was wrong");
  *
  * rather than 3:
  *
- *     libcouchbase_error_t error = LIBCOUCHBASE_ERROR;
- *     libcouchbase_error_handler(instance, error, "Something was wrong");
+ *     lcb_error_t error = LCB_ERROR;
+ *     lcb_error_handler(instance, error, "Something was wrong");
  *     return error;
  *
  * @param instance the connection the error occurred on.
@@ -53,7 +53,8 @@ libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance)
  * @param errinfo the error description
  * @return the error that occurred.
  */
-libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance, libcouchbase_error_t error, const char *errinfo)
+lcb_error_t lcb_error_handler(lcb_t instance, lcb_error_t error,
+                              const char *errinfo)
 {
     /* Set the last error value so it can be access without needing an
     ** error callback.
@@ -61,7 +62,7 @@ libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance, libcouc
     instance->last_error = error;
 
     /* TODO: Should we call the callback anyway, even if it's a SUCCESS? */
-    if (error != LIBCOUCHBASE_SUCCESS) {
+    if (error != LCB_SUCCESS) {
         /* Call the user's error callback. */
         instance->callbacks.error(instance, error, errinfo);
     }

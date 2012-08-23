@@ -22,14 +22,14 @@
 
 class MockUnitTest : public ::testing::Test
 {
- public:
+public:
     static int numNodes;
 
- protected:
+protected:
     static void SetUpTestCase();
     static void TearDownTestCase();
 
-    virtual void createConnection(libcouchbase_t &instance);
+    virtual void createConnection(lcb_t &instance);
     static const void *mock;
     static const char *http;
 };

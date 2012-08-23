@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-#include "internal.h" /* libcouchbase_t definition */
+#include "internal.h" /* lcb_t definition */
 
 
 #include <string.h>
@@ -30,32 +30,31 @@
 int config_cnt;
 int store_cnt;
 
-static void error_callback(libcouchbase_t instance,
-                           libcouchbase_error_t err,
+static void error_callback(lcb_t instance,
+                           lcb_error_t err,
                            const char *errinfo)
 {
     (void)instance;
-    err_exit("Error %s: %s", libcouchbase_strerror(instance, err), errinfo);
+    err_exit("Error %s: %s", lcb_strerror(instance, err), errinfo);
 }
 
-static void vbucket_state_callback(libcouchbase_server_t *server)
+static void vbucket_state_callback(lcb_server_t *server)
 {
     config_cnt++;
     server->instance->io->stop_event_loop(server->instance->io);
 }
 
 struct rvbuf {
-    libcouchbase_error_t error;
+    lcb_error_t error;
     const char *bytes;
-    libcouchbase_size_t nbytes;
+    lcb_size_t nbytes;
 };
 
-static void storage_callback(libcouchbase_t instance,
-                             const void *cookie,
-                             libcouchbase_storage_t operation,
-                             libcouchbase_error_t error,
-                             const void *key, libcouchbase_size_t nkey,
-                             libcouchbase_cas_t cas)
+static void store_callback(lcb_t instance,
+                           const void *cookie,
+                           lcb_storage_t operation,
+                           lcb_error_t error,
+                           const lcb_store_resp_t *resp)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
@@ -63,39 +62,32 @@ static void storage_callback(libcouchbase_t instance,
     instance->io->stop_event_loop(instance->io);
 
     (void)operation;
-    (void)key;
-    (void)nkey;
-    (void)cas;
+    (void)resp;
 }
 
 
-static void get_callback(libcouchbase_t instance,
+static void get_callback(lcb_t instance,
                          const void *cookie,
-                         libcouchbase_error_t error,
-                         const void *key, libcouchbase_size_t nkey,
-                         const void *bytes, libcouchbase_size_t nbytes,
-                         libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
+                         lcb_error_t error,
+                         const lcb_get_resp_t *resp)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
-    rv->bytes = malloc(nbytes);
-    memcpy((void *)rv->bytes, bytes, nbytes);
-    rv->nbytes = nbytes;
+    rv->bytes = malloc(resp->v.v0.nbytes);
+    memcpy((void *)rv->bytes, resp->v.v0.bytes, resp->v.v0.nbytes);
+    rv->nbytes = resp->v.v0.nbytes;
     instance->io->stop_event_loop(instance->io);
 
-    (void)key;
-    (void)nkey;
-    (void)cas;
-    (void)flags;
+    (void)resp;
 }
 
 static void smoke_test(void)
 {
-    struct libcouchbase_io_opt_st *io;
+    lcb_io_opt_t *io;
     const void *mock;
     const char *endpoint;
     const char *argv[] = {"--nodes", "20", NULL};
-    libcouchbase_t instance;
+    lcb_t instance;
 
     mock = start_mock_server((char **)argv);
     if (mock == NULL) {
@@ -108,15 +100,15 @@ static void smoke_test(void)
     }
 
     endpoint = get_mock_http_server(mock);
-    instance = libcouchbase_create(endpoint, "Administrator", "password", NULL, io);
+    instance = lcb_create(endpoint, "Administrator", "password", NULL, io);
     if (instance == NULL) {
         err_exit("Failed to create libcouchbase instance");
     }
 
-    (void)libcouchbase_set_error_callback(instance, error_callback);
+    (void)lcb_set_error_callback(instance, error_callback);
     instance->vbucket_state_listener = vbucket_state_callback;
 
-    if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
+    if (lcb_connect(instance) != LCB_SUCCESS) {
         err_exit("Failed to connect libcouchbase instance to server");
     }
     config_cnt = 0;
@@ -133,22 +125,27 @@ static void smoke_test(void)
     io->run_event_loop(io);
     assert(config_cnt == 20);
 
-    libcouchbase_destroy(instance);
+    lcb_destroy(instance);
     shutdown_mock_server(mock);
 }
 
 static void buffer_relocation_test(void)
 {
-    struct libcouchbase_io_opt_st *io;
+    lcb_io_opt_t *io;
     const void *mock;
     const char *endpoint;
     const char *argv[] = {"--nodes", "2", NULL};
-    libcouchbase_t instance;
-    libcouchbase_error_t err;
+    lcb_t instance;
+    lcb_error_t err;
     struct rvbuf rv;
     const char *key = "foo", *val = "bar";
-    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    lcb_size_t nkey = strlen(key), nval = strlen(val);
     int vb, idx;
+    lcb_store_cmd_t storecmd;
+    const lcb_store_cmd_t *storecmds[] = { &storecmd };
+    lcb_get_cmd_t getcmd;
+    const lcb_get_cmd_t *getcmds[] = { &getcmd };
+
 
     mock = start_mock_server((char **)argv);
     if (mock == NULL) {
@@ -161,25 +158,31 @@ static void buffer_relocation_test(void)
     }
 
     endpoint = get_mock_http_server(mock);
-    instance = libcouchbase_create(endpoint, "Administrator", "password", NULL, io);
+    instance = lcb_create(endpoint, "Administrator", "password", NULL, io);
     if (instance == NULL) {
         err_exit("Failed to create libcouchbase instance");
     }
 
-    (void)libcouchbase_set_error_callback(instance, error_callback);
-    (void)libcouchbase_set_storage_callback(instance, storage_callback);
-    (void)libcouchbase_set_get_callback(instance, get_callback);
+    (void)lcb_set_error_callback(instance, error_callback);
+    (void)lcb_set_store_callback(instance, store_callback);
+    (void)lcb_set_get_callback(instance, get_callback);
     instance->vbucket_state_listener = vbucket_state_callback;
 
-    if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
+    if (lcb_connect(instance) != LCB_SUCCESS) {
         err_exit("Failed to connect libcouchbase instance to server");
     }
     io->run_event_loop(io);
 
     /* schedule SET operation */
-    err = libcouchbase_store(instance, &rv, LIBCOUCHBASE_SET,
-                             key, nkey, val, nval, 0, 0, 0);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+
+    memset(&storecmd, 0, sizeof(storecmd));
+    storecmd.v.v0.key = key;
+    storecmd.v.v0.nkey = nkey;
+    storecmd.v.v0.bytes = val;
+    storecmd.v.v0.nbytes = nval;
+    storecmd.v.v0.operation = LCB_SET;
+    err = lcb_store(instance, &rv, 1, storecmds);
+    assert(err == LCB_SUCCESS);
 
     /* determine what server should receive that operation */
     vb = vbucket_get_vbucket_by_key(instance->vbucket_config, key, nkey);
@@ -191,22 +194,25 @@ static void buffer_relocation_test(void)
     /* execute event loop to reconfigure client and execute operation */
     config_cnt = 0;
     store_cnt = 0;
-    /* it should never return LIBCOUCHBASE_NOT_MY_VBUCKET */
+    /* it should never return LCB_NOT_MY_VBUCKET */
     while (config_cnt == 0 || store_cnt == 0) {
         memset(&rv, 0, sizeof(rv));
         io->run_event_loop(io);
-        assert(err != LIBCOUCHBASE_NOT_MY_VBUCKET);
+        assert(err != LCB_NOT_MY_VBUCKET);
     }
 
     /* check that value was actually set */
     memset(&rv, 0, sizeof(rv));
-    err = libcouchbase_mget(instance, &rv, 1, (const void * const *)&key, &nkey, NULL);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    memset(&getcmd, 0, sizeof(getcmd));
+    getcmd.v.v0.key = key;
+    getcmd.v.v0.nkey = nkey;
+    err = lcb_get(instance, &rv, 1, getcmds);
+    assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
-    assert(rv.error == LIBCOUCHBASE_SUCCESS);
+    assert(rv.error == LCB_SUCCESS);
     assert(memcmp(rv.bytes, "bar", 3) == 0);
-    free((void*)rv.bytes);
-    libcouchbase_destroy(instance);
+    free((void *)rv.bytes);
+    lcb_destroy(instance);
     shutdown_mock_server(mock);
 }
 

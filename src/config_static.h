@@ -86,13 +86,13 @@ typedef int ssize_t;
 #define ntohll(a) a
 #define htonll(a) a
 #else
-#define ntohll(a) libcouchbase_byteswap64(a)
-#define htonll(a) libcouchbase_byteswap64(a)
+#define ntohll(a) lcb_byteswap64(a)
+#define htonll(a) lcb_byteswap64(a)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-    extern uint64_t libcouchbase_byteswap64(uint64_t val);
+    extern uint64_t lcb_byteswap64(uint64_t val);
 #ifdef __cplusplus
 }
 #endif

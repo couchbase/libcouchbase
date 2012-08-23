@@ -25,22 +25,22 @@
 #include "server.h"
 #include "test.h"
 
-libcouchbase_t session = NULL;
+lcb_t session = NULL;
 const void *mock = NULL;
-struct libcouchbase_io_opt_st *io = NULL;
-libcouchbase_error_t global_error = -1;
+struct lcb_io_opt_st *io = NULL;
+lcb_error_t global_error = -1;
 int total_node_count = -1;
 
 
-static void error_callback(libcouchbase_t instance,
-                           libcouchbase_error_t err,
+static void error_callback(lcb_t instance,
+                           lcb_error_t err,
                            const char *errinfo)
 {
-    err_exit("Error %s: %s", libcouchbase_strerror(instance, err), errinfo);
+    err_exit("Error %s: %s", lcb_strerror(instance, err), errinfo);
 }
 
-static void error_callback2(libcouchbase_t instance,
-                            libcouchbase_error_t err,
+static void error_callback2(lcb_t instance,
+                            lcb_error_t err,
                             const char *errinfo)
 {
     global_error = err;
@@ -68,22 +68,22 @@ static void setup(char **argv, const char *username, const char *password,
     }
 
     endpoint = get_mock_http_server(mock);
-    session = libcouchbase_create(endpoint, username, password, bucket, io);
+    session = lcb_create(endpoint, username, password, bucket, io);
     if (session == NULL) {
         err_exit("Failed to create libcouchbase session");
     }
 
-    (void)libcouchbase_set_error_callback(session, error_callback);
+    (void)lcb_set_error_callback(session, error_callback);
 
-    if (libcouchbase_connect(session) != LIBCOUCHBASE_SUCCESS) {
+    if (lcb_connect(session) != LCB_SUCCESS) {
         err_exit("Failed to connect to server");
     }
-    libcouchbase_wait(session);
+    lcb_wait(session);
 }
 
 static void teardown(void)
 {
-    libcouchbase_destroy(session);
+    lcb_destroy(session);
     session = NULL;
     io = NULL;
     shutdown_mock_server(mock);
@@ -91,49 +91,47 @@ static void teardown(void)
 }
 
 struct rvbuf {
-    libcouchbase_error_t error;
-    libcouchbase_storage_t operation;
+    lcb_error_t error;
+    lcb_storage_t operation;
     const char *key;
-    libcouchbase_size_t nkey;
+    lcb_size_t nkey;
     const char *bytes;
-    libcouchbase_size_t nbytes;
-    libcouchbase_cas_t cas;
-    libcouchbase_uint32_t flags;
+    lcb_size_t nbytes;
+    lcb_cas_t cas;
+    lcb_uint32_t flags;
     int32_t counter;
-    libcouchbase_uint32_t errors;
+    lcb_uint32_t errors;
 };
 
-static void store_callback(libcouchbase_t instance,
+static void store_callback(lcb_t instance,
                            const void *cookie,
-                           libcouchbase_storage_t operation,
-                           libcouchbase_error_t error,
-                           const void *key, libcouchbase_size_t nkey,
-                           libcouchbase_cas_t cas)
+                           lcb_storage_t operation,
+                           lcb_error_t error,
+                           const lcb_store_resp_t *resp)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
     rv->operation = operation;
-    rv->key = key;
-    rv->nkey = nkey;
-    rv->cas = cas;
+    rv->key = resp->v.v0.key;
+    rv->nkey = resp->v.v0.nkey;
+    rv->cas = resp->v.v0.cas;
     assert(io);
     io->stop_event_loop(io);
     (void)instance;
 }
 
-static void mstore_callback(libcouchbase_t instance,
+static void mstore_callback(lcb_t instance,
                             const void *cookie,
-                            libcouchbase_storage_t operation,
-                            libcouchbase_error_t error,
-                            const void *key, libcouchbase_size_t nkey,
-                            libcouchbase_cas_t cas)
+                            lcb_storage_t operation,
+                            lcb_error_t error,
+                           const lcb_store_resp_t *resp)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->errors |= error;
     rv->operation = operation;
-    rv->key = key;
-    rv->nkey = nkey;
-    rv->cas = cas;
+    rv->key = resp->v.v0.key;
+    rv->nkey = resp->v.v0.nkey;
+    rv->cas = resp->v.v0.cas;
     rv->counter--;
     if (rv->counter <= 0) {
         assert(io);
@@ -142,21 +140,19 @@ static void mstore_callback(libcouchbase_t instance,
     (void)instance;
 }
 
-static void get_callback(libcouchbase_t instance,
+static void get_callback(lcb_t instance,
                          const void *cookie,
-                         libcouchbase_error_t error,
-                         const void *key, libcouchbase_size_t nkey,
-                         const void *bytes, libcouchbase_size_t nbytes,
-                         libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
+                         lcb_error_t error,
+                         const lcb_get_resp_t *resp)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
-    rv->bytes = bytes;
-    rv->nbytes = nbytes;
-    rv->key = key;
-    rv->nkey = nkey;
-    rv->cas = cas;
-    rv->flags = flags;
+    rv->bytes = resp->v.v0.bytes;
+    rv->nbytes = resp->v.v0.nbytes;
+    rv->key = resp->v.v0.key;
+    rv->nkey = resp->v.v0.nkey;
+    rv->cas = resp->v.v0.cas;
+    rv->flags = resp->v.v0.flags;
     rv->counter--;
     if (rv->counter <= 0) {
         assert(io);
@@ -165,16 +161,16 @@ static void get_callback(libcouchbase_t instance,
     (void)instance;
 }
 
-static void touch_callback(libcouchbase_t instance,
+static void touch_callback(lcb_t instance,
                            const void *cookie,
-                           libcouchbase_error_t error,
-                           const void *key, libcouchbase_size_t nkey)
+                           lcb_error_t error,
+                           const lcb_touch_resp_t *resp)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
-    assert(error == LIBCOUCHBASE_SUCCESS);
-    rv->key = key;
-    rv->nkey = nkey;
+    assert(error == LCB_SUCCESS);
+    rv->key = resp->v.v0.key;
+    rv->nkey = resp->v.v0.nkey;
     rv->counter--;
     if (rv->counter <= 0) {
         assert(io);
@@ -183,18 +179,18 @@ static void touch_callback(libcouchbase_t instance,
     (void)instance;
 }
 
-static void version_callback(libcouchbase_t instance,
+static void version_callback(lcb_t instance,
                              const void *cookie,
                              const char *server_endpoint,
-                             libcouchbase_error_t error,
+                             lcb_error_t error,
                              const char *vstring,
-                             libcouchbase_size_t nvstring)
+                             lcb_size_t nvstring)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
     char *str;
 
-    assert(error == LIBCOUCHBASE_SUCCESS);
+    assert(error == LCB_SUCCESS);
 
     if (server_endpoint == NULL) {
         assert(rv->counter == 0);
@@ -216,33 +212,47 @@ static void version_callback(libcouchbase_t instance,
 
 static void test_set1(void)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
-    const char *key = "foo", *val = "bar";
-    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    lcb_store_cmd_t cmd;
+    const lcb_store_cmd_t *cmds[] = { &cmd };
 
-    (void)libcouchbase_set_storage_callback(session, store_callback);
-    err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, key, nkey, val, nval, 0, 0, 0);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.v.v0.key = "foo";
+    cmd.v.v0.nkey = strlen(cmd.v.v0.key);
+    cmd.v.v0.bytes = "bar";
+    cmd.v.v0.nbytes = strlen(cmd.v.v0.bytes);
+    cmd.v.v0.operation = LCB_SET;
+    (void)lcb_set_store_callback(session, store_callback);
+    err = lcb_store(session, &rv, 1, cmds);
+    assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
-    assert(rv.error == LIBCOUCHBASE_SUCCESS);
-    assert(rv.operation == LIBCOUCHBASE_SET);
+    assert(rv.error == LCB_SUCCESS);
+    assert(rv.operation == LCB_SET);
     assert(memcmp(rv.key, "foo", 3) == 0);
 }
 
 static void test_set2(void)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
-    const char *key = "foo", *val = "bar";
-    libcouchbase_size_t ii, nkey = strlen(key), nval = strlen(val);
+    lcb_size_t ii;
+    lcb_store_cmd_t cmd;
+    const lcb_store_cmd_t *cmds[] = { &cmd };
 
-    (void)libcouchbase_set_storage_callback(session, mstore_callback);
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.v.v0.key = "foo";
+    cmd.v.v0.nkey = strlen(cmd.v.v0.key);
+    cmd.v.v0.bytes = "bar";
+    cmd.v.v0.nbytes = strlen(cmd.v.v0.bytes);
+    cmd.v.v0.operation = LCB_SET;
+
+    (void)lcb_set_store_callback(session, mstore_callback);
     rv.errors = 0;
     rv.counter = 0;
     for (ii = 0; ii < 10; ++ii, ++rv.counter) {
-        err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, key, nkey, val, nval, 0, 0, 0);
-        assert(err == LIBCOUCHBASE_SUCCESS);
+        err = lcb_store(session, &rv, 1, cmds);
+        assert(err == LCB_SUCCESS);
     }
     io->run_event_loop(io);
     assert(rv.errors == 0);
@@ -250,42 +260,57 @@ static void test_set2(void)
 
 static void test_get1(void)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
-    const char *key = "foo", *val = "bar";
-    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    lcb_store_cmd_t storecmd;
+    const lcb_store_cmd_t *storecmds[] = { &storecmd };
+    lcb_get_cmd_t getcmd;
+    const lcb_get_cmd_t *getcmds[] = { &getcmd };
 
-    (void)libcouchbase_set_storage_callback(session, store_callback);
-    (void)libcouchbase_set_get_callback(session, get_callback);
+    memset(&storecmd, 0, sizeof(storecmd));
+    storecmd.v.v0.key = "foo";
+    storecmd.v.v0.nkey = strlen(storecmd.v.v0.key);
+    storecmd.v.v0.bytes = "bar";
+    storecmd.v.v0.nbytes = strlen(storecmd.v.v0.bytes);
+    storecmd.v.v0.operation = LCB_SET;
 
-    err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, key, nkey, val, nval, 0, 0, 0);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    (void)lcb_set_store_callback(session, store_callback);
+    (void)lcb_set_get_callback(session, get_callback);
+
+    err = lcb_store(session, &rv, 1, storecmds);
+    assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
-    assert(rv.error == LIBCOUCHBASE_SUCCESS);
+    assert(rv.error == LCB_SUCCESS);
 
     memset(&rv, 0, sizeof(rv));
-    err = libcouchbase_mget(session, &rv, 1, (const void * const *)&key, &nkey, NULL);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    memset(&getcmd, 0, sizeof(getcmd));
+    getcmd.v.v0.key = "foo";
+    getcmd.v.v0.nkey = strlen(getcmd.v.v0.key);
+    err = lcb_get(session, &rv, 1, getcmds);
+    assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
-    assert(rv.error == LIBCOUCHBASE_SUCCESS);
-    assert(rv.nbytes == nval);
+    assert(rv.error == LCB_SUCCESS);
+    assert(rv.nbytes == strlen("bar"));
     assert(memcmp(rv.bytes, "bar", 3) == 0);
 }
 
 static void test_get2(void)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
     char *key = "fooX", *val = "bar";
-    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    lcb_size_t nkey = strlen(key), nval = strlen(val);
     char **keys;
-    libcouchbase_size_t *nkeys, ii;
+    lcb_size_t *nkeys, ii;
+    lcb_store_cmd_t storecmd;
+    const lcb_store_cmd_t *storecmds[] = { &storecmd };
+    lcb_get_cmd_t *getcmds[26];
 
-    (void)libcouchbase_set_storage_callback(session, store_callback);
-    (void)libcouchbase_set_get_callback(session, get_callback);
+    (void)lcb_set_store_callback(session, store_callback);
+    (void)lcb_set_get_callback(session, get_callback);
 
     keys = malloc(26 * sizeof(char *));
-    nkeys = malloc(26 * sizeof(libcouchbase_size_t));
+    nkeys = malloc(26 * sizeof(lcb_size_t));
     if (keys == NULL || nkeys == NULL) {
         err_exit("Failed to allocate memory for keys");
     }
@@ -296,22 +321,36 @@ static void test_get2(void)
             err_exit("Failed to allocate memory for key");
         }
         keys[ii][3] = (char)ii + 'a';
-        err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, keys[ii], nkeys[ii], val, nval, 0, 0, 0);
-        assert(err == LIBCOUCHBASE_SUCCESS);
+        memset(&storecmd, 0, sizeof(storecmd));
+        storecmd.v.v0.key = key;
+        storecmd.v.v0.nkey = nkey;
+        storecmd.v.v0.bytes = val;
+        storecmd.v.v0.nbytes = nval;
+        storecmd.v.v0.operation = LCB_SET;
+        err = lcb_store(session, &rv, 1, storecmds);
+        assert(err == LCB_SUCCESS);
         io->run_event_loop(io);
-        assert(rv.error == LIBCOUCHBASE_SUCCESS);
+        assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
+
+        getcmds[ii] = calloc(1, sizeof(lcb_get_cmd_t));
+        if (getcmds[ii] == NULL) {
+            err_exit("Failed to allocate memory for get command");
+        }
+        getcmds[ii]->v.v0.key = key;
+        getcmds[ii]->v.v0.nkey = nkey;
     }
 
     rv.counter = 26;
-    err = libcouchbase_mget(session, &rv, 26, (const void * const *)keys, nkeys, NULL);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    err = lcb_get(session, &rv, 26, (const lcb_get_cmd_t *const *)getcmds);
+    assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
-    assert(rv.error == LIBCOUCHBASE_SUCCESS);
+    assert(rv.error == LCB_SUCCESS);
     assert(rv.nbytes == nval);
     assert(memcmp(rv.bytes, "bar", 3) == 0);
     for (ii = 0; ii < 26; ii++) {
         free(keys[ii]);
+        free(getcmds[ii]);
     }
     free(keys);
     free(nkeys);
@@ -319,20 +358,23 @@ static void test_get2(void)
 
 static void test_touch1(void)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
     char *key = "fooX", *val = "bar";
-    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    lcb_size_t nkey = strlen(key), nval = strlen(val);
     char **keys;
-    libcouchbase_size_t *nkeys, ii;
-    libcouchbase_time_t *ttls;
+    lcb_size_t *nkeys, ii;
+    lcb_time_t *ttls;
+    lcb_store_cmd_t storecmd;
+    const lcb_store_cmd_t *storecmds[] = { &storecmd };
+    lcb_touch_cmd_t *touchcmds[26];
 
-    (void)libcouchbase_set_storage_callback(session, store_callback);
-    (void)libcouchbase_set_touch_callback(session, touch_callback);
+    (void)lcb_set_store_callback(session, store_callback);
+    (void)lcb_set_touch_callback(session, touch_callback);
 
     keys = malloc(26 * sizeof(char *));
-    nkeys = malloc(26 * sizeof(libcouchbase_size_t));
-    ttls = malloc(26 * sizeof(libcouchbase_time_t));
+    nkeys = malloc(26 * sizeof(lcb_size_t));
+    ttls = malloc(26 * sizeof(lcb_time_t));
     if (keys == NULL || nkeys == NULL || ttls == NULL) {
         err_exit("Failed to allocate memory for keys");
     }
@@ -344,32 +386,46 @@ static void test_touch1(void)
             err_exit("Failed to allocate memory for key");
         }
         keys[ii][3] = (char)ii + 'a';
-        err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, keys[ii], nkeys[ii], val, nval, 0, 0, 0);
-        assert(err == LIBCOUCHBASE_SUCCESS);
+        memset(&storecmd, 0, sizeof(storecmd));
+        storecmd.v.v0.key = key;
+        storecmd.v.v0.nkey = nkey;
+        storecmd.v.v0.bytes = val;
+        storecmd.v.v0.nbytes = nval;
+        storecmd.v.v0.operation = LCB_SET;
+        err = lcb_store(session, &rv, 1, storecmds);
+        assert(err == LCB_SUCCESS);
         io->run_event_loop(io);
-        assert(rv.error == LIBCOUCHBASE_SUCCESS);
+        assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
+
+        touchcmds[ii] = calloc(1, sizeof(lcb_touch_cmd_t));
+        if (touchcmds[ii] == NULL) {
+            err_exit("Failed to allocate memory for touch command");
+        }
+        touchcmds[ii]->v.v0.key = key;
+        touchcmds[ii]->v.v0.nkey = nkey;
     }
 
     rv.counter = 26;
-    err = libcouchbase_mtouch(session, &rv, 26, (const void * const *)keys, nkeys, ttls);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    err = lcb_touch(session, &rv, 26, (const lcb_touch_cmd_t * const *)touchcmds);
+    assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
-    assert(rv.error == LIBCOUCHBASE_SUCCESS);
+    assert(rv.error == LCB_SUCCESS);
     for (ii = 0; ii < 26; ii++) {
         free(keys[ii]);
+        free(touchcmds[ii]);
     }
     free(keys);
     free(ttls);
     free(nkeys);
 }
 
-static libcouchbase_error_t test_connect(char **argv, const char *username,
-                                         const char *password,
-                                         const char *bucket)
+static lcb_error_t test_connect(char **argv, const char *username,
+                                const char *password,
+                                const char *bucket)
 {
     const char *endpoint;
-    libcouchbase_error_t rc;
+    lcb_error_t rc;
 
     assert(session == NULL);
     assert(mock == NULL);
@@ -386,20 +442,20 @@ static libcouchbase_error_t test_connect(char **argv, const char *username,
     }
 
     endpoint = get_mock_http_server(mock);
-    session = libcouchbase_create(endpoint, username, password, bucket, io);
+    session = lcb_create(endpoint, username, password, bucket, io);
     if (session == NULL) {
         err_exit("Failed to create libcouchbase session");
     }
 
-    (void)libcouchbase_set_error_callback(session, error_callback2);
+    (void)lcb_set_error_callback(session, error_callback2);
 
-    if (libcouchbase_connect(session) != LIBCOUCHBASE_SUCCESS) {
+    if (lcb_connect(session) != LCB_SUCCESS) {
         err_exit("Failed to connect to server");
     }
-    libcouchbase_wait(session);
+    lcb_wait(session);
     rc = global_error;
 
-    libcouchbase_destroy(session);
+    lcb_destroy(session);
     session = NULL;
     io = NULL;
     shutdown_mock_server(mock);
@@ -409,10 +465,10 @@ static libcouchbase_error_t test_connect(char **argv, const char *username,
 }
 
 RESPONSE_HANDLER old_sasl_auth_response_handler;
-libcouchbase_error_t sasl_auth_rc;
+lcb_error_t sasl_auth_rc;
 
-static void sasl_auth_response_handler(libcouchbase_server_t *server,
-                                       struct libcouchbase_command_data_st *command_data,
+static void sasl_auth_response_handler(lcb_server_t *server,
+                                       struct lcb_command_data_st *command_data,
                                        protocol_binary_response_header *res)
 {
     sasl_auth_rc = ntohs(res->response.status);
@@ -421,35 +477,41 @@ static void sasl_auth_response_handler(libcouchbase_server_t *server,
 
 static void test_set3(void)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
-    const char *key = "foo", *val = "bar";
-    libcouchbase_size_t nkey = strlen(key), nval = strlen(val);
+    lcb_store_cmd_t storecmd;
+    const lcb_store_cmd_t *storecmds[] = { &storecmd };
 
     old_sasl_auth_response_handler = session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH];
     session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = sasl_auth_response_handler;
     sasl_auth_rc = -1;
 
-    (void)libcouchbase_set_storage_callback(session, store_callback);
-    err = libcouchbase_store(session, &rv, LIBCOUCHBASE_SET, key, nkey, val, nval, 0, 0, 0);
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    (void)lcb_set_store_callback(session, store_callback);
+    memset(&storecmd, 0, sizeof(storecmd));
+    storecmd.v.v0.key = "foo";
+    storecmd.v.v0.nkey = strlen(storecmd.v.v0.key);
+    storecmd.v.v0.bytes = "bar";
+    storecmd.v.v0.nbytes = strlen(storecmd.v.v0.bytes);
+    storecmd.v.v0.operation = LCB_SET;
+    err = lcb_store(session, &rv, 1, storecmds);
+    assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
-    assert(rv.error == LIBCOUCHBASE_SUCCESS);
-    assert(rv.operation == LIBCOUCHBASE_SET);
+    assert(rv.error == LCB_SUCCESS);
+    assert(rv.operation == LCB_SET);
     assert(memcmp(rv.key, "foo", 3) == 0);
-    assert(sasl_auth_rc == LIBCOUCHBASE_SUCCESS);
+    assert(sasl_auth_rc == LCB_SUCCESS);
     session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = old_sasl_auth_response_handler;
 }
 
 static void test_version1(void)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
 
-    (void)libcouchbase_set_version_callback(session, version_callback);
-    err = libcouchbase_server_versions(session, &rv);
+    (void)lcb_set_version_callback(session, version_callback);
+    err = lcb_server_versions(session, &rv);
 
-    assert(err == LIBCOUCHBASE_SUCCESS);
+    assert(err == LCB_SUCCESS);
 
     rv.counter = total_node_count;
 
@@ -461,31 +523,38 @@ static void test_version1(void)
 
 static void test_spurious_saslerr(void)
 {
-    const char *key = "KEY";
     int iterations = 50;
     struct rvbuf rvs[50];
     int i;
-    libcouchbase_error_t err;
-    libcouchbase_set_storage_callback(session, mstore_callback);
+    lcb_error_t err;
+    lcb_store_cmd_t storecmd;
+    const lcb_store_cmd_t *storecmds[] = { &storecmd };
+    lcb_set_store_callback(session, mstore_callback);
 
     memset(rvs, 0, sizeof(rvs));
 
     for (i = 0; i < iterations; i++) {
         rvs[i].counter = 999; /*don't trigger a stop_event_loop*/
-        err = libcouchbase_store(session, rvs + i, LIBCOUCHBASE_SET, key, 3, key, 3, 0, 0, 0);
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        memset(&storecmd, 0, sizeof(storecmd));
+        storecmd.v.v0.key = "KEY";
+        storecmd.v.v0.nkey = strlen(storecmd.v.v0.key);
+        storecmd.v.v0.bytes = "KEY";
+        storecmd.v.v0.nbytes = strlen(storecmd.v.v0.bytes);
+        storecmd.v.v0.operation = LCB_SET;
+        err = lcb_store(session, rvs + i, 1, storecmds);
+        if (err != LCB_SUCCESS) {
             err_exit("Store operation failed");
         }
     }
-    libcouchbase_wait(session);
+    lcb_wait(session);
 
     for (i = 0; i < iterations; i++) {
         char *errinfo = NULL;
-        if (rvs[i].errors != LIBCOUCHBASE_SUCCESS) {
+        if (rvs[i].errors != LCB_SUCCESS) {
             errinfo = "Did not get success response";
         } else if (rvs[i].nkey != 3) {
             errinfo = "Did not get expected key length";
-        } else if (memcmp(rvs[i].key, key, 3) != 0) {
+        } else if (memcmp(rvs[i].key, "KEY", 3) != 0) {
             errinfo = "Weird key size";
         }
         if (errinfo) {
@@ -501,7 +570,7 @@ int main(int argc, char **argv)
                           "--buckets=default::memcache", NULL
                          };
 
-    if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
+    if (getenv("LCB_VERBOSE_TESTS") == NULL) {
         freopen("/dev/null", "w", stdout);
     }
 
@@ -527,10 +596,10 @@ int main(int argc, char **argv)
     test_version1();
     teardown();
 
-    assert(test_connect((char **)args, "Administrator", "password", "missing") == LIBCOUCHBASE_BUCKET_ENOENT);
+    assert(test_connect((char **)args, "Administrator", "password", "missing") == LCB_BUCKET_ENOENT);
 
     args[2] = "--buckets=protected:secret";
-    assert(test_connect((char **)args, "protected", "incorrect", "protected") == LIBCOUCHBASE_AUTH_ERROR);
+    assert(test_connect((char **)args, "protected", "incorrect", "protected") == LCB_AUTH_ERROR);
     setup((char **)args, "protected", "secret", "protected");
     test_set3();
     test_spurious_saslerr();

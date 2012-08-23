@@ -18,7 +18,7 @@
 #include "internal.h"
 #include "winsock_io_opts.h"
 
-static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code)
+static void set_error(lcb_error_t *error, lcb_error_t code)
 {
     if (error != NULL) {
         *error = code;
@@ -27,19 +27,19 @@ static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code)
 
 
 LIBCOUCHBASE_API
-libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
-                                                  void *cookie,
-                                                  libcouchbase_error_t *error)
+lcb_io_opt_t *lcb_create_io_ops(lcb_io_ops_type_t type,
+                                void *cookie,
+                                lcb_error_t *error)
 {
-    libcouchbase_io_opt_t *ret = NULL;
+    lcb_io_opt_t *ret = NULL;
     (void)cookie;
-    if (type == LIBCOUCHBASE_IO_OPS_DEFAULT || type == LIBCOUCHBASE_IO_OPS_WINSOCK) {
-        ret = libcouchbase_create_winsock_io_opts();
+    if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_WINSOCK) {
+        ret = lcb_create_winsock_io_opts();
         if (ret == NULL) {
-            set_error(error, LIBCOUCHBASE_CLIENT_ENOMEM);
+            set_error(error, LCB_CLIENT_ENOMEM);
         }
     } else {
-        set_error(error, LIBCOUCHBASE_NOT_SUPPORTED);
+        set_error(error, LCB_NOT_SUPPORTED);
     }
 
     return ret;

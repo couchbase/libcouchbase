@@ -16,10 +16,11 @@
  */
 
 /**
- * Definition of the callbacks structure.
- * @todo Document each function
- *
- * @author Trond Norbye
+ * All of the callbacks provide a pointer to a "response structure"
+ * dedicated for the given operation called. Please note that
+ * these pointers are <b>obly</b> valid as long as the callback
+ * method runs, so you <b>must</b> copy them if you want to use
+ * it at a later time.
  */
 #ifndef LIBCOUCHBASE_CALLBACKS_H
 #define LIBCOUCHBASE_CALLBACKS_H 1
@@ -32,130 +33,190 @@
 extern "C" {
 #endif
 
-    typedef void (*libcouchbase_extended_get_callback)(libcouchbase_t instance,
-                                                       const void *cookie,
-                                                       libcouchbase_error_t error,
-                                                       struct libcouchbase_item_st *item);
 
-    typedef void (*libcouchbase_get_callback)(libcouchbase_t instance,
-                                              const void *cookie,
-                                              libcouchbase_error_t error,
-                                              const void *key,
-                                              libcouchbase_size_t nkey,
-                                              const void *bytes,
-                                              libcouchbase_size_t nbytes,
-                                              libcouchbase_uint32_t flags,
-                                              libcouchbase_cas_t cas);
-    typedef void (*libcouchbase_storage_callback)(libcouchbase_t instance,
-                                                  const void *cookie,
-                                                  libcouchbase_storage_t operation,
-                                                  libcouchbase_error_t error,
-                                                  const void *key,
-                                                  libcouchbase_size_t nkey,
-                                                  libcouchbase_cas_t cas);
-    typedef void (*libcouchbase_arithmetic_callback)(libcouchbase_t instance,
-                                                     const void *cookie,
-                                                     libcouchbase_error_t error,
-                                                     const void *key,
-                                                     libcouchbase_size_t nkey,
-                                                     libcouchbase_uint64_t value,
-                                                     libcouchbase_cas_t cas);
-    typedef void (*libcouchbase_observe_callback)(libcouchbase_t instance,
-                                                  const void *cookie,
-                                                  libcouchbase_error_t error,
-                                                  libcouchbase_observe_t status,
-                                                  const void *key,
-                                                  libcouchbase_size_t nkey,
-                                                  libcouchbase_cas_t cas,
-                                                  int from_master,          /* zero if key came from replica */
-                                                  libcouchbase_time_t ttp,  /* time to persist */
-                                                  libcouchbase_time_t ttr); /* time to replicate */
-    typedef void (*libcouchbase_remove_callback)(libcouchbase_t instance,
-                                                 const void *cookie,
-                                                 libcouchbase_error_t error,
-                                                 const void *key,
-                                                 libcouchbase_size_t nkey);
-    typedef void (*libcouchbase_stat_callback)(libcouchbase_t instance,
-                                               const void *cookie,
-                                               const char *server_endpoint,
-                                               libcouchbase_error_t error,
-                                               const void *key,
-                                               libcouchbase_size_t nkey,
-                                               const void *bytes,
-                                               libcouchbase_size_t nbytes);
-    typedef void (*libcouchbase_version_callback)(libcouchbase_t instance,
-                                                  const void *cookie,
-                                                  const char *server_endpoint,
-                                                  libcouchbase_error_t error,
-                                                  const char *vstring,
-                                                  libcouchbase_size_t nvstring);
-    typedef void (*libcouchbase_touch_callback)(libcouchbase_t instance,
-                                                const void *cookie,
-                                                libcouchbase_error_t error,
-                                                const void *key,
-                                                libcouchbase_size_t nkey);
-    typedef void (*libcouchbase_tap_mutation_callback)(libcouchbase_t instance,
-                                                       const void *cookie,
-                                                       const void *key,
-                                                       libcouchbase_size_t nkey,
-                                                       const void *data,
-                                                       libcouchbase_size_t nbytes,
-                                                       libcouchbase_uint32_t flags,
-                                                       libcouchbase_time_t exp,
-                                                       libcouchbase_cas_t cas,
-                                                       libcouchbase_vbucket_t vbucket,
-                                                       const void *es,
-                                                       libcouchbase_size_t nes);
-    typedef void (*libcouchbase_tap_deletion_callback)(libcouchbase_t instance,
-                                                       const void *cookie,
-                                                       const void *key,
-                                                       libcouchbase_size_t nkey,
-                                                       libcouchbase_cas_t cas,
-                                                       libcouchbase_vbucket_t vbucket,
-                                                       const void *es,
-                                                       libcouchbase_size_t nes);
-    typedef void (*libcouchbase_tap_flush_callback)(libcouchbase_t instance,
-                                                    const void *cookie,
-                                                    const void *es,
-                                                    libcouchbase_size_t nes);
-    typedef void (*libcouchbase_tap_opaque_callback)(libcouchbase_t instance,
-                                                     const void *cookie,
-                                                     const void *es,
-                                                     libcouchbase_size_t nes);
-    typedef void (*libcouchbase_tap_vbucket_set_callback)(libcouchbase_t instance,
-                                                          const void *cookie,
-                                                          libcouchbase_vbucket_t vbid,
-                                                          libcouchbase_vbucket_state_t state,
-                                                          const void *es,
-                                                          libcouchbase_size_t nes);
-    typedef void (*libcouchbase_error_callback)(libcouchbase_t instance,
-                                                libcouchbase_error_t error,
-                                                const char *errinfo);
+    /**
+     * The callback function for a "get-style" request.
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param error The status of the operation
+     * @param resp More information about the actual item (only key
+     *             and nkey is valid if error != LCB_SUCCESS)
+     */
+    typedef void (*lcb_get_callback)(lcb_t instance,
+                                     const void *cookie,
+                                     lcb_error_t error,
+                                     const lcb_get_resp_t *resp);
 
-    typedef void (*libcouchbase_flush_callback)(libcouchbase_t instance,
-                                                const void *cookie,
-                                                const char *server_endpoint,
-                                                libcouchbase_error_t error);
+    /**
+     * The callback function for a storage request.
+     *
+     * @param instance the instance performing the operation
+     * @param operation the operation performed
+     * @param cookie the cookie associated with with the command
+     * @param error The status of the operation
+     * @param resp More information about the item related to the store
+     *             operation. (only key and nkey is valid if
+     *             error != LCB_SUCCESS)
+     */
+    typedef void (*lcb_store_callback)(lcb_t instance,
+                                       const void *cookie,
+                                       lcb_storage_t operation,
+                                       lcb_error_t error,
+                                       const lcb_store_resp_t *resp);
 
-    typedef void (*libcouchbase_timer_callback)(libcouchbase_timer_t timer,
-                                                libcouchbase_t instance,
-                                                const void *cookie);
+    /**
+     * The callback function for a remove request.
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param error The status of the operation
+     * @param resp More information about the operation
+     */
+    typedef void (*lcb_remove_callback)(lcb_t instance,
+                                        const void *cookie,
+                                        lcb_error_t error,
+                                        const lcb_remove_resp_t *resp);
+
+    /**
+     * The callback function for a touch request.
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param error The status of the operation
+     * @param resp More information about the operation
+     */
+    typedef void (*lcb_touch_callback)(lcb_t instance,
+                                       const void *cookie,
+                                       lcb_error_t error,
+                                       const lcb_touch_resp_t *resp);
+
+    /**
+     * The callback function for an unlock request.
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param error The status of the operation
+     * @param resp More information about the operation
+     */
+    typedef void (*lcb_unlock_callback)(lcb_t instance,
+                                        const void *cookie,
+                                        lcb_error_t error,
+                                        const lcb_unlock_resp_t *resp);
+
+
+    /**
+     * The callback function for an arithmetic request.
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param error The status of the operation
+     * @param resp More information about the operation (only key
+     *             and nkey is valid if error != LCB_SUCCESS)
+     */
+    typedef void (*lcb_arithmetic_callback)(lcb_t instance,
+                                            const void *cookie,
+                                            lcb_error_t error,
+                                            const lcb_arithmetic_resp_t *resp);
+
+    /**
+     * The callback function for an observe request.
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param error The status of the operation
+     * @param resp More information about the operation (only key
+     *             and nkey is valid if error != LCB_SUCCESS)
+     */
+    typedef void (*lcb_observe_callback)(lcb_t instance,
+                                         const void *cookie,
+                                         lcb_error_t error,
+                                         const lcb_observe_resp_t *resp);
+
+    /**
+     * The callback function for a stat request
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param server_endpoint The name of the server in the cluster
+     *              this response is from
+     * @param error The status of the operation
+     * @parem key The name of the stat code
+     * @param nkey The number of bytes in the stat code
+     * @param bytes The value for the stat
+     * @param nbytes The number of bytes in the stat value
+     */
+    typedef void (*lcb_stat_callback)(lcb_t instance,
+                                      const void *cookie,
+                                      const char *server_endpoint,
+                                      lcb_error_t error,
+                                      const void *key,
+                                      lcb_size_t nkey,
+                                      const void *bytes,
+                                      lcb_size_t nbytes);
+
+
+    /**
+     * The callback fcunction for a version request
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param server_endpoint The name of the server in the cluster
+     *              this response is from
+     * @param error The status of the operation
+     * @parem vstring Pointer to the version string
+     * @param nvstring The number of bytes in the nvstring
+     */
+    typedef void (*lcb_version_callback)(lcb_t instance,
+                                         const void *cookie,
+                                         const char *server_endpoint,
+                                         lcb_error_t error,
+                                         const char *vstring,
+                                         lcb_size_t nvstring);
+
+    /**
+     * The error callback called when we don't have a request context.
+     * This callback may be called when we encounter memory/network
+     * error(s), and we can't map it directly to an operation.
+     *
+     * @param instance The instance that encountered the problem
+     * @param error The error we encountered
+     * @param errinfo An optional string with more information about
+     *                the error (if available)
+     */
+    typedef void (*lcb_error_callback)(lcb_t instance,
+                                       lcb_error_t error,
+                                       const char *errinfo);
+
+    /**
+     * The callback function for a flush request
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param server_endpoint The name of the server in the cluster
+     *              this response is from
+     * @param error The status of the operation
+     */
+    typedef void (*lcb_flush_callback)(lcb_t instance,
+                                       const void *cookie,
+                                       const char *server_endpoint,
+                                       lcb_error_t error);
+
+
+    typedef void (*lcb_timer_callback)(lcb_timer_t timer,
+                                       lcb_t instance,
+                                       const void *cookie);
 
     /**
      * couch_complete_callback will notify that view execution was completed
-     * and libcouchbase will pass response body to this callback unless
+     * and lcb will pass response body to this callback unless
      * couch_data_callback set up.
      */
-    typedef void (*libcouchbase_http_complete_callback)(libcouchbase_http_request_t request,
-                                                        libcouchbase_t instance,
-                                                        const void *cookie,
-                                                        libcouchbase_error_t error,
-                                                        libcouchbase_http_status_t status,
-                                                        const char *path,
-                                                        libcouchbase_size_t npath,
-                                                        const char * const *headers,
-                                                        const void *bytes,
-                                                        libcouchbase_size_t nbytes);
+    typedef void (*lcb_http_complete_callback)(lcb_http_request_t request,
+                                               lcb_t instance,
+                                               const void *cookie,
+                                               lcb_error_t error,
+                                               const lcb_http_resp_t *resp);
 
     /**
      * couch_data_callback switch the view operation into the 'chunked' mode
@@ -164,121 +225,100 @@ extern "C" {
      * NULL for bytes and zero for nbytes to signal that request was
      * completed.
      */
-    typedef void (*libcouchbase_http_data_callback)(libcouchbase_http_request_t request,
-                                                    libcouchbase_t instance,
-                                                    const void *cookie,
-                                                    libcouchbase_error_t error,
-                                                    libcouchbase_http_status_t status,
-                                                    const char *path,
-                                                    libcouchbase_size_t npath,
-                                                    const char * const *headers,
-                                                    const void *bytes,
-                                                    libcouchbase_size_t nbytes);
+    typedef void (*lcb_http_data_callback)(lcb_http_request_t request,
+                                           lcb_t instance,
+                                           const void *cookie,
+                                           lcb_error_t error,
+                                           const lcb_http_resp_t *resp);
 
-    typedef void (*libcouchbase_unlock_callback)(libcouchbase_t instance,
-                                                 const void *cookie,
-                                                 libcouchbase_error_t error,
-                                                 const void *key,
-                                                 libcouchbase_size_t nkey);
 
-    typedef void (*libcouchbase_configuration_callback)(libcouchbase_t instance,
-                                                        libcouchbase_configuration_t val);
+    /**
+     * This callback is called whenever configuration information from
+     * the cluster is received.
+     *
+     * @param instance The instance who received the new configuration
+     * @param config The kind of configuration received
+     */
+    typedef void (*lcb_configuration_callback)(lcb_t instance,
+                                               lcb_configuration_t config);
 
-    typedef void (*libcouchbase_verbosity_callback)(libcouchbase_t instance,
-                                                    const void *cookie,
-                                                    const char *server_endpoint,
-                                                    libcouchbase_error_t error);
+    /**
+     * The callback function for a verbosity command
+     *
+     * @param instance the instance performing the operation
+     * @param cookie the cookie associated with with the command
+     * @param server_endpoint The name of the server in the cluster
+     *              this response is from
+     * @param error The status of the operation
+     */
+    typedef void (*lcb_verbosity_callback)(lcb_t instance,
+                                           const void *cookie,
+                                           const char *server_endpoint,
+                                           lcb_error_t error);
+
+    /*
+     * The following sections contains function prototypes for how to
+     * set the callback for a certain kind of operation. The first
+     * parameter is the instance to update, the second parameter
+     * is the callback to call. The old callback is returned.
+     */
+    LIBCOUCHBASE_API
+    lcb_get_callback lcb_set_get_callback(lcb_t, lcb_get_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_extended_get_callback libcouchbase_set_extended_get_callback(libcouchbase_t,
-                                                                              libcouchbase_extended_get_callback);
-    LIBCOUCHBASE_API
-    libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
-                                                            libcouchbase_get_callback);
+    lcb_store_callback lcb_set_store_callback(lcb_t, lcb_store_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_storage_callback libcouchbase_set_storage_callback(libcouchbase_t,
-                                                                    libcouchbase_storage_callback);
+    lcb_arithmetic_callback lcb_set_arithmetic_callback(lcb_t,
+                                                        lcb_arithmetic_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_arithmetic_callback libcouchbase_set_arithmetic_callback(libcouchbase_t,
-                                                                          libcouchbase_arithmetic_callback);
+    lcb_observe_callback lcb_set_observe_callback(lcb_t, lcb_observe_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_observe_callback libcouchbase_set_observe_callback(libcouchbase_t,
-                                                                    libcouchbase_observe_callback);
+    lcb_remove_callback lcb_set_remove_callback(lcb_t, lcb_remove_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_remove_callback libcouchbase_set_remove_callback(libcouchbase_t,
-                                                                  libcouchbase_remove_callback);
+    lcb_stat_callback lcb_set_stat_callback(lcb_t, lcb_stat_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_stat_callback libcouchbase_set_stat_callback(libcouchbase_t instance,
-                                                              libcouchbase_stat_callback cb);
+    lcb_version_callback lcb_set_version_callback(lcb_t, lcb_version_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_version_callback libcouchbase_set_version_callback(libcouchbase_t instance,
-                                                                    libcouchbase_version_callback cb);
+    lcb_touch_callback lcb_set_touch_callback(lcb_t, lcb_touch_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_touch_callback libcouchbase_set_touch_callback(libcouchbase_t,
-                                                                libcouchbase_touch_callback);
+    lcb_error_callback lcb_set_error_callback(lcb_t, lcb_error_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_tap_mutation_callback libcouchbase_set_tap_mutation_callback(libcouchbase_t,
-                                                                              libcouchbase_tap_mutation_callback);
+    lcb_flush_callback lcb_set_flush_callback(lcb_t, lcb_flush_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_tap_deletion_callback libcouchbase_set_tap_deletion_callback(libcouchbase_t,
-                                                                              libcouchbase_tap_deletion_callback);
+    lcb_http_complete_callback lcb_set_view_complete_callback(lcb_t,
+                                                              lcb_http_complete_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_tap_flush_callback libcouchbase_set_tap_flush_callback(libcouchbase_t,
-                                                                        libcouchbase_tap_flush_callback);
+    lcb_http_data_callback lcb_set_view_data_callback(lcb_t,
+                                                      lcb_http_data_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_tap_opaque_callback libcouchbase_set_tap_opaque_callback(libcouchbase_t,
-                                                                          libcouchbase_tap_opaque_callback);
+    lcb_http_complete_callback lcb_set_management_complete_callback(lcb_t,
+                                                                    lcb_http_complete_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_tap_vbucket_set_callback libcouchbase_set_tap_vbucket_set_callback(libcouchbase_t,
-            libcouchbase_tap_vbucket_set_callback);
+    lcb_http_data_callback lcb_set_management_data_callback(lcb_t,
+                                                            lcb_http_data_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_error_callback libcouchbase_set_error_callback(libcouchbase_t,
-                                                                libcouchbase_error_callback);
+    lcb_unlock_callback lcb_set_unlock_callback(lcb_t, lcb_unlock_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_flush_callback libcouchbase_set_flush_callback(libcouchbase_t,
-                                                                libcouchbase_flush_callback);
+    lcb_configuration_callback lcb_set_configuration_callback(lcb_t,
+                                                              lcb_configuration_callback);
 
     LIBCOUCHBASE_API
-    libcouchbase_http_complete_callback libcouchbase_set_view_complete_callback(libcouchbase_t instance,
-                                                                                libcouchbase_http_complete_callback cb);
-
-    LIBCOUCHBASE_API
-    libcouchbase_http_data_callback libcouchbase_set_view_data_callback(libcouchbase_t instance,
-                                                                        libcouchbase_http_data_callback cb);
-
-    LIBCOUCHBASE_API
-    libcouchbase_http_complete_callback libcouchbase_set_management_complete_callback(libcouchbase_t instance,
-                                                                                      libcouchbase_http_complete_callback cb);
-
-    LIBCOUCHBASE_API
-    libcouchbase_http_data_callback libcouchbase_set_management_data_callback(libcouchbase_t instance,
-                                                                              libcouchbase_http_data_callback cb);
-
-    LIBCOUCHBASE_API
-    libcouchbase_unlock_callback libcouchbase_set_unlock_callback(libcouchbase_t,
-                                                                  libcouchbase_unlock_callback);
-
-    LIBCOUCHBASE_API
-    libcouchbase_configuration_callback libcouchbase_set_configuration_callback(libcouchbase_t,
-                                                                                libcouchbase_configuration_callback);
-
-    LIBCOUCHBASE_API
-    libcouchbase_verbosity_callback libcouchbase_set_verbosity_callback(libcouchbase_t,
-                                                                        libcouchbase_verbosity_callback);
+    lcb_verbosity_callback lcb_set_verbosity_callback(lcb_t,
+                                                      lcb_verbosity_callback);
 
 #ifdef __cplusplus
 }

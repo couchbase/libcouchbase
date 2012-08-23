@@ -26,15 +26,13 @@ class MemcachedCompatibility : public ::testing::Test
 
 TEST_F(MemcachedCompatibility, createInstance)
 {
-    struct libcouchbase_memcached_st memcached;
-    libcouchbase_t instance;
+    struct lcb_memcached_st memcached;
+    lcb_t instance;
 
     memset(&memcached, 0, sizeof(memcached));
     memcached.serverlist = "localhost:11211;localhost:11212";
 
-    EXPECT_EQ(LIBCOUCHBASE_SUCCESS,
-              libcouchbase_create_compat(LIBCOUCHBASE_MEMCACHED_CLUSTER,
-                                         &memcached,
-                                         &instance, NULL));
-    libcouchbase_destroy(instance);
+    EXPECT_EQ(LCB_SUCCESS,
+              lcb_create_compat(LCB_MEMCACHED_CLUSTER, &memcached, &instance, NULL));
+    lcb_destroy(instance);
 }

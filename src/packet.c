@@ -24,15 +24,15 @@
 
 #include "internal.h"
 
-void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
-                                             const void *command_cookie,
-                                             ringbuffer_t *buff,
-                                             ringbuffer_t *buff_cookie,
-                                             const void *data,
-                                             libcouchbase_size_t size)
+void lcb_server_buffer_start_packet(lcb_server_t *c,
+                                    const void *command_cookie,
+                                    ringbuffer_t *buff,
+                                    ringbuffer_t *buff_cookie,
+                                    const void *data,
+                                    lcb_size_t size)
 {
-    struct libcouchbase_command_data_st ct;
-    memset(&ct, 0, sizeof(struct libcouchbase_command_data_st));
+    struct lcb_command_data_st ct;
+    memset(&ct, 0, sizeof(struct lcb_command_data_st));
     /* @todo we don't want to call gethrtime for each operation, */
     /* so I need to pass it down the chain so that a large */
     /* multiget can reuse the same timer... */
@@ -49,14 +49,14 @@ void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
     }
 }
 
-void libcouchbase_server_buffer_retry_packet(libcouchbase_server_t *c,
-                                             struct libcouchbase_command_data_st *ct,
-                                             ringbuffer_t *buff,
-                                             ringbuffer_t *buff_cookie,
-                                             const void *data,
-                                             libcouchbase_size_t size)
+void lcb_server_buffer_retry_packet(lcb_server_t *c,
+                                    struct lcb_command_data_st *ct,
+                                    ringbuffer_t *buff,
+                                    ringbuffer_t *buff_cookie,
+                                    const void *data,
+                                    lcb_size_t size)
 {
-    libcouchbase_size_t ct_size = sizeof(struct libcouchbase_command_data_st);
+    lcb_size_t ct_size = sizeof(struct lcb_command_data_st);
 
     if (!ringbuffer_ensure_capacity(buff, size) ||
             !ringbuffer_ensure_capacity(&c->cmd_log, size) ||
@@ -68,10 +68,10 @@ void libcouchbase_server_buffer_retry_packet(libcouchbase_server_t *c,
     }
 }
 
-void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
-                                             ringbuffer_t *buff,
-                                             const void *data,
-                                             libcouchbase_size_t size)
+void lcb_server_buffer_write_packet(lcb_server_t *c,
+                                    ringbuffer_t *buff,
+                                    const void *data,
+                                    lcb_size_t size)
 {
     (void)c;
     if (!ringbuffer_ensure_capacity(buff, size) ||
@@ -82,92 +82,92 @@ void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
     }
 }
 
-void libcouchbase_server_buffer_end_packet(libcouchbase_server_t *c,
-                                           ringbuffer_t *buff)
+void lcb_server_buffer_end_packet(lcb_server_t *c,
+                                  ringbuffer_t *buff)
 {
     (void)c;
     (void)buff;
 }
 
-void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
-                                                const void *command_cookie,
-                                                ringbuffer_t *buff,
-                                                ringbuffer_t *buff_cookie,
-                                                const void *data,
-                                                libcouchbase_size_t size)
+void lcb_server_buffer_complete_packet(lcb_server_t *c,
+                                       const void *command_cookie,
+                                       ringbuffer_t *buff,
+                                       ringbuffer_t *buff_cookie,
+                                       const void *data,
+                                       lcb_size_t size)
 {
 
-    libcouchbase_server_buffer_start_packet(c, command_cookie,
-                                            buff, buff_cookie, data, size);
-    libcouchbase_server_buffer_end_packet(c, buff);
+    lcb_server_buffer_start_packet(c, command_cookie,
+                                   buff, buff_cookie, data, size);
+    lcb_server_buffer_end_packet(c, buff);
 }
 
-void libcouchbase_server_retry_packet(libcouchbase_server_t *c,
-                                      struct libcouchbase_command_data_st *command_data,
-                                      const void *data,
-                                      libcouchbase_size_t size)
+void lcb_server_retry_packet(lcb_server_t *c,
+                             struct lcb_command_data_st *command_data,
+                             const void *data,
+                             lcb_size_t size)
 {
     if (c->connected) {
-        libcouchbase_server_buffer_retry_packet(c, command_data,
-                                                &c->output,
-                                                &c->output_cookies,
-                                                data, size);
+        lcb_server_buffer_retry_packet(c, command_data,
+                                       &c->output,
+                                       &c->output_cookies,
+                                       data, size);
     } else {
-        libcouchbase_server_buffer_retry_packet(c, command_data,
-                                                &c->pending,
-                                                &c->pending_cookies,
-                                                data, size);
+        lcb_server_buffer_retry_packet(c, command_data,
+                                       &c->pending,
+                                       &c->pending_cookies,
+                                       data, size);
     }
 }
 
-void libcouchbase_server_start_packet(libcouchbase_server_t *c,
-                                      const void *command_cookie,
-                                      const void *data,
-                                      libcouchbase_size_t size)
+void lcb_server_start_packet(lcb_server_t *c,
+                             const void *command_cookie,
+                             const void *data,
+                             lcb_size_t size)
 {
     if (c->connected) {
-        libcouchbase_server_buffer_start_packet(c, command_cookie,
-                                                &c->output,
-                                                &c->output_cookies,
-                                                data, size);
+        lcb_server_buffer_start_packet(c, command_cookie,
+                                       &c->output,
+                                       &c->output_cookies,
+                                       data, size);
     } else {
-        libcouchbase_server_buffer_start_packet(c, command_cookie,
-                                                &c->pending,
-                                                &c->pending_cookies,
-                                                data, size);
+        lcb_server_buffer_start_packet(c, command_cookie,
+                                       &c->pending,
+                                       &c->pending_cookies,
+                                       data, size);
     }
 }
 
-void libcouchbase_server_write_packet(libcouchbase_server_t *c,
-                                      const void *data,
-                                      libcouchbase_size_t size)
+void lcb_server_write_packet(lcb_server_t *c,
+                             const void *data,
+                             lcb_size_t size)
 {
     if (c->connected) {
-        libcouchbase_server_buffer_write_packet(c, &c->output, data, size);
+        lcb_server_buffer_write_packet(c, &c->output, data, size);
     } else {
-        libcouchbase_server_buffer_write_packet(c, &c->pending, data, size);
+        lcb_server_buffer_write_packet(c, &c->pending, data, size);
     }
 }
 
-void libcouchbase_server_end_packet(libcouchbase_server_t *c)
+void lcb_server_end_packet(lcb_server_t *c)
 {
     (void)c;
 }
 
-void libcouchbase_server_complete_packet(libcouchbase_server_t *c,
-                                         const void *command_cookie,
-                                         const void *data,
-                                         libcouchbase_size_t size)
+void lcb_server_complete_packet(lcb_server_t *c,
+                                const void *command_cookie,
+                                const void *data,
+                                lcb_size_t size)
 {
     if (c->connected) {
-        libcouchbase_server_buffer_complete_packet(c, command_cookie,
-                                                   &c->output,
-                                                   &c->output_cookies,
-                                                   data, size);
+        lcb_server_buffer_complete_packet(c, command_cookie,
+                                          &c->output,
+                                          &c->output_cookies,
+                                          data, size);
     } else {
-        libcouchbase_server_buffer_complete_packet(c, command_cookie,
-                                                   &c->pending,
-                                                   &c->pending_cookies,
-                                                   data, size);
+        lcb_server_buffer_complete_packet(c, command_cookie,
+                                          &c->pending,
+                                          &c->pending_cookies,
+                                          data, size);
     }
 }

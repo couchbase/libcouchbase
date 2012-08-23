@@ -18,97 +18,80 @@
 #include "internal.h"
 
 /**
- * libcouchbase_mget use the GETQ command followed by a NOOP command to avoid
+ * lcb_mget use the GETQ command followed by a NOOP command to avoid
  * transferring not-found responses. All of the not-found callbacks are
  * generated implicit by receiving a successful get or the NOOP.
  *
  * @author Trond Norbye
  * @todo improve the error handling
  */
-LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
-                                         const void *command_cookie,
-                                         libcouchbase_size_t num_keys,
-                                         const void *const *keys,
-                                         const libcouchbase_size_t *nkey,
-                                         const libcouchbase_time_t *exp)
-{
-    return libcouchbase_mtouch_by_key(instance, command_cookie, NULL, 0, num_keys,
-                                      keys, nkey, exp);
-}
-
 struct server_info_st {
     int vb;
     int idx;
 };
 
+
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
-                                                const void *command_cookie,
-                                                const void *hashkey,
-                                                libcouchbase_size_t nhashkey,
-                                                libcouchbase_size_t num_keys,
-                                                const void *const *keys,
-                                                const libcouchbase_size_t *nkey,
-                                                const libcouchbase_time_t *exp)
+lcb_error_t lcb_touch(lcb_t instance,
+                      const void *command_cookie,
+                      lcb_size_t num,
+                      const lcb_touch_cmd_t *const *items)
 {
-    libcouchbase_server_t *server = NULL;
-    libcouchbase_size_t ii;
-    int vb, idx;
+    lcb_server_t *server = NULL;
+    lcb_size_t ii;
+    int vb;
     struct server_info_st *servers = NULL;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
-    if (nhashkey != 0) {
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-        if (idx < 0 || idx > (int)instance->nservers) {
-            /* the config says that there is no server yet at that position (-1) */
-            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
-        }
-        server = instance->servers + idx;
-    } else {
-        servers = malloc(num_keys * sizeof(struct server_info_st));
-        if (servers == NULL) {
-            return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
-        }
-        for (ii = 0; ii < num_keys; ++ii) {
-            (void)vbucket_map(instance->vbucket_config, keys[ii], nkey[ii], &servers[ii].vb, &servers[ii].idx);
-            if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
-                /* the config says that there is no server yet at that position (-1) */
-                free(servers);
-                return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
-            }
+    servers = malloc(num * sizeof(struct server_info_st));
+    if (servers == NULL) {
+        return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+    }
+    for (ii = 0; ii < num; ++ii) {
+        const void *key = items[ii]->v.v0.key;
+        uint16_t nkey = items[ii]->v.v0.nkey;
+        (void)vbucket_map(instance->vbucket_config, key, nkey,
+                          &servers[ii].vb, &servers[ii].idx);
+        if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
+            /*
+            ** the config says that there is no server yet at that position
+            ** (-1)
+            */
+            free(servers);
+            return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
         }
     }
 
-    for (ii = 0; ii < num_keys; ++ii) {
+    for (ii = 0; ii < num; ++ii) {
         protocol_binary_request_touch req;
-        if (nhashkey == 0) {
-            server = instance->servers + servers[ii].idx;
-            vb = servers[ii].vb;
-        }
+        const void *key = items[ii]->v.v0.key;
+        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_time_t exp = items[ii]->v.v0.exptime;
+        server = instance->servers + servers[ii].idx;
+        vb = servers[ii].vb;
 
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
         req.message.header.request.opcode = PROTOCOL_BINARY_CMD_TOUCH;
         req.message.header.request.extlen = 4;
-        req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey[ii]);
+        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
         req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)(nkey[ii]) + 4);
+        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
+        req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey) + 4);
         req.message.header.request.opaque = ++instance->seqno;
         /* @todo fix the relative time! */
-        req.message.body.expiration = htonl((libcouchbase_uint32_t)exp[ii]);
-        libcouchbase_server_start_packet(server, command_cookie,
-                                         req.bytes, sizeof(req.bytes));
-        libcouchbase_server_write_packet(server, keys[ii], nkey[ii]);
-        libcouchbase_server_end_packet(server);
-        libcouchbase_server_send_packets(server);
+        req.message.body.expiration = htonl((lcb_uint32_t)exp);
+        lcb_server_start_packet(server, command_cookie,
+                                req.bytes, sizeof(req.bytes));
+        lcb_server_write_packet(server, key, nkey);
+        lcb_server_end_packet(server);
+        lcb_server_send_packets(server);
     }
     free(servers);
 
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

@@ -18,18 +18,18 @@
 #include "internal.h"
 
 static const char *method_strings[] = {
-    "GET ",    /* LIBCOUCHBASE_HTTP_METHOD_GET */
-    "POST ",   /* LIBCOUCHBASE_HTTP_METHOD_POST */
-    "PUT ",    /* LIBCOUCHBASE_HTTP_METHOD_PUT */
-    "DELETE "  /* LIBCOUCHBASE_HTTP_METHOD_DELETE */
+    "GET ",    /* LCB_HTTP_METHOD_GET */
+    "POST ",   /* LCB_HTTP_METHOD_POST */
+    "PUT ",    /* LCB_HTTP_METHOD_PUT */
+    "DELETE "  /* LCB_HTTP_METHOD_DELETE */
 };
 
 
 static const char http_version[] = " HTTP/1.1\r\n";
-static const char headers[] = "User-Agent: libcouchbase/"LIBCOUCHBASE_VERSION_STRING"\r\n"
+static const char req_headers[] = "User-Agent: libcouchbase/"LCB_VERSION_STRING"\r\n"
                               "Accept: application/json\r\n";
 
-void libcouchbase_http_request_destroy(libcouchbase_http_request_t req)
+void lcb_http_request_destroy(lcb_http_request_t req)
 {
     if (req) {
         if (req->io) {
@@ -52,7 +52,7 @@ void libcouchbase_http_request_destroy(libcouchbase_http_request_t req)
         ringbuffer_destruct(&req->output);
         ringbuffer_destruct(&req->result);
         {
-            struct libcouchbase_http_header_st *tmp, *hdr = req->headers_list;
+            struct lcb_http_header_st *tmp, *hdr = req->headers_list;
             while (hdr) {
                 tmp = hdr->next;
                 free(hdr);
@@ -60,25 +60,26 @@ void libcouchbase_http_request_destroy(libcouchbase_http_request_t req)
             }
         }
     }
-    memset(req, 0xff, sizeof(struct libcouchbase_http_request_st));
+    memset(req, 0xff, sizeof(struct lcb_http_request_st));
     free(req);
 }
 
-static int http_parser_header_cb(http_parser *p, const char *bytes, size_t nbytes)
+static int http_parser_header_cb(http_parser *p, const char *bytes,
+                                 size_t nbytes)
 {
-    libcouchbase_http_request_t req = p->data;
-    struct libcouchbase_http_header_st *item;
+    lcb_http_request_t req = p->data;
+    struct lcb_http_header_st *item;
 
-    item = calloc(1, sizeof(struct libcouchbase_http_header_st));
+    item = calloc(1, sizeof(struct lcb_http_header_st));
     if (item == NULL) {
-        libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM,
-                                   "Failed to allocate buffer");
+        lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM,
+                          "Failed to allocate buffer");
         return -1;
     }
     item->data = malloc(nbytes + 1);
     if (item->data == NULL) {
-        libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM,
-                                   "Failed to allocate buffer");
+        lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM,
+                          "Failed to allocate buffer");
         return -1;
     }
     memcpy(item->data, bytes, nbytes);
@@ -91,9 +92,9 @@ static int http_parser_header_cb(http_parser *p, const char *bytes, size_t nbyte
 
 static int http_parser_headers_complete_cb(http_parser *p)
 {
-    libcouchbase_http_request_t req = p->data;
-    struct libcouchbase_http_header_st *hdr;
-    libcouchbase_size_t ii;
+    lcb_http_request_t req = p->data;
+    struct lcb_http_header_st *hdr;
+    lcb_size_t ii;
 
     /* +1 pointer for NULL-terminator */
     req->headers = calloc(req->nheaders + 1, sizeof(const char *));
@@ -103,27 +104,42 @@ static int http_parser_headers_complete_cb(http_parser *p)
     return 0;
 }
 
+static inline void setup_lcb_http_resp_t(lcb_http_resp_t *resp,
+                                         lcb_http_status_t status,
+                                         const char *path,
+                                         lcb_size_t npath,
+                                         const char *const *headers,
+                                         const void *bytes,
+                                         lcb_size_t nbytes)
+{
+    memset(resp, 0, sizeof(*resp));
+    resp->version = 0;
+    resp->v.v0.status = status;
+    resp->v.v0.path = path;
+    resp->v.v0.npath = npath;
+    resp->v.v0.headers = headers;
+    resp->v.v0.bytes = bytes;
+    resp->v.v0.nbytes = nbytes;
+}
+
 static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
 {
-    libcouchbase_error_t rc;
-    libcouchbase_http_request_t req = p->data;
+    lcb_error_t rc;
+    lcb_http_request_t req = p->data;
 
     if (!hashset_is_member(req->server->http_requests, req)) {
         return 0;
     }
     if (req->chunked) {
-        rc = (p->status_code / 100 == 2) ?  LIBCOUCHBASE_SUCCESS : LIBCOUCHBASE_PROTOCOL_ERROR;
-        req->on_data(req, req->instance,
-                     req->command_cookie,
-                     rc, p->status_code,
-                     req->path,
-                     req->npath,
-                     req->headers,
-                     bytes, nbytes);
+        lcb_http_resp_t resp;
+        setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
+                              req->headers, bytes, nbytes);
+        rc = (p->status_code / 100 == 2) ?  LCB_SUCCESS : LCB_PROTOCOL_ERROR;
+        req->on_data(req, req->instance, req->command_cookie, rc, &resp);
     } else {
         if (!ringbuffer_ensure_capacity(&req->result, nbytes)) {
-            libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM,
-                                       "Failed to allocate buffer");
+            lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM,
+                              "Failed to allocate buffer");
             return -1;
         }
         ringbuffer_write(&req->result, bytes, nbytes);
@@ -133,40 +149,37 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
 
 static int http_parser_complete_cb(http_parser *p)
 {
-    libcouchbase_error_t rc;
-    libcouchbase_http_request_t req = p->data;
+    lcb_error_t rc;
+    lcb_http_request_t req = p->data;
     char *bytes = NULL;
-    libcouchbase_size_t np = 0, nbytes = 0;
+    lcb_size_t np = 0, nbytes = 0;
+    lcb_http_resp_t resp;
 
     req->completed = 1;
     if (!hashset_is_member(req->server->http_requests, req)) {
         return 0;
     }
-    rc = (p->status_code / 100 == 2) ?  LIBCOUCHBASE_SUCCESS : LIBCOUCHBASE_PROTOCOL_ERROR;
+    rc = (p->status_code / 100 == 2) ?  LCB_SUCCESS : LCB_PROTOCOL_ERROR;
     if (!req->chunked) {
         nbytes = req->result.nbytes;
         if (ringbuffer_is_continous(&req->result, RINGBUFFER_READ, nbytes)) {
             bytes = ringbuffer_get_read_head(&req->result);
         } else {
             if ((bytes = malloc(nbytes)) == NULL) {
-                libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
+                lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM, NULL);
                 return -1;
             }
             np = ringbuffer_peek(&req->input, bytes, nbytes);
             if (np != nbytes) {
-                libcouchbase_error_handler(req->instance, LIBCOUCHBASE_EINTERNAL, NULL);
+                lcb_error_handler(req->instance, LCB_EINTERNAL, NULL);
                 free(bytes);
                 return -1;
             }
         }
     }
-    req->on_complete(req, req->instance,
-                     req->command_cookie,
-                     rc, p->status_code,
-                     req->path,
-                     req->npath,
-                     req->headers,
-                     bytes, nbytes);
+    setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
+                          req->headers, bytes, nbytes);
+    req->on_complete(req, req->instance, req->command_cookie, rc, &resp);
     if (!req->chunked) {
         ringbuffer_consumed(&req->result, nbytes);
         if (np) {   /* release peek storage */
@@ -176,14 +189,15 @@ static int http_parser_complete_cb(http_parser *p)
     return 0;
 }
 
-static int request_do_fill_input_buffer(libcouchbase_http_request_t req)
+static int request_do_fill_input_buffer(lcb_http_request_t req)
 {
-    struct libcouchbase_iovec_st iov[2];
-    libcouchbase_ssize_t nr;
+    struct lcb_iovec_st iov[2];
+    lcb_ssize_t nr;
+    lcb_http_resp_t resp;
 
     if (!ringbuffer_ensure_capacity(&req->input, 8192)) {
-        libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM,
-                                   "Failed to allocate buffer");
+        lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM,
+                          "Failed to allocate buffer");
         return -1;
     }
 
@@ -197,24 +211,24 @@ static int request_do_fill_input_buffer(libcouchbase_http_request_t req)
         case EWOULDBLOCK:
             return 0;
         default:
-            req->on_complete(req, req->instance,
-                             req->command_cookie,
-                             LIBCOUCHBASE_NETWORK_ERROR,
-                             0, req->path, req->npath, NULL, NULL, 0);
+            setup_lcb_http_resp_t(&resp, 0, req->path, req->npath,
+                                  NULL, NULL, 0);
+            req->on_complete(req, req->instance, req->command_cookie,
+                             LCB_NETWORK_ERROR, &resp);
             return -1;
         }
     } else {
-        ringbuffer_produced(&req->input, (libcouchbase_size_t)nr);
+        ringbuffer_produced(&req->input, (lcb_size_t)nr);
     }
 
     return 0;
 }
 
-static int request_do_read(libcouchbase_http_request_t req)
+static int request_do_read(lcb_http_request_t req)
 {
-    libcouchbase_size_t nb = 0, np = 0;
+    lcb_size_t nb = 0, np = 0;
     char *bytes;
-    libcouchbase_size_t nbytes;
+    lcb_size_t nbytes;
 
     if (request_do_fill_input_buffer(req)) {
         /* error or would block */
@@ -224,12 +238,12 @@ static int request_do_read(libcouchbase_http_request_t req)
     bytes = ringbuffer_get_read_head(&req->input);
     if (!ringbuffer_is_continous(&req->input, RINGBUFFER_READ, nbytes)) {
         if ((bytes = malloc(nbytes)) == NULL) {
-            libcouchbase_error_handler(req->instance, LIBCOUCHBASE_CLIENT_ENOMEM, NULL);
+            lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM, NULL);
             return -1;
         }
         np = ringbuffer_peek(&req->input, bytes, nbytes);
         if (np != nbytes) {
-            libcouchbase_error_handler(req->instance, LIBCOUCHBASE_EINTERNAL, NULL);
+            lcb_error_handler(req->instance, LCB_EINTERNAL, NULL);
             free(bytes);
             return -1;
         }
@@ -253,11 +267,12 @@ static int request_do_read(libcouchbase_http_request_t req)
     return 0;
 }
 
-static int request_do_write(libcouchbase_http_request_t req)
+static int request_do_write(lcb_http_request_t req)
 {
     do {
-        struct libcouchbase_iovec_st iov[2];
-        libcouchbase_ssize_t nw;
+        struct lcb_iovec_st iov[2];
+        lcb_ssize_t nw;
+        lcb_http_resp_t resp;
 
         ringbuffer_get_iov(&req->output, RINGBUFFER_READ, iov);
         nw = req->io->sendv(req->io, req->sock, iov, 2);
@@ -269,61 +284,62 @@ static int request_do_write(libcouchbase_http_request_t req)
             case EWOULDBLOCK:
                 return 0;
             default:
-                req->on_complete(req, req->instance,
-                                 req->command_cookie,
-                                 LIBCOUCHBASE_NETWORK_ERROR,
-                                 0, req->path, req->npath, NULL, NULL, 0);
+                setup_lcb_http_resp_t(&resp, 0, req->path, req->npath,
+                                      NULL, NULL, 0);
+                req->on_complete(req, req->instance, req->command_cookie,
+                                 LCB_NETWORK_ERROR, &resp);
                 return -1;
             }
         } else {
-            ringbuffer_consumed(&req->output, (libcouchbase_size_t)nw);
+            ringbuffer_consumed(&req->output, (lcb_size_t)nw);
         }
     } while (req->output.nbytes > 0);
 
     return 0;
 }
 
-static void request_event_handler(libcouchbase_socket_t sock, short which, void *arg)
+static void request_event_handler(lcb_socket_t sock, short which, void *arg)
 {
-    libcouchbase_http_request_t req = arg;
-    libcouchbase_t instance = req->instance;
-    libcouchbase_server_t *server = req->server;
+    lcb_http_request_t req = arg;
+    lcb_t instance = req->instance;
+    lcb_server_t *server = req->server;
     int rv;
     (void)sock;
+    lcb_http_resp_t resp;
 
-    if (which & LIBCOUCHBASE_READ_EVENT) {
+    if (which & LCB_READ_EVENT) {
         rv = request_do_read(req);
         if (rv > 0) {
             instance->io->update_event(instance->io, req->sock,
-                                       req->event, LIBCOUCHBASE_READ_EVENT,
+                                       req->event, LCB_READ_EVENT,
                                        req, request_event_handler);
         } else if (rv < 0) {
-            req->on_complete(req, instance,
-                             req->command_cookie,
-                             LIBCOUCHBASE_NETWORK_ERROR,
-                             0, req->path, req->npath, NULL, NULL, 0);
+            setup_lcb_http_resp_t(&resp, 0, req->path, req->npath,
+                                  NULL, NULL, 0);
+            req->on_complete(req, req->instance, req->command_cookie,
+                             LCB_NETWORK_ERROR, &resp);
             return;
         } else {
             /* considering request was completed and release it */
             hashset_remove(server->http_requests, req);
-            libcouchbase_http_request_destroy(req);
+            lcb_http_request_destroy(req);
         }
     }
-    if (which & LIBCOUCHBASE_WRITE_EVENT) {
+    if (which & LCB_WRITE_EVENT) {
         if (request_do_write(req) != 0) {
-            req->on_complete(req, instance,
-                             req->command_cookie,
-                             LIBCOUCHBASE_NETWORK_ERROR,
-                             0, req->path, req->npath, NULL, NULL, 0);
+            setup_lcb_http_resp_t(&resp, 0, req->path, req->npath,
+                                  NULL, NULL, 0);
+            req->on_complete(req, req->instance, req->command_cookie,
+                             LCB_NETWORK_ERROR, &resp);
             return;
         }
         if (req->output.nbytes == 0) {
             instance->io->update_event(instance->io, req->sock,
-                                       req->event, LIBCOUCHBASE_READ_EVENT,
+                                       req->event, LCB_READ_EVENT,
                                        req, request_event_handler);
         } else {
             instance->io->update_event(instance->io, req->sock,
-                                       req->event, LIBCOUCHBASE_WRITE_EVENT,
+                                       req->event, LCB_WRITE_EVENT,
                                        req, request_event_handler);
         }
     }
@@ -332,45 +348,46 @@ static void request_event_handler(libcouchbase_socket_t sock, short which, void 
         instance->io->stop_event_loop(instance->io);
     }
     /* Make it known that this was a success. */
-    libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
+    lcb_error_handler(instance, LCB_SUCCESS, NULL);
 }
 
-static libcouchbase_error_t request_connect(libcouchbase_http_request_t req);
+static lcb_error_t request_connect(lcb_http_request_t req);
 
-static void request_connect_handler(libcouchbase_socket_t sock, short which, void *arg)
+static void request_connect_handler(lcb_socket_t sock, short which, void *arg)
 {
-    request_connect((libcouchbase_http_request_t)arg);
+    request_connect((lcb_http_request_t)arg);
     (void)sock;
     (void)which;
 }
 
 
-static void request_connected(libcouchbase_http_request_t req)
+static void request_connected(lcb_http_request_t req)
 {
     req->io->update_event(req->io, req->sock,
-                          req->event, LIBCOUCHBASE_WRITE_EVENT,
+                          req->event, LCB_WRITE_EVENT,
                           req, request_event_handler);
 }
 
-static libcouchbase_error_t request_connect(libcouchbase_http_request_t req)
+static lcb_error_t request_connect(lcb_http_request_t req)
 {
     int retry;
     int save_errno;
+    lcb_http_resp_t resp;
 
     do {
         if (req->sock == INVALID_SOCKET) {
             /* Try to get a socket.. */
-            req->sock = libcouchbase_gai2sock(req->instance,
-                                              &req->curr_ai,
-                                              &save_errno);
+            req->sock = lcb_gai2sock(req->instance,
+                                     &req->curr_ai,
+                                     &save_errno);
         }
 
         if (req->curr_ai == NULL) {
-            req->on_complete(req, req->instance,
-                             req->command_cookie,
-                             LIBCOUCHBASE_CONNECT_ERROR,
-                             0, req->path, req->npath, NULL, NULL, 0);
-            return LIBCOUCHBASE_CONNECT_ERROR;
+            setup_lcb_http_resp_t(&resp, 0, req->path, req->npath,
+                                  NULL, NULL, 0);
+            req->on_complete(req, req->instance, req->command_cookie,
+                             LCB_CONNECT_ERROR, &resp);
+            return LCB_CONNECT_ERROR;
         }
 
         retry = 0;
@@ -380,27 +397,27 @@ static libcouchbase_error_t request_connect(libcouchbase_http_request_t req)
                              (int)req->curr_ai->ai_addrlen) == 0) {
             /* connected */
             request_connected(req);
-            return LIBCOUCHBASE_SUCCESS;
+            return LCB_SUCCESS;
         } else {
-            switch (libcouchbase_connect_status(req->io->error)) {
-            case LIBCOUCHBASE_CONNECT_EINTR:
+            switch (lcb_connect_status(req->io->error)) {
+            case LCB_CONNECT_EINTR:
                 retry = 1;
                 break;
-            case LIBCOUCHBASE_CONNECT_EISCONN:
+            case LCB_CONNECT_EISCONN:
                 request_connected(req);
-                return LIBCOUCHBASE_SUCCESS;
-            case LIBCOUCHBASE_CONNECT_EINPROGRESS: /*first call to connect*/
+                return LCB_SUCCESS;
+            case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
                 req->io->update_event(req->io,
                                       req->sock,
                                       req->event,
-                                      LIBCOUCHBASE_WRITE_EVENT,
+                                      LCB_WRITE_EVENT,
                                       req,
                                       request_connect_handler);
-                return LIBCOUCHBASE_SUCCESS;
-            case LIBCOUCHBASE_CONNECT_EALREADY: /* Subsequent calls to connect */
-                return LIBCOUCHBASE_SUCCESS;
+                return LCB_SUCCESS;
+            case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
+                return LCB_SUCCESS;
 
-            case LIBCOUCHBASE_CONNECT_EFAIL:
+            case LCB_CONNECT_EFAIL:
                 if (req->curr_ai->ai_next) {
                     retry = 1;
                     req->curr_ai = req->curr_ai->ai_next;
@@ -411,66 +428,60 @@ static libcouchbase_error_t request_connect(libcouchbase_http_request_t req)
                 } /* Else, we fallthrough */
 
             default:
-                req->on_complete(req, req->instance,
-                                 req->command_cookie,
-                                 LIBCOUCHBASE_CONNECT_ERROR,
-                                 0, req->path, req->npath, NULL, NULL, 0);
-                return LIBCOUCHBASE_CONNECT_ERROR;
+                setup_lcb_http_resp_t(&resp, 0, req->path, req->npath,
+                                      NULL, NULL, 0);
+                req->on_complete(req, req->instance, req->command_cookie,
+                                 LCB_CONNECT_ERROR, &resp);
+                return LCB_CONNECT_ERROR;
             }
         }
     } while (retry);
 
-    return LIBCOUCHBASE_SUCCESS;
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API
-libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instance,
-                                                           const void *command_cookie,
-                                                           libcouchbase_http_type_t type,
-                                                           const char *path,
-                                                           libcouchbase_size_t npath,
-                                                           const void *body,
-                                                           libcouchbase_size_t nbody,
-                                                           libcouchbase_http_method_t method,
-                                                           int chunked,
-                                                           const char *content_type,
-                                                           libcouchbase_error_t *error)
+lcb_http_request_t lcb_make_http_request(lcb_t instance,
+                                         const void *command_cookie,
+                                         lcb_http_type_t type,
+                                         const lcb_http_cmd_t *cmd,
+                                         lcb_error_t *error)
 {
-    libcouchbase_http_request_t req;
+    lcb_http_request_t req;
     const char *base = NULL, *username = NULL;
     char *password = NULL;
-    libcouchbase_size_t nn, nbase;
-    libcouchbase_server_t *server;
+    lcb_size_t nn, nbase;
+    lcb_server_t *server;
 
-    if (method >= LIBCOUCHBASE_HTTP_METHOD_MAX) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+    if (type >= LCB_HTTP_TYPE_MAX) {
+        *error = lcb_synchandler_return(instance, LCB_EINVAL);
         return NULL;
     }
-    if (type >= LIBCOUCHBASE_HTTP_TYPE_MAX) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+    if (cmd->v.v0.method >= LCB_HTTP_METHOD_MAX) {
+        *error = lcb_synchandler_return(instance, LCB_EINVAL);
         return NULL;
     }
-    if (content_type == NULL) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+    if (cmd->v.v0.content_type == NULL) {
+        *error = lcb_synchandler_return(instance, LCB_EINVAL);
         return NULL;
     }
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        *error = lcb_synchandler_return(instance, LCB_ETMPFAIL);
         return NULL;
     }
     /* pick random server */
-    nn = (libcouchbase_size_t)(gethrtime() >> 10) % instance->nservers;
+    nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
     server = instance->servers + nn;
-    req = calloc(1, sizeof(struct libcouchbase_http_request_st));
+    req = calloc(1, sizeof(struct lcb_http_request_st));
     if (!req) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+        *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         return NULL;
     }
     switch (type) {
-    case LIBCOUCHBASE_HTTP_TYPE_VIEW:
+    case LCB_HTTP_TYPE_VIEW:
         if (!server->couch_api_base) {
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
+            *error = lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
             return NULL;
         }
         base = server->couch_api_base;
@@ -479,7 +490,7 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         if (instance->sasl.password.secret.len) {
             password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
             if (!password) {
-                *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+                *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 return NULL;
             }
             memcpy(password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
@@ -487,9 +498,9 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         req->on_complete = instance->callbacks.view_complete;
         req->on_data = instance->callbacks.view_data;
         break;
-    case LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT:
+    case LCB_HTTP_TYPE_MANAGEMENT:
         if (!server->rest_api_server) {
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NOT_SUPPORTED);
+            *error = lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
             return NULL;
         }
         base = server->rest_api_server;
@@ -502,65 +513,66 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         req->on_data = instance->callbacks.management_data;
         break;
     default:
-        libcouchbase_http_request_destroy(req);                                    \
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+        lcb_http_request_destroy(req);
+        \
+        *error = lcb_synchandler_return(instance, LCB_EINVAL);
         return NULL;
     }
     req->instance = instance;
     req->io = instance->io;
     req->server = server;
     req->command_cookie = command_cookie;
-    req->path = strdup(path);
-    req->npath = npath;
-    req->chunked = chunked;
+    req->path = strdup(cmd->v.v0.path);
+    req->npath = cmd->v.v0.npath;
+    req->chunked = cmd->v.v0.chunked;
 
 #define BUFF_APPEND(dst, src, len)                                                      \
         if (len != ringbuffer_write(dst, src, len)) {                                   \
-            libcouchbase_http_request_destroy(req);                                    \
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINTERNAL); \
+            lcb_http_request_destroy(req);                                    \
+            *error = lcb_synchandler_return(instance, LCB_EINTERNAL); \
             return NULL;                                                                \
         }
 
     {
         /* Build URL */
         ringbuffer_t urlbuf;
-        libcouchbase_size_t nmisc = 1;
+        lcb_size_t nmisc = 1;
 
         if (ringbuffer_initialize(&urlbuf, 1024) == -1) {
-            libcouchbase_http_request_destroy(req);
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+            lcb_http_request_destroy(req);
+            *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             return NULL;
         }
         if (memcmp(base, "http://", 7) != 0) {
             nmisc += 7;
         }
-        if (!ringbuffer_ensure_capacity(&urlbuf, nbase + npath + nmisc)) {
+        if (!ringbuffer_ensure_capacity(&urlbuf, nbase + req->npath + nmisc)) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_http_request_destroy(req);
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+            lcb_http_request_destroy(req);
+            *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             return NULL;
         }
         if (nmisc > 1) {
             BUFF_APPEND(&urlbuf, "http://", 7);
         }
         BUFF_APPEND(&urlbuf, base, nbase);
-        if (path[0] != '/') {
+        if (req->path[0] != '/') {
             BUFF_APPEND(&urlbuf, "/", 1);
         }
-        BUFF_APPEND(&urlbuf, path, npath);
+        BUFF_APPEND(&urlbuf, req->path, req->npath);
         req->nurl = urlbuf.nbytes;
         req->url = calloc(req->nurl + 1, sizeof(char));
         if (req->url == NULL) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_http_request_destroy(req);
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+            lcb_http_request_destroy(req);
+            *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             return NULL;
         }
         nn = ringbuffer_read(&urlbuf, req->url, req->nurl);
         if (nn != req->nurl) {
             ringbuffer_destruct(&urlbuf);
-            libcouchbase_http_request_destroy(req);
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINTERNAL);
+            lcb_http_request_destroy(req);
+            *error = lcb_synchandler_return(instance, LCB_EINTERNAL);
             return NULL;
         }
         req->url[req->nurl] = '\0';
@@ -574,8 +586,8 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         if (http_parser_parse_url(req->url, req->nurl, 0, &req->url_info)
                 || (req->url_info.field_set & required_fields) != required_fields) {
             /* parse error or missing URL part */
-            libcouchbase_http_request_destroy(req);
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+            lcb_http_request_destroy(req);
+            *error = lcb_synchandler_return(instance, LCB_EINVAL);
             return NULL;
         }
     }
@@ -583,25 +595,27 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
     {
         /* Render HTTP request */
         char auth[256];
-        libcouchbase_size_t nauth = 0;
+        lcb_size_t nauth = 0, nbody = cmd->v.v0.nbody;
+        const char *content_type = cmd->v.v0.content_type;
+        const char *body = cmd->v.v0.body;
         if (password) {
             if (username) {
                 char cred[256];
                 snprintf(cred, sizeof(cred), "%s:%s", username, password);
-                if (libcouchbase_base64_encode(cred, auth, sizeof(auth)) == -1) {
-                    *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
-                    libcouchbase_http_request_destroy(req);
+                if (lcb_base64_encode(cred, auth, sizeof(auth)) == -1) {
+                    *error = lcb_synchandler_return(instance, LCB_EINVAL);
+                    lcb_http_request_destroy(req);
                     return NULL;
                 }
                 nauth = strlen(auth);
             }
             free(password);
         }
-        nn = strlen(method_strings[method]) + req->url_info.field_data[UF_PATH].len + sizeof(http_version);
+        nn = strlen(method_strings[req->method]) + req->url_info.field_data[UF_PATH].len + sizeof(http_version);
         if (req->url_info.field_set & UF_QUERY) {
             nn += req->url_info.field_data[UF_QUERY].len + 1;
         }
-        nn += sizeof(headers);
+        nn += sizeof(req_headers);
         if (nauth) {
             nn += 23 + nauth; /* Authorization: Basic ... */
         }
@@ -615,23 +629,23 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         }
 
         if (!ringbuffer_ensure_capacity(&req->output, nn)) {
-            libcouchbase_http_request_destroy(req);
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+            lcb_http_request_destroy(req);
+            *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             return NULL;
         }
 
 #define EXTRACT_URL_PART(field, dst, len)                                               \
         dst = malloc((len + 1) * sizeof(char));                                         \
         if (dst == NULL) {                                                              \
-            libcouchbase_http_request_destroy(req);                                    \
-            *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);    \
+            lcb_http_request_destroy(req);                                    \
+            *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);    \
             return NULL;                                                                \
         }                                                                               \
         strncpy(dst, req->url + req->url_info.field_data[field].off, len);              \
         dst[len] = '\0';
 
-        nn = strlen(method_strings[method]);
-        BUFF_APPEND(&req->output, method_strings[method], nn);
+        nn = strlen(method_strings[req->method]);
+        BUFF_APPEND(&req->output, method_strings[req->method], nn);
         nn = req->url_info.field_data[UF_PATH].len;
         BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_PATH].off, nn);
         nn = req->url_info.field_data[UF_QUERY].len;
@@ -640,8 +654,8 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         }
         nn = strlen(http_version);
         BUFF_APPEND(&req->output, http_version, nn);
-        nn = strlen(headers);
-        BUFF_APPEND(&req->output, headers, nn);
+        nn = strlen(req_headers);
+        BUFF_APPEND(&req->output, req_headers, nn);
         if (nauth) {
             BUFF_APPEND(&req->output, "Authorization: Basic ", 21);
             BUFF_APPEND(&req->output, auth, nauth);
@@ -655,18 +669,18 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         EXTRACT_URL_PART(UF_PORT, req->port, nn);
         /* copy port with leading colon */
         BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_PORT].off - 1, nn + 1);
-        if (method != LIBCOUCHBASE_HTTP_METHOD_GET && nbody) {
+        if (req->method != LCB_HTTP_METHOD_GET && nbody) {
             char *post_headers = calloc(512, sizeof(char));
             if (post_headers == NULL) {
-                libcouchbase_http_request_destroy(req);
-                *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+                lcb_http_request_destroy(req);
+                *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 return NULL;
             }
             nn = snprintf(post_headers, 512, "\r\nContent-Type: %s\r\n"
                           "Content-Length: %ld\r\n\r\n", content_type, (long)nbody);
             if (!ringbuffer_ensure_capacity(&req->output, nbody + nn)) {
-                libcouchbase_http_request_destroy(req);
-                *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+                lcb_http_request_destroy(req);
+                *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 return NULL;
             }
             BUFF_APPEND(&req->output, post_headers, nn);
@@ -683,8 +697,8 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
     /* Initialize HTTP parser */
     req->parser = malloc(sizeof(http_parser));
     if (req->parser == NULL) {
-        libcouchbase_http_request_destroy(req);
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+        lcb_http_request_destroy(req);
+        *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         return NULL;
     }
     http_parser_init(req->parser, HTTP_RESPONSE);
@@ -711,15 +725,14 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         req->sock = INVALID_SOCKET;
     }
 
-    *error = libcouchbase_synchandler_return(instance, request_connect(req));
+    *error = lcb_synchandler_return(instance, request_connect(req));
     return req;
 }
 
 LIBCOUCHBASE_API
-void libcouchbase_cancel_http_request(libcouchbase_t instance,
-                                      libcouchbase_http_request_t request)
+void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
 {
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
     for (ii = 0; ii < instance->nservers; ++ii) {
         if (hashset_is_member(instance->servers[ii].http_requests, request)) {
             request->cancelled = 1;

@@ -17,39 +17,37 @@
 
 #include "internal.h"
 
-static void timer_callback(libcouchbase_socket_t sock,
-                           short which,
-                           void *arg)
+static void timer_callback(lcb_socket_t sock, short which, void *arg)
 {
-    libcouchbase_timer_t timer = arg;
-    libcouchbase_t instance = timer->instance;
+    lcb_timer_t timer = arg;
+    lcb_t instance = timer->instance;
     timer->callback(timer, instance, timer->cookie);
     if (hashset_is_member(instance->timers, timer) && !timer->periodic) {
         instance->io->delete_timer(instance->io, timer->event);
-        libcouchbase_timer_destroy(instance, timer);
+        lcb_timer_destroy(instance, timer);
     }
-    libcouchbase_maybe_breakout(timer->instance);
+    lcb_maybe_breakout(timer->instance);
 
     (void)sock;
     (void)which;
 }
 
 LIBCOUCHBASE_API
-libcouchbase_timer_t libcouchbase_timer_create(libcouchbase_t instance,
-                                               const void *command_cookie,
-                                               libcouchbase_uint32_t usec,
-                                               int periodic,
-                                               libcouchbase_timer_callback callback,
-                                               libcouchbase_error_t *error)
+lcb_timer_t lcb_timer_create(lcb_t instance,
+                             const void *command_cookie,
+                             lcb_uint32_t usec,
+                             int periodic,
+                             lcb_timer_callback callback,
+                             lcb_error_t *error)
 
 {
-    libcouchbase_timer_t tmr = calloc(1, sizeof(struct libcouchbase_timer_st));
+    lcb_timer_t tmr = calloc(1, sizeof(struct lcb_timer_st));
     if (!tmr) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+        *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         return NULL;
     }
     if (!callback) {
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+        *error = lcb_synchandler_return(instance, LCB_EINVAL);
         return NULL;
     }
 
@@ -61,7 +59,7 @@ libcouchbase_timer_t libcouchbase_timer_create(libcouchbase_t instance,
     tmr->event = instance->io->create_timer(instance->io);
     if (tmr->event == NULL) {
         free(tmr);
-        *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+        *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         return NULL;
     }
     instance->io->update_timer(instance->io, tmr->event, tmr->usec,
@@ -69,13 +67,12 @@ libcouchbase_timer_t libcouchbase_timer_create(libcouchbase_t instance,
 
 
     hashset_add(instance->timers, tmr);
-    *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    *error = lcb_synchandler_return(instance, LCB_SUCCESS);
     return tmr;
 }
 
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_timer_destroy(libcouchbase_t instance,
-                                                libcouchbase_timer_t timer)
+lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer)
 {
     if (hashset_is_member(instance->timers, timer)) {
         hashset_remove(instance->timers, timer);
@@ -83,5 +80,5 @@ libcouchbase_error_t libcouchbase_timer_destroy(libcouchbase_t instance,
         instance->io->destroy_timer(instance->io, timer->event);
         free(timer);
     }
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

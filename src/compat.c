@@ -24,48 +24,48 @@
  */
 #include "internal.h"
 
-static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached_st *user,
-                                             VBUCKET_CONFIG_HANDLE vbconfig);
+static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
+                                    VBUCKET_CONFIG_HANDLE vbconfig);
 
 
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_create_compat(libcouchbase_cluster_t type,
-                                                const void *specific,
-                                                libcouchbase_t *instance,
-                                                struct libcouchbase_io_opt_st *io)
+lcb_error_t lcb_create_compat(lcb_cluster_t type,
+                              const void *specific,
+                              lcb_t *instance,
+                              struct lcb_io_opt_st *io)
 {
-    libcouchbase_error_t ret = LIBCOUCHBASE_NOT_SUPPORTED;
+    lcb_error_t ret = LCB_NOT_SUPPORTED;
     VBUCKET_CONFIG_HANDLE config;
 
-    *instance = libcouchbase_create(NULL, NULL, NULL, NULL, io);
+    *instance = lcb_create(NULL, NULL, NULL, NULL, io);
     if (*instance == NULL) {
-        return LIBCOUCHBASE_CLIENT_ENOMEM;
+        return LCB_CLIENT_ENOMEM;
     }
 
     config = vbucket_config_create();
     if (config == NULL) {
-        libcouchbase_destroy(*instance);
+        lcb_destroy(*instance);
         *instance = NULL;
-        return LIBCOUCHBASE_CLIENT_ENOMEM;
+        return LCB_CLIENT_ENOMEM;
     }
 
-    if (type == LIBCOUCHBASE_MEMCACHED_CLUSTER) {
+    if (type == LCB_MEMCACHED_CLUSTER) {
         ret = create_memcached(specific, config);
     }
 
-    if (ret == LIBCOUCHBASE_SUCCESS) {
-        libcouchbase_apply_vbucket_config(*instance, config);
+    if (ret == LCB_SUCCESS) {
+        lcb_apply_vbucket_config(*instance, config);
     } else {
         vbucket_config_destroy(config);
-        libcouchbase_destroy(*instance);
+        lcb_destroy(*instance);
         *instance = NULL;
     }
 
     return ret;
 }
 
-static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached_st *user,
-                                             VBUCKET_CONFIG_HANDLE vbconfig)
+static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
+                                    VBUCKET_CONFIG_HANDLE vbconfig)
 {
     ringbuffer_t buffer;
     char *copy = strdup(user->serverlist);
@@ -73,15 +73,15 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
     int first;
     char *ptr = copy;
     int fail;
-    libcouchbase_ssize_t offset = 0;
+    lcb_ssize_t offset = 0;
 
     if (copy == NULL) {
-        return LIBCOUCHBASE_CLIENT_ENOMEM;
+        return LCB_CLIENT_ENOMEM;
     }
 
     if (ringbuffer_initialize(&buffer, 1024) == -1) {
         free(copy);
-        return LIBCOUCHBASE_CLIENT_ENOMEM;
+        return LCB_CLIENT_ENOMEM;
     }
 
     head[0] = '\0';
@@ -118,7 +118,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
         char *tok;
         char *next = strchr(ptr, ';');
         const char *port = "11211";
-        libcouchbase_ssize_t length;
+        lcb_ssize_t length;
 
         if (next != NULL) {
             *next = '\0';
@@ -140,7 +140,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
 
         if (ringbuffer_ensure_capacity(&buffer, length) == -1) {
             free(copy);
-            return LIBCOUCHBASE_CLIENT_ENOMEM;
+            return LCB_CLIENT_ENOMEM;
         }
 
         ringbuffer_write(&buffer, head, length);
@@ -154,7 +154,7 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
 
     if (ringbuffer_ensure_capacity(&buffer, 3) == -1) {
         free(copy);
-        return LIBCOUCHBASE_CLIENT_ENOMEM;
+        return LCB_CLIENT_ENOMEM;
     }
 
     ringbuffer_write(&buffer, "]}", 3); /* Include '\0' */
@@ -167,8 +167,8 @@ static libcouchbase_error_t create_memcached(const struct libcouchbase_memcached
 
     if (fail) {
         /* Hmm... internal error! */
-        return LIBCOUCHBASE_EINTERNAL;
+        return LCB_EINTERNAL;
     }
 
-    return LIBCOUCHBASE_SUCCESS;
+    return LCB_SUCCESS;
 }

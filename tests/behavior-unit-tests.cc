@@ -22,47 +22,40 @@ class Behavior : public ::testing::Test
 {
 public:
     virtual void SetUp() {
-        instance = libcouchbase_create(NULL, NULL, NULL, NULL, NULL);
+        instance = lcb_create(NULL, NULL, NULL, NULL, NULL);
     }
 
     virtual void TearDown() {
-        libcouchbase_destroy(instance);
+        lcb_destroy(instance);
     }
 
 protected:
-    libcouchbase_t instance;
+    lcb_t instance;
 
 };
 
 TEST_F(Behavior, CheckDefaultValues)
 {
-    EXPECT_EQ(LIBCOUCHBASE_ASYNCHRONOUS,
-              libcouchbase_behavior_get_syncmode(instance));
-    EXPECT_EQ(LIBCOUCHBASE_IPV6_DISABLED,
-              libcouchbase_behavior_get_ipv6(instance));
+    EXPECT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
+    EXPECT_EQ(LCB_IPV6_DISABLED, lcb_behavior_get_ipv6(instance));
 }
 
 TEST_F(Behavior, CheckSyncmode)
 {
-    libcouchbase_behavior_set_syncmode(instance, LIBCOUCHBASE_SYNCHRONOUS);
-    EXPECT_EQ(LIBCOUCHBASE_SYNCHRONOUS,
-              libcouchbase_behavior_get_syncmode(instance));
-    libcouchbase_behavior_set_syncmode(instance, LIBCOUCHBASE_ASYNCHRONOUS);
-    EXPECT_EQ(LIBCOUCHBASE_ASYNCHRONOUS,
-              libcouchbase_behavior_get_syncmode(instance));
+    lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
+    EXPECT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
+    lcb_behavior_set_syncmode(instance, LCB_ASYNCHRONOUS);
+    EXPECT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
 }
 
 TEST_F(Behavior, CheckIPv6)
 {
-    libcouchbase_behavior_set_ipv6(instance, LIBCOUCHBASE_IPV6_ONLY);
-    EXPECT_EQ(LIBCOUCHBASE_IPV6_ONLY,
-              libcouchbase_behavior_get_ipv6(instance));
+    lcb_behavior_set_ipv6(instance, LCB_IPV6_ONLY);
+    EXPECT_EQ(LCB_IPV6_ONLY, lcb_behavior_get_ipv6(instance));
 
-    libcouchbase_behavior_set_ipv6(instance, LIBCOUCHBASE_IPV6_ALLOW);
-    EXPECT_EQ(LIBCOUCHBASE_IPV6_ALLOW,
-              libcouchbase_behavior_get_ipv6(instance));
+    lcb_behavior_set_ipv6(instance, LCB_IPV6_ALLOW);
+    EXPECT_EQ(LCB_IPV6_ALLOW, lcb_behavior_get_ipv6(instance));
 
-    libcouchbase_behavior_set_ipv6(instance, LIBCOUCHBASE_IPV6_DISABLED);
-    EXPECT_EQ(LIBCOUCHBASE_IPV6_DISABLED,
-              libcouchbase_behavior_get_ipv6(instance));
+    lcb_behavior_set_ipv6(instance, LCB_IPV6_DISABLED);
+    EXPECT_EQ(LCB_IPV6_DISABLED, lcb_behavior_get_ipv6(instance));
 }

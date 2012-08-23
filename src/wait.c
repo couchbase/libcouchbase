@@ -16,7 +16,7 @@
  */
 #include "internal.h"
 
-static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
+static void breakout_vbucket_state_listener(lcb_server_t *server)
 {
     if (server->instance->vbucket_state_listener_last) {
         server->instance->vbucket_state_listener =
@@ -25,16 +25,16 @@ static void breakout_vbucket_state_listener(libcouchbase_server_t *server)
     }
     server->instance->io->delete_timer(server->instance->io,
                                        server->instance->timeout.event);
-    libcouchbase_maybe_breakout(server->instance);
+    lcb_maybe_breakout(server->instance);
 }
 
-static void initial_connect_timeout_handler(libcouchbase_socket_t sock,
+static void initial_connect_timeout_handler(lcb_socket_t sock,
                                             short which,
                                             void *arg)
 {
-    libcouchbase_t instance = arg;
-    libcouchbase_error_handler(instance, LIBCOUCHBASE_CONNECT_ERROR,
-                               "Could not connect to server within allotted time");
+    lcb_t instance = arg;
+    lcb_error_handler(instance, LCB_CONNECT_ERROR,
+                      "Could not connect to server within allotted time");
 
     if (instance->sock != INVALID_SOCKET) {
         /* Do we need to delete the event? */
@@ -47,7 +47,7 @@ static void initial_connect_timeout_handler(libcouchbase_socket_t sock,
 
     instance->io->delete_timer(instance->io, instance->timeout.event);
     instance->timeout.next = 0;
-    libcouchbase_maybe_breakout(instance);
+    lcb_maybe_breakout(instance);
 
     (void)sock;
     (void)which;
@@ -63,7 +63,7 @@ static void initial_connect_timeout_handler(libcouchbase_socket_t sock,
  * @param instance the instance to run the event loop for.
  */
 LIBCOUCHBASE_API
-int libcouchbase_is_waiting(libcouchbase_t instance)
+int lcb_is_waiting(lcb_t instance)
 {
     return instance->wait != 0;
 }
@@ -77,7 +77,7 @@ int libcouchbase_is_waiting(libcouchbase_t instance)
  * @author Trond Norbye
  */
 LIBCOUCHBASE_API
-void libcouchbase_wait(libcouchbase_t instance)
+void lcb_wait(lcb_t instance)
 {
     if (instance->wait != 0) {
         return;
@@ -102,12 +102,12 @@ void libcouchbase_wait(libcouchbase_t instance)
                                    instance,
                                    initial_connect_timeout_handler);
     }
-    if (instance->vbucket_config == NULL || libcouchbase_has_data_in_buffers(instance)
+    if (instance->vbucket_config == NULL || lcb_has_data_in_buffers(instance)
             || hashset_num_items(instance->timers) > 0) {
-        libcouchbase_size_t idx;
+        lcb_size_t idx;
         /* update timers on all servers */
         for (idx = 0; idx < instance->nservers; ++idx) {
-            libcouchbase_update_server_timer(instance->servers + idx);
+            lcb_update_server_timer(instance->servers + idx);
         }
         instance->io->run_event_loop(instance->io);
     } else {
@@ -115,7 +115,7 @@ void libcouchbase_wait(libcouchbase_t instance)
     }
 
     /*
-     * something else will call libcouchbase_maybe_breakout with a corresponding
+     * something else will call lcb_maybe_breakout with a corresponding
      * stop_event_loop()
      */
 }
@@ -126,7 +126,7 @@ void libcouchbase_wait(libcouchbase_t instance)
  * @param instance the instance to run the event loop for.
  */
 LIBCOUCHBASE_API
-void libcouchbase_breakout(libcouchbase_t instance)
+void lcb_breakout(lcb_t instance)
 {
     if (instance->wait) {
         instance->io->stop_event_loop(instance->io);

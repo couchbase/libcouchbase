@@ -18,33 +18,33 @@
 #include "internal.h"
 
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_set_verbosity(libcouchbase_t instance,
-                                                const void *command_cookie,
-                                                const char *server,
-                                                libcouchbase_verbosity_level_t level)
+lcb_error_t lcb_set_verbosity(lcb_t instance,
+                              const void *command_cookie,
+                              const char *server,
+                              lcb_verbosity_level_t level)
 {
-    libcouchbase_server_t *srv;
+    lcb_server_t *srv;
     protocol_binary_request_verbosity req;
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
     uint32_t lvl;
     int found = 0;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
     switch (level) {
-    case LIBCOUCHBASE_VERBOSITY_DETAIL:
+    case LCB_VERBOSITY_DETAIL:
         lvl = 3;
         break;
-    case LIBCOUCHBASE_VERBOSITY_DEBUG:
+    case LCB_VERBOSITY_DEBUG:
         lvl = 2;
         break;
-    case LIBCOUCHBASE_VERBOSITY_INFO:
+    case LCB_VERBOSITY_INFO:
         lvl = 1;
         break;
-    case LIBCOUCHBASE_VERBOSITY_WARNING:
+    case LCB_VERBOSITY_WARNING:
     default:
         lvl = 0;
     }
@@ -65,17 +65,17 @@ libcouchbase_error_t libcouchbase_set_verbosity(libcouchbase_t instance,
             continue;
         }
 
-        libcouchbase_server_start_packet(srv, command_cookie, req.bytes,
-                                         sizeof(req.bytes));
-        libcouchbase_server_end_packet(srv);
-        libcouchbase_server_send_packets(srv);
+        lcb_server_start_packet(srv, command_cookie, req.bytes,
+                                sizeof(req.bytes));
+        lcb_server_end_packet(srv);
+        lcb_server_send_packets(srv);
         found = 1;
     }
 
     if (server && found == 0) {
-        return libcouchbase_synchandler_return(instance,
-                                               LIBCOUCHBASE_UNKNOWN_HOST);
+        return lcb_synchandler_return(instance,
+                                      LCB_UNKNOWN_HOST);
     }
 
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

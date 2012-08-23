@@ -49,9 +49,7 @@ enum cbc_command_t {
     cbc_create,
     cbc_flush,
     cbc_lock,
-    cbc_receive,
     cbc_rm,
-    cbc_send,
     cbc_stats,
     cbc_unlock,
     cbc_verify,
@@ -68,66 +66,71 @@ enum cbc_command_t {
 
 struct cp_params {
     list<string> *keys;
-    map<string, vector<libcouchbase_cas_t> > results;
-    libcouchbase_size_t sent;
+    map<string, vector<lcb_cas_t> > results;
+    lcb_size_t sent;
     bool need_persisted;
     int need_replicated;
     size_t total_persisted;
     size_t total_replicated;
     int max_tries;
     int tries;
-    libcouchbase_uint32_t timeout;
+    lcb_uint32_t timeout;
 };
 
 extern "C" {
     // libcouchbase use a C linkage!
 
-    static void error_callback(libcouchbase_t instance,
-                               libcouchbase_error_t error,
+    static void error_callback(lcb_t instance,
+                               lcb_error_t error,
                                const char *errinfo)
     {
-        cerr << "ERROR: " << libcouchbase_strerror(instance, error) << endl;
+        cerr << "ERROR: " << lcb_strerror(instance, error) << endl;
         if (errinfo) {
             cerr << "\t\"" << errinfo << "\"" << endl;
         }
         exit(EXIT_FAILURE);
     }
 
-    void observe_timer_callback(libcouchbase_timer_t timer,
-                                libcouchbase_t instance,
+    void observe_timer_callback(lcb_timer_t timer,
+                                lcb_t instance,
                                 const void *cookie)
     {
         // perform observe query
         struct cp_params *params = (struct cp_params *)cookie;
         int idx = 0;
-        libcouchbase_error_t err;
-        const char* *k = new const char*[params->keys->size()];
-        libcouchbase_size_t *s = new libcouchbase_size_t[params->keys->size()];
+        lcb_error_t err;
+
+        lcb_observe_cmd_t *items = new lcb_observe_cmd_t[params->keys->size()];
+        lcb_observe_cmd_t* *args = new lcb_observe_cmd_t* [params->keys->size()];
 
         for (list<string>::iterator iter = params->keys->begin();
                 iter != params->keys->end(); ++iter, ++idx) {
-            k[idx] = iter->c_str();
-            s[idx] = iter->length();
+            args[idx] = &items[idx];
+            memset(&items[idx], 0, sizeof(items[idx]));
+            items[idx].v.v0.key = iter->c_str();
+            items[idx].v.v0.nkey = iter->length();
         }
-        err = libcouchbase_observe(instance, static_cast<const void *>(params), idx, (const void * const *)k, s);
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        err = lcb_observe(instance, static_cast<const void *>(params), idx,
+                          args);
+        if (err != LCB_SUCCESS) {
             // report the issue and exit
             error_callback(instance, err, "Failed to schedule observe query");
         }
-        delete []k;
-        delete []s;
+
+        delete []items;
+        delete []args;
         (void)timer;
     }
 
-    void schedule_observe(libcouchbase_t instance, struct cp_params *params)
+    void schedule_observe(lcb_t instance, struct cp_params *params)
     {
-        libcouchbase_error_t err;
+        lcb_error_t err;
         if (params->tries > params->max_tries) {
-            error_callback(instance, LIBCOUCHBASE_ETIMEDOUT, "Exceeded number of tries");
+            error_callback(instance, LCB_ETIMEDOUT, "Exceeded number of tries");
         }
-        libcouchbase_timer_create(instance, params, params->timeout, 0,
-                                  observe_timer_callback, &err);
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        lcb_timer_create(instance, params, params->timeout, 0,
+                         observe_timer_callback, &err);
+        if (err != LCB_SUCCESS) {
             // report the issue and exit
             error_callback(instance, err, "Failed to setup timer for observe");
         }
@@ -136,12 +139,11 @@ extern "C" {
         params->total_persisted = params->total_replicated = 0;
     }
 
-    static void storage_callback(libcouchbase_t instance,
-                                 const void *cookie,
-                                 libcouchbase_storage_t,
-                                 libcouchbase_error_t error,
-                                 const void *key, libcouchbase_size_t nkey,
-                                 libcouchbase_cas_t cas)
+    static void store_callback(lcb_t instance,
+                               const void *cookie,
+                               lcb_storage_t,
+                               lcb_error_t error,
+                               const lcb_store_resp_t *item)
     {
         struct cp_params *params = static_cast<struct cp_params *>(const_cast<void *>(cookie));
         if (params && (params->need_persisted || params->need_replicated > 0)) {
@@ -151,106 +153,102 @@ extern "C" {
                 schedule_observe(instance, params);
             }
         } else {
-            if (error == LIBCOUCHBASE_SUCCESS) {
-                cerr << "Stored \"";
-                cerr.write(static_cast<const char *>(key), nkey);
-                cerr << "\" CAS:" << hex << cas << endl;
+            string key((const char *)item->v.v0.key, (size_t)item->v.v0.nkey);
+            if (error == LCB_SUCCESS) {
+                cerr << "Stored \"" << key.c_str() << hex
+                     << "\" CAS:" << item->v.v0.cas << endl;
             } else {
-                cerr << "Failed to store \"";
-                cerr.write(static_cast<const char *>(key), nkey);
-                cerr << "\":" << endl
-                     << libcouchbase_strerror(instance, error) << endl;
+                cerr << "Failed to store \"" << key.c_str() << "\":" << endl
+                     << lcb_strerror(instance, error) << endl;
 
-                void *instance_cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+                void *instance_cookie = const_cast<void *>(lcb_get_cookie(instance));
                 bool *e = static_cast<bool *>(instance_cookie);
                 *e = true;
             }
         }
     }
 
-    static void remove_callback(libcouchbase_t instance,
+    static void remove_callback(lcb_t instance,
                                 const void *,
-                                libcouchbase_error_t error,
-                                const void *key, libcouchbase_size_t nkey)
+                                lcb_error_t error,
+                                const lcb_remove_resp_t *resp)
     {
-        if (error == LIBCOUCHBASE_SUCCESS) {
-            cerr << "Removed \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\"" << endl;
+        string key((const char *)resp->v.v0.key, (size_t)resp->v.v0.nkey);
+
+        if (error == LCB_SUCCESS) {
+            cerr << "Removed \"" << key.c_str() << "\"" << endl;
         } else {
-            cerr << "Failed to remove \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\":" << endl
-                 << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            cerr << "Failed to remove \"" << key.c_str() << "\":" << endl
+                 << lcb_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
-    static void unlock_callback(libcouchbase_t instance,
+    static void unlock_callback(lcb_t instance,
                                 const void *,
-                                libcouchbase_error_t error,
-                                const void *key, libcouchbase_size_t nkey)
+                                lcb_error_t error,
+                                const lcb_unlock_resp_t *resp)
     {
-        if (error == LIBCOUCHBASE_SUCCESS) {
-            cerr << "Unlocked \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\"" << endl;
+        string key((const char *)resp->v.v0.key, (size_t)resp->v.v0.nkey);
+        if (error == LCB_SUCCESS) {
+            cerr << "Unlocked \"" << key.c_str() << "\"" << endl;
         } else {
-            cerr << "Failed to unlock \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\":" << endl
-                 << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            cerr << "Failed to unlock \"" << key.c_str() << "\":" << endl
+                 << lcb_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
-    static void get_callback(libcouchbase_t instance,
+    static void get_callback(lcb_t instance,
                              const void *,
-                             libcouchbase_error_t error,
-                             const void *key, libcouchbase_size_t nkey,
-                             const void *bytes, libcouchbase_size_t nbytes,
-                             libcouchbase_uint32_t flags, libcouchbase_cas_t cas)
+                             lcb_error_t error,
+                             const lcb_get_resp_t *resp)
     {
-        if (error == LIBCOUCHBASE_SUCCESS) {
-            cerr << "\"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\" Size:" << nbytes << " Flags:" << std::hex
-                 << flags << " CAS:" << cas << endl;
+        string key((const char *)resp->v.v0.key, (size_t)resp->v.v0.nkey);
+        if (error == LCB_SUCCESS) {
+            cerr << "\"" << key.c_str()
+                 << "\" Size:" << resp->v.v0.nbytes
+                 << hex
+                 << " Flags:" << resp->v.v0.flags
+                 << " CAS:" << resp->v.v0.cas << endl;
             cerr.flush();
-            cout.write(static_cast<const char *>(bytes), nbytes);
+            cout.write(static_cast<const char *>(resp->v.v0.bytes),
+                       resp->v.v0.nbytes);
             cout.flush();
         } else {
-            cerr << "Failed to get \"";
-            cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\": " << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            cerr << "Failed to get \"" << key.c_str() << "\": "
+                 << lcb_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
-    static void verify_callback(libcouchbase_t instance,
+    static void verify_callback(lcb_t instance,
                                 const void *,
-                                libcouchbase_error_t error,
-                                const void *key, libcouchbase_size_t nkey,
-                                const void *bytes, libcouchbase_size_t nbytes,
-                                libcouchbase_uint32_t, libcouchbase_cas_t)
+                                lcb_error_t error,
+                                const lcb_get_resp_t *resp)
     {
-        if (error == LIBCOUCHBASE_SUCCESS) {
+        const void *key = resp->v.v0.key;
+        lcb_size_t nkey = resp->v.v0.nkey;
+        const void *bytes = resp->v.v0.bytes;
+        lcb_size_t nbytes = resp->v.v0.nbytes;
+
+        if (error == LCB_SUCCESS) {
             char fnm[FILENAME_MAX];
             memcpy(fnm, key, nkey);
             fnm[nkey] = '\0';
             struct stat st;
             if (stat(fnm, &st) == -1) {
                 cerr << "Failed to look up: \"" << fnm << "\"" << endl;
-            } else if ((libcouchbase_size_t)st.st_size != nbytes) {
+            } else if ((lcb_size_t)st.st_size != nbytes) {
                 cerr << "Incorrect size for: \"" << fnm << "\"" << endl;
             } else {
-                char *dta = new char[(libcouchbase_size_t)st.st_size];
+                char *dta = new char[(lcb_size_t)st.st_size];
                 if (dta == NULL) {
                     cerr << "Failed to allocate memory to compare: \""
                          << fnm << "\"" << endl;
@@ -269,23 +267,23 @@ extern "C" {
         } else {
             cerr << "Failed to get \"";
             cerr.write(static_cast<const char *>(key), nkey);
-            cerr << "\": " << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            cerr << "\": " << lcb_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
-    static void stat_callback(libcouchbase_t instance,
+    static void stat_callback(lcb_t instance,
                               const void *,
                               const char *server_endpoint,
-                              libcouchbase_error_t error,
+                              lcb_error_t error,
                               const void *key,
-                              libcouchbase_size_t nkey,
+                              lcb_size_t nkey,
                               const void *value,
-                              libcouchbase_size_t nvalue)
+                              lcb_size_t nvalue)
     {
-        if (error == LIBCOUCHBASE_SUCCESS) {
+        if (error == LCB_SUCCESS) {
             if (nkey > 0) {
                 cout << server_endpoint << "\t";
                 cout.write(static_cast<const char *>(key), nkey);
@@ -295,47 +293,47 @@ extern "C" {
             }
         } else {
             cerr << "Failure requesting stats:" << endl
-                 << libcouchbase_strerror(instance, error) << endl;
+                 << lcb_strerror(instance, error) << endl;
 
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
-    static void flush_callback(libcouchbase_t instance,
+    static void flush_callback(lcb_t instance,
                                const void *,
                                const char *server_endpoint,
-                               libcouchbase_error_t error)
+                               lcb_error_t error)
     {
-        if (error != LIBCOUCHBASE_SUCCESS) {
+        if (error != LCB_SUCCESS) {
             cerr << "Failed to flush node \"" << server_endpoint
-                 << "\": " << libcouchbase_strerror(instance, error)
+                 << "\": " << lcb_strerror(instance, error)
                  << endl;
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+            void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 
-    static void timings_callback(libcouchbase_t, const void *,
-                                 libcouchbase_timeunit_t timeunit,
-                                 libcouchbase_uint32_t min, libcouchbase_uint32_t max,
-                                 libcouchbase_uint32_t total, libcouchbase_uint32_t maxtotal)
+    static void timings_callback(lcb_t, const void *,
+                                 lcb_timeunit_t timeunit,
+                                 lcb_uint32_t min, lcb_uint32_t max,
+                                 lcb_uint32_t total, lcb_uint32_t maxtotal)
     {
         char buffer[1024];
         int offset = sprintf(buffer, "[%3u - %3u]", min, max);
         switch (timeunit) {
-        case LIBCOUCHBASE_TIMEUNIT_NSEC:
+        case LCB_TIMEUNIT_NSEC:
             offset += sprintf(buffer + offset, "ns");
             break;
-        case LIBCOUCHBASE_TIMEUNIT_USEC:
+        case LCB_TIMEUNIT_USEC:
             offset += sprintf(buffer + offset, "us");
             break;
-        case LIBCOUCHBASE_TIMEUNIT_MSEC:
+        case LCB_TIMEUNIT_MSEC:
             offset += sprintf(buffer + offset, "ms");
             break;
-        case LIBCOUCHBASE_TIMEUNIT_SEC:
+        case LCB_TIMEUNIT_SEC:
             offset += sprintf(buffer + offset, "s");
             break;
         default:
@@ -355,71 +353,66 @@ extern "C" {
         cerr << buffer;
     }
 
-    static void data_callback(libcouchbase_http_request_t, libcouchbase_t,
-                              const void *, libcouchbase_error_t,
-                              libcouchbase_http_status_t,
-                              const char *, libcouchbase_size_t,
-                              const char * const *,
-                              const void *bytes, libcouchbase_size_t nbytes)
+    static void data_callback(lcb_http_request_t, lcb_t,
+                              const void *, lcb_error_t,
+                              const lcb_http_resp_t *resp)
     {
-        cout.write(static_cast<const char *>(bytes), nbytes);
+        cout.write(static_cast<const char *>(resp->v.v0.bytes), resp->v.v0.nbytes);
         cout.flush();
     }
 
-    static void complete_callback(libcouchbase_http_request_t,
-                                  libcouchbase_t instance,
-                                  const void *,
-                                  libcouchbase_error_t error,
-                                  libcouchbase_http_status_t status,
-                                  const char *path, libcouchbase_size_t npath,
-                                  const char * const *headers,
-                                  const void *bytes, libcouchbase_size_t nbytes)
+    static void complete_callback(lcb_http_request_t, lcb_t instance,
+                                  const void *, lcb_error_t error,
+                                  const lcb_http_resp_t *resp)
     {
-        if (headers) {
+        if (resp->v.v0.headers) {
+            const char * const*headers = resp->v.v0.headers;
             for (size_t ii = 1; *headers != NULL; ++ii, ++headers) {
                 cerr << *headers;
                 cerr << ((ii % 2 == 0) ? "\n" : ": ");
             }
         }
         cerr << "\"";
-        cerr.write(static_cast<const char *>(path), npath);
+        cerr.write(static_cast<const char *>(resp->v.v0.path), resp->v.v0.npath);
         cerr << "\": ";
-        if (error == LIBCOUCHBASE_SUCCESS) {
-            cerr << "OK Size:" << nbytes << endl;
-            cout.write(static_cast<const char *>(bytes), nbytes);
+        if (error == LCB_SUCCESS) {
+            cerr << "OK Size:" << resp->v.v0.nbytes << endl;
+            cout.write(static_cast<const char *>(resp->v.v0.bytes), resp->v.v0.nbytes);
         } else {
             cerr << "FAIL(" << error << ") "
-                 << libcouchbase_strerror(instance, error)
-                 << " Status:" << status
-                 << " Size:" << nbytes << endl;
-            cout.write(static_cast<const char *>(bytes), nbytes);
+                 << lcb_strerror(instance, error)
+                 << " Status:" << resp->v.v0.status
+                 << " Size:" << resp->v.v0.nbytes << endl;
+            cout.write(static_cast<const char *>(resp->v.v0.bytes), resp->v.v0.nbytes);
         }
         cout.flush();
     }
 
-    static void observe_callback(libcouchbase_t instance,
+    static void observe_callback(lcb_t instance,
                                  const void *cookie,
-                                 libcouchbase_error_t error,
-                                 libcouchbase_observe_t status,
-                                 const void *key,
-                                 libcouchbase_size_t nkey,
-                                 libcouchbase_cas_t cas,
-                                 int is_master,
-                                 libcouchbase_time_t ttp,
-                                 libcouchbase_time_t ttr)
+                                 lcb_error_t error,
+                                 const lcb_observe_resp_t *resp)
     {
-        void *instance_cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+        void *instance_cookie = const_cast<void *>(lcb_get_cookie(instance));
         bool *err = static_cast<bool *>(instance_cookie);
+
+        lcb_observe_t status = resp->v.v0.status;
+        const void *key = resp->v.v0.key;
+        lcb_size_t nkey = resp->v.v0.nkey;
+        lcb_cas_t cas = resp->v.v0.cas;
+        int is_master = resp->v.v0.from_master;
+        lcb_time_t ttp = resp->v.v0.ttp;
+        lcb_time_t ttr = resp->v.v0.ttr;
 
         if (cookie) {
             struct cp_params *params = (struct cp_params *)cookie;
             if (key) {
                 string key_str = string(static_cast<const char *>(key), nkey);
-                vector<libcouchbase_cas_t> &res = params->results[key_str];
+                vector<lcb_cas_t> &res = params->results[key_str];
                 if (res.size() == 0) {
                     res.resize(1);
                 }
-                if (status == LIBCOUCHBASE_OBSERVE_PERSISTED) {
+                if (status == LCB_OBSERVE_PERSISTED) {
                     if (is_master) {
                         params->total_persisted++;
                         res[0] = cas;
@@ -442,12 +435,12 @@ extern "C" {
                     ok &= params->total_replicated == (nkeys * params->need_replicated);
                 }
                 if (ok) {
-                    map<string, libcouchbase_cas_t> done;
+                    map<string, lcb_cas_t> done;
                     for (list<string>::iterator ii = params->keys->begin();
                             ii != params->keys->end(); ++ii) {
                         string kk = *ii;
-                        vector<libcouchbase_cas_t> &res = params->results[kk];
-                        libcouchbase_cas_t cc = res[0];
+                        vector<lcb_cas_t> &res = params->results[kk];
+                        lcb_cas_t cc = res[0];
                         if (cc == 0) {
                             // the key wasn't persisted on master, but
                             // replicas might have old version persisted
@@ -456,7 +449,7 @@ extern "C" {
                         } else {
                             if (params->need_replicated > 0) {
                                 int matching_cas = 0;
-                                for (vector<libcouchbase_cas_t>::iterator jj = res.begin() + 1;
+                                for (vector<lcb_cas_t>::iterator jj = res.begin() + 1;
                                         jj != res.end(); ++jj) {
                                     if (*jj == cc) {
                                         matching_cas++;
@@ -473,7 +466,7 @@ extern "C" {
                     }
                     // all or nothing
                     if (done.size() == params->keys->size()) {
-                        for (map<string, libcouchbase_cas_t>::iterator ii = done.begin();
+                        for (map<string, lcb_cas_t>::iterator ii = done.begin();
                                 ii != done.end(); ++ii) {
                             cerr << "Stored \"" << ii->first << "\" CAS:" << hex << ii->second << endl;
                         }
@@ -488,15 +481,15 @@ extern "C" {
             if (key == NULL) {
                 return; /* end of packet */
             }
-            if (error == LIBCOUCHBASE_SUCCESS) {
+            if (error == LCB_SUCCESS) {
                 switch (status) {
-                case LIBCOUCHBASE_OBSERVE_FOUND:
+                case LCB_OBSERVE_FOUND:
                     cerr << "FOUND";
                     break;
-                case LIBCOUCHBASE_OBSERVE_PERSISTED:
+                case LCB_OBSERVE_PERSISTED:
                     cerr << "PERSISTED";
                     break;
-                case LIBCOUCHBASE_OBSERVE_NOT_FOUND:
+                case LCB_OBSERVE_NOT_FOUND:
                     cerr << "NOT_FOUND";
                     break;
                 default:
@@ -505,41 +498,41 @@ extern "C" {
                 }
                 cerr << " \"";
                 cerr.write(static_cast<const char *>(key), nkey);
-                if (status == LIBCOUCHBASE_OBSERVE_FOUND ||
-                        status == LIBCOUCHBASE_OBSERVE_PERSISTED) {
-                    cerr << "\" CAS:" << std::hex << cas;
+                if (status == LCB_OBSERVE_FOUND ||
+                        status == LCB_OBSERVE_PERSISTED) {
+                    cerr << "\" CAS:" << hex << cas;
                 }
-                cerr << " IsMaster:" << std::boolalpha << (bool)is_master
-                     << std::dec << " TimeToPersist:" << ttp
+                cerr << " IsMaster:" << boolalpha << (bool)is_master
+                     << dec << " TimeToPersist:" << ttp
                      << " TimeToReplicate:" << ttr << endl;
             } else {
-                cerr << "Failed to observe: " << libcouchbase_strerror(instance, error) << endl;
+                cerr << "Failed to observe: " << lcb_strerror(instance, error) << endl;
                 *err = true;
             }
         }
     }
 
-    static void verbosity_callback(libcouchbase_t instance,
+    static void verbosity_callback(lcb_t instance,
                                    const void *,
                                    const char *endpoint,
-                                   libcouchbase_error_t error)
+                                   lcb_error_t error)
     {
-        if (error != LIBCOUCHBASE_SUCCESS) {
+        if (error != LCB_SUCCESS) {
             cerr << "Failed to set verbosity level on \"" << endpoint << "\": "
-                 << libcouchbase_strerror(instance, error) << endl;
-            void *cookie = const_cast<void *>(libcouchbase_get_cookie(instance));
+                 << lcb_strerror(instance, error) << endl;
+            void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
             *err = true;
         }
     }
 }
 
-static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json, bool persisted, int replicated, int max_tries)
+static bool cp_impl(lcb_t instance, list<string> &keys, bool json, bool persisted, int replicated, int max_tries)
 {
-    libcouchbase_size_t currsz = 0;
+    lcb_size_t currsz = 0;
     struct cp_params *cookie = new struct cp_params();
 
-    cookie->results = map<string, vector<libcouchbase_cas_t> >();
+    cookie->results = map<string, vector<lcb_cas_t> >();
     cookie->keys = &keys;
     cookie->need_persisted = persisted;
     cookie->need_replicated = replicated;
@@ -551,7 +544,7 @@ static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json, bool
         string key = *ii;
         struct stat st;
         if (stat(key.c_str(), &st) == 0) {
-            char *bytes = new char[(libcouchbase_size_t)st.st_size + 1];
+            char *bytes = new char[(lcb_size_t)st.st_size + 1];
             if (bytes != NULL) {
                 ifstream file(key.c_str(), ios::binary);
                 if (file.good() && file.read(bytes, st.st_size) && file.good()) {
@@ -578,19 +571,19 @@ static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json, bool
 #else
                     (void)json;
 #endif
-                    libcouchbase_store(instance,
-                                       static_cast<void *>(cookie),
-                                       LIBCOUCHBASE_SET,
-                                       key.c_str(), key.length(),
-                                       bytes, (libcouchbase_size_t)st.st_size,
-                                       0, 0, 0);
+                    lcb_store_cmd_t item(LCB_SET, key.c_str(),
+                                         key.length(), bytes,
+                                         (lcb_size_t)st.st_size);
+                    lcb_store_cmd_t *items[1] = { &item };
+                    lcb_store(instance, static_cast<void *>(cookie),
+                              1, items);
                     delete []bytes;
-                    currsz += (libcouchbase_size_t)st.st_size;
+                    currsz += (lcb_size_t)st.st_size;
 
                     // To avoid too much buffering flush at a regular
                     // interval
                     if (currsz > (2 * 1024 * 1024)) {
-                        libcouchbase_wait(instance);
+                        lcb_wait(instance);
                         currsz = 0;
                     }
                 } else {
@@ -612,7 +605,7 @@ static bool cp_impl(libcouchbase_t instance, list<string> &keys, bool json, bool
     return true;
 }
 
-static bool rm_impl(libcouchbase_t instance, list<string> &keys)
+static bool rm_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to delete" << endl;
@@ -621,101 +614,134 @@ static bool rm_impl(libcouchbase_t instance, list<string> &keys)
 
     for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
         string key = *ii;
-        libcouchbase_error_t err;
-        err = libcouchbase_remove(instance, NULL, key.c_str(), key.length(), 0);
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        lcb_error_t err;
+
+        lcb_remove_cmd_t item;
+        memset(&item, 0, sizeof(item));
+        item.v.v0.key = key.c_str();
+        item.v.v0.nkey = key.length();
+        lcb_remove_cmd_t *items[] = { &item };
+        err = lcb_remove(instance, NULL, 1, items);
+        if (err != LCB_SUCCESS) {
             cerr << "Failed to remove \"" << key << "\":" << endl
-                 << libcouchbase_strerror(instance, err) << endl;
+                 << lcb_strerror(instance, err) << endl;
             return false;
         }
     }
     return true;
 }
 
-static bool cat_impl(libcouchbase_t instance, list<string> &keys, bool replica)
+static bool cat_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to get" << endl;
         return false;
     }
+    lcb_get_cmd_t *items = new lcb_get_cmd_t[keys.size()];
+    lcb_get_cmd_t* *args = new lcb_get_cmd_t* [keys.size()];
 
-    const char* *k = new const char*[keys.size()];
-    libcouchbase_size_t *s = new libcouchbase_size_t[keys.size()];
     int idx = 0;
-    libcouchbase_error_t err;
+    lcb_error_t err;
 
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter, ++idx) {
-        k[idx] = iter->c_str();
-        s[idx] = iter->length();
+        args[idx] = &items[idx];
+        memset(&items[idx], 0, sizeof(items[idx]));
+        items[idx].v.v0.key = iter->c_str();
+        items[idx].v.v0.nkey = iter->length();
     }
-    if (replica) {
-        err = libcouchbase_get_replica(instance, NULL, idx,
-                                       (const void * const *)k, s);
-    } else {
-        err = libcouchbase_mget(instance, NULL, idx,
-                                (const void * const *)k,
-                                s, NULL);
-    }
-    delete []k;
-    delete []s;
-    if (err != LIBCOUCHBASE_SUCCESS) {
+    err = lcb_get(instance, NULL, idx, args);
+    delete []items;
+    delete []args;
+    if (err != LCB_SUCCESS) {
         cerr << "Failed to send requests:" << endl
-             << libcouchbase_strerror(instance, err) << endl;
+             << lcb_strerror(instance, err) << endl;
         return false;
     }
 
     return true;
 }
 
-static bool observe_impl(libcouchbase_t instance, list<string> &keys)
+static bool cat_replica_impl(lcb_t instance, list<string> &keys)
+{
+    if (keys.empty()) {
+        cerr << "ERROR: you need to specify the key to get" << endl;
+        return false;
+    }
+    lcb_get_replica_cmd_t *items = new lcb_get_replica_cmd_t[keys.size()];
+    lcb_get_replica_cmd_t* *args = new lcb_get_replica_cmd_t* [keys.size()];
+
+    int idx = 0;
+    lcb_error_t err;
+
+    for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter, ++idx) {
+        args[idx] = &items[idx];
+        memset(&items[idx], 0, sizeof(items[idx]));
+        items[idx].v.v0.key = iter->c_str();
+        items[idx].v.v0.nkey = iter->length();
+    }
+    err = lcb_get_replica(instance, NULL, idx, args);
+
+    delete []items;
+    delete []args;
+    if (err != LCB_SUCCESS) {
+        cerr << "Failed to send requests:" << endl
+             << lcb_strerror(instance, err) << endl;
+        return false;
+    }
+
+    return true;
+}
+
+static bool observe_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to observe" << endl;
         return false;
     }
 
-    const char* *k = new const char*[keys.size()];
-    libcouchbase_size_t *s = new libcouchbase_size_t[keys.size()];
+    lcb_observe_cmd_t *items = new lcb_observe_cmd_t[keys.size()];
+    lcb_observe_cmd_t* *args = new lcb_observe_cmd_t* [keys.size()];
 
     int idx = 0;
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter, ++idx) {
-        k[idx] = iter->c_str();
-        s[idx] = iter->length();
+        args[idx] = &items[idx];
+        memset(&items[idx], 0, sizeof(items[idx]));
+        items[idx].v.v0.key = iter->c_str();
+        items[idx].v.v0.nkey = iter->length();
     }
 
-    libcouchbase_error_t err = libcouchbase_observe(instance, NULL, idx,
-                                                    (const void * const *)k, s);
+    lcb_error_t err = lcb_observe(instance, NULL, idx, args);
 
-    delete []k;
-    delete []s;
+    delete []items;
+    delete []args;
 
-    if (err != LIBCOUCHBASE_SUCCESS) {
+    if (err != LCB_SUCCESS) {
         cerr << "Failed to send requests:" << endl
-             << libcouchbase_strerror(instance, err) << endl;
+             << lcb_strerror(instance, err) << endl;
         return false;
     }
 
     return true;
 }
 
-static bool verbosity_impl(libcouchbase_t instance, list<string> &args)
+static bool verbosity_impl(lcb_t instance, list<string> &args)
 {
     if (args.empty()) {
         cerr << "ERROR: You need to specify the verbosity level" << endl;
         return false;
     }
 
-    libcouchbase_verbosity_level_t level;
+    lcb_verbosity_level_t level;
     string &s = args.front();
 
     if (s == "detail") {
-        level = LIBCOUCHBASE_VERBOSITY_DETAIL;
+        level = LCB_VERBOSITY_DETAIL;
     } else if (s == "debug") {
-        level = LIBCOUCHBASE_VERBOSITY_DEBUG;
+        level = LCB_VERBOSITY_DEBUG;
     } else if (s == "info") {
-        level = LIBCOUCHBASE_VERBOSITY_INFO;
+        level = LCB_VERBOSITY_INFO;
     } else if (s == "warning") {
-        level = LIBCOUCHBASE_VERBOSITY_WARNING;
+        level = LCB_VERBOSITY_WARNING;
     } else {
         cerr << "ERROR: Unknown verbosity level [detail,debug,info,warning]: "
              << s << endl;
@@ -723,22 +749,22 @@ static bool verbosity_impl(libcouchbase_t instance, list<string> &args)
     }
     args.pop_front();
 
-    libcouchbase_error_t err;
+    lcb_error_t err;
     if (args.empty()) {
-        err = libcouchbase_set_verbosity(instance, NULL, NULL, level);
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        err = lcb_set_verbosity(instance, NULL, NULL, level);
+        if (err != LCB_SUCCESS) {
             cerr << "Failed to set verbosity : " << endl
-                 << libcouchbase_strerror(instance, err) << endl;
+                 << lcb_strerror(instance, err) << endl;
             return false;
         }
     } else {
         list<string>::iterator iter;
         for (iter = args.begin(); iter != args.end(); ++iter) {
-            err = libcouchbase_set_verbosity(instance, NULL,
-                                             iter->c_str(), level);
-            if (err != LIBCOUCHBASE_SUCCESS) {
+            err = lcb_set_verbosity(instance, NULL,
+                                    iter->c_str(), level);
+            if (err != LCB_SUCCESS) {
                 cerr << "Failed to set verbosity : " << endl
-                     << libcouchbase_strerror(instance, err) << endl;
+                     << lcb_strerror(instance, err) << endl;
                 return false;
             }
         }
@@ -747,7 +773,7 @@ static bool verbosity_impl(libcouchbase_t instance, list<string> &args)
     return true;
 }
 
-static bool hash_impl(libcouchbase_t instance, list<string> &keys)
+static bool hash_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to hash" << endl;
@@ -757,16 +783,16 @@ static bool hash_impl(libcouchbase_t instance, list<string> &keys)
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
         int vbucket_id, idx;
         (void)vbucket_map(instance->vbucket_config, iter->c_str(), iter->length(), &vbucket_id, &idx);
-        libcouchbase_server_t *server = instance->servers + idx;
+        lcb_server_t *server = instance->servers + idx;
         cout << "\"" << *iter << "\"\t" << "vBucket:" << vbucket_id
              << " Server:\"" << server->authority << "\"";
         if (server->couch_api_base) {
             cout << " CouchAPI:\"" << server->couch_api_base << "\"";
         }
-        libcouchbase_size_t nrepl = (libcouchbase_size_t)vbucket_config_get_num_replicas(instance->vbucket_config);
+        lcb_size_t nrepl = (lcb_size_t)vbucket_config_get_num_replicas(instance->vbucket_config);
         if (nrepl > 0) {
             cout << " Replicas:";
-            for (libcouchbase_size_t ii = 0; ii < nrepl; ++ii) {
+            for (lcb_size_t ii = 0; ii < nrepl; ++ii) {
                 cout << "\"" << instance->servers[ii].authority << "\"";
                 if (ii != nrepl - 1) {
                     cout << ",";
@@ -779,68 +805,81 @@ static bool hash_impl(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool view_impl(libcouchbase_t instance, string &query, string &data,
-                      bool chunked, libcouchbase_http_method_t method)
+static bool view_impl(lcb_t instance, string &query, string &data,
+                      bool chunked, lcb_http_method_t method)
 {
-    libcouchbase_error_t rc;
-
-    libcouchbase_make_http_request(instance, NULL,
-                                   LIBCOUCHBASE_HTTP_TYPE_VIEW,
-                                   query.c_str(), query.length(),
-                                   data.c_str(), data.length(), method,
-                                   chunked, "application/json", &rc);
-    if (rc != LIBCOUCHBASE_SUCCESS) {
+    lcb_error_t rc;
+    lcb_http_cmd_t cmd;
+    cmd.version = 0;
+    cmd.v.v0.path = query.c_str();
+    cmd.v.v0.npath = query.length();
+    cmd.v.v0.body = data.c_str();
+    cmd.v.v0.nbody = data.length();
+    cmd.v.v0.method = method;
+    cmd.v.v0.chunked = chunked;
+    cmd.v.v0.content_type = "application/json";
+    lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW, &cmd, &rc);
+    if (rc != LCB_SUCCESS) {
         cerr << "Failed to send requests:" << endl
-             << libcouchbase_strerror(instance, rc) << endl;
+             << lcb_strerror(instance, rc) << endl;
         return false;
     }
     return true;
 }
 
-static bool admin_impl(libcouchbase_t instance, string &query, string &data,
-                       bool chunked, libcouchbase_http_method_t method)
+static bool admin_impl(lcb_t instance, string &query, string &data,
+                       bool chunked, lcb_http_method_t method)
 {
-    libcouchbase_error_t rc;
-
-    libcouchbase_make_http_request(instance, NULL,
-                                   LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT,
-                                   query.c_str(), query.length(),
-                                   data.c_str(), data.length(), method, chunked,
-                                   "application/x-www-form-urlencoded", &rc);
-    if (rc != LIBCOUCHBASE_SUCCESS) {
+    lcb_error_t rc;
+    lcb_http_cmd_t cmd;
+    cmd.version = 0;
+    cmd.v.v0.path = query.c_str();
+    cmd.v.v0.npath = query.length();
+    cmd.v.v0.body = data.c_str();
+    cmd.v.v0.nbody = data.length();
+    cmd.v.v0.method = method;
+    cmd.v.v0.chunked = chunked;
+    cmd.v.v0.content_type = "application/x-www-form-urlencoded";
+    lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, &rc);
+    if (rc != LCB_SUCCESS) {
         cerr << "Failed to send requests: " << endl
-             << libcouchbase_strerror(instance, rc) << endl;
+             << lcb_strerror(instance, rc) << endl;
         return false;
     }
     return true;
 }
 
-static bool bucket_delete_impl(libcouchbase_t instance, list<string> &names)
+static bool bucket_delete_impl(lcb_t instance, list<string> &names)
 {
-    libcouchbase_error_t rc;
+    lcb_error_t rc;
 
     for (list<string>::iterator iter = names.begin(); iter != names.end(); ++iter) {
         string query = "/pools/default/buckets/" + *iter;
-        libcouchbase_make_http_request(instance, NULL,
-                                       LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT,
-                                       query.c_str(), query.length(),
-                                       NULL, 0, LIBCOUCHBASE_HTTP_METHOD_DELETE, false,
-                                       "application/x-www-form-urlencoded", &rc);
-        if (rc != LIBCOUCHBASE_SUCCESS) {
+        lcb_http_cmd_t cmd;
+        cmd.version = 0;
+        cmd.v.v0.path = query.c_str();
+        cmd.v.v0.npath = query.length();
+        cmd.v.v0.body = NULL;
+        cmd.v.v0.nbody = 0;
+        cmd.v.v0.method = LCB_HTTP_METHOD_DELETE;
+        cmd.v.v0.chunked = false;
+        cmd.v.v0.content_type = "application/x-www-form-urlencoded";
+        lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, &rc);
+        if (rc != LCB_SUCCESS) {
             cerr << "Failed to send requests: " << endl
-                 << libcouchbase_strerror(instance, rc) << endl;
+                 << lcb_strerror(instance, rc) << endl;
             return false;
         }
     }
     return true;
 }
 
-static bool bucket_create_impl(libcouchbase_t instance, list<string> &names,
+static bool bucket_create_impl(lcb_t instance, list<string> &names,
                                string &bucket_type, string &auth_type, int ram_quota,
                                string &sasl_password, int replica_num, int proxy_port)
 {
-    libcouchbase_error_t rc;
-    const char query[] = "/pools/default/buckets";
+    lcb_error_t rc;
+    string query = "/pools/default/buckets";
 
     if (names.empty()) {
         cerr << "ERROR: you need to specify at least on bucket name" << endl;
@@ -857,22 +896,26 @@ static bool bucket_create_impl(libcouchbase_t instance, list<string> &names,
         if (proxy_port > 0) {
             data << "&proxyPort=" << proxy_port;
         }
-        libcouchbase_make_http_request(instance, NULL,
-                                       LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT,
-                                       query, sizeof(query) - 1,
-                                       data.str().c_str(), data.str().length(),
-                                       LIBCOUCHBASE_HTTP_METHOD_POST, false,
-                                       "application/x-www-form-urlencoded", &rc);
-        if (rc != LIBCOUCHBASE_SUCCESS) {
+        lcb_http_cmd_t cmd;
+        cmd.version = 0;
+        cmd.v.v0.path = query.c_str();
+        cmd.v.v0.npath = query.length();
+        cmd.v.v0.body = data.str().c_str();
+        cmd.v.v0.nbody = data.str().length();
+        cmd.v.v0.method = LCB_HTTP_METHOD_POST;
+        cmd.v.v0.chunked = false;
+        cmd.v.v0.content_type = "application/x-www-form-urlencoded";
+        lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, &rc);
+        if (rc != LCB_SUCCESS) {
             cerr << "Failed to send requests: " << endl
-                 << libcouchbase_strerror(instance, rc) << endl;
+                 << lcb_strerror(instance, rc) << endl;
             return false;
         }
     }
     return true;
 }
 
-static bool lock_impl(libcouchbase_t instance, list<string> &keys, libcouchbase_time_t exptime)
+static bool lock_impl(lcb_t instance, list<string> &keys, lcb_time_t exptime)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to lock" << endl;
@@ -880,14 +923,16 @@ static bool lock_impl(libcouchbase_t instance, list<string> &keys, libcouchbase_
     }
 
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
-        libcouchbase_error_t err = libcouchbase_getl(instance, NULL,
-                                                     (const void *)iter->c_str(),
-                                                     (libcouchbase_size_t)iter->length(),
-                                                     &exptime);
+        lcb_get_locked_cmd_t item;
+        item.v.v0.key = (const void *)iter->c_str();
+        item.v.v0.nkey = (lcb_size_t)iter->length();
+        item.v.v0.exptime = exptime;
 
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        lcb_get_locked_cmd_t *items[] = { &item };
+        lcb_error_t err = lcb_get_locked(instance, NULL, 1, items);
+        if (err != LCB_SUCCESS) {
             cerr << "Failed to send requests:" << endl
-                 << libcouchbase_strerror(instance, err) << endl;
+                 << lcb_strerror(instance, err) << endl;
             return false;
         }
 
@@ -895,7 +940,7 @@ static bool lock_impl(libcouchbase_t instance, list<string> &keys, libcouchbase_
     return true;
 }
 
-static bool unlock_impl(libcouchbase_t instance, list<string> &keys)
+static bool unlock_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to unlock" << endl;
@@ -909,17 +954,22 @@ static bool unlock_impl(libcouchbase_t instance, list<string> &keys)
     }
 
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
-        libcouchbase_cas_t cas;
+        lcb_cas_t cas;
         string key = *iter;
         stringstream ss(*(++iter));
         ss >> hex >> cas;
-        libcouchbase_error_t err = libcouchbase_unlock(instance, NULL,
-                                                       (const void *)key.c_str(),
-                                                       (libcouchbase_size_t)key.length(), cas);
 
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        lcb_unlock_cmd_t item;
+        memset(&item, 0, sizeof(item));
+        item.v.v0.key = key.c_str();
+        item.v.v0.nkey = key.length();
+        item.v.v0.cas = cas;
+        lcb_unlock_cmd_t *items[] = { &item };
+
+        lcb_error_t err = lcb_unlock(instance, NULL, 1, items);
+        if (err != LCB_SUCCESS) {
             cerr << "Failed to send requests:" << endl
-                 << libcouchbase_strerror(instance, err) << endl;
+                 << lcb_strerror(instance, err) << endl;
             return false;
         }
 
@@ -927,24 +977,24 @@ static bool unlock_impl(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool stats_impl(libcouchbase_t instance, list<string> &keys)
+static bool stats_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
-        libcouchbase_error_t err;
-        err = libcouchbase_server_stats(instance, NULL, NULL, 0);
-        if (err != LIBCOUCHBASE_SUCCESS) {
+        lcb_error_t err;
+        err = lcb_server_stats(instance, NULL, NULL, 0);
+        if (err != LCB_SUCCESS) {
             cerr << "Failed to request stats: " << endl
-                 << libcouchbase_strerror(instance, err) << endl;
+                 << lcb_strerror(instance, err) << endl;
             return false;
         }
     } else {
         for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
             string key = *ii;
-            libcouchbase_error_t err;
-            err = libcouchbase_server_stats(instance, NULL, key.c_str(), key.length());
-            if (err != LIBCOUCHBASE_SUCCESS) {
+            lcb_error_t err;
+            err = lcb_server_stats(instance, NULL, key.c_str(), key.length());
+            if (err != LCB_SUCCESS) {
                 cerr << "Failed to request stats: " << endl
-                     << libcouchbase_strerror(instance, err) << endl;
+                     << lcb_strerror(instance, err) << endl;
                 return false;
             }
         }
@@ -953,17 +1003,17 @@ static bool stats_impl(libcouchbase_t instance, list<string> &keys)
     return true;
 }
 
-static bool flush_impl(libcouchbase_t instance, list<string> &keys)
+static bool flush_impl(lcb_t instance, list<string> &keys)
 {
     if (!keys.empty()) {
         cerr << "Ignoring arguments." << endl;
     }
 
-    libcouchbase_error_t err;
-    err = libcouchbase_flush(instance, NULL);
-    if (err != LIBCOUCHBASE_SUCCESS) {
+    lcb_error_t err;
+    err = lcb_flush(instance, NULL);
+    if (err != LCB_SUCCESS) {
         cerr << "Failed to flush: " << endl
-             << libcouchbase_strerror(instance, err) << endl;
+             << lcb_strerror(instance, err) << endl;
         return false;
     }
 
@@ -974,8 +1024,8 @@ static bool spool(string &data)
 {
     stringstream ss;
     char buffer[1024];
-    libcouchbase_size_t nr;
-    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != (libcouchbase_size_t) - 1) {
+    lcb_size_t nr;
+    while ((nr = fread(buffer, 1, sizeof(buffer), stdin)) != (lcb_size_t) - 1) {
         if (nr == 0) {
             break;
         }
@@ -985,8 +1035,8 @@ static bool spool(string &data)
     return nr == 0 || feof(stdin) != 0;
 }
 
-static bool create_impl(libcouchbase_t instance, list<string> &keys,
-                        libcouchbase_uint32_t exptime, libcouchbase_uint32_t flags, bool add)
+static bool create_impl(lcb_t instance, list<string> &keys,
+                        lcb_uint32_t exptime, lcb_uint32_t flags, bool add)
 {
     if (keys.size() != 1) {
         cerr << "Usage: You need to specify a single key" << endl;
@@ -1002,39 +1052,38 @@ static bool create_impl(libcouchbase_t instance, list<string> &keys,
         return false;
     }
 
-    libcouchbase_storage_t operation;
+    lcb_storage_t operation;
     if (add) {
-        operation = LIBCOUCHBASE_ADD;
+        operation = LCB_ADD;
     } else {
-        operation = LIBCOUCHBASE_SET;
+        operation = LCB_SET;
     }
 
-    libcouchbase_error_t err;
-    err = libcouchbase_store(instance, NULL, operation,
-                             key.c_str(), key.length(),
-                             data.data(), data.length(),
-                             flags, exptime, 0);
+    lcb_store_cmd_t item(operation, key.c_str(), key.length(),
+                         data.data(), data.length(), flags, exptime);
+    lcb_store_cmd_t *items[] = { &item };
+    lcb_error_t err = lcb_store(instance, NULL, 1, items);
 
-    if (err != LIBCOUCHBASE_SUCCESS) {
+    if (err != LCB_SUCCESS) {
         cerr << "Failed to store object: " << endl
-             << libcouchbase_strerror(instance, err) << endl;
+             << lcb_strerror(instance, err) << endl;
         return false;
     }
 
     return true;
 }
 
-static bool verify_impl(libcouchbase_t instance, list<string> &keys)
+static bool verify_impl(lcb_t instance, list<string> &keys)
 {
-    (void)libcouchbase_set_get_callback(instance, verify_callback);
-    return cat_impl(instance, keys, false);
+    (void)lcb_set_get_callback(instance, verify_callback);
+    return cat_impl(instance, keys);
 }
 
 static void loadKeys(list<string> &keys)
 {
     char buffer[1024];
     while (fgets(buffer, (int)sizeof(buffer), stdin) != NULL) {
-        libcouchbase_size_t idx = strlen(buffer);
+        lcb_size_t idx = strlen(buffer);
         while (idx > 0 && isspace(buffer[idx - 1])) {
             --idx;
         }
@@ -1062,9 +1111,6 @@ static bool verifyBucketNames(list<string> &names)
     return true;
 }
 
-extern bool receive_impl(libcouchbase_t instance, list<string> &keys);
-extern bool send_impl(libcouchbase_t instance, list<string> &keys);
-
 static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **argv)
 {
     Configuration config;
@@ -1091,8 +1137,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                                "Read key(s) from replicas"));
     }
 
-    libcouchbase_uint32_t flags = 0;
-    libcouchbase_uint32_t exptime = 0;
+    lcb_uint32_t flags = 0;
+    lcb_uint32_t exptime = 0;
     bool add = false;
     if (cmd == cbc_create) {
         getopt.addOption(new CommandLineOption('f', "flag", true,
@@ -1127,7 +1173,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     bool chunked = false;
     string data;
-    libcouchbase_http_method_t method = LIBCOUCHBASE_HTTP_METHOD_GET;
+    lcb_http_method_t method = LCB_HTTP_METHOD_GET;
     if (cmd == cbc_view || cmd == cbc_admin) {
         getopt.addOption(new CommandLineOption('c', "chunked", false,
                                                "Use chunked callback to stream the data"));
@@ -1210,10 +1256,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'f':
-                        flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
+                        flags = (lcb_uint32_t)atoi((*iter)->argument);
                         break;
                     case 'e':
-                        flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
+                        flags = (lcb_uint32_t)atoi((*iter)->argument);
                         break;
                     case 'a':
                         add = true;
@@ -1245,7 +1291,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'e':
-                        flags = (libcouchbase_uint32_t)atoi((*iter)->argument);
+                        flags = (lcb_uint32_t)atoi((*iter)->argument);
                         break;
                     default:
                         unknownOpt = true;
@@ -1262,13 +1308,13 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         break;
                     case 'X':
                         if (arg == "GET") {
-                            method = LIBCOUCHBASE_HTTP_METHOD_GET;
+                            method = LCB_HTTP_METHOD_GET;
                         } else if (arg == "POST") {
-                            method = LIBCOUCHBASE_HTTP_METHOD_POST;
+                            method = LCB_HTTP_METHOD_POST;
                         } else if (arg == "PUT") {
-                            method = LIBCOUCHBASE_HTTP_METHOD_PUT;
+                            method = LCB_HTTP_METHOD_PUT;
                         } else if (arg == "DELETE") {
-                            method = LIBCOUCHBASE_HTTP_METHOD_DELETE;
+                            method = LCB_HTTP_METHOD_DELETE;
                         } else {
                             unknownOpt = true;
                             cerr << "Usupported HTTP method: " << arg << endl;
@@ -1315,47 +1361,47 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         }
     }
 
-    libcouchbase_t instance = libcouchbase_create(config.getHost(),
-                                                  config.getUser(),
-                                                  config.getPassword(),
-                                                  config.getBucket(),
-                                                  NULL);
+    lcb_t instance = lcb_create(config.getHost(),
+                                config.getUser(),
+                                config.getPassword(),
+                                config.getBucket(),
+                                NULL);
     if (instance == NULL) {
         cerr << "Failed to create couchbase instance" << endl;
         exit(EXIT_FAILURE);
     }
 
-    (void)libcouchbase_set_error_callback(instance, error_callback);
-    (void)libcouchbase_set_flush_callback(instance, flush_callback);
-    (void)libcouchbase_set_get_callback(instance, get_callback);
-    (void)libcouchbase_set_remove_callback(instance, remove_callback);
-    (void)libcouchbase_set_stat_callback(instance, stat_callback);
-    (void)libcouchbase_set_storage_callback(instance, storage_callback);
-    (void)libcouchbase_set_unlock_callback(instance, unlock_callback);
-    (void)libcouchbase_set_observe_callback(instance, observe_callback);
-    (void)libcouchbase_set_view_data_callback(instance, data_callback);
-    (void)libcouchbase_set_view_complete_callback(instance, complete_callback);
-    (void)libcouchbase_set_management_data_callback(instance, data_callback);
-    (void)libcouchbase_set_management_complete_callback(instance, complete_callback);
-    (void)libcouchbase_set_verbosity_callback(instance, verbosity_callback);
+    (void)lcb_set_error_callback(instance, error_callback);
+    (void)lcb_set_flush_callback(instance, flush_callback);
+    (void)lcb_set_get_callback(instance, get_callback);
+    (void)lcb_set_remove_callback(instance, remove_callback);
+    (void)lcb_set_stat_callback(instance, stat_callback);
+    (void)lcb_set_store_callback(instance, store_callback);
+    (void)lcb_set_unlock_callback(instance, unlock_callback);
+    (void)lcb_set_observe_callback(instance, observe_callback);
+    (void)lcb_set_view_data_callback(instance, data_callback);
+    (void)lcb_set_view_complete_callback(instance, complete_callback);
+    (void)lcb_set_management_data_callback(instance, data_callback);
+    (void)lcb_set_management_complete_callback(instance, complete_callback);
+    (void)lcb_set_verbosity_callback(instance, verbosity_callback);
 
     if (config.getTimeout() != 0) {
-        libcouchbase_set_timeout(instance, config.getTimeout());
+        lcb_set_timeout(instance, config.getTimeout());
     }
 
-    libcouchbase_error_t ret = libcouchbase_connect(instance);
-    if (ret != LIBCOUCHBASE_SUCCESS) {
+    lcb_error_t ret = lcb_connect(instance);
+    if (ret != LCB_SUCCESS) {
         cerr << "Failed to connect libcouchbase instance to server:" << endl
-             << "\t\"" << libcouchbase_strerror(instance, ret) << "\"" << endl;
+             << "\t\"" << lcb_strerror(instance, ret) << "\"" << endl;
         exit(EXIT_FAILURE);
     }
-    libcouchbase_wait(instance);
+    lcb_wait(instance);
 
     bool error = false;
-    libcouchbase_set_cookie(instance, static_cast<void *>(&error));
+    lcb_set_cookie(instance, static_cast<void *>(&error));
 
     if (config.isTimingsEnabled()) {
-        libcouchbase_enable_timings(instance);
+        lcb_enable_timings(instance);
     }
 
     list<string> keys;
@@ -1363,7 +1409,11 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     bool success = false;
     switch (cmd) {
     case cbc_cat:
-        success = cat_impl(instance, getopt.arguments, replica);
+        if (replica) {
+            success = cat_replica_impl(instance, getopt.arguments);
+        } else {
+            success = cat_impl(instance, getopt.arguments);
+        }
         break;
     case cbc_lock:
         success = lock_impl(instance, getopt.arguments, exptime);
@@ -1387,14 +1437,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     case cbc_rm:
         success = rm_impl(instance, getopt.arguments);
         break;
-    case cbc_receive:
-        success = receive_impl(instance, getopt.arguments);
-        break;
     case cbc_stats:
         success = stats_impl(instance, getopt.arguments);
-        break;
-    case cbc_send:
-        success = send_impl(instance, getopt.arguments);
         break;
     case cbc_flush:
         success = flush_impl(instance, getopt.arguments);
@@ -1462,23 +1506,23 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     if (!success) {
         error = true;
     } else {
-        libcouchbase_wait(instance);
+        lcb_wait(instance);
         if (config.isTimingsEnabled()) {
-            libcouchbase_get_timings(instance, NULL,
-                                     timings_callback);
-            libcouchbase_disable_timings(instance);
+            lcb_get_timings(instance, NULL,
+                            timings_callback);
+            lcb_disable_timings(instance);
         }
     }
 
-    libcouchbase_destroy(instance);
+    lcb_destroy(instance);
     exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
 }
 
 static void lowercase(string &str)
 {
-    libcouchbase_ssize_t len = str.length();
+    lcb_ssize_t len = str.length();
     stringstream ss;
-    for (libcouchbase_ssize_t ii = 0; ii < len; ++ii) {
+    for (lcb_ssize_t ii = 0; ii < len; ++ii) {
         ss << static_cast<char>(tolower(str[ii]));
     }
     str.assign(ss.str());
@@ -1493,12 +1537,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_cp;
     } else if (name.find("cbc-create") != string::npos) {
         return cbc_create;
-    } else if (name.find("cbc-receive") != string::npos) {
-        return cbc_receive;
     } else if (name.find("cbc-rm") != string::npos) {
         return cbc_rm;
-    } else if (name.find("cbc-send") != string::npos) {
-        return cbc_send;
     } else if (name.find("cbc-stats") != string::npos) {
         return cbc_stats;
     } else if (name.find("cbc-flush") != string::npos) {
@@ -1603,7 +1643,7 @@ int main(int argc, char **argv)
         }
     } else if (cmd == cbc_version) {
         cout << "cbc built from: " << PACKAGE_STRING << endl
-             << "    using libcouchbase: " << libcouchbase_get_version(NULL)
+             << "    using libcouchbase: " << lcb_get_version(NULL)
              << endl;
 #ifdef HAVE_LIBYAJL2
         int version = yajl_version();

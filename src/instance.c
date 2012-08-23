@@ -27,7 +27,7 @@
 #endif
 
 /* private function to safely free backup_nodes*/
-static void free_backup_nodes(libcouchbase_t instance);
+static void free_backup_nodes(lcb_t instance);
 /**
  * Get the version of the library.
  *
@@ -39,30 +39,30 @@ static void free_backup_nodes(libcouchbase_t instance);
  *
  */
 LIBCOUCHBASE_API
-const char *libcouchbase_get_version(libcouchbase_uint32_t *version)
+const char *lcb_get_version(lcb_uint32_t *version)
 {
     if (version != NULL) {
-        *version = (libcouchbase_uint32_t)LIBCOUCHBASE_VERSION;
+        *version = (lcb_uint32_t)LCB_VERSION;
     }
 
-    return LIBCOUCHBASE_VERSION_STRING;
+    return LCB_VERSION_STRING;
 }
 
 LIBCOUCHBASE_API
-const char *libcouchbase_get_host(libcouchbase_t instance)
+const char *lcb_get_host(lcb_t instance)
 {
     return instance->host;
 }
 
 LIBCOUCHBASE_API
-const char *libcouchbase_get_port(libcouchbase_t instance)
+const char *lcb_get_port(lcb_t instance)
 {
     return instance->port;
 }
 
 
 LIBCOUCHBASE_API
-libcouchbase_int32_t libcouchbase_get_num_replicas(libcouchbase_t instance)
+lcb_int32_t lcb_get_num_replicas(lcb_t instance)
 {
     if (instance->vbucket_config) {
         return instance->nreplicas;
@@ -71,7 +71,7 @@ libcouchbase_int32_t libcouchbase_get_num_replicas(libcouchbase_t instance)
     }
 }
 
-static void setup_current_host(libcouchbase_t instance, const char *host)
+static void setup_current_host(lcb_t instance, const char *host)
 {
     char *ptr;
     snprintf(instance->host, sizeof(instance->host), "%s", host);
@@ -83,10 +83,10 @@ static void setup_current_host(libcouchbase_t instance, const char *host)
     }
 }
 
-static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
+static int setup_boostrap_hosts(lcb_t ret, const char *host)
 {
     const char *ptr = host;
-    libcouchbase_size_t num = 0;
+    lcb_size_t num = 0;
     int ii;
 
     while ((ptr = strchr(ptr, ';')) != NULL) {
@@ -141,19 +141,19 @@ static int setup_boostrap_hosts(libcouchbase_t ret, const char *host)
 }
 
 LIBCOUCHBASE_API
-libcouchbase_t libcouchbase_create(const char *host,
-                                   const char *user,
-                                   const char *passwd,
-                                   const char *bucket,
-                                   struct libcouchbase_io_opt_st *io)
+lcb_t lcb_create(const char *host,
+                 const char *user,
+                 const char *passwd,
+                 const char *bucket,
+                 struct lcb_io_opt_st *io)
 {
     char buffer[1024];
-    libcouchbase_ssize_t offset;
-    libcouchbase_t ret;
+    lcb_ssize_t offset;
+    lcb_t ret;
 
     if (io == NULL) {
-        io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT,
-                                        NULL, NULL);
+        io = lcb_create_io_ops(LCB_IO_OPS_DEFAULT,
+                               NULL, NULL);
         if (io == NULL) {
             /* You can't initialize the library without a io-handler! */
             return NULL;
@@ -175,9 +175,9 @@ libcouchbase_t libcouchbase_create(const char *host,
     if ((ret = calloc(1, sizeof(*ret))) == NULL) {
         return NULL;
     }
-    libcouchbase_initialize_packet_handlers(ret);
-    libcouchbase_behavior_set_syncmode(ret, LIBCOUCHBASE_ASYNCHRONOUS);
-    libcouchbase_behavior_set_ipv6(ret, LIBCOUCHBASE_IPV6_DISABLED);
+    lcb_initialize_packet_handlers(ret);
+    lcb_behavior_set_syncmode(ret, LCB_ASYNCHRONOUS);
+    lcb_behavior_set_ipv6(ret, LCB_IPV6_DISABLED);
 
     if (setup_boostrap_hosts(ret, host) == -1) {
         free(ret);
@@ -192,21 +192,21 @@ libcouchbase_t libcouchbase_create(const char *host,
         char cred[256];
         char base64[256];
         snprintf(cred, sizeof(cred), "%s:%s", user, passwd);
-        if (libcouchbase_base64_encode(cred, base64, sizeof(base64)) == -1) {
-            libcouchbase_destroy(ret);
+        if (lcb_base64_encode(cred, base64, sizeof(base64)) == -1) {
+            lcb_destroy(ret);
             return NULL;
         }
 
         ret->username = strdup(user);
         ret->password = strdup(passwd);
-        offset += snprintf(buffer + offset, sizeof(buffer) - (libcouchbase_size_t)offset,
+        offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
                            "Authorization: Basic %s\r\n", base64);
     }
-    offset += snprintf(buffer + offset, sizeof(buffer) - (libcouchbase_size_t)offset, "\r\n");
+    offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset, "\r\n");
     ret->http_uri = strdup(buffer);
 
     if (ret->http_uri == NULL) {
-        libcouchbase_destroy(ret);
+        lcb_destroy(ret);
         return NULL;
     }
     ret->timers = hashset_create();
@@ -214,28 +214,28 @@ libcouchbase_t libcouchbase_create(const char *host,
     ret->sock = INVALID_SOCKET;
 
     /* No error has occurred yet. */
-    ret->last_error = LIBCOUCHBASE_SUCCESS;
+    ret->last_error = LCB_SUCCESS;
 
     /* setup io iops! */
     ret->io = io;
     ret->timeout.event = ret->io->create_timer(ret->io);
     assert(ret->timeout.event);
 
-    libcouchbase_set_timeout(ret, LIBCOUCHBASE_DEFAULT_TIMEOUT);
+    lcb_set_timeout(ret, LCB_DEFAULT_TIMEOUT);
 
     return ret;
 }
 
 LIBCOUCHBASE_API
-void libcouchbase_destroy(libcouchbase_t instance)
+void lcb_destroy(lcb_t instance)
 {
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
     free(instance->http_uri);
 
     for (ii = 0; ii < instance->timers->capacity; ++ii) {
         if (instance->timers->items[ii] > 1) {
-            libcouchbase_timer_destroy(instance,
-                                       (libcouchbase_timer_t)instance->timers->items[ii]);
+            lcb_timer_destroy(instance,
+                              (lcb_timer_t)instance->timers->items[ii]);
         }
     }
     hashset_destroy(instance->timers);
@@ -261,7 +261,7 @@ void libcouchbase_destroy(libcouchbase_t instance)
     }
 
     for (ii = 0; ii < instance->nservers; ++ii) {
-        libcouchbase_server_destroy(instance->servers + ii);
+        lcb_server_destroy(instance->servers + ii);
     }
 
     free_backup_nodes(instance);
@@ -299,7 +299,7 @@ void libcouchbase_destroy(libcouchbase_t instance)
  * Callback functions called from libsasl to get the username to use for
  * authentication.
  *
- * @param context ponter to the libcouchbase_t instance running the sasl bits
+ * @param context ponter to the lcb_t instance running the sasl bits
  * @param id the piece of information libsasl wants
  * @param result where to store the result (OUT)
  * @param len The length of the data returned (OUT)
@@ -308,7 +308,7 @@ void libcouchbase_destroy(libcouchbase_t instance)
 static int sasl_get_username(void *context, int id, const char **result,
                              unsigned int *len)
 {
-    libcouchbase_t instance = context;
+    lcb_t instance = context;
     if (!context || !result || (id != SASL_CB_USER && id != SASL_CB_AUTHNAME)) {
         return SASL_BADPARAM;
     }
@@ -325,7 +325,7 @@ static int sasl_get_username(void *context, int id, const char **result,
  * Callback functions called from libsasl to get the password to use for
  * authentication.
  *
- * @param context ponter to the libcouchbase_t instance running the sasl bits
+ * @param context ponter to the lcb_t instance running the sasl bits
  * @param id the piece of information libsasl wants
  * @param psecret where to store the result (OUT)
  * @return SASL_OK if succes
@@ -333,7 +333,7 @@ static int sasl_get_username(void *context, int id, const char **result,
 static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
                              sasl_secret_t **psecret)
 {
-    libcouchbase_t instance = context;
+    lcb_t instance = context;
     if (!conn || ! psecret || id != SASL_CB_PASS) {
         return SASL_BADPARAM;
     }
@@ -342,10 +342,10 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
     return SASL_OK;
 }
 
-libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, VBUCKET_CONFIG_HANDLE config)
+lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE config)
 {
-    libcouchbase_uint16_t ii, max;
-    libcouchbase_size_t num;
+    lcb_uint16_t ii, max;
+    lcb_size_t num;
     const char *passwd;
     char curnode[NI_MAXHOST + NI_MAXSERV + 2];
     sasl_callback_t sasl_callbacks[4] = {
@@ -356,22 +356,22 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
     };
 
     instance->vbucket_config = config;
-    num = (libcouchbase_size_t)vbucket_config_get_num_servers(config);
+    num = (lcb_size_t)vbucket_config_get_num_servers(config);
     /* servers array should be freed in the caller */
-    instance->servers = calloc(num, sizeof(libcouchbase_server_t));
+    instance->servers = calloc(num, sizeof(lcb_server_t));
     if (instance->servers == NULL) {
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM, "Failed to allocate memory");
+        return lcb_error_handler(instance, LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
     instance->nservers = num;
     free_backup_nodes(instance);
     instance->backup_nodes = calloc(num + 1, sizeof(char *));
     if (instance->backup_nodes == NULL) {
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM, "Failed to allocate memory");
+        return lcb_error_handler(instance, LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
     snprintf(curnode, sizeof(curnode), "%s:%s", instance->host, instance->port);
     for (ii = 0; ii < num; ++ii) {
         instance->servers[ii].instance = instance;
-        libcouchbase_server_initialize(instance->servers + ii, (int)ii);
+        lcb_server_initialize(instance->servers + ii, (int)ii);
         if (strcmp(curnode, instance->servers[ii].rest_api_server) == 0) {
             instance->backup_nodes[ii] = NULL;
         } else {
@@ -379,7 +379,7 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
         }
         /* swap with random position < ii */
         if (ii > 0) {
-            libcouchbase_size_t nn = (libcouchbase_size_t)(gethrtime() >> 10) % ii;
+            lcb_size_t nn = (lcb_size_t)(gethrtime() >> 10) % ii;
             char *pp = instance->backup_nodes[ii];
             instance->backup_nodes[ii] = instance->backup_nodes[nn];
             instance->backup_nodes[nn] = pp;
@@ -394,7 +394,7 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
         if (instance->sasl.password.secret.len < sizeof(instance->sasl.password.buffer) - offsetof(sasl_secret_t, data)) {
             memcpy(instance->sasl.password.secret.data, passwd, instance->sasl.password.secret.len);
         } else {
-            return libcouchbase_error_handler(instance, LIBCOUCHBASE_EINVAL, "Password too long");
+            return lcb_error_handler(instance, LCB_EINVAL, "Password too long");
         }
     }
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
@@ -406,42 +406,42 @@ libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance, 
      * It would have been nice if I could query libvbucket for the number
      * of vbuckets a server got, but there isn't at the moment..
      */
-    max = (libcouchbase_uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
+    max = (lcb_uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
     instance->nvbuckets = max;
     free(instance->vb_server_map);
-    instance->vb_server_map = calloc(max, sizeof(libcouchbase_vbucket_t));
+    instance->vb_server_map = calloc(max, sizeof(lcb_vbucket_t));
     if (instance->vb_server_map == NULL) {
-        return libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM, "Failed to allocate memory");
+        return lcb_error_handler(instance, LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
     for (ii = 0; ii < max; ++ii) {
-        instance->vb_server_map[ii] = (libcouchbase_uint16_t)vbucket_get_master(instance->vbucket_config, ii);
+        instance->vb_server_map[ii] = (lcb_uint16_t)vbucket_get_master(instance->vbucket_config, ii);
     }
-    return LIBCOUCHBASE_SUCCESS;
+    return LCB_SUCCESS;
 }
 
-static void relocate_packets(libcouchbase_server_t *src,
-                             libcouchbase_t dst_instance)
+static void relocate_packets(lcb_server_t *src,
+                             lcb_t dst_instance)
 {
-    struct libcouchbase_command_data_st ct;
+    struct lcb_command_data_st ct;
     protocol_binary_request_header cmd;
-    libcouchbase_server_t *dst;
-    libcouchbase_size_t nbody, npacket;
+    lcb_server_t *dst;
+    lcb_size_t nbody, npacket;
     char *body;
-    libcouchbase_size_t idx;
-    libcouchbase_vbucket_t vb;
+    lcb_size_t idx;
+    lcb_vbucket_t vb;
 
     while (ringbuffer_read(&src->cmd_log, cmd.bytes, sizeof(cmd.bytes))) {
         nbody = ntohl(cmd.request.bodylen); /* extlen + nkey + nval */
         npacket = sizeof(cmd.bytes) + nbody;
         body = malloc(nbody);
         if (body == NULL) {
-            libcouchbase_error_handler(dst_instance, LIBCOUCHBASE_CLIENT_ENOMEM,
-                                       "Failed to allocate memory");
+            lcb_error_handler(dst_instance, LCB_CLIENT_ENOMEM,
+                              "Failed to allocate memory");
             return;
         }
         assert(ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
         vb = ntohs(cmd.request.vbucket);
-        idx = (libcouchbase_size_t)vbucket_get_master(dst_instance->vbucket_config, vb);
+        idx = (lcb_size_t)vbucket_get_master(dst_instance->vbucket_config, vb);
         dst = dst_instance->servers + idx;
         if (src->connected) {
             assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
@@ -463,7 +463,7 @@ static void relocate_packets(libcouchbase_server_t *src,
         assert(ringbuffer_write(&dst->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         free(body);
-        libcouchbase_server_send_packets(dst);
+        lcb_server_send_packets(dst);
     }
 }
 
@@ -473,25 +473,25 @@ static void relocate_packets(libcouchbase_server_t *src,
  *
  * @todo use non-blocking connects and timeouts
  */
-static void libcouchbase_update_serverlist(libcouchbase_t instance)
+static void lcb_update_serverlist(lcb_t instance)
 {
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
     VBUCKET_CONFIG_HANDLE next_config, curr_config;
     VBUCKET_CONFIG_DIFF *diff = NULL;
-    libcouchbase_size_t nservers;
-    libcouchbase_server_t *servers, *ss;
+    lcb_size_t nservers;
+    lcb_server_t *servers, *ss;
 
     curr_config = instance->vbucket_config;
     next_config = vbucket_config_create();
     if (next_config == NULL) {
-        libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM,
-                                   "Failed to allocate memory for config");
+        lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
+                          "Failed to allocate memory for config");
         return;
     }
     if (vbucket_config_parse(next_config, LIBVBUCKET_SOURCE_MEMORY,
                              instance->vbucket_stream.input.data) != 0) {
-        libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
-                                   vbucket_get_error_message(next_config));
+        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
+                          vbucket_get_error_message(next_config));
         vbucket_config_destroy(next_config);
         return;
     }
@@ -503,7 +503,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
             VBUCKET_DISTRIBUTION_TYPE dist_t = vbucket_config_get_distribution_type(next_config);
             nservers = instance->nservers;
             servers = instance->servers;
-            if (libcouchbase_apply_vbucket_config(instance, next_config) != LIBCOUCHBASE_SUCCESS) {
+            if (lcb_apply_vbucket_config(instance, next_config) != LCB_SUCCESS) {
                 vbucket_free_diff(diff);
                 vbucket_config_destroy(next_config);
                 return;
@@ -516,9 +516,9 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                     /* other distribution types (ketama) are relying on
                      * hashing key, therefore return TMPFAIL and force users
                      * to retry */
-                    libcouchbase_failout_server(ss, LIBCOUCHBASE_ETMPFAIL);
+                    lcb_failout_server(ss, LCB_ETMPFAIL);
                 }
-                libcouchbase_server_destroy(ss);
+                lcb_server_destroy(ss);
             }
             free(servers);
 
@@ -532,15 +532,15 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
                     instance->vbucket_state_listener(ss);
                 }
                 if (ss->cmd_log.nbytes != 0) {
-                    libcouchbase_server_send_packets(ss);
+                    lcb_server_send_packets(ss);
                 }
             }
             instance->callbacks.configuration(instance,
-                                              LIBCOUCHBASE_CONFIGURATION_CHANGED);
+                                              LCB_CONFIGURATION_CHANGED);
 
         } else {
             instance->callbacks.configuration(instance,
-                                              LIBCOUCHBASE_CONFIGURATION_UNCHANGED);
+                                              LCB_CONFIGURATION_UNCHANGED);
             vbucket_config_destroy(next_config);
         }
         if (diff) {
@@ -549,7 +549,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
     } else {
         assert(instance->servers == NULL);
         assert(instance->nservers == 0);
-        if (libcouchbase_apply_vbucket_config(instance, next_config) != LIBCOUCHBASE_SUCCESS) {
+        if (lcb_apply_vbucket_config(instance, next_config) != LCB_SUCCESS) {
             vbucket_config_destroy(next_config);
             return;
         }
@@ -561,7 +561,7 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
             }
         }
         instance->callbacks.configuration(instance,
-                                          LIBCOUCHBASE_CONFIGURATION_NEW);
+                                          LCB_CONFIGURATION_NEW);
     }
 }
 
@@ -571,12 +571,12 @@ static void libcouchbase_update_serverlist(libcouchbase_t instance)
  * @param instance the instance containing the data
  * @return 1 if we got all the data we need, 0 otherwise
  */
-static int parse_chunk(libcouchbase_t instance)
+static int parse_chunk(lcb_t instance)
 {
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     assert(instance->vbucket_stream.chunk_size != 0);
 
-    if (instance->vbucket_stream.chunk_size == (libcouchbase_size_t) - 1) {
+    if (instance->vbucket_stream.chunk_size == (lcb_size_t) - 1) {
         char *ptr = strstr(buffer->data, "\r\n");
         long val;
         if (ptr == NULL) {
@@ -586,8 +586,8 @@ static int parse_chunk(libcouchbase_t instance)
         ptr += 2;
         val = strtol(buffer->data, NULL, 16);
         val += 2;
-        instance->vbucket_stream.chunk_size = (libcouchbase_size_t)val;
-        buffer->avail -= (libcouchbase_size_t)(ptr - buffer->data);
+        instance->vbucket_stream.chunk_size = (lcb_size_t)val;
+        buffer->avail -= (lcb_size_t)(ptr - buffer->data);
         memmove(buffer->data, ptr, buffer->avail);
         buffer->data[buffer->avail] = '\0';
     }
@@ -606,7 +606,7 @@ static int parse_chunk(libcouchbase_t instance)
  * @param instance the instance containing the data
  * @return 0 success, 1 we need more data, -1 incorrect response
  */
-static int parse_header(libcouchbase_t instance)
+static int parse_header(lcb_t instance)
 {
     int response_code;
 
@@ -626,44 +626,44 @@ static int parse_header(libcouchbase_t instance)
 
     /* parse the headers I care about... */
     if (sscanf(buffer->data, "HTTP/1.1 %d", &response_code) != 1) {
-        libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
-                                   buffer->data);
+        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
+                          buffer->data);
     } else if (response_code != 200) {
-        libcouchbase_error_t err;
+        lcb_error_t err;
         switch (response_code) {
         case 401:
-            err = LIBCOUCHBASE_AUTH_ERROR;
+            err = LCB_AUTH_ERROR;
             break;
         case 404:
-            err = LIBCOUCHBASE_BUCKET_ENOENT;
+            err = LCB_BUCKET_ENOENT;
             break;
         default:
-            err = LIBCOUCHBASE_PROTOCOL_ERROR;
+            err = LCB_PROTOCOL_ERROR;
             break;
         }
-        libcouchbase_error_handler(instance, err, buffer->data);
+        lcb_error_handler(instance, err, buffer->data);
         return -1;
     }
 
     if (strstr(buffer->data, "Transfer-Encoding: chunked") == NULL &&
             strstr(buffer->data, "Transfer-encoding: chunked") == NULL) {
-        libcouchbase_error_handler(instance, LIBCOUCHBASE_PROTOCOL_ERROR,
-                                   buffer->data);
+        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
+                          buffer->data);
         return -1;
     }
 
     instance->vbucket_stream.header = strdup(buffer->data);
     /* realign remaining data.. */
-    buffer->avail -= (libcouchbase_size_t)(ptr - buffer->data);
+    buffer->avail -= (lcb_size_t)(ptr - buffer->data);
     memmove(buffer->data, ptr, buffer->avail);
     buffer->data[buffer->avail] = '\0';
-    instance->vbucket_stream.chunk_size = (libcouchbase_size_t) - 1;
+    instance->vbucket_stream.chunk_size = (lcb_size_t) - 1;
 
     return 0;
 }
 
 /** Don't create any buffers less than 2k */
-const libcouchbase_size_t min_buffer_size = 2048;
+const lcb_size_t min_buffer_size = 2048;
 
 /**
  * Grow a buffer so that it got at least a minimum size of available space.
@@ -674,7 +674,7 @@ const libcouchbase_size_t min_buffer_size = 2048;
  * @param min_free the minimum amount of free space I need
  * @return 1 if success, 0 otherwise
  */
-int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free)
+int grow_buffer(buffer_t *buffer, lcb_size_t min_free)
 {
     if (min_free == 0) {
         /*
@@ -685,7 +685,7 @@ int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free)
     }
 
     if (buffer->size - buffer->avail < min_free) {
-        libcouchbase_size_t next = buffer->size ? buffer->size << 1 : min_buffer_size;
+        lcb_size_t next = buffer->size ? buffer->size << 1 : min_buffer_size;
         char *ptr;
 
         while ((next - buffer->avail) < min_free) {
@@ -707,7 +707,7 @@ int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free)
 /* This function does any resetting of various book-keeping related with the
  * current REST API socket.
  */
-static void libcouchbase_instance_reset_stream_state(libcouchbase_t instance)
+static void lcb_instance_reset_stream_state(lcb_t instance)
 {
     free(instance->vbucket_stream.input.data);
     free(instance->vbucket_stream.chunk.data);
@@ -716,35 +716,35 @@ static void libcouchbase_instance_reset_stream_state(libcouchbase_t instance)
     instance->n_http_uri_sent = 0;
 }
 
-static int libcouchbase_switch_to_backup_node(libcouchbase_t instance,
-                                              libcouchbase_error_t error,
-                                              const char *reason)
+static int lcb_switch_to_backup_node(lcb_t instance,
+                                     lcb_error_t error,
+                                     const char *reason)
 {
     if (instance->backup_nodes == NULL) {
         /* No known backup nodes */
-        libcouchbase_error_handler(instance, error, reason);
+        lcb_error_handler(instance, error, reason);
         return -1;
     }
 
     if (instance->backup_nodes[instance->backup_idx] == NULL) {
-        libcouchbase_error_handler(instance, error, reason);
+        lcb_error_handler(instance, error, reason);
         return -1;
     }
 
     do {
         /* Keep on trying the nodes until all of them failed ;-) */
-        if (libcouchbase_connect(instance) == LIBCOUCHBASE_SUCCESS) {
+        if (lcb_connect(instance) == LCB_SUCCESS) {
             return 0;
         }
     } while (instance->backup_nodes[instance->backup_idx] == NULL);
     /* All known nodes are dead */
-    libcouchbase_error_handler(instance, error, reason);
+    lcb_error_handler(instance, error, reason);
     return -1;
 }
 
-static void libcouchbase_instance_connerr(libcouchbase_t instance,
-                                          libcouchbase_error_t err,
-                                          const char *errinfo)
+static void lcb_instance_connerr(lcb_t instance,
+                                 lcb_error_t err,
+                                 const char *errinfo)
 {
     if (instance->sock != INVALID_SOCKET) {
         instance->io->delete_event(instance->io, instance->sock, instance->event);
@@ -757,7 +757,7 @@ static void libcouchbase_instance_connerr(libcouchbase_t instance,
      * other than -1...
      */
 
-    if (libcouchbase_switch_to_backup_node(instance, err, errinfo) != -1) {
+    if (lcb_switch_to_backup_node(instance, err, errinfo) != -1) {
         return;
     }
 
@@ -770,16 +770,16 @@ static void libcouchbase_instance_connerr(libcouchbase_t instance,
         /* Initial connection, no pending commands, and connect timer */
         instance->io->delete_timer(instance->io, instance->timeout.event);
     } else {
-        libcouchbase_size_t ii;
+        lcb_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
-            libcouchbase_failout_server(instance->servers + ii, err);
+            lcb_failout_server(instance->servers + ii, err);
         }
     }
 
     /* check to see if we can breakout of the event loop. don't hang on REST
      * API connection attempts.
      */
-    libcouchbase_maybe_breakout(instance);
+    lcb_maybe_breakout(instance);
 }
 
 
@@ -789,23 +789,23 @@ static void libcouchbase_instance_connerr(libcouchbase_t instance,
  * @param which what kind of events we may do
  * @param arg pointer to the libcouchbase instance
  */
-static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void *arg)
+static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 {
-    libcouchbase_t instance = arg;
-    libcouchbase_ssize_t nr;
-    libcouchbase_size_t avail;
+    lcb_t instance = arg;
+    lcb_ssize_t nr;
+    lcb_size_t avail;
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     assert(sock != INVALID_SOCKET);
 
-    if ((which & LIBCOUCHBASE_WRITE_EVENT) == LIBCOUCHBASE_WRITE_EVENT) {
-        libcouchbase_ssize_t nw;
+    if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
+        lcb_ssize_t nw;
         nw = instance->io->send(instance->io, instance->sock,
                                 instance->http_uri + instance->n_http_uri_sent,
                                 strlen(instance->http_uri) - instance->n_http_uri_sent,
                                 0);
         if (nw == -1) {
-            libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                       "Failed to send data to REST server");
+            lcb_error_handler(instance, LCB_NETWORK_ERROR,
+                              "Failed to send data to REST server");
             instance->io->delete_event(instance->io, instance->sock,
                                        instance->event);
             return;
@@ -815,19 +815,19 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
         instance->n_http_uri_sent += nw;
         if (instance->n_http_uri_sent == strlen(instance->http_uri)) {
             instance->io->update_event(instance->io, instance->sock,
-                                       instance->event, LIBCOUCHBASE_READ_EVENT,
+                                       instance->event, LCB_READ_EVENT,
                                        instance, vbucket_stream_handler);
         }
     }
 
-    if ((which & LIBCOUCHBASE_READ_EVENT) == 0) {
+    if ((which & LCB_READ_EVENT) == 0) {
         return;
     }
 
     do {
         if (!grow_buffer(buffer, 1)) {
-            libcouchbase_error_handler(instance, LIBCOUCHBASE_CLIENT_ENOMEM,
-                                       "Failed to allocate memory");
+            lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
+                              "Failed to allocate memory");
             return ;
         }
 
@@ -841,25 +841,25 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
             case EWOULDBLOCK:
                 return ;
             default:
-                libcouchbase_error_handler(instance, LIBCOUCHBASE_NETWORK_ERROR,
-                                           strerror(instance->io->error));
+                lcb_error_handler(instance, LCB_NETWORK_ERROR,
+                                  strerror(instance->io->error));
                 return ;
             }
         } else if (nr == 0) {
             /* Socket closed. Pick up next server and try to connect */
-            (void)libcouchbase_instance_connerr(instance,
-                                                LIBCOUCHBASE_NETWORK_ERROR,
-                                                NULL);
+            (void)lcb_instance_connerr(instance,
+                                       LCB_NETWORK_ERROR,
+                                       NULL);
             return;
         }
-        buffer->avail += (libcouchbase_size_t)nr;
+        buffer->avail += (lcb_size_t)nr;
         buffer->data[buffer->avail] = '\0';
-    } while ((libcouchbase_size_t)nr == avail);
+    } while ((lcb_size_t)nr == avail);
 
     if (instance->vbucket_stream.header == NULL) {
         if (parse_header(instance) == -1) {
             /* error already reported */
-            libcouchbase_maybe_breakout(instance);
+            lcb_maybe_breakout(instance);
             return;
         }
     }
@@ -893,10 +893,10 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
                 if (term != NULL) {
                     *term = '\0';
                     instance->vbucket_stream.input.avail -= 4;
-                    libcouchbase_update_serverlist(instance);
+                    lcb_update_serverlist(instance);
                 }
 
-                instance->vbucket_stream.chunk_size = (libcouchbase_size_t) - 1;
+                instance->vbucket_stream.chunk_size = (lcb_size_t) - 1;
                 if (buffer->avail > 0) {
                     done = 0;
                 }
@@ -905,47 +905,47 @@ static void vbucket_stream_handler(libcouchbase_socket_t sock, short which, void
     }
 
     /* Make it known that this was a success. */
-    libcouchbase_error_handler(instance, LIBCOUCHBASE_SUCCESS, NULL);
+    lcb_error_handler(instance, LCB_SUCCESS, NULL);
 }
 
-static void libcouchbase_instance_connected(libcouchbase_t instance)
+static void lcb_instance_connected(lcb_t instance)
 {
     instance->backup_idx = 0;
     instance->io->update_event(instance->io, instance->sock,
-                               instance->event, LIBCOUCHBASE_RW_EVENT,
+                               instance->event, LCB_RW_EVENT,
                                instance, vbucket_stream_handler);
 }
 
-static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
-                                                  short which,
-                                                  void *arg)
+static void lcb_instance_connect_handler(lcb_socket_t sock,
+                                         short which,
+                                         void *arg)
 {
-    libcouchbase_t instance = arg;
+    lcb_t instance = arg;
     int retry;
     int first_try = (sock == INVALID_SOCKET);
-    libcouchbase_connect_status_t connstatus = LIBCOUCHBASE_CONNECT_OK;
+    lcb_connect_status_t connstatus = LCB_CONNECT_OK;
     int save_errno;
     do {
         if (instance->sock == INVALID_SOCKET) {
             /* Try to get a socket.. */
-            instance->sock = libcouchbase_gai2sock(instance,
-                                                   &instance->curr_ai,
-                                                   &save_errno);
+            instance->sock = lcb_gai2sock(instance,
+                                          &instance->curr_ai,
+                                          &save_errno);
 
             /* Reset the stream state, we run this only during a new socket. */
-            libcouchbase_instance_reset_stream_state(instance);
+            lcb_instance_reset_stream_state(instance);
         }
 
         if (instance->curr_ai == NULL) {
             char errinfo[1024];
-            libcouchbase_error_t our_errno;
-            libcouchbase_sockconn_errinfo(save_errno,
-                                          instance->host,
-                                          instance->port,
-                                          instance->ai,
-                                          errinfo,
-                                          sizeof(errinfo),
-                                          &our_errno);
+            lcb_error_t our_errno;
+            lcb_sockconn_errinfo(save_errno,
+                                 instance->host,
+                                 instance->port,
+                                 instance->ai,
+                                 errinfo,
+                                 sizeof(errinfo),
+                                 &our_errno);
 
             if (first_try && instance->sock != INVALID_SOCKET) {
                 /* Ensure our connerr function doesn't try to delete a
@@ -954,7 +954,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                 instance->sock = INVALID_SOCKET;
             }
 
-            libcouchbase_instance_connerr(instance, our_errno, errinfo);
+            lcb_instance_connerr(instance, our_errno, errinfo);
             return ;
         }
 
@@ -963,28 +963,28 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                                   instance->sock,
                                   instance->curr_ai->ai_addr,
                                   (unsigned int)instance->curr_ai->ai_addrlen) == 0) {
-            libcouchbase_instance_connected(instance);
+            lcb_instance_connected(instance);
             return ;
         } else {
             save_errno = instance->io->error;
-            connstatus = libcouchbase_connect_status(save_errno);
+            connstatus = lcb_connect_status(save_errno);
 
             switch (connstatus) {
-            case LIBCOUCHBASE_CONNECT_EINTR:
+            case LCB_CONNECT_EINTR:
                 retry = 1;
                 break;
-            case LIBCOUCHBASE_CONNECT_EISCONN:
-                libcouchbase_instance_connected(instance);
+            case LCB_CONNECT_EISCONN:
+                lcb_instance_connected(instance);
                 return ;
-            case LIBCOUCHBASE_CONNECT_EINPROGRESS:
+            case LCB_CONNECT_EINPROGRESS:
                 instance->io->update_event(instance->io,
                                            instance->sock,
                                            instance->event,
-                                           LIBCOUCHBASE_WRITE_EVENT,
+                                           LCB_WRITE_EVENT,
                                            instance,
-                                           libcouchbase_instance_connect_handler);
+                                           lcb_instance_connect_handler);
                 return ;
-            case LIBCOUCHBASE_CONNECT_EALREADY: /* Subsequent calls to connect */
+            case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return ;
 
             default: {
@@ -999,7 +999,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                     instance->io->close(instance->io, instance->sock);
                     instance->sock = INVALID_SOCKET;
                 }
-                if (connstatus == LIBCOUCHBASE_CONNECT_EFAIL &&
+                if (connstatus == LCB_CONNECT_EFAIL &&
                         instance->curr_ai->ai_next) {
                     /* Here we handle 'medium-type' errors which are not a hard
                      * failure, but mean that we need to retry the connect() with
@@ -1012,9 +1012,9 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
                     char errinfo[1024];
                     snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
                              strerror(instance->io->error));
-                    libcouchbase_instance_connerr(instance,
-                                                  LIBCOUCHBASE_CONNECT_ERROR,
-                                                  errinfo);
+                    lcb_instance_connerr(instance,
+                                         LCB_CONNECT_ERROR,
+                                         errinfo);
                     return ;
                 }
             }
@@ -1027,7 +1027,7 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
 }
 
 
-int lcb_getaddrinfo(libcouchbase_t instance, const char *hostname,
+int lcb_getaddrinfo(lcb_t instance, const char *hostname,
                     const char *servname, struct addrinfo **res)
 {
     struct addrinfo hints;
@@ -1035,10 +1035,10 @@ int lcb_getaddrinfo(libcouchbase_t instance, const char *hostname,
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;
     switch (instance->ipv6) {
-    case LIBCOUCHBASE_IPV6_DISABLED:
+    case LCB_IPV6_DISABLED:
         hints.ai_family = AF_INET;
         break;
-    case LIBCOUCHBASE_IPV6_ONLY:
+    case LCB_IPV6_ONLY:
         hints.ai_family = AF_INET6;
         break;
     default:
@@ -1053,7 +1053,7 @@ int lcb_getaddrinfo(libcouchbase_t instance, const char *hostname,
  * @todo use async connects etc
  */
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
+lcb_error_t lcb_connect(lcb_t instance)
 {
     int error;
 
@@ -1081,22 +1081,22 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
                 snprintf(errinfo, sizeof(errinfo),
                          "Failed to look up \"%s:%s\"",
                          instance->host, instance->port);
-                return libcouchbase_error_handler(instance,
-                                                  LIBCOUCHBASE_UNKNOWN_HOST,
-                                                  errinfo);
+                return lcb_error_handler(instance,
+                                         LCB_UNKNOWN_HOST,
+                                         errinfo);
             }
         }
     } while (error != 0);
 
     instance->curr_ai = instance->ai;
     instance->event = instance->io->create_event(instance->io);
-    instance->last_error = LIBCOUCHBASE_SUCCESS;
-    libcouchbase_instance_connect_handler(INVALID_SOCKET, 0, instance);
+    instance->last_error = LCB_SUCCESS;
+    lcb_instance_connect_handler(INVALID_SOCKET, 0, instance);
 
     return instance->last_error;
 }
 
-static void free_backup_nodes(libcouchbase_t instance)
+static void free_backup_nodes(lcb_t instance)
 {
     if (instance->should_free_backup_nodes) {
         char **ptr = instance->backup_nodes;

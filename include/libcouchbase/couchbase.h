@@ -29,10 +29,10 @@
 #include <libcouchbase/configuration.h>
 #include <libcouchbase/visibility.h>
 #include <libcouchbase/types.h>
+#include <libcouchbase/arguments.h>
 #include <libcouchbase/compat.h>
 #include <libcouchbase/behavior.h>
 #include <libcouchbase/callbacks.h>
-#include <libcouchbase/tap_filter.h>
 #include <libcouchbase/timings.h>
 
 #ifdef __cplusplus
@@ -50,7 +50,7 @@ extern "C" {
      *
      */
     LIBCOUCHBASE_API
-    const char *libcouchbase_get_version(libcouchbase_uint32_t *version);
+    const char *lcb_get_version(lcb_uint32_t *version);
 
     /**
      * Create a new instance of one of the library-supplied io ops types.
@@ -61,13 +61,13 @@ extern "C" {
      * @return pointer to a newly created io ops structure
      */
     LIBCOUCHBASE_API
-    libcouchbase_io_opt_t *libcouchbase_create_io_ops(libcouchbase_io_ops_type_t type,
-                                                      void *cookie,
-                                                      libcouchbase_error_t *error);
+    lcb_io_opt_t *lcb_create_io_ops(lcb_io_ops_type_t type,
+                                    void *cookie,
+                                    lcb_error_t *error);
 
 
     /**
-     * Create an instance of libcouchbase.
+     * Create an instance of lcb.
      *
      * @param hosts A list of hosts:port separated by ';' to the
      *              administration port of the couchbase cluster. (ex:
@@ -78,25 +78,25 @@ extern "C" {
      * @param passwd The password
      * @param bucket The bucket to connect to
      * @param io the io handle to use
-     * @return A handle to libcouchbase, or NULL if an error occured.
+     * @return A handle to lcb, or NULL if an error occured.
      */
     LIBCOUCHBASE_API
-    libcouchbase_t libcouchbase_create(const char *host,
-                                       const char *user,
-                                       const char *passwd,
-                                       const char *bucket,
-                                       struct libcouchbase_io_opt_st *io);
+    lcb_t lcb_create(const char *host,
+                     const char *user,
+                     const char *passwd,
+                     const char *bucket,
+                     struct lcb_io_opt_st *io);
 
 
     /**
-     * Destroy (and release all allocated resources) an instance of libcouchbase.
+     * Destroy (and release all allocated resources) an instance of lcb.
      * Using instance after calling destroy will most likely cause your
      * application to crash.
      *
      * @param instance the instance to destroy.
      */
     LIBCOUCHBASE_API
-    void libcouchbase_destroy(libcouchbase_t instance);
+    void lcb_destroy(lcb_t instance);
 
     /**
      * Set the number of usec the library should allow an operation to
@@ -114,31 +114,31 @@ extern "C" {
      * @param usec the new timeout value.
      */
     LIBCOUCHBASE_API
-    void libcouchbase_set_timeout(libcouchbase_t instance, libcouchbase_uint32_t usec);
+    void lcb_set_timeout(lcb_t instance, lcb_uint32_t usec);
 
     /**
      * Get the current timeout value used by this instance (in usec)
      */
     LIBCOUCHBASE_API
-    libcouchbase_uint32_t libcouchbase_get_timeout(libcouchbase_t instance);
+    lcb_uint32_t lcb_get_timeout(lcb_t instance);
 
     /**
      * Get the current host
      */
     LIBCOUCHBASE_API
-    const char *libcouchbase_get_host(libcouchbase_t instance);
+    const char *lcb_get_host(lcb_t instance);
 
     /**
      * Get the current port
      */
     LIBCOUCHBASE_API
-    const char *libcouchbase_get_port(libcouchbase_t instance);
+    const char *lcb_get_port(lcb_t instance);
 
     /**
      * Connect to the server and get the vbucket and serverlist.
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance);
+    lcb_error_t lcb_connect(lcb_t instance);
 
     /**
      * Returns the last error that was seen within libcoubhase.
@@ -146,54 +146,39 @@ extern "C" {
      * @param instance the connection whose last error should be returned.
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_get_last_error(libcouchbase_t instance);
+    lcb_error_t lcb_get_last_error(lcb_t instance);
 
     /**
      * Try to send/receive data buffered on the servers
      *
-     * @param instance the handle to libcouchbase
+     * @param instance the handle to lcb
      */
     LIBCOUCHBASE_API
-    void libcouchbase_flush_buffers(libcouchbase_t instance, const void *cookie);
+    void lcb_flush_buffers(lcb_t instance, const void *cookie);
 
     /**
-     * Associate a cookie with an instance of libcouchbase
+     * Associate a cookie with an instance of lcb
      * @param instance the instance to associate the cookie to
      * @param cookie the cookie to associate with this instance.
      */
     LIBCOUCHBASE_API
-    void libcouchbase_set_cookie(libcouchbase_t instance, const void *cookie);
+    void lcb_set_cookie(lcb_t instance, const void *cookie);
 
 
     /**
      * Retrieve the cookie associated with this instance
-     * @param instance the instance of libcouchbase
+     * @param instance the instance of lcb
      * @return The cookie associated with this instance or NULL
      */
     LIBCOUCHBASE_API
-    const void *libcouchbase_get_cookie(libcouchbase_t instance);
-
-    /**
-     * Use the TAP protocol to tap the cluster
-     * @param instance the instance to tap
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param filter the tap filter to use
-     * @param block set to true if you want libcouchbase to run the event
-     *              dispatcher loop
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_tap_cluster(libcouchbase_t instance,
-                                                  const void *command_cookie,
-                                                  libcouchbase_tap_filter_t filter,
-                                                  int block);
+    const void *lcb_get_cookie(lcb_t instance);
 
     /**
      * Wait for the execution of all batched requests
      * @param instance the instance containing the requests
      */
     LIBCOUCHBASE_API
-    void libcouchbase_wait(libcouchbase_t instance);
+    void lcb_wait(lcb_t instance);
 
     /**
      * Returns non-zero if the event loop is running now
@@ -202,7 +187,7 @@ extern "C" {
      * @return non-zero if nobody is waiting for IO interaction
      */
     LIBCOUCHBASE_API
-    int libcouchbase_is_waiting(libcouchbase_t instance);
+    int lcb_is_waiting(lcb_t instance);
 
     /**
      * Stop event loop. Might be useful to breakout the event loop
@@ -210,235 +195,271 @@ extern "C" {
      * @param instance the instance to run the event loop for.
      */
     LIBCOUCHBASE_API
-    void libcouchbase_breakout(libcouchbase_t instance);
+    void lcb_breakout(lcb_t instance);
 
     /**
-     * Get a number of values from the cache. You need to run the
-     * event loop yourself (or call libcouchbase_execute) to retrieve
-     * the data. You might want to alter the expiry time for the object
-     * you're fetching, and to do so you should specify the new expiry
-     * time in the exp parameter (refer to the documentation on
-     * libcouchbase_store to see the meaning of the expiration)
+     * Get a number of values from the cache.
      *
-     * NOTE: The semantics of the expiration parameter differs slightly
-     * from its use in libcouchbase_store. To specify that the expiration
-     * time should not be modified, pass NULL for the expiration array.
-     * Passing an array of zeroes will actually cause the key to be expired
-     * immediately.
+     * If you specify a non-null value for expiration, the server will
+     * update the expiration value on the item (refer to the
+     * documentation on lcb_store to see the meaning of the
+     * expiration). All other members should be set to zero.
+     *
+     * Example:
+     *   lcb_get_cmd_t *get = calloc(1, sizeof(*get));
+     *   get->version = 0;
+     *   get->v.v0.key = "my-key";
+     *   get->v.v0.nkey = strlen(get->v.v0.key);
+     *   // Set an expiration of 60 (optional)
+     *   get->v.v0.exptime = 60;
+     *   lcb_get_cmd_t* commands[] = { get };
+     *   lcb_get(instance, NULL, 1, commands);
      *
      * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param num_keys the number of keys to get
-     * @param keys the array containing the keys to get
-     * @param nkey the array containing the lengths of the keys
-     * @param exp the array containing the expiration times, or NULL
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to get
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_mget(libcouchbase_t instance,
-                                           const void *command_cookie,
-                                           libcouchbase_size_t num_keys,
-                                           const void *const *keys,
-                                           const libcouchbase_size_t *nkey,
-                                           const libcouchbase_time_t *exp);
+    lcb_error_t lcb_get(lcb_t instance,
+                        const void *command_cookie,
+                        lcb_size_t num,
+                        const lcb_get_cmd_t *const *commands);
 
     /**
-     * Get a number of values from the cache. You need to run the
-     * event loop yourself (or call libcouchbase_execute) to retrieve
-     * the data. You might want to alter the expiry time for the object
-     * you're fetching, and to do so you should specify the new expiry
-     * time in the exp parameter. To use an ordinary mget use NULL
-     * for the exp parameter.
+     * Get a number of replca values from the cache.
+     *
+     * Example:
+     *   lcb_get_replica_cmd_t *get = calloc(1, sizeof(*get));
+     *   get->version = 0;
+     *   get->v.v0.key = "my-key";
+     *   get->v.v0.nkey = strlen(get->v.v0.key);
+     *   lcb_get_replica-cmd_t* commands[] = { get };
+     *   lcb_get_replica(instance, NULL, 1, commands);
      *
      * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param hashkey the key to use for hashing
-     * @param nhashkey the number of bytes in hashkey
-     * @param num_keys the number of keys to get
-     * @param keys the array containing the keys to get
-     * @param nkey the array containing the lengths of the keys
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to get
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_mget_by_key(libcouchbase_t instance,
-                                                  const void *command_cookie,
-                                                  const void *hashkey,
-                                                  libcouchbase_size_t nhashkey,
-                                                  libcouchbase_size_t num_keys,
-                                                  const void *const *keys,
-                                                  const libcouchbase_size_t *nkey,
-                                                  const libcouchbase_time_t *exp);
+    lcb_error_t lcb_get_replica(lcb_t instance,
+                                const void *command_cookie,
+                                lcb_size_t num,
+                                const lcb_get_replica_cmd_t *const *commands);
 
     /**
      * Get an item with a lock that has a timeout. It can then be unlocked
      * with either a CAS operation or with an explicit unlock command.
      *
+     * You may specify the expiration value for the lock in the
+     * expiration (setting it to 0 cause the server to use the default
+     * value).
+     *
+     * Example:
+     *   lcb_get_locked_cmd_t *get = calloc(1, sizeof(*get));
+     *   get->version = 0;
+     *   get->v.v0.key = "my-key";
+     *   get->v.v0.nkey = strlen(get->v.v0.key);
+     *   // Set a lock expiration of 60 (optional)
+     *   get->v.v0.exptime = 60;
+     *   lcb_get_locked_cmd_t* commands[] = { get };
+     *   lcb_get_locked(instance, NULL, 1, commands);
+     *
      * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param key the key to get
-     * @param nkey the length of the key
-     * @param exp the expiration time for the lock. If exp is NULL, the
-     *            Couchbase will use default value (usually 15 seconds, but
-     *            could be configured). Default value will be used if
-     *            specified value is larger than allowed maximum (usually
-     *            29, but could be configured on server).
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to get and lock
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_getl(libcouchbase_t instance,
-                                           const void *command_cookie,
-                                           const void *key,
-                                           libcouchbase_size_t nkey,
-                                           libcouchbase_time_t *exp);
+    lcb_error_t lcb_get_locked(lcb_t instance,
+                               const void *command_cookie,
+                               lcb_size_t num,
+                               const lcb_get_locked_cmd_t *const *commands);
 
     /**
-     * Get an item with a lock that has a timeout. Use hashkey argument to
-     * locate the vbucket. It can then be unlocked with either a CAS
-     * operation or with an explicit unlock command. All mutation commands
-     * will return LIBCOUCHBASE_ETMPFAIL for locked keys.
+     * Unlock the key locked with lcb_get_locked
      *
-     * @param instance the instance used to batch the requests from
+     * You should initialize the key, nkey and cas member in the
+     * lcb_item_st structure for the keys to get. All other
+     * members should be set to zero.
+     *
+     * Example:
+     *   lcb_unlock_cmd_t *unlock = calloc(1, sizeof(*unlock));
+     *   unlock->version = 0;
+     *   unlock->v.v0.key = "my-key";
+     *   unlock->v.v0.nkey = strlen(unlock->v.v0.key);
+     *   unlock->v.v0.cas = 0x666;
+     *   lcb_unlock_cmd_t* commands[] = { unlock };
+     *   lcb_unlock(instance, NULL, 1, commands);
+     *
+     * @param instance the handle to lcb
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param hashkey the key to use for hashing
-     * @param nhashkey the number of bytes in hashkey
-     * @param key the key to get
-     * @param nkey the length of the key
-     * @param exp the expiration time for the lock. If exp is NULL, the
-     *            Couchbase will use default value (usually 15 seconds, but
-     *            could be configured). Default value will be used if
-     *            specified value is larger than allowed maximum (usually
-     *            29, but could be configured on server).
-     * @return The status of the operation. Returns LIBCOUCHBASE_ETMPFAIL if
-     *         the lock was unsuccessful or LIBCOUCHBASE_KEY_ENOENT for
-     *         missing key.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_getl_by_key(libcouchbase_t instance,
-                                                  const void *command_cookie,
-                                                  const void *hashkey,
-                                                  libcouchbase_size_t nhashkey,
-                                                  const void *key,
-                                                  libcouchbase_size_t nkey,
-                                                  libcouchbase_time_t *exp);
-
-    /**
-     * Unlock the key locked with GETL.
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param key the key to delete
-     * @param nkey the number of bytes in the key
-     * @param cas the cas value for the object
-     * @return Status of the operation. LIBCOUCHBASE_ETMPFAIL if the key
-     *         cannot be unlocked (wrong CAS or non-locked).
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_unlock(libcouchbase_t instance,
-                                             const void *command_cookie,
-                                             const void *key,
-                                             libcouchbase_size_t nkey,
-                                             libcouchbase_cas_t cas);
-
-    /**
-     * Unlock the key locked with GETL. Use hashkey to locate the vbucket.
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param hashkey the key to use for hashing
-     * @param nhashkey the number of bytes in hashkey
-     * @param key the key to delete
-     * @param nkey the number of bytes in the key
-     * @param cas the cas value for the object
-     * @return Status of the operation. LIBCOUCHBASE_ETMPFAIL if the key
-     *         cannot be unlocked (wrong CAS or non-locked).
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_unlock_by_key(libcouchbase_t instance,
-                                                    const void *command_cookie,
-                                                    const void *hashkey,
-                                                    libcouchbase_size_t nhashkey,
-                                                    const void *key,
-                                                    libcouchbase_size_t nkey,
-                                                    libcouchbase_cas_t cas);
-
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_get_replica_by_key(libcouchbase_t instance,
-                                                         const void *command_cookie,
-                                                         const void *hashkey,
-                                                         libcouchbase_size_t nhashkey,
-                                                         libcouchbase_size_t num_keys,
-                                                         const void *const *keys,
-                                                         const libcouchbase_size_t *nkey);
-
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_get_replica(libcouchbase_t instance,
-                                                  const void *command_cookie,
-                                                  libcouchbase_size_t num_keys,
-                                                  const void *const *keys,
-                                                  const libcouchbase_size_t *nkey);
-
-    /**
-     * Touch (set expiration time) on a number of values in the cache
-     * You need to run the event loop yourself (or call
-     * libcouchbase_execute) to retrieve the results of the operations. All
-     * mutation commands will return LIBCOUCHBASE_ETMPFAIL for locked keys.
-     *
-     * @param instance the instance used to batch the requests from
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param num_keys the number of keys to get
-     * @param keys the array containing the keys to get
-     * @param nkey the array containing the lengths of the keys
-     * @param exp the array containing the expiry times for each key. Values
-     *            larger than 30*24*60*60 seconds (30 days) are interpreted
-     *            as absolute times (from the epoch).
-     * @return The status of the operation. Returns LIBCOUCHBASE_ETMPFAIL if
-     *         the lock was unsuccessful or LIBCOUCHBASE_KEY_ENOENT for
-     *         missing key.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_mtouch(libcouchbase_t instance,
-                                             const void *command_cookie,
-                                             libcouchbase_size_t num_keys,
-                                             const void *const *keys,
-                                             const libcouchbase_size_t *nkey,
-                                             const libcouchbase_time_t *exp);
-
-    /**
-     * Touch (set expiration time) on a number of values in the cache
-     * You need to run the event loop yourself (or call
-     * libcouchbase_execute) to retrieve the results of the operations.
-     *
-     * Set <code>nhashkey</code> to 0 if you want to hash each individual
-     * key.
-     *
-     * @param instance the instance used to batch the requests from
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param hashkey the key to use for hashing
-     * @param nhashkey the number of bytes in hashkey
-     * @param num_keys the number of keys to get
-     * @param keys the array containing the keys to get
-     * @param nkey the array containing the lengths of the keys
-     * @param exp the new expiration time for the items
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to unlock
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_mtouch_by_key(libcouchbase_t instance,
-                                                    const void *command_cookie,
-                                                    const void *hashkey,
-                                                    libcouchbase_size_t nhashkey,
-                                                    libcouchbase_size_t num_keys,
-                                                    const void *const *keys,
-                                                    const libcouchbase_size_t *nkey,
-                                                    const libcouchbase_time_t *exp);
+    lcb_error_t lcb_unlock(lcb_t instance,
+                           const void *command_cookie,
+                           lcb_size_t num,
+                           const lcb_unlock_cmd_t *const *commands);
 
+    /**
+     * Touch (set expiration time) on a number of values in the cache.
+     *
+     * Values larger than 30*24*60*60 seconds (30 days) are
+     * interpreted as absolute times (from the epoch). All other
+     * members should be set to zero.
+     *
+     * Example:
+     *   lcb_touch_cmd_t *touch = calloc(1, sizeof(*touch));
+     *   touch->version = 0;
+     *   touch->v.v0.key = "my-key";
+     *   touch->v.v0.nkey = strlen(item->v.v0.key);
+     *   touch->v.v0.exptime = 0x666;
+     *   lcb_touch_cmd_t* commands[] = { touch };
+     *   lcb_touch(instance, NULL, 1, commands);
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param num the total number of elements in the commnands array
+     * @param commands the array containing the items to touch
+     * @return The status of the operation
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_touch(lcb_t instance,
+                          const void *command_cookie,
+                          lcb_size_t num,
+                          const lcb_touch_cmd_t *const *commands);
+
+    /**
+     * Store an item in the cluster.
+     *
+     * You may initialize all of the members in the the
+     * lcb_item_st structure with the values you want.
+     * Values larger than 30*24*60*60 seconds (30 days) are
+     * interpreted as absolute times (from the epoch). Unused members
+     * should be set to zero.
+     *
+     * Example:
+     *   lcb_store_cmd_st *store = calloc(1, sizeof(*store));
+     *   store->version = 0;
+     *   store->v.v0.key = "my-key";
+     *   store->v.v0.nkey = strlen(store->v.v0.key);
+     *   store->v.v0.bytes = "{ value:666 }"
+     *   store->v.v0.nbytes = strlen(store->v.v0.bytes);
+     *   store->v.v0.flags = 0xdeadcafe;
+     *   store->v.v0.cas = 0x1234;
+     *   store->v.v0.exptime = 0x666;
+     *   store->v.v0.datatype = LCB_JSON;
+     *   store->v.v0.operation = LCB_REPLACE;
+     *   lcb_store_cmd_st* commands[] = { store };
+     *   lcb_store(instance, NULL, 1, commands);
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param operation constraints for the storage operation (add/replace etc)
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to store
+     * @return The status of the operation
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_store(lcb_t instance,
+                          const void *command_cookie,
+                          lcb_size_t num,
+                          const lcb_store_cmd_t *const *commands);
+
+    /**
+     * Perform arithmetic operation on a keys value.
+     *
+     * You should initialize the key, nkey and expiration member in
+     * the lcb_item_st structure for the keys to update.
+     * Values larger than 30*24*60*60 seconds (30 days) are
+     * interpreted as absolute times (from the epoch). All other
+     * members should be set to zero.
+     *
+     * Example:
+     *   lcb_arithmetic_cmd_t *arithmetic = calloc(1, sizeof(*arithmetic));
+     *   arithmetic->version = 0;
+     *   arithmetic->v.v0.key = "counter";
+     *   arithmetic->v.v0.nkey = strlen(arithmetic->v.v0.key);
+     *   arithmetic->v.v0.initial = 0x666;
+     *   arithmetic->v.v0.create = 1;
+     *   arithmetic->v.v0.delta = 1;
+     *   lcb_arithmetic_cmd_t* commands[] = { arithmetic };
+     *   lcb_arithmetic(instance, NULL, 1, commands);
+     *
+     * @param instance the handle to lcb
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param create set to true if you want the object to be created if it
+     *               doesn't exist.
+     * @param delta The amount to add / subtract
+     * @param initial The initial value of the object if we create it
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to operate on
+     * @return Status of the operation.
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_arithmetic(lcb_t instance,
+                               const void *command_cookie,
+                               lcb_size_t num,
+                               const lcb_arithmetic_cmd_t *const *commands);
+
+    /**
+     * Observe key
+     *
+     * Example:
+     *   lcb_observe_cmd_t *observe = calloc(1, sizeof(*observe));
+     *   observe->version = 0;
+     *   observe->v.v0.key = "my-key";
+     *   observe->v.v0.nkey = strlen(observe->v.v0.key);
+     *   lcb_observe_cmd_t* commands[] = { observe };
+     *   lcb_observe(instance, NULL, 1, commands);
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to observe
+     * @return The status of the operation
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_observe(lcb_t instance,
+                            const void *command_cookie,
+                            lcb_size_t num,
+                            const lcb_observe_cmd_t *const *commands);
+
+    /**
+     * Remove a key from the cluster
+     *
+     * Example:
+     *   lcb_remove_cmd_t *remove = calloc(1, sizeof(*remove));
+     *   remove->version = 0;
+     *   remove->v.v0.key = "my-key";
+     *   remove->v.v0.nkey = strlen(remove->v.v0.key);
+     *   remove->v.v0.cas = 0x666;
+     *   lcb_remove_cmd_t* commands[] = { remove };
+     *   lcb_remove(instance, NULL, 1, commands);
+     *
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to remove
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_remove(lcb_t instance,
+                           const void *command_cookie,
+                           lcb_size_t num,
+                           const lcb_remove_cmd_t *const *commands);
 
     /**
      * Request server statistics. Without a key specified the server will
@@ -461,10 +482,10 @@ extern "C" {
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
-                                                   const void *command_cookie,
-                                                   const void *arg,
-                                                   libcouchbase_size_t narg);
+    lcb_error_t lcb_server_stats(lcb_t instance,
+                                 const void *command_cookie,
+                                 const void *arg,
+                                 lcb_size_t narg);
 
     /**
      * Request server versions. The callback will be invoked with the
@@ -473,197 +494,12 @@ extern "C" {
      * When all server versions have been received, the callback is invoked
      * with the server endpoint argument set to NULL
      *
-     * @param instance the handle to libcouchbase
+     * @param instance the handle to lcb
      * @param command_cookie a cookie passed to each invocation of the callback
      *                          from this command
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_server_versions(libcouchbase_t instance,
-                                                      const void *command_cookie);
-    /**
-     * Spool a store operation to the cluster. The operation <b>may</b> be
-     * sent immediately, but you won't be sure (or get the result) until you
-     * run the event loop (or call libcouchbase_execute).
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param operation constraints for the storage operation (add/replace etc)
-     * @param key the key to set
-     * @param nkey the number of bytes in the key
-     * @param bytes the value to set
-     * @param nbytes the size of the value
-     * @param flags the user-defined flag section for the item (doesn't have
-     *              any meaning to Couchbase server)
-     * @param exp When the object should expire. The expiration time is
-     *            either an offset into the future.. OR an absolute
-     *            timestamp, depending on how large (numerically) the
-     *            expiration is. if the expiration exceeds 30 days
-     *            (i.e. 24 * 3600 * 30) then it's an absolute timestamp.
-     * @param cas the cas identifier for the existing object if you want to
-     *            ensure that you're only replacing/append/prepending a
-     *            specific object. Specify 0 if you don't want to limit to
-     *            any cas value.
-     * @return Status of the operation.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_store(libcouchbase_t instance,
-                                            const void *command_cookie,
-                                            libcouchbase_storage_t operation,
-                                            const void *key, libcouchbase_size_t nkey,
-                                            const void *bytes, libcouchbase_size_t nbytes,
-                                            libcouchbase_uint32_t flags, libcouchbase_time_t exp,
-                                            libcouchbase_cas_t cas);
-
-    /**
-     * Spool a store operation to the cluster. The operation <b>may</b> be
-     * sent immediately, but you won't be sure (or get the result) until you
-     * run the event loop (or call libcouchbase_execute).
-     *
-     * This _store_by_key function differs from the _store function in that
-     * you can specify a different value for hashkey to specify a different
-     * character string for the client to use when hashing to the proper
-     * location in the cluster.
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param operation constraints for the storage operation (add/replace etc)
-     * @param hashkey the key to use for hashing
-     * @param nhashkey the number of bytes in hashkey
-     * @param key the key to set
-     * @param nkey the number of bytes in the key
-     * @param bytes the value to set
-     * @param nbytes the size of the value
-     * @param flags the user-defined flag section for the item
-     * @param exp When the object should expire
-     * @param cas the cas identifier for the existing object if you want to
-     *            ensure that you're only replacing/append/prepending a
-     *            specific object. Specify 0 if you don't want to limit to
-     *            any cas value.
-     * @return Status of the operation.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_store_by_key(libcouchbase_t instance,
-                                                   const void *command_cookie,
-                                                   libcouchbase_storage_t operation,
-                                                   const void *hashkey,
-                                                   libcouchbase_size_t nhashkey,
-                                                   const void *key,
-                                                   libcouchbase_size_t nkey,
-                                                   const void *bytes,
-                                                   libcouchbase_size_t nbytes,
-                                                   libcouchbase_uint32_t flags,
-                                                   libcouchbase_time_t exp,
-                                                   libcouchbase_cas_t cas);
-
-    /**
-     * Spool an arithmetic operation to the cluster. The operation <b>may</b> be
-     * sent immediately, but you won't be sure (or get the result) until you
-     * run the event loop (or call libcouchbase_execute).
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param key the key to set
-     * @param nkey the number of bytes in the key
-     * @param delta The amount to add / subtract
-     * @param exp When the object should expire
-     * @param create set to true if you want the object to be created if it
-     *               doesn't exist.
-     * @param initial The initial value of the object if we create it
-     * @return Status of the operation.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_arithmetic(libcouchbase_t instance,
-                                                 const void *command_cookie,
-                                                 const void *key,
-                                                 libcouchbase_size_t nkey,
-                                                 libcouchbase_int64_t delta,
-                                                 libcouchbase_time_t exp,
-                                                 int create,
-                                                 libcouchbase_uint64_t initial);
-
-    /**
-     * Spool an arithmetic operation to the cluster. The operation <b>may</b> be
-     * sent immediately, but you won't be sure (or get the result) until you
-     * run the event loop (or call libcouchbase_execute).
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param hashkey the key to use for hashing
-     * @param nhashkey the number of bytes in hashkey
-     * @param key the key to set
-     * @param nkey the number of bytes in the key
-     * @param delta The amount to add / subtract
-     * @param exp When the object should expire
-     * @param create set to true if you want the object to be created if it
-     *               doesn't exist.
-     * @param initial The initial value of the object if we create it
-     * @return Status of the operation.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_arithmetic_by_key(libcouchbase_t instance,
-                                                        const void *command_cookie,
-                                                        const void *hashkey,
-                                                        libcouchbase_size_t nhashkey,
-                                                        const void *key,
-                                                        libcouchbase_size_t nkey,
-                                                        libcouchbase_int64_t delta,
-                                                        libcouchbase_time_t exp,
-                                                        int create,
-                                                        libcouchbase_uint64_t initial);
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_observe(libcouchbase_t instance,
-                                              const void *command_cookie,
-                                              libcouchbase_size_t num_keys,
-                                              const void *const *keys,
-                                              const libcouchbase_size_t *nkey);
-
-    /**
-     * Spool a remove operation to the cluster. The operation <b>may</b> be
-     * sent immediately, but you won't be sure (or get the result) until you
-     * run the event loop (or call libcouchbase_execute).
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param key the key to delete
-     * @param nkey the number of bytes in the key
-     * @param cas the cas value for the object (or 0 if you don't care)
-     * @return Status of the operation.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
-                                             const void *command_cookie,
-                                             const void *key,
-                                             libcouchbase_size_t nkey,
-                                             libcouchbase_cas_t cas);
-
-    /**
-     * Spool a remove operation to the cluster. The operation <b>may</b> be
-     * sent immediately, but you won't be sure (or get the result) until you
-     * run the event loop (or call libcouchbase_execute).
-     *
-     * @param instance the handle to libcouchbase
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param hashkey the key to use for hashing
-     * @param nhashkey the number of bytes in hashkey
-     * @param key the key to delete
-     * @param nkey the number of bytes in the key
-     * @param cas the cas value for the object (or 0 if you don't care)
-     * @return Status of the operation.
-     */
-    LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
-                                                    const void *command_cookie,
-                                                    const void *hashkey,
-                                                    libcouchbase_size_t nhashkey,
-                                                    const void *key,
-                                                    libcouchbase_size_t nkey,
-                                                    libcouchbase_cas_t cas);
+    lcb_error_t lcb_server_versions(lcb_t instance, const void *command_cookie);
 
 
     /**
@@ -675,8 +511,7 @@ extern "C" {
      *         <b>not</b> release the memory returned from this function.
      */
     LIBCOUCHBASE_API
-    const char *libcouchbase_strerror(libcouchbase_t instance,
-                                      libcouchbase_error_t error);
+    const char *lcb_strerror(lcb_t instance, lcb_error_t error);
 
 
     /**
@@ -691,28 +526,27 @@ extern "C" {
      * @return The status of the operation.
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_set_verbosity(libcouchbase_t instance,
-                                                    const void *command_cookie,
-                                                    const char *server,
-                                                    libcouchbase_verbosity_level_t level);
+    lcb_error_t lcb_set_verbosity(lcb_t instance,
+                                  const void *command_cookie,
+                                  const char *server,
+                                  lcb_verbosity_level_t level);
 
     /**
      * Flush the entire couchbase cluster!
      *
-     * @param instance the handle to libcouchbase
+     * @param instance the handle to lcb
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
      * @return Status of the operation.
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
-                                            const void *cookie);
+    lcb_error_t lcb_flush(lcb_t instance, const void *cookie);
 
     /**
      * Execute HTTP request matching given path and yield JSON result object.
      * Depending on type it could be:
      *
-     * - LIBCOUCHBASE_HTTP_TYPE_VIEW
+     * - LCB_HTTP_TYPE_VIEW
      *
      *   The client should setup view_complete callback in order to fetch
      *   the result. Also he can setup view_data callback to fetch response
@@ -721,75 +555,83 @@ extern "C" {
      *   argument (NULL pointer and zero size) is the sign of end of
      *   response. Chunked callback allows to save memory on large datasets.
      *
-     * - LIBCOUCHBASE_HTTP_TYPE_MANAGEMENT
+     * - LCB_HTTP_TYPE_MANAGEMENT
      *
      *   Management requests allow you to configure the cluster, add/remove
      *   buckets, rebalance etc. The result will be passed to management
      *   callbacks (data/complete).
      *
-     * @param instance The handle to libcouchbase
+     * Example: Fetch first 10 docs from '_design/test/_view/all' view
+     *   lcb_error_t err;
+     *   lcb_http_cmd_t *cmd = calloc(1, sizeof(lcb_http_cmd_t));
+     *   cmd->version = 0;
+     *   cmd->v.v0.path = "_design/test/_view/all?limit=10";
+     *   cmd->v.v0.npath = strlen(item->v.v0.path);
+     *   cmd->v.v0.body = NULL;
+     *   cmd->v.v0.nbody = 0;
+     *   cmd->v.v0.method = LCB_HTTP_METHOD_GET;
+     *   cmd->v.v0.chunked = 1;
+     *   cmd->v.v0.content_type = "application/json";
+     *   lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW,
+     *                         &cmd, &err);
+     *
+     * Example: The same as above but with POST filter
+     *   lcb_error_t err;
+     *   lcb_http_cmd_t *cmd = calloc(1, sizeof(lcb_http_cmd_t));
+     *   cmd->version = 0;
+     *   cmd->v.v0.path = "_design/test/_view/all?limit=10";
+     *   cmd->v.v0.npath = strlen(item->v.v0.path);
+     *   cmd->v.v0.body = "{\"keys\": [\"test_1000\", \"test_10002\"]}"
+     *   cmd->v.v0.nbody = strlen(item->v.v0.body);
+     *   cmd->v.v0.method = LCB_HTTP_METHOD_POST;
+     *   cmd->v.v0.chunked = 1;
+     *   cmd->v.v0.content_type = "application/json";
+     *   lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW,
+     *                         &cmd, &err);
+     *
+     * Example: Delete bucket via REST management API
+     *   lcb_error_t err;
+     *   lcb_http_cmd_t cmd;
+     *   cmd->version = 0;
+     *   cmd.v.v0.path = query.c_str();
+     *   cmd.v.v0.npath = query.length();
+     *   cmd.v.v0.body = NULL;
+     *   cmd.v.v0.nbody = 0;
+     *   cmd.v.v0.method = LCB_HTTP_METHOD_DELETE;
+     *   cmd.v.v0.chunked = false;
+     *   cmd.v.v0.content_type = "application/x-www-form-urlencoded";
+     *   lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT,
+     *                         &cmd, &err);
+     *
+     * @param instance The handle to lcb
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
      * @param type The type of the request needed.
-     * @param path A view path string with optional query params (e.g. skip,
-     *             limit etc.)
-     * @param npath Size of path
-     * @param body The POST body for Couchbase View request.
-     * @param nbody Size of body
-     * @param method HTTP message type to be sent to server
-     * @param chunked If true the client will use libcouchbase_http_data_callback
-     *                to notify about response and will call
-     *                libcouchbase_http_complete with empty data eventually.
-     * @param content_type The 'Content-Type' header for request. For view
-     *                     requests it is usually "application/json", for
-     *                     management -- "application/x-www-form-urlencoded".
+     * @param cmd The struct describing the command options
      * @param error Where to store information about why creation failed
-     *
-     * @example Fetch first 10 docs from the bucket
-     *    const char path[] = "_all_docs?limit=10";
-     *    libcouchbase_error_t err;
-     *    libcouchbase_make_http_request(instance, LIBCOUCHBASE_HTTP_TYPE_VIEW,
-     *                                   NULL, path, npath, NULL, 0,
-     *                                   LIBCOUCHBASE_HTTP_METHOD_GET, 1,
-     *                                   "application/json", &err);
-     *
-     * @example Filter first 10 docs using POST request
-     *    const char path[] = "_all_docs?limit=10";
-     *    const char body[] = "{\"keys\": [\"test_1000\", \"test_10002\"]}"
-     *    libcouchbase_make_http_request(instance, LIBCOUCHBASE_HTTP_TYPE_VIEW,
-     *                                   NULL, path, npath, body, sizeof(body),
-     *                                   LIBCOUCHBASE_HTTP_METHOD_POST, 1,
-     *                                   "application/json", &err);
      */
     LIBCOUCHBASE_API
-    libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instance,
-                                                               const void *command_cookie,
-                                                               libcouchbase_http_type_t type,
-                                                               const char *path,
-                                                               libcouchbase_size_t npath,
-                                                               const void *body,
-                                                               libcouchbase_size_t nbody,
-                                                               libcouchbase_http_method_t method,
-                                                               int chunked,
-                                                               const char *content_type,
-                                                               libcouchbase_error_t *error);
-
+    lcb_http_request_t lcb_make_http_request(lcb_t instance,
+                                             const void *command_cookie,
+                                             lcb_http_type_t type,
+                                             const lcb_http_cmd_t *cmd,
+                                             lcb_error_t *error);
 
     /**
      * Cancel HTTP request (view or management API). This function could be
      * called from the callback to stop the request.
      *
-     * @param instance The handle to libcouchbase
+     * @param instance The handle to lcb
      * @param request The request handle
      */
     LIBCOUCHBASE_API
-    void libcouchbase_cancel_http_request(libcouchbase_t instance,
-                                          libcouchbase_http_request_t request);
+    void lcb_cancel_http_request(lcb_t instance,
+                                 lcb_http_request_t request);
 
     /**
      * Create timer event. The user will be notified through timer callback.
      *
-     * @param instance The handle to libcouchbase
+     * @param instance The handle to lcb
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
      * @param usec The timespan in microseconds
@@ -798,12 +640,12 @@ extern "C" {
      * @param error Where to store information about why creation failed
      */
     LIBCOUCHBASE_API
-    libcouchbase_timer_t libcouchbase_timer_create(libcouchbase_t instance,
-                                                   const void *command_cookie,
-                                                   libcouchbase_uint32_t usec,
-                                                   int periodic,
-                                                   libcouchbase_timer_callback callback,
-                                                   libcouchbase_error_t *error);
+    lcb_timer_t lcb_timer_create(lcb_t instance,
+                                 const void *command_cookie,
+                                 lcb_uint32_t usec,
+                                 int periodic,
+                                 lcb_timer_callback callback,
+                                 lcb_error_t *error);
 
     /**
      * Destroy the timer. All non-periodic timers will be sweeped
@@ -811,23 +653,22 @@ extern "C" {
      * instance will be destroyed. It is safe to call this function several
      * times for given timer.
      *
-     * @param instance The handle to libcouchbase
+     * @param instance The handle to lcb
      * @param timer the timer handle
      */
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_timer_destroy(libcouchbase_t instance,
-                                                    libcouchbase_timer_t timer);
+    lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer);
 
     /**
      * Get the number of the replicas in the cluster
      *
-     * @param instance The handle to libcouchbase
+     * @param instance The handle to lcb
      *
      * @return -1 if the cluster wasn't configured yet, and number of
      *         replicas otherwise.
      */
     LIBCOUCHBASE_API
-    libcouchbase_int32_t libcouchbase_get_num_replicas(libcouchbase_t instance);
+    lcb_int32_t lcb_get_num_replicas(lcb_t instance);
 #ifdef __cplusplus
 }
 #endif

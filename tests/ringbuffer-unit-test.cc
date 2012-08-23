@@ -148,7 +148,7 @@ TEST_F(Ringbuffer, wrappedBufferTest)
 TEST_F(Ringbuffer, regression1)
 {
     ringbuffer_t ring;
-    struct libcouchbase_iovec_st iov[2];
+    struct lcb_iovec_st iov[2];
     ring.root = (char *)0x477a80;
     ring.read_head = (char *)0x47b0a3;
     ring.write_head = (char *)0x47b555;

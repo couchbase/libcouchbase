@@ -16,7 +16,7 @@
  */
 
 /**
- * Example program using libcouchbase_view_execute.
+ * Example program using lcb_view_execute.
  *
  * This example shows how to plug the JSON parser to libcouchbase view
  * function. In this example we used libyajl to parse and reformat the
@@ -69,7 +69,7 @@ int minify = 0;
 int force_utf8 = 0;
 
 struct cookie_st {
-    struct libcouchbase_io_opt_st *io;
+    struct lcb_io_opt_st *io;
     yajl_handle parser;
     yajl_gen gen;
 };
@@ -294,22 +294,24 @@ static yajl_callbacks parser_callbacks = {
     reformat_end_array
 };
 
-static void data_callback(libcouchbase_http_request_t request,
-                          libcouchbase_t instance,
+static void data_callback(lcb_http_request_t request,
+                          lcb_t instance,
                           const void *cookie,
-                          libcouchbase_error_t error,
-                          libcouchbase_http_status_t status,
-                          const char *path, size_t npath,
-                          const char * const *headers,
-                          const void *bytes, size_t nbytes)
+                          lcb_error_t error,
+                          const lcb_http_resp_t *resp)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
     yajl_status st;
+    const unsigned char *bytes = resp->v.v0.bytes;
+    unsigned int nbytes = resp->v.v0.nbytes;
 
+    if (error != LCB_SUCCESS) {
+        return;
+    }
     if (bytes) {
-        st = yajl_parse(c->parser, bytes, (unsigned int)nbytes);
+        st = yajl_parse(c->parser, bytes, nbytes);
         if (st != yajl_status_ok) {
-            unsigned char *str = yajl_get_error(c->parser, 1, bytes, (unsigned int)nbytes);
+            unsigned char *str = yajl_get_error(c->parser, 1, bytes, nbytes);
             fprintf(stderr, "%s", (const char *) str);
             yajl_free_error(c->parser, str);
             c->io->stop_event_loop(c->io);
@@ -317,7 +319,7 @@ static void data_callback(libcouchbase_http_request_t request,
     } else { /* end of response */
         st = yajl_complete_parse(c->parser);
         if (st != yajl_status_ok) {
-            unsigned char *str = yajl_get_error(c->parser, 1, bytes, (unsigned int)nbytes);
+            unsigned char *str = yajl_get_error(c->parser, 1, bytes, nbytes);
             fprintf(stderr, "%s", (const char *) str);
             yajl_free_error(c->parser, str);
         } else {
@@ -331,36 +333,30 @@ static void data_callback(libcouchbase_http_request_t request,
     }
     (void)request;
     (void)instance;
-    (void)path;
-    (void)npath;
-    (void)error;
-    (void)status;
-    (void)headers;
 }
 
-static void complete_callback(libcouchbase_http_request_t request,
-                              libcouchbase_t instance,
+static void complete_callback(lcb_http_request_t request,
+                              lcb_t instance,
                               const void *cookie,
-                              libcouchbase_error_t error,
-                              libcouchbase_http_status_t status,
-                              const char *path, size_t npath,
-                              const char * const *headers,
-                              const void *bytes, size_t nbytes)
+                              lcb_error_t error,
+                              const lcb_http_resp_t *resp)
 {
     struct cookie_st *c = (struct cookie_st *)cookie;
     yajl_status st;
-    (void)instance;
+    const unsigned char *bytes = resp->v.v0.bytes;
+    unsigned int nbytes = resp->v.v0.nbytes;
+    const char * const *headers = resp->v.v0.headers;
 
     if (headers) {
-        libcouchbase_size_t ii;
+        lcb_size_t ii;
         for (ii = 1; *headers != NULL; ++ii, ++headers) {
             fprintf(stderr, "%s%s", *headers, (ii % 2 == 0) ? "\n" : ": ");
         }
     }
     fprintf(stderr, "\"");
-    fwrite(path, npath, sizeof(char), stderr);
+    fwrite(resp->v.v0.path, resp->v.v0.npath, sizeof(char), stderr);
     fprintf(stderr, "\": ");
-    if (error == LIBCOUCHBASE_SUCCESS) {
+    if (error == LCB_SUCCESS) {
         fprintf(stderr, "OK\n");
         st = yajl_parse(c->parser, bytes, (unsigned int)nbytes);
         if (st != yajl_status_ok) {
@@ -376,15 +372,16 @@ static void complete_callback(libcouchbase_http_request_t request,
         }
     } else {
         fprintf(stderr, "FAIL(%d): %s, HTTP code: %d\n",
-                error, libcouchbase_strerror(instance, error), status);
+                error, lcb_strerror(instance, error), resp->v.v0.status);
         fwrite(bytes, nbytes, 1, output);
     }
     c->io->stop_event_loop(c->io);
     (void)request;
+    (void)instance;
 }
 
-static void error_callback(libcouchbase_t instance,
-                           libcouchbase_error_t error,
+static void error_callback(lcb_t instance,
+                           lcb_error_t error,
                            const char *errinfo)
 {
     (void)instance;
@@ -402,8 +399,10 @@ int main(int argc, char **argv)
     const char *bytes;
     size_t nbytes = 0;
     struct cookie_st cookie;
-    libcouchbase_error_t rc;
+    lcb_error_t rc;
     handle_options(argc, argv);
+    lcb_t instance;
+    lcb_http_cmd_t cmd;
 
     if (strcmp(filename, "-") == 0) {
         output = stdout;
@@ -428,41 +427,45 @@ int main(int argc, char **argv)
     yajl_config(cookie.parser, yajl_allow_comments, 1);
     yajl_config(cookie.parser, yajl_dont_validate_strings, !force_utf8);
 
-    cookie.io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, NULL);
+    cookie.io = lcb_create_io_ops(LCB_IO_OPS_DEFAULT, NULL, NULL);
     if (cookie.io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
     }
-    libcouchbase_t instance = libcouchbase_create(host, username,
-                                                  passwd, bucket, cookie.io);
+    instance = lcb_create(host, username,
+                                passwd, bucket, cookie.io);
     if (instance == NULL) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
     }
 
-    (void)libcouchbase_set_error_callback(instance, error_callback);
-    (void)libcouchbase_set_view_data_callback(instance, data_callback);
-    (void)libcouchbase_set_view_complete_callback(instance, complete_callback);
+    (void)lcb_set_error_callback(instance, error_callback);
+    (void)lcb_set_view_data_callback(instance, data_callback);
+    (void)lcb_set_view_complete_callback(instance, complete_callback);
 
-    if (libcouchbase_connect(instance) != LIBCOUCHBASE_SUCCESS) {
+    if (lcb_connect(instance) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
         return 1;
     }
 
     // Wait for the connect to compelete
-    libcouchbase_wait(instance);
+    lcb_wait(instance);
 
     bytes = post_data;
     if (bytes) {
         nbytes = strlen(bytes);
     }
 
-    (void)libcouchbase_make_http_request(instance, (void *)&cookie,
-                                         LIBCOUCHBASE_HTTP_TYPE_VIEW,
-                                         uri, strlen(uri), bytes, nbytes,
-                                         bytes ? LIBCOUCHBASE_HTTP_METHOD_POST : LIBCOUCHBASE_HTTP_METHOD_GET,
-                                         chunked, "application/json", &rc);
-    if (rc != LIBCOUCHBASE_SUCCESS) {
+    cmd.version = 0;
+    cmd.v.v0.path = uri;
+    cmd.v.v0.npath = strlen(uri);
+    cmd.v.v0.body = bytes;
+    cmd.v.v0.nbody = nbytes;
+    cmd.v.v0.method = bytes ? LCB_HTTP_METHOD_POST : LCB_HTTP_METHOD_GET;
+    cmd.v.v0.chunked = chunked;
+    cmd.v.v0.content_type = "application/json";
+    (void)lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW, &cmd, &rc);
+    if (rc != LCB_SUCCESS) {
         fprintf(stderr, "Failed to execute view\n");
         return 1;
     }

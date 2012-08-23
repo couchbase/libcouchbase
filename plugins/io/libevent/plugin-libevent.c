@@ -29,7 +29,7 @@
 #include <sys/socket.h>
 
 LIBCOUCHBASE_API
-libcouchbase_io_opt_t *libcouchbase_create_test_loop(void);
+lcb_io_opt_t *lcb_create_test_loop(void);
 
 struct libevent_cookie {
     struct event_base *base;
@@ -100,32 +100,32 @@ event_get_callback(const struct event *ev)
     return ev->ev_callback;
 }
 #endif
-static libcouchbase_ssize_t libcouchbase_io_recv(struct libcouchbase_io_opt_st *iops,
-                                                 libcouchbase_socket_t sock,
-                                                 void *buffer,
-                                                 libcouchbase_size_t len,
-                                                 int flags)
+static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
+                               lcb_socket_t sock,
+                               void *buffer,
+                               lcb_size_t len,
+                               int flags)
 {
-    libcouchbase_ssize_t ret = recv(sock, buffer, len, flags);
+    lcb_ssize_t ret = recv(sock, buffer, len, flags);
     if (ret < 0) {
         iops->error = errno;
     }
     return ret;
 }
 
-static libcouchbase_ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st *iops,
-                                                  libcouchbase_socket_t sock,
-                                                  struct libcouchbase_iovec_st *iov,
-                                                  libcouchbase_size_t niov)
+static lcb_ssize_t lcb_io_recvv(struct lcb_io_opt_st *iops,
+                                lcb_socket_t sock,
+                                struct lcb_iovec_st *iov,
+                                lcb_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
-    libcouchbase_ssize_t ret;
+    lcb_ssize_t ret;
 
     assert(niov == 2);
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
-    msg.msg_iovlen = iov[1].iov_len ? (libcouchbase_size_t)2 : (libcouchbase_size_t)1;
+    msg.msg_iovlen = iov[1].iov_len ? (lcb_size_t)2 : (lcb_size_t)1;
     msg.msg_iov[0].iov_base = iov[0].iov_base;
     msg.msg_iov[0].iov_len = iov[0].iov_len;
     msg.msg_iov[1].iov_base = iov[1].iov_base;
@@ -139,32 +139,32 @@ static libcouchbase_ssize_t libcouchbase_io_recvv(struct libcouchbase_io_opt_st 
     return ret;
 }
 
-static libcouchbase_ssize_t libcouchbase_io_send(struct libcouchbase_io_opt_st *iops,
-                                                 libcouchbase_socket_t sock,
-                                                 const void *msg,
-                                                 libcouchbase_size_t len,
-                                                 int flags)
+static lcb_ssize_t lcb_io_send(struct lcb_io_opt_st *iops,
+                               lcb_socket_t sock,
+                               const void *msg,
+                               lcb_size_t len,
+                               int flags)
 {
-    libcouchbase_ssize_t ret = send(sock, msg, len, flags);
+    lcb_ssize_t ret = send(sock, msg, len, flags);
     if (ret < 0) {
         iops->error = errno;
     }
     return ret;
 }
 
-static libcouchbase_ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st *iops,
-                                                  libcouchbase_socket_t sock,
-                                                  struct libcouchbase_iovec_st *iov,
-                                                  libcouchbase_size_t niov)
+static lcb_ssize_t lcb_io_sendv(struct lcb_io_opt_st *iops,
+                                lcb_socket_t sock,
+                                struct lcb_iovec_st *iov,
+                                lcb_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
-    libcouchbase_ssize_t ret;
+    lcb_ssize_t ret;
 
     assert(niov == 2);
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
-    msg.msg_iovlen = iov[1].iov_len ? (libcouchbase_size_t)2 : (libcouchbase_size_t)1;
+    msg.msg_iovlen = iov[1].iov_len ? (lcb_size_t)2 : (lcb_size_t)1;
     msg.msg_iov[0].iov_base = iov[0].iov_base;
     msg.msg_iov[0].iov_len = iov[0].iov_len;
     msg.msg_iov[1].iov_base = iov[1].iov_base;
@@ -177,12 +177,12 @@ static libcouchbase_ssize_t libcouchbase_io_sendv(struct libcouchbase_io_opt_st 
     return ret;
 }
 
-static libcouchbase_socket_t libcouchbase_io_socket(struct libcouchbase_io_opt_st *iops,
-                                                    int domain,
-                                                    int type,
-                                                    int protocol)
+static lcb_socket_t lcb_io_socket(struct lcb_io_opt_st *iops,
+                                  int domain,
+                                  int type,
+                                  int protocol)
 {
-    libcouchbase_socket_t sock = socket(domain, type, protocol);
+    lcb_socket_t sock = socket(domain, type, protocol);
     if (sock == INVALID_SOCKET) {
         iops->error = errno;
     } else {
@@ -197,17 +197,17 @@ static libcouchbase_socket_t libcouchbase_io_socket(struct libcouchbase_io_opt_s
     return sock;
 }
 
-static void libcouchbase_io_close(struct libcouchbase_io_opt_st *iops,
-                                  libcouchbase_socket_t sock)
+static void lcb_io_close(struct lcb_io_opt_st *iops,
+                         lcb_socket_t sock)
 {
     (void)iops;
     EVUTIL_CLOSESOCKET(sock);
 }
 
-static int libcouchbase_io_connect(struct libcouchbase_io_opt_st *iops,
-                                   libcouchbase_socket_t sock,
-                                   const struct sockaddr *name,
-                                   unsigned int namelen)
+static int lcb_io_connect(struct lcb_io_opt_st *iops,
+                          lcb_socket_t sock,
+                          const struct sockaddr *name,
+                          unsigned int namelen)
 {
     int ret = connect(sock, name, (socklen_t)namelen);
     if (ret < 0) {
@@ -216,20 +216,20 @@ static int libcouchbase_io_connect(struct libcouchbase_io_opt_st *iops,
     return ret;
 }
 
-static void *libcouchbase_io_create_event(struct libcouchbase_io_opt_st *iops)
+static void *lcb_io_create_event(struct lcb_io_opt_st *iops)
 {
     return event_new(((struct libevent_cookie *)iops->cookie)->base,
                      INVALID_SOCKET, 0, NULL, NULL);
 }
 
-static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
-                                        libcouchbase_socket_t sock,
-                                        void *event,
-                                        short flags,
-                                        void *cb_data,
-                                        void (*handler)(libcouchbase_socket_t sock,
-                                                        short which,
-                                                        void *cb_data))
+static int lcb_io_update_event(struct lcb_io_opt_st *iops,
+                               lcb_socket_t sock,
+                               void *event,
+                               short flags,
+                               void *cb_data,
+                               void (*handler)(lcb_socket_t sock,
+                                               short which,
+                                               void *cb_data))
 {
     flags |= EV_PERSIST;
     if (flags == event_get_events(event) &&
@@ -247,8 +247,8 @@ static int libcouchbase_io_update_event(struct libcouchbase_io_opt_st *iops,
 }
 
 
-static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
-                                         void *event)
+static void lcb_io_delete_timer(struct lcb_io_opt_st *iops,
+                                void *event)
 {
     (void)iops;
     if (event_pending(event, EV_TIMEOUT, 0) != 0 && event_del(event) == -1) {
@@ -257,13 +257,13 @@ static void libcouchbase_io_delete_timer(struct libcouchbase_io_opt_st *iops,
     event_assign(event, ((struct libevent_cookie *)iops->cookie)->base, -1, 0, NULL, NULL);
 }
 
-static int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
-                                        void *timer,
-                                        libcouchbase_uint32_t usec,
-                                        void *cb_data,
-                                        void (*handler)(libcouchbase_socket_t sock,
-                                                        short which,
-                                                        void *cb_data))
+static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
+                               void *timer,
+                               lcb_uint32_t usec,
+                               void *cb_data,
+                               void (*handler)(lcb_socket_t sock,
+                                               short which,
+                                               void *cb_data))
 {
     short flags = EV_TIMEOUT | EV_PERSIST;
     struct timeval tmo;
@@ -283,8 +283,8 @@ static int libcouchbase_io_update_timer(struct libcouchbase_io_opt_st *iops,
     return event_add(timer, &tmo);
 }
 
-static void libcouchbase_io_destroy_event(struct libcouchbase_io_opt_st *iops,
-                                          void *event)
+static void lcb_io_destroy_event(struct lcb_io_opt_st *iops,
+                                 void *event)
 {
     (void)iops;
     if (event_pending(event, EV_READ | EV_WRITE | EV_TIMEOUT, 0)) {
@@ -293,9 +293,9 @@ static void libcouchbase_io_destroy_event(struct libcouchbase_io_opt_st *iops,
     event_free(event);
 }
 
-static void libcouchbase_io_delete_event(struct libcouchbase_io_opt_st *iops,
-                                         libcouchbase_socket_t sock,
-                                         void *event)
+static void lcb_io_delete_event(struct lcb_io_opt_st *iops,
+                                lcb_socket_t sock,
+                                void *event)
 {
     (void)iops;
     (void)sock;
@@ -305,17 +305,17 @@ static void libcouchbase_io_delete_event(struct libcouchbase_io_opt_st *iops,
     event_assign(event, ((struct libevent_cookie *)iops->cookie)->base, -1, 0, NULL, NULL);
 }
 
-static void libcouchbase_io_stop_event_loop(struct libcouchbase_io_opt_st *iops)
+static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 {
     event_base_loopbreak(((struct libevent_cookie *)iops->cookie)->base);
 }
 
-static void libcouchbase_io_run_event_loop(struct libcouchbase_io_opt_st *iops)
+static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
     event_base_loop(((struct libevent_cookie *)iops->cookie)->base, 0);
 }
 
-static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *iops)
+static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 {
     if (((struct libevent_cookie *)iops->cookie)->allocated) {
         event_base_free(((struct libevent_cookie *)iops->cookie)->base);
@@ -325,8 +325,8 @@ static void libcouchbase_destroy_io_opts(struct libcouchbase_io_opt_st *iops)
 }
 
 LIBCOUCHBASE_API
-struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event_base *base) {
-    struct libcouchbase_io_opt_st *ret = calloc(1, sizeof(*ret));
+struct lcb_io_opt_st *lcb_create_libevent_io_opts(struct event_base *base) {
+    struct lcb_io_opt_st *ret = calloc(1, sizeof(*ret));
     struct libevent_cookie *cookie = calloc(1, sizeof(*cookie));
     if (ret == NULL || cookie == NULL) {
         free(ret);
@@ -337,26 +337,26 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
     /* setup io iops! */
     ret->version = 1;
     ret->dlhandle = NULL;
-    ret->recv = libcouchbase_io_recv;
-    ret->send = libcouchbase_io_send;
-    ret->recvv = libcouchbase_io_recvv;
-    ret->sendv = libcouchbase_io_sendv;
-    ret->socket = libcouchbase_io_socket;
-    ret->close = libcouchbase_io_close;
-    ret->connect = libcouchbase_io_connect;
-    ret->delete_event = libcouchbase_io_delete_event;
-    ret->destroy_event = libcouchbase_io_destroy_event;
-    ret->create_event = libcouchbase_io_create_event;
-    ret->update_event = libcouchbase_io_update_event;
+    ret->recv = lcb_io_recv;
+    ret->send = lcb_io_send;
+    ret->recvv = lcb_io_recvv;
+    ret->sendv = lcb_io_sendv;
+    ret->socket = lcb_io_socket;
+    ret->close = lcb_io_close;
+    ret->connect = lcb_io_connect;
+    ret->delete_event = lcb_io_delete_event;
+    ret->destroy_event = lcb_io_destroy_event;
+    ret->create_event = lcb_io_create_event;
+    ret->update_event = lcb_io_update_event;
 
-    ret->delete_timer = libcouchbase_io_delete_timer;
-    ret->destroy_timer = libcouchbase_io_destroy_event;
-    ret->create_timer = libcouchbase_io_create_event;
-    ret->update_timer = libcouchbase_io_update_timer;
+    ret->delete_timer = lcb_io_delete_timer;
+    ret->destroy_timer = lcb_io_destroy_event;
+    ret->create_timer = lcb_io_create_event;
+    ret->update_timer = lcb_io_update_timer;
 
-    ret->run_event_loop = libcouchbase_io_run_event_loop;
-    ret->stop_event_loop = libcouchbase_io_stop_event_loop;
-    ret->destructor = libcouchbase_destroy_io_opts;
+    ret->run_event_loop = lcb_io_run_event_loop;
+    ret->stop_event_loop = lcb_io_stop_event_loop;
+    ret->destructor = lcb_destroy_io_opts;
 
     if (base == NULL) {
         if ((cookie->base = event_base_new()) == NULL) {
@@ -375,7 +375,7 @@ struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event
 }
 
 LIBCOUCHBASE_API
-libcouchbase_io_opt_t *libcouchbase_create_test_loop(void)
+lcb_io_opt_t *lcb_create_test_loop(void)
 {
-    return libcouchbase_create_libevent_io_opts(NULL);
+    return lcb_create_libevent_io_opts(NULL);
 }

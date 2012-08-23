@@ -32,7 +32,7 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\cookie.c src\error.c src\event.c src\flush.c src\get.c \
     src\handler.c src\instance.c src\iofactory_win32.c src\packet.c \
     src\remove.c src\ringbuffer.c src\hashset.c src\server.c src\stats.c \
-    src\store.c src\strerror.c src\synchandler.c src\tap.c \
+    src\store.c src\strerror.c src\synchandler.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
     src\wait.c src\gethrtime.c plugins\io\win32\plugin-win32.c src\isasl.c \
     src\compat.c contrib\http_parser\http_parser.c src\http.c \
@@ -152,9 +152,9 @@ uninstall:
          $(INSTALL)\include\libcouchbase\configuration.h \
          $(INSTALL)\include\libcouchbase\couchbase.h \
          $(INSTALL)\include\libcouchbase\libevent_io_opts.h \
-         $(INSTALL)\include\libcouchbase\tap_filter.h \
          $(INSTALL)\include\libcouchbase\timings.h \
          $(INSTALL)\include\libcouchbase\types.h \
+         $(INSTALL)\include\libcouchbase\arguments.h \
          $(INSTALL)\include\libcouchbase\visibility.h \
          $(INSTALL)\include\libcouchbase\winsock_io_opts.h \
          $(INSTALL)\bin\cbc.exe

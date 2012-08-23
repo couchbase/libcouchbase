@@ -11,10 +11,10 @@
 #include <dlfcn.h>
 #endif
 
-#define FACTORY_SYMBOL "libcouchbase_create_test_loop"
+#define FACTORY_SYMBOL "lcb_create_test_loop"
 
 /* Prototype for loop generator */
-typedef struct libcouchbase_io_opt_st *(*loop_generator_func)(void);
+typedef struct lcb_io_opt_st *(*loop_generator_func)(void);
 
 /* our loaded generator */
 static loop_generator_func loop_generator = NULL;
@@ -24,10 +24,10 @@ static loop_generator_func get_loop_generator(const char *plugin_name);
 
 
 
-static struct libcouchbase_io_opt_st *default_loop_generator(void) {
-    libcouchbase_error_t err;
-    struct libcouchbase_io_opt_st *ret;
-    ret = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL, &err);
+static struct lcb_io_opt_st *default_loop_generator(void) {
+    lcb_error_t err;
+    struct lcb_io_opt_st *ret;
+    ret = lcb_create_io_ops(LCB_IO_OPS_DEFAULT, NULL, &err);
     if (ret == NULL) {
         fprintf(stderr, "Couldn't generate default loop: errcode %d\n", err);
         abort();
@@ -101,7 +101,7 @@ static loop_generator_func get_loop_generator(const char *libname)
 
 
 
-struct libcouchbase_io_opt_st *get_test_io_opts(void) {
+struct lcb_io_opt_st *get_test_io_opts(void) {
     const char *plugin_base_name;
     char plugin_full_name[2048];
 

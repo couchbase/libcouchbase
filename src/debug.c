@@ -31,7 +31,7 @@
 #include <string.h>
 
 
-#ifdef LIBCOUCHBASE_DEBUG
+#ifdef LCB_DEBUG
 
 #define _FG "3"
 #define _BG "4"
@@ -52,8 +52,8 @@
 static const char *Color_title_fmt = "\033["  _INTENSE_FG _MAGENTA "m";
 static const char *Color_reset_fmt = "\033[0m";
 
-#ifdef LIBCOUCHBASE_DEBUG_NOCTX
-libcouchbase_debug_st LIBCOUCHBASE_LOG_GLOBAL_NAME = {
+#ifdef LCB_DEBUG_NOCTX
+lcb_debug_st LCB_LOG_GLOBAL_NAME = {
     "libcouchbase", /*prefix*/
     0, /*level*/
     0, /*color*/
@@ -62,7 +62,7 @@ libcouchbase_debug_st LIBCOUCHBASE_LOG_GLOBAL_NAME = {
 };
 #endif
 
-static void init_logging(libcouchbase_debug_st *debugp)
+static void init_logging(lcb_debug_st *debugp)
 {
     char *tmp_env;
     int max_level;
@@ -73,30 +73,30 @@ static void init_logging(libcouchbase_debug_st *debugp)
         debugp->out = stderr;
     }
 
-    if ((tmp_env = getenv(LIBCOUCHBASE_DEBUG_ENV_ENABLE)) != NULL) {
+    if ((tmp_env = getenv(LCB_DEBUG_ENV_ENABLE)) != NULL) {
         if (sscanf(tmp_env, "%d", &max_level) == 1) {
-            int my_level = LIBCOUCHBASE_LOGLVL_MAX - max_level;
+            int my_level = LCB_LOGLVL_MAX - max_level;
             if (my_level <= 0) {
-                my_level = LIBCOUCHBASE_LOGLVL_ALL;
+                my_level = LCB_LOGLVL_ALL;
             }
             debugp->level = my_level;
         } else {
-            debugp->level = LIBCOUCHBASE_LOGLVL_WARN;
+            debugp->level = LCB_LOGLVL_WARN;
         }
     } else {
-        debugp->level = LIBCOUCHBASE_LOGLVL_WARN;
+        debugp->level = LCB_LOGLVL_WARN;
     }
 
-    if (getenv(LIBCOUCHBASE_DEBUG_ENV_COLOR_ENABLE)) {
+    if (getenv(LCB_DEBUG_ENV_COLOR_ENABLE)) {
         debugp->color = 1;
     } else {
         debugp->color = 0;
     }
 }
 
-void libcouchbase_logger(libcouchbase_debug_st *debugp,
-                         libcouchbase_loglevel_t level,
-                         int line, const char *fn, const char *fmt, ...)
+void lcb_logger(lcb_debug_st *debugp,
+                lcb_loglevel_t level,
+                int line, const char *fn, const char *fmt, ...)
 {
     va_list ap;
     const char *title_fmt = "", *reset_fmt = "", *line_fmt = "";
@@ -113,17 +113,17 @@ void libcouchbase_logger(libcouchbase_debug_st *debugp,
         title_fmt = Color_title_fmt;
         reset_fmt = Color_reset_fmt;
         switch (level) {
-        case LIBCOUCHBASE_LOGLVL_CRIT:
-        case LIBCOUCHBASE_LOGLVL_ERROR:
+        case LCB_LOGLVL_CRIT:
+        case LCB_LOGLVL_ERROR:
             line_fmt = "\033[" _BRIGHT_FG ";" _FG _RED "m";
             break;
 
-        case LIBCOUCHBASE_LOGLVL_WARN:
+        case LCB_LOGLVL_WARN:
             line_fmt = "\033[" _FG _YELLOW "m";
             break;
 
-        case LIBCOUCHBASE_LOGLVL_DEBUG:
-        case LIBCOUCHBASE_LOGLVL_TRACE:
+        case LCB_LOGLVL_DEBUG:
+        case LCB_LOGLVL_TRACE:
             line_fmt = "\033[" _DIM_FG ";" _FG _WHITE "m";
             break;
 
@@ -155,31 +155,31 @@ void libcouchbase_logger(libcouchbase_debug_st *debugp,
     va_end(ap);
 }
 
-static int libcouchbase_header_dump_enabled = -1;
-static int libcouchbase_packet_dump_enabled = -1;
-void libcouchbase_dump_header(const void *data, libcouchbase_size_t nbytes)
+static int lcb_header_dump_enabled = -1;
+static int lcb_packet_dump_enabled = -1;
+void lcb_dump_header(const void *data, lcb_size_t nbytes)
 {
     char strbuf[1024];
 
-    if (libcouchbase_header_dump_enabled == -1) {
-        if (getenv(LIBCOUCHBASE_DEBUG_ENV_HEADERS_ENABLE)) {
-            libcouchbase_header_dump_enabled = 1;
+    if (lcb_header_dump_enabled == -1) {
+        if (getenv(LCB_DEBUG_ENV_HEADERS_ENABLE)) {
+            lcb_header_dump_enabled = 1;
         } else {
-            libcouchbase_header_dump_enabled = 0;
+            lcb_header_dump_enabled = 0;
             return;
         }
-    } else if (libcouchbase_header_dump_enabled == 0) {
+    } else if (lcb_header_dump_enabled == 0) {
         return;
     }
 
-    if (libcouchbase_strpacket(strbuf, 1024, data, nbytes)) {
+    if (lcb_strpacket(strbuf, 1024, data, nbytes)) {
         fprintf(stderr, "%s\n", strbuf);
     }
 
 }
 
-void libcouchbase_dump_packet(const void *header, libcouchbase_size_t nheader,
-                              const void *payload, libcouchbase_size_t npayload)
+void lcb_dump_packet(const void *header, lcb_size_t nheader,
+                     const void *payload, lcb_size_t npayload)
 {
     protocol_binary_request_header *req = (void *)header;
 
@@ -188,15 +188,15 @@ void libcouchbase_dump_packet(const void *header, libcouchbase_size_t nheader,
         npayload = nheader;
     }
 
-    libcouchbase_dump_header(header, nheader);
-    if (libcouchbase_packet_dump_enabled == -1) {
-        if (getenv(LIBCOUCHBASE_DEBUG_ENV_PACKET_ENABLE)) {
-            libcouchbase_packet_dump_enabled = 1;
+    lcb_dump_header(header, nheader);
+    if (lcb_packet_dump_enabled == -1) {
+        if (getenv(LCB_DEBUG_ENV_PACKET_ENABLE)) {
+            lcb_packet_dump_enabled = 1;
         } else {
-            libcouchbase_packet_dump_enabled = 0;
+            lcb_packet_dump_enabled = 0;
             return;
         }
-    } else if (libcouchbase_packet_dump_enabled == 0) {
+    } else if (lcb_packet_dump_enabled == 0) {
         return;
     }
 
@@ -210,23 +210,23 @@ void libcouchbase_dump_packet(const void *header, libcouchbase_size_t nheader,
 
     if (req->request.extlen) {
         fprintf(stderr, "\tExtras:\n");
-        libcouchbase_hex_dump(payload, req->request.extlen);
+        lcb_hex_dump(payload, req->request.extlen);
     }
 
     if (req->request.keylen) {
         fprintf(stderr, "\tKey:\n");
-        libcouchbase_hex_dump((char *)payload + req->request.extlen,
-                              ntohs(req->request.keylen));
+        lcb_hex_dump((char *)payload + req->request.extlen,
+                     ntohs(req->request.keylen));
     }
 
     if (req->request.bodylen) {
         fprintf(stderr, "\tBody:\n");
-        libcouchbase_hex_dump((char *)payload + req->request.extlen + ntohs(req->request.keylen),
-                              ntohl(req->request.bodylen));
+        lcb_hex_dump((char *)payload + req->request.extlen + ntohs(req->request.keylen),
+                     ntohl(req->request.bodylen));
     }
 }
 
-void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
+void lcb_hex_dump(const void *data, lcb_size_t size)
 {
     /* dumps size bytes of *data to stdout. Looks like:
      * [0000] 75 6E 6B 6E 6F 77 6E 20
@@ -236,7 +236,7 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
 
     unsigned char *p = (unsigned char *)data;
     unsigned char c;
-    libcouchbase_size_t n;
+    lcb_size_t n;
 
     char bytestr[4] = {0};
     char addrstr[10] = {0};
@@ -248,7 +248,7 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
             /* store address for this line */
             snprintf(addrstr, sizeof(addrstr), "%.4lx",
                      (unsigned long)
-                     ((libcouchbase_size_t)p - (libcouchbase_size_t)data));
+                     ((lcb_size_t)p - (lcb_size_t)data));
         }
 
         c = *p;
@@ -283,18 +283,18 @@ void libcouchbase_hex_dump(const void *data, libcouchbase_size_t size)
     }
 }
 
-#endif /*LIBCOUCHBASE_DEBUG*/
+#endif /*LCB_DEBUG*/
 
 
-#define opcode_match(base) \
-        case PROTOCOL_BINARY_CMD_ ## base: { return # base; }
+#define opcode_match(base)                                  \
+    case PROTOCOL_BINARY_CMD_ ## base: { return # base; }
 
 /*This macro defines a pair of (FOO, FOOQ) */
-#define opcode_matchq2(base) \
-        opcode_match(base) opcode_match(base ## Q)
+#define opcode_matchq2(base)                    \
+    opcode_match(base) opcode_match(base ## Q)
 
 /* I'm sure i've left out some commands here */
-const char *libcouchbase_stropcode(libcouchbase_uint8_t opcode)
+const char *lcb_stropcode(lcb_uint8_t opcode)
 {
     switch (opcode) {
         opcode_matchq2(SET)
@@ -339,11 +339,11 @@ const char *libcouchbase_stropcode(libcouchbase_uint8_t opcode)
 #undef opcode_match
 #undef opcode_matchq2
 
-#define status_match(base) \
-        case PROTOCOL_BINARY_RESPONSE_ ## base: { \
-            return #base; \
-        }
-const char *libcouchbase_strstatus(libcouchbase_uint16_t status)
+#define status_match(base)                      \
+    case PROTOCOL_BINARY_RESPONSE_ ## base: {   \
+        return #base;                           \
+    }
+const char *lcb_strstatus(lcb_uint16_t status)
 {
     switch (status) {
         status_match(SUCCESS)
@@ -367,7 +367,7 @@ const char *libcouchbase_strstatus(libcouchbase_uint16_t status)
 
 #undef status_match
 
-const char *libcouchbase_strmagic(libcouchbase_uint8_t magic)
+const char *lcb_strmagic(lcb_uint8_t magic)
 {
     if (magic == PROTOCOL_BINARY_REQ) {
         return "REQ";
@@ -378,12 +378,12 @@ const char *libcouchbase_strmagic(libcouchbase_uint8_t magic)
     }
 }
 
-libcouchbase_size_t libcouchbase_strpacket(char *dst,
-                                           libcouchbase_size_t ndst,
-                                           const void *bytes,
-                                           libcouchbase_size_t nbytes)
+lcb_size_t lcb_strpacket(char *dst,
+                         lcb_size_t ndst,
+                         const void *bytes,
+                         lcb_size_t nbytes)
 {
-    libcouchbase_ssize_t ret;
+    lcb_ssize_t ret;
     protocol_binary_request_header *req;
     protocol_binary_response_header *res;
 
@@ -400,12 +400,12 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
     req = (protocol_binary_request_header *)bytes;
     res = (protocol_binary_response_header *)bytes;
 
-    if ((magicstr = libcouchbase_strmagic(req->request.magic)) == NULL) {
+    if ((magicstr = lcb_strmagic(req->request.magic)) == NULL) {
         sprintf(a_magicstr, "%0x", req->request.magic);
         magicstr = a_magicstr;
     }
 
-    if ((opstr = libcouchbase_stropcode(req->request.opcode)) == NULL) {
+    if ((opstr = lcb_stropcode(req->request.opcode)) == NULL) {
         sprintf(a_opstr, "%0x", req->request.opcode);
         opstr = a_opstr;
     }
@@ -416,7 +416,7 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
         vbstatus_value = a_vbstatus_value;
     } else {
         vbstatus_title = "STATUS";
-        vbstatus_value = libcouchbase_strstatus(ntohs(res->response.status));
+        vbstatus_value = lcb_strstatus(ntohs(res->response.status));
 
         if (vbstatus_value == NULL) {
             sprintf(a_vbstatus_value, "%0x4", ntohs(res->response.status));
@@ -435,9 +435,9 @@ libcouchbase_size_t libcouchbase_strpacket(char *dst,
                    opstr,
                    vbstatus_title, vbstatus_value,
                    ntohs(req->request.keylen), req->request.extlen,
-                   (libcouchbase_uint32_t)ntohl(req->request.bodylen),
-                   (libcouchbase_uint32_t)req->request.opaque,
-                   (libcouchbase_uint64_t)req->request.cas);
+                   (lcb_uint32_t)ntohl(req->request.bodylen),
+                   (lcb_uint32_t)req->request.opaque,
+                   (lcb_uint64_t)req->request.cas);
 
-    return (libcouchbase_size_t)ret;
+    return (lcb_size_t)ret;
 }

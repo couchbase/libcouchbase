@@ -18,40 +18,39 @@
 #include "internal.h"
 
 LIBCOUCHBASE_API
-void libcouchbase_set_timeout(libcouchbase_t instance, libcouchbase_uint32_t usec)
+void lcb_set_timeout(lcb_t instance, lcb_uint32_t usec)
 {
     instance->timeout.usec = usec;
 }
 
 LIBCOUCHBASE_API
-libcouchbase_uint32_t libcouchbase_get_timeout(libcouchbase_t instance)
+lcb_uint32_t lcb_get_timeout(lcb_t instance)
 {
     return instance->timeout.usec;
 }
 
-static void libcouchbase_server_timeout_handler(libcouchbase_socket_t sock,
-                                                short which,
-                                                void *arg)
+static void lcb_server_timeout_handler(lcb_socket_t sock,
+                                       short which,
+                                       void *arg)
 {
-    libcouchbase_server_t *server = arg;
+    lcb_server_t *server = arg;
 
-    libcouchbase_purge_single_server(server, LIBCOUCHBASE_ETIMEDOUT);
-    libcouchbase_update_server_timer(server);
-    libcouchbase_maybe_breakout(server->instance);
+    lcb_purge_single_server(server, LCB_ETIMEDOUT);
+    lcb_update_server_timer(server);
+    lcb_maybe_breakout(server->instance);
 
     (void)sock;
     (void)which;
 }
 
-void libcouchbase_update_server_timer(libcouchbase_server_t *server)
+void lcb_update_server_timer(lcb_server_t *server)
 {
-    libcouchbase_t instance = server->instance;
+    lcb_t instance = server->instance;
 
     if (server->timer) {
         instance->io->delete_timer(instance->io, server->timer);
     }
     instance->io->update_timer(instance->io, server->timer,
                                instance->timeout.usec, server,
-                               libcouchbase_server_timeout_handler);
+                               lcb_server_timeout_handler);
 }
-

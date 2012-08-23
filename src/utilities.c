@@ -18,16 +18,16 @@
 #include "internal.h"
 
 /**
- * This file contains utility functions which don't have another place to call home
+ * This file contains utility functions which don't have another place
+ * to call home
  */
 
-
 #if !defined(HAVE_HTONLL) && !defined(WORDS_BIGENDIAN)
-extern libcouchbase_uint64_t libcouchbase_byteswap64(libcouchbase_uint64_t val)
+extern lcb_uint64_t lcb_byteswap64(lcb_uint64_t val)
 {
-    libcouchbase_size_t ii;
-    libcouchbase_uint64_t ret = 0;
-    for (ii = 0; ii < sizeof(libcouchbase_uint64_t); ii++) {
+    lcb_size_t ii;
+    lcb_uint64_t ret = 0;
+    for (ii = 0; ii < sizeof(lcb_uint64_t); ii++) {
         ret <<= 8;
         ret |= val & 0xff;
         val >>= 8;
@@ -37,35 +37,37 @@ extern libcouchbase_uint64_t libcouchbase_byteswap64(libcouchbase_uint64_t val)
 #endif
 
 /**
- * This function provides a convenient place to put and classify any sort of weird
- * network error we might receive upon connect(2).
+ * This function provides a convenient place to put and classify any
+ * sort of weird network error we might receive upon connect(2).
  *
- * A connection may either be in progress (EAGAIN), already connected (ISCONN),
- * noop-like (EALREADY), temporarily failed (but likely to work within a short retry
- * interval (EINTR), failed (FFAIL) or just plain down screwy (UNHANDLED).
+ * A connection may either be in progress (EAGAIN), already connected
+ * (ISCONN), noop-like (EALREADY), temporarily failed (but likely to
+ * work within a short retry interval (EINTR), failed (FFAIL) or just
+ * plain down screwy (UNHANDLED).
  *
- * The idea is that for multiple DNS lookups there is no point to abort when the first
- * lookup fails, because we possibly have multiple RR entries.
+ * The idea is that for multiple DNS lookups there is no point to
+ * abort when the first lookup fails, because we possibly have
+ * multiple RR entries.
  *
  */
-libcouchbase_connect_status_t libcouchbase_connect_status(int err)
+lcb_connect_status_t lcb_connect_status(int err)
 {
     switch (err) {
     case 0:
-        return LIBCOUCHBASE_CONNECT_OK;
+        return LCB_CONNECT_OK;
 
     case EINTR:
-        return LIBCOUCHBASE_CONNECT_EINTR;
+        return LCB_CONNECT_EINTR;
 
     case EWOULDBLOCK:
     case EINPROGRESS:
-        return LIBCOUCHBASE_CONNECT_EINPROGRESS;
+        return LCB_CONNECT_EINPROGRESS;
 
     case EALREADY:
-        return LIBCOUCHBASE_CONNECT_EALREADY;
+        return LCB_CONNECT_EALREADY;
 
     case EISCONN:
-        return LIBCOUCHBASE_CONNECT_EISCONN;
+        return LCB_CONNECT_EISCONN;
 
         /* Possible to get these from a bad dns lookup */
     case EAFNOSUPPORT:
@@ -82,11 +84,11 @@ libcouchbase_connect_status_t libcouchbase_connect_status(int err)
 
     case EHOSTDOWN:
     case EHOSTUNREACH:
-        return LIBCOUCHBASE_CONNECT_EFAIL;
+        return LCB_CONNECT_EFAIL;
 
     default:
         /* We should really fail, as I think this should cover it */
-        return LIBCOUCHBASE_CONNECT_EUNHANDLED;
+        return LCB_CONNECT_EUNHANDLED;
     }
 }
 
@@ -95,23 +97,23 @@ libcouchbase_connect_status_t libcouchbase_connect_status(int err)
  * Give me a few parameters and I will figure out what
  * is wrong with your connection.
  *
- * I will give a human readable description in buf, and give a LIBCOUCHBASE_*
+ * I will give a human readable description in buf, and give a LCB_*
  * error number in uerr
  */
-void libcouchbase_sockconn_errinfo(int connerr,
-                                   const char *hostname,
-                                   const char *port,
-                                   const struct addrinfo *root_ai,
-                                   char *buf,
-                                   libcouchbase_size_t nbuf,
-                                   libcouchbase_error_t *uerr)
+void lcb_sockconn_errinfo(int connerr,
+                          const char *hostname,
+                          const char *port,
+                          const struct addrinfo *root_ai,
+                          char *buf,
+                          lcb_size_t nbuf,
+                          lcb_error_t *uerr)
 {
     char *errextra = NULL;
 
     /* First, check and see if the error is not a success */
     if (connerr != 0) {
         errextra = strerror(connerr);
-        *uerr = LIBCOUCHBASE_CONNECT_ERROR;
+        *uerr = LCB_CONNECT_ERROR;
     } else {
         int naddrs = 0;
         struct addrinfo *curr_ai = (struct addrinfo *)root_ai;
@@ -123,10 +125,10 @@ void libcouchbase_sockconn_errinfo(int connerr,
         if (naddrs) {
             /* unknown network error: */
             errextra = "Network error(s)";
-            *uerr = LIBCOUCHBASE_CONNECT_ERROR;
+            *uerr = LCB_CONNECT_ERROR;
         } else {
             errextra = "Lookup failed";
-            *uerr = LIBCOUCHBASE_UNKNOWN_HOST;
+            *uerr = LCB_UNKNOWN_HOST;
         }
     }
 
@@ -145,9 +147,8 @@ void libcouchbase_sockconn_errinfo(int connerr,
  *
  * This function will 'advance' the current addrinfo structure, as well.
  */
-evutil_socket_t libcouchbase_gai2sock(libcouchbase_t instance,
-                                      struct addrinfo **ai,
-                                      int *connerr)
+evutil_socket_t lcb_gai2sock(lcb_t instance, struct addrinfo **ai,
+                             int *connerr)
 {
     evutil_socket_t ret = INVALID_SOCKET;
     *connerr = 0;

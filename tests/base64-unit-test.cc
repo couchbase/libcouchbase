@@ -18,8 +18,8 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-    extern int libcouchbase_base64_encode(const char *src, char *dst,
-                                          size_t sz);
+    extern int lcb_base64_encode(const char *src, char *dst,
+                                 size_t sz);
 }
 
 class Base64 : public ::testing::Test
@@ -27,7 +27,7 @@ class Base64 : public ::testing::Test
 protected:
     void validate(const char *src, const char *result) {
         char dest[1024];
-        ASSERT_NE(-1, libcouchbase_base64_encode(src, dest, sizeof(dest)));
+        ASSERT_NE(-1, lcb_base64_encode(src, dest, sizeof(dest)));
         EXPECT_STREQ(result, dest);
     }
 };

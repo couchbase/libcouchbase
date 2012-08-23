@@ -27,7 +27,7 @@ TEST_F(Strerror, testNoCrash)
 {
     for (int ii = -10; ii < 0xffff; ++ii) {
         EXPECT_NE((const char *)NULL,
-                  libcouchbase_strerror(NULL, (libcouchbase_error_t)ii));
+                  lcb_strerror(NULL, (lcb_error_t)ii));
     }
 }
 

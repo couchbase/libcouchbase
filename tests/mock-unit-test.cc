@@ -17,24 +17,26 @@
 #include "mock-unit-test.h"
 #include "server.h"
 
-void MockUnitTest::SetUpTestCase() {
+void MockUnitTest::SetUpTestCase()
+{
     numNodes = 10;
     mock = start_mock_server(NULL);
-    ASSERT_NE((const void*)(NULL), mock);
+    ASSERT_NE((const void *)(NULL), mock);
     http = get_mock_http_server(mock);
-    ASSERT_NE((const char*)(NULL), http);
+    ASSERT_NE((const char *)(NULL), http);
 }
 
-void MockUnitTest::TearDownTestCase() {
+void MockUnitTest::TearDownTestCase()
+{
     shutdown_mock_server(mock);
 }
 
 extern "C" {
-    static void error_callback(libcouchbase_t instance,
-                               libcouchbase_error_t err,
+    static void error_callback(lcb_t instance,
+                               lcb_error_t err,
                                const char *errinfo)
     {
-        std::cerr << "Error " << libcouchbase_strerror(instance, err);
+        std::cerr << "Error " << lcb_strerror(instance, err);
         if (errinfo) {
             std::cerr << errinfo;
         }
@@ -43,287 +45,361 @@ extern "C" {
     }
 }
 
-void MockUnitTest::createConnection(libcouchbase_t &instance) {
-    struct libcouchbase_io_opt_st *io;
+void MockUnitTest::createConnection(lcb_t &instance)
+{
+    struct lcb_io_opt_st *io;
 
     io = get_test_io_opts();
     if (io == NULL) {
         fprintf(stderr, "Failed to create IO instance\n");
-            exit(1);
+        exit(1);
     }
-    instance = libcouchbase_create(http, "Administrator", "password",
-                                       getenv("LIBCOUCHBASE_TEST_BUCKET"), io);
+    instance = lcb_create(http, "Administrator", "password",
+                          getenv("LCB_TEST_BUCKET"), io);
 
-    ASSERT_NE((libcouchbase_t)NULL, instance);
-    (void)libcouchbase_set_cookie(instance, io);
-    (void)libcouchbase_set_error_callback(instance, error_callback);
-    ASSERT_EQ(LIBCOUCHBASE_SUCCESS, libcouchbase_connect(instance));
-    libcouchbase_wait(instance);
+    ASSERT_NE((lcb_t)NULL, instance);
+    (void)lcb_set_cookie(instance, io);
+    (void)lcb_set_error_callback(instance, error_callback);
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_wait(instance);
 }
-
 
 const void *MockUnitTest::mock;
 const char *MockUnitTest::http;
 int MockUnitTest::numNodes;
 
 extern "C" {
-    static void flags_storage_callback(libcouchbase_t,
-                                       const void *,
-                                       libcouchbase_storage_t operation,
-                                       libcouchbase_error_t error,
-                                       const void *key,
-                                       libcouchbase_size_t nkey,
-                                       libcouchbase_cas_t)
+    static void testGetMissGetCallback(lcb_t, const void *cookie,
+                                       lcb_error_t error,
+                                       const lcb_get_resp_t *resp)
     {
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
-        ASSERT_EQ(5, nkey);
-        ASSERT_EQ(0, memcmp(key, "flags", 5));
-        ASSERT_EQ(LIBCOUCHBASE_SET, operation);
+        int *counter = (int*)cookie;
+        EXPECT_EQ(LCB_KEY_ENOENT, error);
+        ASSERT_NE((const lcb_get_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        std::string val((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        EXPECT_TRUE(val == "testGetMiss1" || val == "testGetMiss2");
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testGetMiss)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_get_callback(instance, testGetMissGetCallback);
+    int numcallbacks = 0;
+
+    lcb_get_cmd_t cmd1("testGetMiss1");
+    lcb_get_cmd_t cmd2("testGetMiss2");
+    lcb_get_cmd_t *cmds[] = { &cmd1, &cmd2 };
+    EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &numcallbacks, 2, cmds));
+
+    lcb_wait(instance);
+    EXPECT_EQ(2, numcallbacks);
+}
+
+extern "C" {
+    static void testSimpleSetStoreCallback(lcb_t, const void *cookie,
+                                           lcb_storage_t operation,
+                                           lcb_error_t error,
+                                           const lcb_store_resp_t *resp)
+    {
+        using namespace std;
+        int *counter = (int*)cookie;
+        ASSERT_EQ(LCB_SET, operation);
+        EXPECT_EQ(LCB_SUCCESS, error);
+        ASSERT_NE((const lcb_store_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        std::string val((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        EXPECT_TRUE(val == "testSimpleStoreKey1" || val == "testSimpleStoreKey2");
+        ++(*counter);
+        EXPECT_NE(0, resp->v.v0.cas);
+    }
+}
+
+TEST_F(MockUnitTest, testSimpleSet)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_store_callback(instance, testSimpleSetStoreCallback);
+    int numcallbacks = 0;
+    lcb_store_cmd_t cmd1(LCB_SET, "testSimpleStoreKey1", 19, "key1", 4);
+    lcb_store_cmd_t cmd2(LCB_SET, "testSimpleStoreKey2", 19, "key2", 4);
+    lcb_store_cmd_t* cmds[] = { &cmd1, &cmd2 };
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 2, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(2, numcallbacks);
+}
+
+extern "C" {
+    static void testSimpleAddStoreCallback(lcb_t, const void *cookie,
+                                           lcb_storage_t operation,
+                                           lcb_error_t error,
+                                           const lcb_store_resp_t *resp)
+    {
+        using namespace std;
+        int *counter = (int*)cookie;
+        ASSERT_EQ(LCB_ADD, operation);
+        ASSERT_NE((const lcb_store_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        std::string val((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        EXPECT_STREQ("testSimpleAddKey", val.c_str());
+        if (*counter == 0) {
+            EXPECT_EQ(LCB_SUCCESS, error);
+            EXPECT_NE(0, resp->v.v0.cas);
+        } else {
+            EXPECT_EQ(LCB_KEY_EEXISTS, error);
+        }
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testSimpleAdd)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_store_callback(instance, testSimpleAddStoreCallback);
+    int numcallbacks = 0;
+    lcb_store_cmd_t cmd1(LCB_ADD, "testSimpleAddKey", 16, "key1", 4);
+    lcb_store_cmd_t cmd2(LCB_ADD, "testSimpleAddKey", 16, "key2", 4);
+    lcb_store_cmd_t* cmds[] = { &cmd1, &cmd2 };
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 2, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(2, numcallbacks);
+}
+
+extern "C" {
+    static void flags_store_callback(lcb_t,
+                                     const void *,
+                                     lcb_storage_t operation,
+                                     lcb_error_t error,
+                                     const lcb_store_resp_t *resp)
+    {
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(5, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "flags", 5));
+        ASSERT_EQ(LCB_SET, operation);
     }
 
-    static void flags_get_callback(libcouchbase_t,
-                                  const void *,
-                                  libcouchbase_error_t error,
-                                  const void *key, libcouchbase_size_t nkey,
-                                  const void *bytes, libcouchbase_size_t nbytes,
-                                  libcouchbase_uint32_t flags,
-                                  libcouchbase_cas_t)
+    static void flags_get_callback(lcb_t, const void *,
+                                   lcb_error_t error,
+                                   const lcb_get_resp_t *resp)
     {
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
-        ASSERT_EQ(5, nkey);
-        ASSERT_EQ(0, memcmp(key, "flags", 5));
-        ASSERT_EQ(1, nbytes);
-        ASSERT_EQ(0, memcmp(bytes, "x", 1));
-        ASSERT_EQ(0xdeadbeef, flags);
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(5, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "flags", 5));
+        ASSERT_EQ(1, resp->v.v0.nbytes);
+        ASSERT_EQ(0, memcmp(resp->v.v0.bytes, "x", 1));
+        ASSERT_EQ(0xdeadbeef, resp->v.v0.flags);
     }
 }
 
 TEST_F(MockUnitTest, testFlags)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    (void)libcouchbase_set_get_callback(instance, flags_get_callback);
-    (void)libcouchbase_set_storage_callback(instance, flags_storage_callback);
+    (void)lcb_set_get_callback(instance, flags_get_callback);
+    (void)lcb_set_store_callback(instance, flags_store_callback);
 
-    const char *keys[1];
-    libcouchbase_size_t nkeys[1];
+    lcb_store_cmd_t storeCommand(LCB_SET, "flags", 5, "x", 1, 0xdeadbeef);
+    lcb_store_cmd_t* storeCommands[] = { &storeCommand };
 
-    keys[0] = "flags";
-    nkeys[0] = 5;
-
-    assert(libcouchbase_store(instance, NULL, LIBCOUCHBASE_SET, keys[0], nkeys[0],
-                              "x", 1, 0xdeadbeef, 0, 0) == LIBCOUCHBASE_SUCCESS);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, NULL, 1, storeCommands));
     // Wait for it to be persisted
-    libcouchbase_wait(instance);
+    lcb_wait(instance);
 
-    assert(libcouchbase_mget(instance, NULL, 1, (const void * const *)keys,
-                             nkeys, NULL) == LIBCOUCHBASE_SUCCESS);
+    lcb_get_cmd_t cmd("flags", 5);
+    lcb_get_cmd_t *cmds[] = { &cmd };
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, NULL, 1, cmds));
 
-    // Wait for it to be received
-    libcouchbase_wait(instance);
-
+    /* Wait for it to be received */
+    lcb_wait(instance);
 }
 
-
-
-static libcouchbase_uint64_t arithm_val;
+static lcb_uint64_t arithm_val;
 
 extern "C" {
-    static void arithmetic_storage_callback(libcouchbase_t, const void *,
-                                            libcouchbase_storage_t operation,
-                                            libcouchbase_error_t error,
-                                            const void *key, libcouchbase_size_t nkey,
-                                            libcouchbase_cas_t)
+    static void arithmetic_store_callback(lcb_t, const void *,
+                                          lcb_storage_t operation,
+                                          lcb_error_t error,
+                                          const lcb_store_resp_t *resp)
     {
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
-        ASSERT_EQ(LIBCOUCHBASE_SET, operation);
-        ASSERT_EQ(7, nkey);
-        ASSERT_EQ(0, memcmp(key, "counter", 7));
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(LCB_SET, operation);
+        ASSERT_EQ(7, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "counter", 7));
     }
 
-    static void arithmetic_incr_callback(libcouchbase_t, const void *,
-                                         libcouchbase_error_t error,
-                                         const void *key,
-                                         libcouchbase_size_t nkey,
-                                         libcouchbase_uint64_t value,
-                                         libcouchbase_cas_t)
+    static void arithmetic_incr_callback(lcb_t, const void *,
+                                         lcb_error_t error,
+                                         const lcb_arithmetic_resp_t *resp)
     {
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
-        ASSERT_EQ(7, nkey);
-        ASSERT_EQ(0, memcmp(key, "counter", 7));
-        ASSERT_EQ(arithm_val + 1, value);
-        arithm_val = value;
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(7, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "counter", 7));
+        ASSERT_EQ(arithm_val + 1, resp->v.v0.value);
+        arithm_val = resp->v.v0.value;
     }
 
-    static void arithmetic_decr_callback(libcouchbase_t, const void *,
-                                         libcouchbase_error_t error,
-                                         const void *key,
-                                         libcouchbase_size_t nkey,
-                                         libcouchbase_uint64_t value,
-                                         libcouchbase_cas_t)
+    static void arithmetic_decr_callback(lcb_t, const void *,
+                                         lcb_error_t error,
+                                         const lcb_arithmetic_resp_t *resp)
     {
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
-        ASSERT_EQ(7, nkey);
-        ASSERT_EQ(0, memcmp(key, "counter", 7));
-        ASSERT_EQ(arithm_val - 1, value);
-        arithm_val = value;
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(7, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "counter", 7));
+        ASSERT_EQ(arithm_val - 1, resp->v.v0.value);
+        arithm_val = resp->v.v0.value;
     }
 
-    static void arithmetic_create_callback(libcouchbase_t, const void *,
-                                           libcouchbase_error_t error,
-                                           const void *key,
-                                           libcouchbase_size_t nkey,
-                                           libcouchbase_uint64_t value,
-                                           libcouchbase_cas_t)
+    static void arithmetic_create_callback(lcb_t, const void *,
+                                           lcb_error_t error,
+                                           const lcb_arithmetic_resp_t *resp)
     {
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
-        ASSERT_EQ(9, nkey);
-        ASSERT_EQ(0, memcmp(key, "mycounter", 9));
-        ASSERT_EQ(0xdeadbeef, value);
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(9, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "mycounter", 9));
+        ASSERT_EQ(0xdeadbeef, resp->v.v0.value);
     }
 }
 
 TEST_F(MockUnitTest, populateArithmetic)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    (void)libcouchbase_set_storage_callback(instance, arithmetic_storage_callback);
-    libcouchbase_store(instance, this, LIBCOUCHBASE_SET, "counter", 7,
-                       "0", 1, 0, 0, 0);
-    libcouchbase_wait(instance);
-    libcouchbase_destroy(instance);
+    (void)lcb_set_store_callback(instance, arithmetic_store_callback);
+
+    lcb_store_cmd_t cmd(LCB_SET, "counter", 7, "0", 1);
+    lcb_store_cmd_t *cmds[] = { &cmd };
+
+    lcb_store(instance, this, 1, cmds);
+    lcb_wait(instance);
+    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testIncr)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    (void)libcouchbase_set_arithmetic_callback(instance,
-                                               arithmetic_incr_callback);
+    (void)lcb_set_arithmetic_callback(instance, arithmetic_incr_callback);
 
     for (int ii = 0; ii < 10; ++ii) {
-        libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, 1, 0);
-        libcouchbase_wait(instance);
+        lcb_arithmetic_cmd_t cmd("counter", 7, 1);
+        lcb_arithmetic_cmd_t *cmds[] = { &cmd };
+        lcb_arithmetic(instance, NULL, 1, cmds);
+        lcb_wait(instance);
     }
 
-    libcouchbase_destroy(instance);
+    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testDecr)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    (void)libcouchbase_set_arithmetic_callback(instance,
-                                               arithmetic_decr_callback);
+    (void)lcb_set_arithmetic_callback(instance, arithmetic_decr_callback);
 
     for (int ii = 0; ii < 10; ++ii) {
-        libcouchbase_arithmetic(instance, NULL, "counter", 7, -1, 0, 1, 0);
-        libcouchbase_wait(instance);
+        lcb_arithmetic_cmd_t cmd("counter", 7, -1);
+        lcb_arithmetic_cmd_t *cmds[] = { &cmd };
+        lcb_arithmetic(instance, NULL, 1, cmds);
+        lcb_wait(instance);
     }
 
-    libcouchbase_destroy(instance);
+    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testArithmeticCreate)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    (void)libcouchbase_set_arithmetic_callback(instance,
-                                               arithmetic_create_callback);
-
-    libcouchbase_arithmetic(instance, NULL, "mycounter", 9, 0xff, 0, 1, 0xdeadbeef);
-    libcouchbase_wait(instance);
-    libcouchbase_destroy(instance);
+    (void)lcb_set_arithmetic_callback(instance, arithmetic_create_callback);
+    lcb_arithmetic_cmd_t cmd("mycounter", 9, 0x77, 1, 0xdeadbeef);
+    lcb_arithmetic_cmd_t *cmds[] = { &cmd };
+    lcb_arithmetic(instance, NULL, 1, cmds);
+    lcb_wait(instance);
+    lcb_destroy(instance);
 }
 
 extern "C" {
-    static void syncmode_store_callback(libcouchbase_t instance,
+    static void syncmode_store_callback(lcb_t,
                                         const void *cookie,
-                                        libcouchbase_storage_t operation,
-                                        libcouchbase_error_t error,
-                                        const void *key,
-                                        libcouchbase_size_t nkey,
-                                        libcouchbase_cas_t cas)
+                                        lcb_storage_t,
+                                        lcb_error_t error,
+                                        const lcb_store_resp_t *)
     {
         int *status = (int *)cookie;
         *status = error;
-        (void)instance;
-        (void)operation;
-        (void)key;
-        (void)nkey;
-        (void)cas;
     }
 }
 
 TEST_F(MockUnitTest, testSyncmodeDefault)
 {
 
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    ASSERT_EQ(LIBCOUCHBASE_ASYNCHRONOUS,
-              libcouchbase_behavior_get_syncmode(instance));
-    libcouchbase_destroy(instance);
+    ASSERT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
+    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testSyncmodeBehaviorToggle)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    libcouchbase_behavior_set_syncmode(instance, LIBCOUCHBASE_SYNCHRONOUS);
-    ASSERT_EQ(LIBCOUCHBASE_SYNCHRONOUS,
-              libcouchbase_behavior_get_syncmode(instance));
-    libcouchbase_destroy(instance);
+    lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
+    ASSERT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
+    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testSyncStore)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    libcouchbase_behavior_set_syncmode(instance, LIBCOUCHBASE_SYNCHRONOUS);
-    ASSERT_EQ(LIBCOUCHBASE_SYNCHRONOUS,
-              libcouchbase_behavior_get_syncmode(instance));
+    lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
+    ASSERT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
 
-    libcouchbase_set_storage_callback(instance, syncmode_store_callback);
+    lcb_set_store_callback(instance, syncmode_store_callback);
 
     int cookie = 0xffff;
-    libcouchbase_error_t ret = libcouchbase_store(instance, &cookie,
-                                                  LIBCOUCHBASE_SET,
-                                                  "key", 3, NULL, 0,
-                                                  0, 0, 0);
-    ASSERT_EQ(LIBCOUCHBASE_SUCCESS, ret);
-    ASSERT_EQ((int)LIBCOUCHBASE_SUCCESS, cookie);
+    lcb_store_cmd_t cmd(LCB_SET, "key", 3);
+    lcb_store_cmd_t *cmds[] = { &cmd };
+    lcb_error_t ret = lcb_store(instance, &cookie, 1, cmds);
+    ASSERT_EQ(LCB_SUCCESS, ret);
+    ASSERT_EQ((int)LCB_SUCCESS, cookie);
     cookie = 0xffff;
-    ret = libcouchbase_store(instance, &cookie, LIBCOUCHBASE_ADD,
-                             "key", 3, NULL, 0, 0, 0, 0);
-    ASSERT_TRUE(ret == LIBCOUCHBASE_KEY_EEXISTS &&
-                cookie == LIBCOUCHBASE_KEY_EEXISTS);
-    libcouchbase_destroy(instance);
+
+    cmd.v.v0.operation = LCB_ADD;
+    ret = lcb_store(instance, &cookie, 1, cmds);
+    ASSERT_TRUE(ret == LCB_KEY_EEXISTS &&
+                cookie == LCB_KEY_EEXISTS);
+    lcb_destroy(instance);
 }
 
 extern "C" {
-    static void timings_callback(libcouchbase_t,
+    static void timings_callback(lcb_t,
                                  const void *cookie,
-                                 libcouchbase_timeunit_t timeunit,
-                                 libcouchbase_uint32_t min,
-                                 libcouchbase_uint32_t max,
-                                 libcouchbase_uint32_t total,
-                                 libcouchbase_uint32_t maxtotal)
+                                 lcb_timeunit_t timeunit,
+                                 lcb_uint32_t min,
+                                 lcb_uint32_t max,
+                                 lcb_uint32_t total,
+                                 lcb_uint32_t maxtotal)
     {
-        FILE *fp = (FILE*)cookie;
+        FILE *fp = (FILE *)cookie;
         if (fp != NULL) {
             fprintf(fp, "[%3u - %3u]", min, max);
 
             switch (timeunit) {
-            case LIBCOUCHBASE_TIMEUNIT_NSEC:
+            case LCB_TIMEUNIT_NSEC:
                 fprintf(fp, "ns");
                 break;
-            case LIBCOUCHBASE_TIMEUNIT_USEC:
+            case LCB_TIMEUNIT_USEC:
                 fprintf(fp, "us");
                 break;
-            case LIBCOUCHBASE_TIMEUNIT_MSEC:
+            case LCB_TIMEUNIT_MSEC:
                 fprintf(fp, "ms");
                 break;
-            case LIBCOUCHBASE_TIMEUNIT_SEC:
+            case LCB_TIMEUNIT_SEC:
                 fprintf(fp, "s");
                 break;
             default:
@@ -345,41 +421,46 @@ extern "C" {
 TEST_F(MockUnitTest, testTimings)
 {
     FILE *fp = stdout;
-    if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
+    if (getenv("LCB_VERBOSE_TESTS") == NULL) {
         fp = NULL;
     }
 
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    libcouchbase_enable_timings(instance);
-    libcouchbase_store(instance, NULL, LIBCOUCHBASE_SET, "counter", 7,
-                       "0", 1, 0, 0, 0);
-    libcouchbase_wait(instance);
+    lcb_enable_timings(instance);
+
+    lcb_store_cmd_t storecmd(LCB_SET, "counter", 7, "0", 1);
+    lcb_store_cmd_t *storecmds[] = { &storecmd };
+
+    lcb_store(instance, NULL, 1, storecmds);
+    lcb_wait(instance);
     for (int ii = 0; ii < 100; ++ii) {
-        libcouchbase_arithmetic(instance, NULL, "counter", 7, 1, 0, 1, 0);
-        libcouchbase_wait(instance);
+        lcb_arithmetic_cmd_t acmd("counter", 7, 1);
+        lcb_arithmetic_cmd_t *acmds[] = { &acmd };
+        lcb_arithmetic(instance, NULL, 1, acmds);
+        lcb_wait(instance);
     }
     if (fp) {
         fprintf(fp, "              +---------+---------+\n");
     }
-    libcouchbase_get_timings(instance, fp, timings_callback);
+    lcb_get_timings(instance, fp, timings_callback);
     if (fp) {
         fprintf(fp, "              +--------------------\n");
     }
-    libcouchbase_disable_timings(instance);
-    libcouchbase_destroy(instance);
+    lcb_disable_timings(instance);
+    lcb_destroy(instance);
 }
 
 
 extern "C" {
-    static void timeout_error_callback(libcouchbase_t instance,
-                                       libcouchbase_error_t err,
+    static void timeout_error_callback(lcb_t instance,
+                                       lcb_error_t err,
                                        const char *errinfo)
     {
-        if (err == LIBCOUCHBASE_ETIMEDOUT) {
+        if (err == LCB_ETIMEDOUT) {
             return;
         }
-        std::cerr << "Error " << libcouchbase_strerror(instance, err);
+        std::cerr << "Error " << lcb_strerror(instance, err);
         if (errinfo) {
             std::cerr << errinfo;
         }
@@ -390,46 +471,46 @@ extern "C" {
     int timeout_seqno = 0;
     int timeout_stats_done = 0;
 
-    static void timeout_storage_callback(libcouchbase_t,
-                                         const void *cookie,
-                                         libcouchbase_storage_t,
-                                         libcouchbase_error_t error,
-                                         const void *,
-                                         libcouchbase_size_t,
-                                         libcouchbase_cas_t)
+    static void timeout_store_callback(lcb_t,
+                                       const void *cookie,
+                                       lcb_storage_t,
+                                       lcb_error_t error,
+                                       const lcb_store_resp_t *)
     {
-        libcouchbase_io_opt_t *io = (libcouchbase_io_opt_t *)cookie;
+        lcb_io_opt_t *io = (lcb_io_opt_t *)cookie;
 
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
+        ASSERT_EQ(LCB_SUCCESS, error);
         timeout_seqno--;
         if (timeout_stats_done && timeout_seqno == 0) {
             io->stop_event_loop(io);
         }
     }
 
-    static void timeout_stat_callback(libcouchbase_t instance,
+    static void timeout_stat_callback(lcb_t instance,
                                       const void *cookie,
                                       const char *server_endpoint,
-                                      libcouchbase_error_t error,
+                                      lcb_error_t error,
                                       const void *key,
-                                      libcouchbase_size_t nkey,
+                                      lcb_size_t nkey,
                                       const void *bytes,
-                                      libcouchbase_size_t nbytes)
+                                      lcb_size_t nbytes)
     {
-        libcouchbase_error_t err;
-        libcouchbase_io_opt_t *io = (libcouchbase_io_opt_t *)cookie;
+        lcb_error_t err;
+        lcb_io_opt_t *io = (lcb_io_opt_t *)cookie;
         char *statkey;
-        libcouchbase_size_t nstatkey;
+        lcb_size_t nstatkey;
 
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
+        ASSERT_EQ(LCB_SUCCESS, error);
         if (server_endpoint != NULL) {
             nstatkey = strlen(server_endpoint) + nkey + 2;
             statkey = new char[nstatkey];
-            snprintf(statkey, nstatkey, "%s-%s", server_endpoint, (const char *)key);
-            err = libcouchbase_store(instance, io, LIBCOUCHBASE_SET,
-                                     statkey, nstatkey,
-                                     bytes, nbytes, 0, 0, 0);
-            ASSERT_EQ(LIBCOUCHBASE_SUCCESS, err);
+            snprintf(statkey, nstatkey, "%s-%s", server_endpoint,
+                     (const char *)key);
+
+            lcb_store_cmd_t storecmd(LCB_SET, statkey, nstatkey, bytes, nbytes);
+            lcb_store_cmd_t *storecmds[] = { &storecmd };
+            err = lcb_store(instance, io, 1, storecmds);
+            ASSERT_EQ(LCB_SUCCESS, err);
             timeout_seqno++;
             delete []statkey;
         } else {
@@ -441,35 +522,34 @@ extern "C" {
 TEST_F(MockUnitTest, testTimeout)
 {
     // @todo we need to have a test that actually tests the timeout callback..
-    libcouchbase_t instance;
-    libcouchbase_io_opt_t *io;
+    lcb_t instance;
+    lcb_io_opt_t *io;
     createConnection(instance);
 
-    (void)libcouchbase_set_error_callback(instance, timeout_error_callback);
-    (void)libcouchbase_set_stat_callback(instance, timeout_stat_callback);
-    (void)libcouchbase_set_storage_callback(instance, timeout_storage_callback);
+    (void)lcb_set_error_callback(instance, timeout_error_callback);
+    (void)lcb_set_stat_callback(instance, timeout_stat_callback);
+    (void)lcb_set_store_callback(instance, timeout_store_callback);
 
-    io = (libcouchbase_io_opt_t *)libcouchbase_get_cookie(instance);
-    ASSERT_EQ(LIBCOUCHBASE_SUCCESS,
-              libcouchbase_server_stats(instance, io, NULL, 0));
+    io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+    ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, NULL, 0));
     io->run_event_loop(io);
-    libcouchbase_destroy(instance);
+    lcb_destroy(instance);
 }
 
 extern "C" {
     static char *verbosity_endpoint;
 
-    static void verbosity_all_callback(libcouchbase_t instance,
+    static void verbosity_all_callback(lcb_t instance,
                                        const void *cookie,
                                        const char *server_endpoint,
-                                       libcouchbase_error_t error)
+                                       lcb_error_t error)
     {
-        int *counter = (int*)cookie;
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
+        int *counter = (int *)cookie;
+        ASSERT_EQ(LCB_SUCCESS, error);
         if (server_endpoint == NULL) {
             EXPECT_EQ(MockUnitTest::numNodes, *counter);
-            libcouchbase_io_opt_t *io;
-            io = (libcouchbase_io_opt_t *)libcouchbase_get_cookie(instance);
+            lcb_io_opt_t *io;
+            io = (lcb_io_opt_t *)lcb_get_cookie(instance);
             io->stop_event_loop(io);
             return;
         } else if (verbosity_endpoint == NULL) {
@@ -478,16 +558,15 @@ extern "C" {
         ++(*counter);
     }
 
-
-    static void verbosity_single_callback(libcouchbase_t instance,
+    static void verbosity_single_callback(lcb_t instance,
                                           const void *,
                                           const char *server_endpoint,
-                                          libcouchbase_error_t error)
+                                          lcb_error_t error)
     {
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, error);
+        ASSERT_EQ(LCB_SUCCESS, error);
         if (server_endpoint == NULL) {
-            libcouchbase_io_opt_t *io;
-            io = (libcouchbase_io_opt_t *)libcouchbase_get_cookie(instance);
+            lcb_io_opt_t *io;
+            io = (lcb_io_opt_t *)lcb_get_cookie(instance);
             io->stop_event_loop(io);
         } else {
             EXPECT_STREQ(verbosity_endpoint, server_endpoint);
@@ -497,134 +576,141 @@ extern "C" {
 
 TEST_F(MockUnitTest, testVerbosity)
 {
-    libcouchbase_t instance;
+    lcb_t instance;
     createConnection(instance);
-    (void)libcouchbase_set_verbosity_callback(instance, verbosity_all_callback);
+    (void)lcb_set_verbosity_callback(instance, verbosity_all_callback);
 
     int counter = 0;
-    EXPECT_EQ(LIBCOUCHBASE_SUCCESS,
-              libcouchbase_set_verbosity(instance, &counter, NULL,
-                                         LIBCOUCHBASE_VERBOSITY_DEBUG));
+    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, NULL,
+                                             LCB_VERBOSITY_DEBUG));
 
-    libcouchbase_io_opt_t *io;
-    io = (libcouchbase_io_opt_t *)libcouchbase_get_cookie(instance);
+    lcb_io_opt_t *io;
+    io = (lcb_io_opt_t *)lcb_get_cookie(instance);
     io->run_event_loop(io);
 
     EXPECT_EQ(numNodes, counter);
-    EXPECT_NE((char*)NULL, verbosity_endpoint);
+    EXPECT_NE((char *)NULL, verbosity_endpoint);
 
-    (void)libcouchbase_set_verbosity_callback(instance,
-                                              verbosity_single_callback);
+    (void)lcb_set_verbosity_callback(instance,
+                                     verbosity_single_callback);
 
-    EXPECT_EQ(LIBCOUCHBASE_SUCCESS,
-              libcouchbase_set_verbosity(instance, &counter, verbosity_endpoint,
-                                         LIBCOUCHBASE_VERBOSITY_DEBUG));
+    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter,
+                                             verbosity_endpoint,
+                                             LCB_VERBOSITY_DEBUG));
     io->run_event_loop(io);
-    free((void*)verbosity_endpoint);
+    free((void *)verbosity_endpoint);
 
-    libcouchbase_destroy(instance);
+    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testIssue59)
 {
-    // libcouchbase_wait() blocks forever if there is nothing queued
-    libcouchbase_t instance;
+    // lcb_wait() blocks forever if there is nothing queued
+    lcb_t instance;
     createConnection(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_wait(instance);
-    libcouchbase_destroy(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_destroy(instance);
 }
 
 extern "C" {
     struct rvbuf {
-        libcouchbase_error_t error;
-        libcouchbase_cas_t cas1;
-        libcouchbase_cas_t cas2;
+        lcb_error_t error;
+        lcb_cas_t cas1;
+        lcb_cas_t cas2;
     };
 
-    static void df_store_callback1(libcouchbase_t instance,
+    static void df_store_callback1(lcb_t instance,
                                    const void *cookie,
-                                   libcouchbase_storage_t,
-                                   libcouchbase_error_t error,
-                                   const void *, libcouchbase_size_t,
-                                   libcouchbase_cas_t)
+                                   lcb_storage_t,
+                                   lcb_error_t error,
+                                   const lcb_store_resp_t *)
     {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
-        libcouchbase_io_opt_t *io = (libcouchbase_io_opt_t *)libcouchbase_get_cookie(instance);
+        lcb_io_opt_t *io = (lcb_io_opt_t *)lcb_get_cookie(instance);
         io->stop_event_loop(io);
     }
 
-    static void df_store_callback2(libcouchbase_t instance,
+    static void df_store_callback2(lcb_t instance,
                                    const void *cookie,
-                                   libcouchbase_storage_t,
-                                   libcouchbase_error_t error,
-                                   const void *, libcouchbase_size_t,
-                                   libcouchbase_cas_t cas)
+                                   lcb_storage_t,
+                                   lcb_error_t error,
+                                   const lcb_store_resp_t *resp)
     {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
-        rv->cas2 = cas;
-        libcouchbase_io_opt_t *io = (libcouchbase_io_opt_t *)libcouchbase_get_cookie(instance);
+        rv->cas2 = resp->v.v0.cas;
+        lcb_io_opt_t *io = (lcb_io_opt_t *)lcb_get_cookie(instance);
         io->stop_event_loop(io);
     }
 
-    static void df_get_callback(libcouchbase_t instance,
+    static void df_get_callback(lcb_t instance,
                                 const void *cookie,
-                                libcouchbase_error_t error,
-                                const void *key, libcouchbase_size_t nkey,
-                                const void *, libcouchbase_size_t,
-                                libcouchbase_uint32_t, libcouchbase_cas_t cas)
+                                lcb_error_t error,
+                                const lcb_get_resp_t *resp)
     {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         const char *value = "{\"bar\"=>1, \"baz\"=>2}";
-        libcouchbase_size_t nvalue = strlen(value);
-        libcouchbase_error_t err;
+        lcb_size_t nvalue = strlen(value);
+        lcb_error_t err;
 
         rv->error = error;
-        rv->cas1 = cas;
-        err = libcouchbase_store(instance, rv, LIBCOUCHBASE_SET, key, nkey, value, nvalue, 0, 0, cas);
-        ASSERT_EQ(LIBCOUCHBASE_SUCCESS, err);
+        rv->cas1 = resp->v.v0.cas;
+        lcb_store_cmd_t storecmd(LCB_SET, resp->v.v0.key, resp->v.v0.nkey,
+                                 value, nvalue, 0, 0, resp->v.v0.cas);
+        lcb_store_cmd_t *storecmds[] = { &storecmd };
+
+        err = lcb_store(instance, rv, 1, storecmds);
+        ASSERT_EQ(LCB_SUCCESS, err);
     }
 }
 
 TEST_F(MockUnitTest, testDoubleFreeError)
 {
-    libcouchbase_error_t err;
+    lcb_error_t err;
     struct rvbuf rv;
     const char *key = "test_compare_and_swap_async_", *value = "{\"bar\" => 1}";
-    libcouchbase_size_t nkey = strlen(key), nvalue = strlen(value);
-    libcouchbase_io_opt_t *io;
-    libcouchbase_t instance;
+    lcb_size_t nkey = strlen(key), nvalue = strlen(value);
+    lcb_io_opt_t *io;
+    lcb_t instance;
 
     createConnection(instance);
-    io = (libcouchbase_io_opt_t *)libcouchbase_get_cookie(instance);
+    io = (lcb_io_opt_t *)lcb_get_cookie(instance);
 
     /* prefill the bucket */
-    (void)libcouchbase_set_storage_callback(instance, df_store_callback1);
-    err = libcouchbase_store(instance, &rv, LIBCOUCHBASE_SET, key, nkey, value, nvalue, 0, 0, 0);
-    ASSERT_EQ(LIBCOUCHBASE_SUCCESS, err);
+    (void)lcb_set_store_callback(instance, df_store_callback1);
+
+    lcb_store_cmd_t storecmd(LCB_SET, key, nkey, value, nvalue);
+    lcb_store_cmd_t *storecmds[] = { &storecmd };
+
+    err = lcb_store(instance, &rv, 1, storecmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
     io->run_event_loop(io);
-    ASSERT_EQ(LIBCOUCHBASE_SUCCESS, rv.error);
+    ASSERT_EQ(LCB_SUCCESS, rv.error);
 
     /* run exercise
      *
      * 1. get the valueue and its cas
      * 2. atomic set new valueue using old cas
      */
-    (void)libcouchbase_set_storage_callback(instance, df_store_callback2);
-    (void)libcouchbase_set_get_callback(instance, df_get_callback);
-    err = libcouchbase_mget(instance, &rv, 1, (const void * const *)&key, &nkey, NULL);
-    ASSERT_EQ(LIBCOUCHBASE_SUCCESS, err);
+    (void)lcb_set_store_callback(instance, df_store_callback2);
+    (void)lcb_set_get_callback(instance, df_get_callback);
+
+    lcb_get_cmd_t getcmd(key, nkey);
+    lcb_get_cmd_t *getcmds[] = { &getcmd };
+
+    err = lcb_get(instance, &rv, 1, getcmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
     rv.cas1 = rv.cas2 = 0;
     io->run_event_loop(io);
-    ASSERT_EQ(LIBCOUCHBASE_SUCCESS, rv.error);
+    ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_GT(rv.cas1, 0);
     ASSERT_GT(rv.cas2, 0);
     ASSERT_NE(rv.cas1, rv.cas2);

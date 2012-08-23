@@ -21,6 +21,7 @@
 #include <iostream>
 #include <map>
 #include <sstream>
+#include <cstring>
 #include <cstdio>
 #include <cstdlib>
 #include <getopt.h>
@@ -127,19 +128,17 @@ public:
 } config;
 
 extern "C" {
-    static void storageCallback(libcouchbase_t, const void *,
-                                libcouchbase_storage_t , libcouchbase_error_t,
-                                const void *, libcouchbase_size_t, libcouchbase_cas_t);
+    static void storageCallback(lcb_t, const void *,
+                                lcb_storage_t, lcb_error_t,
+                                const lcb_store_resp_t *);
 
-    static void getCallback(libcouchbase_t, const void *,
-                            libcouchbase_error_t, const void *, libcouchbase_size_t,
-                            const void *, libcouchbase_size_t, libcouchbase_uint32_t,
-                            libcouchbase_cas_t);
+    static void getCallback(lcb_t, const void *, lcb_error_t,
+                            const lcb_get_resp_t *);
 
-    static void timingsCallback(libcouchbase_t, const void *,
-                                libcouchbase_timeunit_t, libcouchbase_uint32_t,
-                                libcouchbase_uint32_t, libcouchbase_uint32_t,
-                                libcouchbase_uint32_t);
+    static void timingsCallback(lcb_t, const void *,
+                                lcb_timeunit_t, lcb_uint32_t,
+                                lcb_uint32_t, lcb_uint32_t,
+                                lcb_uint32_t);
 }
 
 class ThreadContext
@@ -152,25 +151,23 @@ public:
     }
     ~ThreadContext() {
         if (instance != NULL) {
-            libcouchbase_destroy(instance);
+            lcb_destroy(instance);
         }
     }
     bool create(void) {
-        struct libcouchbase_io_opt_st *io;
-        io = libcouchbase_create_io_ops(LIBCOUCHBASE_IO_OPS_DEFAULT, NULL,
-                                        NULL);
+        struct lcb_io_opt_st *io;
+        io = lcb_create_io_ops(LCB_IO_OPS_DEFAULT, NULL, NULL);
         if (!io) {
             std::cerr << "Failed to create an IO instance" << std::endl;
             return false;
         }
 
-        instance = libcouchbase_create(config.getHost(), config.getUser(),
-                                       config.getPasswd(), config.getBucket(), io);
+        instance = lcb_create(config.getHost(), config.getUser(),
+                              config.getPasswd(), config.getBucket(), io);
 
         if (instance != NULL) {
-            (void)libcouchbase_set_storage_callback(instance, storageCallback);
-            (void)libcouchbase_set_get_callback(instance, getCallback);
-
+            (void)lcb_set_store_callback(instance, storageCallback);
+            (void)lcb_set_get_callback(instance, getCallback);
             return true;
         } else {
             return false;
@@ -178,17 +175,17 @@ public:
     }
 
     bool connect(void) {
-        if ((error = libcouchbase_connect(instance)) != LIBCOUCHBASE_SUCCESS) {
+        if ((error = lcb_connect(instance)) != LCB_SUCCESS) {
             std::cerr << "Failed to connect: "
-                      << libcouchbase_strerror(instance, error) << std::endl;
+                      << lcb_strerror(instance, error) << std::endl;
             return false;
         }
 
-        libcouchbase_wait(instance);
-        error = libcouchbase_get_last_error(instance);
-        if (error != LIBCOUCHBASE_SUCCESS) {
+        lcb_wait(instance);
+        error = lcb_get_last_error(instance);
+        if (error != LCB_SUCCESS) {
             std::cerr << "Failed to connect: "
-                      << libcouchbase_strerror(instance, error) << std::endl;
+                      << lcb_strerror(instance, error) << std::endl;
             return false;
         }
 
@@ -198,9 +195,9 @@ public:
     bool run(bool loop) {
         do {
             bool timings = true;
-            if ((error = libcouchbase_enable_timings(instance)) != LIBCOUCHBASE_SUCCESS) {
+            if ((error = lcb_enable_timings(instance)) != LCB_SUCCESS) {
                 std::cerr << "Failed to enable timings!: "
-                          << libcouchbase_strerror(instance, error) << std::endl;
+                          << lcb_strerror(instance, error) << std::endl;
                 timings = false;
             }
 
@@ -209,44 +206,43 @@ public:
                 std::string key;
                 generateKey(key);
 
-                libcouchbase_uint32_t flags = 0;
-                libcouchbase_uint32_t exp = 0;
+                lcb_uint32_t flags = 0;
+                lcb_uint32_t exp = 0;
 
                 if (config.setprc > 0 && (nextSeqno() % 100) < config.setprc) {
-                    libcouchbase_store(instance, this, LIBCOUCHBASE_SET,
-                                       key.c_str(), (libcouchbase_size_t)key.length(),
-                                       config.data,
-                                       config.maxSize, flags,
-                                       exp, 0);
+                    lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
+                                         config.data, config.maxSize,
+                                         flags, exp);
+                    lcb_store_cmd_t *items[1] = { &item };
+                    lcb_store(instance, this, 1, items);
                 } else {
-                    const char *keys[1];
-                    libcouchbase_size_t nkey[1];
-                    keys[0] = key.c_str();
-                    nkey[0] = (libcouchbase_size_t)key.length();
-                    error = libcouchbase_mget(instance, this, 1,
-                                              reinterpret_cast<const void *const *>(keys),
-                                              nkey, NULL);
-                    if (error != LIBCOUCHBASE_SUCCESS) {
+                    lcb_get_cmd_t item;
+                    memset(&item, 0, sizeof(item));
+                    item.v.v0.key = key.c_str();
+                    item.v.v0.nkey = key.length();
+                    lcb_get_cmd_t *items[1] = { &item };
+                    error = lcb_get(instance, this, 1, items);
+                    if (error != LCB_SUCCESS) {
                         std::cerr << "Failed to get item: "
-                                  << libcouchbase_strerror(instance, error) << std::endl;
+                                  << lcb_strerror(instance, error) << std::endl;
                     }
                 }
 
                 if (ii % 10 == 0) {
-                    libcouchbase_wait(instance);
+                    lcb_wait(instance);
                 } else {
-                    libcouchbase_wait(instance);
+                    lcb_wait(instance);
                     //pending = true;
                 }
             }
 
             if (pending) {
-                libcouchbase_wait(instance);
+                lcb_wait(instance);
             }
 
             if (timings) {
                 dumpTimings("Run");
-                libcouchbase_disable_timings(instance);
+                lcb_disable_timings(instance);
             }
         } while (loop);
 
@@ -255,9 +251,9 @@ public:
 
     bool populate(uint32_t start, uint32_t stop) {
         bool timings = true;
-        if ((error = libcouchbase_enable_timings(instance)) != LIBCOUCHBASE_SUCCESS) {
+        if ((error = lcb_enable_timings(instance)) != LCB_SUCCESS) {
             std::cerr << "Failed to enable timings!: "
-                      << libcouchbase_strerror(instance, error) << std::endl;
+                      << lcb_strerror(instance, error) << std::endl;
             timings = false;
         }
 
@@ -265,25 +261,24 @@ public:
             std::string key;
             generateKey(key, ii);
 
-            error = libcouchbase_store(instance,
-                                       reinterpret_cast<void *>(this), LIBCOUCHBASE_SET,
-                                       key.c_str(),
-                                       (libcouchbase_size_t)key.length(),
-                                       config.data, config.maxSize, 0, 0, 0);
-            if (error != LIBCOUCHBASE_SUCCESS) {
+            lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
+                                 config.data, config.maxSize);
+            lcb_store_cmd_t *items[1] = { &item };
+            error = lcb_store(instance, this, 1, items);
+            if (error != LCB_SUCCESS) {
                 std::cerr << "Failed to store item: "
-                          << libcouchbase_strerror(instance, error) << std::endl;
+                          << lcb_strerror(instance, error) << std::endl;
             }
-            libcouchbase_wait(instance);
-            if (error != LIBCOUCHBASE_SUCCESS) {
+            lcb_wait(instance);
+            if (error != LCB_SUCCESS) {
                 std::cerr << "Failed to store item: "
-                          << libcouchbase_strerror(instance, error) << std::endl;
+                          << lcb_strerror(instance, error) << std::endl;
             }
         }
 
         if (timings) {
             dumpTimings("Populate");
-            libcouchbase_disable_timings(instance);
+            lcb_disable_timings(instance);
         }
 
         return true;
@@ -291,15 +286,13 @@ public:
 
 protected:
     // the callback methods needs to be able to set the error handler..
-    friend void storageCallback(libcouchbase_t, const void *,
-                                libcouchbase_storage_t , libcouchbase_error_t,
-                                const void *, libcouchbase_size_t, libcouchbase_cas_t);
-    friend void getCallback(libcouchbase_t, const void *,
-                            libcouchbase_error_t, const void *, libcouchbase_size_t,
-                            const void *, libcouchbase_size_t, libcouchbase_uint32_t,
-                            libcouchbase_cas_t);
+    friend void storageCallback(lcb_t, const void *,
+                                lcb_storage_t, lcb_error_t,
+                                const lcb_store_resp_t *);
+    friend void getCallback(lcb_t, const void *, lcb_error_t,
+                            const lcb_get_resp_t *);
 
-    void setError(libcouchbase_error_t e) {
+    void setError(lcb_error_t e) {
         error = e;
     }
 
@@ -307,8 +300,8 @@ protected:
         std::stringstream ss;
         ss << header << std::endl;
         ss << "              +---------+---------+---------+---------+" << std::endl;
-        libcouchbase_get_timings(instance, reinterpret_cast<void *>(&ss),
-                                 timingsCallback);
+        lcb_get_timings(instance, reinterpret_cast<void *>(&ss),
+                        timingsCallback);
         ss << "              +----------------------------------------" << endl;
         std::cout << ss.str();
     }
@@ -338,24 +331,22 @@ private:
     uint32_t seqno[8192];
     uint32_t currSeqno;
 
-    libcouchbase_t instance;
-    libcouchbase_error_t error;
+    lcb_t instance;
+    lcb_error_t error;
 };
 
-static void storageCallback(libcouchbase_t, const void *cookie,
-                            libcouchbase_storage_t, libcouchbase_error_t error,
-                            const void *, libcouchbase_size_t, libcouchbase_cas_t)
+static void storageCallback(lcb_t, const void *cookie,
+                            lcb_storage_t, lcb_error_t error,
+                            const lcb_store_resp_t *)
 {
     ThreadContext *tc;
     tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(cookie));
     tc->setError(error);
 }
 
-static void getCallback(libcouchbase_t, const void *cookie,
-                        libcouchbase_error_t error, const void *,
-                        libcouchbase_size_t, const void *,
-                        libcouchbase_size_t, libcouchbase_uint32_t,
-                        libcouchbase_cas_t)
+static void getCallback(lcb_t, const void *cookie,
+                        lcb_error_t error,
+                        const lcb_get_resp_t *)
 {
     ThreadContext *tc;
     tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(cookie));
@@ -363,12 +354,12 @@ static void getCallback(libcouchbase_t, const void *cookie,
 
 }
 
-static void timingsCallback(libcouchbase_t instance, const void *cookie,
-                            libcouchbase_timeunit_t timeunit,
-                            libcouchbase_uint32_t min,
-                            libcouchbase_uint32_t max,
-                            libcouchbase_uint32_t total,
-                            libcouchbase_uint32_t maxtotal)
+static void timingsCallback(lcb_t instance, const void *cookie,
+                            lcb_timeunit_t timeunit,
+                            lcb_uint32_t min,
+                            lcb_uint32_t max,
+                            lcb_uint32_t total,
+                            lcb_uint32_t maxtotal)
 {
     std::stringstream *ss =
         const_cast<std::stringstream *>(reinterpret_cast<const std::stringstream *>(cookie));
@@ -376,16 +367,16 @@ static void timingsCallback(libcouchbase_t instance, const void *cookie,
     int offset = sprintf(buffer, "[%3u - %3u]", min, max);
 
     switch (timeunit) {
-    case LIBCOUCHBASE_TIMEUNIT_NSEC:
+    case LCB_TIMEUNIT_NSEC:
         offset += sprintf(buffer + offset, "ns");
         break;
-    case LIBCOUCHBASE_TIMEUNIT_USEC:
+    case LCB_TIMEUNIT_USEC:
         offset += sprintf(buffer + offset, "us");
         break;
-    case LIBCOUCHBASE_TIMEUNIT_MSEC:
+    case LCB_TIMEUNIT_MSEC:
         offset += sprintf(buffer + offset, "ms");
         break;
-    case LIBCOUCHBASE_TIMEUNIT_SEC:
+    case LCB_TIMEUNIT_SEC:
         offset += sprintf(buffer + offset, "s");
         break;
     default:

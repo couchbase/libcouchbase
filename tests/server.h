@@ -21,14 +21,14 @@
 extern "C" {
 #endif
 
-const void *start_mock_server(char **cmdline);
-const char *get_mock_http_server(const void *);
-void shutdown_mock_server(const void *);
+    const void *start_mock_server(char **cmdline);
+    const char *get_mock_http_server(const void *);
+    void shutdown_mock_server(const void *);
 
-void failover_node(const void *handle, int idx, const char *bucket);
-void respawn_node(const void *handle, int idx, const char *bucket);
+    void failover_node(const void *handle, int idx, const char *bucket);
+    void respawn_node(const void *handle, int idx, const char *bucket);
 
-struct libcouchbase_io_opt_st *get_test_io_opts(void);
+    struct lcb_io_opt_st *get_test_io_opts(void);
 
 #ifdef __cplusplus
 }

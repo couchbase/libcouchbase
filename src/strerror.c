@@ -26,62 +26,61 @@
 #include "internal.h"
 
 LIBCOUCHBASE_API
-const char *libcouchbase_strerror(libcouchbase_t instance,
-                                  libcouchbase_error_t error)
+const char *lcb_strerror(lcb_t instance, lcb_error_t error)
 {
     (void)instance;
     switch (error) {
-    case LIBCOUCHBASE_SUCCESS:
+    case LCB_SUCCESS:
         return "Success";
-    case LIBCOUCHBASE_KEY_ENOENT:
+    case LCB_KEY_ENOENT:
         return "No such key";
-    case LIBCOUCHBASE_E2BIG:
+    case LCB_E2BIG:
         return "Object too big";
-    case LIBCOUCHBASE_ENOMEM:
+    case LCB_ENOMEM:
         return "Out of memory";
-    case LIBCOUCHBASE_KEY_EEXISTS:
+    case LCB_KEY_EEXISTS:
         return "Key exists (with a different CAS value)";
-    case LIBCOUCHBASE_EINVAL:
+    case LCB_EINVAL:
         return "Invalid arguments";
-    case LIBCOUCHBASE_NOT_STORED:
+    case LCB_NOT_STORED:
         return "Not stored";
-    case LIBCOUCHBASE_DELTA_BADVAL:
+    case LCB_DELTA_BADVAL:
         return "Not a number";
-    case LIBCOUCHBASE_NOT_MY_VBUCKET:
+    case LCB_NOT_MY_VBUCKET:
         return "The vbucket is not located on this server";
-    case LIBCOUCHBASE_AUTH_ERROR:
+    case LCB_AUTH_ERROR:
         return "Authentication error";
-    case LIBCOUCHBASE_AUTH_CONTINUE:
+    case LCB_AUTH_CONTINUE:
         return "Continue authentication";
-    case LIBCOUCHBASE_ERANGE:
+    case LCB_ERANGE:
         return "Invalid range";
-    case LIBCOUCHBASE_UNKNOWN_COMMAND:
+    case LCB_UNKNOWN_COMMAND:
         return "Unknown command";
-    case LIBCOUCHBASE_NOT_SUPPORTED:
+    case LCB_NOT_SUPPORTED:
         return "Not supported";
-    case LIBCOUCHBASE_EINTERNAL:
+    case LCB_EINTERNAL:
         return "Internal error";
-    case LIBCOUCHBASE_EBUSY:
+    case LCB_EBUSY:
         return "Too busy. Try again later";
-    case LIBCOUCHBASE_ETMPFAIL:
+    case LCB_ETMPFAIL:
         return "Temporary failure. Try again later";
-    case LIBCOUCHBASE_LIBEVENT_ERROR:
+    case LCB_LIBEVENT_ERROR:
         return "Problem using libevent";
-    case LIBCOUCHBASE_NETWORK_ERROR:
+    case LCB_NETWORK_ERROR:
         return "Network error";
-    case LIBCOUCHBASE_UNKNOWN_HOST:
+    case LCB_UNKNOWN_HOST:
         return "Unknown host";
-    case LIBCOUCHBASE_ERROR:
+    case LCB_ERROR:
         return "Generic error";
-    case LIBCOUCHBASE_PROTOCOL_ERROR:
+    case LCB_PROTOCOL_ERROR:
         return "Protocol error";
-    case LIBCOUCHBASE_ETIMEDOUT:
+    case LCB_ETIMEDOUT:
         return "Operation timed out";
-    case LIBCOUCHBASE_CONNECT_ERROR:
+    case LCB_CONNECT_ERROR:
         return "Connection failure";
-    case LIBCOUCHBASE_BUCKET_ENOENT:
+    case LCB_BUCKET_ENOENT:
         return "No such bucket";
-    case LIBCOUCHBASE_CLIENT_ENOMEM:
+    case LCB_CLIENT_ENOMEM:
         return "Out of memory on the client";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";

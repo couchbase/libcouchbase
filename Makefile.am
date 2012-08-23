@@ -37,9 +37,9 @@ pkginclude_HEADERS = \
                      include/libcouchbase/compat.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
-                     include/libcouchbase/tap_filter.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
+                     include/libcouchbase/arguments.h \
                      include/libcouchbase/visibility.h \
                      plugins/io/libevent/libevent_io_opts.h \
                      plugins/io/win32/winsock_io_opts.h
@@ -82,6 +82,7 @@ libcouchbase_la_SOURCES = \
                         src/flush.c \
                         src/get.c \
                         src/handler.c \
+                        src/handler.h \
                         src/hashset.c \
                         src/hashset.h \
                         src/http.c \
@@ -97,7 +98,6 @@ libcouchbase_la_SOURCES = \
                         src/store.c \
                         src/strerror.c \
                         src/synchandler.c \
-                        src/tap.c \
                         src/timeout.c \
                         src/timer.c \
                         src/timings.c \
@@ -114,7 +114,7 @@ if !HAVE_GETHRTIME
 libcouchbase_la_SOURCES += src/gethrtime.c
 endif
 
-libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(LIBCOUCHBASE_API_CURRENT):$(LIBCOUCHBASE_API_REVISION):$(LIBCOUCHBASE_API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
+libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 libcouchbase_la_DEPENDENCIES=libhttpparser.la libvbucket.la
 libcouchbase_la_LIBADD=libhttpparser.la libvbucket.la $(LIBSASL)
@@ -147,14 +147,17 @@ libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTE
 endif
 endif
 
-tests_unit_tests_SOURCES = tests/unit_tests.cc \
-                           tests/base64-unit-test.cc src/base64.c \
-                           tests/hashset-unit-test.cc src/hashset.c \
-                           tests/strerror-unit-test.cc \
+tests_unit_tests_SOURCES = \
+                           src/base64.c \
+                           src/hashset.c \
+                           src/ringbuffer.c \
+                           tests/base64-unit-test.cc \
+                           tests/behavior-unit-tests.cc \
+                           tests/hashset-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
-                           tests/ringbuffer-unit-test.cc src/ringbuffer.c \
-                           tests/behavior-unit-tests.cc
-
+                           tests/ringbuffer-unit-test.cc \
+                           tests/strerror-unit-test.cc \
+                           tests/unit_tests.cc
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
 tests_unit_tests_LDADD = libcouchbase.la
@@ -208,11 +211,12 @@ libmockserver_la_SOURCES = \
                          tests/server.c tests/loopfactory.c tests/server.h
 
 
+noinst_PROGRAMS =
 #
 # Example programs using the library
 #
 if BUILD_TOOLS
-noinst_PROGRAMS = example/pillowfight
+noinst_PROGRAMS += example/pillowfight
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/couchview_yajl
 endif
@@ -233,13 +237,16 @@ endif
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
 tests_unit_tests_SOURCES += \
-                            tests/mock-unit-test.cc tests/mock-unit-test.h \
-                            tests/server.c tests/server.h tests/loopfactory.c
+							tests/loopfactory.c \
+							tests/mock-unit-test.h \
+							tests/server.h \
+							tests/mock-unit-test.cc \
+							tests/server.c
 
+endif
 check_PROGRAMS += \
                   tests/config-test \
                   tests/smoke-test
-endif
 
 if BUILD_TOOLS
 # and therefore have C++ compiler to build this test
@@ -262,11 +269,14 @@ tools_cbc_LDADD = $(tools_cbc_DEPENDENCIES)
 if HAVE_LIBYAJL2
 tools_cbc_LDADD += -lyajl
 endif
-tools_cbc_SOURCES = tools/cbc.cc tools/cbc-receive.cc                   \
-                    tools/cbc-send.cc tools/cbc-util.cc                 \
-                    tools/cbc-util.h tools/commandlineparser.cc         \
-                    tools/commandlineparser.h tools/configuration.cc    \
-                    tools/configuration.h
+tools_cbc_SOURCES =	\
+					tools/cbc.cc \
+					tools/cbc-util.cc \
+					tools/cbc-util.h \
+					tools/configuration.cc	\
+					tools/commandlineparser.cc \
+					tools/commandlineparser.h \
+					tools/configuration.h
 
 TESTS=${check_PROGRAMS}
 
@@ -274,10 +284,23 @@ example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
 example_pillowfight_LDADD = libcouchbase.la
 
 if BUILD_TOOLS
-CBC_LINKS = cbc-cat cbc-rm cbc-cp cbc-stats cbc-flush cbc-create        \
-            cbc-send cbc-receive cbc-version cbc-verify cbc-lock        \
-            cbc-unlock cbc-hash cbc-view cbc-admin cbc-bucket-create    \
-            cbc-bucket-delete cbc-verbosity
+CBC_LINKS = \
+			cbc-admin \
+			cbc-cat \
+			cbc-bucket-create \
+			cbc-bucket-delete \
+			cbc-cp \
+			cbc-create \
+			cbc-flush \
+			cbc-hash \
+			cbc-lock \
+			cbc-rm \
+			cbc-stats \
+			cbc-unlock \
+			cbc-verify \
+			cbc-verbosity \
+			cbc-version \
+			cbc-view
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \

@@ -45,6 +45,7 @@
 #include "ringbuffer.h"
 #include "hashset.h"
 #include "debug.h"
+#include "handler.h"
 
 /*
  * libevent2 define evutil_socket_t so that it'll automagically work
@@ -54,84 +55,78 @@
 #define evutil_socket_t int
 #endif
 
-#define LIBCOUCHBASE_DEFAULT_TIMEOUT 2500000
+#define LCB_DEFAULT_TIMEOUT 2500000
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-    struct libcouchbase_server_st;
-    typedef struct libcouchbase_server_st libcouchbase_server_t;
+    struct lcb_server_st;
+    typedef struct lcb_server_st lcb_server_t;
 
     typedef void (*EVENT_HANDLER)(evutil_socket_t fd, short which, void *arg);
 
     /**
      * Data stored per command in the command-cookie buffer...
      */
-    struct libcouchbase_command_data_st {
+    struct lcb_command_data_st {
         hrtime_t start;
         const void *cookie;
         int replica;
-        libcouchbase_uint16_t vbucket;
+        lcb_uint16_t vbucket;
     };
 
-    typedef void (*REQUEST_HANDLER)(libcouchbase_server_t *instance,
-                                    struct libcouchbase_command_data_st *command_data,
+    typedef void (*REQUEST_HANDLER)(lcb_server_t *instance,
+                                    struct lcb_command_data_st *command_data,
                                     protocol_binary_request_header *req);
-    typedef void (*RESPONSE_HANDLER)(libcouchbase_server_t *instance,
-                                     struct libcouchbase_command_data_st *command_data,
+    typedef void (*RESPONSE_HANDLER)(lcb_server_t *instance,
+                                     struct lcb_command_data_st *command_data,
                                      protocol_binary_response_header *res);
 
     /**
      * Define constants for connection attemptts
      */
     typedef enum {
-        LIBCOUCHBASE_CONNECT_OK = 0,
-        LIBCOUCHBASE_CONNECT_EINPROGRESS,
-        LIBCOUCHBASE_CONNECT_EALREADY,
-        LIBCOUCHBASE_CONNECT_EISCONN,
-        LIBCOUCHBASE_CONNECT_EINTR,
-        LIBCOUCHBASE_CONNECT_EFAIL,
-        LIBCOUCHBASE_CONNECT_EUNHANDLED
-    } libcouchbase_connect_status_t;
+        LCB_CONNECT_OK = 0,
+        LCB_CONNECT_EINPROGRESS,
+        LCB_CONNECT_EALREADY,
+        LCB_CONNECT_EISCONN,
+        LCB_CONNECT_EINTR,
+        LCB_CONNECT_EFAIL,
+        LCB_CONNECT_EUNHANDLED
+    } lcb_connect_status_t;
 
     typedef struct {
         char *data;
-        libcouchbase_size_t size;
-        libcouchbase_size_t avail;
+        lcb_size_t size;
+        lcb_size_t avail;
     } buffer_t;
-    int grow_buffer(buffer_t *buffer, libcouchbase_size_t min_free);
+    int grow_buffer(buffer_t *buffer, lcb_size_t min_free);
 
-    struct libcouchbase_histogram_st;
+    struct lcb_histogram_st;
 
-    typedef void (*vbucket_state_listener_t)(libcouchbase_server_t *server);
+    typedef void (*vbucket_state_listener_t)(lcb_server_t *server);
 
-    struct libcouchbase_callback_st {
-        libcouchbase_extended_get_callback get;
-        libcouchbase_get_callback old_get;
-        libcouchbase_storage_callback storage;
-        libcouchbase_arithmetic_callback arithmetic;
-        libcouchbase_observe_callback observe;
-        libcouchbase_remove_callback remove;
-        libcouchbase_stat_callback stat;
-        libcouchbase_version_callback version;
-        libcouchbase_touch_callback touch;
-        libcouchbase_flush_callback flush;
-        libcouchbase_tap_mutation_callback tap_mutation;
-        libcouchbase_tap_deletion_callback tap_deletion;
-        libcouchbase_tap_flush_callback tap_flush;
-        libcouchbase_tap_opaque_callback tap_opaque;
-        libcouchbase_tap_vbucket_set_callback tap_vbucket_set;
-        libcouchbase_error_callback error;
-        libcouchbase_http_complete_callback view_complete;
-        libcouchbase_http_data_callback view_data;
-        libcouchbase_http_complete_callback management_complete;
-        libcouchbase_http_data_callback management_data;
-        libcouchbase_unlock_callback unlock;
-        libcouchbase_configuration_callback configuration;
-        libcouchbase_verbosity_callback verbosity;
+    struct lcb_callback_st {
+        lcb_get_callback get;
+        lcb_store_callback store;
+        lcb_arithmetic_callback arithmetic;
+        lcb_observe_callback observe;
+        lcb_remove_callback remove;
+        lcb_stat_callback stat;
+        lcb_version_callback version;
+        lcb_touch_callback touch;
+        lcb_flush_callback flush;
+        lcb_error_callback error;
+        lcb_http_complete_callback view_complete;
+        lcb_http_data_callback view_data;
+        lcb_http_complete_callback management_complete;
+        lcb_http_data_callback management_data;
+        lcb_unlock_callback unlock;
+        lcb_configuration_callback configuration;
+        lcb_verbosity_callback verbosity;
     };
 
-    struct libcouchbase_st {
+    struct lcb_st {
         /** The couchbase host */
         char host[NI_MAXHOST + 1];
         /** The port of the couchbase server */
@@ -155,10 +150,10 @@ extern "C" {
             buffer_t chunk;
         } vbucket_stream;
 
-        struct libcouchbase_io_opt_st *io;
+        struct lcb_io_opt_st *io;
 
         /* The current synchronous mode */
-        libcouchbase_syncmode_t syncmode;
+        lcb_syncmode_t syncmode;
 
         evutil_socket_t sock;
         struct addrinfo *ai;
@@ -167,7 +162,7 @@ extern "C" {
         /** The number of couchbase server in the configuration */
         size_t nservers;
         /** The array of the couchbase servers */
-        libcouchbase_server_t *servers;
+        lcb_server_t *servers;
 
         /** if non-zero, backup_nodes entries should be freed before freeing the pointer itself */
         int should_free_backup_nodes;
@@ -179,11 +174,11 @@ extern "C" {
         /** The type of the key distribution */
         VBUCKET_DISTRIBUTION_TYPE dist_type;
         /** The number of replicas */
-        libcouchbase_uint16_t nreplicas;
+        lcb_uint16_t nreplicas;
         /** The number of vbuckets */
-        libcouchbase_uint16_t nvbuckets;
+        lcb_uint16_t nvbuckets;
         /** A map from the vbucket to the server hosting the vbucket */
-        libcouchbase_vbucket_t *vb_server_map;
+        lcb_vbucket_t *vb_server_map;
 
         vbucket_state_listener_t vbucket_state_listener;
 
@@ -208,37 +203,37 @@ extern "C" {
         } sasl;
 
         struct {
-            libcouchbase_tap_filter_t filter;
+            lcb_tap_filter_t filter;
         } tap;
 
         /** The set of the timers */
         hashset_t timers;
 
-        struct libcouchbase_callback_st callbacks;
-        struct libcouchbase_histogram_st *histogram;
+        struct lcb_callback_st callbacks;
+        struct lcb_histogram_st *histogram;
 
-        libcouchbase_uint32_t seqno;
+        lcb_uint32_t seqno;
         int wait;
         /** Is IPv6 enabled */
-        libcouchbase_ipv6_t ipv6;
+        lcb_ipv6_t ipv6;
         const void *cookie;
 
-        libcouchbase_error_t last_error;
+        lcb_error_t last_error;
 
         struct {
             hrtime_t next;
             void *event;
-            libcouchbase_uint32_t usec;
+            lcb_uint32_t usec;
         } timeout;
-#ifdef LIBCOUCHBASE_DEBUG
-        libcouchbase_debug_st debug;
+#ifdef LCB_DEBUG
+        lcb_debug_st debug;
 #endif
     };
 
     /**
      * The structure representing each couchbase server
      */
-    struct libcouchbase_server_st {
+    struct lcb_server_st {
         /** The server index in the list */
         int index;
         /** The name of the server */
@@ -289,34 +284,34 @@ extern "C" {
         /** The current event handler */
         EVENT_HANDLER ev_handler;
         /* Pointer back to the instance */
-        libcouchbase_t instance;
+        lcb_t instance;
     };
 
-    struct libcouchbase_timer_st {
-        libcouchbase_uint32_t usec;
+    struct lcb_timer_st {
+        lcb_uint32_t usec;
         int periodic;
         void *event;
         const void *cookie;
-        libcouchbase_timer_callback callback;
-        libcouchbase_t instance;
+        lcb_timer_callback callback;
+        lcb_t instance;
     };
 
-    struct libcouchbase_http_header_st {
-        struct libcouchbase_http_header_st *next;
+    struct lcb_http_header_st {
+        struct lcb_http_header_st *next;
         char *data;
     };
 
-    struct libcouchbase_http_request_st {
+    struct lcb_http_request_st {
         /** The socket to the server */
         evutil_socket_t sock;
-        struct libcouchbase_io_opt_st *io;
+        struct lcb_io_opt_st *io;
         /** The origin node */
-        libcouchbase_server_t *server;
+        lcb_server_t *server;
         /** Short ref to instance (server->instance) */
-        libcouchbase_t instance;
+        lcb_t instance;
         /** The URL buffer */
         char *url;
-        libcouchbase_size_t nurl;
+        lcb_size_t nurl;
         /** The URL info */
         struct http_parser_url url_info;
         /** The hostname of the server */
@@ -325,9 +320,9 @@ extern "C" {
         char *port;
         /** The requested path (without couch api endpoint) */
         char *path;
-        libcouchbase_size_t npath;
+        lcb_size_t npath;
         /** The type of HTTP request */
-        libcouchbase_http_method_t method;
+        lcb_http_method_t method;
         /** The HTTP response parser */
         http_parser *parser;
         http_parser_settings parser_settings;
@@ -341,9 +336,9 @@ extern "C" {
         int chunked;
         /** This callback will be executed when the whole response will be
          * transferred */
-        libcouchbase_http_complete_callback on_complete;
+        lcb_http_complete_callback on_complete;
         /** This callback will be executed for each chunk of the response */
-        libcouchbase_http_data_callback on_data;
+        lcb_http_data_callback on_data;
         /** The outgoing buffer for this request */
         ringbuffer_t output;
         /** The incoming buffer for this request */
@@ -356,61 +351,61 @@ extern "C" {
         /** Is HTTP parser completed its work */
         int completed;
         /** Linked list of headers */
-        struct libcouchbase_http_header_st *headers_list;
+        struct lcb_http_header_st *headers_list;
         /** Headers array for passing to callbacks */
         const char **headers;
         /** Number of headers **/
-        libcouchbase_size_t nheaders;
+        lcb_size_t nheaders;
     };
 
-    void libcouchbase_http_request_destroy(libcouchbase_http_request_t req);
+    void lcb_http_request_destroy(lcb_http_request_t req);
 
 
-    libcouchbase_error_t libcouchbase_synchandler_return(libcouchbase_t instance, libcouchbase_error_t retcode);
+    lcb_error_t lcb_synchandler_return(lcb_t instance, lcb_error_t retcode);
 
-    libcouchbase_error_t libcouchbase_error_handler(libcouchbase_t instance,
-                                                    libcouchbase_error_t error,
-                                                    const char *errinfo);
+    lcb_error_t lcb_error_handler(lcb_t instance,
+                                  lcb_error_t error,
+                                  const char *errinfo);
 
-    int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
-                                                     libcouchbase_uint32_t seqno,
-                                                     hrtime_t delta);
-    void libcouchbase_server_destroy(libcouchbase_server_t *server);
-    void libcouchbase_server_connected(libcouchbase_server_t *server);
+    int lcb_server_purge_implicit_responses(lcb_server_t *c,
+                                            lcb_uint32_t seqno,
+                                            hrtime_t delta);
+    void lcb_server_destroy(lcb_server_t *server);
+    void lcb_server_connected(lcb_server_t *server);
 
-    void libcouchbase_server_initialize(libcouchbase_server_t *server,
-                                        int servernum);
+    void lcb_server_initialize(lcb_server_t *server,
+                               int servernum);
 
 
 
-    void libcouchbase_server_buffer_start_packet(libcouchbase_server_t *c,
-                                                 const void *command_cookie,
-                                                 ringbuffer_t *buff,
-                                                 ringbuffer_t *buff_cookie,
-                                                 const void *data,
-                                                 libcouchbase_size_t size);
+    void lcb_server_buffer_start_packet(lcb_server_t *c,
+                                        const void *command_cookie,
+                                        ringbuffer_t *buff,
+                                        ringbuffer_t *buff_cookie,
+                                        const void *data,
+                                        lcb_size_t size);
 
-    void libcouchbase_server_buffer_retry_packet(libcouchbase_server_t *c,
-                                                 struct libcouchbase_command_data_st *ct,
-                                                 ringbuffer_t *buff,
-                                                 ringbuffer_t *buff_cookie,
-                                                 const void *data,
-                                                 libcouchbase_size_t size);
+    void lcb_server_buffer_retry_packet(lcb_server_t *c,
+                                        struct lcb_command_data_st *ct,
+                                        ringbuffer_t *buff,
+                                        ringbuffer_t *buff_cookie,
+                                        const void *data,
+                                        lcb_size_t size);
 
-    void libcouchbase_server_buffer_write_packet(libcouchbase_server_t *c,
-                                                 ringbuffer_t *buff,
-                                                 const void *data,
-                                                 libcouchbase_size_t size);
+    void lcb_server_buffer_write_packet(lcb_server_t *c,
+                                        ringbuffer_t *buff,
+                                        const void *data,
+                                        lcb_size_t size);
 
-    void libcouchbase_server_buffer_end_packet(libcouchbase_server_t *c,
-                                               ringbuffer_t *buff);
+    void lcb_server_buffer_end_packet(lcb_server_t *c,
+                                      ringbuffer_t *buff);
 
-    void libcouchbase_server_buffer_complete_packet(libcouchbase_server_t *c,
-                                                    const void *command_cookie,
-                                                    ringbuffer_t *buff,
-                                                    ringbuffer_t *buff_cookie,
-                                                    const void *data,
-                                                    libcouchbase_size_t size);
+    void lcb_server_buffer_complete_packet(lcb_server_t *c,
+                                           const void *command_cookie,
+                                           ringbuffer_t *buff,
+                                           ringbuffer_t *buff_cookie,
+                                           const void *data,
+                                           lcb_size_t size);
 
     /**
      * Initiate a new packet to be sent
@@ -419,28 +414,28 @@ extern "C" {
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
-    void libcouchbase_server_start_packet(libcouchbase_server_t *c,
-                                          const void *command_cookie,
-                                          const void *data,
-                                          libcouchbase_size_t size);
+    void lcb_server_start_packet(lcb_server_t *c,
+                                 const void *command_cookie,
+                                 const void *data,
+                                 lcb_size_t size);
 
-    void libcouchbase_server_retry_packet(libcouchbase_server_t *c,
-                                          struct libcouchbase_command_data_st *ct,
-                                          const void *data,
-                                          libcouchbase_size_t size);
+    void lcb_server_retry_packet(lcb_server_t *c,
+                                 struct lcb_command_data_st *ct,
+                                 const void *data,
+                                 lcb_size_t size);
     /**
      * Write data to the current packet
      * @param c the server connection to send it to
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
-    void libcouchbase_server_write_packet(libcouchbase_server_t *c,
-                                          const void *data,
-                                          libcouchbase_size_t size);
+    void lcb_server_write_packet(lcb_server_t *c,
+                                 const void *data,
+                                 lcb_size_t size);
     /**
      * Mark this packet complete
      */
-    void libcouchbase_server_end_packet(libcouchbase_server_t *c);
+    void lcb_server_end_packet(lcb_server_t *c);
 
     /**
      * Create a complete packet (to avoid calling start + end)
@@ -449,73 +444,71 @@ extern "C" {
      * @param data pointer to data to include in the packet
      * @param size the size of the data to include
      */
-    void libcouchbase_server_complete_packet(libcouchbase_server_t *c,
-                                             const void *command_cookie,
-                                             const void *data,
-                                             libcouchbase_size_t size);
+    void lcb_server_complete_packet(lcb_server_t *c,
+                                    const void *command_cookie,
+                                    const void *data,
+                                    lcb_size_t size);
     /**
      * Start sending packets
      * @param server the server to start send data to
      */
-    void libcouchbase_server_send_packets(libcouchbase_server_t *server);
+    void lcb_server_send_packets(lcb_server_t *server);
 
 
-    void libcouchbase_server_event_handler(libcouchbase_socket_t sock, short which, void *arg);
+    void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg);
 
-    void libcouchbase_initialize_packet_handlers(libcouchbase_t instance);
+    void lcb_initialize_packet_handlers(lcb_t instance);
 
-    int libcouchbase_base64_encode(const char *src, char *dst, libcouchbase_size_t sz);
+    int lcb_base64_encode(const char *src, char *dst, lcb_size_t sz);
 
-    void libcouchbase_record_metrics(libcouchbase_t instance,
-                                     hrtime_t delta,
-                                     libcouchbase_uint8_t opcode);
+    void lcb_record_metrics(lcb_t instance,
+                            hrtime_t delta,
+                            lcb_uint8_t opcode);
 
-    void libcouchbase_purge_timedout(libcouchbase_t instance);
-
-
-    int libcouchbase_lookup_server_with_command(libcouchbase_t instance,
-                                                libcouchbase_uint8_t opcode,
-                                                libcouchbase_uint32_t opaque,
-                                                libcouchbase_server_t *exc);
-
-    void libcouchbase_update_server_timer(libcouchbase_server_t *server);
-
-    void libcouchbase_purge_single_server(libcouchbase_server_t *server,
-                                          libcouchbase_error_t error);
-
-    libcouchbase_error_t libcouchbase_failout_server(libcouchbase_server_t *server,
-                                                     libcouchbase_error_t error);
-
-    int libcouchbase_has_data_in_buffers(libcouchbase_t instance);
-
-    void libcouchbase_maybe_breakout(libcouchbase_t instance);
-
-    libcouchbase_connect_status_t libcouchbase_connect_status(int err);
-
-    void libcouchbase_sockconn_errinfo(int connerr,
-                                       const char *hostname,
-                                       const char *port,
-                                       const struct addrinfo *root_ai,
-                                       char *buf,
-                                       libcouchbase_size_t nbuf,
-                                       libcouchbase_error_t *uerr);
-
-    evutil_socket_t libcouchbase_gai2sock(libcouchbase_t instance,
-                                          struct addrinfo **curr_ai,
-                                          int *connerr);
-
-    libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance,
-                                                           VBUCKET_CONFIG_HANDLE config);
+    void lcb_purge_timedout(lcb_t instance);
 
 
+    int lcb_lookup_server_with_command(lcb_t instance,
+                                       lcb_uint8_t opcode,
+                                       lcb_uint32_t opaque,
+                                       lcb_server_t *exc);
 
-   int lcb_getaddrinfo(libcouchbase_t instance, const char *hostname,
-                       const char *servname, struct addrinfo **res);
+    void lcb_update_server_timer(lcb_server_t *server);
+
+    void lcb_purge_single_server(lcb_server_t *server,
+                                 lcb_error_t error);
+
+    lcb_error_t lcb_failout_server(lcb_server_t *server,
+                                   lcb_error_t error);
+
+    int lcb_has_data_in_buffers(lcb_t instance);
+
+    void lcb_maybe_breakout(lcb_t instance);
+
+    lcb_connect_status_t lcb_connect_status(int err);
+
+    void lcb_sockconn_errinfo(int connerr,
+                              const char *hostname,
+                              const char *port,
+                              const struct addrinfo *root_ai,
+                              char *buf,
+                              lcb_size_t nbuf,
+                              lcb_error_t *uerr);
+
+    evutil_socket_t lcb_gai2sock(lcb_t instance,
+                                 struct addrinfo **curr_ai,
+                                 int *connerr);
+
+    lcb_error_t lcb_apply_vbucket_config(lcb_t instance,
+                                         VBUCKET_CONFIG_HANDLE config);
+
+
+
+    int lcb_getaddrinfo(lcb_t instance, const char *hostname,
+                        const char *servname, struct addrinfo **res);
 
 #ifdef __cplusplus
 }
 #endif
-
-#include <libcouchbase/couchbase.h>
 
 #endif

@@ -27,18 +27,16 @@ extern "C" {
 #endif
 
     LIBCOUCHBASE_API
-    void libcouchbase_behavior_set_syncmode(libcouchbase_t instance,
-                                            libcouchbase_syncmode_t syncmode);
+    void lcb_behavior_set_syncmode(lcb_t instance, lcb_syncmode_t syncmode);
 
     LIBCOUCHBASE_API
-    libcouchbase_syncmode_t libcouchbase_behavior_get_syncmode(libcouchbase_t instance);
+    lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t instance);
 
     LIBCOUCHBASE_API
-    void libcouchbase_behavior_set_ipv6(libcouchbase_t instance,
-                                        libcouchbase_ipv6_t mode);
+    void lcb_behavior_set_ipv6(lcb_t instance, lcb_ipv6_t mode);
 
     LIBCOUCHBASE_API
-    libcouchbase_ipv6_t libcouchbase_behavior_get_ipv6(libcouchbase_t instance);
+    lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance);
 
 #ifdef __cplusplus
 }

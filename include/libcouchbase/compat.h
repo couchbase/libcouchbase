@@ -31,18 +31,18 @@
 extern "C" {
 #endif
 
-    enum libcouchbase_cluster_t {
-        LIBCOUCHBASE_MEMCACHED_CLUSTER = 0x00
+    enum lcb_cluster_t {
+        LCB_MEMCACHED_CLUSTER = 0x00
     };
-    typedef enum libcouchbase_cluster_t libcouchbase_cluster_t;
+    typedef enum lcb_cluster_t lcb_cluster_t;
 
     LIBCOUCHBASE_API
-    libcouchbase_error_t libcouchbase_create_compat(libcouchbase_cluster_t type,
-                                                    const void *specific,
-                                                    libcouchbase_t *instance,
-                                                    struct libcouchbase_io_opt_st *io);
+    lcb_error_t lcb_create_compat(lcb_cluster_t type,
+                                  const void *specific,
+                                  lcb_t *instance,
+                                  struct lcb_io_opt_st *io);
 
-    struct libcouchbase_memcached_st {
+    struct lcb_memcached_st {
         const char *serverlist;
         const char *username;
         const char *password;

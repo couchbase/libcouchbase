@@ -31,39 +31,39 @@
 #include <stddef.h>
 #include <time.h>
 
-#define LIBCOUCHBASE_VERSION_STRING "1.1.0dp9"
-#define LIBCOUCHBASE_VERSION 0x010100
-#define LIBCOUCHBASE_VERSION_CHANGESET unknown
+#define LCB_VERSION_STRING "1.1.0dp9"
+#define LCB_VERSION 0x010100
+#define LCB_VERSION_CHANGESET unknown
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifdef _WIN32
-#define PACKAGE_STRING "libcouchbase 1.1.0dp9"
-    typedef __int64 libcouchbase_int64_t;
-    typedef __int32 libcouchbase_int32_t;
-    typedef unsigned long libcouchbase_size_t;
-    typedef long libcouchbase_ssize_t;
-    typedef unsigned __int8 libcouchbase_uint8_t;
-    typedef unsigned __int16 libcouchbase_vbucket_t;
-    typedef unsigned __int16 libcouchbase_uint16_t;
-    typedef unsigned __int32 libcouchbase_uint32_t;
-    typedef unsigned __int64 libcouchbase_cas_t;
-    typedef unsigned __int64 libcouchbase_uint64_t;
-    typedef time_t libcouchbase_time_t;
+#define PACKAGE_STRING "lcb 1.1.0dp9"
+    typedef __int64 lcb_int64_t;
+    typedef __int32 lcb_int32_t;
+    typedef unsigned long lcb_size_t;
+    typedef long lcb_ssize_t;
+    typedef unsigned __int8 lcb_uint8_t;
+    typedef unsigned __int16 lcb_vbucket_t;
+    typedef unsigned __int16 lcb_uint16_t;
+    typedef unsigned __int32 lcb_uint32_t;
+    typedef unsigned __int64 lcb_cas_t;
+    typedef unsigned __int64 lcb_uint64_t;
+    typedef time_t lcb_time_t;
 #else
-    typedef int64_t libcouchbase_int64_t;
-    typedef int32_t libcouchbase_int32_t;
-    typedef size_t libcouchbase_size_t;
-    typedef ssize_t libcouchbase_ssize_t;
-    typedef uint16_t libcouchbase_vbucket_t;
-    typedef uint8_t libcouchbase_uint8_t;
-    typedef uint16_t libcouchbase_uint16_t;
-    typedef uint32_t libcouchbase_uint32_t;
-    typedef uint64_t libcouchbase_cas_t;
-    typedef uint64_t libcouchbase_uint64_t;
-    typedef time_t libcouchbase_time_t;
+    typedef int64_t lcb_int64_t;
+    typedef int32_t lcb_int32_t;
+    typedef size_t lcb_size_t;
+    typedef ssize_t lcb_ssize_t;
+    typedef uint16_t lcb_vbucket_t;
+    typedef uint8_t lcb_uint8_t;
+    typedef uint16_t lcb_uint16_t;
+    typedef uint32_t lcb_uint32_t;
+    typedef uint64_t lcb_cas_t;
+    typedef uint64_t lcb_uint64_t;
+    typedef time_t lcb_time_t;
 #endif
 
 #ifdef __cplusplus

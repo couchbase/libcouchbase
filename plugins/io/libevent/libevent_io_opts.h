@@ -42,7 +42,7 @@ extern "C" {
      * @return a pointer to a newly created and initialized event handler
      */
     LIBCOUCHBASE_API
-    struct libcouchbase_io_opt_st *libcouchbase_create_libevent_io_opts(struct event_base *base);
+    struct lcb_io_opt_st *lcb_create_libevent_io_opts(struct event_base *base);
 
 #ifdef __cplusplus
 }

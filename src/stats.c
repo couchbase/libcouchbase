@@ -18,42 +18,42 @@
 #include "internal.h"
 
 /**
- * libcouchbase_stat use the STATS command
+ * lcb_stat use the STATS command
  *
  * @author Sergey Avseyev
  */
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
-                                               const void *command_cookie,
-                                               const void *arg,
-                                               libcouchbase_size_t narg)
+lcb_error_t lcb_server_stats(lcb_t instance,
+                             const void *command_cookie,
+                             const void *arg,
+                             lcb_size_t narg)
 {
-    libcouchbase_server_t *server;
+    lcb_server_t *server;
     protocol_binary_request_stats req;
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = PROTOCOL_BINARY_CMD_STAT;
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)narg);
-    req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)narg);
+    req.message.header.request.keylen = ntohs((lcb_uint16_t)narg);
+    req.message.header.request.bodylen = ntohl((lcb_uint32_t)narg);
     req.message.header.request.opaque = ++instance->seqno;
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
-        libcouchbase_server_start_packet(server, command_cookie,
-                                         req.bytes, sizeof(req.bytes));
-        libcouchbase_server_write_packet(server, arg, narg);
-        libcouchbase_server_end_packet(server);
-        libcouchbase_server_send_packets(server);
+        lcb_server_start_packet(server, command_cookie,
+                                req.bytes, sizeof(req.bytes));
+        lcb_server_write_packet(server, arg, narg);
+        lcb_server_end_packet(server);
+        lcb_server_send_packets(server);
     }
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }
 
 
@@ -62,15 +62,15 @@ libcouchbase_error_t libcouchbase_server_stats(libcouchbase_t instance,
  *
  */
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_server_versions(libcouchbase_t instance,
-                                                  const void *command_cookie)
+lcb_error_t lcb_server_versions(lcb_t instance,
+                                const void *command_cookie)
 {
-    libcouchbase_server_t *server;
+    lcb_server_t *server;
     protocol_binary_request_version req;
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
 
     if (instance->vbucket_config == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
     memset(&req, 0, sizeof(req));
@@ -81,10 +81,10 @@ libcouchbase_error_t libcouchbase_server_versions(libcouchbase_t instance,
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
-        libcouchbase_server_complete_packet(server, command_cookie,
-                                            req.bytes, sizeof(req.bytes));
-        libcouchbase_server_send_packets(server);
+        lcb_server_complete_packet(server, command_cookie,
+                                   req.bytes, sizeof(req.bytes));
+        lcb_server_send_packets(server);
     }
 
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

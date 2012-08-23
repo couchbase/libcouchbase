@@ -24,59 +24,52 @@
  * @todo improve the error handling
  */
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_remove(libcouchbase_t instance,
-                                         const void *command_cookie,
-                                         const void *key, libcouchbase_size_t nkey,
-                                         libcouchbase_cas_t cas)
+lcb_error_t lcb_remove(lcb_t instance,
+                       const void *command_cookie,
+                       lcb_size_t num,
+                       const lcb_remove_cmd_t *const *items)
 {
-    return libcouchbase_remove_by_key(instance, command_cookie, NULL, 0, key,
-                                      nkey, cas);
-}
-
-LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_remove_by_key(libcouchbase_t instance,
-                                                const void *command_cookie,
-                                                const void *hashkey,
-                                                libcouchbase_size_t nhashkey,
-                                                const void *key, libcouchbase_size_t nkey,
-                                                libcouchbase_cas_t cas)
-{
-    libcouchbase_server_t *server;
-    protocol_binary_request_delete req;
-    int vb, idx;
-
+    size_t ii;
     /* we need a vbucket config before we can start removing the item.. */
     if (instance->vbucket_config == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
-    if (nhashkey == 0) {
-        nhashkey = nkey;
-        hashkey = key;
+    for (ii = 0; ii < num; ++ii) {
+        lcb_server_t *server;
+        protocol_binary_request_delete req;
+        int vb, idx;
+        const void *key = items[ii]->v.v0.key;
+        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_cas_t cas = items[ii]->v.v0.cas;
+
+        (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
+        if (idx < 0 || idx > (int)instance->nservers) {
+            /*
+            ** the config says that there is no server yet at
+            ** that position (-1)
+            */
+            return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+        }
+        server = instance->servers + idx;
+
+        memset(&req, 0, sizeof(req));
+        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
+        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
+        req.message.header.request.extlen = 0;
+        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
+        req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
+        req.message.header.request.opaque = ++instance->seqno;
+        req.message.header.request.cas = cas;
+
+        lcb_server_start_packet(server, command_cookie,
+                                req.bytes, sizeof(req.bytes));
+        lcb_server_write_packet(server, key, nkey);
+        lcb_server_end_packet(server);
+        lcb_server_send_packets(server);
     }
-    (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey, &vb, &idx);
-    if (idx < 0 || idx > (int)instance->nservers) {
-        /* the config says that there is no server yet at that position (-1) */
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_NETWORK_ERROR);
-    }
-    server = instance->servers + idx;
 
-    memset(&req, 0, sizeof(req));
-    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
-    req.message.header.request.keylen = ntohs((libcouchbase_uint16_t)nkey);
-    req.message.header.request.extlen = 0;
-    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.vbucket = ntohs((libcouchbase_uint16_t)vb);
-    req.message.header.request.bodylen = ntohl((libcouchbase_uint32_t)nkey);
-    req.message.header.request.opaque = ++instance->seqno;
-    req.message.header.request.cas = cas;
-
-    libcouchbase_server_start_packet(server, command_cookie,
-                                     req.bytes, sizeof(req.bytes));
-    libcouchbase_server_write_packet(server, key, nkey);
-    libcouchbase_server_end_packet(server);
-    libcouchbase_server_send_packets(server);
-
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

@@ -18,16 +18,15 @@
 #include "internal.h"
 
 LIBCOUCHBASE_API
-libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
-                                        const void *command_cookie)
+lcb_error_t lcb_flush(lcb_t instance, const void *command_cookie)
 {
-    libcouchbase_server_t *server;
+    lcb_server_t *server;
     protocol_binary_request_no_extras flush;
-    libcouchbase_size_t ii;
+    lcb_size_t ii;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
     memset(&flush, 0, sizeof(flush));
@@ -38,11 +37,11 @@ libcouchbase_error_t libcouchbase_flush(libcouchbase_t instance,
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
-        libcouchbase_server_complete_packet(server, command_cookie,
-                                            flush.bytes,
-                                            sizeof(flush.bytes));
-        libcouchbase_server_send_packets(server);
+        lcb_server_complete_packet(server, command_cookie,
+                                   flush.bytes,
+                                   sizeof(flush.bytes));
+        lcb_server_send_packets(server);
     }
 
-    return libcouchbase_synchandler_return(instance, LIBCOUCHBASE_SUCCESS);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

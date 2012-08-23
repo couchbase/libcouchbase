@@ -26,7 +26,7 @@
  * @author Trond Norbye
  */
 LIBCOUCHBASE_API
-void libcouchbase_set_cookie(libcouchbase_t instance, const void *cookie)
+void lcb_set_cookie(lcb_t instance, const void *cookie)
 {
     instance->cookie = cookie;
 }
@@ -40,7 +40,7 @@ void libcouchbase_set_cookie(libcouchbase_t instance, const void *cookie)
  * @author Trond Norbye
  */
 LIBCOUCHBASE_API
-const void *libcouchbase_get_cookie(libcouchbase_t instance)
+const void *lcb_get_cookie(lcb_t instance)
 {
     return instance->cookie;
 }
