@@ -123,8 +123,8 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
             {
                 struct libcouchbase_item_st it;
                 memset(&it, 0, sizeof(it));
-                it.v0.key = keyptr;
-                it.v0.nkey = ntohs(req.request.keylen);
+                it.v.v0.key = keyptr;
+                it.v.v0.nkey = ntohs(req.request.keylen);
                 root->callbacks.get(root, ct.cookie, error, &it);
             }
             break;
@@ -687,8 +687,8 @@ int libcouchbase_server_purge_implicit_responses(libcouchbase_server_t *c,
 
             keyptr = packet + sizeof(req) + req.request.extlen;
             memset(&it, 0, sizeof(it));
-            it.v0.key = keyptr;
-            it.v0.nkey = ntohs(req.request.keylen);
+            it.v.v0.key = keyptr;
+            it.v.v0.nkey = ntohs(req.request.keylen);
             c->instance->callbacks.get(c->instance, ct.cookie,
                                        LIBCOUCHBASE_KEY_ENOENT,
                                        &it);

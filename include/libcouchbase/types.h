@@ -63,7 +63,7 @@ extern "C" {
                 libcouchbase_cas_t cas;
                 libcouchbase_datatype_t datatype;
             } v0;
-        };
+        } v;
     };
 
     /**

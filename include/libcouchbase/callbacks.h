@@ -190,8 +190,8 @@ extern "C" {
                                                     libcouchbase_error_t error);
 
     LIBCOUCHBASE_API
-    libcouchbase_get_callback libcouchbase_set_extended_get_callback(libcouchbase_t,
-                                                                     libcouchbase_extended_get_callback);
+    libcouchbase_extended_get_callback libcouchbase_set_extended_get_callback(libcouchbase_t,
+                                                                              libcouchbase_extended_get_callback);
     LIBCOUCHBASE_API
     libcouchbase_get_callback libcouchbase_set_get_callback(libcouchbase_t,
                                                             libcouchbase_get_callback);

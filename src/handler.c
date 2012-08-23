@@ -185,13 +185,13 @@ static inline void setup_item_st(struct libcouchbase_item_st *it,
                                  libcouchbase_datatype_t datatype)
 {
     it->version = 0;
-    it->v0.key = key;
-    it->v0.nkey = nkey;
-    it->v0.bytes = bytes;
-    it->v0.nbytes = nbytes;
-    it->v0.flags = flags;
-    it->v0.cas = cas;
-    it->v0.datatype = datatype;
+    it->v.v0.key = key;
+    it->v.v0.nkey = nkey;
+    it->v.v0.bytes = bytes;
+    it->v.v0.nbytes = nbytes;
+    it->v.v0.flags = flags;
+    it->v.v0.cas = cas;
+    it->v.v0.datatype = datatype;
 }
 
 static void getq_response_handler(libcouchbase_server_t *server,
@@ -920,9 +920,9 @@ static void dummy_extended_get_callback(libcouchbase_t instance,
     assert(item != NULL);
     assert(item->version == 0);
     instance->callbacks.old_get(instance, cookie, error,
-                                item->v0.key, item->v0.nkey,
-                                item->v0.bytes, item->v0.nbytes,
-                                item->v0.flags, item->v0.cas);
+                                item->v.v0.key, item->v.v0.nkey,
+                                item->v.v0.bytes, item->v.v0.nbytes,
+                                item->v.v0.flags, item->v.v0.cas);
 }
 
 static void dummy_storage_callback(libcouchbase_t instance,
@@ -1182,8 +1182,8 @@ void libcouchbase_initialize_packet_handlers(libcouchbase_t instance)
 }
 
 LIBCOUCHBASE_API
-libcouchbase_get_callback libcouchbase_set_extended_get_callback(libcouchbase_t instance,
-                                                                 libcouchbase_extended_get_callback cb)
+libcouchbase_extended_get_callback libcouchbase_set_extended_get_callback(libcouchbase_t instance,
+                                                                          libcouchbase_extended_get_callback cb)
 {
     libcouchbase_extended_get_callback ret = instance->callbacks.get;
     if (cb != NULL) {
