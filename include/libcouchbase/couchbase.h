@@ -779,10 +779,12 @@ extern "C" {
      * Cancel HTTP request (view or management API). This function could be
      * called from the callback to stop the request.
      *
+     * @param instance The handle to libcouchbase
      * @param request The request handle
      */
     LIBCOUCHBASE_API
-    void libcouchbase_cancel_http_request(libcouchbase_http_request_t request);
+    void libcouchbase_cancel_http_request(libcouchbase_t instance,
+                                          libcouchbase_http_request_t request);
 
     /**
      * Create timer event. The user will be notified through timer callback.

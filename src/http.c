@@ -705,8 +705,13 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
 }
 
 LIBCOUCHBASE_API
-void libcouchbase_cancel_http_request(libcouchbase_http_request_t request)
+void libcouchbase_cancel_http_request(libcouchbase_t instance,
+                                      libcouchbase_http_request_t request)
 {
-    hashset_remove(request->server->http_requests, request);
-    request->cancelled = 1;
+    libcouchbase_size_t ii;
+    for (ii = 0; ii < instance->nservers; ++ii) {
+        if (hashset_is_member(instance->servers[ii].http_requests, request)) {
+            request->cancelled = 1;
+        }
+    }
 }
