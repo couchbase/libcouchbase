@@ -59,10 +59,13 @@ libvbucket_la_LIBADD = libketama.la libcrc32.la
 libvbucket_la_DEPENDENCIES = libketama.la libcrc32.la
 
 libketama_la_SOURCES = contrib/libvbucket/ketama.c
-libketama_la_CFLAGS =  $(AM_CFLAGS) ${NO_WERROR}
+libketama_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
+libketama_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
+
 
 libcrc32_la_SOURCES = contrib/libvbucket/crc32.c
-libcrc32_la_CFLAGS = $(AM_CFLAGS) ${NO_WERROR}
+libcrc32_la_CFLAGS = $(AM_NOWARN_CFLAGS)
+libcrc32_la_CPPFLAGS = $(AM_NOWARN_CFLAGS)
 
 libcouchbase_la_SOURCES = \
                         include/ep-engine/command_ids.h \
@@ -155,7 +158,9 @@ tests_unit_tests_SOURCES = tests/unit_tests.cc \
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
 tests_unit_tests_LDADD = libcouchbase.la
-tests_unit_tests_CPPFLAGS = $(AM_CPPFLAGS)
+tests_unit_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
+tests_unit_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
+tests_unit_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
 
 gtest-1.6.0.zip:
 	@echo "+--------------------------------+"
@@ -167,8 +172,9 @@ gtest-1.6.0.zip:
 if HAVE_GOOGLETEST_SRC
 noinst_LTLIBRARIES += libgtest.la
 libgtest_la_SOURCES = tests/gtest-sources.cc
-libgtest_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
-                       $(NO_WERROR)
+libgtest_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
+libgtest_la_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
+
 tests_unit_tests_DEPENDENCIES += libgtest.la
 tests_unit_tests_LDADD += libgtest.la -lpthread
 tests_unit_tests_CPPFLAGS += -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include $(NO_WERROR)

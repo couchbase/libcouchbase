@@ -46,7 +46,8 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
              [
                m4_case(arg, [c89], [C_LANGUAGE_SPEC=c89],
                             [c99], [C_LANGUAGE_SPEC=c99],
-                            [cxx], [NEED_CPP=yes])
+                            [cxx], [NEED_CPP=yes],
+                            [pthread], [PTHREAD=yes])
              ])
 
   GCC_NO_WERROR="-Wno-error"
@@ -135,17 +136,6 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/include $VISIBILITY"
   AM_LDFLAGS="$AM_LDFLAGS $VISIBILITY"
 
-
-  AS_IF([test "$ac_cv_enable_warnings" = "yes"],
-        [AM_CPPFLAGS="$AM_CPPFLAGS $CPP_WARNINGS"
-         AM_CFLAGS="$AM_CFLAGS $C_COMPILER_WARNINGS"
-         AM_CXXFLAGS="$AM_CXXFLAGS $CXX_COMPILER_WARNINGS"])
-
-  AS_IF([test "$ac_cv_enable_werror" = "yes"],
-        [
-           AM_CPPFLAGS="$AM_CPPFLAGS $WERROR"
-        ])
-
   AS_IF([test "$ac_cv_enable_debug" = "yes"],
         [
            AM_CFLAGS="$AM_CFLAGS $C_DEBUG"
@@ -161,7 +151,9 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
         [
            AM_CPPFLAGS="$AM_CPPFLAGS -fprofile-arcs -ftest-coverage"
            AM_LDFLAGS="$AM_LDFLAGS -lgcov"
+           AC_DEFINE(ENABLE_GCOV, 1, [gcov enabled])
         ])
+  AM_CONDITIONAL(ENABLE_GCOV, [test "$ac_cv_enable_gcov" = "yes"])
 
   dnl tcov settings
   AS_IF([test "$ac_cv_enable_tcov" = "yes"],
@@ -171,8 +163,30 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
            dnl due to the stupid libtool it's dropping -xprofile when
            dnl building shared objects.. let's fool it..
 	   AM_PROFILE_SOLDFLAGS="-Wc,-xprofile=tcov"
+           AC_DEFINE(ENABLE_TCOV, 1, [tcov enabled])
         ])
+  AM_CONDITIONAL(ENABLE_TCOV, [test "$ac_cv_enable_tcov" = "yes"])
   AC_SUBST(AM_PROFILE_SOLDFLAGS)
+
+  AS_IF([ test "x$PTHREAD" = "xyes" ], [
+          GCC_CPPFLAGS="$GCC_CPPFLAGS -pthread -D_THREAD_SAFE"
+          GCC_LDFLAGS="-lpthread"
+        ])
+
+  dnl Preserve the flags before we add warnings and error..
+  AM_NOWARN_CPPFLAGS="$AM_CPPFLAGS"
+  AM_NOWARN_CFLAGS="$AM_CFLAGS"
+  AM_NOWARN_CXXFLAGS="$AM_CXXFLAGS"
+
+  AS_IF([test "$ac_cv_enable_warnings" = "yes"],
+        [AM_CPPFLAGS="$AM_CPPFLAGS $CPP_WARNINGS"
+         AM_CFLAGS="$AM_CFLAGS $C_COMPILER_WARNINGS"
+         AM_CXXFLAGS="$AM_CXXFLAGS $CXX_COMPILER_WARNINGS"])
+
+  AS_IF([test "$ac_cv_enable_werror" = "yes"],
+        [
+           AM_CPPFLAGS="$AM_CPPFLAGS $WERROR"
+        ])
 
   dnl Export GCC variables
   AC_SUBST(GCC_NO_WERROR)
@@ -215,4 +229,8 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   AC_SUBST(AM_CPPFLAGS)
   AC_SUBST(AM_CFLAGS)
   AC_SUBST(AM_CXXFLAGS)
+
+  AC_SUBST(AM_NOWARN_CPPFLAGS)
+  AC_SUBST(AM_NOWARN_CFLAGS)
+  AC_SUBST(AM_NOWARN_CXXFLAGS)
 ])

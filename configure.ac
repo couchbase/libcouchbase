@@ -63,6 +63,7 @@ ac_cv_func_realloc_0_nonnull=yes
 COUCHBASE_GENERIC_COMPILER(c99)
 
 AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib"
+AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib"
 CHANGESET=GIT_CHANGESET
 AC_SUBST(CHANGESET)
 
@@ -95,6 +96,7 @@ AC_ARG_ENABLE([m64],
 
 AS_IF([test "x$ac_cv_m32" = "xyes"],
       [ AM_CPPFLAGS="$AM_CPPFLAGS -m32"
+        AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -m32"
         AM_LDFLAGS="$AM_LDFLAGS -m32"
         CPPFLAGS="$CPPFLAGS -m32"
         LDFLAGS="$LDFLAGS -m32"
@@ -102,6 +104,7 @@ AS_IF([test "x$ac_cv_m32" = "xyes"],
               [ AC_MSG_ERROR([You can't specify -m32 and -m64. Pick one of them]) ]) ],
       [ AS_IF([test "x$ac_cv_m64" = "xyes"],
               [ AM_CPPFLAGS="$AM_CPPFLAGS -m64"
+                AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -m64"
                 AM_LDFLAGS="$AM_LDFLAGS -m64"
                 CPPFLAGS="$CPPFLAGS -m64"
                 LDFLAGS="$LDFLAGS -m64"
