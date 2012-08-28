@@ -685,14 +685,8 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
     {
         /* Get server socket address */
         int err;
-        struct addrinfo hints;
-
         req->event = req->io->create_event(req->io);
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_flags = AI_PASSIVE;
-        hints.ai_socktype = SOCK_STREAM;
-        hints.ai_family = AF_UNSPEC;
-        err = getaddrinfo(req->host, req->port, &hints, &req->root_ai);
+        err = lcb_getaddrinfo(instance, req->host, req->port, &req->root_ai);
         req->curr_ai = req->root_ai;
         if (err != 0) {
             req->curr_ai = req->root_ai = NULL;

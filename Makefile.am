@@ -149,7 +149,8 @@ tests_unit_tests_SOURCES = tests/unit_tests.cc \
                            tests/hashset-unit-test.cc src/hashset.c \
                            tests/strerror-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
-                           tests/ringbuffer-unit-test.cc src/ringbuffer.c
+                           tests/ringbuffer-unit-test.cc src/ringbuffer.c \
+                           tests/behavior-unit-tests.cc
 
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la

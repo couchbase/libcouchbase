@@ -27,3 +27,16 @@ libcouchbase_syncmode_t libcouchbase_behavior_get_syncmode(libcouchbase_t instan
 {
     return instance->syncmode;
 }
+
+LIBCOUCHBASE_API
+void libcouchbase_behavior_set_ipv6(libcouchbase_t instance,
+                                    libcouchbase_ipv6_t mode)
+{
+    instance->ipv6 = mode;
+}
+
+LIBCOUCHBASE_API
+libcouchbase_ipv6_t libcouchbase_behavior_get_ipv6(libcouchbase_t instance)
+{
+    return instance->ipv6;
+}

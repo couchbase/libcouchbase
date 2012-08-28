@@ -219,6 +219,8 @@ extern "C" {
 
         libcouchbase_uint32_t seqno;
         int wait;
+        /** Is IPv6 enabled */
+        libcouchbase_ipv6_t ipv6;
         const void *cookie;
 
         libcouchbase_error_t last_error;
@@ -505,6 +507,10 @@ extern "C" {
     libcouchbase_error_t libcouchbase_apply_vbucket_config(libcouchbase_t instance,
                                                            VBUCKET_CONFIG_HANDLE config);
 
+
+
+   int lcb_getaddrinfo(libcouchbase_t instance, const char *hostname,
+                       const char *servname, struct addrinfo **res);
 
 #ifdef __cplusplus
 }

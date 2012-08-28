@@ -177,6 +177,7 @@ libcouchbase_t libcouchbase_create(const char *host,
     }
     libcouchbase_initialize_packet_handlers(ret);
     libcouchbase_behavior_set_syncmode(ret, LIBCOUCHBASE_ASYNCHRONOUS);
+    libcouchbase_behavior_set_ipv6(ret, LIBCOUCHBASE_IPV6_DISABLED);
 
     if (setup_boostrap_hosts(ret, host) == -1) {
         free(ret);
@@ -1025,13 +1026,35 @@ static void libcouchbase_instance_connect_handler(libcouchbase_socket_t sock,
     (void)which;
 }
 
+
+int lcb_getaddrinfo(libcouchbase_t instance, const char *hostname,
+                    const char *servname, struct addrinfo **res)
+{
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_socktype = SOCK_STREAM;
+    switch (instance->ipv6) {
+    case LIBCOUCHBASE_IPV6_DISABLED:
+        hints.ai_family = AF_INET;
+        break;
+    case LIBCOUCHBASE_IPV6_ONLY:
+        hints.ai_family = AF_INET6;
+        break;
+    default:
+        hints.ai_family = AF_UNSPEC;
+    }
+
+    return getaddrinfo(hostname, servname, &hints, res);
+}
+
+
 /**
  * @todo use async connects etc
  */
 LIBCOUCHBASE_API
 libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
 {
-    struct addrinfo hints;
     int error;
 
     if (instance->sock != INVALID_SOCKET) {
@@ -1044,16 +1067,11 @@ libcouchbase_error_t libcouchbase_connect(libcouchbase_t instance)
         freeaddrinfo(instance->ai);
     }
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_flags = AI_PASSIVE;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_family = AF_UNSPEC;
-
     do {
         setup_current_host(instance,
                            instance->backup_nodes[instance->backup_idx++]);
-        error = getaddrinfo(instance->host, instance->port,
-                            &hints, &instance->ai);
+        error = lcb_getaddrinfo(instance, instance->host, instance->port,
+                                &instance->ai);
         if (error != 0) {
             /* Ok, we failed to look up that server.. look up the next
              * in the list

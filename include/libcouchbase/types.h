@@ -327,6 +327,12 @@ extern "C" {
         LIBCOUCHBASE_SYNCHRONOUS = 0xff
     } libcouchbase_syncmode_t;
 
+    typedef enum {
+        LIBCOUCHBASE_IPV6_DISABLED = 0x00,
+        LIBCOUCHBASE_IPV6_ONLY = 0x1,
+        LIBCOUCHBASE_IPV6_ALLOW = 0x02
+    } libcouchbase_ipv6_t;
+
 #ifdef __cplusplus
 }
 #endif

@@ -33,6 +33,13 @@ extern "C" {
     LIBCOUCHBASE_API
     libcouchbase_syncmode_t libcouchbase_behavior_get_syncmode(libcouchbase_t instance);
 
+    LIBCOUCHBASE_API
+    void libcouchbase_behavior_set_ipv6(libcouchbase_t instance,
+                                        libcouchbase_ipv6_t mode);
+
+    LIBCOUCHBASE_API
+    libcouchbase_ipv6_t libcouchbase_behavior_get_ipv6(libcouchbase_t instance);
+
 #ifdef __cplusplus
 }
 #endif

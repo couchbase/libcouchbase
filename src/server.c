@@ -587,7 +587,6 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     /* Initialize all members */
     char *p;
     int error;
-    struct addrinfo hints;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
     server->index = servernum;
@@ -604,15 +603,10 @@ void libcouchbase_server_initialize(libcouchbase_server_t *server, int servernum
     n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
                                            servernum);
     server->rest_api_server = strdup(n);
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_flags = AI_PASSIVE;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_family = AF_UNSPEC;
-
     server->event = server->instance->io->create_event(server->instance->io);
     assert(server->event);
-    error = getaddrinfo(server->hostname, server->port,
-                        &hints, &server->root_ai);
+    error = lcb_getaddrinfo(server->instance, server->hostname, server->port,
+                            &server->root_ai);
     server->curr_ai = server->root_ai;
     server->sock = INVALID_SOCKET;
     if (error != 0) {
