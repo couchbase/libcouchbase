@@ -130,7 +130,7 @@ endif
 if HAVE_WINSOCK2
 if !HAVE_LIBEVENT
 libcouchbase_la_SOURCES += plugins/io/win32/plugin-win32.c src/iofactory_win32.c
-libcouchbase_la_CPPFLAGS += -Iwin32
+libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/win32
 endif
 else
 libcouchbase_la_SOURCES += src/iofactory.c

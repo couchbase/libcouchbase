@@ -16,7 +16,7 @@
  */
 
 #include "internal.h"
-#include <libcouchbase/winsock_io_opts.h>
+#include "winsock_io_opts.h"
 
 static void set_error(libcouchbase_error_t *error, libcouchbase_error_t code)
 {
