@@ -24,6 +24,10 @@
 #ifndef LIBCOUCHBASE_CONFIG_STATIC_H
 #define LIBCOUCHBASE_CONFIG_STATIC_H 1
 
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
 #if !defined HAVE_STDINT_H && defined WIN32
 # include "win_stdint.h"
 #else
