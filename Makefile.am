@@ -65,7 +65,7 @@ libketama_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
 
 libcrc32_la_SOURCES = contrib/libvbucket/crc32.c
 libcrc32_la_CFLAGS = $(AM_NOWARN_CFLAGS)
-libcrc32_la_CPPFLAGS = $(AM_NOWARN_CFLAGS)
+libcrc32_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
 
 libcouchbase_la_SOURCES = \
                         include/ep-engine/command_ids.h \
