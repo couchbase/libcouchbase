@@ -66,6 +66,10 @@
 #include <sys/time.h>
 #endif
 
+#ifdef HAVE_SYS_UIO_H
+#include <sys/uio.h>
+#endif
+
 #ifdef _WIN32
 #include "win32/win_errno_sock.h"
 typedef int ssize_t;
