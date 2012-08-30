@@ -1,3 +1,10 @@
+libcouchbase (1.0.6) stable; urgency=low
+
+  [Sergey Avseyev]
+  * CCBC-92 release ringbuffer in libcouchbase_purge_single_server
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Thu, 30 Aug 2012 10:28:11 +0300
+
 libcouchbase (1.0.5) stable; urgency=low
 
   [Sergey Avseyev]
