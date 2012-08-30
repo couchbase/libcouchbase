@@ -278,6 +278,7 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
         ringbuffer_append(&rest, &server->output);
     }
 
+    ringbuffer_destruct(&rest);
     libcouchbase_maybe_breakout(server->instance);
 }
 
