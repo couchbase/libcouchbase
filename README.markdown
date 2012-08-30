@@ -24,6 +24,13 @@ example program and explains why we need to do certain stuff at:
 
 http://trondn.blogspot.com/2012/01/so-how-do-i-use-this-libcouchbase.html
 
+Unfortunately for you we've later completely refactored the API, so
+when you've read and understood the idea behind the library in the
+above blog post you should read the following post explaining the
+rationale behind changing the API, and what you as a user have to do..
+
+http://trondn.blogspot.no/2012/08/libcouchbase-overhauling.html
+
 Bugs
 ----
 
@@ -41,5 +48,3 @@ Happy hacking!
 Cheers,
 
 Trond Norbye
-
-
