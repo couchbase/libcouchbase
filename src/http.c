@@ -437,7 +437,8 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
                                                            libcouchbase_error_t *error)
 {
     libcouchbase_http_request_t req;
-    const char *base = NULL;
+    const char *base = NULL, *username = NULL;
+    char *password = NULL;
     libcouchbase_size_t nn, nbase;
     libcouchbase_server_t *server;
 
@@ -474,6 +475,15 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         }
         base = server->couch_api_base;
         nbase = strlen(base);
+        username = instance->sasl.name;
+        if (instance->sasl.password.secret.len) {
+            password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
+            if (!password) {
+                *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_CLIENT_ENOMEM);
+                return NULL;
+            }
+            memcpy(password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
+        }
         req->on_complete = instance->callbacks.view_complete;
         req->on_data = instance->callbacks.view_data;
         break;
@@ -484,6 +494,10 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         }
         base = server->rest_api_server;
         nbase = strlen(base);
+        username = instance->username;
+        if (instance->password) {
+            password = strdup(instance->password);
+        }
         req->on_complete = instance->callbacks.management_complete;
         req->on_data = instance->callbacks.management_data;
         break;
@@ -570,15 +584,18 @@ libcouchbase_http_request_t libcouchbase_make_http_request(libcouchbase_t instan
         /* Render HTTP request */
         char auth[256];
         libcouchbase_size_t nauth = 0;
-        if (instance->username && instance->password) {
-            char cred[256];
-            snprintf(cred, sizeof(cred), "%s:%s", instance->username, instance->password);
-            if (libcouchbase_base64_encode(cred, auth, sizeof(auth)) == -1) {
-                *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
-                libcouchbase_http_request_destroy(req);
-                return NULL;
+        if (password) {
+            if (username) {
+                char cred[256];
+                snprintf(cred, sizeof(cred), "%s:%s", username, password);
+                if (libcouchbase_base64_encode(cred, auth, sizeof(auth)) == -1) {
+                    *error = libcouchbase_synchandler_return(instance, LIBCOUCHBASE_EINVAL);
+                    libcouchbase_http_request_destroy(req);
+                    return NULL;
+                }
+                nauth = strlen(auth);
             }
-            nauth = strlen(auth);
+            free(password);
         }
         nn = strlen(method_strings[method]) + req->url_info.field_data[UF_PATH].len + sizeof(http_version);
         if (req->url_info.field_set & UF_QUERY) {
