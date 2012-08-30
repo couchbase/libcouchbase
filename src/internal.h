@@ -134,7 +134,7 @@ extern "C" {
 
         /** The URL request to send to the server */
         char *http_uri;
-        size_t n_http_uri_sent;
+        lcb_size_t n_http_uri_sent;
 
 
         /** The event item representing _this_ object */
@@ -146,7 +146,7 @@ extern "C" {
         struct {
             char *header;
             buffer_t input;
-            size_t chunk_size;
+            lcb_size_t chunk_size;
             buffer_t chunk;
         } vbucket_stream;
 
@@ -155,12 +155,12 @@ extern "C" {
         /* The current synchronous mode */
         lcb_syncmode_t syncmode;
 
-        evutil_socket_t sock;
+        lcb_socket_t sock;
         struct addrinfo *ai;
         struct addrinfo *curr_ai;
 
         /** The number of couchbase server in the configuration */
-        size_t nservers;
+        lcb_size_t nservers;
         /** The array of the couchbase servers */
         lcb_server_t *servers;
 
@@ -247,7 +247,7 @@ extern "C" {
         /** The REST API server as hostname:port */
         char *rest_api_server;
         /** The socket to the server */
-        evutil_socket_t sock;
+        lcb_socket_t sock;
         /** The address information for this server (the one to release) */
         struct addrinfo *root_ai;
         /** The address information for this server (the one we're trying) */
@@ -303,7 +303,7 @@ extern "C" {
 
     struct lcb_http_request_st {
         /** The socket to the server */
-        evutil_socket_t sock;
+        lcb_socket_t sock;
         struct lcb_io_opt_st *io;
         /** The origin node */
         lcb_server_t *server;
@@ -495,9 +495,9 @@ extern "C" {
                               lcb_size_t nbuf,
                               lcb_error_t *uerr);
 
-    evutil_socket_t lcb_gai2sock(lcb_t instance,
-                                 struct addrinfo **curr_ai,
-                                 int *connerr);
+    lcb_socket_t lcb_gai2sock(lcb_t instance,
+                              struct addrinfo **curr_ai,
+                              int *connerr);
 
     lcb_error_t lcb_apply_vbucket_config(lcb_t instance,
                                          VBUCKET_CONFIG_HANDLE config);

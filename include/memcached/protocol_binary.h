@@ -36,7 +36,11 @@
 #ifndef PROTOCOL_BINARY_H
 #define PROTOCOL_BINARY_H
 
-#include <stdint.h>
+#if !defined HAVE_STDINT_H && defined WIN32
+# include "win_stdint.h"
+#else
+# include <stdint.h>
+#endif
 #include <memcached/vbucket.h>
 
 /**

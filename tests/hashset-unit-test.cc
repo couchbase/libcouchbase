@@ -16,6 +16,7 @@
  */
 
 #include "config.h"
+#include <libcouchbase/couchbase.h>
 #include "hashset.h"
 #include <gtest/gtest.h>
 

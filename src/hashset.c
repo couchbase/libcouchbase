@@ -17,8 +17,8 @@
 
 #include "internal.h"
 
-static const int prime_1 = 73;
-static const int prime_2 = 5009;
+static const unsigned int prime_1 = 73;
+static const unsigned int prime_2 = 5009;
 
 hashset_t hashset_create()
 {
@@ -28,9 +28,9 @@ hashset_t hashset_create()
         return NULL;
     }
     set->nbits = 3;
-    set->capacity = 1 << set->nbits;
+    set->capacity = (lcb_size_t)(1 << set->nbits);
     set->mask = set->capacity - 1;
-    set->items = calloc(set->capacity, sizeof(size_t));
+    set->items = calloc(set->capacity, sizeof(lcb_size_t));
     if (set->items == NULL) {
         hashset_destroy(set);
         return NULL;
@@ -39,7 +39,7 @@ hashset_t hashset_create()
     return set;
 }
 
-size_t hashset_num_items(hashset_t set)
+lcb_size_t hashset_num_items(hashset_t set)
 {
     return set->nitems;
 }
@@ -54,8 +54,8 @@ void hashset_destroy(hashset_t set)
 
 static int hashset_add_member(hashset_t set, void *item)
 {
-    size_t value = (size_t)item;
-    size_t ii;
+    lcb_size_t value = (lcb_size_t)item;
+    lcb_size_t ii;
 
     if (value == 0 || value == 1) {
         return -1;
@@ -78,17 +78,17 @@ static int hashset_add_member(hashset_t set, void *item)
 
 static void maybe_rehash(hashset_t set)
 {
-    size_t *old_items;
-    size_t old_capacity, ii;
+    lcb_size_t *old_items;
+    lcb_size_t old_capacity, ii;
 
 
-    if ((float)set->nitems >= set->capacity * 0.85) {
+    if ((float)set->nitems >= (lcb_size_t)((double)set->capacity * 0.85)) {
         old_items = set->items;
         old_capacity = set->capacity;
         set->nbits++;
-        set->capacity = 1 << set->nbits;
+        set->capacity = (lcb_size_t)(1 << set->nbits);
         set->mask = set->capacity - 1;
-        set->items = calloc(set->capacity, sizeof(size_t));
+        set->items = calloc(set->capacity, sizeof(lcb_size_t));
         set->nitems = 0;
         assert(set->items);
         for (ii = 0; ii < old_capacity; ii++) {
@@ -107,8 +107,8 @@ int hashset_add(hashset_t set, void *item)
 
 int hashset_remove(hashset_t set, void *item)
 {
-    size_t value = (size_t)item;
-    size_t ii = set->mask & (prime_1 * value);
+    lcb_size_t value = (lcb_size_t)item;
+    lcb_size_t ii = set->mask & (prime_1 * value);
 
     while (set->items[ii] != 0) {
         if (set->items[ii] == value) {
@@ -124,8 +124,8 @@ int hashset_remove(hashset_t set, void *item)
 
 int hashset_is_member(hashset_t set, void *item)
 {
-    size_t value = (size_t)item;
-    size_t ii = set->mask & (prime_1 * value);
+    lcb_size_t value = (lcb_size_t)item;
+    lcb_size_t ii = set->mask & (prime_1 * value);
 
     while (set->items[ii] != 0) {
         if (set->items[ii] == value) {

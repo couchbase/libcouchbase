@@ -40,7 +40,7 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
         protocol_binary_request_incr req;
         int vb, idx;
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_time_t exp = items[ii]->v.v0.exptime;
         int create = items[ii]->v.v0.create;
         lcb_int64_t delta = items[ii]->v.v0.delta;

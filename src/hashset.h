@@ -15,8 +15,6 @@
  *   limitations under the License.
  */
 
-#include <stdlib.h>
-
 #ifndef LIBCOUCHBASE_HASHSET_H
 #define LIBCOUCHBASE_HASHSET_H 1
 
@@ -25,12 +23,12 @@ extern "C" {
 #endif
 
     struct hashset_st {
-        size_t nbits;
-        size_t mask;
+        lcb_size_t nbits;
+        lcb_size_t mask;
 
-        size_t capacity;
-        size_t *items;
-        size_t nitems;
+        lcb_size_t capacity;
+        lcb_size_t *items;
+        lcb_size_t nitems;
     };
 
     typedef struct hashset_st *hashset_t;
@@ -41,7 +39,7 @@ extern "C" {
     /* destroy hashset instance */
     void hashset_destroy(hashset_t set);
 
-    size_t hashset_num_items(hashset_t set);
+    lcb_size_t hashset_num_items(hashset_t set);
 
     /* add item into the hashset.
      *

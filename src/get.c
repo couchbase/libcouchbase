@@ -76,7 +76,7 @@ lcb_error_t lcb_unlock(lcb_t instance,
         protocol_binary_request_no_extras req;
         int vb, idx;
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_cas_t cas = items[ii]->v.v0.cas;
 
         (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
@@ -135,7 +135,7 @@ lcb_error_t lcb_get_replica(lcb_t instance,
     req.message.header.request.opcode = CMD_GET_REPLICA;
     for (ii = 0; ii < num; ++ii) {
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         vb = vbucket_get_vbucket_by_key(instance->vbucket_config,
                                         key, nkey);
         idx = vbucket_get_replica(instance->vbucket_config, vb, 0);
@@ -180,7 +180,7 @@ static lcb_error_t lcb_single_get(lcb_t instance,
     int vb, idx;
     lcb_size_t nbytes;
     const void *key = item->v.v0.key;
-    uint16_t nkey = item->v.v0.nkey;
+    lcb_size_t nkey = item->v.v0.nkey;
     lcb_time_t exp = item->v.v0.exptime;
 
     (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
@@ -254,7 +254,7 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
 
     for (ii = 0; ii < num; ++ii) {
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         (void)vbucket_map(instance->vbucket_config, key, nkey,
                           &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
@@ -272,7 +272,7 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
     for (ii = 0; ii < num; ++ii) {
         protocol_binary_request_gat req;
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_time_t exp = items[ii]->v.v0.exptime;
         int vb;
 

@@ -147,10 +147,10 @@ void lcb_sockconn_errinfo(int connerr,
  *
  * This function will 'advance' the current addrinfo structure, as well.
  */
-evutil_socket_t lcb_gai2sock(lcb_t instance, struct addrinfo **ai,
-                             int *connerr)
+lcb_socket_t lcb_gai2sock(lcb_t instance, struct addrinfo **ai,
+                          int *connerr)
 {
-    evutil_socket_t ret = INVALID_SOCKET;
+    lcb_socket_t ret = INVALID_SOCKET;
     *connerr = 0;
 
     for (; *ai; *ai = (*ai)->ai_next) {

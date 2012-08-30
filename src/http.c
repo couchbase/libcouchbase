@@ -65,7 +65,7 @@ void lcb_http_request_destroy(lcb_http_request_t req)
 }
 
 static int http_parser_header_cb(http_parser *p, const char *bytes,
-                                 size_t nbytes)
+                                 lcb_size_t nbytes)
 {
     lcb_http_request_t req = p->data;
     struct lcb_http_header_st *item;
@@ -104,13 +104,13 @@ static int http_parser_headers_complete_cb(http_parser *p)
     return 0;
 }
 
-static inline void setup_lcb_http_resp_t(lcb_http_resp_t *resp,
-                                         lcb_http_status_t status,
-                                         const char *path,
-                                         lcb_size_t npath,
-                                         const char *const *headers,
-                                         const void *bytes,
-                                         lcb_size_t nbytes)
+static void setup_lcb_http_resp_t(lcb_http_resp_t *resp,
+                                  lcb_http_status_t status,
+                                  const char *path,
+                                  lcb_size_t npath,
+                                  const char *const *headers,
+                                  const void *bytes,
+                                  lcb_size_t nbytes)
 {
     memset(resp, 0, sizeof(*resp));
     resp->version = 0;
@@ -122,7 +122,7 @@ static inline void setup_lcb_http_resp_t(lcb_http_resp_t *resp,
     resp->v.v0.nbytes = nbytes;
 }
 
-static int http_parser_body_cb(http_parser *p, const char *bytes, size_t nbytes)
+static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nbytes)
 {
     lcb_error_t rc;
     lcb_http_request_t req = p->data;
@@ -224,7 +224,7 @@ static int request_do_fill_input_buffer(lcb_http_request_t req)
     return 0;
 }
 
-static int request_do_read(lcb_http_request_t req)
+static lcb_ssize_t request_do_read(lcb_http_request_t req)
 {
     lcb_size_t nb = 0, np = 0;
     char *bytes;
@@ -250,7 +250,7 @@ static int request_do_read(lcb_http_request_t req)
     }
 
     if (nbytes > 0) {
-        nb = http_parser_execute(req->parser, &req->parser_settings, bytes, nbytes);
+        nb = (lcb_size_t)http_parser_execute(req->parser, &req->parser_settings, bytes, nbytes);
         ringbuffer_consumed(&req->input, nbytes);
         if (np) {   /* release peek storage */
             free(bytes);
@@ -261,7 +261,7 @@ static int request_do_read(lcb_http_request_t req)
         if (req->cancelled || req->completed) {
             return 0;
         } else {
-            return nb;
+            return (lcb_ssize_t)nb;
         }
     }
     return 0;
@@ -303,8 +303,7 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
     lcb_http_request_t req = arg;
     lcb_t instance = req->instance;
     lcb_server_t *server = req->server;
-    int rv;
-    (void)sock;
+    lcb_ssize_t rv;
     lcb_http_resp_t resp;
 
     if (which & LCB_READ_EVENT) {
@@ -349,6 +348,7 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
     }
     /* Make it known that this was a success. */
     lcb_error_handler(instance, LCB_SUCCESS, NULL);
+    (void)sock;
 }
 
 static lcb_error_t request_connect(lcb_http_request_t req);
@@ -394,7 +394,7 @@ static lcb_error_t request_connect(lcb_http_request_t req)
         if (req->io->connect(req->io,
                              req->sock,
                              req->curr_ai->ai_addr,
-                             (int)req->curr_ai->ai_addrlen) == 0) {
+                             (unsigned int)req->curr_ai->ai_addrlen) == 0) {
             /* connected */
             request_connected(req);
             return LCB_SUCCESS;
@@ -613,13 +613,13 @@ lcb_http_request_t lcb_make_http_request(lcb_t instance,
         }
         nn = strlen(method_strings[req->method]) + req->url_info.field_data[UF_PATH].len + sizeof(http_version);
         if (req->url_info.field_set & UF_QUERY) {
-            nn += req->url_info.field_data[UF_QUERY].len + 1;
+            nn += (lcb_size_t)req->url_info.field_data[UF_QUERY].len + 1;
         }
         nn += sizeof(req_headers);
         if (nauth) {
             nn += 23 + nauth; /* Authorization: Basic ... */
         }
-        nn += 10 + req->url_info.field_data[UF_HOST].len +
+        nn += 10 + (lcb_size_t)req->url_info.field_data[UF_HOST].len +
               req->url_info.field_data[UF_PORT].len; /* Host: example.com:666\r\n\r\n */
         if (nbody) {
             if (content_type == NULL) {
@@ -671,14 +671,20 @@ lcb_http_request_t lcb_make_http_request(lcb_t instance,
         BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_PORT].off - 1, nn + 1);
         if (req->method != LCB_HTTP_METHOD_GET && nbody) {
             char *post_headers = calloc(512, sizeof(char));
+            int ret;
             if (post_headers == NULL) {
                 lcb_http_request_destroy(req);
                 *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 return NULL;
             }
-            nn = snprintf(post_headers, 512, "\r\nContent-Type: %s\r\n"
-                          "Content-Length: %ld\r\n\r\n", content_type, (long)nbody);
-            if (!ringbuffer_ensure_capacity(&req->output, nbody + nn)) {
+            ret = snprintf(post_headers, 512, "\r\nContent-Type: %s\r\n"
+                           "Content-Length: %ld\r\n\r\n", content_type, (long)nbody);
+            if (ret < 0) {
+                lcb_http_request_destroy(req);
+                *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+                return NULL;
+            }
+            if (!ringbuffer_ensure_capacity(&req->output, nbody + (lcb_size_t)ret)) {
                 lcb_http_request_destroy(req);
                 *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 return NULL;
@@ -704,11 +710,11 @@ lcb_http_request_t lcb_make_http_request(lcb_t instance,
     http_parser_init(req->parser, HTTP_RESPONSE);
     /* Set back reference to the request */
     req->parser->data = req;
-    req->parser_settings.on_body = http_parser_body_cb;
-    req->parser_settings.on_message_complete = http_parser_complete_cb;
-    req->parser_settings.on_header_field = http_parser_header_cb;
-    req->parser_settings.on_header_value = http_parser_header_cb;
-    req->parser_settings.on_headers_complete = http_parser_headers_complete_cb;
+    req->parser_settings.on_body = (http_data_cb)http_parser_body_cb;
+    req->parser_settings.on_message_complete = (http_cb)http_parser_complete_cb;
+    req->parser_settings.on_header_field = (http_data_cb)http_parser_header_cb;
+    req->parser_settings.on_header_value = (http_data_cb)http_parser_header_cb;
+    req->parser_settings.on_headers_complete = (http_cb)http_parser_headers_complete_cb;
 
     /* Store request reference in the server struct */
     hashset_add(server->http_requests, req);

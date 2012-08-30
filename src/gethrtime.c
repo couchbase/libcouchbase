@@ -89,7 +89,7 @@ hrtime_t gethrtime(void)
     }
 
     ret = (hrtime_t)tv.tv_sec * 1000000000;
-    ret += tv.tv_usec * 1000;
+    ret += (hrtime_t)tv.tv_usec * 1000;
     return ret;
 #elif defined(HAVE_QUERYPERFORMANCECOUNTER)
     double ret;

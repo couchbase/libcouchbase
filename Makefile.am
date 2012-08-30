@@ -47,6 +47,8 @@ pkginclude_HEADERS = \
 libhttpparser_la_SOURCES = \
                         contrib/http_parser/http_parser.c \
                         contrib/http_parser/http_parser.h
+libhttpparser_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
+libhttpparser_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
 
 libvbucket_la_SOURCES = \
                         include/libvbucket/vbucket.h \
@@ -57,6 +59,8 @@ libvbucket_la_SOURCES = \
                         contrib/libvbucket/vbucket.c
 libvbucket_la_LIBADD = libketama.la libcrc32.la
 libvbucket_la_DEPENDENCIES = libketama.la libcrc32.la
+libvbucket_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
+libvbucket_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
 
 libketama_la_SOURCES = contrib/libvbucket/ketama.c
 libketama_la_CFLAGS =  $(AM_NOWARN_CFLAGS)

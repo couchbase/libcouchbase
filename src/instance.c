@@ -119,7 +119,7 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
             unsigned long size = (unsigned long)ptr - (unsigned long)start;
             /* skip the entry if it's too long */
             if (size < sizeof(nm)) {
-                memcpy(nm, start, ptr - start);
+                memcpy(nm, start, (lcb_size_t)(ptr - start));
                 *(nm + size) = '\0';
             }
             ++ptr;
@@ -390,7 +390,7 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
            sizeof(instance->sasl.password.buffer));
     passwd = vbucket_config_get_password(instance->vbucket_config);
     if (passwd) {
-        instance->sasl.password.secret.len = strlen(passwd);
+        instance->sasl.password.secret.len = (unsigned long)strlen(passwd);
         if (instance->sasl.password.secret.len < sizeof(instance->sasl.password.buffer) - offsetof(sasl_secret_t, data)) {
             memcpy(instance->sasl.password.secret.data, passwd, instance->sasl.password.secret.len);
         } else {
@@ -399,7 +399,7 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
     }
     memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
 
-    instance->nreplicas = vbucket_config_get_num_replicas(instance->vbucket_config);
+    instance->nreplicas = (lcb_uint16_t)vbucket_config_get_num_replicas(instance->vbucket_config);
     instance->dist_type = vbucket_config_get_distribution_type(instance->vbucket_config);
     /*
      * Run through all of the vbuckets and build a map of what they need.
@@ -812,7 +812,7 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 
         }
 
-        instance->n_http_uri_sent += nw;
+        instance->n_http_uri_sent += (lcb_size_t)nw;
         if (instance->n_http_uri_sent == strlen(instance->http_uri)) {
             instance->io->update_event(instance->io, instance->sock,
                                        instance->event, LCB_READ_EVENT,

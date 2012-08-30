@@ -23,9 +23,7 @@
  *
  * @author Trond Norbye
  */
-#include <string.h>
-#include <sys/types.h>
-#include <stdlib.h>
+#include "config.h"
 #include <iostream>
 #include <getopt.h>
 #include <vector>

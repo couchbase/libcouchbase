@@ -53,7 +53,7 @@ lcb_error_t lcb_touch(lcb_t instance,
     }
     for (ii = 0; ii < num; ++ii) {
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         (void)vbucket_map(instance->vbucket_config, key, nkey,
                           &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
@@ -69,7 +69,7 @@ lcb_error_t lcb_touch(lcb_t instance,
     for (ii = 0; ii < num; ++ii) {
         protocol_binary_request_touch req;
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_time_t exp = items[ii]->v.v0.exptime;
         server = instance->servers + servers[ii].idx;
         vb = servers[ii].vb;

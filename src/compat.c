@@ -69,11 +69,9 @@ static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
 {
     ringbuffer_t buffer;
     char *copy = strdup(user->serverlist);
-    char head[1024];
     int first;
     char *ptr = copy;
     int fail;
-    lcb_ssize_t offset = 0;
 
     if (copy == NULL) {
         return LCB_CLIENT_ENOMEM;
@@ -84,33 +82,19 @@ static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
         return LCB_CLIENT_ENOMEM;
     }
 
-    head[0] = '\0';
-    offset += snprintf(head + offset, sizeof(head) - offset, "%s", "{");
-    offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                       "\"bucketType\":\"memcached\",");
-    offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                       "\"nodeLocator\":\"ketama\",");
+    ringbuffer_strcat(&buffer, "{\"bucketType\":\"memcached\",\"nodeLocator\":\"ketama\",");
     if (user->username != NULL) {
-        offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                           "\"authType\":\"sasl\",");
-        offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                           "\"name\":\"");
-        offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                           user->username);
-        offset += snprintf(head + offset, sizeof(head) - offset, "%s", "\",");
+        ringbuffer_strcat(&buffer, "\"authType\":\"sasl\",\"name\":\"");
+        ringbuffer_write(&buffer, user->username, strlen(user->username));
+        ringbuffer_strcat(&buffer, "\",");
         if (user->password != NULL) {
-            offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                               "\"saslPassword\":\"");
-            offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                               user->password);
-            offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                               "\",");
+            ringbuffer_strcat(&buffer, "\"saslPassword\":\"");
+            ringbuffer_write(&buffer, user->password, strlen(user->password));
+            ringbuffer_strcat(&buffer, "\",");
         }
     }
 
-    offset += snprintf(head + offset, sizeof(head) - offset, "%s",
-                       "\"nodes\": [");
-    ringbuffer_write(&buffer, head, strlen(head));
+    ringbuffer_strcat(&buffer, "\"nodes\": [");
 
     /* Let's add the hosts... */
     first = 1;
@@ -118,7 +102,8 @@ static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
         char *tok;
         char *next = strchr(ptr, ';');
         const char *port = "11211";
-        lcb_ssize_t length;
+        int length;
+        char buf[256];
 
         if (next != NULL) {
             *next = '\0';
@@ -133,17 +118,19 @@ static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
             }
         }
 
-        length = snprintf(head, sizeof(head),
+        length = snprintf(buf, sizeof(buf),
                           "%c{\"hostname\":\"%s\",\"ports\":{\"direct\":%s}}",
                           first ? ' ' : ',', ptr, port);
-        first = 0;
-
-        if (ringbuffer_ensure_capacity(&buffer, length) == -1) {
+        if (length < 0) {
             free(copy);
             return LCB_CLIENT_ENOMEM;
         }
-
-        ringbuffer_write(&buffer, head, length);
+        first = 0;
+        if (ringbuffer_ensure_capacity(&buffer, (lcb_size_t)length) == -1) {
+            free(copy);
+            return LCB_CLIENT_ENOMEM;
+        }
+        ringbuffer_write(&buffer, buf, (lcb_size_t)length);
 
         if (next != NULL) {
             ptr = next + 1;

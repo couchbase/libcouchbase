@@ -47,7 +47,7 @@ lcb_error_t lcb_store(lcb_t instance,
 
         lcb_storage_t operation = items[ii]->v.v0.operation;
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_cas_t cas = items[ii]->v.v0.cas;
         lcb_uint32_t flags = items[ii]->v.v0.flags;
         lcb_time_t exp = items[ii]->v.v0.exptime;

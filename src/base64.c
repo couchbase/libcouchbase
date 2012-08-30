@@ -25,7 +25,7 @@
 /**
  * An array of the legal charracters used for direct lookup
  */
-static const uint8_t code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const lcb_uint8_t code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 /**
  * Encode up to 3 characters to 4 output character.
@@ -35,7 +35,7 @@ static const uint8_t code[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvw
  * @param num the number of characters from s to encode
  * @return 0 upon success, -1 otherwise.
  */
-static int encode_rest(const uint8_t *s, uint8_t *d, lcb_size_t num)
+static int encode_rest(const lcb_uint8_t *s, lcb_uint8_t *d, lcb_size_t num)
 {
     lcb_uint32_t val = 0;
 
@@ -70,7 +70,7 @@ static int encode_rest(const uint8_t *s, uint8_t *d, lcb_size_t num)
  * @param s pointer to the input stream
  * @param d pointer to the output stream
  */
-static int encode_triplet(const uint8_t *s, uint8_t *d)
+static int encode_triplet(const lcb_uint8_t *s, lcb_uint8_t *d)
 {
     lcb_uint32_t val = (lcb_uint32_t)((*s << 16) | (*(s + 1) << 8) | (*(s + 2)));
     d[3] = code[val & 63] ;
@@ -94,8 +94,8 @@ int lcb_base64_encode(const char *src, char *dst, lcb_size_t sz)
     lcb_size_t triplets = len / 3;
     lcb_size_t rest = len % 3;
     lcb_size_t ii;
-    const uint8_t *in = (const uint8_t *)src;
-    uint8_t *out = (uint8_t *)dst;
+    const lcb_uint8_t *in = (const lcb_uint8_t *)src;
+    lcb_uint8_t *out = (lcb_uint8_t *)dst;
 
     if (sz < (lcb_size_t)((triplets + 1) * 4)) {
         return -1;

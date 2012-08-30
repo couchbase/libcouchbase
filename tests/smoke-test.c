@@ -320,7 +320,7 @@ static void test_get2(void)
         if (keys[ii] == NULL) {
             err_exit("Failed to allocate memory for key");
         }
-        keys[ii][3] = (char)ii + 'a';
+        keys[ii][3] = (char)(ii + 'a');
         memset(&storecmd, 0, sizeof(storecmd));
         storecmd.v.v0.key = key;
         storecmd.v.v0.nkey = nkey;
@@ -385,7 +385,7 @@ static void test_touch1(void)
         if (keys[ii] == NULL) {
             err_exit("Failed to allocate memory for key");
         }
-        keys[ii][3] = (char)ii + 'a';
+        keys[ii][3] = (char)(ii + 'a');
         memset(&storecmd, 0, sizeof(storecmd));
         storecmd.v.v0.key = key;
         storecmd.v.v0.nkey = nkey;

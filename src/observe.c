@@ -77,7 +77,7 @@ lcb_error_t lcb_observe(lcb_t instance,
     opaque = ++instance->seqno;
     for (ii = 0; ii < num; ++ii) {
         const void *key = items[ii]->v.v0.key;
-        uint16_t nkey = items[ii]->v.v0.nkey;
+        lcb_size_t nkey = items[ii]->v.v0.nkey;
 
         vbid = vbucket_get_vbucket_by_key(instance->vbucket_config, key, nkey);
         for (jj = -1; jj < instance->nreplicas; ++jj) {
@@ -107,7 +107,7 @@ lcb_error_t lcb_observe(lcb_t instance,
             }
 
             {
-                lcb_uint16_t vb = htons(vbid);
+                lcb_uint16_t vb = htons((lcb_uint16_t)vbid);
                 lcb_uint16_t len = htons((lcb_uint16_t)nkey);
                 ringbuffer_ensure_capacity(&rr->body, sizeof(vb) + sizeof(len) + nkey);
                 rr->nbody += ringbuffer_write(&rr->body, &vb, sizeof(vb));

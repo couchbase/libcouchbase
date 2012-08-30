@@ -54,6 +54,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
+
 #ifdef HAVE_WINSOCK2_H
 #include <winsock2.h>
 #endif
@@ -70,10 +74,19 @@
 #include <sys/uio.h>
 #endif
 
+#ifdef HAVE_STRING_H
+#include <string.h>
+#endif
+
+#ifdef HAVE_STRINGS_H
+#include <strings.h>
+#endif
+
 #ifdef _WIN32
 #include "win32/win_errno_sock.h"
 typedef int ssize_t;
 #define snprintf _snprintf
+#define strcasecmp(a,b) _stricmp(a,b)
 #undef strdup
 #define strdup _strdup
 #else

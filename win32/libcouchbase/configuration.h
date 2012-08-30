@@ -40,11 +40,11 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
-#define PACKAGE_STRING "lcb 1.1.0dp9"
+#define PACKAGE_STRING "libcouchbase 1.1.0dp9"
     typedef __int64 lcb_int64_t;
     typedef __int32 lcb_int32_t;
-    typedef unsigned long lcb_size_t;
-    typedef long lcb_ssize_t;
+    typedef size_t lcb_size_t;
+    typedef ssize_t lcb_ssize_t;
     typedef unsigned __int8 lcb_uint8_t;
     typedef unsigned __int16 lcb_vbucket_t;
     typedef unsigned __int16 lcb_uint16_t;

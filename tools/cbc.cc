@@ -502,7 +502,7 @@ extern "C" {
                         status == LCB_OBSERVE_PERSISTED) {
                     cerr << "\" CAS:" << hex << cas;
                 }
-                cerr << " IsMaster:" << boolalpha << (bool)is_master
+                cerr << " IsMaster:" << boolalpha << (is_master != 0)
                      << dec << " TimeToPersist:" << ttp
                      << " TimeToReplicate:" << ttr << endl;
             } else {
@@ -1520,9 +1520,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
 static void lowercase(string &str)
 {
-    lcb_ssize_t len = str.length();
+    lcb_size_t len = str.length();
     stringstream ss;
-    for (lcb_ssize_t ii = 0; ii < len; ++ii) {
+    for (lcb_size_t ii = 0; ii < len; ++ii) {
         ss << static_cast<char>(tolower(str[ii]));
     }
     str.assign(ss.str());

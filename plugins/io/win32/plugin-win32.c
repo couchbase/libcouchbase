@@ -152,7 +152,7 @@ static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
 {
     DWORD fl = 0;
     DWORD nr;
-    WSABUF wsabuf = { len, buffer };
+    WSABUF wsabuf = { (ULONG)len, buffer };
     (void)flags;
 
     if (WSARecv(sock, &wsabuf, 1, &nr, &fl, NULL, NULL) == SOCKET_ERROR) {
@@ -179,9 +179,9 @@ static lcb_ssize_t lcb_io_recvv(struct lcb_io_opt_st *iops,
 
     assert(niov == 2);
     wsabuf[0].buf = iov[0].iov_base;
-    wsabuf[0].len = iov[0].iov_len;
+    wsabuf[0].len = (ULONG)iov[0].iov_len;
     wsabuf[1].buf = iov[1].iov_base;
-    wsabuf[1].len = iov[1].iov_len;
+    wsabuf[1].len = (ULONG)iov[1].iov_len;
 
     if (WSARecv(sock, wsabuf, iov[1].iov_len ? 2 : 1,
                 &nr, &fl, NULL, NULL) == SOCKET_ERROR) {
@@ -206,7 +206,7 @@ static lcb_ssize_t lcb_io_send(struct lcb_io_opt_st *iops,
 {
     DWORD fl = 0;
     DWORD nw;
-    WSABUF wsabuf = { len, (char *)msg };
+    WSABUF wsabuf = { (ULONG)len, (char *)msg };
     (void)flags;
 
     if (WSASend(sock, &wsabuf, 1, &nw, fl, NULL, NULL) == SOCKET_ERROR) {
@@ -228,9 +228,9 @@ static lcb_ssize_t lcb_io_sendv(struct lcb_io_opt_st *iops,
 
     assert(niov == 2);
     wsabuf[0].buf = iov[0].iov_base;
-    wsabuf[0].len = iov[0].iov_len;
+    wsabuf[0].len = (ULONG)iov[0].iov_len;
     wsabuf[1].buf = iov[1].iov_base;
-    wsabuf[1].len = iov[1].iov_len;
+    wsabuf[1].len = (ULONG)iov[1].iov_len;
 
     if (WSASend(sock, wsabuf, iov[1].iov_len ? 2 : 1,
                 &nw, fl, NULL, NULL) == SOCKET_ERROR) {
@@ -273,7 +273,7 @@ static int lcb_io_connect(struct lcb_io_opt_st *iops,
                           const struct sockaddr *name,
                           unsigned int namelen)
 {
-    int ret = WSAConnect(sock, name, namelen, NULL, NULL, NULL, NULL);
+    int ret = WSAConnect(sock, name, (int)namelen, NULL, NULL, NULL, NULL);
     if (ret == SOCKET_ERROR) {
         iops->error = getError();
     }
