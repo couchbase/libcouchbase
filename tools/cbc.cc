@@ -923,13 +923,14 @@ static bool lock_impl(lcb_t instance, list<string> &keys, lcb_time_t exptime)
     }
 
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
-        lcb_get_locked_cmd_t item;
+        lcb_get_cmd_t item;
         item.v.v0.key = (const void *)iter->c_str();
         item.v.v0.nkey = (lcb_size_t)iter->length();
+        item.v.v0.lock = 1;
         item.v.v0.exptime = exptime;
 
-        lcb_get_locked_cmd_t *items[] = { &item };
-        lcb_error_t err = lcb_get_locked(instance, NULL, 1, items);
+        lcb_get_cmd_t *items[] = { &item };
+        lcb_error_t err = lcb_get(instance, NULL, 1, items);
         if (err != LCB_SUCCESS) {
             cerr << "Failed to send requests:" << endl
                  << lcb_strerror(instance, err) << endl;

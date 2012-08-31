@@ -200,7 +200,7 @@ extern "C" {
     /**
      * Get a number of values from the cache.
      *
-     * If you specify a non-null value for expiration, the server will
+     * If you specify a non-zero value for expiration, the server will
      * update the expiration value on the item (refer to the
      * documentation on lcb_store to see the meaning of the
      * expiration). All other members should be set to zero.
@@ -211,6 +211,25 @@ extern "C" {
      *   get->v.v0.key = "my-key";
      *   get->v.v0.nkey = strlen(get->v.v0.key);
      *   // Set an expiration of 60 (optional)
+     *   get->v.v0.exptime = 60;
+     *   lcb_get_cmd_t* commands[] = { get };
+     *   lcb_get(instance, NULL, 1, commands);
+     *
+     * It is possible to get an item with a lock that has a timeout. It can
+     * then be unlocked with either a CAS operation or with an explicit
+     * unlock command.
+     *
+     * You may specify the expiration value for the lock in the
+     * expiration (setting it to 0 cause the server to use the default
+     * value).
+     *
+     * Example: Get and lock the key
+     *   lcb_get_cmd_t *get = calloc(1, sizeof(*get));
+     *   get->version = 0;
+     *   get->v.v0.key = "my-key";
+     *   get->v.v0.nkey = strlen(get->v.v0.key);
+     *   // Set a lock expiration of 60 (optional)
+     *   get->v.v0.lock = 1;
      *   get->v.v0.exptime = 60;
      *   lcb_get_cmd_t* commands[] = { get };
      *   lcb_get(instance, NULL, 1, commands);
@@ -251,38 +270,6 @@ extern "C" {
                                 const void *command_cookie,
                                 lcb_size_t num,
                                 const lcb_get_replica_cmd_t *const *commands);
-
-    /**
-     * Get an item with a lock that has a timeout. It can then be unlocked
-     * with either a CAS operation or with an explicit unlock command.
-     *
-     * You may specify the expiration value for the lock in the
-     * expiration (setting it to 0 cause the server to use the default
-     * value).
-     *
-     * Example:
-     *   lcb_get_locked_cmd_t *get = calloc(1, sizeof(*get));
-     *   get->version = 0;
-     *   get->v.v0.key = "my-key";
-     *   get->v.v0.nkey = strlen(get->v.v0.key);
-     *   // Set a lock expiration of 60 (optional)
-     *   get->v.v0.exptime = 60;
-     *   lcb_get_locked_cmd_t* commands[] = { get };
-     *   lcb_get_locked(instance, NULL, 1, commands);
-     *
-     * @param instance the instance used to batch the requests from
-     * @param command_cookie A cookie passed to all of the notifications
-     *                       from this command
-     * @param num the total number of elements in the commands array
-     * @param commands the array containing the items to get and lock
-     * @return The status of the operation
-     */
-    LIBCOUCHBASE_API
-    lcb_error_t lcb_get_locked(lcb_t instance,
-                               const void *command_cookie,
-                               lcb_size_t num,
-                               const lcb_get_locked_cmd_t *const *commands);
-
     /**
      * Unlock the key locked with lcb_get_locked
      *

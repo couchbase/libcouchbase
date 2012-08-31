@@ -43,7 +43,10 @@ extern "C" {
             struct {
                 const void *key;
                 lcb_size_t nkey;
+                /* if non-zero and lock is zero, it will use GAT */
                 lcb_time_t exptime;
+                /* if non-zero, it will use GETL */
+                int lock;
             } v0;
         } v;
 #ifdef __cplusplus
@@ -53,7 +56,8 @@ extern "C" {
 
         lcb_get_cmd_st(const void *key,
                        lcb_size_t nkey = 0,
-                       lcb_time_t exptime = 0) {
+                       lcb_time_t exptime = 0,
+                       int lock = 0) {
             version = 0;
             v.v0.key = key;
             if (key != NULL && nkey == 0) {
@@ -62,6 +66,7 @@ extern "C" {
                 v.v0.nkey = nkey;
             }
             v.v0.exptime = exptime;
+            v.v0.lock = lock;
         }
 #endif
     } lcb_get_cmd_t;
@@ -86,12 +91,6 @@ extern "C" {
         }
 #endif
      } lcb_get_replica_cmd_t;
-
-    /**
-     * Get locked use the same structure as get (the exptime is the
-     * lock expiration time
-     */
-    typedef lcb_get_cmd_t lcb_get_locked_cmd_t;
 
     typedef struct lcb_unlock_cmd_st {
         int version;

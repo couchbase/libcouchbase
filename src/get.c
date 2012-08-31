@@ -24,13 +24,11 @@ struct server_info_st {
 
 static lcb_error_t lcb_single_get(lcb_t instance,
                                   const void *command_cookie,
-                                  const lcb_get_cmd_t *item,
-                                  int lock);
+                                  const lcb_get_cmd_t *item);
 static lcb_error_t lcb_multi_get(lcb_t instance,
                                  const void *command_cookie,
                                  lcb_size_t num,
-                                 const lcb_get_cmd_t *const *items,
-                                 int lock);
+                                 const lcb_get_cmd_t *const *items);
 
 /**
  * libcouchbase_mget use the GETQ command followed by a NOOP command to avoid
@@ -46,16 +44,11 @@ lcb_error_t lcb_get(lcb_t instance,
                     lcb_size_t num,
                     const lcb_get_cmd_t *const *items)
 {
-    return lcb_multi_get(instance, command_cookie, num, items, 0);
-}
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_get_locked(lcb_t instance,
-                           const void *command_cookie,
-                           lcb_size_t num,
-                           const lcb_get_locked_cmd_t *const *items)
-{
-    return lcb_multi_get(instance, command_cookie, num, items, 1);
+    if (num == 1) {
+        return lcb_single_get(instance, command_cookie, items[0]);
+    } else {
+        return lcb_multi_get(instance, command_cookie, num, items);
+    }
 }
 
 LIBCOUCHBASE_API
@@ -172,8 +165,7 @@ lcb_error_t lcb_get_replica(lcb_t instance,
 
 static lcb_error_t lcb_single_get(lcb_t instance,
                                   const void *command_cookie,
-                                  const lcb_get_cmd_t *item,
-                                  int lock)
+                                  const lcb_get_cmd_t *item)
 {
     lcb_server_t *server;
     protocol_binary_request_gat req;
@@ -182,6 +174,11 @@ static lcb_error_t lcb_single_get(lcb_t instance,
     const void *key = item->v.v0.key;
     lcb_size_t nkey = item->v.v0.nkey;
     lcb_time_t exp = item->v.v0.exptime;
+
+    /* we need a vbucket config before we can start getting data.. */
+    if (instance->vbucket_config == NULL) {
+        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
+    }
 
     (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
     if (idx < 0 || idx > (int)instance->nservers) {
@@ -209,7 +206,7 @@ static lcb_error_t lcb_single_get(lcb_t instance,
         nbytes = sizeof(req.bytes);
     }
 
-    if (lock) {
+    if (item->v.v0.lock) {
         /* the expiration is optional for GETL command */
         req.message.header.request.opcode = CMD_GET_LOCKED;
     }
@@ -224,8 +221,7 @@ static lcb_error_t lcb_single_get(lcb_t instance,
 static lcb_error_t lcb_multi_get(lcb_t instance,
                                  const void *command_cookie,
                                  lcb_size_t num,
-                                 const lcb_get_cmd_t *const *items,
-                                 int lock)
+                                 const lcb_get_cmd_t *const *items)
 {
     lcb_server_t *server = NULL;
     protocol_binary_request_noop noop;
@@ -235,10 +231,6 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return lcb_synchandler_return(instance, LCB_ETMPFAIL);
-    }
-
-    if (num == 1) {
-        return lcb_single_get(instance, command_cookie, items[0], lock);
     }
 
     affected_servers = calloc(instance->nservers, sizeof(lcb_size_t));
@@ -300,7 +292,7 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
                                     sizeof(req.bytes));
         }
 
-        if (lock) {
+        if (items[ii]->v.v0.lock) {
             /* the expiration is optional for GETL command */
             req.message.header.request.opcode = CMD_GET_LOCKED;
         }
