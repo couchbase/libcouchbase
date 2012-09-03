@@ -34,6 +34,12 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
     [ac_cv_enable_tcov="yes"],
     [ac_cv_enable_tcov="no"])
 
+  AC_ARG_ENABLE([wconversion],
+    [AS_HELP_STRING([--enable-wconversion],
+            [Enable -Wconversion flag for gcc. @<:@default=off@:>@])],
+    [ac_cv_enable_wconversion="yes"],
+    [ac_cv_enable_wconversion="no"])
+
   AC_CACHE_CHECK([whether the C++ compiler works], [ac_cv_prog_cxx_works], [
     AC_LANG_PUSH([C++])
     AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
@@ -63,7 +69,9 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   GCC_C89=-std=c89
   GCC_C99=-std=gnu99
   GCC_LDFLAGS=""
-  GCC_CPP_WARNINGS="-Wall -pedantic -Wshadow -Wconversion -fdiagnostics-show-option -Wformat -fno-strict-aliasing -Wno-strict-aliasing -Wextra"
+  GCC_CPP_WARNINGS="-Wall -pedantic -Wshadow -fdiagnostics-show-option -Wformat -fno-strict-aliasing -Wno-strict-aliasing -Wextra"
+  AS_IF([test "$ac_cv_enable_wconversion" = "yes" ],
+        [GCC_CPP_WARNINGS="$GCC_CPP_WARNINGS -Wconversion"])
   GCC_C_COMPILER_WARNINGS="-Wundef -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -Wmissing-declarations -Wcast-align"
   GCC_CXX_COMPILER_WARNINGS="-std=gnu++98 -Woverloaded-virtual -Wnon-virtual-dtor -Wctor-dtor-privacy -Wno-long-long -Wno-redundant-decls"
 
