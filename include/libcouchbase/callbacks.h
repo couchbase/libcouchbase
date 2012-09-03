@@ -241,14 +241,13 @@ extern "C" {
      *
      * @param instance the instance performing the operation
      * @param cookie the cookie associated with with the command
-     * @param server_endpoint The name of the server in the cluster
-     *              this response is from
      * @param error The status of the operation
+     * @param resp response data
      */
     typedef void (*lcb_verbosity_callback)(lcb_t instance,
                                            const void *cookie,
-                                           const char *server_endpoint,
-                                           lcb_error_t error);
+                                           lcb_error_t error,
+                                           const lcb_verbosity_resp_t *resp);
 
     /*
      * The following sections contains function prototypes for how to

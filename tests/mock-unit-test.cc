@@ -549,35 +549,37 @@ extern "C" {
 
     static void verbosity_all_callback(lcb_t instance,
                                        const void *cookie,
-                                       const char *server_endpoint,
-                                       lcb_error_t error)
+                                       lcb_error_t error,
+                                       const lcb_verbosity_resp_t *resp)
     {
         int *counter = (int *)cookie;
+        ASSERT_EQ(0, resp->version);
         ASSERT_EQ(LCB_SUCCESS, error);
-        if (server_endpoint == NULL) {
+        if (resp->v.v0.server_endpoint == NULL) {
             EXPECT_EQ(MockUnitTest::numNodes, *counter);
             lcb_io_opt_t io;
             io = (lcb_io_opt_t)lcb_get_cookie(instance);
             io->stop_event_loop(io);
             return;
         } else if (verbosity_endpoint == NULL) {
-            verbosity_endpoint = strdup(server_endpoint);
+            verbosity_endpoint = strdup(resp->v.v0.server_endpoint);
         }
         ++(*counter);
     }
 
     static void verbosity_single_callback(lcb_t instance,
                                           const void *,
-                                          const char *server_endpoint,
-                                          lcb_error_t error)
+                                          lcb_error_t error,
+                                          const lcb_verbosity_resp_t *resp)
     {
+        ASSERT_EQ(0, resp->version);
         ASSERT_EQ(LCB_SUCCESS, error);
-        if (server_endpoint == NULL) {
+        if (resp->v.v0.server_endpoint == NULL) {
             lcb_io_opt_t io;
             io = (lcb_io_opt_t)lcb_get_cookie(instance);
             io->stop_event_loop(io);
         } else {
-            EXPECT_STREQ(verbosity_endpoint, server_endpoint);
+            EXPECT_STREQ(verbosity_endpoint, resp->v.v0.server_endpoint);
         }
     }
 }
@@ -589,8 +591,10 @@ TEST_F(MockUnitTest, testVerbosity)
     (void)lcb_set_verbosity_callback(instance, verbosity_all_callback);
 
     int counter = 0;
-    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, NULL,
-                                             LCB_VERBOSITY_DEBUG));
+
+    lcb_verbosity_cmd_t cmd(LCB_VERBOSITY_DEBUG);
+    lcb_verbosity_cmd_t* commands[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands));
 
     lcb_io_opt_t io;
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
@@ -599,12 +603,11 @@ TEST_F(MockUnitTest, testVerbosity)
     EXPECT_EQ(numNodes, counter);
     EXPECT_NE((char *)NULL, verbosity_endpoint);
 
-    (void)lcb_set_verbosity_callback(instance,
-                                     verbosity_single_callback);
+    (void)lcb_set_verbosity_callback(instance, verbosity_single_callback);
 
-    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter,
-                                             verbosity_endpoint,
-                                             LCB_VERBOSITY_DEBUG));
+    lcb_verbosity_cmd_t cmd2(LCB_VERBOSITY_DEBUG, verbosity_endpoint);
+    lcb_verbosity_cmd_t* commands2[] = { &cmd2 };
+    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands2));
     io->run_event_loop(io);
     free((void *)verbosity_endpoint);
 

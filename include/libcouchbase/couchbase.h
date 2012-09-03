@@ -509,8 +509,8 @@ extern "C" {
     LIBCOUCHBASE_API
     lcb_error_t lcb_set_verbosity(lcb_t instance,
                                   const void *command_cookie,
-                                  const char *server,
-                                  lcb_verbosity_level_t level);
+                                  lcb_size_t num,
+                                  const lcb_verbosity_cmd_t* const *commands);
 
     /**
      * Flush the entire couchbase cluster!

@@ -67,6 +67,18 @@ static void version_callback(lcb_t instance,
     lcb_maybe_breakout(instance);
 }
 
+static void verbosity_callback(lcb_t instance,
+                             const void *command_cookie,
+                             lcb_error_t error,
+                             const lcb_verbosity_resp_t *resp)
+{
+    struct user_cookie *c = (void *)instance->cookie;
+
+    restore_user_env(instance);
+    c->callbacks.verbosity(instance, command_cookie, error, resp);
+    restore_wrapping_env(instance, c, error);
+    lcb_maybe_breakout(instance);
+}
 
 static void get_callback(lcb_t instance,
                          const void *cookie,
@@ -238,6 +250,7 @@ static void restore_wrapping_env(lcb_t instance,
     instance->callbacks.remove = remove_callback;
     instance->callbacks.stat = stat_callback;
     instance->callbacks.version = version_callback;
+    instance->callbacks.verbosity = verbosity_callback;
     instance->callbacks.touch = touch_callback;
     instance->callbacks.flush = flush_callback;
     instance->callbacks.error = error_callback;

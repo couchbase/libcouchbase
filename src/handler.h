@@ -46,7 +46,7 @@ void setup_lcb_server_version_resp_t(lcb_server_version_resp_t *resp,
                                      const char *server_endpoint,
                                      const char *vstring,
                                      lcb_size_t nvstring);
-
-
+void setup_lcb_verbosity_resp_t(lcb_verbosity_resp_t *resp,
+                                const char *server_endpoint);
 
 #endif

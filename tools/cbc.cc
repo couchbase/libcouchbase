@@ -516,11 +516,12 @@ extern "C" {
 
     static void verbosity_callback(lcb_t instance,
                                    const void *,
-                                   const char *endpoint,
-                                   lcb_error_t error)
+                                   lcb_error_t error,
+                                   const lcb_verbosity_resp_t *resp)
     {
         if (error != LCB_SUCCESS) {
-            cerr << "Failed to set verbosity level on \"" << endpoint << "\": "
+            cerr << "Failed to set verbosity level on \""
+                 << resp->v.v0.server_endpoint << "\": "
                  << lcb_strerror(instance, error) << endl;
             void *cookie = const_cast<void *>(lcb_get_cookie(instance));
             bool *err = static_cast<bool *>(cookie);
@@ -753,7 +754,10 @@ static bool verbosity_impl(lcb_t instance, list<string> &args)
 
     lcb_error_t err;
     if (args.empty()) {
-        err = lcb_set_verbosity(instance, NULL, NULL, level);
+        lcb_verbosity_cmd_t cmd(level);
+        lcb_verbosity_cmd_t* commands[] = { &cmd };
+
+        err = lcb_set_verbosity(instance, NULL, 1, commands);
         if (err != LCB_SUCCESS) {
             cerr << "Failed to set verbosity : " << endl
                  << lcb_strerror(instance, err) << endl;
@@ -762,8 +766,10 @@ static bool verbosity_impl(lcb_t instance, list<string> &args)
     } else {
         list<string>::iterator iter;
         for (iter = args.begin(); iter != args.end(); ++iter) {
-            err = lcb_set_verbosity(instance, NULL,
-                                    iter->c_str(), level);
+            lcb_verbosity_cmd_t cmd(level, iter->c_str());
+            lcb_verbosity_cmd_t* commands[] = { &cmd };
+
+            err = lcb_set_verbosity(instance, NULL, 1, commands);
             if (err != LCB_SUCCESS) {
                 cerr << "Failed to set verbosity : " << endl
                      << lcb_strerror(instance, err) << endl;

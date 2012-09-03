@@ -377,6 +377,25 @@ extern "C" {
 #endif
     } lcb_server_version_cmd_t;
 
+    typedef struct lcb_verbosity_cmd_st {
+        int version;
+        union {
+            struct {
+                const char *server;
+                lcb_verbosity_level_t level;
+            } v0;
+        } v;
+
+#ifdef __cplusplus
+        lcb_verbosity_cmd_st(lcb_verbosity_level_t level = LCB_VERBOSITY_WARNING,
+                             const char *server = NULL) {
+            version = 0;
+            v.v0.server = server;
+            v.v0.level = level;
+        }
+#endif
+    } lcb_verbosity_cmd_t;
+
     typedef struct {
         int version;
         union {
@@ -498,6 +517,16 @@ extern "C" {
             } v0;
         } v;
     } lcb_server_version_resp_t;
+
+    typedef struct lcb_verbosity_resp_st {
+        int version;
+        union {
+            struct {
+                const char *server_endpoint;
+            } v0;
+        } v;
+    } lcb_verbosity_resp_t;
+
 
 
 #ifdef __cplusplus

@@ -65,6 +65,7 @@ void lcb_purge_single_server(lcb_server_t *server,
             lcb_observe_resp_t observe;
             lcb_server_stat_resp_t stats;
             lcb_server_version_resp_t versions;
+            lcb_verbosity_resp_t verbosity;
         } resp;
 
         nr = ringbuffer_peek(cookies, &ct, sizeof(ct));
@@ -213,13 +214,16 @@ void lcb_purge_single_server(lcb_server_t *server,
             break;
 
         case PROTOCOL_BINARY_CMD_VERBOSITY:
-            root->callbacks.verbosity(root, ct.cookie, server->authority, error);
+            setup_lcb_verbosity_resp_t(&resp.verbosity, server->authority);
+            root->callbacks.verbosity(root, ct.cookie, error, &resp.verbosity);
 
             if (lcb_lookup_server_with_command(root,
                                                PROTOCOL_BINARY_CMD_VERBOSITY,
                                                req.request.opaque,
                                                server) < 0) {
-                root->callbacks.verbosity(root, ct.cookie, NULL, error);
+                setup_lcb_verbosity_resp_t(&resp.verbosity, NULL);
+                root->callbacks.verbosity(root, ct.cookie, error,
+                                          &resp.verbosity);
             }
             break;
 

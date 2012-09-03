@@ -150,6 +150,14 @@ void setup_lcb_server_version_resp_t(lcb_server_version_resp_t *resp,
     resp->v.v0.nvstring = nvstring;
 }
 
+void setup_lcb_verbosity_resp_t(lcb_verbosity_resp_t *resp,
+                                const char *server_endpoint)
+{
+    memset(resp, 0, sizeof(*resp));
+    resp->version = 0;
+    resp->v.v0.server_endpoint = server_endpoint;
+}
+
 static lcb_error_t map_error(protocol_binary_response_status in)
 {
     switch (in) {
@@ -616,15 +624,19 @@ static void verbosity_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_verbosity_resp_t resp;
 
-    root->callbacks.verbosity(root, command_data->cookie, server->authority,
-                              map_error(status));
+    setup_lcb_verbosity_resp_t(&resp, server->authority);
+
+    root->callbacks.verbosity(root, command_data->cookie, map_error(status),
+                              &resp);
 
     /* run callback with null-null-null to signal the end of transfer */
     if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_VERBOSITY,
                                        res->response.opaque, server) < 0) {
-        root->callbacks.verbosity(root, command_data->cookie, NULL,
-                                  LCB_SUCCESS);
+        setup_lcb_verbosity_resp_t(&resp, NULL);
+        root->callbacks.verbosity(root, command_data->cookie, LCB_SUCCESS,
+                                  &resp);
     }
 }
 
@@ -844,6 +856,17 @@ static void dummy_version_callback(lcb_t instance,
     (void)error;
 }
 
+static void dummy_verbosity_callback(lcb_t instance,
+                                     const void *cookie,
+                                     lcb_error_t error,
+                                     const lcb_verbosity_resp_t *resp)
+{
+    (void)instance;
+    (void)cookie;
+    (void)resp;
+    (void)error;
+}
+
 static void dummy_get_callback(lcb_t instance,
                                const void *cookie,
                                lcb_error_t error,
@@ -1017,6 +1040,7 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.unlock = dummy_unlock_callback;
     instance->callbacks.configuration = dummy_configuration_callback;
     instance->callbacks.observe = dummy_observe_callback;
+    instance->callbacks.verbosity = dummy_verbosity_callback;
 
     instance->response_handler[PROTOCOL_BINARY_CMD_FLUSH] = flush_response_handler;
     instance->response_handler[PROTOCOL_BINARY_CMD_GETQ] = getq_response_handler;

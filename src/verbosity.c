@@ -20,61 +20,65 @@
 LIBCOUCHBASE_API
 lcb_error_t lcb_set_verbosity(lcb_t instance,
                               const void *command_cookie,
-                              const char *server,
-                              lcb_verbosity_level_t level)
+                              lcb_size_t num,
+                              const lcb_verbosity_cmd_t* const *commands)
 {
-    lcb_server_t *srv;
-    protocol_binary_request_verbosity req;
-    lcb_size_t ii;
-    uint32_t lvl;
-    int found = 0;
-
+    lcb_size_t count;
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
-    switch (level) {
-    case LCB_VERBOSITY_DETAIL:
-        lvl = 3;
-        break;
-    case LCB_VERBOSITY_DEBUG:
-        lvl = 2;
-        break;
-    case LCB_VERBOSITY_INFO:
-        lvl = 1;
-        break;
-    case LCB_VERBOSITY_WARNING:
-    default:
-        lvl = 0;
-    }
+    for (count = 0; count < num; ++count) {
+        lcb_server_t *srv;
+        protocol_binary_request_verbosity req;
+        lcb_size_t ii;
+        uint32_t lvl;
+        int found = 0;
+        const char *server = commands[count]->v.v0.server;
 
-    memset(&req, 0, sizeof(req));
-    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_VERBOSITY;
-    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.opaque = ++instance->seqno;
-    req.message.header.request.extlen = 4;
-    req.message.header.request.bodylen = htonl(4);
-    req.message.body.level = htonl(lvl);
 
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        srv = instance->servers + ii;
-
-        if (server && strncmp(server, srv->authority, strlen(server)) != 0) {
-            continue;
+        switch (commands[count]->v.v0.level) {
+        case LCB_VERBOSITY_DETAIL:
+            lvl = 3;
+            break;
+        case LCB_VERBOSITY_DEBUG:
+            lvl = 2;
+            break;
+        case LCB_VERBOSITY_INFO:
+            lvl = 1;
+            break;
+        case LCB_VERBOSITY_WARNING:
+        default:
+            lvl = 0;
         }
 
-        lcb_server_start_packet(srv, command_cookie, req.bytes,
-                                sizeof(req.bytes));
-        lcb_server_end_packet(srv);
-        lcb_server_send_packets(srv);
-        found = 1;
-    }
+        memset(&req, 0, sizeof(req));
+        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_VERBOSITY;
+        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        req.message.header.request.opaque = ++instance->seqno;
+        req.message.header.request.extlen = 4;
+        req.message.header.request.bodylen = htonl(4);
+        req.message.body.level = htonl(lvl);
 
-    if (server && found == 0) {
-        return lcb_synchandler_return(instance,
-                                      LCB_UNKNOWN_HOST);
+        for (ii = 0; ii < instance->nservers; ++ii) {
+            srv = instance->servers + ii;
+
+            if (server && strncmp(server, srv->authority, strlen(server)) != 0) {
+                continue;
+            }
+
+            lcb_server_start_packet(srv, command_cookie, req.bytes,
+                                    sizeof(req.bytes));
+            lcb_server_end_packet(srv);
+            lcb_server_send_packets(srv);
+            found = 1;
+        }
+
+        if (server && found == 0) {
+            return lcb_synchandler_return(instance, LCB_UNKNOWN_HOST);
+        }
     }
 
     return lcb_synchandler_return(instance, LCB_SUCCESS);
