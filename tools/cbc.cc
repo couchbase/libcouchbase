@@ -305,11 +305,11 @@ extern "C" {
 
     static void flush_callback(lcb_t instance,
                                const void *,
-                               const char *server_endpoint,
-                               lcb_error_t error)
+                               lcb_error_t error,
+                               const lcb_flush_resp_t *resp)
     {
         if (error != LCB_SUCCESS) {
-            cerr << "Failed to flush node \"" << server_endpoint
+            cerr << "Failed to flush node \"" << resp->v.v0.server_endpoint
                  << "\": " << lcb_strerror(instance, error)
                  << endl;
             void *cookie = const_cast<void *>(lcb_get_cookie(instance));
@@ -1025,7 +1025,10 @@ static bool flush_impl(lcb_t instance, list<string> &keys)
     }
 
     lcb_error_t err;
-    err = lcb_flush(instance, NULL);
+    lcb_flush_cmd_t flush;
+    lcb_flush_cmd_t* commands[] = {&flush};
+
+    err = lcb_flush(instance, NULL, 1, commands);
     if (err != LCB_SUCCESS) {
         cerr << "Failed to flush: " << endl
              << lcb_strerror(instance, err) << endl;

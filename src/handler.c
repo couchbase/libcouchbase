@@ -158,6 +158,14 @@ void setup_lcb_verbosity_resp_t(lcb_verbosity_resp_t *resp,
     resp->v.v0.server_endpoint = server_endpoint;
 }
 
+void setup_lcb_flush_resp_t(lcb_flush_resp_t *resp,
+                            const char *server_endpoint)
+{
+    memset(resp, 0, sizeof(*resp));
+    resp->version = 0;
+    resp->v.v0.server_endpoint = server_endpoint;
+}
+
 static lcb_error_t map_error(protocol_binary_response_status in)
 {
     switch (in) {
@@ -794,12 +802,17 @@ static void flush_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    root->callbacks.flush(root, command_data->cookie, server->authority,
-                          map_error(status));
+    lcb_flush_resp_t resp;
+    setup_lcb_flush_resp_t(&resp, server->authority);
+
+    root->callbacks.flush(root, command_data->cookie, map_error(status),
+                          &resp);
+
     if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_FLUSH,
                                        res->response.opaque, server) < 0) {
-        root->callbacks.flush(root, command_data->cookie, NULL,
-                              LCB_SUCCESS);
+        setup_lcb_flush_resp_t(&resp, NULL);
+        root->callbacks.flush(root, command_data->cookie,
+                              LCB_SUCCESS, &resp);
     }
 }
 
@@ -926,12 +939,12 @@ static void dummy_touch_callback(lcb_t instance,
 
 static void dummy_flush_callback(lcb_t instance,
                                  const void *cookie,
-                                 const char *server_endpoint,
-                                 lcb_error_t error)
+                                 lcb_error_t error,
+                                 const lcb_flush_resp_t *resp)
 {
     (void)instance;
     (void)cookie;
-    (void)server_endpoint;
+    (void)resp;
     (void)error;
 }
 

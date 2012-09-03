@@ -206,13 +206,13 @@ static void management_data_callback(lcb_http_request_t request,
 
 static void flush_callback(lcb_t instance,
                            const void *cookie,
-                           const char *server_endpoint,
-                           lcb_error_t error)
+                           lcb_error_t error,
+                           const lcb_flush_resp_t *resp)
 {
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.flush(instance, cookie, server_endpoint, error);
+    c->callbacks.flush(instance, cookie, error, resp);
     restore_wrapping_env(instance, c, error);
     lcb_maybe_breakout(instance);
 }

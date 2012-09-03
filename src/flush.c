@@ -18,30 +18,37 @@
 #include "internal.h"
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_flush(lcb_t instance, const void *command_cookie)
+lcb_error_t lcb_flush(lcb_t instance, const void *command_cookie,
+                      lcb_size_t num, const lcb_flush_cmd_t * const *commands)
 {
-    lcb_server_t *server;
-    protocol_binary_request_no_extras flush;
-    lcb_size_t ii;
-
+    lcb_size_t count;
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return lcb_synchandler_return(instance, LCB_ETMPFAIL);
     }
 
-    memset(&flush, 0, sizeof(flush));
-    flush.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    flush.message.header.request.opcode = PROTOCOL_BINARY_CMD_FLUSH;
-    flush.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    flush.message.header.request.opaque = ++instance->seqno;
+    for (count = 0; count < num; ++count) {
+        lcb_server_t *server;
+        protocol_binary_request_no_extras flush;
+        lcb_size_t ii;
 
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        server = instance->servers + ii;
-        lcb_server_complete_packet(server, command_cookie,
-                                   flush.bytes,
-                                   sizeof(flush.bytes));
-        lcb_server_send_packets(server);
+        if (commands[count]->version != 0) {
+            return lcb_synchandler_return(instance, LCB_EINVAL);
+        }
+
+        memset(&flush, 0, sizeof(flush));
+        flush.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        flush.message.header.request.opcode = PROTOCOL_BINARY_CMD_FLUSH;
+        flush.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        flush.message.header.request.opaque = ++instance->seqno;
+
+        for (ii = 0; ii < instance->nservers; ++ii) {
+            server = instance->servers + ii;
+            lcb_server_complete_packet(server, command_cookie,
+                                       flush.bytes,
+                                       sizeof(flush.bytes));
+            lcb_server_send_packets(server);
+        }
     }
-
     return lcb_synchandler_return(instance, LCB_SUCCESS);
 }

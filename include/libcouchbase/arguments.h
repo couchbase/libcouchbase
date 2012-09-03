@@ -396,6 +396,21 @@ extern "C" {
 #endif
     } lcb_verbosity_cmd_t;
 
+    typedef struct lcb_flush_cmd_st {
+        int version;
+        union {
+            struct {
+                int unused;
+            } v0;
+        } v;
+
+#ifdef __cplusplus
+        lcb_flush_cmd_st() {
+            version = 0;
+        }
+#endif
+    } lcb_flush_cmd_t;
+
     typedef struct {
         int version;
         union {
@@ -527,6 +542,14 @@ extern "C" {
         } v;
     } lcb_verbosity_resp_t;
 
+    typedef struct lcb_flush_resp_st {
+        int version;
+        union {
+            struct {
+                const char *server_endpoint;
+            } v0;
+        } v;
+    } lcb_flush_resp_t;
 
 
 #ifdef __cplusplus

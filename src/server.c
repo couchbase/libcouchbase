@@ -66,6 +66,7 @@ void lcb_purge_single_server(lcb_server_t *server,
             lcb_server_stat_resp_t stats;
             lcb_server_version_resp_t versions;
             lcb_verbosity_resp_t verbosity;
+            lcb_flush_resp_t flush;
         } resp;
 
         nr = ringbuffer_peek(cookies, &ct, sizeof(ct));
@@ -137,12 +138,14 @@ void lcb_purge_single_server(lcb_server_t *server,
             root->callbacks.get(root, ct.cookie, error, &resp.get);
             break;
         case PROTOCOL_BINARY_CMD_FLUSH:
-            root->callbacks.flush(root, ct.cookie, server->authority, error);
+            setup_lcb_flush_resp_t(&resp.flush, server->authority);
+            root->callbacks.flush(root, ct.cookie, error, &resp.flush);
             if (lcb_lookup_server_with_command(root,
                                                PROTOCOL_BINARY_CMD_FLUSH,
                                                req.request.opaque,
                                                server) < 0) {
-                root->callbacks.flush(root, ct.cookie, NULL, error);
+                setup_lcb_flush_resp_t(&resp.flush, NULL);
+                root->callbacks.flush(root, ct.cookie, error, &resp.flush);
             }
             break;
         case PROTOCOL_BINARY_CMD_ADD:

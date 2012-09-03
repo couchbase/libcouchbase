@@ -518,10 +518,14 @@ extern "C" {
      * @param instance the handle to lcb
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
+     * @param num number of commands in the commands array
+     * @param commands the commands to send
      * @return Status of the operation.
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_flush(lcb_t instance, const void *cookie);
+    lcb_error_t lcb_flush(lcb_t instance, const void *cookie,
+                          lcb_size_t num,
+                          const lcb_flush_cmd_t* const *commands);
 
     /**
      * Execute HTTP request matching given path and yield JSON result object.
