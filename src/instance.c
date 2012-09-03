@@ -77,7 +77,8 @@ lcb_int32_t lcb_get_num_replicas(lcb_t instance)
 LIBCOUCHBASE_API
 const char * const * lcb_get_server_list(lcb_t instance)
 {
-    return instance->backup_nodes;
+    /* cast it so we get the full const'ness */
+    return (const char * const *)instance->backup_nodes;
 }
 
 static void setup_current_host(lcb_t instance, const char *host)
