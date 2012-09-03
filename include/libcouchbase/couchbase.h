@@ -141,6 +141,17 @@ extern "C" {
     lcb_error_t lcb_get_last_error(lcb_t instance);
 
     /**
+     * Get a textual descrtiption for the given error code
+     * @param instance the instance the error code belongs to (you might
+     *                 want different localizations for the different instances)
+     * @param error the error code
+     * @return A textual description of the error message. The caller should
+     *         <b>not</b> release the memory returned from this function.
+     */
+    LIBCOUCHBASE_API
+    const char *lcb_strerror(lcb_t instance, lcb_error_t error);
+
+    /**
      * Try to send/receive data buffered on the servers
      *
      * @param instance the handle to lcb
@@ -482,18 +493,6 @@ extern "C" {
                                     const void *command_cookie,
                                     lcb_size_t num,
                                     const lcb_server_version_cmd_t * const *commands);
-
-
-    /**
-     * Get a textual descrtiption for the given error code
-     * @param instance the instance the error code belongs to (you might
-     *                 want different localizations for the different instances)
-     * @param error the error code
-     * @return A textual description of the error message. The caller should
-     *         <b>not</b> release the memory returned from this function.
-     */
-    LIBCOUCHBASE_API
-    const char *lcb_strerror(lcb_t instance, lcb_error_t error);
 
 
     /**
