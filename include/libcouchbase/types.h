@@ -226,7 +226,7 @@ extern "C" {
         lcb_size_t iov_len;
     };
 
-    typedef struct lcb_io_opt_st {
+    struct lcb_io_opt_st {
         lcb_uint64_t version;
         void *cookie;
         int error;
@@ -305,7 +305,20 @@ extern "C" {
 
         /* Version 1 of the struct also includes the following members */
         void *dlhandle;
-    } lcb_io_opt_t;
+    };
+    typedef struct lcb_io_opt_st* lcb_io_opt_t;
+
+    struct lcb_create_io_ops_st {
+        int version;
+        union {
+            struct {
+                /** The predefined type you want to create */
+                lcb_io_ops_type_t type;
+                /** A cookie passed directly down to the underlying io ops */
+                void *cookie;
+            } v0;
+        } v;
+    };
 
     typedef enum {
         LCB_ASYNCHRONOUS = 0x00,

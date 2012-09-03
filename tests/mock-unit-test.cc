@@ -477,7 +477,7 @@ extern "C" {
                                        lcb_error_t error,
                                        const lcb_store_resp_t *)
     {
-        lcb_io_opt_t *io = (lcb_io_opt_t *)cookie;
+        lcb_io_opt_t io = (lcb_io_opt_t)cookie;
 
         ASSERT_EQ(LCB_SUCCESS, error);
         timeout_seqno--;
@@ -496,7 +496,7 @@ extern "C" {
                                       lcb_size_t nbytes)
     {
         lcb_error_t err;
-        lcb_io_opt_t *io = (lcb_io_opt_t *)cookie;
+        lcb_io_opt_t io = (lcb_io_opt_t)cookie;
         char *statkey;
         lcb_size_t nstatkey;
 
@@ -523,14 +523,14 @@ TEST_F(MockUnitTest, testTimeout)
 {
     // @todo we need to have a test that actually tests the timeout callback..
     lcb_t instance;
-    lcb_io_opt_t *io;
+    lcb_io_opt_t io;
     createConnection(instance);
 
     (void)lcb_set_error_callback(instance, timeout_error_callback);
     (void)lcb_set_stat_callback(instance, timeout_stat_callback);
     (void)lcb_set_store_callback(instance, timeout_store_callback);
 
-    io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+    io = (lcb_io_opt_t)lcb_get_cookie(instance);
     ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, NULL, 0));
     io->run_event_loop(io);
     lcb_destroy(instance);
@@ -548,8 +548,8 @@ extern "C" {
         ASSERT_EQ(LCB_SUCCESS, error);
         if (server_endpoint == NULL) {
             EXPECT_EQ(MockUnitTest::numNodes, *counter);
-            lcb_io_opt_t *io;
-            io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+            lcb_io_opt_t io;
+            io = (lcb_io_opt_t)lcb_get_cookie(instance);
             io->stop_event_loop(io);
             return;
         } else if (verbosity_endpoint == NULL) {
@@ -565,8 +565,8 @@ extern "C" {
     {
         ASSERT_EQ(LCB_SUCCESS, error);
         if (server_endpoint == NULL) {
-            lcb_io_opt_t *io;
-            io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+            lcb_io_opt_t io;
+            io = (lcb_io_opt_t)lcb_get_cookie(instance);
             io->stop_event_loop(io);
         } else {
             EXPECT_STREQ(verbosity_endpoint, server_endpoint);
@@ -584,8 +584,8 @@ TEST_F(MockUnitTest, testVerbosity)
     EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, NULL,
                                              LCB_VERBOSITY_DEBUG));
 
-    lcb_io_opt_t *io;
-    io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+    lcb_io_opt_t io;
+    io = (lcb_io_opt_t)lcb_get_cookie(instance);
     io->run_event_loop(io);
 
     EXPECT_EQ(numNodes, counter);
@@ -634,7 +634,7 @@ extern "C" {
     {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
-        lcb_io_opt_t *io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+        lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
         io->stop_event_loop(io);
     }
 
@@ -647,7 +647,7 @@ extern "C" {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
         rv->cas2 = resp->v.v0.cas;
-        lcb_io_opt_t *io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+        lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
         io->stop_event_loop(io);
     }
 
@@ -678,11 +678,11 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     struct rvbuf rv;
     const char *key = "test_compare_and_swap_async_", *value = "{\"bar\" => 1}";
     lcb_size_t nkey = strlen(key), nvalue = strlen(value);
-    lcb_io_opt_t *io;
+    lcb_io_opt_t io;
     lcb_t instance;
 
     createConnection(instance);
-    io = (lcb_io_opt_t *)lcb_get_cookie(instance);
+    io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     /* prefill the bucket */
     (void)lcb_set_store_callback(instance, df_store_callback1);

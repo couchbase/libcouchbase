@@ -29,7 +29,7 @@
 #include <sys/socket.h>
 
 LIBCOUCHBASE_API
-lcb_io_opt_t *lcb_create_test_loop(void);
+lcb_io_opt_t lcb_create_test_loop(void);
 
 struct libevent_cookie {
     struct event_base *base;
@@ -375,7 +375,7 @@ struct lcb_io_opt_st *lcb_create_libevent_io_opts(struct event_base *base) {
 }
 
 LIBCOUCHBASE_API
-lcb_io_opt_t *lcb_create_test_loop(void)
+lcb_io_opt_t lcb_create_test_loop(void)
 {
     return lcb_create_libevent_io_opts(NULL);
 }

@@ -18,15 +18,7 @@
 #include "internal.h"
 #include <dlfcn.h>
 
-static void set_error(lcb_error_t *error, lcb_error_t code)
-{
-    if (error != NULL) {
-        *error = code;
-    }
-}
-
-
-typedef lcb_io_opt_t *(*create_func)(struct event_base *base);
+typedef lcb_io_opt_t (*create_func)(struct event_base *base);
 
 struct plugin_st {
     void *dlhandle;
@@ -36,14 +28,12 @@ struct plugin_st {
     } func;
 };
 
-static void get_create_func(const char *image,
-                            struct plugin_st *plugin,
-                            lcb_error_t *error)
+static lcb_error_t get_create_func(const char *image,
+                                   struct plugin_st *plugin)
 {
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
     if (dlhandle == NULL) {
-        set_error(error, LCB_ERROR);
-        return;
+        return LCB_ERROR;
     }
 
     plugin->func.create = NULL;
@@ -54,6 +44,7 @@ static void get_create_func(const char *image,
     } else {
         plugin->dlhandle = dlhandle;
     }
+    return LCB_SUCCESS;
 }
 
 #ifdef __APPLE__
@@ -63,36 +54,53 @@ static void get_create_func(const char *image,
 #endif
 
 LIBCOUCHBASE_API
-lcb_io_opt_t *lcb_create_io_ops(lcb_io_ops_type_t type,
-                                void *cookie,
-                                lcb_error_t *error)
+lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
+                              const struct lcb_create_io_ops_st* options)
 {
-    lcb_io_opt_t *ret = NULL;
+    lcb_error_t ret = LCB_SUCCESS;
+    lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;
+    void *cookie = NULL;
+
+    if (options != NULL) {
+        if (options->version != 0) {
+            return LCB_EINVAL;
+        }
+        type = options->v.v0.type;
+        cookie = options->v.v0.cookie;
+    }
+
     if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_LIBEVENT) {
         struct plugin_st plugin;
         memset(&plugin, 0, sizeof(plugin));
         /* search definition in main program */
-        get_create_func(NULL, &plugin, error);
+        ret = get_create_func(NULL, &plugin);
+
+        if (ret != LCB_SUCCESS) {
+            return ret;
+        }
 
 #ifndef LCB_LIBEVENT_PLUGIN_EMBED
         if (plugin.func.create == NULL) {
-            get_create_func(PLUGIN_SO("libevent"), &plugin, error);
+            ret = get_create_func(PLUGIN_SO("libevent"), &plugin);
         }
 #endif
+        if (ret != LCB_SUCCESS) {
+            return ret;
+        }
 
         if (plugin.func.create != NULL) {
-            ret = plugin.func.create(cookie);
-            if (ret == NULL) {
-                set_error(error, LCB_CLIENT_ENOMEM);
+            *io = plugin.func.create(cookie);
+            if (*io == NULL) {
+                return LCB_CLIENT_ENOMEM;
             } else {
-                ret->dlhandle = plugin.dlhandle;
+                (*io)->dlhandle = plugin.dlhandle;
             }
         }
 
     } else {
-        set_error(error, LCB_NOT_SUPPORTED);
+        return LCB_NOT_SUPPORTED;
     }
 
-    return ret;
+    return LCB_SUCCESS;
 }
 #undef PLUGIN_SO

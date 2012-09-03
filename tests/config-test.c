@@ -83,7 +83,7 @@ static void get_callback(lcb_t instance,
 
 static void smoke_test(void)
 {
-    lcb_io_opt_t *io;
+    lcb_io_opt_t io;
     const void *mock;
     const char *endpoint;
     const char *argv[] = {"--nodes", "20", NULL};
@@ -131,7 +131,7 @@ static void smoke_test(void)
 
 static void buffer_relocation_test(void)
 {
-    lcb_io_opt_t *io;
+    lcb_io_opt_t io;
     const void *mock;
     const char *endpoint;
     const char *argv[] = {"--nodes", "2", NULL};

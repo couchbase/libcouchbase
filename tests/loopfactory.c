@@ -26,9 +26,8 @@ static loop_generator_func get_loop_generator(const char *plugin_name);
 
 static struct lcb_io_opt_st *default_loop_generator(void) {
     lcb_error_t err;
-    struct lcb_io_opt_st *ret;
-    ret = lcb_create_io_ops(LCB_IO_OPS_DEFAULT, NULL, &err);
-    if (ret == NULL) {
+    lcb_io_opt_t ret;
+    if ((err = lcb_create_io_ops(&ret, NULL)) != LCB_SUCCESS) {
         fprintf(stderr, "Couldn't generate default loop: errcode %d\n", err);
         abort();
     }

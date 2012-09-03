@@ -162,12 +162,15 @@ lcb_t lcb_create(const char *host,
     lcb_t ret;
 
     if (io == NULL) {
-        io = lcb_create_io_ops(LCB_IO_OPS_DEFAULT,
-                               NULL, NULL);
-        if (io == NULL) {
+        lcb_io_opt_t ops;
+        struct lcb_create_io_ops_st options;
+        memset(&options, 0, sizeof(options));
+        options.v.v0.type = LCB_IO_OPS_DEFAULT;
+        if (lcb_create_io_ops(&ops, &options) != LCB_SUCCESS) {
             /* You can't initialize the library without a io-handler! */
             return NULL;
         }
+        io = ops;
     }
 
     if (host == NULL) {

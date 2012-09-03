@@ -54,17 +54,13 @@ extern "C" {
 
     /**
      * Create a new instance of one of the library-supplied io ops types.
-     * @param type The predefined type you want to create
-     * @param cookie Extra cookie-information supplied to the creation
-     *               of the io ops type
-     * @param error Where to store information about why creation failed
-     * @return pointer to a newly created io ops structure
+     * @param op Where to store the io ops structure
+     * @param options How to create the io ops structure
+     * @return LCB_SUCCESS on success
      */
     LIBCOUCHBASE_API
-    lcb_io_opt_t *lcb_create_io_ops(lcb_io_ops_type_t type,
-                                    void *cookie,
-                                    lcb_error_t *error);
-
+    lcb_error_t lcb_create_io_ops(lcb_io_opt_t *op,
+                                  const struct lcb_create_io_ops_st* options);
 
     /**
      * Create an instance of lcb.

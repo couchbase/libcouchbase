@@ -18,29 +18,28 @@
 #include "internal.h"
 #include "winsock_io_opts.h"
 
-static void set_error(lcb_error_t *error, lcb_error_t code)
-{
-    if (error != NULL) {
-        *error = code;
-    }
-}
-
-
 LIBCOUCHBASE_API
-lcb_io_opt_t *lcb_create_io_ops(lcb_io_ops_type_t type,
-                                void *cookie,
-                                lcb_error_t *error)
+lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
+                              const struct lcb_create_io_ops_st* options)
 {
-    lcb_io_opt_t *ret = NULL;
-    (void)cookie;
+    lcb_error_t ret = LCB_SUCCESS;
+    lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;
+
+    if (options != NULL) {
+        if (options->version != 0) {
+            return LCB_EINVAL;
+        }
+        type = options->v.v0.type;
+    }
+
     if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_WINSOCK) {
-        ret = lcb_create_winsock_io_opts();
-        if (ret == NULL) {
-            set_error(error, LCB_CLIENT_ENOMEM);
+        *io = lcb_create_winsock_io_opts();
+        if (*io == NULL) {
+            return LCB_CLIENT_ENOMEM;
         }
     } else {
-        set_error(error, LCB_NOT_SUPPORTED);
+        return LCB_NOT_SUPPORTED;
     }
 
-    return ret;
+    return LCB_SUCCESS;
 }

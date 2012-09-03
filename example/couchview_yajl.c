@@ -427,8 +427,7 @@ int main(int argc, char **argv)
     yajl_config(cookie.parser, yajl_allow_comments, 1);
     yajl_config(cookie.parser, yajl_dont_validate_strings, !force_utf8);
 
-    cookie.io = lcb_create_io_ops(LCB_IO_OPS_DEFAULT, NULL, NULL);
-    if (cookie.io == NULL) {
+    if (lcb_create_io_ops(&cookie.io, NULL) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
     }

@@ -155,9 +155,8 @@ public:
         }
     }
     bool create(void) {
-        struct lcb_io_opt_st *io;
-        io = lcb_create_io_ops(LCB_IO_OPS_DEFAULT, NULL, NULL);
-        if (!io) {
+        lcb_io_opt_t io;
+        if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
             std::cerr << "Failed to create an IO instance" << std::endl;
             return false;
         }
