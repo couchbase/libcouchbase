@@ -22,7 +22,7 @@ class Behavior : public ::testing::Test
 {
 public:
     virtual void SetUp() {
-        instance = lcb_create(NULL, NULL, NULL, NULL, NULL);
+        ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, NULL));
     }
 
     virtual void TearDown() {

@@ -52,6 +52,7 @@ static void setup(char **argv, const char *username, const char *password,
                   const char *bucket)
 {
     const char *endpoint;
+    struct lcb_create_st options;
 
     assert(session == NULL);
     assert(mock == NULL);
@@ -68,8 +69,14 @@ static void setup(char **argv, const char *username, const char *password,
     }
 
     endpoint = get_mock_http_server(mock);
-    session = lcb_create(endpoint, username, password, bucket, io);
-    if (session == NULL) {
+    memset(&options, 0, sizeof(options));
+    options.v.v0.host = endpoint;
+    options.v.v0.user = username;
+    options.v.v0.passwd = password;
+    options.v.v0.bucket = bucket;
+    options.v.v0.io = io;
+
+    if (lcb_create(&session, &options) != LCB_SUCCESS) {
         err_exit("Failed to create libcouchbase session");
     }
 
@@ -426,6 +433,7 @@ static lcb_error_t test_connect(char **argv, const char *username,
 {
     const char *endpoint;
     lcb_error_t rc;
+    struct lcb_create_st options;
 
     assert(session == NULL);
     assert(mock == NULL);
@@ -442,8 +450,15 @@ static lcb_error_t test_connect(char **argv, const char *username,
     }
 
     endpoint = get_mock_http_server(mock);
-    session = lcb_create(endpoint, username, password, bucket, io);
-    if (session == NULL) {
+
+    memset(&options, 0, sizeof(options));
+    options.v.v0.host = endpoint;
+    options.v.v0.user = username;
+    options.v.v0.passwd = password;
+    options.v.v0.bucket = bucket;
+    options.v.v0.io = io;
+
+    if (lcb_create(&session, &options) != LCB_SUCCESS) {
         err_exit("Failed to create libcouchbase session");
     }
 

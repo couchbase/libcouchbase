@@ -308,18 +308,6 @@ extern "C" {
     };
     typedef struct lcb_io_opt_st* lcb_io_opt_t;
 
-    struct lcb_create_io_ops_st {
-        int version;
-        union {
-            struct {
-                /** The predefined type you want to create */
-                lcb_io_ops_type_t type;
-                /** A cookie passed directly down to the underlying io ops */
-                void *cookie;
-            } v0;
-        } v;
-    };
-
     typedef enum {
         LCB_ASYNCHRONOUS = 0x00,
         LCB_SYNCHRONOUS = 0xff

@@ -403,6 +403,7 @@ int main(int argc, char **argv)
     handle_options(argc, argv);
     lcb_t instance;
     lcb_http_cmd_t cmd;
+    struct lcb_create_st options;
 
     if (strcmp(filename, "-") == 0) {
         output = stdout;
@@ -431,9 +432,16 @@ int main(int argc, char **argv)
         fprintf(stderr, "Failed to create IO instance\n");
         return 1;
     }
-    instance = lcb_create(host, username,
-                                passwd, bucket, cookie.io);
-    if (instance == NULL) {
+
+    memset(&options, 0, sizeof(options));
+
+    options.v.v0.host = host;
+    options.v.v0.user = username;
+    options.v.v0.passwd = passwd;
+    options.v.v0.bucket = bucket;
+    options.v.v0.io = cookie.io;
+
+    if (lcb_create(&instance, &options) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create libcouchbase instance\n");
         return 1;
     }

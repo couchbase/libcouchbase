@@ -65,23 +65,19 @@ extern "C" {
     /**
      * Create an instance of lcb.
      *
-     * @param hosts A list of hosts:port separated by ';' to the
-     *              administration port of the couchbase cluster. (ex:
-     *              "host1;host2:9000;host3" would try to connect to
-     *              host1 on port 8091, if that fails it'll connect to
-     *              host2 on port 9000 etc).
-     * @param user the username to use
-     * @param passwd The password
-     * @param bucket The bucket to connect to
-     * @param io the io handle to use
-     * @return A handle to lcb, or NULL if an error occured.
+     * Example:
+     * lcb_t instance;
+     * lcb_error_t err = lcb_create(&instance, NULL);
+     * if (err != LCB_SUCCESS) {
+     *   .. failed to create instance ..
+     *
+     * @param instance Where the instance should be returned
+     * @param optins How to create the libcouchbase instance
+     * @return LCB_SUCCESS on success
      */
     LIBCOUCHBASE_API
-    lcb_t lcb_create(const char *host,
-                     const char *user,
-                     const char *passwd,
-                     const char *bucket,
-                     struct lcb_io_opt_st *io);
+    lcb_error_t lcb_create(lcb_t *instance,
+                           const struct lcb_create_st *options);
 
 
     /**

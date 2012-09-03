@@ -37,6 +37,57 @@
 extern "C" {
 #endif
 
+    struct lcb_create_st {
+        int version;
+        union {
+            struct {
+                /**
+                 * hosts A list of hosts:port separated by ';' to the
+                 * administration port of the couchbase cluster. (ex:
+                 * "host1;host2:9000;host3" would try to connect to
+                 * host1 on port 8091, if that fails it'll connect to
+                 * host2 on port 9000 etc).
+                 */
+                const char *host;
+                /** user the username to use */
+                const char *user;
+                /** @param passwd The password */
+                const char *passwd;
+                /** @param bucket The bucket to connect to */
+                const char *bucket;
+                /** @param io the io handle to use */
+                struct lcb_io_opt_st *io;
+            } v0;
+        } v;
+
+#ifdef __cplusplus
+        lcb_create_st(const char *host = NULL,
+                      const char *user = NULL,
+                      const char *passwd = NULL,
+                      const char *bucket = NULL,
+                      struct lcb_io_opt_st *io = NULL) {
+            version = 0;
+            v.v0.host = host;
+            v.v0.user = user;
+            v.v0.passwd = passwd;
+            v.v0.bucket = bucket;
+            v.v0.io = io;
+        }
+#endif
+    };
+
+    struct lcb_create_io_ops_st {
+        int version;
+        union {
+            struct {
+                /** The predefined type you want to create */
+                lcb_io_ops_type_t type;
+                /** A cookie passed directly down to the underlying io ops */
+                void *cookie;
+            } v0;
+        } v;
+    };
+
     typedef struct lcb_get_cmd_st {
         int version;
         union {

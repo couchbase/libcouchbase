@@ -1362,13 +1362,13 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         }
     }
 
-    lcb_t instance = lcb_create(config.getHost(),
-                                config.getUser(),
-                                config.getPassword(),
-                                config.getBucket(),
-                                NULL);
-    if (instance == NULL) {
-        cerr << "Failed to create couchbase instance" << endl;
+    lcb_t instance;
+    struct lcb_create_st options(config.getHost(), config.getUser(),
+                                 config.getPassword(), config.getBucket());
+    lcb_error_t err = lcb_create(&instance, &options);
+    if (err != LCB_SUCCESS) {
+        cerr << "Failed to create couchbase instance: " << endl
+             << lcb_strerror(NULL, err) << endl;
         exit(EXIT_FAILURE);
     }
 

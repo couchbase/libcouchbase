@@ -54,10 +54,11 @@ void MockUnitTest::createConnection(lcb_t &instance)
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
     }
-    instance = lcb_create(http, "Administrator", "password",
+
+    lcb_create_st options(http, "Administrator", "password",
                           getenv("LCB_TEST_BUCKET"), io);
 
-    ASSERT_NE((lcb_t)NULL, instance);
+    ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
     (void)lcb_set_cookie(instance, io);
     (void)lcb_set_error_callback(instance, error_callback);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));

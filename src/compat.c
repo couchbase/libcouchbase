@@ -37,8 +37,11 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type,
     lcb_error_t ret = LCB_NOT_SUPPORTED;
     VBUCKET_CONFIG_HANDLE config;
 
-    *instance = lcb_create(NULL, NULL, NULL, NULL, io);
-    if (*instance == NULL) {
+    struct lcb_create_st cst;
+    memset(&cst, 0, sizeof(cst));
+    cst.v.v0.io = io;
+
+    if (lcb_create(instance, &cst) != LCB_SUCCESS) {
         return LCB_CLIENT_ENOMEM;
     }
 

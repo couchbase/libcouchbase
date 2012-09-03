@@ -151,24 +151,39 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
 }
 
 LIBCOUCHBASE_API
-lcb_t lcb_create(const char *host,
-                 const char *user,
-                 const char *passwd,
-                 const char *bucket,
-                 struct lcb_io_opt_st *io)
+lcb_error_t lcb_create(lcb_t *instance,
+                       const struct lcb_create_st *options)
 {
+    const char *host = NULL;
+    const char *user = NULL;
+    const char *passwd = NULL;
+    const char *bucket = NULL;
+    struct lcb_io_opt_st *io = NULL;
     char buffer[1024];
     lcb_ssize_t offset;
-    lcb_t ret;
+    lcb_t obj;
+
+    if (options != NULL) {
+        if (options->version != 0) {
+            return LCB_EINVAL;
+        }
+        host = options->v.v0.host;
+        user = options->v.v0.user;
+        passwd = options->v.v0.passwd;
+        bucket = options->v.v0.bucket;
+        io = options->v.v0.io;
+    }
 
     if (io == NULL) {
         lcb_io_opt_t ops;
-        struct lcb_create_io_ops_st options;
-        memset(&options, 0, sizeof(options));
-        options.v.v0.type = LCB_IO_OPS_DEFAULT;
-        if (lcb_create_io_ops(&ops, &options) != LCB_SUCCESS) {
+        struct lcb_create_io_ops_st copt;
+        lcb_error_t err;
+
+        memset(&copt, 0, sizeof(copt));
+        copt.v.v0.type = LCB_IO_OPS_DEFAULT;
+        if ((err = lcb_create_io_ops(&ops, &copt)) != LCB_SUCCESS) {
             /* You can't initialize the library without a io-handler! */
-            return NULL;
+            return err;
         }
         io = ops;
     }
@@ -182,19 +197,20 @@ lcb_t lcb_create(const char *host,
     }
 
     if (sasl_client_init(NULL) != SASL_OK) {
-        return NULL;
+        return LCB_EINTERNAL;
     }
 
-    if ((ret = calloc(1, sizeof(*ret))) == NULL) {
-        return NULL;
+    if ((obj = calloc(1, sizeof(*obj))) == NULL) {
+        return LCB_CLIENT_ENOMEM;
     }
-    lcb_initialize_packet_handlers(ret);
-    lcb_behavior_set_syncmode(ret, LCB_ASYNCHRONOUS);
-    lcb_behavior_set_ipv6(ret, LCB_IPV6_DISABLED);
+    *instance = obj;
+    lcb_initialize_packet_handlers(obj);
+    lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
+    lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
 
-    if (setup_boostrap_hosts(ret, host) == -1) {
-        free(ret);
-        return NULL;
+    if (setup_boostrap_hosts(obj, host) == -1) {
+        free(obj);
+        return LCB_EINVAL;
     }
 
     offset = snprintf(buffer, sizeof(buffer),
@@ -206,37 +222,37 @@ lcb_t lcb_create(const char *host,
         char base64[256];
         snprintf(cred, sizeof(cred), "%s:%s", user, passwd);
         if (lcb_base64_encode(cred, base64, sizeof(base64)) == -1) {
-            lcb_destroy(ret);
-            return NULL;
+            lcb_destroy(obj);
+            return LCB_EINTERNAL;
         }
 
-        ret->username = strdup(user);
-        ret->password = strdup(passwd);
+        obj->username = strdup(user);
+        obj->password = strdup(passwd);
         offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
                            "Authorization: Basic %s\r\n", base64);
     }
     offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset, "\r\n");
-    ret->http_uri = strdup(buffer);
+    obj->http_uri = strdup(buffer);
 
-    if (ret->http_uri == NULL) {
-        lcb_destroy(ret);
-        return NULL;
+    if (obj->http_uri == NULL) {
+        lcb_destroy(obj);
+        return LCB_CLIENT_ENOMEM;
     }
-    ret->timers = hashset_create();
+    obj->timers = hashset_create();
 
-    ret->sock = INVALID_SOCKET;
+    obj->sock = INVALID_SOCKET;
 
     /* No error has occurred yet. */
-    ret->last_error = LCB_SUCCESS;
+    obj->last_error = LCB_SUCCESS;
 
     /* setup io iops! */
-    ret->io = io;
-    ret->timeout.event = ret->io->create_timer(ret->io);
-    assert(ret->timeout.event);
+    obj->io = io;
+    obj->timeout.event = obj->io->create_timer(obj->io);
+    assert(obj->timeout.event);
 
-    lcb_set_timeout(ret, LCB_DEFAULT_TIMEOUT);
+    lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
 
-    return ret;
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API

@@ -161,10 +161,11 @@ public:
             return false;
         }
 
-        instance = lcb_create(config.getHost(), config.getUser(),
-                              config.getPasswd(), config.getBucket(), io);
+        struct lcb_create_st options(config.getHost(), config.getUser(),
+                                     config.getPasswd(), config.getBucket(),
+                                     io);
 
-        if (instance != NULL) {
+        if (lcb_create(&instance, &options) == LCB_SUCCESS) {
             (void)lcb_set_store_callback(instance, storageCallback);
             (void)lcb_set_get_callback(instance, getCallback);
             return true;

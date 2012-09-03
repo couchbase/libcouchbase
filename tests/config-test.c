@@ -88,6 +88,7 @@ static void smoke_test(void)
     const char *endpoint;
     const char *argv[] = {"--nodes", "20", NULL};
     lcb_t instance;
+    struct lcb_create_st options;
 
     mock = start_mock_server((char **)argv);
     if (mock == NULL) {
@@ -100,8 +101,13 @@ static void smoke_test(void)
     }
 
     endpoint = get_mock_http_server(mock);
-    instance = lcb_create(endpoint, "Administrator", "password", NULL, io);
-    if (instance == NULL) {
+    memset(&options, 0, sizeof(options));
+    options.v.v0.host = endpoint;
+    options.v.v0.user = "Administrator";
+    options.v.v0.passwd = "password";
+    options.v.v0.io = io;
+
+    if (lcb_create(&instance, &options) != LCB_SUCCESS) {
         err_exit("Failed to create libcouchbase instance");
     }
 
@@ -145,7 +151,7 @@ static void buffer_relocation_test(void)
     const lcb_store_cmd_t *storecmds[] = { &storecmd };
     lcb_get_cmd_t getcmd;
     const lcb_get_cmd_t *getcmds[] = { &getcmd };
-
+    struct lcb_create_st options;
 
     mock = start_mock_server((char **)argv);
     if (mock == NULL) {
@@ -158,8 +164,13 @@ static void buffer_relocation_test(void)
     }
 
     endpoint = get_mock_http_server(mock);
-    instance = lcb_create(endpoint, "Administrator", "password", NULL, io);
-    if (instance == NULL) {
+    memset(&options, 0, sizeof(options));
+    options.v.v0.host = endpoint;
+    options.v.v0.user = "Administrator";
+    options.v.v0.passwd = "password";
+    options.v.v0.io = io;
+
+    if (lcb_create(&instance, &options) != LCB_SUCCESS) {
         err_exit("Failed to create libcouchbase instance");
     }
 
