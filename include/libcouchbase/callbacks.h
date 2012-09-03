@@ -138,13 +138,8 @@ extern "C" {
      *
      * @param instance the instance performing the operation
      * @param cookie the cookie associated with with the command
-     * @param server_endpoint The name of the server in the cluster
-     *              this response is from
      * @param error The status of the operation
-     * @parem key The name of the stat code
-     * @param nkey The number of bytes in the stat code
-     * @param bytes The value for the stat
-     * @param nbytes The number of bytes in the stat value
+     * @param resp response data
      */
     typedef void (*lcb_stat_callback)(lcb_t instance,
                                       const void *cookie,
@@ -153,15 +148,12 @@ extern "C" {
 
 
     /**
-     * The callback fcunction for a version request
+     * The callback function for a version request
      *
      * @param instance the instance performing the operation
      * @param cookie the cookie associated with with the command
-     * @param server_endpoint The name of the server in the cluster
-     *              this response is from
      * @param error The status of the operation
-     * @parem vstring Pointer to the version string
-     * @param nvstring The number of bytes in the nvstring
+     * @param resp response data
      */
     typedef void (*lcb_version_callback)(lcb_t instance,
                                          const void *cookie,

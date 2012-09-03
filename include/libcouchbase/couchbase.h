@@ -358,7 +358,6 @@ extern "C" {
      * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param operation constraints for the storage operation (add/replace etc)
      * @param num the total number of elements in the commands array
      * @param commands the array containing the items to store
      * @return The status of the operation
@@ -392,10 +391,6 @@ extern "C" {
      * @param instance the handle to lcb
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param create set to true if you want the object to be created if it
-     *               doesn't exist.
-     * @param delta The amount to add / subtract
-     * @param initial The initial value of the object if we create it
      * @param num the total number of elements in the commands array
      * @param commands the array containing the items to operate on
      * @return Status of the operation.
@@ -442,6 +437,9 @@ extern "C" {
      *   lcb_remove_cmd_t* commands[] = { remove };
      *   lcb_remove(instance, NULL, 1, commands);
      *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie A cookie passed to all of the notifications
+     *                       from this command
      * @param num the total number of elements in the commands array
      * @param commands the array containing the items to remove
      */
@@ -464,11 +462,20 @@ extern "C" {
      * be zero when some server responds with error. In latter case server
      * endpoint argument will indicate the server address.
      *
+     * Example:
+     *   lcb_server_stats_cmd_t *cmd = calloc(1, sizeof(*cmd));
+     *   cmd->version = 0;
+     *   cmd->v.v0.name = "tap";
+     *   cmd->v.v0.nname = strlen(cmd->v.v0.nname);
+     *   lcb_server_stats_cmd_t* commands[] = { cmd };
+     *   lcb_server_stats(instance, NULL, 1, commands);
+     *
+     *
      * @param instance the instance used to batch the requests from
      * @param command_cookie a cookie passed to all of the notifications
      *                       from this command
      * @param num the total number of elements in the commands array
-     * @param commands the array containing the items to remove
+     * @param commands the array containing the statistic to get
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
@@ -484,9 +491,18 @@ extern "C" {
      * When all server versions have been received, the callback is invoked
      * with the server endpoint argument set to NULL
      *
-     * @param instance the handle to lcb
-     * @param command_cookie a cookie passed to each invocation of the callback
-     *                          from this command
+     * Example
+     *   lcb_server_version_cmd_t *cmd = calloc(1, sizeof(*cmd));
+     *   cmd->version = 0;
+     *   lcb_server_version_cmd_t* commands[] = { cmd };
+     *   lcb_server_versions(instance, NULL, 1, commands);
+     *
+     * @param instance the instance used to batch the requests from
+     * @param command_cookie a cookie passed to all of the notifications
+     *                       from this command
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the version commands
+     * @return The status of the operation
      */
     LIBCOUCHBASE_API
     lcb_error_t lcb_server_versions(lcb_t instance,
@@ -498,12 +514,19 @@ extern "C" {
     /**
      * Set the loglevel on the servers
      *
+     * Example
+     *   lcb_verbosity_cmd_t *cmd = calloc(1, sizeof(*cmd));
+     *   cmd->version = 0;
+     *   cmd->v.v0.level = LCB_VERBOSITY_WARNING;
+     *   lcb_verbosity_cmd_t* commands[] = { cmd };
+     *   lcb_set_verbosity(instance, NULL, 1, commands);
+     *
+     *
      * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param server The server to set the verbosity level on (NULL == all servers)
-     * @param level the new verbosity level to set on the desired memcached servers
-     *              in the cluster
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the verbosity commands
      * @return The status of the operation.
      */
     LIBCOUCHBASE_API
@@ -515,12 +538,19 @@ extern "C" {
     /**
      * Flush the entire couchbase cluster!
      *
-     * @param instance the handle to lcb
+     * Example
+     *   lcb_flush_cmd_t *cmd = calloc(1, sizeof(*cmd));
+     *   cmd->version = 0;
+     *   lcb_flush_cmd_t* commands[] = { cmd };
+     *   lcb_flush(instance, NULL, 1, commands);
+     *
+     *
+     * @param instance the instance used to batch the requests from
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
-     * @param num number of commands in the commands array
-     * @param commands the commands to send
-     * @return Status of the operation.
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the flush commands
+     * @return The status of the operation.
      */
     LIBCOUCHBASE_API
     lcb_error_t lcb_flush(lcb_t instance, const void *cookie,
