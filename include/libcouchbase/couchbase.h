@@ -656,6 +656,17 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     lcb_int32_t lcb_get_num_replicas(lcb_t instance);
+
+    /**
+     * Return a NULL-terminated list of 0-terminated strings consisting of
+     * node hostnames:admin_ports for the entire cluster.
+     * The storage duration of this list is only valid until the
+     * next call to a libcouchbase function and/or when returning control to
+     * libcouchbase' event loop.
+     */
+    LIBCOUCHBASE_API
+    const char * const * lcb_get_server_list(lcb_t instance);
+
 #ifdef __cplusplus
 }
 #endif

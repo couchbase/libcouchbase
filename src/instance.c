@@ -71,6 +71,15 @@ lcb_int32_t lcb_get_num_replicas(lcb_t instance)
     }
 }
 
+/**
+ * Return a NULL-terminated list of servers (host:port) for the entire cluster.
+ */
+LIBCOUCHBASE_API
+const char * const * lcb_get_server_list(lcb_t instance)
+{
+    return instance->backup_nodes;
+}
+
 static void setup_current_host(lcb_t instance, const char *host)
 {
     char *ptr;
