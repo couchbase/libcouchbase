@@ -122,6 +122,34 @@ void setup_lcb_observe_resp_t(lcb_observe_resp_t *resp,
     resp->v.v0.ttr = ttr;
 }
 
+void setup_lcb_server_stat_resp_t(lcb_server_stat_resp_t *resp,
+                                  const char *server_endpoint,
+                                  const void *key,
+                                  lcb_size_t nkey,
+                                  const void *bytes,
+                                  lcb_size_t nbytes)
+{
+    memset(resp, 0, sizeof(*resp));
+    resp->version = 0;
+    resp->v.v0.server_endpoint = server_endpoint;
+    resp->v.v0.key = key;
+    resp->v.v0.nkey = nkey;
+    resp->v.v0.bytes = bytes;
+    resp->v.v0.nbytes = nbytes;
+}
+
+void setup_lcb_server_version_resp_t(lcb_server_version_resp_t *resp,
+                                     const char *server_endpoint,
+                                     const char *vstring,
+                                     lcb_size_t nvstring)
+{
+    memset(resp, 0, sizeof(*resp));
+    resp->version = 0;
+    resp->v.v0.server_endpoint = server_endpoint;
+    resp->v.v0.vstring = vstring;
+    resp->v.v0.nvstring = nvstring;
+}
+
 static lcb_error_t map_error(protocol_binary_response_status in)
 {
     switch (in) {
@@ -544,6 +572,7 @@ static void stat_response_handler(lcb_server_t *server,
     lcb_uint16_t nkey;
     lcb_uint32_t nvalue;
     const char *key, *value;
+    lcb_server_stat_resp_t resp;
 
     if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         nkey = ntohs(res->response.keylen);
@@ -551,25 +580,32 @@ static void stat_response_handler(lcb_server_t *server,
             if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
                                                res->response.opaque, server) < 0) {
                 /* notify client that data is ready */
-                root->callbacks.stat(root, command_data->cookie, NULL,
-                                     LCB_SUCCESS, NULL, 0, NULL, 0);
+                setup_lcb_server_stat_resp_t(&resp, NULL, NULL, 0, NULL, 0);
+                root->callbacks.stat(root, command_data->cookie,
+                                     LCB_SUCCESS, &resp);
             }
             return;
         }
         key = (const char *)res + sizeof(res->bytes);
         nvalue = ntohl(res->response.bodylen) - nkey;
         value = key + nkey;
-        root->callbacks.stat(root, command_data->cookie, server->authority,
-                             map_error(status), key, nkey, value, nvalue);
+
+        setup_lcb_server_stat_resp_t(&resp, server->authority, key,
+                                     nkey, value, nvalue);
+        root->callbacks.stat(root, command_data->cookie,
+                             map_error(status), &resp);
     } else {
-        root->callbacks.stat(root, command_data->cookie, server->authority,
-                             map_error(status), NULL, 0, NULL, 0);
+        setup_lcb_server_stat_resp_t(&resp, server->authority,
+                                     NULL, 0, NULL, 0);
+        root->callbacks.stat(root, command_data->cookie,
+                             map_error(status), &resp);
 
         /* run callback with null-null-null to signal the end of transfer */
         if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
                                            res->response.opaque, server) < 0) {
-            root->callbacks.stat(root, command_data->cookie, NULL,
-                                 LCB_SUCCESS, NULL, 0, NULL, 0);
+            setup_lcb_server_stat_resp_t(&resp, NULL, NULL, 0, NULL, 0);
+            root->callbacks.stat(root, command_data->cookie,
+                                 LCB_SUCCESS, &resp);
         }
     }
 }
@@ -600,6 +636,7 @@ static void version_response_handler(lcb_server_t *server,
     lcb_uint16_t status = ntohs(res->response.status);
     lcb_uint32_t nvstring = ntohl(res->response.bodylen);
     const char *vstring;
+    lcb_server_version_resp_t resp;
 
     if (nvstring) {
         vstring = (const char *)res + sizeof(res->bytes);
@@ -607,12 +644,14 @@ static void version_response_handler(lcb_server_t *server,
         vstring = NULL;
     }
 
-    root->callbacks.version(root, command_data->cookie, server->authority, map_error(status),
-                            vstring, nvstring);
+    setup_lcb_server_version_resp_t(&resp, server->authority, vstring, nvstring);
+    root->callbacks.version(root, command_data->cookie,
+                            map_error(status), &resp);
 
     if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_VERSION,
                                        res->response.opaque, server) < 0) {
-        root->callbacks.version(root, command_data->cookie, NULL, LCB_SUCCESS, NULL, 0);
+        memset(&resp, 0, sizeof(resp));
+        root->callbacks.version(root, command_data->cookie, LCB_SUCCESS, &resp);
     }
 
 }
@@ -785,36 +824,24 @@ static void dummy_error_callback(lcb_t instance,
 
 static void dummy_stat_callback(lcb_t instance,
                                 const void *cookie,
-                                const char *server_endpoint,
                                 lcb_error_t error,
-                                const void *key,
-                                lcb_size_t nkey,
-                                const void *value,
-                                lcb_size_t nvalue)
+                                const lcb_server_stat_resp_t *resp)
 {
     (void)instance;
     (void)error;
     (void)cookie;
-    (void)server_endpoint;
-    (void)key;
-    (void)nkey;
-    (void)value;
-    (void)nvalue;
+    (void)resp;
 }
 
 static void dummy_version_callback(lcb_t instance,
                                    const void *cookie,
-                                   const char *server_endpoint,
                                    lcb_error_t error,
-                                   const char *vstring,
-                                   lcb_size_t nvstring)
+                                   const lcb_server_version_resp_t *resp)
 {
     (void)instance;
     (void)cookie;
-    (void)server_endpoint;
+    (void)resp;
     (void)error;
-    (void)vstring;
-    (void)nvstring;
 }
 
 static void dummy_get_callback(lcb_t instance,

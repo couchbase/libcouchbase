@@ -63,6 +63,8 @@ void lcb_purge_single_server(lcb_server_t *server,
             lcb_unlock_resp_t unlock;
             lcb_arithmetic_resp_t arithmetic;
             lcb_observe_resp_t observe;
+            lcb_server_stat_resp_t stats;
+            lcb_server_version_resp_t versions;
         } resp;
 
         nr = ringbuffer_peek(cookies, &ct, sizeof(ct));
@@ -195,15 +197,18 @@ void lcb_purge_single_server(lcb_server_t *server,
             break;
 
         case PROTOCOL_BINARY_CMD_STAT:
-            root->callbacks.stat(root, ct.cookie, server->authority,
-                                 error, NULL, 0, NULL, 0);
+            setup_lcb_server_stat_resp_t(&resp.stats, server->authority,
+                                         NULL, 0, NULL, 0);
+
+            root->callbacks.stat(root, ct.cookie, error, &resp.stats);
 
             if (lcb_lookup_server_with_command(root,
                                                PROTOCOL_BINARY_CMD_STAT,
                                                req.request.opaque,
                                                server) < 0) {
-                root->callbacks.stat(root, ct.cookie, NULL,
-                                     error, NULL, 0, NULL, 0);
+                setup_lcb_server_stat_resp_t(&resp.stats,
+                                             NULL, NULL, 0, NULL, 0);
+                root->callbacks.stat(root, ct.cookie, error, &resp.stats);
             }
             break;
 
@@ -219,13 +224,15 @@ void lcb_purge_single_server(lcb_server_t *server,
             break;
 
         case PROTOCOL_BINARY_CMD_VERSION:
-            root->callbacks.version(root, ct.cookie, server->authority,
-                                    error, NULL, 0);
+            setup_lcb_server_version_resp_t(&resp.versions, server->authority,
+                                            NULL, 0);
+            root->callbacks.version(root, ct.cookie, error, &resp.versions);
             if (lcb_lookup_server_with_command(root,
                                                PROTOCOL_BINARY_CMD_VERSION,
                                                req.request.opaque,
                                                server) < 0) {
-                root->callbacks.version(root, ct.cookie, NULL, error, NULL, 0);
+                setup_lcb_server_version_resp_t(&resp.versions, NULL, NULL, 0);
+                root->callbacks.version(root, ct.cookie, error, &resp.versions);
             }
             break;
 

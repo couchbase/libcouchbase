@@ -188,11 +188,12 @@ static void touch_callback(lcb_t instance,
 
 static void version_callback(lcb_t instance,
                              const void *cookie,
-                             const char *server_endpoint,
                              lcb_error_t error,
-                             const char *vstring,
-                             lcb_size_t nvstring)
+                             const lcb_server_version_resp_t *resp)
 {
+    const char *server_endpoint = resp->v.v0.server_endpoint;
+    const char *vstring = resp->v.v0.vstring;
+    lcb_size_t nvstring = resp->v.v0.nvstring;
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
     char *str;
@@ -522,9 +523,12 @@ static void test_version1(void)
 {
     lcb_error_t err;
     struct rvbuf rv;
+    lcb_server_version_cmd_t cmd;
+    const lcb_server_version_cmd_t* cmds[] = { &cmd };
+    memset(&cmd, 0, sizeof(cmd));
 
     (void)lcb_set_version_callback(session, version_callback);
-    err = lcb_server_versions(session, &rv);
+    err = lcb_server_versions(session, &rv, 1, cmds);
 
     assert(err == LCB_SUCCESS);
 

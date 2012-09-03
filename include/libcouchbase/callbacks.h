@@ -148,12 +148,8 @@ extern "C" {
      */
     typedef void (*lcb_stat_callback)(lcb_t instance,
                                       const void *cookie,
-                                      const char *server_endpoint,
                                       lcb_error_t error,
-                                      const void *key,
-                                      lcb_size_t nkey,
-                                      const void *bytes,
-                                      lcb_size_t nbytes);
+                                      const lcb_server_stat_resp_t *resp);
 
 
     /**
@@ -169,10 +165,8 @@ extern "C" {
      */
     typedef void (*lcb_version_callback)(lcb_t instance,
                                          const void *cookie,
-                                         const char *server_endpoint,
                                          lcb_error_t error,
-                                         const char *vstring,
-                                         lcb_size_t nvstring);
+                                         const lcb_server_version_resp_t *resp);
 
     /**
      * The error callback called when we don't have a request context.

@@ -43,21 +43,30 @@ static void error_callback(lcb_t instance,
 
 static void stat_callback(lcb_t instance,
                           const void *command_cookie,
-                          const char *server_endpoint,
                           lcb_error_t error,
-                          const void *key,
-                          lcb_size_t nkey,
-                          const void *value,
-                          lcb_size_t nvalue)
+                          const lcb_server_stat_resp_t *resp)
 {
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.stat(instance, command_cookie, server_endpoint,
-                      error, key, nkey, value, nvalue);
+    c->callbacks.stat(instance, command_cookie, error, resp);
     restore_wrapping_env(instance, c, error);
     lcb_maybe_breakout(instance);
 }
+
+static void version_callback(lcb_t instance,
+                             const void *command_cookie,
+                             lcb_error_t error,
+                             const lcb_server_version_resp_t *resp)
+{
+    struct user_cookie *c = (void *)instance->cookie;
+
+    restore_user_env(instance);
+    c->callbacks.version(instance, command_cookie, error, resp);
+    restore_wrapping_env(instance, c, error);
+    lcb_maybe_breakout(instance);
+}
+
 
 static void get_callback(lcb_t instance,
                          const void *cookie,
@@ -228,6 +237,7 @@ static void restore_wrapping_env(lcb_t instance,
     instance->callbacks.arithmetic = arithmetic_callback;
     instance->callbacks.remove = remove_callback;
     instance->callbacks.stat = stat_callback;
+    instance->callbacks.version = version_callback;
     instance->callbacks.touch = touch_callback;
     instance->callbacks.flush = flush_callback;
     instance->callbacks.error = error_callback;

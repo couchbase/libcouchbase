@@ -489,17 +489,20 @@ extern "C" {
 
     static void timeout_stat_callback(lcb_t instance,
                                       const void *cookie,
-                                      const char *server_endpoint,
                                       lcb_error_t error,
-                                      const void *key,
-                                      lcb_size_t nkey,
-                                      const void *bytes,
-                                      lcb_size_t nbytes)
+                                      const lcb_server_stat_resp_t *resp)
     {
         lcb_error_t err;
         lcb_io_opt_t io = (lcb_io_opt_t)cookie;
         char *statkey;
         lcb_size_t nstatkey;
+
+        ASSERT_EQ(0, resp->version);
+        const char *server_endpoint = resp->v.v0.server_endpoint;
+        const void *key = resp->v.v0.key;
+        lcb_size_t nkey = resp->v.v0.nkey;
+        const void *bytes = resp->v.v0.bytes;
+        lcb_size_t nbytes = resp->v.v0.nbytes;
 
         ASSERT_EQ(LCB_SUCCESS, error);
         if (server_endpoint != NULL) {
@@ -532,7 +535,11 @@ TEST_F(MockUnitTest, testTimeout)
     (void)lcb_set_store_callback(instance, timeout_store_callback);
 
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
-    ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, NULL, 0));
+
+    lcb_server_stats_cmd_t stat;
+    lcb_server_stats_cmd_t* commands[] = {&stat };
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, 1, commands));
     io->run_event_loop(io);
     lcb_destroy(instance);
 }

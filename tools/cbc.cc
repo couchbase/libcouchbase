@@ -276,13 +276,15 @@ extern "C" {
 
     static void stat_callback(lcb_t instance,
                               const void *,
-                              const char *server_endpoint,
                               lcb_error_t error,
-                              const void *key,
-                              lcb_size_t nkey,
-                              const void *value,
-                              lcb_size_t nvalue)
+                              const lcb_server_stat_resp_t *resp)
     {
+        const char *server_endpoint = resp->v.v0.server_endpoint;
+        const void *key = resp->v.v0.key;
+        lcb_size_t nkey = resp->v.v0.nkey;
+        const void *value = resp->v.v0.bytes;
+        lcb_size_t nvalue = resp->v.v0.nbytes;
+
         if (error == LCB_SUCCESS) {
             if (nkey > 0) {
                 cout << server_endpoint << "\t";
@@ -982,7 +984,9 @@ static bool stats_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
         lcb_error_t err;
-        err = lcb_server_stats(instance, NULL, NULL, 0);
+        lcb_server_stats_cmd_t stats;
+        lcb_server_stats_cmd_t *commands[] = { &stats };
+        err = lcb_server_stats(instance, NULL, 1, commands);
         if (err != LCB_SUCCESS) {
             cerr << "Failed to request stats: " << endl
                  << lcb_strerror(instance, err) << endl;
@@ -992,7 +996,11 @@ static bool stats_impl(lcb_t instance, list<string> &keys)
         for (list<string>::iterator ii = keys.begin(); ii != keys.end(); ++ii) {
             string key = *ii;
             lcb_error_t err;
-            err = lcb_server_stats(instance, NULL, key.c_str(), key.length());
+
+            lcb_server_stats_cmd_t stats(key.c_str());
+            lcb_server_stats_cmd_t *commands[] = { &stats };
+
+            err = lcb_server_stats(instance, NULL, 1, commands);
             if (err != LCB_SUCCESS) {
                 cerr << "Failed to request stats: " << endl
                      << lcb_strerror(instance, err) << endl;

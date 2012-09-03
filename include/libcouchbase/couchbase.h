@@ -456,15 +456,15 @@ extern "C" {
      * @param instance the instance used to batch the requests from
      * @param command_cookie a cookie passed to all of the notifications
      *                       from this command
-     * @param arg the argument of the STATS command.
-     * @param narg the number of bytes in the argument.
+     * @param num the total number of elements in the commands array
+     * @param commands the array containing the items to remove
      * @return The status of the operation
      */
     LIBCOUCHBASE_API
     lcb_error_t lcb_server_stats(lcb_t instance,
                                  const void *command_cookie,
-                                 const void *arg,
-                                 lcb_size_t narg);
+                                 lcb_size_t num,
+                                 const lcb_server_stats_cmd_t *const *commands);
 
     /**
      * Request server versions. The callback will be invoked with the
@@ -478,7 +478,10 @@ extern "C" {
      *                          from this command
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_server_versions(lcb_t instance, const void *command_cookie);
+    lcb_error_t lcb_server_versions(lcb_t instance,
+                                    const void *command_cookie,
+                                    lcb_size_t num,
+                                    const lcb_server_version_cmd_t * const *commands);
 
 
     /**

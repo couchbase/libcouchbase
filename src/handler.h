@@ -36,4 +36,17 @@ void setup_lcb_observe_resp_t(lcb_observe_resp_t *resp,
                               int from_master,
                               lcb_time_t ttp,
                               lcb_time_t ttr);
+void setup_lcb_server_stat_resp_t(lcb_server_stat_resp_t *resp,
+                                  const char *server_endpoint,
+                                  const void *key,
+                                  lcb_size_t nkey,
+                                  const void *bytes,
+                                  lcb_size_t nbytes);
+void setup_lcb_server_version_resp_t(lcb_server_version_resp_t *resp,
+                                     const char *server_endpoint,
+                                     const char *vstring,
+                                     lcb_size_t nvstring);
+
+
+
 #endif

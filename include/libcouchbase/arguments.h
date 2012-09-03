@@ -336,6 +336,47 @@ extern "C" {
 #endif
     } lcb_http_cmd_t;
 
+    typedef struct lcb_server_stats_cmd_st {
+        int version;
+        union {
+            struct {
+                /** The name of the stats group to get */
+                const void *name;
+                /** The number of bytes in name */
+                lcb_size_t nname;
+            } v0;
+        } v;
+
+#ifdef __cplusplus
+        lcb_server_stats_cmd_st(const char *name = NULL,
+                                lcb_size_t nname = 0) {
+            version = 0;
+            v.v0.name = name;
+            v.v0.nname = nname;
+            if (name != NULL && nname == 0) {
+                v.v0.nname = strlen(name);
+            } else {
+                v.v0.nname = nname;
+            }
+        }
+#endif
+    } lcb_server_stats_cmd_t;
+
+    typedef struct lcb_server_version_cmd_st {
+        int version;
+        union {
+            struct {
+                const void *notused;
+            } v0;
+        } v;
+
+#ifdef __cplusplus
+        lcb_server_version_cmd_st() {
+            memset(this, 0, sizeof(*this));
+        }
+#endif
+    } lcb_server_version_cmd_t;
+
     typedef struct {
         int version;
         union {
@@ -433,6 +474,31 @@ extern "C" {
             } v0;
         } v;
     } lcb_http_resp_t;
+
+    typedef struct lcb_server_stat_resp_st {
+        int version;
+        union {
+            struct {
+                const char *server_endpoint;
+                const void *key;
+                lcb_size_t nkey;
+                const void *bytes;
+                lcb_size_t nbytes;
+            } v0;
+        } v;
+    } lcb_server_stat_resp_t;
+
+    typedef struct lcb_server_version_resp_st {
+        int version;
+        union {
+            struct {
+                const char *server_endpoint;
+                const char *vstring;
+                lcb_size_t nvstring;
+            } v0;
+        } v;
+    } lcb_server_version_resp_t;
+
 
 #ifdef __cplusplus
 }
