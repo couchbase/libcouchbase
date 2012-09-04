@@ -577,7 +577,7 @@ extern "C" {
      *   callbacks (data/complete).
      *
      * Example: Fetch first 10 docs from '_design/test/_view/all' view
-     *   lcb_error_t err;
+     *   lcb_http_request_t req;
      *   lcb_http_cmd_t *cmd = calloc(1, sizeof(lcb_http_cmd_t));
      *   cmd->version = 0;
      *   cmd->v.v0.path = "_design/test/_view/all?limit=10";
@@ -587,11 +587,13 @@ extern "C" {
      *   cmd->v.v0.method = LCB_HTTP_METHOD_GET;
      *   cmd->v.v0.chunked = 1;
      *   cmd->v.v0.content_type = "application/json";
-     *   lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW,
-     *                         &cmd, &err);
+     *   lcb_error_t err = lcb_make_http_request(instance, NULL,
+     *                         LCB_HTTP_TYPE_VIEW, &cmd, &req);
+     *   if (err != LCB_SUCCESS) {
+     *     .. failed to schedule request ..
      *
      * Example: The same as above but with POST filter
-     *   lcb_error_t err;
+     *   lcb_http_request_t req;
      *   lcb_http_cmd_t *cmd = calloc(1, sizeof(lcb_http_cmd_t));
      *   cmd->version = 0;
      *   cmd->v.v0.path = "_design/test/_view/all?limit=10";
@@ -601,11 +603,13 @@ extern "C" {
      *   cmd->v.v0.method = LCB_HTTP_METHOD_POST;
      *   cmd->v.v0.chunked = 1;
      *   cmd->v.v0.content_type = "application/json";
-     *   lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW,
-     *                         &cmd, &err);
+     *   lcb_error_t err = lcb_make_http_request(instance, NULL,
+     *                         LCB_HTTP_TYPE_VIEW, &cmd, &req);
+     *   if (err != LCB_SUCCESS) {
+     *     .. failed to schedule request ..
      *
      * Example: Delete bucket via REST management API
-     *   lcb_error_t err;
+     *   lcb_http_request_t req;
      *   lcb_http_cmd_t cmd;
      *   cmd->version = 0;
      *   cmd.v.v0.path = query.c_str();
@@ -615,22 +619,24 @@ extern "C" {
      *   cmd.v.v0.method = LCB_HTTP_METHOD_DELETE;
      *   cmd.v.v0.chunked = false;
      *   cmd.v.v0.content_type = "application/x-www-form-urlencoded";
-     *   lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT,
-     *                         &cmd, &err);
+     *   lcb_error_t err = lcb_make_http_request(instance, NULL,
+     *                         LCB_HTTP_TYPE_MANAGEMENT, &cmd, &req);
+     *   if (err != LCB_SUCCESS) {
+     *     .. failed to schedule request ..
      *
      * @param instance The handle to lcb
      * @param command_cookie A cookie passed to all of the notifications
      *                       from this command
      * @param type The type of the request needed.
      * @param cmd The struct describing the command options
-     * @param error Where to store information about why creation failed
+     * @param request Where to store request handle
      */
     LIBCOUCHBASE_API
-    lcb_http_request_t lcb_make_http_request(lcb_t instance,
-                                             const void *command_cookie,
-                                             lcb_http_type_t type,
-                                             const lcb_http_cmd_t *cmd,
-                                             lcb_error_t *error);
+    lcb_error_t lcb_make_http_request(lcb_t instance,
+                                      const void *command_cookie,
+                                      lcb_http_type_t type,
+                                      const lcb_http_cmd_t *cmd,
+                                      lcb_http_request_t *request);
 
     /**
      * Cancel HTTP request (view or management API). This function could be

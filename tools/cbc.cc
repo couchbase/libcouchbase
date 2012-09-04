@@ -826,7 +826,7 @@ static bool view_impl(lcb_t instance, string &query, string &data,
     cmd.v.v0.method = method;
     cmd.v.v0.chunked = chunked;
     cmd.v.v0.content_type = "application/json";
-    lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW, &cmd, &rc);
+    rc = lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW, &cmd, NULL);
     if (rc != LCB_SUCCESS) {
         cerr << "Failed to send requests:" << endl
              << lcb_strerror(instance, rc) << endl;
@@ -848,7 +848,7 @@ static bool admin_impl(lcb_t instance, string &query, string &data,
     cmd.v.v0.method = method;
     cmd.v.v0.chunked = chunked;
     cmd.v.v0.content_type = "application/x-www-form-urlencoded";
-    lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, &rc);
+    rc = lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, NULL);
     if (rc != LCB_SUCCESS) {
         cerr << "Failed to send requests: " << endl
              << lcb_strerror(instance, rc) << endl;
@@ -872,7 +872,7 @@ static bool bucket_delete_impl(lcb_t instance, list<string> &names)
         cmd.v.v0.method = LCB_HTTP_METHOD_DELETE;
         cmd.v.v0.chunked = false;
         cmd.v.v0.content_type = "application/x-www-form-urlencoded";
-        lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, &rc);
+        rc = lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, NULL);
         if (rc != LCB_SUCCESS) {
             cerr << "Failed to send requests: " << endl
                  << lcb_strerror(instance, rc) << endl;
@@ -913,7 +913,7 @@ static bool bucket_create_impl(lcb_t instance, list<string> &names,
         cmd.v.v0.method = LCB_HTTP_METHOD_POST;
         cmd.v.v0.chunked = false;
         cmd.v.v0.content_type = "application/x-www-form-urlencoded";
-        lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, &rc);
+        rc = lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, NULL);
         if (rc != LCB_SUCCESS) {
             cerr << "Failed to send requests: " << endl
                  << lcb_strerror(instance, rc) << endl;
