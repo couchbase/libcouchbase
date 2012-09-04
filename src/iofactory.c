@@ -29,6 +29,7 @@ struct plugin_st {
 };
 
 static lcb_error_t get_create_func(const char *image,
+                                   const char *symbol,
                                    struct plugin_st *plugin)
 {
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
@@ -37,10 +38,11 @@ static lcb_error_t get_create_func(const char *image,
     }
 
     plugin->func.create = NULL;
-    plugin->func.voidptr = dlsym(dlhandle, "lcb_create_libevent_io_opts");
+    plugin->func.voidptr = dlsym(dlhandle, symbol);
     if (plugin->func.voidptr == NULL) {
         dlclose(dlhandle);
         dlhandle = NULL;
+        return LCB_ERROR;
     } else {
         plugin->dlhandle = dlhandle;
     }
@@ -52,6 +54,8 @@ static lcb_error_t get_create_func(const char *image,
 #else
 #define PLUGIN_SO(NAME) "libcouchbase_"NAME".so.1"
 #endif
+
+#define PLUGIN_SYMBOL(NAME) "lcb_create_"NAME"_io_opts"
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
@@ -71,32 +75,30 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
 
     if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_LIBEVENT) {
         struct plugin_st plugin;
+        struct lcb_io_opt_st *iop = NULL;
+
         memset(&plugin, 0, sizeof(plugin));
         /* search definition in main program */
-        ret = get_create_func(NULL, &plugin);
+        ret = get_create_func(NULL, PLUGIN_SYMBOL("libevent"), &plugin);
 
         if (ret != LCB_SUCCESS) {
-            return ret;
-        }
-
-#ifndef LCB_LIBEVENT_PLUGIN_EMBED
-        if (plugin.func.create == NULL) {
-            ret = get_create_func(PLUGIN_SO("libevent"), &plugin);
-        }
-#endif
-        if (ret != LCB_SUCCESS) {
-            return ret;
-        }
-
-        if (plugin.func.create != NULL) {
-            *io = plugin.func.create(cookie);
-            if (*io == NULL) {
-                return LCB_CLIENT_ENOMEM;
-            } else {
-                (*io)->dlhandle = plugin.dlhandle;
+            if (plugin.func.create == NULL) {
+                ret = get_create_func(PLUGIN_SO("libevent"),
+                                      PLUGIN_SYMBOL("libevent"),
+                                      &plugin);
+            }
+            if (ret != LCB_SUCCESS) {
+                return ret;
             }
         }
 
+        iop = plugin.func.create(cookie);
+        if (iop == NULL) {
+            return LCB_CLIENT_ENOMEM;
+        } else {
+            iop->dlhandle = plugin.dlhandle;
+        }
+        *io = iop;
     } else {
         return LCB_NOT_SUPPORTED;
     }
