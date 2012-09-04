@@ -41,16 +41,7 @@
 #undef htonl
 #endif
 
-struct mock_server_info {
-    pid_t pid;
-    char *http;
-    in_port_t port;
-    struct sockaddr_storage storage;
-    int sock;
-    int client;
-};
-
-static int create_monitor(struct mock_server_info *info)
+static int create_monitor(struct test_server_info *info)
 {
     struct addrinfo hints, *next, *ai;
     int error;
@@ -155,30 +146,68 @@ static void wait_for_server(const char *port)
     }
 }
 
-const void *start_mock_server(char **cmdline)
+/**
+ * Parse server parameters from environment;
+ * format is host,bucket,username,password
+ */
+static int parse_server_conf(struct test_server_info *info, const char *param)
 {
-    const char *srcdir = getenv("srcdir");
+    char *strings[10] = { NULL };
+    int curix = 0;
+    char *param_copy = strdup(param);
+    param = param_copy;
+
+    while (*param && curix < 10) {
+        const char *curfld;
+        char *curval;
+        size_t diff;
+
+        for (curfld = param; *param && *param != ','; param++);
+        diff = (param - curfld);
+        curval = calloc(1, diff+1);
+        curval[diff] = '\0';
+        memcpy(curval, curfld, diff);
+        strings[curix++] = curval;
+        if (*param == ',') {
+            param++;
+        }
+    }
+
+    info->http = strings[0];
+    info->bucket = strings[1];
+    info->username = strings[2];
+    info->password = strings[3];
+
+    free(param_copy);
+
+    if (!info->http) {
+        fprintf(stderr, "Must have node entry point for real cluster test\n");
+        return 0;
+    }
+    return 1;
+}
+
+static int start_mock_server(struct test_server_info *info, char **cmdline)
+{
+
     char wrapper[1024];
+    const char *srcdir = getenv("srcdir");
 
     if (srcdir == NULL) {
         srcdir = ".";
     }
+
     snprintf(wrapper, sizeof(wrapper), "%s/tests/start_mock.sh", srcdir);
 
     if (access(wrapper, X_OK) == -1) {
         fprintf(stderr, "Failed to locate \"./tests/start_mock.sh\": %s\n",
                 strerror(errno));
-        return NULL;
+        return 0;
     }
 
-    struct mock_server_info *info = calloc(1, sizeof(*info));
-    if (info == NULL) {
-        return NULL;
-    }
 
     if (!create_monitor(info)) {
-        free(info);
-        return NULL;
+        return 0;
     }
 
     info->pid = fork();
@@ -237,12 +266,39 @@ const void *start_mock_server(char **cmdline)
         wait_for_server(buffer + offset);
     }
     sleep(1); /* give it a bit time to initialize itself */
+    return 1;
+
+}
+
+const void *start_test_server(char **cmdline)
+{
+    const char *clconf = getenv(LCB_TEST_REALCLUSTER_ENV);
+    struct test_server_info *info = calloc(1, sizeof(*info));
+    int server_ok = 0;
+
+    if (info == NULL) {
+        return NULL;
+    }
+
+    if (clconf) {
+        server_ok = parse_server_conf(info, clconf);
+        info->is_mock = 0;
+    } else {
+        server_ok = start_mock_server(info, cmdline);
+        info->is_mock = 1;
+    }
+
+    if (!server_ok) {
+        fprintf(stderr, "Couldn't setup server!\n");
+        abort();
+    }
+
     return info;
 }
 
 void failover_node(const void *handle, int idx, const char *bucket)
 {
-    struct mock_server_info *info = (void *)handle;
+    struct test_server_info *info = (void *)handle;
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "failover,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
@@ -251,7 +307,7 @@ void failover_node(const void *handle, int idx, const char *bucket)
 
 void respawn_node(const void *handle, int idx, const char *bucket)
 {
-    struct mock_server_info *info = (void *)handle;
+    struct test_server_info *info = (void *)handle;
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "respawn,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
@@ -260,16 +316,37 @@ void respawn_node(const void *handle, int idx, const char *bucket)
 
 void shutdown_mock_server(const void *handle)
 {
-    struct mock_server_info *info = (void *)handle;
+    struct test_server_info *info = (void *)handle;
     free(info->http);
-    close(info->client);
-    close(info->sock);
-    kill(info->pid, SIGTERM);
+    free(info->bucket);
+    free(info->username);
+    free(info->password);
+    if (info->is_mock) {
+        close(info->client);
+        close(info->sock);
+        kill(info->pid, SIGTERM);
+    }
     free((void *)handle);
 }
 
 const char *get_mock_http_server(const void *handle)
 {
-    struct mock_server_info *info = (void *)handle;
+    struct test_server_info *info = (void *)handle;
     return info->http;
+}
+
+void get_mock_std_creds(const void *handle, const char **userp, const char **passp)
+{
+    const struct test_server_info *info = handle;
+    if (info->is_mock) {
+        *userp = "Administrator";
+        *passp = "password";
+    } else {
+        *userp = info->username;
+        *passp = info->password;
+    }
+}
+
+int is_using_real_cluster(void) {
+    return getenv(LCB_TEST_REALCLUSTER_ENV) != NULL;
 }

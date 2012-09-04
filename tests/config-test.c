@@ -90,7 +90,13 @@ static void smoke_test(void)
     lcb_t instance;
     struct lcb_create_st options;
 
-    mock = start_mock_server((char **)argv);
+    if (is_using_real_cluster()) {
+        fprintf(stderr, "Skipping \"%s\" while testing towards real cluster\n",
+                __func__);
+        return;
+    }
+
+    mock = start_test_server((char **)argv);
     if (mock == NULL) {
         err_exit("Failed to start mock server");
     }
@@ -153,7 +159,13 @@ static void buffer_relocation_test(void)
     const lcb_get_cmd_t *getcmds[] = { &getcmd };
     struct lcb_create_st options;
 
-    mock = start_mock_server((char **)argv);
+    if (is_using_real_cluster()) {
+        fprintf(stderr, "Skipping \"%s\" while testing towards real cluster\n",
+                __func__);
+        return;
+    }
+
+    mock = start_test_server((char **)argv);
     if (mock == NULL) {
         err_exit("Failed to start mock server");
     }

@@ -26,7 +26,7 @@
 #include "test.h"
 
 lcb_t session = NULL;
-const void *mock = NULL;
+const struct test_server_info *mock = NULL;
 struct lcb_io_opt_st *io = NULL;
 lcb_error_t global_error = -1;
 int total_node_count = -1;
@@ -63,13 +63,20 @@ static void setup(char **argv, const char *username, const char *password,
         err_exit("Failed to create IO session");
     }
 
-    mock = start_mock_server(argv);
+    mock = start_test_server(argv);
     if (mock == NULL) {
         err_exit("Failed to start mock server");
     }
 
     endpoint = get_mock_http_server(mock);
     memset(&options, 0, sizeof(options));
+
+    if (!mock->is_mock) {
+        username = mock->username;
+        password = mock->password;
+        bucket = mock->bucket;
+    }
+
     options.v.v0.host = endpoint;
     options.v.v0.user = username;
     options.v.v0.passwd = password;
@@ -86,6 +93,12 @@ static void setup(char **argv, const char *username, const char *password,
         err_exit("Failed to connect to server");
     }
     lcb_wait(session);
+
+    if (!mock->is_mock) {
+        total_node_count = 0;
+        const char * const * servers = lcb_get_server_list(session);
+        for (; *servers; servers++, total_node_count++);
+    }
 }
 
 static void teardown(void)
@@ -390,12 +403,14 @@ static void test_touch1(void)
         nkeys[ii] = nkey;
         keys[ii] = strdup(key);
         ttls[ii] = 1;
+
         if (keys[ii] == NULL) {
             err_exit("Failed to allocate memory for key");
         }
+
         keys[ii][3] = (char)(ii + 'a');
         memset(&storecmd, 0, sizeof(storecmd));
-        storecmd.v.v0.key = key;
+        storecmd.v.v0.key = keys[ii];
         storecmd.v.v0.nkey = nkey;
         storecmd.v.v0.bytes = val;
         storecmd.v.v0.nbytes = nval;
@@ -410,7 +425,7 @@ static void test_touch1(void)
         if (touchcmds[ii] == NULL) {
             err_exit("Failed to allocate memory for touch command");
         }
-        touchcmds[ii]->v.v0.key = key;
+        touchcmds[ii]->v.v0.key = keys[ii];
         touchcmds[ii]->v.v0.nkey = nkey;
     }
 
@@ -445,7 +460,7 @@ static lcb_error_t test_connect(char **argv, const char *username,
         err_exit("Failed to create IO session");
     }
 
-    mock = start_mock_server(argv);
+    mock = start_test_server(argv);
     if (mock == NULL) {
         err_exit("Failed to start mock server");
     }
@@ -585,6 +600,8 @@ static void test_spurious_saslerr(void)
 int main(int argc, char **argv)
 {
     char str_node_count[16];
+    int is_mock = 1;
+
     const char *args[] = {"--nodes", "",
                           "--buckets=default::memcache", NULL
                          };
@@ -598,6 +615,10 @@ int main(int argc, char **argv)
     args[1] = str_node_count;
 
     setup((char **)args, "Administrator", "password", "default");
+
+    /* first time it's initialized */
+    is_mock = mock->is_mock;
+
     test_set1();
     test_set2();
     test_get1();
@@ -615,14 +636,17 @@ int main(int argc, char **argv)
     test_version1();
     teardown();
 
-    assert(test_connect((char **)args, "Administrator", "password", "missing") == LCB_BUCKET_ENOENT);
-
-    args[2] = "--buckets=protected:secret";
-    assert(test_connect((char **)args, "protected", "incorrect", "protected") == LCB_AUTH_ERROR);
-    setup((char **)args, "protected", "secret", "protected");
-    test_set3();
-    test_spurious_saslerr();
-    teardown();
+    if (is_mock) {
+        assert(test_connect((char **)args, "Administrator", "password", "missing") == LCB_BUCKET_ENOENT);
+        args[2] = "--buckets=protected:secret";
+        assert(test_connect((char **)args, "protected", "incorrect", "protected") == LCB_AUTH_ERROR);
+        setup((char **)args, "protected", "secret", "protected");
+        test_set3();
+        test_spurious_saslerr();
+        teardown();
+    } else {
+        fprintf(stderr, "FIXME: Skipping bad auth tests in real cluster\n");
+    }
 
     (void)argc;
     (void)argv;

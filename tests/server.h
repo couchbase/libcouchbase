@@ -16,13 +16,34 @@
  */
 #ifndef LIBCOUCHBASE_TEST_SERVER_H
 #define LIBCOUCHBASE_TEST_SERVER_H 1
+#define LCB_TEST_REALCLUSTER_ENV "LCB_TEST_CLUSTER_CONF"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
-    const void *start_mock_server(char **cmdline);
+    struct test_server_info {
+        pid_t pid;
+        char *http;
+        char *bucket;
+        char *username;
+        char *password;
+        in_port_t port;
+        struct sockaddr_storage storage;
+        int sock;
+        int client;
+        int is_mock;
+    };
+
+
+    const void *start_test_server(char **cmdline);
     const char *get_mock_http_server(const void *);
+    void get_mock_std_creds(const void * handle, const char **userp, const char **passp);
+    int is_using_real_cluster(void);
+
     void shutdown_mock_server(const void *);
 
     void failover_node(const void *handle, int idx, const char *bucket);

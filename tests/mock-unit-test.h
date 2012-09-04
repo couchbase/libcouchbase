@@ -24,6 +24,40 @@
 #include "server.h"
 #include "testutil.h"
 
+class ServerParams
+{
+public:
+    ServerParams() { }
+
+    ServerParams(const char *h, const char *b, const char *u, const char *p) {
+        loadParam(host, h);
+        loadParam(bucket, b);
+        loadParam(user, u);
+        loadParam(pass, p);
+    }
+
+    void makeConnectParams(lcb_create_st &crst) {
+        memset(&crst, 0, sizeof(crst));
+        crst.v.v0.host = host.c_str();
+        crst.v.v0.bucket = bucket.c_str();
+        crst.v.v0.user = user.c_str();
+        crst.v.v0.passwd = pass.c_str();
+    }
+
+protected:
+    std::string host;
+    std::string user;
+    std::string pass;
+    std::string bucket;
+
+private:
+    void loadParam(std::string& d, const char *s) {
+        if (s) {
+            d.assign(s);
+        }
+    }
+};
+
 class MockUnitTest : public ::testing::Test
 {
 public:
@@ -34,8 +68,9 @@ protected:
     static void TearDownTestCase();
 
     virtual void createConnection(lcb_t &instance);
-    static const void *mock;
+    static const struct test_server_info *mock;
     static const char *http;
+    static bool isRealCluster;
 };
 
 #endif

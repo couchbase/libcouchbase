@@ -22,14 +22,56 @@
 #include "mock-unit-test.h"
 
 
-const void *MockUnitTest::mock;
+const struct test_server_info *MockUnitTest::mock;
 const char *MockUnitTest::http;
 int MockUnitTest::numNodes;
+bool MockUnitTest::isRealCluster;
+
+static bool realClusterGotNodes = false;
+
+ServerParams globalServerParams;
+
+static void bootstrapRealCluster(const struct test_server_info *mock)
+{
+    globalServerParams = ServerParams(mock->http, mock->bucket,
+                                      mock->username, mock->password);
+    if (realClusterGotNodes) {
+        return;
+    }
+
+    lcb_t tmphandle;
+    lcb_error_t err;
+    lcb_create_st options;
+    globalServerParams.makeConnectParams(options);
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_create(&tmphandle, &options));
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
+    lcb_wait(tmphandle);
+
+    int ii;
+    const char * const *server_cur;
+    const char * const *servers = lcb_get_server_list(tmphandle);
+    for (ii = 0, server_cur = servers;
+            *server_cur; server_cur++, ii++) {
+        /* no body */
+    }
+
+    MockUnitTest::numNodes = ii;
+    lcb_destroy(tmphandle);
+    realClusterGotNodes = true;
+
+}
 
 void MockUnitTest::SetUpTestCase()
 {
     numNodes = 10;
-    mock = start_mock_server(NULL);
+    mock = (struct test_server_info*)start_test_server(NULL);
+    isRealCluster = is_using_real_cluster();
+
+    if (isRealCluster) {
+        bootstrapRealCluster(mock);
+    }
+
     ASSERT_NE((const void *)(NULL), mock);
     http = get_mock_http_server(mock);
     ASSERT_NE((const char *)(NULL), http);
@@ -40,9 +82,6 @@ void MockUnitTest::TearDownTestCase()
     shutdown_mock_server(mock);
 }
 
-/*
- * Test cases
- */
 extern "C" {
     static void error_callback(lcb_t instance,
                                lcb_error_t err,
@@ -67,13 +106,21 @@ void MockUnitTest::createConnection(lcb_t &instance)
         exit(1);
     }
 
-    lcb_create_st options(http, "Administrator", "password",
-                          getenv("LCB_TEST_BUCKET"), io);
+    lcb_create_st options;
+    if (isRealCluster) {
+        options = lcb_create_st();
+        globalServerParams.makeConnectParams(options);
+        options.v.v0.io = io;
+    } else {
+        options = lcb_create_st(http, "Administrator", "password",
+                                getenv("LCB_TEST_BUCKET"), io);
+    }
 
     ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
     (void)lcb_set_cookie(instance, io);
     (void)lcb_set_error_callback(instance, error_callback);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
+
     lcb_wait(instance);
 }
 
@@ -757,6 +804,7 @@ TEST_F(MockUnitTest, testArithmeticCreate)
 {
     lcb_t instance;
     createConnection(instance);
+    removeKey(instance, "mycounter");
     (void)lcb_set_arithmetic_callback(instance, arithmetic_create_callback);
     lcb_arithmetic_cmd_t cmd("mycounter", 9, 0x77, 1, 0xdeadbeef);
     lcb_arithmetic_cmd_t *cmds[] = { &cmd };
