@@ -518,6 +518,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->path = strdup(cmd->v.v0.path);
     req->npath = cmd->v.v0.npath;
     req->chunked = cmd->v.v0.chunked;
+    req->method = cmd->v.v0.method;
 
 #define BUFF_APPEND(dst, src, len)                                  \
         if (len != ringbuffer_write(dst, src, len)) {               \
