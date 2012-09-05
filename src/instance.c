@@ -150,6 +150,13 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
     return 0;
 }
 
+static const char *get_nonempty_string(const char *s) {
+    if (s != NULL && strlen(s) == 0) {
+        return NULL;
+    }
+    return s;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_create(lcb_t *instance,
                        const struct lcb_create_st *options)
@@ -167,10 +174,10 @@ lcb_error_t lcb_create(lcb_t *instance,
         if (options->version != 0) {
             return LCB_EINVAL;
         }
-        host = options->v.v0.host;
-        user = options->v.v0.user;
-        passwd = options->v.v0.passwd;
-        bucket = options->v.v0.bucket;
+        host = get_nonempty_string(options->v.v0.host);
+        user = get_nonempty_string(options->v.v0.user);
+        passwd = get_nonempty_string(options->v.v0.passwd);
+        bucket = get_nonempty_string(options->v.v0.bucket);
         io = options->v.v0.io;
     }
 
@@ -192,7 +199,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         host = "localhost";
     }
 
-    if (bucket == NULL || strlen(bucket) == 0) {
+    if (bucket == NULL) {
         bucket = "default";
     }
 
