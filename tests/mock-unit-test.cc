@@ -26,6 +26,12 @@ public:
     static int numNodes;
 
 protected:
+    void storeKey(lcb_t instance,
+                  const std::string &key,
+                  const std::string &value);
+
+
+
     static void SetUpTestCase();
     static void TearDownTestCase();
 
@@ -52,6 +58,40 @@ void MockUnitTest::TearDownTestCase()
     shutdown_mock_server(mock);
 }
 
+/*
+ * Helper functions
+ */
+extern "C" {
+    static void storeKeyCallback(lcb_t, const void *cookie,
+                                 lcb_storage_t operation,
+                                 lcb_error_t error,
+                                 const lcb_store_resp_t *)
+    {
+        int *counter = (int*)cookie;
+        ASSERT_EQ(LCB_SET, operation);
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ++(*counter);
+    }
+}
+
+void MockUnitTest::storeKey(lcb_t instance,
+                            const std::string &key,
+                            const std::string &value)
+{
+    int counter = 0;
+    lcb_store_cmd_t cmd(LCB_SET, key.data(), key.length(),
+                        value.data(), value.length());
+    lcb_store_cmd_t* cmds[] = { &cmd };
+    lcb_store_callback cb = lcb_set_store_callback(instance, storeKeyCallback);
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &counter, 1, cmds));
+    lcb_wait(instance);
+    (void)lcb_set_store_callback(instance, cb);
+    ASSERT_EQ(1, counter);
+}
+
+/*
+ * Test cases
+ */
 extern "C" {
     static void error_callback(lcb_t instance,
                                lcb_error_t err,
