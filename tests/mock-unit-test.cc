@@ -457,7 +457,70 @@ TEST_F(MockUnitTest, testSimplePrepend)
     Item itm;
     get(instance, key, itm);
     EXPECT_STREQ("barfoo", itm.val.c_str());
+}
 
+extern "C" {
+    static void testSimpleReplaceNonexistingStoreCallback(lcb_t, const void *cookie,
+                                                          lcb_storage_t operation,
+                                                          lcb_error_t error,
+                                                          const lcb_store_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        ASSERT_EQ(LCB_REPLACE, operation);
+        ASSERT_NE((const lcb_store_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        EXPECT_EQ(LCB_KEY_ENOENT, error);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testSimpleReplaceNonexisting)
+{
+    std::string key("testSimpleReplaceNonexistingKey");
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_store_callback(instance, testSimpleReplaceNonexistingStoreCallback);
+    removeKey(instance, key);
+    int numcallbacks = 0;
+    lcb_store_cmd_t cmd(LCB_REPLACE, key.data(), key.length(), "bar", 3);
+    lcb_store_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(1, numcallbacks);
+}
+
+extern "C" {
+    static void testSimpleReplaceStoreCallback(lcb_t, const void *cookie,
+                                               lcb_storage_t operation,
+                                               lcb_error_t error,
+                                               const lcb_store_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        ASSERT_EQ(LCB_REPLACE, operation);
+        ASSERT_NE((const lcb_store_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        EXPECT_EQ(LCB_SUCCESS, error);
+        EXPECT_NE(0, resp->v.v0.cas);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testSimpleReplace)
+{
+    std::string key("testSimpleReplaceKey");
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_store_callback(instance, testSimpleReplaceStoreCallback);
+    storeKey(instance, key, "foo");
+    int numcallbacks = 0;
+    lcb_store_cmd_t cmd(LCB_REPLACE, key.data(), key.length(), "bar", 3);
+    lcb_store_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(1, numcallbacks);
+    Item itm;
+    get(instance, key, itm);
+    EXPECT_STREQ("bar", itm.val.c_str());
 }
 
 extern "C" {
