@@ -670,7 +670,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
-            BUFF_APPEND(&req->output, post_headers, nn);
+            BUFF_APPEND(&req->output, post_headers, (lcb_size_t)ret);
             BUFF_APPEND(&req->output, body, nbody);
             free(post_headers);
         } else {
