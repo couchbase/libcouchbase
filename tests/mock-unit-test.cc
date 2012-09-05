@@ -678,6 +678,31 @@ TEST_F(MockUnitTest, testServerStats)
 }
 
 extern "C" {
+    static void testServerVersionsCallback(lcb_t, const void *cookie,
+                                           lcb_error_t error,
+                                           const lcb_server_version_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        EXPECT_EQ(LCB_SUCCESS, error);
+        EXPECT_EQ(0, resp->version);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testServerVersion)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_version_callback(instance, testServerVersionsCallback);
+    int numcallbacks = 0;
+    lcb_server_version_cmd_t cmd;
+    lcb_server_version_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_server_versions(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_LT(1, numcallbacks);
+}
+
+extern "C" {
     static void flags_store_callback(lcb_t,
                                      const void *,
                                      lcb_storage_t operation,
