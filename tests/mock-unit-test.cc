@@ -29,8 +29,8 @@ protected:
     void storeKey(lcb_t instance,
                   const std::string &key,
                   const std::string &value);
-
-
+    void removeKey(lcb_t instance,
+                   const std::string &key);
 
     static void SetUpTestCase();
     static void TearDownTestCase();
@@ -72,6 +72,15 @@ extern "C" {
         ASSERT_EQ(LCB_SUCCESS, error);
         ++(*counter);
     }
+
+    static void removeKeyCallback(lcb_t, const void *cookie,
+                                  lcb_error_t error,
+                                  const lcb_remove_resp_t *)
+    {
+        int *counter = (int*)cookie;
+        ASSERT_TRUE(error == LCB_SUCCESS || error == LCB_KEY_ENOENT);
+        ++(*counter);
+    }
 }
 
 void MockUnitTest::storeKey(lcb_t instance,
@@ -86,6 +95,19 @@ void MockUnitTest::storeKey(lcb_t instance,
     EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &counter, 1, cmds));
     lcb_wait(instance);
     (void)lcb_set_store_callback(instance, cb);
+    ASSERT_EQ(1, counter);
+}
+
+void MockUnitTest::removeKey(lcb_t instance,
+                             const std::string &key)
+{
+    int counter = 0;
+    lcb_remove_cmd_t cmd(key.data(), key.length());
+    lcb_remove_cmd_t* cmds[] = { &cmd };
+    lcb_remove_callback cb = lcb_set_remove_callback(instance, removeKeyCallback);
+    EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, &counter, 1, cmds));
+    lcb_wait(instance);
+    (void)lcb_set_remove_callback(instance, cb);
     ASSERT_EQ(1, counter);
 }
 
@@ -220,6 +242,69 @@ TEST_F(MockUnitTest, testGetHit)
     lcb_wait(instance);
     EXPECT_EQ(2, numcallbacks);
 }
+
+extern "C" {
+    static void testRemoveCallback(lcb_t, const void *cookie,
+                                   lcb_error_t error,
+                                   const lcb_remove_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        EXPECT_EQ(LCB_SUCCESS, error);
+        ASSERT_NE((const lcb_remove_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testRemove)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_remove_callback(instance, testRemoveCallback);
+    int numcallbacks = 0;
+    storeKey(instance, "testRemoveKey1", "foo");
+    storeKey(instance, "testRemoveKey2", "foo");
+    lcb_remove_cmd_t cmd1("testRemoveKey1");
+    lcb_remove_cmd_t cmd2("testRemoveKey2");
+    lcb_remove_cmd_t *cmds[] = { &cmd1, &cmd2 };
+    EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, &numcallbacks, 2, cmds));
+
+    lcb_wait(instance);
+    EXPECT_EQ(2, numcallbacks);
+}
+
+extern "C" {
+    static void testRemoveMissCallback(lcb_t, const void *cookie,
+                                   lcb_error_t error,
+                                   const lcb_remove_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        EXPECT_EQ(LCB_KEY_ENOENT, error);
+        ASSERT_NE((const lcb_remove_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testRemoveMiss)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_remove_callback(instance, testRemoveMissCallback);
+    int numcallbacks = 0;
+    removeKey(instance, "testRemoveMissKey1");
+    removeKey(instance, "testRemoveMissKey2");
+    lcb_remove_cmd_t cmd1("testRemoveMissKey1");
+    lcb_remove_cmd_t cmd2("testRemoveMissKey2");
+    lcb_remove_cmd_t *cmds[] = { &cmd1, &cmd2 };
+    EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, &numcallbacks, 2, cmds));
+
+    lcb_wait(instance);
+    EXPECT_EQ(2, numcallbacks);
+}
+
+
+
 
 extern "C" {
     static void testSimpleAddStoreCallback(lcb_t, const void *cookie,

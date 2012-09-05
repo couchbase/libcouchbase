@@ -284,10 +284,16 @@ extern "C" {
             std::memset(this, 0, sizeof(*this));
         }
 
-        lcb_remove_cmd_st(const void *key, lcb_size_t nkey, lcb_cas_t cas) {
+        lcb_remove_cmd_st(const void *key,
+                          lcb_size_t nkey = 0,
+                          lcb_cas_t cas = 0) {
             version = 0;
             v.v0.key = key;
-            v.v0.nkey = nkey;
+            if (key != NULL && nkey == 0) {
+                v.v0.nkey = strlen((const char*)key);
+            } else {
+                v.v0.nkey = nkey;
+            }
             v.v0.cas = cas;
         }
 #endif
