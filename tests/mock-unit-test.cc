@@ -191,6 +191,37 @@ TEST_F(MockUnitTest, testSimpleSet)
 }
 
 extern "C" {
+    static void testGetHitGetCallback(lcb_t, const void *cookie,
+                                      lcb_error_t error,
+                                      const lcb_get_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        EXPECT_EQ(LCB_SUCCESS, error);
+        ASSERT_NE((const lcb_get_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testGetHit)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_get_callback(instance, testGetHitGetCallback);
+    int numcallbacks = 0;
+
+    storeKey(instance, "testGetKey1", "foo");
+    storeKey(instance, "testGetKey2", "foo");
+    lcb_get_cmd_t cmd1("testGetKey1");
+    lcb_get_cmd_t cmd2("testGetKey2");
+    lcb_get_cmd_t *cmds[] = { &cmd1, &cmd2 };
+    EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &numcallbacks, 2, cmds));
+
+    lcb_wait(instance);
+    EXPECT_EQ(2, numcallbacks);
+}
+
+extern "C" {
     static void testSimpleAddStoreCallback(lcb_t, const void *cookie,
                                            lcb_storage_t operation,
                                            lcb_error_t error,
