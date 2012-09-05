@@ -243,6 +243,8 @@ noinst_LTLIBRARIES += libmockserver.la
 tests_unit_tests_SOURCES += \
 							tests/loopfactory.c \
 							tests/server.h \
+							tests/mock-unit-test.h \
+							tests/testutil.cc \
 							tests/mock-unit-test.cc \
 							tests/server.c
 
