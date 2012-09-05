@@ -242,7 +242,6 @@ if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
 tests_unit_tests_SOURCES += \
 							tests/loopfactory.c \
-							tests/mock-unit-test.h \
 							tests/server.h \
 							tests/mock-unit-test.cc \
 							tests/server.c

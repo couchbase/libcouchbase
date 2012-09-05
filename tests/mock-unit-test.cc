@@ -14,8 +14,29 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "mock-unit-test.h"
+#include "config.h"
+#include <gtest/gtest.h>
+#include <libcouchbase/couchbase.h>
+
 #include "server.h"
+
+class MockUnitTest : public ::testing::Test
+{
+public:
+    static int numNodes;
+
+protected:
+    static void SetUpTestCase();
+    static void TearDownTestCase();
+
+    virtual void createConnection(lcb_t &instance);
+    static const void *mock;
+    static const char *http;
+};
+
+const void *MockUnitTest::mock;
+const char *MockUnitTest::http;
+int MockUnitTest::numNodes;
 
 void MockUnitTest::SetUpTestCase()
 {
@@ -64,10 +85,6 @@ void MockUnitTest::createConnection(lcb_t &instance)
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     lcb_wait(instance);
 }
-
-const void *MockUnitTest::mock;
-const char *MockUnitTest::http;
-int MockUnitTest::numNodes;
 
 extern "C" {
     static void testGetMissGetCallback(lcb_t, const void *cookie,
