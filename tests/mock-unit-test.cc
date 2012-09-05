@@ -20,6 +20,28 @@
 
 #include "server.h"
 
+struct Item {
+    void assign(const lcb_get_resp_t *resp) {
+        key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        val.assign((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+        flags = resp->v.v0.flags;
+        cas =  resp->v.v0.cas;
+        datatype =  resp->v.v0.datatype;
+    }
+
+    Item() {
+        flags = 0;
+        cas = 0;
+        datatype = 0;
+    }
+
+    std::string key;
+    std::string val;
+    lcb_uint32_t flags;
+    lcb_cas_t cas;
+    lcb_datatype_t datatype;
+};
+
 class MockUnitTest : public ::testing::Test
 {
 public:
@@ -31,6 +53,7 @@ protected:
                   const std::string &value);
     void removeKey(lcb_t instance,
                    const std::string &key);
+    void get(lcb_t instance, const std::string &key, Item &item);
 
     static void SetUpTestCase();
     static void TearDownTestCase();
@@ -81,6 +104,15 @@ extern "C" {
         ASSERT_TRUE(error == LCB_SUCCESS || error == LCB_KEY_ENOENT);
         ++(*counter);
     }
+
+    static void getKeyCallback(lcb_t, const void *cookie,
+                               lcb_error_t error,
+                               const lcb_get_resp_t *resp)
+    {
+        Item *item = (Item*)cookie;
+        ASSERT_EQ(LCB_SUCCESS, error);
+        item->assign(resp);
+    }
 }
 
 void MockUnitTest::storeKey(lcb_t instance,
@@ -109,6 +141,19 @@ void MockUnitTest::removeKey(lcb_t instance,
     lcb_wait(instance);
     (void)lcb_set_remove_callback(instance, cb);
     ASSERT_EQ(1, counter);
+}
+
+void MockUnitTest::get(lcb_t instance, const std::string &key, Item &item)
+{
+    item.cas = 0xdeadbeef;
+
+    lcb_get_cmd_t cmd(key.data(), key.length());
+    lcb_get_cmd_t* cmds[] = { &cmd };
+    lcb_get_callback cb = lcb_set_get_callback(instance, getKeyCallback);
+    EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &item, 1, cmds));
+    lcb_wait(instance);
+    (void)lcb_set_get_callback(instance, cb);
+    ASSERT_NE(0xdeadbeef, item.cas);
 }
 
 /*
@@ -303,9 +348,6 @@ TEST_F(MockUnitTest, testRemoveMiss)
     EXPECT_EQ(2, numcallbacks);
 }
 
-
-
-
 extern "C" {
     static void testSimpleAddStoreCallback(lcb_t, const void *cookie,
                                            lcb_storage_t operation,
@@ -334,6 +376,7 @@ TEST_F(MockUnitTest, testSimpleAdd)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testSimpleAddStoreCallback);
+    removeKey(instance, "testSimpleAddKey");
     int numcallbacks = 0;
     lcb_store_cmd_t cmd1(LCB_ADD, "testSimpleAddKey", 16, "key1", 4);
     lcb_store_cmd_t cmd2(LCB_ADD, "testSimpleAddKey", 16, "key2", 4);
@@ -341,6 +384,80 @@ TEST_F(MockUnitTest, testSimpleAdd)
     EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 2, cmds));
     lcb_wait(instance);
     EXPECT_EQ(2, numcallbacks);
+}
+
+extern "C" {
+    static void testSimpleAppendStoreCallback(lcb_t, const void *cookie,
+                                              lcb_storage_t operation,
+                                              lcb_error_t error,
+                                              const lcb_store_resp_t *resp)
+    {
+        using namespace std;
+        int *counter = (int*)cookie;
+        ASSERT_EQ(LCB_APPEND, operation);
+        ASSERT_NE((const lcb_store_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        EXPECT_EQ(LCB_SUCCESS, error);
+        EXPECT_NE(0, resp->v.v0.cas);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testSimpleAppend)
+{
+    std::string key("testSimpleAppendKey");
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_store_callback(instance, testSimpleAppendStoreCallback);
+    storeKey(instance, key, "foo");
+    int numcallbacks = 0;
+    lcb_store_cmd_t cmd(LCB_APPEND, key.data(), key.length(), "bar", 3);
+    lcb_store_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(1, numcallbacks);
+
+    Item itm;
+    get(instance, key, itm);
+    EXPECT_STREQ("foobar", itm.val.c_str());
+
+}
+
+extern "C" {
+    static void testSimplePrependStoreCallback(lcb_t, const void *cookie,
+                                              lcb_storage_t operation,
+                                              lcb_error_t error,
+                                              const lcb_store_resp_t *resp)
+    {
+        using namespace std;
+        int *counter = (int*)cookie;
+        ASSERT_EQ(LCB_PREPEND, operation);
+        ASSERT_NE((const lcb_store_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        EXPECT_EQ(LCB_SUCCESS, error);
+        EXPECT_NE(0, resp->v.v0.cas);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testSimplePrepend)
+{
+    std::string key("testSimplePrependKey");
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_store_callback(instance, testSimplePrependStoreCallback);
+    storeKey(instance, key, "foo");
+    int numcallbacks = 0;
+    lcb_store_cmd_t cmd(LCB_PREPEND, key.data(), key.length(), "bar", 3);
+    lcb_store_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(1, numcallbacks);
+
+    Item itm;
+    get(instance, key, itm);
+    EXPECT_STREQ("barfoo", itm.val.c_str());
+
 }
 
 extern "C" {
