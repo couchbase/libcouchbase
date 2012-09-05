@@ -595,6 +595,64 @@ TEST_F(MockUnitTest, testCasReplace)
 }
 
 extern "C" {
+    static void testTouchMissCallback(lcb_t, const void *cookie,
+                                      lcb_error_t error,
+                                      const lcb_touch_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        EXPECT_EQ(LCB_KEY_ENOENT, error);
+        ASSERT_NE((const lcb_touch_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testTouchMiss)
+{
+    std::string key("testTouchMissKey");
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_touch_callback(instance, testTouchMissCallback);
+    removeKey(instance, key);
+
+    int numcallbacks = 0;
+    lcb_touch_cmd_t cmd(key.data(), key.length(), 666);
+    lcb_touch_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_touch(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(1, numcallbacks);
+}
+
+extern "C" {
+    static void testTouchHitCallback(lcb_t, const void *cookie,
+                                     lcb_error_t error,
+                                     const lcb_touch_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        EXPECT_EQ(LCB_SUCCESS, error);
+        ASSERT_NE((const lcb_touch_resp_t*)NULL, resp);
+        EXPECT_EQ(0, resp->version);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testTouchHit)
+{
+    std::string key("testTouchHitKey");
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_touch_callback(instance, testTouchHitCallback);
+    storeKey(instance, key, "foo");
+
+    int numcallbacks = 0;
+    lcb_touch_cmd_t cmd(key.data(), key.length(), 666);
+    lcb_touch_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_touch(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_EQ(1, numcallbacks);
+}
+
+extern "C" {
     static void flags_store_callback(lcb_t,
                                      const void *,
                                      lcb_storage_t operation,
