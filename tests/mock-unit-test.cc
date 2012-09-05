@@ -64,12 +64,13 @@ static void bootstrapRealCluster(const struct test_server_info *mock)
 
 void MockUnitTest::SetUpTestCase()
 {
-    numNodes = 10;
     mock = (struct test_server_info*)start_test_server(NULL);
     isRealCluster = is_using_real_cluster();
 
     if (isRealCluster) {
         bootstrapRealCluster(mock);
+    } else {
+        numNodes = 10;
     }
 
     ASSERT_NE((const void *)(NULL), mock);
