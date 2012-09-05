@@ -702,6 +702,32 @@ TEST_F(MockUnitTest, testServerVersion)
     EXPECT_LT(1, numcallbacks);
 }
 
+
+extern "C" {
+    static void testFlushCallback(lcb_t, const void *cookie,
+                                  lcb_error_t error,
+                                  const lcb_flush_resp_t *resp)
+    {
+        int *counter = (int*)cookie;
+        EXPECT_TRUE(error == LCB_SUCCESS || error == LCB_NOT_SUPPORTED);
+        EXPECT_EQ(0, resp->version);
+        ++(*counter);
+    }
+}
+
+TEST_F(MockUnitTest, testFlush)
+{
+    lcb_t instance;
+    createConnection(instance);
+    (void)lcb_set_flush_callback(instance, testFlushCallback);
+    int numcallbacks = 0;
+    lcb_flush_cmd_t cmd;
+    lcb_flush_cmd_t* cmds[] = { &cmd };
+    EXPECT_EQ(LCB_SUCCESS, lcb_flush(instance, &numcallbacks, 1, cmds));
+    lcb_wait(instance);
+    EXPECT_LT(1, numcallbacks);
+}
+
 extern "C" {
     static void flags_store_callback(lcb_t,
                                      const void *,
