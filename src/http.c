@@ -654,9 +654,16 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         EXTRACT_URL_PART(UF_PORT, req->port, nn);
         /* copy port with leading colon */
         BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_PORT].off - 1, nn + 1);
-        if (req->method != LCB_HTTP_METHOD_GET && nbody) {
+        if (req->method == LCB_HTTP_METHOD_PUT ||
+                req->method == LCB_HTTP_METHOD_POST) {
             char *post_headers = calloc(512, sizeof(char));
             int ret;
+
+            if (nbody == 0) {
+                lcb_http_request_destroy(req);
+                return lcb_synchandler_return(instance, LCB_EINVAL);
+            }
+
             if (post_headers == NULL) {
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
