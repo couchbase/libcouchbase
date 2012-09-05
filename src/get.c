@@ -266,6 +266,7 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
         const void *key = items[ii]->v.v0.key;
         lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_time_t exp = items[ii]->v.v0.exptime;
+        lcb_size_t nreq = sizeof(req.bytes);
         int vb;
 
         server = instance->servers + servers[ii].idx;
@@ -281,22 +282,19 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
 
         if (!exp) {
             req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
-            lcb_server_start_packet(server, command_cookie, req.bytes,
-                                    sizeof(req.bytes) - 4);
+            nreq -= 4;
         } else {
             req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GATQ;
             req.message.header.request.extlen = 4;
             req.message.body.expiration = ntohl((lcb_uint32_t)exp);
             req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey) + 4);
-            lcb_server_start_packet(server, command_cookie, req.bytes,
-                                    sizeof(req.bytes));
         }
-
         if (items[ii]->v.v0.lock) {
             /* the expiration is optional for GETL command */
             req.message.header.request.opcode = CMD_GET_LOCKED;
         }
 
+        lcb_server_start_packet(server, command_cookie, req.bytes, nreq);
         lcb_server_write_packet(server, key, nkey);
         lcb_server_end_packet(server);
     }
