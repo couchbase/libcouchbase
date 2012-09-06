@@ -48,12 +48,16 @@ static void bootstrapRealCluster(const struct test_server_info *mock)
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
     lcb_wait(tmphandle);
 
-    int ii;
-    const char * const *server_cur;
     const char * const *servers = lcb_get_server_list(tmphandle);
-    for (ii = 0, server_cur = servers;
-            *server_cur; server_cur++, ii++) {
-        /* no body */
+    bool verbose = getenv("LCB_VERBOSE_TESTS") != 0;
+    if (verbose) {
+        std::cout << "Using the following servers: " << std::endl;
+    }
+    int ii;
+    for (ii = 0; servers[ii] != NULL; ii++) {
+        if (verbose) {
+            std::cout << "[" << servers[ii] << "]" << std::endl;
+        }
     }
 
     MockUnitTest::numNodes = ii;
