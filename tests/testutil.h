@@ -14,28 +14,36 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#ifndef TESTS_MOCK_UNIT_TESTS_H
-#define TESTS_MOCK_UNIT_TESTS_H 1
+#ifndef TESTS_TESTUTIL_H
+#define TESTS_TESTUTIL_H 1
 
-#include "config.h"
-#include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
 #include <string.h>
-#include "server.h"
-#include "testutil.h"
 
-class MockUnitTest : public ::testing::Test
-{
-public:
-    static int numNodes;
+struct Item {
+    void assign(const lcb_get_resp_t *resp) {
+        key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        val.assign((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+        flags = resp->v.v0.flags;
+        cas =  resp->v.v0.cas;
+        datatype =  resp->v.v0.datatype;
+    }
 
-protected:
-    static void SetUpTestCase();
-    static void TearDownTestCase();
+    Item() {
+        flags = 0;
+        cas = 0;
+        datatype = 0;
+    }
 
-    virtual void createConnection(lcb_t &instance);
-    static const void *mock;
-    static const char *http;
+    std::string key;
+    std::string val;
+    lcb_uint32_t flags;
+    lcb_cas_t cas;
+    lcb_datatype_t datatype;
 };
+
+void storeKey(lcb_t instance, const std::string &key, const std::string &value);
+void removeKey(lcb_t instance, const std::string &key);
+void getKey(lcb_t instance, const std::string &key, Item &item);
 
 #endif

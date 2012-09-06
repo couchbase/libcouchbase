@@ -1,4 +1,4 @@
-/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2012 Couchbase, Inc.
  *
@@ -161,8 +161,8 @@ TEST_F(MockUnitTest, testGetHit)
     (void)lcb_set_get_callback(instance, testGetHitGetCallback);
     int numcallbacks = 0;
 
-    utilStoreKey(instance, "testGetKey1", "foo");
-    utilStoreKey(instance, "testGetKey2", "foo");
+    storeKey(instance, "testGetKey1", "foo");
+    storeKey(instance, "testGetKey2", "foo");
     lcb_get_cmd_t cmd1("testGetKey1");
     lcb_get_cmd_t cmd2("testGetKey2");
     lcb_get_cmd_t *cmds[] = { &cmd1, &cmd2 };
@@ -191,8 +191,8 @@ TEST_F(MockUnitTest, testRemove)
     createConnection(instance);
     (void)lcb_set_remove_callback(instance, testRemoveCallback);
     int numcallbacks = 0;
-    utilStoreKey(instance, "testRemoveKey1", "foo");
-    utilStoreKey(instance, "testRemoveKey2", "foo");
+    storeKey(instance, "testRemoveKey1", "foo");
+    storeKey(instance, "testRemoveKey2", "foo");
     lcb_remove_cmd_t cmd1("testRemoveKey1");
     lcb_remove_cmd_t cmd2("testRemoveKey2");
     lcb_remove_cmd_t *cmds[] = { &cmd1, &cmd2 };
@@ -221,8 +221,8 @@ TEST_F(MockUnitTest, testRemoveMiss)
     createConnection(instance);
     (void)lcb_set_remove_callback(instance, testRemoveMissCallback);
     int numcallbacks = 0;
-    utilRemoveKey(instance, "testRemoveMissKey1");
-    utilRemoveKey(instance, "testRemoveMissKey2");
+    removeKey(instance, "testRemoveMissKey1");
+    removeKey(instance, "testRemoveMissKey2");
     lcb_remove_cmd_t cmd1("testRemoveMissKey1");
     lcb_remove_cmd_t cmd2("testRemoveMissKey2");
     lcb_remove_cmd_t *cmds[] = { &cmd1, &cmd2 };
@@ -260,7 +260,7 @@ TEST_F(MockUnitTest, testSimpleAdd)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testSimpleAddStoreCallback);
-    utilRemoveKey(instance, "testSimpleAddKey");
+    removeKey(instance, "testSimpleAddKey");
     int numcallbacks = 0;
     lcb_store_cmd_t cmd1(LCB_ADD, "testSimpleAddKey", 16, "key1", 4);
     lcb_store_cmd_t cmd2(LCB_ADD, "testSimpleAddKey", 16, "key2", 4);
@@ -293,7 +293,7 @@ TEST_F(MockUnitTest, testSimpleAppend)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testSimpleAppendStoreCallback);
-    utilStoreKey(instance, key, "foo");
+    storeKey(instance, key, "foo");
     int numcallbacks = 0;
     lcb_store_cmd_t cmd(LCB_APPEND, key.data(), key.length(), "bar", 3);
     lcb_store_cmd_t* cmds[] = { &cmd };
@@ -302,7 +302,7 @@ TEST_F(MockUnitTest, testSimpleAppend)
     EXPECT_EQ(1, numcallbacks);
 
     Item itm;
-    utilGetKey(instance, key, itm);
+    getKey(instance, key, itm);
     EXPECT_STREQ("foobar", itm.val.c_str());
 
 }
@@ -330,7 +330,7 @@ TEST_F(MockUnitTest, testSimplePrepend)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testSimplePrependStoreCallback);
-    utilStoreKey(instance, key, "foo");
+    storeKey(instance, key, "foo");
     int numcallbacks = 0;
     lcb_store_cmd_t cmd(LCB_PREPEND, key.data(), key.length(), "bar", 3);
     lcb_store_cmd_t* cmds[] = { &cmd };
@@ -339,7 +339,7 @@ TEST_F(MockUnitTest, testSimplePrepend)
     EXPECT_EQ(1, numcallbacks);
 
     Item itm;
-    utilGetKey(instance, key, itm);
+    getKey(instance, key, itm);
     EXPECT_STREQ("barfoo", itm.val.c_str());
 }
 
@@ -364,7 +364,7 @@ TEST_F(MockUnitTest, testSimpleReplaceNonexisting)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testSimpleReplaceNonexistingStoreCallback);
-    utilRemoveKey(instance, key);
+    removeKey(instance, key);
     int numcallbacks = 0;
     lcb_store_cmd_t cmd(LCB_REPLACE, key.data(), key.length(), "bar", 3);
     lcb_store_cmd_t* cmds[] = { &cmd };
@@ -395,7 +395,7 @@ TEST_F(MockUnitTest, testSimpleReplace)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testSimpleReplaceStoreCallback);
-    utilStoreKey(instance, key, "foo");
+    storeKey(instance, key, "foo");
     int numcallbacks = 0;
     lcb_store_cmd_t cmd(LCB_REPLACE, key.data(), key.length(), "bar", 3);
     lcb_store_cmd_t* cmds[] = { &cmd };
@@ -403,7 +403,7 @@ TEST_F(MockUnitTest, testSimpleReplace)
     lcb_wait(instance);
     EXPECT_EQ(1, numcallbacks);
     Item itm;
-    utilGetKey(instance, key, itm);
+    getKey(instance, key, itm);
     EXPECT_STREQ("bar", itm.val.c_str());
 }
 
@@ -428,9 +428,9 @@ TEST_F(MockUnitTest, testIncorrectCasReplace)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testIncorrectCasReplaceStoreCallback);
-    utilStoreKey(instance, key, "foo");
+    storeKey(instance, key, "foo");
     Item itm;
-    utilGetKey(instance, key, itm);
+    getKey(instance, key, itm);
 
     int numcallbacks = 0;
     lcb_store_cmd_t cmd(LCB_REPLACE, key.data(), key.length(), "bar", 3);
@@ -462,9 +462,9 @@ TEST_F(MockUnitTest, testCasReplace)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_store_callback(instance, testCasReplaceStoreCallback);
-    utilStoreKey(instance, key, "foo");
+    storeKey(instance, key, "foo");
     Item itm;
-    utilGetKey(instance, key, itm);
+    getKey(instance, key, itm);
 
     int numcallbacks = 0;
     lcb_store_cmd_t cmd(LCB_REPLACE, key.data(), key.length(), "bar", 3);
@@ -474,7 +474,7 @@ TEST_F(MockUnitTest, testCasReplace)
     EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &numcallbacks, 1, cmds));
     lcb_wait(instance);
     EXPECT_EQ(1, numcallbacks);
-    utilGetKey(instance, key, itm);
+    getKey(instance, key, itm);
     EXPECT_STREQ("bar", itm.val.c_str());
 }
 
@@ -497,7 +497,7 @@ TEST_F(MockUnitTest, testTouchMiss)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_touch_callback(instance, testTouchMissCallback);
-    utilRemoveKey(instance, key);
+    removeKey(instance, key);
 
     int numcallbacks = 0;
     lcb_touch_cmd_t cmd(key.data(), key.length(), 666);
@@ -526,7 +526,7 @@ TEST_F(MockUnitTest, testTouchHit)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_touch_callback(instance, testTouchHitCallback);
-    utilStoreKey(instance, key, "foo");
+    storeKey(instance, key, "foo");
 
     int numcallbacks = 0;
     lcb_touch_cmd_t cmd(key.data(), key.length(), 666);

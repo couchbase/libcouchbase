@@ -1,3 +1,20 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2012 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #include "mock-unit-test.h"
 /*
  * Helper functions
@@ -33,7 +50,7 @@ extern "C" {
     }
 }
 
-void utilStoreKey(lcb_t instance, const std::string &key, const std::string &value)
+void storeKey(lcb_t instance, const std::string &key, const std::string &value)
 {
     int counter = 0;
     lcb_store_cmd_t cmd(LCB_SET, key.data(), key.length(),
@@ -46,19 +63,20 @@ void utilStoreKey(lcb_t instance, const std::string &key, const std::string &val
     ASSERT_EQ(1, counter);
 }
 
-void utilRemoveKey(lcb_t instance, const std::string &key)
+void removeKey(lcb_t instance, const std::string &key)
 {
     int counter = 0;
     lcb_remove_cmd_t cmd(key.data(), key.length());
     lcb_remove_cmd_t* cmds[] = { &cmd };
-    lcb_remove_callback cb = lcb_set_remove_callback(instance, removeKeyCallback);
+    lcb_remove_callback cb = lcb_set_remove_callback(instance,
+                                                     removeKeyCallback);
     EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, &counter, 1, cmds));
     lcb_wait(instance);
     (void)lcb_set_remove_callback(instance, cb);
     ASSERT_EQ(1, counter);
 }
 
-void utilGetKey(lcb_t instance, const std::string &key, Item &item)
+void getKey(lcb_t instance, const std::string &key, Item &item)
 {
     item.cas = 0xdeadbeef;
 
