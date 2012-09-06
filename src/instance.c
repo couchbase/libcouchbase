@@ -383,7 +383,6 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
     lcb_uint16_t ii, max, buii;
     lcb_size_t num;
     const char *passwd;
-    char curnode[NI_MAXHOST + NI_MAXSERV + 2];
     sasl_callback_t sasl_callbacks[4] = {
         { SASL_CB_USER, (int( *)(void)) &sasl_get_username, instance },
         { SASL_CB_AUTHNAME, (int( *)(void)) &sasl_get_username, instance },
@@ -404,14 +403,9 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
     if (instance->backup_nodes == NULL) {
         return lcb_error_handler(instance, LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
-    snprintf(curnode, sizeof(curnode), "%s:%s", instance->host, instance->port);
     for (buii = 0, ii = 0; ii < num; ++ii) {
         instance->servers[ii].instance = instance;
         lcb_server_initialize(instance->servers + ii, (int)ii);
-        if (strcmp(curnode, instance->servers[ii].rest_api_server) == 0) {
-            continue;
-        }
-
         instance->backup_nodes[buii] = instance->servers[ii].rest_api_server;
         /* swap with random position < ii */
         if (buii > 0) {
@@ -422,9 +416,6 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
         }
         buii++;
     }
-
-    /* current node is last in the list */
-    instance->backup_nodes[buii] = curnode;
 
     instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
     memset(instance->sasl.password.buffer, 0,
