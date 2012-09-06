@@ -1,6 +1,6 @@
-/* -*- Mode: CPP; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2011 Couchbase, Inc.
+ *     Copyright 2012 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -14,41 +14,13 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-/**
- * We don't have a real getopt_long implementation on Windows, so I've
- * added a scaled down version in the win32 directory. This small test
- * program tries to verify that it at least got some basic functionality
- * working.
- *
- * @author Trond Norbye
- */
 #include "config.h"
+#include <gtest/gtest.h>
+#include <libcouchbase/couchbase.h>
 #include <iostream>
 #include <getopt.h>
 #include <vector>
 #include <sstream>
-
-int error = 0;
-
-#define fail(message) \
-   do { \
-       std::cerr << "Failed: " << __FILE__ << ":" \
-                 << __LINE__ << ": " << #message \
-                 << std::endl; \
-       return 1; \
-   } while (0)
-
-#define verify(expression) \
-   do { \
-       if (!(expression)) { \
-           fail(expression); \
-       } \
-   } while (0)
-
-#define assertTrue(a) verify(a)
-#define assertFalse(a) verify(!a)
-#define assertEquals(a, b) verify(a == b)
 
 class CommandLineOption
 {
@@ -153,70 +125,65 @@ public:
     std::vector<CommandLineOption *> options;
 };
 
+
+class GetoptUnitTests : public ::testing::Test
+{
+protected:
+};
+
 static void setup(Getopt &getopt)
 {
     getopt.addOption(new CommandLineOption('a', "alpha", true)).
-    addOption(new CommandLineOption('b', "bravo", false)).
-    addOption(new CommandLineOption('c', "charlie", false));
+        addOption(new CommandLineOption('b', "bravo", false)).
+        addOption(new CommandLineOption('c', "charlie", false));
 }
 
-static int testParseEmptyNoOptions(void)
+
+// Verify that we allow no options and that the option array is empty
+TEST_F(GetoptUnitTests, testParseEmptyNoOptions)
 {
     std::vector<std::string> argv;
     Getopt getopt;
-    if (!getopt.parse(argv)) {
-        fail("Parse should allow no arguments");
-    }
-
-    // validate that none of the options is set
-    std::vector<CommandLineOption *>::const_iterator iter;
-    for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertFalse((*iter)->found);
-    }
-
-    return 0;
+    ASSERT_TRUE(getopt.parse(argv));
+    ASSERT_EQ(0, getopt.options.size());
+    ASSERT_EQ(getopt.options.end(), getopt.options.begin());
 }
 
-static int testParseEmpty(void)
+// Verify that we allow no options and that the option array is empty
+TEST_F(GetoptUnitTests, testParseEmpty)
 {
     std::vector<std::string> argv;
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("Parse should allow no arguments");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
+    EXPECT_NE(getopt.options.end(), getopt.options.begin());
 
     // validate that none of the options is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertFalse((*iter)->found);
+        EXPECT_FALSE((*iter)->found);
     }
-    return 0;
 }
 
-static int testParseOnlyArguments(void)
+TEST_F(GetoptUnitTests, testParseOnlyArguments)
 {
     std::vector<std::string> argv;
     argv.push_back("foo");
     argv.push_back("bar");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("Parse should allow no arguments");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that none of the options is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertFalse((*iter)->found);
+        ASSERT_FALSE((*iter)->found);
     }
 
-    assertEquals(1, optind);
-
-    return 0;
+    ASSERT_EQ(1, optind);
 }
 
-static int testParseOnlyArgumentsWithSeparatorInThere()
+TEST_F(GetoptUnitTests, testParseOnlyArgumentsWithSeparatorInThere)
 {
     std::vector<std::string> argv;
     argv.push_back("foo");
@@ -224,101 +191,85 @@ static int testParseOnlyArgumentsWithSeparatorInThere()
     argv.push_back("bar");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("Parse should allow no arguments");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that none of the options is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertFalse((*iter)->found);
+        EXPECT_FALSE((*iter)->found);
     }
-
-    return 0;
 }
 
-static int testParseSingleLongoptWithoutArgument()
+TEST_F(GetoptUnitTests,testParseSingleLongoptWithoutArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("--bravo");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --bravo is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'b') {
-            assertTrue((*iter)->found);
+            EXPECT_TRUE((*iter)->found);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
-    return 0;
 }
 
-static int testParseSingleLongoptWithoutRequiredArgument()
+TEST_F(GetoptUnitTests,testParseSingleLongoptWithoutRequiredArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("--alpha");
     Getopt getopt;
     setup(getopt);
-    if (getopt.parse(argv)) {
-        fail("parse should fail");
-    }
-    return 0;
+    ASSERT_FALSE(getopt.parse(argv));
 }
 
-static int testParseSingleLongoptWithRequiredArgument()
+TEST_F(GetoptUnitTests,testParseSingleLongoptWithRequiredArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("--alpha=foo");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --alpha is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'a') {
-            assertTrue((*iter)->found);
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            EXPECT_TRUE((*iter)->found);
+            EXPECT_STREQ("foo", (*iter)->argument);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
-    return 0;
 }
 
-static int testParseSingleLongoptWithRequiredArgument1()
+TEST_F(GetoptUnitTests,testParseSingleLongoptWithRequiredArgument1)
 {
     std::vector<std::string> argv;
     argv.push_back("--alpha");
     argv.push_back("foo");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --alpha is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'a') {
-            assertTrue((*iter)->found);
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            EXPECT_TRUE((*iter)->found);
+            EXPECT_STREQ("foo", (*iter)->argument);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
-    return 0;
 }
 
-static int testParseMulipleLongoptWithArgumentsAndOptions()
+TEST_F(GetoptUnitTests, testParseMulipleLongoptWithArgumentsAndOptions)
 {
     std::vector<std::string> argv;
     argv.push_back("--alpha=foo");
@@ -327,24 +278,21 @@ static int testParseMulipleLongoptWithArgumentsAndOptions()
     argv.push_back("foo");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --alpha, bravo and charlie is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertTrue((*iter)->found);
+        EXPECT_TRUE((*iter)->found);
         if ((*iter)->shortopt == 'a') {
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            ASSERT_STREQ("foo", (*iter)->argument);
         }
     }
 
-    assertEquals(4, optind);
-    return 0;
+    ASSERT_EQ(4, optind);
 }
 
-static int testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator()
+TEST_F(GetoptUnitTests, testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator)
 {
 
     std::vector<std::string> argv;
@@ -355,24 +303,21 @@ static int testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator()
     argv.push_back("foo");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'a') {
-            assertTrue((*iter)->found);
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            EXPECT_TRUE((*iter)->found);
+            EXPECT_STREQ("foo", (*iter)->argument);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
-    assertEquals(3, optind);
-    return 0;
+    ASSERT_EQ(3, optind);
 }
 
-static int testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator1()
+TEST_F(GetoptUnitTests, testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator1)
 {
 
     std::vector<std::string> argv;
@@ -384,88 +329,76 @@ static int testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator1()
     argv.push_back("foo");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'a') {
-            assertTrue((*iter)->found);
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            EXPECT_TRUE((*iter)->found);
+            EXPECT_STREQ("foo", (*iter)->argument);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
-    assertEquals(4, optind);
-    return 0;
+    ASSERT_EQ(4, optind);
 }
 
-static int testParseSingleShortoptWithoutArgument()
+TEST_F(GetoptUnitTests, testParseSingleShortoptWithoutArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("-b");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that -b is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'b') {
-            assertTrue((*iter)->found);
+            EXPECT_TRUE((*iter)->found);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
-    return 0;
 }
 
-static int testParseSingleShortoptWithoutRequiredArgument()
+TEST_F(GetoptUnitTests, testParseSingleShortoptWithoutRequiredArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("-a");
     Getopt getopt;
     setup(getopt);
-    if (getopt.parse(argv)) {
-        fail("parse should fail with a missing argument");
-    }
+    ASSERT_FALSE(getopt.parse(argv));
 
     // validate that none is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertFalse((*iter)->found);
+        EXPECT_FALSE((*iter)->found);
     }
-    return 0;
 }
 
-static int testParseSingleShortoptWithRequiredArgument()
+TEST_F(GetoptUnitTests, testParseSingleShortoptWithRequiredArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("-a");
     argv.push_back("foo");
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
 
     // validate that none is set
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'a') {
-            assertTrue((*iter)->found);
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            EXPECT_TRUE((*iter)->found);
+            EXPECT_STREQ("foo", (*iter)->argument);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
-    return 0;
 }
 
-static int testParseMulipleShortoptWithArgumentsAndOptions()
+TEST_F(GetoptUnitTests, testParseMulipleShortoptWithArgumentsAndOptions)
 {
     std::vector<std::string> argv;
     argv.push_back("-a");
@@ -476,22 +409,19 @@ static int testParseMulipleShortoptWithArgumentsAndOptions()
 
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertTrue((*iter)->found);
+        EXPECT_TRUE((*iter)->found);
         if ((*iter)->shortopt == 'a') {
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            EXPECT_STREQ("foo", (*iter)->argument);
         }
     }
 
-    assertEquals(5, optind);
-    return 0;
+    ASSERT_EQ(5, optind);
 }
 
-static int testParseMulipleShortoptWithArgumentsAndOptionsAndSeparator()
+TEST_F(GetoptUnitTests, testParseMulipleShortoptWithArgumentsAndOptionsAndSeparator)
 {
     std::vector<std::string> argv;
     argv.push_back("-a");
@@ -503,24 +433,21 @@ static int testParseMulipleShortoptWithArgumentsAndOptionsAndSeparator()
 
     Getopt getopt;
     setup(getopt);
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->shortopt == 'a') {
-            assertTrue((*iter)->found);
-            verify(strcmp((*iter)->argument, "foo") == 0);
+            EXPECT_TRUE((*iter)->found);
+            EXPECT_STREQ("foo", (*iter)->argument);
         } else {
-            assertFalse((*iter)->found);
+            EXPECT_FALSE((*iter)->found);
         }
     }
 
-    assertEquals(4, optind);
-    return 0;
+    ASSERT_EQ(4, optind);
 }
 
-static int testParseMix()
+TEST_F(GetoptUnitTests, testParseMix)
 {
     std::vector<std::string> argv;
     argv.push_back("-alpha");
@@ -536,49 +463,18 @@ static int testParseMix()
     setup(getopt);
 
 #ifdef _WIN32
-    assertFalse(getopt.parse(argv));
+    ASSERT_FALSE(getopt.parse(argv));
 #else
-    if (!getopt.parse(argv)) {
-        fail("parse should succeed");
-    }
+    ASSERT_TRUE(getopt.parse(argv));
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
-        assertTrue((*iter)->found);
+        EXPECT_TRUE((*iter)->found);
         if ((*iter)->shortopt == 'a') {
             // the second -a overrides the first
-            verify(strcmp((*iter)->argument, "bar") == 0);
+            EXPECT_STREQ("bar", (*iter)->argument);
         }
     }
 
-    assertEquals(7, optind);
+    ASSERT_EQ(7, optind);
 #endif
-    return 0;
-}
-
-int main()
-{
-    error += testParseEmptyNoOptions();
-    error += testParseEmpty();
-    error += testParseOnlyArguments();
-    error += testParseOnlyArgumentsWithSeparatorInThere();
-    error += testParseSingleLongoptWithoutArgument();
-    error += testParseSingleLongoptWithoutRequiredArgument();
-    error += testParseSingleLongoptWithRequiredArgument();
-    error += testParseSingleLongoptWithRequiredArgument1();
-    error += testParseMulipleLongoptWithArgumentsAndOptions();
-    error += testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator();
-    error += testParseMulipleLongoptWithArgumentsAndOptionsAndSeparator1();
-    error += testParseSingleShortoptWithoutArgument();
-    error += testParseSingleShortoptWithoutRequiredArgument();
-    error += testParseSingleShortoptWithRequiredArgument();
-    error += testParseMulipleShortoptWithArgumentsAndOptions();
-    error += testParseMulipleShortoptWithArgumentsAndOptionsAndSeparator();
-    error += testParseMix();
-
-    if (error != 0) {
-        std::cerr << error << " tests failed" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    return EXIT_SUCCESS;
 }

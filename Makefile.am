@@ -243,18 +243,12 @@ noinst_LTLIBRARIES += libmockserver.la
 tests_unit_tests_SOURCES += tests/loopfactory.c tests/server.h          \
                             tests/mock-unit-test.h tests/testutil.h     \
                             tests/testutil.cc tests/http-tests.cc       \
-                            tests/mock-unit-test.cc tests/server.c
+                            tests/mock-unit-test.cc tests/server.c      \
+                            tests/getopt-unit-tests.cc
 endif
 check_PROGRAMS += \
                   tests/config-test \
                   tests/smoke-test
-
-if BUILD_TOOLS
-# and therefore have C++ compiler to build this test
-check_PROGRAMS += tests/getopt-test
-endif
-
-tests_getopt_test_SOURCES = tests/getopt-test.cc
 
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_DEPENDENCIES = libcouchbase.la libmockserver.la libvbucket.la
