@@ -44,7 +44,7 @@ class Getopt
 {
 public:
     Getopt() {
-        verbose = getenv("LIBCOUCHBASE_VERBOSE_TESTS") != 0;
+        verbose = getenv("LCB_VERBOSE_TESTS") != 0;
     }
 
     Getopt &addOption(CommandLineOption *option) {
