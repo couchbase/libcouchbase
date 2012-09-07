@@ -151,6 +151,9 @@ TEST_F(MockUnitTest, testGetMiss)
     (void)lcb_set_get_callback(instance, testGetMissGetCallback);
     int numcallbacks = 0;
 
+    removeKey(instance, "testGetMiss1");
+    removeKey(instance, "testGetMiss2");
+
     lcb_get_cmd_t cmd1("testGetMiss1");
     lcb_get_cmd_t cmd2("testGetMiss2");
     lcb_get_cmd_t *cmds[] = { &cmd1, &cmd2 };
