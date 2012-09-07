@@ -17,6 +17,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
+#include <map>
 
 #include "server.h"
 #include "mock-unit-test.h"
@@ -152,3 +153,84 @@ TEST_F(GetUnitTest, testTouchHit)
     EXPECT_EQ(1, numcallbacks);
 }
 
+extern "C" {
+    static void testMixedMultiGetCallback(lcb_t, const void *cookie,
+                                          lcb_error_t error,
+                                          const lcb_get_resp_t *resp)
+    {
+        using namespace std;
+        map<string, Item> *kmap = (map<string,Item>*)cookie;
+
+        Item itm;
+        itm.assign(resp, error);
+
+        (*kmap)[itm.key] = itm;
+    }
+}
+
+/**
+ * Adopted from smoke-test.c:test_get2
+ * Tests the mixed hit/miss pattern. GET misses interleaved with hits.
+ */
+TEST_F(GetUnitTest, testMixedMultiGet)
+{
+    using namespace std;
+    lcb_t instance;
+
+    vector<string> kexisting;
+    vector<string> kmissing;
+    map<string, Item> kmap;
+
+    vector<lcb_get_cmd_t> cmds;
+    vector<lcb_get_cmd_t*> cmdptrs;
+
+    createConnection(instance);
+
+    int iterations = 4;
+
+    for (int ii = 0; ii < iterations; ii++) {
+        char suffix = 'a' + ii;
+        string k("existingKey");
+        k += suffix;
+        kexisting.push_back(k);
+        storeKey(instance, k, k);
+
+        k = "nonExistKey";
+        k += suffix;
+        removeKey(instance, k);
+        kmissing.push_back(k);
+    }
+
+    for (int ii = 0; ii < iterations; ii++) {
+        lcb_get_cmd_t cmdhit(kexisting[ii].c_str(), kexisting[ii].size());
+        lcb_get_cmd_t cmdmiss(kmissing[ii].c_str(), kmissing[ii].size());
+
+        cmds.push_back(cmdhit);
+        cmds.push_back(cmdmiss);
+    }
+
+    for (int ii = 0; ii < cmds.size(); ii++) {
+        cmdptrs.push_back(&cmds[ii]);
+    }
+
+    lcb_set_get_callback(instance, testMixedMultiGetCallback);
+
+    EXPECT_EQ(LCB_SUCCESS,
+              lcb_get(instance, &kmap, cmds.size(), &cmdptrs[0]));
+
+    lcb_wait(instance);
+    ASSERT_EQ(iterations * 2, kmap.size());
+
+    for (int ii = 0; ii < iterations; ii++) {
+        string k = kexisting[ii];
+        ASSERT_EQ(1, kmap.count(k));
+        Item itm = kmap[k];
+        ASSERT_EQ(LCB_SUCCESS, itm.err);
+        ASSERT_EQ(k, itm.val);
+
+        k = kmissing[ii];
+        ASSERT_EQ(1, kmap.count(k));
+        itm = kmap[k];
+        ASSERT_EQ(LCB_KEY_ENOENT, itm.err);
+    }
+}

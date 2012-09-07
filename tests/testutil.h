@@ -21,12 +21,13 @@
 #include <string.h>
 
 struct Item {
-    void assign(const lcb_get_resp_t *resp) {
+    void assign(const lcb_get_resp_t *resp, lcb_error_t e = LCB_SUCCESS) {
         key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
         val.assign((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
         flags = resp->v.v0.flags;
         cas =  resp->v.v0.cas;
         datatype =  resp->v.v0.datatype;
+        err = e;
     }
 
     Item() {
@@ -40,6 +41,7 @@ struct Item {
     lcb_uint32_t flags;
     lcb_cas_t cas;
     lcb_datatype_t datatype;
+    lcb_error_t err;
 };
 
 void storeKey(lcb_t instance, const std::string &key, const std::string &value);
