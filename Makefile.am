@@ -244,7 +244,12 @@ tests_unit_tests_SOURCES += tests/loopfactory.c tests/server.h          \
                             tests/mock-unit-test.h tests/testutil.h     \
                             tests/testutil.cc tests/http-tests.cc       \
                             tests/mock-unit-test.cc tests/server.c      \
-                            tests/getopt-unit-tests.cc
+                            tests/getopt-unit-tests.cc                  \
+                            tests/mutate-unit-test.cc \
+                            tests/serverops-unit-test.cc \
+                            tests/arithmetic-unit-test.cc \
+                            tests/get-unit-test.cc
+
 endif
 check_PROGRAMS += \
                   tests/config-test \
