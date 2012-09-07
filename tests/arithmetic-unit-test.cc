@@ -76,18 +76,13 @@ extern "C" {
     }
 }
 
-TEST_F(ArithmeticUnitTest, populateArithmetic)
+static void initArithmeticKey(lcb_t instance, std::string key,
+                              lcb_uint64_t value)
 {
-    lcb_t instance;
-    createConnection(instance);
-    (void)lcb_set_store_callback(instance, arithmetic_store_callback);
-
-    lcb_store_cmd_t cmd(LCB_SET, "counter", 7, "0", 1);
-    lcb_store_cmd_t *cmds[] = { &cmd };
-
-    lcb_store(instance, this, 1, cmds);
-    lcb_wait(instance);
-    lcb_destroy(instance);
+    std::stringstream ss;
+    ss << value;
+    storeKey(instance, key, ss.str());
+    arithm_val = value;
 }
 
 TEST_F(ArithmeticUnitTest, testIncr)
@@ -95,6 +90,8 @@ TEST_F(ArithmeticUnitTest, testIncr)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_arithmetic_callback(instance, arithmetic_incr_callback);
+
+    initArithmeticKey(instance, "counter", 0);
 
     for (int ii = 0; ii < 10; ++ii) {
         lcb_arithmetic_cmd_t cmd("counter", 7, 1);
@@ -111,6 +108,8 @@ TEST_F(ArithmeticUnitTest, testDecr)
     lcb_t instance;
     createConnection(instance);
     (void)lcb_set_arithmetic_callback(instance, arithmetic_decr_callback);
+
+    initArithmeticKey(instance, "counter", 100);
 
     for (int ii = 0; ii < 10; ++ii) {
         lcb_arithmetic_cmd_t cmd("counter", 7, -1);
