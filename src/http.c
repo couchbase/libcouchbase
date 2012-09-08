@@ -515,8 +515,14 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->io = instance->io;
     req->server = server;
     req->command_cookie = command_cookie;
-    req->path = strdup(cmd->v.v0.path);
+
     req->npath = cmd->v.v0.npath;
+    if ( (req->path = malloc(req->npath)) == NULL) {
+        lcb_http_request_destroy(req);
+        return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+    }
+    memcpy(req->path, cmd->v.v0.path, req->npath);
+
     req->chunked = cmd->v.v0.chunked;
     req->method = cmd->v.v0.method;
 
