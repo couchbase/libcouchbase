@@ -58,19 +58,35 @@ private:
     }
 };
 
-class MockUnitTest : public ::testing::Test
+class MockEnvironment : public ::testing::Environment
 {
 public:
-    static int numNodes;
+    virtual void SetUp();
+    virtual void TearDown();
 
+    static void makeConnectParams(lcb_create_st &crst) {
+        serverParams.makeConnectParams(crst);
+    }
+
+    static int numNodes;
+    static bool isRealCluster;
+    static const char *http;
+
+
+protected:
+    static void bootstrapRealCluster();
+    static const struct test_server_info *mock;
+    static ServerParams serverParams;
+};
+
+extern MockEnvironment *globalMockEnvironment;
+
+class MockUnitTest : public ::testing::Test
+{
 protected:
     static void SetUpTestCase();
     static void TearDownTestCase();
-
     virtual void createConnection(lcb_t &instance);
-    static const struct test_server_info *mock;
-    static const char *http;
-    static bool isRealCluster;
 };
 
 #endif

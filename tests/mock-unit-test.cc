@@ -21,71 +21,11 @@
 #include "server.h"
 #include "mock-unit-test.h"
 
-
-const struct test_server_info *MockUnitTest::mock;
-const char *MockUnitTest::http;
-int MockUnitTest::numNodes;
-bool MockUnitTest::isRealCluster;
-
-static bool realClusterGotNodes = false;
-
-ServerParams globalServerParams;
-
-static void bootstrapRealCluster(const struct test_server_info *mock)
-{
-    globalServerParams = ServerParams(mock->http, mock->bucket,
-                                      mock->username, mock->password);
-    if (realClusterGotNodes) {
-        return;
-    }
-
-    lcb_t tmphandle;
-    lcb_error_t err;
-    lcb_create_st options;
-    globalServerParams.makeConnectParams(options);
-
-    ASSERT_EQ(LCB_SUCCESS, lcb_create(&tmphandle, &options));
-    ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
-    lcb_wait(tmphandle);
-
-    const char * const *servers = lcb_get_server_list(tmphandle);
-    bool verbose = getenv("LCB_VERBOSE_TESTS") != 0;
-    if (verbose) {
-        std::cout << "Using the following servers: " << std::endl;
-    }
-    int ii;
-    for (ii = 0; servers[ii] != NULL; ii++) {
-        if (verbose) {
-            std::cout << "[" << servers[ii] << "]" << std::endl;
-        }
-    }
-
-    MockUnitTest::numNodes = ii;
-    lcb_destroy(tmphandle);
-    realClusterGotNodes = true;
-
-}
-
-void MockUnitTest::SetUpTestCase()
-{
-    mock = (struct test_server_info*)start_test_server(NULL);
-    isRealCluster = is_using_real_cluster();
-
-    if (isRealCluster) {
-        bootstrapRealCluster(mock);
-    } else {
-        numNodes = 10;
-    }
-
-    ASSERT_NE((const void *)(NULL), mock);
-    http = get_mock_http_server(mock);
-    ASSERT_NE((const char *)(NULL), http);
-}
-
-void MockUnitTest::TearDownTestCase()
-{
-    shutdown_mock_server(mock);
-}
+/**
+ * Keep these around in case we do something useful here in the future
+ */
+void MockUnitTest::SetUpTestCase() { }
+void MockUnitTest::TearDownTestCase() { }
 
 extern "C" {
     static void error_callback(lcb_t instance,
@@ -112,12 +52,13 @@ void MockUnitTest::createConnection(lcb_t &instance)
     }
 
     lcb_create_st options;
-    if (isRealCluster) {
+    if (MockEnvironment::isRealCluster) {
         options = lcb_create_st();
-        globalServerParams.makeConnectParams(options);
+        MockEnvironment::makeConnectParams(options);
         options.v.v0.io = io;
     } else {
-        options = lcb_create_st(http, "Administrator", "password",
+        options = lcb_create_st(MockEnvironment::http,
+                                "Administrator", "password",
                                 getenv("LCB_TEST_BUCKET"), io);
     }
 
