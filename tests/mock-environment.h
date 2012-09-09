@@ -25,6 +25,12 @@
 class MockEnvironment : public ::testing::Environment
 {
 public:
+    enum ServerVersion {
+        VERSION_UNKNOWN = 0,
+        VERSION_10 = 1,
+        VERSION_20 = 2
+    };
+
     virtual void SetUp();
     virtual void TearDown();
 
@@ -75,6 +81,14 @@ public:
      */
     void createConnection(lcb_t &instance);
 
+    ServerVersion getServerVersion(void) const {
+        return serverVersion;
+    }
+
+    void setServerVersion(ServerVersion ver)  {
+        serverVersion = ver;
+    }
+
 protected:
     /**
      * Protected destructor to make it to a singleton
@@ -90,7 +104,22 @@ protected:
     ServerParams serverParams;
     int numNodes;
     bool realCluster;
+    ServerVersion serverVersion;
     const char *http;
 };
+
+#define LCB_TEST_REQUIRE_CLUSTER_VERSION(v) \
+    if (!MockEnvironment::getInstance()->isRealCluster()) {             \
+        std::cerr << "Skipping " << __FILE__ << ":" << std::dec << __LINE__; \
+        std::cerr << " (need real cluster) " << std::endl; \
+        return; \
+    } \
+    if (MockEnvironment:::getInstance()->getServerVersion() < v) {      \
+        std::cerr << "Skipping " << __FILE__ << ":" << std::dec << __LINE__; \
+        std::cerr << " (test needs higher cluster version)" << std::endl; \
+        return; \
+    }
+
+
 
 #endif
