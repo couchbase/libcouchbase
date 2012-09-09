@@ -114,7 +114,7 @@ protected:
         std::cerr << " (need real cluster) " << std::endl; \
         return; \
     } \
-    if (MockEnvironment:::getInstance()->getServerVersion() < v) {      \
+    if (MockEnvironment::getInstance()->getServerVersion() < v) {      \
         std::cerr << "Skipping " << __FILE__ << ":" << std::dec << __LINE__; \
         std::cerr << " (test needs higher cluster version)" << std::endl; \
         return; \

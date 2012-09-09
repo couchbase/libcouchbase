@@ -30,6 +30,16 @@ struct Item {
         err = e;
     }
 
+    /**
+     * Extract the key and CAS from a response.
+     */
+    template <typename T>
+    void assignKC(const T *resp, lcb_error_t e = LCB_SUCCESS) {
+        key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        cas = resp->v.v0.cas;
+        err = e;
+    }
+
     Item() {
         flags = 0;
         cas = 0;

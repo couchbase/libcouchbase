@@ -251,7 +251,8 @@ tests_unit_tests_SOURCES += tests/loopfactory.c tests/server.h          \
                             tests/mutate-unit-test.cc \
                             tests/serverops-unit-test.cc \
                             tests/arithmetic-unit-test.cc \
-                            tests/get-unit-test.cc
+                            tests/get-unit-test.cc \
+                            tests/lock-unit-test.cc
 
 endif
 check_PROGRAMS += \
