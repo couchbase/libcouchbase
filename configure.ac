@@ -316,6 +316,8 @@ Try add --disable-couchbasemock
 ])])])
 
 AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xyes"])
+AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
+      [AC_DEFINE([HAVE_COUCHBASEMOCK], [1], [We have CouchbaseMock.jar])])
 
 AC_ARG_ENABLE([tools],
     [AS_HELP_STRING([--disable-tools],

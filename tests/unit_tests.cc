@@ -15,11 +15,15 @@
  *   limitations under the License.
  */
 #include <gtest/gtest.h>
+#ifdef HAVE_COUCHBASEMOCK
 #include "mock-environment.h"
+#endif
 
 int main(int argc, char **argv)
 {
+#ifdef HAVE_COUCHBASEMOCK
     ::testing::AddGlobalTestEnvironment(MockEnvironment::getInstance());
+#endif
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

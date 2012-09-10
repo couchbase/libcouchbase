@@ -240,24 +240,29 @@ endif
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
-tests_unit_tests_SOURCES += tests/loopfactory.c tests/server.h          \
-                            tests/mock-unit-test.h tests/testutil.h     \
-                            tests/testutil.cc tests/http-tests.cc       \
-                            tests/mock-environment.cc \
-                            tests/mock-environment.h \
-                            tests/serverparams.h \
-                            tests/mock-unit-test.cc tests/server.c      \
-                            tests/getopt-unit-tests.cc                  \
-                            tests/mutate-unit-test.cc \
-                            tests/serverops-unit-test.cc \
+tests_unit_tests_SOURCES += \
                             tests/arithmetic-unit-test.cc \
                             tests/get-unit-test.cc \
-                            tests/lock-unit-test.cc
+                            tests/getopt-unit-tests.cc \
+                            tests/http-tests.cc \
+                            tests/lock-unit-test.cc \
+                            tests/loopfactory.c \
+                            tests/mock-environment.cc \
+                            tests/mock-environment.h \
+                            tests/mock-unit-test.cc \
+                            tests/mock-unit-test.h \
+                            tests/mutate-unit-test.cc \
+                            tests/server.c \
+                            tests/server.h \
+                            tests/serverops-unit-test.cc \
+                            tests/serverparams.h \
+                            tests/testutil.cc \
+                            tests/testutil.h
 
-endif
 check_PROGRAMS += \
                   tests/config-test \
                   tests/smoke-test
+endif
 
 tests_config_test_SOURCES = tests/test.h tests/config-test.c
 tests_config_test_DEPENDENCIES = libcouchbase.la libmockserver.la libvbucket.la
