@@ -80,11 +80,15 @@ extern "C" {
         LCB_ETIMEDOUT = 0x16,
         LCB_CONNECT_ERROR = 0x17,
         LCB_BUCKET_ENOENT = 0x18,
-        LCB_CLIENT_ENOMEM = 0x19
+        LCB_CLIENT_ENOMEM = 0x19,
+        LCB_CLIENT_ETMPFAIL = 0x20
     } lcb_error_t;
 
 #define lcb_is_error_enomem(a) ((a == LCB_CLIENT_ENOMEM) || \
                                 (a == LCB_ENOMEM))
+
+#define lcb_is_error_etmpfail(a) ((a == LCB_CLIENT_ETMPFAIL) || \
+                                  (a == LCB_ETMPFAIL))
 
     typedef enum {
         LCB_CONFIGURATION_NEW = 0x00,

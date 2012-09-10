@@ -548,7 +548,7 @@ static void lcb_update_serverlist(lcb_t instance)
                     /* other distribution types (ketama) are relying on
                      * hashing key, therefore return TMPFAIL and force users
                      * to retry */
-                    lcb_failout_server(ss, LCB_ETMPFAIL);
+                    lcb_failout_server(ss, LCB_CLIENT_ETMPFAIL);
                 }
                 lcb_server_destroy(ss);
             }

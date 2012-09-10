@@ -464,7 +464,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     }
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
     }
     /* pick random server */
     nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;

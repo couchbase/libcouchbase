@@ -32,7 +32,7 @@ lcb_error_t lcb_server_stats(lcb_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
     }
 
     for (count = 0; count < num; ++count) {
@@ -81,7 +81,7 @@ lcb_error_t lcb_server_versions(lcb_t instance,
     lcb_size_t count;
 
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
     }
 
     for (count = 0; count < num; ++count) {

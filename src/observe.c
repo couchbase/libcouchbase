@@ -65,7 +65,7 @@ lcb_error_t lcb_observe(lcb_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_ETMPFAIL);
+        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
     }
 
     if (instance->dist_type != VBUCKET_DISTRIBUTION_VBUCKET) {

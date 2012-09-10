@@ -82,6 +82,8 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "No such bucket";
     case LCB_CLIENT_ENOMEM:
         return "Out of memory on the client";
+    case LCB_CLIENT_ETMPFAIL:
+        return "Temporary failure on the client. Try again later";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }
