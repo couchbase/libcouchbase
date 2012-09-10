@@ -244,6 +244,8 @@ tests_unit_tests_SOURCES += tests/loopfactory.c tests/server.h          \
                             tests/mock-unit-test.h tests/testutil.h     \
                             tests/testutil.cc tests/http-tests.cc       \
                             tests/mock-environment.cc \
+                            tests/mock-environment.h \
+                            tests/serverparams.h \
                             tests/mock-unit-test.cc tests/server.c      \
                             tests/getopt-unit-tests.cc                  \
                             tests/mutate-unit-test.cc \

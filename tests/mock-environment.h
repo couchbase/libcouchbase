@@ -14,15 +14,33 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+#ifndef TESTS_MOCK_ENVIRONMENT_H
+#define TESTS_MOCK_ENVIRONMENT_H 1
+
+#include "config.h"
 #include <gtest/gtest.h>
-#include "mock-environment.h"
+#include <libcouchbase/couchbase.h>
+#include "serverparams.h"
 
-MockEnvironment *globalMockEnvironment;
-
-int main(int argc, char **argv)
+class MockEnvironment : public ::testing::Environment
 {
-    globalMockEnvironment = new MockEnvironment;
-    ::testing::AddGlobalTestEnvironment(globalMockEnvironment);
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+public:
+    virtual void SetUp();
+    virtual void TearDown();
+
+    static void makeConnectParams(lcb_create_st &crst) {
+        serverParams.makeConnectParams(crst);
+    }
+
+    static int numNodes;
+    static bool isRealCluster;
+    static const char *http;
+
+
+protected:
+    static void bootstrapRealCluster();
+    static const struct test_server_info *mock;
+    static ServerParams serverParams;
+};
+
+#endif

@@ -20,6 +20,8 @@
 
 #include "server.h"
 #include "mock-unit-test.h"
+#include "mock-environment.h"
+#include "testutil.h"
 
 class ServeropsUnitTest : public MockUnitTest
 {

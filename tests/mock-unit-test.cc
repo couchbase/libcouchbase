@@ -20,6 +20,7 @@
 
 #include "server.h"
 #include "mock-unit-test.h"
+#include "mock-environment.h"
 
 /**
  * Keep these around in case we do something useful here in the future

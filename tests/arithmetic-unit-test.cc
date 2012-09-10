@@ -20,6 +20,7 @@
 
 #include "server.h"
 #include "mock-unit-test.h"
+#include "testutil.h"
 
 class ArithmeticUnitTest : public MockUnitTest
 {

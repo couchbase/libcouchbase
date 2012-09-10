@@ -16,6 +16,8 @@
  */
 
 #include "mock-unit-test.h"
+#include "testutil.h"
+
 /*
  * Helper functions
  */

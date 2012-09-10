@@ -19,7 +19,7 @@
 #include <libcouchbase/couchbase.h>
 
 #include "server.h"
-#include "mock-unit-test.h"
+#include "mock-environment.h"
 
 const struct test_server_info *MockEnvironment::mock = NULL;
 const char *MockEnvironment::http = NULL;
