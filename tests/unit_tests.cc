@@ -17,12 +17,9 @@
 #include <gtest/gtest.h>
 #include "mock-environment.h"
 
-MockEnvironment *globalMockEnvironment;
-
 int main(int argc, char **argv)
 {
-    globalMockEnvironment = new MockEnvironment;
-    ::testing::AddGlobalTestEnvironment(globalMockEnvironment);
+    ::testing::AddGlobalTestEnvironment(MockEnvironment::getInstance());
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

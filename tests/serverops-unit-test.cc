@@ -119,7 +119,7 @@ extern "C" {
         ASSERT_EQ(0, resp->version);
         ASSERT_EQ(LCB_SUCCESS, error);
         if (resp->v.v0.server_endpoint == NULL) {
-            EXPECT_EQ(MockEnvironment::numNodes, *counter);
+            EXPECT_EQ(MockEnvironment::getInstance()->getNumNodes(), *counter);
             lcb_io_opt_t io;
             io = (lcb_io_opt_t)lcb_get_cookie(instance);
             io->stop_event_loop(io);
@@ -163,7 +163,7 @@ TEST_F(ServeropsUnitTest, testVerbosity)
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
     io->run_event_loop(io);
 
-    EXPECT_EQ(MockEnvironment::numNodes, counter);
+    EXPECT_EQ(MockEnvironment::getInstance()->getNumNodes(), counter);
     EXPECT_NE((char *)NULL, verbosity_endpoint);
 
     (void)lcb_set_verbosity_callback(instance, verbosity_single_callback);

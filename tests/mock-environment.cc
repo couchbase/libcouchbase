@@ -21,11 +21,22 @@
 #include "server.h"
 #include "mock-environment.h"
 
-const struct test_server_info *MockEnvironment::mock = NULL;
-const char *MockEnvironment::http = NULL;
-int MockEnvironment::numNodes;
-ServerParams MockEnvironment::serverParams;
-bool MockEnvironment::isRealCluster = false;
+MockEnvironment* MockEnvironment::instance;
+
+MockEnvironment* MockEnvironment::getInstance(void) {
+    if (instance == NULL) {
+        instance = new MockEnvironment;
+    }
+    return instance;
+}
+
+MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
+                                     realCluster(false),
+                                     http(NULL)
+{
+    // No extra init needed
+}
+
 
 void MockEnvironment::bootstrapRealCluster()
 {
@@ -62,12 +73,12 @@ void MockEnvironment::bootstrapRealCluster()
 void MockEnvironment::SetUp()
 {
     mock = (struct test_server_info*)start_test_server(NULL);
-    isRealCluster = is_using_real_cluster();
+    realCluster = is_using_real_cluster();
     ASSERT_NE((const void *)(NULL), mock);
     http = get_mock_http_server(mock);
     ASSERT_NE((const char *)(NULL), http);
 
-    if (isRealCluster) {
+    if (realCluster) {
         bootstrapRealCluster();
     } else {
         numNodes = 10;

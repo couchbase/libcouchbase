@@ -53,12 +53,12 @@ void MockUnitTest::createConnection(lcb_t &instance)
     }
 
     lcb_create_st options;
-    if (MockEnvironment::isRealCluster) {
+    if (MockEnvironment::getInstance()->isRealCluster()) {
         options = lcb_create_st();
-        MockEnvironment::makeConnectParams(options);
+        MockEnvironment::getInstance()->makeConnectParams(options);
         options.v.v0.io = io;
     } else {
-        options = lcb_create_st(MockEnvironment::http,
+        options = lcb_create_st(MockEnvironment::getInstance()->getMockRestUri(),
                                 "Administrator", "password",
                                 getenv("LCB_TEST_BUCKET"), io);
     }

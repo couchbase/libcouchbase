@@ -28,19 +28,35 @@ public:
     virtual void SetUp();
     virtual void TearDown();
 
-    static void makeConnectParams(lcb_create_st &crst) {
+    static MockEnvironment* getInstance(void);
+
+    void makeConnectParams(lcb_create_st &crst) {
         serverParams.makeConnectParams(crst);
     }
 
-    static int numNodes;
-    static bool isRealCluster;
-    static const char *http;
+    int getNumNodes(void) const {
+        return numNodes;
+    }
 
+    bool isRealCluster(void) const {
+        return realCluster;
+    }
+
+    const char *getMockRestUri(void) const {
+        return http;
+    }
 
 protected:
-    static void bootstrapRealCluster();
-    static const struct test_server_info *mock;
-    static ServerParams serverParams;
+    MockEnvironment();
+
+    static MockEnvironment *instance;
+
+    void bootstrapRealCluster();
+    const struct test_server_info *mock;
+    ServerParams serverParams;
+    int numNodes;
+    bool realCluster;
+    const char *http;
 };
 
 #endif
