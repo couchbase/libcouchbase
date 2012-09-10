@@ -30,25 +30,59 @@ public:
 
     static MockEnvironment* getInstance(void);
 
-    void makeConnectParams(lcb_create_st &crst) {
-        serverParams.makeConnectParams(crst);
+    /**
+     * Make a connect structure you may utilize to connect to
+     * the backend we're running the tests towards.
+     *
+     * @param crst the create structure to fill in
+     * @param io the io ops to use (pass NULL if you don't have a
+     *           special io ops you want to use
+     */
+    void makeConnectParams(lcb_create_st &crst, lcb_io_opt_t io) {
+        serverParams.makeConnectParams(crst, io);
     }
 
+    /**
+     * Get the number of nodes used in the backend
+     */
     int getNumNodes(void) const {
         return numNodes;
     }
 
+    /**
+     * Are we currently using a real cluster as the backend, or
+     * are we using the mock server.
+     *
+     * You should try your very best to avoid using this variable, and
+     * rather extend the mock server to support the requested feature.
+     */
     bool isRealCluster(void) const {
         return realCluster;
     }
 
-    const char *getMockRestUri(void) const {
-        return http;
-    }
+    /**
+     * Create a connection to the mock/real server.
+     *
+     * The instance will be initialized with the the connect parameters
+     * to either the mock or a real server (just like makeConnectParams),
+     * and call lcb_create. The io instance will be stored in the instance
+     * cookie so you may grab it from there.
+     *
+     * You should call lcb_destroy on the instance when you're done
+     * using it.
+     *
+     * @param instance the instane to create
+     */
+    void createConnection(lcb_t &instance);
 
 protected:
+    /**
+     * Protected destructor to make it to a singleton
+     */
     MockEnvironment();
-
+    /**
+     * Handle to the one and only instance of the mock environment
+     */
     static MockEnvironment *instance;
 
     void bootstrapRealCluster();

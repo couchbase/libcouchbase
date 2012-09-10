@@ -44,35 +44,11 @@ extern "C" {
 
 void MockUnitTest::createConnection(lcb_t &instance)
 {
-    struct lcb_io_opt_st *io;
-
-    io = get_test_io_opts();
-    if (io == NULL) {
-        fprintf(stderr, "Failed to create IO instance\n");
-        exit(1);
-    }
-
-    lcb_create_st options;
-    if (MockEnvironment::getInstance()->isRealCluster()) {
-        options = lcb_create_st();
-        MockEnvironment::getInstance()->makeConnectParams(options);
-        options.v.v0.io = io;
-    } else {
-        options = lcb_create_st(MockEnvironment::getInstance()->getMockRestUri(),
-                                "Administrator", "password",
-                                getenv("LCB_TEST_BUCKET"), io);
-    }
-
-    ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
-    (void)lcb_set_cookie(instance, io);
+    MockEnvironment::getInstance()->createConnection(instance);
     (void)lcb_set_error_callback(instance, error_callback);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
-
     lcb_wait(instance);
 }
-
-
-
 
 extern "C" {
     static void flags_store_callback(lcb_t,

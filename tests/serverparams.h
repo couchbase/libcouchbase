@@ -34,12 +34,13 @@ public:
         loadParam(pass, p);
     }
 
-    void makeConnectParams(lcb_create_st &crst) {
+    void makeConnectParams(lcb_create_st &crst, lcb_io_opt_t io) {
         memset(&crst, 0, sizeof(crst));
         crst.v.v0.host = host.c_str();
         crst.v.v0.bucket = bucket.c_str();
         crst.v.v0.user = user.c_str();
         crst.v.v0.passwd = pass.c_str();
+        crst.v.v0.io = io;
     }
 
 protected:

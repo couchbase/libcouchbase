@@ -37,6 +37,21 @@ MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
     // No extra init needed
 }
 
+void MockEnvironment::createConnection(lcb_t &instance)
+{
+    struct lcb_io_opt_st *io;
+    io = get_test_io_opts();
+    if (io == NULL) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        exit(1);
+    }
+
+    lcb_create_st options;
+    makeConnectParams(options, io);
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    (void)lcb_set_cookie(instance, io);
+}
 
 void MockEnvironment::bootstrapRealCluster()
 {
@@ -46,7 +61,7 @@ void MockEnvironment::bootstrapRealCluster()
     lcb_t tmphandle;
     lcb_error_t err;
     lcb_create_st options;
-    serverParams.makeConnectParams(options);
+    serverParams.makeConnectParams(options, NULL);
 
     ASSERT_EQ(LCB_SUCCESS, lcb_create(&tmphandle, &options));
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
@@ -81,6 +96,9 @@ void MockEnvironment::SetUp()
     if (realCluster) {
         bootstrapRealCluster();
     } else {
+        serverParams = ServerParams(http, getenv("LCB_TEST_BUCKET"),
+                                    "Administrator",
+                                    "password");
         numNodes = 10;
     }
 }
