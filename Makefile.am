@@ -330,6 +330,15 @@ EXTRA_DIST = \
              tests/start_mock.sh \
              win32
 
+if HAVE_DOXYGEN
+docs:
+	(cd tests; $(DOXYGEN))
+else
+docs:
+	@echo "You need doxygen to generate test documentation"
+endif
+
+
 LINTFLAGS=-Iinclude -b -c -errchk=%all \
           -erroff=E_INCL_NUSD,E_CAST_INT_TO_SMALL_INT,E_PTRDIFF_OVERFLOW  \
           -errtags=yes -errhdr=%user \

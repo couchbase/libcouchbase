@@ -122,6 +122,8 @@ AC_PATH_PROG(JAVA, java, no)
 AC_PATH_PROG(WGET, wget, no)
 AC_PATH_PROG(CURL, curl, no)
 AC_PATH_PROG(UNZIP, unzip, no)
+AC_PATH_PROG(DOXYGEN, doxygen, no)
+AM_CONDITIONAL(HAVE_DOXYGEN, [test "x$DOXYGEN" != "xno"])
 
 AC_SUBST(UNZIP)
 
