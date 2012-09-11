@@ -176,6 +176,8 @@ gtest-1.6.0.zip:
 	${DOWNLOAD} gtest-1.6.0.zip http://googletest.googlecode.com/files/gtest-1.6.0.zip
 
 
+if HAVE_CXX
+# C++ compiler needed to build google test
 if HAVE_GOOGLETEST_SRC
 noinst_LTLIBRARIES += libgtest.la
 libgtest_la_SOURCES = tests/gtest-sources.cc
@@ -185,6 +187,7 @@ libgtest_la_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
 tests_unit_tests_DEPENDENCIES += libgtest.la
 tests_unit_tests_LDADD += libgtest.la -lpthread
 tests_unit_tests_CPPFLAGS += -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include $(NO_WERROR)
+endif
 endif
 
 CLEANFILES = tests/CouchbaseMock.jar
@@ -219,7 +222,7 @@ noinst_PROGRAMS =
 #
 # Example programs using the library
 #
-if BUILD_TOOLS
+if HAVE_CXX
 noinst_PROGRAMS += example/pillowfight
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/couchview_yajl
@@ -231,7 +234,7 @@ example_couchview_yajl_LDADD = libcouchbase.la -lyajl
 
 check_PROGRAMS =
 
-if BUILD_TOOLS
+if HAVE_CXX
 if HAVE_GOOGLETEST
 # we can't build the test program without a C++ compiler
 check_PROGRAMS += tests/unit-tests
