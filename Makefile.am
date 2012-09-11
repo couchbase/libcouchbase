@@ -315,6 +315,9 @@ install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \
                $(RM) $(CBC_LINKS) && \
                for f in $(CBC_LINKS); do $(LN_S) cbc$(EXEEXT) $$f$(EXEEXT); done
+
+uninstall-local:
+	cd $(DESTDIR)$(bindir) && $(RM) $(CBC_LINKS)
 endif
 
 EXTRA_DIST = \
