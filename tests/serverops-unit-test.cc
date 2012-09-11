@@ -43,6 +43,14 @@ extern "C" {
     }
 }
 
+/**
+ * @test Server Statistics
+ * @pre Schedule a server statistics command
+ * @post The response is a valid statistics structure and its status is
+ * @c SUCCESS.
+ *
+ * @post the statistics callback is invoked more than once.
+ */
 TEST_F(ServeropsUnitTest, testServerStats)
 {
     lcb_t instance;
@@ -68,6 +76,12 @@ extern "C" {
     }
 }
 
+/**
+ * @test Server Versions
+ * @pre Request the server versions
+ * @post Response is successful, and the version callback is invoked more than
+ * once.
+ */
 TEST_F(ServeropsUnitTest, testServerVersion)
 {
     lcb_t instance;
@@ -94,6 +108,11 @@ extern "C" {
     }
 }
 
+/**
+ * @test Flush
+ * @pre Request a flush operation
+ * @post Response is either a success or a @c NOT_SUPPORTED return
+ */
 TEST_F(ServeropsUnitTest, testFlush)
 {
     lcb_t instance;
@@ -147,6 +166,10 @@ extern "C" {
     }
 }
 
+/**
+ * @test Server Verbosity
+ * @todo (document this..)
+ */
 TEST_F(ServeropsUnitTest, testVerbosity)
 {
     lcb_t instance;

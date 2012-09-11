@@ -46,6 +46,20 @@ extern "C" {
     }
 }
 
+/**
+ * @test
+ * Get Miss
+ *
+ * @pre
+ * Request two non-existent keys
+ *
+ * @post
+ * Responses for both keys are received with error code
+ * @c KEY_ENOENT; response structure is not NULL, and the keys match their
+ * expected value
+ *
+ * @todo (maybe check the values too?)
+ */
 TEST_F(GetUnitTest, testGetMiss)
 {
     lcb_t instance;
@@ -78,6 +92,16 @@ extern "C" {
     }
 }
 
+/**
+ * @test
+ * Get Hit
+ *
+ * @pre
+ * Store two keys, and retrieve them
+ *
+ * @post
+ * Both keys exist, and their return code is successul
+ */
 TEST_F(GetUnitTest, testGetHit)
 {
     lcb_t instance;
@@ -109,6 +133,11 @@ extern "C" {
     }
 }
 
+/**
+ * @test Touch (Miss)
+ * @pre Schedule a touch for a non existent key with an expiry @c 666
+ * @post Touch fails with @c KEY_ENOENT
+ */
 TEST_F(GetUnitTest, testTouchMiss)
 {
     std::string key("testTouchMissKey");
@@ -138,6 +167,11 @@ extern "C" {
     }
 }
 
+/**
+ * @test Touch (Hit)
+ * @pre Store a key, and schedule a touch operation with an expiry of @c 666
+ * @post Touch succeeds.
+ */
 TEST_F(GetUnitTest, testTouchHit)
 {
     std::string key("testTouchHitKey");
@@ -171,7 +205,20 @@ extern "C" {
 
 /**
  * Adopted from smoke-test.c:test_get2
- * Tests the mixed hit/miss pattern. GET misses interleaved with hits.
+ *
+ * @test Multi Get (Interleaved)
+ *
+ * @pre
+ * Create two maps of 26 key-value pairs, one called @c kexisting and one
+ * called @c kmissing. Store the @c kexisting map but not the @c kmissing one.
+ *
+ * Create a list of GET commands interleaving keys from @c kmissing and
+ * @c kexisting. Schedule the operation
+ *
+ * @post
+ * Returned result set has exactly 52 items. All the keys from @c kmissing
+ * have @c KEY_ENOENT from their result code, and all keys from @c kexisting
+ * contain the appropriate values.
  */
 TEST_F(GetUnitTest, testMixedMultiGet)
 {

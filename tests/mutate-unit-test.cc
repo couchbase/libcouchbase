@@ -49,6 +49,17 @@ extern "C" {
     }
 }
 
+/**
+ * @test
+ * Simple Set
+ *
+ * @pre
+ * Set two keys
+ *
+ * @post
+ *
+ * @c SUCCESS, both keys are received
+ */
 TEST_F(MutateUnitTest, testSimpleSet)
 {
     lcb_t instance;
@@ -77,6 +88,12 @@ extern "C" {
     }
 }
 
+/**
+ * @test Remove
+ *
+ * @pre Set two keys and remove them
+ * @post Remove succeeds for both keys
+ */
 TEST_F(MutateUnitTest, testRemove)
 {
     lcb_t instance;
@@ -107,6 +124,11 @@ extern "C" {
     }
 }
 
+/**
+ * @test Remove (Miss)
+ * @pre Remove two non-existent keys
+ * @post Remove fails for both keys with @c KEY_ENOENT
+ */
 TEST_F(MutateUnitTest, testRemoveMiss)
 {
     lcb_t instance;
@@ -147,6 +169,11 @@ extern "C" {
     }
 }
 
+/**
+ * @test Add (Simple)
+ * @pre Schedule to Add operations on the same key
+ * @post First operation is a success. Second fails with @c KEY_EEXISTS
+ */
 TEST_F(MutateUnitTest, testSimpleAdd)
 {
     lcb_t instance;
@@ -179,6 +206,11 @@ extern "C" {
     }
 }
 
+/**
+ * @test Append
+ * @pre Set a key to @c foo, append it with @c bar. Retrieve the key
+ * @post Key is now @c foobar
+ */
 TEST_F(MutateUnitTest, testSimpleAppend)
 {
     std::string key("testSimpleAppendKey");
@@ -216,6 +248,13 @@ extern "C" {
     }
 }
 
+/**
+ * @test Prepend
+ * @pre Set a key with the value @c foo, prepend it with the value @c bar.
+ * Get the key
+ *
+ * @post Key is now @c barfoo
+ */
 TEST_F(MutateUnitTest, testSimplePrepend)
 {
     std::string key("testSimplePrependKey");
@@ -250,6 +289,12 @@ extern "C" {
     }
 }
 
+/**
+ * @test Replace (Non-Existing)
+ *
+ * @pre Replace a non-existing key
+ * @post Fails with @c KEY_ENOENT
+ */
 TEST_F(MutateUnitTest, testSimpleReplaceNonexisting)
 {
     std::string key("testSimpleReplaceNonexistingKey");
@@ -281,6 +326,14 @@ extern "C" {
     }
 }
 
+/**
+ * @test Replace (Hit)
+ * @pre
+ * Set a key to the value @c foo, replace it with the value @c bar, get the key
+ *
+ * @post
+ * Replace is a success, and the value is now @c bar
+ */
 TEST_F(MutateUnitTest, testSimpleReplace)
 {
     std::string key("testSimpleReplaceKey");
@@ -314,6 +367,14 @@ extern "C" {
     }
 }
 
+/**
+ * @test Replace (Invalid CAS)
+ *
+ * @pre Set a key to the value @c foo. Replace the key specifying a garbage
+ * CAS value.
+ *
+ * @post Replace fails with @c KEY_EEXISTS
+ */
 TEST_F(MutateUnitTest, testIncorrectCasReplace)
 {
     std::string key("testIncorrectCasReplaceKey");
@@ -348,6 +409,14 @@ extern "C" {
     }
 }
 
+/**
+ * @test Replace (CAS)
+ *
+ * @pre Store a key with the value @c foo, retrieve its CAS, and use retrieved
+ * cas to replace the value with @c bar
+ *
+ * @post Replace succeeds, get on the key yields the new value @c bar.
+ */
 TEST_F(MutateUnitTest, testCasReplace)
 {
     std::string key("testCasReplaceKey");

@@ -77,6 +77,10 @@ extern "C" {
     }
 }
 
+/**
+ * Common function to bootstrap an arithmetic key and set the expected/last
+ * value counter.
+ */
 static void initArithmeticKey(lcb_t instance, std::string key,
                               lcb_uint64_t value)
 {
@@ -86,6 +90,15 @@ static void initArithmeticKey(lcb_t instance, std::string key,
     arithm_val = value;
 }
 
+/**
+ * @test Arithmetic (incr)
+ * @pre initialize a global variable @c arithm_val to 0.
+ * Schedule 10 arithmetic operations. The arithmetic callback should check
+ * that the current value is one greater than @c arithm_val. Then set
+ * @c arithm_val to the current value.
+ *
+ * @post The callback's assertions succeed (see precondition)
+ */
 TEST_F(ArithmeticUnitTest, testIncr)
 {
     lcb_t instance;
@@ -104,6 +117,13 @@ TEST_F(ArithmeticUnitTest, testIncr)
     lcb_destroy(instance);
 }
 
+/**
+ * @test Arithmetic (Decr)
+ *
+ * @pre Initialize the @c arithm_val to @c 100. Decrement the key 10 times.
+ *
+ * @post See @ref testIncr for expectations
+ */
 TEST_F(ArithmeticUnitTest, testDecr)
 {
     lcb_t instance;
@@ -122,6 +142,13 @@ TEST_F(ArithmeticUnitTest, testDecr)
     lcb_destroy(instance);
 }
 
+/**
+ * @test Arithmetic (Creation)
+ * @pre Perform an arithmetic operation on a non-existent key. The increment
+ * offset is @c 0x77 and the default value is @c 0xdeadbeef
+ *
+ * @post Value upon getting the key is @c 0xdeadbeef
+ */
 TEST_F(ArithmeticUnitTest, testArithmeticCreate)
 {
     lcb_t instance;

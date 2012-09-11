@@ -48,6 +48,20 @@ extern "C" {
     }
 }
 
+/**
+ * @test
+ * Lock (lock and unlock)
+ *
+ * @pre
+ * Set a key, and get the value specifying the lock option with a timeout
+ * of @c 10.
+ *
+ * @post
+ * Lock operation succeeds.
+ *
+ * @pre Unlock the key using the CAS from the previous get result.
+ * @post Unlock succeeds
+ */
 TEST_F(LockUnitTest, testSimpleLockAndUnlock)
 {
     LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
@@ -89,6 +103,15 @@ TEST_F(LockUnitTest, testSimpleLockAndUnlock)
     lcb_destroy(instance);
 }
 
+/**
+ * @test Lock (Missing CAS)
+ *
+ * @pre
+ * Store a key and attempt to unlock it with an invalid CAS
+ *
+ * @post
+ * Error result of @c ETMPFAIL
+ */
 TEST_F(LockUnitTest, testUnlockMissingCas)
 {
     LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
@@ -127,8 +150,19 @@ extern "C" {
     }
 }
 /**
- * let's append '_SLEEP' to tests which sleep, so we can exclude them for
- * 'simple' runs..
+ * @test Lock (Storage Contention)
+ *
+ * @pre
+ * Store a key, perform a GET operation with the lock option, specifying a
+ * timeout of @c 10.
+ *
+ * Then attempt to store the key (without specifying any CAS).
+ *
+ * @post Store operation fails with @c KEY_EEXISTS. Getting the key retains
+ * the old value.
+ *
+ * @pre store the key using the CAS specified from the first GET
+ * @post Storage succeeds. Get returns new value.
  */
 TEST_F(LockUnitTest, testStorageLockContention)
 {
@@ -187,6 +221,23 @@ TEST_F(LockUnitTest, testStorageLockContention)
     lcb_destroy(instance);
 }
 
+/**
+ * @test
+ * Lock (Unlocking)
+ *
+ * @pre
+ * Store a key, get it with the lock option, specifying an expiry of @c 10.
+ * Try to unlock the key (using the @c lcb_unlock function) without a valid
+ * CAS.
+ *
+ * @post Unlock fails with @c ETMPFAIL
+ *
+ * @pre
+ * Unlock the key using the valid cas retrieved from the first lock operation.
+ * Then try to store the key with a new value.
+ *
+ * @post Unlock succeeds and retrieval of key yields new value.
+ */
 TEST_F(LockUnitTest, testUnlLockContention)
 {
     LCB_TEST_REQUIRE_CLUSTER_VERSION(2);

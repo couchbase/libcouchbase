@@ -73,6 +73,12 @@ extern "C" {
     }
 }
 
+/**
+ * @test HTTP (Put)
+ *
+ * @pre Create a valid view document and store it on the server
+ * @post Store succeeds and the HTTP result code is 201
+ */
 TEST_F(HttpUnitTest, testPut)
 {
     SKIP_IF_MOCK();
@@ -128,6 +134,13 @@ extern "C" {
     }
 }
 
+/**
+ * @test HTTP (Get)
+ * @pre Query a value view
+ * @post HTTP Result is @c 200, and the view contents look like valid JSON
+ * (i.e. the first non-whitespace char is a @c { and the last non-whitespace
+ * char is a @c }
+ */
 TEST_F(HttpUnitTest, testGet)
 {
     SKIP_IF_MOCK();
@@ -179,6 +192,11 @@ TEST_F(HttpUnitTest, testGet)
     lcb_destroy(instance);
 }
 
+/**
+ * @test HTTP (Bad POST params)
+ * @pre Schedule an HTTP POST request, without passing a content body
+ * @post Client returns @c EINVAL
+ */
 TEST_F(HttpUnitTest, testBadParams)
 {
     SKIP_IF_MOCK();
