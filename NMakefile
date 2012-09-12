@@ -148,4 +148,22 @@ uninstall:
          $(INSTALL)\bin\cbc.exe
 	-rmdir $(INSTALL)\lib $(INSTALL)\bin $(INSTALL)\include\libcouchbase $(INSTALL)\include $(INSTALL)
 
-$(INSTALL) $(INSTALL)\include $(INSTALL)\include\libcouchbase $(INSTALL)\lib $(INSTALL)\bin:; -@mkdir $@
+PKG=$(INSTALL)\dist\libcouchbase$(VERSION)
+PKGDIRS=$(PKG)\include $(PKG)\include\libcouchbase $(PKG)\lib $(PKG)\bin
+
+package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
+	copy include\libcouchbase\** $(PKG)\include\libcouchbase
+	-del $(PKG)\include\libcouchbase\configuration.h.in
+	copy win32\libcouchbase\configuration.h $(PKG)\include\libcouchbase
+	copy libcouchbase.dll $(PKG)\lib
+	copy libcouchbase.dll $(PKG)\bin
+	copy libcouchbase.exp $(PKG)\lib
+	copy libcouchbase.lib $(PKG)\lib
+	copy libcouchbase_debug.dll $(PKG)\lib
+	copy libcouchbase_debug.dll $(PKG)\bin
+	copy libcouchbase_debug.exp $(PKG)\lib
+	copy libcouchbase_debug.lib $(PKG)\lib
+	copy tools\cbc.exe $(PKG)\bin
+	7z a -r $(INSTALL)\libcouchbase$(VERSION).zip $(PKG)
+
+$(INSTALLDIRS) $(PKGDIRS):; -@mkdir $@
