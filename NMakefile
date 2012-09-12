@@ -67,7 +67,7 @@ all: $(lib_LTLIBRARIES) \
      $(example_PROGRAMS)
 
 check: $(check_PROGRAMS)
-    set PATH=$(INSTALL)\bin
+    set PATH=$(PATH);$(INSTALL)\bin
     for %%t in ($(check_PROGRAMS)) do %t
 
 libcouchbase.dll: $(libcouchbase_la_OBJECTS)
