@@ -148,7 +148,7 @@ uninstall:
          $(INSTALL)\bin\cbc.exe
 	-rmdir $(INSTALL)\lib $(INSTALL)\bin $(INSTALL)\include\libcouchbase $(INSTALL)\include $(INSTALL)
 
-PKG=$(INSTALL)\dist\libcouchbase$(VERSION)
+PKG=$(INSTALL)\dist\libcouchbase$(VERSION)$(ARCH)$(MSVCC_VER)
 PKGDIRS=$(PKG)\include $(PKG)\include\libcouchbase $(PKG)\lib $(PKG)\bin
 
 package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
@@ -164,6 +164,6 @@ package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy libcouchbase_debug.exp $(PKG)\lib
 	copy libcouchbase_debug.lib $(PKG)\lib
 	copy tools\cbc.exe $(PKG)\bin
-	7z a -r $(INSTALL)\libcouchbase$(VERSION).zip $(PKG)
+	7z a -r $(INSTALL)\libcouchbase$(VERSION)$(ARCH)$(MSVCC_VER).zip $(PKG)
 
 $(INSTALLDIRS) $(PKGDIRS):; -@mkdir $@
