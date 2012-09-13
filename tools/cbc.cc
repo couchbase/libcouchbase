@@ -60,6 +60,7 @@ enum cbc_command_t {
     cbc_admin,
     cbc_bucket_create,
     cbc_bucket_delete,
+    cbc_bucket_flush,
     cbc_observe,
     cbc_verbosity
 };
@@ -882,6 +883,31 @@ static bool bucket_delete_impl(lcb_t instance, list<string> &names)
     return true;
 }
 
+static bool bucket_flush_impl(lcb_t instance, list<string> &names)
+{
+    lcb_error_t rc;
+
+    for (list<string>::iterator iter = names.begin(); iter != names.end(); ++iter) {
+        string query = "/pools/default/buckets/" + *iter + "/controller/doFlush";
+        lcb_http_cmd_t cmd;
+        cmd.version = 0;
+        cmd.v.v0.path = query.c_str();
+        cmd.v.v0.npath = query.length();
+        cmd.v.v0.body = NULL;
+        cmd.v.v0.nbody = 0;
+        cmd.v.v0.method = LCB_HTTP_METHOD_POST;
+        cmd.v.v0.chunked = false;
+        cmd.v.v0.content_type = "application/x-www-form-urlencoded";
+        rc = lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_MANAGEMENT, &cmd, NULL);
+        if (rc != LCB_SUCCESS) {
+            cerr << "Failed to send requests: " << endl
+                 << lcb_strerror(instance, rc) << endl;
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool bucket_create_impl(lcb_t instance, list<string> &names,
                                string &bucket_type, string &auth_type, int ram_quota,
                                string &sasl_password, int replica_num, int proxy_port)
@@ -1510,6 +1536,14 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                  "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
         }
         break;
+    case cbc_bucket_flush:
+        if (verifyBucketNames(getopt.arguments)) {
+            success = bucket_flush_impl(instance, getopt.arguments);
+        } else {
+            cerr << "Bucket name can only contain characters in range A-Z, "
+                 "a-z, 0-9 as well as underscore, period, dash & percent" << endl;
+        }
+        break;
     case cbc_observe:
         success = observe_impl(instance, getopt.arguments);
         break;
@@ -1581,6 +1615,8 @@ static cbc_command_t getBuiltin(string name)
         return cbc_bucket_create;
     } else if (name.find("cbc-bucket-delete") != string::npos) {
         return cbc_bucket_delete;
+    } else if (name.find("cbc-bucket-flush") != string::npos) {
+        return cbc_bucket_flush;
     } else if (name.find("cbc-observe") != string::npos) {
         return cbc_observe;
     } else if (name.find("cbc-verbosity") != string::npos) {
@@ -1612,6 +1648,7 @@ static void printHelp()
          << "   admin           execute request to management REST API" << endl
          << "   bucket-create   create data bucket on the cluster" << endl
          << "   bucket-delete   delete data bucket" << endl
+         << "   bucket-flush    flush data bucket" << endl
          << "Use 'cbc command --help' to show the options" << endl;
 }
 
