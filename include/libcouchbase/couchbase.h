@@ -692,6 +692,17 @@ extern "C" {
     lcb_int32_t lcb_get_num_replicas(lcb_t instance);
 
     /**
+     * Get the number of the nodes in the cluster
+     *
+     * @param instance The handle to lcb
+     *
+     * @return -1 if the cluster wasn't configured yet, and number of
+     *         nodes otherwise.
+     */
+    LIBCOUCHBASE_API
+    lcb_int32_t lcb_get_num_nodes(lcb_t instance);
+
+    /**
      * Return a NULL-terminated list of 0-terminated strings consisting of
      * node hostnames:admin_ports for the entire cluster.
      * The storage duration of this list is only valid until the

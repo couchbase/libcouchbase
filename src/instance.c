@@ -71,6 +71,16 @@ lcb_int32_t lcb_get_num_replicas(lcb_t instance)
     }
 }
 
+LIBCOUCHBASE_API
+lcb_int32_t lcb_get_num_nodes(lcb_t instance)
+{
+    if (instance->vbucket_config) {
+        return instance->nservers;
+    } else {
+        return -1;
+    }
+}
+
 /**
  * Return a NULL-terminated list of servers (host:port) for the entire cluster.
  */
