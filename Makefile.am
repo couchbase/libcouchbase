@@ -161,6 +161,7 @@ tests_unit_tests_SOURCES = \
                            tests/memcached-compat-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \
                            tests/strerror-unit-test.cc \
+                           tests/timeout.c \
                            tests/unit_tests.cc
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
@@ -260,8 +261,7 @@ tests_unit_tests_SOURCES += \
                             tests/serverops-unit-test.cc \
                             tests/serverparams.h \
                             tests/testutil.cc \
-                            tests/testutil.h \
-                            tests/timeout.c
+                            tests/testutil.h
 
 check_PROGRAMS += \
                   tests/config-test \
