@@ -665,11 +665,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             char *post_headers = calloc(512, sizeof(char));
             int ret;
 
-            if (nbody == 0) {
-                lcb_http_request_destroy(req);
-                return lcb_synchandler_return(instance, LCB_EINVAL);
-            }
-
             if (post_headers == NULL) {
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
@@ -685,7 +680,9 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
             BUFF_APPEND(&req->output, post_headers, (lcb_size_t)ret);
-            BUFF_APPEND(&req->output, body, nbody);
+            if (nbody) {
+                BUFF_APPEND(&req->output, body, nbody);
+            }
             free(post_headers);
         } else {
             BUFF_APPEND(&req->output, "\r\n\r\n", 4);
