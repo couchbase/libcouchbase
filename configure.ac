@@ -86,6 +86,20 @@ LCB_VERSION_HEX=`echo ${LCB_VERSION} | awk -F. '{printf "0x%0.2d%0.2d%0.2d", $1,
 AC_SUBST(LCB_VERSION)
 AC_SUBST(LCB_VERSION_HEX)
 
+AC_ARG_ENABLE([fat_binary],
+    [AS_HELP_STRING([--enable-fat-binary],
+                    [Build a fat binary for mac os x @<:@default=off@:>@])],
+    [ac_cv_fat_binary="$enableval"])
+
+AS_IF([test "x$ac_cv_fat_binary" = "xyes"], [
+        AM_CPPFLAGS="$AM_CPPFLAGS -force_cpusubtype_ALL -arch i386 -arch x86_64"
+        AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -force_cpusubtype_ALL -arch i386 -arch x86_64"
+        AM_LDFLAGS="$AM_LDFLAGS -force_cpusubtype_ALL -arch i386 -arch x86_64"
+        CPPFLAGS="$CPPFLAGS -force_cpusubtype_ALL -arch i386 -arch x86_64"
+        LDFLAGS="$LDFLAGS -force_cpusubtype_ALL -arch i386 -arch x86_64"
+        ac_cv_dependency_tracking="no"
+      ])
+
 AC_ARG_ENABLE([m32],
     [AS_HELP_STRING([--enable-m32],
                     [Pass -m32 to the compiler and linker @<:@default=off@:>@])],
