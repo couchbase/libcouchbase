@@ -260,19 +260,20 @@ tests_unit_tests_SOURCES += \
                             tests/serverops-unit-test.cc \
                             tests/serverparams.h \
                             tests/testutil.cc \
-                            tests/testutil.h
+                            tests/testutil.h \
+                            tests/timeout.c
 
 check_PROGRAMS += \
                   tests/config-test \
                   tests/smoke-test
 endif
 
-tests_config_test_SOURCES = tests/test.h tests/config-test.c
+tests_config_test_SOURCES = tests/test.h tests/config-test.c tests/timeout.c
 tests_config_test_DEPENDENCIES = libcouchbase.la libmockserver.la libvbucket.la
 tests_config_test_LDADD = $(tests_config_test_DEPENDENCIES)
 tests_config_test_LDFLAGS = $(AM_LDFLAGS)
 
-tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c
+tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c tests/timeout.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
 
 tools_cbc_DEPENDENCIES = libcouchbase.la libvbucket.la

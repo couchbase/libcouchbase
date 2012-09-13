@@ -20,6 +20,15 @@
 #include <libcouchbase/couchbase.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    void setup_test_timeout_handler(void);
+
+#ifdef __cplusplus
+} // C linkage
+
 struct Item {
     void assign(const lcb_get_resp_t *resp, lcb_error_t e = LCB_SUCCESS) {
         key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
@@ -57,5 +66,6 @@ struct Item {
 void storeKey(lcb_t instance, const std::string &key, const std::string &value);
 void removeKey(lcb_t instance, const std::string &key);
 void getKey(lcb_t instance, const std::string &key, Item &item);
+#endif
 
 #endif

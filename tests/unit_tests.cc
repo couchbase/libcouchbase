@@ -20,11 +20,14 @@
 #include "mock-environment.h"
 #endif
 
+#include "testutil.h"
+
 int main(int argc, char **argv)
 {
 #ifdef HAVE_COUCHBASEMOCK
     ::testing::AddGlobalTestEnvironment(MockEnvironment::getInstance());
 #endif
     ::testing::InitGoogleTest(&argc, argv);
+    setup_test_timeout_handler();
     return RUN_ALL_TESTS();
 }

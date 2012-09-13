@@ -26,6 +26,7 @@
 
 #include "server.h"
 #include "test.h"
+#include "testutil.h"
 
 int config_cnt;
 int store_cnt;
@@ -243,6 +244,8 @@ int main(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
+
+    setup_test_timeout_handler();
 
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
         freopen("/dev/null", "w", stdout);

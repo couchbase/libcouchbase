@@ -24,6 +24,7 @@
 #include "internal.h" /* to look at the internals to check if sasl ok */
 #include "server.h"
 #include "test.h"
+#include "testutil.h"
 
 lcb_t session = NULL;
 const struct test_server_info *mock = NULL;
@@ -610,6 +611,7 @@ int main(int argc, char **argv)
         freopen("/dev/null", "w", stdout);
     }
 
+    setup_test_timeout_handler();
     total_node_count = 5;
     snprintf(str_node_count, 16, "%d", total_node_count);
     args[1] = str_node_count;
