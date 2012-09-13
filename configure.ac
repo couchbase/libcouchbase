@@ -81,7 +81,7 @@ AC_SUBST(API_REVISION)
 AC_SUBST(API_AGE)
 
 # The actual version numbers for the developers ;)
-LCB_VERSION="1.1.0dp9"
+LCB_VERSION="2.0.0beta"
 LCB_VERSION_HEX=`echo ${LCB_VERSION} | awk -F. '{printf "0x%0.2d%0.2d%0.2d", $1, $2, $3}'`
 AC_SUBST(LCB_VERSION)
 AC_SUBST(LCB_VERSION_HEX)

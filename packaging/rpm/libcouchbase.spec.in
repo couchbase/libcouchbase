@@ -16,18 +16,18 @@ BuildRoot: %{_topdir}/build/@TARREDAS@
 %description
 This is the client and protocol library for Couchbase project.
 
-%package -n %{name}1
+%package -n %{name}2
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library
-Requires: %{name}1, libevent >= 1.4
+Requires: %{name}2, libevent >= 1.4
 
-%description -n %{name}1
+%description -n %{name}2
 This is the client and protocol library for Couchbase project.
 
 %package devel
 Group: Development/Libraries
 Summary: Couchbase Client & Protocol Library - Header files
-Requires: %{name}1
+Requires: %{name}2
 
 %description devel
 Development files for the Couchbase Client & Protocol Library
@@ -45,11 +45,11 @@ Development files for the Couchbase Client & Protocol Library
 %clean
 %{__rm} -rf %{buildroot}
 
-%post -n %{name}1 -p /sbin/ldconfig
+%post -n %{name}2 -p /sbin/ldconfig
 
-%postun -n %{name}1 -p /sbin/ldconfig
+%postun -n %{name}2 -p /sbin/ldconfig
 
-%files -n %{name}1
+%files -n %{name}2
 %defattr(-, root, root)
 %{_bindir}/cbc*
 %{_libdir}/libcouchbase.so.*
@@ -65,6 +65,135 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Thu Sep 13 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta
+[Mark Nunberg]
+- Make tests more modular
+- Add HTTP tests
+- Remove keys before testing miss
+- Don't use strdup for http path
+- Divide unit tests into categories and place them in their own files
+- add mget hit/miss test
+- Initialize counter for arithmetic tests before each test
+- Instantiate the mock only once
+- Determine cluster version
+- Test lock and unlock commands
+- Document tests with Doxygen
+- "Pack" the backup node list (remove holes)
+- Add lcb_get_server_list
+- Fix breakage on older automakes
+- Fix bug where method is not set
+- PUT/POST requests without a body are an error
+- Allow tests to be run against a real cluster
+
+[Sergey Avseyev]
+- Reformat code
+- The threshold for expiration is 30 days
+- CCBC-90 Fix initialization of backup nodes array
+- CCBC-91 Reset timer for commands with NOT_MY_VBUCKET response
+- CCBC-91 Fix switching to backup node in case of server outage
+- Update metadata for release 1.0.5
+- Merge branch 'release10'
+- CCBC-92 release ringbuffer in libcouchbase_purge_single_server
+- Unify HTTP interface
+- Deliver HTTP headers via callbacks
+- Fix warning (fixes build on macos)
+- libcouchbase_cancel_http_request should only cancel request
+- Fix mingw build
+- Enable silent rules by default
+- View requests should always use bucket auth
+- Update metadata for release 1.0.6
+- Merge branch 'release10'
+- Fix windows build
+- Merge lcb_get_locked into lcb_get function
+- Return result code instead of request handle
+- CCBC-96 Correct buffer length for POST/PUT headers
+- Revert "Fix breakage on older automakes"
+- Fix locking keys in multi-get mode
+- CCBC-98 Differentiate between TMPFAILs
+- Fix build breakage with --disable-couchbasemock
+- Include config.h in unit_tests.cc
+- Remove cbc symlinks with 'make uninstall'
+- Do not include targets written in C++ if the compiler missing
+- Declare package task for windows build
+- Put arch and CC version into package name
+- do not reset PATH in NMakefile
+- Leave windows packages into workspace
+- Do not require body for POST and PUT
+- Implement RESTful flush in cbc toolset
+- Implement getter for number of nodes in the cluster
+- Move timeout into generic test src list
+
+[Trond Norbye]
+- Fix compile errors caused by sign issues
+- CCBC-89: Release the memory allocated by the http parser
+- Remove unused code
+- Run some of the mock tests through gtest
+- Fix memory leak in config-test
+- Remove double_free_test macros
+- Move plugins to separate sub directories
+- Fix problem with allocating too few slots in the backup_nodes
+- Bundle libvbucket
+- Fix make dist target
+- Remove unused include
+- Move 'plugin headers' to a local directory
+- Fix build with libyajl available
+- Fix win32 build (Add strings.h)
+- Add --enable-m32 and --enable-m64
+- Prevent automake to inject -g -O2 if cflags isn't set
+- Fix build break introduced by setting the variables too early
+- Don't try to build the unit tests without gtest
+- Fixed warnings reported with -Werror=cast-align
+- Download gtest if you don't have it
+- Fix alignment for sparc platforms
+- Sync memcached/protocol_binary.h
+- Add an extended get callback
+- Fix compile reported with --enable-werror
+- CCBC-80: Default to IPv4 only
+- Add AM_NOWARN_*FLAGS
+- Fix typo for crc32 CPPFLAGS
+- Include sys/types.h
+- Include sys/uio.h
+- Refactor the API
+- Don't use static inline in header
+- Update the readme with the refactoring blogpost
+- Add --enable-wconversion flag
+- Add explicit cast to fix buildbreak
+- Refactor: lcb_create_io_ops should take struct
+- Refactor: lcb_create should use struct
+- Refactor: server_version/stat should take struct
+- Move lcb_strerror to the instance functions
+- Refactor: verbosity should use struct
+- Refactor: flush should use struct
+- Fixup apidocs
+- Fix plugin init
+- Strip empty strings
+- Remove mock-unit-tests.h
+- Add a helper function to set a key
+- Add a test case for get (success)
+- Add testcase for remove
+- Add testcase for Append/Prepend
+- Add replace test
+- Add cas replace test
+- Added test for touch
+- Create test for server_stat
+- Add server version test
+- Add flush test
+- fixup review comments
+- Move getopt test to gtest
+- Use LCB instead of LIBCOUCHBASE
+- Dump the servers in use when using real cluster
+- Don't try to put the current node last in the backup list
+- Split up mock-unit-test.h
+- Refactor MockEnvironment to singleton
+- The mockenv should provide createConnection
+- Add docs target to run generate doxygen docs
+- Make doxygen less chatty
+- Remove obsolete doc file
+- We should always include config.h
+- Tests should finish within 5 minutes
+- Added --enable-fat-binary
+- Set .so-name to 2.0.0 for the release
+
 * Thu Aug 30 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.6
 [Sergey Avseyev]
 - CCBC-92 release ringbuffer in libcouchbase_purge_single_server

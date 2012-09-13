@@ -11,23 +11,23 @@ Vcs-Git: git://github.com/couchbase/libcouchbase.git
 Package: libcouchbase-dev
 Section: libdevel
 Architecture: any
-Depends: libcouchbase1 (= ${binary:Version}), ${misc:Depends}
+Depends: libcouchbase2 (= ${binary:Version}), ${misc:Depends}
 Description: library for the Couchbase protocol, development files
  libcouchbase is a library implementing Couchbase protocol.
  .
  This package provides the files needed for development.
 
-Package: libcouchbase1-dbg
+Package: libcouchbase2-dbg
 Section: debug
 Architecture: any
 Priority: extra
-Depends: libcouchbase1 (= ${binary:Version}), ${misc:Depends}
+Depends: libcouchbase2 (= ${binary:Version}), ${misc:Depends}
 Description: library for the Couchbase protocol, debug symbols
  libcouchbase is a library implementing Couchbase protocol.
  .
  This package provides debugging symbols.
 
-Package: libcouchbase1
+Package: libcouchbase2
 Architecture: any
 Depends: libevent-1.4-2 (>= 1.4) | libevent-2.0-5 (>= 2.0), ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol

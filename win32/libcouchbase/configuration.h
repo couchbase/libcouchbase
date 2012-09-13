@@ -31,8 +31,8 @@
 #include <stddef.h>
 #include <time.h>
 
-#define LCB_VERSION_STRING "1.1.0dp9"
-#define LCB_VERSION 0x010100
+#define LCB_VERSION_STRING "2.0.0beta"
+#define LCB_VERSION 0x020000
 #define LCB_VERSION_CHANGESET unknown
 
 #ifdef __cplusplus
@@ -40,7 +40,7 @@ extern "C" {
 #endif
 
 #ifdef _WIN32
-#define PACKAGE_STRING "libcouchbase 1.1.0dp9"
+#define PACKAGE_STRING "libcouchbase 2.0.0beta"
     typedef __int64 lcb_int64_t;
     typedef __int32 lcb_int32_t;
     typedef size_t lcb_size_t;
