@@ -219,7 +219,13 @@ libmockserver_la_SOURCES = \
                          tests/server.c tests/loopfactory.c tests/server.h
 
 
-noinst_PROGRAMS =
+noinst_PROGRAMS = example/syncmode/syncmode
+
+example_syncmode_syncmode_SOURCES = example/syncmode/main.c
+example_syncmode_syncmode_DEPENDENCIES = libcouchbase.la
+example_syncmode_syncmode_LDADD = libcouchbase.la
+
+
 #
 # Example programs using the library
 #
