@@ -1135,6 +1135,10 @@ lcb_error_t lcb_connect(lcb_t instance)
     instance->last_error = LCB_SUCCESS;
     lcb_instance_connect_handler(INVALID_SOCKET, 0, instance);
 
+    if (instance->syncmode == LCB_SYNCHRONOUS) {
+        lcb_wait(instance);
+    }
+
     return instance->last_error;
 }
 

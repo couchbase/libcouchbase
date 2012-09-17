@@ -260,6 +260,7 @@ tests_unit_tests_SOURCES += \
                             tests/server.h \
                             tests/serverops-unit-test.cc \
                             tests/serverparams.h \
+                            tests/syncmode-unit-tests.cc \
                             tests/testutil.cc \
                             tests/testutil.h
 
