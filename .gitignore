@@ -41,6 +41,7 @@
 /example/couchview_yajl
 /example/pillowfight
 /example/syncmode/syncmode
+/example/libeventdirect/eventloop
 /gtest-1.6.0
 /gtest-1.6.0.zip
 /include/libcouchbase/configuration.h
