@@ -149,7 +149,9 @@ libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
 libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0 $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
+if BUILD_EXAMPLES
 noinst_PROGRAMS += example/libeventdirect/eventloop
+endif
 endif
 endif
 
@@ -221,8 +223,6 @@ libmockserver_la_SOURCES = \
                          tests/server.c tests/loopfactory.c tests/server.h
 
 
-noinst_PROGRAMS += example/syncmode/syncmode
-
 example_syncmode_syncmode_SOURCES = example/syncmode/main.c
 example_syncmode_syncmode_DEPENDENCIES = libcouchbase.la
 example_syncmode_syncmode_LDADD = libcouchbase.la
@@ -234,8 +234,11 @@ example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
 #
 # Example programs using the library
 #
+if BUILD_EXAMPLES
+noinst_PROGRAMS += example/syncmode/syncmode
 if HAVE_CXX
 noinst_PROGRAMS += example/pillowfight
+endif
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/couchview_yajl
 endif

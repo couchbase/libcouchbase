@@ -354,6 +354,13 @@ AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
 
 AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
 
+AC_ARG_ENABLE([examples],
+    [AS_HELP_STRING([--disable-examples],
+            [Build examples. @<:@default=on@:>@])],
+    [ac_cv_enable_examples="$enableval"],
+    [ac_cv_enable_examples="yes"])
+AM_CONDITIONAL(BUILD_EXAMPLES, [test "x${ac_cv_enable_examples}" = "xyes"])
+
 AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday
                      QueryPerformanceCounter alarm setitimer])
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
