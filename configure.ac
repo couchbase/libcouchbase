@@ -341,9 +341,15 @@ AC_ARG_ENABLE([tools],
     [ac_cv_enable_tools="$enableval"],
     [ac_cv_enable_tools="yes"])
 
-AM_CONDITIONAL(HAVE_CXX, [test "x${ac_cv_prog_cxx_works}" = "xyes"])
+AC_ARG_ENABLE([cxx],
+    [AS_HELP_STRING([--disable-cxx],
+            [Build stuff written in C++. @<:@default=on@:>@])],
+    [ac_cv_enable_cxx="$enableval"],
+    [ac_cv_enable_cxx="yes"])
+
+AM_CONDITIONAL(HAVE_CXX, [test "x${ac_cv_prog_cxx_works}" = "xyes" -a "x${ac_cv_enable_cxx}" = "xyes"])
 AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
-      [AS_IF([test "x${ac_cv_prog_cxx_works}" != "xyes"],
+      [AS_IF([test "x${ac_cv_prog_cxx_works}" != "xyes" -o "x${ac_cv_enable_cxx}" != "xyes"],
              [AC_MSG_ERROR([You need C++ compiler to build tools. Try add --disable-tools])])])
 
 AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
