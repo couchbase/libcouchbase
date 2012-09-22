@@ -237,15 +237,15 @@ example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
 if BUILD_EXAMPLES
 noinst_PROGRAMS += example/syncmode/syncmode
 if HAVE_CXX
-noinst_PROGRAMS += example/pillowfight
+noinst_PROGRAMS += example/pillowfight/pillowfight
 endif
 if HAVE_LIBYAJL2
-noinst_PROGRAMS += example/couchview_yajl
+noinst_PROGRAMS += example/yajl/couchview
 endif
 endif
 
-example_couchview_yajl_SOURCES = example/couchview_yajl.c
-example_couchview_yajl_LDADD = libcouchbase.la -lyajl
+example_yajl_couchview_SOURCES = example/yajl/couchview.c
+example_yajl_couchview_LDADD = libcouchbase.la -lyajl
 
 check_PROGRAMS =
 
@@ -308,8 +308,9 @@ tools_cbc_SOURCES =	\
 
 TESTS=${check_PROGRAMS}
 
-example_pillowfight_SOURCES = tools/commandlineparser.cc example/pillowfight.cc
-example_pillowfight_LDADD = libcouchbase.la
+example_pillowfight_pillowfight_SOURCES = tools/commandlineparser.cc \
+                                          example/pillowfight/pillowfight.cc
+example_pillowfight_pillowfight_LDADD = libcouchbase.la
 
 if BUILD_TOOLS
 CBC_LINKS = \

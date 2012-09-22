@@ -26,7 +26,7 @@ RM = del
 lib_LTLIBRARIES = libcouchbase.dll libcouchbase_debug.dll
 check_PROGRAMS =
 bin_PROGRAMS = tools\cbc.exe
-example_PROGRAMS = example\pillowfight.exe
+example_PROGRAMS = example\pillowfight\pillowfight.exe
 
 libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\cookie.c src\error.c src\event.c src\flush.c src\get.c \
@@ -52,13 +52,13 @@ tools_cbc_C_SOURCES = win32\getopt.c
 tools_cbc_OBJECTS = $(tools_cbc_CXX_SOURCES:.cc=.obj) \
                     $(tools_cbc_C_SOURCES:.c=.obj)
 
-example_pillowfight_CXX_SOURCES =  tools\commandlineparser.cc example\pillowfight.cc
-example_pillowfight_C_SOURCES = win32\getopt.c
-example_pillowfight_OBJECTS = $(example_pillowfight_CXX_SOURCES:.cc=.obj) \
-                              $(example_pillowfight_C_SOURCES:.c=.obj)
+example_pillowfight_pillowfight_CXX_SOURCES =  tools\commandlineparser.cc example\pillowfight\pillowfight.cc
+example_pillowfight_pillowfight_C_SOURCES = win32\getopt.c
+example_pillowfight_pillowfight_OBJECTS = $(example_pillowfight_pillowfight_CXX_SOURCES:.cc=.obj) \
+                              $(example_pillowfight_pillowfight_C_SOURCES:.c=.obj)
 
 all_OBJS=$(libcouchbase_la_OBJECTS) $(libcouchbase_la_debug_OBJECTS) \
-   $(tools_cbc_OBJECTS) $(example_pillowfight_OBJECTS)
+   $(tools_cbc_OBJECTS) $(example_pillowfight_pillowfight_OBJECTS)
 
 all: $(lib_LTLIBRARIES) \
      libcouchbase.dll \
@@ -84,8 +84,8 @@ tools\cbc.exe: $(tools_cbc_OBJECTS) libcouchbase.dll
 	$(LD) $(LDFLAGS) -out:tools\cbc.exe $(tools_cbc_OBJECTS) \
           libcouchbase.lib ws2_32.lib
 
-example\pillowfight.exe: $(example_pillowfight_OBJECTS) libcouchbase_debug.dll
-	$(LD) $(LDFLAGS) -out:example\pillowfight.exe $(example_pillowfight_OBJECTS) \
+example\pillowfight\pillowfight.exe: $(example_pillowfight_pillowfight_OBJECTS) libcouchbase_debug.dll
+	$(LD) $(LDFLAGS) -out:example\pillowfight\pillowfight.exe $(example_pillowfight_pillowfight_OBJECTS) \
           libcouchbase_debug.lib ws2_32.lib
 
 .SUFFIXES: .c .cc .obj .dobj .res

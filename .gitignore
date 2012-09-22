@@ -37,9 +37,8 @@
 /config/mkinstalldirs
 /config/plugin.ac
 /configure
-/example/couchview
-/example/couchview_yajl
-/example/pillowfight
+/example/yajl/couchview
+/example/pillowfight/pillowfight
 /example/syncmode/syncmode
 /example/libeventdirect/eventloop
 /gtest-1.6.0
