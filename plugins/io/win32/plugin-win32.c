@@ -58,61 +58,7 @@ struct winsock_io_cookie {
     int event_loop;
 };
 
-static void link_event(struct winsock_io_cookie *instance,
-                       struct winsock_event *event)
-{
-    if (instance->events == NULL) {
-        instance->events = event;
-    } else {
-        instance->events->next = event;
-        event->next = NULL;
-    }
-}
-
-static void unlink_event(struct winsock_io_cookie *instance,
-                         struct winsock_event *event)
-{
-    if (instance->events == event) {
-        instance->events = event->next;
-    } else {
-        struct winsock_event *prev = instance->events;
-        struct winsock_event *next;
-        for (next = prev->next; next != NULL; next = next->next) {
-            if (event == next) {
-                prev->next = next->next;
-                return;
-            }
-        }
-    }
-}
-
-static void link_timer(struct winsock_io_cookie *instance,
-                       struct winsock_timer *timer)
-{
-    if (instance->timers == NULL) {
-        instance->timers = timer;
-    } else {
-        instance->timers->next = timer;
-        timer->next = NULL;
-    }
-}
-
-static void unlink_timer(struct winsock_io_cookie *instance,
-                         struct winsock_timer *timer)
-{
-    if (instance->timers == timer) {
-        instance->timers = timer->next;
-    } else {
-        struct winsock_timer *prev = instance->timers;
-        struct winsock_timer *next;
-        for (next = prev->next; next != NULL; next = next->next) {
-            if (timer == next) {
-                prev->next = next->next;
-                return;
-            }
-        }
-    }
-}
+#include "event_lists.h"
 
 static int getError()
 {

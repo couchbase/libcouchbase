@@ -166,7 +166,9 @@ tests_unit_tests_SOURCES = \
                            tests/ringbuffer-unit-test.cc \
                            tests/strerror-unit-test.cc \
                            tests/timeout.c \
-                           tests/unit_tests.cc
+                           tests/unit_tests.cc \
+                           tests/ccbc_103.cc \
+                           plugins/io/win32/event_lists.h
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
 tests_unit_tests_LDADD = libcouchbase.la
