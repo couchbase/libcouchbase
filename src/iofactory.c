@@ -66,17 +66,54 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
 static lcb_error_t create_v1(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st* options);
 
+#define USE_PLUGIN(OPTS, PLUGIN_NAME, PLUGIN_CONST)             \
+        switch (OPTS->version) {                                \
+        case 0:                                                 \
+            OPTS->v.v0.type = PLUGIN_CONST;                     \
+            break;                                              \
+        case 1:                                                 \
+            OPTS->v.v1.sofile = PLUGIN_SO(PLUGIN_NAME);         \
+            OPTS->v.v1.symbol = PLUGIN_SYMBOL(PLUGIN_NAME);     \
+            break;                                              \
+        }
+
+static void override_from_env(struct lcb_create_io_ops_st* options)
+{
+    char *plugin = getenv("LIBCOUCHBASE_EVENT_PLUGIN_NAME");
+    if (plugin != NULL && *plugin != '\0') {
+        if (strncmp("libevent", plugin, 8) == 0) {
+            USE_PLUGIN(options, "libevent", LCB_IO_OPS_LIBEVENT);
+        } else if (strncmp("libev", plugin, 5) == 0) {
+            USE_PLUGIN(options, "libev", LCB_IO_OPS_LIBEV);
+        } else if (options->version == 1) {
+            char *symbol = getenv("LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL");
+            if (symbol == NULL || *symbol == '\0') {
+                options->v.v1.sofile = plugin;
+                options->v.v1.symbol = symbol;
+            }
+        }
+    }
+}
+
+#undef USE_PLUGIN
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
-                              const struct lcb_create_io_ops_st* options)
+                              const struct lcb_create_io_ops_st* io_opts)
 {
-    if (options == NULL) {
-        // Backwards compatibility
-        return create_v0(io, options);
+    struct lcb_create_io_ops_st options;
+
+    memset(&options, 0, sizeof(struct lcb_create_io_ops_st));
+    if (io_opts == NULL) {
+        options.version = 0;
+        options.v.v0.type = LCB_IO_OPS_DEFAULT;
+    } else {
+        memcpy(&options, io_opts, sizeof(struct lcb_create_io_ops_st));
     }
-    switch (options->version) {
-    case 0: return create_v0(io, options);
-    case 1: return create_v1(io, options);
+    override_from_env(&options);
+    switch (options.version) {
+    case 0: return create_v0(io, &options);
+    case 1: return create_v1(io, &options);
     default:
         return LCB_NOT_SUPPORTED;
     }
@@ -86,19 +123,13 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st* options)
 {
     lcb_error_t ret = LCB_SUCCESS;
-    lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;
+    lcb_io_ops_type_t type;
     void *cookie = NULL;
     const char *sofile;
     const char *symbol;
 
-    if (options != NULL) {
-        if (options->version != 0) {
-            return LCB_EINVAL;
-        }
-        type = options->v.v0.type;
-        cookie = options->v.v0.cookie;
-    }
-
+    type = options->v.v0.type;
+    cookie = options->v.v0.cookie;
     if (type == LCB_IO_OPS_DEFAULT) {
 #if defined(HAVE_LIBEVENT) || defined(HAVE_LIBEVENT2)
         type = LCB_IO_OPS_LIBEVENT;
@@ -115,16 +146,12 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
     case LCB_IO_OPS_LIBEV:
         sofile = PLUGIN_SO("libev");
         symbol = PLUGIN_SYMBOL("libev");
-
-        // TROND: Disabled until we've fixed it..
-        return LCB_NOT_SUPPORTED;
-
-        /* break; */
+        break;
     default:
         return LCB_NOT_SUPPORTED;
     }
 
-    if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_LIBEVENT) {
+    {
         struct plugin_st plugin;
         struct lcb_io_opt_st *iop = NULL;
 
@@ -147,8 +174,6 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
             iop->dlhandle = plugin.dlhandle;
         }
         *io = iop;
-    } else {
-        return LCB_NOT_SUPPORTED;
     }
 
     return LCB_SUCCESS;
