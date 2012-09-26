@@ -59,9 +59,9 @@ static void setup(char **argv, const char *username, const char *password,
     assert(mock == NULL);
     assert(io == NULL);
 
-    io = get_test_io_opts();
-    if (io == NULL) {
-        err_exit("Failed to create IO session");
+    if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        exit(1);
     }
 
     mock = start_test_server(argv);
@@ -456,9 +456,9 @@ static lcb_error_t test_connect(char **argv, const char *username,
     assert(mock == NULL);
     assert(io == NULL);
 
-    io = get_test_io_opts();
-    if (io == NULL) {
-        err_exit("Failed to create IO session");
+    if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        exit(1);
     }
 
     mock = start_test_server(argv);

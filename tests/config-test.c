@@ -102,9 +102,9 @@ static void smoke_test(void)
         err_exit("Failed to start mock server");
     }
 
-    io = get_test_io_opts();
-    if (io == NULL) {
-        err_exit("Failed to create IO instance");
+    if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        exit(1);
     }
 
     endpoint = get_mock_http_server(mock);
@@ -171,9 +171,9 @@ static void buffer_relocation_test(void)
         err_exit("Failed to start mock server");
     }
 
-    io = get_test_io_opts();
-    if (io == NULL) {
-        err_exit("Failed to create IO instance");
+    if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to create IO instance\n");
+        exit(1);
     }
 
     endpoint = get_mock_http_server(mock);

@@ -41,8 +41,8 @@ MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
 void MockEnvironment::createConnection(lcb_t &instance)
 {
     struct lcb_io_opt_st *io;
-    io = get_test_io_opts();
-    if (io == NULL) {
+
+    if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
     }

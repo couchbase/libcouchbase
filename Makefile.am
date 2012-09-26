@@ -234,7 +234,7 @@ tests/CouchbaseMock.jar:
 libmockserver_la_LDFLAGS = $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
-                         tests/server.c tests/loopfactory.c tests/server.h
+                         tests/server.c tests/server.h
 
 
 example_syncmode_syncmode_SOURCES = example/syncmode/main.c
@@ -278,7 +278,6 @@ tests_unit_tests_SOURCES += \
                             tests/getopt-unit-tests.cc \
                             tests/http-tests.cc \
                             tests/lock-unit-test.cc \
-                            tests/loopfactory.c \
                             tests/mock-environment.cc \
                             tests/mock-environment.h \
                             tests/mock-unit-test.cc \
