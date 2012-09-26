@@ -85,6 +85,18 @@ extern "C" {
                 /** A cookie passed directly down to the underlying io ops */
                 void *cookie;
             } v0;
+            struct {
+                /** The name of the shared object to load */
+                const char *sofile;
+                /**
+                 * The method to call in the shared object. The functions
+                 * signature is
+                 *   lcb_error_t create(lcb_io_opt_t *io, const void *cookie);
+                 */
+                const char *symbol;
+                /** A cookie passed directly down to the underlying io ops */
+                void *cookie;
+            } v1;
         } v;
     };
 

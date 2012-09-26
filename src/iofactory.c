@@ -19,11 +19,13 @@
 #include <dlfcn.h>
 
 typedef lcb_io_opt_t (*create_func)(struct event_base *base);
+typedef lcb_error_t (*create_v1_func)(lcb_io_opt_t *io, const void *cookie);
 
 struct plugin_st {
     void *dlhandle;
     union {
         create_func create;
+        create_v1_func create_v1;
         void *voidptr;
     } func;
 };
@@ -37,6 +39,7 @@ static lcb_error_t get_create_func(const char *image,
         return LCB_ERROR;
     }
 
+    memset(plugin, 0, sizeof(*plugin));
     plugin->func.create = NULL;
     plugin->func.voidptr = dlsym(dlhandle, symbol);
     if (plugin->func.voidptr == NULL) {
@@ -57,9 +60,30 @@ static lcb_error_t get_create_func(const char *image,
 
 #define PLUGIN_SYMBOL(NAME) "lcb_create_"NAME"_io_opts"
 
+static lcb_error_t create_v0(lcb_io_opt_t *io,
+                             const struct lcb_create_io_ops_st* options);
+
+static lcb_error_t create_v1(lcb_io_opt_t *io,
+                             const struct lcb_create_io_ops_st* options);
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
                               const struct lcb_create_io_ops_st* options)
+{
+    if (options == NULL) {
+        // Backwards compatibility
+        return create_v0(io, options);
+    }
+    switch (options->version) {
+    case 0: return create_v0(io, options);
+    case 1: return create_v1(io, options);
+    default:
+        return LCB_NOT_SUPPORTED;
+    }
+}
+
+static lcb_error_t create_v0(lcb_io_opt_t *io,
+                             const struct lcb_create_io_ops_st* options)
 {
     lcb_error_t ret = LCB_SUCCESS;
     lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;
@@ -104,7 +128,6 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
         struct plugin_st plugin;
         struct lcb_io_opt_st *iop = NULL;
 
-        memset(&plugin, 0, sizeof(plugin));
         /* search definition in main program */
         ret = get_create_func(NULL, symbol, &plugin);
 
@@ -131,3 +154,30 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
     return LCB_SUCCESS;
 }
 #undef PLUGIN_SO
+
+static lcb_error_t create_v1(lcb_io_opt_t *io,
+                             const struct lcb_create_io_ops_st* options)
+{
+    struct plugin_st plugin;
+    lcb_error_t ret = get_create_func(options->v.v1.sofile,
+                                      options->v.v1.symbol,
+                                      &plugin);
+
+    if (ret != LCB_SUCCESS) {
+        return ret;
+    }
+
+    ret = plugin.func.create_v1(io, options->v.v1.cookie);
+    if (ret != LCB_SUCCESS) {
+        if (options->v.v1.sofile != NULL) {
+            dlclose(plugin.dlhandle);
+        }
+        return LCB_CLIENT_ENOMEM;
+    } else {
+        if ((*io)->version > 0) {
+            (*io)->dlhandle = plugin.dlhandle;
+        }
+    }
+
+    return LCB_SUCCESS;
+}
