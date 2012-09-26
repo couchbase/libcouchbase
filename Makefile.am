@@ -151,7 +151,9 @@ libcouchbase_libevent_la_LDFLAGS=-version-info 1:0:0 $(AM_LDFLAGS) $(AM_PROFILE_
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 if BUILD_EXAMPLES
+if HAVE_LIBEVENT2
 noinst_PROGRAMS += example/libeventdirect/eventloop
+endif
 endif
 endif
 
