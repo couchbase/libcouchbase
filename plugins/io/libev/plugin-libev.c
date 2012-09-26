@@ -183,8 +183,8 @@ static int lcb_io_connect(struct lcb_io_opt_st *iops,
 struct libev_event {
     union {
         struct ev_io io;
+        struct ev_timer timer;
     } ev;
-    struct ev_timer timer;
     void *data;
     void (*handler)(lcb_socket_t sock, short which, void *cb_data);
 };
@@ -237,13 +237,12 @@ static int lcb_io_update_event(struct lcb_io_opt_st *iops,
         return 0;
     }
 
-    if (ev_is_active(&evt->ev.io) || ev_is_pending(&evt->ev.io)) {
-        ev_io_stop(io_cookie->loop, &evt->ev.io);
-    }
+    ev_io_stop(io_cookie->loop, &evt->ev.io);
     evt->data = cb_data;
     evt->handler = handler;
     ev_init(&evt->ev.io, handler_thunk);
     ev_io_set(&evt->ev.io, sock, events);
+    ev_io_stop(io_cookie->loop, &evt->ev.io);
     ev_io_start(io_cookie->loop, &evt->ev.io);
 
     return 0;
@@ -258,7 +257,12 @@ static void lcb_io_delete_event(struct lcb_io_opt_st *iops,
     (void)sock;
 }
 
-
+static void lcb_io_destroy_event(struct lcb_io_opt_st *iops,
+                                 void *event)
+{
+    lcb_io_delete_event(iops, -1, event);
+    free(event);
+}
 
 static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
                                void *timer,
@@ -278,8 +282,8 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
     evt->data = cb_data;
     evt->handler = handler;
     ev_init(&evt->ev.io, handler_thunk);
-    evt->timer.repeat = usec;
-    ev_timer_again(io_cookie->loop, &evt->timer);
+    evt->ev.timer.repeat = usec;
+    ev_timer_again(io_cookie->loop, &evt->ev.timer);
 
     return 0;
 }
@@ -289,19 +293,13 @@ static void lcb_io_delete_timer(struct lcb_io_opt_st *iops,
 {
     struct libev_cookie *io_cookie = iops->cookie;
     struct libev_event *evt = event;
-    ev_io_stop(io_cookie->loop, &evt->ev.io);
+    ev_timer_stop(io_cookie->loop, &evt->ev.timer);
 }
 
-static void lcb_io_destroy_event(struct lcb_io_opt_st *iops,
+static void lcb_io_destroy_timer(struct lcb_io_opt_st *iops,
                                  void *event)
 {
-    struct libev_event *evt = event;
-    struct libev_cookie *io_cookie = iops->cookie;
-
-    if ((ev_is_active(&evt->ev.io) || ev_is_pending(&evt->ev.io)) &&
-            evt->ev.io.events & (EV_READ | EV_WRITE | EV_TIMER)) {
-        ev_io_stop(io_cookie->loop, &evt->ev.io);
-    }
+    lcb_io_delete_timer(iops, event);
     free(event);
 }
 
@@ -353,7 +351,7 @@ struct lcb_io_opt_st *lcb_create_libev_io_opts(struct ev_loop *loop) {
     ret->update_event = lcb_io_update_event;
 
     ret->delete_timer = lcb_io_delete_timer;
-    ret->destroy_timer = lcb_io_destroy_event;
+    ret->destroy_timer = lcb_io_destroy_timer;
     ret->create_timer = lcb_io_create_event;
     ret->update_timer = lcb_io_update_timer;
 
