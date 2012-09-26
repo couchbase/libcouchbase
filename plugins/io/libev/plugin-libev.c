@@ -34,7 +34,6 @@ struct libev_cookie {
     int allocated;
 };
 
-
 static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
                                lcb_socket_t sock,
                                void *buffer,
@@ -306,13 +305,21 @@ static void lcb_io_destroy_timer(struct lcb_io_opt_st *iops,
 static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 {
     struct libev_cookie *io_cookie = iops->cookie;
+#ifdef HAVE_LIBEV4
     ev_break(io_cookie->loop, EVBREAK_ONE);
+#else
+    ev_unloop(io_cookie->loop, EVUNLOOP_ONE);
+#endif
 }
 
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
     struct libev_cookie *io_cookie = iops->cookie;
+#ifdef HAVE_LIBEV4
     ev_run(io_cookie->loop, 0);
+#else
+    ev_loop(io_cookie->loop, 0);
+#endif
 }
 
 static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)

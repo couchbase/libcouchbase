@@ -187,26 +187,49 @@ AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
   ])
 AM_CONDITIONAL(HAVE_WINSOCK2, [test "$ac_cv_have_winsock2" = "yes"])
 
-dnl Check that we've got a usable libev
-AC_CACHE_CHECK([for libev], [ac_cv_have_libev],
+dnl Check that we've got a usable libev3
+AC_CACHE_CHECK([for libev3], [ac_cv_have_libev3],
   [ saved_libs="$LIBS"
     LIBS=-lev
     AC_TRY_LINK([
       #include <sys/types.h>
       #include <ev.h>
             ],[
-      struct ev_loop *loop = ev_default_loop (0);
-      ev_run(loop, 0);
+      struct ev_loop *loop = ev_loop_new(EVFLAG_AUTO|EVFLAG_NOENV);
+      ev_loop(loop, 0);
             ],[
-      ac_cv_have_libev="yes"
+      ac_cv_have_libev3="yes"
             ], [
-      ac_cv_have_libev="no"
+      ac_cv_have_libev3="no"
       ])
     LIBS="$saved_libs"
   ])
-AM_CONDITIONAL(HAVE_LIBEV, [test "x${ac_cv_have_libev}" = "xyes"])
-AS_IF([test "x${ac_cv_have_libev}" = "xyes"],
-      [AC_DEFINE([HAVE_LIBEV], [1], [We have libev])])
+AM_CONDITIONAL(HAVE_LIBEV3, [test "x${ac_cv_have_libev3}" = "xyes" ])
+AS_IF([test "x${ac_cv_have_libev3}" = "xyes"],
+      [AC_DEFINE([HAVE_LIBEV3], [1], [We have libev3])])
+
+dnl Check that we've got a usable libev4
+AC_CACHE_CHECK([for libev4], [ac_cv_have_libev4],
+  [ saved_libs="$LIBS"
+    LIBS=-lev
+    AC_TRY_LINK([
+      #include <sys/types.h>
+      #include <ev.h>
+            ],[
+      struct ev_loop *loop = ev_loop_new(EVFLAG_AUTO|EVFLAG_NOENV);
+      ev_run(loop, 0);
+            ],[
+      ac_cv_have_libev4="yes"
+            ], [
+      ac_cv_have_libev4="no"
+      ])
+    LIBS="$saved_libs"
+  ])
+AM_CONDITIONAL(HAVE_LIBEV4, [test "x${ac_cv_have_libev4}" = "xyes" ])
+AS_IF([test "x${ac_cv_have_libev4}" = "xyes"],
+      [AC_DEFINE([HAVE_LIBEV4], [1], [We have libev4])])
+
+AM_CONDITIONAL(HAVE_LIBEV, [test "x${ac_cv_have_libev3}" = "xyes" -o "x${ac_cv_have_libev4}" = "xyes" ])
 
 dnl Check that we've got a usable libevent
 AC_CACHE_CHECK([for libevent >= 1.4], [ac_cv_have_libevent],
