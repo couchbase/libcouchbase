@@ -148,7 +148,7 @@ static void touch_callback(lcb_t instance,
     lcb_maybe_breakout(instance);
 }
 
-static void view_complete_callback(lcb_http_request_t request,
+static void http_complete_callback(lcb_http_request_t request,
                                    lcb_t instance,
                                    const void *cookie,
                                    lcb_error_t error,
@@ -157,12 +157,12 @@ static void view_complete_callback(lcb_http_request_t request,
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.view_complete(request, instance, cookie, error, resp);
+    c->callbacks.http_complete(request, instance, cookie, error, resp);
     restore_wrapping_env(instance, c, error);
     lcb_maybe_breakout(instance);
 }
 
-static void view_data_callback(lcb_http_request_t request,
+static void http_data_callback(lcb_http_request_t request,
                                lcb_t instance,
                                const void *cookie,
                                lcb_error_t error,
@@ -171,35 +171,7 @@ static void view_data_callback(lcb_http_request_t request,
     struct user_cookie *c = (void *)instance->cookie;
 
     restore_user_env(instance);
-    c->callbacks.view_data(request, instance, cookie, error, resp);
-    restore_wrapping_env(instance, c, error);
-    lcb_maybe_breakout(instance);
-}
-
-static void management_complete_callback(lcb_http_request_t request,
-                                         lcb_t instance,
-                                         const void *cookie,
-                                         lcb_error_t error,
-                                         const lcb_http_resp_t *resp)
-{
-    struct user_cookie *c = (void *)instance->cookie;
-
-    restore_user_env(instance);
-    c->callbacks.management_complete(request, instance, cookie, error, resp);
-    restore_wrapping_env(instance, c, error);
-    lcb_maybe_breakout(instance);
-}
-
-static void management_data_callback(lcb_http_request_t request,
-                                     lcb_t instance,
-                                     const void *cookie,
-                                     lcb_error_t error,
-                                     const lcb_http_resp_t *resp)
-{
-    struct user_cookie *c = (void *)instance->cookie;
-
-    restore_user_env(instance);
-    c->callbacks.management_data(request, instance, cookie, error, resp);
+    c->callbacks.http_data(request, instance, cookie, error, resp);
     restore_wrapping_env(instance, c, error);
     lcb_maybe_breakout(instance);
 }
@@ -254,10 +226,8 @@ static void restore_wrapping_env(lcb_t instance,
     instance->callbacks.touch = touch_callback;
     instance->callbacks.flush = flush_callback;
     instance->callbacks.error = error_callback;
-    instance->callbacks.view_complete = view_complete_callback;
-    instance->callbacks.view_data = view_data_callback;
-    instance->callbacks.management_complete = management_complete_callback;
-    instance->callbacks.management_data = management_data_callback;
+    instance->callbacks.http_complete = http_complete_callback;
+    instance->callbacks.http_data = http_data_callback;
     instance->callbacks.observe = observe_callback;
 
     user->cookie = (void *)instance->cookie;

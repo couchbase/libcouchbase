@@ -476,6 +476,8 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     if (request) {
         *request = req;
     }
+    req->on_complete = instance->callbacks.http_complete;
+    req->on_data = instance->callbacks.http_data;
     switch (type) {
     case LCB_HTTP_TYPE_VIEW:
         if (!server->couch_api_base) {
@@ -491,8 +493,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             }
             memcpy(password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
         }
-        req->on_complete = instance->callbacks.view_complete;
-        req->on_data = instance->callbacks.view_data;
         break;
     case LCB_HTTP_TYPE_MANAGEMENT:
         if (!server->rest_api_server) {
@@ -504,8 +504,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         if (instance->password) {
             password = strdup(instance->password);
         }
-        req->on_complete = instance->callbacks.management_complete;
-        req->on_data = instance->callbacks.management_data;
         break;
     default:
         lcb_http_request_destroy(req);

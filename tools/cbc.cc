@@ -1423,10 +1423,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)lcb_set_store_callback(instance, store_callback);
     (void)lcb_set_unlock_callback(instance, unlock_callback);
     (void)lcb_set_observe_callback(instance, observe_callback);
-    (void)lcb_set_view_data_callback(instance, data_callback);
-    (void)lcb_set_view_complete_callback(instance, complete_callback);
-    (void)lcb_set_management_data_callback(instance, data_callback);
-    (void)lcb_set_management_complete_callback(instance, complete_callback);
+    (void)lcb_set_http_data_callback(instance, data_callback);
+    (void)lcb_set_http_complete_callback(instance, complete_callback);
     (void)lcb_set_verbosity_callback(instance, verbosity_callback);
 
     if (config.getTimeout() != 0) {

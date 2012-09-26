@@ -278,20 +278,12 @@ extern "C" {
     lcb_flush_callback lcb_set_flush_callback(lcb_t, lcb_flush_callback);
 
     LIBCOUCHBASE_API
-    lcb_http_complete_callback lcb_set_view_complete_callback(lcb_t,
+    lcb_http_complete_callback lcb_set_http_complete_callback(lcb_t,
                                                               lcb_http_complete_callback);
 
     LIBCOUCHBASE_API
-    lcb_http_data_callback lcb_set_view_data_callback(lcb_t,
+    lcb_http_data_callback lcb_set_http_data_callback(lcb_t,
                                                       lcb_http_data_callback);
-
-    LIBCOUCHBASE_API
-    lcb_http_complete_callback lcb_set_management_complete_callback(lcb_t,
-                                                                    lcb_http_complete_callback);
-
-    LIBCOUCHBASE_API
-    lcb_http_data_callback lcb_set_management_data_callback(lcb_t,
-                                                            lcb_http_data_callback);
 
     LIBCOUCHBASE_API
     lcb_unlock_callback lcb_set_unlock_callback(lcb_t, lcb_unlock_callback);

@@ -117,10 +117,8 @@ extern "C" {
         lcb_touch_callback touch;
         lcb_flush_callback flush;
         lcb_error_callback error;
-        lcb_http_complete_callback view_complete;
-        lcb_http_data_callback view_data;
-        lcb_http_complete_callback management_complete;
-        lcb_http_data_callback management_data;
+        lcb_http_complete_callback http_complete;
+        lcb_http_data_callback http_data;
         lcb_unlock_callback unlock;
         lcb_configuration_callback configuration;
         lcb_verbosity_callback verbosity;

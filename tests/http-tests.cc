@@ -95,7 +95,7 @@ TEST_F(HttpUnitTest, testPut)
                           "application/json");
 
     lcb_error_t err;
-    lcb_set_view_complete_callback(instance, httpPutCallback);
+    lcb_set_http_complete_callback(instance, httpPutCallback);
 
     lcb_http_request_t htreq;
     HttpCmdContext ctx;
@@ -154,7 +154,7 @@ TEST_F(HttpUnitTest, testGet)
                                           "application/json");
 
     HttpCmdContext ctx;
-    lcb_set_view_complete_callback(instance, httpGetCallback);
+    lcb_set_http_complete_callback(instance, httpGetCallback);
     lcb_error_t err;
     lcb_http_request_t htreq;
 

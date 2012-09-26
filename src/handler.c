@@ -948,7 +948,7 @@ static void dummy_flush_callback(lcb_t instance,
     (void)error;
 }
 
-static void dummy_view_complete_callback(lcb_http_request_t request,
+static void dummy_http_complete_callback(lcb_http_request_t request,
                                          lcb_t instance,
                                          const void *cookie,
                                          lcb_error_t error,
@@ -961,33 +961,7 @@ static void dummy_view_complete_callback(lcb_http_request_t request,
     (void)resp;
 }
 
-static void dummy_management_data_callback(lcb_http_request_t request,
-                                           lcb_t instance,
-                                           const void *cookie,
-                                           lcb_error_t error,
-                                           const lcb_http_resp_t *resp)
-{
-    (void)request;
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_management_complete_callback(lcb_http_request_t request,
-                                               lcb_t instance,
-                                               const void *cookie,
-                                               lcb_error_t error,
-                                               const lcb_http_resp_t *resp)
-{
-    (void)request;
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_view_data_callback(lcb_http_request_t request,
+static void dummy_http_data_callback(lcb_http_request_t request,
                                      lcb_t instance,
                                      const void *cookie,
                                      lcb_error_t error,
@@ -1045,10 +1019,8 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.error = dummy_error_callback;
     instance->callbacks.stat = dummy_stat_callback;
     instance->callbacks.version = dummy_version_callback;
-    instance->callbacks.view_complete = dummy_view_complete_callback;
-    instance->callbacks.view_data = dummy_view_data_callback;
-    instance->callbacks.management_complete = dummy_management_complete_callback;
-    instance->callbacks.management_data = dummy_management_data_callback;
+    instance->callbacks.http_complete = dummy_http_complete_callback;
+    instance->callbacks.http_data = dummy_http_data_callback;
     instance->callbacks.flush = dummy_flush_callback;
     instance->callbacks.unlock = dummy_unlock_callback;
     instance->callbacks.configuration = dummy_configuration_callback;
@@ -1192,45 +1164,23 @@ lcb_flush_callback lcb_set_flush_callback(lcb_t instance,
 }
 
 LIBCOUCHBASE_API
-lcb_http_complete_callback lcb_set_view_complete_callback(lcb_t instance,
+lcb_http_complete_callback lcb_set_http_complete_callback(lcb_t instance,
                                                           lcb_http_complete_callback cb)
 {
-    lcb_http_complete_callback ret = instance->callbacks.view_complete;
+    lcb_http_complete_callback ret = instance->callbacks.http_complete;
     if (cb != NULL) {
-        instance->callbacks.view_complete = cb;
+        instance->callbacks.http_complete = cb;
     }
     return ret;
 }
 
 LIBCOUCHBASE_API
-lcb_http_data_callback lcb_set_view_data_callback(lcb_t instance,
+lcb_http_data_callback lcb_set_http_data_callback(lcb_t instance,
                                                   lcb_http_data_callback cb)
 {
-    lcb_http_data_callback ret = instance->callbacks.view_data;
+    lcb_http_data_callback ret = instance->callbacks.http_data;
     if (cb != NULL) {
-        instance->callbacks.view_data = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_http_complete_callback lcb_set_management_complete_callback(lcb_t instance,
-                                                                lcb_http_complete_callback cb)
-{
-    lcb_http_complete_callback ret = instance->callbacks.management_complete;
-    if (cb != NULL) {
-        instance->callbacks.management_complete = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_http_data_callback lcb_set_management_data_callback(lcb_t instance,
-                                                        lcb_http_data_callback cb)
-{
-    lcb_http_data_callback ret = instance->callbacks.management_data;
-    if (cb != NULL) {
-        instance->callbacks.management_data = cb;
+        instance->callbacks.http_data = cb;
     }
     return ret;
 }

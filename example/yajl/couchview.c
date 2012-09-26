@@ -447,8 +447,8 @@ int main(int argc, char **argv)
     }
 
     (void)lcb_set_error_callback(instance, error_callback);
-    (void)lcb_set_view_data_callback(instance, data_callback);
-    (void)lcb_set_view_complete_callback(instance, complete_callback);
+    (void)lcb_set_http_data_callback(instance, data_callback);
+    (void)lcb_set_http_complete_callback(instance, complete_callback);
 
     if (lcb_connect(instance) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to connect libcouchbase instance to server\n");
