@@ -20,7 +20,7 @@
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
-                              const struct lcb_create_io_ops_st* options)
+                              const struct lcb_create_io_ops_st *options)
 {
     lcb_error_t ret = LCB_SUCCESS;
     lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;

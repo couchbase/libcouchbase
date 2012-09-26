@@ -369,7 +369,7 @@ extern "C" {
                                   const lcb_http_resp_t *resp)
     {
         if (resp->v.v0.headers) {
-            const char * const*headers = resp->v.v0.headers;
+            const char *const *headers = resp->v.v0.headers;
             for (size_t ii = 1; *headers != NULL; ++ii, ++headers) {
                 cerr << *headers;
                 cerr << ((ii % 2 == 0) ? "\n" : ": ");
@@ -756,7 +756,7 @@ static bool verbosity_impl(lcb_t instance, list<string> &args)
     lcb_error_t err;
     if (args.empty()) {
         lcb_verbosity_cmd_t cmd(level);
-        lcb_verbosity_cmd_t* commands[] = { &cmd };
+        lcb_verbosity_cmd_t *commands[] = { &cmd };
 
         err = lcb_set_verbosity(instance, NULL, 1, commands);
         if (err != LCB_SUCCESS) {
@@ -768,7 +768,7 @@ static bool verbosity_impl(lcb_t instance, list<string> &args)
         list<string>::iterator iter;
         for (iter = args.begin(); iter != args.end(); ++iter) {
             lcb_verbosity_cmd_t cmd(level, iter->c_str());
-            lcb_verbosity_cmd_t* commands[] = { &cmd };
+            lcb_verbosity_cmd_t *commands[] = { &cmd };
 
             err = lcb_set_verbosity(instance, NULL, 1, commands);
             if (err != LCB_SUCCESS) {
@@ -1052,7 +1052,7 @@ static bool flush_impl(lcb_t instance, list<string> &keys)
 
     lcb_error_t err;
     lcb_flush_cmd_t flush;
-    lcb_flush_cmd_t* commands[] = {&flush};
+    lcb_flush_cmd_t *commands[] = {&flush};
 
     err = lcb_flush(instance, NULL, 1, commands);
     if (err != LCB_SUCCESS) {

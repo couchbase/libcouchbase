@@ -21,9 +21,10 @@
 #include "server.h"
 #include "mock-environment.h"
 
-MockEnvironment* MockEnvironment::instance;
+MockEnvironment *MockEnvironment::instance;
 
-MockEnvironment* MockEnvironment::getInstance(void) {
+MockEnvironment *MockEnvironment::getInstance(void)
+{
     if (instance == NULL) {
         instance = new MockEnvironment;
     }
@@ -31,9 +32,9 @@ MockEnvironment* MockEnvironment::getInstance(void) {
 }
 
 MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
-                                     realCluster(false),
-                                     serverVersion(VERSION_UNKNOWN),
-                                     http(NULL)
+    realCluster(false),
+    serverVersion(VERSION_UNKNOWN),
+    http(NULL)
 {
     // No extra init needed
 }
@@ -61,7 +62,7 @@ extern "C" {
                               lcb_error_t err,
                               const lcb_server_stat_resp_t *resp)
     {
-        MockEnvironment *me = (MockEnvironment*)cookie;
+        MockEnvironment *me = (MockEnvironment *)cookie;
         ASSERT_EQ(LCB_SUCCESS, err);
         if (resp->v.v0.server_endpoint == NULL) {
             return;
@@ -71,12 +72,12 @@ extern "C" {
             return;
         }
 
-        if (resp->v.v0.nkey != sizeof(STAT_EP_VERSION)-1  ||
+        if (resp->v.v0.nkey != sizeof(STAT_EP_VERSION) - 1  ||
                 memcmp(resp->v.v0.key, STAT_EP_VERSION,
-                       sizeof(STAT_EP_VERSION) -1) != 0) {
+                       sizeof(STAT_EP_VERSION) - 1) != 0) {
             return;
         }
-        int version =  ((const char *)resp->v.v0.bytes)[0] - '0';
+        int version = ((const char *)resp->v.v0.bytes)[0] - '0';
         if (version == 1) {
             me->setServerVersion(MockEnvironment::VERSION_10);
         } else if (version == 2) {
@@ -84,7 +85,7 @@ extern "C" {
 
         } else {
             std::cerr << "Unable to determine version from string '";
-            std::cerr.write((const char*)resp->v.v0.bytes,
+            std::cerr.write((const char *)resp->v.v0.bytes,
                             resp->v.v0.nbytes);
             std::cerr << "' assuming 1.x" << std::endl;
 
@@ -122,7 +123,7 @@ void MockEnvironment::bootstrapRealCluster()
         std::cout << std::endl;
     }
 
-    const char * const *servers = lcb_get_server_list(tmphandle);
+    const char *const *servers = lcb_get_server_list(tmphandle);
     if (verbose) {
         std::cout << "Using the following servers: " << std::endl;
     }
@@ -140,7 +141,7 @@ void MockEnvironment::bootstrapRealCluster()
 
 void MockEnvironment::SetUp()
 {
-    mock = (struct test_server_info*)start_test_server(NULL);
+    mock = (struct test_server_info *)start_test_server(NULL);
     realCluster = is_using_real_cluster();
     ASSERT_NE((const void *)(NULL), mock);
     http = get_mock_http_server(mock);

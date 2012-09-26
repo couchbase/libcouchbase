@@ -36,10 +36,10 @@ struct libev_cookie {
 
 
 static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
-                                                 lcb_socket_t sock,
-                                                 void *buffer,
-                                                 lcb_size_t len,
-                                                 int flags)
+                               lcb_socket_t sock,
+                               void *buffer,
+                               lcb_size_t len,
+                               int flags)
 {
     lcb_ssize_t ret = recv(sock, buffer, len, flags);
     if (ret < 0) {
@@ -49,9 +49,9 @@ static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
 }
 
 static lcb_ssize_t lcb_io_recvv(struct lcb_io_opt_st *iops,
-                                                  lcb_socket_t sock,
-                                                  struct lcb_iovec_st *iov,
-                                                  lcb_size_t niov)
+                                lcb_socket_t sock,
+                                struct lcb_iovec_st *iov,
+                                lcb_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
@@ -75,10 +75,10 @@ static lcb_ssize_t lcb_io_recvv(struct lcb_io_opt_st *iops,
 }
 
 static lcb_ssize_t lcb_io_send(struct lcb_io_opt_st *iops,
-                                                 lcb_socket_t sock,
-                                                 const void *msg,
-                                                 lcb_size_t len,
-                                                 int flags)
+                               lcb_socket_t sock,
+                               const void *msg,
+                               lcb_size_t len,
+                               int flags)
 {
     lcb_ssize_t ret = send(sock, msg, len, flags);
     if (ret < 0) {
@@ -88,9 +88,9 @@ static lcb_ssize_t lcb_io_send(struct lcb_io_opt_st *iops,
 }
 
 static lcb_ssize_t lcb_io_sendv(struct lcb_io_opt_st *iops,
-                                                  lcb_socket_t sock,
-                                                  struct lcb_iovec_st *iov,
-                                                  lcb_size_t niov)
+                                lcb_socket_t sock,
+                                struct lcb_iovec_st *iov,
+                                lcb_size_t niov)
 {
     struct msghdr msg;
     struct iovec vec[2];
@@ -142,9 +142,9 @@ static int close_socket(lcb_socket_t sock)
 }
 
 static lcb_socket_t lcb_io_socket(struct lcb_io_opt_st *iops,
-                                                    int domain,
-                                                    int type,
-                                                    int protocol)
+                                  int domain,
+                                  int type,
+                                  int protocol)
 {
     lcb_socket_t sock = socket(domain, type, protocol);
     if (sock == INVALID_SOCKET) {
@@ -162,16 +162,16 @@ static lcb_socket_t lcb_io_socket(struct lcb_io_opt_st *iops,
 }
 
 static void lcb_io_close(struct lcb_io_opt_st *iops,
-                                  lcb_socket_t sock)
+                         lcb_socket_t sock)
 {
     close_socket(sock);
     (void)iops;
 }
 
 static int lcb_io_connect(struct lcb_io_opt_st *iops,
-                                   lcb_socket_t sock,
-                                   const struct sockaddr *name,
-                                   unsigned int namelen)
+                          lcb_socket_t sock,
+                          const struct sockaddr *name,
+                          unsigned int namelen)
 {
     int ret = connect(sock, name, (socklen_t)namelen);
     if (ret < 0) {
@@ -213,13 +213,13 @@ static void *lcb_io_create_event(struct lcb_io_opt_st *iops)
 }
 
 static int lcb_io_update_event(struct lcb_io_opt_st *iops,
-                                        lcb_socket_t sock,
-                                        void *event,
-                                        short flags,
-                                        void *cb_data,
-                                        void (*handler)(lcb_socket_t sock,
-                                                        short which,
-                                                        void *cb_data))
+                               lcb_socket_t sock,
+                               void *event,
+                               short flags,
+                               void *cb_data,
+                               void (*handler)(lcb_socket_t sock,
+                                               short which,
+                                               void *cb_data))
 {
     struct libev_cookie *io_cookie = iops->cookie;
     struct libev_event *evt = event;
@@ -249,8 +249,8 @@ static int lcb_io_update_event(struct lcb_io_opt_st *iops,
     return 0;
 }
 static void lcb_io_delete_event(struct lcb_io_opt_st *iops,
-                                         lcb_socket_t sock,
-                                         void *event)
+                                lcb_socket_t sock,
+                                void *event)
 {
     struct libev_cookie *io_cookie = iops->cookie;
     struct libev_event *evt = event;
@@ -261,12 +261,12 @@ static void lcb_io_delete_event(struct lcb_io_opt_st *iops,
 
 
 static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
-                                        void *timer,
-                                        lcb_uint32_t usec,
-                                        void *cb_data,
-                                        void (*handler)(lcb_socket_t sock,
-                                                        short which,
-                                                        void *cb_data))
+                               void *timer,
+                               lcb_uint32_t usec,
+                               void *cb_data,
+                               void (*handler)(lcb_socket_t sock,
+                                               short which,
+                                               void *cb_data))
 {
     struct libev_cookie *io_cookie = iops->cookie;
     struct libev_event *evt = timer;
@@ -285,7 +285,7 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
 }
 
 static void lcb_io_delete_timer(struct lcb_io_opt_st *iops,
-                                         void *event)
+                                void *event)
 {
     struct libev_cookie *io_cookie = iops->cookie;
     struct libev_event *evt = event;
@@ -293,13 +293,13 @@ static void lcb_io_delete_timer(struct lcb_io_opt_st *iops,
 }
 
 static void lcb_io_destroy_event(struct lcb_io_opt_st *iops,
-                                          void *event)
+                                 void *event)
 {
     struct libev_event *evt = event;
     struct libev_cookie *io_cookie = iops->cookie;
 
     if ((ev_is_active(&evt->ev.io) || ev_is_pending(&evt->ev.io)) &&
-        evt->ev.io.events & (EV_READ | EV_WRITE | EV_TIMER)) {
+            evt->ev.io.events & (EV_READ | EV_WRITE | EV_TIMER)) {
         ev_io_stop(io_cookie->loop, &evt->ev.io);
     }
     free(event);

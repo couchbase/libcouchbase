@@ -60,7 +60,7 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     lcb_error_t lcb_create_io_ops(lcb_io_opt_t *op,
-                                  const struct lcb_create_io_ops_st* options);
+                                  const struct lcb_create_io_ops_st *options);
 
     /**
      * Create an instance of lcb.
@@ -508,7 +508,7 @@ extern "C" {
     lcb_error_t lcb_server_versions(lcb_t instance,
                                     const void *command_cookie,
                                     lcb_size_t num,
-                                    const lcb_server_version_cmd_t * const *commands);
+                                    const lcb_server_version_cmd_t *const *commands);
 
 
     /**
@@ -533,7 +533,7 @@ extern "C" {
     lcb_error_t lcb_set_verbosity(lcb_t instance,
                                   const void *command_cookie,
                                   lcb_size_t num,
-                                  const lcb_verbosity_cmd_t* const *commands);
+                                  const lcb_verbosity_cmd_t *const *commands);
 
     /**
      * Flush the entire couchbase cluster!
@@ -555,7 +555,7 @@ extern "C" {
     LIBCOUCHBASE_API
     lcb_error_t lcb_flush(lcb_t instance, const void *cookie,
                           lcb_size_t num,
-                          const lcb_flush_cmd_t* const *commands);
+                          const lcb_flush_cmd_t *const *commands);
 
     /**
      * Execute HTTP request matching given path and yield JSON result object.
@@ -710,7 +710,7 @@ extern "C" {
      * libcouchbase' event loop.
      */
     LIBCOUCHBASE_API
-    const char * const * lcb_get_server_list(lcb_t instance);
+    const char *const *lcb_get_server_list(lcb_t instance);
 
 #ifdef __cplusplus
 }

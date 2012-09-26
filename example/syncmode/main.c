@@ -23,7 +23,8 @@
 static const char const *key = "mykey";
 static const char const *value = "myvalue";
 
-static void error_handler(lcb_t instance, lcb_error_t err, const char *info) {
+static void error_handler(lcb_t instance, lcb_error_t err, const char *info)
+{
     fprintf(stderr, "FATAL! an error occured: %s (%s)\n",
             lcb_strerror(instance, err), info ? info : "none");
     exit(EXIT_FAILURE);
@@ -61,7 +62,8 @@ static void store_handler(lcb_t instance, const void *cookie,
                           lcb_storage_t operation, lcb_error_t error,
                           const lcb_store_resp_t *resp)
 {
-    (void)cookie; (void)operation;
+    (void)cookie;
+    (void)operation;
 
     if (error != LCB_SUCCESS) {
         fprintf(stderr, "Failed to store the key on the server: %s\n",
@@ -80,7 +82,7 @@ static void set_key(lcb_t instance)
 {
     lcb_store_cmd_t cmd;
     lcb_error_t error;
-    const lcb_store_cmd_t * const commands[] = { &cmd };
+    const lcb_store_cmd_t *const commands[] = { &cmd };
 
     memset(&cmd, 0, sizeof(cmd));
     cmd.v.v0.key = key;
@@ -126,7 +128,7 @@ static void get_key(lcb_t instance)
 {
     lcb_get_cmd_t cmd;
     lcb_error_t error;
-    const lcb_get_cmd_t * const commands[] = { &cmd };
+    const lcb_get_cmd_t *const commands[] = { &cmd };
 
     memset(&cmd, 0, sizeof(cmd));
     cmd.v.v0.key = key;

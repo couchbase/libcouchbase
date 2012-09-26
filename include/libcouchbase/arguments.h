@@ -124,7 +124,7 @@ extern "C" {
             version = 0;
             v.v0.key = key;
             if (key != NULL && nkey == 0) {
-                v.v0.nkey = std::strlen((const char*)key);
+                v.v0.nkey = std::strlen((const char *)key);
             } else {
                 v.v0.nkey = nkey;
             }
@@ -153,7 +153,7 @@ extern "C" {
             v.v0.nkey = nkey;
         }
 #endif
-     } lcb_get_replica_cmd_t;
+    } lcb_get_replica_cmd_t;
 
     typedef struct lcb_unlock_cmd_st {
         int version;
@@ -302,7 +302,7 @@ extern "C" {
             version = 0;
             v.v0.key = key;
             if (key != NULL && nkey == 0) {
-                v.v0.nkey = strlen((const char*)key);
+                v.v0.nkey = strlen((const char *)key);
             } else {
                 v.v0.nkey = nkey;
             }

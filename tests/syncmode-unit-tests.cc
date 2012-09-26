@@ -24,7 +24,8 @@
 #include "testutil.h"
 
 extern "C" {
-    static void error_callback(lcb_t, lcb_error_t err, const char *) {
+    static void error_callback(lcb_t, lcb_error_t err, const char *)
+    {
         ASSERT_EQ(LCB_SUCCESS, err);
     }
 
@@ -33,7 +34,7 @@ extern "C" {
                                lcb_error_t error,
                                const lcb_store_resp_t *)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         ASSERT_EQ(LCB_SET, operation);
         ASSERT_EQ(LCB_SUCCESS, error);
         ++(*counter);
@@ -67,7 +68,7 @@ TEST_F(SyncmodeUnitTest, testSet)
     std::string value("Hello World");
     lcb_store_cmd_t cmd(LCB_SET, key.data(), key.length(),
                         value.data(), value.length());
-    lcb_store_cmd_t* cmds[] = { &cmd };
+    lcb_store_cmd_t *cmds[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &counter, 1, cmds));
     ASSERT_EQ(1, counter);
     lcb_destroy(instance);

@@ -311,7 +311,7 @@ extern "C" {
         /* Version 1 of the struct also includes the following members */
         void *dlhandle;
     };
-    typedef struct lcb_io_opt_st* lcb_io_opt_t;
+    typedef struct lcb_io_opt_st *lcb_io_opt_t;
 
     typedef enum {
         LCB_ASYNCHRONOUS = 0x00,

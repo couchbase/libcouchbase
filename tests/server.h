@@ -41,7 +41,7 @@ extern "C" {
 
     const void *start_test_server(char **cmdline);
     const char *get_mock_http_server(const void *);
-    void get_mock_std_creds(const void * handle, const char **userp, const char **passp);
+    void get_mock_std_creds(const void *handle, const char **userp, const char **passp);
     int is_using_real_cluster(void);
 
     void shutdown_mock_server(const void *);

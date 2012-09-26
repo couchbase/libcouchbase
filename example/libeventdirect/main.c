@@ -30,13 +30,14 @@ static void error_callback(lcb_t instance,
     exit(EXIT_FAILURE);
 }
 
-static void configuration_callback(lcb_t instance, lcb_configuration_t config) {
+static void configuration_callback(lcb_t instance, lcb_configuration_t config)
+{
     if (config == LCB_CONFIGURATION_NEW) {
 
         // Since we've got our configuration, let's go ahead and store a value
         lcb_store_cmd_t cmd;
-        const lcb_store_cmd_t * cmds[] = {&cmd};
-        memset(&cmd, 0, sizeof (cmd));
+        const lcb_store_cmd_t *cmds[] = {&cmd};
+        memset(&cmd, 0, sizeof(cmd));
         cmd.v.v0.key = "foo";
         cmd.v.v0.nkey = 3;
         cmd.v.v0.bytes = "bar";
@@ -56,7 +57,8 @@ static void get_callback(lcb_t instance,
                          lcb_error_t error,
                          const lcb_get_resp_t *resp)
 {
-    (void)cookie; (void)resp;
+    (void)cookie;
+    (void)resp;
 
     if (error != LCB_SUCCESS) {
         fprintf(stderr, "Failed to get key: %s\n",
@@ -65,7 +67,7 @@ static void get_callback(lcb_t instance,
     }
 
     fprintf(stdout, "I stored and retrieved the key \"foo\". Terminate program\n");
-    event_base_loopbreak((void*)lcb_get_cookie(instance));
+    event_base_loopbreak((void *)lcb_get_cookie(instance));
 }
 
 static void store_callback(lcb_t instance,
@@ -74,7 +76,9 @@ static void store_callback(lcb_t instance,
                            lcb_error_t error,
                            const lcb_store_resp_t *resp)
 {
-    (void)cookie; (void)operation; (void)resp;
+    (void)cookie;
+    (void)operation;
+    (void)resp;
 
     if (error != LCB_SUCCESS) {
         fprintf(stderr, "Failed to store key: %s\n",
@@ -84,8 +88,8 @@ static void store_callback(lcb_t instance,
 
     /* Time to read it back */
     lcb_get_cmd_t cmd;
-    const lcb_get_cmd_t * cmds[] = {&cmd};
-    memset(&cmd, 0, sizeof (cmd));
+    const lcb_get_cmd_t *cmds[] = {&cmd};
+    memset(&cmd, 0, sizeof(cmd));
     cmd.v.v0.key = "foo";
     cmd.v.v0.nkey = 3;
     if ((error = lcb_get(instance, NULL, 1, cmds)) != LCB_SUCCESS) {
@@ -99,7 +103,7 @@ static lcb_io_opt_t create_libevent_io_ops(struct event_base *evbase)
 {
     struct lcb_create_io_ops_st ciops;
 
-    memset(&ciops, 0, sizeof (ciops));
+    memset(&ciops, 0, sizeof(ciops));
     ciops.v.v0.type = LCB_IO_OPS_LIBEVENT;
     ciops.v.v0.cookie = evbase;
 
@@ -114,12 +118,13 @@ static lcb_io_opt_t create_libevent_io_ops(struct event_base *evbase)
     return ioops;
 }
 
-static lcb_t create_libcouchbase_handle(lcb_io_opt_t ioops) {
+static lcb_t create_libcouchbase_handle(lcb_io_opt_t ioops)
+{
     lcb_t instance;
     lcb_error_t error;
     struct lcb_create_st copts;
 
-    memset(&copts, 0, sizeof (copts));
+    memset(&copts, 0, sizeof(copts));
     /*
      * The only field I want to set in the first version of the
      * connect option is the hostname (to connect to the default
@@ -156,7 +161,8 @@ static lcb_t create_libcouchbase_handle(lcb_io_opt_t ioops) {
  * This example shows how we can hook ourself into an external event loop.
  * You may find more information in the blogpost: http://goo.gl/fCTrX
  */
-int main(void) {
+int main(void)
+{
     struct event_base *evbase = event_base_new();
     lcb_io_opt_t ioops = create_libevent_io_ops(evbase);;
     lcb_t instance = create_libcouchbase_handle(ioops);

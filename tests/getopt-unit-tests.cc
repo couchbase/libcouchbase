@@ -134,8 +134,8 @@ protected:
 static void setup(Getopt &getopt)
 {
     getopt.addOption(new CommandLineOption('a', "alpha", true)).
-        addOption(new CommandLineOption('b', "bravo", false)).
-        addOption(new CommandLineOption('c', "charlie", false));
+    addOption(new CommandLineOption('b', "bravo", false)).
+    addOption(new CommandLineOption('c', "charlie", false));
 }
 
 
@@ -200,7 +200,7 @@ TEST_F(GetoptUnitTests, testParseOnlyArgumentsWithSeparatorInThere)
     }
 }
 
-TEST_F(GetoptUnitTests,testParseSingleLongoptWithoutArgument)
+TEST_F(GetoptUnitTests, testParseSingleLongoptWithoutArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("--bravo");
@@ -219,7 +219,7 @@ TEST_F(GetoptUnitTests,testParseSingleLongoptWithoutArgument)
     }
 }
 
-TEST_F(GetoptUnitTests,testParseSingleLongoptWithoutRequiredArgument)
+TEST_F(GetoptUnitTests, testParseSingleLongoptWithoutRequiredArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("--alpha");
@@ -228,7 +228,7 @@ TEST_F(GetoptUnitTests,testParseSingleLongoptWithoutRequiredArgument)
     ASSERT_FALSE(getopt.parse(argv));
 }
 
-TEST_F(GetoptUnitTests,testParseSingleLongoptWithRequiredArgument)
+TEST_F(GetoptUnitTests, testParseSingleLongoptWithRequiredArgument)
 {
     std::vector<std::string> argv;
     argv.push_back("--alpha=foo");
@@ -248,7 +248,7 @@ TEST_F(GetoptUnitTests,testParseSingleLongoptWithRequiredArgument)
     }
 }
 
-TEST_F(GetoptUnitTests,testParseSingleLongoptWithRequiredArgument1)
+TEST_F(GetoptUnitTests, testParseSingleLongoptWithRequiredArgument1)
 {
     std::vector<std::string> argv;
     argv.push_back("--alpha");

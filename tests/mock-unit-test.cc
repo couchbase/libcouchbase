@@ -84,7 +84,7 @@ TEST_F(MockUnitTest, testFlags)
     (void)lcb_set_store_callback(instance, flags_store_callback);
 
     lcb_store_cmd_t storeCommand(LCB_SET, "flags", 5, "x", 1, 0xdeadbeef);
-    lcb_store_cmd_t* storeCommands[] = { &storeCommand };
+    lcb_store_cmd_t *storeCommands[] = { &storeCommand };
 
     ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, NULL, 1, storeCommands));
     // Wait for it to be persisted
@@ -313,7 +313,7 @@ TEST_F(MockUnitTest, testTimeout)
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     lcb_server_stats_cmd_t stat;
-    lcb_server_stats_cmd_t* commands[] = {&stat };
+    lcb_server_stats_cmd_t *commands[] = {&stat };
 
     ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, 1, commands));
     io->run_event_loop(io);

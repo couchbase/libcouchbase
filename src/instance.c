@@ -85,7 +85,7 @@ lcb_int32_t lcb_get_num_nodes(lcb_t instance)
  * Return a NULL-terminated list of servers (host:port) for the entire cluster.
  */
 LIBCOUCHBASE_API
-const char * const * lcb_get_server_list(lcb_t instance)
+const char *const *lcb_get_server_list(lcb_t instance)
 {
     /* cast it so we get the full const'ness */
     return (const char * const *)instance->backup_nodes;
@@ -160,7 +160,8 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
     return 0;
 }
 
-static const char *get_nonempty_string(const char *s) {
+static const char *get_nonempty_string(const char *s)
+{
     if (s != NULL && strlen(s) == 0) {
         return NULL;
     }

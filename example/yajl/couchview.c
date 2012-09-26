@@ -345,7 +345,7 @@ static void complete_callback(lcb_http_request_t request,
     yajl_status st;
     const unsigned char *bytes = resp->v.v0.bytes;
     lcb_size_t nbytes = resp->v.v0.nbytes;
-    const char * const *headers = resp->v.v0.headers;
+    const char *const *headers = resp->v.v0.headers;
 
     if (headers) {
         lcb_size_t ii;

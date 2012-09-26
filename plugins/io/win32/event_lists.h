@@ -3,17 +3,17 @@
 
 #ifdef EVENT_LISTS_UNIT_TESTS
 struct winsock_event {
-winsock_event() : next(NULL) {};
+    winsock_event() : next(NULL) {};
     struct winsock_event *next;
 };
 
 struct winsock_timer {
-winsock_timer() : next(NULL) {};
+    winsock_timer() : next(NULL) {};
     struct winsock_timer *next;
 };
 
 struct winsock_io_cookie {
-winsock_io_cookie() : events(NULL), timers(NULL) {};
+    winsock_io_cookie() : events(NULL), timers(NULL) {};
     struct winsock_event *events;
     struct winsock_timer *timers;
 };
@@ -57,7 +57,7 @@ static void unlink_event(struct winsock_io_cookie *instance,
     } else {
         struct winsock_event *prev = instance->events;
         struct winsock_event *next;
-        for (next = prev->next; next != NULL; prev=next, next = next->next) {
+        for (next = prev->next; next != NULL; prev = next, next = next->next) {
             if (event == next) {
                 prev->next = next->next;
                 return;

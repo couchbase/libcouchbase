@@ -68,9 +68,9 @@ static void version_callback(lcb_t instance,
 }
 
 static void verbosity_callback(lcb_t instance,
-                             const void *command_cookie,
-                             lcb_error_t error,
-                             const lcb_verbosity_resp_t *resp)
+                               const void *command_cookie,
+                               lcb_error_t error,
+                               const lcb_verbosity_resp_t *resp)
 {
     struct user_cookie *c = (void *)instance->cookie;
 

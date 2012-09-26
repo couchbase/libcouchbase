@@ -97,7 +97,7 @@ static void setup(char **argv, const char *username, const char *password,
 
     if (!mock->is_mock) {
         total_node_count = 0;
-        const char * const * servers = lcb_get_server_list(session);
+        const char *const *servers = lcb_get_server_list(session);
         for (; *servers; servers++, total_node_count++);
     }
 }
@@ -145,7 +145,7 @@ static void mstore_callback(lcb_t instance,
                             const void *cookie,
                             lcb_storage_t operation,
                             lcb_error_t error,
-                           const lcb_store_resp_t *resp)
+                            const lcb_store_resp_t *resp)
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->errors |= error;
@@ -364,7 +364,7 @@ static void test_get2(void)
     }
 
     rv.counter = 26;
-    err = lcb_get(session, &rv, 26, (const lcb_get_cmd_t *const *)getcmds);
+    err = lcb_get(session, &rv, 26, (const lcb_get_cmd_t * const *)getcmds);
     assert(err == LCB_SUCCESS);
     io->run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
@@ -540,7 +540,7 @@ static void test_version1(void)
     lcb_error_t err;
     struct rvbuf rv;
     lcb_server_version_cmd_t cmd;
-    const lcb_server_version_cmd_t* cmds[] = { &cmd };
+    const lcb_server_version_cmd_t *cmds[] = { &cmd };
     memset(&cmd, 0, sizeof(cmd));
 
     (void)lcb_set_version_callback(session, version_callback);

@@ -76,7 +76,7 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_server_versions(lcb_t instance,
                                 const void *command_cookie,
                                 lcb_size_t num,
-                                const lcb_server_version_cmd_t * const *commands)
+                                const lcb_server_version_cmd_t *const *commands)
 {
     lcb_size_t count;
 

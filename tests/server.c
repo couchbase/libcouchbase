@@ -164,7 +164,7 @@ static int parse_server_conf(struct test_server_info *info, const char *param)
 
         for (curfld = param; *param && *param != ','; param++);
         diff = (param - curfld);
-        curval = calloc(1, diff+1);
+        curval = calloc(1, diff + 1);
         curval[diff] = '\0';
         memcpy(curval, curfld, diff);
         strings[curix++] = curval;
@@ -347,6 +347,7 @@ void get_mock_std_creds(const void *handle, const char **userp, const char **pas
     }
 }
 
-int is_using_real_cluster(void) {
+int is_using_real_cluster(void)
+{
     return getenv(LCB_TEST_REALCLUSTER_ENV) != NULL;
 }

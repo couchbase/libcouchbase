@@ -50,7 +50,7 @@ protected:
     std::string bucket;
 
 private:
-    void loadParam(std::string& d, const char *s) {
+    void loadParam(std::string &d, const char *s) {
         if (s) {
             d.assign(s);
         }

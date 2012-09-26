@@ -398,8 +398,10 @@ reformat:
                --align-reference=name \
                $(top_srcdir)/include/libcouchbase/*.[ch] \
                $(top_srcdir)/src/*.[ch] \
-               $(top_srcdir)/example/*.cc  \
-               $(top_srcdir)/example/*.[ch]  \
+               $(top_srcdir)/example/libeventdirect/*.c \
+               $(top_srcdir)/example/pillowfight/*.cc \
+               $(top_srcdir)/example/syncmode/*.c \
+               $(top_srcdir)/example/yajl/*.c \
                $(top_srcdir)/tools/*.cc \
                $(top_srcdir)/tools/*.h \
                $(top_srcdir)/tests/*.{cc,c,h} \

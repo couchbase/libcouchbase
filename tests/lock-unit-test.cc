@@ -37,14 +37,14 @@ extern "C" {
                                   lcb_error_t err,
                                   const lcb_get_resp_t *resp)
     {
-        Item *itm = (Item*)cookie;
+        Item *itm = (Item *)cookie;
         itm->assign(resp, err);
     }
     static void unlockCallback(lcb_t, const void *cookie,
                                lcb_error_t err,
                                const lcb_unlock_resp_t *resp)
     {
-        *(lcb_error_t*)cookie = err;
+        *(lcb_error_t *)cookie = err;
     }
 }
 
@@ -122,7 +122,7 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
 
     storeKey(instance, "lockKey", "lockValue");
 
-    lcb_unlock_cmd_t cmd("lockKey", sizeof("lockKey")-1, 0);
+    lcb_unlock_cmd_t cmd("lockKey", sizeof("lockKey") - 1, 0);
     lcb_unlock_cmd_t *cmdlist = &cmd;
     lcb_set_unlock_callback(instance, unlockCallback);
 
@@ -145,7 +145,7 @@ extern "C" {
                                       lcb_error_t err,
                                       const lcb_store_resp_t *resp)
     {
-        Item *itm = (Item*)cookie;
+        Item *itm = (Item *)cookie;
         itm->assignKC<lcb_store_resp_t>(resp, err);
     }
 }
@@ -173,7 +173,7 @@ TEST_F(LockUnitTest, testStorageLockContention)
     createConnection(instance);
     Item itm;
     std::string key = "lockedKey", value = "lockedValue",
-            newvalue = "newUnlockedValue";
+                newvalue = "newUnlockedValue";
 
     /* undo any funny business on our key */
     removeKey(instance, key);

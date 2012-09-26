@@ -36,7 +36,7 @@ extern "C" {
                                         lcb_error_t error,
                                         const lcb_server_stat_resp_t *resp)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         EXPECT_EQ(LCB_SUCCESS, error);
         EXPECT_EQ(0, resp->version);
         ++(*counter);
@@ -58,7 +58,7 @@ TEST_F(ServeropsUnitTest, testServerStats)
     (void)lcb_set_stat_callback(instance, testServerStatsCallback);
     int numcallbacks = 0;
     lcb_server_stats_cmd_t cmd;
-    lcb_server_stats_cmd_t* cmds[] = { &cmd };
+    lcb_server_stats_cmd_t *cmds[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_server_stats(instance, &numcallbacks, 1, cmds));
     lcb_wait(instance);
     EXPECT_LT(1, numcallbacks);
@@ -69,7 +69,7 @@ extern "C" {
                                            lcb_error_t error,
                                            const lcb_server_version_resp_t *resp)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         EXPECT_EQ(LCB_SUCCESS, error);
         EXPECT_EQ(0, resp->version);
         ++(*counter);
@@ -89,7 +89,7 @@ TEST_F(ServeropsUnitTest, testServerVersion)
     (void)lcb_set_version_callback(instance, testServerVersionsCallback);
     int numcallbacks = 0;
     lcb_server_version_cmd_t cmd;
-    lcb_server_version_cmd_t* cmds[] = { &cmd };
+    lcb_server_version_cmd_t *cmds[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_server_versions(instance, &numcallbacks, 1, cmds));
     lcb_wait(instance);
     EXPECT_LT(1, numcallbacks);
@@ -101,7 +101,7 @@ extern "C" {
                                   lcb_error_t error,
                                   const lcb_flush_resp_t *resp)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         EXPECT_TRUE(error == LCB_SUCCESS || error == LCB_NOT_SUPPORTED);
         EXPECT_EQ(0, resp->version);
         ++(*counter);
@@ -120,7 +120,7 @@ TEST_F(ServeropsUnitTest, testFlush)
     (void)lcb_set_flush_callback(instance, testFlushCallback);
     int numcallbacks = 0;
     lcb_flush_cmd_t cmd;
-    lcb_flush_cmd_t* cmds[] = { &cmd };
+    lcb_flush_cmd_t *cmds[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_flush(instance, &numcallbacks, 1, cmds));
     lcb_wait(instance);
     EXPECT_LT(1, numcallbacks);
@@ -179,7 +179,7 @@ TEST_F(ServeropsUnitTest, testVerbosity)
     int counter = 0;
 
     lcb_verbosity_cmd_t cmd(LCB_VERBOSITY_DEBUG);
-    lcb_verbosity_cmd_t* commands[] = { &cmd };
+    lcb_verbosity_cmd_t *commands[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands));
 
     lcb_io_opt_t io;
@@ -192,7 +192,7 @@ TEST_F(ServeropsUnitTest, testVerbosity)
     (void)lcb_set_verbosity_callback(instance, verbosity_single_callback);
 
     lcb_verbosity_cmd_t cmd2(LCB_VERBOSITY_DEBUG, verbosity_endpoint);
-    lcb_verbosity_cmd_t* commands2[] = { &cmd2 };
+    lcb_verbosity_cmd_t *commands2[] = { &cmd2 };
     EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands2));
     io->run_event_loop(io);
     free((void *)verbosity_endpoint);

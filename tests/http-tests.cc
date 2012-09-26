@@ -43,13 +43,13 @@ static const char *view_common =
 static void dumpResponse(const lcb_http_resp_t *resp)
 {
     if (resp->v.v0.headers) {
-        const char * const *hdr;
+        const char *const *hdr;
         for (hdr = resp->v.v0.headers; *hdr; hdr++) {
             printf("Header: %s\n", *hdr);
         }
     }
     if (resp->v.v0.bytes) {
-        printf("%*s\n", (int)resp->v.v0.nbytes, (const char*)resp->v.v0.bytes);
+        printf("%*s\n", (int)resp->v.v0.nbytes, (const char *)resp->v.v0.bytes);
     }
     printf("%*s\n", (int)resp->v.v0.npath, resp->v.v0.path);
 
@@ -63,7 +63,7 @@ extern "C" {
                                 const lcb_http_resp_t *resp)
     {
         HttpCmdContext *htctx;
-        htctx = reinterpret_cast<HttpCmdContext*>((void*)cookie);
+        htctx = reinterpret_cast<HttpCmdContext *>((void *)cookie);
         htctx->err = error;
         htctx->status = resp->v.v0.status;
         htctx->received = true;
@@ -89,10 +89,10 @@ TEST_F(HttpUnitTest, testPut)
 
     const char *design_doc_path = "/_design/" DESIGN_DOC_NAME;
     lcb_http_cmd_st cmd;
-    cmd = lcb_http_cmd_st( design_doc_path, strlen(design_doc_path),
-                           view_common, strlen(view_common),
-                           LCB_HTTP_METHOD_PUT, 0,
-                           "application/json");
+    cmd = lcb_http_cmd_st(design_doc_path, strlen(design_doc_path),
+                          view_common, strlen(view_common),
+                          LCB_HTTP_METHOD_PUT, 0,
+                          "application/json");
 
     lcb_error_t err;
     lcb_set_view_complete_callback(instance, httpPutCallback);
@@ -121,13 +121,13 @@ extern "C" {
                                 const lcb_http_resp_t *resp)
     {
         HttpCmdContext *htctx;
-        htctx = reinterpret_cast<HttpCmdContext*>((void*)cookie);
+        htctx = reinterpret_cast<HttpCmdContext *>((void *)cookie);
         htctx->err = error;
         htctx->status = resp->v.v0.status;
         htctx->received = true;
 
         if (resp->v.v0.bytes) {
-            htctx->body.assign((const char*)resp->v.v0.bytes,
+            htctx->body.assign((const char *)resp->v.v0.bytes,
                                resp->v.v0.nbytes);
         } else {
             dumpResponse(resp);
@@ -172,7 +172,7 @@ TEST_F(HttpUnitTest, testGet)
     const char *pcur;
 
     for (ii = 0, pcur = ctx.body.c_str();
-         ii < ctx.body.size() && isspace(*pcur); ii++, pcur++) {
+            ii < ctx.body.size() && isspace(*pcur); ii++, pcur++) {
         /* no body */
     }
 
@@ -184,7 +184,7 @@ TEST_F(HttpUnitTest, testGet)
     ASSERT_EQ(*pcur, '{');
 
     for (pcur = ctx.body.c_str() + ctx.body.size() - 1;
-         ii >= 0 && isspace(*pcur); ii--, pcur--) {
+            ii >= 0 && isspace(*pcur); ii--, pcur--) {
         /* no body */
     }
     ASSERT_GE(ii, 0);

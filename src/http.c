@@ -27,7 +27,7 @@ static const char *method_strings[] = {
 
 static const char http_version[] = " HTTP/1.1\r\n";
 static const char req_headers[] = "User-Agent: libcouchbase/"LCB_VERSION_STRING"\r\n"
-                              "Accept: application/json\r\n";
+                                  "Accept: application/json\r\n";
 
 void lcb_http_request_destroy(lcb_http_request_t req)
 {
@@ -517,7 +517,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->command_cookie = command_cookie;
 
     req->npath = cmd->v.v0.npath;
-    if ( (req->path = malloc(req->npath)) == NULL) {
+    if ((req->path = malloc(req->npath)) == NULL) {
         lcb_http_request_destroy(req);
         return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
     }

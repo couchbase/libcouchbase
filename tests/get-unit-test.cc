@@ -36,11 +36,11 @@ extern "C" {
                                        lcb_error_t error,
                                        const lcb_get_resp_t *resp)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         EXPECT_EQ(LCB_KEY_ENOENT, error);
-        ASSERT_NE((const lcb_get_resp_t*)NULL, resp);
+        ASSERT_NE((const lcb_get_resp_t *)NULL, resp);
         EXPECT_EQ(0, resp->version);
-        std::string val((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        std::string val((const char *)resp->v.v0.key, resp->v.v0.nkey);
         EXPECT_TRUE(val == "testGetMiss1" || val == "testGetMiss2");
         ++(*counter);
     }
@@ -84,9 +84,9 @@ extern "C" {
                                       lcb_error_t error,
                                       const lcb_get_resp_t *resp)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         EXPECT_EQ(LCB_SUCCESS, error);
-        ASSERT_NE((const lcb_get_resp_t*)NULL, resp);
+        ASSERT_NE((const lcb_get_resp_t *)NULL, resp);
         EXPECT_EQ(0, resp->version);
         ++(*counter);
     }
@@ -125,9 +125,9 @@ extern "C" {
                                       lcb_error_t error,
                                       const lcb_touch_resp_t *resp)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         EXPECT_EQ(LCB_KEY_ENOENT, error);
-        ASSERT_NE((const lcb_touch_resp_t*)NULL, resp);
+        ASSERT_NE((const lcb_touch_resp_t *)NULL, resp);
         EXPECT_EQ(0, resp->version);
         ++(*counter);
     }
@@ -148,7 +148,7 @@ TEST_F(GetUnitTest, testTouchMiss)
 
     int numcallbacks = 0;
     lcb_touch_cmd_t cmd(key.data(), key.length(), 666);
-    lcb_touch_cmd_t* cmds[] = { &cmd };
+    lcb_touch_cmd_t *cmds[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_touch(instance, &numcallbacks, 1, cmds));
     lcb_wait(instance);
     EXPECT_EQ(1, numcallbacks);
@@ -159,9 +159,9 @@ extern "C" {
                                      lcb_error_t error,
                                      const lcb_touch_resp_t *resp)
     {
-        int *counter = (int*)cookie;
+        int *counter = (int *)cookie;
         EXPECT_EQ(LCB_SUCCESS, error);
-        ASSERT_NE((const lcb_touch_resp_t*)NULL, resp);
+        ASSERT_NE((const lcb_touch_resp_t *)NULL, resp);
         EXPECT_EQ(0, resp->version);
         ++(*counter);
     }
@@ -182,7 +182,7 @@ TEST_F(GetUnitTest, testTouchHit)
 
     int numcallbacks = 0;
     lcb_touch_cmd_t cmd(key.data(), key.length(), 666);
-    lcb_touch_cmd_t* cmds[] = { &cmd };
+    lcb_touch_cmd_t *cmds[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_touch(instance, &numcallbacks, 1, cmds));
     lcb_wait(instance);
     EXPECT_EQ(1, numcallbacks);
@@ -194,7 +194,7 @@ extern "C" {
                                           const lcb_get_resp_t *resp)
     {
         using namespace std;
-        map<string, Item> *kmap = (map<string,Item>*)cookie;
+        map<string, Item> *kmap = (map<string, Item> *)cookie;
 
         Item itm;
         itm.assign(resp, error);
@@ -230,7 +230,7 @@ TEST_F(GetUnitTest, testMixedMultiGet)
     map<string, Item> kmap;
 
     vector<lcb_get_cmd_t> cmds;
-    vector<lcb_get_cmd_t*> cmdptrs;
+    vector<lcb_get_cmd_t *> cmdptrs;
 
     createConnection(instance);
 

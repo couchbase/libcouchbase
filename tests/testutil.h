@@ -31,8 +31,8 @@ extern "C" {
 
 struct Item {
     void assign(const lcb_get_resp_t *resp, lcb_error_t e = LCB_SUCCESS) {
-        key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
-        val.assign((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+        key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);
+        val.assign((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
         flags = resp->v.v0.flags;
         cas =  resp->v.v0.cas;
         datatype =  resp->v.v0.datatype;
@@ -44,7 +44,7 @@ struct Item {
      */
     template <typename T>
     void assignKC(const T *resp, lcb_error_t e = LCB_SUCCESS) {
-        key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);
         cas = resp->v.v0.cas;
         err = e;
     }

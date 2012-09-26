@@ -61,10 +61,10 @@ static lcb_error_t get_create_func(const char *image,
 #define PLUGIN_SYMBOL(NAME) "lcb_create_"NAME"_io_opts"
 
 static lcb_error_t create_v0(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st* options);
+                             const struct lcb_create_io_ops_st *options);
 
 static lcb_error_t create_v1(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st* options);
+                             const struct lcb_create_io_ops_st *options);
 
 #define USE_PLUGIN(OPTS, PLUGIN_NAME, PLUGIN_CONST)             \
         switch (OPTS->version) {                                \
@@ -77,7 +77,7 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
             break;                                              \
         }
 
-static void override_from_env(struct lcb_create_io_ops_st* options)
+static void override_from_env(struct lcb_create_io_ops_st *options)
 {
     char *plugin = getenv("LIBCOUCHBASE_EVENT_PLUGIN_NAME");
     if (plugin != NULL && *plugin != '\0') {
@@ -99,7 +99,7 @@ static void override_from_env(struct lcb_create_io_ops_st* options)
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
-                              const struct lcb_create_io_ops_st* io_opts)
+                              const struct lcb_create_io_ops_st *io_opts)
 {
     struct lcb_create_io_ops_st options;
 
@@ -112,15 +112,17 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
     }
     override_from_env(&options);
     switch (options.version) {
-    case 0: return create_v0(io, &options);
-    case 1: return create_v1(io, &options);
+    case 0:
+        return create_v0(io, &options);
+    case 1:
+        return create_v1(io, &options);
     default:
         return LCB_NOT_SUPPORTED;
     }
 }
 
 static lcb_error_t create_v0(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st* options)
+                             const struct lcb_create_io_ops_st *options)
 {
     lcb_error_t ret = LCB_SUCCESS;
     lcb_io_ops_type_t type;
@@ -181,7 +183,7 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
 #undef PLUGIN_SO
 
 static lcb_error_t create_v1(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st* options)
+                             const struct lcb_create_io_ops_st *options)
 {
     struct plugin_st plugin;
     lcb_error_t ret = get_create_func(options->v.v1.sofile,

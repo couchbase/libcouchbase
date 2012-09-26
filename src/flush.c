@@ -19,7 +19,7 @@
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_flush(lcb_t instance, const void *command_cookie,
-                      lcb_size_t num, const lcb_flush_cmd_t * const *commands)
+                      lcb_size_t num, const lcb_flush_cmd_t *const *commands)
 {
     lcb_size_t count;
     /* we need a vbucket config before we can start getting data.. */
