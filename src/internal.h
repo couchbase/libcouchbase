@@ -319,6 +319,8 @@ extern "C" {
         /** The requested path (without couch api endpoint) */
         char *path;
         lcb_size_t npath;
+        /** The password. It is here to simplify memory management */
+        char *password;
         /** The type of HTTP request */
         lcb_http_method_t method;
         /** The HTTP response parser */

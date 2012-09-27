@@ -48,6 +48,7 @@ void lcb_http_request_destroy(lcb_http_request_t req)
         free(req->host);
         free(req->port);
         free(req->parser);
+        free(req->password);
         ringbuffer_destruct(&req->input);
         ringbuffer_destruct(&req->output);
         ringbuffer_destruct(&req->result);
@@ -449,7 +450,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
 {
     lcb_http_request_t req;
     const char *base = NULL, *username = NULL;
-    char *password = NULL;
     lcb_size_t nn, nbase;
     lcb_server_t *server;
 
@@ -493,28 +493,31 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     switch (type) {
     case LCB_HTTP_TYPE_VIEW:
         if (!server->couch_api_base) {
+            lcb_http_request_destroy(req);
             return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
         }
         base = server->couch_api_base;
         nbase = strlen(base);
         username = instance->sasl.name;
         if (instance->sasl.password.secret.len) {
-            password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
-            if (!password) {
+            req->password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
+            if (!req->password) {
+                lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
-            memcpy(password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
+            memcpy(req->password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
         }
         break;
     case LCB_HTTP_TYPE_MANAGEMENT:
         if (!server->rest_api_server) {
+            lcb_http_request_destroy(req);
             return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
         }
         base = server->rest_api_server;
         nbase = strlen(base);
         username = instance->username;
         if (instance->password) {
-            password = strdup(instance->password);
+            req->password = strdup(instance->password);
         }
         break;
 
@@ -523,7 +526,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         nbase = strlen(base);
         username = cmd->v.v1.username;
         if (cmd->v.v1.password) {
-            password = strdup(cmd->v.v1.password);
+            req->password = strdup(cmd->v.v1.password);
         }
         break;
 
@@ -612,17 +615,19 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         lcb_size_t nauth = 0, nbody = cmd->v.v0.nbody;
         const char *content_type = cmd->v.v0.content_type;
         const char *body = cmd->v.v0.body;
-        if (password) {
+        if (req->password) {
             if (username) {
                 char cred[256];
-                snprintf(cred, sizeof(cred), "%s:%s", username, password);
+                snprintf(cred, sizeof(cred), "%s:%s", username, req->password);
                 if (lcb_base64_encode(cred, auth, sizeof(auth)) == -1) {
                     lcb_http_request_destroy(req);
                     return lcb_synchandler_return(instance, LCB_EINVAL);
                 }
                 nauth = strlen(auth);
             }
-            free(password);
+            /* we don't need password anymore */
+            free(req->password);
+            req->password = NULL;
         }
         nn = strlen(method_strings[req->method]) + req->url_info.field_data[UF_PATH].len + sizeof(http_version);
         if (req->url_info.field_set & UF_QUERY) {
