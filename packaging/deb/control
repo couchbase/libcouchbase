@@ -1,12 +1,46 @@
 Source: libcouchbase
 Priority: optional
 Maintainer: Couchbase SDK Team <support@couchbase.com>
-Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libevent-dev (>= 1.4)
+Build-Depends: debhelper (>= 7.0.50~), autotools-dev, libevent-dev (>= 1.4), libev-dev (>= 3)
 Standards-Version: 3.9.2
 Section: libs
 Homepage: http://www.couchbase.com/develop/c/current
 Vcs-Browser: https://github.com/couchbase/libcouchbase
 Vcs-Git: git://github.com/couchbase/libcouchbase.git
+
+Package: libcouchbase2-libevent
+Architecture: any
+Depends: libevent-1.4-2 (>= 1.4) | libevent-2.0-5 (>= 2.0), ${shlibs:Depends}, ${misc:Depends}
+Description: library for the Couchbase protocol (libevent backend)
+ libcouchbase is a library implementing Couchbase protocol.
+ .
+ This package provides libevent backend for libcouchbase
+
+Package: libcouchbase-libevent-dev
+Section: libdevel
+Architecture: any
+Depends: libcouchbase2-libevent (= ${binary:Version}), ${misc:Depends}
+Description: library for the Couchbase protocol (libevent backend), development files
+ libcouchbase is a library implementing Couchbase protocol.
+ .
+ This package provides the files needed for development.
+
+Package: libcouchbase2-libev
+Architecture: any
+Depends: libev3 (>= 3) | libev4 (>= 4), ${shlibs:Depends}, ${misc:Depends}
+Description: library for the Couchbase protocol (libev backend)
+ libcouchbase is a library implementing Couchbase protocol.
+ .
+ This package provides libev backend for libcouchbase
+
+Package: libcouchbase-libev-dev
+Section: libdevel
+Architecture: any
+Depends: libcouchbase2-libev (= ${binary:Version}), ${misc:Depends}
+Description: library for the Couchbase protocol (libev backend), development files
+ libcouchbase is a library implementing Couchbase protocol.
+ .
+ This package provides the files needed for development.
 
 Package: libcouchbase-dev
 Section: libdevel
@@ -29,8 +63,9 @@ Description: library for the Couchbase protocol, debug symbols
 
 Package: libcouchbase2
 Architecture: any
-Depends: libevent-1.4-2 (>= 1.4) | libevent-2.0-5 (>= 2.0), ${shlibs:Depends}, ${misc:Depends}
+Depends: libcouchbase2-libevent (= ${binary:Version}) | libcouchbase2-libev (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol
  libcouchbase is a library implementing Couchbase protocol.
  .
  This package provides the Couchbase client library.
+
