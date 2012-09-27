@@ -453,9 +453,21 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     lcb_size_t nn, nbase;
     lcb_server_t *server;
 
-    if (type >= LCB_HTTP_TYPE_MAX) {
+    switch (cmd->version) {
+    case 0:
+        if (type != LCB_HTTP_TYPE_VIEW && type != LCB_HTTP_TYPE_MANAGEMENT) {
+            return lcb_synchandler_return(instance, LCB_EINVAL);
+        }
+        break;
+    case 1:
+        if (type != LCB_HTTP_TYPE_RAW) {
+            return lcb_synchandler_return(instance, LCB_EINVAL);
+        }
+        break;
+    default:
         return lcb_synchandler_return(instance, LCB_EINVAL);
     }
+
     if (cmd->v.v0.method >= LCB_HTTP_METHOD_MAX) {
         return lcb_synchandler_return(instance, LCB_EINVAL);
     }
@@ -505,6 +517,16 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             password = strdup(instance->password);
         }
         break;
+
+    case LCB_HTTP_TYPE_RAW:
+        base = cmd->v.v1.host;
+        nbase = strlen(base);
+        username = cmd->v.v1.username;
+        if (cmd->v.v1.password) {
+            password = strdup(cmd->v.v1.password);
+        }
+        break;
+
     default:
         lcb_http_request_destroy(req);
         return lcb_synchandler_return(instance, LCB_EINVAL);

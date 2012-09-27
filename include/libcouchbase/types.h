@@ -148,7 +148,8 @@ extern "C" {
 
     typedef enum {
         LCB_HTTP_TYPE_VIEW = 0,
-        LCB_HTTP_TYPE_MANAGEMENT,
+        LCB_HTTP_TYPE_MANAGEMENT = 1,
+        LCB_HTTP_TYPE_RAW = 2,
         LCB_HTTP_TYPE_MAX
     } lcb_http_type_t;
 

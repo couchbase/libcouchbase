@@ -333,6 +333,34 @@ extern "C" {
                  * "application/x-www-form-urlencoded". */
                 const char *content_type;
             } v0;
+            /* v1 is used by the raw http requests. It is exactly the
+             * same layout as v0, but it contains an extra field;
+             * the hostname & port to use....
+             */
+            struct {
+                /* A view path string with optional query params
+                   (e.g. skip, limit etc.) */
+                const char *path;
+                lcb_size_t npath;
+                /* The POST body for HTTP request */
+                const void *body;
+                lcb_size_t nbody;
+                /* HTTP message type to be sent to server */
+                lcb_http_method_t method;
+                /* If true the client will use lcb_http_data_callback to
+                 * notify about response and will call lcb_http_complete
+                 * with empty data eventually. */
+                int chunked;
+                /* The 'Content-Type' header for request. For view requests
+                 * it is usually "application/json", for management --
+                 * "application/x-www-form-urlencoded". */
+                const char *content_type;
+
+                /* The host and port used for this request */
+                const char *host;
+                const char *username;
+                const char *password;
+            } v1;
         } v;
 #ifdef __cplusplus
         lcb_http_cmd_st() {
