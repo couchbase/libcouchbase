@@ -471,9 +471,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     if (cmd->v.v0.method >= LCB_HTTP_METHOD_MAX) {
         return lcb_synchandler_return(instance, LCB_EINVAL);
     }
-    if (cmd->v.v0.content_type == NULL) {
-        return lcb_synchandler_return(instance, LCB_EINVAL);
-    }
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
         return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
@@ -613,7 +610,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         /* Render HTTP request */
         char auth[256];
         lcb_size_t nauth = 0, nbody = cmd->v.v0.nbody;
-        const char *content_type = cmd->v.v0.content_type;
         const char *body = cmd->v.v0.body;
         if (req->password) {
             if (username) {
@@ -639,12 +635,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         }
         nn += 10 + (lcb_size_t)req->url_info.field_data[UF_HOST].len +
               req->url_info.field_data[UF_PORT].len; /* Host: example.com:666\r\n\r\n */
-        if (nbody) {
-            if (content_type == NULL) {
-                content_type = "application/json";
-            }
-            nn += strlen(content_type);
-        }
 
         if (!ringbuffer_ensure_capacity(&req->output, nn)) {
             lcb_http_request_destroy(req);
@@ -688,14 +678,21 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         if (req->method == LCB_HTTP_METHOD_PUT ||
                 req->method == LCB_HTTP_METHOD_POST) {
             char *post_headers = calloc(512, sizeof(char));
-            int ret;
+            const char *content_type = cmd->v.v0.content_type;
+            int ret = 0;
 
             if (post_headers == NULL) {
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
-            ret = snprintf(post_headers, 512, "\r\nContent-Type: %s\r\n"
-                           "Content-Length: %ld\r\n\r\n", content_type, (long)nbody);
+            if (content_type != NULL && *content_type != '\0') {
+                ret = snprintf(post_headers, 512, "\r\nContent-Type: %s", content_type);
+                if (ret < 0) {
+                    lcb_http_request_destroy(req);
+                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+                }
+            }
+            ret = snprintf(post_headers + ret, 512, "\r\nContent-Length: %ld\r\n\r\n", (long)nbody);
             if (ret < 0) {
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
