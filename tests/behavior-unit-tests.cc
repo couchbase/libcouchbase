@@ -22,11 +22,18 @@ class Behavior : public ::testing::Test
 {
 public:
     virtual void SetUp() {
+#ifdef BUILD_PLUGINS
         ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, NULL));
+#else
+        /* there no IO plugins, so creating connection isn't supported */
+        ASSERT_EQ(LCB_NOT_SUPPORTED, lcb_create(&instance, NULL));
+#endif
     }
 
     virtual void TearDown() {
+#ifdef BUILD_PLUGINS
         lcb_destroy(instance);
+#endif
     }
 
 protected:
@@ -34,10 +41,12 @@ protected:
 
 };
 
+#ifdef BUILD_PLUGINS
 TEST_F(Behavior, CheckDefaultValues)
 {
     EXPECT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
     EXPECT_EQ(LCB_IPV6_DISABLED, lcb_behavior_get_ipv6(instance));
+    return;
 }
 
 TEST_F(Behavior, CheckSyncmode)
@@ -59,3 +68,4 @@ TEST_F(Behavior, CheckIPv6)
     lcb_behavior_set_ipv6(instance, LCB_IPV6_DISABLED);
     EXPECT_EQ(LCB_IPV6_DISABLED, lcb_behavior_get_ipv6(instance));
 }
+#endif

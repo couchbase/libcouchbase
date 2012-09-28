@@ -41,10 +41,13 @@ pkginclude_HEADERS = \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
                      include/libcouchbase/arguments.h \
-                     include/libcouchbase/visibility.h \
+                     include/libcouchbase/visibility.h
+if BUILD_PLUGINS
+pkginclude_HEADERS += \
                      plugins/io/libev/libev_io_opts.h \
                      plugins/io/libevent/libevent_io_opts.h \
                      plugins/io/win32/winsock_io_opts.h
+endif
 
 libhttpparser_la_SOURCES = \
                         contrib/http_parser/http_parser.c \
@@ -145,6 +148,7 @@ libcouchbase_la_SOURCES += plugins/io/libevent/plugin-libevent.c
 libcouchbase_la_LIBADD += -levent
 libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
 else
+if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
 libcouchbase_libevent_la_LDFLAGS=-version-info $(LIBEVENT_PLUGIN_API_CURRENT):$(LIBEVENT_PLUGIN_API_REVISION):$(LIBEVENT_PLUGIN_API_AGE) $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
@@ -153,6 +157,7 @@ libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTE
 if BUILD_EXAMPLES
 if HAVE_LIBEVENT2
 noinst_PROGRAMS += example/libeventdirect/eventloop
+endif
 endif
 endif
 endif
@@ -179,8 +184,12 @@ tests_unit_tests_SOURCES = \
                            tests/strerror-unit-test.cc \
                            tests/timeout.c \
                            tests/unit_tests.cc \
-                           tests/ccbc_103.cc \
+                           tests/ccbc_103.cc
+
+if BUILD_PLUGINS
+tests_unit_tests_SOURCES += \
                            plugins/io/win32/event_lists.h
+endif
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
 tests_unit_tests_LDADD = libcouchbase.la
@@ -248,6 +257,7 @@ example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
 #
 # Example programs using the library
 #
+if BUILD_PLUGINS
 if BUILD_EXAMPLES
 noinst_PROGRAMS += example/syncmode/syncmode
 if HAVE_CXX
@@ -255,6 +265,7 @@ noinst_PROGRAMS += example/pillowfight/pillowfight
 endif
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/yajl/couchview
+endif
 endif
 endif
 

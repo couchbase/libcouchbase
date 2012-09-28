@@ -183,6 +183,16 @@ AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
 
+dnl Allow to build library without event library dependency, which is useful
+dnl if the application already have one.
+AC_ARG_ENABLE([plugins],
+              [AS_HELP_STRING([--disable-plugins], [Build without plugins. Note that in this case most of the tests will be skipped.])],
+              [ac_cv_enable_plugins="no"],
+              [ac_cv_enable_plugins="yes"])
+AM_CONDITIONAL(BUILD_PLUGINS, [test "x$ac_cv_enable_plugins" = "xyes"])
+AS_IF([test "x$ac_cv_enable_plugins" = "xyes"],
+      [AC_DEFINE([BUILD_PLUGINS], [1], [Build plugins])])
+
 dnl Check that we can use winsock2 plugin
 AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
   [ saved_libs="$LIBS"
@@ -199,7 +209,7 @@ AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
       ])
     LIBS="$saved_libs"
   ])
-AM_CONDITIONAL(HAVE_WINSOCK2, [test "$ac_cv_have_winsock2" = "yes"])
+AM_CONDITIONAL(HAVE_WINSOCK2, [test "x$ac_cv_enable_plugins" = "xyes" -a "$ac_cv_have_winsock2" = "yes"])
 
 dnl Check that we've got a usable libev3
 AC_CACHE_CHECK([for libev3], [ac_cv_have_libev3],
@@ -218,8 +228,8 @@ AC_CACHE_CHECK([for libev3], [ac_cv_have_libev3],
       ])
     LIBS="$saved_libs"
   ])
-AM_CONDITIONAL(HAVE_LIBEV3, [test "x${ac_cv_have_libev3}" = "xyes" ])
-AS_IF([test "x${ac_cv_have_libev3}" = "xyes"],
+AM_CONDITIONAL(HAVE_LIBEV3, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_have_libev3}" = "xyes" ])
+AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_have_libev3}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEV3], [1], [We have libev3])])
 
 dnl Check that we've got a usable libev4
@@ -239,11 +249,11 @@ AC_CACHE_CHECK([for libev4], [ac_cv_have_libev4],
       ])
     LIBS="$saved_libs"
   ])
-AM_CONDITIONAL(HAVE_LIBEV4, [test "x${ac_cv_have_libev4}" = "xyes" ])
-AS_IF([test "x${ac_cv_have_libev4}" = "xyes"],
+AM_CONDITIONAL(HAVE_LIBEV4, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_have_libev4}" = "xyes" ])
+AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_have_libev4}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEV4], [1], [We have libev4])])
 
-AM_CONDITIONAL(HAVE_LIBEV, [test "x${ac_cv_have_libev3}" = "xyes" -o "x${ac_cv_have_libev4}" = "xyes" ])
+AM_CONDITIONAL(HAVE_LIBEV, [test "x$ac_cv_enable_plugins" = "xyes" -a \( "x${ac_cv_have_libev3}" = "xyes" -o "x${ac_cv_have_libev4}" = "xyes" \)])
 
 dnl Check that we've got a usable libevent
 AC_CACHE_CHECK([for libevent >= 1.4], [ac_cv_have_libevent],
@@ -261,13 +271,13 @@ AC_CACHE_CHECK([for libevent >= 1.4], [ac_cv_have_libevent],
       ])
     LIBS="$saved_libs"
   ])
-AM_CONDITIONAL(HAVE_LIBEVENT, [test "x${ac_cv_have_libevent}" = "xyes"])
-AS_IF([test "x${ac_cv_have_libevent}" = "xyes"],
+AM_CONDITIONAL(HAVE_LIBEVENT, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_have_libevent}" = "xyes"])
+AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_have_libevent}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEVENT], [1], [We have libevent])])
 
-dnl Fail if libevent is the only networking backend accessible
-AS_IF([test "x${ac_cv_have_winsock2}" != "xyes" -a \( "x${ac_cv_have_libevent}" != "xyes" -o "x$ac_cv_header_event_h" != "xyes" \)],
-      [AC_MSG_ERROR(Failed to locate libevent)])
+AM_CONDITIONAL(LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED,
+               [test "x${ac_cv_embed_libevent_plugin}" = "xyes"])
+
 
 AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
   [ saved_libs="$LIBS"
@@ -287,6 +297,15 @@ AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
 AM_CONDITIONAL(HAVE_LIBEVENT2, [test "x${ac_cv_have_libevent2}" = "xyes"])
 AS_IF([test "x${ac_cv_have_libevent2}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEVENT2], [1], [We have libevent2])])
+
+dnl Fail if libevent is the only networking backend accessible
+AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a \
+       "x${ac_cv_have_winsock2}" != "xyes" -a \
+       "x${ac_cv_have_libevent}" != "xyes" -a \
+       "x${ac_cv_have_libevent2}" != "xyes" -a \
+       "x${ac_cv_have_libev3}" != "xyes" -a \
+       "x${ac_cv_have_libev4}" != "xyes"],
+      [AC_MSG_ERROR(Failed to locate usable event library. You must install either libev or libevent dev package or use --disable-plugins option)])
 
 dnl Check if we've got libyajl2
 AC_CACHE_CHECK([for libyajl], [ac_cv_have_libyajl2],
@@ -391,8 +410,9 @@ AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
 Try add --disable-couchbasemock
 ])])])
 
-AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xyes"])
-AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
+dnl It doesn't make sense to use CouchbaseMock.jar without plugins
+AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_couchbasemock}" = "xyes"])
+AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_couchbasemock}" = "xyes"],
       [AC_DEFINE([HAVE_COUCHBASEMOCK], [1], [We have CouchbaseMock.jar])])
 
 AC_ARG_ENABLE([tools],
@@ -411,15 +431,16 @@ AM_CONDITIONAL(HAVE_CXX, [test "x${ac_cv_prog_cxx_works}" = "xyes" -a "x${ac_cv_
 AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
       [AS_IF([test "x${ac_cv_prog_cxx_works}" != "xyes" -o "x${ac_cv_enable_cxx}" != "xyes"],
              [AC_MSG_ERROR([You need C++ compiler to build tools. Try add --disable-tools])])])
-
-AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
+dnl Tools require IO, so at least one plugin must be available
+AM_CONDITIONAL(BUILD_TOOLS, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_tools}" = "xyes"])
 
 AC_ARG_ENABLE([examples],
     [AS_HELP_STRING([--disable-examples],
             [Build examples. @<:@default=on@:>@])],
     [ac_cv_enable_examples="$enableval"],
     [ac_cv_enable_examples="yes"])
-AM_CONDITIONAL(BUILD_EXAMPLES, [test "x${ac_cv_enable_examples}" = "xyes"])
+dnl Examples require IO, so at least one plugin must be available
+AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_examples}" = "xyes"])
 
 AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday
                      QueryPerformanceCounter alarm setitimer])

@@ -36,13 +36,15 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type,
 {
     lcb_error_t ret = LCB_NOT_SUPPORTED;
     VBUCKET_CONFIG_HANDLE config;
+    lcb_error_t rc;
 
     struct lcb_create_st cst;
     memset(&cst, 0, sizeof(cst));
     cst.v.v0.io = io;
 
-    if (lcb_create(instance, &cst) != LCB_SUCCESS) {
-        return LCB_CLIENT_ENOMEM;
+    rc = lcb_create(instance, &cst);
+    if (rc != LCB_SUCCESS) {
+        return rc;
     }
 
     config = vbucket_config_create();
