@@ -275,10 +275,6 @@ AM_CONDITIONAL(HAVE_LIBEVENT, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_
 AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_have_libevent}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEVENT], [1], [We have libevent])])
 
-AM_CONDITIONAL(LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED,
-               [test "x${ac_cv_embed_libevent_plugin}" = "xyes"])
-
-
 AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
   [ saved_libs="$LIBS"
     LIBS=-levent
@@ -445,16 +441,6 @@ AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac
 AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday
                      QueryPerformanceCounter alarm setitimer])
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
-
-AC_ARG_ENABLE([embed-libevent-plugin],
-    [AS_HELP_STRING([--enable-embed-libevent-plugin],
-                    [embed libevent plugin into libcouchbase rather
-                     than dynamically loading it at runtime.
-                    @<:@default=off@:>@])],
-    [ac_cv_embed_libevent_plugin="$enableval"])
-
-AM_CONDITIONAL(LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED,
-               [test "x${ac_cv_embed_libevent_plugin}" = "xyes"])
 
 AC_ARG_ENABLE([trace],
     [AS_HELP_STRING([--enable-trace],

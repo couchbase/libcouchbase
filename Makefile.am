@@ -143,11 +143,6 @@ libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/win32
 endif
 else
 libcouchbase_la_SOURCES += src/iofactory.c
-if LIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-libcouchbase_la_SOURCES += plugins/io/libevent/plugin-libevent.c
-libcouchbase_la_LIBADD += -levent
-libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_LIBEVENT_PLUGIN_EMBED
-else
 if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
@@ -157,7 +152,6 @@ libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTE
 if BUILD_EXAMPLES
 if HAVE_LIBEVENT2
 noinst_PROGRAMS += example/libeventdirect/eventloop
-endif
 endif
 endif
 endif
