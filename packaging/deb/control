@@ -34,3 +34,12 @@ Description: library for the Couchbase protocol
  libcouchbase is a library implementing Couchbase protocol.
  .
  This package provides the Couchbase client library.
+
+Package: libcouchbase1-bin
+Section: utils
+Architecture: any
+Depends: libcouchbase1 (= ${binary:Version}), ${misc:Depends}
+Description: library for the Couchbase protocol (executable files)
+ libcouchbase is a library implementing Couchbase protocol.
+ .
+ This package provides the cbc tools built on libcouchbase library.
