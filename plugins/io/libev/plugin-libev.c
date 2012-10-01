@@ -26,9 +26,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-LIBCOUCHBASE_API
-lcb_io_opt_t lcb_create_test_loop(void);
-
 struct libev_cookie {
     struct ev_loop *loop;
     int allocated;
@@ -384,10 +381,4 @@ struct lcb_io_opt_st *lcb_create_libev_io_opts(struct ev_loop *loop) {
     ret->cookie = cookie;
 
     return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_io_opt_t lcb_create_test_loop(void)
-{
-    return lcb_create_libev_io_opts(NULL);
 }

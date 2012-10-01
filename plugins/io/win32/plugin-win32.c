@@ -460,8 +460,3 @@ struct lcb_io_opt_st *lcb_create_winsock_io_opts(void) {
 
     return ret;
 }
-
-LIBCOUCHBASE_API
-struct lcb_io_opt_st *lcb_create_test_loop(void) {
-    return lcb_create_winsock_io_opts();
-}
