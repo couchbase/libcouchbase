@@ -274,7 +274,11 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
     struct libev_cookie *io_cookie = iops->cookie;
     struct libev_event *evt = timer;
 
+#ifdef HAVE_LIBEV4
     if (evt->handler == handler && evt->ev.io.events == EV_TIMER) {
+#else
+    if (evt->handler == handler && evt->ev.io.events == EV_TIMEOUT) {
+#endif
         /* no change! */
         return 0;
     }
