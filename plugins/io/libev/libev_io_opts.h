@@ -39,11 +39,11 @@ extern "C" {
      *
      * @param loop the event loop to hook use (please note that you shouldn't
      *             reference the event loop from multiple threads)
-     * @return a pointer to a newly created and initialized event handler
+     * @param io a pointer to a newly created and initialized event handler
+     * @return status of the operation
      */
     LIBCOUCHBASE_API
-    struct lcb_io_opt_st *lcb_create_libev_io_opts(struct ev_loop *loop);
-
+    lcb_error_t lcb_create_libev_io_opts(lcb_io_opt_t *io, struct ev_loop *loop);
 #ifdef __cplusplus
 }
 #endif

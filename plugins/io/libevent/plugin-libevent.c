@@ -326,13 +326,14 @@ static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 }
 
 LIBCOUCHBASE_API
-struct lcb_io_opt_st *lcb_create_libevent_io_opts(struct event_base *base) {
+lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, struct event_base *base)
+{
     struct lcb_io_opt_st *ret = calloc(1, sizeof(*ret));
     struct libevent_cookie *cookie = calloc(1, sizeof(*cookie));
     if (ret == NULL || cookie == NULL) {
         free(ret);
         free(cookie);
-        return NULL;
+        return LCB_CLIENT_ENOMEM;
     }
 
     /* setup io iops! */
@@ -363,7 +364,7 @@ struct lcb_io_opt_st *lcb_create_libevent_io_opts(struct event_base *base) {
         if ((cookie->base = event_base_new()) == NULL) {
             free(ret);
             free(cookie);
-            return NULL;
+            return LCB_CLIENT_ENOMEM;
         }
         cookie->allocated = 1;
     } else {
@@ -372,5 +373,6 @@ struct lcb_io_opt_st *lcb_create_libevent_io_opts(struct event_base *base) {
     }
     ret->cookie = cookie;
 
-    return ret;
+    *io = ret;
+    return LCB_SUCCESS;
 }

@@ -124,14 +124,13 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
 static lcb_error_t create_v0(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options)
 {
-    lcb_error_t ret = LCB_SUCCESS;
     lcb_io_ops_type_t type;
-    void *cookie = NULL;
-    const char *sofile;
-    const char *symbol;
+    struct lcb_create_io_ops_st opts;
 
+    memset(&opts, 0, sizeof(struct lcb_create_io_ops_st));
+    opts.version = 1;
+    opts.v.v1.cookie = options->v.v0.cookie;
     type = options->v.v0.type;
-    cookie = options->v.v0.cookie;
     if (type == LCB_IO_OPS_DEFAULT) {
 #if defined(HAVE_LIBEVENT) || defined(HAVE_LIBEVENT2)
         type = LCB_IO_OPS_LIBEVENT;
@@ -139,46 +138,20 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
         type = LCB_IO_OPS_LIBEV;
 #endif
     }
-
     switch (type) {
     case LCB_IO_OPS_LIBEVENT:
-        sofile = PLUGIN_SO("libevent");
-        symbol = PLUGIN_SYMBOL("libevent");
+        opts.v.v1.sofile = PLUGIN_SO("libevent");
+        opts.v.v1.symbol = PLUGIN_SYMBOL("libevent");
         break;
     case LCB_IO_OPS_LIBEV:
-        sofile = PLUGIN_SO("libev");
-        symbol = PLUGIN_SYMBOL("libev");
+        opts.v.v1.sofile = PLUGIN_SO("libev");
+        opts.v.v1.symbol = PLUGIN_SYMBOL("libev");
         break;
     default:
         return LCB_NOT_SUPPORTED;
     }
 
-    {
-        struct plugin_st plugin;
-        struct lcb_io_opt_st *iop = NULL;
-
-        /* search definition in main program */
-        ret = get_create_func(NULL, symbol, &plugin);
-
-        if (ret != LCB_SUCCESS) {
-            if (plugin.func.create == NULL) {
-                ret = get_create_func(sofile, symbol, &plugin);
-            }
-            if (ret != LCB_SUCCESS) {
-                return ret;
-            }
-        }
-
-        iop = plugin.func.create(cookie);
-        if (iop == NULL) {
-            return LCB_CLIENT_ENOMEM;
-        } else {
-            iop->dlhandle = plugin.dlhandle;
-        }
-        *io = iop;
-    }
-
-    return LCB_SUCCESS;
+    return create_v1(io, &opts);
 }
 #undef PLUGIN_SO
 

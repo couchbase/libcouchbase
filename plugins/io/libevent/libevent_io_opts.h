@@ -39,10 +39,11 @@ extern "C" {
      *
      * @param base the event base to hook use (please note that you shouldn't
      *             reference the event base from multiple threads)
-     * @return a pointer to a newly created and initialized event handler
+     * @param io a pointer to a newly created and initialized event handler
+     * @return status of the operation
      */
     LIBCOUCHBASE_API
-    struct lcb_io_opt_st *lcb_create_libevent_io_opts(struct event_base *base);
+    lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, struct event_base *base);
 
 #ifdef __cplusplus
 }
