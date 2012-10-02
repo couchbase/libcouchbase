@@ -21,10 +21,10 @@
  * @author Trond Norbye
  * @todo add more documentation
  */
-#include "internal.h"
 
+#include "config.h"
 #include "libevent_io_opts.h"
-#include <event.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -119,7 +119,9 @@ static lcb_ssize_t lcb_io_recvv(struct lcb_io_opt_st *iops,
     struct iovec vec[2];
     lcb_ssize_t ret;
 
-    assert(niov == 2);
+    if (niov != 2) {
+        return -1;
+    }
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
     msg.msg_iovlen = iov[1].iov_len ? (lcb_size_t)2 : (lcb_size_t)1;
@@ -158,7 +160,9 @@ static lcb_ssize_t lcb_io_sendv(struct lcb_io_opt_st *iops,
     struct iovec vec[2];
     lcb_ssize_t ret;
 
-    assert(niov == 2);
+    if (niov != 2) {
+        return -1;
+    }
     memset(&msg, 0, sizeof(msg));
     msg.msg_iov = vec;
     msg.msg_iovlen = iov[1].iov_len ? (lcb_size_t)2 : (lcb_size_t)1;
