@@ -36,6 +36,9 @@ struct libevent_cookie {
 
 #ifndef HAVE_LIBEVENT2
 /* libevent 1.x compatibility layer */
+#ifndef evutil_socket_t
+#define evutil_socket_t int
+#endif
 
 typedef void (*event_callback_fn)(evutil_socket_t, short, void *);
 
