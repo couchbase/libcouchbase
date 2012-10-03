@@ -86,6 +86,10 @@
 #include <fcntl.h>
 #endif
 
+#ifdef HAVE_DLFCN_H
+#include <dlfcn.h>
+#endif
+
 #ifdef _WIN32
 #include "win32/win_errno_sock.h"
 typedef int ssize_t;

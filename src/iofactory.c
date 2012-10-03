@@ -16,7 +16,40 @@
  */
 
 #include "internal.h"
-#include <dlfcn.h>
+
+#ifdef WIN32
+/*
+ * For windows we're currently only supporting the single IO method
+ * bundle.
+ */
+#include "winsock_io_opts.h"
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
+                              const struct lcb_create_io_ops_st *options)
+{
+    lcb_error_t ret = LCB_SUCCESS;
+    lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;
+
+    if (options != NULL) {
+        if (options->version != 0) {
+            return LCB_EINVAL;
+        }
+        type = options->v.v0.type;
+    }
+
+    if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_WINSOCK) {
+        *io = lcb_create_winsock_io_opts();
+        if (*io == NULL) {
+            return LCB_CLIENT_ENOMEM;
+        }
+    } else {
+        return LCB_NOT_SUPPORTED;
+    }
+
+    return LCB_SUCCESS;
+}
+#else
 
 typedef lcb_io_opt_t (*create_func)(struct event_base *base);
 typedef lcb_error_t (*create_v1_func)(lcb_io_opt_t *io, const void *cookie);
@@ -181,3 +214,5 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
 
     return LCB_SUCCESS;
 }
+
+#endif

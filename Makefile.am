@@ -138,7 +138,7 @@ endif
 
 if HAVE_WINSOCK2
 if !HAVE_LIBEVENT
-libcouchbase_la_SOURCES += plugins/io/win32/plugin-win32.c src/iofactory_win32.c
+libcouchbase_la_SOURCES += plugins/io/win32/plugin-win32.c
 libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/win32
 endif
 else
@@ -366,7 +366,6 @@ EXTRA_DIST = \
              include/memcached/COPYING \
              include/memcached/README \
              include/ep-engine/README \
-             src/iofactory_win32.c \
              contrib/libvbucket/rfc1321 \
              tests/start_mock.sh \
              win32

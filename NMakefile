@@ -30,7 +30,7 @@ example_PROGRAMS = example\pillowfight\pillowfight.exe
 
 libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\cookie.c src\error.c src\event.c src\flush.c src\get.c \
-    src\handler.c src\instance.c src\iofactory_win32.c src\packet.c \
+    src\handler.c src\instance.c src\iofactory.c src\packet.c \
     src\remove.c src\ringbuffer.c src\hashset.c src\server.c src\stats.c \
     src\store.c src\strerror.c src\synchandler.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
