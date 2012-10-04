@@ -28,3 +28,20 @@ pillowfight
 
 This is an example that implements a small test program to show
 you some of the functionalities in libcouchbase.
+
+minimal
+-------
+
+This is an minimal single-file example which works both unix-like and windows OS.
+It accepts three arguments: "host:port", "bucket" and "password".
+
+Build:
+
+     gcc -lcouchbase -o minimal minimal.c
+     cl /DWIN32 /Iinclude lib\libcouchbase.lib minimal.c
+
+Execute:
+
+     valgrind -v --tool=memcheck  --leak-check=full --show-reachable=yes ./minimal
+     ./minimal <host:port> <bucket> <passwd>
+     mininal.exe <host:port> <bucket> <passwd>

@@ -244,6 +244,10 @@ example_syncmode_syncmode_SOURCES = example/syncmode/main.c
 example_syncmode_syncmode_DEPENDENCIES = libcouchbase.la
 example_syncmode_syncmode_LDADD = libcouchbase.la
 
+example_minimal_minimal_SOURCES = example/minimal/minimal.c
+example_minimal_minimal_DEPENDENCIES = libcouchbase.la
+example_minimal_minimal_LDADD = libcouchbase.la
+
 example_libeventdirect_eventloop_SOURCES = example/libeventdirect/main.c
 example_libeventdirect_eventloop_DEPENDENCIES = libcouchbase.la
 example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
@@ -254,6 +258,7 @@ example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
 if BUILD_PLUGINS
 if BUILD_EXAMPLES
 noinst_PROGRAMS += example/syncmode/syncmode
+noinst_PROGRAMS += example/minimal/minimal
 if HAVE_CXX
 noinst_PROGRAMS += example/pillowfight/pillowfight
 endif
