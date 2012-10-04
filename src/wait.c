@@ -77,10 +77,10 @@ int lcb_is_waiting(lcb_t instance)
  * @author Trond Norbye
  */
 LIBCOUCHBASE_API
-void lcb_wait(lcb_t instance)
+lcb_error_t lcb_wait(lcb_t instance)
 {
     if (instance->wait != 0) {
-        return;
+        return instance->last_error;
     }
     /*
      * The API is designed for you to run your own event loop,
@@ -88,6 +88,7 @@ void lcb_wait(lcb_t instance)
      * able to know when to break out of the event loop, we're setting
      * the wait flag to 1
      */
+    instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
     if (instance->vbucket_config == NULL) {
         /* Initial configuration. Set a timer */
@@ -114,10 +115,7 @@ void lcb_wait(lcb_t instance)
         instance->wait = 0;
     }
 
-    /*
-     * something else will call lcb_maybe_breakout with a corresponding
-     * stop_event_loop()
-     */
+    return instance->last_error;
 }
 
 /**

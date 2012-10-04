@@ -179,9 +179,10 @@ extern "C" {
     /**
      * Wait for the execution of all batched requests
      * @param instance the instance containing the requests
+     * @return the last error or LCB_SUCCESS
      */
     LIBCOUCHBASE_API
-    void lcb_wait(lcb_t instance);
+    lcb_error_t lcb_wait(lcb_t instance);
 
     /**
      * Returns non-zero if the event loop is running now

@@ -842,7 +842,7 @@ static void dummy_error_callback(lcb_t instance,
                                  lcb_error_t error,
                                  const char *errinfo)
 {
-    (void)instance;
+    lcb_breakout(instance);
     (void)error;
     (void)errinfo;
 }
