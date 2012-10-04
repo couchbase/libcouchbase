@@ -92,7 +92,6 @@
 
 #ifdef _WIN32
 #include "win32/win_errno_sock.h"
-typedef int ssize_t;
 #define snprintf _snprintf
 #define strcasecmp(a,b) _stricmp(a,b)
 #undef strdup

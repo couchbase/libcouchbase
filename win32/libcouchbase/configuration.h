@@ -39,12 +39,15 @@
 extern "C" {
 #endif
 
+
 #ifdef _WIN32
 #define PACKAGE_STRING "libcouchbase 2.0.0beta"
+#include <winsock2.h>
+#include <BaseTsd.h>
+    typedef SIZE_T lcb_size_t;
+    typedef SSIZE_T lcb_ssize_t;
     typedef __int64 lcb_int64_t;
     typedef __int32 lcb_int32_t;
-    typedef size_t lcb_size_t;
-    typedef ssize_t lcb_ssize_t;
     typedef unsigned __int8 lcb_uint8_t;
     typedef unsigned __int16 lcb_vbucket_t;
     typedef unsigned __int16 lcb_uint16_t;

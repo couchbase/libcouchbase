@@ -49,7 +49,7 @@ extern "C" {
     typedef struct lcb_timer_st *lcb_timer_t;
 
 
-    typedef uint8_t lcb_datatype_t;
+    typedef lcb_uint8_t lcb_datatype_t;
 
     /**
      * Define the error codes in use by the library
