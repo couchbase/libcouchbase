@@ -74,6 +74,7 @@ get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
         fprintf(stderr, "\" CAS: %"PRIu64" FLAGS:0x%x SIZE:%lu\n",
                 item->v.v0.cas, item->v.v0.flags, (unsigned long)item->v.v0.nbytes);
         fwrite(item->v.v0.bytes, sizeof(char), item->v.v0.nbytes, stderr);
+        fprintf(stderr, "\n");
     } else {
         fprintf(stderr, "GET ERROR: %s (0x%x)\n",
                 lcb_strerror(instance, error), error);
