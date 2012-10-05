@@ -179,17 +179,38 @@ lcb_error_t lcb_create(lcb_t *instance,
     struct lcb_io_opt_st *io = NULL;
     char buffer[1024];
     lcb_ssize_t offset;
+    lcb_type_t type = LCB_TYPE_BUCKET;
     lcb_t obj;
 
     if (options != NULL) {
-        if (options->version != 0) {
+        switch (options->version) {
+        case 0:
+            host = get_nonempty_string(options->v.v0.host);
+            user = get_nonempty_string(options->v.v0.user);
+            passwd = get_nonempty_string(options->v.v0.passwd);
+            bucket = get_nonempty_string(options->v.v0.bucket);
+            io = options->v.v0.io;
+            break;
+        case 1:
+            type = options->v.v1.type;
+            host = get_nonempty_string(options->v.v1.host);
+            user = get_nonempty_string(options->v.v1.user);
+            passwd = get_nonempty_string(options->v.v1.passwd);
+            io = options->v.v1.io;
+            switch (type) {
+            case LCB_TYPE_BUCKET:
+                bucket = get_nonempty_string(options->v.v1.bucket);
+                break;
+            case LCB_TYPE_CLUSTER:
+                if (user == NULL || passwd == NULL) {
+                    return LCB_EINVAL;
+                }
+                break;
+            }
+            break;
+        default:
             return LCB_EINVAL;
         }
-        host = get_nonempty_string(options->v.v0.host);
-        user = get_nonempty_string(options->v.v0.user);
-        passwd = get_nonempty_string(options->v.v0.passwd);
-        bucket = get_nonempty_string(options->v.v0.bucket);
-        io = options->v.v0.io;
     }
 
     if (io == NULL) {
@@ -222,16 +243,18 @@ lcb_error_t lcb_create(lcb_t *instance,
         return LCB_CLIENT_ENOMEM;
     }
     *instance = obj;
+    obj->type = type;
     lcb_initialize_packet_handlers(obj);
     lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
 
     if (setup_boostrap_hosts(obj, host) == -1) {
-        free(obj);
+        lcb_destroy(obj);
         return LCB_EINVAL;
     }
     obj->timers = hashset_create();
+    obj->http_requests = hashset_create();
     obj->sock = INVALID_SOCKET;
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
@@ -239,12 +262,20 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->io = io;
     obj->timeout.event = obj->io->v.v0.create_timer(obj->io);
     if (obj->timeout.event == NULL) {
+        lcb_destroy(obj);
         return LCB_CLIENT_ENOMEM;
     }
 
-    offset = snprintf(buffer, sizeof(buffer),
-                      "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
-                      bucket);
+    switch (type) {
+    case LCB_TYPE_BUCKET:
+        offset = snprintf(buffer, sizeof(buffer),
+                          "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
+                          bucket);
+        break;
+    case LCB_TYPE_CLUSTER:
+        offset = snprintf(buffer, sizeof(buffer), "GET /pools/ HTTP/1.1\r\n");
+        break;
+    }
 
     if (user && passwd) {
         char cred[256];
@@ -312,7 +343,12 @@ void lcb_destroy(lcb_t instance)
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_destroy(instance->servers + ii);
     }
-
+    for (ii = 0; ii < instance->http_requests->capacity; ++ii) {
+        if (instance->http_requests->items[ii] > 1) {
+            lcb_http_request_destroy((lcb_http_request_t)instance->http_requests->items[ii]);
+        }
+    }
+    hashset_destroy(instance->http_requests);
     free_backup_nodes(instance);
     free(instance->servers);
 
@@ -687,7 +723,8 @@ static int parse_header(lcb_t instance)
         return -1;
     }
 
-    if (strstr(buffer->data, "Transfer-Encoding: chunked") == NULL &&
+    if (instance->type == LCB_TYPE_BUCKET &&
+            strstr(buffer->data, "Transfer-Encoding: chunked") == NULL &&
             strstr(buffer->data, "Transfer-encoding: chunked") == NULL) {
         lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
                           buffer->data);
@@ -941,6 +978,11 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
             }
         } while (!done);
     }
+
+    if (instance->type != LCB_TYPE_BUCKET) {
+        instance->connected = 1;
+        lcb_maybe_breakout(instance);
+    } /* LCB_TYPE_BUCKET connection must receive valid config */
 
     /* Make it known that this was a success. */
     lcb_error_handler(instance, LCB_SUCCESS, NULL);

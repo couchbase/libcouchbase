@@ -44,7 +44,13 @@ lcb_error_t lcb_touch(lcb_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        switch (instance->type) {
+        case LCB_TYPE_CLUSTER:
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        case LCB_TYPE_BUCKET:
+        default:
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
     }
 
     servers = malloc(num * sizeof(struct server_info_st));

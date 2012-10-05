@@ -26,7 +26,13 @@ lcb_error_t lcb_set_verbosity(lcb_t instance,
     lcb_size_t count;
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        switch (instance->type) {
+        case LCB_TYPE_CLUSTER:
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        case LCB_TYPE_BUCKET:
+        default:
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
     }
 
     for (count = 0; count < num; ++count) {

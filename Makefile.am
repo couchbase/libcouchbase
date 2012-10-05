@@ -172,6 +172,7 @@ tests_unit_tests_SOURCES = \
                            src/ringbuffer.c \
                            tests/base64-unit-test.cc \
                            tests/behavior-unit-tests.cc \
+                           tests/cluster-unit-tests.cc \
                            tests/hashset-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \

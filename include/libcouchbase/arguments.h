@@ -58,6 +58,33 @@ extern "C" {
                 /** @param io the io handle to use */
                 struct lcb_io_opt_st *io;
             } v0;
+            struct {
+                /**
+                 * hosts A list of hosts:port separated by ';' to the
+                 * administration port of the couchbase cluster. (ex:
+                 * "host1;host2:9000;host3" would try to connect to
+                 * host1 on port 8091, if that fails it'll connect to
+                 * host2 on port 9000 etc).
+                 */
+                const char *host;
+                /** user the username to use */
+                const char *user;
+                /** @param passwd The password */
+                const char *passwd;
+                /** @param bucket The bucket to connect to */
+                const char *bucket;
+                /** @param io the io handle to use */
+                struct lcb_io_opt_st *io;
+                /**
+                 * the type of the connection:
+                 * * LCB_TYPE_BUCKET
+                 *      NULL for bucket means "default" bucket
+                 * * LCB_TYPE_CLUSTER
+                 *      the bucket argument ignored and all data commands
+                 *      will return LCB_NOT_SUPPORTED
+                 */
+                lcb_type_t type;
+            } v1;
         } v;
 
 #ifdef __cplusplus
@@ -65,13 +92,15 @@ extern "C" {
                       const char *user = NULL,
                       const char *passwd = NULL,
                       const char *bucket = NULL,
-                      struct lcb_io_opt_st *io = NULL) {
-            version = 0;
-            v.v0.host = host;
-            v.v0.user = user;
-            v.v0.passwd = passwd;
-            v.v0.bucket = bucket;
-            v.v0.io = io;
+                      struct lcb_io_opt_st *io = NULL,
+                      lcb_type_t type = LCB_TYPE_BUCKET) {
+            version = 1;
+            v.v1.host = host;
+            v.v1.user = user;
+            v.v1.passwd = passwd;
+            v.v1.bucket = bucket;
+            v.v1.io = io;
+            v.v1.type = type;
         }
 #endif
     };

@@ -123,12 +123,23 @@ static void setup_lcb_http_resp_t(lcb_http_resp_t *resp,
     resp->v.v0.nbytes = nbytes;
 }
 
+static int request_valid(lcb_http_request_t req)
+{
+    switch (req->instance->type) {
+    case LCB_TYPE_BUCKET:
+        return hashset_is_member(req->server->http_requests, req);
+    case LCB_TYPE_CLUSTER:
+    default:
+        return hashset_is_member(req->instance->http_requests, req);
+    }
+}
+
 static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nbytes)
 {
     lcb_error_t rc;
     lcb_http_request_t req = p->data;
 
-    if (!hashset_is_member(req->server->http_requests, req)) {
+    if (!request_valid(req)) {
         return 0;
     }
     if (req->chunked) {
@@ -157,7 +168,7 @@ static int http_parser_complete_cb(http_parser *p)
     lcb_http_resp_t resp;
 
     req->completed = 1;
-    if (!hashset_is_member(req->server->http_requests, req)) {
+    if (!request_valid(req)) {
         return 0;
     }
     rc = (p->status_code / 100 == 2) ?  LCB_SUCCESS : LCB_PROTOCOL_ERROR;
@@ -321,7 +332,7 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
             return;
         } else {
             /* considering request was completed and release it */
-            hashset_remove(server->http_requests, req);
+            lcb_cancel_http_request(instance, req);
             lcb_http_request_destroy(req);
         }
     }
@@ -343,9 +354,9 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
                                             req, request_event_handler);
         }
     }
-    if (instance->wait && hashset_num_items(server->http_requests) == 0) {
-        instance->wait = 0;
-        instance->io->v.v0.stop_event_loop(instance->io);
+    if (instance->wait && hashset_num_items(instance->http_requests) == 0
+            && (!server || hashset_num_items(server->http_requests) == 0)) {
+        lcb_maybe_breakout(instance);
     }
     /* Make it known that this was a success. */
     lcb_error_handler(instance, LCB_SUCCESS, NULL);
@@ -450,8 +461,8 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
 {
     lcb_http_request_t req;
     const char *base = NULL, *username = NULL, *body, *path, *content_type;
+    char *basebuf = NULL;
     lcb_size_t nn, nbase, nbody, npath;
-    lcb_server_t *server;
     lcb_http_method_t method;
     int chunked;
 
@@ -465,6 +476,9 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         body = cmd->v.v0.body;
         content_type = cmd->v.v0.content_type;
         if (type != LCB_HTTP_TYPE_VIEW && type != LCB_HTTP_TYPE_MANAGEMENT) {
+            return lcb_synchandler_return(instance, LCB_EINVAL);
+        }
+        if (type == LCB_HTTP_TYPE_VIEW && instance->type != LCB_TYPE_BUCKET) {
             return lcb_synchandler_return(instance, LCB_EINVAL);
         }
         break;
@@ -483,17 +497,22 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     default:
         return lcb_synchandler_return(instance, LCB_EINVAL);
     }
-
+    switch (instance->type) {
+    case LCB_TYPE_CLUSTER:
+        if (type == LCB_HTTP_TYPE_MANAGEMENT) {
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        }
+        break;
+    case LCB_TYPE_BUCKET:
+        /* we need a vbucket config before we can start getting data.. */
+        if (instance->vbucket_config == NULL) {
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
+        break;
+    }
     if (method >= LCB_HTTP_METHOD_MAX) {
         return lcb_synchandler_return(instance, LCB_EINVAL);
     }
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
-    }
-    /* pick random server */
-    nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
-    server = instance->servers + nn;
     req = calloc(1, sizeof(struct lcb_http_request_st));
     if (!req) {
         return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
@@ -505,29 +524,44 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->on_data = instance->callbacks.http_data;
     switch (type) {
     case LCB_HTTP_TYPE_VIEW:
-        if (!server->couch_api_base) {
-            lcb_http_request_destroy(req);
-            return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
-        }
-        base = server->couch_api_base;
-        nbase = strlen(base);
-        username = instance->sasl.name;
-        if (instance->sasl.password.secret.len) {
-            req->password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
-            if (!req->password) {
-                lcb_http_request_destroy(req);
-                return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+        {
+            lcb_server_t *server;
+            if (instance->type == LCB_TYPE_BUCKET) {
+                /* pick random server */
+                nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
+                server = instance->servers + nn;
             }
-            memcpy(req->password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
+            if (!server->couch_api_base) {
+                lcb_http_request_destroy(req);
+                return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
+            }
+            req->server = server;
+            base = server->couch_api_base;
+            nbase = strlen(base);
+            username = instance->sasl.name;
+            if (instance->sasl.password.secret.len) {
+                req->password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
+                if (!req->password) {
+                    lcb_http_request_destroy(req);
+                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+                }
+                memcpy(req->password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
+            }
         }
         break;
+
     case LCB_HTTP_TYPE_MANAGEMENT:
-        if (!server->rest_api_server) {
+        nbase = strlen(instance->host) + strlen(instance->port) + 2;
+        base = basebuf = calloc(nbase, sizeof(char));
+        if (!base) {
             lcb_http_request_destroy(req);
-            return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
+            return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
-        base = server->rest_api_server;
-        nbase = strlen(base);
+        if (snprintf(basebuf, nbase, "%s:%s", instance->host, instance->port) < 0) {
+            lcb_http_request_destroy(req);
+            return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+        }
+        nbase -= 1; /* skip '\0' */
         username = instance->username;
         if (instance->password) {
             req->password = strdup(instance->password);
@@ -549,7 +583,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     }
     req->instance = instance;
     req->io = instance->io;
-    req->server = server;
     req->command_cookie = command_cookie;
     req->chunked = chunked;
     req->method = method;
@@ -590,6 +623,9 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         if (req->path[0] != '/') {
             BUFF_APPEND(&urlbuf, "/", 1);
         }
+        if (type == LCB_HTTP_TYPE_MANAGEMENT) {
+            free(basebuf);
+        }
         BUFF_APPEND(&urlbuf, req->path, req->npath);
         req->nurl = urlbuf.nbytes;
         req->url = calloc(req->nurl + 1, sizeof(char));
@@ -604,7 +640,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             lcb_http_request_destroy(req);
             return lcb_synchandler_return(instance, LCB_EINTERNAL);
         }
-        req->url[req->nurl] = '\0';
         ringbuffer_destruct(&urlbuf);
     }
 
@@ -624,6 +659,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         /* Render HTTP request */
         char auth[256];
         lcb_size_t nauth = 0;
+
         if (req->password) {
             if (username) {
                 char cred[256];
@@ -743,7 +779,11 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->parser_settings.on_headers_complete = (http_cb)http_parser_headers_complete_cb;
 
     /* Store request reference in the server struct */
-    hashset_add(server->http_requests, req);
+    if (instance->type == LCB_TYPE_BUCKET) {
+        hashset_add(req->server->http_requests, req);
+    } else {
+        hashset_add(instance->http_requests, req);
+    }
 
     {
         /* Get server socket address */
@@ -764,9 +804,18 @@ LIBCOUCHBASE_API
 void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
 {
     lcb_size_t ii;
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        if (hashset_is_member(instance->servers[ii].http_requests, request)) {
+    if (instance->type == LCB_TYPE_BUCKET) {
+        for (ii = 0; ii < instance->nservers; ++ii) {
+            lcb_server_t *server = instance->servers + ii;
+            if (hashset_is_member(server->http_requests, request)) {
+                request->cancelled = 1;
+                hashset_remove(server->http_requests, request);
+            }
+        }
+    } else {
+        if (hashset_is_member(instance->http_requests, request)) {
             request->cancelled = 1;
+            hashset_remove(instance->http_requests, request);
         }
     }
 }

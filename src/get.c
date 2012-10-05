@@ -61,7 +61,13 @@ lcb_error_t lcb_unlock(lcb_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        switch (instance->type) {
+        case LCB_TYPE_CLUSTER:
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        case LCB_TYPE_BUCKET:
+        default:
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
     }
 
     for (ii = 0; ii < num; ++ii) {
@@ -115,7 +121,13 @@ lcb_error_t lcb_get_replica(lcb_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        switch (instance->type) {
+        case LCB_TYPE_CLUSTER:
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        case LCB_TYPE_BUCKET:
+        default:
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
     }
 
     affected_servers = calloc(instance->nservers, sizeof(lcb_size_t));
@@ -177,7 +189,13 @@ static lcb_error_t lcb_single_get(lcb_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        switch (instance->type) {
+        case LCB_TYPE_CLUSTER:
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        case LCB_TYPE_BUCKET:
+        default:
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
     }
 
     (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
@@ -230,7 +248,13 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        switch (instance->type) {
+        case LCB_TYPE_CLUSTER:
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        case LCB_TYPE_BUCKET:
+        default:
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
     }
 
     affected_servers = calloc(instance->nservers, sizeof(lcb_size_t));

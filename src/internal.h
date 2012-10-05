@@ -125,6 +125,15 @@ extern "C" {
     };
 
     struct lcb_st {
+        /**
+         * the type of the connection:
+         * * LCB_TYPE_BUCKET
+         *      NULL for bucket means "default" bucket
+         * * LCB_TYPE_CLUSTER
+         *      the bucket argument ignored and all data commands will
+         *      return LCB_NOT_SUPPORTED
+         */
+        lcb_type_t type;
         /** The couchbase host */
         char host[NI_MAXHOST + 1];
         /** The port of the couchbase server */
@@ -206,12 +215,15 @@ extern "C" {
 
         /** The set of the timers */
         hashset_t timers;
+        /** The set of the pointers to HTTP requests to Cluster */
+        hashset_t http_requests;
 
         struct lcb_callback_st callbacks;
         struct lcb_histogram_st *histogram;
 
         lcb_uint32_t seqno;
         int wait;
+        int connected;
         /** Is IPv6 enabled */
         lcb_ipv6_t ipv6;
         const void *cookie;

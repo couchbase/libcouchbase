@@ -81,7 +81,8 @@ extern "C" {
         LCB_CONNECT_ERROR = 0x17,
         LCB_BUCKET_ENOENT = 0x18,
         LCB_CLIENT_ENOMEM = 0x19,
-        LCB_CLIENT_ETMPFAIL = 0x20
+        LCB_CLIENT_ETMPFAIL = 0x20,
+        LCB_EBADHANDLE = 0x21
     } lcb_error_t;
 
 #define lcb_is_error_enomem(a) ((a == LCB_CLIENT_ENOMEM) || \
@@ -125,6 +126,13 @@ extern "C" {
         LCB_OBSERVE_NOT_FOUND = 0x80,
         LCB_OBSERVE_MAX = 0x81
     } lcb_observe_t;
+
+    typedef enum {
+        /** Use bucket name and setup config listener */
+        LCB_TYPE_BUCKET = 0x00,
+        /** Ignore bucket name. All data calls will return LCB_NOT_SUPPORTED */
+        LCB_TYPE_CLUSTER = 0x01
+    } lcb_type_t;
 
     struct  lcb_tap_filter_st;
     typedef struct lcb_tap_filter_st *lcb_tap_filter_t;

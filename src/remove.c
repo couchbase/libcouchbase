@@ -32,7 +32,13 @@ lcb_error_t lcb_remove(lcb_t instance,
     size_t ii;
     /* we need a vbucket config before we can start removing the item.. */
     if (instance->vbucket_config == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        switch (instance->type) {
+        case LCB_TYPE_CLUSTER:
+            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+        case LCB_TYPE_BUCKET:
+        default:
+            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        }
     }
 
     for (ii = 0; ii < num; ++ii) {

@@ -25,6 +25,7 @@ static void breakout_vbucket_state_listener(lcb_server_t *server)
     }
     server->instance->io->v.v0.delete_timer(server->instance->io,
                                             server->instance->timeout.event);
+    server->instance->connected = 1;
     lcb_maybe_breakout(server->instance);
 }
 
@@ -79,6 +80,7 @@ int lcb_is_waiting(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_error_t lcb_wait(lcb_t instance)
 {
+
     if (instance->wait != 0) {
         return instance->last_error;
     }
@@ -90,11 +92,12 @@ lcb_error_t lcb_wait(lcb_t instance)
      */
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    if (instance->vbucket_config == NULL) {
-        /* Initial configuration. Set a timer */
-        instance->vbucket_state_listener_last =
-            instance->vbucket_state_listener;
-        instance->vbucket_state_listener = breakout_vbucket_state_listener;
+    if (!instance->connected) {
+        if (instance->type == LCB_TYPE_BUCKET) {
+            /* Initial configuration. Set a timer */
+            instance->vbucket_state_listener_last = instance->vbucket_state_listener;
+            instance->vbucket_state_listener = breakout_vbucket_state_listener;
+        }
 
         /* Initial connection timeout */
         instance->io->v.v0.update_timer(instance->io,
@@ -103,7 +106,7 @@ lcb_error_t lcb_wait(lcb_t instance)
                                         instance,
                                         initial_connect_timeout_handler);
     }
-    if (instance->vbucket_config == NULL || lcb_has_data_in_buffers(instance)
+    if (!instance->connected || lcb_has_data_in_buffers(instance)
             || hashset_num_items(instance->timers) > 0) {
         lcb_size_t idx;
         /* update timers on all servers */
@@ -114,6 +117,7 @@ lcb_error_t lcb_wait(lcb_t instance)
     } else {
         instance->wait = 0;
     }
+
 
     return instance->last_error;
 }

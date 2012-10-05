@@ -332,6 +332,9 @@ int lcb_has_data_in_buffers(lcb_t instance)
 {
     lcb_size_t ii;
 
+    if (hashset_num_items(instance->http_requests)) {
+        return 1;
+    }
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
         if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes ||
