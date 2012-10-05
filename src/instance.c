@@ -225,10 +225,21 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_initialize_packet_handlers(obj);
     lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
+    lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
 
     if (setup_boostrap_hosts(obj, host) == -1) {
         free(obj);
         return LCB_EINVAL;
+    }
+    obj->timers = hashset_create();
+    obj->sock = INVALID_SOCKET;
+    /* No error has occurred yet. */
+    obj->last_error = LCB_SUCCESS;
+    /* setup io iops! */
+    obj->io = io;
+    obj->timeout.event = obj->io->create_timer(obj->io);
+    if (obj->timeout.event == NULL) {
+        return LCB_CLIENT_ENOMEM;
     }
 
     offset = snprintf(buffer, sizeof(buffer),
@@ -251,25 +262,10 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
     offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset, "\r\n");
     obj->http_uri = strdup(buffer);
-
     if (obj->http_uri == NULL) {
         lcb_destroy(obj);
         return LCB_CLIENT_ENOMEM;
     }
-    obj->timers = hashset_create();
-
-    obj->sock = INVALID_SOCKET;
-
-    /* No error has occurred yet. */
-    obj->last_error = LCB_SUCCESS;
-
-    /* setup io iops! */
-    obj->io = io;
-    obj->timeout.event = obj->io->create_timer(obj->io);
-    assert(obj->timeout.event);
-
-    lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
-
     return LCB_SUCCESS;
 }
 
