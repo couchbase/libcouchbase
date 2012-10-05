@@ -388,6 +388,7 @@ extern "C" {
                  << " Size:" << resp->v.v0.nbytes << endl;
             cout.write(static_cast<const char *>(resp->v.v0.bytes), resp->v.v0.nbytes);
         }
+        cerr << endl;
         cout.flush();
     }
 
@@ -916,26 +917,27 @@ static bool bucket_create_impl(lcb_t instance, list<string> &names,
     string query = "/pools/default/buckets";
 
     if (names.empty()) {
-        cerr << "ERROR: you need to specify at least on bucket name" << endl;
+        cerr << "ERROR: you need to specify at least one bucket name" << endl;
         return false;
     }
     for (list<string>::iterator iter = names.begin(); iter != names.end(); ++iter) {
-        stringstream data;
-        data << "name=" << *iter
-             << "&bucketType=" << bucket_type
-             << "&ramQuotaMB=" << ram_quota
-             << "&replicaNumber=" << replica_num
-             << "&authType=" << auth_type
-             << "&saslPassword=" << sasl_password;
+        stringstream dss;
+        dss << "name=" << *iter
+            << "&bucketType=" << bucket_type
+            << "&ramQuotaMB=" << ram_quota
+            << "&replicaNumber=" << replica_num
+            << "&authType=" << auth_type
+            << "&saslPassword=" << sasl_password;
         if (proxy_port > 0) {
-            data << "&proxyPort=" << proxy_port;
+            dss << "&proxyPort=" << proxy_port;
         }
+        string data = dss.str();
         lcb_http_cmd_t cmd;
         cmd.version = 0;
         cmd.v.v0.path = query.c_str();
         cmd.v.v0.npath = query.length();
-        cmd.v.v0.body = data.str().c_str();
-        cmd.v.v0.nbody = data.str().length();
+        cmd.v.v0.body = data.c_str();
+        cmd.v.v0.nbody = data.length();
         cmd.v.v0.method = LCB_HTTP_METHOD_POST;
         cmd.v.v0.chunked = false;
         cmd.v.v0.content_type = "application/x-www-form-urlencoded";
