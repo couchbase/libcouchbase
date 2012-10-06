@@ -692,11 +692,12 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
                     return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 }
             }
-            ret = snprintf(post_headers + ret, 512, "\r\nContent-Length: %ld\r\n\r\n", (long)nbody);
-            if (ret < 0) {
+            nn = snprintf(post_headers + ret, 512, "\r\nContent-Length: %ld\r\n\r\n", (long)nbody);
+            if (nn < 0) {
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
+            ret += nn;
             if (!ringbuffer_ensure_capacity(&req->output, nbody + (lcb_size_t)ret)) {
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
