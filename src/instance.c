@@ -269,6 +269,17 @@ lcb_error_t lcb_create(lcb_t *instance,
     return LCB_SUCCESS;
 }
 
+static void release_socket(lcb_t instance)
+{
+    if (instance->sock != INVALID_SOCKET) {
+        instance->io->delete_event(instance->io, instance->sock, instance->event);
+        instance->io->destroy_event(instance->io, instance->event);
+        instance->event = NULL;
+        instance->io->close(instance->io, instance->sock);
+        instance->sock = INVALID_SOCKET;
+    }
+}
+
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
 {
@@ -282,12 +293,7 @@ void lcb_destroy(lcb_t instance)
         }
     }
     hashset_destroy(instance->timers);
-    if (instance->sock != INVALID_SOCKET) {
-        instance->io->delete_event(instance->io, instance->sock,
-                                   instance->event);
-        instance->io->destroy_event(instance->io, instance->event);
-        instance->io->close(instance->io, instance->sock);
-    }
+    release_socket(instance);
 
     if (instance->timeout.event != NULL) {
         instance->io->delete_timer(instance->io, instance->timeout.event);
@@ -785,11 +791,7 @@ static void lcb_instance_connerr(lcb_t instance,
                                  lcb_error_t err,
                                  const char *errinfo)
 {
-    if (instance->sock != INVALID_SOCKET) {
-        instance->io->delete_event(instance->io, instance->sock, instance->event);
-        instance->io->close(instance->io, instance->sock);
-        instance->sock = INVALID_SOCKET;
-    }
+    release_socket(instance);
 
     /* We try and see if the connection attempt can be relegated to another
      * REST API entry point. If we can, the following should return something
@@ -985,14 +987,6 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
                                  errinfo,
                                  sizeof(errinfo),
                                  &our_errno);
-
-            if (first_try && instance->sock != INVALID_SOCKET) {
-                /* Ensure our connerr function doesn't try to delete a
-                 * nonexistent event */
-                instance->io->close(instance->io, instance->sock);
-                instance->sock = INVALID_SOCKET;
-            }
-
             lcb_instance_connerr(instance, our_errno, errinfo);
             return ;
         }
@@ -1027,17 +1021,7 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
                 return ;
 
             default: {
-                /* Save errno because of possible subsequent errors */
-                if (instance->sock != INVALID_SOCKET) {
-                    if (!first_try) {
-                        /* Event updated */
-                        instance->io->delete_event(instance->io,
-                                                   instance->sock,
-                                                   instance->event);
-                    }
-                    instance->io->close(instance->io, instance->sock);
-                    instance->sock = INVALID_SOCKET;
-                }
+                release_socket(instance);
                 if (connstatus == LCB_CONNECT_EFAIL &&
                         instance->curr_ai->ai_next) {
                     /* Here we handle 'medium-type' errors which are not a hard
@@ -1051,9 +1035,7 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
                     char errinfo[1024];
                     snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
                              strerror(instance->io->error));
-                    lcb_instance_connerr(instance,
-                                         LCB_CONNECT_ERROR,
-                                         errinfo);
+                    lcb_instance_connerr(instance, LCB_CONNECT_ERROR, errinfo);
                     return ;
                 }
             }
@@ -1096,12 +1078,7 @@ lcb_error_t lcb_connect(lcb_t instance)
 {
     int error;
 
-    if (instance->sock != INVALID_SOCKET) {
-        instance->io->delete_event(instance->io, instance->sock, instance->event);
-        instance->io->destroy_event(instance->io, instance->event);
-        instance->io->close(instance->io, instance->sock);
-        instance->sock = INVALID_SOCKET;
-    }
+    release_socket(instance);
     if (instance->ai != NULL) {
         freeaddrinfo(instance->ai);
     }
