@@ -449,17 +449,33 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
                                   lcb_http_request_t *request)
 {
     lcb_http_request_t req;
-    const char *base = NULL, *username = NULL;
-    lcb_size_t nn, nbase;
+    const char *base = NULL, *username = NULL, *body, *path, *content_type;
+    lcb_size_t nn, nbase, nbody, npath;
     lcb_server_t *server;
+    lcb_http_method_t method;
+    int chunked;
 
     switch (cmd->version) {
     case 0:
+        method = cmd->v.v0.method;
+        chunked = cmd->v.v0.chunked;
+        npath = cmd->v.v0.npath;
+        path = cmd->v.v0.path;
+        nbody = cmd->v.v0.nbody;
+        body = cmd->v.v0.body;
+        content_type = cmd->v.v0.content_type;
         if (type != LCB_HTTP_TYPE_VIEW && type != LCB_HTTP_TYPE_MANAGEMENT) {
             return lcb_synchandler_return(instance, LCB_EINVAL);
         }
         break;
     case 1:
+        method = cmd->v.v1.method;
+        chunked = cmd->v.v1.chunked;
+        npath = cmd->v.v1.npath;
+        path = cmd->v.v1.path;
+        nbody = cmd->v.v1.nbody;
+        body = cmd->v.v1.body;
+        content_type = cmd->v.v1.content_type;
         if (type != LCB_HTTP_TYPE_RAW) {
             return lcb_synchandler_return(instance, LCB_EINVAL);
         }
@@ -468,7 +484,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         return lcb_synchandler_return(instance, LCB_EINVAL);
     }
 
-    if (cmd->v.v0.method >= LCB_HTTP_METHOD_MAX) {
+    if (method >= LCB_HTTP_METHOD_MAX) {
         return lcb_synchandler_return(instance, LCB_EINVAL);
     }
     /* we need a vbucket config before we can start getting data.. */
@@ -535,16 +551,14 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->io = instance->io;
     req->server = server;
     req->command_cookie = command_cookie;
-
-    req->npath = cmd->v.v0.npath;
+    req->chunked = chunked;
+    req->method = method;
+    req->npath = npath;
     if ((req->path = malloc(req->npath)) == NULL) {
         lcb_http_request_destroy(req);
         return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
     }
-    memcpy(req->path, cmd->v.v0.path, req->npath);
-
-    req->chunked = cmd->v.v0.chunked;
-    req->method = cmd->v.v0.method;
+    memcpy(req->path, path, req->npath);
 
 #define BUFF_APPEND(dst, src, len)                                  \
         if (len != ringbuffer_write(dst, src, len)) {               \
@@ -609,8 +623,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     {
         /* Render HTTP request */
         char auth[256];
-        lcb_size_t nauth = 0, nbody = cmd->v.v0.nbody;
-        const char *body = cmd->v.v0.body;
+        lcb_size_t nauth = 0;
         if (req->password) {
             if (username) {
                 char cred[256];
@@ -678,7 +691,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         if (req->method == LCB_HTTP_METHOD_PUT ||
                 req->method == LCB_HTTP_METHOD_POST) {
             char *post_headers = calloc(512, sizeof(char));
-            const char *content_type = cmd->v.v0.content_type;
             int ret = 0;
 
             if (post_headers == NULL) {
