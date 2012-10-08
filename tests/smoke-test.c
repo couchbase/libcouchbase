@@ -608,7 +608,7 @@ int main(int argc, char **argv)
                          };
 
     if (getenv("LCB_VERBOSE_TESTS") == NULL) {
-        freopen("/dev/null", "w", stdout);
+        (void)freopen("/dev/null", "w", stdout);
     }
 
     setup_test_timeout_handler();
