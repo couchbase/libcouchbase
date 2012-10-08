@@ -963,7 +963,6 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
 {
     lcb_t instance = arg;
     int retry;
-    int first_try = (sock == INVALID_SOCKET);
     lcb_connect_status_t connstatus = LCB_CONNECT_OK;
     int save_errno;
     do {
