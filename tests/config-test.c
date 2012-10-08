@@ -248,7 +248,8 @@ int main(int argc, char **argv)
     setup_test_timeout_handler();
 
     if (getenv("LIBCOUCHBASE_VERBOSE_TESTS") == NULL) {
-        (void)freopen("/dev/null", "w", stdout);
+        FILE *unused = freopen("/dev/null", "w", stdout);
+        (void)unused;
     }
 
     smoke_test();
