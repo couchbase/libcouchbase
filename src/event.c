@@ -35,9 +35,9 @@ static int do_fill_input_buffer(lcb_server_t *c)
 
     ringbuffer_get_iov(&c->input, RINGBUFFER_WRITE, iov);
 
-    nr = c->instance->io->recvv(c->instance->io, c->sock, iov, 2);
+    nr = c->instance->io->v.v0.recvv(c->instance->io, c->sock, iov, 2);
     if (nr == -1) {
-        switch (c->instance->io->error) {
+        switch (c->instance->io->v.v0.error) {
         case EINTR:
             break;
         case EWOULDBLOCK:
@@ -253,9 +253,9 @@ static int do_send_data(lcb_server_t *c)
         struct lcb_iovec_st iov[2];
         lcb_ssize_t nw;
         ringbuffer_get_iov(&c->output, RINGBUFFER_READ, iov);
-        nw = c->instance->io->sendv(c->instance->io, c->sock, iov, 2);
+        nw = c->instance->io->v.v0.sendv(c->instance->io, c->sock, iov, 2);
         if (nw == -1) {
-            switch (c->instance->io->error) {
+            switch (c->instance->io->v.v0.error) {
             case EINTR:
                 /* retry */
                 break;
@@ -313,13 +313,13 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     }
 
     if (c->output.nbytes == 0) {
-        c->instance->io->update_event(c->instance->io, c->sock,
-                                      c->event, LCB_READ_EVENT,
-                                      c, lcb_server_event_handler);
+        c->instance->io->v.v0.update_event(c->instance->io, c->sock,
+                                           c->event, LCB_READ_EVENT,
+                                           c, lcb_server_event_handler);
     } else {
-        c->instance->io->update_event(c->instance->io, c->sock,
-                                      c->event, LCB_RW_EVENT,
-                                      c, lcb_server_event_handler);
+        c->instance->io->v.v0.update_event(c->instance->io, c->sock,
+                                           c->event, LCB_RW_EVENT,
+                                           c, lcb_server_event_handler);
     }
 
     lcb_maybe_breakout(c->instance);
@@ -348,7 +348,7 @@ void lcb_maybe_breakout(lcb_t instance)
         if (!lcb_has_data_in_buffers(instance)
                 && hashset_num_items(instance->timers) == 0) {
             instance->wait = 0;
-            instance->io->stop_event_loop(instance->io);
+            instance->io->v.v0.stop_event_loop(instance->io);
         }
     }
 }

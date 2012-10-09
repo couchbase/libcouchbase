@@ -48,9 +48,9 @@ void lcb_update_server_timer(lcb_server_t *server)
     lcb_t instance = server->instance;
 
     if (server->timer) {
-        instance->io->delete_timer(instance->io, server->timer);
+        instance->io->v.v0.delete_timer(instance->io, server->timer);
     }
-    instance->io->update_timer(instance->io, server->timer,
-                               instance->timeout.usec, server,
-                               lcb_server_timeout_handler);
+    instance->io->v.v0.update_timer(instance->io, server->timer,
+                                    instance->timeout.usec, server,
+                                    lcb_server_timeout_handler);
 }

@@ -259,7 +259,7 @@ extern "C" {
         ASSERT_EQ(LCB_SUCCESS, error);
         timeout_seqno--;
         if (timeout_stats_done && timeout_seqno == 0) {
-            io->stop_event_loop(io);
+            io->v.v0.stop_event_loop(io);
         }
     }
 
@@ -316,7 +316,7 @@ TEST_F(MockUnitTest, testTimeout)
     lcb_server_stats_cmd_t *commands[] = {&stat };
 
     ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, 1, commands));
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     lcb_destroy(instance);
 }
 
@@ -353,7 +353,7 @@ extern "C" {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
         lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
-        io->stop_event_loop(io);
+        io->v.v0.stop_event_loop(io);
     }
 
     static void df_store_callback2(lcb_t instance,
@@ -366,7 +366,7 @@ extern "C" {
         rv->error = error;
         rv->cas2 = resp->v.v0.cas;
         lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
-        io->stop_event_loop(io);
+        io->v.v0.stop_event_loop(io);
     }
 
     static void df_get_callback(lcb_t instance,
@@ -410,7 +410,7 @@ TEST_F(MockUnitTest, testDoubleFreeError)
 
     err = lcb_store(instance, &rv, 1, storecmds);
     ASSERT_EQ(LCB_SUCCESS, err);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
 
     /* run exercise
@@ -427,7 +427,7 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     err = lcb_get(instance, &rv, 1, getcmds);
     ASSERT_EQ(LCB_SUCCESS, err);
     rv.cas1 = rv.cas2 = 0;
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_GT(rv.cas1, 0);
     ASSERT_GT(rv.cas2, 0);

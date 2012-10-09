@@ -155,14 +155,14 @@ lcb_socket_t lcb_gai2sock(lcb_t instance, struct addrinfo **ai,
 
     for (; *ai; *ai = (*ai)->ai_next) {
 
-        ret = instance->io->socket(instance->io,
-                                   (*ai)->ai_family,
-                                   (*ai)->ai_socktype,
-                                   (*ai)->ai_protocol);
+        ret = instance->io->v.v0.socket(instance->io,
+                                        (*ai)->ai_family,
+                                        (*ai)->ai_socktype,
+                                        (*ai)->ai_protocol);
         if (ret != INVALID_SOCKET) {
             return ret;
         } else {
-            *connerr = instance->io->error;
+            *connerr = instance->io->v.v0.error;
         }
     }
 

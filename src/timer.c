@@ -23,7 +23,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
     lcb_t instance = timer->instance;
     timer->callback(timer, instance, timer->cookie);
     if (hashset_is_member(instance->timers, timer) && !timer->periodic) {
-        instance->io->delete_timer(instance->io, timer->event);
+        instance->io->v.v0.delete_timer(instance->io, timer->event);
         lcb_timer_destroy(instance, timer);
     }
     lcb_maybe_breakout(timer->instance);
@@ -56,13 +56,13 @@ lcb_timer_t lcb_timer_create(lcb_t instance,
     tmr->cookie = command_cookie;
     tmr->usec = usec;
     tmr->periodic = periodic;
-    tmr->event = instance->io->create_timer(instance->io);
+    tmr->event = instance->io->v.v0.create_timer(instance->io);
     if (tmr->event == NULL) {
         free(tmr);
         *error = lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         return NULL;
     }
-    instance->io->update_timer(instance->io, tmr->event, tmr->usec,
+    instance->io->v.v0.update_timer(instance->io, tmr->event, tmr->usec,
                                tmr, timer_callback);
 
 
@@ -76,8 +76,8 @@ lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer)
 {
     if (hashset_is_member(instance->timers, timer)) {
         hashset_remove(instance->timers, timer);
-        instance->io->delete_timer(instance->io, timer->event);
-        instance->io->destroy_timer(instance->io, timer->event);
+        instance->io->v.v0.delete_timer(instance->io, timer->event);
+        instance->io->v.v0.destroy_timer(instance->io, timer->event);
         free(timer);
     }
     return lcb_synchandler_return(instance, LCB_SUCCESS);

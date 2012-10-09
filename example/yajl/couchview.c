@@ -314,7 +314,7 @@ static void data_callback(lcb_http_request_t request,
             unsigned char *str = yajl_get_error(c->parser, 1, bytes, nbytes);
             fprintf(stderr, "%s", (const char *) str);
             yajl_free_error(c->parser, str);
-            c->io->stop_event_loop(c->io);
+            c->io->v.v0.stop_event_loop(c->io);
         }
     } else { /* end of response */
         st = yajl_complete_parse(c->parser);
@@ -329,7 +329,7 @@ static void data_callback(lcb_http_request_t request,
             fwrite(buf, 1, len, output);
             yajl_gen_clear(c->gen);
         }
-        c->io->stop_event_loop(c->io);
+        c->io->v.v0.stop_event_loop(c->io);
     }
     (void)request;
     (void)instance;
@@ -375,7 +375,7 @@ static void complete_callback(lcb_http_request_t request,
                 error, lcb_strerror(instance, error), resp->v.v0.status);
         fwrite(bytes, nbytes, 1, output);
     }
-    c->io->stop_event_loop(c->io);
+    c->io->v.v0.stop_event_loop(c->io);
     (void)request;
     (void)instance;
 }
@@ -479,7 +479,7 @@ int main(int argc, char **argv)
 
     /* Start the event loop and let it run until request will be completed
      * with success or failure (see view callbacks)  */
-    cookie.io->run_event_loop(cookie.io);
+    cookie.io->v.v0.run_event_loop(cookie.io);
 
     yajl_free(cookie.parser);
     yajl_gen_free(cookie.gen);

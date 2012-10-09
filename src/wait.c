@@ -23,8 +23,8 @@ static void breakout_vbucket_state_listener(lcb_server_t *server)
             server->instance->vbucket_state_listener_last;
         server->instance->vbucket_state_listener_last = NULL;
     }
-    server->instance->io->delete_timer(server->instance->io,
-                                       server->instance->timeout.event);
+    server->instance->io->v.v0.delete_timer(server->instance->io,
+                                            server->instance->timeout.event);
     lcb_maybe_breakout(server->instance);
 }
 
@@ -38,14 +38,14 @@ static void initial_connect_timeout_handler(lcb_socket_t sock,
 
     if (instance->sock != INVALID_SOCKET) {
         /* Do we need to delete the event? */
-        instance->io->delete_event(instance->io,
-                                   instance->sock,
-                                   instance->event);
-        instance->io->close(instance->io, instance->sock);
+        instance->io->v.v0.delete_event(instance->io,
+                                        instance->sock,
+                                        instance->event);
+        instance->io->v.v0.close(instance->io, instance->sock);
         instance->sock = INVALID_SOCKET;
     }
 
-    instance->io->delete_timer(instance->io, instance->timeout.event);
+    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
     instance->timeout.next = 0;
     lcb_maybe_breakout(instance);
 
@@ -97,11 +97,11 @@ lcb_error_t lcb_wait(lcb_t instance)
         instance->vbucket_state_listener = breakout_vbucket_state_listener;
 
         /* Initial connection timeout */
-        instance->io->update_timer(instance->io,
-                                   instance->timeout.event,
-                                   instance->timeout.usec,
-                                   instance,
-                                   initial_connect_timeout_handler);
+        instance->io->v.v0.update_timer(instance->io,
+                                        instance->timeout.event,
+                                        instance->timeout.usec,
+                                        instance,
+                                        initial_connect_timeout_handler);
     }
     if (instance->vbucket_config == NULL || lcb_has_data_in_buffers(instance)
             || hashset_num_items(instance->timers) > 0) {
@@ -110,7 +110,7 @@ lcb_error_t lcb_wait(lcb_t instance)
         for (idx = 0; idx < instance->nservers; ++idx) {
             lcb_update_server_timer(instance->servers + idx);
         }
-        instance->io->run_event_loop(instance->io);
+        instance->io->v.v0.run_event_loop(instance->io);
     } else {
         instance->wait = 0;
     }
@@ -127,7 +127,7 @@ LIBCOUCHBASE_API
 void lcb_breakout(lcb_t instance)
 {
     if (instance->wait) {
-        instance->io->stop_event_loop(instance->io);
+        instance->io->v.v0.stop_event_loop(instance->io);
         instance->wait = 0;
     }
 }

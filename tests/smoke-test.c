@@ -137,7 +137,7 @@ static void store_callback(lcb_t instance,
     rv->nkey = resp->v.v0.nkey;
     rv->cas = resp->v.v0.cas;
     assert(io);
-    io->stop_event_loop(io);
+    io->v.v0.stop_event_loop(io);
     (void)instance;
 }
 
@@ -156,7 +156,7 @@ static void mstore_callback(lcb_t instance,
     rv->counter--;
     if (rv->counter <= 0) {
         assert(io);
-        io->stop_event_loop(io);
+        io->v.v0.stop_event_loop(io);
     }
     (void)instance;
 }
@@ -177,7 +177,7 @@ static void get_callback(lcb_t instance,
     rv->counter--;
     if (rv->counter <= 0) {
         assert(io);
-        io->stop_event_loop(io);
+        io->v.v0.stop_event_loop(io);
     }
     (void)instance;
 }
@@ -195,7 +195,7 @@ static void touch_callback(lcb_t instance,
     rv->counter--;
     if (rv->counter <= 0) {
         assert(io);
-        io->stop_event_loop(io);
+        io->v.v0.stop_event_loop(io);
     }
     (void)instance;
 }
@@ -216,7 +216,7 @@ static void version_callback(lcb_t instance,
 
     if (server_endpoint == NULL) {
         assert(rv->counter == 0);
-        io->stop_event_loop(io);
+        io->v.v0.stop_event_loop(io);
         return;
     }
 
@@ -248,7 +248,7 @@ static void test_set1(void)
     (void)lcb_set_store_callback(session, store_callback);
     err = lcb_store(session, &rv, 1, cmds);
     assert(err == LCB_SUCCESS);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
     assert(rv.operation == LCB_SET);
     assert(memcmp(rv.key, "foo", 3) == 0);
@@ -276,7 +276,7 @@ static void test_set2(void)
         err = lcb_store(session, &rv, 1, cmds);
         assert(err == LCB_SUCCESS);
     }
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.errors == 0);
 }
 
@@ -301,7 +301,7 @@ static void test_get1(void)
 
     err = lcb_store(session, &rv, 1, storecmds);
     assert(err == LCB_SUCCESS);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
 
     memset(&rv, 0, sizeof(rv));
@@ -310,7 +310,7 @@ static void test_get1(void)
     getcmd.v.v0.nkey = strlen(getcmd.v.v0.key);
     err = lcb_get(session, &rv, 1, getcmds);
     assert(err == LCB_SUCCESS);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
     assert(rv.nbytes == strlen("bar"));
     assert(memcmp(rv.bytes, "bar", 3) == 0);
@@ -351,7 +351,7 @@ static void test_get2(void)
         storecmd.v.v0.operation = LCB_SET;
         err = lcb_store(session, &rv, 1, storecmds);
         assert(err == LCB_SUCCESS);
-        io->run_event_loop(io);
+        io->v.v0.run_event_loop(io);
         assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
 
@@ -366,7 +366,7 @@ static void test_get2(void)
     rv.counter = 26;
     err = lcb_get(session, &rv, 26, (const lcb_get_cmd_t * const *)getcmds);
     assert(err == LCB_SUCCESS);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
     assert(rv.nbytes == nval);
     assert(memcmp(rv.bytes, "bar", 3) == 0);
@@ -418,7 +418,7 @@ static void test_touch1(void)
         storecmd.v.v0.operation = LCB_SET;
         err = lcb_store(session, &rv, 1, storecmds);
         assert(err == LCB_SUCCESS);
-        io->run_event_loop(io);
+        io->v.v0.run_event_loop(io);
         assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
 
@@ -433,7 +433,7 @@ static void test_touch1(void)
     rv.counter = 26;
     err = lcb_touch(session, &rv, 26, (const lcb_touch_cmd_t * const *)touchcmds);
     assert(err == LCB_SUCCESS);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
     for (ii = 0; ii < 26; ii++) {
         free(keys[ii]);
@@ -527,7 +527,7 @@ static void test_set3(void)
     storecmd.v.v0.operation = LCB_SET;
     err = lcb_store(session, &rv, 1, storecmds);
     assert(err == LCB_SUCCESS);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
     assert(rv.operation == LCB_SET);
     assert(memcmp(rv.key, "foo", 3) == 0);
@@ -550,7 +550,7 @@ static void test_version1(void)
 
     rv.counter = total_node_count;
 
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
 
     /* Ensure all version responses have been received */
     assert(rv.counter == 0);

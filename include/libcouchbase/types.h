@@ -233,84 +233,76 @@ extern "C" {
     };
 
     struct lcb_io_opt_st {
-        lcb_uint64_t version;
-        void *cookie;
-        int error;
+        int version;
+        union {
+            struct {
+                void *cookie;
+                int error;
+                void *dlhandle;
 
-        void (*destructor)(struct lcb_io_opt_st *iops);
+                void (*destructor)(struct lcb_io_opt_st *iops);
 
-        /**
-         * Create a non-blocking socket.
-         */
-        lcb_socket_t (*socket)(struct lcb_io_opt_st *iops,
-                               int domain,
-                               int type,
-                               int protocol);
-        int (*connect)(struct lcb_io_opt_st *iops,
-                       lcb_socket_t sock,
-                       const struct sockaddr *name,
-                       unsigned int namelen);
-
-        lcb_ssize_t (*recv)(struct lcb_io_opt_st *iops,
-                            lcb_socket_t sock,
-                            void *buffer,
-                            lcb_size_t len,
-                            int flags);
-        lcb_ssize_t (*send)(struct lcb_io_opt_st *iops,
-                            lcb_socket_t sock,
-                            const void *msg,
-                            lcb_size_t len,
-                            int flags);
-
-        lcb_ssize_t (*recvv)(struct lcb_io_opt_st *iops,
-                             lcb_socket_t sock,
-                             struct lcb_iovec_st *iov,
-                             lcb_size_t niov);
-
-        lcb_ssize_t (*sendv)(struct lcb_io_opt_st *iops,
-                             lcb_socket_t sock,
-                             struct lcb_iovec_st *iov,
-                             lcb_size_t niov);
-
-
-        void (*close)(struct lcb_io_opt_st *iops,
-                      lcb_socket_t sock);
-
-        void *(*create_timer)(struct lcb_io_opt_st *iops);
-        void (*destroy_timer)(struct lcb_io_opt_st *iops,
-                              void *timer);
-        void (*delete_timer)(struct lcb_io_opt_st *iops,
-                             void *timer);
-        int (*update_timer)(struct lcb_io_opt_st *iops,
-                            void *timer,
-                            lcb_uint32_t usec,
-                            void *cb_data,
-                            void (*handler)(lcb_socket_t sock,
-                                            short which,
-                                            void *cb_data));
-
-        void *(*create_event)(struct lcb_io_opt_st *iops);
-        void (*destroy_event)(struct lcb_io_opt_st *iops,
-                              void *event);
-
-        int (*update_event)(struct lcb_io_opt_st *iops,
-                            lcb_socket_t sock,
-                            void *event,
-                            short flags,
-                            void *cb_data,
-                            void (*handler)(lcb_socket_t sock,
-                                            short which,
-                                            void *cb_data));
-
-        void (*delete_event)(struct lcb_io_opt_st *iops,
-                             lcb_socket_t sock,
-                             void *event);
-
-        void (*stop_event_loop)(struct lcb_io_opt_st *iops);
-        void (*run_event_loop)(struct lcb_io_opt_st *iops);
-
-        /* Version 1 of the struct also includes the following members */
-        void *dlhandle;
+                /**
+                 * Create a non-blocking socket.
+                 */
+                lcb_socket_t (*socket)(struct lcb_io_opt_st *iops,
+                                       int domain,
+                                       int type,
+                                       int protocol);
+                int (*connect)(struct lcb_io_opt_st *iops,
+                               lcb_socket_t sock,
+                               const struct sockaddr *name,
+                               unsigned int namelen);
+                lcb_ssize_t (*recv)(struct lcb_io_opt_st *iops,
+                                    lcb_socket_t sock,
+                                    void *buffer,
+                                    lcb_size_t len,
+                                    int flags);
+                lcb_ssize_t (*send)(struct lcb_io_opt_st *iops,
+                                    lcb_socket_t sock,
+                                    const void *msg,
+                                    lcb_size_t len,
+                                    int flags);
+                lcb_ssize_t (*recvv)(struct lcb_io_opt_st *iops,
+                                     lcb_socket_t sock,
+                                     struct lcb_iovec_st *iov,
+                                     lcb_size_t niov);
+                lcb_ssize_t (*sendv)(struct lcb_io_opt_st *iops,
+                                     lcb_socket_t sock,
+                                     struct lcb_iovec_st *iov,
+                                     lcb_size_t niov);
+                void (*close)(struct lcb_io_opt_st *iops,
+                              lcb_socket_t sock);
+                void *(*create_timer)(struct lcb_io_opt_st *iops);
+                void (*destroy_timer)(struct lcb_io_opt_st *iops,
+                                      void *timer);
+                void (*delete_timer)(struct lcb_io_opt_st *iops,
+                                     void *timer);
+                int (*update_timer)(struct lcb_io_opt_st *iops,
+                                    void *timer,
+                                    lcb_uint32_t usec,
+                                    void *cb_data,
+                                    void (*handler)(lcb_socket_t sock,
+                                                    short which,
+                                                    void *cb_data));
+                void *(*create_event)(struct lcb_io_opt_st *iops);
+                void (*destroy_event)(struct lcb_io_opt_st *iops,
+                                      void *event);
+                int (*update_event)(struct lcb_io_opt_st *iops,
+                                    lcb_socket_t sock,
+                                    void *event,
+                                    short flags,
+                                    void *cb_data,
+                                    void (*handler)(lcb_socket_t sock,
+                                                    short which,
+                                                    void *cb_data));
+                void (*delete_event)(struct lcb_io_opt_st *iops,
+                                     lcb_socket_t sock,
+                                     void *event);
+                void (*stop_event_loop)(struct lcb_io_opt_st *iops);
+                void (*run_event_loop)(struct lcb_io_opt_st *iops);
+            } v0;
+        } v;
     };
     typedef struct lcb_io_opt_st *lcb_io_opt_t;
 

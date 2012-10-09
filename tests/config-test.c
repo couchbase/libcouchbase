@@ -42,7 +42,7 @@ static void error_callback(lcb_t instance,
 static void vbucket_state_callback(lcb_server_t *server)
 {
     config_cnt++;
-    server->instance->io->stop_event_loop(server->instance->io);
+    server->instance->io->v.v0.stop_event_loop(server->instance->io);
 }
 
 struct rvbuf {
@@ -60,7 +60,7 @@ static void store_callback(lcb_t instance,
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
     store_cnt++;
-    instance->io->stop_event_loop(instance->io);
+    instance->io->v.v0.stop_event_loop(instance->io);
 
     (void)operation;
     (void)resp;
@@ -77,7 +77,7 @@ static void get_callback(lcb_t instance,
     rv->bytes = malloc(resp->v.v0.nbytes);
     memcpy((void *)rv->bytes, resp->v.v0.bytes, resp->v.v0.nbytes);
     rv->nbytes = resp->v.v0.nbytes;
-    instance->io->stop_event_loop(instance->io);
+    instance->io->v.v0.stop_event_loop(instance->io);
 
     (void)resp;
 }
@@ -125,17 +125,17 @@ static void smoke_test(void)
         err_exit("Failed to connect libcouchbase instance to server");
     }
     config_cnt = 0;
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(config_cnt == 20);
 
     config_cnt = 0;
     failover_node(mock, 0, NULL);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(config_cnt == 19);
 
     config_cnt = 0;
     respawn_node(mock, 0, NULL);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(config_cnt == 20);
 
     lcb_destroy(instance);
@@ -195,7 +195,7 @@ static void buffer_relocation_test(void)
     if (lcb_connect(instance) != LCB_SUCCESS) {
         err_exit("Failed to connect libcouchbase instance to server");
     }
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
 
     /* schedule SET operation */
 
@@ -221,7 +221,7 @@ static void buffer_relocation_test(void)
     /* it should never return LCB_NOT_MY_VBUCKET */
     while (config_cnt == 0 || store_cnt == 0) {
         memset(&rv, 0, sizeof(rv));
-        io->run_event_loop(io);
+        io->v.v0.run_event_loop(io);
         assert(err != LCB_NOT_MY_VBUCKET);
     }
 
@@ -232,7 +232,7 @@ static void buffer_relocation_test(void)
     getcmd.v.v0.nkey = nkey;
     err = lcb_get(instance, &rv, 1, getcmds);
     assert(err == LCB_SUCCESS);
-    io->run_event_loop(io);
+    io->v.v0.run_event_loop(io);
     assert(rv.error == LCB_SUCCESS);
     assert(memcmp(rv.bytes, "bar", 3) == 0);
     free((void *)rv.bytes);

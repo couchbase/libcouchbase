@@ -237,7 +237,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->last_error = LCB_SUCCESS;
     /* setup io iops! */
     obj->io = io;
-    obj->timeout.event = obj->io->create_timer(obj->io);
+    obj->timeout.event = obj->io->v.v0.create_timer(obj->io);
     if (obj->timeout.event == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
@@ -272,10 +272,10 @@ lcb_error_t lcb_create(lcb_t *instance,
 static void release_socket(lcb_t instance)
 {
     if (instance->sock != INVALID_SOCKET) {
-        instance->io->delete_event(instance->io, instance->sock, instance->event);
-        instance->io->destroy_event(instance->io, instance->event);
+        instance->io->v.v0.delete_event(instance->io, instance->sock, instance->event);
+        instance->io->v.v0.destroy_event(instance->io, instance->event);
         instance->event = NULL;
-        instance->io->close(instance->io, instance->sock);
+        instance->io->v.v0.close(instance->io, instance->sock);
         instance->sock = INVALID_SOCKET;
     }
 }
@@ -296,8 +296,8 @@ void lcb_destroy(lcb_t instance)
     release_socket(instance);
 
     if (instance->timeout.event != NULL) {
-        instance->io->delete_timer(instance->io, instance->timeout.event);
-        instance->io->destroy_timer(instance->io, instance->timeout.event);
+        instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
+        instance->io->v.v0.destroy_timer(instance->io, instance->timeout.event);
         instance->timeout.event = NULL;
     }
 
@@ -318,13 +318,10 @@ void lcb_destroy(lcb_t instance)
 
     if (instance->io) {
 #ifndef _WIN32
-        void *dlhandle = NULL;
-        if (instance->io->version == 1) {
-            dlhandle = instance->io->dlhandle;
-        }
+        void *dlhandle = instance->io->v.v0.dlhandle;
 #endif
-        if (instance->io->destructor) {
-            instance->io->destructor(instance->io);
+        if (instance->io->v.v0.destructor) {
+            instance->io->v.v0.destructor(instance->io);
         }
 #ifndef _WIN32
         if (dlhandle) {
@@ -809,7 +806,7 @@ static void lcb_instance_connerr(lcb_t instance,
 
     if (!instance->vbucket_config) {
         /* Initial connection, no pending commands, and connect timer */
-        instance->io->delete_timer(instance->io, instance->timeout.event);
+        instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
     } else {
         lcb_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
@@ -840,24 +837,24 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 
     if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
         lcb_ssize_t nw;
-        nw = instance->io->send(instance->io, instance->sock,
-                                instance->http_uri + instance->n_http_uri_sent,
-                                strlen(instance->http_uri) - instance->n_http_uri_sent,
-                                0);
+        nw = instance->io->v.v0.send(instance->io, instance->sock,
+                                     instance->http_uri + instance->n_http_uri_sent,
+                                     strlen(instance->http_uri) - instance->n_http_uri_sent,
+                                     0);
         if (nw == -1) {
             lcb_error_handler(instance, LCB_NETWORK_ERROR,
                               "Failed to send data to REST server");
-            instance->io->delete_event(instance->io, instance->sock,
-                                       instance->event);
+            instance->io->v.v0.delete_event(instance->io, instance->sock,
+                                            instance->event);
             return;
 
         }
 
         instance->n_http_uri_sent += (lcb_size_t)nw;
         if (instance->n_http_uri_sent == strlen(instance->http_uri)) {
-            instance->io->update_event(instance->io, instance->sock,
-                                       instance->event, LCB_READ_EVENT,
-                                       instance, vbucket_stream_handler);
+            instance->io->v.v0.update_event(instance->io, instance->sock,
+                                            instance->event, LCB_READ_EVENT,
+                                            instance, vbucket_stream_handler);
         }
     }
 
@@ -873,17 +870,17 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
         }
 
         avail = (buffer->size - buffer->avail);
-        nr = instance->io->recv(instance->io, instance->sock,
-                                buffer->data + buffer->avail, avail, 0);
+        nr = instance->io->v.v0.recv(instance->io, instance->sock,
+                                     buffer->data + buffer->avail, avail, 0);
         if (nr < 0) {
-            switch (instance->io->error) {
+            switch (instance->io->v.v0.error) {
             case EINTR:
                 break;
             case EWOULDBLOCK:
                 return ;
             default:
                 lcb_error_handler(instance, LCB_NETWORK_ERROR,
-                                  strerror(instance->io->error));
+                                  strerror(instance->io->v.v0.error));
                 return ;
             }
         } else if (nr == 0) {
@@ -952,9 +949,9 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 static void lcb_instance_connected(lcb_t instance)
 {
     instance->backup_idx = 0;
-    instance->io->update_event(instance->io, instance->sock,
-                               instance->event, LCB_RW_EVENT,
-                               instance, vbucket_stream_handler);
+    instance->io->v.v0.update_event(instance->io, instance->sock,
+                                    instance->event, LCB_RW_EVENT,
+                                    instance, vbucket_stream_handler);
 }
 
 static void lcb_instance_connect_handler(lcb_socket_t sock,
@@ -991,14 +988,14 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
         }
 
         retry = 0;
-        if (instance->io->connect(instance->io,
-                                  instance->sock,
-                                  instance->curr_ai->ai_addr,
-                                  (unsigned int)instance->curr_ai->ai_addrlen) == 0) {
+        if (instance->io->v.v0.connect(instance->io,
+                                       instance->sock,
+                                       instance->curr_ai->ai_addr,
+                                       (unsigned int)instance->curr_ai->ai_addrlen) == 0) {
             lcb_instance_connected(instance);
             return ;
         } else {
-            save_errno = instance->io->error;
+            save_errno = instance->io->v.v0.error;
             connstatus = lcb_connect_status(save_errno);
 
             switch (connstatus) {
@@ -1009,7 +1006,7 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
                 lcb_instance_connected(instance);
                 return ;
             case LCB_CONNECT_EINPROGRESS:
-                instance->io->update_event(instance->io,
+                instance->io->v.v0.update_event(instance->io,
                                            instance->sock,
                                            instance->event,
                                            LCB_WRITE_EVENT,
@@ -1033,7 +1030,7 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
                 } else {
                     char errinfo[1024];
                     snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
-                             strerror(instance->io->error));
+                             strerror(instance->io->v.v0.error));
                     lcb_instance_connerr(instance, LCB_CONNECT_ERROR, errinfo);
                     return ;
                 }
@@ -1104,7 +1101,7 @@ lcb_error_t lcb_connect(lcb_t instance)
     } while (error != 0);
 
     instance->curr_ai = instance->ai;
-    instance->event = instance->io->create_event(instance->io);
+    instance->event = instance->io->v.v0.create_event(instance->io);
     instance->last_error = LCB_SUCCESS;
     lcb_instance_connect_handler(INVALID_SOCKET, 0, instance);
 

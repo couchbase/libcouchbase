@@ -207,9 +207,7 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
         }
         return LCB_CLIENT_ENOMEM;
     } else {
-        if ((*io)->version > 0) {
-            (*io)->dlhandle = plugin.dlhandle;
-        }
+        (*io)->v.v0.dlhandle = plugin.dlhandle;
     }
 
     return LCB_SUCCESS;
