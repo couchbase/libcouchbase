@@ -247,6 +247,7 @@ extern "C" {
                 void *cookie;
                 int error;
                 void *dlhandle;
+                int need_cleanup;
 
                 void (*destructor)(struct lcb_io_opt_st *iops);
 

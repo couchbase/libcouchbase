@@ -63,6 +63,14 @@ extern "C" {
                                   const struct lcb_create_io_ops_st *options);
 
     /**
+     * Destory io ops instance.
+     * @param op ops structure
+     * @return LCB_SUCCESS on success
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t op);
+
+    /**
      * Create an instance of lcb.
      *
      * Example:

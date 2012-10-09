@@ -49,6 +49,15 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
 
     return LCB_SUCCESS;
 }
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
+{
+    if (io && io->v.v0.destructor) {
+        io->v.v0.destructor(io);
+    }
+    return LCB_SUCCESS;
+}
 #else
 
 typedef lcb_io_opt_t (*create_func)(struct event_base *base);
@@ -129,6 +138,22 @@ static void override_from_env(struct lcb_create_io_ops_st *options)
 }
 
 #undef USE_PLUGIN
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
+{
+    if (io) {
+        void *dlhandle = io->v.v0.dlhandle;
+        if (io->v.v0.destructor) {
+            io->v.v0.destructor(io);
+        }
+        if (dlhandle) {
+            dlclose(dlhandle);
+        }
+    }
+
+    return LCB_SUCCESS;
+}
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,

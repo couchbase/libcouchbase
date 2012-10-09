@@ -225,6 +225,7 @@ lcb_error_t lcb_create(lcb_t *instance,
             return err;
         }
         io = ops;
+        io->v.v0.need_cleanup = 1;
     }
 
     if (host == NULL) {
@@ -351,21 +352,9 @@ void lcb_destroy(lcb_t instance)
     hashset_destroy(instance->http_requests);
     free_backup_nodes(instance);
     free(instance->servers);
-
-    if (instance->io) {
-#ifndef _WIN32
-        void *dlhandle = instance->io->v.v0.dlhandle;
-#endif
-        if (instance->io->v.v0.destructor) {
-            instance->io->v.v0.destructor(instance->io);
-        }
-#ifndef _WIN32
-        if (dlhandle) {
-            dlclose(dlhandle);
-        }
-#endif
+    if (instance->io->v.v0.need_cleanup) {
+        lcb_destroy_io_ops(instance->io);
     }
-
     free(instance->vbucket_stream.input.data);
     free(instance->vbucket_stream.chunk.data);
     free(instance->vbucket_stream.header);

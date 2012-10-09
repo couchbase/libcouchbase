@@ -342,6 +342,9 @@ lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, struct event_base *bas
     /* setup io iops! */
     ret->version = 0;
     ret->v.v0.dlhandle = NULL;
+    /* consider that struct isn't allocated by the library,
+     * `need_cleanup' flag might be set in lcb_create() */
+    ret->v.v0.need_cleanup = 0;
     ret->v.v0.recv = lcb_io_recv;
     ret->v.v0.send = lcb_io_send;
     ret->v.v0.recvv = lcb_io_recvv;
