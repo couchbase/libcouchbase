@@ -178,7 +178,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     const char *bucket = NULL;
     struct lcb_io_opt_st *io = NULL;
     char buffer[1024];
-    lcb_ssize_t offset;
+    lcb_ssize_t offset = 0;
     lcb_type_t type = LCB_TYPE_BUCKET;
     lcb_t obj;
 
@@ -276,6 +276,8 @@ lcb_error_t lcb_create(lcb_t *instance,
     case LCB_TYPE_CLUSTER:
         offset = snprintf(buffer, sizeof(buffer), "GET /pools/ HTTP/1.1\r\n");
         break;
+    default:
+        return LCB_EINVAL;
     }
 
     if (user && passwd) {
@@ -286,7 +288,6 @@ lcb_error_t lcb_create(lcb_t *instance,
             lcb_destroy(obj);
             return LCB_EINTERNAL;
         }
-
         obj->username = strdup(user);
         obj->password = strdup(passwd);
         offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,

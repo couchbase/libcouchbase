@@ -526,11 +526,12 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     case LCB_HTTP_TYPE_VIEW:
         {
             lcb_server_t *server;
-            if (instance->type == LCB_TYPE_BUCKET) {
-                /* pick random server */
-                nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
-                server = instance->servers + nn;
+            if (instance->type != LCB_TYPE_BUCKET) {
+                return lcb_synchandler_return(instance, LCB_EINVAL);
             }
+            /* pick random server */
+            nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
+            server = instance->servers + nn;
             if (!server->couch_api_base) {
                 lcb_http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
