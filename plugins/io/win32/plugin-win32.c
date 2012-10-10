@@ -414,7 +414,7 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 
 static void lcb_destroy_io_opts(struct lcb_io_opt_st *instance)
 {
-    free(instance->cookie);
+    free(instance->v.v0.cookie);
     free(instance);
 }
 
@@ -434,6 +434,9 @@ struct lcb_io_opt_st *lcb_create_winsock_io_opts(void) {
 
     // setup io iops!
     ret->version = 0;
+    /* consider that struct isn't allocated by the library,
+     * `need_cleanup' flag might be set in lcb_create() */
+    ret->v.v0.need_cleanup = 0;
     ret->v.v0.recv = lcb_io_recv;
     ret->v.v0.send = lcb_io_send;
     ret->v.v0.recvv = lcb_io_recvv;
@@ -454,7 +457,7 @@ struct lcb_io_opt_st *lcb_create_winsock_io_opts(void) {
     ret->v.v0.destructor = lcb_destroy_io_opts;
     ret->v.v0.cookie = calloc(1, sizeof(struct winsock_io_cookie));
 
-    if (ret->cookie == NULL) {
+    if (ret->v.v0.cookie == NULL) {
         free(ret);
         ret = NULL;
     }
