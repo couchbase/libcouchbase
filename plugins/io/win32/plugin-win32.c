@@ -102,10 +102,10 @@ static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
     (void)flags;
 
     if (WSARecv(sock, &wsabuf, 1, &nr, &fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->error = getError();
+        iops->v.v0.error = getError();
 
         // recv on a closed socket should return 0
-        if (iops->error == ECONNRESET) {
+        if (iops->v.v0.error == ECONNRESET) {
             return 0;
         }
         return -1;
@@ -131,10 +131,10 @@ static lcb_ssize_t lcb_io_recvv(struct lcb_io_opt_st *iops,
 
     if (WSARecv(sock, wsabuf, iov[1].iov_len ? 2 : 1,
                 &nr, &fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->error = getError();
+        iops->v.v0.error = getError();
 
         // recv on a closed socket should return 0
-        if (iops->error == ECONNRESET) {
+        if (iops->v.v0.error == ECONNRESET) {
             return 0;
         }
         return -1;
@@ -156,7 +156,7 @@ static lcb_ssize_t lcb_io_send(struct lcb_io_opt_st *iops,
     (void)flags;
 
     if (WSASend(sock, &wsabuf, 1, &nw, fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->error = getError();
+        iops->v.v0.error = getError();
         return -1;
     }
 
@@ -180,7 +180,7 @@ static lcb_ssize_t lcb_io_sendv(struct lcb_io_opt_st *iops,
 
     if (WSASend(sock, wsabuf, iov[1].iov_len ? 2 : 1,
                 &nw, fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->error = getError();
+        iops->v.v0.error = getError();
         return -1;
     }
 
@@ -194,11 +194,11 @@ static lcb_socket_t lcb_io_socket(struct lcb_io_opt_st *iops,
 {
     lcb_socket_t sock = WSASocket(domain, type, protocol, NULL, 0, 0);
     if (sock == INVALID_SOCKET) {
-        iops->error = getError();
+        iops->v.v0.error = getError();
     } else {
         u_long noblock = 1;
         if (ioctlsocket(sock, FIONBIO, &noblock) == SOCKET_ERROR) {
-            iops->error = getError();
+            iops->v.v0.error = getError();
             closesocket(sock);
             sock = INVALID_SOCKET;
         }
@@ -221,7 +221,7 @@ static int lcb_io_connect(struct lcb_io_opt_st *iops,
 {
     int ret = WSAConnect(sock, name, (int)namelen, NULL, NULL, NULL, NULL);
     if (ret == SOCKET_ERROR) {
-        iops->error = getError();
+        iops->v.v0.error = getError();
     }
     return ret;
 }
@@ -230,7 +230,7 @@ static void *lcb_io_create_event(struct lcb_io_opt_st *iops)
 {
     struct winsock_event *ret = calloc(1, sizeof(*ret));
     if (ret != NULL) {
-        link_event(iops->cookie, ret);
+        link_event(iops->v.v0.cookie, ret);
     }
 
     return ret;
@@ -258,7 +258,7 @@ static void lcb_io_destroy_event(struct lcb_io_opt_st *iops,
                                  void *event)
 {
     struct winsock_event *ev = event;
-    unlink_event(iops->cookie, event);
+    unlink_event(iops->v.v0.cookie, event);
     free(ev);
 }
 
@@ -277,7 +277,7 @@ void *lcb_io_create_timer(struct lcb_io_opt_st *iops)
     struct winsock_timer *timer;
     timer = calloc(1, sizeof(*timer));
     if (timer != NULL) {
-        link_timer(iops->cookie, timer);
+        link_timer(iops->v.v0.cookie, timer);
     }
     return timer;
 }
@@ -286,7 +286,7 @@ void lcb_io_destroy_timer(struct lcb_io_opt_st *iops,
                           void *timer)
 {
     struct winsock_timer *tm = timer;
-    unlink_timer(iops->cookie, tm);
+    unlink_timer(iops->v.v0.cookie, tm);
     free(tm);
 }
 
@@ -315,13 +315,13 @@ int lcb_io_update_timer(struct lcb_io_opt_st *iops,
 
 static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 {
-    struct winsock_io_cookie *instance = iops->cookie;
+    struct winsock_io_cookie *instance = iops->v.v0.cookie;
     instance->event_loop = 0;
 }
 
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
-    struct winsock_io_cookie *instance = iops->cookie;
+    struct winsock_io_cookie *instance = iops->v.v0.cookie;
     int nevents;
     struct winsock_event *n;
 
@@ -433,25 +433,26 @@ struct lcb_io_opt_st *lcb_create_winsock_io_opts(void) {
     }
 
     // setup io iops!
-    ret->recv = lcb_io_recv;
-    ret->send = lcb_io_send;
-    ret->recvv = lcb_io_recvv;
-    ret->sendv = lcb_io_sendv;
-    ret->socket = lcb_io_socket;
-    ret->close = lcb_io_close;
-    ret->connect = lcb_io_connect;
-    ret->delete_event = lcb_io_delete_event;
-    ret->destroy_event = lcb_io_destroy_event;
-    ret->create_event = lcb_io_create_event;
-    ret->update_event = lcb_io_update_event;
-    ret->delete_timer = lcb_io_delete_timer;
-    ret->destroy_timer = lcb_io_destroy_timer;
-    ret->create_timer = lcb_io_create_timer;
-    ret->update_timer = lcb_io_update_timer;
-    ret->run_event_loop = lcb_io_run_event_loop;
-    ret->stop_event_loop = lcb_io_stop_event_loop;
-    ret->destructor = lcb_destroy_io_opts;
-    ret->cookie = calloc(1, sizeof(struct winsock_io_cookie));
+    ret->version = 0;
+    ret->v.v0.recv = lcb_io_recv;
+    ret->v.v0.send = lcb_io_send;
+    ret->v.v0.recvv = lcb_io_recvv;
+    ret->v.v0.sendv = lcb_io_sendv;
+    ret->v.v0.socket = lcb_io_socket;
+    ret->v.v0.close = lcb_io_close;
+    ret->v.v0.connect = lcb_io_connect;
+    ret->v.v0.delete_event = lcb_io_delete_event;
+    ret->v.v0.destroy_event = lcb_io_destroy_event;
+    ret->v.v0.create_event = lcb_io_create_event;
+    ret->v.v0.update_event = lcb_io_update_event;
+    ret->v.v0.delete_timer = lcb_io_delete_timer;
+    ret->v.v0.destroy_timer = lcb_io_destroy_timer;
+    ret->v.v0.create_timer = lcb_io_create_timer;
+    ret->v.v0.update_timer = lcb_io_update_timer;
+    ret->v.v0.run_event_loop = lcb_io_run_event_loop;
+    ret->v.v0.stop_event_loop = lcb_io_stop_event_loop;
+    ret->v.v0.destructor = lcb_destroy_io_opts;
+    ret->v.v0.cookie = calloc(1, sizeof(struct winsock_io_cookie));
 
     if (ret->cookie == NULL) {
         free(ret);
