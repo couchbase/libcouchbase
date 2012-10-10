@@ -131,7 +131,7 @@ extern "C" {
          *      NULL for bucket means "default" bucket
          * * LCB_TYPE_CLUSTER
          *      the bucket argument ignored and all data commands will
-         *      return LCB_NOT_SUPPORTED
+         *      return LCB_EBADHANDLE
          */
         lcb_type_t type;
         /** The couchbase host */
