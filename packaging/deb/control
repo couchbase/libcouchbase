@@ -28,7 +28,7 @@ Description: library for the Couchbase protocol (libevent backend)
 Package: libcouchbase-libevent-dev
 Section: libdevel
 Architecture: any
-Depends: libcouchbase2-libevent (= ${binary:Version}), ${misc:Depends}
+Depends: libcouchbase-dev (= ${binary:Version}), libcouchbase2-libevent (= ${binary:Version}), ${misc:Depends}
 Description: library for the Couchbase protocol (libevent backend), development files
  libcouchbase is a library implementing Couchbase protocol.
  .
@@ -45,7 +45,7 @@ Description: library for the Couchbase protocol (libev backend)
 Package: libcouchbase-libev-dev
 Section: libdevel
 Architecture: any
-Depends: libcouchbase2-libev (= ${binary:Version}), ${misc:Depends}
+Depends: libcouchbase-dev (= ${binary:Version}), libcouchbase2-libev (= ${binary:Version}), ${misc:Depends}
 Description: library for the Couchbase protocol (libev backend), development files
  libcouchbase is a library implementing Couchbase protocol.
  .
