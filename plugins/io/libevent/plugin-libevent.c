@@ -23,6 +23,7 @@
  */
 
 #include "config.h"
+#include <event.h>
 #include "libevent_io_opts.h"
 #include <errno.h>
 #include <sys/types.h>
@@ -329,8 +330,9 @@ static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, struct event_base *base)
+lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, void *arg)
 {
+    struct event_base *base = arg;
     struct lcb_io_opt_st *ret = calloc(1, sizeof(*ret));
     struct libevent_cookie *cookie = calloc(1, sizeof(*cookie));
     if (ret == NULL || cookie == NULL) {

@@ -27,7 +27,6 @@
 #define LIBCOUCHBASE_LIBEV_IO_OPTS_H 1
 
 #include <libcouchbase/couchbase.h>
-#include <ev.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,13 +36,14 @@ extern "C" {
      * Create an instance of an event handler that utilize libev for
      * event notification.
      *
-     * @param loop the event loop to hook use (please note that you shouldn't
-     *             reference the event loop from multiple threads)
+     * @param loop the event loop (struct ev_loop *) to hook use (please
+     *             note that you shouldn't reference the event loop from
+     *             multiple threads)
      * @param io a pointer to a newly created and initialized event handler
      * @return status of the operation
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_create_libev_io_opts(lcb_io_opt_t *io, struct ev_loop *loop);
+    lcb_error_t lcb_create_libev_io_opts(lcb_io_opt_t *io, void *loop);
 #ifdef __cplusplus
 }
 #endif

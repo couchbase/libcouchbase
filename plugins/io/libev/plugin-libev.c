@@ -21,6 +21,11 @@
  * @author Sergey Avseyev
  */
 #include "config.h"
+#ifdef HAVE_LIBEV_EV_H
+#include <libev/ev.h>
+#else
+#include <ev.h>
+#endif
 #include "libev_io_opts.h"
 #include <errno.h>
 #include <sys/types.h>
@@ -338,8 +343,9 @@ static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_libev_io_opts(lcb_io_opt_t *io, struct ev_loop *loop)
+lcb_error_t lcb_create_libev_io_opts(lcb_io_opt_t *io, void *arg)
 {
+    struct ev_loop *loop = arg;
     struct lcb_io_opt_st *ret = calloc(1, sizeof(*ret));
     struct libev_cookie *cookie = calloc(1, sizeof(*cookie));
     if (ret == NULL || cookie == NULL) {

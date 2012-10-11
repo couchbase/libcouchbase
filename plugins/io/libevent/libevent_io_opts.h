@@ -27,7 +27,6 @@
 #define LIBCOUCHBASE_LIBEVENT_IO_OPTS_H 1
 
 #include <libcouchbase/couchbase.h>
-#include <event.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,13 +36,14 @@ extern "C" {
      * Create an instance of an event handler that utilize libevent for
      * event notification.
      *
-     * @param base the event base to hook use (please note that you shouldn't
-     *             reference the event base from multiple threads)
+     * @param base the event base (struct event_base *) to hook use (please
+     *             note that you shouldn't reference the event base from
+     *             multiple threads)
      * @param io a pointer to a newly created and initialized event handler
      * @return status of the operation
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, struct event_base *base);
+    lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, void *base);
 
 #ifdef __cplusplus
 }

@@ -178,10 +178,14 @@ AC_ARG_WITH([couchbasemock],
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
                        ws2tcpip.h winsock2.h event.h stdint.h
-                       sys/uio.h sys/types.h fcntl.h dlfcn.h])
+                       sys/uio.h sys/types.h fcntl.h dlfcn.h
+                       ev.h libev/ev.h])
 
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
+
+AS_IF([test "x$ac_cv_header_libev_ev_h" = "xyes"],
+      [AC_DEFINE([HAVE_LIBEV_EV_H], [1], [Have non-standard place for libev header])])
 
 dnl Allow to build library without event library dependency, which is useful
 dnl if the application already have one.
@@ -217,7 +221,11 @@ AC_CACHE_CHECK([for libev3], [ac_cv_have_libev3],
     LIBS=-lev
     AC_TRY_LINK([
       #include <sys/types.h>
+      #ifdef HAVE_LIBEV_EV_H
+      #include <libev/ev.h>
+      #else
       #include <ev.h>
+      #endif
             ],[
       struct ev_loop *loop = ev_loop_new(EVFLAG_AUTO|EVFLAG_NOENV);
       ev_loop(loop, 0);
@@ -238,7 +246,11 @@ AC_CACHE_CHECK([for libev4], [ac_cv_have_libev4],
     LIBS=-lev
     AC_TRY_LINK([
       #include <sys/types.h>
+      #ifdef HAVE_LIBEV_EV_H
+      #include <libev/ev.h>
+      #else
       #include <ev.h>
+      #endif
             ],[
       struct ev_loop *loop = ev_loop_new(EVFLAG_AUTO|EVFLAG_NOENV);
       ev_run(loop, 0);
