@@ -125,11 +125,9 @@ static void setup_lcb_http_resp_t(lcb_http_resp_t *resp,
 
 static int request_valid(lcb_http_request_t req)
 {
-    switch (req->instance->type) {
-    case LCB_TYPE_BUCKET:
+    if (req->server) {
         return hashset_is_member(req->server->http_requests, req);
-    case LCB_TYPE_CLUSTER:
-    default:
+    } else {
         return hashset_is_member(req->instance->http_requests, req);
     }
 }
@@ -780,7 +778,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->parser_settings.on_headers_complete = (http_cb)http_parser_headers_complete_cb;
 
     /* Store request reference in the server struct */
-    if (instance->type == LCB_TYPE_BUCKET) {
+    if (req->server) {
         hashset_add(req->server->http_requests, req);
     } else {
         hashset_add(instance->http_requests, req);
@@ -804,19 +802,17 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
 LIBCOUCHBASE_API
 void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
 {
-    lcb_size_t ii;
-    if (instance->type == LCB_TYPE_BUCKET) {
+    if (hashset_is_member(instance->http_requests, request)) {
+        request->cancelled = 1;
+        hashset_remove(instance->http_requests, request);
+    } else {
+        lcb_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
             lcb_server_t *server = instance->servers + ii;
             if (hashset_is_member(server->http_requests, request)) {
                 request->cancelled = 1;
                 hashset_remove(server->http_requests, request);
             }
-        }
-    } else {
-        if (hashset_is_member(instance->http_requests, request)) {
-            request->cancelled = 1;
-            hashset_remove(instance->http_requests, request);
         }
     }
 }
