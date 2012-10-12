@@ -31,7 +31,7 @@
 #include <stddef.h>
 #include <time.h>
 
-#define LCB_VERSION_STRING "2.0.0beta"
+#define LCB_VERSION_STRING "2.0.0beta2"
 #define LCB_VERSION 0x020000
 #define LCB_VERSION_CHANGESET unknown
 
@@ -41,7 +41,7 @@ extern "C" {
 
 
 #ifdef _WIN32
-#define PACKAGE_STRING "libcouchbase 2.0.0beta"
+#define PACKAGE_STRING "libcouchbase 2.0.0beta2"
 #include <winsock2.h>
 #include <BaseTsd.h>
     typedef SIZE_T lcb_size_t;

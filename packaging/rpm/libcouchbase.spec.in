@@ -132,6 +132,67 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libev.so
 
 %changelog
+
+* Fri Oct 12 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta2
+[Sergey Avseyev]
+- Allow to disable CXX targets
+- Allow to disable examples
+- Implement libev plugin
+- libeventdirect example is bound to libevent2
+- Use environment variables to pick plugin
+- Remove tests/loopfactory
+- Reformat code
+- Fixup Mark's comments on libev plugin
+- libev3 comatibility
+- Cleanup HTTP callbacks
+- Split packages for debian
+- Fix password memory leak in http.c
+- http.c:lcb_make_http_request doesn't require content_type
+- Allow to install both libraries on the same system.
+- Fix libev3 support
+- Remove test artifacts from plugins
+- Allow to build library without dependencies
+- Remove internal.h dependency from plugins
+- Update create functions in plugins
+- Disable libevent embedding
+- Fix libevent v1 builds
+- Update deb packages
+- CCBC-105 breakout event loop in default error_callback
+- Upload minimal working example
+- Fix windows datatypes
+- lcb_create: replace assert() with error code
+- example/minimal: put new line after the value
+- Fix invalid memory access in cbc tool
+- Fix buffer size in lcb_make_http_request
+- Use versioned arguments in lcb_make_http_request
+- Fix memory leak after unsuccessful connection
+- Fix compilation errors
+- Fix gcc warnings in tests
+- Really fix gcc warnings in tests
+- Make IO struct versioned
+- Allow to connect to instance without specifying bucket
+- Fix SEGFAULT if IO struct is allocated not by the lcb_create()
+- Update error code in the comment for lcb_t.type
+- Fix compilation warnings
+- Make win32 plugin versioned
+- Fix windows build
+- Use more robust check to pick a set of the HTTP requests
+- Plugin dev files also depend on libcouchbase-dev
+- Update lcb_strerror() for LCB_EBADHANDLE code
+- Fix handle verification condition
+- Search ev.h also in ${includedir}/libev
+- Update RPM spec: split packages
+
+[Trond Norbye]
+- lcb_connect() should honor the syncmode setting
+- Add an example on how to use the syncmode
+- add event example
+- Move examples to different sub directories
+- CCBC-103: Fix linked event/timer lists for win32
+- Add a new interface version for creating ioops
+- Add support for raw http requests
+- Move win32 iofactory into the same file
+
 * Thu Sep 13 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta
 [Mark Nunberg]
 - Make tests more modular
