@@ -84,6 +84,8 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "Out of memory on the client";
     case LCB_CLIENT_ETMPFAIL:
         return "Temporary failure on the client. Try again later";
+    case LCB_EBADHANDLE:
+        return "Invalid handle type. The requested operation isn't allowed for given type.";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }
