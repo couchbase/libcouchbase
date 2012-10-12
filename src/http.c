@@ -497,7 +497,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     }
     switch (instance->type) {
     case LCB_TYPE_CLUSTER:
-        if (type == LCB_HTTP_TYPE_MANAGEMENT) {
+        if (type != LCB_HTTP_TYPE_MANAGEMENT) {
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
         }
         break;
