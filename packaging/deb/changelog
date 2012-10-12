@@ -1,3 +1,11 @@
+libcouchbase (1.0.7) stable; urgency=low
+
+  [Sergey Avseyev]
+  * Extract cbc tool into separate deb package
+  * Extract cbc tool into separate rpm package
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Fri, 12 Oct 2012 11:45:51 -0700
+
 libcouchbase (1.0.6) stable; urgency=low
 
   [Sergey Avseyev]

@@ -75,6 +75,11 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase_libevent.so
 
 %changelog
+* Fri Oct 12 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.7
+[Sergey Avseyev]
+- Extract cbc tool into separate deb package
+- Extract cbc tool into separate rpm package
+
 * Thu Aug 30 2012 Sergey Avseyev <sergey@couchbase.com> - 1.0.6
 [Sergey Avseyev]
 - CCBC-92 release ringbuffer in libcouchbase_purge_single_server
