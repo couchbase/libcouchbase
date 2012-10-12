@@ -24,6 +24,13 @@ Requires: %{name}1, libvbucket1 >= 1.8.0.2, libevent >= 1.4
 %description -n %{name}1
 This is the client and protocol library for Couchbase project.
 
+%package -n %{name}1-bin
+Group: Development/Tools
+Summary: Couchbase Client Tools
+Requires: %{name}1
+%description -n %{name}1-bin
+This is the CLI tools Couchbase project.
+
 %package devel
 Group: Development/Libraries
 Summary: Couchbase Client & Protocol Library - Header files
@@ -51,9 +58,12 @@ Development files for the Couchbase Client & Protocol Library
 
 %files -n %{name}1
 %defattr(-, root, root)
-%{_bindir}/cbc*
 %{_libdir}/libcouchbase.so.*
 %{_libdir}/libcouchbase_libevent.so.*
+
+%files -n %{name}1-bin
+%defattr(-, root, root)
+%{_bindir}/cbc*
 
 %files devel
 %defattr(-, root, root)
