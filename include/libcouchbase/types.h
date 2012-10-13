@@ -137,7 +137,7 @@ extern "C" {
     struct  lcb_tap_filter_st;
     typedef struct lcb_tap_filter_st *lcb_tap_filter_t;
 
-#ifdef _WIN32
+#if defined(_WIN32) && defined(SOCKET)
     typedef SOCKET lcb_socket_t;
 #else
     typedef int lcb_socket_t;

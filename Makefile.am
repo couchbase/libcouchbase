@@ -136,13 +136,13 @@ libcouchbase_la_SOURCES += \
 libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_DEBUG_NOCTX
 endif
 
+libcouchbase_la_SOURCES += src/iofactory.c
 if HAVE_WINSOCK2
 if !HAVE_LIBEVENT
 libcouchbase_la_SOURCES += plugins/io/win32/plugin-win32.c
 libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/win32
 endif
 else
-libcouchbase_la_SOURCES += src/iofactory.c
 if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c

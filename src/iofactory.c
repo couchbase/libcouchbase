@@ -17,7 +17,7 @@
 
 #include "internal.h"
 
-#ifdef WIN32
+#ifdef _WIN32
 /*
  * For windows we're currently only supporting the single IO method
  * bundle.
