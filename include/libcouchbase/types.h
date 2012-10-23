@@ -118,15 +118,15 @@ extern "C" {
         LCB_HTTP_TYPE_VIEW = 0,
         LCB_HTTP_TYPE_MANAGEMENT = 1,
         LCB_HTTP_TYPE_RAW = 2,
-        LCB_HTTP_TYPE_MAX
+        LCB_HTTP_TYPE_MAX = 3
     } lcb_http_type_t;
 
     typedef enum {
         LCB_HTTP_METHOD_GET = 0,
-        LCB_HTTP_METHOD_POST,
-        LCB_HTTP_METHOD_PUT,
-        LCB_HTTP_METHOD_DELETE,
-        LCB_HTTP_METHOD_MAX
+        LCB_HTTP_METHOD_POST = 1,
+        LCB_HTTP_METHOD_PUT = 2,
+        LCB_HTTP_METHOD_DELETE = 3,
+        LCB_HTTP_METHOD_MAX = 4
     } lcb_http_method_t;
 
     typedef enum {
@@ -181,9 +181,9 @@ extern "C" {
 
     typedef enum {
         LCB_VBUCKET_STATE_ACTIVE = 1,   /* Actively servicing a vbucket. */
-        LCB_VBUCKET_STATE_REPLICA,      /* Servicing a vbucket as a replica only. */
-        LCB_VBUCKET_STATE_PENDING,      /* Pending active. */
-        LCB_VBUCKET_STATE_DEAD          /* Not in use, pending deletion. */
+        LCB_VBUCKET_STATE_REPLICA = 2,  /* Servicing a vbucket as a replica only. */
+        LCB_VBUCKET_STATE_PENDING = 3,  /* Pending active. */
+        LCB_VBUCKET_STATE_DEAD = 4      /* Not in use, pending deletion. */
     } lcb_vbucket_state_t;
 
     typedef enum {
