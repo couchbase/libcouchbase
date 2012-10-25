@@ -166,12 +166,12 @@ extern "C" {
         /**
          * The instance of libcouchbase can't be used in this context
          */
-        LCB_EBADHANDLE = 0x1c,
+        LCB_EBADHANDLE = 0x1c
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        LCB_MAX_ERROR_VAL = 0x1d
+        , LCB_MAX_ERROR_VAL = 0x1d
 #endif
     } lcb_error_t;
 
