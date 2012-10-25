@@ -139,6 +139,7 @@ uninstall:
          $(INSTALL)\include\libcouchbase\callbacks.h \
          $(INSTALL)\include\libcouchbase\configuration.h \
          $(INSTALL)\include\libcouchbase\couchbase.h \
+         $(INSTALL)\include\libcouchbase\error.h \
          $(INSTALL)\include\libcouchbase\libevent_io_opts.h \
          $(INSTALL)\include\libcouchbase\timings.h \
          $(INSTALL)\include\libcouchbase\types.h \

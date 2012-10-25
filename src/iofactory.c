@@ -78,7 +78,7 @@ static lcb_error_t get_create_func(const char *image,
 {
     void *dlhandle = dlopen(image, RTLD_NOW | RTLD_LOCAL);
     if (dlhandle == NULL) {
-        return LCB_ERROR;
+        return LCB_DLOPEN_FAILED;
     }
 
     memset(plugin, 0, sizeof(*plugin));
@@ -87,7 +87,7 @@ static lcb_error_t get_create_func(const char *image,
     if (plugin->func.voidptr == NULL) {
         dlclose(dlhandle);
         dlhandle = NULL;
-        return LCB_ERROR;
+        return LCB_DLSYM_FAILED;
     } else {
         plugin->dlhandle = dlhandle;
     }

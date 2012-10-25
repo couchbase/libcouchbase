@@ -64,8 +64,10 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "Too busy. Try again later";
     case LCB_ETMPFAIL:
         return "Temporary failure. Try again later";
-    case LCB_LIBEVENT_ERROR:
-        return "Problem using libevent";
+    case LCB_DLOPEN_FAILED:
+        return "Failed to open shared object";
+    case LCB_DLSYM_FAILED:
+        return "Failed to locate the requested symbol in the shared object";
     case LCB_NETWORK_ERROR:
         return "Network error";
     case LCB_UNKNOWN_HOST:

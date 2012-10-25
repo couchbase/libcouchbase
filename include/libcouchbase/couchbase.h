@@ -16,7 +16,34 @@
  */
 
 /**
- * @todo Add documentation about the library (how it works etc)
+ * libcouchbase is a high performant client library that allows you to
+ * access your Couchbase cluster from your application. It is a so-called
+ * "smart client" in the sence that it understands the topology of the
+ * cluster and properly handle any change of cluster topology.
+ *
+ * Clients of libcouchbase should include &lt;libcouchbase/couchbase.h&gt;
+ * and link with -lcouchbase.
+ *
+ * If you look at the API provided by libcouchbase you'll see that most
+ * of the functions follows the convention that they return the error
+ * of the type lcb_error_t, but the documentation of the API call does
+ * not tell you which error code you may expect from each call. The
+ * reason for this is that the library is currently under rapid development
+ * where we continue to add new error codes, and we would most likely
+ * get the documentation obsolete if we kept the error codes in there.
+ * My recommendation to you as a user is therefore that you handle
+ * all of errors you know you can handle gracefully, and then add a
+ * "catch-all" section to the end where you catch all errors you don't
+ * know of. Note that we won't give you a new value for "success", so
+ * as a bare minimum you could do:
+ *
+ * <pre>
+ *   if (lcb_create(&amp;instance, NULL) != LCB_SUCCESS) {
+ *     .. handle error
+ * </pre>
+ *
+ * You should look in &lg;libcouchbase/error.h&gt; for a description
+ * of the current error codes.
  *
  * @author Trond Norbye
  */
@@ -28,6 +55,7 @@
 
 #include <libcouchbase/configuration.h>
 #include <libcouchbase/visibility.h>
+#include <libcouchbase/error.h>
 #include <libcouchbase/types.h>
 #include <libcouchbase/arguments.h>
 #include <libcouchbase/compat.h>

@@ -16,8 +16,8 @@
  */
 #include "config.h"
 #include <gtest/gtest.h>
+#define LIBCOUCHBASE_INTERNAL 1
 #include <libcouchbase/couchbase.h>
-
 
 class Strerror : public ::testing::Test
 {
@@ -31,4 +31,12 @@ TEST_F(Strerror, testNoCrash)
     }
 }
 
-// @todo add error test cases that verifies the error messages!
+TEST_F(Strerror, allCodesDocumented)
+{
+    const char *generic = lcb_strerror(NULL, (lcb_error_t)-1);
+    ASSERT_NE((const char*)NULL, generic);
+    for (int ii = 0; ii < LCB_MAX_ERROR_VAL; ++ii) {
+        EXPECT_STRNE(generic,
+                     lcb_strerror(NULL, (lcb_error_t)ii));
+    }
+}

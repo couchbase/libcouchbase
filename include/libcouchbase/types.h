@@ -51,46 +51,6 @@ extern "C" {
 
     typedef lcb_uint8_t lcb_datatype_t;
 
-    /**
-     * Define the error codes in use by the library
-     */
-    typedef enum {
-        LCB_SUCCESS = 0x00,
-        LCB_AUTH_CONTINUE = 0x01,
-        LCB_AUTH_ERROR = 0x02,
-        LCB_DELTA_BADVAL = 0x03,
-        LCB_E2BIG = 0x04,
-        LCB_EBUSY = 0x05,
-        LCB_EINTERNAL = 0x06,
-        LCB_EINVAL = 0x07,
-        LCB_ENOMEM = 0x08,
-        LCB_ERANGE = 0x09,
-        LCB_ERROR = 0x0a,
-        LCB_ETMPFAIL = 0x0b,
-        LCB_KEY_EEXISTS = 0x0c,
-        LCB_KEY_ENOENT = 0x0d,
-        LCB_LIBEVENT_ERROR = 0x0e,
-        LCB_NETWORK_ERROR = 0x0f,
-        LCB_NOT_MY_VBUCKET = 0x10,
-        LCB_NOT_STORED = 0x11,
-        LCB_NOT_SUPPORTED = 0x12,
-        LCB_UNKNOWN_COMMAND = 0x13,
-        LCB_UNKNOWN_HOST = 0x14,
-        LCB_PROTOCOL_ERROR = 0x15,
-        LCB_ETIMEDOUT = 0x16,
-        LCB_CONNECT_ERROR = 0x17,
-        LCB_BUCKET_ENOENT = 0x18,
-        LCB_CLIENT_ENOMEM = 0x19,
-        LCB_CLIENT_ETMPFAIL = 0x20,
-        LCB_EBADHANDLE = 0x21
-    } lcb_error_t;
-
-#define lcb_is_error_enomem(a) ((a == LCB_CLIENT_ENOMEM) || \
-                                (a == LCB_ENOMEM))
-
-#define lcb_is_error_etmpfail(a) ((a == LCB_CLIENT_ETMPFAIL) || \
-                                  (a == LCB_ETMPFAIL))
-
     typedef enum {
         LCB_CONFIGURATION_NEW = 0x00,
         LCB_CONFIGURATION_CHANGED = 0x01,
