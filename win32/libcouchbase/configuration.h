@@ -29,45 +29,30 @@
 #endif
 
 #include <stddef.h>
-#include <time.h>
 
 #define LCB_VERSION_STRING "2.0.0beta2"
 #define LCB_VERSION 0x020000
 #define LCB_VERSION_CHANGESET unknown
 
+#define PACKAGE_STRING "libcouchbase 2.0.0beta2"
+#include <winsock2.h>
+#include <BaseTsd.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-#ifdef _WIN32
-#define PACKAGE_STRING "libcouchbase 2.0.0beta2"
-#include <winsock2.h>
-#include <BaseTsd.h>
-    typedef SIZE_T lcb_size_t;
-    typedef SSIZE_T lcb_ssize_t;
-    typedef __int64 lcb_int64_t;
-    typedef __int32 lcb_int32_t;
-    typedef unsigned __int8 lcb_uint8_t;
-    typedef unsigned __int16 lcb_vbucket_t;
-    typedef unsigned __int16 lcb_uint16_t;
-    typedef unsigned __int32 lcb_uint32_t;
-    typedef unsigned __int64 lcb_cas_t;
-    typedef unsigned __int64 lcb_uint64_t;
-    typedef time_t lcb_time_t;
-#else
-    typedef int64_t lcb_int64_t;
-    typedef int32_t lcb_int32_t;
-    typedef size_t lcb_size_t;
-    typedef ssize_t lcb_ssize_t;
-    typedef uint16_t lcb_vbucket_t;
-    typedef uint8_t lcb_uint8_t;
-    typedef uint16_t lcb_uint16_t;
-    typedef uint32_t lcb_uint32_t;
-    typedef uint64_t lcb_cas_t;
-    typedef uint64_t lcb_uint64_t;
-    typedef time_t lcb_time_t;
-#endif
+typedef SIZE_T lcb_size_t;
+typedef SSIZE_T lcb_ssize_t;
+typedef __int64 lcb_int64_t;
+typedef __int32 lcb_int32_t;
+typedef unsigned __int8 lcb_uint8_t;
+typedef unsigned __int16 lcb_vbucket_t;
+typedef unsigned __int16 lcb_uint16_t;
+typedef unsigned __int32 lcb_uint32_t;
+typedef unsigned __int64 lcb_cas_t;
+typedef unsigned __int64 lcb_uint64_t;
+typedef unsigned __int32 lcb_time_t;
 
 #ifdef __cplusplus
 }
