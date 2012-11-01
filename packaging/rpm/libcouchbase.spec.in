@@ -20,7 +20,6 @@ This is the client and protocol library for Couchbase project.
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library (libevent backend)
 Provides: %{name}2-backend
-Provides: %{name}2-backend-real
 Requires: %{name}2, libevent >= 1.4
 %description -n %{name}2-libevent
 This package provides libevent backend for libcouchbase
@@ -29,52 +28,50 @@ This package provides libevent backend for libcouchbase
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library (libev backend)
 Provides: %{name}2-backend
-Provides: %{name}2-backend-real
 Requires: %{name}2, libev >= 3
 %description -n %{name}2-libev
 This package provides libev backend for libcouchbase
 
-%package -n %{name}2-dummy
+%package -n %{name}2-core
 Group: System Environment/Libraries
-Summary: Couchbase Client & Protocol Library (dummy backend)
-Provides: %{name}2-backend
-Requires: %{name}2
-%description -n %{name}2-dummy
-This package provides dummy backend for libcouchbase. This mean that user
-should implement (provide) his own IO plugin.
+Summary: Couchbase Client & Protocol Library (core)
+%description -n %{name}2-core
+This package provides core for libcouchbase. The IO backends should be
+provided by application or installed separately.
 
 %package -n %{name}2
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library
-Requires: %{name}2, %{name}2-backend
+Requires: %{name}2-core, %{name}2-backend
 %description -n %{name}2
 This is the client and protocol library for Couchbase project.
 
 %package -n %{name}2-bin
 Group: Development/Tools
 Summary: Couchbase Client Tools
-Requires: %{name}2-backend-real, %{name}2
+Provides: %{name}2-all
+Requires: %{name}2
 %description -n %{name}2-bin
 This is the CLI tools Couchbase project.
 
 %package devel
 Group: Development/Libraries
 Summary: Couchbase Client & Protocol Library - Header files
-Requires: %{name}2
+Requires: %{name}2-core
 %description devel
 Development files for the Couchbase Client & Protocol Library
 
 %package -n %{name}-libev-devel
 Group: Development/Libraries
 Summary: Couchbase Client & Protocol Library (libev backend) - Development files
-Requires: %{name}-devel
+Requires: %{name}-devel, %{name}2-libev
 %description -n %{name}-libev-devel
 Development files for the Couchbase Client & Protocol Library
 
 %package -n %{name}-libevent-devel
 Group: Development/Libraries
 Summary: Couchbase Client & Protocol Library (libevent backend) - Development files
-Requires: %{name}-devel
+Requires: %{name}-devel, %{name}2-libevent
 %description -n %{name}-libevent-devel
 Development files for the Couchbase Client & Protocol Library
 
@@ -95,7 +92,7 @@ Development files for the Couchbase Client & Protocol Library
 
 %postun -n %{name}2 -p /sbin/ldconfig
 
-%files -n %{name}2
+%files -n %{name}2-core
 %defattr(-, root, root)
 %{_libdir}/libcouchbase.so.*
 
@@ -107,7 +104,7 @@ Development files for the Couchbase Client & Protocol Library
 %defattr(-, root, root)
 %{_libdir}/libcouchbase_libev.so.*
 
-%files -n %{name}2-dummy
+%files -n %{name}2
 %defattr(-, root, root)
 
 %files -n %{name}2-bin
