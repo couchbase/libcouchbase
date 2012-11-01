@@ -36,7 +36,7 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
     src\wait.c src\gethrtime.c plugins\io\win32\plugin-win32.c src\isasl.c \
     src\compat.c contrib\http_parser\http_parser.c src\http.c \
-    src\observe.c src\timer.c src\verbosity.c \
+    src\observe.c src\timer.c src\verbosity.c src\sanitycheck.c \
     contrib\libvbucket\crc32.c contrib\libvbucket\cJSON.c \
     contrib\libvbucket\vbucket.c contrib\libvbucket\ketama.c \
     contrib\libvbucket\rfc1321\md5c.c
@@ -144,6 +144,7 @@ uninstall:
          $(INSTALL)\include\libcouchbase\timings.h \
          $(INSTALL)\include\libcouchbase\types.h \
          $(INSTALL)\include\libcouchbase\arguments.h \
+         $(INSTALL)\include\libcouchbase\sanitycheck.h \
          $(INSTALL)\include\libcouchbase\visibility.h \
          $(INSTALL)\include\libcouchbase\winsock_io_opts.h \
          $(INSTALL)\bin\cbc.exe

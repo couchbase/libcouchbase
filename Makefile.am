@@ -42,6 +42,7 @@ pkginclude_HEADERS = \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
                      include/libcouchbase/arguments.h \
+                     include/libcouchbase/sanitycheck.h \
                      include/libcouchbase/visibility.h
 if BUILD_PLUGINS
 pkginclude_HEADERS += \
@@ -103,6 +104,7 @@ libcouchbase_la_SOURCES = \
                         src/remove.c \
                         src/ringbuffer.c \
                         src/ringbuffer.h \
+                        src/sanitycheck.c \
                         src/server.c \
                         src/stats.c \
                         src/store.c \

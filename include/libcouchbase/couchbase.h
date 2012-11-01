@@ -58,6 +58,7 @@
 #include <libcouchbase/error.h>
 #include <libcouchbase/types.h>
 #include <libcouchbase/arguments.h>
+#include <libcouchbase/sanitycheck.h>
 #include <libcouchbase/compat.h>
 #include <libcouchbase/behavior.h>
 #include <libcouchbase/callbacks.h>

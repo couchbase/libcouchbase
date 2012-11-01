@@ -22,6 +22,9 @@
  * the version field when you create command, and you <b>must</b>
  * check the version field to figure out the layout when you want
  * to access the fields.
+ *
+ * You must also remember to update sanitycheck.[ch] whenever you do
+ * changes here!
  */
 
 #ifndef LIBCOUCHBASE_ARGUMENTS_H
@@ -36,6 +39,9 @@
 #include <cstring>
 extern "C" {
 #endif
+
+#define LCB_C_ST_ID 0
+#define LCB_C_ST_V 1
 
     struct lcb_create_st {
         int version;
@@ -105,6 +111,9 @@ extern "C" {
 #endif
     };
 
+#define LCB_C_I_O_ST_ID 1
+#define LCB_C_I_O_ST_V 1
+
     struct lcb_create_io_ops_st {
         int version;
         union {
@@ -129,6 +138,8 @@ extern "C" {
         } v;
     };
 
+#define LCB_G_C_ST_ID 2
+#define LCB_G_C_ST_V 0
     typedef struct lcb_get_cmd_st {
         int version;
         union {
@@ -163,6 +174,9 @@ extern "C" {
 #endif
     } lcb_get_cmd_t;
 
+#define LCB_G_R_C_ST_ID 3
+#define LCB_G_R_C_ST_V 0
+
     typedef struct lcb_get_replica_cmd_st {
         int version;
         union {
@@ -184,6 +198,8 @@ extern "C" {
 #endif
     } lcb_get_replica_cmd_t;
 
+#define LCB_U_C_ST_ID 4
+#define LCB_U_C_ST_V 0
     typedef struct lcb_unlock_cmd_st {
         int version;
         union {
@@ -210,8 +226,12 @@ extern "C" {
     /**
      * Touch use the same sturcture as get
      */
+#define LCB_T_C_ST_ID 5
+#define LCB_T_C_ST_V 0
     typedef lcb_get_cmd_t lcb_touch_cmd_t;
 
+#define LCB_S_C_ST_ID 6
+#define LCB_S_C_ST_V 0
     typedef struct lcb_store_cmd_st {
         int version;
         union {
@@ -255,6 +275,8 @@ extern "C" {
 #endif
     } lcb_store_cmd_t;
 
+#define LCB_A_C_ST_ID 7
+#define LCB_A_C_ST_V 0
     typedef struct lcb_arithmetic_cmd_st {
         int version;
         union {
@@ -290,6 +312,8 @@ extern "C" {
 #endif
     } lcb_arithmetic_cmd_t;
 
+#define LCB_O_C_ST_ID 8
+#define LCB_O_C_ST_V 0
     typedef struct lcb_observe_cmd_st {
         int version;
         union {
@@ -311,6 +335,8 @@ extern "C" {
 #endif
     } lcb_observe_cmd_t;
 
+#define LCB_R_C_ST_ID 9
+#define LCB_R_C_ST_V 0
     typedef struct lcb_remove_cmd_st {
         int version;
         union {
@@ -340,6 +366,8 @@ extern "C" {
 #endif
     } lcb_remove_cmd_t;
 
+#define LCB_H_C_ST_ID 10
+#define LCB_H_C_ST_V 1
     typedef struct lcb_http_cmd_st {
         int version;
         union {
@@ -411,6 +439,8 @@ extern "C" {
 #endif
     } lcb_http_cmd_t;
 
+#define LCB_S_S_C_ST_ID 11
+#define LCB_S_S_C_ST_V 0
     typedef struct lcb_server_stats_cmd_st {
         int version;
         union {
@@ -437,6 +467,8 @@ extern "C" {
 #endif
     } lcb_server_stats_cmd_t;
 
+#define LCB_S_V_C_ST_ID 12
+#define LCB_S_V_C_ST_V 0
     typedef struct lcb_server_version_cmd_st {
         int version;
         union {
@@ -452,6 +484,8 @@ extern "C" {
 #endif
     } lcb_server_version_cmd_t;
 
+#define LCB_V_C_ST_ID 13
+#define LCB_V_C_ST_V 0
     typedef struct lcb_verbosity_cmd_st {
         int version;
         union {
@@ -471,6 +505,8 @@ extern "C" {
 #endif
     } lcb_verbosity_cmd_t;
 
+#define LCB_F_C_ST_ID 14
+#define LCB_F_C_ST_V 0
     typedef struct lcb_flush_cmd_st {
         int version;
         union {
@@ -486,6 +522,8 @@ extern "C" {
 #endif
     } lcb_flush_cmd_t;
 
+#define LCB_G_R_ST_ID 15
+#define LCB_G_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -501,6 +539,8 @@ extern "C" {
         } v;
     } lcb_get_resp_t;
 
+#define LCB_S_R_ST_ID 16
+#define LCB_S_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -512,6 +552,8 @@ extern "C" {
         } v;
     } lcb_store_resp_t;
 
+#define LCB_R_R_ST_ID 17
+#define LCB_R_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -522,6 +564,8 @@ extern "C" {
         } v;
     } lcb_remove_resp_t;
 
+#define LCB_T_R_ST_ID 18
+#define LCB_T_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -533,6 +577,8 @@ extern "C" {
         } v;
     } lcb_touch_resp_t;
 
+#define LCB_U_R_ST_ID 19
+#define LCB_U_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -543,6 +589,8 @@ extern "C" {
         } v;
     } lcb_unlock_resp_t;
 
+#define LCB_A_R_ST_ID 20
+#define LCB_A_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -555,6 +603,8 @@ extern "C" {
         } v;
     } lcb_arithmetic_resp_t;
 
+#define LCB_O_R_ST_ID 21
+#define LCB_O_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -570,6 +620,8 @@ extern "C" {
         } v;
     } lcb_observe_resp_t;
 
+#define LCB_H_R_ST_ID 22
+#define LCB_H_R_ST_V 0
     typedef struct {
         int version;
         union {
@@ -584,6 +636,8 @@ extern "C" {
         } v;
     } lcb_http_resp_t;
 
+#define LCB_S_S_R_ST_ID 23
+#define LCB_S_S_R_ST_V 0
     typedef struct lcb_server_stat_resp_st {
         int version;
         union {
@@ -597,6 +651,8 @@ extern "C" {
         } v;
     } lcb_server_stat_resp_t;
 
+#define LCB_S_V_R_ST_ID 24
+#define LCB_S_V_R_ST_V 0
     typedef struct lcb_server_version_resp_st {
         int version;
         union {
@@ -608,6 +664,8 @@ extern "C" {
         } v;
     } lcb_server_version_resp_t;
 
+#define LCB_V_R_ST_ID 25
+#define LCB_V_R_ST_V 0
     typedef struct lcb_verbosity_resp_st {
         int version;
         union {
@@ -617,6 +675,8 @@ extern "C" {
         } v;
     } lcb_verbosity_resp_t;
 
+#define LCB_F_R_ST_ID 26
+#define LCB_F_R_ST_V 0
     typedef struct lcb_flush_resp_st {
         int version;
         union {
@@ -626,6 +686,7 @@ extern "C" {
         } v;
     } lcb_flush_resp_t;
 
+#define LCB_ST_M 26
 
 #ifdef __cplusplus
 }

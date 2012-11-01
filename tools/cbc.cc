@@ -1664,6 +1664,14 @@ static void printHelp()
 int main(int argc, char **argv)
 {
     string cmdstr(argv[0]);
+
+    if (!lcb_verify_compiler_setup()) {
+        cerr << "The compiler use an incompatible set of compiler options"
+             << endl;
+        exit(EXIT_FAILURE);
+    }
+
+
     cbc_command_t cmd = getBuiltin(cmdstr);
 
     if (cmd == cbc_illegal) {
