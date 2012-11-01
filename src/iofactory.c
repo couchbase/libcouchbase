@@ -189,27 +189,29 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
     opts.version = 1;
     opts.v.v1.cookie = options->v.v0.cookie;
     type = options->v.v0.type;
-    if (type == LCB_IO_OPS_DEFAULT) {
-#if defined(HAVE_LIBEVENT) || defined(HAVE_LIBEVENT2)
-        type = LCB_IO_OPS_LIBEVENT;
-#elif defined(HAVE_LIBEV)
-        type = LCB_IO_OPS_LIBEV;
-#endif
-    }
     switch (type) {
     case LCB_IO_OPS_LIBEVENT:
         opts.v.v1.sofile = PLUGIN_SO("libevent");
         opts.v.v1.symbol = PLUGIN_SYMBOL("libevent");
-        break;
+        return create_v1(io, &opts);
     case LCB_IO_OPS_LIBEV:
         opts.v.v1.sofile = PLUGIN_SO("libev");
         opts.v.v1.symbol = PLUGIN_SYMBOL("libev");
-        break;
+        return create_v1(io, &opts);
+    case LCB_IO_OPS_DEFAULT:
+        opts.v.v1.sofile = PLUGIN_SO("libevent");
+        opts.v.v1.symbol = PLUGIN_SYMBOL("libevent");
+        if (create_v1(io, &opts) != LCB_SUCCESS) {
+            opts.v.v1.sofile = PLUGIN_SO("libev");
+            opts.v.v1.symbol = PLUGIN_SYMBOL("libev");
+            return create_v1(io, &opts);
+        } else {
+            return LCB_SUCCESS;
+        }
     default:
         return LCB_NOT_SUPPORTED;
     }
 
-    return create_v1(io, &opts);
 }
 #undef PLUGIN_SO
 
