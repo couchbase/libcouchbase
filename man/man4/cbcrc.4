@@ -1,0 +1,122 @@
+.\" te
+.\"
+.\"   Copyright 2012 Couchbase, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"     http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.TH cbcrc 4 "Nov 5, 2012"
+.SH NAME
+~/.cbcrc \- cbc resource file
+.SH DESCRIPTION
+.PP
+\fBcbcrc\fR is an \fBASCII\fR file that allows you to specify default
+configuration values for \fBcbc\fR.
+.PP
+Each entry in the \fBcbcrc\fR file is a line with a key - value pair in
+the following form:
+.sp
+.nf
+\f(CWkey="\fIvalue\fR"\fR
+.fi
+.sp
+.PP
+The keys may be specified in random order, and if you specify the same key
+multiple times the last value "wins".
+.PP
+The following keys exists:
+.sp
+.ne 2
+.mk
+\fB\fBuri\fR\fR
+.sp .6
+.in +4
+This is a list separated by semicolon of hostnames (with an optional port)
+to your cluster\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBuser\fR\fR
+.sp .6
+.in +4
+This is the username used during authentication to your cluster\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBpassword\fR\fR
+.sp .6
+.in +4
+This is the password used during authentication to your cluster\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBbucket\fR\fR
+.sp .6
+.in +4
+This is the name of the bucket you would like to use\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBtimeout\fR\fR
+.sp .6
+.in +4
+The timeout value to use for the operations\&.
+.sp
+.sp 1
+.in -4
+
+.SH EXAMPLES
+.PP
+\fBExample 1: A Sample \fB~/.cbcrc\fR File\fR
+.PP
+Here is a sample \fB~/.cbcrc\fR file that specifies all of the allowed
+parameters:
+.sp
+.nf
+\f(CW
+uri = server1;server2;server3
+user = blogapp
+password = secret
+bucket = blogapp
+timeout = 100000\fR
+.fi
+.sp
+.SH ATTRIBUTES
+.PP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+.TS
+tab() allbox;
+cw(2.750000i)| cw(2.750000i)
+lw(2.750000i)| lw(2.750000i).
+ATTRIBUTE TYPEATTRIBUTE VALUE
+Interface StabilityEvolving
+.TE
+.sp
+.SH SEE ALSO
+.PP
+\fBcbcrc\fR(1), \fBattributes\fR(5)

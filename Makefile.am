@@ -30,6 +30,7 @@ noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
 noinst_PROGRAMS =
 if BUILD_TOOLS
 bin_PROGRAMS = tools/cbc
+man_MANS = man/man1/cbc.1 man/man4/cbcrc.4
 endif
 
 pkginclude_HEADERS = \
