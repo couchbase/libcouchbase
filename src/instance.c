@@ -523,7 +523,6 @@ static void relocate_packets(lcb_server_t *src,
         assert(ringbuffer_ensure_capacity(&dst->output_cookies, sizeof(ct)));
         assert(ringbuffer_write(&dst->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
-        assert(!dst->connected);
         assert(ringbuffer_ensure_capacity(&dst->pending, npacket));
         assert(ringbuffer_write(&dst->pending, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
         assert(ringbuffer_write(&dst->pending, body, nbody) == nbody);
