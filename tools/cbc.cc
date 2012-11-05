@@ -986,7 +986,7 @@ static bool unlock_impl(lcb_t instance, list<string> &keys)
 
     if (keys.size() % 2 != 0) {
         cerr << "ERROR: you need to specify key-cas pairs, "
-             << "therefore argument list should be odd" << endl;
+             << "therefore argument list should be even" << endl;
         return false;
     }
 
