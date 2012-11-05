@@ -222,9 +222,13 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
     lcb_error_t ret = get_create_func(options->v.v1.sofile,
                                       options->v.v1.symbol,
                                       &plugin);
-
     if (ret != LCB_SUCCESS) {
-        return ret;
+        /* try to look up the symbol in the current image */
+        lcb_error_t ret2 = get_create_func(NULL, options->v.v1.symbol, &plugin);
+        if (ret2 != LCB_SUCCESS) {
+            /* return original error to allow caller to fix it */
+            return ret;
+        }
     }
 
     ret = plugin.func.create_v1(io, options->v.v1.cookie);
