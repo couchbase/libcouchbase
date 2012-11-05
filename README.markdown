@@ -39,11 +39,11 @@ Please see: http://www.couchbase.com/issues/browse/CCBC
 Run the testsuite towards a running cluster
 -------------------------------------------
 
-LCB_TEST_CLUSTER_CONF=<hostname>,<bucket>,<user>,<password> ./tests/unit-tests
+    LCB_TEST_CLUSTER_CONF=<hostname>,<bucket>,<user>,<password> ./tests/unit-tests
 
-ex:
+Example:
 
-LCB_TEST_CLUSTER_CONF=localhost,default,Administrator,mypass ./tests/unit-tests
+    LCB_TEST_CLUSTER_CONF=localhost,default,Administrator,mypass ./tests/unit-tests
 
 
 Contact us
