@@ -1413,6 +1413,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                  config.getPassword(), config.getBucket());
     if (cmd == cbc_admin || cmd == cbc_bucket_create || cmd == cbc_bucket_delete) {
         options.v.v1.type = LCB_TYPE_CLUSTER;
+        if (config.getPassword() == NULL || config.getUser() == NULL) {
+            cerr << "Username and password mandatory for admin operations." << endl;
+            exit(EXIT_FAILURE);
+        }
     }
     lcb_error_t err = lcb_create(&instance, &options);
     if (err != LCB_SUCCESS) {
