@@ -1591,43 +1591,47 @@ static void lowercase(string &str)
 static cbc_command_t getBuiltin(string name)
 {
     lowercase(name);
-    if (name.find("cbc-cat") != string::npos) {
+    size_t dot = name.rfind(".");
+    if (dot != string::npos) {
+        name = name.substr(0, dot);
+    }
+    if (name == "cbc-cat") {
         return cbc_cat;
-    } else if (name.find("cbc-cp") != string::npos) {
+    } else if (name == "cbc-cp") {
         return cbc_cp;
-    } else if (name.find("cbc-create") != string::npos) {
+    } else if (name == "cbc-create") {
         return cbc_create;
-    } else if (name.find("cbc-rm") != string::npos) {
+    } else if (name == "cbc-rm") {
         return cbc_rm;
-    } else if (name.find("cbc-stats") != string::npos) {
+    } else if (name == "cbc-stats") {
         return cbc_stats;
-    } else if (name.find("cbc-flush") != string::npos) {
+    } else if (name == "cbc-flush") {
         return cbc_flush;
-    } else if (name.find("cbc-lock") != string::npos) {
+    } else if (name == "cbc-lock") {
         return cbc_lock;
-    } else if (name.find("cbc-unlock") != string::npos) {
+    } else if (name == "cbc-unlock") {
         return cbc_unlock;
-    } else if (name.find("cbc-version") != string::npos) {
+    } else if (name == "cbc-version") {
         return cbc_version;
-    } else if (name.find("cbc-verify") != string::npos) {
+    } else if (name == "cbc-verify") {
         return cbc_verify;
-    } else if (name.find("cbc-hash") != string::npos) {
+    } else if (name == "cbc-hash") {
         return cbc_hash;
-    } else if (name.find("cbc-help") != string::npos) {
+    } else if (name == "cbc-help") {
         return cbc_help;
-    } else if (name.find("cbc-view") != string::npos) {
+    } else if (name == "cbc-view") {
         return cbc_view;
-    } else if (name.find("cbc-admin") != string::npos) {
+    } else if (name == "cbc-admin") {
         return cbc_admin;
-    } else if (name.find("cbc-bucket-create") != string::npos) {
+    } else if (name == "cbc-bucket-create") {
         return cbc_bucket_create;
-    } else if (name.find("cbc-bucket-delete") != string::npos) {
+    } else if (name == "cbc-bucket-delete") {
         return cbc_bucket_delete;
-    } else if (name.find("cbc-bucket-flush") != string::npos) {
+    } else if (name == "cbc-bucket-flush") {
         return cbc_bucket_flush;
-    } else if (name.find("cbc-observe") != string::npos) {
+    } else if (name == "cbc-observe") {
         return cbc_observe;
-    } else if (name.find("cbc-verbosity") != string::npos) {
+    } else if (name == "cbc-verbosity") {
         return cbc_verbosity;
     }
 
