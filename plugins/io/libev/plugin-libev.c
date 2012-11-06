@@ -291,7 +291,7 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
     evt->data = cb_data;
     evt->handler = handler;
     ev_init(&evt->ev.io, handler_thunk);
-    evt->ev.timer.repeat = usec;
+    evt->ev.timer.repeat = usec / (ev_tstamp)1000000;
     ev_timer_again(io_cookie->loop, &evt->ev.timer);
 
     return 0;
