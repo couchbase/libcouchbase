@@ -1242,7 +1242,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         getopt.addOption(new CommandLineOption('a', "auth-type", true,
                                                "Type of bucket authentication, possible values are: none, sasl (default: sasl)."
                                                " Note you should specify free port for 'none'"));
-        getopt.addOption(new CommandLineOption('s', "sasl-passord", true,
+        getopt.addOption(new CommandLineOption('s', "sasl-password", true,
                                                "Password for SASL (default: '')"));
         getopt.addOption(new CommandLineOption('r', "replica-number", true,
                                                "Number of the nodes each key should be replicated, allowed values 0-3 (default 1)"));
@@ -1371,6 +1371,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     }
                 } else if (cmd == cbc_bucket_create) {
                     string arg = (*iter)->argument;
+                    unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'B':
                         if (arg == "couchbase") {
