@@ -56,7 +56,7 @@ recent version from git and build from source on your hardware.
 
 1. Grab the sources using git:
 
-       git clone git://github.com/couchbase/libcouchbase.git
+        git clone git://github.com/couchbase/libcouchbase.git
 
 2. Generate `./configure` script using autoconf. Note: this step
    requires that you have cloned this repository from git and that the
@@ -64,17 +64,17 @@ recent version from git and build from source on your hardware.
    will complain on this step, see [config/autorun.sh][2] file for
    details.
 
-       ./config/autorun.sh
+        ./config/autorun.sh
 
 3. Generate Makefile. Take a look at possible options to the script:
    `./configure --help`.
 
-       ./configure
+        ./configure
 
 4. Make and check the build (you can also use `make check` to only run
    test suite):
 
-       make && make distcheck
+        make && make distcheck
 
 
 Contact us
