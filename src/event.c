@@ -244,7 +244,7 @@ static int do_read_data(lcb_server_t *c)
         }
     }
 
-    return rv;
+    return 0;
 }
 
 static int do_send_data(lcb_server_t *c)
