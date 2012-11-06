@@ -63,7 +63,7 @@ lcb_timer_t lcb_timer_create(lcb_t instance,
         return NULL;
     }
     instance->io->v.v0.update_timer(instance->io, tmr->event, tmr->usec,
-                               tmr, timer_callback);
+                                    tmr, timer_callback);
 
 
     hashset_add(instance->timers, tmr);

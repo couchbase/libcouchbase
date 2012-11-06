@@ -1038,11 +1038,11 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
                 return ;
             case LCB_CONNECT_EINPROGRESS:
                 instance->io->v.v0.update_event(instance->io,
-                                           instance->sock,
-                                           instance->event,
-                                           LCB_WRITE_EVENT,
-                                           instance,
-                                           lcb_instance_connect_handler);
+                                                instance->sock,
+                                                instance->event,
+                                                LCB_WRITE_EVENT,
+                                                instance,
+                                                lcb_instance_connect_handler);
                 return ;
             case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return ;

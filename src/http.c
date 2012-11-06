@@ -374,8 +374,8 @@ static void request_connect_handler(lcb_socket_t sock, short which, void *arg)
 static void request_connected(lcb_http_request_t req)
 {
     req->io->v.v0.update_event(req->io, req->sock,
-                          req->event, LCB_WRITE_EVENT,
-                          req, request_event_handler);
+                               req->event, LCB_WRITE_EVENT,
+                               req, request_event_handler);
 }
 
 static lcb_error_t request_connect(lcb_http_request_t req)
@@ -521,33 +521,32 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->on_complete = instance->callbacks.http_complete;
     req->on_data = instance->callbacks.http_data;
     switch (type) {
-    case LCB_HTTP_TYPE_VIEW:
-        {
-            lcb_server_t *server;
-            if (instance->type != LCB_TYPE_BUCKET) {
-                return lcb_synchandler_return(instance, LCB_EINVAL);
-            }
-            /* pick random server */
-            nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
-            server = instance->servers + nn;
-            if (!server->couch_api_base) {
-                lcb_http_request_destroy(req);
-                return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
-            }
-            req->server = server;
-            base = server->couch_api_base;
-            nbase = strlen(base);
-            username = instance->sasl.name;
-            if (instance->sasl.password.secret.len) {
-                req->password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
-                if (!req->password) {
-                    lcb_http_request_destroy(req);
-                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
-                }
-                memcpy(req->password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
-            }
+    case LCB_HTTP_TYPE_VIEW: {
+        lcb_server_t *server;
+        if (instance->type != LCB_TYPE_BUCKET) {
+            return lcb_synchandler_return(instance, LCB_EINVAL);
         }
-        break;
+        /* pick random server */
+        nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
+        server = instance->servers + nn;
+        if (!server->couch_api_base) {
+            lcb_http_request_destroy(req);
+            return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
+        }
+        req->server = server;
+        base = server->couch_api_base;
+        nbase = strlen(base);
+        username = instance->sasl.name;
+        if (instance->sasl.password.secret.len) {
+            req->password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
+            if (!req->password) {
+                lcb_http_request_destroy(req);
+                return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+            }
+            memcpy(req->password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
+        }
+    }
+    break;
 
     case LCB_HTTP_TYPE_MANAGEMENT:
         nbase = strlen(instance->host) + strlen(instance->port) + 2;
