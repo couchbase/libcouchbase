@@ -50,14 +50,12 @@ extern "C" {
          */
         LCB_AUTH_ERROR = 0x02,
         /**
-         * This error code represent an error message that may be
-         * returned over the network protocol, but you should
-         * never receive this in your application unless you've
-         * discovered a bug in the server.
+         * The server detected that operation cannot be executed with
+         * requested arguments. For example, when incrementing not a number.
          */
         LCB_DELTA_BADVAL = 0x03,
         /**
-         * The sever reported that this object is too big
+         * The server reported that this object is too big
          */
         LCB_E2BIG = 0x04,
         /**
