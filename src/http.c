@@ -134,7 +134,6 @@ static int request_valid(lcb_http_request_t req)
 
 static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nbytes)
 {
-    lcb_error_t rc;
     lcb_http_request_t req = p->data;
 
     if (!request_valid(req)) {
@@ -144,8 +143,7 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nby
         lcb_http_resp_t resp;
         setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
                               req->headers, bytes, nbytes);
-        rc = (p->status_code / 100 == 2) ?  LCB_SUCCESS : LCB_PROTOCOL_ERROR;
-        req->on_data(req, req->instance, req->command_cookie, rc, &resp);
+        req->on_data(req, req->instance, req->command_cookie, LCB_SUCCESS, &resp);
     } else {
         if (!ringbuffer_ensure_capacity(&req->result, nbytes)) {
             lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM,
@@ -159,7 +157,6 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nby
 
 static int http_parser_complete_cb(http_parser *p)
 {
-    lcb_error_t rc;
     lcb_http_request_t req = p->data;
     char *bytes = NULL;
     lcb_size_t np = 0, nbytes = 0;
@@ -169,7 +166,6 @@ static int http_parser_complete_cb(http_parser *p)
     if (!request_valid(req)) {
         return 0;
     }
-    rc = (p->status_code / 100 == 2) ?  LCB_SUCCESS : LCB_PROTOCOL_ERROR;
     if (!req->chunked) {
         nbytes = req->result.nbytes;
         if (ringbuffer_is_continous(&req->result, RINGBUFFER_READ, nbytes)) {
@@ -189,7 +185,7 @@ static int http_parser_complete_cb(http_parser *p)
     }
     setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
                           req->headers, bytes, nbytes);
-    req->on_complete(req, req->instance, req->command_cookie, rc, &resp);
+    req->on_complete(req, req->instance, req->command_cookie, LCB_SUCCESS, &resp);
     if (!req->chunked) {
         ringbuffer_consumed(&req->result, nbytes);
         if (np) {   /* release peek storage */
