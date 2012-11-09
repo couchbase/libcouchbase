@@ -369,6 +369,7 @@ uninstall-local:
 endif
 
 EXTRA_DIST = \
+             CONTRIBUTING.md \
              LICENSE \
              NMakefile \
              README.markdown \
