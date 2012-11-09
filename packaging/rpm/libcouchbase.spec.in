@@ -110,6 +110,8 @@ Development files for the Couchbase Client & Protocol Library
 %files -n %{name}2-bin
 %defattr(-, root, root)
 %{_bindir}/cbc*
+%{_mandir}/man1/cbc.1*
+%{_mandir}/man4/cbcrc.4*
 
 %files devel
 %defattr(-, root, root)
