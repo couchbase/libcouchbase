@@ -60,7 +60,14 @@ lcb_error_t lcb_touch(lcb_t instance,
     for (ii = 0; ii < num; ++ii) {
         const void *key = items[ii]->v.v0.key;
         lcb_size_t nkey = items[ii]->v.v0.nkey;
-        (void)vbucket_map(instance->vbucket_config, key, nkey,
+        const void *hashkey = items[ii]->v.v0.hashkey;
+        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
+
+        if (nhashkey == 0) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                           &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
             /*

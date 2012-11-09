@@ -51,8 +51,17 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
         int create = items[ii]->v.v0.create;
         lcb_int64_t delta = items[ii]->v.v0.delta;
         lcb_uint64_t initial = items[ii]->v.v0.initial;
+        const void *hashkey = items[ii]->v.v0.hashkey;
+        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
 
-        (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
+        if (nhashkey == 0) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
+                          &vb, &idx);
+
         if (idx < 0 || idx > (int)instance->nservers) {
             /*
             ** the config says that there is no server yet at that

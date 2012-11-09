@@ -48,8 +48,17 @@ lcb_error_t lcb_remove(lcb_t instance,
         const void *key = items[ii]->v.v0.key;
         lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_cas_t cas = items[ii]->v.v0.cas;
+        const void *hashkey = items[ii]->v.v0.hashkey;
+        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
 
-        (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
+        if (nhashkey == 0) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
+                          &vb, &idx);
+
         if (idx < 0 || idx > (int)instance->nservers) {
             /*
             ** the config says that there is no server yet at

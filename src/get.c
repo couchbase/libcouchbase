@@ -74,11 +74,19 @@ lcb_error_t lcb_unlock(lcb_t instance,
         lcb_server_t *server;
         protocol_binary_request_no_extras req;
         int vb, idx;
+        const void *hashkey = items[ii]->v.v0.hashkey;
+        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
         const void *key = items[ii]->v.v0.key;
         lcb_size_t nkey = items[ii]->v.v0.nkey;
         lcb_cas_t cas = items[ii]->v.v0.cas;
 
-        (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
+        if (nhashkey == 0) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
+                          &vb, &idx);
+
         if (idx < 0 || idx > (int)instance->nservers) {
             /*
             ** the config says that there is no server yet at that
@@ -183,6 +191,8 @@ static lcb_error_t lcb_single_get(lcb_t instance,
     protocol_binary_request_gat req;
     int vb, idx;
     lcb_size_t nbytes;
+    const void *hashkey = item->v.v0.hashkey;
+    lcb_size_t nhashkey = item->v.v0.nhashkey;
     const void *key = item->v.v0.key;
     lcb_size_t nkey = item->v.v0.nkey;
     lcb_time_t exp = item->v.v0.exptime;
@@ -198,7 +208,14 @@ static lcb_error_t lcb_single_get(lcb_t instance,
         }
     }
 
-    (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
+    if (nhashkey == 0) {
+        hashkey = key;
+        nhashkey = nkey;
+    }
+
+    (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
+                      &vb, &idx);
+
     if (idx < 0 || idx > (int)instance->nservers) {
         /* the config says that there is no server yet at that position (-1) */
         return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
@@ -271,7 +288,15 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
     for (ii = 0; ii < num; ++ii) {
         const void *key = items[ii]->v.v0.key;
         lcb_size_t nkey = items[ii]->v.v0.nkey;
-        (void)vbucket_map(instance->vbucket_config, key, nkey,
+        const void *hashkey = items[ii]->v.v0.hashkey;
+        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
+
+        if (nhashkey == 0) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                           &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
             /*

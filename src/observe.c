@@ -84,8 +84,16 @@ lcb_error_t lcb_observe(lcb_t instance,
     for (ii = 0; ii < num; ++ii) {
         const void *key = items[ii]->v.v0.key;
         lcb_size_t nkey = items[ii]->v.v0.nkey;
+        const void *hashkey = items[ii]->v.v0.hashkey;
+        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
 
-        vbid = vbucket_get_vbucket_by_key(instance->vbucket_config, key, nkey);
+        if (nhashkey == 0) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+
+        vbid = vbucket_get_vbucket_by_key(instance->vbucket_config, hashkey,
+                                          nhashkey);
         for (jj = -1; jj < instance->nreplicas; ++jj) {
             struct observe_st *rr;
             /* it will increment jj to get server index, so (-1 + 1) = 0 (master) */

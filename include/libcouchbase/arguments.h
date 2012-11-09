@@ -23,6 +23,20 @@
  * check the version field to figure out the layout when you want
  * to access the fields.
  *
+ * All of the data operations contains a <code>hashkey</code> and
+ * <code>nhashkey</code> field. This allows you to "group" items
+ * together in your cluster. A typical use case for this is if you're
+ * storing lets say data for a single user in multiple objects. If you
+ * want to ensure that either <b>all</b> or <b>none</b> of the objects
+ * are available if a server goes down, it <u>could</u> be a good
+ * idea to locate them on the same server. Do bear in mind that if
+ * you do try to decide where objects is located, you may end up
+ * with an uneven distribution of the number of items on each node.
+ * This will again result in some nodes being more busy than others
+ * etc. This is why some clients doesn't allow you to do this, so
+ * bear in mind that by doing so you might not be able to get your
+ * objects from other clients.
+ *
  * You must also remember to update sanitycheck.[ch] whenever you do
  * changes here!
  */
@@ -150,6 +164,8 @@ extern "C" {
                 lcb_time_t exptime;
                 /* if non-zero, it will use GETL */
                 int lock;
+                const void *hashkey;
+                lcb_size_t nhashkey;
             } v0;
         } v;
 #ifdef __cplusplus
@@ -170,6 +186,8 @@ extern "C" {
             }
             v.v0.exptime = exptime;
             v.v0.lock = lock;
+            v.v0.hashkey = NULL;
+            v.v0.nhashkey = 0;
         }
 #endif
     } lcb_get_cmd_t;
@@ -183,6 +201,8 @@ extern "C" {
             struct {
                 const void *key;
                 lcb_size_t nkey;
+                const void *hashkey;
+                lcb_size_t nhashkey;
             } v0;
         } v;
 #ifdef __cplusplus
@@ -194,6 +214,8 @@ extern "C" {
             version = 0;
             v.v0.key = key;
             v.v0.nkey = nkey;
+            v.v0.hashkey = NULL;
+            v.v0.nhashkey = 0;
         }
 #endif
     } lcb_get_replica_cmd_t;
@@ -207,6 +229,8 @@ extern "C" {
                 const void *key;
                 lcb_size_t nkey;
                 lcb_cas_t cas;
+                const void *hashkey;
+                lcb_size_t nhashkey;
             } v0;
         } v;
 #ifdef __cplusplus
@@ -219,6 +243,8 @@ extern "C" {
             v.v0.key = key;
             v.v0.nkey = nkey;
             v.v0.cas = cas;
+            v.v0.hashkey = NULL;
+            v.v0.nhashkey = 0;
         }
 #endif
     } lcb_unlock_cmd_t;
@@ -245,6 +271,8 @@ extern "C" {
                 lcb_datatype_t datatype;
                 lcb_time_t exptime;
                 lcb_storage_t operation;
+                const void *hashkey;
+                lcb_size_t nhashkey;
             } v0;
         } v;
 #ifdef __cplusplus
@@ -271,6 +299,8 @@ extern "C" {
             v.v0.flags = flags;
             v.v0.datatype = datatype;
             v.v0.exptime = exptime;
+            v.v0.hashkey = NULL;
+            v.v0.nhashkey = 0;
         }
 #endif
     } lcb_store_cmd_t;
@@ -287,6 +317,8 @@ extern "C" {
                 int create;
                 lcb_int64_t delta;
                 lcb_uint64_t initial;
+                const void *hashkey;
+                lcb_size_t nhashkey;
             } v0;
         } v;
 
@@ -308,6 +340,8 @@ extern "C" {
             v.v0.delta = delta;
             v.v0.create = create;
             v.v0.initial = initial;
+            v.v0.hashkey = NULL;
+            v.v0.nhashkey = 0;
         }
 #endif
     } lcb_arithmetic_cmd_t;
@@ -320,6 +354,8 @@ extern "C" {
             struct {
                 const void *key;
                 lcb_size_t nkey;
+                const void *hashkey;
+                lcb_size_t nhashkey;
             } v0;
         } v;
 #ifdef __cplusplus
@@ -331,6 +367,8 @@ extern "C" {
             version = 0;
             v.v0.key = key;
             v.v0.nkey = nkey;
+            v.v0.hashkey = NULL;
+            v.v0.nhashkey = 0;
         }
 #endif
     } lcb_observe_cmd_t;
@@ -344,6 +382,8 @@ extern "C" {
                 const void *key;
                 lcb_size_t nkey;
                 lcb_cas_t cas;
+                const void *hashkey;
+                lcb_size_t nhashkey;
             } v0;
         } v;
 #ifdef __cplusplus
@@ -362,6 +402,8 @@ extern "C" {
                 v.v0.nkey = nkey;
             }
             v.v0.cas = cas;
+            v.v0.hashkey = NULL;
+            v.v0.nhashkey = 0;
         }
 #endif
     } lcb_remove_cmd_t;

@@ -59,8 +59,16 @@ lcb_error_t lcb_store(lcb_t instance,
         lcb_time_t exp = items[ii]->v.v0.exptime;
         const void *bytes = items[ii]->v.v0.bytes;
         lcb_size_t nbytes = items[ii]->v.v0.nbytes;
+        const void *hashkey = items[ii]->v.v0.hashkey;
+        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
 
-        (void)vbucket_map(instance->vbucket_config, key, nkey, &vb, &idx);
+        if (nhashkey == 0) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
+                          &vb, &idx);
         if (idx < 0 || idx > (int)instance->nservers) {
             /*
             ** the config says that there is no server yet at that
