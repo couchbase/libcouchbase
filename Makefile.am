@@ -369,14 +369,16 @@ uninstall-local:
 endif
 
 EXTRA_DIST = \
-             README.markdown \
              LICENSE \
              NMakefile \
+             README.markdown \
+             contrib/libvbucket/rfc1321 \
+             include/ep-engine/README \
              include/libcouchbase/configuration.h.in \
              include/memcached/COPYING \
              include/memcached/README \
-             include/ep-engine/README \
-             contrib/libvbucket/rfc1321 \
+             man/man1 \
+             man/man4 \
              tests/start_mock.sh \
              win32
 
