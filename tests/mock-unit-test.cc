@@ -433,3 +433,19 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     ASSERT_GT(rv.cas2, 0);
     ASSERT_NE(rv.cas1, rv.cas2);
 }
+
+TEST_F(MockUnitTest, testBrokenFirstNodeInList)
+{
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    lcb_create_st options;
+    mock->makeConnectParams(options, NULL);
+    std::string nodes = options.v.v0.host;
+    nodes = "1.2.3.4;" + nodes;
+    options.v.v0.host = nodes.c_str();
+
+    lcb_t instance;
+    ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    lcb_set_timeout(instance, 200000); /* 200 ms */
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
+    lcb_destroy(instance);
+}

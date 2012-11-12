@@ -784,9 +784,9 @@ static void lcb_instance_reset_stream_state(lcb_t instance)
     instance->n_http_uri_sent = 0;
 }
 
-static int lcb_switch_to_backup_node(lcb_t instance,
-                                     lcb_error_t error,
-                                     const char *reason)
+int lcb_switch_to_backup_node(lcb_t instance,
+                              lcb_error_t error,
+                              const char *reason)
 {
     if (instance->backup_nodes == NULL) {
         /* No known backup nodes */
