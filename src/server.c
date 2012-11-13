@@ -635,13 +635,20 @@ void lcb_server_send_packets(lcb_server_t *server)
     }
 }
 
+/*
+ * Drop all packets with sequence number less than specified.
+ *
+ * The packets are considered as stale and the caller will receive
+ * appropriate error code in the operation callback.
+ *
+ * Returns 0 on success
+ */
 int lcb_server_purge_implicit_responses(lcb_server_t *c,
                                         lcb_uint32_t seqno,
                                         hrtime_t end)
 {
     protocol_binary_request_header req;
-    lcb_size_t nr =  ringbuffer_peek(&c->cmd_log, req.bytes,
-                                     sizeof(req));
+    lcb_size_t nr =  ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
     /* There should at _LEAST_ be _ONE_ message in here! */
     assert(nr == sizeof(req));
     while (req.request.opaque < seqno) {
@@ -662,62 +669,47 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
         assert(nr == sizeof(ct));
 
         if (c->instance->histogram) {
-            lcb_record_metrics(c->instance, end - ct.start,
-                               req.request.opcode);
+            lcb_record_metrics(c->instance, end - ct.start, req.request.opcode);
+        }
+
+        if (!ringbuffer_is_continous(&c->cmd_log, RINGBUFFER_READ, packetsize)) {
+            packet = malloc(packetsize);
+            if (packet == NULL) {
+                lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
+                return -1;
+            }
+
+            nr = ringbuffer_peek(&c->cmd_log, packet, packetsize);
+            if (nr != packetsize) {
+                lcb_error_handler(c->instance, LCB_EINTERNAL, NULL);
+                free(packet);
+                return -1;
+            }
         }
 
         switch (req.request.opcode) {
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GETQ:
-            if (!ringbuffer_is_continous(&c->cmd_log,
-                                         RINGBUFFER_READ,
-                                         packetsize)) {
-                packet = malloc(packetsize);
-                if (packet == NULL) {
-                    lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
-                    return -1;
-                }
-
-                nr = ringbuffer_peek(&c->cmd_log, packet, packetsize);
-                if (nr != packetsize) {
-                    lcb_error_handler(c->instance, LCB_EINTERNAL,
-                                      NULL);
-                    free(packet);
-                    return -1;
-                }
-            }
-
             keyptr = packet + sizeof(req) + req.request.extlen;
             setup_lcb_get_resp_t(&resp.get, keyptr, ntohs(req.request.keylen),
                                  NULL, 0, 0, 0, 0);
-            c->instance->callbacks.get(c->instance, ct.cookie,
-                                       LCB_KEY_ENOENT,
-                                       &resp.get);
-
-            if (packet != c->cmd_log.read_head) {
-                free(packet);
-            }
+            c->instance->callbacks.get(c->instance, ct.cookie, LCB_KEY_ENOENT, &resp.get);
             break;
         case PROTOCOL_BINARY_CMD_NOOP:
-            if (packet != c->cmd_log.read_head) {
-                free(packet);
-            }
-            return -1;
-
+            break;
         default: {
             char errinfo[128] = { '\0' };
             snprintf(errinfo, 128, "Unknown implicit send message op=%0x", req.request.opcode);
-            lcb_error_handler(c->instance,
-                              LCB_EINTERNAL,
-                              errinfo);
+            lcb_error_handler(c->instance, LCB_EINTERNAL, errinfo);
             return -1;
-
         }
         }
 
+        if (packet != c->cmd_log.read_head) {
+            free(packet);
+        }
         ringbuffer_consumed(&c->cmd_log, packetsize);
-        nr =  ringbuffer_peek(&c->cmd_log, req.bytes,
-                              sizeof(req));
+        nr =  ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
         /* The current message should also be there... */
         assert(nr == sizeof(req));
     }
