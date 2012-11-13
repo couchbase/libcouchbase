@@ -312,10 +312,20 @@ on memcached buckets. To flush a Couchbase bucket you need use
 .sp
 .ne 2
 .na
-\fBcbc hash\fR [\fBcommon options\fR] \fIkey...\fR
+\fBcbc hash\fR [\fBcommon options\fR] [\fB-f\fR \fIfilename\fR] \fIkey...\fR
 .ad
 .RS 4n
 hash key(s) and print out useful info.
+.sp
+.ne 2
+.na
+\fB-f\fR \fIfilename\fR \fB--config-file\fR=\fIfilename\fR
+.ad
+.sp .6
+.RS 4n
+\fIfilename\fR shall be a plain text file containing an alternative
+cluster configuration (in JSON) to use.
+.RE
 .RE
 
 .sp

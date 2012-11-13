@@ -783,6 +783,58 @@ static bool verbosity_impl(lcb_t instance, list<string> &args)
     return true;
 }
 
+static bool hash_impl(string filename, list<string> &keys)
+{
+    if (keys.empty()) {
+        cerr << "ERROR: you need to specify the key to hash" << endl;
+        return false;
+    }
+
+    VBUCKET_CONFIG_HANDLE vbucket_config = vbucket_config_create();
+    if (vbucket_config_parse(vbucket_config, LIBVBUCKET_SOURCE_FILE, filename.c_str()) != 0) {
+        cerr << "ERROR: cannot parse vBucket config: "
+             << vbucket_get_error_message(vbucket_config) << endl;
+        vbucket_config_destroy(vbucket_config);
+        return false;
+    }
+
+    for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter) {
+        int vbucket_id, idx;
+        (void)vbucket_map(vbucket_config, iter->c_str(), iter->length(), &vbucket_id, &idx);
+        cout << "\"" << *iter << "\"\t"
+             << "Server:\"" << vbucket_config_get_server(vbucket_config, idx) << "\"";
+        if (vbucket_config_get_distribution_type(vbucket_config) == VBUCKET_DISTRIBUTION_VBUCKET) {
+            cout << " vBucket:" << vbucket_id;
+            const char *couch_api = vbucket_config_get_couch_api_base(vbucket_config, idx);
+            if (couch_api) {
+                cout << " CouchAPI:\"" << couch_api << "\"";
+            }
+            lcb_size_t nrepl = (lcb_size_t)vbucket_config_get_num_replicas(vbucket_config);
+            if (nrepl > 0) {
+                cout << " Replicas:";
+                for (lcb_size_t ii = 0; ii < nrepl; ++ii) {
+                    int rr = vbucket_get_replica(vbucket_config, vbucket_id, ii);
+                    const char *replica;
+                    if (rr >= 0) {
+                        replica = vbucket_config_get_server(vbucket_config, rr);
+                        if (replica != NULL) {
+                            cout << "\"" << replica << "\"";
+                        }
+                    } else {
+                        cout << "N/A";
+                    }
+                    if (ii != nrepl - 1) {
+                        cout << ",";
+                    }
+                }
+            }
+        }
+        cout << endl;
+    }
+
+    return true;
+}
+
 static bool hash_impl(lcb_t instance, list<string> &keys)
 {
     if (keys.empty()) {
@@ -794,23 +846,25 @@ static bool hash_impl(lcb_t instance, list<string> &keys)
         int vbucket_id, idx;
         (void)vbucket_map(instance->vbucket_config, iter->c_str(), iter->length(), &vbucket_id, &idx);
         lcb_server_t *server = instance->servers + idx;
-        cout << "\"" << *iter << "\"\t" << "vBucket:" << vbucket_id
-             << " Server:\"" << server->authority << "\"";
-        if (server->couch_api_base) {
-            cout << " CouchAPI:\"" << server->couch_api_base << "\"";
-        }
-        lcb_size_t nrepl = (lcb_size_t)vbucket_config_get_num_replicas(instance->vbucket_config);
-        if (nrepl > 0) {
-            cout << " Replicas:";
-            for (lcb_size_t ii = 0; ii < nrepl; ++ii) {
-                int rr = vbucket_get_replica(instance->vbucket_config, vbucket_id, ii);
-                if (rr >= 0) {
-                    cout << "\"" << instance->servers[rr].authority << "\"";
-                } else {
-                    cout << "N/A";
-                }
-                if (ii != nrepl - 1) {
-                    cout << ",";
+        cout << "\"" << *iter << "\"\tServer:\"" << server->authority << "\"";
+        if (instance->dist_type == VBUCKET_DISTRIBUTION_VBUCKET) {
+            cout << " vBucket:" << vbucket_id;
+            if (server->couch_api_base) {
+                cout << " CouchAPI:\"" << server->couch_api_base << "\"";
+            }
+            lcb_size_t nrepl = (lcb_size_t)vbucket_config_get_num_replicas(instance->vbucket_config);
+            if (nrepl > 0) {
+                cout << " Replicas:";
+                for (lcb_size_t ii = 0; ii < nrepl; ++ii) {
+                    int rr = vbucket_get_replica(instance->vbucket_config, vbucket_id, ii);
+                    if (rr >= 0) {
+                        cout << "\"" << instance->servers[rr].authority << "\"";
+                    } else {
+                        cout << "N/A";
+                    }
+                    if (ii != nrepl - 1) {
+                        cout << ",";
+                    }
                 }
             }
         }
@@ -1254,6 +1308,13 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         getopt.addOption(new CommandLineOption('p', "proxy-port", true,
                                                "Proxy port (default 11211)"));
     }
+
+    string filename;
+    if (cmd == cbc_hash) {
+        getopt.addOption(new CommandLineOption('f', "config-file", true,
+                                               "The dump of the cluster JSON configuration"));
+    }
+
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
         exit(EXIT_FAILURE);
@@ -1403,6 +1464,15 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     default:
                         unknownOpt = true;
                     }
+                } else if (cmd == cbc_hash) {
+                    unknownOpt = false;
+                    switch ((*iter)->shortopt) {
+                    case 'f':
+                        filename = (*iter)->argument;
+                        break;
+                    default:
+                        unknownOpt = true;
+                    }
                 }
 
                 if (unknownOpt) {
@@ -1411,6 +1481,12 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 }
             }
         }
+    }
+
+    bool success = false;
+    if (cmd == cbc_hash && !filename.empty()) {
+        success = hash_impl(filename, getopt.arguments);
+        exit(success ? EXIT_SUCCESS : EXIT_FAILURE);
     }
 
     lcb_t instance;
@@ -1463,7 +1539,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     list<string> keys;
 
-    bool success = false;
     switch (cmd) {
     case cbc_cat:
         if (replica) {
