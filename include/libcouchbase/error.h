@@ -164,7 +164,15 @@ extern "C" {
         /**
          * The instance of libcouchbase can't be used in this context
          */
-        LCB_EBADHANDLE = 0x1c
+        LCB_EBADHANDLE = 0x1c,
+        /**
+         * Unexpected usage of the server protocol, like unexpected
+         * response. If you've received this error code, please record your
+         * steps and file the issue at:
+         *
+         *   http://www.couchbase.com/issues/browse/MB
+         */
+        LCB_SERVER_BUG = 0x1d
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase

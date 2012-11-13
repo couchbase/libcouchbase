@@ -695,6 +695,12 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
                                  NULL, 0, 0, 0, 0);
             c->instance->callbacks.get(c->instance, ct.cookie, LCB_KEY_ENOENT, &resp.get);
             break;
+        case CMD_OBSERVE:
+            keyptr = packet + sizeof(req) + req.request.extlen;
+            setup_lcb_observe_resp_t(&resp.observe, keyptr, ntohs(req.request.keylen),
+                                     LCB_OBSERVE_MAX, 0, 0, 0, 0);
+            c->instance->callbacks.observe(c->instance, ct.cookie, LCB_SERVER_BUG, &resp.observe);
+            break;
         case PROTOCOL_BINARY_CMD_NOOP:
             break;
         default: {
