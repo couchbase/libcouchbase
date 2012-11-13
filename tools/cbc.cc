@@ -803,7 +803,12 @@ static bool hash_impl(lcb_t instance, list<string> &keys)
         if (nrepl > 0) {
             cout << " Replicas:";
             for (lcb_size_t ii = 0; ii < nrepl; ++ii) {
-                cout << "\"" << instance->servers[ii].authority << "\"";
+                int rr = vbucket_get_replica(instance->vbucket_config, vbucket_id, ii);
+                if (rr >= 0) {
+                    cout << "\"" << instance->servers[rr].authority << "\"";
+                } else {
+                    cout << "N/A";
+                }
                 if (ii != nrepl - 1) {
                     cout << ",";
                 }
