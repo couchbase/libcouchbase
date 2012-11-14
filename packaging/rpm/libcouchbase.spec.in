@@ -61,20 +61,6 @@ Requires: %{name}2-core
 %description devel
 Development files for the Couchbase Client & Protocol Library
 
-%package -n %{name}-libev-devel
-Group: Development/Libraries
-Summary: Couchbase Client & Protocol Library (libev backend) - Development files
-Requires: %{name}-devel, %{name}2-libev
-%description -n %{name}-libev-devel
-Development files for the Couchbase Client & Protocol Library
-
-%package -n %{name}-libevent-devel
-Group: Development/Libraries
-Summary: Couchbase Client & Protocol Library (libevent backend) - Development files
-Requires: %{name}-devel, %{name}2-libevent
-%description -n %{name}-libevent-devel
-Development files for the Couchbase Client & Protocol Library
-
 %prep
 %setup -q -n @TARREDAS@
 %configure --disable-couchbasemock
@@ -98,11 +84,11 @@ Development files for the Couchbase Client & Protocol Library
 
 %files -n %{name}2-libevent
 %defattr(-, root, root)
-%{_libdir}/libcouchbase_libevent.so.*
+%{_libdir}/libcouchbase_libevent.so
 
 %files -n %{name}2-libev
 %defattr(-, root, root)
-%{_libdir}/libcouchbase_libev.so.*
+%{_libdir}/libcouchbase_libev.so
 
 %files -n %{name}2
 %defattr(-, root, root)
@@ -119,17 +105,7 @@ Development files for the Couchbase Client & Protocol Library
 %{_includedir}/libcouchbase
 %{_libdir}/libcouchbase.la
 %{_libdir}/libcouchbase.so
-
-%files -n %{name}-libevent-devel
-%defattr(-, root, root)
-%{_libdir}/libcouchbase_libevent.la
-%{_libdir}/libcouchbase_libevent.so
-
-%files -n %{name}-libev-devel
-%defattr(-, root, root)
-%{_libdir}/libcouchbase_libev.la
-%{_libdir}/libcouchbase_libev.so
-
+%
 %changelog
 
 * Fri Oct 12 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta2

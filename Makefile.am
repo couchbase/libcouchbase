@@ -150,7 +150,7 @@ else
 if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
-libcouchbase_libevent_la_LDFLAGS=-version-info $(LIBEVENT_PLUGIN_API_CURRENT):$(LIBEVENT_PLUGIN_API_REVISION):$(LIBEVENT_PLUGIN_API_AGE) $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
+libcouchbase_libevent_la_LDFLAGS=$(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 if BUILD_EXAMPLES
@@ -163,7 +163,7 @@ endif
 if HAVE_LIBEV
 lib_LTLIBRARIES += libcouchbase_libev.la
 libcouchbase_libev_la_SOURCES = plugins/io/libev/plugin-libev.c
-libcouchbase_libev_la_LDFLAGS=-version-info $(LIBEV_PLUGIN_API_CURRENT):$(LIBEV_PLUGIN_API_REVISION):$(LIBEV_PLUGIN_API_AGE) $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
+libcouchbase_libev_la_LDFLAGS=$(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_libev_la_LIBADD=-lev
 libcouchbase_libev_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 endif

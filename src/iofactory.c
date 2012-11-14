@@ -95,9 +95,9 @@ static lcb_error_t get_create_func(const char *image,
 }
 
 #ifdef __APPLE__
-#define PLUGIN_SO(NAME) "libcouchbase_"NAME"."LIBEVENT_PLUGIN_VERSION_MAJOR".dylib"
+#define PLUGIN_SO(NAME) "libcouchbase_"NAME".dylib"
 #else
-#define PLUGIN_SO(NAME) "libcouchbase_"NAME".so."LIBEV_PLUGIN_VERSION_MAJOR
+#define PLUGIN_SO(NAME) "libcouchbase_"NAME".so"
 #endif
 
 #define PLUGIN_SYMBOL(NAME) "lcb_create_"NAME"_io_opts"
