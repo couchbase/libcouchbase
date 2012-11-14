@@ -434,6 +434,7 @@ struct lcb_io_opt_st *lcb_create_winsock_io_opts(void) {
 
     // setup io iops!
     ret->version = 0;
+    ret->destructor = lcb_destroy_io_opts;
     /* consider that struct isn't allocated by the library,
      * `need_cleanup' flag might be set in lcb_create() */
     ret->v.v0.need_cleanup = 0;
@@ -454,7 +455,6 @@ struct lcb_io_opt_st *lcb_create_winsock_io_opts(void) {
     ret->v.v0.update_timer = lcb_io_update_timer;
     ret->v.v0.run_event_loop = lcb_io_run_event_loop;
     ret->v.v0.stop_event_loop = lcb_io_stop_event_loop;
-    ret->v.v0.destructor = lcb_destroy_io_opts;
     ret->v.v0.cookie = calloc(1, sizeof(struct winsock_io_cookie));
 
     if (ret->v.v0.cookie == NULL) {
