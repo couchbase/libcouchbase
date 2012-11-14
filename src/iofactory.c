@@ -141,11 +141,12 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
 {
     if (io) {
+        void *dlhandle = io->dlhandle;
         if (io->destructor) {
             io->destructor(io);
         }
-        if (io->dlhandle) {
-            dlclose(io->dlhandle);
+        if (dlhandle) {
+            dlclose(dlhandle);
         }
     }
 
