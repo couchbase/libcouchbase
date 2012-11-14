@@ -53,21 +53,19 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
 LIBCOUCHBASE_API
 lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
 {
-    if (io && io->v.v0.destructor) {
-        io->v.v0.destructor(io);
+    if (io && io->destructor) {
+        io->destructor(io);
     }
     return LCB_SUCCESS;
 }
 #else
 
-typedef lcb_io_opt_t (*create_func)(struct event_base *base);
-typedef lcb_error_t (*create_v1_func)(lcb_io_opt_t *io, const void *cookie);
+typedef lcb_error_t (*create_func_t)(int version, lcb_io_opt_t *io, const void *cookie);
 
 struct plugin_st {
     void *dlhandle;
     union {
-        create_func create;
-        create_v1_func create_v1;
+        create_func_t create;
         void *voidptr;
     } func;
 };
@@ -143,12 +141,11 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
 {
     if (io) {
-        void *dlhandle = io->v.v0.dlhandle;
-        if (io->v.v0.destructor) {
-            io->v.v0.destructor(io);
+        if (io->destructor) {
+            io->destructor(io);
         }
-        if (dlhandle) {
-            dlclose(dlhandle);
+        if (io->dlhandle) {
+            dlclose(io->dlhandle);
         }
     }
 
@@ -231,14 +228,20 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
         }
     }
 
-    ret = plugin.func.create_v1(io, options->v.v1.cookie);
+    ret = plugin.func.create(0, io, options->v.v1.cookie);
     if (ret != LCB_SUCCESS) {
         if (options->v.v1.sofile != NULL) {
             dlclose(plugin.dlhandle);
         }
         return LCB_CLIENT_ENOMEM;
     } else {
-        (*io)->v.v0.dlhandle = plugin.dlhandle;
+        lcb_io_opt_t iop = *io;
+        iop->dlhandle = plugin.dlhandle;
+        /* check if plugin select compatible version */
+        if (iop->version < 0 || iop->version > 0) {
+            lcb_destroy_io_ops(iop);
+            return LCB_PLUGIN_VERSION_MISMATCH;
+        }
     }
 
     return LCB_SUCCESS;

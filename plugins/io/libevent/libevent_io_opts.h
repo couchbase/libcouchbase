@@ -36,6 +36,7 @@ extern "C" {
      * Create an instance of an event handler that utilize libevent for
      * event notification.
      *
+     * @param version the API version to use
      * @param base the event base (struct event_base *) to hook use (please
      *             note that you shouldn't reference the event base from
      *             multiple threads)
@@ -43,7 +44,7 @@ extern "C" {
      * @return status of the operation
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, void *base);
+    lcb_error_t lcb_create_libevent_io_opts(int version, lcb_io_opt_t *io, void *base);
 
 #ifdef __cplusplus
 }

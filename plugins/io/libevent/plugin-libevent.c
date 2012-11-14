@@ -330,11 +330,17 @@ static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, void *arg)
+lcb_error_t lcb_create_libevent_io_opts(int version, lcb_io_opt_t *io, void *arg)
 {
     struct event_base *base = arg;
-    struct lcb_io_opt_st *ret = calloc(1, sizeof(*ret));
-    struct libevent_cookie *cookie = calloc(1, sizeof(*cookie));
+    struct lcb_io_opt_st *ret;
+    struct libevent_cookie *cookie;
+    if (version != 0) {
+        return LCB_PLUGIN_VERSION_MISMATCH;
+    }
+
+    ret = calloc(1, sizeof(*ret));
+    cookie = calloc(1, sizeof(*cookie));
     if (ret == NULL || cookie == NULL) {
         free(ret);
         free(cookie);
@@ -343,7 +349,8 @@ lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, void *arg)
 
     /* setup io iops! */
     ret->version = 0;
-    ret->v.v0.dlhandle = NULL;
+    ret->dlhandle = NULL;
+    ret->destructor = lcb_destroy_io_opts;
     /* consider that struct isn't allocated by the library,
      * `need_cleanup' flag might be set in lcb_create() */
     ret->v.v0.need_cleanup = 0;
@@ -366,7 +373,6 @@ lcb_error_t lcb_create_libevent_io_opts(lcb_io_opt_t *io, void *arg)
 
     ret->v.v0.run_event_loop = lcb_io_run_event_loop;
     ret->v.v0.stop_event_loop = lcb_io_stop_event_loop;
-    ret->v.v0.destructor = lcb_destroy_io_opts;
 
     if (base == NULL) {
         if ((cookie->base = event_base_new()) == NULL) {

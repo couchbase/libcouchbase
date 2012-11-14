@@ -202,14 +202,13 @@ extern "C" {
 
     struct lcb_io_opt_st {
         int version;
+        void *dlhandle;
+        void (*destructor)(struct lcb_io_opt_st *iops);
         union {
             struct {
                 void *cookie;
                 int error;
-                void *dlhandle;
                 int need_cleanup;
-
-                void (*destructor)(struct lcb_io_opt_st *iops);
 
                 /**
                  * Create a non-blocking socket.

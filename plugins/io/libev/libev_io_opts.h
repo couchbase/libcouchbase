@@ -36,6 +36,7 @@ extern "C" {
      * Create an instance of an event handler that utilize libev for
      * event notification.
      *
+     * @param version the API version to use
      * @param loop the event loop (struct ev_loop *) to hook use (please
      *             note that you shouldn't reference the event loop from
      *             multiple threads)
@@ -43,7 +44,7 @@ extern "C" {
      * @return status of the operation
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_create_libev_io_opts(lcb_io_opt_t *io, void *loop);
+    lcb_error_t lcb_create_libev_io_opts(int version, lcb_io_opt_t *io, void *loop);
 #ifdef __cplusplus
 }
 #endif

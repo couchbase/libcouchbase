@@ -172,7 +172,11 @@ extern "C" {
          *
          *   http://www.couchbase.com/issues/browse/MB
          */
-        LCB_SERVER_BUG = 0x1d
+        LCB_SERVER_BUG = 0x1d,
+        /**
+         * Libcouchbase cannot load the plugin because of version mismatch
+         */
+        LCB_PLUGIN_VERSION_MISMATCH = 0x1e
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
