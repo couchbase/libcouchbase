@@ -107,7 +107,7 @@ Development files for the Couchbase Client & Protocol Library
 %{_includedir}/libcouchbase
 %{_libdir}/libcouchbase.la
 %{_libdir}/libcouchbase.so
-%
+
 %changelog
 
 * Fri Oct 12 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta2
