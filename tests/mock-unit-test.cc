@@ -348,6 +348,7 @@ extern "C" {
         lcb_cas_t cas2;
         char *bytes;
         lcb_size_t nbytes;
+        lcb_int32_t counter;
     };
 
     static void df_store_callback1(lcb_t instance,
@@ -467,6 +468,13 @@ extern "C" {
 
     int store_cnt;
 
+    /* Needed for "testPurgedBody", to ensure preservation of connection */
+    static void io_close_wrap(lcb_io_opt_t, lcb_socket_t)
+    {
+        fprintf(stderr, "We requested to close, but we were't expecting it\n");
+        abort();
+    }
+
     static void store_callback(lcb_t instance, const void *cookie,
                                lcb_storage_t, lcb_error_t error,
                                const lcb_store_resp_t *)
@@ -476,7 +484,6 @@ extern "C" {
         store_cnt++;
         instance->io->v.v0.stop_event_loop(instance->io);
     }
-
 
     static void get_callback(lcb_t instance, const void *cookie,
                              lcb_error_t error, const lcb_get_resp_t *resp)
@@ -488,6 +495,92 @@ extern "C" {
         rv->nbytes = resp->v.v0.nbytes;
         instance->io->v.v0.stop_event_loop(instance->io);
     }
+
+    static void tpb_get_callback(lcb_t instance, const void *cookie,
+                             lcb_error_t error, const lcb_get_resp_t *resp)
+    {
+        struct rvbuf *rv = (struct rvbuf *)cookie;
+        rv->error = error;
+        rv->counter--;
+        if (rv->counter <= 0) {
+            lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
+            assert(io);
+            io->v.v0.stop_event_loop(io);
+        }
+    }
+}
+
+TEST_F(MockUnitTest, testPurgedBody)
+{
+    lcb_error_t err;
+    struct rvbuf rv;
+    const char key[] = "testPurgedBody";
+    lcb_size_t nkey = sizeof(key);
+    int nvalue = 100000;
+    char *value = (char *)malloc(nvalue);
+    lcb_t instance;
+    lcb_io_opt_t io;
+
+    createConnection(instance);
+
+    lcb_uint32_t old_timeo = lcb_get_timeout(instance);
+    io = (lcb_io_opt_t)lcb_get_cookie(instance);
+
+    /* --enable-warnings --enable-werror won't let me use a simple void* */
+    void (*io_close_old)(lcb_io_opt_t, lcb_socket_t) = io->v.v0.close;
+
+    lcb_set_timeout(instance, 3100000); /* 3.1 seconds */
+    hrtime_t now = gethrtime(), begin_time = 0;
+
+    io->v.v0.close = io_close_wrap;
+
+    memset(value, 0xff, nvalue);
+    lcb_set_store_callback(instance, store_callback);
+    lcb_set_get_callback(instance, tpb_get_callback);
+
+    /*
+     * Store large 100000 bytes key in the bucket
+     */
+    lcb_store_cmd_t store_cmd(LCB_SET, key, nkey, value, nvalue);
+    lcb_store_cmd_t *store_cmds[] = { &store_cmd };
+    err = lcb_store(instance, &rv, 1, store_cmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    rv.counter = 1;
+    io->v.v0.run_event_loop(io);
+    ASSERT_EQ(LCB_SUCCESS, rv.error);
+
+    /*
+     * Schedule GET operation for the key
+     */
+    lcb_get_cmd_t get_cmd(key, nkey);
+    lcb_get_cmd_t *get_cmds[] = { &get_cmd };
+    err = lcb_get(instance, &rv, 1, get_cmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    /*
+     * Setup mock to split response in two parts: send first 40 bytes
+     * immediately and send the rest after 3.5 seconds.
+     *
+     * And sleep a bit (for 0.25 seconds)
+     */
+    MockEnvironment::getInstance()->hiccupNodes(3500, 40); /* 3.5 seconds */
+    usleep(250000L); /* 0.25 seconds */
+
+    /*
+     * Run the IO loop and measure how long does it take to transfer the
+     * value back.
+     */
+    begin_time = gethrtime();
+    io->v.v0.run_event_loop(io);
+    now = gethrtime();
+
+    /*
+     * The command must be timed out and it should take more than 2.8
+     * seconds
+     */
+    ASSERT_EQ(LCB_ETIMEDOUT, rv.error);
+    ASSERT_GE(now - begin_time, 2800000000L); /* 2.8 seconds */
+    free(value);
 }
 
 TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)

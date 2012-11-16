@@ -102,6 +102,16 @@ public:
      */
     void createConnection(lcb_t &instance);
 
+    /**
+     * Setup mock to split response in two parts: send first "offset" bytes
+     * immediately and send the rest after "msecs" milliseconds.
+     *
+     * @param msecs the number of milliseconds to wait before sending the
+     *              rest of the packet.
+     * @param offset the number of the bytes to send in first before delay
+     */
+    void hiccupNodes(int msecs, int offset);
+
     ServerVersion getServerVersion(void) const {
         return serverVersion;
     }

@@ -20,6 +20,7 @@
 
 #include "server.h"
 #include "mock-environment.h"
+#include <sstream>
 
 MockEnvironment *MockEnvironment::instance;
 
@@ -65,6 +66,14 @@ void MockEnvironment::respawnNode(int index, std::string bucket)
     assert(nw == cmd.size());
 }
 
+void MockEnvironment::hiccupNodes(int msecs, int offset)
+{
+    std::stringstream cmdbuf;
+    cmdbuf << "hiccup," << msecs << "," << offset << "\n";
+    std::string cmd = cmdbuf.str();
+    ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
+    assert(nw == cmd.size());
+}
 void MockEnvironment::createConnection(lcb_t &instance)
 {
     struct lcb_io_opt_st *io;

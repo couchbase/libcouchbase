@@ -307,6 +307,11 @@ tests_unit_tests_SOURCES += \
                             tests/testutil.cc \
                             tests/testutil.h
 
+if !HAVE_GETHRTIME
+tests_unit_tests_SOURCES += \
+                            src/gethrtime.c
+endif
+
 check_PROGRAMS += \
                   tests/smoke-test
 endif
