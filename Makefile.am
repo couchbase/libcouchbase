@@ -42,6 +42,7 @@ pkginclude_HEADERS = \
                      include/libcouchbase/error.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
+                     include/libcouchbase/http.h \
                      include/libcouchbase/arguments.h \
                      include/libcouchbase/sanitycheck.h \
                      include/libcouchbase/visibility.h

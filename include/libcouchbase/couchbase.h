@@ -57,6 +57,7 @@
 #include <libcouchbase/visibility.h>
 #include <libcouchbase/error.h>
 #include <libcouchbase/types.h>
+#include <libcouchbase/http.h>
 #include <libcouchbase/arguments.h>
 #include <libcouchbase/sanitycheck.h>
 #include <libcouchbase/compat.h>

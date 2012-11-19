@@ -145,6 +145,7 @@ uninstall:
          $(INSTALL)\include\libcouchbase\libevent_io_opts.h \
          $(INSTALL)\include\libcouchbase\timings.h \
          $(INSTALL)\include\libcouchbase\types.h \
+         $(INSTALL)\include\libcouchbase\http.h \
          $(INSTALL)\include\libcouchbase\arguments.h \
          $(INSTALL)\include\libcouchbase\sanitycheck.h \
          $(INSTALL)\include\libcouchbase\visibility.h \
