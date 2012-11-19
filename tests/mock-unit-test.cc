@@ -21,12 +21,16 @@
 #include "server.h"
 #include "mock-unit-test.h"
 #include "mock-environment.h"
+#include "internal.h" /* vbucket_* things from lcb_t */
 
 /**
  * Keep these around in case we do something useful here in the future
  */
 void MockUnitTest::SetUpTestCase() { }
-void MockUnitTest::TearDownTestCase() { }
+void MockUnitTest::TearDownTestCase()
+{
+    MockEnvironment::Reset();
+}
 
 extern "C" {
     static void error_callback(lcb_t instance,
@@ -342,6 +346,8 @@ extern "C" {
         lcb_error_t error;
         lcb_cas_t cas1;
         lcb_cas_t cas2;
+        char *bytes;
+        lcb_size_t nbytes;
     };
 
     static void df_store_callback1(lcb_t instance,
@@ -448,4 +454,120 @@ TEST_F(MockUnitTest, testBrokenFirstNodeInList)
     lcb_set_timeout(instance, 200000); /* 200 ms */
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     lcb_destroy(instance);
+}
+
+extern "C" {
+    int config_cnt;
+
+    static void vbucket_state_callback(lcb_server_t *server)
+    {
+        config_cnt++;
+        server->instance->io->v.v0.stop_event_loop(server->instance->io);
+    }
+
+    int store_cnt;
+
+    static void store_callback(lcb_t instance, const void *cookie,
+                               lcb_storage_t, lcb_error_t error,
+                               const lcb_store_resp_t *)
+    {
+        struct rvbuf *rv = (struct rvbuf *)cookie;
+        rv->error = error;
+        store_cnt++;
+        instance->io->v.v0.stop_event_loop(instance->io);
+    }
+
+
+    static void get_callback(lcb_t instance, const void *cookie,
+                             lcb_error_t error, const lcb_get_resp_t *resp)
+    {
+        struct rvbuf *rv = (struct rvbuf *)cookie;
+        rv->error = error;
+        rv->bytes = (char *)malloc(resp->v.v0.nbytes);
+        memcpy((void *)rv->bytes, resp->v.v0.bytes, resp->v.v0.nbytes);
+        rv->nbytes = resp->v.v0.nbytes;
+        instance->io->v.v0.stop_event_loop(instance->io);
+    }
+}
+
+TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
+{
+    lcb_error_t err;
+    struct rvbuf rv;
+    lcb_io_opt_t io;
+    lcb_t instance;
+
+    createConnection(instance);
+    io = (lcb_io_opt_t)lcb_get_cookie(instance);
+
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    /* mock uses 10 nodes by default */
+    ASSERT_EQ(10, mock->getNumNodes());
+    instance->vbucket_state_listener = vbucket_state_callback;
+
+    config_cnt = 0;
+    mock->failoverNode(0);
+    io->v.v0.run_event_loop(io);
+    ASSERT_EQ(9, config_cnt);
+
+    config_cnt = 0;
+    mock->respawnNode(0);
+    io->v.v0.run_event_loop(io);
+    ASSERT_EQ(10, config_cnt);
+}
+
+TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
+{
+    lcb_error_t err;
+    struct rvbuf rv;
+    lcb_io_opt_t io;
+    lcb_t instance;
+    std::string key = "testBufferRelocationOnNodeFailover";
+    std::string val = "foo";
+
+    createConnection(instance);
+    io = (lcb_io_opt_t)lcb_get_cookie(instance);
+
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    /* mock uses 10 nodes by default */
+    ASSERT_EQ(10, mock->getNumNodes());
+    instance->vbucket_state_listener = vbucket_state_callback;
+    (void)lcb_set_store_callback(instance, store_callback);
+    (void)lcb_set_get_callback(instance, get_callback);
+
+    /* Schedule SET operation */
+    lcb_store_cmd_t storecmd(LCB_SET, key.c_str(), key.size(),
+                             val.c_str(), val.size());
+    lcb_store_cmd_t *storecmds[] = { &storecmd };
+    err = lcb_store(instance, &rv, 1, storecmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    /* Determine what server should receive that operation */
+    int vb = vbucket_get_vbucket_by_key(instance->vbucket_config, key.c_str(), key.size());
+    lcb_vbucket_t idx = instance->vb_server_map[vb];
+
+    /* Switch off that server */
+    mock->failoverNode(idx);
+
+    /* Execute event loop to reconfigure client and execute operation */
+    config_cnt = 0;
+    store_cnt = 0;
+    /* It should never return LCB_NOT_MY_VBUCKET */
+    while (config_cnt == 0 || store_cnt == 0) {
+        memset(&rv, 0, sizeof(rv));
+        io->v.v0.run_event_loop(io);
+        ASSERT_NE(LCB_NOT_MY_VBUCKET, err);
+    }
+
+    /* Check that value was actually set */
+    lcb_get_cmd_t getcmd(key.c_str(), key.size());
+    lcb_get_cmd_t *getcmds[] = { &getcmd };
+    err = lcb_get(instance, &rv, 1, getcmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    io->v.v0.run_event_loop(io);
+    ASSERT_EQ(LCB_SUCCESS, rv.error);
+    ASSERT_EQ(rv.nbytes, val.size());
+    std::string bytes = std::string(rv.bytes, rv.nbytes);
+    ASSERT_STREQ(bytes.c_str(), val.c_str());
+    free(rv.bytes);
 }

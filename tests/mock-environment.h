@@ -68,6 +68,26 @@ public:
     }
 
     /**
+     * Simulate node failover. In this case mock will disable server
+     * corresponding given index an push new configuration. No data
+     * rebalancing implemented on the mock.
+     *
+     * @param index the index of the node on the mock
+     * @param bucket the name of the bucket
+     */
+    void failoverNode(int index, std::string bucket = "default");
+
+    /**
+     * Simulate node reconvering. In this case mock will enable server
+     * corresponding given index an push new configuration. No data
+     * rebalancing implemented on the mock.
+     *
+     * @param index the index of the node on the mock
+     * @param bucket the name of the bucket
+     */
+    void respawnNode(int index, std::string bucket = "default");
+
+    /**
      * Create a connection to the mock/real server.
      *
      * The instance will be initialized with the the connect parameters

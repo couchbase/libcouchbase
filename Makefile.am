@@ -192,7 +192,7 @@ tests_unit_tests_SOURCES += \
 endif
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
-tests_unit_tests_LDADD = libcouchbase.la
+tests_unit_tests_LDADD = libcouchbase.la libvbucket.la
 tests_unit_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
 tests_unit_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
 tests_unit_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
@@ -308,14 +308,8 @@ tests_unit_tests_SOURCES += \
                             tests/testutil.h
 
 check_PROGRAMS += \
-                  tests/config-test \
                   tests/smoke-test
 endif
-
-tests_config_test_SOURCES = tests/test.h tests/config-test.c tests/timeout.c
-tests_config_test_DEPENDENCIES = libcouchbase.la libmockserver.la libvbucket.la
-tests_config_test_LDADD = $(tests_config_test_DEPENDENCIES)
-tests_config_test_LDFLAGS = $(AM_LDFLAGS)
 
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c tests/timeout.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la

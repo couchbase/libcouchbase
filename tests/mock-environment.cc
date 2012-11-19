@@ -47,6 +47,24 @@ MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
     // No extra init needed
 }
 
+void MockEnvironment::failoverNode(int index, std::string bucket)
+{
+    std::stringstream cmdbuf;
+    cmdbuf << "failover," << index << "," << bucket << "\n";
+    std::string cmd = cmdbuf.str();
+    ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
+    assert(nw == cmd.size());
+}
+
+void MockEnvironment::respawnNode(int index, std::string bucket)
+{
+    std::stringstream cmdbuf;
+    cmdbuf << "respawn," << index << "," << bucket << "\n";
+    std::string cmd = cmdbuf.str();
+    ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
+    assert(nw == cmd.size());
+}
+
 void MockEnvironment::createConnection(lcb_t &instance)
 {
     struct lcb_io_opt_st *io;
