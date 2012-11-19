@@ -35,6 +35,7 @@ public:
     virtual void TearDown();
 
     static MockEnvironment *getInstance(void);
+    static void Reset();
 
     /**
      * Make a connect structure you may utilize to connect to

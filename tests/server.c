@@ -317,16 +317,18 @@ void respawn_node(const void *handle, int idx, const char *bucket)
 void shutdown_mock_server(const void *handle)
 {
     struct test_server_info *info = (void *)handle;
-    free(info->http);
-    free(info->bucket);
-    free(info->username);
-    free(info->password);
-    if (info->is_mock) {
-        close(info->client);
-        close(info->sock);
-        kill(info->pid, SIGTERM);
+    if (info != NULL) {
+        free(info->http);
+        free(info->bucket);
+        free(info->username);
+        free(info->password);
+        if (info->is_mock) {
+            close(info->client);
+            close(info->sock);
+            kill(info->pid, SIGTERM);
+        }
+        free((void *)handle);
     }
-    free((void *)handle);
 }
 
 const char *get_mock_http_server(const void *handle)

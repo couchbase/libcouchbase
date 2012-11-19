@@ -31,6 +31,14 @@ MockEnvironment *MockEnvironment::getInstance(void)
     return instance;
 }
 
+void MockEnvironment::Reset()
+{
+    if (instance != NULL) {
+        instance->TearDown();
+        instance->SetUp();
+    }
+}
+
 MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
     realCluster(false),
     serverVersion(VERSION_UNKNOWN),
@@ -160,4 +168,5 @@ void MockEnvironment::SetUp()
 void MockEnvironment::TearDown()
 {
     shutdown_mock_server(mock);
+    mock = NULL;
 }
