@@ -868,12 +868,14 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
                                      strlen(instance->http_uri) - instance->n_http_uri_sent,
                                      0);
         if (nw == -1) {
-            lcb_error_handler(instance, LCB_NETWORK_ERROR,
-                              "Failed to send data to REST server");
-            instance->io->v.v0.delete_event(instance->io, instance->sock,
-                                            instance->event);
+            int sockerr = instance->io->v.v0.error;
+            if (sockerr != EWOULDBLOCK && sockerr != EINTR) {
+                lcb_error_handler(instance, LCB_NETWORK_ERROR,
+                                  "Failed to send data to REST server");
+                instance->io->v.v0.delete_event(instance->io, instance->sock,
+                                                instance->event);
+            }
             return;
-
         }
 
         instance->n_http_uri_sent += (lcb_size_t)nw;
