@@ -255,6 +255,14 @@ extern "C" {
     const char *vbucket_config_get_rest_api_server(VBUCKET_CONFIG_HANDLE vb, int i);
 
     /**
+     * Check if the server was used for configuration
+     *
+     * @return non-zero for configuration node
+     */
+    LIBVBUCKET_PUBLIC_API
+    int vbucket_config_is_config_node(VBUCKET_CONFIG_HANDLE h, int i);
+
+    /**
      * Get the distribution type. Currently can be or "vbucket" (for
      * eventually persisted nodes) either "ketama" (for plain memcached
      * nodes).

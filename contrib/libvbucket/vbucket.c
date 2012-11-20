@@ -40,6 +40,8 @@ struct server_st {
     char *authority;        /* host:port */
     char *rest_api_authority;
     char *couchdb_api_base;
+    int config_node;        /* non-zero if server struct describes node,
+                               which is listening */
 };
 
 struct vbucket_st {
@@ -256,6 +258,10 @@ static int update_server_info(struct vbucket_config_st *vb, cJSON *config) {
                         return -1;
                     }
                     vb->servers[idx].rest_api_authority = value;
+                }
+                json = cJSON_GetObjectItem(node, "thisNode");
+                if (json != NULL && json->type == cJSON_True) {
+                    vb->servers[idx].config_node = 1;
                 }
             }
         }
@@ -674,6 +680,10 @@ const char *vbucket_config_get_couch_api_base(VBUCKET_CONFIG_HANDLE vb, int i) {
 
 const char *vbucket_config_get_rest_api_server(VBUCKET_CONFIG_HANDLE vb, int i) {
     return vb->servers[i].rest_api_authority;
+}
+
+int vbucket_config_is_config_node(VBUCKET_CONFIG_HANDLE vb, int i) {
+    return vb->servers[i].config_node;
 }
 
 VBUCKET_DISTRIBUTION_TYPE vbucket_config_get_distribution_type(VBUCKET_CONFIG_HANDLE vb) {
