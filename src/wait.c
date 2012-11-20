@@ -16,17 +16,13 @@
  */
 #include "internal.h"
 
-static void breakout_vbucket_state_listener(lcb_server_t *server)
+static void breakout_configuration_callback(lcb_t instance, lcb_configuration_t config)
 {
-    if (server->instance->vbucket_state_listener_last) {
-        server->instance->vbucket_state_listener =
-            server->instance->vbucket_state_listener_last;
-        server->instance->vbucket_state_listener_last = NULL;
-    }
-    server->instance->io->v.v0.delete_timer(server->instance->io,
-                                            server->instance->timeout.event);
-    server->instance->connected = 1;
-    lcb_maybe_breakout(server->instance);
+    instance->callbacks.configuration = instance->configuration_callback_last;
+    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
+    instance->connected = 1;
+    lcb_maybe_breakout(instance);
+    instance->callbacks.configuration(instance, config);
 }
 
 static void initial_connect_timeout_handler(lcb_socket_t sock,
@@ -56,10 +52,6 @@ static void initial_connect_timeout_handler(lcb_socket_t sock,
 
     (void)sock;
     (void)which;
-    /* Notice we do not re-set the vbucket_state_listener. This is by design,
-     * as we are still in the same state, and are just reporting an error
-     * back to the user
-     */
 }
 
 /**
@@ -99,8 +91,8 @@ lcb_error_t lcb_wait(lcb_t instance)
     if (!instance->connected) {
         if (instance->type == LCB_TYPE_BUCKET) {
             /* Initial configuration. Set a timer */
-            instance->vbucket_state_listener_last = instance->vbucket_state_listener;
-            instance->vbucket_state_listener = breakout_vbucket_state_listener;
+            instance->configuration_callback_last = instance->callbacks.configuration;
+            instance->callbacks.configuration = breakout_configuration_callback;
         }
 
         /* Initial connection timeout */
