@@ -497,7 +497,7 @@ static void relocate_packets(lcb_server_t *src,
     lcb_server_t *dst;
     lcb_size_t nbody, npacket;
     char *body;
-    lcb_size_t idx;
+    int idx;
     lcb_vbucket_t vb;
 
     while (ringbuffer_read(&src->cmd_log, cmd.bytes, sizeof(cmd.bytes))) {
@@ -511,8 +511,14 @@ static void relocate_packets(lcb_server_t *src,
         }
         assert(ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
         vb = ntohs(cmd.request.vbucket);
-        idx = (lcb_size_t)vbucket_get_master(dst_instance->vbucket_config, vb);
-        dst = dst_instance->servers + idx;
+        idx = vbucket_get_master(dst_instance->vbucket_config, vb);
+        if (idx < 0) {
+            /* looks like master isn't ready to accept the data, try another
+             * one, maybe from fast forward map. this function will never
+             * give -1 */
+            idx = vbucket_found_incorrect_master(dst_instance->vbucket_config, vb, idx);
+        }
+        dst = dst_instance->servers + (lcb_size_t)idx;
         if (src->connected) {
             assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
         } else {
