@@ -41,6 +41,7 @@ void lcb_purge_single_server(lcb_server_t *server,
     lcb_size_t send_size = ringbuffer_get_nbytes(&server->output);
     lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
     hrtime_t now = gethrtime();
+    int should_switch_to_backup_node = 0;
 
     if (server->connected) {
         cookies = &server->output_cookies;
@@ -261,6 +262,12 @@ void lcb_purge_single_server(lcb_server_t *server,
         if (mirror) {
             ringbuffer_consumed(mirror, packetsize);
         }
+        if (server->is_config_node) {
+            root->weird_things++;
+            if (root->weird_things >= root->weird_things_threshold) {
+                should_switch_to_backup_node = 1;
+            }
+        }
     } while (1); /* CONSTCOND */
 
     if (server->connected) {
@@ -279,6 +286,11 @@ void lcb_purge_single_server(lcb_server_t *server,
     }
 
     ringbuffer_destruct(&rest);
+    if (should_switch_to_backup_node) {
+        lcb_switch_to_backup_node(root, LCB_NETWORK_ERROR,
+                                  "Config connection considered stale. "
+                                  "Reconnection forced");
+    }
     lcb_maybe_breakout(server->instance);
 }
 
@@ -597,6 +609,8 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
     *p = '\0';
     server->port = p + 1;
 
+    server->is_config_node = vbucket_config_is_config_node(server->instance->vbucket_config,
+                                                           servernum);
     n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
                                           servernum);
     server->couch_api_base = (n != NULL) ? strdup(n) : NULL;

@@ -39,3 +39,15 @@ lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance)
 {
     return instance->ipv6;
 }
+
+LIBCOUCHBASE_API
+void lcb_behavior_set_config_errors_threshold(lcb_t instance, lcb_size_t num_events)
+{
+    instance->weird_things_threshold = num_events;
+}
+
+LIBCOUCHBASE_API
+lcb_size_t lcb_behavior_get_config_errors_threshold(lcb_t instance)
+{
+    return instance->weird_things_threshold;
+}

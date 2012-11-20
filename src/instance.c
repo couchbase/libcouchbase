@@ -249,6 +249,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
+    lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
 
     if (setup_boostrap_hosts(obj, host) == -1) {
         lcb_destroy(obj);
@@ -427,6 +428,7 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
     };
 
     instance->vbucket_config = config;
+    instance->weird_things = 0;
     num = (lcb_size_t)vbucket_config_get_num_servers(config);
     /* servers array should be freed in the caller */
     instance->servers = calloc(num, sizeof(lcb_server_t));

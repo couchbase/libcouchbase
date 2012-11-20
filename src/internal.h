@@ -56,6 +56,7 @@
 #endif
 
 #define LCB_DEFAULT_TIMEOUT 2500000
+#define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 
 #ifdef __cplusplus
 extern "C" {
@@ -159,6 +160,14 @@ extern "C" {
 
         struct lcb_io_opt_st *io;
 
+        /** The number of weird things happened with config node
+         *  This counter reflects event on memcached port (default 11210),
+         *  but used to make decisions about healthiness of the
+         *  configuration port (default 8091).
+         */
+        lcb_size_t weird_things;
+        lcb_size_t weird_things_threshold;
+
         /* The current synchronous mode */
         lcb_syncmode_t syncmode;
 
@@ -246,6 +255,8 @@ extern "C" {
     struct lcb_server_st {
         /** The server index in the list */
         int index;
+        /** Non-zero for node is using for configuration */
+        int is_config_node;
         /** The name of the server */
         char *hostname;
         /** The servers port */

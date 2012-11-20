@@ -38,6 +38,18 @@ extern "C" {
     LIBCOUCHBASE_API
     lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance);
 
+    /**
+     * Set the maximum number of error events allowed on the data socket
+     * paired with config port, to consider node suspicious and to force
+     * reconnection. This feature is solving issues when node is gone
+     * without proper socket close.
+     */
+    LIBCOUCHBASE_API
+    void lcb_behavior_set_config_errors_threshold(lcb_t instance, lcb_size_t num_events);
+
+    LIBCOUCHBASE_API
+    lcb_size_t lcb_behavior_get_config_errors_threshold(lcb_t instance);
+
 #ifdef __cplusplus
 }
 #endif
