@@ -49,7 +49,7 @@ This is the client and protocol library for Couchbase project.
 %package -n %{name}2-bin
 Group: Development/Tools
 Summary: Couchbase Client Tools
-Provides: %{name}2-all
+Provides: %{name}-all
 Requires: %{name}2
 %description -n %{name}2-bin
 This is the CLI tools Couchbase project.
