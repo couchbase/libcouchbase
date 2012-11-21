@@ -110,6 +110,64 @@ Development files for the Couchbase Client & Protocol Library
 
 %changelog
 
+* Wed Nov 21 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta3
+[Mark Nunberg]
+- Check for EWOULDBLOCK/EINTR on failed send
+
+[Sergey Avseyev]
+- Fix build for MinGW
+- Try all known plugins for LCB_IO_OPS_DEFAULT in run time
+- CCBC-113 Remove unauthorized asserion
+- CCBC-114 Lookup the plugin symbol in current executable image
+- Apply new packaging scheme
+- Fix README formatting
+- README: add hacking section
+- +1 more space for github Markdown parser
+- Do not allow admin operations without authentication
+- Reformat code and reorder .gitignore
+- Check subcommands more strictly
+- CCBC-115 Return zero from do_read_data() if operations_per_call reached
+- Timer in libev uses double for interval
+- Clarify LCB_DELTA_BADVAL error
+- CCBC-118 lcb_error_t member in the http callbacks shouldn't reflect the HTTP response code
+- Update binary packages with man files
+- CCBC-122 Try to switch another server from backup list on timeout
+- CCBC-120 Reformat and refactor lcb_server_purge_implicit_responses()
+- CCBC-120 Purge stale OBSERVE packets
+- CCBC-124 Output replicas properly
+- Allow to use 'cbc-hash' with files
+- Remove libtool version from the plugins
+- Use dynamic versioning for plugins
+- Update destructor setup in windows plugin
+- Finish removing libtool version from plugins
+- Fix using free'd memory (was introduced in 43971816
+- Include .la files in plugin RPMs
+- Fix RPM spec: remove extra % sign
+- Allow to use gethrtime() from C++
+- Allow to reset mock connection
+- Rewrite config-test.c using gtest framework
+- CCBC-107 Port test from http://review.couchbase.org/13667
+- Use public configuration callback instead of vbucket_listener
+- libvbucket: read and store thisNode property of node
+- CCBC-104 Reconnect config listener
+- CCBC-104 Fix illegal memory access
+- Update metadata for release 2.0.0beta3
+
+[Trond Norbye]
+- CCBC-87: Add documentation about the error codes
+- All enums should have explicit values
+- Don't end an enum with a ,
+- Add lcb_verify_compiler_setup
+- Don't use the time_t for win32
+- Fix the list should be even, not odd
+- Fix bucket-create
+- Create man pages for cbc and cbcrc
+- CCBC-119: Allow the user to specify a different hash key
+- Include the man pages (and pdfs) in the distribution
+- Added CONTRIBUTING.md
+- Check for endianness during configure
+- Refactor: move http constants to its own file
+
 * Fri Oct 12 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta2
 [Sergey Avseyev]
 - Allow to disable CXX targets
