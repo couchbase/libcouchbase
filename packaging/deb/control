@@ -26,11 +26,11 @@ Description: library for the Couchbase protocol (libev backend)
  .
  This package provides libev backend for libcouchbase
 
-Package: libcouchbase2-dbg
+Package: libcouchbase-dbg
 Section: debug
 Architecture: any
 Priority: extra
-Depends: libcouchbase2 (= ${binary:Version}), ${misc:Depends}
+Depends: libcouchbase2-core (= ${binary:Version}), ${misc:Depends}
 Description: library for the Couchbase protocol, debug symbols
  libcouchbase is a library implementing Couchbase protocol.
  .
