@@ -58,6 +58,7 @@
 /m4/lt~obsolete.m4
 /m4/version.m4
 /src/config.h
+/src/probes.h
 /src/config.h.in
 /src/stamp-h1
 /tests/*-test

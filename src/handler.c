@@ -329,6 +329,7 @@ static void getq_response_handler(lcb_server_t *server,
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
+    lcb_error_t rc = map_error(status);
 
     nbytes -= res->response.extlen;
     if (key == NULL) {
@@ -341,14 +342,16 @@ static void getq_response_handler(lcb_server_t *server,
         setup_lcb_get_resp_t(&resp, key, nkey, bytes, nbytes,
                              ntohl(getq->message.body.flags),
                              res->response.cas, res->response.datatype);
-        root->callbacks.get(root, command_data->cookie, LCB_SUCCESS,
-                            &resp);
+        TRACE_GET_END(res->response.opaque, command_data->vbucket,
+                      res->response.opcode, rc, &resp);
+        root->callbacks.get(root, command_data->cookie, rc, &resp);
     } else {
         lcb_get_resp_t resp;
         setup_lcb_get_resp_t(&resp, key, nkey, NULL, 0, 0,
                              0, res->response.datatype);
-        root->callbacks.get(root, command_data->cookie,
-                            map_error(status), &resp);
+        TRACE_GET_END(res->response.opaque, command_data->vbucket,
+                      res->response.opcode, rc, &resp);
+        root->callbacks.get(root, command_data->cookie, rc, &resp);
     }
     release_key(server, packet);
 }
@@ -362,6 +365,7 @@ static void get_replica_response_handler(lcb_server_t *server,
     lcb_uint16_t status = ntohs(res->response.status);
     lcb_uint16_t nkey = ntohs(res->response.keylen);
     const char *key = (const char *)res;
+    lcb_error_t rc = map_error(status);
 
     key += sizeof(get->bytes);
     if (key == NULL) {
@@ -375,8 +379,9 @@ static void get_replica_response_handler(lcb_server_t *server,
                              ntohl(get->message.body.flags),
                              res->response.cas,
                              res->response.datatype);
-        root->callbacks.get(root, command_data->cookie, LCB_SUCCESS,
-                            &resp);
+        TRACE_GET_END(res->response.opaque, command_data->vbucket,
+                      res->response.opcode, rc, &resp);
+        root->callbacks.get(root, command_data->cookie, rc, &resp);
     } else {
         if (status == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
             /* the config was updated, start from first replica */
@@ -404,6 +409,7 @@ static void get_replica_response_handler(lcb_server_t *server,
             req.message.header.request.vbucket = ntohs(command_data->vbucket);
             req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
             req.message.header.request.opaque = ++root->seqno;
+            TRACE_GET_BEGIN(&req, key, nkey, 0);
             lcb_server_retry_packet(server, command_data,
                                     req.bytes, sizeof(req.bytes));
             lcb_server_write_packet(server, key, nkey);
@@ -414,8 +420,9 @@ static void get_replica_response_handler(lcb_server_t *server,
             lcb_get_resp_t resp;
             setup_lcb_get_resp_t(&resp, key, nkey, NULL, 0, 0, 0,
                                  res->response.datatype);
-            root->callbacks.get(root, command_data->cookie,
-                                map_error(status), &resp);
+            TRACE_GET_END(res->response.opaque, command_data->vbucket,
+                          res->response.opcode, rc, &resp);
+            root->callbacks.get(root, command_data->cookie, rc, &resp);
         }
     }
 }
@@ -426,6 +433,7 @@ static void delete_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
@@ -435,8 +443,9 @@ static void delete_response_handler(lcb_server_t *server,
     } else {
         lcb_remove_resp_t resp;
         setup_lcb_remove_resp_t(&resp, key, nkey, res->response.cas);
-        root->callbacks.remove(root, command_data->cookie,
-                               map_error(status), &resp);
+        TRACE_REMOVE_END(res->response.opaque, command_data->vbucket,
+                         res->response.opcode, rc, &resp);
+        root->callbacks.remove(root, command_data->cookie, rc, &resp);
         release_key(server, packet);
     }
 }
@@ -447,6 +456,7 @@ static void observe_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
     lcb_uint32_t ttp;
     lcb_uint32_t ttr;
     VBUCKET_CONFIG_HANDLE config;
@@ -483,9 +493,9 @@ static void observe_response_handler(lcb_server_t *server,
         setup_lcb_observe_resp_t(&resp, key, nkey, cas, obs,
                                  server->index == vbucket_get_master(config, vb),
                                  ttp, ttr);
-
-        root->callbacks.observe(root, command_data->cookie, map_error(status),
-                                &resp);
+        TRACE_OBSERVE_PROGRESS(res->response.opaque, command_data->vbucket,
+                               res->response.opcode, rc, &resp);
+        root->callbacks.observe(root, command_data->cookie, rc, &resp);
     }
     /* run callback with null-null-null to signal the end of transfer */
     if (lcb_lookup_server_with_command(root, CMD_OBSERVE,
@@ -493,8 +503,9 @@ static void observe_response_handler(lcb_server_t *server,
 
         lcb_observe_resp_t resp;
         memset(&resp, 0, sizeof(resp));
-        root->callbacks.observe(root, command_data->cookie, map_error(status),
-                                &resp);
+        TRACE_OBSERVE_END(res->response.opaque, command_data->vbucket,
+                          res->response.opcode, rc);
+        root->callbacks.observe(root, command_data->cookie, LCB_SUCCESS, &resp);
     }
 }
 
@@ -509,8 +520,8 @@ static void store_response_handler(lcb_server_t *server,
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
 
-
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
 
     switch (res->response.opcode) {
     case PROTOCOL_BINARY_CMD_ADD:
@@ -546,8 +557,9 @@ static void store_response_handler(lcb_server_t *server,
     } else {
         lcb_store_resp_t resp;
         setup_lcb_store_resp_t(&resp, key, nkey, res->response.cas);
-        root->callbacks.store(root, command_data->cookie, op,
-                              map_error(status), &resp);
+        TRACE_STORE_END(res->response.opaque, command_data->vbucket,
+                        res->response.opcode, rc, &resp);
+        root->callbacks.store(root, command_data->cookie, op, rc, &resp);
         release_key(server, packet);
     }
 }
@@ -558,6 +570,7 @@ static void arithmetic_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
@@ -576,8 +589,9 @@ static void arithmetic_response_handler(lcb_server_t *server,
     }
 
     setup_lcb_arithmetic_resp_t(&resp, key, nkey, value, res->response.cas);
-    root->callbacks.arithmetic(root, command_data->cookie,
-                               map_error(status), &resp);
+    TRACE_ARITHMETIC_END(res->response.opaque, command_data->vbucket,
+                         res->response.opcode, rc, &resp);
+    root->callbacks.arithmetic(root, command_data->cookie, rc, &resp);
     release_key(server, packet);
 }
 
@@ -587,6 +601,7 @@ static void stat_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
     lcb_uint16_t nkey;
     lcb_uint32_t nvalue;
     const char *key, *value;
@@ -599,8 +614,9 @@ static void stat_response_handler(lcb_server_t *server,
                                                res->response.opaque, server) < 0) {
                 /* notify client that data is ready */
                 setup_lcb_server_stat_resp_t(&resp, NULL, NULL, 0, NULL, 0);
-                root->callbacks.stat(root, command_data->cookie,
-                                     LCB_SUCCESS, &resp);
+                TRACE_STATS_END(res->response.opaque, command_data->vbucket,
+                                res->response.opcode, rc);
+                root->callbacks.stat(root, command_data->cookie, rc, &resp);
             }
             return;
         }
@@ -610,20 +626,23 @@ static void stat_response_handler(lcb_server_t *server,
 
         setup_lcb_server_stat_resp_t(&resp, server->authority, key,
                                      nkey, value, nvalue);
-        root->callbacks.stat(root, command_data->cookie,
-                             map_error(status), &resp);
+        TRACE_STATS_PROGRESS(res->response.opaque, command_data->vbucket,
+                             res->response.opcode, rc, &resp);
+        root->callbacks.stat(root, command_data->cookie, rc, &resp);
     } else {
         setup_lcb_server_stat_resp_t(&resp, server->authority,
                                      NULL, 0, NULL, 0);
-        root->callbacks.stat(root, command_data->cookie,
-                             map_error(status), &resp);
+        TRACE_STATS_END(res->response.opaque, command_data->vbucket,
+                        res->response.opcode, rc);
+        root->callbacks.stat(root, command_data->cookie, rc, &resp);
 
         /* run callback with null-null-null to signal the end of transfer */
         if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_STAT,
                                            res->response.opaque, server) < 0) {
             setup_lcb_server_stat_resp_t(&resp, NULL, NULL, 0, NULL, 0);
-            root->callbacks.stat(root, command_data->cookie,
-                                 LCB_SUCCESS, &resp);
+            TRACE_STATS_END(res->response.opaque, command_data->vbucket,
+                            res->response.opcode, LCB_SUCCESS);
+            root->callbacks.stat(root, command_data->cookie, LCB_SUCCESS, &resp);
         }
     }
 }
@@ -634,19 +653,22 @@ static void verbosity_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
     lcb_verbosity_resp_t resp;
 
     setup_lcb_verbosity_resp_t(&resp, server->authority);
 
-    root->callbacks.verbosity(root, command_data->cookie, map_error(status),
-                              &resp);
+    TRACE_VERBOSITY_END(res->response.opaque, command_data->vbucket,
+                        res->response.opcode, rc, &resp);
+    root->callbacks.verbosity(root, command_data->cookie, rc, &resp);
 
     /* run callback with null-null-null to signal the end of transfer */
     if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_VERBOSITY,
                                        res->response.opaque, server) < 0) {
         setup_lcb_verbosity_resp_t(&resp, NULL);
-        root->callbacks.verbosity(root, command_data->cookie, LCB_SUCCESS,
-                                  &resp);
+        TRACE_VERBOSITY_END(res->response.opaque, command_data->vbucket,
+                            res->response.opcode, LCB_SUCCESS, &resp);
+        root->callbacks.verbosity(root, command_data->cookie, LCB_SUCCESS, &resp);
     }
 }
 
@@ -656,6 +678,7 @@ static void version_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
     lcb_uint32_t nvstring = ntohl(res->response.bodylen);
     const char *vstring;
     lcb_server_version_resp_t resp;
@@ -667,12 +690,15 @@ static void version_response_handler(lcb_server_t *server,
     }
 
     setup_lcb_server_version_resp_t(&resp, server->authority, vstring, nvstring);
-    root->callbacks.version(root, command_data->cookie,
-                            map_error(status), &resp);
+    TRACE_VERSIONS_PROGRESS(res->response.opaque, command_data->vbucket,
+                            res->response.opcode, rc, &resp);
+    root->callbacks.version(root, command_data->cookie, rc, &resp);
 
     if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_VERSION,
                                        res->response.opaque, server) < 0) {
         memset(&resp, 0, sizeof(resp));
+        TRACE_VERSIONS_END(res->response.opaque, command_data->vbucket,
+                           res->response.opcode, LCB_SUCCESS);
         root->callbacks.version(root, command_data->cookie, LCB_SUCCESS, &resp);
     }
 
@@ -785,6 +811,7 @@ static void touch_response_handler(lcb_server_t *server,
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
 
     if (key == NULL) {
         lcb_error_handler(server->instance, LCB_EINTERNAL,
@@ -792,8 +819,9 @@ static void touch_response_handler(lcb_server_t *server,
     } else {
         lcb_touch_resp_t resp;
         setup_lcb_touch_resp_t(&resp, key, nkey, res->response.cas);
-        root->callbacks.touch(root, command_data->cookie,
-                              map_error(status), &resp);
+        TRACE_TOUCH_END(res->response.opaque, command_data->vbucket,
+                        res->response.opcode, rc, &resp);
+        root->callbacks.touch(root, command_data->cookie, rc, &resp);
         release_key(server, packet);
     }
 }
@@ -804,17 +832,20 @@ static void flush_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
+    lcb_error_t rc = map_error(status);
     lcb_flush_resp_t resp;
     setup_lcb_flush_resp_t(&resp, server->authority);
 
-    root->callbacks.flush(root, command_data->cookie, map_error(status),
-                          &resp);
+    TRACE_FLUSH_PROGRESS(res->response.opaque, command_data->vbucket,
+                         res->response.opcode, rc, &resp);
+    root->callbacks.flush(root, command_data->cookie, rc, &resp);
 
     if (lcb_lookup_server_with_command(root, PROTOCOL_BINARY_CMD_FLUSH,
                                        res->response.opaque, server) < 0) {
         setup_lcb_flush_resp_t(&resp, NULL);
-        root->callbacks.flush(root, command_data->cookie,
-                              LCB_SUCCESS, &resp);
+        TRACE_FLUSH_END(res->response.opaque, command_data->vbucket,
+                        res->response.opcode, LCB_SUCCESS);
+        root->callbacks.flush(root, command_data->cookie, LCB_SUCCESS, &resp);
     }
 }
 
@@ -827,6 +858,7 @@ static void unlock_response_handler(lcb_server_t *server,
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
+    lcb_error_t rc = map_error(status);
 
     if (key == NULL) {
         lcb_error_handler(server->instance, LCB_EINTERNAL,
@@ -834,8 +866,8 @@ static void unlock_response_handler(lcb_server_t *server,
     } else {
         lcb_unlock_resp_t resp;
         setup_lcb_unlock_resp_t(&resp, key, nkey);
-        root->callbacks.unlock(root, command_data->cookie, map_error(status),
-                               &resp);
+        TRACE_UNLOCK_END(res->response.opaque, command_data->vbucket, rc, &resp);
+        root->callbacks.unlock(root, command_data->cookie, rc, &resp);
         release_key(server, packet);
     }
 }

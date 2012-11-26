@@ -123,6 +123,7 @@ lcb_error_t lcb_store(lcb_t instance,
         bodylen = nkey + nbytes + req.message.header.request.extlen;
         req.message.header.request.bodylen = htonl((lcb_uint32_t)bodylen);
 
+        TRACE_STORE_BEGIN(&req, key, nkey, bytes, nbytes, flags, exp);
         lcb_server_start_packet(server, command_cookie, &req, headersize);
         lcb_server_write_packet(server, key, nkey);
         lcb_server_write_packet(server, bytes, nbytes);

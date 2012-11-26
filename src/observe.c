@@ -136,18 +136,22 @@ lcb_error_t lcb_observe(lcb_t instance,
         lcb_server_t *server = instance->servers + ii;
 
         if (rr->allocated) {
+            char *tmp;
             rr->req.message.header.request.bodylen = ntohl((lcb_uint32_t)rr->nbody);
             lcb_server_start_packet(server, command_cookie, rr->req.bytes, sizeof(rr->req.bytes));
             if (ringbuffer_is_continous(&rr->body, RINGBUFFER_READ, rr->nbody)) {
-                lcb_server_write_packet(server, ringbuffer_get_read_head(&rr->body), rr->nbody);
+                tmp = ringbuffer_get_read_head(&rr->body);
+                TRACE_OBSERVE_BEGIN(&rr->req, server->authority, tmp, rr->nbody);
+                lcb_server_write_packet(server, tmp, rr->nbody);
             } else {
-                char *tmp = malloc(ringbuffer_get_nbytes(&rr->body));
+                tmp = malloc(ringbuffer_get_nbytes(&rr->body));
                 if (!tmp) {
                     /* FIXME by this time some of requests might be scheduled */
                     destroy_requests(requests, instance->nservers);
                     return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
                 } else {
                     ringbuffer_read(&rr->body, tmp, rr->nbody);
+                    TRACE_OBSERVE_BEGIN(&rr->req, server->authority, tmp, rr->nbody);
                     lcb_server_write_packet(server, tmp, rr->nbody);
                 }
             }

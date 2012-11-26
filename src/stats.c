@@ -62,6 +62,7 @@ lcb_error_t lcb_server_stats(lcb_t instance,
 
         for (ii = 0; ii < instance->nservers; ++ii) {
             server = instance->servers + ii;
+            TRACE_STATS_BEGIN(&req, server->authority, arg, narg);
             lcb_server_start_packet(server, command_cookie,
                                     req.bytes, sizeof(req.bytes));
             lcb_server_write_packet(server, arg, narg);
@@ -113,6 +114,7 @@ lcb_error_t lcb_server_versions(lcb_t instance,
 
         for (ii = 0; ii < instance->nservers; ++ii) {
             server = instance->servers + ii;
+            TRACE_VERSIONS_BEGIN(&req, server->authority);
             lcb_server_complete_packet(server, command_cookie,
                                        req.bytes, sizeof(req.bytes));
             lcb_server_send_packets(server);

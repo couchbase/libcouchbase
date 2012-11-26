@@ -23,6 +23,7 @@
 #undef NDEBUG
 
 #include "config.h"
+#include "trace.h"
 
 #include <assert.h>
 #include <errno.h>

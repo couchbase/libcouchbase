@@ -106,6 +106,7 @@ lcb_error_t lcb_unlock(lcb_t instance,
         req.message.header.request.opaque = ++instance->seqno;
         req.message.header.request.opcode = CMD_UNLOCK_KEY;
 
+        TRACE_UNLOCK_BEGIN(&req, key, nkey);
         lcb_server_start_packet(server, command_cookie, req.bytes,
                                 sizeof(req.bytes));
         lcb_server_write_packet(server, key, nkey);
@@ -166,6 +167,7 @@ lcb_error_t lcb_get_replica(lcb_t instance,
         req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
         req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
         req.message.header.request.opaque = ++instance->seqno;
+        TRACE_GET_BEGIN(&req, key, nkey, 0);
         lcb_server_start_packet(server, command_cookie,
                                 req.bytes, sizeof(req.bytes));
         lcb_server_write_packet(server, key, nkey);
@@ -245,6 +247,7 @@ static lcb_error_t lcb_single_get(lcb_t instance,
         /* the expiration is optional for GETL command */
         req.message.header.request.opcode = CMD_GET_LOCKED;
     }
+    TRACE_GET_BEGIN(&req, key, nkey, exp);
     lcb_server_start_packet(server, command_cookie, req.bytes, nbytes);
     lcb_server_write_packet(server, key, nkey);
     lcb_server_end_packet(server);
@@ -342,7 +345,7 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
             /* the expiration is optional for GETL command */
             req.message.header.request.opcode = CMD_GET_LOCKED;
         }
-
+        TRACE_GET_BEGIN(&req, key, nkey, exp);
         lcb_server_start_packet(server, command_cookie, req.bytes, nreq);
         lcb_server_write_packet(server, key, nkey);
         lcb_server_end_packet(server);

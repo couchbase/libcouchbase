@@ -98,6 +98,7 @@ lcb_error_t lcb_touch(lcb_t instance,
         req.message.header.request.opaque = ++instance->seqno;
         /* @todo fix the relative time! */
         req.message.body.expiration = htonl((lcb_uint32_t)exp);
+        TRACE_TOUCH_BEGIN(&req, key, nkey, exp);
         lcb_server_start_packet(server, command_cookie,
                                 req.bytes, sizeof(req.bytes));
         lcb_server_write_packet(server, key, nkey);

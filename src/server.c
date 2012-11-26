@@ -136,51 +136,70 @@ void lcb_purge_single_server(lcb_server_t *server,
         case PROTOCOL_BINARY_CMD_GET:
         case PROTOCOL_BINARY_CMD_GETQ:
             setup_lcb_get_resp_t(&resp.get, keyptr, nkey, NULL, 0, 0, 0, 0);
+            TRACE_GET_END(req.request.opaque, ntohs(req.request.vbucket),
+                          req.request.opcode, error, &resp.get);
             root->callbacks.get(root, ct.cookie, error, &resp.get);
             break;
         case PROTOCOL_BINARY_CMD_FLUSH:
             setup_lcb_flush_resp_t(&resp.flush, server->authority);
+            TRACE_FLUSH_PROGRESS(req.request.opaque, ntohs(req.request.vbucket),
+                                 req.request.opcode, error, &resp.flush);
             root->callbacks.flush(root, ct.cookie, error, &resp.flush);
             if (lcb_lookup_server_with_command(root,
                                                PROTOCOL_BINARY_CMD_FLUSH,
                                                req.request.opaque,
                                                server) < 0) {
                 setup_lcb_flush_resp_t(&resp.flush, NULL);
+                TRACE_FLUSH_END(req.request.opaque, ntohs(req.request.vbucket),
+                                req.request.opcode, error);
                 root->callbacks.flush(root, ct.cookie, error, &resp.flush);
             }
             break;
         case PROTOCOL_BINARY_CMD_ADD:
             setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            TRACE_STORE_END(req.request.opaque, ntohs(req.request.vbucket),
+                            req.request.opcode, error, &resp.store);
             root->callbacks.store(root, ct.cookie, LCB_ADD, error, &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_REPLACE:
             setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            TRACE_STORE_END(req.request.opaque, ntohs(req.request.vbucket),
+                            req.request.opcode, error, &resp.store);
             root->callbacks.store(root, ct.cookie, LCB_REPLACE, error,
                                   &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_SET:
             setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            TRACE_STORE_END(req.request.opaque, ntohs(req.request.vbucket),
+                            req.request.opcode, error, &resp.store);
             root->callbacks.store(root, ct.cookie, LCB_SET, error, &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_APPEND:
             setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            TRACE_STORE_END(req.request.opaque, ntohs(req.request.vbucket),
+                            req.request.opcode, error, &resp.store);
             root->callbacks.store(root, ct.cookie, LCB_APPEND, error,
                                   &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_PREPEND:
             setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
+            TRACE_STORE_END(req.request.opaque, ntohs(req.request.vbucket),
+                            req.request.opcode, error, &resp.store);
             root->callbacks.store(root, ct.cookie, LCB_PREPEND, error,
                                   &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_DELETE:
             setup_lcb_remove_resp_t(&resp.remove, keyptr, nkey, 0);
+            TRACE_REMOVE_END(req.request.opaque, ntohs(req.request.vbucket),
+                             req.request.opcode, error, &resp.remove);
             root->callbacks.remove(root, ct.cookie, error, &resp.remove);
             break;
 
         case PROTOCOL_BINARY_CMD_INCREMENT:
         case PROTOCOL_BINARY_CMD_DECREMENT:
             setup_lcb_arithmetic_resp_t(&resp.arithmetic, keyptr, nkey, 0, 0);
-
+            TRACE_ARITHMETIC_END(req.request.opaque, ntohs(req.request.vbucket),
+                                 req.request.opcode, error, &resp.arithmetic);
             root->callbacks.arithmetic(root, ct.cookie, error,
                                        &resp.arithmetic);
             break;
@@ -198,13 +217,16 @@ void lcb_purge_single_server(lcb_server_t *server,
 
         case PROTOCOL_BINARY_CMD_TOUCH:
             setup_lcb_touch_resp_t(&resp.touch, keyptr, nkey, 0);
+            TRACE_TOUCH_END(req.request.opaque, ntohs(req.request.vbucket),
+                            req.request.opcode, error, &resp.touch);
             root->callbacks.touch(root, ct.cookie, error, &resp.touch);
             break;
 
         case PROTOCOL_BINARY_CMD_STAT:
             setup_lcb_server_stat_resp_t(&resp.stats, server->authority,
                                          NULL, 0, NULL, 0);
-
+            TRACE_STATS_PROGRESS(req.request.opaque, ntohs(req.request.vbucket),
+                                 req.request.opcode, error, &resp.stats);
             root->callbacks.stat(root, ct.cookie, error, &resp.stats);
 
             if (lcb_lookup_server_with_command(root,
@@ -213,12 +235,16 @@ void lcb_purge_single_server(lcb_server_t *server,
                                                server) < 0) {
                 setup_lcb_server_stat_resp_t(&resp.stats,
                                              NULL, NULL, 0, NULL, 0);
+                TRACE_STATS_END(req.request.opaque, ntohs(req.request.vbucket),
+                                req.request.opcode, error);
                 root->callbacks.stat(root, ct.cookie, error, &resp.stats);
             }
             break;
 
         case PROTOCOL_BINARY_CMD_VERBOSITY:
             setup_lcb_verbosity_resp_t(&resp.verbosity, server->authority);
+            TRACE_VERBOSITY_END(req.request.opaque, ntohs(req.request.vbucket),
+                                req.request.opcode, error, &resp.verbosity);
             root->callbacks.verbosity(root, ct.cookie, error, &resp.verbosity);
 
             if (lcb_lookup_server_with_command(root,
@@ -226,19 +252,24 @@ void lcb_purge_single_server(lcb_server_t *server,
                                                req.request.opaque,
                                                server) < 0) {
                 setup_lcb_verbosity_resp_t(&resp.verbosity, NULL);
-                root->callbacks.verbosity(root, ct.cookie, error,
-                                          &resp.verbosity);
+                TRACE_VERBOSITY_END(req.request.opaque, ntohs(req.request.vbucket),
+                                    req.request.opcode, error, &resp.verbosity);
+                root->callbacks.verbosity(root, ct.cookie, error, &resp.verbosity);
             }
             break;
 
         case PROTOCOL_BINARY_CMD_VERSION:
             setup_lcb_server_version_resp_t(&resp.versions, server->authority,
                                             NULL, 0);
+            TRACE_VERSIONS_PROGRESS(req.request.opaque, ntohs(req.request.vbucket),
+                                    req.request.opcode, error, &resp.versions);
             root->callbacks.version(root, ct.cookie, error, &resp.versions);
             if (lcb_lookup_server_with_command(root,
                                                PROTOCOL_BINARY_CMD_VERSION,
                                                req.request.opaque,
                                                server) < 0) {
+                TRACE_VERSIONS_END(req.request.opaque, ntohs(req.request.vbucket),
+                                   req.request.opcode, error);
                 setup_lcb_server_version_resp_t(&resp.versions, NULL, NULL, 0);
                 root->callbacks.version(root, ct.cookie, error, &resp.versions);
             }
@@ -247,6 +278,8 @@ void lcb_purge_single_server(lcb_server_t *server,
         case CMD_OBSERVE:
             setup_lcb_observe_resp_t(&resp.observe, NULL, 0, LCB_OBSERVE_MAX,
                                      0, 0, 0, 0);
+            TRACE_OBSERVE_END(req.request.opaque, ntohs(req.request.vbucket),
+                              req.request.opcode, error);
             root->callbacks.observe(root, ct.cookie, error, &resp.observe);
             break;
 
@@ -707,12 +740,16 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
             keyptr = packet + sizeof(req) + req.request.extlen;
             setup_lcb_get_resp_t(&resp.get, keyptr, ntohs(req.request.keylen),
                                  NULL, 0, 0, 0, 0);
+            TRACE_GET_END(req.request.opaque, ntohs(req.request.vbucket),
+                          req.request.opcode, LCB_KEY_ENOENT, &resp.get);
             c->instance->callbacks.get(c->instance, ct.cookie, LCB_KEY_ENOENT, &resp.get);
             break;
         case CMD_OBSERVE:
             keyptr = packet + sizeof(req) + req.request.extlen;
             setup_lcb_observe_resp_t(&resp.observe, keyptr, ntohs(req.request.keylen),
                                      LCB_OBSERVE_MAX, 0, 0, 0, 0);
+            TRACE_OBSERVE_END(req.request.opaque, ntohs(req.request.vbucket),
+                              req.request.opcode, LCB_SERVER_BUG);
             c->instance->callbacks.observe(c->instance, ct.cookie, LCB_SERVER_BUG, &resp.observe);
             break;
         case PROTOCOL_BINARY_CMD_NOOP:

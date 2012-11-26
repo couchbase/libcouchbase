@@ -184,6 +184,7 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
              * get code different from LCB_NOT_MY_VBUCKET */
             ct.start = gethrtime();
             lcb_server_retry_packet(new_srv, &ct, &req, sizeof(req));
+            /* FIXME dtrace instrumentation */
             lcb_server_write_packet(new_srv, body, nbody);
             lcb_server_end_packet(new_srv);
             lcb_server_send_packets(new_srv);

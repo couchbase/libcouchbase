@@ -166,7 +166,7 @@ AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
                        ws2tcpip.h winsock2.h event.h stdint.h
                        sys/uio.h sys/types.h fcntl.h dlfcn.h
-                       ev.h libev/ev.h])
+                       ev.h libev/ev.h sys/sdt.h])
 
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
@@ -491,6 +491,37 @@ AM_CONDITIONAL(DOWNLOAD_GTEST, [test "x$ac_cv_download_gtest" = "xyes"])
 AM_CONDITIONAL(HAVE_GOOGLETEST_SRC, [test "$ac_cv_have_gtest_src" = "yes"])
 AM_CONDITIONAL(HAVE_GOOGLETEST, [test "$ac_cv_have_gtest" = "yes" -o \
                                  "$ac_cv_have_gtest_src" = "yes"])
+
+#
+# SystemTap and DTrace support
+#
+AC_CHECK_PROGS([DTRACE], [dtrace])
+
+# On Solaris we need to instrument all of the object files, but this isn't
+# true with DTrace on MacOSX or SystemTap. Instead of doing the hard
+# work of trying to check if we have to do this, just do it if __sun is
+# defined...
+AC_CHECK_DECL([__sun])
+AC_CHECK_DECL([__APPLE__])
+AS_IF([test "x$ac_cv_have_decl___APPLE__" != "xyes"],
+      [DTRACE_DASH_G="-G"])
+AC_SUBST(DTRACE_DASH_G)
+AC_CACHE_CHECK([for SystemTap/DTrace requirements], [ac_cv_enable_dtrace], [
+   AS_IF([test "x$ac_cv_prog_DTRACE" != "xno" -a "x$ac_cv_header_sys_sdt_h" = "xyes"], [
+         AS_IF([test "x$ac_cv_have_decl___APPLE__" = "xyes"],
+               [ ac_cv_enable_dtrace=no ],
+               [ ac_cv_enable_dtrace=yes ])
+      ], [
+         ac_cv_enable_dtrace=no
+      ])
+])
+AS_IF([test "x$ac_cv_enable_dtrace" = "xyes"],
+      [AC_DEFINE([HAVE_DTRACE], [1], [Enables SystemTap / DTrace Support])])
+
+AM_CONDITIONAL([ENABLE_DTRACE], [test "x$ac_cv_enable_dtrace" = xyes ])
+AM_CONDITIONAL([DTRACE_INSTRUMENT_OBJECT],
+               [test "x$ac_cv_have_decl___sun" = "xyes"])
+AM_CONDITIONAL([APPLE_DTRACE], [test "x$ac_cv_have_decl__APPLE__" = "xyes"])
 
 AH_TOP([
 #ifndef CONFIG_H

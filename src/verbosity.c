@@ -75,6 +75,7 @@ lcb_error_t lcb_set_verbosity(lcb_t instance,
                 continue;
             }
 
+            TRACE_VERBOSITY_BEGIN(&req, server, lvl);
             lcb_server_start_packet(srv, command_cookie, req.bytes,
                                     sizeof(req.bytes));
             lcb_server_end_packet(srv);
