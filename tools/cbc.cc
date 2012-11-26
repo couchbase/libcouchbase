@@ -177,7 +177,8 @@ extern "C" {
         string key((const char *)resp->v.v0.key, (size_t)resp->v.v0.nkey);
 
         if (error == LCB_SUCCESS) {
-            cerr << "Removed \"" << key.c_str() << "\"" << endl;
+            cerr << "Removed \"" << key.c_str() << "\" CAS:"
+                 << resp->v.v0.cas << endl;
         } else {
             cerr << "Failed to remove \"" << key.c_str() << "\":" << endl
                  << lcb_strerror(instance, error) << endl;

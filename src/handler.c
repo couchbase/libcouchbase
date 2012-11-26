@@ -47,11 +47,13 @@ void setup_lcb_get_resp_t(lcb_get_resp_t *resp,
 
 void setup_lcb_remove_resp_t(lcb_remove_resp_t *resp,
                              const void *key,
-                             lcb_size_t nkey)
+                             lcb_size_t nkey,
+                             lcb_cas_t cas)
 {
     resp->version = 0;
     resp->v.v0.key = key;
     resp->v.v0.nkey = nkey;
+    resp->v.v0.cas = cas;
 }
 
 void setup_lcb_store_resp_t(lcb_store_resp_t *resp,
@@ -432,7 +434,7 @@ static void delete_response_handler(lcb_server_t *server,
         lcb_error_handler(server->instance, LCB_EINTERNAL, NULL);
     } else {
         lcb_remove_resp_t resp;
-        setup_lcb_remove_resp_t(&resp, key, nkey);
+        setup_lcb_remove_resp_t(&resp, key, nkey, res->response.cas);
         root->callbacks.remove(root, command_data->cookie,
                                map_error(status), &resp);
         release_key(server, packet);

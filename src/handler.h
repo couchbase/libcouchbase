@@ -11,7 +11,8 @@ void setup_lcb_get_resp_t(lcb_get_resp_t *resp,
                           lcb_datatype_t datatype);
 void setup_lcb_remove_resp_t(lcb_remove_resp_t *resp,
                              const void *key,
-                             lcb_size_t nkey);
+                             lcb_size_t nkey,
+                             lcb_cas_t cas);
 void setup_lcb_store_resp_t(lcb_store_resp_t *resp,
                             const void *key,
                             lcb_size_t nkey,

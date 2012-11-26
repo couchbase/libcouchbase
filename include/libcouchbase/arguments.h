@@ -602,6 +602,7 @@ extern "C" {
             struct {
                 const void *key;
                 lcb_size_t nkey;
+                lcb_cas_t cas;
             } v0;
         } v;
     } lcb_remove_resp_t;

@@ -173,7 +173,7 @@ void lcb_purge_single_server(lcb_server_t *server,
                                   &resp.store);
             break;
         case PROTOCOL_BINARY_CMD_DELETE:
-            setup_lcb_remove_resp_t(&resp.remove, keyptr, nkey);
+            setup_lcb_remove_resp_t(&resp.remove, keyptr, nkey, 0);
             root->callbacks.remove(root, ct.cookie, error, &resp.remove);
             break;
 
