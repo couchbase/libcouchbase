@@ -202,6 +202,19 @@ static void observe_callback(lcb_t instance,
     lcb_maybe_breakout(instance);
 }
 
+static void unlock_callback(lcb_t instance,
+                            const void *cookie,
+                            lcb_error_t error,
+                            const lcb_unlock_resp_t *resp)
+{
+    struct user_cookie *c = (void *)instance->cookie;
+
+    restore_user_env(instance);
+    c->callbacks.unlock(instance, cookie, error, resp);
+    restore_wrapping_env(instance, c, error);
+    lcb_maybe_breakout(instance);
+}
+
 static void restore_user_env(lcb_t instance)
 {
     struct user_cookie *cookie = (void *)instance->cookie;
@@ -229,6 +242,7 @@ static void restore_wrapping_env(lcb_t instance,
     instance->callbacks.http_complete = http_complete_callback;
     instance->callbacks.http_data = http_data_callback;
     instance->callbacks.observe = observe_callback;
+    instance->callbacks.unlock = unlock_callback;
 
     user->cookie = (void *)instance->cookie;
     user->retcode = error;
