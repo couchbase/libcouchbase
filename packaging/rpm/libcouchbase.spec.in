@@ -110,6 +110,14 @@ Development files for the Couchbase Client & Protocol Library
 
 %changelog
 
+* Tue Nov 27 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0
+[Sergey Avseyev]
+- libcouchbase-all package comes without version
+- Add libcouchbase-{bin,core} to libcouchbase-dbg
+
+[Trond Norbye]
+- Add the CAS to the delete callback
+
 * Wed Nov 21 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.0beta3
 [Mark Nunberg]
 - Check for EWOULDBLOCK/EINTR on failed send

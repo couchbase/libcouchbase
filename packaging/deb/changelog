@@ -1,3 +1,14 @@
+libcouchbase (2.0.0) stable; urgency=low
+
+  [Sergey Avseyev]
+  * libcouchbase-all package comes without version
+  * Add libcouchbase-{bin,core} to libcouchbase-dbg
+
+  [Trond Norbye]
+  * Add the CAS to the delete callback
+
+ -- Sergey Avseyev <sergey@couchbase.com> Tue, 27 Nov 2012 09:30:21 +0300
+
 libcouchbase (2.0.0beta3) stable; urgency=low
 
   [Mark Nunberg]
