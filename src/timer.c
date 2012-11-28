@@ -26,7 +26,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
         instance->io->v.v0.delete_timer(instance->io, timer->event);
         lcb_timer_destroy(instance, timer);
     }
-    lcb_maybe_breakout(timer->instance);
+    lcb_maybe_breakout(instance);
 
     (void)sock;
     (void)which;
