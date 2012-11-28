@@ -427,6 +427,7 @@ EXTRA_DIST = \
              include/memcached/README \
              man/man1 \
              man/man4 \
+             src/probes.d \
              tests/start_mock.sh \
              win32
 
