@@ -56,10 +56,12 @@ void lcb_http_request_destroy(lcb_http_request_t req)
             struct lcb_http_header_st *tmp, *hdr = req->headers_list;
             while (hdr) {
                 tmp = hdr->next;
+                free(hdr->data);
                 free(hdr);
                 hdr = tmp;
             }
         }
+        free(req->headers);
     }
     memset(req, 0xff, sizeof(struct lcb_http_request_st));
     free(req);
