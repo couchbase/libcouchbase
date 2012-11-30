@@ -34,11 +34,6 @@ static const char *view_common =
     "}"
     "}";
 
-#define SKIP_IF_MOCK()                                                  \
-    if (!getenv(LCB_TEST_REALCLUSTER_ENV)) {                            \
-        fprintf(stderr, "Skipping %s: Need real cluster\n", __func__);  \
-        return;                                                         \
-    }
 
 static void dumpResponse(const lcb_http_resp_t *resp)
 {

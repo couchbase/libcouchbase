@@ -512,6 +512,7 @@ extern "C" {
 
 TEST_F(MockUnitTest, testPurgedBody)
 {
+    SKIP_UNLESS_MOCK();
     lcb_error_t err;
     struct rvbuf rv;
     const char key[] = "testPurgedBody";
@@ -585,6 +586,7 @@ TEST_F(MockUnitTest, testPurgedBody)
 
 TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 {
+    SKIP_UNLESS_MOCK();
     lcb_error_t err;
     struct rvbuf rv;
     lcb_io_opt_t io;
@@ -611,6 +613,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 
 TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 {
+    SKIP_UNLESS_MOCK();
     lcb_error_t err;
     struct rvbuf rv;
     lcb_io_opt_t io;

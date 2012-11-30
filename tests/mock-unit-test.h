@@ -21,6 +21,18 @@
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
 
+#define SKIP_IF_MOCK()                                                  \
+    if (!getenv(LCB_TEST_REALCLUSTER_ENV)) {                            \
+        fprintf(stderr, "Skipping %s: Need real cluster\n", __func__);  \
+        return;                                                         \
+    }
+
+#define SKIP_UNLESS_MOCK() \
+    if (getenv(LCB_TEST_REALCLUSTER_ENV)) { \
+        fprintf(stderr, "Skipping %s: Need mock cluster\n", __func__); \
+        return; \
+    }
+
 class MockUnitTest : public ::testing::Test
 {
 protected:
