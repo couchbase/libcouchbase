@@ -163,8 +163,6 @@ probes.lo: probes.o
 	  "non_pic_object='$<'" \
 	> $@
 
-libcouchbase_la_SOURCES += src/probes.h
-
 if DTRACE_INSTRUMENT_OBJECT
 
 # We need to change the name from src/libcouchbase_la-fname.lo to
