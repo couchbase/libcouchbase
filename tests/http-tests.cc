@@ -192,26 +192,3 @@ TEST_F(HttpUnitTest, testGet)
 
     lcb_destroy(instance);
 }
-
-/**
- * @test HTTP (Bad POST params)
- * @pre Schedule an HTTP POST request, without passing a content body
- * @post Client returns @c EINVAL
- */
-TEST_F(HttpUnitTest, testBadParams)
-{
-    SKIP_IF_MOCK();
-
-    lcb_t instance;
-    createConnection(instance);
-
-    lcb_http_cmd_st cmd = lcb_http_cmd_st("/", 1, NULL, 0,
-                                          LCB_HTTP_METHOD_POST, 0,
-                                          "blah/blah");
-
-    lcb_error_t err;
-    lcb_http_request_t htreq;
-    err = lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW,
-                                &cmd, &htreq);
-    ASSERT_EQ(LCB_EINVAL, err);
-}
