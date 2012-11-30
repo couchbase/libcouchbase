@@ -454,6 +454,25 @@ static lcb_error_t request_connect(lcb_http_request_t req)
     return LCB_SUCCESS;
 }
 
+static lcb_server_t *get_view_node(lcb_t instance)
+{
+    /* pick random server */
+    lcb_size_t nn, nn_limit;
+    lcb_server_t *server;
+
+    nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
+    nn_limit = nn;
+
+    do {
+        server = instance->servers + nn;
+        if (server->couch_api_base) {
+            return server;
+        }
+        nn = (nn + 1) % instance->nservers;
+    } while (nn != nn_limit);
+    return NULL;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_make_http_request(lcb_t instance,
                                   const void *command_cookie,
@@ -530,10 +549,8 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         if (instance->type != LCB_TYPE_BUCKET) {
             return lcb_synchandler_return(instance, LCB_EINVAL);
         }
-        /* pick random server */
-        nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
-        server = instance->servers + nn;
-        if (!server->couch_api_base) {
+        server = get_view_node(instance);
+        if (!server) {
             lcb_http_request_destroy(req);
             return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
         }
