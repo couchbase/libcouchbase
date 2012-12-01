@@ -30,7 +30,15 @@ noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
 noinst_PROGRAMS =
 if BUILD_TOOLS
 bin_PROGRAMS = tools/cbc
-man_MANS = man/man1/cbc.1 man/man4/cbcrc.4
+man_MANS = man/man1/cbc.1 man/man1/cbc-admin.1                          \
+           man/man1/cbc-bucket-create.1 man/man1/cbc-bucket-delete.1    \
+           man/man1/cbc-cat.1 man/man1/cbc-cp.1                         \
+           man/man1/cbc-create.1 man/man1/cbc-flush.1                   \
+           man/man1/cbc-hash.1 man/man1/cbc-lock.1 man/man1/cbc-rm.1    \
+           man/man1/cbc-stats.1 man/man1/cbc-unlock.1                   \
+           man/man1/cbc-verbosity.1 man/man1/cbc-verify.1               \
+           man/man1/cbc-version.1 man/man1/cbc-view.1                   \
+           man/man4/cbcrc.4
 endif
 CLEANFILES = tests/CouchbaseMock.jar
 BUILT_SOURCES=
