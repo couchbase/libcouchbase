@@ -149,7 +149,7 @@ libcouchbase_la_SOURCES += \
                         src/debug.c \
                         src/debug.h
 
-libcouchbase_la_CPPFLAGS += -DLIBCOUCHBASE_DEBUG_NOCTX
+libcouchbase_la_CPPFLAGS += -DLCB_DEBUG_NOCTX
 endif
 
 if ENABLE_DTRACE
