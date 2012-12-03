@@ -199,12 +199,10 @@ provider libcouchbase {
                       uint8_t,      /* opcode */
                       uint16_t);    /* return code (from libcouchbase) */
 
-    probe http_begin(const char*,   /* server_endpoint */
-                     const char*,   /* url */
+    probe http_begin(const char*,   /* url */
                      size_t,        /* nurl */
                      uint8_t);      /* method: GET = 0, POST = 1, PUT = 2, DELETE = 3 */
-    probe http_end(const char*,     /* server_endpoint */
-                   const char*,     /* url */
+    probe http_end(const char*,     /* url */
                    size_t,          /* nurl */
                    uint8_t,         /* method: GET = 0, POST = 1, PUT = 2, DELETE = 3 */
                    uint16_t,        /* return code (from libcouchbase) */

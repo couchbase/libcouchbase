@@ -197,14 +197,12 @@
     TRACE(LIBCOUCHBASE_OBSERVE_END(opaque, vbucket, opcode, rc))
 
 #define TRACE_HTTP_BEGIN(req)                               \
-    TRACE(LIBCOUCHBASE_HTTP_BEGIN((req)->server->authority, \
-                                  (req)->url,               \
+    TRACE(LIBCOUCHBASE_HTTP_BEGIN((req)->url,               \
                                   (req)->nurl,              \
                                   (req)->method))
 
 #define TRACE_HTTP_END(req, rc, resp)                               \
-    TRACE(LIBCOUCHBASE_HTTP_END((req)->server->authority,           \
-                                (req)->url,                         \
+    TRACE(LIBCOUCHBASE_HTTP_END((req)->url,                         \
                                 (req)->nurl,                        \
                                 (req)->method, rc,                  \
                                 (resp)->v.v0.status))
