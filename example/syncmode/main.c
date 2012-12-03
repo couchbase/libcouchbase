@@ -20,8 +20,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static const char const *key = "mykey";
-static const char const *value = "myvalue";
+static const char *key = "mykey";
+static const char *value = "myvalue";
 
 static void error_handler(lcb_t instance, lcb_error_t err, const char *info)
 {
@@ -82,8 +82,9 @@ static void set_key(lcb_t instance)
 {
     lcb_store_cmd_t cmd;
     lcb_error_t error;
-    const lcb_store_cmd_t *const commands[] = { &cmd };
+    const lcb_store_cmd_t *commands[1];
 
+    commands[0] = &cmd;
     memset(&cmd, 0, sizeof(cmd));
     cmd.v.v0.key = key;
     cmd.v.v0.nkey = strlen(key);
@@ -128,8 +129,9 @@ static void get_key(lcb_t instance)
 {
     lcb_get_cmd_t cmd;
     lcb_error_t error;
-    const lcb_get_cmd_t *const commands[] = { &cmd };
+    const lcb_get_cmd_t *commands[1];
 
+    commands[0] = &cmd;
     memset(&cmd, 0, sizeof(cmd));
     cmd.v.v0.key = key;
     cmd.v.v0.nkey = strlen(key);

@@ -14,24 +14,17 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+#include "config.h"
 #include "server.h"
 #include <pthread.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <sys/wait.h>
-#include <netdb.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <assert.h>
-#include <string.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <fcntl.h>
 #include <ctype.h>
 
 #ifdef linux

@@ -132,7 +132,9 @@ main(int argc, char *argv[])
     lcb_wait(instance);
     {
         lcb_store_cmd_t cmd;
-        const lcb_store_cmd_t * const commands[1] = { &cmd };
+        const lcb_store_cmd_t *commands[1];
+
+        commands[0] = &cmd;
         memset(&cmd, 0, sizeof(cmd));
         cmd.v.v0.operation = LCB_SET;
         cmd.v.v0.key = "foo";
@@ -148,7 +150,8 @@ main(int argc, char *argv[])
     lcb_wait(instance);
     {
         lcb_get_cmd_t cmd;
-        const lcb_get_cmd_t * const commands[1] = { &cmd };
+        const lcb_get_cmd_t *commands[1];
+        commands[0] = &cmd;
         memset(&cmd, 0, sizeof(cmd));
         cmd.v.v0.key = "foo";
         cmd.v.v0.nkey = 3;

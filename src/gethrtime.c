@@ -85,7 +85,7 @@ hrtime_t gethrtime(void)
     hrtime_t ret;
     struct timeval tv;
     if (gettimeofday(&tv, NULL) == -1) {
-        return (-1ULL);
+        return -1;
     }
 
     ret = (hrtime_t)tv.tv_sec * 1000000000;

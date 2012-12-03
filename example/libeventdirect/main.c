@@ -33,17 +33,18 @@ static void error_callback(lcb_t instance,
 static void configuration_callback(lcb_t instance, lcb_configuration_t config)
 {
     if (config == LCB_CONFIGURATION_NEW) {
-
-        // Since we've got our configuration, let's go ahead and store a value
+        lcb_error_t err;
+        /* Since we've got our configuration, let's go ahead and store a value */
         lcb_store_cmd_t cmd;
-        const lcb_store_cmd_t *cmds[] = {&cmd};
+        const lcb_store_cmd_t *cmds[1];
+        cmds[0] = &cmd;
         memset(&cmd, 0, sizeof(cmd));
         cmd.v.v0.key = "foo";
         cmd.v.v0.nkey = 3;
         cmd.v.v0.bytes = "bar";
         cmd.v.v0.nbytes = 3;
         cmd.v.v0.operation = LCB_SET;
-        lcb_error_t err = lcb_store(instance, NULL, 1, cmds);
+        err = lcb_store(instance, NULL, 1, cmds);
         if (err != LCB_SUCCESS) {
             fprintf(stderr, "Failed to set up store request: %s\n",
                     lcb_strerror(instance, err));
@@ -76,6 +77,10 @@ static void store_callback(lcb_t instance,
                            lcb_error_t error,
                            const lcb_store_resp_t *resp)
 {
+    lcb_get_cmd_t cmd;
+    const lcb_get_cmd_t *cmds[1];
+
+    cmds[0] = &cmd;
     (void)cookie;
     (void)operation;
     (void)resp;
@@ -87,8 +92,6 @@ static void store_callback(lcb_t instance,
     }
 
     /* Time to read it back */
-    lcb_get_cmd_t cmd;
-    const lcb_get_cmd_t *cmds[] = {&cmd};
     memset(&cmd, 0, sizeof(cmd));
     cmd.v.v0.key = "foo";
     cmd.v.v0.nkey = 3;
@@ -102,13 +105,14 @@ static void store_callback(lcb_t instance,
 static lcb_io_opt_t create_libevent_io_ops(struct event_base *evbase)
 {
     struct lcb_create_io_ops_st ciops;
+    lcb_io_opt_t ioops;
+    lcb_error_t error;
 
     memset(&ciops, 0, sizeof(ciops));
     ciops.v.v0.type = LCB_IO_OPS_LIBEVENT;
     ciops.v.v0.cookie = evbase;
 
-    lcb_io_opt_t ioops;
-    lcb_error_t error = lcb_create_io_ops(&ioops, &ciops);
+    error = lcb_create_io_ops(&ioops, &ciops);
     if (error != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create an IOOPS structure for libevent: %s\n",
                 lcb_strerror(NULL, error));
@@ -164,7 +168,7 @@ static lcb_t create_libcouchbase_handle(lcb_io_opt_t ioops)
 int main(void)
 {
     struct event_base *evbase = event_base_new();
-    lcb_io_opt_t ioops = create_libevent_io_ops(evbase);;
+    lcb_io_opt_t ioops = create_libevent_io_ops(evbase);
     lcb_t instance = create_libcouchbase_handle(ioops);
 
     /*

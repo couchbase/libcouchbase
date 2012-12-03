@@ -99,7 +99,7 @@
 #define OBS_DELETED_EVENT      3
 #define OBS_REPLICATED_EVENT   4
 
-// Command identifiers used by Cross Data Center Replication (cdcr)
+/* Command identifiers used by Cross Data Center Replication (cdcr) */
 
 /**
  * CMD_GET_META is used to retrieve the meta section for an item.
@@ -181,9 +181,9 @@
  * Parameter types of CMD_SET_PARAM command.
  */
 typedef enum {
-    engine_param_flush = 1,  // flusher-related param type
-    engine_param_tap,        // tap-related param type
-    engine_param_checkpoint  // checkpoint-related param type
+    engine_param_flush = 1,  /* flusher-related param type */
+    engine_param_tap,        /* tap-related param type */
+    engine_param_checkpoint  /* checkpoint-related param type */
 } engine_param_t;
 
 /**
@@ -243,7 +243,7 @@ typedef union {
     struct {
         protocol_binary_request_header header;
         struct {
-            uint32_t nmeta_bytes; // # of bytes in the body that is meta info
+            uint32_t nmeta_bytes; /* # of bytes in the body that is meta info */
             uint32_t flags;
             uint32_t expiration;
         } body;
@@ -260,7 +260,7 @@ typedef union {
     struct {
         protocol_binary_request_header header;
         struct {
-            uint32_t nmeta_bytes; // # of bytes in the body that is meta info
+            uint32_t nmeta_bytes; /* # of bytes in the body that is meta info */
         } body;
     } message;
     uint8_t bytes[sizeof(protocol_binary_request_header) + 4];

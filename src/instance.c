@@ -427,12 +427,20 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
     lcb_uint16_t ii, max, buii;
     lcb_size_t num;
     const char *passwd;
-    sasl_callback_t sasl_callbacks[4] = {
-        { SASL_CB_USER, (int( *)(void)) &sasl_get_username, instance },
-        { SASL_CB_AUTHNAME, (int( *)(void)) &sasl_get_username, instance },
-        { SASL_CB_PASS, (int( *)(void)) &sasl_get_password, instance },
-        { SASL_CB_LIST_END, NULL, NULL }
-    };
+    sasl_callback_t sasl_callbacks[4];
+
+    sasl_callbacks[0].id = SASL_CB_USER;
+    sasl_callbacks[0].proc = (int( *)(void)) &sasl_get_username;
+    sasl_callbacks[0].context = instance;
+    sasl_callbacks[1].id = SASL_CB_AUTHNAME;
+    sasl_callbacks[1].proc = (int( *)(void)) &sasl_get_username;
+    sasl_callbacks[1].context = instance;
+    sasl_callbacks[2].id = SASL_CB_PASS;
+    sasl_callbacks[2].proc = (int( *)(void)) &sasl_get_password;
+    sasl_callbacks[2].context = instance;
+    sasl_callbacks[3].id = SASL_CB_LIST_END;
+    sasl_callbacks[3].proc = NULL;
+    sasl_callbacks[3].context = NULL;
 
     instance->vbucket_config = config;
     instance->weird_things = 0;
