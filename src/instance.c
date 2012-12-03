@@ -348,7 +348,14 @@ void lcb_destroy(lcb_t instance)
     }
     for (ii = 0; ii < instance->http_requests->capacity; ++ii) {
         if (instance->http_requests->items[ii] > 1) {
-            lcb_http_request_destroy((lcb_http_request_t)instance->http_requests->items[ii]);
+            lcb_http_request_t htreq =
+                (lcb_http_request_t)instance->http_requests->items[ii];
+
+            /* we should figure out a better error code for this.. */
+            lcb_http_request_finish(instance,
+                                    NULL,
+                                    htreq,
+                                    LCB_ERROR);
         }
     }
     hashset_destroy(instance->http_requests);

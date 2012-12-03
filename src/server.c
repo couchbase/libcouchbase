@@ -353,14 +353,40 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
     return error;
 }
 
+static void
+purge_http_request(lcb_server_t *server)
+{
+    lcb_size_t ii;
+    lcb_http_request_t *htitems;
+    lcb_size_t curix;
+    lcb_size_t nitems = hashset_num_items(server->http_requests);
+    htitems = malloc(nitems * sizeof(*htitems));
+
+    for (curix = 0, ii = 0; ii < server->http_requests->capacity; ii++) {
+        if (server->http_requests->items[ii] > 1) {
+            htitems[curix] = (lcb_http_request_t)server->http_requests->items[ii];
+            curix++;
+        }
+    }
+
+    assert(curix);
+
+    for (ii = 0; ii < curix; ii++) {
+        lcb_http_request_finish(server->instance,
+                                server,
+                                htitems[ii],
+                                LCB_CONFIGURATION_CHANGED);
+    }
+
+    free(htitems);
+}
+
 /**
  * Release all allocated resources for this server instance
  * @param server the server to destroy
  */
 void lcb_server_destroy(lcb_server_t *server)
 {
-    lcb_size_t ii;
-
     /* Cancel all pending commands */
     if (server->cmd_log.nbytes) {
         lcb_server_purge_implicit_responses(server,
@@ -398,11 +424,11 @@ void lcb_server_destroy(lcb_server_t *server)
     ringbuffer_destruct(&server->pending);
     ringbuffer_destruct(&server->pending_cookies);
     ringbuffer_destruct(&server->input);
-    for (ii = 0; ii < server->http_requests->capacity; ++ii) {
-        if (server->http_requests->items[ii] > 1) {
-            lcb_http_request_destroy((lcb_http_request_t)server->http_requests->items[ii]);
-        }
+
+    if (hashset_num_items(server->http_requests)) {
+        purge_http_request(server);
     }
+
     hashset_destroy(server->http_requests);
     memset(server, 0xff, sizeof(*server));
 }

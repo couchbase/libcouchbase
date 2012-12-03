@@ -13,8 +13,15 @@ class HttpUnitTest : public MockUnitTest
 class HttpCmdContext
 {
 public:
-    HttpCmdContext() { }
+    HttpCmdContext() :
+        received(false), dumpIfEmpty(false), dumpIfError(false), cbCount(0)
+    { }
+
     bool received;
+    bool dumpIfEmpty;
+    bool dumpIfError;
+    unsigned cbCount;
+
     lcb_http_status_t status;
     lcb_error_t err;
     std::string body;
@@ -44,26 +51,37 @@ static void dumpResponse(const lcb_http_resp_t *resp)
         }
     }
     if (resp->v.v0.bytes) {
-        printf("%*s\n", (int)resp->v.v0.nbytes, (const char *)resp->v.v0.bytes);
+        printf("%.*s\n", (int)resp->v.v0.nbytes, (const char *)resp->v.v0.bytes);
     }
-    printf("%*s\n", (int)resp->v.v0.npath, resp->v.v0.path);
+    printf("%.*s\n", (int)resp->v.v0.npath, resp->v.v0.path);
 
 }
 
 extern "C" {
-    static void httpPutCallback(lcb_http_request_t request,
-                                lcb_t instance,
-                                const void *cookie,
-                                lcb_error_t error,
-                                const lcb_http_resp_t *resp)
+
+    static void httpSimpleCallback(lcb_http_request_t request,
+                                   lcb_t instance,
+                                   const void *cookie,
+                                   lcb_error_t error,
+                                   const lcb_http_resp_t *resp)
     {
         HttpCmdContext *htctx;
         htctx = reinterpret_cast<HttpCmdContext *>((void *)cookie);
         htctx->err = error;
         htctx->status = resp->v.v0.status;
         htctx->received = true;
+        htctx->cbCount++;
 
-        if (error != LCB_SUCCESS) {
+        if (resp->v.v0.bytes) {
+            htctx->body.assign((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
+        }
+
+        if ((resp->v.v0.nbytes == 0 && htctx->dumpIfEmpty) ||
+                (error != LCB_SUCCESS && htctx->dumpIfError)) {
+
+            printf("Count: %d\n", htctx->cbCount);
+            printf("Code: %d\n", error);
+            printf("nBytes: %d\n", resp->v.v0.nbytes);
             dumpResponse(resp);
         }
     }
@@ -90,10 +108,12 @@ TEST_F(HttpUnitTest, testPut)
                           "application/json");
 
     lcb_error_t err;
-    lcb_set_http_complete_callback(instance, httpPutCallback);
+    lcb_set_http_complete_callback(instance, httpSimpleCallback);
 
     lcb_http_request_t htreq;
     HttpCmdContext ctx;
+    ctx.dumpIfError = true;
+
     err = lcb_make_http_request(instance, &ctx, LCB_HTTP_TYPE_VIEW,
                                 &cmd, &htreq);
 
@@ -103,31 +123,9 @@ TEST_F(HttpUnitTest, testPut)
     ASSERT_EQ(true, ctx.received);
     ASSERT_EQ(LCB_SUCCESS, ctx.err);
     ASSERT_EQ(LCB_HTTP_STATUS_CREATED, ctx.status);
+    ASSERT_EQ(1, ctx.cbCount);
 
     lcb_destroy(instance);
-}
-
-
-extern "C" {
-    static void httpGetCallback(lcb_http_request_t request,
-                                lcb_t instance,
-                                const void *cookie,
-                                lcb_error_t error,
-                                const lcb_http_resp_t *resp)
-    {
-        HttpCmdContext *htctx;
-        htctx = reinterpret_cast<HttpCmdContext *>((void *)cookie);
-        htctx->err = error;
-        htctx->status = resp->v.v0.status;
-        htctx->received = true;
-
-        if (resp->v.v0.bytes) {
-            htctx->body.assign((const char *)resp->v.v0.bytes,
-                               resp->v.v0.nbytes);
-        } else {
-            dumpResponse(resp);
-        }
-    }
 }
 
 /**
@@ -149,7 +147,10 @@ TEST_F(HttpUnitTest, testGet)
                                           "application/json");
 
     HttpCmdContext ctx;
-    lcb_set_http_complete_callback(instance, httpGetCallback);
+    ctx.dumpIfEmpty = true;
+    ctx.dumpIfError = true;
+
+    lcb_set_http_complete_callback(instance, httpSimpleCallback);
     lcb_error_t err;
     lcb_http_request_t htreq;
 
@@ -162,6 +163,7 @@ TEST_F(HttpUnitTest, testGet)
     ASSERT_EQ(true, ctx.received);
     ASSERT_EQ(LCB_HTTP_STATUS_OK, ctx.status);
     ASSERT_GT(ctx.body.size(), 0);
+    ASSERT_EQ(ctx.cbCount, 1);
 
     unsigned ii;
     const char *pcur;
@@ -184,6 +186,47 @@ TEST_F(HttpUnitTest, testGet)
     }
     ASSERT_GE(ii, 0);
     ASSERT_EQ('}', *pcur);
+
+    lcb_destroy(instance);
+}
+
+/**
+ * @test HTTP (Connection Refused)
+ * @bug CCBC-132
+ * @pre Create a request of type RAW to @c localhost:1 - nothing should be
+ * listening there
+ * @post Command returns. Status code is one of CONNECT_ERROR or NETWORK_ERROR
+ */
+TEST_F(HttpUnitTest, testRefused)
+{
+    lcb_t instance;
+    createConnection(instance);
+
+    const char *path = "non-exist-path";
+    lcb_http_cmd_st cmd = lcb_http_cmd_st();
+
+    cmd.version = 1;
+    cmd.v.v1.host = "localhost:1"; // should not have anything listening on it
+    cmd.v.v1.path = "non-exist";
+    cmd.v.v1.npath = strlen(cmd.v.v1.path);
+    cmd.v.v1.method = LCB_HTTP_METHOD_GET;
+
+
+    HttpCmdContext ctx;
+    ctx.dumpIfEmpty = false;
+    ctx.dumpIfError = false;
+
+    lcb_set_http_complete_callback(instance, httpSimpleCallback);
+    lcb_error_t err;
+    lcb_http_request_t htreq;
+
+    err = lcb_make_http_request(instance, &ctx, LCB_HTTP_TYPE_RAW,
+                                &cmd, &htreq);
+
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance);
+    ASSERT_EQ(true, ctx.received);
+    ASSERT_TRUE(ctx.err == LCB_CONNECT_ERROR || ctx.err == LCB_NETWORK_ERROR);
 
     lcb_destroy(instance);
 }

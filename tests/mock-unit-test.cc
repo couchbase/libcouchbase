@@ -497,7 +497,7 @@ extern "C" {
     }
 
     static void tpb_get_callback(lcb_t instance, const void *cookie,
-                             lcb_error_t error, const lcb_get_resp_t *resp)
+                                 lcb_error_t error, const lcb_get_resp_t *resp)
     {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
