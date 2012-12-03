@@ -214,7 +214,6 @@ static int http_parser_complete_cb(http_parser *p)
 static int request_do_fill_input_buffer(lcb_http_request_t req)
 {
     struct lcb_iovec_st iov[2];
-    lcb_http_resp_t resp = { 0 };
     lcb_ssize_t nr;
 
     if (!ringbuffer_ensure_capacity(&req->input, 8192)) {
@@ -233,7 +232,6 @@ static int request_do_fill_input_buffer(lcb_http_request_t req)
         case EWOULDBLOCK:
             return 0;
         default:
-            TRACE_HTTP_END(req, LCB_NETWORK_ERROR, &resp);
             return -1;
         }
     } else {
@@ -288,7 +286,6 @@ static lcb_ssize_t request_do_read(lcb_http_request_t req)
 
 static int request_do_write(lcb_http_request_t req)
 {
-    lcb_http_resp_t resp = { 0 };
     do {
         struct lcb_iovec_st iov[2];
         lcb_ssize_t nw;
@@ -303,7 +300,6 @@ static int request_do_write(lcb_http_request_t req)
             case EWOULDBLOCK:
                 return 0;
             default:
-                TRACE_HTTP_END(req, LCB_NETWORK_ERROR, &resp);
                 return -1;
             }
         } else {
@@ -319,7 +315,7 @@ void lcb_http_request_finish(lcb_t instance,
                              lcb_http_request_t req,
                              lcb_error_t error)
 {
-    lcb_http_resp_t resp = { 0 };
+    lcb_http_resp_t resp;
     setup_lcb_http_resp_t(&resp,
                           req->parser->status_code,
                           req->path,
@@ -328,6 +324,7 @@ void lcb_http_request_finish(lcb_t instance,
                           NULL, /* data */
                           0);
 
+    TRACE_HTTP_END(req, error, &resp);
     if (req->on_complete) {
         req->on_complete(req,
                          req->instance, req->command_cookie, error, &resp);
@@ -346,7 +343,6 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
     lcb_t instance = req->instance;
     lcb_server_t *server = req->server;
     lcb_ssize_t rv;
-    lcb_http_resp_t resp = { 0 };
     int should_continue = 1;
     lcb_error_t err = LCB_SUCCESS;
 
@@ -357,10 +353,8 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
                                             req->event, LCB_READ_EVENT,
                                             req, request_event_handler);
         } else if (rv < 0) {
-            TRACE_HTTP_END(req, LCB_NETWORK_ERROR, &resp);
             should_continue = 0;
             err = LCB_NETWORK_ERROR;
-
         } else {
             should_continue = 0;
         }
@@ -368,8 +362,6 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
 
     if (should_continue && (which & LCB_WRITE_EVENT)) {
         if (request_do_write(req) != 0) {
-
-            TRACE_HTTP_END(req, LCB_NETWORK_ERROR, &resp);
             err = LCB_NETWORK_ERROR;
             should_continue = 0;
 
@@ -423,7 +415,6 @@ static lcb_error_t request_connect(lcb_http_request_t req)
 {
     int retry;
     int save_errno;
-    lcb_http_resp_t resp = { 0 };
 
     do {
         if (req->sock == INVALID_SOCKET) {
@@ -434,7 +425,9 @@ static lcb_error_t request_connect(lcb_http_request_t req)
         }
 
         if (req->curr_ai == NULL) {
-            TRACE_HTTP_END(req, LCB_NETWORK_ERROR, &resp);
+            lcb_http_request_finish(req->instance,
+                                    req->server, req,
+                                    LCB_CONNECT_ERROR);
             return LCB_CONNECT_ERROR;
         }
 
@@ -476,7 +469,9 @@ static lcb_error_t request_connect(lcb_http_request_t req)
                 } /* Else, we fallthrough */
 
             default:
-                TRACE_HTTP_END(req, LCB_NETWORK_ERROR, &resp);
+                lcb_http_request_finish(req->instance,
+                                        req->server, req,
+                                        LCB_CONNECT_ERROR);
                 return LCB_CONNECT_ERROR;
             }
         }
@@ -854,20 +849,17 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
 LIBCOUCHBASE_API
 void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
 {
-    lcb_http_resp_t resp = { 0 };
     if (request->cancelled) {
         return;
     }
 
     if (hashset_is_member(instance->http_requests, request)) {
-        TRACE_HTTP_END(request, LCB_EINTERNAL, &resp);
         hashset_remove(instance->http_requests, request);
     } else {
         lcb_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
             lcb_server_t *server = instance->servers + ii;
             if (hashset_is_member(server->http_requests, request)) {
-                TRACE_HTTP_END(request, LCB_EINTERNAL, &resp);
                 hashset_remove(server->http_requests, request);
             }
         }
