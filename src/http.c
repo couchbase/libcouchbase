@@ -425,9 +425,6 @@ static lcb_error_t request_connect(lcb_http_request_t req)
         }
 
         if (req->curr_ai == NULL) {
-            lcb_http_request_finish(req->instance,
-                                    req->server, req,
-                                    LCB_CONNECT_ERROR);
             return LCB_CONNECT_ERROR;
         }
 
@@ -469,9 +466,6 @@ static lcb_error_t request_connect(lcb_http_request_t req)
                 } /* Else, we fallthrough */
 
             default:
-                lcb_http_request_finish(req->instance,
-                                        req->server, req,
-                                        LCB_CONNECT_ERROR);
                 return LCB_CONNECT_ERROR;
             }
         }
