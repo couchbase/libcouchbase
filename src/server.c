@@ -189,15 +189,9 @@ void libcouchbase_purge_single_server(libcouchbase_server_t *server,
                                        keyptr, ntohs(req.request.keylen), 0, 0);
             break;
         case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
-            abort();
-            break;
-
         case PROTOCOL_BINARY_CMD_SASL_AUTH:
-            abort();
-            break;
-
         case PROTOCOL_BINARY_CMD_SASL_STEP:
-            abort();
+            /* no need to notify user about these commands */
             break;
 
         case PROTOCOL_BINARY_CMD_TOUCH:
