@@ -657,8 +657,8 @@ extern "C" {
                 lcb_cas_t cas;
                 lcb_observe_t status;
                 int from_master;          /* zero if key came from replica */
-                lcb_time_t ttp;           /* time to persist */
-                lcb_time_t ttr;           /* time to replicate */
+                lcb_time_t ttp;           /* average time to persist */
+                lcb_time_t ttr;           /* average time to replicate */
             } v0;
         } v;
     } lcb_observe_resp_t;
