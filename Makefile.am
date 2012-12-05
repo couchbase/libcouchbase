@@ -426,6 +426,7 @@ EXTRA_DIST = \
              LICENSE \
              NMakefile \
              README.markdown \
+             RELEASE_NOTES.markdown \
              contrib/libvbucket/rfc1321 \
              include/ep-engine/README \
              include/libcouchbase/configuration.h.in \
