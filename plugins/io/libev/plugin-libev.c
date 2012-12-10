@@ -281,6 +281,7 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
 {
     struct libev_cookie *io_cookie = iops->v.v0.cookie;
     struct libev_event *evt = timer;
+    ev_tstamp start, repeat;
 
 #ifdef HAVE_LIBEV4
     if (evt->handler == handler && evt->ev.io.events == EV_TIMER) {
@@ -293,8 +294,12 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
     evt->data = cb_data;
     evt->handler = handler;
     ev_init(&evt->ev.io, handler_thunk);
-    evt->ev.timer.repeat = usec / (ev_tstamp)1000000;
-    ev_timer_again(io_cookie->loop, &evt->ev.timer);
+    start = repeat = usec / (ev_tstamp)1000000;
+    if (io_cookie->suspended) {
+        start += ev_time() - ev_now(io_cookie->loop);
+    }
+    ev_timer_set(&evt->ev.timer, start, repeat);
+    ev_timer_start(io_cookie->loop, &evt->ev.timer);
 
     return 0;
 }
@@ -322,24 +327,18 @@ static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 #else
     ev_unloop(io_cookie->loop, EVUNLOOP_ONE);
 #endif
-    if (!io_cookie->suspended) {
-        io_cookie->suspended = 1;
-        ev_suspend(io_cookie->loop);
-    }
 }
 
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
     struct libev_cookie *io_cookie = iops->v.v0.cookie;
-    if (io_cookie->suspended) {
-        io_cookie->suspended = 0;
-        ev_resume(io_cookie->loop);
-    }
+    io_cookie->suspended = 0;
 #ifdef HAVE_LIBEV4
     ev_run(io_cookie->loop, 0);
 #else
     ev_loop(io_cookie->loop, 0);
 #endif
+    io_cookie->suspended = 1;
 }
 
 static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
@@ -407,6 +406,7 @@ lcb_error_t lcb_create_libev_io_opts(int version, lcb_io_opt_t *io, void *arg)
         cookie->loop = loop;
         cookie->allocated = 0;
     }
+    cookie->suspended = 1;
     ret->v.v0.cookie = cookie;
 
     *io = ret;
