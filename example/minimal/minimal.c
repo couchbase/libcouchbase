@@ -38,18 +38,17 @@
 #include <inttypes.h>
 #endif
 
-static void
-error_callback(lcb_t instance, lcb_error_t error, const char *errinfo)
+static void error_callback(lcb_t instance, lcb_error_t error, const char *errinfo)
 {
     fprintf(stderr, "ERROR: %s (0x%x), %s\n",
             lcb_strerror(instance, error), error, errinfo);
     exit(EXIT_FAILURE);
 }
 
-
-static void
-store_callback(lcb_t instance, const void *cookie, lcb_storage_t operation,
-               lcb_error_t error, const lcb_store_resp_t *item)
+static void store_callback(lcb_t instance, const void *cookie,
+                           lcb_storage_t operation,
+                           lcb_error_t error,
+                           const lcb_store_resp_t *item)
 {
     if (error == LCB_SUCCESS) {
         fprintf(stderr, "STORED \"");
@@ -64,9 +63,8 @@ store_callback(lcb_t instance, const void *cookie, lcb_storage_t operation,
     (void)operation;
 }
 
-static void
-get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
-             const lcb_get_resp_t *item)
+static void get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
+                         const lcb_get_resp_t *item)
 {
     if (error == LCB_SUCCESS) {
         fprintf(stderr, "GOT \"");
@@ -82,8 +80,7 @@ get_callback(lcb_t instance, const void *cookie, lcb_error_t error,
     (void)cookie;
 }
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     lcb_error_t err;
     lcb_t instance;
