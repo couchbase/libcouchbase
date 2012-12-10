@@ -1,3 +1,38 @@
+libcouchbase (2.0.1) stable; urgency=low
+
+  [Mark Nunberg]
+  * CCBC-131: Compensate for cluster nodes lacking couchApiBase
+  * Don't check for EINVAL when missing POST/PUT body
+  * Skip mock tests on real cluster
+  * CCBC-130: Fix memory leak on http headers
+  * CCBC-132, CCBC-133: Let HTTP function in stormy weather
+  * Make lcb_logger work again
+
+  [Sergey Avseyev]
+  * SystemTap and DTrace integration
+  * Add probes into the distribution tarball
+  * Fix possible SEGFAULT
+  * src/probes.h is generated file, so it should be in dist
+  * Make it C89 friendly again
+  * Do not use req->server in macros
+  * Cleanup HTTP traces: probe http_end only once
+  * Do not call finish twice on connect error
+  * CCBC-136: do not abort when purging SASL commands
+  * Delay all timers while loop isn't active
+  * Reset IO event on delete
+  * Put readable RELEASE_NOTES into the repo
+
+  [Sokolov Yura aka funny_falcon]
+  * Other way to fix timers in libev
+
+  [Trond Norbye]
+  * Add manpages for all of cbc-* commands
+  * Clarify the ttp/ttr fields for observe
+  * Fixup compiler invocation for minimal.c
+  * Use defined coding style for examples
+
+ -- Sergey Avseyev <sergey@couchbase.com> Tue, 11 Dec 2012 01:56:15 +0300
+
 libcouchbase (2.0.0) stable; urgency=low
 
   [Sergey Avseyev]

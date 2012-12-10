@@ -30,11 +30,11 @@
 
 #include <stddef.h>
 
-#define LCB_VERSION_STRING "2.0.0"
-#define LCB_VERSION 0x020000
+#define LCB_VERSION_STRING "2.0.1"
+#define LCB_VERSION 0x020001
 #define LCB_VERSION_CHANGESET unknown
 
-#define PACKAGE_STRING "libcouchbase 2.0.0"
+#define PACKAGE_STRING "libcouchbase 2.0.1"
 #include <winsock2.h>
 #include <BaseTsd.h>
 
