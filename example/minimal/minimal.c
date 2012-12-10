@@ -18,8 +18,8 @@
 /*
  * BUILD:
  *
- *      gcc -lcouchbase -o minimal minimal.c
- *      cl /DWIN32 /Iinclude lib\libcouchbase.lib minimal.c
+ *      cc -o minimal minimal.c -lcouchbase
+ *      cl /DWIN32 /Iinclude minimal.c lib\libcouchbase.lib
  *
  * RUN:
  *
