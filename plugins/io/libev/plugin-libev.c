@@ -34,6 +34,7 @@
 struct libev_cookie {
     struct ev_loop *loop;
     int allocated;
+    int suspended;
 };
 
 static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
@@ -320,11 +321,19 @@ static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 #else
     ev_unloop(io_cookie->loop, EVUNLOOP_ONE);
 #endif
+    if (!io_cookie->suspended) {
+        io_cookie->suspended = 1;
+        ev_suspend(io_cookie->loop);
+    }
 }
 
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
     struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    if (io_cookie->suspended) {
+        io_cookie->suspended = 0;
+        ev_resume(io_cookie->loop);
+    }
 #ifdef HAVE_LIBEV4
     ev_run(io_cookie->loop, 0);
 #else
