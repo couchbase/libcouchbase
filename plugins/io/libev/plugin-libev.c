@@ -260,6 +260,7 @@ static void lcb_io_delete_event(struct lcb_io_opt_st *iops,
     struct libev_cookie *io_cookie = iops->v.v0.cookie;
     struct libev_event *evt = event;
     ev_io_stop(io_cookie->loop, &evt->ev.io);
+    ev_io_init(&evt->ev.io, NULL, 0, 0);
     (void)sock;
 }
 
