@@ -3,17 +3,22 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
-## 2.0.1 (UNRELEASED)
+## 2.0.2 (UNRELEASED)
+
+* [minor] CCBC-143 'cbc version' reports that uses 2.0.0, but really
+  installed with 2.0.1. Minor but confusing issue.
+
+## 2.0.1 (2012-12-11)
 
 50 files changed, 1009 insertions(+), 274 deletions(-)
 
 * libev-plugin: delay all timers while the loop isn't active. It will
   fix LCB_ETIMEOUT in the following scenario:
 
-    1. connect the instance
-    2. sleep for time greater than default timeout (e.g. 3 seconds)
-    3. schedule and execute a command (it will be timed out
-       immediately)
+  1. connect the instance
+  2. sleep for time greater than default timeout (e.g. 3 seconds)
+  3. schedule and execute a command (it will be timed out
+     immediately)
 
 * libev-plugin: reset IO event on delete. We need to reset it,
   because it might be re-used later
