@@ -47,7 +47,6 @@ pkginclude_HEADERS = \
                      include/libcouchbase/behavior.h \
                      include/libcouchbase/callbacks.h \
                      include/libcouchbase/compat.h \
-                     include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
                      include/libcouchbase/error.h \
                      include/libcouchbase/timings.h \
