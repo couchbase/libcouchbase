@@ -15,10 +15,10 @@ bugfixes. Do not forget to update this doc in every important patch.
 * libev-plugin: delay all timers while the loop isn't active. It will
   fix LCB_ETIMEOUT in the following scenario:
 
-  1. connect the instance
-  2. sleep for time greater than default timeout (e.g. 3 seconds)
-  3. schedule and execute a command (it will be timed out
-     immediately)
+  * connect the instance
+  * sleep for time greater than default timeout (e.g. 3 seconds)
+  * schedule and execute a command (it will be timed out
+    immediately)
 
 * libev-plugin: reset IO event on delete. We need to reset it,
   because it might be re-used later
@@ -62,7 +62,6 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 64 files changed, 3641 insertions(+), 735 deletions(-)
 
-25ba54c (tag: 2.0.0beta3) Update metadata for release 2.0.0beta3
 * CCBC-104 Fix illegal memory access. Reconnect config listener if the
   config connection was gone without proper shutdown.
 
@@ -70,7 +69,7 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * Allow to use gethrtime() from C++
 
-* Fix using free'd memory (was introduced in 4397181)
+* Fix using freed memory (was introduced in 4397181)
 
 * Use dynamic versioning for plugins
 
@@ -185,7 +184,7 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * Allow users to use environment variables to pick the event plugin
 
-* Add a new interface version for creating ioops
+* Add a new interface version for creating IO objects via plugins
 
 * Implement a new libev plugin. It is compatible with both libev3 and
   libev4.
@@ -279,7 +278,7 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * CCBC-92 release ringbuffer in libcouchbase_purge_single_server
 
-## 1.0.5 (2012-08-14)
+## 1.0.5 (2012-08-15)
 
 6 files changed, 23 insertions(+), 15 deletions(-)
 
@@ -299,7 +298,8 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 36 files changed, 2093 insertions(+), 704 deletions(-)
 
-* Allow the client to specify the verbosity level on the servers
+* Allow the client to specify the verbosity level on the servers using
+  lcb_set_verbosity() function.
 
 * Bind timeouts to server sockets instead of commands. This means that
   from this point timeout interval will be started from the latest IO
@@ -408,9 +408,9 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 54 files changed, 1874 insertions(+), 824 deletions(-)
 
-* Implement UNLOCK_KEY (UNL) command
+* CCBC-68 Implement UNLOCK_KEY (UNL) command
 
-* Implement GET_LOCKED (GETL) command
+* CCBC-68 Implement GET_LOCKED (GETL) command
 
 * hashset.c: iterate over whole set on rehashing. Fixes memory leaks
   related to hash collisions (905ef95)
@@ -485,7 +485,7 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * Fix segfault while authorizing on protected buckets (211bb04)
 
-## 1.1.0dp (2012-04-04)
+## 1.1.0dp (2012-04-05)
 
 59 files changed, 4374 insertions(+), 1205 deletions(-)
 
@@ -654,7 +654,7 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * Add stats command
 
-## 0.3.0 (2012-10-12)
+## 0.3.0 (2011-11-02)
 
 102 files changed, 6188 insertions(+), 1531 deletions(-)
 
