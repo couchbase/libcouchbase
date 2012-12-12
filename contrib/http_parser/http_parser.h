@@ -119,7 +119,7 @@ enum http_method
   {
 #define XX(num, name) HTTP_##name = num,
   HTTP_METHOD_MAP(XX)
-#undef X
+#undef XX
   HTTP_MAX
   };
 
