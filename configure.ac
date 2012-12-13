@@ -37,7 +37,7 @@ AS_IF([test "x$CPPFLAGS" = "x" ],
       [CPPFLAGS="-I."])
 
 AC_USE_SYSTEM_EXTENSIONS
-AM_INIT_AUTOMAKE(subdir-objects foreign)
+AM_INIT_AUTOMAKE(subdir-objects foreign tar-pax)
 AC_PROG_CXX
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -139,6 +139,9 @@ AC_PATH_PROG(CURL, curl, no)
 AC_PATH_PROG(UNZIP, unzip, no)
 AC_PATH_PROG(DOXYGEN, doxygen, no)
 AM_CONDITIONAL(HAVE_DOXYGEN, [test "x$DOXYGEN" != "xno"])
+AC_PATH_PROG(A2X, a2x, no)
+AM_CONDITIONAL(HAVE_A2X, [test "x$A2X" != "xno"])
+
 
 AC_SUBST(UNZIP)
 
@@ -522,6 +525,14 @@ AM_CONDITIONAL([ENABLE_DTRACE], [test "x$ac_cv_enable_dtrace" = xyes ])
 AM_CONDITIONAL([DTRACE_INSTRUMENT_OBJECT],
                [test "x$ac_cv_have_decl___sun" = "xyes"])
 AM_CONDITIONAL([APPLE_DTRACE], [test "x$ac_cv_have_decl__APPLE__" = "xyes"])
+
+AC_CACHE_CHECK([manpage layout], [ac_cv_manpage_layout], [
+   manpage=`man -s4 null 2> /dev/null`
+   AS_IF([test x"$manpage" = "x"], [ac_cv_manpage_layout="System V"],
+          [ac_cv_manpage_layout=bsd])
+])
+
+AM_CONDITIONAL(MANPAGE_BSD_LAYOUT, [test "x$ac_cv_manpage_layout" = "xbsd"])
 
 AH_TOP([
 #ifndef CONFIG_H

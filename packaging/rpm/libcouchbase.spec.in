@@ -107,6 +107,8 @@ Development files for the Couchbase Client & Protocol Library
 %{_includedir}/libcouchbase
 %{_libdir}/libcouchbase.la
 %{_libdir}/libcouchbase.so
+%{_mandir}/man3/*
+%{_mandir}/man5/*
 
 %changelog
 
