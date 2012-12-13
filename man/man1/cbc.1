@@ -726,7 +726,33 @@ This is the name of the bucket you would like to use\&.
 .sp 1
 .in -4
 
+.sp
+.ne 2
+.mk
+\fB\fBLIBCOUCHBASE_EVENT_PLUGIN_NAME\fR\fR
+.sp .6
+.in +4
+Override type of the IO backend. The value should be either name or
+path to IO plugin. Currently there are two names recognized (depending
+on plugin availability): \fBlibev\fR and \fBlibevent\fR. In case of
+path to custom IO plugin, also symbol name required, see
+LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL below.
+.sp
+.sp 1
+.in -4
 
+.sp
+.ne 2
+.mk
+\fB\fBLIBCOUCHBASE_EVENT_PLUGIN_SYMBOL\fR\fR
+.sp .6
+.in +4
+Symbol which should be accessibe in the plugin. The library will use
+the function, associated with the symbol to create new instances of
+the IO object.
+.sp
+.sp 1
+.in -4
 
 
 .SH ATTRIBUTES
