@@ -94,7 +94,8 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
                    sizeof(req.message.body.expiration));
         }
 
-        TRACE_ARITHMETIC_BEGIN(&req, key, nkey, delta, initial, create ? exp : 0xffffffff);
+        TRACE_ARITHMETIC_BEGIN(&req, key, nkey, delta, initial,
+                               create ? exp : (lcb_time_t)0xffffffff);
         lcb_server_start_packet(server, command_cookie, req.bytes,
                                 sizeof(req.bytes));
         lcb_server_write_packet(server, key, nkey);
