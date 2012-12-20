@@ -50,9 +50,37 @@ struct Item {
     }
 
     Item() {
+        key.clear();
+        val.clear();
+
+        err = LCB_SUCCESS;
         flags = 0;
         cas = 0;
         datatype = 0;
+        exp = 0;
+    }
+
+    Item(const std::string &key,
+         const std::string &value = "",
+         lcb_cas_t cas = 0) {
+
+        this->key = key;
+        this->val = value;
+        this->cas = cas;
+
+        flags = 0;
+        datatype = 0;
+        exp = 0;
+    }
+
+    friend std::ostream& operator<< (std::ostream& out,
+                                     const Item &item);
+
+    /**
+     * Dump the string representation of the item to standard output
+     */
+    void dump() {
+        std::cout << *this;
     }
 
     std::string key;
@@ -61,11 +89,49 @@ struct Item {
     lcb_cas_t cas;
     lcb_datatype_t datatype;
     lcb_error_t err;
+    lcb_time_t exp;
+};
+
+struct KVOperation {
+    /** The resultant item */
+    Item result;
+
+    /** The request item */
+    const Item *request;
+
+    /** whether the callback was at all received */
+    unsigned callCount;
+
+    /** Acceptable errors during callback */
+    std::set<lcb_error_t> allowableErrors;
+
+    void assertOk(lcb_error_t err);
+
+    KVOperation(const Item *request) {
+        this->request = request;
+        callCount = 0;
+    }
+
+    void clear() {
+        result = Item();
+        callCount = 0;
+        allowableErrors.clear();
+    }
+
+    void store(lcb_t instance);
+    void get(lcb_t instance);
+    void remove(lcb_t instance);
+
+    void cbCommon(lcb_error_t error) {
+        callCount++;
+        assertOk(error);
+    }
 };
 
 void storeKey(lcb_t instance, const std::string &key, const std::string &value);
 void removeKey(lcb_t instance, const std::string &key);
 void getKey(lcb_t instance, const std::string &key, Item &item);
+
 #endif
 
 #endif

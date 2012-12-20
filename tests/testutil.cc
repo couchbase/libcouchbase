@@ -23,71 +23,141 @@
  * Helper functions
  */
 extern "C" {
-    static void storeKeyCallback(lcb_t, const void *cookie,
+    static void storeKvoCallback(lcb_t, const void *cookie,
                                  lcb_storage_t operation,
                                  lcb_error_t error,
-                                 const lcb_store_resp_t *)
+                                 const lcb_store_resp_t *resp)
     {
-        int *counter = (int *)cookie;
+
+        KVOperation *kvo = (KVOperation *)cookie;
+        kvo->cbCommon(error);
+        kvo->result.assignKC(resp, error);
         ASSERT_EQ(LCB_SET, operation);
-        ASSERT_EQ(LCB_SUCCESS, error);
-        ++(*counter);
     }
 
-    static void removeKeyCallback(lcb_t, const void *cookie,
-                                  lcb_error_t error,
-                                  const lcb_remove_resp_t *)
-    {
-        int *counter = (int *)cookie;
-        ASSERT_TRUE(error == LCB_SUCCESS || error == LCB_KEY_ENOENT);
-        ++(*counter);
-    }
-
-    static void getKeyCallback(lcb_t, const void *cookie,
+    static void getKvoCallback(lcb_t, const void *cookie,
                                lcb_error_t error,
                                const lcb_get_resp_t *resp)
     {
-        Item *item = (Item *)cookie;
-        ASSERT_EQ(LCB_SUCCESS, error);
-        item->assign(resp);
+        KVOperation *kvo = (KVOperation *)cookie;
+        kvo->cbCommon(error);
+        kvo->result.assign(resp, error);
     }
+
+    static void removeKvoCallback(lcb_t, const void *cookie,
+                                  lcb_error_t error,
+                                  const lcb_remove_resp_t *resp)
+    {
+        KVOperation *kvo = (KVOperation *)cookie;
+        kvo->cbCommon(error);
+        kvo->result.assignKC(resp, error);
+    }
+}
+
+void KVOperation::assertOk(lcb_error_t err)
+{
+    if (allowableErrors.empty()) {
+        ASSERT_EQ(LCB_SUCCESS, err);
+        return;
+    }
+    ASSERT_TRUE(allowableErrors.find(err) != allowableErrors.end());
+}
+
+void KVOperation::store(lcb_t instance)
+{
+    lcb_store_cmd_t cmd(LCB_SET,
+                        request->key.data(), request->key.length(),
+                        request->val.data(), request->val.length(),
+                        request->flags,
+                        request->exp,
+                        request->cas,
+                        request->datatype);
+    lcb_store_cmd_t *cmds[] = { &cmd };
+    lcb_store_callback cb = lcb_set_store_callback(instance, storeKvoCallback);
+
+    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, this, 1, cmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+
+    (void)lcb_set_store_callback(instance, cb);
+    ASSERT_EQ(1, callCount);
+}
+
+void KVOperation::remove(lcb_t instance)
+{
+    lcb_remove_cmd_t cmd(request->key.data(), request->key.length(),
+                         request->cas);
+    lcb_remove_cmd_t *cmds[] = { &cmd };
+    lcb_remove_callback cb = lcb_set_remove_callback(instance, removeKvoCallback);
+
+    EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, this, 1, cmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+
+    (void)lcb_set_remove_callback(instance, cb);
+    ASSERT_EQ(1, callCount);
+}
+
+void KVOperation::get(lcb_t instance)
+{
+    lcb_get_cmd_t cmd(request->key.data(), request->key.length(), request->exp);
+    lcb_get_cmd_t *cmds[] = { &cmd };
+
+    lcb_get_callback cb = lcb_set_get_callback(instance, getKvoCallback);
+    EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, this, 1, cmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+
+    (void)lcb_set_get_callback(instance, cb);
+    ASSERT_EQ(1, callCount);
 }
 
 void storeKey(lcb_t instance, const std::string &key, const std::string &value)
 {
-    int counter = 0;
-    lcb_store_cmd_t cmd(LCB_SET, key.data(), key.length(),
-                        value.data(), value.length());
-    lcb_store_cmd_t *cmds[] = { &cmd };
-    lcb_store_callback cb = lcb_set_store_callback(instance, storeKeyCallback);
-    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, &counter, 1, cmds));
-    lcb_wait(instance);
-    (void)lcb_set_store_callback(instance, cb);
-    ASSERT_EQ(1, counter);
+    Item req = Item(key, value);
+    KVOperation kvo = KVOperation(&req);
+    kvo.store(instance);
 }
 
 void removeKey(lcb_t instance, const std::string &key)
 {
-    int counter = 0;
-    lcb_remove_cmd_t cmd(key.data(), key.length());
-    lcb_remove_cmd_t *cmds[] = { &cmd };
-    lcb_remove_callback cb = lcb_set_remove_callback(instance,
-                                                     removeKeyCallback);
-    EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, &counter, 1, cmds));
-    lcb_wait(instance);
-    (void)lcb_set_remove_callback(instance, cb);
-    ASSERT_EQ(1, counter);
+    Item req = Item();
+    req.key = key;
+    KVOperation kvo = KVOperation(&req);
+    kvo.allowableErrors.insert(LCB_SUCCESS);
+    kvo.allowableErrors.insert(LCB_KEY_ENOENT);
+    kvo.remove(instance);
 }
 
 void getKey(lcb_t instance, const std::string &key, Item &item)
 {
-    item.cas = 0xdeadbeef;
+    Item req = Item();
+    req.key = key;
+    KVOperation kvo = KVOperation(&req);
+    kvo.result.cas = 0xdeadbeef;
 
-    lcb_get_cmd_t cmd(key.data(), key.length());
-    lcb_get_cmd_t *cmds[] = { &cmd };
-    lcb_get_callback cb = lcb_set_get_callback(instance, getKeyCallback);
-    EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, &item, 1, cmds));
-    lcb_wait(instance);
-    (void)lcb_set_get_callback(instance, cb);
-    ASSERT_NE(0xdeadbeef, item.cas);
+    kvo.get(instance);
+    ASSERT_NE(0xdeadbeef, kvo.result.cas);
+    item = kvo.result;
+}
+
+/**
+ * Dump the item object to a stream
+ * @param out where to dump the object to
+ * @param item the item to print
+ * @return the stream
+ */
+std::ostream& operator<< (std::ostream& out, const Item &item)
+{
+    using namespace std;
+    out << "Key: " << item.key << endl;
+    if (item.val.length()) {
+        out <<  "Value: " << item.val << endl;
+    }
+
+    out << ios::hex << "CAS: 0x" << item.cas << endl
+        << "Flags: 0x" << item.flags << endl;
+
+    if (item.err != LCB_SUCCESS) {
+        out << "Error: " << item.err << endl;
+    }
+
+    return out;
 }
