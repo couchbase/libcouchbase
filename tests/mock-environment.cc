@@ -74,10 +74,10 @@ void MockEnvironment::hiccupNodes(int msecs, int offset)
     ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
     assert(nw == cmd.size());
 }
-void MockEnvironment::createConnection(lcb_t &instance)
-{
-    struct lcb_io_opt_st *io;
 
+void MockEnvironment::createConnection(HandleWrap &handle)
+{
+    lcb_io_opt_t io;
     if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create IO instance\n");
         exit(1);
@@ -85,9 +85,25 @@ void MockEnvironment::createConnection(lcb_t &instance)
 
     lcb_create_st options;
     makeConnectParams(options, io);
+    lcb_t instance;
 
     ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
     (void)lcb_set_cookie(instance, io);
+
+    handle.instance = instance;
+    handle.iops = io;
+}
+
+void MockEnvironment::createConnection(lcb_t &instance)
+{
+    HandleWrap handle;
+    createConnection(handle);
+
+    instance = handle.instance;
+
+    handle.instance = NULL;
+    handle.iops = NULL;
+
 }
 
 #define STAT_EP_VERSION "ep_version"
@@ -196,4 +212,22 @@ void MockEnvironment::TearDown()
 {
     shutdown_mock_server(mock);
     mock = NULL;
+}
+
+void HandleWrap::destroy()
+{
+    if (instance) {
+        lcb_destroy(instance);
+    }
+    if (iops) {
+        lcb_destroy_io_ops(iops);
+    }
+
+    instance = NULL;
+    iops = NULL;
+}
+
+HandleWrap::~HandleWrap()
+{
+    destroy();
 }

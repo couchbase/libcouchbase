@@ -22,6 +22,34 @@
 #include <libcouchbase/couchbase.h>
 #include "serverparams.h"
 
+
+class HandleWrap {
+
+friend class MockEnvironment;
+
+public:
+    lcb_t getLcb() const {
+        return instance;
+    }
+
+    void destroy();
+
+    // Don't ever allow copying. C++0x allows = 0, though
+    HandleWrap operator= (const HandleWrap& other) {
+        fprintf(stderr, "Can't copy this object around!\n");
+        abort();
+        return HandleWrap();
+    }
+
+    HandleWrap() : instance(NULL), iops(NULL) { }
+    virtual ~HandleWrap();
+
+
+private:
+    lcb_t instance;
+    lcb_io_opt_t iops;
+};
+
 class MockEnvironment : public ::testing::Environment
 {
 public:
@@ -102,6 +130,8 @@ public:
      */
     void createConnection(lcb_t &instance);
 
+    void createConnection(HandleWrap &handle);
+
     /**
      * Setup mock to split response in two parts: send first "offset" bytes
      * immediately and send the rest after "msecs" milliseconds.
@@ -137,6 +167,7 @@ protected:
     bool realCluster;
     ServerVersion serverVersion;
     const char *http;
+    lcb_io_opt_st *iops;
 };
 
 #define LCB_TEST_REQUIRE_CLUSTER_VERSION(v) \

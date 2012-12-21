@@ -21,6 +21,8 @@
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
 
+class HandleWrap;
+
 #define SKIP_IF_MOCK()                                                  \
     if (!getenv(LCB_TEST_REALCLUSTER_ENV)) {                            \
         fprintf(stderr, "Skipping %s: Need real cluster\n", __func__);  \
@@ -39,6 +41,7 @@ protected:
     static void SetUpTestCase();
     static void TearDownTestCase();
     virtual void createConnection(lcb_t &instance);
+    virtual void createConnection(HandleWrap &handle);
 };
 
 #endif

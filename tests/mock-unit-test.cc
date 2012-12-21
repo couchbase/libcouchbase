@@ -46,6 +46,14 @@ extern "C" {
     }
 }
 
+void MockUnitTest::createConnection(HandleWrap &handle)
+{
+    MockEnvironment::getInstance()->createConnection(handle);
+    (void)lcb_set_error_callback(handle.getLcb(), error_callback);
+    ASSERT_EQ(LCB_SUCCESS, lcb_connect(handle.getLcb()));
+    lcb_wait(handle.getLcb());
+}
+
 void MockUnitTest::createConnection(lcb_t &instance)
 {
     MockEnvironment::getInstance()->createConnection(instance);
