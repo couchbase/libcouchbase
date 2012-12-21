@@ -8,6 +8,9 @@ bugfixes. Do not forget to update this doc in every important patch.
 * [minor] CCBC-143 'cbc version' reports that uses 2.0.0, but really
   installed with 2.0.1. Minor but confusing issue.
 
+* [major] CCBC-151 Cancellation of the HTTP request might lead to
+  memory leaks or to segfaults (2e3875c2).
+
 ## 2.0.1 (2012-12-11)
 
 50 files changed, 1009 insertions(+), 274 deletions(-)
