@@ -50,6 +50,9 @@ static void http_request_destroy(lcb_http_request_t req)
     free(req->url);
     free(req->host);
     free(req->port);
+    if (req->parser) {
+        free(req->parser->data);
+    }
     free(req->parser);
     free(req->password);
     ringbuffer_destruct(&req->input);
@@ -70,10 +73,17 @@ static void http_request_destroy(lcb_http_request_t req)
     free(req);
 }
 
+struct parser_ctx_st
+{
+    lcb_t instance;
+    lcb_http_request_t req;
+};
+
 static int http_parser_header_cb(http_parser *p, const char *bytes,
                                  lcb_size_t nbytes)
 {
-    lcb_http_request_t req = p->data;
+    struct parser_ctx_st *ctx = p->data;
+    lcb_http_request_t req = ctx->req;
     struct lcb_http_header_st *item;
 
     item = calloc(1, sizeof(struct lcb_http_header_st));
@@ -98,7 +108,8 @@ static int http_parser_header_cb(http_parser *p, const char *bytes,
 
 static int http_parser_headers_complete_cb(http_parser *p)
 {
-    lcb_http_request_t req = p->data;
+    struct parser_ctx_st *ctx = p->data;
+    lcb_http_request_t req = ctx->req;
     struct lcb_http_header_st *hdr;
     lcb_size_t ii;
 
@@ -128,24 +139,42 @@ static void setup_lcb_http_resp_t(lcb_http_resp_t *resp,
     resp->v.v0.nbytes = nbytes;
 }
 
-static int request_valid(lcb_http_request_t req)
+static int request_valid(lcb_t instance, lcb_http_request_t req)
 {
-    if (req->server) {
-        return hashset_is_member(req->server->http_requests, req);
+    /* invalid requests are possibly deallocated already, so avoid
+     * dereferencing */
+    if (hashset_is_member(instance->http_requests, req)) {
+        return 1;
     } else {
-        return hashset_is_member(req->instance->http_requests, req);
+        lcb_size_t ii;
+        for (ii = 0; ii < instance->nservers; ++ii) {
+            lcb_server_t *server = instance->servers + ii;
+            if (hashset_is_member(server->http_requests, req)) {
+                return 1;
+            }
+        }
     }
+    return 0;
 }
 
 static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nbytes)
 {
-    lcb_http_request_t req = p->data;
+    struct parser_ctx_st *ctx = p->data;
+    lcb_http_request_t req = ctx->req;
+    lcb_http_resp_t resp;
 
-    if (!request_valid(req)) {
+    if (!request_valid(ctx->instance, req)) {
+        return 0;
+    }
+    if (req->cancelled) {
+        /* ignore on_complete callback because the caller decided to
+         * cancel the request, therefore doesn't need any
+         * further notifications */
+        req->on_complete = NULL;
+        lcb_http_request_finish(req->instance, req->server, req, LCB_SUCCESS);
         return 0;
     }
     if (req->chunked) {
-        lcb_http_resp_t resp;
         setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
                               req->headers, bytes, nbytes);
         req->on_data(req, req->instance, req->command_cookie, LCB_SUCCESS, &resp);
@@ -162,15 +191,16 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nby
 
 static int http_parser_complete_cb(http_parser *p)
 {
-    lcb_http_request_t req = p->data;
+    struct parser_ctx_st *ctx = p->data;
+    lcb_http_request_t req = ctx->req;
     char *bytes = NULL;
     lcb_size_t np = 0, nbytes = 0;
     lcb_http_resp_t resp;
 
-    req->completed = 1;
-    if (!request_valid(req)) {
+    if (!request_valid(ctx->instance, req)) {
         return 0;
     }
+    req->completed = 1;
     if (!req->chunked) {
         nbytes = req->result.nbytes;
         if (ringbuffer_is_continous(&req->result, RINGBUFFER_READ, nbytes)) {
@@ -332,6 +362,12 @@ void lcb_http_request_finish(lcb_t instance,
     }
 
     lcb_cancel_http_request(instance, req);
+
+    if (req->server) {
+        hashset_remove(server->http_requests, req);
+    } else {
+        hashset_remove(instance->http_requests, req);
+    }
     http_request_destroy(req);
     lcb_maybe_breakout(instance);
     (void)server;
@@ -809,8 +845,16 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
     }
     http_parser_init(req->parser, HTTP_RESPONSE);
-    /* Set back reference to the request */
-    req->parser->data = req;
+    {
+        struct parser_ctx_st *parser_ctx = malloc(sizeof(struct parser_ctx_st));
+        if (parser_ctx == NULL) {
+            http_request_destroy(req);
+            return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+        }
+        parser_ctx->instance = instance;
+        parser_ctx->req = req;
+        req->parser->data = parser_ctx;
+    }
     req->parser_settings.on_body = (http_data_cb)http_parser_body_cb;
     req->parser_settings.on_message_complete = (http_cb)http_parser_complete_cb;
     req->parser_settings.on_header_field = (http_data_cb)http_parser_header_cb;
@@ -843,21 +887,8 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
 LIBCOUCHBASE_API
 void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
 {
-    if (request->cancelled) {
-        return;
+    /* deference request only if we know about it */
+    if (request_valid(instance, request)) {
+        request->cancelled = 1;
     }
-
-    if (hashset_is_member(instance->http_requests, request)) {
-        hashset_remove(instance->http_requests, request);
-    } else {
-        lcb_size_t ii;
-        for (ii = 0; ii < instance->nservers; ++ii) {
-            lcb_server_t *server = instance->servers + ii;
-            if (hashset_is_member(server->http_requests, request)) {
-                hashset_remove(server->http_requests, request);
-            }
-        }
-    }
-
-    request->cancelled = 1;
 }
