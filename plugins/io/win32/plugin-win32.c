@@ -324,6 +324,7 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
     struct winsock_io_cookie *instance = iops->v.v0.cookie;
     int nevents;
     struct winsock_event *n;
+    struct winsock_event *next;
 
     instance->event_loop = 1;
     do {
@@ -391,7 +392,8 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
                 }
             }
         } else {
-            for (n = instance->events; n != NULL; n = n->next) {
+            for (n = instance->events; n != NULL; n = next) {
+    			next = n->next;
                 if (n->flags != 0) {
                     short flags = 0;
 
