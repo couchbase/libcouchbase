@@ -266,7 +266,7 @@ void lcb_hex_dump(const void *data, lcb_size_t size)
 
         if (n % 16 == 0) {
             /* line completed */
-            printf("[%4.4s]   %-50.50s  %s\n", addrstr, hexstr, charstr);
+            fprintf(stderr, "[%4.4s]   %-50.50s  %s\n", addrstr, hexstr, charstr);
             hexstr[0] = 0;
             charstr[0] = 0;
         } else if (n % 8 == 0) {
