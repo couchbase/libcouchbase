@@ -136,3 +136,29 @@ int hashset_is_member(hashset_t set, void *item)
     }
     return 0;
 }
+
+void **hashset_get_items(hashset_t set, void **itemlist)
+{
+    size_t ii, oix;
+
+    if (!set->nitems) {
+        return NULL;
+    }
+
+    if (!itemlist) {
+        itemlist = malloc(set->nitems * sizeof(void *));
+        if (!itemlist) {
+            return NULL;
+        }
+    }
+
+    for (ii = 0, oix = 0; ii < set->capacity; ii++) {
+
+        if (set->items[ii] > 1) {
+            itemlist[oix] = (void *)set->items[ii];
+            oix++;
+        }
+    }
+
+    return itemlist;
+}

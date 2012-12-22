@@ -41,6 +41,22 @@ extern "C" {
 
     lcb_size_t hashset_num_items(hashset_t set);
 
+    /**
+     * Makes a list of items inside the hashset.
+     * @param set the hashset
+     * @param itemlist an allocated array large enough to hold the number
+     * of items in the hashset (use hashset_num_items). If this is NULL
+     * then a list is allocated for you
+     *
+     * @return the item list. If the @itemlist param argument was
+     * not-null, then this is the same list; if it was NULL then this
+     * is an allocated list which should be released using @itemlist
+     * free(). It will return NULL if the hashset is empty or memory
+     * allocation for @itemlist was failed.
+     */
+    void **hashset_get_items(hashset_t set, void **itemlist);
+
+
     /* add item into the hashset.
      *
      * @note 0 and 1 is special values, meaning nil and deleted items. the

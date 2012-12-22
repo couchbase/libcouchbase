@@ -19,6 +19,7 @@
 #include <libcouchbase/couchbase.h>
 #include "hashset.h"
 #include <gtest/gtest.h>
+#include <vector>
 
 class Hashset : public ::testing::Test
 {
@@ -168,4 +169,88 @@ TEST_F(Hashset, testRehashingItemsPlacedBeyondNumItems)
     EXPECT_TRUE(hashset_is_member(set, (void *)24693536));
     EXPECT_TRUE(hashset_is_member(set, (void *)24743792));
     EXPECT_TRUE(hashset_is_member(set, (void *)24756480));
+}
+
+static void hsXref(hashset_t hs,
+                   void **itemarry,
+                   const std::set<size_t> &src)
+{
+    // Cross-reference stuff here
+    std::set<size_t> got;
+
+    size_t n_items = hashset_num_items(hs);
+    ASSERT_EQ(n_items, src.size());
+
+    for (unsigned ii = 0; ii < n_items; ii++) {
+
+        size_t cur = (size_t) itemarry[ii];
+
+        ASSERT_TRUE(hashset_is_member(hs, (void *)cur));
+        ASSERT_TRUE(src.find(cur) != src.end());
+
+        got.insert(cur);
+    }
+
+    ASSERT_EQ(src.size(), got.size());
+
+    for (std::set<size_t>::const_iterator iter = src.begin();
+            iter != src.end();
+            iter++) {
+
+        ASSERT_TRUE(got.find(*iter) != got.end());
+    }
+}
+
+TEST_F(Hashset, testGetAll)
+{
+    std::set<size_t> items, items_base;
+    items_base.insert(0xdeadbeef);
+    items_base.insert(0xbeef);
+    items_base.insert(0xcafe);
+    items_base.insert(0xbabe);
+    items_base.insert(0xf00d);
+    items_base.insert(0xfab);
+    items_base.insert(0xbad);
+
+    // Fill it up
+    for (std::set<size_t>::iterator iter = items_base.begin();
+            iter != items_base.end();
+            iter++) {
+
+        size_t cur = *iter;
+        items.insert(cur);
+        items.insert(cur * cur);
+        items.insert(cur + cur);
+        items.insert(cur * 3);
+    }
+
+    for (std::set<size_t>::iterator iter = items.begin();
+            iter != items.end();
+            iter++) {
+
+        hashset_add(set, (void *)*iter);
+    }
+
+    void **list_hsalloc = hashset_get_items(set, NULL);
+    ASSERT_TRUE(list_hsalloc != NULL);
+    hsXref(set, list_hsalloc, items);
+    free(list_hsalloc);
+
+    void **list_myalloc = (void **)malloc(
+                              sizeof(void *) * hashset_num_items(set));
+
+    void **ret = hashset_get_items(set, list_myalloc);
+
+    ASSERT_TRUE(ret == list_myalloc);
+    hsXref(set, list_myalloc, items);
+    free(list_myalloc);
+
+    for (std::set<size_t>::iterator iter = items.begin();
+            iter != items.end();
+            iter++) {
+        hashset_remove(set, (void *)*iter);
+    }
+
+    ASSERT_EQ(0, hashset_num_items(set));
+    ASSERT_TRUE(NULL == hashset_get_items(set, NULL));
 }
