@@ -524,6 +524,12 @@ extern "C" {
     int lcb_getaddrinfo(lcb_t instance, const char *hostname,
                         const char *servname, struct addrinfo **res);
 
+    void lcb_failout_observe_request(lcb_server_t *server,
+                                     struct lcb_command_data_st *command_data,
+                                     const char *packet,
+                                     lcb_size_t npacket,
+                                     lcb_error_t err);
+
 #ifdef __cplusplus
 }
 #endif

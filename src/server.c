@@ -24,6 +24,48 @@
 
 #include "internal.h"
 
+void lcb_failout_observe_request(lcb_server_t *server,
+                                 struct lcb_command_data_st *command_data,
+                                 const char *packet,
+                                 lcb_size_t npacket,
+                                 lcb_error_t err)
+{
+    lcb_t instance = server->instance;
+    protocol_binary_request_header *req = (void *)packet;
+    const char *ptr = packet + sizeof(req->bytes);
+    const char *end = packet + npacket;
+    lcb_observe_resp_t resp;
+
+    memset(&resp, 0, sizeof(resp));
+    resp.v.v0.status = LCB_OBSERVE_MAX;
+    while (ptr < end) {
+        lcb_uint16_t nkey;
+
+        /* ignore vbucket */
+        ptr += sizeof(lcb_uint16_t);
+        nkey = ntohs(*(lcb_uint16_t*)ptr);
+
+        ptr += sizeof(lcb_uint16_t);
+        resp.v.v0.key = ptr;
+        resp.v.v0.nkey = nkey;
+
+        TRACE_OBSERVE_PROGRESS(req->request.opaque, ntohs(req->request.vbucket),
+                               req->request.opcode, err, &resp);
+        instance->callbacks.observe(instance, command_data->cookie,
+                                    err, &resp);
+        ptr += nkey;
+    }
+    if (lcb_lookup_server_with_command(instance, CMD_OBSERVE,
+                                       req->request.opaque, server) < 0) {
+        TRACE_OBSERVE_END(req->request.opaque, ntohs(req->request.vbucket),
+                          req->request.opcode, err);
+        resp.v.v0.key = NULL;
+        resp.v.v0.nkey = 0;
+        instance->callbacks.observe(instance, command_data->cookie, err, &resp);
+    }
+}
+
+
 void lcb_purge_single_server(lcb_server_t *server,
                              lcb_error_t error)
 {
@@ -270,11 +312,9 @@ void lcb_purge_single_server(lcb_server_t *server,
             break;
 
         case CMD_OBSERVE:
-            setup_lcb_observe_resp_t(&resp.observe, NULL, 0, LCB_OBSERVE_MAX,
-                                     0, 0, 0, 0);
-            TRACE_OBSERVE_END(req.request.opaque, ntohs(req.request.vbucket),
-                              req.request.opcode, error);
-            root->callbacks.observe(root, ct.cookie, error, &resp.observe);
+            lcb_failout_observe_request(server, &ct, packet,
+                                        sizeof(req.bytes) + ntohl(req.request.bodylen),
+                                        error);
             break;
 
         default:
@@ -802,12 +842,9 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
             c->instance->callbacks.get(c->instance, ct.cookie, LCB_KEY_ENOENT, &resp.get);
             break;
         case CMD_OBSERVE:
-            keyptr = packet + sizeof(req) + req.request.extlen;
-            setup_lcb_observe_resp_t(&resp.observe, keyptr, ntohs(req.request.keylen),
-                                     LCB_OBSERVE_MAX, 0, 0, 0, 0);
-            TRACE_OBSERVE_END(req.request.opaque, ntohs(req.request.vbucket),
-                              req.request.opcode, LCB_SERVER_BUG);
-            c->instance->callbacks.observe(c->instance, ct.cookie, LCB_SERVER_BUG, &resp.observe);
+            lcb_failout_observe_request(c, &ct, packet,
+                                        sizeof(req.bytes) + ntohl(req.request.bodylen),
+                                        LCB_SERVER_BUG);
             break;
         case PROTOCOL_BINARY_CMD_NOOP:
             break;

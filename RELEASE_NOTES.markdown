@@ -24,6 +24,9 @@ bugfixes. Do not forget to update this doc in every important patch.
 * [major] CCBC-171 Invalid read in libevent plugin, when the plugin
   compiled in 1.x mode
 
+* [critical] CCBC-155 Observe malfunctions in the case of multiple
+  keys and server failure
+
 ## 2.0.2 (2013-01-04)
 
 * [major] CCBC-150 commands sent to multiple servers fail to detect
