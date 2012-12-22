@@ -57,15 +57,9 @@ void lcb_failout_observe_request(lcb_server_t *server,
         resp.v.v0.key = ptr;
         resp.v.v0.nkey = nkey;
 
-        lcb_observe_invoke_callback(instance, command_data, err, &resp);
+        lcb_observe_invoke_callback(instance, command_data, err,
+                                    &resp, req->request.opaque);
         ptr += nkey;
-    }
-    if ((command_data->flags & LCB_CMD_F_OBS_BCAST) &&
-            lcb_lookup_server_with_command(instance, CMD_OBSERVE,
-                                           req->request.opaque, server) < 0) {
-        resp.v.v0.key = NULL;
-        resp.v.v0.nkey = 0;
-        lcb_observe_invoke_callback(instance, command_data, err, &resp);
     }
 }
 static void failout_single_request(lcb_server_t *server,

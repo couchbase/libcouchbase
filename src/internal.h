@@ -236,6 +236,7 @@ extern "C" {
         ringbuffer_t purged_cookies;
 
         lcb_settings settings;
+        genhash_t *cmdht;
 
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
@@ -515,6 +516,10 @@ extern "C" {
      * Hashtable wrappers
      */
     genhash_t *lcb_hashtable_nc_new(lcb_size_t est);
+    genhash_t *lcb_hashtable_szt_new(lcb_size_t est);
+    void lcb_assoc_opaque(lcb_t instance, lcb_uint32_t opaque, const void *data);
+    void * lcb_get_opaque(lcb_t instance, lcb_uint32_t opaque);
+    void lcb_clear_opaque(lcb_t instance, lcb_uint32_t opaque);
 
     void lcb_server_connect(lcb_server_t *server);
 
@@ -541,7 +546,8 @@ extern "C" {
     void lcb_observe_invoke_callback(lcb_t instance,
                                      const struct lcb_command_data_st *ct,
                                      lcb_error_t error,
-                                     const lcb_observe_resp_t *resp);
+                                     const lcb_observe_resp_t *resp,
+                                     lcb_uint32_t opaque);
 
     lcb_error_t lcb_observe_ex(lcb_t instance,
                                const void *command_cookie,

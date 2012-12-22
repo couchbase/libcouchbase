@@ -5,6 +5,7 @@
 #include "mock-unit-test.h"
 #include "mock-environment.h"
 #include "testutil.h"
+#include "internal.h"
 #include <map>
 
 using namespace std;
@@ -690,4 +691,78 @@ TEST_F(DurabilityUnitTest, testMasterObserve)
 
     // 2 == one for the callback, one for the NULL
     ASSERT_EQ(2, o_cookie.count);
+}
+
+extern "C" {
+static void fo_callback(lcb_timer_t, lcb_t, const void *)
+{
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    for (int ii = 1; ii < mock->getNumNodes(); ii++) {
+        mock->failoverNode(ii);
+    }
+}
+}
+
+/**
+ * Test the functionality of durability operations during things like
+ * node failovers.
+ *
+ * The idea behind here is to ensure that we can trigger a case where a series
+ * of OBSERVE packets are caught in the middle of a cluster update and end up
+ * being relocated to the same server. Previously (and currently) this would
+ * confuse the lookup_server_with_command functionality which would then invoke
+ * the 'NULL' callback multiple times (because it assumes it's not located
+ * anywhere else)
+ */
+TEST_F(DurabilityUnitTest, testDurabilityRelocation)
+{
+    SKIP_UNLESS_MOCK();
+
+    // Disable CCCP so that we get streaming updates
+    MockEnvironment *mock = MockEnvironment::getInstance();
+    mock->setCCCP(false);
+
+    HandleWrap handle;
+    lcb_t instance;
+    createConnection(handle);
+    instance = handle.getLcb();
+
+    lcb_set_durability_callback(instance, dummyDurabilityCallback);
+    std::string key = "key";
+
+    lcb_durability_cmd_t dcmd, *dcmds[] = { &dcmd };
+    lcb_durability_opts_t opts = { 0 };
+
+    opts.v.v0.persist_to = 100;
+    opts.v.v0.replicate_to = 100;
+    opts.v.v0.cap_max = 1;
+    storeKey(instance, key, "value");
+
+    // Ensure we have to resend commands multiple times
+    MockMutationCommand mcmd(MockCommand::UNPERSIST, key);
+    mcmd.onMaster = true;
+    mcmd.replicaCount = lcb_get_num_replicas(instance);
+    doMockTxn(mcmd);
+
+    memset(&dcmd, 0, sizeof(dcmd));
+
+    dcmd.v.v0.key = key.c_str();
+    dcmd.v.v0.nkey = 3;
+
+    /**
+     * Failover all but one node
+     */
+    for (int ii = 1; ii < mock->getNumNodes(); ii++) {
+        mock->hiccupNodes(1000, 0);
+    }
+    lcb_timer_t tm = lcb_timer_create_simple(handle.getIo(),
+                                             NULL, 500000, fo_callback);
+
+    struct cb_cookie cookie = { 0, 0 };
+    lcb_error_t err = lcb_durability_poll(instance, &cookie, &opts, 1, dcmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    lcb_wait(instance);
+    ASSERT_EQ(1, cookie.count);
+    lcb_timer_destroy(instance, tm);
 }

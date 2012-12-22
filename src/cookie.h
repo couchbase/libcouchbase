@@ -18,4 +18,8 @@ struct lcb_command_data_st {
     unsigned char flags;
 };
 
+struct lcb_observe_exdata_st {
+    lcb_uint32_t refcount;
+};
+
 #endif

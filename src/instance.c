@@ -385,6 +385,10 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->durability_polls = hashset_create();
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
+    if ((obj->cmdht = lcb_hashtable_szt_new(32)) == NULL) {
+        lcb_destroy(obj);
+        return LCB_CLIENT_ENOMEM;
+    }
 
 
     if (!ringbuffer_initialize(&obj->purged_buf, 4096)) {
@@ -481,6 +485,11 @@ void lcb_destroy(lcb_t instance)
     free(settings->password);
     free(settings->bucket);
     free(settings->sasl_mech_force);
+    if (instance->cmdht) {
+        genhash_free(instance->cmdht);
+        instance->cmdht = NULL;
+    }
+
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }

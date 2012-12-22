@@ -73,6 +73,8 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
     lcb_uint32_t opaque;
     struct lcb_command_data_st ct;
     struct observe_requests_st reqs;
+    struct lcb_observe_exdata_st *pc;
+    lcb_size_t ncmds = 0;
 
     memset(&reqs, 0, sizeof(reqs));
 
@@ -178,6 +180,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
                 rr->nbody += ringbuffer_write(&rr->body, &len, sizeof(len));
                 rr->nbody += ringbuffer_write(&rr->body, key, nkey);
             }
+            ncmds++;
 
             if (master_only) {
                 break;
@@ -218,6 +221,10 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         lcb_server_send_packets(server);
     }
 
+    pc = calloc(1, sizeof(*pc));
+    pc->refcount = ncmds;
+    lcb_assoc_opaque(instance, instance->seqno, pc);
+
     destroy_requests(&reqs);
     return lcb_synchandler_return(instance, LCB_SUCCESS);
 }
@@ -239,8 +246,12 @@ lcb_error_t lcb_observe(lcb_t instance,
 void lcb_observe_invoke_callback(lcb_t instance,
                                  const struct lcb_command_data_st *ct,
                                  lcb_error_t error,
-                                 const lcb_observe_resp_t *resp)
+                                 const lcb_observe_resp_t *resp,
+                                 lcb_uint32_t opaque)
 {
+    struct lcb_observe_exdata_st *exd;
+    exd = lcb_get_opaque(instance, opaque);
+
     if (ct->flags & LCB_CMD_F_OBS_DURABILITY) {
         lcb_durability_dset_update(instance,
                                    (lcb_durability_set_t *)ct->cookie,
@@ -251,5 +262,15 @@ void lcb_observe_invoke_callback(lcb_t instance,
 
     } else {
         instance->callbacks.observe(instance, ct->cookie, error, resp);
+    }
+
+    if (exd && --exd->refcount == 0) {
+        lcb_clear_opaque(instance, opaque);
+        free(exd);
+
+        lcb_observe_resp_t resp2;
+        memset(&resp2, 0, sizeof(resp2));
+        setup_lcb_observe_resp_t(&resp2, NULL, 0, 0, 0, 0, 0, 0);
+        lcb_observe_invoke_callback(instance, ct, error, &resp2, opaque);
     }
 }
