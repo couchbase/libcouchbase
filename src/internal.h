@@ -447,6 +447,22 @@ extern "C" {
                                  const void *data,
                                  lcb_size_t size);
 
+    /**
+     * Like start_packet, except instead of a cookie, a command data structure
+     * is passed
+     *
+     * @param c the server
+     * @param command_data a cookie. This is copied to the cookie buffer. This is
+     * copied without any modification, so set any boilerplate yourself :)
+     * @param data pointer to data to include in the packet
+     * @param size size of the data
+     */
+    void lcb_server_start_packet_ct(lcb_server_t *c,
+                                    struct lcb_command_data_st *command_data,
+                                    const void *data,
+                                    lcb_size_t size);
+
+
     void lcb_server_retry_packet(lcb_server_t *c,
                                  struct lcb_command_data_st *ct,
                                  const void *data,

@@ -120,6 +120,15 @@ void lcb_server_retry_packet(lcb_server_t *c,
     }
 }
 
+void lcb_server_start_packet_ct(lcb_server_t *c,
+                                struct lcb_command_data_st *command_data,
+                                const void *data,
+                                lcb_size_t size)
+{
+    lcb_server_retry_packet(c, command_data, data, size);
+}
+
+
 void lcb_server_start_packet(lcb_server_t *c,
                              const void *command_cookie,
                              const void *data,
