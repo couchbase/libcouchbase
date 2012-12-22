@@ -181,7 +181,7 @@ extern "C" {
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        , LCB_MAX_ERROR_VAL = 0x1d
+        , LCB_MAX_ERROR_VAL = 0x1f
 #endif
     } lcb_error_t;
 

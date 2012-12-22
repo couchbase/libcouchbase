@@ -11,6 +11,10 @@ bugfixes. Do not forget to update this doc in every important patch.
 * [major] CCBC-151 Cancellation of the HTTP request might lead to
   memory leaks or to segfaults (2e3875c2).
 
+* [minor] Document LCB_SERVER_BUG and LCB_PLUGIN_VERSION_MISMATCH.
+  Enhance the the lcb_strerror test to detect undocumented error
+  codes.
+
 ## 2.0.1 (2012-12-11)
 
 50 files changed, 1009 insertions(+), 274 deletions(-)

@@ -39,4 +39,10 @@ TEST_F(Strerror, allCodesDocumented)
         EXPECT_STRNE(generic,
                      lcb_strerror(NULL, (lcb_error_t)ii));
     }
+
+    for (int ii = LCB_MAX_ERROR_VAL; ii < 0xffff; ++ii) {
+        EXPECT_STREQ(generic,
+                     lcb_strerror(NULL, (lcb_error_t)ii));
+    }
+
 }
