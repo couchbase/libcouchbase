@@ -460,6 +460,46 @@ static void observe_response_handler(lcb_server_t *server,
     VBUCKET_CONFIG_HANDLE config;
     const char *end, *ptr = (const char *)&res->response.cas;
 
+    /**
+     * If we have an error we must decode the request instead
+     */
+    if (rc != LCB_SUCCESS) {
+        protocol_binary_request_header req;
+        lcb_size_t nr;
+
+        nr = ringbuffer_peek(&server->cmd_log, req.bytes, sizeof(req.bytes));
+        if (nr != sizeof(req.bytes)) {
+            lcb_error_handler(server->instance, LCB_EINTERNAL, NULL);
+            abort();
+        }
+        if (req.request.bodylen) {
+            lcb_size_t npacket = sizeof(req.bytes) + ntohl(req.request.bodylen);
+            char *packet = server->cmd_log.read_head;
+            int allocated = 0;
+
+            if (!ringbuffer_is_continous(&server->cmd_log, RINGBUFFER_READ, npacket)) {
+                packet = malloc(npacket);
+                if (packet == NULL) {
+                    lcb_error_handler(root, LCB_CLIENT_ENOMEM, NULL);
+                    abort();
+                }
+                nr = ringbuffer_peek(&server->cmd_log, packet, npacket);
+                if (nr != npacket) {
+                    lcb_error_handler(root, LCB_EINTERNAL, NULL);
+                    free(packet);
+                    abort();
+                }
+                allocated = 1;
+            }
+            lcb_failout_observe_request(server, command_data, packet, npacket, rc);
+            if (allocated) {
+                free(packet);
+            }
+        }
+        return;
+    }
+
+
     memcpy(&ttp, ptr, sizeof(ttp));
     ttp = ntohl(ttp);
     memcpy(&ttr, ptr + sizeof(ttp), sizeof(ttr));

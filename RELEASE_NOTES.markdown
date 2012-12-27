@@ -27,6 +27,13 @@ bugfixes. Do not forget to update this doc in every important patch.
 * [critical] CCBC-155 Observe malfunctions in the case of multiple
   keys and server failure
 
+* [major] CCBC-156 The ep-engine renders meaningful body for observe
+  responses only if status code is 0 (PROTOCOL_BINARY_RESPONSE_SUCCESS).
+  We shouldn't interpret response body in other cases, just decode &
+  failout request instead. Also we shouldn't retry observe commands on
+  PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET, because it can cause the
+  client to loop infinitely
+
 ## 2.0.2 (2013-01-04)
 
 * [major] CCBC-150 commands sent to multiple servers fail to detect
