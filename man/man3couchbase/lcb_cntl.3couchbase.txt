@@ -256,6 +256,20 @@ the same as calling lcb_wait() after each function call.
         lcb_size_t num_events = 10;
         lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFERRTHRESH, &num_events);
 
+*LCB_CNTL_DURABILITY_TIMEOUT* '(lcb_uint32_t*)'::
+    Get or set the default timeout for durability operations.
+    Default is 5000000 (5 seconds)
+
+        lcb_uint32_t tmo = 7500000; /* 7.5 seconds */
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_DURABILITY_TIMEOUT, &tmo);
+
+*LCB_CNTL_DURABILITY_INTERVAL* '(lcb_uint32_t*)'::
+    Get or set the default durability polling interval
+    Default is 100000 (10 milliseconds)
+
+        lcb_uint32_t tmo = 50000; /* 5 milliseconds */
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_DURABILITY_INTERVAL, &tmo);
+
 RETURN VALUE
 ------------
 

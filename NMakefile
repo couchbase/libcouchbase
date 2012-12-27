@@ -48,6 +48,7 @@ libcouchbase_SOURCES = \
     src\compat.c \
     src\config_cache.c \
     src\cookie.c \
+    src\durability.c \
     src\error.c \
     src\flush.c \
     src\hashtable.c \

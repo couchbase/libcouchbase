@@ -62,6 +62,7 @@
 #include <libcouchbase/sanitycheck.h>
 #include <libcouchbase/compat.h>
 #include <libcouchbase/behavior.h>
+#include <libcouchbase/durability.h>
 #include <libcouchbase/callbacks.h>
 #include <libcouchbase/timings.h>
 #include <libcouchbase/cntl.h>
@@ -793,6 +794,93 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
+
+    /**
+     * Schedule a durability check on a set of keys. This callback wraps (somewhat)
+     * the lower-level OBSERVE (lcb_observe) operations so that users may check if
+     * a key is endured, e.g. if a key is persisted accross "at least" n number of
+     * servers
+     *
+     * When each key has its criteria satisfied, the durability callback (see above)
+     * is invoked for it.
+     *
+     * The callback may also be invoked when a condition is encountered that will
+     * prevent the key from ever satisfying the criteria.
+     *
+     * @param instance the lcb handle
+     * @param cookie a pointer to be received with each callback
+     * @param dest_p a double pointer to contain the location of the 'durability set'
+     * @param options a set of options and criteria for this durability check
+     * @param cmds a list of key specifications to check for
+     * @param ncmds how many key specifications reside in the list
+     *
+     * @return a status code showing whether the request was scheduled.
+     * If the request could not be scheduled, an error will be returned. Custom
+     * errors returned include @c LCB_DURABILITY_ETOOMANY which indicates that
+     * the number of servers specified by the user exceeds the possible number
+     * of servers that the key may be replicated and/or persisted to:
+     *
+     * Example (after receiving a store callback):
+     *
+     * lcb_durability_cmd_t cmd, cmds[1];
+     * lcb_durability_opts_t opts;
+     * lcb_error_t err;
+     *
+     * memset(&opts, 0, sizeof(opts);
+     * memset(&cmd, 0, sizeof(cmd);
+     * cmds[0] = &cmd;
+     *
+     *
+     * opts.persist_to = 2;
+     * opts.replicate_to = 1;
+     *
+     * cmd.v.v0.key = resp->v.v0.key;
+     * cmd.v.v0.nkey = resp->v.v0.nkey;
+     * cmd.v.v0.cas = resp->v.v0.cas;
+     *
+     * -- schedule the command --
+     * err = lcb_durability_poll(instance, cookie, &opts, &cmds, 1);
+     * -- error checking omitted --
+     *
+     * -- later on, in the callback. resp is now a durability_resp_t* --
+     * if (resp->v.v0.err == LCB_SUCCESS) {
+     *      printf("Key was endured!\n");
+     * } else {
+     *      printf("Key did not endure in time\n");
+     *      printf("Replicated to: %u replica nodes\n", resp->v.v0.nreplicated);
+     *      printf("Persisted to: %u total nodes\n", resp->v.v0.npersisted);
+     *      printf("Did we persist to master? %u\n",
+     *          resp->v.v0.persisted_master);
+     *      printf("Does the key exist in the master's cache? %u\n",
+     *          resp->v.v0.exists_master);
+     *
+     *      switch (resp->v.v0.err) {
+     *
+     *      case LCB_KEY_EEXISTS:
+     *          printf("Seems like someone modified the key already...\n");
+     *          break;
+     *
+     *      case LCB_ETIMEDOUT:
+     *          printf("Either key does not exist, or the servers are too slow\n");
+     *          printf("If persisted_master or exists_master is true, then the"
+     *              "server is simply slow.",
+     *              "otherwise, the key does not exist\n");
+     *
+     *          break;
+     *
+     *      default:
+     *          printf("Got other error. This is probably a network error\n");
+     *          break;
+     *      }
+     *  }
+     *
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_durability_poll(lcb_t instance,
+                                    const void *cookie,
+                                    const lcb_durability_opts_t *options,
+                                    size_t ncmds,
+                                    const lcb_durability_cmd_t * const * cmds);
 
 
 #ifdef __cplusplus

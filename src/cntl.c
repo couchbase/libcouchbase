@@ -32,6 +32,12 @@ static lcb_uint32_t* get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_VIEW_TIMEOUT:
         return &instance->views_timeout;
 
+    case LCB_CNTL_DURABILITY_INTERVAL:
+        return &instance->durability_interval;
+
+    case LCB_CNTL_DURABILITY_TIMEOUT:
+        return &instance->durability_timeout;
+
     default:
         return NULL;
     }
@@ -256,7 +262,9 @@ static ctl_handler handlers[] = {
     conninfo,       /* LCB_CNTL_CONFIGNODE_INFO */
     syncmode,       /* LCB_CNTL_SYNCMODE */
     ippolicy,       /* LCB_CNTL_IP6POLICY */
-    confthresh      /* LCB_CNTL_CONFERRTHRESH */
+    confthresh      /* LCB_CNTL_CONFERRTHRESH */,
+    timeout_common, /* LCB_CNTL_DURABILITY_INTERVAL */
+    timeout_common, /* LCB_CNTL_DURABILITY_TIMEOUT */
 };
 
 

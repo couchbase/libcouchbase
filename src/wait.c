@@ -61,7 +61,8 @@ lcb_error_t lcb_wait(lcb_t instance)
     instance->wait = 1;
     if (instance->connection.state != LCB_CONNSTATE_CONNECTED
             || lcb_flushing_buffers(instance)
-            || hashset_num_items(instance->timers) > 0) {
+            || hashset_num_items(instance->timers) > 0
+            || hashset_num_items(instance->durability_polls) > 0) {
         lcb_size_t idx;
         /* update timers on all servers */
         for (idx = 0; idx < instance->nservers; ++idx) {

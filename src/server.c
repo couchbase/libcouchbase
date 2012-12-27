@@ -52,17 +52,17 @@ void lcb_failout_observe_request(lcb_server_t *server,
 
         TRACE_OBSERVE_PROGRESS(req->request.opaque, ntohs(req->request.vbucket),
                                req->request.opcode, err, &resp);
-        instance->callbacks.observe(instance, command_data->cookie,
-                                    err, &resp);
+        lcb_observe_invoke_callback(instance, command_data, err, &resp);
         ptr += nkey;
     }
-    if (lcb_lookup_server_with_command(instance, CMD_OBSERVE,
+    if ((command_data->flags & LCB_CMD_F_OBS_BCAST) &&
+            lcb_lookup_server_with_command(instance, CMD_OBSERVE,
                                        req->request.opaque, server) < 0) {
         TRACE_OBSERVE_END(req->request.opaque, ntohs(req->request.vbucket),
                           req->request.opcode, err);
         resp.v.v0.key = NULL;
         resp.v.v0.nkey = 0;
-        instance->callbacks.observe(instance, command_data->cookie, err, &resp);
+        lcb_observe_invoke_callback(instance, command_data, err, &resp);
     }
 }
 

@@ -84,7 +84,10 @@ extern "C" {
         LCB_OBSERVE_PERSISTED = 0x01,
         /** The item missing on the disk and the memory */
         LCB_OBSERVE_NOT_FOUND = 0x80,
-        LCB_OBSERVE_MAX = 0x81
+        /** No knowledge of the key :) */
+        LCB_OBSERVE_LOGICALLY_DELETED = 0x81,
+
+        LCB_OBSERVE_MAX = 0x82
     } lcb_observe_t;
 
     typedef enum {

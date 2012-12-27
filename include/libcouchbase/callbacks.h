@@ -240,6 +240,26 @@ extern "C" {
                                            lcb_error_t error,
                                            const lcb_verbosity_resp_t *resp);
 
+    /**
+     * Callback for durability status. The callback is invoked on completion
+     * of each key (i.e. only one callback is invoked per-key).
+     *
+     * @param lcb_t the instance
+     * @param cookie the user cookie
+     * @param err an error
+     * @param res a response containing information about the key.
+     */
+    typedef void (*lcb_durability_callback)(lcb_t instance,
+                                            const void *cookie,
+                                            lcb_error_t err,
+                                            const lcb_durability_resp_t *res);
+
+    typedef void (*lcb_exists_callback)(lcb_t instance,
+                                        const void *cookie,
+                                        lcb_error_t err,
+                                        const lcb_observe_resp_t *resp);
+
+
     /*
      * The following sections contains function prototypes for how to
      * set the callback for a certain kind of operation. The first
@@ -295,6 +315,10 @@ extern "C" {
     LIBCOUCHBASE_API
     lcb_verbosity_callback lcb_set_verbosity_callback(lcb_t,
                                                       lcb_verbosity_callback);
+
+    LIBCOUCHBASE_API
+    lcb_durability_callback lcb_set_durability_callback(lcb_t,
+                                                        lcb_durability_callback);
 
 #ifdef __cplusplus
 }

@@ -489,6 +489,8 @@ static void observe_response_handler(lcb_server_t *server,
     lcb_error_t rc = map_error(status);
     lcb_uint32_t ttp;
     lcb_uint32_t ttr;
+    lcb_size_t pos;
+
     VBUCKET_CONFIG_HANDLE config;
     const char *end, *ptr = (const char *)&res->response.cas;
 
@@ -537,10 +539,11 @@ static void observe_response_handler(lcb_server_t *server,
     memcpy(&ttr, ptr + sizeof(ttp), sizeof(ttr));
     ttr = ntohl(ttr);
 
+
     ptr = (const char *)res + sizeof(res->bytes);
     end = ptr + ntohl(res->response.bodylen);
     config = root->vbucket_config;
-    while (ptr < end) {
+    for (pos = 0; ptr < end; pos++) {
         lcb_cas_t cas;
         lcb_uint8_t obs;
         lcb_uint16_t nkey, vb;
@@ -560,22 +563,33 @@ static void observe_response_handler(lcb_server_t *server,
         memcpy(&cas, ptr, sizeof(cas));
         ptr += sizeof(cas);
 
+        /* update timings */
+        if (ttp) {
+            server->kv_timings.ttp = ttp;
+        }
+
+        if (ttr) {
+            server->kv_timings.ttr = ttr;
+        }
+
         setup_lcb_observe_resp_t(&resp, key, nkey, cas, obs,
                                  server->index == vbucket_get_master(config, vb),
                                  ttp, ttr);
         TRACE_OBSERVE_PROGRESS(res->response.opaque, command_data->vbucket,
                                res->response.opcode, rc, &resp);
-        root->callbacks.observe(root, command_data->cookie, rc, &resp);
+        lcb_observe_invoke_callback(root, command_data, rc, &resp);
     }
+
     /* run callback with null-null-null to signal the end of transfer */
-    if (lcb_lookup_server_with_command(root, CMD_OBSERVE,
+    if ((command_data->flags & LCB_CMD_F_OBS_BCAST) &&
+            lcb_lookup_server_with_command(root, CMD_OBSERVE,
                                        res->response.opaque, server) < 0) {
 
         lcb_observe_resp_t resp;
         memset(&resp, 0, sizeof(resp));
         TRACE_OBSERVE_END(res->response.opaque, command_data->vbucket,
                           res->response.opcode, rc);
-        root->callbacks.observe(root, command_data->cookie, LCB_SUCCESS, &resp);
+        lcb_observe_invoke_callback(root, command_data, LCB_SUCCESS, &resp);
     }
 }
 
@@ -1055,6 +1069,17 @@ static void dummy_observe_callback(lcb_t instance,
     (void)resp;
 }
 
+static void dummy_durability_callback(lcb_t instance,
+                                      const void *cookie,
+                                      lcb_error_t error,
+                                      const lcb_durability_resp_t *resp)
+{
+    (void)instance;
+    (void)cookie;
+    (void)error;
+    (void)resp;
+}
+
 void lcb_initialize_packet_handlers(lcb_t instance)
 {
     instance->callbacks.get = dummy_get_callback;
@@ -1072,6 +1097,7 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.configuration = dummy_configuration_callback;
     instance->callbacks.observe = dummy_observe_callback;
     instance->callbacks.verbosity = dummy_verbosity_callback;
+    instance->callbacks.durability = dummy_durability_callback;
 }
 
 int lcb_dispatch_response(lcb_server_t *c,
@@ -1304,6 +1330,17 @@ lcb_verbosity_callback lcb_set_verbosity_callback(lcb_t instance,
     lcb_verbosity_callback ret = instance->callbacks.verbosity;
     if (cb != NULL) {
         instance->callbacks.verbosity = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+lcb_durability_callback lcb_set_durability_callback(lcb_t instance,
+                                                    lcb_durability_callback cb)
+{
+    lcb_durability_callback ret = instance->callbacks.durability;
+    if (cb != NULL) {
+        instance->callbacks.durability = cb;
     }
     return ret;
 }

@@ -184,13 +184,23 @@ extern "C" {
         /**
          * Invalid character used in the path component of an URL
          */
-        LCB_INVALID_CHAR = 0x20
+        LCB_INVALID_CHAR = 0x20,
+
+        /**
+         * Too many nodes were requested for the observe criteria
+         */
+        LCB_DURABILITY_ETOOMANY = 0x21,
+
+        /**
+         * The same key was passed multiple times in a command list
+         */
+        LCB_DUPLICATE_COMMANDS = 0x22
 
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        , LCB_MAX_ERROR_VAL = 0x21
+        , LCB_MAX_ERROR_VAL = 0x23
 #endif
     } lcb_error_t;
 

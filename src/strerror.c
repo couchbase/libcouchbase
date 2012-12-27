@@ -100,6 +100,13 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
                " or an unsupported format";
     case LCB_INVALID_CHAR:
         return "An invalid character is used";
+    case LCB_DURABILITY_ETOOMANY:
+        return "Durability constraints requires more "
+                "nodes/replicas than the cluster configuration allows. "
+                "Durability constraints will never be satisfied";
+    case LCB_DUPLICATE_COMMANDS:
+        return "The same key was specified more than once in the command list";
+
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

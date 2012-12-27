@@ -176,8 +176,27 @@ struct lcb_cntl_server_st {
  */
 #define LCB_CNTL_CONFERRTHRESH          0x0c
 
+/**
+ * Get/Set the default durability timeout. This is the time the client will
+ * spend sending repeated probes to a given key's vBucket masters and replicas
+ * before they are deemed not to have satisfied the durability requirements
+ *
+ * Arg: lcb_uint32_t*
+ */
+#define LCB_CNTL_DURABILITY_TIMEOUT     0x0d
+
+/**
+ * Get/Set the default durability interval. This is the time the client will
+ * wait between repeated probes to a given server. Note that this is usually
+ * auto-estimated based on the servers' given 'ttp' and 'ttr' fields reported
+ * with an OBSERVE response packet.
+ *
+ * Arg: lcb_uint32_t*
+ */
+#define LCB_CNTL_DURABILITY_INTERVAL    0x0e
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                   0x0d
+#define LCB_CNTL__MAX                   0x0e
 
 
 #ifdef __cplusplus

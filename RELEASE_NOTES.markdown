@@ -122,6 +122,11 @@ bugfixes. Do not forget to update this doc in every important patch.
   PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET, because it can cause the
   client to loop infinitely
 
+* [major] CCBC-145 KV Durability operation API. Async APIs added to
+  allow the checking of the durability (replication and persistence)
+  status of a key, and to notify the user when a specific criteria has
+  been satisfied.
+
 ## 2.0.2 (2013-01-04)
 
 * [major] CCBC-150 commands sent to multiple servers fail to detect

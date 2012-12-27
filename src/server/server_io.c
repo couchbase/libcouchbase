@@ -258,7 +258,8 @@ void lcb_maybe_breakout(lcb_t instance)
      */
     if (instance->wait) {
         if (!lcb_flushing_buffers(instance)
-                && hashset_num_items(instance->timers) == 0) {
+                && hashset_num_items(instance->timers) == 0
+                && hashset_num_items(instance->durability_polls) == 0) {
             instance->wait = 0;
             instance->io->v.v0.stop_event_loop(instance->io);
         }

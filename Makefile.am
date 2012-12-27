@@ -63,6 +63,7 @@ pkginclude_HEADERS = \
                      include/libcouchbase/compat.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
+                     include/libcouchbase/durability.h \
                      include/libcouchbase/error.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
@@ -137,6 +138,8 @@ libcouchbase_la_SOURCES = \
                         src/config_static.h \
                         src/cookie.c \
                         src/error.c \
+                        src/durability.c \
+                        src/durability_internal.h \
                         src/flush.c \
                         src/genhash.c \
                         src/genhash.h \
@@ -401,6 +404,7 @@ if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
 tests_unit_tests_SOURCES += \
                             tests/arithmetic-unit-test.cc \
+                            tests/durability-unit-test.cc \
                             tests/get-unit-test.cc \
                             tests/getopt-unit-tests.cc \
                             src/gethrtime.c \

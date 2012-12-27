@@ -42,7 +42,14 @@ protected:
     static void SetUpTestCase();
     static void TearDownTestCase();
     virtual void createConnection(lcb_t &instance);
+    virtual void createConnection(HandleWrap &handle);
     virtual void createConnection(HandleWrap &handle, lcb_t &instance);
+
+    // A mock "Transaction"
+    void doMockTxn(MockCommand &cmd) {
+        MockEnvironment::getInstance()->sendCommand(cmd);
+        ASSERT_TRUE(MockEnvironment::getInstance()->getResponse().isOk());
+    }
 };
 
 #endif

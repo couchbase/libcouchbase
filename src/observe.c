@@ -16,40 +16,217 @@
  */
 
 #include "internal.h"
+#include "durability_internal.h"
 
 struct observe_st {
     int allocated;
-    protocol_binary_request_no_extras req;
+    protocol_binary_request_no_extras packet;
     ringbuffer_t body;
     lcb_size_t nbody;
 };
 
-static void destroy_request(struct observe_st *req)
-{
-    if (req->allocated) {
-        ringbuffer_destruct(&req->body);
-        req->allocated = 0;
-    }
-}
+struct observe_requests_st {
+    struct observe_st *requests;
+    lcb_size_t nrequests;
+};
 
-static int init_request(struct observe_st *req)
+static int init_request(struct observe_st *reqinfo)
 {
-    memset(&req->req, 0, sizeof(req->req));
-    if (!ringbuffer_initialize(&req->body, 512)) {
+    memset(&reqinfo->packet, 0, sizeof(reqinfo->packet));
+
+    if (!ringbuffer_initialize(&reqinfo->body, 512)) {
         return 0;
     }
-    req->allocated = 1;
+    reqinfo->allocated = 1;
     return 1;
 }
 
-static void destroy_requests(struct observe_st *req, lcb_size_t nreq)
+static void destroy_requests(struct observe_requests_st *reqs)
 {
     lcb_size_t ii;
+    for (ii = 0; ii < reqs->nrequests; ii++) {
+        struct observe_st *rr = reqs->requests + ii;
 
-    for (ii = 0; ii < nreq; ++ii) {
-        destroy_request(req + ii);
+        if (!rr->allocated) {
+            continue;
+        }
+
+        ringbuffer_destruct(&rr->body);
+        rr->allocated = 0;
     }
-    free(req);
+    free(reqs->requests);
+}
+
+static void get_common_params(const void *item,
+                              lcb_observe_type_t type,
+                              const void **key,
+                              lcb_size_t *nkey,
+                              const void **hashkey,
+                              lcb_size_t *nhashkey)
+{
+    if (type == LCB_OBSERVE_TYPE_DURABILITY) {
+        const lcb_durability_entry_t *ent = item;
+        *key = ent->request.v.v0.key;
+        *nkey = ent->request.v.v0.nkey;
+        *hashkey = ent->request.v.v0.hashkey;
+        *nhashkey = ent->request.v.v0.nhashkey;
+
+    } else {
+        const lcb_observe_cmd_t *ocmd = item;
+        *key = ocmd->v.v0.key;
+        *nkey = ocmd->v.v0.nkey;
+        *hashkey = ocmd->v.v0.hashkey;
+        *nhashkey = ocmd->v.v0.nhashkey;
+    }
+}
+
+/**
+ * Extended version of observe command. This allows us to service
+ * various forms of higher level operations which use observe in one way
+ * or another
+ */
+lcb_error_t lcb_observe_ex(lcb_t instance,
+                           const void *command_cookie,
+                           lcb_size_t num,
+                           const void * const * items,
+                           lcb_observe_type_t type)
+{
+    lcb_size_t ii;
+    lcb_size_t maxix;
+    lcb_uint32_t opaque;
+    struct lcb_command_data_st ct;
+    struct observe_requests_st reqs = { 0 };
+
+    if (instance->type != LCB_TYPE_BUCKET) {
+        return lcb_synchandler_return(instance, LCB_EBADHANDLE);
+    }
+
+    if (instance->vbucket_config == NULL) {
+        return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+    }
+
+    if (instance->dist_type != VBUCKET_DISTRIBUTION_VBUCKET) {
+        return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
+    }
+
+    opaque = ++instance->seqno;
+    ct.cookie = command_cookie;
+    maxix = instance->nreplicas;
+
+    if (type == LCB_OBSERVE_TYPE_CHECK) {
+        maxix = 0;
+
+    } else {
+        if (type == LCB_OBSERVE_TYPE_DURABILITY) {
+            ct.flags = LCB_CMD_F_OBS_DURABILITY | LCB_CMD_F_OBS_BCAST;
+
+        } else {
+            ct.flags = LCB_CMD_F_OBS_BCAST;
+        }
+    }
+
+    reqs.nrequests = instance->nservers;
+    reqs.requests = calloc(reqs.nrequests, sizeof(*reqs.requests));
+
+    for (ii = 0; ii < num; ii++) {
+        const void *key, *hashkey;
+        lcb_size_t nkey, nhashkey;
+        int vbid, jj;
+
+        const void *item = items[ii];
+
+
+        get_common_params(item, type, &key, &nkey, &hashkey, &nhashkey);
+
+        if (!nhashkey) {
+            hashkey = key;
+            nhashkey = nkey;
+        }
+
+        vbid = vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                          hashkey,
+                                          nhashkey);
+
+        for (jj = -1; jj < (int)maxix; jj++) {
+            struct observe_st *rr;
+
+            int idx = vbucket_get_replica(instance->vbucket_config,
+                                          vbid,
+                                          jj);
+
+            if (idx < 0 || idx > (int)instance->nservers) {
+                if (jj == -1) {
+                    /* no master */
+                    destroy_requests(&reqs);
+                    return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+                }
+                continue;
+            }
+            assert(idx < (int)reqs.nrequests);
+            rr = reqs.requests + idx;
+
+            if (!rr->allocated) {
+                if (!init_request(rr)) {
+                    destroy_requests(&reqs);
+                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+                }
+            }
+
+            {
+                lcb_uint16_t vb = htons((lcb_uint16_t)vbid);
+                lcb_uint16_t len = htons((lcb_uint16_t)nkey);
+
+                rr->packet.message.header.request.magic = PROTOCOL_BINARY_REQ;
+                rr->packet.message.header.request.opcode = CMD_OBSERVE;
+                rr->packet.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+                rr->packet.message.header.request.opaque = opaque;
+
+                ringbuffer_ensure_capacity(&rr->body,
+                                           sizeof(vb) + sizeof(len) + nkey);
+                rr->nbody += ringbuffer_write(&rr->body, &vb, sizeof(vb));
+                rr->nbody += ringbuffer_write(&rr->body, &len, sizeof(len));
+                rr->nbody += ringbuffer_write(&rr->body, key, nkey);
+            }
+        }
+    }
+
+    for (ii = 0; ii < reqs.nrequests; ii++) {
+        struct observe_st *rr = reqs.requests + ii;
+        struct lcb_server_st *server = instance->servers + ii;
+        char *tmp;
+
+        if (!rr->allocated) {
+            continue;
+        }
+
+        rr->packet.message.header.request.bodylen = ntohl((lcb_uint32_t)rr->nbody);
+        ct.start = gethrtime();
+
+        lcb_server_start_packet_ct(server, &ct, rr->packet.bytes,
+                                   sizeof(rr->packet.bytes));
+
+        if (ringbuffer_is_continous(&rr->body, RINGBUFFER_READ, rr->nbody)) {
+            tmp = ringbuffer_get_read_head(&rr->body);
+            TRACE_OBSERVE_BEGIN(&rr->packet, server->authority, tmp, rr->nbody);
+            lcb_server_write_packet(server, tmp, rr->nbody);
+        } else {
+            tmp = malloc(ringbuffer_get_nbytes(&rr->body));
+            if (!tmp) {
+                /* FIXME by this time some of requests might be scheduled */
+                destroy_requests(&reqs);
+                return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+            } else {
+                ringbuffer_read(&rr->body, tmp, rr->nbody);
+                TRACE_OBSERVE_BEGIN(&rr->packet, server->authority, tmp, rr->nbody);
+                lcb_server_write_packet(server, tmp, rr->nbody);
+            }
+        }
+        lcb_server_end_packet(server);
+        lcb_server_send_packets(server);
+    }
+
+    destroy_requests(&reqs);
+    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }
 
 LIBCOUCHBASE_API
@@ -58,108 +235,28 @@ lcb_error_t lcb_observe(lcb_t instance,
                         lcb_size_t num,
                         const lcb_observe_cmd_t *const *items)
 {
-    int vbid, idx, jj;
-    lcb_size_t ii;
-    lcb_uint32_t opaque;
-    struct observe_st *requests;
+    return lcb_observe_ex(instance, command_cookie, num,
+                          (const void * const *)items,
+                          LCB_OBSERVE_TYPE_BCAST);
+}
 
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
-        }
+/**
+ * So here we invoke observe callbacks and potentially free resources
+ */
+void lcb_observe_invoke_callback(lcb_t instance,
+                                 const struct lcb_command_data_st *ct,
+                                 lcb_error_t error,
+                                 const lcb_observe_resp_t *resp)
+{
+    if (ct->flags & LCB_CMD_F_OBS_DURABILITY) {
+        lcb_durability_dset_update(instance,
+                                   (lcb_durability_set_t*)ct->cookie,
+                                   error,
+                                   resp);
+    } else if (ct->flags & LCB_CMD_F_OBS_CHECK) {
+        instance->callbacks.exists(instance, ct->cookie, error, resp);
+
+    } else {
+        instance->callbacks.observe(instance, ct->cookie, error, resp);
     }
-
-    if (instance->dist_type != VBUCKET_DISTRIBUTION_VBUCKET) {
-        return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
-    }
-
-    /* the list of pointers to body buffers for each server */
-    requests = calloc(instance->nservers, sizeof(struct observe_st));
-    opaque = ++instance->seqno;
-    for (ii = 0; ii < num; ++ii) {
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        const void *hashkey = items[ii]->v.v0.hashkey;
-        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
-
-        if (nhashkey == 0) {
-            hashkey = key;
-            nhashkey = nkey;
-        }
-
-        vbid = vbucket_get_vbucket_by_key(instance->vbucket_config, hashkey,
-                                          nhashkey);
-        for (jj = -1; jj < instance->nreplicas; ++jj) {
-            struct observe_st *rr;
-            /* it will increment jj to get server index, so (-1 + 1) = 0 (master) */
-            idx = vbucket_get_replica(instance->vbucket_config, vbid, jj);
-            if ((idx < 0 || idx > (int)instance->nservers)) {
-                /* the config says that there is no server yet at that position (-1) */
-                if (jj == -1) {
-                    /* master node must be available */
-                    destroy_requests(requests, instance->nservers);
-                    return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
-                } else {
-                    continue;
-                }
-            }
-            rr = requests + idx;
-            if (!rr->allocated) {
-                if (!init_request(rr)) {
-                    destroy_requests(requests, instance->nservers);
-                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
-                }
-                rr->req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-                rr->req.message.header.request.opcode = CMD_OBSERVE;
-                rr->req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-                rr->req.message.header.request.opaque = opaque;
-            }
-
-            {
-                lcb_uint16_t vb = htons((lcb_uint16_t)vbid);
-                lcb_uint16_t len = htons((lcb_uint16_t)nkey);
-                ringbuffer_ensure_capacity(&rr->body, sizeof(vb) + sizeof(len) + nkey);
-                rr->nbody += ringbuffer_write(&rr->body, &vb, sizeof(vb));
-                rr->nbody += ringbuffer_write(&rr->body, &len, sizeof(len));
-                rr->nbody += ringbuffer_write(&rr->body, key, nkey);
-            }
-        }
-    }
-
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        struct observe_st *rr = requests + ii;
-        lcb_server_t *server = instance->servers + ii;
-
-        if (rr->allocated) {
-            char *tmp;
-            rr->req.message.header.request.bodylen = ntohl((lcb_uint32_t)rr->nbody);
-            lcb_server_start_packet(server, command_cookie, rr->req.bytes, sizeof(rr->req.bytes));
-            if (ringbuffer_is_continous(&rr->body, RINGBUFFER_READ, rr->nbody)) {
-                tmp = ringbuffer_get_read_head(&rr->body);
-                TRACE_OBSERVE_BEGIN(&rr->req, server->authority, tmp, rr->nbody);
-                lcb_server_write_packet(server, tmp, rr->nbody);
-            } else {
-                tmp = malloc(ringbuffer_get_nbytes(&rr->body));
-                if (!tmp) {
-                    /* FIXME by this time some of requests might be scheduled */
-                    destroy_requests(requests, instance->nservers);
-                    return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
-                } else {
-                    ringbuffer_read(&rr->body, tmp, rr->nbody);
-                    TRACE_OBSERVE_BEGIN(&rr->req, server->authority, tmp, rr->nbody);
-                    lcb_server_write_packet(server, tmp, rr->nbody);
-                }
-            }
-            lcb_server_end_packet(server);
-            lcb_server_send_packets(server);
-        }
-    }
-
-    destroy_requests(requests, instance->nservers);
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
 }
