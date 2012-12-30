@@ -347,8 +347,7 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
     return error;
 }
 
-static void
-purge_http_request(lcb_server_t *server)
+static void purge_http_request(lcb_server_t *server)
 {
     lcb_size_t ii;
     lcb_http_request_t *htitems;
@@ -369,7 +368,7 @@ purge_http_request(lcb_server_t *server)
         lcb_http_request_finish(server->instance,
                                 server,
                                 htitems[ii],
-                                LCB_CONFIGURATION_CHANGED);
+                                LCB_ETMPFAIL);
     }
 
     free(htitems);
