@@ -237,6 +237,17 @@ lcb_size_t ringbuffer_peek(ringbuffer_t *buffer, void *dest, lcb_size_t nb)
     return ringbuffer_read(&copy, dest, nb);
 }
 
+lcb_size_t ringbuffer_peek_at(ringbuffer_t *buffer, lcb_size_t offset,
+                              void *dest, lcb_size_t nb)
+{
+    ringbuffer_t copy = *buffer;
+    lcb_size_t n = ringbuffer_read(&copy, NULL, offset);
+    if (n != offset) {
+        return -1;
+    }
+    return ringbuffer_read(&copy, dest, nb);
+}
+
 void ringbuffer_produced(ringbuffer_t *buffer, lcb_size_t nb)
 {
     lcb_size_t n = ringbuffer_write(buffer, NULL, nb);

@@ -75,6 +75,9 @@ TEST_F(Ringbuffer, basicTests)
         memset(buffer, 0, sizeof(buffer));
         EXPECT_EQ(16, ringbuffer_peek(&ring, buffer, 16));
         EXPECT_EQ(0, memcmp(buffer, "01234567891234567", 16));
+        memset(buffer, 0, sizeof(buffer));
+        EXPECT_EQ(10, ringbuffer_peek_at(&ring, 6, buffer, 10));
+        EXPECT_EQ(0, memcmp(buffer, "67891234567", 10));
     }
 
     EXPECT_EQ(16, ringbuffer_read(&ring, buffer, 16));

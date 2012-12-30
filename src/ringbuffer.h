@@ -55,6 +55,10 @@ extern "C" {
     lcb_size_t ringbuffer_peek(ringbuffer_t *buffer,
                                void *dest,
                                lcb_size_t nb);
+    lcb_size_t ringbuffer_peek_at(ringbuffer_t *buffer,
+                                  lcb_size_t offset,
+                                  void *dest,
+                                  lcb_size_t nb);
     /* replace +nb+ bytes on +direction+ end of the buffer with src */
     lcb_size_t ringbuffer_update(ringbuffer_t *buffer,
                                  ringbuffer_direction_t direction,
