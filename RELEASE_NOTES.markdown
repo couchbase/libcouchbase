@@ -5,6 +5,9 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 ## 2.0.2 (UNRELEASED)
 
+* [major] CCBC-150 commands sent to multiple servers fails to detect
+  the respose if mixed with other commands.
+
 * [minor] CCBC-143 'cbc version' reports that uses 2.0.0, but really
   installed with 2.0.1. Minor but confusing issue.
 

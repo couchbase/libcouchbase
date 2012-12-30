@@ -286,6 +286,16 @@ static const char *get_key(lcb_server_t *server, lcb_uint16_t *nkey,
     return keyptr;
 }
 
+/**
+ * Return the index of one of the servers that contains an entry for
+ * the requested command (note that it may not be the first response we're
+ * expecting for that server)
+ *
+ * @param instance the intance to operate on
+ * @param opcode the command opcode we're searching for
+ * @param opaque the sequence number to search for
+ * @param exc ignore this server.
+ */
 int lcb_lookup_server_with_command(lcb_t instance,
                                    lcb_uint8_t opcode,
                                    lcb_uint32_t opaque,
@@ -293,18 +303,32 @@ int lcb_lookup_server_with_command(lcb_t instance,
 {
     protocol_binary_request_header cmd;
     lcb_server_t *server;
-    lcb_size_t nr, ii;
+    lcb_size_t nr;
+    lcb_size_t ii;
+    lcb_size_t offset = 0;
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
-        nr = ringbuffer_peek(&server->cmd_log, cmd.bytes, sizeof(cmd));
-        if (nr == sizeof(cmd) &&
+        if (server != exc) {
+            while ((nr = ringbuffer_peek_at(&server->cmd_log,
+                                            offset,
+                                            cmd.bytes,
+                                            sizeof(cmd))) == sizeof(cmd)) {
+                if (cmd.request.opaque >= opaque) {
+                    break;
+                }
+                /* look at the next server */
+                offset += sizeof(cmd) + ntohl(cmd.request.bodylen);
+            }
+
+            if (nr == sizeof(cmd) &&
                 cmd.request.opcode == opcode &&
-                cmd.request.opaque == opaque &&
-                server != exc) {
-            return (int)ii;
+                cmd.request.opaque == opaque) {
+                return (int)ii;
+            }
         }
     }
+
     return -1;
 }
 

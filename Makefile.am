@@ -236,6 +236,7 @@ tests_unit_tests_SOURCES = \
                            tests/hashset-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \
+                           tests/regression-unit-test.cc \
                            tests/strerror-unit-test.cc \
                            tests/timeout.c \
                            tests/unit_tests.cc \
