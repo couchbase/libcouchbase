@@ -294,7 +294,6 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     lcb_server_t *c = arg;
     (void)sock;
 
-    lcb_update_server_timer(c);
     if (which & LCB_READ_EVENT) {
         if (do_read_data(c) != 0) {
             /* TODO stash error message somewhere
@@ -322,6 +321,7 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
                                            c->event, LCB_RW_EVENT,
                                            c, lcb_server_event_handler);
     }
+    lcb_update_server_timer(c);
 
     lcb_maybe_breakout(c->instance);
 
