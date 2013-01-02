@@ -54,6 +54,7 @@ static int do_fill_input_buffer(lcb_server_t *c)
         return -1;
     } else {
         ringbuffer_produced(&c->input, (lcb_size_t)nr);
+        lcb_update_server_timer(c);
     }
 
     return 1;
@@ -266,8 +267,9 @@ static int do_send_data(lcb_server_t *c)
                 lcb_failout_server(c, LCB_NETWORK_ERROR);
                 return -1;
             }
-        } else {
+        } else if (nw > 0) {
             ringbuffer_consumed(&c->output, (lcb_size_t)nw);
+            lcb_update_server_timer(c);
         }
     } while (c->output.nbytes > 0);
 
@@ -317,8 +319,6 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
                                            c->event, LCB_RW_EVENT,
                                            c, lcb_server_event_handler);
     }
-
-    lcb_update_server_timer(c);
 
     lcb_maybe_breakout(c->instance);
 
