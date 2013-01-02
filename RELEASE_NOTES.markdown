@@ -15,6 +15,9 @@ bugfixes. Do not forget to update this doc in every important patch.
   Enhance the the lcb_strerror test to detect undocumented error
   codes.
 
+* [critical] CCBC-153 Under high load the library could generate
+  LCB_ETIMEDOUT errors without reason owing to internal limitations.
+
 ## 2.0.1 (2012-12-11)
 
 50 files changed, 1009 insertions(+), 274 deletions(-)

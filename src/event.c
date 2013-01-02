@@ -294,15 +294,6 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     lcb_server_t *c = arg;
     (void)sock;
 
-    if (which & LCB_READ_EVENT) {
-        if (do_read_data(c) != 0) {
-            /* TODO stash error message somewhere
-             * "Failed to read from connection to \"%s:%s\"", c->hostname, c->port */
-            lcb_failout_server(c, LCB_NETWORK_ERROR);
-            return;
-        }
-    }
-
     if (which & LCB_WRITE_EVENT) {
         if (do_send_data(c) != 0) {
             /* TODO stash error message somewhere
@@ -312,15 +303,21 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
         }
     }
 
-    if (c->output.nbytes == 0) {
-        c->instance->io->v.v0.update_event(c->instance->io, c->sock,
-                                           c->event, LCB_READ_EVENT,
-                                           c, lcb_server_event_handler);
-    } else {
+    if (which & LCB_READ_EVENT || c->input.nbytes) {
+        if (do_read_data(c) != 0) {
+            /* TODO stash error message somewhere
+             * "Failed to read from connection to \"%s:%s\"", c->hostname, c->port */
+            lcb_failout_server(c, LCB_NETWORK_ERROR);
+            return;
+        }
+    }
+
+    if (c->output.nbytes || c->input.nbytes) {
         c->instance->io->v.v0.update_event(c->instance->io, c->sock,
                                            c->event, LCB_RW_EVENT,
                                            c, lcb_server_event_handler);
     }
+
     lcb_update_server_timer(c);
 
     lcb_maybe_breakout(c->instance);
