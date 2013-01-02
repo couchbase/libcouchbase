@@ -1133,6 +1133,7 @@ lcb_error_t lcb_connect(lcb_t instance)
     release_socket(instance);
     if (instance->ai != NULL) {
         freeaddrinfo(instance->ai);
+        instance->ai = NULL;
     }
 
     do {
