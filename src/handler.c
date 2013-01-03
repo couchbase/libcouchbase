@@ -774,13 +774,11 @@ static void sasl_list_mech_response_handler(lcb_server_t *server,
                                    chosenmech, keylen);
     lcb_server_buffer_write_packet(server, &server->output, data, len);
     lcb_server_buffer_end_packet(server, &server->output);
-
-    /* send the data and add a write handler */
-    lcb_server_event_handler(0, LCB_WRITE_EVENT, server);
-
-    /* Make it known that this was a success. */
-    lcb_error_handler(server->instance, LCB_SUCCESS, NULL);
+    server->instance->io->v.v0.update_event(server->instance->io, server->sock,
+                                            server->event, LCB_WRITE_EVENT,
+                                            server, lcb_server_event_handler);
 }
+
 
 static void sasl_auth_response_handler(lcb_server_t *server,
                                        struct lcb_command_data_st *command_data,

@@ -525,11 +525,9 @@ void lcb_server_connected(lcb_server_t *server)
 
         ringbuffer_reset(&server->pending);
         ringbuffer_reset(&server->pending_cookies);
-
-        /* Send the pending data! */
-        lcb_server_event_handler(server->sock,
-                                 LCB_WRITE_EVENT, server);
-
+        server->instance->io->v.v0.update_event(server->instance->io, server->sock,
+                                                server->event, LCB_WRITE_EVENT,
+                                                server, lcb_server_event_handler);
     } else {
         /* Set the correct event handler */
         server->instance->io->v.v0.update_event(server->instance->io, server->sock,

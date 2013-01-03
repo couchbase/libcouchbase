@@ -213,7 +213,7 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
 }
 
 
-static int do_read_data(lcb_server_t *c)
+static int do_read_data(lcb_server_t *c, int allow_read)
 {
     /*
     ** Loop and try to parse the data... We don't want to lock up the
@@ -231,17 +231,17 @@ static int do_read_data(lcb_server_t *c)
     hrtime_t stop = gethrtime();
 
     while (processed < operations_per_call) {
-        switch ((rv = parse_single(c, stop))) {
-        case -1:
+        rv = parse_single(c, stop);
+        if (rv == -1) {
             return -1;
-        case 0:
+        } else if (rv == 0) {
             /* need more data */
-            if ((rv = do_fill_input_buffer(c)) < 1) {
+            if (allow_read && (rv = do_fill_input_buffer(c)) < 1) {
                 /* error or would block ;) */
                 return rv;
             }
             break;
-        default:
+        } else {
             ++processed;
         }
     }
@@ -306,7 +306,7 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     }
 
     if (which & LCB_READ_EVENT || c->input.nbytes) {
-        if (do_read_data(c) != 0) {
+        if (do_read_data(c, which & LCB_READ_EVENT) != 0) {
             /* TODO stash error message somewhere
              * "Failed to read from connection to \"%s:%s\"", c->hostname, c->port */
             lcb_failout_server(c, LCB_NETWORK_ERROR);
@@ -314,10 +314,17 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
         }
     }
 
+    which = 0;
     if (c->output.nbytes || c->input.nbytes) {
+        which |= LCB_WRITE_EVENT;
+    }
+    if (c->cmd_log.nbytes) {
+        which |= LCB_READ_EVENT;
+    }
+    if (which) {
         c->instance->io->v.v0.update_event(c->instance->io, c->sock,
-                                           c->event, LCB_RW_EVENT,
-                                           c, lcb_server_event_handler);
+                                           c->event, which, c,
+                                           lcb_server_event_handler);
     }
 
     lcb_maybe_breakout(c->instance);
