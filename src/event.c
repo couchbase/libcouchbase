@@ -295,7 +295,6 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_server_t *c = arg;
     (void)sock;
-
     if (which & LCB_WRITE_EVENT) {
         if (do_send_data(c) != 0) {
             /* TODO stash error message somewhere
@@ -314,18 +313,19 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
         }
     }
 
-    which = 0;
+    which = LCB_READ_EVENT;
     if (c->output.nbytes || c->input.nbytes) {
+        /**
+         * If we have data in the read buffer, we need to make sure the event
+         * still gets delivered despite nothing being in the actual TCP read
+         * buffer. Since writes will typically not block, we hinge the next
+         * read operation on write-ability
+         */
         which |= LCB_WRITE_EVENT;
     }
-    if (c->cmd_log.nbytes) {
-        which |= LCB_READ_EVENT;
-    }
-    if (which) {
-        c->instance->io->v.v0.update_event(c->instance->io, c->sock,
-                                           c->event, which, c,
-                                           lcb_server_event_handler);
-    }
+    c->instance->io->v.v0.update_event(c->instance->io, c->sock,
+                                       c->event, which, c,
+                                       lcb_server_event_handler);
 
     lcb_maybe_breakout(c->instance);
 
