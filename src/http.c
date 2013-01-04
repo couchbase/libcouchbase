@@ -73,8 +73,7 @@ static void http_request_destroy(lcb_http_request_t req)
     free(req);
 }
 
-struct parser_ctx_st
-{
+struct parser_ctx_st {
     lcb_t instance;
     lcb_http_request_t req;
 };

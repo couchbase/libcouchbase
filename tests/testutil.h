@@ -73,7 +73,7 @@ struct Item {
         exp = 0;
     }
 
-    friend std::ostream& operator<< (std::ostream& out,
+    friend std::ostream &operator<< (std::ostream &out,
                                      const Item &item);
 
     /**

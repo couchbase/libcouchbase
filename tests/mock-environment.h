@@ -23,9 +23,10 @@
 #include "serverparams.h"
 
 
-class HandleWrap {
+class HandleWrap
+{
 
-friend class MockEnvironment;
+    friend class MockEnvironment;
 
 public:
     lcb_t getLcb() const {
@@ -35,7 +36,7 @@ public:
     void destroy();
 
     // Don't ever allow copying. C++0x allows = 0, though
-    HandleWrap operator= (const HandleWrap& other) {
+    HandleWrap operator= (const HandleWrap &other) {
         fprintf(stderr, "Can't copy this object around!\n");
         abort();
         return HandleWrap();

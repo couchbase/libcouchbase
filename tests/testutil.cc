@@ -144,7 +144,7 @@ void getKey(lcb_t instance, const std::string &key, Item &item)
  * @param item the item to print
  * @return the stream
  */
-std::ostream& operator<< (std::ostream& out, const Item &item)
+std::ostream &operator<< (std::ostream &out, const Item &item)
 {
     using namespace std;
     out << "Key: " << item.key << endl;

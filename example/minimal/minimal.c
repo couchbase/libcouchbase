@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
         cmd.v.v0.nbytes = 3;
         err = lcb_store(instance, NULL, 1, commands);
         if (err != LCB_SUCCESS) {
-            fprintf(stderr, "Failed to get: %s\n", lcb_strerror(NULL, err));
+            fprintf(stderr, "Failed to store: %s\n", lcb_strerror(NULL, err));
             return 1;
         }
     }

@@ -322,8 +322,8 @@ int lcb_lookup_server_with_command(lcb_t instance,
             }
 
             if (nr == sizeof(cmd) &&
-                cmd.request.opcode == opcode &&
-                cmd.request.opaque == opaque) {
+                    cmd.request.opcode == opcode &&
+                    cmd.request.opaque == opaque) {
                 return (int)ii;
             }
         }

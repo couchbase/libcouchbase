@@ -110,6 +110,38 @@ Development files for the Couchbase Client & Protocol Library
 
 %changelog
 
+* Fri Jan 04 2013 Sergey Avseyev <sergey@couchbase.com> - 2.0.2
+[Mark Nunberg]
+- Fix typo when undefining xmacro
+- Make test kv functions/structures more versatile
+- Provide scoped handle for lcb_t in tests
+- Provide hashset_get_items
+- Packet dump should be to stderr
+- Allow adding packets with custom command_data
+- CCBC-163: Fix high CPU usage
+
+[Sergey Avseyev]
+- CCBC-143 Fix version '2.0.1' mark and set release date in log
+- Put note about environment variables to select IO plugins
+- Revert "Don't include configuration.h in the tarball"
+- Review RELEASE_NOTES
+- Protect HTTP requests from SEGFAULTs and memleaks
+- Update RELEASE_NOTES
+- Reduce impact of user callbacks to socket timer
+- CCBC-153 Nullify the address info to avoid doublefree
+- CCBC-159 Allow to handle large operation buffers
+- regression-unit-test.cc requires CouchbaseMock.jar
+- CCBC-159 Fix MockUnitTest.testPurgedBody
+- CCBC-160 Fix incorrect reschedule of batched commands
+
+[Trond Norbye]
+- Don't include configuration.h in the tarball
+- Fix compiler warning
+- CCBC-154 update lcb_strerror for undocumented values
+- Remove compiler error
+- Add ringbuffer_peek_at
+- CCBC-150: Do a deep search to locate commands
+
 * Tue Dec 11 2012 Sergey Avseyev <sergey@couchbase.com> - 2.0.1
 [Mark Nunberg]
 - CCBC-131: Compensate for cluster nodes lacking couchApiBase

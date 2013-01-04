@@ -90,11 +90,11 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "Invalid handle type. The requested operation isn't allowed for given type.";
     case LCB_SERVER_BUG:
         return "Unexpected usage of the server protocol, like unexpected"
-            " response. Please record your steps and file an issue at"
-            " http://www.couchbase.com/issues/browse/MB";
+               " response. Please record your steps and file an issue at"
+               " http://www.couchbase.com/issues/browse/MB";
     case LCB_PLUGIN_VERSION_MISMATCH:
         return "The plugin used for IO operations cannot be loaded due to"
-            " a version mismatch";
+               " a version mismatch";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }
