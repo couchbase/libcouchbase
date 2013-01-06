@@ -251,7 +251,7 @@ static int do_read_data(lcb_server_t *c, int allow_read)
 
 static int do_send_data(lcb_server_t *c)
 {
-    do {
+    while (c->output.nbytes > 0) {
         struct lcb_iovec_st iov[2];
         lcb_ssize_t nw;
         ringbuffer_get_iov(&c->output, RINGBUFFER_READ, iov);
@@ -271,7 +271,7 @@ static int do_send_data(lcb_server_t *c)
             ringbuffer_consumed(&c->output, (lcb_size_t)nw);
             lcb_update_server_timer(c);
         }
-    } while (c->output.nbytes > 0);
+    }
 
     return 0;
 }
@@ -323,6 +323,7 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
          */
         which |= LCB_WRITE_EVENT;
     }
+
     c->instance->io->v.v0.update_event(c->instance->io, c->sock,
                                        c->event, which, c,
                                        lcb_server_event_handler);
