@@ -81,6 +81,7 @@ Development files for the Couchbase Client & Protocol Library
 %files -n %{name}2-core
 %defattr(-, root, root)
 %{_libdir}/libcouchbase.so.*
+%{_mandir}/man5/lcb_attributes.5
 
 %files -n %{name}2-libevent
 %defattr(-, root, root)
@@ -98,8 +99,8 @@ Development files for the Couchbase Client & Protocol Library
 %files -n %{name}2-bin
 %defattr(-, root, root)
 %{_bindir}/cbc*
-%{_mandir}/man1/cbc*.1*
-%{_mandir}/man4/cbcrc.4*
+%{_mandir}/man1/cbc*.1
+%{_mandir}/man5/cbcrc.5
 
 %files devel
 %defattr(-, root, root)
@@ -108,7 +109,6 @@ Development files for the Couchbase Client & Protocol Library
 %{_libdir}/libcouchbase.la
 %{_libdir}/libcouchbase.so
 %{_mandir}/man3/*
-%{_mandir}/man5/*
 
 %changelog
 

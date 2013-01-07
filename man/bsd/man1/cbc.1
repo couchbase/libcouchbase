@@ -1,0 +1,773 @@
+.\" te
+.\"
+.\"   Copyright 2012 Couchbase, Inc.
+.\"
+.\" Licensed under the Apache License, Version 2.0 (the "License");
+.\" you may not use this file except in compliance with the License.
+.\" You may obtain a copy of the License at
+.\"
+.\"     http://www.apache.org/licenses/LICENSE-2.0
+.\"
+.\" Unless required by applicable law or agreed to in writing, software
+.\" distributed under the License is distributed on an "AS IS" BASIS,
+.\" WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+.\" See the License for the specific language governing permissions and
+.\" limitations under the License.
+.TH cbc 1 "Nov 5, 2012"
+.SH NAME
+cbc \- Couchbase command line utility
+.SH SYNOPSIS
+
+.LP
+.nf
+\fBcbc help\fR
+.fi
+.LP
+.nf
+\fBcbc cat\fR [\fBcommon options\fR] [\fB-r\fR] \fIkey...\fR
+.fi
+.LP
+.nf
+\fBcbc cp\fR [\fBcommon options\fR] [\fB-p\fR] [\fB-r\fR \fInum\fR] [\fB-m\fR \fInum\fR] [\fB-j\fR] \fIfilename...\fR
+.fi
+.LP
+.nf
+\fBcbc create\fR [\fBcommon options\fR] [\fB-f\fR \fIflag\fR] [\fB-e\fR \fIexptime\fR] [\fB-a\fR] \fIkey\fR
+.fi
+.LP
+.nf
+\fBcbc observe\fR [\fBcommon options\fR] \fIkey\fR
+.fi
+.LP
+.nf
+\fBcbc flush\fR [\fBcommon options\fR]
+.fi
+.LP
+.nf
+\fBcbc hash\fR [\fBcommon options\fR] \fIkey...\fR
+.fi
+.LP
+.nf
+\fBcbc lock\fR [\fBcommon options\fR] [\fB-e\fR \fIexptime\fR] \fIkey...\fR
+.fi
+.LP
+.nf
+\fBcbc unlock\fR [\fBcommon options\fR] \fIkey cas\fR...
+.fi
+.LP
+.nf
+\fBcbc rm\fR [\fBcommon options\fR] \fIkey...\fR
+.fi
+.LP
+.nf
+\fBcbc stats\fR [\fBcommon options\fR] [\fBstat group\fR]...
+.fi
+.LP
+.nf
+\fBcbc verify\fR [\fBcommon options\fR] \fIkey...\fR
+.fi
+.LP
+.nf
+\fBcbc version\fR [\fBcommon options\fR]
+.fi
+.LP
+.nf
+\fBcbc verbosity\fR [\fBcommon options\fR] \fIlevel\fR [\fBserver\fR]...
+.fi
+.LP
+.nf
+\fBcbc view\fR [\fBcommon options\fR] [\fB-c\fR] [\fB-d\fR \fIdata\fR] [\fB-X\fR \fImethod\fR] \fIquery\fR
+.fi
+.LP
+.nf
+\fBcbc admin\fR [\fBcommon options\fR] [\fB-c\fR] [\fB-d\fR \fIdata\fR] [\fB-X\fR \fImethod\fR] \fIquery\fR
+.fi
+.LP
+.nf
+\fBcbc bucket-create\fR [\fBcommon options\fR] [\fB-B\fR \fItype\fR] [\fB-q\fR \fIquota\fR] [\fB-a\fR \fIauth\fR] [\fB-s\fR \fIsasl-password\fR] [\fB-r\fR \fIreplicas\fR] [\fB-p\fR \fIport\fR] \fIbucketname\fR
+.fi
+.LP
+.nf
+\fBcbc bucket-delete\fR [\fBcommon options\fR] \fIbucket...\fR
+.fi
+.LP
+.nf
+\fBcbc bucket-flush\fR [\fBcommon options\fR] \fIbucket...\fR
+.fi
+
+.SH DESCRIPTION
+.sp
+.LP
+cbc is a command line utility that allows you to communicate with your
+Couchbase Server cluster from the command line prompt.
+.SH COMMON OPTIONS
+.sp
+.LP
+The following options are supported:
+.sp
+.ne 2
+.na
+\fB\fB-h --help\fR\fR
+.ad
+.RS 16n
+Display usage information and exit.
+.RE
+
+.sp
+.ne 2
+.na
+\fB\fB-h --host\fR\fR
+.ad
+.RS 16n
+Specify the list of hosts to connect to (default: "127.0.0.1:8091").
+.RE
+
+.sp
+.ne 2
+.na
+\fB\fB-b --bucket\fR\fR
+.ad
+.RS 16n
+Specify the bucket to use (default: "default").
+.RE
+
+.sp
+.ne 2
+.na
+\fB\fB-u --user\fR\fR
+.ad
+.RS 16n
+Specify the username used for authentication to the cluster.
+.RE
+
+.sp
+.ne 2
+.na
+\fB\fB-P --password\fR\fR
+.ad
+.RS 16n
+Specify the password used for authentication to the cluster.
+.RE
+
+.sp
+.ne 2
+.na
+\fB\fB-T --enable-timings\fR\fR
+.ad
+.RS 16n
+Enable the recording of the timing of commands.
+.RE
+
+.sp
+.ne 2
+.na
+\fB\fB-t --timeout\fR\fR
+.ad
+.RS 16n
+Specify timeout value.
+.RE
+
+.SH SUBCOMMANDS
+.sp
+.LP
+The following subcommands are supported:
+.sp
+.ne 2
+.na
+\fB\fBcbc help\fR\fR
+.ad
+.sp .6
+.RS 4n
+Display usage information and exit.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc cat\fR [\fBcommon options\fR] [\fB-r\fR] \fIkey...\fR
+.ad
+.sp .6
+.RS 4n
+Print the contents of the value for the key to standard output.
+.sp
+.ne 2
+.na
+\fB-r --replicas\fR
+.ad
+.sp .6
+.RS 4n
+Use one of the replicas instead of the master server.
+.RE
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc cp\fR [\fBcommon options\fR] [\fB-p\fR] [\fB-r\fR \fInum\fR] [\fB-m\fR \fInum\fR] [\fB-j\fR] \fIfilename...\fR
+.ad
+.sp .6
+.RS 4n
+Store the content of a file under the specified key in the cluster.
+
+.sp
+.ne 2
+.na
+\fB-p --persisted\fR
+.ad
+.sp .6
+.RS 4n
+Ensure that key has been persisted to the primary node.
+.RE
+
+.sp
+.ne 2
+.na
+\fB-r\fR \fInum\fR \fB--replicated\fR=\fInum\fR
+.ad
+.sp .6
+.RS 4n
+Ensure that the key has been replicated and persisted to given number of replicas.
+.RE
+
+.sp
+.ne 2
+.na
+\fB-m\fR \fInum\fR \fB--max-tries\fR=\fInum\fR
+.ad
+.sp .6
+.RS 4n
+The number of attempts for observing keys (default: 5).
+.RE
+
+.sp
+.ne 2
+.na
+\fB-j\fR \fB--json\fR
+.ad
+.sp .6
+.RS 4n
+Treat the value as a JSON document (take key from '_id' attribute). This option is
+only valid if the libyajl2 is present.
+.RE
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc create\fR [\fBcommon options\fR] [\fB-f\fR \fIflag\fR] [\fB-e\fR \fIexptime\fR] [\fB-a\fR] \fIkey\fR
+.ad
+.RS 4n
+Create a key in the cluster by reading the the value from standard input.
+.sp
+.ne 2
+.na
+\fB-f\fR \fIvalue\fR \fB--flag\fR=\fIvalue\fR
+.ad
+.sp .6
+.RS 4n
+The flags to associate with the key.
+.RE
+
+.sp
+.ne 2
+.na
+\fB-e\fR \fIvalue\fR \fB--exptime\fR=\fIvalue\fR
+.ad
+.sp .6
+.RS 4n
+The expiration time for the key.
+.RE
+
+.sp
+.ne 2
+.na
+\fB-a\fR
+.ad
+.sp .6
+.RS 4n
+Fail if an object exist in the database for that key.
+.RE
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc observe\fR [\fBcommon options\fR] \fIkey\fR
+.ad
+.RS 4n
+Observe a key in the cache.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc flush\fR [\fBcommon options\fR]
+.ad
+.RS 4n
+Remove all keys from the cluster. The flush subcommand is only supported
+on memcached buckets. To flush a Couchbase bucket you need use
+\fBbucket-flush\fR.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc hash\fR [\fBcommon options\fR] [\fB-f\fR \fIfilename\fR] \fIkey...\fR
+.ad
+.RS 4n
+hash key(s) and print out useful info.
+.sp
+.ne 2
+.na
+\fB-f\fR \fIfilename\fR \fB--config-file\fR=\fIfilename\fR
+.ad
+.sp .6
+.RS 4n
+\fIfilename\fR shall be a plain text file containing an alternative
+cluster configuration (in JSON) to use.
+.RE
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc lock\fR [\fBcommon options\fR] [\fB-e\fR \fIexptime\fR] \fIkey...\fR
+.ad
+.RS 4n
+Lock and retrieve the value for a key. The lock is held for the object until
+it expires (timing out) or from a manual unlock command. Consult your
+Couchbase documentation for more information about locking of objects.
+.sp
+.ne 2
+.na
+\fB-e\fR \fIvalue\fR \fB--exptime\fR=\fIvalue\fR
+.ad
+.sp .6
+.RS 4n
+The expiry time for the lock.
+.RE
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc unlock\fR [\fBcommon options\fR] \fIkey cas\fR...
+.ad
+.RS 4n
+Unlock the key previously locked with lock. You have to specify the same
+cas value as returned by the lock command in order to successfully unlock
+the keys.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc rm\fR [\fBcommon options\fR] \fIkey...\fR
+.ad
+.RS 4n
+Remove a number of keys from the cluster.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc stats\fR [\fBcommon options\fR] [\fBstat group\fR]...
+.ad
+.RS 4n
+Retrieve various statistics from the cluster.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc verify\fR [\fBcommon options\fR] \fIfilename...\fR
+.ad
+.RS 4n
+Verify the content for the key represented by the filename in the cache
+is the same as the file content.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc version\fR [\fBcommon options\fR]
+.ad
+.RS 4n
+Print the version numbers for cbc and libcouchbase.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc verbosity\fR [\fBcommon options\fR] \fIlevel\rR [\fBserver\fR]...
+.ad
+.RS 4n
+Set verbosity level. The level may be one of the following:
+.sp
+.ne 2
+.na
+\fBdetail\fR
+.ad
+.sp .6
+.RS 4n
+This will cause the nodes to generate \fIan insane\fR amount of data. It
+shoud not be used unless you know what you're doing.
+.RE
+
+.sp
+.ne 2
+.na
+\fBdebug\fR
+.ad
+.sp .6
+.RS 4n
+This will cause the nodes to generate \fIa lot\fR of data. It should not be
+used unless you know what you're doing.
+.RE
+
+.sp
+.ne 2
+.na
+\fBinfo\fR
+.ad
+.sp .6
+.RS 4n
+This will cause the nodes to generate \fIlot\fR of data (dumping each command
+being executed). You should avoid using this unless you're searching for a
+bug. It will affect your performance.
+.RE
+
+.sp
+.ne 2
+.na
+\fBwarning\fR
+.ad
+.sp .6
+.RS 4n
+Only warnings will be reported. This is what you normally want!
+.RE
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc view\fR [\fBcommon options\fR] [\fB-c\fR] [\fB-d\fR \fIdata\fR] [\fB-X\fR \fImethod\fR] \fIquery\fR
+.ad
+.RS 4n
+Execute Couchbase view (aka map/reduce) request.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc admin\fR [\fBcommon options\fR] [\fB-c\fR] [\fB-d\fR \fIdata\fR] [\fB-X\fR \fImethod\fR] \fIquery\fR
+.ad
+.RS 4n
+execute request to management REST API.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc bucket-create\fR [\fBcommon options\fR] [\fB-B\fR \fItype\fR] [\fB-q\fR \fIquota\fR] [\fB-a\fR \fIauth\fR] [\fB-s\fR \fIsasl-password\fR] [\fB-r\fR \fIreplicas\fR] [\fB-p\fR \fIport\fR] \fIbucketname\fR
+.ad
+.RS 4n
+Create a bucket in the Cluster.
+.sp
+.ne 2
+.na
+\fB-B\fR \fItype\fR \fB--bucket-type\fR=\fItype\fR
+.ad
+.sp .6
+.RS 4n
+Specify the type of bucket to create. Type may be one of "couchbase",
+"memcached"
+.RE
+
+.sp
+.ne 2
+.na
+\fB-q\fR \fIvalue\fR \fB--ram-quota\fR=\fIvalue\fR
+.ad
+.sp .6
+.RS 4n
+RAM quota in megabytes.
+.RE
+
+.sp
+.ne 2
+.na
+\fB-a\fR \fItype\fR \fB--auth-type\fR=\fItype\fR
+.ad
+.sp .6
+.RS 4n
+Type of bucket authentication, type may be one of "none" or "sasl".
+.RE
+
+.sp
+.ne 2
+.na
+\fB-s\fR \fIpasswd\fR \fB--sasl-password\fR=\fIpasswd\fR
+.ad
+.sp .6
+.RS 4n
+Password used for sasl authentication.
+.RE
+
+.sp
+.ne 2
+.na
+\fB-r\fR \fInum\fR \fB--replica-number\fR=\fInum\fR
+.ad
+.sp .6
+.RS 4n
+The number of replicas to create for each key. The value should be in the
+range [0-3].
+.RE
+
+.sp
+.ne 2
+.na
+\fB-p\fR \fIport\fR \fB--proxy-port\fR=\fIport\fR
+.ad
+.sp .6
+.RS 4n
+The port number the proxy should provide access to this bucket.
+.RE
+
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc bucket-delete\fR [\fBcommon options\fR] \fIbucket...\fR
+.ad
+.RS 4n
+Delete the named buckets from the cluster.
+.RE
+
+.sp
+.ne 2
+.na
+\fBcbc bucket-flush\fR [\fBcommon options\fR] \fIbucket...\fR
+.ad
+.RS 4n
+Flush (remove all data) from the named buckets. Please note that you need to
+have flush enabled on the specified bucket to use this command successfully.
+.RE
+
+.SH EXAMPLES
+.LP
+\fBExample 1 \fRCopy a file into the cluster
+.sp
+.LP
+The following command copies the file mynote.txt located in the current
+directory into the cluster:
+
+.sp
+.in +2
+.nf
+example$ \fBcbc cp mynote.txt\fR
+Stored "mynote.txt" CAS:d8062155b1100000
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 2 \fRObserve a key in the cluster
+.sp
+.LP
+The following command retrieves information about the key named mynote.txt:
+.sp
+.in +2
+.nf
+example$ \fBcbc observe mynote.txt\fR
+PERSISTED "mynote.txt" CAS:313e468316000000 IsMaster:true TimeToPersist:0 TimeToReplicate:0
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 3 \fRcbc hash
+.sp
+.LP
+The following command shows you how to use \fBcbc hash\fR:
+.sp
+.in +2
+.nf
+example$ \fBcbc hash key1 key2 key3\fR
+"key1"	vBucket:92 Server:"127.0.0.1:12000" CouchAPI:"http://127.0.0.1:9500/default" Replicas:"127.0.0.1:12000"
+"key2"	vBucket:341 Server:"127.0.0.1:12000" CouchAPI:"http://127.0.0.1:9500/default" Replicas:"127.0.0.1:12000"
+"key3"	vBucket:594 Server:"127.0.0.1:12000" CouchAPI:"http://127.0.0.1:9500/default" Replicas:"127.0.0.1:12000"
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 4\fR Create a bucket
+.sp
+.LP
+The following command shows you how to create a bucket in the cache.
+This is a privileged operation so you need to authenticate to the cluster:
+.sp
+.in +2
+.nf
+example$ \fBcbc bucket-create -u Administrator -P secret --bucket-type=memcached --ram-quota=64 --auth-type=sasl --sasl-password=secret --replica-number=0 --proxy-port=11211 mybucket\fR
+Server: Couchbase Server 2.0.0r_521_g67b4898
+Pragma: no-cache
+Location: /pools/default/buckets/mybucket
+Date: Tue, 06 Nov 2012 11:04:40 GMT
+Content-Length: 0
+Cache-Control: no-cache
+"/pools/default/buckets": OK Size:0
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 5\fR Flush a bucket
+.sp
+.LP
+The following command shows you how to flush (remove all items) in the
+bucket named "mybucket":
+.sp
+.in +2
+.nf
+example$ \fBcbc bucket-flush mybucket\fR
+Server: Couchbase Server 2.0.0r_521_g67b4898
+Pragma: no-cache
+Date: Tue, 06 Nov 2012 11:12:33 GMT
+Content-Length: 0
+Cache-Control: no-cache
+"/pools/default/buckets/mybucket/controller/doFlush": OK Size:0
+.fi
+.in -2
+.sp
+
+.LP
+\fBExample 6\fR Delete a bucket
+.sp
+.LP
+The following command shows you delete the bucket named "mybucket".
+This is a privileged operation so you need to authenticate to the cluster:
+.sp
+.in +2
+.nf
+example$ \fBcbc bucket-delete -u Administrator -P secret --timeout=10000000 mybucket\fR
+Server: Couchbase Server 2.0.0r_521_g67b4898
+Pragma: no-cache
+Date: Tue, 06 Nov 2012 11:25:57 GMT
+Content-Length: 0
+Cache-Control: no-cache
+"/pools/default/buckets/mybucket": OK Size:0
+.fi
+.in -2
+.sp
+
+
+.SH FILES
+.sp
+.ne 2
+.na
+\fB\fB~/.cbcrc\fR\fR
+.ad
+.RS 4n
+Default values used by cbc. See \fBcbcrc\fR(4) for more information
+.RE
+
+.SH ENVIRONMENT VARIABLES
+.sp
+.LP
+The following environment variables may be used to specify configuration
+values. If specified they override the value specified in \fB~/.cbcrc\fR (but
+options specified on the command line will override environment variables).
+.sp
+.ne 2
+.mk
+\fB\fBCOUCHBASE_CLUSTER_URI\fR\fR
+.sp .6
+.in +4
+This is a list separated by semicolon of hostnames (with an optional port)
+to your cluster\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBCOUCHBASE_CLUSTER_USER\fR\fR
+.sp .6
+.in +4
+This is the username used during authentication to your cluster\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBCOUCHBASE_CLUSTER_PASSWORD\fR\fR
+.sp .6
+.in +4
+This is the password used during authentication to your cluster\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBCOUCHBASE_CLUSTER_BUCKET\fR\fR
+.sp .6
+.in +4
+This is the name of the bucket you would like to use\&.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBLIBCOUCHBASE_EVENT_PLUGIN_NAME\fR\fR
+.sp .6
+.in +4
+Override type of the IO backend. The value should be either name or
+path to IO plugin. Currently there are two names recognized (depending
+on plugin availability): \fBlibev\fR and \fBlibevent\fR. In case of
+path to custom IO plugin, also symbol name required, see
+LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL below.
+.sp
+.sp 1
+.in -4
+
+.sp
+.ne 2
+.mk
+\fB\fBLIBCOUCHBASE_EVENT_PLUGIN_SYMBOL\fR\fR
+.sp .6
+.in +4
+Symbol which should be accessibe in the plugin. The library will use
+the function, associated with the symbol to create new instances of
+the IO object.
+.sp
+.sp 1
+.in -4
+
+
+.SH ATTRIBUTES
+.PP
+See \fBattributes\fR(5) for descriptions of the following attributes:
+.sp
+.TS
+tab() allbox;
+cw(2.750000i)| cw(2.750000i)
+lw(2.750000i)| lw(2.750000i).
+ATTRIBUTE TYPEATTRIBUTE VALUE
+Interface StabilityVolatile
+.TE
+
+.SH SEE ALSO
+.sp
+.LP
+\fBcbcrc\fR(4), \fBattributes\fR(5)
