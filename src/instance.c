@@ -28,6 +28,8 @@
 
 /* private function to safely free backup_nodes*/
 static void free_backup_nodes(lcb_t instance);
+static lcb_error_t try_to_connect(lcb_t instance);
+
 /**
  * Get the version of the library.
  *
@@ -650,8 +652,10 @@ static void lcb_update_serverlist(lcb_t instance)
                 instance->vbucket_state_listener(instance->servers + ii);
             }
         }
-        instance->callbacks.configuration(instance,
-                                          LCB_CONFIGURATION_NEW);
+        instance->callbacks.configuration(instance, LCB_CONFIGURATION_NEW);
+        instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
+        instance->connected = 1;
+        lcb_maybe_breakout(instance);
     }
 }
 
@@ -824,7 +828,7 @@ int lcb_switch_to_backup_node(lcb_t instance,
 
     do {
         /* Keep on trying the nodes until all of them failed ;-) */
-        if (lcb_connect(instance) == LCB_SUCCESS) {
+        if (try_to_connect(instance) == LCB_SUCCESS) {
             return 0;
         }
     } while (instance->backup_nodes[instance->backup_idx] == NULL);
@@ -1125,8 +1129,7 @@ int lcb_getaddrinfo(lcb_t instance, const char *hostname,
 /**
  * @todo use async connects etc
  */
-LIBCOUCHBASE_API
-lcb_error_t lcb_connect(lcb_t instance)
+static lcb_error_t try_to_connect(lcb_t instance)
 {
     int error;
 
@@ -1167,6 +1170,47 @@ lcb_error_t lcb_connect(lcb_t instance)
     }
 
     return instance->last_error;
+}
+
+static void initial_connect_timeout_handler(lcb_socket_t sock,
+                                            short which,
+                                            void *arg)
+{
+    lcb_t instance = arg;
+
+    /* try to switch to backup node and just return on success */
+    if (lcb_switch_to_backup_node(instance, LCB_CONNECT_ERROR,
+                                  "Could not connect to server within allotted time") != -1) {
+        return;
+    }
+
+    if (instance->sock != INVALID_SOCKET) {
+        /* Do we need to delete the event? */
+        instance->io->v.v0.delete_event(instance->io,
+                                        instance->sock,
+                                        instance->event);
+        instance->io->v.v0.close(instance->io, instance->sock);
+        instance->sock = INVALID_SOCKET;
+    }
+
+    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
+    instance->timeout.next = 0;
+    lcb_maybe_breakout(instance);
+
+    (void)sock;
+    (void)which;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_connect(lcb_t instance)
+{
+    instance->backup_idx = 0;
+    instance->io->v.v0.update_timer(instance->io,
+                                    instance->timeout.event,
+                                    instance->timeout.usec,
+                                    instance,
+                                    initial_connect_timeout_handler);
+    return try_to_connect(instance);
 }
 
 static void free_backup_nodes(lcb_t instance)

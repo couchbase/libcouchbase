@@ -199,10 +199,6 @@ extern "C" {
 
         vbucket_state_listener_t vbucket_state_listener;
 
-        /** for initial configuration.
-         * see breakout_configuration_callback in wait.c*/
-        lcb_configuration_callback configuration_callback_last;
-
         RESPONSE_HANDLER response_handler[0x100];
         REQUEST_HANDLER request_handler[0x100];
 

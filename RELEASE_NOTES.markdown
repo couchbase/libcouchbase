@@ -7,6 +7,11 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * [minor] Added manual pages for the library
 
+* [major] CCBC-153 Reset internal state on lcb_connect(). Allow caller
+  to use lcb_connect() multiple times to implement reconnecting using
+  the same lcb_t instance. Also it sets up the initial-connection
+  timer for users who don't use lcb_wait() and drive IO loop manually.
+
 ## 2.0.2 (2013-01-04)
 
 * [major] CCBC-150 commands sent to multiple servers fail to detect

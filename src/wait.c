@@ -16,44 +16,6 @@
  */
 #include "internal.h"
 
-static void breakout_configuration_callback(lcb_t instance, lcb_configuration_t config)
-{
-    instance->callbacks.configuration = instance->configuration_callback_last;
-    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
-    instance->connected = 1;
-    lcb_maybe_breakout(instance);
-    instance->callbacks.configuration(instance, config);
-}
-
-static void initial_connect_timeout_handler(lcb_socket_t sock,
-                                            short which,
-                                            void *arg)
-{
-    lcb_t instance = arg;
-
-    /* try to switch to backup node and just return on success */
-    if (lcb_switch_to_backup_node(instance, LCB_CONNECT_ERROR,
-                                  "Could not connect to server within allotted time") != -1) {
-        return;
-    }
-
-    if (instance->sock != INVALID_SOCKET) {
-        /* Do we need to delete the event? */
-        instance->io->v.v0.delete_event(instance->io,
-                                        instance->sock,
-                                        instance->event);
-        instance->io->v.v0.close(instance->io, instance->sock);
-        instance->sock = INVALID_SOCKET;
-    }
-
-    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
-    instance->timeout.next = 0;
-    lcb_maybe_breakout(instance);
-
-    (void)sock;
-    (void)which;
-}
-
 /**
  * Returns non zero if the event loop is running now
  *
@@ -88,20 +50,6 @@ lcb_error_t lcb_wait(lcb_t instance)
      */
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    if (!instance->connected) {
-        if (instance->type == LCB_TYPE_BUCKET) {
-            /* Initial configuration. Set a timer */
-            instance->configuration_callback_last = instance->callbacks.configuration;
-            instance->callbacks.configuration = breakout_configuration_callback;
-        }
-
-        /* Initial connection timeout */
-        instance->io->v.v0.update_timer(instance->io,
-                                        instance->timeout.event,
-                                        instance->timeout.usec,
-                                        instance,
-                                        initial_connect_timeout_handler);
-    }
     if (!instance->connected || lcb_has_data_in_buffers(instance)
             || hashset_num_items(instance->timers) > 0) {
         lcb_size_t idx;
