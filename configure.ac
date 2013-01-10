@@ -46,7 +46,7 @@ AC_DISABLE_STATIC
 AC_PROG_LIBTOOL
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
-AM_SILENT_RULES([yes])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_C_BIGENDIAN
 
 # Restore CFLAGS/CXXFLAGS now that I've prevented automake
