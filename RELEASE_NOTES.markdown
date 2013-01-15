@@ -5,6 +5,10 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 ## 2.0.3 (UNRELEASED)
 
+* [minor] Add a new library: libcouchbase_debug.so (see
+  include/libcouchbase/debug.h) which is a new library that contains
+  new debug functionality.
+
 * [minor] Added manual pages for the library
 
 * [major] CCBC-153 Reset internal state on lcb_connect(). Allow caller

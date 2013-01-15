@@ -27,6 +27,9 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
+if HAVE_CXX
+lib_LTLIBRARIES += libcouchbase_debug.la
+endif
 noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
 noinst_PROGRAMS =
 bin_PROGRAMS =
@@ -54,6 +57,7 @@ pkginclude_HEADERS = \
                      include/libcouchbase/compat.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
+                     include/libcouchbase/debug.h \
                      include/libcouchbase/error.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
@@ -94,6 +98,15 @@ libketama_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
 libcrc32_la_SOURCES = contrib/libvbucket/crc32.c
 libcrc32_la_CFLAGS = $(AM_NOWARN_CFLAGS)
 libcrc32_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
+
+libcouchbase_debug_la_LDFLAGS = $(AM_LDFLAGS) \
+       -version-info 1:0:0 \
+       -no-undefined $(AM_PROFILE_SOLDFLAGS)
+libcouchbase_debug_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) \
+       -DLIBCOUCHBASE_INTERNAL=1
+
+libcouchbase_debug_la_SOURCES = \
+   debug/debug.cc
 
 libcouchbase_la_SOURCES = \
                         include/ep-engine/command_ids.h \
@@ -325,6 +338,7 @@ noinst_PROGRAMS += example/syncmode/syncmode
 noinst_PROGRAMS += example/minimal/minimal
 if HAVE_CXX
 noinst_PROGRAMS += example/pillowfight/pillowfight
+noinst_PROGRAMS += example/debug/debug
 endif
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/yajl/couchview
@@ -398,6 +412,10 @@ TESTS=${check_PROGRAMS}
 example_pillowfight_pillowfight_SOURCES = tools/commandlineparser.cc \
                                           example/pillowfight/pillowfight.cc
 example_pillowfight_pillowfight_LDADD = libcouchbase.la
+
+example_debug_debug_SOURCES = example/debug/debug.cc
+example_debug_debug_LDADD = libcouchbase_debug.la
+
 
 if BUILD_TOOLS
 CBC_LINKS = \
@@ -477,6 +495,7 @@ reformat:
                --align-reference=name \
                $(top_srcdir)/include/libcouchbase/*.[ch] \
                $(top_srcdir)/src/*.[ch] \
+               $(top_srcdir)/debug/*.cc \
                $(top_srcdir)/example/libeventdirect/*.c \
                $(top_srcdir)/example/pillowfight/*.cc \
                $(top_srcdir)/example/syncmode/*.c \

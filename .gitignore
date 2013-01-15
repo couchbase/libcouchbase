@@ -37,6 +37,7 @@
 /config/mkinstalldirs
 /config/plugin.ac
 /configure
+/example/debug/debug
 /example/libeventdirect/eventloop
 /example/minimal/minimal
 /example/pillowfight/pillowfight
