@@ -15,6 +15,9 @@
  *   limitations under the License.
  */
 #include <libcouchbase/debug.h>
+#include <cstdlib>
+
+using namespace std;
 
 /**
  * This is just an example program intended to show you how to use
@@ -24,7 +27,7 @@
 static void dumpHttpCommand(void) {
     lcb_http_cmd_t http_cmd("/foo/bar", 8, NULL, 0, LCB_HTTP_METHOD_POST,
                             1, "applicaiton/json");
-    std::cout << http_cmd << std::endl;
+    cout << http_cmd << endl;
 }
 
 int main(void)
