@@ -1,2 +1,5 @@
+usr/lib/libcouchbase.la
 usr/lib/libcouchbase.so.*
+usr/lib/libcouchbase_debug.la
+usr/lib/libcouchbase_debug.so.*
 usr/share/man/man5/lcb_attributes.5*
