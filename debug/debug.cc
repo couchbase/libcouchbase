@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012 - 2013 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -78,5 +78,74 @@ std::ostream& operator <<(std::ostream &out, const lcb_http_cmd_t &cmd)
 
     out << "}";
 
+    return out;
+}
+
+std::ostream& operator <<(std::ostream &out, const lcb_datatype_t op)
+{
+    if (op == 0) {
+        out << "RAW";
+    } else {
+        out << "Illegal";
+    }
+
+    return out;
+}
+
+std::ostream& operator <<(std::ostream &out, const lcb_storage_t op)
+{
+    if (op == LCB_ADD) {
+        out << "ADD";
+    } else if (op == LCB_REPLACE) {
+        out << "REPLACE";
+    } else if (op == LCB_SET) {
+        out << "SET";
+    } else if (op == LCB_APPEND) {
+        out << "APPEND";
+    } else if (op == LCB_PREPEND) {
+        out << "PREPEND";
+    } else {
+        out << "INVALID";
+    }
+
+    return out;
+}
+
+std::ostream& operator <<(std::ostream &out, const lcb_store_cmd_t &cmd)
+{
+    int v = cmd.version;
+    out << "{" << std::endl
+        << "   version: " << v << std::endl;
+
+    if (v > 1) {
+        out << "   unknown layout " << std::endl << "}";
+        return out;
+    }
+
+    out << "   v.v" << v << ".key: [";
+    out.write((const char *)cmd.v.v0.key, cmd.v.v0.nkey);
+    out << "]" << std::endl
+        << "   v.v" << v << ".nkey: " << cmd.v.v0.nkey << std::endl
+        << "   v.v" << v << ".bytes: [";
+    out.write((const char *)cmd.v.v0.bytes, cmd.v.v0.nbytes);
+    out << "]" << std::endl
+        << "   v.v" << v << ".nbytes: " << cmd.v.v0.nbytes << std::endl
+        << "   v.v" << v << ".flags: " << cmd.v.v0.flags << std::endl
+        << "   v.v" << v << ".cas: " << cmd.v.v0.cas << std::endl
+        << "   v.v" << v << ".datatype: " << cmd.v.v0.datatype << std::endl
+        << "   v.v" << v << ".exptime: " << cmd.v.v0.exptime << std::endl
+        << "   v.v" << v << ".operation: " << cmd.v.v0.operation << std::endl
+        << "   v.v" << v << ".nhashkey: " << cmd.v.v0.nhashkey << std::endl
+        << "   v.v" << v << ".hashkey: [";
+    out.write((const char *)cmd.v.v0.hashkey, cmd.v.v0.nhashkey);
+    out << "]" << std::endl;
+    out << "}";
+
+    return out;
+}
+
+std::ostream& operator <<(std::ostream &out, const lcb_error_t err)
+{
+    out << lcb_strerror(NULL, err);
     return out;
 }

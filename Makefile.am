@@ -105,6 +105,9 @@ libcouchbase_debug_la_LDFLAGS = $(AM_LDFLAGS) \
 libcouchbase_debug_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) \
        -DLIBCOUCHBASE_INTERNAL=1
 
+libcouchbase_debug_la_DEPENDENCIES = libcouchbase.la
+libcouchbase_debug_la_LIBADD = libcouchbase.la
+
 libcouchbase_debug_la_SOURCES = \
    debug/debug.cc
 

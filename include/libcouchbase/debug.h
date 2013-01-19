@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012 - 2013 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -35,6 +35,18 @@ extern std::ostream& operator <<(std::ostream &out,
                                  const lcb_http_method_t method);
 LIBCOUCHBASE_API
 extern std::ostream& operator <<(std::ostream &out, const lcb_http_cmd_t &cmd);
+
+LIBCOUCHBASE_API
+extern std::ostream& operator <<(std::ostream &out, const lcb_error_t op);
+
+LIBCOUCHBASE_API
+extern std::ostream& operator <<(std::ostream &out, const lcb_datatype_t op);
+
+LIBCOUCHBASE_API
+extern std::ostream& operator <<(std::ostream &out, const lcb_storage_t op);
+
+LIBCOUCHBASE_API
+extern std::ostream& operator <<(std::ostream &out, const lcb_store_cmd_t &cmd);
 
 extern "C" {
 #endif
