@@ -37,6 +37,7 @@
 /config/mkinstalldirs
 /config/plugin.ac
 /configure
+/debug/sizes
 /example/debug/debug
 /example/libeventdirect/eventloop
 /example/minimal/minimal

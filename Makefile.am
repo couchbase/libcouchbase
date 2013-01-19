@@ -31,7 +31,7 @@ if HAVE_CXX
 lib_LTLIBRARIES += libcouchbase_debug.la
 endif
 noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
-noinst_PROGRAMS =
+noinst_PROGRAMS = debug/sizes
 bin_PROGRAMS =
 
 man1_MANS =
@@ -419,6 +419,7 @@ example_pillowfight_pillowfight_LDADD = libcouchbase.la
 example_debug_debug_SOURCES = example/debug/debug.cc
 example_debug_debug_LDADD = libcouchbase_debug.la
 
+debug_sizes_SOURCES = debug/sizes.c
 
 if BUILD_TOOLS
 CBC_LINKS = \
