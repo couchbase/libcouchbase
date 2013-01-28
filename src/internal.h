@@ -48,14 +48,6 @@
 #include "debug.h"
 #include "handler.h"
 
-/*
- * libevent2 define evutil_socket_t so that it'll automagically work
- * on windows
- */
-#ifndef evutil_socket_t
-#define evutil_socket_t int
-#endif
-
 #define LCB_DEFAULT_TIMEOUT 2500000
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 
@@ -64,8 +56,6 @@ extern "C" {
 #endif
     struct lcb_server_st;
     typedef struct lcb_server_st lcb_server_t;
-
-    typedef void (*EVENT_HANDLER)(evutil_socket_t fd, short which, void *arg);
 
     /**
      * Data stored per command in the command-cookie buffer...
@@ -138,7 +128,6 @@ extern "C" {
         char *http_uri;
         lcb_size_t n_http_uri_sent;
 
-
         /** The event item representing _this_ object */
         void *event;
 
@@ -174,7 +163,8 @@ extern "C" {
         /** The array of the couchbase servers */
         lcb_server_t *servers;
 
-        /** if non-zero, backup_nodes entries should be freed before freeing the pointer itself */
+        /** if non-zero, backup_nodes entries should be freed before
+            freeing the pointer itself */
         int should_free_backup_nodes;
         /** The array of last known nodes as hostname:port */
         char **backup_nodes;
@@ -285,8 +275,6 @@ extern "C" {
         void *timer;
         /** Is this server in a connected state (done with sasl auth) */
         int connected;
-        /** The current event handler */
-        EVENT_HANDLER ev_handler;
         /* Pointer back to the instance */
         lcb_t instance;
     };
