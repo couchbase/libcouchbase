@@ -215,10 +215,6 @@ extern "C" {
             sasl_callback_t callbacks[4];
         } sasl;
 
-        struct {
-            lcb_tap_filter_t filter;
-        } tap;
-
         /** The set of the timers */
         hashset_t timers;
         /** The set of the pointers to HTTP requests to Cluster */

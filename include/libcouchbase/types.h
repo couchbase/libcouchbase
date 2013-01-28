@@ -94,9 +94,6 @@ extern "C" {
         LCB_TYPE_CLUSTER = 0x01
     } lcb_type_t;
 
-    struct  lcb_tap_filter_st;
-    typedef struct lcb_tap_filter_st *lcb_tap_filter_t;
-
 #if defined(_WIN32) && defined(SOCKET)
     typedef SOCKET lcb_socket_t;
 #else
