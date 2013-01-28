@@ -36,6 +36,7 @@
 /config/missing
 /config/mkinstalldirs
 /config/plugin.ac
+/config/test-driver
 /configure
 /debug/sizes
 /example/debug/debug
@@ -118,9 +119,14 @@
 /src/config.h.in
 /src/probes.h
 /src/stamp-h1
+/test-suite.log
 /tests/*-test
 /tests/CouchbaseMock.jar
+/tests/smoke-test.log
+/tests/smoke-test.trs
 /tests/unit-tests
+/tests/unit-tests.log
+/tests/unit-tests.trs
 /tools/cbc
 /vc100.idb
 /vc100.pdb
