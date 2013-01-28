@@ -5,6 +5,8 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 ## 2.0.3 (UNRELEASED)
 
+* [minor] bypass SASL LIST MECH
+
 * [minor] Shrink internal lookup tables (and reduce the size of
   lcb_t)
 

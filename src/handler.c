@@ -702,58 +702,6 @@ static void version_response_handler(lcb_server_t *server,
 
 }
 
-static void sasl_list_mech_response_handler(lcb_server_t *server,
-                                            struct lcb_command_data_st *command_data,
-                                            protocol_binary_response_header *res)
-{
-    const char *data;
-    const char *chosenmech;
-    char *mechlist;
-    unsigned int len;
-    protocol_binary_request_no_extras req;
-    lcb_size_t keylen;
-    lcb_size_t bodysize;
-
-    assert(ntohs(res->response.status) == PROTOCOL_BINARY_RESPONSE_SUCCESS);
-    bodysize = ntohl(res->response.bodylen);
-    mechlist = calloc(bodysize + 1, sizeof(char));
-    if (mechlist == NULL) {
-        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
-        return;
-    }
-    memcpy(mechlist, (const char *)(res + 1), bodysize);
-    if (sasl_client_start(server->sasl_conn, mechlist,
-                          NULL, &data, &len, &chosenmech) != SASL_OK) {
-        free(mechlist);
-        lcb_error_handler(server->instance, LCB_AUTH_ERROR,
-                          "Unable to start sasl client");
-        return;
-    }
-    free(mechlist);
-
-    keylen = strlen(chosenmech);
-    bodysize = keylen + len;
-
-    memset(&req, 0, sizeof(req));
-    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_AUTH;
-    req.message.header.request.keylen = ntohs((lcb_uint16_t)keylen);
-    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.bodylen = ntohl((lcb_uint32_t)(bodysize));
-
-    lcb_server_buffer_start_packet(server, command_data->cookie, &server->output,
-                                   &server->output_cookies,
-                                   req.bytes, sizeof(req.bytes));
-    lcb_server_buffer_write_packet(server, &server->output,
-                                   chosenmech, keylen);
-    lcb_server_buffer_write_packet(server, &server->output, data, len);
-    lcb_server_buffer_end_packet(server, &server->output);
-    server->instance->io->v.v0.update_event(server->instance->io, server->sock,
-                                            server->event, LCB_WRITE_EVENT,
-                                            server, lcb_server_event_handler);
-}
-
-
 static void sasl_auth_response_handler(lcb_server_t *server,
                                        struct lcb_command_data_st *command_data,
                                        protocol_binary_response_header *res)
@@ -1092,9 +1040,6 @@ int lcb_dispatch_response(lcb_server_t *c,
         arithmetic_response_handler(c, ct, (void*)header);
         break;
 
-    case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
-        sasl_list_mech_response_handler(c, ct, (void*)header);
-        break;
     case PROTOCOL_BINARY_CMD_SASL_AUTH:
         sasl_auth_response_handler(c, ct, (void*)header);
         break;

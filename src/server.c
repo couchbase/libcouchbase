@@ -480,24 +480,64 @@ static int get_remote_address(lcb_socket_t sock,
 }
 
 /**
- * Start the SASL auth for a given server by sending the SASL_LIST_MECHS
- * packet to the server.
+ * Start the SASL auth for a given server.
+ *
+ * Neither the server or the client supports anything else than
+ * plain SASL authentication, so lets just try it. If someone change
+ * the list of supported SASL mechanisms they need to update the client
+ * anyway.
+ *
  * @param server the server object to auth agains
  */
 static void start_sasl_auth_server(lcb_server_t *server)
 {
+    /* There is no point of calling sasl_list_mechs on the server
+     * because we know that the server will reply with "PLAIN"
+     * it means it's just an extra ping-pong to the server
+     * adding latency.. Let's do the SASL_AUTH immediately
+     */
+    const char *data;
+    const char *chosenmech;
+    char *mechlist;
+    unsigned int len;
     protocol_binary_request_no_extras req;
+    lcb_size_t keylen;
+    lcb_size_t bodysize;
+
+    mechlist = strdup("PLAIN");
+    if (mechlist == NULL) {
+        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+        return;
+    }
+    if (sasl_client_start(server->sasl_conn, mechlist,
+                          NULL, &data, &len, &chosenmech) != SASL_OK) {
+        free(mechlist);
+        lcb_error_handler(server->instance, LCB_AUTH_ERROR,
+                          "Unable to start sasl client");
+        return;
+    }
+    free(mechlist);
+
+    keylen = strlen(chosenmech);
+    bodysize = keylen + len;
+
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_LIST_MECHS;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_AUTH;
+    req.message.header.request.keylen = ntohs((lcb_uint16_t)keylen);
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.bodylen = ntohl((lcb_uint32_t)(bodysize));
 
-    lcb_server_buffer_complete_packet(server, NULL, &server->output,
-                                      &server->output_cookies,
-                                      req.bytes, sizeof(req.bytes));
-    /* send the data and add it to libevent.. */
-    lcb_server_event_handler(server->sock, LCB_WRITE_EVENT,
-                             server);
+    lcb_server_buffer_start_packet(server, NULL, &server->output,
+                                   &server->output_cookies,
+                                   req.bytes, sizeof(req.bytes));
+    lcb_server_buffer_write_packet(server, &server->output,
+                                   chosenmech, keylen);
+    lcb_server_buffer_write_packet(server, &server->output, data, len);
+    lcb_server_buffer_end_packet(server, &server->output);
+    server->instance->io->v.v0.update_event(server->instance->io, server->sock,
+                                            server->event, LCB_WRITE_EVENT,
+                                            server, lcb_server_event_handler);
 }
 
 void lcb_server_connected(lcb_server_t *server)
