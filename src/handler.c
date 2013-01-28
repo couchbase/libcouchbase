@@ -211,32 +211,6 @@ static lcb_error_t map_error(protocol_binary_response_status in)
     }
 }
 
-
-static void dummy_request_handler(lcb_server_t *server,
-                                  struct lcb_command_data_st *command_data,
-                                  protocol_binary_request_header *req)
-{
-    (void)server;
-    (void)req;
-    (void)command_data;
-#ifdef DEBUG
-    fprintf(stderr, "Received request packet %02x\n", req->request.opcode);
-#endif
-}
-
-static void dummy_response_handler(lcb_server_t *server,
-                                   struct lcb_command_data_st *command_data,
-                                   protocol_binary_response_header *res)
-{
-#ifdef DEBUG
-    fprintf(stderr, "Received response packet %02x %04x\n",
-            res->response.opcode, ntohs(res->response.status));
-#endif
-    (void)server;
-    (void)res;
-    (void)command_data;
-}
-
 /**
  * Get a pointer to the key. If the buffer isn't continous we need to
  * allocate a temporary chunk of memory and copy the packet over there.
@@ -1061,12 +1035,6 @@ static void dummy_observe_callback(lcb_t instance,
 
 void lcb_initialize_packet_handlers(lcb_t instance)
 {
-    int ii;
-    for (ii = 0; ii < 0x100; ++ii) {
-        instance->request_handler[ii] = dummy_request_handler;
-        instance->response_handler[ii] = dummy_response_handler;
-    }
-
     instance->callbacks.get = dummy_get_callback;
     instance->callbacks.store = dummy_store_callback;
     instance->callbacks.arithmetic = dummy_arithmetic_callback;
@@ -1082,33 +1050,80 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.configuration = dummy_configuration_callback;
     instance->callbacks.observe = dummy_observe_callback;
     instance->callbacks.verbosity = dummy_verbosity_callback;
+}
 
-    instance->response_handler[PROTOCOL_BINARY_CMD_FLUSH] = flush_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_GETQ] = getq_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_GATQ] = getq_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_GET] = getq_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_GAT] = getq_response_handler;
-    instance->response_handler[CMD_GET_LOCKED] = getq_response_handler;
-    instance->response_handler[CMD_GET_REPLICA] = get_replica_response_handler;
-    instance->response_handler[CMD_UNLOCK_KEY] = unlock_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_ADD] = store_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_DELETE] = delete_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_REPLACE] = store_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_SET] = store_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_APPEND] = store_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_PREPEND] = store_response_handler;
+int lcb_dispatch_response(lcb_server_t *c,
+                          struct lcb_command_data_st *ct,
+                          protocol_binary_response_header *header)
+{
+    switch (header->response.opcode) {
+    case PROTOCOL_BINARY_CMD_FLUSH:
+        flush_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_GETQ:
+    case PROTOCOL_BINARY_CMD_GATQ:
+    case PROTOCOL_BINARY_CMD_GET:
+    case PROTOCOL_BINARY_CMD_GAT:
+    case CMD_GET_LOCKED:
+        getq_response_handler(c, ct, (void*)header);
+        break;
+    case CMD_GET_REPLICA:
+        get_replica_response_handler(c, ct, (void*)header);
+        break;
 
-    instance->response_handler[PROTOCOL_BINARY_CMD_INCREMENT] = arithmetic_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_DECREMENT] = arithmetic_response_handler;
+    case CMD_UNLOCK_KEY:
+        unlock_response_handler(c, ct, (void*)header);
+        break;
 
-    instance->response_handler[PROTOCOL_BINARY_CMD_SASL_LIST_MECHS] = sasl_list_mech_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = sasl_auth_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_SASL_STEP] = sasl_step_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_TOUCH] = touch_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_STAT] = stat_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_VERSION] = version_response_handler;
-    instance->response_handler[PROTOCOL_BINARY_CMD_VERBOSITY] = verbosity_response_handler;
-    instance->response_handler[CMD_OBSERVE] = observe_response_handler;
+    case PROTOCOL_BINARY_CMD_DELETE:
+        delete_response_handler(c, ct, (void*)header);
+        break;
+
+    case PROTOCOL_BINARY_CMD_ADD:
+    case PROTOCOL_BINARY_CMD_REPLACE:
+    case PROTOCOL_BINARY_CMD_SET:
+    case PROTOCOL_BINARY_CMD_APPEND:
+    case PROTOCOL_BINARY_CMD_PREPEND:
+        store_response_handler(c, ct, (void*)header);
+        break;
+
+    case PROTOCOL_BINARY_CMD_INCREMENT:
+    case PROTOCOL_BINARY_CMD_DECREMENT:
+        arithmetic_response_handler(c, ct, (void*)header);
+        break;
+
+    case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
+        sasl_list_mech_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_SASL_AUTH:
+        sasl_auth_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_SASL_STEP:
+        sasl_step_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_TOUCH:
+        touch_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_STAT:
+        stat_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_VERSION:
+        version_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_VERBOSITY:
+        verbosity_response_handler(c, ct, (void*)header);
+        break;
+    case CMD_OBSERVE:
+        observe_response_handler(c, ct, (void*)header);
+        break;
+    case PROTOCOL_BINARY_CMD_NOOP:
+        // Ignore
+        break;
+    default:
+        return -1;
+    }
+
+    return 0;
 }
 
 LIBCOUCHBASE_API

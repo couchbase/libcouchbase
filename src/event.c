@@ -129,7 +129,13 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
 
     switch (header.response.magic) {
     case PROTOCOL_BINARY_REQ:
-        c->instance->request_handler[header.response.opcode](c, &ct, (void *)packet);
+        /*
+         * The only way to get request packets is if someone started
+         * to send us TAP requests, and we don't support that anymore
+         */
+        lcb_error_handler(c->instance, LCB_EINTERNAL,
+                          "Protocol error. someone sent us a command!");
+        return -1;
         break;
     case PROTOCOL_BINARY_RES: {
         int was_connected = c->connected;
@@ -147,7 +153,20 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
 
         if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET
                 || header.response.opcode == CMD_GET_REPLICA) {
-            c->instance->response_handler[header.response.opcode](c, &ct, (void *)packet);
+            if (lcb_dispatch_response(c, &ct, (void*)packet) == -1) {
+                /*
+                 * Internal error.. we received an unsupported response
+                 * id. This should _ONLY_ happen at development time because
+                 * we won't receive response packets with other opcodes
+                 * than we send. Let's abort here to make it easy for
+                 * the developer to know what happened..
+                 */
+                lcb_error_handler(c->instance, LCB_EINTERNAL,
+                                  "Received unknown command response");
+                abort();
+                return -1;
+            }
+
             /* keep command and cookie until we get complete STAT response */
             if (was_connected &&
                     (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0)) {

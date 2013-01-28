@@ -21,7 +21,6 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
-#include "internal.h" /* to look at the internals to check if sasl ok */
 #include "server.h"
 #include "test.h"
 #include "testutil.h"
@@ -496,45 +495,6 @@ static lcb_error_t test_connect(char **argv, const char *username,
     return rc;
 }
 
-RESPONSE_HANDLER old_sasl_auth_response_handler;
-lcb_error_t sasl_auth_rc;
-
-static void sasl_auth_response_handler(lcb_server_t *server,
-                                       struct lcb_command_data_st *command_data,
-                                       protocol_binary_response_header *res)
-{
-    sasl_auth_rc = ntohs(res->response.status);
-    old_sasl_auth_response_handler(server, command_data, res);
-}
-
-static void test_set3(void)
-{
-    lcb_error_t err;
-    struct rvbuf rv;
-    lcb_store_cmd_t storecmd;
-    const lcb_store_cmd_t *storecmds[] = { &storecmd };
-
-    old_sasl_auth_response_handler = session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH];
-    session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = sasl_auth_response_handler;
-    sasl_auth_rc = -1;
-
-    (void)lcb_set_store_callback(session, store_callback);
-    memset(&storecmd, 0, sizeof(storecmd));
-    storecmd.v.v0.key = "foo";
-    storecmd.v.v0.nkey = strlen(storecmd.v.v0.key);
-    storecmd.v.v0.bytes = "bar";
-    storecmd.v.v0.nbytes = strlen(storecmd.v.v0.bytes);
-    storecmd.v.v0.operation = LCB_SET;
-    err = lcb_store(session, &rv, 1, storecmds);
-    assert(err == LCB_SUCCESS);
-    io->v.v0.run_event_loop(io);
-    assert(rv.error == LCB_SUCCESS);
-    assert(rv.operation == LCB_SET);
-    assert(memcmp(rv.key, "foo", 3) == 0);
-    assert(sasl_auth_rc == LCB_SUCCESS);
-    session->response_handler[PROTOCOL_BINARY_CMD_SASL_AUTH] = old_sasl_auth_response_handler;
-}
-
 static void test_version1(void)
 {
     lcb_error_t err;
@@ -644,7 +604,6 @@ int main(int argc, char **argv)
         args[2] = "--buckets=protected:secret";
         assert(test_connect((char **)args, "protected", "incorrect", "protected") == LCB_AUTH_ERROR);
         setup((char **)args, "protected", "secret", "protected");
-        test_set3();
         test_spurious_saslerr();
         teardown();
     } else {

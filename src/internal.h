@@ -77,13 +77,6 @@ extern "C" {
         lcb_uint16_t vbucket;
     };
 
-    typedef void (*REQUEST_HANDLER)(lcb_server_t *instance,
-                                    struct lcb_command_data_st *command_data,
-                                    protocol_binary_request_header *req);
-    typedef void (*RESPONSE_HANDLER)(lcb_server_t *instance,
-                                     struct lcb_command_data_st *command_data,
-                                     protocol_binary_response_header *res);
-
     /**
      * Define constants for connection attemptts
      */
@@ -198,9 +191,6 @@ extern "C" {
         lcb_vbucket_t *vb_server_map;
 
         vbucket_state_listener_t vbucket_state_listener;
-
-        RESPONSE_HANDLER response_handler[0x100];
-        REQUEST_HANDLER request_handler[0x100];
 
         /* credentials needed to operate cluster via REST API */
         char *username;
@@ -396,6 +386,9 @@ extern "C" {
     void lcb_server_initialize(lcb_server_t *server,
                                int servernum);
 
+    int lcb_dispatch_response(lcb_server_t *c,
+                              struct lcb_command_data_st *ct,
+                              protocol_binary_response_header *header);
 
 
     void lcb_server_buffer_start_packet(lcb_server_t *c,

@@ -5,6 +5,9 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 ## 2.0.3 (UNRELEASED)
 
+* [minor] Shrink internal lookup tables (and reduce the size of
+  lcb_t)
+
 * [minor] Add a new library: libcouchbase_debug.so (see
   include/libcouchbase/debug.h) which is a new library that contains
   new debug functionality.
