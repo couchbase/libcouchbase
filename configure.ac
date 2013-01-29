@@ -42,8 +42,7 @@ AC_PROG_CXX
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_LN_S
-AC_DISABLE_STATIC
-AC_PROG_LIBTOOL
+LT_INIT([disable-static shared dlopen pic-only])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_MACRO_DIR([m4])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
