@@ -397,7 +397,7 @@ extern "C" {
             version = 0;
             v.v0.key = key;
             if (key != NULL && nkey == 0) {
-                v.v0.nkey = strlen((const char *)key);
+                v.v0.nkey = std::strlen((const char *)key);
             } else {
                 v.v0.nkey = nkey;
             }
@@ -501,7 +501,7 @@ extern "C" {
             v.v0.name = name;
             v.v0.nname = nname;
             if (name != NULL && nname == 0) {
-                v.v0.nname = strlen(name);
+                v.v0.nname = std::strlen(name);
             } else {
                 v.v0.nname = nname;
             }
@@ -521,7 +521,7 @@ extern "C" {
 
 #ifdef __cplusplus
         lcb_server_version_cmd_st() {
-            memset(this, 0, sizeof(*this));
+            std::memset(this, 0, sizeof(*this));
         }
 #endif
     } lcb_server_version_cmd_t;
