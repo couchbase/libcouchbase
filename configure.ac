@@ -117,7 +117,7 @@ AS_IF([test "x$ac_cv_m32" = "xyes"],
         CPPFLAGS="$CPPFLAGS -m32"
         LDFLAGS="$LDFLAGS -m32"
         AS_IF([test "x$ac_cv_m64" = "xyes"],
-              [ AC_MSG_ERROR([You can't specify -m32 and -m64. Pick one of them]) ]) ],
+              [ AC_MSG_ERROR([You cannot specify -m32 and -m64. Pick one of them]) ]) ],
       [ AS_IF([test "x$ac_cv_m64" = "xyes"],
               [ AM_CPPFLAGS="$AM_CPPFLAGS -m64"
                 AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -m64"
