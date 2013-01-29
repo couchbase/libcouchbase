@@ -198,11 +198,15 @@ if DTRACE_INSTRUMENT_OBJECT
 # src/.libs/libcouchbase_la-fname.o ;)
 LIBCOUCHBASE_OBJS=$(libcouchbase_la_OBJECTS:%lo=%o)
 LIBCOUCHBASE_OBJECTS=$(LIBCOUCHBASE_OBJS:src%=src/.libs%)
-src/libcouchbase_la-probes.lo: $(lilbcouchbase_la_OBJECTS) src/probes.h
+src/libcouchbase_la-probes.lo: $(libcouchbase_la_OBJECTS) src/probes.h
 	$(DTRACE) $(DTRACEFLAGS) -C -G \
-                  -o src/.libs/libcouchb\ase_la-probes.o \
+                  -o src/.libs/libcouchbase_la-probes.o \
                   -s ${srcdir}/src/probes.d \
                   $(LIBCOUCHBASE_OBJECTS)
+	@$(DTRACE) $(DTRACEFLAGS) -C -G \
+                  -o src/libcouchbase_la-probes.o \
+                  -s ${srcdir}/src/probes.d \
+                  $(LIBCOUCHBASE_OBJS) 2>/dev/null || /bin/true
 	sed -e s,instance,probes,g src/libcouchbase_la-instance.lo > src/libcouchbase_la-probes.lo
 
 libcouchbase_la_DEPENDENCIES += src/libcouchbase_la-probes.lo
