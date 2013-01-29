@@ -152,6 +152,15 @@ AS_IF([test "x${WGET}" != "xno"],
 
 AC_SUBST(DOWNLOAD)
 
+AC_ARG_ENABLE([debug_library],
+    [AS_HELP_STRING([--enable-debug-library],
+                    [Build libcouchbase_debug.so @<:@default=off@:>@])],
+    [ac_cv_build_debug_library="$enableval"])
+
+AM_CONDITIONAL(BUILD_LIBCOUCHBASE_DEBUG, [ test "x$ac_cv_build_debug_library" = "xyes" ])
+AS_IF([test "x$ac_cv_build_debug_library" = "xyes" ], [
+      AC_DEFINE([HAVE_LIBCOUCHBASE_DEBUG], [1], [I will build libcouchbase_debug.so])])
+
 AC_ARG_WITH([couchbasemock],
     [AC_HELP_STRING([--with-couchbasemock], [Use the specified file as the test mock server])],
     [

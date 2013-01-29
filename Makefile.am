@@ -27,7 +27,8 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
-if HAVE_CXX
+
+if BUILD_LIBCOUCHBASE_DEBUG
 lib_LTLIBRARIES += libcouchbase_debug.la
 endif
 noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
@@ -57,7 +58,6 @@ pkginclude_HEADERS = \
                      include/libcouchbase/compat.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
-                     include/libcouchbase/debug.h \
                      include/libcouchbase/error.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
@@ -65,6 +65,11 @@ pkginclude_HEADERS = \
                      include/libcouchbase/arguments.h \
                      include/libcouchbase/sanitycheck.h \
                      include/libcouchbase/visibility.h
+
+if BUILD_LIBCOUCHBASE_DEBUG
+pkginclude_HEADERS += include/libcouchbase/debug.h
+endif
+
 if BUILD_PLUGINS
 pkginclude_HEADERS += \
                      plugins/io/libev/libev_io_opts.h \
@@ -350,12 +355,15 @@ noinst_PROGRAMS += example/minimal/minimal
 noinst_PROGRAMS += example/db/db
 if HAVE_CXX
 noinst_PROGRAMS += example/pillowfight/pillowfight
-noinst_PROGRAMS += example/debug/debug
 endif
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/yajl/couchview
 endif
 endif
+endif
+
+if BUILD_LIBCOUCHBASE_DEBUG
+noinst_PROGRAMS += example/debug/debug
 endif
 
 example_yajl_couchview_SOURCES = example/yajl/couchview.c
