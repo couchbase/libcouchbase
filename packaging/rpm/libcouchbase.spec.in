@@ -82,8 +82,6 @@ Development files for the Couchbase Client & Protocol Library
 %defattr(-, root, root)
 %{_libdir}/libcouchbase.la
 %{_libdir}/libcouchbase.so.*
-%{_libdir}/libcouchbase_debug.la
-%{_libdir}/libcouchbase_debug.so.*
 %{_mandir}/man5/lcb_attributes.5*
 
 %files -n %{name}2-libevent
@@ -110,7 +108,6 @@ Development files for the Couchbase Client & Protocol Library
 %doc README.markdown AUTHORS LICENSE RELEASE_NOTES.markdown
 %{_includedir}/libcouchbase
 %{_libdir}/libcouchbase.so
-%{_libdir}/libcouchbase_debug.so
 %{_mandir}/man3/*
 
 %changelog

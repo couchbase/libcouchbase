@@ -1,4 +1,3 @@
 usr/include/libcouchbase/*
 usr/lib/libcouchbase.so
-usr/lib/libcouchbase_debug.so
 usr/share/man/man3/*
