@@ -20,8 +20,10 @@
 int main(void) {
 
     fprintf(stderr, "Sizes\n");
-    fprintf(stderr, "  lcb_t        : %ld\n", sizeof(struct lcb_st));
-    fprintf(stderr, "  lcb_server_t : %ld\n", sizeof(struct lcb_server_st));
+    fprintf(stderr, "  lcb_t        : %ld\n",
+            (long)sizeof(struct lcb_st));
+    fprintf(stderr, "  lcb_server_t : %ld\n",
+            (long)sizeof(struct lcb_server_st));
     return 0;
 
 }
