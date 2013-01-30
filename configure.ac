@@ -461,6 +461,17 @@ AC_ARG_ENABLE([trace],
 AM_CONDITIONAL(LIBCOUCHBASE_ENABLE_TRACE,
                [test "x${ac_cv_enable_trace}" = "xyes"])
 
+
+AC_ARG_ENABLE([tests],
+    [AS_HELP_STRING([--disable-tests],
+            [Build without tests. BE CAREFUL. @<:@default=on@:>@])],
+    [ac_cv_enable_tests="$enableval"],
+    [ac_cv_enable_tests="yes"])
+dnl Tests require google test framework, which might be not the case
+dnl for some targets. If you disable test you won't be able easily
+dnl prove that libcouchbase working.
+AM_CONDITIONAL(BUILD_TESTS, [test "x${ac_cv_enable_tests}" = "xyes"])
+
 AS_IF([test "x$GTEST_ROOT" != "x"], [
   AC_CACHE_CHECK([for gtest source], [ac_cv_have_gtest_src], [
     AS_IF([test -f "$GTEST_ROOT/src/gtest-all.cc"],
@@ -492,7 +503,7 @@ return 0;
  ])
 ])
 
-AS_IF([test "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no" -a "x$DOWNLOAD" != "x" -a "x$UNZIP" != "xno"], [
+AS_IF([test "x$ac_cv_enable_tests" = "xyes" -a "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no" -a "x$DOWNLOAD" != "x" -a "x$UNZIP" != "xno"], [
       ac_cv_download_gtest=yes
       GTEST_ROOT=gtest-1.6.0
       ac_cv_have_gtest_src=yes
