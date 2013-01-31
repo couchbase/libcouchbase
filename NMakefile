@@ -124,8 +124,6 @@ install: $(INSTALLDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy libcouchbase_debug.dll $(INSTALL)\bin
 	copy libcouchbase_debug.exp $(INSTALL)\lib
 	copy libcouchbase_debug.lib $(INSTALL)\lib
-	copy man\man1\cbc.1.pdf $(INSTALL)\doc
-	copy man\man4\cbcrc.4.pdf $(INSTALL)\doc
 	copy tools\cbc.exe $(INSTALL)\bin
 
 uninstall:
@@ -150,8 +148,6 @@ uninstall:
          $(INSTALL)\include\libcouchbase\sanitycheck.h \
          $(INSTALL)\include\libcouchbase\visibility.h \
          $(INSTALL)\include\libcouchbase\winsock_io_opts.h \
-         $(INSTALL)\doc\cbc.1.pdf \
-         $(INSTALL)\doc\cbcrc.4.pdf \
          $(INSTALL)\bin\cbc.exe \
 	-rmdir $(INSTALL)\lib $(INSTALL)\bin $(INSTALL)\include\libcouchbase $(INSTALL)\include $(INSTALL)\doc $(INSTALL)
 
