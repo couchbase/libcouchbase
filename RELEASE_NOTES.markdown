@@ -21,6 +21,9 @@ bugfixes. Do not forget to update this doc in every important patch.
   the same lcb_t instance. Also it sets up the initial-connection
   timer for users who don't use lcb_wait() and drive IO loop manually.
 
+* [major] CCBC-171 Invalid read in libevent plugin, when the plugin
+  compiled in 1.x mode
+
 ## 2.0.2 (2013-01-04)
 
 * [major] CCBC-150 commands sent to multiple servers fail to detect

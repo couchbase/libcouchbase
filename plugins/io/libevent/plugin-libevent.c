@@ -51,7 +51,6 @@ event_assign(struct event *ev,
              event_callback_fn callback,
              void *arg)
 {
-    event_base_set(base, ev);
     ev->ev_callback = callback;
     ev->ev_arg = arg;
     ev->ev_fd = fd;
@@ -60,6 +59,7 @@ event_assign(struct event *ev,
     ev->ev_flags = EVLIST_INIT;
     ev->ev_ncalls = 0;
     ev->ev_pncalls = NULL;
+    event_base_set(base, ev);
 
     return 0;
 }
