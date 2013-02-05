@@ -25,7 +25,7 @@ RM = del
 
 lib_LTLIBRARIES = libcouchbase.dll libcouchbase_debug.dll
 check_PROGRAMS =
-bin_PROGRAMS = tools\cbc.exe
+bin_PROGRAMS = tools\cbc.exe tools\cbc_debug.exe
 example_PROGRAMS = example\pillowfight\pillowfight.exe
 
 libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
@@ -51,6 +51,9 @@ tools_cbc_CXX_SOURCES = tools\cbc.cc \
 tools_cbc_C_SOURCES = win32\getopt.c
 tools_cbc_OBJECTS = $(tools_cbc_CXX_SOURCES:.cc=.obj) \
                     $(tools_cbc_C_SOURCES:.c=.obj)
+tools_cbc_debug_OBJECTS = $(tools_cbc_CXX_SOURCES:.cc=.dobj) \
+                          $(tools_cbc_C_SOURCES:.c=.dobj)
+
 
 example_pillowfight_pillowfight_CXX_SOURCES =  tools\commandlineparser.cc example\pillowfight\pillowfight.cc
 example_pillowfight_pillowfight_C_SOURCES = win32\getopt.c
@@ -62,6 +65,7 @@ all_OBJS=$(libcouchbase_la_OBJECTS) $(libcouchbase_la_debug_OBJECTS) \
 
 all: $(lib_LTLIBRARIES) \
      libcouchbase.dll \
+     libcouchbase_debug.dll \
      $(bin_PROGRAMS) \
      $(check_PROGRAMS) \
      $(example_PROGRAMS)
@@ -76,13 +80,17 @@ libcouchbase.dll: $(libcouchbase_la_OBJECTS)
           ws2_32.lib
 
 libcouchbase_debug.dll: $(libcouchbase_la_debug_OBJECTS)
-	$(LD) $(LDFLAGS)  $(DLLLDFLAGS) /out:libcouchbase_debug.dll \
+	$(LD) $(LDFLAGS) -debug $(DLLLDFLAGS) /out:libcouchbase_debug.dll \
           $(libcouchbase_la_debug_OBJECTS) \
           ws2_32.lib
 
 tools\cbc.exe: $(tools_cbc_OBJECTS) libcouchbase.dll
 	$(LD) $(LDFLAGS) -out:tools\cbc.exe $(tools_cbc_OBJECTS) \
           libcouchbase.lib ws2_32.lib
+
+tools\cbc_debug.exe: $(tools_cbc_debug_OBJECTS) libcouchbase_debug.dll
+	$(LD) $(LDFLAGS) -debug -out:tools\cbc_debug.exe $(tools_cbc_debug_OBJECTS) \
+          libcouchbase_debug.lib ws2_32.lib
 
 example\pillowfight\pillowfight.exe: $(example_pillowfight_pillowfight_OBJECTS) libcouchbase_debug.dll
 	$(LD) $(LDFLAGS) -out:example\pillowfight\pillowfight.exe $(example_pillowfight_pillowfight_OBJECTS) \
@@ -125,6 +133,7 @@ install: $(INSTALLDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy libcouchbase_debug.exp $(INSTALL)\lib
 	copy libcouchbase_debug.lib $(INSTALL)\lib
 	copy tools\cbc.exe $(INSTALL)\bin
+	copy tools\cbc_debug.exe $(INSTALL)\bin
 
 uninstall:
 	-del $(INSTALL)\lib\libcouchbase_debug.dll \
@@ -149,6 +158,7 @@ uninstall:
          $(INSTALL)\include\libcouchbase\visibility.h \
          $(INSTALL)\include\libcouchbase\winsock_io_opts.h \
          $(INSTALL)\bin\cbc.exe \
+         $(INSTALL)\bin\cbc_debug.exe \
 	-rmdir $(INSTALL)\lib $(INSTALL)\bin $(INSTALL)\include\libcouchbase $(INSTALL)\include $(INSTALL)\doc $(INSTALL)
 
 PKG=libcouchbase$(VERSION)$(ARCH)$(MSVCC_VER)
@@ -169,6 +179,7 @@ package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy man\man1\cbc.1.pdf $(PKG)\doc
 	copy man\man4\cbcrc.4.pdf $(PKG)\doc
 	copy tools\cbc.exe $(PKG)\bin
+	copy tools\cbc_debug.exe $(PKG)\bin
 	7z a -r $(PKG).zip $(PKG)
 
 $(INSTALLDIRS) $(PKGDIRS):; -@mkdir $@
