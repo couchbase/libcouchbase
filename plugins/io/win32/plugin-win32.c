@@ -65,6 +65,7 @@ static int getError()
     DWORD error = WSAGetLastError();
     switch (error) {
     case WSAECONNRESET:
+    case WSAECONNABORTED:
         return ECONNRESET;
     case WSAEWOULDBLOCK:
         return EWOULDBLOCK;
