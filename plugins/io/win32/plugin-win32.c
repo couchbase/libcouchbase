@@ -60,9 +60,14 @@ struct winsock_io_cookie {
 
 #include "event_lists.h"
 
-static int getError()
+static int getError(lcb_socket_t sock)
 {
     DWORD error = WSAGetLastError();
+    int ext = 0;
+    int len = sizeof(ext);
+
+    /* Retrieves extended error status and clear */
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&ext, &len);
     switch (error) {
     case WSAECONNRESET:
     case WSAECONNABORTED:
@@ -103,7 +108,7 @@ static lcb_ssize_t lcb_io_recv(struct lcb_io_opt_st *iops,
     (void)flags;
 
     if (WSARecv(sock, &wsabuf, 1, &nr, &fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->v.v0.error = getError();
+        iops->v.v0.error = getError(sock);
 
         // recv on a closed socket should return 0
         if (iops->v.v0.error == ECONNRESET) {
@@ -132,7 +137,7 @@ static lcb_ssize_t lcb_io_recvv(struct lcb_io_opt_st *iops,
 
     if (WSARecv(sock, wsabuf, iov[1].iov_len ? 2 : 1,
                 &nr, &fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->v.v0.error = getError();
+        iops->v.v0.error = getError(sock);
 
         // recv on a closed socket should return 0
         if (iops->v.v0.error == ECONNRESET) {
@@ -157,7 +162,7 @@ static lcb_ssize_t lcb_io_send(struct lcb_io_opt_st *iops,
     (void)flags;
 
     if (WSASend(sock, &wsabuf, 1, &nw, fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->v.v0.error = getError();
+        iops->v.v0.error = getError(sock);
         return -1;
     }
 
@@ -181,7 +186,7 @@ static lcb_ssize_t lcb_io_sendv(struct lcb_io_opt_st *iops,
 
     if (WSASend(sock, wsabuf, iov[1].iov_len ? 2 : 1,
                 &nw, fl, NULL, NULL) == SOCKET_ERROR) {
-        iops->v.v0.error = getError();
+        iops->v.v0.error = getError(sock);
         return -1;
     }
 
@@ -195,11 +200,11 @@ static lcb_socket_t lcb_io_socket(struct lcb_io_opt_st *iops,
 {
     lcb_socket_t sock = WSASocket(domain, type, protocol, NULL, 0, 0);
     if (sock == INVALID_SOCKET) {
-        iops->v.v0.error = getError();
+        iops->v.v0.error = getError(sock);
     } else {
         u_long noblock = 1;
         if (ioctlsocket(sock, FIONBIO, &noblock) == SOCKET_ERROR) {
-            iops->v.v0.error = getError();
+            iops->v.v0.error = getError(sock);
             closesocket(sock);
             sock = INVALID_SOCKET;
         }
@@ -222,7 +227,7 @@ static int lcb_io_connect(struct lcb_io_opt_st *iops,
 {
     int ret = WSAConnect(sock, name, (int)namelen, NULL, NULL, NULL, NULL);
     if (ret == SOCKET_ERROR) {
-        iops->v.v0.error = getError();
+        iops->v.v0.error = getError(sock);
     }
     return ret;
 }
