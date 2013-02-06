@@ -391,13 +391,19 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 
         if (ret == 0) {
             hrtime_t now = gethrtime();
-            for (tm = instance->timers; tm != NULL; tm = tm->next) {
+            struct winsock_timer *t = instance->timers;
+            while (t != NULL) {
+                tm = t;
+                t = t->next;
                 if (tm->active && now > tm->exptime) {
                     tm->handler(-1, 0, tm->cb_data);
                 }
             }
         } else {
-            for (n = instance->events; n != NULL; n = n->next) {
+            struct winsock_event *ev = instance->events;
+            while (ev != NULL) {
+                n = ev;
+                ev = ev->next;
                 if (n->flags != 0) {
                     short flags = 0;
 
