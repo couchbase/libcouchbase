@@ -60,6 +60,9 @@ lcb_connect_status_t lcb_connect_status(int err)
         return LCB_CONNECT_EINTR;
 
     case EWOULDBLOCK:
+#ifdef USE_EAGAIN
+    case EAGAIN:
+#endif
     case EINPROGRESS:
         return LCB_CONNECT_EINPROGRESS;
 

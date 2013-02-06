@@ -896,7 +896,11 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
                                      0);
         if (nw == -1) {
             int sockerr = instance->io->v.v0.error;
-            if (sockerr != EWOULDBLOCK && sockerr != EINTR) {
+            if (sockerr != EWOULDBLOCK
+#ifdef USE_EAGAIN
+                && sockerr != EAGAIN
+#endif
+                && sockerr != EINTR) {
                 lcb_error_handler(instance, LCB_NETWORK_ERROR,
                                   "Failed to send data to REST server");
                 instance->io->v.v0.delete_event(instance->io, instance->sock,
@@ -932,6 +936,9 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
             case EINTR:
                 break;
             case EWOULDBLOCK:
+#ifdef USE_EAGAIN
+            case EAGAIN:
+#endif
                 return ;
             default:
                 lcb_error_handler(instance, LCB_NETWORK_ERROR,

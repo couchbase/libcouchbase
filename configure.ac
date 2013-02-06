@@ -553,6 +553,29 @@ AC_CACHE_CHECK([manpage layout], [ac_cv_manpage_layout], [
 
 AM_CONDITIONAL(MANPAGE_BSD_LAYOUT, [test "x$ac_cv_manpage_layout" = "xbsd"])
 
+AC_CACHE_CHECK([if EWOULDBLOCK != EAGAIN],[ac_cv_eagain_neq_ewouldblock],
+               [AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+                    #include <errno.h>
+                    int error = EAGAIN;
+                    int main()
+                    {
+                        switch(error)
+                        {
+                        case EWOULDBLOCK:
+                        case EAGAIN:
+                            error = 1;
+                            break;
+                        default:
+                            error = 0;
+                        }
+                        return 0;
+                    }
+                ])],
+                [ ac_cv_eagain_neq_ewouldblock=yes ],
+                [ ac_cv_eagain_neq_ewouldblock=no])])
+AS_IF([test "x$ac_cv_eagain_neq_ewouldblock" = "xyes"],[
+       AC_DEFINE([USE_EAGAIN], [1], [Defined for systems where EAGAIN != EWOULDBLOCK])])
+
 AH_TOP([
 #ifndef CONFIG_H
 #define CONFIG_H

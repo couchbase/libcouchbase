@@ -3,6 +3,10 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+## UNRELEASED
+
+* [minor] CCBC-175 Work properly on systems where EWOULDBLOCK != EAGAIN
+
 ## 2.0.3 (2013-02-06)
 
 * [minor] bypass SASL LIST MECH

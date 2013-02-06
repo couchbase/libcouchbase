@@ -259,6 +259,9 @@ static int request_do_fill_input_buffer(lcb_http_request_t req)
         case EINTR:
             break;
         case EWOULDBLOCK:
+#ifdef USE_EAGAIN
+        case EAGAIN:
+#endif
             return 0;
         default:
             return -1;
@@ -327,6 +330,9 @@ static int request_do_write(lcb_http_request_t req)
                 /* retry */
                 break;
             case EWOULDBLOCK:
+#ifdef USE_EAGAIN
+            case EAGAIN:
+#endif
                 return 0;
             default:
                 return -1;

@@ -41,6 +41,9 @@ static int do_fill_input_buffer(lcb_server_t *c)
         case EINTR:
             break;
         case EWOULDBLOCK:
+#ifdef USE_EAGAIN
+        case EAGAIN:
+#endif
             return 0;
         default:
             lcb_failout_server(c, LCB_NETWORK_ERROR);
@@ -282,6 +285,9 @@ static int do_send_data(lcb_server_t *c)
                 /* retry */
                 break;
             case EWOULDBLOCK:
+#ifdef USE_EAGAIN
+            case EAGAIN:
+#endif
                 return 0;
             default:
                 lcb_failout_server(c, LCB_NETWORK_ERROR);
