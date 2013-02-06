@@ -16,7 +16,7 @@
  */
 #include <libcouchbase/debug.h>
 
-std::ostream& operator <<(std::ostream &out, const lcb_http_type_t type)
+std::ostream &operator <<(std::ostream &out, const lcb_http_type_t type)
 {
     if (type == LCB_HTTP_TYPE_VIEW) {
         out << "view";
@@ -30,7 +30,7 @@ std::ostream& operator <<(std::ostream &out, const lcb_http_type_t type)
     return out;
 }
 
-std::ostream& operator <<(std::ostream &out, const lcb_http_method_t method)
+std::ostream &operator <<(std::ostream &out, const lcb_http_method_t method)
 {
     if (method == LCB_HTTP_METHOD_GET) {
         out << "GET";
@@ -46,7 +46,7 @@ std::ostream& operator <<(std::ostream &out, const lcb_http_method_t method)
     return out;
 }
 
-std::ostream& operator <<(std::ostream &out, const lcb_http_cmd_t &cmd)
+std::ostream &operator <<(std::ostream &out, const lcb_http_cmd_t &cmd)
 {
     int v = cmd.version;
     out << "{" << std::endl
@@ -81,7 +81,7 @@ std::ostream& operator <<(std::ostream &out, const lcb_http_cmd_t &cmd)
     return out;
 }
 
-std::ostream& operator <<(std::ostream &out, const lcb_datatype_t op)
+std::ostream &operator <<(std::ostream &out, const lcb_datatype_t op)
 {
     if (op == 0) {
         out << "RAW";
@@ -92,7 +92,7 @@ std::ostream& operator <<(std::ostream &out, const lcb_datatype_t op)
     return out;
 }
 
-std::ostream& operator <<(std::ostream &out, const lcb_storage_t op)
+std::ostream &operator <<(std::ostream &out, const lcb_storage_t op)
 {
     if (op == LCB_ADD) {
         out << "ADD";
@@ -111,7 +111,7 @@ std::ostream& operator <<(std::ostream &out, const lcb_storage_t op)
     return out;
 }
 
-std::ostream& operator <<(std::ostream &out, const lcb_store_cmd_t &cmd)
+std::ostream &operator <<(std::ostream &out, const lcb_store_cmd_t &cmd)
 {
     int v = cmd.version;
     out << "{" << std::endl
@@ -144,7 +144,7 @@ std::ostream& operator <<(std::ostream &out, const lcb_store_cmd_t &cmd)
     return out;
 }
 
-std::ostream& operator <<(std::ostream &out, const lcb_error_t err)
+std::ostream &operator <<(std::ostream &out, const lcb_error_t err)
 {
     out << lcb_strerror(NULL, err);
     return out;

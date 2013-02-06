@@ -67,7 +67,7 @@ static int getError(lcb_socket_t sock)
     int len = sizeof(ext);
 
     /* Retrieves extended error status and clear */
-    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&ext, &len);
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&ext, &len);
     switch (error) {
     case WSAECONNRESET:
     case WSAECONNABORTED:

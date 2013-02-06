@@ -154,7 +154,7 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
         if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET
                 || header.response.opcode == CMD_GET_REPLICA
                 || header.response.opcode == CMD_OBSERVE) {
-            if (lcb_dispatch_response(c, &ct, (void*)packet) == -1) {
+            if (lcb_dispatch_response(c, &ct, (void *)packet) == -1) {
                 /*
                  * Internal error.. we received an unsupported response
                  * id. This should _ONLY_ happen at development time because

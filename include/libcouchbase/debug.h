@@ -27,26 +27,26 @@
 #include <iostream>
 
 LIBCOUCHBASE_API
-extern std::ostream& operator <<(std::ostream &out,
+extern std::ostream &operator <<(std::ostream &out,
                                  const lcb_http_type_t type);
 
 LIBCOUCHBASE_API
-extern std::ostream& operator <<(std::ostream &out,
+extern std::ostream &operator <<(std::ostream &out,
                                  const lcb_http_method_t method);
 LIBCOUCHBASE_API
-extern std::ostream& operator <<(std::ostream &out, const lcb_http_cmd_t &cmd);
+extern std::ostream &operator <<(std::ostream &out, const lcb_http_cmd_t &cmd);
 
 LIBCOUCHBASE_API
-extern std::ostream& operator <<(std::ostream &out, const lcb_error_t op);
+extern std::ostream &operator <<(std::ostream &out, const lcb_error_t op);
 
 LIBCOUCHBASE_API
-extern std::ostream& operator <<(std::ostream &out, const lcb_datatype_t op);
+extern std::ostream &operator <<(std::ostream &out, const lcb_datatype_t op);
 
 LIBCOUCHBASE_API
-extern std::ostream& operator <<(std::ostream &out, const lcb_storage_t op);
+extern std::ostream &operator <<(std::ostream &out, const lcb_storage_t op);
 
 LIBCOUCHBASE_API
-extern std::ostream& operator <<(std::ostream &out, const lcb_store_cmd_t &cmd);
+extern std::ostream &operator <<(std::ostream &out, const lcb_store_cmd_t &cmd);
 
 extern "C" {
 #endif

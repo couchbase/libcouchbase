@@ -1046,25 +1046,25 @@ int lcb_dispatch_response(lcb_server_t *c,
 {
     switch (header->response.opcode) {
     case PROTOCOL_BINARY_CMD_FLUSH:
-        flush_response_handler(c, ct, (void*)header);
+        flush_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_GETQ:
     case PROTOCOL_BINARY_CMD_GATQ:
     case PROTOCOL_BINARY_CMD_GET:
     case PROTOCOL_BINARY_CMD_GAT:
     case CMD_GET_LOCKED:
-        getq_response_handler(c, ct, (void*)header);
+        getq_response_handler(c, ct, (void *)header);
         break;
     case CMD_GET_REPLICA:
-        get_replica_response_handler(c, ct, (void*)header);
+        get_replica_response_handler(c, ct, (void *)header);
         break;
 
     case CMD_UNLOCK_KEY:
-        unlock_response_handler(c, ct, (void*)header);
+        unlock_response_handler(c, ct, (void *)header);
         break;
 
     case PROTOCOL_BINARY_CMD_DELETE:
-        delete_response_handler(c, ct, (void*)header);
+        delete_response_handler(c, ct, (void *)header);
         break;
 
     case PROTOCOL_BINARY_CMD_ADD:
@@ -1072,34 +1072,34 @@ int lcb_dispatch_response(lcb_server_t *c,
     case PROTOCOL_BINARY_CMD_SET:
     case PROTOCOL_BINARY_CMD_APPEND:
     case PROTOCOL_BINARY_CMD_PREPEND:
-        store_response_handler(c, ct, (void*)header);
+        store_response_handler(c, ct, (void *)header);
         break;
 
     case PROTOCOL_BINARY_CMD_INCREMENT:
     case PROTOCOL_BINARY_CMD_DECREMENT:
-        arithmetic_response_handler(c, ct, (void*)header);
+        arithmetic_response_handler(c, ct, (void *)header);
         break;
 
     case PROTOCOL_BINARY_CMD_SASL_AUTH:
-        sasl_auth_response_handler(c, ct, (void*)header);
+        sasl_auth_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_SASL_STEP:
-        sasl_step_response_handler(c, ct, (void*)header);
+        sasl_step_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_TOUCH:
-        touch_response_handler(c, ct, (void*)header);
+        touch_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_STAT:
-        stat_response_handler(c, ct, (void*)header);
+        stat_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_VERSION:
-        version_response_handler(c, ct, (void*)header);
+        version_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_VERBOSITY:
-        verbosity_response_handler(c, ct, (void*)header);
+        verbosity_response_handler(c, ct, (void *)header);
         break;
     case CMD_OBSERVE:
-        observe_response_handler(c, ct, (void*)header);
+        observe_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_NOOP:
         // Ignore
