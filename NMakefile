@@ -174,10 +174,13 @@ package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy libcouchbase.lib $(PKG)\lib
 	copy libcouchbase_debug.dll $(PKG)\lib
 	copy libcouchbase_debug.dll $(PKG)\bin
+	copy libcouchbase_debug.pdb $(PKG)\lib
+	copy libcouchbase_debug.pdb $(PKG)\bin
 	copy libcouchbase_debug.exp $(PKG)\lib
 	copy libcouchbase_debug.lib $(PKG)\lib
 	copy tools\cbc.exe $(PKG)\bin
 	copy tools\cbc_debug.exe $(PKG)\bin
+	copy tools\cbc_debug.pdb $(PKG)\bin
 	7z a -r $(PKG).zip $(PKG)
 
 $(INSTALLDIRS) $(PKGDIRS):; -@mkdir $@

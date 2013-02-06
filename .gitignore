@@ -39,8 +39,8 @@
 /config/test-driver
 /configure
 /debug/sizes
-/example/debug/debug
 /example/db/db
+/example/debug/debug
 /example/libeventdirect/eventloop
 /example/minimal/minimal
 /example/pillowfight/pillowfight
@@ -54,6 +54,7 @@
 /libcouchbase*.dsc
 /libcouchbase*.rpm
 /libcouchbase*.tar.gz
+/libcouchbase_debug.pdb
 /libtool
 /m4/libtool.m4
 /m4/ltoptions.m4
@@ -129,6 +130,8 @@
 /tests/unit-tests.log
 /tests/unit-tests.trs
 /tools/cbc
+/tools/cbc_debug.ilk
+/tools/cbc_debug.pdb
 /vc100.idb
 /vc100.pdb
 core*
