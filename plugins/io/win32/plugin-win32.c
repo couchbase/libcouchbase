@@ -424,10 +424,23 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
     } while (instance->event_loop);
 }
 
-static void lcb_destroy_io_opts(struct lcb_io_opt_st *instance)
+static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 {
-    free(instance->v.v0.cookie);
-    free(instance);
+    struct winsock_io_cookie *instance = iops->v.v0.cookie;
+    struct winsock_event *ev;
+    struct winsock_timer *tm;
+
+    assert(instance->event_loop == 0);
+    for (ev = instance->events; ev != NULL; ev = ev->next) {
+        lcb_io_destroy_event(iops, ev);
+    }
+    assert(instance->events == NULL);
+    for (tm = instance->timers; tm != NULL; tm = tm->next) {
+        lcb_io_destroy_timer(iops, tm);
+    }
+    assert(instance->timers == NULL);
+    free(iops->v.v0.cookie);
+    free(iops);
 }
 
 
