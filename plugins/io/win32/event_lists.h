@@ -71,7 +71,7 @@ static void unlink_event(struct winsock_io_cookie *instance,
 {
     if (instance->events == event) {
         instance->events = event->next;
-    } else {
+    } else if (instance->events) {
         struct winsock_event *prev = instance->events;
         struct winsock_event *next;
         for (next = prev->next; next != NULL; prev = next, next = next->next) {
@@ -80,6 +80,9 @@ static void unlink_event(struct winsock_io_cookie *instance,
                 return;
             }
         }
+    }
+    if (event) {
+        event->next = NULL;
     }
 }
 
@@ -95,7 +98,7 @@ static void unlink_timer(struct winsock_io_cookie *instance,
 {
     if (instance->timers == timer) {
         instance->timers = timer->next;
-    } else {
+    } else if (instance->timers) {
         struct winsock_timer *prev = instance->timers;
         struct winsock_timer *next;
         for (next = prev->next; next != NULL; prev = next, next = next->next) {
@@ -104,6 +107,9 @@ static void unlink_timer(struct winsock_io_cookie *instance,
                 return;
             }
         }
+    }
+    if (timer) {
+        timer->next = NULL;
     }
 }
 #endif
