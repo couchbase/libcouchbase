@@ -428,7 +428,7 @@ int ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
 
 int ringbuffer_ensure_alignment(ringbuffer_t *c)
 {
-#ifdef __sparc
+#if defined(__hpux__) || defined(__hpux) || defined(__sparc__) || defined(__sparc)
     intptr_t addr = (intptr_t)c->read_head;
 
     if (addr % 8 != 0) {
