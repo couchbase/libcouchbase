@@ -514,6 +514,12 @@ AM_CONDITIONAL(HAVE_GOOGLETEST_SRC, [test "$ac_cv_have_gtest_src" = "yes"])
 AM_CONDITIONAL(HAVE_GOOGLETEST, [test "$ac_cv_have_gtest" = "yes" -o \
                                  "$ac_cv_have_gtest_src" = "yes"])
 
+# On HP-UX we need to link libxnet(3lib)
+AC_CHECK_DECL([__hpux])
+AS_IF([test "x$ac_cv_have_decl___hpux" = "xyes"],
+      [AC_CHECK_LIB(xnet, t_error, ,
+                    AC_MSG_ERROR([*** -lxnet needed on HP-UX ***]))])
+
 #
 # SystemTap and DTrace support
 #
