@@ -141,7 +141,7 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
         CXX_COMPILER_WARNINGS="$SPRO_CXX_COMPILER_WARNINGS"
       ])
 
-  AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/include $VISIBILITY"
+  AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/include -D_REENTRANT $VISIBILITY"
   AM_LDFLAGS="$AM_LDFLAGS $VISIBILITY"
 
   AS_IF([test "$ac_cv_enable_debug" = "yes"],
@@ -170,7 +170,7 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
            AM_LDFLAGS="$AM_LDFLAGS -xprofile=tcov"
            dnl due to the stupid libtool it's dropping -xprofile when
            dnl building shared objects.. let's fool it..
-	   AM_PROFILE_SOLDFLAGS="-Wc,-xprofile=tcov"
+           AM_PROFILE_SOLDFLAGS="-Wc,-xprofile=tcov"
            AC_DEFINE(ENABLE_TCOV, 1, [tcov enabled])
         ])
   AM_CONDITIONAL(ENABLE_TCOV, [test "$ac_cv_enable_tcov" = "yes"])
