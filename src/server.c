@@ -43,7 +43,8 @@ void lcb_failout_observe_request(lcb_server_t *server,
 
         /* ignore vbucket */
         ptr += sizeof(lcb_uint16_t);
-        nkey = ntohs(*(lcb_uint16_t *)ptr);
+        memcpy(&nkey, ptr, sizeof(nkey));
+        nkey = ntohs(nkey);
 
         ptr += sizeof(lcb_uint16_t);
         resp.v.v0.key = ptr;
