@@ -308,9 +308,9 @@ lcb_error_t lcb_create(lcb_t *instance,
 static void release_socket(lcb_t instance)
 {
     if (instance->sock != INVALID_SOCKET) {
-        instance->io->v.v0.delete_event(instance->io, instance->sock, instance->event);
-        instance->io->v.v0.destroy_event(instance->io, instance->event);
-        instance->event = NULL;
+        if (instance->event) {
+            instance->io->v.v0.delete_event(instance->io, instance->sock, instance->event);
+        }
         instance->io->v.v0.close(instance->io, instance->sock);
         instance->sock = INVALID_SOCKET;
     }
@@ -330,6 +330,10 @@ void lcb_destroy(lcb_t instance)
     }
     hashset_destroy(instance->timers);
     release_socket(instance);
+    if (instance->event) {
+        instance->io->v.v0.destroy_event(instance->io, instance->event);
+        instance->event = NULL;
+    }
 
     if (instance->timeout.event != NULL) {
         instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);

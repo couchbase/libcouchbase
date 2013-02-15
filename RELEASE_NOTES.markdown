@@ -7,6 +7,10 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * [minor] CCBC-175 Work properly on systems where EWOULDBLOCK != EAGAIN
 
+* [critical] CCBC-180 Segmentation fault when the hostname resolved
+  into several addresses and first of them reject couchbase
+  connections.
+
 ## 2.0.3 (2013-02-06)
 
 * [minor] bypass SASL LIST MECH
