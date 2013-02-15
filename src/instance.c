@@ -838,7 +838,7 @@ int lcb_switch_to_backup_node(lcb_t instance,
         if (try_to_connect(instance) == LCB_SUCCESS) {
             return 0;
         }
-    } while (instance->backup_nodes[instance->backup_idx] == NULL);
+    } while (instance->backup_nodes[instance->backup_idx] != NULL);
     /* All known nodes are dead */
     lcb_error_handler(instance, error, reason);
     return -1;

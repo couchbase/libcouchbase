@@ -11,6 +11,9 @@ bugfixes. Do not forget to update this doc in every important patch.
   into several addresses and first of them reject couchbase
   connections.
 
+* [major] CCBC-182 The library stops iterating backup nodes list if
+  the next one isn't accessible.
+
 ## 2.0.3 (2013-02-06)
 
 * [minor] bypass SASL LIST MECH
