@@ -176,12 +176,17 @@ extern "C" {
         /**
          * Libcouchbase cannot load the plugin because of version mismatch
          */
-        LCB_PLUGIN_VERSION_MISMATCH = 0x1e
+        LCB_PLUGIN_VERSION_MISMATCH = 0x1e,
+        /**
+         * The bootstrap hosts list use an invalid/unsupported format
+         */
+        LCB_INVALID_HOST_FORMAT = 0x1f
+
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        , LCB_MAX_ERROR_VAL = 0x1f
+        , LCB_MAX_ERROR_VAL = 0x20
 #endif
     } lcb_error_t;
 

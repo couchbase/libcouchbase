@@ -105,7 +105,88 @@ static void setup_current_host(lcb_t instance, const char *host)
     }
 }
 
-static int setup_boostrap_hosts(lcb_t ret, const char *host)
+static lcb_error_t validate_hostname(const char *host, char **realhost)
+{
+    /* The http parser aborts if it finds a space.. we don't want our
+     * program to core, so run a prescan first
+     */
+    int len = strlen(host);
+    int ii;
+    char *schema = strstr(host, "://");
+    char *path;
+    int port = 8091;
+    int numcolons = 0;
+
+    for (ii = 0; ii < len; ++ii) {
+        if (isspace(host[ii])) {
+            return LCB_INVALID_HOST_FORMAT;
+        }
+    }
+
+    if (schema != NULL) {
+        size_t size;
+        size = schema - host;
+        if (size != 4 && strncasecmp(host, "http", 4) != 0) {
+            return LCB_INVALID_HOST_FORMAT;
+        }
+        host += 7;
+        len -= 7;
+        port = 80;
+    }
+
+    path = strchr(host, '/');
+    if (path != NULL) {
+        if (strcmp(path, "/pools") != 0 && strcmp(path, "/pools/") != 0) {
+            return LCB_INVALID_HOST_FORMAT;
+        }
+        size_t size;
+        size = path - host;
+        len = (int)size;
+    }
+
+    if (strchr(host, ':') != NULL) {
+        port = 0;
+    }
+
+    for (ii = 0; ii < len; ++ii) {
+        if (isalnum(host[ii]) == 0) {
+            switch (host[ii]) {
+            case ':' :
+                ++numcolons;
+                break;
+            case '.' :
+            case '-' :
+            case '_' :
+                break;
+            default:
+                /* Invalid character in the hostname */
+                return LCB_INVALID_HOST_FORMAT;
+            }
+        }
+    }
+
+    if (numcolons > 1) {
+        return LCB_INVALID_HOST_FORMAT;
+    }
+
+    if (port == 0) {
+        if ((*realhost = strdup(host)) == NULL) {
+            return LCB_CLIENT_ENOMEM;
+        }
+
+        (*realhost)[len] = '\0';
+    } else {
+        if ((*realhost = malloc(len + 10)) == NULL) {
+            return LCB_CLIENT_ENOMEM;
+        }
+        memcpy(*realhost, host, len);
+        sprintf(*realhost + len, ":%d", port);
+    }
+
+    return LCB_SUCCESS;
+}
+
+static lcb_error_t setup_boostrap_hosts(lcb_t ret, const char *host)
 {
     const char *ptr = host;
     lcb_size_t num = 0;
@@ -121,7 +202,7 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
      * bootstrap hosts (num == 0 means that we've got a single host etc)
      */
     if ((ret->backup_nodes = calloc(num + 2, sizeof(char *))) == NULL) {
-        return -1;
+        return LCB_CLIENT_ENOMEM;
     }
 
     ret->should_free_backup_nodes = 1;
@@ -131,10 +212,13 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
     do {
         char nm[NI_MAXHOST + NI_MAXSERV + 2];
         const char *start = ptr;
+        lcb_error_t error;
+
         ptr = strchr(ptr, ';');
+        ret->backup_nodes[ii] = NULL;
         if (ptr == NULL) {
             /* this is the last part */
-            ret->backup_nodes[ii] = strdup(start);
+            error = validate_hostname(start, &ret->backup_nodes[ii]);
             ptr = NULL;
         } else {
             /* copy everything up to ';' */
@@ -145,13 +229,13 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
                 *(nm + size) = '\0';
             }
             ++ptr;
-            ret->backup_nodes[ii] = strdup(nm);
+            error = validate_hostname(nm, &ret->backup_nodes[ii]);
         }
-        if (ret->backup_nodes[ii] == NULL) {
-            do {
+        if (error != LCB_SUCCESS) {
+            while (ii > 0) {
                 free(ret->backup_nodes[ii--]);
-            } while (ii > -1);
-            return -1;
+            }
+            return error;
         }
         ++ii;
     } while (ptr != NULL);
@@ -159,7 +243,7 @@ static int setup_boostrap_hosts(lcb_t ret, const char *host)
     ret->backup_idx = 0;
     setup_current_host(ret, ret->backup_nodes[0]);
 
-    return 0;
+    return LCB_SUCCESS;
 }
 
 static const char *get_nonempty_string(const char *s)
@@ -183,6 +267,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_ssize_t offset = 0;
     lcb_type_t type = LCB_TYPE_BUCKET;
     lcb_t obj;
+    lcb_error_t err;
 
     if (options != NULL) {
         switch (options->version) {
@@ -218,7 +303,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     if (io == NULL) {
         lcb_io_opt_t ops;
         struct lcb_create_io_ops_st copt;
-        lcb_error_t err;
 
         memset(&copt, 0, sizeof(copt));
         copt.v.v0.type = LCB_IO_OPS_DEFAULT;
@@ -254,9 +338,10 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
     obj->sock = INVALID_SOCKET;
 
-    if (setup_boostrap_hosts(obj, host) == -1) {
+    err = setup_boostrap_hosts(obj, host);
+    if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
-        return LCB_EINVAL;
+        return err;
     }
     obj->timers = hashset_create();
     obj->http_requests = hashset_create();

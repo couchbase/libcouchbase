@@ -2,12 +2,12 @@
 .\"     Title: lcb_create
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/07/2013
+.\"      Date: 02/20/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CREATE" "3" "01/07/2013" "\ \&" "\ \&"
+.TH "LCB_CREATE" "3" "02/20/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -70,7 +70,7 @@ A lcb_create_st structure should be initialized by using memset to 0, causing th
 .sp
 The "version" member specifies how the "v" union should be interpreted\&. The only difference between version 0 and version 1 is that version 1 allows you to create an instance to use for http requests (without binding to a bucket)\&.
 .sp
-Hosts may be specified as a list of hosts separated by \fI;\fR\&. If the Couchbase cluster is using a non\-standard port, it may be specified by appending ":port" per host\&. ex: "host1;host2:9000;host3"\&. If no value is specified for host, "localhost:8091" is used\&.
+Hosts may be specified as a list of hosts separated by \fI;\fR\&. If the Couchbase cluster is using a non\-standard port, it may be specified by appending ":port" per host\&. ex: "host1;host2:9000;host3"\&. The hostname parameter may alternatively be specified as an URI like: http://hostname:8091/pools\&. libcouchbase does not support any other schema than http, and the only supported path is "/pools"\&. If no value is specified for host, "localhost:8091" is used\&.
 .sp
 If specified user and password specifies the credentials used for authorization\&.
 .sp

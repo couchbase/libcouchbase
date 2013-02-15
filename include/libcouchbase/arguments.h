@@ -67,6 +67,9 @@ extern "C" {
                  * "host1;host2:9000;host3" would try to connect to
                  * host1 on port 8091, if that fails it'll connect to
                  * host2 on port 9000 etc).
+                 *
+                 * The hostname may also be specified as a URI looking
+                 * like: http://localhost:8091/pools
                  */
                 const char *host;
                 /** user the username to use */
@@ -85,6 +88,9 @@ extern "C" {
                  * "host1;host2:9000;host3" would try to connect to
                  * host1 on port 8091, if that fails it'll connect to
                  * host2 on port 9000 etc).
+                 *
+                 * The hostname may also be specified as a URI looking
+                 * like: http://localhost:8091/pools
                  */
                 const char *host;
                 /** user the username to use */

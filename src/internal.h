@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <ctype.h>
 #include <memcached/protocol_binary.h>
 #include <ep-engine/command_ids.h>
 #include <libvbucket/vbucket.h>

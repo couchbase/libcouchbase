@@ -5,6 +5,8 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 ## UNRELEASED
 
+* [minor] CCBC-185 The bootstrap URI is not parsed correctly
+
 * [minor] CCBC-175 Work properly on systems where EWOULDBLOCK != EAGAIN
 
 * [critical] CCBC-180 Segmentation fault when the hostname resolved

@@ -269,6 +269,7 @@ tests_unit_tests_SOURCES = \
                            tests/strerror-unit-test.cc \
                            tests/timeout.c \
                            tests/unit_tests.cc \
+                           tests/hostname-unit-test.cc \
                            tests/ccbc_103.cc
 
 if BUILD_PLUGINS

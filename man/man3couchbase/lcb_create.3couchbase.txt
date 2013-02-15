@@ -52,7 +52,10 @@ requests (without binding to a bucket).
 
 Hosts may be specified as a list of hosts separated by ';'. If the
 Couchbase cluster is using a non-standard port, it may be specified by
-appending ":port" per host. ex: "host1;host2:9000;host3". If no value
+appending ":port" per host. ex: "host1;host2:9000;host3". The hostname
+parameter may alternatively be specified as an URI like:
+http://hostname:8091/pools. libcouchbase does not support any other
+schema than http, and the only supported path is "/pools". If no value
 is specified for host, "localhost:8091" is used.
 
 If specified user and password specifies the credentials used for
