@@ -252,6 +252,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
+    obj->sock = INVALID_SOCKET;
 
     if (setup_boostrap_hosts(obj, host) == -1) {
         lcb_destroy(obj);
@@ -259,7 +260,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
     obj->timers = hashset_create();
     obj->http_requests = hashset_create();
-    obj->sock = INVALID_SOCKET;
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
     /* setup io iops! */
@@ -322,13 +322,15 @@ void lcb_destroy(lcb_t instance)
     lcb_size_t ii;
     free(instance->http_uri);
 
-    for (ii = 0; ii < instance->timers->capacity; ++ii) {
-        if (instance->timers->items[ii] > 1) {
-            lcb_timer_destroy(instance,
-                              (lcb_timer_t)instance->timers->items[ii]);
+    if (instance->timers != NULL) {
+        for (ii = 0; ii < instance->timers->capacity; ++ii) {
+            if (instance->timers->items[ii] > 1) {
+                lcb_timer_destroy(instance,
+                                  (lcb_timer_t)instance->timers->items[ii]);
+            }
         }
+        hashset_destroy(instance->timers);
     }
-    hashset_destroy(instance->timers);
     release_socket(instance);
     if (instance->event) {
         instance->io->v.v0.destroy_event(instance->io, instance->event);
@@ -352,22 +354,23 @@ void lcb_destroy(lcb_t instance)
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_destroy(instance->servers + ii);
     }
-    for (ii = 0; ii < instance->http_requests->capacity; ++ii) {
-        if (instance->http_requests->items[ii] > 1) {
-            lcb_http_request_t htreq =
-                (lcb_http_request_t)instance->http_requests->items[ii];
 
-            /* we should figure out a better error code for this.. */
-            lcb_http_request_finish(instance,
-                                    NULL,
-                                    htreq,
-                                    LCB_ERROR);
+    if (instance->http_requests) {
+        for (ii = 0; ii < instance->http_requests->capacity; ++ii) {
+            if (instance->http_requests->items[ii] > 1) {
+                lcb_http_request_t htreq =
+                    (lcb_http_request_t)instance->http_requests->items[ii];
+
+                /* we should figure out a better error code for this.. */
+                lcb_http_request_finish(instance, NULL, htreq, LCB_ERROR);
+            }
         }
     }
+
     hashset_destroy(instance->http_requests);
     free_backup_nodes(instance);
     free(instance->servers);
-    if (instance->io->v.v0.need_cleanup) {
+    if (instance->io && instance->io->v.v0.need_cleanup) {
         lcb_destroy_io_ops(instance->io);
     }
     free(instance->vbucket_stream.input.data);
