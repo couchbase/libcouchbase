@@ -47,13 +47,18 @@ static void dumpResponse(const lcb_http_resp_t *resp)
     if (resp->v.v0.headers) {
         const char *const *hdr;
         for (hdr = resp->v.v0.headers; *hdr; hdr++) {
-            printf("Header: %s\n", *hdr);
+            std::cout << "Header: " << *hdr << std::endl;
         }
     }
     if (resp->v.v0.bytes) {
-        printf("%.*s\n", (int)resp->v.v0.nbytes, (const char *)resp->v.v0.bytes);
+        std::cout << "Data: " << std::endl;
+        std::cout.write((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
+        std::cout << std::endl;
     }
-    printf("%.*s\n", (int)resp->v.v0.npath, resp->v.v0.path);
+
+    std::cout << "Path: " << std::endl;
+    std::cout.write(resp->v.v0.path, resp->v.v0.npath);
+    std::cout << std::endl;
 
 }
 
@@ -78,10 +83,9 @@ extern "C" {
 
         if ((resp->v.v0.nbytes == 0 && htctx->dumpIfEmpty) ||
                 (error != LCB_SUCCESS && htctx->dumpIfError)) {
-
-            printf("Count: %d\n", htctx->cbCount);
-            printf("Code: %d\n", error);
-            printf("nBytes: %d\n", resp->v.v0.nbytes);
+            std::cout << "Count: " << htctx->cbCount << std::endl
+                      << "Code: " << error << std::endl
+                      << "nBytes: " << resp->v.v0.nbytes << std::endl;
             dumpResponse(resp);
         }
     }
