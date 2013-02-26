@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <ctype.h>
 #include <memcached/protocol_binary.h>
 #include <ep-engine/command_ids.h>
@@ -220,6 +221,18 @@ extern "C" {
             void *event;
             lcb_uint32_t usec;
         } timeout;
+
+        struct {
+            lcb_compat_t type;
+            union {
+                struct {
+                    time_t mtime;
+                    char *cachefile;
+                    int updating;
+                } cached;
+            } value;
+        } compat;
+
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
 #endif
@@ -533,6 +546,9 @@ extern "C" {
                                      const char *packet,
                                      lcb_size_t npacket,
                                      lcb_error_t err);
+
+    int lcb_load_config_cache(lcb_t instance);
+    void lcb_refresh_config_cache(lcb_t instance);
 
 #ifdef __cplusplus
 }

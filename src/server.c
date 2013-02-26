@@ -725,6 +725,12 @@ static void server_connect(lcb_server_t *server)
                     break;
                 } /* Else, we fallthrough */
 
+                if (server->instance->compat.type == LCB_CACHED_CONFIG) {
+                    /* Try to update the cache :S */
+                    lcb_refresh_config_cache(server->instance);
+                    return;
+                }
+
             default:
                 lcb_failout_server(server, LCB_CONNECT_ERROR);
                 return;

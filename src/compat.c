@@ -24,9 +24,14 @@
  */
 #include "internal.h"
 
-static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
-                                    VBUCKET_CONFIG_HANDLE vbconfig);
-
+static lcb_error_t create_memcached_config(const struct lcb_memcached_st *user,
+                                           VBUCKET_CONFIG_HANDLE vbconfig);
+static lcb_error_t create_memcached_compat(const struct lcb_memcached_st *user,
+                                           lcb_t *instance,
+                                           struct lcb_io_opt_st *io);
+static lcb_error_t create_cached_compat(const struct lcb_cached_config_st *cfg,
+                                        lcb_t *instance,
+                                        struct lcb_io_opt_st *io);
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_create_compat(lcb_cluster_t type,
@@ -34,7 +39,20 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type,
                               lcb_t *instance,
                               struct lcb_io_opt_st *io)
 {
-    lcb_error_t ret = LCB_NOT_SUPPORTED;
+    switch (type) {
+    case LCB_MEMCACHED_CLUSTER:
+        return create_memcached_compat(specific, instance, io);
+    case LCB_CACHED_CONFIG:
+        return create_cached_compat(specific, instance, io);
+    }
+
+    return LCB_NOT_SUPPORTED;
+}
+
+static lcb_error_t create_memcached_compat(const struct lcb_memcached_st *user,
+                                           lcb_t *instance,
+                                           struct lcb_io_opt_st *io)
+{
     VBUCKET_CONFIG_HANDLE config;
     lcb_error_t rc;
 
@@ -54,11 +72,8 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type,
         return LCB_CLIENT_ENOMEM;
     }
 
-    if (type == LCB_MEMCACHED_CLUSTER) {
-        ret = create_memcached(specific, config);
-    }
-
-    if (ret == LCB_SUCCESS) {
+    rc = create_memcached_config(user, config);
+    if (rc == LCB_SUCCESS) {
         lcb_apply_vbucket_config(*instance, config);
     } else {
         vbucket_config_destroy(config);
@@ -66,11 +81,11 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type,
         *instance = NULL;
     }
 
-    return ret;
+    return rc;
 }
 
-static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
-                                    VBUCKET_CONFIG_HANDLE vbconfig)
+static lcb_error_t create_memcached_config(const struct lcb_memcached_st *user,
+                                           VBUCKET_CONFIG_HANDLE vbconfig)
 {
     ringbuffer_t buffer;
     char *copy = strdup(user->serverlist);
@@ -161,6 +176,84 @@ static lcb_error_t create_memcached(const struct lcb_memcached_st *user,
         /* Hmm... internal error! */
         return LCB_EINTERNAL;
     }
+
+    return LCB_SUCCESS;
+}
+
+static const char *get_tmp_dir(void) {
+    const char *ret;
+    if ((ret = getenv("TMPDIR")) != NULL) {
+        return ret;
+    } else if ((ret = getenv("TEMPDIR")) != NULL) {
+        return ret;
+    } else if ((ret = getenv("TEMP")) != NULL) {
+        return ret;
+    } else if ((ret = getenv("TMP")) != NULL) {
+        return ret;
+    }
+
+    return NULL;
+}
+
+static char *mkcachefile(const char *name, const char *bucket) {
+    if (name != NULL) {
+        return strdup(name);
+    } else {
+        char buffer[1024];
+        const char *tmpdir = get_tmp_dir();
+
+        snprintf(buffer, sizeof(buffer),
+                 "%s/%s", tmpdir ? tmpdir : ".", bucket);
+        return strdup(buffer);
+    }
+}
+
+static lcb_error_t create_cached_compat(const struct lcb_cached_config_st *cfg,
+                                        lcb_t *instance,
+                                        struct lcb_io_opt_st *io)
+{
+    lcb_error_t rc;
+    lcb_t inst;
+    const char *bucket;
+    struct lcb_create_st cst;
+
+    switch (cfg->createopt.version) {
+    case 0:
+        bucket = cfg->createopt.v.v0.bucket;
+        break;
+    case 1:
+        bucket = cfg->createopt.v.v1.bucket;
+        break;
+    default:
+        return LCB_NOT_SUPPORTED;
+    }
+
+    if (bucket == NULL) {
+        bucket = "default";
+    }
+
+    memcpy(&cst, &cfg->createopt, sizeof(cst));
+    if (cst.v.v0.io == NULL) {
+        cst.v.v0.io = io;
+    }
+
+    rc = lcb_create(instance, &cst);
+    if (rc != LCB_SUCCESS) {
+        return rc;
+    }
+
+    inst = *instance;
+    inst->compat.type = LCB_CACHED_CONFIG;
+    inst->compat.value.cached.cachefile = mkcachefile(cfg->cachefile,
+                                                      bucket);
+
+    if (inst->compat.value.cached.cachefile == NULL) {
+        lcb_destroy(*instance);
+        *instance = NULL;
+        return LCB_CLIENT_ENOMEM;
+    }
+
+    lcb_load_config_cache(inst);
 
     return LCB_SUCCESS;
 }

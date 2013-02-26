@@ -3,6 +3,11 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+
+## (Not released)
+* [minor] CCBC-190 New compat mode (experimental) for configuration
+                   caching. See man lcb_create_compat
+
 ## 2.0.4 (2013-03-06)
 
 * [minor] CCBC-185 The bootstrap URI is not parsed correctly

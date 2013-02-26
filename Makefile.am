@@ -125,6 +125,7 @@ libcouchbase_la_SOURCES = \
                         src/behavior.c \
                         src/compat.c \
                         src/config_static.h \
+                        src/config_cache.c \
                         src/cookie.c \
                         src/error.c \
                         src/event.c \

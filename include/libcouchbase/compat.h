@@ -31,13 +31,17 @@
 extern "C" {
 #endif
 
-    enum lcb_cluster_t {
-        LCB_MEMCACHED_CLUSTER = 0x00
+    enum lcb_compat_t {
+        LCB_MEMCACHED_CLUSTER = 0x00,
+        LCB_CACHED_CONFIG = 0x01
     };
-    typedef enum lcb_cluster_t lcb_cluster_t;
+
+    typedef enum lcb_compat_t lcb_compat_t;
+    /* For backwards compatibility mode */
+    typedef enum lcb_compat_t lcb_cluster_t;
 
     LIBCOUCHBASE_API
-    lcb_error_t lcb_create_compat(lcb_cluster_t type,
+    lcb_error_t lcb_create_compat(lcb_compat_t type,
                                   const void *specific,
                                   lcb_t *instance,
                                   struct lcb_io_opt_st *io);
@@ -46,6 +50,11 @@ extern "C" {
         const char *serverlist;
         const char *username;
         const char *password;
+    };
+
+    struct lcb_cached_config_st {
+        struct lcb_create_st createopt;
+        const char *cachefile;
     };
 
 #ifdef __cplusplus

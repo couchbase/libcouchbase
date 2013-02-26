@@ -42,6 +42,13 @@ lcb_error_t lcb_wait(lcb_t instance)
     if (instance->wait != 0) {
         return instance->last_error;
     }
+
+    if (!instance->connected && !lcb_has_data_in_buffers(instance)
+        && instance->compat.type == LCB_CACHED_CONFIG
+        && instance->vbucket_config != NULL) {
+        return LCB_SUCCESS;
+    }
+
     /*
      * The API is designed for you to run your own event loop,
      * but should also work if you don't do that.. In order to be

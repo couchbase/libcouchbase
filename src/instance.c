@@ -331,6 +331,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
     *instance = obj;
     obj->type = type;
+    obj->compat.type = (lcb_compat_t)0xdead;
     lcb_initialize_packet_handlers(obj);
     lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
@@ -672,6 +673,18 @@ static void lcb_update_serverlist(lcb_t instance)
                           "Failed to allocate memory for config");
         return;
     }
+
+    if (instance->compat.type == LCB_CACHED_CONFIG) {
+        FILE *fp = fopen(instance->compat.value.cached.cachefile, "w");
+        if (fp) {
+            fprintf(fp, "%s{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}",
+                    instance->vbucket_stream.input.data);
+            fclose(fp);
+        }
+        instance->compat.value.cached.updating = 0;
+        instance->compat.value.cached.mtime = time(NULL) - 1;
+    }
+
     if (vbucket_config_parse(next_config, LIBVBUCKET_SOURCE_MEMORY,
                              instance->vbucket_stream.input.data) != 0) {
         lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
@@ -827,7 +840,14 @@ static int parse_header(lcb_t instance)
             err = LCB_PROTOCOL_ERROR;
             break;
         }
+
         lcb_error_handler(instance, err, buffer->data);
+
+        if (instance->compat.type == LCB_CACHED_CONFIG) {
+            /* cached config should try a bootsrapping logic */
+            return -2;
+        }
+
         return -1;
     }
 
@@ -1049,10 +1069,22 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
     } while ((lcb_size_t)nr == avail);
 
     if (instance->vbucket_stream.header == NULL) {
-        if (parse_header(instance) == -1) {
+        switch (parse_header(instance)) {
+        case -1:
             /* error already reported */
             lcb_maybe_breakout(instance);
             return;
+        case -2:
+            release_socket(instance);
+            instance->backup_idx++;
+            if (lcb_switch_to_backup_node(instance, LCB_CONNECT_ERROR,
+                                          "Failed to parse REST response") != -1) {
+                return;
+            }
+            /* We should try another server */
+            return;
+        default:
+            ;
         }
     }
 
@@ -1246,7 +1278,7 @@ static lcb_error_t try_to_connect(lcb_t instance)
         freeaddrinfo(instance->ai);
         instance->ai = NULL;
     }
-
+    instance->n_http_uri_sent = 0;
     do {
         setup_current_host(instance,
                            instance->backup_nodes[instance->backup_idx++]);
@@ -1313,6 +1345,13 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
     instance->backup_idx = 0;
+    if (instance->compat.type == LCB_CACHED_CONFIG &&
+        instance->vbucket_config != NULL &&
+        instance->compat.value.cached.updating == 0)
+    {
+        return LCB_SUCCESS;
+    }
+
     instance->io->v.v0.update_timer(instance->io,
                                     instance->timeout.event,
                                     instance->timeout.usec,

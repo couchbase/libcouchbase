@@ -46,6 +46,12 @@ static int do_fill_input_buffer(lcb_server_t *c)
 #endif
             return 0;
         default:
+            if (c->instance->compat.type == LCB_CACHED_CONFIG) {
+                /* Try to update the cache :S */
+                lcb_refresh_config_cache(c->instance);
+                return 0;
+            }
+
             lcb_failout_server(c, LCB_NETWORK_ERROR);
             return -1;
         }
@@ -53,6 +59,13 @@ static int do_fill_input_buffer(lcb_server_t *c)
         assert((iov[0].iov_len + iov[1].iov_len) != 0);
         /* TODO stash error message somewhere
          * "Connection closed... we should resend to other nodes or reconnect!!" */
+
+        if (c->instance->compat.type == LCB_CACHED_CONFIG) {
+            /* Try to update the cache :S */
+            lcb_refresh_config_cache(c->instance);
+            return 0;
+        }
+
         lcb_failout_server(c, LCB_NETWORK_ERROR);
         return -1;
     } else {
@@ -184,6 +197,11 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
             char *body;
             lcb_size_t nbody;
             lcb_server_t *new_srv;
+
+            if (c->instance->compat.type == LCB_CACHED_CONFIG) {
+                lcb_refresh_config_cache(c->instance);
+            }
+
             /* re-schedule command to new server */
             nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
             assert(nr == sizeof(req));
