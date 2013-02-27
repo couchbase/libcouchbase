@@ -143,6 +143,25 @@ Example 3: Delete bucket via REST management API
     if (err != LCB_SUCCESS) {
         ... failed to schedule request ...
 
+Example 4: Save design document `_design/test' with trivial `all' view
+
+    const char *docid = "_design/test";
+    const char *doc = "{\"views\":{\"all\":{\"map\":\"function (doc, meta) { emit(meta.id, null); }\"}}}";
+    lcb_http_cmd_t cmd;
+    lcb_http_request_t req;
+    cmd.version = 0;
+    cmd.v.v0.path = docid;
+    cmd.v.v0.npath = strlen(docid);
+    cmd.v.v0.body = doc;
+    cmd.v.v0.nbody = strlen(doc);
+    cmd.v.v0.method = LCB_HTTP_METHOD_PUT;
+    cmd.v.v0.content_type = "application/json";
+    lcb_error_t err = lcb_make_http_request(instance, NULL,
+                                            LCB_HTTP_TYPE_VIEW,
+                                            &cmd, &req);
+    if (err != LCB_SUCCESS) {
+        ... failed to schedule request ...
+
 ATTRIBUTES
 ----------
 See lcb_attributes(5) for descriptions of the following attributes:
