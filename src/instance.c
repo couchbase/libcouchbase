@@ -136,10 +136,10 @@ static lcb_error_t validate_hostname(const char *host, char **realhost)
 
     path = strchr(host, '/');
     if (path != NULL) {
+        size_t size;
         if (strcmp(path, "/pools") != 0 && strcmp(path, "/pools/") != 0) {
             return LCB_INVALID_HOST_FORMAT;
         }
-        size_t size;
         size = path - host;
         len = (int)size;
     }
