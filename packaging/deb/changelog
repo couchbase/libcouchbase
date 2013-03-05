@@ -1,3 +1,27 @@
+libcouchbase (2.0.4) stable; urgency=low
+
+  [Sergey Avseyev]
+  * CCBC-175 Work properly on systems where EWOULDBLOCK != EAGAIN
+  * Install pdb files for windows
+  * CCBC-147 Fixed illegal memory access in win32 plugin
+  * Destroy all events in win32 plugin destructor
+  * Be more secure about pointers in event lists (win32 plugin)
+  * Align buffers on HP-UX systems (thanks to Yury Alioshinov)
+  * Define -D_REENTRANT to ensure errno is threadsafe
+  * CCBC-180 Do not destroy event struct in release_socket()
+  * Fix possible illegal memory access
+  * CCBC-182 Fix mistyped condition in the loop
+  * Link with libxnet on HP-UX
+  * Describe how to create design document
+
+  [Trond Norbye]
+  * CCBC-178: short require 2byte alignment
+  * CCBC-185: Try to validate the bootstrap hosts
+  * Remove compile warnings
+  * Fix build break on win32
+
+ -- Sergey Avseyev <sergey@couchbase.com> Wed, 06 Mar 2013 00:43:21 +0300
+
 libcouchbase (2.0.3) stable; urgency=low
 
   [Mark Nunberg]

@@ -3,7 +3,7 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
-## UNRELEASED
+## 2.0.4 (2013-03-06)
 
 * [minor] CCBC-185 The bootstrap URI is not parsed correctly
 
@@ -15,6 +15,10 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 * [major] CCBC-182 The library stops iterating backup nodes list if
   the next one isn't accessible.
+
+* [major] CCBC-147 Fixed illegal memory access in win32 plugin
+
+* [minor] CCBC-178 Build error on solaris/sparc: -Werror=cast-align
 
 ## 2.0.3 (2013-02-06)
 
