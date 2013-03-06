@@ -2,12 +2,12 @@
 .\"     Title: lcb_behavior_get_syncmode
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/07/2013
+.\"      Date: 03/06/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_BEHAVIOR_GET_SYN" "3couchbase" "01/07/2013" "\ \&" "\ \&"
+.TH "LCB_BEHAVIOR_GET_SYN" "3couchbase" "03/06/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -91,7 +91,7 @@ The following example shows how to toggle synchronous mode on and off
 .\}
 .nf
 \&.\&.\&.
-lb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
+lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
 lcb_make_http_request( \&.\&.\&. );
 lcb_behavior_set_syncmode(instance, LCB_ASYNCHRONOUS);
 \&.\&.\&.

@@ -50,7 +50,7 @@ The following example shows how to toggle synchronous mode on and off
          #include <libcouchbase/couchbase.h>
 
          ...
-         lb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
+         lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
          lcb_make_http_request( ... );
          lcb_behavior_set_syncmode(instance, LCB_ASYNCHRONOUS);
          ...
