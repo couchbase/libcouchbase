@@ -97,7 +97,7 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
                " a version mismatch";
     case LCB_INVALID_HOST_FORMAT:
         return "One of the hostnames specified use invalid characters"
-            " or an unsupported format";
+               " or an unsupported format";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

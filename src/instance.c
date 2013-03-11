@@ -990,9 +990,9 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
             int sockerr = instance->io->v.v0.error;
             if (sockerr != EWOULDBLOCK
 #ifdef USE_EAGAIN
-                && sockerr != EAGAIN
+                    && sockerr != EAGAIN
 #endif
-                && sockerr != EINTR) {
+                    && sockerr != EINTR) {
                 lcb_error_handler(instance, LCB_NETWORK_ERROR,
                                   "Failed to send data to REST server");
                 instance->io->v.v0.delete_event(instance->io, instance->sock,

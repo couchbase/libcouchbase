@@ -22,13 +22,14 @@
 #include <map>
 #include <sstream>
 #include <queue>
+#include <list>
 #include <cstring>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <getopt.h>
 #include "tools/commandlineparser.h"
-
+#include <signal.h>
 
 using namespace std;
 
@@ -210,6 +211,7 @@ public:
                 (void)lcb_set_store_callback(instance, storageCallback);
                 (void)lcb_set_get_callback(instance, getCallback);
                 queue.push(instance);
+                handles.push_back(instance);
             } else {
                 std::cout << std::endl;
                 std::cerr << "Failed to create instance: "
@@ -235,9 +237,9 @@ public:
     }
 
     ~InstancePool() {
-        while (!queue.empty()) {
-            lcb_destroy(queue.front());
-            queue.pop();
+        while (!handles.empty()) {
+            lcb_destroy(handles.back());
+            handles.pop_back();
         }
     }
 
@@ -265,6 +267,7 @@ public:
 
 private:
     std::queue<lcb_t> queue;
+    std::list<lcb_t> handles;
 };
 
 
@@ -291,7 +294,10 @@ public:
         lcb_destroy_io_ops(io);
     }
 
-    bool run(bool loop) {
+    bool run() {
+        if (config.isLoop()) {
+            std::cerr << "Running in a loop. Press Ctrl-C to terminate..." << std::endl;
+        }
         do {
             bool pending = false;
             lcb_t instance = pool->pop();
@@ -338,7 +344,7 @@ public:
 
             pool->push(instance);
 
-        } while (loop);
+        } while (config.isLoop());
 
         return true;
     }
@@ -579,6 +585,36 @@ static void handle_options(int argc, char **argv)
     }
 }
 
+ThreadContext *ctx = NULL;
+
+static void setup_sigint_handler(void (handler)(int));
+static void cruel_handler(int);
+static void gentle_handler(int);
+
+static void deaf_handler(int) { }
+
+static void cruel_handler(int)
+{
+    delete ctx;
+    exit(EXIT_FAILURE);
+}
+
+static void gentle_handler(int)
+{
+    config.setLoop(false);
+    setup_sigint_handler(cruel_handler);
+}
+
+static void setup_sigint_handler(void (handler)(int))
+{
+    struct sigaction action;
+
+    sigemptyset(&action.sa_mask);
+    action.sa_handler = handler;
+    action.sa_flags = 0;
+    sigaction(SIGINT, &action, NULL);
+}
+
 /**
  * Program entry point
  * @param argc argument count
@@ -587,11 +623,14 @@ static void handle_options(int argc, char **argv)
  */
 int main(int argc, char **argv)
 {
+    setup_sigint_handler(deaf_handler);
     handle_options(argc, argv);
 
-    ThreadContext ctx(config.getNumInstances());
-    ctx.populate(0, config.maxKey);
-    ctx.run(config.isLoop());
+    ctx = new ThreadContext(config.getNumInstances());
+    ctx->populate(0, config.maxKey);
+    setup_sigint_handler(gentle_handler);
+    ctx->run();
+    delete ctx;
 
     return 0;
 }
