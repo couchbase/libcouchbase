@@ -272,9 +272,7 @@ class ThreadContext
 {
 public:
     ThreadContext(size_t poolSize) :
-        currSeqno(0), pool(0) {
-        // @todo fill the random seqnos
-        lcb_io_opt_t io;
+        currSeqno(0), pool(0), io(NULL) {
         lcb_error_t err = lcb_create_io_ops(&io, NULL);
         if (err != LCB_SUCCESS) {
             std::cerr << "Failed to create IO option: "
@@ -290,6 +288,7 @@ public:
 
     ~ThreadContext() {
         delete pool;
+        lcb_destroy_io_ops(io);
     }
 
     bool run(bool loop) {
@@ -415,6 +414,7 @@ private:
 
     lcb_error_t error;
     InstancePool *pool;
+    lcb_io_opt_t io;
 };
 
 static void storageCallback(lcb_t, const void *cookie,
