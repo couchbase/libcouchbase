@@ -26,7 +26,7 @@ RM = del
 lib_LTLIBRARIES = libcouchbase.dll libcouchbase_debug.dll
 check_PROGRAMS =
 bin_PROGRAMS = tools\cbc.exe tools\cbc_debug.exe
-example_PROGRAMS = example\pillowfight\pillowfight.exe
+example_PROGRAMS =
 
 libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\cookie.c src\error.c src\event.c src\flush.c src\get.c \
