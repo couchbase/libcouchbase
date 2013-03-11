@@ -48,6 +48,17 @@ public:
         loop(false),
         randomSeed(0) {
         data = static_cast<void *>(new char[maxSize]);
+        /* fill data array with pattern */
+        uint32_t *iptr = static_cast<uint32_t *>(data);
+        for (uint32_t ii = 0; ii < maxSize / sizeof(uint32_t); ++ii) {
+            iptr[ii] = 0xdeadbeef;
+        }
+        /* pad rest bytes with zeros */
+        size_t rest = maxSize % sizeof(uint32_t);
+        if (rest > 0) {
+            char *cptr = static_cast<char *>(data) + (maxSize / sizeof(uint32_t));
+            memset(cptr, 0, rest);
+        }
     }
 
     ~Configuration() {
