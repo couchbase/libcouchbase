@@ -45,8 +45,8 @@ public:
         numThreads(1),
         numInstances(1),
         timings(false),
-        loop(false) {
-        // @todo initialize the random sequence in seqno
+        loop(false),
+        randomSeed(0) {
         data = static_cast<void *>(new char[maxSize]);
     }
 
@@ -96,6 +96,14 @@ public:
 
     void setBucket(const char *b) {
         bucket.assign(b);
+    }
+
+    void setRandomSeed(uint32_t val) {
+        randomSeed = val;
+    }
+
+    uint32_t getRandomSeed() {
+        return randomSeed;
     }
 
     void setIterations(uint32_t val) {
@@ -154,6 +162,7 @@ public:
     uint32_t numInstances;
     bool timings;
     bool loop;
+    uint32_t randomSeed;
 } config;
 
 extern "C" {
@@ -262,6 +271,10 @@ public:
             exit(EXIT_FAILURE);
         }
         pool = new InstancePool(poolSize, io);
+        srand(config.getRandomSeed());
+        for (int ii = 0; ii < 8192; ++ii) {
+            seqno[ii] = rand();
+        }
     }
 
     ~ThreadContext() {
@@ -482,6 +495,8 @@ static void handle_options(int argc, char **argv)
                                            "Loop running load"));
     getopt.addOption(new CommandLineOption('T', "timings", false,
                                            "Enable internal timings"));
+    getopt.addOption(new CommandLineOption('s', "random-seed", true,
+                                           "Specify random seed (default 0)"));
     /* getopt.addOption(new CommandLineOption()); */
 
     if (!getopt.parse(argc, argv)) {
@@ -535,6 +550,10 @@ static void handle_options(int argc, char **argv)
 
             case 'T' :
                 config.setTimings(true);
+                break;
+
+            case 's' :
+                config.setRandomSeed(atoi((*iter)->argument));
                 break;
 
             case '?':
