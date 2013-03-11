@@ -221,6 +221,7 @@ extern "C" {
             cout.write(static_cast<const char *>(resp->v.v0.bytes),
                        resp->v.v0.nbytes);
             cout.flush();
+            cerr << endl; /* use cerr to avoid breaking blobs */
         } else {
             cerr << "Failed to get \"" << key.c_str() << "\": "
                  << lcb_strerror(instance, error) << endl;
