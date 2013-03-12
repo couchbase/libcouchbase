@@ -194,7 +194,14 @@ extern "C" {
 class InstancePool
 {
 public:
-    InstancePool(size_t size, lcb_io_opt_t io) {
+    InstancePool(size_t size) {
+        lcb_error_t err = lcb_create_io_ops(&io, NULL);
+        if (err != LCB_SUCCESS) {
+            std::cerr << "Failed to create IO option: "
+                      << lcb_strerror(NULL, err) << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
         for (size_t ii = 0; ii < size; ++ii) {
             lcb_t instance;
             std::cout << "\rCreating instance " << ii;
@@ -243,6 +250,7 @@ public:
             lcb_destroy(handles.back());
             handles.pop_back();
         }
+        lcb_destroy_io_ops(io);
     }
 
     lcb_t pop() {
@@ -270,30 +278,19 @@ public:
 private:
     std::queue<lcb_t> queue;
     std::list<lcb_t> handles;
+    lcb_io_opt_t io;
 };
 
 
 class ThreadContext
 {
 public:
-    ThreadContext(size_t poolSize) :
-        currSeqno(0), pool(0), io(NULL) {
-        lcb_error_t err = lcb_create_io_ops(&io, NULL);
-        if (err != LCB_SUCCESS) {
-            std::cerr << "Failed to create IO option: "
-                      << lcb_strerror(NULL, err) << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        pool = new InstancePool(poolSize, io);
+    ThreadContext(InstancePool *pool) :
+        currSeqno(0), pool(pool) {
         srand(config.getRandomSeed());
         for (int ii = 0; ii < 8192; ++ii) {
             seqno[ii] = rand();
         }
-    }
-
-    ~ThreadContext() {
-        delete pool;
-        lcb_destroy_io_ops(io);
     }
 
     bool run() {
@@ -422,7 +419,6 @@ private:
 
     lcb_error_t error;
     InstancePool *pool;
-    lcb_io_opt_t io;
 };
 
 static void storageCallback(lcb_t, const void *cookie,
@@ -632,10 +628,13 @@ int main(int argc, char **argv)
     setup_sigint_handler(deaf_handler);
     handle_options(argc, argv);
 
-    ctx = new ThreadContext(config.getNumInstances());
-    ctx->populate(0, config.maxKey);
+    InstancePool pool(config.getNumInstances());
     setup_sigint_handler(gentle_handler);
+
+    ctx = new ThreadContext(&pool);
+    ctx->populate(0, config.maxKey);
     ctx->run();
+
     delete ctx;
 
     return 0;
