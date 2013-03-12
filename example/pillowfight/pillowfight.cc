@@ -306,8 +306,8 @@ private:
 class ThreadContext
 {
 public:
-    ThreadContext(InstancePool *pool) :
-        currSeqno(0), pool(pool) {
+    ThreadContext(InstancePool *p) :
+        currSeqno(0), pool(p) {
         srand(config.getRandomSeed());
         for (int ii = 0; ii < 8192; ++ii) {
             seqno[ii] = rand();
@@ -676,7 +676,7 @@ int main(int argc, char **argv)
     }
 
     std::list<pthread_t> threads;
-    for (int ii = 0; ii < config.getNumThreads(); ++ii) {
+    for (uint32_t ii = 0; ii < config.getNumThreads(); ++ii) {
         ThreadContext *ctx = new ThreadContext(pool);
         contexts.push_back(ctx);
 
