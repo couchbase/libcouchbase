@@ -590,10 +590,7 @@ static void setup_sigint_handler(void (handler)(int));
 extern "C" {
     static void cruel_handler(int);
     static void gentle_handler(int);
-    static void deaf_handler(int);
 }
-
-static void deaf_handler(int) { }
 
 static void cruel_handler(int)
 {
@@ -625,7 +622,7 @@ static void setup_sigint_handler(void (handler)(int))
  */
 int main(int argc, char **argv)
 {
-    setup_sigint_handler(deaf_handler);
+    setup_sigint_handler(SIG_IGN);
     handle_options(argc, argv);
 
     InstancePool pool(config.getNumInstances());
