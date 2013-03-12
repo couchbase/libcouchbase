@@ -588,8 +588,12 @@ static void handle_options(int argc, char **argv)
 ThreadContext *ctx = NULL;
 
 static void setup_sigint_handler(void (handler)(int));
-static void cruel_handler(int);
-static void gentle_handler(int);
+
+extern "C" {
+    static void cruel_handler(int);
+    static void gentle_handler(int);
+    static void deaf_handler(int);
+}
 
 static void deaf_handler(int) { }
 
