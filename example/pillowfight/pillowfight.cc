@@ -220,6 +220,7 @@ public:
             }
             if (config.isTimings()) {
                 if ((error = lcb_enable_timings(instance)) != LCB_SUCCESS) {
+                    std::cout << std::endl;
                     std::cerr << "Failed to enable timings!: "
                               << lcb_strerror(instance, error) << std::endl;
                 }
@@ -228,6 +229,7 @@ public:
             lcb_wait(instance);
             error = lcb_get_last_error(instance);
             if (error != LCB_SUCCESS) {
+                std::cout << std::endl;
                 std::cerr << "Failed to connect: "
                           << lcb_strerror(instance, error) << std::endl;
                 exit(EXIT_FAILURE);
