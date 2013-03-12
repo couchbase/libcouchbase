@@ -432,7 +432,7 @@ TESTS=${check_PROGRAMS}
 
 example_pillowfight_pillowfight_SOURCES = tools/commandlineparser.cc \
                                           example/pillowfight/pillowfight.cc
-example_pillowfight_pillowfight_LDADD = libcouchbase.la
+example_pillowfight_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 example_debug_debug_SOURCES = example/debug/debug.cc
 example_debug_debug_LDADD = libcouchbase_debug.la
