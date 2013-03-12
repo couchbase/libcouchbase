@@ -134,6 +134,10 @@ public:
         numThreads = val;
     }
 
+    uint32_t getNumThreads() {
+        return numThreads;
+    }
+
     void setNumInstances(uint32_t val) {
         numInstances = val;
     }
@@ -194,12 +198,15 @@ extern "C" {
 class InstancePool
 {
 public:
-    InstancePool(size_t size) {
-        lcb_error_t err = lcb_create_io_ops(&io, NULL);
-        if (err != LCB_SUCCESS) {
-            std::cerr << "Failed to create IO option: "
-                      << lcb_strerror(NULL, err) << std::endl;
-            exit(EXIT_FAILURE);
+    InstancePool(size_t size): io(NULL) {
+        if (config.getNumThreads() == 1) {
+            /* allow to share IO object in single-thread only */
+            lcb_error_t err = lcb_create_io_ops(&io, NULL);
+            if (err != LCB_SUCCESS) {
+                std::cerr << "Failed to create IO option: "
+                    << lcb_strerror(NULL, err) << std::endl;
+                exit(EXIT_FAILURE);
+            }
         }
 
         for (size_t ii = 0; ii < size; ++ii) {
