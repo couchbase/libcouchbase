@@ -180,13 +180,17 @@ extern "C" {
         /**
          * The bootstrap hosts list use an invalid/unsupported format
          */
-        LCB_INVALID_HOST_FORMAT = 0x1f
+        LCB_INVALID_HOST_FORMAT = 0x1f,
+        /**
+         * Invalid character used in the path component of an URL
+         */
+        LCB_INVALID_CHAR = 0x20
 
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        , LCB_MAX_ERROR_VAL = 0x20
+        , LCB_MAX_ERROR_VAL = 0x21
 #endif
     } lcb_error_t;
 

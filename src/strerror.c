@@ -98,6 +98,8 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
     case LCB_INVALID_HOST_FORMAT:
         return "One of the hostnames specified use invalid characters"
                " or an unsupported format";
+    case LCB_INVALID_CHAR:
+        return "An invalid character is used";
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

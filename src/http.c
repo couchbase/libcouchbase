@@ -555,6 +555,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     lcb_size_t nn, nbase, nbody, npath;
     lcb_http_method_t method;
     int chunked;
+    lcb_error_t error;
 
     switch (cmd->version) {
     case 0:
@@ -674,12 +675,12 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->command_cookie = command_cookie;
     req->chunked = chunked;
     req->method = method;
-    req->npath = npath;
-    if ((req->path = malloc(req->npath)) == NULL) {
+    error = lcb_urlencode_path(path, npath, &req->path, &req->npath);
+
+    if (error != LCB_SUCCESS) {
         http_request_destroy(req);
-        return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+        return lcb_synchandler_return(instance, error);
     }
-    memcpy(req->path, path, req->npath);
 
 #define BUFF_APPEND(dst, src, len)                                  \
         if (len != ringbuffer_write(dst, src, len)) {               \

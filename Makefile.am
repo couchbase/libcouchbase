@@ -153,6 +153,8 @@ libcouchbase_la_SOURCES = \
                         src/timings.c \
                         src/touch.c \
                         src/trace.h \
+                        src/url_encoding.c \
+                        src/url_encoding.h \
                         src/utilities.c \
                         src/verbosity.c \
                         src/wait.c
@@ -260,6 +262,7 @@ tests_unit_tests_SOURCES = \
                            src/base64.c \
                            src/hashset.c \
                            src/ringbuffer.c \
+                           src/url_encoding.c \
                            tests/base64-unit-test.cc \
                            tests/behavior-unit-tests.cc \
                            tests/cluster-unit-tests.cc \
@@ -269,6 +272,7 @@ tests_unit_tests_SOURCES = \
                            tests/strerror-unit-test.cc \
                            tests/timeout.c \
                            tests/unit_tests.cc \
+                           tests/url_encoding-tests.cc \
                            tests/hostname-unit-test.cc \
                            tests/ccbc_103.cc
 
