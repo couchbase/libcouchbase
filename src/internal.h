@@ -369,7 +369,8 @@ extern "C" {
                                   const char *reason);
     int lcb_server_purge_implicit_responses(lcb_server_t *c,
                                             lcb_uint32_t seqno,
-                                            hrtime_t delta);
+                                            hrtime_t delta,
+                                            int all);
     void lcb_server_destroy(lcb_server_t *server);
     void lcb_server_connected(lcb_server_t *server);
 

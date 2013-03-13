@@ -425,7 +425,8 @@ void lcb_server_destroy(lcb_server_t *server)
     if (server->cmd_log.nbytes) {
         lcb_server_purge_implicit_responses(server,
                                             server->instance->seqno,
-                                            gethrtime());
+                                            gethrtime(),
+                                            1);
     }
 
     if (server->sasl_conn != NULL) {
@@ -798,11 +799,17 @@ void lcb_server_send_packets(lcb_server_t *server)
  */
 int lcb_server_purge_implicit_responses(lcb_server_t *c,
                                         lcb_uint32_t seqno,
-                                        hrtime_t end)
+                                        hrtime_t end,
+                                        int all)
 {
     protocol_binary_request_header req;
     lcb_size_t nr =  ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
-    /* There should at _LEAST_ be _ONE_ message in here! */
+    /* There should at _LEAST_ be _ONE_ message in here if we're not
+     * trying to purge _ALL_ of the messages in the queue
+     */
+    if (all && nr == 0) {
+        return 0;
+    }
     assert(nr == sizeof(req));
     while (req.request.opaque < seqno) {
         struct lcb_command_data_st ct;
@@ -870,7 +877,12 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
         }
         ringbuffer_consumed(&c->cmd_log, packetsize);
         nr =  ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
-        /* The current message should also be there... */
+        /* The current message should also be there (unless we tried to
+         * purge _all_ of them
+         */
+        if (all && nr == 0) {
+            return 0;
+        }
         assert(nr == sizeof(req));
     }
 

@@ -142,7 +142,7 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
         break;
     case PROTOCOL_BINARY_RES: {
         int was_connected = c->connected;
-        if (lcb_server_purge_implicit_responses(c, header.response.opaque, stop) != 0) {
+        if (lcb_server_purge_implicit_responses(c, header.response.opaque, stop, 0) != 0) {
             if (packet != c->input.read_head) {
                 free(packet);
             }
