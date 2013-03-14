@@ -157,7 +157,7 @@ void Configuration::loadCbcRc(void)
 
     if (getenv("HOME") != NULL) {
         ss << getenv("HOME");
-#ifdef WIN32
+#ifdef _WIN32
         ss << "\\";
 #else
         ss << "/";

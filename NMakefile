@@ -17,7 +17,7 @@
 INSTALL=..\deps
 CC_NODEBUG = cl.exe /O2 /DNDEBUG /MD /LD
 CC_DEBUG = cl.exe /Od /D_DEBUG /RTC1 /Z7 /LDd /W3 /MDd
-CFLAGS = /Iinclude /Iwin32 /Icontrib /Iplugins\io\win32 /I$(INSTALL)\include /Isrc /I. /nologo /W3 /EHsc /DWIN32 /FD /c -D_CRT_SECURE_NO_WARNINGS -DLIBCOUCHBASE_INTERNAL=1
+CFLAGS = /Iinclude /Iwin32 /Icontrib /Iplugins\io\win32 /I$(INSTALL)\include /Isrc /I. /nologo /W3 /EHsc /FD /c -D_CRT_SECURE_NO_WARNINGS -DLIBCOUCHBASE_INTERNAL=1
 DLLLDFLAGS = /dll /incremental:no /opt:ref,icf /version:1.1
 LDFLAGS =  /nologo /LIBPATH:$(INSTALL)\lib
 LD = link.exe
