@@ -78,6 +78,7 @@ extern "C" {
         LCB_CONNECT_EISCONN,
         LCB_CONNECT_EINTR,
         LCB_CONNECT_EFAIL,
+        LCB_CONNECT_EINVAL,
         LCB_CONNECT_EUNHANDLED
     } lcb_connect_status_t;
 

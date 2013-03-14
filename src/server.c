@@ -657,6 +657,7 @@ static void server_connect_handler(lcb_socket_t sock, short which, void *arg)
 static void server_connect(lcb_server_t *server)
 {
     int retry;
+    int retry_once = 0;
     int save_errno;
 
     do {
@@ -703,7 +704,14 @@ static void server_connect(lcb_server_t *server)
                 return ;
             case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return ;
-
+            case LCB_CONNECT_EINVAL:
+                if (!retry_once) {     /* First time get WSAEINVAL error - do retry */
+                    retry = 1;
+                    retry_once = 1;
+                    break;
+                } else {               /* Second time get WSAEINVAL error - it is permanent error */
+                    retry_once = 0;    /* go to LCB_CONNECT_EFAIL brench (no break or return) */
+                }
             case LCB_CONNECT_EFAIL:
                 if (server->curr_ai->ai_next) {
                     retry = 1;

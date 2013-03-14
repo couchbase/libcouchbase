@@ -75,7 +75,9 @@ lcb_connect_status_t lcb_connect_status(int err)
         /* Possible to get these from a bad dns lookup */
     case EAFNOSUPPORT:
     case EINVAL:
-
+#ifdef _WIN32
+        return LCB_CONNECT_EINVAL;
+#endif
     case ECONNREFUSED:
 
     case ENETUNREACH:

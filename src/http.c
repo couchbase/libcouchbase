@@ -455,6 +455,7 @@ static void request_connected(lcb_http_request_t req)
 static lcb_error_t request_connect(lcb_http_request_t req)
 {
     int retry;
+    int retry_once = 0;
     int save_errno;
 
     do {
@@ -495,7 +496,14 @@ static lcb_error_t request_connect(lcb_http_request_t req)
                 return LCB_SUCCESS;
             case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return LCB_SUCCESS;
-
+            case LCB_CONNECT_EINVAL:
+                if (!retry_once) {     /* First time get WSAEINVAL error - do retry */
+                    retry = 1;
+                    retry_once = 1;
+                    break;
+                } else {               /* Second time get WSAEINVAL error - it is permanent error */
+                    retry_once = 0;    /* go to LCB_CONNECT_EFAIL brench (no break or return) */
+                }
             case LCB_CONNECT_EFAIL:
                 if (req->curr_ai->ai_next) {
                     retry = 1;

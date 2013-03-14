@@ -1119,6 +1119,7 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
 {
     lcb_t instance = arg;
     int retry;
+    int retry_once = 0;
     lcb_connect_status_t connstatus = LCB_CONNECT_OK;
     int save_errno;
     do {
@@ -1174,7 +1175,15 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
                 return ;
             case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
                 return ;
-
+            case LCB_CONNECT_EINVAL:
+                if (!retry_once) {     /* First time get WSAEINVAL error - do retry */
+                    retry = 1;
+                    retry_once = 1;
+                    break;
+                } else {               /* Second time get WSAEINVAL error - it is permanent error */
+                    retry_once = 0;    /* go to default brench (no break or return) */
+                    connstatus = LCB_CONNECT_EFAIL;
+                }
             default: {
                 release_socket(instance);
                 if (connstatus == LCB_CONNECT_EFAIL &&
