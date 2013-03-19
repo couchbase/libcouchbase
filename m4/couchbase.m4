@@ -79,10 +79,10 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   SPRO_WERROR="-errwarn=%all"
   SPRO_C_OPTIMIZE="-O -xbuiltin=%default"
   SPRO_CXX_OPTIMIZE="-O -xbuiltin=%default"
-  SPRO_C_DEBUG="-g3 -traceback=common -xcheck=%all"
-  SPRO_CXX_DEBUG="-g3 -traceback=common -xcheck=%all"
+  SPRO_C_DEBUG="-g -xcheck=%all"
+  SPRO_CXX_DEBUG="-g"
   SPRO_VISIBILITY="-xldscope=hidden"
-  SPRO_CPPFLAGS="-mt=yes -D_THREAD_SAFE"
+  SPRO_CPPFLAGS="-mt -D_THREAD_SAFE"
   SPRO_CXXFLAGS="-xlang=c99 -compat=5 -library=stlport4 -template=no%extdef"
   SPRO_C89="-Xt -xc99=none"
   SPRO_C99="-D_XOPEN_SOURCE=600 -xc99=all"
@@ -90,7 +90,7 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   SPRO_CPP_WARNINGS="-errhdr=%user -errfmt=error -errshort=full -errtags "
   SPRO_C_COMPILER_WARNINGS="-v"
   SPRO_CXX_COMPILER_WARNINGS="+w +w2"
-  SPRO_LDFLAGS="-mt=yes"
+  SPRO_LDFLAGS="-mt"
 
   AC_CHECK_DECL([__SUNPRO_C], [SUNCC="yes"], [SUNCC="no"])
   AC_CHECK_DECL([__GNUC__], [GCC="yes"], [GCC="no"])
