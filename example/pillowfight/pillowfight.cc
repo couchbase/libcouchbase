@@ -604,12 +604,15 @@ static void handle_options(int argc, char **argv)
 std::list<ThreadContext *> contexts;
 InstancePool *pool = NULL;
 
-static void setup_sigint_handler(void (handler)(int));
-
 extern "C" {
+    typedef void (*handler_t)(int);
+
     static void cruel_handler(int);
     static void gentle_handler(int);
 }
+
+static void setup_sigint_handler(handler_t handler);
+
 
 static void cruel_handler(int)
 {
@@ -629,7 +632,7 @@ static void gentle_handler(int)
     setup_sigint_handler(cruel_handler);
 }
 
-static void setup_sigint_handler(void (handler)(int))
+static void setup_sigint_handler(handler_t handler)
 {
     struct sigaction action;
 
@@ -649,6 +652,7 @@ static void *thread_worker(void *arg)
     ctx->populate(0, config.maxKey);
     ctx->run();
     pthread_exit(NULL);
+    return NULL;
 }
 
 /**
