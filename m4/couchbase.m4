@@ -56,6 +56,10 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
                             [pthread], [PTHREAD=yes])
              ])
 
+  AM_CFLAGS="$CFLAGS $AM_CFLAGS"
+  AM_CPPFLAGS="$CPPFLAGS $AM_CPPFLAGS"
+  AM_LDFLAGS="$LDFLAGS $AM_LDFLAGS"
+
   GCC_NO_WERROR="-Wno-error"
   GCC_WERROR="-Werror"
   GCC_C_OPTIMIZE="-O3"

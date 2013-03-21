@@ -18,6 +18,7 @@ m4_include([m4/version.m4])
 AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
 AC_CONFIG_SRCDIR([src/internal.h])
 AC_CONFIG_AUX_DIR(config)
+AC_CANONICAL_HOST
 
 # Preserve what the user specified as CFLAGS/CXXFLAGS/CPPFLAGS/LDFLAGS
 SAVE_CFLAGS="$CFLAGS"
@@ -56,6 +57,17 @@ AS_IF([test "x$CXXFLAGS" = "x-I." ],
       [CXXFLAGS=""])
 AS_IF([test "x$CPPFLAGS" = "x-I." ],
       [CPPFLAGS=""])
+
+# It is common to install all stuff to /usr/local prefix on FreeBSD
+case "$host_os" in
+    freebsd*)
+    ac_default_prefix=/usr/local
+    AS_IF([test "x${ac_cv_env_CPPFLAGS_set}" = "x"],
+          [CPPFLAGS="${CPPFLAGS} -I/usr/local/include"])
+    AS_IF([test "x${ac_cv_env_LDFLAGS_set}" = "x"],
+          [LDFLAGS="${LDFLAGS} -L/usr/local/lib -L/usr/local/lib/event2"])
+    ;;
+esac
 
 # the malloc tests seems to be broken for cross compilation.. ignore them
 ac_cv_func_malloc_0_nonnull=yes
@@ -544,10 +556,23 @@ AC_CACHE_CHECK([for SystemTap/DTrace requirements], [ac_cv_enable_dtrace], [
          ac_cv_enable_dtrace=no
       ])
 ])
-AS_IF([test "x$ac_cv_enable_dtrace" = "xyes"],
+AC_CACHE_CHECK([if dtrace works], [ac_cv_dtrace_works],
+               [
+                 cat > conftest.d <<EOF
+provider ConfTest {
+    probe ac_test(int);
+};
+EOF
+                 $DTRACE -h -o conftest.h -s conftest.d 2>/dev/zero
+                 AS_IF([test $? -eq 0],
+                       [ac_cv_dtrace_works=yes],
+                       [ac_cv_dtrace_works=no])
+                 rm -f conftest.h conftest.d
+               ])
+AS_IF([test "x$ac_cv_enable_dtrace" = "xyes" -a "x$ac_cv_dtrace_works" = "xyes"],
       [AC_DEFINE([HAVE_DTRACE], [1], [Enables SystemTap / DTrace Support])])
 
-AM_CONDITIONAL([ENABLE_DTRACE], [test "x$ac_cv_enable_dtrace" = xyes ])
+AM_CONDITIONAL([ENABLE_DTRACE], [test "x$ac_cv_enable_dtrace" = "xyes" -a "x$ac_cv_dtrace_works" = "xyes" ])
 AM_CONDITIONAL([DTRACE_INSTRUMENT_OBJECT],
                [test "x$ac_cv_have_decl___sun" = "xyes"])
 AM_CONDITIONAL([APPLE_DTRACE], [test "x$ac_cv_have_decl__APPLE__" = "xyes"])
