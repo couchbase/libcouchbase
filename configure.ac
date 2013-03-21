@@ -289,6 +289,7 @@ AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
   [ saved_libs="$LIBS"
     LIBS=-levent
     AC_TRY_LINK([
+      #include <stdlib.h>
       #include <sys/types.h>
       #include <event2/event.h>
             ],[
