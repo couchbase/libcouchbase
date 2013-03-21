@@ -25,8 +25,9 @@ function with the following signature:
 
     void function(lcb_t instance,
                   const void* cookie,
+                  lcb_storage_t operation,
                   lcb_error_t error,
-                  lcb_store_resp_t * resp);
+                  const lcb_store_resp_t *resp);
 
 instance is the libcouchbase instance that this response is called
 from.  The cookie is cookie you passed to lcb_store. error is the
@@ -71,6 +72,7 @@ Example 2: Install custom callback
 
          ...
          static void callback(lcb_t instance, const void *cookie,
+                              lcb_storage_t operation,
                               lcb_error_t error,
                               const lcb_store_resp_t *resp)
          {
