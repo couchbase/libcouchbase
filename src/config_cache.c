@@ -21,7 +21,7 @@ int lcb_load_config_cache(lcb_t instance)
 {
     ringbuffer_t buffer;
     char line[1024];
-    ssize_t nr;
+    lcb_ssize_t nr;
     int fail;
     FILE *fp;
     VBUCKET_CONFIG_HANDLE config;
