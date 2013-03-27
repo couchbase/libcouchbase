@@ -68,6 +68,13 @@ int lcb_load_config_cache(lcb_t instance)
 
     fclose(fp);
 
+    /* write the terminal NUL for strstr */
+    if (ringbuffer_ensure_capacity(&buffer, 1) == -1) {
+        ringbuffer_destruct(&buffer);
+        return -1;
+    }
+    ringbuffer_write(&buffer, "", 1);
+
     end = strstr((char *)ringbuffer_get_read_head(&buffer),
                  "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}");
     if (end == NULL) {
