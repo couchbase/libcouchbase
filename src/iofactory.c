@@ -106,6 +106,9 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
 static lcb_error_t create_v1(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
 
+static lcb_error_t create_v2(lcb_io_opt_t *io,
+                             const struct lcb_create_io_ops_st *options);
+
 #define USE_PLUGIN(OPTS, PLUGIN_NAME, PLUGIN_CONST)             \
         switch (OPTS->version) {                                \
         case 0:                                                 \
@@ -172,6 +175,8 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
         return create_v0(io, &options);
     case 1:
         return create_v1(io, &options);
+    case 2:
+        return create_v2(io, &options);
     default:
         return LCB_NOT_SUPPORTED;
     }
@@ -244,7 +249,27 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
     } else {
         lcb_io_opt_t iop = *io;
         iop->dlhandle = plugin.dlhandle;
-        /* check if plugin select compatible version */
+        /* check if plugin selected compatible version */
+        if (iop->version < 0 || iop->version > 0) {
+            lcb_destroy_io_ops(iop);
+            return LCB_PLUGIN_VERSION_MISMATCH;
+        }
+    }
+
+    return LCB_SUCCESS;
+}
+
+static lcb_error_t create_v2(lcb_io_opt_t *io,
+                             const struct lcb_create_io_ops_st *options)
+{
+    lcb_error_t ret;
+
+    ret = options->v.v2.create(0, io, options->v.v2.cookie);
+    if (ret != LCB_SUCCESS) {
+        return ret;
+    } else {
+        lcb_io_opt_t iop = *io;
+        /* check if plugin selected compatible version */
         if (iop->version < 0 || iop->version > 0) {
             lcb_destroy_io_ops(iop);
             return LCB_PLUGIN_VERSION_MISMATCH;
