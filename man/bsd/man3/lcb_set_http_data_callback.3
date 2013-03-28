@@ -2,12 +2,12 @@
 .\"     Title: lcb_set_http_data_callback
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/07/2013
+.\"      Date: 03/28/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_SET_HTTP_DATA_CA" "3" "01/07/2013" "\ \&" "\ \&"
+.TH "LCB_SET_HTTP_DATA_CA" "3" "03/28/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -46,10 +46,11 @@ Passing NULL as the callback function may be used to query the current callback 
 .RS 4
 .\}
 .nf
-void function(lcb_t instance,
+void function(lcb_http_request_t request,
+              lcb_t instance,
               const void* cookie,
               lcb_error_t error,
-              lcb_http_resp_t * resp);
+              const lcb_http_resp_t *resp);
 .fi
 .if n \{\
 .RE
@@ -73,7 +74,7 @@ typedef struct {
             lcb_size_t nbytes; /* The number of bytes in the content */
         } v0;
     } v;
-} lcb_http_data_resp_t;
+} lcb_http_resp_t;
 .fi
 .if n \{\
 .RE
@@ -129,9 +130,10 @@ Example 2: Install custom callback
 .\}
 .nf
 \&.\&.\&.
-static void callback(lcb_t instance, const void *cookie,
+static void callback(lcb_http_request_t request,
+                     lcb_t instance, const void *cookie,
                      lcb_error_t error,
-                     const lcb_http_data_resp_t *resp)
+                     const lcb_http_resp_t *resp)
 {
    if (error == LCB_SUCCESS) {
       switch (resp\->version) {

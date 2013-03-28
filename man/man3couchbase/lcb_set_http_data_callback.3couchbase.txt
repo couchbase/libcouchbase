@@ -28,10 +28,11 @@ Passing NULL as the callback function may be used to query the current
 callback function. The lcb_http_data_callback is a function with the
 following signature:
 
-    void function(lcb_t instance,
+    void function(lcb_http_request_t request,
+                  lcb_t instance,
                   const void* cookie,
                   lcb_error_t error,
-                  lcb_http_resp_t * resp);
+                  const lcb_http_resp_t *resp);
 
 instance is the libcouchbase instance that this response is called
 from.  The cookie is cookie you passed to lcb_make_http_request.
@@ -51,7 +52,7 @@ lcb_http_resp_t is a structure defined in <libcouchbase/arguments.h>:
                 lcb_size_t nbytes; /* The number of bytes in the content */
             } v0;
         } v;
-    } lcb_http_data_resp_t;
+    } lcb_http_resp_t;
 
 
 The callback function will be called for each chunk received. When all
@@ -82,9 +83,10 @@ Example 2: Install custom callback
          #include <libcouchbase/couchbase.h>
 
          ...
-         static void callback(lcb_t instance, const void *cookie,
+         static void callback(lcb_http_request_t request,
+                              lcb_t instance, const void *cookie,
                               lcb_error_t error,
-                              const lcb_http_data_resp_t *resp)
+                              const lcb_http_resp_t *resp)
          {
             if (error == LCB_SUCCESS) {
                switch (resp->version) {
