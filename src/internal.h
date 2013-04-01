@@ -229,6 +229,7 @@ extern "C" {
                     time_t mtime;
                     char *cachefile;
                     int updating;
+                    int needs_update;
                 } cached;
             } value;
         } compat;
@@ -549,6 +550,9 @@ extern "C" {
 
     int lcb_load_config_cache(lcb_t instance);
     void lcb_refresh_config_cache(lcb_t instance);
+    void lcb_schedule_config_cache_refresh(lcb_t instance);
+    void lcb_update_vbconfig(lcb_t instance,
+                             VBUCKET_CONFIG_HANDLE next_config);
 
 #ifdef __cplusplus
 }

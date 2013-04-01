@@ -653,26 +653,26 @@ static void relocate_packets(lcb_server_t *src,
 }
 
 /**
- * Update the list of servers and connect to the new ones
- * @param instance the instance to update the serverlist for.
- *
- * @todo use non-blocking connects and timeouts
+ * Read the configuration data from the socket. Also write the config to the
+ * cachefile, if such exists, and the config is valid.
  */
-static void lcb_update_serverlist(lcb_t instance)
+static int grab_http_config(lcb_t instance, VBUCKET_CONFIG_HANDLE *config)
 {
-    lcb_size_t ii;
-    VBUCKET_CONFIG_HANDLE next_config, curr_config;
-    VBUCKET_CONFIG_DIFF *diff = NULL;
-    lcb_size_t nservers;
-    lcb_server_t *servers, *ss;
-
-    curr_config = instance->vbucket_config;
-    next_config = vbucket_config_create();
-    if (next_config == NULL) {
+    *config = vbucket_config_create();
+    if (*config == NULL) {
         lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
                           "Failed to allocate memory for config");
-        return;
+        return -1;
     }
+
+    if (vbucket_config_parse(*config, LIBVBUCKET_SOURCE_MEMORY,
+                             instance->vbucket_stream.input.data) != 0) {
+        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
+                          vbucket_get_error_message(*config));
+        vbucket_config_destroy(*config);
+        return -1;
+    }
+    instance->vbucket_stream.input.avail = 0;
 
     if (instance->compat.type == LCB_CACHED_CONFIG) {
         FILE *fp = fopen(instance->compat.value.cached.cachefile, "w");
@@ -684,15 +684,40 @@ static void lcb_update_serverlist(lcb_t instance)
         instance->compat.value.cached.updating = 0;
         instance->compat.value.cached.mtime = time(NULL) - 1;
     }
+    return 0;
+}
 
-    if (vbucket_config_parse(next_config, LIBVBUCKET_SOURCE_MEMORY,
-                             instance->vbucket_stream.input.data) != 0) {
-        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
-                          vbucket_get_error_message(next_config));
-        vbucket_config_destroy(next_config);
-        return;
+/**
+ * Update the list of servers and connect to the new ones
+ *
+ * @param instance the instance to update the serverlist for.
+ * @param next_config a ready-to-use VBUCKET_CONFIG_HANDLE containing the
+ * updated config. May be null, in which case the config from the read buffer
+ * is used.
+ *
+ * @todo use non-blocking connects and timeouts
+ */
+void lcb_update_vbconfig(lcb_t instance,
+                         VBUCKET_CONFIG_HANDLE next_config)
+{
+    lcb_size_t ii;
+    VBUCKET_CONFIG_HANDLE curr_config;
+    VBUCKET_CONFIG_DIFF *diff = NULL;
+    lcb_size_t nservers;
+    lcb_server_t *servers, *ss;
+    int is_cached = next_config != NULL;
+
+    curr_config = instance->vbucket_config;
+
+    /**
+     * If we're not passed a new config object, it means we parse it from the
+     * read buffer. Otherwise assume it's from some "compat" mode
+     */
+    if (!next_config) {
+        if (grab_http_config(instance, &next_config) == -1) {
+            return;
+        }
     }
-    instance->vbucket_stream.input.avail = 0;
 
     if (curr_config) {
         diff = vbucket_compare(curr_config, next_config);
@@ -758,10 +783,24 @@ static void lcb_update_serverlist(lcb_t instance)
             }
         }
         instance->callbacks.configuration(instance, LCB_CONFIGURATION_NEW);
-        instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
         instance->connected = 1;
-        lcb_maybe_breakout(instance);
     }
+
+    /**
+     * Remove the timer. We aren't waiting for updated configurations anyway
+     */
+    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
+
+    /**
+     * If we're using a cached config, we should not need a socket connection.
+     * Disconnect the socket, if it's there
+     */
+    if (is_cached) {
+        release_socket(instance);
+    }
+
+    lcb_maybe_breakout(instance);
+
 }
 
 /**
@@ -1117,7 +1156,7 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
                 if (term != NULL) {
                     *term = '\0';
                     instance->vbucket_stream.input.avail -= 4;
-                    lcb_update_serverlist(instance);
+                    lcb_update_vbconfig(instance, NULL);
                 }
 
                 instance->vbucket_stream.chunk_size = (lcb_size_t) - 1;
@@ -1180,6 +1219,7 @@ static void lcb_instance_connect_handler(lcb_socket_t sock,
         }
 
         retry = 0;
+
         if (instance->io->v.v0.connect(instance->io,
                                        instance->sock,
                                        instance->curr_ai->ai_addr,
@@ -1317,7 +1357,6 @@ static void initial_connect_timeout_handler(lcb_socket_t sock,
                                             void *arg)
 {
     lcb_t instance = arg;
-
     /* try to switch to backup node and just return on success */
     if (lcb_switch_to_backup_node(instance, LCB_CONNECT_ERROR,
                                   "Could not connect to server within allotted time") != -1) {

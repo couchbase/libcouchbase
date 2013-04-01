@@ -727,7 +727,7 @@ static void server_connect(lcb_server_t *server)
 
                 if (server->instance->compat.type == LCB_CACHED_CONFIG) {
                     /* Try to update the cache :S */
-                    lcb_refresh_config_cache(server->instance);
+                    lcb_schedule_config_cache_refresh(server->instance);
                     return;
                 }
 

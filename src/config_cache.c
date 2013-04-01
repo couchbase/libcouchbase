@@ -88,13 +88,14 @@ int lcb_load_config_cache(lcb_t instance)
     ringbuffer_destruct(&buffer);
 
     if (!fail) {
-        lcb_apply_vbucket_config(instance, config);
+        lcb_update_vbconfig(instance, config);
         instance->compat.value.cached.mtime = st.st_mtime;
         return 0;
     }
 
     return -1;
 }
+
 
 void lcb_refresh_config_cache(lcb_t instance)
 {
@@ -108,4 +109,19 @@ void lcb_refresh_config_cache(lcb_t instance)
         instance->compat.value.cached.updating = 1;
         lcb_connect(instance);
     }
+
+    instance->compat.value.cached.needs_update = 0;
+}
+
+void lcb_schedule_config_cache_refresh(lcb_t instance)
+{
+    if (instance->compat.value.cached.updating) {
+        return;
+    }
+
+    if (instance->compat.value.cached.needs_update) {
+        return;
+    }
+
+    instance->compat.value.cached.needs_update = 1;
 }

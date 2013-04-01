@@ -48,7 +48,7 @@ static int do_fill_input_buffer(lcb_server_t *c)
         default:
             if (c->instance->compat.type == LCB_CACHED_CONFIG) {
                 /* Try to update the cache :S */
-                lcb_refresh_config_cache(c->instance);
+                lcb_schedule_config_cache_refresh(c->instance);
                 return 0;
             }
 
@@ -62,7 +62,7 @@ static int do_fill_input_buffer(lcb_server_t *c)
 
         if (c->instance->compat.type == LCB_CACHED_CONFIG) {
             /* Try to update the cache :S */
-            lcb_refresh_config_cache(c->instance);
+            lcb_schedule_config_cache_refresh(c->instance);
             return 0;
         }
 
@@ -74,6 +74,23 @@ static int do_fill_input_buffer(lcb_server_t *c)
     }
 
     return 1;
+}
+
+static void swallow_command(lcb_server_t *c,
+                            protocol_binary_response_header *header,
+                            int was_connected)
+{
+    lcb_size_t nr;
+    protocol_binary_request_header req;
+    if (was_connected &&
+            (header->response.opcode != PROTOCOL_BINARY_CMD_STAT ||
+             header->response.keylen == 0)) {
+        nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
+        assert(nr == sizeof(req));
+        ringbuffer_consumed(&c->cmd_log, ntohl(req.request.bodylen));
+        ringbuffer_consumed(&c->output_cookies,
+                            sizeof(struct lcb_command_data_st));
+    }
 }
 
 static int parse_single(lcb_server_t *c, hrtime_t stop)
@@ -185,13 +202,8 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
             }
 
             /* keep command and cookie until we get complete STAT response */
-            if (was_connected &&
-                    (header.response.opcode != PROTOCOL_BINARY_CMD_STAT || header.response.keylen == 0)) {
-                nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
-                assert(nr == sizeof(req));
-                ringbuffer_consumed(&c->cmd_log, ntohl(req.request.bodylen));
-                ringbuffer_consumed(&c->output_cookies, sizeof(ct));
-            }
+            swallow_command(c, &header, was_connected);
+
         } else {
             int idx;
             char *body;
@@ -199,17 +211,25 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
             lcb_server_t *new_srv;
 
             if (c->instance->compat.type == LCB_CACHED_CONFIG) {
-                lcb_refresh_config_cache(c->instance);
+                lcb_schedule_config_cache_refresh(c->instance);
             }
 
             /* re-schedule command to new server */
-            nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
-            assert(nr == sizeof(req));
             idx = vbucket_found_incorrect_master(c->instance->vbucket_config,
                                                  ntohs(req.request.vbucket),
                                                  (int)c->index);
+
+            if (idx == -1) {
+                swallow_command(c, &header, was_connected);
+                break;
+            }
+
             assert((lcb_size_t)idx < c->instance->nservers);
             new_srv = c->instance->servers + idx;
+
+            nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
+            assert(nr == sizeof(req));
+
             req.request.opaque = ++c->instance->seqno;
             nbody = ntohl(req.request.bodylen);
             body = malloc(nbody);
@@ -335,15 +355,31 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
     (void)cookie;
 }
 
+static void event_complete_common(lcb_t instance)
+{
+    if (instance->compat.type == LCB_CACHED_CONFIG &&
+            instance->compat.value.cached.needs_update) {
+        lcb_refresh_config_cache(instance);
+    }
+
+    lcb_maybe_breakout(instance);
+
+    /* Make it known that this was a success. */
+    lcb_error_handler(instance, LCB_SUCCESS, NULL);
+}
+
 void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_server_t *c = arg;
+    lcb_t instance = c->instance;
     (void)sock;
+
     if (which & LCB_WRITE_EVENT) {
         if (do_send_data(c) != 0) {
             /* TODO stash error message somewhere
              * "Failed to send to the connection to \"%s:%s\"", c->hostname, c->port */
             lcb_failout_server(c, LCB_NETWORK_ERROR);
+            event_complete_common(instance);
             return;
         }
     }
@@ -353,6 +389,7 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
             /* TODO stash error message somewhere
              * "Failed to read from connection to \"%s:%s\"", c->hostname, c->port */
             lcb_failout_server(c, LCB_NETWORK_ERROR);
+            event_complete_common(instance);
             return;
         }
     }
@@ -372,10 +409,8 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
                                        c->event, which, c,
                                        lcb_server_event_handler);
 
-    lcb_maybe_breakout(c->instance);
+    event_complete_common(instance);
 
-    /* Make it known that this was a success. */
-    lcb_error_handler(c->instance, LCB_SUCCESS, NULL);
 }
 
 int lcb_has_data_in_buffers(lcb_t instance)
@@ -397,6 +432,9 @@ int lcb_has_data_in_buffers(lcb_t instance)
 
 void lcb_maybe_breakout(lcb_t instance)
 {
+    /**
+     * So we're done with normal operations. See if we need a refresh
+     */
     if (instance->wait) {
         if (!lcb_has_data_in_buffers(instance)
                 && hashset_num_items(instance->timers) == 0) {
