@@ -44,8 +44,8 @@ lcb_error_t lcb_wait(lcb_t instance)
     }
 
     if (!instance->connected && !lcb_has_data_in_buffers(instance)
-        && instance->compat.type == LCB_CACHED_CONFIG
-        && instance->vbucket_config != NULL) {
+            && instance->compat.type == LCB_CACHED_CONFIG
+            && instance->vbucket_config != NULL) {
         return LCB_SUCCESS;
     }
 

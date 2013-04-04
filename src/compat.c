@@ -180,7 +180,8 @@ static lcb_error_t create_memcached_config(const struct lcb_memcached_st *user,
     return LCB_SUCCESS;
 }
 
-static const char *get_tmp_dir(void) {
+static const char *get_tmp_dir(void)
+{
     const char *ret;
     if ((ret = getenv("TMPDIR")) != NULL) {
         return ret;
@@ -195,7 +196,8 @@ static const char *get_tmp_dir(void) {
     return NULL;
 }
 
-static char *mkcachefile(const char *name, const char *bucket) {
+static char *mkcachefile(const char *name, const char *bucket)
+{
     if (name != NULL) {
         return strdup(name);
     } else {

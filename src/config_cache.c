@@ -42,7 +42,7 @@ int lcb_load_config_cache(lcb_t instance)
     }
 
     if ((config = vbucket_config_create()) == NULL ||
-        ringbuffer_initialize(&buffer, 2048) == -1) {
+            ringbuffer_initialize(&buffer, 2048) == -1) {
         /* You'll have to do full bootsrap ;-) */
         if (config != NULL) {
             vbucket_config_destroy(config);

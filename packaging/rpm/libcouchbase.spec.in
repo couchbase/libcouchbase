@@ -112,6 +112,45 @@ Development files for the Couchbase Client & Protocol Library
 
 %changelog
 
+* Fri Apr 05 2013 Sergey Avseyev <sergey@couchbase.com> - 2.0.5
+[Sergey Avseyev]
+- cbc.cc: Put newline after document body for interactive users
+- pillowfight.cc: Initialize seqno array with rand()
+- pillowfight.cc: initialize data blob with pattern
+- pillowfight.cc: fix leaking event loop descriptors
+- pillowfight.cc: allow gracefully terminate the loop
+- pillowfight.cc: use C linkage for signal handlers
+- pillowfight.cc: put new lines before connect errors
+- pillowfight.cc: extract pool object out of thread context
+- pillowfight.cc: use SIG_IGN instead
+- pillowfight.cc: allow to share IO object in single-threaded mode only
+- pillowfight.cc: use pthreads
+- EAFNOSUPPORT should be mapped to LCB_CONNECT_EFAIL on windows
+- configure.ac: NULL isn't standard thing, so require stdlib.h
+- Fix build for FreeBSD
+- Fix lcb_set_store_callback() signature in man page
+- Fix manpages for HTTP callbacks
+
+[Trond Norbye]
+- Extend pillowfight a bit
+- Fix spelling in lcb_behavior_get_syncmode man page
+- Disable pillowfight for win32
+- Fix compile problems on macosx
+- Use _WIN32 instead of WIN32
+- Fixed purging during disconnect
+- Adjust flags to support older Sun Studios
+- Support C++ compilers without C99 __func__
+- Fix compile failure on Solaris with Sun Studio
+- URL-encode characters in the path
+- CCBC-190: Create compat mode that cache configuration
+- ssize_t ==> lcb_ssize_t
+
+[Yury Alioshinov]
+- Reconnect on EINVAL for windows
+
+[Mark Nunberg]
+- NUL-terminate config cache buffer after reading
+
 * Wed Mar 06 2013 Sergey Avseyev <sergey@couchbase.com> - 2.0.4
 [Sergey Avseyev]
 - CCBC-175 Work properly on systems where EWOULDBLOCK != EAGAIN

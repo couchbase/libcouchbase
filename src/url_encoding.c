@@ -17,7 +17,8 @@
 
 #include "internal.h"
 
-static int maybe_skip_encoding(const char *p, int c, int l) {
+static int maybe_skip_encoding(const char *p, int c, int l)
+{
     int ii;
     p += c;
 
@@ -44,7 +45,8 @@ static int maybe_skip_encoding(const char *p, int c, int l) {
     return 1;
 }
 
-static int is_legal_uri_character(char c) {
+static int is_legal_uri_character(char c)
+{
     if (isalpha(c) || isdigit(c)) {
         return 1;
     }
@@ -124,13 +126,13 @@ lcb_error_t lcb_urlencode_path(const char *path,
             int numbytes;
             int xx;
 
-            if ((c & 0x80) == 0) { // Ascii character
+            if ((c & 0x80) == 0) {  /* ASCII character */
                 numbytes = 1;
-            } else if ((c & 0xE0) == 0xC0) { // 110x xxxx
+            } else if ((c & 0xE0) == 0xC0) {    /* 110x xxxx */
                 numbytes = 2;
-            } else if ((c & 0xF0 ) == 0xE0) { // 1110 xxxx
+            } else if ((c & 0xF0) == 0xE0) {    /* 1110 xxxx */
                 numbytes = 3;
-            } else if ((c & 0xF8) == 0xF0) { // 1111 0xxx
+            } else if ((c & 0xF8) == 0xF0) {    /* 1111 0xxx */
                 numbytes = 4;
             } else {
                 free(op);

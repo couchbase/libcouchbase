@@ -4,9 +4,20 @@ This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
 
-## (Not released)
+## 2.0.5 (2013-04-05)
+
 * [minor] CCBC-190 New compat mode (experimental) for configuration
-                   caching. See man lcb_create_compat
+  caching. See man lcb_create_compat
+
+* [minor] Manpage fixes
+
+* [minor] Fix build on FreeBSD (http://review.couchbase.org/25289)
+
+* [minor] Fix reconnecting issues on windows
+  (http://review.couchbase.org/25170 and
+   http://review.couchbase.org/25155)
+
+* [minor] pillowfight example, now allows to use threads
 
 ## 2.0.4 (2013-03-06)
 

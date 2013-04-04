@@ -779,7 +779,7 @@ static void sasl_step_response_handler(lcb_server_t *server,
                       "SASL AUTH CONTINUE not supported yet");
 
 #if 0
-    // I should put the server to the notification!
+    /* I should put the server to the notification! */
     if (server->instance->vbucket_state_listener != NULL) {
         server->instance->vbucket_state_listener(server);
     }
@@ -1102,7 +1102,7 @@ int lcb_dispatch_response(lcb_server_t *c,
         observe_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_NOOP:
-        // Ignore
+        /* Ignore */
         break;
     default:
         return -1;
