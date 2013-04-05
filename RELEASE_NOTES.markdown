@@ -20,7 +20,7 @@ bugfixes. Do not forget to update this doc in every important patch.
   (http://review.couchbase.org/25170 and
    http://review.couchbase.org/25155)
 
-* [minor] pillowfight example, now allows to use threads
+* [minor] pillowfight example updated to optionally use threads
 
 ## 2.0.4 (2013-03-06)
 
