@@ -904,5 +904,7 @@ void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
     /* deference request only if we know about it */
     if (request_valid(instance, request)) {
         request->cancelled = 1;
+        request->on_complete = NULL;
+        request->on_data = NULL;
     }
 }
