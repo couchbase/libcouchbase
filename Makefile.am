@@ -169,7 +169,7 @@ libcouchbase_la_SOURCES += src/gethrtime.c
 endif
 
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
-libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
+libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -DLCB_LIBDIR="\"${libdir}\""
 libcouchbase_la_DEPENDENCIES=libhttpparser.la libvbucket.la
 libcouchbase_la_LIBADD=libhttpparser.la libvbucket.la $(LIBSASL)
 

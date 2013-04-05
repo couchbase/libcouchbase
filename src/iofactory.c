@@ -224,8 +224,14 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
         /* try to look up the symbol in the current image */
         lcb_error_t ret2 = get_create_func(NULL, options->v.v1.symbol, &plugin);
         if (ret2 != LCB_SUCCESS) {
-            /* return original error to allow caller to fix it */
-            return ret;
+            char path[PATH_MAX];
+            /* try to look up the so-file in the libdir */
+            snprintf(path, PATH_MAX, "%s/%s", LCB_LIBDIR, options->v.v1.sofile);
+            ret2 = get_create_func(path, options->v.v1.symbol, &plugin);
+            if (ret2 != LCB_SUCCESS) {
+                /* return original error to allow caller to fix it */
+                return ret;
+            }
         }
     }
 

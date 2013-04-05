@@ -90,6 +90,15 @@
 #include <dlfcn.h>
 #endif
 
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#else
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
+#endif
+
+
 #ifdef _WIN32
 #include "win32/win_errno_sock.h"
 #define snprintf _snprintf

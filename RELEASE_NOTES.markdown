@@ -6,6 +6,9 @@ bugfixes. Do not forget to update this doc in every important patch.
 
 ## 2.0.5 (2013-04-05)
 
+* [minor] Try to search the --libdir for modules if dlopen
+  fails to find the module in the default library path
+
 * [minor] CCBC-190 New compat mode (experimental) for configuration
   caching. See man lcb_create_compat
 

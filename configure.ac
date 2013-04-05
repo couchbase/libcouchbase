@@ -189,7 +189,7 @@ AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
                        ws2tcpip.h winsock2.h event.h stdint.h
                        sys/uio.h sys/types.h fcntl.h dlfcn.h
-                       ev.h libev/ev.h sys/sdt.h])
+                       ev.h libev/ev.h sys/sdt.h limits.h])
 
 AS_IF([test "x$ac_cv_header_stdint_h" != "xyes"],
       [AC_MSG_ERROR(Failed to locate stdint.h)])
