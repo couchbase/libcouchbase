@@ -1373,11 +1373,9 @@ static void initial_connect_timeout_handler(lcb_socket_t sock,
                                             void *arg)
 {
     lcb_t instance = arg;
-    /* try to switch to backup node and just return on success */
-    if (lcb_switch_to_backup_node(instance, LCB_CONNECT_ERROR,
-                                  "Could not connect to server within allotted time") != -1) {
-        return;
-    }
+    lcb_error_handler(instance,
+                      LCB_CONNECT_ERROR,
+                      "Could not connect to server within allotted time");
 
     if (instance->sock != INVALID_SOCKET) {
         /* Do we need to delete the event? */
