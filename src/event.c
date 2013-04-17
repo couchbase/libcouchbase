@@ -169,7 +169,6 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
         lcb_error_handler(c->instance, LCB_EINTERNAL,
                           "Protocol error. someone sent us a command!");
         return -1;
-        break;
     case PROTOCOL_BINARY_RES: {
         int was_connected = c->connected;
         if (lcb_server_purge_implicit_responses(c, header.response.opaque, stop, 0) != 0) {
