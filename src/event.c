@@ -339,6 +339,11 @@ static int do_send_data(lcb_server_t *c)
     return 0;
 }
 
+int lcb_flush_send_buffer(lcb_server_t *server) {
+    return do_send_data(server);
+}
+
+
 LIBCOUCHBASE_API
 void lcb_flush_buffers(lcb_t instance, const void *cookie)
 {

@@ -783,12 +783,14 @@ void lcb_server_send_packets(lcb_server_t *server)
 {
     if (server->pending.nbytes > 0 || server->output.nbytes > 0) {
         if (server->connected) {
-            server->instance->io->v.v0.update_event(server->instance->io,
-                                                    server->sock,
-                                                    server->event,
-                                                    LCB_RW_EVENT,
-                                                    server,
-                                                    lcb_server_event_handler);
+            if (server->instance->direct_write_mode == 0 || lcb_flush_send_buffer(server) != 0) {
+                server->instance->io->v.v0.update_event(server->instance->io,
+                                                        server->sock,
+                                                        server->event,
+                                                        LCB_RW_EVENT,
+                                                        server,
+                                                        lcb_server_event_handler);
+            }
         } else {
             server_connect(server);
         }

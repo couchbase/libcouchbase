@@ -234,6 +234,14 @@ extern "C" {
             } value;
         } compat;
 
+        /* It is possible to let the server enter "direct write mode"
+         * causing lcb_server_send_packets to try to write the data
+         * immediately. To enable this mode you have to set the
+         * environment variable LCB_DIRECT_WRITE_MODE before
+         * creating the instance. This mode is currently experimental.
+         */
+        int direct_write_mode;
+
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
 #endif
@@ -553,6 +561,9 @@ extern "C" {
     void lcb_schedule_config_cache_refresh(lcb_t instance);
     void lcb_update_vbconfig(lcb_t instance,
                              VBUCKET_CONFIG_HANDLE next_config);
+
+
+    int lcb_flush_send_buffer(lcb_server_t *server);
 
 #ifdef __cplusplus
 }

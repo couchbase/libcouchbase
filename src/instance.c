@@ -338,6 +338,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
     obj->sock = INVALID_SOCKET;
+    obj->direct_write_mode = getenv("LCB_DIRECT_WRITE_MODE") != NULL;
 
     err = setup_boostrap_hosts(obj, host);
     if (err != LCB_SUCCESS) {
