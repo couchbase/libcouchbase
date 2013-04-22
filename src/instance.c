@@ -388,7 +388,8 @@ lcb_error_t lcb_create(lcb_t *instance,
     offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
                        "%s", LCB_LAST_HTTP_HEADER);
 
-    obj->http_uri = malloc(strlen(buffer) + strlen(host) + 10);
+    /* Add space for: Host: \r\n\r\n" */
+    obj->http_uri = malloc(strlen(buffer) + strlen(host) + 80);
     if (obj->http_uri == NULL) {
         lcb_destroy(obj);
         return LCB_CLIENT_ENOMEM;
