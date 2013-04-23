@@ -637,11 +637,8 @@ static void relocate_packets(lcb_server_t *src,
             idx = vbucket_found_incorrect_master(dst_instance->vbucket_config, vb, idx);
         }
         dst = dst_instance->servers + (lcb_size_t)idx;
-        if (src->connected) {
-            assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
-        } else {
-            assert(ringbuffer_read(&src->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
-        }
+        assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct) ||
+               ringbuffer_read(&src->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         assert(ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
         assert(ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
