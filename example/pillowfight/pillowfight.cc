@@ -43,7 +43,8 @@ public:
         fixedSize(true),
         setprc(33),
         prefix(""),
-        maxSize(1024),
+        maxSize(5120),
+        minSize(50),
         numThreads(1),
         numInstances(1),
         timings(false),
@@ -175,6 +176,7 @@ public:
     uint32_t setprc;
     std::string prefix;
     uint32_t maxSize;
+    uint32_t minSize;
     uint32_t numThreads;
     uint32_t numInstances;
     bool timings;
@@ -302,12 +304,11 @@ private:
     pthread_cond_t cond;
 };
 
-
 class ThreadContext
 {
 public:
     ThreadContext(InstancePool *p) :
-        currSeqno(0), pool(p) {
+        currSeqno(0), rnum(0), pool(p) {
         srand(config.getRandomSeed());
         for (int ii = 0; ii < 8192; ++ii) {
             seqno[ii] = rand();
@@ -321,21 +322,21 @@ public:
             for (uint32_t ii = 0; ii < config.iterations; ++ii) {
                 std::string key;
                 generateKey(key);
-
                 lcb_uint32_t flags = 0;
                 lcb_uint32_t exp = 0;
 
                 if (config.setprc > 0 && (nextSeqno() % 100) < config.setprc) {
+                    lcb_size_t size = nextSeqno() % config.maxSize;
+                    if (size < config.minSize) {
+                        size += config.minSize;
+                    }
                     lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
-                                         config.data, config.maxSize,
+                                         config.data, size,
                                          flags, exp);
                     lcb_store_cmd_t *items[1] = { &item };
                     lcb_store(instance, this, 1, items);
                 } else {
-                    lcb_get_cmd_t item;
-                    memset(&item, 0, sizeof(item));
-                    item.v.v0.key = key.c_str();
-                    item.v.v0.nkey = key.length();
+                    lcb_get_cmd_t item(key.c_str(), key.length());
                     lcb_get_cmd_t *items[1] = { &item };
                     error = lcb_get(instance, this, 1, items);
                     if (error != LCB_SUCCESS) {
@@ -343,7 +344,6 @@ public:
                                   << lcb_strerror(instance, error) << std::endl;
                     }
                 }
-
                 if (ii % 10 == 0) {
                     lcb_wait(instance);
                 } else {
@@ -412,12 +412,12 @@ protected:
 
 private:
     uint32_t nextSeqno() {
-        uint32_t ret = seqno[currSeqno];
-        currSeqno += ret;
+        rnum += seqno[currSeqno];
+        currSeqno++;
         if (currSeqno > 8191) {
-            currSeqno &= 0xff;
+            currSeqno = 0;
         }
-        return ret;
+        return rnum;
     }
 
     void generateKey(std::string &key,
@@ -427,14 +427,14 @@ private:
             ii = nextSeqno() % config.maxKey;
         }
 
-        std::stringstream ss;
-        ss << config.prefix << ":" << ii;
-        key.assign(ss.str());
+        char buffer[21];
+        snprintf(buffer, sizeof(buffer), "%020d", ii);
+        key.assign(buffer);
     }
 
     uint32_t seqno[8192];
     uint32_t currSeqno;
-
+    uint32_t rnum;
     lcb_error_t error;
     InstancePool *pool;
 };
@@ -713,5 +713,6 @@ int main(int argc, char **argv)
     delete pool;
     pthread_attr_destroy(&attr);
     pthread_exit(NULL);
+
     return exit_code;
 }
