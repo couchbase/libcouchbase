@@ -471,7 +471,7 @@ int main(int argc, char **argv)
     cmd.v.v0.method = bytes ? LCB_HTTP_METHOD_POST : LCB_HTTP_METHOD_GET;
     cmd.v.v0.chunked = chunked;
     cmd.v.v0.content_type = "application/json";
-    rc = lcb_make_http_request(instance, NULL, LCB_HTTP_TYPE_VIEW, &cmd, NULL);
+    rc = lcb_make_http_request(instance, &cookie, LCB_HTTP_TYPE_VIEW, &cmd, NULL);
     if (rc != LCB_SUCCESS) {
         fprintf(stderr, "Failed to execute view\n");
         return 1;
