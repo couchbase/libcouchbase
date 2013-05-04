@@ -74,7 +74,7 @@ recent version from git and build from source on your hardware.
 4. Make and check the build (you can also use `make check` to only run
    test suite):
 
-        make && make distcheck
+        make && make distcheck && make install
 
 
 Contact us
