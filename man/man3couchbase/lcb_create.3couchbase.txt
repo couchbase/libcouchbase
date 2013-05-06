@@ -59,7 +59,10 @@ schema than http, and the only supported path is "/pools". If no value
 is specified for host, "localhost:8091" is used.
 
 If specified user and password specifies the credentials used for
-authorization.
+authorization. It is recommended to use principle of least privilege
+when accessing the cluster, i.e. when you only need to perform data
+operations, you should use bucket-level credentials instead of
+Administrator account (see examples 3 and 4).
 
 If specified bucket specifies the bucket in the cluster to connect
 to. If not specified the "default" bucket is selected.
@@ -113,6 +116,27 @@ Example 3: Create an handle to use for management requests
     options.v.v1.user = "Administrator";
     options.v.v1.passwd = "secret";
     options.v.v1.type = LCB_TYPE_CLUSTER;
+
+    err = lcb_create(&instance, &options);
+    if (err != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to create instance: %s\n",
+                lcb_strerror(NULL, err));
+        exit(EXIT_FAILURE);
+    }
+
+Example 4: Create an handle for data requests to protected bucket
+
+    lcb_t instance;
+    lcb_error_t err;
+    struct lcb_create_st options;
+
+    memset(&options, 0, sizeof(options));
+    options.version = 1;
+    options.v.v1.host = "example.com:8091;example.org";
+    options.v.v1.bucket = "protected";
+    options.v.v1.user = "protected";
+    options.v.v1.passwd = "secret";
+    options.v.v1.type = LCB_TYPE_BUCKET;
 
     err = lcb_create(&instance, &options);
     if (err != LCB_SUCCESS) {

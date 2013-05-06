@@ -2,12 +2,12 @@
 .\"     Title: lcb_create
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 02/20/2013
+.\"      Date: 05/06/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CREATE" "3" "02/20/2013" "\ \&" "\ \&"
+.TH "LCB_CREATE" "3" "05/06/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -72,7 +72,7 @@ The "version" member specifies how the "v" union should be interpreted\&. The on
 .sp
 Hosts may be specified as a list of hosts separated by \fI;\fR\&. If the Couchbase cluster is using a non\-standard port, it may be specified by appending ":port" per host\&. ex: "host1;host2:9000;host3"\&. The hostname parameter may alternatively be specified as an URI like: http://hostname:8091/pools\&. libcouchbase does not support any other schema than http, and the only supported path is "/pools"\&. If no value is specified for host, "localhost:8091" is used\&.
 .sp
-If specified user and password specifies the credentials used for authorization\&.
+If specified user and password specifies the credentials used for authorization\&. It is recommended to use principle of least privilege when accessing the cluster, i\&.e\&. when you only need to perform data operations, you should use bucket\-level credentials instead of Administrator account (see examples 3 and 4)\&.
 .sp
 If specified bucket specifies the bucket in the cluster to connect to\&. If not specified the "default" bucket is selected\&.
 .sp
@@ -155,6 +155,51 @@ options\&.v\&.v1\&.host = "host1";
 options\&.v\&.v1\&.user = "Administrator";
 options\&.v\&.v1\&.passwd = "secret";
 options\&.v\&.v1\&.type = LCB_TYPE_CLUSTER;
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+err = lcb_create(&instance, &options);
+if (err != LCB_SUCCESS) {
+    fprintf(stderr, "Failed to create instance: %s\en",
+            lcb_strerror(NULL, err));
+    exit(EXIT_FAILURE);
+}
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Example 4: Create an handle for data requests to protected bucket
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_t instance;
+lcb_error_t err;
+struct lcb_create_st options;
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+memset(&options, 0, sizeof(options));
+options\&.version = 1;
+options\&.v\&.v1\&.host = "example\&.com:8091;example\&.org";
+options\&.v\&.v1\&.bucket = "protected";
+options\&.v\&.v1\&.user = "protected";
+options\&.v\&.v1\&.passwd = "secret";
+options\&.v\&.v1\&.type = LCB_TYPE_BUCKET;
 .fi
 .if n \{\
 .RE
