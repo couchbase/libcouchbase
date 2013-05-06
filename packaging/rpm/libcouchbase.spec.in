@@ -111,6 +111,25 @@ Development files for the Couchbase Client & Protocol Library
 %{_mandir}/man3/*
 
 %changelog
+* Fri Apr 07 2013 Sergey Avseyev <sergey@couchbase.com> - 2.0.6
+[Mark Nunberg]
+- Don't invoke HTTP callbacks after cancellation
+- CCBC-202: Don't try to switch to backup nodes when timeout is reached
+
+[Sergey Avseyev]
+- Minor fix for phrasing on the pillowfight note.
+- CCBC-188 Check if SASL struct valid before disposing
+- example/yajl/couchview.c: pass cookie to the command
+- CCBC-188 Fix segfault when rebalancing
+- CCBC-179 Provide an example about least privilege principle
+
+[Trond Norbye]
+- Fix compile error with sun studio
+- Allow a direct write mode
+- Revert "Allow a direct write mode"
+- Add Host header in http request
+- Fix buffer overrun
+- Tune dump program a bit
 
 * Fri Apr 05 2013 Sergey Avseyev <sergey@couchbase.com> - 2.0.5
 [Sergey Avseyev]

@@ -3,6 +3,34 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+## 2.0.6 (2013-05-07)
+
+* [major] CCBC-188 Fix segfault when rebalancing
+  When a (!connected) server is reconnected, the tasks in its
+  "pending" buffer will be moved into "output" buffer. If its
+  connection is broken again immediately, relocate_packets() will go
+  to wrong path.
+
+* [major] CCBC-202 Don't try to switch to backup nodes when timeout is
+  reached
+
+* [major] CCBC-188 Check if SASL struct is valid before disposing
+
+* [major] Fix compile error with sun studio
+  "src/event.c", line 172: error: statement not reached (E_STATEMENT_NOT_REACHED)
+
+* [major] Don't invoke HTTP callbacks after cancellation, because
+  user code might assume a previously-freed resource is still valid
+
+* [minor] CCBC-179 Added an example to properly use the bucket
+  credentials for authentication instead of administrator credentials
+
+* [minor] example/yajl/couchview.c: pass cookie to the command
+  Fixes coredump when executing ./examples/yajl/couchview
+
+* [minor] CCBC-201 Add Host header in http request
+  http://cbugg.hq.couchbase.com/bug/bug-555 points out that Host is a
+  required field in HTTP 1.1
 
 ## 2.0.5 (2013-04-05)
 
