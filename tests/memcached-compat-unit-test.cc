@@ -38,7 +38,7 @@ TEST_F(MemcachedCompatibility, createInstance)
     lcb_destroy(instance);
 #else
     /* there no IO plugins, so creating connection isn't supported */
-    ASSERT_EQ(LCB_NOT_SUPPORTED,
+    ASSERT_EQ(LCB_DLOPEN_FAILED,
               lcb_create_compat(LCB_MEMCACHED_CLUSTER, &memcached, &instance, NULL));
 #endif
 }
