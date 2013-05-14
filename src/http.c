@@ -93,6 +93,7 @@ static int http_parser_header_cb(http_parser *p, const char *bytes,
     }
     item->data = malloc(nbytes + 1);
     if (item->data == NULL) {
+        free(item);
         lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM,
                           "Failed to allocate buffer");
         return -1;
