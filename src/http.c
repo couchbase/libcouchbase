@@ -35,21 +35,11 @@ static void http_request_destroy(lcb_http_request_t req)
         return;
     }
 
-    if (req->io) {
-        if (req->event) {
-            req->io->v.v0.destroy_event(req->io, req->event);
-        }
-        if (req->sock != INVALID_SOCKET) {
-            req->io->v.v0.close(req->io, req->sock);
-        }
-    }
-    if (req->root_ai) {
-        freeaddrinfo(req->root_ai);
-    }
+    lcb_connection_cleanup(&req->connection);
+
     free(req->path);
     free(req->url);
-    free(req->host);
-    free(req->port);
+
     if (req->parser) {
         free(req->parser->data);
     }
@@ -254,7 +244,7 @@ static int request_do_fill_input_buffer(lcb_http_request_t req)
 
     ringbuffer_get_iov(&req->input, RINGBUFFER_WRITE, iov);
 
-    nr = req->io->v.v0.recvv(req->io, req->sock, iov, 2);
+    nr = req->io->v.v0.recvv(req->io, req->connection.sockfd, iov, 2);
     if (nr == -1) {
         switch (req->io->v.v0.error) {
         case EINTR:
@@ -324,7 +314,7 @@ static int request_do_write(lcb_http_request_t req)
         lcb_ssize_t nw;
 
         ringbuffer_get_iov(&req->output, RINGBUFFER_READ, iov);
-        nw = req->io->v.v0.sendv(req->io, req->sock, iov, 2);
+        nw = req->io->v.v0.sendv(req->io, req->connection.sockfd, iov, 2);
         if (nw == -1) {
             switch (req->io->v.v0.error) {
             case EINTR:
@@ -391,9 +381,12 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
     if (which & LCB_READ_EVENT) {
         rv = request_do_read(req);
         if (rv > 0) {
-            instance->io->v.v0.update_event(instance->io, req->sock,
-                                            req->event, LCB_READ_EVENT,
-                                            req, request_event_handler);
+            instance->io->v.v0.update_event(instance->io,
+                                            req->connection.sockfd,
+                                            req->connection.event,
+                                            LCB_READ_EVENT,
+                                            req,
+                                            request_event_handler);
         } else if (rv < 0) {
             should_continue = 0;
             err = LCB_NETWORK_ERROR;
@@ -408,12 +401,17 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
             should_continue = 0;
 
         } else if (req->output.nbytes == 0) {
-            instance->io->v.v0.update_event(instance->io, req->sock,
-                                            req->event, LCB_READ_EVENT,
-                                            req, request_event_handler);
+            instance->io->v.v0.update_event(instance->io,
+                                            req->connection.sockfd,
+                                            req->connection.event,
+                                            LCB_READ_EVENT,
+                                            req,
+                                            request_event_handler);
         } else {
-            instance->io->v.v0.update_event(instance->io, req->sock,
-                                            req->event, LCB_WRITE_EVENT,
+            instance->io->v.v0.update_event(instance->io,
+                                            req->connection.sockfd,
+                                            req->connection.event,
+                                            LCB_WRITE_EVENT,
                                             req, request_event_handler);
         }
     }
@@ -429,97 +427,38 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
 
 static lcb_error_t request_connect(lcb_http_request_t req);
 
-static void request_connect_handler(lcb_socket_t sock, short which, void *arg)
-{
-    lcb_http_request_t req = (lcb_http_request_t) arg;
-    lcb_error_t err = request_connect((lcb_http_request_t)arg);
 
+static void request_connected(lcb_connection_t conn, lcb_error_t err)
+{
+    lcb_http_request_t req = (lcb_http_request_t)conn->data;
     if (err != LCB_SUCCESS) {
         lcb_http_request_finish(req->instance,
                                 req->server,
                                 req,
                                 err);
+        return;
     }
 
-    (void)sock;
-    (void)which;
-}
-
-
-static void request_connected(lcb_http_request_t req)
-{
-    req->io->v.v0.update_event(req->io, req->sock,
-                               req->event, LCB_WRITE_EVENT,
-                               req, request_event_handler);
+    req->io->v.v0.update_event(req->io, req->connection.sockfd,
+                               req->connection.event,
+                               LCB_WRITE_EVENT,
+                               req,
+                               request_event_handler);
 }
 
 static lcb_error_t request_connect(lcb_http_request_t req)
 {
-    int retry;
-    int retry_once = 0;
-    int save_errno;
+    lcb_connection_result_t result;
+    lcb_connection_t conn = &req->connection;
+    conn->on_connect_complete = request_connected;
+    conn->instance = req->instance;
+    conn->data = req;
+    lcb_connection_getaddrinfo(conn, 0);
+    result = lcb_connection_start(conn, 1, 0);
 
-    do {
-        if (req->sock == INVALID_SOCKET) {
-            /* Try to get a socket.. */
-            req->sock = lcb_gai2sock(req->instance,
-                                     &req->curr_ai,
-                                     &save_errno);
-        }
-
-        if (req->curr_ai == NULL) {
-            return LCB_CONNECT_ERROR;
-        }
-
-        retry = 0;
-        if (req->io->v.v0.connect(req->io,
-                                  req->sock,
-                                  req->curr_ai->ai_addr,
-                                  (unsigned int)req->curr_ai->ai_addrlen) == 0) {
-            /* connected */
-            request_connected(req);
-            return LCB_SUCCESS;
-        } else {
-            switch (lcb_connect_status(req->io->v.v0.error)) {
-            case LCB_CONNECT_EINTR:
-                retry = 1;
-                break;
-            case LCB_CONNECT_EISCONN:
-                request_connected(req);
-                return LCB_SUCCESS;
-            case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
-                req->io->v.v0.update_event(req->io,
-                                           req->sock,
-                                           req->event,
-                                           LCB_WRITE_EVENT,
-                                           req,
-                                           request_connect_handler);
-                return LCB_SUCCESS;
-            case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
-                return LCB_SUCCESS;
-            case LCB_CONNECT_EINVAL:
-                if (!retry_once) {     /* First time get WSAEINVAL error - do retry */
-                    retry = 1;
-                    retry_once = 1;
-                    break;
-                } else {               /* Second time get WSAEINVAL error - it is permanent error */
-                    retry_once = 0;    /* go to LCB_CONNECT_EFAIL brench (no break or return) */
-                }
-            case LCB_CONNECT_EFAIL:
-                if (req->curr_ai->ai_next) {
-                    retry = 1;
-                    req->curr_ai = req->curr_ai->ai_next;
-                    req->io->v.v0.delete_event(req->io, req->sock, req->event);
-                    req->io->v.v0.close(req->io, req->sock);
-                    req->sock = INVALID_SOCKET;
-                    break;
-                } /* Else, we fallthrough */
-
-            default:
-                return LCB_CONNECT_ERROR;
-            }
-        }
-    } while (retry);
+    if (result != LCB_CONN_INPROGRESS) {
+        return LCB_CONNECT_ERROR;
+    }
 
     return LCB_SUCCESS;
 }
@@ -641,13 +580,14 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     break;
 
     case LCB_HTTP_TYPE_MANAGEMENT:
-        nbase = strlen(instance->host) + strlen(instance->port) + 2;
+        nbase = strlen(instance->connection.host) + strlen(instance->connection.port) + 2;
         base = basebuf = calloc(nbase, sizeof(char));
         if (!base) {
             http_request_destroy(req);
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
-        if (snprintf(basebuf, nbase, "%s:%s", instance->host, instance->port) < 0) {
+        if (snprintf(basebuf, nbase, "%s:%s", instance->connection.host,
+                     instance->connection.port) < 0) {
             http_request_destroy(req);
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
@@ -780,13 +720,12 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
 
-#define EXTRACT_URL_PART(field, dst, len)                                   \
-        dst = malloc((len + 1) * sizeof(char));                             \
-        if (dst == NULL) {                                                  \
-            http_request_destroy(req);                                  \
-            return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);     \
-        }                                                                   \
-        strncpy(dst, req->url + req->url_info.field_data[field].off, len);  \
+#define EXTRACT_URL_PART_NOALLOC(field, dst, len) \
+        if (len > sizeof(dst) -1 ) { \
+            http_request_destroy(req); \
+            return lcb_synchandler_return(instance, LCB_E2BIG); \
+        } \
+        strncpy(dst, req->url + req->url_info.field_data[field].off, len); \
         dst[len] = '\0';
 
         nn = strlen(method_strings[req->method]);
@@ -808,10 +747,13 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         }
         BUFF_APPEND(&req->output, "Host: ", 6);
         nn = req->url_info.field_data[UF_HOST].len;
-        EXTRACT_URL_PART(UF_HOST, req->host, nn);
-        BUFF_APPEND(&req->output, req->host, nn);
+
+        EXTRACT_URL_PART_NOALLOC(UF_HOST, req->connection.host, nn);
+        BUFF_APPEND(&req->output, req->connection.host, nn);
+
         nn = req->url_info.field_data[UF_PORT].len;
-        EXTRACT_URL_PART(UF_PORT, req->port, nn);
+        EXTRACT_URL_PART_NOALLOC(UF_PORT, req->connection.port, nn);
+
         /* copy port with leading colon */
         BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_PORT].off - 1, nn + 1);
         if (req->method == LCB_HTTP_METHOD_PUT ||
@@ -848,7 +790,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         } else {
             BUFF_APPEND(&req->output, "\r\n\r\n", 4);
         }
-#undef EXTRACT_URL_PART
     }
 
 #undef BUFF_APPEND
@@ -883,17 +824,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         hashset_add(instance->http_requests, req);
     }
 
-    {
-        /* Get server socket address */
-        int err;
-        req->event = req->io->v.v0.create_event(req->io);
-        err = lcb_getaddrinfo(instance, req->host, req->port, &req->root_ai);
-        req->curr_ai = req->root_ai;
-        if (err != 0) {
-            req->curr_ai = req->root_ai = NULL;
-        }
-        req->sock = INVALID_SOCKET;
-    }
+    req->connection.sockfd = INVALID_SOCKET;
 
     TRACE_HTTP_BEGIN(req);
     return lcb_synchandler_return(instance, request_connect(req));

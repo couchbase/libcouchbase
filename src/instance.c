@@ -26,11 +26,9 @@
 #include <dlfcn.h>
 #endif
 
-#define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 
 /* private function to safely free backup_nodes*/
 static void free_backup_nodes(lcb_t instance);
-static lcb_error_t try_to_connect(lcb_t instance);
 
 /**
  * Get the version of the library.
@@ -55,13 +53,13 @@ const char *lcb_get_version(lcb_uint32_t *version)
 LIBCOUCHBASE_API
 const char *lcb_get_host(lcb_t instance)
 {
-    return instance->host;
+    return instance->connection.host;
 }
 
 LIBCOUCHBASE_API
 const char *lcb_get_port(lcb_t instance)
 {
-    return instance->port;
+    return instance->connection.port;
 }
 
 
@@ -95,17 +93,6 @@ const char *const *lcb_get_server_list(lcb_t instance)
     return (const char * const *)instance->backup_nodes;
 }
 
-static void setup_current_host(lcb_t instance, const char *host)
-{
-    char *ptr;
-    snprintf(instance->host, sizeof(instance->host), "%s", host);
-    if ((ptr = strchr(instance->host, ':')) == NULL) {
-        strcpy(instance->port, "8091");
-    } else {
-        *ptr = '\0';
-        snprintf(instance->port, sizeof(instance->port), "%s", ptr + 1);
-    }
-}
 
 static lcb_error_t validate_hostname(const char *host, char **realhost)
 {
@@ -243,8 +230,6 @@ static lcb_error_t setup_boostrap_hosts(lcb_t ret, const char *host)
     } while (ptr != NULL);
 
     ret->backup_idx = 0;
-    setup_current_host(ret, ret->backup_nodes[0]);
-
     return LCB_SUCCESS;
 }
 
@@ -331,18 +316,13 @@ lcb_error_t lcb_create(lcb_t *instance,
         io->v.v0.need_cleanup = 1;
     }
     obj->io = io;
-    obj->timeout.event = obj->io->v.v0.create_timer(obj->io);
-    if (obj->timeout.event == NULL) {
-        lcb_destroy(obj);
-        return LCB_CLIENT_ENOMEM;
-    }
-
     lcb_initialize_packet_handlers(obj);
     lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
-    obj->sock = INVALID_SOCKET;
+    obj->connection.sockfd = INVALID_SOCKET;
+    obj->connection.instance = obj;
 
     err = setup_boostrap_hosts(obj, host);
     if (err != LCB_SUCCESS) {
@@ -395,16 +375,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     return LCB_SUCCESS;
 }
 
-static void release_socket(lcb_t instance)
-{
-    if (instance->sock != INVALID_SOCKET) {
-        if (instance->event) {
-            instance->io->v.v0.delete_event(instance->io, instance->sock, instance->event);
-        }
-        instance->io->v.v0.close(instance->io, instance->sock);
-        instance->sock = INVALID_SOCKET;
-    }
-}
 
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
@@ -421,21 +391,7 @@ void lcb_destroy(lcb_t instance)
         }
         hashset_destroy(instance->timers);
     }
-    release_socket(instance);
-    if (instance->event) {
-        instance->io->v.v0.destroy_event(instance->io, instance->event);
-        instance->event = NULL;
-    }
-
-    if (instance->timeout.event != NULL) {
-        instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
-        instance->io->v.v0.destroy_timer(instance->io, instance->timeout.event);
-        instance->timeout.event = NULL;
-    }
-
-    if (instance->ai != NULL) {
-        freeaddrinfo(instance->ai);
-    }
+    lcb_connection_cleanup(&instance->connection);
 
     if (instance->vbucket_config != NULL) {
         vbucket_config_destroy(instance->vbucket_config);
@@ -784,20 +740,20 @@ void lcb_update_vbconfig(lcb_t instance,
             }
         }
         instance->callbacks.configuration(instance, LCB_CONFIGURATION_NEW);
-        instance->connected = 1;
+        instance->connection_ready = 1;
     }
 
     /**
      * Remove the timer. We aren't waiting for updated configurations anyway
      */
-    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
+    lcb_connection_delete_timer(&instance->connection);
 
     /**
      * If we're using a cached config, we should not need a socket connection.
      * Disconnect the socket, if it's there
      */
     if (is_cached) {
-        release_socket(instance);
+        lcb_connection_close(&instance->connection);
     }
 
     lcb_maybe_breakout(instance);
@@ -954,14 +910,6 @@ int grow_buffer(buffer_t *buffer, lcb_size_t min_free)
 /* This function does any resetting of various book-keeping related with the
  * current REST API socket.
  */
-static void lcb_instance_reset_stream_state(lcb_t instance)
-{
-    free(instance->vbucket_stream.input.data);
-    free(instance->vbucket_stream.chunk.data);
-    free(instance->vbucket_stream.header);
-    memset(&instance->vbucket_stream, 0, sizeof(instance->vbucket_stream));
-    instance->n_http_uri_sent = 0;
-}
 
 int lcb_switch_to_backup_node(lcb_t instance,
                               lcb_error_t error,
@@ -980,7 +928,7 @@ int lcb_switch_to_backup_node(lcb_t instance,
 
     do {
         /* Keep on trying the nodes until all of them failed ;-) */
-        if (try_to_connect(instance) == LCB_SUCCESS) {
+        if (lcb_instance_start_connection(instance) == LCB_SUCCESS) {
             return 0;
         }
     } while (instance->backup_nodes[instance->backup_idx] != NULL);
@@ -989,41 +937,6 @@ int lcb_switch_to_backup_node(lcb_t instance,
     return -1;
 }
 
-static void lcb_instance_connerr(lcb_t instance,
-                                 lcb_error_t err,
-                                 const char *errinfo)
-{
-    release_socket(instance);
-
-    /* We try and see if the connection attempt can be relegated to another
-     * REST API entry point. If we can, the following should return something
-     * other than -1...
-     */
-
-    if (lcb_switch_to_backup_node(instance, err, errinfo) != -1) {
-        return;
-    }
-
-    /* ..otherwise, we have a currently irrecoverable error. bail out all the
-     * pending commands, if applicable and/or deliver a final failure for
-     * initial connect attempts.
-     */
-
-    if (!instance->vbucket_config) {
-        /* Initial connection, no pending commands, and connect timer */
-        instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
-    } else {
-        lcb_size_t ii;
-        for (ii = 0; ii < instance->nservers; ++ii) {
-            lcb_failout_server(instance->servers + ii, err);
-        }
-    }
-
-    /* check to see if we can breakout of the event loop. don't hang on REST
-     * API connection attempts.
-     */
-    lcb_maybe_breakout(instance);
-}
 
 
 /**
@@ -1032,17 +945,18 @@ static void lcb_instance_connerr(lcb_t instance,
  * @param which what kind of events we may do
  * @param arg pointer to the libcouchbase instance
  */
-static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
+void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_t instance = arg;
     lcb_ssize_t nr;
     lcb_size_t avail;
     buffer_t *buffer = &instance->vbucket_stream.chunk;
-    lcb_assert(sock != INVALID_SOCKET);
+    lcb_connection_t conn = &instance->connection;
+    assert(sock != INVALID_SOCKET);
 
     if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
         lcb_ssize_t nw;
-        nw = instance->io->v.v0.send(instance->io, instance->sock,
+        nw = instance->io->v.v0.send(instance->io, conn->sockfd,
                                      instance->http_uri + instance->n_http_uri_sent,
                                      strlen(instance->http_uri) - instance->n_http_uri_sent,
                                      0);
@@ -1055,17 +969,18 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
                     && sockerr != EINTR) {
                 lcb_error_handler(instance, LCB_NETWORK_ERROR,
                                   "Failed to send data to REST server");
-                instance->io->v.v0.delete_event(instance->io, instance->sock,
-                                                instance->event);
+                lcb_instance_connerr(instance,
+                                     LCB_NETWORK_ERROR,
+                                     "Problem with sending data");
             }
             return;
         }
 
         instance->n_http_uri_sent += (lcb_size_t)nw;
         if (instance->n_http_uri_sent == strlen(instance->http_uri)) {
-            instance->io->v.v0.update_event(instance->io, instance->sock,
-                                            instance->event, LCB_READ_EVENT,
-                                            instance, vbucket_stream_handler);
+            instance->io->v.v0.update_event(instance->io, conn->sockfd,
+                                            conn->event, LCB_READ_EVENT,
+                                            instance, lcb_vbucket_stream_handler);
         }
     }
 
@@ -1081,7 +996,7 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
         }
 
         avail = (buffer->size - buffer->avail);
-        nr = instance->io->v.v0.recv(instance->io, instance->sock,
+        nr = instance->io->v.v0.recv(instance->io, conn->sockfd,
                                      buffer->data + buffer->avail, avail, 0);
         if (nr < 0) {
             switch (instance->io->v.v0.error) {
@@ -1115,7 +1030,6 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
             lcb_maybe_breakout(instance);
             return;
         case -2:
-            release_socket(instance);
             instance->backup_idx++;
             if (lcb_switch_to_backup_node(instance, LCB_CONNECT_ERROR,
                                           "Failed to parse REST response") != -1) {
@@ -1169,222 +1083,12 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
     }
 
     if (instance->type != LCB_TYPE_BUCKET) {
-        instance->connected = 1;
+        instance->connection_ready = 1;
         lcb_maybe_breakout(instance);
     } /* LCB_TYPE_BUCKET connection must receive valid config */
 
     /* Make it known that this was a success. */
     lcb_error_handler(instance, LCB_SUCCESS, NULL);
-}
-
-static void lcb_instance_connected(lcb_t instance)
-{
-    instance->backup_idx = 0;
-    instance->io->v.v0.update_event(instance->io, instance->sock,
-                                    instance->event, LCB_RW_EVENT,
-                                    instance, vbucket_stream_handler);
-}
-
-static void lcb_instance_connect_handler(lcb_socket_t sock,
-                                         short which,
-                                         void *arg)
-{
-    lcb_t instance = arg;
-    int retry;
-    int retry_once = 0;
-    lcb_connect_status_t connstatus = LCB_CONNECT_OK;
-    int save_errno;
-    do {
-        if (instance->sock == INVALID_SOCKET) {
-            /* Try to get a socket.. */
-            instance->sock = lcb_gai2sock(instance,
-                                          &instance->curr_ai,
-                                          &save_errno);
-
-            /* Reset the stream state, we run this only during a new socket. */
-            lcb_instance_reset_stream_state(instance);
-        }
-
-        if (instance->curr_ai == NULL) {
-            char errinfo[1024];
-            lcb_error_t our_errno;
-            lcb_sockconn_errinfo(save_errno,
-                                 instance->host,
-                                 instance->port,
-                                 instance->ai,
-                                 errinfo,
-                                 sizeof(errinfo),
-                                 &our_errno);
-            lcb_instance_connerr(instance, our_errno, errinfo);
-            return ;
-        }
-
-        retry = 0;
-
-        if (instance->io->v.v0.connect(instance->io,
-                                       instance->sock,
-                                       instance->curr_ai->ai_addr,
-                                       (unsigned int)instance->curr_ai->ai_addrlen) == 0) {
-            lcb_instance_connected(instance);
-            return ;
-        } else {
-            save_errno = instance->io->v.v0.error;
-            connstatus = lcb_connect_status(save_errno);
-
-            switch (connstatus) {
-            case LCB_CONNECT_EINTR:
-                retry = 1;
-                break;
-            case LCB_CONNECT_EISCONN:
-                lcb_instance_connected(instance);
-                return ;
-            case LCB_CONNECT_EINPROGRESS:
-                instance->io->v.v0.update_event(instance->io,
-                                                instance->sock,
-                                                instance->event,
-                                                LCB_WRITE_EVENT,
-                                                instance,
-                                                lcb_instance_connect_handler);
-                return ;
-            case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
-                return ;
-            case LCB_CONNECT_EINVAL:
-                if (!retry_once) {     /* First time get WSAEINVAL error - do retry */
-                    retry = 1;
-                    retry_once = 1;
-                    break;
-                } else {               /* Second time get WSAEINVAL error - it is permanent error */
-                    retry_once = 0;    /* go to default brench (no break or return) */
-                    connstatus = LCB_CONNECT_EFAIL;
-                }
-            default: {
-                release_socket(instance);
-                if (connstatus == LCB_CONNECT_EFAIL &&
-                        instance->curr_ai->ai_next) {
-                    /* Here we handle 'medium-type' errors which are not a hard
-                     * failure, but mean that we need to retry the connect() with
-                     * different parameters.
-                     */
-                    retry = 1;
-                    instance->curr_ai = instance->curr_ai->ai_next;
-                    break;
-                } else {
-                    char errinfo[1024];
-                    snprintf(errinfo, sizeof(errinfo), "Connection failed: %s",
-                             strerror(instance->io->v.v0.error));
-                    lcb_instance_connerr(instance, LCB_CONNECT_ERROR, errinfo);
-                    return ;
-                }
-            }
-
-            }
-        }
-    } while (retry);
-    (void)sock;
-    (void)which;
-}
-
-
-int lcb_getaddrinfo(lcb_t instance, const char *hostname,
-                    const char *servname, struct addrinfo **res)
-{
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_flags = AI_PASSIVE;
-    hints.ai_socktype = SOCK_STREAM;
-    switch (instance->ipv6) {
-    case LCB_IPV6_DISABLED:
-        hints.ai_family = AF_INET;
-        break;
-    case LCB_IPV6_ONLY:
-        hints.ai_family = AF_INET6;
-        break;
-    default:
-        hints.ai_family = AF_UNSPEC;
-    }
-
-    return getaddrinfo(hostname, servname, &hints, res);
-}
-
-
-/**
- * @todo use async connects etc
- */
-static lcb_error_t try_to_connect(lcb_t instance)
-{
-    int error;
-    char *ptr;
-
-    release_socket(instance);
-    if (instance->ai != NULL) {
-        freeaddrinfo(instance->ai);
-        instance->ai = NULL;
-    }
-    instance->n_http_uri_sent = 0;
-    do {
-        setup_current_host(instance,
-                           instance->backup_nodes[instance->backup_idx++]);
-        error = lcb_getaddrinfo(instance, instance->host, instance->port,
-                                &instance->ai);
-        if (error != 0) {
-            /* Ok, we failed to look up that server.. look up the next
-             * in the list
-             */
-            if (instance->backup_nodes[instance->backup_idx] == NULL) {
-                char errinfo[1024];
-                snprintf(errinfo, sizeof(errinfo),
-                         "Failed to look up \"%s:%s\"",
-                         instance->host, instance->port);
-                return lcb_error_handler(instance,
-                                         LCB_UNKNOWN_HOST,
-                                         errinfo);
-            }
-        }
-    } while (error != 0);
-
-    instance->curr_ai = instance->ai;
-    instance->event = instance->io->v.v0.create_event(instance->io);
-    instance->last_error = LCB_SUCCESS;
-
-    /* We need to fix the host part... */
-    ptr = strstr(instance->http_uri, LCB_LAST_HTTP_HEADER);
-    lcb_assert(ptr);
-    ptr += strlen(LCB_LAST_HTTP_HEADER);
-    sprintf(ptr, "Host: %s:%s\r\n\r\n", instance->host, instance->port);
-
-    lcb_instance_connect_handler(INVALID_SOCKET, 0, instance);
-
-    if (instance->syncmode == LCB_SYNCHRONOUS) {
-        lcb_wait(instance);
-    }
-
-    return instance->last_error;
-}
-
-static void initial_connect_timeout_handler(lcb_socket_t sock,
-                                            short which,
-                                            void *arg)
-{
-    lcb_t instance = arg;
-    lcb_error_handler(instance,
-                      LCB_CONNECT_ERROR,
-                      "Could not connect to server within allotted time");
-
-    if (instance->sock != INVALID_SOCKET) {
-        /* Do we need to delete the event? */
-        instance->io->v.v0.delete_event(instance->io,
-                                        instance->sock,
-                                        instance->event);
-        instance->io->v.v0.close(instance->io, instance->sock);
-        instance->sock = INVALID_SOCKET;
-    }
-
-    instance->io->v.v0.delete_timer(instance->io, instance->timeout.event);
-    instance->timeout.next = 0;
-    lcb_maybe_breakout(instance);
-
-    (void)sock;
-    (void)which;
 }
 
 LIBCOUCHBASE_API
@@ -1397,12 +1101,10 @@ lcb_error_t lcb_connect(lcb_t instance)
         return LCB_SUCCESS;
     }
 
-    instance->io->v.v0.update_timer(instance->io,
-                                    instance->timeout.event,
-                                    instance->timeout.usec,
-                                    instance,
-                                    initial_connect_timeout_handler);
-    return try_to_connect(instance);
+    /**
+     * Schedule the connection to begin, start the timer:
+     */
+    return lcb_instance_start_connection(instance);
 }
 
 static void free_backup_nodes(lcb_t instance)

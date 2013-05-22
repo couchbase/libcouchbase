@@ -86,7 +86,7 @@ void lcb_purge_single_server(lcb_server_t *server,
     hrtime_t now = gethrtime();
     int should_switch_to_backup_node = 0;
 
-    if (server->connected) {
+    if (server->connection_ready) {
         cookies = &server->output_cookies;
     } else {
         cookies = &server->pending_cookies;
@@ -136,7 +136,8 @@ void lcb_purge_single_server(lcb_server_t *server,
                                req.request.opcode);
         }
 
-        if (server->connected && stream_size > send_size && (stream_size - packetsize) < send_size) {
+        if (server->connection_ready &&
+                stream_size > send_size && (stream_size - packetsize) < send_size) {
             /* Copy the rest of the current packet into the
                temporary stream */
 
@@ -338,7 +339,7 @@ void lcb_purge_single_server(lcb_server_t *server,
         }
     } while (1); /* CONSTCOND */
 
-    if (server->connected) {
+    if (server->connection_ready) {
         /* Preserve the rest of the stream */
         lcb_size_t nbytes = ringbuffer_get_nbytes(stream);
         send_size = ringbuffer_get_nbytes(&server->output);
@@ -374,17 +375,8 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
     ringbuffer_reset(&server->pending);
     ringbuffer_reset(&server->pending_cookies);
 
-    server->connected = 0;
-
-    if (server->sock != INVALID_SOCKET) {
-        server->instance->io->v.v0.delete_event(server->instance->io, server->sock,
-                                                server->event);
-        server->instance->io->v.v0.close(server->instance->io, server->sock);
-        server->sock = INVALID_SOCKET;
-    }
-    /* reset address info for future attempts */
-    server->curr_ai = server->root_ai;
-
+    server->connection_ready = 0;
+    lcb_connection_close(&server->connection);
     return error;
 }
 
@@ -435,23 +427,10 @@ void lcb_server_destroy(lcb_server_t *server)
     }
 
     /* Delete the event structure itself */
-    server->instance->io->v.v0.destroy_event(server->instance->io,
-                                             server->event);
-
-    server->instance->io->v.v0.destroy_timer(server->instance->io,
-                                             server->timer);
-
-    if (server->sock != INVALID_SOCKET) {
-        server->instance->io->v.v0.close(server->instance->io, server->sock);
-    }
-
-    if (server->root_ai != NULL) {
-        freeaddrinfo(server->root_ai);
-    }
+    lcb_connection_cleanup(&server->connection);
 
     free(server->rest_api_server);
     free(server->couch_api_base);
-    free(server->hostname);
     free(server->authority);
     ringbuffer_destruct(&server->output);
     ringbuffer_destruct(&server->output_cookies);
@@ -470,58 +449,6 @@ void lcb_server_destroy(lcb_server_t *server)
 
 
 /**
- * Get the name of the local endpoint
- * @param sock The socket to query the name for
- * @param buffer The destination buffer
- * @param buffz The size of the output buffer
- * @return 1 if success, 0 otherwise
- */
-static int get_local_address(lcb_socket_t sock,
-                             char *buffer,
-                             lcb_size_t bufsz)
-{
-    char h[NI_MAXHOST];
-    char p[NI_MAXSERV];
-    struct sockaddr_storage saddr;
-    socklen_t salen = sizeof(saddr);
-
-    if ((getsockname(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-            (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                         p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-            (snprintf(buffer, bufsz, "%s;%s", h, p) < 0)) {
-        return 0;
-    }
-
-    return 1;
-}
-
-/**
- * Get the name of the remote enpoint
- * @param sock The socket to query the name for
- * @param buffer The destination buffer
- * @param buffz The size of the output buffer
- * @return 1 if success, 0 otherwise
- */
-static int get_remote_address(lcb_socket_t sock,
-                              char *buffer,
-                              lcb_size_t bufsz)
-{
-    char h[NI_MAXHOST];
-    char p[NI_MAXSERV];
-    struct sockaddr_storage saddr;
-    socklen_t salen = sizeof(saddr);
-
-    if ((getpeername(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-            (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                         p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-            (snprintf(buffer, bufsz, "%s;%s", h, p) < 0)) {
-        return 0;
-    }
-
-    return 1;
-}
-
-/**
  * Start the SASL auth for a given server.
  *
  * Neither the server or the client supports anything else than
@@ -531,60 +458,10 @@ static int get_remote_address(lcb_socket_t sock,
  *
  * @param server the server object to auth agains
  */
-static void start_sasl_auth_server(lcb_server_t *server)
-{
-    /* There is no point of calling sasl_list_mechs on the server
-     * because we know that the server will reply with "PLAIN"
-     * it means it's just an extra ping-pong to the server
-     * adding latency.. Let's do the SASL_AUTH immediately
-     */
-    const char *data;
-    const char *chosenmech;
-    char *mechlist;
-    unsigned int len;
-    protocol_binary_request_no_extras req;
-    lcb_size_t keylen;
-    lcb_size_t bodysize;
-
-    mechlist = strdup("PLAIN");
-    if (mechlist == NULL) {
-        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
-        return;
-    }
-    if (sasl_client_start(server->sasl_conn, mechlist,
-                          NULL, &data, &len, &chosenmech) != SASL_OK) {
-        free(mechlist);
-        lcb_error_handler(server->instance, LCB_AUTH_ERROR,
-                          "Unable to start sasl client");
-        return;
-    }
-    free(mechlist);
-
-    keylen = strlen(chosenmech);
-    bodysize = keylen + len;
-
-    memset(&req, 0, sizeof(req));
-    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_AUTH;
-    req.message.header.request.keylen = ntohs((lcb_uint16_t)keylen);
-    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.bodylen = ntohl((lcb_uint32_t)(bodysize));
-
-    lcb_server_buffer_start_packet(server, NULL, &server->output,
-                                   &server->output_cookies,
-                                   req.bytes, sizeof(req.bytes));
-    lcb_server_buffer_write_packet(server, &server->output,
-                                   chosenmech, keylen);
-    lcb_server_buffer_write_packet(server, &server->output, data, len);
-    lcb_server_buffer_end_packet(server, &server->output);
-    server->instance->io->v.v0.update_event(server->instance->io, server->sock,
-                                            server->event, LCB_WRITE_EVENT,
-                                            server, lcb_server_event_handler);
-}
 
 void lcb_server_connected(lcb_server_t *server)
 {
-    server->connected = 1;
+    server->connection_ready = 1;
 
     if (server->pending.nbytes > 0) {
         /*
@@ -607,153 +484,34 @@ void lcb_server_connected(lcb_server_t *server)
 
         ringbuffer_reset(&server->pending);
         ringbuffer_reset(&server->pending_cookies);
-        server->instance->io->v.v0.update_event(server->instance->io, server->sock,
-                                                server->event, LCB_WRITE_EVENT,
+        server->instance->io->v.v0.update_event(server->instance->io,
+                                                server->connection.sockfd,
+                                                server->connection.event,
+                                                LCB_WRITE_EVENT,
                                                 server, lcb_server_event_handler);
     } else {
         /* Set the correct event handler */
-        server->instance->io->v.v0.update_event(server->instance->io, server->sock,
-                                                server->event, LCB_READ_EVENT,
-                                                server, lcb_server_event_handler);
+        server->instance->io->v.v0.update_event(server->instance->io,
+                                                server->connection.sockfd,
+                                                server->connection.event,
+                                                LCB_READ_EVENT,
+                                                server,
+                                                lcb_server_event_handler);
     }
-}
-
-static void socket_connected(lcb_server_t *server)
-{
-    char local[NI_MAXHOST + NI_MAXSERV + 2];
-    char remote[NI_MAXHOST + NI_MAXSERV + 2];
-    int sasl_in_progress = (server->sasl_conn != NULL);
-
-    get_local_address(server->sock, local, sizeof(local));
-    get_remote_address(server->sock, remote, sizeof(remote));
-
-    if (!sasl_in_progress) {
-        lcb_assert(sasl_client_new("couchbase", server->hostname, local, remote,
-                                   server->instance->sasl.callbacks, 0,
-                                   &server->sasl_conn) == SASL_OK);
-    }
-
-    if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
-        /* No SASL AUTH needed */
-        lcb_server_connected(server);
-    } else {
-        if (!sasl_in_progress) {
-            start_sasl_auth_server(server);
-        }
-    }
-}
-
-static void server_connect(lcb_server_t *server);
-
-
-static void server_connect_handler(lcb_socket_t sock, short which, void *arg)
-{
-    lcb_server_t *server = arg;
-    (void)sock;
-    (void)which;
-
-    server_connect(server);
-}
-
-static void server_connect(lcb_server_t *server)
-{
-    int retry;
-    int retry_once = 0;
-    int save_errno;
-
-    do {
-        if (server->sock == INVALID_SOCKET) {
-            /* Try to get a socket.. */
-            server->sock = lcb_gai2sock(server->instance,
-                                        &server->curr_ai,
-                                        &save_errno);
-        }
-
-        if (server->curr_ai == NULL) {
-            /*TODO: Maybe check save_errno now? */
-
-            /* this means we're not going to retry!! add an error here! */
-            lcb_failout_server(server, LCB_CONNECT_ERROR);
-            return ;
-        }
-
-        retry = 0;
-        if (server->instance->io->v.v0.connect(server->instance->io,
-                                               server->sock,
-                                               server->curr_ai->ai_addr,
-                                               (unsigned int)server->curr_ai->ai_addrlen) == 0) {
-            /* connected */
-            socket_connected(server);
-            return ;
-        } else {
-            lcb_connect_status_t connstatus =
-                lcb_connect_status(server->instance->io->v.v0.error);
-            switch (connstatus) {
-            case LCB_CONNECT_EINTR:
-                retry = 1;
-                break;
-            case LCB_CONNECT_EISCONN:
-                socket_connected(server);
-                return ;
-            case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
-                server->instance->io->v.v0.update_event(server->instance->io,
-                                                        server->sock,
-                                                        server->event,
-                                                        LCB_WRITE_EVENT,
-                                                        server,
-                                                        server_connect_handler);
-                return ;
-            case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
-                return ;
-            case LCB_CONNECT_EINVAL:
-                if (!retry_once) {     /* First time get WSAEINVAL error - do retry */
-                    retry = 1;
-                    retry_once = 1;
-                    break;
-                } else {               /* Second time get WSAEINVAL error - it is permanent error */
-                    retry_once = 0;    /* go to LCB_CONNECT_EFAIL brench (no break or return) */
-                }
-            case LCB_CONNECT_EFAIL:
-                if (server->curr_ai->ai_next) {
-                    retry = 1;
-                    server->curr_ai = server->curr_ai->ai_next;
-                    server->instance->io->v.v0.delete_event(server->instance->io,
-                                                            server->sock,
-                                                            server->event);
-                    server->instance->io->v.v0.close(server->instance->io, server->sock);
-                    server->sock = INVALID_SOCKET;
-                    break;
-                } /* Else, we fallthrough */
-
-                if (server->instance->compat.type == LCB_CACHED_CONFIG) {
-                    /* Try to update the cache :S */
-                    lcb_schedule_config_cache_refresh(server->instance);
-                    return;
-                }
-
-            default:
-                lcb_failout_server(server, LCB_CONNECT_ERROR);
-                return;
-            }
-        }
-    } while (retry);
-    /* not reached */
-    return ;
 }
 
 void lcb_server_initialize(lcb_server_t *server, int servernum)
 {
     /* Initialize all members */
     char *p;
-    int error;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
     server->index = servernum;
     server->authority = strdup(n);
-    server->hostname = strdup(n);
-    p = strchr(server->hostname, ':');
+    strcpy(server->connection.host, n);
+    p = strchr(server->connection.host, ':');
     *p = '\0';
-    server->port = p + 1;
+    strcpy(server->connection.port, p+1);
 
     server->is_config_node = vbucket_config_is_config_node(server->instance->vbucket_config,
                                                            servernum);
@@ -764,17 +522,11 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
     n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
                                            servernum);
     server->rest_api_server = strdup(n);
-    server->event = server->instance->io->v.v0.create_event(server->instance->io);
-    lcb_assert(server->event);
-    error = lcb_getaddrinfo(server->instance, server->hostname, server->port,
-                            &server->root_ai);
-    server->curr_ai = server->root_ai;
-    server->sock = INVALID_SOCKET;
-    if (error != 0) {
-        server->curr_ai = server->root_ai = NULL;
-    }
-    server->timer = server->instance->io->v.v0.create_timer(server->instance->io);
-    lcb_assert(server->timer);
+    server->connection.sockfd = INVALID_SOCKET;
+    server->connection.data = server;
+    server->connection.instance = server->instance;
+
+    lcb_connection_getaddrinfo(&server->connection, 0);
 
     server->sasl_conn = NULL;
 }
@@ -782,15 +534,15 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
 void lcb_server_send_packets(lcb_server_t *server)
 {
     if (server->pending.nbytes > 0 || server->output.nbytes > 0) {
-        if (server->connected) {
+        if (server->connection_ready) {
             server->instance->io->v.v0.update_event(server->instance->io,
-                                                    server->sock,
-                                                    server->event,
+                                                    server->connection.sockfd,
+                                                    server->connection.event,
                                                     LCB_RW_EVENT,
                                                     server,
                                                     lcb_server_event_handler);
         } else {
-            server_connect(server);
+            lcb_server_connect(server);
         }
     }
 }

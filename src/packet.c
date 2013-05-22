@@ -107,7 +107,7 @@ void lcb_server_retry_packet(lcb_server_t *c,
                              const void *data,
                              lcb_size_t size)
 {
-    if (c->connected) {
+    if (c->connection_ready) {
         lcb_server_buffer_retry_packet(c, command_data,
                                        &c->output,
                                        &c->output_cookies,
@@ -134,7 +134,7 @@ void lcb_server_start_packet(lcb_server_t *c,
                              const void *data,
                              lcb_size_t size)
 {
-    if (c->connected) {
+    if (c->connection_ready) {
         lcb_server_buffer_start_packet(c, command_cookie,
                                        &c->output,
                                        &c->output_cookies,
@@ -151,7 +151,7 @@ void lcb_server_write_packet(lcb_server_t *c,
                              const void *data,
                              lcb_size_t size)
 {
-    if (c->connected) {
+    if (c->connection_ready) {
         lcb_server_buffer_write_packet(c, &c->output, data, size);
     } else {
         lcb_server_buffer_write_packet(c, &c->pending, data, size);
@@ -168,7 +168,7 @@ void lcb_server_complete_packet(lcb_server_t *c,
                                 const void *data,
                                 lcb_size_t size)
 {
-    if (c->connected) {
+    if (c->connection_ready) {
         lcb_server_buffer_complete_packet(c, command_cookie,
                                           &c->output,
                                           &c->output_cookies,
@@ -203,7 +203,7 @@ void lcb_server_start_packet_ex(lcb_server_t *c,
                                 const void *data,
                                 lcb_size_t size)
 {
-    if (c->connected) {
+    if (c->connection_ready) {
         lcb_server_buffer_start_packet_ex(c, ct,
                                           &c->output,
                                           &c->output_cookies,

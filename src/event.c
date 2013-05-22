@@ -35,7 +35,7 @@ static int do_fill_input_buffer(lcb_server_t *c)
 
     ringbuffer_get_iov(&c->input, RINGBUFFER_WRITE, iov);
 
-    nr = c->instance->io->v.v0.recvv(c->instance->io, c->sock, iov, 2);
+    nr = c->instance->io->v.v0.recvv(c->instance->io, c->connection.sockfd, iov, 2);
     if (nr == -1) {
         switch (c->instance->io->v.v0.error) {
         case EINTR:
@@ -170,7 +170,7 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
                           "Protocol error. someone sent us a command!");
         return -1;
     case PROTOCOL_BINARY_RES: {
-        int was_connected = c->connected;
+        int was_connected = c->connection_ready;
         if (lcb_server_purge_implicit_responses(c, header.response.opaque, stop, 0) != 0) {
             if (packet != c->input.read_head) {
                 free(packet);
@@ -315,7 +315,7 @@ static int do_send_data(lcb_server_t *c)
         struct lcb_iovec_st iov[2];
         lcb_ssize_t nw;
         ringbuffer_get_iov(&c->output, RINGBUFFER_READ, iov);
-        nw = c->instance->io->v.v0.sendv(c->instance->io, c->sock, iov, 2);
+        nw = c->instance->io->v.v0.sendv(c->instance->io, c->connection.sockfd, iov, 2);
         if (nw == -1) {
             switch (c->instance->io->v.v0.error) {
             case EINTR:
@@ -345,8 +345,8 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
     lcb_size_t ii;
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
-        if (c->connected) {
-            lcb_server_event_handler(c->sock,
+        if (c->connection_ready) {
+            lcb_server_event_handler(c->connection.sockfd,
                                      LCB_READ_EVENT | LCB_WRITE_EVENT,
                                      c);
         }
@@ -404,8 +404,8 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
         which |= LCB_WRITE_EVENT;
     }
 
-    c->instance->io->v.v0.update_event(c->instance->io, c->sock,
-                                       c->event, which, c,
+    c->instance->io->v.v0.update_event(c->instance->io, c->connection.sockfd,
+                                       c->connection.event, which, c,
                                        lcb_server_event_handler);
 
     event_complete_common(instance);

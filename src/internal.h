@@ -47,9 +47,11 @@
 #include "debug.h"
 #include "handler.h"
 #include "lcb_assert.h"
+#include "io/lcbio.h"
 
 #define LCB_DEFAULT_TIMEOUT 2500000
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
+#define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 
 #ifdef __cplusplus
 extern "C" {
@@ -122,17 +124,10 @@ extern "C" {
          *      return LCB_EBADHANDLE
          */
         lcb_type_t type;
-        /** The couchbase host */
-        char host[NI_MAXHOST + 1];
-        /** The port of the couchbase server */
-        char port[NI_MAXSERV + 1];
 
         /** The URL request to send to the server */
         char *http_uri;
         lcb_size_t n_http_uri_sent;
-
-        /** The event item representing _this_ object */
-        void *event;
 
         /** The current vbucket config handle */
         VBUCKET_CONFIG_HANDLE vbucket_config;
@@ -157,9 +152,10 @@ extern "C" {
         /* The current synchronous mode */
         lcb_syncmode_t syncmode;
 
-        lcb_socket_t sock;
-        struct addrinfo *ai;
-        struct addrinfo *curr_ai;
+        struct lcb_connection_st connection;
+
+        /** Indicates whether the instance is configured */
+        int connection_ready;
 
         /** The number of couchbase server in the configuration */
         lcb_size_t nservers;
@@ -208,7 +204,6 @@ extern "C" {
 
         lcb_uint32_t seqno;
         int wait;
-        int connected;
         /** Is IPv6 enabled */
         lcb_ipv6_t ipv6;
         const void *cookie;
@@ -217,7 +212,6 @@ extern "C" {
 
         struct {
             hrtime_t next;
-            void *event;
             lcb_uint32_t usec;
         } timeout;
 
@@ -246,10 +240,6 @@ extern "C" {
         int index;
         /** Non-zero for node is using for configuration */
         int is_config_node;
-        /** The name of the server */
-        char *hostname;
-        /** The servers port */
-        char *port;
         /** The server endpoint as hostname:port */
         char *authority;
         /** The Couchbase Views API endpoint base */
@@ -257,12 +247,6 @@ extern "C" {
         /** The REST API server as hostname:port */
         char *rest_api_server;
         /** The socket to the server */
-        lcb_socket_t sock;
-        /** The address information for this server (the one to release) */
-        struct addrinfo *root_ai;
-        /** The address information for this server (the one we're trying) */
-        struct addrinfo *curr_ai;
-
         /** The output buffer for this server */
         ringbuffer_t output;
         /** The sent buffer for this server so that we can resend the
@@ -285,14 +269,11 @@ extern "C" {
 
         /** The SASL object used for this server */
         sasl_conn_t *sasl_conn;
-        /** The event item representing _this_ object */
-        void *event;
-        /** The timer bound to the socket to implement timeouts */
-        void *timer;
         /** Is this server in a connected state (done with sasl auth) */
-        int connected;
+        int connection_ready;
         /* Pointer back to the instance */
         lcb_t instance;
+        struct lcb_connection_st connection;
     };
 
     struct lcb_timer_st {
@@ -311,8 +292,6 @@ extern "C" {
 
     struct lcb_http_request_st {
         /** The socket to the server */
-        lcb_socket_t sock;
-        struct lcb_io_opt_st *io;
         /** The origin node */
         lcb_server_t *server;
         /** Short ref to instance (server->instance) */
@@ -322,10 +301,6 @@ extern "C" {
         lcb_size_t nurl;
         /** The URL info */
         struct http_parser_url url_info;
-        /** The hostname of the server */
-        char *host;
-        /** The string representation of the port number (binary is url_info.port) */
-        char *port;
         /** The requested path (without couch api endpoint) */
         char *path;
         lcb_size_t npath;
@@ -336,12 +311,7 @@ extern "C" {
         /** The HTTP response parser */
         http_parser *parser;
         http_parser_settings parser_settings;
-        /** The address information for this server (the one to release) */
-        struct addrinfo *root_ai;
-        /** The address information for this server (the one we're trying) */
-        struct addrinfo *curr_ai;
-        /** The event item representing _this_ object */
-        void *event;
+
         /** Non-zero if caller would like to receive response in chunks */
         int chunked;
         /** This callback will be executed when the whole response will be
@@ -366,6 +336,11 @@ extern "C" {
         const char **headers;
         /** Number of headers **/
         lcb_size_t nheaders;
+
+        lcb_io_opt_t io;
+
+        struct lcb_connection_st connection;
+
     };
 
     void lcb_http_request_finish(lcb_t instance,
@@ -571,6 +546,17 @@ extern "C" {
      * Hashtable wrappers
      */
     genhash_t *lcb_hashtable_nc_new(int est);
+
+    void lcb_instance_connerr(lcb_t instance,
+                                     lcb_error_t err,
+                                     const char *errinfo);
+
+    lcb_error_t lcb_instance_start_connection(lcb_t instance);
+
+    void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg);
+
+    void lcb_server_connect(lcb_server_t *server);
+
 
 #ifdef __cplusplus
 }

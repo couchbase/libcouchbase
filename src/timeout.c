@@ -29,28 +29,19 @@ lcb_uint32_t lcb_get_timeout(lcb_t instance)
     return instance->timeout.usec;
 }
 
-static void lcb_server_timeout_handler(lcb_socket_t sock,
-                                       short which,
-                                       void *arg)
+static void lcb_server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
-    lcb_server_t *server = arg;
-
-    lcb_purge_single_server(server, LCB_ETIMEDOUT);
+    lcb_server_t *server = (lcb_server_t*)conn->data;
+    lcb_purge_single_server(server, err);
     lcb_update_server_timer(server);
     lcb_maybe_breakout(server->instance);
-
-    (void)sock;
-    (void)which;
 }
 
 void lcb_update_server_timer(lcb_server_t *server)
 {
     lcb_t instance = server->instance;
-
-    if (server->timer) {
-        instance->io->v.v0.delete_timer(instance->io, server->timer);
-    }
-    instance->io->v.v0.update_timer(instance->io, server->timer,
-                                    instance->timeout.usec, server,
-                                    lcb_server_timeout_handler);
+    lcb_connection_delete_timer(&server->connection);
+    lcb_connection_update_timer(&server->connection,
+                                instance->timeout.usec,
+                                lcb_server_timeout_handler);
 }

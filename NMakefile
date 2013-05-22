@@ -32,8 +32,8 @@ libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
     src\cookie.c src\error.c src\event.c src\flush.c src\get.c \
     src\handler.c src\instance.c src\iofactory.c src\packet.c \
     src\remove.c src\ringbuffer.c src\hashset.c src\server.c src\stats.c \
-    src\store.c src\strerror.c src\synchandler.c src\list.c \
-    src\genhash.c src\hashtable.c \
+    src\store.c src\strerror.c src\synchandler.c src\server\server_io.c \
+    src\io\connect.c src\bucketconfig\bconf_io.c \ src\list.c \
     src\timeout.c src\timings.c src\touch.c src\utilities.c \
     src\wait.c src\gethrtime.c plugins\io\select\plugin-select.c src\isasl.c \
     src\compat.c contrib\http_parser\http_parser.c src\http.c \
