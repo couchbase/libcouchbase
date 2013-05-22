@@ -36,7 +36,20 @@ extern "C" {
 
     int ringbuffer_initialize(ringbuffer_t *buffer,
                               lcb_size_t size);
+
+    /**
+     * Initialize a ringbuffer, taking ownership of an allocated char buffer.
+     * This function always succeeds.
+     * @param buffer a ringbuffer_t to be initialized
+     * @param buf the buffer to steal
+     * @param size the allocated size of the buffer
+     */
+    void ringbuffer_take_buffer(ringbuffer_t *buffer,
+                                char *buf,
+                                lcb_size_t size);
+
     void ringbuffer_reset(ringbuffer_t *buffer);
+
     void ringbuffer_destruct(ringbuffer_t *buffer);
     int ringbuffer_ensure_capacity(ringbuffer_t *buffer,
                                    lcb_size_t size);

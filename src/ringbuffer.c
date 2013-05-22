@@ -22,18 +22,26 @@ static lcb_size_t minimum(lcb_size_t a, lcb_size_t b)
     return (a < b) ? a : b;
 }
 
+
 int ringbuffer_initialize(ringbuffer_t *buffer, lcb_size_t size)
 {
-    memset(buffer, 0, sizeof(ringbuffer_t));
-    buffer->root = malloc(size);
-    if (buffer->root == NULL) {
+    char *root = malloc(size);
+    if (root == NULL) {
         return 0;
     }
+    ringbuffer_take_buffer(buffer, root, size);
+    return 1;
+}
+
+void ringbuffer_take_buffer(ringbuffer_t *buffer, char *buf, lcb_size_t size)
+{
+    memset(buffer, 0, sizeof(ringbuffer_t));
+    buffer->root = buf;
     buffer->size = size;
     buffer->write_head = buffer->root;
     buffer->read_head = buffer->root;
-    return 1;
 }
+
 
 void ringbuffer_reset(ringbuffer_t *buffer)
 {
