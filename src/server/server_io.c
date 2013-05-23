@@ -49,7 +49,7 @@ static int do_read_data(lcb_server_t *c, int allow_read)
             /* need more data */
             lcb_sockrw_status_t status;
 
-            status = lcb_sockrw_read(&c->connection, c->connection.input);
+            status = lcb_sockrw_v0_read(&c->connection, c->connection.input);
 
             switch (status) {
 
@@ -93,7 +93,10 @@ static void event_complete_common(lcb_server_t *c)
         lcb_refresh_config_cache(c->instance);
     }
 
+
     lcb_sockrw_apply_want(&c->connection);
+
+    c->inside_handler = 0;
 
     lcb_maybe_breakout(c->instance);
 
@@ -103,7 +106,7 @@ static void event_complete_common(lcb_server_t *c)
 
 
 
-void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
+void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_server_t *c = arg;
     lcb_connection_t conn = &c->connection;
@@ -112,7 +115,7 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     if (which & LCB_WRITE_EVENT) {
         lcb_sockrw_status_t status;
 
-        status = lcb_sockrw_write(conn, conn->output);
+        status = lcb_sockrw_v0_write(conn, conn->output);
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
             event_complete_common(c);
             return;
@@ -145,6 +148,84 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     event_complete_common(c);
 }
 
+static void error_v1_common(lcb_server_t *server)
+{
+    if (server->instance->compat.type == LCB_CACHED_CONFIG) {
+        lcb_schedule_config_cache_refresh(server->instance);
+        return;
+    }
+    lcb_failout_server(server, LCB_NETWORK_ERROR);
+}
+
+void lcb_server_v1_error_handler(lcb_sockdata_t *sockptr)
+{
+    lcb_server_t *c;
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&c)) {
+        return;
+    }
+    error_v1_common(c);
+}
+
+
+void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
+{
+    lcb_server_t *c;
+    int rv;
+    hrtime_t stop;
+
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&c)) {
+        return;
+    }
+
+    lcb_sockrw_v1_onread_common(sockptr, &c->connection.input, nr);
+
+    c->inside_handler = 1;
+
+    if (nr < 1) {
+        error_v1_common(c);
+        event_complete_common(c);
+        return;
+    }
+
+    lcb_update_server_timer(c);
+
+    stop = gethrtime();
+
+    while ((rv = lcb_proto_parse_single(c, stop)) > 0) {
+        /* do nothing */
+    }
+
+    if (rv >= 0) {
+        /* Schedule the read request again */
+        lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
+    }
+    event_complete_common(c);
+}
+
+void lcb_server_v1_write_handler(lcb_sockdata_t *sockptr,
+                                 lcb_io_writebuf_t *wbuf,
+                                 int status)
+{
+    lcb_server_t *c;
+    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void**)&c)) {
+        return;
+    }
+
+    lcb_sockrw_v1_onwrite_common(sockptr, wbuf, &c->connection.output);
+
+    c->inside_handler = 1;
+
+    if (status) {
+        error_v1_common(c);
+
+    } else {
+        lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
+    }
+
+    event_complete_common(c);
+
+}
+
 LIBCOUCHBASE_API
 void lcb_flush_buffers(lcb_t instance, const void *cookie)
 {
@@ -152,7 +233,7 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
         if (c->connection_ready) {
-            lcb_server_event_handler(c->connection.sockfd,
+            lcb_server_v0_event_handler(c->connection.sockfd,
                                      LCB_READ_EVENT | LCB_WRITE_EVENT,
                                      c);
         }
@@ -170,6 +251,11 @@ int lcb_flushing_buffers(lcb_t instance)
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
         lcb_connection_t conn = &c->connection;
+
+        if ((conn->output && conn->output->nbytes) ||
+                (conn->input && conn->input->nbytes)) {
+            return 1;
+        }
 
         if (c->cmd_log.nbytes ||
                 c->pending.nbytes ||

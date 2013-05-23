@@ -135,6 +135,11 @@ void lcb_server_start_packet(lcb_server_t *c,
                              lcb_size_t size)
 {
     if (c->connection_ready) {
+        if (!c->connection.output) {
+            c->connection.output = calloc(1, sizeof(ringbuffer_t));
+            ringbuffer_initialize(c->connection.output, 8092);
+        }
+
         lcb_server_buffer_start_packet(c, command_cookie,
                                        c->connection.output,
                                        &c->output_cookies,

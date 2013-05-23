@@ -129,7 +129,6 @@ static void start_sasl_auth_server(lcb_server_t *server)
 static void connection_error(lcb_server_t *server, lcb_error_t err)
 {
     lcb_failout_server(server, err);
-
     if (server->instance->compat.type == LCB_CACHED_CONFIG) {
         /* Try to update the cache :S */
         lcb_schedule_config_cache_refresh(server->instance);
@@ -141,7 +140,10 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_server_t *server = (lcb_server_t*)conn->data;
-    conn->evinfo.handler = lcb_server_event_handler;
+    conn->evinfo.handler = lcb_server_v0_event_handler;
+    conn->completion.read = lcb_server_v1_read_handler;
+    conn->completion.write = lcb_server_v1_write_handler;
+    conn->completion.error = lcb_server_v1_error_handler;
 
     if (err != LCB_SUCCESS) {
         connection_error(server, err);

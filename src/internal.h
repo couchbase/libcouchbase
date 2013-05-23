@@ -264,6 +264,18 @@ extern "C" {
         sasl_conn_t *sasl_conn;
         /** Is this server in a connected state (done with sasl auth) */
         int connection_ready;
+
+        /**
+         * This flag is for use by server_send_packets. By default, this
+         * function calls apply_want, but this is unsafe if we are already
+         * inside the handler, because at this point the read buffer may not
+         * have been owned by us, while a read event may still be requested.
+         *
+         * If this is the case, apply_want will not be called from send_packets
+         * but it will be called when the event handler regains control.
+         */
+        int inside_handler;
+
         /* Pointer back to the instance */
         lcb_t instance;
         struct lcb_connection_st connection;
@@ -467,7 +479,7 @@ extern "C" {
     void lcb_server_send_packets(lcb_server_t *server);
 
 
-    void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg);
+    void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg);
 
     void lcb_initialize_packet_handlers(lcb_t instance);
 
@@ -509,6 +521,10 @@ extern "C" {
                               struct addrinfo **curr_ai,
                               int *connerr);
 
+    lcb_sockdata_t *lcb_gai2sock_v1(lcb_t instance,
+                                struct addrinfo **ai,
+                                int *connerr);
+
     lcb_error_t lcb_apply_vbucket_config(lcb_t instance,
                                          VBUCKET_CONFIG_HANDLE config);
 
@@ -540,12 +556,11 @@ extern "C" {
 
     lcb_error_t lcb_instance_start_connection(lcb_t instance);
 
-    void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg);
+    void lcb_vbucket_stream_v0_handler(lcb_socket_t sock, short which, void *arg);
 
     void lcb_server_connect(lcb_server_t *server);
 
     int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop);
-    void lcb_parse_vbucket_stream(lcb_t instance);
 
     int lcb_http_request_valid(lcb_t instance, lcb_http_request_t req);
     lcb_error_t lcb_http_parse_setup(lcb_http_request_t req);
@@ -558,6 +573,15 @@ extern "C" {
                                    const char * const *headers,
                                    const void *bytes,
                                    lcb_size_t nbytes);
+
+
+    void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr);
+    void lcb_server_v1_write_handler(lcb_sockdata_t *sockptr,
+                                     lcb_io_writebuf_t *wbuf,
+                                     int status);
+    void lcb_server_v1_error_handler(lcb_sockdata_t *sockptr);
+
+    void lcb_parse_vbucket_stream(lcb_t instance);
 
 
 #ifdef __cplusplus

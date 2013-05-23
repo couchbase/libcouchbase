@@ -327,6 +327,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         lcb_destroy(obj);
         return err;
     }
+    obj->connection.data = obj;
 
     obj->connection.data = obj;
 
@@ -794,53 +795,6 @@ int lcb_switch_to_backup_node(lcb_t instance,
     /* All known nodes are dead */
     lcb_error_handler(instance, error, reason);
     return -1;
-}
-
-/**
- * Callback from libevent when we read from the REST socket
- * @param sock the readable socket
- * @param which what kind of events we may do
- * @param arg pointer to the libcouchbase instance
- */
-void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
-{
-    lcb_t instance = arg;
-    lcb_connection_t conn = &instance->connection;
-    assert(sock != INVALID_SOCKET);
-    lcb_sockrw_status_t status;
-
-    if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
-
-        status = lcb_sockrw_write(conn, conn->output);
-        if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
-            lcb_instance_connerr(instance,
-                                 LCB_NETWORK_ERROR,
-                                 "Problem with sending data. "
-                                 "Failed to send data to REST server");
-            return;
-        }
-
-        if (lcb_sockrw_flushed(conn)) {
-            lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-        }
-
-    }
-
-    if ((which & LCB_READ_EVENT) == 0) {
-        return;
-    }
-
-    status = lcb_sockrw_slurp(conn, conn->input);
-    if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
-        lcb_instance_connerr(instance,
-                             LCB_NETWORK_ERROR,
-                             "Problem with reading data. "
-                             "Failed to send read data from REST server");
-        return;
-    }
-    lcb_parse_vbucket_stream(instance);
-    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 0);
-    lcb_sockrw_apply_want(conn);
 }
 
 LIBCOUCHBASE_API

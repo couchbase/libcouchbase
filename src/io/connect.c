@@ -24,6 +24,7 @@
 
 #include "internal.h"
 static lcb_connection_result_t v0_connect(lcb_connection_t conn, int nocb);
+static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb);
 
 /**
  * This just wraps the connect routine again
@@ -55,8 +56,8 @@ static int conn_next_ai(struct lcb_connection_st *conn)
  */
 static int conn_failed(struct lcb_connection_st *conn)
 {
+    lcb_connection_close(conn);
     if (conn_next_ai(conn) == 0) {
-        lcb_connection_close(conn);
         return 0;
     }
     return -1;
@@ -225,16 +226,117 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
     return LCB_CONN_ERROR;;
 }
 
+static void v1_connect_handler(lcb_sockdata_t *sockptr, int status)
+{
+    lcb_connection_t conn = (lcb_connection_t)sockptr->lcbconn;
+    if (!conn) {
+        /* closed? */
+        return;
+    }
+    if (status) {
+        v1_connect(conn, 0);
+    } else {
+        connection_success(conn);
+    }
+}
+
+static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
+{
+    int save_errno;
+    int rv;
+    int retry = 1;
+    int retry_once = 0;
+    lcb_connect_status_t status;
+    lcb_io_opt_t io = conn->instance->io;
+
+    do {
+
+        if (!conn->sockptr) {
+            conn->sockptr = lcb_gai2sock_v1(conn->instance,
+                                            &conn->curr_ai,
+                                            &save_errno);
+
+            conn->sockptr->lcbconn = conn;
+            conn->sockptr->parent = io;
+
+        }
+
+        if (!conn->sockptr) {
+            if (conn_failed(conn) == -1) {
+                conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
+                return LCB_CONN_ERROR;
+            }
+        }
+
+        rv = io->v.v1.start_connect(io,
+                                    conn->sockptr,
+                                    conn->curr_ai->ai_addr,
+                                    (unsigned int)conn->curr_ai->ai_addrlen,
+                                    v1_connect_handler);
+
+        if (rv == 0) {
+            if (nocb) {
+                return LCB_CONN_INPROGRESS;
+            }
+            connection_success(conn);
+            return LCB_CONN_CONNECTED;
+        }
+
+        status = lcb_connect_status(io->v.v1.error);
+        switch (status) {
+
+        case LCB_CONNECT_EINTR:
+            retry = 1;
+            break;
+
+        case LCB_CONNECT_EISCONN:
+            connection_success(conn);
+            return LCB_CONN_CONNECTED;
+
+        case LCB_CONNECT_EALREADY:
+        case LCB_CONNECT_EINPROGRESS:
+            return LCB_CONN_INPROGRESS;
+
+        case LCB_CONNECT_EINVAL:
+            if (!retry_once) {
+                retry = 1;
+                retry_once = 1;
+                break;
+            } else {
+                retry_once = 0;
+            }
+
+        case LCB_CONNECT_EFAIL:
+            if (conn_failed(conn) == -1) {
+                conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
+                return LCB_CONN_ERROR;
+            }
+            break;
+
+        default:
+            return LCB_CONN_ERROR;
+
+        }
+    } while (retry);
+
+    return LCB_CONN_ERROR;
+}
+
 lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
                                              int nocb,
                                              lcb_uint32_t timeout)
 {
     lcb_connection_result_t result;
-    if (!conn->evinfo.ptr) {
-        conn->evinfo.ptr = conn->instance->io->v.v0.create_event(conn->instance->io);
-    }
 
-    result = v0_connect(conn, nocb);
+    if (conn->instance->io->version == 0) {
+        if (!conn->evinfo.ptr) {
+            conn->evinfo.ptr = conn->instance->io->v.v0.create_event(conn->instance->io);
+        }
+        result = v0_connect(conn, nocb);
+
+    } else {
+        result = v1_connect(conn, nocb);
+    }
 
     if (result == LCB_CONN_INPROGRESS && timeout > 0) {
         if (!conn->timer) {
@@ -256,13 +358,30 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
 
 void lcb_connection_close(lcb_connection_t conn)
 {
-    lcb_io_opt_t io = conn->instance->io;
-    if (conn->sockfd != INVALID_SOCKET) {
-        if (conn->evinfo.ptr) {
-            io->v.v0.delete_event(io, conn->sockfd, conn->evinfo.ptr);
+    lcb_io_opt_t io;
+    if (conn->instance == NULL || conn->instance->io == NULL) {
+        assert(conn->sockfd < 0 && conn->sockptr == NULL);
+        return;
+    }
+
+    io = conn->instance->io;
+    if (io->version == 0) {
+        if (conn->sockfd != INVALID_SOCKET) {
+            if (conn->evinfo.ptr) {
+                io->v.v0.delete_event(io, conn->sockfd, conn->evinfo.ptr);
+            }
+            io->v.v0.close(io, conn->sockfd);
+            conn->sockfd = INVALID_SOCKET;
         }
-        io->v.v0.close(io, conn->sockfd);
-        conn->sockfd = INVALID_SOCKET;
+
+    } else {
+
+        if (conn->sockptr) {
+            conn->sockptr->closed = 1;
+            conn->sockptr->lcbconn = NULL;
+            io->v.v1.close_socket(io, conn->sockptr);
+            conn->sockptr = NULL;
+        }
     }
 
     if (conn->input) {
@@ -335,7 +454,6 @@ void lcb_connection_cleanup(lcb_connection_t conn)
         conn->output = NULL;
     }
 
-
     lcb_connection_close(conn);
 
     if (conn->evinfo.ptr) {
@@ -347,10 +465,10 @@ void lcb_connection_cleanup(lcb_connection_t conn)
     lcb_connection_delete_timer(conn);
 
     if (conn->timer) {
-        conn->instance->io->v.v0.destroy_timer(conn->instance->io,
-                                               conn->timer);
+        conn->instance->io->v.v0.destroy_timer(conn->instance->io, conn->timer);
         conn->timer = NULL;
     }
+
     memset(conn, 0, sizeof(*conn));
 }
 

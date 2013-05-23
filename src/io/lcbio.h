@@ -30,19 +30,25 @@
 extern "C" {
 #endif
 
+
     typedef enum {
         LCB_CONN_CONNECTED = 1,
         LCB_CONN_INPROGRESS = 2,
         LCB_CONN_ERROR = 3
     } lcb_connection_result_t;
 
+
     typedef enum {
-        LCB_SOCKRW_READ = 0x1,
-        LCB_SOCKRW_WROTE = 0x2,
-        LCB_SOCKRW_IO_ERROR = 0x4,
-        LCB_SOCKRW_GENERIC_ERROR = 0x8,
-        LCB_SOCKRW_WOULDBLOCK = 0x10
+        LCB_SOCKRW_READ = 1,
+        LCB_SOCKRW_WROTE = 2,
+        LCB_SOCKRW_IO_ERROR = 3,
+        LCB_SOCKRW_GENERIC_ERROR = 4,
+        LCB_SOCKRW_WOULDBLOCK = 5,
+        LCB_SOCKRW_PENDING
     } lcb_sockrw_status_t;
+
+
+
 
     struct lcb_connection_st;
     typedef void (*lcb_connection_handler)(struct lcb_connection_st*, lcb_error_t);
@@ -71,11 +77,26 @@ extern "C" {
         /** for generic timeout events */
         lcb_connection_handler on_timeout;
 
+        /**
+         * v0 event based I/O fields
+         */
         struct {
+            /** The handler callback */
             void (*handler)(lcb_socket_t,short,void*);
+            /** The event from create_event */
             void *ptr;
+            /** This is 0 if delete_event has been called */
             int active;
         } evinfo;
+
+        /**
+         * v1 completion based I/O fields
+         */
+        struct {
+            lcb_io_read_cb read;
+            lcb_io_write_cb write;
+            lcb_io_error_cb error;
+        } completion;
 
         /** timer for the connection */
         void *timer;
@@ -91,6 +112,10 @@ extern "C" {
 
         /** this is populated with the socket when the connection is done */
         lcb_socket_t sockfd;
+
+        /** This is the v1 socket */
+        lcb_sockdata_t *sockptr;
+
         int connected;
 
         short want;
@@ -149,13 +174,13 @@ extern "C" {
 
 
     /* Read a bit of data */
-    lcb_sockrw_status_t lcb_sockrw_read(lcb_connection_t conn, ringbuffer_t *buf);
+    lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf);
 
     /* Exhaust the data until there is nothing to read */
-    lcb_sockrw_status_t lcb_sockrw_slurp(lcb_connection_t conn, ringbuffer_t *buf);
+    lcb_sockrw_status_t lcb_sockrw_v0_slurp(lcb_connection_t conn, ringbuffer_t *buf);
 
     /* Write as much data from the write buffer until blocked */
-    lcb_sockrw_status_t lcb_sockrw_write(lcb_connection_t conn, ringbuffer_t *buf);
+    lcb_sockrw_status_t lcb_sockrw_v0_write(lcb_connection_t conn, ringbuffer_t *buf);
 
     int lcb_sockrw_flushed(lcb_connection_t conn);
     /**
@@ -174,6 +199,28 @@ extern "C" {
     void lcb_sockrw_apply_want(lcb_connection_t conn);
 
     int lcb_flushing_buffers(lcb_t instance);
+
+    lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
+                                                 ringbuffer_t **buf,
+                                                 lcb_io_read_cb callback,
+                                                 lcb_io_error_cb error_callback);
+
+    lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
+                                              ringbuffer_t **buf,
+                                              lcb_io_write_cb callback,
+                                              lcb_io_error_cb error_callback);
+
+    void lcb_sockrw_v1_onread_common(lcb_sockdata_t *sock,
+                                 ringbuffer_t **dst,
+                                 lcb_ssize_t nr);
+
+    void lcb_sockrw_v1_onwrite_common(lcb_sockdata_t *sock,
+                                  lcb_io_writebuf_t *wbuf,
+                                  ringbuffer_t **dst);
+
+    unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
+                                            lcb_io_writebuf_t *wbuf,
+                                            void **datap);
 
 #ifdef __cplusplus
 }

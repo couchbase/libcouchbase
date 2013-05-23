@@ -21,7 +21,7 @@
 extern "C" {
 #endif
 
-    typedef struct {
+    typedef struct ringbuffer_st {
         char *root;
         char *read_head;
         char *write_head;

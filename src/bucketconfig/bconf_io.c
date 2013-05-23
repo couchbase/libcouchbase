@@ -23,6 +23,14 @@
 
 #include "internal.h"
 
+static void config_v0_handler(lcb_socket_t sock, short which, void *arg);
+static void config_v1_read_handler(lcb_sockdata_t *sockptr,
+                                            lcb_ssize_t nr);
+static void config_v1_write_handler(lcb_sockdata_t *sockptr,
+                                            lcb_io_writebuf_t *wbuf,
+                                            int status);
+static void config_v1_error_handler(lcb_sockdata_t *sockptr);
+
 static void lcb_instance_reset_stream_state(lcb_t instance)
 {
     free(instance->vbucket_stream.input.data);
@@ -75,6 +83,7 @@ static void instance_connect_done_handler(lcb_connection_t conn,
                                           lcb_error_t err)
 {
     lcb_t instance = conn->instance;
+
     if (err == LCB_SUCCESS) {
         instance->backup_idx = 0;
         /**
@@ -82,7 +91,12 @@ static void instance_connect_done_handler(lcb_connection_t conn,
          */
         ringbuffer_strcat(conn->output, instance->http_uri);
         assert(conn->output->nbytes > 0);
-        conn->evinfo.handler = lcb_vbucket_stream_handler;
+
+        conn->evinfo.handler = config_v0_handler;
+        conn->completion.read = config_v1_read_handler;
+        conn->completion.write = config_v1_write_handler;
+        conn->completion.error = config_v1_error_handler;
+
         lcb_sockrw_set_want(conn, LCB_RW_EVENT, 0);
         lcb_sockrw_apply_want(conn);
 
@@ -167,4 +181,105 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     }
 
     return instance->last_error;
+}
+
+/**
+ * Callback from libevent when we read from the REST socket
+ * @param sock the readable socket
+ * @param which what kind of events we may do
+ * @param arg pointer to the libcouchbase instance
+ */
+static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
+{
+    lcb_t instance = arg;
+    lcb_connection_t conn = &instance->connection;
+    assert(sock != INVALID_SOCKET);
+    lcb_sockrw_status_t status;
+
+    if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
+
+        status = lcb_sockrw_v0_write(conn, conn->output);
+        if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
+            lcb_instance_connerr(instance,
+                                 LCB_NETWORK_ERROR,
+                                 "Problem with sending data. "
+                                 "Failed to send data to REST server");
+            return;
+        }
+
+        if (lcb_sockrw_flushed(conn)) {
+            lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
+        }
+
+    }
+
+    if ((which & LCB_READ_EVENT) == 0) {
+        return;
+    }
+
+    status = lcb_sockrw_v0_slurp(conn, conn->input);
+    if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
+        lcb_instance_connerr(instance,
+                             LCB_NETWORK_ERROR,
+                             "Problem with reading data. "
+                             "Failed to send read data from REST server");
+        return;
+    }
+    lcb_parse_vbucket_stream(instance);
+    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 0);
+    lcb_sockrw_apply_want(conn);
+}
+
+static void v1_error_common(lcb_t instance)
+{
+    lcb_instance_connerr(instance, LCB_NETWORK_ERROR,
+                         "Problem with sending data");
+}
+
+static void config_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
+{
+    lcb_t instance;
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&instance)) {
+        return;
+    }
+
+    lcb_sockrw_v1_onread_common(sockptr, &instance->connection.input, nr);
+
+    if (nr < 1) {
+        v1_error_common(instance);
+        return;
+    }
+
+    lcb_parse_vbucket_stream(instance);
+    lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
+    lcb_sockrw_apply_want(&instance->connection);
+}
+
+static void config_v1_write_handler(lcb_sockdata_t *sockptr,
+                                    lcb_io_writebuf_t *wbuf,
+                                    int status)
+{
+    lcb_t instance;
+    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void**)&instance)) {
+        return;
+    }
+
+    lcb_sockrw_v1_onwrite_common(sockptr, wbuf, &instance->connection.output);
+
+    if (status) {
+        v1_error_common(instance);
+    }
+
+    lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
+    lcb_sockrw_apply_want(&instance->connection);
+}
+
+static void config_v1_error_handler(lcb_sockdata_t *sockptr)
+{
+    lcb_t instance;
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&instance)) {
+        return;
+    }
+
+    v1_error_common(instance);
 }
