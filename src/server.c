@@ -484,19 +484,11 @@ void lcb_server_connected(lcb_server_t *server)
 
         ringbuffer_reset(&server->pending);
         ringbuffer_reset(&server->pending_cookies);
-        server->instance->io->v.v0.update_event(server->instance->io,
-                                                server->connection.sockfd,
-                                                server->connection.event,
-                                                LCB_WRITE_EVENT,
-                                                server, lcb_server_event_handler);
+        lcb_server_io_start(server, LCB_WRITE_EVENT);
+
     } else {
         /* Set the correct event handler */
-        server->instance->io->v.v0.update_event(server->instance->io,
-                                                server->connection.sockfd,
-                                                server->connection.event,
-                                                LCB_READ_EVENT,
-                                                server,
-                                                lcb_server_event_handler);
+        lcb_server_io_start(server, LCB_READ_EVENT);
     }
 }
 
@@ -535,12 +527,8 @@ void lcb_server_send_packets(lcb_server_t *server)
 {
     if (server->pending.nbytes > 0 || server->output.nbytes > 0) {
         if (server->connection_ready) {
-            server->instance->io->v.v0.update_event(server->instance->io,
-                                                    server->connection.sockfd,
-                                                    server->connection.event,
-                                                    LCB_RW_EVENT,
-                                                    server,
-                                                    lcb_server_event_handler);
+            lcb_server_io_start(server, LCB_RW_EVENT);
+
         } else {
             lcb_server_connect(server);
         }

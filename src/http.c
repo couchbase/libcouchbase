@@ -29,6 +29,19 @@ static const char http_version[] = " HTTP/1.1\r\n";
 static const char req_headers[] = "User-Agent: libcouchbase/"LCB_VERSION_STRING"\r\n"
                                   "Accept: application/json\r\n";
 
+static void request_event_handler(lcb_socket_t, short, void *);
+
+static void http_io_start(lcb_http_request_t req, short events)
+{
+    lcb_io_opt_t io = req->io;
+    io->v.v0.update_event(io,
+                          req->connection.sockfd,
+                          req->connection.event,
+                          events,
+                          req,
+                          request_event_handler);
+}
+
 static void http_request_destroy(lcb_http_request_t req)
 {
     if (!req) {
@@ -381,12 +394,8 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
     if (which & LCB_READ_EVENT) {
         rv = request_do_read(req);
         if (rv > 0) {
-            instance->io->v.v0.update_event(instance->io,
-                                            req->connection.sockfd,
-                                            req->connection.event,
-                                            LCB_READ_EVENT,
-                                            req,
-                                            request_event_handler);
+            http_io_start(req, LCB_READ_EVENT);
+
         } else if (rv < 0) {
             should_continue = 0;
             err = LCB_NETWORK_ERROR;
@@ -401,18 +410,10 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
             should_continue = 0;
 
         } else if (req->output.nbytes == 0) {
-            instance->io->v.v0.update_event(instance->io,
-                                            req->connection.sockfd,
-                                            req->connection.event,
-                                            LCB_READ_EVENT,
-                                            req,
-                                            request_event_handler);
+            http_io_start(req, LCB_READ_EVENT);
+
         } else {
-            instance->io->v.v0.update_event(instance->io,
-                                            req->connection.sockfd,
-                                            req->connection.event,
-                                            LCB_WRITE_EVENT,
-                                            req, request_event_handler);
+            http_io_start(req, LCB_WRITE_EVENT);
         }
     }
 
@@ -439,11 +440,7 @@ static void request_connected(lcb_connection_t conn, lcb_error_t err)
         return;
     }
 
-    req->io->v.v0.update_event(req->io, req->connection.sockfd,
-                               req->connection.event,
-                               LCB_WRITE_EVENT,
-                               req,
-                               request_event_handler);
+    http_io_start(req, LCB_WRITE_EVENT);
 }
 
 static lcb_error_t request_connect(lcb_http_request_t req)

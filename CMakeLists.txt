@@ -64,6 +64,7 @@ ADD_LIBRARY(couchbase SHARED
             src/sanitycheck.c
             src/server.c
             src/server/server_io.c
+            src/server/server_connect.c
             src/stats.c
             src/store.c
             src/strerror.c

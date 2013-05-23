@@ -557,6 +557,10 @@ extern "C" {
 
     void lcb_server_connect(lcb_server_t *server);
 
+    void lcb_server_io_start(lcb_server_t *server, short flags);
+    void lcb_config_io_start(lcb_t instance, short events);
+    int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop);
+
 
 #ifdef __cplusplus
 }

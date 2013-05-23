@@ -978,9 +978,7 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 
         instance->n_http_uri_sent += (lcb_size_t)nw;
         if (instance->n_http_uri_sent == strlen(instance->http_uri)) {
-            instance->io->v.v0.update_event(instance->io, conn->sockfd,
-                                            conn->event, LCB_READ_EVENT,
-                                            instance, lcb_vbucket_stream_handler);
+            lcb_config_io_start(instance, LCB_READ_EVENT);
         }
     }
 

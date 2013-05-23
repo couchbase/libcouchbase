@@ -75,9 +75,7 @@ static void instance_connect_done_handler(lcb_connection_t conn,
     lcb_t instance = conn->instance;
     if (err == LCB_SUCCESS) {
         instance->backup_idx = 0;
-        instance->io->v.v0.update_event(instance->io, conn->sockfd,
-                                        conn->event, LCB_RW_EVENT,
-                                        instance, lcb_vbucket_stream_handler);
+        lcb_config_io_start(instance, LCB_RW_EVENT);
 
     } else if (err == LCB_ETIMEDOUT) {
         lcb_error_handler(instance,
@@ -161,4 +159,14 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     }
 
     return instance->last_error;
+}
+
+void lcb_config_io_start(lcb_t instance, short events)
+{
+    instance->io->v.v0.update_event(instance->io,
+                                    instance->connection.sockfd,
+                                    instance->connection.event,
+                                    events,
+                                    instance,
+                                    lcb_vbucket_stream_handler);
 }

@@ -148,8 +148,8 @@ libcouchbase_la_SOURCES = \
                         src/hashtable.c \
                         src/http.c \
                         src/instance.c \
-                        src/io/connect.c \
                         src/internal.h \
+                        src/io/connect.c \
                         src/io/lcbio.h \
                         src/lcb_assert.h \
                         src/list.c \
@@ -161,6 +161,7 @@ libcouchbase_la_SOURCES = \
                         src/ringbuffer.h \
                         src/sanitycheck.c \
                         src/server.c \
+                        src/server/server_connect.c \
                         src/server/server_io.c \
                         src/stats.c \
                         src/store.c \
