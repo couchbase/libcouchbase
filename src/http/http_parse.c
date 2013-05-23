@@ -83,13 +83,8 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nby
         return 0;
     }
     if (req->chunked) {
-        lcb_setup_lcb_http_resp_t(&resp,
-                                  p->status_code,
-                                  req->path,
-                                  req->npath,
-                                  req->headers,
-                                  bytes,
-                                  nbytes);
+        lcb_setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
+                              req->headers, bytes, nbytes);
         req->on_data(req, req->instance, req->command_cookie, LCB_SUCCESS, &resp);
     } else {
         if (!ringbuffer_ensure_capacity(&req->result, nbytes)) {
@@ -123,7 +118,7 @@ static int http_parser_complete_cb(http_parser *p)
                 lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM, NULL);
                 return -1;
             }
-            np = ringbuffer_peek(&req->input, bytes, nbytes);
+            np = ringbuffer_peek(req->connection.input, bytes, nbytes);
             if (np != nbytes) {
                 lcb_error_handler(req->instance, LCB_EINTERNAL, NULL);
                 free(bytes);
@@ -131,13 +126,8 @@ static int http_parser_complete_cb(http_parser *p)
             }
         }
     }
-    lcb_setup_lcb_http_resp_t(&resp,
-                              p->status_code,
-                              req->path,
-                              req->npath,
-                              req->headers,
-                              bytes,
-                              nbytes);
+    lcb_setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
+                              req->headers, bytes, nbytes);
 
     TRACE_HTTP_END(req, LCB_SUCCESS, &resp);
 
@@ -166,15 +156,16 @@ int lcb_http_request_do_parse(lcb_http_request_t req)
 {
     lcb_size_t nbytes, nb = 0, np = 0;
     char *bytes;
+    ringbuffer_t *input = req->connection.input;
 
-    nbytes = req->input.nbytes;
-    bytes = ringbuffer_get_read_head(&req->input);
-    if (!ringbuffer_is_continous(&req->input, RINGBUFFER_READ, nbytes)) {
+    nbytes = input->nbytes;
+    bytes = ringbuffer_get_read_head(input);
+    if (!ringbuffer_is_continous(input, RINGBUFFER_READ, nbytes)) {
         if ((bytes = malloc(nbytes)) == NULL) {
             lcb_error_handler(req->instance, LCB_CLIENT_ENOMEM, NULL);
             return -1;
         }
-        np = ringbuffer_peek(&req->input, bytes, nbytes);
+        np = ringbuffer_peek(input, bytes, nbytes);
         if (np != nbytes) {
             lcb_error_handler(req->instance, LCB_EINTERNAL, NULL);
             free(bytes);
@@ -184,7 +175,7 @@ int lcb_http_request_do_parse(lcb_http_request_t req)
 
     if (nbytes > 0) {
         nb = (lcb_size_t)http_parser_execute(req->parser, &req->parser_settings, bytes, nbytes);
-        ringbuffer_consumed(&req->input, nbytes);
+        ringbuffer_consumed(input, nbytes);
         if (np) {   /* release peek storage */
             free(bytes);
         }

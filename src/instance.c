@@ -321,8 +321,12 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
-    obj->connection.sockfd = INVALID_SOCKET;
-    obj->connection.instance = obj;
+
+    err = lcb_connection_init(&obj->connection, obj);
+    if (err != LCB_SUCCESS) {
+        lcb_destroy(obj);
+        return err;
+    }
 
     err = setup_boostrap_hosts(obj, host);
     if (err != LCB_SUCCESS) {
@@ -371,9 +375,6 @@ lcb_error_t lcb_create(lcb_t *instance,
         return LCB_CLIENT_ENOMEM;
     }
     strcpy(obj->http_uri, buffer);
-
-    ringbuffer_initialize(&obj->input, 4096);
-    ringbuffer_initialize(&obj->output, 1024);
 
     return LCB_SUCCESS;
 }
@@ -425,8 +426,6 @@ void lcb_destroy(lcb_t instance)
     free(instance->vbucket_stream.input.data);
     free(instance->vbucket_stream.chunk.data);
     free(instance->vbucket_stream.header);
-    ringbuffer_reset(&instance->input);
-    ringbuffer_reset(&instance->output);
     free(instance->vb_server_map);
     free(instance->histogram);
     free(instance->username);
@@ -795,7 +794,6 @@ int lcb_switch_to_backup_node(lcb_t instance,
     return -1;
 }
 
-
 /**
  * Callback from libevent when we read from the REST socket
  * @param sock the readable socket
@@ -811,7 +809,7 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 
     if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
 
-        status = lcb_sockrw_write(conn, &instance->output);
+        status = lcb_sockrw_write(conn, conn->output);
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
             lcb_error_handler(instance, LCB_NETWORK_ERROR,
                               "Failed to send data to REST server");
@@ -821,7 +819,7 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
             return;
         }
 
-        if (!instance->output.nbytes) {
+        if (!conn->output->nbytes) {
             lcb_config_io_start(instance, LCB_READ_EVENT);
         }
     }
@@ -830,7 +828,7 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
         return;
     }
 
-    status = lcb_sockrw_slurp(conn, &instance->input);
+    status = lcb_sockrw_slurp(conn, conn->input);
     if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
         /** TODO: Handle Errors */
     }

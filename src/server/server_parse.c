@@ -49,20 +49,21 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     char *packet;
     lcb_size_t packetsize;
     struct lcb_command_data_st ct;
+    lcb_connection_t conn = &c->connection;
 
-    if (ringbuffer_ensure_alignment(&c->input) != 0) {
+    if (ringbuffer_ensure_alignment(conn->input) != 0) {
         lcb_error_handler(c->instance, LCB_EINTERNAL,
                           NULL);
         return -1;
     }
 
-    nr = ringbuffer_peek(&c->input, header.bytes, sizeof(header));
+    nr = ringbuffer_peek(conn->input, header.bytes, sizeof(header));
     if (nr < sizeof(header)) {
         return 0;
     }
 
     packetsize = ntohl(header.response.bodylen) + (lcb_uint32_t)sizeof(header);
-    if (c->input.nbytes < packetsize) {
+    if (conn->input->nbytes < packetsize) {
         return 0;
     }
 
@@ -72,14 +73,14 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
             (header.response.opaque < req.request.opaque &&
              header.response.opaque > 0)) { /* sasl comes with zero opaque */
         /* already processed. */
-        ringbuffer_consumed(&c->input, packetsize);
+        ringbuffer_consumed(conn->input, packetsize);
         return 1;
     }
 
-    packet = c->input.read_head;
+    packet = conn->input->read_head;
     /* we have everything! */
 
-    if (!ringbuffer_is_continous(&c->input, RINGBUFFER_READ,
+    if (!ringbuffer_is_continous(conn->input, RINGBUFFER_READ,
                                  packetsize)) {
         /* The buffer isn't continous.. for now just copy it out and
         ** operate on the copy ;)
@@ -88,7 +89,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
             lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
             return -1;
         }
-        nr = ringbuffer_read(&c->input, packet, packetsize);
+        nr = ringbuffer_read(conn->input, packet, packetsize);
         if (nr != packetsize) {
             lcb_error_handler(c->instance, LCB_EINTERNAL,
                               NULL);
@@ -101,7 +102,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     if (nr != sizeof(ct)) {
         lcb_error_handler(c->instance, LCB_EINTERNAL,
                           NULL);
-        if (packet != c->input.read_head) {
+        if (packet != conn->input->read_head) {
             free(packet);
         }
         return -1;
@@ -120,7 +121,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     case PROTOCOL_BINARY_RES: {
         int was_connected = c->connection_ready;
         if (lcb_server_purge_implicit_responses(c, header.response.opaque, stop, 0) != 0) {
-            if (packet != c->input.read_head) {
+            if (packet != conn->input->read_head) {
                 free(packet);
             }
             return -1;
@@ -206,16 +207,16 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
         lcb_error_handler(c->instance,
                           LCB_PROTOCOL_ERROR,
                           NULL);
-        if (packet != c->input.read_head) {
+        if (packet != conn->input->read_head) {
             free(packet);
         }
         return -1;
     }
 
-    if (packet != c->input.read_head) {
+    if (packet != conn->input->read_head) {
         free(packet);
     } else {
-        ringbuffer_consumed(&c->input, packetsize);
+        ringbuffer_consumed(conn->input, packetsize);
     }
     return 1;
 }

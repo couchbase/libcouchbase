@@ -81,7 +81,8 @@ void lcb_purge_single_server(lcb_server_t *server,
     ringbuffer_t *stream = &server->cmd_log;
     ringbuffer_t *cookies;
     ringbuffer_t *mirror = NULL; /* mirror buffer should be purged with main stream */
-    lcb_size_t send_size = ringbuffer_get_nbytes(&server->output);
+    lcb_connection_t conn = &server->connection;
+    lcb_size_t send_size = ringbuffer_get_nbytes(conn->output);
     lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
     hrtime_t now = gethrtime();
     int should_switch_to_backup_node = 0;
@@ -144,9 +145,9 @@ void lcb_purge_single_server(lcb_server_t *server,
             /* I do believe I have some IOV functions to do that? */
             lcb_size_t nbytes = packetsize - (stream_size - send_size);
             lcb_assert(ringbuffer_memcpy(&rest,
-                                         &server->output,
+                                         conn->output,
                                          nbytes) == 0);
-            ringbuffer_consumed(&server->output, nbytes);
+            ringbuffer_consumed(conn->output, nbytes);
             send_size -= nbytes;
         }
         stream_size -= packetsize;
@@ -342,16 +343,14 @@ void lcb_purge_single_server(lcb_server_t *server,
     if (server->connection_ready) {
         /* Preserve the rest of the stream */
         lcb_size_t nbytes = ringbuffer_get_nbytes(stream);
-        send_size = ringbuffer_get_nbytes(&server->output);
+        send_size = ringbuffer_get_nbytes(conn->output);
 
         if (send_size >= nbytes) {
-            ringbuffer_consumed(&server->output,
-                                send_size - nbytes);
-            lcb_assert(ringbuffer_memcpy(&rest,
-                                         &server->output, nbytes) == 0);
+            ringbuffer_consumed(conn->output, send_size - nbytes);
+            lcb_assert(ringbuffer_memcpy(&rest, conn->output, nbytes) == 0);
         }
-        ringbuffer_reset(&server->output);
-        ringbuffer_append(&rest, &server->output);
+        ringbuffer_reset(conn->output);
+        ringbuffer_append(&rest, conn->output);
     }
 
     ringbuffer_destruct(&rest);
@@ -367,9 +366,6 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
                                lcb_error_t error)
 {
     lcb_purge_single_server(server, error);
-
-    ringbuffer_reset(&server->output);
-    ringbuffer_reset(&server->input);
     ringbuffer_reset(&server->cmd_log);
     ringbuffer_reset(&server->output_cookies);
     ringbuffer_reset(&server->pending);
@@ -432,12 +428,10 @@ void lcb_server_destroy(lcb_server_t *server)
     free(server->rest_api_server);
     free(server->couch_api_base);
     free(server->authority);
-    ringbuffer_destruct(&server->output);
     ringbuffer_destruct(&server->output_cookies);
     ringbuffer_destruct(&server->cmd_log);
     ringbuffer_destruct(&server->pending);
     ringbuffer_destruct(&server->pending_cookies);
-    ringbuffer_destruct(&server->input);
 
     if (hashset_num_items(server->http_requests)) {
         purge_http_request(server);
@@ -462,6 +456,7 @@ void lcb_server_destroy(lcb_server_t *server)
 void lcb_server_connected(lcb_server_t *server)
 {
     server->connection_ready = 1;
+    lcb_connection_t conn = &server->connection;
 
     if (server->pending.nbytes > 0) {
         /*
@@ -473,10 +468,11 @@ void lcb_server_connected(lcb_server_t *server)
         ringbuffer_t copy = server->pending;
         ringbuffer_reset(&server->cmd_log);
         ringbuffer_reset(&server->output_cookies);
-        ringbuffer_reset(&server->output);
-        if (!ringbuffer_append(&server->pending, &server->output) ||
+        ringbuffer_reset(conn->output);
+        if (!ringbuffer_append(&server->pending, conn->output) ||
                 !ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
                 !ringbuffer_append(&copy, &server->cmd_log)) {
+
             lcb_error_handler(server->instance,
                               LCB_CLIENT_ENOMEM,
                               NULL);
@@ -484,6 +480,7 @@ void lcb_server_connected(lcb_server_t *server)
 
         ringbuffer_reset(&server->pending);
         ringbuffer_reset(&server->pending_cookies);
+        assert(conn->output->nbytes);
         lcb_server_io_start(server, LCB_WRITE_EVENT);
 
     } else {
@@ -498,6 +495,11 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
     char *p;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
+
+    lcb_connection_init(&server->connection, server->instance);
+
+    server->connection.data = server;
+
     server->index = servernum;
     server->authority = strdup(n);
     strcpy(server->connection.host, n);
@@ -514,9 +516,6 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
     n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
                                            servernum);
     server->rest_api_server = strdup(n);
-    server->connection.sockfd = INVALID_SOCKET;
-    server->connection.data = server;
-    server->connection.instance = server->instance;
 
     lcb_connection_getaddrinfo(&server->connection, 0);
 
@@ -525,7 +524,7 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
 
 void lcb_server_send_packets(lcb_server_t *server)
 {
-    if (server->pending.nbytes > 0 || server->output.nbytes > 0) {
+    if (server->pending.nbytes > 0 || server->connection.output->nbytes > 0) {
         if (server->connection_ready) {
             lcb_server_io_start(server, LCB_RW_EVENT);
 

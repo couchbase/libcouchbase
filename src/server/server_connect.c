@@ -89,6 +89,7 @@ static void start_sasl_auth_server(lcb_server_t *server)
     protocol_binary_request_no_extras req;
     lcb_size_t keylen;
     lcb_size_t bodysize;
+    lcb_connection_t conn = &server->connection;
 
     mechlist = strdup("PLAIN");
     if (mechlist == NULL) {
@@ -114,13 +115,13 @@ static void start_sasl_auth_server(lcb_server_t *server)
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     req.message.header.request.bodylen = ntohl((lcb_uint32_t)(bodysize));
 
-    lcb_server_buffer_start_packet(server, NULL, &server->output,
+    lcb_server_buffer_start_packet(server, NULL, conn->output,
                                    &server->output_cookies,
                                    req.bytes, sizeof(req.bytes));
-    lcb_server_buffer_write_packet(server, &server->output,
+    lcb_server_buffer_write_packet(server, conn->output,
                                    chosenmech, keylen);
-    lcb_server_buffer_write_packet(server, &server->output, data, len);
-    lcb_server_buffer_end_packet(server, &server->output);
+    lcb_server_buffer_write_packet(server, conn->output, data, len);
+    lcb_server_buffer_end_packet(server, conn->output);
 
     lcb_server_io_start(server, LCB_WRITE_EVENT);
 }

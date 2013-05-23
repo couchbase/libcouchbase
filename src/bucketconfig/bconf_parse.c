@@ -177,8 +177,9 @@ void lcb_parse_vbucket_stream(lcb_t instance)
 {
     buffer_t *buffer = &instance->vbucket_stream.chunk;
     lcb_size_t nw, expected;
+    lcb_connection_t conn = &instance->connection;
 
-    if (!grow_buffer(buffer, instance->input.nbytes+1)) {
+    if (!grow_buffer(buffer, conn->input->nbytes+1)) {
         lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
                           "Failed to allocate memory");
         return;
@@ -188,7 +189,7 @@ void lcb_parse_vbucket_stream(lcb_t instance)
      * TODO: Refactor this code to use ringbuffer directly, so we don't need
      * to copy
      */
-    expected = instance->input.nbytes;
+    expected = conn->input->nbytes;
     assert(buffer->data);
 
     /**
@@ -198,7 +199,7 @@ void lcb_parse_vbucket_stream(lcb_t instance)
      * that 'size' is the allocated length, and 'avail' is the length of the
      * contents within the buffer
      */
-    nw = ringbuffer_read(&instance->input,
+    nw = ringbuffer_read(conn->input,
                          buffer->data + buffer->avail,
                          buffer->size - buffer->avail);
 

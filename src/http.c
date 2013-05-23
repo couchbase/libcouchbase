@@ -46,8 +46,6 @@ static void http_request_destroy(lcb_http_request_t req)
     }
     free(req->parser);
     free(req->password);
-    ringbuffer_destruct(&req->input);
-    ringbuffer_destruct(&req->output);
     ringbuffer_destruct(&req->result);
     {
         struct lcb_http_header_st *tmp, *hdr = req->headers_list;
@@ -166,6 +164,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     lcb_http_method_t method;
     int chunked;
     lcb_error_t error;
+    ringbuffer_t *output;
 
     switch (cmd->version) {
     case 0:
@@ -293,6 +292,14 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         return lcb_synchandler_return(instance, error);
     }
 
+    error = lcb_connection_init(&req->connection, instance);
+    if (error != LCB_SUCCESS) {
+        http_request_destroy(req);
+        return lcb_synchandler_return(instance, error);
+    }
+
+    output = req->connection.output;
+
 #define BUFF_APPEND(dst, src, len)                                  \
         if (len != ringbuffer_write(dst, src, len)) {               \
             http_request_destroy(req);                          \
@@ -385,7 +392,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         nn += 10 + (lcb_size_t)req->url_info.field_data[UF_HOST].len +
               req->url_info.field_data[UF_PORT].len; /* Host: example.com:666\r\n\r\n */
 
-        if (!ringbuffer_ensure_capacity(&req->output, nn)) {
+        if (!ringbuffer_ensure_capacity(output, nn)) {
             http_request_destroy(req);
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
@@ -399,33 +406,33 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         dst[len] = '\0';
 
         nn = strlen(method_strings[req->method]);
-        BUFF_APPEND(&req->output, method_strings[req->method], nn);
+        BUFF_APPEND(output, method_strings[req->method], nn);
         nn = req->url_info.field_data[UF_PATH].len;
-        BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_PATH].off, nn);
+        BUFF_APPEND(output, req->url + req->url_info.field_data[UF_PATH].off, nn);
         nn = req->url_info.field_data[UF_QUERY].len;
         if (nn) {
-            BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_QUERY].off - 1, nn + 1);
+            BUFF_APPEND(output, req->url + req->url_info.field_data[UF_QUERY].off - 1, nn + 1);
         }
         nn = strlen(http_version);
-        BUFF_APPEND(&req->output, http_version, nn);
+        BUFF_APPEND(output, http_version, nn);
         nn = strlen(req_headers);
-        BUFF_APPEND(&req->output, req_headers, nn);
+        BUFF_APPEND(output, req_headers, nn);
         if (nauth) {
-            BUFF_APPEND(&req->output, "Authorization: Basic ", 21);
-            BUFF_APPEND(&req->output, auth, nauth);
-            BUFF_APPEND(&req->output, "\r\n", 2);
+            BUFF_APPEND(output, "Authorization: Basic ", 21);
+            BUFF_APPEND(output, auth, nauth);
+            BUFF_APPEND(output, "\r\n", 2);
         }
-        BUFF_APPEND(&req->output, "Host: ", 6);
+        BUFF_APPEND(output, "Host: ", 6);
         nn = req->url_info.field_data[UF_HOST].len;
 
         EXTRACT_URL_PART_NOALLOC(UF_HOST, req->connection.host, nn);
-        BUFF_APPEND(&req->output, req->connection.host, nn);
+        BUFF_APPEND(output, req->connection.host, nn);
 
         nn = req->url_info.field_data[UF_PORT].len;
         EXTRACT_URL_PART_NOALLOC(UF_PORT, req->connection.port, nn);
 
         /* copy port with leading colon */
-        BUFF_APPEND(&req->output, req->url + req->url_info.field_data[UF_PORT].off - 1, nn + 1);
+        BUFF_APPEND(output, req->url + req->url_info.field_data[UF_PORT].off - 1, nn + 1);
         if (req->method == LCB_HTTP_METHOD_PUT ||
                 req->method == LCB_HTTP_METHOD_POST) {
             char *post_headers = calloc(512, sizeof(char));
@@ -448,17 +455,17 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
             ret += rr;
-            if (!ringbuffer_ensure_capacity(&req->output, nbody + (lcb_size_t)ret)) {
+            if (!ringbuffer_ensure_capacity(output, nbody + (lcb_size_t)ret)) {
                 http_request_destroy(req);
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
-            BUFF_APPEND(&req->output, post_headers, (lcb_size_t)ret);
+            BUFF_APPEND(output, post_headers, (lcb_size_t)ret);
             if (nbody) {
-                BUFF_APPEND(&req->output, body, nbody);
+                BUFF_APPEND(output, body, nbody);
             }
             free(post_headers);
         } else {
-            BUFF_APPEND(&req->output, "\r\n\r\n", 4);
+            BUFF_APPEND(output, "\r\n\r\n", 4);
         }
     }
 

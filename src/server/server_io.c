@@ -49,7 +49,7 @@ static int do_read_data(lcb_server_t *c, int allow_read)
             /* need more data */
             lcb_sockrw_status_t status;
 
-            status = lcb_sockrw_read(&c->connection, &c->input);
+            status = lcb_sockrw_read(&c->connection, c->connection.input);
 
             switch (status) {
 
@@ -105,18 +105,20 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_server_t *c = arg;
     lcb_t instance = c->instance;
+    lcb_connection_t conn = &c->connection;
     (void)sock;
 
     if (which & LCB_WRITE_EVENT) {
         lcb_sockrw_status_t status;
-        status = lcb_sockrw_write(&c->connection, &c->output);
+
+        status = lcb_sockrw_write(conn, conn->output);
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
             event_complete_common(instance);
             return;
         }
     }
 
-    if (which & LCB_READ_EVENT || c->input.nbytes) {
+    if (which & LCB_READ_EVENT || conn->input->nbytes) {
         if (do_read_data(c, which & LCB_READ_EVENT) != 0) {
             /* TODO stash error message somewhere
              * "Failed to read from connection to \"%s:%s\"", c->hostname, c->port */
@@ -127,7 +129,7 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     }
 
     which = LCB_READ_EVENT;
-    if (c->output.nbytes || c->input.nbytes) {
+    if (conn->output->nbytes || conn->input->nbytes) {
         /**
          * If we have data in the read buffer, we need to make sure the event
          * still gets delivered despite nothing being in the actual TCP read
@@ -160,13 +162,14 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
 int lcb_has_data_in_buffers(lcb_t instance)
 {
     lcb_size_t ii;
+    lcb_connection_t conn = &instance->connection;
 
     if (hashset_num_items(instance->http_requests)) {
         return 1;
     }
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
-        if (c->cmd_log.nbytes || c->output.nbytes || c->input.nbytes ||
+        if (c->cmd_log.nbytes || conn->output->nbytes || conn->input->nbytes ||
                 c->pending.nbytes || hashset_num_items(c->http_requests)) {
             return 1;
         }

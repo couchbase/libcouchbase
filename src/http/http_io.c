@@ -30,7 +30,7 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
     if (which & LCB_READ_EVENT) {
         lcb_sockrw_status_t status;
 
-        status = lcb_sockrw_slurp(&req->connection, &req->input);
+        status = lcb_sockrw_slurp(&req->connection, req->connection.input);
         if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
             should_continue = 0;
             err = LCB_NETWORK_ERROR;
@@ -55,13 +55,13 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
     if (should_continue && (which & LCB_WRITE_EVENT)) {
         lcb_sockrw_status_t status;
 
-        status = lcb_sockrw_write(&req->connection, &req->output);
+        status = lcb_sockrw_write(&req->connection, req->connection.output);
 
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
             err = LCB_NETWORK_ERROR;
             should_continue = 0;
 
-        } else if (req->output.nbytes == 0) {
+        } else if (req->connection.output->nbytes == 0) {
             http_io_start(req, LCB_READ_EVENT);
 
         } else {

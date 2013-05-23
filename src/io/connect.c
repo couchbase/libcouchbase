@@ -264,6 +264,14 @@ void lcb_connection_close(lcb_connection_t conn)
         io->v.v0.close(io, conn->sockfd);
         conn->sockfd = INVALID_SOCKET;
     }
+
+    if (conn->input) {
+        ringbuffer_reset(conn->input);
+    }
+
+    if (conn->output) {
+        ringbuffer_reset(conn->output);
+    }
 }
 
 int lcb_getaddrinfo(lcb_t instance, const char *hostname,
@@ -315,6 +323,19 @@ void lcb_connection_cleanup(lcb_connection_t conn)
         conn->ai = NULL;
     }
 
+    if (conn->input) {
+        ringbuffer_destruct(conn->input);
+        free(conn->input);
+        conn->input = NULL;
+    }
+
+    if (conn->output) {
+        ringbuffer_destruct(conn->output);
+        free(conn->output);
+        conn->output = NULL;
+    }
+
+
     lcb_connection_close(conn);
 
     if (conn->event) {
@@ -357,4 +378,30 @@ void lcb_connection_update_timer(lcb_connection_t conn,
                                           usec,
                                           conn,
                                           timeout_handler_dispatch);
+}
+
+lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance)
+{
+    conn->instance = instance;
+    if (!conn->input) {
+        conn->input = calloc(1, sizeof(*conn->input));
+    }
+
+    if (!conn->output) {
+        conn->output = calloc(1, sizeof(*conn->output));
+    }
+
+    conn->sockfd = INVALID_SOCKET;
+
+    if (conn->input == NULL || conn->output == NULL) {
+        lcb_connection_cleanup(conn);
+        return LCB_CLIENT_ENOMEM;
+    }
+    if (ringbuffer_initialize(conn->input, 8092) == 0 ||
+            ringbuffer_initialize(conn->output, 8092) == 0) {
+        lcb_connection_cleanup(conn);
+        return LCB_CLIENT_ENOMEM;
+    }
+
+    return LCB_SUCCESS;
 }

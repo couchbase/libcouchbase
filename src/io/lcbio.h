@@ -51,6 +51,9 @@ extern "C" {
         struct addrinfo *ai;
         struct addrinfo *curr_ai;
 
+        ringbuffer_t *input;
+        ringbuffer_t *output;
+
         /** instance */
         lcb_t instance;
 
@@ -87,6 +90,11 @@ extern "C" {
     };
 
     typedef struct lcb_connection_st* lcb_connection_t;
+
+    /**
+     * Initialize the connection object's buffers, usually allocating them
+     */
+    lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance);
 
 
     /**

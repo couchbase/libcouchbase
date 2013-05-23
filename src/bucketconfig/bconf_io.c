@@ -30,8 +30,8 @@ static void lcb_instance_reset_stream_state(lcb_t instance)
     free(instance->vbucket_stream.header);
     memset(&instance->vbucket_stream, 0, sizeof(instance->vbucket_stream));
 
-    ringbuffer_reset(&instance->input);
-    ringbuffer_reset(&instance->output);
+    ringbuffer_reset(instance->connection.input);
+    ringbuffer_reset(instance->connection.output);
 }
 
 
@@ -80,8 +80,8 @@ static void instance_connect_done_handler(lcb_connection_t conn,
         /**
          * Print the URI to the ringbuffer
          */
-        ringbuffer_strcat(&instance->output, instance->http_uri);
-        assert(instance->output.nbytes > 0);
+        ringbuffer_strcat(conn->output, instance->http_uri);
+        assert(conn->output->nbytes > 0);
 
         lcb_config_io_start(instance, LCB_RW_EVENT);
 
