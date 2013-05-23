@@ -38,6 +38,7 @@ ADD_LIBRARY(couchbase SHARED
             src/arithmetic.c
             src/base64.c
             src/bucketconfig/bconf_io.c
+            src/bucketconfig/bconf_parse.c
             src/behavior.c
             src/compat.c
             src/config_cache.c
@@ -52,8 +53,11 @@ ADD_LIBRARY(couchbase SHARED
             src/hashset.c
             src/hashtable.c
             src/http.c
+            src/http/http_io.c
+            src/http/http_parse.c
             src/instance.c
             src/io/connect.c
+            src/io/readwrite.c
             src/iofactory.c
             src/isasl.c
             src/list.c
@@ -65,6 +69,7 @@ ADD_LIBRARY(couchbase SHARED
             src/server.c
             src/server/server_io.c
             src/server/server_connect.c
+            src/server/server_parse.c
             src/stats.c
             src/store.c
             src/strerror.c

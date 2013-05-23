@@ -23,59 +23,6 @@
 
 #include "internal.h"
 
-static int do_fill_input_buffer(lcb_server_t *c)
-{
-    struct lcb_iovec_st iov[2];
-    lcb_ssize_t nr;
-
-    if (!ringbuffer_ensure_capacity(&c->input, 8192)) {
-        lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
-        return -1;
-    }
-
-    ringbuffer_get_iov(&c->input, RINGBUFFER_WRITE, iov);
-
-    nr = c->instance->io->v.v0.recvv(c->instance->io, c->connection.sockfd, iov, 2);
-    if (nr == -1) {
-        switch (c->instance->io->v.v0.error) {
-        case EINTR:
-            break;
-        case EWOULDBLOCK:
-#ifdef USE_EAGAIN
-        case EAGAIN:
-#endif
-            return 0;
-        default:
-            if (c->instance->compat.type == LCB_CACHED_CONFIG) {
-                /* Try to update the cache :S */
-                lcb_schedule_config_cache_refresh(c->instance);
-                return 0;
-            }
-
-            lcb_failout_server(c, LCB_NETWORK_ERROR);
-            return -1;
-        }
-    } else if (nr == 0) {
-        assert((iov[0].iov_len + iov[1].iov_len) != 0);
-        /* TODO stash error message somewhere
-         * "Connection closed... we should resend to other nodes or reconnect!!" */
-
-        if (c->instance->compat.type == LCB_CACHED_CONFIG) {
-            /* Try to update the cache :S */
-            lcb_schedule_config_cache_refresh(c->instance);
-            return 0;
-        }
-
-        lcb_failout_server(c, LCB_NETWORK_ERROR);
-        return -1;
-    } else {
-        ringbuffer_produced(&c->input, (lcb_size_t)nr);
-        lcb_update_server_timer(c);
-    }
-
-    return 1;
-}
-
 static int do_read_data(lcb_server_t *c, int allow_read)
 {
     /*
@@ -97,13 +44,40 @@ static int do_read_data(lcb_server_t *c, int allow_read)
         rv = lcb_proto_parse_single(c, stop);
         if (rv == -1) {
             return -1;
-        } else if (rv == 0) {
+
+        } else if (rv == 0 && allow_read) {
             /* need more data */
-            if (allow_read && (rv = do_fill_input_buffer(c)) < 1) {
-                /* error or would block ;) */
-                return rv;
-            }
+            lcb_sockrw_status_t status;
+
+            status = lcb_sockrw_read(&c->connection, &c->input);
+
+            switch (status) {
+
+            case LCB_SOCKRW_READ:
+                lcb_update_server_timer(c);
+                break;
+
+            case LCB_SOCKRW_WOULDBLOCK:
+                processed = operations_per_call + 1;
+                break;
+
+            case LCB_SOCKRW_IO_ERROR:
+                if (c->instance->compat.type == LCB_CACHED_CONFIG) {
+                    lcb_schedule_config_cache_refresh(c->instance);
+                    processed = operations_per_call + 1;
+                    break;
+                }
+
+                lcb_failout_server(c, LCB_NETWORK_ERROR);
+                return -1;
+
+            default:
+                return -1;
+
+            } /* switch (status) */
+
             break;
+
         } else {
             ++processed;
         }
@@ -111,37 +85,6 @@ static int do_read_data(lcb_server_t *c, int allow_read)
 
     return 0;
 }
-
-static int do_send_data(lcb_server_t *c)
-{
-    while (c->output.nbytes > 0) {
-        struct lcb_iovec_st iov[2];
-        lcb_ssize_t nw;
-        ringbuffer_get_iov(&c->output, RINGBUFFER_READ, iov);
-        nw = c->instance->io->v.v0.sendv(c->instance->io, c->connection.sockfd, iov, 2);
-        if (nw == -1) {
-            switch (c->instance->io->v.v0.error) {
-            case EINTR:
-                /* retry */
-                break;
-            case EWOULDBLOCK:
-#ifdef USE_EAGAIN
-            case EAGAIN:
-#endif
-                return 0;
-            default:
-                lcb_failout_server(c, LCB_NETWORK_ERROR);
-                return -1;
-            }
-        } else if (nw > 0) {
-            ringbuffer_consumed(&c->output, (lcb_size_t)nw);
-            lcb_update_server_timer(c);
-        }
-    }
-
-    return 0;
-}
-
 
 static void event_complete_common(lcb_t instance)
 {
@@ -165,10 +108,9 @@ void lcb_server_event_handler(lcb_socket_t sock, short which, void *arg)
     (void)sock;
 
     if (which & LCB_WRITE_EVENT) {
-        if (do_send_data(c) != 0) {
-            /* TODO stash error message somewhere
-             * "Failed to send to the connection to \"%s:%s\"", c->hostname, c->port */
-            lcb_failout_server(c, LCB_NETWORK_ERROR);
+        lcb_sockrw_status_t status;
+        status = lcb_sockrw_write(&c->connection, &c->output);
+        if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
             event_complete_common(instance);
             return;
         }

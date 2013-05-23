@@ -36,6 +36,13 @@ extern "C" {
         LCB_CONN_ERROR = 3
     } lcb_connection_result_t;
 
+    typedef enum {
+        LCB_SOCKRW_READ = 1,
+        LCB_SOCKRW_WROTE = 2,
+        LCB_SOCKRW_IO_ERROR = 3,
+        LCB_SOCKRW_GENERIC_ERROR = 4,
+        LCB_SOCKRW_WOULDBLOCK = 5
+    } lcb_sockrw_status_t;
 
     struct lcb_connection_st;
     typedef void (*lcb_connection_handler)(struct lcb_connection_st*, lcb_error_t);
@@ -123,6 +130,16 @@ extern "C" {
      * Cancel any timeout event set by update_timer on the connection
      */
     void lcb_connection_delete_timer(lcb_connection_t conn);
+
+
+    /* Read a bit of data */
+    lcb_sockrw_status_t lcb_sockrw_read(lcb_connection_t conn, ringbuffer_t *buf);
+
+    /* Exhaust the data until there is nothing to read */
+    lcb_sockrw_status_t lcb_sockrw_slurp(lcb_connection_t conn, ringbuffer_t *buf);
+
+    /* Write as much data from the write buffer until blocked */
+    lcb_sockrw_status_t lcb_sockrw_write(lcb_connection_t conn, ringbuffer_t *buf);
 
 
 #ifdef __cplusplus

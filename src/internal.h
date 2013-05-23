@@ -125,9 +125,10 @@ extern "C" {
          */
         lcb_type_t type;
 
+        ringbuffer_t output;
+        ringbuffer_t input;
         /** The URL request to send to the server */
         char *http_uri;
-        lcb_size_t n_http_uri_sent;
 
         /** The current vbucket config handle */
         VBUCKET_CONFIG_HANDLE vbucket_config;
@@ -560,6 +561,19 @@ extern "C" {
     void lcb_server_io_start(lcb_server_t *server, short flags);
     void lcb_config_io_start(lcb_t instance, short events);
     int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop);
+    void lcb_parse_vbucket_stream(lcb_t instance);
+
+    int lcb_http_request_valid(lcb_t instance, lcb_http_request_t req);
+    lcb_error_t lcb_http_parse_setup(lcb_http_request_t req);
+    lcb_error_t lcb_http_request_connect(lcb_http_request_t req);
+    int lcb_http_request_do_parse(lcb_http_request_t req);
+    void lcb_setup_lcb_http_resp_t(lcb_http_resp_t *resp,
+                                   lcb_http_status_t status,
+                                   const char *path,
+                                   lcb_size_t npath,
+                                   const char * const *headers,
+                                   const void *bytes,
+                                   lcb_size_t nbytes);
 
 
 #ifdef __cplusplus

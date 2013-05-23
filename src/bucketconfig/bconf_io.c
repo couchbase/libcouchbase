@@ -29,7 +29,9 @@ static void lcb_instance_reset_stream_state(lcb_t instance)
     free(instance->vbucket_stream.chunk.data);
     free(instance->vbucket_stream.header);
     memset(&instance->vbucket_stream, 0, sizeof(instance->vbucket_stream));
-    instance->n_http_uri_sent = 0;
+
+    ringbuffer_reset(&instance->input);
+    ringbuffer_reset(&instance->output);
 }
 
 
@@ -75,6 +77,12 @@ static void instance_connect_done_handler(lcb_connection_t conn,
     lcb_t instance = conn->instance;
     if (err == LCB_SUCCESS) {
         instance->backup_idx = 0;
+        /**
+         * Print the URI to the ringbuffer
+         */
+        ringbuffer_strcat(&instance->output, instance->http_uri);
+        assert(instance->output.nbytes > 0);
+
         lcb_config_io_start(instance, LCB_RW_EVENT);
 
     } else if (err == LCB_ETIMEDOUT) {
@@ -116,7 +124,6 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     lcb_connection_close(&instance->connection);
     lcb_instance_reset_stream_state(instance);
 
-    instance->n_http_uri_sent = 0;
     conn->on_connect_complete = instance_connect_done_handler;
 
     do {
