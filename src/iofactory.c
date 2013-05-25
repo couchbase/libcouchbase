@@ -120,22 +120,39 @@ static lcb_error_t create_v2(lcb_io_opt_t *io,
             break;                                              \
         }
 
-static void override_from_env(struct lcb_create_io_ops_st *options)
+static char *getenv_nonempty(const char *s)
 {
-    char *plugin = getenv("LIBCOUCHBASE_EVENT_PLUGIN_NAME");
-    if (plugin != NULL && *plugin != '\0') {
-        if (strncmp("libevent", plugin, 8) == 0) {
-            USE_PLUGIN(options, "libevent", LCB_IO_OPS_LIBEVENT);
-        } else if (strncmp("libev", plugin, 5) == 0) {
-            USE_PLUGIN(options, "libev", LCB_IO_OPS_LIBEV);
-        } else if (options->version == 1) {
-            char *symbol = getenv("LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL");
-            if (symbol == NULL || *symbol == '\0') {
-                options->v.v1.sofile = plugin;
-                options->v.v1.symbol = symbol;
-            }
+    char *ret = getenv(s);
+    if (ret == NULL || *ret == '\0') {
+        return NULL;
+    }
+    return ret;
+}
+
+static void override_from_env(struct lcb_create_io_ops_st *options,
+                              int use_any_version)
+{
+    char *plugin = getenv_nonempty("LIBCOUCHBASE_EVENT_PLUGIN_NAME");
+    char *symbol = getenv_nonempty("LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL");
+
+    if (!plugin) {
+        return;
+    }
+
+    if (strncmp("libevent", plugin, 8) == 0) {
+        USE_PLUGIN(options, "libevent", LCB_IO_OPS_LIBEVENT);
+
+    } else if (strncmp("libev", plugin, 5) == 0) {
+        USE_PLUGIN(options, "libev", LCB_IO_OPS_LIBEV);
+
+    } else if (options->version == 1 || use_any_version) {
+        if (symbol) {
+            options->v.v1.sofile = plugin;
+            options->v.v1.symbol = symbol;
+            options->version = 1;
         }
     }
+
 }
 
 #undef USE_PLUGIN
@@ -161,15 +178,20 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
                               const struct lcb_create_io_ops_st *io_opts)
 {
     struct lcb_create_io_ops_st options;
+    int use_any_version;
 
     memset(&options, 0, sizeof(struct lcb_create_io_ops_st));
     if (io_opts == NULL) {
         options.version = 0;
         options.v.v0.type = LCB_IO_OPS_DEFAULT;
+        use_any_version = 1;
+
     } else {
+        use_any_version = 0;
         memcpy(&options, io_opts, sizeof(struct lcb_create_io_ops_st));
     }
-    override_from_env(&options);
+
+    override_from_env(&options, use_any_version);
     switch (options.version) {
     case 0:
         return create_v0(io, &options);

@@ -304,11 +304,7 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     if (io == NULL) {
         lcb_io_opt_t ops;
-        struct lcb_create_io_ops_st copt;
-
-        memset(&copt, 0, sizeof(copt));
-        copt.v.v0.type = LCB_IO_OPS_DEFAULT;
-        if ((err = lcb_create_io_ops(&ops, &copt)) != LCB_SUCCESS) {
+        if ((err = lcb_create_io_ops(&ops, NULL)) != LCB_SUCCESS) {
             /* You can't initialize the library without a io-handler! */
             return err;
         }
