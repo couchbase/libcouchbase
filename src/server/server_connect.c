@@ -122,8 +122,7 @@ static void start_sasl_auth_server(lcb_server_t *server)
                                    chosenmech, keylen);
     lcb_server_buffer_write_packet(server, conn->output, data, len);
     lcb_server_buffer_end_packet(server, conn->output);
-
-    lcb_server_io_start(server, LCB_WRITE_EVENT);
+    lcb_sockrw_set_want(&server->connection, LCB_WRITE_EVENT, 0);
 }
 
 
@@ -142,9 +141,11 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_server_t *server = (lcb_server_t*)conn->data;
+    conn->evinfo.handler = lcb_server_event_handler;
 
     if (err != LCB_SUCCESS) {
         connection_error(server, err);
+        return;
     }
 
     char local[NI_MAXHOST + NI_MAXSERV + 2];
@@ -169,7 +170,7 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
         }
     }
 
-    (void)err;
+    lcb_sockrw_apply_want(conn);
 }
 
 /**
@@ -180,18 +181,4 @@ void lcb_server_connect(lcb_server_t *server)
     lcb_connection_t conn = &server->connection;
     conn->on_connect_complete = socket_connected;
     lcb_connection_start(conn, 1, 0);
-}
-
-/**
- * Request an IO operation on the server
- */
-void lcb_server_io_start(lcb_server_t *server, short flags)
-{
-    lcb_io_opt_t io = server->instance->io;
-    io->v.v0.update_event(io,
-                          server->connection.sockfd,
-                          server->connection.event,
-                          flags,
-                          server,
-                          lcb_server_event_handler);
 }

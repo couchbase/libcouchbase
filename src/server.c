@@ -455,8 +455,8 @@ void lcb_server_destroy(lcb_server_t *server)
 
 void lcb_server_connected(lcb_server_t *server)
 {
-    server->connection_ready = 1;
     lcb_connection_t conn = &server->connection;
+    server->connection_ready = 1;
 
     if (server->pending.nbytes > 0) {
         /*
@@ -481,11 +481,7 @@ void lcb_server_connected(lcb_server_t *server)
         ringbuffer_reset(&server->pending);
         ringbuffer_reset(&server->pending_cookies);
         assert(conn->output->nbytes);
-        lcb_server_io_start(server, LCB_WRITE_EVENT);
-
-    } else {
-        /* Set the correct event handler */
-        lcb_server_io_start(server, LCB_READ_EVENT);
+        lcb_server_send_packets(server);
     }
 }
 
@@ -526,7 +522,8 @@ void lcb_server_send_packets(lcb_server_t *server)
 {
     if (server->pending.nbytes > 0 || server->connection.output->nbytes > 0) {
         if (server->connection_ready) {
-            lcb_server_io_start(server, LCB_RW_EVENT);
+            lcb_sockrw_set_want(&server->connection, LCB_RW_EVENT, 0);
+            lcb_sockrw_apply_want(&server->connection);
 
         } else {
             lcb_server_connect(server);

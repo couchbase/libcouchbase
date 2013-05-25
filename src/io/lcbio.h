@@ -37,11 +37,11 @@ extern "C" {
     } lcb_connection_result_t;
 
     typedef enum {
-        LCB_SOCKRW_READ = 1,
-        LCB_SOCKRW_WROTE = 2,
-        LCB_SOCKRW_IO_ERROR = 3,
-        LCB_SOCKRW_GENERIC_ERROR = 4,
-        LCB_SOCKRW_WOULDBLOCK = 5
+        LCB_SOCKRW_READ = 0x1,
+        LCB_SOCKRW_WROTE = 0x2,
+        LCB_SOCKRW_IO_ERROR = 0x4,
+        LCB_SOCKRW_GENERIC_ERROR = 0x8,
+        LCB_SOCKRW_WOULDBLOCK = 0x10
     } lcb_sockrw_status_t;
 
     struct lcb_connection_st;
@@ -57,6 +57,10 @@ extern "C" {
         /** instance */
         lcb_t instance;
 
+        /**
+         * Data associated with the connection. This is also passed as the
+         * third argument for the v0 event handler
+         */
         void *data;
 
         /** callback to be invoked when the connection is complete */
@@ -67,8 +71,11 @@ extern "C" {
         /** for generic timeout events */
         lcb_connection_handler on_timeout;
 
-        /** event for the connection */
-        void *event;
+        struct {
+            void (*handler)(lcb_socket_t,short,void*);
+            void *ptr;
+            int active;
+        } evinfo;
 
         /** timer for the connection */
         void *timer;
@@ -81,11 +88,12 @@ extern "C" {
          * OUT parameters
          */
         int timeout_active;
-        int event_active;
 
         /** this is populated with the socket when the connection is done */
         lcb_socket_t sockfd;
         int connected;
+
+        short want;
 
     };
 
@@ -149,6 +157,23 @@ extern "C" {
     /* Write as much data from the write buffer until blocked */
     lcb_sockrw_status_t lcb_sockrw_write(lcb_connection_t conn, ringbuffer_t *buf);
 
+    int lcb_sockrw_flushed(lcb_connection_t conn);
+    /**
+     * Indicates that buffers should be read into or written from
+     * @param conn the connection
+     * @param events a set of event bits to request
+     * @param clear_existing whether to clear any existing 'want' events. By
+     * default, the existing events are AND'ed with the new ones.
+     */
+    void lcb_sockrw_set_want(lcb_connection_t conn, short events, int clear_existing);
+
+    /**
+     * Apply the 'want' events. This means to start (waiting for) reading and
+     * writing.
+     */
+    void lcb_sockrw_apply_want(lcb_connection_t conn);
+
+    int lcb_flushing_buffers(lcb_t instance);
 
 #ifdef __cplusplus
 }

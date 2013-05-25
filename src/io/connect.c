@@ -190,7 +190,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
             io->v.v0.update_event(io,
                                   conn->sockfd,
-                                  conn->event,
+                                  conn->evinfo.ptr,
                                   LCB_WRITE_EVENT,
                                   conn, v0_reconnect_handler);
             return LCB_CONN_INPROGRESS;
@@ -230,8 +230,8 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
                                              lcb_uint32_t timeout)
 {
     lcb_connection_result_t result;
-    if (!conn->event) {
-        conn->event = conn->instance->io->v.v0.create_event(conn->instance->io);
+    if (!conn->evinfo.ptr) {
+        conn->evinfo.ptr = conn->instance->io->v.v0.create_event(conn->instance->io);
     }
 
     result = v0_connect(conn, nocb);
@@ -258,8 +258,8 @@ void lcb_connection_close(lcb_connection_t conn)
 {
     lcb_io_opt_t io = conn->instance->io;
     if (conn->sockfd != INVALID_SOCKET) {
-        if (conn->event) {
-            io->v.v0.delete_event(io, conn->sockfd, conn->event);
+        if (conn->evinfo.ptr) {
+            io->v.v0.delete_event(io, conn->sockfd, conn->evinfo.ptr);
         }
         io->v.v0.close(io, conn->sockfd);
         conn->sockfd = INVALID_SOCKET;
@@ -338,10 +338,10 @@ void lcb_connection_cleanup(lcb_connection_t conn)
 
     lcb_connection_close(conn);
 
-    if (conn->event) {
+    if (conn->evinfo.ptr) {
         conn->instance->io->v.v0.destroy_event(conn->instance->io,
-                                               conn->event);
-        conn->event = NULL;
+                                               conn->evinfo.ptr);
+        conn->evinfo.ptr = NULL;
     }
 
     lcb_connection_delete_timer(conn);

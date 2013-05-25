@@ -493,8 +493,6 @@ extern "C" {
     lcb_error_t lcb_failout_server(lcb_server_t *server,
                                    lcb_error_t error);
 
-    int lcb_has_data_in_buffers(lcb_t instance);
-
     void lcb_maybe_breakout(lcb_t instance);
 
     lcb_connect_status_t lcb_connect_status(int err);
@@ -546,8 +544,6 @@ extern "C" {
 
     void lcb_server_connect(lcb_server_t *server);
 
-    void lcb_server_io_start(lcb_server_t *server, short flags);
-    void lcb_config_io_start(lcb_t instance, short events);
     int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop);
     void lcb_parse_vbucket_stream(lcb_t instance);
 

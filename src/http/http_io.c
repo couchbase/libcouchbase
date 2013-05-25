@@ -16,8 +16,6 @@
  */
 #include "internal.h"
 
-static void http_io_start(lcb_http_request_t req, short events);
-
 static void request_event_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_http_request_t req = arg;
@@ -47,7 +45,7 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
                 err = LCB_PROTOCOL_ERROR;
             } else {
                 /* Still want more data: */
-                http_io_start(req, LCB_READ_EVENT);
+                lcb_sockrw_set_want(&req->connection, LCB_READ_EVENT, 1);
             }
         }
     }
@@ -61,16 +59,19 @@ static void request_event_handler(lcb_socket_t sock, short which, void *arg)
             err = LCB_NETWORK_ERROR;
             should_continue = 0;
 
-        } else if (req->connection.output->nbytes == 0) {
-            http_io_start(req, LCB_READ_EVENT);
+        } else if (lcb_sockrw_flushed(&req->connection)) {
+            lcb_sockrw_set_want(&req->connection, LCB_READ_EVENT, 1);
 
         } else {
-            http_io_start(req, LCB_RW_EVENT);
+            lcb_sockrw_set_want(&req->connection, LCB_RW_EVENT, 1);
         }
     }
 
     if (!should_continue) {
         lcb_http_request_finish(instance, server, req, err);
+
+    } else {
+        lcb_sockrw_apply_want(&req->connection);
     }
 
     /* log whatever error ocurred here */
@@ -90,7 +91,9 @@ static void request_connected(lcb_connection_t conn, lcb_error_t err)
         return;
     }
 
-    http_io_start(req, LCB_WRITE_EVENT);
+    req->connection.evinfo.handler = request_event_handler;
+    lcb_sockrw_set_want(&req->connection, LCB_WRITE_EVENT, 1);
+    lcb_sockrw_apply_want(&req->connection);
 }
 
 lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
@@ -108,15 +111,4 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
     }
 
     return LCB_SUCCESS;
-}
-
-static void http_io_start(lcb_http_request_t req, short events)
-{
-    lcb_io_opt_t io = req->io;
-    io->v.v0.update_event(io,
-                          req->connection.sockfd,
-                          req->connection.event,
-                          events,
-                          req,
-                          request_event_handler);
 }

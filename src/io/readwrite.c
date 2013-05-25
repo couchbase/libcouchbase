@@ -103,3 +103,42 @@ lcb_sockrw_status_t lcb_sockrw_write(lcb_connection_t conn,
 
     return LCB_SOCKRW_WROTE;
 }
+
+void lcb_sockrw_set_want(lcb_connection_t conn, short events, int clear_existing)
+{
+
+    if (clear_existing) {
+        conn->want = events;
+    } else {
+        conn->want |= events;
+    }
+}
+
+void lcb_sockrw_apply_want(lcb_connection_t conn)
+{
+    lcb_io_opt_t io = conn->instance->io;
+
+    if (!conn->want) {
+        if (conn->evinfo.active) {
+            conn->evinfo.active = 0;
+            io->v.v0.delete_event(io, conn->sockfd, conn->evinfo.ptr);
+        }
+        return;
+    }
+
+    conn->evinfo.active = 1;
+    io->v.v0.update_event(io,
+                          conn->sockfd,
+                          conn->evinfo.ptr,
+                          conn->want,
+                          conn->data,
+                          conn->evinfo.handler);
+}
+
+int lcb_sockrw_flushed(lcb_connection_t conn)
+{
+    if (conn->output && conn->output->nbytes == 0) {
+        return 1;
+    }
+    return 0;
+}

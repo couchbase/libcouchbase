@@ -328,6 +328,8 @@ lcb_error_t lcb_create(lcb_t *instance,
         return err;
     }
 
+    obj->connection.data = obj;
+
     err = setup_boostrap_hosts(obj, host);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
@@ -819,9 +821,10 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
             return;
         }
 
-        if (!conn->output->nbytes) {
-            lcb_config_io_start(instance, LCB_READ_EVENT);
+        if (lcb_sockrw_flushed(conn)) {
+            lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
         }
+
     }
 
     if ((which & LCB_READ_EVENT) == 0) {
@@ -833,6 +836,8 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
         /** TODO: Handle Errors */
     }
     lcb_parse_vbucket_stream(instance);
+    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 0);
+    lcb_sockrw_apply_want(conn);
 }
 
 LIBCOUCHBASE_API
