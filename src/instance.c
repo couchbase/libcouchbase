@@ -302,16 +302,6 @@ lcb_error_t lcb_create(lcb_t *instance,
         }
     }
 
-    if (io == NULL) {
-        lcb_io_opt_t ops;
-        if ((err = lcb_create_io_ops(&ops, NULL)) != LCB_SUCCESS) {
-            /* You can't initialize the library without a io-handler! */
-            return err;
-        }
-        io = ops;
-        io->v.v0.need_cleanup = 1;
-    }
-
     if (host == NULL) {
         host = "localhost";
     }
@@ -330,6 +320,23 @@ lcb_error_t lcb_create(lcb_t *instance,
     *instance = obj;
     obj->type = type;
     obj->compat.type = (lcb_compat_t)0xdead;
+
+    if (io == NULL) {
+        lcb_io_opt_t ops;
+        if ((err = lcb_create_io_ops(&ops, NULL)) != LCB_SUCCESS) {
+            /* You can't initialize the library without a io-handler! */
+            return err;
+        }
+        io = ops;
+        io->v.v0.need_cleanup = 1;
+    }
+    obj->io = io;
+    obj->timeout.event = obj->io->v.v0.create_timer(obj->io);
+    if (obj->timeout.event == NULL) {
+        lcb_destroy(obj);
+        return LCB_CLIENT_ENOMEM;
+    }
+
     lcb_initialize_packet_handlers(obj);
     lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
@@ -346,13 +353,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->http_requests = hashset_create();
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
-    /* setup io iops! */
-    obj->io = io;
-    obj->timeout.event = obj->io->v.v0.create_timer(obj->io);
-    if (obj->timeout.event == NULL) {
-        lcb_destroy(obj);
-        return LCB_CLIENT_ENOMEM;
-    }
 
     switch (type) {
     case LCB_TYPE_BUCKET:
