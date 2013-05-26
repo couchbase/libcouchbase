@@ -20,6 +20,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
+#include "mock-environment.h"
 
 class HandleWrap;
 
@@ -41,7 +42,7 @@ protected:
     static void SetUpTestCase();
     static void TearDownTestCase();
     virtual void createConnection(lcb_t &instance);
-    virtual void createConnection(HandleWrap &handle);
+    virtual void createConnection(HandleWrap &handle, lcb_t &instance);
 };
 
 #endif

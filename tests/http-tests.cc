@@ -100,9 +100,9 @@ extern "C" {
 TEST_F(HttpUnitTest, testPut)
 {
     SKIP_IF_MOCK();
-
+    HandleWrap hw;
     lcb_t instance;
-    createConnection(instance);
+    createConnection(hw, instance);
 
     const char *design_doc_path = "/_design/" DESIGN_DOC_NAME;
     lcb_http_cmd_st cmd;
@@ -129,7 +129,6 @@ TEST_F(HttpUnitTest, testPut)
     ASSERT_EQ(LCB_HTTP_STATUS_CREATED, ctx.status);
     ASSERT_EQ(1, ctx.cbCount);
 
-    lcb_destroy(instance);
 }
 
 /**
@@ -143,8 +142,10 @@ TEST_F(HttpUnitTest, testGet)
 {
     SKIP_IF_MOCK();
 
+    HandleWrap hw;
     lcb_t instance;
-    createConnection(instance);
+    createConnection(hw, instance);
+
     const char *path = "_design/" DESIGN_DOC_NAME "/_view/" VIEW_NAME;
     lcb_http_cmd_st cmd = lcb_http_cmd_st(path, strlen(path), NULL, 0,
                                           LCB_HTTP_METHOD_GET, 0,
@@ -191,7 +192,6 @@ TEST_F(HttpUnitTest, testGet)
     ASSERT_GE(ii, 0);
     ASSERT_EQ('}', *pcur);
 
-    lcb_destroy(instance);
 }
 
 /**
@@ -204,7 +204,8 @@ TEST_F(HttpUnitTest, testGet)
 TEST_F(HttpUnitTest, testRefused)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
 
     const char *path = "non-exist-path";
     lcb_http_cmd_st cmd = lcb_http_cmd_st();
@@ -232,5 +233,4 @@ TEST_F(HttpUnitTest, testRefused)
     ASSERT_EQ(true, ctx.received);
     ASSERT_TRUE(ctx.err == LCB_CONNECT_ERROR || ctx.err == LCB_NETWORK_ERROR);
 
-    lcb_destroy(instance);
 }

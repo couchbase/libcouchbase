@@ -54,7 +54,9 @@ extern "C" {
 TEST_F(ServeropsUnitTest, testServerStats)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_stat_callback(instance, testServerStatsCallback);
     int numcallbacks = 0;
     lcb_server_stats_cmd_t cmd;
@@ -85,7 +87,9 @@ extern "C" {
 TEST_F(ServeropsUnitTest, testServerVersion)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_version_callback(instance, testServerVersionsCallback);
     int numcallbacks = 0;
     lcb_server_version_cmd_t cmd;
@@ -116,7 +120,9 @@ extern "C" {
 TEST_F(ServeropsUnitTest, testFlush)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_flush_callback(instance, testFlushCallback);
     int numcallbacks = 0;
     lcb_flush_cmd_t cmd;
@@ -173,7 +179,9 @@ extern "C" {
 TEST_F(ServeropsUnitTest, testVerbosity)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_verbosity_callback(instance, verbosity_all_callback);
 
     int counter = 0;
@@ -196,6 +204,6 @@ TEST_F(ServeropsUnitTest, testVerbosity)
     EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands2));
     io->v.v0.run_event_loop(io);
     free((void *)verbosity_endpoint);
+    verbosity_endpoint = NULL;
 
-    lcb_destroy(instance);
 }

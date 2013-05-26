@@ -44,6 +44,7 @@ TEST_F(Hostname, testSchemas)
 
     options.v.v0.host = "http://localhost";
     EXPECT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    lcb_destroy(instance);
 }
 
 TEST_F(Hostname, testPaths)
@@ -59,9 +60,11 @@ TEST_F(Hostname, testPaths)
 
     options.v.v0.host = "http://localhost/pools";
     EXPECT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    lcb_destroy(instance);
 
     options.v.v0.host = "http://localhost/pools/";
     EXPECT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    lcb_destroy(instance);
 }
 
 TEST_F(Hostname, testPort)
@@ -75,11 +78,14 @@ TEST_F(Hostname, testPort)
 
     options.v.v0.host = "localhost";
     EXPECT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    lcb_destroy(instance);
 
     options.v.v0.host = "localhost:80";
     EXPECT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    lcb_destroy(instance);
 
     options.v.v0.host = "http://localhost:80";
     EXPECT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    lcb_destroy(instance);
 }
 #endif

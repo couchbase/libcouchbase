@@ -131,7 +131,7 @@ public:
      */
     void createConnection(lcb_t &instance);
 
-    void createConnection(HandleWrap &handle);
+    void createConnection(HandleWrap &handle, lcb_t &instance);
 
     /**
      * Setup mock to split response in two parts: send first "offset" bytes

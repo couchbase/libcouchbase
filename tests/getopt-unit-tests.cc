@@ -131,12 +131,29 @@ class GetoptUnitTests : public ::testing::Test
 protected:
 };
 
-static void setup(Getopt &getopt)
-{
-    getopt.addOption(new CommandLineOption('a', "alpha", true)).
-    addOption(new CommandLineOption('b', "bravo", false)).
-    addOption(new CommandLineOption('c', "charlie", false));
-}
+class OptionContainer {
+public:
+    CommandLineOption optAlpha;
+    CommandLineOption optBravo;
+    CommandLineOption optCharlie;
+
+    OptionContainer(Getopt &getopt) :
+        optAlpha(CommandLineOption('a', "alpha", true)),
+        optBravo(CommandLineOption('b', "bravo", false)),
+        optCharlie(CommandLineOption('c', "charlie", false))
+
+    {
+        setup(getopt);
+    }
+
+    void setup(Getopt &getopt) {
+        getopt.addOption(&optAlpha).
+            addOption(&optBravo).
+            addOption(&optCharlie);
+    }
+
+    ~OptionContainer() { }
+};
 
 
 // Verify that we allow no options and that the option array is empty
@@ -154,7 +171,7 @@ TEST_F(GetoptUnitTests, testParseEmpty)
 {
     std::vector<std::string> argv;
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
     EXPECT_NE(getopt.options.end(), getopt.options.begin());
 
@@ -171,7 +188,7 @@ TEST_F(GetoptUnitTests, testParseOnlyArguments)
     argv.push_back("foo");
     argv.push_back("bar");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that none of the options is set
@@ -190,7 +207,7 @@ TEST_F(GetoptUnitTests, testParseOnlyArgumentsWithSeparatorInThere)
     argv.push_back("--");
     argv.push_back("bar");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that none of the options is set
@@ -205,7 +222,7 @@ TEST_F(GetoptUnitTests, testParseSingleLongoptWithoutArgument)
     std::vector<std::string> argv;
     argv.push_back("--bravo");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --bravo is set
@@ -224,7 +241,7 @@ TEST_F(GetoptUnitTests, testParseSingleLongoptWithoutRequiredArgument)
     std::vector<std::string> argv;
     argv.push_back("--alpha");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_FALSE(getopt.parse(argv));
 }
 
@@ -233,7 +250,7 @@ TEST_F(GetoptUnitTests, testParseSingleLongoptWithRequiredArgument)
     std::vector<std::string> argv;
     argv.push_back("--alpha=foo");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --alpha is set
@@ -254,7 +271,7 @@ TEST_F(GetoptUnitTests, testParseSingleLongoptWithRequiredArgument1)
     argv.push_back("--alpha");
     argv.push_back("foo");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --alpha is set
@@ -277,7 +294,7 @@ TEST_F(GetoptUnitTests, testParseMulipleLongoptWithArgumentsAndOptions)
     argv.push_back("--charlie");
     argv.push_back("foo");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that --alpha, bravo and charlie is set
@@ -302,7 +319,7 @@ TEST_F(GetoptUnitTests, testParseMulipleLongoptWithArgumentsAndOptionsAndSeparat
     argv.push_back("--charlie");
     argv.push_back("foo");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     std::vector<CommandLineOption *>::const_iterator iter;
@@ -328,7 +345,7 @@ TEST_F(GetoptUnitTests, testParseMulipleLongoptWithArgumentsAndOptionsAndSeparat
     argv.push_back("--charlie");
     argv.push_back("foo");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     std::vector<CommandLineOption *>::const_iterator iter;
@@ -348,7 +365,7 @@ TEST_F(GetoptUnitTests, testParseSingleShortoptWithoutArgument)
     std::vector<std::string> argv;
     argv.push_back("-b");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that -b is set
@@ -367,7 +384,7 @@ TEST_F(GetoptUnitTests, testParseSingleShortoptWithoutRequiredArgument)
     std::vector<std::string> argv;
     argv.push_back("-a");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_FALSE(getopt.parse(argv));
 
     // validate that none is set
@@ -383,7 +400,7 @@ TEST_F(GetoptUnitTests, testParseSingleShortoptWithRequiredArgument)
     argv.push_back("-a");
     argv.push_back("foo");
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
 
     // validate that none is set
@@ -408,7 +425,7 @@ TEST_F(GetoptUnitTests, testParseMulipleShortoptWithArgumentsAndOptions)
     argv.push_back("foo");
 
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
@@ -432,7 +449,7 @@ TEST_F(GetoptUnitTests, testParseMulipleShortoptWithArgumentsAndOptionsAndSepara
     argv.push_back("foo");
 
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
     ASSERT_TRUE(getopt.parse(argv));
     std::vector<CommandLineOption *>::const_iterator iter;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
@@ -460,7 +477,7 @@ TEST_F(GetoptUnitTests, testParseMix)
     argv.push_back("foo");
 
     Getopt getopt;
-    setup(getopt);
+    OptionContainer oc(getopt);
 
 #ifdef _WIN32
     ASSERT_FALSE(getopt.parse(argv));

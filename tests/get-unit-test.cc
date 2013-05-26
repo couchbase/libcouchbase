@@ -62,8 +62,10 @@ extern "C" {
  */
 TEST_F(GetUnitTest, testGetMiss)
 {
+    HandleWrap hw;
     lcb_t instance;
-    createConnection(instance);
+    createConnection(hw, instance);
+
     (void)lcb_set_get_callback(instance, testGetMissGetCallback);
     int numcallbacks = 0;
 
@@ -104,8 +106,10 @@ extern "C" {
  */
 TEST_F(GetUnitTest, testGetHit)
 {
+    HandleWrap hw;
     lcb_t instance;
-    createConnection(instance);
+    createConnection(hw, instance);
+
     (void)lcb_set_get_callback(instance, testGetHitGetCallback);
     int numcallbacks = 0;
 
@@ -141,8 +145,10 @@ extern "C" {
 TEST_F(GetUnitTest, testTouchMiss)
 {
     std::string key("testTouchMissKey");
+    HandleWrap hw;
     lcb_t instance;
-    createConnection(instance);
+    createConnection(hw, instance);
+
     (void)lcb_set_touch_callback(instance, testTouchMissCallback);
     removeKey(instance, key);
 
@@ -175,8 +181,10 @@ extern "C" {
 TEST_F(GetUnitTest, testTouchHit)
 {
     std::string key("testTouchHitKey");
+    HandleWrap hw;
     lcb_t instance;
-    createConnection(instance);
+    createConnection(hw, instance);
+
     (void)lcb_set_touch_callback(instance, testTouchHitCallback);
     storeKey(instance, key, "foo");
 
@@ -223,7 +231,10 @@ extern "C" {
 TEST_F(GetUnitTest, testMixedMultiGet)
 {
     using namespace std;
+    HandleWrap hw;
     lcb_t instance;
+    createConnection(hw, instance);
+
 
     vector<string> kexisting;
     vector<string> kmissing;
@@ -231,8 +242,6 @@ TEST_F(GetUnitTest, testMixedMultiGet)
 
     vector<lcb_get_cmd_t> cmds;
     vector<lcb_get_cmd_t *> cmdptrs;
-
-    createConnection(instance);
 
     int iterations = 4;
 

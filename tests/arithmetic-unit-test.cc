@@ -102,7 +102,8 @@ static void initArithmeticKey(lcb_t instance, std::string key,
 TEST_F(ArithmeticUnitTest, testIncr)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
     (void)lcb_set_arithmetic_callback(instance, arithmetic_incr_callback);
 
     initArithmeticKey(instance, "counter", 0);
@@ -113,8 +114,6 @@ TEST_F(ArithmeticUnitTest, testIncr)
         lcb_arithmetic(instance, NULL, 1, cmds);
         lcb_wait(instance);
     }
-
-    lcb_destroy(instance);
 }
 
 /**
@@ -127,7 +126,8 @@ TEST_F(ArithmeticUnitTest, testIncr)
 TEST_F(ArithmeticUnitTest, testDecr)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
     (void)lcb_set_arithmetic_callback(instance, arithmetic_decr_callback);
 
     initArithmeticKey(instance, "counter", 100);
@@ -139,7 +139,6 @@ TEST_F(ArithmeticUnitTest, testDecr)
         lcb_wait(instance);
     }
 
-    lcb_destroy(instance);
 }
 
 /**
@@ -152,12 +151,13 @@ TEST_F(ArithmeticUnitTest, testDecr)
 TEST_F(ArithmeticUnitTest, testArithmeticCreate)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     removeKey(instance, "mycounter");
     (void)lcb_set_arithmetic_callback(instance, arithmetic_create_callback);
     lcb_arithmetic_cmd_t cmd("mycounter", 9, 0x77, 1, 0xdeadbeef);
     lcb_arithmetic_cmd_t *cmds[] = { &cmd };
     lcb_arithmetic(instance, NULL, 1, cmds);
     lcb_wait(instance);
-    lcb_destroy(instance);
 }

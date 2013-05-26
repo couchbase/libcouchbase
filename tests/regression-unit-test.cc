@@ -34,7 +34,8 @@ protected:
 TEST_F(RegressionUnitTest, CCBC_150)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
 
     lcb_get_cmd_t getCmd1("testGetMiss1");
     lcb_get_cmd_t *getCmds[] = { &getCmd1 };
@@ -56,5 +57,4 @@ TEST_F(RegressionUnitTest, CCBC_150)
     EXPECT_EQ(LCB_SUCCESS, lcb_server_stats(instance, NULL, 1, statCmds));
     EXPECT_EQ(LCB_SUCCESS, lcb_server_stats(instance, NULL, 1, statCmds));
     lcb_wait(instance);
-    lcb_destroy(instance);
 }

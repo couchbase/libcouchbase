@@ -63,7 +63,9 @@ extern "C" {
 TEST_F(MutateUnitTest, testSimpleSet)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testSimpleSetStoreCallback);
     int numcallbacks = 0;
     lcb_store_cmd_t cmd1(LCB_SET, "testSimpleStoreKey1", 19, "key1", 4);
@@ -97,7 +99,9 @@ extern "C" {
 TEST_F(MutateUnitTest, testRemove)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_remove_callback(instance, testRemoveCallback);
     int numcallbacks = 0;
     storeKey(instance, "testRemoveKey1", "foo");
@@ -132,7 +136,9 @@ extern "C" {
 TEST_F(MutateUnitTest, testRemoveMiss)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_remove_callback(instance, testRemoveMissCallback);
     int numcallbacks = 0;
     removeKey(instance, "testRemoveMissKey1");
@@ -177,7 +183,9 @@ extern "C" {
 TEST_F(MutateUnitTest, testSimpleAdd)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testSimpleAddStoreCallback);
     removeKey(instance, "testSimpleAddKey");
     int numcallbacks = 0;
@@ -215,7 +223,9 @@ TEST_F(MutateUnitTest, testSimpleAppend)
 {
     std::string key("testSimpleAppendKey");
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testSimpleAppendStoreCallback);
     storeKey(instance, key, "foo");
     int numcallbacks = 0;
@@ -259,7 +269,9 @@ TEST_F(MutateUnitTest, testSimplePrepend)
 {
     std::string key("testSimplePrependKey");
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testSimplePrependStoreCallback);
     storeKey(instance, key, "foo");
     int numcallbacks = 0;
@@ -299,7 +311,9 @@ TEST_F(MutateUnitTest, testSimpleReplaceNonexisting)
 {
     std::string key("testSimpleReplaceNonexistingKey");
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testSimpleReplaceNonexistingStoreCallback);
     removeKey(instance, key);
     int numcallbacks = 0;
@@ -338,7 +352,9 @@ TEST_F(MutateUnitTest, testSimpleReplace)
 {
     std::string key("testSimpleReplaceKey");
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testSimpleReplaceStoreCallback);
     storeKey(instance, key, "foo");
     int numcallbacks = 0;
@@ -379,7 +395,9 @@ TEST_F(MutateUnitTest, testIncorrectCasReplace)
 {
     std::string key("testIncorrectCasReplaceKey");
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testIncorrectCasReplaceStoreCallback);
     storeKey(instance, key, "foo");
     Item itm;
@@ -421,7 +439,9 @@ TEST_F(MutateUnitTest, testCasReplace)
 {
     std::string key("testCasReplaceKey");
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     (void)lcb_set_store_callback(instance, testCasReplaceStoreCallback);
     storeKey(instance, key, "foo");
     Item itm;

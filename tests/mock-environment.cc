@@ -75,7 +75,7 @@ void MockEnvironment::hiccupNodes(int msecs, int offset)
     assert(nw == cmd.size());
 }
 
-void MockEnvironment::createConnection(HandleWrap &handle)
+void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
 {
     lcb_io_opt_t io;
     if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
@@ -85,9 +85,9 @@ void MockEnvironment::createConnection(HandleWrap &handle)
 
     lcb_create_st options;
     makeConnectParams(options, io);
-    lcb_t instance;
+    lcb_error_t err = lcb_create(&instance, &options);
+    ASSERT_EQ(LCB_SUCCESS, err);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
     (void)lcb_set_cookie(instance, io);
 
     handle.instance = instance;
@@ -97,10 +97,9 @@ void MockEnvironment::createConnection(HandleWrap &handle)
 void MockEnvironment::createConnection(lcb_t &instance)
 {
     HandleWrap handle;
-    createConnection(handle);
+    createConnection(handle, instance);
 
-    instance = handle.instance;
-
+    handle.iops->v.v0.need_cleanup = 1;
     handle.instance = NULL;
     handle.iops = NULL;
 
@@ -115,6 +114,7 @@ extern "C" {
     {
         MockEnvironment *me = (MockEnvironment *)cookie;
         ASSERT_EQ(LCB_SUCCESS, err);
+
         if (resp->v.v0.server_endpoint == NULL) {
             return;
         }

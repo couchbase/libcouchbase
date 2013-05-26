@@ -67,7 +67,9 @@ TEST_F(LockUnitTest, testSimpleLockAndUnlock)
     LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
 
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     std::string key = "lockKey";
     std::string value = "lockValue";
 
@@ -100,7 +102,6 @@ TEST_F(LockUnitTest, testSimpleLockAndUnlock)
 
     ASSERT_EQ(LCB_SUCCESS, reserr);
 
-    lcb_destroy(instance);
 }
 
 /**
@@ -117,7 +118,9 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
     LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
 
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     lcb_error_t err, reserr = LCB_ERROR;
 
     storeKey(instance, "lockKey", "lockValue");
@@ -135,7 +138,6 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
      * without a valid CAS? -
      */
     ASSERT_EQ(LCB_ETMPFAIL, reserr);
-    lcb_destroy(instance);
 }
 
 extern "C" {
@@ -168,9 +170,10 @@ TEST_F(LockUnitTest, testStorageLockContention)
 {
     LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
     lcb_t instance;
+    HandleWrap hw;
     lcb_error_t err;
 
-    createConnection(instance);
+    createConnection(hw, instance);
     Item itm;
     std::string key = "lockedKey", value = "lockedValue",
                 newvalue = "newUnlockedValue";
@@ -217,8 +220,6 @@ TEST_F(LockUnitTest, testStorageLockContention)
     /* verify the value is now the new value */
     getKey(instance, key, ritem);
     ASSERT_EQ(ritem.val, newvalue);
-
-    lcb_destroy(instance);
 }
 
 /**
@@ -242,8 +243,9 @@ TEST_F(LockUnitTest, testUnlLockContention)
 {
     LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
     lcb_t instance;
+    HandleWrap hw;
     lcb_error_t err, reserr = LCB_ERROR;
-    createConnection(instance);
+    createConnection(hw, instance);
 
     std::string key = "lockedKey2", value = "lockedValue2";
     storeKey(instance, key, value);
@@ -278,5 +280,4 @@ TEST_F(LockUnitTest, testUnlLockContention)
     getKey(instance, key, gitm);
     ASSERT_EQ(gitm.val, newval);
 
-    lcb_destroy(instance);
 }

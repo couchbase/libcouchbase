@@ -90,6 +90,8 @@ TEST_F(Ringbuffer, basicTests)
     EXPECT_EQ(8, ringbuffer_read(&ring, buffer, 9));
     EXPECT_EQ(0, memcmp(buffer, "89123456", 8));
 
+    ringbuffer_destruct(&ring);
+
     // wrapped_buffer_test();
     // my_regression_1_test();
 
@@ -145,6 +147,7 @@ TEST_F(Ringbuffer, wrappedBufferTest)
      * |-de-------|
      *   r
      */
+    ringbuffer_destruct(&ring);
 }
 
 // This is a crash I noticed while I was debugging the tap code
@@ -252,6 +255,7 @@ TEST_F(Ringbuffer, replace)
      * |8j2klmnoa1234567|
      *           r
      */
+    ringbuffer_destruct(&rb);
 }
 
 TEST_F(Ringbuffer, memcpy)
@@ -268,4 +272,7 @@ TEST_F(Ringbuffer, memcpy)
     EXPECT_EQ(4, dst.nbytes);
     EXPECT_EQ(4, ringbuffer_read(&dst, buffer, 4));
     EXPECT_EQ(0, memcmp(buffer, "0123", 4));
+
+    ringbuffer_destruct(&src);
+    ringbuffer_destruct(&dst);
 }

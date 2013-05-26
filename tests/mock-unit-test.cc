@@ -37,7 +37,7 @@ extern "C" {
                                lcb_error_t err,
                                const char *errinfo)
     {
-        std::cerr << "Error " << lcb_strerror(instance, err);
+        std::cerr << "Error " << lcb_strerror(instance, err) << std::endl;
         if (errinfo) {
             std::cerr << errinfo;
         }
@@ -46,9 +46,9 @@ extern "C" {
     }
 }
 
-void MockUnitTest::createConnection(HandleWrap &handle)
+void MockUnitTest::createConnection(HandleWrap &handle, lcb_t &instance)
 {
-    MockEnvironment::getInstance()->createConnection(handle);
+    MockEnvironment::getInstance()->createConnection(handle, instance);
     (void)lcb_set_error_callback(handle.getLcb(), error_callback);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(handle.getLcb()));
     lcb_wait(handle.getLcb());
@@ -91,7 +91,10 @@ extern "C" {
 TEST_F(MockUnitTest, testFlags)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+
+    createConnection(hw, instance);
+
     (void)lcb_set_get_callback(instance, flags_get_callback);
     (void)lcb_set_store_callback(instance, flags_store_callback);
 
@@ -127,24 +130,28 @@ TEST_F(MockUnitTest, testSyncmodeDefault)
 {
 
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+
+    createConnection(hw, instance);
     ASSERT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
-    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testSyncmodeBehaviorToggle)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+
+    createConnection(hw, instance);
     lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
     ASSERT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
-    lcb_destroy(instance);
 }
 
 TEST_F(MockUnitTest, testSyncStore)
 {
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
     ASSERT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
 
@@ -162,7 +169,6 @@ TEST_F(MockUnitTest, testSyncStore)
     ret = lcb_store(instance, &cookie, 1, cmds);
     ASSERT_TRUE(ret == LCB_KEY_EEXISTS &&
                 cookie == LCB_KEY_EEXISTS);
-    lcb_destroy(instance);
 }
 
 extern "C" {
@@ -215,7 +221,9 @@ TEST_F(MockUnitTest, testTimings)
     }
 
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     lcb_enable_timings(instance);
 
     lcb_store_cmd_t storecmd(LCB_SET, "counter", 7, "0", 1);
@@ -237,7 +245,6 @@ TEST_F(MockUnitTest, testTimings)
         fprintf(fp, "              +--------------------\n");
     }
     lcb_disable_timings(instance);
-    lcb_destroy(instance);
 }
 
 
@@ -315,8 +322,9 @@ TEST_F(MockUnitTest, testTimeout)
 {
     // @todo we need to have a test that actually tests the timeout callback..
     lcb_t instance;
+    HandleWrap hw;
     lcb_io_opt_t io;
-    createConnection(instance);
+    createConnection(hw, instance);
 
     (void)lcb_set_error_callback(instance, timeout_error_callback);
     (void)lcb_set_stat_callback(instance, timeout_stat_callback);
@@ -329,7 +337,6 @@ TEST_F(MockUnitTest, testTimeout)
 
     ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, 1, commands));
     io->v.v0.run_event_loop(io);
-    lcb_destroy(instance);
 }
 
 
@@ -337,7 +344,9 @@ TEST_F(MockUnitTest, testIssue59)
 {
     // lcb_wait() blocks forever if there is nothing queued
     lcb_t instance;
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
+
     lcb_wait(instance);
     lcb_wait(instance);
     lcb_wait(instance);
@@ -346,7 +355,6 @@ TEST_F(MockUnitTest, testIssue59)
     lcb_wait(instance);
     lcb_wait(instance);
     lcb_wait(instance);
-    lcb_destroy(instance);
 }
 
 extern "C" {
@@ -413,8 +421,8 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     lcb_size_t nkey = strlen(key), nvalue = strlen(value);
     lcb_io_opt_t io;
     lcb_t instance;
-
-    createConnection(instance);
+    HandleWrap hw;
+    createConnection(hw, instance);
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     /* prefill the bucket */
@@ -525,12 +533,17 @@ TEST_F(MockUnitTest, testPurgedBody)
     struct rvbuf rv;
     const char key[] = "testPurgedBody";
     lcb_size_t nkey = sizeof(key);
+
     int nvalue = 100000;
-    char *value = (char *)malloc(nvalue);
+    std::string scoped_value;
+    scoped_value.assign(nvalue, 0xff);
+    const char *backed_value = scoped_value.c_str();
+
     lcb_t instance;
+    HandleWrap hw;
     lcb_io_opt_t io;
 
-    createConnection(instance);
+    createConnection(hw, instance);
 
     lcb_uint32_t old_timeo = lcb_get_timeout(instance);
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
@@ -540,17 +553,15 @@ TEST_F(MockUnitTest, testPurgedBody)
 
     lcb_set_timeout(instance, 3100000); /* 3.1 seconds */
     hrtime_t now = gethrtime(), begin_time = 0;
-
     io->v.v0.close = io_close_wrap;
 
-    memset(value, 0xff, nvalue);
     lcb_set_store_callback(instance, store_callback);
     lcb_set_get_callback(instance, tpb_get_callback);
 
     /*
      * Store large 100000 bytes key in the bucket
      */
-    lcb_store_cmd_t store_cmd(LCB_SET, key, nkey, value, nvalue);
+    lcb_store_cmd_t store_cmd(LCB_SET, key, nkey, backed_value, nvalue);
     lcb_store_cmd_t *store_cmds[] = { &store_cmd };
     err = lcb_store(instance, &rv, 1, store_cmds);
     ASSERT_EQ(LCB_SUCCESS, err);
@@ -577,10 +588,12 @@ TEST_F(MockUnitTest, testPurgedBody)
 
     /*
      * Run the IO loop and measure how long does it take to transfer the
-     * value back.
+     * backed_value back.
      */
     begin_time = gethrtime();
     io->v.v0.run_event_loop(io);
+    io->v.v0.close = io_close_old;
+
     now = gethrtime();
 
     /*
@@ -589,7 +602,6 @@ TEST_F(MockUnitTest, testPurgedBody)
      */
     ASSERT_EQ(LCB_ETIMEDOUT, rv.error);
     ASSERT_GE(now - begin_time, 2800000000L); /* 2.8 seconds */
-    free(value);
 }
 
 TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
@@ -599,8 +611,9 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     struct rvbuf rv;
     lcb_io_opt_t io;
     lcb_t instance;
+    HandleWrap hw;
 
-    createConnection(instance);
+    createConnection(hw, instance);
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     MockEnvironment *mock = MockEnvironment::getInstance();
@@ -626,10 +639,11 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     struct rvbuf rv;
     lcb_io_opt_t io;
     lcb_t instance;
+    HandleWrap hw;
     std::string key = "testBufferRelocationOnNodeFailover";
     std::string val = "foo";
 
-    createConnection(instance);
+    createConnection(hw, instance);
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     MockEnvironment *mock = MockEnvironment::getInstance();
