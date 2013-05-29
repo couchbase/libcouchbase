@@ -504,9 +504,10 @@ extern "C" {
                 }
                 cerr << " \"";
                 cerr.write(static_cast<const char *>(key), nkey);
+                cerr << "\"";
                 if (status == LCB_OBSERVE_FOUND ||
                         status == LCB_OBSERVE_PERSISTED) {
-                    cerr << "\" CAS:" << hex << cas;
+                    cerr << " CAS:" << hex << cas;
                 }
                 cerr << " IsMaster:" << boolalpha << (is_master != 0)
                      << dec << " TimeToPersist:" << ttp
