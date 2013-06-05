@@ -124,6 +124,10 @@ public:
         iterations = val;
     }
 
+    void setRatio(uint32_t val) {
+        setprc = val;
+    }
+
     void setMaxKeys(uint32_t val) {
         maxKey = val;
     }
@@ -530,7 +534,8 @@ static void handle_options(int argc, char **argv)
                                            "Enable internal timings"));
     getopt.addOption(new CommandLineOption('s', "random-seed", true,
                                            "Specify random seed (default 0)"));
-    /* getopt.addOption(new CommandLineOption()); */
+    getopt.addOption(new CommandLineOption('r', "ratio", true,
+                                           "Specify SET command ratio (default 0.33)"));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -587,6 +592,10 @@ static void handle_options(int argc, char **argv)
 
             case 's' :
                 config.setRandomSeed(atoi((*iter)->argument));
+                break;
+
+            case 'r' :
+                config.setRatio(atoi((*iter)->argument));
                 break;
 
             case '?':
