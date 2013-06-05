@@ -43,25 +43,13 @@ public:
         fixedSize(true),
         setprc(33),
         prefix(""),
-        maxSize(5120),
-        minSize(50),
         numThreads(1),
         numInstances(1),
         timings(false),
         loop(false),
         randomSeed(0) {
-        data = static_cast<void *>(new char[maxSize]);
-        /* fill data array with pattern */
-        uint32_t *iptr = static_cast<uint32_t *>(data);
-        for (uint32_t ii = 0; ii < maxSize / sizeof(uint32_t); ++ii) {
-            iptr[ii] = 0xdeadbeef;
-        }
-        /* pad rest bytes with zeros */
-        size_t rest = maxSize % sizeof(uint32_t);
-        if (rest > 0) {
-            char *cptr = static_cast<char *>(data) + (maxSize / sizeof(uint32_t));
-            memset(cptr, 0, rest);
-        }
+        setMaxSize(5120);
+        setMinSize(50);
     }
 
     ~Configuration() {
@@ -146,6 +134,36 @@ public:
 
     void setNumInstances(uint32_t val) {
         numInstances = val;
+    }
+
+    void setMinSize(uint32_t val) {
+        if (val > maxSize) {
+            minSize = maxSize;
+        } else {
+            minSize = val;
+        }
+    }
+
+    void setMaxSize(uint32_t val) {
+        if (data) {
+            delete []static_cast<char *>(data);
+        }
+        maxSize = val;
+        if (minSize > maxSize) {
+            minSize = maxSize;
+        }
+        data = static_cast<void *>(new char[maxSize]);
+        /* fill data array with pattern */
+        uint32_t *iptr = static_cast<uint32_t *>(data);
+        for (uint32_t ii = 0; ii < maxSize / sizeof(uint32_t); ++ii) {
+            iptr[ii] = 0xdeadbeef;
+        }
+        /* pad rest bytes with zeros */
+        size_t rest = maxSize % sizeof(uint32_t);
+        if (rest > 0) {
+            char *cptr = static_cast<char *>(data) + (maxSize / sizeof(uint32_t));
+            memset(cptr, 0, rest);
+        }
     }
 
     uint32_t getNumInstances(void) {
@@ -518,13 +536,13 @@ static void handle_options(int argc, char **argv)
                                            "Username for the rest port"));
     getopt.addOption(new CommandLineOption('P', "password", true,
                                            "password for the rest port"));
-    getopt.addOption(new CommandLineOption('i', "iterations", true,
+    getopt.addOption(new CommandLineOption('i', "iterations (default 1000)", true,
                                            "Number of iterations to run"));
-    getopt.addOption(new CommandLineOption('I', "num-items", true,
+    getopt.addOption(new CommandLineOption('I', "num-items (default 1000)", true,
                                            "Number of items to operate on"));
-    getopt.addOption(new CommandLineOption('p', "key-prefix", true,
+    getopt.addOption(new CommandLineOption('p', "key-prefix (default \"\")", true,
                                            "Use the following prefix for keys"));
-    getopt.addOption(new CommandLineOption('t', "num-threads", true,
+    getopt.addOption(new CommandLineOption('t', "num-threads (default 1)", true,
                                            "The number of threads to use"));
     getopt.addOption(new CommandLineOption('Q', "num-instances", true,
                                            "The number of instances to use"));
@@ -536,6 +554,10 @@ static void handle_options(int argc, char **argv)
                                            "Specify random seed (default 0)"));
     getopt.addOption(new CommandLineOption('r', "ratio", true,
                                            "Specify SET command ratio (default 0.33)"));
+    getopt.addOption(new CommandLineOption('m', "min-size", true,
+                                           "Specify minimum size of payload (default 50)"));
+    getopt.addOption(new CommandLineOption('M', "max-size", true,
+                                           "Specify maximum size of payload (default 5120)"));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -596,6 +618,14 @@ static void handle_options(int argc, char **argv)
 
             case 'r' :
                 config.setRatio(atoi((*iter)->argument));
+                break;
+
+            case 'm' :
+                config.setMinSize(atoi((*iter)->argument));
+                break;
+
+            case 'M' :
+                config.setMaxSize(atoi((*iter)->argument));
                 break;
 
             case '?':
