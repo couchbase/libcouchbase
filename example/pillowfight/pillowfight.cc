@@ -47,7 +47,8 @@ public:
         numInstances(1),
         timings(false),
         loop(false),
-        randomSeed(0) {
+        randomSeed(0),
+        dumb(false) {
         setMaxSize(5120);
         setMinSize(50);
     }
@@ -185,6 +186,15 @@ public:
     void setLoop(bool val) {
         loop = val;
     }
+
+    void setDumb(bool val) {
+        dumb = val;
+    }
+
+    bool isDumb() {
+        return dumb;
+    }
+
     void *data;
 
     std::string host;
@@ -204,6 +214,7 @@ public:
     bool timings;
     bool loop;
     uint32_t randomSeed;
+    bool dumb;
 } config;
 
 extern "C" {
@@ -242,13 +253,23 @@ public:
             std::cout << "\rCreating instance " << ii;
             std::cout.flush();
 
-            struct lcb_create_st options(config.getHost(),
-                                         config.getUser(),
-                                         config.getPasswd(),
-                                         config.getBucket(),
-                                         io);
+            lcb_error_t error;
+            if (config.isDumb()) {
+                struct lcb_memcached_st memcached;
 
-            lcb_error_t error = lcb_create(&instance, &options);
+                memset(&memcached, 0, sizeof(memcached));
+                memcached.serverlist = config.getHost();
+                error = lcb_create_compat(LCB_MEMCACHED_CLUSTER,
+                                          &memcached, &instance, io);
+            } else {
+                struct lcb_create_st options(config.getHost(),
+                                             config.getUser(),
+                                             config.getPasswd(),
+                                             config.getBucket(),
+                                             io);
+
+                error = lcb_create(&instance, &options);
+            }
             if (error == LCB_SUCCESS) {
                 (void)lcb_set_store_callback(instance, storageCallback);
                 (void)lcb_set_get_callback(instance, getCallback);
@@ -558,6 +579,8 @@ static void handle_options(int argc, char **argv)
                                            "Specify minimum size of payload (default 50)"));
     getopt.addOption(new CommandLineOption('M', "max-size", true,
                                            "Specify maximum size of payload (default 5120)"));
+    getopt.addOption(new CommandLineOption('d', "dumb", false,
+                                           "Behave like legacy memcached client (default false)"));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -626,6 +649,10 @@ static void handle_options(int argc, char **argv)
 
             case 'M' :
                 config.setMaxSize(atoi((*iter)->argument));
+                break;
+
+            case 'd' :
+                config.setDumb(true);
                 break;
 
             case '?':
