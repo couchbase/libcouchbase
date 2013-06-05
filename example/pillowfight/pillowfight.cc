@@ -553,7 +553,7 @@ static void handle_options(int argc, char **argv)
     getopt.addOption(new CommandLineOption('s', "random-seed", true,
                                            "Specify random seed (default 0)"));
     getopt.addOption(new CommandLineOption('r', "ratio", true,
-                                           "Specify SET command ratio (default 0.33)"));
+                                           "Specify SET command ratio (default 33)"));
     getopt.addOption(new CommandLineOption('m', "min-size", true,
                                            "Specify minimum size of payload (default 50)"));
     getopt.addOption(new CommandLineOption('M', "max-size", true,
