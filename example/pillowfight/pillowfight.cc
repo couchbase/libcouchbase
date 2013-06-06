@@ -226,7 +226,7 @@ void log(const char *format, ...)
     va_start(args, format);
     vsprintf(buffer, format, args);
     if (config.isTimings()) {
-        std::cerr << "[" << gethrtime() / 1000000000.0 << "] ";
+        std::cerr << "[" << std::fixed << gethrtime() / 1000000000.0 << "] ";
     }
     std::cerr << buffer << std::endl;
     va_end (args);
@@ -344,7 +344,8 @@ public:
     static void dumpTimings(lcb_t instance, std::string header) {
         std::stringstream ss;
 
-        ss << "[" << gethrtime() / 1000000000.0 << "] " << header << std::endl;
+        ss << "[" << std::fixed << gethrtime() / 1000000000.0 << "] " << header << std::endl;
+
         ss << "              +---------+---------+---------+---------+" << std::endl;
         lcb_get_timings(instance, reinterpret_cast<void *>(&ss), timingsCallback);
         ss << "              +----------------------------------------" << endl;
