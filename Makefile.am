@@ -131,6 +131,7 @@ libcouchbase_la_SOURCES = \
                         src/event.c \
                         src/flush.c \
                         src/get.c \
+                        src/gethrtime.c \
                         src/handler.c \
                         src/handler.h \
                         src/hashset.c \
@@ -162,10 +163,6 @@ libcouchbase_la_SOURCES = \
 
 if !HAVE_SYSTEM_LIBSASL
 libcouchbase_la_SOURCES += src/isasl.c src/isasl.h
-endif
-
-if !HAVE_GETHRTIME
-libcouchbase_la_SOURCES += src/gethrtime.c
 endif
 
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
@@ -390,6 +387,7 @@ tests_unit_tests_SOURCES += \
                             tests/arithmetic-unit-test.cc \
                             tests/get-unit-test.cc \
                             tests/getopt-unit-tests.cc \
+                            src/gethrtime.c \
                             tests/http-tests.cc \
                             tests/lock-unit-test.cc \
                             tests/mock-environment.cc \
@@ -405,11 +403,6 @@ tests_unit_tests_SOURCES += \
                             tests/syncmode-unit-tests.cc \
                             tests/testutil.cc \
                             tests/testutil.h
-
-if !HAVE_GETHRTIME
-tests_unit_tests_SOURCES += \
-                            src/gethrtime.c
-endif
 
 check_PROGRAMS += \
                   tests/smoke-test
@@ -436,10 +429,8 @@ tools_cbc_SOURCES =	\
 TESTS=${check_PROGRAMS}
 
 example_pillowfight_pillowfight_SOURCES = tools/commandlineparser.cc \
-                                          example/pillowfight/pillowfight.cc
-if !HAVE_GETHRTIME
-example_pillowfight_pillowfight_SOURCES += src/gethrtime.c
-endif
+                                          example/pillowfight/pillowfight.cc \
+                                          src/gethrtime.c
 
 example_pillowfight_pillowfight_LDADD = libcouchbase.la  -lpthread
 
