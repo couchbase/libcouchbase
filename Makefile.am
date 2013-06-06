@@ -437,6 +437,10 @@ TESTS=${check_PROGRAMS}
 
 example_pillowfight_pillowfight_SOURCES = tools/commandlineparser.cc \
                                           example/pillowfight/pillowfight.cc
+if !HAVE_GETHRTIME
+example_pillowfight_pillowfight_SOURCES += src/gethrtime.c
+endif
+
 example_pillowfight_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 example_debug_debug_SOURCES = example/debug/debug.cc

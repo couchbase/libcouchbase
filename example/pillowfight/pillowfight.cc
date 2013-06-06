@@ -31,6 +31,7 @@
 #include "tools/commandlineparser.h"
 #include <signal.h>
 #include <pthread.h>
+#include <cstdarg>
 
 using namespace std;
 
@@ -217,6 +218,20 @@ public:
     bool dumb;
 } config;
 
+void log(const char *format, ...)
+{
+    char buffer[512];
+    va_list args;
+
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    if (config.isTimings()) {
+        std::cerr << "[" << gethrtime() / 1000000000.0 << "] ";
+    }
+    std::cerr << buffer << std::endl;
+    va_end (args);
+}
+
 extern "C" {
     static void storageCallback(lcb_t, const void *,
                                 lcb_storage_t, lcb_error_t,
@@ -242,8 +257,7 @@ public:
             /* allow to share IO object in single-thread only */
             lcb_error_t err = lcb_create_io_ops(&io, NULL);
             if (err != LCB_SUCCESS) {
-                std::cerr << "Failed to create IO option: "
-                          << lcb_strerror(NULL, err) << std::endl;
+                log("Failed to create IO option: %s", lcb_strerror(NULL, err));
                 exit(EXIT_FAILURE);
             }
         }
@@ -277,15 +291,13 @@ public:
                 handles.push_back(instance);
             } else {
                 std::cout << std::endl;
-                std::cerr << "Failed to create instance: "
-                          << lcb_strerror(NULL, error) << std::endl;
+                log("Failed to create instance: %s", lcb_strerror(NULL, error));
                 exit(EXIT_FAILURE);
             }
             if (config.isTimings()) {
                 if ((error = lcb_enable_timings(instance)) != LCB_SUCCESS) {
                     std::cout << std::endl;
-                    std::cerr << "Failed to enable timings!: "
-                              << lcb_strerror(instance, error) << std::endl;
+                    log("Failed to enable timings!: %s", lcb_strerror(instance, error));
                 }
             }
             lcb_connect(instance);
@@ -293,8 +305,7 @@ public:
             error = lcb_get_last_error(instance);
             if (error != LCB_SUCCESS) {
                 std::cout << std::endl;
-                std::cerr << "Failed to connect: "
-                          << lcb_strerror(instance, error) << std::endl;
+                log("Failed to connect: %s", lcb_strerror(instance, error));
                 exit(EXIT_FAILURE);
             }
         }
@@ -330,10 +341,10 @@ public:
 
     static void dumpTimings(lcb_t instance, std::string header) {
         std::stringstream ss;
-        ss << header << std::endl;
+
+        ss << "[" << gethrtime() / 1000000000.0 << "] " << header << std::endl;
         ss << "              +---------+---------+---------+---------+" << std::endl;
-        lcb_get_timings(instance, reinterpret_cast<void *>(&ss),
-                        timingsCallback);
+        lcb_get_timings(instance, reinterpret_cast<void *>(&ss), timingsCallback);
         ss << "              +----------------------------------------" << endl;
         std::cout << ss.str();
     }
@@ -383,8 +394,7 @@ public:
                     lcb_get_cmd_t *items[1] = { &item };
                     error = lcb_get(instance, this, 1, items);
                     if (error != LCB_SUCCESS) {
-                        std::cerr << "Failed to get item: "
-                                  << lcb_strerror(instance, error) << std::endl;
+                        log("Failed to get item: %s", lcb_strerror(instance, error));
                     }
                 }
                 if (ii % 10 == 0) {
@@ -423,13 +433,11 @@ public:
             lcb_store_cmd_t *items[1] = { &item };
             error = lcb_store(instance, this, 1, items);
             if (error != LCB_SUCCESS) {
-                std::cerr << "Failed to store item: "
-                          << lcb_strerror(instance, error) << std::endl;
+                log("Failed to store item: %s", lcb_strerror(instance, error));
             }
             lcb_wait(instance);
             if (error != LCB_SUCCESS) {
-                std::cerr << "Failed to store item: "
-                          << lcb_strerror(instance, error) << std::endl;
+                log("Failed to store item: %s", lcb_strerror(instance, error));
             }
         }
 
@@ -660,7 +668,7 @@ static void handle_options(int argc, char **argv)
                 exit(EXIT_FAILURE);
 
             default:
-                std::cerr << "Unhandled option.. Fix the code!" << std::endl;
+                log("Unhandled option.. Fix the code!");
                 abort();
             }
         }
@@ -693,8 +701,8 @@ static void cruel_handler(int)
 static void gentle_handler(int)
 {
     config.setLoop(false);
-    std::cerr << "Termination requested. Waiting threads to finish. "
-              << "Ctrl-C to force termination." << std::endl;
+    log("Termination requested. Waiting threads to finish. "
+        "Ctrl-C to force termination.");
     setup_sigint_handler(cruel_handler);
 }
 
@@ -742,7 +750,7 @@ int main(int argc, char **argv)
     pool = new InstancePool(config.getNumInstances());
     setup_sigint_handler(gentle_handler);
     if (config.isLoop()) {
-        std::cerr << "Running in a loop. Press Ctrl-C to terminate..." << std::endl;
+        log("Running in a loop. Press Ctrl-C to terminate...");
     }
 
     std::list<pthread_t> threads;
@@ -753,7 +761,7 @@ int main(int argc, char **argv)
         pthread_t tid;
         rc = pthread_create(&tid, &attr, thread_worker, ctx);
         if (rc) {
-            std::cerr << "Failed to create thread: " << rc;
+            log("Failed to create thread: %d", rc);
             exit_code = EXIT_FAILURE;
             break;
         }
@@ -765,7 +773,7 @@ int main(int argc, char **argv)
                 it != threads.end(); ++it) {
             rc = pthread_join(*it, NULL);
             if (rc) {
-                std::cerr << "Failed to join thread: " << rc;
+                log("Failed to join thread: %d", rc);
                 exit_code = EXIT_FAILURE;
                 break;
             }
