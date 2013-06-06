@@ -300,13 +300,15 @@ public:
                     log("Failed to enable timings!: %s", lcb_strerror(instance, error));
                 }
             }
-            lcb_connect(instance);
-            lcb_wait(instance);
-            error = lcb_get_last_error(instance);
-            if (error != LCB_SUCCESS) {
-                std::cout << std::endl;
-                log("Failed to connect: %s", lcb_strerror(instance, error));
-                exit(EXIT_FAILURE);
+            if (!config.isDumb()) {
+                lcb_connect(instance);
+                lcb_wait(instance);
+                error = lcb_get_last_error(instance);
+                if (error != LCB_SUCCESS) {
+                    std::cout << std::endl;
+                    log("Failed to connect: %s", lcb_strerror(instance, error));
+                    exit(EXIT_FAILURE);
+                }
             }
         }
         std::cout << std::endl;
