@@ -1721,6 +1721,7 @@ static cbc_command_t getBuiltin(string name)
     return cbc_illegal;
 }
 
+#ifndef WIN32
 static bool exists_in_path(string file)
 {
     const char *p = getenv("PATH");
@@ -1740,8 +1741,10 @@ static bool exists_in_path(string file)
             return true;
         }
     }
+
     return false;
 }
+#endif
 
 static void printHelp()
 {
@@ -1798,9 +1801,11 @@ int main(int argc, char **argv)
             ++argv;
             /* in case of failure lookup external executable */
             if (cmd == cbc_illegal) {
+#ifndef WIN32
                 if (exists_in_path(cmdstr) && !execvp(cmdstr.c_str(), argv)) {
                     cerr << "Error: Cannot execute \"" << cmdstr << "\"" << endl;
                 }
+#endif
             }
         }
     }
@@ -1818,9 +1823,11 @@ int main(int argc, char **argv)
             cmdstr.append(argv[1]);
             cmd = getBuiltin(cmdstr);
             if (cmd == cbc_illegal) {
+#ifndef WIN32
                 if (exists_in_path(cmdstr) && !execvp(cmdstr.c_str(), (char **)help_argv)) {
                     cerr << "Error: Cannot execute \"" << cmdstr << "\"" << endl;
                 }
+#endif
             }
             if (cmd == cbc_illegal) {
                 cerr << "Error: Unknown command \"" << cmdstr << "\"" << endl;
