@@ -49,7 +49,9 @@ CLEANFILES = tests/CouchbaseMock.jar
 include Makefile.manpage.inc
 
 if BUILD_TOOLS
-bin_PROGRAMS += tools/cbc
+if HAVE_CXX
+bin_PROGRAMS += tools/cbc tools/cbc-pillowfight
+endif
 endif
 
 pkginclude_HEADERS = \
@@ -356,9 +358,6 @@ if BUILD_EXAMPLES
 noinst_PROGRAMS += example/syncmode/syncmode
 noinst_PROGRAMS += example/minimal/minimal
 noinst_PROGRAMS += example/db/db
-if HAVE_CXX
-noinst_PROGRAMS += example/pillowfight/pillowfight
-endif
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/yajl/couchview
 endif
@@ -426,13 +425,13 @@ tools_cbc_SOURCES =	\
 					tools/commandlineparser.h \
 					tools/configuration.h
 
+tools_cbc_pillowfight_SOURCES = tools/commandlineparser.cc \
+                                tools/cbc-pillowfight.cc \
+                                src/gethrtime.c
+tools_cbc_pillowfight_LDADD = libcouchbase.la  -lpthread
+
+
 TESTS=${check_PROGRAMS}
-
-example_pillowfight_pillowfight_SOURCES = tools/commandlineparser.cc \
-                                          example/pillowfight/pillowfight.cc \
-                                          src/gethrtime.c
-
-example_pillowfight_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 example_debug_debug_SOURCES = example/debug/debug.cc
 example_debug_debug_LDADD = libcouchbase_debug.la
@@ -519,7 +518,6 @@ reformat:
                $(top_srcdir)/src/*.[ch] \
                $(top_srcdir)/debug/*.cc \
                $(top_srcdir)/example/libeventdirect/*.c \
-               $(top_srcdir)/example/pillowfight/*.cc \
                $(top_srcdir)/example/syncmode/*.c \
                $(top_srcdir)/example/yajl/*.c \
                $(top_srcdir)/tools/*.cc \

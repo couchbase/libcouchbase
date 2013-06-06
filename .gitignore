@@ -43,7 +43,6 @@
 /example/debug/debug
 /example/libeventdirect/eventloop
 /example/minimal/minimal
-/example/pillowfight/pillowfight
 /example/syncmode/syncmode
 /example/yajl/couchview
 /gtest-1.6.0
@@ -130,6 +129,7 @@
 /tests/unit-tests.log
 /tests/unit-tests.trs
 /tools/cbc
+/tools/cbc-pillowfight
 /tools/cbc_debug.ilk
 /tools/cbc_debug.pdb
 /vc100.idb
