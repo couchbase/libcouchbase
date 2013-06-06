@@ -1721,6 +1721,28 @@ static cbc_command_t getBuiltin(string name)
     return cbc_illegal;
 }
 
+static bool exists_in_path(string file)
+{
+    const char *p = getenv("PATH");
+
+    if (!p || !*p) {
+        return false;
+    }
+
+    stringstream path(p);
+    string item;
+    while (std::getline(path, item, ':')) {
+        if (item.size() > 0) {
+            item += '/';
+        }
+        item += file;
+        if (!access(item.c_str(), F_OK)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void printHelp()
 {
     cerr << "Usage: cbc command [options]" << endl
@@ -1763,37 +1785,48 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-
     cbc_command_t cmd = getBuiltin(cmdstr);
 
+    /* it probably called from main executable like 'cbc COMMAND' */
     if (cmd == cbc_illegal) {
+        /* at least one argument required */
         if (argc > 1) {
             cmdstr.assign("cbc-");
             cmdstr.append(argv[1]);
             cmd = getBuiltin(cmdstr);
-        }
-        if (cmd == cbc_illegal) {
-            if (cmdstr != argv[0]) {
-                cerr << "Error: Unknown command \"" << cmdstr << "\"" << endl;
+            --argc;
+            ++argv;
+            /* in case of failure lookup external executable */
+            if (cmd == cbc_illegal) {
+                if (exists_in_path(cmdstr) && !execvp(cmdstr.c_str(), argv)) {
+                    cerr << "Error: Cannot execute \"" << cmdstr << "\"" << endl;
+                }
             }
-            printHelp();
-            exit(EXIT_FAILURE);
         }
-        --argc;
-        ++argv;
+    }
+    /* if it still illegal command */
+    if (cmd == cbc_illegal) {
+        cerr << "Error: Unknown command \"" << cmdstr << "\"" << endl;
+        printHelp();
+        exit(EXIT_FAILURE);
     }
 
     if (cmd == cbc_help) {
         if (argc > 1) {
+            const char *help_argv[] = {argv[1], "-?", NULL};
             cmdstr.assign("cbc-");
             cmdstr.append(argv[1]);
             cmd = getBuiltin(cmdstr);
+            if (cmd == cbc_illegal) {
+                if (exists_in_path(cmdstr) && !execvp(cmdstr.c_str(), (char **)help_argv)) {
+                    cerr << "Error: Cannot execute \"" << cmdstr << "\"" << endl;
+                }
+            }
             if (cmd == cbc_illegal) {
                 cerr << "Error: Unknown command \"" << cmdstr << "\"" << endl;
                 printHelp();
                 exit(EXIT_FAILURE);
             } else {
-                const char *help_argv[] = {argv[1], "-?", NULL};
                 handleCommandLineOptions(cmd, 2, (char **)help_argv);
             }
         } else {
@@ -1810,9 +1843,9 @@ int main(int argc, char **argv)
              << (version / 100) % 100 << "."
              << version % 100 << endl;
 #endif
-    } else {
-        handleCommandLineOptions(cmd, argc, argv);
     }
+
+    handleCommandLineOptions(cmd, argc, argv);
 
     return EXIT_SUCCESS;
 }

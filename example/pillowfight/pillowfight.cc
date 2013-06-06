@@ -229,7 +229,7 @@ void log(const char *format, ...)
         std::cerr << "[" << std::fixed << gethrtime() / 1000000000.0 << "] ";
     }
     std::cerr << buffer << std::endl;
-    va_end (args);
+    va_end(args);
 }
 
 extern "C" {
