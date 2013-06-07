@@ -30,7 +30,9 @@
 #include <getopt.h>
 #include "tools/commandlineparser.h"
 #include <signal.h>
+#ifndef WIN32
 #include <pthread.h>
+#endif
 #include <cstdarg>
 
 using namespace std;
@@ -250,8 +252,10 @@ class InstancePool
 {
 public:
     InstancePool(size_t size): io(NULL) {
+#ifndef WIN32
         pthread_mutex_init(&mutex, NULL);
         pthread_cond_init(&cond, NULL);
+#endif
 
         if (config.getNumThreads() == 1) {
             /* allow to share IO object in single-thread only */
@@ -323,22 +327,30 @@ public:
     }
 
     lcb_t pop() {
+#ifndef WIN32
         pthread_mutex_lock(&mutex);
         while (queue.empty()) {
             pthread_cond_wait(&cond, &mutex);
         }
         assert(!queue.empty());
+#endif
         lcb_t ret = queue.front();
         queue.pop();
+#ifndef WIN32
         pthread_mutex_unlock(&mutex);
+#endif
         return ret;
     }
 
     void push(lcb_t inst) {
+#ifndef WIN32
         pthread_mutex_lock(&mutex);
+#endif
         queue.push(inst);
+#ifndef WIN32
         pthread_cond_signal(&cond);
         pthread_mutex_unlock(&mutex);
+#endif
     }
 
     static void dumpTimings(lcb_t instance, std::string header) {
@@ -357,8 +369,10 @@ private:
     std::queue<lcb_t> queue;
     std::list<lcb_t> handles;
     lcb_io_opt_t io;
+#ifndef WIN32
     pthread_mutex_t mutex;
     pthread_cond_t cond;
+#endif
 };
 
 class ThreadContext
@@ -688,9 +702,11 @@ extern "C" {
     static void gentle_handler(int);
 }
 
+#ifndef WIN32
 static void setup_sigint_handler(handler_t handler);
+#endif
 
-
+#ifndef WIN32
 static void cruel_handler(int)
 {
     std::list<ThreadContext *>::iterator it;
@@ -718,6 +734,7 @@ static void setup_sigint_handler(handler_t handler)
     action.sa_flags = 0;
     sigaction(SIGINT, &action, NULL);
 }
+#endif
 
 extern "C" {
     static void *thread_worker(void *);
@@ -728,7 +745,9 @@ static void *thread_worker(void *arg)
     ThreadContext *ctx = static_cast<ThreadContext *>(arg);
     ctx->populate(0, config.maxKey);
     ctx->run();
+#ifndef WIN32
     pthread_exit(NULL);
+#endif
     return NULL;
 }
 
@@ -740,29 +759,40 @@ static void *thread_worker(void *arg)
  */
 int main(int argc, char **argv)
 {
-    int exit_code = EXIT_SUCCESS, rc;
+    int exit_code = EXIT_SUCCESS;
 
+#ifndef WIN32
     setup_sigint_handler(SIG_IGN);
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+#endif
 
     handle_options(argc, argv);
 
     pool = new InstancePool(config.getNumInstances());
+#ifndef WIN32
     setup_sigint_handler(gentle_handler);
+#endif
     if (config.isLoop()) {
         log("Running in a loop. Press Ctrl-C to terminate...");
     }
+#ifdef WIN32
+  ThreadContext *ctx = new ThreadContext(pool);
+        contexts.push_back(ctx);
+        thread_worker(ctx);
 
+
+
+#else
     std::list<pthread_t> threads;
     for (uint32_t ii = 0; ii < config.getNumThreads(); ++ii) {
         ThreadContext *ctx = new ThreadContext(pool);
         contexts.push_back(ctx);
 
         pthread_t tid;
-        rc = pthread_create(&tid, &attr, thread_worker, ctx);
+        int rc = pthread_create(&tid, &attr, thread_worker, ctx);
         if (rc) {
             log("Failed to create thread: %d", rc);
             exit_code = EXIT_FAILURE;
@@ -774,7 +804,7 @@ int main(int argc, char **argv)
     if (contexts.size() == config.getNumThreads()) {
         for (std::list<pthread_t>::iterator it = threads.begin();
                 it != threads.end(); ++it) {
-            rc = pthread_join(*it, NULL);
+            int rc = pthread_join(*it, NULL);
             if (rc) {
                 log("Failed to join thread: %d", rc);
                 exit_code = EXIT_FAILURE;
@@ -782,14 +812,18 @@ int main(int argc, char **argv)
             }
         }
     }
+#endif
 
     for (std::list<ThreadContext *>::iterator it = contexts.begin();
             it != contexts.end(); ++it) {
         delete *it;
     }
     delete pool;
+
+#ifndef WIN32
     pthread_attr_destroy(&attr);
     pthread_exit(NULL);
+#endif
 
     return exit_code;
 }

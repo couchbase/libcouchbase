@@ -1721,18 +1721,79 @@ static cbc_command_t getBuiltin(string name)
     return cbc_illegal;
 }
 
-#ifndef WIN32
+#ifdef WIN32
+#define F_OK 0
+
+bool file_exists(const char *name) {
+    HANDLE handle;
+    WIN32_FIND_DATA findData;
+
+    handle = FindFirstFileEx(name,
+                             FindExInfoStandard,
+                             &findData,
+                             FindExSearchNameMatch,
+                             NULL,
+                             0);
+    if (handle == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    FindClose(handle);
+    return true;
+}
+
+std::string locate_file(const char *name) {
+    const char * const exts[] = { "", ".exe", ".com", ".bat", NULL };
+    int ii = 0;
+
+    while (exts[ii] != NULL) {
+        std::string fnm(name);
+        fnm.append(exts[ii]);
+        if (file_exists(fnm.c_str())) {
+            return fnm;
+        }
+        ++ii;
+    }
+
+    return "";
+}
+
+bool access(const char *name, int mode) {
+    assert(mode == F_OK);
+    std::string nm = locate_file(name);
+    return nm != "";
+}
+
+int execvp(const char *file, char *const argv[]) {
+    std::stringstream ss;
+    ss << locate_file(file);
+    int ii = 1;
+    while (argv[ii] != NULL) {
+        ss << " " << argv[ii];
+        ++ii;
+    }
+
+    exit(system(ss.str().c_str()));
+    return -1;
+}
+
+#endif
+
 static bool exists_in_path(string file)
 {
     const char *p = getenv("PATH");
-
+#ifdef WIN32
+    const char path_separator = ';';
+#else
+    const char path_separator = ':';
+#endif
     if (!p || !*p) {
         return false;
     }
 
     stringstream path(p);
     string item;
-    while (std::getline(path, item, ':')) {
+    while (std::getline(path, item, path_separator)) {
         if (item.size() > 0) {
             item += '/';
         }
@@ -1744,7 +1805,6 @@ static bool exists_in_path(string file)
 
     return false;
 }
-#endif
 
 static void printHelp()
 {
@@ -1801,11 +1861,9 @@ int main(int argc, char **argv)
             ++argv;
             /* in case of failure lookup external executable */
             if (cmd == cbc_illegal) {
-#ifndef WIN32
                 if (exists_in_path(cmdstr) && !execvp(cmdstr.c_str(), argv)) {
                     cerr << "Error: Cannot execute \"" << cmdstr << "\"" << endl;
                 }
-#endif
             }
         }
     }
@@ -1823,11 +1881,9 @@ int main(int argc, char **argv)
             cmdstr.append(argv[1]);
             cmd = getBuiltin(cmdstr);
             if (cmd == cbc_illegal) {
-#ifndef WIN32
                 if (exists_in_path(cmdstr) && !execvp(cmdstr.c_str(), (char **)help_argv)) {
                     cerr << "Error: Cannot execute \"" << cmdstr << "\"" << endl;
                 }
-#endif
             }
             if (cmd == cbc_illegal) {
                 cerr << "Error: Unknown command \"" << cmdstr << "\"" << endl;

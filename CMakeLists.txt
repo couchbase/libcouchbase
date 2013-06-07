@@ -52,12 +52,18 @@ ADD_EXECUTABLE(cbc tools/cbc.cc tools/cbc-util.cc
                    tools/configuration.cc win32/getopt.c)
 TARGET_LINK_LIBRARIES(cbc couchbase)
 
+ADD_EXECUTABLE(cbc-pillowfight
+                               tools/commandlineparser.cc
+                               tools/cbc-pillowfight.cc
+                               src/gethrtime.c win32/getopt.c)
+TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
+
 INSTALL(TARGETS couchbase
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-INSTALL(TARGETS cbc RUNTIME DESTINATION bin)
+INSTALL(TARGETS cbc cbc-pillowfight RUNTIME DESTINATION bin)
 INSTALL(FILES include/libcouchbase/behavior.h
               include/libcouchbase/callbacks.h
               include/libcouchbase/compat.h
