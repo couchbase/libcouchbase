@@ -813,11 +813,10 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 
         status = lcb_sockrw_write(conn, conn->output);
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
-            lcb_error_handler(instance, LCB_NETWORK_ERROR,
-                              "Failed to send data to REST server");
             lcb_instance_connerr(instance,
                                  LCB_NETWORK_ERROR,
-                                 "Problem with sending data");
+                                 "Problem with sending data. "
+                                 "Failed to send data to REST server");
             return;
         }
 
@@ -833,7 +832,11 @@ void lcb_vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
 
     status = lcb_sockrw_slurp(conn, conn->input);
     if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
-        /** TODO: Handle Errors */
+        lcb_instance_connerr(instance,
+                             LCB_NETWORK_ERROR,
+                             "Problem with reading data. "
+                             "Failed to send read data from REST server");
+        return;
     }
     lcb_parse_vbucket_stream(instance);
     lcb_sockrw_set_want(conn, LCB_READ_EVENT, 0);
