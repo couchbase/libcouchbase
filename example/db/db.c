@@ -108,23 +108,12 @@ int main(int argc, char *argv[])
     lcb_error_t err;
     lcb_t instance;
     struct lcb_create_st create_options;
-    struct lcb_create_io_ops_st io_opts;
     const char *key = "foo";
     size_t nkey = strlen(key);
     void *bytes;
     long nbytes = 6; /* the size of the value */
 
-    io_opts.version = 0;
-    io_opts.v.v0.type = LCB_IO_OPS_DEFAULT;
-    io_opts.v.v0.cookie = NULL;
-
     memset(&create_options, 0, sizeof(create_options));
-    err = lcb_create_io_ops(&create_options.v.v0.io, &io_opts);
-    if (err != LCB_SUCCESS) {
-        fprintf(stderr, "Failed to create IO instance: %s\n",
-                lcb_strerror(NULL, err));
-        exit(EXIT_FAILURE);
-    }
 
     if (argc > 1) {
         key = argv[1];
