@@ -37,7 +37,21 @@
 #ifdef _WIN32
 #define PRIu64 "I64u"
 #else
+#include <signal.h>
 #include <inttypes.h>
+#endif
+
+#ifndef _WIN32
+static void handle_sigint(int sig)
+{
+    (void)sig;
+    printf("Exiting on SIGINT\n");
+    exit(0);
+}
+
+#define INSTALL_SIGINT_HANDLER() signal(SIGINT, handle_sigint)
+#else
+#define INSTALL_SIGINT_HANDLER()
 #endif
 
 static void error_callback(lcb_t instance, lcb_error_t error, const char *errinfo)
@@ -129,6 +143,9 @@ int main(int argc, char *argv[])
     if (argc > 5) {
         create_options.v.v0.passwd = argv[5];
     }
+
+    INSTALL_SIGINT_HANDLER();
+
     err = lcb_create(&instance, &create_options);
     if (err != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create libcouchbase instance: %s\n",
