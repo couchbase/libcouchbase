@@ -3,6 +3,20 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+## 2.0.7 (UNRELEASED)
+
+* [major] CCBC-183 Improve `lcb_get_replica()`. Now it is possible
+  choose between three strategies:
+
+  1. `LCB_REPLICA_FIRST`: previously accessible and default now, when
+     the caller will get first successful replica or error
+
+  2. `LCB_REPLICA_ALL`: Ask all replicas to send keys
+
+  3. `LCB_REPLICA_SELECT`: select particular replica by the index (from 1
+     to 3 inclusive). This one is faster, but can generate false
+     negatives
+
 ## 2.0.6 (2013-05-07)
 
 * [major] CCBC-188 Fix segfault when rebalancing

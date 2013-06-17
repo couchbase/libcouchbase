@@ -38,10 +38,39 @@ lcb_get_replica_cmd_t is a structure defined in <libcouchbase/arguments.h>:
                 const void *hashkey; /* hash key if != key */
                 lcb_size_t nhashkey; /* number of bytes in hash key */
             } v0;
+            struct {
+                const void *key;
+                lcb_size_t nkey;
+                const void *hashkey;
+                lcb_size_t nhashkey;
+                lcb_replica_t strategy; /* how to select replica node */
+                int index;              /* the replica index in case
+                                           LCB_REPLICA_SELECT strategy */
+            } v1;
         } v;
     } lcb_get_replica_cmd_t;
 
 Upon completion the get callback as set by lcb_set_get_callback is called.
+
+From command version 1, it is possible to select strategy of how to
+select the replica node. Currently three strategies available:
+
+1. LCB_REPLICA_FIRST: previously accessible (in version 0) and default
+   now, when the caller will get first successful replica or error.
+   This robust solution will skip errors on intermediate nodes.
+
+2. LCB_REPLICA_ALL: Ask all replicas to send keys. This strategy is
+   more efficient from latency point of view, because all requests are
+   going in parallel. But the caller have to make decision which result
+   to use. Note that this strategy can generate multiple responses.
+   The exact number of replicas configured for the cluster, you can
+   find using lcb_get_num_replicas() call.
+
+3. LCB_REPLICA_SELECT: select particular replica by the index (from 1
+   to 3 inclusive). This one is fastest, but can generate false
+   negatives, when chosen replica is dead when others seem to be
+   alive. Also the caller can implement all strategies above using
+   this call and even more, e.g. "fetch two of three replicas".
 
 
 RETURN VALUES
@@ -53,6 +82,58 @@ information.
 
 EXAMPLES
 --------
+
+Example 1: Get document from second replica
+
+    #include <libcouchbase/couchbase.h>
+
+    ...
+    lcb_t instance;
+    ...
+    lcb_get_replica_cmd_t *get = calloc(1, sizeof(*get));
+    get->version = 1;
+    get->v.v1.key = "my-key";
+    get->v.v1.nkey = strlen(get->v.v0.key);
+    get->v.v1.strategy = LCB_REPLICA_SELECT;
+    get->v.v1.index = 2;
+    lcb_get_replica_cmd_st* commands[] = { get };
+    lcb_get_replica(instance, NULL, 1, commands);
+    ...
+
+Example 2: Get document from first available replica
+
+    #include <libcouchbase/couchbase.h>
+
+    ...
+    lcb_t instance;
+    ...
+    lcb_get_replica_cmd_t *get = calloc(1, sizeof(*get));
+    get->version = 1;
+    get->v.v1.key = "my-key";
+    get->v.v1.nkey = strlen(get->v.v0.key);
+    get->v.v1.strategy = LCB_REPLICA_FIRST;
+    lcb_get_replica_cmd_st* commands[] = { get };
+    lcb_get_replica(instance, NULL, 1, commands);
+    ...
+
+Example 3: Get document from all replicas (will generate
+           lcb_get_num_replicas() responses)
+
+    #include <libcouchbase/couchbase.h>
+
+    ...
+    lcb_t instance;
+    ...
+    lcb_get_replica_cmd_t *get = calloc(1, sizeof(*get));
+    get->version = 1;
+    get->v.v1.key = "my-key";
+    get->v.v1.nkey = strlen(get->v.v0.key);
+    get->v.v1.strategy = LCB_REPLICA_ALL;
+    lcb_get_replica_cmd_st* commands[] = { get };
+    lcb_get_replica(instance, NULL, 1, commands);
+    ...
+
+Example 4: Simple get replica (API v0)
 
     #include <libcouchbase/couchbase.h>
 

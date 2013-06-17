@@ -66,6 +66,8 @@ extern "C" {
     struct lcb_command_data_st {
         hrtime_t start;
         const void *cookie;
+        /* if != -1, it means that we are sequentially iterating
+         * through the all replicas until first successful response */
         int replica;
         lcb_uint16_t vbucket;
     };
@@ -425,6 +427,20 @@ extern "C" {
                                            ringbuffer_t *buff_cookie,
                                            const void *data,
                                            lcb_size_t size);
+
+    /* These two *_ex fuction allow to fill lcb_command_data_st struct
+     * in caller */
+    void lcb_server_buffer_start_packet_ex(lcb_server_t *c,
+                                           struct lcb_command_data_st *ct,
+                                           ringbuffer_t *buff,
+                                           ringbuffer_t *buff_cookie,
+                                           const void *data,
+                                           lcb_size_t size);
+
+    void lcb_server_start_packet_ex(lcb_server_t *c,
+                                    struct lcb_command_data_st *ct,
+                                    const void *data,
+                                    lcb_size_t size);
 
     /**
      * Initiate a new packet to be sent

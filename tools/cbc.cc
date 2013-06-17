@@ -669,7 +669,7 @@ static bool cat_impl(lcb_t instance, list<string> &keys)
     return true;
 }
 
-static bool cat_replica_impl(lcb_t instance, list<string> &keys)
+static bool cat_replica_impl(lcb_t instance, list<string> &keys, int strategy, int index)
 {
     if (keys.empty()) {
         cerr << "ERROR: you need to specify the key to get" << endl;
@@ -684,8 +684,11 @@ static bool cat_replica_impl(lcb_t instance, list<string> &keys)
     for (list<string>::iterator iter = keys.begin(); iter != keys.end(); ++iter, ++idx) {
         args[idx] = &items[idx];
         memset(&items[idx], 0, sizeof(items[idx]));
-        items[idx].v.v0.key = iter->c_str();
-        items[idx].v.v0.nkey = iter->length();
+        items[idx].version = 1;
+        items[idx].v.v1.key = iter->c_str();
+        items[idx].v.v1.nkey = iter->length();
+        items[idx].v.v1.strategy = (lcb_replica_t)strategy;
+        items[idx].v.v1.index = index;
     }
     err = lcb_get_replica(instance, NULL, idx, args);
 
@@ -1239,10 +1242,15 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     getopt.addOption(new CommandLineOption('t', "timeout", true,
                                            "Specify timeout value"));
 
-    bool replica = false;
+    int replica_strategy = -1;
+    int replica_idx = 0;
     if (cmd == cbc_cat) {
-        getopt.addOption(new CommandLineOption('r', "replica", false,
-                                               "Read key(s) from replicas"));
+        getopt.addOption(new CommandLineOption('r', "replica", true,
+                                               "Read key(s) from replicas: (default: first)).\n"
+                                               "\t\tFollowing strategies available:\n"
+                                               "\t\t  first: try all replica from first in a sequence until first successful response\n"
+                                               "\t\t  all: try all replicas in parallel\n"
+                                               "\t\t  N, where 0 < N < number of replicas: read from selected replica only"));
     }
 
     lcb_uint32_t flags = 0;
@@ -1359,10 +1367,19 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             default:
                 if (cmd == cbc_cat) {
+                    string arg;
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'r':
-                        replica = true;
+                        arg.assign((*iter)->argument);
+                        if (arg == "first") {
+                            replica_strategy = LCB_REPLICA_FIRST;
+                        } else if (arg == "all") {
+                            replica_strategy = LCB_REPLICA_ALL;
+                        } else {
+                            replica_strategy = LCB_REPLICA_SELECT;
+                            replica_idx = atoi(arg.c_str());
+                        }
                         break;
                     default:
                         unknownOpt = true;
@@ -1544,8 +1561,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     switch (cmd) {
     case cbc_cat:
-        if (replica) {
-            success = cat_replica_impl(instance, getopt.arguments);
+        if (replica_strategy != -1) {
+            success = cat_replica_impl(instance, getopt.arguments,
+                                       replica_strategy, replica_idx);
         } else {
             success = cat_impl(instance, getopt.arguments);
         }

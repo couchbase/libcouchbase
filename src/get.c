@@ -148,30 +148,82 @@ lcb_error_t lcb_get_replica(lcb_t instance,
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     req.message.header.request.opcode = CMD_GET_REPLICA;
     for (ii = 0; ii < num; ++ii) {
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        vb = vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                        key, nkey);
-        idx = vbucket_get_replica(instance->vbucket_config, vb, 0);
-        if (idx < 0 || idx > (int)instance->nservers) {
-            /*
-            ** the config says that there is no server yet at that
-            ** position (-1)
-            */
-            free(affected_servers);
-            return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+        const void *key;
+        lcb_size_t nkey;
+        int r0, r1;
+        lcb_replica_t strategy;
+        struct lcb_command_data_st ct;
+
+        memset(&ct, 0, sizeof(struct lcb_command_data_st));
+        ct.start = gethrtime();
+        ct.cookie = command_cookie;
+        strategy = LCB_REPLICA_FIRST;
+        r0 = 0; /* begin */
+        r1 = 0; /* end */
+
+        switch (items[ii]->version) {
+        case 0:
+            key = items[ii]->v.v0.key;
+            nkey = items[ii]->v.v0.nkey;
+            break;
+        case 1:
+            key = items[ii]->v.v1.key;
+            nkey = items[ii]->v.v1.nkey;
+            strategy = items[ii]->v.v1.strategy;
+            switch (strategy) {
+            case LCB_REPLICA_FIRST:
+                r0 = r1 = 0;
+                /* iterate replicas in a sequence until first
+                 * successful response */
+                ct.replica = 0;
+                break;
+            case LCB_REPLICA_SELECT:
+                r0 = r1 = items[ii]->v.v1.index;
+                if (r0 >= instance->nreplicas) {
+                    return lcb_synchandler_return(instance, LCB_EINVAL);
+                }
+                ct.replica = -1; /* do not iterate */
+                break;
+            case LCB_REPLICA_ALL:
+                r0 = 0;
+                r1 = instance->nreplicas;
+                ct.replica = -1; /* do not iterate */
+                break;
+            }
+            break;
+        default:
+            return lcb_synchandler_return(instance, LCB_EINVAL);
         }
-        affected_servers[idx]++;
-        server = instance->servers + idx;
-        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
-        req.message.header.request.opaque = ++instance->seqno;
-        TRACE_GET_BEGIN(&req, key, nkey, 0);
-        lcb_server_start_packet(server, command_cookie,
-                                req.bytes, sizeof(req.bytes));
-        lcb_server_write_packet(server, key, nkey);
-        lcb_server_end_packet(server);
+
+        do {
+            vb = vbucket_get_vbucket_by_key(instance->vbucket_config,
+                                            key, nkey);
+            idx = vbucket_get_replica(instance->vbucket_config, vb, r0);
+            if (idx < 0 || idx > (int)instance->nservers) {
+                /*
+                 ** the config says that there is no server yet at that
+                 ** position (-1)
+                 */
+                free(affected_servers);
+                /* FIXME: when 'packet' patch will be applied, here
+                 * should be rollback of all the previous commands
+                 * queued */
+                return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+            }
+            affected_servers[idx]++;
+            server = instance->servers + idx;
+            req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
+            req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
+            req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
+            req.message.header.request.opaque = ++instance->seqno;
+
+            TRACE_GET_BEGIN(&req, key, nkey, 0);
+            lcb_server_start_packet_ex(server, &ct, req.bytes,
+                                       sizeof(req.bytes));
+            lcb_server_write_packet(server, key, nkey);
+            lcb_server_end_packet(server);
+            ++r0;
+        } while (r0 < r1);
     }
 
     for (ii = 0; ii < instance->nservers; ++ii) {

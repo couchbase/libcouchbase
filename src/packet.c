@@ -180,3 +180,39 @@ void lcb_server_complete_packet(lcb_server_t *c,
                                           data, size);
     }
 }
+
+void lcb_server_buffer_start_packet_ex(lcb_server_t *c,
+                                       struct lcb_command_data_st *ct,
+                                       ringbuffer_t *buff,
+                                       ringbuffer_t *buff_cookie,
+                                       const void *data,
+                                       lcb_size_t size)
+{
+    if (!ringbuffer_ensure_capacity(buff, size) ||
+            !ringbuffer_ensure_capacity(&c->cmd_log, size) ||
+            !ringbuffer_ensure_capacity(buff_cookie, sizeof(*ct)) ||
+            ringbuffer_write(buff, data, size) != size ||
+            ringbuffer_write(&c->cmd_log, data, size) != size ||
+            ringbuffer_write(buff_cookie, ct, sizeof(*ct)) != sizeof(*ct)) {
+        abort();
+    }
+}
+
+void lcb_server_start_packet_ex(lcb_server_t *c,
+                                struct lcb_command_data_st *ct,
+                                const void *data,
+                                lcb_size_t size)
+{
+    if (c->connected) {
+        lcb_server_buffer_start_packet_ex(c, ct,
+                                          &c->output,
+                                          &c->output_cookies,
+                                          data, size);
+    } else {
+        lcb_server_buffer_start_packet_ex(c, ct,
+                                          &c->pending,
+                                          &c->pending_cookies,
+                                          data, size);
+    }
+}
+

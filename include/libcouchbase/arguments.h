@@ -210,7 +210,13 @@ extern "C" {
     } lcb_get_cmd_t;
 
 #define LCB_G_R_C_ST_ID 3
-#define LCB_G_R_C_ST_V 0
+#define LCB_G_R_C_ST_V 1
+
+    typedef enum {
+        LCB_REPLICA_FIRST = 0x00,
+        LCB_REPLICA_ALL = 0x01,
+        LCB_REPLICA_SELECT = 0x02
+    } lcb_replica_t;
 
     typedef struct lcb_get_replica_cmd_st {
         int version;
@@ -221,18 +227,30 @@ extern "C" {
                 const void *hashkey;
                 lcb_size_t nhashkey;
             } v0;
+            struct {
+                const void *key;
+                lcb_size_t nkey;
+                const void *hashkey;
+                lcb_size_t nhashkey;
+                lcb_replica_t strategy;
+                int index;
+            } v1;
         } v;
 #ifdef __cplusplus
         lcb_get_replica_cmd_st() {
             std::memset(this, 0, sizeof(*this));
         }
 
-        lcb_get_replica_cmd_st(const void *key, lcb_size_t nkey) {
-            version = 0;
-            v.v0.key = key;
-            v.v0.nkey = nkey;
-            v.v0.hashkey = NULL;
-            v.v0.nhashkey = 0;
+        lcb_get_replica_cmd_st(const void *key, lcb_size_t nkey,
+                               lcb_replica_t strategy = LCB_REPLICA_FIRST,
+                               int index = 0) {
+            version = 1;
+            v.v1.key = key;
+            v.v1.nkey = nkey;
+            v.v1.hashkey = NULL;
+            v.v1.nhashkey = 0;
+            v.v1.strategy = strategy;
+            v.v1.index = index;
         }
 #endif
     } lcb_get_replica_cmd_t;

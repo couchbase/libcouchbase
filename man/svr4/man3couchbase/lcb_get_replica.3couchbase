@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: lcb_get_replica
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/07/2013
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 07/09/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_GET_REPLICA" "3couchbase" "01/07/2013" "\ \&" "\ \&"
+.TH "LCB_GET_REPLICA" "3couchbase" "07/09/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -53,6 +53,15 @@ typedef struct lcb_get_replica_cmd_st {
             const void *hashkey; /* hash key if != key */
             lcb_size_t nhashkey; /* number of bytes in hash key */
         } v0;
+        struct {
+            const void *key;
+            lcb_size_t nkey;
+            const void *hashkey;
+            lcb_size_t nhashkey;
+            lcb_replica_t strategy; /* how to select replica node */
+            int index;              /* the replica index in case
+                                       LCB_REPLICA_SELECT strategy */
+        } v1;
     } v;
 } lcb_get_replica_cmd_t;
 .fi
@@ -61,10 +70,144 @@ typedef struct lcb_get_replica_cmd_st {
 .\}
 .sp
 Upon completion the get callback as set by lcb_set_get_callback is called\&.
+.sp
+From command version 1, it is possible to select strategy of how to select the replica node\&. Currently three strategies available:
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 1.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  1." 4.2
+.\}
+LCB_REPLICA_FIRST: previously accessible (in version 0) and default now, when the caller will get first successful replica or error\&. This robust solution will skip errors on intermediate nodes\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 2.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  2." 4.2
+.\}
+LCB_REPLICA_ALL: Ask all replicas to send keys\&. This strategy is more efficient from latency point of view, because all requests are going in parallel\&. But the caller have to make decision which result to use\&. Note that this strategy can generate multiple responses\&. The exact number of replicas configured for the cluster, you can find using lcb_get_num_replicas() call\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04' 3.\h'+01'\c
+.\}
+.el \{\
+.sp -1
+.IP "  3." 4.2
+.\}
+LCB_REPLICA_SELECT: select particular replica by the index (from 1 to 3 inclusive)\&. This one is fastest, but can generate false negatives, when chosen replica is dead when others seem to be alive\&. Also the caller can implement all strategies above using this call and even more, e\&.g\&. "fetch two of three replicas"\&.
+.RE
 .SH "RETURN VALUES"
 .sp
 lcb_get_replica() returns the LCB_SUCCESS on success, or a specific error code upon failure\&. See lcb_strerror(3couchbase) for more information\&.
 .SH "EXAMPLES"
+.sp
+Example 1: Get document from second replica
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+#include <libcouchbase/couchbase\&.h>
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\&.\&.\&.
+lcb_t instance;
+\&.\&.\&.
+lcb_get_replica_cmd_t *get = calloc(1, sizeof(*get));
+get\->version = 1;
+get\->v\&.v1\&.key = "my\-key";
+get\->v\&.v1\&.nkey = strlen(get\->v\&.v0\&.key);
+get\->v\&.v1\&.strategy = LCB_REPLICA_SELECT;
+get\->v\&.v1\&.index = 2;
+lcb_get_replica_cmd_st* commands[] = { get };
+lcb_get_replica(instance, NULL, 1, commands);
+\&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Example 2: Get document from first available replica
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+#include <libcouchbase/couchbase\&.h>
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\&.\&.\&.
+lcb_t instance;
+\&.\&.\&.
+lcb_get_replica_cmd_t *get = calloc(1, sizeof(*get));
+get\->version = 1;
+get\->v\&.v1\&.key = "my\-key";
+get\->v\&.v1\&.nkey = strlen(get\->v\&.v0\&.key);
+get\->v\&.v1\&.strategy = LCB_REPLICA_FIRST;
+lcb_get_replica_cmd_st* commands[] = { get };
+lcb_get_replica(instance, NULL, 1, commands);
+\&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Example 3: Get document from all replicas (will generate lcb_get_num_replicas() responses)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+#include <libcouchbase/couchbase\&.h>
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+\&.\&.\&.
+lcb_t instance;
+\&.\&.\&.
+lcb_get_replica_cmd_t *get = calloc(1, sizeof(*get));
+get\->version = 1;
+get\->v\&.v1\&.key = "my\-key";
+get\->v\&.v1\&.nkey = strlen(get\->v\&.v0\&.key);
+get\->v\&.v1\&.strategy = LCB_REPLICA_ALL;
+lcb_get_replica_cmd_st* commands[] = { get };
+lcb_get_replica(instance, NULL, 1, commands);
+\&.\&.\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Example 4: Simple get replica (API v0)
 .sp
 .if n \{\
 .RS 4

@@ -380,7 +380,7 @@ static void get_replica_response_handler(lcb_server_t *server,
         TRACE_GET_END(res->response.opaque, command_data->vbucket,
                       res->response.opcode, rc, &resp);
         root->callbacks.get(root, command_data->cookie, rc, &resp);
-    } else {
+    } else if (command_data->replica != -1) { /* iterating all replicas */
         if (status == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
             /* the config was updated, start from first replica */
             command_data->replica = 0;
