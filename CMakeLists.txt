@@ -29,33 +29,68 @@ ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /EHsc /FD")
 
 ADD_LIBRARY(couchbase SHARED
-            src/arithmetic.c src/base64.c src/behavior.c src/cookie.c
-            src/error.c src/event.c src/flush.c src/get.c
-            src/handler.c src/instance.c src/iofactory.c src/packet.c
-            src/remove.c src/ringbuffer.c src/hashset.c src/server.c
-            src/stats.c src/store.c src/strerror.c src/synchandler.c
-            src/timeout.c src/timings.c src/touch.c src/utilities.c
-            src/wait.c src/gethrtime.c plugins/io/win32/plugin-win32.c
-            src/isasl.c src/compat.c contrib/http_parser/http_parser.c
-            src/http.c src/observe.c src/timer.c src/verbosity.c
-            src/sanitycheck.c src/url_encoding.c src/config_cache.c
-            contrib/libvbucket/crc32.c contrib/libvbucket/cJSON.c
-            contrib/libvbucket/vbucket.c contrib/libvbucket/ketama.c
+            src/arithmetic.c
+            src/base64.c
+            src/behavior.c
+            src/cookie.c
+            src/error.c
+            src/event.c
+            src/flush.c
+            src/get.c
+            src/handler.c
+            src/instance.c
+            src/iofactory.c
+            src/packet.c
+            src/remove.c
+            src/ringbuffer.c
+            src/hashset.c
+            src/server.c
+            src/stats.c
+            src/store.c
+            src/strerror.c
+            src/synchandler.c
+            src/timeout.c
+            src/timings.c
+            src/touch.c
+            src/utilities.c
+            src/wait.c
+            src/gethrtime.c
+            plugins/io/win32/plugin-win32.c
+            src/isasl.c
+            src/compat.c
+            contrib/http_parser/http_parser.c
+            src/http.c
+            src/observe.c
+            src/timer.c
+            src/verbosity.c
+            src/sanitycheck.c
+            src/url_encoding.c
+            src/config_cache.c
+            contrib/libvbucket/crc32.c
+            contrib/libvbucket/cJSON.c
+            contrib/libvbucket/vbucket.c
+            contrib/libvbucket/ketama.c
             contrib/libvbucket/rfc1321/md5c.c)
 
 SET_TARGET_PROPERTIES(couchbase PROPERTIES
                       COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
 TARGET_LINK_LIBRARIES(couchbase ws2_32.lib)
 
-ADD_EXECUTABLE(cbc tools/cbc.cc tools/cbc-util.cc
-                   tools/commandlineparser.cc
-                   tools/configuration.cc win32/getopt.c)
+ADD_EXECUTABLE(cbc
+            tools/cbc.cc
+            tools/cbc-util.cc
+            tools/commandlineparser.cc
+            tools/configuration.cc
+            win32/getopt.c)
+
 TARGET_LINK_LIBRARIES(cbc couchbase)
 
 ADD_EXECUTABLE(cbc-pillowfight
-                               tools/commandlineparser.cc
-                               tools/cbc-pillowfight.cc
-                               src/gethrtime.c win32/getopt.c)
+            tools/commandlineparser.cc
+            tools/cbc-pillowfight.cc
+            src/gethrtime.c
+            win32/getopt.c)
+
 TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
 
 INSTALL(TARGETS couchbase
