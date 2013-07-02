@@ -158,4 +158,6 @@ debug/libcouchbase.idb
 debug/libcouchbase.ilk
 debug/libcouchbase.pdb
 ipch/
+libcouchbase.sdf
+libcouchbase.suo
 win32/Debug/

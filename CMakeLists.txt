@@ -17,24 +17,23 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 # Currently this file is only used for Windows
 
+project(libcouchbase)
+SET(NT_REQUIRED_VERSION 0x0501)
+
 SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
                            ${SOURCE_ROOT}/contrib
+                           ${SOURCE_ROOT}/plugins/io/iocp
                            ${SOURCE_ROOT}/src
                            ${SOURCE_ROOT}/win32
                            ${SOURCE_ROOT})
 
 IF(${MSVC})
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
-    SET(COMMON_FLAGS "/W3 /MP /EHsc")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TC")
-
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /EHsc /FD")
 ELSE()
-    SET(COMMON_FLAGS "-Wall -Wextra -ggdb3")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -g")
 ENDIF()
-
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 
 ADD_LIBRARY(couchbase SHARED
             contrib/http_parser/http_parser.c
@@ -43,12 +42,18 @@ ADD_LIBRARY(couchbase SHARED
             contrib/libvbucket/ketama.c
             contrib/libvbucket/rfc1321/md5c.c
             contrib/libvbucket/vbucket.c
+            plugins/io/iocp/iocp_iops.c
+            plugins/io/iocp/iocp_loop.c
+            plugins/io/iocp/iocp_timer.c
+            plugins/io/iocp/iocp_util.c
             plugins/io/select/plugin-select.c
             src/arithmetic.c
             src/base64.c
             src/bucketconfig/bconf_io.c
             src/bucketconfig/bconf_parse.c
             src/behavior.c
+            src/bucketconfig/bconf_io.c
+            src/bucketconfig/bconf_parse.c
             src/compat.c
             src/config_cache.c
             src/cookie.c
@@ -93,6 +98,7 @@ ADD_LIBRARY(couchbase SHARED
 
 SET_TARGET_PROPERTIES(couchbase PROPERTIES
                       COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
+ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase ws2_32.lib)
 

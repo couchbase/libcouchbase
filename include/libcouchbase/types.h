@@ -105,7 +105,8 @@ extern "C" {
         LCB_IO_OPS_LIBEVENT = 0x02,
         LCB_IO_OPS_WINSOCK = 0x03,
         LCB_IO_OPS_LIBEV = 0x04,
-        LCB_IO_OPS_SELECT = 0x05
+        LCB_IO_OPS_SELECT = 0x05,
+        LCB_IO_OPS_WINIOCP = 0x06
     } lcb_io_ops_type_t;
 
 #define LCB_READ_EVENT 0x02
@@ -133,7 +134,7 @@ extern "C" {
         lcb_size_t iov_len;
     };
 
-    typedef struct lcb_io_opt_st* lcb_io_opt_t;
+    typedef struct lcb_io_opt_st *lcb_io_opt_t;
 
     struct lcb_iops_table_v0_st {
         void *cookie;
@@ -287,7 +288,7 @@ extern "C" {
         struct lcb_buf_info buffer;
     } lcb_io_writebuf_t;
 
-    typedef void (*lcb_io_v0_callback)(lcb_socket_t, short, void*);
+    typedef void (*lcb_io_v0_callback)(lcb_socket_t, short, void *);
 
 
     /**
@@ -358,19 +359,19 @@ extern "C" {
          * v0: socket()
          */
         lcb_sockdata_t *(*create_socket)(struct lcb_io_opt_st *iops,
-                              int domain,
-                              int type,
-                              int protocol);
+                                         int domain,
+                                         int type,
+                                         int protocol);
 
         /**
          * Request a connection to the socket.
          * v0: connect()
          */
         int (*start_connect)(struct lcb_io_opt_st *iops,
-                               lcb_sockdata_t *create_socket,
-                               const struct sockaddr *name,
-                               unsigned int namelen,
-                               lcb_io_connect_cb callback);
+                             lcb_sockdata_t *create_socket,
+                             const struct sockaddr *name,
+                             unsigned int namelen,
+                             lcb_io_connect_cb callback);
 
         /**
          * write buffer allocation and releasing
@@ -385,8 +386,8 @@ extern "C" {
          * v0: send()
          */
         void (*release_writebuf)(struct lcb_io_opt_st *iops,
-                                lcb_sockdata_t *sock,
-                                lcb_io_writebuf_t *buf);
+                                 lcb_sockdata_t *sock,
+                                 lcb_io_writebuf_t *buf);
 
         /**
          * Start writing data
@@ -412,7 +413,7 @@ extern "C" {
          * v0: close()
          */
         unsigned int (*close_socket)(struct lcb_io_opt_st *iops,
-                              lcb_sockdata_t *create_socket);
+                                     lcb_sockdata_t *create_socket);
 
         /**
          * Insert normal start/stop stuff here
@@ -449,8 +450,8 @@ extern "C" {
          * v0: delete_event
          */
         void (*send_error)(struct lcb_io_opt_st *iops,
-                            lcb_sockdata_t *sock,
-                            lcb_io_error_cb callback);
+                           lcb_sockdata_t *sock,
+                           lcb_io_error_cb callback);
 
         void (*stop_event_loop)(struct lcb_io_opt_st *iops);
         void (*run_event_loop)(struct lcb_io_opt_st *iops);

@@ -23,6 +23,9 @@ static lcb_error_t create_v2(lcb_io_opt_t *io,
 
 #ifdef _WIN32
 LIBCOUCHBASE_API
+lcb_error_t lcb_iocp_new_iops(int, lcb_io_opt_t *, void *);
+
+LIBCOUCHBASE_API
 lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
 {
     if (io && io->destructor) {
@@ -37,15 +40,29 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
 {
     struct lcb_create_io_ops_st options;
 
-    options.version = 2;
-    options.v.v2.create = lcb_create_select_io_opts;
-    options.v.v2.cookie = NULL;
-    if (io_opts != NULL && io_opts->version == 2) {
-        /* use only second version until dlopen() equivalent will be implemented */
-        options.v.v2.create = io_opts->v.v2.create;
-        options.v.v2.cookie = io_opts->v.v2.cookie;
+    if (io_opts == NULL) {
+        options.version = 0;
+        options.v.v0.type = LCB_IO_OPS_WINIOCP;
+        options.v.v0.cookie = NULL;
+        io_opts = &options;
     }
-    return create_v2(io, &options);
+    switch (io_opts->version) {
+    case 0:
+        switch (io_opts->v.v0.type) {
+        case LCB_IO_OPS_DEFAULT:
+        case LCB_IO_OPS_WINIOCP:
+            return lcb_iocp_new_iops(0, io, NULL);
+        case LCB_IO_OPS_SELECT:
+            options.version = 2;
+            options.v.v2.create = lcb_create_select_io_opts;
+            options.v.v2.cookie = NULL;
+            return create_v2(io, &options);
+        }
+    case 2:
+        return create_v2(io, io_opts);
+    default:
+        return LCB_EINVAL;
+    }
 }
 
 #else
@@ -276,7 +293,7 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
         lcb_io_opt_t iop = *io;
         iop->dlhandle = plugin.dlhandle;
         /* check if plugin selected compatible version */
-        if (iop->version < 0 || iop->version > 1) {
+        if (iop->version < 0 || iop->version > 0) {
             lcb_destroy_io_ops(iop);
             return LCB_PLUGIN_VERSION_MISMATCH;
         }
@@ -298,7 +315,7 @@ static lcb_error_t create_v2(lcb_io_opt_t *io,
     } else {
         lcb_io_opt_t iop = *io;
         /* check if plugin selected compatible version */
-        if (iop->version < 0 || iop->version > 1) {
+        if (iop->version < 0 || iop->version > 0) {
             lcb_destroy_io_ops(iop);
             return LCB_PLUGIN_VERSION_MISMATCH;
         }

@@ -28,22 +28,62 @@ check_PROGRAMS =
 bin_PROGRAMS = tools\cbc.exe tools\cbc_debug.exe
 example_PROGRAMS =
 
-libcouchbase_SOURCES = src\arithmetic.c src\base64.c src\behavior.c \
-    src\cookie.c src\error.c src\flush.c src\get.c \
-    src\handler.c src\instance.c src\iofactory.c src\packet.c \
-    src\remove.c src\ringbuffer.c src\hashset.c src\server.c src\stats.c \
-    src\store.c src\strerror.c src\synchandler.c src\server\server_io.c \
-    src\io\connect.c src\bucketconfig\bconf_io.c src\list.c \
-    src\server\server_connect.c src\io\readwrite.c src\server\server_parse.c \
-    src\http\http_io.c src\http\http_parse.c src\bucketconfig\bconf_parse.c \
-    src\timeout.c src\timings.c src\touch.c src\utilities.c \
-    src\wait.c src\gethrtime.c plugins\io\select\plugin-select.c src\isasl.c \
-    src\compat.c contrib\http_parser\http_parser.c src\http.c \
-    src\observe.c src\timer.c src\verbosity.c src\sanitycheck.c \
-    src\url_encoding.c src\config_cache.c \
-    contrib\libvbucket\crc32.c contrib\libvbucket\cJSON.c \
-    contrib\libvbucket\vbucket.c contrib\libvbucket\ketama.c \
-    contrib\libvbucket\rfc1321\md5c.c
+libcouchbase_SOURCES = \
+    contrib\http_parser\http_parser.c \
+    contrib\libvbucket\ketama.c \
+    contrib\libvbucket\cJSON.c \
+    contrib\libvbucket\crc32.c \
+    contrib\libvbucket\rfc1321\md5c.c \
+    contrib\libvbucket\vbucket.c \
+    plugins\io\iocp\iocp_iops.c \
+    plugins\io\iocp\iocp_loop.c \
+    plugins\io\iocp\iocp_timer.c \
+    plugins\io\iocp\iocp_util.c \
+    plugins\io\select\plugin-select.c \
+    src\arithmetic.c \
+    src\base64.c \
+    src\behavior.c \
+    src\bucketconfig\bconf_io.c \
+    src\bucketconfig\bconf_parse.c \
+    src\compat.c \
+    src\config_cache.c \
+    src\cookie.c \
+    src\error.c \
+    src\flush.c \
+    src\get.c \
+    src\gethrtime.c \
+    src\handler.c \
+    src\hashset.c \
+    src\http.c \
+    src\http\http_io.c \
+    src\http\http_parse.c \
+    src\instance.c \
+    src\io\connect.c \
+    src\io\readwrite.c \
+    src\iofactory.c \
+    src\isasl.c \
+    src\list.c \
+    src\observe.c \
+    src\packet.c \
+    src\remove.c \
+    src\ringbuffer.c \
+    src\sanitycheck.c \
+    src\server.c \
+    src\server\server_connect.c \
+    src\server\server_io.c \
+    src\server\server_parse.c \
+    src\stats.c \
+    src\store.c \
+    src\strerror.c \
+    src\synchandler.c \
+    src\timeout.c \
+    src\timer.c \
+    src\timings.c \
+    src\touch.c \
+    src\url_encoding.c \
+    src\utilities.c \
+    src\verbosity.c \
+    src\wait.c \
 
 # Unfortunately nmake is a bit limited in its substitute functions.
 # Work around that by using dobj to represent debug object files ;)

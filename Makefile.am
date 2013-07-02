@@ -248,7 +248,16 @@ endif
 endif
 
 libcouchbase_la_SOURCES += src/iofactory.c
+if HAVE_WINSOCK2
+libcouchbase_la_SOURCES += \
+                           plugins/io/iocp/iocp_iops.c \
+                           plugins/io/iocp/iocp_iops.h \
+                           plugins/io/iocp/iocp_loop.c \
+                           plugins/io/iocp/iocp_timer.c \
+                           plugins/io/iocp/iocp_util.c
 
+libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/iocp
+endif
 if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c

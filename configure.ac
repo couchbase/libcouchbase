@@ -187,7 +187,7 @@ AC_ARG_WITH([couchbasemock],
 
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
-                       ws2tcpip.h event.h stdint.h
+                       ws2tcpip.h winsock2.h event.h stdint.h
                        sys/uio.h sys/types.h fcntl.h dlfcn.h
                        ev.h libev/ev.h sys/sdt.h limits.h])
 
@@ -206,6 +206,24 @@ AC_ARG_ENABLE([plugins],
 AM_CONDITIONAL(BUILD_PLUGINS, [test "x$ac_cv_enable_plugins" = "xyes"])
 AS_IF([test "x$ac_cv_enable_plugins" = "xyes"],
       [AC_DEFINE([BUILD_PLUGINS], [1], [Build plugins])])
+
+dnl Check that we can use winsock2 plugin
+AC_CACHE_CHECK([for winsock2], [ac_cv_have_winsock2],
+  [ saved_libs="$LIBS"
+    LIBS=-lws2_32
+    AC_TRY_LINK([
+      #include <winsock2.h>
+      #include <ws2tcpip.h>
+            ],[
+      DWORD error = WSAGetLastError();
+            ],[
+      ac_cv_have_winsock2="yes"
+            ], [
+      ac_cv_have_winsock2="no"
+      ])
+    LIBS="$saved_libs"
+  ])
+AM_CONDITIONAL(HAVE_WINSOCK2, [test "$ac_cv_have_winsock2" = "yes"])
 
 dnl Check that we've got a usable libev3
 AC_CACHE_CHECK([for libev3], [ac_cv_have_libev3],
@@ -301,6 +319,7 @@ AS_IF([test "x${ac_cv_have_libevent2}" = "xyes"],
 
 dnl Fail if libevent is the only networking backend accessible
 AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a \
+       "x${ac_cv_have_winsock2}" != "xyes" -a \
        "x${ac_cv_have_libevent}" != "xyes" -a \
        "x${ac_cv_have_libevent2}" != "xyes" -a \
        "x${ac_cv_have_libev3}" != "xyes" -a \
