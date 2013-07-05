@@ -54,12 +54,16 @@ static int conn_next_ai(struct lcb_connection_st *conn)
  * structures, and closes the socket. Returns 0 if there are more addrinfo
  * structures to try, -1 on error
  */
-static int conn_failed(struct lcb_connection_st *conn)
+static int handle_conn_failure(struct lcb_connection_st *conn)
 {
+    /** Reset the state */
     lcb_connection_close(conn);
+
     if (conn_next_ai(conn) == 0) {
+        conn->state = LCB_CONNSTATE_INPROGRESS;
         return 0;
     }
+
     return -1;
 }
 
@@ -88,7 +92,7 @@ static void conn_do_callback(struct lcb_connection_st *conn,
 static void connection_success(lcb_connection_t conn)
 {
     lcb_connection_delete_timer(conn);
-    conn->connected = 1;
+    conn->state = LCB_CONNSTATE_CONNECTED;
     conn_do_callback(conn, 0, LCB_SUCCESS);
 }
 
@@ -213,7 +217,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
 
         case LCB_CONNECT_EFAIL:
         default:
-            if (conn_failed(conn) == -1) {
+            if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
             }
@@ -265,7 +269,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
         }
 
         if (!conn->sockptr) {
-            if (conn_failed(conn) == -1) {
+            if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
             }
@@ -310,7 +314,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
             }
 
         case LCB_CONNECT_EFAIL:
-            if (conn_failed(conn) == -1) {
+            if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
             }
@@ -330,6 +334,9 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
                                              lcb_uint32_t timeout)
 {
     lcb_connection_result_t result;
+
+    lcb_assert(conn->state == LCB_CONNSTATE_UNINIT);
+    conn->state = LCB_CONNSTATE_INPROGRESS;
 
     if (conn->instance->io->version == 0) {
         if (!conn->evinfo.ptr) {
@@ -362,6 +369,8 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
 void lcb_connection_close(lcb_connection_t conn)
 {
     lcb_io_opt_t io;
+    conn->state = LCB_CONNSTATE_UNINIT;
+
     if (conn->instance == NULL || conn->instance->io == NULL) {
         assert(conn->sockfd < 0 && conn->sockptr == NULL);
         return;
@@ -513,6 +522,7 @@ lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance)
     }
 
     conn->sockfd = INVALID_SOCKET;
+    conn->state = LCB_CONNSTATE_UNINIT;
 
     if (conn->input == NULL || conn->output == NULL) {
         lcb_connection_cleanup(conn);

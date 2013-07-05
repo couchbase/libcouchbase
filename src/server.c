@@ -527,7 +527,7 @@ void lcb_server_send_packets(lcb_server_t *server)
                 lcb_sockrw_apply_want(&server->connection);
             }
 
-        } else {
+        } else if (server->connection.state == LCB_CONNSTATE_UNINIT) {
             lcb_server_connect(server);
         }
     }

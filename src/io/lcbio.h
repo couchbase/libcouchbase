@@ -47,8 +47,11 @@ extern "C" {
         LCB_SOCKRW_PENDING
     } lcb_sockrw_status_t;
 
-
-
+    typedef enum {
+        LCB_CONNSTATE_UNINIT = 0,
+        LCB_CONNSTATE_CONNECTED,
+        LCB_CONNSTATE_INPROGRESS
+    } lcb_connstate_t;
 
     struct lcb_connection_st;
     typedef void (*lcb_connection_handler)(struct lcb_connection_st*, lcb_error_t);
@@ -116,7 +119,7 @@ extern "C" {
         /** This is the v1 socket */
         lcb_sockdata_t *sockptr;
 
-        int connected;
+        lcb_connstate_t state;
 
         short want;
 
