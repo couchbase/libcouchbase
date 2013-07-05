@@ -25,65 +25,46 @@
 
 static int do_read_data(lcb_server_t *c, int allow_read)
 {
-    /*
-    ** Loop and try to parse the data... We don't want to lock up the
-    ** event loop completely, so set a max number of packets to process
-    ** before backing off..
-    */
+    lcb_sockrw_status_t status;
     lcb_size_t processed = 0;
-    /* @todo Make the backoff number tunable from the instance */
-    const lcb_size_t operations_per_call = 1000;
     int rv = 0;
+
     /*
     ** The timers isn't supposed to be _that_ accurate.. it's better
     ** to shave off system calls :)
     */
     hrtime_t stop = gethrtime();
 
-    while (processed < operations_per_call) {
-        rv = lcb_proto_parse_single(c, stop);
-        if (rv == -1) {
-            return -1;
+    if (allow_read) {
+        status = lcb_sockrw_v0_slurp(&c->connection, c->connection.input);
 
-        } else if (rv == 0 && allow_read) {
-            /* need more data */
-            lcb_sockrw_status_t status;
-
-            status = lcb_sockrw_v0_read(&c->connection, c->connection.input);
-
-            switch (status) {
-
-            case LCB_SOCKRW_READ:
-                lcb_update_server_timer(c);
-                break;
-
-            case LCB_SOCKRW_WOULDBLOCK:
-                processed = operations_per_call + 1;
-                break;
-
-            case LCB_SOCKRW_IO_ERROR:
-                if (c->instance->compat.type == LCB_CACHED_CONFIG) {
-                    lcb_schedule_config_cache_refresh(c->instance);
-                    processed = operations_per_call + 1;
-                    break;
-                }
-
-                lcb_failout_server(c, LCB_NETWORK_ERROR);
-                return -1;
-
-            default:
-                return -1;
-
-            } /* switch (status) */
-
-            break;
-
-        } else {
-            ++processed;
-        }
+    } else {
+        status = LCB_SOCKRW_WOULDBLOCK;
     }
 
-    return 0;
+    while ((rv = lcb_proto_parse_single(c, stop)) > 0) {
+        processed++;
+    }
+
+    if (rv == -1) {
+        return -1;
+    }
+
+    if (processed) {
+        lcb_update_server_timer(c);
+    }
+
+    if (status == LCB_SOCKRW_WOULDBLOCK || status == LCB_SOCKRW_READ) {
+        return 0;
+    }
+
+    if (c->instance->compat.type == LCB_CACHED_CONFIG) {
+        lcb_schedule_config_cache_refresh(c->instance);
+        return 0;
+    }
+
+    lcb_failout_server(c, LCB_NETWORK_ERROR);
+    return -1;
 }
 
 static void event_complete_common(lcb_server_t *c)
