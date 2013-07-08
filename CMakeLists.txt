@@ -24,8 +24,17 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
                            ${SOURCE_ROOT}/win32
                            ${SOURCE_ROOT})
 
-ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /EHsc /FD")
+IF(${MSVC})
+    ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
+    SET(COMMON_FLAGS "/W3 /MP /EHsc")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TC")
+
+ELSE()
+    SET(COMMON_FLAGS "-Wall -Wextra -ggdb3")
+ENDIF()
+
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 
 ADD_LIBRARY(couchbase SHARED
             contrib/http_parser/http_parser.c
@@ -44,7 +53,6 @@ ADD_LIBRARY(couchbase SHARED
             src/config_cache.c
             src/cookie.c
             src/error.c
-            src/event.c
             src/flush.c
             src/genhash.c
             src/get.c
@@ -85,6 +93,7 @@ ADD_LIBRARY(couchbase SHARED
 
 SET_TARGET_PROPERTIES(couchbase PROPERTIES
                       COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
+SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase ws2_32.lib)
 
 ADD_EXECUTABLE(cbc
@@ -110,6 +119,7 @@ INSTALL(TARGETS couchbase
         ARCHIVE DESTINATION lib)
 
 INSTALL(TARGETS cbc cbc-pillowfight RUNTIME DESTINATION bin)
+
 INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/behavior.h
               include/libcouchbase/callbacks.h

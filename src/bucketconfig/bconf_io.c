@@ -193,9 +193,9 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_t instance = arg;
     lcb_connection_t conn = &instance->connection;
-    assert(sock != INVALID_SOCKET);
     lcb_sockrw_status_t status;
 
+    lcb_assert(sock != INVALID_SOCKET);
     if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
 
         status = lcb_sockrw_v0_write(conn, conn->output);

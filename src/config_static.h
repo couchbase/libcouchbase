@@ -101,7 +101,11 @@
 
 #ifdef _WIN32
 #include "win32/win_errno_sock.h"
-#define snprintf _snprintf
+
+#ifndef __MINGW32__
+  #define snprintf _snprintf
+#endif
+
 #define strcasecmp(a,b) _stricmp(a,b)
 #define strncasecmp(a,b,c) _strnicmp(a,b,c)
 #undef strdup

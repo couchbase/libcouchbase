@@ -36,7 +36,7 @@
 
 #define PACKAGE_STRING "libcouchbase 2.0.7"
 #include <winsock2.h>
-#include <BaseTsd.h>
+#include <basetsd.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -154,8 +154,8 @@ debug/cbc-pillowfight.ilk
 debug/cbc-pillowfight.pdb
 debug/cbc.ilk
 debug/cbc.pdb
-debug/couchbase.idb
-debug/couchbase.ilk
-debug/couchbase.pdb
+debug/libcouchbase.idb
+debug/libcouchbase.ilk
+debug/libcouchbase.pdb
 ipch/
 win32/Debug/

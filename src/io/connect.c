@@ -71,10 +71,13 @@ static void conn_do_callback(struct lcb_connection_st *conn,
                              int nocb,
                              lcb_error_t err)
 {
+    lcb_connection_handler handler;
+
     if (nocb) {
         return;
     }
-    lcb_connection_handler handler = conn->on_connect_complete;
+
+    handler = conn->on_connect_complete;
     if (!handler) {
         return;
     }

@@ -140,6 +140,10 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_server_t *server = (lcb_server_t*)conn->data;
+    char local[NI_MAXHOST + NI_MAXSERV + 2];
+    char remote[NI_MAXHOST + NI_MAXSERV + 2];
+    int sasl_in_progress;
+
     conn->evinfo.handler = lcb_server_v0_event_handler;
     conn->completion.read = lcb_server_v1_read_handler;
     conn->completion.write = lcb_server_v1_write_handler;
@@ -150,9 +154,7 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
         return;
     }
 
-    char local[NI_MAXHOST + NI_MAXSERV + 2];
-    char remote[NI_MAXHOST + NI_MAXSERV + 2];
-    int sasl_in_progress = (server->sasl_conn != NULL);
+    sasl_in_progress = (server->sasl_conn != NULL);
 
     get_local_address(conn->sockfd, local, sizeof(local));
     get_remote_address(conn->sockfd, remote, sizeof(remote));

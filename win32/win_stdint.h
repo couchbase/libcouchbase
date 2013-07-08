@@ -29,8 +29,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+
 #ifndef _MSC_VER // [
-#error "Use this header only with Microsoft Visual C++ compilers!"
+#define _MSC_STDINT_H_
+#include <stdint.h>
 #endif // _MSC_VER ]
 
 #if _MSC_VER >= 1600

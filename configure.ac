@@ -590,6 +590,13 @@ AS_IF([test "x$ac_cv_eagain_neq_ewouldblock" = "xyes"],[
        AC_DEFINE([USE_EAGAIN], [1], [Defined for systems where EAGAIN != EWOULDBLOCK])])
 
 AH_TOP([
+#ifndef HAVE_CONFIG_H
+  #if defined(_WIN32)
+    #include "win32/config.h"
+  #endif
+  #define CONFIG_H
+#endif
+
 #ifndef CONFIG_H
 #define CONFIG_H
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
