@@ -1,3 +1,40 @@
+libcouchbase (2.0.7) stable; urgency=low
+
+  [Mark Nunberg]
+  * Add ringbuffer_take_buffer
+  * Plug various leaks in tests
+  * Allow using of external plugins with environment variables
+  * Only allocate iops after instance
+  * Allow db.c to exit gracefully on receiving a signal
+  * Don't create custom iops in db
+  * CCBC-221: Don't use iops in minimal.c
+
+  [Sergey Avseyev]
+  * It reports LCB_DLOPEN_FAILED if built without IO plugins
+  * Allow to choose plugin constructor without using dlopen(3)
+  * [cbc] Fix observe output formatting
+  * Allow to set SET/GET ratio
+  * Allow to set minimum and maximum size of payload
+  * GET/SET Ratio is in integer percents (fixes helpstring)
+  * Let pillowfight to be a dumb client
+  * pillowfight: timestamp messages in timings mode
+  * Do not call connect for dumb pillowfight
+  * Always use fixed notation for timestamps in pillowfight
+  * Allow to execute any 'cbc-XXX' binary in PATH like 'cbc XXX'
+  * Make pillowfight part of the package
+  * CCBC-183 Improve lcb_get_replica()
+  * Update metadata for release 2.0.7
+
+  [Trond Norbye]
+  * Simplify build script compile src/gethrtime.c for all platforms
+  * CCBC-209 Add support for building with CMake on win32
+  * Add support for building pillowfight on win32
+
+  [Volker Mische]
+  * Add missing free()
+
+ -- Sergey Avseyev <sergey@couchbase.com> Tue, 09 Jul 2013 23:29:17 +0300
+
 libcouchbase (2.0.6) stable; urgency=low
 
   [Mark Nunberg]
