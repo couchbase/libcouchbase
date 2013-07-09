@@ -2,12 +2,12 @@
 .\"     Title: lcb_get_replica
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 07/09/2013
+.\"      Date: 07/10/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_GET_REPLICA" "3" "07/09/2013" "\ \&" "\ \&"
+.TH "LCB_GET_REPLICA" "3" "07/10/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -71,7 +71,7 @@ typedef struct lcb_get_replica_cmd_st {
 .sp
 Upon completion the get callback as set by lcb_set_get_callback is called\&.
 .sp
-From command version 1, it is possible to select strategy of how to select the replica node\&. Currently three strategies available:
+From command version 1, it is possible to select strategy of how to select the replica node\&. Currently three strategies are available:
 .sp
 .RS 4
 .ie n \{\
@@ -81,7 +81,7 @@ From command version 1, it is possible to select strategy of how to select the r
 .sp -1
 .IP "  1." 4.2
 .\}
-LCB_REPLICA_FIRST: previously accessible (in version 0) and default now, when the caller will get first successful replica or error\&. This robust solution will skip errors on intermediate nodes\&.
+LCB_REPLICA_FIRST: Previously accessible and default as of 2\&.0\&.8, the caller will get a reply from the first replica to successfully reply within the timeout for the operation or will receive an error\&.
 .RE
 .sp
 .RS 4
@@ -92,7 +92,7 @@ LCB_REPLICA_FIRST: previously accessible (in version 0) and default now, when th
 .sp -1
 .IP "  2." 4.2
 .\}
-LCB_REPLICA_ALL: Ask all replicas to send keys\&. This strategy is more efficient from latency point of view, because all requests are going in parallel\&. But the caller have to make decision which result to use\&. Note that this strategy can generate multiple responses\&. The exact number of replicas configured for the cluster, you can find using lcb_get_num_replicas() call\&.
+LCB_REPLICA_ALL: Ask all replicas to send documents/items back\&.
 .RE
 .sp
 .RS 4
@@ -103,14 +103,16 @@ LCB_REPLICA_ALL: Ask all replicas to send keys\&. This strategy is more efficien
 .sp -1
 .IP "  3." 4.2
 .\}
-LCB_REPLICA_SELECT: select particular replica by the index starting from zero\&. This one is fastest, but can generate false negatives, when chosen replica is dead when others seem to be alive\&. Also the caller can implement all strategies above using this call and even more, e\&.g\&. "fetch two of three replicas"\&.
+LCB_REPLICA_SELECT: Select one replica by the index in the configuration starting from zero\&. This approach can more quickly receive all possible replies for a given topology, but it can also generate false negatives\&.
 .RE
+.sp
+Note that applications should not assume the order of the replicas indicates more recent data is at a lower index number\&. It is up to the application to determine which version of a document/item it may wish to use in the case of retrieving data from a replica\&.
 .SH "RETURN VALUES"
 .sp
 lcb_get_replica() returns the LCB_SUCCESS on success, or a specific error code upon failure\&. See lcb_strerror(3) for more information\&.
 .SH "EXAMPLES"
 .sp
-Example 1: Get document from second replica
+Example 1: Get document from the second replica
 .sp
 .if n \{\
 .RS 4
@@ -143,7 +145,7 @@ lcb_get_replica(instance, NULL, 1, commands);
 .RE
 .\}
 .sp
-Example 2: Get document from first available replica
+Example 2: Get document from the first available replica
 .sp
 .if n \{\
 .RS 4

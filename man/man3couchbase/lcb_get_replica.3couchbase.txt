@@ -53,24 +53,26 @@ lcb_get_replica_cmd_t is a structure defined in <libcouchbase/arguments.h>:
 Upon completion the get callback as set by lcb_set_get_callback is called.
 
 From command version 1, it is possible to select strategy of how to
-select the replica node. Currently three strategies available:
+select the replica node. Currently three strategies are available:
 
-1. LCB_REPLICA_FIRST: previously accessible (in version 0) and default
-   now, when the caller will get first successful replica or error.
-   This robust solution will skip errors on intermediate nodes.
+1. LCB_REPLICA_FIRST: Previously accessible and default as of 2.0.8,
+   the caller will get a reply from the first replica to successfully
+   reply within the timeout for the operation or will receive an
+   error.
 
-2. LCB_REPLICA_ALL: Ask all replicas to send keys. This strategy is
-   more efficient from latency point of view, because all requests are
-   going in parallel. But the caller have to make decision which result
-   to use. Note that this strategy can generate multiple responses.
-   The exact number of replicas configured for the cluster, you can
-   find using lcb_get_num_replicas() call.
+2. LCB_REPLICA_ALL: Ask all replicas to send documents/items
+   back.
 
-3. LCB_REPLICA_SELECT: select particular replica by the index starting
-   from zero. This one is fastest, but can generate false negatives,
-   when chosen replica is dead when others seem to be alive. Also the
-   caller can implement all strategies above using this call and even
-   more, e.g. "fetch two of three replicas".
+3. LCB_REPLICA_SELECT: Select one replica by the index in the
+   configuration starting from zero. This approach can more quickly
+   receive all possible replies for a given topology, but it can
+   also generate false negatives.
+
+Note that applications should not assume the order of the
+replicas indicates more recent data is at a lower index number.
+It is up to the application to determine which version of a
+document/item it may wish to use in the case of retrieving data
+from a replica.
 
 
 RETURN VALUES
@@ -83,7 +85,7 @@ information.
 EXAMPLES
 --------
 
-Example 1: Get document from second replica
+Example 1: Get document from the second replica
 
     #include <libcouchbase/couchbase.h>
 
@@ -100,7 +102,7 @@ Example 1: Get document from second replica
     lcb_get_replica(instance, NULL, 1, commands);
     ...
 
-Example 2: Get document from first available replica
+Example 2: Get document from the first available replica
 
     #include <libcouchbase/couchbase.h>
 

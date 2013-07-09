@@ -6,16 +6,26 @@ bugfixes. Do not forget to update this doc in every important patch.
 ## 2.0.7 (UNRELEASED)
 
 * [major] CCBC-183 Improve `lcb_get_replica()`. Now it is possible
-  choose between three strategies:
+  to choose between three strategies:
 
-  1. `LCB_REPLICA_FIRST`: previously accessible and default now, when
-     the caller will get first successful replica or error
+  1. `LCB_REPLICA_FIRST`: Previously accessible and now the default,
+     the caller will get a reply from the first replica to successfully
+     reply within the timeout for the operation or will receive an
+     error.
 
-  2. `LCB_REPLICA_ALL`: Ask all replicas to send keys
+  2. `LCB_REPLICA_ALL`: Ask all replicas to send documents/items
+     back.
 
-  3. `LCB_REPLICA_SELECT`: select particular replica by the index
-     starting from zero. This one is faster, but can generate false
-     negatives
+  3. `LCB_REPLICA_SELECT`: Select one replica by the index in the
+     configuration starting from zero. This approach can more quickly
+     receive all possible replies for a given topology, but it can
+     also generate false negatives.
+
+  Note that applications should not assume the order of the
+  replicas indicates more recent data is at a lower index number.
+  It is up to the application to determine which version of a
+  document/item it may wish to use in the case of retrieving data
+  from a replica.
 
 ## 2.0.6 (2013-05-07)
 
