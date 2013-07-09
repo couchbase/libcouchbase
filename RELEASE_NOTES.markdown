@@ -3,7 +3,7 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
-## 2.0.7 (UNRELEASED)
+## 2.0.7 (2013-07-10)
 
 * [major] CCBC-183 Improve `lcb_get_replica()`. Now it is possible
   to choose between three strategies:
