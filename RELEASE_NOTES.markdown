@@ -13,8 +13,8 @@ bugfixes. Do not forget to update this doc in every important patch.
 
   2. `LCB_REPLICA_ALL`: Ask all replicas to send keys
 
-  3. `LCB_REPLICA_SELECT`: select particular replica by the index (from 1
-     to 3 inclusive). This one is faster, but can generate false
+  3. `LCB_REPLICA_SELECT`: select particular replica by the index
+     starting from zero. This one is faster, but can generate false
      negatives
 
 ## 2.0.6 (2013-05-07)

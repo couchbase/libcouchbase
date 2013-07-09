@@ -103,7 +103,7 @@ LCB_REPLICA_ALL: Ask all replicas to send keys\&. This strategy is more efficien
 .sp -1
 .IP "  3." 4.2
 .\}
-LCB_REPLICA_SELECT: select particular replica by the index (from 1 to 3 inclusive)\&. This one is fastest, but can generate false negatives, when chosen replica is dead when others seem to be alive\&. Also the caller can implement all strategies above using this call and even more, e\&.g\&. "fetch two of three replicas"\&.
+LCB_REPLICA_SELECT: select particular replica by the index starting from zero\&. This one is fastest, but can generate false negatives, when chosen replica is dead when others seem to be alive\&. Also the caller can implement all strategies above using this call and even more, e\&.g\&. "fetch two of three replicas"\&.
 .RE
 .SH "RETURN VALUES"
 .sp
