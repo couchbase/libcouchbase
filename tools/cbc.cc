@@ -1913,6 +1913,7 @@ int main(int argc, char **argv)
         } else {
             printHelp();
         }
+        exit(EXIT_SUCCESS);
     } else if (cmd == cbc_version) {
         cout << "cbc built from: " << PACKAGE_STRING << endl
              << "    using libcouchbase: " << lcb_get_version(NULL)
@@ -1924,6 +1925,7 @@ int main(int argc, char **argv)
              << (version / 100) % 100 << "."
              << version % 100 << endl;
 #endif
+        exit(EXIT_SUCCESS);
     }
 
     handleCommandLineOptions(cmd, argc, argv);

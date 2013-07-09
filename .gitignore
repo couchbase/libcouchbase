@@ -123,6 +123,8 @@
 /test-suite.log
 /tests/*-test
 /tests/CouchbaseMock.jar
+/tests/homebrew-acceptance-test.log
+/tests/homebrew-acceptance-test.trs
 /tests/smoke-test.log
 /tests/smoke-test.trs
 /tests/unit-tests

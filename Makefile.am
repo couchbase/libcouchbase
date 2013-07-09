@@ -34,6 +34,7 @@ endif
 noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
 noinst_PROGRAMS = debug/sizes
 bin_PROGRAMS =
+check_PROGRAMS =
 
 man1_MANS =
 man3_MANS =
@@ -51,6 +52,7 @@ include Makefile.manpage.inc
 if BUILD_TOOLS
 if HAVE_CXX
 bin_PROGRAMS += tools/cbc tools/cbc-pillowfight
+check_PROGRAMS += tests/homebrew-acceptance-test
 endif
 endif
 
@@ -370,8 +372,6 @@ endif
 
 example_yajl_couchview_SOURCES = example/yajl/couchview.c
 example_yajl_couchview_LDADD = libcouchbase.la -lyajl
-
-check_PROGRAMS =
 
 if HAVE_CXX
 if HAVE_GOOGLETEST
