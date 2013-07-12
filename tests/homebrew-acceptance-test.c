@@ -17,7 +17,7 @@
 
 #include <internal.h> /* getenv, sytem, snprintf */
 
-int main(int argc, char *argv[])
+int main(void)
 {
 #ifndef WIN32
     char *srcdir = getenv("srcdir");
