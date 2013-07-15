@@ -152,6 +152,12 @@ extern "C" {
     LIBCOUCHBASE_API
     lcb_uint32_t lcb_get_timeout(lcb_t instance);
 
+    LIBCOUCHBASE_API
+    void lcb_set_view_timeout(lcb_t instance, lcb_uint32_t usec);
+
+    LIBCOUCHBASE_API
+    lcb_uint32_t lcb_get_view_timeout(lcb_t instance);
+
     /**
      * Get the current host
      */

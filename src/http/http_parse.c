@@ -71,17 +71,10 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nby
     lcb_http_request_t req = ctx->req;
     lcb_http_resp_t resp;
 
-    if (!lcb_http_request_valid(ctx->instance, req)) {
+    if (req->status != LCB_HTREQ_S_ONGOING) {
         return 0;
     }
-    if (req->cancelled) {
-        /* ignore on_complete callback because the caller decided to
-         * cancel the request, therefore doesn't need any
-         * further notifications */
-        req->on_complete = NULL;
-        lcb_http_request_finish(req->instance, req->server, req, LCB_SUCCESS);
-        return 0;
-    }
+
     if (req->chunked) {
         lcb_setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
                               req->headers, bytes, nbytes);
@@ -105,10 +98,10 @@ static int http_parser_complete_cb(http_parser *p)
     lcb_size_t np = 0, nbytes = 0;
     lcb_http_resp_t resp;
 
-    if (!lcb_http_request_valid(ctx->instance, req)) {
+    if (req->status != LCB_HTREQ_S_ONGOING) {
         return 0;
     }
-    req->completed = 1;
+
     if (!req->chunked) {
         nbytes = req->result.nbytes;
         if (ringbuffer_is_continous(&req->result, RINGBUFFER_READ, nbytes)) {
@@ -137,7 +130,6 @@ static int http_parser_complete_cb(http_parser *p)
                          req->command_cookie,
                          LCB_SUCCESS,
                          &resp);
-        req->on_complete = NULL;
     }
 
     if (!req->chunked) {
@@ -146,6 +138,7 @@ static int http_parser_complete_cb(http_parser *p)
             free(bytes);
         }
     }
+    req->status |= LCB_HTREQ_S_CBINVOKED;
     return 0;
 }
 
@@ -157,6 +150,10 @@ int lcb_http_request_do_parse(lcb_http_request_t req)
     lcb_size_t nbytes, nb = 0, np = 0;
     char *bytes;
     ringbuffer_t *input = req->connection.input;
+
+    if (req->status != LCB_HTREQ_S_ONGOING) {
+        return 0;
+    }
 
     nbytes = input->nbytes;
     bytes = ringbuffer_get_read_head(input);
@@ -182,7 +179,7 @@ int lcb_http_request_do_parse(lcb_http_request_t req)
         if (HTTP_PARSER_ERRNO(req->parser) != HPE_OK) {
             return -1;
         }
-        if (req->cancelled || req->completed) {
+        if (req->status != LCB_HTREQ_S_ONGOING) {
             return 0;
         } else {
             return (lcb_ssize_t)nb;

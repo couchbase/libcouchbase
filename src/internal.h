@@ -50,6 +50,7 @@
 #include "io/lcbio.h"
 
 #define LCB_DEFAULT_TIMEOUT 2500000
+#define LCB_DEFAULT_VIEW_TIMEOUT 75000000
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 
@@ -209,6 +210,8 @@ extern "C" {
 
         lcb_error_t last_error;
 
+        lcb_uint32_t views_timeout;
+
         struct {
             hrtime_t next;
             lcb_uint32_t usec;
@@ -256,10 +259,6 @@ extern "C" {
         ringbuffer_t pending;
         ringbuffer_t pending_cookies;
 
-        /** The set of the pointers to HTTP requests to couchbase (Views and
-         * Management API) */
-        hashset_t http_requests;
-
         /** The SASL object used for this server */
         sasl_conn_t *sasl_conn;
         /** Is this server in a connected state (done with sasl auth) */
@@ -295,11 +294,26 @@ extern "C" {
         char *data;
     };
 
+    typedef enum {
+        /**
+         * The request is still ongoing. Callbacks are still active
+         */
+        LCB_HTREQ_S_ONGOING = 0,
+
+        /**
+         * The on_complete callback has been invoked
+         */
+        LCB_HTREQ_S_CBINVOKED = 1 << 0,
+
+        /**
+         * The object has been purged from either its servers' or instances'
+         * hashset.
+         */
+        LCB_HTREQ_S_HTREMOVED = 1 << 1
+
+    } lcb_http_request_status_t;
+
     struct lcb_http_request_st {
-        /** The socket to the server */
-        /** The origin node */
-        lcb_server_t *server;
-        /** Short ref to instance (server->instance) */
         lcb_t instance;
         /** The URL buffer */
         char *url;
@@ -328,9 +342,15 @@ extern "C" {
         ringbuffer_t result;
         /** The cookie belonging to this request */
         const void *command_cookie;
-        int cancelled;
-        /** Is HTTP parser completed its work */
-        int completed;
+        /** Reference count */
+        unsigned int refcount;
+
+        /** Current state */
+        lcb_http_request_status_t status;
+
+        /** Request type; views or management */
+        lcb_http_type_t reqtype;
+
         /** Linked list of headers */
         struct lcb_http_header_st *headers_list;
         /** Headers array for passing to callbacks */
@@ -343,11 +363,6 @@ extern "C" {
         struct lcb_connection_st connection;
 
     };
-
-    void lcb_http_request_finish(lcb_t instance,
-                                 lcb_server_t *server,
-                                 lcb_http_request_t req,
-                                 lcb_error_t error);
 
     lcb_error_t lcb_synchandler_return(lcb_t instance, lcb_error_t retcode);
 
@@ -562,7 +577,10 @@ extern "C" {
 
     int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop);
 
-    int lcb_http_request_valid(lcb_t instance, lcb_http_request_t req);
+    void lcb_http_request_finish(lcb_t instance,
+                                 lcb_http_request_t req,
+                                 lcb_error_t error);
+    void lcb_http_request_decref(lcb_http_request_t req);
     lcb_error_t lcb_http_parse_setup(lcb_http_request_t req);
     lcb_error_t lcb_http_request_connect(lcb_http_request_t req);
     int lcb_http_request_do_parse(lcb_http_request_t req);

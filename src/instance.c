@@ -319,6 +319,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
+    lcb_set_view_timeout(obj, LCB_DEFAULT_VIEW_TIMEOUT);
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
 
     err = lcb_connection_init(&obj->connection, obj);
@@ -414,8 +415,14 @@ void lcb_destroy(lcb_t instance)
                 lcb_http_request_t htreq =
                     (lcb_http_request_t)instance->http_requests->items[ii];
 
+                /**
+                 * We don't want to invoke callbacks *or* remove it from our
+                 * hash table
+                 */
+                htreq->status |= LCB_HTREQ_S_CBINVOKED | LCB_HTREQ_S_HTREMOVED;
+
                 /* we should figure out a better error code for this.. */
-                lcb_http_request_finish(instance, NULL, htreq, LCB_ERROR);
+                lcb_http_request_finish(instance, htreq, LCB_ERROR);
             }
         }
     }

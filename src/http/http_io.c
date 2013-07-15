@@ -24,15 +24,17 @@ static void request_v1_write_handler(lcb_sockdata_t *sock,
 
 static void request_v1_read_handler(lcb_sockdata_t *sock, lcb_ssize_t nr);
 static void request_v1_error_handler(lcb_sockdata_t *sock);
+static int request_do_parse(lcb_http_request_t req);
 
 static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_http_request_t req = arg;
     lcb_t instance = req->instance;
-    lcb_server_t *server = req->server;
     lcb_ssize_t rv;
     int should_continue = 1;
     lcb_error_t err = LCB_SUCCESS;
+
+    req->refcount++;
 
     if (which & LCB_READ_EVENT) {
         lcb_sockrw_status_t status;
@@ -43,7 +45,7 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
             err = LCB_NETWORK_ERROR;
 
         } else {
-            rv = lcb_http_request_do_parse(req);
+            rv = request_do_parse(req);
             if (rv == 0) {
                 /* Request completed */
                 should_continue = 0;
@@ -77,21 +79,19 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
     }
 
     if (!should_continue) {
-        lcb_http_request_finish(instance, server, req, err);
+        lcb_http_request_finish(instance, req, err);
 
     } else {
         lcb_sockrw_apply_want(&req->connection);
     }
+
+    lcb_http_request_decref(req);
 
     /* log whatever error ocurred here */
     lcb_error_handler(instance, err, NULL);
     (void)sock;
 }
 
-static void request_finish(lcb_http_request_t req, lcb_error_t error)
-{
-    lcb_http_request_finish(req->instance, req->server, req, error);
-}
 
 static void request_v1_error_handler(lcb_sockdata_t *sock)
 {
@@ -99,7 +99,7 @@ static void request_v1_error_handler(lcb_sockdata_t *sock)
     if (!lcb_sockrw_v1_cb_common(sock, NULL, (void**)&req)) {
         return;
     }
-    request_finish(req, LCB_NETWORK_ERROR);
+    lcb_http_request_finish(req->instance, req, LCB_NETWORK_ERROR);
 }
 
 static void request_v1_read_handler(lcb_sockdata_t *sock, lcb_ssize_t nr)
@@ -113,24 +113,23 @@ static void request_v1_read_handler(lcb_sockdata_t *sock, lcb_ssize_t nr)
     lcb_sockrw_v1_onread_common(sock, &req->connection.input, nr);
 
     if (nr < 1) {
-        request_finish(req, LCB_NETWORK_ERROR);
+        lcb_http_request_finish(req->instance, req, LCB_NETWORK_ERROR);
         return;
     }
 
-    rv = lcb_http_request_do_parse(req);
-    if (rv == 0) {
-        request_finish(req, LCB_SUCCESS);
-        return;
+    req->refcount++;
+    rv = request_do_parse(req);
 
-    } else if (rv < 0) {
-        request_finish(req, LCB_PROTOCOL_ERROR);
-        return;
+    if (rv < 1) {
+        lcb_http_request_finish(req->instance,
+                                req, rv ? LCB_PROTOCOL_ERROR : LCB_SUCCESS);
 
     } else {
         lcb_sockrw_set_want(&req->connection, LCB_READ_EVENT, 1);
+        lcb_sockrw_apply_want(&req->connection);
     }
 
-    lcb_sockrw_apply_want(&req->connection);
+    lcb_http_request_decref(req);
 }
 
 static void request_v1_write_handler(lcb_sockdata_t *sock,
@@ -146,23 +145,38 @@ static void request_v1_write_handler(lcb_sockdata_t *sock,
     lcb_sockrw_v1_onwrite_common(sock, wbuf, &req->connection.input);
 
     if (status) {
-        request_finish(req, LCB_NETWORK_ERROR);
+        lcb_http_request_finish(req->instance, req, LCB_NETWORK_ERROR);
 
     } else {
         lcb_sockrw_set_want(&req->connection, LCB_READ_EVENT, 1);
+        lcb_sockrw_apply_want(&req->connection);
     }
-
-    lcb_sockrw_apply_want(&req->connection);
 }
+
+
+static void request_timed_out(lcb_connection_t conn, lcb_error_t err)
+{
+    lcb_http_request_t req = (lcb_http_request_t)conn->data;
+    lcb_http_request_finish(req->instance, req, err);
+}
+
+static int request_do_parse(lcb_http_request_t req)
+{
+    int rv = lcb_http_request_do_parse(req);
+    if (rv == 0 && req->reqtype == LCB_HTTP_TYPE_VIEW && req->instance != NULL) {
+        lcb_connection_update_timer(&req->connection,
+                                    req->instance->views_timeout,
+                                    request_timed_out);
+    }
+    return rv;
+}
+
 
 static void request_connected(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_http_request_t req = (lcb_http_request_t)conn->data;
     if (err != LCB_SUCCESS) {
-        lcb_http_request_finish(req->instance,
-                                req->server,
-                                req,
-                                err);
+        lcb_http_request_finish(req->instance, req, err);
         return;
     }
 
@@ -170,6 +184,7 @@ static void request_connected(lcb_connection_t conn, lcb_error_t err)
     req->connection.completion.read = request_v1_read_handler;
     req->connection.completion.write = request_v1_write_handler;
     req->connection.completion.error = request_v1_error_handler;
+    req->connection.on_timeout = request_timed_out;
 
     lcb_sockrw_set_want(&req->connection, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(&req->connection);
@@ -180,10 +195,13 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
     lcb_connection_result_t result;
     lcb_connection_t conn = &req->connection;
     conn->on_connect_complete = request_connected;
+    conn->on_connect_timeout = request_timed_out;
     conn->instance = req->instance;
     conn->data = req;
     lcb_connection_getaddrinfo(conn, 0);
-    result = lcb_connection_start(conn, 1, 0);
+    result = lcb_connection_start(conn, 1,
+                                  req->reqtype == LCB_HTTP_TYPE_VIEW ?
+                                          req->instance->views_timeout : 0);
 
     if (result != LCB_CONN_INPROGRESS) {
         return LCB_CONNECT_ERROR;

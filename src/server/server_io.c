@@ -238,9 +238,7 @@ int lcb_flushing_buffers(lcb_t instance)
             return 1;
         }
 
-        if (c->cmd_log.nbytes ||
-                c->pending.nbytes ||
-                hashset_num_items(c->http_requests)) {
+        if (c->cmd_log.nbytes || c->pending.nbytes) {
             return 1;
         }
 
