@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <assert.h>
+#include <lcb_assert.h>
 #include <ctype.h>
 
 #ifdef linux
@@ -204,7 +204,7 @@ static int start_mock_server(struct test_server_info *info, char **cmdline)
     }
 
     info->pid = fork();
-    assert(info->pid != -1);
+    lcb_assert(info->pid != -1);
 
     if (info->pid == 0) {
         /* Child */
@@ -248,12 +248,12 @@ static int start_mock_server(struct test_server_info *info, char **cmdline)
             }
         }
 
-        assert(info->client != -1);
+        lcb_assert(info->client != -1);
         /* Get the port number of the http server */
         offset = snprintf(buffer, sizeof(buffer), "localhost:");
         nr = recv(info->client, buffer + offset,
                   sizeof(buffer) - (size_t)offset - 1, 0);
-        assert(nr > 0);
+        lcb_assert(nr > 0);
         buffer[nr + offset] = '\0';
         info->http = strdup(buffer);
         wait_for_server(buffer + offset);
@@ -295,7 +295,7 @@ void failover_node(const void *handle, int idx, const char *bucket)
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "failover,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
-    assert(nw == nb);
+    lcb_assert(nw == nb);
 }
 
 void respawn_node(const void *handle, int idx, const char *bucket)
@@ -304,7 +304,7 @@ void respawn_node(const void *handle, int idx, const char *bucket)
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "respawn,%d,%s\n", idx, bucket ? bucket : "default");
     ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
-    assert(nw == nb);
+    lcb_assert(nw == nb);
 }
 
 void shutdown_mock_server(const void *handle)

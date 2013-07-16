@@ -17,15 +17,9 @@
 #ifndef LIBCOUCHBASE_INTERNAL_H
 #define LIBCOUCHBASE_INTERNAL_H 1
 
-/* We're currently doing a lot of logic inside our asserts, causing the
- * library to behave "weird" if you try to build with -DNDEBUG
- */
-#undef NDEBUG
-
 #include "config.h"
 #include "trace.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -50,6 +44,7 @@
 #include "hashset.h"
 #include "debug.h"
 #include "handler.h"
+#include "lcb_assert.h"
 
 #define LCB_DEFAULT_TIMEOUT 2500000
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100

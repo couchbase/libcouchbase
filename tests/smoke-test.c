@@ -16,7 +16,7 @@
  */
 
 #include <string.h>
-#include <assert.h>
+#include <lcb_assert.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -54,9 +54,9 @@ static void setup(char **argv, const char *username, const char *password,
     const char *endpoint;
     struct lcb_create_st options;
 
-    assert(session == NULL);
-    assert(mock == NULL);
-    assert(io == NULL);
+    lcb_assert(session == NULL);
+    lcb_assert(mock == NULL);
+    lcb_assert(io == NULL);
 
     if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create IO instance\n");
@@ -135,7 +135,7 @@ static void store_callback(lcb_t instance,
     rv->key = resp->v.v0.key;
     rv->nkey = resp->v.v0.nkey;
     rv->cas = resp->v.v0.cas;
-    assert(io);
+    lcb_assert(io);
     io->v.v0.stop_event_loop(io);
     (void)instance;
 }
@@ -154,7 +154,7 @@ static void mstore_callback(lcb_t instance,
     rv->cas = resp->v.v0.cas;
     rv->counter--;
     if (rv->counter <= 0) {
-        assert(io);
+        lcb_assert(io);
         io->v.v0.stop_event_loop(io);
     }
     (void)instance;
@@ -175,7 +175,7 @@ static void get_callback(lcb_t instance,
     rv->flags = resp->v.v0.flags;
     rv->counter--;
     if (rv->counter <= 0) {
-        assert(io);
+        lcb_assert(io);
         io->v.v0.stop_event_loop(io);
     }
     (void)instance;
@@ -188,12 +188,12 @@ static void touch_callback(lcb_t instance,
 {
     struct rvbuf *rv = (struct rvbuf *)cookie;
     rv->error = error;
-    assert(error == LCB_SUCCESS);
+    lcb_assert(error == LCB_SUCCESS);
     rv->key = resp->v.v0.key;
     rv->nkey = resp->v.v0.nkey;
     rv->counter--;
     if (rv->counter <= 0) {
-        assert(io);
+        lcb_assert(io);
         io->v.v0.stop_event_loop(io);
     }
     (void)instance;
@@ -211,10 +211,10 @@ static void version_callback(lcb_t instance,
     rv->error = error;
     char *str;
 
-    assert(error == LCB_SUCCESS);
+    lcb_assert(error == LCB_SUCCESS);
 
     if (server_endpoint == NULL) {
-        assert(rv->counter == 0);
+        lcb_assert(rv->counter == 0);
         io->v.v0.stop_event_loop(io);
         return;
     }
@@ -246,11 +246,11 @@ static void test_set1(void)
     cmd.v.v0.operation = LCB_SET;
     (void)lcb_set_store_callback(session, store_callback);
     err = lcb_store(session, &rv, 1, cmds);
-    assert(err == LCB_SUCCESS);
+    lcb_assert(err == LCB_SUCCESS);
     io->v.v0.run_event_loop(io);
-    assert(rv.error == LCB_SUCCESS);
-    assert(rv.operation == LCB_SET);
-    assert(memcmp(rv.key, "foo", 3) == 0);
+    lcb_assert(rv.error == LCB_SUCCESS);
+    lcb_assert(rv.operation == LCB_SET);
+    lcb_assert(memcmp(rv.key, "foo", 3) == 0);
 }
 
 static void test_set2(void)
@@ -273,10 +273,10 @@ static void test_set2(void)
     rv.counter = 0;
     for (ii = 0; ii < 10; ++ii, ++rv.counter) {
         err = lcb_store(session, &rv, 1, cmds);
-        assert(err == LCB_SUCCESS);
+        lcb_assert(err == LCB_SUCCESS);
     }
     io->v.v0.run_event_loop(io);
-    assert(rv.errors == 0);
+    lcb_assert(rv.errors == 0);
 }
 
 static void test_get1(void)
@@ -299,20 +299,20 @@ static void test_get1(void)
     (void)lcb_set_get_callback(session, get_callback);
 
     err = lcb_store(session, &rv, 1, storecmds);
-    assert(err == LCB_SUCCESS);
+    lcb_assert(err == LCB_SUCCESS);
     io->v.v0.run_event_loop(io);
-    assert(rv.error == LCB_SUCCESS);
+    lcb_assert(rv.error == LCB_SUCCESS);
 
     memset(&rv, 0, sizeof(rv));
     memset(&getcmd, 0, sizeof(getcmd));
     getcmd.v.v0.key = "foo";
     getcmd.v.v0.nkey = strlen(getcmd.v.v0.key);
     err = lcb_get(session, &rv, 1, getcmds);
-    assert(err == LCB_SUCCESS);
+    lcb_assert(err == LCB_SUCCESS);
     io->v.v0.run_event_loop(io);
-    assert(rv.error == LCB_SUCCESS);
-    assert(rv.nbytes == strlen("bar"));
-    assert(memcmp(rv.bytes, "bar", 3) == 0);
+    lcb_assert(rv.error == LCB_SUCCESS);
+    lcb_assert(rv.nbytes == strlen("bar"));
+    lcb_assert(memcmp(rv.bytes, "bar", 3) == 0);
 }
 
 static void test_get2(void)
@@ -349,9 +349,9 @@ static void test_get2(void)
         storecmd.v.v0.nbytes = nval;
         storecmd.v.v0.operation = LCB_SET;
         err = lcb_store(session, &rv, 1, storecmds);
-        assert(err == LCB_SUCCESS);
+        lcb_assert(err == LCB_SUCCESS);
         io->v.v0.run_event_loop(io);
-        assert(rv.error == LCB_SUCCESS);
+        lcb_assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
 
         getcmds[ii] = calloc(1, sizeof(lcb_get_cmd_t));
@@ -364,11 +364,11 @@ static void test_get2(void)
 
     rv.counter = 26;
     err = lcb_get(session, &rv, 26, (const lcb_get_cmd_t * const *)getcmds);
-    assert(err == LCB_SUCCESS);
+    lcb_assert(err == LCB_SUCCESS);
     io->v.v0.run_event_loop(io);
-    assert(rv.error == LCB_SUCCESS);
-    assert(rv.nbytes == nval);
-    assert(memcmp(rv.bytes, "bar", 3) == 0);
+    lcb_assert(rv.error == LCB_SUCCESS);
+    lcb_assert(rv.nbytes == nval);
+    lcb_assert(memcmp(rv.bytes, "bar", 3) == 0);
     for (ii = 0; ii < 26; ii++) {
         free(keys[ii]);
         free(getcmds[ii]);
@@ -416,9 +416,9 @@ static void test_touch1(void)
         storecmd.v.v0.nbytes = nval;
         storecmd.v.v0.operation = LCB_SET;
         err = lcb_store(session, &rv, 1, storecmds);
-        assert(err == LCB_SUCCESS);
+        lcb_assert(err == LCB_SUCCESS);
         io->v.v0.run_event_loop(io);
-        assert(rv.error == LCB_SUCCESS);
+        lcb_assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
 
         touchcmds[ii] = calloc(1, sizeof(lcb_touch_cmd_t));
@@ -431,9 +431,9 @@ static void test_touch1(void)
 
     rv.counter = 26;
     err = lcb_touch(session, &rv, 26, (const lcb_touch_cmd_t * const *)touchcmds);
-    assert(err == LCB_SUCCESS);
+    lcb_assert(err == LCB_SUCCESS);
     io->v.v0.run_event_loop(io);
-    assert(rv.error == LCB_SUCCESS);
+    lcb_assert(rv.error == LCB_SUCCESS);
     for (ii = 0; ii < 26; ii++) {
         free(keys[ii]);
         free(touchcmds[ii]);
@@ -451,9 +451,9 @@ static lcb_error_t test_connect(char **argv, const char *username,
     lcb_error_t rc;
     struct lcb_create_st options;
 
-    assert(session == NULL);
-    assert(mock == NULL);
-    assert(io == NULL);
+    lcb_assert(session == NULL);
+    lcb_assert(mock == NULL);
+    lcb_assert(io == NULL);
 
     if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
         fprintf(stderr, "Failed to create IO instance\n");
@@ -506,14 +506,14 @@ static void test_version1(void)
     (void)lcb_set_version_callback(session, version_callback);
     err = lcb_server_versions(session, &rv, 1, cmds);
 
-    assert(err == LCB_SUCCESS);
+    lcb_assert(err == LCB_SUCCESS);
 
     rv.counter = total_node_count;
 
     io->v.v0.run_event_loop(io);
 
     /* Ensure all version responses have been received */
-    assert(rv.counter == 0);
+    lcb_assert(rv.counter == 0);
 }
 
 static void test_spurious_saslerr(void)
@@ -600,9 +600,9 @@ int main(int argc, char **argv)
     teardown();
 
     if (is_mock) {
-        assert(test_connect((char **)args, "Administrator", "password", "missing") == LCB_BUCKET_ENOENT);
+        lcb_assert(test_connect((char **)args, "Administrator", "password", "missing") == LCB_BUCKET_ENOENT);
         args[2] = "--buckets=protected:secret";
-        assert(test_connect((char **)args, "protected", "incorrect", "protected") == LCB_AUTH_ERROR);
+        lcb_assert(test_connect((char **)args, "protected", "incorrect", "protected") == LCB_AUTH_ERROR);
         setup((char **)args, "protected", "secret", "protected");
         test_spurious_saslerr();
         teardown();

@@ -143,6 +143,7 @@ libcouchbase_la_SOURCES = \
                         src/http.c \
                         src/instance.c \
                         src/internal.h \
+                        src/lcb_assert.h \
                         src/observe.c \
                         src/packet.c \
                         src/remove.c \

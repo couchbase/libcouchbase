@@ -56,7 +56,7 @@ static int do_fill_input_buffer(lcb_server_t *c)
             return -1;
         }
     } else if (nr == 0) {
-        assert((iov[0].iov_len + iov[1].iov_len) != 0);
+        lcb_assert((iov[0].iov_len + iov[1].iov_len) != 0);
         /* TODO stash error message somewhere
          * "Connection closed... we should resend to other nodes or reconnect!!" */
 
@@ -86,7 +86,7 @@ static void swallow_command(lcb_server_t *c,
             (header->response.opcode != PROTOCOL_BINARY_CMD_STAT ||
              header->response.keylen == 0)) {
         nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
-        assert(nr == sizeof(req));
+        lcb_assert(nr == sizeof(req));
         ringbuffer_consumed(&c->cmd_log, ntohl(req.request.bodylen));
         ringbuffer_consumed(&c->output_cookies,
                             sizeof(struct lcb_command_data_st));
@@ -223,11 +223,11 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
                 break;
             }
 
-            assert((lcb_size_t)idx < c->instance->nservers);
+            lcb_assert((lcb_size_t)idx < c->instance->nservers);
             new_srv = c->instance->servers + idx;
 
             nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
-            assert(nr == sizeof(req));
+            lcb_assert(nr == sizeof(req));
 
             req.request.opaque = ++c->instance->seqno;
             nbody = ntohl(req.request.bodylen);
@@ -237,9 +237,9 @@ static int parse_single(lcb_server_t *c, hrtime_t stop)
                 return -1;
             }
             nr = ringbuffer_read(&c->cmd_log, body, nbody);
-            assert(nr == nbody);
+            lcb_assert(nr == nbody);
             nr = ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
-            assert(nr == sizeof(ct));
+            lcb_assert(nr == sizeof(ct));
             /* Preserve the cookie and reset timestamp for the command. This
              * means that the library will retry the command until it will
              * get code different from LCB_NOT_MY_VBUCKET */

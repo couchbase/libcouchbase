@@ -623,7 +623,7 @@ static void relocate_packets(lcb_server_t *src,
                               "Failed to allocate memory");
             return;
         }
-        assert(ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
+        lcb_assert(ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
         vb = ntohs(cmd.request.vbucket);
         idx = vbucket_get_master(dst_instance->vbucket_config, vb);
         if (idx < 0) {
@@ -633,20 +633,20 @@ static void relocate_packets(lcb_server_t *src,
             idx = vbucket_found_incorrect_master(dst_instance->vbucket_config, vb, idx);
         }
         dst = dst_instance->servers + (lcb_size_t)idx;
-        assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct) ||
+        lcb_assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct) ||
                ringbuffer_read(&src->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
-        assert(ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
-        assert(ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
-        assert(ringbuffer_write(&dst->cmd_log, body, nbody) == nbody);
-        assert(ringbuffer_ensure_capacity(&dst->output_cookies, sizeof(ct)));
-        assert(ringbuffer_write(&dst->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        lcb_assert(ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
+        lcb_assert(ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
+        lcb_assert(ringbuffer_write(&dst->cmd_log, body, nbody) == nbody);
+        lcb_assert(ringbuffer_ensure_capacity(&dst->output_cookies, sizeof(ct)));
+        lcb_assert(ringbuffer_write(&dst->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
-        assert(ringbuffer_ensure_capacity(&dst->pending, npacket));
-        assert(ringbuffer_write(&dst->pending, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
-        assert(ringbuffer_write(&dst->pending, body, nbody) == nbody);
-        assert(ringbuffer_ensure_capacity(&dst->pending_cookies, sizeof(ct)));
-        assert(ringbuffer_write(&dst->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
+        lcb_assert(ringbuffer_ensure_capacity(&dst->pending, npacket));
+        lcb_assert(ringbuffer_write(&dst->pending, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
+        lcb_assert(ringbuffer_write(&dst->pending, body, nbody) == nbody);
+        lcb_assert(ringbuffer_ensure_capacity(&dst->pending_cookies, sizeof(ct)));
+        lcb_assert(ringbuffer_write(&dst->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         free(body);
         lcb_server_send_packets(dst);
@@ -770,8 +770,8 @@ void lcb_update_vbconfig(lcb_t instance,
             vbucket_free_diff(diff);
         }
     } else {
-        assert(instance->servers == NULL);
-        assert(instance->nservers == 0);
+        lcb_assert(instance->servers == NULL);
+        lcb_assert(instance->nservers == 0);
         if (lcb_apply_vbucket_config(instance, next_config) != LCB_SUCCESS) {
             vbucket_config_destroy(next_config);
             return;
@@ -813,7 +813,7 @@ void lcb_update_vbconfig(lcb_t instance,
 static int parse_chunk(lcb_t instance)
 {
     buffer_t *buffer = &instance->vbucket_stream.chunk;
-    assert(instance->vbucket_stream.chunk_size != 0);
+    lcb_assert(instance->vbucket_stream.chunk_size != 0);
 
     if (instance->vbucket_stream.chunk_size == (lcb_size_t) - 1) {
         char *ptr = strstr(buffer->data, "\r\n");
@@ -1038,7 +1038,7 @@ static void vbucket_stream_handler(lcb_socket_t sock, short which, void *arg)
     lcb_ssize_t nr;
     lcb_size_t avail;
     buffer_t *buffer = &instance->vbucket_stream.chunk;
-    assert(sock != INVALID_SOCKET);
+    lcb_assert(sock != INVALID_SOCKET);
 
     if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
         lcb_ssize_t nw;
@@ -1348,7 +1348,7 @@ static lcb_error_t try_to_connect(lcb_t instance)
 
     /* We need to fix the host part... */
     ptr = strstr(instance->http_uri, LCB_LAST_HTTP_HEADER);
-    assert(ptr);
+    lcb_assert(ptr);
     ptr += strlen(LCB_LAST_HTTP_HEADER);
     sprintf(ptr, "Host: %s:%s\r\n\r\n", instance->host, instance->port);
 

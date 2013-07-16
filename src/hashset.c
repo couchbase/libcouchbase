@@ -90,7 +90,7 @@ static void maybe_rehash(hashset_t set)
         set->mask = set->capacity - 1;
         set->items = calloc(set->capacity, sizeof(lcb_size_t));
         set->nitems = 0;
-        assert(set->items);
+        lcb_assert(set->items);
         for (ii = 0; ii < old_capacity; ii++) {
             hashset_add_member(set, (void *)old_items[ii]);
         }

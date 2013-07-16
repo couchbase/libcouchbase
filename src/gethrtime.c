@@ -21,7 +21,7 @@
 
 #include <stdlib.h>
 #include <time.h>
-#include <assert.h>
+#include <lcb_assert.h>
 
 #ifdef HAVE_MACH_MACH_TIME_H
 #include <mach/mach_time.h>
@@ -57,7 +57,7 @@ static void mach_absolute_difference(libcouchbase_uint64_t start, libcouchbase_u
 
 static int clock_gettime(int which, struct timespec *tp)
 {
-    assert(which == CLOCK_MONOTONIC);
+    lcb_assert(which == CLOCK_MONOTONIC);
 
     static libcouchbase_uint64_t epoch = 0;
 
@@ -106,7 +106,7 @@ hrtime_t gethrtime(void)
 
     if (pf.QuadPart == 0) {
         if (QueryPerformanceFrequency(&pf)) {
-            assert(pf.QuadPart != 0);
+            lcb_assert(pf.QuadPart != 0);
             freq = 1.0e9 / (double)pf.QuadPart;
         } else {
             abort();

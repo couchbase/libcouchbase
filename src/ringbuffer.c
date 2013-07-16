@@ -341,7 +341,7 @@ void ringbuffer_get_iov(ringbuffer_t *buffer,
             }
         }
     } else {
-        assert(direction == RINGBUFFER_WRITE);
+        lcb_assert(direction == RINGBUFFER_WRITE);
         iov[0].iov_base = buffer->write_head;
         iov[0].iov_len = buffer->size - buffer->nbytes;
         if (buffer->write_head >= buffer->read_head) {
@@ -424,7 +424,7 @@ int ringbuffer_memcpy(ringbuffer_t *dst, ringbuffer_t *src,
     ringbuffer_get_iov(dst, RINGBUFFER_WRITE, iov);
     toread = minimum(iov[ii].iov_len, nbytes);
     do {
-        assert(ii < 2);
+        lcb_assert(ii < 2);
         nb = ringbuffer_read(&copy, iov[ii].iov_base, toread);
         toread -= nb;
         towrite -= nb;

@@ -93,7 +93,7 @@ void lcb_purge_single_server(lcb_server_t *server,
         mirror = &server->pending;
     }
 
-    assert(ringbuffer_initialize(&rest, 1024));
+    lcb_assert(ringbuffer_initialize(&rest, 1024));
 
     do {
         int allocated = 0;
@@ -128,7 +128,7 @@ void lcb_purge_single_server(lcb_server_t *server,
 
         ringbuffer_consumed(cookies, sizeof(ct));
 
-        assert(nr == sizeof(req));
+        lcb_assert(nr == sizeof(req));
         packet = stream->read_head;
 
         if (server->instance->histogram) {
@@ -142,7 +142,7 @@ void lcb_purge_single_server(lcb_server_t *server,
 
             /* I do believe I have some IOV functions to do that? */
             lcb_size_t nbytes = packetsize - (stream_size - send_size);
-            assert(ringbuffer_memcpy(&rest,
+            lcb_assert(ringbuffer_memcpy(&rest,
                                      &server->output,
                                      nbytes) == 0);
             ringbuffer_consumed(&server->output, nbytes);
@@ -346,7 +346,7 @@ void lcb_purge_single_server(lcb_server_t *server,
         if (send_size >= nbytes) {
             ringbuffer_consumed(&server->output,
                                 send_size - nbytes);
-            assert(ringbuffer_memcpy(&rest,
+            lcb_assert(ringbuffer_memcpy(&rest,
                                      &server->output, nbytes) == 0);
         }
         ringbuffer_reset(&server->output);
@@ -403,7 +403,7 @@ static void purge_http_request(lcb_server_t *server)
         }
     }
 
-    assert(curix);
+    lcb_assert(curix);
 
     for (ii = 0; ii < curix; ii++) {
         lcb_http_request_finish(server->instance,
@@ -628,7 +628,7 @@ static void socket_connected(lcb_server_t *server)
     get_remote_address(server->sock, remote, sizeof(remote));
 
     if (!sasl_in_progress) {
-        assert(sasl_client_new("couchbase", server->hostname, local, remote,
+        lcb_assert(sasl_client_new("couchbase", server->hostname, local, remote,
                                server->instance->sasl.callbacks, 0,
                                &server->sasl_conn) == SASL_OK);
     }
@@ -765,7 +765,7 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
                                            servernum);
     server->rest_api_server = strdup(n);
     server->event = server->instance->io->v.v0.create_event(server->instance->io);
-    assert(server->event);
+    lcb_assert(server->event);
     error = lcb_getaddrinfo(server->instance, server->hostname, server->port,
                             &server->root_ai);
     server->curr_ai = server->root_ai;
@@ -774,7 +774,7 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
         server->curr_ai = server->root_ai = NULL;
     }
     server->timer = server->instance->io->v.v0.create_timer(server->instance->io);
-    assert(server->timer);
+    lcb_assert(server->timer);
 
     server->sasl_conn = NULL;
 }
@@ -816,7 +816,7 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
     if (all && nr == 0) {
         return 0;
     }
-    assert(nr == sizeof(req));
+    lcb_assert(nr == sizeof(req));
     while (req.request.opaque < seqno) {
         struct lcb_command_data_st ct;
         char *packet = c->cmd_log.read_head;
@@ -832,7 +832,7 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
             lcb_observe_resp_t observe;
         } resp;
         nr = ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
-        assert(nr == sizeof(ct));
+        lcb_assert(nr == sizeof(ct));
 
         if (c->instance->histogram) {
             lcb_record_metrics(c->instance, end - ct.start, req.request.opcode);
@@ -889,7 +889,7 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
         if (all && nr == 0) {
             return 0;
         }
-        assert(nr == sizeof(req));
+        lcb_assert(nr == sizeof(req));
     }
 
     return 0;

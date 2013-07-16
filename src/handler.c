@@ -231,7 +231,7 @@ static const char *get_key(lcb_server_t *server, lcb_uint16_t *nkey,
     lcb_size_t packetsize = ntohl(req.request.bodylen) + (lcb_uint32_t)sizeof(req);
     char *keyptr;
     *packet = server->cmd_log.read_head;
-    assert(nr == sizeof(req));
+    lcb_assert(nr == sizeof(req));
 
     *nkey = ntohs(req.request.keylen);
     keyptr = *packet + sizeof(req) + req.request.extlen;
