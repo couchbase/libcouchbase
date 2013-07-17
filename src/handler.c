@@ -363,13 +363,19 @@ static void get_replica_response_handler(lcb_server_t *server,
     lcb_uint16_t status = ntohs(res->response.status);
     lcb_uint16_t nkey = ntohs(res->response.keylen);
     const char *key = (const char *)res;
+    char *packet;
+
     lcb_error_t rc = map_error(status);
 
     key += sizeof(get->bytes);
     if (key == NULL) {
         lcb_error_handler(server->instance, LCB_EINTERNAL, NULL);
         return;
-    } else if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+    }
+    /**
+     * Success? always perform the callback
+     */
+    if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         const char *bytes = key + nkey;
         lcb_size_t nbytes = ntohl(res->response.bodylen) - nkey - res->response.extlen;
         lcb_get_resp_t resp;
@@ -380,49 +386,75 @@ static void get_replica_response_handler(lcb_server_t *server,
         TRACE_GET_END(res->response.opaque, command_data->vbucket,
                       res->response.opcode, rc, &resp);
         root->callbacks.get(root, command_data->cookie, rc, &resp);
-    } else if (command_data->replica != -1) { /* iterating all replicas */
-        if (status == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
-            /* the config was updated, start from first replica */
-            command_data->replica = 0;
-        } else {
-            command_data->replica++;
-        }
-        if (command_data->replica < root->nreplicas) {
-            /* try next replica */
-            protocol_binary_request_get req;
-            int idx = vbucket_get_replica(root->vbucket_config,
-                                          command_data->vbucket,
-                                          command_data->replica);
-            if (idx < 0 || idx > (int)root->nservers) {
-                lcb_error_handler(root, LCB_NETWORK_ERROR,
-                                  "GET_REPLICA: missing server");
-                return;
-            }
-            server = root->servers + idx;
-            memset(&req, 0, sizeof(req));
-            req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-            req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-            req.message.header.request.opcode = CMD_GET_REPLICA;
-            req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-            req.message.header.request.vbucket = ntohs(command_data->vbucket);
-            req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
-            req.message.header.request.opaque = ++root->seqno;
-            TRACE_GET_BEGIN(&req, key, nkey, 0);
-            lcb_server_retry_packet(server, command_data,
-                                    req.bytes, sizeof(req.bytes));
-            lcb_server_write_packet(server, key, nkey);
-            lcb_server_end_packet(server);
-            lcb_server_send_packets(server);
-        } else {
-            /* give up and report the error */
-            lcb_get_resp_t resp;
-            setup_lcb_get_resp_t(&resp, key, nkey, NULL, 0, 0, 0,
-                                 res->response.datatype);
-            TRACE_GET_END(res->response.opaque, command_data->vbucket,
-                          res->response.opcode, rc, &resp);
-            root->callbacks.get(root, command_data->cookie, rc, &resp);
-        }
+        return;
     }
+
+    key = get_key(server, &nkey, &packet);
+
+    /**
+     * Following code handles errors.
+     */
+    if (command_data->replica == -1) {
+        /* Perform the callback. Either SELECT or ALL */
+        lcb_get_resp_t resp;
+        setup_lcb_get_resp_t(&resp, key, nkey, NULL, 0, 0, 0, 0);
+        TRACE_GET_END(res->response.opaque, command_data->vbucket,
+                      res->response.opcode, rc, &resp);
+        root->callbacks.get(root, command_data->cookie, rc, &resp);
+        release_key(server, packet);
+        return;
+    }
+
+    /** LCB_REPLICA_FIRST */
+    if (status == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
+        /**
+         * the config was updated, start from first replica.
+         * Reset the iteration count
+         */
+        command_data->replica = 0;
+    } else {
+        command_data->replica++;
+    }
+
+    if (command_data->replica < root->nreplicas) {
+        /* try next replica */
+        protocol_binary_request_get req;
+        lcb_server_t *new_server;
+        int idx = vbucket_get_replica(root->vbucket_config,
+                                      command_data->vbucket,
+                                      command_data->replica);
+        if (idx < 0 || idx > (int)root->nservers) {
+            lcb_error_handler(root, LCB_NETWORK_ERROR,
+                              "GET_REPLICA: missing server");
+            release_key(server, packet);
+            return;
+        }
+        new_server = root->servers + idx;
+        memset(&req, 0, sizeof(req));
+        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        req.message.header.request.opcode = CMD_GET_REPLICA;
+        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
+        req.message.header.request.vbucket = ntohs(command_data->vbucket);
+        req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
+        req.message.header.request.opaque = ++root->seqno;
+        TRACE_GET_BEGIN(&req, key, nkey, 0);
+        lcb_server_retry_packet(new_server, command_data,
+                                req.bytes, sizeof(req.bytes));
+        lcb_server_write_packet(new_server, key, nkey);
+        lcb_server_end_packet(new_server);
+        lcb_server_send_packets(new_server);
+    } else {
+        /* give up and report the error */
+        lcb_get_resp_t resp;
+        setup_lcb_get_resp_t(&resp, key, nkey, NULL, 0, 0, 0,
+                             res->response.datatype);
+        TRACE_GET_END(res->response.opaque, command_data->vbucket,
+                      res->response.opcode, rc, &resp);
+        root->callbacks.get(root, command_data->cookie, rc, &resp);
+    }
+
+    release_key(server, packet);
 }
 
 static void delete_response_handler(lcb_server_t *server,
