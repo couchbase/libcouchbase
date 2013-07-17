@@ -104,7 +104,8 @@ extern "C" {
         LCB_IO_OPS_DEFAULT = 0x01,
         LCB_IO_OPS_LIBEVENT = 0x02,
         LCB_IO_OPS_WINSOCK = 0x03,
-        LCB_IO_OPS_LIBEV = 0x04
+        LCB_IO_OPS_LIBEV = 0x04,
+        LCB_IO_OPS_SELECT = 0x05
     } lcb_io_ops_type_t;
 
 #define LCB_READ_EVENT 0x02

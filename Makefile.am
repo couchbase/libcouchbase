@@ -124,6 +124,8 @@ libcouchbase_la_SOURCES = \
                         include/ep-engine/command_ids.h \
                         include/memcached/protocol_binary.h \
                         include/memcached/vbucket.h \
+                        plugins/io/select/plugin-select.c \
+                        plugins/io/select/select_io_opts.h \
                         src/arithmetic.c \
                         src/base64.c \
                         src/behavior.c \

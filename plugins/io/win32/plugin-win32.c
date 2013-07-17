@@ -443,7 +443,6 @@ static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
     free(iops);
 }
 
-
 LIBCOUCHBASE_API
 struct lcb_io_opt_st *lcb_create_winsock_io_opts(void) {
     struct lcb_io_opt_st *ret;

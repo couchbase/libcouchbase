@@ -16,49 +16,7 @@
  */
 
 #include "internal.h"
-
-#ifdef _WIN32
-/*
- * For windows we're currently only supporting the single IO method
- * bundle.
- */
-#include "winsock_io_opts.h"
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
-                              const struct lcb_create_io_ops_st *options)
-{
-    lcb_error_t ret = LCB_SUCCESS;
-    lcb_io_ops_type_t type = LCB_IO_OPS_DEFAULT;
-
-    if (options != NULL) {
-        if (options->version != 0) {
-            return LCB_EINVAL;
-        }
-        type = options->v.v0.type;
-    }
-
-    if (type == LCB_IO_OPS_DEFAULT || type == LCB_IO_OPS_WINSOCK) {
-        *io = lcb_create_winsock_io_opts();
-        if (*io == NULL) {
-            return LCB_CLIENT_ENOMEM;
-        }
-    } else {
-        return LCB_NOT_SUPPORTED;
-    }
-
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
-{
-    if (io && io->destructor) {
-        io->destructor(io);
-    }
-    return LCB_SUCCESS;
-}
-#else
+#include "plugins/io/select/select_io_opts.h"
 
 typedef lcb_error_t (*create_func_t)(int version, lcb_io_opt_t *io, const void *cookie);
 
@@ -136,6 +94,13 @@ static void override_from_env(struct lcb_create_io_ops_st *options,
     char *symbol = getenv_nonempty("LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL");
 
     if (!plugin) {
+        return;
+    }
+
+    if (strncmp("select", plugin, 6) == 0) {
+        options->version = 2;
+        options->v.v2.create = lcb_create_select_io_opts;
+        options->v.v2.cookie = NULL;
         return;
     }
 
@@ -223,16 +188,26 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
         opts.v.v1.sofile = PLUGIN_SO("libev");
         opts.v.v1.symbol = PLUGIN_SYMBOL("libev");
         return create_v1(io, &opts);
+    case LCB_IO_OPS_SELECT:
+        opts.version = 2;
+        opts.v.v2.create = lcb_create_select_io_opts;
+        opts.v.v2.cookie = NULL;
+        return create_v2(io, &opts);
     case LCB_IO_OPS_DEFAULT:
         opts.v.v1.sofile = PLUGIN_SO("libevent");
         opts.v.v1.symbol = PLUGIN_SYMBOL("libevent");
-        if (create_v1(io, &opts) != LCB_SUCCESS) {
-            opts.v.v1.sofile = PLUGIN_SO("libev");
-            opts.v.v1.symbol = PLUGIN_SYMBOL("libev");
-            return create_v1(io, &opts);
-        } else {
+        if (create_v1(io, &opts) == LCB_SUCCESS) {
             return LCB_SUCCESS;
         }
+        opts.v.v1.sofile = PLUGIN_SO("libev");
+        opts.v.v1.symbol = PLUGIN_SYMBOL("libev");
+        if (create_v1(io, &opts) == LCB_SUCCESS) {
+            return LCB_SUCCESS;
+        }
+        opts.version = 2;
+        opts.v.v2.create = lcb_create_select_io_opts;
+        opts.v.v2.cookie = NULL;
+        return create_v2(io, &opts);
     default:
         return LCB_NOT_SUPPORTED;
     }
@@ -300,5 +275,3 @@ static lcb_error_t create_v2(lcb_io_opt_t *io,
 
     return LCB_SUCCESS;
 }
-
-#endif
