@@ -40,6 +40,7 @@
 
 #include "http_parser/http_parser.h"
 #include "ringbuffer.h"
+#include "list.h"
 #include "url_encoding.h"
 #include "hashset.h"
 #include "debug.h"

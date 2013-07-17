@@ -128,8 +128,8 @@ libcouchbase_la_SOURCES = \
                         src/base64.c \
                         src/behavior.c \
                         src/compat.c \
-                        src/config_static.h \
                         src/config_cache.c \
+                        src/config_static.h \
                         src/cookie.c \
                         src/error.c \
                         src/event.c \
@@ -144,6 +144,8 @@ libcouchbase_la_SOURCES = \
                         src/instance.c \
                         src/internal.h \
                         src/lcb_assert.h \
+                        src/list.c \
+                        src/list.h \
                         src/observe.c \
                         src/packet.c \
                         src/remove.c \
@@ -264,20 +266,22 @@ endif
 tests_unit_tests_SOURCES = \
                            src/base64.c \
                            src/hashset.c \
+                           src/list.c \
                            src/ringbuffer.c \
                            src/url_encoding.c \
                            tests/base64-unit-test.cc \
                            tests/behavior-unit-tests.cc \
+                           tests/ccbc_103.cc \
                            tests/cluster-unit-tests.cc \
                            tests/hashset-unit-test.cc \
+                           tests/hostname-unit-test.cc \
+                           tests/list-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \
                            tests/strerror-unit-test.cc \
                            tests/timeout.c \
                            tests/unit_tests.cc \
-                           tests/url_encoding-tests.cc \
-                           tests/hostname-unit-test.cc \
-                           tests/ccbc_103.cc
+                           tests/url_encoding-tests.cc
 
 if BUILD_PLUGINS
 tests_unit_tests_SOURCES += \

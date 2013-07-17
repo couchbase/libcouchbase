@@ -53,6 +53,7 @@ ADD_LIBRARY(couchbase SHARED
             src/instance.c
             src/iofactory.c
             src/isasl.c
+            src/list.c
             src/observe.c
             src/packet.c
             src/remove.c
