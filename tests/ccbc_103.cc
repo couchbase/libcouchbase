@@ -17,132 +17,79 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
+#include "list.h"
 
-#define EVENT_LISTS_UNIT_TESTS 1
-#include "plugins/io/win32/event_lists.h"
 
 class CCBC_103 : public ::testing::Test
 {
 };
 
-TEST_F(CCBC_103, events)
+typedef struct {
+    lcb_list_t list;
+} event_t;
+
+typedef struct {
+    event_t events;
+} io_cookie;
+
+TEST_F(CCBC_103, lists)
 {
-    winsock_io_cookie instance;
-    winsock_event e1, e2, e3, e4;
+    io_cookie instance;
+    event_t e1, e2, e3, e4;
 
-    link_event(&instance, &e1);
-    ASSERT_EQ(&e1, instance.events);
+    lcb_list_init(&instance.events.list);
+    lcb_list_append(&instance.events.list, &e1.list);
+    ASSERT_EQ(&e1.list, instance.events.list.prev);
 
-    link_event(&instance, &e2);
-    ASSERT_EQ(&e2, instance.events);
+    lcb_list_append(&instance.events.list, &e2.list);
+    ASSERT_EQ(&e2.list, instance.events.list.prev);
 
-    link_event(&instance, &e3);
-    ASSERT_EQ(&e3, instance.events);
+    lcb_list_append(&instance.events.list, &e3.list);
+    ASSERT_EQ(&e3.list, instance.events.list.prev);
 
-    link_event(&instance, &e4);
-    ASSERT_EQ(&e4, instance.events);
+    lcb_list_append(&instance.events.list, &e4.list);
+    ASSERT_EQ(&e4.list, instance.events.list.prev);
 
-    ASSERT_EQ(1, event_contains(&instance, &e1));
-    ASSERT_EQ(1, event_contains(&instance, &e2));
-    ASSERT_EQ(1, event_contains(&instance, &e3));
-    ASSERT_EQ(1, event_contains(&instance, &e4));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e1.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e2.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e3.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e4.list));
 
     // Try to unlink the one in the middle
-    unlink_event(&instance, &e2);
-    ASSERT_EQ(1, event_contains(&instance, &e1));
-    ASSERT_EQ(0, event_contains(&instance, &e2));
-    ASSERT_EQ(1, event_contains(&instance, &e3));
-    ASSERT_EQ(1, event_contains(&instance, &e4));
+    lcb_list_delete(&e2.list);
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e1.list));
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e2.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e3.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e4.list));
 
     // Try to unlink the last one
-    unlink_event(&instance, &e1);
-    ASSERT_EQ(0, event_contains(&instance, &e1));
-    ASSERT_EQ(0, event_contains(&instance, &e2));
-    ASSERT_EQ(1, event_contains(&instance, &e3));
-    ASSERT_EQ(1, event_contains(&instance, &e4));
+    lcb_list_delete(&e1.list);
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e1.list));
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e2.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e3.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e4.list));
 
     // try to unlink the current head
-    unlink_event(&instance, &e4);
-    ASSERT_EQ(0, event_contains(&instance, &e1));
-    ASSERT_EQ(0, event_contains(&instance, &e2));
-    ASSERT_EQ(1, event_contains(&instance, &e3));
-    ASSERT_EQ(0, event_contains(&instance, &e4));
+    lcb_list_delete(&e4.list);
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e1.list));
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e2.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e3.list));
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e4.list));
 
     // try to unlink the last one
-    unlink_event(&instance, &e3);
-    ASSERT_EQ(0, event_contains(&instance, &e1));
-    ASSERT_EQ(0, event_contains(&instance, &e2));
-    ASSERT_EQ(0, event_contains(&instance, &e3));
-    ASSERT_EQ(0, event_contains(&instance, &e4));
+    lcb_list_delete(&e3.list);
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e1.list));
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e2.list));
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e3.list));
+    ASSERT_EQ(0, lcb_list_contains(&instance.events.list, &e4.list));
 
     // And we should be able to add all back
-    link_event(&instance, &e1);
-    link_event(&instance, &e2);
-    link_event(&instance, &e3);
-    link_event(&instance, &e4);
-    ASSERT_EQ(1, event_contains(&instance, &e1));
-    ASSERT_EQ(1, event_contains(&instance, &e2));
-    ASSERT_EQ(1, event_contains(&instance, &e3));
-    ASSERT_EQ(1, event_contains(&instance, &e4));
-}
-
-TEST_F(CCBC_103, timers)
-{
-    winsock_io_cookie instance;
-    winsock_timer e1, e2, e3, e4;
-
-    link_timer(&instance, &e1);
-    ASSERT_EQ(&e1, instance.timers);
-
-    link_timer(&instance, &e2);
-    ASSERT_EQ(&e2, instance.timers);
-
-    link_timer(&instance, &e3);
-    ASSERT_EQ(&e3, instance.timers);
-
-    link_timer(&instance, &e4);
-    ASSERT_EQ(&e4, instance.timers);
-
-    ASSERT_EQ(1, timer_contains(&instance, &e1));
-    ASSERT_EQ(1, timer_contains(&instance, &e2));
-    ASSERT_EQ(1, timer_contains(&instance, &e3));
-    ASSERT_EQ(1, timer_contains(&instance, &e4));
-
-    // Try to unlink the one in the middle
-    unlink_timer(&instance, &e2);
-    ASSERT_EQ(1, timer_contains(&instance, &e1));
-    ASSERT_EQ(0, timer_contains(&instance, &e2));
-    ASSERT_EQ(1, timer_contains(&instance, &e3));
-    ASSERT_EQ(1, timer_contains(&instance, &e4));
-
-    // Try to unlink the last one
-    unlink_timer(&instance, &e1);
-    ASSERT_EQ(0, timer_contains(&instance, &e1));
-    ASSERT_EQ(0, timer_contains(&instance, &e2));
-    ASSERT_EQ(1, timer_contains(&instance, &e3));
-    ASSERT_EQ(1, timer_contains(&instance, &e4));
-
-    // try to unlink the current head
-    unlink_timer(&instance, &e4);
-    ASSERT_EQ(0, timer_contains(&instance, &e1));
-    ASSERT_EQ(0, timer_contains(&instance, &e2));
-    ASSERT_EQ(1, timer_contains(&instance, &e3));
-    ASSERT_EQ(0, timer_contains(&instance, &e4));
-
-    // try to unlink the last one
-    unlink_timer(&instance, &e3);
-    ASSERT_EQ(0, timer_contains(&instance, &e1));
-    ASSERT_EQ(0, timer_contains(&instance, &e2));
-    ASSERT_EQ(0, timer_contains(&instance, &e3));
-    ASSERT_EQ(0, timer_contains(&instance, &e4));
-
-    // And we should be able to add all back
-    link_timer(&instance, &e1);
-    link_timer(&instance, &e2);
-    link_timer(&instance, &e3);
-    link_timer(&instance, &e4);
-    ASSERT_EQ(1, timer_contains(&instance, &e1));
-    ASSERT_EQ(1, timer_contains(&instance, &e2));
-    ASSERT_EQ(1, timer_contains(&instance, &e3));
-    ASSERT_EQ(1, timer_contains(&instance, &e4));
+    lcb_list_append(&instance.events.list, &e1.list);
+    lcb_list_append(&instance.events.list, &e2.list);
+    lcb_list_append(&instance.events.list, &e3.list);
+    lcb_list_append(&instance.events.list, &e4.list);
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e1.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e2.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e3.list));
+    ASSERT_EQ(1, lcb_list_contains(&instance.events.list, &e4.list));
 }
