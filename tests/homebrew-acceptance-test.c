@@ -15,21 +15,18 @@
  *   limitations under the License.
  */
 
-#include <internal.h> /* getenv, sytem, snprintf */
+#include <internal.h> /* getenv, system, snprintf */
 
 int main(void)
 {
 #ifndef WIN32
-    char *srcdir = getenv("srcdir");
-    char command[FILENAME_MAX];
     int status;
 
-    snprintf(command, FILENAME_MAX, "%s/tools/cbc version 2>&1", srcdir);
-    status = system(command);
+    status = system("./tools/cbc version 2>&1");
     if (status == -1 || WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
         return 1;
     }
-    snprintf(command, FILENAME_MAX, "%s/tools/cbc help 2>&1", srcdir);
+    status = system("./tools/cbc help 2>&1");
     if (status == -1 || WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
         return 1;
     }
