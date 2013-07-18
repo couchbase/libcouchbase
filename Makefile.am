@@ -78,7 +78,7 @@ if BUILD_PLUGINS
 pkginclude_HEADERS += \
                      plugins/io/libev/libev_io_opts.h \
                      plugins/io/libevent/libevent_io_opts.h \
-                     plugins/io/win32/winsock_io_opts.h
+                     plugins/io/select/select_io_opts.h
 endif
 
 libhttpparser_la_SOURCES = \
@@ -236,12 +236,7 @@ endif
 endif
 
 libcouchbase_la_SOURCES += src/iofactory.c
-if HAVE_WINSOCK2
-if !HAVE_LIBEVENT
-libcouchbase_la_SOURCES += plugins/io/win32/plugin-win32.c
-libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/win32
-endif
-else
+
 if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
 libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
@@ -263,8 +258,6 @@ libcouchbase_libev_la_LIBADD=-lev
 libcouchbase_libev_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 endif
 
-endif
-
 tests_unit_tests_SOURCES = \
                            src/base64.c \
                            src/hashset.c \
@@ -284,11 +277,6 @@ tests_unit_tests_SOURCES = \
                            tests/timeout.c \
                            tests/unit_tests.cc \
                            tests/url_encoding-tests.cc
-
-if BUILD_PLUGINS
-tests_unit_tests_SOURCES += \
-                           plugins/io/win32/event_lists.h
-endif
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
 tests_unit_tests_LDADD = libcouchbase.la libvbucket.la

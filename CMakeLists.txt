@@ -19,10 +19,9 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
-                           ${SOURCE_ROOT}/win32
                            ${SOURCE_ROOT}/contrib
-                           ${SOURCE_ROOT}/plugins/io/win32
                            ${SOURCE_ROOT}/src
+                           ${SOURCE_ROOT}/win32
                            ${SOURCE_ROOT})
 
 ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
@@ -35,7 +34,7 @@ ADD_LIBRARY(couchbase SHARED
             contrib/libvbucket/ketama.c
             contrib/libvbucket/rfc1321/md5c.c
             contrib/libvbucket/vbucket.c
-            plugins/io/win32/plugin-win32.c
+            plugins/io/select/plugin-select.c
             src/arithmetic.c
             src/base64.c
             src/behavior.c

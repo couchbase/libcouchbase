@@ -18,6 +18,38 @@
 #include "internal.h"
 #include "plugins/io/select/select_io_opts.h"
 
+static lcb_error_t create_v2(lcb_io_opt_t *io,
+                             const struct lcb_create_io_ops_st *options);
+
+#ifdef _WIN32
+LIBCOUCHBASE_API
+lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
+{
+    if (io && io->destructor) {
+      io->destructor(io);
+    }
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
+                              const struct lcb_create_io_ops_st *io_opts)
+{
+    struct lcb_create_io_ops_st options;
+
+    options.version = 2;
+    options.v.v2.create = lcb_create_select_io_opts;
+    options.v.v2.cookie = NULL;
+    if (io_opts != NULL && io_opts->version == 2) {
+        /* use only second version until dlopen() equivalent will be implemented */
+        options.v.v2.create = io_opts->v.v2.create;
+        options.v.v2.cookie = io_opts->v.v2.cookie;
+    }
+    return create_v2(io, &options);
+ }
+
+#else
+
 typedef lcb_error_t (*create_func_t)(int version, lcb_io_opt_t *io, const void *cookie);
 
 struct plugin_st {
@@ -62,9 +94,6 @@ static lcb_error_t create_v0(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
 
 static lcb_error_t create_v1(lcb_io_opt_t *io,
-                             const struct lcb_create_io_ops_st *options);
-
-static lcb_error_t create_v2(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
 
 #define USE_PLUGIN(OPTS, PLUGIN_NAME, PLUGIN_CONST)             \
@@ -255,6 +284,8 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
 
     return LCB_SUCCESS;
 }
+
+#endif
 
 static lcb_error_t create_v2(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options)
