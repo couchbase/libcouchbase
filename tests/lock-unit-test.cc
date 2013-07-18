@@ -64,7 +64,7 @@ extern "C" {
  */
 TEST_F(LockUnitTest, testSimpleLockAndUnlock)
 {
-    LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
+    LCB_TEST_REQUIRE_FEATURE("lock")
 
     lcb_t instance;
     HandleWrap hw;
@@ -115,7 +115,7 @@ TEST_F(LockUnitTest, testSimpleLockAndUnlock)
  */
 TEST_F(LockUnitTest, testUnlockMissingCas)
 {
-    LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
+    LCB_TEST_REQUIRE_FEATURE("lock")
 
     lcb_t instance;
     HandleWrap hw;
@@ -168,7 +168,8 @@ extern "C" {
  */
 TEST_F(LockUnitTest, testStorageLockContention)
 {
-    LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
+    LCB_TEST_REQUIRE_FEATURE("lock")
+
     lcb_t instance;
     HandleWrap hw;
     lcb_error_t err;
@@ -241,7 +242,8 @@ TEST_F(LockUnitTest, testStorageLockContention)
  */
 TEST_F(LockUnitTest, testUnlLockContention)
 {
-    LCB_TEST_REQUIRE_CLUSTER_VERSION(2);
+    LCB_TEST_REQUIRE_FEATURE("lock")
+
     lcb_t instance;
     HandleWrap hw;
     lcb_error_t err, reserr = LCB_ERROR;

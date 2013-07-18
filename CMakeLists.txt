@@ -27,7 +27,7 @@ SET(GTEST_DLSERVER http://googletest.googlecode.com/files)
 
 # Couchbase mock path to download
 SET(COUCHBASE_MOCK_VERSION
-    0.5-SNAPSHOT/CouchbaseMock-0.5-20120726.220757-19)
+    0.6-SNAPSHOT/CouchbaseMock-0.6-20130805.230415-1)
 
 # Maven repository where ${COUCHBASE_MOCK_VERSION} is to be found
 SET(COUCHBASE_MOCK_DLSERVER
@@ -112,6 +112,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 # They export no symbols of their own and may
 # be considered as 'static'
 ADD_LIBRARY(lcbutils STATIC
+            contrib/libvbucket/cJSON.c
             src/base64.c
             src/gethrtime.c
             src/genhash.c
@@ -124,7 +125,6 @@ ADD_LIBRARY(lcbutils STATIC
 
 ADD_LIBRARY(couchbase SHARED
             contrib/http_parser/http_parser.c
-            contrib/libvbucket/cJSON.c
             contrib/libvbucket/crc32.c
             contrib/libvbucket/ketama.c
             contrib/libvbucket/rfc1321/md5c.c

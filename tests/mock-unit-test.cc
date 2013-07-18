@@ -581,11 +581,8 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
     /*
      * Setup mock to split response in two parts: send first 40 bytes
      * immediately and send the rest after 3.5 seconds.
-     *
-     * And sleep a bit (for 0.25 seconds)
      */
     MockEnvironment::getInstance()->hiccupNodes(3500, 40); /* 3.5 seconds */
-    usleep(250000L); /* 0.25 seconds */
 
     /*
      * Run the IO loop and measure how long does it take to transfer the

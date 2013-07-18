@@ -50,29 +50,52 @@ MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
 
 void MockEnvironment::failoverNode(int index, std::string bucket)
 {
-    std::stringstream cmdbuf;
-    cmdbuf << "failover," << index << "," << bucket << "\n";
-    std::string cmd = cmdbuf.str();
-    lcb_ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
-    assert(nw == cmd.size());
+    MockBucketCommand bCmd = MockBucketCommand(MockCommand::FAILOVER,
+                                               index,
+                                               bucket);
+    sendCommand(bCmd);
+    getResponse();
 }
 
 void MockEnvironment::respawnNode(int index, std::string bucket)
 {
+    MockBucketCommand bCmd = MockBucketCommand(MockCommand::RESPAWN,
+                                               index,
+                                               bucket);
+    sendCommand(bCmd);
+    getResponse();
     std::stringstream cmdbuf;
-    cmdbuf << "respawn," << index << "," << bucket << "\n";
-    std::string cmd = cmdbuf.str();
-    lcb_ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
-    assert(nw == cmd.size());
 }
 
 void MockEnvironment::hiccupNodes(int msecs, int offset)
 {
-    std::stringstream cmdbuf;
-    cmdbuf << "hiccup," << msecs << "," << offset << "\n";
-    std::string cmd = cmdbuf.str();
-    lcb_ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
-    assert(nw == cmd.size());
+    MockCommand cmd = MockCommand(MockCommand::HICCUP);
+    cmd.set("msecs", msecs);
+    cmd.set("offset", offset);
+    sendCommand(cmd);
+    getResponse();
+}
+
+void MockEnvironment::sendCommand(MockCommand &cmd)
+{
+    std::string s = cmd.encode();
+    lcb_ssize_t nw = send(mock->client, s.c_str(), (unsigned long)s.size(), 0);
+    assert(nw == s.size());
+}
+
+MockResponse MockEnvironment::getResponse()
+{
+    std::string rbuf;
+    do {
+        char c;
+        int rv = recv(mock->client, &c, 1, 0);
+        assert(rv == 1);
+        if (c == '\n') {
+            break;
+        }
+        rbuf += c;
+    } while (true);
+    return MockResponse(rbuf);
 }
 
 void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
@@ -186,6 +209,15 @@ void MockEnvironment::bootstrapRealCluster()
         }
     }
 
+    if (serverVersion == VERSION_20) {
+        // Couchbase 2.0.x
+        featureRegistry.insert("observe");
+        featureRegistry.insert("views");
+        featureRegistry.insert("http");
+        featureRegistry.insert("replica_read");
+        featureRegistry.insert("lock");
+    }
+
     numNodes = ii;
     lcb_destroy(tmphandle);
 }
@@ -205,6 +237,12 @@ void MockEnvironment::SetUp()
                                     "Administrator",
                                     "password");
         numNodes = 10;
+
+        // Mock 0.6
+        featureRegistry.insert("observe");
+        featureRegistry.insert("views");
+        featureRegistry.insert("replica_read");
+        featureRegistry.insert("lock");
     }
 }
 
@@ -230,4 +268,128 @@ void HandleWrap::destroy()
 HandleWrap::~HandleWrap()
 {
     destroy();
+}
+
+MockCommand::MockCommand(Code code)
+{
+    this->code = code;
+    name = GetName(code);
+    command = cJSON_CreateObject();
+    payload = cJSON_CreateObject();
+    cJSON_AddItemToObject(command, "payload", payload);
+    cJSON_AddStringToObject(command, "command", name.c_str());
+}
+
+MockCommand::~MockCommand()
+{
+    cJSON_Delete(command);
+}
+
+void MockCommand::set(const std::string& field, const std::string& value)
+{
+    cJSON_AddStringToObject(payload, field.c_str(), value.c_str());
+}
+
+void MockCommand::set(const std::string& field, int value)
+{
+    cJSON_AddNumberToObject(payload, field.c_str(), value);
+}
+
+void MockCommand::set(const std::string field, bool value)
+{
+    cJSON *v = value ? cJSON_CreateTrue() : cJSON_CreateFalse();
+    cJSON_AddItemToObject(payload, field.c_str(), v);
+}
+
+std::string MockCommand::encode()
+{
+    finalizePayload();
+    char *s = cJSON_PrintUnformatted(command);
+    std::string ret(s);
+    ret += "\n";
+    free(s);
+    return ret;
+}
+
+void MockKeyCommand::finalizePayload()
+{
+    MockCommand::finalizePayload();
+    if (vbucket != -1) {
+        set("vBucket", vbucket);
+    }
+
+    if (!bucket.empty()) {
+        set("Bucket", bucket);
+    }
+    set("Key", key);
+}
+
+void MockMutationCommand::finalizePayload()
+{
+    MockKeyCommand::finalizePayload();
+    set("OnMaster", onMaster);
+
+    if (!replicaList.empty()) {
+        cJSON *arr = cJSON_CreateArray();
+        for (std::vector<int>::iterator ii = replicaList.begin();
+                ii != replicaList.end(); ii++) {
+            cJSON_AddItemToArray(arr, cJSON_CreateNumber(*ii));
+        }
+        cJSON_AddItemToObject(payload, "OnReplicas", arr);
+
+    } else {
+        set("OnReplicas", replicaCount);
+    }
+
+    if (cas != 0) {
+        if (cas > (1LU << 30)) {
+            fprintf(stderr, "Detected incompatible > 31 bit integer\n");
+            abort();
+        }
+        set("CAS", (int)cas);
+    }
+
+    if (!value.empty()) {
+        set("Value", value);
+    }
+}
+
+void MockBucketCommand::finalizePayload()
+{
+    MockCommand::finalizePayload();
+    set("idx", ix);
+    set("bucket", bucket);
+}
+
+MockResponse::MockResponse(const std::string& resp)
+{
+    jresp = cJSON_Parse(resp.c_str());
+    assert(jresp);
+}
+
+MockResponse::~MockResponse()
+{
+    if (jresp) {
+        cJSON_Delete(jresp);
+    }
+}
+
+bool MockResponse::isOk()
+{
+    cJSON *status = cJSON_GetObjectItem(jresp, "status");
+
+    if (!status) {
+        return false;
+    }
+
+    if (status->type != cJSON_String) {
+        return false;
+    }
+
+    if ( tolower(status->valuestring[0]) != 'o') {
+        return false;
+    }
+
+    return true;
+
 }

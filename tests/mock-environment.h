@@ -20,6 +20,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
+#include "libvbucket/cJSON.h"
 #include "serverparams.h"
 
 
@@ -49,6 +50,129 @@ public:
 private:
     lcb_t instance;
     lcb_io_opt_t iops;
+};
+
+
+class MockCommand
+{
+#define XMOCKCMD(X) \
+    X(FAILOVER) \
+    X(RESPAWN) \
+    X(HICCUP) \
+    X(TRUNCATE) \
+    X(MOCKINFO) \
+    X(PERSIST) \
+    X(CACHE) \
+    X(UNPERSIST) \
+    X(UNCACHE) \
+    X(ENDURE) \
+    X(PURGE) \
+    X(KEYINFO)
+
+public:
+    enum Code {
+        #define X(cc) cc,
+        XMOCKCMD(X)
+        #undef X
+        _NONE
+    };
+
+    static std::string GetName(Code code) {
+
+        #define X(cc) if (code == cc) { return #cc; }
+        XMOCKCMD(X)
+        #undef X
+
+        abort();
+        return "";
+    }
+
+    MockCommand(Code code);
+
+    // Various methods to set a field in the payload
+    void set(const std::string&, const std::string&);
+    void set(const std::string&, int);
+    void set(const std::string, bool);
+    virtual ~MockCommand();
+
+    // Encodes the command in a form suitable for sending over the network
+    std::string encode();
+
+protected:
+    Code code;
+    std::string name;
+    cJSON* command;
+    cJSON* payload;
+    virtual void finalizePayload() {}
+};
+
+class MockKeyCommand : public MockCommand
+{
+public:
+    MockKeyCommand(Code code, std::string &key)
+    : MockCommand(code), vbucket(-1) {
+        this->key = key;
+    }
+
+    const std::string& getKey() const {
+        return key;
+    }
+
+    short vbucket;
+    std::string bucket;
+    std::string key;
+
+protected:
+    virtual void finalizePayload();
+};
+
+class MockMutationCommand : public MockKeyCommand
+{
+public:
+    MockMutationCommand(Code code, std::string &key)
+    : MockKeyCommand(code, key), onMaster(false), replicaCount(0), cas(0) {}
+
+    bool onMaster;
+    int replicaCount;
+    std::vector<int> replicaList;
+    lcb_uint64_t cas;
+    std::string value;
+
+protected:
+    virtual void finalizePayload();
+};
+
+class MockBucketCommand : public MockCommand
+{
+public:
+    MockBucketCommand(Code code, int index, std::string bucketstr="default")
+    : MockCommand(code)
+    {
+        ix = index;
+        bucket = bucketstr;
+    }
+
+protected:
+    virtual void finalizePayload();
+    int ix;
+    std::string bucket;
+};
+
+class MockResponse
+{
+public:
+    MockResponse(const std::string& resp);
+    virtual ~MockResponse();
+
+    bool isOk();
+
+    const cJSON* getRawResponse() {
+        return jresp;
+    }
+
+
+protected:
+    cJSON *jresp;
 };
 
 class MockEnvironment : public ::testing::Environment
@@ -151,6 +275,20 @@ public:
         serverVersion = ver;
     }
 
+    void sendCommand(MockCommand& cmd);
+    MockResponse getResponse();
+
+    bool hasFeature(const char* feature) {
+        return featureRegistry.find(feature) != featureRegistry.end();
+    }
+
+    static void printSkipMessage(std::string file, int line, std::string reason)
+    {
+        std::cerr << "Skipping " << file << ":" << std::dec << line;
+        std::cerr << "(" << reason << ")";
+        std::cerr << std::endl;
+    }
+
 protected:
     /**
      * Protected destructor to make it to a singleton
@@ -169,20 +307,28 @@ protected:
     ServerVersion serverVersion;
     const char *http;
     lcb_io_opt_st *iops;
+    std::set<std::string> featureRegistry;
 };
 
 #define LCB_TEST_REQUIRE_CLUSTER_VERSION(v) \
-    if (!MockEnvironment::getInstance()->isRealCluster()) {             \
-        std::cerr << "Skipping " << __FILE__ << ":" << std::dec << __LINE__; \
-        std::cerr << " (need real cluster) " << std::endl; \
+    if (!MockEnvironment::getInstance()->isRealCluster()) { \
+        MockEnvironment::printSkipMessage(__FILE__, __LINE__, \
+                                          "need real cluster"); \
         return; \
     } \
     if (MockEnvironment::getInstance()->getServerVersion() < v) {      \
-        std::cerr << "Skipping " << __FILE__ << ":" << std::dec << __LINE__; \
-        std::cerr << " (test needs higher cluster version)" << std::endl; \
+        MockEnvironment::printSkipMessage(__FILE__, __LINE__, \
+                                          "needs higher cluster version"); \
         return; \
     }
 
+#define LCB_TEST_REQUIRE_FEATURE(s) \
+    if (!MockEnvironment::getInstance()->hasFeature(s)) { \
+        MockEnvironment::printSkipMessage(__FILE__, __LINE__, \
+                                          "Feature " s \
+                                          " missing in server implementation"); \
+        return; \
+    }
 
 
 #endif

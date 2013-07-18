@@ -345,7 +345,7 @@ tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	@echo "| Download CouchbaseMock for functional tests |"
 	@echo "+---------------------------------------------+"
-	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.5-SNAPSHOT/CouchbaseMock-0.5-20120726.220757-19.jar
+	${DOWNLOAD} tests/CouchbaseMock.jar  http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.6-SNAPSHOT/CouchbaseMock-0.6-20130805.230415-1.jar
 
 libmockserver_la_LDFLAGS = $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
