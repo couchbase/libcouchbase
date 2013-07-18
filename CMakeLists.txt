@@ -18,7 +18,15 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 # Currently this file is only used for Windows
 
 project(libcouchbase)
+
 SET(NT_REQUIRED_VERSION 0x0501)
+
+SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/bin)
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/bin)
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/lib)
 
 SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
@@ -35,6 +43,24 @@ ELSE()
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -g")
 ENDIF()
 
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
+
+
+# These files are bundled in a static library.
+# They export no symbols of their own and may
+# be considered as 'static'
+ADD_LIBRARY(lcbutils STATIC
+            src/base64.c
+            src/gethrtime.c
+            src/genhash.c
+            src/hashtable.c
+            src/hashset.c
+            src/list.c
+            src/ringbuffer.c
+            src/url_encoding.c
+            win32/getopt.c)
+
 ADD_LIBRARY(couchbase SHARED
             contrib/http_parser/http_parser.c
             contrib/libvbucket/cJSON.c
@@ -48,7 +74,6 @@ ADD_LIBRARY(couchbase SHARED
             plugins/io/iocp/iocp_util.c
             plugins/io/select/plugin-select.c
             src/arithmetic.c
-            src/base64.c
             src/bucketconfig/bconf_io.c
             src/bucketconfig/bconf_parse.c
             src/behavior.c
@@ -59,12 +84,8 @@ ADD_LIBRARY(couchbase SHARED
             src/cookie.c
             src/error.c
             src/flush.c
-            src/genhash.c
             src/get.c
-            src/gethrtime.c
             src/handler.c
-            src/hashset.c
-            src/hashtable.c
             src/http.c
             src/http/http_io.c
             src/http/http_parse.c
@@ -73,11 +94,9 @@ ADD_LIBRARY(couchbase SHARED
             src/io/readwrite.c
             src/iofactory.c
             src/isasl.c
-            src/list.c
             src/observe.c
             src/packet.c
             src/remove.c
-            src/ringbuffer.c
             src/sanitycheck.c
             src/server.c
             src/server/server_io.c
@@ -91,7 +110,6 @@ ADD_LIBRARY(couchbase SHARED
             src/timer.c
             src/timings.c
             src/touch.c
-            src/url_encoding.c
             src/utilities.c
             src/verbosity.c
             src/wait.c)
@@ -100,24 +118,90 @@ SET_TARGET_PROPERTIES(couchbase PROPERTIES
                       COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
 ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
-TARGET_LINK_LIBRARIES(couchbase ws2_32.lib)
+TARGET_LINK_LIBRARIES(couchbase ws2_32.lib lcbutils)
 
 ADD_EXECUTABLE(cbc
             tools/cbc-util.cc
             tools/cbc.cc
             tools/commandlineparser.cc
-            tools/configuration.cc
-            win32/getopt.c)
+            tools/configuration.cc)
 
-TARGET_LINK_LIBRARIES(cbc couchbase)
+TARGET_LINK_LIBRARIES(cbc couchbase lcbutils)
 
 ADD_EXECUTABLE(cbc-pillowfight
-            src/gethrtime.c
             tools/cbc-pillowfight.cc
-            tools/commandlineparser.cc
-            win32/getopt.c)
+            tools/commandlineparser.cc)
 
-TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
+TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase lcbutils)
+
+IF(NOT LCB_NO_TESTS)
+    ADD_EXECUTABLE(unit-tests
+            tests/arithmetic-unit-test.cc
+            tests/base64-unit-test.cc
+            tests/behavior-unit-tests.cc
+            tests/ccbc_103.cc
+            tests/cluster-unit-tests.cc
+            tests/get-unit-test.cc
+            tests/getopt-unit-tests.cc
+            tests/hashset-unit-test.cc
+            tests/hostname-unit-test.cc
+            tests/http-tests.cc
+            tests/lock-unit-test.cc
+            tests/memcached-compat-unit-test.cc
+            tests/mock-unit-test.cc
+            tests/mutate-unit-test.cc
+            tests/regression-unit-test.cc
+            tests/ringbuffer-unit-test.cc
+            tests/serverops-unit-test.cc
+            tests/strerror-unit-test.cc
+            tests/syncmode-unit-tests.cc
+            tests/url_encoding-tests.cc
+
+    # Support files
+            tests/server.c
+            tests/timeout.c
+            tests/testutil.cc
+            tests/unit_tests.cc
+            tests/mock-environment.cc)
+
+    # We're a library using the shared CRT. Don't use the static one
+
+    # Normally defined by config.h
+    SET_PROPERTY(
+        TARGET unit-tests
+        APPEND PROPERTY COMPILE_DEFINITIONS
+            HAVE_COUCHBASEMOCK
+            BUILD_PLUGINS
+    )
+
+    IF(CMAKE_COMPILER_IS_GNUCXX)
+        SET_TARGET_PROPERTIES(unit-tests
+            PROPERTIES
+            COMPILE_FLAGS "-Wno-sign-compare")
+    ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+
+    IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/gtest-1.6.0.zip)
+        file(DOWNLOAD http://googletest.googlecode.com/files/gtest-1.6.0.zip ${CMAKE_SOURCE_DIR}/gtest-1.6.0.zip)
+        execute_process(COMMAND cmake -E tar zxf gtest-1.6.0.zip WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/gtest-1.6.0.zip)
+
+    IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
+        SET(COUCHBASE_MOCK_VERSION 0.5-SNAPSHOT/CouchbaseMock-0.5-20120726.220757-19)
+        file(DOWNLOAD http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/${COUCHBASE_MOCK_VERSION}.jar ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
+        execute_process(COMMAND cmake -E tar zxf gtest-1.6.0.zip WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
+
+    SET(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) runtime library event Google Test built as static library")
+
+    ADD_SUBDIRECTORY(gtest-1.6.0 gtest-1.6.0)
+
+    INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+    TARGET_LINK_LIBRARIES(unit-tests couchbase lcbutils gtest)
+    enable_testing()
+    ADD_TEST(tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unit-tests)
+ENDIF(NOT LCB_NO_TESTS)
+
+
 
 INSTALL(TARGETS couchbase
         RUNTIME DESTINATION bin

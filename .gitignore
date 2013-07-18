@@ -142,6 +142,7 @@
 /vc100.pdb
 CMakeCache.txt
 CMakeFiles/
+CTestTestfile.cmake
 Project.opensdf
 Project.sdf
 Project.suo
@@ -158,6 +159,9 @@ debug/libcouchbase.idb
 debug/libcouchbase.ilk
 debug/libcouchbase.pdb
 ipch/
+lcbutils.dir/
+libcouchbase.opensdf
 libcouchbase.sdf
 libcouchbase.suo
+unit-tests.dir/
 win32/Debug/

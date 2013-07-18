@@ -176,7 +176,7 @@ TEST_F(Ringbuffer, replace)
     ringbuffer_t rb;
 
     EXPECT_EQ(1, ringbuffer_initialize(&rb, 16));
-    EXPECT_TRUE(memset(rb.root, 0, rb.size));
+    EXPECT_TRUE(memset(rb.root, 0, rb.size) != NULL);
     EXPECT_EQ(8, ringbuffer_write(&rb, "01234567", 8));
     EXPECT_EQ(0, memcmp(rb.root, "01234567\0\0\0\0\0\0\0\0", rb.size));
     /*          w

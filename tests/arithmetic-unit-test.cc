@@ -25,7 +25,7 @@
 class ArithmeticUnitTest : public MockUnitTest
 {
 protected:
-    static void SetUpTestCas() {
+    static void SetUpTestCase() {
         MockUnitTest::SetUpTestCase();
     }
 };
@@ -33,17 +33,6 @@ protected:
 static lcb_uint64_t arithm_val;
 
 extern "C" {
-    static void arithmetic_store_callback(lcb_t, const void *,
-                                          lcb_storage_t operation,
-                                          lcb_error_t error,
-                                          const lcb_store_resp_t *resp)
-    {
-        ASSERT_EQ(LCB_SUCCESS, error);
-        ASSERT_EQ(LCB_SET, operation);
-        ASSERT_EQ(7, resp->v.v0.nkey);
-        ASSERT_EQ(0, memcmp(resp->v.v0.key, "counter", 7));
-    }
-
     static void arithmetic_incr_callback(lcb_t, const void *,
                                          lcb_error_t error,
                                          const lcb_arithmetic_resp_t *resp)

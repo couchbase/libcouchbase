@@ -21,6 +21,12 @@
 #include <gtest/gtest.h>
 #include <vector>
 
+#ifdef _MSC_VER
+/* We get a ton of these warnings inside the file */
+#pragma message( __FILE__ ": Disabling C4800 (cast-to-bool performance)" )
+#pragma warning( disable : 4800 )
+#endif /* _MSC_VER */
+
 class Hashset : public ::testing::Test
 {
 public:

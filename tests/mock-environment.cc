@@ -53,7 +53,7 @@ void MockEnvironment::failoverNode(int index, std::string bucket)
     std::stringstream cmdbuf;
     cmdbuf << "failover," << index << "," << bucket << "\n";
     std::string cmd = cmdbuf.str();
-    ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
+    lcb_ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
     assert(nw == cmd.size());
 }
 
@@ -62,7 +62,7 @@ void MockEnvironment::respawnNode(int index, std::string bucket)
     std::stringstream cmdbuf;
     cmdbuf << "respawn," << index << "," << bucket << "\n";
     std::string cmd = cmdbuf.str();
-    ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
+    lcb_ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
     assert(nw == cmd.size());
 }
 
@@ -71,7 +71,7 @@ void MockEnvironment::hiccupNodes(int msecs, int offset)
     std::stringstream cmdbuf;
     cmdbuf << "hiccup," << msecs << "," << offset << "\n";
     std::string cmd = cmdbuf.str();
-    ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
+    lcb_ssize_t nw = send(mock->client, cmd.c_str(), cmd.size(), 0);
     assert(nw == cmd.size());
 }
 
@@ -193,7 +193,7 @@ void MockEnvironment::bootstrapRealCluster()
 void MockEnvironment::SetUp()
 {
     mock = (struct test_server_info *)start_test_server(NULL);
-    realCluster = is_using_real_cluster();
+    realCluster = is_using_real_cluster() != 0;
     ASSERT_NE((const void *)(NULL), mock);
     http = get_mock_http_server(mock);
     ASSERT_NE((const char *)(NULL), http);

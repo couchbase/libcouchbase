@@ -16,23 +16,29 @@
  */
 #include "config.h"
 #include "server.h"
-#include <pthread.h>
-#include <sys/wait.h>
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <lcb_assert.h>
 #include <ctype.h>
 
+#ifndef _WIN32
+#define DIRSEP "/"
+#include <pthread.h>
+#include <sys/wait.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+#include <signal.h>
 #ifdef linux
 #undef ntohs
 #undef ntohl
 #undef htons
 #undef htonl
 #endif
+#else
+#define DIRSEP "\\"
+#include <io.h> /* for access() */
+#endif /* ! _WIN32 */
 
 static int create_monitor(struct test_server_info *info)
 {
@@ -47,7 +53,11 @@ static int create_monitor(struct test_server_info *info)
     info->sock = -1;
     error = getaddrinfo(NULL, "0", &hints, &ai);
     if (error != 0) {
+#ifdef _WIN32
+        if (0) {
+#else
         if (error != EAI_SYSTEM) {
+#endif
             fprintf(stderr, "getaddrinfo failed: %s\n",
                     gai_strerror(error));
         } else {
@@ -70,11 +80,11 @@ static int create_monitor(struct test_server_info *info)
                    (void *)&flags, sizeof(flags));
 
         if (bind(info->sock, next->ai_addr, next->ai_addrlen) == -1) {
-            close(info->sock);
+            closesocket(info->sock);
             info->sock = -1;
             continue;
         } else if (listen(info->sock, 10) == -1) {
-            close(info->sock);
+            closesocket(info->sock);
             info->sock = -1;
             continue;
         }
@@ -82,7 +92,7 @@ static int create_monitor(struct test_server_info *info)
         /* Ok, I've got a working socket :) */
         len = sizeof(info->storage);
         if (getsockname(info->sock, (struct sockaddr *)&info->storage, &len) == -1) {
-            close(info->sock);
+            closesocket(info->sock);
             info->sock = -1;
             continue;
         }
@@ -110,7 +120,11 @@ static void wait_for_server(const char *port)
 
     error = getaddrinfo("localhost", port, &hints, &ai);
     if (error != 0) {
+#ifndef _WIN32
         if (error != EAI_SYSTEM) {
+#else
+        if (0) {
+#endif
             fprintf(stderr, "getaddrinfo failed: %s\n",
                     gai_strerror(error));
         } else {
@@ -128,12 +142,12 @@ static void wait_for_server(const char *port)
             }
 
             if (connect(sock, next->ai_addr, next->ai_addrlen) == 0) {
-                close(sock);
+                closesocket(sock);
                 freeaddrinfo(ai);
                 return;
             }
 
-            close(sock);
+            closesocket(sock);
         }
         usleep(250);
     }
@@ -180,20 +194,133 @@ static int parse_server_conf(struct test_server_info *info, const char *param)
     return 1;
 }
 
+#ifndef _WIN32
+#define WRAPPER_BASE "start_mock.sh"
+static int start_mock_process(struct test_server_info *info, char **argv)
+{
+    info->pid = fork();
+    assert(info->pid != -1);
+    if (info->pid == 0) {
+        execv(argv[0], argv);
+        abort();
+        return 0;
+    }
+    return 1;
+}
+
+static void kill_mock_process(struct test_server_info *info)
+{
+    kill(info->pid, SIGTERM);
+}
+
+#else
+#define WRAPPER_BASE "start_mock.bat"
+static int start_mock_process(struct test_server_info *info, char **argv)
+{
+    /**
+     * Ahh windows. We need to create a flat buffer for the arguments, as
+     * CreateProcess does not accept argv
+     */
+    char argbuf[4096] = { 0 };
+    char **arg;
+    int rv;
+    for (arg = argv; *arg; arg++) {
+        strcat(argbuf, *arg);
+        strcat(argbuf, " ");
+    }
+
+    memset(&info->pi, 0, sizeof(info->pi));
+    memset(&info->si, 0, sizeof(info->si));
+
+    rv = CreateProcess(
+        NULL,
+        argbuf,
+        NULL,
+        NULL,
+        FALSE,
+        0,
+        NULL,
+        NULL,
+        &info->si,
+        &info->pi);
+
+    if (!rv) {
+        int err = GetLastError();
+        fprintf(stderr, "CreateProcess failed: [%d], %s\n", err, strerror(err));
+        abort();
+    }
+    return 0;
+}
+
+static void kill_mock_process(struct test_server_info *info)
+{
+    TerminateProcess(info->pi.hProcess, 0);
+    CloseHandle(info->pi.hProcess);
+    CloseHandle(info->pi.hThread);
+    memset(&info->pi, 0, sizeof(info->pi));
+}
+#endif
+
+static void negotiate_mock_connection(struct test_server_info *info)
+{
+    char buffer[1024];
+    lcb_ssize_t offset;
+    lcb_ssize_t nr;
+    int ii;
+
+    /* wait until the server connects */
+    for (ii = 0; ii < 10; ii++) {
+        info->client = accept(info->sock, NULL, NULL);
+        if (info->client == -1) {
+            /* running this in gdb on OS X, I got an EINTR a few times */
+            if (errno == EINTR) {
+                fprintf(stderr, "start_mock_server: Sleeping 1 second on EINTR\n");
+                sleep(1);
+            } else {
+                perror("start_mock_server");
+                abort();
+            }
+        } else {
+            break;
+        }
+    }
+
+    assert(info->client != -1);
+    /* Get the port number of the http server */
+    offset = snprintf(buffer, sizeof(buffer), "localhost:");
+    nr = recv(info->client, buffer + offset,
+              sizeof(buffer) - (size_t)offset - 1, 0);
+    assert(nr > 0);
+    buffer[nr + offset] = '\0';
+    info->http = strdup(buffer);
+    wait_for_server(buffer + offset);
+}
+
 static int start_mock_server(struct test_server_info *info, char **cmdline)
 {
 
     char wrapper[1024];
+    char monitor[1024];
+    char *argv[1024];
+#ifdef _WIN32
+    int access_mode = 00;
+#else
+    int access_mode = X_OK;
+#endif
     const char *srcdir = getenv("srcdir");
+
 
     if (srcdir == NULL) {
         srcdir = ".";
     }
 
-    snprintf(wrapper, sizeof(wrapper), "%s/tests/start_mock.sh", srcdir);
+    snprintf(wrapper, sizeof(wrapper),
+            "%s" DIRSEP "tests" DIRSEP WRAPPER_BASE,
+            srcdir);
 
-    if (access(wrapper, X_OK) == -1) {
-        fprintf(stderr, "Failed to locate \"./tests/start_mock.sh\": %s\n",
+    if (access(wrapper, access_mode) == -1) {
+        fprintf(stderr, "Failed to locate \"%s\": %s\n",
+                wrapper,
                 strerror(errno));
         return 0;
     }
@@ -203,13 +330,7 @@ static int start_mock_server(struct test_server_info *info, char **cmdline)
         return 0;
     }
 
-    info->pid = fork();
-    lcb_assert(info->pid != -1);
-
-    if (info->pid == 0) {
-        /* Child */
-        char monitor[1024];
-        char *argv[1024];
+    {
         int arg = 0;
         argv[arg++] = (char *)wrapper;
         sprintf(monitor, "--harakiri-monitor=localhost:%d", info->port);
@@ -221,53 +342,32 @@ static int start_mock_server(struct test_server_info *info, char **cmdline)
                 argv[arg++] = cmdline[ii++];
             }
         }
-
         argv[arg++] = NULL;
-        execv(argv[0], argv);
-        abort();
-    } else {
-        char buffer[1024];
-        ssize_t offset;
-        ssize_t nr;
-        int ii;
 
-        /* wait until the server connects */
-        for (ii = 0; ii < 10; ii++) {
-            info->client = accept(info->sock, NULL, NULL);
-            if (info->client == -1) {
-                /* running this in gdb on OS X, I got an EINTR a few times */
-                if (errno == EINTR) {
-                    fprintf(stderr, "start_mock_server: Sleeping 1 second on EINTR\n");
-                    sleep(1);
-                } else {
-                    perror("start_mock_server");
-                    abort();
-                }
-            } else {
-                break;
-            }
-        }
-
-        lcb_assert(info->client != -1);
-        /* Get the port number of the http server */
-        offset = snprintf(buffer, sizeof(buffer), "localhost:");
-        nr = recv(info->client, buffer + offset,
-                  sizeof(buffer) - (size_t)offset - 1, 0);
-        lcb_assert(nr > 0);
-        buffer[nr + offset] = '\0';
-        info->http = strdup(buffer);
-        wait_for_server(buffer + offset);
     }
+
+    start_mock_process(info, argv);
+    negotiate_mock_connection(info);
     sleep(1); /* give it a bit time to initialize itself */
     return 1;
-
 }
 
 const void *start_test_server(char **cmdline)
 {
     const char *clconf = getenv(LCB_TEST_REALCLUSTER_ENV);
-    struct test_server_info *info = calloc(1, sizeof(*info));
     int server_ok = 0;
+    struct test_server_info *info = calloc(1, sizeof(*info));
+
+#ifdef _WIN32
+    /** Winsock boilerplate */
+    {
+        WSADATA wsaData;
+        if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) {
+            fprintf(stderr, "WSAStartup failed. Abort\n");
+            abort();
+        }
+    }
+#endif
 
     if (info == NULL) {
         return NULL;
@@ -294,8 +394,8 @@ void failover_node(const void *handle, int idx, const char *bucket)
     struct test_server_info *info = (void *)handle;
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "failover,%d,%s\n", idx, bucket ? bucket : "default");
-    ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
-    lcb_assert(nw == nb);
+    lcb_ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
+    assert(nw == nb);
 }
 
 void respawn_node(const void *handle, int idx, const char *bucket)
@@ -303,8 +403,8 @@ void respawn_node(const void *handle, int idx, const char *bucket)
     struct test_server_info *info = (void *)handle;
     char buffer[1024];
     int nb = snprintf(buffer, 1024, "respawn,%d,%s\n", idx, bucket ? bucket : "default");
-    ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
-    lcb_assert(nw == nb);
+    lcb_ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
+    assert(nw == nb);
 }
 
 void shutdown_mock_server(const void *handle)
@@ -316,9 +416,9 @@ void shutdown_mock_server(const void *handle)
         free(info->username);
         free(info->password);
         if (info->is_mock) {
-            close(info->client);
-            close(info->sock);
-            kill(info->pid, SIGTERM);
+            closesocket(info->client);
+            closesocket(info->sock);
+            kill_mock_process(info);
         }
         free((void *)handle);
     }

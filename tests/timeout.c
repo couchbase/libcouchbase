@@ -16,7 +16,7 @@
  */
 #include "config.h"
 #include "testutil.h"
-
+#include <stdio.h>
 /*
  * The current test suite should not take more than 5 minutes to run.
  * If you're testing on a really slow system you may set the
@@ -24,6 +24,17 @@
  * seconds you'd like the tests to take.
  */
 const int max_duration = 300;
+
+#ifdef _WIN32
+static HANDLE hTimer;
+void CALLBACK test_timed_out(PVOID lpUnused, BOOLEAN bUnused)
+{
+    (void)lpUnused;
+    (void)bUnused;
+    fprintf(stderr, "Tests are taking too long to run. Aborting..\n");
+    abort();
+}
+#endif
 
 void setup_test_timeout_handler(void)
 {
@@ -41,6 +52,15 @@ void setup_test_timeout_handler(void)
     setitimer(ITIMER_REAL, &timer, NULL);
 #elif defined(HAVE_ALARM)
     alarm(duration);
+#elif defined(_WIN32)
+    CreateTimerQueueTimer(
+        &hTimer,
+        NULL,
+        test_timed_out,
+        NULL,
+        duration * 1000,
+        0,
+        0);
 #else
     /* print an error message so that we're using the duration variable
      * and not generate a warning about unused variables ;) */

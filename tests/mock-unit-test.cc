@@ -523,6 +523,8 @@ extern "C" {
             assert(io);
             io->v.v0.stop_event_loop(io);
         }
+
+        (void)resp;
     }
 }
 
@@ -545,7 +547,6 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
 
     createConnection(hw, instance);
 
-    lcb_uint32_t old_timeo = lcb_get_timeout(instance);
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     /* --enable-warnings --enable-werror won't let me use a simple void* */
@@ -601,14 +602,12 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
      * seconds
      */
     ASSERT_EQ(LCB_ETIMEDOUT, rv.error);
-    ASSERT_GE(now - begin_time, 2800000000L); /* 2.8 seconds */
+    ASSERT_GE(now - begin_time, 2800000000LU); /* 2.8 seconds */
 }
 
 TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 {
     SKIP_UNLESS_MOCK();
-    lcb_error_t err;
-    struct rvbuf rv;
     lcb_io_opt_t io;
     lcb_t instance;
     HandleWrap hw;

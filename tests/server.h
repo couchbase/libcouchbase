@@ -21,12 +21,34 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#ifdef _WIN32
+#define in_port_t USHORT
+#ifndef usleep
+  #define usleep(us) Sleep((us) / 1000)
+#endif
+#ifndef sleep
+  #define sleep(s) Sleep( (s) * 1000)
+#endif
+
+#include <windows.h>
+#include <winsock2.h>
+#include <process.h>
+#else
+#define closesocket close
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#endif
+#include <libcouchbase/couchbase.h>
 
     struct test_server_info {
+#ifdef _WIN32
+        STARTUPINFO si;
+        PROCESS_INFORMATION pi;
+#else
         pid_t pid;
+#endif
         char *http;
         char *bucket;
         char *username;
