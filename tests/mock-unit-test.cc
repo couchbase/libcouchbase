@@ -526,7 +526,7 @@ extern "C" {
     }
 }
 
-TEST_F(MockUnitTest, testPurgedBody)
+TEST_F(MockUnitTest, DISABLED_testPurgedBody)
 {
     SKIP_UNLESS_MOCK();
     lcb_error_t err;
