@@ -468,10 +468,11 @@ uninstall-local:
 endif
 
 EXTRA_DIST = \
+             CMakeLists.txt \
              CONTRIBUTING.md \
              LICENSE \
-             NMakefile \
              Makefile.manpage.inc \
+             NMakefile \
              README.markdown \
              RELEASE_NOTES.markdown \
              contrib/libvbucket/rfc1321 \
