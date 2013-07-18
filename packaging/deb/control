@@ -9,7 +9,6 @@ Vcs-Browser: https://github.com/couchbase/libcouchbase
 Vcs-Git: git://github.com/couchbase/libcouchbase.git
 
 Package: libcouchbase2-libevent
-Provides: libcouchbase2-backend
 Architecture: any
 Depends: libevent-1.4-2 (>= 1.4) | libevent-2.0-5 (>= 2.0), ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol (libevent backend)
@@ -18,7 +17,6 @@ Description: library for the Couchbase protocol (libevent backend)
  This package provides libevent backend for libcouchbase
 
 Package: libcouchbase2-libev
-Provides: libcouchbase2-backend
 Architecture: any
 Depends: libev3 (>= 3) | libev4 (>= 4), ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol (libev backend)
@@ -38,11 +36,16 @@ Description: library for the Couchbase protocol, debug symbols
 
 Package: libcouchbase2-core
 Architecture: any
+Provides: libcouchbase2
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol, core files
  libcouchbase is a library implementing Couchbase protocol.
  .
- This package provides the Couchbase client library but without any IO backend.
+ This package provides the core for libcouchbase. It contains an IO implementation
+ based on select(2). If preferred, you can install one of the available
+ backends (libcouchbase2-libevent or libcouchbase2-libev).  libcouchbase will
+ automatically use the installed backend. It is also possible to integrate another
+ IO backend or write your own.
 
 Package: libcouchbase-dev
 Section: libdevel
@@ -53,28 +56,10 @@ Description: library for the Couchbase protocol, development files
  .
  This package provides the files needed for development.
 
-Package: libcouchbase2-backend
-Architecture: any
-Depends: libcouchbase2-libevent (= ${binary:Version}) | libcouchbase2-libev (= ${binary:Version})
-Description: library for the Couchbase protocol
- libcouchbase is a library implementing Couchbase protocol.
- .
- This is meta-package for all known backends.
-
-Package: libcouchbase2
-Architecture: any
-Depends: libcouchbase2-core (= ${binary:Version}), libcouchbase2-backend (= ${binary:Version}),
-         ${shlibs:Depends}, ${misc:Depends}
-Description: library for the Couchbase protocol
- libcouchbase is a library implementing Couchbase protocol.
- .
- This package provides the Couchbase client library.
-
 Package: libcouchbase2-bin
-Provides: libcouchbase-all
 Section: utils
 Architecture: any
-Depends: libcouchbase2 (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: libcouchbase2-core (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Conflicts: libcouchbase1-bin
 Description: library for the Couchbase protocol
  libcouchbase is a library implementing Couchbase protocol.

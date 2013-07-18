@@ -19,7 +19,6 @@ This is the client and protocol library for Couchbase project.
 %package -n %{name}2-libevent
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library (libevent backend)
-Provides: %{name}2-backend
 Requires: %{name}2, libevent >= 1.4
 %description -n %{name}2-libevent
 This package provides libevent backend for libcouchbase
@@ -27,7 +26,6 @@ This package provides libevent backend for libcouchbase
 %package -n %{name}2-libev
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library (libev backend)
-Provides: %{name}2-backend
 Requires: %{name}2, libev >= 3
 %description -n %{name}2-libev
 This package provides libev backend for libcouchbase
@@ -35,22 +33,19 @@ This package provides libev backend for libcouchbase
 %package -n %{name}2-core
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library (core)
+Provides: %{name}2
 %description -n %{name}2-core
-This package provides core for libcouchbase. The IO backends should be
-provided by application or installed separately.
-
-%package -n %{name}2
-Group: System Environment/Libraries
-Summary: Couchbase Client & Protocol Library
-Requires: %{name}2-core, %{name}2-backend
-%description -n %{name}2
-This is the client and protocol library for Couchbase project.
+This package provides the core for libcouchbase. It contains an IO
+implementation based on select(2). If preferred, you can install one
+of the available backends (libcouchbase2-libevent or
+libcouchbase2-libev).  libcouchbase will automatically use the
+installed backend. It is also possible to integrate another IO backend
+or write your own.
 
 %package -n %{name}2-bin
 Group: Development/Tools
 Summary: Couchbase Client Tools
-Provides: %{name}-all
-Requires: %{name}2
+Requires: %{name}2-core
 %description -n %{name}2-bin
 This is the CLI tools Couchbase project.
 
@@ -93,9 +88,6 @@ Development files for the Couchbase Client & Protocol Library
 %defattr(-, root, root)
 %{_libdir}/libcouchbase_libev.la
 %{_libdir}/libcouchbase_libev.so
-
-%files -n %{name}2
-%defattr(-, root, root)
 
 %files -n %{name}2-bin
 %defattr(-, root, root)
