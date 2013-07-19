@@ -131,7 +131,8 @@ class GetoptUnitTests : public ::testing::Test
 protected:
 };
 
-class OptionContainer {
+class OptionContainer
+{
 public:
     CommandLineOption optAlpha;
     CommandLineOption optBravo;
@@ -148,8 +149,8 @@ public:
 
     void setup(Getopt &getopt) {
         getopt.addOption(&optAlpha).
-            addOption(&optBravo).
-            addOption(&optCharlie);
+        addOption(&optBravo).
+        addOption(&optCharlie);
     }
 
     ~OptionContainer() { }

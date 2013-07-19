@@ -76,8 +76,8 @@ extern "C" {
     void lcb_list_prepend(lcb_list_t *list, lcb_list_t *item);
     void lcb_list_append(lcb_list_t *list, lcb_list_t *item);
     void lcb_list_delete(lcb_list_t *item);
-    lcb_list_t* lcb_list_shift(lcb_list_t *list);
-    lcb_list_t* lcb_list_pop(lcb_list_t *list);
+    lcb_list_t *lcb_list_shift(lcb_list_t *list);
+    lcb_list_t *lcb_list_pop(lcb_list_t *list);
     int lcb_list_contains(lcb_list_t *list, lcb_list_t *item);
 
 #define LCB_LIST_IS_EMPTY(list) \

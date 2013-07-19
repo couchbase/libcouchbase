@@ -779,9 +779,9 @@ int main(int argc, char **argv)
         log("Running in a loop. Press Ctrl-C to terminate...");
     }
 #ifdef WIN32
-  ThreadContext *ctx = new ThreadContext(pool);
-        contexts.push_back(ctx);
-        thread_worker(ctx);
+    ThreadContext *ctx = new ThreadContext(pool);
+    contexts.push_back(ctx);
+    thread_worker(ctx);
 
 
 

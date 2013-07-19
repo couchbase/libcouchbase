@@ -1742,7 +1742,8 @@ static cbc_command_t getBuiltin(string name)
 #ifdef WIN32
 #define F_OK 0
 
-bool file_exists(const char *name) {
+bool file_exists(const char *name)
+{
     HANDLE handle;
     WIN32_FIND_DATA findData;
 
@@ -1760,8 +1761,9 @@ bool file_exists(const char *name) {
     return true;
 }
 
-std::string locate_file(const char *name) {
-    const char * const exts[] = { "", ".exe", ".com", ".bat", NULL };
+std::string locate_file(const char *name)
+{
+    const char *const exts[] = { "", ".exe", ".com", ".bat", NULL };
     int ii = 0;
 
     while (exts[ii] != NULL) {
@@ -1776,13 +1778,15 @@ std::string locate_file(const char *name) {
     return "";
 }
 
-bool access(const char *name, int mode) {
+bool access(const char *name, int mode)
+{
     assert(mode == F_OK);
     std::string nm = locate_file(name);
     return nm != "";
 }
 
-int execvp(const char *file, char *const argv[]) {
+int execvp(const char *file, char *const argv[])
+{
     std::stringstream ss;
     ss << locate_file(file);
     int ii = 1;

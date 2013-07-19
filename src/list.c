@@ -54,7 +54,7 @@ void lcb_list_delete(lcb_list_t *item)
 }
 
 
-lcb_list_t* lcb_list_shift(lcb_list_t *list)
+lcb_list_t *lcb_list_shift(lcb_list_t *list)
 {
     lcb_list_t *item;
 
@@ -66,7 +66,7 @@ lcb_list_t* lcb_list_shift(lcb_list_t *list)
     return item;
 }
 
-lcb_list_t* lcb_list_pop(lcb_list_t *list)
+lcb_list_t *lcb_list_pop(lcb_list_t *list)
 {
     lcb_list_t *item;
 

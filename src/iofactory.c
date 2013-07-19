@@ -26,7 +26,7 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
 {
     if (io && io->destructor) {
-      io->destructor(io);
+        io->destructor(io);
     }
     return LCB_SUCCESS;
 }
@@ -46,7 +46,7 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
         options.v.v2.cookie = io_opts->v.v2.cookie;
     }
     return create_v2(io, &options);
- }
+}
 
 #else
 

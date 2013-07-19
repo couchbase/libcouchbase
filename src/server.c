@@ -143,8 +143,8 @@ void lcb_purge_single_server(lcb_server_t *server,
             /* I do believe I have some IOV functions to do that? */
             lcb_size_t nbytes = packetsize - (stream_size - send_size);
             lcb_assert(ringbuffer_memcpy(&rest,
-                                     &server->output,
-                                     nbytes) == 0);
+                                         &server->output,
+                                         nbytes) == 0);
             ringbuffer_consumed(&server->output, nbytes);
             send_size -= nbytes;
         }
@@ -347,7 +347,7 @@ void lcb_purge_single_server(lcb_server_t *server,
             ringbuffer_consumed(&server->output,
                                 send_size - nbytes);
             lcb_assert(ringbuffer_memcpy(&rest,
-                                     &server->output, nbytes) == 0);
+                                         &server->output, nbytes) == 0);
         }
         ringbuffer_reset(&server->output);
         ringbuffer_append(&rest, &server->output);
@@ -629,8 +629,8 @@ static void socket_connected(lcb_server_t *server)
 
     if (!sasl_in_progress) {
         lcb_assert(sasl_client_new("couchbase", server->hostname, local, remote,
-                               server->instance->sasl.callbacks, 0,
-                               &server->sasl_conn) == SASL_OK);
+                                   server->instance->sasl.callbacks, 0,
+                                   &server->sasl_conn) == SASL_OK);
     }
 
     if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {

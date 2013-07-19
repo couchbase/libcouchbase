@@ -496,7 +496,7 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
          * cancel all registered events before iteration will end
          */
         if (ret == 0) {
-            s_timer_t* active = NULL;
+            s_timer_t *active = NULL;
             hrtime_t now = gethrtime();
             LCB_LIST_SAFE_FOR(ii, nn, &io->timers.list) {
                 tm = LCB_LIST_ITEM(ii, s_timer_t, list);
@@ -512,7 +512,7 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
                 tm = p;
             }
         } else {
-            s_event_t* active = NULL;
+            s_event_t *active = NULL;
             LCB_LIST_FOR(ii, &io->events.list) {
                 ev = LCB_LIST_ITEM(ii, s_event_t, list);
                 if (ev->flags != 0) {
