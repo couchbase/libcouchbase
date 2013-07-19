@@ -44,10 +44,12 @@ ADD_LIBRARY(couchbase SHARED
             src/error.c
             src/event.c
             src/flush.c
+            src/genhash.c
             src/get.c
             src/gethrtime.c
             src/handler.c
             src/hashset.c
+            src/hashtable.c
             src/http.c
             src/instance.c
             src/iofactory.c

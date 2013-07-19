@@ -43,6 +43,7 @@
 #include "list.h"
 #include "url_encoding.h"
 #include "hashset.h"
+#include "genhash.h"
 #include "debug.h"
 #include "handler.h"
 #include "lcb_assert.h"
@@ -565,6 +566,11 @@ extern "C" {
     void lcb_schedule_config_cache_refresh(lcb_t instance);
     void lcb_update_vbconfig(lcb_t instance,
                              VBUCKET_CONFIG_HANDLE next_config);
+
+    /**
+     * Hashtable wrappers
+     */
+    genhash_t *lcb_hashtable_nc_new(int est);
 
 #ifdef __cplusplus
 }

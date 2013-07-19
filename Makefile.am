@@ -136,12 +136,15 @@ libcouchbase_la_SOURCES = \
                         src/error.c \
                         src/event.c \
                         src/flush.c \
+                        src/genhash.c \
+                        src/genhash.h \
                         src/get.c \
                         src/gethrtime.c \
                         src/handler.c \
                         src/handler.h \
                         src/hashset.c \
                         src/hashset.h \
+                        src/hashtable.c \
                         src/http.c \
                         src/instance.c \
                         src/internal.h \
