@@ -302,7 +302,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     if ((obj = calloc(1, sizeof(*obj))) == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
-    *instance = obj;
     obj->type = type;
     obj->compat.type = (lcb_compat_t)0xdead;
 
@@ -379,6 +378,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
     strcpy(obj->http_uri, buffer);
 
+    *instance = obj;
     return LCB_SUCCESS;
 }
 
