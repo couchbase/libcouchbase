@@ -47,7 +47,7 @@ for dir in couchbase lib
 do
     for f in svr4/man3$dir/*
     do
-       destname=bsd/man3/`basename $f | sed -e s,$dir,,g`
+       destname=bsd/man3/`basename $f | sed -e s,3lib,3,g -e s,3couchbase,3,g`
        sed -e s,3lib,3,g -e s,3couchbase,3,g $f > $destname
     done
 done

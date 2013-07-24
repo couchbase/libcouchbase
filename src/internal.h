@@ -51,6 +51,9 @@
 
 #define LCB_DEFAULT_TIMEOUT 2500000
 #define LCB_DEFAULT_VIEW_TIMEOUT 75000000
+#define LCB_DEFAULT_RBUFSIZE 32768
+#define LCB_DEFAULT_WBUFSIZE 32768
+
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 
@@ -216,6 +219,9 @@ extern "C" {
             hrtime_t next;
             lcb_uint32_t usec;
         } timeout;
+
+        lcb_size_t rbufsize;
+        lcb_size_t wbufsize;
 
         struct {
             lcb_compat_t type;

@@ -76,9 +76,9 @@ ADD_LIBRARY(couchbase SHARED
             src/arithmetic.c
             src/bucketconfig/bconf_io.c
             src/bucketconfig/bconf_parse.c
-            src/behavior.c
             src/bucketconfig/bconf_io.c
             src/bucketconfig/bconf_parse.c
+            src/cntl.c
             src/compat.c
             src/config_cache.c
             src/cookie.c

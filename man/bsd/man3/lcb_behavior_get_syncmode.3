@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: lcb_behavior_get_syncmode
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 03/06/2013
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 07/31/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_BEHAVIOR_GET_SYN" "3" "03/06/2013" "\ \&" "\ \&"
+.TH "LCB_BEHAVIOR_GET_SYN" "3" "07/31/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -37,6 +37,33 @@ lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t instance);
 .sp
 void lcb_behavior_set_syncmode(lcb_t instance, lcb_syncmode_t mode);
 .SH "DESCRIPTION"
+.sp
+This interface deprecated and will be removed in libcouchbase 3\&.x in favour lcb_cntl(3)\&. Consider this replacement:
+.sp
+1) for lcb_behavior_get_syncmode(instance):
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_syncmode_t mode;
+lcb_cntl(LCB_CNTL_GET, instance, LCB_CNTL_SYNCMODE, &mode);
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+2) for lcb_behavior_set_syncmode(instance, mode):
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_cntl(LCB_CNTL_SET, instance, LCB_CNTL_SYNCMODE, &mode);
+.fi
+.if n \{\
+.RE
+.\}
 .sp
 lcb_behavior_get_syncmode() returns the current synchronous mode the instance of libcouchbase operates in\&.
 .sp
@@ -131,7 +158,7 @@ T}
 .sp 1
 .SH "SEE ALSO"
 .sp
-libcouchbase(3), lcb_create(3), lcb_wait(3), lcb_attributes(5)
+libcouchbase(3), lcb_create(3), lcb_wait(3), lcb_attributes(5), lcb_cntl(3)
 .SH "AUTHOR"
 .PP
 \fBTrond Norbye\fR <\&trond\&.norbye@couchbase\&.com\&>

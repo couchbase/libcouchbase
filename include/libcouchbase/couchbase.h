@@ -64,6 +64,7 @@
 #include <libcouchbase/behavior.h>
 #include <libcouchbase/callbacks.h>
 #include <libcouchbase/timings.h>
+#include <libcouchbase/cntl.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -756,6 +757,43 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     const char *const *lcb_get_server_list(lcb_t instance);
+
+    /**
+     * This function exposes an ioctl/fcntl-like interface to read and write
+     * various configuration properties to and from an lcb_t handle.
+     *
+     * @param instance The instance to modify
+     *
+     * @param mode One of LCB_CNTL_GET (to retrieve a setting) or LCB_CNTL_SET
+     *      (to modify a setting). Note that not all configuration properties
+     *      support SET.
+     *
+     * @param cmd The specific command/property to modify. This is one of the
+     *      LCB_CNTL_* constants defined in this file. Note that it is safe
+     *      (and even recommanded) to use the raw numeric value (i.e.
+     *      to be backwards and forwards compatible with libcouchbase
+     *      versions), as they are not subject to change.
+     *
+     *      Using the actual value may be useful in ensuring your application
+     *      will still compile with an older libcouchbase version (though
+     *      you may get a runtime error (see return) if the command is not
+     *      supported
+     *
+     * @param arg The argument passed to the configuration handler.
+     *      The actual type of this pointer is dependent on the
+     *      command in question.  Typically for GET operations, the
+     *      value of 'arg' is set to the current configuration value;
+     *      and for SET operations, the current configuration is
+     *      updated with the contents of *arg.
+     *
+     * @return LCB_NOT_SUPPORTED if the code is unrecognized
+     *      LCB_EINVAL if there was a problem with the argument
+     *      (typically for SET) other error codes depending on the
+     *      command.
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
+
 
 #ifdef __cplusplus
 }

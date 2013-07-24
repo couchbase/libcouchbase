@@ -320,6 +320,9 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
     lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
     lcb_set_view_timeout(obj, LCB_DEFAULT_VIEW_TIMEOUT);
+    obj->rbufsize = LCB_DEFAULT_RBUFSIZE;
+    obj->wbufsize = LCB_DEFAULT_WBUFSIZE;
+
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
 
     err = lcb_connection_init(&obj->connection, obj);

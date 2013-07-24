@@ -17,29 +17,6 @@
 
 #include "internal.h"
 
-LIBCOUCHBASE_API
-void lcb_set_timeout(lcb_t instance, lcb_uint32_t usec)
-{
-    instance->timeout.usec = usec;
-}
-
-LIBCOUCHBASE_API
-lcb_uint32_t lcb_get_timeout(lcb_t instance)
-{
-    return instance->timeout.usec;
-}
-
-LIBCOUCHBASE_API
-void lcb_set_view_timeout(lcb_t instance, lcb_uint32_t usec)
-{
-    instance->views_timeout = usec;
-}
-
-LIBCOUCHBASE_API
-lcb_uint32_t lcb_get_view_timeout(lcb_t instance)
-{
-    return instance->views_timeout;
-}
 
 static void lcb_server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {

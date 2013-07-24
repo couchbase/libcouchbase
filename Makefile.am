@@ -59,6 +59,7 @@ endif
 pkginclude_HEADERS = \
                      include/libcouchbase/behavior.h \
                      include/libcouchbase/callbacks.h \
+                     include/libcouchbase/cntl.h \
                      include/libcouchbase/compat.h \
                      include/libcouchbase/configuration.h \
                      include/libcouchbase/couchbase.h \
@@ -128,9 +129,9 @@ libcouchbase_la_SOURCES = \
                         plugins/io/select/select_io_opts.h \
                         src/arithmetic.c \
                         src/base64.c \
-                        src/behavior.c \
                         src/bucketconfig/bconf_io.c \
                         src/bucketconfig/bconf_parse.c \
+                        src/cntl.c \
                         src/compat.c \
                         src/config_cache.c \
                         src/config_static.h \

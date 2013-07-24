@@ -528,8 +528,8 @@ lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance)
         lcb_connection_cleanup(conn);
         return LCB_CLIENT_ENOMEM;
     }
-    if (ringbuffer_initialize(conn->input, 8092) == 0 ||
-            ringbuffer_initialize(conn->output, 8092) == 0) {
+    if (ringbuffer_initialize(conn->input, instance->rbufsize) == 0 ||
+            ringbuffer_initialize(conn->output, instance->wbufsize) == 0) {
         lcb_connection_cleanup(conn);
         return LCB_CLIENT_ENOMEM;
     }

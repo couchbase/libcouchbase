@@ -30,9 +30,9 @@ example_PROGRAMS =
 
 libcouchbase_SOURCES = \
     contrib\http_parser\http_parser.c \
-    contrib\libvbucket\ketama.c \
     contrib\libvbucket\cJSON.c \
     contrib\libvbucket\crc32.c \
+    contrib\libvbucket\ketama.c \
     contrib\libvbucket\rfc1321\md5c.c \
     contrib\libvbucket\vbucket.c \
     plugins\io\iocp\iocp_iops.c \
@@ -45,6 +45,7 @@ libcouchbase_SOURCES = \
     src\behavior.c \
     src\bucketconfig\bconf_io.c \
     src\bucketconfig\bconf_parse.c \
+    src\cntl.c \
     src\compat.c \
     src\config_cache.c \
     src\cookie.c \

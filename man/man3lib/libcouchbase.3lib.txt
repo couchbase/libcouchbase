@@ -120,4 +120,4 @@ lcb_set_version_callback(3couchbase), lcb_store(3couchbase),
 lcb_strerror(3couchbase), lcb_timer_create(3couchbase),
 lcb_timer_destroy(3couchbase), lcb_touch(3couchbase),
 lcb_unlock(3couchbase), lcb_verify_struct_size(3couchbase),
-lcb_wait(3couchbase), lcb_attributes(5)
+lcb_wait(3couchbase), lcb_cntl(3couchbase), lcb_attributes(5)
