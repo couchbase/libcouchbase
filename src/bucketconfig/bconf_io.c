@@ -228,6 +228,8 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
     lcb_parse_vbucket_stream(instance);
     lcb_sockrw_set_want(conn, LCB_READ_EVENT, 0);
     lcb_sockrw_apply_want(conn);
+
+    (void)sock;
 }
 
 static void v1_error_common(lcb_t instance)
