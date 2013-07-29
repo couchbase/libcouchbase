@@ -71,6 +71,7 @@ extern "C" {
         lcb_list_t *prev;
     };
 
+    typedef int (*lcb_list_cmp_fn)(lcb_list_t *a, lcb_list_t *b);
 
     void lcb_list_init(lcb_list_t *list);
     void lcb_list_prepend(lcb_list_t *list, lcb_list_t *item);
@@ -79,6 +80,7 @@ extern "C" {
     lcb_list_t *lcb_list_shift(lcb_list_t *list);
     lcb_list_t *lcb_list_pop(lcb_list_t *list);
     int lcb_list_contains(lcb_list_t *list, lcb_list_t *item);
+    void lcb_list_add_sorted(lcb_list_t *list, lcb_list_t *item, lcb_list_cmp_fn cmp);
 
 #define LCB_LIST_IS_EMPTY(list) \
     ((list) == (list)->next && (list) == (list)->prev)

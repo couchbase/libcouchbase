@@ -88,3 +88,19 @@ int lcb_list_contains(lcb_list_t *list, lcb_list_t *item)
 
     return (ptr == item) ? 1 : 0;
 }
+
+void lcb_list_add_sorted(lcb_list_t *list, lcb_list_t *item, lcb_list_cmp_fn cmp)
+{
+    lcb_list_t *p;
+
+    if (LCB_LIST_IS_EMPTY(list)) {
+        lcb_list_insert(list->prev, list, item);
+    } else {
+        LCB_LIST_FOR(p, list) {
+            if (cmp(item, p) < 0) {
+                break;
+            }
+        }
+        lcb_list_insert(p->prev, p, item);
+    }
+}

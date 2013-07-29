@@ -96,3 +96,60 @@ TEST_F(List, basicTests)
     EXPECT_EQ(&root.list, root.list.next);
     EXPECT_EQ(&root.list, root.list.prev);
 }
+
+typedef struct {
+    lcb_list_t list;
+    int number;
+} num_t;
+
+int ascending(lcb_list_t *a, lcb_list_t *b)
+{
+    num_t *aa, *bb;
+
+    aa = LCB_LIST_ITEM(a, num_t, list);
+    bb = LCB_LIST_ITEM(b, num_t, list);
+    if (aa->number > bb->number) {
+        return 1;
+    } else if (aa->number < bb->number) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+TEST_F(List, sortedListTest)
+{
+    num_t root;
+
+    memset(&root, 0, sizeof(num_t));
+    lcb_list_init(&root.list);
+
+    num_t n0 = {{NULL, NULL}, 0};
+    lcb_list_add_sorted(&root.list, &n0.list, ascending);
+    num_t n3 = {{NULL, NULL}, 3};
+    lcb_list_add_sorted(&root.list, &n3.list, ascending);
+    num_t n2 = {{NULL, NULL}, 2};
+    lcb_list_add_sorted(&root.list, &n2.list, ascending);
+    num_t n7 = {{NULL, NULL}, 7};
+    lcb_list_add_sorted(&root.list, &n7.list, ascending);
+    num_t n1 = {{NULL, NULL}, 1};
+    lcb_list_add_sorted(&root.list, &n1.list, ascending);
+
+    lcb_list_t *ii = root.list.next;
+    num_t *nn;
+    nn = LCB_LIST_ITEM(ii, num_t, list);
+    EXPECT_EQ(0, nn->number);
+    ii = ii->next;
+    nn = LCB_LIST_ITEM(ii, num_t, list);
+    EXPECT_EQ(1, nn->number);
+    ii = ii->next;
+    nn = LCB_LIST_ITEM(ii, num_t, list);
+    EXPECT_EQ(2, nn->number);
+    ii = ii->next;
+    nn = LCB_LIST_ITEM(ii, num_t, list);
+    EXPECT_EQ(3, nn->number);
+    ii = ii->next;
+    nn = LCB_LIST_ITEM(ii, num_t, list);
+    EXPECT_EQ(7, nn->number);
+    ii = ii->next;
+}
