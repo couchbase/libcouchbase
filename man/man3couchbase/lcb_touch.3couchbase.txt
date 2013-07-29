@@ -27,20 +27,27 @@ otherwise it will block until all commands are executed.
 command_cookie is is an opaque field that will be provided to the
 callback function. num is the number of entries in the commands array.
 
-lcb_touch_cmd_t is a structure defined in <libcouchbase/arguments.h>:
+lcb_touch_cmd_t is a structure defined in <libcouchbase/arguments.h>
+as alias to lcb_get_cmd_t, therefore has the same layout:
 
     typedef struct {
-        int version;              /* The enty in "v" to use */
+        int version;              /* The entry in "v" to use */
         union {
             struct {
                 const void *key;    /* The key this response belongs to */
                 lcb_size_t nkey;    /* The number of bytes in the key */
-                lcb_cas_t cas;      /* The object identifier of the object */
+                lcb_time_t exptime; /* New key expiration time */
+                int lock;           /* Lock the document if non-zero */
                 const void *hashkey; /* hash key if != key */
                 lcb_size_t nhashkey; /* number of bytes in hash key */
             } v0;
         } v;
-    } lcb_touch_cmd_t;
+    } lcb_get_cmd_t;
+
+    typedef lcb_get_cmd_t lcb_touch_cmd_t;
+
+Values of exptime larger than 30*24*60*60 seconds (30 days) are
+interpreted as absolute times (from the epoch).
 
 Set cas to 0 unless you want to touch the document only if the key and
 cas match.
