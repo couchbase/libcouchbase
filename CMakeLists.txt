@@ -177,7 +177,7 @@ IF(NOT LCB_NO_TESTS)
     IF(CMAKE_COMPILER_IS_GNUCXX)
         SET_TARGET_PROPERTIES(unit-tests
             PROPERTIES
-            COMPILE_FLAGS "-Wno-sign-compare")
+            COMPILE_FLAGS "-Wno-sign-compare -Wno-missing-field-initializers")
     ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
     IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/gtest-1.6.0.zip)
