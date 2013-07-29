@@ -81,7 +81,13 @@ if BUILD_PLUGINS
 pkginclude_HEADERS += \
                      plugins/io/libev/libev_io_opts.h \
                      plugins/io/libevent/libevent_io_opts.h \
-                     plugins/io/select/select_io_opts.h
+                     plugins/io/select/select_io_opts.h \
+                     plugins/io/iocp/iocp_iops.h \
+                     plugins/io/libuv/libuv_io_opts.h
+
+nobase_pkginclude_HEADERS := \
+                             plugins/io/libuv/plugin-internal.h \
+                             plugins/io/libuv/plugin-libuv.c
 endif
 
 libhttpparser_la_SOURCES = \
@@ -280,6 +286,14 @@ libcouchbase_libev_la_SOURCES = plugins/io/libev/plugin-libev.c
 libcouchbase_libev_la_LDFLAGS=-avoid-version $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_libev_la_LIBADD=-lev
 libcouchbase_libev_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
+endif
+
+if HAVE_LIBUV
+lib_LTLIBRARIES += libcouchbase_libuv.la
+libcouchbase_libuv_la_SOURCES = plugins/io/libuv/plugin-libuv.c
+libcouchbase_libuv_la_LDFLAGS = $(AM_PROFILE_SOLDFLAGS)
+libcouchbase_libuv_la_LIBADD = -luv
+libcouchbase_libuv_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 endif
 
 tests_unit_tests_SOURCES = \

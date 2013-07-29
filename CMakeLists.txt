@@ -310,6 +310,29 @@ IF(NOT LCB_NO_TOOLS)
             DESTINATION ${LCB_INSTDIR}/bin)
 ENDIF(NOT LCB_NO_TOOLS)
 
+IF(LIBUV_ROOT)
+    ADD_LIBRARY(couchbase_libuv SHARED plugins/io/libuv/plugin-libuv.c)
+    SET_TARGET_PROPERTIES(couchbase_libuv PROPERTIES PREFIX "lib")
+    SET_TARGET_PROPERTIES(couchbase_libuv PROPERTIES IMPORT_PREFIX "lib")
+
+    SET_PROPERTY(TARGET couchbase_libuv
+        APPEND PROPERTY COMPILE_DEFINITIONS LIBCOUCHBASE_INTERNAL)
+    FIND_LIBRARY(LIBUV_RELEASE
+        NAMES uv libuv
+        PATHS ${LIBUV_ROOT}/Release ${LIBUV_ROOT}/Release/lib)
+    FIND_LIBRARY(LIBUV_DEBUG
+        NAMES uv libuv
+        PATHS ${LIBUV_ROOT}/Debug ${LIBUV_ROOT}/Debug/lib)
+    SET(LIBUV_LIBRARIES optimized ${LIBUV_RELEASE} debug ${LIBUV_DEBUG})
+
+    SET_PROPERTY(TARGET couchbase_libuv
+        APPEND PROPERTY INCLUDE_DIRECTORIES ${LIBUV_ROOT}/include)
+    TARGET_LINK_LIBRARIES(couchbase_libuv couchbase ${LIBUV_LIBRARIES})
+    INSTALL(TARGETS couchbase_libuv RUNTIME DESTINATION bin)
+ENDIF(LIBUV_ROOT)
+
+
+
 INSTALL(TARGETS couchbase
         RUNTIME DESTINATION ${LCB_INSTDIR}/bin
         LIBRARY DESTINATION ${LCB_INSTDIR}/lib
@@ -330,5 +353,10 @@ INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/timings.h
               include/libcouchbase/types.h
               include/libcouchbase/visibility.h
+              plugins/io/libuv/libuv_io_opts.h
               win32/libcouchbase/configuration.h
             DESTINATION ${LCB_INSTDIR}/include/libcouchbase)
+INSTALL(FILES plugins/io/libuv/plugin-libuv.c
+              plugins/io/libuv/plugin-internal.h
+            DESTINATION
+                ${LCB_INSTDIR}/include/libcouchbase/plugins/io/libuv)

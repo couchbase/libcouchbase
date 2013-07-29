@@ -31,6 +31,29 @@ rationale behind changing the API, and what you as a user have to do..
 
 http://trondn.blogspot.no/2012/08/libcouchbase-overhauling.html
 
+How to use libuv as the IO backend
+----------------------------------
+
+libuv is a cross platform library abstracting event
+notifications. Unfortunately the current stable version of libuv
+(0.10.x) don't provide a "make install" target making it harder for
+end users use. The easiest way for you to use libuv as a backend is to
+use the unstable version (currently 0.11.x) and run make install to
+install all required headers and libraries. If you for some reason
+don't want to do that you can then manually do the "install" target
+and copy the include files and libraries to the appropriate
+directories ( /usr/include and /usr/lib ), or you may run instruct the
+compiler and linker where to find the libraries at config time like:
+
+    ./configure CPPFLAGS="-I/tmp/libuv/include" LDFLAGS="-L/tmp/libuv"
+
+And make sure runtime linker can find the library (either with
+`DYLD_LIBRARY_PATH/LD_LIBRARY_PATH` or `-rpath`) in case of
+non-standard location.
+
+Please note that if you try to link to a static library of libuv you
+_have_ to find out all of the other libraries libuv require.
+
 Bugs
 ----
 

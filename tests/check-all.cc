@@ -43,14 +43,14 @@
 #define DEFAULT_TEST_NAMES "unit-tests;smoke-test"
 
 #ifdef _WIN32
-#define DEFAULT_PLUGINS_STRING "select;iocp"
+#define DEFAULT_PLUGINS_STRING "select;iocp;libuv"
 #define PATHSEP "\\"
 #define usleep(n) Sleep((n) / 1000)
 #define setenv(key, value, ignored) SetEnvironmentVariable(key, value)
 #else
 #include <signal.h>
 #include <unistd.h> /* usleep */
-#define DEFAULT_PLUGINS_STRING "select;libev;libevent"
+#define DEFAULT_PLUGINS_STRING "select;libev;libevent;libuv"
 #define PATHSEP "/"
 #endif
 

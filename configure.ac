@@ -317,9 +317,28 @@ AM_CONDITIONAL(HAVE_LIBEVENT2, [test "x${ac_cv_have_libevent2}" = "xyes"])
 AS_IF([test "x${ac_cv_have_libevent2}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEVENT2], [1], [We have libevent2])])
 
+AC_CACHE_CHECK([for libuv], [ac_cv_have_libuv],
+  [ saved_libs="$LIBS"
+    LIBS=-luv
+    AC_TRY_LINK([
+      #include <uv.h>
+            ],[
+      uv_timer_init(NULL, NULL);
+            ],[
+      ac_cv_have_libuv="yes"
+            ], [
+      ac_cv_have_libuv="no"
+      ])
+    LIBS="$saved_libs"
+  ])
+AM_CONDITIONAL(HAVE_LIBUV, [test "x${ac_cv_have_libuv}" = "xyes"])
+AS_IF([test "x${ac_cv_have_libuv}" = "xyes"],
+      [AC_DEFINE([HAVE_LIBUV], [1], [We have libuv])])
+
 dnl Fail if libevent is the only networking backend accessible
 AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a \
        "x${ac_cv_have_winsock2}" != "xyes" -a \
+       "x${ac_cv_have_libuv}" != "xyes" -a \
        "x${ac_cv_have_libevent}" != "xyes" -a \
        "x${ac_cv_have_libevent2}" != "xyes" -a \
        "x${ac_cv_have_libev3}" != "xyes" -a \

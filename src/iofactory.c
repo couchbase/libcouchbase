@@ -79,6 +79,7 @@ static plugin_info builtin_plugins[] = {
 
     BUILTIN_DL("libevent", LCB_IO_OPS_LIBEVENT),
     BUILTIN_DL("libev", LCB_IO_OPS_LIBEV),
+    BUILTIN_DL("libuv", LCB_IO_OPS_LIBUV),
 
     { NULL }
 };
