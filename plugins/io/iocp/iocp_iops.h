@@ -199,6 +199,7 @@ extern "C" {
     };
 
 #ifdef IOCP_LOG_VERBOSE
+#include <stdio.h>
 #define IOCP_LOG(facil, ...) \
     fprintf(stderr, "[%s] <%s:%d>: ", #facil, __FILE__, __LINE__); \
     fprintf(stderr, __VA_ARGS__); \
