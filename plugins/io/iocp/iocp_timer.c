@@ -18,6 +18,7 @@
 /**
 * New-Style v1 plugin for Windows, Using IOCP
 * @author Mark Nunberg
+* @author Sergey Avseyev
 */
 
 #include "iocp_iops.h"
@@ -40,12 +41,12 @@ static int iocp_timer_cmp_asc(lcb_list_t *a, lcb_list_t *b)
 unsigned long iocp_tmq_next_timeout(lcb_list_t *list, lcb_uint64_t now)
 {
     if (LCB_LIST_IS_EMPTY(list)) {
-        return 0;
+        return INFINITE;
+
     } else {
         iocp_timer_t *tt;
         tt = LCB_LIST_ITEM(list->next, iocp_timer_t, list);
-        /* is tt->ms always greater then now? */
-        return (unsigned long)(tt->ms - now);
+        return tt->ms > now ? tt->ms - now : 0;
     }
 }
 
@@ -66,11 +67,13 @@ iocp_timer_t *iocp_tmq_pop(lcb_list_t *list, lcb_uint64_t now)
 
 void iocp_tmq_add(lcb_list_t *list, iocp_timer_t *timer)
 {
+    IOCP_LOG(IOCP_TRACE, "Adding timer %p with ms %lu", timer, timer->ms);
     lcb_list_add_sorted(list, &timer->list, iocp_timer_cmp_asc);
 }
 
 void iocp_tmq_del(lcb_list_t *list, iocp_timer_t *timer)
 {
     lcb_list_delete(&timer->list);
+    IOCP_LOG(IOCP_TRACE, "Removing %p. Empty?=%d", timer, LCB_LIST_IS_EMPTY(list));
     (void)list;
 }

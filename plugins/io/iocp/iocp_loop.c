@@ -233,6 +233,7 @@ static void deque_expired_timers(iocp_t *io, lcb_uint64_t now)
             return;
         }
 
+        timer->is_active = 0;
         timer->cb(-1, 0, timer->arg);
     }
 }
@@ -270,11 +271,8 @@ void iocp_run(lcb_io_opt_t iobase)
             tmo = iocp_tmq_next_timeout(&io->timer_queue.list, now);
         }
 
-        if (!tmo) {
-            tmo = INFINITE;
-        }
-
         IOCP_LOG(IOCP_TRACE, "Timeout=%lu msec", tmo);
+        /** TODO: warn something if (tmo==INFINITE) here. This is bad */
 
         do {
             if (Have_GQCS_Ex) {
@@ -285,7 +283,6 @@ void iocp_run(lcb_io_opt_t iobase)
             }
 
             tmo = 0;
-
         } while (LOOP_CAN_CONTINUE(io) && remaining);
 
         IOCP_LOG(IOCP_TRACE, "Stopped IO loop");
@@ -296,7 +293,7 @@ void iocp_run(lcb_io_opt_t iobase)
             tmo = iocp_tmq_next_timeout(&io->timer_queue.list, now);
         }
 
-    } while (LOOP_CAN_CONTINUE(io) && (HAS_QUEUED_IO(io) || tmo));
+    } while (LOOP_CAN_CONTINUE(io) && (HAS_QUEUED_IO(io) || tmo != INFINITE));
 
     IOCP_LOG(IOCP_INFO, "do-loop END");
 

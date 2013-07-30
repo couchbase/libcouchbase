@@ -361,8 +361,10 @@ static void delete_timer(lcb_io_opt_t iobase, void *opaque)
 {
     iocp_timer_t *tmr = (iocp_timer_t *)opaque;
     iocp_t *io = (iocp_t *)iobase;
-    tmr->is_active = 0;
-    iocp_tmq_del(&io->timer_queue.list, tmr);
+    if (tmr->is_active) {
+        tmr->is_active = 0;
+        iocp_tmq_del(&io->timer_queue.list, tmr);
+    }
 }
 
 static int update_timer(lcb_io_opt_t iobase,
