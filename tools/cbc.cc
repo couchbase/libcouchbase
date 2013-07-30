@@ -1429,8 +1429,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         unknownOpt = true;
                     }
                 } else if (cmd == cbc_view || cmd == cbc_admin) {
+                    string arg;
                     unknownOpt = false;
-                    string arg = (*iter)->argument;
                     switch ((*iter)->shortopt) {
                     case 'c':
                         chunked = true;
@@ -1439,6 +1439,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         data = (*iter)->argument;
                         break;
                     case 'X':
+                        arg = (*iter)->argument;
                         if (arg == "GET") {
                             method = LCB_HTTP_METHOD_GET;
                         } else if (arg == "POST") {
