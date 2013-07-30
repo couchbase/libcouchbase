@@ -202,7 +202,15 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
         }
     }
 
+    lcb_connection_cancel_timer(conn);
     lcb_sockrw_apply_want(conn);
+}
+
+static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
+{
+    lcb_server_t *server = (lcb_server_t*)conn->data;
+    lcb_purge_single_server(server, err);
+    lcb_maybe_breakout(server->instance);
 }
 
 /**
@@ -212,5 +220,7 @@ void lcb_server_connect(lcb_server_t *server)
 {
     lcb_connection_t conn = &server->connection;
     conn->on_connect_complete = socket_connected;
-    lcb_connection_start(conn, 1, 0);
+    conn->on_timeout = server_timeout_handler;
+    conn->timeout.usec = server->instance->timeout.usec;
+    lcb_connection_start(conn, 1);
 }

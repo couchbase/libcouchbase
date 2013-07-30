@@ -63,11 +63,17 @@ lcb_error_t lcb_wait(lcb_t instance)
             || lcb_flushing_buffers(instance)
             || hashset_num_items(instance->timers) > 0
             || hashset_num_items(instance->durability_polls) > 0) {
-        lcb_size_t idx;
-        /* update timers on all servers */
-        for (idx = 0; idx < instance->nservers; ++idx) {
-            lcb_update_server_timer(instance->servers + idx);
+
+        lcb_size_t ii;
+
+        for (ii = 0; ii < instance->nservers; ii++) {
+            lcb_server_t *c = instance->servers + ii;
+
+            if (lcb_server_has_pending(c)) {
+                lcb_connection_activate_timer(&c->connection);
+            }
         }
+
         instance->io->v.v0.run_event_loop(instance->io);
     } else {
         instance->wait = 0;

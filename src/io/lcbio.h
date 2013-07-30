@@ -56,6 +56,18 @@ extern "C" {
     struct lcb_connection_st;
     typedef void (*lcb_connection_handler)(struct lcb_connection_st*, lcb_error_t);
 
+    struct lcb_timeout_info_st {
+        /** The timer to use */
+
+        void *timer;
+
+        /** Set when update_timer is called, unset when delete_timer is called */
+        short active;
+
+        /** Delay for the timeout */
+        lcb_uint32_t usec;
+    };
+
     struct lcb_connection_st {
         struct addrinfo *ai;
         struct addrinfo *curr_ai;
@@ -75,10 +87,11 @@ extern "C" {
         /** callback to be invoked when the connection is complete */
         lcb_connection_handler on_connect_complete;
 
-        lcb_connection_handler on_connect_timeout;
-
         /** for generic timeout events */
         lcb_connection_handler on_timeout;
+
+        /** Timeout information */
+        struct lcb_timeout_info_st timeout;
 
         /**
          * v0 event based I/O fields
@@ -101,17 +114,10 @@ extern "C" {
             lcb_io_error_cb error;
         } completion;
 
-        /** timer for the connection */
-        void *timer;
-
         /** Host/Port */
         char host[NI_MAXHOST+1];
         char port[NI_MAXSERV+1];
 
-        /**
-         * OUT parameters
-         */
-        int timeout_active;
 
         /** this is populated with the socket when the connection is done */
         lcb_socket_t sockfd;
@@ -142,8 +148,7 @@ extern "C" {
      * invoked while the user still has control of the event lioop.
      */
     lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
-                                                 int nocb,
-                                                 lcb_uint32_t timeout);
+                                                 int nocb);
 
     /**
      * Close the socket and clean up any socket-related resources
@@ -161,19 +166,27 @@ extern "C" {
     void lcb_connection_cleanup(lcb_connection_t conn);
 
     /**
-     * Update the connection-level timer
+     * Activates the timer. If the timer is already active, this function
+     * does nothing. Otherwise, it schedules a timer to be invoked in
+     * conn->timeout.usec microseconds.
+     *
      * @param conn a connection object
-     * @param usec when the timeout should be triggered
-     * @param handler a callback to be invoked when the timeout has been reached
+     * You may call delete_timer() to cancel the pending timeout
      */
-    void lcb_connection_update_timer(lcb_connection_t conn,
-                                     lcb_uint32_t usec,
-                                     lcb_connection_handler handler);
+    void lcb_connection_activate_timer(lcb_connection_t conn);
+
+    /**
+     * Unconditionally schedule a timer to be invoked in the interval specified
+     * in the connection's timeout.usecs structure. If a timeout is already
+     * active, it is cleared first; otherwise a new timeout is initialized
+     * @param conn the connection
+     */
+    void lcb_connection_delay_timer(lcb_connection_t conn);
 
     /**
      * Cancel any timeout event set by update_timer on the connection
      */
-    void lcb_connection_delete_timer(lcb_connection_t conn);
+    void lcb_connection_cancel_timer(lcb_connection_t conn);
 
 
     /* Read a bit of data */

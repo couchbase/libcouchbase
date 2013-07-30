@@ -91,7 +91,7 @@ static void conn_do_callback(struct lcb_connection_st *conn,
 
 static void connection_success(lcb_connection_t conn)
 {
-    lcb_connection_delete_timer(conn);
+    lcb_connection_cancel_timer(conn);
     conn->state = LCB_CONNSTATE_CONNECTED;
     conn_do_callback(conn, 0, LCB_SUCCESS);
 }
@@ -106,7 +106,6 @@ static void initial_connect_timeout_handler(lcb_socket_t sock,
 {
     lcb_connection_t conn = (lcb_connection_t)arg;
     lcb_connection_close(conn);
-    lcb_connection_delete_timer(conn);
     conn_do_callback(conn, 0, LCB_ETIMEDOUT);
     (void)which;
     (void)sock;
@@ -120,8 +119,9 @@ static void timeout_handler_dispatch(lcb_socket_t sock,
                                      void *arg)
 {
     lcb_connection_t conn = (lcb_connection_t)arg;
-    lcb_connection_delete_timer(conn);
-    if (conn->on_timeout) {
+    lcb_connection_cancel_timer(conn);
+
+    if (conn->timeout.active && conn->on_timeout) {
         lcb_connection_handler handler = conn->on_timeout;
         conn->on_timeout = NULL;
         handler(conn, LCB_ETIMEDOUT);
@@ -330,8 +330,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
 }
 
 lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
-                                             int nocb,
-                                             lcb_uint32_t timeout)
+                                             int nocb)
 {
     lcb_connection_result_t result;
 
@@ -348,19 +347,14 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
         result = v1_connect(conn, nocb);
     }
 
-    if (result == LCB_CONN_INPROGRESS && timeout > 0) {
-        if (!conn->timer) {
-            conn->timer = conn->instance->io->v.v0.create_timer(conn->instance->io);
-
-        } else {
-            lcb_connection_delete_timer(conn);
-        }
+    if (result == LCB_CONN_INPROGRESS && conn->timeout.usec) {
+        lcb_connection_cancel_timer(conn);
         conn->instance->io->v.v0.update_timer(conn->instance->io,
-                                              conn->timer,
-                                              timeout,
+                                              conn->timeout.timer,
+                                              conn->timeout.usec,
                                               conn,
                                               initial_connect_timeout_handler);
-        conn->timeout_active = 1;
+        conn->timeout.active = 1;
     }
 
     return result;
@@ -369,6 +363,7 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
 void lcb_connection_close(lcb_connection_t conn)
 {
     lcb_io_opt_t io;
+
     conn->state = LCB_CONNSTATE_UNINIT;
 
     if (conn->instance == NULL || conn->instance->io == NULL) {
@@ -474,40 +469,44 @@ void lcb_connection_cleanup(lcb_connection_t conn)
         conn->evinfo.ptr = NULL;
     }
 
-    lcb_connection_delete_timer(conn);
+    lcb_connection_cancel_timer(conn);
 
-    if (conn->timer) {
-        conn->instance->io->v.v0.destroy_timer(conn->instance->io, conn->timer);
-        conn->timer = NULL;
+    if (conn->timeout.timer) {
+        conn->instance->io->v.v0.destroy_timer(conn->instance->io,
+                                               conn->timeout.timer);
     }
 
     memset(conn, 0, sizeof(*conn));
 }
 
-void lcb_connection_delete_timer(lcb_connection_t conn)
+void lcb_connection_cancel_timer(lcb_connection_t conn)
 {
-    if (conn->timer != NULL && conn->timeout_active != 0) {
-        conn->instance->io->v.v0.delete_timer(conn->instance->io, conn->timer);
-        conn->timeout_active = 0;
+    if (!conn->timeout.active) {
+        return;
     }
+    conn->timeout.active = 0;
+    conn->instance->io->v.v0.delete_timer(conn->instance->io,
+                                          conn->timeout.timer);
 }
 
-void lcb_connection_update_timer(lcb_connection_t conn,
-                                 lcb_uint32_t usec,
-                                 lcb_connection_handler handler)
+void lcb_connection_activate_timer(lcb_connection_t conn)
 {
-    lcb_connection_delete_timer(conn);
-    if (!conn->timer) {
-        conn->timer = conn->instance->io->v.v0.create_timer(conn->instance->io);
+    if (conn->timeout.active || conn->timeout.usec == 0) {
+        return;
     }
 
-    conn->timeout_active = 1;
-    conn->on_timeout = handler;
+    conn->timeout.active = 1;
     conn->instance->io->v.v0.update_timer(conn->instance->io,
-                                          conn->timer,
-                                          usec,
+                                          conn->timeout.timer,
+                                          conn->timeout.usec,
                                           conn,
                                           timeout_handler_dispatch);
+}
+
+void lcb_connection_delay_timer(lcb_connection_t conn)
+{
+    lcb_connection_cancel_timer(conn);
+    lcb_connection_activate_timer(conn);
 }
 
 lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance)
@@ -523,6 +522,7 @@ lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance)
 
     conn->sockfd = INVALID_SOCKET;
     conn->state = LCB_CONNSTATE_UNINIT;
+    conn->timeout.timer = instance->io->v.v0.create_timer(instance->io);
 
     if (conn->input == NULL || conn->output == NULL) {
         lcb_connection_cleanup(conn);

@@ -778,7 +778,7 @@ void lcb_update_vbconfig(lcb_t instance,
     /**
      * Remove the timer. We aren't waiting for updated configurations anyway
      */
-    lcb_connection_delete_timer(&instance->connection);
+    lcb_connection_cancel_timer(&instance->connection);
 
     /**
      * If we're using a cached config, we should not need a socket connection.

@@ -180,6 +180,10 @@ void lcb_sockrw_apply_want(lcb_connection_t conn)
     } else {
         apply_want_v1(conn);
     }
+
+    if (conn->want) {
+        lcb_connection_activate_timer(conn);
+    }
 }
 
 int lcb_sockrw_flushed(lcb_connection_t conn)

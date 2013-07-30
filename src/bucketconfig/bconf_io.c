@@ -64,7 +64,7 @@ void lcb_instance_connerr(lcb_t instance,
 
     if (!instance->vbucket_config) {
         /* Initial connection, no pending commands, and connect timer */
-        lcb_connection_delete_timer(&instance->connection);
+        lcb_connection_cancel_timer(&instance->connection);
     } else {
         lcb_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
@@ -76,6 +76,13 @@ void lcb_instance_connerr(lcb_t instance,
      * API connection attempts.
      */
     lcb_maybe_breakout(instance);
+}
+
+static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
+{
+    lcb_instance_connerr((lcb_t)conn->data,
+                         err,
+                         "Configuration update timed out");
 }
 
 
@@ -96,9 +103,11 @@ static void instance_connect_done_handler(lcb_connection_t conn,
         conn->completion.read = config_v1_read_handler;
         conn->completion.write = config_v1_write_handler;
         conn->completion.error = config_v1_error_handler;
+        conn->on_timeout = instance_timeout_handler;
 
         lcb_sockrw_set_want(conn, LCB_RW_EVENT, 0);
         lcb_sockrw_apply_want(conn);
+        lcb_connection_activate_timer(conn);
 
     } else if (err == LCB_ETIMEDOUT) {
         lcb_error_handler(instance,
@@ -170,7 +179,8 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     ptr += strlen(LCB_LAST_HTTP_HEADER);
     sprintf(ptr, "Host: %s:%s\r\n\r\n", conn->host, conn->port);
 
-    connres = lcb_connection_start(conn, 1, instance->timeout.usec);
+    conn->timeout.usec = instance->timeout.usec;
+    connres = lcb_connection_start(conn, 1);
     if (connres == LCB_CONN_ERROR) {
         return lcb_error_handler(instance, LCB_CONNECT_ERROR,
                                  "Couldn't schedule connection");

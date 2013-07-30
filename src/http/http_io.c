@@ -163,10 +163,9 @@ static void request_timed_out(lcb_connection_t conn, lcb_error_t err)
 static int request_do_parse(lcb_http_request_t req)
 {
     int rv = lcb_http_request_do_parse(req);
-    if (rv == 0 && req->reqtype == LCB_HTTP_TYPE_VIEW && req->instance != NULL) {
-        lcb_connection_update_timer(&req->connection,
-                                    req->instance->views_timeout,
-                                    request_timed_out);
+
+    if (rv == 0 && req->instance != NULL) {
+        lcb_connection_activate_timer(&req->connection);
     }
     return rv;
 }
@@ -184,8 +183,6 @@ static void request_connected(lcb_connection_t conn, lcb_error_t err)
     req->connection.completion.read = request_v1_read_handler;
     req->connection.completion.write = request_v1_write_handler;
     req->connection.completion.error = request_v1_error_handler;
-    req->connection.on_timeout = request_timed_out;
-
     lcb_sockrw_set_want(&req->connection, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(&req->connection);
 }
@@ -195,13 +192,20 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
     lcb_connection_result_t result;
     lcb_connection_t conn = &req->connection;
     conn->on_connect_complete = request_connected;
-    conn->on_connect_timeout = request_timed_out;
+    conn->on_timeout = request_timed_out;
+
+    if (req->reqtype == LCB_HTTP_TYPE_VIEW) {
+        conn->timeout.usec = req->instance->views_timeout;
+
+    } else {
+        /** TODO: find a sane value for this? */
+        conn->timeout.usec = 0;
+    }
+
     conn->instance = req->instance;
     conn->data = req;
     lcb_connection_getaddrinfo(conn, 0);
-    result = lcb_connection_start(conn, 1,
-                                  req->reqtype == LCB_HTTP_TYPE_VIEW ?
-                                          req->instance->views_timeout : 0);
+    result = lcb_connection_start(conn, 1);
 
     if (result != LCB_CONN_INPROGRESS) {
         return LCB_CONNECT_ERROR;

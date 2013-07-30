@@ -543,6 +543,12 @@ extern "C" {
      */
     void lcb_server_send_packets(lcb_server_t *server);
 
+    /**
+     * Returns true if this server has pending I/O on it
+     */
+    int lcb_server_has_pending(lcb_server_t *server);
+
+
 
     void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg);
 
@@ -561,8 +567,6 @@ extern "C" {
                                        lcb_uint8_t opcode,
                                        lcb_uint32_t opaque,
                                        lcb_server_t *exc);
-
-    void lcb_update_server_timer(lcb_server_t *server);
 
     void lcb_purge_single_server(lcb_server_t *server,
                                  lcb_error_t error);

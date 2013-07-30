@@ -51,7 +51,7 @@ static int do_read_data(lcb_server_t *c, int allow_read)
     }
 
     if (processed) {
-        lcb_update_server_timer(c);
+        lcb_connection_delay_timer(&c->connection);
     }
 
     if (status == LCB_SOCKRW_WOULDBLOCK || status == LCB_SOCKRW_READ) {
@@ -168,7 +168,7 @@ void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
         return;
     }
 
-    lcb_update_server_timer(c);
+    lcb_connection_delay_timer(&c->connection);
 
     stop = gethrtime();
 
@@ -222,6 +222,25 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
     (void)cookie;
 }
 
+int lcb_server_has_pending(lcb_server_t *server)
+{
+    lcb_connection_t conn = &server->connection;
+
+    if ((conn->output && conn->output->nbytes) ||
+            (conn->input && conn->input->nbytes)) {
+        return 1;
+    }
+
+    if (server->cmd_log.nbytes || server->pending.nbytes) {
+        return 1;
+    }
+
+    if (!lcb_sockrw_flushed(conn)) {
+        return 1;
+    }
+    return 0;
+}
+
 int lcb_flushing_buffers(lcb_t instance)
 {
     lcb_size_t ii;
@@ -230,22 +249,9 @@ int lcb_flushing_buffers(lcb_t instance)
         return 1;
     }
     for (ii = 0; ii < instance->nservers; ++ii) {
-        lcb_server_t *c = instance->servers + ii;
-        lcb_connection_t conn = &c->connection;
-
-        if ((conn->output && conn->output->nbytes) ||
-                (conn->input && conn->input->nbytes)) {
+        if (lcb_server_has_pending(instance->servers + ii)) {
             return 1;
         }
-
-        if (c->cmd_log.nbytes || c->pending.nbytes) {
-            return 1;
-        }
-
-        if (!lcb_sockrw_flushed(conn)) {
-            return 1;
-        }
-
     }
     return 0;
 }
