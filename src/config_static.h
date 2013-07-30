@@ -104,12 +104,12 @@
 
 #ifndef __MINGW32__
   #define snprintf _snprintf
+  #define strcasecmp(a,b) _stricmp(a,b)
+  #define strncasecmp(a,b,c) _strnicmp(a,b,c)
+  #undef strdup
+  #define strdup _strdup
 #endif
 
-#define strcasecmp(a,b) _stricmp(a,b)
-#define strncasecmp(a,b,c) _strnicmp(a,b,c)
-#undef strdup
-#define strdup _strdup
 #else
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
