@@ -17,7 +17,44 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 # Currently this file is only used for Windows
 
+### BEGIN CONFIGURABLES ###
+# These variables can be modified as needed
+
+# Gtest source archive to use
+SET(GTEST_ARCHIVE gtest-1.6.0.zip)
+# Where to download archive (if it doesn't exist)
+SET(GTEST_DLSERVER http://googletest.googlecode.com/files)
+
+# Couchbase mock path to download
+SET(COUCHBASE_MOCK_VERSION
+    0.5-SNAPSHOT/CouchbaseMock-0.5-20120726.220757-19)
+
+# Maven repository where ${COUCHBASE_MOCK_VERSION} is to be found
+SET(COUCHBASE_MOCK_DLSERVER
+    http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock)
 project(libcouchbase)
+
+# Enable/Disable tests
+OPTION(LCB_NO_TESTS "Disable building of tests" OFF)
+
+# Enable/Disable tools
+OPTION(LCB_NO_TOOLS "Disable building of additional tools" OFF)
+
+# library version
+IF(EXISTS ${CMAKE_SOURCE_DIR}/VERSION)
+    FILE(STRINGS ${CMAKE_SOURCE_DIR}/VERSION lines)
+    FOREACH(line ${lines})
+        STRING(REGEX REPLACE "^([^=]+)=(.*)" "\\1" varname "${line}")
+        STRING(REGEX REPLACE "^([^=]+)=(.*)" "\\2" varvalue "${line}")
+        SET(LCB_${varname} "${varvalue}")
+    ENDFOREACH()
+ENDIF()
+
+IF (NOT LCB_VERSION)
+    SET(LCB_VERSION "2.1.0")
+ENDIF()
+
+### END CONFIGURABLES ###
 
 SET(NT_REQUIRED_VERSION 0x0501)
 
@@ -27,6 +64,29 @@ SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     ${PROJECT_BINARY_DIR}/bin)
 SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
     ${PROJECT_BINARY_DIR}/lib)
+
+# Figure out how we're building!
+IF(MSVC)
+    IF(CMAKE_CL_64)
+        SET(lcb_arch_string "amd64")
+    ELSE()
+        SET(lcb_arch_string "x86")
+    ENDIF(CMAKE_CL_64)
+
+    IF(MSVC80)
+        SET(lcb_cc_string "vs8")
+    ELSEIF(MSVC90)
+        SET(lcb_cc_string "vc9")
+    ELSEIF(MSVC_VERSION EQUAL 1600)
+        SET(lcb_cc_string "vc10")
+    ENDIF()
+ELSE()
+    SET(lcb_arch_string "x86") #mingw
+    SET(lcb_cc_string "mingw")
+ENDIF()
+
+SET(lcb_package_name "libcouchbase-${LCB_VERSION}_${lcb_arch_string}_${lcb_cc_string}")
+SET(LCB_INSTDIR ${PROJECT_BINARY_DIR}/${lcb_package_name})
 
 SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
@@ -38,9 +98,10 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
 
 IF(${MSVC})
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W3 /EHsc /FD")
+    SET(COMMON_FLAGS "/W3 /EHsc /FD /MP")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TC")
 ELSE()
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -gstabs")
+    SET(COMMON_FLAGS "-Wall -gstabs")
 ENDIF()
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
@@ -118,21 +179,9 @@ SET_TARGET_PROPERTIES(couchbase PROPERTIES
                       COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
 ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
+SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase ws2_32.lib lcbutils)
 
-ADD_EXECUTABLE(cbc
-            tools/cbc-util.cc
-            tools/cbc.cc
-            tools/commandlineparser.cc
-            tools/configuration.cc)
-
-TARGET_LINK_LIBRARIES(cbc couchbase lcbutils)
-
-ADD_EXECUTABLE(cbc-pillowfight
-            tools/cbc-pillowfight.cc
-            tools/commandlineparser.cc)
-
-TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase lcbutils)
 
 IF(NOT LCB_NO_TESTS)
     ADD_EXECUTABLE(unit-tests
@@ -164,7 +213,6 @@ IF(NOT LCB_NO_TESTS)
             tests/unit_tests.cc
             tests/mock-environment.cc)
 
-    # We're a library using the shared CRT. Don't use the static one
 
     # Normally defined by config.h
     SET_PROPERTY(
@@ -180,18 +228,27 @@ IF(NOT LCB_NO_TESTS)
             COMPILE_FLAGS "-Wno-sign-compare -Wno-missing-field-initializers")
     ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-    IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/gtest-1.6.0.zip)
-        file(DOWNLOAD http://googletest.googlecode.com/files/gtest-1.6.0.zip ${CMAKE_SOURCE_DIR}/gtest-1.6.0.zip)
-        execute_process(COMMAND cmake -E tar zxf gtest-1.6.0.zip WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/gtest-1.6.0.zip)
+    IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/${GTEST_ARCHIVE})
+        file(DOWNLOAD ${GTEST_DLSERVER}/${GTEST_ARCHIVE}
+            ${CMAKE_SOURCE_DIR}/${GTEST_ARCHIVE})
+
+        execute_process(COMMAND cmake -E tar zxf ${GTEST_ARCHIVE}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+    ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/${GTEST_ARCHIVE})
 
     IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
-        SET(COUCHBASE_MOCK_VERSION 0.5-SNAPSHOT/CouchbaseMock-0.5-20120726.220757-19)
-        file(DOWNLOAD http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/${COUCHBASE_MOCK_VERSION}.jar ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
-        execute_process(COMMAND cmake -E tar zxf gtest-1.6.0.zip WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+        file(DOWNLOAD ${COUCHBASE_MOCK_DLSERVER}/${COUCHBASE_MOCK_VERSION}
+            ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
     ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
 
-    SET(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) runtime library event Google Test built as static library")
+    execute_process(COMMAND
+        cmake -E tar zxf ${GTEST_ARCHIVE}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+    # We're a library using the shared CRT. Don't use the static one
+    SET(gtest_force_shared_crt ON CACHE BOOL
+        "Use shared (DLL) runtime library event Google Test built as static library")
 
     ADD_SUBDIRECTORY(gtest-1.6.0 gtest-1.6.0)
 
@@ -202,13 +259,30 @@ IF(NOT LCB_NO_TESTS)
 ENDIF(NOT LCB_NO_TESTS)
 
 
+IF(NOT LCB_NO_TOOLS)
+    ADD_EXECUTABLE(cbc
+                tools/cbc-util.cc
+                tools/cbc.cc
+                tools/commandlineparser.cc
+                tools/configuration.cc)
+
+    TARGET_LINK_LIBRARIES(cbc couchbase lcbutils)
+
+    ADD_EXECUTABLE(cbc-pillowfight
+                tools/cbc-pillowfight.cc
+                tools/commandlineparser.cc)
+
+    TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase lcbutils)
+
+    INSTALL(TARGETS cbc cbc-pillowfight RUNTIME
+            DESTINATION ${LCB_INSTDIR}/bin)
+ENDIF(NOT LCB_NO_TOOLS)
 
 INSTALL(TARGETS couchbase
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+        RUNTIME DESTINATION ${LCB_INSTDIR}/bin
+        LIBRARY DESTINATION ${LCB_INSTDIR}/lib
+        ARCHIVE DESTINATION ${LCB_INSTDIR}/lib)
 
-INSTALL(TARGETS cbc cbc-pillowfight RUNTIME DESTINATION bin)
 
 INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/behavior.h
@@ -222,4 +296,4 @@ INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/types.h
               include/libcouchbase/visibility.h
               win32/libcouchbase/configuration.h
-        DESTINATION include/libcouchbase)
+            DESTINATION ${LCB_INSTDIR}/include/libcouchbase)
