@@ -35,7 +35,7 @@ sources.each do |file|
   STDERR.print("#{file} ... ")
   tmpname = "#{tempdir}/#{File.basename(file, ".txt")}.tmp"
   tmp = File.open(tmpname, "w")
-  contents.gsub!(/(?<!=\s)(((libcouchbase|lcb)\w*)\((\d+\w*)\))/, 'link:\2.\4.html[\1]')
+  contents.gsub!(/(?<!=\s)(((libcouchbase|lcb|cbc)\w*)\((\d+\w*)\))/, 'link:\2.\4.html[\1]')
   tmp.write(contents)
   tmp.close
   output = `a2x -D #{destdir} -L --doctype manpage --format xhtml #{tmpname} 2>&1`

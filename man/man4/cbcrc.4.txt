@@ -55,7 +55,7 @@ specifies all of the allowed parameters:
 ATTRIBUTES
 ----------
 
-See attributes(5) for descriptions of the following attributes:
+See lcb_attributes(5) for descriptions of the following attributes:
 
 [options="header"]
 |=======================================
@@ -66,4 +66,4 @@ See attributes(5) for descriptions of the following attributes:
 SEE ALSO
 --------
 
-cbc(1), attributes(5)
+cbc(1), lcb_attributes(5)
