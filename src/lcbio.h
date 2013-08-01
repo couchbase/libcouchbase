@@ -68,6 +68,11 @@ extern "C" {
     struct lcb_connection_st;
     typedef void (*lcb_connection_handler)(struct lcb_connection_st *, lcb_error_t);
 
+    /**
+     * These 'easy' handlers simply invoke the specified callback.
+     */
+    typedef void (*lcb_io_generic_cb)(struct lcb_connection_st*);
+
     struct lcb_timeout_info_st {
         /** The timer to use */
 
@@ -128,6 +133,11 @@ extern "C" {
             lcb_io_write_cb write;
             lcb_io_error_cb error;
         } completion;
+
+        struct {
+            lcb_io_generic_cb error;
+            lcb_io_generic_cb read;
+        } easy;
 
         /** Host/Port */
         char host[NI_MAXHOST + 1];
@@ -307,6 +317,14 @@ extern "C" {
 
     int lcb_connection_setup_host(lcb_connection_t conn,
                                   struct lcb_host_st *host);
+
+
+    /**
+     * Generic handler which invokes the appropriate 'v0' methods.
+     * This wraps some stuff and is potentially slower. Should be used for non-
+     * hot-paths, such as HTTP
+     */
+    void lcb_connection_setup_generic(lcb_connection_t conn);
 
 #ifdef __cplusplus
 }

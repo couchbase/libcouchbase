@@ -4,6 +4,9 @@
 #include "lcbio.h"
 #include "mcserver.h"
 
+static void io_error_handler(lcb_connection_t);
+static void io_read_handler(lcb_connection_t);
+
 static void negotiation_success(lcb_server_t *server)
 {
     server->negotiation->complete(server->negotiation, LCB_SUCCESS);
@@ -283,91 +286,19 @@ static void packet_handler(lcb_server_t *server)
     }
 }
 
-static void v0_handler(lcb_socket_t sock, short which, void *arg)
+static void io_error_handler(lcb_connection_t conn)
 {
-    lcb_server_t *c = arg;
-    lcb_connection_t conn = &c->connection;
-    lcb_sockrw_status_t status;
-    c->inside_handler = 1;
-
-    if (which & LCB_WRITE_EVENT) {
-        status = lcb_sockrw_v0_write(conn, conn->output);
-        if (status == LCB_SOCKRW_WROTE) {
-            lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-
-        } else if (status != LCB_SOCKRW_WOULDBLOCK) {
-            negotiation_set_error_ex(c, LCB_NETWORK_ERROR, "Couldn't write");
-            negotiation_bail(c->negotiation);
-            return;
-
-        } else {
-            lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 0);
-        }
-        if (! (which & LCB_READ_EVENT)) {
-            lcb_sockrw_apply_want(conn);
-        }
-    }
-
-    if (which & LCB_READ_EVENT) {
-        status = lcb_sockrw_v0_slurp(conn, conn->input);
-        if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
-            negotiation_set_error_ex(c, LCB_NETWORK_ERROR, "Couldn't read");
-            negotiation_bail(c->negotiation);
-            return;
-        }
-        packet_handler(c);
-    }
-
-    c->inside_handler = 0;
-
-    (void)sock;
+    lcb_server_t *c = conn->data;
+    negotiation_set_error_ex(c, LCB_NETWORK_ERROR, "IO Error");
+    negotiation_bail(c->negotiation);
 }
 
-static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf,
-                     int status)
+static void io_read_handler(lcb_connection_t conn)
 {
-    lcb_server_t *c;
-
-
-    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&c)) {
-        return;
-    }
-
-    if (status) {
-        negotiation_set_error_ex(c, LCB_NETWORK_ERROR, "Couldn't write");
-        negotiation_bail(c->negotiation);
-    } else {
-        lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 1);
-        lcb_sockrw_apply_want(&c->connection);
-    }
-}
-
-static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
-{
-    lcb_server_t *c;
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&c)) {
-        return;
-    }
-
-    lcb_sockrw_v1_onread_common(sockptr, &c->connection.input, nr);
-    if (nr < 1) {
-        negotiation_set_error_ex(c, LCB_NETWORK_ERROR, "Couldn't read");
-        negotiation_bail(c->negotiation);
-        return;
-    }
-
+    lcb_server_t *c = conn->data;
     c->inside_handler = 1;
     packet_handler(c);
-}
-
-static void v1_error(lcb_sockdata_t *sockptr)
-{
-    lcb_server_t *c;
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&c)) {
-        return;
-    }
-    negotiation_set_error_ex(c, LCB_NETWORK_ERROR, NULL);
-    negotiation_bail(c->negotiation);
+    c->inside_handler = 0;
 }
 
 lcb_error_t lcb_negotiation_init(lcb_server_t *server,
@@ -424,11 +355,9 @@ lcb_error_t lcb_negotiation_init(lcb_server_t *server,
     }
 
     /** Set up the I/O handlers */
-    conn->evinfo.handler = v0_handler;
-    conn->completion.write = v1_write;
-    conn->completion.read = v1_read;
-    conn->completion.error = v1_error;
-
+    conn->easy.error = io_error_handler;
+    conn->easy.read = io_read_handler;
+    lcb_connection_setup_generic(conn);
 
     lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(conn);

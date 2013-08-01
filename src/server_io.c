@@ -85,8 +85,8 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
 
 static void v0_handler(lcb_socket_t sock, short which, void *arg)
 {
-    lcb_server_t *c = arg;
-    lcb_connection_t conn = &c->connection;
+    lcb_connection_t conn = arg;
+    lcb_server_t *c = conn->data;
     (void)sock;
 
     if (which & LCB_WRITE_EVENT) {

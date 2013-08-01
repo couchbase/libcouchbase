@@ -135,7 +135,7 @@ static void apply_want_v0(lcb_connection_t conn)
                           conn->sockfd,
                           conn->evinfo.ptr,
                           conn->want,
-                          conn->data,
+                          conn,
                           conn->evinfo.handler);
 }
 
@@ -374,4 +374,92 @@ unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
     }
 
     return 1;
+}
+
+static void v0_generic_handler(lcb_socket_t sock, short which, void *arg)
+{
+    lcb_connection_t conn = arg;
+    lcb_sockrw_status_t status;
+
+    lcb_assert(sock != INVALID_SOCKET);
+
+    if (which & LCB_WRITE_EVENT) {
+        status = lcb_sockrw_v0_write(conn, conn->output);
+        if (status == LCB_SOCKRW_WROTE) {
+            if ((which & LCB_READ_EVENT) == 0) {
+                lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
+                lcb_sockrw_apply_want(conn);
+            }
+
+        } else if (status == LCB_SOCKRW_WOULDBLOCK) {
+            lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 0);
+            lcb_sockrw_apply_want(conn);
+
+        } else {
+            conn->easy.error(conn);
+            return;
+        }
+    }
+
+    if ( (which & LCB_READ_EVENT) == 0) {
+        return;
+    }
+
+    status = lcb_sockrw_v0_slurp(conn, conn->input);
+    if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
+        conn->easy.error(conn);
+    } else {
+        conn->easy.read(conn);
+    }
+}
+
+static void v1_generic_write_handler(lcb_sockdata_t *sd,
+                                     lcb_io_writebuf_t *wbuf,
+                                     int status)
+{
+    lcb_t instance;
+    lcb_connection_t conn = sd->lcbconn;
+
+    if (!lcb_sockrw_v1_cb_common(sd, wbuf, (void **)&instance)) {
+        return;
+    }
+
+    lcb_sockrw_v1_onwrite_common(sd, wbuf, &sd->lcbconn->output);
+
+    if (status) {
+        conn->easy.error(conn);
+    } else {
+        lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
+        lcb_sockrw_apply_want(conn);
+    }
+}
+
+static void v1_generic_read_handler(lcb_sockdata_t *sd, lcb_ssize_t nr)
+{
+    lcb_connection_t conn = sd->lcbconn;
+    if (!lcb_sockrw_v1_cb_common(sd, NULL, NULL)) {
+        return;
+    }
+
+    lcb_sockrw_v1_onread_common(sd, &sd->lcbconn->input, nr);
+    if (nr < 1) {
+        conn->easy.error(conn);
+        return;
+
+    } else {
+        conn->easy.read(conn);
+    }
+}
+
+static void v1_generic_error_handler(lcb_sockdata_t *sd)
+{
+    sd->lcbconn->easy.error(sd->lcbconn);
+}
+
+void lcb_connection_setup_generic(lcb_connection_t conn)
+{
+    conn->evinfo.handler = v0_generic_handler;
+    conn->completion.error = v1_generic_error_handler;
+    conn->completion.read = v1_generic_read_handler;
+    conn->completion.write = v1_generic_write_handler;
 }

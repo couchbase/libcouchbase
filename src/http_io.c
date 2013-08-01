@@ -28,7 +28,8 @@ static int request_do_parse(lcb_http_request_t req);
 
 static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
 {
-    lcb_http_request_t req = arg;
+    lcb_connection_t conn = arg;
+    lcb_http_request_t req = conn->data;
     lcb_t instance = req->instance;
     lcb_ssize_t rv;
     int should_continue = 1;

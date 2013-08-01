@@ -25,10 +25,8 @@
 #define LOG(ht, lvlbase, msg) \
     lcb_log(LOGARGS(ht, lvlbase), msg)
 
-static void v0_readwrite(lcb_socket_t sock, short which, void *arg);
-static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr);
-static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf, int status);
-static void v1_error(lcb_sockdata_t *sockptr);
+static void io_read_handler(lcb_connection_t);
+static void io_error_handler(lcb_connection_t);
 
 static lcb_error_t connect_next(http_provider *);
 static void read_common(http_provider *);
@@ -414,13 +412,12 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.nodes_updated = refresh_nodes;
     http->base.enabled = 1;
     http->connection.timeout.usec = parent->settings->config_timeout;
-
-    conn->evinfo.handler = v0_readwrite;
-    conn->completion.read = v1_read;
-    conn->completion.write = v1_write;
-    conn->completion.error = v1_error;
+    conn->easy.error = io_error_handler;
+    conn->easy.read = io_read_handler;
     conn->on_timeout = timeout_handler;
     conn->data = http;
+
+    lcb_connection_setup_generic(conn);
 
     lcb_string_init(&http->stream.chunk);
     lcb_string_init(&http->stream.header);
@@ -429,99 +426,16 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     return &http->base;
 }
 
-/**
- * Callback from libevent when we read from the REST socket
- * @param sock the readable socket
- * @param which what kind of events we may do
- * @param arg pointer to the libcouchbase instance
- */
-static void v0_readwrite(lcb_socket_t sock, short which, void *arg)
+static void io_error_handler(lcb_connection_t conn)
 {
-    http_provider *http = (http_provider *)arg;
-    lcb_connection_t conn = &http->connection;
-    lcb_sockrw_status_t status;
-
-    lcb_assert(sock != INVALID_SOCKET);
-    if ((which & LCB_WRITE_EVENT) == LCB_WRITE_EVENT) {
-        status = lcb_sockrw_v0_write(conn, conn->output);
-        if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
-            LOG(http, ERR, "Got error during flush");
-            io_error(http);
-            return;
-        }
-
-        if (lcb_sockrw_flushed(conn)) {
-            lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-        } else {
-            lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
-            lcb_sockrw_apply_want(conn);
-            return;
-        }
-    }
-
-    if ((which & LCB_READ_EVENT) == 0) {
-        return;
-    }
-
-    status = lcb_sockrw_v0_slurp(conn, conn->input);
-    if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
-        lcb_log(LOGARGS(http, ERROR), "Got error during read (%d)", status);
-        io_error(http);
-        return;
-    }
-
-    read_common(http);
-    (void)sock;
+    io_error((http_provider *)conn->data);
 }
 
-static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
+static void io_read_handler(lcb_connection_t conn)
 {
-    http_provider *http;
-    lcb_connection_t conn = sockptr->lcbconn;
-
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&http)) {
-        return;
-    }
-
-    lcb_sockrw_v1_onread_common(sockptr, &conn->input, nr);
-    if (nr < 1) {
-        io_error(http);
-        return;
-    }
-
-    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-    /* automatically does apply_want */
+    http_provider *http = conn->data;
     read_common(http);
 }
-
-static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf,
-                     int status)
-{
-    http_provider *http;
-    lcb_connection_t conn = sockptr->lcbconn;
-
-    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&http)) {
-        return;
-    }
-    lcb_sockrw_v1_onwrite_common(sockptr, wbuf, &conn->output);
-    if (status) {
-        io_error(http);
-    }
-
-    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-    lcb_sockrw_apply_want(conn);
-}
-
-static void v1_error(lcb_sockdata_t *sockptr)
-{
-    http_provider *http;
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&http)) {
-        return;
-    }
-
-    io_error(http);
-}
-
 
 static lcb_error_t set_next_config(struct htvb_st *vbs)
 {
