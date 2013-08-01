@@ -34,7 +34,7 @@ lcb_set_verbosity \- Set verbosity level on a node
 cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
 .nf
-#include <libcouchbase\&.h>
+#include <libcouchbase/couchbase\&.h>
 .fi
 .sp
 .nf

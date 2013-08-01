@@ -34,7 +34,7 @@ lcb_create_io_ops \- Create IO ops instance
 cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
 .nf
-#include <libcouchbase\&.h>
+#include <libcouchbase/couchbase\&.h>
 .fi
 .sp
 .nf

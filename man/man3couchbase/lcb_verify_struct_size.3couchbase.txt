@@ -10,7 +10,7 @@ SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
 
-    #include <libcouchbase.h>
+    #include <libcouchbase/couchbase.h>
 
     lcb_error_t lcb_verify_struct_size(lcb_uint32_t id,
                                        lcb_uint32_t version,

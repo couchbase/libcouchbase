@@ -34,7 +34,7 @@ lcb_set_touch_callback \- Set callback for touch operations
 cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
 .nf
-#include <libcouchbase\&.h>
+#include <libcouchbase/couchbase\&.h>
 .fi
 .sp
 .nf

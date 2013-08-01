@@ -10,7 +10,7 @@ SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
 
-    #include <libcouchbase.h>
+    #include <libcouchbase/couchbase.h>
 
     const char * lcb_strerror(lcb_t instance, lcb_error_t error);
 

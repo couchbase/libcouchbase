@@ -34,7 +34,7 @@ lcb_get_replica \- Retrieve a document from a replica location in the cluster
 cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
 .nf
-#include <libcouchbase\&.h>
+#include <libcouchbase/couchbase\&.h>
 .fi
 .sp
 .nf

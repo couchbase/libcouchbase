@@ -10,7 +10,7 @@ SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
 
-    #include <libcouchbase.h>
+    #include <libcouchbase/couchbase.h>
 
     lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance);
 

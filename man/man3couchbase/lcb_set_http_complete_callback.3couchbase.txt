@@ -10,7 +10,7 @@ SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
 
-    #include <libcouchbase.h>
+    #include <libcouchbase/couchbase.h>
 
     lcb_http_complete_callback lcb_set_http_complete_callback(lcb_t instance, lcb_http_complete_callback callback);
 

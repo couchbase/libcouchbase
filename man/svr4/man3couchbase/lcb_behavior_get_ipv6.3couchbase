@@ -34,7 +34,7 @@ lcb_behavior_get_ipv6 \- Get IPv6 settings
 cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
 .nf
-#include <libcouchbase\&.h>
+#include <libcouchbase/couchbase\&.h>
 .fi
 .sp
 .nf

@@ -34,7 +34,7 @@ lcb_set_arithmetic_callback \- Set callback for arithmetic operations
 cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
 .nf
-#include <libcouchbase\&.h>
+#include <libcouchbase/couchbase\&.h>
 .fi
 .sp
 .nf

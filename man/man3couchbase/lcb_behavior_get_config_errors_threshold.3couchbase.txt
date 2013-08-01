@@ -11,7 +11,7 @@ SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
 
-    #include <libcouchbase.h>
+    #include <libcouchbase/couchbase.h>
 
     lcb_size_t lcb_behavior_get_config_errors_threshold(lcb_t instance);
 

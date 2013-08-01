@@ -10,7 +10,7 @@ SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
 
-    #include <libcouchbase.h>
+    #include <libcouchbase/couchbase.h>
 
     lcb_uint32_t lcb_get_timeout(lcb_t instance);
 

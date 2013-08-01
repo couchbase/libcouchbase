@@ -34,7 +34,7 @@ lcb_get_num_nodes \- Get the number of nodes currently in the cluster
 cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
 .nf
-#include <libcouchbase\&.h>
+#include <libcouchbase/couchbase\&.h>
 .fi
 .sp
 .nf
