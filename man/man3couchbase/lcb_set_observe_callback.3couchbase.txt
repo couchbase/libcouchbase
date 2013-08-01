@@ -9,9 +9,10 @@ lcb_set_observe_callback - Set callback for observe operations
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_observe_callback lcb_set_observe_callback(lcb_t instance, lcb_observe_callback callback);
+    #include <libcouchbase.h>
+
+    lcb_observe_callback lcb_set_observe_callback(lcb_t instance, lcb_observe_callback callback);
 
 DESCRIPTION
 -----------

@@ -9,9 +9,10 @@ lcb_set_stat_callback - Set callback for stats
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_stat_callback lcb_set_stat_callback(lcb_t, lcb_stat_callback);
+    #include <libcouchbase.h>
+
+    lcb_stat_callback lcb_set_stat_callback(lcb_t, lcb_stat_callback);
 
 DESCRIPTION
 -----------

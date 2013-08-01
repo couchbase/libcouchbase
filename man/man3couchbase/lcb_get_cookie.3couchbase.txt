@@ -10,11 +10,12 @@ SYNOPSIS
 --------
 
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-const void *lcb_get_cookie(lcb_t instance);
+    #include <libcouchbase.h>
 
-void lcb_set_cookie(lcb_t instance, const void * cookie);
+    const void *lcb_get_cookie(lcb_t instance);
+
+    void lcb_set_cookie(lcb_t instance, const void * cookie);
 
 
 DESCRIPTION

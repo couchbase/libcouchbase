@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: lcb_get_cookie
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/07/2013
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 08/01/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_GET_COOKIE" "3couchbase" "01/07/2013" "\ \&" "\ \&"
+.TH "LCB_GET_COOKIE" "3couchbase" "08/01/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -31,11 +31,19 @@
 lcb_get_cookie \- Get userdata stored for instance
 .SH "SYNOPSIS"
 .sp
-cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ] #include <libcouchbase\&.h>
+cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
+.nf
+#include <libcouchbase\&.h>
+.fi
+.sp
+.nf
 const void *lcb_get_cookie(lcb_t instance);
+.fi
 .sp
+.nf
 void lcb_set_cookie(lcb_t instance, const void * cookie);
+.fi
 .SH "DESCRIPTION"
 .sp
 These functions are used to attach or retrieve a user\-defined value to a libcouchbase instance\&.

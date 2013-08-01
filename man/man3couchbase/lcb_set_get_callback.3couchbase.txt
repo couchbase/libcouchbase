@@ -9,10 +9,11 @@ lcb_set_get_callback - Set callback for get operations
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_get_callback lcb_set_get_callback(lcb_t instance,
-                                      lcb_get_callback callback);
+    #include <libcouchbase.h>
+
+    lcb_get_callback lcb_set_get_callback(lcb_t instance,
+                                          lcb_get_callback callback);
 
 DESCRIPTION
 -----------

@@ -9,9 +9,10 @@ lcb_get_num_nodes - Get the number of nodes currently in the cluster
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_int32_t lcb_get_num_nodes(lcb_t instance);
+    #include <libcouchbase.h>
+
+    lcb_int32_t lcb_get_num_nodes(lcb_t instance);
 
 DESCRIPTION
 -----------

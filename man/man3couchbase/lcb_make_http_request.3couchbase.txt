@@ -9,13 +9,14 @@ lcb_make_http_request - Create instance
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_error_t lcb_make_http_request(lcb_t instance,
-                                  const void *command_cookie,
-                                  lcb_http_type_t type,
-                                  const lcb_http_cmd_t *cmd,
-                                  lcb_http_request_t *request);
+    #include <libcouchbase.h>
+
+    lcb_error_t lcb_make_http_request(lcb_t instance,
+                                      const void *command_cookie,
+                                      lcb_http_type_t type,
+                                      const lcb_http_cmd_t *cmd,
+                                      lcb_http_request_t *request);
 
 DESCRIPTION
 -----------

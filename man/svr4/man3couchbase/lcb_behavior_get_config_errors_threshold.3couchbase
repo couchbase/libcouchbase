@@ -2,12 +2,12 @@
 .\"     Title: lcb_behavior_get_config_errors_threshold
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 07/31/2013
+.\"      Date: 08/01/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_BEHAVIOR_GET_CON" "3couchbase" "07/31/2013" "\ \&" "\ \&"
+.TH "LCB_BEHAVIOR_GET_CON" "3couchbase" "08/01/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -31,11 +31,20 @@
 lcb_behavior_get_config_errors_threshold \- Get the threshold values for configuration errors
 .SH "SYNOPSIS"
 .sp
-cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ] #include <libcouchbase\&.h>
+cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
+.nf
+#include <libcouchbase\&.h>
+.fi
+.sp
+.nf
 lcb_size_t lcb_behavior_get_config_errors_threshold(lcb_t instance);
+.fi
 .sp
-void lcb_behavior_set_config_errors_threshold(lcb_t instance, lcb_size_t num_events);
+.nf
+void lcb_behavior_set_config_errors_threshold(lcb_t instance,
+                                              lcb_size_t num_events);
+.fi
 .SH "DESCRIPTION"
 .sp
 This interface deprecated and will be removed in libcouchbase 3\&.x in favour lcb_cntl(3couchbase)\&. Consider this replacement:

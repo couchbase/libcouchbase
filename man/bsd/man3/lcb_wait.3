@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: lcb_wait
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
-.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 01/07/2013
+.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
+.\"      Date: 08/01/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_WAIT" "3" "01/07/2013" "\ \&" "\ \&"
+.TH "LCB_WAIT" "3" "08/01/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -31,13 +31,23 @@
 lcb_wait \- Wait for events
 .SH "SYNOPSIS"
 .sp
-cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ] #include <libcouchbase\&.h>
+cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .sp
+.nf
+#include <libcouchbase\&.h>
+.fi
+.sp
+.nf
 lcb_error_t lcb_wait(lcb_t instance);
+.fi
 .sp
+.nf
 lcb_error_t lcb_breakout(lcb_t instance);
+.fi
 .sp
+.nf
 int lcb_is_waiting(lcb_t instance);
+.fi
 .SH "DESCRIPTION"
 .sp
 libcouchbase is implemented in a fully anynchronous way, but to allow users to use libcouchbase without an event loop libcouchbase provides simple primitives to wait for operations\&.

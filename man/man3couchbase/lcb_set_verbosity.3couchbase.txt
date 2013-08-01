@@ -9,12 +9,13 @@ lcb_set_verbosity - Set verbosity level on a node
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_error_t lcb_verbosity(lcb_t instance,
-                          const void *command_cookie,
-                          lcb_size_t num,
-                          const lcb_verbosity_cmd_t *const *commands);
+    #include <libcouchbase.h>
+
+    lcb_error_t lcb_verbosity(lcb_t instance,
+                              const void *command_cookie,
+                              lcb_size_t num,
+                              const lcb_verbosity_cmd_t *const *commands);
 
 
 DESCRIPTION

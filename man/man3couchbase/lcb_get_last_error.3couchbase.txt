@@ -9,9 +9,10 @@ lcb_get_last_error - Get the last error code set by a function
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_error_t lcb_get_last_error(lcb_t instance);
+    #include <libcouchbase.h>
+
+    lcb_error_t lcb_get_last_error(lcb_t instance);
 
 DESCRIPTION
 -----------

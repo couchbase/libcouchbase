@@ -9,9 +9,10 @@ lcb_set_http_data_callback - Set callback for http_data chunks
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_http_data_callback lcb_set_http_data_callback(lcb_t instance, lcb_http_data_callback callback);
+    #include <libcouchbase.h>
+
+    lcb_http_data_callback lcb_set_http_data_callback(lcb_t instance, lcb_http_data_callback callback);
 
 DESCRIPTION
 -----------

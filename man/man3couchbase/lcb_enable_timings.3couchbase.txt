@@ -9,15 +9,16 @@ lcb_enable_timings - internal timings
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_error_t lcb_enable_timings(lcb_t instance);
+    #include <libcouchbase.h>
 
-lcb_error_t lcb_disable_timings(lcb_t instance);
+    lcb_error_t lcb_enable_timings(lcb_t instance);
 
-lcb_error_t lcb_get_timings(lcb_t instance,
-                            const void * cookie,
-                            lcb_timings_callback callback);
+    lcb_error_t lcb_disable_timings(lcb_t instance);
+
+    lcb_error_t lcb_get_timings(lcb_t instance,
+                                const void * cookie,
+                                lcb_timings_callback callback);
 
 
 DESCRIPTION

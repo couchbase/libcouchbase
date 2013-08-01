@@ -9,13 +9,14 @@ lcb_verify_struct_size - Verify compiler setup
 SYNOPSIS
 --------
 cc [ flag ... ] file... -lcouchbase [ library ... ]
-#include <libcouchbase.h>
 
-lcb_error_t lcb_verify_struct_size(lcb_uint32_t id,
-                                   lcb_uint32_t version,
-                                   lcb_size_t size);
+    #include <libcouchbase.h>
 
-int lcb_verify_compiler_setup();
+    lcb_error_t lcb_verify_struct_size(lcb_uint32_t id,
+                                       lcb_uint32_t version,
+                                       lcb_size_t size);
+
+    int lcb_verify_compiler_setup();
 
 DESCRIPTION
 -----------
