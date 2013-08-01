@@ -2,12 +2,12 @@
 .\"     Title: lcb_set_get_callback
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/01/2013
+.\"      Date: 08/02/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_SET_GET_CALLBACK" "3couchbase" "08/01/2013" "\ \&" "\ \&"
+.TH "LCB_SET_GET_CALLBACK" "3couchbase" "08/02/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -197,9 +197,14 @@ MT\-Safe
 T}
 .TE
 .sp 1
+.SH "COPYRIGHT"
+.sp
+Copyright 2010\-2013 Couchbase, Inc\&.
 .SH "SEE ALSO"
 .sp
-libcouchbase(3LIB), lcb_get(3couchbase), lcb_attributes(5)
+Learn more at http://www\&.couchbase\&.com/communities/c\&.
+.sp
+libcouchbase(3lib), lcb_get(3couchbase), lcb_attributes(5)
 .SH "AUTHOR"
 .PP
 \fBTrond Norbye\fR <\&trond\&.norbye@couchbase\&.com\&>

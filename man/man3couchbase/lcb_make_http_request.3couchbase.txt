@@ -174,8 +174,14 @@ See lcb_attributes(5) for descriptions of the following attributes:
 | MT-Level            | MT-Safe
 |=======================================
 
+COPYRIGHT
+---------
+Copyright 2010-2013 Couchbase, Inc.
+
 SEE ALSO
 --------
+Learn more at <http://www.couchbase.com/communities/c>.
+
 libcouchbase(3lib), lcb_create(3couchbase),
 lcb_cancel_http_request(3couchbase),
 lcb_set_http_data_callback(3couchbase),

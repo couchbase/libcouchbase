@@ -484,7 +484,12 @@ See lcb_attributes(5) for descriptions of the following attributes:
 | Interface Stability | Volatile
 |=======================================
 
+COPYRIGHT
+---------
+Copyright 2010-2013 Couchbase, Inc.
+
 SEE ALSO
 --------
+Learn more at <http://www.couchbase.com/communities/c>.
 
 cbcrc(4), lcb_attributes(5)
