@@ -183,4 +183,17 @@
 #define EREMOTE                 WSAEREMOTE
 #endif
 
+#ifndef EPROTO
+#define EPROTO                  WSAEPROTONOSUPPORT
+#endif
+
+#ifndef ECANCELED
+#define ECANCELED               WSAECANCELLED
+#endif
+
+/** Some versions have this; some don't */
+#ifndef ENOTSUP
+#define ENOTSUP                 -1
+#endif
+
 #endif
