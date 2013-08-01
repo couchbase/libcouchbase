@@ -1306,7 +1306,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     int proxy_port = 0;
     if (cmd == cbc_bucket_create) {
         getopt.addOption(new CommandLineOption('B', "bucket-type", true,
-                                               "Bucket type, possible values are: membase (with alias couchbase), memcached) (default: membase)"));
+                                               "Bucket type, possible values are: membase (with alias couchbase), memcached) (default: couchbase)"));
         getopt.addOption(new CommandLineOption('q', "ram-quota", true,
                                                "RAM quota in megabytes (default: 100)"));
         getopt.addOption(new CommandLineOption('a', "auth-type", true,
