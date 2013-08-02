@@ -195,8 +195,14 @@ struct lcb_cntl_server_st {
  */
 #define LCB_CNTL_DURABILITY_INTERVAL    0x0e
 
+/**
+ * Get/Set the default timeout for *non-view* HTTP requests.
+ * Arg: lcb_uint32_t*
+ */
+#define LCB_CNTL_HTTP_TIMEOUT           0x0f
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                   0x0e
+#define LCB_CNTL__MAX                   0x0f
 
 
 #ifdef __cplusplus

@@ -63,6 +63,14 @@ Available Commands
         lcb_uint32_t tmo = 30000000;
         lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_VIEW_TIMEOUT, &tmo);
 
+*LCB_CNTL_HTTP_TIMEOUT* '(lcb_uint32_t*)'::
+    Set or get the HTTP timeout. This is used for administrative
+    (LCB_HTTP_TYPE_MANAGEMENT) or raw (LCB_HTTP_TYPE_RAW) requests.
+    Default is 75000000 (75 seconds)
+
+        lcb_uint32_t tmo = 20000000;
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTTP_TIMEOUT, &tmo);
+
 *LCB_CNTL_RBUFSIZE* '(lcb_size_t*)'::
     Set or get default read buffer size (this is not a socket option).
     Default is 32768 bytes.

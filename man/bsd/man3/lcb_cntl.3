@@ -2,12 +2,12 @@
 .\"     Title: lcb_cntl
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/02/2013
+.\"      Date: 08/08/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CNTL" "3" "08/02/2013" "\ \&" "\ \&"
+.TH "LCB_CNTL" "3" "08/08/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -94,6 +94,22 @@ Set or get view (map/reduce) timeout in microseconds\&. Default is 75000000 (75 
 .nf
 lcb_uint32_t tmo = 30000000;
 lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_VIEW_TIMEOUT, &tmo);
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fBLCB_CNTL_HTTP_TIMEOUT\fR \fI(lcb_uint32_t*)\fR
+.RS 4
+Set or get the HTTP timeout\&. This is used for administrative (LCB_HTTP_TYPE_MANAGEMENT) or raw (LCB_HTTP_TYPE_RAW) requests\&. Default is 75000000 (75 seconds)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_uint32_t tmo = 20000000;
+lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTTP_TIMEOUT, &tmo);
 .fi
 .if n \{\
 .RE
@@ -505,6 +521,38 @@ Get or set the configuration error threshold\&. This number indicates how many n
 .nf
 lcb_size_t num_events = 10;
 lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFERRTHRESH, &num_events);
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fBLCB_CNTL_DURABILITY_TIMEOUT\fR \fI(lcb_uint32_t*)\fR
+.RS 4
+Get or set the default timeout for durability operations\&. Default is 5000000 (5 seconds)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_uint32_t tmo = 7500000; /* 7\&.5 seconds */
+lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_DURABILITY_TIMEOUT, &tmo);
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fBLCB_CNTL_DURABILITY_INTERVAL\fR \fI(lcb_uint32_t*)\fR
+.RS 4
+Get or set the default durability polling interval Default is 100000 (10 milliseconds)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_uint32_t tmo = 50000; /* 5 milliseconds */
+lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_DURABILITY_INTERVAL, &tmo);
 .fi
 .if n \{\
 .RE

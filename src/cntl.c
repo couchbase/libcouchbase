@@ -38,6 +38,9 @@ static lcb_uint32_t* get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_DURABILITY_TIMEOUT:
         return &instance->durability_timeout;
 
+    case LCB_CNTL_HTTP_TIMEOUT:
+        return &instance->http_timeout;
+
     default:
         return NULL;
     }
@@ -265,6 +268,7 @@ static ctl_handler handlers[] = {
     confthresh      /* LCB_CNTL_CONFERRTHRESH */,
     timeout_common, /* LCB_CNTL_DURABILITY_INTERVAL */
     timeout_common, /* LCB_CNTL_DURABILITY_TIMEOUT */
+    timeout_common, /* LCB_CNTL_HTTP_TIMEOUT */
 };
 
 

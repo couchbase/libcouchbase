@@ -198,8 +198,7 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
         conn->timeout.usec = req->instance->views_timeout;
 
     } else {
-        /** TODO: find a sane value for this? */
-        conn->timeout.usec = 0;
+        conn->timeout.usec = req->instance->http_timeout;
     }
 
     conn->instance = req->instance;

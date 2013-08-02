@@ -324,6 +324,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->wbufsize = LCB_DEFAULT_WBUFSIZE;
     obj->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
     obj->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
+    obj->views_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
 
     lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
 

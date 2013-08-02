@@ -55,6 +55,7 @@
 #define LCB_DEFAULT_WBUFSIZE 32768
 #define LCB_DEFAULT_DURABILITY_TIMEOUT 5000000
 #define LCB_DEFAULT_DURABILITY_INTERVAL 100000
+#define LCB_DEFAULT_HTTP_TIMEOUT 75000000
 
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
@@ -252,6 +253,7 @@ extern "C" {
         lcb_error_t last_error;
 
         lcb_uint32_t views_timeout;
+        lcb_uint32_t http_timeout;
         lcb_uint32_t durability_timeout;
         lcb_uint32_t durability_interval;
 
