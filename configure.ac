@@ -659,7 +659,7 @@ CPPFLAGS="$SAVE_CPPFLAGS"
 LDFLAGS="$SAVE_LDFLAGS"
 
 dnl ----------------------------------------------------------------------------
-AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h])
+AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h VERSION])
 AC_OUTPUT
 AS_IF([test "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no"],
       [AS_IF([test "x$DOWNLOAD" = "x" -o "x$UNZIP" = "xno"],

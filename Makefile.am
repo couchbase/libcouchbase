@@ -500,7 +500,8 @@ EXTRA_DIST = \
              man/svr4 \
              src/probes.d \
              tests/start_mock.sh \
-             win32
+             win32 \
+             VERSION
 
 if HAVE_DOXYGEN
 docs:
