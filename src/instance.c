@@ -314,19 +314,20 @@ lcb_error_t lcb_create(lcb_t *instance,
         io = ops;
         io->v.v0.need_cleanup = 1;
     }
+
     obj->io = io;
-    lcb_initialize_packet_handlers(obj);
-    lcb_behavior_set_syncmode(obj, LCB_ASYNCHRONOUS);
-    lcb_behavior_set_ipv6(obj, LCB_IPV6_DISABLED);
-    lcb_set_timeout(obj, LCB_DEFAULT_TIMEOUT);
-    lcb_set_view_timeout(obj, LCB_DEFAULT_VIEW_TIMEOUT);
+    obj->syncmode = LCB_ASYNCHRONOUS;
+    obj->ipv6 = LCB_IPV6_DISABLED;
+    obj->timeout.usec = LCB_DEFAULT_TIMEOUT;
+    obj->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
     obj->rbufsize = LCB_DEFAULT_RBUFSIZE;
     obj->wbufsize = LCB_DEFAULT_WBUFSIZE;
     obj->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
     obj->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
-    obj->views_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
+    obj->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
+    obj->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
 
-    lcb_behavior_set_config_errors_threshold(obj, LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD);
+    lcb_initialize_packet_handlers(obj);
 
     err = lcb_connection_init(&obj->connection, obj);
     if (err != LCB_SUCCESS) {
