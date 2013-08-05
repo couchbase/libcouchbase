@@ -287,6 +287,7 @@ INSTALL(TARGETS couchbase
 INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/behavior.h
               include/libcouchbase/callbacks.h
+              include/libcouchbase/cntl.h
               include/libcouchbase/compat.h
               include/libcouchbase/couchbase.h
               include/libcouchbase/error.h
