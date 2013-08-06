@@ -4386,5 +4386,11 @@ typedef struct _OVERLAPPED_ENTRY {
 # define ERROR_SYMLINK_NOT_SUPPORTED 1464
 #endif
 
+/** Mingw doesn't have this */
+#ifndef SO_UPDATE_CONNECT_CONTEXT
+#define SO_UPDATE_CONNECT_CONTEXT 0x7010
+#endif
+
+
 
 #endif /* UV_WIN_WINAPI_H_ */

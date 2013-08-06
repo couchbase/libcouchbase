@@ -339,6 +339,16 @@ static unsigned int close_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
     return 0;
 }
 
+static int sock_nameinfo(lcb_io_opt_t iobase,
+                         lcb_sockdata_t *sockbase,
+                         struct lcb_nameinfo_st *ni)
+{
+    iocp_sockdata_t *sd = (iocp_sockdata_t *)sockbase;
+    getsockname(sd->sSocket, ni->local.name, ni->local.len);
+    getpeername(sd->sSocket, ni->remote.name, ni->remote.len);
+    return 0;
+}
+
 static void *create_timer(lcb_io_opt_t iobase)
 {
     iocp_timer_t *tmr = (iocp_timer_t *)calloc(1, sizeof(*tmr));
@@ -439,6 +449,7 @@ lcb_error_t lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg)
 
     tbl->v.v1.create_socket = create_socket;
     tbl->v.v1.close_socket = close_socket;
+    tbl->v.v1.get_nameinfo = sock_nameinfo;
 
     tbl->v.v1.start_connect = start_connect;
 

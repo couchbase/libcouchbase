@@ -134,6 +134,18 @@ extern "C" {
         lcb_size_t iov_len;
     };
 
+    struct lcb_nameinfo_st {
+        struct {
+            struct sockaddr *name;
+            int *len;
+        } local;
+
+        struct {
+            struct sockaddr *name;
+            int *len;
+        } remote;
+    };
+
     typedef struct lcb_io_opt_st *lcb_io_opt_t;
 
     struct lcb_iops_table_v0_st {
@@ -433,7 +445,15 @@ extern "C" {
                                             void *cb_data));
 
         /** v0: create_event */
-        void *pad_1;
+
+        /**
+         * Return the 'remote' and 'local' address of a connected socket.
+         * Returns nonzero if the socket is invalid
+         */
+        int (*get_nameinfo)(struct lcb_io_opt_st *iops,
+                            lcb_sockdata_t *sock,
+                            struct lcb_nameinfo_st *ni);
+
         /**  v0: destroy_event */
         void *pad_2;
         /** v0: update_event */

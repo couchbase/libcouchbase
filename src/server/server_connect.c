@@ -23,55 +23,82 @@
 
 #include "internal.h"
 
-/**
- * Get the name of the local endpoint
- * @param sock The socket to query the name for
- * @param buffer The destination buffer
- * @param buffz The size of the output buffer
- * @return 1 if success, 0 otherwise
- */
-static int get_local_address(lcb_socket_t sock,
-                             char *buffer,
-                             lcb_size_t bufsz)
-{
-    char h[NI_MAXHOST];
-    char p[NI_MAXSERV];
-    struct sockaddr_storage saddr;
-    socklen_t salen = sizeof(saddr);
+struct nameinfo_common {
+    char remote[NI_MAXHOST + NI_MAXSERV + 2];
+    char local[NI_MAXHOST + NI_MAXSERV + 2];
+};
 
-    if ((getsockname(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-            (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                         p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-            (snprintf(buffer, bufsz, "%s;%s", h, p) < 0)) {
+static int saddr_to_string(struct sockaddr *saddr, int len,
+                           char *buf, lcb_size_t nbuf)
+{
+    char h[NI_MAXHOST + 1];
+    char p[NI_MAXSERV + 1];
+    int rv;
+
+    rv = getnameinfo(saddr, len, h, sizeof(h), p, sizeof(p),
+                     NI_NUMERICHOST|NI_NUMERICSERV);
+    if (rv < 0) {
+        return 0;
+    }
+
+    if (snprintf(buf, nbuf, "%s;%s", h, p) < 0) {
         return 0;
     }
 
     return 1;
 }
 
-/**
- * Get the name of the remote enpoint
- * @param sock The socket to query the name for
- * @param buffer The destination buffer
- * @param buffz The size of the output buffer
- * @return 1 if success, 0 otherwise
- */
-static int get_remote_address(lcb_socket_t sock,
-                              char *buffer,
-                              lcb_size_t bufsz)
+static int get_nameinfo(lcb_connection_t conn,
+                        struct nameinfo_common *nistrs)
 {
-    char h[NI_MAXHOST];
-    char p[NI_MAXSERV];
-    struct sockaddr_storage saddr;
-    socklen_t salen = sizeof(saddr);
+    struct sockaddr_storage sa_local;
+    struct sockaddr_storage sa_remote;
+    int n_salocal, n_saremote;
+    struct lcb_nameinfo_st ni;
+    int rv;
 
-    if ((getpeername(sock, (struct sockaddr *)&saddr, &salen) < 0) ||
-            (getnameinfo((struct sockaddr *)&saddr, salen, h, sizeof(h),
-                         p, sizeof(p), NI_NUMERICHOST | NI_NUMERICSERV) < 0) ||
-            (snprintf(buffer, bufsz, "%s;%s", h, p) < 0)) {
+    n_salocal = sizeof(sa_local);
+    n_saremote = sizeof(sa_remote);
+
+    ni.local.name = (struct sockaddr *)&sa_local;
+    ni.local.len = &n_salocal;
+
+    ni.remote.name = (struct sockaddr *)&sa_remote;
+    ni.remote.len = &n_saremote;
+
+    if (conn->instance->io->version == 1) {
+        rv = conn->instance->io->v.v1.get_nameinfo(conn->instance->io,
+                                                   conn->sockptr,
+                                                   &ni);
+
+        if (ni.local.len == 0 || ni.remote.len == 0 || rv < 0) {
+            return 0;
+        }
+
+    } else {
+        socklen_t sl_tmp = sizeof(sa_local);
+
+        rv = getsockname(conn->sockfd, ni.local.name, &sl_tmp);
+        n_salocal = sl_tmp;
+        if (rv < 0) {
+            return 0;
+        }
+        rv = getpeername(conn->sockfd, ni.remote.name, &sl_tmp);
+        n_saremote = sl_tmp;
+        if (rv < 0) {
+            return 0;
+        }
+    }
+
+    if (!saddr_to_string(ni.remote.name, *ni.remote.len,
+                         nistrs->remote, sizeof(nistrs->remote))) {
         return 0;
     }
 
+    if (!saddr_to_string(ni.local.name, *ni.local.len,
+                         nistrs->local, sizeof(nistrs->local))) {
+        return 0;
+    }
     return 1;
 }
 
@@ -140,8 +167,7 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_server_t *server = (lcb_server_t*)conn->data;
-    char local[NI_MAXHOST + NI_MAXSERV + 2];
-    char remote[NI_MAXHOST + NI_MAXSERV + 2];
+    struct nameinfo_common nistrs;
     int sasl_in_progress;
 
     conn->evinfo.handler = lcb_server_v0_event_handler;
@@ -155,12 +181,14 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
     }
 
     sasl_in_progress = (server->sasl_conn != NULL);
-
-    get_local_address(conn->sockfd, local, sizeof(local));
-    get_remote_address(conn->sockfd, remote, sizeof(remote));
+    if (!get_nameinfo(conn, &nistrs)) {
+        /** This normally shouldn't happen! */
+        connection_error(server, LCB_NETWORK_ERROR);
+    }
 
     if (!sasl_in_progress) {
-        assert(sasl_client_new("couchbase", conn->host, local, remote,
+        assert(sasl_client_new("couchbase", conn->host,
+                               nistrs.local, nistrs.remote,
                                server->instance->sasl.callbacks, 0,
                                &server->sasl_conn) == SASL_OK);
     }

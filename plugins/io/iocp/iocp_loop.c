@@ -120,6 +120,19 @@ static void handle_single_overlapped(iocp_t *io,
 
     case LCBIOCP_ACTION_CONNECT:
         u_ol.conn = (iocp_connect_t *)ol;
+
+        if (opstatus == 0) {
+            int rv = setsockopt(ol->sd->sSocket,
+                                SOL_SOCKET,
+                                SO_UPDATE_CONNECT_CONTEXT,
+                                NULL,
+                                0);
+
+            if (rv == SOCKET_ERROR) {
+                fprintf(stderr, "SO_UPDATE_CONNECT_CONTEXT failed (%d)\n",
+                        WSAGetLastError());
+            }
+        }
         u_ol.conn->cb(&sd->sd_base, opstatus);
         pointer_to_free = u_ol.conn;
         break;
