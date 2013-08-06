@@ -12,7 +12,7 @@ cc [ flag ... ] file... -lcouchbase [ library ... ]
 
     #include <libcouchbase/couchbase.h>
 
-    lcb_error_t lcb_create(lcb_t *instance);
+    lcb_error_t lcb_connect(lcb_t *instance);
 
 
 DESCRIPTION

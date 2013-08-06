@@ -13,9 +13,9 @@ cc [ flag ... ] file... -lcouchbase [ library ... ]
     #include <libcouchbase/couchbase.h>
 
     lcb_error_t lcb_store(lcb_t instance,
-                        const void *command_cookie,
-                        lcb_size_t num,
-                        const lcb_store_cmd_t *const *commands);
+                          const void *command_cookie,
+                          lcb_size_t num,
+                          const lcb_store_cmd_t *const *commands);
 
 
 DESCRIPTION

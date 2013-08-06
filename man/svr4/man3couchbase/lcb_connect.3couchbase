@@ -2,12 +2,12 @@
 .\"     Title: lcb_connect
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/02/2013
+.\"      Date: 08/06/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CONNECT" "3couchbase" "08/02/2013" "\ \&" "\ \&"
+.TH "LCB_CONNECT" "3couchbase" "08/06/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -38,7 +38,7 @@ cc [ flag \&... ] file\&... \-lcouchbase [ library \&... ]
 .fi
 .sp
 .nf
-lcb_error_t lcb_create(lcb_t *instance);
+lcb_error_t lcb_connect(lcb_t *instance);
 .fi
 .SH "DESCRIPTION"
 .sp
