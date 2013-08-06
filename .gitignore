@@ -146,6 +146,7 @@ CTestTestfile.cmake
 Project.opensdf
 Project.sdf
 Project.suo
+VERSION
 cbc-pillowfight.dir/
 cbc.dir/
 cmake_install.cmake
