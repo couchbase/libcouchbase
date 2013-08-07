@@ -452,6 +452,8 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
                 if (ev->flags & LCB_WRITE_EVENT) {
                     FD_SET(ev->sock, io->writefds);
                 }
+
+                FD_SET(ev->sock, io->exceptfds);
                 ++nevents;
             }
         }
@@ -522,6 +524,9 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
                     }
                     if (FD_ISSET(ev->sock, io->writefds)) {
                         ev->eflags |= LCB_WRITE_EVENT;
+                    }
+                    if (FD_ISSET(ev->sock, io->exceptfds)) {
+                        ev->eflags = LCB_RW_EVENT; /** It should error */
                     }
                     if (ev->eflags != 0) {
                         ev->next = active;
