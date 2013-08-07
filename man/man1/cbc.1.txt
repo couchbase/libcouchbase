@@ -85,6 +85,10 @@ The following options are supported:
 *-t, --timeout*='TIMEOUT'::
     Specify timeout value in microseconds (default: 2500000)
 
+*-D, --dumb*::
+    Enable memcached compatibility mode. With this option set
+    subcommands can be executed against regular memcached node.
+
 
 SUBCOMMANDS
 -----------
@@ -254,7 +258,7 @@ Only warnings will be reported. This is what you normally want!
     command successfully.
 
 *cbc pillowfight* [-?] [-h 'HOST'] [-b 'BUCKET'] [-u 'USER'] [-P 'PASSWORD'] [-T] [-i 'ITERATIONS'] [-I 'ITEMS'] [-p 'PREFIX'] [-t 'THREADS'] [-Q 'INSTANCES'] [-l] [-s 'SEED'] [-r 'RATIO'] [-m 'MIN'] [-M 'MAX'] [-d]::
-    Generate test load for the cluster. Currenly only one workload
+    Generate test load for the cluster. Currently only one workload
     type available: mixed SET and GET operations (see '--ratio' option
     below).
 
@@ -468,7 +472,7 @@ environment variables).
     below.
 
 *LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL*::
-    Symbol which should be accessibe in the plugin. The library will
+    Symbol which should be accessible in the plugin. The library will
     use the function, associated with the symbol to create new
     instances of the IO object.
 

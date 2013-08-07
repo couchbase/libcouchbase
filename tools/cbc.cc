@@ -1226,6 +1226,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 {
     Configuration config;
     Getopt getopt;
+    bool dumb = false;
 
     getopt.addOption(new CommandLineOption('?', "help", false,
                                            "Print this help text"));
@@ -1241,6 +1242,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Enable command timings"));
     getopt.addOption(new CommandLineOption('t', "timeout", true,
                                            "Specify timeout value"));
+    getopt.addOption(new CommandLineOption('D', "dumb", false,
+                                           "Behave like legacy memcached client (default false)"));
 
     int replica_strategy = -1;
     int replica_idx = 0;
@@ -1358,6 +1361,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             case 'T' :
                 config.setTimingsEnabled(true);
+                break;
+
+            case 'D':
+                dumb = true;
                 break;
 
             case '?':
@@ -1511,16 +1518,26 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     }
 
     lcb_t instance;
-    struct lcb_create_st options(config.getHost(), config.getUser(),
-                                 config.getPassword(), config.getBucket());
-    if (cmd == cbc_admin || cmd == cbc_bucket_create || cmd == cbc_bucket_delete) {
-        options.v.v1.type = LCB_TYPE_CLUSTER;
-        if (config.getPassword() == NULL || config.getUser() == NULL) {
-            cerr << "Username and password mandatory for admin operations." << endl;
-            exit(EXIT_FAILURE);
+    lcb_error_t err;
+    if (dumb) {
+        struct lcb_memcached_st memcached;
+
+        memset(&memcached, 0, sizeof(memcached));
+        memcached.serverlist = config.getHost();
+        err = lcb_create_compat(LCB_MEMCACHED_CLUSTER,
+                                &memcached, &instance, NULL);
+    } else {
+        struct lcb_create_st options(config.getHost(), config.getUser(),
+                                     config.getPassword(), config.getBucket());
+        if (cmd == cbc_admin || cmd == cbc_bucket_create || cmd == cbc_bucket_delete) {
+            options.v.v1.type = LCB_TYPE_CLUSTER;
+            if (config.getPassword() == NULL || config.getUser() == NULL) {
+                cerr << "Username and password mandatory for admin operations." << endl;
+                exit(EXIT_FAILURE);
+            }
         }
+        err = lcb_create(&instance, &options);
     }
-    lcb_error_t err = lcb_create(&instance, &options);
     if (err != LCB_SUCCESS) {
         cerr << "Failed to create couchbase instance: " << endl
              << lcb_strerror(NULL, err) << endl;
