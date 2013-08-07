@@ -127,6 +127,7 @@
 /src/stamp-h1
 /test-suite.log
 /tests/*-test
+/tests/check-all
 /tests/CouchbaseMock.jar
 /tests/homebrew-acceptance-test.log
 /tests/homebrew-acceptance-test.trs

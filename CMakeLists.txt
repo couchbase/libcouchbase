@@ -218,6 +218,7 @@ IF(NOT LCB_NO_TESTS)
             tests/url_encoding-tests.cc
 
     # Support files
+            tests/procutil.c
             tests/server.c
             tests/timeout.c
             tests/testutil.cc

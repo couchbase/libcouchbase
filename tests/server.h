@@ -31,9 +31,7 @@ extern "C" {
   #define sleep(s) Sleep( (s) * 1000)
 #endif
 
-#include <windows.h>
 #include <winsock2.h>
-#include <process.h>
 #else
 #define closesocket close
 #include <sys/types.h>
@@ -41,14 +39,10 @@ extern "C" {
 #include <arpa/inet.h>
 #endif
 #include <libcouchbase/couchbase.h>
+#include "procutil.h"
 
     struct test_server_info {
-#ifdef _WIN32
-        STARTUPINFO si;
-        PROCESS_INFORMATION pi;
-#else
-        pid_t pid;
-#endif
+        child_process_t process;
         char *http;
         char *bucket;
         char *username;

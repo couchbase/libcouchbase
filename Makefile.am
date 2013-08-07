@@ -352,7 +352,8 @@ tests/CouchbaseMock.jar:
 libmockserver_la_LDFLAGS = $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
 libmockserver_la_SOURCES = \
-                         tests/server.c tests/server.h
+                         tests/server.c tests/server.h \
+                         tests/procutil.c tests/procutil.h
 
 
 example_syncmode_syncmode_SOURCES = example/syncmode/main.c
@@ -420,6 +421,8 @@ tests_unit_tests_SOURCES += \
                             tests/mock-unit-test.h \
                             tests/mutate-unit-test.cc \
                             tests/regression-unit-test.cc \
+                            tests/procutil.c \
+                            tests/procutil.h \
                             tests/server.c \
                             tests/server.h \
                             tests/serverops-unit-test.cc \

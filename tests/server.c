@@ -194,71 +194,32 @@ static int parse_server_conf(struct test_server_info *info, const char *param)
     return 1;
 }
 
-#ifndef _WIN32
-#define WRAPPER_BASE "start_mock.sh"
 static int start_mock_process(struct test_server_info *info, char **argv)
 {
-    info->pid = fork();
-    assert(info->pid != -1);
-    if (info->pid == 0) {
-        execv(argv[0], argv);
-        abort();
-        return 0;
-    }
-    return 1;
-}
-
-static void kill_mock_process(struct test_server_info *info)
-{
-    kill(info->pid, SIGTERM);
-}
-
-#else
-#define WRAPPER_BASE "start_mock.bat"
-static int start_mock_process(struct test_server_info *info, char **argv)
-{
-    /**
-     * Ahh windows. We need to create a flat buffer for the arguments, as
-     * CreateProcess does not accept argv
-     */
     char argbuf[4096] = { 0 };
     char **arg;
-    int rv;
     for (arg = argv; *arg; arg++) {
         strcat(argbuf, *arg);
         strcat(argbuf, " ");
     }
 
-    memset(&info->pi, 0, sizeof(info->pi));
-    memset(&info->si, 0, sizeof(info->si));
+    memset(&info->process, 0, sizeof(info->process));
+    info->process.name = argbuf;
 
-    rv = CreateProcess(
-        NULL,
-        argbuf,
-        NULL,
-        NULL,
-        FALSE,
-        0,
-        NULL,
-        NULL,
-        &info->si,
-        &info->pi);
-
-    if (!rv) {
-        int err = GetLastError();
-        fprintf(stderr, "CreateProcess failed: [%d], %s\n", err, strerror(err));
-        abort();
-    }
-    return 0;
+    return create_process(&info->process);
 }
 
 static void kill_mock_process(struct test_server_info *info)
 {
-    TerminateProcess(info->pi.hProcess, 0);
-    CloseHandle(info->pi.hProcess);
-    CloseHandle(info->pi.hThread);
-    memset(&info->pi, 0, sizeof(info->pi));
+    kill_process(&info->process, 1);
+    wait_process(&info->process, 1);
+    cleanup_process(&info->process);
 }
+
+#ifndef _WIN32
+#define WRAPPER_BASE "start_mock.sh"
+#else
+#define WRAPPER_BASE "start_mock.bat"
 #endif
 
 static void negotiate_mock_connection(struct test_server_info *info)
