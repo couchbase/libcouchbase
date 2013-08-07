@@ -467,26 +467,40 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
         if (!LCB_LIST_IS_EMPTY(&io->timers.list)) {
             hrtime_t now = gethrtime();
             hrtime_t min = 0;
+            int have_timeout = 0;
+
             tmo.tv_sec = 0;
             tmo.tv_usec = 0;
 
             LCB_LIST_FOR(ii, &io->timers.list) {
                 tm = LCB_LIST_ITEM(ii, s_timer_t, list);
-                if (tm->active && now < tm->exptime
-                        && (min == 0 || min > tm->exptime)) {
+                if (tm->active && (min == 0 || min > tm->exptime)) {
                     min = tm->exptime;
+                    have_timeout = 1;
                 }
             }
-            if (min > 0) {
+
+
+            if (min > now) {
                 hrtime_t delta = min - now;
                 delta /= 1000;
                 tmo.tv_sec = (long)(delta / 1000000);
                 tmo.tv_usec = delta % 1000000;
                 t = &tmo;
+
+            } else if (have_timeout) {
+                tmo.tv_sec = 0;
+                tmo.tv_usec = 0;
+                t = &tmo;
+
+            } else {
+                /** This is probably bad! */
+                ; /* TODO: we might want to do something here */
             }
+
         }
-        ret = select(FD_SETSIZE, io->readfds, io->writefds,
-                     io->exceptfds, t);
+
+        ret = select(FD_SETSIZE, io->readfds, io->writefds, io->exceptfds, t);
 
         if (ret == SOCKET_ERROR) {
             return;
