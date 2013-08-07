@@ -281,7 +281,7 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
 {
     struct libev_cookie *io_cookie = iops->v.v0.cookie;
     struct libev_event *evt = timer;
-    ev_tstamp start, repeat;
+    ev_tstamp start;
 
 #ifdef HAVE_LIBEV4
     if (evt->handler == handler && evt->ev.io.events == EV_TIMER) {
@@ -291,14 +291,17 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
         /* no change! */
         return 0;
     }
+
     evt->data = cb_data;
     evt->handler = handler;
     ev_init(&evt->ev.io, handler_thunk);
-    start = repeat = usec / (ev_tstamp)1000000;
+    start = usec / (ev_tstamp)1000000;
+
     if (io_cookie->suspended) {
         start += ev_time() - ev_now(io_cookie->loop);
     }
-    ev_timer_set(&evt->ev.timer, start, repeat);
+
+    ev_timer_set(&evt->ev.timer, start, 0);
     ev_timer_start(io_cookie->loop, &evt->ev.timer);
 
     return 0;
