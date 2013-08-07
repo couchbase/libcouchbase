@@ -332,8 +332,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
     obj->connection.data = obj;
 
-    obj->connection.data = obj;
-
     err = setup_boostrap_hosts(obj, host);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
