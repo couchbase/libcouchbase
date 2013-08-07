@@ -45,7 +45,8 @@ lcb_error_t lcb_wait(lcb_t instance)
 
     if (instance->connection.state != LCB_CONNSTATE_CONNECTED
             && !lcb_flushing_buffers(instance)
-            && instance->compat.type == LCB_CACHED_CONFIG
+            && (instance->compat.type == LCB_CACHED_CONFIG
+                || instance->compat.type == LCB_MEMCACHED_CLUSTER)
             && instance->vbucket_config != NULL) {
         return LCB_SUCCESS;
     }

@@ -811,9 +811,10 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
     instance->backup_idx = 0;
-    if (instance->compat.type == LCB_CACHED_CONFIG &&
-            instance->vbucket_config != NULL &&
-            instance->compat.value.cached.updating == 0) {
+    if (instance->compat.type == LCB_MEMCACHED_CLUSTER ||
+        (instance->compat.type == LCB_CACHED_CONFIG &&
+         instance->vbucket_config != NULL &&
+         instance->compat.value.cached.updating == 0)) {
         return LCB_SUCCESS;
     }
 

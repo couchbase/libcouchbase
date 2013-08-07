@@ -64,6 +64,7 @@ static lcb_error_t create_memcached_compat(const struct lcb_memcached_st *user,
     if (rc != LCB_SUCCESS) {
         return rc;
     }
+    (*instance)->compat.type = LCB_MEMCACHED_CLUSTER;
 
     config = vbucket_config_create();
     if (config == NULL) {
