@@ -21,6 +21,15 @@
 static lcb_error_t create_v2(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
 
+static char *getenv_nonempty(const char *s)
+{
+    char *ret = getenv(s);
+    if (ret == NULL || *ret == '\0') {
+        return NULL;
+    }
+    return ret;
+}
+
 #ifdef _WIN32
 LIBCOUCHBASE_API
 lcb_error_t lcb_iocp_new_iops(int, lcb_io_opt_t *, void *);
@@ -40,9 +49,20 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
 {
     struct lcb_create_io_ops_st options;
 
+
     if (io_opts == NULL) {
+        /* TODO: refactor this in common code */
+        lcb_io_ops_type_t iotype = LCB_IO_OPS_WINIOCP;
+        char *envstring = getenv_nonempty("LIBCOUCHBASE_EVENT_PLUGIN_NAME");
+
+        if (envstring) {
+            if (_stricmp(envstring, "select") == 0) {
+                iotype = LCB_IO_OPS_SELECT;
+            }
+        }
+
         options.version = 0;
-        options.v.v0.type = LCB_IO_OPS_WINIOCP;
+        options.v.v0.type = iotype;
         options.v.v0.cookie = NULL;
         io_opts = &options;
     }
@@ -124,14 +144,6 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
             break;                                              \
         }
 
-static char *getenv_nonempty(const char *s)
-{
-    char *ret = getenv(s);
-    if (ret == NULL || *ret == '\0') {
-        return NULL;
-    }
-    return ret;
-}
 
 static void override_from_env(struct lcb_create_io_ops_st *options,
                               int use_any_version)
