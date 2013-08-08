@@ -1,4 +1,4 @@
-java ^
+@java ^
     -client^
     -jar tests\CouchbaseMock.jar^
     --nodes=10^
