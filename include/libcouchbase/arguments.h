@@ -149,7 +149,7 @@ extern "C" {
                 /**
                  * The method to call in the shared object. The functions
                  * signature is
-                 *   lcb_error_t create(lcb_io_opt_t *io, const void *cookie);
+                 *   lcb_error_t create(int version, lcb_io_opt_t *io, const void *cookie);
                  */
                 const char *symbol;
                 /** A cookie passed directly down to the underlying io ops */
@@ -157,7 +157,7 @@ extern "C" {
             } v1;
             struct {
                 /**
-                 * The pointer to function. Usefule when adding
+                 * The pointer to function. Useful when adding
                  * -rdynamic isn't acceptable solution
                  */
                 lcb_error_t (*create)(int version,

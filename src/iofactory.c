@@ -72,6 +72,7 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
         case LCB_IO_OPS_DEFAULT:
         case LCB_IO_OPS_WINIOCP:
             return lcb_iocp_new_iops(0, io, NULL);
+        case LCB_IO_OPS_WINSOCK:
         case LCB_IO_OPS_SELECT:
             options.version = 2;
             options.v.v2.create = lcb_create_select_io_opts;

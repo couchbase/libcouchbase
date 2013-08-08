@@ -19,9 +19,9 @@ DESCRIPTION
 -----------
 lcb_create_io_ops() is used to create an instance of the IO operations
 to use from libcouchbase. The newly created IO operation structure is
-returned in the +op+ parameter.
+returned in the 'op' parameter.
 
-+lcb_create_io_ops_st+ is defined in <libcouchbase/arguments.h> and
+'lcb_create_io_ops_st' is defined in <libcouchbase/arguments.h> and
 looks like:
 
     struct lcb_create_io_ops_st {
@@ -36,36 +36,46 @@ looks like:
                 const char *symbol;
                 void *cookie;
             } v1;
+            struct {
+                lcb_error_t (*create)(int version,
+                                      lcb_io_opt_t *io,
+                                      void *cookie);
+                void *cookie;
+            } v2;
         } v;
     };
 
-The +version+ member specifies which entry in +v+ to use. +v0+ is the
+The 'version' member specifies which entry in 'v' to use. 'v0' is the
 simplest version that allows you to specify a predefined version to
 use:
 
-    LCB_IO_OPS_DEFAULT    Use the default IO ops for this platform
+|=======================================
+| LCB_IO_OPS_DEFAULT  | Use the default IO ops for this platform
+| LCB_IO_OPS_SELECT   |
+Use portable implementation based on select(2) call. On windows it is also aliased as LCB_IO_OPS_WINSOCK
+| LCB_IO_OPS_LIBEVENT | Use libevent. 'cookie' may be specified to utilize given event_base
+| LCB_IO_OPS_LIBEV    | Use libev
+| LCB_IO_OPS_WINIOCP  | Windows-specific implementation based on IO completion ports
+|=======================================
 
-    LCB_IO_OPS_LIBEVENT   Use libevent. +cookie+ may be specified
-                          to utilize given event_base.
-
-    LCB_IO_OPS_WINSOCK    Use Windows sockets
-
-    LCB_IO_OPS_LIBEV      Use libev.
-
-+v1+ allows for more flexibility. +sofile+ specifies the shared object
+'v1' allows for more flexibility. 'sofile' specifies the shared object
 containing the function used to create and initialize the IO
 operation. Some runtime linkers allows this parameter to be set to
-NULL to search for the object in the current application. +symbol+
+NULL to search for the object in the current application. 'symbol'
 contains the name of the function to call to create and initialize the
 IO ops structure. The symbol must be a function with the following
 signature:
 
-    lcb_error_t create(lcb_io_opt_t *io, const void *cookie);
+    lcb_error_t create(int version, lcb_io_opt_t *io, const void *cookie);
 
-The function should return the newly created IO ops though the +io+
-parameter. The +cookie+ parameter is the same value as specified as
-+cookie+ in the +v1+ structure. If successful the function should
+The function should return the newly created IO ops though the 'io'
+parameter. The 'cookie' parameter is the same value as specified as
+'cookie' in the 'v0' structure. If successful the function should
 return LCB_SUCCESS.
+
+'v2' is useful, when you don't want to load external module. So you
+can just put the pointer directly into the structure. The cookie field
+has the same meaning as in 'v0'.
 
 lcb_io_opt_t is a structure defined in <libcouchbase/types.h> with the
 following layout:
