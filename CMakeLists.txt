@@ -79,6 +79,8 @@ IF(MSVC)
         SET(lcb_cc_string "vc9")
     ELSEIF(MSVC_VERSION EQUAL 1600)
         SET(lcb_cc_string "vc10")
+    ELSEIF(MSVC_VERSION EQUAL 1700)
+        SET(lcb_cc_string "vc11")
     ENDIF()
 ELSE()
     SET(lcb_arch_string "x86") #mingw
@@ -100,6 +102,12 @@ IF(${MSVC})
     ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
     # Don't warn about "deprecated POSIX names"
     ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
+
+    # Need this for VS 2012 for googletest and C++
+    IF(MSVC_VERSION EQUAL 1700 OR MSVC_VERSION GREATER 1700)
+        ADD_DEFINITIONS(-D_VARIADIC_MAX=10)
+    ENDIF()
+
     SET(COMMON_FLAGS "/W3 /EHsc /FD /MP")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TC")
 ELSE()
