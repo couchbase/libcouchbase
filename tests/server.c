@@ -389,24 +389,6 @@ const void *start_test_server(char **cmdline)
     return info;
 }
 
-void failover_node(const void *handle, int idx, const char *bucket)
-{
-    struct test_server_info *info = (void *)handle;
-    char buffer[1024];
-    int nb = snprintf(buffer, 1024, "failover,%d,%s\n", idx, bucket ? bucket : "default");
-    lcb_ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
-    assert(nw == nb);
-}
-
-void respawn_node(const void *handle, int idx, const char *bucket)
-{
-    struct test_server_info *info = (void *)handle;
-    char buffer[1024];
-    int nb = snprintf(buffer, 1024, "respawn,%d,%s\n", idx, bucket ? bucket : "default");
-    lcb_ssize_t nw = send(info->client, buffer, (size_t)nb, 0);
-    assert(nw == nb);
-}
-
 void shutdown_mock_server(const void *handle)
 {
     struct test_server_info *info = (void *)handle;
