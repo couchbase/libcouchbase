@@ -194,6 +194,17 @@ TARGET_LINK_LIBRARIES(couchbase ws2_32.lib lcbutils)
 
 
 IF(NOT LCB_NO_TESTS)
+    ADD_EXECUTABLE(check-all
+            tests/check-all.cc
+            tools/commandlineparser.cc
+            tests/procutil.c)
+
+    SET_PROPERTY(TARGET check-all
+        APPEND PROPERTY INCLUDE_DIRECTORIES
+            ${SOURCE_ROOT}/win32
+            ${SOURCE_ROOT}/tools)
+    TARGET_LINK_LIBRARIES(check-all lcbutils couchbase)
+
     ADD_EXECUTABLE(unit-tests
             tests/arithmetic-unit-test.cc
             tests/base64-unit-test.cc

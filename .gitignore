@@ -28,6 +28,7 @@
 /Makefile.in
 /aclocal.m4
 /autom4te.cache
+/check-all.log
 /config.cache
 /config.log
 /config.status
@@ -127,15 +128,11 @@
 /src/stamp-h1
 /test-suite.log
 /tests/*-test
-/tests/check-all
+/tests/*.log
+/tests/*.trs
 /tests/CouchbaseMock.jar
-/tests/homebrew-acceptance-test.log
-/tests/homebrew-acceptance-test.trs
-/tests/smoke-test.log
-/tests/smoke-test.trs
+/tests/check-all
 /tests/unit-tests
-/tests/unit-tests.log
-/tests/unit-tests.trs
 /tools/cbc
 /tools/cbc-pillowfight
 /tools/cbc_debug.ilk

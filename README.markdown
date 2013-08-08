@@ -76,6 +76,9 @@ recent version from git and build from source on your hardware.
 
         make && make distcheck
 
+    Note that by default 'make check' will test all the plugins supported by
+    libcouchbase. This is needed because plugins have different implementations
+    regarding I/O.
 
 Contact us
 ----------

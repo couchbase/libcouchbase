@@ -303,7 +303,7 @@ tests_unit_tests_SOURCES = \
                            tests/url_encoding-tests.cc
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
-tests_unit_tests_LDADD = libcouchbase.la libvbucket.la
+tests_unit_tests_LDADD = libcouchbase.la libvbucket.la libmockserver.la
 tests_unit_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
 tests_unit_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
 tests_unit_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
@@ -432,12 +432,16 @@ tests_unit_tests_SOURCES += \
                             tests/testutil.cc \
                             tests/testutil.h
 
-check_PROGRAMS += \
-                  tests/smoke-test
+check_PROGRAMS += tests/smoke-test
 endif
 
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c tests/timeout.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
+
+check_PROGRAMS += tests/check-all
+tests_check_all_SOURCES = tests/check-all.cc tools/commandlineparser.cc tests/procutil.c
+tests_check_all_CPPFLAGS = $(AM_CPPFLAGS) -I"${srcdir}/tools"
+tests_check_all_LDADD = libcouchbase.la
 
 tools_cbc_DEPENDENCIES = libcouchbase.la libvbucket.la
 tools_cbc_LDADD = $(tools_cbc_DEPENDENCIES)
@@ -460,7 +464,10 @@ tools_cbc_pillowfight_SOURCES = tools/commandlineparser.cc \
 tools_cbc_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 
-TESTS=${check_PROGRAMS}
+TESTS_ENVIRONMENT = \
+                    outdir="$(pwd)/tests";
+
+TESTS=tests/check-all tests/homebrew-acceptance-test
 
 example_debug_debug_SOURCES = example/debug/debug.cc
 example_debug_debug_LDADD = libcouchbase_debug.la
