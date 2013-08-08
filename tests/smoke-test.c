@@ -24,6 +24,7 @@
 #include "server.h"
 #include "test.h"
 #include "testutil.h"
+#include "config.h"
 
 lcb_t session = NULL;
 const struct test_server_info *mock = NULL;
@@ -95,8 +96,9 @@ static void setup(char **argv, const char *username, const char *password,
     lcb_wait(session);
 
     if (!mock->is_mock) {
+        const char * const * servers;
         total_node_count = 0;
-        const char *const *servers = lcb_get_server_list(session);
+        servers = lcb_get_server_list(session);
         for (; *servers; servers++, total_node_count++);
     }
 }
@@ -119,7 +121,7 @@ struct rvbuf {
     lcb_size_t nbytes;
     lcb_cas_t cas;
     lcb_uint32_t flags;
-    int32_t counter;
+    lcb_int32_t counter;
     lcb_uint32_t errors;
 };
 
@@ -208,8 +210,9 @@ static void version_callback(lcb_t instance,
     const char *vstring = resp->v.v0.vstring;
     lcb_size_t nvstring = resp->v.v0.nvstring;
     struct rvbuf *rv = (struct rvbuf *)cookie;
-    rv->error = error;
     char *str;
+
+    rv->error = error;
 
     lcb_assert(error == LCB_SUCCESS);
 

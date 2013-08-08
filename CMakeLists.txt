@@ -199,11 +199,18 @@ IF(NOT LCB_NO_TESTS)
             tools/commandlineparser.cc
             tests/procutil.c)
 
+
     SET_PROPERTY(TARGET check-all
         APPEND PROPERTY INCLUDE_DIRECTORIES
             ${SOURCE_ROOT}/win32
             ${SOURCE_ROOT}/tools)
     TARGET_LINK_LIBRARIES(check-all lcbutils couchbase)
+
+    ADD_EXECUTABLE(smoke-test
+            tests/smoke-test.c
+            tests/server.c
+            tests/timeout.c
+            tests/procutil.c)
 
     ADD_EXECUTABLE(unit-tests
             tests/arithmetic-unit-test.cc
@@ -240,14 +247,14 @@ IF(NOT LCB_NO_TESTS)
 
     # Normally defined by config.h
     SET_PROPERTY(
-        TARGET unit-tests
+        TARGET unit-tests smoke-test
         APPEND PROPERTY COMPILE_DEFINITIONS
             HAVE_COUCHBASEMOCK
             BUILD_PLUGINS
     )
 
     IF(CMAKE_COMPILER_IS_GNUCXX)
-        SET_TARGET_PROPERTIES(unit-tests
+        SET_TARGET_PROPERTIES(unit-tests smoke-test
             PROPERTIES
             COMPILE_FLAGS "-Wno-sign-compare -Wno-missing-field-initializers")
     ENDIF(CMAKE_COMPILER_IS_GNUCXX)
@@ -278,6 +285,7 @@ IF(NOT LCB_NO_TESTS)
 
     INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
     TARGET_LINK_LIBRARIES(unit-tests couchbase lcbutils gtest)
+    TARGET_LINK_LIBRARIES(smoke-test couchbase lcbutils)
     enable_testing()
     ADD_TEST(tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unit-tests)
 ENDIF(NOT LCB_NO_TESTS)
