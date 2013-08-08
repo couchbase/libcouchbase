@@ -294,6 +294,7 @@ protected:
      * Protected destructor to make it to a singleton
      */
     MockEnvironment();
+    virtual ~MockEnvironment();
     /**
      * Handle to the one and only instance of the mock environment
      */

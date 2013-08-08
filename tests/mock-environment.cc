@@ -222,8 +222,51 @@ void MockEnvironment::bootstrapRealCluster()
     lcb_destroy(tmphandle);
 }
 
+extern "C" {
+static void mock_flush_callback(lcb_t instance,
+                                const void *cookie,
+                                lcb_error_t err,
+                                const lcb_flush_resp_t *resp) {
+    assert(err == LCB_SUCCESS);
+}
+}
 void MockEnvironment::SetUp()
 {
+    if (mock) {
+        if (is_using_real_cluster()) {
+            return;
+        }
+
+        for (int ii = 0; ii < getNumNodes(); ii++) {
+            respawnNode(ii, "default");
+        }
+
+        HandleWrap hw;
+        lcb_t instance;
+        lcb_error_t err;
+
+        createConnection(hw, instance);
+        lcb_set_flush_callback(instance, mock_flush_callback);
+
+        err = lcb_connect(instance);
+        ASSERT_EQ(LCB_SUCCESS, err);
+
+        err = lcb_wait(instance);
+        ASSERT_EQ(LCB_SUCCESS, err);
+
+        lcb_flush_cmd_t fcmd;
+        const lcb_flush_cmd_t *fcmd_p = &fcmd;
+        memset(&fcmd, 0, sizeof(fcmd));
+
+        err = lcb_flush(instance, NULL, 1, &fcmd_p);
+        ASSERT_EQ(LCB_SUCCESS, err);
+
+        err = lcb_wait(instance);
+        ASSERT_EQ(LCB_SUCCESS, err);
+
+        return;
+    }
+
     mock = (struct test_server_info *)start_test_server(NULL);
     realCluster = is_using_real_cluster() != 0;
     ASSERT_NE((const void *)(NULL), mock);
@@ -247,6 +290,11 @@ void MockEnvironment::SetUp()
 }
 
 void MockEnvironment::TearDown()
+{
+
+}
+
+MockEnvironment::~MockEnvironment()
 {
     shutdown_mock_server(mock);
     mock = NULL;
