@@ -22,11 +22,11 @@ int main(void)
 #ifndef WIN32
     int status;
 
-    status = system("./tools/cbc version 2>&1");
+    status = system("./tools/cbc version > /dev/null 2>&1");
     if (status == -1 || WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
         return 1;
     }
-    status = system("./tools/cbc help 2>&1");
+    status = system("./tools/cbc help > /dev/null 2>&1");
     if (status == -1 || WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
         return 1;
     }
