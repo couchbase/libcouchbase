@@ -27,9 +27,15 @@ if [ -z "$srcdir" ]; then
     srcdir="."
 fi
 
+for p in "$srcdir/tests" "$srcdir" "tests" "."; do
+    if [ -f "$p/CouchbaseMock.jar" ]; then
+        COUCHBASEMOCK="$p/CouchbaseMock.jar"
+    fi
+done
+
 exec java \
        -client \
-       -jar "$srcdir"/tests/CouchbaseMock.jar \
+       -jar "$COUCHBASEMOCK" \
         --nodes=10 \
         --host=localhost \
         --port=0 \
