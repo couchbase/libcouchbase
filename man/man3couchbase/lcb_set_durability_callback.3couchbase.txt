@@ -26,7 +26,7 @@ success or with error).
 Passing NULL as the callback function may be used
 to query the current callback function. The lcb_durability_callback is a
 function with the following signature:
-    
+
     void function(lcb_t instance,
                   const void *cookie,
                   lcb_error_t error,
@@ -178,6 +178,10 @@ See lcb_attributes(5) for descriptions of the following attributes:
 | Interface Stability | Committed
 | MT-Level            | MT-Safe
 |=======================================
+
+COPYRIGHT
+---------
+Copyright 2010-2013 Couchbase, Inc.
 
 SEE ALSO
 --------

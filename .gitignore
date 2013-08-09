@@ -47,6 +47,7 @@
 /example/debug/debug
 /example/libeventdirect/eventloop
 /example/minimal/minimal
+/example/observe/observe
 /example/syncmode/syncmode
 /example/yajl/couchview
 /gtest-1.6.0
