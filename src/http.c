@@ -27,6 +27,7 @@ static const char *method_strings[] = {
 
 static const char http_version[] = " HTTP/1.1\r\n";
 static const char req_headers[] = "User-Agent: libcouchbase/"LCB_VERSION_STRING"\r\n"
+                                  "Connection: close\r\n"
                                   "Accept: application/json\r\n";
 
 
