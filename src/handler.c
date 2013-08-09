@@ -279,11 +279,11 @@ int lcb_lookup_server_with_command(lcb_t instance,
     lcb_server_t *server;
     lcb_size_t nr;
     lcb_size_t ii;
-    lcb_size_t offset = 0;
 
     for (ii = 0; ii < instance->nservers; ++ii) {
         server = instance->servers + ii;
         if (server != exc) {
+            lcb_size_t offset = 0;
             while ((nr = ringbuffer_peek_at(&server->cmd_log,
                                             offset,
                                             cmd.bytes,
