@@ -70,12 +70,8 @@ lcb_error_t lcb_touch(lcb_t instance,
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                           &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
-            /*
-            ** the config says that there is no server yet at that position
-            ** (-1)
-            */
             free(servers);
-            return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
         }
     }
 

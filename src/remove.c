@@ -60,11 +60,7 @@ lcb_error_t lcb_remove(lcb_t instance,
                           &vb, &idx);
 
         if (idx < 0 || idx > (int)instance->nservers) {
-            /*
-            ** the config says that there is no server yet at
-            ** that position (-1)
-            */
-            return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
         }
         server = instance->servers + idx;
 

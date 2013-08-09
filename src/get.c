@@ -88,11 +88,7 @@ lcb_error_t lcb_unlock(lcb_t instance,
                           &vb, &idx);
 
         if (idx < 0 || idx > (int)instance->nservers) {
-            /*
-            ** the config says that there is no server yet at that
-            ** position (-1)
-            */
-            return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
         }
         server = instance->servers + idx;
 
@@ -200,15 +196,11 @@ lcb_error_t lcb_get_replica(lcb_t instance,
                                             key, nkey);
             idx = vbucket_get_replica(instance->vbucket_config, vb, r0);
             if (idx < 0 || idx > (int)instance->nservers) {
-                /*
-                 ** the config says that there is no server yet at that
-                 ** position (-1)
-                 */
                 free(affected_servers);
                 /* FIXME: when 'packet' patch will be applied, here
                  * should be rollback of all the previous commands
                  * queued */
-                return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+                return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
             }
             affected_servers[idx]++;
             server = instance->servers + idx;
@@ -271,8 +263,7 @@ static lcb_error_t lcb_single_get(lcb_t instance,
                       &vb, &idx);
 
     if (idx < 0 || idx > (int)instance->nservers) {
-        /* the config says that there is no server yet at that position (-1) */
-        return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+        return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
     }
     server = instance->servers + idx;
 
@@ -354,13 +345,9 @@ static lcb_error_t lcb_multi_get(lcb_t instance,
         (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                           &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
-            /*
-            ** the config says that there is no server yet at that
-            ** position (-1)
-            */
             free(servers);
             free(affected_servers);
-            return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
         }
         affected_servers[servers[ii].idx]++;
     }

@@ -194,8 +194,13 @@ extern "C" {
         /**
          * The same key was passed multiple times in a command list
          */
-        LCB_DUPLICATE_COMMANDS = 0x22
+        LCB_DUPLICATE_COMMANDS = 0x22,
 
+        /**
+         * The config says that there is no server yet at that
+         * position (-1 in the vbucket map)
+         */
+        LCB_NO_MATCHING_SERVER = 0x23
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase

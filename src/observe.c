@@ -156,9 +156,8 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
 
             if (idx < 0 || idx > (int)instance->nservers) {
                 if (jj == -1) {
-                    /* no master */
                     destroy_requests(&reqs);
-                    return lcb_synchandler_return(instance, LCB_NETWORK_ERROR);
+                    return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
                 }
                 continue;
             }
