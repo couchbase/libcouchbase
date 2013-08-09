@@ -73,7 +73,7 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   GCC_C89=-std=c89
   GCC_C99=-std=gnu99
   GCC_LDFLAGS=""
-  GCC_CPP_WARNINGS="-Wall -pedantic -Wshadow -fdiagnostics-show-option -Wformat -fno-strict-aliasing -Wno-strict-aliasing -Wextra"
+  GCC_CPP_WARNINGS="-Wall -pedantic -Wshadow -fdiagnostics-show-option -Wformat -fno-strict-aliasing -Wno-strict-aliasing -Wextra -Winit-self"
   AS_IF([test "$ac_cv_enable_wconversion" = "yes" ],
         [GCC_CPP_WARNINGS="$GCC_CPP_WARNINGS -Wconversion"])
   GCC_C_COMPILER_WARNINGS="-Wundef -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -Wmissing-declarations -Wcast-align"
