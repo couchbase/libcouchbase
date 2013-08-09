@@ -57,29 +57,6 @@ static void destroy_requests(struct observe_requests_st *reqs)
     free(reqs->requests);
 }
 
-static void get_common_params(const void *item,
-                              lcb_observe_type_t type,
-                              const void **key,
-                              lcb_size_t *nkey,
-                              const void **hashkey,
-                              lcb_size_t *nhashkey)
-{
-    if (type == LCB_OBSERVE_TYPE_DURABILITY) {
-        const lcb_durability_entry_t *ent = item;
-        *key = ent->request.v.v0.key;
-        *nkey = ent->request.v.v0.nkey;
-        *hashkey = ent->request.v.v0.hashkey;
-        *nhashkey = ent->request.v.v0.nhashkey;
-
-    } else {
-        const lcb_observe_cmd_t *ocmd = item;
-        *key = ocmd->v.v0.key;
-        *nkey = ocmd->v.v0.nkey;
-        *hashkey = ocmd->v.v0.hashkey;
-        *nhashkey = ocmd->v.v0.nhashkey;
-    }
-}
-
 /**
  * Extended version of observe command. This allows us to service
  * various forms of higher level operations which use observe in one way
@@ -133,11 +110,19 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         lcb_size_t nkey, nhashkey;
         int vbid, jj;
 
-        const void *item = items[ii];
-
-
-        get_common_params(item, type, &key, &nkey, &hashkey, &nhashkey);
-
+        if (type == LCB_OBSERVE_TYPE_DURABILITY) {
+            const lcb_durability_entry_t *ent = items[ii];
+            key = ent->request.v.v0.key;
+            nkey = ent->request.v.v0.nkey;
+            hashkey = ent->request.v.v0.hashkey;
+            nhashkey = ent->request.v.v0.nhashkey;
+        } else {
+            const lcb_observe_cmd_t *ocmd = items[ii];
+            key = ocmd->v.v0.key;
+            nkey = ocmd->v.v0.nkey;
+            hashkey = ocmd->v.v0.hashkey;
+            nhashkey = ocmd->v.v0.nhashkey;
+        }
         if (!nhashkey) {
             hashkey = key;
             nhashkey = nkey;
