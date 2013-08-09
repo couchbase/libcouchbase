@@ -72,7 +72,9 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
     lcb_size_t maxix;
     lcb_uint32_t opaque;
     struct lcb_command_data_st ct;
-    struct observe_requests_st reqs = { 0 };
+    struct observe_requests_st reqs;
+
+    memset(&reqs, 0, sizeof(reqs));
 
     if (instance->type != LCB_TYPE_BUCKET) {
         return lcb_synchandler_return(instance, LCB_EBADHANDLE);
