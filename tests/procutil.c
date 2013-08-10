@@ -128,14 +128,41 @@ int wait_process(child_process_t *process, int tmosec)
     do {
         pid_t pidrv = waitpid(process->pid, &ec, flags);
 
-        if (pidrv > 0 && WIFEXITED(ec)) {
-            process->exited = 1;
-            process->status = WEXITSTATUS(ec);
-            return 0;
+        if (pidrv > 0) {
+            if (WIFEXITED(ec)) {
+                process->status = WEXITSTATUS(ec);
+                process->exited = 1;
+
+
+            } else if (WIFSIGNALED(ec)) {
+                process->status = WTERMSIG(ec);
+                process->exited = 1;
+
+
+            } else if (WIFSTOPPED(ec) || WIFCONTINUED(ec)) {
+                continue;
+
+            } else {
+                fprintf(stderr,
+                        "Waitpid returned pid with neither EXITED or "
+                        "SIGNALLED true. Assuming something else (0x%x)\n",
+                        ec);
+                process->status = -1;
+                process->exited = 1;
+            }
+
         } else if (pidrv == -1 && errno == ESRCH) {
+            fprintf(stderr,
+                    "Process has already terminated. waitpid(%d) == ESRCH\n",
+                    process->pid);
+
             process->exited = 1;
+        }
+
+        if (process->exited) {
             return 0;
         }
+
         if (!tmostamp) {
             break;
         }
