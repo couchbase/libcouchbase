@@ -330,33 +330,47 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
 }
 
 lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
-                                             int nocb)
+                                             lcb_connstart_opts_t options)
 {
     lcb_connection_result_t result;
+    lcb_io_opt_t io = conn->instance->io;
 
     lcb_assert(conn->state == LCB_CONNSTATE_UNINIT);
     conn->state = LCB_CONNSTATE_INPROGRESS;
 
     if (conn->instance->io->version == 0) {
         if (!conn->evinfo.ptr) {
-            conn->evinfo.ptr = conn->instance->io->v.v0.create_event(conn->instance->io);
+            conn->evinfo.ptr = io->v.v0.create_event(io);
         }
-        result = v0_connect(conn, nocb);
+        result = v0_connect(conn, options & LCB_CONNSTART_NOCB);
 
     } else {
-        result = v1_connect(conn, nocb);
+        result = v1_connect(conn, options & LCB_CONNSTART_NOCB);
     }
 
-    if (result == LCB_CONN_INPROGRESS && conn->timeout.usec) {
-        lcb_connection_cancel_timer(conn);
-        conn->instance->io->v.v0.update_timer(conn->instance->io,
-                                              conn->timeout.timer,
-                                              conn->timeout.usec,
-                                              conn,
-                                              initial_connect_timeout_handler);
-        conn->timeout.active = 1;
-    }
 
+    if (result == LCB_CONN_INPROGRESS) {
+        if (conn->timeout.usec) {
+            io->v.v0.update_timer(io,
+                                  conn->timeout.timer, conn->timeout.usec,
+                                  conn, initial_connect_timeout_handler);
+            conn->timeout.active = 1;
+        }
+
+    } else if (result != LCB_CONN_CONNECTED) {
+        if (options & LCB_CONNSTART_ASYNCERR) {
+            if (io->version == 0) {
+                if (conn->timeout.active) {
+                    io->v.v0.delete_timer(io, conn->timeout.timer);
+                }
+                io->v.v0.update_timer(io, conn->timeout.timer, 0,
+                                      conn, initial_connect_timeout_handler);
+            } else {
+                lcb_assert(io->version == 1);
+                io->v.v1.send_error(io, conn->sockptr, conn->completion.error);
+            }
+        }
+    }
     return result;
 }
 

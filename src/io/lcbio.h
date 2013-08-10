@@ -53,6 +53,17 @@ extern "C" {
         LCB_CONNSTATE_INPROGRESS
     } lcb_connstate_t;
 
+    /**
+     * Options for initiating a new connection.
+     */
+    typedef enum {
+        /** Don't invoke callback on immediate event */
+        LCB_CONNSTART_NOCB = 0x1,
+
+        /** If initial scheduling attempt fails, schedule a callback */
+        LCB_CONNSTART_ASYNCERR = 0x2
+    } lcb_connstart_opts_t;
+
     struct lcb_connection_st;
     typedef void (*lcb_connection_handler)(struct lcb_connection_st*, lcb_error_t);
 
@@ -143,12 +154,11 @@ extern "C" {
      * Request a connection. The connection object should be filled with the
      * appropriate callbacks
      * @param conn a connection object with properly initialized fields
-     * @param nocb if true, don't invoke callbacks if anything happens during
-     * this first call. This is to avoid strange behavior if this function is
-     * invoked while the user still has control of the event lioop.
+     * @params options a set of options controlling the connection intialization
+     *  behavior.
      */
     lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
-                                                 int nocb);
+                                                 lcb_connstart_opts_t options);
 
     /**
      * Close the socket and clean up any socket-related resources

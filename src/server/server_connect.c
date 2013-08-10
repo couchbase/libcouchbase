@@ -170,11 +170,6 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
     struct nameinfo_common nistrs;
     int sasl_in_progress;
 
-    conn->evinfo.handler = lcb_server_v0_event_handler;
-    conn->completion.read = lcb_server_v1_read_handler;
-    conn->completion.write = lcb_server_v1_write_handler;
-    conn->completion.error = lcb_server_v1_error_handler;
-
     if (err != LCB_SUCCESS) {
         connection_error(server, err);
         return;
@@ -221,6 +216,11 @@ void lcb_server_connect(lcb_server_t *server)
     lcb_connection_t conn = &server->connection;
     conn->on_connect_complete = socket_connected;
     conn->on_timeout = server_timeout_handler;
+    conn->evinfo.handler = lcb_server_v0_event_handler;
+    conn->completion.read = lcb_server_v1_read_handler;
+    conn->completion.write = lcb_server_v1_write_handler;
+    conn->completion.error = lcb_server_v1_error_handler;
     conn->timeout.usec = server->instance->timeout.usec;
-    lcb_connection_start(conn, 1);
+
+    lcb_connection_start(conn, LCB_CONNSTART_NOCB|LCB_CONNSTART_ASYNCERR);
 }
