@@ -38,6 +38,7 @@ extern "C" {
                                const char *errinfo)
     {
         std::cerr << "Error " << lcb_strerror(instance, err) << std::endl;
+        fflush(NULL);
         if (errinfo) {
             std::cerr << errinfo;
         }
@@ -309,8 +310,8 @@ extern "C" {
         if (server_endpoint != NULL) {
             nstatkey = strlen(server_endpoint) + nkey + 2;
             statkey = new char[nstatkey];
-            snprintf(statkey, nstatkey, "%s-%s", server_endpoint,
-                     (const char *)key);
+            snprintf(statkey, nstatkey, "%s-%.*s", server_endpoint,
+                     (int)nkey, (const char *)key);
 
             lcb_store_cmd_t storecmd(LCB_SET, statkey, nstatkey, bytes, nbytes);
             lcb_store_cmd_t *storecmds[] = { &storecmd };
