@@ -426,7 +426,7 @@ static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
     io_cookie_t *io = iops->v.v0.cookie;
-    int nevents;
+
     s_event_t *ev;
     lcb_list_t *ii, *nn;
 
@@ -435,11 +435,13 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
         s_timer_t *tm;
         struct timeval tmo, *t;
         int ret;
+        int nevents = 0;
+        int ntimers = 0;
+
 
         FD_ZERO(io->readfds);
         FD_ZERO(io->writefds);
         FD_ZERO(io->exceptfds);
-        nevents = 0;
 
 
         LCB_LIST_FOR(ii, &io->events.list) {
@@ -458,11 +460,6 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
             }
         }
 
-        if (nevents == 0) {
-            io->event_loop = 0;
-            return;
-        }
-
         t = NULL;
         if (!LCB_LIST_IS_EMPTY(&io->timers.list)) {
             hrtime_t now = gethrtime();
@@ -474,9 +471,14 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 
             LCB_LIST_FOR(ii, &io->timers.list) {
                 tm = LCB_LIST_ITEM(ii, s_timer_t, list);
-                if (tm->active && (min == 0 || min > tm->exptime)) {
+                if (!tm->active) {
+                    continue;
+                }
+
+                if (min == 0 || min > tm->exptime) {
                     min = tm->exptime;
                     have_timeout = 1;
+                    ++ntimers;
                 }
             }
 
@@ -499,6 +501,12 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
             }
 
         }
+
+        if (nevents == 0 && ntimers == 0) {
+            io->event_loop = 0;
+            return;
+        }
+
 
         ret = select(FD_SETSIZE, io->readfds, io->writefds, io->exceptfds, t);
 
