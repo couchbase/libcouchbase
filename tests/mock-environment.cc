@@ -50,18 +50,14 @@ MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
 
 void MockEnvironment::failoverNode(int index, std::string bucket)
 {
-    MockBucketCommand bCmd = MockBucketCommand(MockCommand::FAILOVER,
-                                               index,
-                                               bucket);
+    MockBucketCommand bCmd(MockCommand::FAILOVER, index, bucket);
     sendCommand(bCmd);
     getResponse();
 }
 
 void MockEnvironment::respawnNode(int index, std::string bucket)
 {
-    MockBucketCommand bCmd = MockBucketCommand(MockCommand::RESPAWN,
-                                               index,
-                                               bucket);
+    MockBucketCommand bCmd(MockCommand::RESPAWN, index, bucket);
     sendCommand(bCmd);
     getResponse();
     std::stringstream cmdbuf;
@@ -69,7 +65,7 @@ void MockEnvironment::respawnNode(int index, std::string bucket)
 
 void MockEnvironment::hiccupNodes(int msecs, int offset)
 {
-    MockCommand cmd = MockCommand(MockCommand::HICCUP);
+    MockCommand cmd(MockCommand::HICCUP);
     cmd.set("msecs", msecs);
     cmd.set("offset", offset);
     sendCommand(cmd);
@@ -331,6 +327,8 @@ MockCommand::MockCommand(Code code)
 MockCommand::~MockCommand()
 {
     cJSON_Delete(command);
+    payload = NULL;
+    command = NULL;
 }
 
 void MockCommand::set(const std::string& field, const std::string& value)
@@ -340,7 +338,9 @@ void MockCommand::set(const std::string& field, const std::string& value)
 
 void MockCommand::set(const std::string& field, int value)
 {
-    cJSON_AddNumberToObject(payload, field.c_str(), value);
+    cJSON* num = cJSON_CreateNumber(value);
+    assert(num);
+    cJSON_AddItemToObject(payload, field.c_str(), num);
 }
 
 void MockCommand::set(const std::string field, bool value)

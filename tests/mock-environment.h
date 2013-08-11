@@ -104,6 +104,9 @@ protected:
     cJSON* command;
     cJSON* payload;
     virtual void finalizePayload() {}
+
+private:
+    MockCommand(const MockCommand& other);
 };
 
 class MockKeyCommand : public MockCommand
