@@ -23,7 +23,7 @@
  */
 
 #include "internal.h"
-static lcb_connection_result_t v0_connect(lcb_connection_t conn, int nocb);
+static lcb_connection_result_t v0_connect(lcb_connection_t conn, int nocb, short events);
 static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb);
 
 /**
@@ -31,7 +31,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb);
  */
 static void v0_reconnect_handler(lcb_socket_t sockfd, short which, void *data)
 {
-    v0_connect((struct lcb_connection_st*)data, 0);
+    v0_connect((struct lcb_connection_st*)data, 0, which);
     (void)which;
     (void)sockfd;
 }
@@ -137,7 +137,7 @@ static void timeout_handler_dispatch(lcb_socket_t sock,
  * successfuly or not.
  */
 static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
-                                          int nocb)
+                                          int nocb, short events)
 {
     int retry;
     int retry_once = 0;
@@ -161,30 +161,40 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         }
 
         retry = 0;
-        if (io->v.v0.connect(io,
-                             conn->sockfd,
-                             conn->curr_ai->ai_addr,
-                             (unsigned int)conn->curr_ai->ai_addrlen) == 0) {
-            /**
-             * Connected.
-             * XXX: In the odd event that this does connect immediately, we
-             * still enqueue it! - this is because we likely want to invoke some
-             * other callbacks after this, and we can't be sure that it's safe to
-             * do so until the event loop has control. Therefore we actually rely
-             * on EISCONN!.
-             * This isn't a whole lot of overhead as we shouldn't be connecting
-             * too much in the first place
-             */
-            if (nocb) {
-                return LCB_CONN_INPROGRESS;
+        if (events & LCB_ERROR_EVENT) {
+            socklen_t errlen = sizeof(int);
+            int sockerr = 0;
+            getsockopt(conn->sockfd,
+                       SOL_SOCKET, SO_ERROR, (char *)&sockerr, &errlen);
+            conn->last_error = sockerr;
 
+        } else {
+                if (io->v.v0.connect(io,
+                                     conn->sockfd,
+                                     conn->curr_ai->ai_addr,
+                                     (unsigned int)conn->curr_ai->ai_addrlen) == 0) {
+                /**
+                 * Connected.
+                 * XXX: In the odd event that this does connect immediately, we
+                 * still enqueue it! - this is because we likely want to invoke some
+                 * other callbacks after this, and we can't be sure that it's safe to
+                 * do so until the event loop has control. Therefore we actually rely
+                 * on EISCONN!.
+                 * This isn't a whole lot of overhead as we shouldn't be connecting
+                 * too much in the first place
+                 */
+                if (nocb) {
+                    return LCB_CONN_INPROGRESS;
+
+                } else {
+                    connection_success(conn);
+                    return LCB_CONN_CONNECTED;
+                }
             } else {
-                connection_success(conn);
-                return LCB_CONN_CONNECTED;
+                conn->last_error = io->v.v0.error;
             }
         }
 
-        conn->last_error = io->v.v0.error;
         connstatus = lcb_connect_status(conn->last_error);
         switch (connstatus) {
 
@@ -349,7 +359,7 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
         if (!conn->evinfo.ptr) {
             conn->evinfo.ptr = io->v.v0.create_event(io);
         }
-        result = v0_connect(conn, options & LCB_CONNSTART_NOCB);
+        result = v0_connect(conn, options & LCB_CONNSTART_NOCB, 0);
 
     } else {
         result = v1_connect(conn, options & LCB_CONNSTART_NOCB);
