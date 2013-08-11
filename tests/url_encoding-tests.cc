@@ -133,7 +133,7 @@ TEST_F(UrlEncoding, internationalTest)
 {
     char *out;
     size_t nout;
-    std::string input("_design/beer/_view/all?startkey=\"øl\"");
+    std::string input("_design/beer/_view/all?startkey=\"\xc3\xb8l\"");
     std::string exp("_design/beer/_view/all?startkey=%22%C3%B8l%22");
     EXPECT_EQ(LCB_SUCCESS, lcb_urlencode_path(input.data(), input.length(),
                                               &out, &nout));
