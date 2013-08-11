@@ -154,7 +154,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         }
 
         if (conn->curr_ai == NULL) {
-            /*TODO: Maybe check save_errno now? */
+            conn->last_error = io->v.v0.error;
 
             /* this means we're not going to retry!! add an error here! */
             return LCB_CONN_ERROR;
@@ -184,7 +184,8 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
             }
         }
 
-        connstatus = lcb_connect_status(io->v.v0.error);
+        conn->last_error = io->v.v0.error;
+        connstatus = lcb_connect_status(conn->last_error);
         switch (connstatus) {
 
         case LCB_CONNECT_EINTR:
@@ -269,6 +270,8 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
         }
 
         if (!conn->sockptr) {
+            conn->last_error = io->v.v1.error;
+
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
@@ -305,6 +308,8 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
             return LCB_CONN_INPROGRESS;
 
         case LCB_CONNECT_EINVAL:
+            /** TODO: do we still need this for v1? */
+            conn->last_error = io->v.v1.error;
             if (!retry_once) {
                 retry = 1;
                 retry_once = 1;
@@ -314,6 +319,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
             }
 
         case LCB_CONNECT_EFAIL:
+            conn->last_error = io->v.v1.error;
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
@@ -321,6 +327,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
             break;
 
         default:
+            conn->last_error = io->v.v1.error;
             return LCB_CONN_ERROR;
 
         }

@@ -129,7 +129,6 @@ extern "C" {
         char host[NI_MAXHOST+1];
         char port[NI_MAXSERV+1];
 
-
         /** this is populated with the socket when the connection is done */
         lcb_socket_t sockfd;
 
@@ -139,6 +138,19 @@ extern "C" {
         lcb_connstate_t state;
 
         short want;
+
+        /** We should really typedef this... */
+        /**
+         * This contains the last "real" socket error received by this
+         * connection. This can be something like ECONNREFUSED or similar.
+         * Very helpful for debugging, and may also be exposed to the user
+         * one day..
+         */
+#ifdef _WIN32
+        DWORD last_error;
+#else
+        int last_error;
+#endif
 
     };
 
