@@ -414,6 +414,7 @@ tests_unit_tests_SOURCES += \
                             tests/getopt-unit-tests.cc \
                             src/gethrtime.c \
                             tests/http-tests.cc \
+                            tests/iops-unit-test.cc \
                             tests/lock-unit-test.cc \
                             tests/mock-environment.cc \
                             tests/mock-environment.h \

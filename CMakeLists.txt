@@ -206,6 +206,7 @@ IF(NOT LCB_NO_TESTS)
             tests/hashset-unit-test.cc
             tests/hostname-unit-test.cc
             tests/http-tests.cc
+            tests/iops-unit-test.cc
             tests/lock-unit-test.cc
             tests/memcached-compat-unit-test.cc
             tests/mock-unit-test.cc
