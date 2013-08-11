@@ -371,6 +371,8 @@ TEST_F(DurabilityUnitTest, testSimpleDurability)
 TEST_F(DurabilityUnitTest, testNonExist)
 {
     LCB_TEST_REQUIRE_FEATURE("observe");
+    SKIP_UNLESS_MOCK();
+
     lcb_t instance;
     HandleWrap hwrap;
 
@@ -486,8 +488,8 @@ TEST_F(DurabilityUnitTest, testModified)
 
 /**
  * @test Test with very quick timeouts
- * @pre Schedule an operation with an interval of 25 usec and a timeout of
- * 50 usec
+ * @pre Schedule an operation with an interval of 2 usec and a timeout of
+ * 5 usec
  *
  * @post Operation returns with LCB_ETIMEDOUT
  */
@@ -508,8 +510,8 @@ TEST_F(DurabilityUnitTest, testQuickTimeout)
     defaultOptions(instance, opts);
 
     /* absurd */
-    opts.v.v0.timeout = 50;
-    opts.v.v0.interval = 25;
+    opts.v.v0.timeout = 5;
+    opts.v.v0.interval = 2;
 
     for (unsigned ii = 0; ii < 10; ii++) {
         DurabilityOperation dop;
