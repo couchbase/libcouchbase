@@ -47,11 +47,12 @@ static int maybe_skip_encoding(const char *p, int c, int l)
 
 static int is_legal_uri_character(char c)
 {
-    if (isalpha(c) || isdigit(c)) {
+    unsigned char uc = (unsigned char)c;
+    if (isalpha(uc) || isdigit(uc)) {
         return 1;
     }
 
-    switch (c) {
+    switch (uc) {
     case '-':
     case '_':
     case '.':
