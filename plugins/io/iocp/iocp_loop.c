@@ -272,8 +272,7 @@ void iocp_run(lcb_io_opt_t iobase)
         }
 
         IOCP_LOG(IOCP_TRACE, "Timeout=%lu msec", tmo);
-        /** TODO: warn something if (tmo==INFINITE) here. This is bad */
-
+        lcb_assert(tmo != INFINITE);
         do {
             if (Have_GQCS_Ex) {
                 remaining = dequeue_io_impl_ex(io, tmo);
