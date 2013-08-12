@@ -106,6 +106,9 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
                 "Durability constraints will never be satisfied";
     case LCB_DUPLICATE_COMMANDS:
         return "The same key was specified more than once in the command list";
+    case LCB_NO_MATCHING_SERVER:
+        return "No node was found for servicing this key. This may be a "
+            "result of a nonexistent/stale vBucket configuration";
 
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
