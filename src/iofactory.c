@@ -343,6 +343,11 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
     plugin_info pi;
     memset(&options, 0, sizeof(options));
 
+    err = lcb_initialize_socket_subsystem();
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+
     err = generate_options(&pi, io_opts, &options, NULL);
     if (err != LCB_SUCCESS) {
         return err;

@@ -245,3 +245,19 @@ int lcb_getenv_boolean(const char *key)
     return value != NULL && *value;
 }
 #endif
+
+#ifdef _WIN32
+int iocp_initialize_winsock(void);
+lcb_error_t lcb_initialize_socket_subsystem(void)
+{
+    if (!iocp_initialize_winsock()) {
+        return LCB_EINTERNAL;
+    }
+    return LCB_SUCCESS;
+}
+#else
+lcb_error_t lcb_initialize_socket_subsystem(void)
+{
+    return LCB_SUCCESS;
+}
+#endif

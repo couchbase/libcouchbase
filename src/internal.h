@@ -683,6 +683,12 @@ extern "C" {
     int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len);
     int lcb_getenv_boolean(const char *key);
 
+    /**
+     * Initialize the socket subsystem. For windows, this initializes Winsock.
+     * On Unix, this does nothing
+     */
+    lcb_error_t lcb_initialize_socket_subsystem(void);
+
 #ifdef __cplusplus
 }
 #endif

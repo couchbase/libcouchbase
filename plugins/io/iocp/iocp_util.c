@@ -102,13 +102,11 @@ int iocp_initialize_winsock(void)
     WSADATA wsaData;
 
     if (!IOCP_INITONCE(initialized)) {
-        return 0;
+        return 1;
     }
 
     if (WSAStartup(MAKEWORD(2, 0), &wsaData) != 0) {
-        IOCP_LOG(IOCP_FATAL, "Winsock initialization error. Abort");
-        abort();
-        return 0;
+        lcb_assert("Winsock initialization error" && 0);
     }
     return 1;
 }
