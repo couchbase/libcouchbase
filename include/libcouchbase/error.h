@@ -200,12 +200,18 @@ extern "C" {
          * The config says that there is no server yet at that
          * position (-1 in the vbucket map)
          */
-        LCB_NO_MATCHING_SERVER = 0x23
+        LCB_NO_MATCHING_SERVER = 0x23,
+
+        /**
+         * An environment variable recognized by libcouchbase was detected,
+         * but it contains an invalid value format
+         */
+        LCB_BAD_ENVIRONMENT = 0x24
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        , LCB_MAX_ERROR_VAL = 0x24
+        , LCB_MAX_ERROR_VAL = 0x25
 #endif
     } lcb_error_t;
 

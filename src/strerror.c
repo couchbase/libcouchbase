@@ -110,6 +110,10 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "No node was found for servicing this key. This may be a "
             "result of a nonexistent/stale vBucket configuration";
 
+    case LCB_BAD_ENVIRONMENT:
+        return "An environment variable recognized by libcouchbase was "
+                "specified in an invalid format or has missing items";
+
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

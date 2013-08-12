@@ -104,6 +104,7 @@ extern "C" {
 #endif
 
     typedef enum {
+        LCB_IO_OPS_INVALID = 0x00,
         LCB_IO_OPS_DEFAULT = 0x01,
         LCB_IO_OPS_LIBEVENT = 0x02,
         LCB_IO_OPS_WINSOCK = 0x03,

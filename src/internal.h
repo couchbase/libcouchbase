@@ -671,6 +671,18 @@ extern "C" {
     struct lcb_durability_set_st;
     void lcb_durability_dset_destroy(struct lcb_durability_set_st *dset);
 
+    lcb_error_t lcb_iops_cntl_handler(int mode,
+                                      lcb_t instance, int cmd, void *arg);
+
+    /**
+     * These two routines define portable ways to get environment variables
+     * on various platforms.
+     *
+     * They are mainly useful for Windows compatibility.
+     */
+    int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len);
+    int lcb_getenv_boolean(const char *key);
+
 #ifdef __cplusplus
 }
 #endif

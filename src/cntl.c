@@ -269,6 +269,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_DURABILITY_INTERVAL */
     timeout_common, /* LCB_CNTL_DURABILITY_TIMEOUT */
     timeout_common, /* LCB_CNTL_HTTP_TIMEOUT */
+    lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DEFAULT_TYPES */
+    lcb_iops_cntl_handler  /* LCB_CNTL_IOPS_DLOPEN_DEBUG */
 };
 
 

@@ -189,3 +189,59 @@ lcb_sockdata_t *lcb_gai2sock_v1(lcb_t instance, struct addrinfo **ai, int *conne
     }
     return ret;
 }
+
+/**
+ * While the C standard library uses 'putenv' for environment variable
+ * manipulation, POSIX defines setenv (which works sanely) but Windows
+ * only has putenv (via the CRT interface).
+ * However Windows also has the 'GetEnvironmentVariable' etc. API - which
+ * actually uses a different interface.
+ *
+ * We prefer to use actual API calls rather than hack into a poor excuse
+ * of conformance. Since putenv requires ownership of the string, its use
+ * is discouraged (and _putenv_s isn't available in MinGW); thus the
+ * assumption that the most common APIs are GetEnvironmentVariable and
+ * SetEnvironmentVariable. We try to abstract this away from the rest of the
+ * library.
+ */
+
+#ifdef _WIN32
+int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
+{
+    DWORD nvalue = GetEnvironmentVariable(key, buf, len);
+
+    if (nvalue == 0 || nvalue >= len) {
+        return 0;
+    }
+
+    if (!buf[0]) {
+        return 0;
+    }
+    return 1;
+}
+
+int lcb_getenv_boolean(const char *key)
+{
+    DWORD nvalue = GetEnvironmentVariable(key, NULL, 0);
+
+    return nvalue != 0;
+}
+
+#else
+int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
+{
+    const char *cur = getenv(key);
+    if (cur == NULL || *cur == '\0') {
+        return 0;
+    }
+
+    strncpy(buf, cur, len);
+    return 1;
+}
+
+int lcb_getenv_boolean(const char *key)
+{
+    const char *value = getenv(key);
+    return value != NULL && *value;
+}
+#endif

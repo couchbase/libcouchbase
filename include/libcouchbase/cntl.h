@@ -201,8 +201,60 @@ struct lcb_cntl_server_st {
  */
 #define LCB_CNTL_HTTP_TIMEOUT           0x0f
 
+struct lcb_cntl_iops_info_st {
+    int version;
+    union {
+        struct {
+            /**
+             * Pass here options, used to create IO structure with
+             * lcb_create_io_ops(3), to find out whether the library
+             * will override them in the current environment
+             */
+            const struct lcb_create_io_ops_st *options;
+
+            /**
+             * The default IO ops type. This is hard-coded into the library
+             * and is used if nothing else was specified in creation options
+             * or the environment
+             */
+            lcb_io_ops_type_t os_default;
+
+            /**
+             * The effective plugin type after reading environment variables.
+             * If this is set to 0, then a manual (non-builtin) plugin has been
+             * specified.
+             */
+            lcb_io_ops_type_t effective;
+        } v0;
+    } v;
+};
+
+/**
+ * Get the default IOPS types for this build. This provides a convenient
+ * way to determine what libcouchbase will use for IO when not explicitly
+ * specifying an iops structure to lcb_create()
+ *
+ * Arg: struct lcb_cntl_io_ops_info_st*
+ * NOTE: Pass NULL to lcb_cntl for the 'instance' parameter, as this does not
+ * read anything specific on the handle
+ */
+#define LCB_CNTL_IOPS_DEFAULT_TYPES      0x10
+
+/**
+ * Get/Set the global setting (this is a static global) regarding whether to
+ * print verbose information when trying to dynamically load an IO plugin.
+ * The information printed can be useful in determining why a plugin failed
+ * to load. This setting can also be controlled via the
+ * "LIBCOUCHBASE_DLOPEN_DEBUG" environment variable (and if enabled from the
+ * environment, will override the setting mentioned here).
+ *
+ * Arg: int*
+ * NOTE: Pass NULL to lcb_cntl for the 'instance' parameter.
+ */
+#define LCB_CNTL_IOPS_DLOPEN_DEBUG       0x11
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                   0x0f
+#define LCB_CNTL__MAX                    0x12
 
 
 #ifdef __cplusplus
