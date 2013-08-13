@@ -45,7 +45,7 @@ man5_MANS =
 
 man_MANS =
 BUILT_SOURCES =
-CLEANFILES = tests/CouchbaseMock.jar
+CLEANFILES = tests/CouchbaseMock.jar check-all.log
 
 include Makefile.manpage.inc
 
