@@ -390,6 +390,13 @@ example_libeventdirect_eventloop_SOURCES = example/libeventdirect/main.c
 example_libeventdirect_eventloop_DEPENDENCIES = libcouchbase.la
 example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
 
+if HAVE_CXX
+noinst_PROGRAMS += example/mcc/mcc
+example_mcc_mcc_SOURCES = example/mcc/mcc.cc
+example_mcc_mcc_DEPENDENCIES = libcouchbase.la
+example_mcc_mcc_LDADD = libcouchbase.la
+endif
+
 #
 # Example programs using the library
 #

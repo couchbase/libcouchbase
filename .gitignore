@@ -47,6 +47,7 @@
 /example/db/db
 /example/debug/debug
 /example/libeventdirect/eventloop
+/example/mcc/mcc
 /example/minimal/minimal
 /example/observe/observe
 /example/syncmode/syncmode
