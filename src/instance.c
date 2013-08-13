@@ -309,6 +309,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         lcb_io_opt_t ops;
         if ((err = lcb_create_io_ops(&ops, NULL)) != LCB_SUCCESS) {
             /* You can't initialize the library without a io-handler! */
+            free(obj);
             return err;
         }
         io = ops;
