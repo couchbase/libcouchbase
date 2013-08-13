@@ -182,10 +182,11 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
     }
 
     if (!sasl_in_progress) {
-        assert(sasl_client_new("couchbase", conn->host,
-                               nistrs.local, nistrs.remote,
-                               server->instance->sasl.callbacks, 0,
-                               &server->sasl_conn) == SASL_OK);
+        int sasl_ok = sasl_client_new("couchbase", conn->host,
+                                      nistrs.local, nistrs.remote,
+                                      server->instance->sasl.callbacks, 0,
+                                      &server->sasl_conn);
+        lcb_assert(sasl_ok == SASL_OK);
     }
 
     if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
