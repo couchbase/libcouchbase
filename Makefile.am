@@ -57,6 +57,8 @@ endif
 endif
 
 pkginclude_HEADERS = \
+                     include/libcouchbase/arguments.h \
+                     include/libcouchbase/assert.h \
                      include/libcouchbase/behavior.h \
                      include/libcouchbase/callbacks.h \
                      include/libcouchbase/cntl.h \
@@ -65,11 +67,10 @@ pkginclude_HEADERS = \
                      include/libcouchbase/couchbase.h \
                      include/libcouchbase/durability.h \
                      include/libcouchbase/error.h \
+                     include/libcouchbase/http.h \
+                     include/libcouchbase/sanitycheck.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
-                     include/libcouchbase/http.h \
-                     include/libcouchbase/arguments.h \
-                     include/libcouchbase/sanitycheck.h \
                      include/libcouchbase/visibility.h
 
 if BUILD_LIBCOUCHBASE_DEBUG
@@ -158,7 +159,6 @@ libcouchbase_la_SOURCES = \
                         src/io/connect.c \
                         src/io/lcbio.h \
                         src/io/readwrite.c \
-                        src/lcb_assert.h \
                         src/list.c \
                         src/list.h \
                         src/observe.c \

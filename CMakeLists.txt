@@ -317,12 +317,13 @@ INSTALL(TARGETS couchbase
 
 
 INSTALL(FILES include/libcouchbase/arguments.h
+              include/libcouchbase/assert.h
               include/libcouchbase/behavior.h
               include/libcouchbase/callbacks.h
               include/libcouchbase/cntl.h
-              include/libcouchbase/durability.h
               include/libcouchbase/compat.h
               include/libcouchbase/couchbase.h
+              include/libcouchbase/durability.h
               include/libcouchbase/error.h
               include/libcouchbase/http.h
               include/libcouchbase/sanitycheck.h

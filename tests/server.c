@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <lcb_assert.h>
 #include <ctype.h>
 
 #ifndef _WIN32

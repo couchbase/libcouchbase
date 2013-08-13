@@ -16,12 +16,12 @@
  */
 
 #include "config.h"
+#include <libcouchbase/assert.h>
 
 #ifndef HAVE_GETHRTIME
 
 #include <stdlib.h>
 #include <time.h>
-#include <lcb_assert.h>
 
 #ifdef HAVE_MACH_MACH_TIME_H
 #include <mach/mach_time.h>

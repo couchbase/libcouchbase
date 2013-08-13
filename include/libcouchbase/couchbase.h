@@ -54,6 +54,7 @@
 #include <time.h>
 
 #include <libcouchbase/configuration.h>
+#include <libcouchbase/assert.h>
 #include <libcouchbase/visibility.h>
 #include <libcouchbase/error.h>
 #include <libcouchbase/types.h>

@@ -23,7 +23,7 @@
 #ifndef LCB_IOCP_H
 #define LCB_IOCP_H
 
-#include "lcb_assert.h"
+#include <libcouchbase/assert.h>
 
 #define WIN32_NO_STATUS
 #include <libcouchbase/couchbase.h>

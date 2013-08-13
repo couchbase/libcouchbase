@@ -23,7 +23,6 @@
 #include "iocp_iops.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "lcb_assert.h"
 
 static lcb_io_writebuf_t *create_wbuf(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
 {

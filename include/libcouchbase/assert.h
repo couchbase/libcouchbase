@@ -14,8 +14,8 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#ifndef LCB_ASSERT_H
-#define LCB_ASSERT_H 1
+#ifndef LIBCOUCHBASE_ASSERT_H
+#define LIBCOUCHBASE_ASSERT_H 1
 
 #include <assert.h>
 

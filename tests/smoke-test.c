@@ -16,7 +16,6 @@
  */
 
 #include <string.h>
-#include <lcb_assert.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
