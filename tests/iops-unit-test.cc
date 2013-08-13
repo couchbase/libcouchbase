@@ -54,6 +54,10 @@ public:
         io->v.v0.update_timer(io, timer, us, arg, cb);
     }
 
+    void freeTimer(void *timer) {
+        io->v.v0.destroy_timer(io, timer);
+    }
+
     void startLoop() {
         io->v.v0.run_event_loop(io);
     }
@@ -103,12 +107,24 @@ public:
 
     virtual ~TimerCountdown() {
         parent->cancelTimer(timer);
+        parent->freeTimer(timer);
     }
+
+    void reset() {
+        parent->cancelTimer(timer);
+        parent->freeTimer(timer);
+        timer = parent->createTimer();
+        counter = 1;
+    }
+
+
+private:
+    TimerCountdown(const TimerCountdown&);
 };
 
 TEST_F(IOPS, Timers)
 {
-    TimerCountdown cont = TimerCountdown(this);
+    TimerCountdown cont(this);
     scheduleTimer(cont.timer, timer_callback, 0, &cont);
     startLoop();
     ASSERT_EQ(0, cont.counter);
@@ -129,7 +145,7 @@ TEST_F(IOPS, Timers)
     }
 
     // Try it again..
-    cont = TimerCountdown(this);
+    cont.reset();
     multi.clear();
     for (int ii = 0; ii < 10; ii++) {
         TimerCountdown *cur = new TimerCountdown(this);
