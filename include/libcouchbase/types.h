@@ -463,9 +463,9 @@ extern "C" {
                             struct lcb_nameinfo_st *ni);
 
         /**  v0: destroy_event */
-        void *pad_2;
+        void (*pad_2)(void);
         /** v0: update_event */
-        void *pad_3;
+        void (*pad_3)(void);
 
         /**
          * In the rare event that scheduling a read should fail, this should
