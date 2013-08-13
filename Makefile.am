@@ -465,7 +465,7 @@ tools_cbc_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 
 TESTS_ENVIRONMENT = \
-                    outdir="$(pwd)/tests";
+                    export outdir="$(shell pwd)/tests";
 
 TESTS=tests/check-all tests/homebrew-acceptance-test
 
