@@ -106,6 +106,7 @@ static void setup(char **argv, const char *username, const char *password,
 static void teardown(void)
 {
     lcb_destroy(session);
+    lcb_destroy_io_ops(io);
     session = NULL;
     io = NULL;
     shutdown_mock_server(mock);
@@ -490,6 +491,7 @@ static lcb_error_t test_connect(char **argv, const char *username,
     rc = global_error;
 
     lcb_destroy(session);
+    lcb_destroy_io_ops(io);
     session = NULL;
     io = NULL;
     shutdown_mock_server(mock);
