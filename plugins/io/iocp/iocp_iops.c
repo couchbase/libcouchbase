@@ -313,6 +313,8 @@ static lcb_sockdata_t *create_socket(lcb_io_opt_t iobase,
     sd->refcount = 1;
     sd->sSocket = s;
 
+    lcb_list_append(&io->sockets.list, &sd->list);
+
     return &sd->sd_base;
 }
 
@@ -419,6 +421,86 @@ static void send_error(lcb_io_opt_t iobase,
     iocp_asq_schedule(io, sd, &aerr->ol_dummy);
 }
 
+static void iops_dtor(lcb_io_opt_t iobase)
+{
+    iocp_t *io = (iocp_t*)iobase;
+    lcb_list_t *cur;
+    BOOL result;
+
+    /** Close all sockets first so we can get events for them */
+    LCB_LIST_FOR(cur, &io->sockets.list) {
+        iocp_sockdata_t *sd;
+        sd = LCB_LIST_ITEM(cur, iocp_sockdata_t, list);
+        if (sd->sSocket != INVALID_SOCKET) {
+            closesocket(sd->sSocket);
+            sd->sSocket = INVALID_SOCKET;
+        }
+    }
+
+    /** Drain the queue. This should not block */
+    while (1) {
+        DWORD nbytes;
+        ULONG_PTR completionKey;
+        LPOVERLAPPED pOl;
+        iocp_sockdata_t *sd;
+        iocp_overlapped_t *ol;
+
+        GetQueuedCompletionStatus(io->hCompletionPort,
+                                  &nbytes,
+                                  &completionKey,
+                                  &pOl,
+                                  0);
+
+        sd = (iocp_sockdata_t *)completionKey;
+        ol = (iocp_overlapped_t *)pOl;
+
+        if (!ol) {
+            break;
+        }
+
+
+        switch (ol->action) {
+        case LCBIOCP_ACTION_CONNECT:
+        case LCBIOCP_ACTION_ERROR:
+            free(ol);
+            break;
+
+        case LCBIOCP_ACTION_WRITE:
+            release_wbuf(iobase, &sd->sd_base, (lcb_io_writebuf_t*)ol);
+            break;
+
+        default:
+            /* We don't care about read */
+            break;
+        }
+
+        iocp_socket_decref(io, sd);
+    }
+
+    LCB_LIST_FOR(cur, &io->sockets.list) {
+        iocp_sockdata_t *sd = LCB_LIST_ITEM(cur, iocp_sockdata_t, list);
+
+        IOCP_LOG(IOCP_WARN,
+                "Leak detected in socket %p (%lu). Refcount=%d",
+                sd,
+                sd->sSocket,
+                sd->refcount);
+
+        if (sd->sSocket != INVALID_SOCKET) {
+            closesocket(sd->sSocket);
+            sd->sSocket = INVALID_SOCKET;
+        }
+    }
+
+    if (io->hCompletionPort) {
+        if (!CloseHandle(io->hCompletionPort)) {
+            IOCP_LOG(IOCP_ERR, "Couldn't CloseHandle: %d", GetLastError());
+        }
+    }
+
+    free(io);
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg)
 {
@@ -435,6 +517,7 @@ lcb_error_t lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg)
     iocp_initialize_winsock();
     iocp_initialize_loop_globals();
     lcb_list_init(&io->timer_queue.list);
+    lcb_list_init(&io->sockets.list);
 
     tbl = &io->base;
     *ioret = tbl;
@@ -449,6 +532,8 @@ lcb_error_t lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg)
         abort();
     }
 
+
+    tbl->destructor = iops_dtor;
     tbl->v.v1.create_socket = create_socket;
     tbl->v.v1.close_socket = close_socket;
     tbl->v.v1.get_nameinfo = sock_nameinfo;

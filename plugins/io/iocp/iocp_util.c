@@ -176,6 +176,9 @@ void iocp_socket_decref(iocp_t *io, iocp_sockdata_t *sd)
     }
 
     iocp_free_bufinfo_common(&sd->sd_base.read_buffer);
+
+    lcb_list_delete(&sd->list);
+
     (void)io;
     free(sd);
 }

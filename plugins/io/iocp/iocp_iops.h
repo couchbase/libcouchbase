@@ -108,6 +108,7 @@ extern "C" {
 
         SOCKET sSocket;
         lcb_io_read_cb rdcb;
+        lcb_list_t list;
     } iocp_sockdata_t;
 
     typedef struct {
@@ -141,6 +142,9 @@ extern "C" {
 
         /** Sorted list */
         iocp_timer_t timer_queue;
+
+        /** List of registered sockets in the list */
+        iocp_sockdata_t sockets;
 
         /** How many operations are pending for I/O */
         unsigned int n_iopending;
