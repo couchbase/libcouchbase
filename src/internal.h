@@ -618,7 +618,7 @@ extern "C" {
     /**
      * Hashtable wrappers
      */
-    genhash_t *lcb_hashtable_nc_new(int est);
+    genhash_t *lcb_hashtable_nc_new(lcb_size_t est);
 
     void lcb_instance_connerr(lcb_t instance,
                               lcb_error_t err,

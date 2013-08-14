@@ -7,14 +7,14 @@
 #include "genhash.h"
 
 /* Table of 32 primes by their distance from the nearest power of two */
-static int prime_lcb_size_table[] = {
+static lcb_size_t prime_size_table[] = {
     3, 7, 13, 23, 47, 97, 193, 383, 769, 1531, 3067, 6143, 12289, 24571, 49157,
     98299, 196613, 393209, 786433, 1572869, 3145721, 6291449, 12582917,
     25165813, 50331653, 100663291, 201326611, 402653189, 805306357,
     1610612741
 };
 
-#define TABLE_SIZE ((int)(sizeof(prime_lcb_size_table) / sizeof(int)))
+#define TABLE_SIZE ((int)(sizeof(prime_size_table) / sizeof(int)))
 
 struct genhash_entry_t {
     /** The key for this entry */
@@ -35,7 +35,7 @@ struct _genhash {
     struct genhash_entry_t *buckets[];
 };
 
-static int estimate_table_size(int est);
+static lcb_size_t estimate_table_size(lcb_size_t est);
 
 
 static void *dup_key(genhash_t *h, const void *key, lcb_size_t klen)
@@ -70,20 +70,19 @@ static void free_value(genhash_t *h, void *value)
     }
 }
 
-static int estimate_table_size(int est)
+static lcb_size_t estimate_table_size(lcb_size_t est)
 {
-    int rv = 0;
-    lcb_assert(est > 0);
-    while (prime_lcb_size_table[rv] < est && rv + 1 < TABLE_SIZE) {
+    lcb_size_t rv = 0;
+    while (prime_size_table[rv] < est && rv + 1 < TABLE_SIZE) {
         rv++;
     }
-    return prime_lcb_size_table[rv];
+    return prime_size_table[rv];
 }
 
-genhash_t *genhash_init(int est, struct lcb_hash_ops ops)
+genhash_t *genhash_init(lcb_size_t est, struct lcb_hash_ops ops)
 {
     genhash_t *rv = NULL;
-    int size = 0;
+    lcb_size_t size = 0;
     if (est < 1) {
         return NULL;
     }

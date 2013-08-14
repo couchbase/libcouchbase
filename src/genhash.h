@@ -80,7 +80,7 @@ enum update_type {
  *
  * @return the new genhash_t or NULL if one cannot be created
  */
-genhash_t *genhash_init(int est, struct lcb_hash_ops ops);
+genhash_t *genhash_init(lcb_size_t est, struct lcb_hash_ops ops);
 
 /**
  * Free a gen hash.

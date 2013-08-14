@@ -880,7 +880,7 @@ extern "C" {
     lcb_error_t lcb_durability_poll(lcb_t instance,
                                     const void *cookie,
                                     const lcb_durability_opts_t *options,
-                                    size_t ncmds,
+                                    lcb_size_t ncmds,
                                     const lcb_durability_cmd_t *const *cmds);
 
 

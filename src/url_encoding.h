@@ -22,9 +22,9 @@ extern "C" {
 #endif
 
     lcb_error_t lcb_urlencode_path(const char *path,
-                                   size_t npath,
+                                   lcb_size_t npath,
                                    char **out,
-                                   size_t *nout);
+                                   lcb_size_t *nout);
 
 #ifdef __cplusplus
 }

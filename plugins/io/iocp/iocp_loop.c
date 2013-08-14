@@ -254,7 +254,7 @@ void iocp_run(lcb_io_opt_t iobase)
     iocp_t *io = (iocp_t *)iobase;
 
     lcb_uint64_t now = 0;
-    unsigned long tmo;
+    DWORD tmo;
     int remaining;
 
     if (!io->breakout) {
@@ -268,7 +268,7 @@ void iocp_run(lcb_io_opt_t iobase)
     do {
         if (!now) {
             now = iocp_millis();
-            tmo = iocp_tmq_next_timeout(&io->timer_queue.list, now);
+            tmo = (DWORD)iocp_tmq_next_timeout(&io->timer_queue.list, now);
         }
 
         IOCP_LOG(IOCP_TRACE, "Timeout=%lu msec", tmo);
@@ -289,7 +289,7 @@ void iocp_run(lcb_io_opt_t iobase)
         if (LOOP_CAN_CONTINUE(io)) {
             now = iocp_millis();
             deque_expired_timers(io, now);
-            tmo = iocp_tmq_next_timeout(&io->timer_queue.list, now);
+            tmo = (DWORD)iocp_tmq_next_timeout(&io->timer_queue.list, now);
         }
 
     } while (LOOP_CAN_CONTINUE(io) && (HAS_QUEUED_IO(io) || tmo != INFINITE));

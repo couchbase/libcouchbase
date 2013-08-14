@@ -59,7 +59,7 @@ extern "C" {
         struct lcb_durability_entry_st **valid_entries;
 
         /** number of entries in the array */
-        size_t nentries;
+        lcb_size_t nentries;
 
         struct {
             /**
@@ -73,7 +73,7 @@ extern "C" {
          * How many entries have been thus far completed. The operation is
          * complete when this number hits zero
          */
-        unsigned nremaining;
+        lcb_size_t nremaining;
 
         /**
          * How many entries remain for the current iteration

@@ -819,7 +819,7 @@ static bool hash_impl(string filename, list<string> &keys)
             if (nrepl > 0) {
                 cout << " Replicas:";
                 for (lcb_size_t ii = 0; ii < nrepl; ++ii) {
-                    int rr = vbucket_get_replica(vbucket_config, vbucket_id, ii);
+                    int rr = vbucket_get_replica(vbucket_config, vbucket_id, (int)ii);
                     const char *replica;
                     if (rr >= 0) {
                         replica = vbucket_config_get_server(vbucket_config, rr);
@@ -862,7 +862,7 @@ static bool hash_impl(lcb_t instance, list<string> &keys)
             if (nrepl > 0) {
                 cout << " Replicas:";
                 for (lcb_size_t ii = 0; ii < nrepl; ++ii) {
-                    int rr = vbucket_get_replica(instance->vbucket_config, vbucket_id, ii);
+                    int rr = vbucket_get_replica(instance->vbucket_config, vbucket_id, (int)ii);
                     if (rr >= 0) {
                         cout << "\"" << instance->servers[rr].authority << "\"";
                     } else {

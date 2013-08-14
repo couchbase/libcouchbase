@@ -271,7 +271,7 @@ static lcb_socket_t lcb_io_socket(lcb_io_opt_t iops,
 {
     lcb_socket_t sock;
 #ifdef _WIN32
-    sock = WSASocket(domain, type, protocol, NULL, 0, 0);
+    sock = (lcb_socket_t)WSASocket(domain, type, protocol, NULL, 0, 0);
 #else
     sock = socket(domain, type, protocol);
 #endif

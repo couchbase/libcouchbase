@@ -180,7 +180,7 @@ static void dset_done_waiting(lcb_durability_set_t *dset)
  */
 static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err)
 {
-    size_t ii;
+    lcb_size_t ii;
     dset->us_timeout = 0;
     dset->next_state = STATE_IGNORE;
 
@@ -209,7 +209,7 @@ static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err)
  */
 static void poll_once(lcb_durability_set_t *dset)
 {
-    size_t ii, oix;
+    lcb_size_t ii, oix;
     lcb_error_t err;
 
     /**
@@ -261,7 +261,7 @@ static void poll_once(lcb_durability_set_t *dset)
     }
 
     if (dset->waiting && oix) {
-        lcb_uint32_t us_now = gethrtime() / 1000;
+        lcb_uint32_t us_now = (lcb_uint32_t)(gethrtime() / 1000);
         lcb_uint32_t us_tmo;
 
         if (dset->us_timeout > us_now) {
@@ -566,14 +566,11 @@ static int verify_critera(lcb_t instance, lcb_durability_set_t *dset)
     return 0;
 }
 
-/**
- * API function
- */
 LIBCOUCHBASE_API
 lcb_error_t lcb_durability_poll(lcb_t instance,
                                 const void *cookie,
                                 const lcb_durability_opts_t *options,
-                                size_t ncmds,
+                                lcb_size_t ncmds,
                                 const lcb_durability_cmd_t *const *cmds)
 {
     hrtime_t now = gethrtime();
@@ -602,7 +599,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     }
 
     /* set our timeouts now */
-    dset->us_timeout = (now / 1000) + DSET_OPTFLD(dset, timeout);
+    dset->us_timeout = (lcb_uint32_t)(now / 1000) + DSET_OPTFLD(dset, timeout);
     dset->timer = instance->io->v.v0.create_timer(instance->io);
     dset->cookie = cookie;
     dset->nentries = ncmds;
@@ -704,7 +701,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
 {
     lcb_durability_set_t *dset = arg;
     hrtime_t ns_now = gethrtime();
-    lcb_uint32_t us_now = ns_now / 1000;
+    lcb_uint32_t us_now = (lcb_uint32_t)(ns_now / 1000);
 
     if (us_now >= (dset->us_timeout - 50)) {
         dset->next_state = STATE_TIMEOUT;

@@ -17,7 +17,7 @@
 
 #include "internal.h"
 
-static int maybe_skip_encoding(const char *p, int c, int l)
+static int maybe_skip_encoding(const char *p, lcb_size_t c, lcb_size_t l)
 {
     int ii;
     p += c;
@@ -84,12 +84,12 @@ static int is_legal_uri_character(char c)
 }
 
 lcb_error_t lcb_urlencode_path(const char *path,
-                               size_t npath,
+                               lcb_size_t npath,
                                char **out,
-                               size_t *nout)
+                               lcb_size_t *nout)
 {
-    size_t ii;
-    size_t n = 0;
+    lcb_size_t ii;
+    lcb_size_t n = 0;
     int skip_encoding = 0;
     char *op;
 

@@ -139,7 +139,7 @@ int hashset_is_member(hashset_t set, void *item)
 
 void **hashset_get_items(hashset_t set, void **itemlist)
 {
-    size_t ii, oix;
+    lcb_size_t ii, oix;
 
     if (!set->nitems) {
         return NULL;

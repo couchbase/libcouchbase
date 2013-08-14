@@ -57,7 +57,7 @@ void lcb_http_request_decref(lcb_http_request_t req)
         }
     }
 
-    free(req->headers);
+    free((void*)req->headers);
     memset(req, 0xff, sizeof(struct lcb_http_request_st));
     free(req);
 }

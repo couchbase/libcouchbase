@@ -28,7 +28,7 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
                            lcb_size_t num,
                            const lcb_arithmetic_cmd_t *const *items)
 {
-    size_t ii;
+    lcb_size_t ii;
 
     /* we need a vbucket config before we can start getting data.. */
     if (instance->vbucket_config == NULL) {

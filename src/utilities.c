@@ -208,7 +208,7 @@ lcb_sockdata_t *lcb_gai2sock_v1(lcb_t instance, struct addrinfo **ai, int *conne
 #ifdef _WIN32
 int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
 {
-    DWORD nvalue = GetEnvironmentVariable(key, buf, len);
+    DWORD nvalue = GetEnvironmentVariable(key, buf, (DWORD)len);
 
     if (nvalue == 0 || nvalue >= len) {
         return 0;

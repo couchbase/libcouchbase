@@ -38,7 +38,7 @@ static int iocp_timer_cmp_asc(lcb_list_t *a, lcb_list_t *b)
     }
 }
 
-unsigned long iocp_tmq_next_timeout(lcb_list_t *list, lcb_uint64_t now)
+lcb_uint64_t iocp_tmq_next_timeout(lcb_list_t *list, lcb_uint64_t now)
 {
     if (LCB_LIST_IS_EMPTY(list)) {
         return INFINITE;

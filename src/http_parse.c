@@ -182,7 +182,7 @@ int lcb_http_request_do_parse(lcb_http_request_t req)
         if (req->status != LCB_HTREQ_S_ONGOING) {
             return 0;
         } else {
-            return (lcb_ssize_t)nb;
+            return (int)nb;
         }
     }
     return 0;

@@ -42,7 +42,7 @@ static struct lcb_hash_ops hashops_nocopy = {
     NULL, /* freeValue */
 };
 
-genhash_t *lcb_hashtable_nc_new(int est)
+genhash_t *lcb_hashtable_nc_new(lcb_size_t est)
 {
     return genhash_init(est, hashops_nocopy);
 }

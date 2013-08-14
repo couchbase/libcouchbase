@@ -101,7 +101,7 @@ static int start_write(lcb_io_opt_t iobase,
         }
 
         nbufs++;
-        wsbuf[ii].len = iov->iov_len;
+        wsbuf[ii].len = (ULONG)iov->iov_len;
         wsbuf[ii].buf = iov->iov_base;
     }
 
@@ -142,7 +142,7 @@ static int start_read(lcb_io_opt_t iobase,
         }
 
         wsb->buf = iov->iov_base;
-        wsb->len = iov->iov_len;
+        wsb->len = (ULONG)iov->iov_len;
         nbufs++;
     }
 
@@ -424,7 +424,6 @@ static void iops_dtor(lcb_io_opt_t iobase)
 {
     iocp_t *io = (iocp_t *)iobase;
     lcb_list_t *cur;
-    BOOL result;
 
     /** Close all sockets first so we can get events for them */
     LCB_LIST_FOR(cur, &io->sockets.list) {

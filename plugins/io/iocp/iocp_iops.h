@@ -188,7 +188,7 @@ extern "C" {
      */
     void iocp_tmq_add(lcb_list_t *list, iocp_timer_t *timer);
     void iocp_tmq_del(lcb_list_t *list, iocp_timer_t *timer);
-    unsigned long iocp_tmq_next_timeout(lcb_list_t *list, lcb_uint64_t now);
+    lcb_uint64_t iocp_tmq_next_timeout(lcb_list_t *list, lcb_uint64_t now);
     iocp_timer_t *iocp_tmq_pop(lcb_list_t *list, lcb_uint64_t now);
 
     LIBCOUCHBASE_API

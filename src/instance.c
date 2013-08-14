@@ -77,7 +77,7 @@ LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_nodes(lcb_t instance)
 {
     if (instance->vbucket_config) {
-        return instance->nservers;
+        return (lcb_int32_t)instance->nservers;
     } else {
         return -1;
     }
@@ -99,8 +99,8 @@ static lcb_error_t validate_hostname(const char *host, char **realhost)
     /* The http parser aborts if it finds a space.. we don't want our
      * program to core, so run a prescan first
      */
-    int len = strlen(host);
-    int ii;
+    lcb_size_t len = strlen(host);
+    lcb_size_t ii;
     char *schema = strstr(host, "://");
     char *path;
     int port = 8091;
@@ -113,7 +113,7 @@ static lcb_error_t validate_hostname(const char *host, char **realhost)
     }
 
     if (schema != NULL) {
-        size_t size;
+        lcb_size_t size;
         size = schema - host;
         if (size != 4 && strncasecmp(host, "http", 4) != 0) {
             return LCB_INVALID_HOST_FORMAT;
@@ -125,7 +125,7 @@ static lcb_error_t validate_hostname(const char *host, char **realhost)
 
     path = strchr(host, '/');
     if (path != NULL) {
-        size_t size;
+        lcb_size_t size;
         if (strcmp(path, "/pools") != 0 && strcmp(path, "/pools/") != 0) {
             return LCB_INVALID_HOST_FORMAT;
         }
