@@ -81,7 +81,7 @@ static plugin_info builtin_plugins[] = {
     BUILTIN_DL("libev", LCB_IO_OPS_LIBEV),
     BUILTIN_DL("libuv", LCB_IO_OPS_LIBUV),
 
-    { NULL }
+    { NULL, LCB_IO_OPS_INVALID, NULL, NULL, NULL, { 0 }, { 0 } }
 };
 
 /**
@@ -443,11 +443,12 @@ lcb_error_t lcb_iops_cntl_handler(int mode,
 
     switch (cmd) {
     case LCB_CNTL_IOPS_DEFAULT_TYPES: {
-        struct lcb_create_io_ops_st options = { 0 };
+        struct lcb_create_io_ops_st options;
         struct lcb_cntl_iops_info_st *info = arg;
         lcb_error_t err;
         plugin_info pi;
 
+        memset(&options, 0, sizeof(options));
         if (mode != LCB_CNTL_GET) {
             return LCB_NOT_SUPPORTED;
         }
