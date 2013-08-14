@@ -137,16 +137,17 @@ libcouchbase_la_SOURCES = \
                         plugins/io/select/select_io_opts.h \
                         src/arithmetic.c \
                         src/base64.c \
-                        src/bucketconfig/bconf_io.c \
-                        src/bucketconfig/bconf_parse.c \
+                        src/bconf_io.c \
+                        src/bconf_parse.c \
                         src/cntl.c \
                         src/compat.c \
                         src/config_cache.c \
                         src/config_static.h \
+                        src/connect.c \
                         src/cookie.c \
-                        src/error.c \
                         src/durability.c \
                         src/durability_internal.h \
+                        src/error.c \
                         src/flush.c \
                         src/genhash.c \
                         src/genhash.h \
@@ -158,25 +159,24 @@ libcouchbase_la_SOURCES = \
                         src/hashset.h \
                         src/hashtable.c \
                         src/http.c \
-                        src/http/http_io.c \
-                        src/http/http_parse.c \
+                        src/http_io.c \
+                        src/http_parse.c \
                         src/instance.c \
                         src/internal.h \
-                        src/io/connect.c \
-                        src/io/lcbio.h \
-                        src/io/readwrite.c \
+                        src/lcbio.h \
                         src/list.c \
                         src/list.h \
                         src/observe.c \
                         src/packet.c \
+                        src/readwrite.c \
                         src/remove.c \
                         src/ringbuffer.c \
                         src/ringbuffer.h \
                         src/sanitycheck.c \
                         src/server.c \
-                        src/server/server_connect.c \
-                        src/server/server_io.c \
-                        src/server/server_parse.c \
+                        src/server_connect.c \
+                        src/server_io.c \
+                        src/server_parse.c \
                         src/stats.c \
                         src/store.c \
                         src/strerror.c \

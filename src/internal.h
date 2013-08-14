@@ -46,7 +46,7 @@
 #include "genhash.h"
 #include "debug.h"
 #include "handler.h"
-#include "io/lcbio.h"
+#include "lcbio.h"
 
 #define LCB_DEFAULT_TIMEOUT 2500000
 #define LCB_DEFAULT_VIEW_TIMEOUT 75000000
