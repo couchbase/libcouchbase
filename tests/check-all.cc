@@ -40,7 +40,11 @@
 
 #define PLUGIN_ENV_VAR "LIBCOUCHBASE_EVENT_PLUGIN_NAME"
 #define LCB_SRCROOT_ENV_VAR "srcdir"
+#ifdef HAVE_COUCHBASEMOCK
 #define DEFAULT_TEST_NAMES "unit-tests;smoke-test"
+#else
+#define DEFAULT_TEST_NAMES "unit-tests"
+#endif
 
 #ifdef _WIN32
 #define DEFAULT_PLUGINS_STRING "select;iocp;libuv"

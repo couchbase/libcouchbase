@@ -317,7 +317,7 @@ tests_unit_tests_SOURCES = \
                            tests/url_encoding-tests.cc
 
 tests_unit_tests_DEPENDENCIES = libcouchbase.la
-tests_unit_tests_LDADD = libcouchbase.la libvbucket.la libmockserver.la
+tests_unit_tests_LDADD = libcouchbase.la libvbucket.la
 tests_unit_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
 tests_unit_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
 tests_unit_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
@@ -446,6 +446,7 @@ tests_unit_tests_SOURCES += \
                             tests/testutil.cc \
                             tests/testutil.h
 
+tests_unit_tests_LDADD += libmockserver.la
 check_PROGRAMS += tests/smoke-test
 endif
 
