@@ -464,8 +464,7 @@ tools_cbc_pillowfight_SOURCES = tools/commandlineparser.cc \
 tools_cbc_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 
-TESTS_ENVIRONMENT = \
-                    export outdir="$(shell pwd)/tests";
+AM_TESTS_ENVIRONMENT = export outdir="$(top_builddir)/tests";
 
 TESTS=tests/check-all tests/homebrew-acceptance-test
 
