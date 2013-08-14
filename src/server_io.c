@@ -141,7 +141,7 @@ static void error_v1_common(lcb_server_t *server)
 void lcb_server_v1_error_handler(lcb_sockdata_t *sockptr)
 {
     lcb_server_t *c;
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&c)) {
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&c)) {
         return;
     }
     error_v1_common(c);
@@ -154,7 +154,7 @@ void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
     int rv;
     hrtime_t stop;
 
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&c)) {
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&c)) {
         return;
     }
 
@@ -188,7 +188,7 @@ void lcb_server_v1_write_handler(lcb_sockdata_t *sockptr,
                                  int status)
 {
     lcb_server_t *c;
-    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void**)&c)) {
+    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&c)) {
         return;
     }
 
@@ -215,8 +215,8 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
         lcb_server_t *c = instance->servers + ii;
         if (c->connection_ready) {
             lcb_server_v0_event_handler(c->connection.sockfd,
-                                     LCB_READ_EVENT | LCB_WRITE_EVENT,
-                                     c);
+                                        LCB_READ_EVENT | LCB_WRITE_EVENT,
+                                        c);
         }
     }
     (void)cookie;

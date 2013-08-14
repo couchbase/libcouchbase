@@ -565,16 +565,13 @@ reformat:
                --unpad-paren \
                --align-pointer=name \
                --align-reference=name \
-               $(top_srcdir)/include/libcouchbase/*.[ch] \
-               $(top_srcdir)/src/*.[ch] \
                $(top_srcdir)/debug/*.cc \
-               $(top_srcdir)/example/libeventdirect/*.c \
-               $(top_srcdir)/example/syncmode/*.c \
-               $(top_srcdir)/example/yajl/*.c \
-               $(top_srcdir)/tools/*.cc \
-               $(top_srcdir)/tools/*.h \
-               $(top_srcdir)/tests/*.{cc,c,h} \
+               $(top_srcdir)/example/*/*.c \
+               $(top_srcdir)/include/libcouchbase/*.[ch] \
                $(top_srcdir)/plugins/io/*/*.[ch] \
+               $(top_srcdir)/src/*.[ch] \
+               $(top_srcdir)/tests/*.{cc,c,h} \
+               $(top_srcdir)/tools/*.{cc,h} \
                $(top_srcdir)/win32/*.[ch]
 
 regenerate-manpage:

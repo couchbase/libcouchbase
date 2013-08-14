@@ -31,7 +31,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb);
  */
 static void v0_reconnect_handler(lcb_socket_t sockfd, short which, void *data)
 {
-    v0_connect((struct lcb_connection_st*)data, 0, which);
+    v0_connect((struct lcb_connection_st *)data, 0, which);
     (void)which;
     (void)sockfd;
 }
@@ -169,10 +169,10 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
             conn->last_error = sockerr;
 
         } else {
-                if (io->v.v0.connect(io,
-                                     conn->sockfd,
-                                     conn->curr_ai->ai_addr,
-                                     (unsigned int)conn->curr_ai->ai_addrlen) == 0) {
+            if (io->v.v0.connect(io,
+                                 conn->sockfd,
+                                 conn->curr_ai->ai_addr,
+                                 (unsigned int)conn->curr_ai->ai_addrlen) == 0) {
                 /**
                  * Connected.
                  * XXX: In the odd event that this does connect immediately, we

@@ -25,10 +25,10 @@
 
 static void config_v0_handler(lcb_socket_t sock, short which, void *arg);
 static void config_v1_read_handler(lcb_sockdata_t *sockptr,
-                                            lcb_ssize_t nr);
+                                   lcb_ssize_t nr);
 static void config_v1_write_handler(lcb_sockdata_t *sockptr,
-                                            lcb_io_writebuf_t *wbuf,
-                                            int status);
+                                    lcb_io_writebuf_t *wbuf,
+                                    int status);
 static void config_v1_error_handler(lcb_sockdata_t *sockptr);
 
 static void lcb_instance_reset_stream_state(lcb_t instance)
@@ -44,8 +44,8 @@ static void lcb_instance_reset_stream_state(lcb_t instance)
 
 
 void lcb_instance_connerr(lcb_t instance,
-                                 lcb_error_t err,
-                                 const char *errinfo)
+                          lcb_error_t err,
+                          const char *errinfo)
 {
     lcb_connection_close(&instance->connection);
     /* We try and see if the connection attempt can be relegated to another
@@ -251,7 +251,7 @@ static void v1_error_common(lcb_t instance)
 static void config_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
 {
     lcb_t instance;
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&instance)) {
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&instance)) {
         return;
     }
 
@@ -272,7 +272,7 @@ static void config_v1_write_handler(lcb_sockdata_t *sockptr,
                                     int status)
 {
     lcb_t instance;
-    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void**)&instance)) {
+    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&instance)) {
         return;
     }
 
@@ -289,7 +289,7 @@ static void config_v1_write_handler(lcb_sockdata_t *sockptr,
 static void config_v1_error_handler(lcb_sockdata_t *sockptr)
 {
     lcb_t instance;
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void**)&instance)) {
+    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&instance)) {
         return;
     }
 

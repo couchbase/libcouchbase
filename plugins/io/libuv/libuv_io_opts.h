@@ -30,30 +30,30 @@ extern "C" {
 #define LCBUV_API LIBCOUCHBASE_API
 #endif
 
-typedef struct lcbuv_options_st {
-    int version;
-    union {
-        struct {
-            /** External loop to be used (if not default) */
-            uv_loop_t *loop;
+    typedef struct lcbuv_options_st {
+        int version;
+        union {
+            struct {
+                /** External loop to be used (if not default) */
+                uv_loop_t *loop;
 
-            /** Whether run_event_loop/stop_event_loop should do anything */
-            int startsop_noop;
-        } v0;
-    } v;
-} lcbuv_options_t;
+                /** Whether run_event_loop/stop_event_loop should do anything */
+                int startsop_noop;
+            } v0;
+        } v;
+    } lcbuv_options_t;
 
-/**
- * Use this if using an existing uv_loop_t
- * @param io a pointer to an io pointer. Will be populated on success
- * @param loop a uv_loop_t. You may use 'NULL', in which case the default
- * @param options the options to be passed. From libcouchbase this is a
- * 'void' parameter.
- */
-LCBUV_API
-lcb_error_t lcb_create_libuv_io_opts(int version,
-                                     lcb_io_opt_t *io,
-                                     lcbuv_options_t *options);
+    /**
+     * Use this if using an existing uv_loop_t
+     * @param io a pointer to an io pointer. Will be populated on success
+     * @param loop a uv_loop_t. You may use 'NULL', in which case the default
+     * @param options the options to be passed. From libcouchbase this is a
+     * 'void' parameter.
+     */
+    LCBUV_API
+    lcb_error_t lcb_create_libuv_io_opts(int version,
+                                         lcb_io_opt_t *io,
+                                         lcbuv_options_t *options);
 
 #ifdef __cplusplus
 }

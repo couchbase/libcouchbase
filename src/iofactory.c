@@ -124,7 +124,7 @@ static int get_env_plugin_info(plugin_info *info)
     return 1;
 }
 
-static plugin_info* find_plugin_info(lcb_io_ops_type_t iotype)
+static plugin_info *find_plugin_info(lcb_io_ops_type_t iotype)
 {
     plugin_info *cur;
 

@@ -19,10 +19,10 @@
  * ioctl/fcntl-like interface for libcouchbase configuration properties
  */
 
-typedef lcb_error_t (*ctl_handler)(int, lcb_t, int, void*);
+typedef lcb_error_t (*ctl_handler)(int, lcb_t, int, void *);
 
 
-static lcb_uint32_t* get_timeout_field(lcb_t instance, int cmd)
+static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
 {
     switch (cmd) {
 
@@ -100,7 +100,7 @@ static lcb_error_t get_vbconfig(int mode, lcb_t instance, int cmd, void *arg)
     if (mode != LCB_CNTL_GET) {
         return LCB_NOT_SUPPORTED;
     }
-    *(VBUCKET_CONFIG_HANDLE*)arg = instance->vbucket_config;
+    *(VBUCKET_CONFIG_HANDLE *)arg = instance->vbucket_config;
 
     (void)cmd;
     return LCB_SUCCESS;
@@ -112,7 +112,7 @@ static lcb_error_t get_htype(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    *(lcb_type_t*)arg = instance->type;
+    *(lcb_type_t *)arg = instance->type;
 
     (void)cmd;
     return LCB_SUCCESS;
@@ -150,7 +150,7 @@ static lcb_error_t get_iops(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    *(lcb_io_opt_t*)arg = instance->io;
+    *(lcb_io_opt_t *)arg = instance->io;
     (void)cmd;
     return LCB_SUCCESS;
 }
@@ -170,7 +170,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
     }
 
     if (cmd == LCB_CNTL_MEMDNODE_INFO) {
-        lcb_server_t* server;
+        lcb_server_t *server;
         int ix = si->v.v0.index;
 
         if (ix < 0 || ix > (int)instance->nservers) {

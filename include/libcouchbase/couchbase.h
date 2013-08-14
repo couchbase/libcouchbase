@@ -881,7 +881,7 @@ extern "C" {
                                     const void *cookie,
                                     const lcb_durability_opts_t *options,
                                     size_t ncmds,
-                                    const lcb_durability_cmd_t * const * cmds);
+                                    const lcb_durability_cmd_t *const *cmds);
 
 
 #ifdef __cplusplus

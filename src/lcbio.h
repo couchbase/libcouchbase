@@ -65,7 +65,7 @@ extern "C" {
     } lcb_connstart_opts_t;
 
     struct lcb_connection_st;
-    typedef void (*lcb_connection_handler)(struct lcb_connection_st*, lcb_error_t);
+    typedef void (*lcb_connection_handler)(struct lcb_connection_st *, lcb_error_t);
 
     struct lcb_timeout_info_st {
         /** The timer to use */
@@ -109,7 +109,7 @@ extern "C" {
          */
         struct {
             /** The handler callback */
-            void (*handler)(lcb_socket_t,short,void*);
+            void (*handler)(lcb_socket_t, short, void *);
             /** The event from create_event */
             void *ptr;
             /** This is 0 if delete_event has been called */
@@ -126,8 +126,8 @@ extern "C" {
         } completion;
 
         /** Host/Port */
-        char host[NI_MAXHOST+1];
-        char port[NI_MAXSERV+1];
+        char host[NI_MAXHOST + 1];
+        char port[NI_MAXSERV + 1];
 
         /** this is populated with the socket when the connection is done */
         lcb_socket_t sockfd;
@@ -154,7 +154,7 @@ extern "C" {
 
     };
 
-    typedef struct lcb_connection_st* lcb_connection_t;
+    typedef struct lcb_connection_st *lcb_connection_t;
 
     /**
      * Initialize the connection object's buffers, usually allocating them
@@ -244,21 +244,21 @@ extern "C" {
                                                  lcb_io_error_cb error_callback);
 
     lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
-                                              ringbuffer_t **buf,
-                                              lcb_io_write_cb callback,
-                                              lcb_io_error_cb error_callback);
+                                                  ringbuffer_t **buf,
+                                                  lcb_io_write_cb callback,
+                                                  lcb_io_error_cb error_callback);
 
     void lcb_sockrw_v1_onread_common(lcb_sockdata_t *sock,
-                                 ringbuffer_t **dst,
-                                 lcb_ssize_t nr);
+                                     ringbuffer_t **dst,
+                                     lcb_ssize_t nr);
 
     void lcb_sockrw_v1_onwrite_common(lcb_sockdata_t *sock,
-                                  lcb_io_writebuf_t *wbuf,
-                                  ringbuffer_t **dst);
+                                      lcb_io_writebuf_t *wbuf,
+                                      ringbuffer_t **dst);
 
     unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
-                                            lcb_io_writebuf_t *wbuf,
-                                            void **datap);
+                                         lcb_io_writebuf_t *wbuf,
+                                         void **datap);
 
 #ifdef __cplusplus
 }

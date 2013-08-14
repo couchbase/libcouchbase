@@ -95,7 +95,7 @@ static void setup(char **argv, const char *username, const char *password,
     lcb_wait(session);
 
     if (!mock->is_mock) {
-        const char * const * servers;
+        const char *const *servers;
         total_node_count = 0;
         servers = lcb_get_server_list(session);
         for (; *servers; servers++, total_node_count++);

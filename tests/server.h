@@ -25,10 +25,10 @@ extern "C" {
 #ifdef _WIN32
 #define in_port_t USHORT
 #ifndef usleep
-  #define usleep(us) Sleep((us) / 1000)
+#define usleep(us) Sleep((us) / 1000)
 #endif
 #ifndef sleep
-  #define sleep(s) Sleep( (s) * 1000)
+#define sleep(s) Sleep( (s) * 1000)
 #endif
 
 #include <winsock2.h>

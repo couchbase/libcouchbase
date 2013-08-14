@@ -66,7 +66,7 @@ void lcb_setup_lcb_http_resp_t(lcb_http_resp_t *resp,
                                lcb_http_status_t status,
                                const char *path,
                                lcb_size_t npath,
-                               const char * const *headers,
+                               const char *const *headers,
                                const void *bytes,
                                lcb_size_t nbytes)
 {
@@ -87,12 +87,12 @@ void lcb_http_request_finish(lcb_t instance,
     if ((req->status & LCB_HTREQ_S_CBINVOKED) == 0 && req->on_complete) {
         lcb_http_resp_t resp;
         lcb_setup_lcb_http_resp_t(&resp,
-                              req->parser->status_code,
-                              req->path,
-                              req->npath,
-                              NULL, /* headers */
-                              NULL, /* data */
-                              0);
+                                  req->parser->status_code,
+                                  req->path,
+                                  req->npath,
+                                  NULL, /* headers */
+                                  NULL, /* data */
+                                  0);
         TRACE_HTTP_END(req, error, &resp);
         req->on_complete(req, instance, req->command_cookie, error, &resp);
     }

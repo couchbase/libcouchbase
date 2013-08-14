@@ -179,7 +179,7 @@ void lcb_parse_vbucket_stream(lcb_t instance)
     lcb_size_t nw, expected;
     lcb_connection_t conn = &instance->connection;
 
-    if (!grow_buffer(buffer, conn->input->nbytes+1)) {
+    if (!grow_buffer(buffer, conn->input->nbytes + 1)) {
         lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
                           "Failed to allocate memory");
         return;

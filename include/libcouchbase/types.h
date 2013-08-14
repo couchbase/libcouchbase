@@ -114,11 +114,11 @@ extern "C" {
         LCB_IO_OPS_LIBUV = 0x07
     } lcb_io_ops_type_t;
 
-/** Data is available for reading */
+    /** Data is available for reading */
 #define LCB_READ_EVENT 0x02
-/** Data can be written */
+    /** Data can be written */
 #define LCB_WRITE_EVENT 0x04
-/** Exceptional condition ocurred on socket */
+    /** Exceptional condition ocurred on socket */
 #define LCB_ERROR_EVENT 0x08
 #define LCB_RW_EVENT (LCB_READ_EVENT|LCB_WRITE_EVENT)
 

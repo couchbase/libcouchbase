@@ -30,7 +30,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
 
     if (!ringbuffer_ensure_capacity(buf,
                                     conn->instance ? conn->instance->rbufsize :
-                                            LCB_DEFAULT_RBUFSIZE)) {
+                                    LCB_DEFAULT_RBUFSIZE)) {
         lcb_error_handler(conn->instance, LCB_CLIENT_ENOMEM, NULL);
         return LCB_SOCKRW_GENERIC_ERROR;
     }
@@ -175,7 +175,7 @@ void lcb_sockrw_apply_want(lcb_connection_t conn)
     if (conn->instance == NULL || conn->instance->io == NULL) {
         return;
     }
-    if (conn->instance->io->version == 0){
+    if (conn->instance->io->version == 0) {
         apply_want_v0(conn);
     } else {
         apply_want_v1(conn);
@@ -225,7 +225,7 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
 
     ringbuffer_ensure_capacity(*buf,
                                conn->instance ? conn->instance->rbufsize :
-                                       LCB_DEFAULT_RBUFSIZE);
+                               LCB_DEFAULT_RBUFSIZE);
     ringbuffer_get_iov(*buf, RINGBUFFER_WRITE, bi->iov);
 
     assert(bi->ringbuffer == NULL);
@@ -288,7 +288,7 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
     ringbuffer_get_iov(bi->ringbuffer, RINGBUFFER_READ, bi->iov);
 
     ret = io->v.v1.start_write(io, conn->sockptr, wbuf, callback);
-    if (ret == 0){
+    if (ret == 0) {
         return LCB_SOCKRW_PENDING;
 
     } else {
@@ -355,8 +355,8 @@ void lcb_sockrw_v1_onwrite_common(lcb_sockdata_t *sock,
 
 
 unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
-                                        lcb_io_writebuf_t *wbuf,
-                                        void **datap)
+                                     lcb_io_writebuf_t *wbuf,
+                                     void **datap)
 {
     int is_closed;
 

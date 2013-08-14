@@ -56,7 +56,8 @@
 
 typedef std::vector<std::string> strlist;
 
-class TestConfiguration {
+class TestConfiguration
+{
 
 public:
     TestConfiguration() {
@@ -345,7 +346,7 @@ private:
 };
 
 
-static void setPluginEnvironment(std::string& name)
+static void setPluginEnvironment(std::string &name)
 {
     const char *v = NULL;
     if (name != "default") {
@@ -374,8 +375,8 @@ struct Process {
     std::string pluginName;
     bool exitedOk;
 
-    Process(std::string& plugin,
-            std::string& cmd, std::string& output, bool interactive) {
+    Process(std::string &plugin,
+            std::string &cmd, std::string &output, bool interactive) {
 
         this->pluginName = plugin;
         this->commandline = cmd;
@@ -394,13 +395,14 @@ struct Process {
     }
 };
 
-class TestScheduler {
+class TestScheduler
+{
 public:
     TestScheduler(unsigned int lim) : limit(lim) {
 
     }
 
-    typedef std::list<Process*> proclist;
+    typedef std::list<Process *> proclist;
     std::vector<Process> _all;
 
     proclist executing;
@@ -418,9 +420,9 @@ public:
         proclist::iterator iter;
         scheduleAll();
 
-        while (! (executing.empty() && scheduled.empty())) {
+        while (!(executing.empty() && scheduled.empty())) {
             while ((!scheduled.empty()) && executing.size() < limit) {
-                Process* proc = scheduled.front();
+                Process *proc = scheduled.front();
                 scheduled.pop_front();
                 invokeScheduled(proc);
             }
@@ -466,7 +468,7 @@ private:
             scheduled.push_back(p);
         }
     }
-    void invokeScheduled(Process* proc) {
+    void invokeScheduled(Process *proc) {
         proc->setupPointers();
         setPluginEnvironment(proc->pluginName);
         fprintf(stderr, "START [%s] .. %s\n",
@@ -505,10 +507,10 @@ static bool runSingleCycle(TestConfiguration &config)
 
             std::string cmdline = config.setupCommandline(*iterbins);
             scheduler.schedule(
-                    Process(*iter,
-                            cmdline,
-                            config.logfile,
-                            config.isInteractive));
+                Process(*iter,
+                        cmdline,
+                        config.logfile,
+                        config.isInteractive));
         }
 
     }

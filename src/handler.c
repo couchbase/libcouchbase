@@ -583,7 +583,7 @@ static void observe_response_handler(lcb_server_t *server,
     /* run callback with null-null-null to signal the end of transfer */
     if ((command_data->flags & LCB_CMD_F_OBS_BCAST) &&
             lcb_lookup_server_with_command(root, CMD_OBSERVE,
-                                       res->response.opaque, server) < 0) {
+                                           res->response.opaque, server) < 0) {
 
         lcb_observe_resp_t resp;
         memset(&resp, 0, sizeof(resp));

@@ -412,7 +412,7 @@ void lcb_destroy(lcb_t instance)
         struct lcb_durability_set_st **dset_list;
         lcb_size_t nitems = hashset_num_items(instance->durability_polls);
         dset_list = (struct lcb_durability_set_st **)
-                hashset_get_items(instance->durability_polls, NULL);
+                    hashset_get_items(instance->durability_polls, NULL);
         if (dset_list) {
             for (ii = 0; ii < nitems; ii++) {
                 lcb_durability_dset_destroy(dset_list[ii]);
@@ -830,9 +830,9 @@ lcb_error_t lcb_connect(lcb_t instance)
 {
     instance->backup_idx = 0;
     if (instance->compat.type == LCB_MEMCACHED_CLUSTER ||
-        (instance->compat.type == LCB_CACHED_CONFIG &&
-         instance->vbucket_config != NULL &&
-         instance->compat.value.cached.updating == 0)) {
+            (instance->compat.type == LCB_CACHED_CONFIG &&
+             instance->vbucket_config != NULL &&
+             instance->compat.value.cached.updating == 0)) {
         return LCB_SUCCESS;
     }
 

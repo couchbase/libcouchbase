@@ -31,12 +31,14 @@
 #define EXPECTED_DEFAULT LCB_IO_OPS_LIBEVENT
 #endif
 
-static void setPluginEnv(const std::string &name, const std::string &sym) {
+static void setPluginEnv(const std::string &name, const std::string &sym)
+{
     setenv(ENV_VAR_NAME, name.c_str(), 1);
     setenv(ENV_VAR_SYM, sym.c_str(), 1);
 }
 
-static void clearPluginEnv() {
+static void clearPluginEnv()
+{
     setPluginEnv("", "");
 }
 
@@ -65,11 +67,11 @@ class Behavior : public ::testing::Test
 public:
     virtual void SetUp() {
         const char *tmp;
-        if ( (tmp = getenv(ENV_VAR_NAME)) != NULL) {
+        if ((tmp = getenv(ENV_VAR_NAME)) != NULL) {
             origPluginName = tmp;
         }
 
-        if ( (tmp = getenv(ENV_VAR_SYM)) != NULL) {
+        if ((tmp = getenv(ENV_VAR_SYM)) != NULL) {
             origPluginSymbol = tmp;
         }
 

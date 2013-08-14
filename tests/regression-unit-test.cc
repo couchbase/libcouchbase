@@ -34,27 +34,27 @@ protected:
 static bool callbackInvoked = false;
 
 extern "C" {
-static void get_callback(lcb_t, const void *cookie,
-                         lcb_error_t err, const lcb_get_resp_t *)
-{
-    EXPECT_EQ(err, LCB_KEY_ENOENT);
-    int *counter_p = reinterpret_cast<int*>(const_cast<void*>(cookie));
-    EXPECT_TRUE(counter_p != NULL);
-    EXPECT_GT(*counter_p, 0);
-    *counter_p -= 1;
-    callbackInvoked = true;
-}
-
-static void stats_callback(lcb_t, const void *cookie, lcb_error_t err,
-                           const lcb_server_stat_resp_t *resp)
-{
-    EXPECT_EQ(err, LCB_SUCCESS);
-    if (resp->v.v0.nkey == 0) {
-        int *counter_p = reinterpret_cast<int*>(const_cast<void*>(cookie));
+    static void get_callback(lcb_t, const void *cookie,
+                             lcb_error_t err, const lcb_get_resp_t *)
+    {
+        EXPECT_EQ(err, LCB_KEY_ENOENT);
+        int *counter_p = reinterpret_cast<int *>(const_cast<void *>(cookie));
+        EXPECT_TRUE(counter_p != NULL);
+        EXPECT_GT(*counter_p, 0);
         *counter_p -= 1;
+        callbackInvoked = true;
     }
-    callbackInvoked = true;
-}
+
+    static void stats_callback(lcb_t, const void *cookie, lcb_error_t err,
+                               const lcb_server_stat_resp_t *resp)
+    {
+        EXPECT_EQ(err, LCB_SUCCESS);
+        if (resp->v.v0.nkey == 0) {
+            int *counter_p = reinterpret_cast<int *>(const_cast<void *>(cookie));
+            *counter_p -= 1;
+        }
+        callbackInvoked = true;
+    }
 
 }
 

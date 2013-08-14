@@ -77,7 +77,7 @@ static int http_parser_body_cb(http_parser *p, const char *bytes, lcb_size_t nby
 
     if (req->chunked) {
         lcb_setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
-                              req->headers, bytes, nbytes);
+                                  req->headers, bytes, nbytes);
         req->on_data(req, req->instance, req->command_cookie, LCB_SUCCESS, &resp);
     } else {
         if (!ringbuffer_ensure_capacity(&req->result, nbytes)) {

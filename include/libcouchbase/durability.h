@@ -27,128 +27,128 @@ extern "C" {
 #endif
 
 
-typedef struct lcb_durability_cmd_st {
-    int version;
-    union {
-        struct {
-            const void *key;
-            size_t nkey;
+    typedef struct lcb_durability_cmd_st {
+        int version;
+        union {
+            struct {
+                const void *key;
+                size_t nkey;
 
-            /**
-             * Hashkey and hashkey size to use for customized vbucket
-             * mapping
-             */
-            const void *hashkey;
-            size_t nhashkey;
+                /**
+                 * Hashkey and hashkey size to use for customized vbucket
+                 * mapping
+                 */
+                const void *hashkey;
+                size_t nhashkey;
 
-            /**
-             * CAS to be checked against. If the key exists on the server
-             * with a different CAS, the error (in the response) is set to
-             * LCB_KEY_EEXISTS
-             */
-            lcb_cas_t cas;
-        } v0;
-    } v;
-} lcb_durability_cmd_t;
+                /**
+                 * CAS to be checked against. If the key exists on the server
+                 * with a different CAS, the error (in the response) is set to
+                 * LCB_KEY_EEXISTS
+                 */
+                lcb_cas_t cas;
+            } v0;
+        } v;
+    } lcb_durability_cmd_t;
 
-/**
- * Public API for durability response
- */
-typedef struct lcb_durability_resp_st {
-    int version;
-    union {
-        struct {
-            /** key */
-            const void *key;
+    /**
+     * Public API for durability response
+     */
+    typedef struct lcb_durability_resp_st {
+        int version;
+        union {
+            struct {
+                /** key */
+                const void *key;
 
-            /** key length */
-            lcb_size_t nkey;
+                /** key length */
+                lcb_size_t nkey;
 
-            /**
-             * if this entry failed, this contains the reason, e.g.
-             *
-             * LCB_KEY_EEXISTS: The key exists with a different CAS than expected
-             *
-             * LCB_KEY_ENOENT: The key was not found in the master cache
-             *
-             * LCB_ETIMEDOUT: The key may exist, but the required servers needed
-             *  took too long to respond
-             */
-            lcb_error_t err;
+                /**
+                 * if this entry failed, this contains the reason, e.g.
+                 *
+                 * LCB_KEY_EEXISTS: The key exists with a different CAS than expected
+                 *
+                 * LCB_KEY_ENOENT: The key was not found in the master cache
+                 *
+                 * LCB_ETIMEDOUT: The key may exist, but the required servers needed
+                 *  took too long to respond
+                 */
+                lcb_error_t err;
 
-            /** if found with a different CAS, this is the CAS */
-            lcb_cas_t cas;
+                /** if found with a different CAS, this is the CAS */
+                lcb_cas_t cas;
 
-            /**
-             * Whether the key was persisted to the master.
-             * For deletes, this means the key was removed from disk
-             */
-            unsigned char persisted_master;
+                /**
+                 * Whether the key was persisted to the master.
+                 * For deletes, this means the key was removed from disk
+                 */
+                unsigned char persisted_master;
 
-            /**
-             * Whether the key exists on the master. For deletes, this means
-             * the key does not exist in cache
-             */
-            unsigned char exists_master;
+                /**
+                 * Whether the key exists on the master. For deletes, this means
+                 * the key does not exist in cache
+                 */
+                unsigned char exists_master;
 
-            /** how many nodes (including master) this item was persisted to */
-            unsigned char npersisted;
+                /** how many nodes (including master) this item was persisted to */
+                unsigned char npersisted;
 
-            /** how many nodes (excluding master) this item was replicated to */
-            unsigned char nreplicated;
+                /** how many nodes (excluding master) this item was replicated to */
+                unsigned char nreplicated;
 
-            /**
-             * Total number of observe responses received for the node.
-             * This can be used as a performance metric to determine how many
-             * total OBSERVE probes were sent until this key was 'done'
-             */
-            unsigned short nresponses;
-        } v0;
-    } v;
-} lcb_durability_resp_t;
+                /**
+                 * Total number of observe responses received for the node.
+                 * This can be used as a performance metric to determine how many
+                 * total OBSERVE probes were sent until this key was 'done'
+                 */
+                unsigned short nresponses;
+            } v0;
+        } v;
+    } lcb_durability_resp_t;
 
-/**
- * Options and preferences for a durability check operation
- */
-typedef struct lcb_durability_opts_st {
-    int version;
-    union {
-        struct {
-            /**
-             * Upper limit in microseconds from the scheduling of the command. When
-             * this timeout occurs, all remaining non-verified keys will have their
-             * callbacks invoked with @c LCB_ETIMEDOUT
-             */
-            lcb_uint32_t timeout;
+    /**
+     * Options and preferences for a durability check operation
+     */
+    typedef struct lcb_durability_opts_st {
+        int version;
+        union {
+            struct {
+                /**
+                 * Upper limit in microseconds from the scheduling of the command. When
+                 * this timeout occurs, all remaining non-verified keys will have their
+                 * callbacks invoked with @c LCB_ETIMEDOUT
+                 */
+                lcb_uint32_t timeout;
 
-            /**
-             * The durability check may involve more than a single call to observe - or
-             * more than a single packet sent to a server to check the key status. This
-             * value determines the time to wait between multiple probes for the same
-             * server. If left at 0, a sensible adaptive value will be used.
-             */
-            lcb_uint32_t interval;
+                /**
+                 * The durability check may involve more than a single call to observe - or
+                 * more than a single packet sent to a server to check the key status. This
+                 * value determines the time to wait between multiple probes for the same
+                 * server. If left at 0, a sensible adaptive value will be used.
+                 */
+                lcb_uint32_t interval;
 
-            /** how many nodes the key should be persisted to (including master) */
-            lcb_uint16_t persist_to;
+                /** how many nodes the key should be persisted to (including master) */
+                lcb_uint16_t persist_to;
 
-            /** how many nodes the key should be replicated to (excluding master) */
-            lcb_uint16_t replicate_to;
+                /** how many nodes the key should be replicated to (excluding master) */
+                lcb_uint16_t replicate_to;
 
-            /**
-             * this flag inverts the sense of the durability check and ensures that
-             * the key does *not* exist
-             */
-            lcb_uint8_t check_delete;
+                /**
+                 * this flag inverts the sense of the durability check and ensures that
+                 * the key does *not* exist
+                 */
+                lcb_uint8_t check_delete;
 
-            /**
-             * If replication/persistence requirements are excessive, cap to
-             * the maximum available
-             */
-            lcb_uint8_t cap_max;
-        } v0;
-    } v;
-} lcb_durability_opts_t;
+                /**
+                 * If replication/persistence requirements are excessive, cap to
+                 * the maximum available
+                 */
+                lcb_uint8_t cap_max;
+            } v0;
+        } v;
+    } lcb_durability_opts_t;
 
 
 #ifdef __cplusplus

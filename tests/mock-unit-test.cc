@@ -63,7 +63,7 @@ void MockUnitTest::createConnection(lcb_t &instance)
     lcb_wait(instance);
 }
 
-void MockUnitTest::createConnection(HandleWrap& handle)
+void MockUnitTest::createConnection(HandleWrap &handle)
 {
     lcb_t instance = NULL;
     createConnection(handle, instance);

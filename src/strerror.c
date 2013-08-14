@@ -102,17 +102,17 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "An invalid character is used";
     case LCB_DURABILITY_ETOOMANY:
         return "Durability constraints requires more "
-                "nodes/replicas than the cluster configuration allows. "
-                "Durability constraints will never be satisfied";
+               "nodes/replicas than the cluster configuration allows. "
+               "Durability constraints will never be satisfied";
     case LCB_DUPLICATE_COMMANDS:
         return "The same key was specified more than once in the command list";
     case LCB_NO_MATCHING_SERVER:
         return "No node was found for servicing this key. This may be a "
-            "result of a nonexistent/stale vBucket configuration";
+               "result of a nonexistent/stale vBucket configuration";
 
     case LCB_BAD_ENVIRONMENT:
         return "An environment variable recognized by libcouchbase was "
-                "specified in an invalid format or has missing items";
+               "specified in an invalid format or has missing items";
 
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";

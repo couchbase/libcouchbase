@@ -275,8 +275,8 @@ static int start_mock_server(struct test_server_info *info, char **cmdline)
     }
 
     snprintf(wrapper, sizeof(wrapper),
-            "%s" DIRSEP "tests" DIRSEP WRAPPER_BASE,
-            srcdir);
+             "%s" DIRSEP "tests" DIRSEP WRAPPER_BASE,
+             srcdir);
 
     if (access(wrapper, access_mode) == -1) {
         fprintf(stderr, "Failed to locate \"%s\": %s\n",

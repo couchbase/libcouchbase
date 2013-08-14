@@ -82,13 +82,14 @@ public:
 
 
 extern "C" {
-static void timer_callback(lcb_socket_t, short, void *arg)
-{
-    reinterpret_cast<Continuation*>(arg)->nextAction();
-}
+    static void timer_callback(lcb_socket_t, short, void *arg)
+    {
+        reinterpret_cast<Continuation *>(arg)->nextAction();
+    }
 }
 
-class TimerCountdown : public Continuation {
+class TimerCountdown : public Continuation
+{
 public:
     int counter;
     void *timer;
@@ -119,7 +120,7 @@ public:
 
 
 private:
-    TimerCountdown(const TimerCountdown&);
+    TimerCountdown(const TimerCountdown &);
 };
 
 TEST_F(IOPS, Timers)
@@ -129,7 +130,7 @@ TEST_F(IOPS, Timers)
     startLoop();
     ASSERT_EQ(0, cont.counter);
 
-    std::vector<TimerCountdown*> multi;
+    std::vector<TimerCountdown *> multi;
 
     for (int ii = 0; ii < 10; ii++) {
         TimerCountdown *cur = new TimerCountdown(this);

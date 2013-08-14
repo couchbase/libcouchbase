@@ -36,7 +36,7 @@ static int saddr_to_string(struct sockaddr *saddr, int len,
     int rv;
 
     rv = getnameinfo(saddr, len, h, sizeof(h), p, sizeof(p),
-                     NI_NUMERICHOST|NI_NUMERICSERV);
+                     NI_NUMERICHOST | NI_NUMERICSERV);
     if (rv < 0) {
         return 0;
     }
@@ -166,7 +166,7 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 
 static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 {
-    lcb_server_t *server = (lcb_server_t*)conn->data;
+    lcb_server_t *server = (lcb_server_t *)conn->data;
     struct nameinfo_common nistrs;
     int sasl_in_progress;
 
@@ -204,7 +204,7 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 
 static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
-    lcb_server_t *server = (lcb_server_t*)conn->data;
+    lcb_server_t *server = (lcb_server_t *)conn->data;
     lcb_purge_single_server(server, err);
     lcb_maybe_breakout(server->instance);
 }
@@ -223,5 +223,5 @@ void lcb_server_connect(lcb_server_t *server)
     conn->completion.error = lcb_server_v1_error_handler;
     conn->timeout.usec = server->instance->timeout.usec;
 
-    lcb_connection_start(conn, LCB_CONNSTART_NOCB|LCB_CONNSTART_ASYNCERR);
+    lcb_connection_start(conn, LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
 }

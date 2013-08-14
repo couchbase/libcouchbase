@@ -37,7 +37,7 @@ public:
     void destroy();
 
     // Don't ever allow copying. C++0x allows = 0, though
-    HandleWrap operator= (const HandleWrap&) {
+    HandleWrap operator= (const HandleWrap &) {
         fprintf(stderr, "Can't copy this object around!\n");
         abort();
         return HandleWrap();
@@ -71,17 +71,17 @@ class MockCommand
 
 public:
     enum Code {
-        #define X(cc) cc,
+#define X(cc) cc,
         XMOCKCMD(X)
-        #undef X
+#undef X
         _NONE
     };
 
     static std::string GetName(Code code) {
 
-        #define X(cc) if (code == cc) { return #cc; }
+#define X(cc) if (code == cc) { return #cc; }
         XMOCKCMD(X)
-        #undef X
+#undef X
 
         abort();
         return "";
@@ -90,8 +90,8 @@ public:
     MockCommand(Code code);
 
     // Various methods to set a field in the payload
-    void set(const std::string&, const std::string&);
-    void set(const std::string&, int);
+    void set(const std::string &, const std::string &);
+    void set(const std::string &, int);
     void set(const std::string, bool);
     virtual ~MockCommand();
 
@@ -101,23 +101,23 @@ public:
 protected:
     Code code;
     std::string name;
-    cJSON* command;
-    cJSON* payload;
+    cJSON *command;
+    cJSON *payload;
     virtual void finalizePayload() {}
 
 private:
-    MockCommand(const MockCommand& other);
+    MockCommand(const MockCommand &other);
 };
 
 class MockKeyCommand : public MockCommand
 {
 public:
     MockKeyCommand(Code code, std::string &key)
-    : MockCommand(code), vbucket(-1) {
+        : MockCommand(code), vbucket(-1) {
         this->key = key;
     }
 
-    const std::string& getKey() const {
+    const std::string &getKey() const {
         return key;
     }
 
@@ -133,7 +133,7 @@ class MockMutationCommand : public MockKeyCommand
 {
 public:
     MockMutationCommand(Code code, std::string &key)
-    : MockKeyCommand(code, key), onMaster(false), replicaCount(0), cas(0) {}
+        : MockKeyCommand(code, key), onMaster(false), replicaCount(0), cas(0) {}
 
     bool onMaster;
     int replicaCount;
@@ -148,9 +148,8 @@ protected:
 class MockBucketCommand : public MockCommand
 {
 public:
-    MockBucketCommand(Code code, int index, std::string bucketstr="default")
-    : MockCommand(code)
-    {
+    MockBucketCommand(Code code, int index, std::string bucketstr = "default")
+        : MockCommand(code) {
         ix = index;
         bucket = bucketstr;
     }
@@ -164,12 +163,12 @@ protected:
 class MockResponse
 {
 public:
-    MockResponse(const std::string& resp);
+    MockResponse(const std::string &resp);
     virtual ~MockResponse();
 
     bool isOk();
 
-    const cJSON* getRawResponse() {
+    const cJSON *getRawResponse() {
         return jresp;
     }
 
@@ -278,15 +277,14 @@ public:
         serverVersion = ver;
     }
 
-    void sendCommand(MockCommand& cmd);
+    void sendCommand(MockCommand &cmd);
     MockResponse getResponse();
 
-    bool hasFeature(const char* feature) {
+    bool hasFeature(const char *feature) {
         return featureRegistry.find(feature) != featureRegistry.end();
     }
 
-    static void printSkipMessage(std::string file, int line, std::string reason)
-    {
+    static void printSkipMessage(std::string file, int line, std::string reason) {
         std::cerr << "Skipping " << file << ":" << std::dec << line;
         std::cerr << "(" << reason << ")";
         std::cerr << std::endl;

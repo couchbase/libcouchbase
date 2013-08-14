@@ -592,8 +592,8 @@ extern "C" {
                               int *connerr);
 
     lcb_sockdata_t *lcb_gai2sock_v1(lcb_t instance,
-                                struct addrinfo **ai,
-                                int *connerr);
+                                    struct addrinfo **ai,
+                                    int *connerr);
 
     lcb_error_t lcb_apply_vbucket_config(lcb_t instance,
                                          VBUCKET_CONFIG_HANDLE config);
@@ -621,8 +621,8 @@ extern "C" {
     genhash_t *lcb_hashtable_nc_new(int est);
 
     void lcb_instance_connerr(lcb_t instance,
-                                     lcb_error_t err,
-                                     const char *errinfo);
+                              lcb_error_t err,
+                              const char *errinfo);
 
     lcb_error_t lcb_instance_start_connection(lcb_t instance);
 
@@ -643,7 +643,7 @@ extern "C" {
                                    lcb_http_status_t status,
                                    const char *path,
                                    lcb_size_t npath,
-                                   const char * const *headers,
+                                   const char *const *headers,
                                    const void *bytes,
                                    lcb_size_t nbytes);
 

@@ -422,7 +422,7 @@ static void send_error(lcb_io_opt_t iobase,
 
 static void iops_dtor(lcb_io_opt_t iobase)
 {
-    iocp_t *io = (iocp_t*)iobase;
+    iocp_t *io = (iocp_t *)iobase;
     lcb_list_t *cur;
     BOOL result;
 
@@ -465,7 +465,7 @@ static void iops_dtor(lcb_io_opt_t iobase)
             break;
 
         case LCBIOCP_ACTION_WRITE:
-            release_wbuf(iobase, &sd->sd_base, (lcb_io_writebuf_t*)ol);
+            release_wbuf(iobase, &sd->sd_base, (lcb_io_writebuf_t *)ol);
             break;
 
         default:
@@ -480,10 +480,10 @@ static void iops_dtor(lcb_io_opt_t iobase)
         iocp_sockdata_t *sd = LCB_LIST_ITEM(cur, iocp_sockdata_t, list);
 
         IOCP_LOG(IOCP_WARN,
-                "Leak detected in socket %p (%lu). Refcount=%d",
-                sd,
-                sd->sSocket,
-                sd->refcount);
+                 "Leak detected in socket %p (%lu). Refcount=%d",
+                 sd,
+                 sd->sSocket,
+                 sd->refcount);
 
         if (sd->sSocket != INVALID_SOCKET) {
             closesocket(sd->sSocket);

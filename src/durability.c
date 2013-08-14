@@ -112,7 +112,7 @@ static int ent_is_complete(lcb_durability_entry_t *ent)
     }
 
     if (OPTFLD(opts, persist_to)) {
-        if (!RESFLD(ent,persisted_master)) {
+        if (!RESFLD(ent, persisted_master)) {
             return 0;
         }
 
@@ -167,9 +167,8 @@ static void dset_done_waiting(lcb_durability_set_t *dset)
 
     if (dset->nremaining > 0) {
         timer_schedule(dset,
-                       get_grace_interval(dset->instance,
-                                          dset),
-                                          STATE_OBSPOLL);
+                       get_grace_interval(dset->instance, dset),
+                       STATE_OBSPOLL);
 
     }
     dset_unref(dset);
@@ -462,12 +461,12 @@ static void ent_init(const lcb_durability_cmd_t *cmd,
     RESFLD(ent, key) = REQFLD(ent, key);
     RESFLD(ent, nkey) = REQFLD(ent, nkey);
 
-    memcpy((void*)REQFLD(ent, key), cmd->v.v0.key, REQFLD(ent, nkey));
+    memcpy((void *)REQFLD(ent, key), cmd->v.v0.key, REQFLD(ent, nkey));
 
     if (cmd->v.v0.nhashkey) {
         REQFLD(ent, nhashkey) = cmd->v.v0.nhashkey;
         REQFLD(ent, hashkey) = malloc(cmd->v.v0.nhashkey);
-        memcpy((void*)REQFLD(ent, hashkey), cmd->v.v0.hashkey, REQFLD(ent, nhashkey));
+        memcpy((void *)REQFLD(ent, hashkey), cmd->v.v0.hashkey, REQFLD(ent, nhashkey));
     }
 }
 
@@ -480,8 +479,7 @@ static lcb_uint32_t get_max_timing(lcb_t instance, int is_ttp)
     unsigned ii;
     for (ii = 0; ii < instance->nservers; ii++) {
         lcb_server_t *server = instance->servers + ii;
-        lcb_uint32_t cur =
-                is_ttp ? server->kv_timings.ttp : server->kv_timings.ttr;
+        lcb_uint32_t cur = is_ttp ? server->kv_timings.ttp : server->kv_timings.ttr;
 
         if (cur < ret) {
             continue;
@@ -576,7 +574,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
                                 const void *cookie,
                                 const lcb_durability_opts_t *options,
                                 size_t ncmds,
-                                const lcb_durability_cmd_t * const * cmds)
+                                const lcb_durability_cmd_t *const *cmds)
 {
     hrtime_t now = gethrtime();
     lcb_durability_set_t *dset;
@@ -682,7 +680,7 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
 
     for (ii = 0; ii < dset->nentries; ii++) {
         lcb_durability_entry_t *ent = dset->entries + ii;
-        free((void*)REQFLD(ent, key));
+        free((void *)REQFLD(ent, key));
     }
 
     hashset_remove(dset->instance->durability_polls, dset);

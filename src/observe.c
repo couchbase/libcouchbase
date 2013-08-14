@@ -65,7 +65,7 @@ static void destroy_requests(struct observe_requests_st *reqs)
 lcb_error_t lcb_observe_ex(lcb_t instance,
                            const void *command_cookie,
                            lcb_size_t num,
-                           const void * const * items,
+                           const void *const *items,
                            lcb_observe_type_t type)
 {
     lcb_size_t ii;
@@ -236,7 +236,7 @@ void lcb_observe_invoke_callback(lcb_t instance,
 {
     if (ct->flags & LCB_CMD_F_OBS_DURABILITY) {
         lcb_durability_dset_update(instance,
-                                   (lcb_durability_set_t*)ct->cookie,
+                                   (lcb_durability_set_t *)ct->cookie,
                                    error,
                                    resp);
     } else if (ct->flags & LCB_CMD_F_OBS_CHECK) {

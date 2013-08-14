@@ -35,7 +35,7 @@
 #include "libuv_io_opts.h"
 #endif
 
-typedef void (*v0_callback_t)(lcb_socket_t,short,void*);
+typedef void (*v0_callback_t)(lcb_socket_t, short, void *);
 typedef void (*generic_callback_t)(void);
 
 

@@ -57,7 +57,7 @@ void lcb_failout_observe_request(lcb_server_t *server,
     }
     if ((command_data->flags & LCB_CMD_F_OBS_BCAST) &&
             lcb_lookup_server_with_command(instance, CMD_OBSERVE,
-                                       req->request.opaque, server) < 0) {
+                                           req->request.opaque, server) < 0) {
         TRACE_OBSERVE_END(req->request.opaque, ntohs(req->request.vbucket),
                           req->request.opcode, err);
         resp.v.v0.key = NULL;
@@ -468,7 +468,7 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
     strcpy(server->connection.host, n);
     p = strchr(server->connection.host, ':');
     *p = '\0';
-    strcpy(server->connection.port, p+1);
+    strcpy(server->connection.port, p + 1);
 
     server->is_config_node = vbucket_config_is_config_node(server->instance->vbucket_config,
                                                            servernum);

@@ -23,19 +23,20 @@ protected:
         lcb_size_t nreplicas = lcb_get_num_replicas(instance);
 
         opts.v.v0.persist_to = min(nreplicas + 1, nservers);
-        opts.v.v0.replicate_to = min(nreplicas, nservers-1);
+        opts.v.v0.replicate_to = min(nreplicas, nservers - 1);
     }
 };
 
 extern "C" {
-static void defaultDurabilityCallback(lcb_t, const void*, lcb_error_t,
-                                      const lcb_durability_resp_t*);
+    static void defaultDurabilityCallback(lcb_t, const void *, lcb_error_t,
+                                          const lcb_durability_resp_t *);
 
-static void multiDurabilityCallback(lcb_t, const void*, lcb_error_t,
-                                    const lcb_durability_resp_t*);
+    static void multiDurabilityCallback(lcb_t, const void *, lcb_error_t,
+                                        const lcb_durability_resp_t *);
 }
 
-class DurabilityOperation {
+class DurabilityOperation
+{
 public:
     DurabilityOperation() {
     }
@@ -46,7 +47,7 @@ public:
 
     void assign(const lcb_durability_resp_st *resp) {
         this->resp = *resp;
-        key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);
         this->resp.v.v0.key = NULL;
     }
 
@@ -64,8 +65,8 @@ public:
     }
 
     void run(lcb_t instance,
-              const lcb_durability_opts_t *opts,
-              const Item &itm) {
+             const lcb_durability_opts_t *opts,
+             const Item &itm) {
 
         lcb_durability_cmd_t cmd = { 0 };
 
@@ -111,18 +112,17 @@ public:
     }
 };
 
-class DurabilityMultiOperation {
+class DurabilityMultiOperation
+{
 public:
 
-    DurabilityMultiOperation() : counter(0)
-    {
+    DurabilityMultiOperation() : counter(0) {
     }
 
     template <typename T>
-    void run(lcb_t instance, const lcb_durability_opts_t *opts, const T& items)
-    {
+    void run(lcb_t instance, const lcb_durability_opts_t *opts, const T &items) {
         std::vector<lcb_durability_cmd_t> cmds;
-        std::vector<const lcb_durability_cmd_t*> cmds_p;
+        std::vector<const lcb_durability_cmd_t *> cmds_p;
 
         counter = 0;
         unsigned ii = 0;
@@ -152,7 +152,7 @@ public:
         lcb_error_t err = lcb_durability_poll(instance,
                                               this, opts,
                                               items.size(),
-                                              (const lcb_durability_cmd_t * const*)&cmds_p[0]);
+                                              (const lcb_durability_cmd_t * const *)&cmds_p[0]);
         ASSERT_EQ(LCB_SUCCESS, err);
         ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance));
         ASSERT_EQ(items.size(), counter);
@@ -163,14 +163,13 @@ public:
         counter++;
 
         string key;
-        key.assign((const char*)resp->v.v0.key, resp->v.v0.nkey);
+        key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);
         ASSERT_TRUE(kmap.find(key) != kmap.end());
         kmap[key].assign(resp);
     }
 
     template <typename T>
-    bool _findItem(const string& s, const T& items, Item& itm)
-    {
+    bool _findItem(const string &s, const T &items, Item &itm) {
         for (typename T::const_iterator iter = items.begin();
                 iter != items.end(); iter++) {
             if (iter->key.compare(s) == 0) {
@@ -183,10 +182,9 @@ public:
 
     template <typename T>
     void assertAllMatch(const lcb_durability_opts_t &opts,
-                        const T& items_ok,
-                        const T& items_missing,
-                        lcb_error_t missing_err = LCB_KEY_ENOENT)
-   {
+                        const T &items_ok,
+                        const T &items_missing,
+                        lcb_error_t missing_err = LCB_KEY_ENOENT) {
 
         for (map<string, DurabilityOperation>::iterator iter = kmap.begin();
                 iter != kmap.end();
@@ -194,7 +192,7 @@ public:
 
             Item itm_tmp;
             // make sure we were expecting it
-            if(_findItem(iter->second.key, items_ok, itm_tmp)) {
+            if (_findItem(iter->second.key, items_ok, itm_tmp)) {
                 iter->second.assertCriteriaMatch(opts);
 
             } else if (_findItem(iter->second.key, items_missing, itm_tmp)) {
@@ -221,26 +219,26 @@ public:
     }
 
     unsigned counter;
-    map<string,DurabilityOperation> kmap;
+    map<string, DurabilityOperation> kmap;
 };
 
 extern "C" {
 
-static void defaultDurabilityCallback(lcb_t,
-                                const void *cookie,
-                                lcb_error_t,
-                                const lcb_durability_resp_t *resp)
-{
-    ((DurabilityOperation*)cookie)->assign(resp);
-}
+    static void defaultDurabilityCallback(lcb_t,
+                                          const void *cookie,
+                                          lcb_error_t,
+                                          const lcb_durability_resp_t *resp)
+    {
+        ((DurabilityOperation *)cookie)->assign(resp);
+    }
 
-static void multiDurabilityCallback(lcb_t,
-                                    const void *cookie,
-                                    lcb_error_t,
-                                    const lcb_durability_resp_t *resp)
-{
-    ((DurabilityMultiOperation*)cookie)->assign(resp);
-}
+    static void multiDurabilityCallback(lcb_t,
+                                        const void *cookie,
+                                        lcb_error_t,
+                                        const lcb_durability_resp_t *resp)
+    {
+        ((DurabilityMultiOperation *)cookie)->assign(resp);
+    }
 
 }
 
@@ -602,7 +600,7 @@ extern "C" {
                                      lcb_error_t,
                                      const lcb_observe_resp_t *)
     {
-        struct cb_cookie* c = (struct cb_cookie*)cookie;
+        struct cb_cookie *c = (struct cb_cookie *)cookie;
         ASSERT_EQ(1, c->is_observe);
         c->count++;
     }
@@ -611,7 +609,7 @@ extern "C" {
                                         lcb_error_t,
                                         const lcb_durability_resp_t *)
     {
-        struct cb_cookie *c = (struct cb_cookie*)cookie;
+        struct cb_cookie *c = (struct cb_cookie *)cookie;
         ASSERT_EQ(0, c->is_observe);
         c->count++;
     }

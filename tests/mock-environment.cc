@@ -219,12 +219,13 @@ void MockEnvironment::bootstrapRealCluster()
 }
 
 extern "C" {
-static void mock_flush_callback(lcb_t instance,
-                                const void *cookie,
-                                lcb_error_t err,
-                                const lcb_flush_resp_t *resp) {
-    assert(err == LCB_SUCCESS);
-}
+    static void mock_flush_callback(lcb_t instance,
+                                    const void *cookie,
+                                    lcb_error_t err,
+                                    const lcb_flush_resp_t *resp)
+    {
+        assert(err == LCB_SUCCESS);
+    }
 }
 void MockEnvironment::SetUp()
 {
@@ -331,14 +332,14 @@ MockCommand::~MockCommand()
     command = NULL;
 }
 
-void MockCommand::set(const std::string& field, const std::string& value)
+void MockCommand::set(const std::string &field, const std::string &value)
 {
     cJSON_AddStringToObject(payload, field.c_str(), value.c_str());
 }
 
-void MockCommand::set(const std::string& field, int value)
+void MockCommand::set(const std::string &field, int value)
 {
-    cJSON* num = cJSON_CreateNumber(value);
+    cJSON *num = cJSON_CreateNumber(value);
     assert(num);
     cJSON_AddItemToObject(payload, field.c_str(), num);
 }
@@ -409,7 +410,7 @@ void MockBucketCommand::finalizePayload()
     set("bucket", bucket);
 }
 
-MockResponse::MockResponse(const std::string& resp)
+MockResponse::MockResponse(const std::string &resp)
 {
     jresp = cJSON_Parse(resp.c_str());
     assert(jresp);
@@ -434,7 +435,7 @@ bool MockResponse::isOk()
         return false;
     }
 
-    if ( tolower(status->valuestring[0]) != 'o') {
+    if (tolower(status->valuestring[0]) != 'o') {
         return false;
     }
 

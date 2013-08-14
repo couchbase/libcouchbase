@@ -96,7 +96,7 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
 static void request_v1_error_handler(lcb_sockdata_t *sock)
 {
     lcb_http_request_t req;
-    if (!lcb_sockrw_v1_cb_common(sock, NULL, (void**)&req)) {
+    if (!lcb_sockrw_v1_cb_common(sock, NULL, (void **)&req)) {
         return;
     }
     lcb_http_request_finish(req->instance, req, LCB_NETWORK_ERROR);
@@ -106,7 +106,7 @@ static void request_v1_read_handler(lcb_sockdata_t *sock, lcb_ssize_t nr)
 {
     int rv;
     lcb_http_request_t req;
-    if (!lcb_sockrw_v1_cb_common(sock, NULL, (void**)&req)) {
+    if (!lcb_sockrw_v1_cb_common(sock, NULL, (void **)&req)) {
         return;
     }
 
@@ -138,7 +138,7 @@ static void request_v1_write_handler(lcb_sockdata_t *sock,
 {
     lcb_http_request_t req;
 
-    if (!lcb_sockrw_v1_cb_common(sock, wbuf, (void**)&req)) {
+    if (!lcb_sockrw_v1_cb_common(sock, wbuf, (void **)&req)) {
         return;
     }
 
