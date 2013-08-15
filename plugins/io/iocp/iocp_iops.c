@@ -258,8 +258,6 @@ static lcb_sockdata_t *create_socket(lcb_io_opt_t iobase,
                   0,
                   WSA_FLAG_OVERLAPPED);
 
-    s = socket(domain, type, protocol);
-
     if (s == INVALID_SOCKET) {
         iocp_set_last_error(iobase, s);
         free(sd);
@@ -417,6 +415,9 @@ static void send_error(lcb_io_opt_t iobase,
     }
 
     aerr->cb = cb;
+    aerr->ol_dummy.sd = sd;
+    aerr->ol_dummy.action = LCBIOCP_ACTION_ERROR;
+
     iocp_asq_schedule(io, sd, &aerr->ol_dummy);
 }
 

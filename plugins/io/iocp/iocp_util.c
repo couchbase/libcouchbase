@@ -72,6 +72,8 @@ int iocp_w32err_2errno(DWORD error)
     case WSAEHOSTUNREACH:
     case WSAEHOSTDOWN:
         return ENETUNREACH;
+    case WSAENOTSOCK:
+        return ENOTSOCK;
 
     default:
         IOCP_LOG(IOCP_WARN, "Unknown error code %d.", (int)error);

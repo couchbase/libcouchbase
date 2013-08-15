@@ -129,8 +129,8 @@ static void handle_single_overlapped(iocp_t *io,
                                 0);
 
             if (rv == SOCKET_ERROR) {
-                fprintf(stderr, "SO_UPDATE_CONNECT_CONTEXT failed (%d)\n",
-                        WSAGetLastError());
+                iocp_set_last_error(&io->base, ol->sd->sSocket);
+                opstatus = -1;
             }
         }
         u_ol.conn->cb(&sd->sd_base, opstatus);
