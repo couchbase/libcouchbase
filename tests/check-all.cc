@@ -459,7 +459,7 @@ public:
                 if (rv == 0) {
                     char msg[2048];
                     cur->exitedOk = cur->proc_.status == 0;
-                    snprintf(msg, 2048, "REAP [%s] '%s' .. %s\n",
+                    snprintf(msg, 2048, "REAP [%s] '%s' .. %s",
                              cur->pluginName.c_str(),
                              cur->commandline.c_str(),
                              cur->exitedOk ? "OK" : "FAIL");
@@ -498,7 +498,7 @@ private:
         proc->setupPointers();
         setPluginEnvironment(proc->pluginName);
         char msg[2048];
-        snprintf(msg, 2048, "START [%s] '%s'\n",
+        snprintf(msg, 2048, "START [%s] '%s'",
                  proc->pluginName.c_str(),
                  proc->commandline.c_str());
         proc->writeLog(msg);
@@ -506,7 +506,7 @@ private:
 
         int rv = create_process(&proc->proc_);
         if (rv < 0) {
-            snprintf(msg, 2048, "FAIL couldn't invoke [%s] '%s'\n",
+            snprintf(msg, 2048, "FAIL couldn't invoke [%s] '%s'",
                      proc->pluginName.c_str(),
                      proc->commandline.c_str());
             proc->writeLog(msg);
