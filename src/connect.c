@@ -119,9 +119,11 @@ static void timeout_handler_dispatch(lcb_socket_t sock,
                                      void *arg)
 {
     lcb_connection_t conn = (lcb_connection_t)arg;
+    int was_active = conn->timeout.active;
+
     lcb_connection_cancel_timer(conn);
 
-    if (conn->timeout.active && conn->on_timeout) {
+    if (was_active && conn->on_timeout) {
         lcb_connection_handler handler = conn->on_timeout;
         conn->on_timeout = NULL;
         handler(conn, LCB_ETIMEDOUT);
