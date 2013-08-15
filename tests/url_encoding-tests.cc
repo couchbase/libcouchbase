@@ -26,7 +26,7 @@ class UrlEncoding : public ::testing::Test
 TEST_F(UrlEncoding, plainTextTests)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
 
     std::string input("abcdef");
     std::string exp("abcdef");
@@ -42,7 +42,7 @@ TEST_F(UrlEncoding, plainTextTests)
 TEST_F(UrlEncoding, plainTextWithSlashTests)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
 
     std::string input("a/b/c/d/e/f/g/h/i/j");
 
@@ -57,7 +57,7 @@ TEST_F(UrlEncoding, plainTextWithSlashTests)
 TEST_F(UrlEncoding, plainTextWithSpaceTests)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
 
     std::string input("a b c d e f g");
     std::string exp("a%20b%20c%20d%20e%20f%20g");
@@ -73,7 +73,7 @@ TEST_F(UrlEncoding, plainTextWithSpaceTests)
 TEST_F(UrlEncoding, encodedTextWithPlusAsApaceTests)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
 
     std::string input("a+b+c+d+e+g+h");
 
@@ -88,7 +88,7 @@ TEST_F(UrlEncoding, encodedTextWithPlusAsApaceTests)
 TEST_F(UrlEncoding, encodedTextWithPlusAndHexAsApaceTests)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
 
     std::string input("a+b%20c%20d+e+g+h");
 
@@ -103,7 +103,7 @@ TEST_F(UrlEncoding, encodedTextWithPlusAndHexAsApaceTests)
 TEST_F(UrlEncoding, mixedLegalTextTests)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
 
     std::string input("a/b/c/d/e f g+32%20");
     std::string exp("a/b/c/d/e%20f%20g+32%20");
@@ -120,7 +120,7 @@ TEST_F(UrlEncoding, mixedLegalTextTests)
 TEST_F(UrlEncoding, mixedIllegalEncodingTextTests)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
 
     std::string input("a+ ");
 
@@ -132,7 +132,7 @@ TEST_F(UrlEncoding, mixedIllegalEncodingTextTests)
 TEST_F(UrlEncoding, internationalTest)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
     std::string input("_design/beer/_view/all?startkey=\"\xc3\xb8l\"");
     std::string exp("_design/beer/_view/all?startkey=%22%C3%B8l%22");
     EXPECT_EQ(LCB_SUCCESS, lcb_urlencode_path(input.data(), input.length(),
@@ -146,7 +146,7 @@ TEST_F(UrlEncoding, internationalTest)
 TEST_F(UrlEncoding, internationalEncodedTest)
 {
     char *out;
-    size_t nout;
+    lcb_size_t nout;
     std::string input("_design/beer/_view/all?startkey=%22%C3%B8l%22");
     std::string exp("_design/beer/_view/all?startkey=%22%C3%B8l%22");
     EXPECT_EQ(LCB_SUCCESS, lcb_urlencode_path(input.data(), input.length(),
