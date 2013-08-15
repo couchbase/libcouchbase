@@ -71,7 +71,9 @@ pkginclude_HEADERS = \
                      include/libcouchbase/sanitycheck.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
-                     include/libcouchbase/visibility.h
+                     include/libcouchbase/visibility.h \
+                     plugins/io/iocp/iocp_iops.h \
+                     plugins/io/select/select_io_opts.h
 
 if BUILD_LIBCOUCHBASE_DEBUG
 pkginclude_HEADERS += include/libcouchbase/debug.h
@@ -81,11 +83,9 @@ if BUILD_PLUGINS
 pkginclude_HEADERS += \
                      plugins/io/libev/libev_io_opts.h \
                      plugins/io/libevent/libevent_io_opts.h \
-                     plugins/io/select/select_io_opts.h \
-                     plugins/io/iocp/iocp_iops.h \
                      plugins/io/libuv/libuv_io_opts.h
 
-nobase_pkginclude_HEADERS := \
+nobase_pkginclude_HEADERS = \
                              plugins/io/libuv/plugin-internal.h \
                              plugins/io/libuv/plugin-libuv.c
 endif
@@ -400,15 +400,14 @@ endif
 #
 # Example programs using the library
 #
-if BUILD_PLUGINS
 if BUILD_EXAMPLES
-noinst_PROGRAMS += example/syncmode/syncmode
-noinst_PROGRAMS += example/minimal/minimal
-noinst_PROGRAMS += example/observe/observe
-noinst_PROGRAMS += example/db/db
+noinst_PROGRAMS += \
+                   example/db/db \
+                   example/minimal/minimal \
+                   example/observe/observe \
+                   example/syncmode/syncmode
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/yajl/couchview
-endif
 endif
 endif
 
@@ -488,7 +487,13 @@ tools_cbc_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 TESTS_ENVIRONMENT = export outdir="$(top_builddir)/tests";
 
-TESTS=tests/check-all tests/homebrew-acceptance-test
+TESTS = tests/check-all
+
+if BUILD_TOOLS
+if HAVE_CXX
+TESTS += tests/homebrew-acceptance-test
+endif
+endif
 
 example_debug_debug_SOURCES = example/debug/debug.cc
 example_debug_debug_LDADD = libcouchbase_debug.la

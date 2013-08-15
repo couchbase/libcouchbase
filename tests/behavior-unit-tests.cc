@@ -78,18 +78,11 @@ public:
         // Clear it
         clearPluginEnv();
 
-#ifdef BUILD_PLUGINS
         ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, NULL));
-#else
-        /* there no IO plugins, so creating connection isn't supported */
-        ASSERT_EQ(LCB_NOT_SUPPORTED, lcb_create(&instance, NULL));
-#endif
     }
 
     virtual void TearDown() {
-#ifdef BUILD_PLUGINS
         lcb_destroy(instance);
-#endif
         setPluginEnv(origPluginName, origPluginSymbol);
     }
 
@@ -100,7 +93,6 @@ protected:
 };
 
 
-#ifdef BUILD_PLUGINS
 TEST_F(Behavior, CheckDefaultValues)
 {
     EXPECT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
@@ -228,4 +220,3 @@ TEST_F(Behavior, BadPluginEnvironment)
     ASSERT_EQ(lcb_create(&instance2, NULL), LCB_DLSYM_FAILED);
 
 }
-#endif

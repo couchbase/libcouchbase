@@ -33,6 +33,7 @@
 #include <cstring>
 #include <list>
 
+#include "config.h"
 #include "procutil.h"
 #include "commandlineparser.h"
 #include <libcouchbase/couchbase.h>
@@ -47,14 +48,24 @@
 #endif
 
 #ifdef _WIN32
-#define DEFAULT_PLUGINS_STRING "select;iocp;libuv"
+const char default_plugins_string[] = "select;iocp;libuv";
 #define PATHSEP "\\"
 #define usleep(n) Sleep((n) / 1000)
 #define setenv(key, value, ignored) SetEnvironmentVariable(key, value)
 #else
 #include <signal.h>
 #include <unistd.h> /* usleep */
-#define DEFAULT_PLUGINS_STRING "select;libev;libevent;libuv"
+const char default_plugins_string[] = "select"
+#if defined(HAVE_LIBEV3) || defined(HAVE_LIBEV4)
+";libev"
+#endif
+#if defined(HAVE_LIBEVENT) || defined(HAVE_LIBEVENT2)
+";libevent"
+#endif
+#ifdef HAVE_LIBUV
+";libuv"
+#endif
+;
 #define PATHSEP "/"
 #endif
 
@@ -70,7 +81,7 @@ public:
 
         addOption(&opt_plugins, 'p', "opt_plugins",
                   "semicolon-delimited list of plugins to test",
-                  DEFAULT_PLUGINS_STRING);
+                  default_plugins_string);
 
         addOption(&opt_jobs, 'j', "opt_jobs",
                   "Execute this many processes concurrently");

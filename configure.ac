@@ -314,7 +314,7 @@ AC_CACHE_CHECK([for libevent2], [ac_cv_have_libevent2],
     LIBS="$saved_libs"
   ])
 AM_CONDITIONAL(HAVE_LIBEVENT2, [test "x${ac_cv_have_libevent2}" = "xyes"])
-AS_IF([test "x${ac_cv_have_libevent2}" = "xyes"],
+AS_IF([test "x${ac_cv_enable_plugins}" = "xyes" -a "x${ac_cv_have_libevent2}" = "xyes"],
       [AC_DEFINE([HAVE_LIBEVENT2], [1], [We have libevent2])])
 
 AC_CACHE_CHECK([for libuv], [ac_cv_have_libuv],
@@ -332,7 +332,7 @@ AC_CACHE_CHECK([for libuv], [ac_cv_have_libuv],
     LIBS="$saved_libs"
   ])
 AM_CONDITIONAL(HAVE_LIBUV, [test "x${ac_cv_have_libuv}" = "xyes"])
-AS_IF([test "x${ac_cv_have_libuv}" = "xyes"],
+AS_IF([test "x${ac_cv_enable_plugins}" = "xyes" -a "x${ac_cv_have_libuv}" = "xyes"],
       [AC_DEFINE([HAVE_LIBUV], [1], [We have libuv])])
 
 dnl Fail if libevent is the only networking backend accessible
@@ -469,16 +469,14 @@ AM_CONDITIONAL(HAVE_CXX, [test "x${ac_cv_prog_cxx_works}" = "xyes" -a "x${ac_cv_
 AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
       [AS_IF([test "x${ac_cv_prog_cxx_works}" != "xyes" -o "x${ac_cv_enable_cxx}" != "xyes"],
              [AC_MSG_ERROR([You need C++ compiler to build tools. Try add --disable-tools])])])
-dnl Tools require IO, so at least one plugin must be available
-AM_CONDITIONAL(BUILD_TOOLS, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_tools}" = "xyes"])
+AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
 
 AC_ARG_ENABLE([examples],
     [AS_HELP_STRING([--disable-examples],
             [Build examples. @<:@default=on@:>@])],
     [ac_cv_enable_examples="$enableval"],
     [ac_cv_enable_examples="yes"])
-dnl Examples require IO, so at least one plugin must be available
-AM_CONDITIONAL(BUILD_EXAMPLES, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_examples}" = "xyes"])
+AM_CONDITIONAL(BUILD_EXAMPLES, [test "x${ac_cv_enable_examples}" = "xyes"])
 
 AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday
                      QueryPerformanceCounter alarm setitimer])

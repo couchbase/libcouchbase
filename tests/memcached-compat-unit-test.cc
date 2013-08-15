@@ -32,13 +32,7 @@ TEST_F(MemcachedCompatibility, createInstance)
     memset(&memcached, 0, sizeof(memcached));
     memcached.serverlist = "localhost:11211;localhost:11212";
 
-#ifdef BUILD_PLUGINS
     EXPECT_EQ(LCB_SUCCESS,
               lcb_create_compat(LCB_MEMCACHED_CLUSTER, &memcached, &instance, NULL));
     lcb_destroy(instance);
-#else
-    /* there no IO plugins, so creating connection isn't supported */
-    ASSERT_EQ(LCB_DLOPEN_FAILED,
-              lcb_create_compat(LCB_MEMCACHED_CLUSTER, &memcached, &instance, NULL));
-#endif
 }

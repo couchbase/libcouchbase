@@ -18,7 +18,6 @@
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
 
-#ifdef BUILD_PLUGINS
 class Cluster : public ::testing::Test
 {
 public:
@@ -51,4 +50,3 @@ TEST_F(Cluster, IsntAllowedToMakeDataCalls)
     EXPECT_EQ(LCB_EBADHANDLE, lcb_set_verbosity(instance, NULL, 0, NULL));
     return;
 }
-#endif

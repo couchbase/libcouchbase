@@ -24,7 +24,6 @@ public:
 
 };
 
-#ifdef BUILD_PLUGINS
 TEST_F(Hostname, testSchemas)
 {
     lcb_t instance;
@@ -88,4 +87,3 @@ TEST_F(Hostname, testPort)
     EXPECT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
     lcb_destroy(instance);
 }
-#endif
