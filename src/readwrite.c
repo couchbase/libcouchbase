@@ -56,7 +56,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
         assert((iov[0].iov_len + iov[1].iov_len) != 0);
         /* TODO stash error message somewhere
          * "Connection closed... we should resend to other nodes or reconnect!!" */
-        return LCB_SOCKRW_IO_ERROR;
+        return LCB_SOCKRW_SHUTDOWN;
 
     } else {
         ringbuffer_produced(buf, (lcb_size_t)nr);

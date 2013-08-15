@@ -44,7 +44,8 @@ extern "C" {
         LCB_SOCKRW_IO_ERROR = 3,
         LCB_SOCKRW_GENERIC_ERROR = 4,
         LCB_SOCKRW_WOULDBLOCK = 5,
-        LCB_SOCKRW_PENDING
+        LCB_SOCKRW_PENDING,
+        LCB_SOCKRW_SHUTDOWN
     } lcb_sockrw_status_t;
 
     typedef enum {

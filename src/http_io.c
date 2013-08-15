@@ -40,7 +40,9 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
         lcb_sockrw_status_t status;
 
         status = lcb_sockrw_v0_slurp(&req->connection, req->connection.input);
-        if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
+        if (status != LCB_SOCKRW_READ &&
+                status != LCB_SOCKRW_WOULDBLOCK &&
+                status != LCB_SOCKRW_SHUTDOWN) {
             should_continue = 0;
             err = LCB_NETWORK_ERROR;
 
@@ -57,6 +59,11 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
             } else {
                 /* Still want more data: */
                 lcb_sockrw_set_want(&req->connection, LCB_READ_EVENT, 1);
+            }
+
+            if (status == LCB_SOCKRW_SHUTDOWN && should_continue != 0) {
+                /** Premature termination of connection */
+                err = LCB_NETWORK_ERROR;
             }
         }
     }
