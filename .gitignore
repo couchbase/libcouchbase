@@ -28,7 +28,7 @@
 /Makefile.in
 /aclocal.m4
 /autom4te.cache
-/check-all.log
+/check-all*
 /config.cache
 /config.log
 /config.status

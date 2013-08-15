@@ -29,6 +29,7 @@
 #include <cassert>
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <cstring>
 #include <list>
@@ -159,10 +160,8 @@ public:
         assignFromArg(testdir, opt_bindir, getEffectiveTestdir());
         assignFromArg(debugger, opt_debugger, "");
 
-        // Logfile
-        if (!opt_verbose->found) {
-            logfile = "check-all.log";
-        }
+        // Verbosity
+        isVerbose = opt_verbose->found;
 
         // isInteractive
         isInteractive = opt_interactive->found;
@@ -205,11 +204,11 @@ public:
     std::string srcroot;
     std::string testdir;
     std::string debugger;
-    std::string logfile;
 
     strlist plugins;
     strlist testnames;
 
+    bool isVerbose;
     bool isInteractive;
     int maxJobs;
     int maxCycles;
@@ -386,17 +385,26 @@ static void setPluginEnvironment(std::string &name)
 struct Process {
     child_process_t proc_;
     std::string commandline;
-    std::string logfile;
+    std::string logfileName;
     std::string pluginName;
+    std::string testName;
     bool exitedOk;
+    bool verbose;
 
-    Process(std::string &plugin,
-            std::string &cmd, std::string &output, bool interactive) {
-
+    Process(std::string &plugin, std::string &name, std::string &cmd,
+            TestConfiguration &config) {
         this->pluginName = plugin;
+        this->testName = name;
         this->commandline = cmd;
-        this->logfile = output;
-        proc_.interactive = interactive;
+        this->verbose = config.isVerbose;
+        proc_.interactive = config.isInteractive;
+        this->logfileName = "check-all-" + pluginName + "-" + testName + ".log";
+    }
+
+    void writeLog(const char *msg) {
+        std::ofstream out(logfileName.c_str(), std::ios::app);
+        out << msg << std::endl;
+        out.close();
     }
 
     void setupPointers() {
@@ -404,8 +412,8 @@ struct Process {
 
         proc_.name = commandline.c_str();
 
-        if (!logfile.empty()) {
-            proc_.redirect = logfile.c_str();
+        if (!verbose) {
+            proc_.redirect = logfileName.c_str();
         }
     }
 };
@@ -449,11 +457,14 @@ public:
                 int rv = wait_process(&cur->proc_, -1);
 
                 if (rv == 0) {
+                    char msg[2048];
                     cur->exitedOk = cur->proc_.status == 0;
-                    fprintf(stderr, "REAP [%s] '%s' .. %s\n",
-                            cur->pluginName.c_str(),
-                            cur->commandline.c_str(),
-                            cur->exitedOk ? "OK" : "FAIL");
+                    snprintf(msg, 2048, "REAP [%s] '%s' .. %s\n",
+                             cur->pluginName.c_str(),
+                             cur->commandline.c_str(),
+                             cur->exitedOk ? "OK" : "FAIL");
+                    cur->writeLog(msg);
+                    fprintf(stderr, "%s\n", msg);
                     cleanup_process(&cur->proc_);
                     to_remove_e.push_back(cur);
                 }
@@ -486,16 +497,20 @@ private:
     void invokeScheduled(Process *proc) {
         proc->setupPointers();
         setPluginEnvironment(proc->pluginName);
-        fprintf(stderr, "START [%s] .. %s\n",
-                proc->pluginName.c_str(),
-                proc->commandline.c_str());
+        char msg[2048];
+        snprintf(msg, 2048, "START [%s] '%s'\n",
+                 proc->pluginName.c_str(),
+                 proc->commandline.c_str());
+        proc->writeLog(msg);
+        fprintf(stderr, "%s\n", msg);
 
         int rv = create_process(&proc->proc_);
         if (rv < 0) {
-            fprintf(stderr,
-                    "Coudln't invoke '%s'\n",
-                    proc->commandline.c_str());
-
+            snprintf(msg, 2048, "FAIL couldn't invoke [%s] '%s'\n",
+                     proc->pluginName.c_str(),
+                     proc->commandline.c_str());
+            proc->writeLog(msg);
+            fprintf(stderr, "%s\n", msg);
             proc->exitedOk = false;
             completed.push_back(proc);
             return;
@@ -521,11 +536,7 @@ static bool runSingleCycle(TestConfiguration &config)
                 iterbins++) {
 
             std::string cmdline = config.setupCommandline(*iterbins);
-            scheduler.schedule(
-                Process(*iter,
-                        cmdline,
-                        config.logfile,
-                        config.isInteractive));
+            scheduler.schedule(Process(*iter, *iterbins, cmdline, config));
         }
 
     }
@@ -543,13 +554,6 @@ int main(int argc, char **argv)
     TestConfiguration config;
     if (!config.parseOptions(argc, argv)) {
         exit(EXIT_FAILURE);
-    }
-
-    if (!config.logfile.empty()) {
-        FILE *fp = fopen(config.logfile.c_str(), "w");
-        if (fp) {
-            fclose(fp);
-        }
     }
 
     // Set the environment for 'srcdir'
