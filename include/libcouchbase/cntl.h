@@ -253,8 +253,20 @@ extern "C" {
      */
 #define LCB_CNTL_IOPS_DLOPEN_DEBUG       0x11
 
+    /**
+     * Get/Set the per-instance setting for the connection timeout. This is
+     * how long the client will wait to obtain the initial configuration as
+     * well as the time the client will wait to obtain new configurations
+     * when needed
+     *
+     * Arg: lcb_uint32_t*
+     */
+#define LCB_CNTL_CONFIGURATION_TIMEOUT   0x12
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x12
+
+
+#define LCB_CNTL__MAX                    0x13
 
 
 #ifdef __cplusplus

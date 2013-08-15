@@ -221,7 +221,7 @@ void lcb_server_connect(lcb_server_t *server)
     conn->completion.read = lcb_server_v1_read_handler;
     conn->completion.write = lcb_server_v1_write_handler;
     conn->completion.error = lcb_server_v1_error_handler;
-    conn->timeout.usec = server->instance->timeout.usec;
+    conn->timeout.usec = server->instance->operation_timeout;
 
     lcb_connection_start(conn, LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
 }

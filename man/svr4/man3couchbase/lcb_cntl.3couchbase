@@ -2,12 +2,12 @@
 .\"     Title: lcb_cntl
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/12/2013
+.\"      Date: 08/16/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CNTL" "3couchbase" "08/12/2013" "\ \&" "\ \&"
+.TH "LCB_CNTL" "3couchbase" "08/16/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -78,6 +78,22 @@ Set or get operation timeout in microseconds\&. Default is 2500000 (2\&.5 second
 .nf
 lcb_uint32_t tmo = 3500000;
 lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo);
+.fi
+.if n \{\
+.RE
+.\}
+.RE
+.PP
+\fBLCB_CNTL_CONFIGURATION_TIMEOUT\fR \fI(lcb_uint32_t*)\fR
+.RS 4
+Set or get the per\-instance setting for the connection timeout\&. This is how long the client will wait to obtain the initial configuration as well as the time the client will wait to obtain new configurations when needed\&. Default is 5000000 (5 seconds)
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_uint32_t tmo = 3500000;
+lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIGURATION_TIMEOUT, &tmo);
 .fi
 .if n \{\
 .RE

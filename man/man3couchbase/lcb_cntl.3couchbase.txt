@@ -56,6 +56,15 @@ Available Commands
         lcb_uint32_t tmo = 3500000;
         lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo);
 
+*LCB_CNTL_CONFIGURATION_TIMEOUT* '(lcb_uint32_t*)'::
+    Set or get the per-instance setting for the connection timeout.
+    This is how long the client will wait to obtain the initial
+    configuration as well as the time the client will wait to obtain
+    new configurations when needed. Default is 5000000 (5 seconds)
+
+        lcb_uint32_t tmo = 3500000;
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIGURATION_TIMEOUT, &tmo);
+
 *LCB_CNTL_VIEW_TIMEOUT* '(lcb_uint32_t*)'::
     Set or get view (map/reduce) timeout in microseconds. Default is
     75000000 (75 seconds).

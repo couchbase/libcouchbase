@@ -114,6 +114,10 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "An environment variable recognized by libcouchbase was "
                "specified in an invalid format or has missing items";
 
+    case LCB_BUSY:
+        return "An internal operation was not completed yet. "
+               "(you shouldn't be seeing this message!)";
+
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

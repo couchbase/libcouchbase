@@ -542,27 +542,51 @@ void lcb_connection_delay_timer(lcb_connection_t conn)
     lcb_connection_activate_timer(conn);
 }
 
+static lcb_error_t reset_buffer(ringbuffer_t **rb, lcb_size_t defsz)
+{
+    if (*rb) {
+        ringbuffer_reset(*rb);
+        return LCB_SUCCESS;
+    }
+
+    *rb = calloc(1, sizeof(**rb));
+
+    if (*rb == NULL) {
+        return LCB_CLIENT_ENOMEM;
+    }
+
+    if (!ringbuffer_initialize(*rb, defsz)) {
+        return LCB_CLIENT_ENOMEM;
+    }
+
+    return LCB_SUCCESS;
+}
+
+lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn)
+{
+    if (reset_buffer(&conn->input, conn->instance->rbufsize) != LCB_SUCCESS) {
+        return LCB_CLIENT_ENOMEM;
+    }
+    if (reset_buffer(&conn->output, conn->instance->wbufsize) != LCB_SUCCESS) {
+        return LCB_CLIENT_ENOMEM;
+    }
+    return LCB_SUCCESS;
+}
+
+
 lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance)
 {
     conn->instance = instance;
-    if (!conn->input) {
-        conn->input = calloc(1, sizeof(*conn->input));
-    }
-
-    if (!conn->output) {
-        conn->output = calloc(1, sizeof(*conn->output));
-    }
 
     conn->sockfd = INVALID_SOCKET;
     conn->state = LCB_CONNSTATE_UNINIT;
     conn->timeout.timer = instance->io->v.v0.create_timer(instance->io);
 
-    if (conn->input == NULL || conn->output == NULL) {
+    if (LCB_SUCCESS != lcb_connection_reset_buffers(conn)) {
         lcb_connection_cleanup(conn);
         return LCB_CLIENT_ENOMEM;
     }
-    if (ringbuffer_initialize(conn->input, instance->rbufsize) == 0 ||
-            ringbuffer_initialize(conn->output, instance->wbufsize) == 0) {
+    if (conn->timeout.timer == NULL) {
         lcb_connection_cleanup(conn);
         return LCB_CLIENT_ENOMEM;
     }

@@ -146,9 +146,8 @@ ADD_LIBRARY(couchbase SHARED
             plugins/io/select/plugin-select.c
             src/arithmetic.c
             src/bconf_io.c
-            src/bconf_io.c
             src/bconf_parse.c
-            src/bconf_parse.c
+            src/bconf_provider.c
             src/cntl.c
             src/compat.c
             src/config_cache.c

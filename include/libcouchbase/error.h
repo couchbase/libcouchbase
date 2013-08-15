@@ -206,13 +206,19 @@ extern "C" {
          * An environment variable recognized by libcouchbase was detected,
          * but it contains an invalid value format
          */
-        LCB_BAD_ENVIRONMENT = 0x24
+        LCB_BAD_ENVIRONMENT = 0x24,
+
+        /** An operation has not yet completed */
+        LCB_BUSY = 0x25
+
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        , LCB_MAX_ERROR_VAL = 0x25
+        ,LCB_MAX_ERROR_VAL = 0x26
 #endif
+
+
     } lcb_error_t;
 
 #define lcb_is_error_enomem(a) ((a == LCB_CLIENT_ENOMEM) || \

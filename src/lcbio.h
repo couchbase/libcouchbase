@@ -163,6 +163,14 @@ extern "C" {
 
 
     /**
+     * Resets the buffers in the connection. This allocates new writes or
+     * read buffers if needed, or resets the mark of the existing ones, depending
+     * on their ownership
+     */
+    lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn);
+
+
+    /**
      * Request a connection. The connection object should be filled with the
      * appropriate callbacks
      * @param conn a connection object with properly initialized fields

@@ -37,9 +37,72 @@ static void lcb_instance_reset_stream_state(lcb_t instance)
     free(instance->vbucket_stream.chunk.data);
     free(instance->vbucket_stream.header);
     memset(&instance->vbucket_stream, 0, sizeof(instance->vbucket_stream));
+    lcb_assert(LCB_SUCCESS ==
+               lcb_connection_reset_buffers(&instance->connection));
+}
 
-    ringbuffer_reset(instance->connection.input);
-    ringbuffer_reset(instance->connection.output);
+/**
+ * Common function to handle parsing the event loop for both v0 and v1 io
+ * implementations.
+ */
+static lcb_error_t handle_vbstream_read(lcb_t instance)
+{
+    lcb_error_t err;
+    int can_retry = 0;
+    int old_gen = instance->config_generation;
+    err = lcb_parse_vbucket_stream(instance);
+
+    if (err == LCB_SUCCESS) {
+        lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
+        lcb_sockrw_apply_want(&instance->connection);
+
+        if (old_gen != instance->config_generation) {
+            lcb_connection_cancel_timer(&instance->connection);
+            instance->connection.timeout.usec = 0;
+        }
+
+        lcb_maybe_breakout(instance);
+
+        return LCB_SUCCESS;
+
+    } else if (err != LCB_BUSY) {
+        /**
+         * XXX: We only want to retry on some errors. Things which signify an
+         * obvious user error should be left out here; we only care about
+         * actual "network" errors
+         */
+
+        switch (err) {
+        case LCB_ENOMEM:
+        case LCB_AUTH_ERROR:
+        case LCB_PROTOCOL_ERROR:
+        case LCB_BUCKET_ENOENT:
+            can_retry = 0;
+            break;
+        default:
+            can_retry = 1;
+        }
+
+        if (can_retry) {
+            const char *msg = "Failed to get configuration";
+            can_retry = lcb_switch_to_backup_node(instance, err, msg) != -1;
+        } else {
+            lcb_maybe_breakout(instance);
+            return lcb_error_handler(instance, err, "");
+        }
+    }
+
+    lcb_assert(err == LCB_BUSY);
+    lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
+    lcb_sockrw_apply_want(&instance->connection);
+
+    if (old_gen != instance->config_generation) {
+        lcb_connection_cancel_timer(&instance->connection);
+        instance->connection.timeout.usec = 0;
+        lcb_maybe_breakout(instance);
+    }
+
+    return LCB_BUSY;
 }
 
 
@@ -52,6 +115,9 @@ void lcb_instance_connerr(lcb_t instance,
      * REST API entry point. If we can, the following should return something
      * other than -1...
      */
+    if (instance->confstatus == LCB_CONFSTATE_CONFIGURED) {
+        instance->confstatus = LCB_CONFSTATE_RETRY;
+    }
 
     if (lcb_switch_to_backup_node(instance, err, errinfo) != -1) {
         return;
@@ -61,33 +127,31 @@ void lcb_instance_connerr(lcb_t instance,
      * pending commands, if applicable and/or deliver a final failure for
      * initial connect attempts.
      */
-
-    if (!instance->vbucket_config) {
-        /* Initial connection, no pending commands, and connect timer */
-        lcb_connection_cancel_timer(&instance->connection);
-    } else {
+    if (instance->vbucket_config) {
         lcb_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
             lcb_failout_server(instance->servers + ii, err);
         }
     }
 
-    /* check to see if we can breakout of the event loop. don't hang on REST
-     * API connection attempts.
-     */
     lcb_maybe_breakout(instance);
 }
 
 static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
-    lcb_instance_connerr((lcb_t)conn->data,
-                         err,
-                         "Configuration update timed out");
+    lcb_t instance = (lcb_t)conn->data;
+    const char *msg = "Configuration update timed out";
+    if (instance->confstatus == LCB_CONFSTATE_CONFIGURED) {
+        /* OK... */
+        abort();
+        return;
+    }
+
+    lcb_instance_connerr(instance, err, msg);
 }
 
 
-static void instance_connect_done_handler(lcb_connection_t conn,
-                                          lcb_error_t err)
+static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_t instance = conn->instance;
 
@@ -99,26 +163,24 @@ static void instance_connect_done_handler(lcb_connection_t conn,
         ringbuffer_strcat(conn->output, instance->http_uri);
         assert(conn->output->nbytes > 0);
 
-        conn->evinfo.handler = config_v0_handler;
-        conn->completion.read = config_v1_read_handler;
-        conn->completion.write = config_v1_write_handler;
-        conn->completion.error = config_v1_error_handler;
-        conn->on_timeout = instance_timeout_handler;
-
         lcb_sockrw_set_want(conn, LCB_RW_EVENT, 0);
         lcb_sockrw_apply_want(conn);
         lcb_connection_activate_timer(conn);
-
-    } else if (err == LCB_ETIMEDOUT) {
-        lcb_error_handler(instance,
-                          LCB_CONNECT_ERROR,
-                          "Could not connect to server within allotted time");
-        instance->timeout.next = 0;
-        lcb_maybe_breakout(instance);
-
-    } else {
-        lcb_instance_connerr(instance, err, "Couldn't connect");
+        return;
     }
+
+    if (err == LCB_ETIMEDOUT) {
+        if (instance->confstatus == LCB_CONFSTATE_UNINIT) {
+            lcb_error_handler(instance,
+                              LCB_CONNECT_ERROR,
+                              "Could not connect to server within allotted time");
+            lcb_maybe_breakout(instance);
+            return;
+        }
+    }
+
+    lcb_instance_connerr(instance, err, "Couldn't connect");
+    lcb_maybe_breakout(instance);
 }
 
 static void setup_current_host(lcb_t instance, const char *host)
@@ -141,6 +203,11 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     lcb_connection_t conn = &instance->connection;
     lcb_connection_result_t connres;
 
+    if (instance->connection.state == LCB_CONNSTATE_INPROGRESS ||
+            instance->connection.state == LCB_CONNSTATE_CONNECTED) {
+        lcb_assert("start_connection called while we still have a connection" && 0);
+    }
+
     /**
      * First, close the connection, if there's an open socket from a previous
      * one.
@@ -148,7 +215,13 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     lcb_connection_close(&instance->connection);
     lcb_instance_reset_stream_state(instance);
 
-    conn->on_connect_complete = instance_connect_done_handler;
+    conn->on_connect_complete = connect_done_handler;
+    conn->evinfo.handler = config_v0_handler;
+    conn->completion.read = config_v1_read_handler;
+    conn->completion.write = config_v1_write_handler;
+    conn->completion.error = config_v1_error_handler;
+    conn->on_timeout = instance_timeout_handler;
+    conn->timeout.usec = instance->config_timeout;
 
     do {
         setup_current_host(instance,
@@ -178,8 +251,6 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     assert(ptr);
     ptr += strlen(LCB_LAST_HTTP_HEADER);
     sprintf(ptr, "Host: %s:%s\r\n\r\n", conn->host, conn->port);
-
-    conn->timeout.usec = instance->timeout.usec;
     connres = lcb_connection_start(conn, 1);
     if (connres == LCB_CONN_ERROR) {
         return lcb_error_handler(instance, LCB_CONNECT_ERROR,
@@ -235,10 +306,8 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
                              "Failed to send read data from REST server");
         return;
     }
-    lcb_parse_vbucket_stream(instance);
-    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 0);
-    lcb_sockrw_apply_want(conn);
 
+    handle_vbstream_read(instance);
     (void)sock;
 }
 
@@ -262,9 +331,9 @@ static void config_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
         return;
     }
 
-    lcb_parse_vbucket_stream(instance);
     lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
-    lcb_sockrw_apply_want(&instance->connection);
+    /* automatically does apply_want */
+    handle_vbstream_read(instance);
 }
 
 static void config_v1_write_handler(lcb_sockdata_t *sockptr,

@@ -49,6 +49,7 @@
 #include "lcbio.h"
 
 #define LCB_DEFAULT_TIMEOUT 2500000
+#define LCB_DEFAULT_CONFIGURATION_TIMEOUT 5000000
 #define LCB_DEFAULT_VIEW_TIMEOUT 75000000
 #define LCB_DEFAULT_RBUFSIZE 32768
 #define LCB_DEFAULT_WBUFSIZE 32768
@@ -93,6 +94,20 @@ extern "C" {
         LCB_CONNECT_EUNHANDLED
     } lcb_connect_status_t;
 
+
+    typedef enum {
+        /** We have no configuration */
+        LCB_CONFSTATE_UNINIT = 0,
+
+        /** Configured OK */
+        LCB_CONFSTATE_CONFIGURED = 1,
+
+        /** We are retrying a new configuration */
+        LCB_CONFSTATE_RETRY = 2,
+
+        LCB_CONFSTATE_ERROR = 3
+    } lcb_config_status_t;
+
     typedef enum {
         /**
          * Request is part of a durability operation. Don't invoke the
@@ -128,7 +143,13 @@ extern "C" {
         lcb_size_t size;
         lcb_size_t avail;
     } buffer_t;
-    int grow_buffer(buffer_t *buffer, lcb_size_t min_free);
+
+    struct vbucket_stream_st {
+        char *header;
+        buffer_t input;
+        lcb_size_t chunk_size;
+        buffer_t chunk;
+    };
 
     struct lcb_histogram_st;
 
@@ -171,13 +192,7 @@ extern "C" {
         /** The current vbucket config handle */
         VBUCKET_CONFIG_HANDLE vbucket_config;
 
-        struct {
-            char *header;
-            buffer_t input;
-            lcb_size_t chunk_size;
-            buffer_t chunk;
-        } vbucket_stream;
-
+        struct vbucket_stream_st vbucket_stream;
         struct lcb_io_opt_st *io;
 
         /** The number of weird things happened with config node
@@ -193,8 +208,9 @@ extern "C" {
 
         struct lcb_connection_st connection;
 
-        /** Indicates whether the instance is configured */
-        int connection_ready;
+        lcb_config_status_t confstatus;
+        /* Incremented whenever we get a new config */
+        int config_generation;
 
         /** The number of couchbase server in the configuration */
         lcb_size_t nservers;
@@ -255,11 +271,8 @@ extern "C" {
         lcb_uint32_t http_timeout;
         lcb_uint32_t durability_timeout;
         lcb_uint32_t durability_interval;
-
-        struct {
-            hrtime_t next;
-            lcb_uint32_t usec;
-        } timeout;
+        lcb_uint32_t operation_timeout;
+        lcb_uint32_t config_timeout;
 
         lcb_size_t rbufsize;
         lcb_size_t wbufsize;
@@ -654,7 +667,7 @@ extern "C" {
                                      int status);
     void lcb_server_v1_error_handler(lcb_sockdata_t *sockptr);
 
-    void lcb_parse_vbucket_stream(lcb_t instance);
+    lcb_error_t lcb_parse_vbucket_stream(lcb_t instance);
 
     void lcb_observe_invoke_callback(lcb_t instance,
                                      const struct lcb_command_data_st *ct,
@@ -687,6 +700,8 @@ extern "C" {
      * On Unix, this does nothing
      */
     lcb_error_t lcb_initialize_socket_subsystem(void);
+
+    void lcb_free_backup_nodes(lcb_t instance);
 
 #ifdef __cplusplus
 }

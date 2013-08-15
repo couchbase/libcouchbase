@@ -36,7 +36,7 @@ const lcb_size_t min_buffer_size = 2048;
  * @param min_free the minimum amount of free space I need
  * @return 1 if success, 0 otherwise
  */
-int grow_buffer(buffer_t *buffer, lcb_size_t min_free)
+static int grow_buffer(buffer_t *buffer, lcb_size_t min_free)
 {
     if (min_free == 0) {
         /*
@@ -73,33 +73,33 @@ int grow_buffer(buffer_t *buffer, lcb_size_t min_free)
  * @param instance the instance containing the data
  * @return 1 if we got all the data we need, 0 otherwise
  */
-static int parse_chunk(lcb_t instance)
+static lcb_error_t parse_chunk(struct vbucket_stream_st *vbs)
 {
-    buffer_t *buffer = &instance->vbucket_stream.chunk;
-    assert(instance->vbucket_stream.chunk_size != 0);
+    buffer_t *buffer = &vbs->chunk;
+    assert(vbs->chunk_size != 0);
 
-    if (instance->vbucket_stream.chunk_size == (lcb_size_t) - 1) {
+    if (vbs->chunk_size == (lcb_size_t) - 1) {
         char *ptr = strstr(buffer->data, "\r\n");
         long val;
         if (ptr == NULL) {
             /* We need more data! */
-            return 0;
+            return LCB_BUSY;
         }
         ptr += 2;
         val = strtol(buffer->data, NULL, 16);
         val += 2;
-        instance->vbucket_stream.chunk_size = (lcb_size_t)val;
+        vbs->chunk_size = (lcb_size_t)val;
         buffer->avail -= (lcb_size_t)(ptr - buffer->data);
         memmove(buffer->data, ptr, buffer->avail);
         buffer->data[buffer->avail] = '\0';
     }
 
-    if (buffer->avail < instance->vbucket_stream.chunk_size) {
+    if (buffer->avail < vbs->chunk_size) {
         /* need more data! */
-        return 0;
+        return LCB_BUSY;
     }
 
-    return 1;
+    return LCB_SUCCESS;
 }
 
 /**
@@ -108,11 +108,11 @@ static int parse_chunk(lcb_t instance)
  * @param instance the instance containing the data
  * @return 0 success, 1 we need more data, -1 incorrect response
  */
-static int parse_header(lcb_t instance)
+static lcb_error_t parse_header(struct vbucket_stream_st *vbs, lcb_type_t btype)
 {
     int response_code;
 
-    buffer_t *buffer = &instance->vbucket_stream.chunk;
+    buffer_t *buffer = &vbs->chunk;
     char *ptr = strstr(buffer->data, "\r\n\r\n");
 
     if (ptr != NULL) {
@@ -123,67 +123,108 @@ static int parse_header(lcb_t instance)
         ptr += 2;
     } else {
         /* We need more data! */
-        return 1;
+        return LCB_BUSY;
     }
 
     /* parse the headers I care about... */
     if (sscanf(buffer->data, "HTTP/1.1 %d", &response_code) != 1) {
-        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
-                          buffer->data);
+        return LCB_PROTOCOL_ERROR;
+
     } else if (response_code != 200) {
-        lcb_error_t err;
         switch (response_code) {
         case 401:
-            err = LCB_AUTH_ERROR;
-            break;
+            return LCB_AUTH_ERROR;
         case 404:
-            err = LCB_BUCKET_ENOENT;
-            break;
+            return LCB_BUCKET_ENOENT;
         default:
-            err = LCB_PROTOCOL_ERROR;
+            return LCB_PROTOCOL_ERROR;
             break;
         }
-
-        lcb_error_handler(instance, err, buffer->data);
-
-        if (instance->compat.type == LCB_CACHED_CONFIG) {
-            /* cached config should try a bootsrapping logic */
-            return -2;
-        }
-
-        return -1;
     }
 
-    if (instance->type == LCB_TYPE_BUCKET &&
+    /** TODO: Isn't a vBucket config only for BUCKET types? */
+    if (btype == LCB_TYPE_BUCKET &&
             strstr(buffer->data, "Transfer-Encoding: chunked") == NULL &&
             strstr(buffer->data, "Transfer-encoding: chunked") == NULL) {
-        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
-                          buffer->data);
-        return -1;
+        return LCB_PROTOCOL_ERROR;
     }
 
-    instance->vbucket_stream.header = strdup(buffer->data);
+    vbs->header = strdup(buffer->data);
     /* realign remaining data.. */
     buffer->avail -= (lcb_size_t)(ptr - buffer->data);
     memmove(buffer->data, ptr, buffer->avail);
     buffer->data[buffer->avail] = '\0';
-    instance->vbucket_stream.chunk_size = (lcb_size_t) - 1;
+    vbs->chunk_size = (lcb_size_t) - 1;
 
-    return 0;
+    return LCB_SUCCESS;
 }
 
-
-void lcb_parse_vbucket_stream(lcb_t instance)
+static lcb_error_t parse_body(lcb_t instance,
+                              struct vbucket_stream_st *vbs,
+                              int *done)
 {
-    buffer_t *buffer = &instance->vbucket_stream.chunk;
+    lcb_error_t err = LCB_BUSY;
+    char *term;
+    buffer_t *buffer = &vbs->chunk;
+
+    if ((err = parse_chunk(vbs)) != LCB_SUCCESS) {
+        *done = 1; /* no data */
+        lcb_assert(err == LCB_BUSY);
+        return err;
+    }
+
+    if (!grow_buffer(&vbs->input, vbs->chunk_size)) {
+        return LCB_ENOMEM;
+    }
+
+    memcpy(vbs->input.data + vbs->input.avail, buffer->data, vbs->chunk_size);
+
+    vbs->input.avail += vbs->chunk_size;
+    /* the chunk includes the \r\n at the end.. We shouldn't add
+    ** that..
+    */
+    vbs->input.avail -= 2;
+    vbs->input.data[vbs->input.avail] = '\0';
+
+    /* realign buffer */
+    memmove(buffer->data, buffer->data + vbs->chunk_size,
+            buffer->avail - vbs->chunk_size);
+
+    buffer->avail -= vbs->chunk_size;
+    buffer->data[buffer->avail] = '\0';
+    term = strstr(vbs->input.data, "\n\n\n\n");
+
+    if (term != NULL) {
+        *term = '\0';
+        vbs->input.avail -= 4;
+        lcb_update_vbconfig(instance, NULL);
+        err = LCB_SUCCESS;
+    }
+
+    vbs->chunk_size = (lcb_size_t) - 1;
+    if (buffer->avail > 0) {
+        *done = 0;
+        /**
+         * If we receive at least one configuration here, we
+         * return LCB_SUCCESS to let the outer loop propagate it to the
+         * I/O code; in which case the connection timer (if any) is cancelled.
+         */
+    }
+    return err;
+}
+
+lcb_error_t lcb_parse_vbucket_stream(lcb_t instance)
+{
+    struct vbucket_stream_st *vbs = &instance->vbucket_stream;
+    buffer_t *buffer = &vbs->chunk;
     lcb_size_t nw, expected;
+    lcb_error_t status = LCB_ERROR;
     lcb_connection_t conn = &instance->connection;
 
     if (!grow_buffer(buffer, conn->input->nbytes + 1)) {
-        lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
-                          "Failed to allocate memory");
-        return;
+        return LCB_ENOMEM;
     }
+
     /**
      * Read any data from the ringbuffer into our 'buffer_t' structure.
      * TODO: Refactor this code to use ringbuffer directly, so we don't need
@@ -207,70 +248,24 @@ void lcb_parse_vbucket_stream(lcb_t instance)
     buffer->avail += nw;
     buffer->data[buffer->avail] = '\0';
 
-    if (instance->vbucket_stream.header == NULL) {
-        switch (parse_header(instance)) {
-        case -1:
-            /* error already reported */
-            lcb_maybe_breakout(instance);
-            return;
-        case -2:
-            instance->backup_idx++;
-            if (lcb_switch_to_backup_node(instance, LCB_CONNECT_ERROR,
-                                          "Failed to parse REST response") != -1) {
-                return;
-            }
-            /* We should try another server */
-            return;
-        default:
-            ;
+    if (vbs->header == NULL) {
+        status = parse_header(&instance->vbucket_stream, instance->type);
+        if (status != LCB_SUCCESS) {
+            return status; /* BUSY or otherwise */
         }
     }
 
-    if (instance->vbucket_stream.header != NULL) {
-        int done;
+    lcb_assert(vbs->header);
+
+    /**
+     * Note that we're doing a streaming push-based config; we
+     */
+    {
+        int done = 0;
         do {
-            done = 1;
-            if (parse_chunk(instance)) {
-                /* @todo copy the data over to the input buffer there.. */
-                char *term;
-                if (!grow_buffer(&instance->vbucket_stream.input,
-                                 instance->vbucket_stream.chunk_size)) {
-                    abort();
-                }
-                memcpy(instance->vbucket_stream.input.data + instance->vbucket_stream.input.avail,
-                       buffer->data, instance->vbucket_stream.chunk_size);
-                instance->vbucket_stream.input.avail += instance->vbucket_stream.chunk_size;
-                /* the chunk includes the \r\n at the end.. We shouldn't add
-                ** that..
-                */
-                instance->vbucket_stream.input.avail -= 2;
-                instance->vbucket_stream.input.data[instance->vbucket_stream.input.avail] = '\0';
-
-                /* realign buffer */
-                memmove(buffer->data, buffer->data + instance->vbucket_stream.chunk_size,
-                        buffer->avail - instance->vbucket_stream.chunk_size);
-                buffer->avail -= instance->vbucket_stream.chunk_size;
-                buffer->data[buffer->avail] = '\0';
-                term = strstr(instance->vbucket_stream.input.data, "\n\n\n\n");
-                if (term != NULL) {
-                    *term = '\0';
-                    instance->vbucket_stream.input.avail -= 4;
-                    lcb_update_vbconfig(instance, NULL);
-                }
-
-                instance->vbucket_stream.chunk_size = (lcb_size_t) - 1;
-                if (buffer->avail > 0) {
-                    done = 0;
-                }
-            }
+            status = parse_body(instance, vbs, &done);
         } while (!done);
     }
 
-    if (instance->type != LCB_TYPE_BUCKET) {
-        instance->connection_ready = 1;
-        lcb_maybe_breakout(instance);
-    } /* LCB_TYPE_BUCKET connection must receive valid config */
-
-    /* Make it known that this was a success. */
-    lcb_error_handler(instance, LCB_SUCCESS, NULL);
+    return status;
 }

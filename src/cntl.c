@@ -27,7 +27,7 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     switch (cmd) {
 
     case LCB_CNTL_OP_TIMEOUT:
-        return &instance->timeout.usec;
+        return &instance->operation_timeout;
 
     case LCB_CNTL_VIEW_TIMEOUT:
         return &instance->views_timeout;
@@ -40,6 +40,9 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
 
     case LCB_CNTL_HTTP_TIMEOUT:
         return &instance->http_timeout;
+
+    case LCB_CNTL_CONFIGURATION_TIMEOUT:
+        return &instance->config_timeout;
 
     default:
         return NULL;
@@ -270,7 +273,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_DURABILITY_TIMEOUT */
     timeout_common, /* LCB_CNTL_HTTP_TIMEOUT */
     lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DEFAULT_TYPES */
-    lcb_iops_cntl_handler  /* LCB_CNTL_IOPS_DLOPEN_DEBUG */
+    lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DLOPEN_DEBUG */
+    timeout_common  /* LCB_CNTL_CONFIGURATION_TIMEOUT */
 };
 
 
