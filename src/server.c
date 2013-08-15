@@ -82,7 +82,7 @@ void lcb_purge_single_server(lcb_server_t *server,
     ringbuffer_t *cookies;
     ringbuffer_t *mirror = NULL; /* mirror buffer should be purged with main stream */
     lcb_connection_t conn = &server->connection;
-    lcb_size_t send_size = ringbuffer_get_nbytes(conn->output);
+    lcb_size_t send_size = 0;
     lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
     hrtime_t now = gethrtime();
     int should_switch_to_backup_node = 0;
@@ -94,7 +94,13 @@ void lcb_purge_single_server(lcb_server_t *server,
         mirror = &server->pending;
     }
 
+    if (conn->output) {
+        /* This will usually be false for v1 */
+        send_size = ringbuffer_get_nbytes(conn->output);
+    }
+
     lcb_assert(ringbuffer_initialize(&rest, 1024));
+
 
     do {
         int allocated = 0;
