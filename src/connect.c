@@ -234,14 +234,14 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
             }
 
             /* Try next AI */
+            retry = 1;
             break;
-
         }
     } while (retry);
 
     /* not reached */
     abort();
-    return LCB_CONN_ERROR;;
+    return LCB_CONN_ERROR;
 }
 
 static void v1_connect_handler(lcb_sockdata_t *sockptr, int status)
