@@ -533,7 +533,33 @@ extern "C" {
 
         (void)resp;
     }
+
+    static void timer_callback(lcb_timer_t, lcb_t, const void *) {
+        abort();
+    }
 }
+
+class DummyTimer {
+public:
+    DummyTimer(lcb_t instance) : instance(instance) {
+        lcb_error_t err;
+        tm = lcb_timer_create(instance, this, 100 * 1000000, 1,
+                              timer_callback, &err);
+        EXPECT_EQ(LCB_SUCCESS, err);
+    }
+
+    void clear() {
+        lcb_timer_destroy(instance, tm);
+        tm = NULL;
+    }
+
+    ~DummyTimer() {
+    }
+
+private:
+    lcb_timer_t tm;
+    lcb_t instance;
+};
 
 TEST_F(MockUnitTest, DISABLED_testPurgedBody)
 {
@@ -618,13 +644,14 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 
     createConnection(hw, instance);
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
+    // Create a timer so IOCP doesn't complain
+    DummyTimer dt(instance);
+    config_cnt = 0;
 
     MockEnvironment *mock = MockEnvironment::getInstance();
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
     instance->vbucket_state_listener = vbucket_state_callback;
-
-    config_cnt = 0;
     mock->failoverNode(0);
     io->v.v0.run_event_loop(io);
     ASSERT_EQ(9, config_cnt);
@@ -633,6 +660,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     mock->respawnNode(0);
     io->v.v0.run_event_loop(io);
     ASSERT_EQ(10, config_cnt);
+    dt.clear();
 }
 
 TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
