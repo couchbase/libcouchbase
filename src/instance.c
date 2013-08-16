@@ -474,10 +474,17 @@ lcb_error_t lcb_connect(lcb_t instance)
         return LCB_SUCCESS;
     }
 
-    /**
-     * Schedule the connection to begin, start the timer:
-     */
-    return lcb_instance_start_connection(instance);
+    switch (instance->connection.state) {
+    case LCB_CONNSTATE_CONNECTED:
+        return LCB_SUCCESS;
+    case LCB_CONNSTATE_INPROGRESS:
+        return LCB_BUSY;
+    default:
+        /**
+         * Schedule the connection to begin, start the timer:
+         */
+        return lcb_instance_start_connection(instance);
+    }
 }
 
 void lcb_free_backup_nodes(lcb_t instance)
