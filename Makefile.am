@@ -45,7 +45,15 @@ man5_MANS =
 
 man_MANS =
 BUILT_SOURCES =
-CLEANFILES = tests/CouchbaseMock.jar check-all.log
+CLEANFILES = tests/CouchbaseMock.jar \
+             check-all-libev-smoke-test.log \
+             check-all-libev-unit-tests.log \
+             check-all-libevent-smoke-test.log \
+             check-all-libevent-unit-tests.log \
+             check-all-libuv-smoke-test.log \
+             check-all-libuv-unit-tests.log \
+             check-all-select-smoke-test.log \
+             check-all-select-unit-tests.log
 
 include Makefile.manpage.inc
 
