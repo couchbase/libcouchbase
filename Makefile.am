@@ -79,7 +79,6 @@ if BUILD_LIBCOUCHBASE_DEBUG
 pkginclude_HEADERS += include/libcouchbase/debug.h
 endif
 
-if BUILD_PLUGINS
 pkginclude_HEADERS += \
                      plugins/io/libev/libev_io_opts.h \
                      plugins/io/libevent/libevent_io_opts.h \
@@ -88,7 +87,6 @@ pkginclude_HEADERS += \
 nobase_pkginclude_HEADERS = \
                              plugins/io/libuv/plugin-internal.h \
                              plugins/io/libuv/plugin-libuv.c
-endif
 
 libhttpparser_la_SOURCES = \
                         contrib/http_parser/http_parser.c \
