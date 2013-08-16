@@ -486,7 +486,9 @@ extern "C" {
     static void vbucket_state_callback(lcb_server_t *server)
     {
         config_cnt++;
-        server->instance->io->v.v0.stop_event_loop(server->instance->io);
+        if (!server->instance->wait) { /* do not touch IO if we are using lcb_wait() */
+            server->instance->io->v.v0.stop_event_loop(server->instance->io);
+        }
     }
 
     int store_cnt;
@@ -505,7 +507,9 @@ extern "C" {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
         store_cnt++;
-        instance->io->v.v0.stop_event_loop(instance->io);
+        if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
+            instance->io->v.v0.stop_event_loop(instance->io);
+        }
     }
 
     static void get_callback(lcb_t instance, const void *cookie,
@@ -516,7 +520,9 @@ extern "C" {
         rv->bytes = (char *)malloc(resp->v.v0.nbytes);
         memcpy((void *)rv->bytes, resp->v.v0.bytes, resp->v.v0.nbytes);
         rv->nbytes = resp->v.v0.nbytes;
-        instance->io->v.v0.stop_event_loop(instance->io);
+        if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
+            instance->io->v.v0.stop_event_loop(instance->io);
+        }
     }
 
     static void tpb_get_callback(lcb_t instance, const void *cookie,
@@ -701,19 +707,17 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     /* Execute event loop to reconfigure client and execute operation */
     config_cnt = 0;
     store_cnt = 0;
-    /* It should never return LCB_NOT_MY_VBUCKET */
-    while (config_cnt == 0 || store_cnt == 0) {
-        memset(&rv, 0, sizeof(rv));
-        io->v.v0.run_event_loop(io);
-        ASSERT_NE(LCB_NOT_MY_VBUCKET, err);
-    }
+    lcb_wait(instance);
+    ASSERT_EQ(9, config_cnt);
+    ASSERT_EQ(1, store_cnt);
+    ASSERT_EQ(LCB_SUCCESS, rv.error);
 
     /* Check that value was actually set */
     lcb_get_cmd_t getcmd(key.c_str(), key.size());
     lcb_get_cmd_t *getcmds[] = { &getcmd };
     err = lcb_get(instance, &rv, 1, getcmds);
     ASSERT_EQ(LCB_SUCCESS, err);
-    io->v.v0.run_event_loop(io);
+    lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_EQ(rv.nbytes, val.size());
     std::string bytes = std::string(rv.bytes, rv.nbytes);
