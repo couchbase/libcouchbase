@@ -125,7 +125,6 @@ static void timeout_handler_dispatch(lcb_socket_t sock,
 
     if (was_active && conn->on_timeout) {
         lcb_connection_handler handler = conn->on_timeout;
-        conn->on_timeout = NULL;
         handler(conn, LCB_ETIMEDOUT);
     }
 
