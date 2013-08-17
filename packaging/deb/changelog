@@ -1,3 +1,89 @@
+libcouchbase (2.1.0) stable; urgency=low
+
+  * [major] New backend `select`. This backend is based on the select(2)
+    system call and its Windows version. It could be considered the most
+    portable solution and is available with the libcouchbase core.
+
+  * [major] CCBC-236 New backend `libuv`. This backend previously was
+    part of the `couchnode` project and is now available as a plugin.
+    Because libuv doesn't ship binary packages there is no binary
+    package `libcouchbase2-libuv`. You can build plugin from the source
+    distribution, or through the `libcouchbase-dev` or
+    `libcouchbase-devel` package on UNIX like systems.
+
+  * [major] New backend `iocp`. This is a Windows specific backend,
+    which uses "I/O Completion Ports". As a part of the change, a new
+    version of plugin API was introduced which is more optimized to this
+    model of asynchronous IO.
+
+  * [major] CCBC-229 Fixed bug when REPLICA_FIRST fails if first try
+    does not return key
+
+  * [major] CCBC-228 Fixed bug when REPLICA_SELECT didn't invoke
+    callbacks for negative error codes
+
+  * [major] CCBC-145 API for durability operations. This new API is
+    based on `lcb_observe(3)` and allows you to monitor keys more
+    easily. See the man pages `lcb_durability_poll(3)` and
+    `lcb_set_durability_callback(3)` for more info.
+
+  * [major] New configuration interface lcb_cntl(3) along with new
+    tunable options of the library and connection instances. In this
+    release the following settings are available. See the man page for
+    more information and examples.:
+
+    * LCB_CNTL_OP_TIMEOUT operation timeout (default 2.5 seconds)
+
+    * LCB_CNTL_CONFIGURATION_TIMEOUT time to fetch cluster
+      configuration. This is similar to a connection timeout (default 5
+      seconds)
+
+    * LCB_CNTL_VIEW_TIMEOUT timeout for couchbase views (default 75
+      seconds)
+
+    * LCB_CNTL_HTTP_TIMEOUT timeout for other HTTP operations like
+      RESTful flush, bucket creating etc. (default 75 seconds)
+
+    * LCB_CNTL_RBUFSIZE size of the internal read buffer (default
+      32768 bytes)
+
+    * LCB_CNTL_WBUFSIZE size of the internal write buffer (default
+      32768 bytes)
+
+    * LCB_CNTL_HANDLETYPE type of the `lcb_t` handler (readonly)
+
+    * LCB_CNTL_VBCONFIG returns pointer to VBUCKET_CONFIG_HANDLE
+      (readonly)
+
+    * LCB_CNTL_IOPS get the implementation of IO (lcb_io_opt_t)
+
+    * LCB_CNTL_VBMAP get vBucket ID for a given key
+
+    * LCB_CNTL_MEMDNODE_INFO get memcached node info
+
+    * LCB_CNTL_CONFIGNODE_INFO get config node info
+
+    * LCB_CNTL_SYNCMODE control synchronous behaviour (default
+      LCB_ASYNCHRONOUS)
+
+    * LCB_CNTL_IP6POLICY specify IPv4/IPv6 policy (default
+      LCB_IPV6_DISABLED)
+
+    * LCB_CNTL_CONFERRTHRESH control configuration error threshold
+      (default 100)
+
+    * LCB_CNTL_DURABILITY_TIMEOUT durability timeout (default 5 seconds)
+
+    * LCB_CNTL_DURABILITY_INTERVAL durability polling interval (default
+      100 milliseconds)
+
+    * LCB_CNTL_IOPS_DEFAULT_TYPES get the default IO types
+
+    * LCB_CNTL_IOPS_DLOPEN_DEBUG control verbose printing of dynamic
+      loading of IO plugins.
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Sat, 17 Aug 2013 17:54:40 +0300
+
 libcouchbase (2.0.7) stable; urgency=low
 
   [Mark Nunberg]
@@ -33,7 +119,7 @@ libcouchbase (2.0.7) stable; urgency=low
   [Volker Mische]
   * Add missing free()
 
- -- Sergey Avseyev <sergey@couchbase.com> Tue, 09 Jul 2013 23:29:17 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Tue, 09 Jul 2013 23:29:17 +0300
 
 libcouchbase (2.0.6) stable; urgency=low
 
@@ -56,7 +142,7 @@ libcouchbase (2.0.6) stable; urgency=low
   * Fix buffer overrun
   * Tune dump program a bit
 
- -- Sergey Avseyev <sergey@couchbase.com> Mon, 07 May 2013 11:41:56 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Mon, 07 May 2013 11:41:56 +0300
 
 libcouchbase (2.0.5) stable; urgency=low
 
@@ -98,7 +184,7 @@ libcouchbase (2.0.5) stable; urgency=low
   [Mark Nunberg]
   * NUL-terminate config cache buffer after reading
 
- -- Sergey Avseyev <sergey@couchbase.com> Fri, 05 Apr 2013 01:04:16 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Fri, 05 Apr 2013 01:04:16 +0300
 
 libcouchbase (2.0.4) stable; urgency=low
 
@@ -122,7 +208,7 @@ libcouchbase (2.0.4) stable; urgency=low
   * Remove compile warnings
   * Fix build break on win32
 
- -- Sergey Avseyev <sergey@couchbase.com> Wed, 06 Mar 2013 00:43:21 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 06 Mar 2013 00:43:21 +0300
 
 libcouchbase (2.0.3) stable; urgency=low
 
@@ -167,7 +253,7 @@ libcouchbase (2.0.3) stable; urgency=low
   * Don't build and install the debug library by default
   * Fix make install target for windows
 
- -- Sergey Avseyev <sergey@couchbase.com> Wed, 06 Feb 2013 10:52:14 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 06 Feb 2013 10:52:14 +0300
 
 libcouchbase (2.0.2) stable; urgency=low
 
@@ -202,7 +288,7 @@ libcouchbase (2.0.2) stable; urgency=low
   * Add ringbuffer_peek_at
   * CCBC-150: Do a deep search to locate commands
 
- -- Sergey Avseyev <sergey@couchbase.com> Fri, 04 Jan 2013 22:02:54 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Fri, 04 Jan 2013 22:02:54 +0300
 
 libcouchbase (2.0.1) stable; urgency=low
 
@@ -237,7 +323,7 @@ libcouchbase (2.0.1) stable; urgency=low
   * Fixup compiler invocation for minimal.c
   * Use defined coding style for examples
 
- -- Sergey Avseyev <sergey@couchbase.com> Tue, 11 Dec 2012 01:56:15 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Tue, 11 Dec 2012 01:56:15 +0300
 
 libcouchbase (2.0.0) stable; urgency=low
 
@@ -248,7 +334,7 @@ libcouchbase (2.0.0) stable; urgency=low
   [Trond Norbye]
   * Add the CAS to the delete callback
 
- -- Sergey Avseyev <sergey@couchbase.com> Tue, 27 Nov 2012 09:30:21 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Tue, 27 Nov 2012 09:30:21 +0300
 
 libcouchbase (2.0.0beta3) stable; urgency=low
 
@@ -309,7 +395,7 @@ libcouchbase (2.0.0beta3) stable; urgency=low
   * Check for endianness during configure
   * Refactor: move http constants to its own file
 
- -- Sergey Avseyev <sergey@couchbase.com> Wed, 21 Nov 2012 13:45:28 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Wed, 21 Nov 2012 13:45:28 +0300
 
 libcouchbase (2.0.0beta2) stable; urgency=low
 
@@ -372,7 +458,7 @@ libcouchbase (2.0.0beta2) stable; urgency=low
   * Add support for raw http requests
   * Move win32 iofactory into the same file
 
- -- Sergey Avseyev <sergey@couchbase.com> Fri, 12 Oct 2012 10:48:33 -0700
+ -- Sergey Avseyev <sergey@couchbase.com>  Fri, 12 Oct 2012 10:48:33 -0700
 
 libcouchbase (2.0.0beta) stable; urgency=low
 
@@ -504,14 +590,14 @@ libcouchbase (2.0.0beta) stable; urgency=low
   * Added --enable-fat-binary
   * Set .so-name to 2.0.0 for the release
 
- -- Sergey Avseyev <sergey@couchbase.com> Thu, 13 Sep 2012 19:48:18 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Thu, 13 Sep 2012 19:48:18 +0300
 
 libcouchbase (1.1.0dp9) stable; urgency=low
 
   [Sergey Avseyev]
   * Render auth credentials for View requests
 
- -- Sergey Avseyev <sergey@couchbase.com> Fri, 27 Jul 2012 23:52:41 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Fri, 27 Jul 2012 23:52:41 +0300
 
 libcouchbase (1.1.0dp8) stable; urgency=low
 
@@ -570,7 +656,7 @@ libcouchbase (1.1.0dp8) stable; urgency=low
   * Fixed warning about possible overflow
   * Allow client to specify the verbosity level on the servers
 
- -- Sergey Avseyev <sergey@couchbase.com> Fri, 27 Jul 2012 08:20:53 +0300
+ -- Sergey Avseyev <sergey@couchbase.com>  Fri, 27 Jul 2012 08:20:53 +0300
 
 libcouchbase (1.1.0dp7) stable; urgency=low
 

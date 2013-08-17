@@ -103,6 +103,90 @@ Development files for the Couchbase Client & Protocol Library
 %{_mandir}/man3/*
 
 %changelog
+* Sat Aug 17 2013 Sergey Avseyev <sergey@couchbase.com> - 2.1.0
+
+- [major] New backend `select`. This backend is based on the select(2)
+  system call and its Windows version. It could be considered the most
+  portable solution and is available with the libcouchbase core.
+
+- [major] CCBC-236 New backend `libuv`. This backend previously was
+  part of the `couchnode` project and is now available as a plugin.
+  Because libuv doesn't ship binary packages there is no binary
+  package `libcouchbase2-libuv`. You can build plugin from the source
+  distribution, or through the `libcouchbase-dev` or
+  `libcouchbase-devel` package on UNIX like systems.
+
+- [major] New backend `iocp`. This is a Windows specific backend,
+  which uses "I/O Completion Ports". As a part of the change, a new
+  version of plugin API was introduced which is more optimized to this
+  model of asynchronous IO.
+
+- [major] CCBC-229 Fixed bug when REPLICA_FIRST fails if first try
+  does not return key
+
+- [major] CCBC-228 Fixed bug when REPLICA_SELECT didn't invoke
+  callbacks for negative error codes
+
+- [major] CCBC-145 API for durability operations. This new API is
+  based on `lcb_observe(3)` and allows you to monitor keys more
+  easily. See the man pages `lcb_durability_poll(3)` and
+  `lcb_set_durability_callback(3)` for more info.
+
+- [major] New configuration interface lcb_cntl(3) along with new
+  tunable options of the library and connection instances. In this
+  release the following settings are available. See the man page for
+  more information and examples.:
+
+  - LCB_CNTL_OP_TIMEOUT operation timeout (default 2.5 seconds)
+
+  - LCB_CNTL_CONFIGURATION_TIMEOUT time to fetch cluster
+    configuration. This is similar to a connection timeout (default 5
+    seconds)
+
+  - LCB_CNTL_VIEW_TIMEOUT timeout for couchbase views (default 75
+    seconds)
+
+  - LCB_CNTL_HTTP_TIMEOUT timeout for other HTTP operations like
+    RESTful flush, bucket creating etc. (default 75 seconds)
+
+  - LCB_CNTL_RBUFSIZE size of the internal read buffer (default
+    32768 bytes)
+
+  - LCB_CNTL_WBUFSIZE size of the internal write buffer (default
+    32768 bytes)
+
+  - LCB_CNTL_HANDLETYPE type of the `lcb_t` handler (readonly)
+
+  - LCB_CNTL_VBCONFIG returns pointer to VBUCKET_CONFIG_HANDLE
+    (readonly)
+
+  - LCB_CNTL_IOPS get the implementation of IO (lcb_io_opt_t)
+
+  - LCB_CNTL_VBMAP get vBucket ID for a given key
+
+  - LCB_CNTL_MEMDNODE_INFO get memcached node info
+
+  - LCB_CNTL_CONFIGNODE_INFO get config node info
+
+  - LCB_CNTL_SYNCMODE control synchronous behaviour (default
+    LCB_ASYNCHRONOUS)
+
+  - LCB_CNTL_IP6POLICY specify IPv4/IPv6 policy (default
+    LCB_IPV6_DISABLED)
+
+  - LCB_CNTL_CONFERRTHRESH control configuration error threshold
+    (default 100)
+
+  - LCB_CNTL_DURABILITY_TIMEOUT durability timeout (default 5 seconds)
+
+  - LCB_CNTL_DURABILITY_INTERVAL durability polling interval (default
+    100 milliseconds)
+
+  - LCB_CNTL_IOPS_DEFAULT_TYPES get the default IO types
+
+  - LCB_CNTL_IOPS_DLOPEN_DEBUG control verbose printing of dynamic
+    loading of IO plugins.
+
 * Tue Jul 09 2013 Sergey Avseyev <sergey@couchbase.com> - 2.0.7
 [Mark Nunberg]
 - Add ringbuffer_take_buffer
