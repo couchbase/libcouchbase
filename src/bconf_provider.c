@@ -232,7 +232,6 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
         lcb_assert(ringbuffer_write(&dst->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         free(body);
-        lcb_server_send_packets(dst);
     }
 }
 
