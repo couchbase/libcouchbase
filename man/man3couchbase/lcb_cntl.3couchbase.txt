@@ -282,9 +282,9 @@ the same as calling lcb_wait() after each function call.
 
 *LCB_CNTL_DURABILITY_INTERVAL* '(lcb_uint32_t*)'::
     Get or set the default durability polling interval
-    Default is 100000 (10 milliseconds)
+    Default is 100000 (100 milliseconds)
 
-        lcb_uint32_t tmo = 50000; /* 5 milliseconds */
+        lcb_uint32_t tmo = 50000; /* 50 milliseconds */
         lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_DURABILITY_INTERVAL, &tmo);
 
 *LCB_CNTL_IOPS_DEFAULT_TYPES* '(struct lcb_cntl_iops_info_st*)'::
