@@ -214,10 +214,15 @@ uninstall:
 	-rmdir $(INSTALL)\lib $(INSTALL)\bin $(INSTALL)\include\libcouchbase $(INSTALL)\include $(INSTALL)\doc $(INSTALL)
 
 PKG=libcouchbase$(VERSION)$(ARCH)$(MSVCC_VER)
-PKGDIRS=$(PKG)\include $(PKG)\include\libcouchbase $(PKG)\lib $(PKG)\bin $(PKG)\doc
+PKGDIRS=$(PKG)\include $(PKG)\include\libcouchbase $(PKG)\lib $(PKG)\bin $(PKG)\doc \
+        $(PKG)\include\libcouchbase\plugins $(PKG)\include\libcouchbase\plugins\io \
+        $(PKG)\include\libcouchbase\plugins\io\libuv
 
 package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy include\libcouchbase\** $(PKG)\include\libcouchbase
+	copy plugins\io\libuv\plugin-internal.h $(PKG)\include\libcouchbase\plugins\io\libuv
+	copy plugins\io\libuv\plugin-libuv.c $(PKG)\include\libcouchbase\plugins\io\libuv
+	copy plugins\io\libuv\libuv_io_opts.h $(PKG)\include\libcouchbase
 	-del $(PKG)\include\libcouchbase\configuration.h.in
 	copy win32\libcouchbase\configuration.h $(PKG)\include\libcouchbase
 	copy libcouchbase.dll $(PKG)\lib
@@ -233,6 +238,6 @@ package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy tools\cbc.exe $(PKG)\bin
 	copy tools\cbc_debug.exe $(PKG)\bin
 	copy tools\cbc_debug.pdb $(PKG)\bin
-	7z a -r $(PKG).zip $(PKG)
+	7z a $(PKG).zip $(PKG)
 
 $(INSTALLDIRS) $(PKGDIRS):; -@mkdir $@
