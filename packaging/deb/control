@@ -10,7 +10,7 @@ Vcs-Git: git://github.com/couchbase/libcouchbase.git
 
 Package: libcouchbase2-libevent
 Architecture: any
-Depends: libevent-1.4-2 (>= 1.4) | libevent-2.0-5 (>= 2.0), ${shlibs:Depends}, ${misc:Depends}
+Depends: libevent-1.4-2 (>= 1.4) | libevent-2.0-5 (>= 2.0), libcouchbase2-core (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol (libevent backend)
  libcouchbase is a library implementing Couchbase protocol.
  .
@@ -18,7 +18,7 @@ Description: library for the Couchbase protocol (libevent backend)
 
 Package: libcouchbase2-libev
 Architecture: any
-Depends: libev3 (>= 3) | libev4 (>= 4), ${shlibs:Depends}, ${misc:Depends}
+Depends: libev3 (>= 3) | libev4 (>= 4), libcouchbase2-core (= ${binary:Version}), ${shlibs:Depends}, ${misc:Depends}
 Description: library for the Couchbase protocol (libev backend)
  libcouchbase is a library implementing Couchbase protocol.
  .
