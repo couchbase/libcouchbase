@@ -246,6 +246,7 @@ static void close_dlhandle(void *handle)
 }
 #endif
 
+static int want_dl_debug = 0; /* global variable */
 static lcb_error_t create_v1(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
 
@@ -274,8 +275,6 @@ static lcb_error_t generate_options(plugin_info *pi,
                                     struct lcb_create_io_ops_st *ours,
                                     lcb_io_ops_type_t *type)
 {
-
-
     if (user) {
         memcpy(ours, user, sizeof(*user));
 
@@ -317,6 +316,30 @@ static lcb_error_t generate_options(plugin_info *pi,
             }
 
             options_from_info(ours, pip);
+
+            /* if the plugin is dynamically loadable, we need to
+             * fallback to select(2) plugin in case we cannot find the
+             * create function */
+            if (ours->version == 1) {
+                struct plugin_st plugin;
+                int want_debug;
+                lcb_error_t ret;
+
+                if (lcb_getenv_boolean("LIBCOUCHBASE_DLOPEN_DEBUG")) {
+                    want_debug = 1;
+                } else {
+                    want_debug = want_dl_debug;
+                }
+                ret = get_create_func(ours->v.v1.sofile, ours->v.v1.symbol, &plugin, want_debug);
+                if (ret != LCB_SUCCESS) {
+                    if (type) {
+                        *type = LCB_IO_OPS_SELECT;
+                    }
+                    ours->version = 2;
+                    ours->v.v2.create = lcb_create_select_io_opts;
+                    ours->v.v2.cookie = NULL;
+                }
+            }
         }
         return LCB_SUCCESS;
 
@@ -363,8 +386,6 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
         return LCB_NOT_SUPPORTED;
     }
 }
-
-static int want_dl_debug = 0; /* global variable */
 
 static lcb_error_t create_v1(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options)
