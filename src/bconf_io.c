@@ -59,9 +59,9 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
         if (old_gen != instance->config_generation) {
             lcb_connection_cancel_timer(&instance->connection);
             instance->connection.timeout.usec = 0;
+            lcb_maybe_breakout(instance);
         }
 
-        lcb_maybe_breakout(instance);
 
         return LCB_SUCCESS;
 
@@ -186,7 +186,6 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
     }
 
     lcb_instance_connerr(instance, err, "Couldn't connect");
-    lcb_maybe_breakout(instance);
 }
 
 static void setup_current_host(lcb_t instance, const char *host)
