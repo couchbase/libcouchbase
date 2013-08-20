@@ -63,29 +63,26 @@ static int do_read_data(lcb_server_t *c, int allow_read)
         return 0;
     }
 
-    lcb_failout_server(c, LCB_NETWORK_ERROR);
     return -1;
 }
 
-static void event_complete_common(lcb_server_t *c)
+static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
 {
-    if (c->instance->compat.type == LCB_CACHED_CONFIG &&
-            c->instance->compat.value.cached.needs_update) {
-        lcb_refresh_config_cache(c->instance);
+    lcb_t instance = c->instance;
+
+    if (rc != LCB_SUCCESS) {
+        lcb_failout_server(c, rc);
+    } else {
+        lcb_sockrw_apply_want(&c->connection);
+        c->inside_handler = 0;
     }
-
-
-    lcb_sockrw_apply_want(&c->connection);
-
-    c->inside_handler = 0;
-
-    lcb_maybe_breakout(c->instance);
-
-    /* Make it known that this was a success. */
-    lcb_error_handler(c->instance, LCB_SUCCESS, NULL);
+    if (instance->compat.type == LCB_CACHED_CONFIG &&
+            instance->compat.value.cached.needs_update) {
+        lcb_refresh_config_cache(instance);
+    }
+    lcb_maybe_breakout(instance);
+    lcb_error_handler(instance, rc, NULL);
 }
-
-
 
 void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg)
 {
@@ -98,7 +95,7 @@ void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg)
 
         status = lcb_sockrw_v0_write(conn, conn->output);
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
-            event_complete_common(c);
+            event_complete_common(c, LCB_NETWORK_ERROR);
             return;
         }
     }
@@ -107,8 +104,7 @@ void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg)
         if (do_read_data(c, which & LCB_READ_EVENT) != 0) {
             /* TODO stash error message somewhere
              * "Failed to read from connection to \"%s:%s\"", c->hostname, c->port */
-            lcb_failout_server(c, LCB_NETWORK_ERROR);
-            event_complete_common(c);
+            event_complete_common(c, LCB_NETWORK_ERROR);
             return;
         }
     }
@@ -126,25 +122,17 @@ void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg)
     }
 
     lcb_sockrw_set_want(conn, which, 1);
-    event_complete_common(c);
-}
-
-static void error_v1_common(lcb_server_t *server)
-{
-    if (server->instance->compat.type == LCB_CACHED_CONFIG) {
-        lcb_schedule_config_cache_refresh(server->instance);
-        return;
-    }
-    lcb_failout_server(server, LCB_NETWORK_ERROR);
+    event_complete_common(c, LCB_SUCCESS);
 }
 
 void lcb_server_v1_error_handler(lcb_sockdata_t *sockptr)
 {
     lcb_server_t *c;
+
     if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&c)) {
         return;
     }
-    error_v1_common(c);
+    event_complete_common(c, LCB_NETWORK_ERROR);
 }
 
 
@@ -163,8 +151,7 @@ void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
     c->inside_handler = 1;
 
     if (nr < 1) {
-        error_v1_common(c);
-        event_complete_common(c);
+        event_complete_common(c, LCB_NETWORK_ERROR);
         return;
     }
 
@@ -180,7 +167,7 @@ void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
         /* Schedule the read request again */
         lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
     }
-    event_complete_common(c);
+    event_complete_common(c, LCB_SUCCESS);
 }
 
 void lcb_server_v1_write_handler(lcb_sockdata_t *sockptr,
@@ -197,14 +184,11 @@ void lcb_server_v1_write_handler(lcb_sockdata_t *sockptr,
     c->inside_handler = 1;
 
     if (status) {
-        error_v1_common(c);
-
+        event_complete_common(c, LCB_NETWORK_ERROR);
     } else {
         lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
+        event_complete_common(c, LCB_SUCCESS);
     }
-
-    event_complete_common(c);
-
 }
 
 LIBCOUCHBASE_API
