@@ -12,6 +12,7 @@
 *.lib
 *.obj
 *.orig
+*.pdb
 *.profile
 *.sln
 *.swo
@@ -60,7 +61,6 @@
 /libcouchbase*.dsc
 /libcouchbase*.rpm
 /libcouchbase*.tar.gz
-/libcouchbase_debug.pdb
 /libtool
 /m4/libtool.m4
 /m4/ltoptions.m4
@@ -137,9 +137,7 @@
 /tools/cbc
 /tools/cbc-pillowfight
 /tools/cbc_debug.ilk
-/tools/cbc_debug.pdb
 /vc100.idb
-/vc100.pdb
 CMakeCache.txt
 CMakeFiles/
 CTestTestfile.cmake
@@ -153,12 +151,9 @@ cmake_install.cmake
 core*
 couchbase.dir/
 debug/cbc-pillowfight.ilk
-debug/cbc-pillowfight.pdb
 debug/cbc.ilk
-debug/cbc.pdb
 debug/libcouchbase.idb
 debug/libcouchbase.ilk
-debug/libcouchbase.pdb
 ipch/
 lcbutils.dir/
 libcouchbase.opensdf

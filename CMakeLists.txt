@@ -108,8 +108,13 @@ IF(${MSVC})
         ADD_DEFINITIONS(-D_VARIADIC_MAX=10)
     ENDIF()
 
-    SET(COMMON_FLAGS "/W3 /EHsc /FD /MP")
+    SET(COMMON_FLAGS "/W3 /EHsc /FD /MP /Z7")
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TC")
+    # put debug info into release build and revert /OPT defaults after
+    # /DEBUG so that it won't degrade performance and size
+    # http://msdn.microsoft.com/en-us/library/xe4t6fc1(v=vs.80).aspx
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
+    SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
 ELSE()
     SET(COMMON_FLAGS "-Wall -gstabs")
 ENDIF()

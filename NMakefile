@@ -15,15 +15,16 @@
 #   limitations under the License.
 
 INSTALL=..\deps
-CC_NODEBUG = cl.exe /O2 /DNDEBUG /MD /LD
+# put debug info into release build
+CC_NODEBUG = cl.exe /O2 /DNDEBUG /MD /LD /Z7
 CC_DEBUG = cl.exe /Od /D_DEBUG /RTC1 /Z7 /LDd /W3 /MDd
 # Include paths
 INCDIRS = /Iwin32 /Iinclude /Icontrib /I$(INSTALL)\include /Isrc /I.
 # Various preprocessor macros to define
 DEFINES = /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE /DLIBCOUCHBASE_INTERNAL=1
 CFLAGS = $(INCDIRS) $(DEFINES) /nologo /W3 /EHsc /FD /c
-DLLLDFLAGS = /dll /incremental:no /opt:ref,icf /version:1.1
-LDFLAGS =  /nologo /LIBPATH:$(INSTALL)\lib
+DLLLDFLAGS = /dll /version:1.1
+LDFLAGS =  /nologo /incremental:no /DEBUG /opt:ref,icf /LIBPATH:$(INSTALL)\lib
 LD = link.exe
 RM = del
 
@@ -131,7 +132,7 @@ libcouchbase.dll: $(libcouchbase_la_OBJECTS)
           ws2_32.lib
 
 libcouchbase_debug.dll: $(libcouchbase_la_debug_OBJECTS)
-	$(LD) $(LDFLAGS) -debug $(DLLLDFLAGS) /out:libcouchbase_debug.dll \
+	$(LD) $(LDFLAGS) $(DLLLDFLAGS) /DEBUG /out:libcouchbase_debug.dll \
           $(libcouchbase_la_debug_OBJECTS) \
           ws2_32.lib
 
@@ -140,7 +141,7 @@ tools\cbc.exe: $(tools_cbc_OBJECTS) libcouchbase.dll
           libcouchbase.lib ws2_32.lib
 
 tools\cbc_debug.exe: $(tools_cbc_debug_OBJECTS) libcouchbase_debug.dll
-	$(LD) $(LDFLAGS) -debug -out:tools\cbc_debug.exe $(tools_cbc_debug_OBJECTS) \
+	$(LD) $(LDFLAGS) /DEBUG -out:tools\cbc_debug.exe $(tools_cbc_debug_OBJECTS) \
           libcouchbase_debug.lib ws2_32.lib
 
 example\pillowfight\pillowfight.exe: $(example_pillowfight_pillowfight_OBJECTS) libcouchbase_debug.dll
@@ -179,12 +180,15 @@ install: $(INSTALLDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy libcouchbase.dll $(INSTALL)\bin
 	copy libcouchbase.exp $(INSTALL)\lib
 	copy libcouchbase.lib $(INSTALL)\lib
+	copy libcouchbase.pdb $(INSTALL)\lib
 	copy libcouchbase_debug.dll $(INSTALL)\lib
 	copy libcouchbase_debug.dll $(INSTALL)\bin
 	copy libcouchbase_debug.exp $(INSTALL)\lib
 	copy libcouchbase_debug.lib $(INSTALL)\lib
 	copy tools\cbc.exe $(INSTALL)\bin
+	copy tools\cbc.pdb $(INSTALL)\bin
 	copy tools\cbc_debug.exe $(INSTALL)\bin
+	copy tools\cbc_debug.pdb $(INSTALL)\bin
 
 uninstall:
 	-del $(INSTALL)\lib\libcouchbase_debug.dll \
@@ -225,17 +229,20 @@ package: $(PKGDIRS) libcouchbase.dll libcouchbase_debug.dll $(bin_PROGRAMS)
 	copy plugins\io\libuv\libuv_io_opts.h $(PKG)\include\libcouchbase
 	-del $(PKG)\include\libcouchbase\configuration.h.in
 	copy win32\libcouchbase\configuration.h $(PKG)\include\libcouchbase
-	copy libcouchbase.dll $(PKG)\lib
 	copy libcouchbase.dll $(PKG)\bin
+	copy libcouchbase.dll $(PKG)\lib
 	copy libcouchbase.exp $(PKG)\lib
 	copy libcouchbase.lib $(PKG)\lib
-	copy libcouchbase_debug.dll $(PKG)\lib
+	copy libcouchbase.pdb $(PKG)\bin
+	copy libcouchbase.pdb $(PKG)\lib
 	copy libcouchbase_debug.dll $(PKG)\bin
-	copy libcouchbase_debug.pdb $(PKG)\lib
-	copy libcouchbase_debug.pdb $(PKG)\bin
+	copy libcouchbase_debug.dll $(PKG)\lib
 	copy libcouchbase_debug.exp $(PKG)\lib
 	copy libcouchbase_debug.lib $(PKG)\lib
+	copy libcouchbase_debug.pdb $(PKG)\bin
+	copy libcouchbase_debug.pdb $(PKG)\lib
 	copy tools\cbc.exe $(PKG)\bin
+	copy tools\cbc.pdb $(PKG)\bin
 	copy tools\cbc_debug.exe $(PKG)\bin
 	copy tools\cbc_debug.pdb $(PKG)\bin
 	7z a $(PKG).zip $(PKG)
