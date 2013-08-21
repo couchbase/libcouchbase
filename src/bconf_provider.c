@@ -67,7 +67,7 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
                              sasl_secret_t **psecret)
 {
     lcb_t instance = context;
-    if (!conn || ! psecret || id != SASL_CB_PASS) {
+    if (!conn || ! psecret || id != SASL_CB_PASS || instance == NULL) {
         return SASL_BADPARAM;
     }
 
@@ -93,10 +93,10 @@ static lcb_error_t setup_sasl_params(lcb_t instance)
     sasl_callbacks[3].proc = NULL;
     sasl_callbacks[3].context = NULL;
 
-    instance->sasl.name = vbucket_config_get_user(instance->vbucket_config);
+    instance->sasl.name = instance->username;
     memset(instance->sasl.password.buffer, 0,
            sizeof(instance->sasl.password.buffer));
-    passwd = vbucket_config_get_password(instance->vbucket_config);
+    passwd = instance->password;
 
     if (passwd) {
         unsigned long pwlen;
@@ -110,7 +110,6 @@ static lcb_error_t setup_sasl_params(lcb_t instance)
 
         if (pwlen < maxlen) {
             memcpy(instance->sasl.password.secret.data, passwd, pwlen);
-
         } else {
             return lcb_error_handler(instance, LCB_EINVAL, "Password too long");
         }

@@ -3,6 +3,14 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+## 2.1.1 (Not released)
+* [minor] Use provided credentials for authenticating to the data
+  nodes. With this fix, it is no longer possible to use Administrator
+  credentials with a bucket. If your configuration does so, you must
+  change the credentials you use before applying this update. No
+  documentation guides use of Administrator credentials, so this
+  change is not expected to affect few, if any deployments.
+
 ## 2.1.0 (2013-08-17)
 
 * [major] New backend `select`. This backend is based on the select(2)
