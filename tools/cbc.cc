@@ -1398,7 +1398,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         flags = (lcb_uint32_t)atoi((*iter)->argument);
                         break;
                     case 'e':
-                        flags = (lcb_uint32_t)atoi((*iter)->argument);
+                        exptime = (lcb_uint32_t)atoi((*iter)->argument);
                         break;
                     case 'a':
                         add = true;
