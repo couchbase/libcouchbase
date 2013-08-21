@@ -26,9 +26,15 @@
 
 #ifdef _WIN32
 #define EXPECTED_DEFAULT LCB_IO_OPS_WINIOCP
+#define EXPECTED_EFFECTIVE EXPECTED_DEFAULT
 #define setenv(k, v, o) SetEnvironmentVariable(k, v)
 #else
 #define EXPECTED_DEFAULT LCB_IO_OPS_LIBEVENT
+#if defined(HAVE_LIBEVENT) || defined(HAVE_LIBEVENT2)
+#define EXPECTED_EFFECTIVE EXPECTED_DEFAULT
+#else
+#define EXPECTED_EFFECTIVE LCB_IO_OPS_SELECT
+#endif
 #endif
 
 static void setPluginEnv(const std::string &name, const std::string &sym)
@@ -130,7 +136,7 @@ TEST_F(Behavior, PluginDefaults)
 
     ASSERT_EQ(LCB_SUCCESS, err);
     ASSERT_EQ(EXPECTED_DEFAULT, info.v.v0.os_default);
-    ASSERT_EQ(EXPECTED_DEFAULT, info.v.v0.effective);
+    ASSERT_EQ(EXPECTED_EFFECTIVE, info.v.v0.effective);
 }
 
 TEST_F(Behavior, PluginEnvironment)
