@@ -50,7 +50,8 @@ simplest version that allows you to specify a predefined version to
 use:
 
 |=======================================
-| LCB_IO_OPS_DEFAULT  | Use the default IO ops for this platform
+| LCB_IO_OPS_DEFAULT  |
+Use the default IO ops for this platform. See examples from LCB_CNTL_IOPS_DEFAULT_TYPES section of lcb_cntl(3couchbase).
 | LCB_IO_OPS_SELECT   |
 Use portable implementation based on select(2) call. On windows it is also aliased as LCB_IO_OPS_WINSOCK
 | LCB_IO_OPS_LIBEVENT | Use libevent. 'cookie' may be specified to utilize given event_base

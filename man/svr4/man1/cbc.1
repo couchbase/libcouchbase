@@ -2,12 +2,12 @@
 .\"     Title: cbc
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/07/2013
+.\"      Date: 08/21/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "CBC" "1" "08/07/2013" "\ \&" "\ \&"
+.TH "CBC" "1" "08/21/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -712,13 +712,9 @@ This is the name of the bucket you would like to use\&.
 .PP
 \fBLIBCOUCHBASE_EVENT_PLUGIN_NAME\fR
 .RS 4
-Override type of the IO backend\&. The value should be either name or path to IO plugin\&. Currently there are two names recognized (depending on plugin availability):
-\fIlibev\fR
-and
-\fIlibevent\fR\&. Also there is a plugin which is built into the core of library:
-\fIselect\fR\&. In case of path to custom IO plugin, also symbol name required, see
+Override type of the IO backend\&. The value should be either the name or path to the IO plugin\&. When it is a path to custom IO plugin, the symbol name is also required, see
 \fILIBCOUCHBASE_EVENT_PLUGIN_SYMBOL\fR
-below\&.
+below\&. See list of known plugins and more details about IO subsystem in lcb_create_io_ops(3couchbase) page\&.
 .RE
 .PP
 \fBLIBCOUCHBASE_EVENT_PLUGIN_SYMBOL\fR

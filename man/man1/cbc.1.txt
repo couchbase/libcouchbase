@@ -464,12 +464,10 @@ environment variables).
 
 *LIBCOUCHBASE_EVENT_PLUGIN_NAME*::
     Override  type  of  the  IO  backend. The value should be either
-    name or path to IO plugin. Currently there are two names
-    recognized (depending on plugin availability): 'libev' and
-    'libevent'. Also there is a plugin which is built into the core of
-    library: 'select'. In case of path to custom IO plugin, also
-    symbol name required, see 'LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL'
-    below.
+    the name or path to the IO plugin. When it is a path to custom IO plugin,
+    the symbol name is also required, see 'LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL'
+    below. See list of known plugins and more details about IO
+    subsystem in lcb_create_io_ops(3couchbase) page.
 
 *LIBCOUCHBASE_EVENT_PLUGIN_SYMBOL*::
     Symbol which should be accessible in the plugin. The library will
