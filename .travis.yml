@@ -1,11 +1,20 @@
 language: c
 
+compiler:
+  - clang
+  - gcc
+
 before_install:
   - sudo apt-get -y install libgtest-dev
+  - export GTEST_ROOT=/usr/src/gtest
+  - git config --global user.email "travis@localhost"
+  - git config --global user.name "Travis CI"
+  - git tag -a 0.0.$TRAVIS_BUILD_NUMBER -m $TRAVIS_BUILD_NUMBER
 
 script: |
-  export GTEST_ROOT=/usr/src/gtest
-  ./config/autorun.sh && ./configure --disable-plugins && make check
+  ./config/autorun.sh && \
+  ./configure --disable-plugins --enable-warnings && \
+  make check || cat ./check-all*.log || false
 
 notifications:
   email:
