@@ -5,7 +5,7 @@ before_install:
 
 script: |
   export GTEST_ROOT=/usr/src/gtest
-  ./config/autorun.sh && ./configure && make check
+  ./config/autorun.sh && ./configure --disable-plugins && make check
 
 notifications:
   email:
