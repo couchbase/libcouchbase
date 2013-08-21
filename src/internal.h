@@ -289,6 +289,9 @@ extern "C" {
             } value;
         } compat;
 
+        /* if non-zero, skip nodes in list that seems like not
+         * configured or doesn't have the bucket needed */
+        int bummer;
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
 #endif

@@ -377,6 +377,21 @@ environment, will override the setting mentioned here).
 +
 Pass NULL as the instance, as this accesses a global setting
 
+*LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT* '(int*)'::
+    Get/Set the per-instance setting to control connection behaviour
+    when config node doesn't seem to be member of the cluster. By
+    default the setting is false (0), which mean to propagate
+    LCB_BUCKET_ENOENT or LCB_AUTH_ERROR immediately from the first
+    node and look at the next entry in list only on network issues.
+    But for cases when the node list is rather constant, and the some
+    nodes might be removed from the deployment and still listen on
+    configuration port, the caller can set this setting to true (non
+    zero), to force checking bucket on all nodes in the list until it
+    found working.
+
+        int check = 1;
+        lcb_cntl(instance, LCB_CNTL_SET,
+            LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT, &check);
 
 RETURN VALUE
 ------------
@@ -384,7 +399,6 @@ RETURN VALUE
 LCB_NOT_SUPPORTED if the code is unrecognized LCB_EINVAL if there was
 a problem with the argument (typically for SET) other error codes
 depending on the command.
-
 
 ATTRIBUTES
 ----------

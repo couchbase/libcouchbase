@@ -313,6 +313,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         io->v.v0.need_cleanup = 1;
     }
 
+    obj->bummer = 0;
     obj->io = io;
     obj->syncmode = LCB_ASYNCHRONOUS;
     obj->ipv6 = LCB_IPV6_DISABLED;

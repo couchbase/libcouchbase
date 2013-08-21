@@ -83,9 +83,16 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
             can_retry = 1;
         }
 
+        if (instance->bummer &&
+                (err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR)) {
+            can_retry = 1;
+        }
+
         if (can_retry) {
             const char *msg = "Failed to get configuration";
-            can_retry = lcb_switch_to_backup_node(instance, err, msg) != -1;
+            lcb_connection_close(&instance->connection);
+            lcb_switch_to_backup_node(instance, err, msg);
+            return err;
         } else {
             lcb_maybe_breakout(instance);
             return lcb_error_handler(instance, err, "");
@@ -156,7 +163,6 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
     lcb_t instance = conn->instance;
 
     if (err == LCB_SUCCESS) {
-        instance->backup_idx = 0;
         /**
          * Print the URI to the ringbuffer
          */

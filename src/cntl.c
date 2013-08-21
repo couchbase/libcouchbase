@@ -255,6 +255,20 @@ static lcb_error_t confthresh(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t bummer_mode_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    int *skip = arg;
+
+    if (mode == LCB_CNTL_SET) {
+        instance->bummer = *skip;
+    } else {
+        *skip = instance->bummer;
+    }
+
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -274,7 +288,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_HTTP_TIMEOUT */
     lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DEFAULT_TYPES */
     lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DLOPEN_DEBUG */
-    timeout_common  /* LCB_CNTL_CONFIGURATION_TIMEOUT */
+    timeout_common,  /* LCB_CNTL_CONFIGURATION_TIMEOUT */
+    bummer_mode_handler    /* LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT */
 };
 
 

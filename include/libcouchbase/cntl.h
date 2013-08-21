@@ -263,10 +263,24 @@ extern "C" {
      */
 #define LCB_CNTL_CONFIGURATION_TIMEOUT   0x12
 
+    /**
+     * Get/Set the per-instance setting to control connection
+     * behaviour when config node doesn't seem to be member of the
+     * cluster. By default the setting is false (0), which mean
+     * propagate LCB_BUCKET_ENOENT or LCB_AUTH_ERROR immediately from
+     * the first node and look at the next entry in list only on
+     * network issues. But for cases when the node list is rather
+     * constant, and the some nodes might be removed from the
+     * deployment and still listen on configuration port, the caller
+     * can set this setting to true (non zero), to force checking
+     * bucket on all nodes in the list until it found working.
+     *
+     * Arg: int*
+     */
+#define LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT 0x13
+
     /** This is not a command, but rather an indicator of the last item */
-
-
-#define LCB_CNTL__MAX                    0x13
+#define LCB_CNTL__MAX                    0x14
 
 
 #ifdef __cplusplus

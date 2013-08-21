@@ -2,12 +2,12 @@
 .\"     Title: lcb_cntl
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/17/2013
+.\"      Date: 08/21/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CNTL" "3couchbase" "08/17/2013" "\ \&" "\ \&"
+.TH "LCB_CNTL" "3couchbase" "08/21/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -687,6 +687,23 @@ Get or set the verbose printing of dynamic loading of IO plugins\&.
 The information printed can be useful in determining why a plugin failed to load\&. This setting can also be controlled via the "LIBCOUCHBASE_DLOPEN_DEBUG" environment variable (and if enabled from the environment, will override the setting mentioned here)\&.
 .sp
 Pass NULL as the instance, as this accesses a global setting
+.RE
+.PP
+\fBLCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT\fR \fI(int*)\fR
+.RS 4
+Get/Set the per\-instance setting to control connection behaviour when config node doesn\(cqt seem to be member of the cluster\&. By default the setting is false (0), which mean to propagate LCB_BUCKET_ENOENT or LCB_AUTH_ERROR immediately from the first node and look at the next entry in list only on network issues\&. But for cases when the node list is rather constant, and the some nodes might be removed from the deployment and still listen on configuration port, the caller can set this setting to true (non zero), to force checking bucket on all nodes in the list until it found working\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+int check = 1;
+lcb_cntl(instance, LCB_CNTL_SET,
+    LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT, &check);
+.fi
+.if n \{\
+.RE
+.\}
 .RE
 .SH "RETURN VALUE"
 .sp
