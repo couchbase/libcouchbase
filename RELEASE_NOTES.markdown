@@ -3,13 +3,42 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
-## 2.1.1 (Not released)
+## 2.1.1 (2013-08-22)
+
 * [minor] Use provided credentials for authenticating to the data
   nodes. With this fix, it is no longer possible to use Administrator
   credentials with a bucket. If your configuration does so, you must
   change the credentials you use before applying this update. No
   documentation guides use of Administrator credentials, so this
   change is not expected to affect few, if any deployments.
+
+* [major] CCBC-239 Do not use socket after failout. Fixes segmentation
+  faults during rebalance.
+
+* [minor] CCBC-245 Distribute debug information with release binaries
+  on Windows
+
+* [minor] CCBC-248 Do not disable config.h on UNIX-like platforms. It
+  fixes build issue, when application is trying to include plugins
+  from the tarball.
+
+* [major] CCBC-192 Skip misconfigured nodes in the list. New
+  lcb\_cntl(3couchbase) added to control whether the library will skip
+  nodes in initial node list, which listen on configuration port (8091
+  usually) but doesn't meet required parameters (invalid
+  authentication or missing bucket). By default report this issue and
+  stop trying nodes from the list, like all previous release. Read
+  more at man page lcb\_cntl(3couchbase) in section
+  LCB\_CNTL\_SKIP\_CONFIGURATION\_ERRORS\_ON\_CONNECT
+
+* [major] CCBC-246 Fallback to 'select' IO plugin if default plugin
+   cannot be loaded. On UNIX-like systems, default IO backend is
+   'libevent', which uses third-party library might be not available
+   at the run-time. Read in lcb\_cntl(3couchbase) man page in section
+   LCB\_CNTL\_IOPS\_DEFAULT\_TYPES about how to determine effective IO
+   plugin, when your code chose to use LCB\_IO\_OPS\_DEFAULT during
+   connection instantiation. The fallback mode doesn't affect
+   application which specify IO backend explicitly.
 
 ## 2.1.0 (2013-08-17)
 
