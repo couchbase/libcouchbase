@@ -1939,7 +1939,35 @@ int main(int argc, char **argv)
     } else if (cmd == cbc_version) {
         cout << "cbc built from: " << PACKAGE_STRING << endl
              << "    using libcouchbase: " << lcb_get_version(NULL)
-             << endl;
+             << " (";
+
+        struct lcb_cntl_iops_info_st info;
+        info.version = 0;
+        memset(&info, 0, sizeof(info));
+        lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES, &info);
+        switch (info.v.v0.effective) {
+        case LCB_IO_OPS_LIBEVENT:
+            cout << "libevent";
+            break;
+        case LCB_IO_OPS_LIBEV:
+            cout << "libev";
+            break;
+        case LCB_IO_OPS_SELECT:
+        case LCB_IO_OPS_WINSOCK:
+            cout << "select";
+            break;
+        case LCB_IO_OPS_WINIOCP:
+            cout << "windows IOCP";
+            break;
+        case LCB_IO_OPS_LIBUV:
+            cout << "libuv";
+            break;
+        default:
+            cout << "custom";
+            break;
+        }
+        cout << ")" << endl;
+
 #ifdef HAVE_LIBYAJL2
         int version = yajl_version();
         cout << "    using libyajl: "

@@ -326,7 +326,7 @@ is defined in <libcouchbase/cntl.h>:
 Example 1: Get default IO backend for current OS
 +
         struct lcb_cntl_iops_info_st info;
-        info.version = 0;
+        memset(&info, 0, sizeof(info));
         lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES, &info);
         printf("libcouchbase by default will try to use: ");
         switch (info.v.v0.os_default) {
