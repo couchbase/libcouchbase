@@ -143,17 +143,34 @@ static plugin_info *find_plugin_info(lcb_io_ops_type_t iotype)
 static void options_from_info(struct lcb_create_io_ops_st *opts,
                               const plugin_info *info)
 {
+    void *cookie;
+
+    switch (opts->version) {
+    case 0:
+        cookie = opts->v.v0.cookie;
+        break;
+    case 1:
+        cookie = opts->v.v1.cookie;
+        break;
+    case 2:
+        cookie = opts->v.v2.cookie;
+        break;
+    default:
+        lcb_assert("unknown options version" && 0);
+    }
+
     if (info->create) {
         opts->version = 2;
         opts->v.v2.create = info->create;
+        opts->v.v2.cookie = cookie;
         return;
     }
 
     opts->version = 1;
     opts->v.v1.sofile = info->soname;
     opts->v.v1.symbol = info->symbol;
+    opts->v.v1.cookie = cookie;
 }
-
 
 static lcb_error_t create_v2(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
