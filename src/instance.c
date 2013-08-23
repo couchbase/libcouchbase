@@ -352,6 +352,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         offset = snprintf(buffer, sizeof(buffer),
                           "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
                           bucket);
+        obj->bucket = strdup(bucket);
         break;
     case LCB_TYPE_CLUSTER:
         offset = snprintf(buffer, sizeof(buffer), "GET /pools/ HTTP/1.1\r\n");
@@ -458,6 +459,7 @@ void lcb_destroy(lcb_t instance)
     free(instance->vbucket_stream.header);
     free(instance->vb_server_map);
     free(instance->histogram);
+    free(instance->bucket);
     free(instance->username);
     free(instance->password);
     memset(instance, 0xff, sizeof(*instance));

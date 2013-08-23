@@ -93,7 +93,8 @@ static lcb_error_t setup_sasl_params(lcb_t instance)
     sasl_callbacks[3].proc = NULL;
     sasl_callbacks[3].context = NULL;
 
-    instance->sasl.name = instance->username;
+    instance->sasl.name = instance->username ?
+                          instance->username : instance->bucket;
     memset(instance->sasl.password.buffer, 0,
            sizeof(instance->sasl.password.buffer));
     passwd = instance->password;
