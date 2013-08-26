@@ -3,6 +3,20 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+## 2.1.2 (2013-08-27)
+
+* [major] CCBC-253, CCBC-254 Use bucket name in SASL if username
+  omitted. Without this fix, you can may encounter a segmentation
+  faults for buckets, which are not protected by a password.
+
+* [major] Preserve IO cookie in `options_from_info` when using v0
+  plugins with user-provided IO loop instance. This issue was
+  introduced in 2.1.0.
+
+* [minor] Display the effective IO backend in 'cbc-version'. This is
+  helpful to quickly detect what is the effective IO plugin on a given
+  system.
+
 ## 2.1.1 (2013-08-22)
 
 * [minor] Use provided credentials for authenticating to the data

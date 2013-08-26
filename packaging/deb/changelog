@@ -1,3 +1,19 @@
+libcouchbase (2.1.2) stable; urgency=low
+
+  * [major] CCBC-253, CCBC-254 Use bucket name in SASL if username
+    omitted. Without this fix, you can may encounter a segmentation
+    faults for buckets, which are not protected by a password.
+
+  * [major] Preserve IO cookie in `options_from_info` when using v0
+    plugins with user-provided IO loop instance. This issue was
+    introduced in 2.1.0.
+
+  * [minor] Display the effective IO backend in 'cbc-version'. This is
+    helpful to quickly detect what is the effective IO plugin on a given
+    system.
+
+ -- Sergey Avseyev <sergey@couchbase.com>  Mon, 26 Aug 2013 22:17:48 +0300
+
 libcouchbase (2.1.1) stable; urgency=low
 
   * [minor] Use provided credentials for authenticating to the data
