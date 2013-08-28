@@ -1937,7 +1937,8 @@ int main(int argc, char **argv)
         }
         exit(EXIT_SUCCESS);
     } else if (cmd == cbc_version) {
-        cout << "cbc built from: " << PACKAGE_STRING << endl
+        cout << "cbc built from: " << PACKAGE_STRING
+             << " (rev. " << LCB_VERSION_CHANGESET << ")" << endl
              << "    using libcouchbase: " << lcb_get_version(NULL)
              << " (";
 

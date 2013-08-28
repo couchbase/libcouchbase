@@ -32,7 +32,7 @@
 
 #define LCB_VERSION_STRING "2.1.2"
 #define LCB_VERSION 0x020102
-#define LCB_VERSION_CHANGESET unknown
+#define LCB_VERSION_CHANGESET "unknown"
 
 #define PACKAGE_STRING "libcouchbase 2.1.2"
 #include <winsock2.h>
