@@ -175,6 +175,9 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
         return;
     }
 
+
+    server->inside_handler = 1;
+
     sasl_in_progress = (server->sasl_conn != NULL);
     if (!get_nameinfo(conn, &nistrs)) {
         /** This normally shouldn't happen! */
@@ -200,6 +203,8 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 
     lcb_connection_cancel_timer(conn);
     lcb_sockrw_apply_want(conn);
+
+    server->inside_handler = 0;
 }
 
 static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
