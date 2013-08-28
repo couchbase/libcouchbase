@@ -47,7 +47,7 @@ static void iops_lcb_dtor(lcb_io_opt_t iobase)
     }
 
     while (io->iops_refcount > 1) {
-        uv_run(io->loop, UV_RUN_ONCE);
+        LCBUV_LOOP_ONCE(io->loop);
     }
 
     if (io->external_loop == 0) {
@@ -62,12 +62,36 @@ static void iops_lcb_dtor(lcb_io_opt_t iobase)
  ** Event Loop Functions                                                     **
  ******************************************************************************
  ******************************************************************************/
+
+#if UV_VERSION_MAJOR == 0 && UV_VERSION_MINOR < 10
+static void do_run_loop(my_iops_t *io)
+{
+    while (uv_run_once(io->loop) && io->do_stop == 0) {
+        /* nothing */
+    }
+    io->do_stop = 0;
+}
+static void do_stop_loop(my_iops_t *io)
+{
+    io->do_stop = 1;
+}
+#else
+static void do_run_loop(my_iops_t *io) {
+    uv_run(io->loop, UV_RUN_DEFAULT);
+}
+static void do_stop_loop(my_iops_t *io)
+{
+    uv_stop(io->loop);
+}
+#endif
+
+
 static void run_event_loop(lcb_io_opt_t iobase)
 {
     my_iops_t *io = (my_iops_t *)iobase;
 
     if (!io->startstop_noop) {
-        uv_run(io->loop, UV_RUN_DEFAULT);
+        do_run_loop(io);
     }
 }
 
@@ -75,7 +99,7 @@ static void stop_event_loop(lcb_io_opt_t iobase)
 {
     my_iops_t *io = (my_iops_t *)iobase;
     if (!io->startstop_noop) {
-        uv_stop(io->loop);
+        do_stop_loop(io);
     }
 }
 

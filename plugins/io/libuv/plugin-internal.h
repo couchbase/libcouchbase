@@ -122,6 +122,9 @@ typedef struct {
 
     /** whether start/stop are noops */
     int startstop_noop;
+
+    /** for 0.8 only, whether to stop */
+    int do_stop;
 } my_iops_t;
 
 typedef struct {
@@ -154,6 +157,14 @@ typedef struct {
 #define PTR_FROM_FIELD(t, p, fld) ((t*)((char*)p-(offsetof(t, fld))))
 
 #define incref_iops(io) (io)->iops_refcount++
+
+#if (UV_VERSION_MAJOR == 0 && UV_VERSION_MINOR < 10)
+#define LCBUV_LOOP_ONCE(l) uv_run_once(l)
+#define LCBUV_LOOP_DEFL(l) uv_run(l)
+#else
+#define LCBUV_LOOP_ONCE(l) uv_run(l, UV_RUN_ONCE)
+#define LCBUV_LOOP_DEFL(l) uv_run(l, UV_RUN_DEFAULT)
+#endif
 
 
 #endif
