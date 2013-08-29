@@ -447,8 +447,8 @@ extern "C" {
     void lcb_server_destroy(lcb_server_t *server);
     void lcb_server_connected(lcb_server_t *server);
 
-    void lcb_server_initialize(lcb_server_t *server,
-                               int servernum);
+    lcb_error_t lcb_server_initialize(lcb_server_t *server,
+                                      int servernum);
 
     int lcb_dispatch_response(lcb_server_t *c,
                               struct lcb_command_data_st *ct,

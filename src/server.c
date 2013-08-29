@@ -458,14 +458,18 @@ void lcb_server_connected(lcb_server_t *server)
     }
 }
 
-void lcb_server_initialize(lcb_server_t *server, int servernum)
+lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
 {
     /* Initialize all members */
+    lcb_error_t err;
     char *p;
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
 
-    lcb_connection_init(&server->connection, server->instance);
+    err = lcb_connection_init(&server->connection, server->instance);
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
 
     server->connection.data = server;
 
@@ -488,6 +492,7 @@ void lcb_server_initialize(lcb_server_t *server, int servernum)
     lcb_connection_getaddrinfo(&server->connection, 0);
 
     server->sasl_conn = NULL;
+    return LCB_SUCCESS;
 }
 
 void lcb_server_send_packets(lcb_server_t *server)
