@@ -209,13 +209,17 @@ extern "C" {
         LCB_BAD_ENVIRONMENT = 0x24,
 
         /** An operation has not yet completed */
-        LCB_BUSY = 0x25
+        LCB_BUSY = 0x25,
+
+        /** Administrator account must not be used to access the data
+         * in the bucket */
+        LCB_INVALID_USERNAME = 0x26
 
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        ,LCB_MAX_ERROR_VAL = 0x26
+        ,LCB_MAX_ERROR_VAL = 0x27
 #endif
 
 

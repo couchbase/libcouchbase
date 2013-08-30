@@ -292,6 +292,11 @@ lcb_error_t lcb_create(lcb_t *instance,
         bucket = "default";
     }
 
+    /* Do not allow people use Administrator account for data access */
+    if (type == LCB_TYPE_BUCKET && user && strcmp(user, bucket) != 0) {
+        return LCB_INVALID_USERNAME;
+    }
+
     if (sasl_client_init(NULL) != SASL_OK) {
         return LCB_EINTERNAL;
     }

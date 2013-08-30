@@ -117,6 +117,10 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
     case LCB_BUSY:
         return "An operation was not completed yet";
 
+    case LCB_INVALID_USERNAME:
+        return "Administrator account must not be used to access"
+               " the data in the bucket";
+
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }
