@@ -352,7 +352,6 @@ lcb_error_t lcb_create(lcb_t *instance,
         offset = snprintf(buffer, sizeof(buffer),
                           "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
                           bucket);
-        obj->bucket = strdup(bucket);
         break;
     case LCB_TYPE_CLUSTER:
         offset = snprintf(buffer, sizeof(buffer), "GET /pools/ HTTP/1.1\r\n");
@@ -361,15 +360,19 @@ lcb_error_t lcb_create(lcb_t *instance,
         return LCB_EINVAL;
     }
 
-    if (user && passwd) {
+    if (user && *user) {
+        obj->username = strdup(user);
+    } else if (type == LCB_TYPE_BUCKET) {
+        obj->username = strdup(bucket);
+    }
+    if (passwd) {
         char cred[256];
         char base64[256];
-        snprintf(cred, sizeof(cred), "%s:%s", user, passwd);
+        snprintf(cred, sizeof(cred), "%s:%s", obj->username, passwd);
         if (lcb_base64_encode(cred, base64, sizeof(base64)) == -1) {
             lcb_destroy(obj);
             return LCB_EINTERNAL;
         }
-        obj->username = strdup(user);
         obj->password = strdup(passwd);
         offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
                            "Authorization: Basic %s\r\n", base64);
@@ -459,7 +462,6 @@ void lcb_destroy(lcb_t instance)
     free(instance->vbucket_stream.header);
     free(instance->vb_server_map);
     free(instance->histogram);
-    free(instance->bucket);
     free(instance->username);
     free(instance->password);
     memset(instance, 0xff, sizeof(*instance));

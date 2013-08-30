@@ -239,7 +239,6 @@ extern "C" {
         /* credentials needed to operate cluster via REST API */
         char *username;
         char *password;
-        char *bucket;
 
         struct {
             const char *name;
