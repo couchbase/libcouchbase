@@ -91,18 +91,14 @@ public:
             str = "<No Key>\n";
             return;
         }
-        char restbuf[1024];
-        str = "Key: " + key + "\n";
-        sprintf(restbuf,
-                "Error: %d\n"
-                "Persisted (master?): %d (%d)\n"
-                "Replicated: %d\n"
-                "CAS: 0x%0llX\n",
-                resp.v.v0.err,
-                resp.v.v0.npersisted, resp.v.v0.persisted_master,
-                resp.v.v0.nreplicated,
-                resp.v.v0.cas);
-        str += restbuf;
+        std::stringstream ss;
+        ss << "Key: " << key << std::endl
+           << "Error: " << resp.v.v0.err << std::endl
+           << "Persisted (master?): " << resp.v.v0.npersisted
+           << " (" << resp.v.v0.persisted_master << ")" << std::endl
+           << "Replicated: " << resp.v.v0.nreplicated << std::endl
+           << "CAS: 0x" << std::hex << resp.v.v0.cas << std::endl;
+        str += ss.str();
     }
 
     void dump() {
