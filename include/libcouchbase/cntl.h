@@ -279,8 +279,20 @@ extern "C" {
      */
 #define LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT 0x13
 
+
+    /**
+     * Get/Set. if the order of the bootstrap hosts should be utilized
+     *          in a random order or not. The argument is a boolean
+     *          where 0 means the order of the bootstrap hosts should
+     *          be preserved and a non-null value means it should be
+     *          randomized.
+     *
+     * Arg: int*
+     */
+#define LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS 0x14
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x14
+#define LCB_CNTL__MAX                    0x15
 
 
 #ifdef __cplusplus

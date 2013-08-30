@@ -156,12 +156,14 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
             return lcb_error_handler(instance, err, "Failed to initialize server");
         }
         instance->backup_nodes[buii] = instance->servers[ii].rest_api_server;
-        /* swap with random position < ii */
-        if (buii > 0) {
-            lcb_size_t nn = (lcb_size_t)(gethrtime() >> 10) % buii;
-            char *pp = instance->backup_nodes[buii];
-            instance->backup_nodes[ii] = instance->backup_nodes[nn];
-            instance->backup_nodes[nn] = pp;
+        if (instance->randomize_bootstrap_nodes) {
+            /* swap with random position < ii */
+            if (buii > 0) {
+                lcb_size_t nn = (lcb_size_t)(gethrtime() >> 10) % buii;
+                char *pp = instance->backup_nodes[buii];
+                instance->backup_nodes[ii] = instance->backup_nodes[nn];
+                instance->backup_nodes[nn] = pp;
+            }
         }
         buii++;
     }

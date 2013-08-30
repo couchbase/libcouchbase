@@ -223,8 +223,20 @@ static lcb_error_t setup_boostrap_hosts(lcb_t ret, const char *host)
             }
             return error;
         }
+
         ++ii;
     } while (ptr != NULL);
+
+    if (ret->randomize_bootstrap_nodes) {
+        ii = 1;
+        while (ret->backup_nodes[ii] != NULL) {
+            lcb_size_t nidx = (lcb_size_t)(gethrtime() >> 10) % ii;
+            char *other = ret->backup_nodes[nidx];
+            ret->backup_nodes[nidx] = ret->backup_nodes[ii];
+            ret->backup_nodes[ii] = other;
+            ++ii;
+        }
+    }
 
     ret->backup_idx = 0;
     return LCB_SUCCESS;

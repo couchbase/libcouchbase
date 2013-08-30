@@ -220,6 +220,8 @@ extern "C" {
         /** if non-zero, backup_nodes entries should be freed before
             freeing the pointer itself */
         int should_free_backup_nodes;
+        /** If we should randomize bootstrap nodes or not */
+        int randomize_bootstrap_nodes;
         /** The array of last known nodes as hostname:port */
         char **backup_nodes;
         /** The current connect index */
