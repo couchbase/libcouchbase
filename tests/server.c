@@ -376,8 +376,8 @@ void get_mock_std_creds(const void *handle, const char **userp, const char **pas
 {
     const struct test_server_info *info = handle;
     if (info->is_mock) {
-        *userp = "Administrator";
-        *passp = "password";
+        *userp = NULL;
+        *passp = NULL;
     } else {
         *userp = info->username;
         *passp = info->password;

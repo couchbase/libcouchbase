@@ -273,9 +273,8 @@ void MockEnvironment::SetUp()
     if (realCluster) {
         bootstrapRealCluster();
     } else {
-        serverParams = ServerParams(http, getenv("LCB_TEST_BUCKET"),
-                                    "Administrator",
-                                    "password");
+        const char *name = getenv("LCB_TEST_BUCKET");
+        serverParams = ServerParams(http, name, name, NULL);
         numNodes = 10;
 
         // Mock 0.6

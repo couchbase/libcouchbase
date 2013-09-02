@@ -581,7 +581,7 @@ int main(int argc, char **argv)
     snprintf(str_node_count, 16, "%d", total_node_count);
     args[1] = str_node_count;
 
-    setup((char **)args, "Administrator", "password", "default");
+    setup((char **)args, "default", NULL, "default");
 
     /* first time it's initialized */
     is_mock = mock->is_mock;
@@ -594,7 +594,7 @@ int main(int argc, char **argv)
     teardown();
 
     args[2] = NULL;
-    setup((char **)args, "Administrator", "password", "default");
+    setup((char **)args, "default", NULL, "default");
     test_set1();
     test_set2();
     test_get1();
@@ -604,7 +604,7 @@ int main(int argc, char **argv)
     teardown();
 
     if (is_mock) {
-        lcb_assert(test_connect((char **)args, "Administrator", "password", "missing") == LCB_BUCKET_ENOENT);
+        lcb_assert(test_connect((char **)args, "missing", NULL, "missing") == LCB_BUCKET_ENOENT);
         args[2] = "--buckets=protected:secret";
         lcb_assert(test_connect((char **)args, "protected", "incorrect", "protected") == LCB_AUTH_ERROR);
         setup((char **)args, "protected", "secret", "protected");
