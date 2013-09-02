@@ -211,6 +211,13 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
             return;
         }
         lcb_assert(ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
+        if (cmd.request.opcode == PROTOCOL_BINARY_CMD_SASL_AUTH) {
+            /* Skip unfinished SASL command.
+             * SASL AUTH written directly into output buffer,
+             * therefore we can ignore its cookies */
+            ringbuffer_consumed(&src->output_cookies, sizeof(ct));
+            continue;
+        }
         vb = ntohs(cmd.request.vbucket);
         idx = vbucket_get_master(dst_instance->vbucket_config, vb);
         if (idx < 0) {
@@ -220,14 +227,27 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
             idx = vbucket_found_incorrect_master(dst_instance->vbucket_config, vb, idx);
         }
         dst = dst_instance->servers + (lcb_size_t)idx;
-        lcb_assert(ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct) ||
-                   ringbuffer_read(&src->pending_cookies, &ct, sizeof(ct)) == sizeof(ct));
+
+        /* read from pending buffer first, because the only case so
+         * far when we have cookies in both buffers is when we send
+         * some commands to disconnected server (it will put them into
+         * pending buffer/cookies and also copy into log), after that
+         * SASL authenticator runs, and push its packets to output
+         * buffer/cookies and also copy into log.
+         *
+         * Here we are traversing the log only. Therefore we will see
+         * pending commands first.
+         *
+         * TODO it will be simplified when with the packet-oriented
+         * commands patch, where cookies will live along with command
+         * itself in the log
+         */
+        lcb_assert(ringbuffer_read(&src->pending_cookies, &ct, sizeof(ct)) == sizeof(ct) ||
+                   ringbuffer_read(&src->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         lcb_assert(ringbuffer_ensure_capacity(&dst->cmd_log, npacket));
         lcb_assert(ringbuffer_write(&dst->cmd_log, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
         lcb_assert(ringbuffer_write(&dst->cmd_log, body, nbody) == nbody);
-        lcb_assert(ringbuffer_ensure_capacity(&dst->output_cookies, sizeof(ct)));
-        lcb_assert(ringbuffer_write(&dst->output_cookies, &ct, sizeof(ct)) == sizeof(ct));
 
         lcb_assert(ringbuffer_ensure_capacity(&dst->pending, npacket));
         lcb_assert(ringbuffer_write(&dst->pending, cmd.bytes, sizeof(cmd.bytes)) == sizeof(cmd.bytes));
