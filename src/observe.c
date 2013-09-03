@@ -148,7 +148,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
                 }
                 continue;
             }
-            assert(idx < (int)reqs.nrequests);
+            lcb_assert(idx < (int)reqs.nrequests);
             rr = reqs.requests + idx;
 
             if (!rr->allocated) {

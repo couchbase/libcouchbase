@@ -79,9 +79,7 @@ hrtime_t gethrtime(void)
 {
 #ifdef HAVE_CLOCK_GETTIME
     struct timespec tm;
-    if (clock_gettime(CLOCK_MONOTONIC, &tm) == -1) {
-        abort();
-    }
+    lcb_assert(clock_gettime(CLOCK_MONOTONIC, &tm) != -1);
     return (((hrtime_t)tm.tv_sec) * 1000000000) + (hrtime_t)tm.tv_nsec;
 #elif HAVE_GETTIMEOFDAY
 
@@ -105,12 +103,9 @@ hrtime_t gethrtime(void)
     LARGE_INTEGER currtime;
 
     if (pf.QuadPart == 0) {
-        if (QueryPerformanceFrequency(&pf)) {
-            lcb_assert(pf.QuadPart != 0);
-            freq = 1.0e9 / (double)pf.QuadPart;
-        } else {
-            abort();
-        }
+        lcb_assert(QueryPerformanceFrequency(&pf));
+        lcb_assert(pf.QuadPart != 0);
+        freq = 1.0e9 / (double)pf.QuadPart;
     }
 
     QueryPerformanceCounter(&currtime);

@@ -83,9 +83,7 @@ int ringbuffer_ensure_capacity(ringbuffer_t *buffer, lcb_size_t size)
         char *old;
         lcb_size_t nbytes = buffer->nbytes;
         lcb_size_t nr = ringbuffer_read(buffer, new_root, nbytes);
-        if (nr != nbytes) {
-            abort();
-        }
+        lcb_assert(nr == nbytes);
         old = buffer->root;
         buffer->size = new_size;
         buffer->root = new_root;
@@ -259,17 +257,13 @@ lcb_size_t ringbuffer_peek_at(ringbuffer_t *buffer, lcb_size_t offset,
 void ringbuffer_produced(ringbuffer_t *buffer, lcb_size_t nb)
 {
     lcb_size_t n = ringbuffer_write(buffer, NULL, nb);
-    if (n != nb) {
-        abort();
-    }
+    lcb_assert(n == nb);
 }
 
 void ringbuffer_consumed(ringbuffer_t *buffer, lcb_size_t nb)
 {
     lcb_size_t n = ringbuffer_read(buffer, NULL, nb);
-    if (n != nb) {
-        abort();
-    }
+    lcb_assert(n == nb);
 }
 
 lcb_size_t ringbuffer_get_nbytes(ringbuffer_t *buffer)
@@ -387,16 +381,9 @@ int ringbuffer_append(ringbuffer_t *src, ringbuffer_t *dest)
 
     while ((nr = ringbuffer_read(src, buffer,
                                  sizeof(buffer))) != 0) {
-        if (!ringbuffer_ensure_capacity(dest, nr)) {
-            abort();
-            return 0;
-        }
-
+        lcb_assert(ringbuffer_ensure_capacity(dest, nr));
         nw = ringbuffer_write(dest, buffer, nr);
-        if (nw != nr) {
-            abort();
-            return 0;
-        }
+        lcb_assert(nw == nr);
     }
 
     return 1;

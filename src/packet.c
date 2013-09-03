@@ -39,14 +39,12 @@ void lcb_server_buffer_start_packet(lcb_server_t *c,
     ct.start = gethrtime();
     ct.cookie = command_cookie;
 
-    if (!ringbuffer_ensure_capacity(buff, size) ||
-            !ringbuffer_ensure_capacity(&c->cmd_log, size) ||
-            !ringbuffer_ensure_capacity(buff_cookie, sizeof(ct)) ||
-            ringbuffer_write(buff, data, size) != size ||
-            ringbuffer_write(&c->cmd_log, data, size) != size ||
-            ringbuffer_write(buff_cookie, &ct, sizeof(ct)) != sizeof(ct)) {
-        abort();
-    }
+    lcb_assert(ringbuffer_ensure_capacity(buff, size) &&
+               ringbuffer_ensure_capacity(&c->cmd_log, size) &&
+               ringbuffer_ensure_capacity(buff_cookie, sizeof(ct)) &&
+               ringbuffer_write(buff, data, size) == size &&
+               ringbuffer_write(&c->cmd_log, data, size) == size &&
+               ringbuffer_write(buff_cookie, &ct, sizeof(ct)) == sizeof(ct));
 }
 
 void lcb_server_buffer_retry_packet(lcb_server_t *c,
@@ -58,14 +56,12 @@ void lcb_server_buffer_retry_packet(lcb_server_t *c,
 {
     lcb_size_t ct_size = sizeof(struct lcb_command_data_st);
 
-    if (!ringbuffer_ensure_capacity(buff, size) ||
-            !ringbuffer_ensure_capacity(&c->cmd_log, size) ||
-            !ringbuffer_ensure_capacity(buff_cookie, ct_size) ||
-            ringbuffer_write(buff, data, size) != size ||
-            ringbuffer_write(&c->cmd_log, data, size) != size ||
-            ringbuffer_write(buff_cookie, ct, ct_size) != ct_size) {
-        abort();
-    }
+    lcb_assert(ringbuffer_ensure_capacity(buff, size) &&
+               ringbuffer_ensure_capacity(&c->cmd_log, size) &&
+               ringbuffer_ensure_capacity(buff_cookie, ct_size) &&
+               ringbuffer_write(buff, data, size) == size &&
+               ringbuffer_write(&c->cmd_log, data, size) == size &&
+               ringbuffer_write(buff_cookie, ct, ct_size) == ct_size);
 }
 
 void lcb_server_buffer_write_packet(lcb_server_t *c,
@@ -74,12 +70,10 @@ void lcb_server_buffer_write_packet(lcb_server_t *c,
                                     lcb_size_t size)
 {
     (void)c;
-    if (!ringbuffer_ensure_capacity(buff, size) ||
-            !ringbuffer_ensure_capacity(&c->cmd_log, size) ||
-            ringbuffer_write(buff, data, size) != size ||
-            ringbuffer_write(&c->cmd_log, data, size) != size) {
-        abort();
-    }
+    lcb_assert(ringbuffer_ensure_capacity(buff, size) &&
+               ringbuffer_ensure_capacity(&c->cmd_log, size) &&
+               ringbuffer_write(buff, data, size) == size &&
+               ringbuffer_write(&c->cmd_log, data, size) == size);
 }
 
 void lcb_server_buffer_end_packet(lcb_server_t *c,
@@ -197,14 +191,12 @@ void lcb_server_buffer_start_packet_ex(lcb_server_t *c,
                                        const void *data,
                                        lcb_size_t size)
 {
-    if (!ringbuffer_ensure_capacity(buff, size) ||
-            !ringbuffer_ensure_capacity(&c->cmd_log, size) ||
-            !ringbuffer_ensure_capacity(buff_cookie, sizeof(*ct)) ||
-            ringbuffer_write(buff, data, size) != size ||
-            ringbuffer_write(&c->cmd_log, data, size) != size ||
-            ringbuffer_write(buff_cookie, ct, sizeof(*ct)) != sizeof(*ct)) {
-        abort();
-    }
+    lcb_assert(ringbuffer_ensure_capacity(buff, size) &&
+               ringbuffer_ensure_capacity(&c->cmd_log, size) &&
+               ringbuffer_ensure_capacity(buff_cookie, sizeof(*ct)) &&
+               ringbuffer_write(buff, data, size) == size &&
+               ringbuffer_write(&c->cmd_log, data, size) == size &&
+               ringbuffer_write(buff_cookie, ct, sizeof(*ct)) == sizeof(*ct));
 }
 
 void lcb_server_start_packet_ex(lcb_server_t *c,

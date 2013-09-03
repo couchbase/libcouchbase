@@ -148,12 +148,7 @@ static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_t instance = (lcb_t)conn->data;
     const char *msg = "Configuration update timed out";
-    if (instance->confstatus == LCB_CONFSTATE_CONFIGURED) {
-        /* OK... */
-        abort();
-        return;
-    }
-
+    lcb_assert(instance->confstatus != LCB_CONFSTATE_CONFIGURED);
     lcb_instance_connerr(instance, err, msg);
 }
 
@@ -167,7 +162,7 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
          * Print the URI to the ringbuffer
          */
         ringbuffer_strcat(conn->output, instance->http_uri);
-        assert(conn->output->nbytes > 0);
+        lcb_assert(conn->output->nbytes > 0);
 
         lcb_sockrw_set_want(conn, LCB_RW_EVENT, 0);
         lcb_sockrw_apply_want(conn);
@@ -253,7 +248,7 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
 
     /* We need to fix the host part... */
     ptr = strstr(instance->http_uri, LCB_LAST_HTTP_HEADER);
-    assert(ptr);
+    lcb_assert(ptr);
     ptr += strlen(LCB_LAST_HTTP_HEADER);
     sprintf(ptr, "Host: %s:%s\r\n\r\n", conn->host, conn->port);
     connres = lcb_connection_start(conn, 1);

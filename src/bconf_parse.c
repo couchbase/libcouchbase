@@ -76,7 +76,7 @@ static int grow_buffer(buffer_t *buffer, lcb_size_t min_free)
 static lcb_error_t parse_chunk(struct vbucket_stream_st *vbs)
 {
     buffer_t *buffer = &vbs->chunk;
-    assert(vbs->chunk_size != 0);
+    lcb_assert(vbs->chunk_size != 0);
 
     if (vbs->chunk_size == (lcb_size_t) - 1) {
         char *ptr = strstr(buffer->data, "\r\n");
@@ -231,7 +231,7 @@ lcb_error_t lcb_parse_vbucket_stream(lcb_t instance)
      * to copy
      */
     expected = conn->input->nbytes;
-    assert(buffer->data);
+    lcb_assert(buffer->data);
 
     /**
      * XXX: The semantics of the buffer fields are confusing. Normally,
@@ -244,7 +244,7 @@ lcb_error_t lcb_parse_vbucket_stream(lcb_t instance)
                          buffer->data + buffer->avail,
                          buffer->size - buffer->avail);
 
-    assert(nw == expected);
+    lcb_assert(nw == expected);
     buffer->avail += nw;
     buffer->data[buffer->avail] = '\0';
 

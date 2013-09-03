@@ -327,7 +327,7 @@ void lcb_purge_single_server(lcb_server_t *server,
             break;
 
         default:
-            abort();
+            lcb_assert("unexpected opcode while purging the server" && 0);
         }
 
         if (allocated) {
@@ -453,7 +453,7 @@ void lcb_server_connected(lcb_server_t *server)
 
         ringbuffer_reset(&server->pending);
         ringbuffer_reset(&server->pending_cookies);
-        assert(conn->output->nbytes);
+        lcb_assert(conn->output->nbytes);
         lcb_server_send_packets(server);
     }
 }

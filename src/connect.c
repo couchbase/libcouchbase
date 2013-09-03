@@ -240,8 +240,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         }
     } while (retry);
 
-    /* not reached */
-    abort();
+    lcb_assert("this statement shouldn't be reached" && 0);
     return LCB_CONN_ERROR;
 }
 
@@ -399,7 +398,7 @@ void lcb_connection_close(lcb_connection_t conn)
     conn->state = LCB_CONNSTATE_UNINIT;
 
     if (conn->instance == NULL || conn->instance->io == NULL) {
-        assert(conn->sockfd < 0 && conn->sockptr == NULL);
+        lcb_assert(conn->sockfd < 0 && conn->sockptr == NULL);
         return;
     }
 

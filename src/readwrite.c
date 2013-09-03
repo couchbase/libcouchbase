@@ -53,7 +53,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
         }
 
     } else if (nr == 0) {
-        assert((iov[0].iov_len + iov[1].iov_len) != 0);
+        lcb_assert((iov[0].iov_len + iov[1].iov_len) != 0);
         /* TODO stash error message somewhere
          * "Connection closed... we should resend to other nodes or reconnect!!" */
         return LCB_SOCKRW_SHUTDOWN;
@@ -228,8 +228,8 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
                                LCB_DEFAULT_RBUFSIZE);
     ringbuffer_get_iov(*buf, RINGBUFFER_WRITE, bi->iov);
 
-    assert(bi->ringbuffer == NULL);
-    assert(bi->root == NULL);
+    lcb_assert(bi->ringbuffer == NULL);
+    lcb_assert(bi->root == NULL);
 
     bi->ringbuffer = *buf;
     bi->root = bi->ringbuffer->root;
@@ -296,12 +296,8 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
         memset(bi, 0, sizeof(*bi));
         io->v.v1.release_writebuf(io, conn->sockptr, wbuf);
 
-        if (error_callback) {
-            io->v.v1.send_error(io, conn->sockptr, error_callback);
-
-        } else {
-            abort();
-        }
+        lcb_assert(error_callback);
+        io->v.v1.send_error(io, conn->sockptr, error_callback);
 
         return LCB_SOCKRW_IO_ERROR;
 
@@ -314,7 +310,7 @@ void lcb_sockrw_v1_onread_common(lcb_sockdata_t *sock,
 {
     struct lcb_buf_info *bi = &sock->read_buffer;
 
-    assert(*dst == NULL);
+    lcb_assert(*dst == NULL);
 
     *dst = bi->ringbuffer;
     memset(bi, 0, sizeof(*bi));
@@ -335,7 +331,7 @@ void lcb_sockrw_v1_onwrite_common(lcb_sockdata_t *sock,
     lcb_io_opt_t io = sock->parent;
 
     if (*dst) {
-        assert(*dst != bi->ringbuffer);
+        lcb_assert(*dst != bi->ringbuffer);
         /**
          * We can't override the existing buffer, so just return
          */

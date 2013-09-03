@@ -731,7 +731,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
         break;
 
     default:
-        abort();
+        lcb_assert("unexpected state" && 0);
         break;
     }
 
