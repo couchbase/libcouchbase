@@ -27,7 +27,7 @@ SET(GTEST_DLSERVER http://googletest.googlecode.com/files)
 
 # Couchbase mock path to download
 SET(COUCHBASE_MOCK_VERSION
-    0.6-SNAPSHOT/CouchbaseMock-0.6-20130805.230415-1.jar)
+    0.6-SNAPSHOT/CouchbaseMock-0.6-20130903.160518-3.jar)
 
 # Maven repository where ${COUCHBASE_MOCK_VERSION} is to be found
 SET(COUCHBASE_MOCK_DLSERVER
