@@ -1529,7 +1529,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     } else {
         struct lcb_create_st options(config.getHost(), config.getUser(),
                                      config.getPassword(), config.getBucket());
-        if (cmd == cbc_admin || cmd == cbc_bucket_create || cmd == cbc_bucket_delete) {
+        if (cmd == cbc_admin || cmd == cbc_bucket_create ||
+            cmd == cbc_bucket_delete || cmd == cbc_bucket_flush) {
             options.v.v1.type = LCB_TYPE_CLUSTER;
             if (config.getPassword() == NULL || config.getUser() == NULL) {
                 cerr << "Username and password mandatory for admin operations." << endl;
