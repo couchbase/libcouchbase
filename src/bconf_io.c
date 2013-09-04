@@ -50,19 +50,18 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
     lcb_error_t err;
     int can_retry = 0;
     int old_gen = instance->config_generation;
+
     err = lcb_parse_vbucket_stream(instance);
-
     if (err == LCB_SUCCESS) {
-        lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
-        lcb_sockrw_apply_want(&instance->connection);
-
-        if (old_gen != instance->config_generation) {
+        if (instance->type == LCB_TYPE_BUCKET) {
+            lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
+            lcb_sockrw_apply_want(&instance->connection);
+        }
+        if (old_gen != instance->config_generation || instance->type == LCB_TYPE_CLUSTER) {
             lcb_connection_cancel_timer(&instance->connection);
             instance->connection.timeout.usec = 0;
             lcb_maybe_breakout(instance);
         }
-
-
         return LCB_SUCCESS;
 
     } else if (err != LCB_BUSY) {

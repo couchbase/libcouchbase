@@ -256,6 +256,10 @@ lcb_error_t lcb_parse_vbucket_stream(lcb_t instance)
     }
 
     lcb_assert(vbs->header);
+    if (instance->type == LCB_TYPE_CLUSTER) {
+        /* Do not parse payload for cluster connection type */
+        return LCB_SUCCESS;
+    }
 
     /**
      * Note that we're doing a streaming push-based config; we
