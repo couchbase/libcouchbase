@@ -535,7 +535,7 @@ return 0;
 
 AS_IF([test "x$ac_cv_enable_tests" = "xyes" -a "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no" -a "x$DOWNLOAD" != "x" -a "x$UNZIP" != "xno"], [
       ac_cv_download_gtest=yes
-      GTEST_ROOT=gtest-1.6.0
+      GTEST_ROOT=gtest-1.7.0
       ac_cv_have_gtest_src=yes
 ])
 

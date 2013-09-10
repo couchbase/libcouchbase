@@ -329,11 +329,11 @@ tests_unit_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
 tests_unit_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
 tests_unit_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
 
-gtest-1.6.0.zip:
+gtest-1.7.0.zip:
 	@echo "+--------------------------------+"
 	@echo "| Download Google test framework |"
 	@echo "+--------------------------------+"
-	${DOWNLOAD} gtest-1.6.0.zip http://googletest.googlecode.com/files/gtest-1.6.0.zip
+	${DOWNLOAD} gtest-1.7.0.zip http://googletest.googlecode.com/files/gtest-1.7.0-rc1.zip
 
 
 if HAVE_CXX
@@ -351,14 +351,14 @@ endif
 endif
 
 if DOWNLOAD_GTEST
-gtest-1.6.0: gtest-1.6.0.zip
-	${UNZIP} -o -qq gtest-1.6.0.zip
-BUILT_SOURCES += gtest-1.6.0
-CLEANFILES += gtest-1.6.0.zip
+gtest-1.7.0: gtest-1.7.0.zip
+	${UNZIP} -o -qq gtest-1.7.0.zip
+BUILT_SOURCES += gtest-1.7.0
+CLEANFILES += gtest-1.7.0.zip
 endif
 
 distclean-local:
-	@rm -rf gtest-1.6.0
+	@rm -rf gtest-1.7.0
 
 if !HAVE_GOOGLETEST_SRC
 tests_unit_tests_LDADD += -lgtest -lpthread
