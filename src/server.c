@@ -361,6 +361,7 @@ void lcb_purge_single_server(lcb_server_t *server,
 
     ringbuffer_destruct(&rest);
     if (should_switch_to_backup_node) {
+        lcb_connection_close(&root->connection);
         lcb_switch_to_backup_node(root, LCB_NETWORK_ERROR,
                                   "Config connection considered stale. "
                                   "Reconnection forced");
