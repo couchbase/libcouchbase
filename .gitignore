@@ -53,8 +53,7 @@
 /example/observe/observe
 /example/syncmode/syncmode
 /example/yajl/couchview
-/gtest-1.6.0
-/gtest-1.6.0.zip
+/gtest-1.*
 /include/libcouchbase/configuration.h
 /libcouchbase*.changes
 /libcouchbase*.deb
