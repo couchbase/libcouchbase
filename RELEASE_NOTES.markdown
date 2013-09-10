@@ -3,6 +3,50 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+## 2.1.3 (2013-09-10)
+
+* [minor] Updated gtest to version 1.7.0. Fixes issue with building
+  test suite with new XCode 5.0 version being released later this
+  month.
+
+* [major] CCBC-265 Do not try to parse config for `LCB_TYPE_CLUSTER`
+  handles. It fixes timouts for management operations (like 'cbc
+  bucket-create', 'cbc bucket-flush', 'cbc bucket-delete' and 'cbc
+  admin')
+
+* [major] CCBC-263 Skip unfinished SASL commands on rebalance. During
+  rebalance, it is possible that the newly added server doesn't have
+  chance to finish SASL auth before the cluster will push config
+  update, in this case packet relocator messing cookies. Also the
+  patch makes sure that SASL command/cookie isn't mixing with other
+  commands
+
+* [major] Use cluster type connection for cbc-bucket-flush. Although
+  flush command is accessible for bucket type connections,
+  cbc-bucket-flush doesn't use provided bucket name to connect to,
+  therefore it will fail if the bucket name isn't "default".
+
+* [major] Allow to make connect order deterministic. It allows the
+  user to toggle between deterministic and random connect order for
+  the supplied nodes list. By default it will randomize the list.
+
+* [major] Do not allow to use Administrator account for
+  `LCB_TYPE_BUCKET`
+
+* [major] CCBC-258 Fig segmentation faults during tests load of
+  node.js. Sets `inside_handler` on `socket_connected`. Previously we
+  were always using SASL auth, and as such, we wouldn't flush packets
+  from the `cmd_log` using `server_send_packets` (which calls
+  `apply_want`). `apply_want` shouldn't be called more than once per
+  event loop entry -- so this sets and unsets the `inside_handler`
+  flag.
+
+* [major] Added support of libuv 0.8
+
+* [major] Close config connection before trying next node. It will fix
+  asserts in case of the config node becomes unresponsive, and the
+  threshold controlled by `LCB_CNTL_CONFERRTHRESH` and `lcb_cntl(3)`
+
 ## 2.1.2 (2013-08-27)
 
 * [major] CCBC-253, CCBC-254 Use bucket name in SASL if username
