@@ -396,11 +396,11 @@ Pass NULL as the instance, as this accesses a global setting
 *LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS* '(int*)'::
     Get/Set the per-instance setting to control the connect behaviour
     when choosing the node to connect to for receiving cluster configuration
-    information. By default the hosts will be tried in the order they are
-    specified in the list, but the connect order may be randomized by
-    toggling the mode through this setting.
+    information. By default the hosts will be randomized, but the
+    connect order may be deterministic by toggling the mode through
+    this setting.
 
-        int randomize = 1;
+        int randomize = 0;
         lcb_cntl(instance, LCB_CNTL_SET,
                  LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS, &randomize);
 

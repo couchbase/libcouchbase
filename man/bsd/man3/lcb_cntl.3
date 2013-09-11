@@ -2,12 +2,12 @@
 .\"     Title: lcb_cntl
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/22/2013
+.\"      Date: 09/10/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CNTL" "3" "08/22/2013" "\ \&" "\ \&"
+.TH "LCB_CNTL" "3" "09/10/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -705,9 +705,26 @@ lcb_cntl(instance, LCB_CNTL_SET,
 .RE
 .\}
 .RE
+.PP
+\fBLCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS\fR \fI(int*)\fR
+.RS 4
+Get/Set the per\-instance setting to control the connect behaviour when choosing the node to connect to for receiving cluster configuration information\&. By default the hosts will be randomized, but the connect order may be deterministic by toggling the mode through this setting\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+int randomize = 0;
+lcb_cntl(instance, LCB_CNTL_SET,
+         LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS, &randomize);
+.fi
+.if n \{\
+.RE
+.\}
+.RE
 .SH "RETURN VALUE"
 .sp
-LCB_NOT_SUPPORTED if the code is unrecognized LCB_EINVAL if there was a problem with the argument (typically for SET) other error codes depending on the command\&.
+LCB_NOT_SUPPORTED if the code is unrecognized LCB_EINVAL if there was a problem with the argument (typically for SET) other error codes depending on the command\&. LCB_EINTERNAL if an internal error occurred\&.
 .SH "ATTRIBUTES"
 .sp
 See lcb_attributes(5) for descriptions of the following attributes:
