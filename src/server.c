@@ -446,10 +446,11 @@ void lcb_server_connected(lcb_server_t *server)
         if (!ringbuffer_append(&server->pending, conn->output) ||
                 !ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
                 !ringbuffer_append(&copy, &server->cmd_log)) {
-
-            lcb_error_handler(server->instance,
-                              LCB_CLIENT_ENOMEM,
-                              NULL);
+            ringbuffer_reset(&server->cmd_log);
+            ringbuffer_reset(&server->output_cookies);
+            lcb_connection_cleanup(conn);
+            lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+            return;
         }
 
         ringbuffer_reset(&server->pending);
