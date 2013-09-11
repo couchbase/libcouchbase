@@ -715,7 +715,12 @@ int vbucket_get_master(VBUCKET_CONFIG_HANDLE vb, int vbucket) {
 }
 
 int vbucket_get_replica(VBUCKET_CONFIG_HANDLE vb, int vbucket, int i) {
-    return vb->vbuckets[vbucket].servers[i+1];
+    int idx = i + 1;
+    if (idx < vb->num_servers) {
+        return vb->vbuckets[vbucket].servers[i + 1];
+    } else {
+        return -1;
+    }
 }
 
 int vbucket_found_incorrect_master(VBUCKET_CONFIG_HANDLE vb, int vbucket,

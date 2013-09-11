@@ -108,7 +108,7 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "The same key was specified more than once in the command list";
     case LCB_NO_MATCHING_SERVER:
         return "No node was found for servicing this key. This may be a "
-               "result of a nonexistent/stale vBucket configuration";
+               "result of a nonexistent/stale cluster configuration";
 
     case LCB_BAD_ENVIRONMENT:
         return "An environment variable recognized by libcouchbase was "
