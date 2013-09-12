@@ -273,15 +273,13 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
             conn->sockptr = lcb_gai2sock_v1(conn->instance,
                                             &conn->curr_ai,
                                             &save_errno);
-
-            conn->sockptr->lcbconn = conn;
-            conn->sockptr->parent = io;
-
         }
 
-        if (!conn->sockptr) {
+        if (conn->sockptr) {
+            conn->sockptr->lcbconn = conn;
+            conn->sockptr->parent = io;
+        } else {
             conn->last_error = io->v.v1.error;
-
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
