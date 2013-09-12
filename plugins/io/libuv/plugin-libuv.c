@@ -584,8 +584,13 @@ static void send_error(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase,
 {
     my_sockdata_t *sock = (my_sockdata_t *)sockbase;
     my_iops_t *io = (my_iops_t *)iobase;
+    my_uvreq_t *uvr;
 
-    my_uvreq_t *uvr = alloc_uvreq(sock, (generic_callback_t)callback);
+    if (!sock) {
+        return;
+    }
+
+    uvr = alloc_uvreq(sock, (generic_callback_t)callback);
 
     if (!uvr) {
         return;
