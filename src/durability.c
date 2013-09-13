@@ -85,8 +85,6 @@ enum {
     STATE_IGNORE = 3
 };
 
-static unsigned long get_grace_interval(lcb_t instance,
-                                        lcb_durability_set_t *dset);
 static void timer_callback(lcb_socket_t sock, short which, void *arg);
 static void timer_schedule(lcb_durability_set_t *dset,
                            unsigned long delay,
@@ -166,10 +164,7 @@ static void dset_done_waiting(lcb_durability_set_t *dset)
     dset->waiting = 0;
 
     if (dset->nremaining > 0) {
-        timer_schedule(dset,
-                       get_grace_interval(dset->instance, dset),
-                       STATE_OBSPOLL);
-
+        timer_schedule(dset, DSET_OPTFLD(dset, interval), STATE_OBSPOLL);
     }
     dset_unref(dset);
 }
@@ -471,60 +466,6 @@ static void ent_init(const lcb_durability_cmd_t *cmd,
 }
 
 /**
- * Get the maximum adaptive time for a poll interval (if known)
- */
-static lcb_uint32_t get_max_timing(lcb_t instance, int is_ttp)
-{
-    lcb_uint32_t ret = 0;
-    unsigned ii;
-    for (ii = 0; ii < instance->nservers; ii++) {
-        lcb_server_t *server = instance->servers + ii;
-        lcb_uint32_t cur = is_ttp ? server->kv_timings.ttp : server->kv_timings.ttr;
-
-        if (cur < ret) {
-            continue;
-        }
-        /* else */
-        ret = cur;
-    }
-    return ret;
-}
-
-/**
- * Adjust intervals using statistical information.
- * Returns the value in microseconds
- */
-static unsigned long get_grace_interval(lcb_t instance,
-                                        lcb_durability_set_t *dset)
-{
-    /** assume persistence takes longer than replication */
-    unsigned long ret;
-    lcb_durability_opts_t *options = &dset->opts;
-
-    if (OPTFLD(options, interval)) {
-        return OPTFLD(options, interval);
-    }
-
-
-
-    if (OPTFLD(options, persist_to)) {
-        ret = get_max_timing(instance, 1);
-
-    } else {
-        ret = get_max_timing(instance, 0);
-    }
-
-    if (!ret) {
-        ret = instance->durability_interval;
-
-    } else {
-        ret *= 1000; /* msec -> usec */
-    }
-
-    return ret;
-}
-
-/**
  * Ensure that the user-specified criteria is possible; i.e. we have enough
  * servers and replicas. If the user requested capping, we do that here too.
  */
@@ -604,6 +545,11 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     dset->cookie = cookie;
     dset->nentries = ncmds;
     dset->nremaining = ncmds;
+
+    /** Get the timings */
+    if (!DSET_OPTFLD(dset, interval)) {
+        DSET_OPTFLD(dset, interval) = LCB_DEFAULT_DURABILITY_INTERVAL;
+    }
 
     /* list of observe commands to schedule */
     if (dset->nentries == 1) {

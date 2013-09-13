@@ -563,15 +563,6 @@ static void observe_response_handler(lcb_server_t *server,
         memcpy(&cas, ptr, sizeof(cas));
         ptr += sizeof(cas);
 
-        /* update timings */
-        if (ttp) {
-            server->kv_timings.ttp = ttp;
-        }
-
-        if (ttr) {
-            server->kv_timings.ttr = ttr;
-        }
-
         setup_lcb_observe_resp_t(&resp, key, nkey, cas, obs,
                                  server->index == vbucket_get_master(config, vb),
                                  ttp, ttr);

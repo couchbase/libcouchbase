@@ -343,10 +343,6 @@ extern "C" {
         /* Pointer back to the instance */
         lcb_t instance;
         struct lcb_connection_st connection;
-        struct {
-            unsigned int ttp;
-            unsigned int ttr;
-        } kv_timings;
     };
 
     struct lcb_timer_st {
