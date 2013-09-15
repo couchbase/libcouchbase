@@ -585,6 +585,7 @@ extern "C" {
 
     void lcb_purge_single_server(lcb_server_t *server,
                                  lcb_error_t error);
+    void lcb_timeout_server(lcb_server_t *server);
 
     lcb_error_t lcb_failout_server(lcb_server_t *server,
                                    lcb_error_t error);

@@ -203,15 +203,16 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 
     lcb_connection_cancel_timer(conn);
     lcb_sockrw_apply_want(conn);
-
     server->inside_handler = 0;
 }
 
 static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_server_t *server = (lcb_server_t *)conn->data;
-    lcb_purge_single_server(server, err);
+    lcb_timeout_server(server);
     lcb_maybe_breakout(server->instance);
+
+    (void)err;
 }
 
 /**

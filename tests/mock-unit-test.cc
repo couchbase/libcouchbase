@@ -22,6 +22,7 @@
 #include "mock-unit-test.h"
 #include "mock-environment.h"
 #include "internal.h" /* vbucket_* things from lcb_t */
+#include "testutil.h"
 
 /**
  * Keep these around in case we do something useful here in the future
@@ -344,6 +345,63 @@ TEST_F(MockUnitTest, testTimeout)
 
     ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, 1, commands));
     io->v.v0.run_event_loop(io);
+}
+
+struct timeout_test_cookie {
+    int *counter;
+    lcb_error_t expected;
+};
+extern "C" {
+static void set_callback(lcb_t,
+                         const void *cookie,
+                         lcb_storage_t, lcb_error_t err,
+                         const lcb_store_resp_t *)
+{
+    timeout_test_cookie *tc = (timeout_test_cookie*)cookie;;
+    EXPECT_EQ(err, tc->expected);
+    *tc->counter -= 1;
+}
+}
+
+TEST_F(MockUnitTest, testTimeoutOnlyStale)
+{
+    HandleWrap hw;
+    createConnection(hw);
+    lcb_t instance = hw.getLcb();
+    lcb_uint32_t tmoval = 1000000;
+    int nremaining = 2;
+    struct timeout_test_cookie cookies[2];
+
+    // Set the timeout
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
+
+    lcb_set_store_callback(instance, set_callback);
+
+    lcb_store_cmd_t scmd, *cmdp;
+    char *key = "i'm a key";
+    char *value = "a value";
+    cmdp = &scmd;
+
+    removeKey(instance, key);
+
+    memset(&scmd, 0, sizeof(scmd));
+    scmd.v.v0.key = key;
+    scmd.v.v0.nkey = strlen(key);
+    scmd.v.v0.bytes = value;
+    scmd.v.v0.nbytes = strlen(value);
+    scmd.v.v0.operation = LCB_SET;
+    cookies[0].counter = &nremaining;
+    cookies[0].expected = LCB_ETIMEDOUT;
+    lcb_store(instance, cookies, 1, &cmdp);
+    usleep(1500000);
+
+    cookies[1].counter = &nremaining;
+    cookies[1].expected = LCB_SUCCESS;
+    lcb_store(instance, cookies + 1, 1, &cmdp);
+
+    instance->wait = 1;
+    hw.getIo()->v.v0.run_event_loop(hw.getIo());
+    ASSERT_EQ(0, nremaining);
 }
 
 

@@ -67,8 +67,8 @@ void lcb_failout_observe_request(lcb_server_t *server,
 }
 
 
-void lcb_purge_single_server(lcb_server_t *server,
-                             lcb_error_t error)
+static void purge_single_server(lcb_server_t *server, lcb_error_t error,
+                                hrtime_t min_nonstale)
 {
     protocol_binary_request_header req;
     struct lcb_command_data_st ct;
@@ -130,6 +130,9 @@ void lcb_purge_single_server(lcb_server_t *server,
         }
         packetsize = (lcb_uint32_t)sizeof(req) + ntohl(req.request.bodylen);
         if (stream->nbytes < packetsize) {
+            break;
+        }
+        if (min_nonstale && ct.start >= min_nonstale) {
             break;
         }
 
@@ -333,7 +336,6 @@ void lcb_purge_single_server(lcb_server_t *server,
         if (allocated) {
             free(packet);
         }
-
         ringbuffer_consumed(stream, packetsize);
         if (mirror) {
             ringbuffer_consumed(mirror, packetsize);
@@ -369,6 +371,11 @@ void lcb_purge_single_server(lcb_server_t *server,
     lcb_maybe_breakout(server->instance);
 }
 
+void lcb_purge_single_server(lcb_server_t *server, lcb_error_t error)
+{
+    purge_single_server(server, error, 0);
+}
+
 lcb_error_t lcb_failout_server(lcb_server_t *server,
                                lcb_error_t error)
 {
@@ -381,6 +388,18 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
     server->connection_ready = 0;
     lcb_connection_close(&server->connection);
     return error;
+}
+
+void lcb_timeout_server(lcb_server_t *server)
+{
+    hrtime_t min_valid, now;
+    now = gethrtime();
+    min_valid = now - server->connection.timeout.usec * 1000;
+    purge_single_server(server, LCB_ETIMEDOUT, min_valid);
+
+    if (server->connection_ready) {
+        lcb_connection_activate_timer(&server->connection);
+    }
 }
 
 /**

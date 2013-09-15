@@ -34,6 +34,10 @@ public:
         return instance;
     }
 
+    lcb_io_opt_t getIo() const {
+        return iops;
+    }
+
     void destroy();
 
     // Don't ever allow copying. C++0x allows = 0, though
