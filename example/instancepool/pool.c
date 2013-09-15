@@ -194,7 +194,7 @@ lcb_error_t pool_create(unsigned int size,
         io = options->v.v0.io;
         break;
     case 1:
-        io = options->v.v0.io;
+        io = options->v.v1.io;
         break;
     default:
         /*
