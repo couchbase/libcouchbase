@@ -252,6 +252,7 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     sprintf(ptr, "Host: %s:%s\r\n\r\n", conn->host, conn->port);
     connres = lcb_connection_start(conn, 1);
     if (connres == LCB_CONN_ERROR) {
+        lcb_connection_close(&instance->connection);
         return lcb_error_handler(instance, LCB_CONNECT_ERROR,
                                  "Couldn't schedule connection");
     }
