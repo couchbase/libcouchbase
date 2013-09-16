@@ -129,7 +129,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    if (instance->vbucket_config) {
+    if (!instance->vbucket_config) {
         return LCB_CLIENT_ETMPFAIL;
     }
 
