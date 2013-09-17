@@ -378,8 +378,8 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     lcb_set_store_callback(instance, set_callback);
 
     lcb_store_cmd_t scmd, *cmdp;
-    char *key = "i'm a key";
-    char *value = "a value";
+    const char *key = "i'm a key";
+    const char *value = "a value";
     cmdp = &scmd;
 
     removeKey(instance, key);
