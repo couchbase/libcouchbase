@@ -316,19 +316,19 @@ extern "C" {
      * Callback which is invoked when a certain handle has been connected
      * (or failed to connect)
      */
-    typedef void (*lcb_io_connect_cb)(lcb_sockdata_t *create_socket, int status);
+    typedef void (*lcb_io_connect_cb)(lcb_sockdata_t *socket, int status);
 
     /**
      * Called when a read request has been completed.
      */
-    typedef void (*lcb_io_read_cb)(lcb_sockdata_t *create_socket, lcb_ssize_t nr);
+    typedef void (*lcb_io_read_cb)(lcb_sockdata_t *socket, lcb_ssize_t nr);
 
-    typedef void (*lcb_io_error_cb)(lcb_sockdata_t *create_socket);
+    typedef void (*lcb_io_error_cb)(lcb_sockdata_t *socket);
 
     /**
      * Called when a write has been completed
      */
-    typedef void (*lcb_io_write_cb)(lcb_sockdata_t *create_socket,
+    typedef void (*lcb_io_write_cb)(lcb_sockdata_t *socket,
                                     lcb_io_writebuf_t *buf,
                                     int status);
 
@@ -389,7 +389,7 @@ extern "C" {
          * v0: connect()
          */
         int (*start_connect)(struct lcb_io_opt_st *iops,
-                             lcb_sockdata_t *create_socket,
+                             lcb_sockdata_t *socket,
                              const struct sockaddr *name,
                              unsigned int namelen,
                              lcb_io_connect_cb callback);
@@ -415,7 +415,7 @@ extern "C" {
          * v0: recvv()
          */
         int (*start_write)(struct lcb_io_opt_st *iops,
-                           lcb_sockdata_t *create_socket,
+                           lcb_sockdata_t *socket,
                            lcb_io_writebuf_t *buf,
                            lcb_io_write_cb callback);
 
@@ -424,7 +424,7 @@ extern "C" {
          * Request to read a bunch of data from the socket
          */
         int (*start_read)(struct lcb_io_opt_st *iops,
-                          lcb_sockdata_t *create_socket,
+                          lcb_sockdata_t *socket,
                           lcb_io_read_cb callback);
 
         /**
@@ -434,7 +434,7 @@ extern "C" {
          * v0: close()
          */
         unsigned int (*close_socket)(struct lcb_io_opt_st *iops,
-                                     lcb_sockdata_t *create_socket);
+                                     lcb_sockdata_t *socket);
 
         /**
          * Insert normal start/stop stuff here
