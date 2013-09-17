@@ -172,7 +172,7 @@ static lcb_error_t validate_hostname(const char *host, char **realhost)
     return LCB_SUCCESS;
 }
 
-static lcb_error_t setup_boostrap_hosts(lcb_t ret, const char *host)
+static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
 {
     const char *ptr = host;
     lcb_size_t num = 0;
@@ -354,7 +354,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
     obj->connection.data = obj;
 
-    err = setup_boostrap_hosts(obj, host);
+    err = setup_bootstrap_hosts(obj, host);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;
