@@ -73,6 +73,9 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
     if (rc != LCB_SUCCESS) {
         lcb_failout_server(c, rc);
     } else {
+        if (c->is_config_node) {
+            c->instance->weird_things = 0;
+        }
         lcb_sockrw_apply_want(&c->connection);
         c->inside_handler = 0;
     }
