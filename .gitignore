@@ -46,6 +46,7 @@
 /configure
 /debug/sizes
 /example/db/db
+/example/db/vb
 /example/debug/debug
 /example/instancepool/instancepool
 /example/libeventdirect/eventloop
