@@ -118,7 +118,7 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "An operation was not completed yet";
 
     case LCB_INVALID_USERNAME:
-        return "Username must match bucket name when authenticating.";
+        return "The administration user cannot be used for authenticating to the bucket, or did you just misspell the username?";
 
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";

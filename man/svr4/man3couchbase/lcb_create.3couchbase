@@ -2,12 +2,12 @@
 .\"     Title: lcb_create
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 08/30/2013
+.\"      Date: 09/19/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CREATE" "3couchbase" "08/30/2013" "\ \&" "\ \&"
+.TH "LCB_CREATE" "3couchbase" "09/19/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -79,9 +79,9 @@ The "version" member specifies how the "v" union should be interpreted\&. The on
 .sp
 Hosts may be specified as a list of hosts separated by \fI;\fR\&. If the Couchbase cluster is using a non\-standard port, it may be specified by appending ":port" per host\&. ex: "host1;host2:9000;host3"\&. The hostname parameter may alternatively be specified as an URI like: http://hostname:8091/pools\&. libcouchbase does not support any other schema than http, and the only supported path is "/pools"\&. If no value is specified for host, "localhost:8091" is used\&.
 .sp
-If specified user and password specifies the credentials used for authorization\&. It is recommended to use principle of least privilege when accessing the cluster, i\&.e\&. when you only need to perform data operations, you must use bucket\-level credentials instead of Administrator account (see examples 3 and 4)\&.
+If specified user and password specifies the credentials used for authorization\&. If you are trying to connect to a bucket (to perform data operations) you must use bucket\-level credentials instead of the administrator account\&. See examples 3 and 4\&.
 .sp
-If specified bucket specifies the bucket in the cluster to connect to\&. If not specified the "default" bucket is selected\&.
+If specified, bucket specifies the bucket in the cluster to connect to\&. If not specified the "default" bucket is selected\&.
 .sp
 If specified io specifies the io instance used for communications\&. See lcb_create_io_ops(3couchbase) for more information\&. If not specified a default io instance will be created\&.
 .SH "RETURN VALUES"

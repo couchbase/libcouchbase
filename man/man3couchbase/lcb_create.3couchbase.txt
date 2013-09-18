@@ -60,12 +60,11 @@ schema than http, and the only supported path is "/pools". If no value
 is specified for host, "localhost:8091" is used.
 
 If specified user and password specifies the credentials used for
-authorization. It is recommended to use principle of least privilege
-when accessing the cluster, i.e. when you only need to perform data
-operations, you must use bucket-level credentials instead of
-Administrator account (see examples 3 and 4).
+authorization. If you are trying to connect to a bucket (to perform
+data operations) you must use bucket-level credentials instead of
+the administrator account. See examples 3 and 4.
 
-If specified bucket specifies the bucket in the cluster to connect
+If specified, bucket specifies the bucket in the cluster to connect
 to. If not specified the "default" bucket is selected.
 
 If specified io specifies the io instance used for communications. See
