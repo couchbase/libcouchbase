@@ -575,7 +575,7 @@ static void handle_options(int argc, char **argv)
     getopt.addOption(new CommandLineOption('?', "help", false,
                                            "Print this help text"));
     getopt.addOption(new CommandLineOption('h', "host", true,
-                                           "Hostname to connect to"));
+                                           "Hostname(s) to connect to (use \"foo;bar\" to specify multiple)"));
     getopt.addOption(new CommandLineOption('b', "bucket", true,
                                            "Bucket to use"));
     getopt.addOption(new CommandLineOption('u', "user", true,
