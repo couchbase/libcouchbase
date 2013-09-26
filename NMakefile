@@ -107,13 +107,8 @@ tools_cbc_debug_OBJECTS = $(tools_cbc_CXX_SOURCES:.cc=.dobj) \
                           $(tools_cbc_C_SOURCES:.c=.dobj)
 
 
-example_pillowfight_pillowfight_CXX_SOURCES =  tools\commandlineparser.cc example\pillowfight\pillowfight.cc
-example_pillowfight_pillowfight_C_SOURCES = win32\getopt.c
-example_pillowfight_pillowfight_OBJECTS = $(example_pillowfight_pillowfight_CXX_SOURCES:.cc=.obj) \
-                              $(example_pillowfight_pillowfight_C_SOURCES:.c=.obj)
-
 all_OBJS=$(libcouchbase_la_OBJECTS) $(libcouchbase_la_debug_OBJECTS) \
-   $(tools_cbc_OBJECTS) $(example_pillowfight_pillowfight_OBJECTS)
+   $(tools_cbc_OBJECTS)
 
 all: $(lib_LTLIBRARIES) \
      libcouchbase.dll \
@@ -142,10 +137,6 @@ tools\cbc.exe: $(tools_cbc_OBJECTS) libcouchbase.dll
 
 tools\cbc_debug.exe: $(tools_cbc_debug_OBJECTS) libcouchbase_debug.dll
 	$(LD) $(LDFLAGS) /DEBUG -out:tools\cbc_debug.exe $(tools_cbc_debug_OBJECTS) \
-          libcouchbase_debug.lib ws2_32.lib
-
-example\pillowfight\pillowfight.exe: $(example_pillowfight_pillowfight_OBJECTS) libcouchbase_debug.dll
-	$(LD) $(LDFLAGS) -out:example\pillowfight\pillowfight.exe $(example_pillowfight_pillowfight_OBJECTS) \
           libcouchbase_debug.lib ws2_32.lib
 
 .SUFFIXES: .c .cc .obj .dobj .res
