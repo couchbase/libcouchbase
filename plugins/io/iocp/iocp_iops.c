@@ -465,7 +465,8 @@ static void iops_dtor(lcb_io_opt_t iobase)
             break;
 
         case LCBIOCP_ACTION_WRITE:
-            release_wbuf(iobase, &sd->sd_base, (lcb_io_writebuf_t *)ol);
+            release_wbuf(iobase, &sd->sd_base,
+                         (lcb_io_writebuf_t*)IOCP_WRITEOBJ_FROM_OVERLAPPED(ol));
             break;
 
         default:

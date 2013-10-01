@@ -111,9 +111,7 @@ static void handle_single_overlapped(iocp_t *io,
         break;
 
     case LCBIOCP_ACTION_WRITE:
-        u_ol.w =
-            (iocp_write_t *)
-            (((char *)lpOverlapped) - offsetof(iocp_write_t, ol_write));
+        u_ol.w = IOCP_WRITEOBJ_FROM_OVERLAPPED(lpOverlapped);
         /** Invoke the callback */
         u_ol.w->cb(&sd->sd_base, &u_ol.w->wbase, opstatus);
         break;

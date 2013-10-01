@@ -93,6 +93,9 @@ extern "C" {
         iocp_wbuf_state_t state;
     } iocp_write_t;
 
+    #define IOCP_WRITEOBJ_FROM_OVERLAPPED(ol) \
+        (iocp_write_t *)(((char *)ol) - offsetof(iocp_write_t, ol_write))
+
     typedef struct iocp_sockdata_st {
         lcb_sockdata_t sd_base;
         iocp_overlapped_t ol_read;
