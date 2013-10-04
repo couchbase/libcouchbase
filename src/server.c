@@ -185,6 +185,7 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         switch (req.request.opcode) {
         case PROTOCOL_BINARY_CMD_NOOP:
             break;
+        case CMD_GET_LOCKED:
         case PROTOCOL_BINARY_CMD_GAT:
         case PROTOCOL_BINARY_CMD_GATQ:
         case PROTOCOL_BINARY_CMD_GET:
@@ -193,6 +194,12 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
             TRACE_GET_END(req.request.opaque, ntohs(req.request.vbucket),
                           req.request.opcode, error, &resp.get);
             root->callbacks.get(root, ct.cookie, error, &resp.get);
+            break;
+        case CMD_UNLOCK_KEY:
+            setup_lcb_unlock_resp_t(&resp.unlock, keyptr, nkey);
+            TRACE_UNLOCK_END(req.request.opaque, ntohs(req.request.vbucket),
+                             error, &resp.unlock);
+            root->callbacks.unlock(root, ct.cookie, error, &resp.unlock);
             break;
         case PROTOCOL_BINARY_CMD_FLUSH:
             setup_lcb_flush_resp_t(&resp.flush, server->authority);
