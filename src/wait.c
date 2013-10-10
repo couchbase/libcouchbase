@@ -79,8 +79,7 @@ lcb_error_t lcb_wait(lcb_t instance)
         instance->wait = 0;
     }
 
-
-    return instance->last_error;
+    return LCB_SUCCESS;
 }
 
 /**
