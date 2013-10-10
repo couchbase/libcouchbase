@@ -639,6 +639,17 @@ extern "C" {
                               lcb_error_t err,
                               const char *errinfo);
 
+    /**
+     * Configuration received was invalid. Try to get
+     * the configuration again.
+     *
+     * Currently this is aliased to 'connerr', but may
+     * be split off later on
+     */
+    void lcb_instance_config_error(lcb_t instance,
+                                   lcb_error_t err,
+                                   const char *errinfo);
+
     lcb_error_t lcb_instance_start_connection(lcb_t instance);
 
     void lcb_vbucket_stream_v0_handler(lcb_socket_t sock, short which, void *arg);

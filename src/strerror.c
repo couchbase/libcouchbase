@@ -120,6 +120,10 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
     case LCB_INVALID_USERNAME:
         return "The administration user cannot be used for authenticating to the bucket, or did you just misspell the username?";
 
+    case LCB_CONFIG_CACHE_INVALID:
+        return "The contents of the configuration cache file were invalid. "
+                "Will attempt to grab configuration from the network";
+
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

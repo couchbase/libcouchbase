@@ -111,6 +111,12 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
     return LCB_BUSY;
 }
 
+void lcb_instance_config_error(lcb_t instance,
+                               lcb_error_t err,
+                               const char *errinfo)
+{
+    lcb_instance_connerr(instance, err, errinfo);
+}
 
 void lcb_instance_connerr(lcb_t instance,
                           lcb_error_t err,

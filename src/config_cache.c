@@ -105,9 +105,10 @@ void lcb_refresh_config_cache(lcb_t instance)
     }
 
     if (lcb_load_config_cache(instance) == -1) {
+        const char *msg = "Received bad configuration from cache file";
         /* try to bootstrap it */
         instance->compat.value.cached.updating = 1;
-        lcb_connect(instance);
+        lcb_instance_config_error(instance, LCB_CONFIG_CACHE_INVALID, msg);
     }
 
     instance->compat.value.cached.needs_update = 0;

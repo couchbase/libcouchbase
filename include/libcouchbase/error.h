@@ -213,13 +213,18 @@ extern "C" {
 
         /** Administrator account must not be used to access the data
          * in the bucket */
-        LCB_INVALID_USERNAME = 0x26
+        LCB_INVALID_USERNAME = 0x26,
+
+        /**
+         * The contents of the configuration cache file are invalid.
+         */
+        LCB_CONFIG_CACHE_INVALID = 0x27
 
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        ,LCB_MAX_ERROR_VAL = 0x27
+        ,LCB_MAX_ERROR_VAL = 0x28
 #endif
 
 
