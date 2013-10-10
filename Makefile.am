@@ -442,6 +442,7 @@ if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
 tests_unit_tests_SOURCES += \
                             tests/arithmetic-unit-test.cc \
+                            tests/configcache-unit-test.cc \
                             tests/durability-unit-test.cc \
                             tests/get-unit-test.cc \
                             tests/getopt-unit-tests.cc \

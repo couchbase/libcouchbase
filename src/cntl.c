@@ -289,6 +289,30 @@ static lcb_error_t randomize_bootstrap_hosts_handler(int mode,
     return LCB_SUCCESS;
 }
 
+static lcb_error_t config_cache_loaded_handler(int mode,
+                                               lcb_t instance,
+                                               int cmd,
+                                               void *arg)
+{
+    if (mode != LCB_CNTL_GET) {
+        return LCB_NOT_SUPPORTED;
+    }
+
+    if (cmd != LCB_CNTL_CONFIG_CACHE_LOADED) {
+        return LCB_EINTERNAL;
+    }
+
+    if (instance->compat.type == LCB_CACHED_CONFIG &&
+            instance->compat.value.cached.loaded) {
+        *(int *)arg = 1;
+
+    } else {
+        *(int *)arg = 0;
+    }
+
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -310,7 +334,8 @@ static ctl_handler handlers[] = {
     lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DLOPEN_DEBUG */
     timeout_common,  /* LCB_CNTL_CONFIGURATION_TIMEOUT */
     bummer_mode_handler,   /* LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT */
-    randomize_bootstrap_hosts_handler /* LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS */
+    randomize_bootstrap_hosts_handler /* LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS */,
+    config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */
 };
 
 

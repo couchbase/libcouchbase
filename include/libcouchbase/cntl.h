@@ -291,8 +291,23 @@ extern "C" {
      */
 #define LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS 0x14
 
+    /**
+     * Get. Determines whether the configuration cache (if used) was used.
+     * If the configuration cache is in use, the argument pointer
+     * will be set to a true value. If the configuration cache was not used,
+     * the argument pointer will be set to false.
+     *
+     * A false value may indicates that the client will need to load the
+     * configuration from the network. This may be caused by the following:
+     * - The configuration cache did not exist or was empty
+     * - The configuration cache contained stale information
+     *
+     * Arg: int*
+     */
+#define LCB_CNTL_CONFIG_CACHE_LOADED 0x15
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x15
+#define LCB_CNTL__MAX                    0x16
 
 
 #ifdef __cplusplus

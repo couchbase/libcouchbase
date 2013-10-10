@@ -90,6 +90,7 @@ int lcb_load_config_cache(lcb_t instance)
     if (!fail) {
         lcb_update_vbconfig(instance, config);
         instance->compat.value.cached.mtime = st.st_mtime;
+        instance->compat.value.cached.loaded = 1;
         return 0;
     }
 
@@ -108,6 +109,7 @@ void lcb_refresh_config_cache(lcb_t instance)
         const char *msg = "Received bad configuration from cache file";
         /* try to bootstrap it */
         instance->compat.value.cached.updating = 1;
+        instance->compat.value.cached.loaded = 0;
         lcb_instance_config_error(instance, LCB_CONFIG_CACHE_INVALID, msg);
     }
 

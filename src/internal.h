@@ -288,6 +288,7 @@ extern "C" {
                     char *cachefile;
                     int updating;
                     int needs_update;
+                    int loaded;
                 } cached;
             } value;
         } compat;

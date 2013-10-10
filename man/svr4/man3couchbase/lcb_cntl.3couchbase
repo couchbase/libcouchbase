@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: lcb_cntl
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
-.\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 09/10/2013
+.\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
+.\"      Date: 10/10/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CNTL" "3couchbase" "09/10/2013" "\ \&" "\ \&"
+.TH "LCB_CNTL" "3couchbase" "10/10/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -721,6 +721,70 @@ lcb_cntl(instance, LCB_CNTL_SET,
 .if n \{\
 .RE
 .\}
+.RE
+.PP
+\fBLCB_CNTL_CONFIG_CACHE_LOADED\fR \fI(int*)\fR
+.RS 4
+Determines whether the configuration cache (if used) was used\&. If the configuration cache is in use, the argument pointer will be set to a true value\&. If the configuration cache was not used, the argument pointer will be set to false\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+A false value may indicates that the client will need to load the
+configuration from the network\&. This may be caused by the following:
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The configuration cache did not exist or was empty
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+The configuration cache contained stale information
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+int is_loaded;
+lcb_cntl(instance, LCB_CNTL_GET,
+         LCB_CNTL_CONFIG_CACHE_LOADED, &is_loaded);
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+if (is_loaded) {
+    printf("Configuration cache saved us a trip to the config server\en");
+} else {
+    printf("We had to contact the configuration server for some reason\en");
+}
+.fi
+.if n \{\
+.RE
+.\}
+.RE
 .RE
 .SH "RETURN VALUE"
 .sp
