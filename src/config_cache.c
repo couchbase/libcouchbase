@@ -76,7 +76,7 @@ int lcb_load_config_cache(lcb_t instance)
     ringbuffer_write(&buffer, "", 1);
 
     end = strstr((char *)ringbuffer_get_read_head(&buffer),
-                 "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}");
+                 LCB_CONFIG_CACHE_MAGIC);
     if (end == NULL) {
         /* This in an incomplete read */
         return -1;

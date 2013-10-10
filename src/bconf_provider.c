@@ -344,8 +344,9 @@ static int grab_http_config(lcb_t instance, VBUCKET_CONFIG_HANDLE *config)
     if (instance->compat.type == LCB_CACHED_CONFIG) {
         FILE *fp = fopen(instance->compat.value.cached.cachefile, "w");
         if (fp) {
-            fprintf(fp, "%s{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}",
-                    instance->vbucket_stream.input.data);
+            fprintf(fp, "%s%s",
+                    instance->vbucket_stream.input.data,
+                    LCB_CONFIG_CACHE_MAGIC);
             fclose(fp);
         }
         instance->compat.value.cached.updating = 0;

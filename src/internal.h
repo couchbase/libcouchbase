@@ -59,6 +59,7 @@
 
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
+#define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
 
 #ifdef __cplusplus
 extern "C" {
