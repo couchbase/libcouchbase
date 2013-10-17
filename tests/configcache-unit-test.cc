@@ -21,8 +21,6 @@
 
 #include <cstdio>
 
-#define CONFIG_CACHE_FILENAME "test-cacheinfo"
-
 class ConfigCacheUnitTest : public MockUnitTest
 {
 protected:
@@ -38,10 +36,13 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
 
     struct lcb_cached_config_st cacheinfo;
 
-    memset(&cacheinfo, 0, sizeof(cacheinfo));
-    remove(CONFIG_CACHE_FILENAME);
+    // Get the filename:
+    char filename[L_tmpnam + 0];
+    ASSERT_TRUE(NULL != tmpnam(filename));
 
-    cacheinfo.cachefile = CONFIG_CACHE_FILENAME;
+    memset(&cacheinfo, 0, sizeof(cacheinfo));
+
+    cacheinfo.cachefile = filename;
     MockEnvironment::getInstance()->makeConnectParams(cacheinfo.createopt, NULL);
 
     err = lcb_create_compat(LCB_CACHED_CONFIG, &cacheinfo, &instance, NULL);
@@ -73,5 +74,5 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
     storeKey(instance, "a_key", "a_value");
 
     lcb_destroy(instance);
-    remove(CONFIG_CACHE_FILENAME);
+    remove(filename);
 }
