@@ -259,6 +259,25 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
     }
 }
 
+/**
+ * CONFIG REPLACEMENT AND PACKET RELOCATION.
+ *
+ * When we receive any sort of configuration update, all connections to all
+ * servers are immediately reset, and a new server array is allocated with
+ * new server structures.
+ *
+ * Before the old servers are destroyed, their buffers are relocated like so:
+ * SRC->PENDING -> DST->PENDING
+ * SRC->SENT    -> DST->PENDING
+ * SRC->COOKIES -> DST->PENDING_COOKIES
+ *
+ * where 'src' is the old server struct, and 'dst' is the new server struct
+ * which is the vBucket master for a given packet..
+ *
+ * When each server has connected, the code
+ * (server.c, lcb_server_connected) will move the pending commands over to the
+ * output commands.
+ */
 
 static int replace_config(lcb_t instance, VBUCKET_CONFIG_HANDLE next_config)
 {
