@@ -19,9 +19,9 @@ INSTALL=..\deps
 CC_NODEBUG = cl.exe /O2 /DNDEBUG /MD /LD /Z7
 CC_DEBUG = cl.exe /Od /D_DEBUG /RTC1 /Z7 /LDd /W3 /MDd
 # Include paths
-INCDIRS = /Iwin32 /Iinclude /Icontrib /I$(INSTALL)\include /Isrc /I.
+INCDIRS = /Iwin32 /Iinclude /Icontrib /Icontrib\cbsasl\include /I$(INSTALL)\include /Isrc /I.
 # Various preprocessor macros to define
-DEFINES = /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE /DLIBCOUCHBASE_INTERNAL=1
+DEFINES = /D_CRT_SECURE_NO_WARNINGS /D_CRT_NONSTDC_NO_DEPRECATE /DLIBCOUCHBASE_INTERNAL=1 /DBUILDING_CBSASL=1
 CFLAGS = $(INCDIRS) $(DEFINES) /nologo /W3 /EHsc /FD /c
 DLLLDFLAGS = /dll /version:1.1
 LDFLAGS =  /nologo /incremental:no /DEBUG /opt:ref,icf /LIBPATH:$(INSTALL)\lib
@@ -34,6 +34,10 @@ bin_PROGRAMS = tools\cbc.exe tools\cbc_debug.exe
 example_PROGRAMS =
 
 libcouchbase_SOURCES = \
+    contrib\cbsasl\src\client.c \
+    contrib\cbsasl\src\common.c \
+    contrib\cbsasl\src\cram-md5\hmac.c \
+    contrib\cbsasl\src\cram-md5\md5.c \
     contrib\http_parser\http_parser.c \
     contrib\libvbucket\cJSON.c \
     contrib\libvbucket\crc32.c \
@@ -70,7 +74,6 @@ libcouchbase_SOURCES = \
     src\connect.c \
     src\readwrite.c \
     src\iofactory.c \
-    src\isasl.c \
     src\list.c \
     src\observe.c \
     src\packet.c \

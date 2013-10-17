@@ -786,7 +786,7 @@ static void sasl_auth_response_handler(lcb_server_t *server,
     lcb_uint16_t ret = ntohs(res->response.status);
     if (ret == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         if (server->sasl_conn) {
-            sasl_dispose(&server->sasl_conn);
+            cbsasl_dispose(&server->sasl_conn);
         }
         server->sasl_conn = NULL;
         lcb_server_connected(server);

@@ -427,7 +427,7 @@ void lcb_server_destroy(lcb_server_t *server)
     }
 
     if (server->sasl_conn != NULL) {
-        sasl_dispose(&server->sasl_conn);
+        cbsasl_dispose(&server->sasl_conn);
         server->sasl_conn = NULL;
     }
 

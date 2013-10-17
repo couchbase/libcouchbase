@@ -123,7 +123,7 @@ static void start_sasl_auth_server(lcb_server_t *server)
         lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
         return;
     }
-    if (sasl_client_start(server->sasl_conn, mechlist,
+    if (cbsasl_client_start(server->sasl_conn, mechlist,
                           NULL, &data, &len, &chosenmech) != SASL_OK) {
         free(mechlist);
         lcb_error_handler(server->instance, LCB_AUTH_ERROR,
@@ -185,10 +185,10 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
     }
 
     if (!sasl_in_progress) {
-        int sasl_ok = sasl_client_new("couchbase", conn->host,
-                                      nistrs.local, nistrs.remote,
-                                      server->instance->sasl.callbacks, 0,
-                                      &server->sasl_conn);
+        int sasl_ok = cbsasl_client_new("couchbase", conn->host,
+                                         nistrs.local, nistrs.remote,
+                                         server->instance->sasl.callbacks, 0,
+                                         &server->sasl_conn);
         lcb_assert(sasl_ok == SASL_OK);
     }
 

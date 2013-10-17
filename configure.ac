@@ -75,8 +75,8 @@ ac_cv_func_realloc_0_nonnull=yes
 
 COUCHBASE_GENERIC_COMPILER(c99)
 
-AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib"
-AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib"
+AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
+AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
 CHANGESET=GIT_CHANGESET
 AC_SUBST(CHANGESET)
 
@@ -365,60 +365,6 @@ AC_CACHE_CHECK([for libyajl], [ac_cv_have_libyajl2],
 AM_CONDITIONAL(HAVE_LIBYAJL2, [test "x${ac_cv_have_libyajl2}" = "xyes"])
 AS_IF([test "x${ac_cv_have_libyajl2}" = "xyes"],
       [AC_DEFINE([HAVE_LIBYAJL2], [1], [We have libyajl2])])
-
-AC_ARG_ENABLE([system-libsasl],
-    [AS_HELP_STRING([--enable-system-libsasl],
-                    [Use libsasl installed on the system
-                    @<:@default=off@:>@])],
-    [ac_cv_system_libsasl="$enableval"])
-
-AS_IF([test "x${ac_cv_system_libsasl}" = "xyes"],
-      [
-         LIBSASL=-lsasl
-         dnl Check for sasl
-         AC_CACHE_CHECK([for libsasl], [ac_cv_have_libsasl],
-           [ saved_libs="$LIBS"
-             LIBS=-lsasl
-             AC_TRY_LINK([
-               #include <stdlib.h>
-               #include <sasl/sasl.h>
-                     ],[
-               sasl_client_init(NULL);
-                     ],[
-               ac_cv_have_libsasl="yes"
-                     ], [
-               ac_cv_have_libsasl="no"
-               ])
-             LIBS="$saved_libs"
-           ])
-
-         AS_IF([test "$ac_cv_have_libsasl" = no], [
-           AC_CACHE_CHECK([for libsasl2], [ac_cv_have_libsasl2],
-             [ saved_libs="$LIBS"
-               LIBS=-lsasl2
-               AC_TRY_LINK([
-                 #include <stdlib.h>
-                 #include <sasl/sasl.h>
-                       ],[
-                 sasl_client_init(NULL);
-                       ],[
-                 ac_cv_have_libsasl2="yes"
-                       ], [
-                 ac_cv_have_libsasl2="no"
-                 ])
-               LIBS="$saved_libs"
-             ])
-           AS_IF([test "x${ac_cv_have_libsasl2}" = "xno"],
-               [AC_MSG_ERROR(Failed to locate a usable sasl library)])
-           LIBSASL=-lsasl2
-         ])
-         AC_DEFINE([HAVE_SYSTEM_LIBSASL], [1], [Use system internal sasl])
-      ])
-
-AM_CONDITIONAL(HAVE_SYSTEM_LIBSASL,
-               [test "x${ac_cv_system_libsasl}" = "xyes"])
-
-AC_SUBST(LIBSASL)
 
 AC_CACHE_CHECK([for htonll], [ac_cv_have_htonll],
     [AC_TRY_LINK([

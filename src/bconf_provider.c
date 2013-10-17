@@ -42,7 +42,7 @@ static int sasl_get_username(void *context, int id, const char **result,
                              unsigned int *len)
 {
     lcb_t instance = context;
-    if (!context || !result || (id != SASL_CB_USER && id != SASL_CB_AUTHNAME)) {
+    if (!context || !result || (id != CBSASL_CB_USER && id != CBSASL_CB_AUTHNAME)) {
         return SASL_BADPARAM;
     }
 
@@ -63,11 +63,11 @@ static int sasl_get_username(void *context, int id, const char **result,
  * @param psecret where to store the result (OUT)
  * @return SASL_OK if succes
  */
-static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
-                             sasl_secret_t **psecret)
+static int sasl_get_password(cbsasl_conn_t *conn, void *context, int id,
+                             cbsasl_secret_t **psecret)
 {
     lcb_t instance = context;
-    if (!conn || ! psecret || id != SASL_CB_PASS || instance == NULL) {
+    if (!conn || ! psecret || id != CBSASL_CB_PASS || instance == NULL) {
         return SASL_BADPARAM;
     }
 
@@ -78,18 +78,18 @@ static int sasl_get_password(sasl_conn_t *conn, void *context, int id,
 static lcb_error_t setup_sasl_params(lcb_t instance)
 {
     const char *passwd;
-    sasl_callback_t sasl_callbacks[4];
+    cbsasl_callback_t sasl_callbacks[4];
 
-    sasl_callbacks[0].id = SASL_CB_USER;
+    sasl_callbacks[0].id = CBSASL_CB_USER;
     sasl_callbacks[0].proc = (int( *)(void)) &sasl_get_username;
     sasl_callbacks[0].context = instance;
-    sasl_callbacks[1].id = SASL_CB_AUTHNAME;
+    sasl_callbacks[1].id = CBSASL_CB_AUTHNAME;
     sasl_callbacks[1].proc = (int( *)(void)) &sasl_get_username;
     sasl_callbacks[1].context = instance;
-    sasl_callbacks[2].id = SASL_CB_PASS;
+    sasl_callbacks[2].id = CBSASL_CB_PASS;
     sasl_callbacks[2].proc = (int( *)(void)) &sasl_get_password;
     sasl_callbacks[2].context = instance;
-    sasl_callbacks[3].id = SASL_CB_LIST_END;
+    sasl_callbacks[3].id = CBSASL_CB_LIST_END;
     sasl_callbacks[3].proc = NULL;
     sasl_callbacks[3].context = NULL;
 
@@ -104,7 +104,7 @@ static lcb_error_t setup_sasl_params(lcb_t instance)
 
         pwlen = (unsigned long)strlen(passwd);
         maxlen = sizeof(instance->sasl.password.buffer) -
-                 offsetof(sasl_secret_t, data);
+                 offsetof(cbsasl_secret_t, data);
 
         instance->sasl.password.secret.len = pwlen;
 

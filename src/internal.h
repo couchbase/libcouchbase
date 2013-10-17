@@ -32,11 +32,7 @@
 #include <ep-engine/command_ids.h>
 #include <libvbucket/vbucket.h>
 #include <libcouchbase/couchbase.h>
-#ifdef HAVE_SYSTEM_LIBSASL
-#include <sasl/sasl.h>
-#else
-#include "isasl.h"
-#endif
+#include "cbsasl/cbsasl.h"
 
 #include "http_parser/http_parser.h"
 #include "ringbuffer.h"
@@ -246,10 +242,10 @@ extern "C" {
         struct {
             const char *name;
             union {
-                sasl_secret_t secret;
+                cbsasl_secret_t secret;
                 char buffer[256];
             } password;
-            sasl_callback_t callbacks[4];
+            cbsasl_callback_t callbacks[4];
         } sasl;
 
         /** The set of the timers */
@@ -334,7 +330,7 @@ extern "C" {
         ringbuffer_t pending_cookies;
 
         /** The SASL object used for this server */
-        sasl_conn_t *sasl_conn;
+        cbsasl_conn_t *sasl_conn;
         /** Is this server in a connected state (done with sasl auth) */
         int connection_ready;
 

@@ -309,10 +309,6 @@ lcb_error_t lcb_create(lcb_t *instance,
         return LCB_INVALID_USERNAME;
     }
 
-    if (sasl_client_init(NULL) != SASL_OK) {
-        return LCB_EINTERNAL;
-    }
-
     if ((obj = calloc(1, sizeof(*obj))) == NULL) {
         return LCB_CLIENT_ENOMEM;
     }

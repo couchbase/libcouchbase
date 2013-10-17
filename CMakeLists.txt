@@ -93,6 +93,7 @@ SET(LCB_INSTDIR ${PROJECT_BINARY_DIR}/${lcb_package_name})
 SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
                            ${SOURCE_ROOT}/contrib
+                           ${SOURCE_ROOT}/contrib/cbsasl/include
                            ${SOURCE_ROOT}/plugins/io/iocp
                            ${SOURCE_ROOT}/src
                            ${SOURCE_ROOT}/win32
@@ -139,6 +140,10 @@ ADD_LIBRARY(lcbutils STATIC
             win32/getopt.c)
 
 ADD_LIBRARY(couchbase SHARED
+            contrib/cbsasl/src/client.c
+            contrib/cbsasl/src/common.c
+            contrib/cbsasl/src/cram-md5/hmac.c
+            contrib/cbsasl/src/cram-md5/md5.c
             contrib/http_parser/http_parser.c
             contrib/libvbucket/crc32.c
             contrib/libvbucket/ketama.c
@@ -169,7 +174,6 @@ ADD_LIBRARY(couchbase SHARED
             src/connect.c
             src/readwrite.c
             src/iofactory.c
-            src/isasl.c
             src/observe.c
             src/packet.c
             src/remove.c
@@ -191,6 +195,7 @@ ADD_LIBRARY(couchbase SHARED
 
 SET_TARGET_PROPERTIES(couchbase PROPERTIES
                       COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
+ADD_DEFINITIONS(-DBUILDING_CBSASL=1)
 ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")

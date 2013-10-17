@@ -31,7 +31,7 @@ lib_LTLIBRARIES = libcouchbase.la
 if BUILD_LIBCOUCHBASE_DEBUG
 lib_LTLIBRARIES += libcouchbase_debug.la
 endif
-noinst_LTLIBRARIES = libhttpparser.la libvbucket.la libketama.la libcrc32.la
+noinst_LTLIBRARIES = libcbsasl.la libcrc32.la libhttpparser.la libketama.la libvbucket.la
 noinst_PROGRAMS = debug/sizes
 bin_PROGRAMS =
 check_PROGRAMS =
@@ -101,6 +101,21 @@ libhttpparser_la_SOURCES = \
                         contrib/http_parser/http_parser.h
 libhttpparser_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
 libhttpparser_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
+
+libcbsasl_la_SOURCES = \
+                       contrib/cbsasl/include/cbsasl/cbsasl.h \
+                       contrib/cbsasl/include/cbsasl/visibility.h \
+                       contrib/cbsasl/src/client.c \
+                       contrib/cbsasl/src/common.c \
+                       contrib/cbsasl/src/config.h \
+                       contrib/cbsasl/src/cram-md5/hmac.c \
+                       contrib/cbsasl/src/cram-md5/hmac.h \
+                       contrib/cbsasl/src/cram-md5/md5.c \
+                       contrib/cbsasl/src/cram-md5/md5.h \
+                       contrib/cbsasl/src/util.h
+
+libcbsasl_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
+libcbsasl_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS) -DBUILDING_CBSASL=1 -I${top_srcdir}/contrib/cbsasl/src
 
 libvbucket_la_SOURCES = \
                         include/libvbucket/vbucket.h \
@@ -198,14 +213,10 @@ libcouchbase_la_SOURCES = \
                         src/verbosity.c \
                         src/wait.c
 
-if !HAVE_SYSTEM_LIBSASL
-libcouchbase_la_SOURCES += src/isasl.c src/isasl.h
-endif
-
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -DLCB_LIBDIR="\"${libdir}\""
-libcouchbase_la_DEPENDENCIES=libhttpparser.la libvbucket.la
-libcouchbase_la_LIBADD=libhttpparser.la libvbucket.la $(LIBSASL)
+libcouchbase_la_DEPENDENCIES=libcbsasl.la libhttpparser.la libvbucket.la
+libcouchbase_la_LIBADD=libcbsasl.la libhttpparser.la libvbucket.la
 
 if LIBCOUCHBASE_ENABLE_TRACE
 libcouchbase_la_SOURCES += \
