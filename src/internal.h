@@ -296,6 +296,13 @@ extern "C" {
         /* if non-zero, skip nodes in list that seems like not
          * configured or doesn't have the bucket needed */
         int bummer;
+
+        /**
+         * Cached ringbuffer objects for 'purge_implicit_responses'
+         */
+        ringbuffer_t purged_buf;
+        ringbuffer_t purged_cookies;
+
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
 #endif

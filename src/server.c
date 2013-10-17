@@ -552,19 +552,74 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
                                         int all)
 {
     protocol_binary_request_header req;
-    lcb_size_t nr =  ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
+
+    /** Instance level allocated buffers */
+    ringbuffer_t *cmdlog, *cookies;
+
+    lcb_size_t nr = ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
+
     /* There should at _LEAST_ be _ONE_ message in here if we're not
      * trying to purge _ALL_ of the messages in the queue
      */
     if (all && nr == 0) {
         return 0;
     }
+
+
+    /**
+     * Reading the command log is not re-entrant safe, as an additional
+     * command to the same server may result in the command log being modified.
+     * To this end, we must first buffer all the commands in a separate
+     * ringbuffer (or simple buffer) for that matter, and only *then*
+     * invoke the callbacks
+     */
     lcb_assert(nr == sizeof(req));
+
+    if (req.request.opaque >= seqno) {
+        return 0;
+    }
+
+    cmdlog = &c->instance->purged_buf;
+    cookies = &c->instance->purged_cookies;
+    ringbuffer_reset(cmdlog);
+    ringbuffer_reset(cookies);
+
+    /**
+     * Move all the commands we want to purge into the relevant ("local") buffers.
+     * We will later read from these local buffers
+     */
     while (req.request.opaque < seqno) {
+        lcb_size_t packetsize = ntohl(req.request.bodylen) + (lcb_uint32_t)sizeof(req);
+
+        ringbuffer_memcpy(cmdlog, &c->cmd_log, packetsize);
+        ringbuffer_consumed(&c->cmd_log, packetsize);
+
+
+        ringbuffer_memcpy(cookies, &c->output_cookies, sizeof(struct lcb_command_data_st));
+        ringbuffer_consumed(&c->output_cookies, sizeof(struct lcb_command_data_st));
+
+        nr = ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req.bytes));
+
+        if (!nr) {
+            break;
+        }
+
+        lcb_assert(nr == sizeof(req));
+    }
+
+    nr = ringbuffer_peek(cmdlog, req.bytes, sizeof(req));
+    lcb_assert(nr == sizeof(req));
+
+    if (!all) {
+        lcb_assert(c->cmd_log.nbytes);
+    }
+
+    do {
         struct lcb_command_data_st ct;
-        char *packet = c->cmd_log.read_head;
+        char *packet = cmdlog->read_head;
         lcb_size_t packetsize = ntohl(req.request.bodylen) + (lcb_uint32_t)sizeof(req);
         char *keyptr;
+
         union {
             lcb_get_resp_t get;
             lcb_store_resp_t store;
@@ -574,21 +629,22 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
             lcb_arithmetic_resp_t arithmetic;
             lcb_observe_resp_t observe;
         } resp;
-        nr = ringbuffer_read(&c->output_cookies, &ct, sizeof(ct));
+
+        nr = ringbuffer_read(cookies, &ct, sizeof(ct));
         lcb_assert(nr == sizeof(ct));
 
         if (c->instance->histogram) {
             lcb_record_metrics(c->instance, end - ct.start, req.request.opcode);
         }
 
-        if (!ringbuffer_is_continous(&c->cmd_log, RINGBUFFER_READ, packetsize)) {
+        if (!ringbuffer_is_continous(cmdlog, RINGBUFFER_READ, packetsize)) {
             packet = malloc(packetsize);
             if (packet == NULL) {
                 lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
                 return -1;
             }
 
-            nr = ringbuffer_peek(&c->cmd_log, packet, packetsize);
+            nr = ringbuffer_peek(cmdlog, packet, packetsize);
             if (nr != packetsize) {
                 lcb_error_handler(c->instance, LCB_EINTERNAL, NULL);
                 free(packet);
@@ -621,19 +677,19 @@ int lcb_server_purge_implicit_responses(lcb_server_t *c,
         }
         }
 
-        if (packet != c->cmd_log.read_head) {
+        if (packet != cmdlog->read_head) {
             free(packet);
         }
-        ringbuffer_consumed(&c->cmd_log, packetsize);
-        nr =  ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
-        /* The current message should also be there (unless we tried to
-         * purge _all_ of them
-         */
-        if (all && nr == 0) {
+
+        ringbuffer_consumed(cmdlog, packetsize);
+        nr = ringbuffer_peek(cmdlog, req.bytes, sizeof(req));
+
+        if (nr == 0) {
             return 0;
         }
+
         lcb_assert(nr == sizeof(req));
-    }
+    } while (1); /* CONSTCOND */
 
     return 0;
 }
