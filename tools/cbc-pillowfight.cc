@@ -128,6 +128,10 @@ public:
         prefix.assign(val);
     }
 
+    std::string getKeyPrefix() {
+        return prefix;
+    }
+
     void setNumThreads(uint32_t val) {
         numThreads = val;
     }
@@ -497,7 +501,7 @@ private:
 
         char buffer[21];
         snprintf(buffer, sizeof(buffer), "%020d", ii);
-        key.assign(buffer);
+        key.assign(config.getKeyPrefix() + buffer);
     }
 
     uint32_t seqno[8192];
