@@ -779,11 +779,72 @@ static void version_response_handler(lcb_server_t *server,
 
 }
 
+static void sasl_list_mech_response_handler(lcb_server_t *server,
+                                            struct lcb_command_data_st *command_data,
+                                            protocol_binary_response_header *res)
+{
+    const char *chosenmech;
+    char *mechlist;
+    const char *data;
+    unsigned int ndata;
+    protocol_binary_request_no_extras req;
+    lcb_size_t bodysize;
+    lcb_uint16_t ret = ntohs(res->response.status);
+    lcb_connection_t conn = &server->connection;
+
+    if (ret != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        lcb_error_handler(server->instance, LCB_AUTH_ERROR,
+                          "SASL authentication failed: "
+                          "bad SASL_LIST_MECH status code");
+        return;
+    }
+
+    bodysize = ntohl(res->response.bodylen);
+    mechlist = calloc(bodysize + 1, sizeof(char));
+    if (mechlist == NULL) {
+        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+        return;
+    }
+    memcpy(mechlist, (const char *)(res + 1), bodysize);
+    if (cbsasl_client_start(server->sasl_conn, mechlist,
+                          NULL, &data, &ndata, &chosenmech) != SASL_OK) {
+        free(mechlist);
+        lcb_error_handler(server->instance, LCB_AUTH_ERROR,
+                          "Unable to start sasl client");
+        return;
+    }
+    free(mechlist);
+
+    server->sasl_nmech = strlen(chosenmech);
+    server->sasl_mech = strdup(chosenmech);
+    if (server->sasl_mech == NULL) {
+        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+        return;
+    }
+
+    memset(&req, 0, sizeof(req));
+    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_AUTH;
+    req.message.header.request.keylen = ntohs((lcb_uint16_t)server->sasl_nmech);
+    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    req.message.header.request.bodylen = ntohl((lcb_uint32_t)(server->sasl_nmech + ndata));
+
+    lcb_server_buffer_start_packet(server, command_data->cookie, conn->output,
+                                   &server->output_cookies,
+                                   req.bytes, sizeof(req.bytes));
+    lcb_server_buffer_write_packet(server, conn->output,
+                                   server->sasl_mech, server->sasl_nmech);
+    lcb_server_buffer_write_packet(server, conn->output, data, ndata);
+    lcb_server_buffer_end_packet(server, conn->output);
+    lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 0);
+}
+
 static void sasl_auth_response_handler(lcb_server_t *server,
                                        struct lcb_command_data_st *command_data,
                                        protocol_binary_response_header *res)
 {
     lcb_uint16_t ret = ntohs(res->response.status);
+
     if (ret == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         if (server->sasl_conn) {
             cbsasl_dispose(&server->sasl_conn);
@@ -791,10 +852,31 @@ static void sasl_auth_response_handler(lcb_server_t *server,
         server->sasl_conn = NULL;
         lcb_server_connected(server);
     } else if (ret == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
-        /* I don't know how to step yet ;-) */
-        lcb_error_handler(server->instance,
-                          LCB_NOT_SUPPORTED,
-                          "We don't support sasl authentication that requires \"SASL STEP\" yet");
+        protocol_binary_request_no_extras req;
+        lcb_connection_t conn = &server->connection;
+        const char *out, *bytes = (const char *)res + sizeof(res->bytes);
+        unsigned int nout, nbytes = ntohl(res->response.bodylen);
+
+        if (cbsasl_client_step(server->sasl_conn, bytes, nbytes,
+                               NULL, &out, &nout) != SASL_CONTINUE) {
+            lcb_error_handler(server->instance, LCB_AUTH_ERROR,
+                              "Unable to perform SASL STEP");
+            return;
+        }
+        memset(&req, 0, sizeof(req));
+        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SASL_STEP;
+        req.message.header.request.keylen = ntohs((lcb_uint16_t)server->sasl_nmech);
+        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        req.message.header.request.bodylen = ntohl((lcb_uint32_t)(server->sasl_nmech + nout));
+        lcb_server_buffer_start_packet(server, command_data->cookie, conn->output,
+                                       &server->output_cookies,
+                                       req.bytes, sizeof(req.bytes));
+        lcb_server_buffer_write_packet(server, conn->output,
+                                       server->sasl_mech, server->sasl_nmech);
+        lcb_server_buffer_write_packet(server, conn->output, out, nout);
+        lcb_server_buffer_end_packet(server, conn->output);
+        lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 0);
     } else {
         lcb_error_handler(server->instance, LCB_AUTH_ERROR,
                           "SASL authentication failed");
@@ -809,20 +891,19 @@ static void sasl_step_response_handler(lcb_server_t *server,
                                        struct lcb_command_data_st *command_data,
                                        protocol_binary_response_header *res)
 {
-    (void)server;
-    (void)res;
-    (void)command_data;
+    lcb_uint16_t ret = ntohs(res->response.status);
 
-    /* I don't have sasl step support yet ;-) */
-    lcb_error_handler(server->instance, LCB_NOT_SUPPORTED,
-                      "SASL AUTH CONTINUE not supported yet");
-
-#if 0
-    /* I should put the server to the notification! */
-    if (server->instance->vbucket_state_listener != NULL) {
-        server->instance->vbucket_state_listener(server);
+    if (ret == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        if (server->sasl_conn) {
+            cbsasl_dispose(&server->sasl_conn);
+        }
+        server->sasl_conn = NULL;
+        lcb_server_connected(server);
+    } else {
+        lcb_error_handler(server->instance, LCB_AUTH_ERROR,
+                          "SASL authentication failed");
     }
-#endif
+    (void)command_data;
 }
 
 static void touch_response_handler(lcb_server_t *server,
@@ -1131,6 +1212,9 @@ int lcb_dispatch_response(lcb_server_t *c,
         arithmetic_response_handler(c, ct, (void *)header);
         break;
 
+    case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
+        sasl_list_mech_response_handler(c, ct, (void*)header);
+        break;
     case PROTOCOL_BINARY_CMD_SASL_AUTH:
         sasl_auth_response_handler(c, ct, (void *)header);
         break;

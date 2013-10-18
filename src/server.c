@@ -434,6 +434,7 @@ void lcb_server_destroy(lcb_server_t *server)
     /* Delete the event structure itself */
     lcb_connection_cleanup(&server->connection);
 
+    free(server->sasl_mech);
     free(server->rest_api_server);
     free(server->couch_api_base);
     free(server->authority);
@@ -447,11 +448,6 @@ void lcb_server_destroy(lcb_server_t *server)
 
 /**
  * Start the SASL auth for a given server.
- *
- * Neither the server or the client supports anything else than
- * plain SASL authentication, so lets just try it. If someone change
- * the list of supported SASL mechanisms they need to update the client
- * anyway.
  *
  * @param server the server object to auth agains
  */

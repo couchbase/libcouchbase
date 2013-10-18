@@ -331,6 +331,9 @@ extern "C" {
 
         /** The SASL object used for this server */
         cbsasl_conn_t *sasl_conn;
+        /* name of the chosen SASL mechanism */
+        char *sasl_mech;
+        lcb_size_t sasl_nmech;
         /** Is this server in a connected state (done with sasl auth) */
         int connection_ready;
 
