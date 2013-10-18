@@ -222,7 +222,7 @@ IF(NOT LCB_NO_TESTS)
             tests/behavior-unit-tests.cc
             tests/ccbc_103.cc
             tests/cluster-unit-tests.cc
-            tests/config-cache-unit-test.cc
+            tests/configcache-unit-test.cc
             tests/durability-unit-test.cc
             tests/get-unit-test.cc
             tests/getopt-unit-tests.cc
