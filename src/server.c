@@ -394,6 +394,19 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
 
     server->connection_ready = 0;
     lcb_connection_close(&server->connection);
+
+    if (server->sasl_conn) {
+        cbsasl_dispose(&server->sasl_conn);
+        server->sasl_conn = NULL;
+    }
+
+    if (server->sasl_mech) {
+        free(server->sasl_mech);
+        server->sasl_mech = NULL;
+    }
+
+    server->sasl_nmech = 0;
+
     return error;
 }
 
