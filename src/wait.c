@@ -79,7 +79,11 @@ lcb_error_t lcb_wait(lcb_t instance)
         instance->wait = 0;
     }
 
-    return LCB_SUCCESS;
+    if (instance->vbucket_config) {
+        return LCB_SUCCESS;
+    }
+
+    return instance->last_error;
 }
 
 /**
