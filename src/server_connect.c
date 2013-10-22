@@ -229,5 +229,9 @@ void lcb_server_connect(lcb_server_t *server)
     conn->completion.error = lcb_server_v1_error_handler;
     conn->timeout.usec = server->instance->operation_timeout;
 
+    if (lcb_connection_reset_buffers(&server->connection) != LCB_SUCCESS) {
+        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+    }
+
     lcb_connection_start(conn, LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
 }
