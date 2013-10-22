@@ -316,9 +316,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
 
-    // TODO: Make mock work with this assertion. hiccupNodes doesn't seem
-    // to reset itself?
-    // ASSERT_EQ(LCB_KEY_ENOENT, info.last_err);
+    ASSERT_EQ(LCB_KEY_ENOENT, info.last_err);
 
     lcb_destroy(instance);
     MockEnvironment::destroySpecial(mock);
