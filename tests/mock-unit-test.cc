@@ -782,3 +782,51 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     ASSERT_STREQ(bytes.c_str(), val.c_str());
     free(rv.bytes);
 }
+
+TEST_F(MockUnitTest, testSaslMechs)
+{
+    // Ensure our SASL mech listing works.
+    SKIP_UNLESS_MOCK();
+
+    const char *argv[] = { "--buckets", "protected:secret:couchbase", NULL };
+
+    lcb_t instance;
+    struct lcb_create_st crParams;
+    MockEnvironment *protectedEnv = MockEnvironment::createSpecial(argv);
+    protectedEnv->makeConnectParams(crParams, NULL);
+    crParams.v.v0.user = "protected";
+    crParams.v.v0.passwd = "secret";
+    crParams.v.v0.bucket = "protected";
+
+    lcb_error_t err = lcb_create(&instance, &crParams);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    err = lcb_connect(instance);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance);
+
+    // Force our SASL mech
+    err = lcb_cntl(instance, LCB_CNTL_SET,
+                   LCB_CNTL_FORCE_SASL_MECH, (void *)"blah");
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    Item itm("key", "value");
+    KVOperation kvo(&itm);
+
+    kvo.allowableErrors.insert(LCB_SASLMECH_UNAVAILABLE);
+    kvo.allowableErrors.insert(LCB_ETIMEDOUT);
+    kvo.store(instance);
+
+    ASSERT_NE(kvo.globalErrors.find(LCB_SASLMECH_UNAVAILABLE),
+              kvo.globalErrors.end());
+
+    err = lcb_cntl(instance, LCB_CNTL_SET,
+                   LCB_CNTL_FORCE_SASL_MECH, (void *)"PLAIN");
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    kvo.clear();
+    kvo.store(instance);
+
+    lcb_destroy(instance);
+    MockEnvironment::destroySpecial(protectedEnv);
+}

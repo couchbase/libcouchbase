@@ -105,6 +105,9 @@ struct KVOperation {
     /** Acceptable errors during callback */
     std::set<lcb_error_t> allowableErrors;
 
+    /** Errors received from error handler */
+    std::set<lcb_error_t> globalErrors;
+
     void assertOk(lcb_error_t err);
 
     KVOperation(const Item *request) {
@@ -116,6 +119,7 @@ struct KVOperation {
         result = Item();
         callCount = 0;
         allowableErrors.clear();
+        globalErrors.clear();
     }
 
     void store(lcb_t instance);
@@ -127,9 +131,13 @@ struct KVOperation {
         assertOk(error);
     }
 
+    static void handleInstanceError(lcb_t, lcb_error_t, const char *);
+
 private:
     void enter(lcb_t);
     void leave(lcb_t);
+    const void *oldCookie;
+
     struct {
         lcb_get_callback get;
         lcb_store_callback store;

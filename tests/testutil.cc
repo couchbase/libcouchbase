@@ -23,13 +23,10 @@
  * Helper functions
  */
 extern "C" {
-    static void kvoErrorHandler(lcb_t, lcb_error_t err, const char *msg)
+    static void kvoErrorHandler(lcb_t instance,
+                                lcb_error_t err, const char *msg)
     {
-        std::cerr << "Got error: " << std::dec << err;
-        if (msg) {
-            std::cerr << msg;
-        }
-        std::cerr << std::endl;
+        KVOperation::handleInstanceError(instance, err, msg);
     }
 
     static void storeKvoCallback(lcb_t, const void *cookie,
@@ -63,12 +60,23 @@ extern "C" {
     }
 }
 
+void KVOperation::handleInstanceError(lcb_t instance, lcb_error_t err,
+                                      const char *)
+{
+    KVOperation *kvo = reinterpret_cast<KVOperation *>(
+            const_cast<void*>(lcb_get_cookie(instance)));
+    kvo->assertOk(err);
+    kvo->globalErrors.insert(err);
+}
+
 void KVOperation::enter(lcb_t instance)
 {
     callbacks.err = lcb_set_error_callback(instance, kvoErrorHandler);
     callbacks.get = lcb_set_get_callback(instance, getKvoCallback);
     callbacks.rm = lcb_set_remove_callback(instance, removeKvoCallback);
     callbacks.store = lcb_set_store_callback(instance, storeKvoCallback);
+    oldCookie = lcb_get_cookie(instance);
+    lcb_set_cookie(instance, this);
 }
 
 void KVOperation::leave(lcb_t instance)
@@ -77,6 +85,7 @@ void KVOperation::leave(lcb_t instance)
     lcb_set_get_callback(instance, callbacks.get);
     lcb_set_remove_callback(instance, callbacks.rm);
     lcb_set_store_callback(instance, callbacks.store);
+    lcb_set_cookie(instance, oldCookie);
 }
 
 void KVOperation::assertOk(lcb_error_t err)
