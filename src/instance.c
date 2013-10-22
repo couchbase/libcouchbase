@@ -492,6 +492,7 @@ void lcb_destroy(lcb_t instance)
     free(instance->histogram);
     free(instance->username);
     free(instance->password);
+    free(instance->sasl_mech_force);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }

@@ -177,8 +177,14 @@ Structure layout:
 +
         typedef struct lcb_cntl_server_st lcb_cntl_server_t;
         struct lcb_cntl_server_st {
-            int version;
+            int version; /** Set this to 1 */
             union {
+                struct {
+                    /**
+                     * The 'v0' of this structure is the same as the
+                     * 'v1' structure, without the 'sasl_mech' field
+                     */
+                } v0;
                 struct {
                     /** Server index to query */
                     int index;
@@ -206,7 +212,10 @@ Structure layout:
                         lcb_socket_t sockfd;
                         lcb_sockdata_t *sockptr;
                     } sock;
-                } v0;
+
+                    /** The effective SASL mechanism used */
+                    char *sasl_mech;
+                } v1;
             } v;
         };
 +
@@ -214,12 +223,15 @@ Example:
 +
         lcb_cntl_server_t node;
 
-        node.version = 0;
-        node.v.v0.index = 0; /* first node */
+        node.version = 1;
+        node.v.v1.index = 0; /* first node */
 
         lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_MEMDNODE_INFO, &node);
-        printf("node \"%s:%s\" is %s\n", node.v.v0.host, node.v.v0.port,
-               node.v.v0.connected ? "connected" : "is not connected");
+        printf("node \"%s:%s\" is %s\n", node.v.v1.host, node.v.v1.port,
+               node.v.v1.connected ? "connected" : "is not connected");
+        if (node.v.v1.sasl_mech) {
+            printf("Node is authenticated via SASL '%s'\n",
+                   node.v.v0.sasl_mech);
 
 *LCB_CNTL_CONFIGNODE_INFO* '(lcb_io_opt_t*)'::
     Get information about the configuration node. Semantics of
@@ -425,6 +437,22 @@ Pass NULL as the instance, as this accesses a global setting
         } else {
             printf("We had to contact the configuration server for some reason\n");
         }
+
+*LCB_CNTL_FORCE_SASL_MECH* '(char**)', '(char **')::
+    Get/Set. Force a specific SASL mechanism to use for authentication. This
+    can allow a user to ensure a certain level of security and have the
+    connection fail if the desired mechanism is not available.
+
+    When setting this value, the arg parameter shall be a
+    NUL-terminated string or a NULL pointer (to unset). When retrieving
+    this value, the parameter shall be set to a 'char **'. Note that this
+    value (in LCB_CNTL_GET) is valid only until the next call to a
+    libcouchbase API, after which it may have been freed.
+
+    Also note that no validation is done to ensure that the argument is a
+    valid SASL mechanism.
+
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, "PLAIN");
 
 
 RETURN VALUE

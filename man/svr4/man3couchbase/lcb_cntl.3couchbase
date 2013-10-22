@@ -2,12 +2,12 @@
 .\"     Title: lcb_cntl
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.76.1 <http://docbook.sf.net/>
-.\"      Date: 10/10/2013
+.\"      Date: 10/22/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CNTL" "3couchbase" "10/10/2013" "\ \&" "\ \&"
+.TH "LCB_CNTL" "3couchbase" "10/22/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -347,8 +347,14 @@ Structure layout:
 .nf
 typedef struct lcb_cntl_server_st lcb_cntl_server_t;
 struct lcb_cntl_server_st {
-    int version;
+    int version; /** Set this to 1 */
     union {
+        struct {
+            /**
+             * The \*(Aqv0\*(Aq of this structure is the same as the
+             * \*(Aqv1\*(Aq structure, without the \*(Aqsasl_mech\*(Aq field
+             */
+        } v0;
         struct {
             /** Server index to query */
             int index;
@@ -376,7 +382,18 @@ struct lcb_cntl_server_st {
                 lcb_socket_t sockfd;
                 lcb_sockdata_t *sockptr;
             } sock;
-        } v0;
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+            /** The effective SASL mechanism used */
+            char *sasl_mech;
+        } v1;
     } v;
 };
 .fi
@@ -400,8 +417,8 @@ lcb_cntl_server_t node;
 .RS 4
 .\}
 .nf
-node\&.version = 0;
-node\&.v\&.v0\&.index = 0; /* first node */
+node\&.version = 1;
+node\&.v\&.v1\&.index = 0; /* first node */
 .fi
 .if n \{\
 .RE
@@ -412,8 +429,11 @@ node\&.v\&.v0\&.index = 0; /* first node */
 .\}
 .nf
 lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_MEMDNODE_INFO, &node);
-printf("node \e"%s:%s\e" is %s\en", node\&.v\&.v0\&.host, node\&.v\&.v0\&.port,
-       node\&.v\&.v0\&.connected ? "connected" : "is not connected");
+printf("node \e"%s:%s\e" is %s\en", node\&.v\&.v1\&.host, node\&.v\&.v1\&.port,
+       node\&.v\&.v1\&.connected ? "connected" : "is not connected");
+if (node\&.v\&.v1\&.sasl_mech) {
+    printf("Node is authenticated via SASL \*(Aq%s\*(Aq\en",
+           node\&.v\&.v0\&.sasl_mech);
 .fi
 .if n \{\
 .RE
@@ -785,6 +805,46 @@ if (is_loaded) {
 .RE
 .\}
 .RE
+.RE
+.PP
+\fBLCB_CNTL_FORCE_SASL_MECH\fR \fI(char\fR\fI\fB)\fR\fR\fI, \fR\fI\fI(char \fR\fR)
+.RS 4
+Get/Set\&. Force a specific SASL mechanism to use for authentication\&. This can allow a user to ensure a certain level of security and have the connection fail if the desired mechanism is not available\&.
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+When setting this value, the arg parameter shall be a
+NUL\-terminated string or a NULL pointer (to unset)\&. When retrieving
+this value, the parameter shall be set to a \*(Aqchar **\*(Aq\&. Note that this
+value (in LCB_CNTL_GET) is valid only until the next call to a
+libcouchbase API, after which it may have been freed\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+Also note that no validation is done to ensure that the argument is a
+valid SASL mechanism\&.
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, "PLAIN");
+.fi
+.if n \{\
+.RE
+.\}
 .RE
 .SH "RETURN VALUE"
 .sp

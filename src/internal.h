@@ -299,6 +299,8 @@ extern "C" {
         ringbuffer_t purged_buf;
         ringbuffer_t purged_cookies;
 
+        char *sasl_mech_force;
+
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
 #endif

@@ -806,6 +806,19 @@ static void sasl_list_mech_response_handler(lcb_server_t *server,
         return;
     }
     memcpy(mechlist, (const char *)(res + 1), bodysize);
+
+    if (server->instance->sasl_mech_force) {
+        if (!strstr(mechlist, server->instance->sasl_mech_force)) {
+            lcb_error_handler(server->instance, LCB_SASLMECH_UNAVAILABLE,
+                              mechlist);
+            free(mechlist);
+            return;
+        }
+
+        /** strstr already ensures we have enough space */
+        strcpy(mechlist, server->instance->sasl_mech_force);
+    }
+
     if (cbsasl_client_start(server->sasl_conn, mechlist,
                           NULL, &data, &ndata, &chosenmech) != SASL_OK) {
         free(mechlist);

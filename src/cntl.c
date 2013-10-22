@@ -167,7 +167,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    if (si->version != 0) {
+    if (si->version < 0 || si->version > 1) {
         return LCB_EINVAL;
 
     }
@@ -184,6 +184,11 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         if (!server) {
             return LCB_NETWORK_ERROR;
         }
+
+        if (si->version == 1) {
+            si->v.v1.sasl_mech = server->sasl_mech;
+        }
+
         conn = &server->connection;
 
     } else if (cmd == LCB_CNTL_CONFIGNODE_INFO) {
@@ -313,6 +318,32 @@ static lcb_error_t config_cache_loaded_handler(int mode,
     return LCB_SUCCESS;
 }
 
+static lcb_error_t force_sasl_mech_handler(int mode,
+                                           lcb_t instance,
+                                           int cmd,
+                                           void *arg)
+{
+    union {
+        char *set;
+        char **get;
+    } u_arg;
+
+    u_arg.set = arg;
+
+    if (mode == LCB_CNTL_SET) {
+        free(instance->sasl_mech_force);
+        if (u_arg.set) {
+            instance->sasl_mech_force = strdup(u_arg.set);
+        }
+    } else {
+        *u_arg.get = instance->sasl_mech_force;
+    }
+
+    (void)cmd;
+
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -335,7 +366,8 @@ static ctl_handler handlers[] = {
     timeout_common,  /* LCB_CNTL_CONFIGURATION_TIMEOUT */
     bummer_mode_handler,   /* LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT */
     randomize_bootstrap_hosts_handler /* LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS */,
-    config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */
+    config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */,
+    force_sasl_mech_handler, /* LCB_CNTL_FORCE_SASL_MECH */
 };
 
 

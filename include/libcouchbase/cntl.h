@@ -104,40 +104,49 @@ extern "C" {
 
 
     typedef struct lcb_cntl_server_st lcb_cntl_server_t;
+
+#define LCB_CNTL_SERVER_COMMON_FIELDS \
+        /** Server index to query */ \
+        int index; \
+        \
+        /** NUL-terminated string containing the address */ \
+        const char *host; \
+        /** NUL-terminated string containing the port */ \
+        const char *port; \
+        /** Whether the node is connected */ \
+        int connected; \
+        \
+        /**
+         * Socket information. If a v0 IO plugin is being used, the sockfd
+         * is set to the socket descriptor. If a v1 plugin is being used, the
+         * sockptr is set to point to the appropriate structure.
+         *
+         * Note that you *MAY* perform various 'setsockopt' calls on the
+         * sockfd (though it is your responsibility to ensure those options
+         * are valid); however the actual socket descriptor may change
+         * in the case of a cluster configuration update.
+         */ \
+        union { \
+            lcb_socket_t sockfd; \
+            lcb_sockdata_t *sockptr; \
+        } sock; \
+
     struct lcb_cntl_server_st {
         /** Structure version */
         int version;
 
         union {
-
             struct {
-                /** Server index to query */
-                int index;
-
-                /** NUL-terminated string containing the address */
-                const char *host;
-                /** NUL-terminated string containing the port */
-                const char *port;
-                /** Whether the node is connected */
-                int connected;
-
-                /**
-                 * Socket information. If a v0 IO plugin is being used, the sockfd
-                 * is set to the socket descriptor. If a v1 plugin is being used, the
-                 * sockptr is set to point to the appropriate structure.
-                 *
-                 * Note that you *MAY* perform various 'setsockopt' calls on the
-                 * sockfd (though it is your responsibility to ensure those options
-                 * are valid); however the actual socket descriptor may change
-                 * in the case of a cluster configuration update.
-                 */
-                union {
-                    lcb_socket_t sockfd;
-                    lcb_sockdata_t *sockptr;
-                } sock;
+                LCB_CNTL_SERVER_COMMON_FIELDS
             } v0;
+            struct {
+                LCB_CNTL_SERVER_COMMON_FIELDS
+                /** Chosen SASL mechanism */
+                char *sasl_mech;
+            } v1;
         } v;
     };
+#undef LCB_CNTL_SERVER_COMMON_FIELDS
 
     /**
      * Get information about a memcached node.
@@ -306,8 +315,23 @@ extern "C" {
      */
 #define LCB_CNTL_CONFIG_CACHE_LOADED 0x15
 
+    /**
+     * Get/Set. Force a specific SASL mechanism to use for authentication. This
+     * can allow a user to ensure a certain level of security and have the
+     * connection fail if the desired mechanism is not available.
+     *
+     * When setting this value, the arg parameter shall be a
+     * NUL-terminated string or a NULL pointer (to unset). When retrieving
+     * this value, the parameter shall be set to a 'char **'. Note that this
+     * value (in LCB_CNTL_GET) is valid only until the next call to a
+     * libcouchbase API, after which it may have been freed.
+     *
+     * Arg: char* (for LCB_CNTL_SET), char** (for LCB_CNTL_SET)
+     */
+#define LCB_CNTL_FORCE_SASL_MECH 0x16
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x16
+#define LCB_CNTL__MAX                    0x17
 
 
 #ifdef __cplusplus

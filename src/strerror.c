@@ -124,6 +124,11 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
         return "The contents of the configuration cache file were invalid. "
                 "Will attempt to grab configuration from the network";
 
+    case LCB_SASLMECH_UNAVAILABLE:
+        return "The user-defined authentication mechanism is not supported "
+                "by the server. Either upgrade your server or change the "
+                "authentication requirements";
+
     default:
         return "Unknown error.. are you sure libcouchbase gave you that?";
     }

@@ -218,13 +218,19 @@ extern "C" {
         /**
          * The contents of the configuration cache file are invalid.
          */
-        LCB_CONFIG_CACHE_INVALID = 0x27
+        LCB_CONFIG_CACHE_INVALID = 0x27,
+
+        /**
+         * The requested SASL mechanism (forced via lcb_cntl) was not
+         * available for use
+         */
+        LCB_SASLMECH_UNAVAILABLE = 0x28
 
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase
          */
-        ,LCB_MAX_ERROR_VAL = 0x28
+        ,LCB_MAX_ERROR_VAL = 0x29
 #endif
 
 
