@@ -32,6 +32,14 @@ MockEnvironment *MockEnvironment::getInstance(void)
     return instance;
 }
 
+MockEnvironment *MockEnvironment::createSpecial(const char **argv)
+{
+    MockEnvironment *env = new MockEnvironment();
+    env->argv = argv;
+    env->SetUp();
+    return env;
+}
+
 void MockEnvironment::Reset()
 {
     if (instance != NULL) {
@@ -43,7 +51,8 @@ void MockEnvironment::Reset()
 MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
     realCluster(false),
     serverVersion(VERSION_UNKNOWN),
-    http(NULL)
+    http(NULL),
+    argv(NULL)
 {
     // No extra init needed
 }
@@ -264,7 +273,7 @@ void MockEnvironment::SetUp()
         return;
     }
 
-    mock = (struct test_server_info *)start_test_server(NULL);
+    mock = (struct test_server_info *)start_test_server((char **)argv);
     realCluster = is_using_real_cluster() != 0;
     ASSERT_NE((const void *)(NULL), mock);
     http = get_mock_http_server(mock);

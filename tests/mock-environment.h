@@ -194,6 +194,10 @@ public:
     virtual void TearDown();
 
     static MockEnvironment *getInstance(void);
+    static MockEnvironment *createSpecial(const char **argv);
+    static void destroySpecial(MockEnvironment *mock) {
+        delete mock;
+    }
     static void Reset();
 
     /**
@@ -314,6 +318,7 @@ protected:
     const char *http;
     lcb_io_opt_st *iops;
     std::set<std::string> featureRegistry;
+    const char **argv;
 };
 
 #define LCB_TEST_REQUIRE_CLUSTER_VERSION(v) \

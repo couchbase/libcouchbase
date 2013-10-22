@@ -225,3 +225,101 @@ TEST_F(RegressionUnitTest, CCBC_282)
     scheduleCommands_282(instance, &info);
     lcb_wait(instance);
 }
+
+
+struct ccbc_275_info_st {
+    int call_count;
+    lcb_error_t last_err;
+};
+
+extern "C" {
+static void get_callback_275(lcb_t instance,
+                             const void *cookie,
+                             lcb_error_t err,
+                             const lcb_get_resp_t *)
+{
+    struct ccbc_275_info_st *info = (struct ccbc_275_info_st *)cookie;
+    info->call_count++;
+    info->last_err = err;
+    lcb_breakout(instance);
+}
+
+}
+
+TEST_F(RegressionUnitTest, CCBC_275)
+{
+    SKIP_UNLESS_MOCK();
+    lcb_t instance;
+    lcb_error_t err;
+    struct lcb_create_st crOpts;
+    const char *argv[] = { "--buckets", "protected:secret:couchbase", NULL };
+    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
+    struct ccbc_275_info_st info = { 0, LCB_SUCCESS };
+
+    mock->makeConnectParams(crOpts, NULL);
+    crOpts.v.v0.user = "protected";
+    crOpts.v.v0.passwd = "secret";
+    crOpts.v.v0.bucket = "protected";
+
+    err = lcb_create(&instance, &crOpts);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    err = lcb_connect(instance);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    err = lcb_wait(instance);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    std::string key = "key_CCBC_275";
+    lcb_get_cmd_t cmd, *cmdp;
+    memset(&cmd, 0, sizeof(cmd));
+    cmd.v.v0.key = key.c_str();
+    cmd.v.v0.nkey = key.size();
+    cmdp = &cmd;
+
+    // Set timeout for a short interval
+    lcb_uint32_t tmo_usec = 100000;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo_usec);
+
+    // In the past this issue would result in several symptoms:
+    // (1) the client would crash (ringbuffer_consumed in failout_server)
+    // (2) the client would hang
+    // (3) the subsequent lcb_wait would return immediately.
+    // So far I've managed to reproduce (1), not clear on (2) and (3)
+    mock->hiccupNodes(1000, 1);
+    lcb_set_get_callback(instance, get_callback_275);
+
+    err = lcb_get(instance, &info, 1, &cmdp);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance);
+    ASSERT_EQ(1, info.call_count);
+    ASSERT_EQ(LCB_ETIMEDOUT, info.last_err);
+
+    // Make sure we've fully purged and disconnected the server
+    struct lcb_cntl_vbinfo_st vbi;
+    memset(&vbi, 0, sizeof(vbi));
+    vbi.v.v0.key = key.c_str();
+    vbi.v.v0.nkey = key.size();
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBMAP, &vbi);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_CONNSTATE_UNINIT,
+              instance->servers[vbi.v.v0.server_index].connection.state);
+
+    // Restore the timeout to something sane
+    tmo_usec = 2500000;
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo_usec);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    info.call_count = 0;
+    err = lcb_get(instance, &info, 1, &cmdp);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance);
+    ASSERT_EQ(1, info.call_count);
+
+    // TODO: Make mock work with this assertion. hiccupNodes doesn't seem
+    // to reset itself?
+    // ASSERT_EQ(LCB_KEY_ENOENT, info.last_err);
+
+    lcb_destroy(instance);
+    MockEnvironment::destroySpecial(mock);
+}

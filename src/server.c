@@ -399,13 +399,16 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
 
 void lcb_timeout_server(lcb_server_t *server)
 {
-    hrtime_t min_valid, now;
-    now = gethrtime();
-    min_valid = now - server->connection.timeout.usec * 1000;
-    purge_single_server(server, LCB_ETIMEDOUT, min_valid);
-
     if (server->connection_ready) {
+        hrtime_t min_valid, now;
+        now = gethrtime();
+        min_valid = now - server->connection.timeout.usec * 1000;
+        purge_single_server(server, LCB_ETIMEDOUT, min_valid);
         lcb_connection_activate_timer(&server->connection);
+
+    } else {
+        /** We've died while waiting for negotiation. Kill everything */
+        lcb_failout_server(server, LCB_ETIMEDOUT);
     }
 }
 
