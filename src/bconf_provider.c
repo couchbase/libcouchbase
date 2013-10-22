@@ -211,12 +211,19 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
             return;
         }
         lcb_assert(ringbuffer_read(&src->cmd_log, body, nbody) == nbody);
-        if (cmd.request.opcode == PROTOCOL_BINARY_CMD_SASL_AUTH) {
-            /* Skip unfinished SASL command.
+
+        switch (cmd.request.opcode) {
+        case PROTOCOL_BINARY_CMD_SASL_AUTH:
+        case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
+        case PROTOCOL_BINARY_CMD_SASL_STEP:
+            /* Skip unfinished SASL commands.
              * SASL AUTH written directly into output buffer,
              * therefore we can ignore its cookies */
             ringbuffer_consumed(&src->output_cookies, sizeof(ct));
             continue;
+
+        default:
+            break;
         }
         vb = ntohs(cmd.request.vbucket);
         idx = vbucket_get_master(dst_instance->vbucket_config, vb);
