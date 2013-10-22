@@ -23,6 +23,15 @@
  * Helper functions
  */
 extern "C" {
+    static void kvoErrorHandler(lcb_t, lcb_error_t err, const char *msg)
+    {
+        std::cerr << "Got error: " << std::dec << err;
+        if (msg) {
+            std::cerr << msg;
+        }
+        std::cerr << std::endl;
+    }
+
     static void storeKvoCallback(lcb_t, const void *cookie,
                                  lcb_storage_t operation,
                                  lcb_error_t error,
@@ -54,6 +63,22 @@ extern "C" {
     }
 }
 
+void KVOperation::enter(lcb_t instance)
+{
+    callbacks.err = lcb_set_error_callback(instance, kvoErrorHandler);
+    callbacks.get = lcb_set_get_callback(instance, getKvoCallback);
+    callbacks.rm = lcb_set_remove_callback(instance, removeKvoCallback);
+    callbacks.store = lcb_set_store_callback(instance, storeKvoCallback);
+}
+
+void KVOperation::leave(lcb_t instance)
+{
+    lcb_set_error_callback(instance, callbacks.err);
+    lcb_set_get_callback(instance, callbacks.get);
+    lcb_set_remove_callback(instance, callbacks.rm);
+    lcb_set_store_callback(instance, callbacks.store);
+}
+
 void KVOperation::assertOk(lcb_error_t err)
 {
     if (allowableErrors.empty()) {
@@ -73,13 +98,14 @@ void KVOperation::store(lcb_t instance)
                         request->cas,
                         request->datatype);
     lcb_store_cmd_t *cmds[] = { &cmd };
-    lcb_store_callback cb = lcb_set_store_callback(instance, storeKvoCallback);
 
+    enter(instance);
     EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, this, 1, cmds));
     EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+    leave(instance);
 
-    (void)lcb_set_store_callback(instance, cb);
     ASSERT_EQ(1, callCount);
+
 }
 
 void KVOperation::remove(lcb_t instance)
@@ -87,13 +113,14 @@ void KVOperation::remove(lcb_t instance)
     lcb_remove_cmd_t cmd(request->key.data(), request->key.length(),
                          request->cas);
     lcb_remove_cmd_t *cmds[] = { &cmd };
-    lcb_remove_callback cb = lcb_set_remove_callback(instance, removeKvoCallback);
 
+    enter(instance);
     EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, this, 1, cmds));
     EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+    leave(instance);
 
-    (void)lcb_set_remove_callback(instance, cb);
     ASSERT_EQ(1, callCount);
+
 }
 
 void KVOperation::get(lcb_t instance)
@@ -101,11 +128,11 @@ void KVOperation::get(lcb_t instance)
     lcb_get_cmd_t cmd(request->key.data(), request->key.length(), request->exp);
     lcb_get_cmd_t *cmds[] = { &cmd };
 
-    lcb_get_callback cb = lcb_set_get_callback(instance, getKvoCallback);
+    enter(instance);
     EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, this, 1, cmds));
     EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
+    leave(instance);
 
-    (void)lcb_set_get_callback(instance, cb);
     ASSERT_EQ(1, callCount);
 }
 

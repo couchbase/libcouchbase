@@ -126,6 +126,16 @@ struct KVOperation {
         callCount++;
         assertOk(error);
     }
+
+private:
+    void enter(lcb_t);
+    void leave(lcb_t);
+    struct {
+        lcb_get_callback get;
+        lcb_store_callback store;
+        lcb_error_callback err;
+        lcb_remove_callback rm;
+    } callbacks;
 };
 
 void storeKey(lcb_t instance, const std::string &key, const std::string &value);
