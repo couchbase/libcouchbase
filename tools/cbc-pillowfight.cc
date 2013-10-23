@@ -401,9 +401,12 @@ public:
                 lcb_uint32_t exp = 0;
 
                 if (config.setprc > 0 && (nextSeqno() % 100) < config.setprc) {
-                    lcb_size_t size = nextSeqno() % config.maxSize;
-                    if (size < config.minSize) {
-                        size += config.minSize;
+                    lcb_size_t size;
+                    if (config.minSize == config.maxSize) {
+                        size = config.maxSize;
+                    } else {
+                        size = config.minSize +
+                               nextSeqno() % (config.maxSize - config.minSize);
                     }
                     lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
                                          config.data, size,
