@@ -17,7 +17,6 @@
 #include "config.h"
 
 #include "cbsasl/cbsasl.h"
-#include "cram-md5/cram-md5.h"
 #include "cram-md5/hmac.h"
 #include "plain/plain.h"
 #include "util.h"
