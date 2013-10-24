@@ -85,7 +85,7 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
     lcb_size_t send_size = 0;
     lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
     hrtime_t now = gethrtime();
-    int should_switch_to_backup_node = 0;
+    int should_refresh_config = 0;
 
     if (server->connection_ready) {
         cookies = &server->output_cookies;
@@ -350,7 +350,7 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         if (server->is_config_node) {
             root->weird_things++;
             if (root->weird_things >= root->weird_things_threshold) {
-                should_switch_to_backup_node = 1;
+                should_refresh_config = 1;
             }
         }
     } while (1); /* CONSTCOND */
@@ -369,11 +369,11 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
     }
 
     ringbuffer_destruct(&rest);
-    if (should_switch_to_backup_node) {
-        lcb_connection_close(&root->connection);
-        lcb_switch_to_backup_node(root, LCB_NETWORK_ERROR,
+    if (should_refresh_config) {
+        lcb_instance_config_error(root, LCB_NETWORK_ERROR,
                                   "Config connection considered stale. "
-                                  "Reconnection forced");
+                                  "Refresing",
+                                  LCB_CONNFERR_NO_FAILOUT);
     }
     lcb_maybe_breakout(server->instance);
 }

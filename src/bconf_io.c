@@ -31,6 +31,9 @@ static void config_v1_write_handler(lcb_sockdata_t *sockptr,
                                     int status);
 static void config_v1_error_handler(lcb_sockdata_t *sockptr);
 
+static void connection_error(lcb_t instance, lcb_error_t err,
+                             const char *errinfo, lcb_conferr_opt_t options);
+
 static void reset_stream_state(lcb_t instance)
 {
     free(instance->vbucket_stream.input.data);
@@ -113,14 +116,14 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
 
 void lcb_instance_config_error(lcb_t instance,
                                lcb_error_t err,
-                               const char *errinfo)
+                               const char *errinfo,
+                               lcb_conferr_opt_t options)
 {
-    lcb_instance_connerr(instance, err, errinfo);
+    connection_error(instance, err, errinfo, options);
 }
 
-void lcb_instance_connerr(lcb_t instance,
-                          lcb_error_t err,
-                          const char *errinfo)
+static void connection_error(lcb_t instance, lcb_error_t err,
+                             const char *errinfo, lcb_conferr_opt_t options)
 {
     lcb_connection_close(&instance->connection);
     /* We try and see if the connection attempt can be relegated to another
@@ -139,7 +142,7 @@ void lcb_instance_connerr(lcb_t instance,
      * pending commands, if applicable and/or deliver a final failure for
      * initial connect attempts.
      */
-    if (instance->vbucket_config) {
+    if (instance->vbucket_config && (options & LCB_CONNFERR_NO_FAILOUT) == 0) {
         lcb_size_t ii;
         for (ii = 0; ii < instance->nservers; ++ii) {
             lcb_failout_server(instance->servers + ii, err);
@@ -154,7 +157,7 @@ static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
     lcb_t instance = (lcb_t)conn->data;
     const char *msg = "Configuration update timed out";
     lcb_assert(instance->confstatus != LCB_CONFSTATE_CONFIGURED);
-    lcb_instance_connerr(instance, err, msg);
+    connection_error(instance, err, msg, 0);
 }
 
 
@@ -185,7 +188,7 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
         }
     }
 
-    lcb_instance_connerr(instance, err, "Couldn't connect");
+    connection_error(instance, err, "Couldn't connect", 0);
 }
 
 static void setup_current_host(lcb_t instance, const char *host)
@@ -287,10 +290,10 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
 
         status = lcb_sockrw_v0_write(conn, conn->output);
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
-            lcb_instance_connerr(instance,
-                                 LCB_NETWORK_ERROR,
-                                 "Problem with sending data. "
-                                 "Failed to send data to REST server");
+            connection_error(instance, LCB_NETWORK_ERROR,
+                             "Problem with sending data. "
+                             "Failed to send data to REST server",
+                             0);
             return;
         }
 
@@ -306,10 +309,9 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
 
     status = lcb_sockrw_v0_slurp(conn, conn->input);
     if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
-        lcb_instance_connerr(instance,
-                             LCB_NETWORK_ERROR,
-                             "Problem with reading data. "
-                             "Failed to send read data from REST server");
+        connection_error(instance, LCB_NETWORK_ERROR,
+                         "Problem with reading data. "
+                         "Failed to send read data from REST server", 0);
         return;
     }
 
@@ -319,8 +321,8 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
 
 static void v1_error_common(lcb_t instance)
 {
-    lcb_instance_connerr(instance, LCB_NETWORK_ERROR,
-                         "Problem with sending data");
+    connection_error(instance, LCB_NETWORK_ERROR,
+                     "Problem with sending data", 0);
 }
 
 static void config_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)

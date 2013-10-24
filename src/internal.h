@@ -106,6 +106,11 @@ extern "C" {
     } lcb_config_status_t;
 
     typedef enum {
+        /** Don't failout servers */
+        LCB_CONNFERR_NO_FAILOUT = 1 << 0
+    } lcb_conferr_opt_t;
+
+    typedef enum {
         /**
          * Request is part of a durability operation. Don't invoke the
          * user callback.
@@ -645,20 +650,14 @@ extern "C" {
      */
     genhash_t *lcb_hashtable_nc_new(lcb_size_t est);
 
-    void lcb_instance_connerr(lcb_t instance,
-                              lcb_error_t err,
-                              const char *errinfo);
-
     /**
      * Configuration received was invalid. Try to get
      * the configuration again.
-     *
-     * Currently this is aliased to 'connerr', but may
-     * be split off later on
      */
     void lcb_instance_config_error(lcb_t instance,
                                    lcb_error_t err,
-                                   const char *errinfo);
+                                   const char *errinfo,
+                                   lcb_conferr_opt_t options);
 
     lcb_error_t lcb_instance_start_connection(lcb_t instance);
 
