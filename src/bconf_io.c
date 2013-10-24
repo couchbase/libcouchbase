@@ -157,6 +157,19 @@ static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
     lcb_t instance = (lcb_t)conn->data;
     const char *msg = "Configuration update timed out";
     lcb_assert(instance->confstatus != LCB_CONFSTATE_CONFIGURED);
+
+    if (instance->confstatus == LCB_CONFSTATE_UNINIT) {
+        /**
+         * If lcb_connect was called explicitly then it means there are no
+         * pending operations and we should just break out because we have
+         * no valid configuration.
+         */
+        lcb_error_handler(instance, LCB_CONNECT_ERROR,
+                          "Could not connect to server within allotted time");
+        lcb_maybe_breakout(instance);
+        return;
+    }
+
     connection_error(instance, err, msg, 0);
 }
 
@@ -179,16 +192,11 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
     }
 
     if (err == LCB_ETIMEDOUT) {
-        if (instance->confstatus == LCB_CONFSTATE_UNINIT) {
-            lcb_error_handler(instance,
-                              LCB_CONNECT_ERROR,
-                              "Could not connect to server within allotted time");
-            lcb_maybe_breakout(instance);
-            return;
-        }
-    }
+        instance_timeout_handler(conn, err);
 
-    connection_error(instance, err, "Couldn't connect", 0);
+    } else {
+        connection_error(instance, err, "Couldn't connect", 0);
+    }
 }
 
 static void setup_current_host(lcb_t instance, const char *host)
