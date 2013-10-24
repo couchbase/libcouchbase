@@ -449,9 +449,6 @@ extern "C" {
     lcb_error_t lcb_error_handler(lcb_t instance,
                                   lcb_error_t error,
                                   const char *errinfo);
-    int lcb_switch_to_backup_node(lcb_t instance,
-                                  lcb_error_t error,
-                                  const char *reason);
     int lcb_server_purge_implicit_responses(lcb_server_t *c,
                                             lcb_uint32_t seqno,
                                             hrtime_t delta,

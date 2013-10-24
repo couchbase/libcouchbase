@@ -34,6 +34,8 @@ static void config_v1_error_handler(lcb_sockdata_t *sockptr);
 static void connection_error(lcb_t instance, lcb_error_t err,
                              const char *errinfo, lcb_conferr_opt_t options);
 
+static int switch_node(lcb_t instance, lcb_error_t error, const char *reason);
+
 static void reset_stream_state(lcb_t instance)
 {
     free(instance->vbucket_stream.input.data);
@@ -93,7 +95,7 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
         if (can_retry) {
             const char *msg = "Failed to get configuration";
             lcb_connection_close(&instance->connection);
-            lcb_switch_to_backup_node(instance, err, msg);
+            switch_node(instance, err, msg);
             return err;
         } else {
             lcb_maybe_breakout(instance);
@@ -134,7 +136,7 @@ static void connection_error(lcb_t instance, lcb_error_t err,
         instance->confstatus = LCB_CONFSTATE_RETRY;
     }
 
-    if (lcb_switch_to_backup_node(instance, err, errinfo) != -1) {
+    if (switch_node(instance, err, errinfo) != -1) {
         return;
     }
 
@@ -211,6 +213,38 @@ static void setup_current_host(lcb_t instance, const char *host)
         snprintf(conn->port, sizeof(conn->port), "%s", ptr + 1);
     }
 }
+
+static int switch_node(lcb_t instance, lcb_error_t error, const char *reason)
+{
+    if (instance->connection.state == LCB_CONNSTATE_INPROGRESS) {
+        return 0; /* We're still connecting. Don't do anything here */
+    }
+
+    if (instance->backup_nodes == NULL) {
+        /* No known backup nodes */
+        lcb_error_handler(instance, error, reason);
+        return -1;
+    }
+
+    if (instance->backup_nodes[instance->backup_idx] == NULL) {
+        lcb_error_handler(instance, error, reason);
+        return -1;
+    }
+
+    do {
+        /* Keep on trying the nodes until all of them failed
+         * It will advance instance->backup_idx while calling
+         * setup_current_host
+         */
+        if (lcb_instance_start_connection(instance) == LCB_SUCCESS) {
+            return 0;
+        }
+    } while (instance->backup_nodes[instance->backup_idx] != NULL);
+    /* All known nodes are dead */
+    lcb_error_handler(instance, error, reason);
+    return -1;
+}
+
 
 lcb_error_t lcb_instance_start_connection(lcb_t instance)
 {
