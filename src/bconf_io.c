@@ -94,8 +94,7 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
 
         if (can_retry) {
             const char *msg = "Failed to get configuration";
-            lcb_connection_close(&instance->connection);
-            switch_node(instance, err, msg);
+            connection_error(instance, err, msg, LCB_CONFERR_NO_BREAKOUT);
             return err;
         } else {
             lcb_maybe_breakout(instance);
@@ -151,7 +150,18 @@ static void connection_error(lcb_t instance, lcb_error_t err,
         }
     }
 
-    lcb_maybe_breakout(instance);
+    if (options & LCB_CONFERR_NO_BREAKOUT) {
+        /**
+         * Requested no breakout.
+         *
+         * TODO: We might want to re-activate the timer
+         * in the future and wait until a node becomes available; however
+         * since this is currently simply a code refactoring, we'll hold this
+         * off until later
+         */
+    } else {
+        lcb_maybe_breakout(instance);
+    }
 }
 
 static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)

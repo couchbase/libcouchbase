@@ -107,7 +107,10 @@ extern "C" {
 
     typedef enum {
         /** Don't failout servers */
-        LCB_CONNFERR_NO_FAILOUT = 1 << 0
+        LCB_CONNFERR_NO_FAILOUT = 1 << 0,
+
+        /** Do not call lcb_maybe_breakout if reconnect fails */
+        LCB_CONFERR_NO_BREAKOUT = 1 << 1
     } lcb_conferr_opt_t;
 
     typedef enum {
