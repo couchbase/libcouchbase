@@ -22,13 +22,13 @@ struct server_info_st {
     int idx;
 };
 
-static lcb_error_t lcb_single_get(lcb_t instance,
-                                  const void *command_cookie,
-                                  const lcb_get_cmd_t *item);
-static lcb_error_t lcb_multi_get(lcb_t instance,
-                                 const void *command_cookie,
-                                 lcb_size_t num,
-                                 const lcb_get_cmd_t *const *items);
+static lcb_error_t single_get(lcb_t instance,
+                              const void *command_cookie,
+                              const lcb_get_cmd_t *item);
+static lcb_error_t multi_get(lcb_t instance,
+                             const void *command_cookie,
+                             lcb_size_t num,
+                             const lcb_get_cmd_t *const *items);
 
 /**
  * libcouchbase_mget use the GETQ command followed by a NOOP command to avoid
@@ -45,9 +45,9 @@ lcb_error_t lcb_get(lcb_t instance,
                     const lcb_get_cmd_t *const *items)
 {
     if (num == 1) {
-        return lcb_single_get(instance, command_cookie, items[0]);
+        return single_get(instance, command_cookie, items[0]);
     } else {
-        return lcb_multi_get(instance, command_cookie, num, items);
+        return multi_get(instance, command_cookie, num, items);
     }
 }
 
@@ -229,9 +229,9 @@ lcb_error_t lcb_get_replica(lcb_t instance,
     return lcb_synchandler_return(instance, LCB_SUCCESS);
 }
 
-static lcb_error_t lcb_single_get(lcb_t instance,
-                                  const void *command_cookie,
-                                  const lcb_get_cmd_t *item)
+static lcb_error_t single_get(lcb_t instance,
+                              const void *command_cookie,
+                              const lcb_get_cmd_t *item)
 {
     lcb_server_t *server;
     protocol_binary_request_gat req;
@@ -299,10 +299,10 @@ static lcb_error_t lcb_single_get(lcb_t instance,
     return lcb_synchandler_return(instance, LCB_SUCCESS);
 }
 
-static lcb_error_t lcb_multi_get(lcb_t instance,
-                                 const void *command_cookie,
-                                 lcb_size_t num,
-                                 const lcb_get_cmd_t *const *items)
+static lcb_error_t multi_get(lcb_t instance,
+                             const void *command_cookie,
+                             lcb_size_t num,
+                             const lcb_get_cmd_t *const *items)
 {
     lcb_server_t *server = NULL;
     protocol_binary_request_noop noop;

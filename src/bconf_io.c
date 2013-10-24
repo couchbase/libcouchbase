@@ -31,7 +31,7 @@ static void config_v1_write_handler(lcb_sockdata_t *sockptr,
                                     int status);
 static void config_v1_error_handler(lcb_sockdata_t *sockptr);
 
-static void lcb_instance_reset_stream_state(lcb_t instance)
+static void reset_stream_state(lcb_t instance)
 {
     free(instance->vbucket_stream.input.data);
     free(instance->vbucket_stream.chunk.data);
@@ -218,7 +218,7 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
      * one.
      */
     lcb_connection_close(&instance->connection);
-    lcb_instance_reset_stream_state(instance);
+    reset_stream_state(instance);
 
     conn->on_connect_complete = connect_done_handler;
     conn->evinfo.handler = config_v0_handler;
