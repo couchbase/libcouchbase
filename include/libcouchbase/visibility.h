@@ -18,7 +18,11 @@
 #ifndef LIBCOUCHBASE_VISIBILITY_H
 #define LIBCOUCHBASE_VISIBILITY_H
 
-#if defined(LIBCOUCHBASE_INTERNAL)
+#ifdef LIBCOUCHBASE_STATIC
+#define LIBCOUCHBASE_API
+#else
+
+#ifdef LIBCOUCHBASE_INTERNAL
 
 #ifdef __SUNPRO_C
 #define LIBCOUCHBASE_API __global
@@ -36,6 +40,8 @@
 #define LIBCOUCHBASE_API extern __declspec(dllimport)
 #else
 #define LIBCOUCHBASE_API
+#endif
+
 #endif
 
 #endif
