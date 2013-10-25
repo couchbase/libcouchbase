@@ -409,6 +409,7 @@ example_libeventdirect_eventloop_DEPENDENCIES = libcouchbase.la
 example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
 
 example_instancepool_instancepool_SOURCES = example/instancepool/pool.c \
+                                            example/instancepool/pool.h \
                                             example/instancepool/main.c
 example_instancepool_instancepool_DEPENDENCIES = libcouchbase.la
 example_instancepool_instancepool_LDADD = libcouchbase.la
