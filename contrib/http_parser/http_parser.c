@@ -2006,7 +2006,7 @@ http_parser_parse_url(const char *buf, size_t buflen, int is_connect,
       continue;
     }
 
-    u->field_data[uf].off = p - buf;
+    u->field_data[uf].off = (uint16_t)(p - buf);
     u->field_data[uf].len = 1;
 
     u->field_set |= (1 << uf);

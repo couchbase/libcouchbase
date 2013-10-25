@@ -19,7 +19,7 @@ void hash_md5(const char *key, size_t key_length, unsigned char *result)
     MD5_CTX ctx;
 
     MD5Init(&ctx);
-    MD5Update(&ctx, (unsigned char *)key, key_length);
+    MD5Update(&ctx, (unsigned char *)key, (unsigned int)key_length);
     MD5Final(result, &ctx);
 }
 
@@ -29,7 +29,7 @@ void* hash_md5_update(void *ctx, const char *key, size_t key_length)
         ctx = calloc(1, sizeof(MD5_CTX));
         MD5Init(ctx);
     }
-    MD5Update(ctx, (unsigned char *)key, key_length);
+    MD5Update(ctx, (unsigned char *)key, (unsigned int)key_length);
     return ctx;
 }
 
