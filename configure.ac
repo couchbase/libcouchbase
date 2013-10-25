@@ -395,8 +395,8 @@ Try add --disable-couchbasemock
 ])])])
 
 dnl It doesn't make sense to use CouchbaseMock.jar without plugins
-AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_couchbasemock}" = "xyes"])
-AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a "x${ac_cv_enable_couchbasemock}" = "xyes"],
+AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xyes"])
+AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
       [AC_DEFINE([HAVE_COUCHBASEMOCK], [1], [We have CouchbaseMock.jar])])
 
 AC_ARG_ENABLE([tools],
