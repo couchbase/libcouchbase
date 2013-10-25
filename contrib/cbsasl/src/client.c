@@ -199,7 +199,7 @@ cbsasl_error_t cbsasl_client_step(cbsasl_conn_t *conn,
            sizeof(md5string));
 
     *clientout = conn->c.client.userdata;
-    *clientoutlen = strlen(conn->c.client.userdata);
+    *clientoutlen = (unsigned int)strlen(conn->c.client.userdata);
 
     return SASL_CONTINUE;
 }
