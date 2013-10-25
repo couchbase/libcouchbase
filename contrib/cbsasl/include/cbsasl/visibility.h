@@ -17,6 +17,10 @@
 #ifndef CBSASL_VISIBILITY_H
 #define CBSASL_VISIBILITY_H 1
 
+#ifdef CBSASL_STATIC
+#define CBSASL_PUBLIC_API
+#else
+
 #ifdef BUILDING_CBSASL
 
 #if defined (__SUNPRO_C) && (__SUNPRO_C >= 0x550)
@@ -36,6 +40,8 @@
 #define CBSASL_PUBLIC_API extern __declspec(dllimport)
 #else
 #define CBSASL_PUBLIC_API
+#endif
+
 #endif
 
 #endif
