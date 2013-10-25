@@ -166,5 +166,10 @@ typedef struct {
 #define LCBUV_LOOP_DEFL(l) uv_run(l, UV_RUN_DEFAULT)
 #endif
 
+#ifdef _WIN32
+  typedef ULONG lcb_uvbuf_len_t;
+#else
+  typedef size_t lcb_uvbuf_len_t;
+#endif
 
 #endif

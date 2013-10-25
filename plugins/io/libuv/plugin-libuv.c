@@ -453,7 +453,7 @@ static int start_write(lcb_io_opt_t iobase,
 
     for (ii = 0; ii < 2; ii++) {
         wbuf->uvbuf[ii].base = wbuf->base.buffer.iov[ii].iov_base;
-        wbuf->uvbuf[ii].len = wbuf->base.buffer.iov[ii].iov_len;
+        wbuf->uvbuf[ii].len = (lcb_uvbuf_len_t)wbuf->base.buffer.iov[ii].iov_len;
     }
 
     ret = uv_write(&wbuf->write.w,
@@ -487,7 +487,7 @@ static uv_buf_t alloc_cb(uv_handle_t *handle, size_t suggested_size)
     lcb_assert(sock->cur_iov == 0);
 
     ret.base = bi->iov[0].iov_base;
-    ret.len = bi->iov[0].iov_len;
+    ret.len = (lcb_uvbuf_len_t)bi->iov[0].iov_len;
 
     sock->cur_iov++;
     sock->read_done = 1;
