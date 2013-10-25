@@ -551,3 +551,15 @@ void lcb_free_backup_nodes(lcb_t instance)
     instance->backup_nodes = NULL;
     instance->backup_idx = 0;
 }
+
+LIBCOUCHBASE_API
+void *lcb_mem_alloc(lcb_size_t size)
+{
+    return malloc(size);
+}
+
+LIBCOUCHBASE_API
+void lcb_mem_free(void *ptr)
+{
+    free(ptr);
+}
