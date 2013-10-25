@@ -73,6 +73,11 @@ esac
 ac_cv_func_malloc_0_nonnull=yes
 ac_cv_func_realloc_0_nonnull=yes
 
+AC_ARG_ENABLE([maintainer_mode],
+              [AS_HELP_STRING([--enable-maintainer-mode],
+                              [Forces all plugins, examples, and tools to be build. Forces compiler strictness])],
+              [ac_cv_enable_maintainer_mode="$enableval"])
+
 COUCHBASE_GENERIC_COMPILER(c99)
 
 AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
@@ -568,8 +573,54 @@ AC_CACHE_CHECK([if EWOULDBLOCK != EAGAIN],[ac_cv_eagain_neq_ewouldblock],
                 ])],
                 [ ac_cv_eagain_neq_ewouldblock=yes ],
                 [ ac_cv_eagain_neq_ewouldblock=no])])
+
 AS_IF([test "x$ac_cv_eagain_neq_ewouldblock" = "xyes"],[
        AC_DEFINE([USE_EAGAIN], [1], [Defined for systems where EAGAIN != EWOULDBLOCK])])
+
+
+AS_IF([test "x${ac_cv_enable_maintainer_mode}" = "xyes"],
+      [
+       echo ""
+       echo "MAINT:"
+       echo "MAINT: Libcouchbase Maintainer Mode"
+       echo "MAINT: Will check for prequisites"
+
+       echo "MAINT: Checking that --disable-plugins was not passed"
+       AS_IF([test "x${ac_cv_enable_plugins}" != "xyes"],
+             [AC_MSG_ERROR([Maintainer mode requires all plugins enabled])])
+
+       echo "MAINT: Ensuring libuv has been found"
+       AS_IF([test "x${ac_cv_have_libuv}" != "xyes"],
+             [AC_MSG_ERROR([libuv not found])])
+
+       echo "MAINT: Ensuring libevent1.x or libevent2.x"
+       AS_IF([test "x${ac_cv_have_libevent}" != "xyes" && test "x${ac_cv_have_libevent2}" != "xyes"],
+             [AC_MSG_ERROR([libevent not found])])
+
+       echo "MAINT: Ensuring libev3 or libev4"
+       AS_IF([test "x${ac_cv_have_libev3}" != "xyes" && test "x${ac_cv_have_libev4}" != "xyes"],
+             [AC_MSG_ERROR([libev not found])])
+
+       echo "MAINT: Ensuring couchbasemock"
+       AS_IF([test "x${ac_cv_enable_couchbasemock}" != "xyes"],
+             [AC_MSG_ERROR([Mock must be enabled])])
+
+       echo "MAINT: Ensuring examples are enabled"
+       AS_IF([test "x${ac_cv_enable_examples}" != "xyes"],
+             [AC_MSG_ERROR([Examples must be enabled])])
+
+       echo "MAINT: Ensuring CXX is enabled"
+       AS_IF([test "x${ac_cv_enable_cxx}" != "xyes"],
+             [AC_MSG_ERROR([cxx must be enabled])])
+
+       echo "MAINT: Ensuring tools are enabled"
+       AS_IF([test "x${ac_cv_enable_tools}" != "xyes"],
+             [AC_MSG_ERROR([Tools must be enabled])])
+
+       AS_IF([test "x${ac_cv_enable_tests}" != "xyes"],
+             [AC_MSG_ERROR([Tests must be enabled])])
+      ])
+
 
 AH_TOP([
 #if defined(_WIN32) && !defined(HAVE_CONFIG_H)
@@ -643,3 +694,5 @@ AS_IF([test "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no"],
               echo "*"
               echo "*****"
               ])])
+
+
