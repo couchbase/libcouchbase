@@ -70,6 +70,7 @@ extern "C" {
     struct lcb_command_data_st {
         hrtime_t start;
         const void *cookie;
+        hrtime_t real_start;
         lcb_uint16_t vbucket;
         /* if != -1, it means that we are sequentially iterating
          * through the all replicas until first successful response */
