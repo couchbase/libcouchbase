@@ -64,6 +64,7 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
             if (status == LCB_SOCKRW_SHUTDOWN && should_continue != 0) {
                 /** Premature termination of connection */
                 err = LCB_NETWORK_ERROR;
+                should_continue = 0;
             }
         }
     }
@@ -87,15 +88,11 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
 
     if (!should_continue) {
         lcb_http_request_finish(instance, req, err);
-
     } else {
         lcb_sockrw_apply_want(&req->connection);
     }
 
     lcb_http_request_decref(req);
-
-    /* log whatever error ocurred here */
-    lcb_error_handler(instance, err, NULL);
     (void)sock;
 }
 
