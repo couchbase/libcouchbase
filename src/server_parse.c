@@ -219,6 +219,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
                 return -1;
 
             } else if (rv == 0) {
+                lcb_dispatch_response(c, &ct, (void *)packet);
                 swallow_command(c, &header, was_connected);
             }
 
