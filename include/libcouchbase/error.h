@@ -226,6 +226,12 @@ extern "C" {
          */
         LCB_SASLMECH_UNAVAILABLE = 0x28,
 
+        /**
+         * Maximum allowed number redirects reached. See lcb_cntl(3)
+         * manpage for LCB_MAX_REDIRECTS options to get/set this limit.
+         */
+        LCB_TOO_MANY_REDIRECTS = 0x29,
+
 #ifdef LIBCOUCHBASE_INTERNAL
         /**
          * This is a private value used by the tests in libcouchbase

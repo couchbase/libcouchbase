@@ -56,11 +56,28 @@ static int http_parser_headers_complete_cb(http_parser *p)
     lcb_http_request_t req = ctx->req;
     struct lcb_http_header_st *hdr;
     lcb_size_t ii;
+    lcb_t instance = req->instance;
+    const char *location = NULL;
 
     /* +1 pointer for NULL-terminator */
     req->headers = calloc(req->nheaders + 1, sizeof(const char *));
     for (ii = req->nheaders - 1, hdr = req->headers_list; hdr; --ii, hdr = hdr->next) {
         req->headers[ii] = hdr->data;
+        if (strcasecmp("Location", hdr->data) == 0) {
+            if (hdr->next) {
+                location = req->headers[ii + 1];
+            }
+        }
+    }
+    if (p->status_code >= 300 && p->status_code < 400) {
+        req->redircount++;
+        if (location) {
+            req->redirect_to = strdup(location);
+            if (!req->redirect_to) {
+                lcb_http_request_finish(instance, req, LCB_CLIENT_ENOMEM);
+            }
+        }
+        return 1;
     }
     return 0;
 }
@@ -98,7 +115,7 @@ static int http_parser_complete_cb(http_parser *p)
     lcb_size_t np = 0, nbytes = 0;
     lcb_http_resp_t resp;
 
-    if (req->status != LCB_HTREQ_S_ONGOING) {
+    if (req->status != LCB_HTREQ_S_ONGOING || req->redirect_to) {
         return 0;
     }
 

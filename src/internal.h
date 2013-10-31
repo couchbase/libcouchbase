@@ -53,6 +53,7 @@
 #define LCB_DEFAULT_DURABILITY_INTERVAL 100000
 #define LCB_DEFAULT_HTTP_TIMEOUT 75000000
 
+#define LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS 3
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 #define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
@@ -284,6 +285,9 @@ extern "C" {
         lcb_size_t rbufsize;
         lcb_size_t wbufsize;
 
+        /** maximum redirect hops. -1 means infinite redirects */
+        int max_redir;
+
         struct {
             lcb_compat_t type;
             union {
@@ -438,6 +442,9 @@ extern "C" {
         const void *command_cookie;
         /** Reference count */
         unsigned int refcount;
+        /** Redirect count */
+        int redircount;
+        char *redirect_to;
 
         /** Current state */
         lcb_http_request_status_t status;

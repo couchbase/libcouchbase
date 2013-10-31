@@ -105,6 +105,7 @@ void lcb_http_request_decref(lcb_http_request_t req)
 
     free(req->path);
     free(req->url);
+    free(req->redirect_to);
 
     if (req->parser) {
         free(req->parser->data);

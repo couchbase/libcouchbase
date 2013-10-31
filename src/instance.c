@@ -340,6 +340,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
     obj->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
     obj->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
+    obj->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
 
     lcb_initialize_packet_handlers(obj);
 
