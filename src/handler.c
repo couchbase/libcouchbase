@@ -168,8 +168,12 @@ void setup_lcb_flush_resp_t(lcb_flush_resp_t *resp,
     resp->v.v0.server_endpoint = server_endpoint;
 }
 
-static lcb_error_t map_error(protocol_binary_response_status in)
+static lcb_error_t map_error(lcb_t instance,
+                             protocol_binary_response_status in)
 {
+
+    (void)instance;
+
     switch (in) {
     case PROTOCOL_BINARY_RESPONSE_SUCCESS:
         return LCB_SUCCESS;
@@ -327,7 +331,7 @@ static void getq_response_handler(lcb_server_t *server,
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
 
     nbytes -= res->response.extlen;
     if (key == NULL) {
@@ -365,7 +369,7 @@ static void get_replica_response_handler(lcb_server_t *server,
     const char *key = (const char *)res;
     char *packet;
 
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
 
     key += sizeof(get->bytes);
     if (key == NULL) {
@@ -463,7 +467,7 @@ static void delete_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
@@ -486,7 +490,7 @@ static void observe_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
     lcb_uint32_t ttp;
     lcb_uint32_t ttr;
     lcb_size_t pos;
@@ -596,7 +600,7 @@ static void store_response_handler(lcb_server_t *server,
     const char *key = get_key(server, &nkey, &packet);
 
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
 
     switch (res->response.opcode) {
     case PROTOCOL_BINARY_CMD_ADD:
@@ -645,7 +649,7 @@ static void arithmetic_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
@@ -676,7 +680,7 @@ static void stat_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
     lcb_uint16_t nkey;
     lcb_uint32_t nvalue;
     const char *key, *value;
@@ -728,7 +732,7 @@ static void verbosity_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
     lcb_verbosity_resp_t resp;
 
     setup_lcb_verbosity_resp_t(&resp, server->authority);
@@ -753,7 +757,7 @@ static void version_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
     lcb_uint32_t nvstring = ntohl(res->response.bodylen);
     const char *vstring;
     lcb_server_version_resp_t resp;
@@ -928,7 +932,7 @@ static void touch_response_handler(lcb_server_t *server,
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
 
     if (key == NULL) {
         lcb_error_handler(server->instance, LCB_EINTERNAL,
@@ -949,7 +953,7 @@ static void flush_response_handler(lcb_server_t *server,
 {
     lcb_t root = server->instance;
     lcb_uint16_t status = ntohs(res->response.status);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
     lcb_flush_resp_t resp;
     setup_lcb_flush_resp_t(&resp, server->authority);
 
@@ -975,7 +979,7 @@ static void unlock_response_handler(lcb_server_t *server,
     char *packet;
     lcb_uint16_t nkey;
     const char *key = get_key(server, &nkey, &packet);
-    lcb_error_t rc = map_error(status);
+    lcb_error_t rc = map_error(root, status);
 
     if (key == NULL) {
         lcb_error_handler(server->instance, LCB_EINTERNAL,
