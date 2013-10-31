@@ -130,6 +130,10 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
                 "authentication requirements";
 
     default:
-        return "Unknown error.. are you sure libcouchbase gave you that?";
+        if (error > LCB_MAX_ERROR) {
+            return "Unknown error";
+        } else {
+            return "Unknown error. This code exceeds reserved limit for libcouchbase";
+        }
     }
 }
