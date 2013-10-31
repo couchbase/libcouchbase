@@ -168,6 +168,30 @@ void setup_lcb_flush_resp_t(lcb_flush_resp_t *resp,
     resp->v.v0.server_endpoint = server_endpoint;
 }
 
+/**
+ * Default mapping for user-modifiable behavior
+ */
+LIBCOUCHBASE_API
+lcb_error_t lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
+{
+    (void)instance;
+
+    switch (in) {
+    case PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET:
+        return LCB_NO_MATCHING_SERVER;
+    case PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE:
+        return LCB_AUTH_CONTINUE;
+    case PROTOCOL_BINARY_RESPONSE_EBUSY:
+        return LCB_EBUSY;
+    case PROTOCOL_BINARY_RESPONSE_ETMPFAIL:
+        return LCB_ETMPFAIL;
+    case PROTOCOL_BINARY_RESPONSE_EINTERNAL:
+        return LCB_EINTERNAL;
+    default:
+        return LCB_ERROR;
+    }
+}
+
 static lcb_error_t map_error(lcb_t instance,
                              protocol_binary_response_status in)
 {
@@ -191,27 +215,16 @@ static lcb_error_t map_error(lcb_t instance,
         return LCB_NOT_STORED;
     case PROTOCOL_BINARY_RESPONSE_DELTA_BADVAL:
         return LCB_DELTA_BADVAL;
-    case PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET:
-        return LCB_NOT_MY_VBUCKET;
     case PROTOCOL_BINARY_RESPONSE_AUTH_ERROR:
         return LCB_AUTH_ERROR;
-    case PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE:
-        return LCB_AUTH_CONTINUE;
     case PROTOCOL_BINARY_RESPONSE_ERANGE:
         return LCB_ERANGE;
     case PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND:
         return LCB_UNKNOWN_COMMAND;
     case PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED:
         return LCB_NOT_SUPPORTED;
-    case PROTOCOL_BINARY_RESPONSE_EINTERNAL:
-        return LCB_EINTERNAL;
-    case PROTOCOL_BINARY_RESPONSE_EBUSY:
-        return LCB_EBUSY;
-    case PROTOCOL_BINARY_RESPONSE_ETMPFAIL:
-        return LCB_ETMPFAIL;
     default:
-        return LCB_ERROR;
-
+        return instance->callbacks.errmap(instance, in);
     }
 }
 
@@ -1187,6 +1200,7 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.observe = dummy_observe_callback;
     instance->callbacks.verbosity = dummy_verbosity_callback;
     instance->callbacks.durability = dummy_durability_callback;
+    instance->callbacks.errmap = lcb_errmap_default;
 }
 
 int lcb_dispatch_response(lcb_server_t *c,
@@ -1433,6 +1447,17 @@ lcb_durability_callback lcb_set_durability_callback(lcb_t instance,
     lcb_durability_callback ret = instance->callbacks.durability;
     if (cb != NULL) {
         instance->callbacks.durability = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+lcb_errmap_callback lcb_set_errmap_callback(lcb_t instance,
+                                            lcb_errmap_callback cb)
+{
+    lcb_errmap_callback ret = instance->callbacks.errmap;
+    if (cb != NULL) {
+        instance->callbacks.errmap = cb;
     }
     return ret;
 }

@@ -883,6 +883,13 @@ extern "C" {
                                     lcb_size_t ncmds,
                                     const lcb_durability_cmd_t *const *cmds);
 
+    /**
+     * This may be used in conjunction with the errmap callback if it wishes
+     * to fallback for default behavior for the given code.
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_errmap_default(lcb_t instance, lcb_uint16_t code);
+
 
 #ifdef __cplusplus
 }

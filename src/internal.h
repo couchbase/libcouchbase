@@ -180,6 +180,7 @@ extern "C" {
         lcb_verbosity_callback verbosity;
         lcb_durability_callback durability;
         lcb_exists_callback exists;
+        lcb_errmap_callback errmap;
     };
 
     struct lcb_st {
