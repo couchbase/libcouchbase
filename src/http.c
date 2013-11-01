@@ -424,7 +424,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
         }
         base = server->couch_api_base;
-        base = "http://localhost:9292/default";
         nbase = strlen(base);
         username = instance->sasl.name;
         if (instance->sasl.password.secret.len) {
