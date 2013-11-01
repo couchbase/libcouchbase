@@ -549,4 +549,5 @@ void lcb_free_backup_nodes(lcb_t instance)
     }
     free(instance->backup_nodes);
     instance->backup_nodes = NULL;
+    instance->backup_idx = 0;
 }
