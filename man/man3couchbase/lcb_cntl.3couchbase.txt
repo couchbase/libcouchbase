@@ -231,7 +231,8 @@ Example:
                node.v.v1.connected ? "connected" : "is not connected");
         if (node.v.v1.sasl_mech) {
             printf("Node is authenticated via SASL '%s'\n",
-                   node.v.v0.sasl_mech);
+                   node.v.v1.sasl_mech);
+        }
 
 *LCB_CNTL_CONFIGNODE_INFO* '(lcb_io_opt_t*)'::
     Get information about the configuration node. Semantics of
