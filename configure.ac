@@ -545,13 +545,7 @@ AM_CONDITIONAL([DTRACE_INSTRUMENT_OBJECT],
                [test "x$ac_cv_have_decl___sun" = "xyes"])
 AM_CONDITIONAL([APPLE_DTRACE], [test "x$ac_cv_have_decl__APPLE__" = "xyes"])
 
-AC_CACHE_CHECK([manpage layout], [ac_cv_manpage_layout], [
-   manpage=`man -s4 null 2> /dev/null`
-   AS_IF([test x"$manpage" = "x"], [ac_cv_manpage_layout="System V"],
-          [ac_cv_manpage_layout=bsd])
-])
-
-AM_CONDITIONAL(MANPAGE_BSD_LAYOUT, [test "x$ac_cv_manpage_layout" = "xbsd"])
+AM_CONDITIONAL(MANPAGE_BSD_LAYOUT, [test "x$ac_cv_have_decl___sun" != "xyes"])
 
 AC_CACHE_CHECK([if EWOULDBLOCK != EAGAIN],[ac_cv_eagain_neq_ewouldblock],
                [AC_COMPILE_IFELSE([AC_LANG_SOURCE([
