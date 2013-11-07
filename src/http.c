@@ -289,7 +289,7 @@ lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_si
     }
 
     required_fields = ((1 << UF_HOST) | (1 << UF_PORT) | (1 << UF_PATH));
-    if (http_parser_parse_url(req->url, req->nurl, 0, &req->url_info)
+    if (_lcb_http_parser_parse_url(req->url, req->nurl, 0, &req->url_info)
             || (req->url_info.field_set & required_fields) != required_fields) {
         return LCB_EINVAL;
     }

@@ -188,7 +188,7 @@ int lcb_http_request_do_parse(lcb_http_request_t req)
     }
 
     if (nbytes > 0) {
-        nb = (lcb_size_t)http_parser_execute(req->parser, &req->parser_settings, bytes, nbytes);
+        nb = (lcb_size_t)_lcb_http_parser_execute(req->parser, &req->parser_settings, bytes, nbytes);
         ringbuffer_consumed(input, nbytes);
         if (np) {   /* release peek storage */
             free(bytes);
@@ -214,7 +214,7 @@ lcb_error_t lcb_http_parse_setup(lcb_http_request_t req)
         return LCB_CLIENT_ENOMEM;
     }
 
-    http_parser_init(req->parser, HTTP_RESPONSE);
+    _lcb_http_parser_init(req->parser, HTTP_RESPONSE);
 
     parser_ctx = malloc(sizeof(struct parser_ctx_st));
     if (parser_ctx == NULL) {
