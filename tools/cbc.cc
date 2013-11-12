@@ -1219,6 +1219,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Specify timeout value"));
     getopt.addOption(new CommandLineOption('D', "dumb", false,
                                            "Behave like legacy memcached client (default false)"));
+    getopt.addOption(new CommandLineOption('S', "sasl", true,
+                                           "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
 
     int replica_strategy = -1;
     int replica_idx = 0;
@@ -1313,6 +1315,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     }
 
     vector<CommandLineOption *>::iterator iter;
+    const char *sasl_mech = NULL;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->found) {
             bool unknownOpt = true;
@@ -1343,6 +1346,10 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             case 'D':
                 dumb = true;
+                break;
+
+            case 'S':
+                sasl_mech = (*iter)->argument;
                 break;
 
             case '?':
@@ -1526,6 +1533,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         exit(EXIT_FAILURE);
     }
 
+    if (sasl_mech) {
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)sasl_mech);
+    }
     (void)lcb_set_error_callback(instance, error_callback);
     (void)lcb_set_flush_callback(instance, flush_callback);
     (void)lcb_set_get_callback(instance, get_callback);

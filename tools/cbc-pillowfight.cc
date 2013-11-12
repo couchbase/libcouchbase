@@ -51,7 +51,8 @@ public:
         timings(false),
         loop(false),
         randomSeed(0),
-        dumb(false) {
+        dumb(false),
+        saslMech() {
         setMaxSize(5120);
         setMinSize(50);
     }
@@ -202,6 +203,17 @@ public:
         return dumb;
     }
 
+    void setSaslMech(const char *val) {
+        saslMech.assign(val);
+    }
+
+    const char *getSaslMech() {
+        if (saslMech.length() > 0) {
+            return saslMech.c_str();
+        }
+        return NULL;
+    }
+
     void *data;
 
     std::string host;
@@ -222,6 +234,7 @@ public:
     bool loop;
     uint32_t randomSeed;
     bool dumb;
+    std::string saslMech;
 } config;
 
 void log(const char *format, ...)
@@ -293,6 +306,10 @@ public:
                 error = lcb_create(&instance, &options);
             }
             if (error == LCB_SUCCESS) {
+                const char *sasl_mech = config.getSaslMech();
+                if (sasl_mech) {
+                    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)sasl_mech);
+                }
                 (void)lcb_set_store_callback(instance, storageCallback);
                 (void)lcb_set_get_callback(instance, getCallback);
                 queue.push(instance);
@@ -613,6 +630,8 @@ static void handle_options(int argc, char **argv)
                                            "Specify maximum size of payload (default 5120)"));
     getopt.addOption(new CommandLineOption('d', "dumb", false,
                                            "Behave like legacy memcached client (default false)"));
+    getopt.addOption(new CommandLineOption('S', "sasl", true,
+                                           "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -685,6 +704,10 @@ static void handle_options(int argc, char **argv)
 
             case 'd' :
                 config.setDumb(true);
+                break;
+
+            case 'S':
+                config.setSaslMech((*iter)->argument);
                 break;
 
             case '?':

@@ -89,6 +89,10 @@ The following options are supported:
     Enable memcached compatibility mode. With this option set
     subcommands can be executed against regular memcached node.
 
+*-S, --sasl*='MECH'::
+    Force SASL authentication mechanism (currently "PLAIN" or
+    "CRAM-MD5").
+
 
 SUBCOMMANDS
 -----------
@@ -317,6 +321,10 @@ Only warnings will be reported. This is what you normally want!
     *-d, --dumb*::::
         Behave like legacy memcached client (default: false). Useful
         to check moxi for example, or other memcached implementations.
+
+    *-S, --sasl*='MECH'::
+        Force SASL authentication mechanism (currently "PLAIN" or
+        "CRAM-MD5").
 
 
 EXAMPLES
