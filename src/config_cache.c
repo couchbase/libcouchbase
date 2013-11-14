@@ -103,6 +103,22 @@ int lcb_load_config_cache(lcb_t instance)
     return -1;
 }
 
+void lcb_dump_config_cache(lcb_t instance)
+{
+    FILE *fp;
+    if (instance->compat.type != LCB_CACHED_CONFIG) {
+        return;
+    }
+    fp = fopen(instance->compat.value.cached.cachefile, "w");
+    if (fp) {
+        fprintf(fp, "%s%s",
+                instance->vbucket_stream.input.data,
+                LCB_CONFIG_CACHE_MAGIC);
+        fclose(fp);
+    }
+    instance->compat.value.cached.updating = 0;
+    instance->compat.value.cached.mtime = time(NULL) - 1;
+}
 
 void lcb_refresh_config_cache(lcb_t instance)
 {

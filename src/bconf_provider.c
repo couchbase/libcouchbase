@@ -351,17 +351,7 @@ static int grab_http_config(lcb_t instance, VBUCKET_CONFIG_HANDLE *config)
     }
     instance->vbucket_stream.input.avail = 0;
 
-    if (instance->compat.type == LCB_CACHED_CONFIG) {
-        FILE *fp = fopen(instance->compat.value.cached.cachefile, "w");
-        if (fp) {
-            fprintf(fp, "%s%s",
-                    instance->vbucket_stream.input.data,
-                    LCB_CONFIG_CACHE_MAGIC);
-            fclose(fp);
-        }
-        instance->compat.value.cached.updating = 0;
-        instance->compat.value.cached.mtime = time(NULL) - 1;
-    }
+    lcb_dump_config_cache(instance);
     return 0;
 }
 

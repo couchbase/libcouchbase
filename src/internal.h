@@ -658,6 +658,7 @@ extern "C" {
                                      lcb_size_t npacket,
                                      lcb_error_t err);
 
+    void lcb_dump_config_cache(lcb_t instance);
     int lcb_load_config_cache(lcb_t instance);
     void lcb_refresh_config_cache(lcb_t instance);
     void lcb_schedule_config_cache_refresh(lcb_t instance);
