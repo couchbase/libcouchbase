@@ -41,13 +41,43 @@ static void swallow_command(lcb_server_t *c,
     }
 }
 
+static int extract_cccp_body(lcb_t instance, lcb_server_t *c, const char *body)
+{
+    VBUCKET_CONFIG_HANDLE config = vbucket_config_create();
+
+    if (config == NULL) {
+        lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
+                          "Cannot create vbucket config");
+        return -1;
+    }
+
+    if (vbucket_config_parse2(config,
+                              LIBVBUCKET_SOURCE_MEMORY, body, c->connection.host)) {
+
+        lcb_error_handler(instance,
+                          LCB_PROTOCOL_ERROR,
+                          vbucket_get_error_message(config));
+
+        vbucket_config_destroy(config);
+        return -1;
+    }
+
+    if (instance->bootstrap.via.cccp.next_config) {
+        vbucket_config_destroy(instance->bootstrap.via.cccp.next_config);
+    }
+
+    instance->bootstrap.via.cccp.next_config = config;
+    return 0;
+}
+
 /**
  * Returns 1 if retried, 0 if the command should fail, -1 for an internal
  * error
  */
 static int handle_not_my_vbucket(lcb_server_t *c,
                                  protocol_binary_request_header *oldreq,
-                                 struct lcb_command_data_st *oldct)
+                                 struct lcb_command_data_st *oldct,
+                                 protocol_binary_response_header *res)
 {
     int idx;
     char *body;
@@ -58,7 +88,25 @@ static int handle_not_my_vbucket(lcb_server_t *c,
     hrtime_t now;
     lcb_t instance = c->instance;
 
-    if (instance->compat.type == LCB_CACHED_CONFIG) {
+    nbody = ntohl(res->response.bodylen);
+    if (nbody) {
+        int vbrv;
+
+        char *config_body = malloc(nbody + 1);
+        if (!config_body) {
+            lcb_error_handler(instance, LCB_CLIENT_ENOMEM, NULL);
+            return -1;
+        }
+
+        memcpy(config_body, (char *)res + sizeof(res->bytes), nbody);
+        config_body[nbody] = '\0';
+        vbrv = extract_cccp_body(instance, c, config_body);
+        free(config_body);
+
+        if (vbrv < 0) {
+            return -1;
+        }
+    } else if (instance->compat.type == LCB_CACHED_CONFIG) {
         lcb_schedule_config_cache_refresh(instance);
     }
 
@@ -231,7 +279,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
             swallow_command(c, &header, was_connected);
 
         } else {
-            int rv = handle_not_my_vbucket(c, &req, &ct);
+            int rv = handle_not_my_vbucket(c, &req, &ct, (void *)packet);
 
             if (rv == -1) {
                 return -1;
@@ -246,9 +294,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     }
 
     default:
-        lcb_error_handler(c->instance,
-                          LCB_PROTOCOL_ERROR,
-                          NULL);
+        lcb_error_handler(c->instance, LCB_PROTOCOL_ERROR, NULL);
         if (packet != conn->input->read_head) {
             free(packet);
         }

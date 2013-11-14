@@ -79,10 +79,17 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
         lcb_sockrw_apply_want(&c->connection);
         c->inside_handler = 0;
     }
+
     if (instance->compat.type == LCB_CACHED_CONFIG &&
             instance->compat.value.cached.needs_update) {
         lcb_refresh_config_cache(instance);
+
+    } else if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_CCCP &&
+            instance->bootstrap.via.cccp.next_config) {
+        lcb_update_vbconfig(instance, instance->bootstrap.via.cccp.next_config);
+        instance->bootstrap.via.cccp.next_config = NULL;
     }
+
     lcb_maybe_breakout(instance);
     lcb_error_handler(instance, rc, NULL);
 }
