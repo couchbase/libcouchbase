@@ -125,6 +125,23 @@ extern "C" {
                              vbucket_source_t data_source,
                              const char *data);
 
+    /**
+     * Parse a vbucket configuration and substitute local address if needed
+     * @param handle the vbucket config handle to store the result
+     * @param data_source what kind of datasource to parse
+     * @param data A zero terminated string representing the data to parse.
+     *             For LIBVBUCKET_SOURCE_FILE this is the file to parse,
+     *             for LIBVBUCKET_SOURCE_MEMORY it is the actual JSON body.
+     * @param peername a string, representing address of local peer
+     *                 (usually 127.0.0.1)
+     * @return 0 for success, the appropriate error code otherwise
+     */
+    LIBVBUCKET_PUBLIC_API
+    int vbucket_config_parse2(VBUCKET_CONFIG_HANDLE handle,
+                              vbucket_source_t data_source,
+                              const char *data,
+                              const char *peername);
+
     LIBVBUCKET_PUBLIC_API
     const char *vbucket_get_error_message(VBUCKET_CONFIG_HANDLE handle);
 
