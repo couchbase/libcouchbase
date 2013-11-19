@@ -121,7 +121,7 @@ static lcb_error_t setup_sasl_params(lcb_t instance)
 
 lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE config)
 {
-    lcb_uint16_t ii, max, buii;
+    lcb_uint16_t ii, buii;
     lcb_size_t num;
     lcb_error_t err;
 
@@ -170,22 +170,6 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
 
     instance->nreplicas = (lcb_uint16_t)vbucket_config_get_num_replicas(instance->vbucket_config);
     instance->dist_type = vbucket_config_get_distribution_type(instance->vbucket_config);
-    /*
-     * Run through all of the vbuckets and build a map of what they need.
-     * It would have been nice if I could query libvbucket for the number
-     * of vbuckets a server got, but there isn't at the moment..
-     */
-    max = (lcb_uint16_t)vbucket_config_get_num_vbuckets(instance->vbucket_config);
-    instance->nvbuckets = max;
-    free(instance->vb_server_map);
-    instance->vb_server_map = calloc(max, sizeof(lcb_vbucket_t));
-    if (instance->vb_server_map == NULL) {
-        return lcb_error_handler(instance, LCB_CLIENT_ENOMEM, "Failed to allocate memory");
-    }
-    for (ii = 0; ii < max; ++ii) {
-        instance->vb_server_map[ii] = (lcb_uint16_t)vbucket_get_master(instance->vbucket_config, ii);
-    }
-
     instance->confstatus = LCB_CONFSTATE_CONFIGURED;
     instance->config_generation++;
     return LCB_SUCCESS;

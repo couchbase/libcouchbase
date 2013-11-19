@@ -489,7 +489,6 @@ void lcb_destroy(lcb_t instance)
     free(instance->vbucket_stream.input.data);
     free(instance->vbucket_stream.chunk.data);
     free(instance->vbucket_stream.header);
-    free(instance->vb_server_map);
     free(instance->histogram);
     free(instance->username);
     free(instance->password);

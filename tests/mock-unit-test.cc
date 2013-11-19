@@ -756,8 +756,8 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     /* Determine what server should receive that operation */
-    int vb = vbucket_get_vbucket_by_key(instance->vbucket_config, key.c_str(), key.size());
-    lcb_vbucket_t idx = instance->vb_server_map[vb];
+    int vb, idx;
+    vbucket_map(instance->vbucket_config, key.c_str(), key.size(), &vb, &idx);
 
     /* Switch off that server */
     mock->failoverNode(idx);

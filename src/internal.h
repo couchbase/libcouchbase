@@ -239,10 +239,6 @@ extern "C" {
         VBUCKET_DISTRIBUTION_TYPE dist_type;
         /** The number of replicas */
         lcb_uint16_t nreplicas;
-        /** The number of vbuckets */
-        lcb_uint16_t nvbuckets;
-        /** A map from the vbucket to the server hosting the vbucket */
-        lcb_vbucket_t *vb_server_map;
 
         vbucket_state_listener_t vbucket_state_listener;
 
