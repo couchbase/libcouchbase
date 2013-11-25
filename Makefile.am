@@ -94,6 +94,7 @@ pkginclude_HEADERS += \
 
 nobase_pkginclude_HEADERS = \
                              plugins/io/libuv/plugin-internal.h \
+                             plugins/io/libuv/libuv_compat.h \
                              plugins/io/libuv/plugin-libuv.c
 
 libhttpparser_la_SOURCES = \
