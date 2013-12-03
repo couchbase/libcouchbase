@@ -314,6 +314,10 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
     obj->type = type;
     obj->compat.type = (lcb_compat_t)0xdead;
+    obj->bucket = strdup(bucket);
+    if (obj->bucket == NULL) {
+        return LCB_CLIENT_ENOMEM;
+    }
 
     if (io == NULL) {
         lcb_io_opt_t ops;
@@ -492,48 +496,17 @@ void lcb_destroy(lcb_t instance)
     free(instance->histogram);
     free(instance->username);
     free(instance->password);
+    free(instance->bucket);
     free(instance->sasl_mech_force);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
-}
-
-static void dummy_error_callback(lcb_t instance, lcb_error_t err,
-                                 const char *msg)
-{
-    (void)instance;
-    (void)err;
-    (void)msg;
 }
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
     instance->backup_idx = 0;
-    if (instance->compat.type == LCB_MEMCACHED_CLUSTER ||
-            (instance->compat.type == LCB_CACHED_CONFIG &&
-             instance->vbucket_config != NULL &&
-             instance->compat.value.cached.updating == 0)) {
-        return LCB_SUCCESS;
-    }
-
-    switch (instance->connection.state) {
-    case LCB_CONNSTATE_CONNECTED:
-        return LCB_SUCCESS;
-    case LCB_CONNSTATE_INPROGRESS:
-        return LCB_BUSY;
-    default: {
-        lcb_error_t ret;
-        lcb_error_callback old_cb;
-
-        old_cb = instance->callbacks.error;
-        instance->callbacks.error = dummy_error_callback;
-        ret = lcb_instance_start_connection(instance);
-        instance->callbacks.error = old_cb;
-        return ret;
-
-    }
-
-    }
+    return lcb_bootstrap_http_connect(instance);
 }
 
 void lcb_free_backup_nodes(lcb_t instance)

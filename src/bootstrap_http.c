@@ -15,26 +15,21 @@
  *   limitations under the License.
  */
 
-/**
- * This file contains connection routines for the instance
- *
- * @author Mark Nunberg
- */
-
 #include "internal.h"
 
 static void config_v0_handler(lcb_socket_t sock, short which, void *arg);
-static void config_v1_read_handler(lcb_sockdata_t *sockptr,
-                                   lcb_ssize_t nr);
-static void config_v1_write_handler(lcb_sockdata_t *sockptr,
-                                    lcb_io_writebuf_t *wbuf,
-                                    int status);
+static void config_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr);
+static void config_v1_write_handler(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf, int status);
 static void config_v1_error_handler(lcb_sockdata_t *sockptr);
-
-static void connection_error(lcb_t instance, lcb_error_t err,
-                             const char *errinfo, lcb_conferr_opt_t options);
-
 static int switch_node(lcb_t instance, lcb_error_t error, const char *reason);
+static lcb_error_t start_connection(lcb_t instance);
+static lcb_error_t handle_vbstream_read(lcb_t instance);
+static void timeout_handler(lcb_connection_t conn, lcb_error_t err);
+static void connect_done_handler(lcb_connection_t conn, lcb_error_t err);
+static void v1_error_common(lcb_t instance);
+static void setup_current_host(lcb_t instance, const char *host);
+static void dummy_error_callback(lcb_t instance, lcb_error_t err, const char *msg);
+
 
 static void reset_stream_state(lcb_t instance)
 {
@@ -42,8 +37,7 @@ static void reset_stream_state(lcb_t instance)
     free(instance->vbucket_stream.chunk.data);
     free(instance->vbucket_stream.header);
     memset(&instance->vbucket_stream, 0, sizeof(instance->vbucket_stream));
-    lcb_assert(LCB_SUCCESS ==
-               lcb_connection_reset_buffers(&instance->connection));
+    lcb_assert(LCB_SUCCESS == lcb_connection_reset_buffers(&instance->connection));
 }
 
 /**
@@ -55,16 +49,17 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
     lcb_error_t err;
     int can_retry = 0;
     int old_gen = instance->config_generation;
+    lcb_connection_t conn = &instance->connection;
 
     err = lcb_parse_vbucket_stream(instance);
     if (err == LCB_SUCCESS) {
         if (instance->type == LCB_TYPE_BUCKET) {
-            lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
-            lcb_sockrw_apply_want(&instance->connection);
+            lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
+            lcb_sockrw_apply_want(conn);
         }
         if (old_gen != instance->config_generation || instance->type == LCB_TYPE_CLUSTER) {
-            lcb_connection_cancel_timer(&instance->connection);
-            instance->connection.timeout.usec = 0;
+            lcb_connection_cancel_timer(conn);
+            conn->timeout.usec = 0;
             lcb_maybe_breakout(instance);
         }
         return LCB_SUCCESS;
@@ -94,7 +89,7 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
 
         if (can_retry) {
             const char *msg = "Failed to get configuration";
-            connection_error(instance, err, msg, LCB_CONFERR_NO_BREAKOUT);
+            lcb_bootstrap_error(instance, err, msg, LCB_CONFERR_NO_BREAKOUT);
             return err;
         } else {
             lcb_maybe_breakout(instance);
@@ -103,28 +98,28 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
     }
 
     lcb_assert(err == LCB_BUSY);
-    lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
-    lcb_sockrw_apply_want(&instance->connection);
+    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
+    lcb_sockrw_apply_want(conn);
 
     if (old_gen != instance->config_generation) {
-        lcb_connection_cancel_timer(&instance->connection);
-        instance->connection.timeout.usec = 0;
+        lcb_connection_cancel_timer(conn);
+        conn->timeout.usec = 0;
         lcb_maybe_breakout(instance);
     }
 
     return LCB_BUSY;
 }
 
-void lcb_instance_config_error(lcb_t instance,
-                               lcb_error_t err,
-                               const char *errinfo,
-                               lcb_conferr_opt_t options)
+static void dummy_error_callback(lcb_t instance, lcb_error_t err,
+                                 const char *msg)
 {
-    connection_error(instance, err, errinfo, options);
+    (void)instance;
+    (void)err;
+    (void)msg;
 }
 
-static void connection_error(lcb_t instance, lcb_error_t err,
-                             const char *errinfo, lcb_conferr_opt_t options)
+void lcb_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo,
+                         lcb_conferr_opt_t options)
 {
     lcb_connection_close(&instance->connection);
     /* We try and see if the connection attempt can be relegated to another
@@ -168,7 +163,7 @@ static void connection_error(lcb_t instance, lcb_error_t err,
     }
 }
 
-static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
+static void timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_t instance = (lcb_t)conn->data;
     const char *msg = "Configuration update timed out";
@@ -186,9 +181,8 @@ static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
         return;
     }
 
-    connection_error(instance, err, msg, 0);
+    lcb_bootstrap_error(instance, err, msg, 0);
 }
-
 
 static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
 {
@@ -208,10 +202,9 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
     }
 
     if (err == LCB_ETIMEDOUT) {
-        instance_timeout_handler(conn, err);
-
+        timeout_handler(conn, err);
     } else {
-        connection_error(instance, err, "Couldn't connect", 0);
+        lcb_bootstrap_error(instance, err, "Couldn't connect", 0);
     }
 }
 
@@ -219,8 +212,10 @@ static void setup_current_host(lcb_t instance, const char *host)
 {
     char *ptr;
     lcb_connection_t conn = &instance->connection;
+
     snprintf(conn->host, sizeof(conn->host), "%s", host);
-    if ((ptr = strchr(conn->host, ':')) == NULL) {
+    ptr = strchr(conn->host, ':');
+    if (ptr == NULL) {
         strcpy(conn->port, "8091");
     } else {
         *ptr = '\0';
@@ -250,7 +245,7 @@ static int switch_node(lcb_t instance, lcb_error_t error, const char *reason)
          * It will advance instance->backup_idx while calling
          * setup_current_host
          */
-        if (lcb_instance_start_connection(instance) == LCB_SUCCESS) {
+        if (start_connection(instance) == LCB_SUCCESS) {
             return 0;
         }
     } while (instance->backup_nodes[instance->backup_idx] != NULL);
@@ -259,16 +254,14 @@ static int switch_node(lcb_t instance, lcb_error_t error, const char *reason)
     return -1;
 }
 
-
-lcb_error_t lcb_instance_start_connection(lcb_t instance)
+static lcb_error_t start_connection(lcb_t instance)
 {
     int error;
     char *ptr;
     lcb_connection_t conn = &instance->connection;
     lcb_connection_result_t connres;
 
-    if (instance->connection.state == LCB_CONNSTATE_INPROGRESS ||
-            instance->connection.state == LCB_CONNSTATE_CONNECTED) {
+    if (conn->state == LCB_CONNSTATE_INPROGRESS || conn->state == LCB_CONNSTATE_CONNECTED) {
         lcb_assert("start_connection called while we still have a connection" && 0);
     }
 
@@ -276,7 +269,7 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
      * First, close the connection, if there's an open socket from a previous
      * one.
      */
-    lcb_connection_close(&instance->connection);
+    lcb_connection_close(conn);
     reset_stream_state(instance);
 
     conn->on_connect_complete = connect_done_handler;
@@ -284,7 +277,7 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     conn->completion.read = config_v1_read_handler;
     conn->completion.write = config_v1_write_handler;
     conn->completion.error = config_v1_error_handler;
-    conn->on_timeout = instance_timeout_handler;
+    conn->on_timeout = timeout_handler;
     conn->timeout.usec = instance->config_timeout;
 
     do {
@@ -298,12 +291,9 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
              */
             if (instance->backup_nodes[instance->backup_idx] == NULL) {
                 char errinfo[1024];
-                snprintf(errinfo, sizeof(errinfo),
-                         "Failed to look up \"%s:%s\"",
+                snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
                          conn->host, conn->port);
-                return lcb_error_handler(instance,
-                                         LCB_UNKNOWN_HOST,
-                                         errinfo);
+                return lcb_error_handler(instance, LCB_UNKNOWN_HOST, errinfo);
             }
         }
     } while (error != 0);
@@ -317,7 +307,7 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     sprintf(ptr, "Host: %s:%s\r\n\r\n", conn->host, conn->port);
     connres = lcb_connection_start(conn, 1);
     if (connres == LCB_CONN_ERROR) {
-        lcb_connection_close(&instance->connection);
+        lcb_connection_close(conn);
         return lcb_error_handler(instance, LCB_CONNECT_ERROR,
                                  "Couldn't schedule connection");
     }
@@ -346,10 +336,10 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
 
         status = lcb_sockrw_v0_write(conn, conn->output);
         if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
-            connection_error(instance, LCB_NETWORK_ERROR,
-                             "Problem with sending data. "
-                             "Failed to send data to REST server",
-                             0);
+            lcb_bootstrap_error(instance, LCB_NETWORK_ERROR,
+                                "Problem with sending data. "
+                                "Failed to send data to REST server",
+                                0);
             return;
         }
 
@@ -365,9 +355,9 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
 
     status = lcb_sockrw_v0_slurp(conn, conn->input);
     if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
-        connection_error(instance, LCB_NETWORK_ERROR,
-                         "Problem with reading data. "
-                         "Failed to send read data from REST server", 0);
+        lcb_bootstrap_error(instance, LCB_NETWORK_ERROR,
+                            "Problem with reading data. "
+                            "Failed to send read data from REST server", 0);
         return;
     }
 
@@ -377,25 +367,25 @@ static void config_v0_handler(lcb_socket_t sock, short which, void *arg)
 
 static void v1_error_common(lcb_t instance)
 {
-    connection_error(instance, LCB_NETWORK_ERROR,
-                     "Problem with sending data", 0);
+    lcb_bootstrap_error(instance, LCB_NETWORK_ERROR,
+                        "Problem with sending data", 0);
 }
 
 static void config_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
 {
     lcb_t instance;
+    lcb_connection_t conn = sockptr->lcbconn;
+
     if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&instance)) {
         return;
     }
-
-    lcb_sockrw_v1_onread_common(sockptr, &instance->connection.input, nr);
-
+    lcb_sockrw_v1_onread_common(sockptr, &conn->input, nr);
     if (nr < 1) {
         v1_error_common(instance);
         return;
     }
 
-    lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
+    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
     /* automatically does apply_want */
     handle_vbstream_read(instance);
 }
@@ -405,18 +395,18 @@ static void config_v1_write_handler(lcb_sockdata_t *sockptr,
                                     int status)
 {
     lcb_t instance;
+    lcb_connection_t conn = sockptr->lcbconn;
+
     if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&instance)) {
         return;
     }
-
-    lcb_sockrw_v1_onwrite_common(sockptr, wbuf, &instance->connection.output);
-
+    lcb_sockrw_v1_onwrite_common(sockptr, wbuf, &conn->output);
     if (status) {
         v1_error_common(instance);
     }
 
-    lcb_sockrw_set_want(&instance->connection, LCB_READ_EVENT, 1);
-    lcb_sockrw_apply_want(&instance->connection);
+    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
+    lcb_sockrw_apply_want(conn);
 }
 
 static void config_v1_error_handler(lcb_sockdata_t *sockptr)
@@ -427,4 +417,91 @@ static void config_v1_error_handler(lcb_sockdata_t *sockptr)
     }
 
     v1_error_common(instance);
+}
+
+lcb_error_t lcb_bootstrap_http_setup(lcb_t instance)
+{
+    char buffer[1024];
+    lcb_ssize_t offset = 0;
+    lcb_error_t err;
+    lcb_connection_t conn = &instance->connection;
+
+    instance->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
+    instance->bummer = 0;
+    switch (instance->type) {
+    case LCB_TYPE_BUCKET:
+        offset = snprintf(buffer, sizeof(buffer),
+                          "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
+                          instance->bucket);
+        break;
+    case LCB_TYPE_CLUSTER:
+        offset = snprintf(buffer, sizeof(buffer), "GET /pools/ HTTP/1.1\r\n");
+        break;
+    default:
+        return LCB_EINVAL;
+    }
+
+    err = lcb_connection_init(conn, instance);
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+    conn->data = instance;
+
+    if (instance->password) {
+        char cred[256];
+        char base64[256];
+        snprintf(cred, sizeof(cred), "%s:%s", instance->username, instance->password);
+        if (lcb_base64_encode(cred, base64, sizeof(base64)) == -1) {
+            lcb_destroy(instance);
+            return LCB_EINTERNAL;
+        }
+        offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
+                           "Authorization: Basic %s\r\n", base64);
+    }
+
+    offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
+                       "%s", LCB_LAST_HTTP_HEADER);
+
+    /* Add space for: Host: \r\n\r\n" */
+    instance->http_uri = malloc(strlen(buffer) + strlen(instance->backup_nodes[0]) + 80);
+    if (instance->http_uri == NULL) {
+        lcb_destroy(instance);
+        return LCB_CLIENT_ENOMEM;
+    }
+    strcpy(instance->http_uri, buffer);
+
+    return LCB_SUCCESS;
+}
+
+lcb_error_t lcb_bootstrap_http_connect(lcb_t instance)
+{
+    lcb_error_t ret;
+    lcb_error_callback old_cb;
+    lcb_connection_t conn = &instance->connection;
+
+    if (instance->compat.type == LCB_MEMCACHED_CLUSTER ||
+            (instance->compat.type == LCB_CACHED_CONFIG &&
+             instance->vbucket_config != NULL &&
+             instance->compat.value.cached.updating == 0)) {
+        return LCB_SUCCESS;
+    }
+    switch (conn->state) {
+    case LCB_CONNSTATE_CONNECTED:
+        return LCB_SUCCESS;
+    case LCB_CONNSTATE_INPROGRESS:
+        return LCB_BUSY;
+    default:
+        old_cb = instance->callbacks.error;
+        instance->callbacks.error = dummy_error_callback;
+        ret = start_connection(instance);
+        instance->callbacks.error = old_cb;
+        return ret;
+    }
+}
+
+void lcb_bootstrap_http_cleanup(lcb_t instance)
+{
+    reset_stream_state(instance);
+    free(instance->http_uri);
+    lcb_connection_cleanup(&instance->connection);
 }

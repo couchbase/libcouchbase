@@ -245,6 +245,7 @@ extern "C" {
         /* credentials needed to operate cluster via REST API */
         char *username;
         char *password;
+        char *bucket;
 
         struct {
             const char *name;
@@ -315,6 +316,11 @@ extern "C" {
         lcb_debug_st debug;
 #endif
     };
+
+    lcb_error_t lcb_bootstrap_http_setup(lcb_t instance);
+    void lcb_bootstrap_http_cleanup(lcb_t instance);
+    lcb_error_t lcb_bootstrap_http_connect(lcb_t instance);
+    void lcb_bootstrap_error(lcb_t instance, lcb_error_t err, const char *reason, lcb_conferr_opt_t options);
 
     /**
      * The structure representing each couchbase server
