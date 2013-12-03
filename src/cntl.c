@@ -367,6 +367,36 @@ static lcb_error_t max_redirects(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t config_transport(int mode, lcb_t instance, int cmd, void *arg)
+{
+    lcb_config_transport_t *val = arg;
+
+    if (mode == LCB_CNTL_SET) {
+        if (instance->config.handle) {
+            return LCB_EINVAL;
+        }
+        switch (*val) {
+        case LCB_CONFIG_TRANSPORT_HTTP:
+            instance->bootstrap.cleanup(instance);
+            lcb_bootstrap_use_http(instance);
+            instance->bootstrap.setup(instance);
+            break;
+        case LCB_CONFIG_TRANSPORT_CCCP:
+            instance->bootstrap.cleanup(instance);
+            lcb_bootstrap_use_cccp(instance);
+            instance->bootstrap.setup(instance);
+            break;
+        default:
+            return LCB_EINVAL;
+        }
+    } else {
+        *val = instance->bootstrap.type;
+    }
+
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -392,6 +422,7 @@ static ctl_handler handlers[] = {
     config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */,
     force_sasl_mech_handler, /* LCB_CNTL_FORCE_SASL_MECH */
     max_redirects, /* LCB_CNTL_MAX_REDIRECTS */
+    config_transport, /* LCB_CNTL_CONFIG_TRANSPORT */
 };
 
 

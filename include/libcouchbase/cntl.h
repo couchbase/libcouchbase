@@ -338,8 +338,15 @@ extern "C" {
      */
 #define LCB_CNTL_MAX_REDIRECTS 0x17
 
+    /**
+     * Get/Set the transport used to fetch cluster configuration.
+     *
+     * Arg: lcb_config_transport_t*
+     */
+#define LCB_CNTL_CONFIG_TRANSPORT 0x18
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x18
+#define LCB_CNTL__MAX 0x19
 
 
 #ifdef __cplusplus
