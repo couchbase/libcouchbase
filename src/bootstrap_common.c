@@ -124,7 +124,7 @@ lcb_error_t lcb_init_next_host(lcb_t instance, int default_port)
 {
     char *ptr;
     int error;
-    lcb_connection_t conn = &instance->bootstrap.via.http.connection;
+    lcb_connection_t conn = instance->bootstrap.connection;
 
     do {
         snprintf(conn->host, sizeof(conn->host), "%s",

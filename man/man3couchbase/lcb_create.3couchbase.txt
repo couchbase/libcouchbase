@@ -41,6 +41,15 @@ in <libcouchbase/arguments.h>:
                 struct lcb_io_opt_st *io; /* IO instance to use */
                 lcb_type_t type;    /* type of handle */
             } v1;
+            struct {
+                const char *host;   /* host (list) to use */
+                const char *user;   /* username for authentication */
+                const char *passwd; /* password for authentication */
+                const char *bucket; /* bucket to connect to */
+                struct lcb_io_opt_st *io; /* IO instance to use */
+                lcb_type_t type;    /* type of handle */
+                lcb_config_transport_t transport; /* bootstrap transport */
+            } v2;
         } v;
 
 A lcb_create_st structure should be initialized by using memset to 0, causing
@@ -49,7 +58,20 @@ the default values to be used for all options not specified.
 The "version" member specifies how the "v" union should be
 interpreted. The only difference between version 0 and version 1 is
 that version 1 allows you to create an instance to use for http
-requests (without binding to a bucket).
+requests (without binding to a bucket). The version "v2" allows to
+choose protocol for initial configuration. At the moment two protocols
+available:
+
+*LCB_CONFIG_TRANSPORT_HTTP*::
+    Default transport, which requires additional HTTP connection to
+    the cluster.
+
+*LCB_CONFIG_TRANSPORT_CCCP*::
+    New Cluster Configuration Carrier Publication protocol which comes
+    with Couchbase Server 2.5. This is more efficient implementation,
+    and also it doesn't need HTTP connection, it uses direct data port
+    to fetch configuration (default 11210). More info at:
+    http://couchbase.com/wiki/display/couchbase/Cluster+Configuration+Carrier+Publication
 
 Hosts may be specified as a list of hosts separated by ';'. If the
 Couchbase cluster is using a non-standard port, it may be specified by
@@ -67,9 +89,10 @@ the administrator account. See examples 3 and 4.
 If specified, bucket specifies the bucket in the cluster to connect
 to. If not specified the "default" bucket is selected.
 
-If specified io specifies the io instance used for communications. See
+If specified, io specifies the io instance used for communications. See
 lcb_create_io_ops(3couchbase) for more information. If not specified a
 default io instance will be created.
+
 
 RETURN VALUES
 -------------
@@ -137,6 +160,28 @@ Example 4: Create an handle for data requests to protected bucket
     options.v.v1.user = "protected";
     options.v.v1.passwd = "secret";
     options.v.v1.type = LCB_TYPE_BUCKET;
+
+    err = lcb_create(&instance, &options);
+    if (err != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to create instance: %s\n",
+                lcb_strerror(NULL, err));
+        exit(EXIT_FAILURE);
+    }
+
+Example 5: Use CCCP protocol. If port missing it will assume 11210
+
+    lcb_t instance;
+    lcb_error_t err;
+    struct lcb_create_st options;
+
+    memset(&options, 0, sizeof(options));
+    options.version = 1;
+    options.v.v2.host = "example.com:11210;example.org";
+    options.v.v2.bucket = "protected";
+    options.v.v2.user = "protected";
+    options.v.v2.passwd = "secret";
+    options.v.v2.type = LCB_TYPE_BUCKET;
+    options.v.v2.transport = LCB_CONFIG_TRANSPORT_CCCP;
 
     err = lcb_create(&instance, &options);
     if (err != LCB_SUCCESS) {

@@ -512,7 +512,8 @@ extern "C" {
     } lcb_ipv6_t;
 
     typedef enum {
-        LCB_CONFIG_TRANSPORT_HTTP
+        LCB_CONFIG_TRANSPORT_HTTP,
+        LCB_CONFIG_TRANSPORT_CCCP
     } lcb_config_transport_t;
 
 #ifdef __cplusplus

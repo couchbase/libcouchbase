@@ -161,6 +161,7 @@ libcouchbase_la_SOURCES = \
                         src/base64.c \
                         src/bconf_parse.c \
                         src/bconf_provider.c \
+                        src/bootstrap_cccp.c \
                         src/bootstrap_common.c \
                         src/bootstrap_http.c \
                         src/cntl.c \

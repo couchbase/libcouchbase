@@ -381,8 +381,8 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
     ringbuffer_destruct(&rest);
     if (should_refresh_config) {
         lcb_bootstrap_error(root, LCB_NETWORK_ERROR,
-                            "Config connection considered stale. "
-                            "Refresing", LCB_CONNFERR_NO_FAILOUT);
+                            "Config connection considered stale. Refresing",
+                            LCB_CONNFERR_NO_FAILOUT);
     }
     lcb_maybe_breakout(server->instance);
 }

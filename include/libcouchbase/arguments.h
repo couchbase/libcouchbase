@@ -111,6 +111,48 @@ extern "C" {
                  */
                 lcb_type_t type;
             } v1;
+            struct {
+                /**
+                 * hosts A list of hosts:port separated by ';' to the
+                 * administration port of the couchbase cluster. (ex:
+                 * "host1;host2:9000;host3" would try to connect to
+                 * host1 on port 8091, if that fails it'll connect to
+                 * host2 on port 9000 etc).
+                 *
+                 * The hostname may also be specified as a URI looking
+                 * like: http://localhost:8091/pools
+                 */
+                const char *host;
+                /** user the username to use */
+                const char *user;
+                /** @param passwd The password */
+                const char *passwd;
+                /** @param bucket The bucket to connect to */
+                const char *bucket;
+                /** @param io the io handle to use */
+                struct lcb_io_opt_st *io;
+                /**
+                 * the type of the connection:
+                 * * LCB_TYPE_BUCKET
+                 *      NULL for bucket means "default" bucket
+                 * * LCB_TYPE_CLUSTER
+                 *      the bucket argument ignored and all data commands
+                 *      will return LCB_NOT_SUPPORTED
+                 */
+                lcb_type_t type;
+                /**
+                 * the bootstrap transport:
+                 * * LCB_CONFIG_TRANSPORT_HTTP
+                 *      Default transport, which requires additional
+                 *      HTTP connection to the cluster
+                 * * LCB_CONFIG_TRANSPORT_CCCP
+                 *      Cluster Configuration Carrier Publication
+                 *      protocol. This protocol utilizes one of the
+                 *      data connection to the cluster to keep
+                 *      configuration up to date.
+                 */
+                lcb_config_transport_t transport;
+            } v2;
         } v;
 
 #ifdef __cplusplus

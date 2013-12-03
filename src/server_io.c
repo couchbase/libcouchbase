@@ -240,6 +240,10 @@ int lcb_flushing_buffers(lcb_t instance)
             return 1;
         }
     }
+    if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_CCCP &&
+        lcb_server_has_pending(&instance->bootstrap.via.cccp.server)) {
+        return 1;
+    }
     return 0;
 }
 

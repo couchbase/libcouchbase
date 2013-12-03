@@ -75,7 +75,7 @@ static int sasl_get_password(cbsasl_conn_t *conn, void *context, int id,
     return SASL_OK;
 }
 
-static lcb_error_t setup_sasl_params(lcb_t instance)
+lcb_error_t lcb_setup_sasl(lcb_t instance)
 {
     const char *passwd;
     cbsasl_callback_t sasl_callbacks[4];
@@ -147,7 +147,7 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
                                  LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
 
-    err = setup_sasl_params(instance);
+    err = lcb_setup_sasl(instance);
     if (err != LCB_SUCCESS) {
         return lcb_error_handler(instance, err, "sasl setup");
     }
@@ -412,7 +412,7 @@ void lcb_update_vbconfig(lcb_t instance, VBUCKET_CONFIG_HANDLE next_config)
      * If we're using a cached config, we should not need a socket connection.
      * Disconnect the socket, if it's there
      */
-    if (is_cached) {
+    if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && is_cached) {
         lcb_connection_close(&instance->bootstrap.via.http.connection);
     }
 

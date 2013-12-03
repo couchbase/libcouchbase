@@ -91,7 +91,7 @@ const char *const *lcb_get_server_list(lcb_t instance)
 }
 
 
-static lcb_error_t validate_hostname(const char *host, char **realhost)
+static lcb_error_t validate_hostname(lcb_t instance, const char *host, char **realhost)
 {
     /* The http parser aborts if it finds a space.. we don't want our
      * program to core, so run a prescan first
@@ -100,9 +100,17 @@ static lcb_error_t validate_hostname(const char *host, char **realhost)
     lcb_size_t ii;
     char *schema = strstr(host, "://");
     char *path;
-    int port = 8091;
+    int port;
     int numcolons = 0;
 
+    switch (instance->bootstrap.type) {
+    case LCB_CONFIG_TRANSPORT_HTTP:
+        port = 8091;
+        break;
+    case LCB_CONFIG_TRANSPORT_CCCP:
+        port = 11210;
+        break;
+    }
     for (ii = 0; ii < len; ++ii) {
         if (isspace(host[ii])) {
             return LCB_INVALID_HOST_FORMAT;
@@ -204,7 +212,7 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
         ret->config.backup_nodes[ii] = NULL;
         if (ptr == NULL) {
             /* this is the last part */
-            error = validate_hostname(start, &ret->config.backup_nodes[ii]);
+            error = validate_hostname(ret, start, &ret->config.backup_nodes[ii]);
             ptr = NULL;
         } else {
             /* copy everything up to ';' */
@@ -215,7 +223,7 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
                 *(nm + size) = '\0';
             }
             ++ptr;
-            error = validate_hostname(nm, &ret->config.backup_nodes[ii]);
+            error = validate_hostname(ret, nm, &ret->config.backup_nodes[ii]);
         }
         if (error != LCB_SUCCESS) {
             while (ii > 0) {
@@ -251,101 +259,123 @@ static const char *get_nonempty_string(const char *s)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create(lcb_t *instance,
-                       const struct lcb_create_st *options)
+lcb_error_t lcb_create(lcb_t *instance, const struct lcb_create_st *options)
 {
-    const char *host = NULL;
-    const char *user = NULL;
-    const char *passwd = NULL;
-    const char *bucket = NULL;
-    struct lcb_io_opt_st *io = NULL;
-    lcb_type_t type = LCB_TYPE_BUCKET;
-    lcb_t obj;
+    struct lcb_create_st opts;
     lcb_error_t err;
+    lcb_t obj;
 
+    memset(&opts, 0, sizeof(opts));
+    opts.version = 2;
+    opts.v.v2.type = LCB_TYPE_BUCKET;
+    opts.v.v2.transport = LCB_CONFIG_TRANSPORT_HTTP;
     if (options != NULL) {
         switch (options->version) {
         case 0:
-            host = get_nonempty_string(options->v.v0.host);
-            user = get_nonempty_string(options->v.v0.user);
-            passwd = get_nonempty_string(options->v.v0.passwd);
-            bucket = get_nonempty_string(options->v.v0.bucket);
-            io = options->v.v0.io;
+            opts.v.v2.host = get_nonempty_string(options->v.v0.host);
+            opts.v.v2.user = get_nonempty_string(options->v.v0.user);
+            opts.v.v2.passwd = get_nonempty_string(options->v.v0.passwd);
+            opts.v.v2.bucket = get_nonempty_string(options->v.v0.bucket);
+            opts.v.v2.io = options->v.v0.io;
             break;
         case 1:
-            type = options->v.v1.type;
-            host = get_nonempty_string(options->v.v1.host);
-            user = get_nonempty_string(options->v.v1.user);
-            passwd = get_nonempty_string(options->v.v1.passwd);
-            io = options->v.v1.io;
-            switch (type) {
-            case LCB_TYPE_BUCKET:
-                bucket = get_nonempty_string(options->v.v1.bucket);
-                break;
-            case LCB_TYPE_CLUSTER:
-                if (user == NULL || passwd == NULL) {
-                    return LCB_EINVAL;
-                }
-                break;
-            }
+            opts.v.v2.host = get_nonempty_string(options->v.v1.host);
+            opts.v.v2.user = get_nonempty_string(options->v.v1.user);
+            opts.v.v2.passwd = get_nonempty_string(options->v.v1.passwd);
+            opts.v.v2.bucket = get_nonempty_string(options->v.v1.bucket);
+            opts.v.v2.io = options->v.v1.io;
+            opts.v.v2.type = options->v.v1.type;
+            break;
+        case 2:
+            opts.v.v2.host = get_nonempty_string(options->v.v2.host);
+            opts.v.v2.user = get_nonempty_string(options->v.v2.user);
+            opts.v.v2.passwd = get_nonempty_string(options->v.v2.passwd);
+            opts.v.v2.bucket = get_nonempty_string(options->v.v2.bucket);
+            opts.v.v2.io = options->v.v2.io;
+            opts.v.v2.type = options->v.v2.type;
+            opts.v.v2.transport = options->v.v2.transport;
             break;
         default:
             return LCB_EINVAL;
         }
     }
-    if (host == NULL) {
-        host = "localhost";
+
+    if (opts.v.v2.host == NULL) {
+        opts.v.v2.host = "localhost";
     }
-    if (bucket == NULL) {
-        bucket = "default";
+    if (opts.v.v2.bucket == NULL) {
+        opts.v.v2.bucket = "default";
     }
-    if (type == LCB_TYPE_BUCKET) {
-        if (user) {
+    switch (opts.v.v2.type) {
+    case LCB_TYPE_CLUSTER:
+        if (opts.v.v2.user == NULL || opts.v.v2.passwd == NULL) {
+            return LCB_EINVAL;
+        }
+        break;
+    case LCB_TYPE_BUCKET:
+        if (opts.v.v2.user) {
             /* Do not allow people use Administrator account for data access */
-            if (strcmp(user, bucket) != 0) {
+            if (strcmp(opts.v.v2.user, opts.v.v2.bucket) != 0) {
                 return LCB_INVALID_USERNAME;
             }
         } else {
             /* Fallback to bucket name if the username is missing */
-            user = bucket;
+            opts.v.v2.user = opts.v.v2.bucket;
         }
+        break;
+    default:
+        return LCB_EINVAL;
     }
     obj = calloc(1, sizeof(*obj));
     if (obj == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
-    lcb_bootstrap_use_http(obj);
-    obj->bucket = strdup(bucket);
+    switch (opts.v.v2.transport) {
+    case LCB_CONFIG_TRANSPORT_HTTP:
+        lcb_bootstrap_use_http(obj);
+        break;
+    case LCB_CONFIG_TRANSPORT_CCCP:
+        lcb_bootstrap_use_cccp(obj);
+        break;
+    default:
+        lcb_destroy(obj);
+        return LCB_EINVAL;
+    }
+    obj->bucket = strdup(opts.v.v2.bucket);
     if (obj->bucket == NULL) {
+        lcb_destroy(obj);
         return LCB_CLIENT_ENOMEM;
     }
-    if (user) {
-        obj->username = strdup(user);
+    if (opts.v.v2.user) {
+        obj->username = strdup(opts.v.v2.user);
         if (obj->username == NULL) {
+            lcb_destroy(obj);
             return LCB_CLIENT_ENOMEM;
         }
     }
-    if (passwd) {
-        obj->password = strdup(passwd);
+    if (opts.v.v2.passwd) {
+        obj->password = strdup(opts.v.v2.passwd);
         if (obj->password == NULL) {
+            lcb_destroy(obj);
             return LCB_CLIENT_ENOMEM;
         }
     }
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
-    obj->type = type;
+    obj->type = opts.v.v2.type;
     obj->compat.type = (lcb_compat_t)0xdead;
-    if (io == NULL) {
+    if (opts.v.v2.io == NULL) {
         lcb_io_opt_t ops;
-        if ((err = lcb_create_io_ops(&ops, NULL)) != LCB_SUCCESS) {
+        err = lcb_create_io_ops(&ops, NULL);
+        if (err != LCB_SUCCESS) {
             /* You can't initialize the library without a io-handler! */
-            free(obj);
+            lcb_destroy(obj);
             return err;
         }
-        io = ops;
-        io->v.v0.need_cleanup = 1;
+        opts.v.v2.io = ops;
+        opts.v.v2.io->v.v0.need_cleanup = 1;
     }
-    obj->io = io;
+    obj->io = opts.v.v2.io;
     obj->config.randomize_bootstrap_nodes = 1;
     obj->config.syncmode = LCB_ASYNCHRONOUS;
     obj->config.ipv6 = LCB_IPV6_DISABLED;
@@ -358,10 +388,8 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->config.durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
     obj->config.http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
     obj->config.max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
-    obj->bootstrap.type = LCB_CONFIG_TRANSPORT_HTTP;
-
     lcb_initialize_packet_handlers(obj);
-    err = setup_bootstrap_hosts(obj, host);
+    err = setup_bootstrap_hosts(obj, opts.v.v2.host);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;

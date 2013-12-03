@@ -44,10 +44,9 @@ lcb_error_t lcb_wait(lcb_t instance)
         return instance->last_error;
     }
 
-    if (conn->state != LCB_CONNSTATE_CONNECTED
+    if ((instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && conn->state != LCB_CONNSTATE_CONNECTED)
             && !lcb_flushing_buffers(instance)
-            && (instance->compat.type == LCB_CACHED_CONFIG
-                || instance->compat.type == LCB_MEMCACHED_CLUSTER)
+            && (instance->compat.type == LCB_CACHED_CONFIG || instance->compat.type == LCB_MEMCACHED_CLUSTER)
             && instance->config.handle != NULL) {
         return LCB_SUCCESS;
     }
@@ -60,7 +59,7 @@ lcb_error_t lcb_wait(lcb_t instance)
      */
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    if (conn->state != LCB_CONNSTATE_CONNECTED
+    if ((instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && conn->state != LCB_CONNSTATE_CONNECTED)
             || lcb_flushing_buffers(instance)
             || hashset_num_items(instance->timers) > 0
             || hashset_num_items(instance->durability_polls) > 0) {
@@ -74,6 +73,7 @@ lcb_error_t lcb_wait(lcb_t instance)
                 lcb_connection_delay_timer(&c->connection);
             }
         }
+        lcb_connection_delay_timer(instance->bootstrap.connection);
 
         instance->io->v.v0.run_event_loop(instance->io);
     } else {

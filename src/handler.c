@@ -497,6 +497,33 @@ static void delete_response_handler(lcb_server_t *server,
     }
 }
 
+static void cluster_config_response_handler(lcb_server_t *server,
+                                            struct lcb_command_data_st *command_data,
+                                            protocol_binary_response_header *res)
+{
+    lcb_t root = server->instance;
+    lcb_error_t rc = map_error(root, ntohs(res->response.status));
+    lcb_size_t nbody;
+    char *body;
+
+    lcb_assert(root->bootstrap.type == LCB_CONFIG_TRANSPORT_CCCP &&
+               server == &root->bootstrap.via.cccp.server);
+    if (root->callbacks.cluster_config == NULL) {
+        return;
+    }
+    nbody = ntohl(res->response.bodylen);
+    body = malloc(sizeof(char) * (nbody + 1));
+    if (body == NULL) {
+        root->callbacks.cluster_config(server, LCB_CLIENT_ENOMEM, NULL);
+        return;
+    }
+    memcpy(body, (char *)res + sizeof(res->bytes), nbody);
+    body[nbody] = '\0';
+    root->callbacks.cluster_config(server, rc, body);
+    free(body);
+    (void)command_data;
+}
+
 static void observe_response_handler(lcb_server_t *server,
                                      struct lcb_command_data_st *command_data,
                                      protocol_binary_response_header *res)
@@ -1266,6 +1293,9 @@ int lcb_dispatch_response(lcb_server_t *c,
         break;
     case CMD_OBSERVE:
         observe_response_handler(c, ct, (void *)header);
+        break;
+    case CMD_GET_CLUSTER_CONFIG:
+        cluster_config_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_NOOP:
         /* Ignore */

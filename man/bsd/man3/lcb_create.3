@@ -2,12 +2,12 @@
 .\"     Title: lcb_create
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 09/19/2013
+.\"      Date: 12/04/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CREATE" "3" "09/19/2013" "\ \&" "\ \&"
+.TH "LCB_CREATE" "3" "12/04/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -67,6 +67,15 @@ struct lcb_create_st {
             struct lcb_io_opt_st *io; /* IO instance to use */
             lcb_type_t type;    /* type of handle */
         } v1;
+        struct {
+            const char *host;   /* host (list) to use */
+            const char *user;   /* username for authentication */
+            const char *passwd; /* password for authentication */
+            const char *bucket; /* bucket to connect to */
+            struct lcb_io_opt_st *io; /* IO instance to use */
+            lcb_type_t type;    /* type of handle */
+            lcb_config_transport_t transport; /* bootstrap transport */
+        } v2;
     } v;
 .fi
 .if n \{\
@@ -75,7 +84,18 @@ struct lcb_create_st {
 .sp
 A lcb_create_st structure should be initialized by using memset to 0, causing the default values to be used for all options not specified\&.
 .sp
-The "version" member specifies how the "v" union should be interpreted\&. The only difference between version 0 and version 1 is that version 1 allows you to create an instance to use for http requests (without binding to a bucket)\&.
+The "version" member specifies how the "v" union should be interpreted\&. The only difference between version 0 and version 1 is that version 1 allows you to create an instance to use for http requests (without binding to a bucket)\&. The version "v2" allows to choose protocol for initial configuration\&. At the moment two protocols available:
+.PP
+\fBLCB_CONFIG_TRANSPORT_HTTP\fR
+.RS 4
+Default transport, which requires additional HTTP connection to the cluster\&.
+.RE
+.PP
+\fBLCB_CONFIG_TRANSPORT_CCCP\fR
+.RS 4
+New Cluster Configuration Carrier Publication protocol which comes with Couchbase Server 2\&.5\&. This is more efficient implementation, and also it doesn\(cqt need HTTP connection, it uses direct data port to fetch configuration (default 11210)\&. More info at:
+http://couchbase\&.com/wiki/display/couchbase/Cluster+Configuration+Carrier+Publication
+.RE
 .sp
 Hosts may be specified as a list of hosts separated by \fI;\fR\&. If the Couchbase cluster is using a non\-standard port, it may be specified by appending ":port" per host\&. ex: "host1;host2:9000;host3"\&. The hostname parameter may alternatively be specified as an URI like: http://hostname:8091/pools\&. libcouchbase does not support any other schema than http, and the only supported path is "/pools"\&. If no value is specified for host, "localhost:8091" is used\&.
 .sp
@@ -83,7 +103,7 @@ If specified user and password specifies the credentials used for authorization\
 .sp
 If specified, bucket specifies the bucket in the cluster to connect to\&. If not specified the "default" bucket is selected\&.
 .sp
-If specified io specifies the io instance used for communications\&. See lcb_create_io_ops(3) for more information\&. If not specified a default io instance will be created\&.
+If specified, io specifies the io instance used for communications\&. See lcb_create_io_ops(3) for more information\&. If not specified a default io instance will be created\&.
 .SH "RETURN VALUES"
 .sp
 lcb_create() returns the LCB_SUCCESS on success, or a specific error code upon failure\&. See lcb_strerror(3) for more information\&.
@@ -207,6 +227,52 @@ options\&.v\&.v1\&.bucket = "protected";
 options\&.v\&.v1\&.user = "protected";
 options\&.v\&.v1\&.passwd = "secret";
 options\&.v\&.v1\&.type = LCB_TYPE_BUCKET;
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+err = lcb_create(&instance, &options);
+if (err != LCB_SUCCESS) {
+    fprintf(stderr, "Failed to create instance: %s\en",
+            lcb_strerror(NULL, err));
+    exit(EXIT_FAILURE);
+}
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+Example 5: Use CCCP protocol\&. If port missing it will assume 11210
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+lcb_t instance;
+lcb_error_t err;
+struct lcb_create_st options;
+.fi
+.if n \{\
+.RE
+.\}
+.sp
+.if n \{\
+.RS 4
+.\}
+.nf
+memset(&options, 0, sizeof(options));
+options\&.version = 1;
+options\&.v\&.v2\&.host = "example\&.com:11210;example\&.org";
+options\&.v\&.v2\&.bucket = "protected";
+options\&.v\&.v2\&.user = "protected";
+options\&.v\&.v2\&.passwd = "secret";
+options\&.v\&.v2\&.type = LCB_TYPE_BUCKET;
+options\&.v\&.v2\&.transport = LCB_CONFIG_TRANSPORT_CCCP;
 .fi
 .if n \{\
 .RE

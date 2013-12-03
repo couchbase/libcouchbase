@@ -161,6 +161,9 @@ extern "C" {
 
     typedef void (*vbucket_state_listener_t)(lcb_server_t *server);
 
+    typedef void (*lcb_cluster_config_callback)(lcb_server_t *server,
+                                                lcb_error_t error,
+                                                const char *json);
     struct lcb_callback_st {
         lcb_get_callback get;
         lcb_store_callback store;
@@ -180,9 +183,61 @@ extern "C" {
         lcb_durability_callback durability;
         lcb_exists_callback exists;
         lcb_errmap_callback errmap;
+        lcb_cluster_config_callback cluster_config;
     };
 
+    /**
+     * The structure representing each couchbase server
+     */
+    struct lcb_server_st {
+        /** The server index in the list. -1 for bootstrap server */
+        int index;
+        /** Non-zero for node is using for configuration */
+        int is_config_node;
+        /** The server endpoint as hostname:port */
+        char *authority;
+        /** The Couchbase Views API endpoint base */
+        char *couch_api_base;
+        /** The REST API server as hostname:port */
+        char *rest_api_server;
+        /** The sent buffer for this server so that we can resend the
+         * command to another server if the bucket is moved... */
+        ringbuffer_t cmd_log;
+        ringbuffer_t output_cookies;
+        /**
+         * The pending buffer where we write data until we're in a
+         * connected state;
+         */
+        ringbuffer_t pending;
+        ringbuffer_t pending_cookies;
+
+        /** The SASL object used for this server */
+        cbsasl_conn_t *sasl_conn;
+        /* name of the chosen SASL mechanism */
+        char *sasl_mech;
+        lcb_size_t sasl_nmech;
+        /** Is this server in a connected state (done with sasl auth) */
+        int connection_ready;
+
+        /**
+         * This flag is for use by server_send_packets. By default, this
+         * function calls apply_want, but this is unsafe if we are already
+         * inside the handler, because at this point the read buffer may not
+         * have been owned by us, while a read event may still be requested.
+         *
+         * If this is the case, apply_want will not be called from send_packets
+         * but it will be called when the event handler regains control.
+         */
+        int inside_handler;
+
+        /* Pointer back to the instance */
+        lcb_t instance;
+        struct lcb_connection_st connection;
+    };
+
+    lcb_error_t lcb_setup_sasl(lcb_t instance);
     void lcb_bootstrap_use_http(lcb_t instance);
+    void lcb_bootstrap_use_cccp(lcb_t instance);
     void lcb_bootstrap_timeout_handler(lcb_connection_t conn, lcb_error_t err);
     void lcb_bootstrap_error(lcb_t instance, lcb_error_t err, const char *reason, lcb_conferr_opt_t options);
 
@@ -194,7 +249,7 @@ extern "C" {
         lcb_error_t (*setup)(lcb_t instance);
         void (*cleanup)(lcb_t instance);
         lcb_error_t (*connect)(lcb_t instance);
-        void (*error)(lcb_t instance, lcb_error_t err, const char *reason, lcb_conferr_opt_t options);
+        lcb_error_t (*start_connection)(lcb_t instance);
 
         union {
             struct {
@@ -213,6 +268,11 @@ extern "C" {
                  * configured or doesn't have the bucket needed */
                 int bummer;
             } http;
+            struct {
+                /** The next vbucket config to be applied when it will be safe */
+                VBUCKET_CONFIG_HANDLE next_config;
+                struct lcb_server_st server;
+            } cccp;
         } via;
     };
 
@@ -330,55 +390,6 @@ extern "C" {
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
 #endif
-    };
-
-    /**
-     * The structure representing each couchbase server
-     */
-    struct lcb_server_st {
-        /** The server index in the list */
-        int index;
-        /** Non-zero for node is using for configuration */
-        int is_config_node;
-        /** The server endpoint as hostname:port */
-        char *authority;
-        /** The Couchbase Views API endpoint base */
-        char *couch_api_base;
-        /** The REST API server as hostname:port */
-        char *rest_api_server;
-        /** The sent buffer for this server so that we can resend the
-         * command to another server if the bucket is moved... */
-        ringbuffer_t cmd_log;
-        ringbuffer_t output_cookies;
-        /**
-         * The pending buffer where we write data until we're in a
-         * connected state;
-         */
-        ringbuffer_t pending;
-        ringbuffer_t pending_cookies;
-
-        /** The SASL object used for this server */
-        cbsasl_conn_t *sasl_conn;
-        /* name of the chosen SASL mechanism */
-        char *sasl_mech;
-        lcb_size_t sasl_nmech;
-        /** Is this server in a connected state (done with sasl auth) */
-        int connection_ready;
-
-        /**
-         * This flag is for use by server_send_packets. By default, this
-         * function calls apply_want, but this is unsafe if we are already
-         * inside the handler, because at this point the read buffer may not
-         * have been owned by us, while a read event may still be requested.
-         *
-         * If this is the case, apply_want will not be called from send_packets
-         * but it will be called when the event handler regains control.
-         */
-        int inside_handler;
-
-        /* Pointer back to the instance */
-        lcb_t instance;
-        struct lcb_connection_st connection;
     };
 
     struct lcb_timer_st {
@@ -621,6 +632,7 @@ extern "C" {
     int lcb_server_has_pending(lcb_server_t *server);
 
 
+    void lcb_server_connect_handler(lcb_connection_t conn, lcb_error_t err);
 
     void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg);
 
