@@ -376,6 +376,34 @@ static lcb_error_t logprocs_handler(int mode, lcb_t instance, int cmd, void *arg
     return LCB_SUCCESS;
 }
 
+static lcb_error_t config_transport(int mode, lcb_t instance, int cmd, void *arg)
+{
+    lcb_config_transport_t *val = arg;
+
+    if (mode == LCB_CNTL_SET) {
+        return LCB_EINVAL;
+    }
+
+    if (!instance->cur_configinfo) {
+        return LCB_CLIENT_ETMPFAIL;
+    }
+
+    switch (instance->cur_configinfo->origin) {
+        case LCB_CLCONFIG_HTTP:
+            *val = LCB_CONFIG_TRANSPORT_HTTP;
+            break;
+
+        case LCB_CLCONFIG_CCCP:
+            *val = LCB_CONFIG_TRANSPORT_CCCP;
+            break;
+
+        default:
+            return LCB_CLIENT_ETMPFAIL;
+    }
+
+    (void)cmd;
+    return LCB_SUCCESS;
+}
 
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
@@ -403,7 +431,8 @@ static ctl_handler handlers[] = {
     force_sasl_mech_handler, /* LCB_CNTL_FORCE_SASL_MECH */
     max_redirects, /* LCB_CNTL_MAX_REDIRECTS */
     logprocs_handler /* LCB_CNTL_LOGGER */,
-    timeout_common /* LCB_CNTL_CONFDELAY_THRESH */
+    timeout_common, /* LCB_CNTL_CONFDELAY_THRESH */
+    config_transport /* LCB_CNTL_CONFIG_TRANSPORT */
 };
 
 

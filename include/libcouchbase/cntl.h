@@ -359,8 +359,15 @@ extern "C" {
      */
 #define LCB_CNTL_CONFDELAY_THRESH 0x19
 
+    /**
+     * Get the transport used to fetch cluster configuration.
+     *
+     * Arg: lcb_config_transport_t*
+     */
+#define LCB_CNTL_CONFIG_TRANSPORT 0x1A
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x1a
+#define LCB_CNTL__MAX                    0x1B
 
 
 #ifdef __cplusplus
