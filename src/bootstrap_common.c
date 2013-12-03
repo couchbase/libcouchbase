@@ -119,3 +119,35 @@ static int switch_node(lcb_t instance, lcb_error_t error, const char *reason)
     lcb_error_handler(instance, error, reason);
     return -1;
 }
+
+lcb_error_t lcb_init_next_host(lcb_t instance, int default_port)
+{
+    char *ptr;
+    int error;
+    lcb_connection_t conn = &instance->bootstrap.via.http.connection;
+
+    do {
+        snprintf(conn->host, sizeof(conn->host), "%s",
+                 instance->config.backup_nodes[instance->config.backup_idx++]);
+        ptr = strchr(conn->host, ':');
+        if (ptr == NULL) {
+            snprintf(conn->port, sizeof(conn->port), "%d", default_port);
+        } else {
+            *ptr = '\0';
+            snprintf(conn->port, sizeof(conn->port), "%s", ptr + 1);
+        }
+        error = lcb_connection_getaddrinfo(conn, 1);
+        if (error != 0) {
+            /* Ok, we failed to look up that server.. look up the next
+             * in the list
+             */
+            if (instance->config.backup_nodes[instance->config.backup_idx] == NULL) {
+                char errinfo[1024];
+                snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
+                         conn->host, conn->port);
+                return lcb_error_handler(instance, LCB_UNKNOWN_HOST, errinfo);
+            }
+        }
+    } while (error != 0);
+    return LCB_SUCCESS;
+}

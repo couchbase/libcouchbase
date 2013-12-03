@@ -482,6 +482,13 @@ extern "C" {
 
     };
 
+    /**
+     * Initialize host/port pair for connection. It iterates through
+     * list of backup nodes until alive node will be found. If the
+     * hostname doesn't contain port, it will use 'default_port'
+     */
+    lcb_error_t lcb_init_next_host(lcb_t instance, int default_port);
+
     lcb_error_t lcb_synchandler_return(lcb_t instance, lcb_error_t retcode);
 
     lcb_error_t lcb_error_handler(lcb_t instance,

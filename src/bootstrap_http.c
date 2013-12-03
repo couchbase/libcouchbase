@@ -25,7 +25,6 @@ static lcb_error_t start_connection(lcb_t instance);
 static lcb_error_t handle_vbstream_read(lcb_t instance);
 static void connect_done_handler(lcb_connection_t conn, lcb_error_t err);
 static void v1_error_common(lcb_t instance);
-static void setup_current_host(lcb_t instance, const char *host);
 static void dummy_error_callback(lcb_t instance, lcb_error_t err, const char *msg);
 
 static lcb_error_t http_setup(lcb_t instance);
@@ -164,24 +163,9 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
     }
 }
 
-static void setup_current_host(lcb_t instance, const char *host)
-{
-    char *ptr;
-    lcb_connection_t conn = &instance->bootstrap.via.http.connection;
-
-    snprintf(conn->host, sizeof(conn->host), "%s", host);
-    ptr = strchr(conn->host, ':');
-    if (ptr == NULL) {
-        strcpy(conn->port, "8091");
-    } else {
-        *ptr = '\0';
-        snprintf(conn->port, sizeof(conn->port), "%s", ptr + 1);
-    }
-}
-
 static lcb_error_t start_connection(lcb_t instance)
 {
-    int error;
+    lcb_error_t rc;
     char *ptr;
     lcb_connection_result_t connres;
     lcb_connection_t conn = &instance->bootstrap.via.http.connection;
@@ -200,25 +184,10 @@ static lcb_error_t start_connection(lcb_t instance)
     conn->completion.error = config_v1_error_handler;
     conn->on_timeout = lcb_bootstrap_timeout_handler;
     conn->timeout.usec = instance->config.bootstrap_timeout;
-
-    do {
-        setup_current_host(instance,
-                           instance->config.backup_nodes[instance->config.backup_idx++]);
-        error = lcb_connection_getaddrinfo(conn, 1);
-
-        if (error != 0) {
-            /* Ok, we failed to look up that server.. look up the next
-             * in the list
-             */
-            if (instance->config.backup_nodes[instance->config.backup_idx] == NULL) {
-                char errinfo[1024];
-                snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
-                         conn->host, conn->port);
-                return lcb_error_handler(instance, LCB_UNKNOWN_HOST, errinfo);
-            }
-        }
-    } while (error != 0);
-
+    rc = lcb_init_next_host(instance, 8091);
+    if (rc != LCB_SUCCESS) {
+        return rc;
+    }
     instance->last_error = LCB_SUCCESS;
 
     /* We need to fix the host part... */
