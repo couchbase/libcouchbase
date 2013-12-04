@@ -43,7 +43,7 @@ lcb_error_t lcb_touch(lcb_t instance,
     struct server_info_st *servers = NULL;
 
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
+    if (instance->config.handle == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
@@ -67,8 +67,8 @@ lcb_error_t lcb_touch(lcb_t instance,
             hashkey = key;
             nhashkey = nkey;
         }
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                          &servers[ii].vb, &servers[ii].idx);
+        vbucket_map(instance->config.handle, hashkey, nhashkey,
+                    &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
             free(servers);
             return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);

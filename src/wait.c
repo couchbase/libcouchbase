@@ -38,16 +38,17 @@ int lcb_is_waiting(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_error_t lcb_wait(lcb_t instance)
 {
+    lcb_connection_t conn = instance->bootstrap.connection;
 
     if (instance->wait != 0) {
         return instance->last_error;
     }
 
-    if (instance->connection.state != LCB_CONNSTATE_CONNECTED
+    if (conn->state != LCB_CONNSTATE_CONNECTED
             && !lcb_flushing_buffers(instance)
             && (instance->compat.type == LCB_CACHED_CONFIG
                 || instance->compat.type == LCB_MEMCACHED_CLUSTER)
-            && instance->vbucket_config != NULL) {
+            && instance->config.handle != NULL) {
         return LCB_SUCCESS;
     }
 
@@ -59,7 +60,7 @@ lcb_error_t lcb_wait(lcb_t instance)
      */
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    if (instance->connection.state != LCB_CONNSTATE_CONNECTED
+    if (conn->state != LCB_CONNSTATE_CONNECTED
             || lcb_flushing_buffers(instance)
             || hashset_num_items(instance->timers) > 0
             || hashset_num_items(instance->durability_polls) > 0) {
@@ -79,7 +80,7 @@ lcb_error_t lcb_wait(lcb_t instance)
         instance->wait = 0;
     }
 
-    if (instance->vbucket_config) {
+    if (instance->config.handle) {
         return LCB_SUCCESS;
     }
 

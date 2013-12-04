@@ -160,7 +160,7 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
         lcb_assert(sasl_ok == SASL_OK);
     }
 
-    if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
+    if (vbucket_config_get_user(server->instance->config.handle) == NULL) {
         /* No SASL AUTH needed */
         lcb_server_connected(server);
     } else {
@@ -195,7 +195,7 @@ void lcb_server_connect(lcb_server_t *server)
     conn->completion.read = lcb_server_v1_read_handler;
     conn->completion.write = lcb_server_v1_write_handler;
     conn->completion.error = lcb_server_v1_error_handler;
-    conn->timeout.usec = server->instance->operation_timeout;
+    conn->timeout.usec = server->instance->config.operation_timeout;
 
     if (lcb_connection_reset_buffers(&server->connection) != LCB_SUCCESS) {
         lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);

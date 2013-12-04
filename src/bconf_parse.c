@@ -215,11 +215,11 @@ static lcb_error_t parse_body(lcb_t instance,
 
 lcb_error_t lcb_parse_vbucket_stream(lcb_t instance)
 {
-    struct vbucket_stream_st *vbs = &instance->vbucket_stream;
+    struct vbucket_stream_st *vbs = &instance->bootstrap.via.http.stream;
     buffer_t *buffer = &vbs->chunk;
     lcb_size_t nw, expected;
     lcb_error_t status = LCB_ERROR;
-    lcb_connection_t conn = &instance->connection;
+    lcb_connection_t conn = &instance->bootstrap.via.http.connection;
 
     if (!grow_buffer(buffer, conn->input->nbytes + 1)) {
         return LCB_ENOMEM;
@@ -249,7 +249,7 @@ lcb_error_t lcb_parse_vbucket_stream(lcb_t instance)
     buffer->data[buffer->avail] = '\0';
 
     if (vbs->header == NULL) {
-        status = parse_header(&instance->vbucket_stream, instance->type);
+        status = parse_header(vbs, instance->type);
         if (status != LCB_SUCCESS) {
             return status; /* BUSY or otherwise */
         }

@@ -157,6 +157,7 @@ ADD_LIBRARY(couchbase SHARED
             src/arithmetic.c
             src/bconf_parse.c
             src/bconf_provider.c
+            src/bootstrap_common.c
             src/bootstrap_http.c
             src/cntl.c
             src/compat.c

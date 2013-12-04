@@ -433,11 +433,11 @@ static void get_replica_response_handler(lcb_server_t *server,
         command_data->replica++;
     }
 
-    if (command_data->replica < root->nreplicas) {
+    if (command_data->replica < root->config.nreplicas) {
         /* try next replica */
         protocol_binary_request_get req;
         lcb_server_t *new_server;
-        int idx = vbucket_get_replica(root->vbucket_config,
+        int idx = vbucket_get_replica(root->config.handle,
                                       command_data->vbucket,
                                       command_data->replica);
         if (idx < 0 || idx > (int)root->nservers) {
@@ -559,7 +559,7 @@ static void observe_response_handler(lcb_server_t *server,
 
     ptr = (const char *)res + sizeof(res->bytes);
     end = ptr + ntohl(res->response.bodylen);
-    config = root->vbucket_config;
+    config = root->config.handle;
     for (pos = 0; ptr < end; pos++) {
         lcb_cas_t cas;
         lcb_uint8_t obs;

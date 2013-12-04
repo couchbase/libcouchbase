@@ -112,7 +112,7 @@ void lcb_dump_config_cache(lcb_t instance)
     fp = fopen(instance->compat.value.cached.cachefile, "w");
     if (fp) {
         fprintf(fp, "%s%s",
-                instance->vbucket_stream.input.data,
+                instance->bootstrap.via.http.stream.input.data,
                 LCB_CONFIG_CACHE_MAGIC);
         fclose(fp);
     }

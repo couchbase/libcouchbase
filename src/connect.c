@@ -436,7 +436,7 @@ int lcb_getaddrinfo(lcb_t instance, const char *hostname,
     memset(&hints, 0, sizeof(hints));
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;
-    switch (instance->ipv6) {
+    switch (instance->config.ipv6) {
     case LCB_IPV6_DISABLED:
         hints.ai_family = AF_INET;
         break;
@@ -560,10 +560,10 @@ static lcb_error_t reset_buffer(ringbuffer_t **rb, lcb_size_t defsz)
 
 lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn)
 {
-    if (reset_buffer(&conn->input, conn->instance->rbufsize) != LCB_SUCCESS) {
+    if (reset_buffer(&conn->input, conn->instance->config.rbufsize) != LCB_SUCCESS) {
         return LCB_CLIENT_ENOMEM;
     }
-    if (reset_buffer(&conn->output, conn->instance->wbufsize) != LCB_SUCCESS) {
+    if (reset_buffer(&conn->output, conn->instance->config.wbufsize) != LCB_SUCCESS) {
         return LCB_CLIENT_ENOMEM;
     }
     return LCB_SUCCESS;

@@ -357,9 +357,9 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         if (mirror) {
             ringbuffer_consumed(mirror, packetsize);
         }
-        if (server->is_config_node) {
-            root->weird_things++;
-            if (root->weird_things >= root->weird_things_threshold) {
+        if (root->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && server->is_config_node) {
+            root->bootstrap.via.http.weird_things++;
+            if (root->bootstrap.via.http.weird_things >= root->bootstrap.via.http.weird_things_threshold) {
                 should_refresh_config = 1;
             }
         }
@@ -512,29 +512,27 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     /* Initialize all members */
     lcb_error_t err;
     char *p;
-    const char *n = vbucket_config_get_server(server->instance->vbucket_config,
-                                              servernum);
+    const char *n;
 
     err = lcb_connection_init(&server->connection, server->instance);
     if (err != LCB_SUCCESS) {
         return err;
     }
-
     server->connection.data = server;
-
     server->index = servernum;
+    n = vbucket_config_get_server(server->instance->config.handle, servernum);
     server->authority = strdup(n);
     strcpy(server->connection.host, n);
     p = strchr(server->connection.host, ':');
     *p = '\0';
     strcpy(server->connection.port, p + 1);
 
-    server->is_config_node = vbucket_config_is_config_node(server->instance->vbucket_config,
+    server->is_config_node = vbucket_config_is_config_node(server->instance->config.handle,
                                                            servernum);
-    n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
+    n = vbucket_config_get_couch_api_base(server->instance->config.handle,
                                           servernum);
     server->couch_api_base = (n != NULL) ? strdup(n) : NULL;
-    n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
+    n = vbucket_config_get_rest_api_server(server->instance->config.handle,
                                            servernum);
     server->rest_api_server = strdup(n);
 

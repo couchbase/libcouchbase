@@ -80,17 +80,17 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         return lcb_synchandler_return(instance, LCB_EBADHANDLE);
     }
 
-    if (instance->vbucket_config == NULL) {
+    if (instance->config.handle == NULL) {
         return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
     }
 
-    if (instance->dist_type != VBUCKET_DISTRIBUTION_VBUCKET) {
+    if (instance->config.dist_type != VBUCKET_DISTRIBUTION_VBUCKET) {
         return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
     }
 
     opaque = ++instance->seqno;
     ct.cookie = command_cookie;
-    maxix = instance->nreplicas;
+    maxix = instance->config.nreplicas;
 
     if (type == LCB_OBSERVE_TYPE_CHECK) {
         maxix = 0;
@@ -130,16 +130,14 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
             nhashkey = nkey;
         }
 
-        vbid = vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                          hashkey,
-                                          nhashkey);
+        vbid = vbucket_get_vbucket_by_key(instance->config.handle,
+                                          hashkey, nhashkey);
 
         for (jj = -1; jj < (int)maxix; jj++) {
             struct observe_st *rr;
 
-            int idx = vbucket_get_replica(instance->vbucket_config,
-                                          vbid,
-                                          jj);
+            int idx = vbucket_get_replica(instance->config.handle,
+                                          vbid, jj);
 
             if (idx < 0 || idx > (int)instance->nservers) {
                 if (jj == -1) {

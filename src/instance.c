@@ -50,21 +50,21 @@ const char *lcb_get_version(lcb_uint32_t *version)
 LIBCOUCHBASE_API
 const char *lcb_get_host(lcb_t instance)
 {
-    return instance->connection.host;
+    return instance->bootstrap.connection->host;
 }
 
 LIBCOUCHBASE_API
 const char *lcb_get_port(lcb_t instance)
 {
-    return instance->connection.port;
+    return instance->bootstrap.connection->port;
 }
 
 
 LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_replicas(lcb_t instance)
 {
-    if (instance->vbucket_config) {
-        return instance->nreplicas;
+    if (instance->config.handle) {
+        return instance->config.nreplicas;
     } else {
         return -1;
     }
@@ -73,7 +73,7 @@ lcb_int32_t lcb_get_num_replicas(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_nodes(lcb_t instance)
 {
-    if (instance->vbucket_config) {
+    if (instance->config.handle) {
         return (lcb_int32_t)instance->nservers;
     } else {
         return -1;
@@ -87,7 +87,7 @@ LIBCOUCHBASE_API
 const char *const *lcb_get_server_list(lcb_t instance)
 {
     /* cast it so we get the full const'ness */
-    return (const char * const *)instance->backup_nodes;
+    return (const char * const *)instance->config.backup_nodes;
 }
 
 
@@ -187,11 +187,11 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
      * (the +2 and not +1 is because of the way we count the number of
      * bootstrap hosts (num == 0 means that we've got a single host etc)
      */
-    if ((ret->backup_nodes = calloc(num + 2, sizeof(char *))) == NULL) {
+    ret->config.backup_nodes = calloc(num + 2, sizeof(char *));
+    if (ret->config.backup_nodes == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
-
-    ret->should_free_backup_nodes = 1;
+    ret->config.should_free_backup_nodes = 1;
 
     ptr = host;
     ii = 0;
@@ -201,10 +201,10 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
         lcb_error_t error;
 
         ptr = strchr(ptr, ';');
-        ret->backup_nodes[ii] = NULL;
+        ret->config.backup_nodes[ii] = NULL;
         if (ptr == NULL) {
             /* this is the last part */
-            error = validate_hostname(start, &ret->backup_nodes[ii]);
+            error = validate_hostname(start, &ret->config.backup_nodes[ii]);
             ptr = NULL;
         } else {
             /* copy everything up to ';' */
@@ -215,11 +215,11 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
                 *(nm + size) = '\0';
             }
             ++ptr;
-            error = validate_hostname(nm, &ret->backup_nodes[ii]);
+            error = validate_hostname(nm, &ret->config.backup_nodes[ii]);
         }
         if (error != LCB_SUCCESS) {
             while (ii > 0) {
-                free(ret->backup_nodes[ii--]);
+                free(ret->config.backup_nodes[ii--]);
             }
             return error;
         }
@@ -227,18 +227,18 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
         ++ii;
     } while (ptr != NULL);
 
-    if (ret->randomize_bootstrap_nodes) {
+    if (ret->config.randomize_bootstrap_nodes) {
         ii = 1;
-        while (ret->backup_nodes[ii] != NULL) {
+        while (ret->config.backup_nodes[ii] != NULL) {
             lcb_size_t nidx = (lcb_size_t)(gethrtime() >> 10) % ii;
-            char *other = ret->backup_nodes[nidx];
-            ret->backup_nodes[nidx] = ret->backup_nodes[ii];
-            ret->backup_nodes[ii] = other;
+            char *other = ret->config.backup_nodes[nidx];
+            ret->config.backup_nodes[nidx] = ret->config.backup_nodes[ii];
+            ret->config.backup_nodes[ii] = other;
             ++ii;
         }
     }
 
-    ret->backup_idx = 0;
+    ret->config.backup_idx = 0;
     return LCB_SUCCESS;
 }
 
@@ -259,8 +259,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     const char *passwd = NULL;
     const char *bucket = NULL;
     struct lcb_io_opt_st *io = NULL;
-    char buffer[1024];
-    lcb_ssize_t offset = 0;
     lcb_type_t type = LCB_TYPE_BUCKET;
     lcb_t obj;
     lcb_error_t err;
@@ -295,30 +293,48 @@ lcb_error_t lcb_create(lcb_t *instance,
             return LCB_EINVAL;
         }
     }
-
     if (host == NULL) {
         host = "localhost";
     }
-
     if (bucket == NULL) {
         bucket = "default";
     }
-
-    /* Do not allow people use Administrator account for data access */
-    if (type == LCB_TYPE_BUCKET && user && strcmp(user, bucket) != 0) {
-        return LCB_INVALID_USERNAME;
+    if (type == LCB_TYPE_BUCKET) {
+        if (user) {
+            /* Do not allow people use Administrator account for data access */
+            if (strcmp(user, bucket) != 0) {
+                return LCB_INVALID_USERNAME;
+            }
+        } else {
+            /* Fallback to bucket name if the username is missing */
+            user = bucket;
+        }
     }
-
-    if ((obj = calloc(1, sizeof(*obj))) == NULL) {
+    obj = calloc(1, sizeof(*obj));
+    if (obj == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
-    obj->type = type;
-    obj->compat.type = (lcb_compat_t)0xdead;
+    lcb_bootstrap_use_http(obj);
     obj->bucket = strdup(bucket);
     if (obj->bucket == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
-
+    if (user) {
+        obj->username = strdup(user);
+        if (obj->username == NULL) {
+            return LCB_CLIENT_ENOMEM;
+        }
+    }
+    if (passwd) {
+        obj->password = strdup(passwd);
+        if (obj->password == NULL) {
+            return LCB_CLIENT_ENOMEM;
+        }
+    }
+    /* No error has occurred yet. */
+    obj->last_error = LCB_SUCCESS;
+    obj->type = type;
+    obj->compat.type = (lcb_compat_t)0xdead;
     if (io == NULL) {
         lcb_io_opt_t ops;
         if ((err = lcb_create_io_ops(&ops, NULL)) != LCB_SUCCESS) {
@@ -329,84 +345,42 @@ lcb_error_t lcb_create(lcb_t *instance,
         io = ops;
         io->v.v0.need_cleanup = 1;
     }
-
-    obj->randomize_bootstrap_nodes = 1;
-    obj->bummer = 0;
     obj->io = io;
-    obj->syncmode = LCB_ASYNCHRONOUS;
-    obj->ipv6 = LCB_IPV6_DISABLED;
-    obj->operation_timeout = LCB_DEFAULT_TIMEOUT;
-    obj->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
-    obj->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
-    obj->rbufsize = LCB_DEFAULT_RBUFSIZE;
-    obj->wbufsize = LCB_DEFAULT_WBUFSIZE;
-    obj->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
-    obj->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
-    obj->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
-    obj->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
-    obj->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
+    obj->config.randomize_bootstrap_nodes = 1;
+    obj->config.syncmode = LCB_ASYNCHRONOUS;
+    obj->config.ipv6 = LCB_IPV6_DISABLED;
+    obj->config.operation_timeout = LCB_DEFAULT_TIMEOUT;
+    obj->config.bootstrap_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
+    obj->config.views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
+    obj->config.rbufsize = LCB_DEFAULT_RBUFSIZE;
+    obj->config.wbufsize = LCB_DEFAULT_WBUFSIZE;
+    obj->config.durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
+    obj->config.durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
+    obj->config.http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
+    obj->config.max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
+    obj->bootstrap.type = LCB_CONFIG_TRANSPORT_HTTP;
 
     lcb_initialize_packet_handlers(obj);
-
-    err = lcb_connection_init(&obj->connection, obj);
-    if (err != LCB_SUCCESS) {
-        lcb_destroy(obj);
-        return err;
-    }
-    obj->connection.data = obj;
-
     err = setup_bootstrap_hosts(obj, host);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;
     }
     obj->timers = hashset_create();
-    obj->http_requests = hashset_create();
-    obj->durability_polls = hashset_create();
-    /* No error has occurred yet. */
-    obj->last_error = LCB_SUCCESS;
-
-    switch (type) {
-    case LCB_TYPE_BUCKET:
-        offset = snprintf(buffer, sizeof(buffer),
-                          "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n",
-                          bucket);
-        break;
-    case LCB_TYPE_CLUSTER:
-        offset = snprintf(buffer, sizeof(buffer), "GET /pools/ HTTP/1.1\r\n");
-        break;
-    default:
-        return LCB_EINVAL;
-    }
-
-    if (user && *user) {
-        obj->username = strdup(user);
-    } else if (type == LCB_TYPE_BUCKET) {
-        obj->username = strdup(bucket);
-    }
-    if (passwd) {
-        char cred[256];
-        char base64[256];
-        snprintf(cred, sizeof(cred), "%s:%s", obj->username, passwd);
-        if (lcb_base64_encode(cred, base64, sizeof(base64)) == -1) {
-            lcb_destroy(obj);
-            return LCB_EINTERNAL;
-        }
-        obj->password = strdup(passwd);
-        offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
-                           "Authorization: Basic %s\r\n", base64);
-    }
-
-    offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
-                       "%s", LCB_LAST_HTTP_HEADER);
-
-    /* Add space for: Host: \r\n\r\n" */
-    obj->http_uri = malloc(strlen(buffer) + strlen(host) + 80);
-    if (obj->http_uri == NULL) {
+    if (obj->timers == NULL) {
         lcb_destroy(obj);
         return LCB_CLIENT_ENOMEM;
     }
-
+    obj->http_requests = hashset_create();
+    if (obj->http_requests == NULL) {
+        lcb_destroy(obj);
+        return LCB_CLIENT_ENOMEM;
+    }
+    obj->durability_polls = hashset_create();
+    if (obj->durability_polls == NULL) {
+        lcb_destroy(obj);
+        return LCB_CLIENT_ENOMEM;
+    }
     if (!ringbuffer_initialize(&obj->purged_buf, 4096)) {
         lcb_destroy(obj);
         return LCB_CLIENT_ENOMEM;
@@ -415,20 +389,22 @@ lcb_error_t lcb_create(lcb_t *instance,
         lcb_destroy(obj);
         return LCB_CLIENT_ENOMEM;
     }
-
-    strcpy(obj->http_uri, buffer);
+    err = obj->bootstrap.setup(obj);
+    if (err != LCB_SUCCESS) {
+        lcb_destroy(obj);
+        return err;
+    }
 
     *instance = obj;
     return LCB_SUCCESS;
 }
 
-
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
 {
     lcb_size_t ii;
-    free(instance->http_uri);
 
+    instance->bootstrap.cleanup(instance);
     if (instance->timers != NULL) {
         for (ii = 0; ii < instance->timers->capacity; ++ii) {
             if (instance->timers->items[ii] > 1) {
@@ -439,7 +415,6 @@ void lcb_destroy(lcb_t instance)
         hashset_destroy(instance->timers);
     }
 
-    lcb_connection_cleanup(&instance->connection);
     if (instance->durability_polls) {
         struct lcb_durability_set_st **dset_list;
         lcb_size_t nitems = hashset_num_items(instance->durability_polls);
@@ -454,8 +429,8 @@ void lcb_destroy(lcb_t instance)
         hashset_destroy(instance->durability_polls);
     }
 
-    if (instance->vbucket_config != NULL) {
-        vbucket_config_destroy(instance->vbucket_config);
+    if (instance->config.handle != NULL) {
+        vbucket_config_destroy(instance->config.handle);
     }
 
     for (ii = 0; ii < instance->nservers; ++ii) {
@@ -489,14 +464,10 @@ void lcb_destroy(lcb_t instance)
 
     ringbuffer_destruct(&instance->purged_buf);
     ringbuffer_destruct(&instance->purged_cookies);
-
-    free(instance->vbucket_stream.input.data);
-    free(instance->vbucket_stream.chunk.data);
-    free(instance->vbucket_stream.header);
     free(instance->histogram);
+    free(instance->bucket);
     free(instance->username);
     free(instance->password);
-    free(instance->bucket);
     free(instance->sasl_mech_force);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
@@ -505,23 +476,23 @@ void lcb_destroy(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
-    instance->backup_idx = 0;
-    return lcb_bootstrap_http_connect(instance);
+    instance->config.backup_idx = 0;
+    return instance->bootstrap.connect(instance);
 }
 
 void lcb_free_backup_nodes(lcb_t instance)
 {
-    if (instance->should_free_backup_nodes) {
-        char **ptr = instance->backup_nodes;
+    if (instance->config.should_free_backup_nodes) {
+        char **ptr = instance->config.backup_nodes;
         while (*ptr != NULL) {
             free(*ptr);
             ptr++;
         }
-        instance->should_free_backup_nodes = 0;
+        instance->config.should_free_backup_nodes = 0;
     }
-    free(instance->backup_nodes);
-    instance->backup_nodes = NULL;
-    instance->backup_idx = 0;
+    free(instance->config.backup_nodes);
+    instance->config.backup_nodes = NULL;
+    instance->config.backup_idx = 0;
 }
 
 LIBCOUCHBASE_API

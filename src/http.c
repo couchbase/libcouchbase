@@ -374,7 +374,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         break;
     case LCB_TYPE_BUCKET:
         /* we need a vbucket config before we can start getting data.. */
-        if (instance->vbucket_config == NULL) {
+        if (instance->config.handle == NULL) {
             return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
         }
         break;
@@ -435,22 +435,30 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         }
     }
     break;
-    case LCB_HTTP_TYPE_MANAGEMENT:
-        nbase = strlen(instance->connection.host) + strlen(instance->connection.port) + 2;
+    case LCB_HTTP_TYPE_MANAGEMENT: {
+        const char *host = lcb_get_host(instance);
+        const char *port = lcb_get_port(instance);
+
+        nbase = strlen(host) + strlen(port) + 2;
         base = calloc(nbase, sizeof(char));
         if (!base) {
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
-        if (snprintf(base, nbase, "%s:%s", instance->connection.host,
-                     instance->connection.port) < 0) {
+        if (snprintf(base, nbase, "%s:%s", host, port) < 0) {
+            free(base);
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
         nbase -= 1; /* skip '\0' */
         username = instance->username;
         if (instance->password) {
             password = strdup(instance->password);
+            if (!password) {
+                free(password);
+                return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
+            }
         }
-        break;
+    }
+    break;
     case LCB_HTTP_TYPE_RAW:
         base = (char *)cmd->v.v1.host;
         nbase = strlen(base);

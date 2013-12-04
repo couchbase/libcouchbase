@@ -189,7 +189,7 @@ TEST_F(RegressionUnitTest, CCBC_282)
 
     // Figure out which server this belongs to..
     int vbid, rv, ix;
-    rv = vbucket_map(instance->vbucket_config,
+    rv = vbucket_map(instance->config.handle,
                      info.kHashKey.c_str(),
                      (unsigned long)info.kHashKey.size(),
                      &vbid, &ix);

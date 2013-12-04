@@ -56,7 +56,7 @@ static void request_v0_handler(lcb_socket_t sock, short which, void *arg)
                 /* Request format error */
                 should_continue = 0;
                 if (req->redirect_to) {
-                    if (instance->max_redir != -1 && instance->max_redir ==  req->redircount) {
+                    if (instance->config.max_redir != -1 && instance->config.max_redir ==  req->redircount) {
                         err = LCB_TOO_MANY_REDIRECTS;
                         req->redirect_to = NULL;
                     }
@@ -219,10 +219,10 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
     conn->on_timeout = request_timed_out;
 
     if (req->reqtype == LCB_HTTP_TYPE_VIEW) {
-        conn->timeout.usec = req->instance->views_timeout;
+        conn->timeout.usec = req->instance->config.views_timeout;
 
     } else {
-        conn->timeout.usec = req->instance->http_timeout;
+        conn->timeout.usec = req->instance->config.http_timeout;
     }
 
     conn->instance = req->instance;

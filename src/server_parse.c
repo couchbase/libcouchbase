@@ -56,13 +56,14 @@ static int handle_not_my_vbucket(lcb_server_t *c,
     struct lcb_command_data_st ct;
     protocol_binary_request_header req;
     hrtime_t now;
+    lcb_t instance = c->instance;
 
-    if (c->instance->compat.type == LCB_CACHED_CONFIG) {
-        lcb_schedule_config_cache_refresh(c->instance);
+    if (instance->compat.type == LCB_CACHED_CONFIG) {
+        lcb_schedule_config_cache_refresh(instance);
     }
 
     /* re-schedule command to new server */
-    idx = vbucket_found_incorrect_master(c->instance->vbucket_config,
+    idx = vbucket_found_incorrect_master(instance->config.handle,
                                          ntohs(oldreq->request.vbucket),
                                          (int)c->index);
 
@@ -82,17 +83,17 @@ static int handle_not_my_vbucket(lcb_server_t *c,
 
     req = *oldreq;
 
-    lcb_assert((lcb_size_t)idx < c->instance->nservers);
-    new_srv = c->instance->servers + idx;
+    lcb_assert((lcb_size_t)idx < instance->nservers);
+    new_srv = instance->servers + idx;
 
     nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
     lcb_assert(nr == sizeof(req));
 
-    req.request.opaque = ++c->instance->seqno;
+    req.request.opaque = ++instance->seqno;
     nbody = ntohl(req.request.bodylen);
     body = malloc(nbody);
     if (body == NULL) {
-        lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
+        lcb_error_handler(instance, LCB_CLIENT_ENOMEM, NULL);
         return -1;
     }
     nr = ringbuffer_read(&c->cmd_log, body, nbody);

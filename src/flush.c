@@ -23,7 +23,7 @@ lcb_error_t lcb_flush(lcb_t instance, const void *command_cookie,
 {
     lcb_size_t count;
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
+    if (instance->config.handle == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);

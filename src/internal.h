@@ -93,7 +93,6 @@ extern "C" {
         LCB_CONNECT_EUNHANDLED
     } lcb_connect_status_t;
 
-
     typedef enum {
         /** We have no configuration */
         LCB_CONFSTATE_UNINIT = 0,
@@ -183,6 +182,40 @@ extern "C" {
         lcb_errmap_callback errmap;
     };
 
+    void lcb_bootstrap_use_http(lcb_t instance);
+    void lcb_bootstrap_timeout_handler(lcb_connection_t conn, lcb_error_t err);
+    void lcb_bootstrap_error(lcb_t instance, lcb_error_t err, const char *reason, lcb_conferr_opt_t options);
+
+    struct lcb_bootstrap_st {
+        lcb_config_transport_t type;
+        /* pointer to connection member */
+        lcb_connection_t connection;
+
+        lcb_error_t (*setup)(lcb_t instance);
+        void (*cleanup)(lcb_t instance);
+        lcb_error_t (*connect)(lcb_t instance);
+        void (*error)(lcb_t instance, lcb_error_t err, const char *reason, lcb_conferr_opt_t options);
+
+        union {
+            struct {
+                /** The URL request to send to the server */
+                char *uri;
+                struct vbucket_stream_st stream;
+                /** The number of weird things happened with config node
+                 *  This counter reflects event on memcached port (default 11210),
+                 *  but used to make decisions about healthiness of the
+                 *  configuration port (default 8091).
+                 */
+                lcb_size_t weird_things;
+                lcb_size_t weird_things_threshold;
+                struct lcb_connection_st connection;
+                /* if non-zero, skip nodes in list that seems like not
+                 * configured or doesn't have the bucket needed */
+                int bummer;
+            } http;
+        } via;
+    };
+
     struct lcb_st {
         /**
          * the type of the connection:
@@ -194,53 +227,54 @@ extern "C" {
          */
         lcb_type_t type;
 
-        /** The URL request to send to the server */
-        char *http_uri;
+        struct {
+            lcb_config_status_t state;
 
-        /** The current vbucket config handle */
-        VBUCKET_CONFIG_HANDLE vbucket_config;
+            /* The current synchronous mode */
+            lcb_syncmode_t syncmode;
+            /** Is IPv6 enabled */
+            lcb_ipv6_t ipv6;
+            lcb_uint32_t views_timeout;
+            lcb_uint32_t http_timeout;
+            lcb_uint32_t durability_timeout;
+            lcb_uint32_t durability_interval;
+            lcb_uint32_t operation_timeout;
+            lcb_uint32_t bootstrap_timeout;
 
-        struct vbucket_stream_st vbucket_stream;
+            lcb_size_t rbufsize;
+            lcb_size_t wbufsize;
+
+            /** maximum redirect hops. -1 means infinite redirects */
+            int max_redir;
+
+            /** The current vbucket config handle */
+            VBUCKET_CONFIG_HANDLE handle;
+            /** if non-zero, backup_nodes entries should be freed before
+              freeing the pointer itself */
+            int should_free_backup_nodes;
+            /** If we should randomize bootstrap nodes or not */
+            int randomize_bootstrap_nodes;
+            /** The array of last known nodes as hostname:port */
+            char **backup_nodes;
+            /** The current connect index */
+            int backup_idx;
+            /* Incremented whenever we get a new config */
+            int generation;
+            /** The type of the key distribution */
+            VBUCKET_DISTRIBUTION_TYPE dist_type;
+            /** The number of replicas */
+            lcb_uint16_t nreplicas;
+            vbucket_state_listener_t vbucket_state_listener;
+        } config;
+        /** Data and functions to perform initial bootstrapping */
+        struct lcb_bootstrap_st bootstrap;
+
         struct lcb_io_opt_st *io;
-
-        /** The number of weird things happened with config node
-         *  This counter reflects event on memcached port (default 11210),
-         *  but used to make decisions about healthiness of the
-         *  configuration port (default 8091).
-         */
-        lcb_size_t weird_things;
-        lcb_size_t weird_things_threshold;
-
-        /* The current synchronous mode */
-        lcb_syncmode_t syncmode;
-
-        struct lcb_connection_st connection;
-
-        lcb_config_status_t confstatus;
-        /* Incremented whenever we get a new config */
-        int config_generation;
 
         /** The number of couchbase server in the configuration */
         lcb_size_t nservers;
         /** The array of the couchbase servers */
         lcb_server_t *servers;
-
-        /** if non-zero, backup_nodes entries should be freed before
-            freeing the pointer itself */
-        int should_free_backup_nodes;
-        /** If we should randomize bootstrap nodes or not */
-        int randomize_bootstrap_nodes;
-        /** The array of last known nodes as hostname:port */
-        char **backup_nodes;
-        /** The current connect index */
-        int backup_idx;
-
-        /** The type of the key distribution */
-        VBUCKET_DISTRIBUTION_TYPE dist_type;
-        /** The number of replicas */
-        lcb_uint16_t nreplicas;
-
-        vbucket_state_listener_t vbucket_state_listener;
 
         /* credentials needed to operate cluster via REST API */
         char *username;
@@ -268,24 +302,9 @@ extern "C" {
 
         lcb_uint32_t seqno;
         int wait;
-        /** Is IPv6 enabled */
-        lcb_ipv6_t ipv6;
         const void *cookie;
 
         lcb_error_t last_error;
-
-        lcb_uint32_t views_timeout;
-        lcb_uint32_t http_timeout;
-        lcb_uint32_t durability_timeout;
-        lcb_uint32_t durability_interval;
-        lcb_uint32_t operation_timeout;
-        lcb_uint32_t config_timeout;
-
-        lcb_size_t rbufsize;
-        lcb_size_t wbufsize;
-
-        /** maximum redirect hops. -1 means infinite redirects */
-        int max_redir;
 
         struct {
             lcb_compat_t type;
@@ -300,10 +319,6 @@ extern "C" {
             } value;
         } compat;
 
-        /* if non-zero, skip nodes in list that seems like not
-         * configured or doesn't have the bucket needed */
-        int bummer;
-
         /**
          * Cached ringbuffer objects for 'purge_implicit_responses'
          */
@@ -316,11 +331,6 @@ extern "C" {
         lcb_debug_st debug;
 #endif
     };
-
-    lcb_error_t lcb_bootstrap_http_setup(lcb_t instance);
-    void lcb_bootstrap_http_cleanup(lcb_t instance);
-    lcb_error_t lcb_bootstrap_http_connect(lcb_t instance);
-    void lcb_bootstrap_error(lcb_t instance, lcb_error_t err, const char *reason, lcb_conferr_opt_t options);
 
     /**
      * The structure representing each couchbase server
@@ -684,8 +694,6 @@ extern "C" {
                                    lcb_error_t err,
                                    const char *errinfo,
                                    lcb_conferr_opt_t options);
-
-    lcb_error_t lcb_instance_start_connection(lcb_t instance);
 
     void lcb_vbucket_stream_v0_handler(lcb_socket_t sock, short which, void *arg);
 
