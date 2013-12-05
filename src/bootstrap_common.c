@@ -22,10 +22,11 @@ static int switch_node(lcb_t instance, lcb_error_t error, const char *reason);
 void lcb_bootstrap_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_t instance = conn->instance;
+    struct lcb_config_st *config = &instance->config;
     const char *msg = "Configuration update timed out";
-    lcb_assert(instance->config.state != LCB_CONFSTATE_CONFIGURED);
+    lcb_assert(config->state != LCB_CONFSTATE_CONFIGURED);
 
-    if (instance->config.state == LCB_CONFSTATE_UNINIT) {
+    if (config->state == LCB_CONFSTATE_UNINIT) {
         /**
          * If lcb_connect was called explicitly then it means there are no
          * pending operations and we should just break out because we have
@@ -87,17 +88,18 @@ void lcb_bootstrap_error(lcb_t instance, lcb_error_t err,
 
 static int switch_node(lcb_t instance, lcb_error_t error, const char *reason)
 {
+    struct lcb_config_st *config = &instance->config;
     if (instance->bootstrap.connection->state == LCB_CONNSTATE_INPROGRESS) {
         return 0; /* We're still connecting. Don't do anything here */
     }
 
-    if (instance->config.backup_nodes == NULL) {
+    if (config->backup_nodes == NULL) {
         /* No known backup nodes */
         lcb_error_handler(instance, error, reason);
         return -1;
     }
 
-    if (instance->config.backup_nodes[instance->config.backup_idx] == NULL) {
+    if (config->backup_nodes[config->backup_idx] == NULL) {
         lcb_error_handler(instance, error, reason);
         return -1;
     }
@@ -114,7 +116,7 @@ static int switch_node(lcb_t instance, lcb_error_t error, const char *reason)
         if (instance->bootstrap.connect(instance) == LCB_SUCCESS) {
             return 0;
         }
-    } while (instance->config.backup_nodes[instance->config.backup_idx] != NULL);
+    } while (config->backup_nodes[config->backup_idx] != NULL);
     /* All known nodes are dead */
     lcb_error_handler(instance, error, reason);
     return -1;
@@ -125,10 +127,11 @@ lcb_error_t lcb_init_next_host(lcb_t instance, int default_port)
     char *ptr;
     int error;
     lcb_connection_t conn = instance->bootstrap.connection;
+    struct lcb_config_st *config = &instance->config;
 
     do {
         snprintf(conn->host, sizeof(conn->host), "%s",
-                 instance->config.backup_nodes[instance->config.backup_idx++]);
+                 config->backup_nodes[config->backup_idx++]);
         ptr = strchr(conn->host, ':');
         if (ptr == NULL) {
             snprintf(conn->port, sizeof(conn->port), "%d", default_port);
@@ -141,7 +144,7 @@ lcb_error_t lcb_init_next_host(lcb_t instance, int default_port)
             /* Ok, we failed to look up that server.. look up the next
              * in the list
              */
-            if (instance->config.backup_nodes[instance->config.backup_idx] == NULL) {
+            if (config->backup_nodes[config->backup_idx] == NULL) {
                 char errinfo[1024];
                 snprintf(errinfo, sizeof(errinfo), "Failed to look up \"%s:%s\"",
                          conn->host, conn->port);

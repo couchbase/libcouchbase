@@ -70,9 +70,11 @@ static lcb_error_t cccp_connect(lcb_t instance)
     lcb_connection_t conn = &server->connection;
 
     rc = lcb_init_next_host(instance, 11210);
+
     if (rc != LCB_SUCCESS) {
         return rc;
     }
+
     conn->on_connect_complete = lcb_server_connect_handler;
     conn->on_timeout = lcb_bootstrap_timeout_handler;
     conn->evinfo.handler = lcb_server_v0_event_handler;
@@ -80,16 +82,20 @@ static lcb_error_t cccp_connect(lcb_t instance)
     conn->completion.write = lcb_server_v1_write_handler;
     conn->completion.error = lcb_server_v1_error_handler;
     conn->timeout.usec = instance->config.bootstrap_timeout;
+
     if (lcb_connection_reset_buffers(conn) != LCB_SUCCESS) {
         return LCB_CLIENT_ENOMEM;
     }
+
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = CMD_GET_CLUSTER_CONFIG;
     req.message.header.request.opaque = ++instance->seqno;
     lcb_server_complete_packet(server, NULL, req.bytes, sizeof(req.bytes));
     instance->last_error = LCB_SUCCESS;
-    connrc = lcb_connection_start(conn, LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
+
+    connrc = lcb_connection_start(conn,
+                                  LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
     if (connrc == LCB_CONN_ERROR) {
         return LCB_NETWORK_ERROR;
     }
@@ -107,19 +113,26 @@ static void config_callback(lcb_server_t *server, lcb_error_t error, const char 
 
     server->connection.timeout.usec = 0;
     lcb_connection_cancel_timer(&server->connection);
+
     if (error != LCB_SUCCESS) {
         lcb_error_handler(instance, error, "Failed to receive configration");
         return;
     }
+
     config = vbucket_config_create();
+
     if (config == NULL) {
-        lcb_error_handler(instance, LCB_CLIENT_ENOMEM, "Failed to allocate memory for configuration");
+        lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
+                          "Failed to allocate memory for configuration");
         return;
     }
+
     if (vbucket_config_parse2(config, LIBVBUCKET_SOURCE_MEMORY, json, server->connection.host)) {
         vbucket_config_destroy(config);
-        lcb_error_handler(instance, LCB_PROTOCOL_ERROR, vbucket_get_error_message(config));
+        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
+                          vbucket_get_error_message(config));
         return;
     }
+
     lcb_update_vbconfig(instance, config);
 }

@@ -185,6 +185,8 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
     const char *ptr = host;
     lcb_size_t num = 0;
     int ii;
+    struct lcb_config_st *config = &ret->config;
+    char **backup_nodes;
 
     while ((ptr = strchr(ptr, ';')) != NULL) {
         ++ptr;
@@ -195,11 +197,12 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
      * (the +2 and not +1 is because of the way we count the number of
      * bootstrap hosts (num == 0 means that we've got a single host etc)
      */
-    ret->config.backup_nodes = calloc(num + 2, sizeof(char *));
-    if (ret->config.backup_nodes == NULL) {
+    config->backup_nodes = calloc(num + 2, sizeof(char *));
+    if (config->backup_nodes == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
-    ret->config.should_free_backup_nodes = 1;
+    config->should_free_backup_nodes = 1;
+    backup_nodes = config->backup_nodes;
 
     ptr = host;
     ii = 0;
@@ -209,10 +212,11 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
         lcb_error_t error;
 
         ptr = strchr(ptr, ';');
-        ret->config.backup_nodes[ii] = NULL;
+        backup_nodes[ii] = NULL;
+
         if (ptr == NULL) {
             /* this is the last part */
-            error = validate_hostname(ret, start, &ret->config.backup_nodes[ii]);
+            error = validate_hostname(ret, start, &backup_nodes[ii]);
             ptr = NULL;
         } else {
             /* copy everything up to ';' */
@@ -223,11 +227,11 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
                 *(nm + size) = '\0';
             }
             ++ptr;
-            error = validate_hostname(ret, nm, &ret->config.backup_nodes[ii]);
+            error = validate_hostname(ret, nm, &backup_nodes[ii]);
         }
         if (error != LCB_SUCCESS) {
             while (ii > 0) {
-                free(ret->config.backup_nodes[ii--]);
+                free(backup_nodes[ii--]);
             }
             return error;
         }
@@ -235,18 +239,18 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
         ++ii;
     } while (ptr != NULL);
 
-    if (ret->config.randomize_bootstrap_nodes) {
+    if (config->randomize_bootstrap_nodes) {
         ii = 1;
-        while (ret->config.backup_nodes[ii] != NULL) {
+        while (backup_nodes[ii] != NULL) {
             lcb_size_t nidx = (lcb_size_t)(gethrtime() >> 10) % ii;
-            char *other = ret->config.backup_nodes[nidx];
-            ret->config.backup_nodes[nidx] = ret->config.backup_nodes[ii];
-            ret->config.backup_nodes[ii] = other;
+            char *other = backup_nodes[nidx];
+            backup_nodes[nidx] = backup_nodes[ii];
+            backup_nodes[ii] = other;
             ++ii;
         }
     }
 
-    ret->config.backup_idx = 0;
+    config->backup_idx = 0;
     return LCB_SUCCESS;
 }
 

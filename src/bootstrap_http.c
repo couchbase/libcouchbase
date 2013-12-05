@@ -33,11 +33,13 @@ static lcb_error_t http_connect(lcb_t instance);
 
 static void reset_stream_state(lcb_t instance)
 {
-    free(instance->bootstrap.via.http.stream.input.data);
-    free(instance->bootstrap.via.http.stream.chunk.data);
-    free(instance->bootstrap.via.http.stream.header);
-    memset(&instance->bootstrap.via.http.stream, 0, sizeof(instance->bootstrap.via.http.stream));
-    lcb_assert(LCB_SUCCESS == lcb_connection_reset_buffers(&instance->bootstrap.via.http.connection));
+    struct lcb_http_bootstrap_st *http = &instance->bootstrap.via.http;
+
+    free(http->stream.input.data);
+    free(http->stream.chunk.data);
+    free(http->stream.header);
+    memset(&http->stream, 0, sizeof(http->stream));
+    lcb_assert(LCB_SUCCESS == lcb_connection_reset_buffers(&http->connection));
 }
 
 /**
@@ -49,6 +51,7 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
     lcb_error_t err;
     int can_retry = 0;
     int old_gen = instance->config.generation;
+    struct lcb_http_bootstrap_st *http = &instance->bootstrap.via.http;
     lcb_connection_t conn = &instance->bootstrap.via.http.connection;
 
     err = lcb_parse_vbucket_stream(instance);
@@ -82,8 +85,7 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
             can_retry = 1;
         }
 
-        if (instance->bootstrap.via.http.bummer &&
-                (err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR)) {
+        if (http->bummer && (err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR)) {
             can_retry = 1;
         }
 
@@ -314,9 +316,11 @@ static lcb_error_t http_setup(lcb_t instance)
     lcb_ssize_t offset = 0;
     lcb_error_t err;
     lcb_connection_t conn = &instance->bootstrap.via.http.connection;
+    struct lcb_http_bootstrap_st *http = &instance->bootstrap.via.http;
 
-    instance->bootstrap.via.http.weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
-    instance->bootstrap.via.http.bummer = 0;
+    http->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
+    http->bummer = 0;
+
     switch (instance->type) {
     case LCB_TYPE_BUCKET:
         offset = snprintf(buffer, sizeof(buffer),
@@ -352,12 +356,12 @@ static lcb_error_t http_setup(lcb_t instance)
                        "%s", LCB_LAST_HTTP_HEADER);
 
     /* Add space for: Host: \r\n\r\n" */
-    instance->bootstrap.via.http.uri = malloc(strlen(buffer) + strlen(instance->config.backup_nodes[0]) + 80);
-    if (instance->bootstrap.via.http.uri == NULL) {
+    http->uri = malloc(strlen(buffer) + strlen(instance->config.backup_nodes[0]) + 80);
+    if (http->uri == NULL) {
         lcb_destroy(instance);
         return LCB_CLIENT_ENOMEM;
     }
-    strcpy(instance->bootstrap.via.http.uri, buffer);
+    strcpy(http->uri, buffer);
 
     return LCB_SUCCESS;
 }

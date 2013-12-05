@@ -124,8 +124,10 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
     lcb_uint16_t ii, buii;
     lcb_size_t num;
     lcb_error_t err;
+    struct lcb_config_st *cfginfo = &instance->config;
 
-    instance->config.handle = config;
+
+    cfginfo->handle = config;
     if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP) {
         instance->bootstrap.via.http.weird_things = 0;
     }
@@ -137,12 +139,14 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
         return lcb_error_handler(instance,
                                  LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
+
     instance->nservers = num;
     lcb_free_backup_nodes(instance);
-    instance->config.backup_idx = 0;
-    instance->config.backup_nodes = calloc(num + 1, sizeof(char *));
 
-    if (instance->config.backup_nodes == NULL) {
+    cfginfo->backup_idx = 0;
+    cfginfo->backup_nodes = calloc(num + 1, sizeof(char *));
+
+    if (cfginfo->backup_nodes == NULL) {
         return lcb_error_handler(instance,
                                  LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
@@ -158,23 +162,23 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
         if (err != LCB_SUCCESS) {
             return lcb_error_handler(instance, err, "Failed to initialize server");
         }
-        instance->config.backup_nodes[buii] = instance->servers[ii].rest_api_server;
-        if (instance->config.randomize_bootstrap_nodes) {
+        cfginfo->backup_nodes[buii] = instance->servers[ii].rest_api_server;
+        if (cfginfo->randomize_bootstrap_nodes) {
             /* swap with random position < ii */
             if (buii > 0) {
                 lcb_size_t nn = (lcb_size_t)(gethrtime() >> 10) % buii;
-                char *pp = instance->config.backup_nodes[buii];
-                instance->config.backup_nodes[ii] = instance->config.backup_nodes[nn];
-                instance->config.backup_nodes[nn] = pp;
+                char *pp = cfginfo->backup_nodes[buii];
+                cfginfo->backup_nodes[ii] = cfginfo->backup_nodes[nn];
+                cfginfo->backup_nodes[nn] = pp;
             }
         }
         buii++;
     }
 
-    instance->config.nreplicas = (lcb_uint16_t)vbucket_config_get_num_replicas(instance->config.handle);
-    instance->config.dist_type = vbucket_config_get_distribution_type(instance->config.handle);
-    instance->config.state = LCB_CONFSTATE_CONFIGURED;
-    instance->config.generation++;
+    cfginfo->nreplicas = (lcb_uint16_t)vbucket_config_get_num_replicas(cfginfo->handle);
+    cfginfo->dist_type = vbucket_config_get_distribution_type(cfginfo->handle);
+    cfginfo->state = LCB_CONFSTATE_CONFIGURED;
+    cfginfo->generation++;
     return LCB_SUCCESS;
 }
 
