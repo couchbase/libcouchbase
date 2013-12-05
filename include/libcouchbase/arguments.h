@@ -161,14 +161,16 @@ extern "C" {
                       const char *passwd = NULL,
                       const char *bucket = NULL,
                       struct lcb_io_opt_st *io = NULL,
-                      lcb_type_t type = LCB_TYPE_BUCKET) {
-            version = 1;
-            v.v1.host = host;
-            v.v1.user = user;
-            v.v1.passwd = passwd;
-            v.v1.bucket = bucket;
-            v.v1.io = io;
-            v.v1.type = type;
+                      lcb_type_t type = LCB_TYPE_BUCKET,
+                      lcb_config_transport_t transport = LCB_CONFIG_TRANSPORT_HTTP) {
+            version = 2;
+            v.v2.host = host;
+            v.v2.user = user;
+            v.v2.passwd = passwd;
+            v.v2.bucket = bucket;
+            v.v2.io = io;
+            v.v2.type = type;
+            v.v2.transport = transport;
         }
 #endif
     };
