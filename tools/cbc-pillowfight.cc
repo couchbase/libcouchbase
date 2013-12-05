@@ -52,6 +52,7 @@ public:
         loop(false),
         randomSeed(0),
         dumb(false),
+        transport(LCB_CONFIG_TRANSPORT_HTTP),
         saslMech() {
         setMaxSize(5120);
         setMinSize(50);
@@ -203,6 +204,21 @@ public:
         return dumb;
     }
 
+    void setConfigTransport(string val) {
+        if (val == "HTTP") {
+            transport = LCB_CONFIG_TRANSPORT_HTTP;
+        } else if (val == "CCCP") {
+            transport = LCB_CONFIG_TRANSPORT_CCCP;
+        } else {
+            cerr << "Usupported configuration transport: " << val << endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    lcb_config_transport_t getConfigTransport() {
+        return transport;
+    }
+
     void setSaslMech(const char *val) {
         saslMech.assign(val);
     }
@@ -234,6 +250,7 @@ public:
     bool loop;
     uint32_t randomSeed;
     bool dumb;
+    lcb_config_transport_t transport;
     std::string saslMech;
 } config;
 
@@ -302,7 +319,11 @@ public:
                                              config.getPasswd(),
                                              config.getBucket(),
                                              io);
-
+                if (options.version == 2) {
+                    options.v.v2.transport = config.getConfigTransport();
+                } else {
+                    log("Cannot change configuration transport. Fallback to default");
+                }
                 error = lcb_create(&instance, &options);
             }
             if (error == LCB_SUCCESS) {
@@ -632,6 +653,8 @@ static void handle_options(int argc, char **argv)
                                            "Behave like legacy memcached client (default false)"));
     getopt.addOption(new CommandLineOption('S', "sasl", true,
                                            "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
+    getopt.addOption(new CommandLineOption('C', "config-transport", true,
+                                           "Specify transport for bootstrapping the connection: \"HTTP\" (default) or \"CCCP\""));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -708,6 +731,10 @@ static void handle_options(int argc, char **argv)
 
             case 'S':
                 config.setSaslMech((*iter)->argument);
+                break;
+
+            case 'C':
+                config.setConfigTransport((*iter)->argument);
                 break;
 
             case '?':
