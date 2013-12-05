@@ -1221,6 +1221,8 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Behave like legacy memcached client (default false)"));
     getopt.addOption(new CommandLineOption('S', "sasl", true,
                                            "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
+    getopt.addOption(new CommandLineOption('C', "config-transport", true,
+                                           "Specify transport for bootstrapping the connection: \"HTTP\" or \"CCCP\" (default)"));
 
     int replica_strategy = -1;
     int replica_idx = 0;
@@ -1316,9 +1318,17 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     vector<CommandLineOption *>::iterator iter;
     const char *sasl_mech = NULL;
+
+    lcb_config_transport_t default_transports[] = {
+            LCB_CONFIG_TRANSPORT_HTTP,
+            LCB_CONFIG_TRANSPORT_CCCP,
+            LCB_CONFIG_TRANSPORT_LIST_END
+    };
+
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->found) {
             bool unknownOpt = true;
+            string arg;
             switch ((*iter)->shortopt) {
             case 'h' :
                 config.setHost((*iter)->argument);
@@ -1352,6 +1362,20 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 sasl_mech = (*iter)->argument;
                 break;
 
+            case 'C':
+                arg = (*iter)->argument;
+                if (arg == "HTTP") {
+                    default_transports[0] = LCB_CONFIG_TRANSPORT_HTTP;
+                } else if (arg == "CCCP") {
+                    default_transports[0] = LCB_CONFIG_TRANSPORT_CCCP;
+                } else {
+                    cerr << "Usupported configuration transport: " << arg << endl;
+                    getopt.usage(argv[0]);
+                    exit(EXIT_FAILURE);
+                }
+                default_transports[1] = LCB_CONFIG_TRANSPORT_LIST_END;
+                break;
+
             case '?':
                 getopt.usage(argv[0]);
                 exit(EXIT_SUCCESS);
@@ -1359,7 +1383,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             default:
                 if (cmd == cbc_cat) {
-                    string arg;
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'r':
@@ -1421,7 +1444,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         unknownOpt = true;
                     }
                 } else if (cmd == cbc_view || cmd == cbc_admin) {
-                    string arg;
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'c':
@@ -1449,7 +1471,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         unknownOpt = true;
                     }
                 } else if (cmd == cbc_bucket_create) {
-                    string arg = (*iter)->argument;
+                    arg = (*iter)->argument;
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'B':
@@ -1524,6 +1546,11 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 cerr << "Username and password mandatory for admin operations." << endl;
                 exit(EXIT_FAILURE);
             }
+        }
+        if (options.version == 2) {
+            options.v.v2.transports = default_transports;
+        } else {
+            cerr << "Cannot change configuration transport. Fallback to default" << endl;
         }
         err = lcb_create(&instance, &options);
     }

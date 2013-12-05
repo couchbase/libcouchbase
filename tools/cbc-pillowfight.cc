@@ -55,6 +55,9 @@ public:
         randomSeed(0),
         dumb(false),
         saslMech() {
+        transports.push_back(LCB_CONFIG_TRANSPORT_HTTP);
+        transports.push_back(LCB_CONFIG_TRANSPORT_CCCP);
+        transports.push_back(LCB_CONFIG_TRANSPORT_LIST_END);
         setMaxSize(5120);
         setMinSize(50);
     }
@@ -217,6 +220,22 @@ public:
         return dumb;
     }
 
+    void setConfigTransport(string val) {
+        if (val == "HTTP") {
+            transports[0] = LCB_CONFIG_TRANSPORT_HTTP;
+        } else if (val == "CCCP") {
+            transports[0] = LCB_CONFIG_TRANSPORT_CCCP;
+        } else {
+            cerr << "Usupported configuration transport: " << val << endl;
+            exit(EXIT_FAILURE);
+        }
+        transports[1] = LCB_CONFIG_TRANSPORT_LIST_END;
+    }
+
+    lcb_config_transport_t *getConfigTransport() {
+        return &transports[0];
+    }
+
     void setSaslMech(const char *val) {
         saslMech.assign(val);
     }
@@ -234,6 +253,7 @@ public:
     std::string user;
     std::string passwd;
     std::string bucket;
+    std::vector<lcb_config_transport_t> transports;
 
     uint32_t maxKey;
     uint32_t iterations;
@@ -319,7 +339,11 @@ public:
                                              config.getPasswd(),
                                              config.getBucket(),
                                              io);
-
+                if (options.version == 2) {
+                    options.v.v2.transports = config.getConfigTransport();
+                } else {
+                    log("Cannot change configuration transport. Fallback to default");
+                }
                 error = lcb_create(&instance, &options);
             }
             if (error == LCB_SUCCESS) {
@@ -685,6 +709,8 @@ static void handle_options(int argc, char **argv)
                                            "Behave like legacy memcached client (default false)"));
     getopt.addOption(new CommandLineOption('S', "sasl", true,
                                            "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
+    getopt.addOption(new CommandLineOption('C', "config-transport", true,
+                                           "Specify transport for bootstrapping the connection: \"HTTP\" or \"CCCP\" (default)"));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -765,6 +791,10 @@ static void handle_options(int argc, char **argv)
 
             case 'S':
                 config.setSaslMech((*iter)->argument);
+                break;
+
+            case 'C':
+                config.setConfigTransport((*iter)->argument);
                 break;
 
             case '?':
