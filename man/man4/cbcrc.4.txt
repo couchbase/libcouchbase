@@ -60,7 +60,7 @@ See lcb_attributes(5) for descriptions of the following attributes:
 [options="header"]
 |=======================================
 | ATTRIBUTE TYPE      | ATTRIBUTE VALUE
-| Interface Stability | Evolving
+| Interface Stability | Uncommited
 |=======================================
 
 COPYRIGHT
