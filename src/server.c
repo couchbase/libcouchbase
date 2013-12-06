@@ -173,6 +173,7 @@ static void failout_single_request(lcb_server_t *server,
     case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
     case PROTOCOL_BINARY_CMD_SASL_AUTH:
     case PROTOCOL_BINARY_CMD_SASL_STEP:
+    case CMD_GET_CLUSTER_CONFIG:
         /* no need to notify user about these commands */
         break;
 
