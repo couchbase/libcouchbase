@@ -53,11 +53,11 @@ static int extract_cccp_body(lcb_t instance, lcb_server_t *c, const char *body)
 
     if (vbucket_config_parse2(config,
                               LIBVBUCKET_SOURCE_MEMORY, body, c->connection.host)) {
-
-        lcb_error_handler(instance,
-                          LCB_PROTOCOL_ERROR,
-                          vbucket_get_error_message(config));
-
+        /**
+         * TODO: We are suppressing all errors if we can't parse the config.
+         * This is in order to properly handle 2.5 responses (e.g. textual
+         * "Not my vbucket") without failing out the entire server.
+         */
         vbucket_config_destroy(config);
         return -1;
     }
@@ -90,8 +90,6 @@ static int handle_not_my_vbucket(lcb_server_t *c,
 
     nbody = ntohl(res->response.bodylen);
     if (nbody) {
-        int vbrv;
-
         char *config_body = malloc(nbody + 1);
         if (!config_body) {
             lcb_error_handler(instance, LCB_CLIENT_ENOMEM, NULL);
@@ -100,12 +98,9 @@ static int handle_not_my_vbucket(lcb_server_t *c,
 
         memcpy(config_body, (char *)res + sizeof(res->bytes), nbody);
         config_body[nbody] = '\0';
-        vbrv = extract_cccp_body(instance, c, config_body);
+        (void) extract_cccp_body(instance, c, config_body);
         free(config_body);
 
-        if (vbrv < 0) {
-            return -1;
-        }
     } else if (instance->compat.type == LCB_CACHED_CONFIG) {
         lcb_schedule_config_cache_refresh(instance);
     }
