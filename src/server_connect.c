@@ -137,6 +137,7 @@ void lcb_server_connect_handler(lcb_connection_t conn, lcb_error_t err)
     lcb_server_t *server = (lcb_server_t *)conn->data;
     struct nameinfo_common nistrs;
     int sasl_in_progress;
+    int should_do_sasl = 0;
 
     if (err != LCB_SUCCESS) {
         connection_error(server, err);
@@ -160,7 +161,13 @@ void lcb_server_connect_handler(lcb_connection_t conn, lcb_error_t err)
         lcb_assert(sasl_ok == SASL_OK);
     }
 
-    if (server->instance->password || server->index == -1) {
+    if (server->index == -1) {
+        should_do_sasl = 1;
+    } else if (vbucket_config_get_user(server->instance->config.handle) != NULL) {
+        should_do_sasl = 1;
+    }
+
+    if (should_do_sasl) {
         if (!sasl_in_progress) {
             start_sasl_auth_server(server);
         }

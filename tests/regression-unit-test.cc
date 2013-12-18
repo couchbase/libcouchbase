@@ -16,6 +16,7 @@
  */
 #include "config.h"
 #include <gtest/gtest.h>
+#include <map>
 #include <libcouchbase/couchbase.h>
 
 #include "server.h"
@@ -319,5 +320,72 @@ TEST_F(RegressionUnitTest, CCBC_275)
     ASSERT_EQ(LCB_KEY_ENOENT, info.last_err);
 
     lcb_destroy(instance);
+    MockEnvironment::destroySpecial(mock);
+}
+
+/**
+ * Simple test to check that we're connecting to the buckets we say we are.
+ */
+typedef std::map<std::string, lcb_t>::iterator instance_iter;
+TEST_F(RegressionUnitTest, testMultipleBuckets) {
+    SKIP_UNLESS_MOCK();
+    lcb_t instance;
+    lcb_error_t err;
+    struct lcb_create_st crOpts;
+
+    const char *argv[] = {
+            "--buckets",
+
+            // SASL password protected
+            "protected:secret:couchbase,"
+            // Default bucket
+            "default::couchbase,"
+            // Alternate, non-password bucket.
+            "authless::couchbase",
+
+            NULL
+    };
+
+    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
+    std::map<std::string, lcb_t> instances;
+    memset(&crOpts, 0, sizeof(crOpts));
+
+    mock->makeConnectParams(crOpts, NULL);
+
+    // Create all our instances
+    crOpts.v.v0.bucket = "protected";
+    crOpts.v.v0.passwd = "secret";
+
+    err = lcb_create(&instance, &crOpts);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    instances["protected"] = instance;
+
+    crOpts.v.v0.passwd = NULL;
+    crOpts.v.v0.bucket = "default";
+    err = lcb_create(&instance, &crOpts);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    instances["default"] = instance;
+
+    crOpts.v.v0.bucket = "authless";
+    err = lcb_create(&instance, &crOpts);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    instances["authless"] = instance;
+
+    for (instance_iter iter = instances.begin(); iter != instances.end(); iter++) {
+        err = lcb_connect(iter->second);
+        ASSERT_EQ(LCB_SUCCESS, err);
+        err = lcb_wait(iter->second);
+        ASSERT_EQ(LCB_SUCCESS, err);
+        storeKey(iter->second, "BUCKET_NAME", iter->first);
+    }
+
+    // Ensure we can read them back again
+    for (instance_iter iter = instances.begin(); iter != instances.end(); iter++) {
+        Item itm;
+        getKey(iter->second, "BUCKET_NAME", itm);
+        ASSERT_EQ(iter->first, itm.val);
+        lcb_destroy(iter->second);
+    }
+
     MockEnvironment::destroySpecial(mock);
 }
