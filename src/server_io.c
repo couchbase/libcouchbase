@@ -244,6 +244,7 @@ int lcb_flushing_buffers(lcb_t instance)
 }
 
 
+LCB_INTERNAL_API
 void lcb_maybe_breakout(lcb_t instance)
 {
     /**

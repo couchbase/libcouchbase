@@ -491,7 +491,8 @@ tests_unit_tests_SOURCES += \
                             tests/serverparams.h \
                             tests/syncmode-unit-tests.cc \
                             tests/testutil.cc \
-                            tests/testutil.h
+                            tests/testutil.h \
+                            tests/timer-unit-test.cc
 
 tests_unit_tests_LDADD += libmockserver.la
 check_PROGRAMS += tests/smoke-test

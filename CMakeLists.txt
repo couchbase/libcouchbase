@@ -269,6 +269,7 @@ IF(NOT LCB_NO_TESTS)
             tests/strerror-unit-test.cc
             tests/string-unit-test.cc
             tests/syncmode-unit-tests.cc
+            tests/timer-unit-test.cc
             tests/url_encoding-tests.cc
 
     # Support files
