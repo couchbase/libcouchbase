@@ -200,6 +200,7 @@ libcouchbase_la_SOURCES = \
                         src/server_connect.c \
                         src/server_io.c \
                         src/server_parse.c \
+                        src/simplestring.c \
                         src/stats.c \
                         src/store.c \
                         src/strerror.c \
@@ -321,6 +322,7 @@ tests_unit_tests_SOURCES = \
                            src/list.c \
                            src/ringbuffer.c \
                            src/url_encoding.c \
+                           src/simplestring.c \
                            tests/base64-unit-test.cc \
                            tests/behavior-unit-tests.cc \
                            tests/ccbc_103.cc \
@@ -330,6 +332,7 @@ tests_unit_tests_SOURCES = \
                            tests/list-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \
+                           tests/string-unit-test.cc \
                            tests/strerror-unit-test.cc \
                            tests/timeout.c \
                            tests/unit_tests.cc \

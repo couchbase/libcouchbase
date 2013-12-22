@@ -158,6 +158,7 @@ ADD_LIBRARY(lcbutils STATIC
             src/hashset.c
             src/list.c
             src/ringbuffer.c
+            src/simplestring.c
             src/url_encoding.c
             ${lcb_getopt_src})
 
@@ -262,6 +263,7 @@ IF(NOT LCB_NO_TESTS)
             tests/ringbuffer-unit-test.cc
             tests/serverops-unit-test.cc
             tests/strerror-unit-test.cc
+            tests/string-unit-test.cc
             tests/syncmode-unit-tests.cc
             tests/url_encoding-tests.cc
 
