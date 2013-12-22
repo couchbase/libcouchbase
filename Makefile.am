@@ -181,6 +181,7 @@ libcouchbase_la_SOURCES = \
                         src/hashset.c \
                         src/hashset.h \
                         src/hashtable.c \
+                        src/hostlist.c \
                         src/http.c \
                         src/http_io.c \
                         src/http_parse.c \
@@ -323,12 +324,14 @@ tests_unit_tests_SOURCES = \
                            src/ringbuffer.c \
                            src/url_encoding.c \
                            src/simplestring.c \
+                           src/hostlist.c \
                            tests/base64-unit-test.cc \
                            tests/behavior-unit-tests.cc \
                            tests/ccbc_103.cc \
                            tests/cluster-unit-tests.cc \
                            tests/hashset-unit-test.cc \
                            tests/hostname-unit-test.cc \
+                           tests/host-unit-test.cc \
                            tests/list-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \
