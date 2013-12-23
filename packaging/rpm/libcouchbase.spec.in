@@ -1,5 +1,3 @@
-%define _topdir %(pwd)/rpmbuild
-
 Summary: Couchbase Client & Protocol Library
 Name: libcouchbase
 Version: @VERSION@
