@@ -75,7 +75,7 @@ static int sasl_get_password(cbsasl_conn_t *conn, void *context, int id,
     return SASL_OK;
 }
 
-lcb_error_t lcb_setup_sasl(lcb_t instance)
+static lcb_error_t setup_sasl_params(lcb_t instance)
 {
     const char *passwd;
     cbsasl_callback_t sasl_callbacks[4];
@@ -124,13 +124,9 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
     lcb_uint16_t ii, buii;
     lcb_size_t num;
     lcb_error_t err;
-    struct lcb_config_st *cfginfo = &instance->config;
 
-
-    cfginfo->handle = config;
-    if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP) {
-        instance->bootstrap.via.http.weird_things = 0;
-    }
+    instance->vbucket_config = config;
+    instance->weird_things = 0;
     num = (lcb_size_t)vbucket_config_get_num_servers(config);
 
     /* servers array should be freed in the caller */
@@ -139,19 +135,16 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
         return lcb_error_handler(instance,
                                  LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
-
     instance->nservers = num;
     lcb_free_backup_nodes(instance);
+    instance->backup_nodes = calloc(num + 1, sizeof(char *));
 
-    cfginfo->backup_idx = 0;
-    cfginfo->backup_nodes = calloc(num + 1, sizeof(char *));
-
-    if (cfginfo->backup_nodes == NULL) {
+    if (instance->backup_nodes == NULL) {
         return lcb_error_handler(instance,
                                  LCB_CLIENT_ENOMEM, "Failed to allocate memory");
     }
 
-    err = lcb_setup_sasl(instance);
+    err = setup_sasl_params(instance);
     if (err != LCB_SUCCESS) {
         return lcb_error_handler(instance, err, "sasl setup");
     }
@@ -162,23 +155,23 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
         if (err != LCB_SUCCESS) {
             return lcb_error_handler(instance, err, "Failed to initialize server");
         }
-        cfginfo->backup_nodes[buii] = instance->servers[ii].rest_api_server;
-        if (cfginfo->randomize_bootstrap_nodes) {
+        instance->backup_nodes[buii] = instance->servers[ii].rest_api_server;
+        if (instance->randomize_bootstrap_nodes) {
             /* swap with random position < ii */
             if (buii > 0) {
                 lcb_size_t nn = (lcb_size_t)(gethrtime() >> 10) % buii;
-                char *pp = cfginfo->backup_nodes[buii];
-                cfginfo->backup_nodes[ii] = cfginfo->backup_nodes[nn];
-                cfginfo->backup_nodes[nn] = pp;
+                char *pp = instance->backup_nodes[buii];
+                instance->backup_nodes[ii] = instance->backup_nodes[nn];
+                instance->backup_nodes[nn] = pp;
             }
         }
         buii++;
     }
 
-    cfginfo->nreplicas = (lcb_uint16_t)vbucket_config_get_num_replicas(cfginfo->handle);
-    cfginfo->dist_type = vbucket_config_get_distribution_type(cfginfo->handle);
-    cfginfo->state = LCB_CONFSTATE_CONFIGURED;
-    cfginfo->generation++;
+    instance->nreplicas = (lcb_uint16_t)vbucket_config_get_num_replicas(instance->vbucket_config);
+    instance->dist_type = vbucket_config_get_distribution_type(instance->vbucket_config);
+    instance->confstatus = LCB_CONFSTATE_CONFIGURED;
+    instance->config_generation++;
     return LCB_SUCCESS;
 }
 
@@ -217,12 +210,12 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
             break;
         }
         vb = ntohs(cmd.request.vbucket);
-        idx = vbucket_get_master(dst_instance->config.handle, vb);
+        idx = vbucket_get_master(dst_instance->vbucket_config, vb);
         if (idx < 0) {
             /* looks like master isn't ready to accept the data, try another
              * one, maybe from fast forward map. this function will never
              * give -1 */
-            idx = vbucket_found_incorrect_master(dst_instance->config.handle, vb, idx);
+            idx = vbucket_found_incorrect_master(dst_instance->vbucket_config, vb, idx);
         }
         dst = dst_instance->servers + (lcb_size_t)idx;
 
@@ -285,16 +278,16 @@ static int replace_config(lcb_t instance, VBUCKET_CONFIG_HANDLE next_config)
 
     lcb_size_t ii, nservers;
     lcb_server_t *servers;
-    curr_config = instance->config.handle;
+    curr_config = instance->vbucket_config;
 
     diff = vbucket_compare(curr_config, next_config);
     if (diff == NULL ||
             (diff->sequence_changed == 0 && diff->n_vb_changes == 0)) {
         vbucket_free_diff(diff);
         vbucket_config_destroy(next_config);
-        instance->config.state = LCB_CONFSTATE_CONFIGURED;
+        instance->confstatus = LCB_CONFSTATE_CONFIGURED;
         /* We still increment the generation count, though */
-        instance->config.generation++;
+        instance->config_generation++;
         return LCB_CONFIGURATION_UNCHANGED;
     }
 
@@ -342,20 +335,22 @@ static int replace_config(lcb_t instance, VBUCKET_CONFIG_HANDLE next_config)
  */
 static int grab_http_config(lcb_t instance, VBUCKET_CONFIG_HANDLE *config)
 {
-    struct vbucket_stream_st *vbs = &instance->bootstrap.via.http.stream;
-
     *config = vbucket_config_create();
     if (*config == NULL) {
         lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
                           "Failed to allocate memory for config");
         return -1;
     }
-    if (vbucket_config_parse(*config, LIBVBUCKET_SOURCE_MEMORY, vbs->input.data) != 0) {
-        lcb_error_handler(instance, LCB_PROTOCOL_ERROR, vbucket_get_error_message(*config));
+
+    if (vbucket_config_parse(*config, LIBVBUCKET_SOURCE_MEMORY,
+                             instance->vbucket_stream.input.data) != 0) {
+        lcb_error_handler(instance, LCB_PROTOCOL_ERROR,
+                          vbucket_get_error_message(*config));
         vbucket_config_destroy(*config);
         return -1;
     }
-    vbs->input.avail = 0;
+    instance->vbucket_stream.input.avail = 0;
+
     lcb_dump_config_cache(instance);
     return 0;
 }
@@ -380,13 +375,13 @@ void lcb_update_vbconfig(lcb_t instance, VBUCKET_CONFIG_HANDLE next_config)
      * If we're not passed a new config object, it means we parse it from the
      * read buffer. Otherwise assume it's from some "compat" mode
      */
-    if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && !next_config) {
+    if (!next_config) {
         if (grab_http_config(instance, &next_config) == -1) {
             return;
         }
     }
 
-    if (instance->config.handle) {
+    if (instance->vbucket_config) {
         change_status = replace_config(instance, next_config);
         if (change_status < 0) {
             /* error */
@@ -404,21 +399,22 @@ void lcb_update_vbconfig(lcb_t instance, VBUCKET_CONFIG_HANDLE next_config)
     }
 
     /* Notify anyone interested in this event... */
-    if (instance->config.vbucket_state_listener != NULL) {
+    if (instance->vbucket_state_listener != NULL) {
         for (ii = 0; ii < instance->nservers; ++ii) {
-            instance->config.vbucket_state_listener(instance->servers + ii);
+            instance->vbucket_state_listener(instance->servers + ii);
         }
     }
     instance->callbacks.configuration(instance, change_status);
-    instance->config.state = LCB_CONFSTATE_CONFIGURED;
+    instance->confstatus = LCB_CONFSTATE_CONFIGURED;
 
     /**
      * If we're using a cached config, we should not need a socket connection.
      * Disconnect the socket, if it's there
      */
-    if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && is_cached) {
-        lcb_connection_close(&instance->bootstrap.via.http.connection);
+    if (is_cached) {
+        lcb_connection_close(&instance->connection);
     }
 
     lcb_maybe_breakout(instance);
+
 }

@@ -2,12 +2,12 @@
 .\"     Title: lcb_cntl
 .\"    Author: Trond Norbye <trond.norbye@couchbase.com>
 .\" Generator: DocBook XSL Stylesheets v1.78.1 <http://docbook.sf.net/>
-.\"      Date: 12/04/2013
+.\"      Date: 11/05/2013
 .\"    Manual: \ \&
 .\"    Source: \ \&
 .\"  Language: English
 .\"
-.TH "LCB_CNTL" "3couchbase" "12/04/2013" "\ \&" "\ \&"
+.TH "LCB_CNTL" "3couchbase" "11/05/2013" "\ \&" "\ \&"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -840,34 +840,6 @@ Get/Set\&. Set how many redirects the library should follow for the single reque
 .nf
 int new_value = 5;
 lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_MAX_REDIRECTS, &new_value);
-.fi
-.if n \{\
-.RE
-.\}
-.RE
-.PP
-\fBLCB_CNTL_CONFIG_TRANSPORT\fR \fI(lcb_config_transport_t*)\fR
-.RS 4
-Get/Set the transport used to fetch cluster configuration\&. Note that it is possible to change the bootstrapping protocol only before calling lcb_connect(3couchbase), otherwise it will return LCB_EINVAL\&.
-.sp
-.if n \{\
-.RS 4
-.\}
-.nf
-lcb_config_transport_t type;
-lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_TRANSPORT, &type);
-printf("this instance bootstraps using ");
-switch (type) {
-case LCB_CONFIG_TRANSPORT_HTTP:
-    printf("HTTP protocol\en");
-    break;
-case LCB_CONFIG_TRANSPORT_CCCP:
-    printf("Cluster Configuration Carrier Publication protocol\en");
-    break;
-default:
-    printf("unknown protocol\en");
-    break;
-}
 .fi
 .if n \{\
 .RE

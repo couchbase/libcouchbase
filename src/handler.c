@@ -433,11 +433,11 @@ static void get_replica_response_handler(lcb_server_t *server,
         command_data->replica++;
     }
 
-    if (command_data->replica < root->config.nreplicas) {
+    if (command_data->replica < root->nreplicas) {
         /* try next replica */
         protocol_binary_request_get req;
         lcb_server_t *new_server;
-        int idx = vbucket_get_replica(root->config.handle,
+        int idx = vbucket_get_replica(root->vbucket_config,
                                       command_data->vbucket,
                                       command_data->replica);
         if (idx < 0 || idx > (int)root->nservers) {
@@ -495,33 +495,6 @@ static void delete_response_handler(lcb_server_t *server,
         root->callbacks.remove(root, command_data->cookie, rc, &resp);
         release_key(server, packet);
     }
-}
-
-static void cluster_config_response_handler(lcb_server_t *server,
-                                            struct lcb_command_data_st *command_data,
-                                            protocol_binary_response_header *res)
-{
-    lcb_t root = server->instance;
-    lcb_error_t rc = map_error(root, ntohs(res->response.status));
-    lcb_size_t nbody;
-    char *body;
-
-    lcb_assert(root->bootstrap.type == LCB_CONFIG_TRANSPORT_CCCP &&
-               server == &root->bootstrap.via.cccp.server);
-    if (root->callbacks.cluster_config == NULL) {
-        return;
-    }
-    nbody = ntohl(res->response.bodylen);
-    body = malloc(sizeof(char) * (nbody + 1));
-    if (body == NULL) {
-        root->callbacks.cluster_config(server, LCB_CLIENT_ENOMEM, NULL);
-        return;
-    }
-    memcpy(body, (char *)res + sizeof(res->bytes), nbody);
-    body[nbody] = '\0';
-    root->callbacks.cluster_config(server, rc, body);
-    free(body);
-    (void)command_data;
 }
 
 static void observe_response_handler(lcb_server_t *server,
@@ -586,7 +559,7 @@ static void observe_response_handler(lcb_server_t *server,
 
     ptr = (const char *)res + sizeof(res->bytes);
     end = ptr + ntohl(res->response.bodylen);
-    config = root->config.handle;
+    config = root->vbucket_config;
     for (pos = 0; ptr < end; pos++) {
         lcb_cas_t cas;
         lcb_uint8_t obs;
@@ -1293,9 +1266,6 @@ int lcb_dispatch_response(lcb_server_t *c,
         break;
     case CMD_OBSERVE:
         observe_response_handler(c, ct, (void *)header);
-        break;
-    case CMD_GET_CLUSTER_CONFIG:
-        cluster_config_response_handler(c, ct, (void *)header);
         break;
     case PROTOCOL_BINARY_CMD_NOOP:
         /* Ignore */

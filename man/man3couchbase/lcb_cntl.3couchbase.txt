@@ -465,27 +465,6 @@ valid SASL mechanism.
         int new_value = 5;
         lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_MAX_REDIRECTS, &new_value);
 
-*LCB_CNTL_CONFIG_TRANSPORT* '(lcb_config_transport_t*)'::
-    Get/Set the transport used to fetch cluster configuration. Note
-    that it is possible to change the bootstrapping protocol only
-    before calling lcb_connect(3couchbase), otherwise it will return
-    LCB_EINVAL.
-
-        lcb_config_transport_t type;
-        lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_TRANSPORT, &type);
-        printf("this instance bootstraps using ");
-        switch (type) {
-        case LCB_CONFIG_TRANSPORT_HTTP:
-            printf("HTTP protocol\n");
-            break;
-        case LCB_CONFIG_TRANSPORT_CCCP:
-            printf("Cluster Configuration Carrier Publication protocol\n");
-            break;
-        default:
-            printf("unknown protocol\n");
-            break;
-        }
-
 
 RETURN VALUE
 ------------

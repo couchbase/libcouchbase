@@ -31,7 +31,7 @@ lcb_error_t lcb_remove(lcb_t instance,
 {
     lcb_size_t ii;
     /* we need a vbucket config before we can start removing the item.. */
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
@@ -56,7 +56,7 @@ lcb_error_t lcb_remove(lcb_t instance,
             nhashkey = nkey;
         }
 
-        (void)vbucket_map(instance->config.handle, hashkey, nhashkey,
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                           &vb, &idx);
 
         if (idx < 0 || idx > (int)instance->nservers) {

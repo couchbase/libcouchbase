@@ -96,7 +96,7 @@ See lcb_attributes(5) for descriptions of the following attributes:
 [options="header"]
 |=======================================
 | ATTRIBUTE TYPE      | ATTRIBUTE VALUE
-| Interface Stability | Uncommitted
+| Interface Stability | Evolving
 | MT-Level            | MT-Safe
 |=======================================
 
@@ -110,7 +110,7 @@ Learn more at <http://www.couchbase.com/communities/c>.
 
 intro(3),
 lcb_arithmetic(3couchbase),
-lcb_attributes(5),
+lcb_attributes(5)
 lcb_behavior_get_config_errors_threshold(3couchbase),
 lcb_behavior_get_ipv6(3couchbase),
 lcb_behavior_get_syncmode(3couchbase),

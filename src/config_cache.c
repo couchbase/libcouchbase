@@ -112,7 +112,7 @@ void lcb_dump_config_cache(lcb_t instance)
     fp = fopen(instance->compat.value.cached.cachefile, "w");
     if (fp) {
         fprintf(fp, "%s%s",
-                instance->bootstrap.via.http.stream.input.data,
+                instance->vbucket_stream.input.data,
                 LCB_CONFIG_CACHE_MAGIC);
         fclose(fp);
     }
@@ -132,7 +132,7 @@ void lcb_refresh_config_cache(lcb_t instance)
         /* try to bootstrap it */
         instance->compat.value.cached.updating = 1;
         instance->compat.value.cached.loaded = 0;
-        lcb_bootstrap_error(instance, LCB_CONFIG_CACHE_INVALID, msg, 0);
+        lcb_instance_config_error(instance, LCB_CONFIG_CACHE_INVALID, msg, 0);
     }
 
     instance->compat.value.cached.needs_update = 0;

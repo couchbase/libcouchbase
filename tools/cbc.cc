@@ -852,7 +852,7 @@ static bool hash_impl(string filename, list<string> &keys, bool is_vbucket)
 
 static bool hash_impl(lcb_t instance, list<string> &keys, bool is_vbucket)
 {
-    return hash_exec(instance->config.handle, keys, is_vbucket);
+    return hash_exec(instance->vbucket_config, keys, is_vbucket);
 }
 
 static bool view_impl(lcb_t instance, string &query, string &data,
@@ -1221,8 +1221,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Behave like legacy memcached client (default false)"));
     getopt.addOption(new CommandLineOption('S', "sasl", true,
                                            "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
-    getopt.addOption(new CommandLineOption('C', "config-transport", true,
-                                           "Specify transport for bootstrapping the connection: \"HTTP\" (default) or \"CCCP\""));
 
     int replica_strategy = -1;
     int replica_idx = 0;
@@ -1318,11 +1316,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     vector<CommandLineOption *>::iterator iter;
     const char *sasl_mech = NULL;
-    lcb_config_transport_t transport = LCB_CONFIG_TRANSPORT_HTTP;
     for (iter = getopt.options.begin(); iter != getopt.options.end(); ++iter) {
         if ((*iter)->found) {
             bool unknownOpt = true;
-            string arg;
             switch ((*iter)->shortopt) {
             case 'h' :
                 config.setHost((*iter)->argument);
@@ -1356,19 +1352,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 sasl_mech = (*iter)->argument;
                 break;
 
-            case 'C':
-                arg = (*iter)->argument;
-                if (arg == "HTTP") {
-                    transport = LCB_CONFIG_TRANSPORT_HTTP;
-                } else if (arg == "CCCP") {
-                    transport = LCB_CONFIG_TRANSPORT_CCCP;
-                } else {
-                    cerr << "Usupported configuration transport: " << arg << endl;
-                    getopt.usage(argv[0]);
-                    exit(EXIT_FAILURE);
-                }
-                break;
-
             case '?':
                 getopt.usage(argv[0]);
                 exit(EXIT_SUCCESS);
@@ -1376,6 +1359,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             default:
                 if (cmd == cbc_cat) {
+                    string arg;
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'r':
@@ -1437,6 +1421,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         unknownOpt = true;
                     }
                 } else if (cmd == cbc_view || cmd == cbc_admin) {
+                    string arg;
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'c':
@@ -1464,7 +1449,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                         unknownOpt = true;
                     }
                 } else if (cmd == cbc_bucket_create) {
-                    arg = (*iter)->argument;
+                    string arg = (*iter)->argument;
                     unknownOpt = false;
                     switch ((*iter)->shortopt) {
                     case 'B':
@@ -1539,11 +1524,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                 cerr << "Username and password mandatory for admin operations." << endl;
                 exit(EXIT_FAILURE);
             }
-        }
-        if (options.version == 2) {
-            options.v.v2.transport = transport;
-        } else {
-            cerr << "Cannot change configuration transport. Fallback to default" << endl;
         }
         err = lcb_create(&instance, &options);
     }

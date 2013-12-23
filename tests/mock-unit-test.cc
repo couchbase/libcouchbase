@@ -715,7 +715,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     MockEnvironment *mock = MockEnvironment::getInstance();
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
-    instance->config.vbucket_state_listener = vbucket_state_callback;
+    instance->vbucket_state_listener = vbucket_state_callback;
     mock->failoverNode(0);
     io->v.v0.run_event_loop(io);
     ASSERT_EQ(9, config_cnt);
@@ -744,7 +744,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     MockEnvironment *mock = MockEnvironment::getInstance();
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
-    instance->config.vbucket_state_listener = vbucket_state_callback;
+    instance->vbucket_state_listener = vbucket_state_callback;
     (void)lcb_set_store_callback(instance, store_callback);
     (void)lcb_set_get_callback(instance, get_callback);
 
@@ -757,7 +757,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 
     /* Determine what server should receive that operation */
     int vb, idx;
-    vbucket_map(instance->config.handle, key.c_str(), key.size(), &vb, &idx);
+    vbucket_map(instance->vbucket_config, key.c_str(), key.size(), &vb, &idx);
 
     /* Switch off that server */
     mock->failoverNode(idx);

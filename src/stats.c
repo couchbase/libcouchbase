@@ -31,7 +31,7 @@ lcb_error_t lcb_server_stats(lcb_t instance,
     lcb_size_t count;
 
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
@@ -87,7 +87,7 @@ lcb_error_t lcb_server_versions(lcb_t instance,
 {
     lcb_size_t count;
 
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);

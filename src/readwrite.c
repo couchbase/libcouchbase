@@ -29,7 +29,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
     lcb_ssize_t nr;
 
     if (!ringbuffer_ensure_capacity(buf,
-                                    conn->instance ? conn->instance->config.rbufsize :
+                                    conn->instance ? conn->instance->rbufsize :
                                     LCB_DEFAULT_RBUFSIZE)) {
         lcb_error_handler(conn->instance, LCB_CLIENT_ENOMEM, NULL);
         return LCB_SOCKRW_GENERIC_ERROR;
@@ -224,7 +224,7 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
     }
 
     ringbuffer_ensure_capacity(*buf,
-                               conn->instance ? conn->instance->config.rbufsize :
+                               conn->instance ? conn->instance->rbufsize :
                                LCB_DEFAULT_RBUFSIZE);
     ringbuffer_get_iov(*buf, RINGBUFFER_WRITE, bi->iov);
 

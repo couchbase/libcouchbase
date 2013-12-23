@@ -25,7 +25,7 @@ lcb_error_t lcb_set_verbosity(lcb_t instance,
 {
     lcb_size_t count;
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);

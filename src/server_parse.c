@@ -41,43 +41,13 @@ static void swallow_command(lcb_server_t *c,
     }
 }
 
-static int extract_cccp_body(lcb_t instance, lcb_server_t *c, const char *body)
-{
-    VBUCKET_CONFIG_HANDLE config = vbucket_config_create();
-
-    if (config == NULL) {
-        lcb_error_handler(instance, LCB_CLIENT_ENOMEM,
-                          "Cannot create vbucket config");
-        return -1;
-    }
-
-    if (vbucket_config_parse2(config,
-                              LIBVBUCKET_SOURCE_MEMORY, body, c->connection.host)) {
-        /**
-         * TODO: We are suppressing all errors if we can't parse the config.
-         * This is in order to properly handle 2.5 responses (e.g. textual
-         * "Not my vbucket") without failing out the entire server.
-         */
-        vbucket_config_destroy(config);
-        return -1;
-    }
-
-    if (instance->bootstrap.via.cccp.next_config) {
-        vbucket_config_destroy(instance->bootstrap.via.cccp.next_config);
-    }
-
-    instance->bootstrap.via.cccp.next_config = config;
-    return 0;
-}
-
 /**
  * Returns 1 if retried, 0 if the command should fail, -1 for an internal
  * error
  */
 static int handle_not_my_vbucket(lcb_server_t *c,
                                  protocol_binary_request_header *oldreq,
-                                 struct lcb_command_data_st *oldct,
-                                 protocol_binary_response_header *res)
+                                 struct lcb_command_data_st *oldct)
 {
     int idx;
     char *body;
@@ -86,27 +56,13 @@ static int handle_not_my_vbucket(lcb_server_t *c,
     struct lcb_command_data_st ct;
     protocol_binary_request_header req;
     hrtime_t now;
-    lcb_t instance = c->instance;
 
-    nbody = ntohl(res->response.bodylen);
-    if (nbody) {
-        char *config_body = malloc(nbody + 1);
-        if (!config_body) {
-            lcb_error_handler(instance, LCB_CLIENT_ENOMEM, NULL);
-            return -1;
-        }
-
-        memcpy(config_body, (char *)res + sizeof(res->bytes), nbody);
-        config_body[nbody] = '\0';
-        (void) extract_cccp_body(instance, c, config_body);
-        free(config_body);
-
-    } else if (instance->compat.type == LCB_CACHED_CONFIG) {
-        lcb_schedule_config_cache_refresh(instance);
+    if (c->instance->compat.type == LCB_CACHED_CONFIG) {
+        lcb_schedule_config_cache_refresh(c->instance);
     }
 
     /* re-schedule command to new server */
-    idx = vbucket_found_incorrect_master(instance->config.handle,
+    idx = vbucket_found_incorrect_master(c->instance->vbucket_config,
                                          ntohs(oldreq->request.vbucket),
                                          (int)c->index);
 
@@ -126,17 +82,17 @@ static int handle_not_my_vbucket(lcb_server_t *c,
 
     req = *oldreq;
 
-    lcb_assert((lcb_size_t)idx < instance->nservers);
-    new_srv = instance->servers + idx;
+    lcb_assert((lcb_size_t)idx < c->instance->nservers);
+    new_srv = c->instance->servers + idx;
 
     nr = ringbuffer_read(&c->cmd_log, req.bytes, sizeof(req));
     lcb_assert(nr == sizeof(req));
 
-    req.request.opaque = ++instance->seqno;
+    req.request.opaque = ++c->instance->seqno;
     nbody = ntohl(req.request.bodylen);
     body = malloc(nbody);
     if (body == NULL) {
-        lcb_error_handler(instance, LCB_CLIENT_ENOMEM, NULL);
+        lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
         return -1;
     }
     nr = ringbuffer_read(&c->cmd_log, body, nbody);
@@ -274,7 +230,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
             swallow_command(c, &header, was_connected);
 
         } else {
-            int rv = handle_not_my_vbucket(c, &req, &ct, (void *)packet);
+            int rv = handle_not_my_vbucket(c, &req, &ct);
 
             if (rv == -1) {
                 return -1;
@@ -289,7 +245,9 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     }
 
     default:
-        lcb_error_handler(c->instance, LCB_PROTOCOL_ERROR, NULL);
+        lcb_error_handler(c->instance,
+                          LCB_PROTOCOL_ERROR,
+                          NULL);
         if (packet != conn->input->read_head) {
             free(packet);
         }

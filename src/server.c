@@ -173,7 +173,6 @@ static void failout_single_request(lcb_server_t *server,
     case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
     case PROTOCOL_BINARY_CMD_SASL_AUTH:
     case PROTOCOL_BINARY_CMD_SASL_STEP:
-    case CMD_GET_CLUSTER_CONFIG:
         /* no need to notify user about these commands */
         break;
 
@@ -358,10 +357,9 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         if (mirror) {
             ringbuffer_consumed(mirror, packetsize);
         }
-        if (root->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && server->is_config_node) {
-            struct lcb_http_bootstrap_st *http = &root->bootstrap.via.http;
-            http->weird_things++;
-            if (http->weird_things >= http->weird_things_threshold) {
+        if (server->is_config_node) {
+            root->weird_things++;
+            if (root->weird_things >= root->weird_things_threshold) {
                 should_refresh_config = 1;
             }
         }
@@ -382,9 +380,10 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
 
     ringbuffer_destruct(&rest);
     if (should_refresh_config) {
-        lcb_bootstrap_error(root, LCB_NETWORK_ERROR,
-                            "Config connection considered stale. Refresing",
-                            LCB_CONNFERR_NO_FAILOUT);
+        lcb_instance_config_error(root, LCB_NETWORK_ERROR,
+                                  "Config connection considered stale. "
+                                  "Refresing",
+                                  LCB_CONNFERR_NO_FAILOUT);
     }
     lcb_maybe_breakout(server->instance);
 }
@@ -514,26 +513,30 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     /* Initialize all members */
     lcb_error_t err;
     char *p;
-    const char *n;
-    struct lcb_config_st *config = &server->instance->config;
+    const char *n = vbucket_config_get_server(server->instance->vbucket_config,
+                                              servernum);
 
     err = lcb_connection_init(&server->connection, server->instance);
     if (err != LCB_SUCCESS) {
         return err;
     }
+
     server->connection.data = server;
+
     server->index = servernum;
-    n = vbucket_config_get_server(config->handle, servernum);
     server->authority = strdup(n);
     strcpy(server->connection.host, n);
     p = strchr(server->connection.host, ':');
     *p = '\0';
     strcpy(server->connection.port, p + 1);
 
-    server->is_config_node = vbucket_config_is_config_node(config->handle, servernum);
-    n = vbucket_config_get_couch_api_base(config->handle, servernum);
+    server->is_config_node = vbucket_config_is_config_node(server->instance->vbucket_config,
+                                                           servernum);
+    n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
+                                          servernum);
     server->couch_api_base = (n != NULL) ? strdup(n) : NULL;
-    n = vbucket_config_get_rest_api_server(config->handle, servernum);
+    n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
+                                           servernum);
     server->rest_api_server = strdup(n);
 
     lcb_connection_getaddrinfo(&server->connection, 0);

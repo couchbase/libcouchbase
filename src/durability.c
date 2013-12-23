@@ -473,7 +473,7 @@ static int verify_critera(lcb_t instance, lcb_durability_set_t *dset)
 {
     lcb_durability_opts_t *options = &dset->opts;
 
-    int replica_max = instance->config.nreplicas;
+    int replica_max = instance->nreplicas;
     int persist_max = replica_max + 1;
 
     /**
@@ -531,7 +531,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     dset->instance = instance;
 
     if (!DSET_OPTFLD(dset, timeout)) {
-        DSET_OPTFLD(dset, timeout) = instance->config.durability_timeout;
+        DSET_OPTFLD(dset, timeout) = instance->durability_timeout;
     }
 
     if (-1 == verify_critera(instance, dset)) {

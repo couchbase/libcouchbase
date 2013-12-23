@@ -27,22 +27,22 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     switch (cmd) {
 
     case LCB_CNTL_OP_TIMEOUT:
-        return &instance->config.operation_timeout;
+        return &instance->operation_timeout;
 
     case LCB_CNTL_VIEW_TIMEOUT:
-        return &instance->config.views_timeout;
+        return &instance->views_timeout;
 
     case LCB_CNTL_DURABILITY_INTERVAL:
-        return &instance->config.durability_interval;
+        return &instance->durability_interval;
 
     case LCB_CNTL_DURABILITY_TIMEOUT:
-        return &instance->config.durability_timeout;
+        return &instance->durability_timeout;
 
     case LCB_CNTL_HTTP_TIMEOUT:
-        return &instance->config.http_timeout;
+        return &instance->http_timeout;
 
     case LCB_CNTL_CONFIGURATION_TIMEOUT:
-        return &instance->config.bootstrap_timeout;
+        return &instance->config_timeout;
 
     default:
         return NULL;
@@ -74,11 +74,11 @@ static lcb_error_t bufsize_common(int mode, lcb_t instance, int cmd, void *arg)
 
     switch (cmd) {
     case LCB_CNTL_WBUFSIZE:
-        ptr = &instance->config.wbufsize;
+        ptr = &instance->wbufsize;
         break;
 
     case LCB_CNTL_RBUFSIZE:
-        ptr = &instance->config.rbufsize;
+        ptr = &instance->rbufsize;
         break;
 
     default:
@@ -103,7 +103,7 @@ static lcb_error_t get_vbconfig(int mode, lcb_t instance, int cmd, void *arg)
     if (mode != LCB_CNTL_GET) {
         return LCB_NOT_SUPPORTED;
     }
-    *(VBUCKET_CONFIG_HANDLE *)arg = instance->config.handle;
+    *(VBUCKET_CONFIG_HANDLE *)arg = instance->vbucket_config;
 
     (void)cmd;
     return LCB_SUCCESS;
@@ -129,7 +129,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    if (!instance->config.handle) {
+    if (!instance->vbucket_config) {
         return LCB_CLIENT_ETMPFAIL;
     }
 
@@ -137,7 +137,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_EINVAL;
     }
 
-    vbucket_map(instance->config.handle,
+    vbucket_map(instance->vbucket_config,
                 vbi->v.v0.key,
                 vbi->v.v0.nkey,
                 &vbi->v.v0.vbucket,
@@ -192,7 +192,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         conn = &server->connection;
 
     } else if (cmd == LCB_CNTL_CONFIGNODE_INFO) {
-        conn = instance->bootstrap.connection;
+        conn = &instance->connection;
 
     } else {
         return LCB_EINVAL;
@@ -223,9 +223,9 @@ static lcb_error_t syncmode(int mode, lcb_t instance, int cmd, void *arg)
     lcb_syncmode_t *user = arg;
 
     if (mode == LCB_CNTL_SET) {
-        instance->config.syncmode = *user;
+        instance->syncmode = *user;
     } else {
-        *user = instance->config.syncmode;
+        *user = instance->syncmode;
     }
 
     (void)cmd;
@@ -237,9 +237,9 @@ static lcb_error_t ippolicy(int mode, lcb_t instance, int cmd, void *arg)
     lcb_ipv6_t *user = arg;
 
     if (mode == LCB_CNTL_SET) {
-        instance->config.ipv6 = *user;
+        instance->ipv6 = *user;
     } else {
-        *user = instance->config.ipv6;
+        *user = instance->ipv6;
     }
 
     (void)cmd;
@@ -250,13 +250,10 @@ static lcb_error_t confthresh(int mode, lcb_t instance, int cmd, void *arg)
 {
     lcb_size_t *user = arg;
 
-    if (instance->bootstrap.type != LCB_CONFIG_TRANSPORT_HTTP) {
-        return LCB_EINVAL;
-    }
     if (mode == LCB_CNTL_SET) {
-        instance->bootstrap.via.http.weird_things_threshold = *user;
+        instance->weird_things_threshold = *user;
     } else {
-        *user = instance->bootstrap.via.http.weird_things_threshold;
+        *user = instance->weird_things_threshold;
     }
 
     (void)cmd;
@@ -267,13 +264,10 @@ static lcb_error_t bummer_mode_handler(int mode, lcb_t instance, int cmd, void *
 {
     int *skip = arg;
 
-    if (instance->bootstrap.type != LCB_CONFIG_TRANSPORT_HTTP) {
-        return LCB_EINVAL;
-    }
     if (mode == LCB_CNTL_SET) {
-        instance->bootstrap.via.http.bummer = *skip;
+        instance->bummer = *skip;
     } else {
-        *skip = instance->bootstrap.via.http.bummer;
+        *skip = instance->bummer;
     }
 
     (void)cmd;
@@ -292,9 +286,9 @@ static lcb_error_t randomize_bootstrap_hosts_handler(int mode,
     }
 
     if (mode == LCB_CNTL_SET) {
-        instance->config.randomize_bootstrap_nodes = *randomize;
+        instance->randomize_bootstrap_nodes = *randomize;
     } else {
-        *randomize = instance->config.randomize_bootstrap_nodes;
+        *randomize = instance->randomize_bootstrap_nodes;
     }
 
     return LCB_SUCCESS;
@@ -358,44 +352,15 @@ static lcb_error_t max_redirects(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_EINVAL;
     }
     if (mode == LCB_CNTL_SET) {
-        instance->config.max_redir = *val;
+        instance->max_redir = *val;
     } else {
-        *val = instance->config.max_redir;
+        *val = instance->max_redir;
     }
 
     (void)cmd;
     return LCB_SUCCESS;
 }
 
-static lcb_error_t config_transport(int mode, lcb_t instance, int cmd, void *arg)
-{
-    lcb_config_transport_t *val = arg;
-
-    if (mode == LCB_CNTL_SET) {
-        if (instance->config.handle) {
-            return LCB_EINVAL;
-        }
-        switch (*val) {
-        case LCB_CONFIG_TRANSPORT_HTTP:
-            instance->bootstrap.cleanup(instance);
-            lcb_bootstrap_use_http(instance);
-            instance->bootstrap.setup(instance);
-            break;
-        case LCB_CONFIG_TRANSPORT_CCCP:
-            instance->bootstrap.cleanup(instance);
-            lcb_bootstrap_use_cccp(instance);
-            instance->bootstrap.setup(instance);
-            break;
-        default:
-            return LCB_EINVAL;
-        }
-    } else {
-        *val = instance->bootstrap.type;
-    }
-
-    (void)cmd;
-    return LCB_SUCCESS;
-}
 
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
@@ -422,7 +387,6 @@ static ctl_handler handlers[] = {
     config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */,
     force_sasl_mech_handler, /* LCB_CNTL_FORCE_SASL_MECH */
     max_redirects, /* LCB_CNTL_MAX_REDIRECTS */
-    config_transport, /* LCB_CNTL_CONFIG_TRANSPORT */
 };
 
 

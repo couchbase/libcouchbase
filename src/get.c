@@ -60,7 +60,7 @@ lcb_error_t lcb_unlock(lcb_t instance,
     lcb_size_t ii;
 
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
@@ -84,7 +84,7 @@ lcb_error_t lcb_unlock(lcb_t instance,
             hashkey = key;
             nhashkey = nkey;
         }
-        (void)vbucket_map(instance->config.handle, hashkey, nhashkey,
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                           &vb, &idx);
 
         if (idx < 0 || idx > (int)instance->nservers) {
@@ -125,7 +125,7 @@ lcb_error_t lcb_get_replica(lcb_t instance,
     lcb_size_t ii, *affected_servers = NULL;
 
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
@@ -175,14 +175,14 @@ lcb_error_t lcb_get_replica(lcb_t instance,
                 break;
             case LCB_REPLICA_SELECT:
                 r0 = r1 = items[ii]->v.v1.index;
-                if (r0 >= instance->config.nreplicas) {
+                if (r0 >= instance->nreplicas) {
                     return lcb_synchandler_return(instance, LCB_EINVAL);
                 }
                 ct.replica = -1; /* do not iterate */
                 break;
             case LCB_REPLICA_ALL:
                 r0 = 0;
-                r1 = instance->config.nreplicas;
+                r1 = instance->nreplicas;
                 ct.replica = -1; /* do not iterate */
                 break;
             }
@@ -192,9 +192,9 @@ lcb_error_t lcb_get_replica(lcb_t instance,
         }
 
         do {
-            vb = vbucket_get_vbucket_by_key(instance->config.handle,
+            vb = vbucket_get_vbucket_by_key(instance->vbucket_config,
                                             key, nkey);
-            idx = vbucket_get_replica(instance->config.handle, vb, r0);
+            idx = vbucket_get_replica(instance->vbucket_config, vb, r0);
             if (idx < 0 || idx > (int)instance->nservers) {
                 free(affected_servers);
                 /* FIXME: when 'packet' patch will be applied, here
@@ -244,7 +244,7 @@ static lcb_error_t single_get(lcb_t instance,
     lcb_time_t exp = item->v.v0.exptime;
 
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
@@ -259,7 +259,7 @@ static lcb_error_t single_get(lcb_t instance,
         nhashkey = nkey;
     }
 
-    (void)vbucket_map(instance->config.handle, hashkey, nhashkey,
+    (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                       &vb, &idx);
 
     if (idx < 0 || idx > (int)instance->nservers) {
@@ -310,7 +310,7 @@ static lcb_error_t multi_get(lcb_t instance,
     struct server_info_st *servers = NULL;
 
     /* we need a vbucket config before we can start getting data.. */
-    if (instance->config.handle == NULL) {
+    if (instance->vbucket_config == NULL) {
         switch (instance->type) {
         case LCB_TYPE_CLUSTER:
             return lcb_synchandler_return(instance, LCB_EBADHANDLE);
@@ -342,7 +342,7 @@ static lcb_error_t multi_get(lcb_t instance,
             nhashkey = nkey;
         }
 
-        (void)vbucket_map(instance->config.handle, hashkey, nhashkey,
+        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
                           &servers[ii].vb, &servers[ii].idx);
         if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
             free(servers);

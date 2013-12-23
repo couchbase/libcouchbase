@@ -73,23 +73,16 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
     if (rc != LCB_SUCCESS) {
         lcb_failout_server(c, rc);
     } else {
-        if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_HTTP && c->is_config_node) {
-            c->instance->bootstrap.via.http.weird_things = 0;
+        if (c->is_config_node) {
+            c->instance->weird_things = 0;
         }
         lcb_sockrw_apply_want(&c->connection);
         c->inside_handler = 0;
     }
-
     if (instance->compat.type == LCB_CACHED_CONFIG &&
             instance->compat.value.cached.needs_update) {
         lcb_refresh_config_cache(instance);
-
-    } else if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_CCCP &&
-            instance->bootstrap.via.cccp.next_config) {
-        lcb_update_vbconfig(instance, instance->bootstrap.via.cccp.next_config);
-        instance->bootstrap.via.cccp.next_config = NULL;
     }
-
     lcb_maybe_breakout(instance);
     lcb_error_handler(instance, rc, NULL);
 }
@@ -246,10 +239,6 @@ int lcb_flushing_buffers(lcb_t instance)
         if (lcb_server_has_pending(instance->servers + ii)) {
             return 1;
         }
-    }
-    if (instance->bootstrap.type == LCB_CONFIG_TRANSPORT_CCCP &&
-        lcb_server_has_pending(&instance->bootstrap.via.cccp.server)) {
-        return 1;
     }
     return 0;
 }

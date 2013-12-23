@@ -93,9 +93,6 @@ The following options are supported:
     Force SASL authentication mechanism (currently "PLAIN" or
     "CRAM-MD5").
 
-*-C, --config-transport*='TRANSPORT'::
-    Specify transport for bootstrapping the connection: "HTTP"
-    (default) or "CCCP"
 
 SUBCOMMANDS
 -----------
@@ -332,9 +329,6 @@ Only warnings will be reported. This is what you normally want!
         Force SASL authentication mechanism (currently "PLAIN" or
         "CRAM-MD5").
 
-    *-C, --config-transport*='TRANSPORT'::
-        Specify transport for bootstrapping the connection: "HTTP"
-        (default) or "CCCP"
 
     *-D, --data-greater-than-memory*::::
         Specify if testing with data greater than memory size

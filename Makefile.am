@@ -159,11 +159,9 @@ libcouchbase_la_SOURCES = \
                         plugins/io/select/select_io_opts.h \
                         src/arithmetic.c \
                         src/base64.c \
+                        src/bconf_io.c \
                         src/bconf_parse.c \
                         src/bconf_provider.c \
-                        src/bootstrap_cccp.c \
-                        src/bootstrap_common.c \
-                        src/bootstrap_http.c \
                         src/cntl.c \
                         src/compat.c \
                         src/config_cache.c \

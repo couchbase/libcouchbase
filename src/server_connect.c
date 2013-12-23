@@ -132,12 +132,11 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 
 }
 
-void lcb_server_connect_handler(lcb_connection_t conn, lcb_error_t err)
+static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_server_t *server = (lcb_server_t *)conn->data;
     struct nameinfo_common nistrs;
     int sasl_in_progress;
-    int should_do_sasl = 0;
 
     if (err != LCB_SUCCESS) {
         connection_error(server, err);
@@ -161,19 +160,13 @@ void lcb_server_connect_handler(lcb_connection_t conn, lcb_error_t err)
         lcb_assert(sasl_ok == SASL_OK);
     }
 
-    if (server->index == -1) {
-        should_do_sasl = 1;
-    } else if (vbucket_config_get_user(server->instance->config.handle) != NULL) {
-        should_do_sasl = 1;
-    }
-
-    if (should_do_sasl) {
+    if (vbucket_config_get_user(server->instance->vbucket_config) == NULL) {
+        /* No SASL AUTH needed */
+        lcb_server_connected(server);
+    } else {
         if (!sasl_in_progress) {
             start_sasl_auth_server(server);
         }
-    } else {
-        /* No SASL AUTH needed */
-        lcb_server_connected(server);
     }
 
     lcb_connection_cancel_timer(conn);
@@ -196,13 +189,13 @@ static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 void lcb_server_connect(lcb_server_t *server)
 {
     lcb_connection_t conn = &server->connection;
-    conn->on_connect_complete = lcb_server_connect_handler;
+    conn->on_connect_complete = socket_connected;
     conn->on_timeout = server_timeout_handler;
     conn->evinfo.handler = lcb_server_v0_event_handler;
     conn->completion.read = lcb_server_v1_read_handler;
     conn->completion.write = lcb_server_v1_write_handler;
     conn->completion.error = lcb_server_v1_error_handler;
-    conn->timeout.usec = server->instance->config.operation_timeout;
+    conn->timeout.usec = server->instance->operation_timeout;
 
     if (lcb_connection_reset_buffers(&server->connection) != LCB_SUCCESS) {
         lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);

@@ -267,7 +267,7 @@ lcb_error_t lcb_synchandler_return(lcb_t instance, lcb_error_t retcode)
 {
     struct user_cookie cookie;
 
-    if (instance->config.syncmode == LCB_ASYNCHRONOUS ||
+    if (instance->syncmode == LCB_ASYNCHRONOUS ||
             retcode != LCB_SUCCESS) {
         return retcode;
     }
