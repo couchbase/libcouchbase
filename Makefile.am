@@ -192,6 +192,7 @@ libcouchbase_la_SOURCES = \
                         src/list.h \
                         src/observe.c \
                         src/packet.c \
+                        src/packetutils.c \
                         src/readwrite.c \
                         src/remove.c \
                         src/ringbuffer.c \
@@ -325,6 +326,7 @@ tests_unit_tests_SOURCES = \
                            src/url_encoding.c \
                            src/simplestring.c \
                            src/hostlist.c \
+                           src/packetutils.c \
                            tests/base64-unit-test.cc \
                            tests/behavior-unit-tests.cc \
                            tests/ccbc_103.cc \
@@ -334,6 +336,7 @@ tests_unit_tests_SOURCES = \
                            tests/host-unit-test.cc \
                            tests/list-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
+                           tests/packet-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \
                            tests/string-unit-test.cc \
                            tests/strerror-unit-test.cc \

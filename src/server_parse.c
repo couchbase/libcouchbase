@@ -23,9 +23,10 @@
  * @todo add more documentation
  */
 #include "internal.h"
+#include "packetutils.h"
 
 static void swallow_command(lcb_server_t *c,
-                            protocol_binary_response_header *header,
+                            const protocol_binary_response_header *header,
                             int was_connected)
 {
     lcb_size_t nr;
@@ -120,12 +121,10 @@ static int handle_not_my_vbucket(lcb_server_t *c,
 
 int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
 {
+    int rv;
+    packet_info info;
     protocol_binary_request_header req;
-    protocol_binary_response_header header;
     lcb_size_t nr;
-    char *packet;
-    lcb_size_t packetsize;
-    struct lcb_command_data_st ct;
     lcb_connection_t conn = &c->connection;
 
     if (ringbuffer_ensure_alignment(conn->input) != 0) {
@@ -134,59 +133,33 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
         return -1;
     }
 
-    nr = ringbuffer_peek(conn->input, header.bytes, sizeof(header));
-    if (nr < sizeof(header)) {
-        return 0;
-    }
-
-    packetsize = ntohl(header.response.bodylen) + (lcb_uint32_t)sizeof(header);
-    if (conn->input->nbytes < packetsize) {
+    rv = lcb_packet_read_ringbuffer(&info, conn->input);
+    if (rv == -1) {
+        return -1;
+    } else if (rv == 0) {
         return 0;
     }
 
     /* Is it already timed out? */
     nr = ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
     if (nr < sizeof(req) || /* the command log doesn't know about it */
-            (header.response.opaque < req.request.opaque &&
-             header.response.opaque > 0)) { /* sasl comes with zero opaque */
+            (PACKET_OPAQUE(&info) < req.request.opaque &&
+             PACKET_OPAQUE(&info) > 0)) { /* sasl comes with zero opaque */
         /* already processed. */
-        ringbuffer_consumed(conn->input, packetsize);
+        lcb_packet_release_ringbuffer(&info, conn->input);
         return 1;
     }
 
-    packet = conn->input->read_head;
-    /* we have everything! */
 
-    if (!ringbuffer_is_continous(conn->input, RINGBUFFER_READ,
-                                 packetsize)) {
-        /* The buffer isn't continous.. for now just copy it out and
-        ** operate on the copy ;)
-        */
-        if ((packet = malloc(packetsize)) == NULL) {
-            lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
-            return -1;
-        }
-        nr = ringbuffer_read(conn->input, packet, packetsize);
-        if (nr != packetsize) {
-            lcb_error_handler(c->instance, LCB_EINTERNAL,
-                              NULL);
-            free(packet);
-            return -1;
-        }
-    }
-
-    nr = ringbuffer_peek(&c->output_cookies, &ct, sizeof(ct));
-    if (nr != sizeof(ct)) {
-        lcb_error_handler(c->instance, LCB_EINTERNAL,
-                          NULL);
-        if (packet != conn->input->read_head) {
-            free(packet);
-        }
+    nr = ringbuffer_peek(&c->output_cookies, &info.ct, sizeof(info.ct));
+    if (nr != sizeof(info.ct)) {
+        lcb_error_handler(c->instance, LCB_EINTERNAL, NULL);
+        lcb_packet_release_ringbuffer(&info, conn->input);
         return -1;
     }
-    ct.vbucket = ntohs(req.request.vbucket);
+    info.ct.vbucket = ntohs(req.request.vbucket);
 
-    switch (header.response.magic) {
+    switch (info.res.response.magic) {
     case PROTOCOL_BINARY_REQ:
         /*
          * The only way to get request packets is if someone started
@@ -197,29 +170,24 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
         return -1;
     case PROTOCOL_BINARY_RES: {
         int was_connected = c->connection_ready;
-        if (lcb_server_purge_implicit_responses(c, header.response.opaque, stop, 0) != 0) {
-            if (packet != conn->input->read_head) {
-                free(packet);
-            }
+        rv = lcb_server_purge_implicit_responses(c,
+                                                 PACKET_OPAQUE(&info),
+                                                 stop, 0);
+        if (rv != 0) {
+            lcb_packet_release_ringbuffer(&info, conn->input);
             return -1;
         }
 
         if (c->instance->histogram) {
-            lcb_record_metrics(c->instance, stop - ct.start,
-                               header.response.opcode);
+            lcb_record_metrics(c->instance, stop - info.ct.start,
+                               PACKET_OPCODE(&info));
         }
 
-        if (ntohs(header.response.status) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET
-                || header.response.opcode == CMD_GET_REPLICA
-                || header.response.opcode == CMD_OBSERVE) {
-            if (lcb_dispatch_response(c, &ct, (void *)packet) == -1) {
-                /*
-                 * Internal error.. we received an unsupported response
-                 * id. This should _ONLY_ happen at development time because
-                 * we won't receive response packets with other opcodes
-                 * than we send. Let's abort here to make it easy for
-                 * the developer to know what happened..
-                 */
+        if (PACKET_STATUS(&info) != PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET
+                || PACKET_OPCODE(&info) == CMD_GET_REPLICA
+                || PACKET_OPCODE(&info) == CMD_OBSERVE) {
+            rv = lcb_dispatch_response(c, &info);
+            if (rv == -1) {
                 lcb_error_handler(c->instance, LCB_EINTERNAL,
                                   "Received unknown command response");
                 abort();
@@ -227,17 +195,17 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
             }
 
             /* keep command and cookie until we get complete STAT response */
-            swallow_command(c, &header, was_connected);
+            swallow_command(c, &info.res, was_connected);
 
         } else {
-            int rv = handle_not_my_vbucket(c, &req, &ct);
+            rv = handle_not_my_vbucket(c, &req, &info.ct);
 
             if (rv == -1) {
                 return -1;
 
             } else if (rv == 0) {
-                lcb_dispatch_response(c, &ct, (void *)packet);
-                swallow_command(c, &header, was_connected);
+                lcb_dispatch_response(c, &info);
+                swallow_command(c, &info.res, was_connected);
             }
 
         }
@@ -245,19 +213,11 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     }
 
     default:
-        lcb_error_handler(c->instance,
-                          LCB_PROTOCOL_ERROR,
-                          NULL);
-        if (packet != conn->input->read_head) {
-            free(packet);
-        }
+        lcb_error_handler(c->instance, LCB_PROTOCOL_ERROR, NULL);
+        lcb_packet_release_ringbuffer(&info, conn->input);
         return -1;
     }
 
-    if (packet != conn->input->read_head) {
-        free(packet);
-    } else {
-        ringbuffer_consumed(conn->input, packetsize);
-    }
+    lcb_packet_release_ringbuffer(&info, conn->input);
     return 1;
 }

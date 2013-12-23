@@ -43,6 +43,7 @@
 #include "debug.h"
 #include "handler.h"
 #include "lcbio.h"
+#include "cookie.h"
 
 #define LCB_DEFAULT_TIMEOUT 2500000
 #define LCB_DEFAULT_CONFIGURATION_TIMEOUT 5000000
@@ -64,20 +65,6 @@ extern "C" {
     struct lcb_server_st;
     typedef struct lcb_server_st lcb_server_t;
 
-    /**
-     * Data stored per command in the command-cookie buffer...
-     */
-    struct lcb_command_data_st {
-        hrtime_t start;
-        const void *cookie;
-        hrtime_t real_start;
-        lcb_uint16_t vbucket;
-        /* if != -1, it means that we are sequentially iterating
-         * through the all replicas until first successful response */
-        char replica;
-        /** Flags used for observe */
-        unsigned char flags;
-    };
 
     /**
      * Define constants for connection attemptts
@@ -485,9 +472,9 @@ extern "C" {
     lcb_error_t lcb_server_initialize(lcb_server_t *server,
                                       int servernum);
 
+    struct packet_info_st;
     int lcb_dispatch_response(lcb_server_t *c,
-                              struct lcb_command_data_st *ct,
-                              protocol_binary_response_header *header);
+                              struct packet_info_st *info);
 
 
     void lcb_server_buffer_start_packet(lcb_server_t *c,

@@ -158,6 +158,7 @@ ADD_LIBRARY(lcbutils STATIC
             src/hashset.c
             src/hostlist.c
             src/list.c
+            src/packetutils.c
             src/ringbuffer.c
             src/simplestring.c
             src/url_encoding.c
@@ -261,6 +262,7 @@ IF(NOT LCB_NO_TESTS)
             tests/memcached-compat-unit-test.cc
             tests/mock-unit-test.cc
             tests/mutate-unit-test.cc
+            tests/packet-unit-test.cc
             tests/regression-unit-test.cc
             tests/ringbuffer-unit-test.cc
             tests/serverops-unit-test.cc
