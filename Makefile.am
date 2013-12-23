@@ -520,7 +520,9 @@ endif
 tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c tests/timeout.c
 tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
 
+if BUILD_TESTS
 check_PROGRAMS += tests/check-all
+endif
 tests_check_all_SOURCES = tests/check-all.cc tools/commandlineparser.cc tests/procutil.c
 tests_check_all_CPPFLAGS = $(AM_CPPFLAGS) -I"${srcdir}/tools"
 tests_check_all_LDADD = libcouchbase.la
@@ -548,7 +550,10 @@ tools_cbc_pillowfight_LDADD = libcouchbase.la  -lpthread
 
 TESTS_ENVIRONMENT = export outdir="$(top_builddir)/tests";
 
-TESTS = tests/check-all
+TESTS =
+if BUILD_TESTS
+TESTS += tests/check-all
+endif
 
 if BUILD_TOOLS
 if HAVE_CXX
