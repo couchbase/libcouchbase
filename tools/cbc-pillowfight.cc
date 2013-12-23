@@ -53,7 +53,8 @@ public:
         randomSeed(0),
         dumb(false),
         transport(LCB_CONFIG_TRANSPORT_HTTP),
-        saslMech() {
+        saslMech(),
+        waitTime(10) {
         setMaxSize(5120);
         setMinSize(50);
     }
@@ -200,6 +201,18 @@ public:
         dumb = val;
     }
 
+    void setDGM(bool val) {
+        dgm = val;
+    }
+
+    void setWaitTime(uint32_t val) {
+        waitTime = val;
+    }
+
+    void setSkipPopulate(bool val) {
+        skipPopulate = val;
+    }
+
     bool isDumb() {
         return dumb;
     }
@@ -252,6 +265,9 @@ public:
     bool dumb;
     lcb_config_transport_t transport;
     std::string saslMech;
+    bool skipPopulate;
+    bool dgm;
+    uint32_t waitTime;
 } config;
 
 void log(const char *format, ...)
@@ -437,33 +453,44 @@ public:
                 generateKey(key);
                 lcb_uint32_t flags = 0;
                 lcb_uint32_t exp = 0;
-
-                if (config.setprc > 0 && (nextSeqno() % 100) < config.setprc) {
-                    lcb_size_t size;
-                    if (config.minSize == config.maxSize) {
-                        size = config.maxSize;
+                uint32_t nextseq = nextSeqno();
+                int retry = config.dgm ? 10000: -1;
+                do {
+                    if (config.setprc > 0 && (nextseq % 100) < config.setprc) {
+                        lcb_size_t size;
+                        if (config.minSize == config.maxSize) {
+                            size = config.maxSize;
+                        } else {
+                            size = config.minSize +
+                                nextseq % (config.maxSize - config.minSize);
+                        }
+                        lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
+                                config.data, size,
+                                flags, exp);
+                        lcb_store_cmd_t *items[1] = { &item };
+                        lcb_store(instance, this, 1, items);
                     } else {
-                        size = config.minSize +
-                               nextSeqno() % (config.maxSize - config.minSize);
+                        lcb_get_cmd_t item(key.c_str(), key.length());
+                        lcb_get_cmd_t *items[1] = { &item };
+                        error = lcb_get(instance, this, 1, items);
+                        if (error != LCB_SUCCESS) {
+                            log("Failed to get item: %s",
+                                    lcb_strerror(instance, error));
+                        }
                     }
-                    lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
-                                         config.data, size,
-                                         flags, exp);
-                    lcb_store_cmd_t *items[1] = { &item };
-                    lcb_store(instance, this, 1, items);
-                } else {
-                    lcb_get_cmd_t item(key.c_str(), key.length());
-                    lcb_get_cmd_t *items[1] = { &item };
-                    error = lcb_get(instance, this, 1, items);
-                    if (error != LCB_SUCCESS) {
-                        log("Failed to get item: %s", lcb_strerror(instance, error));
+                    if (ii % config.waitTime == 0 || config.dgm) {
+                        lcb_wait(instance);
+                        if (error == LCB_ETMPFAIL) {
+                            usleep(1000);// wait in increments of 1 second
+                            retry--;
+                        } else {
+                            retry = -1;
+                        }
+                        pending = false;
+                    } else {
+                        pending = true;
                     }
-                }
-                if (ii % 10 == 0) {
-                    lcb_wait(instance);
-                } else {
-                    pending = true;
-                }
+                } while (retry > 0);
             }
 
             if (pending) {
@@ -489,17 +516,40 @@ public:
         for (uint32_t ii = start; ii < stop; ++ii) {
             std::string key;
             generateKey(key, ii);
+            int retry = 1000;
 
-            lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
-                                 config.data, config.maxSize);
-            lcb_store_cmd_t *items[1] = { &item };
-            error = lcb_store(instance, this, 1, items);
-            if (error != LCB_SUCCESS) {
-                log("Failed to store item: %s", lcb_strerror(instance, error));
-            }
-            lcb_wait(instance);
-            if (error != LCB_SUCCESS) {
-                log("Failed to store item: %s", lcb_strerror(instance, error));
+            do {
+                lcb_store_cmd_t item(LCB_SET, key.c_str(), key.length(),
+                        config.data, config.maxSize);
+                lcb_store_cmd_t *items[1] = { &item };
+                error = lcb_store(instance, this, 1, items);
+                if (error != LCB_SUCCESS) {
+                    log("Failed to store item:%d (%s)", error,
+                            lcb_strerror(instance, error));
+                }
+                lcb_wait(instance);
+                switch (error) {
+                    case LCB_SUCCESS:
+                        retry = -1;
+                        break;
+                    case LCB_ETMPFAIL:
+                        if (retry == 1000) {
+                            log("Failed to store item: [%d] (%s) retry 10s",
+                                    error, lcb_strerror(instance, error));
+                        }
+                        usleep(1000*config.waitTime);
+                        retry--;
+                        break;
+                    default:
+                        log("Failed to store item: [%d] (%s)",
+                                error, lcb_strerror(instance, error));
+                        retry = -1;
+                }
+            } while (retry > 0);
+
+            if (retry == 0) {
+                log("Failed to populate item: %d (%s) Giving Up!", error,
+                        lcb_strerror(instance, error));
             }
         }
 
@@ -647,6 +697,8 @@ static void handle_options(int argc, char **argv)
                                            "Specify SET command ratio (default 33)"));
     getopt.addOption(new CommandLineOption('m', "min-size", true,
                                            "Specify minimum size of payload (default 50)"));
+    getopt.addOption(new CommandLineOption('n', "no-population", false,
+                                           "Skip populating (default false)"));
     getopt.addOption(new CommandLineOption('M', "max-size", true,
                                            "Specify maximum size of payload (default 5120)"));
     getopt.addOption(new CommandLineOption('d', "dumb", false,
@@ -655,6 +707,10 @@ static void handle_options(int argc, char **argv)
                                            "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
     getopt.addOption(new CommandLineOption('C', "config-transport", true,
                                            "Specify transport for bootstrapping the connection: \"HTTP\" (default) or \"CCCP\""));
+    getopt.addOption(new CommandLineOption('D', "data-greater-than-memory",
+                                           false, "Specify if testing with data greater than memory (default false)"));
+    getopt.addOption(new CommandLineOption('w', "wait-time-for-op", true,
+                                           "Specify time to wait for store operations if data greater than memory (default 10)"));
 
     if (!getopt.parse(argc, argv)) {
         getopt.usage(argv[0]);
@@ -721,6 +777,10 @@ static void handle_options(int argc, char **argv)
                 config.setMinSize(atoi((*iter)->argument));
                 break;
 
+            case 'n' :
+                config.setSkipPopulate(true);
+                break;
+
             case 'M' :
                 config.setMaxSize(atoi((*iter)->argument));
                 break;
@@ -735,6 +795,13 @@ static void handle_options(int argc, char **argv)
 
             case 'C':
                 config.setConfigTransport((*iter)->argument);
+
+            case 'D' :
+                config.setDGM(true);
+                break;
+
+            case 'w' :
+                config.setWaitTime(atoi((*iter)->argument));
                 break;
 
             case '?':
@@ -800,7 +867,9 @@ extern "C" {
 static void *thread_worker(void *arg)
 {
     ThreadContext *ctx = static_cast<ThreadContext *>(arg);
-    ctx->populate(0, config.maxKey);
+    if (!config.skipPopulate) {
+        ctx->populate(0, config.maxKey);
+    }
     ctx->run();
 #ifndef WIN32
     pthread_exit(NULL);
