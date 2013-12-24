@@ -306,7 +306,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
               instance->servers[vbi.v.v0.server_index].connection.state);
 
     // Restore the timeout to something sane
-    tmo_usec = 2500000;
+    tmo_usec = 5000000;
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo_usec);
     ASSERT_EQ(LCB_SUCCESS, err);
 

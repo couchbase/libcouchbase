@@ -199,8 +199,8 @@ libcouchbase_la_SOURCES = \
                         src/ringbuffer.h \
                         src/sanitycheck.c \
                         src/server.c \
-                        src/server_connect.c \
                         src/server_io.c \
+                        src/server_negotiate.c \
                         src/server_parse.c \
                         src/simplestring.c \
                         src/stats.c \

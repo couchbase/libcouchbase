@@ -404,18 +404,7 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
 
     server->connection_ready = 0;
     lcb_connection_close(&server->connection);
-
-    if (server->sasl_conn) {
-        cbsasl_dispose(&server->sasl_conn);
-        server->sasl_conn = NULL;
-    }
-
-    if (server->sasl_mech) {
-        free(server->sasl_mech);
-        server->sasl_mech = NULL;
-    }
-
-    server->sasl_nmech = 0;
+    lcb_negotiation_destroy(server);
 
     return error;
 }
@@ -449,15 +438,11 @@ void lcb_server_destroy(lcb_server_t *server)
                                             1);
     }
 
-    if (server->sasl_conn != NULL) {
-        cbsasl_dispose(&server->sasl_conn);
-        server->sasl_conn = NULL;
-    }
+    lcb_negotiation_destroy(server);
 
     /* Delete the event structure itself */
     lcb_connection_cleanup(&server->connection);
 
-    free(server->sasl_mech);
     free(server->rest_api_server);
     free(server->couch_api_base);
     free(server->authority);
@@ -538,10 +523,9 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
                                            servernum);
     server->rest_api_server = strdup(n);
+    server->negotiation = NULL;
 
     lcb_connection_getaddrinfo(&server->connection, 0);
-
-    server->sasl_conn = NULL;
     return LCB_SUCCESS;
 }
 

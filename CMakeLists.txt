@@ -201,7 +201,7 @@ ADD_LIBRARY(couchbase SHARED
             src/remove.c
             src/sanitycheck.c
             src/server.c
-            src/server_connect.c
+            src/server_negotiate.c
             src/server_io.c
             src/server_parse.c
             src/stats.c

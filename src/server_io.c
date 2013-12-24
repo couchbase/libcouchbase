@@ -87,7 +87,7 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
     lcb_error_handler(instance, rc, NULL);
 }
 
-void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg)
+static void v0_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_server_t *c = arg;
     lcb_connection_t conn = &c->connection;
@@ -128,7 +128,7 @@ void lcb_server_v0_event_handler(lcb_socket_t sock, short which, void *arg)
     event_complete_common(c, LCB_SUCCESS);
 }
 
-void lcb_server_v1_error_handler(lcb_sockdata_t *sockptr)
+static void v1_error(lcb_sockdata_t *sockptr)
 {
     lcb_server_t *c;
 
@@ -139,7 +139,7 @@ void lcb_server_v1_error_handler(lcb_sockdata_t *sockptr)
 }
 
 
-void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
+static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
 {
     lcb_server_t *c;
     int rv;
@@ -173,9 +173,7 @@ void lcb_server_v1_read_handler(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
     event_complete_common(c, LCB_SUCCESS);
 }
 
-void lcb_server_v1_write_handler(lcb_sockdata_t *sockptr,
-                                 lcb_io_writebuf_t *wbuf,
-                                 int status)
+static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf, int status)
 {
     lcb_server_t *c;
     if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&c)) {
@@ -194,6 +192,15 @@ void lcb_server_v1_write_handler(lcb_sockdata_t *sockptr,
     }
 }
 
+static void wire_io(lcb_server_t *server)
+{
+    lcb_connection_t conn = &server->connection;
+    conn->evinfo.handler = v0_handler;
+    conn->completion.read = v1_read;
+    conn->completion.write = v1_write;
+    conn->completion.error = v1_error;
+}
+
 LIBCOUCHBASE_API
 void lcb_flush_buffers(lcb_t instance, const void *cookie)
 {
@@ -201,7 +208,7 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
         if (c->connection_ready) {
-            lcb_server_v0_event_handler(c->connection.sockfd,
+            v0_handler(c->connection.sockfd,
                                         LCB_READ_EVENT | LCB_WRITE_EVENT,
                                         c);
         }
@@ -222,9 +229,6 @@ int lcb_server_has_pending(lcb_server_t *server)
         return 1;
     }
 
-    if (!lcb_sockrw_flushed(conn)) {
-        return 1;
-    }
     return 0;
 }
 
@@ -258,4 +262,174 @@ void lcb_maybe_breakout(lcb_t instance)
             instance->io->v.v0.stop_event_loop(instance->io);
         }
     }
+}
+
+
+
+struct nameinfo_common {
+    char remote[NI_MAXHOST + NI_MAXSERV + 2];
+    char local[NI_MAXHOST + NI_MAXSERV + 2];
+};
+
+static int saddr_to_string(struct sockaddr *saddr, int len,
+                           char *buf, lcb_size_t nbuf)
+{
+    char h[NI_MAXHOST + 1];
+    char p[NI_MAXSERV + 1];
+    int rv;
+
+    rv = getnameinfo(saddr, len, h, sizeof(h), p, sizeof(p),
+                     NI_NUMERICHOST | NI_NUMERICSERV);
+    if (rv < 0) {
+        return 0;
+    }
+
+    if (snprintf(buf, nbuf, "%s;%s", h, p) < 0) {
+        return 0;
+    }
+
+    return 1;
+}
+
+static int get_nameinfo(lcb_connection_t conn,
+                        struct nameinfo_common *nistrs)
+{
+    struct sockaddr_storage sa_local;
+    struct sockaddr_storage sa_remote;
+    int n_salocal, n_saremote;
+    struct lcb_nameinfo_st ni;
+    int rv;
+
+    n_salocal = sizeof(sa_local);
+    n_saremote = sizeof(sa_remote);
+
+    ni.local.name = (struct sockaddr *)&sa_local;
+    ni.local.len = &n_salocal;
+
+    ni.remote.name = (struct sockaddr *)&sa_remote;
+    ni.remote.len = &n_saremote;
+
+    if (conn->instance->io->version == 1) {
+        rv = conn->instance->io->v.v1.get_nameinfo(conn->instance->io,
+                                                   conn->sockptr,
+                                                   &ni);
+
+        if (ni.local.len == 0 || ni.remote.len == 0 || rv < 0) {
+            return 0;
+        }
+
+    } else {
+        socklen_t sl_tmp = sizeof(sa_local);
+
+        rv = getsockname(conn->sockfd, ni.local.name, &sl_tmp);
+        n_salocal = sl_tmp;
+        if (rv < 0) {
+            return 0;
+        }
+        rv = getpeername(conn->sockfd, ni.remote.name, &sl_tmp);
+        n_saremote = sl_tmp;
+        if (rv < 0) {
+            return 0;
+        }
+    }
+
+    if (!saddr_to_string(ni.remote.name, *ni.remote.len,
+                         nistrs->remote, sizeof(nistrs->remote))) {
+        return 0;
+    }
+
+    if (!saddr_to_string(ni.local.name, *ni.local.len,
+                         nistrs->local, sizeof(nistrs->local))) {
+        return 0;
+    }
+    return 1;
+}
+
+
+static void connection_error(lcb_server_t *server, lcb_error_t err)
+{
+    lcb_failout_server(server, err);
+    if (server->instance->compat.type == LCB_CACHED_CONFIG) {
+        /* Try to update the cache :S */
+        lcb_schedule_config_cache_refresh(server->instance);
+        return;
+    }
+}
+
+static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
+{
+    if (err != LCB_SUCCESS) {
+        connection_error(ctx->server, err);
+    } else {
+        wire_io(ctx->server);
+        lcb_connection_reset_buffers(&ctx->server->connection);
+        lcb_server_connected(ctx->server);
+    }
+}
+
+
+static void socket_connected(lcb_connection_t conn, lcb_error_t err)
+{
+    lcb_server_t *server = (lcb_server_t *)conn->data;
+    int sasl_needed;
+
+    if (err != LCB_SUCCESS) {
+        connection_error(server, err);
+        return;
+    }
+
+    server->inside_handler = 1;
+    sasl_needed = vbucket_config_get_user(
+            server->instance->vbucket_config) != NULL;
+
+    if (sasl_needed) {
+        struct nameinfo_common nistrs;
+        if (!get_nameinfo(conn, &nistrs)) {
+            /** This normally shouldn't happen! */
+            connection_error(server, LCB_NETWORK_ERROR);
+            return;
+        }
+
+        err = lcb_negotiation_init(server, nistrs.remote, nistrs.local,
+                                   negotiation_done);
+        if (err != LCB_SUCCESS) {
+            connection_error(server, err);
+        }
+
+    } else {
+        wire_io(server);
+        lcb_server_connected(server);
+        lcb_connection_cancel_timer(conn);
+        lcb_sockrw_apply_want(conn);
+    }
+
+    server->inside_handler = 0;
+}
+
+static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
+{
+    lcb_server_t *server = (lcb_server_t *)conn->data;
+
+    lcb_timeout_server(server);
+    lcb_maybe_breakout(server->instance);
+
+    (void)err;
+}
+
+/**
+ * Schedule a connection to the server
+ */
+void lcb_server_connect(lcb_server_t *server)
+{
+    lcb_connection_t conn = &server->connection;
+
+    conn->on_connect_complete = socket_connected;
+    conn->on_timeout = server_timeout_handler;
+    conn->timeout.usec = server->instance->operation_timeout;
+
+    if (lcb_connection_reset_buffers(&server->connection) != LCB_SUCCESS) {
+        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+    }
+
+    lcb_connection_start(conn, LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
 }

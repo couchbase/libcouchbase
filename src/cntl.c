@@ -186,7 +186,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         }
 
         if (si->version == 1) {
-            si->v.v1.sasl_mech = server->sasl_mech;
+            si->v.v1.sasl_mech = server->negotiation->mech;
         }
 
         conn = &server->connection;
