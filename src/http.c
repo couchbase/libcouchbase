@@ -189,7 +189,9 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
 
     request_free_headers(req);
     lcb_connection_cleanup(&req->connection);
-    rc = lcb_connection_init(&req->connection, instance);
+    rc = lcb_connection_init(&req->connection,
+                             instance->settings.io,
+                             &instance->settings);
     if (rc != LCB_SUCCESS) {
         lcb_http_request_decref(req);
         return lcb_synchandler_return(instance, rc);
@@ -446,9 +448,9 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
         nbase -= 1; /* skip '\0' */
-        username = instance->username;
-        if (instance->password) {
-            password = strdup(instance->password);
+        username = instance->settings.username;
+        if (instance->settings.password) {
+            password = strdup(instance->settings.password);
         }
         break;
     case LCB_HTTP_TYPE_RAW:
@@ -475,7 +477,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     }
     req->refcount = 1;
     req->instance = instance;
-    req->io = instance->io;
+    req->io = instance->settings.io;
     req->command_cookie = command_cookie;
     req->chunked = chunked;
     req->method = method;

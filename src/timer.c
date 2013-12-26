@@ -72,7 +72,7 @@ lcb_timer_t lcb_timer_create(lcb_t instance,
                              lcb_error_t *error)
 
 {
-    return lcb_timer_create2(instance->io,
+    return lcb_timer_create2(instance->settings.io,
                              command_cookie,
                              usec,
                              periodic ? LCB_TIMER_PERIODIC : 0,

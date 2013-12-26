@@ -93,10 +93,10 @@ static lcb_error_t setup_sasl_params(lcb_t instance)
     sasl_callbacks[3].proc = NULL;
     sasl_callbacks[3].context = NULL;
 
-    instance->sasl.name = instance->username;
+    instance->sasl.name = instance->settings.username;
     memset(instance->sasl.password.buffer, 0,
            sizeof(instance->sasl.password.buffer));
-    passwd = instance->password;
+    passwd = instance->settings.password;
 
     if (passwd) {
         unsigned long pwlen;
@@ -156,7 +156,7 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
             return lcb_error_handler(instance, err, "Failed to initialize server");
         }
         instance->backup_nodes[buii] = instance->servers[ii].rest_api_server;
-        if (instance->randomize_bootstrap_nodes) {
+        if (instance->settings.randomize_bootstrap_nodes) {
             /* swap with random position < ii */
             if (buii > 0) {
                 lcb_size_t nn = (lcb_size_t)(gethrtime() >> 10) % buii;

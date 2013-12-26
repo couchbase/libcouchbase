@@ -46,8 +46,8 @@ static int set_chosen_mech(lcb_server_t *server,
     const char *chosenmech;
     struct negotiation_context *ctx = server->negotiation;
 
-    if (server->instance->sasl_mech_force) {
-        char *forcemech = server->instance->sasl_mech_force;
+    if (server->instance->settings.sasl_mech_force) {
+        char *forcemech = server->instance->settings.sasl_mech_force;
         if (!strstr(mechlist->base, forcemech)) {
             /** Requested mechanism not found */
             negotiation_set_error_ex(server,

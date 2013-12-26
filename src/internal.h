@@ -45,18 +45,8 @@
 #include "lcbio.h"
 #include "cookie.h"
 #include "mcserver.h"
+#include "settings.h"
 
-#define LCB_DEFAULT_TIMEOUT 2500000
-#define LCB_DEFAULT_CONFIGURATION_TIMEOUT 5000000
-#define LCB_DEFAULT_VIEW_TIMEOUT 75000000
-#define LCB_DEFAULT_RBUFSIZE 32768
-#define LCB_DEFAULT_WBUFSIZE 32768
-#define LCB_DEFAULT_DURABILITY_TIMEOUT 5000000
-#define LCB_DEFAULT_DURABILITY_INTERVAL 100000
-#define LCB_DEFAULT_HTTP_TIMEOUT 75000000
-
-#define LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS -1
-#define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 #define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
 
@@ -170,6 +160,9 @@ extern "C" {
     };
 
     struct lcb_st {
+        /** The current vbucket config handle */
+        VBUCKET_CONFIG_HANDLE vbucket_config;
+
         /**
          * the type of the connection:
          * * LCB_TYPE_BUCKET
@@ -183,11 +176,8 @@ extern "C" {
         /** The URL request to send to the server */
         char *http_uri;
 
-        /** The current vbucket config handle */
-        VBUCKET_CONFIG_HANDLE vbucket_config;
 
         struct vbucket_stream_st vbucket_stream;
-        struct lcb_io_opt_st *io;
 
         /** The number of weird things happened with config node
          *  This counter reflects event on memcached port (default 11210),
@@ -195,7 +185,6 @@ extern "C" {
          *  configuration port (default 8091).
          */
         lcb_size_t weird_things;
-        lcb_size_t weird_things_threshold;
 
         /* The current synchronous mode */
         lcb_syncmode_t syncmode;
@@ -214,8 +203,6 @@ extern "C" {
         /** if non-zero, backup_nodes entries should be freed before
             freeing the pointer itself */
         int should_free_backup_nodes;
-        /** If we should randomize bootstrap nodes or not */
-        int randomize_bootstrap_nodes;
         /** The array of last known nodes as hostname:port */
         char **backup_nodes;
         /** The current connect index */
@@ -228,9 +215,6 @@ extern "C" {
 
         vbucket_state_listener_t vbucket_state_listener;
 
-        /* credentials needed to operate cluster via REST API */
-        char *username;
-        char *password;
 
         struct {
             const char *name;
@@ -253,24 +237,9 @@ extern "C" {
 
         lcb_uint32_t seqno;
         int wait;
-        /** Is IPv6 enabled */
-        lcb_ipv6_t ipv6;
         const void *cookie;
 
         lcb_error_t last_error;
-
-        lcb_uint32_t views_timeout;
-        lcb_uint32_t http_timeout;
-        lcb_uint32_t durability_timeout;
-        lcb_uint32_t durability_interval;
-        lcb_uint32_t operation_timeout;
-        lcb_uint32_t config_timeout;
-
-        lcb_size_t rbufsize;
-        lcb_size_t wbufsize;
-
-        /** maximum redirect hops. -1 means infinite redirects */
-        int max_redir;
 
         struct {
             lcb_compat_t type;
@@ -285,17 +254,13 @@ extern "C" {
             } value;
         } compat;
 
-        /* if non-zero, skip nodes in list that seems like not
-         * configured or doesn't have the bucket needed */
-        int bummer;
-
         /**
          * Cached ringbuffer objects for 'purge_implicit_responses'
          */
         ringbuffer_t purged_buf;
         ringbuffer_t purged_cookies;
 
-        char *sasl_mech_force;
+        lcb_settings settings;
 
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
@@ -580,21 +545,10 @@ extern "C" {
                               lcb_size_t nbuf,
                               lcb_error_t *uerr);
 
-    lcb_socket_t lcb_gai2sock(lcb_t instance,
-                              struct addrinfo **curr_ai,
-                              int *connerr);
-
-    lcb_sockdata_t *lcb_gai2sock_v1(lcb_t instance,
-                                    struct addrinfo **ai,
-                                    int *connerr);
 
     lcb_error_t lcb_apply_vbucket_config(lcb_t instance,
                                          VBUCKET_CONFIG_HANDLE config);
 
-
-
-    int lcb_getaddrinfo(lcb_t instance, const char *hostname,
-                        const char *servname, struct addrinfo **res);
 
     void lcb_failout_observe_request(lcb_server_t *server,
                                      struct lcb_command_data_st *command_data,

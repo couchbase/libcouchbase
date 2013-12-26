@@ -87,7 +87,7 @@ static lcb_error_t handle_vbstream_read(lcb_t instance)
             can_retry = 1;
         }
 
-        if (instance->bummer &&
+        if (instance->settings.bummer &&
                 (err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR)) {
             can_retry = 1;
         }
@@ -193,7 +193,7 @@ static void instance_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 
 static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
 {
-    lcb_t instance = conn->instance;
+    lcb_t instance = conn->data;
 
     if (err == LCB_SUCCESS) {
         /**
@@ -290,7 +290,8 @@ lcb_error_t lcb_instance_start_connection(lcb_t instance)
     conn->completion.write = config_v1_write_handler;
     conn->completion.error = config_v1_error_handler;
     conn->on_timeout = instance_timeout_handler;
-    conn->timeout.usec = instance->config_timeout;
+    conn->timeout.usec = instance->settings.config_timeout;
+    conn->data = instance;
 
     do {
         setup_current_host(instance,

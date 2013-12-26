@@ -152,39 +152,37 @@ void lcb_sockconn_errinfo(int connerr,
  *
  * This function will 'advance' the current addrinfo structure, as well.
  */
-lcb_socket_t lcb_gai2sock(lcb_t instance, struct addrinfo **ai, int *connerr)
+lcb_socket_t lcb_gai2sock(lcb_io_opt_t io, struct addrinfo **ai, int *connerr)
 {
     lcb_socket_t ret = INVALID_SOCKET;
     *connerr = 0;
 
     for (; *ai; *ai = (*ai)->ai_next) {
 
-        ret = instance->io->v.v0.socket(instance->io,
-                                        (*ai)->ai_family,
-                                        (*ai)->ai_socktype,
-                                        (*ai)->ai_protocol);
+        ret = io->v.v0.socket(io, (*ai)->ai_family,
+                              (*ai)->ai_socktype,
+                              (*ai)->ai_protocol);
+
         if (ret != INVALID_SOCKET) {
             return ret;
         } else {
-            *connerr = instance->io->v.v0.error;
+            *connerr = io->v.v0.error;
         }
     }
 
     return ret;
 }
 
-lcb_sockdata_t *lcb_gai2sock_v1(lcb_t instance, struct addrinfo **ai, int *connerr)
+lcb_sockdata_t *lcb_gai2sock_v1(lcb_io_opt_t io, struct addrinfo **ai, int *connerr)
 {
     lcb_sockdata_t *ret = NULL;
     for (; *ai; *ai = (*ai)->ai_next) {
-        ret = instance->io->v.v1.create_socket(instance->io,
-                                               (*ai)->ai_family,
-                                               (*ai)->ai_socktype,
-                                               (*ai)->ai_protocol);
+        ret = io->v.v1.create_socket(io, (*ai)->ai_family, (*ai)->ai_socktype,
+                                     (*ai)->ai_protocol);
         if (ret) {
             return ret;
         } else {
-            *connerr = instance->io->v.v1.error;
+            *connerr = io->v.v1.error;
         }
     }
     return ret;

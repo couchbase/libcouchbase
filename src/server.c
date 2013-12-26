@@ -359,7 +359,7 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         }
         if (server->is_config_node) {
             root->weird_things++;
-            if (root->weird_things >= root->weird_things_threshold) {
+            if (root->weird_things >= root->settings.weird_things_threshold) {
                 should_refresh_config = 1;
             }
         }
@@ -501,7 +501,9 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
 
-    err = lcb_connection_init(&server->connection, server->instance);
+    err = lcb_connection_init(&server->connection,
+                              server->instance->settings.io,
+                              &server->instance->settings);
     if (err != LCB_SUCCESS) {
         return err;
     }

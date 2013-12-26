@@ -48,7 +48,7 @@ TEST_F(Timers, testStandalone)
     ASSERT_EQ(1, hashset_num_items(instance->timers));
     lcb_wait(instance);
 
-    tm = lcb_timer_create2(instance->io,
+    tm = lcb_timer_create2(instance->settings.io,
                            NULL, 0,
                            LCB_TIMER_STANDALONE,
                            timer_callback,
@@ -56,11 +56,12 @@ TEST_F(Timers, testStandalone)
                            &err);
 
     ASSERT_EQ(0, hashset_num_items(instance->timers));
-    instance->io->v.v0.run_event_loop(instance->io);
+    instance->settings.io->v.v0.run_event_loop(instance->settings.io);
 
-    lcb_async_t async = lcb_async_create(instance->io, NULL, timer_callback, &err);
+    lcb_async_t async = lcb_async_create(instance->settings.io,
+                                         NULL, timer_callback, &err);
     ASSERT_EQ(0, hashset_num_items(instance->timers));
-    instance->io->v.v0.run_event_loop(instance->io);
+    instance->settings.io->v.v0.run_event_loop(instance->settings.io);
 
     // Try a periodic timer...
     int ncalled = 0;
@@ -70,7 +71,7 @@ TEST_F(Timers, testStandalone)
 
     // Try a periodic, standalone timer
     ncalled = 0;
-    tm = lcb_timer_create2(instance->io,
+    tm = lcb_timer_create2(instance->settings.io,
                            &ncalled,
                            1,
                            (lcb_timer_options)(LCB_TIMER_STANDALONE|LCB_TIMER_PERIODIC),
@@ -78,7 +79,7 @@ TEST_F(Timers, testStandalone)
                            NULL,
                            &err);
 
-    instance->io->v.v0.run_event_loop(instance->io);
+    instance->settings.io->v.v0.run_event_loop(instance->settings.io);
     ASSERT_EQ(5, ncalled);
 
 }

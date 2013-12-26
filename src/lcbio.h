@@ -80,15 +80,15 @@ extern "C" {
         lcb_uint32_t usec;
     };
 
+    struct lcb_settings_st;
     struct lcb_connection_st {
         struct addrinfo *ai;
         struct addrinfo *curr_ai;
 
         ringbuffer_t *input;
         ringbuffer_t *output;
-
-        /** instance */
-        lcb_t instance;
+        struct lcb_io_opt_st *io;
+        struct lcb_settings_st *settings;
 
         /**
          * Data associated with the connection. This is also passed as the
@@ -160,7 +160,9 @@ extern "C" {
     /**
      * Initialize the connection object's buffers, usually allocating them
      */
-    lcb_error_t lcb_connection_init(lcb_connection_t conn, lcb_t instance);
+    lcb_error_t lcb_connection_init(lcb_connection_t conn,
+                                    struct lcb_io_opt_st *io,
+                                    struct lcb_settings_st *settings);
 
 
     /**
@@ -268,6 +270,20 @@ extern "C" {
     unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
                                          lcb_io_writebuf_t *wbuf,
                                          void **datap);
+
+    lcb_socket_t lcb_gai2sock(lcb_io_opt_t io, struct addrinfo **curr_ai,
+                              int *connerr);
+
+    lcb_sockdata_t *lcb_gai2sock_v1(lcb_io_opt_t io, struct addrinfo **ai,
+                                    int *connerr);
+
+    int lcb_getaddrinfo(struct lcb_settings_st *settings,
+                        const char *hostname,
+                        const char *servname,
+                        struct addrinfo **res);
+
+#define CONN_IOV0(conn) (conn)->io->v.v0
+#define CONN_IOV1(conn) (conn)->io->v.v1
 
 #ifdef __cplusplus
 }

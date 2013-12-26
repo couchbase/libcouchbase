@@ -74,7 +74,7 @@ lcb_error_t lcb_wait(lcb_t instance)
             }
         }
 
-        instance->io->v.v0.run_event_loop(instance->io);
+        instance->settings.io->v.v0.run_event_loop(instance->settings.io);
     } else {
         instance->wait = 0;
     }
@@ -95,7 +95,7 @@ LIBCOUCHBASE_API
 void lcb_breakout(lcb_t instance)
 {
     if (instance->wait) {
-        instance->io->v.v0.stop_event_loop(instance->io);
+        instance->settings.io->v.v0.stop_event_loop(instance->settings.io);
         instance->wait = 0;
     }
 }

@@ -227,7 +227,7 @@ static lcb_error_t setup_bootstrap_hosts(lcb_t ret, const char *host)
         ++ii;
     } while (ptr != NULL);
 
-    if (ret->randomize_bootstrap_nodes) {
+    if (ret->settings.randomize_bootstrap_nodes) {
         ii = 1;
         while (ret->backup_nodes[ii] != NULL) {
             lcb_size_t nidx = (lcb_size_t)(gethrtime() >> 10) % ii;
@@ -294,6 +294,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_type_t type = LCB_TYPE_BUCKET;
     lcb_t obj;
     lcb_error_t err;
+    lcb_settings *settings;
 
     if (options != NULL) {
         switch (options->version) {
@@ -356,25 +357,26 @@ lcb_error_t lcb_create(lcb_t *instance,
         io->v.v0.need_cleanup = 1;
     }
 
-    obj->randomize_bootstrap_nodes = 1;
-    obj->bummer = 0;
-    obj->io = io;
+    settings = &obj->settings;
+    settings->randomize_bootstrap_nodes = 1;
+    settings->bummer = 0;
+    settings->io = io;
     obj->syncmode = LCB_ASYNCHRONOUS;
-    obj->ipv6 = LCB_IPV6_DISABLED;
-    obj->operation_timeout = LCB_DEFAULT_TIMEOUT;
-    obj->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
-    obj->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
-    obj->rbufsize = LCB_DEFAULT_RBUFSIZE;
-    obj->wbufsize = LCB_DEFAULT_WBUFSIZE;
-    obj->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
-    obj->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
-    obj->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
-    obj->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
-    obj->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
+    settings->ipv6 = LCB_IPV6_DISABLED;
+    settings->operation_timeout = LCB_DEFAULT_TIMEOUT;
+    settings->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
+    settings->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
+    settings->rbufsize = LCB_DEFAULT_RBUFSIZE;
+    settings->wbufsize = LCB_DEFAULT_WBUFSIZE;
+    settings->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
+    settings->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
+    settings->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
+    settings->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
+    settings->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
 
     lcb_initialize_packet_handlers(obj);
 
-    err = lcb_connection_init(&obj->connection, obj);
+    err = lcb_connection_init(&obj->connection, settings->io, settings);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;
@@ -406,19 +408,19 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     if (user && *user) {
-        obj->username = strdup(user);
+        settings->username = strdup(user);
     } else if (type == LCB_TYPE_BUCKET) {
-        obj->username = strdup(bucket);
+        settings->username = strdup(bucket);
     }
     if (passwd) {
         char cred[256];
         char base64[256];
-        snprintf(cred, sizeof(cred), "%s:%s", obj->username, passwd);
+        snprintf(cred, sizeof(cred), "%s:%s", settings->username, passwd);
         if (lcb_base64_encode(cred, base64, sizeof(base64)) == -1) {
             lcb_destroy(obj);
             return LCB_EINTERNAL;
         }
-        obj->password = strdup(passwd);
+        settings->password = strdup(passwd);
         offset += snprintf(buffer + offset, sizeof(buffer) - (lcb_size_t)offset,
                            "Authorization: Basic %s\r\n", base64);
     }
@@ -453,6 +455,7 @@ LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
 {
     lcb_size_t ii;
+    lcb_settings *settings = &instance->settings;
     free(instance->http_uri);
 
     if (instance->timers != NULL) {
@@ -509,8 +512,8 @@ void lcb_destroy(lcb_t instance)
     hashset_destroy(instance->http_requests);
     lcb_free_backup_nodes(instance);
     free(instance->servers);
-    if (instance->io && instance->io->v.v0.need_cleanup) {
-        lcb_destroy_io_ops(instance->io);
+    if (settings->io && settings->io->v.v0.need_cleanup) {
+        lcb_destroy_io_ops(settings->io);
     }
 
     ringbuffer_destruct(&instance->purged_buf);
@@ -520,9 +523,9 @@ void lcb_destroy(lcb_t instance)
     free(instance->vbucket_stream.chunk.data);
     free(instance->vbucket_stream.header);
     free(instance->histogram);
-    free(instance->username);
-    free(instance->password);
-    free(instance->sasl_mech_force);
+    free(settings->username);
+    free(settings->password);
+    free(settings->sasl_mech_force);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }

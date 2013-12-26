@@ -259,7 +259,7 @@ void lcb_maybe_breakout(lcb_t instance)
                 && hashset_num_items(instance->timers) == 0
                 && hashset_num_items(instance->durability_polls) == 0) {
             instance->wait = 0;
-            instance->io->v.v0.stop_event_loop(instance->io);
+            instance->settings.io->v.v0.stop_event_loop(instance->settings.io);
         }
     }
 }
@@ -309,10 +309,8 @@ static int get_nameinfo(lcb_connection_t conn,
     ni.remote.name = (struct sockaddr *)&sa_remote;
     ni.remote.len = &n_saremote;
 
-    if (conn->instance->io->version == 1) {
-        rv = conn->instance->io->v.v1.get_nameinfo(conn->instance->io,
-                                                   conn->sockptr,
-                                                   &ni);
+    if (conn->io->version == 1) {
+        rv = conn->io->v.v1.get_nameinfo(conn->io, conn->sockptr, &ni);
 
         if (ni.local.len == 0 || ni.remote.len == 0 || rv < 0) {
             return 0;
@@ -425,7 +423,7 @@ void lcb_server_connect(lcb_server_t *server)
 
     conn->on_connect_complete = socket_connected;
     conn->on_timeout = server_timeout_handler;
-    conn->timeout.usec = server->instance->operation_timeout;
+    conn->timeout.usec = server->instance->settings.operation_timeout;
 
     if (lcb_connection_reset_buffers(&server->connection) != LCB_SUCCESS) {
         lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
