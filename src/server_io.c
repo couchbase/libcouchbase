@@ -265,84 +265,6 @@ void lcb_maybe_breakout(lcb_t instance)
 
 
 
-struct nameinfo_common {
-    char remote[NI_MAXHOST + NI_MAXSERV + 2];
-    char local[NI_MAXHOST + NI_MAXSERV + 2];
-};
-
-static int saddr_to_string(struct sockaddr *saddr, int len,
-                           char *buf, lcb_size_t nbuf)
-{
-    char h[NI_MAXHOST + 1];
-    char p[NI_MAXSERV + 1];
-    int rv;
-
-    rv = getnameinfo(saddr, len, h, sizeof(h), p, sizeof(p),
-                     NI_NUMERICHOST | NI_NUMERICSERV);
-    if (rv < 0) {
-        return 0;
-    }
-
-    if (snprintf(buf, nbuf, "%s;%s", h, p) < 0) {
-        return 0;
-    }
-
-    return 1;
-}
-
-static int get_nameinfo(lcb_connection_t conn,
-                        struct nameinfo_common *nistrs)
-{
-    struct sockaddr_storage sa_local;
-    struct sockaddr_storage sa_remote;
-    int n_salocal, n_saremote;
-    struct lcb_nameinfo_st ni;
-    int rv;
-
-    n_salocal = sizeof(sa_local);
-    n_saremote = sizeof(sa_remote);
-
-    ni.local.name = (struct sockaddr *)&sa_local;
-    ni.local.len = &n_salocal;
-
-    ni.remote.name = (struct sockaddr *)&sa_remote;
-    ni.remote.len = &n_saremote;
-
-    if (conn->io->version == 1) {
-        rv = conn->io->v.v1.get_nameinfo(conn->io, conn->sockptr, &ni);
-
-        if (ni.local.len == 0 || ni.remote.len == 0 || rv < 0) {
-            return 0;
-        }
-
-    } else {
-        socklen_t sl_tmp = sizeof(sa_local);
-
-        rv = getsockname(conn->sockfd, ni.local.name, &sl_tmp);
-        n_salocal = sl_tmp;
-        if (rv < 0) {
-            return 0;
-        }
-        rv = getpeername(conn->sockfd, ni.remote.name, &sl_tmp);
-        n_saremote = sl_tmp;
-        if (rv < 0) {
-            return 0;
-        }
-    }
-
-    if (!saddr_to_string(ni.remote.name, *ni.remote.len,
-                         nistrs->remote, sizeof(nistrs->remote))) {
-        return 0;
-    }
-
-    if (!saddr_to_string(ni.local.name, *ni.local.len,
-                         nistrs->local, sizeof(nistrs->local))) {
-        return 0;
-    }
-    return 1;
-}
-
-
 static void connection_error(lcb_server_t *server, lcb_error_t err)
 {
     lcb_failout_server(server, err);
@@ -384,8 +306,8 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
             server->instance->vbucket_config) != NULL;
 
     if (sasl_needed) {
-        struct nameinfo_common nistrs;
-        if (!get_nameinfo(conn, &nistrs)) {
+        struct lcb_nibufs_st nistrs;
+        if (!lcb_get_nameinfo(conn, &nistrs)) {
             /** This normally shouldn't happen! */
             connection_error(server, LCB_NETWORK_ERROR);
             return;

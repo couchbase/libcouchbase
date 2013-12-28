@@ -88,6 +88,11 @@ extern "C" {
         lcb_uint32_t last_timeout;
     };
 
+    struct lcb_nibufs_st {
+        char local[NI_MAXHOST + NI_MAXSERV + 2];
+        char remote[NI_MAXHOST + NI_MAXSERV + 2];
+    };
+
     struct lcb_settings_st;
     struct lcb_connection_st {
         struct addrinfo *ai;
@@ -325,6 +330,15 @@ extern "C" {
      * hot-paths, such as HTTP
      */
     void lcb_connection_setup_generic(lcb_connection_t conn);
+
+    /**
+     * Populates the 'nistrs' pointers with the local and remote endpoint
+     * addresses as strings.
+     * @param conn a connected object
+     * @param nistrs an allocated structure
+     * @return true on failure, false on error.
+     */
+    int lcb_get_nameinfo(lcb_connection_t conn, struct lcb_nibufs_st *nistrs);
 
 #ifdef __cplusplus
 }
