@@ -409,7 +409,10 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
 
     server->connection_ready = 0;
     lcb_connection_close(&server->connection);
-    lcb_negotiation_destroy(server);
+    if (server->negotiation) {
+        lcb_negotiation_destroy(server->negotiation);
+        server->negotiation = NULL;
+    }
 
     return error;
 }
@@ -463,7 +466,9 @@ void lcb_server_destroy(lcb_server_t *server)
                                             1);
     }
 
-    lcb_negotiation_destroy(server);
+    if (server->negotiation) {
+        lcb_negotiation_destroy(server->negotiation);
+    }
 
     /* Delete the event structure itself */
     lcb_connection_cleanup(&server->connection);

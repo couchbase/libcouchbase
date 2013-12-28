@@ -1,24 +1,28 @@
 #ifndef LCB_MCSERVER_H
 #define LCB_MCSERVER_H
 
+#include <libcouchbase/couchbase.h>
 #include "cbsasl/cbsasl.h"
+#include "lcbio.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct lcb_server_st;
+struct lcb_settings_st;
 struct negotiation_context;
 typedef void (*negotiation_callback)(struct negotiation_context *, lcb_error_t);
 
+
 struct negotiation_context {
     cbsasl_conn_t *sasl;
+
     /** Selected mechanism */
     char *mech;
+
     /** Mechanism length */
     unsigned int nmech;
-    /** Backref */
-    struct lcb_server_st *server;
+
     /** Callback */
     negotiation_callback complete;
 
@@ -27,6 +31,21 @@ struct negotiation_context {
         char *msg;
         lcb_error_t err;
     } errinfo;
+
+    void *data;
+
+    /** Connection */
+    lcb_connection_t conn;
+
+    /** Settings structure from whence we get our username/password info */
+    struct lcb_settings_st *settings;
+
+    union {
+        cbsasl_secret_t secret;
+        char buffer[256];
+    } u_auth;
+
+    cbsasl_callback_t sasl_callbacks[4];
 };
 
 /**
@@ -73,32 +92,39 @@ typedef struct lcb_server_st {
 
 
 /**
- * Starts negotiation on an initialized server object. The server must already
- * be in a connected state and must not already be in the process of a SASL
- * negotiation.
- * @param server the server for which to negotiate
- * @param remote a string of host:port for the remote end of the connection
- * @param local a string of host:port for the local end of the connection
- * @param callback a callback to be invoked when the negotiation succeeds or
- * fails. The callback will only be called if the return value is successful.
- * Additionally, if the callback is not successful, it MUST destroy the I/O
- * loop within the server structure.
+ * Creates a negotiation context. The negotiation context shall use an
+ * existing _connected_ connection object and perform memcached SASL
+ * negotiation on it.
  *
- * @return LCB_SUCCESS on success, an error code on failure.
+ * @param conn a connected object
  *
- * Note that this function does not check if negotiation is ready or note.
+ * @param settings a settings structure to use for retrieving username
+ * and password information
+ *
+ * @param remote a string in the form of host:port representing the remote
+ * server address
+ *
+ * @param local a string in the form of host:port representing the local end
+ * of the connection
+ *
+ * @param err a pointer to an error which will be populated if this function
+ * fails.
+ *
+ * @return a new negotiation context object, or NULL if initialization failed.
+ * If initialization failed, err will be set with the reason.
+ *
  */
-lcb_error_t lcb_negotiation_init(struct lcb_server_st *server,
-                                 const char *remote,
-                                 const char *local,
-                                 negotiation_callback callback);
-
+struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
+                                                   struct lcb_settings_st *settings,
+                                                   const char *remote,
+                                                   const char *local,
+                                                   lcb_error_t *err);
 
 /**
  * Destroys any resources created by negotiation_init.
  * This is safe to call even if negotiation_init itself was not called.
  */
-void lcb_negotiation_destroy(struct lcb_server_st *server);
+void lcb_negotiation_destroy(struct negotiation_context *ctx);
 
 #ifdef __cplusplus
 }

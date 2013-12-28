@@ -429,13 +429,13 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         }
         base = server->couch_api_base;
         nbase = strlen(base);
-        username = instance->sasl.name;
-        if (instance->sasl.password.secret.len) {
-            password = calloc(instance->sasl.password.secret.len + 1, sizeof(char));
+        username = instance->settings.username;
+
+        if (instance->settings.password && *instance->settings.password) {
+            password = strdup(instance->settings.password);
             if (!password) {
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             }
-            memcpy(password, instance->sasl.password.secret.data, instance->sasl.password.secret.len);
         }
     }
     break;

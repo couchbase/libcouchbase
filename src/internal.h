@@ -201,16 +201,6 @@ extern "C" {
 
         vbucket_state_listener_t vbucket_state_listener;
 
-
-        struct {
-            const char *name;
-            union {
-                cbsasl_secret_t secret;
-                char buffer[256];
-            } password;
-            cbsasl_callback_t callbacks[4];
-        } sasl;
-
         /** The set of the timers */
         hashset_t timers;
         /** The set of the pointers to HTTP requests to Cluster */

@@ -27,6 +27,7 @@
     &(c)->instance->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
 
+static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err);
 static int do_read_data(lcb_server_t *c, int allow_read)
 {
     lcb_sockrw_status_t status;
@@ -195,6 +196,8 @@ static void wire_io(lcb_server_t *server)
     conn->completion.read = v1_read;
     conn->completion.write = v1_write;
     conn->completion.error = v1_error;
+    conn->on_timeout = server_timeout_handler;
+    conn->data = server;
 }
 
 LIBCOUCHBASE_API
@@ -348,12 +351,20 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 
 static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
 {
+    lcb_server_t *server = ctx->data;
+    wire_io(server);
+
     if (err != LCB_SUCCESS) {
-        connection_error(ctx->server, err);
+        if (err == LCB_ETIMEDOUT) {
+            server_timeout_handler(ctx->conn, err);
+        } else {
+            lcb_error_handler(server->instance, err, "SASL Negotiation failed");
+            connection_error(server, err);
+        }
     } else {
-        wire_io(ctx->server);
-        lcb_connection_reset_buffers(&ctx->server->connection);
-        lcb_server_connected(ctx->server);
+
+        lcb_connection_reset_buffers(&server->connection);
+        lcb_server_connected(server);
     }
 }
 
@@ -380,11 +391,18 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
             return;
         }
 
-        err = lcb_negotiation_init(server, nistrs.remote, nistrs.local,
-                                   negotiation_done);
+        server->negotiation = lcb_negotiation_create(&server->connection,
+                                                     &server->instance->settings,
+                                                     nistrs.remote,
+                                                     nistrs.local,
+                                                     &err);
+
         if (err != LCB_SUCCESS) {
             connection_error(server, err);
         }
+
+        server->negotiation->data = server;
+        server->negotiation->complete = negotiation_done;
 
     } else {
         wire_io(server);

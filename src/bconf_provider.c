@@ -37,96 +37,6 @@
 static int allocate_new_servers(lcb_t instance, clconfig_info *config);
 
 
-/**
- * Callback functions called from libsasl to get the username to use for
- * authentication.
- *
- * @param context ponter to the lcb_t instance running the sasl bits
- * @param id the piece of information libsasl wants
- * @param result where to store the result (OUT)
- * @param len The length of the data returned (OUT)
- * @return SASL_OK if succes
- */
-static int sasl_get_username(void *context, int id, const char **result,
-                             unsigned int *len)
-{
-    lcb_t instance = context;
-    if (!context || !result || (id != CBSASL_CB_USER && id != CBSASL_CB_AUTHNAME)) {
-        return SASL_BADPARAM;
-    }
-
-    *result = instance->sasl.name;
-    if (len) {
-        *len = (unsigned int)strlen(*result);
-    }
-
-    return SASL_OK;
-}
-
-/**
- * Callback functions called from libsasl to get the password to use for
- * authentication.
- *
- * @param context ponter to the lcb_t instance running the sasl bits
- * @param id the piece of information libsasl wants
- * @param psecret where to store the result (OUT)
- * @return SASL_OK if succes
- */
-static int sasl_get_password(cbsasl_conn_t *conn, void *context, int id,
-                             cbsasl_secret_t **psecret)
-{
-    lcb_t instance = context;
-    if (!conn || ! psecret || id != CBSASL_CB_PASS || instance == NULL) {
-        return SASL_BADPARAM;
-    }
-
-    *psecret = &instance->sasl.password.secret;
-    return SASL_OK;
-}
-
-static lcb_error_t setup_sasl_params(lcb_t instance)
-{
-    const char *passwd;
-    cbsasl_callback_t sasl_callbacks[4];
-
-    sasl_callbacks[0].id = CBSASL_CB_USER;
-    sasl_callbacks[0].proc = (int( *)(void)) &sasl_get_username;
-    sasl_callbacks[0].context = instance;
-    sasl_callbacks[1].id = CBSASL_CB_AUTHNAME;
-    sasl_callbacks[1].proc = (int( *)(void)) &sasl_get_username;
-    sasl_callbacks[1].context = instance;
-    sasl_callbacks[2].id = CBSASL_CB_PASS;
-    sasl_callbacks[2].proc = (int( *)(void)) &sasl_get_password;
-    sasl_callbacks[2].context = instance;
-    sasl_callbacks[3].id = CBSASL_CB_LIST_END;
-    sasl_callbacks[3].proc = NULL;
-    sasl_callbacks[3].context = NULL;
-
-    instance->sasl.name = instance->settings.username;
-    memset(instance->sasl.password.buffer, 0,
-           sizeof(instance->sasl.password.buffer));
-    passwd = instance->settings.password;
-
-    if (passwd) {
-        unsigned long pwlen;
-        lcb_size_t maxlen;
-
-        pwlen = (unsigned long)strlen(passwd);
-        maxlen = sizeof(instance->sasl.password.buffer) -
-                 offsetof(cbsasl_secret_t, data);
-
-        instance->sasl.password.secret.len = pwlen;
-
-        if (pwlen < maxlen) {
-            memcpy(instance->sasl.password.secret.data, passwd, pwlen);
-        } else {
-            return lcb_error_handler(instance, LCB_EINVAL, "Password too long");
-        }
-    }
-
-    memcpy(instance->sasl.callbacks, sasl_callbacks, sizeof(sasl_callbacks));
-    return LCB_SUCCESS;
-}
 
 static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
 {
@@ -259,10 +169,6 @@ static int allocate_new_servers(lcb_t instance, clconfig_info *config)
     instance->nservers = vbucket_config_get_num_servers(config->vbc);
     instance->servers = calloc(instance->nservers, sizeof(*instance->servers));
     if (!instance->servers) {
-        return -1;
-    }
-
-    if (setup_sasl_params(instance) != LCB_SUCCESS) {
         return -1;
     }
 

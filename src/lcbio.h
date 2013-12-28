@@ -19,12 +19,12 @@
  * Common header for IO routines
  */
 
-#ifndef LIBCOUCHBASE_INTERNAL_H
-#error "Please include internal.h first"
-#endif
-
 #ifndef LCBIO_H
 #define LCBIO_H
+
+#include <libcouchbase/couchbase.h>
+#include "ringbuffer.h"
+#include "config.h"
 
 #ifdef __cplusplus
 extern "C" {
