@@ -154,7 +154,7 @@ static char *substitute_localhost_marker(struct vbucket_config_st *vb, char *inp
     if (vb->localhost && (placeholder = strstr(input, "$HOST"))) {
         size_t nprefix = placeholder - input;
         size_t off = 0;
-        result = calloc(ninput + vb->nlocalhost - 5, sizeof(char));
+        result = calloc(ninput + (vb->nlocalhost+1) - 5, sizeof(char));
         if (!result) {
             return NULL;
         }
