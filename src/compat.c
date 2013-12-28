@@ -236,6 +236,9 @@ static lcb_error_t create_cached_compat(const struct lcb_cached_config_st *cfg,
     case 1:
         bucket = cfg->createopt.v.v1.bucket;
         break;
+    case 2:
+        bucket = cfg->createopt.v.v2.bucket;
+        break;
     default:
         return LCB_NOT_SUPPORTED;
     }

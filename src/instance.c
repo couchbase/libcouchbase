@@ -133,6 +133,76 @@ const void *lcb_get_cookie(lcb_t instance)
     return instance->cookie;
 }
 
+
+static lcb_error_t init_cccp(lcb_t obj,
+                             const struct lcb_create_st2 *e_options)
+{
+    hostlist_t mc_nodes;
+    lcb_error_t err;
+    const char *hosts;
+    clconfig_provider *cccp =
+            lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_CCCP);
+
+    if (e_options->no_cccp) {
+        lcb_clconfig_cccp_disable(cccp);
+        return LCB_SUCCESS;
+    }
+
+    hosts = get_nonempty_string(e_options->mchosts);
+    mc_nodes = hostlist_create();
+
+    if (!mc_nodes) {
+        return LCB_CLIENT_ENOMEM;
+    }
+
+    if (hosts) {
+        err = hostlist_add_stringz(mc_nodes, hosts, 11210);
+        if (err != LCB_SUCCESS) {
+            hostlist_destroy(mc_nodes);
+            return err;
+        }
+
+    } else {
+        lcb_size_t ii;
+        for (ii = 0; ii < obj->usernodes->nentries; ii++) {
+            lcb_host_t *cur = obj->usernodes->entries + ii;
+            hostlist_add_stringz(mc_nodes, cur->host, 11210);
+        }
+    }
+
+    lcb_clconfig_cccp_set_nodes(cccp, mc_nodes);
+    hostlist_destroy(mc_nodes);
+    return LCB_SUCCESS;
+}
+
+static lcb_error_t normalize_options(struct lcb_create_st *myopts,
+                                     const struct lcb_create_st *useropts)
+{
+    lcb_size_t to_copy;
+    memset(myopts, 0, sizeof(*myopts));
+
+    if (useropts == NULL) {
+        return LCB_SUCCESS;
+    }
+
+    if (useropts->version < 0 || useropts->version > 2) {
+        return LCB_EINVAL;
+    }
+
+    if (useropts->version == 0) {
+        to_copy = sizeof(struct lcb_create_st0);
+    } else if (useropts->version == 1) {
+        to_copy = sizeof(struct lcb_create_st1);
+    } else if (useropts->version == 2) {
+        to_copy = sizeof(struct lcb_create_st2);
+    } else {
+        return LCB_EINVAL;
+    }
+
+    memcpy(&myopts->v, &useropts->v, to_copy);
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_create(lcb_t *instance,
                        const struct lcb_create_st *options)
@@ -141,41 +211,31 @@ lcb_error_t lcb_create(lcb_t *instance,
     const char *user = NULL;
     const char *passwd = NULL;
     const char *bucket = NULL;
+
     struct lcb_io_opt_st *io = NULL;
+    struct lcb_create_st options_container;
+    struct lcb_create_st2 *e_options = &options_container.v.v2;
+
     lcb_type_t type = LCB_TYPE_BUCKET;
     lcb_t obj;
     lcb_error_t err;
     lcb_settings *settings;
 
-    if (options != NULL) {
-        switch (options->version) {
-        case 0:
-            host = get_nonempty_string(options->v.v0.host);
-            user = get_nonempty_string(options->v.v0.user);
-            passwd = get_nonempty_string(options->v.v0.passwd);
-            bucket = get_nonempty_string(options->v.v0.bucket);
-            io = options->v.v0.io;
-            break;
-        case 1:
-            type = options->v.v1.type;
-            host = get_nonempty_string(options->v.v1.host);
-            user = get_nonempty_string(options->v.v1.user);
-            passwd = get_nonempty_string(options->v.v1.passwd);
-            io = options->v.v1.io;
-            switch (type) {
-            case LCB_TYPE_BUCKET:
-                bucket = get_nonempty_string(options->v.v1.bucket);
-                break;
-            case LCB_TYPE_CLUSTER:
-                if (user == NULL || passwd == NULL) {
-                    return LCB_EINVAL;
-                }
-                break;
-            }
-            break;
-        default:
-            return LCB_EINVAL;
-        }
+    err = normalize_options(&options_container, options);
+
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+
+    host = get_nonempty_string(e_options->host);
+    user = get_nonempty_string(e_options->user);
+    passwd = get_nonempty_string(e_options->passwd);
+    bucket = get_nonempty_string(e_options->bucket);
+    io = e_options->io;
+    type = e_options->type;
+
+    if (type == LCB_TYPE_CLUSTER && user == NULL && passwd == NULL) {
+        return LCB_EINVAL;
     }
 
     if (host == NULL) {
@@ -194,6 +254,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     if ((obj = calloc(1, sizeof(*obj))) == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
+
     obj->type = type;
     obj->compat.type = (lcb_compat_t)0xdead;
 
@@ -263,8 +324,13 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     lcb_confmon_set_nodes(obj->confmon, obj->usernodes, NULL);
-
     lcb_initialize_packet_handlers(obj);
+
+    err = init_cccp(obj, e_options);
+    if (err != LCB_SUCCESS) {
+        lcb_destroy(obj);
+        return err;
+    }
 
     obj->timers = hashset_create();
     obj->http_requests = hashset_create();

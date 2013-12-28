@@ -443,19 +443,6 @@ static void generic_shutdown(clconfig_provider *provider)
     free(provider);
 }
 
-/**
- * Dummy provider for CCCP
- */
-clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
-{
-    clconfig_provider *provider = calloc(1, sizeof(*provider));
-    provider->type = LCB_CLCONFIG_CCCP;
-    provider->shutdown = generic_shutdown;
-
-    (void)mon;
-    return provider;
-}
-
 clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon)
 {
     clconfig_provider *provider = calloc(1, sizeof(*provider));

@@ -188,6 +188,8 @@ clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon);
 /** Get a provider by its type. */
 #define lcb_confmon_get_provider(mon, ix) (mon)->all_providers[ix]
 
+#define PROVIDER_SETTING(p, n) ((p)->parent->settings->n)
+
 /**
  * Create a new configuration monitor server.
  */
@@ -330,6 +332,14 @@ void lcb_clconfig_write_file(clconfig_provider *provider_base, lcb_string *data)
  * Get the REST connection object.
  */
 struct lcb_connection_st* lcb_confmon_get_rest_connection(lcb_confmon *mon);
+
+
+/** CCCP Routines */
+LCB_INTERNAL_API
+void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, hostlist_t mcnodes);
+lcb_error_t lcb_cccp_update(clconfig_provider *provider, const char *host,
+                            lcb_string *data);
+void lcb_clconfig_cccp_disable(clconfig_provider *provider);
 
 #ifdef __cplusplus
 }

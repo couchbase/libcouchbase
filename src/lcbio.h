@@ -97,6 +97,7 @@ extern "C" {
     };
 
     struct lcb_settings_st;
+    typedef void (*protoctx_dtor_t)(void*);
     struct lcb_connection_st {
         struct addrinfo *ai;
         struct addrinfo *curr_ai;
@@ -111,6 +112,12 @@ extern "C" {
          * third argument for the v0 event handler
          */
         void *data;
+
+        /** Protocol specific data bound to the connection itself */
+        void *protoctx;
+
+        /** Destructor function called to clean up the protoctx pointer */
+        protoctx_dtor_t protoctx_dtor;
 
         /** callback to be invoked when the connection is complete */
         lcb_connection_handler on_connect_complete;

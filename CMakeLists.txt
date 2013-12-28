@@ -180,6 +180,7 @@ ADD_LIBRARY(couchbase SHARED
             src/arithmetic.c
             src/bconf_provider.c
             src/bootstrap.c
+            src/bucketconfig/bc_cccp.c
             src/bucketconfig/bc_http.c
             src/bucketconfig/bc_file.c
             src/bucketconfig/confmon.c

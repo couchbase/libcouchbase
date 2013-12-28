@@ -55,62 +55,76 @@ extern "C" {
 #endif
 
 #define LCB_C_ST_ID 0
-#define LCB_C_ST_V 1
+#define LCB_C_ST_V 2
+
+#define LCB_CREATE_V0_FIELDS \
+    /**
+     * hosts A list of hosts:port separated by ';' to the
+     * administration port of the couchbase cluster. (ex:
+     * "host1;host2:9000;host3" would try to connect to
+     * host1 on port 8091, if that fails it'll connect to
+     * host2 on port 9000 etc).
+     *
+     * The hostname may also be specified as a URI looking
+     * like: http://localhost:8091/pools
+     */ \
+    const char *host; \
+    /** user the username to use */ \
+    const char *user; \
+    /** @param passwd The password */ \
+    const char *passwd; \
+    /** @param bucket The bucket to connect to */ \
+    const char *bucket; \
+    /** @param io the io handle to use */ \
+    struct lcb_io_opt_st *io;
+
+
+#define LCB_CREATE_V1_FIELDS \
+    LCB_CREATE_V0_FIELDS \
+    /**
+     * the type of the connection:
+     * * LCB_TYPE_BUCKET
+     *      NULL for bucket means "default" bucket
+     * * LCB_TYPE_CLUSTER
+     *      the bucket argument ignored and all data commands
+     *      will return LCB_NOT_SUPPORTED
+     */ \
+    lcb_type_t type;
+
+#define LCB_CREATE_V2_FIELDS \
+    LCB_CREATE_V1_FIELDS \
+    /**
+     * For CCCP configuration there are three options.
+     *  (1) Specify an explicit sequence of host:port;host:port where port is
+     *      the _memcached_ (i.e. data) port for each host.
+     *  (2) [default] the memcached hosts will be considered the same as the
+     *      normal HTTP hosts, but with the default HTTP port replaced with
+     *      the default memcached port of 11210 used instead.
+     *  (3) disable CCCP entirely
+     */ \
+    const char *mchosts; \
+    int no_cccp;
+
+
+    struct lcb_create_st0 {
+        LCB_CREATE_V0_FIELDS
+    };
+
+    struct lcb_create_st1 {
+        LCB_CREATE_V1_FIELDS
+    };
+
+    struct lcb_create_st2 {
+        LCB_CREATE_V2_FIELDS
+    };
+
 
     struct lcb_create_st {
         int version;
         union {
-            struct {
-                /**
-                 * hosts A list of hosts:port separated by ';' to the
-                 * administration port of the couchbase cluster. (ex:
-                 * "host1;host2:9000;host3" would try to connect to
-                 * host1 on port 8091, if that fails it'll connect to
-                 * host2 on port 9000 etc).
-                 *
-                 * The hostname may also be specified as a URI looking
-                 * like: http://localhost:8091/pools
-                 */
-                const char *host;
-                /** user the username to use */
-                const char *user;
-                /** @param passwd The password */
-                const char *passwd;
-                /** @param bucket The bucket to connect to */
-                const char *bucket;
-                /** @param io the io handle to use */
-                struct lcb_io_opt_st *io;
-            } v0;
-            struct {
-                /**
-                 * hosts A list of hosts:port separated by ';' to the
-                 * administration port of the couchbase cluster. (ex:
-                 * "host1;host2:9000;host3" would try to connect to
-                 * host1 on port 8091, if that fails it'll connect to
-                 * host2 on port 9000 etc).
-                 *
-                 * The hostname may also be specified as a URI looking
-                 * like: http://localhost:8091/pools
-                 */
-                const char *host;
-                /** user the username to use */
-                const char *user;
-                /** @param passwd The password */
-                const char *passwd;
-                /** @param bucket The bucket to connect to */
-                const char *bucket;
-                /** @param io the io handle to use */
-                struct lcb_io_opt_st *io;
-                /**
-                 * the type of the connection:
-                 * * LCB_TYPE_BUCKET
-                 *      NULL for bucket means "default" bucket
-                 * * LCB_TYPE_CLUSTER
-                 *      the bucket argument ignored and all data commands
-                 *      will return LCB_NOT_SUPPORTED
-                 */
-                lcb_type_t type;
-            } v1;
+            struct lcb_create_st0 v0;
+            struct lcb_create_st1 v1;
+            struct lcb_create_st2 v2;
         } v;
 
 #ifdef __cplusplus
@@ -127,6 +141,7 @@ extern "C" {
             v.v1.bucket = bucket;
             v.v1.io = io;
             v.v1.type = type;
+
         }
 #endif
     };

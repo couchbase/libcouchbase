@@ -483,6 +483,11 @@ int lcb_connection_getaddrinfo(lcb_connection_t conn, int refresh)
 
 void lcb_connection_cleanup(lcb_connection_t conn)
 {
+
+    if (conn->protoctx) {
+        conn->protoctx_dtor(conn->protoctx);
+    }
+
     if (conn->ai) {
         freeaddrinfo(conn->ai);
         conn->ai = NULL;
@@ -686,38 +691,38 @@ void lcb_connuse_easy(struct lcb_io_use_st *use,
     use->usec = tmo_usec;
 }
 
-
+LCB_INTERNAL_API
 void lcb_connection_transfer_socket(lcb_connection_t from,
                                     lcb_connection_t to,
                                     const struct lcb_io_use_st *use)
 {
-    lcb_assert(from->state == LCB_CONNSTATE_UNINIT);
+    lcb_assert(to->state == LCB_CONNSTATE_UNINIT);
+    if (from == to) {
+        return;
+    }
 
     if (from->io->version == 0 && from->evinfo.active) {
         from->io->v.v0.delete_event(from->io, from->sockfd, from->evinfo.ptr);
         from->evinfo.active = 0;
     }
 
-    if (to->ai) {
-        freeaddrinfo(to->ai);
-    }
+    to->io = from->io;
+    to->settings = from->settings;
 
     to->ai = from->ai; from->ai = NULL;
     to->curr_ai = from->curr_ai; from->curr_ai = NULL;
-
-    to->io = from->io;
-    to->settings = from->settings;
     to->sockfd = from->sockfd; from->sockfd = INVALID_SOCKET;
     to->sockptr = from->sockptr; from->sockptr = NULL;
+    to->protoctx = from->protoctx; from->protoctx = NULL;
     to->last_error = from->last_error;
+    memcpy(to->host, from->host, sizeof(from->host));
+    memcpy(to->port, from->port, sizeof(from->port));
+    to->state = from->state; from->state = LCB_CONNSTATE_UNINIT;
 
     if (to->sockptr) {
         to->sockptr->lcbconn = to;
     }
 
-    memcpy(to->host, from->host, sizeof(from->host));
-    memcpy(to->port, from->port, sizeof(from->port));
-    to->state = from->state; from->state = LCB_CONNSTATE_UNINIT;
     lcb_connection_use(to, use);
 
 }

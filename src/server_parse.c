@@ -24,6 +24,7 @@
  */
 #include "internal.h"
 #include "packetutils.h"
+#include "bucketconfig/clconfig.h"
 
 #define LOGARGS(c, lvl) \
     &(c)->instance->settings, "pktparse", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -52,6 +53,7 @@ static void swallow_command(lcb_server_t *c,
  * error
  */
 static int handle_not_my_vbucket(lcb_server_t *c,
+                                 packet_info *resinfo,
                                  protocol_binary_request_header *oldreq,
                                  struct lcb_command_data_st *oldct)
 {
@@ -62,6 +64,8 @@ static int handle_not_my_vbucket(lcb_server_t *c,
     struct lcb_command_data_st ct;
     protocol_binary_request_header req;
     hrtime_t now;
+    lcb_string config_string;
+    lcb_error_t err = LCB_ERROR;
 
     lcb_log(LOGARGS(c, WARN),
             "NOT_MY_VBUCKET; Server=%p,ix=%d,real_start=%lu,vb=%d",
@@ -69,7 +73,23 @@ static int handle_not_my_vbucket(lcb_server_t *c,
             (unsigned long)oldct->real_start,
             (int)ntohs(oldreq->request.vbucket));
 
-    lcb_bootstrap_refresh(c->instance);
+    lcb_string_init(&config_string);
+    if (PACKET_NBODY(resinfo)) {
+        lcb_string_append(&config_string,
+                          PACKET_VALUE(resinfo),
+                          PACKET_NVALUE(resinfo));
+
+        err = lcb_cccp_update(lcb_confmon_get_provider(c->instance->confmon,
+                                                       LCB_CLCONFIG_CCCP),
+                                                       c->connection.host,
+                                                       &config_string);
+    }
+
+    lcb_string_release(&config_string);
+
+    if (err != LCB_SUCCESS) {
+        lcb_bootstrap_refresh(c->instance);
+    }
 
     /* re-schedule command to new server */
     if (!c->instance->settings.vb_noguess) {
@@ -208,7 +228,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
             swallow_command(c, &info.res, was_connected);
 
         } else {
-            rv = handle_not_my_vbucket(c, &req, &info.ct);
+            rv = handle_not_my_vbucket(c, &info, &req, &info.ct);
 
             if (rv == -1) {
                 return -1;

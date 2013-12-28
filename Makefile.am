@@ -159,6 +159,7 @@ libcouchbase_la_SOURCES = \
                         plugins/io/select/select_io_opts.h \
                         src/bucketconfig/clconfig.h \
                         src/bucketconfig/confmon.c \
+                        src/bucketconfig/bc_cccp.c \
                         src/bucketconfig/bc_http.c \
                         src/bucketconfig/bc_http.h \
                         src/bucketconfig/bc_file.c \

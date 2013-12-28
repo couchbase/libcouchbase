@@ -31,6 +31,8 @@ typedef struct packet_info_st {
  */
 #define PACKET_NBODY(pkt) (ntohl((pkt)->res.response.bodylen))
 
+#define PACKET_BODY(pkt) (pkt)->payload
+
 /**
  * Gets the key size, if included in the packet.
  */
