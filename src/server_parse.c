@@ -25,6 +25,11 @@
 #include "internal.h"
 #include "packetutils.h"
 
+#define LOGARGS(c, lvl) \
+    &(c)->instance->settings, "pktparse", LCB_LOG_##lvl, __FILE__, __LINE__
+
+#define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
+
 static void swallow_command(lcb_server_t *c,
                             const protocol_binary_response_header *header,
                             int was_connected)
@@ -58,18 +63,29 @@ static int handle_not_my_vbucket(lcb_server_t *c,
     protocol_binary_request_header req;
     hrtime_t now;
 
-    if (c->instance->compat.type == LCB_CACHED_CONFIG) {
-        lcb_schedule_config_cache_refresh(c->instance);
-    }
+    lcb_log(LOGARGS(c, WARN),
+            "NOT_MY_VBUCKET; Server=%p,ix=%d,real_start=%lu,vb=%d",
+            (void *)c, c->index,
+            (unsigned long)oldct->real_start,
+            (int)ntohs(oldreq->request.vbucket));
+
+    lcb_bootstrap_refresh(c->instance);
 
     /* re-schedule command to new server */
-    idx = vbucket_found_incorrect_master(c->instance->vbucket_config,
-                                         ntohs(oldreq->request.vbucket),
-                                         (int)c->index);
+    if (!c->instance->settings.vb_noguess) {
+        idx = vbucket_found_incorrect_master(c->instance->vbucket_config,
+                                             ntohs(oldreq->request.vbucket),
+                                             (int)c->index);
+    } else {
+        idx = c->index;
+    }
 
     if (idx == -1) {
+        lcb_log(LOGARGS(c, ERR), "no alternate server");
         return 0;
     }
+    lcb_log(LOGARGS(c, INFO), "Mapped key to new server %d -> %d",
+            c->index, idx);
 
     now = gethrtime();
 

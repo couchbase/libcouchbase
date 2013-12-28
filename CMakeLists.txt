@@ -178,12 +178,13 @@ ADD_LIBRARY(couchbase SHARED
             ${lcb_plat_io}
             plugins/io/select/plugin-select.c
             src/arithmetic.c
-            src/bconf_io.c
-            src/bconf_parse.c
             src/bconf_provider.c
+            src/bootstrap.c
+            src/bucketconfig/bc_http.c
+            src/bucketconfig/bc_file.c
+            src/bucketconfig/confmon.c
             src/cntl.c
             src/compat.c
-            src/config_cache.c
             src/durability.c
             src/error.c
             src/flush.c
@@ -254,6 +255,7 @@ IF(NOT LCB_NO_TESTS)
             tests/ccbc_103.cc
             tests/cluster-unit-tests.cc
             tests/configcache-unit-test.cc
+            tests/confmon-unit-test.cc
             tests/durability-unit-test.cc
             tests/get-unit-test.cc
             tests/getopt-unit-tests.cc

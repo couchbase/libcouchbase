@@ -46,6 +46,7 @@
 #include "cookie.h"
 #include "mcserver.h"
 #include "settings.h"
+#include "logging.h"
 
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 #define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
@@ -159,6 +160,10 @@ extern "C" {
         lcb_errmap_callback errmap;
     };
 
+    struct lcb_confmon_st;
+    struct hostlist_st;
+    struct lcb_bootstrap_st;
+
     struct lcb_st {
         /** The current vbucket config handle */
         VBUCKET_CONFIG_HANDLE vbucket_config;
@@ -173,45 +178,26 @@ extern "C" {
          */
         lcb_type_t type;
 
-        /** The URL request to send to the server */
-        char *http_uri;
+        VBUCKET_DISTRIBUTION_TYPE dist_type;
 
-
-        struct vbucket_stream_st vbucket_stream;
-
-        /** The number of weird things happened with config node
-         *  This counter reflects event on memcached port (default 11210),
-         *  but used to make decisions about healthiness of the
-         *  configuration port (default 8091).
-         */
-        lcb_size_t weird_things;
-
+        struct lcb_io_opt_st *io;
         /* The current synchronous mode */
         lcb_syncmode_t syncmode;
-
-        struct lcb_connection_st connection;
-
-        lcb_config_status_t confstatus;
-        /* Incremented whenever we get a new config */
-        int config_generation;
 
         /** The number of couchbase server in the configuration */
         lcb_size_t nservers;
         /** The array of the couchbase servers */
         lcb_server_t *servers;
 
-        /** if non-zero, backup_nodes entries should be freed before
-            freeing the pointer itself */
-        int should_free_backup_nodes;
-        /** The array of last known nodes as hostname:port */
-        char **backup_nodes;
-        /** The current connect index */
-        int backup_idx;
-
-        /** The type of the key distribution */
-        VBUCKET_DISTRIBUTION_TYPE dist_type;
         /** The number of replicas */
         lcb_uint16_t nreplicas;
+
+        struct lcb_confmon_st *confmon;
+        struct hostlist_st *usernodes;
+        struct clconfig_info_st *cur_configinfo;
+        struct lcb_bootstrap_st *bootstrap;
+
+        unsigned int weird_things;
 
         vbucket_state_listener_t vbucket_state_listener;
 
@@ -245,11 +231,7 @@ extern "C" {
             lcb_compat_t type;
             union {
                 struct {
-                    time_t mtime;
                     char *cachefile;
-                    int updating;
-                    int needs_update;
-                    int loaded;
                 } cached;
             } value;
         } compat;
@@ -272,13 +254,21 @@ extern "C" {
         LCB_TIMER_PERIODIC = 1 << 1
     } lcb_timer_options;
 
+
     struct lcb_timer_st {
+        /** Interval */
         lcb_uint32_t usec;
         int state;
         lcb_timer_options options;
         void *event;
+
+        /** User data */
         const void *cookie;
+
+        /** Callback to invoke */
         lcb_timer_callback callback;
+
+        /** Note that 'instance' may be NULL in this case */
         lcb_t instance;
         lcb_io_opt_t io;
     };
@@ -546,40 +536,18 @@ extern "C" {
                               lcb_error_t *uerr);
 
 
-    lcb_error_t lcb_apply_vbucket_config(lcb_t instance,
-                                         VBUCKET_CONFIG_HANDLE config);
-
+    struct clconfig_info_st;
+    void lcb_update_vbconfig(lcb_t instance, struct clconfig_info_st *config);
 
     void lcb_failout_observe_request(lcb_server_t *server,
                                      struct lcb_command_data_st *command_data,
                                      const char *packet,
                                      lcb_size_t npacket,
                                      lcb_error_t err);
-
-    void lcb_dump_config_cache(lcb_t instance);
-    int lcb_load_config_cache(lcb_t instance);
-    void lcb_refresh_config_cache(lcb_t instance);
-    void lcb_schedule_config_cache_refresh(lcb_t instance);
-    void lcb_update_vbconfig(lcb_t instance,
-                             VBUCKET_CONFIG_HANDLE next_config);
-
     /**
      * Hashtable wrappers
      */
     genhash_t *lcb_hashtable_nc_new(lcb_size_t est);
-
-    /**
-     * Configuration received was invalid. Try to get
-     * the configuration again.
-     */
-    void lcb_instance_config_error(lcb_t instance,
-                                   lcb_error_t err,
-                                   const char *errinfo,
-                                   lcb_conferr_opt_t options);
-
-    lcb_error_t lcb_instance_start_connection(lcb_t instance);
-
-    void lcb_vbucket_stream_v0_handler(lcb_socket_t sock, short which, void *arg);
 
     void lcb_server_connect(lcb_server_t *server);
 
@@ -690,6 +658,22 @@ extern "C" {
                                         lcb_timer_callback callback);
 
     #define lcb_async_destroy lcb_timer_destroy
+
+    /**
+     * These three functions are all reentrant safe. They control asynchronous
+     * scheduling of cluster configuration retrievals.
+     */
+
+    /** Call this for initial bootstrap */
+    lcb_error_t lcb_bootstrap_initial(lcb_t instance);
+
+    /** Call this on not-my-vbucket, or when a toplogy change is evident */
+    lcb_error_t lcb_bootstrap_refresh(lcb_t instance);
+
+    /** Call this when a non-specicic error has taken place, such as a timeout */
+    void lcb_bootstrap_errcount_incr(lcb_t instance);
+
+    void lcb_bootstrap_destroy(lcb_t instance);
 
 
 #ifdef __cplusplus

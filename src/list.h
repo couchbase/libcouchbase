@@ -95,6 +95,9 @@ extern "C" {
 #define LCB_LIST_SAFE_FOR(pos, n, list) \
     for (pos = (list)->next, n = pos->next; pos != (list); pos = n, n = pos->next)
 
+#define LCB_LIST_HAS_NEXT(ll, item) \
+    ((item)->next != ll)
+
 #ifdef __cplusplus
 }
 #endif

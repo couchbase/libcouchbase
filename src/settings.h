@@ -12,6 +12,15 @@
 #define LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS 3
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 
+/* 1 second */
+#define LCB_DEFAULT_CLCONFIG_GRACE_CYCLE 1000000
+
+/* 100 ms */
+#define LCB_DEFAULT_CLCONFIG_GRACE_NEXT 100000
+
+/* 10 seconds */
+#define LCB_DEFAULT_BC_HTTP_DISCONNTMO 10000000
+
 #include "config.h"
 #include <libcouchbase/couchbase.h>
 
@@ -34,6 +43,19 @@ typedef struct lcb_settings_st {
     lcb_size_t rbufsize;
     lcb_size_t wbufsize;
     lcb_size_t weird_things_threshold;
+    lcb_type_t conntype;
+
+    /** Grace period to wait between querying providers */
+    lcb_uint32_t grace_next_provider;
+
+    /** Grace period to wait between retrying from the beginning */
+    lcb_uint32_t grace_next_cycle;
+
+    /**
+     * For bc_http, the amount of type to keep the stream open, for future
+     * updates.
+     */
+    lcb_uint32_t bc_http_stream_time;
 
     /** maximum redirect hops. -1 means infinite redirects */
     int max_redir;
@@ -41,10 +63,12 @@ typedef struct lcb_settings_st {
     /** If we should randomize bootstrap nodes or not */
     int randomize_bootstrap_nodes;
 
-
     /* if non-zero, skip nodes in list that seems like not
      * configured or doesn't have the bucket needed */
     int bummer;
+
+    /** Don't guess next vbucket server. Mainly for testing */
+    int vb_noguess;
 
     /** Is IPv6 enabled */
     lcb_ipv6_t ipv6;

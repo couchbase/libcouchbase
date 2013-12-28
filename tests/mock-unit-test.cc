@@ -786,7 +786,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     lcb_uint32_t newtmo = 7500000; // 7.5 sec
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &newtmo);
     ASSERT_EQ(LCB_SUCCESS, err);
-
+    instance->settings.vb_noguess = 1;
     lcb_connect(instance);
     lcb_wait(instance);
     ASSERT_EQ(0, lcb_get_num_replicas(instance));

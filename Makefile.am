@@ -157,15 +157,18 @@ libcouchbase_la_SOURCES = \
                         include/memcached/vbucket.h \
                         plugins/io/select/plugin-select.c \
                         plugins/io/select/select_io_opts.h \
+                        src/bucketconfig/clconfig.h \
+                        src/bucketconfig/confmon.c \
+                        src/bucketconfig/bc_http.c \
+                        src/bucketconfig/bc_http.h \
+                        src/bucketconfig/bc_file.c \
                         src/arithmetic.c \
                         src/base64.c \
-                        src/bconf_io.c \
-                        src/bconf_parse.c \
                         src/bconf_provider.c \
+                        src/bootstrap.c \
                         src/cntl.c \
                         src/compat.c \
                         src/cookie.h \
-                        src/config_cache.c \
                         src/config_static.h \
                         src/connect.c \
                         src/connection_utils.c \
@@ -339,6 +342,7 @@ tests_unit_tests_SOURCES = \
                            tests/behavior-unit-tests.cc \
                            tests/ccbc_103.cc \
                            tests/cluster-unit-tests.cc \
+                           tests/confmon-unit-test.cc \
                            tests/hashset-unit-test.cc \
                            tests/hostname-unit-test.cc \
                            tests/host-unit-test.cc \

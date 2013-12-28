@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 #include "internal.h"
+#include "bucketconfig/clconfig.h"
 /**
  * ioctl/fcntl-like interface for libcouchbase configuration properties
  */
@@ -193,7 +194,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         conn = &server->connection;
 
     } else if (cmd == LCB_CNTL_CONFIGNODE_INFO) {
-        conn = &instance->connection;
+        conn = lcb_confmon_get_rest_connection(instance->confmon);
 
     } else {
         return LCB_EINVAL;
@@ -308,13 +309,8 @@ static lcb_error_t config_cache_loaded_handler(int mode,
         return LCB_EINTERNAL;
     }
 
-    if (instance->compat.type == LCB_CACHED_CONFIG &&
-            instance->compat.value.cached.loaded) {
-        *(int *)arg = 1;
-
-    } else {
-        *(int *)arg = 0;
-    }
+    *(int *)arg = instance->cur_configinfo &&
+            instance->cur_configinfo->origin == LCB_CLCONFIG_FILE;
 
     return LCB_SUCCESS;
 }

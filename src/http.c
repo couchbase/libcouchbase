@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include "bucketconfig/clconfig.h"
 
 static const char *method_strings[] = {
     "GET ",    /* LCB_HTTP_METHOD_GET */
@@ -367,6 +368,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     lcb_http_method_t method;
     int chunked;
     lcb_error_t rc;
+    lcb_connection_t restconn;
 
     switch (instance->type) {
     case LCB_TYPE_CLUSTER:
@@ -438,13 +440,13 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     }
     break;
     case LCB_HTTP_TYPE_MANAGEMENT:
-        nbase = strlen(instance->connection.host) + strlen(instance->connection.port) + 2;
+        restconn = lcb_confmon_get_rest_connection(instance->confmon);
+        nbase = strlen(restconn->host) + strlen(restconn->port) + 2;
         base = calloc(nbase, sizeof(char));
         if (!base) {
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
-        if (snprintf(base, nbase, "%s:%s", instance->connection.host,
-                     instance->connection.port) < 0) {
+        if (snprintf(base, nbase, "%s:%s", restconn->host, restconn->port) < 0) {
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
         nbase -= 1; /* skip '\0' */

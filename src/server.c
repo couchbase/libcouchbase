@@ -264,7 +264,6 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
     char *packet;
     lcb_size_t packetsize;
     char *keyptr;
-    lcb_t root = server->instance;
     ringbuffer_t rest;
     ringbuffer_t *stream = &server->cmd_log;
     ringbuffer_t *cookies;
@@ -273,7 +272,6 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
     lcb_size_t send_size = 0;
     lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
     hrtime_t now = gethrtime();
-    int should_refresh_config = 0;
 
     if (server->connection_ready) {
         cookies = &server->output_cookies;
@@ -308,6 +306,10 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
             break;
         }
         if (min_nonstale && ct.start >= min_nonstale) {
+            lcb_log(LOGARGS(server, INFO),
+                    "Still have %d ms remaining for command",
+                    (ct.start - min_nonstale) / 1000000);
+
             if (tmo_next) {
                 *tmo_next = (ct.start - min_nonstale) + 1;
             }
@@ -371,12 +373,6 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         if (mirror) {
             ringbuffer_consumed(mirror, packetsize);
         }
-        if (server->is_config_node) {
-            root->weird_things++;
-            if (root->weird_things >= root->settings.weird_things_threshold) {
-                should_refresh_config = 1;
-            }
-        }
     } while (1); /* CONSTCOND */
 
     if (server->connection_ready && conn->output) {
@@ -393,18 +389,13 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
     }
 
     ringbuffer_destruct(&rest);
-    if (should_refresh_config) {
-        lcb_instance_config_error(root, LCB_NETWORK_ERROR,
-                                  "Config connection considered stale. "
-                                  "Refresing",
-                                  LCB_CONNFERR_NO_FAILOUT);
-    }
     lcb_maybe_breakout(server->instance);
 }
 
 void lcb_purge_single_server(lcb_server_t *server, lcb_error_t error)
 {
     purge_single_server(server, error, 0, NULL);
+    lcb_bootstrap_errcount_incr(server->instance);
 }
 
 lcb_error_t lcb_failout_server(lcb_server_t *server,
@@ -450,7 +441,9 @@ void lcb_timeout_server(lcb_server_t *server)
     }
 
     lcb_log(LOGARGS(server, INFO),
-            "Scheduling next timeout for %d ms", next_us / 1000);
+            "%p, Scheduling next timeout for %d ms",
+            server,
+            next_us / 1000);
 
     lcb_connection_cancel_timer(conn);
     lcb_connection_activate_timer2(conn, next_us);
@@ -549,8 +542,6 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     *p = '\0';
     strcpy(server->connection.port, p + 1);
 
-    server->is_config_node = vbucket_config_is_config_node(server->instance->vbucket_config,
-                                                           servernum);
     n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
                                           servernum);
     server->couch_api_base = (n != NULL) ? strdup(n) : NULL;

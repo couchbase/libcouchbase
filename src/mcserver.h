@@ -35,8 +35,6 @@ struct negotiation_context {
 typedef struct lcb_server_st {
     /** The server index in the list */
     int index;
-    /** Non-zero for node is using for configuration */
-    int is_config_node;
     /** The server endpoint as hostname:port */
     char *authority;
     /** The Couchbase Views API endpoint base */

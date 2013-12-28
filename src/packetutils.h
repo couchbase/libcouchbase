@@ -72,6 +72,12 @@ typedef struct packet_info_st {
 #define PACKET_KEY(pkt) \
     ( ((const char *)(pkt)->payload) + PACKET_EXTLEN(pkt))
 
+#define PACKET_REQUEST(pkt) \
+    ( (protocol_binary_request_header *) &(pkt)->res)
+
+#define PACKET_REQ_VBID(pkt) \
+    (ntohs(PACKET_REQUEST(pkt)->request.vbucket))
+
 /**
  * Gets a pointer starting at the packet's value field. Only use if NVALUE is 0
  */

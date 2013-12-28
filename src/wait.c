@@ -43,14 +43,6 @@ lcb_error_t lcb_wait(lcb_t instance)
         return instance->last_error;
     }
 
-    if (instance->connection.state != LCB_CONNSTATE_CONNECTED
-            && !lcb_flushing_buffers(instance)
-            && (instance->compat.type == LCB_CACHED_CONFIG
-                || instance->compat.type == LCB_MEMCACHED_CLUSTER)
-            && instance->vbucket_config != NULL) {
-        return LCB_SUCCESS;
-    }
-
     /*
      * The API is designed for you to run your own event loop,
      * but should also work if you don't do that.. In order to be
@@ -59,10 +51,10 @@ lcb_error_t lcb_wait(lcb_t instance)
      */
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    if (instance->connection.state != LCB_CONNSTATE_CONNECTED
-            || lcb_flushing_buffers(instance)
-            || hashset_num_items(instance->timers) > 0
-            || hashset_num_items(instance->durability_polls) > 0) {
+    if (instance->vbucket_config == NULL ||
+            lcb_flushing_buffers(instance) ||
+            hashset_num_items(instance->timers) > 0 ||
+            hashset_num_items(instance->durability_polls) > 0) {
 
         lcb_size_t ii;
 

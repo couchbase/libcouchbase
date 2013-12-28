@@ -23,6 +23,10 @@
 
 #include "internal.h"
 
+#define LOGARGS(c, lvl) \
+    &(c)->instance->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
+
 static int do_read_data(lcb_server_t *c, int allow_read)
 {
     lcb_sockrw_status_t status;
@@ -58,11 +62,6 @@ static int do_read_data(lcb_server_t *c, int allow_read)
         return 0;
     }
 
-    if (c->instance->compat.type == LCB_CACHED_CONFIG) {
-        lcb_schedule_config_cache_refresh(c->instance);
-        return 0;
-    }
-
     return -1;
 }
 
@@ -71,18 +70,15 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
     lcb_t instance = c->instance;
 
     if (rc != LCB_SUCCESS) {
+        LOG(c, ERR, "Server failed");
         lcb_failout_server(c, rc);
+        lcb_bootstrap_errcount_incr(instance);
+
     } else {
-        if (c->is_config_node) {
-            c->instance->weird_things = 0;
-        }
         lcb_sockrw_apply_want(&c->connection);
         c->inside_handler = 0;
     }
-    if (instance->compat.type == LCB_CACHED_CONFIG &&
-            instance->compat.value.cached.needs_update) {
-        lcb_refresh_config_cache(instance);
-    }
+
     lcb_maybe_breakout(instance);
     lcb_error_handler(instance, rc, NULL);
 }
@@ -347,11 +343,7 @@ static int get_nameinfo(lcb_connection_t conn,
 static void connection_error(lcb_server_t *server, lcb_error_t err)
 {
     lcb_failout_server(server, err);
-    if (server->instance->compat.type == LCB_CACHED_CONFIG) {
-        /* Try to update the cache :S */
-        lcb_schedule_config_cache_refresh(server->instance);
-        return;
-    }
+    lcb_bootstrap_errcount_incr(server->instance);
 }
 
 static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
@@ -407,10 +399,10 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_server_t *server = (lcb_server_t *)conn->data;
-
+    LOG(server, ERR, "Server timed out");
     lcb_timeout_server(server);
+    lcb_bootstrap_errcount_incr(server->instance);
     lcb_maybe_breakout(server->instance);
-
     (void)err;
 }
 
