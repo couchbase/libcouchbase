@@ -250,6 +250,36 @@ static const char *get_nonempty_string(const char *s)
     return s;
 }
 
+
+/**
+ * Associate a "cookie" with an instance of libcouchbase. You may only store
+ * <b>one</b> cookie with each instance of libcouchbase.
+ *
+ * @param instance the instance to associate the cookie with
+ * @param cookie the cookie to associate with this instance.
+ *
+ * @author Trond Norbye
+ */
+LIBCOUCHBASE_API
+void lcb_set_cookie(lcb_t instance, const void *cookie)
+{
+    instance->cookie = cookie;
+}
+
+/**
+ * Get the cookie associated with a given instance of libcouchbase.
+ *
+ * @param instance the instance to query
+ * @return The cookie associated with this instance.
+ *
+ * @author Trond Norbye
+ */
+LIBCOUCHBASE_API
+const void *lcb_get_cookie(lcb_t instance)
+{
+    return instance->cookie;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_create(lcb_t *instance,
                        const struct lcb_create_st *options)

@@ -183,7 +183,6 @@ ADD_LIBRARY(couchbase SHARED
             src/cntl.c
             src/compat.c
             src/config_cache.c
-            src/cookie.c
             src/durability.c
             src/error.c
             src/flush.c
