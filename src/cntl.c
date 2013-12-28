@@ -362,6 +362,18 @@ static lcb_error_t max_redirects(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t logprocs_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    if (mode == LCB_CNTL_SET) {
+        instance->settings.logger = (lcb_logprocs *)arg;
+    } else {
+        *(lcb_logprocs**)arg = instance->settings.logger;
+    }
+
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
@@ -388,6 +400,7 @@ static ctl_handler handlers[] = {
     config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */,
     force_sasl_mech_handler, /* LCB_CNTL_FORCE_SASL_MECH */
     max_redirects, /* LCB_CNTL_MAX_REDIRECTS */
+    logprocs_handler /* LCB_CNTL_LOGGER */
 };
 
 

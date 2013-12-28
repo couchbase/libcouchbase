@@ -338,8 +338,16 @@ extern "C" {
      */
 #define LCB_CNTL_MAX_REDIRECTS 0x17
 
+
+#define LCB_CNTL_LOGGER 0x18
+    /**
+     * Get/Set. Modify the lcb_logprocs structure used for logging. See
+     * the types.h header for more information about logging.
+     * Arg: lcb_logprocs* for set, lcb_logprocs** for get
+     */
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x18
+#define LCB_CNTL__MAX                    0x19
 
 
 #ifdef __cplusplus

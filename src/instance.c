@@ -25,6 +25,7 @@
 #ifndef _WIN32
 #include <dlfcn.h>
 #endif
+#include "logging.h"
 
 
 /**
@@ -373,6 +374,9 @@ lcb_error_t lcb_create(lcb_t *instance,
     settings->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
     settings->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
     settings->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
+    if (lcb_getenv_boolean("LCB_VERBOSE_LOGGING")) {
+        settings->logger = &lcb_verbose_logprocs;
+    }
 
     lcb_initialize_packet_handlers(obj);
 

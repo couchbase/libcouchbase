@@ -16,6 +16,7 @@
 #include <libcouchbase/couchbase.h>
 
 struct lcb_io_opt_st;
+struct lcb_logprocs_st;
 /**
  * Stateless setting structure.
  * Specifically this contains the 'environment' of the instance for things
@@ -52,6 +53,7 @@ typedef struct lcb_settings_st {
     char *password;
     char *bucket;
     char *sasl_mech_force;
+    struct lcb_logprocs_st *logger;
 } lcb_settings;
 
 #endif

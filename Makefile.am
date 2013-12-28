@@ -189,6 +189,7 @@ libcouchbase_la_SOURCES = \
                         src/lcbio.h \
                         src/list.c \
                         src/list.h \
+                        src/logging.c \
                         src/observe.c \
                         src/packet.c \
                         src/packetutils.c \
@@ -334,6 +335,7 @@ tests_unit_tests_SOURCES = \
                            tests/hostname-unit-test.cc \
                            tests/host-unit-test.cc \
                            tests/list-unit-test.cc \
+                           tests/logger-unit-test.cc \
                            tests/memcached-compat-unit-test.cc \
                            tests/packet-unit-test.cc \
                            tests/ringbuffer-unit-test.cc \
