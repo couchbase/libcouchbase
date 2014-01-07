@@ -87,16 +87,30 @@ ELSE()
     SET(lcb_cc_string "mingw")
 ENDIF()
 
+
 SET(lcb_package_name "libcouchbase-${LCB_VERSION}_${lcb_arch_string}_${lcb_cc_string}")
 SET(LCB_INSTDIR ${PROJECT_BINARY_DIR}/${lcb_package_name})
-
 SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
+
+IF(WIN32)
+    SET(lcb_plat_includes "${SOURCE_ROOT}/win32")
+    SET(lcb_plat_io
+        plugins/io/iocp/iocp_iops.c
+        plugins/io/iocp/iocp_loop.c
+        plugins/io/iocp/iocp_timer.c
+        plugins/io/iocp/iocp_util.c)
+    SET(lcb_plat_libs ws2_32.lib)
+ELSE()
+    ADD_DEFINITIONS(-DLCB_LIBDIR="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+    SET(lcb_plat_libs dl m pthread)
+ENDIF()
+
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
                            ${SOURCE_ROOT}/contrib
                            ${SOURCE_ROOT}/contrib/cbsasl/include
                            ${SOURCE_ROOT}/plugins/io/iocp
                            ${SOURCE_ROOT}/src
-                           ${SOURCE_ROOT}/win32
+                           ${lcb_plat_includes}
                            ${SOURCE_ROOT})
 
 IF(${MSVC})
@@ -117,7 +131,12 @@ IF(${MSVC})
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
     SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
 ELSE()
-    SET(COMMON_FLAGS "-Wall -gstabs")
+    SET(COMMON_FLAGS "-Wall")
+    IF(WIN32)
+        SET(COMMON_FLAGS "${COMMON_FLAGS} -gstabs")
+    ELSE()
+        SET(COMMON_FLAGS "${COMMON_FLAGS} -ggdb3 -fPIC")
+    ENDIF()
 ENDIF()
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
@@ -127,6 +146,9 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 # These files are bundled in a static library.
 # They export no symbols of their own and may
 # be considered as 'static'
+IF(WIN32)
+    SET(lcb_getopt_src win32/getopt.c)
+ENDIF()
 ADD_LIBRARY(lcbutils STATIC
             contrib/libvbucket/cJSON.c
             src/base64.c
@@ -137,7 +159,7 @@ ADD_LIBRARY(lcbutils STATIC
             src/list.c
             src/ringbuffer.c
             src/url_encoding.c
-            win32/getopt.c)
+            ${lcb_getopt_src})
 
 ADD_LIBRARY(couchbase SHARED
             contrib/cbsasl/src/client.c
@@ -149,10 +171,7 @@ ADD_LIBRARY(couchbase SHARED
             contrib/libvbucket/ketama.c
             contrib/libvbucket/rfc1321/md5c.c
             contrib/libvbucket/vbucket.c
-            plugins/io/iocp/iocp_iops.c
-            plugins/io/iocp/iocp_loop.c
-            plugins/io/iocp/iocp_timer.c
-            plugins/io/iocp/iocp_util.c
+            ${lcb_plat_io}
             plugins/io/select/plugin-select.c
             src/arithmetic.c
             src/bconf_io.c
@@ -199,7 +218,7 @@ ADD_DEFINITIONS(-DBUILDING_CBSASL=1)
 ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
-TARGET_LINK_LIBRARIES(couchbase ws2_32.lib lcbutils)
+TARGET_LINK_LIBRARIES(couchbase ${lcb_plat_libs} lcbutils)
 
 
 IF(NOT LCB_NO_TESTS)
@@ -211,7 +230,7 @@ IF(NOT LCB_NO_TESTS)
 
     SET_PROPERTY(TARGET check-all
         APPEND PROPERTY INCLUDE_DIRECTORIES
-            ${SOURCE_ROOT}/win32
+            ${lcb_plat_includes}
             ${SOURCE_ROOT}/tools)
     TARGET_LINK_LIBRARIES(check-all lcbutils couchbase)
 
@@ -340,6 +359,18 @@ IF(LIBUV_ROOT)
     TARGET_LINK_LIBRARIES(couchbase_libuv couchbase ${LIBUV_LIBRARIES})
     INSTALL(TARGETS couchbase_libuv RUNTIME DESTINATION bin)
 ENDIF(LIBUV_ROOT)
+
+
+IF(UNIX)
+    ADD_LIBRARY(couchbase_libevent SHARED plugins/io/libevent/plugin-libevent.c)
+    ADD_LIBRARY(couchbase_libev SHARED plugins/io/libev/plugin-libev.c)
+    SET_PROPERTY(TARGET couchbase_libevent
+        APPEND PROPERTY COMPILE_DEFINITIONS LIBCOUCHBASE_INTERNAL)
+    SET_PROPERTY(TARGET couchbase_libev
+        APPEND PROPERTY COMPILE_DEFINITIONS LIBCOUCHBASE_INTERNAL)
+    TARGET_LINK_LIBRARIES(couchbase_libevent event)
+    TARGET_LINK_LIBRARIES(couchbase_libev ev)
+ENDIF()
 
 
 
