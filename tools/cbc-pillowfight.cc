@@ -32,6 +32,8 @@
 #include <signal.h>
 #ifndef WIN32
 #include <pthread.h>
+#else
+#define usleep(n) Sleep(n/1000)
 #endif
 #include <cstdarg>
 
