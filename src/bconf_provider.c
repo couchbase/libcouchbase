@@ -167,7 +167,7 @@ lcb_error_t lcb_apply_vbucket_config(lcb_t instance, VBUCKET_CONFIG_HANDLE confi
         }
         buii++;
     }
-
+    instance->backup_idx = 0;
     instance->nreplicas = (lcb_uint16_t)vbucket_config_get_num_replicas(instance->vbucket_config);
     instance->dist_type = vbucket_config_get_distribution_type(instance->vbucket_config);
     instance->confstatus = LCB_CONFSTATE_CONFIGURED;

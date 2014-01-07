@@ -135,7 +135,8 @@ static void connection_error(lcb_t instance, lcb_error_t err,
         instance->confstatus = LCB_CONFSTATE_RETRY;
     }
 
-    if (instance->backup_nodes[instance->backup_idx] == NULL) {
+    /* Do not cycle backup nodes on initial connection */
+    if (instance->vbucket_config && instance->backup_nodes[instance->backup_idx] == NULL) {
         instance->backup_idx = 0;
     }
 
@@ -211,7 +212,11 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
         instance_timeout_handler(conn, err);
 
     } else {
-        connection_error(instance, err, "Couldn't connect", 0);
+        char reason[256];
+        lcb_sockconn_errinfo(conn->last_error,
+                             conn->host, conn->port,
+                             conn->curr_ai, reason, 256, &err);
+        connection_error(instance, err, reason, 0);
     }
 }
 
