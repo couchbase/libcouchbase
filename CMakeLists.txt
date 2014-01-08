@@ -21,7 +21,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 # These variables can be modified as needed
 
 # Gtest source archive to use
-SET(GTEST_ARCHIVE gtest-1.6.0.zip)
+SET(GTEST_ARCHIVE gtest-1.7.0.zip)
 # Where to download archive (if it doesn't exist)
 SET(GTEST_DLSERVER http://googletest.googlecode.com/files)
 
@@ -321,7 +321,7 @@ IF(NOT LCB_NO_TESTS)
     SET(gtest_force_shared_crt ON CACHE BOOL
         "Use shared (DLL) runtime library event Google Test built as static library")
 
-    ADD_SUBDIRECTORY(gtest-1.6.0 gtest-1.6.0)
+    ADD_SUBDIRECTORY(gtest-1.7.0 gtest-1.7.0)
 
     INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
     TARGET_LINK_LIBRARIES(unit-tests couchbase lcbutils gtest)
