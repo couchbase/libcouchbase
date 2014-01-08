@@ -357,18 +357,25 @@ IF(LIBUV_ROOT)
 
     SET_PROPERTY(TARGET couchbase_libuv
         APPEND PROPERTY COMPILE_DEFINITIONS LIBCOUCHBASE_INTERNAL)
-    FIND_LIBRARY(LIBUV_RELEASE
-        NAMES uv libuv
-        PATHS ${LIBUV_ROOT}/Release ${LIBUV_ROOT}/Release/lib)
-    FIND_LIBRARY(LIBUV_DEBUG
-        NAMES uv libuv
-        PATHS ${LIBUV_ROOT}/Debug ${LIBUV_ROOT}/Debug/lib)
-    SET(LIBUV_LIBRARIES optimized ${LIBUV_RELEASE} debug ${LIBUV_DEBUG})
+    IF(WIN32)
+        FIND_LIBRARY(LIBUV_RELEASE
+            NAMES uv libuv
+            PATHS ${LIBUV_ROOT}/Release ${LIBUV_ROOT}/Release/lib)
+        FIND_LIBRARY(LIBUV_DEBUG
+            NAMES uv libuv
+            PATHS ${LIBUV_ROOT}/Debug ${LIBUV_ROOT}/Debug/lib)
+        SET(LIBUV_LIBRARIES optimized ${LIBUV_RELEASE} debug ${LIBUV_DEBUG})
+    ELSE()
+        FIND_LIBRARY(LIBUV NAMES uv libuv PATHS ${LIBUV_ROOT})
+        SET(LIBUV_LIBRARIES ${LIBUV})
+    ENDIF()
 
     SET_PROPERTY(TARGET couchbase_libuv
         APPEND PROPERTY INCLUDE_DIRECTORIES ${LIBUV_ROOT}/include)
     TARGET_LINK_LIBRARIES(couchbase_libuv couchbase ${LIBUV_LIBRARIES})
-    INSTALL(TARGETS couchbase_libuv RUNTIME DESTINATION bin)
+    INSTALL(TARGETS couchbase_libuv
+            RUNTIME DESTINATION bin
+            LIBRARY DESTINATION bin)
 ENDIF(LIBUV_ROOT)
 
 
