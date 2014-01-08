@@ -67,9 +67,9 @@ lcb_error_t lcb_wait(lcb_t instance)
         }
 
         instance->settings.io->v.v0.run_event_loop(instance->settings.io);
-    } else {
-        instance->wait = 0;
     }
+
+    instance->wait = 0;
 
     if (instance->vbucket_config) {
         return LCB_SUCCESS;
