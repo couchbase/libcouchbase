@@ -28,7 +28,7 @@ void lcb_string_clear(lcb_string *str)
     }
 }
 
-void lcb_string_added(lcb_string *str, size_t nused)
+void lcb_string_added(lcb_string *str, lcb_size_t nused)
 {
     str->nused += nused;
     lcb_assert(str->nused <= str->nalloc);

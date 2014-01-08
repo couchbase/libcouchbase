@@ -203,6 +203,7 @@ libcouchbase_la_SOURCES = \
                         src/server_negotiate.c \
                         src/server_parse.c \
                         src/simplestring.c \
+                        src/simplestring.h \
                         src/stats.c \
                         src/store.c \
                         src/strerror.c \
