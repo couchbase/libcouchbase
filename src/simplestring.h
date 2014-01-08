@@ -122,6 +122,16 @@ void lcb_string_erase_end(lcb_string *str, lcb_size_t to_remove);
  */
 void lcb_string_erase_beginning(lcb_string *str, lcb_size_t to_remove);
 
+/**
+ * Transfers ownership of the underlying buffer contained within the structure
+ * 'to' to the structure 'from', as such, 'from' becomes a newly initialized
+ * empty string structure and 'to' contains the existing buffer.
+ *
+ * @param from the string which contains the existing buffer
+ * @param to a new string structure which contains no buffer. It will receive
+ * from's buffer
+ */
+void lcb_string_transfer(lcb_string *from, lcb_string *to);
 
 #define lcb_string_tail(str) ((str)->base + (str)->nused)
 

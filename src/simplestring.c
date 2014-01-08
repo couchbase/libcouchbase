@@ -139,3 +139,10 @@ void lcb_string_erase_beginning(lcb_string *str, lcb_size_t to_remove)
     str->nused -= to_remove;
     ensure_cstr(str);
 }
+
+void lcb_string_transfer(lcb_string *from, lcb_string *to)
+{
+    lcb_assert(to->base == NULL);
+    *to = *from;
+    memset(from, 0, sizeof(*from));
+}
