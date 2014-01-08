@@ -18,6 +18,10 @@
 #include "internal.h"
 #include "select_io_opts.h"
 
+#if defined(_WIN32) && !defined(usleep)
+#define usleep(n) Sleep((n) / 1000)
+#endif
+
 typedef struct s_event_s s_event_t;
 struct s_event_s {
     lcb_list_t list;
@@ -464,7 +468,6 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
         if (!LCB_LIST_IS_EMPTY(&io->timers.list)) {
             hrtime_t now = gethrtime();
             hrtime_t min = 0;
-            int have_timeout = 0;
 
             tmo.tv_sec = 0;
             tmo.tv_usec = 0;
@@ -475,31 +478,28 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
                     continue;
                 }
 
+                ++ntimers;
+
                 if (min == 0 || min >= tm->exptime) {
+                    /** Set the shortest amount of time to wait.. */
                     min = tm->exptime;
-                    have_timeout = 1;
-                    ++ntimers;
                 }
+
             }
 
-
             if (min > now) {
+                /** We need to wait at least a bit. */
                 hrtime_t delta = min - now;
                 delta /= 1000;
                 tmo.tv_sec = (long)(delta / 1000000);
                 tmo.tv_usec = delta % 1000000;
                 t = &tmo;
 
-            } else if (have_timeout) {
+            } else {
                 tmo.tv_sec = 0;
                 tmo.tv_usec = 0;
                 t = &tmo;
-
-            } else {
-                /** This is probably bad! */
-                ; /* TODO: we might want to do something here */
             }
-
         }
 
         if (nevents == 0 && ntimers == 0) {
@@ -507,11 +507,14 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
             return;
         }
 
-
-        ret = select(FD_SETSIZE, io->readfds, io->writefds, io->exceptfds, t);
-
-        if (ret == SOCKET_ERROR) {
-            return;
+        if (nevents) {
+            ret = select(FD_SETSIZE, io->readfds, io->writefds, io->exceptfds, t);
+            if (ret == SOCKET_ERROR) {
+                return;
+            }
+        } else {
+            ret = 0;
+            usleep((t->tv_sec * 1000000) + t->tv_usec);
         }
 
         /* To be completely safe, we need to copy active events
@@ -519,7 +522,9 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
          * registered events isn't safe, because one callback can
          * cancel all registered events before iteration will end
          */
-        if (ret == 0) {
+
+        /** Always invoke the pending timers */
+        if (ntimers) {
             s_timer_t *active = NULL;
             hrtime_t now = gethrtime();
             LCB_LIST_SAFE_FOR(ii, nn, &io->timers.list) {
@@ -535,7 +540,9 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
                 tm->handler(-1, 0, tm->cb_data);
                 tm = p;
             }
-        } else {
+        }
+
+        if (ret && nevents) {
             s_event_t *active = NULL;
             LCB_LIST_FOR(ii, &io->events.list) {
                 ev = LCB_LIST_ITEM(ii, s_event_t, list);
