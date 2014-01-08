@@ -54,8 +54,8 @@ lcb_error_t lcb_host_parse(lcb_host_t *host,
 {
     lcb_string zspec;
 
-    char *s_host;
-    char *s_port;
+    char *host_s;
+    char *port_s;
     char *delim;
 
 
@@ -81,34 +81,34 @@ lcb_error_t lcb_host_parse(lcb_host_t *host,
     }
 
 
-    s_host = zspec.base;
-    if (*s_host == ':') {
+    host_s = zspec.base;
+    if (*host_s == ':') {
         lcb_string_release(&zspec);
         return LCB_INVALID_HOST_FORMAT;
     }
 
-    if ( (delim = strstr(s_host, "://"))) {
-        s_host = delim + 3;
+    if ( (delim = strstr(host_s, "://"))) {
+        host_s = delim + 3;
     }
 
-    if ((delim = strstr(s_host, "/"))) {
+    if ((delim = strstr(host_s, "/"))) {
         *delim = '\0';
     }
 
-    s_port = strstr(s_host, ":");
-    if (s_port != NULL) {
+    port_s = strstr(host_s, ":");
+    if (port_s != NULL) {
         char *endp;
         long ll;
 
-        *s_port = '\0';
-        s_port++;
+        *port_s = '\0';
+        port_s++;
 
-        if (! *s_port) {
+        if (! *port_s) {
             lcb_string_release(&zspec);
             return LCB_INVALID_HOST_FORMAT;
         }
 
-        ll = strtol(s_port, &endp, 10);
+        ll = strtol(port_s, &endp, 10);
         if (ll == LONG_MIN || ll == LONG_MAX) {
             lcb_string_release(&zspec);
             return LCB_INVALID_HOST_FORMAT;
@@ -120,24 +120,24 @@ lcb_error_t lcb_host_parse(lcb_host_t *host,
         }
 
     } else {
-        s_port = "";
+        port_s = "";
     }
 
 
-    if (strlen(s_host) > sizeof(host->host)-1 ||
-            strlen(s_port) > sizeof(host->port)-1 ||
-            *s_host == '\0') {
+    if (strlen(host_s) > sizeof(host->host)-1 ||
+            strlen(port_s) > sizeof(host->port)-1 ||
+            *host_s == '\0') {
         lcb_string_release(&zspec);
         return LCB_INVALID_HOST_FORMAT;
     }
 
     {
-        lcb_size_t ii, hostlen = strlen(s_host);
+        lcb_size_t ii, hostlen = strlen(host_s);
         for (ii = 0; ii < hostlen; ii++) {
-            if (isalnum(s_host[ii])) {
+            if (isalnum(host_s[ii])) {
                 continue;
             }
-            switch (s_host[ii]) {
+            switch (host_s[ii]) {
             case '.':
             case '-':
             case '_':
@@ -149,9 +149,9 @@ lcb_error_t lcb_host_parse(lcb_host_t *host,
         }
     }
 
-    strcpy(host->host, s_host);
-    if (*s_port) {
-        strcpy(host->port, s_port);
+    strcpy(host->host, host_s);
+    if (*port_s) {
+        strcpy(host->port, port_s);
     } else {
         sprintf(host->port, "%d", deflport);
     }
