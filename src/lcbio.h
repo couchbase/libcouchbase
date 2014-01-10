@@ -76,8 +76,11 @@ extern "C" {
         /** Set when update_timer is called, unset when delete_timer is called */
         short active;
 
-        /** Delay for the timeout */
+        /** Default delay for the timeout */
         lcb_uint32_t usec;
+
+        /** Last timeout set */
+        lcb_uint32_t last_timeout;
     };
 
     struct lcb_settings_st;
@@ -207,6 +210,14 @@ extern "C" {
      * You may call delete_timer() to cancel the pending timeout
      */
     void lcb_connection_activate_timer(lcb_connection_t conn);
+
+    /**
+     * Activates the timer with the specified interval. This interval will
+     * be set in the conn->timeout.last_timeout field which may be used for
+     * re-scheduling.
+     */
+    void lcb_connection_activate_timer2(lcb_connection_t conn,
+                                        lcb_uint32_t interval);
 
     /**
      * Unconditionally schedule a timer to be invoked in the interval specified

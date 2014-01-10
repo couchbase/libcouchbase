@@ -527,14 +527,26 @@ void lcb_connection_cancel_timer(lcb_connection_t conn)
 
 void lcb_connection_activate_timer(lcb_connection_t conn)
 {
-    if (conn->timeout.active || conn->timeout.usec == 0) {
+    if (!conn->timeout.usec) {
+        return;
+    }
+
+    lcb_connection_activate_timer2(conn, conn->timeout.usec);
+}
+
+void lcb_connection_activate_timer2(lcb_connection_t conn,
+                                    lcb_uint32_t interval)
+{
+    if (conn->timeout.active) {
         return;
     }
 
     conn->timeout.active = 1;
+    conn->timeout.last_timeout = interval;
+
     conn->io->v.v0.update_timer(conn->io,
                                 conn->timeout.timer,
-                                conn->timeout.usec,
+                                interval,
                                 conn,
                                 timeout_handler_dispatch);
 }

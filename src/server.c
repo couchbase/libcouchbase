@@ -23,6 +23,12 @@
  */
 
 #include "internal.h"
+#include "logging.h"
+
+#define LOGARGS(c, lvl) \
+    &(c)->instance->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
+
 
 void lcb_failout_observe_request(lcb_server_t *server,
                                  struct lcb_command_data_st *command_data,
@@ -249,7 +255,8 @@ static void failout_single_request(lcb_server_t *server,
 }
 
 static void purge_single_server(lcb_server_t *server, lcb_error_t error,
-                                hrtime_t min_nonstale)
+                                hrtime_t min_nonstale,
+                                hrtime_t *tmo_next)
 {
     protocol_binary_request_header req;
     struct lcb_command_data_st ct;
@@ -301,8 +308,15 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
             break;
         }
         if (min_nonstale && ct.start >= min_nonstale) {
+            if (tmo_next) {
+                *tmo_next = (ct.start - min_nonstale) + 1;
+            }
             break;
         }
+
+        lcb_log(LOGARGS(server, INFO),
+                "Command with cookie=%p timed out from server %s:%s",
+                ct.cookie, server->connection.host, server->connection.port);
 
         ringbuffer_consumed(cookies, sizeof(ct));
 
@@ -390,7 +404,7 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
 
 void lcb_purge_single_server(lcb_server_t *server, lcb_error_t error)
 {
-    purge_single_server(server, error, 0);
+    purge_single_server(server, error, 0, NULL);
 }
 
 lcb_error_t lcb_failout_server(lcb_server_t *server,
@@ -411,17 +425,35 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
 
 void lcb_timeout_server(lcb_server_t *server)
 {
-    if (server->connection_ready) {
-        hrtime_t min_valid, now;
-        now = gethrtime();
-        min_valid = now - server->connection.timeout.usec * 1000;
-        purge_single_server(server, LCB_ETIMEDOUT, min_valid);
-        lcb_connection_activate_timer(&server->connection);
+    hrtime_t now, min_valid, next_ns = 0;
+    lcb_uint32_t next_us;
+    lcb_connection_t conn = &server->connection;
+
+    if (!server->connection_ready) {
+        lcb_failout_server(server, LCB_ETIMEDOUT);
+        return;
+    }
+
+    now = gethrtime();
+    min_valid = now - conn->timeout.usec * 1000;
+
+    if (conn->timeout.last_timeout < conn->timeout.usec) {
+        min_valid += (conn->timeout.last_timeout * 1000);
+    }
+
+    purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns);
+    if (next_ns) {
+        next_us = next_ns / 1000;
 
     } else {
-        /** We've died while waiting for negotiation. Kill everything */
-        lcb_failout_server(server, LCB_ETIMEDOUT);
+        next_us = conn->timeout.usec;
     }
+
+    lcb_log(LOGARGS(server, INFO),
+            "Scheduling next timeout for %d ms", next_us / 1000);
+
+    lcb_connection_cancel_timer(conn);
+    lcb_connection_activate_timer2(conn, next_us);
 }
 
 /**
