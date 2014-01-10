@@ -143,12 +143,6 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     lcb_size_t nr;
     lcb_connection_t conn = &c->connection;
 
-    if (ringbuffer_ensure_alignment(conn->input) != 0) {
-        lcb_error_handler(c->instance, LCB_EINTERNAL,
-                          NULL);
-        return -1;
-    }
-
     rv = lcb_packet_read_ringbuffer(&info, conn->input);
     if (rv == -1) {
         return -1;
