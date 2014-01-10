@@ -19,6 +19,7 @@
 #include "simplestring.h"
 #include <stdio.h>
 #include <ctype.h>
+#include <limits.h>
 
 hostlist_t hostlist_create(void)
 {
