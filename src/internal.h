@@ -683,6 +683,7 @@ extern "C" {
     /**
      * Create a simple one-shot standalone timer.
      */
+    LCB_INTERNAL_API
     lcb_timer_t lcb_timer_create_simple(lcb_io_opt_t io,
                                         const void *cookie,
                                         lcb_uint32_t usec,

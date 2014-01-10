@@ -17,6 +17,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
+#include <map>
 
 #include "server.h"
 #include "mock-unit-test.h"
@@ -358,19 +359,45 @@ static void set_callback(lcb_t,
                          const lcb_store_resp_t *)
 {
     timeout_test_cookie *tc = (timeout_test_cookie*)cookie;;
-    EXPECT_EQ(err, tc->expected);
+    EXPECT_EQ(tc->expected, err);
+    if (err == LCB_ETIMEDOUT) {
+        // Remove the hiccup at the first timeout failure
+        MockEnvironment::getInstance()->hiccupNodes(0, 0);
+    }
     *tc->counter -= 1;
 }
+
+struct next_store_st {
+    struct timeout_test_cookie *tc;
+    const lcb_store_cmd_t * const * cmdpp;
+};
+
+static void reschedule_callback(lcb_timer_t timer,
+                                lcb_t instance,
+                                const void *cookie)
+{
+    lcb_error_t err;
+    struct next_store_st *ns = (struct next_store_st *)cookie;
+    err = lcb_store(instance, ns->tc, 1, ns->cmdpp);
+    EXPECT_EQ(LCB_SUCCESS, err);
+    lcb_timer_destroy(instance, timer);
+
+}
+
 }
 
 TEST_F(MockUnitTest, testTimeoutOnlyStale)
 {
+    SKIP_UNLESS_MOCK();
+
     HandleWrap hw;
     createConnection(hw);
     lcb_t instance = hw.getLcb();
     lcb_uint32_t tmoval = 1000000;
     int nremaining = 2;
+    lcb_error_t err;
     struct timeout_test_cookie cookies[2];
+    MockEnvironment *mock = MockEnvironment::getInstance();
 
     // Set the timeout
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
@@ -384,6 +411,11 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
 
     removeKey(instance, key);
 
+    // Make the mock timeout the first cookie. The extras length is:
+    mock->hiccupNodes(1500, 1);
+
+
+
     memset(&scmd, 0, sizeof(scmd));
     scmd.v.v0.key = key;
     scmd.v.v0.nkey = strlen(key);
@@ -393,14 +425,21 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     cookies[0].counter = &nremaining;
     cookies[0].expected = LCB_ETIMEDOUT;
     lcb_store(instance, cookies, 1, &cmdp);
-    usleep(1500000);
 
     cookies[1].counter = &nremaining;
     cookies[1].expected = LCB_SUCCESS;
-    lcb_store(instance, cookies + 1, 1, &cmdp);
+    struct next_store_st ns;
+    ns.cmdpp = &cmdp;
+    ns.tc = cookies+1;
+    lcb_timer_t timer = lcb_timer_create(instance, &ns,
+                                         900000,
+                                         0,
+                                         reschedule_callback,
+                                         &err);
+    ASSERT_EQ(LCB_SUCCESS, err);
 
-    instance->wait = 1;
-    hw.getIo()->v.v0.run_event_loop(hw.getIo());
+    lcb_wait(instance);
+
     ASSERT_EQ(0, nremaining);
 }
 
@@ -544,10 +583,6 @@ extern "C" {
     static void vbucket_state_callback(lcb_server_t *server)
     {
         config_cnt++;
-        if (!server->instance->wait) { /* do not touch IO if we are using lcb_wait() */
-            lcb_io_opt_t io = server->instance->settings.io;
-            io->v.v0.stop_event_loop(io);
-        }
     }
 
     int store_cnt;
@@ -700,32 +735,106 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
     ASSERT_GE(now - begin_time, 2800000000LU); /* 2.8 seconds */
 }
 
+struct StoreContext {
+    std::map<std::string, lcb_error_t> mm;
+    typedef std::map<std::string, lcb_error_t>::iterator MyIter;
+
+    void check(int expected) {
+        EXPECT_EQ(expected, mm.size());
+
+        for (MyIter iter = mm.begin(); iter != mm.end(); iter++) {
+            EXPECT_EQ(LCB_SUCCESS, iter->second);
+        }
+    }
+
+    void clear() {
+        mm.clear();
+    }
+};
+
+extern "C" {
+static void ctx_store_callback(lcb_t, const void *cookie, lcb_storage_t,
+                                  lcb_error_t err, const lcb_store_resp_t *resp)
+{
+    StoreContext *ctx = reinterpret_cast<StoreContext *>(
+            const_cast<void *>(cookie));
+
+
+    std::string s((const char *)resp->v.v0.key, resp->v.v0.nkey);
+    ctx->mm[s] = err;
+}
+}
+
 TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 {
     SKIP_UNLESS_MOCK();
-    lcb_io_opt_t io;
     lcb_t instance;
     HandleWrap hw;
+    lcb_error_t err;
 
-    createConnection(hw, instance);
-    io = (lcb_io_opt_t)lcb_get_cookie(instance);
-    // Create a timer so IOCP doesn't complain
-    DummyTimer dt(instance);
-    config_cnt = 0;
+    const char *argv[] = {
+            "--replicas", "0", "--nodes", "10", NULL
+    };
 
-    MockEnvironment *mock = MockEnvironment::getInstance();
+    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
+
+    std::vector<std::string> keys;
+    std::vector<lcb_store_cmd_t> cmds;
+    std::vector<lcb_store_cmd_t *>ppcmds;
+
+    mock->createConnection(hw, instance);
+    lcb_uint32_t newtmo = 7500000; // 7.5 sec
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &newtmo);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    lcb_connect(instance);
+    lcb_wait(instance);
+    ASSERT_EQ(0, lcb_get_num_replicas(instance));
+
+
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
     instance->vbucket_state_listener = vbucket_state_callback;
+    genDistKeys(instance->vbucket_config, keys);
+    genStoreCommands(keys, cmds, ppcmds);
+    StoreContext ctx;
+
+    lcb_set_store_callback(instance, ctx_store_callback);
+
+    err = lcb_store(instance, &ctx, cmds.size(), &ppcmds[0]);
     mock->failoverNode(0);
-    io->v.v0.run_event_loop(io);
-    ASSERT_EQ(9, config_cnt);
+    lcb_wait(instance);
+
+    ctx.check((int)cmds.size());
+    ctx.clear();
+    ASSERT_EQ(9, lcb_get_num_nodes(instance));
 
     config_cnt = 0;
     mock->respawnNode(0);
-    io->v.v0.run_event_loop(io);
+    err = lcb_store(instance, &ctx, cmds.size(), &ppcmds[0]);
+    lcb_wait(instance);
+    ctx.check((int)cmds.size());
     ASSERT_EQ(10, config_cnt);
-    dt.clear();
+
+    MockEnvironment::destroySpecial(mock);
+}
+
+
+
+struct fo_context_st {
+    MockEnvironment *env;
+    int index;
+};
+// Hiccup the server, then fail it over.
+extern "C" {
+static void fo_callback(lcb_timer_t tm, lcb_t instance, const void *cookie)
+{
+    fo_context_st *ctx = (fo_context_st *)cookie;
+    ctx->env->hiccupNodes(0, 0);
+    ctx->env->failoverNode(ctx->index);
+    ctx->env->hiccupNodes(0, 0);
+    lcb_timer_destroy(instance, tm);
+}
 }
 
 TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
@@ -733,55 +842,77 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     SKIP_UNLESS_MOCK();
     lcb_error_t err;
     struct rvbuf rv;
-    lcb_io_opt_t io;
     lcb_t instance;
     HandleWrap hw;
     std::string key = "testBufferRelocationOnNodeFailover";
     std::string val = "foo";
 
-    createConnection(hw, instance);
-    io = (lcb_io_opt_t)lcb_get_cookie(instance);
+    const char *argv[] = { "--replicas", "0", "--nodes", "10", NULL };
+    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
 
-    MockEnvironment *mock = MockEnvironment::getInstance();
+    mock->createConnection(hw, instance);
+    lcb_connect(instance);
+    lcb_wait(instance);
+
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
     instance->vbucket_state_listener = vbucket_state_callback;
-    (void)lcb_set_store_callback(instance, store_callback);
-    (void)lcb_set_get_callback(instance, get_callback);
+    lcb_set_store_callback(instance, store_callback);
+    lcb_set_get_callback(instance, get_callback);
+
+    // Initialize the nodes first..
+    removeKey(instance, key);
 
     /* Schedule SET operation */
     lcb_store_cmd_t storecmd(LCB_SET, key.c_str(), key.size(),
                              val.c_str(), val.size());
-    lcb_store_cmd_t *storecmds[] = { &storecmd };
-    err = lcb_store(instance, &rv, 1, storecmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
 
     /* Determine what server should receive that operation */
     int vb, idx;
     vbucket_map(instance->vbucket_config, key.c_str(), key.size(), &vb, &idx);
 
-    /* Switch off that server */
-    mock->failoverNode(idx);
+    mock->hiccupNodes(5000, 1);
+    struct fo_context_st ctx = { mock, idx };
+
+    lcb_timer_t timer = lcb_timer_create_simple(instance->settings.io,
+                                                &ctx,
+                                                500000,
+                                                fo_callback);
+
+    lcb_store_cmd_t *storecmds[] = { &storecmd };
+    err = lcb_store(instance, &rv, 1, storecmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
 
     /* Execute event loop to reconfigure client and execute operation */
     config_cnt = 0;
     store_cnt = 0;
     lcb_wait(instance);
-    ASSERT_EQ(9, config_cnt);
     ASSERT_EQ(1, store_cnt);
+    ASSERT_EQ(9, config_cnt);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
+
+    memset(&rv, 0, sizeof(rv));
+    err = lcb_store(instance, &rv, 1, storecmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    config_cnt = 0;
+    store_cnt = 0;
+    lcb_wait(instance);
+    ASSERT_EQ(1, store_cnt);
 
     /* Check that value was actually set */
     lcb_get_cmd_t getcmd(key.c_str(), key.size());
     lcb_get_cmd_t *getcmds[] = { &getcmd };
     err = lcb_get(instance, &rv, 1, getcmds);
     ASSERT_EQ(LCB_SUCCESS, err);
+
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_EQ(rv.nbytes, val.size());
     std::string bytes = std::string(rv.bytes, rv.nbytes);
     ASSERT_STREQ(bytes.c_str(), val.c_str());
     free(rv.bytes);
+
+    MockEnvironment::destroySpecial(mock);
 }
 
 TEST_F(MockUnitTest, testSaslMechs)

@@ -95,6 +95,7 @@ lcb_async_t lcb_async_create(lcb_io_opt_t io,
                              error);
 }
 
+LCB_INTERNAL_API
 lcb_timer_t lcb_timer_create_simple(lcb_io_opt_t io,
                                     const void *cookie,
                                     lcb_uint32_t usec,
