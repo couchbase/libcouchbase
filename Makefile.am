@@ -168,6 +168,7 @@ libcouchbase_la_SOURCES = \
                         src/config_cache.c \
                         src/config_static.h \
                         src/connect.c \
+                        src/connection_utils.c \
                         src/durability.c \
                         src/durability_internal.h \
                         src/error.c \

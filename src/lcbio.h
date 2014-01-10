@@ -282,8 +282,20 @@ extern "C" {
                         const char *servname,
                         struct addrinfo **res);
 
-#define CONN_IOV0(conn) (conn)->io->v.v0
-#define CONN_IOV1(conn) (conn)->io->v.v1
+
+    struct hostlist_st;
+    struct lcb_host_st;
+
+    lcb_error_t lcb_connection_next_node(lcb_connection_t conn,
+                                         struct hostlist_st *hostlist,
+                                         char **errinfo);
+
+    lcb_error_t lcb_connection_cycle_nodes(lcb_connection_t conn,
+                                            struct hostlist_st *hostlist,
+                                            char **errinfo);
+
+    int lcb_connection_setup_host(lcb_connection_t conn,
+                                  struct lcb_host_st *host);
 
 #ifdef __cplusplus
 }

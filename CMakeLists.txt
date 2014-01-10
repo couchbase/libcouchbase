@@ -194,6 +194,7 @@ ADD_LIBRARY(couchbase SHARED
             src/http_parse.c
             src/instance.c
             src/connect.c
+            src/connection_utils.c
             src/readwrite.c
             src/iofactory.c
             src/observe.c
