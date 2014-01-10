@@ -164,6 +164,7 @@ libcouchbase_la_SOURCES = \
                         src/bconf_provider.c \
                         src/cntl.c \
                         src/compat.c \
+                        src/cookie.h \
                         src/config_cache.c \
                         src/config_static.h \
                         src/connect.c \
@@ -181,6 +182,7 @@ libcouchbase_la_SOURCES = \
                         src/hashset.h \
                         src/hashtable.c \
                         src/hostlist.c \
+                        src/hostlist.h \
                         src/http.c \
                         src/http_io.c \
                         src/http_parse.c \
@@ -190,9 +192,12 @@ libcouchbase_la_SOURCES = \
                         src/list.c \
                         src/list.h \
                         src/logging.c \
+                        src/logging.h \
+                        src/mcserver.h \
                         src/observe.c \
                         src/packet.c \
                         src/packetutils.c \
+                        src/packetutils.h \
                         src/readwrite.c \
                         src/remove.c \
                         src/ringbuffer.c \
@@ -202,6 +207,7 @@ libcouchbase_la_SOURCES = \
                         src/server_io.c \
                         src/server_negotiate.c \
                         src/server_parse.c \
+                        src/settings.h \
                         src/simplestring.c \
                         src/simplestring.h \
                         src/stats.c \
