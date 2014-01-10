@@ -41,6 +41,9 @@ void lcb_log(const struct lcb_settings_st *settings,
 #define LCB_LOG_BASIC(settings, msg) \
     lcb_log(settings, "unknown", 0, __FILE__, __LINE__, msg)
 
+/** Macro for overcoming Win32 identifiers */
+#define LCB_LOG_ERR LCB_LOG_ERROR
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
