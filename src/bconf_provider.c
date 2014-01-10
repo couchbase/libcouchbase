@@ -309,9 +309,11 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     }
 
     /* Notify anyone interested in this event... */
-    if (instance->vbucket_state_listener != NULL) {
-        for (ii = 0; ii < instance->nservers; ++ii) {
-            instance->vbucket_state_listener(instance->servers + ii);
+    if (change_status != LCB_CONFIGURATION_UNCHANGED) {
+        if (instance->vbucket_state_listener != NULL) {
+            for (ii = 0; ii < instance->nservers; ++ii) {
+                instance->vbucket_state_listener(instance->servers + ii);
+            }
         }
     }
 
