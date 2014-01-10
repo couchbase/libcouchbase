@@ -23,8 +23,13 @@
  */
 
 #include "internal.h"
+#include "logging.h"
+
 static lcb_connection_result_t v0_connect(lcb_connection_t conn, int nocb, short events);
 static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb);
+#define LOGARGS(conn, lvl) \
+    conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOG(conn, lvl, msg) lcb_log(LOGARGS(conn, lvl), msg)
 
 /**
  * This just wraps the connect routine again
@@ -78,13 +83,19 @@ static void conn_do_callback(struct lcb_connection_st *conn,
     lcb_connection_handler handler;
 
     if (nocb) {
+        LOG(conn, DEBUG, "Not invoking event because nocb specified");
         return;
     }
 
     handler = conn->on_connect_complete;
+
     if (!handler) {
-        return;
+        lcb_log(LOGARGS(conn, ERROR),
+            "%p [%s:%s] Connection complete but no handler set",
+            conn, conn->host, conn->port);
+        abort();
     }
+
     conn->on_connect_complete = NULL;
     handler(conn, err);
 }
@@ -349,6 +360,9 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
     lcb_assert(conn->state == LCB_CONNSTATE_UNINIT);
     conn->state = LCB_CONNSTATE_INPROGRESS;
 
+    lcb_log(LOGARGS(conn, INFO),
+            "Starting connection (%p) to %s:%s", conn, conn->host, conn->port);
+
     if (io->version == 0) {
         if (!conn->evinfo.ptr) {
             conn->evinfo.ptr = io->v.v0.create_event(io);
@@ -362,6 +376,9 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
 
     if (result == LCB_CONN_INPROGRESS) {
         if (conn->timeout.usec) {
+            lcb_log(LOGARGS(conn, INFO),
+                    "%p: Setting timeout for %lu usec", conn, conn->timeout.usec);
+
             io->v.v0.update_timer(io,
                                   conn->timeout.timer, conn->timeout.usec,
                                   conn, initial_connect_timeout_handler);
