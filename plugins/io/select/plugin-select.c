@@ -475,7 +475,7 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
                     continue;
                 }
 
-                if (min == 0 || min > tm->exptime) {
+                if (min == 0 || min >= tm->exptime) {
                     min = tm->exptime;
                     have_timeout = 1;
                     ++ntimers;
