@@ -19,6 +19,7 @@
 
 #include <libcouchbase/couchbase.h>
 #include <string.h>
+#include <libvbucket/vbucket.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -149,6 +150,14 @@ private:
 void storeKey(lcb_t instance, const std::string &key, const std::string &value);
 void removeKey(lcb_t instance, const std::string &key);
 void getKey(lcb_t instance, const std::string &key, Item &item);
+
+/**
+ * Generate keys which will trigger all the servers in the map.
+ */
+void genDistKeys(VBUCKET_CONFIG_HANDLE vbc, std::vector<std::string> &out);
+void genStoreCommands(const std::vector<std::string> &keys,
+                      std::vector<lcb_store_cmd_t> &cmds,
+                      std::vector<lcb_store_cmd_t*> &cmdpp);
 
 #endif
 
