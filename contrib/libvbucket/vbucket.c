@@ -57,7 +57,6 @@ struct vbucket_config_st {
     char *errmsg;
     VBUCKET_DISTRIBUTION_TYPE distribution;
     int num_vbuckets;
-    int mask;
     int num_servers;
     int num_replicas;
     char *user;
@@ -402,11 +401,10 @@ static int parse_vbucket_config(VBUCKET_CONFIG_HANDLE vb, cJSON *c)
         return -1;
     }
     vb->num_vbuckets = cJSON_GetArraySize(json);
-    if (vb->num_vbuckets == 0 || (vb->num_vbuckets & (vb->num_vbuckets - 1)) != 0) {
-        vb->errmsg = strdup("Number of vBuckets must be a power of two > 0 and <= " STRINGIFY(MAX_VBUCKETS));
+    if (vb->num_vbuckets == 0) {
+        vb->errmsg = strdup("Number of vBuckets must be > 0 and <= " STRINGIFY(MAX_VBUCKETS));
         return -1;
     }
-    vb->mask = vb->num_vbuckets - 1;
     if (populate_buckets(vb, json, 0) != 0) {
         return -1;
     }
@@ -770,7 +768,7 @@ int vbucket_get_vbucket_by_key(VBUCKET_CONFIG_HANDLE vb, const void *key, size_t
      * function when vbucket distribution will support multiple hashing
      * algorithms */
     uint32_t digest = hash_crc32(key, nkey);
-    return digest & vb->mask;
+    return digest % vb->num_vbuckets;
 }
 
 int vbucket_get_master(VBUCKET_CONFIG_HANDLE vb, int vbucket) {
