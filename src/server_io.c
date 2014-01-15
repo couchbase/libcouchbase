@@ -175,7 +175,7 @@ static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
     event_complete_common(c, LCB_SUCCESS);
 }
 
-static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf, int status)
+static void v1_write(lcb_sockdata_t *sockptr, int status, void *wbuf)
 {
     lcb_server_t *c;
     if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&c)) {
@@ -264,7 +264,7 @@ void lcb_maybe_breakout(lcb_t instance)
                 && hashset_num_items(instance->timers) == 0
                 && hashset_num_items(instance->durability_polls) == 0) {
             instance->wait = 0;
-            instance->settings.io->v.v0.stop_event_loop(instance->settings.io);
+            instance->settings.io->loop.stop(instance->settings.io->p);
         }
     }
 }

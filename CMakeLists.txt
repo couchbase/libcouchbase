@@ -178,6 +178,7 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/http_io.c
             src/http_parse.c
             src/instance.c
+            src/iotable.c
             src/connect.c
             src/connection_utils.c
             src/readwrite.c

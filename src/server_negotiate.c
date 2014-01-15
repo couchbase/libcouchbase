@@ -439,7 +439,7 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     }
 
     if (timeout) {
-        ctx->timer = lcb_timer_create_simple(conn->io,
+        ctx->timer = lcb_timer_create_simple(conn->iotable,
                                              ctx, timeout, timeout_handler);
     }
 

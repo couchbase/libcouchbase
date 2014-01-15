@@ -164,7 +164,7 @@ static lcb_error_t get_iops(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    *(lcb_io_opt_t *)arg = instance->settings.io;
+    *(lcb_io_opt_t *)arg = instance->settings.io->p;
     (void)cmd;
     return LCB_SUCCESS;
 }
@@ -216,12 +216,12 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
     si->v.v0.host = host->host;
     si->v.v0.port = host->port;
 
-    switch (instance->settings.io->version) {
-    case 0:
+    switch (instance->settings.io->model) {
+    case LCB_IOMODEL_EVENT:
         si->v.v0.sock.sockfd = conn->sockfd;
         break;
 
-    case 1:
+    case LCB_IOMODEL_COMPLETION:
         si->v.v0.sock.sockptr = conn->sockptr;
         break;
 

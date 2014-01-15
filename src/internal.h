@@ -237,6 +237,7 @@ extern "C" {
 
         lcb_settings settings;
         genhash_t *cmdht;
+        lcb_iotable iotable;
 
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
@@ -329,7 +330,7 @@ extern "C" {
         /** Number of headers **/
         lcb_size_t nheaders;
 
-        lcb_io_opt_t io;
+        lcb_iotable* io;
 
         struct lcb_connection_st connection;
         lcb_timer_t io_timer;

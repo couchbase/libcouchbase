@@ -99,8 +99,9 @@ int lcb_get_nameinfo(lcb_connection_t conn, struct lcb_nibufs_st *nistrs)
     ni.remote.name = (struct sockaddr *)&sa_remote;
     ni.remote.len = &n_saremote;
 
-    if (conn->io->version == 1) {
-        rv = conn->io->v.v1.get_nameinfo(conn->io, conn->sockptr, &ni);
+    if (!IOT_IS_EVENT(conn->iotable)) {
+        rv = IOT_V1(conn->iotable).nameinfo(IOT_ARG(conn->iotable),
+                                            conn->sockptr, &ni);
 
         if (ni.local.len == 0 || ni.remote.len == 0 || rv < 0) {
             return 0;

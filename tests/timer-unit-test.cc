@@ -16,7 +16,7 @@ static void timer_callback(lcb_timer_t tm, lcb_t instance, const void *)
     if (instance != NULL) {
         lcb_maybe_breakout(instance);
     } else {
-        tm->io->v.v0.stop_event_loop(tm->io);
+        IOT_STOP(tm->io);
     }
     lcb_timer_destroy(instance, tm);
 }
@@ -56,12 +56,12 @@ TEST_F(Timers, testStandalone)
                            &err);
 
     ASSERT_EQ(0, hashset_num_items(instance->timers));
-    instance->settings.io->v.v0.run_event_loop(instance->settings.io);
+    IOT_START(instance->settings.io);
 
     lcb_async_t async = lcb_async_create(instance->settings.io,
                                          NULL, timer_callback, &err);
     ASSERT_EQ(0, hashset_num_items(instance->timers));
-    instance->settings.io->v.v0.run_event_loop(instance->settings.io);
+    IOT_START(instance->settings.io);
 
     // Try a periodic timer...
     int ncalled = 0;
@@ -79,7 +79,7 @@ TEST_F(Timers, testStandalone)
                            NULL,
                            &err);
 
-    instance->settings.io->v.v0.run_event_loop(instance->settings.io);
+    IOT_START(instance->settings.io);
     ASSERT_EQ(5, ncalled);
 
 }

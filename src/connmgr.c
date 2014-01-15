@@ -56,7 +56,7 @@ static connmgr_hostent * he_from_conn(connmgr_t *mgr, lcb_connection_t conn)
     return ci->parent;
 }
 
-connmgr_t *connmgr_create(lcb_settings *settings, lcb_io_opt_t io)
+connmgr_t *connmgr_create(lcb_settings *settings, lcb_iotable *io)
 {
     connmgr_t *pool = calloc(1, sizeof(*pool));
     if (!pool) {
@@ -445,7 +445,7 @@ static void write_he_list(lcb_clist_t *ll, FILE *out)
                 (void *)info,
                 (void *)&info->connection);
 
-        if (info->connection.io->version == 0) {
+        if (info->connection.iotable->model == LCB_IOMODEL_EVENT) {
             fprintf(out, "SOCKFD=%d", (int)info->connection.sockfd);
         } else {
             fprintf(out, "SOCKDATA=%p", (void *)info->connection.sockptr);

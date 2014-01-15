@@ -165,7 +165,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
     lcb_connect_status_t connstatus;
     lcb_ioconnect_t ioconn = conn->ioconn;
 
-    struct lcb_io_opt_st *io = conn->io;
+    lcb_iotable *io = conn->iotable;
 
     do {
         if (conn->sockfd == INVALID_SOCKET) {
@@ -173,7 +173,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         }
 
         if (ioconn->ai == NULL) {
-            conn->last_error = io->v.v0.error;
+            conn->last_error = IOT_ERRNO(io);
 
             lcb_log(LOGARGS(conn, WARN),
                     "%p, %s:%s No more addrinfo structures remaining",
@@ -193,10 +193,10 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
             conn->last_error = sockerr;
 
         } else {
-            if (io->v.v0.connect(io,
-                                 conn->sockfd,
-                                 ioconn->ai->ai_addr,
-                                 (unsigned int)ioconn->ai->ai_addrlen) == 0) {
+            if (IOT_V0IO(io).connect0(IOT_ARG(io),
+                                      conn->sockfd,
+                                      ioconn->ai->ai_addr,
+                                      (unsigned int)ioconn->ai->ai_addrlen) == 0) {
                 /**
                  * Connected.
                  * XXX: In the odd event that this does connect immediately, we
@@ -215,7 +215,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
                     return LCB_CONN_CONNECTED;
                 }
             } else {
-                conn->last_error = io->v.v0.error;
+                conn->last_error = IOT_ERRNO(io);
             }
         }
 
@@ -231,11 +231,11 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
             return LCB_CONN_CONNECTED;
 
         case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
-            io->v.v0.update_event(io,
-                                  conn->sockfd,
-                                  conn->evinfo.ptr,
-                                  LCB_WRITE_EVENT,
-                                  conn, v0_reconnect_handler);
+            IOT_V0EV(io).watch(IOT_ARG(io),
+                               conn->sockfd,
+                               conn->evinfo.ptr,
+                               LCB_WRITE_EVENT,
+                               conn, v0_reconnect_handler);
             conn->evinfo.active = 1;
 
             return LCB_CONN_INPROGRESS;
@@ -290,7 +290,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
     int retry = 1;
     int retry_once = 0;
     lcb_connect_status_t status;
-    lcb_io_opt_t io = conn->io;
+    lcb_iotable *io = conn->iotable;
     lcb_ioconnect_t ioconn = conn->ioconn;
 
     do {
@@ -301,26 +301,26 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
 
         if (conn->sockptr) {
             conn->sockptr->lcbconn = conn;
-            conn->sockptr->parent = io;
+            conn->sockptr->parent = io->p;
         } else {
-            conn->last_error = io->v.v1.error;
+            conn->last_error = IOT_ERRNO(io);
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
             }
         }
 
-        rv = io->v.v1.start_connect(io,
-                                    conn->sockptr,
-                                    ioconn->ai->ai_addr,
-                                    (unsigned int)ioconn->ai->ai_addrlen,
-                                    v1_connect_handler);
+        rv = IOT_V1(io).connect(io->p,
+                                conn->sockptr,
+                                ioconn->ai->ai_addr,
+                                (unsigned int)ioconn->ai->ai_addrlen,
+                                v1_connect_handler);
 
         if (rv == 0) {
             return LCB_CONN_INPROGRESS;
         }
 
-        status = lcb_connect_status(io->v.v1.error);
+        status = lcb_connect_status(IOT_ERRNO(io));
         switch (status) {
 
         case LCB_CONNECT_EINTR:
@@ -337,7 +337,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
 
         case LCB_CONNECT_EINVAL:
             /** TODO: do we still need this for v1? */
-            conn->last_error = io->v.v1.error;
+            conn->last_error = IOT_ERRNO(io);
             if (!retry_once) {
                 retry = 1;
                 retry_once = 1;
@@ -347,7 +347,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
             }
 
         case LCB_CONNECT_EFAIL:
-            conn->last_error = io->v.v1.error;
+            conn->last_error = IOT_ERRNO(io);
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
                 return LCB_CONN_ERROR;
@@ -355,7 +355,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
             break;
 
         default:
-            conn->last_error = io->v.v1.error;
+            conn->last_error = IOT_ERRNO(io);
             return LCB_CONN_ERROR;
 
         }
@@ -381,7 +381,8 @@ static void setup_async_error(lcb_connection_t conn, lcb_error_t err)
         lcb_timer_destroy(NULL, ioconn->timer);
     }
     ioconn->pending_err = err;
-    ioconn->timer = lcb_async_create(conn->io, conn, async_error_callback, &dummy);
+    ioconn->timer = lcb_async_create(conn->iotable,
+                                     conn, async_error_callback, &dummy);
 }
 
 lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
@@ -389,7 +390,7 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
                                              lcb_connstart_opts_t options)
 {
     lcb_connection_result_t result;
-    lcb_io_opt_t io = conn->io;
+    lcb_iotable *io = conn->iotable;
 
     /** Basic sanity checking */
     lcb_assert(conn->state == LCB_CONNSTATE_UNINIT);
@@ -429,10 +430,9 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
     }
 
     conn->ioconn->ai = conn->ioconn->root_ai;
-
-    if (io->version == 0) {
+    if (IOT_IS_EVENT(io)) {
         if (!conn->evinfo.ptr) {
-            conn->evinfo.ptr = io->v.v0.create_event(io);
+            conn->evinfo.ptr = IOT_V0EV(io).create(io->p);
         }
         result = v0_connect(conn, options & LCB_CONNSTART_NOCB, 0);
 
@@ -456,22 +456,21 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
 
 void lcb_connection_close(lcb_connection_t conn)
 {
-    lcb_io_opt_t io;
-
+    lcb_iotable *io;
     conn->state = LCB_CONNSTATE_UNINIT;
     destroy_connstart(conn);
-    if (conn->io == NULL) {
+    if (conn->iotable == NULL) {
         lcb_assert(conn->sockfd < 0 && conn->sockptr == NULL);
         return;
     }
 
-    io = conn->io;
-    if (io->version == 0) {
+    io = conn->iotable;
+    if (IOT_IS_EVENT(io)) {
         if (conn->sockfd != INVALID_SOCKET) {
             if (conn->evinfo.ptr) {
-                io->v.v0.delete_event(io, conn->sockfd, conn->evinfo.ptr);
+                IOT_V0EV(io).cancel(io->p, conn->sockfd, conn->evinfo.ptr);
             }
-            io->v.v0.close(io, conn->sockfd);
+            IOT_V0IO(io).close(io->p, conn->sockfd);
             conn->sockfd = INVALID_SOCKET;
         }
 
@@ -480,7 +479,7 @@ void lcb_connection_close(lcb_connection_t conn)
         if (conn->sockptr) {
             conn->sockptr->closed = 1;
             conn->sockptr->lcbconn = NULL;
-            io->v.v1.close_socket(io, conn->sockptr);
+            io->u_io.completion.close(io->p, conn->sockptr);
             conn->sockptr = NULL;
         }
     }
@@ -491,6 +490,9 @@ void lcb_connection_close(lcb_connection_t conn)
 
     if (conn->output) {
         ringbuffer_reset(conn->output);
+    }
+    if (conn->as_err) {
+        lcb_async_cancel(conn->as_err);
     }
 }
 
@@ -536,13 +538,18 @@ void lcb_connection_cleanup(lcb_connection_t conn)
         conn->output = NULL;
     }
 
+    if (conn->as_err) {
+        lcb_async_destroy(NULL, conn->as_err);
+        conn->as_err = NULL;
+    }
+
     free(conn->cur_host_);
     conn->cur_host_ = NULL;
 
     lcb_connection_close(conn);
 
     if (conn->evinfo.ptr) {
-        conn->io->v.v0.destroy_event(conn->io, conn->evinfo.ptr);
+        IOT_V0EV(conn->iotable).destroy(conn->iotable->p, conn->evinfo.ptr);
         conn->evinfo.ptr = NULL;
     }
 
@@ -582,14 +589,24 @@ lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn)
 }
 
 
+static void async_error_trigger(lcb_timer_t t, lcb_t i, const void *arg)
+{
+    lcb_connection_t conn = (lcb_connection_t )arg;
+    conn->completion.error(conn->sockptr);
+    (void)t; (void)i;
+}
+
 lcb_error_t lcb_connection_init(lcb_connection_t conn,
-                                struct lcb_io_opt_st *io,
+                                lcb_iotable *iotable,
                                 lcb_settings *settings)
 {
-    conn->io = io;
+    conn->iotable = iotable;
     conn->settings = settings;
     conn->sockfd = INVALID_SOCKET;
     conn->state = LCB_CONNSTATE_UNINIT;
+    conn->as_err = lcb_timer_create_simple(iotable, conn, 0, async_error_trigger);
+    lcb_async_cancel(conn->as_err);
+
 
     if (LCB_SUCCESS != lcb_connection_reset_buffers(conn)) {
         lcb_connection_cleanup(conn);
@@ -628,7 +645,7 @@ void lcb_connuse_ex(struct lcb_io_use_st *use,
                     void *udata,
                     lcb_event_handler_cb v0_handler,
                     lcb_io_read_cb v1_read,
-                    lcb_io_write_cb v1_write,
+                    lcb_ioC_write2_callback v1_write,
                     lcb_io_error_cb v1_error)
 {
     lcb_assert(udata != NULL);
@@ -672,13 +689,13 @@ void lcb_connection_transfer_socket(lcb_connection_t from,
 
     lcb_assert(to->state == LCB_CONNSTATE_UNINIT);
     lcb_assert(to->ioconn == NULL && from->ioconn == NULL);
-
-    if (from->io->version == 0 && from->evinfo.active) {
-        from->io->v.v0.delete_event(from->io, from->sockfd, from->evinfo.ptr);
+    if (IOT_IS_EVENT(from->iotable) && from->evinfo.active) {
+        IOT_V0EV(from->iotable).cancel(from->iotable->p,
+                                       from->sockfd, from->evinfo.ptr);
         from->evinfo.active = 0;
     }
 
-    to->io = from->io;
+    to->iotable = from->iotable;
     to->settings = from->settings;
 
     to->evinfo.ptr = from->evinfo.ptr; from->evinfo.ptr = NULL;

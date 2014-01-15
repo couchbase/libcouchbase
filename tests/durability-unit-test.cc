@@ -755,7 +755,7 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     for (int ii = 1; ii < mock->getNumNodes(); ii++) {
         mock->hiccupNodes(1000, 0);
     }
-    lcb_timer_t tm = lcb_timer_create_simple(handle.getIo(),
+    lcb_timer_t tm = lcb_timer_create_simple(handle.getLcb()->settings.io,
                                              NULL, 500000, fo_callback);
 
     struct cb_cookie cookie = { 0, 0 };

@@ -197,9 +197,8 @@ extern "C" {
                  * The pointer to function. Useful when adding
                  * -rdynamic isn't acceptable solution
                  */
-                lcb_error_t (*create)(int version,
-                                      lcb_io_opt_t *io,
-                                      void *cookie);
+                lcb_io_create_fn create;
+
                 /** A cookie passed directly down to the underlying io ops */
                 void *cookie;
             } v2;

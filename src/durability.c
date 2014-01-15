@@ -517,7 +517,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     hrtime_t now = gethrtime();
     lcb_durability_set_t *dset;
     lcb_size_t ii;
-    lcb_io_opt_t io = instance->settings.io;
+    lcb_iotable *io = instance->settings.io;
 
     if (!ncmds) {
         return LCB_EINVAL;
@@ -542,7 +542,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
 
     /* set our timeouts now */
     dset->us_timeout = (lcb_uint32_t)(now / 1000) + DSET_OPTFLD(dset, timeout);
-    dset->timer = io->v.v0.create_timer(io);
+    dset->timer = io->timer.create(io->p);
     dset->cookie = cookie;
     dset->nentries = ncmds;
     dset->nremaining = ncmds;
@@ -617,9 +617,9 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
     lcb_t instance = dset->instance;
 
     if (dset->timer) {
-        lcb_io_opt_t io = instance->settings.io;
-        io->v.v0.delete_timer(io, dset->timer);
-        io->v.v0.destroy_timer(io, dset->timer);
+        lcb_iotable *io = instance->settings.io;
+        io->timer.cancel(io->p, dset->timer);
+        io->timer.destroy(io->p, dset->timer);
         dset->timer = NULL;
     }
 
@@ -695,12 +695,12 @@ static void timer_schedule(lcb_durability_set_t *dset,
                            unsigned long delay,
                            unsigned int state)
 {
-    lcb_io_opt_t io = dset->instance->settings.io;
+    lcb_iotable* io = dset->instance->settings.io;
     dset->next_state = state;
     if (!delay) {
         delay = 1;
     }
 
-    io->v.v0.delete_timer(io, dset->timer);
-    io->v.v0.update_timer(io, dset->timer, delay, dset, timer_callback);
+    io->timer.cancel(io->p, dset->timer);
+    io->timer.schedule(io->p, dset->timer, delay, dset, timer_callback);
 }

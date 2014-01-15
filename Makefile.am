@@ -196,6 +196,8 @@ libcouchbase_la_SOURCES = \
                         src/http_parse.c \
                         src/instance.c \
                         src/internal.h \
+                        src/iotable.c \
+                        src/iotable.h \
                         src/lcbio.h \
                         src/list.c \
                         src/list.h \

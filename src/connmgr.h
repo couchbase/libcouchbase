@@ -100,7 +100,7 @@ typedef struct connmgr_hostent_st {
 typedef struct connmgr_t {
     genhash_t* ht;
     lcb_settings *settings;
-    lcb_io_opt_t io;
+    lcb_iotable *io;
 
     /** Timeout for an idle connection */
     lcb_uint32_t idle_timeout;
@@ -117,7 +117,7 @@ typedef struct connmgr_t {
  * Create a socket pool controlled by the given settings and IO structure
  */
 LCB_INTERNAL_API
-connmgr_t* connmgr_create(lcb_settings *settings, lcb_io_opt_t io);
+connmgr_t* connmgr_create(lcb_settings *settings, lcb_iotable *io);
 
 /**
  * Free the socket pool

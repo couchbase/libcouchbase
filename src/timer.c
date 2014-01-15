@@ -25,7 +25,7 @@
 static void destroy_timer(lcb_timer_t timer)
 {
     if (timer->event) {
-        timer->io->v.v0.destroy_timer(timer->io, timer->event);
+        timer->io->timer.destroy(timer->io->p, timer->event);
     }
     memset(timer, 0xff, sizeof(*timer));
     free(timer);
@@ -85,12 +85,12 @@ lcb_timer_t lcb_timer_create(lcb_t instance,
 }
 
 LCB_INTERNAL_API
-lcb_async_t lcb_async_create(lcb_io_opt_t io,
+lcb_async_t lcb_async_create(lcb_iotable *iotable,
                              const void *command_cookie,
                              lcb_timer_callback callback,
                              lcb_error_t *error)
 {
-    return lcb_timer_create2(io,
+    return lcb_timer_create2(iotable,
                              command_cookie, 0,
                              LCB_TIMER_STANDALONE,
                              callback,
@@ -99,14 +99,14 @@ lcb_async_t lcb_async_create(lcb_io_opt_t io,
 }
 
 LCB_INTERNAL_API
-lcb_timer_t lcb_timer_create_simple(lcb_io_opt_t io,
+lcb_timer_t lcb_timer_create_simple(lcb_iotable *iotable,
                                     const void *cookie,
                                     lcb_uint32_t usec,
                                     lcb_timer_callback callback)
 {
     lcb_error_t err;
     lcb_timer_t ret;
-    ret = lcb_timer_create2(io,
+    ret = lcb_timer_create2(iotable,
                             cookie,
                             usec,
                             LCB_TIMER_STANDALONE, callback, NULL, &err);
@@ -117,7 +117,7 @@ lcb_timer_t lcb_timer_create_simple(lcb_io_opt_t io,
 }
 
 LCB_INTERNAL_API
-lcb_timer_t lcb_timer_create2(lcb_io_opt_t io,
+lcb_timer_t lcb_timer_create2(lcb_iotable *io,
                               const void *cookie,
                               lcb_uint32_t usec,
                               lcb_timer_options options,
@@ -145,7 +145,7 @@ lcb_timer_t lcb_timer_create2(lcb_io_opt_t io,
     tmr->callback = callback;
     tmr->cookie = cookie;
     tmr->options = options;
-    tmr->event = io->v.v0.create_timer(io);
+    tmr->event = io->timer.create(io->p);
 
     if (tmr->event == NULL) {
         free(tmr);
@@ -195,7 +195,7 @@ void lcb_timer_disarm(lcb_timer_t timer)
     }
 
     timer->state &= ~LCB_TIMER_S_ARMED;
-    timer->io->v.v0.delete_timer(timer->io, timer->event);
+    timer->io->timer.cancel(timer->io->p, timer->event);
 }
 
 LCB_INTERNAL_API
@@ -206,10 +206,7 @@ void lcb_timer_rearm(lcb_timer_t timer, lcb_uint32_t usec)
     }
 
     timer->usec_ = usec;
-    timer->io->v.v0.update_timer(timer->io,
-                                 timer->event,
-                                 usec,
-                                 timer,
-                                 timer_callback);
+    timer->io->timer.schedule(timer->io->p, timer->event,
+                              usec, timer, timer_callback);
     timer->state |= LCB_TIMER_S_ARMED;
 }

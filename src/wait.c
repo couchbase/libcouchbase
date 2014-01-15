@@ -66,8 +66,7 @@ lcb_error_t lcb_wait(lcb_t instance)
                                 instance->settings.operation_timeout);
             }
         }
-
-        instance->settings.io->v.v0.run_event_loop(instance->settings.io);
+        instance->settings.io->loop.start(instance->settings.io->p);
     }
 
     instance->wait = 0;
@@ -88,7 +87,7 @@ LIBCOUCHBASE_API
 void lcb_breakout(lcb_t instance)
 {
     if (instance->wait) {
-        instance->settings.io->v.v0.stop_event_loop(instance->settings.io);
+        instance->settings.io->loop.stop(instance->settings.io->p);
         instance->wait = 0;
     }
 }

@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include "iotable.h"
 
 /**
  * This file contains utility functions which don't have another place
@@ -152,37 +153,38 @@ void lcb_sockconn_errinfo(int connerr,
  *
  * This function will 'advance' the current addrinfo structure, as well.
  */
-lcb_socket_t lcb_gai2sock(lcb_io_opt_t io, struct addrinfo **ai, int *connerr)
+lcb_socket_t lcb_gai2sock(lcb_iotable* io, struct addrinfo **ai, int *connerr)
 {
     lcb_socket_t ret = INVALID_SOCKET;
     *connerr = 0;
 
     for (; *ai; *ai = (*ai)->ai_next) {
-
-        ret = io->v.v0.socket(io, (*ai)->ai_family,
-                              (*ai)->ai_socktype,
-                              (*ai)->ai_protocol);
+        ret = IOT_V0IO(io).socket0(IOT_ARG(io),
+                                   (*ai)->ai_family,
+                                   (*ai)->ai_socktype,
+                                   (*ai)->ai_protocol);
 
         if (ret != INVALID_SOCKET) {
             return ret;
         } else {
-            *connerr = io->v.v0.error;
+            *connerr = IOT_ERRNO(io);
         }
     }
 
     return ret;
 }
 
-lcb_sockdata_t *lcb_gai2sock_v1(lcb_io_opt_t io, struct addrinfo **ai, int *connerr)
+lcb_sockdata_t *lcb_gai2sock_v1(lcb_iotable *io, struct addrinfo **ai, int *connerr)
 {
     lcb_sockdata_t *ret = NULL;
     for (; *ai; *ai = (*ai)->ai_next) {
-        ret = io->v.v1.create_socket(io, (*ai)->ai_family, (*ai)->ai_socktype,
-                                     (*ai)->ai_protocol);
+        ret = IOT_V1(io).socket(IOT_ARG(io),
+                                (*ai)->ai_family, (*ai)->ai_socktype,
+                                (*ai)->ai_protocol);
         if (ret) {
             return ret;
         } else {
-            *connerr = io->v.v1.error;
+            *connerr = IOT_ERRNO(io);
         }
     }
     return ret;

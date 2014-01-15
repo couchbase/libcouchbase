@@ -278,7 +278,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     const char *passwd = NULL;
     const char *bucket = NULL;
 
-    struct lcb_io_opt_st *io = NULL;
+    struct lcb_io_opt_st *io_priv = NULL;
     struct lcb_create_st options_container;
     struct lcb_create_st2 *e_options = &options_container.v.v2;
 
@@ -297,7 +297,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     user = get_nonempty_string(e_options->user);
     passwd = get_nonempty_string(e_options->passwd);
     bucket = get_nonempty_string(e_options->bucket);
-    io = e_options->io;
+    io_priv = e_options->io;
     type = e_options->type;
 
     if (type == LCB_TYPE_CLUSTER && user == NULL && passwd == NULL) {
@@ -324,20 +324,21 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->type = type;
     obj->compat.type = (lcb_compat_t)0xdead;
 
-    if (io == NULL) {
+    if (io_priv == NULL) {
         lcb_io_opt_t ops;
         if ((err = lcb_create_io_ops(&ops, NULL)) != LCB_SUCCESS) {
             /* You can't initialize the library without a io-handler! */
             free(obj);
             return err;
         }
-        io = ops;
-        io->v.v0.need_cleanup = 1;
+        io_priv = ops;
+        io_priv->v.v0.need_cleanup = 1;
     }
 
     settings = &obj->settings;
     lcb_default_settings(settings);
-    settings->io = io;
+    lcb_init_io_table(&obj->iotable, io_priv);
+    settings->io = &obj->iotable;
     obj->syncmode = LCB_ASYNCHRONOUS;
     settings->bucket = strdup(bucket);
     settings->logger = lcb_init_console_logger();
@@ -355,7 +356,7 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     lcb_initialize_packet_handlers(obj);
 
-    obj->memd_sockpool = connmgr_create(settings, io);
+    obj->memd_sockpool = connmgr_create(settings, &obj->iotable);
     obj->memd_sockpool->max_idle = 1;
     obj->memd_sockpool->idle_timeout = 10000000;
 
@@ -476,8 +477,8 @@ void lcb_destroy(lcb_t instance)
 
     connmgr_destroy(instance->memd_sockpool);
 
-    if (settings->io && settings->io->v.v0.need_cleanup) {
-        lcb_destroy_io_ops(settings->io);
+    if (settings->io && settings->io->p->v.v0.need_cleanup) {
+        lcb_destroy_io_ops(settings->io->p);
     }
 
     ringbuffer_destruct(&instance->purged_buf);

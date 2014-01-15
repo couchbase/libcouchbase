@@ -610,7 +610,7 @@ extern "C" {
         rv->error = error;
         store_cnt++;
         if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
-            instance->settings.io->v.v0.stop_event_loop(instance->settings.io);
+            IOT_STOP(instance->settings.io);
         }
     }
 
@@ -623,7 +623,7 @@ extern "C" {
         memcpy((void *)rv->bytes, resp->v.v0.bytes, resp->v.v0.nbytes);
         rv->nbytes = resp->v.v0.nbytes;
         if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
-            instance->settings.io->v.v0.stop_event_loop(instance->settings.io);
+            IOT_STOP(instance->settings.io);
         }
     }
 

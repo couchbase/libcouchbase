@@ -23,14 +23,15 @@
 #define LCBIO_H
 
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/iops.h>
 #include "ringbuffer.h"
 #include "config.h"
 #include "hostlist.h"
+#include "iotable.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
 
     typedef enum {
         LCB_CONN_CONNECTED = 1,
@@ -104,7 +105,7 @@ extern "C" {
     struct lcb_connection_st {
         ringbuffer_t *input;
         ringbuffer_t *output;
-        struct lcb_io_opt_st *io;
+        lcb_iotable *iotable;
         struct lcb_settings_st *settings;
 
         /** Host we're connected to: PRIVATE */
@@ -144,7 +145,7 @@ extern "C" {
          */
         struct {
             lcb_io_read_cb read;
-            lcb_io_write_cb write;
+            lcb_ioC_write2_callback write;
             lcb_io_error_cb error;
         } completion;
 
@@ -159,9 +160,12 @@ extern "C" {
         /** This is the v1 socket */
         lcb_sockdata_t *sockptr;
 
+        lcb_timer_t as_err;
+
         lcb_connstate_t state;
 
         short want;
+
 
         /** We should really typedef this... */
         /**
@@ -189,7 +193,7 @@ extern "C" {
      * Initialize the connection object's buffers, usually allocating them
      */
     lcb_error_t lcb_connection_init(lcb_connection_t conn,
-                                    struct lcb_io_opt_st *io,
+                                    lcb_iotable *iotable,
                                     struct lcb_settings_st *settings);
 
 
@@ -251,30 +255,30 @@ extern "C" {
 
     lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
                                                  ringbuffer_t **buf,
-                                                 lcb_io_read_cb callback,
-                                                 lcb_io_error_cb error_callback);
+                                                 lcb_io_read_cb callback);
 
     lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
                                                   ringbuffer_t **buf,
-                                                  lcb_io_write_cb callback,
-                                                  lcb_io_error_cb error_callback);
+                                                  lcb_ioC_write2_callback callback);
 
     void lcb_sockrw_v1_onread_common(lcb_sockdata_t *sock,
                                      ringbuffer_t **dst,
                                      lcb_ssize_t nr);
 
     void lcb_sockrw_v1_onwrite_common(lcb_sockdata_t *sock,
-                                      lcb_io_writebuf_t *wbuf,
+                                      void *wbuf,
                                       ringbuffer_t **dst);
 
     unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
-                                         lcb_io_writebuf_t *wbuf,
+                                         void *wbuf,
                                          void **datap);
 
-    lcb_socket_t lcb_gai2sock(lcb_io_opt_t io, struct addrinfo **curr_ai,
+    lcb_socket_t lcb_gai2sock(struct lcb_iotable_st *io,
+                              struct addrinfo **curr_ai,
                               int *connerr);
 
-    lcb_sockdata_t *lcb_gai2sock_v1(lcb_io_opt_t io, struct addrinfo **ai,
+    lcb_sockdata_t *lcb_gai2sock_v1(struct lcb_iotable_st *io,
+                                    struct addrinfo **ai,
                                     int *connerr);
 
     int lcb_getaddrinfo(struct lcb_settings_st *settings,
@@ -318,7 +322,7 @@ extern "C" {
             struct {
                 /** Event handler for V0 I/O */
                 lcb_event_handler_cb v0_handler;
-                lcb_io_write_cb v1_write;
+                lcb_ioC_write2_callback v1_write;
                 lcb_io_read_cb v1_read;
                 lcb_io_error_cb v1_error;
             } ex;
@@ -347,7 +351,7 @@ extern "C" {
                         void *data,
                         lcb_event_handler_cb v0_handler,
                         lcb_io_read_cb v1_read_cb,
-                        lcb_io_write_cb v1_write_cb,
+                        lcb_ioC_write2_callback v1_write_cb,
                         lcb_io_error_cb v1_error_cb);
 
     /**
