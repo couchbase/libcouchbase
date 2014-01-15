@@ -458,7 +458,7 @@ public:
                                     lcb_strerror(instance, error));
                         }
                     }
-                    if (ii % config.waitTime == 0 || config.dgm) {
+                    if ( (config.waitTime && ii % config.waitTime == 0) || config.dgm) {
                         lcb_wait(instance);
                         if (error == LCB_ETMPFAIL) {
                             usleep(1000);// wait in increments of 1 second
