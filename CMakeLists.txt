@@ -34,114 +34,76 @@ SET(COUCHBASE_MOCK_DLSERVER
     http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock)
 project(libcouchbase)
 
-# Enable/Disable tests
 OPTION(LCB_NO_TESTS "Disable building of tests" OFF)
-
-# Enable/Disable tools
 OPTION(LCB_NO_TOOLS "Disable building of additional tools" OFF)
-
-# library version
-IF(EXISTS ${CMAKE_SOURCE_DIR}/VERSION)
-    FILE(STRINGS ${CMAKE_SOURCE_DIR}/VERSION lines)
-    FOREACH(line ${lines})
-        STRING(REGEX REPLACE "^([^=]+)=(.*)" "\\1" varname "${line}")
-        STRING(REGEX REPLACE "^([^=]+)=(.*)" "\\2" varvalue "${line}")
-        SET(LCB_${varname} "${varvalue}")
-    ENDFOREACH()
-ENDIF()
-
-IF (NOT LCB_VERSION)
-    SET(LCB_VERSION "2.1.3")
-ENDIF()
+OPTION(LCB_NO_PLUGINS "Disable the building of IO plugins for external libs" OFF)
+OPTION(LCB_MAINTAINER_MODE "Enables maintainer mode" OFF)
 
 ### END CONFIGURABLES ###
+INCLUDE(cmake/Modules/GetLibcouchbaseFlags.cmake)
+INCLUDE(cmake/Modules/FindCouchbaseLibevent.cmake)
+INCLUDE(cmake/Modules/FindCouchbaseLibev.cmake)
+INCLUDE(cmake/Modules/FindCouchbaseLibuv.cmake)
+INCLUDE(cmake/Modules/GetPlatformCCInfo.cmake)
+INCLUDE(cmake/Modules/GetVersionInfo.cmake)
+INCLUDE(cmake/Modules/GenerateConfigDotH.cmake)
+INCLUDE(CheckIncludeFiles)
+
+SET(CPACK_PACKAGE_VERSION_MAJOR "${LCB_VERSION_MAJOR}")
+SET(CPACK_PACKAGE_VERSION_MINOR "${LCB_VERSION_MINOR}")
+SET(CPACK_PACKAGE_VERSION_PATCH "${LCB_VERSION_PATCH}")
+SET(CPACK_SOURCE_GENERATOR "TBZ2")
+SET(CPACK_SOURCE_PACKAGE_FILE_NAME "libcouchbase-${LCB_VERSION}")
+SET(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}/;build*;.git/;~$;${CPACK_SOURCE_IGNORE_FILES}")
+
+INCLUDE(CPack)
+
+SET(CHANGESET ${LCB_VERSION_CHANGESET})
+CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/include/libcouchbase/configuration.h.in
+    ${CMAKE_SOURCE_DIR}/include/libcouchbase/configuration.h
+    @ONLY)
+UNSET(CHANGESET)
+CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/win32/dllversion.rc.in
+    ${CMAKE_BINARY_DIR}/dllversion.rc)
 
 SET(NT_REQUIRED_VERSION 0x0501)
 
-SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-    ${PROJECT_BINARY_DIR}/bin)
-SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-    ${PROJECT_BINARY_DIR}/bin)
-SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-    ${PROJECT_BINARY_DIR}/lib)
+ADD_DEFINITIONS(-DLIBCOUCHBASE_INTERNAL=1)
+ADD_DEFINITIONS(-DCBSASL_STATIC=1)
 
-# Figure out how we're building!
-IF(MSVC)
-    IF(CMAKE_CL_64)
-        SET(lcb_arch_string "amd64")
-    ELSE()
-        SET(lcb_arch_string "x86")
-    ENDIF(CMAKE_CL_64)
-
-    IF(MSVC80)
-        SET(lcb_cc_string "vs8")
-    ELSEIF(MSVC90)
-        SET(lcb_cc_string "vc9")
-    ELSEIF(MSVC_VERSION EQUAL 1600)
-        SET(lcb_cc_string "vc10")
-    ELSEIF(MSVC_VERSION EQUAL 1700)
-        SET(lcb_cc_string "vc11")
-    ENDIF()
+SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+SET(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+IF(WIN32)
+    SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 ELSE()
-    SET(lcb_arch_string "x86") #mingw
-    SET(lcb_cc_string "mingw")
+    SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 ENDIF()
 
+SET(lcb_package_name "libcouchbase-${LCB_VERSION}_${LCB_ARCH_STRING}_${LCB_CC_STRING}")
+IF(WIN32)
+    SET(CMAKE_INSTALL_PREFIX ${PROJECT_BINARY_DIR}/${lcb_package_name})
+ENDIF()
 
-SET(lcb_package_name "libcouchbase-${LCB_VERSION}_${lcb_arch_string}_${lcb_cc_string}")
-SET(LCB_INSTDIR ${PROJECT_BINARY_DIR}/${lcb_package_name})
 SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
 
 IF(WIN32)
+    ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
     SET(lcb_plat_includes "${SOURCE_ROOT}/win32")
-    SET(lcb_plat_io
-        plugins/io/iocp/iocp_iops.c
-        plugins/io/iocp/iocp_loop.c
-        plugins/io/iocp/iocp_timer.c
-        plugins/io/iocp/iocp_util.c)
-    SET(lcb_plat_libs ws2_32.lib)
+    SET(lcb_plat_libs couchbase_iocp ws2_32.lib)
 ELSE()
     ADD_DEFINITIONS(-DLCB_LIBDIR="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
     SET(lcb_plat_libs dl m pthread)
+    SET(lcb_plat_includes "${SOURCE_ROOT}/cmake")
 ENDIF()
 
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
                            ${SOURCE_ROOT}/contrib
                            ${SOURCE_ROOT}/contrib/cbsasl/include
-                           ${SOURCE_ROOT}/plugins/io/iocp
                            ${SOURCE_ROOT}/src
                            ${lcb_plat_includes}
                            ${SOURCE_ROOT})
-
-IF(${MSVC})
-    ADD_DEFINITIONS(-D_CRT_SECURE_NO_WARNINGS)
-    # Don't warn about "deprecated POSIX names"
-    ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
-
-    # Need this for VS 2012 for googletest and C++
-    IF(MSVC_VERSION EQUAL 1700 OR MSVC_VERSION GREATER 1700)
-        ADD_DEFINITIONS(-D_VARIADIC_MAX=10)
-    ENDIF()
-
-    SET(COMMON_FLAGS "/W3 /EHsc /FD /MP /Z7")
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /TC")
-    # put debug info into release build and revert /OPT defaults after
-    # /DEBUG so that it won't degrade performance and size
-    # http://msdn.microsoft.com/en-us/library/xe4t6fc1(v=vs.80).aspx
-    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
-    SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG /OPT:REF /OPT:ICF")
-ELSE()
-    SET(COMMON_FLAGS "-Wall")
-    IF(WIN32)
-        SET(COMMON_FLAGS "${COMMON_FLAGS} -gstabs")
-    ELSE()
-        SET(COMMON_FLAGS "${COMMON_FLAGS} -ggdb3 -fPIC")
-    ENDIF()
-ENDIF()
-
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMMON_FLAGS}")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
-
 
 # These files are bundled in a static library.
 # They export no symbols of their own and may
@@ -149,7 +111,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMMON_FLAGS}")
 IF(WIN32)
     SET(lcb_getopt_src win32/getopt.c)
 ENDIF()
-ADD_LIBRARY(lcbutils STATIC
+ADD_LIBRARY(couchbase_utils STATIC
             contrib/libvbucket/cJSON.c
             src/base64.c
             src/gethrtime.c
@@ -165,17 +127,17 @@ ADD_LIBRARY(lcbutils STATIC
             src/url_encoding.c
             ${lcb_getopt_src})
 
+SET_TARGET_PROPERTIES(couchbase_utils
+    PROPERTIES
+        POSITION_INDEPENDENT_CODE
+            TRUE
+        COMPILE_FLAGS "${LCB_CORE_CFLAGS}")
+
+ADD_SUBDIRECTORY(contrib/libvbucket)
+ADD_SUBDIRECTORY(contrib/cbsasl)
+
 ADD_LIBRARY(couchbase SHARED
-            contrib/cbsasl/src/client.c
-            contrib/cbsasl/src/common.c
-            contrib/cbsasl/src/cram-md5/hmac.c
-            contrib/cbsasl/src/cram-md5/md5.c
             contrib/http_parser/http_parser.c
-            contrib/libvbucket/crc32.c
-            contrib/libvbucket/ketama.c
-            contrib/libvbucket/rfc1321/md5c.c
-            contrib/libvbucket/vbucket.c
-            ${lcb_plat_io}
             plugins/io/select/plugin-select.c
             src/arithmetic.c
             src/bconf_provider.c
@@ -215,198 +177,61 @@ ADD_LIBRARY(couchbase SHARED
             src/timer.c
             src/timings.c
             src/touch.c
+            ${CMAKE_BINARY_DIR}/dllversion.rc
             src/utilities.c
             src/verbosity.c
             src/wait.c)
 
-SET_TARGET_PROPERTIES(couchbase PROPERTIES
-                      COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
-SET_TARGET_PROPERTIES(lcbutils PROPERTIES
-                      COMPILE_FLAGS -DLIBCOUCHBASE_INTERNAL=1)
+SET_TARGET_PROPERTIES(couchbase
+    PROPERTIES
+        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
+        PREFIX "lib"
+        IMPORT_PREFIX "lib"
+        VERSION "2"
+        SOVERSION "2.0.13")
 
-ADD_DEFINITIONS(-DBUILDING_CBSASL=1)
-ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
-TARGET_LINK_LIBRARIES(couchbase ${lcb_plat_libs} lcbutils)
+TARGET_LINK_LIBRARIES(couchbase
+    couchbase_select couchbase_utils vbucket cbsasl ${lcb_plat_libs})
 
 
 IF(NOT LCB_NO_TESTS)
-    ADD_EXECUTABLE(check-all
-            tests/check-all.cc
-            tools/commandlineparser.cc
-            tests/procutil.c)
-
-
-    SET_PROPERTY(TARGET check-all
-        APPEND PROPERTY INCLUDE_DIRECTORIES
-            ${lcb_plat_includes}
-            ${SOURCE_ROOT}/tools)
-    TARGET_LINK_LIBRARIES(check-all lcbutils couchbase)
-
-    ADD_EXECUTABLE(smoke-test
-            tests/smoke-test.c
-            tests/server.c
-            tests/timeout.c
-            tests/procutil.c)
-
-    ADD_EXECUTABLE(unit-tests
-            tests/arithmetic-unit-test.cc
-            tests/base64-unit-test.cc
-            tests/behavior-unit-tests.cc
-            tests/ccbc_103.cc
-            tests/cluster-unit-tests.cc
-            tests/configcache-unit-test.cc
-            tests/confmon-unit-test.cc
-            tests/durability-unit-test.cc
-            tests/get-unit-test.cc
-            tests/getopt-unit-tests.cc
-            tests/hashset-unit-test.cc
-            tests/host-unit-test.cc
-            tests/hostname-unit-test.cc
-            tests/http-tests.cc
-            tests/iops-unit-test.cc
-            tests/lock-unit-test.cc
-            tests/logger-unit-test.cc
-            tests/memcached-compat-unit-test.cc
-            tests/mock-unit-test.cc
-            tests/mutate-unit-test.cc
-            tests/packet-unit-test.cc
-            tests/regression-unit-test.cc
-            tests/ringbuffer-unit-test.cc
-            tests/serverops-unit-test.cc
-            tests/strerror-unit-test.cc
-            tests/string-unit-test.cc
-            tests/syncmode-unit-tests.cc
-            tests/timer-unit-test.cc
-            tests/url_encoding-tests.cc
-
-    # Support files
-            tests/procutil.c
-            tests/server.c
-            tests/timeout.c
-            tests/testutil.cc
-            tests/unit_tests.cc
-            tests/mock-environment.cc)
-
-
-    # Normally defined by config.h
-    SET_PROPERTY(
-        TARGET unit-tests smoke-test
-        APPEND PROPERTY COMPILE_DEFINITIONS
-            HAVE_COUCHBASEMOCK
-            BUILD_PLUGINS
-    )
-
-    IF(CMAKE_COMPILER_IS_GNUCXX)
-        SET_TARGET_PROPERTIES(unit-tests smoke-test
-            PROPERTIES
-            COMPILE_FLAGS "-Wno-sign-compare -Wno-missing-field-initializers")
-    ENDIF(CMAKE_COMPILER_IS_GNUCXX)
-
-    IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/${GTEST_ARCHIVE})
-        file(DOWNLOAD ${GTEST_DLSERVER}/${GTEST_ARCHIVE}
-            ${CMAKE_SOURCE_DIR}/${GTEST_ARCHIVE})
-
-        execute_process(COMMAND cmake -E tar zxf ${GTEST_ARCHIVE}
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-    ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/${GTEST_ARCHIVE})
-
-    IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
-        file(DOWNLOAD ${COUCHBASE_MOCK_DLSERVER}/${COUCHBASE_MOCK_VERSION}
-            ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
-    ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
-
-    execute_process(COMMAND
-        cmake -E tar zxf ${GTEST_ARCHIVE}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-    # We're a library using the shared CRT. Don't use the static one
-    SET(gtest_force_shared_crt ON CACHE BOOL
-        "Use shared (DLL) runtime library event Google Test built as static library")
-
-    ADD_SUBDIRECTORY(gtest-1.7.0 gtest-1.7.0)
-
-    INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-    TARGET_LINK_LIBRARIES(unit-tests couchbase lcbutils gtest)
-    TARGET_LINK_LIBRARIES(smoke-test couchbase lcbutils)
-    enable_testing()
-    ADD_TEST(tests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unit-tests)
+    ENABLE_TESTING()
+    ADD_SUBDIRECTORY(tests tests)
 ENDIF(NOT LCB_NO_TESTS)
 
-
 IF(NOT LCB_NO_TOOLS)
-    ADD_EXECUTABLE(cbc
-                tools/cbc-util.cc
-                tools/cbc.cc
-                tools/commandlineparser.cc
-                tools/configuration.cc)
-
-    TARGET_LINK_LIBRARIES(cbc couchbase lcbutils)
-
-    ADD_EXECUTABLE(cbc-pillowfight
-                tools/cbc-pillowfight.cc
-                tools/commandlineparser.cc)
-
-    TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase lcbutils)
-
-    INSTALL(TARGETS cbc cbc-pillowfight RUNTIME
-            DESTINATION ${LCB_INSTDIR}/bin)
+    ADD_SUBDIRECTORY(tools tools)
 ENDIF(NOT LCB_NO_TOOLS)
 
-IF(LIBUV_ROOT)
-    ADD_LIBRARY(couchbase_libuv SHARED plugins/io/libuv/plugin-libuv.c)
-    SET_TARGET_PROPERTIES(couchbase_libuv PROPERTIES PREFIX "lib")
-    SET_TARGET_PROPERTIES(couchbase_libuv PROPERTIES IMPORT_PREFIX "lib")
-
-    SET_PROPERTY(TARGET couchbase_libuv
-        APPEND PROPERTY COMPILE_DEFINITIONS LIBCOUCHBASE_INTERNAL)
-    IF(WIN32)
-        FIND_LIBRARY(LIBUV_RELEASE
-            NAMES uv libuv
-            PATHS ${LIBUV_ROOT}/Release ${LIBUV_ROOT}/Release/lib)
-        FIND_LIBRARY(LIBUV_DEBUG
-            NAMES uv libuv
-            PATHS ${LIBUV_ROOT}/Debug ${LIBUV_ROOT}/Debug/lib)
-        SET(LIBUV_LIBRARIES optimized ${LIBUV_RELEASE} debug ${LIBUV_DEBUG})
-    ELSE()
-        FIND_LIBRARY(LIBUV NAMES uv libuv PATHS ${LIBUV_ROOT})
-        SET(LIBUV_LIBRARIES ${LIBUV})
-    ENDIF()
-
-    SET_PROPERTY(TARGET couchbase_libuv
-        APPEND PROPERTY INCLUDE_DIRECTORIES ${LIBUV_ROOT}/include)
-    TARGET_LINK_LIBRARIES(couchbase_libuv couchbase ${LIBUV_LIBRARIES})
-    INSTALL(TARGETS couchbase_libuv
-            RUNTIME DESTINATION bin
-            LIBRARY DESTINATION bin)
-ENDIF(LIBUV_ROOT)
-
-
-IF(UNIX)
-    ADD_LIBRARY(couchbase_libevent SHARED plugins/io/libevent/plugin-libevent.c)
-    ADD_LIBRARY(couchbase_libev SHARED plugins/io/libev/plugin-libev.c)
-    SET_PROPERTY(TARGET couchbase_libevent
-        APPEND PROPERTY COMPILE_DEFINITIONS LIBCOUCHBASE_INTERNAL)
-    SET_PROPERTY(TARGET couchbase_libev
-        APPEND PROPERTY COMPILE_DEFINITIONS LIBCOUCHBASE_INTERNAL)
-    TARGET_LINK_LIBRARIES(couchbase_libevent event)
-    TARGET_LINK_LIBRARIES(couchbase_libev ev)
+IF(NOT LCB_NO_PLUGINS)
+    ADD_SUBDIRECTORY(plugins/io/libuv)
+    ADD_SUBDIRECTORY(plugins/io/libevent)
+    ADD_SUBDIRECTORY(plugins/io/libev)
+ELSEIF(NOT (LIBEV_FOUND OR LIBEVENT_FOUND))
+    MESSAGE(FATAL_ERROR "Must have libevent or libev")
 ENDIF()
 
+IF(LCB_MAINTAINER_MODE)
+    IF(NOT (HAVE_LIBEV AND HAVE_LIBEVENT AND HAVE_LIBUV))
+        MESSAGE(FATAL_ERROR "Maintainer mode requires all plugins to be present")
+    ENDIF()
+ENDIF()
 
+ADD_SUBDIRECTORY(plugins/io/select)
+ADD_SUBDIRECTORY(plugins/io/iocp)
 
 INSTALL(TARGETS couchbase
-        RUNTIME DESTINATION ${LCB_INSTDIR}/bin
-        LIBRARY DESTINATION ${LCB_INSTDIR}/lib
-        ARCHIVE DESTINATION ${LCB_INSTDIR}/lib)
-
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib)
 
 INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/assert.h
               include/libcouchbase/behavior.h
               include/libcouchbase/callbacks.h
+              include/libcouchbase/configuration.h
               include/libcouchbase/cntl.h
               include/libcouchbase/compat.h
               include/libcouchbase/couchbase.h
@@ -414,13 +239,8 @@ INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/error.h
               include/libcouchbase/http.h
               include/libcouchbase/sanitycheck.h
+              include/libcouchbase/sysdefs.h
               include/libcouchbase/timings.h
               include/libcouchbase/types.h
               include/libcouchbase/visibility.h
-              plugins/io/libuv/libuv_io_opts.h
-              win32/libcouchbase/configuration.h
-            DESTINATION ${LCB_INSTDIR}/include/libcouchbase)
-INSTALL(FILES plugins/io/libuv/plugin-libuv.c
-              plugins/io/libuv/plugin-internal.h
-            DESTINATION
-                ${LCB_INSTDIR}/include/libcouchbase/plugins/io/libuv)
+            DESTINATION include/libcouchbase)
