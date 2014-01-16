@@ -850,6 +850,10 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     const char *argv[] = { "--replicas", "0", "--nodes", "10", NULL };
     MockEnvironment *mock = MockEnvironment::createSpecial(argv);
 
+    // We need to disable CCCP for this test to receive "Push" style
+    // configuration.
+    mock->setCCCP(false);
+
     mock->createConnection(hw, instance);
     lcb_connect(instance);
     lcb_wait(instance);
@@ -870,8 +874,8 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     /* Determine what server should receive that operation */
     int vb, idx;
     vbucket_map(instance->vbucket_config, key.c_str(), key.size(), &vb, &idx);
-
     mock->hiccupNodes(5000, 1);
+
     struct fo_context_st ctx = { mock, idx };
 
     lcb_timer_t timer = lcb_timer_create_simple(instance->settings.io,
@@ -883,7 +887,6 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     err = lcb_store(instance, &rv, 1, storecmds);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    /* Execute event loop to reconfigure client and execute operation */
     config_cnt = 0;
     store_cnt = 0;
     lcb_wait(instance);
@@ -924,8 +927,11 @@ TEST_F(MockUnitTest, testSaslMechs)
 
     lcb_t instance;
     struct lcb_create_st crParams;
-    MockEnvironment *protectedEnv = MockEnvironment::createSpecial(argv);
+    MockEnvironment *protectedEnv =
+            MockEnvironment::createSpecial(argv, "protected");
     protectedEnv->makeConnectParams(crParams, NULL);
+    protectedEnv->setCCCP(false);
+
     crParams.v.v0.user = "protected";
     crParams.v.v0.passwd = "secret";
     crParams.v.v0.bucket = "protected";

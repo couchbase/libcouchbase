@@ -32,10 +32,11 @@ MockEnvironment *MockEnvironment::getInstance(void)
     return instance;
 }
 
-MockEnvironment *MockEnvironment::createSpecial(const char **argv)
+MockEnvironment *MockEnvironment::createSpecial(const char **argv, std::string bucketName)
 {
     MockEnvironment *env = new MockEnvironment();
     env->argv = argv;
+    env->bucketName = bucketName;
     env->SetUp();
     return env;
 }
@@ -81,6 +82,57 @@ void MockEnvironment::hiccupNodes(int msecs, int offset)
     getResponse();
 }
 
+
+std::vector<int> MockEnvironment::getMcPorts(std::string bucket)
+{
+    MockCommand cmd(MockCommand::GET_MCPORTS);
+    if (!bucket.empty()) {
+        cmd.set("bucket", bucket);
+    }
+
+    sendCommand(cmd);
+    MockResponse resp = getResponse();
+    EXPECT_TRUE(resp.isOk());
+
+    const cJSON *payload = cJSON_GetObjectItem((cJSON *)resp.getRawResponse(),
+                                               "payload");
+    int nports = cJSON_GetArraySize((cJSON *)payload);
+
+    std::vector<int> ret;
+
+    for (int ii = 0; ii < nports; ii++) {
+        cJSON *ixobj = cJSON_GetArrayItem((cJSON *)payload, ii);
+        ret.push_back(ixobj->valueint);
+    }
+    return ret;
+}
+
+void MockEnvironment::setCCCP(bool enabled, std::string bucket,
+                              const std::vector<int>* nodes)
+{
+    MockCommand cmd(MockCommand::SET_CCCP);
+    cmd.set("enabled", enabled);
+
+    if (!bucket.empty()) {
+        cmd.set("bucket", bucket);
+    }
+
+    if (nodes != NULL) {
+        const std::vector<int>& v = *nodes;
+        cJSON *array = cJSON_CreateArray();
+
+        for (std::vector<int>::const_iterator ii = v.begin(); ii != v.end(); ii++) {
+            cJSON *num = cJSON_CreateNumber(*ii);
+            cJSON_AddItemToArray(array, num);
+        }
+
+        cmd.set("servers", array);
+    }
+
+    sendCommand(cmd);
+    getResponse();
+}
+
 void MockEnvironment::sendCommand(MockCommand &cmd)
 {
     std::string s = cmd.encode();
@@ -100,7 +152,12 @@ MockResponse MockEnvironment::getResponse()
         }
         rbuf += c;
     } while (true);
-    return MockResponse(rbuf);
+
+    MockResponse ret = MockResponse(rbuf);
+    if (!ret.isOk()) {
+        std::cout << ret;
+    }
+    return ret;
 }
 
 void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
@@ -282,8 +339,21 @@ void MockEnvironment::SetUp()
     if (realCluster) {
         bootstrapRealCluster();
     } else {
-        const char *name = getenv("LCB_TEST_BUCKET");
-        serverParams = ServerParams(http, name, name, NULL);
+        if (bucketName.empty()) {
+            const char *name = getenv("LCB_TEST_BUCKET");
+            if (name != NULL) {
+                bucketName = name;
+            } else {
+                bucketName = "default";
+            }
+        }
+        serverParams = ServerParams(http,
+                                    bucketName.c_str(),
+                                    bucketName.c_str(),
+                                    NULL);
+
+        std::vector<int> mcPorts = getMcPorts(bucketName);
+        serverParams.setMcPorts(mcPorts);
         numNodes = 10;
 
         // Mock 0.6
@@ -291,6 +361,7 @@ void MockEnvironment::SetUp()
         featureRegistry.insert("views");
         featureRegistry.insert("replica_read");
         featureRegistry.insert("lock");
+        setCCCP(true, bucketName);
     }
 }
 
@@ -349,13 +420,18 @@ void MockCommand::set(const std::string &field, int value)
 {
     cJSON *num = cJSON_CreateNumber(value);
     assert(num);
-    cJSON_AddItemToObject(payload, field.c_str(), num);
+    set(field, num);
 }
 
 void MockCommand::set(const std::string field, bool value)
 {
     cJSON *v = value ? cJSON_CreateTrue() : cJSON_CreateFalse();
-    cJSON_AddItemToObject(payload, field.c_str(), v);
+    set(field, v);
+}
+
+void MockCommand::set(const std::string& field, cJSON *value)
+{
+    cJSON_AddItemToObject(payload, field.c_str(), value);
 }
 
 std::string MockCommand::encode()
@@ -429,6 +505,22 @@ MockResponse::~MockResponse()
     if (jresp) {
         cJSON_Delete(jresp);
     }
+}
+
+std::ostream& operator<<(std::ostream& os, const MockResponse& resp)
+{
+    for (cJSON *js = resp.jresp->child; js; js = js->next) {
+        if (js->type == cJSON_String) {
+            os << js->string << "\t";
+            os << js->valuestring;
+        } else {
+            char *s = cJSON_Print(js);
+            os << s;
+            free(s);
+        }
+        os << std::endl;
+    }
+    return os;
 }
 
 bool MockResponse::isOk()

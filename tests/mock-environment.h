@@ -71,7 +71,9 @@ class MockCommand
     X(UNCACHE) \
     X(ENDURE) \
     X(PURGE) \
-    X(KEYINFO)
+    X(KEYINFO) \
+    X(GET_MCPORTS) \
+    X(SET_CCCP)
 
 public:
     enum Code {
@@ -97,6 +99,7 @@ public:
     void set(const std::string &, const std::string &);
     void set(const std::string &, int);
     void set(const std::string, bool);
+    void set(const std::string&, cJSON *);
     virtual ~MockCommand();
 
     // Encodes the command in a form suitable for sending over the network
@@ -176,9 +179,9 @@ public:
         return jresp;
     }
 
-
 protected:
     cJSON *jresp;
+    friend std::ostream& operator<<(std::ostream&, const MockResponse&);
 };
 
 class MockEnvironment : public ::testing::Environment
@@ -194,7 +197,8 @@ public:
     virtual void TearDown();
 
     static MockEnvironment *getInstance(void);
-    static MockEnvironment *createSpecial(const char **argv);
+    static MockEnvironment *createSpecial(const char **argv,
+                                          std::string name = "default");
     static void destroySpecial(MockEnvironment *mock) {
         delete mock;
     }
@@ -249,6 +253,25 @@ public:
      * @param bucket the name of the bucket
      */
     void respawnNode(int index, std::string bucket = "default");
+
+
+    /**
+     * Retrieve the memcached listening ports for a given bucket
+     * @param bucket the bucket for which to retrieve memcached port into
+     * @return a vector of ports to use.
+     */
+    std::vector<int> getMcPorts(std::string bucket = "default");
+
+    /**
+     * Enable CCCP on the mock cluster
+     * @param bucket the bucket on which to enable CCCP
+     * @param nodes a list of by-index nodes on which to enable CCCP. If NULL
+     * then all nodes are enabled
+     * @param bucket the bucket on which to
+     */
+    void setCCCP(bool enabled,
+                 std::string bucket = "",
+                 const std::vector<int>* nodes = NULL);
 
     /**
      * Create a connection to the mock/real server.
@@ -318,6 +341,7 @@ protected:
     const char *http;
     lcb_io_opt_st *iops;
     std::set<std::string> featureRegistry;
+    std::string bucketName;
     const char **argv;
 };
 
