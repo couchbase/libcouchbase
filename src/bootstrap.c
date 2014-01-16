@@ -11,12 +11,17 @@ struct lcb_bootstrap_st {
 #define LOGARGS(instance, lvl) \
     &instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
 
+static void async_step_callback(clconfig_info *info, clconfig_listener *listener);
+
 static void config_callback(clconfig_info *info, clconfig_listener *listener)
 {
     struct lcb_bootstrap_st *bootstrap = (struct lcb_bootstrap_st *)listener;
     lcb_t instance = bootstrap->parent;
+
     instance->last_error = LCB_SUCCESS;
     bootstrap->active = 0;
+    /** Ensure we're not called directly twice again */
+    listener->callback = async_step_callback;
 
     if (bootstrap->timer) {
         lcb_timer_destroy(instance, bootstrap->timer);
@@ -49,8 +54,7 @@ static void initial_timeout(lcb_timer_t timer, lcb_t instance,
     (void)timer;
 }
 
-static void async_refresh(lcb_timer_t timer, lcb_t unused,
-                          const void *cookie)
+static void async_refresh(lcb_timer_t timer, lcb_t unused, const void *cookie)
 {
     /** Get the best configuration and run stuff.. */
     struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)cookie;
@@ -63,8 +67,7 @@ static void async_refresh(lcb_timer_t timer, lcb_t unused,
     (void)timer;
 }
 
-static void async_step_callback(clconfig_info *info,
-                                clconfig_listener *listener)
+static void async_step_callback(clconfig_info *info, clconfig_listener *listener)
 {
     lcb_error_t err;
     struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
