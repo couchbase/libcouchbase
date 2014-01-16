@@ -76,6 +76,7 @@ pkginclude_HEADERS = \
                      include/libcouchbase/durability.h \
                      include/libcouchbase/error.h \
                      include/libcouchbase/http.h \
+                     include/libcouchbase/sysdefs.h \
                      include/libcouchbase/sanitycheck.h \
                      include/libcouchbase/timings.h \
                      include/libcouchbase/types.h \
