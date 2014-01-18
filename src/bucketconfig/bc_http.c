@@ -131,6 +131,7 @@ static void read_common(http_provider *http)
 
     lcb_log(LOGARGS(http, TRACE), "Received %d bytes on HTTP stream",
             conn->input->nbytes);
+    lcb_connection_delay_timer(conn);
 
     lcb_string_rbappend(&http->stream.chunk, conn->input, 1);
 
