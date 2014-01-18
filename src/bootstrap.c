@@ -13,6 +13,12 @@ struct lcb_bootstrap_st {
 
 static void async_step_callback(clconfig_info *info, clconfig_listener *listener);
 
+/**
+ * This function is where the configuration actually takes place. We ensure
+ * in other functions that this is only ever called directly from an event
+ * loop stack frame (or one of the small mini functions here) so that we
+ * don't accidentally end up destroying resources underneath us.
+ */
 static void config_callback(clconfig_info *info, clconfig_listener *listener)
 {
     struct lcb_bootstrap_st *bootstrap = (struct lcb_bootstrap_st *)listener;
@@ -33,6 +39,12 @@ static void config_callback(clconfig_info *info, clconfig_listener *listener)
     lcb_maybe_breakout(instance);
 }
 
+
+/**
+ * This it the initial bootstrap timeout handler. This timeout pins down the
+ * instance. It is only scheduled during the initial bootstrap and is only
+ * triggered if the initial bootstrap fails to configure in time.
+ */
 static void initial_timeout(lcb_timer_t timer, lcb_t instance,
                             const void *unused)
 {
@@ -54,6 +66,9 @@ static void initial_timeout(lcb_timer_t timer, lcb_t instance,
     (void)timer;
 }
 
+/**
+ * Proxy async call to config_callback
+ */
 static void async_refresh(lcb_timer_t timer, lcb_t unused, const void *cookie)
 {
     /** Get the best configuration and run stuff.. */
@@ -67,10 +82,19 @@ static void async_refresh(lcb_timer_t timer, lcb_t unused, const void *cookie)
     (void)timer;
 }
 
+/**
+ * set_next listener callback which schedules an async call to our config
+ * callback.
+ */
 static void async_step_callback(clconfig_info *info, clconfig_listener *listener)
 {
     lcb_error_t err;
     struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
+
+    if (bs->timer) {
+        lcb_log(LOGARGS(bs->parent, DEBUG), "Timer already present..");
+        return;
+    }
 
     lcb_log(LOGARGS(bs->parent, INFO), "Got async step callback..");
 
