@@ -99,6 +99,14 @@ public:
         EXPECT_EQ(len - 24, nw);
     }
 
+    void writeGenericHeader(unsigned long bodylen, ringbuffer_t *rb) {
+        protocol_binary_response_header hdr;
+        memset(&hdr, 0, sizeof(hdr));
+        hdr.response.opcode = 0;
+        hdr.response.bodylen = htonl(bodylen);
+        ringbuffer_write(rb, hdr.bytes, sizeof(hdr.bytes));
+    }
+
     ~Pkt() {
         clear();
     }
@@ -203,6 +211,25 @@ TEST_F(Packet, testParsePartial)
     ASSERT_EQ(1, rv);
     ASSERT_EQ(1, pi.is_allocated);
     lcb_packet_release_ringbuffer(&pi, &rb);
+
+    // Test where we're missing just one byte
+    ringbuffer_reset(&rb);
+    pkt.writeGenericHeader(10, &rb);
+    rv = lcb_packet_read_ringbuffer(&pi, &rb);
+    ASSERT_EQ(0, rv);
+    for (int ii = 0; ii < 9; ii++) {
+        char c = 'O';
+        ringbuffer_write(&rb, &c, 1);
+        rv = lcb_packet_read_ringbuffer(&pi, &rb);
+        ASSERT_EQ(0, rv);
+    }
+    char tmp = 'O';
+    ringbuffer_write(&rb, &tmp, 1);
+    rv = lcb_packet_read_ringbuffer(&pi, &rb);
+    ASSERT_EQ(1, rv);
+    lcb_packet_release_ringbuffer(&pi, &rb);
+
+
     ringbuffer_destruct(&rb);
 }
 

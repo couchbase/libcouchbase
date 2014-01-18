@@ -21,7 +21,7 @@ int lcb_packet_read_ringbuffer(packet_info *info, ringbuffer_t *src)
         return 1;
     }
 
-    if (src->nbytes < PACKET_NBODY(info)) {
+    if (src->nbytes < PACKET_NBODY(info) + sizeof(info->res.bytes)) {
         return 0;
     }
 
