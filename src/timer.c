@@ -23,9 +23,15 @@ enum {
 };
 
 
+#define TMR_IS_PERIODIC(timer) ((timer)->options & LCB_TIMER_PERIODIC)
+#define TMR_IS_DESTROYED(timer) ((timer)->state & TIMER_S_DESTROYED)
+#define TMR_IS_STANDALONE(timer) ((timer)->options & LCB_TIMER_STANDALONE)
+
 static void destroy_timer(lcb_timer_t timer)
 {
-    timer->io->v.v0.destroy_timer(timer->io, timer->event);
+    if (timer->event) {
+        timer->io->v.v0.destroy_timer(timer->io, timer->event);
+    }
     free(timer);
 }
 
@@ -35,25 +41,27 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
     lcb_t instance = timer->instance;
     timer->state = TIMER_S_ENTERED;
 
+    if (!TMR_IS_PERIODIC(timer)) {
+        timer->io->v.v0.destroy_timer(timer->io, timer->event);
+        timer->event = NULL;
+    }
+
     timer->callback(timer, instance, timer->cookie);
 
-    if (! (timer->options & LCB_TIMER_PERIODIC)) {
-        timer->io->v.v0.delete_timer(timer->io, timer->event);
-
-    } else if (! (timer->state & TIMER_S_DESTROYED)) {
+    if (TMR_IS_DESTROYED(timer) == 0 && TMR_IS_PERIODIC(timer) != 0) {
         timer->io->v.v0.update_timer(timer->io, timer->event,
                                      timer->usec, timer, timer_callback);
         return;
     }
 
-    if ( (timer->options & LCB_TIMER_STANDALONE) == 0) {
+    if (! TMR_IS_STANDALONE(timer)) {
         if (hashset_is_member(instance->timers, timer)) {
             hashset_remove(instance->timers, timer);
         }
         lcb_maybe_breakout(instance);
     }
 
-    if (timer->state & TIMER_S_DESTROYED) {
+    if (TMR_IS_DESTROYED(timer)) {
         destroy_timer(timer);
     } else {
         timer->state = 0;
@@ -172,7 +180,9 @@ lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer)
         hashset_remove(instance->timers, timer);
     }
 
-    io->v.v0.delete_timer(io, timer->event);
+    if (timer->event) {
+        io->v.v0.delete_timer(io, timer->event);
+    }
 
     if (timer->state & TIMER_S_ENTERED) {
         timer->state |= TIMER_S_DESTROYED;
