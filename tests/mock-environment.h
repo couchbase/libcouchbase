@@ -170,8 +170,9 @@ protected:
 class MockResponse
 {
 public:
-    MockResponse(const std::string &resp);
-    virtual ~MockResponse();
+    MockResponse() : jresp(NULL) {}
+    ~MockResponse();
+    void assign(const std::string& s);
 
     bool isOk();
 
@@ -182,6 +183,8 @@ public:
 protected:
     cJSON *jresp;
     friend std::ostream& operator<<(std::ostream&, const MockResponse&);
+private:
+    MockResponse(const MockResponse&);
 };
 
 class MockEnvironment : public ::testing::Environment
@@ -309,7 +312,8 @@ public:
     }
 
     void sendCommand(MockCommand &cmd);
-    MockResponse getResponse();
+    void getResponse(MockResponse &resp);
+    void getResponse() { MockResponse tmp; getResponse(tmp); }
 
     bool hasFeature(const char *feature) {
         return featureRegistry.find(feature) != featureRegistry.end();

@@ -91,7 +91,8 @@ std::vector<int> MockEnvironment::getMcPorts(std::string bucket)
     }
 
     sendCommand(cmd);
-    MockResponse resp = getResponse();
+    MockResponse resp;
+    getResponse(resp);
     EXPECT_TRUE(resp.isOk());
 
     const cJSON *payload = cJSON_GetObjectItem((cJSON *)resp.getRawResponse(),
@@ -140,7 +141,7 @@ void MockEnvironment::sendCommand(MockCommand &cmd)
     assert(nw == s.size());
 }
 
-MockResponse MockEnvironment::getResponse()
+void MockEnvironment::getResponse(MockResponse& ret)
 {
     std::string rbuf;
     do {
@@ -153,11 +154,10 @@ MockResponse MockEnvironment::getResponse()
         rbuf += c;
     } while (true);
 
-    MockResponse ret = MockResponse(rbuf);
+    ret.assign(rbuf);
     if (!ret.isOk()) {
         std::cout << ret;
     }
-    return ret;
 }
 
 void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
@@ -506,7 +506,7 @@ void MockBucketCommand::finalizePayload()
     set("bucket", bucket);
 }
 
-MockResponse::MockResponse(const std::string &resp)
+void MockResponse::assign(const std::string &resp)
 {
     jresp = cJSON_Parse(resp.c_str());
     assert(jresp);

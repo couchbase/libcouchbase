@@ -48,7 +48,9 @@ protected:
     // A mock "Transaction"
     void doMockTxn(MockCommand &cmd) {
         MockEnvironment::getInstance()->sendCommand(cmd);
-        ASSERT_TRUE(MockEnvironment::getInstance()->getResponse().isOk());
+        MockResponse tmp;
+        MockEnvironment::getInstance()->getResponse(tmp);
+        ASSERT_TRUE(tmp.isOk());
     }
 };
 
