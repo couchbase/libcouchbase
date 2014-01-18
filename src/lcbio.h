@@ -73,6 +73,9 @@ extern "C" {
      */
     typedef void (*lcb_io_generic_cb)(struct lcb_connection_st*);
 
+    /** v0 handler */
+    typedef void (*lcb_event_handler_cb)(lcb_socket_t, short, void *);
+
     struct lcb_timeout_info_st {
         /** The timer to use */
 
@@ -123,7 +126,7 @@ extern "C" {
          */
         struct {
             /** The handler callback */
-            void (*handler)(lcb_socket_t, short, void *);
+            lcb_event_handler_cb handler;
             /** The event from create_event */
             void *ptr;
             /** This is 0 if delete_event has been called */
@@ -339,6 +342,98 @@ extern "C" {
      * @return true on failure, false on error.
      */
     int lcb_get_nameinfo(lcb_connection_t conn, struct lcb_nibufs_st *nistrs);
+
+
+
+    struct lcb_io_use_st {
+        /** Set this to 1 if using the "Easy I/O" mode */
+        int easy;
+
+        /** User data to be associated with the connection */
+        void *udata;
+
+        /** Timeout handler */
+        lcb_connection_handler timeout;
+
+        lcb_uint32_t usec;
+
+        union {
+            struct {
+                /** Event handler for V0 I/O */
+                lcb_event_handler_cb v0_handler;
+                lcb_io_write_cb v1_write;
+                lcb_io_read_cb v1_read;
+                lcb_io_error_cb v1_error;
+            } ex;
+            struct {
+                /** Easy handlers */
+                lcb_io_generic_cb read;
+                lcb_io_generic_cb err;
+            } easy;
+        } u;
+    };
+
+    /**
+     * These two functions take ownership of the specific handlers installed
+     * within the connection object. They are intended to be used as safe ways
+     * to handle a connection properly. They are also required to maintain order
+     * in case one subsystem transfers a connection to another subsystem.
+     */
+
+    void lcb_connection_use(lcb_connection_t conn,
+                            const struct lcb_io_use_st *use);
+
+    /**
+     * Populates an 'io_use' structure for extended I/O callbacks
+     */
+    void lcb_connuse_ex(struct lcb_io_use_st *use,
+                        void *data,
+                        lcb_uint32_t tmo_usec,
+                        lcb_event_handler_cb v0_handler,
+                        lcb_io_read_cb v1_read_cb,
+                        lcb_io_write_cb v1_write_cb,
+                        lcb_io_error_cb v1_error_cb,
+                        lcb_connection_handler tmo_cb);
+
+    /**
+     * Populates an 'io_use' structure for simple I/O callbacks
+     */
+    void lcb_connuse_easy(struct lcb_io_use_st *use,
+                          void *data,
+                          lcb_uint32_t tmo_usec,
+                          lcb_io_generic_cb read_cb,
+                          lcb_io_generic_cb err_cb,
+                          lcb_connection_handler tmo_cb);
+
+    /** Private */
+    void lcb__io_wire_easy(struct lcb_io_use_st *use);
+
+    /**
+     * Initialize an 'empty' connection to with an initialized connection 'from'.
+     * The target connection shall contain the source's socket resources and
+     * structures, and shall be initialized with the callback parameters
+     * specified in 'use'
+     *
+     * The intention of this function is to allow the assignment/transferring
+     * of connections without requiring connections themselves to be pointers
+     * and also to allow for a clean and programmatic way to 'own' an existing
+     * connection.
+     *
+     * @param from the connection to use. The connection must be "clear",
+     * meaning it must not have any pending events on it
+     *
+     * @param to the target connection to be populated. This connection must
+     * be in an uninitialized state (i.e. no pending connect and no pending
+     * I/O).
+     *
+     * @param use the structure containing the relevant callbacks and user
+     * specified data to employ.
+     */
+    void lcb_connection_transfer_socket(lcb_connection_t from,
+                                        lcb_connection_t to,
+                                        const struct lcb_io_use_st *use);
+
+    #define LCB_CONN_DATA(conn) (conn->data)
 
 #ifdef __cplusplus
 }

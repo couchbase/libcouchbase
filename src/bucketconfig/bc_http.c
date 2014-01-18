@@ -382,7 +382,7 @@ static void shutdown_http(clconfig_provider *provider)
 clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
 {
     lcb_error_t status;
-
+    struct lcb_io_use_st use;
     http_provider *http = calloc(1, sizeof(*http));
     lcb_connection_t conn = &http->connection;
     if (!http) {
@@ -411,13 +411,10 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.shutdown = shutdown_http;
     http->base.nodes_updated = refresh_nodes;
     http->base.enabled = 1;
-    http->connection.timeout.usec = parent->settings->config_timeout;
-    conn->easy.error = io_error_handler;
-    conn->easy.read = io_read_handler;
-    conn->on_timeout = timeout_handler;
-    conn->data = http;
 
-    lcb_connection_setup_generic(conn);
+    lcb_connuse_easy(&use, http, parent->settings->config_timeout,
+                     io_read_handler, io_error_handler, timeout_handler);
+    lcb_connection_use(&http->connection, &use);
 
     lcb_string_init(&http->stream.chunk);
     lcb_string_init(&http->stream.header);

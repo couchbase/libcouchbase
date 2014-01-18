@@ -191,13 +191,12 @@ static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf, int statu
 
 static void wire_io(lcb_server_t *server)
 {
-    lcb_connection_t conn = &server->connection;
-    conn->evinfo.handler = v0_handler;
-    conn->completion.read = v1_read;
-    conn->completion.write = v1_write;
-    conn->completion.error = v1_error;
-    conn->on_timeout = server_timeout_handler;
-    conn->data = server;
+    struct lcb_io_use_st use;
+    lcb_connuse_ex(&use,
+                   server, server->instance->settings.operation_timeout,
+                   v0_handler, v1_read, v1_write, v1_error,
+                   server_timeout_handler);
+    lcb_connection_use(&server->connection, &use);
 }
 
 LIBCOUCHBASE_API

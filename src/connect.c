@@ -610,3 +610,114 @@ lcb_error_t lcb_connection_init(lcb_connection_t conn,
 
     return LCB_SUCCESS;
 }
+
+void lcb_connection_use(lcb_connection_t conn, const struct lcb_io_use_st *use)
+{
+    struct lcb_io_use_st use_proxy;
+
+    conn->data = use->udata;
+    conn->timeout.usec = use->usec;
+    conn->on_timeout = use->timeout;
+
+    if (use->easy) {
+        conn->easy.error = use->u.easy.err;
+        conn->easy.read = use->u.easy.read;
+        memset(&use_proxy, 0, sizeof(use_proxy));
+        lcb__io_wire_easy(&use_proxy);
+        use = &use_proxy;
+    }
+
+    conn->completion.error = use->u.ex.v1_error;
+    conn->completion.read = use->u.ex.v1_read;
+    conn->completion.write = use->u.ex.v1_write;
+    conn->evinfo.handler = use->u.ex.v0_handler;
+
+    lcb_assert(conn->completion.error);
+    lcb_assert(conn->completion.read);
+    lcb_assert(conn->completion.write);
+    lcb_assert(conn->evinfo.handler);
+    lcb_assert(conn->on_timeout);
+}
+
+void lcb_connuse_ex(struct lcb_io_use_st *use,
+                    void *udata,
+                    lcb_uint32_t usec,
+                    lcb_event_handler_cb v0_handler,
+                    lcb_io_read_cb v1_read,
+                    lcb_io_write_cb v1_write,
+                    lcb_io_error_cb v1_error,
+                    lcb_connection_handler tmo_cb)
+{
+    lcb_assert(udata != NULL);
+    lcb_assert(v0_handler != NULL);
+    lcb_assert(v1_read != NULL);
+    lcb_assert(v1_write != NULL);
+    lcb_assert(v1_error != NULL);
+    lcb_assert(tmo_cb != NULL);
+
+    memset(use, 0, sizeof(*use));
+    use->udata = udata;
+    use->usec = usec;
+    use->timeout = tmo_cb;
+
+    use->u.ex.v0_handler = v0_handler;
+    use->u.ex.v1_read = v1_read;
+    use->u.ex.v1_write = v1_write;
+    use->u.ex.v1_error = v1_error;
+}
+
+void lcb_connuse_easy(struct lcb_io_use_st *use,
+                      void *data,
+                      lcb_uint32_t tmo_usec,
+                      lcb_io_generic_cb read_cb,
+                      lcb_io_generic_cb err_cb,
+                      lcb_connection_handler tmo_cb)
+{
+    lcb_assert(data != NULL);
+    lcb_assert(read_cb != NULL);
+    lcb_assert(err_cb != NULL);
+    lcb_assert(tmo_cb != NULL);
+
+    use->easy = 1;
+    use->u.easy.read = read_cb;
+    use->u.easy.err = err_cb;
+    use->udata = data;
+    use->timeout = tmo_cb;
+    use->usec = tmo_usec;
+}
+
+
+void lcb_connection_transfer_socket(lcb_connection_t from,
+                                    lcb_connection_t to,
+                                    const struct lcb_io_use_st *use)
+{
+    lcb_assert(from->state == LCB_CONNSTATE_UNINIT);
+
+    if (from->io->version == 0 && from->evinfo.active) {
+        from->io->v.v0.delete_event(from->io, from->sockfd, from->evinfo.ptr);
+        from->evinfo.active = 0;
+    }
+
+    if (to->ai) {
+        freeaddrinfo(to->ai);
+    }
+
+    to->ai = from->ai; from->ai = NULL;
+    to->curr_ai = from->curr_ai; from->curr_ai = NULL;
+
+    to->io = from->io;
+    to->settings = from->settings;
+    to->sockfd = from->sockfd; from->sockfd = INVALID_SOCKET;
+    to->sockptr = from->sockptr; from->sockptr = NULL;
+    to->last_error = from->last_error;
+
+    if (to->sockptr) {
+        to->sockptr->lcbconn = to;
+    }
+
+    memcpy(to->host, from->host, sizeof(from->host));
+    memcpy(to->port, from->port, sizeof(from->port));
+    to->state = from->state; from->state = LCB_CONNSTATE_UNINIT;
+    lcb_connection_use(to, use);
+
+}

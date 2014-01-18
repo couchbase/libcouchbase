@@ -403,6 +403,7 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     cbsasl_error_t saslerr;
     protocol_binary_request_no_extras req;
     struct negotiation_context *ctx = calloc(1, sizeof(*ctx));
+    struct lcb_io_use_st use;
 
     if (ctx == NULL) {
         *err = LCB_CLIENT_ENOMEM;
@@ -461,11 +462,9 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     }
 
     /** Set up the I/O handlers */
-    conn->easy.error = io_error_handler;
-    conn->easy.read = io_read_handler;
-    conn->on_timeout = timeout_handler;
-
-    lcb_connection_setup_generic(conn);
+    lcb_connuse_easy(&use, ctx, conn->timeout.usec,
+                     io_read_handler, io_error_handler, timeout_handler);
+    lcb_connection_use(conn, &use);
 
     lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(conn);

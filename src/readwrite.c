@@ -456,10 +456,12 @@ static void v1_generic_error_handler(lcb_sockdata_t *sd)
     sd->lcbconn->easy.error(sd->lcbconn);
 }
 
-void lcb_connection_setup_generic(lcb_connection_t conn)
+
+void lcb__io_wire_easy(struct lcb_io_use_st *use)
 {
-    conn->evinfo.handler = v0_generic_handler;
-    conn->completion.error = v1_generic_error_handler;
-    conn->completion.read = v1_generic_read_handler;
-    conn->completion.write = v1_generic_write_handler;
+    use->easy = 0;
+    use->u.ex.v0_handler = v0_generic_handler;
+    use->u.ex.v1_read = v1_generic_read_handler;
+    use->u.ex.v1_write = v1_generic_write_handler;
+    use->u.ex.v1_error = v1_generic_error_handler;
 }
