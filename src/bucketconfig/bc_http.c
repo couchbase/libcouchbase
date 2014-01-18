@@ -384,7 +384,6 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     lcb_error_t status;
     struct lcb_io_use_st use;
     http_provider *http = calloc(1, sizeof(*http));
-    lcb_connection_t conn = &http->connection;
     if (!http) {
         return NULL;
     }
