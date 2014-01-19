@@ -343,6 +343,7 @@ protected:
     std::set<std::string> featureRegistry;
     std::string bucketName;
     const char **argv;
+    void clearAndReset();
 };
 
 #define LCB_TEST_REQUIRE_CLUSTER_VERSION(v) \

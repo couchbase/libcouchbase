@@ -293,42 +293,56 @@ extern "C" {
         assert(err == LCB_SUCCESS);
     }
 }
+
+void MockEnvironment::clearAndReset()
+{
+    if (is_using_real_cluster()) {
+        return;
+    }
+
+    for (int ii = 0; ii < getNumNodes(); ii++) {
+        respawnNode(ii, bucketName);
+    }
+
+    std::vector<int> mcPorts = getMcPorts(bucketName);
+    serverParams.setMcPorts(mcPorts);
+    setCCCP(true, bucketName);
+
+    if (this != getInstance()) {
+        return;
+    }
+
+    HandleWrap hw;
+    lcb_t instance;
+    lcb_error_t err;
+
+    createConnection(hw, instance);
+    lcb_set_flush_callback(instance, mock_flush_callback);
+
+    err = lcb_connect(instance);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    err = lcb_wait(instance);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    lcb_flush_cmd_t fcmd;
+    const lcb_flush_cmd_t *fcmd_p = &fcmd;
+    memset(&fcmd, 0, sizeof(fcmd));
+
+    err = lcb_flush(instance, NULL, 1, &fcmd_p);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    err = lcb_wait(instance);
+    ASSERT_EQ(LCB_SUCCESS, err);
+}
+
 void MockEnvironment::SetUp()
 {
     if (mock) {
-        if (is_using_real_cluster()) {
-            return;
-        }
-
-        for (int ii = 0; ii < getNumNodes(); ii++) {
-            respawnNode(ii, "default");
-        }
-
-        HandleWrap hw;
-        lcb_t instance;
-        lcb_error_t err;
-
-        createConnection(hw, instance);
-        lcb_set_flush_callback(instance, mock_flush_callback);
-
-        err = lcb_connect(instance);
-        ASSERT_EQ(LCB_SUCCESS, err);
-
-        err = lcb_wait(instance);
-        ASSERT_EQ(LCB_SUCCESS, err);
-
-        lcb_flush_cmd_t fcmd;
-        const lcb_flush_cmd_t *fcmd_p = &fcmd;
-        memset(&fcmd, 0, sizeof(fcmd));
-
-        err = lcb_flush(instance, NULL, 1, &fcmd_p);
-        ASSERT_EQ(LCB_SUCCESS, err);
-
-        err = lcb_wait(instance);
-        ASSERT_EQ(LCB_SUCCESS, err);
-
-        return;
+        clearAndReset();
     }
+
+    numNodes = 10;
 
     mock = (struct test_server_info *)start_test_server((char **)argv);
     realCluster = is_using_real_cluster() != 0;
@@ -338,31 +352,29 @@ void MockEnvironment::SetUp()
 
     if (realCluster) {
         bootstrapRealCluster();
-    } else {
-        if (bucketName.empty()) {
-            const char *name = getenv("LCB_TEST_BUCKET");
-            if (name != NULL) {
-                bucketName = name;
-            } else {
-                bucketName = "default";
-            }
-        }
-        serverParams = ServerParams(http,
-                                    bucketName.c_str(),
-                                    bucketName.c_str(),
-                                    NULL);
-
-        std::vector<int> mcPorts = getMcPorts(bucketName);
-        serverParams.setMcPorts(mcPorts);
-        numNodes = 10;
-
-        // Mock 0.6
-        featureRegistry.insert("observe");
-        featureRegistry.insert("views");
-        featureRegistry.insert("replica_read");
-        featureRegistry.insert("lock");
-        setCCCP(true, bucketName);
+        return;
     }
+
+    if (bucketName.empty()) {
+        const char *name = getenv("LCB_TEST_BUCKET");
+        if (name != NULL) {
+            bucketName = name;
+        } else {
+            bucketName = "default";
+        }
+    }
+    serverParams = ServerParams(http,
+                                bucketName.c_str(),
+                                bucketName.c_str(),
+                                NULL);
+
+    // Mock 0.6
+    featureRegistry.insert("observe");
+    featureRegistry.insert("views");
+    featureRegistry.insert("replica_read");
+    featureRegistry.insert("lock");
+
+    clearAndReset();
 }
 
 void MockEnvironment::TearDown()
