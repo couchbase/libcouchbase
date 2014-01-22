@@ -144,6 +144,10 @@ void lcb_http_request_finish(lcb_t instance,
                              lcb_http_request_t req,
                              lcb_error_t error)
 {
+    if (error != LCB_SUCCESS && req->reqtype == LCB_HTTP_TYPE_VIEW) {
+        lcb_bootstrap_refresh(instance);
+    }
+
     if ((req->status & LCB_HTREQ_S_CBINVOKED) == 0 && req->on_complete) {
         lcb_http_resp_t resp;
         lcb_setup_lcb_http_resp_t(&resp,
