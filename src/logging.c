@@ -51,7 +51,7 @@ static void verbose_log(struct lcb_logprocs_st *procs,
         now++;
     }
 
-    fprintf(stderr, "%lums ", (now - start_time) / 1000000);
+    fprintf(stderr, "%lums ", (unsigned long)(now - start_time) / 1000000);
 
     fprintf(stderr, "[%s] (%s - L:%d) ",
             level_to_string(severity),
