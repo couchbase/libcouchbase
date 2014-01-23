@@ -237,7 +237,10 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     if (user) {
         settings->username = strdup(user);
+    } else {
+        settings->username = strdup(settings->bucket);
     }
+
     if (passwd) {
         settings->password = strdup(passwd);
     }
