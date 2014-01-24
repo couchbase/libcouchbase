@@ -221,6 +221,7 @@ libcouchbase_la_SOURCES = \
                         src/strerror.c \
                         src/synchandler.c \
                         src/timer.c \
+                        src/timer.h \
                         src/timings.c \
                         src/touch.c \
                         src/trace.h \
