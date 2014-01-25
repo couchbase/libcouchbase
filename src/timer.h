@@ -10,15 +10,30 @@ extern "C" {
 
 typedef enum {
     LCB_TIMER_STANDALONE = 1 << 0,
-    LCB_TIMER_PERIODIC = 1 << 1
+    LCB_TIMER_PERIODIC = 1 << 1,
+    LCB_TIMER_EX = 1 << 2
 } lcb_timer_options;
+
+
+typedef enum {
+    LCB_TIMER_S_ENTERED = 0x01,
+    LCB_TIMER_S_DESTROYED = 0x02,
+    LCB_TIMER_S_ARMED = 0x04
+} lcb_timer_state;
+
 
 
 struct lcb_timer_st {
     /** Interval */
-    lcb_uint32_t usec;
-    int state;
+    lcb_uint32_t usec_;
+
+    /** Internal state of the timer */
+    lcb_timer_state state;
+
+    /** Options for the timer itself. Do not modify */
     lcb_timer_options options;
+
+    /** Handle for the IO Plugin */
     void *event;
 
     /** User data */
@@ -29,6 +44,8 @@ struct lcb_timer_st {
 
     /** Note that 'instance' may be NULL in this case */
     lcb_t instance;
+
+    /** IO instance pointer */
     lcb_io_opt_t io;
 };
 
@@ -76,6 +93,8 @@ lcb_async_t lcb_async_create(lcb_io_opt_t io,
                              lcb_timer_callback callback,
                              lcb_error_t *error);
 
+#define lcb_async_destroy lcb_timer_destroy
+
 /**
  * Create a simple one-shot standalone timer.
  */
@@ -85,7 +104,39 @@ lcb_timer_t lcb_timer_create_simple(lcb_io_opt_t io,
                                     lcb_uint32_t usec,
                                     lcb_timer_callback callback);
 
-#define lcb_async_destroy lcb_timer_destroy
+/**
+ * Rearm the timer to fire within a specified number of microseconds. The timer
+ * must have not already been fired.
+ * The timer may be currently armed, in which case a pending call is delayed
+ * until the new interval is reached.
+ *
+ * @param timer the timer to rearm
+ * @param usec the number of microseconds by which the timer should be
+ * rearmed.
+ */
+LCB_INTERNAL_API
+void lcb_timer_rearm(lcb_timer_t timer, lcb_uint32_t usec);
+
+/**
+ * Disarm the timer so that any pending calls are cancelled. The timer must
+ * then be re-armed via rearmed to be used again.
+ */
+LCB_INTERNAL_API
+void lcb_timer_disarm(lcb_timer_t timer);
+
+/**
+ * Returns true if the timer is armed. Usually you can do this in somehitng like
+ * if (!lcb_timer_armed(timer)) {
+ *     lcb_timer_arm(timer, usec);
+ * }
+ */
+#define lcb_timer_armed(timer) ((timer)->state & LCB_TIMER_S_ARMED)
+
+
+/**
+ * Gets the last interval the timer was scheduled with.
+ */
+#define lcb_timer_last_interval(timer) ((const lcb_uint32_t)(timer)->usec_)
 
 
 #ifdef __cplusplus

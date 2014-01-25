@@ -318,7 +318,9 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
 
         lcb_log(LOGARGS(server, INFO),
                 "Command with cookie=%p timed out from server %s:%s",
-                ct.cookie, server->connection.host, server->connection.port);
+                ct.cookie,
+                server->curhost.host,
+                server->curhost.port);
 
         ringbuffer_consumed(cookies, sizeof(ct));
 
@@ -421,26 +423,28 @@ void lcb_timeout_server(lcb_server_t *server)
 {
     hrtime_t now, min_valid, next_ns = 0;
     lcb_uint32_t next_us;
-    lcb_connection_t conn = &server->connection;
 
+    LOG(server, ERR, "Server timed out");
+
+    lcb_bootstrap_errcount_incr(server->instance);
+
+    /** If we don't even have a valid connection yet, it's obviously too slow */
     if (!server->connection_ready) {
         lcb_failout_server(server, LCB_ETIMEDOUT);
         return;
     }
 
     now = gethrtime();
-    min_valid = now - conn->timeout.usec * 1000;
 
-    if (conn->timeout.last_timeout < conn->timeout.usec) {
-        min_valid += (conn->timeout.last_timeout * 1000);
-    }
+    /** The oldest valid command timestamp */
+    min_valid = now - MCSERVER_TIMEOUT(server) * 1000;
 
     purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns);
     if (next_ns) {
         next_us = next_ns / 1000;
 
     } else {
-        next_us = conn->timeout.usec;
+        next_us = MCSERVER_TIMEOUT(server);
     }
 
     lcb_log(LOGARGS(server, INFO),
@@ -448,8 +452,16 @@ void lcb_timeout_server(lcb_server_t *server)
             server,
             next_us / 1000);
 
-    lcb_connection_cancel_timer(conn);
-    lcb_connection_activate_timer2(conn, next_us);
+    lcb_timer_rearm(server->io_timer, next_us);
+    lcb_maybe_breakout(server->instance);
+}
+
+static void tmo_thunk(lcb_timer_t tm, lcb_t i, const void *cookie)
+{
+    lcb_server_t *server = (lcb_server_t *)cookie;
+    (void)tm;
+    (void)i;
+    lcb_timeout_server(server);
 }
 
 /**
@@ -468,6 +480,10 @@ void lcb_server_destroy(lcb_server_t *server)
 
     if (server->negotiation) {
         lcb_negotiation_destroy(server->negotiation);
+    }
+
+    if (server->io_timer) {
+        lcb_timer_destroy(NULL, server->io_timer);
     }
 
     /* Delete the event structure itself */
@@ -539,13 +555,12 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     }
 
     server->connection.data = server;
-
     server->index = servernum;
     server->authority = strdup(n);
-    strcpy(server->connection.host, n);
-    p = strchr(server->connection.host, ':');
+    strcpy(server->curhost.host, n);
+    p = strchr(server->curhost.host, ':');
     *p = '\0';
-    strcpy(server->connection.port, p + 1);
+    strcpy(server->curhost.port, p + 1);
 
     n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
                                           servernum);
@@ -554,8 +569,11 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
                                            servernum);
     server->rest_api_server = strdup(n);
     server->negotiation = NULL;
+    server->io_timer = lcb_timer_create_simple(server->instance->settings.io,
+                                               server, MCSERVER_TIMEOUT(server),
+                                               tmo_thunk);
+    lcb_timer_disarm(server->io_timer);
 
-    lcb_connection_getaddrinfo(&server->connection, 0);
     return LCB_SUCCESS;
 }
 
@@ -566,6 +584,9 @@ void lcb_server_send_packets(lcb_server_t *server)
             lcb_sockrw_set_want(&server->connection, LCB_RW_EVENT, 0);
             if (!server->inside_handler) {
                 lcb_sockrw_apply_want(&server->connection);
+                if (!lcb_timer_armed(server->io_timer)) {
+                    lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
+                }
             }
 
         } else if (server->connection.state == LCB_CONNSTATE_UNINIT) {

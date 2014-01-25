@@ -16,19 +16,20 @@ typedef struct {
     clconfig_info *config;
     int server_active;
     int disabled;
+    lcb_timer_t timer;
 } cccp_provider;
 
 static void io_error_handler(lcb_connection_t);
 static void io_read_handler(lcb_connection_t);
 static void request_config(cccp_provider *);
 static void socket_connected(lcb_connection_t, lcb_error_t);
-static void socket_timeout(lcb_connection_t, lcb_error_t);
 
 static lcb_error_t mcio_error(cccp_provider *cccp)
 {
     lcb_error_t err;
     char *errinfo;
     struct lcb_io_use_st use;
+    lcb_conn_params cparams;
 
     lcb_connection_t conn = &cccp->connection;
 
@@ -40,17 +41,14 @@ static lcb_error_t mcio_error(cccp_provider *cccp)
         conn->protoctx = NULL;
     }
 
-    conn->on_connect_complete = socket_connected;
-    err = lcb_connection_next_node(conn, cccp->nodes, &errinfo);
-
-    lcb_connuse_easy(&use, cccp,
-                     PROVIDER_SETTING(&cccp->base, config_timeout),
-                     io_read_handler, io_error_handler, socket_timeout);
-
+    cparams.handler = socket_connected;
+    cparams.timeout = PROVIDER_SETTING(&cccp->base, config_timeout);
+    err = lcb_connection_next_node(conn, cccp->nodes, &cparams, &errinfo);
+    lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
     lcb_connection_use(conn, &use);
 
     if (err != LCB_SUCCESS) {
-        lcb_connection_cancel_timer(conn);
+        lcb_timer_disarm(cccp->timer);
         lcb_confmon_provider_failed(&cccp->base, err);
         cccp->server_active = 0;
         return err;
@@ -59,12 +57,13 @@ static lcb_error_t mcio_error(cccp_provider *cccp)
     return LCB_SUCCESS;
 }
 
-static void socket_timeout(lcb_connection_t conn, lcb_error_t err)
+static void socket_timeout(lcb_timer_t tm, lcb_t instance, const void *cookie)
 {
-    cccp_provider *cccp = conn->data;
-    (void)err;
-
+    cccp_provider *cccp = (cccp_provider *)cookie;
     mcio_error(cccp);
+
+    (void)instance;
+    (void)tm;
 }
 
 static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
@@ -77,9 +76,7 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
         mcio_error(cccp);
     } else {
         LOG(cccp, DEBUG, "CCCP SASL negotiation done");
-        lcb_connuse_easy(&use, cccp,
-                         PROVIDER_SETTING(&cccp->base, config_timeout),
-                         io_read_handler, io_error_handler, socket_timeout);
+        lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
         lcb_connection_use(&cccp->connection, &use);
         request_config(cccp);
     }
@@ -104,8 +101,12 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
     if (cccp->base.parent->settings->username || 1) {
         struct negotiation_context *ctx;
 
-        ctx = lcb_negotiation_create(conn, cccp->base.parent->settings,
-                                     nistrs.remote, nistrs.local, &err);
+        ctx = lcb_negotiation_create(conn,
+                                     cccp->base.parent->settings,
+                                     PROVIDER_SETTING(&cccp->base, config_timeout),
+                                     nistrs.remote,
+                                     nistrs.local,
+                                     &err);
         if (!ctx) {
             mcio_error(cccp);
         }
@@ -176,6 +177,8 @@ static lcb_error_t cccp_get(clconfig_provider *pb)
     lcb_error_t err;
     char *errinfo;
     struct lcb_io_use_st use;
+    lcb_conn_params params;
+
     cccp_provider *cccp = (cccp_provider *)pb;
     lcb_connection_t conn = &cccp->connection;
 
@@ -184,16 +187,16 @@ static lcb_error_t cccp_get(clconfig_provider *pb)
         return LCB_BUSY;
     }
 
-    conn->on_connect_complete = socket_connected;
-    err = lcb_connection_cycle_nodes(conn, cccp->nodes, &errinfo);
+    params.handler = socket_connected;
+    params.timeout = PROVIDER_SETTING(pb, config_timeout);
+    err = lcb_connection_cycle_nodes(conn, cccp->nodes, &params, &errinfo);
 
     if (err != LCB_SUCCESS) {
         lcb_confmon_provider_failed(pb, LCB_CONNECT_ERROR);
         return err;
     }
 
-    lcb_connuse_easy(&use, cccp, PROVIDER_SETTING(pb, config_timeout),
-                     io_read_handler, io_error_handler, socket_timeout);
+    lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
     lcb_connection_use(&cccp->connection, &use);
     cccp->server_active = 1;
     return LCB_SUCCESS;
@@ -214,7 +217,7 @@ static lcb_error_t cccp_pause(clconfig_provider *pb)
 
     cccp->server_active = 0;
     lcb_connection_close(&cccp->connection);
-    lcb_connection_cancel_timer(&cccp->connection);
+    lcb_timer_disarm(cccp->timer);
     return LCB_SUCCESS;
 }
 
@@ -236,6 +239,9 @@ static void cccp_cleanup(clconfig_provider *pb)
     }
     if (cccp->nodes) {
         hostlist_destroy(cccp->nodes);
+    }
+    if (cccp->timer) {
+        lcb_timer_destroy(NULL, cccp->timer);
     }
     free(cccp);
 }
@@ -273,6 +279,7 @@ static void io_read_handler(lcb_connection_t conn)
     lcb_string jsonstr;
     lcb_error_t err;
     int rv;
+    const lcb_host_t *curhost;
 
     memset(&pi, 0, sizeof(pi));
 
@@ -317,7 +324,8 @@ static void io_read_handler(lcb_connection_t conn)
         return;
     }
 
-    err = lcb_cccp_update(&cccp->base, conn->host, &jsonstr);
+    curhost = lcb_connection_get_host(&cccp->connection);
+    err = lcb_cccp_update(&cccp->base, curhost->host, &jsonstr);
     lcb_string_release(&jsonstr);
     lcb_packet_release_ringbuffer(&pi, conn->input);
     if (err != LCB_SUCCESS) {
@@ -326,7 +334,6 @@ static void io_read_handler(lcb_connection_t conn)
     } else {
         lcb_sockrw_set_want(conn, 0, 1);
         lcb_sockrw_apply_want(conn);
-        lcb_connection_cancel_timer(conn);
     }
 }
 
@@ -356,6 +363,7 @@ static void request_config(cccp_provider *cccp)
     ringbuffer_write(buf, req.bytes, sizeof(req.bytes));
     lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(conn);
+    lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base, config_timeout));
 }
 
 clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
@@ -370,6 +378,11 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
     cccp->base.nodes_updated = nodes_updated;
     cccp->base.parent = mon;
     cccp->base.enabled = 0;
+    cccp->timer = lcb_timer_create_simple(mon->settings->io,
+                                          cccp,
+                                          mon->settings->config_timeout,
+                                          socket_timeout);
+    lcb_timer_disarm(cccp->timer);
 
     if (!cccp->nodes) {
         free(cccp);

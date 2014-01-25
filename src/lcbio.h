@@ -25,6 +25,7 @@
 #include <libcouchbase/couchbase.h>
 #include "ringbuffer.h"
 #include "config.h"
+#include "hostlist.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -65,6 +66,8 @@ extern "C" {
         LCB_CONNSTART_ASYNCERR = 0x2
     } lcb_connstart_opts_t;
 
+    typedef struct lcb_ioconnect_st * lcb_ioconnect_t;
+
     struct lcb_connection_st;
     typedef void (*lcb_connection_handler)(struct lcb_connection_st *, lcb_error_t);
 
@@ -99,13 +102,13 @@ extern "C" {
     struct lcb_settings_st;
     typedef void (*protoctx_dtor_t)(void*);
     struct lcb_connection_st {
-        struct addrinfo *ai;
-        struct addrinfo *curr_ai;
-
         ringbuffer_t *input;
         ringbuffer_t *output;
         struct lcb_io_opt_st *io;
         struct lcb_settings_st *settings;
+
+        /** Host we're connected to: PRIVATE */
+        lcb_host_t *cur_host_;
 
         /**
          * Data associated with the connection. This is also passed as the
@@ -119,14 +122,7 @@ extern "C" {
         /** Destructor function called to clean up the protoctx pointer */
         protoctx_dtor_t protoctx_dtor;
 
-        /** callback to be invoked when the connection is complete */
-        lcb_connection_handler on_connect_complete;
-
-        /** for generic timeout events */
-        lcb_connection_handler on_timeout;
-
-        /** Timeout information */
-        struct lcb_timeout_info_st timeout;
+        lcb_ioconnect_t ioconn;
 
         /**
          * v0 event based I/O fields
@@ -154,10 +150,6 @@ extern "C" {
             lcb_io_generic_cb read;
         } easy;
 
-        /** Host/Port */
-        char host[NI_MAXHOST + 1];
-        char port[NI_MAXSERV + 1];
-
         /** this is populated with the socket when the connection is done */
         lcb_socket_t sockfd;
 
@@ -180,8 +172,13 @@ extern "C" {
 #else
         int last_error;
 #endif
-
     };
+
+    typedef struct {
+        lcb_connection_handler handler;
+        lcb_uint32_t timeout;
+        lcb_host_t *destination;
+    } lcb_conn_params;
 
     typedef struct lcb_connection_st *lcb_connection_t;
 
@@ -209,6 +206,7 @@ extern "C" {
      *  behavior.
      */
     lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
+                                                 const lcb_conn_params *params,
                                                  lcb_connstart_opts_t options);
 
     /**
@@ -217,46 +215,9 @@ extern "C" {
     void lcb_connection_close(lcb_connection_t conn);
 
     /**
-     * Wrapper around lcb_getaddrinfo
-     */
-    int lcb_connection_getaddrinfo(lcb_connection_t conn, int refresh);
-
-    /**
      * Free any resources allocated by the connection subsystem
      */
     void lcb_connection_cleanup(lcb_connection_t conn);
-
-    /**
-     * Activates the timer. If the timer is already active, this function
-     * does nothing. Otherwise, it schedules a timer to be invoked in
-     * conn->timeout.usec microseconds.
-     *
-     * @param conn a connection object
-     * You may call delete_timer() to cancel the pending timeout
-     */
-    void lcb_connection_activate_timer(lcb_connection_t conn);
-
-    /**
-     * Activates the timer with the specified interval. This interval will
-     * be set in the conn->timeout.last_timeout field which may be used for
-     * re-scheduling.
-     */
-    void lcb_connection_activate_timer2(lcb_connection_t conn,
-                                        lcb_uint32_t interval);
-
-    /**
-     * Unconditionally schedule a timer to be invoked in the interval specified
-     * in the connection's timeout.usecs structure. If a timeout is already
-     * active, it is cleared first; otherwise a new timeout is initialized
-     * @param conn the connection
-     */
-    void lcb_connection_delay_timer(lcb_connection_t conn);
-
-    /**
-     * Cancel any timeout event set by update_timer on the connection
-     */
-    void lcb_connection_cancel_timer(lcb_connection_t conn);
-
 
     /* Read a bit of data */
     lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf);
@@ -324,14 +285,13 @@ extern "C" {
 
     lcb_error_t lcb_connection_next_node(lcb_connection_t conn,
                                          struct hostlist_st *hostlist,
+                                         lcb_conn_params *params,
                                          char **errinfo);
 
     lcb_error_t lcb_connection_cycle_nodes(lcb_connection_t conn,
                                             struct hostlist_st *hostlist,
+                                            lcb_conn_params *params,
                                             char **errinfo);
-
-    int lcb_connection_setup_host(lcb_connection_t conn,
-                                  struct lcb_host_st *host);
 
 
     /**
@@ -358,11 +318,6 @@ extern "C" {
 
         /** User data to be associated with the connection */
         void *udata;
-
-        /** Timeout handler */
-        lcb_connection_handler timeout;
-
-        lcb_uint32_t usec;
 
         union {
             struct {
@@ -395,22 +350,18 @@ extern "C" {
      */
     void lcb_connuse_ex(struct lcb_io_use_st *use,
                         void *data,
-                        lcb_uint32_t tmo_usec,
                         lcb_event_handler_cb v0_handler,
                         lcb_io_read_cb v1_read_cb,
                         lcb_io_write_cb v1_write_cb,
-                        lcb_io_error_cb v1_error_cb,
-                        lcb_connection_handler tmo_cb);
+                        lcb_io_error_cb v1_error_cb);
 
     /**
      * Populates an 'io_use' structure for simple I/O callbacks
      */
     void lcb_connuse_easy(struct lcb_io_use_st *use,
                           void *data,
-                          lcb_uint32_t tmo_usec,
                           lcb_io_generic_cb read_cb,
-                          lcb_io_generic_cb err_cb,
-                          lcb_connection_handler tmo_cb);
+                          lcb_io_generic_cb err_cb);
 
     /** Private */
     void lcb__io_wire_easy(struct lcb_io_use_st *use);
@@ -439,6 +390,8 @@ extern "C" {
     void lcb_connection_transfer_socket(lcb_connection_t from,
                                         lcb_connection_t to,
                                         const struct lcb_io_use_st *use);
+
+    const lcb_host_t * lcb_connection_get_host(const lcb_connection_t);
 
     #define LCB_CONN_DATA(conn) (conn->data)
 

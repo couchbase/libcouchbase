@@ -95,11 +95,14 @@ static void negotiation_cleanup(struct negotiation_context *ctx)
     lcb_sockrw_set_want(conn, 0, 1);
     lcb_sockrw_apply_want(conn);
     memset(&conn->easy, 0, sizeof(conn->easy));
-    conn->on_timeout = NULL;
     conn->evinfo.handler = NULL;
     conn->completion.error = NULL;
     conn->completion.read = NULL;
     conn->completion.write = NULL;
+    if (ctx->timer) {
+        lcb_timer_destroy(NULL, ctx->timer);
+        ctx->timer = NULL;
+    }
 }
 
 static void negotiation_success(struct negotiation_context *ctx)
@@ -137,11 +140,12 @@ static void negotiation_bail(struct negotiation_context *ctx)
 
 
 
-static void timeout_handler(lcb_connection_t conn, lcb_error_t err)
+static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
-    struct negotiation_context *ctx = conn->data;
+    struct negotiation_context *ctx = (struct negotiation_context *)cookie;
     negotiation_set_error_ex(ctx, LCB_ETIMEDOUT, "Negotiation timed out");
-    (void)err;
+    (void)tm;
+    (void)i;
 }
 
 /**
@@ -396,6 +400,7 @@ static void io_error_handler(lcb_connection_t conn)
 
 struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
                                                    lcb_settings *settings,
+                                                   lcb_uint32_t timeout,
                                                    const char *remote,
                                                    const char *local,
                                                    lcb_error_t *err)
@@ -404,6 +409,7 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     protocol_binary_request_no_extras req;
     struct negotiation_context *ctx = calloc(1, sizeof(*ctx));
     struct lcb_io_use_st use;
+    const lcb_host_t *curhost;
 
     if (ctx == NULL) {
         *err = LCB_CLIENT_ENOMEM;
@@ -413,14 +419,16 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     conn->data = ctx;
     ctx->settings = settings;
     ctx->conn = conn;
+    curhost = lcb_connection_get_host(conn);
 
     *err = setup_sasl_params(ctx);
+
     if (*err != LCB_SUCCESS) {
         lcb_negotiation_destroy(ctx);
         return NULL;
     }
 
-    saslerr = cbsasl_client_new("couchbase", conn->host,
+    saslerr = cbsasl_client_new("couchbase", curhost->host,
                                 local, remote,
                                 ctx->sasl_callbacks, 0,
                                 &ctx->sasl);
@@ -429,6 +437,11 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
         lcb_negotiation_destroy(ctx);
         *err = LCB_CLIENT_ENOMEM;
         return NULL;
+    }
+
+    if (timeout) {
+        ctx->timer = lcb_timer_create_simple(conn->io,
+                                             ctx, timeout, timeout_handler);
     }
 
     memset(&req, 0, sizeof(req));
@@ -462,10 +475,8 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     }
 
     /** Set up the I/O handlers */
-    lcb_connuse_easy(&use, ctx, conn->timeout.usec,
-                     io_read_handler, io_error_handler, timeout_handler);
+    lcb_connuse_easy(&use, ctx, io_read_handler, io_error_handler);
     lcb_connection_use(conn, &use);
-
     lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(conn);
     *err = LCB_SUCCESS;
@@ -482,6 +493,10 @@ void lcb_negotiation_destroy(struct negotiation_context *ctx)
 
     if (ctx->mech) {
         free(ctx->mech);
+    }
+
+    if (ctx->timer) {
+        lcb_timer_destroy(NULL, ctx->timer);
     }
 
     free(ctx->errinfo.msg);

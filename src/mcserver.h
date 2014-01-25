@@ -4,6 +4,7 @@
 #include <libcouchbase/couchbase.h>
 #include "cbsasl/cbsasl.h"
 #include "lcbio.h"
+#include "timer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,6 +45,8 @@ struct negotiation_context {
         cbsasl_secret_t secret;
         char buffer[256];
     } u_auth;
+
+    lcb_timer_t timer;
 
     cbsasl_callback_t sasl_callbacks[4];
 };
@@ -86,8 +89,11 @@ typedef struct lcb_server_st {
 
     /* Pointer back to the instance */
     lcb_t instance;
+    lcb_timer_t io_timer;
+
     struct lcb_connection_st connection;
     struct negotiation_context *negotiation;
+    lcb_host_t curhost;
 } lcb_server_t;
 
 
@@ -116,6 +122,7 @@ typedef struct lcb_server_st {
  */
 struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
                                                    struct lcb_settings_st *settings,
+                                                   lcb_uint32_t timeout,
                                                    const char *remote,
                                                    const char *local,
                                                    lcb_error_t *err);
@@ -125,6 +132,8 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
  * This is safe to call even if negotiation_init itself was not called.
  */
 void lcb_negotiation_destroy(struct negotiation_context *ctx);
+
+#define MCSERVER_TIMEOUT(c) (c)->instance->settings.operation_timeout
 
 #ifdef __cplusplus
 }

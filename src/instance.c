@@ -53,13 +53,13 @@ const char *lcb_get_version(lcb_uint32_t *version)
 LIBCOUCHBASE_API
 const char *lcb_get_host(lcb_t instance)
 {
-    return lcb_confmon_get_rest_connection(instance->confmon)->host;
+    return lcb_confmon_get_rest_host(instance->confmon)->host;
 }
 
 LIBCOUCHBASE_API
 const char *lcb_get_port(lcb_t instance)
 {
-    return lcb_confmon_get_rest_connection(instance->confmon)->port;
+    return lcb_confmon_get_rest_host(instance->confmon)->port;
 }
 
 

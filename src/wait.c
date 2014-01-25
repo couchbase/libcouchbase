@@ -62,7 +62,8 @@ lcb_error_t lcb_wait(lcb_t instance)
             lcb_server_t *c = instance->servers + ii;
 
             if (lcb_server_has_pending(c)) {
-                lcb_connection_delay_timer(&c->connection);
+                lcb_timer_rearm(c->io_timer,
+                                instance->settings.operation_timeout);
             }
         }
 

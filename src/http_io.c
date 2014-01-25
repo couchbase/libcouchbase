@@ -16,16 +16,6 @@
  */
 #include "internal.h"
 
-static int request_do_parse(lcb_http_request_t req)
-{
-    int rv = lcb_http_request_do_parse(req);
-
-    if (rv == 0 && req->instance != NULL) {
-        lcb_connection_activate_timer(&req->connection);
-    }
-    return rv;
-}
-
 static void io_read(lcb_connection_t conn)
 {
     lcb_http_request_t req = conn->data;
@@ -34,9 +24,9 @@ static void io_read(lcb_connection_t conn)
     lcb_error_t err = LCB_SUCCESS;
 
     /** Delay the timer */
-    lcb_connection_delay_timer(conn);
+    lcb_timer_rearm(req->io_timer, req->timeout);
 
-    rv = request_do_parse(req);
+    rv = lcb_http_request_do_parse(req);
     if (rv == 0) {
         is_done = 1;
 
@@ -84,10 +74,12 @@ static void io_error(lcb_connection_t conn)
     lcb_http_request_finish(req->instance, req, LCB_NETWORK_ERROR);
 }
 
-static void request_timed_out(lcb_connection_t conn, lcb_error_t err)
+static void request_timed_out(lcb_timer_t tm, lcb_t u, const void *cookie)
 {
-    lcb_http_request_t req = (lcb_http_request_t)conn->data;
-    lcb_http_request_finish(req->instance, req, err);
+    lcb_http_request_t req = (lcb_http_request_t)cookie;
+    lcb_http_request_finish(req->instance, req, LCB_ETIMEDOUT);
+    (void)u;
+    (void)tm;
 }
 
 
@@ -108,23 +100,39 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
 {
     struct lcb_io_use_st use;
     lcb_connection_result_t result;
-    lcb_uint32_t timeout;
+    lcb_conn_params params;
+    lcb_host_t dest;
     lcb_connection_t conn = &req->connection;
-    conn->on_connect_complete = request_connected;
-    conn->on_timeout = request_timed_out;
 
-    timeout = req->reqtype == LCB_HTTP_TYPE_VIEW ?
+    memcpy(dest.host, req->host, req->nhost);
+    dest.host[req->nhost] = '\0';
+
+    memcpy(dest.port, req->port, req->nport);
+    dest.port[req->nport] = '\0';
+
+    params.destination = &dest;
+    params.handler = request_connected;
+    req->timeout = req->reqtype == LCB_HTTP_TYPE_VIEW ?
             req->instance->settings.views_timeout :
             req->instance->settings.http_timeout;
+    params.timeout = req->timeout;
 
-    lcb_connection_getaddrinfo(conn, 0);
+    result = lcb_connection_start(conn, &params,
+                                  LCB_CONNSTART_NOCB|LCB_CONNSTART_ASYNCERR);
 
-    result = lcb_connection_start(conn, 1);
     if (result != LCB_CONN_INPROGRESS) {
         return LCB_CONNECT_ERROR;
     }
+    if (!req->io_timer) {
+        req->io_timer = lcb_timer_create_simple(req->io,
+                                                req,
+                                                params.timeout,
+                                                request_timed_out);
+    } else {
+        lcb_timer_rearm(req->io_timer, req->timeout);
+    }
 
-    lcb_connuse_easy(&use, req, timeout, io_read, io_error, request_timed_out);
+    lcb_connuse_easy(&use, req, io_read, io_error);
     lcb_connection_use(conn, &use);
     return LCB_SUCCESS;
 }

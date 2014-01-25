@@ -329,7 +329,9 @@ extern "C" {
         lcb_io_opt_t io;
 
         struct lcb_connection_st connection;
-
+        lcb_timer_t io_timer;
+        /** IO Timeout */
+        lcb_uint32_t timeout;
     };
 
     lcb_error_t lcb_synchandler_return(lcb_t instance, lcb_error_t retcode);

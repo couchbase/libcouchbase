@@ -81,7 +81,7 @@ static int handle_not_my_vbucket(lcb_server_t *c,
 
         err = lcb_cccp_update(lcb_confmon_get_provider(c->instance->confmon,
                                                        LCB_CLCONFIG_CCCP),
-                                                       c->connection.host,
+                                                       c->curhost.host,
                                                        &config_string);
     }
 
@@ -110,7 +110,7 @@ static int handle_not_my_vbucket(lcb_server_t *c,
     now = gethrtime();
 
     if (oldct->real_start) {
-        hrtime_t min_ok = now - (c->connection.timeout.usec * 1000);
+        hrtime_t min_ok = now - MCSERVER_TIMEOUT(c) * 1000;
         if (oldct->real_start < min_ok) {
             /** Timed out in a 'natural' manner */
             return 0;

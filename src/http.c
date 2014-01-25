@@ -111,6 +111,11 @@ void lcb_http_request_decref(lcb_http_request_t req)
     if (req->parser) {
         free(req->parser->data);
     }
+    if (req->io_timer) {
+        lcb_timer_destroy(NULL, req->io_timer);
+        req->io_timer = NULL;
+    }
+
     free(req->parser);
     ringbuffer_destruct(&req->result);
     request_free_headers(req);
@@ -191,6 +196,7 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
     lcb_error_t rc;
     ringbuffer_t *out;
     lcb_list_t *ii;
+    lcb_host_t reqhost;
 
     request_free_headers(req);
     lcb_connection_cleanup(&req->connection);
@@ -202,18 +208,18 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
         return lcb_synchandler_return(instance, rc);
     }
     out = req->connection.output;
-    if (req->nhost > sizeof(req->connection.host)) {
+    if (req->nhost > sizeof(reqhost.host)) {
         lcb_http_request_decref(req);
         return LCB_E2BIG;
     }
-    strncpy(req->connection.host, req->host, req->nhost);
-    req->connection.host[req->nhost] = '\0';
-    if (req->nport > sizeof(req->connection.port)) {
+    strncpy(reqhost.host, req->host, req->nhost);
+    reqhost.host[req->nhost] = '\0';
+    if (req->nport > sizeof(reqhost.port)) {
         lcb_http_request_decref(req);
         return LCB_E2BIG;
     }
-    strncpy(req->connection.port, req->port, req->nport);
-    req->connection.port[req->nport] = '\0';
+    strncpy(reqhost.port, req->port, req->nport);
+    reqhost.port[req->nport] = '\0';
     rc = render_http_preamble(req, out);
     if (rc != LCB_SUCCESS) {
         lcb_http_request_decref(req);
@@ -372,7 +378,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     lcb_http_method_t method;
     int chunked;
     lcb_error_t rc;
-    lcb_connection_t restconn;
+    lcb_host_t *resthost;
 
     switch (instance->type) {
     case LCB_TYPE_CLUSTER:
@@ -444,13 +450,13 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     }
     break;
     case LCB_HTTP_TYPE_MANAGEMENT:
-        restconn = lcb_confmon_get_rest_connection(instance->confmon);
-        nbase = strlen(restconn->host) + strlen(restconn->port) + 2;
+        resthost = lcb_confmon_get_rest_host(instance->confmon);
+        nbase = strlen(resthost->host) + strlen(resthost->port) + 2;
         base = calloc(nbase, sizeof(char));
         if (!base) {
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
-        if (snprintf(base, nbase, "%s:%s", restconn->host, restconn->port) < 0) {
+        if (snprintf(base, nbase, "%s:%s", resthost->host, resthost->port) < 0) {
             return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
         }
         nbase -= 1; /* skip '\0' */
@@ -537,6 +543,11 @@ void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
         hashset_remove(instance->http_requests, request);
     }
     request->instance = NULL;
+
+    if (request->io_timer) {
+        lcb_timer_destroy(NULL, request->io_timer);
+        request->io_timer = NULL;
+    }
 
     lcb_maybe_breakout(instance);
 }

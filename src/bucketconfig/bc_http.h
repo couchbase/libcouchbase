@@ -79,6 +79,7 @@ typedef struct clprovider_http_st {
      * next connection.
      */
     lcb_timer_t disconn_timer;
+    lcb_timer_t io_timer;
 
     /** List of hosts to try */
     hostlist_t nodes;

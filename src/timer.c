@@ -17,21 +17,17 @@
 
 #include "internal.h"
 
-enum {
-    TIMER_S_ENTERED = 1,
-    TIMER_S_DESTROYED = 2
-};
-
-
 #define TMR_IS_PERIODIC(timer) ((timer)->options & LCB_TIMER_PERIODIC)
-#define TMR_IS_DESTROYED(timer) ((timer)->state & TIMER_S_DESTROYED)
+#define TMR_IS_DESTROYED(timer) ((timer)->state & LCB_TIMER_S_DESTROYED)
 #define TMR_IS_STANDALONE(timer) ((timer)->options & LCB_TIMER_STANDALONE)
+#define TMR_IS_ARMED(timer) ((timer)->state & LCB_TIMER_S_ARMED)
 
 static void destroy_timer(lcb_timer_t timer)
 {
     if (timer->event) {
         timer->io->v.v0.destroy_timer(timer->io, timer->event);
     }
+    memset(timer, 0xff, sizeof(*timer));
     free(timer);
 }
 
@@ -39,18 +35,17 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
 {
     lcb_timer_t timer = arg;
     lcb_t instance = timer->instance;
-    timer->state = TIMER_S_ENTERED;
 
-    if (!TMR_IS_PERIODIC(timer)) {
-        timer->io->v.v0.destroy_timer(timer->io, timer->event);
-        timer->event = NULL;
-    }
+    lcb_assert(TMR_IS_ARMED(timer));
+    lcb_assert(!TMR_IS_DESTROYED(timer));
 
+    timer->state |= LCB_TIMER_S_ENTERED;
+
+    lcb_timer_disarm(timer);
     timer->callback(timer, instance, timer->cookie);
 
     if (TMR_IS_DESTROYED(timer) == 0 && TMR_IS_PERIODIC(timer) != 0) {
-        timer->io->v.v0.update_timer(timer->io, timer->event,
-                                     timer->usec, timer, timer_callback);
+        lcb_timer_rearm(timer, timer->usec_);
         return;
     }
 
@@ -64,7 +59,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
     if (TMR_IS_DESTROYED(timer)) {
         destroy_timer(timer);
     } else {
-        timer->state = 0;
+        timer->state &= ~LCB_TIMER_S_ENTERED;
     }
 
     (void)sock;
@@ -149,9 +144,7 @@ lcb_timer_t lcb_timer_create2(lcb_io_opt_t io,
     tmr->instance = instance;
     tmr->callback = callback;
     tmr->cookie = cookie;
-    tmr->usec = usec;
     tmr->options = options;
-
     tmr->event = io->v.v0.create_timer(io);
 
     if (tmr->event == NULL) {
@@ -160,11 +153,11 @@ lcb_timer_t lcb_timer_create2(lcb_io_opt_t io,
         return NULL;
     }
 
-    io->v.v0.update_timer(io, tmr->event, tmr->usec, tmr, timer_callback);
-
     if ( (options & LCB_TIMER_STANDALONE) == 0) {
         hashset_add(instance->timers, tmr);
     }
+
+    lcb_timer_rearm(tmr, usec);
 
     *error = LCB_SUCCESS;
     return tmr;
@@ -173,19 +166,17 @@ lcb_timer_t lcb_timer_create2(lcb_io_opt_t io,
 LIBCOUCHBASE_API
 lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer)
 {
-    lcb_io_opt_t io = timer->io;
     int standalone = timer->options & LCB_TIMER_STANDALONE;
 
     if (standalone == 0 && hashset_is_member(instance->timers, timer)) {
         hashset_remove(instance->timers, timer);
     }
 
-    if (timer->event) {
-        io->v.v0.delete_timer(io, timer->event);
-    }
+    lcb_timer_disarm(timer);
 
-    if (timer->state & TIMER_S_ENTERED) {
-        timer->state |= TIMER_S_DESTROYED;
+    if (timer->state & LCB_TIMER_S_ENTERED) {
+        timer->state |= LCB_TIMER_S_DESTROYED;
+        lcb_assert(TMR_IS_DESTROYED(timer));
     } else {
         destroy_timer(timer);
     }
@@ -194,4 +185,31 @@ lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer)
     } else {
         return LCB_SUCCESS;
     }
+}
+
+LCB_INTERNAL_API
+void lcb_timer_disarm(lcb_timer_t timer)
+{
+    if (!TMR_IS_ARMED(timer)) {
+        return;
+    }
+
+    timer->state &= ~LCB_TIMER_S_ARMED;
+    timer->io->v.v0.delete_timer(timer->io, timer->event);
+}
+
+LCB_INTERNAL_API
+void lcb_timer_rearm(lcb_timer_t timer, lcb_uint32_t usec)
+{
+    if (TMR_IS_ARMED(timer)) {
+        lcb_timer_disarm(timer);
+    }
+
+    timer->usec_ = usec;
+    timer->io->v.v0.update_timer(timer->io,
+                                 timer->event,
+                                 usec,
+                                 timer,
+                                 timer_callback);
+    timer->state |= LCB_TIMER_S_ARMED;
 }

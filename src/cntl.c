@@ -164,6 +164,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
 {
     lcb_connection_t conn;
     struct lcb_cntl_server_st *si = arg;
+    const lcb_host_t *host;
 
     if (mode != LCB_CNTL_GET) {
         return LCB_NOT_SUPPORTED;
@@ -200,9 +201,10 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_EINVAL;
     }
 
+    host = lcb_connection_get_host(conn);
     si->v.v0.connected = conn->state == LCB_CONNSTATE_CONNECTED;
-    si->v.v0.host = conn->host;
-    si->v.v0.port = conn->port;
+    si->v.v0.host = host->host;
+    si->v.v0.port = host->port;
 
     switch (instance->settings.io->version) {
     case 0:

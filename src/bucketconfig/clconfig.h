@@ -333,6 +333,7 @@ void lcb_clconfig_write_file(clconfig_provider *provider_base, lcb_string *data)
  */
 struct lcb_connection_st* lcb_confmon_get_rest_connection(lcb_confmon *mon);
 
+lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon);
 
 /** CCCP Routines */
 LCB_INTERNAL_API

@@ -27,7 +27,6 @@
     &(c)->instance->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
 
-static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err);
 static int do_read_data(lcb_server_t *c, int allow_read)
 {
     lcb_sockrw_status_t status;
@@ -55,10 +54,6 @@ static int do_read_data(lcb_server_t *c, int allow_read)
         return -1;
     }
 
-    if (processed) {
-        lcb_connection_delay_timer(&c->connection);
-    }
-
     if (status == LCB_SOCKRW_WOULDBLOCK || status == LCB_SOCKRW_READ) {
         return 0;
     }
@@ -76,6 +71,10 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
         lcb_bootstrap_errcount_incr(instance);
 
     } else {
+        if (!lcb_timer_armed(c->io_timer)) {
+            lcb_timer_rearm(c->io_timer, MCSERVER_TIMEOUT(c));
+        }
+
         lcb_sockrw_apply_want(&c->connection);
         c->inside_handler = 0;
     }
@@ -155,8 +154,6 @@ static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
         return;
     }
 
-    lcb_connection_delay_timer(&c->connection);
-
     stop = gethrtime();
 
     while ((rv = lcb_proto_parse_single(c, stop)) > 0) {
@@ -192,10 +189,7 @@ static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf, int statu
 static void wire_io(lcb_server_t *server)
 {
     struct lcb_io_use_st use;
-    lcb_connuse_ex(&use,
-                   server, server->instance->settings.operation_timeout,
-                   v0_handler, v1_read, v1_write, v1_error,
-                   server_timeout_handler);
+    lcb_connuse_ex(&use, server, v0_handler, v1_read, v1_write, v1_error);
     lcb_connection_use(&server->connection, &use);
 }
 
@@ -206,9 +200,7 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
         if (c->connection_ready) {
-            v0_handler(c->connection.sockfd,
-                                        LCB_READ_EVENT | LCB_WRITE_EVENT,
-                                        c);
+            v0_handler(c->connection.sockfd, LCB_READ_EVENT | LCB_WRITE_EVENT, c);
         }
     }
     (void)cookie;
@@ -277,7 +269,7 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
 
     if (err != LCB_SUCCESS) {
         if (err == LCB_ETIMEDOUT) {
-            server_timeout_handler(ctx->conn, err);
+            lcb_timeout_server(server);
         } else {
             lcb_error_handler(server->instance, err, "SASL Negotiation failed");
             connection_error(server, err);
@@ -314,6 +306,7 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
 
         server->negotiation = lcb_negotiation_create(&server->connection,
                                                      &server->instance->settings,
+                                                     MCSERVER_TIMEOUT(server),
                                                      nistrs.remote,
                                                      nistrs.local,
                                                      &err);
@@ -328,21 +321,10 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
     } else {
         wire_io(server);
         lcb_server_connected(server);
-        lcb_connection_cancel_timer(conn);
         lcb_sockrw_apply_want(conn);
     }
 
     server->inside_handler = 0;
-}
-
-static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
-{
-    lcb_server_t *server = (lcb_server_t *)conn->data;
-    LOG(server, ERR, "Server timed out");
-    lcb_timeout_server(server);
-    lcb_bootstrap_errcount_incr(server->instance);
-    lcb_maybe_breakout(server->instance);
-    (void)err;
 }
 
 /**
@@ -350,15 +332,17 @@ static void server_timeout_handler(lcb_connection_t conn, lcb_error_t err)
  */
 void lcb_server_connect(lcb_server_t *server)
 {
+    lcb_conn_params params;
     lcb_connection_t conn = &server->connection;
-
-    conn->on_connect_complete = socket_connected;
-    conn->on_timeout = server_timeout_handler;
-    conn->timeout.usec = server->instance->settings.operation_timeout;
+    params.handler = socket_connected;
+    params.timeout = MCSERVER_TIMEOUT(server);
+    params.destination = &server->curhost;
 
     if (lcb_connection_reset_buffers(&server->connection) != LCB_SUCCESS) {
         lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
     }
 
-    lcb_connection_start(conn, LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
+    wire_io(server);
+    lcb_connection_start(conn, &params,
+                         LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
 }
