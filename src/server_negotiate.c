@@ -375,9 +375,7 @@ static void io_read_handler(lcb_connection_t conn)
     }
     }
 
-    if (rv == 0) {
-        lcb_packet_release_ringbuffer(&info, conn->input);
-    }
+    lcb_packet_release_ringbuffer(&info, conn->input);
 
     if (ctx->errinfo.err) {
         negotiation_bail(ctx);
