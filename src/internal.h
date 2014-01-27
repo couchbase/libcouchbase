@@ -48,6 +48,7 @@
 #include "mcserver.h"
 #include "settings.h"
 #include "logging.h"
+#include "connmgr.h"
 
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 #define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
@@ -215,6 +216,9 @@ extern "C" {
         lcb_uint32_t seqno;
         int wait;
         const void *cookie;
+
+        /** Socket pool for memcached connections */
+        connmgr_t *memd_sockpool;
 
         lcb_error_t last_error;
 

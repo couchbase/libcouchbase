@@ -170,7 +170,7 @@ static lcb_error_t init_cccp(lcb_t obj,
         }
     }
 
-    lcb_clconfig_cccp_set_nodes(cccp, mc_nodes);
+    lcb_clconfig_cccp_set_nodes(cccp, mc_nodes, obj);
     hostlist_destroy(mc_nodes);
     return LCB_SUCCESS;
 }
@@ -307,6 +307,11 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     lcb_initialize_packet_handlers(obj);
+
+    obj->memd_sockpool = connmgr_create(settings, io);
+    obj->memd_sockpool->max_idle = 1;
+    obj->memd_sockpool->idle_timeout = 10000000;
+
     obj->confmon = lcb_confmon_create(settings);
     obj->usernodes = hostlist_create();
 
@@ -418,6 +423,9 @@ void lcb_destroy(lcb_t instance)
     hashset_destroy(instance->http_requests);
 
     free(instance->servers);
+
+    connmgr_destroy(instance->memd_sockpool);
+
     if (settings->io && settings->io->v.v0.need_cleanup) {
         lcb_destroy_io_ops(settings->io);
     }

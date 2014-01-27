@@ -186,11 +186,18 @@ static void v1_write(lcb_sockdata_t *sockptr, lcb_io_writebuf_t *wbuf, int statu
     }
 }
 
-static void wire_io(lcb_server_t *server)
+static void wire_io(lcb_server_t *server, lcb_connection_t src)
 {
     struct lcb_io_use_st use;
     lcb_connuse_ex(&use, server, v0_handler, v1_read, v1_write, v1_error);
-    lcb_connection_use(&server->connection, &use);
+
+    if (src != NULL) {
+        lcb_connection_transfer_socket(src, &server->connection, &use);
+    } else {
+        lcb_connection_use(&server->connection, &use);
+    }
+
+    lcb_connection_reset_buffers(&server->connection);
 }
 
 LIBCOUCHBASE_API
@@ -265,9 +272,13 @@ static void connection_error(lcb_server_t *server, lcb_error_t err)
 static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
 {
     lcb_server_t *server = ctx->data;
-    wire_io(server);
+    wire_io(server, NULL);
 
     if (err != LCB_SUCCESS) {
+        lcb_negotiation_destroy(ctx);
+        server->connection.protoctx = NULL;
+        server->connection.protoctx_dtor = NULL;
+
         if (err == LCB_ETIMEDOUT) {
             lcb_timeout_server(server);
         } else {
@@ -282,21 +293,41 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
 }
 
 
-static void socket_connected(lcb_connection_t conn, lcb_error_t err)
+static void socket_connected(connmgr_request *req)
 {
-    lcb_server_t *server = (lcb_server_t *)conn->data;
+    lcb_server_t *server = req->data;
     int sasl_needed;
+    lcb_error_t err;
+    lcb_connection_t src_conn = req->conn;
+
+    if (!src_conn) {
+        if (req->err == LCB_SUCCESS) {
+            req->err = LCB_CONNECT_ERROR;
+        }
+        err = req->err;
+    } else {
+        err = LCB_SUCCESS;
+    }
+
+    free(server->connreq);
+    server->connreq = NULL;
 
     if (err != LCB_SUCCESS) {
         connection_error(server, err);
         return;
     }
 
+    wire_io(server, src_conn);
+
     server->inside_handler = 1;
-    sasl_needed = vbucket_config_get_user(
-            server->instance->vbucket_config) != NULL;
+    sasl_needed = (
+            vbucket_config_get_user(server->instance->vbucket_config) != NULL &&
+            server->connection.protoctx == NULL);
 
     if (sasl_needed) {
+        lcb_connection_t conn = &server->connection;
+        struct negotiation_context *saslctx;
+
         struct lcb_nibufs_st nistrs;
         if (!lcb_get_nameinfo(conn, &nistrs)) {
             /** This normally shouldn't happen! */
@@ -304,24 +335,22 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
             return;
         }
 
-        server->negotiation = lcb_negotiation_create(&server->connection,
-                                                     &server->instance->settings,
-                                                     MCSERVER_TIMEOUT(server),
-                                                     nistrs.remote,
-                                                     nistrs.local,
-                                                     &err);
+        saslctx = lcb_negotiation_create(conn, &server->instance->settings,
+                                         MCSERVER_TIMEOUT(server),
+                                         nistrs.remote, nistrs.local, &err);
 
         if (err != LCB_SUCCESS) {
             connection_error(server, err);
         }
 
-        server->negotiation->data = server;
-        server->negotiation->complete = negotiation_done;
+        saslctx->data = server;
+        saslctx->complete = negotiation_done;
+        conn->protoctx = saslctx;
+        conn->protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
 
     } else {
-        wire_io(server);
         lcb_server_connected(server);
-        lcb_sockrw_apply_want(conn);
+        lcb_sockrw_apply_want(&server->connection);
     }
 
     server->inside_handler = 0;
@@ -332,17 +361,62 @@ static void socket_connected(lcb_connection_t conn, lcb_error_t err)
  */
 void lcb_server_connect(lcb_server_t *server)
 {
-    lcb_conn_params params;
-    lcb_connection_t conn = &server->connection;
-    params.handler = socket_connected;
-    params.timeout = MCSERVER_TIMEOUT(server);
-    params.destination = &server->curhost;
+    connmgr_request *connreq;
 
-    if (lcb_connection_reset_buffers(&server->connection) != LCB_SUCCESS) {
-        lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+    if (server->connreq || server->connection.state != LCB_CONNSTATE_UNINIT) {
+        return;
     }
 
-    wire_io(server);
-    lcb_connection_start(conn, &params,
-                         LCB_CONNSTART_NOCB | LCB_CONNSTART_ASYNCERR);
+
+    server->connreq = malloc(sizeof(*server->connreq));
+    connreq = server->connreq;
+
+    connmgr_req_init(connreq,
+                     server->curhost.host, server->curhost.port,
+                     socket_connected);
+
+    connreq->data = server;
+    connmgr_get(server->instance->memd_sockpool,
+                connreq,
+                MCSERVER_TIMEOUT(server));
+}
+
+void lcb_server_release_connection(lcb_server_t *server)
+{
+    lcb_connection_t conn = &server->connection;
+    int can_release = 1;
+
+    if (server->connreq) {
+        connmgr_cancel(server->instance->memd_sockpool, server->connreq);
+        free(server->connreq);
+        server->connreq = NULL;
+        return;
+    }
+
+    if (server->connection.state == LCB_CONNSTATE_UNINIT) {
+        return;
+    }
+
+    if (server->cmd_log.nbytes || conn->want) {
+        can_release = 0;
+    }
+
+    if (conn->state != LCB_CONNSTATE_CONNECTED) {
+        can_release = 0;
+    }
+
+    if (MCCONN_IS_NEGOTIATING(conn)) {
+        can_release = 0;
+    }
+
+    if (can_release) {
+        connmgr_put(server->instance->memd_sockpool, conn);
+    } else {
+        connmgr_discard(server->instance->memd_sockpool, conn);
+    }
+}
+
+struct negotiation_context * lcb_negotiation_get(lcb_connection_t conn)
+{
+    return (struct negotiation_context *)conn->protoctx;
 }

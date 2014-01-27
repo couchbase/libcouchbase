@@ -189,7 +189,8 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         }
 
         if (si->version == 1) {
-            si->v.v1.sasl_mech = server->negotiation->mech;
+            struct negotiation_context *ctx = lcb_negotiation_get(&server->connection);
+            si->v.v1.sasl_mech = ctx->mech;
         }
 
         conn = &server->connection;

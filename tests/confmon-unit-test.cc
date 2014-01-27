@@ -103,6 +103,7 @@ TEST_F(Confmon, testCycle)
 
     mock->createConnection(hw, instance);
     instance->settings.bc_http_stream_time = 100000;
+    instance->memd_sockpool->idle_timeout = 100000;
 
     lcb_confmon *mon = lcb_confmon_create(&instance->settings);
     lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
@@ -119,7 +120,7 @@ TEST_F(Confmon, testCycle)
     clconfig_provider *cccp = lcb_confmon_get_provider(mon, LCB_CLCONFIG_CCCP);
     hostlist_t hl = hostlist_create();
     hostlist_add_stringz(hl, cropts.v.v2.mchosts, 11210);
-    lcb_clconfig_cccp_set_nodes(cccp, hl);
+    lcb_clconfig_cccp_set_nodes(cccp, hl, instance);
     hostlist_destroy(hl);
 
     lcb_confmon_prepare(mon);

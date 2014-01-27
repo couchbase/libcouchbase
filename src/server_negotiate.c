@@ -108,6 +108,7 @@ static void negotiation_cleanup(struct negotiation_context *ctx)
 static void negotiation_success(struct negotiation_context *ctx)
 {
     negotiation_cleanup(ctx);
+    ctx->done_ = 1;
     ctx->complete(ctx, LCB_SUCCESS);
 }
 
@@ -449,6 +450,11 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     req.message.header.request.bodylen = 0;
     req.message.header.request.keylen = 0;
     req.message.header.request.opaque = 0;
+
+    if ( (*err = lcb_connection_reset_buffers(conn)) != LCB_SUCCESS) {
+        lcb_negotiation_destroy(ctx);
+        return NULL;
+    }
 
     if (!conn->output) {
         if ((conn->output = calloc(1, sizeof(*conn->output))) == NULL) {

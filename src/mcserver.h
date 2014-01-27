@@ -5,6 +5,7 @@
 #include "cbsasl/cbsasl.h"
 #include "lcbio.h"
 #include "timer.h"
+#include "connmgr.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +24,8 @@ struct negotiation_context {
 
     /** Mechanism length */
     unsigned int nmech;
+
+    unsigned int done_;
 
     /** Callback */
     negotiation_callback complete;
@@ -92,7 +95,10 @@ typedef struct lcb_server_st {
     lcb_timer_t io_timer;
 
     struct lcb_connection_st connection;
-    struct negotiation_context *negotiation;
+
+    /** Request for current connection */
+    connmgr_request *connreq;
+
     lcb_host_t curhost;
 } lcb_server_t;
 
@@ -127,11 +133,25 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
                                                    const char *local,
                                                    lcb_error_t *err);
 
+struct negotiation_context* lcb_negotiation_get(lcb_connection_t conn);
+
 /**
  * Destroys any resources created by negotiation_init.
  * This is safe to call even if negotiation_init itself was not called.
  */
 void lcb_negotiation_destroy(struct negotiation_context *ctx);
+
+#define lcb_negotiation_is_busy(conn) \
+    ((struct negotiation_context *)ctx)->done_
+
+/**
+ * Return the underlying connection to the socket pool
+ */
+void lcb_server_release_connection(lcb_server_t *server);
+
+#define MCCONN_IS_NEGOTIATING(conn) \
+    ((conn)->protoctx && \
+            ((struct negotiation_context *)(conn)->protoctx)->done_ == 0)
 
 #define MCSERVER_TIMEOUT(c) (c)->instance->settings.operation_timeout
 

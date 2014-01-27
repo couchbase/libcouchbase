@@ -25,6 +25,7 @@
 
 #include "internal.h"
 #include "packetutils.h"
+#include "bucketconfig/clconfig.h"
 
 void setup_lcb_get_resp_t(lcb_get_resp_t *resp,
                           const void *key,
@@ -829,6 +830,16 @@ static void unlock_response_handler(lcb_server_t *server,
     }
 }
 
+static void config_handler(lcb_server_t *server, packet_info *info)
+{
+    lcb_error_t rc = map_error(server->instance, PACKET_STATUS(info));
+
+    lcb_cccp_update2(info->ct.cookie, rc,
+                     PACKET_VALUE(info),
+                     PACKET_NVALUE(info),
+                     &server->curhost);
+}
+
 static void dummy_error_callback(lcb_t instance,
                                  lcb_error_t error,
                                  const char *errinfo)
@@ -1082,6 +1093,11 @@ int lcb_dispatch_response(lcb_server_t *c, packet_info *info)
     case PROTOCOL_BINARY_CMD_NOOP:
         /* Ignore */
         break;
+
+    case CMD_GET_CLUSTER_CONFIG:
+        config_handler(c, info);
+        break;
+
     default:
         return -1;
     }

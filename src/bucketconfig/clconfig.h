@@ -337,9 +337,17 @@ lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon);
 
 /** CCCP Routines */
 LCB_INTERNAL_API
-void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, hostlist_t mcnodes);
+void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb,
+                                 hostlist_t mcnodes,
+                                 lcb_t instance);
+
 lcb_error_t lcb_cccp_update(clconfig_provider *provider, const char *host,
                             lcb_string *data);
+
+void lcb_cccp_update2(const void *cookie, lcb_error_t err,
+                      const void *bytes, lcb_size_t nbytes,
+                      const lcb_host_t *origin);
+
 void lcb_clconfig_cccp_disable(clconfig_provider *provider);
 
 #ifdef __cplusplus

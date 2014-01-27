@@ -24,6 +24,7 @@
 
 #include "internal.h"
 #include "logging.h"
+#include "bucketconfig/clconfig.h"
 
 #define LOGARGS(c, lvl) \
     &(c)->instance->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -248,6 +249,10 @@ static void failout_single_request(lcb_server_t *server,
                                     error);
         break;
 
+    case CMD_GET_CLUSTER_CONFIG:
+        lcb_cccp_update2(ct->cookie, error, NULL, 0, NULL);
+        break;
+
     default:
         lcb_assert("unexpected opcode while purging the server" && 0);
     }
@@ -410,12 +415,7 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
     ringbuffer_reset(&server->pending_cookies);
 
     server->connection_ready = 0;
-    lcb_connection_close(&server->connection);
-    if (server->negotiation) {
-        lcb_negotiation_destroy(server->negotiation);
-        server->negotiation = NULL;
-    }
-
+    lcb_server_release_connection(server);
     return error;
 }
 
@@ -425,10 +425,8 @@ void lcb_timeout_server(lcb_server_t *server)
     lcb_uint32_t next_us;
 
     LOG(server, ERR, "Server timed out");
-
     lcb_bootstrap_errcount_incr(server->instance);
 
-    /** If we don't even have a valid connection yet, it's obviously too slow */
     if (!server->connection_ready) {
         lcb_failout_server(server, LCB_ETIMEDOUT);
         return;
@@ -437,7 +435,7 @@ void lcb_timeout_server(lcb_server_t *server)
     now = gethrtime();
 
     /** The oldest valid command timestamp */
-    min_valid = now - MCSERVER_TIMEOUT(server) * 1000;
+    min_valid = now - ((hrtime_t)MCSERVER_TIMEOUT(server)) * 1000;
 
     purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns);
     if (next_ns) {
@@ -478,15 +476,12 @@ void lcb_server_destroy(lcb_server_t *server)
                                             1);
     }
 
-    if (server->negotiation) {
-        lcb_negotiation_destroy(server->negotiation);
-    }
-
     if (server->io_timer) {
         lcb_timer_destroy(NULL, server->io_timer);
     }
 
-    /* Delete the event structure itself */
+
+    lcb_server_release_connection(server);
     lcb_connection_cleanup(&server->connection);
 
     free(server->rest_api_server);
@@ -527,6 +522,7 @@ void lcb_server_connected(lcb_server_t *server)
                 !ringbuffer_append(&copy, &server->cmd_log)) {
             ringbuffer_reset(&server->cmd_log);
             ringbuffer_reset(&server->output_cookies);
+            lcb_server_release_connection(server);
             lcb_connection_cleanup(conn);
             lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
             return;
@@ -568,7 +564,6 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
                                            servernum);
     server->rest_api_server = strdup(n);
-    server->negotiation = NULL;
     server->io_timer = lcb_timer_create_simple(server->instance->settings.io,
                                                server, MCSERVER_TIMEOUT(server),
                                                tmo_thunk);

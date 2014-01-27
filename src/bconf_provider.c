@@ -81,11 +81,20 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
 
         lcb_assert(nr == sizeof(pi.ct));
 
-        lcb_server_start_packet_ex(dst, &pi.ct, &pi.res, sizeof(pi.res));
-        if (PACKET_NBODY(&pi)) {
-            lcb_server_write_packet(dst, pi.payload, PACKET_NBODY(&pi));
+        switch (PACKET_OPCODE(&pi)) {
+        case CMD_GET_CLUSTER_CONFIG:
+            lcb_cccp_update2(pi.ct.cookie, LCB_EINTERNAL, NULL, 0, &src->curhost);
+            break;
+
+        default:
+            lcb_server_start_packet_ex(dst, &pi.ct, &pi.res, sizeof(pi.res));
+            if (PACKET_NBODY(&pi)) {
+                lcb_server_write_packet(dst, pi.payload, PACKET_NBODY(&pi));
+            }
+            lcb_server_end_packet(dst);
+            break;
         }
-        lcb_server_end_packet(dst);
+
         lcb_packet_release_ringbuffer(&pi, &src->cmd_log);
     }
 }

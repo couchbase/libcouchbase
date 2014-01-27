@@ -3,11 +3,13 @@
 #include "packetutils.h"
 #include "simplestring.h"
 #include "mcserver.h"
+#include "connmgr.h"
 
 #define LOGARGS(cccp, lvl) \
     cccp->base.parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
-
 #define LOG(cccp, lvl, msg) lcb_log(LOGARGS(cccp, lvl), msg)
+
+struct cccp_cookie_st;
 
 typedef struct {
     clconfig_provider base;
@@ -17,50 +19,115 @@ typedef struct {
     int server_active;
     int disabled;
     lcb_timer_t timer;
+    lcb_t instance;
+    connmgr_request *cur_connreq;
+    struct cccp_cookie_st *cmdcookie;
 } cccp_provider;
+
+typedef struct cccp_cookie_st {
+    /** Parent object */
+    cccp_provider *parent;
+
+    /** Whether to ignore errors on this cookie object */
+    int ignore_errors;
+} cccp_cookie;
 
 static void io_error_handler(lcb_connection_t);
 static void io_read_handler(lcb_connection_t);
 static void request_config(cccp_provider *);
-static void socket_connected(lcb_connection_t, lcb_error_t);
+static void socket_connected(connmgr_request *req);
 
-static lcb_error_t mcio_error(cccp_provider *cccp)
+static void release_socket(cccp_provider *cccp, int can_reuse)
 {
-    lcb_error_t err;
-    char *errinfo;
-    struct lcb_io_use_st use;
-    lcb_conn_params cparams;
-
-    lcb_connection_t conn = &cccp->connection;
-
-    LOG(cccp, ERR, "Got I/O Error");
-    lcb_connection_close(conn);
-
-    if (conn->protoctx) {
-        lcb_negotiation_destroy((struct negotiation_context*)conn->protoctx);
-        conn->protoctx = NULL;
+    if (cccp->cmdcookie) {
+        cccp->cmdcookie->ignore_errors = 1;
+        cccp->cmdcookie =  NULL;
+        return;
     }
 
-    cparams.handler = socket_connected;
-    cparams.timeout = PROVIDER_SETTING(&cccp->base, config_timeout);
-    err = lcb_connection_next_node(conn, cccp->nodes, &cparams, &errinfo);
-    lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
-    lcb_connection_use(conn, &use);
+    if (cccp->cur_connreq) {
+        connmgr_cancel(cccp->instance->memd_sockpool, cccp->cur_connreq);
+        free(cccp->cur_connreq);
+        cccp->cur_connreq = NULL;
+    } else if (cccp->connection.state != LCB_CONNSTATE_UNINIT) {
+        if (can_reuse) {
+            connmgr_put(cccp->instance->memd_sockpool, &cccp->connection);
+        } else {
+            connmgr_discard(cccp->instance->memd_sockpool, &cccp->connection);
+        }
+    }
+}
 
-    if (err != LCB_SUCCESS) {
+static lcb_error_t schedule_next_request(cccp_provider *cccp,
+                                         lcb_error_t err,
+                                         int can_rollover)
+{
+    lcb_server_t *server = NULL;
+    lcb_size_t ii;
+
+    lcb_host_t *next_host = hostlist_shift_next(cccp->nodes, can_rollover);
+
+    if (!next_host) {
         lcb_timer_disarm(cccp->timer);
         lcb_confmon_provider_failed(&cccp->base, err);
         cccp->server_active = 0;
         return err;
     }
 
+    /** See if we can find a server */
+    for (ii = 0; ii < cccp->instance->nservers; ii++) {
+        lcb_server_t *cur = cccp->instance->servers + ii;
+        if (lcb_host_equals(&cur->curhost, next_host)) {
+            server = cur;
+            break;
+        }
+    }
+
+    if (server == NULL && cccp->instance->nservers) {
+        abort();
+    }
+
+    if (server) {
+        protocol_binary_request_get_cluster_config req;
+        cccp_cookie *cookie = calloc(1, sizeof(*cookie));
+
+        abort();
+        lcb_log(LOGARGS(cccp, INFO),
+                "Re-Issuing CCCP Command on server struct %p", server);
+
+        cookie->parent = cccp;
+        memset(&req, 0, sizeof(req));
+        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
+        req.message.header.request.opcode = CMD_GET_CLUSTER_CONFIG;
+        req.message.header.request.opaque = ++cccp->instance->seqno;
+        lcb_server_start_packet(server, cookie, &req, sizeof(req.bytes));
+        lcb_server_end_packet(server);
+        lcb_server_send_packets(server);
+
+    } else {
+        cccp->cur_connreq = calloc(1, sizeof(*cccp->cur_connreq));
+        connmgr_req_init(cccp->cur_connreq, next_host->host, next_host->port,
+                         socket_connected);
+        cccp->cur_connreq->data = cccp;
+        connmgr_get(cccp->instance->memd_sockpool, cccp->cur_connreq,
+                    PROVIDER_SETTING(&cccp->base, config_timeout));
+    }
+
+    cccp->server_active = 1;
     return LCB_SUCCESS;
+}
+
+static lcb_error_t mcio_error(cccp_provider *cccp, lcb_error_t err)
+{
+    lcb_log(LOGARGS(cccp, ERR), "Got I/O Error=0x%x", err);
+    release_socket(cccp, err == LCB_NOT_SUPPORTED);
+    return schedule_next_request(cccp, err, 0);
 }
 
 static void socket_timeout(lcb_timer_t tm, lcb_t instance, const void *cookie)
 {
     cccp_provider *cccp = (cccp_provider *)cookie;
-    mcio_error(cccp);
+    mcio_error(cccp, LCB_ETIMEDOUT);
 
     (void)instance;
     (void)tm;
@@ -73,7 +140,8 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
 
     if (err != LCB_SUCCESS) {
         LOG(cccp, ERR, "CCCP SASL negotiation failed");
-        mcio_error(cccp);
+        mcio_error(cccp, err);
+
     } else {
         LOG(cccp, DEBUG, "CCCP SASL negotiation done");
         lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
@@ -82,47 +150,9 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
     }
 }
 
-static void socket_connected(lcb_connection_t conn, lcb_error_t err)
-{
-    cccp_provider *cccp = conn->data;
-    struct lcb_nibufs_st nistrs;
-    LOG(cccp, DEBUG, "CCCP Socket connected");
-
-    if (err != LCB_SUCCESS) {
-        mcio_error(cccp);
-        return;
-    }
-
-    if (!lcb_get_nameinfo(conn, &nistrs)) {
-        mcio_error(cccp);
-        return;
-    }
-
-    if (cccp->base.parent->settings->username || 1) {
-        struct negotiation_context *ctx;
-
-        ctx = lcb_negotiation_create(conn,
-                                     cccp->base.parent->settings,
-                                     PROVIDER_SETTING(&cccp->base, config_timeout),
-                                     nistrs.remote,
-                                     nistrs.local,
-                                     &err);
-        if (!ctx) {
-            mcio_error(cccp);
-        }
-
-        ctx->complete = negotiation_done;
-        ctx->data = cccp;
-        conn->protoctx = ctx;
-        conn->protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
-
-    } else {
-        request_config(cccp);
-    }
-}
-
-
-void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, hostlist_t mcnodes)
+void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb,
+                                 hostlist_t mcnodes,
+                                 lcb_t instance)
 {
     unsigned int ii;
     cccp_provider *cccp = (cccp_provider *)pb;
@@ -133,6 +163,7 @@ void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, hostlist_t mcnodes)
     if (mcnodes->nentries) {
         pb->enabled = 1;
     }
+    cccp->instance = instance;
 }
 
 /** Update the configuration from a server. */
@@ -172,34 +203,101 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
     return LCB_SUCCESS;
 }
 
-static lcb_error_t cccp_get(clconfig_provider *pb)
+void lcb_cccp_update2(const void *cookie, lcb_error_t err,
+                      const void *bytes, lcb_size_t nbytes,
+                      const lcb_host_t *origin)
 {
-    lcb_error_t err;
-    char *errinfo;
-    struct lcb_io_use_st use;
-    lcb_conn_params params;
+    cccp_cookie *ck = (cccp_cookie *)cookie;
+    cccp_provider *cccp = ck->parent;
 
-    cccp_provider *cccp = (cccp_provider *)pb;
-    lcb_connection_t conn = &cccp->connection;
+    if (err == LCB_SUCCESS) {
+        lcb_string ss;
+
+        lcb_string_init(&ss);
+        lcb_string_append(&ss, bytes, nbytes);
+        err = lcb_cccp_update(&cccp->base, origin->host, &ss);
+        lcb_string_release(&ss);
+
+        if (err != LCB_SUCCESS && ck->ignore_errors == 0) {
+            mcio_error(cccp, err);
+        }
 
 
-    if (cccp->server_active) {
-        return LCB_BUSY;
+    } else if (ck->ignore_errors != 0) {
+        mcio_error(cccp, err);
     }
 
-    params.handler = socket_connected;
-    params.timeout = PROVIDER_SETTING(pb, config_timeout);
-    err = lcb_connection_cycle_nodes(conn, cccp->nodes, &params, &errinfo);
+    if (ck == cccp->cmdcookie) {
+        cccp->cmdcookie = NULL;
+    }
 
-    if (err != LCB_SUCCESS) {
-        lcb_confmon_provider_failed(pb, LCB_CONNECT_ERROR);
-        return err;
+    free(ck);
+}
+
+static void socket_connected(connmgr_request *req)
+{
+    cccp_provider *cccp = req->data;
+    lcb_connection_t conn = req->conn;
+    struct lcb_nibufs_st nistrs;
+    struct lcb_io_use_st use;
+
+    free(req);
+    cccp->cur_connreq = NULL;
+
+    LOG(cccp, DEBUG, "CCCP Socket connected");
+
+    if (!conn) {
+        mcio_error(cccp, LCB_CONNECT_ERROR);
+        return;
     }
 
     lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
-    lcb_connection_use(&cccp->connection, &use);
-    cccp->server_active = 1;
-    return LCB_SUCCESS;
+    lcb_connection_transfer_socket(conn, &cccp->connection, &use);
+    conn = NULL;
+
+
+    if (cccp->connection.protoctx) {
+        /** Already have SASL */
+        request_config(cccp);
+        return;
+    }
+
+    if (!lcb_get_nameinfo(&cccp->connection, &nistrs)) {
+        mcio_error(cccp, LCB_EINTERNAL);
+        return;
+    }
+
+    if (cccp->base.parent->settings->username || 1) {
+        struct negotiation_context *ctx;
+        lcb_error_t err;
+
+        ctx = lcb_negotiation_create(&cccp->connection,
+                                     cccp->base.parent->settings,
+                                     PROVIDER_SETTING(&cccp->base, config_timeout),
+                                     nistrs.remote,
+                                     nistrs.local,
+                                     &err);
+        if (!ctx) {
+            mcio_error(cccp, err);
+        }
+
+        ctx->complete = negotiation_done;
+        ctx->data = cccp;
+        cccp->connection.protoctx = ctx;
+        cccp->connection.protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
+
+    }
+}
+
+static lcb_error_t cccp_get(clconfig_provider *pb)
+{
+    cccp_provider *cccp = (cccp_provider *)pb;
+
+    if (cccp->cur_connreq || cccp->server_active || cccp->cmdcookie) {
+        return LCB_BUSY;
+    }
+
+    return schedule_next_request(cccp, LCB_SUCCESS, 1);
 }
 
 static clconfig_info *cccp_get_cached(clconfig_provider *pb)
@@ -216,7 +314,7 @@ static lcb_error_t cccp_pause(clconfig_provider *pb)
     }
 
     cccp->server_active = 0;
-    lcb_connection_close(&cccp->connection);
+    release_socket(cccp, 0);
     lcb_timer_disarm(cccp->timer);
     return LCB_SUCCESS;
 }
@@ -224,14 +322,8 @@ static lcb_error_t cccp_pause(clconfig_provider *pb)
 static void cccp_cleanup(clconfig_provider *pb)
 {
     cccp_provider *cccp = (cccp_provider *)pb;
-    struct negotiation_context *ctx = cccp->connection.protoctx;
-    cccp->connection.protoctx = NULL;
 
-    if (ctx) {
-        lcb_negotiation_destroy(ctx);
-    }
-
-    lcb_connection_close(&cccp->connection);
+    release_socket(cccp, 0);
     lcb_connection_cleanup(&cccp->connection);
 
     if (cccp->config) {
@@ -242,6 +334,9 @@ static void cccp_cleanup(clconfig_provider *pb)
     }
     if (cccp->timer) {
         lcb_timer_destroy(NULL, cccp->timer);
+    }
+    if (cccp->cmdcookie) {
+        cccp->cmdcookie->ignore_errors = 1;
     }
     free(cccp);
 }
@@ -269,7 +364,7 @@ static void nodes_updated(clconfig_provider *provider, hostlist_t nodes,
 
 static void io_error_handler(lcb_connection_t conn)
 {
-    mcio_error((cccp_provider *)conn->data);
+    mcio_error((cccp_provider *)conn->data, LCB_NETWORK_ERROR);
 }
 
 static void io_read_handler(lcb_connection_t conn)
@@ -287,7 +382,7 @@ static void io_read_handler(lcb_connection_t conn)
 
     if (rv < 0) {
         LOG(cccp, ERR, "Couldn't parse packet!?");
-        mcio_error(cccp);
+        mcio_error(cccp, LCB_EINTERNAL);
         return;
 
     } else if (rv == 0) {
@@ -305,22 +400,26 @@ static void io_read_handler(lcb_connection_t conn)
                 PACKET_OPCODE(&pi),
                 PACKET_OPAQUE(&pi));
 
-        mcio_error(cccp);
+        if (PACKET_STATUS(&pi) == PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED) {
+            mcio_error(cccp, LCB_NOT_SUPPORTED);
+        } else {
+            mcio_error(cccp, LCB_PROTOCOL_ERROR);
+        }
         return;
     }
 
     if (!PACKET_NBODY(&pi)) {
-        mcio_error(cccp);
+        mcio_error(cccp, LCB_PROTOCOL_ERROR);
         return;
     }
 
     if (lcb_string_init(&jsonstr)) {
-        mcio_error(cccp);
+        mcio_error(cccp, LCB_CLIENT_ENOMEM);
         return;
     }
 
     if (lcb_string_append(&jsonstr, PACKET_BODY(&pi), PACKET_NBODY(&pi))) {
-        mcio_error(cccp);
+        mcio_error(cccp, LCB_CLIENT_ENOMEM);
         return;
     }
 
@@ -329,11 +428,14 @@ static void io_read_handler(lcb_connection_t conn)
     lcb_string_release(&jsonstr);
     lcb_packet_release_ringbuffer(&pi, conn->input);
     if (err != LCB_SUCCESS) {
-        mcio_error(cccp);
+        mcio_error(cccp, LCB_PROTOCOL_ERROR);
 
     } else {
         lcb_sockrw_set_want(conn, 0, 1);
         lcb_sockrw_apply_want(conn);
+        cccp->server_active = 0;
+        connmgr_put(cccp->instance->memd_sockpool, &cccp->connection);
+        lcb_timer_disarm(cccp->timer);
     }
 }
 
@@ -350,14 +452,14 @@ static void request_config(cccp_provider *cccp)
 
     if (!buf) {
         if ((buf = calloc(1, sizeof(*buf))) == NULL) {
-            mcio_error(cccp);
+            mcio_error(cccp, LCB_CLIENT_ENOMEM);
             return;
         }
         conn->output = buf;
     }
 
     if (!ringbuffer_ensure_capacity(buf, sizeof(req.bytes))) {
-        mcio_error(cccp);
+        mcio_error(cccp, LCB_CLIENT_ENOMEM);
     }
 
     ringbuffer_write(buf, req.bytes, sizeof(req.bytes));
@@ -388,7 +490,6 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
         free(cccp);
         return NULL;
     }
-
 
     if (lcb_connection_init(&cccp->connection,
                             cccp->base.parent->settings->io,

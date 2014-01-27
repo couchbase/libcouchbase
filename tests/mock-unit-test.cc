@@ -939,6 +939,9 @@ TEST_F(MockUnitTest, testSaslMechs)
     lcb_error_t err = lcb_create(&instance, &crParams);
     ASSERT_EQ(LCB_SUCCESS, err);
 
+    // Make the socket pool disallow idle connections
+    instance->memd_sockpool->max_idle = 0;
+
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_wait(instance);
