@@ -376,6 +376,7 @@ static void v0_generic_handler(lcb_socket_t sock, short which, void *arg)
 {
     lcb_connection_t conn = arg;
     lcb_sockrw_status_t status;
+    lcb_size_t oldnr, newnr;
 
     lcb_assert(sock != INVALID_SOCKET);
 
@@ -401,8 +402,13 @@ static void v0_generic_handler(lcb_socket_t sock, short which, void *arg)
         return;
     }
 
+    oldnr = conn->input->nbytes;
     status = lcb_sockrw_v0_slurp(conn, conn->input);
-    if (status != LCB_SOCKRW_READ && status != LCB_SOCKRW_WOULDBLOCK) {
+    newnr = conn->input->nbytes;
+
+    if (status != LCB_SOCKRW_READ &&
+            status != LCB_SOCKRW_WOULDBLOCK && oldnr == newnr) {
+
         conn->easy.error(conn);
     } else {
         conn->easy.read(conn);
