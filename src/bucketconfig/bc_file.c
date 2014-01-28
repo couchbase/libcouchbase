@@ -87,6 +87,11 @@ static int load_cache(file_provider *provider)
     fclose(fp);
     fp = NULL;
 
+    if (!str.nused) {
+        status = -1;
+        goto GT_DONE;
+    }
+
     end = strstr(str.base, CONFIG_CACHE_MAGIC);
     if (end == NULL) {
         LOG(provider, ERROR, "Couldn't find magic in file");
