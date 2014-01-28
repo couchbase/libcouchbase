@@ -89,14 +89,20 @@ static void listen_callback2(clconfig_listener *prov,
                              clconfig_event_t event,
                              clconfig_info *info)
 {
+    // Increase the number of times we've received a callback..
+    struct listener2* lsn = getListener2(prov);
+
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
     }
 
-    // Increase the number of times we've received a callback..
-    struct listener2* lsn = getListener2(prov);
     lsn->call_count++;
     lsn->last_source = info->origin;
+
+    int state = lcb_confmon_get_state(prov->parent);
+    if ((state & CONFMON_S_ACTIVE) == 0) {
+        lsn->io->v.v0.stop_event_loop(lsn->io);
+    }
 }
 }
 

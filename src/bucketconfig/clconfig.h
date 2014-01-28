@@ -313,6 +313,20 @@ void lcb_confmon_add_listener(lcb_confmon *mon, clconfig_listener *listener);
 LIBCOUCHBASE_API
 void lcb_confmon_remove_listener(lcb_confmon *mon, clconfig_listener *listener);
 
+typedef enum {
+    /** Confmon is active */
+    CONFMON_S_ACTIVE = 1 << 0,
+
+    /** Confmon is in the "Iteration grace" period */
+    CONFMON_S_ITERGRACE = 1 << 1,
+} confmon_state_t;
+
+/**
+ * Get the state of the 'confmon'.
+ */
+LCB_INTERNAL_API
+int lcb_confmon_get_state(lcb_confmon *mon);
+
 /**
  * Creates a new configuration wrapper object containing the vbucket config
  * pointed to by 'config'. Its initial refcount will be set to 1.

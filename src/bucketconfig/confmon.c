@@ -294,7 +294,7 @@ static void async_stop(lcb_timer_t tm, lcb_t instance, const void *cookie)
 
 lcb_error_t lcb_confmon_stop(lcb_confmon *mon)
 {
-    lcb_error_t err;
+    lcb_error_t err = LCB_SUCCESS;
 
     if (mon->tm_retry) {
         lcb_timer_destroy(NULL, mon->tm_retry);
@@ -306,17 +306,14 @@ lcb_error_t lcb_confmon_stop(lcb_confmon *mon)
         mon->as_refresh = NULL;
     }
 
-    if (mon->as_pause) {
-        return LCB_SUCCESS;
+    if (!mon->as_pause) {
+        mon->as_pause = lcb_async_create(mon->settings->io,
+                                         mon,
+                                         async_stop,
+                                         &err);
     }
 
-    mon->as_pause = lcb_async_create(mon->settings->io,
-                                     mon,
-                                     async_stop,
-                                     &err);
-
     mon->is_refreshing = 0;
-
     return err;
 }
 
@@ -460,4 +457,17 @@ clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon)
 
     (void)mon;
     return provider;
+}
+
+LCB_INTERNAL_API
+int lcb_confmon_get_state(lcb_confmon *mon)
+{
+    int ret = 0;
+    if (mon->is_refreshing || mon->as_refresh) {
+        ret |= CONFMON_S_ACTIVE;
+    }
+    if (mon->tm_retry && lcb_timer_armed(mon->tm_retry)) {
+        ret |= CONFMON_S_ITERGRACE;
+    }
+    return ret;
 }
