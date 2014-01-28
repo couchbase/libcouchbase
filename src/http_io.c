@@ -15,6 +15,10 @@
  *   limitations under the License.
  */
 #include "internal.h"
+#include "logging.h"
+
+#define LOGARGS(req, lvl) \
+    &req->instance->settings, "http-io", LCB_LOG_##lvl, __FILE__, __LINE__
 
 static void io_read(lcb_connection_t conn)
 {
@@ -22,6 +26,9 @@ static void io_read(lcb_connection_t conn)
     lcb_t instance = req->instance;
     int rv, is_done = 0;
     lcb_error_t err = LCB_SUCCESS;
+
+
+    req->refcount++;
 
     /** Delay the timer */
     lcb_timer_rearm(req->io_timer, req->timeout);
@@ -88,9 +95,14 @@ static void request_connected(lcb_connection_t conn, lcb_error_t err)
 {
     lcb_http_request_t req = (lcb_http_request_t)conn->data;
     if (err != LCB_SUCCESS) {
+        const lcb_host_t *tmphost = lcb_connection_get_host(conn);
+        lcb_log(LOGARGS(req, ERR),
+                "Connection to %s:%s failed with Err=0x%x",
+                tmphost->host, tmphost->port, err);
         lcb_http_request_finish(req->instance, req, err);
         return;
     }
+
 
     lcb_sockrw_set_want(&req->connection, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(&req->connection);
