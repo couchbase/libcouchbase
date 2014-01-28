@@ -143,7 +143,7 @@ static lcb_error_t init_cccp(lcb_t obj,
     clconfig_provider *cccp =
             lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_CCCP);
 
-    if (e_options->no_cccp) {
+    if (e_options->no_cccp || lcb_getenv_boolean("LCB_NO_CCCP")) {
         lcb_clconfig_cccp_disable(cccp);
         return LCB_SUCCESS;
     }
