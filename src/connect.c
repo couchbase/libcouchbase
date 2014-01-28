@@ -134,6 +134,12 @@ static void connection_success(lcb_connection_t conn)
 static void timeout_handler(lcb_timer_t tm, lcb_t instance, const void *cookie)
 {
     lcb_connection_t conn = (lcb_connection_t)cookie;
+
+    lcb_log(LOGARGS(conn, ERR),
+            "%p: Connection to %s:%s timed out. Last OS Error=%d",
+            conn, conn->cur_host_->host, conn->cur_host_->port,
+            (int)conn->last_error);
+
     conn_do_callback(conn, 0, LCB_ETIMEDOUT);
     (void)tm;
     (void)instance;
@@ -163,6 +169,11 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         if (ioconn->ai == NULL) {
             conn->last_error = io->v.v0.error;
 
+            lcb_log(LOGARGS(conn, WARN),
+                    "%p, %s:%s No more addrinfo structures remaining",
+                    (void *)conn,
+                    conn->cur_host_->host,
+                    conn->cur_host_->port);
             /* this means we're not going to retry!! add an error here! */
             return LCB_CONN_ERROR;
         }
@@ -427,7 +438,7 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
 
     if (result != LCB_CONN_INPROGRESS) {
         lcb_log(LOGARGS(conn, INFO),
-                "Scheduling connection for %p failed with code %d",
+                "Scheduling connection for %p failed with code 0x%x",
                 conn, result);
 
         if (options & LCB_CONNSTART_ASYNCERR) {

@@ -204,6 +204,7 @@ clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon);
 #define lcb_confmon_get_provider(mon, ix) (mon)->all_providers[ix]
 
 #define PROVIDER_SETTING(p, n) ((p)->parent->settings->n)
+#define PROVIDER_SET_ERROR(p, e) (p)->parent->last_error = e
 
 /**
  * Create a new configuration monitor server.

@@ -54,7 +54,6 @@ static lcb_error_t io_error(http_provider *http)
     lcb_conn_params params;
     char *errinfo;
 
-    LOG(http, ERR, "Got I/O Error");
     close_current(http);
 
     params.timeout = PROVIDER_SETTING(&http->base, config_timeout);
@@ -77,6 +76,7 @@ static void protocol_error(http_provider *http, lcb_error_t err)
     int can_retry = 1;
 
     lcb_log(LOGARGS(http, ERROR), "Got protocol-level error 0x%x", err);
+    PROVIDER_SET_ERROR(&http->base, err);
     /**
      * XXX: We only want to retry on some errors. Things which signify an
      * obvious user error should be left out here; we only care about
@@ -130,8 +130,7 @@ static void read_common(http_provider *http)
     int old_generation = http->stream.generation;
 
     lcb_log(LOGARGS(http, TRACE),
-            "Received %d bytes on HTTP stream",
-            conn->input->nbytes);
+            "Received %d bytes on HTTP stream", conn->input->nbytes);
 
     lcb_timer_rearm(http->io_timer,
                     PROVIDER_SETTING(&http->base, config_timeout));
@@ -196,10 +195,7 @@ static lcb_error_t setup_request_header(http_provider *http)
     offset += snprintf(buf + offset, nbuf - offset, HOSTHDR_FMT,
                        hostinfo->host, hostinfo->port);
 
-    offset += snprintf(buf + offset, nbuf - offset, "%s\r\n",
-                       LAST_HTTP_HEADER);
-
-    lcb_log(LOGARGS(http, DEBUG), "Request header: %s", buf);
+    offset += snprintf(buf + offset, nbuf - offset, "%s\r\n", LAST_HTTP_HEADER);
 
     return LCB_SUCCESS;
 }
@@ -222,13 +218,20 @@ static void reset_stream_state(http_provider *http)
 static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
 {
     http_provider *http = (http_provider *)conn->data;
-    LOG(http, DEBUG, "Connected to REST API");
+    const lcb_host_t *host = lcb_connection_get_host(conn);
 
     if (err != LCB_SUCCESS) {
-        LOG(http, ERR, "HTTP Connection failed");
+        lcb_log(LOGARGS(http, ERR),
+                "Connection to REST API @%s:%s failed with code=0x%x",
+                host->host, host->port, err);
+
         io_error(http);
         return;
     }
+
+    lcb_log(LOGARGS(http, DEBUG),
+            "Successfuly connected to REST API %s:%s",
+            host->host, host->port);
 
     lcb_connection_reset_buffers(conn);
     ringbuffer_strcat(conn->output, http->request_buf);
@@ -243,7 +246,12 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
 static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
     http_provider *http = (http_provider *)cookie;
-    LOG(http, WARN, "Stream timed out");
+    const lcb_host_t *curhost = lcb_connection_get_host(&http->connection);
+
+    lcb_log(LOGARGS(http, ERR),
+            "HTTP Provider timed out on host %s:%s waiting for I/O",
+            curhost->host, curhost->port);
+
     io_error(http);
 
     (void)tm;
@@ -263,17 +271,17 @@ static lcb_error_t connect_next(http_provider *http)
     params.handler = connect_done_handler;
     params.timeout = PROVIDER_SETTING(&http->base, config_timeout);
 
-    LOG(http, TRACE, "Starting HTTP Configuration Provider");
+    lcb_log(LOGARGS(http, TRACE),
+            "Starting HTTP Configuration Provider %p", http);
+
     err = lcb_connection_cycle_nodes(conn, http->nodes, &params, &errinfo);
 
     if (err == LCB_SUCCESS) {
         err = setup_request_header(http);
+    } else {
+        lcb_log(LOGARGS(http, ERROR),
+                "%p: Couldn't schedule connection (0x%x)", http, err);
     }
-
-    if (err != LCB_SUCCESS) {
-        lcb_log(LOGARGS(http, ERROR), "Couldn't schedule connection (%d)", err);
-    }
-
 
     return err;
 }
@@ -281,7 +289,7 @@ static lcb_error_t connect_next(http_provider *http)
 static void delayed_disconn(lcb_timer_t tm, lcb_t instance, const void *cookie)
 {
     http_provider *http = (http_provider *)cookie;
-    LOG(http, DEBUG, "Stopping HTTP provider");
+    lcb_log(LOGARGS(http, DEBUG), "Stopping HTTP provider %p", http);
 
     /** closes the connection and cleans up the timer */
     close_current(http);
