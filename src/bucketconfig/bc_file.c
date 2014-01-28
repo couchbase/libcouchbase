@@ -230,9 +230,14 @@ static void shutdown_file(clconfig_provider *pb)
     free(provider);
 }
 
-static void config_listener(clconfig_info *info, clconfig_listener *lsn)
+static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
+                            clconfig_info *info)
 {
     file_provider *provider;
+
+    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+        return;
+    }
 
     provider = (file_provider *) (((char *)lsn) - offsetof(file_provider, listener));
 

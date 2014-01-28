@@ -12,7 +12,13 @@ struct lcb_bootstrap_st {
 #define LOGARGS(instance, lvl) \
     &instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
 
-static void async_step_callback(clconfig_info *info, clconfig_listener *listener);
+static void async_step_callback(clconfig_listener *listener,
+                                clconfig_event_t event,
+                                clconfig_info *info);
+
+static void initial_bootstrap_error(lcb_t instance,
+                                    lcb_error_t err,
+                                    const char *msg);
 
 /**
  * This function is where the configuration actually takes place. We ensure
@@ -20,10 +26,23 @@ static void async_step_callback(clconfig_info *info, clconfig_listener *listener
  * loop stack frame (or one of the small mini functions here) so that we
  * don't accidentally end up destroying resources underneath us.
  */
-static void config_callback(clconfig_info *info, clconfig_listener *listener)
+static void config_callback(clconfig_listener *listener,
+                            clconfig_event_t event,
+                            clconfig_info *info)
 {
     struct lcb_bootstrap_st *bootstrap = (struct lcb_bootstrap_st *)listener;
     lcb_t instance = bootstrap->parent;
+
+    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+        if (event == CLCONFIG_EVENT_PROVIDERS_CYCLED) {
+            if (!instance->vbucket_config) {
+                initial_bootstrap_error(instance,
+                                        LCB_ERROR,
+                                        "No more bootstrap providers remain");
+            }
+        }
+        return;
+    }
 
     instance->last_error = LCB_SUCCESS;
     bootstrap->active = 0;
@@ -45,6 +64,28 @@ static void config_callback(clconfig_info *info, clconfig_listener *listener)
 }
 
 
+static void initial_bootstrap_error(lcb_t instance,
+                                    lcb_error_t err,
+                                    const char *errinfo)
+{
+    instance->last_error = lcb_confmon_last_error(instance->confmon);
+    if (instance->last_error == LCB_SUCCESS) {
+        instance->last_error = err;
+    }
+
+    instance->bootstrap->active = 0 ;
+    lcb_error_handler(instance, instance->last_error, errinfo);
+    lcb_log(LOGARGS(instance, ERR),
+            "Failed to bootstrap client=%p. Code=0x%x, Message=%s",
+            (void *)instance, err, errinfo);
+    if (instance->bootstrap->timer) {
+        lcb_timer_destroy(instance, instance->bootstrap->timer);
+        instance->bootstrap->timer = NULL;
+    }
+
+    lcb_maybe_breakout(instance);
+}
+
 /**
  * This it the initial bootstrap timeout handler. This timeout pins down the
  * instance. It is only scheduled during the initial bootstrap and is only
@@ -53,22 +94,11 @@ static void config_callback(clconfig_info *info, clconfig_listener *listener)
 static void initial_timeout(lcb_timer_t timer, lcb_t instance,
                             const void *unused)
 {
-    instance->last_error = lcb_confmon_last_error(instance->confmon);
-    if (instance->last_error == LCB_SUCCESS) {
-        instance->last_error = LCB_ETIMEDOUT;
-    }
-
-    instance->bootstrap->active = 0;
-
-    lcb_error_handler(instance, instance->last_error,
-                      "Failed to bootstrap in time");
-
-    lcb_log(LOGARGS(instance, DEBUG),
-            "Failed to bootstrap in time. 0x%x", instance->last_error);
-
-    lcb_maybe_breakout(instance);
-    (void)unused;
+    initial_bootstrap_error(instance,
+                            LCB_ETIMEDOUT,
+                            "Failed to bootstrap in time");
     (void)timer;
+    (void)unused;
 }
 
 /**
@@ -81,7 +111,7 @@ static void async_refresh(lcb_timer_t timer, lcb_t unused, const void *cookie)
     clconfig_info *info;
 
     info = lcb_confmon_get_config(bs->parent->confmon);
-    config_callback(info, &bs->listener);
+    config_callback(&bs->listener, CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
 
     (void)unused;
     (void)timer;
@@ -91,10 +121,16 @@ static void async_refresh(lcb_timer_t timer, lcb_t unused, const void *cookie)
  * set_next listener callback which schedules an async call to our config
  * callback.
  */
-static void async_step_callback(clconfig_info *info, clconfig_listener *listener)
+static void async_step_callback(clconfig_listener *listener,
+                                clconfig_event_t event,
+                                clconfig_info *info)
 {
     lcb_error_t err;
     struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
+
+    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+        return;
+    }
 
     if (bs->timer) {
         lcb_log(LOGARGS(bs->parent, DEBUG), "Timer already present..");

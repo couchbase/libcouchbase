@@ -16,8 +16,13 @@ struct evstop_listener {
 };
 
 extern "C" {
-static void listen_callback1(clconfig_info *info, clconfig_listener *lsn)
+static void listen_callback1(clconfig_listener *lsn, clconfig_event_t event,
+                             clconfig_info *info)
 {
+    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+        return;
+    }
+
     evstop_listener *me = reinterpret_cast<evstop_listener*>(lsn);
     me->called = 1;
     me->io->v.v0.stop_event_loop(me->io);
@@ -80,8 +85,14 @@ static struct listener2* getListener2(const void *p)
 }
 
 extern "C" {
-static void listen_callback2(clconfig_info *info, clconfig_listener *prov)
+static void listen_callback2(clconfig_listener *prov,
+                             clconfig_event_t event,
+                             clconfig_info *info)
 {
+    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+        return;
+    }
+
     // Increase the number of times we've received a callback..
     struct listener2* lsn = getListener2(prov);
     lsn->call_count++;

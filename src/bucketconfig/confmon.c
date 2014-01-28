@@ -22,6 +22,9 @@
 
 #define LOG(mon, lvlbase, msg) lcb_log(LOGARGS(mon, lvlbase), msg)
 static int do_next_provider(lcb_confmon *mon);
+static void invoke_listeners(lcb_confmon *mon,
+                             clconfig_event_t event,
+                             clconfig_info *info);
 
 lcb_confmon* lcb_confmon_create(lcb_settings *settings)
 {
@@ -106,7 +109,8 @@ void lcb_confmon_destroy(lcb_confmon *mon)
 
 int lcb_confmon_set_next(lcb_confmon *mon, clconfig_info *info, int force)
 {
-    lcb_list_t *ll, *ll_next;
+
+    invoke_listeners(mon, CLCONFIG_EVENT_GOT_ANY_CONFIG, info);
 
     if (mon->config && force == 0) {
         VBUCKET_CONFIG_DIFF *diff =
@@ -136,12 +140,7 @@ int lcb_confmon_set_next(lcb_confmon *mon, clconfig_info *info, int force)
     mon->config = info;
     lcb_confmon_stop(mon);
 
-    LCB_LIST_SAFE_FOR(ll, ll_next, &mon->listeners) {
-        clconfig_listener *listener = LCB_LIST_ITEM(ll, clconfig_listener, ll);
-        listener->callback(mon->config, listener);
-    }
-
-
+    invoke_listeners(mon, CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
 
     return 1;
 }
@@ -182,6 +181,7 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
         LOG(mon, TRACE, "Maximum provider reached. Resetting index");
         next_ll = mon->active_providers.next;
         tmo = mon->settings->grace_next_cycle;
+        invoke_listeners(mon, CLCONFIG_EVENT_PROVIDERS_CYCLED, NULL);
 
     } else {
         next_ll = mon->cur_provider->ll.next;
@@ -193,8 +193,7 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
             mon->cur_provider->type, mon->cur_provider);
 
     if (mon->cur_provider == provider) {
-        LOG(mon, DEBUG, "Not moving to next provider. Same as self");
-        return;
+        tmo = mon->settings->grace_next_cycle;
     }
 
     if (tmo == 0) {
@@ -435,6 +434,17 @@ void lcb_confmon_remove_listener(lcb_confmon *mon, clconfig_listener *listener)
 {
     lcb_list_delete(&listener->ll);
     (void)mon;
+}
+
+static void invoke_listeners(lcb_confmon *mon,
+                             clconfig_event_t event,
+                             clconfig_info *info)
+{
+    lcb_list_t *ll, *ll_next;
+    LCB_LIST_SAFE_FOR(ll, ll_next, &mon->listeners) {
+        clconfig_listener *lsn = LCB_LIST_ITEM(ll, clconfig_listener, ll);
+        lsn->callback(lsn, event, info);
+    }
 }
 
 static void generic_shutdown(clconfig_provider *provider)

@@ -168,6 +168,17 @@ typedef struct clconfig_info_st {
     lcb_string raw;
 } clconfig_info;
 
+typedef enum {
+    /** Called when a new configuration is being set in confmon */
+    CLCONFIG_EVENT_GOT_NEW_CONFIG,
+
+    /** Called when _any_ configuration is received via set_enxt */
+    CLCONFIG_EVENT_GOT_ANY_CONFIG,
+
+    /** Called when all providers have been tried */
+    CLCONFIG_EVENT_PROVIDERS_CYCLED
+} clconfig_event_t;
+
 typedef struct clconfig_listener_st {
     /** Linked list node */
     lcb_list_t ll;
@@ -176,7 +187,11 @@ typedef struct clconfig_listener_st {
     lcb_confmon *parent;
 
     /** Callback to be invoked */
-    void (*callback)(struct clconfig_info_st *, struct clconfig_listener_st *);
+    void (*callback)(
+            struct clconfig_listener_st *,
+            clconfig_event_t,
+            struct clconfig_info_st *);
+
 } clconfig_listener;
 
 /** Method-specific setup methods.. */
