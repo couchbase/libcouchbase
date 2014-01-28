@@ -285,6 +285,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     settings->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
     settings->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
     settings->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
+    settings->weird_things_delay = LCB_DEFAULT_CONFIG_ERRORS_DELAY;
     settings->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
     settings->grace_next_cycle = LCB_DEFAULT_CLCONFIG_GRACE_CYCLE;
     settings->grace_next_provider = LCB_DEFAULT_CLCONFIG_GRACE_NEXT;

@@ -12,6 +12,9 @@
 #define LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS 3
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 
+/* 10 seconds */
+#define LCB_DEFAULT_CONFIG_ERRORS_DELAY 10000000
+
 /* 1 second */
 #define LCB_DEFAULT_CLCONFIG_GRACE_CYCLE 1000000
 
@@ -20,6 +23,7 @@
 
 /* 10 seconds */
 #define LCB_DEFAULT_BC_HTTP_DISCONNTMO 10000000
+
 
 #include "config.h"
 #include <libcouchbase/couchbase.h>
@@ -43,6 +47,7 @@ typedef struct lcb_settings_st {
     lcb_size_t rbufsize;
     lcb_size_t wbufsize;
     lcb_size_t weird_things_threshold;
+    lcb_uint32_t weird_things_delay;
     lcb_type_t conntype;
 
     /** Grace period to wait between querying providers */

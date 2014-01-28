@@ -46,6 +46,9 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_CONFIGURATION_TIMEOUT:
         return &settings->config_timeout;
 
+    case LCB_CNTL_CONFDELAY_THRESH:
+        return &settings->weird_things_delay;
+
     default:
         return NULL;
     }
@@ -399,7 +402,8 @@ static ctl_handler handlers[] = {
     config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */,
     force_sasl_mech_handler, /* LCB_CNTL_FORCE_SASL_MECH */
     max_redirects, /* LCB_CNTL_MAX_REDIRECTS */
-    logprocs_handler /* LCB_CNTL_LOGGER */
+    logprocs_handler /* LCB_CNTL_LOGGER */,
+    timeout_common /* LCB_CNTL_CONFDELAY_THRESH */
 };
 
 

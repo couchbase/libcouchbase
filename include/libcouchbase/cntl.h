@@ -338,16 +338,29 @@ extern "C" {
      */
 #define LCB_CNTL_MAX_REDIRECTS 0x17
 
-
-#define LCB_CNTL_LOGGER 0x18
     /**
      * Get/Set. Modify the lcb_logprocs structure used for logging. See
      * the types.h header for more information about logging.
      * Arg: lcb_logprocs* for set, lcb_logprocs** for get
      */
+#define LCB_CNTL_LOGGER 0x18
+
+
+    /**
+     * Get/Set. Modify the amount of time (in microseconds) before the
+     * CONFERRTHRESH setting (see above) will forcefully be set to its maximum
+     * number forcing a configuration refresh.
+     *
+     * Note that if you expect a high number of timeouts in your operations, you
+     * should set this to a high number (along with CONFERRTHRESH). If you
+     * are using the default timeout setting, then this value is likely optimal.
+     *
+     * Arg: lcb_uint32_t*
+     */
+#define LCB_CNTL_CONFDELAY_THRESH 0x19
 
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x19
+#define LCB_CNTL__MAX                    0x1a
 
 
 #ifdef __cplusplus

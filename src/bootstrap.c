@@ -6,6 +6,7 @@ struct lcb_bootstrap_st {
     lcb_t parent;
     lcb_timer_t timer;
     int active;
+    hrtime_t last_refresh;
 };
 
 #define LOGARGS(instance, lvl) \
@@ -156,10 +157,22 @@ lcb_error_t lcb_bootstrap_refresh(lcb_t instance)
 
 void lcb_bootstrap_errcount_incr(lcb_t instance)
 {
+    int should_refresh = 0;
+    hrtime_t now = gethrtime();
+
     instance->weird_things++;
+
+    if (now - instance->bootstrap->last_refresh >
+            (hrtime_t)(instance->settings.weird_things_delay * 1000)) {
+        should_refresh = 1;
+    }
+
     if (instance->weird_things == instance->settings.weird_things_threshold) {
-        instance->weird_things = 0;
-        lcb_bootstrap_refresh(instance);
+        should_refresh = 1;
+    }
+
+    if (!should_refresh) {
+        return;
     }
 }
 
