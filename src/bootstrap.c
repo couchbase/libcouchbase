@@ -36,7 +36,11 @@ static void config_callback(clconfig_info *info, clconfig_listener *listener)
     }
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
-    lcb_update_vbconfig(instance, info);
+
+    if (instance->type != LCB_TYPE_CLUSTER) {
+        lcb_update_vbconfig(instance, info);
+    }
+
     lcb_maybe_breakout(instance);
 }
 
