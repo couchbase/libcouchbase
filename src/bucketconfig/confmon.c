@@ -335,7 +335,6 @@ void lcb_clconfig_decref(clconfig_info *info)
 
     lcb_string_release(&info->raw);
 
-    memset(info, 0xEE, sizeof(*info));
     free(info);
 }
 
