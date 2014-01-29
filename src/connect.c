@@ -122,11 +122,17 @@ static void conn_do_callback(struct lcb_connection_st *conn,
     handler = conn->ioconn->callback;
     lcb_assert(handler != NULL);
     destroy_connstart(conn);
+    lcb_sockrw_set_want(conn, 0, 1);
+    lcb_sockrw_apply_want(conn);
     handler(conn, err);
 }
 
 static void connection_success(lcb_connection_t conn)
 {
+    lcb_log(LOGARGS(conn, INFO),
+            "Connection=%p,%s:%s completed succesfully",
+            conn, conn->cur_host_->host, conn->cur_host_->port);
+
     conn->state = LCB_CONNSTATE_CONNECTED;
     conn_do_callback(conn, 0, LCB_SUCCESS);
 }
@@ -230,6 +236,8 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
                                   conn->evinfo.ptr,
                                   LCB_WRITE_EVENT,
                                   conn, v0_reconnect_handler);
+            conn->evinfo.active = 1;
+
             return LCB_CONN_INPROGRESS;
 
         case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
