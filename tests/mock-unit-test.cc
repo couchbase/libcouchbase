@@ -25,6 +25,9 @@
 #include "internal.h" /* vbucket_* things from lcb_t */
 #include "testutil.h"
 
+#define LOGARGS(instance, lvl) \
+    &instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
+
 /**
  * Keep these around in case we do something useful here in the future
  */
@@ -599,6 +602,11 @@ extern "C" {
                                const lcb_store_resp_t *)
     {
         struct rvbuf *rv = (struct rvbuf *)cookie;
+        lcb_log(LOGARGS(instance, INFO),
+                "Got storage callback for cookie %p with err=0x%x",
+                (void *)cookie,
+                (int)error);
+
         rv->error = error;
         store_cnt++;
         if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
@@ -830,7 +838,6 @@ extern "C" {
 static void fo_callback(lcb_timer_t tm, lcb_t instance, const void *cookie)
 {
     fo_context_st *ctx = (fo_context_st *)cookie;
-    ctx->env->hiccupNodes(0, 0);
     ctx->env->failoverNode(ctx->index);
     ctx->env->hiccupNodes(0, 0);
     lcb_timer_destroy(instance, tm);
@@ -857,6 +864,10 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     mock->createConnection(hw, instance);
     lcb_connect(instance);
     lcb_wait(instance);
+
+    // Set the timeout for 15 seconds
+    lcb_uint32_t tmoval = 15000000;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
 
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
@@ -891,8 +902,8 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     store_cnt = 0;
     lcb_wait(instance);
     ASSERT_EQ(1, store_cnt);
-    ASSERT_EQ(9, config_cnt);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
+    ASSERT_EQ(9, config_cnt);
 
     memset(&rv, 0, sizeof(rv));
     err = lcb_store(instance, &rv, 1, storecmds);
