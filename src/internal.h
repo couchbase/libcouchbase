@@ -474,8 +474,6 @@ extern "C" {
                             hrtime_t delta,
                             lcb_uint8_t opcode);
 
-    void lcb_purge_timedout(lcb_t instance);
-
 
     int lcb_lookup_server_with_command(lcb_t instance,
                                        lcb_uint8_t opcode,
@@ -537,7 +535,6 @@ extern "C" {
                                    const void *bytes,
                                    lcb_size_t nbytes);
 
-    lcb_error_t lcb_parse_vbucket_stream(lcb_t instance);
 
     void lcb_observe_invoke_callback(lcb_t instance,
                                      const struct lcb_command_data_st *ct,
@@ -570,9 +567,6 @@ extern "C" {
      * On Unix, this does nothing
      */
     lcb_error_t lcb_initialize_socket_subsystem(void);
-
-    void lcb_free_backup_nodes(lcb_t instance);
-
 
     /**
      * These three functions are all reentrant safe. They control asynchronous

@@ -441,7 +441,7 @@ void lcb_timeout_server(lcb_server_t *server)
 
     purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns);
     if (next_ns) {
-        next_us = next_ns / 1000;
+        next_us = (lcb_uint32_t) (next_ns / 1000);
 
     } else {
         next_us = MCSERVER_TIMEOUT(server);

@@ -684,7 +684,7 @@ void lcb_connection_transfer_socket(lcb_connection_t from,
 
 }
 
-const lcb_host_t * lcb_connection_get_host(lcb_connection_t conn)
+const lcb_host_t * lcb_connection_get_host(const lcb_connection_t conn)
 {
     static lcb_host_t dummy = { { '\0' }, { '\0' } };
     if (conn->cur_host_) {

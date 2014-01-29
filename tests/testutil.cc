@@ -201,7 +201,7 @@ void genStoreCommands(const std::vector<std::string> &keys,
                       std::vector<lcb_store_cmd_t> &cmds,
                       std::vector<lcb_store_cmd_t*> &cmdpp)
 {
-    for (int ii = 0; ii < keys.size(); ii++) {
+    for (unsigned int ii = 0; ii < keys.size(); ii++) {
         lcb_store_cmd_t cmd;
         memset(&cmd, 0, sizeof(cmd));
         cmd.v.v0.key = keys[ii].c_str();
@@ -212,7 +212,7 @@ void genStoreCommands(const std::vector<std::string> &keys,
         cmds.push_back(cmd);
     }
 
-    for (int ii = 0; ii < keys.size(); ii++) {
+    for (unsigned int ii = 0; ii < keys.size(); ii++) {
         cmdpp.push_back(&cmds[ii]);
     }
 }

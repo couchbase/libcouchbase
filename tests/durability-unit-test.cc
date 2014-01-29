@@ -22,8 +22,8 @@ protected:
         lcb_size_t nservers = lcb_get_num_nodes(instance);
         lcb_size_t nreplicas = lcb_get_num_replicas(instance);
 
-        opts.v.v0.persist_to = min(nreplicas + 1, nservers);
-        opts.v.v0.replicate_to = min(nreplicas, nservers - 1);
+        opts.v.v0.persist_to = (lcb_uint16_t) min(nreplicas + 1, nservers);
+        opts.v.v0.replicate_to = (lcb_uint16_t) min(nreplicas, nservers - 1);
     }
 };
 
@@ -81,7 +81,7 @@ public:
 
     void assertCriteriaMatch(const lcb_durability_opts_st &opts) {
         ASSERT_EQ(LCB_SUCCESS, resp.v.v0.err);
-        ASSERT_TRUE(resp.v.v0.persisted_master);
+        ASSERT_TRUE(resp.v.v0.persisted_master != 0);
         ASSERT_TRUE(opts.v.v0.persist_to <= resp.v.v0.npersisted);
         ASSERT_TRUE(opts.v.v0.replicate_to <= resp.v.v0.nreplicated);
     }
@@ -155,7 +155,7 @@ public:
     }
 
     void assign(const lcb_durability_resp_t *resp) {
-        ASSERT_GT(resp->v.v0.nkey, 0);
+        ASSERT_GT(resp->v.v0.nkey, 0U);
         counter++;
 
         string key;
@@ -279,7 +279,6 @@ TEST_F(DurabilityUnitTest, testDurabilityCriteria)
     lcb_durability_opts_st opts = { 0 };
     lcb_durability_cmd_st cmd = { 0 };
     lcb_durability_cmd_st *cmd_p = &cmd;
-    lcb_error_t err;
 
     /** test with no persist/replicate */
     defaultOptions(instance, opts);
@@ -572,7 +571,7 @@ TEST_F(DurabilityUnitTest, testMulti)
     dmop.assertAllMatch(opts, items_stored, vector<Item>());
 
     // Store all the missing ones
-    opts.v.v0.timeout = SECS_USECS(1.5);
+    opts.v.v0.timeout = (lcb_uint32_t)SECS_USECS(1.5);
     dmop = DurabilityMultiOperation();
     dmop.run(instance, &opts, items_missing);
     dmop.assertAllMatch(opts, vector<Item>(), items_missing, LCB_KEY_ENOENT);

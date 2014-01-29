@@ -171,7 +171,6 @@ TEST_F(Hostlist, testParseList)
 TEST_F(Hostlist, testCycle)
 {
     hostlist_t hosts = hostlist_create();
-    lcb_error_t err;
     lcb_host_t *curhost;
 
 

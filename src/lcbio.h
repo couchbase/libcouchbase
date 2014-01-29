@@ -296,14 +296,6 @@ extern "C" {
                                             lcb_conn_params *params,
                                             char **errinfo);
 
-
-    /**
-     * Generic handler which invokes the appropriate 'v0' methods.
-     * This wraps some stuff and is potentially slower. Should be used for non-
-     * hot-paths, such as HTTP
-     */
-    void lcb_connection_setup_generic(lcb_connection_t conn);
-
     /**
      * Populates the 'nistrs' pointers with the local and remote endpoint
      * addresses as strings.
@@ -391,6 +383,7 @@ extern "C" {
      * @param use the structure containing the relevant callbacks and user
      * specified data to employ.
      */
+    LCB_INTERNAL_API
     void lcb_connection_transfer_socket(lcb_connection_t from,
                                         lcb_connection_t to,
                                         const struct lcb_io_use_st *use);
