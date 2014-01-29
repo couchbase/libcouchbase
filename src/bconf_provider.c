@@ -42,9 +42,10 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
 {
     packet_info pi;
 
-    lcb_log(LOGARGS(dst_instance, DEBUG),
-            "Relocating packets from %p [i=%d]",
-            src, src->index);
+    lcb_log(LOGARGS(dst_instance, INFO),
+            "Relocating: %lu bytes from %p (%s ix=%d)",
+            (unsigned long)src->cmd_log.nbytes,
+            src, src->authority, src->index);
 
     while (lcb_packet_read_ringbuffer(&pi, &src->cmd_log) > 0) {
         int idx;
@@ -119,6 +120,27 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
  * output commands.
  */
 
+static void log_vbdiff(lcb_t instance, VBUCKET_CONFIG_DIFF *diff)
+{
+    char **curserver;
+    lcb_log(LOGARGS(instance, INFO),
+            "Config Diff: [ vBuckets Modified=%d ], [Sequence Changed=%d]",
+            diff->n_vb_changes, diff->sequence_changed);
+
+    if (diff->servers_added) {
+        for (curserver = diff->servers_added; *curserver; curserver++) {
+            lcb_log(LOGARGS(instance, INFO), "Detected server %s added",
+                    *curserver);
+        }
+    }
+    if (diff->servers_removed) {
+        for (curserver = diff->servers_removed; *curserver; curserver++) {
+            lcb_log(LOGARGS(instance, INFO), "Detected server %s removed",
+                    *curserver);
+        }
+    }
+}
+
 static int replace_config(lcb_t instance, clconfig_info *old_config,
                           clconfig_info *next_config)
 {
@@ -129,6 +151,11 @@ static int replace_config(lcb_t instance, clconfig_info *old_config,
     lcb_server_t *old_servers;
 
     diff = vbucket_compare(old_config->vbc, next_config->vbc);
+
+    if (diff) {
+        log_vbdiff(instance, diff);
+    }
+
     if (diff == NULL ||
             (diff->sequence_changed == 0 && diff->n_vb_changes == 0)) {
         lcb_log(LOGARGS(instance, DEBUG),
