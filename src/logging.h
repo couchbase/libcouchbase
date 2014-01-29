@@ -11,10 +11,10 @@ struct lcb_settings_st;
 struct lcb_st;
 
 /**
- * Default printf logger which is enabled via LCB_VERBOSE_LOGGING in the
+ * Default printf logger which is enabled via LCB_LOGLEVEL in the
  * environment
  */
-extern struct lcb_logprocs_st lcb_verbose_logprocs;
+extern struct lcb_logprocs_st *lcb_console_logprocs;
 
 /**
  * Log a message via the installed logger. The parameters correlate to the
@@ -31,6 +31,8 @@ void lcb_log(const struct lcb_settings_st *settings,
              int srcline,
              const char *fmt,
              ...);
+
+lcb_logprocs * lcb_init_console_logger(void);
 
 #define LCB_LOGS(settings, subsys, severity, msg) \
     lcb_log(settings, subsys, severity, __FILE__, __LINE__, msg)

@@ -517,8 +517,10 @@ extern "C" {
     /**
      * LOGGING:
      * Verbose logging may be enabled by default using the environment variable
-     * LCB_VERBOSE_LOGGING and setting it to 1. You may also install your
-     * own logger using lcb_cntl and the LCB_CNTL_LOGGER constant. Note that
+     * LCB_LOGLEVEL and setting it to a number > 1; higher values produce more
+     * verbose output.
+     * You may also install your own logger using lcb_cntl and the
+     * LCB_CNTL_LOGGER constant. Note that
      * the logger functions will not be called rapidly from within hot paths.
      */
 

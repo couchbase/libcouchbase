@@ -291,11 +291,8 @@ lcb_error_t lcb_create(lcb_t *instance,
     settings->grace_next_provider = LCB_DEFAULT_CLCONFIG_GRACE_NEXT;
     settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
     settings->bucket = strdup(bucket);
+    settings->logger = lcb_init_console_logger();
 
-
-    if (lcb_getenv_boolean("LCB_VERBOSE_LOGGING")) {
-        settings->logger = &lcb_verbose_logprocs;
-    }
 
     if (user) {
         settings->username = strdup(user);

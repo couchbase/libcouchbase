@@ -1,10 +1,32 @@
 #include "settings.h"
 #include "logging.h"
-
+#include "internal.h" /* for lcb_getenv* */
 #include <stdio.h>
 #include <stdarg.h>
 
 static hrtime_t start_time = 0;
+
+struct console_logprocs_st {
+    struct lcb_logprocs_st base;
+    int minlevel;
+};
+
+static void console_log(struct lcb_logprocs_st *procs,
+                        const char *subsys,
+                        int severity,
+                        const char *srcfile,
+                        int srcline,
+                        const char *fmt,
+                        va_list ap);
+
+static struct console_logprocs_st console_logprocs = {
+        {0 /* version */, {{console_log} /* v1 */} /*v*/},
+        /** Minimum severity */
+        LCB_LOG_INFO
+};
+
+struct lcb_logprocs_st *lcb_console_logprocs = &console_logprocs.base;
+
 
 /**
  * Return a string representation of the severity level
@@ -32,7 +54,7 @@ static const char * level_to_string(int severity)
 /**
  * Default logging callback for the verbose logger.
  */
-static void verbose_log(struct lcb_logprocs_st *procs,
+static void console_log(struct lcb_logprocs_st *procs,
                         const char *subsys,
                         int severity,
                         const char *srcfile,
@@ -42,6 +64,12 @@ static void verbose_log(struct lcb_logprocs_st *procs,
 {
 
     hrtime_t now;
+    struct console_logprocs_st *vprocs = (struct console_logprocs_st *)procs;
+
+    if (severity < vprocs->minlevel) {
+        return;
+    }
+
     if (!start_time) {
         start_time = gethrtime();
     }
@@ -63,16 +91,6 @@ static void verbose_log(struct lcb_logprocs_st *procs,
     (void)procs;
     (void)srcfile;
 }
-
-struct lcb_logprocs_st lcb_verbose_logprocs = {
-        0 /* version */,
-
-        {
-                {
-                        verbose_log
-                } /* v1 */
-        } /*v*/
-};
 
 
 LCB_INTERNAL_API
@@ -100,4 +118,28 @@ void lcb_log(const struct lcb_settings_st *settings,
     va_start(ap, fmt);
     callback(settings->logger, subsys, severity, srcfile, srcline, fmt, ap);
     va_end(ap);
+}
+
+lcb_logprocs * lcb_init_console_logger(void)
+{
+    char vbuf[1024];
+    int lvl = 0;
+
+    if (!lcb_getenv_nonempty("LCB_LOGLEVEL", vbuf, sizeof(vbuf))) {
+        return NULL;
+    }
+
+    if (sscanf(vbuf, "%d", &lvl) != 1) {
+        return NULL;
+    }
+
+    if (!lvl) {
+        /** "0" */
+        return NULL;
+    }
+
+    /** The "lowest" level we can expose is WARN, e.g. ERROR-1 */
+    lvl = LCB_LOG_ERROR - lvl;
+    console_logprocs.minlevel = lvl;
+    return lcb_console_logprocs;
 }
