@@ -336,6 +336,7 @@ endif
 
 tests_unit_tests_SOURCES = \
                            src/base64.c \
+                           src/gethrtime.c \
                            src/hashset.c \
                            src/list.c \
                            src/ringbuffer.c \
@@ -347,8 +348,6 @@ tests_unit_tests_SOURCES = \
                            tests/behavior-unit-tests.cc \
                            tests/ccbc_103.cc \
                            tests/cluster-unit-tests.cc \
-                           tests/confmon-unit-test.cc \
-                           tests/connmgr-unit-test.cc \
                            tests/hashset-unit-test.cc \
                            tests/hostname-unit-test.cc \
                            tests/host-unit-test.cc \
@@ -489,10 +488,11 @@ noinst_LTLIBRARIES += libmockserver.la
 tests_unit_tests_SOURCES += \
                             tests/arithmetic-unit-test.cc \
                             tests/configcache-unit-test.cc \
+                            tests/confmon-unit-test.cc \
+                            tests/connmgr-unit-test.cc \
                             tests/durability-unit-test.cc \
                             tests/get-unit-test.cc \
                             tests/getopt-unit-tests.cc \
-                            src/gethrtime.c \
                             tests/http-tests.cc \
                             tests/iops-unit-test.cc \
                             tests/lock-unit-test.cc \
