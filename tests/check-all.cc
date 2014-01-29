@@ -143,7 +143,7 @@ public:
         }
 
         if (myargc < argc) {
-            for (int ii = myargc; ii < argc; ii++) {
+            for (int ii = myargc+1; ii < argc; ii++) {
                 ss << argv[ii] << " ";
             }
         }
