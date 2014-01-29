@@ -68,6 +68,8 @@ TEST_F(RegressionUnitTest, CCBC_150)
     callbackInvoked = false;
     lcb_set_get_callback(instance, get_callback);
     lcb_set_stat_callback(instance, stats_callback);
+    lcb_uint32_t tmoval = 15000000;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
 
     lcb_get_cmd_t getCmd1("testGetMiss1");
     lcb_get_cmd_t *getCmds[] = { &getCmd1 };
