@@ -674,6 +674,7 @@ void lcb_connection_transfer_socket(lcb_connection_t from,
     to->last_error = from->last_error;
     to->state = from->state; from->state = LCB_CONNSTATE_UNINIT;
     to->cur_host_ = from->cur_host_; from->cur_host_ = NULL;
+    to->poolinfo = from->poolinfo; from->poolinfo = NULL;
 
     if (to->sockptr) {
         to->sockptr->lcbconn = to;

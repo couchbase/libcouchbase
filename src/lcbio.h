@@ -124,6 +124,9 @@ extern "C" {
 
         lcb_ioconnect_t ioconn;
 
+        /** Information for pools */
+        void *poolinfo;
+
         /**
          * v0 event based I/O fields
          */
@@ -358,6 +361,7 @@ extern "C" {
     /**
      * Populates an 'io_use' structure for simple I/O callbacks
      */
+    LCB_INTERNAL_API
     void lcb_connuse_easy(struct lcb_io_use_st *use,
                           void *data,
                           lcb_io_generic_cb read_cb,

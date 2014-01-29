@@ -186,6 +186,7 @@ ADD_LIBRARY(couchbase SHARED
             src/bucketconfig/confmon.c
             src/cntl.c
             src/compat.c
+            src/connmgr.c
             src/durability.c
             src/error.c
             src/flush.c

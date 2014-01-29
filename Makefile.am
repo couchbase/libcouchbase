@@ -174,6 +174,8 @@ libcouchbase_la_SOURCES = \
                         src/config_static.h \
                         src/connect.c \
                         src/connection_utils.c \
+                        src/connmgr.c \
+                        src/connmgr.h \
                         src/durability.c \
                         src/durability_internal.h \
                         src/error.c \
@@ -346,6 +348,7 @@ tests_unit_tests_SOURCES = \
                            tests/ccbc_103.cc \
                            tests/cluster-unit-tests.cc \
                            tests/confmon-unit-test.cc \
+                           tests/connmgr-unit-test.cc \
                            tests/hashset-unit-test.cc \
                            tests/hostname-unit-test.cc \
                            tests/host-unit-test.cc \
