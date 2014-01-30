@@ -417,7 +417,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.get_cached = http_get_cached;
     http->base.shutdown = shutdown_http;
     http->base.nodes_updated = refresh_nodes;
-    http->base.enabled = 1;
+    http->base.enabled = 0;
     http->io_timer = lcb_timer_create_simple(parent->settings->io,
                                              http,
                                              parent->settings->config_timeout,
@@ -674,4 +674,11 @@ lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon)
     http_provider *http;
     http = (http_provider *)mon->all_providers[LCB_CLCONFIG_HTTP];
     return (lcb_host_t *)lcb_connection_get_host(&http->connection);
+}
+
+
+void lcb_clconfig_http_enable(clconfig_provider *http, hostlist_t nodes)
+{
+    http->enabled = 1;
+    refresh_nodes(http, nodes, NULL);
 }

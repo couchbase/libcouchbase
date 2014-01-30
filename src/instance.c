@@ -134,17 +134,62 @@ const void *lcb_get_cookie(lcb_t instance)
 }
 
 
-static lcb_error_t init_cccp(lcb_t obj,
+static lcb_error_t init_providers(lcb_t obj,
                              const struct lcb_create_st2 *e_options)
 {
     hostlist_t mc_nodes;
     lcb_error_t err;
     const char *hosts;
+    int http_enabled = 1;
+    int cccp_enabled = 1;
+
+    clconfig_provider *http =
+            lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_HTTP);
+
     clconfig_provider *cccp =
             lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_CCCP);
 
-    if (e_options->no_cccp || lcb_getenv_boolean("LCB_NO_CCCP")) {
-        lcb_clconfig_cccp_disable(cccp);
+
+    if (e_options->transports) {
+        int cccp_found = 0;
+        int http_found = 0;
+        const lcb_config_transport_t *cur;
+
+        for (cur = e_options->transports;
+                *cur != LCB_CONFIG_TRANSPORT_LIST_END; cur++) {
+            if (*cur == LCB_CONFIG_TRANSPORT_CCCP) {
+                cccp_found = 1;
+            } else if (*cur == LCB_CONFIG_TRANSPORT_HTTP) {
+                http_found = 1;
+            } else {
+                return LCB_EINVAL;
+            }
+        }
+
+        if (http_found || cccp_found) {
+            cccp_enabled = cccp_found;
+            http_enabled = http_found;
+        }
+    }
+
+    if (lcb_getenv_boolean("LCB_NO_CCCP")) {
+        cccp_enabled = 0;
+    }
+
+    if (lcb_getenv_boolean("LCB_NO_HTTP")) {
+        http_enabled = 0;
+    }
+
+    /** The only way we can get to here is if one of the vars are set */
+    if (cccp_enabled == 0 && http_enabled == 0) {
+        return LCB_BAD_ENVIRONMENT;
+    }
+
+    if (http_enabled) {
+        lcb_clconfig_http_enable(http, obj->usernodes);
+    }
+
+    if (!cccp_enabled) {
         return LCB_SUCCESS;
     }
 
@@ -170,7 +215,7 @@ static lcb_error_t init_cccp(lcb_t obj,
         }
     }
 
-    lcb_clconfig_cccp_set_nodes(cccp, mc_nodes, obj);
+    lcb_clconfig_cccp_enable(cccp, mc_nodes, obj);
     hostlist_destroy(mc_nodes);
     return LCB_SUCCESS;
 }
@@ -326,14 +371,13 @@ lcb_error_t lcb_create(lcb_t *instance,
         return err;
     }
 
-    lcb_confmon_set_nodes(obj->confmon, obj->usernodes, NULL);
-    lcb_initialize_packet_handlers(obj);
-
-    err = init_cccp(obj, e_options);
+    err = init_providers(obj, e_options);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;
     }
+
+    lcb_initialize_packet_handlers(obj);
 
     obj->timers = hashset_create();
     obj->http_requests = hashset_create();

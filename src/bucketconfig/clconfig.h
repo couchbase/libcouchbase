@@ -365,9 +365,12 @@ struct lcb_connection_st* lcb_confmon_get_rest_connection(lcb_confmon *mon);
 
 lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon);
 
+LCB_INTERNAL_API
+void lcb_clconfig_http_enable(clconfig_provider *pb, hostlist_t restnodes);
+
 /** CCCP Routines */
 LCB_INTERNAL_API
-void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb,
+void lcb_clconfig_cccp_enable(clconfig_provider *pb,
                                  hostlist_t mcnodes,
                                  lcb_t instance);
 

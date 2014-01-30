@@ -38,6 +38,9 @@ TEST_F(Confmon, testBasic)
 
     lcb_confmon *mon = lcb_confmon_create(&instance->settings);
     lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
+    lcb_clconfig_http_enable(lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP),
+                             instance->usernodes);
+
     lcb_confmon_prepare(mon);
 
     EXPECT_EQ(NULL, lcb_confmon_get_config(mon));
@@ -137,7 +140,9 @@ TEST_F(Confmon, testCycle)
     clconfig_provider *cccp = lcb_confmon_get_provider(mon, LCB_CLCONFIG_CCCP);
     hostlist_t hl = hostlist_create();
     hostlist_add_stringz(hl, cropts.v.v2.mchosts, 11210);
-    lcb_clconfig_cccp_set_nodes(cccp, hl, instance);
+    lcb_clconfig_cccp_enable(cccp, hl, instance);
+    lcb_clconfig_http_enable(lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP),
+                             instance->usernodes);
     hostlist_destroy(hl);
 
     lcb_confmon_prepare(mon);

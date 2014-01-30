@@ -94,16 +94,36 @@ extern "C" {
 #define LCB_CREATE_V2_FIELDS \
     LCB_CREATE_V1_FIELDS \
     /**
-     * For CCCP configuration there are three options.
-     *  (1) Specify an explicit sequence of host:port;host:port where port is
-     *      the _memcached_ (i.e. data) port for each host.
-     *  (2) [default] the memcached hosts will be considered the same as the
-     *      normal HTTP hosts, but with the default HTTP port replaced with
-     *      the default memcached port of 11210 used instead.
-     *  (3) disable CCCP entirely
+     * The default configuration process will attempt to bootstrap first from
+     * the new memcached configuration protocol (CCCP) and if that fails, use
+     * the "HTTP" protocol via the REST API.
+     *
+     * The CCCP configuration will by default attempt to connect to one of
+     * the nodes specified on the port 11200. While normally the memcached port
+     * is determined by the configuration itself, this is not possible when
+     * the configuration has not been attained. You may specify a list of
+     * alternate memcached servers by using the 'mchosts' field.
+     *
+     * If you wish to modify the default bootstrap protocol selection, you
+     * can use the 'transports' field to pass an array of desired protocols
+     * to use for configuration (note that the ordering of this array is
+     * ignored). Using this mechanism, you can disable CCCP or HTTP.
+     *
+     * If the array is NULL or does not contain any protocols, the library
+     * will bootstrap as if the following values had been specified for the
+     * array:
+     *
+     *   { LCB_CONFIG_TRANSPORT_CCCP,
+     *     LCB_CONFIG_TRANSPORT_HTTP,
+     *     LCB_CONFIG_TRANSPORT_LIST_END }
      */ \
     const char *mchosts; \
-    int no_cccp;
+    \
+    /**
+     * An array of config transports to use. The last element should be the
+     * constant LCB_CONFIG_TRANSPORT_LIST_END. If
+     */ \
+    const lcb_config_transport_t* transports;
 
 
     struct lcb_create_st0 {
@@ -134,13 +154,15 @@ extern "C" {
                       const char *bucket = NULL,
                       struct lcb_io_opt_st *io = NULL,
                       lcb_type_t type = LCB_TYPE_BUCKET) {
-            version = 1;
-            v.v1.host = host;
-            v.v1.user = user;
-            v.v1.passwd = passwd;
-            v.v1.bucket = bucket;
-            v.v1.io = io;
-            v.v1.type = type;
+            version = 2;
+            v.v2.host = host;
+            v.v2.user = user;
+            v.v2.passwd = passwd;
+            v.v2.bucket = bucket;
+            v.v2.io = io;
+            v.v2.type = type;
+            v.v2.mchosts = NULL;
+            v.v2.transports = NULL;
 
         }
 #endif

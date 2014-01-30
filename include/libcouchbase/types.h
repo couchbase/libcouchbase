@@ -571,6 +571,18 @@ extern "C" {
         } v;
     } lcb_logprocs;
 
+    typedef enum {
+        /** End of list for the config_transports array */
+        LCB_CONFIG_TRANSPORT_LIST_END = 0,
+
+        /** Use the HTTP (aka "REST API") connection for configuration */
+        LCB_CONFIG_TRANSPORT_HTTP = 1,
+
+        /** Use the memcached bootstrap protocol (Servers 2.5+ only) */
+        LCB_CONFIG_TRANSPORT_CCCP
+
+    } lcb_config_transport_t;
+
 
 #ifdef __cplusplus
 }

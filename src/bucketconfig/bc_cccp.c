@@ -150,9 +150,8 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
     }
 }
 
-void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb,
-                                 hostlist_t mcnodes,
-                                 lcb_t instance)
+void lcb_clconfig_cccp_enable(clconfig_provider *pb,
+                              hostlist_t mcnodes, lcb_t instance)
 {
     unsigned int ii;
     cccp_provider *cccp = (cccp_provider *)pb;
@@ -499,10 +498,4 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
     }
 
     return &cccp->base;
-}
-
-void lcb_clconfig_cccp_disable(clconfig_provider *provider)
-{
-    cccp_provider *cccp = (cccp_provider *)provider;
-    cccp->disabled = 1;
 }
