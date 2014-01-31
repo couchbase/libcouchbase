@@ -132,6 +132,9 @@ void lcb_timer_disarm(lcb_timer_t timer);
  */
 #define lcb_timer_armed(timer) ((timer)->state & LCB_TIMER_S_ARMED)
 
+#define lcb_async_signal(async) lcb_timer_rearm(async, 0)
+#define lcb_async_cancel(async) lcb_timer_disarm(async)
+
 
 /**
  * Gets the last interval the timer was scheduled with.

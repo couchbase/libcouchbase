@@ -5,6 +5,7 @@
 #include "lcbio.h"
 #include "genhash.h"
 #include "list.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,10 +72,13 @@ typedef struct connmgr_request_st {
  */
 typedef struct connmgr_hostent_st {
     /** A list of connections */
-    lcb_list_t conns;
+    lcb_clist_t ll_idle;
+
+    /** A list of pending connections */
+    lcb_clist_t ll_pending;
 
     /** A list of requests */
-    lcb_list_t requests;
+    lcb_clist_t requests;
 
     /** The key */
     connmgr_key_t key;
@@ -88,14 +92,8 @@ typedef struct connmgr_hostent_st {
     /** How many connections are currently being used */
     unsigned int n_leased;
 
-    /** How many connections are currently pending */
-    unsigned int n_pending;
-
     /** How many total connections are in the pool */
     unsigned int n_total;
-
-    /** How many pending requests exist */
-    unsigned int n_requests;
 } connmgr_hostent;
 
 
@@ -180,6 +178,13 @@ void connmgr_put(connmgr_t *mgr, lcb_connection_t conn);
  */
 LCB_INTERNAL_API
 void connmgr_discard(connmgr_t *mgr, lcb_connection_t conn);
+
+
+/**
+ * Dumps the connection manager state to stderr
+ */
+LCB_INTERNAL_API
+void connmgr_dump(connmgr_t *mgr, FILE *out);
 
 #ifdef __cplusplus
 }

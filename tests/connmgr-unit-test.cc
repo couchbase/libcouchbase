@@ -64,8 +64,8 @@ TEST_F(Connmgr, testBasic)
 
     ASSERT_EQ(1, req.he->n_total);
     ASSERT_EQ(0, req.he->n_leased);
-    ASSERT_FALSE(LCB_LIST_IS_EMPTY(&req.he->conns));
-    ASSERT_TRUE(LCB_LIST_IS_EMPTY(&req.he->requests));
+    ASSERT_FALSE(LCB_CLIST_SIZE(&req.he->ll_idle) == 0);
+    ASSERT_TRUE(LCB_CLIST_SIZE(&req.he->requests) == 0);
     connmgr_destroy(mgr);
 }
 
