@@ -147,7 +147,7 @@ void lcb_negotiation_destroy(struct negotiation_context *ctx);
 /**
  * Return the underlying connection to the socket pool
  */
-void lcb_server_release_connection(lcb_server_t *server);
+void lcb_server_release_connection(lcb_server_t *server, lcb_error_t err);
 
 #define MCCONN_IS_NEGOTIATING(conn) \
     ((conn)->protoctx && \

@@ -83,15 +83,10 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
         }
     }
 
-    if (server == NULL && cccp->instance->nservers) {
-        abort();
-    }
-
     if (server) {
         protocol_binary_request_get_cluster_config req;
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
 
-        abort();
         lcb_log(LOGARGS(cccp, INFO),
                 "Re-Issuing CCCP Command on server struct %p", server);
 
@@ -120,6 +115,7 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
 static lcb_error_t mcio_error(cccp_provider *cccp, lcb_error_t err)
 {
     lcb_log(LOGARGS(cccp, ERR), "Got I/O Error=0x%x", err);
+
     release_socket(cccp, err == LCB_NOT_SUPPORTED);
     return schedule_next_request(cccp, err, 0);
 }
@@ -222,7 +218,7 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
         }
 
 
-    } else if (ck->ignore_errors != 0) {
+    } else if (!ck->ignore_errors) {
         mcio_error(cccp, err);
     }
 
@@ -373,7 +369,7 @@ static void io_read_handler(lcb_connection_t conn)
     lcb_string jsonstr;
     lcb_error_t err;
     int rv;
-    const lcb_host_t *curhost;
+    lcb_host_t curhost;
 
     memset(&pi, 0, sizeof(pi));
 
@@ -422,19 +418,17 @@ static void io_read_handler(lcb_connection_t conn)
         return;
     }
 
-    curhost = lcb_connection_get_host(&cccp->connection);
-    err = lcb_cccp_update(&cccp->base, curhost->host, &jsonstr);
-    lcb_string_release(&jsonstr);
+    curhost = *lcb_connection_get_host(&cccp->connection);
     lcb_packet_release_ringbuffer(&pi, conn->input);
-    if (err != LCB_SUCCESS) {
-        mcio_error(cccp, LCB_PROTOCOL_ERROR);
+    release_socket(cccp, 1);
 
-    } else {
-        lcb_sockrw_set_want(conn, 0, 1);
-        lcb_sockrw_apply_want(conn);
-        cccp->server_active = 0;
-        connmgr_put(cccp->instance->memd_sockpool, &cccp->connection);
+    err = lcb_cccp_update(&cccp->base, curhost.host, &jsonstr);
+    lcb_string_release(&jsonstr);
+    if (err == LCB_SUCCESS) {
         lcb_timer_disarm(cccp->timer);
+        cccp->server_active = 0;
+    } else {
+        schedule_next_request(cccp, LCB_PROTOCOL_ERROR, 0);
     }
 }
 

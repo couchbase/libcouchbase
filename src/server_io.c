@@ -117,7 +117,11 @@ static void v0_handler(lcb_socket_t sock, short which, void *arg)
     if (conn->output->nbytes || conn->input->nbytes) {
         which = LCB_RW_EVENT;
     } else {
-        which = LCB_READ_EVENT;
+        if (c->cmd_log.nbytes) {
+            which = LCB_READ_EVENT;
+        } else {
+            which = 0;
+        }
     }
 
     lcb_sockrw_set_want(conn, which, 1);
@@ -162,7 +166,11 @@ static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
 
     if (rv >= 0) {
         /* Schedule the read request again */
-        lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
+        if (c->cmd_log.nbytes) {
+            lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
+        } else {
+            lcb_sockrw_set_want(&c->connection, 0, 1);
+        }
     }
     event_complete_common(c, LCB_SUCCESS);
 }
@@ -381,10 +389,10 @@ void lcb_server_connect(lcb_server_t *server)
                 MCSERVER_TIMEOUT(server));
 }
 
-void lcb_server_release_connection(lcb_server_t *server)
+void lcb_server_release_connection(lcb_server_t *server, lcb_error_t err)
 {
     lcb_connection_t conn = &server->connection;
-    int can_release = 1;
+    int can_release = (err == LCB_SUCCESS);
 
     if (server->connreq) {
         connmgr_cancel(server->instance->memd_sockpool, server->connreq);
@@ -398,6 +406,9 @@ void lcb_server_release_connection(lcb_server_t *server)
     }
 
     if (server->cmd_log.nbytes || conn->want) {
+        lcb_log(LOGARGS(server, INFO),
+                "Cannot release socket: Want=%d, CMDLOG=%lu bytes",
+                conn->want, server->cmd_log.nbytes);
         can_release = 0;
     }
 

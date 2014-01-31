@@ -415,7 +415,7 @@ lcb_error_t lcb_failout_server(lcb_server_t *server,
     ringbuffer_reset(&server->pending_cookies);
 
     server->connection_ready = 0;
-    lcb_server_release_connection(server);
+    lcb_server_release_connection(server, error);
     return error;
 }
 
@@ -468,6 +468,8 @@ static void tmo_thunk(lcb_timer_t tm, lcb_t i, const void *cookie)
  */
 void lcb_server_destroy(lcb_server_t *server)
 {
+    lcb_server_release_connection(server, LCB_SUCCESS);
+
     /* Cancel all pending commands */
     if (server->cmd_log.nbytes) {
         lcb_server_purge_implicit_responses(server,
@@ -481,7 +483,6 @@ void lcb_server_destroy(lcb_server_t *server)
     }
 
 
-    lcb_server_release_connection(server);
     lcb_connection_cleanup(&server->connection);
 
     free(server->rest_api_server);
@@ -522,7 +523,7 @@ void lcb_server_connected(lcb_server_t *server)
                 !ringbuffer_append(&copy, &server->cmd_log)) {
             ringbuffer_reset(&server->cmd_log);
             ringbuffer_reset(&server->output_cookies);
-            lcb_server_release_connection(server);
+            lcb_server_release_connection(server, LCB_CLIENT_ENOMEM);
             lcb_connection_cleanup(conn);
             lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
             return;
@@ -576,7 +577,7 @@ void lcb_server_send_packets(lcb_server_t *server)
 {
     if (server->pending.nbytes > 0 || server->connection.output->nbytes > 0) {
         if (server->connection_ready) {
-            lcb_sockrw_set_want(&server->connection, LCB_RW_EVENT, 0);
+            lcb_sockrw_set_want(&server->connection, LCB_WRITE_EVENT, 0);
             if (!server->inside_handler) {
                 lcb_sockrw_apply_want(&server->connection);
                 if (!lcb_timer_armed(server->io_timer)) {
