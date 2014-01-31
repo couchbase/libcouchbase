@@ -101,6 +101,73 @@ Development files for the Couchbase Client & Protocol Library
 %{_mandir}/man3/*
 
 %changelog
+
+* Tue Feb 04 2014 Mark Nunberg <mark.nunberg@couchbase.com> - 2.3.0-0.dp1
+
+- [major] CCBC-234: Implementation of Cluster Configuration Carrier Publication.
+  This is the new and
+  more efficient way to bootstrap from a cluster using the native memcached
+  protocol and is quicker than the previous HTTP bootstrap mechanism, dramatically
+  improving startup times and reducing load on the server. This feature is
+  available in server verions 2.5 and greater. The existing HTTP configuration is
+  still supported and will be employed as a fallback in the event that `CCCP`
+  is not supported.
+
+  In conjunction with this, a new struct version has been added to the
+  `lcb_create_st` parameters structure for use with `lcb_create`. This allows
+  you to get more control over how the client is initialized:
+
+    lcb_t instance;
+    struct lcb_create_st options;
+    lcb_config_transport_t enabled_transports = {
+        LCB_CONFIG_TRANSPORT_CCCP,
+        LCB_CONFIG_TRANSPORT_LIST_END
+    };
+
+    memset(&options, 0, sizeof(options));
+    options.version = 2;
+    options.v.v2.mchosts = "example.com:11210";
+    options.v.v2.transports = enabled_transports;
+
+    lcb_error_t rc = lcb_create(&instance, &options);
+    if (rc != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to create instance: %s\n", lcb_strerror(instance, rc));
+    }
+
+  The above snippet will configure a client to _always_ use the `CCCP` protocol
+  and never attempt to fall back on HTTP
+
+  The CCCP implementation required a significant rewrite in how sockets were
+  created and re-used. Particularly, a connection pooling feature was implemented.
+
+  Additionally, the `cbc` command now has an additional `-C` option which accepts
+  the preferred configuration mechanism to use.
+
+- [major] CCBC-305: Implement logging hooks.
+
+  This improvements adds various levels of diagnostic logging with the library
+  itself. It may be utilized via the environment (by setting the `LCB_LOGLEVEL`
+  environment variable to a positive integer -- the higher the number the more
+  verbose the logging).
+
+  Integrators may also use the logging API specified in `<libcouchbase/types.h>`
+  to proxy the library's logging messages into your own application.
+
+  Current events logged include connection initialization, destruction, connection
+  pool management, configuration changes, and timeouts.
+
+  By default the library is silent.
+
+- [major] CCBC-316: Allow per-node bootstrap/config timeouts.
+  This change allows more finer grained control over how long to wait per-node
+  to receive updated configuration info. This setting helps adjust the initial
+  and subsequent bootstrap processes to help ensure each node gets a slice of
+  time.
+
+- [major] CCBC-297: Handle spurious EWOULDBLOCK on UV/Win32
+  This issue caused odd errors on Windows when large amounts of data
+  would be received on the socket.
+
 * Wed Nov 06 2013 Sergey Avseyev <sergey@couchbase.com> - 2.2.0
 
 - [major] CCBC-169 Handle 302 redirects in HTTP (views, administrative

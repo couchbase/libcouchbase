@@ -28,8 +28,8 @@
 #error "Include libcouchbase/couchbase.h instead"
 #endif
 
-#define LCB_VERSION_STRING "2.2.0"
-#define LCB_VERSION 0x020200
+#define LCB_VERSION_STRING "2.3.0dp1"
+#define LCB_VERSION 0x020300
 #define LCB_VERSION_CHANGESET "unknown"
-#define PACKAGE_STRING "libcouchbase 2.2.0"
+#define PACKAGE_STRING "libcouchbase 2.2.0-dp1"
 #endif
