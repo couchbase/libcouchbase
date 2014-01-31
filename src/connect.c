@@ -670,12 +670,12 @@ void lcb_connection_transfer_socket(lcb_connection_t from,
                                     lcb_connection_t to,
                                     const struct lcb_io_use_st *use)
 {
-    lcb_assert(to->state == LCB_CONNSTATE_UNINIT);
-    lcb_assert(to->ioconn == NULL && from->ioconn == NULL);
-
     if (from == to) {
         return;
     }
+
+    lcb_assert(to->state == LCB_CONNSTATE_UNINIT);
+    lcb_assert(to->ioconn == NULL && from->ioconn == NULL);
 
     if (from->io->version == 0 && from->evinfo.active) {
         from->io->v.v0.delete_event(from->io, from->sockfd, from->evinfo.ptr);
