@@ -120,8 +120,11 @@ void lcb_http_request_decref(lcb_http_request_t req)
     ringbuffer_destruct(&req->result);
     request_free_headers(req);
     LCB_LIST_SAFE_FOR(ii, nn, &req->headers_out.list) {
+        lcb_http_header_t *hdr = LCB_LIST_ITEM(ii, lcb_http_header_t, list);
         lcb_list_delete(ii);
-        free(LCB_LIST_ITEM(ii, lcb_http_header_t, list));
+        free(hdr->key);
+        free(hdr->val);
+        free(hdr);
     }
     memset(req, 0xff, sizeof(struct lcb_http_request_st));
     free(req);
