@@ -145,13 +145,32 @@ void lcb_setup_lcb_http_resp_t(lcb_http_resp_t *resp,
     resp->v.v0.nbytes = nbytes;
 }
 
+static void maybe_refresh_config(lcb_t instance,
+                                 lcb_http_request_t req, lcb_error_t err)
+{
+
+    if (!req->parser) {
+        return;
+    }
+
+    if (err != LCB_SUCCESS) {
+        lcb_bootstrap_refresh(instance);
+        return;
+    }
+
+    if (req->parser->status_code >= 200 && req->parser->status_code < 299) {
+        return;
+    }
+
+    lcb_bootstrap_refresh(instance);
+}
+
 void lcb_http_request_finish(lcb_t instance,
                              lcb_http_request_t req,
                              lcb_error_t error)
 {
-    if (error != LCB_SUCCESS && req->reqtype == LCB_HTTP_TYPE_VIEW) {
-        lcb_bootstrap_refresh(instance);
-    }
+
+    maybe_refresh_config(instance, req, error);
 
     if ((req->status & LCB_HTREQ_S_CBINVOKED) == 0 && req->on_complete) {
         lcb_http_resp_t resp;
