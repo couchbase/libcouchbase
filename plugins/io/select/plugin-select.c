@@ -40,12 +40,11 @@ struct s_timer_s {
     hrtime_t exptime;
     void *cb_data;
     void (*handler)(lcb_socket_t sock, short which, void *cb_data);
-    s_timer_t *next; /* for chaining active timers */
 };
 
 typedef struct {
     s_event_t events;
-    s_timer_t timers;
+    lcb_list_t timers;
 
     fd_set readfds[FD_SETSIZE];
     fd_set writefds[FD_SETSIZE];
@@ -53,6 +52,19 @@ typedef struct {
 
     int event_loop;
 } io_cookie_t;
+
+static int timer_cmp_asc(lcb_list_t *a, lcb_list_t *b)
+{
+    s_timer_t *ta = LCB_LIST_ITEM(a, s_timer_t, list);
+    s_timer_t *tb = LCB_LIST_ITEM(b, s_timer_t, list);
+    if (ta->exptime > tb->exptime) {
+        return 1;
+    } else if (ta->exptime < tb->exptime) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
 
 
 #ifdef _WIN32
@@ -379,28 +391,26 @@ static void lcb_io_delete_event(lcb_io_opt_t iops,
 
 static void *lcb_io_create_timer(lcb_io_opt_t iops)
 {
-    io_cookie_t *io = iops->v.v0.cookie;
     s_timer_t *ret = calloc(1, sizeof(s_timer_t));
-    if (ret != NULL) {
-        lcb_list_append(&io->timers.list, &ret->list);
-    }
+    (void)iops;
     return ret;
 }
 
-static void lcb_io_destroy_timer(lcb_io_opt_t iops,
-                                 void *timer)
+static void lcb_io_delete_timer(lcb_io_opt_t iops, void *timer)
 {
     s_timer_t *tm = timer;
-    lcb_list_delete(&tm->list);
-    free(tm);
+    if (tm->active) {
+        tm->active = 0;
+        lcb_list_delete(&tm->list);
+    }
     (void)iops;
 }
 
-static void lcb_io_delete_timer(lcb_io_opt_t iops,
-                                void *timer)
+
+static void lcb_io_destroy_timer(lcb_io_opt_t iops, void *timer)
 {
-    s_timer_t *tm = timer;
-    tm->active = 0;
+    lcb_io_delete_timer(iops, timer);
+    free(timer);
     (void)iops;
 }
 
@@ -413,10 +423,14 @@ static int lcb_io_update_timer(lcb_io_opt_t iops,
                                                void *cb_data))
 {
     s_timer_t *tm = timer;
+    io_cookie_t *cookie = iops->v.v0.cookie;
+    lcb_assert(!tm->active);
     tm->exptime = gethrtime() + (usec * (hrtime_t)1000);
     tm->cb_data = cb_data;
     tm->handler = handler;
     tm->active = 1;
+    lcb_list_add_sorted(&cookie->timers, &tm->list, timer_cmp_asc);
+
     (void)iops;
     return 0;
 }
@@ -427,26 +441,74 @@ static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
     io->event_loop = 0;
 }
 
+static s_timer_t *pop_next_timer(io_cookie_t *cookie, hrtime_t now)
+{
+    s_timer_t *ret;
+
+    if (LCB_LIST_IS_EMPTY(&cookie->timers)) {
+        return NULL;
+    }
+
+    ret = LCB_LIST_ITEM(cookie->timers.next, s_timer_t, list);
+    if (ret->exptime > now) {
+        return NULL;
+    }
+    lcb_list_shift(&cookie->timers);
+    ret->active = 0;
+    return ret;
+}
+
+static int get_next_timeout(io_cookie_t *cookie, struct timeval *tmo, hrtime_t now)
+{
+    s_timer_t *first;
+    hrtime_t delta;
+
+    if (LCB_LIST_IS_EMPTY(&cookie->timers)) {
+        tmo->tv_sec = 0;
+        tmo->tv_usec = 0;
+        return 0;
+    }
+
+    first = LCB_LIST_ITEM(cookie->timers.next, s_timer_t, list);
+    if (now > first->exptime) {
+        delta = now - first->exptime;
+    } else {
+        delta = 0;
+    }
+
+
+    if (delta) {
+        delta /= 1000;
+        tmo->tv_sec = (long)(delta / 1000000);
+        tmo->tv_usec = delta % 1000000;
+    } else {
+        tmo->tv_sec = 0;
+        tmo->tv_usec = 0;
+    }
+    return 1;
+}
+
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
     io_cookie_t *io = iops->v.v0.cookie;
 
     s_event_t *ev;
-    lcb_list_t *ii, *nn;
+    lcb_list_t *ii;
 
     io->event_loop = 1;
     do {
-        s_timer_t *tm;
         struct timeval tmo, *t;
         int ret;
         int nevents = 0;
-        int ntimers = 0;
+        int has_timers;
+        hrtime_t now;
 
+        t = NULL;
+        now = gethrtime();
 
         FD_ZERO(io->readfds);
         FD_ZERO(io->writefds);
         FD_ZERO(io->exceptfds);
-
 
         LCB_LIST_FOR(ii, &io->events.list) {
             ev = LCB_LIST_ITEM(ii, s_event_t, list);
@@ -464,45 +526,13 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
             }
         }
 
-        t = NULL;
-        if (!LCB_LIST_IS_EMPTY(&io->timers.list)) {
-            hrtime_t now = gethrtime();
-            hrtime_t min = 0;
-
-            tmo.tv_sec = 0;
-            tmo.tv_usec = 0;
-
-            LCB_LIST_FOR(ii, &io->timers.list) {
-                tm = LCB_LIST_ITEM(ii, s_timer_t, list);
-                if (!tm->active) {
-                    continue;
-                }
-
-                ++ntimers;
-
-                if (min == 0 || min >= tm->exptime) {
-                    /** Set the shortest amount of time to wait.. */
-                    min = tm->exptime;
-                }
-
-            }
-
-            if (min > now) {
-                /** We need to wait at least a bit. */
-                hrtime_t delta = min - now;
-                delta /= 1000;
-                tmo.tv_sec = (long)(delta / 1000000);
-                tmo.tv_usec = delta % 1000000;
-                t = &tmo;
-
-            } else {
-                tmo.tv_sec = 0;
-                tmo.tv_usec = 0;
-                t = &tmo;
-            }
+        has_timers = get_next_timeout(io, &tmo, now);
+        if (has_timers) {
+            t = &tmo;
         }
 
-        if (nevents == 0 && ntimers == 0) {
+
+        if (nevents == 0 && has_timers == 0) {
             io->event_loop = 0;
             return;
         }
@@ -517,30 +547,28 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
             usleep((t->tv_sec * 1000000) + t->tv_usec);
         }
 
+
+        /** Always invoke the pending timers */
+        if (has_timers) {
+            s_timer_t *tm;
+            now = gethrtime();
+
+            while ((tm = pop_next_timer(io, now))) {
+                tm->handler(-1, 0, tm->cb_data);
+            }
+            if ((has_timers = get_next_timeout(io, &tmo, now))) {
+                t = &tmo;
+            } else {
+                t = NULL;
+            }
+
+        }
+
         /* To be completely safe, we need to copy active events
          * before handing them. Iterating over the list of
          * registered events isn't safe, because one callback can
          * cancel all registered events before iteration will end
          */
-
-        /** Always invoke the pending timers */
-        if (ntimers) {
-            s_timer_t *active = NULL;
-            hrtime_t now = gethrtime();
-            LCB_LIST_SAFE_FOR(ii, nn, &io->timers.list) {
-                tm = LCB_LIST_ITEM(ii, s_timer_t, list);
-                if (tm->active && now > tm->exptime) {
-                    tm->next = active;
-                    active = tm;
-                }
-            }
-            tm = active;
-            while (tm) {
-                s_timer_t *p = tm->next;
-                tm->handler(-1, 0, tm->cb_data);
-                tm = p;
-            }
-        }
 
         if (ret && nevents) {
             s_event_t *active = NULL;
@@ -586,11 +614,11 @@ static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
         iops->v.v0.destroy_event(iops, ev);
     }
     assert(LCB_LIST_IS_EMPTY(&io->events.list));
-    LCB_LIST_SAFE_FOR(ii, nn, &io->timers.list) {
+    LCB_LIST_SAFE_FOR(ii, nn, &io->timers) {
         tm = LCB_LIST_ITEM(ii, s_timer_t, list);
         iops->v.v0.destroy_timer(iops, tm);
     }
-    assert(LCB_LIST_IS_EMPTY(&io->timers.list));
+    assert(LCB_LIST_IS_EMPTY(&io->timers));
     free(io);
     free(iops);
 }
@@ -612,7 +640,7 @@ lcb_error_t lcb_create_select_io_opts(int version, lcb_io_opt_t *io, void *arg)
         return LCB_CLIENT_ENOMEM;
     }
     lcb_list_init(&cookie->events.list);
-    lcb_list_init(&cookie->timers.list);
+    lcb_list_init(&cookie->timers);
 
     /* setup io iops! */
     ret->version = 0;
