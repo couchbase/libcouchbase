@@ -507,6 +507,12 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         }
         memcpy(req->body, body, nbody);
     }
+
+    if (!npath) {
+        path = "/";
+        npath = 1;
+    }
+
     rc = lcb_urlencode_path(path, npath, &req->path, &req->npath);
     if (rc != LCB_SUCCESS) {
         lcb_http_request_decref(req);
