@@ -164,6 +164,7 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
         lcb_confmon_add_listener(instance->confmon, &bs->listener);
     }
 
+    bs->last_refresh = gethrtime();
     bs->active = 1;
 
     if (initial) {
@@ -199,11 +200,13 @@ void lcb_bootstrap_errcount_incr(lcb_t instance)
 {
     int should_refresh = 0;
     hrtime_t now = gethrtime();
-
     instance->weird_things++;
 
     if (now - instance->bootstrap->last_refresh >
-            (hrtime_t)(instance->settings.weird_things_delay * 1000)) {
+            LCB_US2NS(instance->settings.weird_things_delay)) {
+
+        lcb_log(LOGARGS(instance, INFO),
+                "Max grace period for refresh exceeded");
         should_refresh = 1;
     }
 
@@ -214,6 +217,9 @@ void lcb_bootstrap_errcount_incr(lcb_t instance)
     if (!should_refresh) {
         return;
     }
+
+    instance->weird_things = 0;
+    lcb_bootstrap_refresh(instance);
 }
 
 void lcb_bootstrap_destroy(lcb_t instance)
