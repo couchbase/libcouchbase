@@ -1,28 +1,50 @@
 #ifndef LCB_SETTINGS_H
 #define LCB_SETTINGS_H
 
-#define LCB_DEFAULT_TIMEOUT 2500000
-#define LCB_DEFAULT_CONFIGURATION_TIMEOUT 5000000
-#define LCB_DEFAULT_VIEW_TIMEOUT 75000000
+/**
+ * Handy macros for converting between different time resolutions
+ */
+
+/** Convert seconds to millis */
+#define LCB_S2MS(s) ((lcb_uint32_t)s) / 1000
+
+/** Convert seconds to microseconds */
+#define LCB_S2US(s) ((lcb_uint32_t)s) / 1000000
+
+/** Convert seconds to nanoseconds */
+#define LCB_S2NS(s) ((hrtime_t)s) / 1000000000
+
+/** Convert nanoseconds to microseconds */
+#define LCB_NS2US(s) (s) / 1000
+
+#define LCB_MS2US(s) (s) * 1000
+
+/** Convert microseconds to nanoseconds */
+#define LCB_US2NS(s) ((hrtime_t)s) * 1000
+
+
+#define LCB_DEFAULT_TIMEOUT LCB_MS2US(2500)
+#define LCB_DEFAULT_CONFIGURATION_TIMEOUT LCB_MS2US(5000)
+#define LCB_DEFAULT_VIEW_TIMEOUT LCB_MS2US(75000)
 #define LCB_DEFAULT_RBUFSIZE 32768
 #define LCB_DEFAULT_WBUFSIZE 32768
-#define LCB_DEFAULT_DURABILITY_TIMEOUT 5000000
-#define LCB_DEFAULT_DURABILITY_INTERVAL 100000
-#define LCB_DEFAULT_HTTP_TIMEOUT 75000000
+#define LCB_DEFAULT_DURABILITY_TIMEOUT LCB_MS2US(5000)
+#define LCB_DEFAULT_DURABILITY_INTERVAL LCB_MS2US(100)
+#define LCB_DEFAULT_HTTP_TIMEOUT LCB_MS2US(75000)
 #define LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS 3
 #define LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD 100
 
 /* 10 seconds */
-#define LCB_DEFAULT_CONFIG_ERRORS_DELAY 10000000
+#define LCB_DEFAULT_CONFIG_ERRORS_DELAY LCB_MS2US(10000)
 
 /* 1 second */
-#define LCB_DEFAULT_CLCONFIG_GRACE_CYCLE 1000000
+#define LCB_DEFAULT_CLCONFIG_GRACE_CYCLE LCB_MS2US(1000)
 
 /* 100 ms */
-#define LCB_DEFAULT_CLCONFIG_GRACE_NEXT 100000
+#define LCB_DEFAULT_CLCONFIG_GRACE_NEXT LCB_MS2US(100)
 
 /* 10 seconds */
-#define LCB_DEFAULT_BC_HTTP_DISCONNTMO 10000000
+#define LCB_DEFAULT_BC_HTTP_DISCONNTMO LCB_MS2US(10000)
 
 
 #include "config.h"
