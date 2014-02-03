@@ -323,6 +323,7 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     settings->operation_timeout = LCB_DEFAULT_TIMEOUT;
     settings->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
+    settings->config_node_timeout = LCB_DEFAULT_NODECONFIG_TIMEOUT;
     settings->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
     settings->rbufsize = LCB_DEFAULT_RBUFSIZE;
     settings->wbufsize = LCB_DEFAULT_WBUFSIZE;

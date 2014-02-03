@@ -56,7 +56,7 @@ static lcb_error_t io_error(http_provider *http)
 
     close_current(http);
 
-    params.timeout = PROVIDER_SETTING(&http->base, config_timeout);
+    params.timeout = PROVIDER_SETTING(&http->base, config_node_timeout);
     params.handler = connect_done_handler;
     err = lcb_connection_next_node(&http->connection,
                                    http->nodes, &params, &errinfo);
@@ -133,7 +133,7 @@ static void read_common(http_provider *http)
             "Received %d bytes on HTTP stream", conn->input->nbytes);
 
     lcb_timer_rearm(http->io_timer,
-                    PROVIDER_SETTING(&http->base, config_timeout));
+                    PROVIDER_SETTING(&http->base, config_node_timeout));
 
     lcb_string_rbappend(&http->stream.chunk, conn->input, 1);
 
@@ -240,7 +240,7 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
     lcb_sockrw_set_want(conn, LCB_RW_EVENT, 0);
     lcb_sockrw_apply_want(conn);
     lcb_timer_rearm(http->io_timer,
-                    PROVIDER_SETTING(&http->base, config_timeout));
+                    PROVIDER_SETTING(&http->base, config_node_timeout));
 }
 
 static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
@@ -269,7 +269,7 @@ static lcb_error_t connect_next(http_provider *http)
     close_current(http);
     reset_stream_state(http);
     params.handler = connect_done_handler;
-    params.timeout = PROVIDER_SETTING(&http->base, config_timeout);
+    params.timeout = PROVIDER_SETTING(&http->base, config_node_timeout);
 
     lcb_log(LOGARGS(http, TRACE),
             "Starting HTTP Configuration Provider %p", http);
@@ -322,7 +322,8 @@ static lcb_error_t get_refresh(clconfig_provider *provider)
      */
     if (lcb_timer_armed(http->disconn_timer)) {
         lcb_timer_disarm(http->disconn_timer);
-        lcb_timer_rearm(http->io_timer, PROVIDER_SETTING(provider, config_timeout));
+        lcb_timer_rearm(http->io_timer, PROVIDER_SETTING(provider,
+                                                         config_node_timeout));
         return LCB_SUCCESS;
     }
 
@@ -420,7 +421,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.enabled = 0;
     http->io_timer = lcb_timer_create_simple(parent->settings->io,
                                              http,
-                                             parent->settings->config_timeout,
+                                             parent->settings->config_node_timeout,
                                              timeout_handler);
     lcb_timer_disarm(http->io_timer);
 

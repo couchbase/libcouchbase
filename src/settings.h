@@ -24,7 +24,13 @@
 
 
 #define LCB_DEFAULT_TIMEOUT LCB_MS2US(2500)
+
+/** 5 seconds for total bootstrap */
 #define LCB_DEFAULT_CONFIGURATION_TIMEOUT LCB_MS2US(5000)
+
+/** 2 seconds per node */
+#define LCB_DEFAULT_NODECONFIG_TIMEOUT LCB_MS2US(2000)
+
 #define LCB_DEFAULT_VIEW_TIMEOUT LCB_MS2US(75000)
 #define LCB_DEFAULT_RBUFSIZE 32768
 #define LCB_DEFAULT_WBUFSIZE 32768
@@ -66,6 +72,7 @@ typedef struct lcb_settings_st {
     lcb_uint32_t durability_interval;
     lcb_uint32_t operation_timeout;
     lcb_uint32_t config_timeout;
+    lcb_uint32_t config_node_timeout;
     lcb_size_t rbufsize;
     lcb_size_t wbufsize;
     lcb_size_t weird_things_threshold;

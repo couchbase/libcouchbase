@@ -366,8 +366,26 @@ extern "C" {
      */
 #define LCB_CNTL_CONFIG_TRANSPORT 0x1A
 
+    /**
+     * Get/Set the per-node configuration timeout.
+     *
+     * The per-node configuration timeout sets the amount of time to wait
+     * for each node within the bootstrap/configuration process. This interval
+     * is a subset of the CONFIG_TIMEOUT option mentioned above and is intended
+     * to ensure that the bootstrap process does not wait too long for a given
+     * node. Nodes that are physically offline may never respond and it may take
+     * a long time until they are detected as being offline. See CCBC-261 and
+     * CCBC-313 for more reasons.
+     *
+     * Arg: lcb_uint32_t*, Timeout in microseconds.
+     *
+     * Note that the CONFIG_TIMEOUT should be higher than this number. No check
+     * is made to ensure that this is the case, however.
+     */
+#define LCB_CNTL_CONFIG_NODE_TIMEOUT 0x1B
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x1B
+#define LCB_CNTL__MAX                    0x1C
 
 
 #ifdef __cplusplus

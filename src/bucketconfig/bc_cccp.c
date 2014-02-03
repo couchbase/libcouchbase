@@ -105,7 +105,7 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
                          socket_connected);
         cccp->cur_connreq->data = cccp;
         connmgr_get(cccp->instance->memd_sockpool, cccp->cur_connreq,
-                    PROVIDER_SETTING(&cccp->base, config_timeout));
+                    PROVIDER_SETTING(&cccp->base, config_node_timeout));
     }
 
     cccp->server_active = 1;
@@ -268,7 +268,8 @@ static void socket_connected(connmgr_request *req)
 
         ctx = lcb_negotiation_create(&cccp->connection,
                                      cccp->base.parent->settings,
-                                     PROVIDER_SETTING(&cccp->base, config_timeout),
+                                     PROVIDER_SETTING(&cccp->base,
+                                                      config_node_timeout),
                                      nistrs.remote,
                                      nistrs.local,
                                      &err);
@@ -458,7 +459,8 @@ static void request_config(cccp_provider *cccp)
     ringbuffer_write(buf, req.bytes, sizeof(req.bytes));
     lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(conn);
-    lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base, config_timeout));
+    lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base,
+                                                  config_node_timeout));
 }
 
 clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
