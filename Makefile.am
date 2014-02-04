@@ -129,7 +129,7 @@ libvbucket_la_SOURCES = \
 libvbucket_la_LIBADD = libketama.la libcrc32.la
 libvbucket_la_DEPENDENCIES = libketama.la libcrc32.la
 libvbucket_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
-libvbucket_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
+libvbucket_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 
 libketama_la_SOURCES = contrib/libvbucket/ketama.c
 libketama_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
