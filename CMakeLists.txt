@@ -40,6 +40,9 @@ OPTION(LCB_NO_PLUGINS "Disable the building of IO plugins for external libs" OFF
 OPTION(LCB_MAINTAINER_MODE "Enables maintainer mode" OFF)
 
 ### END CONFIGURABLES ###
+SET(LCB_GENSRCDIR ${CMAKE_BINARY_DIR}/generated)
+INCLUDE_DIRECTORIES(${LCB_GENSRCDIR})
+
 INCLUDE(cmake/Modules/GetLibcouchbaseFlags.cmake)
 INCLUDE(cmake/Modules/FindCouchbaseLibevent.cmake)
 INCLUDE(cmake/Modules/FindCouchbaseLibev.cmake)
@@ -61,8 +64,9 @@ INCLUDE(CPack)
 SET(CHANGESET ${LCB_VERSION_CHANGESET})
 CONFIGURE_FILE(
     ${CMAKE_SOURCE_DIR}/include/libcouchbase/configuration.h.in
-    ${CMAKE_SOURCE_DIR}/include/libcouchbase/configuration.h
+    ${LCB_GENSRCDIR}/libcouchbase/configuration.h
     @ONLY)
+
 UNSET(CHANGESET)
 CONFIGURE_FILE(
     ${CMAKE_SOURCE_DIR}/win32/dllversion.rc.in
@@ -231,7 +235,6 @@ INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/assert.h
               include/libcouchbase/behavior.h
               include/libcouchbase/callbacks.h
-              include/libcouchbase/configuration.h
               include/libcouchbase/cntl.h
               include/libcouchbase/compat.h
               include/libcouchbase/couchbase.h
@@ -243,4 +246,5 @@ INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/timings.h
               include/libcouchbase/types.h
               include/libcouchbase/visibility.h
+              ${LCB_GENSRCDIR}/libcouchbase/configuration.h
             DESTINATION include/libcouchbase)

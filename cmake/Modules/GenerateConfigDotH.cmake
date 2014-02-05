@@ -23,5 +23,4 @@ ENDIF()
 
 CONFIGURE_FILE(
     ${CMAKE_SOURCE_DIR}/cmake/config-cmake.h.in
-    ${CMAKE_BINARY_DIR}/generated-config/config.h)
-INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/generated-config)
+    ${LCB_GENSRCDIR}/config.h)

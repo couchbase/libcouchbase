@@ -8,19 +8,23 @@
 #  LCB_VERSION_PATCH
 
 ## Try git first ##
-IF(NOT WIN32)
+FIND_PROGRAM(GIT_EXECUTABLE NAMES git git.exe)
+if (GIT_EXECUTABLE)
     EXECUTE_PROCESS(
         COMMAND git describe
         COMMAND tr '-' '_'
         COMMAND tr -d '\n'
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE LCB_VERSION)
     EXECUTE_PROCESS(
         COMMAND git rev-parse HEAD
         COMMAND tr -d '\n'
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE LCB_VERSION_CHANGESET)
     EXECUTE_PROCESS(
         COMMAND echo ${LCB_VERSION}
         COMMAND awk -F. "{printf \"0x%0.2d%0.2d%0.2d\", $1, $2, $3}"
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         OUTPUT_VARIABLE LCB_VERSION_HEX)
 ENDIF()
 
