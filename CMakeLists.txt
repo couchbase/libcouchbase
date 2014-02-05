@@ -40,6 +40,10 @@ OPTION(LCB_NO_PLUGINS "Disable the building of IO plugins for external libs" OFF
 OPTION(LCB_MAINTAINER_MODE "Enables maintainer mode" OFF)
 
 ### END CONFIGURABLES ###
+IF(MSVC)
+    SET(CMAKE_DEBUG_POSTFIX "_d")
+ENDIF()
+
 SET(LCB_GENSRCDIR ${CMAKE_BINARY_DIR}/generated)
 INCLUDE_DIRECTORIES(${LCB_GENSRCDIR})
 
