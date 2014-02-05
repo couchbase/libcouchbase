@@ -21,3 +21,5 @@ TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
 
 INSTALL(TARGETS cbc cbc-pillowfight RUNTIME
     DESTINATION bin)
+INSTALL_PDBS(cbc)
+INSTALL_PDBS(cbc-pillowfight)

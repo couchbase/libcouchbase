@@ -54,6 +54,7 @@ INCLUDE(cmake/Modules/FindCouchbaseLibuv.cmake)
 INCLUDE(cmake/Modules/GetPlatformCCInfo.cmake)
 INCLUDE(cmake/Modules/GetVersionInfo.cmake)
 INCLUDE(cmake/Modules/GenerateConfigDotH.cmake)
+INCLUDE(cmake/Modules/CopyPDB.cmake)
 INCLUDE(CheckIncludeFiles)
 
 SET(CPACK_PACKAGE_VERSION_MAJOR "${LCB_VERSION_MAJOR}")
@@ -252,3 +253,5 @@ INSTALL(FILES include/libcouchbase/arguments.h
               include/libcouchbase/visibility.h
               ${LCB_GENSRCDIR}/libcouchbase/configuration.h
             DESTINATION include/libcouchbase)
+
+INSTALL_PDBS(couchbase)
