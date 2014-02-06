@@ -565,7 +565,16 @@ AS_IF([test "x${ac_cv_enable_maintainer_mode}" = "xyes"],
 AH_TOP([
 #if defined(_WIN32) && !defined(HAVE_CONFIG_H)
   /* skip config.h contents on a non-autotools win32 build */
-  #include "win32/config.h"
+  #ifndef _CRT_SECURE_NO_WARNINGS
+  #define _CRT_SECURE_NO_WARNINGS
+  #endif
+
+  #include <string.h>
+
+  #define HAVE_WINSOCK2_H 1
+  #define HAVE_WS2TCPIP_H 1
+  #define HAVE_QUERYPERFORMANCECOUNTER 1
+  #include "config_static.h"
   #define CONFIG_H
 #endif
 

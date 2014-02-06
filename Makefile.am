@@ -552,7 +552,6 @@ EXTRA_DIST = \
              CONTRIBUTING.md \
              LICENSE \
              Makefile.manpage.inc \
-             NMakefile \
              README.markdown \
              RELEASE_NOTES.markdown \
              contrib/libvbucket/rfc1321 \
