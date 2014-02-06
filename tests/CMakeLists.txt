@@ -105,17 +105,18 @@ ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
 INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 TARGET_LINK_LIBRARIES(unit-tests couchbase couchbase_utils gtest)
 TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils)
-ADD_TEST(CHECK-ALL
-    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/check-all"
-    "-S" "${CMAKE_SOURCE_DIR}"
-    "-T" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+ADD_TEST(
+    NAME
+        CHECK-ALL
+    COMMAND
+        $<TARGET_FILE:check-all>
+        --srcdir "${CMAKE_SOURCE_DIR}"
+        --testdir "$<TARGET_FILE_DIR:check-all>"
+        --verbose)
 
 
 ADD_CUSTOM_TARGET(check
     COMMAND
-        "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/check-all"
-        "-S" "${CMAKE_SOURCE_DIR}"
-        "-T" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
-        "-v"
+        ${CMAKE_CTEST_COMMAND} -V
     DEPENDS
         unit-tests smoke-test check-all)
