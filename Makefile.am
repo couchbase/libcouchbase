@@ -596,6 +596,16 @@ endif
 
 EXTRA_DIST = \
              CMakeLists.txt \
+             cmake \
+             tests/CMakeLists.txt \
+			 tools/CMakeLists.txt \
+             plugins/io/iocp/CMakeLists.txt \
+             plugins/io/libev/CMakeLists.txt \
+             plugins/io/libuv/CMakeLists.txt \
+             plugins/io/select/CMakeLists.txt \
+             plugins/io/libevent/CMakeLists.txt \
+             contrib/libvbucket/CMakeLists.txt \
+             contrib/cbsasl/CMakeLists.txt \
              CONTRIBUTING.md \
              LICENSE \
              Makefile.manpage.inc \
