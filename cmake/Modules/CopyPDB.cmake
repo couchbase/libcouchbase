@@ -22,26 +22,20 @@ MACRO(TRANSFORM_TARGET tname output_pdb output_exp)
 ENDMACRO()
 
 MACRO(INSTALL_PDBS target)
-    IF(!MSVC)
-        RETURN()
-    ENDIF()
-    GET_TARGET_PROPERTY(_BIN_DEBUG ${target} LOCATION_DEBUG)
-    GET_TARGET_PROPERTY(_BIN_RDB ${target} LOCATION_RelWithDebInfo)
-    TRANSFORM_TARGET(${_BIN_DEBUG} _DEBUG_PDB _DEBUG_EXP)
-    TRANSFORM_TARGET(${_BIN_RDB} _RDB_PDB _RDB_EXP)
-    INSTALL(FILES
-        ${_DEBUG_PDB}
-        ${_DEBUG_EXP}
-        DESTINATION lib
-        CONFIGURATIONS DEBUG)
-    INSTALL(FILES
-        ${_RDB_PDB}
-        ${_RDB_EXP}
-        DESTINATION lib
-        CONFIGURATIONS RelWithDebInfo)
-
-
-    # Handle the '.exp' stuff as well
-
-
+    IF(MSVC)
+        GET_TARGET_PROPERTY(_BIN_DEBUG ${target} LOCATION_DEBUG)
+        GET_TARGET_PROPERTY(_BIN_RDB ${target} LOCATION_RelWithDebInfo)
+        TRANSFORM_TARGET(${_BIN_DEBUG} _DEBUG_PDB _DEBUG_EXP)
+        TRANSFORM_TARGET(${_BIN_RDB} _RDB_PDB _RDB_EXP)
+        INSTALL(FILES
+            ${_DEBUG_PDB}
+            ${_DEBUG_EXP}
+            DESTINATION lib
+            CONFIGURATIONS DEBUG)
+        INSTALL(FILES
+            ${_RDB_PDB}
+            ${_RDB_EXP}
+            DESTINATION lib
+            CONFIGURATIONS RelWithDebInfo)
+    ENDIF(MSVC)
 ENDMACRO()
