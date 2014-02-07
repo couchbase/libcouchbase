@@ -237,14 +237,6 @@ libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -D
 libcouchbase_la_DEPENDENCIES=libcbsasl.la libhttpparser.la libvbucket.la
 libcouchbase_la_LIBADD=libcbsasl.la libhttpparser.la libvbucket.la
 
-if LIBCOUCHBASE_ENABLE_TRACE
-libcouchbase_la_SOURCES += \
-                        src/debug.c \
-                        src/debug.h
-
-libcouchbase_la_CPPFLAGS += -DLCB_DEBUG_NOCTX
-endif
-
 libcouchbase_la_SOURCES += src/iofactory.c
 if HAVE_WINSOCK2
 libcouchbase_la_SOURCES += \

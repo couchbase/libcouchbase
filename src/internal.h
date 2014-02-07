@@ -39,7 +39,6 @@
 #include "url_encoding.h"
 #include "hashset.h"
 #include "genhash.h"
-#include "debug.h"
 #include "handler.h"
 #include "timer.h"
 #include "lcbio.h"

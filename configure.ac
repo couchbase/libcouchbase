@@ -433,16 +433,6 @@ AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday
                      QueryPerformanceCounter alarm setitimer])
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
 
-AC_ARG_ENABLE([trace],
-    [AS_HELP_STRING([--enable-trace],
-                    [enable trace routines, mainly useful for libcouchbase development
-                    @<:@default=off@:>@])],
-    [ac_cv_enable_trace="$enableval"])
-
-AM_CONDITIONAL(LIBCOUCHBASE_ENABLE_TRACE,
-               [test "x${ac_cv_enable_trace}" = "xyes"])
-
-
 AC_ARG_ENABLE([tests],
     [AS_HELP_STRING([--disable-tests],
             [Build without tests. BE CAREFUL. @<:@default=on@:>@])],
