@@ -303,7 +303,7 @@ libcouchbase_la_SOURCES += \
                            plugins/io/iocp/iocp_timer.c \
                            plugins/io/iocp/iocp_util.c
 
-libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/iocp
+libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/iocp -DWINVER=0x0600 -D_WIN32_WINNT=0x0600
 endif
 if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
