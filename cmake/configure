@@ -75,6 +75,10 @@ my @HELP_DESCRIPTIONS = (
         "Verbose CMake output",
         "%d", \(my $CMAKE_VERBOSE = 0)],
 
+    [ "host", "s",
+        "Set host target for Win32 cross compilation",
+        "%s", \(my $CMAKE_HOST = "")],
+
     [ "help", "",
         "This message", "%s", \(my $WANT_HELP = 0) ]
 );
@@ -161,6 +165,23 @@ if ($CMAKE_VERBOSE) {
 if ($USE_NINJA) {
     push @CM_OPTIONS, "-DCMAKE_MAKE_PROGRAM=$USE_NINJA";
     push @CM_OPTIONS, "-GNinja";
+}
+if ($CMAKE_HOST) {
+    # Write the toolchain file
+    my $fname = "TOOLCHAIN-$CMAKE_HOST.cmake";
+    open my $fp, ">", $fname;
+    print $fp <<EOF;
+SET(CMAKE_SYSTEM_NAME Windows)
+SET(CMAKE_C_COMPILER $CMAKE_HOST-gcc)
+SET(CMAKE_CXX_COMPILER $CMAKE_HOST-g++)
+SET(CMAKE_RC_COMPILER $CMAKE_HOST-windres)
+SET(CMAKE_FIND_ROOT_PATH /usr/$CMAKE_HOST)
+SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+EOF
+    $fname = realpath($fname);
+    push @CM_OPTIONS, "-DCMAKE_TOOLCHAIN_FILE=$fname";
 }
 
 print "$CMAKE_EXE ../ \\ \n";
