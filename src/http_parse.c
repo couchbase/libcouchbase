@@ -139,8 +139,6 @@ static int http_parser_complete_cb(http_parser *p)
     lcb_setup_lcb_http_resp_t(&resp, p->status_code, req->path, req->npath,
                               req->headers, bytes, nbytes);
 
-    TRACE_HTTP_END(req, LCB_SUCCESS, &resp);
-
     if (req->on_complete) {
         req->on_complete(req,
                          req->instance,

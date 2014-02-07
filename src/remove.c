@@ -75,7 +75,6 @@ lcb_error_t lcb_remove(lcb_t instance,
         req.message.header.request.opaque = ++instance->seqno;
         req.message.header.request.cas = cas;
 
-        TRACE_REMOVE_BEGIN(&req, key, nkey);
         lcb_server_start_packet(server, command_cookie,
                                 req.bytes, sizeof(req.bytes));
         lcb_server_write_packet(server, key, nkey);

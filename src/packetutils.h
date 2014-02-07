@@ -102,19 +102,6 @@ typedef struct packet_info_st {
 #define PACKET_EPHEMERAL_START(pkt) \
     (const void *)(( ((const char *)(pkt)->payload) - 24 ))
 
-#define PACKET_TRACE(tgt, info, rc, resp) \
-    tgt(PACKET_OPAQUE(info), \
-        (info)->ct.vbucket, \
-        PACKET_OPCODE(info), \
-        rc, \
-        resp)
-
-#define PACKET_TRACE_NORES(tgt, info, rc) \
-    tgt(PACKET_OPAQUE(info), \
-        (info)->ct.vbucket, \
-        PACKET_OPCODE(info), \
-        rc)
-
 /**
  * Reads the header of the packet.
  * @param info a new info structure to read info

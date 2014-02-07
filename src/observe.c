@@ -193,7 +193,6 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
 
         if (ringbuffer_is_continous(&rr->body, RINGBUFFER_READ, rr->nbody)) {
             tmp = ringbuffer_get_read_head(&rr->body);
-            TRACE_OBSERVE_BEGIN(&rr->packet, server->authority, tmp, rr->nbody);
             lcb_server_write_packet(server, tmp, rr->nbody);
         } else {
             tmp = malloc(ringbuffer_get_nbytes(&rr->body));
@@ -203,7 +202,6 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             } else {
                 ringbuffer_read(&rr->body, tmp, rr->nbody);
-                TRACE_OBSERVE_BEGIN(&rr->packet, server->authority, tmp, rr->nbody);
                 lcb_server_write_packet(server, tmp, rr->nbody);
             }
         }

@@ -184,7 +184,6 @@ void lcb_http_request_finish(lcb_t instance,
                                   NULL, /* headers */
                                   NULL, /* data */
                                   0);
-        TRACE_HTTP_END(req, error, &resp);
         req->on_complete(req, instance, req->command_cookie, error, &resp);
     }
     req->status |= LCB_HTREQ_S_CBINVOKED;
@@ -277,7 +276,6 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
 
     hashset_add(instance->http_requests, req);
 
-    TRACE_HTTP_BEGIN(req);
     rc = lcb_http_request_connect(req);
     if (rc != LCB_SUCCESS) {
         /** Mark as having the callback invoked */

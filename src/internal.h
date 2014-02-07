@@ -18,7 +18,6 @@
 #define LIBCOUCHBASE_INTERNAL_H 1
 
 #include "config.h"
-#include "trace.h"
 
 #include <errno.h>
 #include <stddef.h>
