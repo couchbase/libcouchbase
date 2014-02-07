@@ -79,6 +79,10 @@ my @HELP_DESCRIPTIONS = (
         "Set host target for Win32 cross compilation",
         "%s", \(my $CMAKE_HOST = "")],
 
+    [ "enable-static", "",
+        "Build static libraries",
+        "%d", \(my $STATIC_LIBS = 0)],
+
     [ "help", "",
         "This message", "%s", \(my $WANT_HELP = 0) ]
 );
@@ -162,6 +166,10 @@ if ($OSX_UNIVERSAL_BUILD) {
 if ($CMAKE_VERBOSE) {
     push @CM_OPTIONS, "--debug-output";
 }
+if ($STATIC_LIBS) {
+    push @CM_OPTIONS, "-DBUILD_SHARED_LIBS=OFF", "-DLCB_BUILD_STATIC=1";
+}
+
 if ($USE_NINJA) {
     push @CM_OPTIONS, "-DCMAKE_MAKE_PROGRAM=$USE_NINJA";
     push @CM_OPTIONS, "-GNinja";
