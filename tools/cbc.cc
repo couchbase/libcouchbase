@@ -17,6 +17,10 @@
 
 #include "config.h"
 
+#ifdef _WIN32
+#include <io.h> /* access() */
+#endif
+
 #include <iostream>
 #include <sstream>
 #include <ctype.h>
@@ -1813,13 +1817,6 @@ std::string locate_file(const char *name)
     }
 
     return "";
-}
-
-bool access(const char *name, int mode)
-{
-    assert(mode == F_OK);
-    std::string nm = locate_file(name);
-    return nm != "";
 }
 
 int execvp(const char *file, char *const argv[])
