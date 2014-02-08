@@ -50,9 +50,9 @@ TEST_F(Logger, testLogger)
     LCB_LOG_BASIC(&instance->settings, "baz");
 
     set<string>& msgs = procs.messages;
-    ASSERT_NE(msgs.find("foo"), msgs.end());
-    ASSERT_NE(msgs.find("bar"), msgs.end());
-    ASSERT_NE(msgs.find("baz"), msgs.end());
+    ASSERT_FALSE(msgs.find("foo") == msgs.end());
+    ASSERT_FALSE(msgs.find("bar") == msgs.end());
+    ASSERT_FALSE(msgs.find("baz") == msgs.end());
     msgs.clear();
 
     // Try without a logger

@@ -969,7 +969,7 @@ TEST_F(MockUnitTest, testSaslMechs)
     kvo.allowableErrors.insert(LCB_ETIMEDOUT);
     kvo.store(instance);
 
-    ASSERT_NE(kvo.globalErrors.find(LCB_SASLMECH_UNAVAILABLE),
+    ASSERT_FALSE(kvo.globalErrors.find(LCB_SASLMECH_UNAVAILABLE) ==
               kvo.globalErrors.end());
 
     err = lcb_cntl(instance, LCB_CNTL_SET,
