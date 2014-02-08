@@ -161,7 +161,6 @@ ELSE()
 ENDIF()
 ADD_LIBRARY(couchbase ${_lcb_linkspec}
             contrib/http_parser/http_parser.c
-            plugins/io/select/plugin-select.c
             src/arithmetic.c
             src/bconf_provider.c
             src/bootstrap.c
