@@ -105,18 +105,48 @@ ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
 INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 TARGET_LINK_LIBRARIES(unit-tests couchbase couchbase_utils gtest)
 TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils)
-ADD_TEST(
-    NAME
-        CHECK-ALL
-    COMMAND
-        $<TARGET_FILE:check-all>
-        --srcdir "${CMAKE_SOURCE_DIR}"
-        --testdir "$<TARGET_FILE_DIR:check-all>"
-        --verbose)
 
 
-ADD_CUSTOM_TARGET(check
-    COMMAND
-        ${CMAKE_CTEST_COMMAND} -V
-    DEPENDS
-        unit-tests smoke-test check-all)
+MACRO(BUILD_TEST target)
+    ADD_TEST(NAME BUILD-${target}
+        COMMAND ${CMAKE_COMMAND} --build "${CMAKE_BINARY_DIR}" --target ${target})
+ENDMACRO()
+
+BUILD_TEST(check-all)
+BUILD_TEST(smoke-test)
+BUILD_TEST(unit-tests)
+
+MACRO(DEFINE_MOCKTEST plugin test)
+    ADD_TEST(
+        NAME
+            check-${plugin}-${test}
+        COMMAND
+            $<TARGET_FILE:check-all>
+            --srcdir "${CMAKE_SOURCE_DIR}"
+            --testdir "$<TARGET_FILE_DIR:check-all>"
+            --opt_plugins ${plugin}
+            --tests ${test}
+            --verbose
+            --
+            --gtest_print_time=1
+            --gtest_output=xml:"${CMAKE_BINARY_DIR}/REPORT_${plugin}_${test}.xml")
+ENDMACRO()
+
+DEFINE_MOCKTEST("select" "unit-tests")
+DEFINE_MOCKTEST("select" "smoke-test")
+IF(WIN32)
+    DEFINE_MOCKTEST("iocp" "unit-tests")
+    DEFINE_MOCKTEST("iocp" "smoke-test")
+ENDIF()
+IF(HAVE_LIBEVENT)
+    DEFINE_MOCKTEST("libevent" "unit-tests")
+    DEFINE_MOCKTEST("libevent" "smoke-test")
+ENDIF()
+IF(HAVE_LIBEV)
+    DEFINE_MOCKTEST("libev" "unit-tests")
+    DEFINE_MOCKTEST("libev" "smoke-test")
+ENDIF()
+IF(HAVE_LIBUV)
+    DEFINE_MOCKTEST("libuv" "unit-tests")
+    DEFINE_MOCKTEST("libuv" "smoke-test")
+ENDIF()
