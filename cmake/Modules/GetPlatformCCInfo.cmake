@@ -31,7 +31,11 @@ ELSE()
             OUTPUT_VARIABLE
                 LCB_ARCH_STRING)
     ELSE()
-        SET(LCB_ARCH_STRING "x86") #mingow
+        IF(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            SET(LCB_ARCH_STRING "amd64")
+        ELSE()
+            SET(LCB_ARCH_STRING "x86")
+        ENDIF()
         SET(LCB_CC_STRING "mingw")
     ENDIF()
 ENDIF()
