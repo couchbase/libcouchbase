@@ -18,7 +18,7 @@ FIND_LIBRARY(LIBEV_LIBRARIES
 FIND_PATH(LIBEV_INCLUDE_DIR ev.h
     HINTS
         ENV LIBEV_DIR
-    PATH_SUFFIXES include
+    PATH_SUFFIXES include include/libev
     PATHS
         ${DEPS_INCLUDE_DIR}
         ~/Library/Frameworks
