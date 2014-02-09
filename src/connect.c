@@ -317,11 +317,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
                                     v1_connect_handler);
 
         if (rv == 0) {
-            if (nocb) {
-                return LCB_CONN_INPROGRESS;
-            }
-            connection_success(conn);
-            return LCB_CONN_CONNECTED;
+            return LCB_CONN_INPROGRESS;
         }
 
         status = lcb_connect_status(io->v.v1.error);
