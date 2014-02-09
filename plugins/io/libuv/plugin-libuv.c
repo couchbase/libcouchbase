@@ -332,6 +332,8 @@ static void connect_callback(uv_connect_t *req, int status)
 {
     my_uvreq_t *uvr = (my_uvreq_t *)req;
 
+    set_last_error((my_iops_t *)uvr->socket->base.parent, status);
+
     if (uvr->cb.conn) {
         uvr->cb.conn(&uvr->socket->base, status);
     }
