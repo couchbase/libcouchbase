@@ -418,17 +418,35 @@ extern "C" {
 #endif
     } lcb_arithmetic_cmd_t;
 
+
+    typedef enum {
+        /**
+         * Only sends a command to the master. In this case the callback will
+         * be invoked only once for the master, and then another time with the
+         * NULL callback
+         */
+        LCB_OBSERVE_MASTER_ONLY = 0x01
+    } lcb_observe_options_t;
+
+#define LCB_OBSERVE_FIELDS_COMMON \
+        const void *key; \
+        lcb_size_t nkey; \
+        const void *hashkey; \
+        lcb_size_t nhashkey;
+
 #define LCB_O_C_ST_ID 8
-#define LCB_O_C_ST_V 0
+#define LCB_O_C_ST_V 1
     typedef struct lcb_observe_cmd_st {
         int version;
         union {
             struct {
-                const void *key;
-                lcb_size_t nkey;
-                const void *hashkey;
-                lcb_size_t nhashkey;
+                LCB_OBSERVE_FIELDS_COMMON
             } v0;
+            struct {
+                LCB_OBSERVE_FIELDS_COMMON
+                /** Extended options for observe */
+                lcb_observe_options_t options;
+            } v1;
         } v;
 #ifdef __cplusplus
         lcb_observe_cmd_st() {

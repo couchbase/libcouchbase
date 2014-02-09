@@ -110,7 +110,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
     for (ii = 0; ii < num; ii++) {
         const void *key, *hashkey;
         lcb_size_t nkey, nhashkey;
-        int vbid, jj;
+        int vbid, jj, master_only = 0;
 
         if (type == LCB_OBSERVE_TYPE_DURABILITY) {
             const lcb_durability_entry_t *ent = items[ii];
@@ -120,11 +120,16 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
             nhashkey = ent->request.v.v0.nhashkey;
         } else {
             const lcb_observe_cmd_t *ocmd = items[ii];
-            key = ocmd->v.v0.key;
-            nkey = ocmd->v.v0.nkey;
-            hashkey = ocmd->v.v0.hashkey;
-            nhashkey = ocmd->v.v0.nhashkey;
+            key = ocmd->v.v1.key;
+            nkey = ocmd->v.v1.nkey;
+            hashkey = ocmd->v.v1.hashkey;
+            nhashkey = ocmd->v.v1.nhashkey;
+            if (ocmd->version == 1 &&
+                    (ocmd->v.v1.options & LCB_OBSERVE_MASTER_ONLY)) {
+                master_only = 1;
+            }
         }
+
         if (!nhashkey) {
             hashkey = key;
             nhashkey = nkey;
@@ -172,6 +177,10 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
                 rr->nbody += ringbuffer_write(&rr->body, &vb, sizeof(vb));
                 rr->nbody += ringbuffer_write(&rr->body, &len, sizeof(len));
                 rr->nbody += ringbuffer_write(&rr->body, key, nkey);
+            }
+
+            if (master_only) {
+                break;
             }
         }
     }

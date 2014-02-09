@@ -665,3 +665,29 @@ TEST_F(DurabilityUnitTest, testObserveSanity)
     ASSERT_GT(o_cookie.count, 0);
     ASSERT_GT(d_cookie.count, 0);
 }
+
+TEST_F(DurabilityUnitTest, testMasterObserve)
+{
+    LCB_TEST_REQUIRE_FEATURE("observe");
+    SKIP_UNLESS_MOCK();
+
+    HandleWrap handle;
+    createConnection(handle);
+    lcb_t instance = handle.getLcb();
+
+    lcb_set_observe_callback(instance, dummyObserveCallback);
+    lcb_observe_cmd_t ocmd, *ocmds[] = { &ocmd };
+    memset(&ocmd, 0, sizeof(ocmd));
+    ocmd.version = 1;
+    ocmd.v.v1.key = "key";
+    ocmd.v.v1.options = LCB_OBSERVE_MASTER_ONLY;
+    ocmd.v.v1.nkey = 3;
+    storeKey(instance, "key", "value");
+    struct cb_cookie o_cookie = { 1, 0 };
+    lcb_error_t err = lcb_observe(instance, &o_cookie, 1, ocmds);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_wait(instance);
+
+    // 2 == one for the callback, one for the NULL
+    ASSERT_EQ(2, o_cookie.count);
+}
