@@ -220,7 +220,6 @@ libcouchbase_la_SOURCES = \
                         src/simplestring.h \
                         src/stats.c \
                         src/store.c \
-                        src/strerror.c \
                         src/synchandler.c \
                         src/timer.c \
                         src/timer.h \

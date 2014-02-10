@@ -192,7 +192,6 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/server_parse.c
             src/stats.c
             src/store.c
-            src/strerror.c
             src/synchandler.c
             src/timer.c
             src/timings.c
