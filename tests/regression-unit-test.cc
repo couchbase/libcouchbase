@@ -295,7 +295,8 @@ TEST_F(RegressionUnitTest, CCBC_275)
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
-    ASSERT_EQ(LCB_ETIMEDOUT, info.last_err);
+
+    ASSERT_ERRISA(info.last_err, LCB_ERRTYPE_NETWORK);
 
     // Make sure we've fully purged and disconnected the server
     struct lcb_cntl_vbinfo_st vbi;
