@@ -384,8 +384,32 @@ extern "C" {
      */
 #define LCB_CNTL_CONFIG_NODE_TIMEOUT 0x1B
 
+    /**
+     * Get/Set the idle timeout for HTTP bootstrap.
+     *
+     * The library's current behavior when no CCCP config is available is to
+     * open a socket to the cluster's REST API and request a configuration via
+     * the streaming URI.
+     *
+     * Once a configuration is received, rather than closing the socket
+     * immediately, an idle timer is set up after which it will be closed. This
+     * is to allow for more configuration updates to be received on this socket
+     * without re-opening the connection -- as typically configuration updates
+     * are received in batches.
+     *
+     * Modifying this value indicates the length of this idle timeout period.
+     * Setting this to a very high number effectively emulates pre-2.3
+     * behavior where the configuration streaming socket was never closed.
+     * Setting this to a small number will potentially conserve more resources
+     * on the cluster (at the expense of possibly excessive TCP connections) by
+     * not keeping a socket open for longer than needed.
+     *
+     * Arg: lcb_uint32_t*, Timeout in microseconds
+     */
+#define LCB_CNTL_HTCONFIG_IDLE_TIMEOUT 0x1C
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x1C
+#define LCB_CNTL__MAX                    0x1D
 
 
 #ifdef __cplusplus

@@ -52,6 +52,9 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_CONFIG_NODE_TIMEOUT:
         return &settings->config_node_timeout;
 
+    case LCB_CNTL_HTCONFIG_IDLE_TIMEOUT:
+        return &settings->bc_http_stream_time;
+
     default:
         return NULL;
     }
@@ -436,7 +439,8 @@ static ctl_handler handlers[] = {
     logprocs_handler /* LCB_CNTL_LOGGER */,
     timeout_common, /* LCB_CNTL_CONFDELAY_THRESH */
     config_transport, /* LCB_CNTL_CONFIG_TRANSPORT */
-    timeout_common /* LCB_CNTL_CONFIG_NODE_TIMEOUT */
+    timeout_common, /* LCB_CNTL_CONFIG_NODE_TIMEOUT */
+    timeout_common /* LCB_CNTL_HTCONFIG_IDLE_TIMEOUT */
 };
 
 
