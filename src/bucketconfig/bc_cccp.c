@@ -419,11 +419,16 @@ static void io_read_handler(lcb_connection_t conn)
                 PACKET_OPCODE(&pi),
                 PACKET_OPAQUE(&pi));
 
-        if (PACKET_STATUS(&pi) == PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED) {
+        switch (PACKET_STATUS(&pi)) {
+        case PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED:
+        case PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND:
             mcio_error(cccp, LCB_NOT_SUPPORTED);
-        } else {
+            break;
+        default:
             mcio_error(cccp, LCB_PROTOCOL_ERROR);
+            break;
         }
+
         return;
     }
 
