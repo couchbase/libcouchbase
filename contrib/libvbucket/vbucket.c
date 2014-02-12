@@ -894,3 +894,83 @@ void vbucket_free_diff(VBUCKET_CONFIG_DIFF *diff) {
     free_array_helper(diff->servers_removed);
     free(diff);
 }
+
+
+LIBVBUCKET_PUBLIC_API
+int vbucket_config_generate(VBUCKET_CONFIG_HANDLE vb,
+                            int nservers,
+                            int nreplicas,
+                            int nvbuckets)
+{
+    int ii;
+    int srvix = 0;
+
+#define INCR_SRVIX() srvix = (srvix + 1) % nservers
+
+    memset(vb, 0, sizeof(*vb));
+
+    vb->distribution = VBUCKET_DISTRIBUTION_VBUCKET;
+    vb->num_vbuckets = nvbuckets;
+    vb->num_replicas = nreplicas;
+    vb->num_servers = nservers;
+
+    if (nvbuckets == 0 || (nvbuckets & (nvbuckets - 1)) != 0) {
+        vb->errmsg = strdup("vbuckets must be > 0 and 2^n");
+        return -1;
+    }
+
+    if (nservers < 1) {
+        vb->errmsg = strdup("Must have at least one server");
+        return -1;
+    }
+
+    if (nreplicas >= nservers) {
+        vb->errmsg = strdup("nservers must be > nreplicas");
+        return -1;
+    }
+
+    if (nreplicas < 0) {
+        vb->errmsg = strdup("Replicas cannot be negative");
+        return -1;
+    }
+
+    if (nreplicas > 4) {
+        vb->errmsg = strdup("Replicas must be <= 4");
+        return -1;
+    }
+
+    vb->vbuckets = calloc(vb->num_vbuckets, sizeof(*vb->vbuckets));
+    if (!vb->vbuckets) {
+        return -1;
+    }
+    for (ii = 0; ii < vb->num_vbuckets; ii++) {
+        struct vbucket_st *cur = vb->vbuckets + ii;
+        cur->servers[0] = srvix;
+        INCR_SRVIX();
+    }
+
+    for (ii = 0; ii < vb->num_vbuckets; ii++) {
+        int jj;
+        for (jj = 0; jj < nreplicas; jj++) {
+            vb->vbuckets[ii].servers[jj+1] = srvix;
+            INCR_SRVIX();
+        }
+    }
+
+    vb->servers = calloc(nservers, sizeof(*vb->servers));
+    for (ii = 0; ii < nservers; ii++) {
+        struct server_st *server = vb->servers + ii;
+        char buf[1024];
+        sprintf(buf, "localhost:100%2d", ii);
+        server->authority = strdup(buf);
+        sprintf(buf, "localhost:200%2d", ii);
+        server->rest_api_authority = strdup(buf);
+        sprintf(buf, "localhost:300%2d", ii);
+        server->couchdb_api_base = strdup(buf);
+        server->config_node = (ii == 0);
+    }
+
+    return 0;
+
+#undef INCR_SRVIX
+}

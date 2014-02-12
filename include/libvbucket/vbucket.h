@@ -142,6 +142,17 @@ extern "C" {
                               const char *data,
                               const char *peername);
 
+    /**
+     * Generate a randomized vbucket configuration used for testing. This will
+     * create a vbucket map with the given number of servers, replicas, and
+     * vbuckets.
+     */
+    LIBVBUCKET_PUBLIC_API
+    int vbucket_config_generate(VBUCKET_CONFIG_HANDLE handle,
+                                int nservers,
+                                int nreplicas,
+                                int nvbuckets);
+
     LIBVBUCKET_PUBLIC_API
     const char *vbucket_get_error_message(VBUCKET_CONFIG_HANDLE handle);
 
