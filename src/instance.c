@@ -133,6 +133,27 @@ const void *lcb_get_cookie(lcb_t instance)
     return instance->cookie;
 }
 
+LCB_INTERNAL_API
+void lcb_default_settings(lcb_settings *settings)
+{
+    settings->ipv6 = LCB_IPV6_DISABLED;
+    settings->operation_timeout = LCB_DEFAULT_TIMEOUT;
+    settings->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
+    settings->config_node_timeout = LCB_DEFAULT_NODECONFIG_TIMEOUT;
+    settings->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
+    settings->rbufsize = LCB_DEFAULT_RBUFSIZE;
+    settings->wbufsize = LCB_DEFAULT_WBUFSIZE;
+    settings->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
+    settings->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
+    settings->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
+    settings->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
+    settings->weird_things_delay = LCB_DEFAULT_CONFIG_ERRORS_DELAY;
+    settings->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
+    settings->grace_next_cycle = LCB_DEFAULT_CLCONFIG_GRACE_CYCLE;
+    settings->grace_next_provider = LCB_DEFAULT_CLCONFIG_GRACE_NEXT;
+    settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
+}
+
 
 static lcb_error_t init_providers(lcb_t obj,
                              const struct lcb_create_st2 *e_options)
@@ -315,27 +336,9 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     settings = &obj->settings;
-    settings->randomize_bootstrap_nodes = 1;
-    settings->bummer = 0;
+    lcb_default_settings(settings);
     settings->io = io;
     obj->syncmode = LCB_ASYNCHRONOUS;
-    settings->ipv6 = LCB_IPV6_DISABLED;
-
-    settings->operation_timeout = LCB_DEFAULT_TIMEOUT;
-    settings->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
-    settings->config_node_timeout = LCB_DEFAULT_NODECONFIG_TIMEOUT;
-    settings->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
-    settings->rbufsize = LCB_DEFAULT_RBUFSIZE;
-    settings->wbufsize = LCB_DEFAULT_WBUFSIZE;
-    settings->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
-    settings->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
-    settings->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
-    settings->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
-    settings->weird_things_delay = LCB_DEFAULT_CONFIG_ERRORS_DELAY;
-    settings->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
-    settings->grace_next_cycle = LCB_DEFAULT_CLCONFIG_GRACE_CYCLE;
-    settings->grace_next_provider = LCB_DEFAULT_CLCONFIG_GRACE_NEXT;
-    settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
     settings->bucket = strdup(bucket);
     settings->logger = lcb_init_console_logger();
 

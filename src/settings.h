@@ -56,6 +56,10 @@
 #include "config.h"
 #include <libcouchbase/couchbase.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct lcb_io_opt_st;
 struct lcb_logprocs_st;
 /**
@@ -113,5 +117,12 @@ typedef struct lcb_settings_st {
     char *sasl_mech_force;
     struct lcb_logprocs_st *logger;
 } lcb_settings;
+
+LCB_INTERNAL_API
+void lcb_default_settings(lcb_settings *settings);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
