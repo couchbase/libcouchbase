@@ -531,9 +531,9 @@ void lcb_server_send_packets(lcb_server_t *server)
 {
     if (server->pending.nbytes > 0 || server->connection.output->nbytes > 0) {
         if (server->connection_ready) {
-            lcb_sockrw_set_want(&server->connection, LCB_WRITE_EVENT, 0);
+            lcbconn_set_want(&server->connection, LCB_WRITE_EVENT, 0);
             if (!server->inside_handler) {
-                lcb_sockrw_apply_want(&server->connection);
+                lcbconn_apply_want(&server->connection);
                 if (!lcb_timer_armed(server->io_timer)) {
                     lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
                 }

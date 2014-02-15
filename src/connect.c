@@ -125,8 +125,8 @@ static void conn_do_callback(struct lcb_connection_st *conn,
     handler = conn->ioconn->callback;
     lcb_assert(handler != NULL);
     destroy_connstart(conn);
-    lcb_sockrw_set_want(conn, 0, 1);
-    lcb_sockrw_apply_want(conn);
+    lcbconn_set_want(conn, 0, 1);
+    lcbconn_apply_want(conn);
     handler(conn, err);
 }
 

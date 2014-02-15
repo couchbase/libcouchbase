@@ -405,8 +405,8 @@ static void io_read_handler(lcbconn_t conn)
         return;
 
     } else if (rv == 0) {
-        lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-        lcb_sockrw_apply_want(conn);
+        lcbconn_set_want(conn, LCB_READ_EVENT, 1);
+        lcbconn_apply_want(conn);
         return;
     }
 
@@ -485,8 +485,8 @@ static void request_config(cccp_provider *cccp)
     }
 
     ringbuffer_write(buf, req.bytes, sizeof(req.bytes));
-    lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
-    lcb_sockrw_apply_want(conn);
+    lcbconn_set_want(conn, LCB_WRITE_EVENT, 1);
+    lcbconn_apply_want(conn);
     lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base,
                                                   config_node_timeout));
 }

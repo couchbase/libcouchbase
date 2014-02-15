@@ -209,15 +209,15 @@ void lcbconn_close(lcbconn_t conn);
 void lcbconn_cleanup(lcbconn_t conn);
 
 /* Read a bit of data */
-lcbio_status_t lcb_sockrw_v0_read(lcbconn_t conn, ringbuffer_t *buf);
+lcbio_status_t lcbconn_Erb_read(lcbconn_t conn);
 
 /* Exhaust the data until there is nothing to read */
-lcbio_status_t lcb_sockrw_v0_slurp(lcbconn_t conn, ringbuffer_t *buf);
+lcbio_status_t lcbconn_Erb_slurp(lcbconn_t conn);
 
 /* Write as much data from the write buffer until blocked */
-lcbio_status_t lcb_sockrw_v0_write(lcbconn_t conn, ringbuffer_t *buf);
+lcbio_status_t lcbconn_Erb_write(lcbconn_t conn);
 
-int lcb_sockrw_flushed(lcbconn_t conn);
+int lcbconn_is_flushed(lcbconn_t conn);
 /**
  * Indicates that buffers should be read into or written from
  * @param conn the connection
@@ -225,35 +225,33 @@ int lcb_sockrw_flushed(lcbconn_t conn);
  * @param clear_existing whether to clear any existing 'want' events. By
  * default, the existing events are AND'ed with the new ones.
  */
-void lcb_sockrw_set_want(lcbconn_t conn, short events, int clear_existing);
+void lcbconn_set_want(lcbconn_t conn, short events, int clear_existing);
 
 /**
  * Apply the 'want' events. This means to start (waiting for) reading and
  * writing.
  */
-void lcb_sockrw_apply_want(lcbconn_t conn);
+void lcbconn_apply_want(lcbconn_t conn);
 
 int lcb_flushing_buffers(lcb_t instance);
 
-lcbio_status_t lcb_sockrw_v1_start_read(lcbconn_t conn,
-                                             ringbuffer_t **buf,
-                                             lcb_io_read_cb callback);
 
-lcbio_status_t lcb_sockrw_v1_start_write(lcbconn_t conn,
-                                              ringbuffer_t **buf,
-                                              lcb_ioC_write2_callback callback);
-
-void lcb_sockrw_v1_onread_common(lcb_sockdata_t *sock,
-                                 ringbuffer_t **dst,
-                                 lcb_ssize_t nr);
-
-void lcb_sockrw_v1_onwrite_common(lcb_sockdata_t *sock,
-                                  void *wbuf,
-                                  ringbuffer_t **dst);
-
-unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
-                                     void *wbuf,
-                                     void **datap);
+/**
+ * Call this to unpack any related data related with the operation and the
+ * socket.
+ *
+ * @param sock The socket upon which the data was received
+ * @param event either LCB_READ_EVENT or LCB_WRITE_EVENT
+ * @param nr the number of bytes read (for READ) or a status code (for WRITE)
+ * @param wbuf The opaque buffer, if any, which was passed
+ * @param datap A pointer to be set to the related connection's "Data" field.
+ *
+ * @return true on success. false on failure. On failure you _MUST_ return
+ * from your function and perform no further action
+ */
+int lcbconn_Crb_enter(lcb_sockdata_t *sock,
+                      short event, lcb_ssize_t nr,
+                      void *wbuf, void **datap);
 
 lcb_socket_t lcb_gai2sock(struct lcb_iotable_st *io,
                           struct addrinfo **curr_ai,

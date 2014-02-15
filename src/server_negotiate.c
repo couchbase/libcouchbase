@@ -92,8 +92,8 @@ static lcb_error_t setup_sasl_params(struct negotiation_context *ctx)
 static void negotiation_cleanup(struct negotiation_context *ctx)
 {
     lcbconn_t conn = ctx->conn;
-    lcb_sockrw_set_want(conn, 0, 1);
-    lcb_sockrw_apply_want(conn);
+    lcbconn_set_want(conn, 0, 1);
+    lcbconn_apply_want(conn);
     memset(&conn->easy, 0, sizeof(conn->easy));
 
     if (IOT_IS_EVENT(conn->iotable)) {
@@ -237,7 +237,7 @@ static int send_sasl_auth(struct negotiation_context *ctx,
     ringbuffer_write(conn->output, req.bytes, sizeof(req.bytes));
     ringbuffer_write(conn->output, ctx->mech, ctx->nmech);
     ringbuffer_write(conn->output, sasl_data, ndata);
-    lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 0);
+    lcbconn_set_want(conn, LCB_WRITE_EVENT, 0);
     return 0;
 }
 
@@ -288,7 +288,7 @@ static int send_sasl_step(struct negotiation_context *ctx,
     ringbuffer_write(conn->output, req.bytes, sizeof(req.bytes));
     ringbuffer_write(conn->output, ctx->mech, ctx->nmech);
     ringbuffer_write(conn->output, step_data, ndata);
-    lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 0);
+    lcbconn_set_want(conn, LCB_WRITE_EVENT, 0);
     return 0;
 }
 
@@ -308,8 +308,8 @@ static void io_read_handler(lcbconn_t conn)
 
     rv = lcb_packet_read_ringbuffer(&info, conn->input);
     if (rv == 0) {
-        lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-        lcb_sockrw_apply_want(conn);
+        lcbconn_set_want(conn, LCB_READ_EVENT, 1);
+        lcbconn_apply_want(conn);
         return;
     }
 
@@ -392,7 +392,7 @@ static void io_read_handler(lcbconn_t conn)
     if (is_done) {
         negotiation_success(ctx);
     } else if (rv == 0) {
-        lcb_sockrw_apply_want(conn);
+        lcbconn_apply_want(conn);
     }
 }
 
@@ -487,8 +487,8 @@ struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
     /** Set up the I/O handlers */
     lcbconn_use_easy(&use, ctx, io_read_handler, io_error_handler);
     lcbconn_use(conn, &use);
-    lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
-    lcb_sockrw_apply_want(conn);
+    lcbconn_set_want(conn, LCB_WRITE_EVENT, 1);
+    lcbconn_apply_want(conn);
     *err = LCB_SUCCESS;
     return ctx;
 }

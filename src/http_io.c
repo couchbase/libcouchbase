@@ -51,7 +51,7 @@ static void io_read(lcbconn_t conn)
             err = LCB_PROTOCOL_ERROR;
         }
     } else {
-        lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
+        lcbconn_set_want(conn, LCB_READ_EVENT, 1);
     }
 
     if (is_done) {
@@ -69,7 +69,7 @@ static void io_read(lcbconn_t conn)
             lcb_http_request_finish(instance, req, err);
         }
     } else {
-        lcb_sockrw_apply_want(conn);
+        lcbconn_apply_want(conn);
     }
 
     lcb_http_request_decref(req);
@@ -104,8 +104,8 @@ static void request_connected(lcbconn_t conn, lcb_error_t err)
     }
 
 
-    lcb_sockrw_set_want(&req->connection, LCB_WRITE_EVENT, 1);
-    lcb_sockrw_apply_want(&req->connection);
+    lcbconn_set_want(&req->connection, LCB_WRITE_EVENT, 1);
+    lcbconn_apply_want(&req->connection);
 }
 
 lcb_error_t lcb_http_request_connect(lcb_http_request_t req)

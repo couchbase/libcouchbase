@@ -152,8 +152,8 @@ static void read_common(http_provider *http)
         return;
     }
 
-    lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
-    lcb_sockrw_apply_want(conn);
+    lcbconn_set_want(conn, LCB_READ_EVENT, 1);
+    lcbconn_apply_want(conn);
 }
 
 static lcb_error_t setup_request_header(http_provider *http)
@@ -236,8 +236,8 @@ static void connect_done_handler(lcbconn_t conn, lcb_error_t err)
     ringbuffer_strcat(conn->output, http->request_buf);
     lcb_assert(conn->output->nbytes > 0);
 
-    lcb_sockrw_set_want(conn, LCB_RW_EVENT, 0);
-    lcb_sockrw_apply_want(conn);
+    lcbconn_set_want(conn, LCB_RW_EVENT, 0);
+    lcbconn_apply_want(conn);
     lcb_timer_rearm(http->io_timer,
                     PROVIDER_SETTING(&http->base, config_node_timeout));
 }

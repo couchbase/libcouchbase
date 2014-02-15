@@ -403,8 +403,8 @@ void connmgr_put(connmgr_t *mgr, lcbconn_t conn)
     he->n_leased--;
     lcbconn_use_easy(&use, info, io_read, io_error);
     lcbconn_transfer(conn, &info->connection, &use);
-    lcb_sockrw_set_want(&info->connection, 0, 1);
-    lcb_sockrw_apply_want(&info->connection);
+    lcbconn_set_want(&info->connection, 0, 1);
+    lcbconn_apply_want(&info->connection);
     lcb_timer_rearm(info->idle_timer, mgr->idle_timeout);
     lcb_clist_append(&he->ll_idle, &info->llnode);
     info->state = CS_IDLE;

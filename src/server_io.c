@@ -40,7 +40,7 @@ static int do_read_data(lcb_server_t *c, int allow_read)
     hrtime_t stop = gethrtime();
 
     if (allow_read) {
-        status = lcb_sockrw_v0_slurp(&c->connection, c->connection.input);
+        status = lcbconn_Erb_slurp(&c->connection);
 
     } else {
         status = LCBIO_STATUS_COMPLETED;
@@ -75,7 +75,7 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
             lcb_timer_rearm(c->io_timer, MCSERVER_TIMEOUT(c));
         }
 
-        lcb_sockrw_apply_want(&c->connection);
+        lcbconn_apply_want(&c->connection);
         c->inside_handler = 0;
     }
 
@@ -92,7 +92,7 @@ static void v0_handler(lcb_socket_t sock, short which, void *arg)
     if (which & LCB_WRITE_EVENT) {
         lcbio_status_t status;
 
-        status = lcb_sockrw_v0_write(conn, conn->output);
+        status = lcbconn_Erb_write(conn);
         if (!LCBIO_IS_OK(status)) {
             event_complete_common(c, LCB_NETWORK_ERROR);
             return;
@@ -124,7 +124,7 @@ static void v0_handler(lcb_socket_t sock, short which, void *arg)
         }
     }
 
-    lcb_sockrw_set_want(conn, which, 1);
+    lcbconn_set_want(conn, which, 1);
     event_complete_common(c, LCB_SUCCESS);
 }
 
@@ -141,11 +141,9 @@ static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
     int rv;
     hrtime_t stop;
 
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&c)) {
+    if (!lcbconn_Crb_enter(sockptr, LCB_READ_EVENT, nr, NULL, (void **)&c)) {
         return;
     }
-
-    lcb_sockrw_v1_onread_common(sockptr, &c->connection.input, nr);
 
     c->inside_handler = 1;
 
@@ -163,9 +161,9 @@ static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
     if (rv >= 0) {
         /* Schedule the read request again */
         if (c->cmd_log.nbytes) {
-            lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
+            lcbconn_set_want(&c->connection, LCB_READ_EVENT, 0);
         } else {
-            lcb_sockrw_set_want(&c->connection, 0, 1);
+            lcbconn_set_want(&c->connection, 0, 1);
         }
     }
     event_complete_common(c, LCB_SUCCESS);
@@ -174,18 +172,16 @@ static void v1_read(lcb_sockdata_t *sockptr, lcb_ssize_t nr)
 static void v1_write(lcb_sockdata_t *sockptr, int status, void *wbuf)
 {
     lcb_server_t *c;
-    if (!lcb_sockrw_v1_cb_common(sockptr, wbuf, (void **)&c)) {
+    if (!lcbconn_Crb_enter(sockptr, LCB_WRITE_EVENT, status, wbuf, (void **)&c)) {
         return;
     }
-
-    lcb_sockrw_v1_onwrite_common(sockptr, wbuf, &c->connection.output);
 
     c->inside_handler = 1;
 
     if (status) {
         event_complete_common(c, LCB_NETWORK_ERROR);
     } else {
-        lcb_sockrw_set_want(&c->connection, LCB_READ_EVENT, 0);
+        lcbconn_set_want(&c->connection, LCB_READ_EVENT, 0);
         event_complete_common(c, LCB_SUCCESS);
     }
 }
@@ -355,7 +351,7 @@ static void socket_connected(connmgr_request *req)
 
     } else {
         lcb_server_connected(server);
-        lcb_sockrw_apply_want(&server->connection);
+        lcbconn_apply_want(&server->connection);
     }
 
     server->inside_handler = 0;
