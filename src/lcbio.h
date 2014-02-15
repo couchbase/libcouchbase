@@ -80,21 +80,6 @@ extern "C" {
     /** v0 handler */
     typedef void (*lcb_event_handler_cb)(lcb_socket_t, short, void *);
 
-    struct lcb_timeout_info_st {
-        /** The timer to use */
-
-        void *timer;
-
-        /** Set when update_timer is called, unset when delete_timer is called */
-        short active;
-
-        /** Default delay for the timeout */
-        lcb_uint32_t usec;
-
-        /** Last timeout set */
-        lcb_uint32_t last_timeout;
-    };
-
     struct lcb_nibufs_st {
         char local[NI_MAXHOST + NI_MAXSERV + 2];
         char remote[NI_MAXHOST + NI_MAXSERV + 2];
