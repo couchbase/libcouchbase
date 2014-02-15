@@ -487,7 +487,7 @@ typedef void (*lcb_io_start_fn)(lcb_io_opt_t iops);
 typedef void (*lcb_io_stop_fn)(lcb_io_opt_t iops);
 
 /** NOT USED */
-typedef void (*lcb_io_error_cb)(lcb_sockdata_t *socket);
+LCB_DEPRECATED(typedef void (*lcb_io_error_cb)(lcb_sockdata_t *socket));
 
 #define LCB_IOPS_BASE_FIELDS \
     void *cookie; \
@@ -580,7 +580,7 @@ struct lcb_iops_completion_st {
     void (*pad2)(void);
 
     /** No longer used */
-    void (*send_error)(struct lcb_io_opt_st*, lcb_sockdata_t*,lcb_io_error_cb);
+    void (*send_error)(struct lcb_io_opt_st*, lcb_sockdata_t*,void(*)(lcb_sockdata_t*));
 
     lcb_io_stop_fn stop_event_loop;
     lcb_io_start_fn run_event_loop;
