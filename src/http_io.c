@@ -111,7 +111,7 @@ static void request_connected(lcbconn_t conn, lcb_error_t err)
 lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
 {
     struct lcb_io_use_st use;
-    lcb_connection_result_t result;
+    lcbio_status_t result;
     lcbconn_params params;
     lcb_host_t dest;
     lcbconn_t conn = &req->connection;
@@ -131,7 +131,7 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
 
     result = lcbconn_connect(conn, &params);
 
-    if (result != LCB_CONN_INPROGRESS) {
+    if (!LCBIO_IS_OK(result)) {
         return LCB_CONNECT_ERROR;
     }
     if (!req->io_timer) {

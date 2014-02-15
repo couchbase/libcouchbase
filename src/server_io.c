@@ -29,7 +29,7 @@
 
 static int do_read_data(lcb_server_t *c, int allow_read)
 {
-    lcb_sockrw_status_t status;
+    lcbio_status_t status;
     lcb_size_t processed = 0;
     int rv = 0;
 
@@ -43,7 +43,7 @@ static int do_read_data(lcb_server_t *c, int allow_read)
         status = lcb_sockrw_v0_slurp(&c->connection, c->connection.input);
 
     } else {
-        status = LCB_SOCKRW_WOULDBLOCK;
+        status = LCBIO_STATUS_COMPLETED;
     }
 
     while ((rv = lcb_proto_parse_single(c, stop)) > 0) {
@@ -54,7 +54,7 @@ static int do_read_data(lcb_server_t *c, int allow_read)
         return -1;
     }
 
-    if (status == LCB_SOCKRW_WOULDBLOCK || status == LCB_SOCKRW_READ) {
+    if (LCBIO_IS_OK(status)) {
         return 0;
     }
 
@@ -90,10 +90,10 @@ static void v0_handler(lcb_socket_t sock, short which, void *arg)
     (void)sock;
 
     if (which & LCB_WRITE_EVENT) {
-        lcb_sockrw_status_t status;
+        lcbio_status_t status;
 
         status = lcb_sockrw_v0_write(conn, conn->output);
-        if (status != LCB_SOCKRW_WROTE && status != LCB_SOCKRW_WOULDBLOCK) {
+        if (!LCBIO_IS_OK(status)) {
             event_complete_common(c, LCB_NETWORK_ERROR);
             return;
         }

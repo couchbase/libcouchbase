@@ -34,29 +34,38 @@ extern "C" {
 #endif
 
 typedef enum {
-    LCB_CONN_CONNECTED = 1,
-    LCB_CONN_INPROGRESS = 2,
-    LCB_CONN_ERROR = 3
-} lcb_connection_result_t;
+    /**
+     * A pending operation was completed.
+     */
+    LCBIO_STATUS_COMPLETED = 0,
 
-typedef enum {
-    /** The operation completed successfuly */
-    LCBCONN_SUCCESS = 0,
-    LCBCONN_PENDING,
-    LCBCONN_CLOSED,
-    LCBCONN_IOERR,
-    LCBCONN_ALLOCERR
-} lcbconn_result_t;
+    /**
+     * An operation is still pending
+     */
+    LCBIO_STATUS_PENDING = 1,
 
-typedef enum {
-    LCB_SOCKRW_READ = 1,
-    LCB_SOCKRW_WROTE = 2,
-    LCB_SOCKRW_IO_ERROR = 3,
-    LCB_SOCKRW_GENERIC_ERROR = 4,
-    LCB_SOCKRW_WOULDBLOCK = 5,
-    LCB_SOCKRW_PENDING,
-    LCB_SOCKRW_SHUTDOWN
-} lcb_sockrw_status_t;
+    /** Numbers >= this constant are errors */
+    LCBIO__STATUS_SUCCESS_MAX,
+
+    /** Error Codes */
+
+    /** I/O Error */
+    LCBIO_STATUS_IOERR,
+
+    /** Internal Error */
+    LCBIO_STATUS_INTERR,
+
+    /** Graceful close */
+    LCBIO_STATUS_SHUTDOWN
+} lcbio_status_t;
+
+
+#define LCBIO_STATUS_WFLUSHED LCBIO_STATUS_COMPLETED
+#define LCBIO_STATUS_CANREAD LCBIO_STATUS_COMPLETED
+#define LCBIO_STATUS_CONNECT_SCHEDULED LCBIO_STATUS_PENDING
+#define LCBIO_STATUS_CONNECT_COMPLETE LCBIO_STATUS_COMPLETED
+
+#define LCBIO_IS_OK(s) ((s) < LCBIO__STATUS_SUCCESS_MAX)
 
 typedef enum {
     LCBCONN_S_UNINIT = 0,
@@ -183,12 +192,11 @@ lcb_error_t lcbconn_reset_bufs(lcbconn_t conn);
 /**
  * Request a connection. The connection object should be filled with the
  * appropriate callbacks
- * @param conn a connection object with properly initialized fields
- * @params options a set of options controlling the connection intialization
- *  behavior.
+ * The LCBIO subsystem will deliver a callback once the state of the connection
+ * is known.
+ *
  */
-lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
-                                        const lcbconn_params *params);
+lcbio_status_t lcbconn_connect(lcbconn_t conn, const lcbconn_params *params);
 
 /**
  * Close the socket and clean up any socket-related resources
@@ -201,13 +209,13 @@ void lcbconn_close(lcbconn_t conn);
 void lcbconn_cleanup(lcbconn_t conn);
 
 /* Read a bit of data */
-lcb_sockrw_status_t lcb_sockrw_v0_read(lcbconn_t conn, ringbuffer_t *buf);
+lcbio_status_t lcb_sockrw_v0_read(lcbconn_t conn, ringbuffer_t *buf);
 
 /* Exhaust the data until there is nothing to read */
-lcb_sockrw_status_t lcb_sockrw_v0_slurp(lcbconn_t conn, ringbuffer_t *buf);
+lcbio_status_t lcb_sockrw_v0_slurp(lcbconn_t conn, ringbuffer_t *buf);
 
 /* Write as much data from the write buffer until blocked */
-lcb_sockrw_status_t lcb_sockrw_v0_write(lcbconn_t conn, ringbuffer_t *buf);
+lcbio_status_t lcb_sockrw_v0_write(lcbconn_t conn, ringbuffer_t *buf);
 
 int lcb_sockrw_flushed(lcbconn_t conn);
 /**
@@ -227,11 +235,11 @@ void lcb_sockrw_apply_want(lcbconn_t conn);
 
 int lcb_flushing_buffers(lcb_t instance);
 
-lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcbconn_t conn,
+lcbio_status_t lcb_sockrw_v1_start_read(lcbconn_t conn,
                                              ringbuffer_t **buf,
                                              lcb_io_read_cb callback);
 
-lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcbconn_t conn,
+lcbio_status_t lcb_sockrw_v1_start_write(lcbconn_t conn,
                                               ringbuffer_t **buf,
                                               lcb_ioC_write2_callback callback);
 

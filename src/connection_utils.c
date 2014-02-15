@@ -16,11 +16,11 @@ lcb_error_t lcbconn_next_node(lcbconn_t conn,
     lcbconn_close(conn);
 
     while ( (next_host = hostlist_shift_next(hostlist, 0))) {
-        lcb_connection_result_t connres;
+        lcbio_status_t connres;
         params->destination = next_host;
         connres = lcbconn_connect(conn, params);
 
-        if (connres != LCB_CONN_INPROGRESS) {
+        if (!LCBIO_IS_OK(connres)) {
             lcbconn_close(conn);
         }
 
@@ -40,12 +40,12 @@ lcb_error_t lcbconn_cycle_nodes(lcbconn_t conn,
     lcb_size_t ii;
 
     for (ii = 0; ii < total; ii++) {
-        lcb_connection_result_t connres;
+        lcbio_status_t connres;
         params->destination = hostlist_shift_next(hostlist, 1);
         lcb_assert(params->destination != NULL);
 
         connres = lcbconn_connect(conn, params);
-        if (connres != LCB_CONN_INPROGRESS) {
+        if (!LCBIO_IS_OK(connres)) {
             LOG(conn, ERR, "Couldn't start connection");
             lcbconn_close(conn);
         }

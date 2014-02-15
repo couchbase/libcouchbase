@@ -25,8 +25,8 @@
 #include "internal.h"
 #include "logging.h"
 
-static lcb_connection_result_t v0_connect(lcbconn_t conn, int nocb, short events);
-static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb);
+static lcbio_status_t v0_connect(lcbconn_t conn, int nocb, short events);
+static lcbio_status_t v1_connect(lcbconn_t conn, int nocb);
 #define LOGARGS(conn, lvl) \
     conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(conn, lvl, msg) lcb_log(LOGARGS(conn, lvl), msg)
@@ -159,8 +159,8 @@ static void timeout_handler(lcb_timer_t tm, lcb_t instance, const void *cookie)
  * Returns a status indicating whether the connection has been scheduled
  * successfuly or not.
  */
-static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
-                                          int nocb, short events)
+static lcbio_status_t v0_connect(struct lcb_connection_st *conn, int nocb,
+                                   short events)
 {
     int retry;
     int retry_once = 0;
@@ -184,7 +184,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
                     conn->cur_host_->host,
                     conn->cur_host_->port);
             /* this means we're not going to retry!! add an error here! */
-            return LCB_CONN_ERROR;
+            return LCBIO_STATUS_IOERR;
         }
 
         retry = 0;
@@ -211,11 +211,11 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
                  * too much in the first place
                  */
                 if (nocb) {
-                    return LCB_CONN_INPROGRESS;
+                    return LCBIO_STATUS_CONNECT_SCHEDULED;
 
                 } else {
                     connection_success(conn);
-                    return LCB_CONN_CONNECTED;
+                    return LCBIO_STATUS_CONNECT_COMPLETE;
                 }
             } else {
                 conn->last_error = IOT_ERRNO(io);
@@ -231,7 +231,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
 
         case LCB_CONNECT_EISCONN:
             connection_success(conn);
-            return LCB_CONN_CONNECTED;
+            return LCBIO_STATUS_CONNECT_COMPLETE;
 
         case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
             IOT_V0EV(io).watch(IOT_ARG(io),
@@ -241,10 +241,10 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
                                conn, v0_reconnect_handler);
             e->active = 1;
 
-            return LCB_CONN_INPROGRESS;
+            return LCBIO_STATUS_CONNECT_SCHEDULED;
 
         case LCB_CONNECT_EALREADY: /* Subsequent calls to connect */
-            return LCB_CONN_INPROGRESS;
+            return LCBIO_STATUS_CONNECT_SCHEDULED;
 
         case LCB_CONNECT_EINVAL:
             if (!retry_once) {     /* First time get WSAEINVAL error - do retry */
@@ -259,7 +259,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         default:
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
-                return LCB_CONN_ERROR;
+                return LCBIO_STATUS_IOERR;
             }
 
             /* Try next AI */
@@ -269,7 +269,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
     } while (retry);
 
     lcb_assert("this statement shouldn't be reached" && 0);
-    return LCB_CONN_ERROR;
+    return LCBIO_STATUS_IOERR;
 }
 
 static void v1_connect_handler(lcb_sockdata_t *sockptr, int status)
@@ -286,7 +286,7 @@ static void v1_connect_handler(lcb_sockdata_t *sockptr, int status)
     }
 }
 
-static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb)
+static lcbio_status_t v1_connect(lcbconn_t conn, int nocb)
 {
     int save_errno;
     int rv;
@@ -310,7 +310,7 @@ static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb)
             conn->last_error = IOT_ERRNO(io);
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
-                return LCB_CONN_ERROR;
+                return LCBIO_STATUS_IOERR;
             }
         }
 
@@ -321,7 +321,7 @@ static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb)
                                 v1_connect_handler);
 
         if (rv == 0) {
-            return LCB_CONN_INPROGRESS;
+            return LCBIO_STATUS_CONNECT_SCHEDULED;
         }
 
         status = lcb_connect_status(IOT_ERRNO(io));
@@ -333,11 +333,11 @@ static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb)
 
         case LCB_CONNECT_EISCONN:
             connection_success(conn);
-            return LCB_CONN_CONNECTED;
+            return LCBIO_STATUS_CONNECT_COMPLETE;
 
         case LCB_CONNECT_EALREADY:
         case LCB_CONNECT_EINPROGRESS:
-            return LCB_CONN_INPROGRESS;
+            return LCBIO_STATUS_CONNECT_SCHEDULED;
 
         case LCB_CONNECT_EINVAL:
             /** TODO: do we still need this for v1? */
@@ -354,18 +354,18 @@ static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb)
             conn->last_error = IOT_ERRNO(io);
             if (handle_conn_failure(conn) == -1) {
                 conn_do_callback(conn, nocb, LCB_CONNECT_ERROR);
-                return LCB_CONN_ERROR;
+                return LCBIO_STATUS_IOERR;
             }
             break;
 
         default:
             conn->last_error = IOT_ERRNO(io);
-            return LCB_CONN_ERROR;
+            return LCBIO_STATUS_IOERR;
 
         }
     } while (retry);
 
-    return LCB_CONN_ERROR;
+    return LCBIO_STATUS_IOERR;
 }
 
 static void async_error_callback(lcb_timer_t tm, lcb_t i, const void *cookie)
@@ -389,10 +389,9 @@ static void setup_async_error(lcbconn_t conn, lcb_error_t err)
                                      conn, async_error_callback, &dummy);
 }
 
-lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
-                                        const lcbconn_params *params)
+lcbio_status_t lcbconn_connect(lcbconn_t conn, const lcbconn_params *params)
 {
-    lcb_connection_result_t result;
+    lcbio_status_t result;
     lcb_iotable *io = conn->iotable;
 
     /** Basic sanity checking */
@@ -430,6 +429,7 @@ lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
 
     if (!conn->ioconn->root_ai) {
         setup_async_error(conn, LCB_UNKNOWN_HOST);
+        return LCBIO_STATUS_IOERR;
     }
 
     conn->ioconn->ai = conn->ioconn->root_ai;
@@ -443,12 +443,12 @@ lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
         result = v1_connect(conn, 1);
     }
 
-    if (result != LCB_CONN_INPROGRESS) {
+    if (result != LCBIO_STATUS_CONNECT_SCHEDULED) {
         lcb_log(LOGARGS(conn, INFO),
                 "Scheduling connection for %p failed with code 0x%x",
                 conn, result);
         setup_async_error(conn, LCB_CONNECT_ERROR);
-        return LCB_CONN_INPROGRESS;
+        return LCBIO_STATUS_CONNECT_SCHEDULED;
     }
 
     return result;
