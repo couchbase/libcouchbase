@@ -12,10 +12,19 @@ extern "C" {
 typedef int lcb_socket_t;
 struct sockaddr;
 
+#ifndef _WIN32
+#define LCB_IOV_LAYOUT_UIO
 struct lcb_iovec_st {
-    char *iov_base;
-    lcb_size_t iov_len;
+    void *iov_base;
+    size_t iov_len;
 };
+#else
+#define LCB_IOV_LAYOUT_WSABUF
+struct lcb_iovec_st {
+    ULONG iov_len;
+    void *iov_base;
+};
+#endif
 
 struct lcb_nameinfo_st {
     struct {
