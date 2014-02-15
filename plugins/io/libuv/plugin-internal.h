@@ -56,12 +56,6 @@ typedef struct {
     lcb_io_read_cb callback;
 } my_tcp_t;
 
-typedef struct {
-    uv_write_t w;
-    lcb_io_write_cb callback;
-} my_write_t;
-
-
 /**
  * Wrapper for lcb_sockdata_t
  */
@@ -92,21 +86,12 @@ typedef struct {
 
 } my_sockdata_t;
 
+
 typedef struct {
-    lcb_io_writebuf_t base;
-
-    /** Write handle.
-     * ->data field contains the callback
-     */
-    my_write_t write;
-
-    /** Buffer structures corresponding to buf_info */
-    uv_buf_t uvbuf[2];
-
-    /** Parent socket structure */
+    uv_write_t w;
+    lcb_ioC_write2_callback callback;
     my_sockdata_t *sock;
-
-} my_writebuf_t;
+} my_write_t;
 
 
 typedef struct {
@@ -141,7 +126,6 @@ typedef struct {
 
     union {
         lcb_io_connect_cb conn;
-        lcb_io_error_cb err;
         generic_callback_t cb_;
     } cb;
 

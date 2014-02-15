@@ -21,9 +21,15 @@ static my_uvreq_t *alloc_uvreq(my_sockdata_t *sock, generic_callback_t callback)
 static void free_bufinfo_common(struct lcb_buf_info *bi);
 static void generic_close_cb(uv_handle_t *handle);
 static void set_last_error(my_iops_t *io, int error);
-static void wire_rw_ops(lcb_io_opt_t iop);
 static void wire_timer_ops(lcb_io_opt_t iop);
 static void socket_closed_callback(uv_handle_t *handle);
+static void wire_iops2(int version,
+                       lcb_loop_procs *loop,
+                       lcb_timer_procs *timer,
+                       lcb_bsd_procs *bsd,
+                       lcb_ev_procs *ev,
+                       lcb_completion_procs *iocp,
+                       lcb_iomodel_t *model);
 
 
 static void decref_iops(lcb_io_opt_t iobase)
@@ -140,16 +146,9 @@ lcb_error_t lcb_create_libuv_io_opts(int version,
     }
 
     iop = &ret->base;
-    iop->version = 1;
-
-    wire_timer_ops(iop);
-    wire_rw_ops(iop);
-
-    iop->v.v1.run_event_loop = run_event_loop;
-    iop->v.v1.stop_event_loop = stop_event_loop;
-
-    /* dtor */
+    iop->version = 2;
     iop->destructor = iops_lcb_dtor;
+    iop->v.v2.get_procs = wire_iops2;
 
     ret->iops_refcount = 1;
 
@@ -393,87 +392,50 @@ static int start_connect(lcb_io_opt_t iobase,
 
 /******************************************************************************
  ******************************************************************************
- ** my_writebuf_t functions                                                  **
- ******************************************************************************
- ******************************************************************************/
-static lcb_io_writebuf_t *create_writebuf(lcb_io_opt_t iobase, lcb_sockdata_t *sd)
-{
-    my_writebuf_t *ret = calloc(1, sizeof(*ret));
-
-    ret->base.parent = iobase;
-
-    (void)sd;
-    return (lcb_io_writebuf_t *)ret;
-}
-
-static void release_writebuf(lcb_io_opt_t iobase,
-                             lcb_sockdata_t *sd,
-                             lcb_io_writebuf_t *buf)
-{
-    free_bufinfo_common(&buf->buffer);
-    memset(buf, 0xff, sizeof(my_writebuf_t));
-    free(buf);
-
-    (void)iobase;
-    (void)sd;
-}
-
-
-/******************************************************************************
- ******************************************************************************
  ** Write Functions                                                          **
  ******************************************************************************
  ******************************************************************************/
-static void write_callback(uv_write_t *req, int status)
+static void write2_callback(uv_write_t *req, int status)
 {
     my_write_t *mw = (my_write_t *)req;
-    my_writebuf_t *wbuf = PTR_FROM_FIELD(my_writebuf_t, mw, write);
-    my_sockdata_t *sock = wbuf->sock;
-    lcb_io_write_cb callback = CbREQ(mw);
+    my_sockdata_t *sock = mw->sock;
 
-    if (callback) {
-        callback(&sock->base, &wbuf->base, status);
+    if (status != 0) {
+        set_last_error((my_iops_t *)sock->base.parent, status);
     }
 
-    SOCK_DECR_PENDING(sock, write);
-    decref_sock(sock);
+    mw->callback(&sock->base, status, mw->w.data);
+    free(mw);
 }
 
-static int start_write(lcb_io_opt_t iobase,
-                       lcb_sockdata_t *sockbase,
-                       lcb_io_writebuf_t *wbufbase,
-                       lcb_io_write_cb callback)
+static int start_write2(lcb_io_opt_t iobase,
+                        lcb_sockdata_t *sockbase,
+                        struct lcb_iovec_st *iov,
+                        lcb_size_t niov,
+                        void *uarg,
+                        lcb_ioC_write2_callback callback)
 {
-    my_sockdata_t *sock = (my_sockdata_t *)sockbase;
-    my_iops_t *io = (my_iops_t *)iobase;
-    my_writebuf_t *wbuf = (my_writebuf_t *)wbufbase;
-    int ii;
+    my_write_t *w;
+    my_sockdata_t *sd = (my_sockdata_t *)sockbase;
     int ret;
 
-    wbuf->sock = sock;
-    wbuf->write.callback = callback;
+    w = calloc(1, sizeof(*w));
+    w->w.data = uarg;
+    w->callback = callback;
+    w->sock = sd;
 
-    for (ii = 0; ii < 2; ii++) {
-        wbuf->uvbuf[ii].base = wbuf->base.buffer.iov[ii].iov_base;
-        wbuf->uvbuf[ii].len = (lcb_uvbuf_len_t)wbuf->base.buffer.iov[ii].iov_len;
-    }
+    ret = uv_write(&w->w, (uv_stream_t *)&sd->tcp,
+                   (uv_buf_t *)iov,
+                   niov,
+                   write2_callback);
 
-    ret = uv_write(&wbuf->write.w,
-                   (uv_stream_t *)&sock->tcp,
-                   wbuf->uvbuf,
-                   2,
-                   write_callback);
-
-    set_last_error(io, ret);
-
-    if (ret == 0) {
-        incref_sock(sock);
-        SOCK_INCR_PENDING(sock, write);
+    if (ret != 0) {
+        free(w);
+        set_last_error((my_iops_t *)iobase, -1);
     }
 
     return ret;
 }
-
 
 /******************************************************************************
  ******************************************************************************
@@ -570,50 +532,6 @@ static int start_read(lcb_io_opt_t iobase,
     return ret;
 }
 
-/******************************************************************************
- ******************************************************************************
- ** Async Errors                                                             **
- ******************************************************************************
- ******************************************************************************/
-static void err_idle_cb(uv_idle_t *idle, int status)
-{
-    my_uvreq_t *uvr = (my_uvreq_t *)idle;
-    lcb_io_error_cb callback = uvr->cb.err;
-
-    uv_idle_stop(idle);
-    uv_close((uv_handle_t *)idle, generic_close_cb);
-
-    if (callback) {
-        callback(&uvr->socket->base);
-    }
-
-    decref_sock(uvr->socket);
-    (void)status;
-}
-
-
-static void send_error(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase,
-                       lcb_io_error_cb callback)
-{
-    my_sockdata_t *sock = (my_sockdata_t *)sockbase;
-    my_iops_t *io = (my_iops_t *)iobase;
-    my_uvreq_t *uvr;
-
-    if (!sock) {
-        return;
-    }
-
-    uvr = alloc_uvreq(sock, (generic_callback_t)callback);
-
-    if (!uvr) {
-        return;
-    }
-
-    uv_idle_init(io->loop, &uvr->uvreq.idle);
-    uv_idle_start(&uvr->uvreq.idle, err_idle_cb);
-    incref_sock(sock);
-}
-
 static int get_nameinfo(lcb_io_opt_t iobase,
                         lcb_sockdata_t *sockbase,
                         struct lcb_nameinfo_st *ni)
@@ -625,20 +543,6 @@ static int get_nameinfo(lcb_io_opt_t iobase,
 
     (void)io;
     return 0;
-}
-
-
-static void wire_rw_ops(lcb_io_opt_t iop)
-{
-    iop->v.v1.start_connect = start_connect;
-    iop->v.v1.create_writebuf = create_writebuf;
-    iop->v.v1.release_writebuf = release_writebuf;
-    iop->v.v1.start_write = start_write;
-    iop->v.v1.start_read = start_read;
-    iop->v.v1.create_socket = create_socket;
-    iop->v.v1.close_socket = close_socket;
-    iop->v.v1.send_error = send_error;
-    iop->v.v1.get_nameinfo = get_nameinfo;
 }
 
 /******************************************************************************
@@ -711,17 +615,6 @@ static void destroy_timer(lcb_io_opt_t io, void *timer_opaque)
     uv_close((uv_handle_t *)timer_opaque, timer_close_cb);
 }
 
-static void wire_timer_ops(lcb_io_opt_t iop)
-{
-    /**
-     * v0 functions
-     */
-    iop->v.v1.create_timer = create_timer;
-    iop->v.v1.update_timer = update_timer;
-    iop->v.v1.delete_timer = delete_timer;
-    iop->v.v1.destroy_timer = destroy_timer;
-}
-
 static my_uvreq_t *alloc_uvreq(my_sockdata_t *sock, generic_callback_t callback)
 {
     my_uvreq_t *ret = calloc(1, sizeof(*ret));
@@ -743,4 +636,40 @@ static void set_last_error(my_iops_t *io, int error)
 static void generic_close_cb(uv_handle_t *handle)
 {
     free(handle);
+}
+
+
+static void wire_iops2(int version,
+                       lcb_loop_procs *loop,
+                       lcb_timer_procs *timer,
+                       lcb_bsd_procs *bsd,
+                       lcb_ev_procs *ev,
+                       lcb_completion_procs *iocp,
+                       lcb_iomodel_t *model)
+{
+    *model = LCB_IOMODEL_COMPLETION;
+    loop->start = run_event_loop;
+    loop->stop = stop_event_loop;
+
+    timer->create = create_timer;
+    timer->cancel = delete_timer;
+    timer->schedule = update_timer;
+    timer->destroy = destroy_timer;
+
+    iocp->close = close_socket;
+    iocp->socket = create_socket;
+    iocp->connect = start_connect;
+    iocp->nameinfo = get_nameinfo;
+    iocp->read = start_read;
+    iocp->write2 = start_write2;
+
+    /** Stuff we don't use */
+    iocp->write = NULL;
+    iocp->wballoc = NULL;
+    iocp->wbfree = NULL;
+    iocp->serve = NULL;
+
+    (void)bsd;
+    (void)version;
+    (void)ev;
 }
