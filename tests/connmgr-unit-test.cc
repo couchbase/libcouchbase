@@ -11,7 +11,7 @@ class Connmgr : public ::testing::Test
 
 struct MyRequest : connmgr_request_st {
     lcb_connection_st myconn;
-    lcb_io_opt_t io;
+    lcb_iotable *io;
 };
 
 extern "C" {
@@ -28,7 +28,7 @@ static void mgr_callback(connmgr_request *reqbase)
     struct lcb_io_use_st use;
     lcb_connuse_easy(&use, req, io_read, io_error);
     lcb_connection_transfer_socket(reqbase->conn, &req->myconn, &use);
-    req->io->v.v0.stop_event_loop(req->io);
+    IOT_STOP(req->io);
 }
 }
 
@@ -56,7 +56,7 @@ TEST_F(Connmgr, testBasic)
     req.callback = mgr_callback;
     strcpy(req.key, crst.v.v2.host);
     connmgr_get(mgr, &req, 2000000);
-    mgr->io->v.v0.run_event_loop(mgr->io);
+    IOT_START(mgr->io);
 
     ASSERT_EQ(LCB_CONNSTATE_CONNECTED, req.myconn.state);
     /** Release the connection.. */
