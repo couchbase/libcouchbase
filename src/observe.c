@@ -265,10 +265,10 @@ void lcb_observe_invoke_callback(lcb_t instance,
     }
 
     if (exd && --exd->refcount == 0) {
+        lcb_observe_resp_t resp2;
+
         lcb_clear_opaque(instance, opaque);
         free(exd);
-
-        lcb_observe_resp_t resp2;
         memset(&resp2, 0, sizeof(resp2));
         setup_lcb_observe_resp_t(&resp2, NULL, 0, 0, 0, 0, 0, 0);
         lcb_observe_invoke_callback(instance, ct, error, &resp2, opaque);
