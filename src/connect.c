@@ -25,8 +25,8 @@
 #include "internal.h"
 #include "logging.h"
 
-static lcb_connection_result_t v0_connect(lcb_connection_t conn, int nocb, short events);
-static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb);
+static lcb_connection_result_t v0_connect(lcbconn_t conn, int nocb, short events);
+static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb);
 #define LOGARGS(conn, lvl) \
     conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(conn, lvl, msg) lcb_log(LOGARGS(conn, lvl), msg)
@@ -79,18 +79,18 @@ static int handle_conn_failure(struct lcb_connection_st *conn)
     conn->ioconn = NULL;
 
     /** This actually closes ioconn as well, so maintain it here */
-    lcb_connection_close(conn);
+    lcbconn_close(conn);
     conn->ioconn = ioconn;
 
     if (conn_next_ai(conn) == 0) {
-        conn->state = LCB_CONNSTATE_INPROGRESS;
+        conn->state = LCBCONN_S_PENDING;
         return 0;
     }
 
     return -1;
 }
 
-static void destroy_connstart(lcb_connection_t conn)
+static void destroy_connstart(lcbconn_t conn)
 {
     if (!conn->ioconn) {
         return;
@@ -130,19 +130,19 @@ static void conn_do_callback(struct lcb_connection_st *conn,
     handler(conn, err);
 }
 
-static void connection_success(lcb_connection_t conn)
+static void connection_success(lcbconn_t conn)
 {
     lcb_log(LOGARGS(conn, INFO),
             "Connection=%p,%s:%s completed succesfully",
             conn, conn->cur_host_->host, conn->cur_host_->port);
 
-    conn->state = LCB_CONNSTATE_CONNECTED;
+    conn->state = LCBCONN_S_CONNECTED;
     conn_do_callback(conn, 0, LCB_SUCCESS);
 }
 
 static void timeout_handler(lcb_timer_t tm, lcb_t instance, const void *cookie)
 {
-    lcb_connection_t conn = (lcb_connection_t)cookie;
+    lcbconn_t conn = (lcbconn_t)cookie;
 
     lcb_log(LOGARGS(conn, ERR),
             "%p: Connection to %s:%s timed out. Last OS Error=%d",
@@ -274,7 +274,7 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
 
 static void v1_connect_handler(lcb_sockdata_t *sockptr, int status)
 {
-    lcb_connection_t conn = (lcb_connection_t)sockptr->lcbconn;
+    lcbconn_t conn = (lcbconn_t)sockptr->lcbconn;
     if (!conn) {
         /* closed? */
         return;
@@ -286,7 +286,7 @@ static void v1_connect_handler(lcb_sockdata_t *sockptr, int status)
     }
 }
 
-static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
+static lcb_connection_result_t v1_connect(lcbconn_t conn, int nocb)
 {
     int save_errno;
     int rv;
@@ -370,13 +370,13 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
 
 static void async_error_callback(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
-    lcb_connection_t conn = (lcb_connection_t)cookie;
+    lcbconn_t conn = (lcbconn_t)cookie;
     conn_do_callback(conn, 0, conn->ioconn->pending_err);
     (void)tm;
     (void)i;
 }
 
-static void setup_async_error(lcb_connection_t conn, lcb_error_t err)
+static void setup_async_error(lcbconn_t conn, lcb_error_t err)
 {
     lcb_ioconnect_t ioconn = conn->ioconn;
     lcb_error_t dummy;
@@ -389,20 +389,20 @@ static void setup_async_error(lcb_connection_t conn, lcb_error_t err)
                                      conn, async_error_callback, &dummy);
 }
 
-lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
-                                             const lcb_conn_params *params,
-                                             lcb_connstart_opts_t options)
+lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
+                                        const lcbconn_params *params,
+                                        lcb_connstart_opts_t options)
 {
     lcb_connection_result_t result;
     lcb_iotable *io = conn->iotable;
 
     /** Basic sanity checking */
-    lcb_assert(conn->state == LCB_CONNSTATE_UNINIT);
+    lcb_assert(conn->state == LCBCONN_S_UNINIT);
     lcb_assert(conn->ioconn == NULL);
     lcb_assert(params->destination);
     lcb_assert(params->handler);
 
-    conn->state = LCB_CONNSTATE_INPROGRESS;
+    conn->state = LCBCONN_S_PENDING;
 
     lcb_log(LOGARGS(conn, INFO),
             "Starting connection (%p) to %s:%s", conn,
@@ -458,10 +458,10 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
     return result;
 }
 
-void lcb_connection_close(lcb_connection_t conn)
+void lcbconn_close(lcbconn_t conn)
 {
     lcb_iotable *io;
-    conn->state = LCB_CONNSTATE_UNINIT;
+    conn->state = LCBCONN_S_UNINIT;
     destroy_connstart(conn);
     if (conn->iotable == NULL) {
         return;
@@ -521,7 +521,7 @@ int lcb_getaddrinfo(lcb_settings *settings, const char *hostname,
     return getaddrinfo(hostname, servname, &hints, res);
 }
 
-void lcb_connection_cleanup(lcb_connection_t conn)
+void lcbconn_cleanup(lcbconn_t conn)
 {
     destroy_connstart(conn);
 
@@ -548,7 +548,7 @@ void lcb_connection_cleanup(lcb_connection_t conn)
 
     free(conn->cur_host_);
     conn->cur_host_ = NULL;
-    lcb_connection_close(conn);
+    lcbconn_close(conn);
 
     if (conn->iotable && IOT_IS_EVENT(conn->iotable) && CN_E(conn)->ptr) {
         IOT_V0EV(conn->iotable).destroy(conn->iotable->p, CN_E(conn)->ptr);
@@ -578,7 +578,7 @@ static lcb_error_t reset_buffer(ringbuffer_t **rb, lcb_size_t defsz)
     return LCB_SUCCESS;
 }
 
-lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn)
+lcb_error_t lcbconn_reset_bufs(lcbconn_t conn)
 {
     if (reset_buffer(&conn->input, conn->settings->rbufsize) != LCB_SUCCESS) {
         return LCB_CLIENT_ENOMEM;
@@ -592,12 +592,12 @@ lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn)
 
 static void async_error_trigger(lcb_timer_t t, lcb_t i, const void *arg)
 {
-    lcb_connection_t conn = (lcb_connection_t )arg;
+    lcbconn_t conn = (lcbconn_t )arg;
     conn->errcb(conn);
     (void)t; (void)i;
 }
 
-lcb_error_t lcb_connection_init(lcb_connection_t conn,
+lcb_error_t lcbconn_init(lcbconn_t conn,
                                 lcb_iotable *iotable,
                                 lcb_settings *settings)
 {
@@ -610,20 +610,20 @@ lcb_error_t lcb_connection_init(lcb_connection_t conn,
         CN_C(conn)->sockptr = NULL;
     }
 
-    conn->state = LCB_CONNSTATE_UNINIT;
+    conn->state = LCBCONN_S_UNINIT;
     conn->as_err = lcb_timer_create_simple(iotable, conn, 0, async_error_trigger);
     lcb_async_cancel(conn->as_err);
 
 
-    if (LCB_SUCCESS != lcb_connection_reset_buffers(conn)) {
-        lcb_connection_cleanup(conn);
+    if (LCB_SUCCESS != lcbconn_reset_bufs(conn)) {
+        lcbconn_cleanup(conn);
         return LCB_CLIENT_ENOMEM;
     }
 
     return LCB_SUCCESS;
 }
 
-void lcb_connection_use(lcb_connection_t conn, const struct lcb_io_use_st *use)
+void lcbconn_use(lcbconn_t conn, const struct lcb_io_use_st *use)
 {
     struct lcb_io_use_st use_proxy;
 
@@ -650,7 +650,7 @@ void lcb_connection_use(lcb_connection_t conn, const struct lcb_io_use_st *use)
     lcb_assert(conn->errcb);
 }
 
-void lcb_connuse_ex(struct lcb_io_use_st *use,
+void lcbconn_use_ex(struct lcb_io_use_st *use,
                     void *udata,
                     lcb_event_handler_cb v0_handler,
                     lcb_io_read_cb v1_read,
@@ -672,7 +672,7 @@ void lcb_connuse_ex(struct lcb_io_use_st *use,
     use->u.ex.v1_write = v1_write;
 }
 
-void lcb_connuse_easy(struct lcb_io_use_st *use,
+void lcbconn_use_easy(struct lcb_io_use_st *use,
                       void *data,
                       lcb_io_generic_cb read_cb,
                       lcb_io_generic_cb err_cb)
@@ -688,9 +688,8 @@ void lcb_connuse_easy(struct lcb_io_use_st *use,
 }
 
 LCB_INTERNAL_API
-void lcb_connection_transfer_socket(lcb_connection_t from,
-                                    lcb_connection_t to,
-                                    const struct lcb_io_use_st *use)
+void lcbconn_transfer(lcbconn_t from, lcbconn_t to,
+                      const struct lcb_io_use_st *use)
 {
     lcbio_Ectx *esrc = CN_E(from), *edst = CN_E(to);
     lcbio_Cctx *csrc = CN_C(from), *cdst = CN_C(to);
@@ -699,7 +698,7 @@ void lcb_connection_transfer_socket(lcb_connection_t from,
         return;
     }
 
-    lcb_assert(to->state == LCB_CONNSTATE_UNINIT);
+    lcb_assert(to->state == LCBCONN_S_UNINIT);
     lcb_assert(to->ioconn == NULL && from->ioconn == NULL);
     if (IOT_IS_EVENT(from->iotable) && esrc->active) {
         IOT_V0EV(from->iotable).cancel(from->iotable->p,
@@ -723,13 +722,13 @@ void lcb_connection_transfer_socket(lcb_connection_t from,
     to->protoctx = from->protoctx; from->protoctx = NULL;
     to->protoctx_dtor = from->protoctx_dtor; from->protoctx_dtor = NULL;
     to->last_error = from->last_error;
-    to->state = from->state; from->state = LCB_CONNSTATE_UNINIT;
+    to->state = from->state; from->state = LCBCONN_S_UNINIT;
     to->cur_host_ = from->cur_host_; from->cur_host_ = NULL;
     to->poolinfo = from->poolinfo; from->poolinfo = NULL;
-    lcb_connection_use(to, use);
+    lcbconn_use(to, use);
 }
 
-const lcb_host_t * lcb_connection_get_host(const lcb_connection_t conn)
+const lcb_host_t * lcbconn_get_host(const lcbconn_t conn)
 {
     static lcb_host_t dummy = { { '\0' }, { '\0' } };
     if (conn->cur_host_) {

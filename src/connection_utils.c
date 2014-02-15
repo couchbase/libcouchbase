@@ -7,21 +7,21 @@
 
 #define LOG(conn, lvl, msg) lcb_log(LOGARGS(conn, lvl), msg)
 
-lcb_error_t lcb_connection_next_node(lcb_connection_t conn,
-                                     hostlist_t hostlist,
-                                     lcb_conn_params *params,
-                                     char **errinfo)
+lcb_error_t lcbconn_next_node(lcbconn_t conn,
+                              hostlist_t hostlist,
+                              lcbconn_params *params,
+                              char **errinfo)
 {
     lcb_host_t *next_host = NULL;
-    lcb_connection_close(conn);
+    lcbconn_close(conn);
 
     while ( (next_host = hostlist_shift_next(hostlist, 0))) {
         lcb_connection_result_t connres;
         params->destination = next_host;
-        connres = lcb_connection_start(conn, params, LCB_CONNSTART_NOCB);
+        connres = lcbconn_connect(conn, params, LCB_CONNSTART_NOCB);
 
         if (connres != LCB_CONN_INPROGRESS) {
-            lcb_connection_close(conn);
+            lcbconn_close(conn);
         }
 
         return LCB_SUCCESS;
@@ -31,10 +31,10 @@ lcb_error_t lcb_connection_next_node(lcb_connection_t conn,
     return LCB_CONNECT_ERROR;
 }
 
-lcb_error_t lcb_connection_cycle_nodes(lcb_connection_t conn,
-                                        hostlist_t hostlist,
-                                        lcb_conn_params *params,
-                                        char **errinfo)
+lcb_error_t lcbconn_cycle_nodes(lcbconn_t conn,
+                                hostlist_t hostlist,
+                                lcbconn_params *params,
+                                char **errinfo)
 {
     lcb_size_t total = hostlist->nentries;
     lcb_size_t ii;
@@ -44,10 +44,10 @@ lcb_error_t lcb_connection_cycle_nodes(lcb_connection_t conn,
         params->destination = hostlist_shift_next(hostlist, 1);
         lcb_assert(params->destination != NULL);
 
-        connres = lcb_connection_start(conn, params, LCB_CONNSTART_NOCB);
+        connres = lcbconn_connect(conn, params, LCB_CONNSTART_NOCB);
         if (connres != LCB_CONN_INPROGRESS) {
             LOG(conn, ERR, "Couldn't start connection");
-            lcb_connection_close(conn);
+            lcbconn_close(conn);
         }
         return LCB_SUCCESS;
     }
@@ -82,7 +82,7 @@ static int saddr_to_string(struct sockaddr *saddr, int len,
     return 1;
 }
 
-int lcb_get_nameinfo(lcb_connection_t conn, struct lcb_nibufs_st *nistrs)
+int lcb_get_nameinfo(lcbconn_t conn, struct lcb_nibufs_st *nistrs)
 {
     struct sockaddr_storage sa_local;
     struct sockaddr_storage sa_remote;

@@ -24,7 +24,7 @@
 #include "internal.h"
 #include "iotable.h"
 
-lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
+lcb_sockrw_status_t lcb_sockrw_v0_read(lcbconn_t conn, ringbuffer_t *buf)
 {
     struct lcb_iovec_st iov[2];
     lcb_ssize_t nr;
@@ -66,7 +66,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
     return LCB_SOCKRW_READ;
 }
 
-lcb_sockrw_status_t lcb_sockrw_v0_slurp(lcb_connection_t conn, ringbuffer_t *buf)
+lcb_sockrw_status_t lcb_sockrw_v0_slurp(lcbconn_t conn, ringbuffer_t *buf)
 {
     lcb_sockrw_status_t status;
     while ((status = lcb_sockrw_v0_read(conn, buf)) == LCB_SOCKRW_READ) {
@@ -77,7 +77,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_slurp(lcb_connection_t conn, ringbuffer_t *buf
 }
 
 
-lcb_sockrw_status_t lcb_sockrw_v0_write(lcb_connection_t conn,
+lcb_sockrw_status_t lcb_sockrw_v0_write(lcbconn_t conn,
                                         ringbuffer_t *buf)
 {
     lcb_iotable *iot = conn->iotable;
@@ -110,7 +110,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_write(lcb_connection_t conn,
     return LCB_SOCKRW_WROTE;
 }
 
-void lcb_sockrw_set_want(lcb_connection_t conn, short events, int clear_existing)
+void lcb_sockrw_set_want(lcbconn_t conn, short events, int clear_existing)
 {
 
     if (clear_existing) {
@@ -120,7 +120,7 @@ void lcb_sockrw_set_want(lcb_connection_t conn, short events, int clear_existing
     }
 }
 
-static void apply_want_v0(lcb_connection_t conn)
+static void apply_want_v0(lcbconn_t conn)
 {
     lcb_iotable *iot = conn->iotable;
     lcbio_Ectx *e = &conn->u_model.e;
@@ -137,7 +137,7 @@ static void apply_want_v0(lcb_connection_t conn)
                         e->handler);
 }
 
-static void apply_want_v1(lcb_connection_t conn)
+static void apply_want_v1(lcbconn_t conn)
 {
     lcbio_Cctx *c = &conn->u_model.c;
     if (!conn->want) {
@@ -165,7 +165,7 @@ static void apply_want_v1(lcb_connection_t conn)
 
 }
 
-void lcb_sockrw_apply_want(lcb_connection_t conn)
+void lcb_sockrw_apply_want(lcbconn_t conn)
 {
     if (conn->iotable == NULL) {
         return;
@@ -177,7 +177,7 @@ void lcb_sockrw_apply_want(lcb_connection_t conn)
     }
 }
 
-int lcb_sockrw_flushed(lcb_connection_t conn)
+int lcb_sockrw_flushed(lcbconn_t conn)
 {
     if (!IOT_IS_EVENT(conn->iotable)) {
         if (conn->output && conn->output->nbytes == 0) {
@@ -201,7 +201,7 @@ int lcb_sockrw_flushed(lcb_connection_t conn)
  * for the duration of the operation. It may be restored via
  * ringbuffer_take_buffer once the operation has finished.
  */
-lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
+lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcbconn_t conn,
                                              ringbuffer_t **buf,
                                              lcb_io_read_cb callback)
 {
@@ -253,7 +253,7 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
  * the IO system takes exclusive ownership of the buffer, and the contents
  * of *buf are zeroed.
  */
-lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
+lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcbconn_t conn,
                                               ringbuffer_t **buf,
                                               lcb_ioC_write2_callback callback)
 {
@@ -318,7 +318,7 @@ unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
 {
     int is_closed;
 
-    lcb_connection_t conn = sock->lcbconn;
+    lcbconn_t conn = sock->lcbconn;
     is_closed = sock->closed;
 
     if (is_closed) {
@@ -339,7 +339,7 @@ unsigned int lcb_sockrw_v1_cb_common(lcb_sockdata_t *sock,
 
 static void v0_generic_handler(lcb_socket_t sock, short which, void *arg)
 {
-    lcb_connection_t conn = arg;
+    lcbconn_t conn = arg;
     lcb_sockrw_status_t status;
     lcb_size_t oldnr, newnr;
 
@@ -385,7 +385,7 @@ static void v1_generic_write_handler(lcb_sockdata_t *sd,
                                      void *wdata)
 {
     lcb_t instance;
-    lcb_connection_t conn = sd->lcbconn;
+    lcbconn_t conn = sd->lcbconn;
 
     if (!lcb_sockrw_v1_cb_common(sd, wdata, (void **)&instance)) {
         return;
@@ -403,7 +403,7 @@ static void v1_generic_write_handler(lcb_sockdata_t *sd,
 
 static void v1_generic_read_handler(lcb_sockdata_t *sd, lcb_ssize_t nr)
 {
-    lcb_connection_t conn = sd->lcbconn;
+    lcbconn_t conn = sd->lcbconn;
     if (!lcb_sockrw_v1_cb_common(sd, NULL, NULL)) {
         return;
     }

@@ -20,7 +20,7 @@
 #define LOGARGS(req, lvl) \
     &req->instance->settings, "http-io", LCB_LOG_##lvl, __FILE__, __LINE__
 
-static void io_read(lcb_connection_t conn)
+static void io_read(lcbconn_t conn)
 {
     lcb_http_request_t req = conn->data;
     lcb_t instance = req->instance;
@@ -75,7 +75,7 @@ static void io_read(lcb_connection_t conn)
     lcb_http_request_decref(req);
 }
 
-static void io_error(lcb_connection_t conn)
+static void io_error(lcbconn_t conn)
 {
     lcb_http_request_t req = conn->data;
     lcb_http_request_finish(req->instance, req, LCB_NETWORK_ERROR);
@@ -91,11 +91,11 @@ static void request_timed_out(lcb_timer_t tm, lcb_t u, const void *cookie)
 
 
 
-static void request_connected(lcb_connection_t conn, lcb_error_t err)
+static void request_connected(lcbconn_t conn, lcb_error_t err)
 {
     lcb_http_request_t req = (lcb_http_request_t)conn->data;
     if (err != LCB_SUCCESS) {
-        const lcb_host_t *tmphost = lcb_connection_get_host(conn);
+        const lcb_host_t *tmphost = lcbconn_get_host(conn);
         lcb_log(LOGARGS(req, ERR),
                 "Connection to %s:%s failed with Err=0x%x",
                 tmphost->host, tmphost->port, err);
@@ -112,9 +112,9 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
 {
     struct lcb_io_use_st use;
     lcb_connection_result_t result;
-    lcb_conn_params params;
+    lcbconn_params params;
     lcb_host_t dest;
-    lcb_connection_t conn = &req->connection;
+    lcbconn_t conn = &req->connection;
 
     memcpy(dest.host, req->host, req->nhost);
     dest.host[req->nhost] = '\0';
@@ -129,7 +129,7 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
             req->instance->settings.http_timeout;
     params.timeout = req->timeout;
 
-    result = lcb_connection_start(conn, &params,
+    result = lcbconn_connect(conn, &params,
                                   LCB_CONNSTART_NOCB|LCB_CONNSTART_ASYNCERR);
 
     if (result != LCB_CONN_INPROGRESS) {
@@ -144,7 +144,7 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
         lcb_timer_rearm(req->io_timer, req->timeout);
     }
 
-    lcb_connuse_easy(&use, req, io_read, io_error);
-    lcb_connection_use(conn, &use);
+    lcbconn_use_easy(&use, req, io_read, io_error);
+    lcbconn_use(conn, &use);
     return LCB_SUCCESS;
 }

@@ -10,8 +10,8 @@
 
 #define LOG(ctx, lvl, msg) lcb_log(LOGARGS(ctx, lvl), msg)
 
-static void io_error_handler(lcb_connection_t);
-static void io_read_handler(lcb_connection_t);
+static void io_error_handler(lcbconn_t);
+static void io_read_handler(lcbconn_t);
 
 static int sasl_get_username(void *context,
                              int id,
@@ -91,7 +91,7 @@ static lcb_error_t setup_sasl_params(struct negotiation_context *ctx)
 
 static void negotiation_cleanup(struct negotiation_context *ctx)
 {
-    lcb_connection_t conn = ctx->conn;
+    lcbconn_t conn = ctx->conn;
     lcb_sockrw_set_want(conn, 0, 1);
     lcb_sockrw_apply_want(conn);
     memset(&conn->easy, 0, sizeof(conn->easy));
@@ -208,7 +208,7 @@ static int send_sasl_auth(struct negotiation_context *ctx,
 {
     protocol_binary_request_no_extras req;
     protocol_binary_request_header *hdr = &req.message.header;
-    lcb_connection_t conn = ctx->conn;
+    lcbconn_t conn = ctx->conn;
     lcb_size_t to_write;
 
     memset(&req, 0, sizeof(req));
@@ -246,7 +246,7 @@ static int send_sasl_step(struct negotiation_context *ctx,
 {
     protocol_binary_request_no_extras req;
     protocol_binary_request_header *hdr = &req.message.header;
-    lcb_connection_t conn = ctx->conn;
+    lcbconn_t conn = ctx->conn;
     cbsasl_error_t saslerr;
     const char *step_data;
     unsigned int ndata;
@@ -296,7 +296,7 @@ static int send_sasl_step(struct negotiation_context *ctx,
  * It's assumed the server buffers will be reset upon close(), so we must make
  * sure to _not_ release the ringbuffer if that happens.
  */
-static void io_read_handler(lcb_connection_t conn)
+static void io_read_handler(lcbconn_t conn)
 {
     packet_info info;
     int rv;
@@ -396,14 +396,14 @@ static void io_read_handler(lcb_connection_t conn)
     }
 }
 
-static void io_error_handler(lcb_connection_t conn)
+static void io_error_handler(lcbconn_t conn)
 {
     struct negotiation_context *ctx = conn->data;
     negotiation_set_error_ex(ctx, LCB_NETWORK_ERROR, "IO Error");
     negotiation_bail(ctx);
 }
 
-struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
+struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
                                                    lcb_settings *settings,
                                                    lcb_uint32_t timeout,
                                                    const char *remote,
@@ -424,7 +424,7 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     conn->data = ctx;
     ctx->settings = settings;
     ctx->conn = conn;
-    curhost = lcb_connection_get_host(conn);
+    curhost = lcbconn_get_host(conn);
 
     *err = setup_sasl_params(ctx);
 
@@ -457,7 +457,7 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     req.message.header.request.keylen = 0;
     req.message.header.request.opaque = 0;
 
-    if ( (*err = lcb_connection_reset_buffers(conn)) != LCB_SUCCESS) {
+    if ( (*err = lcbconn_reset_bufs(conn)) != LCB_SUCCESS) {
         lcb_negotiation_destroy(ctx);
         return NULL;
     }
@@ -485,8 +485,8 @@ struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
     }
 
     /** Set up the I/O handlers */
-    lcb_connuse_easy(&use, ctx, io_read_handler, io_error_handler);
-    lcb_connection_use(conn, &use);
+    lcbconn_use_easy(&use, ctx, io_read_handler, io_error_handler);
+    lcbconn_use(conn, &use);
     lcb_sockrw_set_want(conn, LCB_WRITE_EVENT, 1);
     lcb_sockrw_apply_want(conn);
     *err = LCB_SUCCESS;

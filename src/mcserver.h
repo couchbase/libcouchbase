@@ -39,7 +39,7 @@ struct negotiation_context {
     void *data;
 
     /** Connection */
-    lcb_connection_t conn;
+    lcbconn_t conn;
 
     /** Settings structure from whence we get our username/password info */
     struct lcb_settings_st *settings;
@@ -126,14 +126,14 @@ typedef struct lcb_server_st {
  * If initialization failed, err will be set with the reason.
  *
  */
-struct negotiation_context* lcb_negotiation_create(lcb_connection_t conn,
+struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
                                                    struct lcb_settings_st *settings,
                                                    lcb_uint32_t timeout,
                                                    const char *remote,
                                                    const char *local,
                                                    lcb_error_t *err);
 
-struct negotiation_context* lcb_negotiation_get(lcb_connection_t conn);
+struct negotiation_context* lcb_negotiation_get(lcbconn_t conn);
 
 /**
  * Destroys any resources created by negotiation_init.

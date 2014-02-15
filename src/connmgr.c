@@ -42,12 +42,12 @@ static void destroy_cinfo(connmgr_cinfo *info)
     }
 
     lcb_timer_destroy(NULL, info->idle_timer);
-    lcb_connection_cleanup(&info->connection);
+    lcbconn_cleanup(&info->connection);
 
     free(info);
 }
 
-static connmgr_hostent * he_from_conn(connmgr_t *mgr, lcb_connection_t conn)
+static connmgr_hostent * he_from_conn(connmgr_t *mgr, lcbconn_t conn)
 {
     connmgr_cinfo *ci = conn->poolinfo;
     (void)mgr;
@@ -164,7 +164,7 @@ static void connection_available(connmgr_hostent *he)
     }
 }
 
-static void on_connected(lcb_connection_t conn, lcb_error_t err)
+static void on_connected(lcbconn_t conn, lcb_error_t err)
 {
     connmgr_cinfo *info = (connmgr_cinfo *)conn->poolinfo;
     connmgr_hostent *he = info->parent;
@@ -199,7 +199,7 @@ static void start_new_connection(connmgr_hostent *he, lcb_uint32_t tmo)
 {
     lcb_host_t tmphost;
     lcb_error_t err;
-    lcb_conn_params params;
+    lcbconn_params params;
 
     connmgr_cinfo *info = calloc(1, sizeof(*info));
     info->state = CS_PENDING;
@@ -209,9 +209,7 @@ static void start_new_connection(connmgr_hostent *he, lcb_uint32_t tmo)
                                                on_idle_timeout);
     lcb_timer_disarm(info->idle_timer);
 
-    lcb_connection_init(&info->connection,
-                        he->parent->io,
-                        he->parent->settings);
+    lcbconn_init(&info->connection, he->parent->io, he->parent->settings);
 
     params.handler = on_connected;
     params.timeout = tmo;
@@ -220,8 +218,8 @@ static void start_new_connection(connmgr_hostent *he, lcb_uint32_t tmo)
     params.destination = &tmphost;
     lcb_log(LOGARGS(he->parent, INFO),
             "Starting connection on I=%p,C=%p", info, &info->connection);
-    lcb_connection_start(&info->connection, &params,
-                         LCB_CONNSTART_ASYNCERR|LCB_CONNSTART_NOCB);
+    lcbconn_connect(&info->connection, &params,
+                    LCB_CONNSTART_ASYNCERR|LCB_CONNSTART_NOCB);
     lcb_clist_append(&he->ll_pending, &info->llnode);
     he->n_total++;
 }
@@ -346,7 +344,7 @@ void connmgr_cancel(connmgr_t *mgr, connmgr_request *req)
     }
 }
 
-static void io_error(lcb_connection_t conn)
+static void io_error(lcbconn_t conn)
 {
     connmgr_cinfo *info = conn->poolinfo;
     lcb_assert(info);
@@ -360,7 +358,7 @@ static void io_error(lcb_connection_t conn)
     destroy_cinfo(info);
 }
 
-static void io_read(lcb_connection_t conn)
+static void io_read(lcbconn_t conn)
 {
     io_error(conn);
 }
@@ -380,13 +378,13 @@ static void on_idle_timeout(lcb_timer_t tm, lcb_t instance, const void *cookie)
 }
 
 
-void connmgr_put(connmgr_t *mgr, lcb_connection_t conn)
+void connmgr_put(connmgr_t *mgr, lcbconn_t conn)
 {
     struct lcb_io_use_st use;
     connmgr_hostent *he;
     connmgr_cinfo *info = conn->poolinfo;
 
-    lcb_assert(conn->state == LCB_CONNSTATE_CONNECTED);
+    lcb_assert(conn->state == LCBCONN_S_CONNECTED);
     lcb_assert(conn->poolinfo != NULL);
 
     he = he_from_conn(mgr, conn);
@@ -404,8 +402,8 @@ void connmgr_put(connmgr_t *mgr, lcb_connection_t conn)
             info, conn, &info->connection, he->key);
 
     he->n_leased--;
-    lcb_connuse_easy(&use, info, io_read, io_error);
-    lcb_connection_transfer_socket(conn, &info->connection, &use);
+    lcbconn_use_easy(&use, info, io_read, io_error);
+    lcbconn_transfer(conn, &info->connection, &use);
     lcb_sockrw_set_want(&info->connection, 0, 1);
     lcb_sockrw_apply_want(&info->connection);
     lcb_timer_rearm(info->idle_timer, mgr->idle_timeout);
@@ -413,13 +411,13 @@ void connmgr_put(connmgr_t *mgr, lcb_connection_t conn)
     info->state = CS_IDLE;
 }
 
-void connmgr_discard(connmgr_t *pool, lcb_connection_t conn)
+void connmgr_discard(connmgr_t *pool, lcbconn_t conn)
 {
     connmgr_cinfo *cinfo = conn->poolinfo;
 
     lcb_log(LOGARGS(pool, DEBUG), "Discarding connection %p", conn);
     lcb_assert(cinfo);
-    lcb_connection_cleanup(conn);
+    lcbconn_cleanup(conn);
     cinfo->parent->n_leased--;
     destroy_cinfo(cinfo);
 }

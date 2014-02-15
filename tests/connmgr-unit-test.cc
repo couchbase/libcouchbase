@@ -15,10 +15,10 @@ struct MyRequest : connmgr_request_st {
 };
 
 extern "C" {
-static void io_error(lcb_connection_t)
+static void io_error(lcbconn_t)
 {
 }
-static void io_read(lcb_connection_t)
+static void io_read(lcbconn_t)
 {
 }
 
@@ -26,8 +26,8 @@ static void mgr_callback(connmgr_request *reqbase)
 {
     MyRequest *req = reinterpret_cast<MyRequest *>(reqbase);
     struct lcb_io_use_st use;
-    lcb_connuse_easy(&use, req, io_read, io_error);
-    lcb_connection_transfer_socket(reqbase->conn, &req->myconn, &use);
+    lcbconn_use_easy(&use, req, io_read, io_error);
+    lcbconn_transfer(reqbase->conn, &req->myconn, &use);
     IOT_STOP(req->io);
 }
 }
@@ -58,7 +58,7 @@ TEST_F(Connmgr, testBasic)
     connmgr_get(mgr, &req, 2000000);
     IOT_START(mgr->io);
 
-    ASSERT_EQ(LCB_CONNSTATE_CONNECTED, req.myconn.state);
+    ASSERT_EQ(LCBCONN_S_CONNECTED, req.myconn.state);
     /** Release the connection.. */
     connmgr_put(mgr, &req.myconn);
 

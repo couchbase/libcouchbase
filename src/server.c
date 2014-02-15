@@ -227,7 +227,7 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
     ringbuffer_t *stream = &server->cmd_log;
     ringbuffer_t *cookies;
     ringbuffer_t *mirror = NULL; /* mirror buffer should be purged with main stream */
-    lcb_connection_t conn = &server->connection;
+    lcbconn_t conn = &server->connection;
     lcb_size_t send_size = 0;
     lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
     hrtime_t now = gethrtime();
@@ -437,7 +437,7 @@ void lcb_server_destroy(lcb_server_t *server)
     }
 
 
-    lcb_connection_cleanup(&server->connection);
+    lcbconn_cleanup(&server->connection);
 
     free(server->rest_api_server);
     free(server->couch_api_base);
@@ -458,7 +458,7 @@ void lcb_server_destroy(lcb_server_t *server)
 
 void lcb_server_connected(lcb_server_t *server)
 {
-    lcb_connection_t conn = &server->connection;
+    lcbconn_t conn = &server->connection;
     server->connection_ready = 1;
 
     if (server->pending.nbytes > 0) {
@@ -478,7 +478,7 @@ void lcb_server_connected(lcb_server_t *server)
             ringbuffer_reset(&server->cmd_log);
             ringbuffer_reset(&server->output_cookies);
             lcb_server_release_connection(server, LCB_CLIENT_ENOMEM);
-            lcb_connection_cleanup(conn);
+            lcbconn_cleanup(conn);
             lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
             return;
         }
@@ -498,7 +498,7 @@ lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
     const char *n = vbucket_config_get_server(server->instance->vbucket_config,
                                               servernum);
 
-    err = lcb_connection_init(&server->connection,
+    err = lcbconn_init(&server->connection,
                               server->instance->settings.io,
                               &server->instance->settings);
     if (err != LCB_SUCCESS) {
@@ -539,7 +539,7 @@ void lcb_server_send_packets(lcb_server_t *server)
                 }
             }
 
-        } else if (server->connection.state == LCB_CONNSTATE_UNINIT) {
+        } else if (server->connection.state == LCBCONN_S_UNINIT) {
             lcb_server_connect(server);
         }
     }

@@ -39,6 +39,14 @@ typedef enum {
     LCB_CONN_ERROR = 3
 } lcb_connection_result_t;
 
+typedef enum {
+    /** The operation completed successfuly */
+    LCBCONN_SUCCESS = 0,
+    LCBCONN_PENDING,
+    LCBCONN_CLOSED,
+    LCBCONN_IOERR,
+    LCBCONN_ALLOCERR
+} lcbconn_result_t;
 
 typedef enum {
     LCB_SOCKRW_READ = 1,
@@ -51,10 +59,10 @@ typedef enum {
 } lcb_sockrw_status_t;
 
 typedef enum {
-    LCB_CONNSTATE_UNINIT = 0,
-    LCB_CONNSTATE_CONNECTED,
-    LCB_CONNSTATE_INPROGRESS
-} lcb_connstate_t;
+    LCBCONN_S_UNINIT = 0,
+    LCBCONN_S_CONNECTED,
+    LCBCONN_S_PENDING
+} lcbconn_state_t;
 
 /**
  * Options for initiating a new connection.
@@ -140,7 +148,7 @@ struct lcb_connection_st {
     lcb_io_generic_cb errcb;
     lcb_timer_t as_err;
 
-    lcb_connstate_t state;
+    lcbconn_state_t state;
 
     short want;
 
@@ -163,16 +171,16 @@ typedef struct {
     lcb_connection_handler handler;
     lcb_uint32_t timeout;
     lcb_host_t *destination;
-} lcb_conn_params;
+} lcbconn_params;
 
-typedef struct lcb_connection_st *lcb_connection_t;
+typedef struct lcb_connection_st *lcbconn_t;
 
 /**
  * Initialize the connection object's buffers, usually allocating them
  */
-lcb_error_t lcb_connection_init(lcb_connection_t conn,
-                                lcb_iotable *iotable,
-                                struct lcb_settings_st *settings);
+lcb_error_t lcbconn_init(lcbconn_t conn,
+                         lcb_iotable *iotable,
+                         struct lcb_settings_st *settings);
 
 
 /**
@@ -180,7 +188,7 @@ lcb_error_t lcb_connection_init(lcb_connection_t conn,
  * read buffers if needed, or resets the mark of the existing ones, depending
  * on their ownership
  */
-lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn);
+lcb_error_t lcbconn_reset_bufs(lcbconn_t conn);
 
 
 /**
@@ -190,30 +198,30 @@ lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn);
  * @params options a set of options controlling the connection intialization
  *  behavior.
  */
-lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
-                                             const lcb_conn_params *params,
-                                             lcb_connstart_opts_t options);
+lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
+                                        const lcbconn_params *params,
+                                        lcb_connstart_opts_t options);
 
 /**
  * Close the socket and clean up any socket-related resources
  */
-void lcb_connection_close(lcb_connection_t conn);
+void lcbconn_close(lcbconn_t conn);
 
 /**
  * Free any resources allocated by the connection subsystem
  */
-void lcb_connection_cleanup(lcb_connection_t conn);
+void lcbconn_cleanup(lcbconn_t conn);
 
 /* Read a bit of data */
-lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf);
+lcb_sockrw_status_t lcb_sockrw_v0_read(lcbconn_t conn, ringbuffer_t *buf);
 
 /* Exhaust the data until there is nothing to read */
-lcb_sockrw_status_t lcb_sockrw_v0_slurp(lcb_connection_t conn, ringbuffer_t *buf);
+lcb_sockrw_status_t lcb_sockrw_v0_slurp(lcbconn_t conn, ringbuffer_t *buf);
 
 /* Write as much data from the write buffer until blocked */
-lcb_sockrw_status_t lcb_sockrw_v0_write(lcb_connection_t conn, ringbuffer_t *buf);
+lcb_sockrw_status_t lcb_sockrw_v0_write(lcbconn_t conn, ringbuffer_t *buf);
 
-int lcb_sockrw_flushed(lcb_connection_t conn);
+int lcb_sockrw_flushed(lcbconn_t conn);
 /**
  * Indicates that buffers should be read into or written from
  * @param conn the connection
@@ -221,21 +229,21 @@ int lcb_sockrw_flushed(lcb_connection_t conn);
  * @param clear_existing whether to clear any existing 'want' events. By
  * default, the existing events are AND'ed with the new ones.
  */
-void lcb_sockrw_set_want(lcb_connection_t conn, short events, int clear_existing);
+void lcb_sockrw_set_want(lcbconn_t conn, short events, int clear_existing);
 
 /**
  * Apply the 'want' events. This means to start (waiting for) reading and
  * writing.
  */
-void lcb_sockrw_apply_want(lcb_connection_t conn);
+void lcb_sockrw_apply_want(lcbconn_t conn);
 
 int lcb_flushing_buffers(lcb_t instance);
 
-lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
+lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcbconn_t conn,
                                              ringbuffer_t **buf,
                                              lcb_io_read_cb callback);
 
-lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
+lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcbconn_t conn,
                                               ringbuffer_t **buf,
                                               lcb_ioC_write2_callback callback);
 
@@ -268,14 +276,14 @@ int lcb_getaddrinfo(struct lcb_settings_st *settings,
 struct hostlist_st;
 struct lcb_host_st;
 
-lcb_error_t lcb_connection_next_node(lcb_connection_t conn,
-                                     struct hostlist_st *hostlist,
-                                     lcb_conn_params *params,
-                                     char **errinfo);
+lcb_error_t lcbconn_next_node(lcbconn_t conn,
+                              struct hostlist_st *hostlist,
+                              lcbconn_params *params,
+                              char **errinfo);
 
-lcb_error_t lcb_connection_cycle_nodes(lcb_connection_t conn,
+lcb_error_t lcbconn_cycle_nodes(lcbconn_t conn,
                                         struct hostlist_st *hostlist,
-                                        lcb_conn_params *params,
+                                        lcbconn_params *params,
                                         char **errinfo);
 
 /**
@@ -285,7 +293,7 @@ lcb_error_t lcb_connection_cycle_nodes(lcb_connection_t conn,
  * @param nistrs an allocated structure
  * @return true on failure, false on error.
  */
-int lcb_get_nameinfo(lcb_connection_t conn, struct lcb_nibufs_st *nistrs);
+int lcb_get_nameinfo(lcbconn_t conn, struct lcb_nibufs_st *nistrs);
 
 
 
@@ -319,13 +327,12 @@ struct lcb_io_use_st {
  * in case one subsystem transfers a connection to another subsystem.
  */
 
-void lcb_connection_use(lcb_connection_t conn,
-                        const struct lcb_io_use_st *use);
+void lcbconn_use(lcbconn_t conn, const struct lcb_io_use_st *use);
 
 /**
  * Populates an 'io_use' structure for extended I/O callbacks
  */
-void lcb_connuse_ex(struct lcb_io_use_st *use,
+void lcbconn_use_ex(struct lcb_io_use_st *use,
                     void *data,
                     lcb_event_handler_cb v0_handler,
                     lcb_io_read_cb v1_read_cb,
@@ -336,7 +343,7 @@ void lcb_connuse_ex(struct lcb_io_use_st *use,
  * Populates an 'io_use' structure for simple I/O callbacks
  */
 LCB_INTERNAL_API
-void lcb_connuse_easy(struct lcb_io_use_st *use,
+void lcbconn_use_easy(struct lcb_io_use_st *use,
                       void *data,
                       lcb_io_generic_cb read_cb,
                       lcb_io_generic_cb err_cb);
@@ -366,14 +373,13 @@ void lcb__io_wire_easy(struct lcb_io_use_st *use);
  * specified data to employ.
  */
 LCB_INTERNAL_API
-void lcb_connection_transfer_socket(lcb_connection_t from,
-                                    lcb_connection_t to,
-                                    const struct lcb_io_use_st *use);
+void lcbconn_transfer(lcbconn_t from,
+                      lcbconn_t to, const struct lcb_io_use_st *use);
 
-const lcb_host_t * lcb_connection_get_host(const lcb_connection_t);
+const lcb_host_t * lcbconn_get_host(const lcbconn_t);
 
 /** Schedule an asynchronous error to be sent to the handler */
-void lcb_conn_senderr(lcb_connection_t conn, int err);
+void lcb_conn_senderr(lcbconn_t conn, int err);
 
 #define LCB_CONN_DATA(conn) (conn->data)
 

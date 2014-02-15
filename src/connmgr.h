@@ -55,7 +55,7 @@ typedef struct connmgr_request_st {
      * The connection pointer will be deemed invalid after this call, so
      * be sure to use lcb_connection_transfer_socket.
      */
-    lcb_connection_t conn;
+    lcbconn_t conn;
 
     /**
      * OUT: If the connection failed to connect, this contains the reason why
@@ -169,7 +169,7 @@ void connmgr_cancel(connmgr_t *mgr, connmgr_request *req);
  * will still be valid, however its contents will remain empty.
  */
 LCB_INTERNAL_API
-void connmgr_put(connmgr_t *mgr, lcb_connection_t conn);
+void connmgr_put(connmgr_t *mgr, lcbconn_t conn);
 
 /**
  * Mark a slot as available but discard the current connection. This should be
@@ -177,7 +177,7 @@ void connmgr_put(connmgr_t *mgr, lcb_connection_t conn);
  * or is otherwise not suitable for reuse
  */
 LCB_INTERNAL_API
-void connmgr_discard(connmgr_t *mgr, lcb_connection_t conn);
+void connmgr_discard(connmgr_t *mgr, lcbconn_t conn);
 
 
 /**

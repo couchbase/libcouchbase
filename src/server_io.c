@@ -85,7 +85,7 @@ static void event_complete_common(lcb_server_t *c, lcb_error_t rc)
 
 static void v0_handler(lcb_socket_t sock, short which, void *arg)
 {
-    lcb_connection_t conn = arg;
+    lcbconn_t conn = arg;
     lcb_server_t *c = conn->data;
     (void)sock;
 
@@ -128,7 +128,7 @@ static void v0_handler(lcb_socket_t sock, short which, void *arg)
     event_complete_common(c, LCB_SUCCESS);
 }
 
-static void generic_error(lcb_connection_t conn)
+static void generic_error(lcbconn_t conn)
 {
     lcb_server_t *c = conn->data;
     event_complete_common(c, LCB_NETWORK_ERROR);
@@ -190,18 +190,18 @@ static void v1_write(lcb_sockdata_t *sockptr, int status, void *wbuf)
     }
 }
 
-static void wire_io(lcb_server_t *server, lcb_connection_t src)
+static void wire_io(lcb_server_t *server, lcbconn_t src)
 {
     struct lcb_io_use_st use;
-    lcb_connuse_ex(&use, server, v0_handler, v1_read, v1_write, generic_error);
+    lcbconn_use_ex(&use, server, v0_handler, v1_read, v1_write, generic_error);
 
     if (src != NULL) {
-        lcb_connection_transfer_socket(src, &server->connection, &use);
+        lcbconn_transfer(src, &server->connection, &use);
     } else {
-        lcb_connection_use(&server->connection, &use);
+        lcbconn_use(&server->connection, &use);
     }
 
-    lcb_connection_reset_buffers(&server->connection);
+    lcbconn_reset_bufs(&server->connection);
 }
 
 LIBCOUCHBASE_API
@@ -220,7 +220,7 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
 
 int lcb_server_has_pending(lcb_server_t *server)
 {
-    lcb_connection_t conn = &server->connection;
+    lcbconn_t conn = &server->connection;
 
     if ((conn->output && conn->output->nbytes) ||
             (conn->input && conn->input->nbytes)) {
@@ -292,7 +292,7 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
         }
     } else {
 
-        lcb_connection_reset_buffers(&server->connection);
+        lcbconn_reset_bufs(&server->connection);
         lcb_server_connected(server);
     }
 }
@@ -303,7 +303,7 @@ static void socket_connected(connmgr_request *req)
     lcb_server_t *server = req->data;
     int sasl_needed;
     lcb_error_t err;
-    lcb_connection_t src_conn = req->conn;
+    lcbconn_t src_conn = req->conn;
 
     if (!src_conn) {
         if (req->err == LCB_SUCCESS) {
@@ -330,7 +330,7 @@ static void socket_connected(connmgr_request *req)
             server->connection.protoctx == NULL);
 
     if (sasl_needed) {
-        lcb_connection_t conn = &server->connection;
+        lcbconn_t conn = &server->connection;
         struct negotiation_context *saslctx;
 
         struct lcb_nibufs_st nistrs;
@@ -368,7 +368,7 @@ void lcb_server_connect(lcb_server_t *server)
 {
     connmgr_request *connreq;
 
-    if (server->connreq || server->connection.state != LCB_CONNSTATE_UNINIT) {
+    if (server->connreq || server->connection.state != LCBCONN_S_UNINIT) {
         return;
     }
 
@@ -388,7 +388,7 @@ void lcb_server_connect(lcb_server_t *server)
 
 void lcb_server_release_connection(lcb_server_t *server, lcb_error_t err)
 {
-    lcb_connection_t conn = &server->connection;
+    lcbconn_t conn = &server->connection;
     int can_release = (err == LCB_SUCCESS);
 
     if (server->connreq) {
@@ -398,7 +398,7 @@ void lcb_server_release_connection(lcb_server_t *server, lcb_error_t err)
         return;
     }
 
-    if (server->connection.state == LCB_CONNSTATE_UNINIT) {
+    if (server->connection.state == LCBCONN_S_UNINIT) {
         return;
     }
 
@@ -409,7 +409,7 @@ void lcb_server_release_connection(lcb_server_t *server, lcb_error_t err)
         can_release = 0;
     }
 
-    if (conn->state != LCB_CONNSTATE_CONNECTED) {
+    if (conn->state != LCBCONN_S_CONNECTED) {
         can_release = 0;
     }
 
@@ -424,7 +424,7 @@ void lcb_server_release_connection(lcb_server_t *server, lcb_error_t err)
     }
 }
 
-struct negotiation_context * lcb_negotiation_get(lcb_connection_t conn)
+struct negotiation_context * lcb_negotiation_get(lcbconn_t conn)
 {
     return (struct negotiation_context *)conn->protoctx;
 }

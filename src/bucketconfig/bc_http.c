@@ -25,12 +25,12 @@
 #define LOG(ht, lvlbase, msg) \
     lcb_log(LOGARGS(ht, lvlbase), msg)
 
-static void io_read_handler(lcb_connection_t);
-static void io_error_handler(lcb_connection_t);
+static void io_read_handler(lcbconn_t);
+static void io_error_handler(lcbconn_t);
 
 static lcb_error_t connect_next(http_provider *);
 static void read_common(http_provider *);
-static void connect_done_handler(lcb_connection_t conn, lcb_error_t err);
+static void connect_done_handler(lcbconn_t conn, lcb_error_t err);
 static lcb_error_t setup_request_header(http_provider *http);
 static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype);
 
@@ -41,7 +41,7 @@ static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype);
 static void close_current(http_provider *http)
 {
     lcb_timer_disarm(http->disconn_timer);
-    lcb_connection_close(&http->connection);
+    lcbconn_close(&http->connection);
 }
 
 /**
@@ -51,15 +51,14 @@ static void close_current(http_provider *http)
 static lcb_error_t io_error(http_provider *http)
 {
     lcb_error_t err;
-    lcb_conn_params params;
+    lcbconn_params params;
     char *errinfo;
 
     close_current(http);
 
     params.timeout = PROVIDER_SETTING(&http->base, config_node_timeout);
     params.handler = connect_done_handler;
-    err = lcb_connection_next_node(&http->connection,
-                                   http->nodes, &params, &errinfo);
+    err = lcbconn_next_node(&http->connection, http->nodes, &params, &errinfo);
 
     if (err != LCB_SUCCESS) {
         lcb_confmon_provider_failed(&http->base, err);
@@ -126,7 +125,7 @@ static void set_new_config(http_provider *http)
 static void read_common(http_provider *http)
 {
     lcb_error_t err;
-    lcb_connection_t conn = &http->connection;
+    lcbconn_t conn = &http->connection;
     int old_generation = http->stream.generation;
 
     lcb_log(LOGARGS(http, TRACE),
@@ -190,7 +189,7 @@ static lcb_error_t setup_request_header(http_provider *http)
         offset += snprintf(buf + offset, nbuf - offset, AUTHDR_FMT, b64);
     }
 
-    hostinfo = lcb_connection_get_host(&http->connection);
+    hostinfo = lcbconn_get_host(&http->connection);
 
     offset += snprintf(buf + offset, nbuf - offset, HOSTHDR_FMT,
                        hostinfo->host, hostinfo->port);
@@ -212,13 +211,13 @@ static void reset_stream_state(http_provider *http)
 
     http->stream.config = NULL;
 
-    lcb_assert(LCB_SUCCESS == lcb_connection_reset_buffers(&http->connection));
+    lcb_assert(LCB_SUCCESS == lcbconn_reset_bufs(&http->connection));
 }
 
-static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
+static void connect_done_handler(lcbconn_t conn, lcb_error_t err)
 {
     http_provider *http = (http_provider *)conn->data;
-    const lcb_host_t *host = lcb_connection_get_host(conn);
+    const lcb_host_t *host = lcbconn_get_host(conn);
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR),
@@ -233,7 +232,7 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
             "Successfuly connected to REST API %s:%s",
             host->host, host->port);
 
-    lcb_connection_reset_buffers(conn);
+    lcbconn_reset_bufs(conn);
     ringbuffer_strcat(conn->output, http->request_buf);
     lcb_assert(conn->output->nbytes > 0);
 
@@ -246,7 +245,7 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
 static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
     http_provider *http = (http_provider *)cookie;
-    const lcb_host_t *curhost = lcb_connection_get_host(&http->connection);
+    const lcb_host_t *curhost = lcbconn_get_host(&http->connection);
 
     lcb_log(LOGARGS(http, ERR),
             "HTTP Provider timed out on host %s:%s waiting for I/O",
@@ -263,8 +262,8 @@ static lcb_error_t connect_next(http_provider *http)
 {
     char *errinfo = NULL;
     lcb_error_t err;
-    lcb_conn_params params;
-    lcb_connection_t conn = &http->connection;
+    lcbconn_params params;
+    lcbconn_t conn = &http->connection;
 
     close_current(http);
     reset_stream_state(http);
@@ -274,7 +273,7 @@ static lcb_error_t connect_next(http_provider *http)
     lcb_log(LOGARGS(http, TRACE),
             "Starting HTTP Configuration Provider %p", http);
 
-    err = lcb_connection_cycle_nodes(conn, http->nodes, &params, &errinfo);
+    err = lcbconn_cycle_nodes(conn, http->nodes, &params, &errinfo);
 
     if (err == LCB_SUCCESS) {
         err = setup_request_header(http);
@@ -370,8 +369,8 @@ static void shutdown_http(clconfig_provider *provider)
     lcb_string_release(&http->stream.input);
     lcb_string_release(&http->stream.header);
 
-    lcb_connection_close(&http->connection);
-    lcb_connection_cleanup(&http->connection);
+    lcbconn_close(&http->connection);
+    lcbconn_cleanup(&http->connection);
 
     if (http->current_config) {
         lcb_clconfig_decref(http->current_config);
@@ -397,9 +396,8 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
         return NULL;
     }
 
-    status = lcb_connection_init(&http->connection,
-                                 parent->settings->io,
-                                 parent->settings);
+    status = lcbconn_init(&http->connection, parent->settings->io,
+                          parent->settings);
 
     if (status != LCB_SUCCESS) {
         free(http);
@@ -407,7 +405,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     }
 
     if (! (http->nodes = hostlist_create())) {
-        lcb_connection_cleanup(&http->connection);
+        lcbconn_cleanup(&http->connection);
         free(http);
         return NULL;
     }
@@ -431,8 +429,8 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
                                                   delayed_disconn);
     lcb_timer_disarm(http->disconn_timer);
 
-    lcb_connuse_easy(&use, http, io_read_handler, io_error_handler);
-    lcb_connection_use(&http->connection, &use);
+    lcbconn_use_easy(&use, http, io_read_handler, io_error_handler);
+    lcbconn_use(&http->connection, &use);
 
     lcb_string_init(&http->stream.chunk);
     lcb_string_init(&http->stream.header);
@@ -441,12 +439,12 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     return &http->base;
 }
 
-static void io_error_handler(lcb_connection_t conn)
+static void io_error_handler(lcbconn_t conn)
 {
     io_error((http_provider *)conn->data);
 }
 
-static void io_read_handler(lcb_connection_t conn)
+static void io_read_handler(lcbconn_t conn)
 {
     http_provider *http = conn->data;
     read_common(http);
@@ -659,7 +657,7 @@ static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype)
     return status;
 }
 
-lcb_connection_t lcb_confmon_get_rest_connection(lcb_confmon *mon)
+lcbconn_t lcb_confmon_get_rest_connection(lcb_confmon *mon)
 {
     http_provider *http;
     http = (http_provider *)mon->all_providers[LCB_CLCONFIG_HTTP];
@@ -674,7 +672,7 @@ lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon)
 {
     http_provider *http;
     http = (http_provider *)mon->all_providers[LCB_CLCONFIG_HTTP];
-    return (lcb_host_t *)lcb_connection_get_host(&http->connection);
+    return (lcb_host_t *)lcbconn_get_host(&http->connection);
 }
 
 

@@ -102,7 +102,7 @@ void lcb_http_request_decref(lcb_http_request_t req)
         return;
     }
 
-    lcb_connection_cleanup(&req->connection);
+    lcbconn_cleanup(&req->connection);
 
     free(req->path);
     free(req->url);
@@ -220,10 +220,9 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
     lcb_host_t reqhost;
 
     request_free_headers(req);
-    lcb_connection_cleanup(&req->connection);
-    rc = lcb_connection_init(&req->connection,
-                             instance->settings.io,
-                             &instance->settings);
+    lcbconn_cleanup(&req->connection);
+    rc = lcbconn_init(&req->connection, instance->settings.io,
+                      &instance->settings);
     if (rc != LCB_SUCCESS) {
         lcb_http_request_decref(req);
         return lcb_synchandler_return(instance, rc);

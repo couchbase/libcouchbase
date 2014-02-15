@@ -55,8 +55,8 @@ typedef struct cccp_cookie_st {
     int ignore_errors;
 } cccp_cookie;
 
-static void io_error_handler(lcb_connection_t);
-static void io_read_handler(lcb_connection_t);
+static void io_error_handler(lcbconn_t);
+static void io_read_handler(lcbconn_t);
 static void request_config(cccp_provider *);
 static void socket_connected(connmgr_request *req);
 
@@ -72,7 +72,7 @@ static void release_socket(cccp_provider *cccp, int can_reuse)
         connmgr_cancel(cccp->instance->memd_sockpool, cccp->cur_connreq);
         free(cccp->cur_connreq);
         cccp->cur_connreq = NULL;
-    } else if (cccp->connection.state != LCB_CONNSTATE_UNINIT) {
+    } else if (cccp->connection.state != LCBCONN_S_UNINIT) {
         if (can_reuse) {
             connmgr_put(cccp->instance->memd_sockpool, &cccp->connection);
         } else {
@@ -163,8 +163,8 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
 
     } else {
         LOG(cccp, DEBUG, "CCCP SASL negotiation done");
-        lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
-        lcb_connection_use(&cccp->connection, &use);
+        lcbconn_use_easy(&use, cccp, io_read_handler, io_error_handler);
+        lcbconn_use(&cccp->connection, &use);
         request_config(cccp);
     }
 }
@@ -255,7 +255,7 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
 static void socket_connected(connmgr_request *req)
 {
     cccp_provider *cccp = req->data;
-    lcb_connection_t conn = req->conn;
+    lcbconn_t conn = req->conn;
     struct lcb_nibufs_st nistrs;
     struct lcb_io_use_st use;
 
@@ -269,8 +269,8 @@ static void socket_connected(connmgr_request *req)
         return;
     }
 
-    lcb_connuse_easy(&use, cccp, io_read_handler, io_error_handler);
-    lcb_connection_transfer_socket(conn, &cccp->connection, &use);
+    lcbconn_use_easy(&use, cccp, io_read_handler, io_error_handler);
+    lcbconn_transfer(conn, &cccp->connection, &use);
     conn = NULL;
 
 
@@ -343,7 +343,7 @@ static void cccp_cleanup(clconfig_provider *pb)
     cccp_provider *cccp = (cccp_provider *)pb;
 
     release_socket(cccp, 0);
-    lcb_connection_cleanup(&cccp->connection);
+    lcbconn_cleanup(&cccp->connection);
 
     if (cccp->config) {
         lcb_clconfig_decref(cccp->config);
@@ -381,12 +381,12 @@ static void nodes_updated(clconfig_provider *provider, hostlist_t nodes,
     (void)nodes;
 }
 
-static void io_error_handler(lcb_connection_t conn)
+static void io_error_handler(lcbconn_t conn)
 {
     mcio_error((cccp_provider *)conn->data, LCB_NETWORK_ERROR);
 }
 
-static void io_read_handler(lcb_connection_t conn)
+static void io_read_handler(lcbconn_t conn)
 {
     packet_info pi;
     cccp_provider *cccp = conn->data;
@@ -447,7 +447,7 @@ static void io_read_handler(lcb_connection_t conn)
         return;
     }
 
-    curhost = *lcb_connection_get_host(&cccp->connection);
+    curhost = *lcbconn_get_host(&cccp->connection);
     lcb_packet_release_ringbuffer(&pi, conn->input);
     release_socket(cccp, 1);
 
@@ -464,7 +464,7 @@ static void io_read_handler(lcb_connection_t conn)
 static void request_config(cccp_provider *cccp)
 {
     protocol_binary_request_set_cluster_config req;
-    lcb_connection_t conn = &cccp->connection;
+    lcbconn_t conn = &cccp->connection;
     ringbuffer_t *buf = conn->output;
 
     memset(&req, 0, sizeof(req));
@@ -514,9 +514,9 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
         return NULL;
     }
 
-    if (lcb_connection_init(&cccp->connection,
-                            cccp->base.parent->settings->io,
-                            cccp->base.parent->settings) != LCB_SUCCESS) {
+    if (lcbconn_init(&cccp->connection,
+                     cccp->base.parent->settings->io,
+                     cccp->base.parent->settings) != LCB_SUCCESS) {
         free(cccp);
         return NULL;
     }

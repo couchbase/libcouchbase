@@ -161,7 +161,7 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     packet_info info;
     protocol_binary_request_header req;
     lcb_size_t nr;
-    lcb_connection_t conn = &c->connection;
+    lcbconn_t conn = &c->connection;
 
     rv = lcb_packet_read_ringbuffer(&info, conn->input);
     if (rv == -1) {
