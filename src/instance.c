@@ -518,3 +518,15 @@ void lcb_mem_free(void *ptr)
 {
     free(ptr);
 }
+
+LCB_INTERNAL_API
+void lcb_run_loop(lcb_t instance)
+{
+    IOT_START(instance->settings.io);
+}
+
+LCB_INTERNAL_API
+void lcb_stop_loop(lcb_t instance)
+{
+    IOT_STOP(instance->settings.io);
+}

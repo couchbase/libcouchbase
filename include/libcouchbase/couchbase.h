@@ -904,6 +904,21 @@ extern "C" {
     void lcb_mem_free(void *ptr);
 
 
+    /**
+     * These two functions unconditionally start and stop the event loop. These
+     * should be used _only_ when necessary. Use lcb_wait and lcb_breakout
+     * for safer variants.
+     *
+     * Internally these proxy to the run_event_loop/stop_event_loop calls
+     *
+     */
+    LCB_INTERNAL_API
+    void lcb_run_loop(lcb_t instance);
+
+    LCB_INTERNAL_API
+    void lcb_stop_loop(lcb_t instance);
+
+
 #ifdef __cplusplus
 }
 #endif
