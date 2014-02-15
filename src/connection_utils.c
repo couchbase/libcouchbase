@@ -18,7 +18,7 @@ lcb_error_t lcbconn_next_node(lcbconn_t conn,
     while ( (next_host = hostlist_shift_next(hostlist, 0))) {
         lcb_connection_result_t connres;
         params->destination = next_host;
-        connres = lcbconn_connect(conn, params, LCB_CONNSTART_NOCB);
+        connres = lcbconn_connect(conn, params);
 
         if (connres != LCB_CONN_INPROGRESS) {
             lcbconn_close(conn);
@@ -44,7 +44,7 @@ lcb_error_t lcbconn_cycle_nodes(lcbconn_t conn,
         params->destination = hostlist_shift_next(hostlist, 1);
         lcb_assert(params->destination != NULL);
 
-        connres = lcbconn_connect(conn, params, LCB_CONNSTART_NOCB);
+        connres = lcbconn_connect(conn, params);
         if (connres != LCB_CONN_INPROGRESS) {
             LOG(conn, ERR, "Couldn't start connection");
             lcbconn_close(conn);

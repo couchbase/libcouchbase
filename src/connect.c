@@ -390,8 +390,7 @@ static void setup_async_error(lcbconn_t conn, lcb_error_t err)
 }
 
 lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
-                                        const lcbconn_params *params,
-                                        lcb_connstart_opts_t options)
+                                        const lcbconn_params *params)
 {
     lcb_connection_result_t result;
     lcb_iotable *io = conn->iotable;
@@ -438,21 +437,18 @@ lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
         if (!CN_E(conn)->ptr) {
             CN_E(conn)->ptr = IOT_V0EV(io).create(io->p);
         }
-        result = v0_connect(conn, options & LCB_CONNSTART_NOCB, 0);
+        result = v0_connect(conn, 1, 0);
 
     } else {
-        result = v1_connect(conn, options & LCB_CONNSTART_NOCB);
+        result = v1_connect(conn, 1);
     }
 
     if (result != LCB_CONN_INPROGRESS) {
         lcb_log(LOGARGS(conn, INFO),
                 "Scheduling connection for %p failed with code 0x%x",
                 conn, result);
-
-        if (options & LCB_CONNSTART_ASYNCERR) {
-            setup_async_error(conn, LCB_CONNECT_ERROR);
-            return LCB_CONN_INPROGRESS;
-        }
+        setup_async_error(conn, LCB_CONNECT_ERROR);
+        return LCB_CONN_INPROGRESS;
     }
 
     return result;

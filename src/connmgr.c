@@ -218,8 +218,7 @@ static void start_new_connection(connmgr_hostent *he, lcb_uint32_t tmo)
     params.destination = &tmphost;
     lcb_log(LOGARGS(he->parent, INFO),
             "Starting connection on I=%p,C=%p", info, &info->connection);
-    lcbconn_connect(&info->connection, &params,
-                    LCB_CONNSTART_ASYNCERR|LCB_CONNSTART_NOCB);
+    lcbconn_connect(&info->connection, &params);
     lcb_clist_append(&he->ll_pending, &info->llnode);
     he->n_total++;
 }

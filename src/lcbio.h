@@ -64,17 +64,6 @@ typedef enum {
     LCBCONN_S_PENDING
 } lcbconn_state_t;
 
-/**
- * Options for initiating a new connection.
- */
-typedef enum {
-    /** Don't invoke callback on immediate event */
-    LCB_CONNSTART_NOCB = 0x1,
-
-    /** If initial scheduling attempt fails, schedule a callback */
-    LCB_CONNSTART_ASYNCERR = 0x2
-} lcb_connstart_opts_t;
-
 typedef struct lcb_ioconnect_st * lcb_ioconnect_t;
 
 struct lcb_connection_st;
@@ -199,8 +188,7 @@ lcb_error_t lcbconn_reset_bufs(lcbconn_t conn);
  *  behavior.
  */
 lcb_connection_result_t lcbconn_connect(lcbconn_t conn,
-                                        const lcbconn_params *params,
-                                        lcb_connstart_opts_t options);
+                                        const lcbconn_params *params);
 
 /**
  * Close the socket and clean up any socket-related resources

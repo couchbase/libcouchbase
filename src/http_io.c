@@ -129,8 +129,7 @@ lcb_error_t lcb_http_request_connect(lcb_http_request_t req)
             req->instance->settings.http_timeout;
     params.timeout = req->timeout;
 
-    result = lcbconn_connect(conn, &params,
-                                  LCB_CONNSTART_NOCB|LCB_CONNSTART_ASYNCERR);
+    result = lcbconn_connect(conn, &params);
 
     if (result != LCB_CONN_INPROGRESS) {
         return LCB_CONNECT_ERROR;
