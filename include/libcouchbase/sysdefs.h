@@ -65,6 +65,14 @@ extern "C" {
     typedef time_t lcb_time_t;
 #endif
 
+#ifdef __GNUC__
+#define LCB_DEPRECATED(X) X __attribute__((deprecated))
+#elif _MSC_VER
+#define LCB_DEPRECATED(X) __declspec(deprecated) X
+#else
+#define LCB_DEPRECATED(X) X
+#endif
+
 #ifdef __cplusplus
 }
 #endif
