@@ -67,7 +67,7 @@ extern "C" {
 
 #ifdef __GNUC__
 #define LCB_DEPRECATED(X) X __attribute__((deprecated))
-#elif _MSC_VER
+#elif defined(_MSC_VER)
 #define LCB_DEPRECATED(X) __declspec(deprecated) X
 #else
 #define LCB_DEPRECATED(X) X

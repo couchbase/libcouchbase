@@ -48,6 +48,7 @@ ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL
     cluster-unit-tests.cc
     configcache-unit-test.cc
     confmon-unit-test.cc
+    connmgr-unit-test.cc
     durability-unit-test.cc
     get-unit-test.cc
     getopt-unit-tests.cc
