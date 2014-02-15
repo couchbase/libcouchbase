@@ -11,7 +11,7 @@ class Confmon : public ::testing::Test
 
 struct evstop_listener {
     clconfig_listener base;
-    lcb_io_opt_t io;
+    lcb_iotable *io;
     int called;
 };
 
@@ -25,7 +25,7 @@ static void listen_callback1(clconfig_listener *lsn, clconfig_event_t event,
 
     evstop_listener *me = reinterpret_cast<evstop_listener*>(lsn);
     me->called = 1;
-    me->io->v.v0.stop_event_loop(me->io);
+    IOT_STOP(me->io);
 }
 }
 
@@ -58,12 +58,11 @@ TEST_F(Confmon, testBasic)
 
     listener.base.callback = listen_callback1;
     listener.base.parent = mon;
-    listener.io = hw.getIo();
+    listener.io = instance->settings.io;
 
     lcb_confmon_add_listener(mon, &listener.base);
     lcb_confmon_start(mon);
-    hw.getIo()->v.v0.run_event_loop(hw.getIo());
-
+    IOT_START(instance->settings.io);
     ASSERT_NE(0, listener.called);
 
     lcb_confmon_destroy(mon);
@@ -73,7 +72,7 @@ TEST_F(Confmon, testBasic)
 struct listener2 {
     clconfig_listener base;
     int call_count;
-    lcb_io_opt_t io;
+    lcb_iotable *io;
     clconfig_method_t last_source;
 
     void reset() {
@@ -104,7 +103,7 @@ static void listen_callback2(clconfig_listener *prov,
 
     int state = lcb_confmon_get_state(prov->parent);
     if ((state & CONFMON_S_ACTIVE) == 0) {
-        lsn->io->v.v0.stop_event_loop(lsn->io);
+        IOT_STOP(lsn->io);
     }
 }
 }
@@ -131,7 +130,7 @@ TEST_F(Confmon, testCycle)
     struct listener2 lsn;
     memset(&lsn, 0, sizeof(lsn));
     lsn.base.callback = listen_callback2;
-    lsn.io = hw.getIo();
+    lsn.io = instance->settings.io;
     lsn.reset();
 
     lcb_confmon_add_listener(mon, &lsn.base);
@@ -147,7 +146,7 @@ TEST_F(Confmon, testCycle)
 
     lcb_confmon_prepare(mon);
     lcb_confmon_start(mon);
-    lsn.io->v.v0.run_event_loop(lsn.io);
+    IOT_START(lsn.io);
 
     // Ensure CCCP is functioning properly and we're called only once.
     ASSERT_EQ(1, lsn.call_count);
@@ -156,14 +155,14 @@ TEST_F(Confmon, testCycle)
 
     lcb_confmon_start(mon);
     lsn.reset();
-    lsn.io->v.v0.run_event_loop(lsn.io);
+    IOT_START(lsn.io);
     ASSERT_EQ(1, lsn.call_count);
     ASSERT_EQ(LCB_CLCONFIG_CCCP, lsn.last_source);
 
     mock->setCCCP(false);
     lsn.reset();
     lcb_confmon_start(mon);
-    lsn.io->v.v0.run_event_loop(lsn.io);
+    IOT_START(lsn.io);
     ASSERT_EQ(1, lsn.call_count);
     ASSERT_EQ(LCB_CLCONFIG_HTTP, lsn.last_source);
     lcb_confmon_destroy(mon);

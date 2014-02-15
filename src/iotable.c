@@ -1,3 +1,4 @@
+#define LCB_IOPS_V12_NO_DEPRECATE
 #include "lcbio.h"
 
 struct _1to3_st {
@@ -73,6 +74,7 @@ init_v2_table(lcb_iotable *table, lcb_io_opt_t io)
                        &table->u_io.completion,
                        &table->model);
 
+    table->p = io;
     if (table->model == LCB_IOMODEL_COMPLETION) {
         if (!table->u_io.completion.write2) {
             table->u_io.completion.write2 = _1to3_write;

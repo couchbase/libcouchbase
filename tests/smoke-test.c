@@ -27,7 +27,6 @@
 
 lcb_t session = NULL;
 const struct test_server_info *mock = NULL;
-struct lcb_io_opt_st *io = NULL;
 lcb_error_t global_error = -1;
 int total_node_count = -1;
 static lcb_config_transport_t enabled_transports[] = {
@@ -59,12 +58,6 @@ static void setup(char **argv, const char *username, const char *password,
 
     lcb_assert(session == NULL);
     lcb_assert(mock == NULL);
-    lcb_assert(io == NULL);
-
-    if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
-        fprintf(stderr, "Failed to create IO instance\n");
-        exit(1);
-    }
 
     mock = start_test_server(argv);
     if (mock == NULL) {
@@ -84,7 +77,6 @@ static void setup(char **argv, const char *username, const char *password,
     options.v.v2.user = username;
     options.v.v2.passwd = password;
     options.v.v2.bucket = bucket;
-    options.v.v2.io = io;
     options.v.v2.transports = enabled_transports;
 
     if (lcb_create(&session, &options) != LCB_SUCCESS) {
@@ -109,9 +101,7 @@ static void setup(char **argv, const char *username, const char *password,
 static void teardown(void)
 {
     lcb_destroy(session);
-    lcb_destroy_io_ops(io);
     session = NULL;
-    io = NULL;
     shutdown_mock_server(mock);
     mock = NULL;
 }
@@ -141,8 +131,7 @@ static void store_callback(lcb_t instance,
     rv->key = resp->v.v0.key;
     rv->nkey = resp->v.v0.nkey;
     rv->cas = resp->v.v0.cas;
-    lcb_assert(io);
-    io->v.v0.stop_event_loop(io);
+    lcb_stop_loop(instance);
     (void)instance;
 }
 
@@ -160,8 +149,7 @@ static void mstore_callback(lcb_t instance,
     rv->cas = resp->v.v0.cas;
     rv->counter--;
     if (rv->counter <= 0) {
-        lcb_assert(io);
-        io->v.v0.stop_event_loop(io);
+        lcb_stop_loop(instance);
     }
     (void)instance;
 }
@@ -181,8 +169,7 @@ static void get_callback(lcb_t instance,
     rv->flags = resp->v.v0.flags;
     rv->counter--;
     if (rv->counter <= 0) {
-        lcb_assert(io);
-        io->v.v0.stop_event_loop(io);
+        lcb_stop_loop(instance);
     }
     (void)instance;
 }
@@ -199,8 +186,7 @@ static void touch_callback(lcb_t instance,
     rv->nkey = resp->v.v0.nkey;
     rv->counter--;
     if (rv->counter <= 0) {
-        lcb_assert(io);
-        io->v.v0.stop_event_loop(io);
+        lcb_stop_loop(instance);
     }
     (void)instance;
 }
@@ -222,7 +208,7 @@ static void version_callback(lcb_t instance,
 
     if (server_endpoint == NULL) {
         lcb_assert(rv->counter == 0);
-        io->v.v0.stop_event_loop(io);
+        lcb_stop_loop(instance);
         return;
     }
 
@@ -254,7 +240,7 @@ static void test_set1(void)
     (void)lcb_set_store_callback(session, store_callback);
     err = lcb_store(session, &rv, 1, cmds);
     lcb_assert(err == LCB_SUCCESS);
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(session);
     lcb_assert(rv.error == LCB_SUCCESS);
     lcb_assert(rv.operation == LCB_SET);
     lcb_assert(memcmp(rv.key, "foo", 3) == 0);
@@ -282,7 +268,7 @@ static void test_set2(void)
         err = lcb_store(session, &rv, 1, cmds);
         lcb_assert(err == LCB_SUCCESS);
     }
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(session);
     lcb_assert(rv.errors == 0);
 }
 
@@ -307,7 +293,7 @@ static void test_get1(void)
 
     err = lcb_store(session, &rv, 1, storecmds);
     lcb_assert(err == LCB_SUCCESS);
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(session);
     lcb_assert(rv.error == LCB_SUCCESS);
 
     memset(&rv, 0, sizeof(rv));
@@ -316,7 +302,7 @@ static void test_get1(void)
     getcmd.v.v0.nkey = strlen(getcmd.v.v0.key);
     err = lcb_get(session, &rv, 1, getcmds);
     lcb_assert(err == LCB_SUCCESS);
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(session);
     lcb_assert(rv.error == LCB_SUCCESS);
     lcb_assert(rv.nbytes == strlen("bar"));
     lcb_assert(memcmp(rv.bytes, "bar", 3) == 0);
@@ -357,7 +343,7 @@ static void test_get2(void)
         storecmd.v.v0.operation = LCB_SET;
         err = lcb_store(session, &rv, 1, storecmds);
         lcb_assert(err == LCB_SUCCESS);
-        io->v.v0.run_event_loop(io);
+        lcb_run_loop(session);
         lcb_assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
 
@@ -372,7 +358,7 @@ static void test_get2(void)
     rv.counter = 26;
     err = lcb_get(session, &rv, 26, (const lcb_get_cmd_t * const *)getcmds);
     lcb_assert(err == LCB_SUCCESS);
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(session);
     lcb_assert(rv.error == LCB_SUCCESS);
     lcb_assert(rv.nbytes == nval);
     lcb_assert(memcmp(rv.bytes, "bar", 3) == 0);
@@ -424,7 +410,7 @@ static void test_touch1(void)
         storecmd.v.v0.operation = LCB_SET;
         err = lcb_store(session, &rv, 1, storecmds);
         lcb_assert(err == LCB_SUCCESS);
-        io->v.v0.run_event_loop(io);
+        lcb_run_loop(session);
         lcb_assert(rv.error == LCB_SUCCESS);
         memset(&rv, 0, sizeof(rv));
 
@@ -439,7 +425,7 @@ static void test_touch1(void)
     rv.counter = 26;
     err = lcb_touch(session, &rv, 26, (const lcb_touch_cmd_t * const *)touchcmds);
     lcb_assert(err == LCB_SUCCESS);
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(session);
     lcb_assert(rv.error == LCB_SUCCESS);
     for (ii = 0; ii < 26; ii++) {
         free(keys[ii]);
@@ -460,12 +446,6 @@ static lcb_error_t test_connect(char **argv, const char *username,
 
     lcb_assert(session == NULL);
     lcb_assert(mock == NULL);
-    lcb_assert(io == NULL);
-
-    if (lcb_create_io_ops(&io, NULL) != LCB_SUCCESS) {
-        fprintf(stderr, "Failed to create IO instance\n");
-        exit(1);
-    }
 
     mock = start_test_server(argv);
     if (mock == NULL) {
@@ -480,7 +460,6 @@ static lcb_error_t test_connect(char **argv, const char *username,
     options.v.v2.user = username;
     options.v.v2.passwd = password;
     options.v.v2.bucket = bucket;
-    options.v.v2.io = io;
     options.v.v2.transports = enabled_transports;
 
     if (lcb_create(&session, &options) != LCB_SUCCESS) {
@@ -496,9 +475,7 @@ static lcb_error_t test_connect(char **argv, const char *username,
     rc = global_error;
 
     lcb_destroy(session);
-    lcb_destroy_io_ops(io);
     session = NULL;
-    io = NULL;
     shutdown_mock_server(mock);
     mock = NULL;
 
@@ -520,7 +497,7 @@ static void test_version1(void)
 
     rv.counter = total_node_count;
 
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(session);
 
     /* Ensure all version responses have been received */
     lcb_assert(rv.counter == 0);

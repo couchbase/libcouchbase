@@ -728,8 +728,15 @@ struct lcb_io_opt_st {
     void *dlhandle;
     void (*destructor)(struct lcb_io_opt_st *iops);
     union {
+        struct {
+            LCB_IOPS_BASE_FIELDS
+        } base;
+
+        /** These two names are deprecated internally */
         struct lcb_iops_evented_st v0;
         struct lcb_iops_completion_st v1;
+        struct lcb_iops_evented_st v0_INTERNAL;
+        struct lcb_iops_completion_st v1_INTERNAL;
         struct lcb_iops2_st v2;
     } v;
 };

@@ -184,7 +184,7 @@ void MockEnvironment::createConnection(lcb_t &instance)
     HandleWrap handle;
     createConnection(handle, instance);
 
-    handle.iops->v.v0.need_cleanup = 1;
+    handle.iops->v.base.need_cleanup = 1;
     handle.instance = NULL;
     handle.iops = NULL;
 

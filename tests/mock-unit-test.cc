@@ -279,18 +279,16 @@ extern "C" {
     int timeout_seqno = 0;
     int timeout_stats_done = 0;
 
-    static void timeout_store_callback(lcb_t,
-                                       const void *cookie,
+    static void timeout_store_callback(lcb_t instance,
+                                       const void *,
                                        lcb_storage_t,
                                        lcb_error_t error,
                                        const lcb_store_resp_t *)
     {
-        lcb_io_opt_t io = (lcb_io_opt_t)cookie;
-
         ASSERT_EQ(LCB_SUCCESS, error);
         timeout_seqno--;
         if (timeout_stats_done && timeout_seqno == 0) {
-            io->v.v0.stop_event_loop(io);
+            lcb_stop_loop(instance);
         }
     }
 
@@ -335,20 +333,18 @@ TEST_F(MockUnitTest, testTimeout)
     // @todo we need to have a test that actually tests the timeout callback..
     lcb_t instance;
     HandleWrap hw;
-    lcb_io_opt_t io;
     createConnection(hw, instance);
 
     (void)lcb_set_error_callback(instance, timeout_error_callback);
     (void)lcb_set_stat_callback(instance, timeout_stat_callback);
     (void)lcb_set_store_callback(instance, timeout_store_callback);
 
-    io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     lcb_server_stats_cmd_t stat;
     lcb_server_stats_cmd_t *commands[] = {&stat };
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, io, 1, commands));
-    io->v.v0.run_event_loop(io);
+    ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, NULL, 1, commands));
+    lcb_run_loop(instance);
 }
 
 struct timeout_test_cookie {
@@ -482,8 +478,7 @@ extern "C" {
     {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
-        lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
-        io->v.v0.stop_event_loop(io);
+        lcb_stop_loop(instance);
     }
 
     static void df_store_callback2(lcb_t instance,
@@ -495,8 +490,7 @@ extern "C" {
         struct rvbuf *rv = (struct rvbuf *)cookie;
         rv->error = error;
         rv->cas2 = resp->v.v0.cas;
-        lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
-        io->v.v0.stop_event_loop(io);
+        lcb_stop_loop(instance);
     }
 
     static void df_get_callback(lcb_t instance,
@@ -526,11 +520,9 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     struct rvbuf rv;
     const char *key = "test_compare_and_swap_async_", *value = "{\"bar\" => 1}";
     lcb_size_t nkey = strlen(key), nvalue = strlen(value);
-    lcb_io_opt_t io;
     lcb_t instance;
     HandleWrap hw;
     createConnection(hw, instance);
-    io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     /* prefill the bucket */
     (void)lcb_set_store_callback(instance, df_store_callback1);
@@ -540,7 +532,7 @@ TEST_F(MockUnitTest, testDoubleFreeError)
 
     err = lcb_store(instance, &rv, 1, storecmds);
     ASSERT_EQ(LCB_SUCCESS, err);
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
 
     /* run exercise
@@ -557,7 +549,7 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     err = lcb_get(instance, &rv, 1, getcmds);
     ASSERT_EQ(LCB_SUCCESS, err);
     rv.cas1 = rv.cas2 = 0;
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_GT(rv.cas1, 0);
     ASSERT_GT(rv.cas2, 0);
@@ -634,9 +626,7 @@ extern "C" {
         rv->error = error;
         rv->counter--;
         if (rv->counter <= 0) {
-            lcb_io_opt_t io = (lcb_io_opt_t)lcb_get_cookie(instance);
-            assert(io);
-            io->v.v0.stop_event_loop(io);
+            lcb_stop_loop(instance);
         }
 
         (void)resp;
@@ -691,11 +681,11 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     /* --enable-warnings --enable-werror won't let me use a simple void* */
-    void (*io_close_old)(lcb_io_opt_t, lcb_socket_t) = io->v.v0.close;
+    void (*io_close_old)(lcb_io_opt_t, lcb_socket_t) = io->v.v0_INTERNAL.close;
 
     lcb_set_timeout(instance, 3100000); /* 3.1 seconds */
     hrtime_t now = gethrtime(), begin_time = 0;
-    io->v.v0.close = io_close_wrap;
+    io->v.v0_INTERNAL.close = io_close_wrap;
 
     lcb_set_store_callback(instance, store_callback);
     lcb_set_get_callback(instance, tpb_get_callback);
@@ -708,7 +698,7 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
     err = lcb_store(instance, &rv, 1, store_cmds);
     ASSERT_EQ(LCB_SUCCESS, err);
     rv.counter = 1;
-    io->v.v0.run_event_loop(io);
+    lcb_run_loop(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
 
     /*
@@ -730,8 +720,8 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
      * backed_value back.
      */
     begin_time = gethrtime();
-    io->v.v0.run_event_loop(io);
-    io->v.v0.close = io_close_old;
+    io->v.v0_INTERNAL.run_event_loop(io);
+    io->v.v0_INTERNAL.close = io_close_old;
 
     now = gethrtime();
 
