@@ -218,11 +218,11 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
 
     switch (instance->settings.io->model) {
     case LCB_IOMODEL_EVENT:
-        si->v.v0.sock.sockfd = conn->sockfd;
+        si->v.v0.sock.sockfd = conn->u_model.e.sockfd;
         break;
 
     case LCB_IOMODEL_COMPLETION:
-        si->v.v0.sock.sockptr = conn->sockptr;
+        si->v.v0.sock.sockptr = conn->u_model.c.sockptr;
         break;
 
     default:

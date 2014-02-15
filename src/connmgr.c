@@ -446,9 +446,9 @@ static void write_he_list(lcb_clist_t *ll, FILE *out)
                 (void *)&info->connection);
 
         if (info->connection.iotable->model == LCB_IOMODEL_EVENT) {
-            fprintf(out, "SOCKFD=%d", (int)info->connection.sockfd);
+            fprintf(out, "SOCKFD=%d", (int)info->connection.u_model.e.sockfd);
         } else {
-            fprintf(out, "SOCKDATA=%p", (void *)info->connection.sockptr);
+            fprintf(out, "SOCKDATA=%p", (void *)info->connection.u_model.c.sockptr);
         }
         fprintf(out, " STATE=0x%x", info->state);
         fprintf(out, "]\n");

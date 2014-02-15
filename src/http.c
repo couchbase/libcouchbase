@@ -516,7 +516,9 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     req->on_complete = instance->callbacks.http_complete;
     req->on_data = instance->callbacks.http_data;
     req->reqtype = type;
-    req->connection.sockfd = INVALID_SOCKET;
+    if (IOT_IS_EVENT(req->io)) {
+        req->connection.u_model.e.sockfd = INVALID_SOCKET;
+    }
     lcb_list_init(&req->headers_out.list);
     req->nbody = nbody;
     if (req->nbody) {

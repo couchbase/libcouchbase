@@ -31,6 +31,9 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb);
     conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(conn, lvl, msg) lcb_log(LOGARGS(conn, lvl), msg)
 
+#define CN_E(conn) (&(conn)->u_model.e)
+#define CN_C(conn) (&(conn)->u_model.c)
+
 struct lcb_ioconnect_st {
     /** Timer to use for connection */
     lcb_timer_t timer;
@@ -164,12 +167,12 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
     int save_errno;
     lcb_connect_status_t connstatus;
     lcb_ioconnect_t ioconn = conn->ioconn;
-
     lcb_iotable *io = conn->iotable;
+    lcbio_Ectx *e = CN_E(conn);
 
     do {
-        if (conn->sockfd == INVALID_SOCKET) {
-            conn->sockfd = lcb_gai2sock(io, &ioconn->ai, &save_errno);
+        if (e->sockfd == INVALID_SOCKET) {
+            e->sockfd = lcb_gai2sock(io, &ioconn->ai, &save_errno);
         }
 
         if (ioconn->ai == NULL) {
@@ -188,13 +191,13 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
         if (events & LCB_ERROR_EVENT) {
             socklen_t errlen = sizeof(int);
             int sockerr = 0;
-            getsockopt(conn->sockfd,
+            getsockopt(e->sockfd,
                        SOL_SOCKET, SO_ERROR, (char *)&sockerr, &errlen);
             conn->last_error = sockerr;
 
         } else {
             if (IOT_V0IO(io).connect0(IOT_ARG(io),
-                                      conn->sockfd,
+                                      e->sockfd,
                                       ioconn->ai->ai_addr,
                                       (unsigned int)ioconn->ai->ai_addrlen) == 0) {
                 /**
@@ -232,11 +235,11 @@ static lcb_connection_result_t v0_connect(struct lcb_connection_st *conn,
 
         case LCB_CONNECT_EINPROGRESS: /*first call to connect*/
             IOT_V0EV(io).watch(IOT_ARG(io),
-                               conn->sockfd,
-                               conn->evinfo.ptr,
+                               e->sockfd,
+                               e->ptr,
                                LCB_WRITE_EVENT,
                                conn, v0_reconnect_handler);
-            conn->evinfo.active = 1;
+            e->active = 1;
 
             return LCB_CONN_INPROGRESS;
 
@@ -292,16 +295,17 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
     lcb_connect_status_t status;
     lcb_iotable *io = conn->iotable;
     lcb_ioconnect_t ioconn = conn->ioconn;
+    lcbio_Cctx *c = CN_C(conn);
 
     do {
 
-        if (!conn->sockptr) {
-            conn->sockptr = lcb_gai2sock_v1(io, &ioconn->ai, &save_errno);
+        if (!c->sockptr) {
+            c->sockptr = lcb_gai2sock_v1(io, &ioconn->ai, &save_errno);
         }
 
-        if (conn->sockptr) {
-            conn->sockptr->lcbconn = conn;
-            conn->sockptr->parent = io->p;
+        if (c->sockptr) {
+            c->sockptr->lcbconn = conn;
+            c->sockptr->parent = io->p;
         } else {
             conn->last_error = IOT_ERRNO(io);
             if (handle_conn_failure(conn) == -1) {
@@ -311,7 +315,7 @@ static lcb_connection_result_t v1_connect(lcb_connection_t conn, int nocb)
         }
 
         rv = IOT_V1(io).connect(io->p,
-                                conn->sockptr,
+                                c->sockptr,
                                 ioconn->ai->ai_addr,
                                 (unsigned int)ioconn->ai->ai_addrlen,
                                 v1_connect_handler);
@@ -431,8 +435,8 @@ lcb_connection_result_t lcb_connection_start(lcb_connection_t conn,
 
     conn->ioconn->ai = conn->ioconn->root_ai;
     if (IOT_IS_EVENT(io)) {
-        if (!conn->evinfo.ptr) {
-            conn->evinfo.ptr = IOT_V0EV(io).create(io->p);
+        if (!CN_E(conn)->ptr) {
+            CN_E(conn)->ptr = IOT_V0EV(io).create(io->p);
         }
         result = v0_connect(conn, options & LCB_CONNSTART_NOCB, 0);
 
@@ -460,27 +464,27 @@ void lcb_connection_close(lcb_connection_t conn)
     conn->state = LCB_CONNSTATE_UNINIT;
     destroy_connstart(conn);
     if (conn->iotable == NULL) {
-        lcb_assert(conn->sockfd < 0 && conn->sockptr == NULL);
         return;
     }
 
     io = conn->iotable;
     if (IOT_IS_EVENT(io)) {
-        if (conn->sockfd != INVALID_SOCKET) {
-            if (conn->evinfo.ptr) {
-                IOT_V0EV(io).cancel(io->p, conn->sockfd, conn->evinfo.ptr);
+        lcbio_Ectx *e = CN_E(conn);
+        if (e->sockfd != INVALID_SOCKET) {
+            if (e->ptr) {
+                IOT_V0EV(io).cancel(io->p, e->sockfd, e->ptr);
             }
-            IOT_V0IO(io).close(io->p, conn->sockfd);
-            conn->sockfd = INVALID_SOCKET;
+            IOT_V0IO(io).close(io->p, e->sockfd);
+            e->sockfd = INVALID_SOCKET;
         }
 
     } else {
-
-        if (conn->sockptr) {
-            conn->sockptr->closed = 1;
-            conn->sockptr->lcbconn = NULL;
-            io->u_io.completion.close(io->p, conn->sockptr);
-            conn->sockptr = NULL;
+        lcbio_Cctx *c = CN_C(conn);
+        if (c->sockptr) {
+            c->sockptr->closed = 1;
+            c->sockptr->lcbconn = NULL;
+            io->u_io.completion.close(io->p, c->sockptr);
+            c->sockptr = NULL;
         }
     }
 
@@ -519,7 +523,6 @@ int lcb_getaddrinfo(lcb_settings *settings, const char *hostname,
 
 void lcb_connection_cleanup(lcb_connection_t conn)
 {
-
     destroy_connstart(conn);
 
     if (conn->protoctx) {
@@ -545,16 +548,14 @@ void lcb_connection_cleanup(lcb_connection_t conn)
 
     free(conn->cur_host_);
     conn->cur_host_ = NULL;
-
     lcb_connection_close(conn);
 
-    if (conn->evinfo.ptr) {
-        IOT_V0EV(conn->iotable).destroy(conn->iotable->p, conn->evinfo.ptr);
-        conn->evinfo.ptr = NULL;
+    if (conn->iotable && IOT_IS_EVENT(conn->iotable) && CN_E(conn)->ptr) {
+        IOT_V0EV(conn->iotable).destroy(conn->iotable->p, CN_E(conn)->ptr);
+        CN_E(conn)->ptr = NULL;
     }
 
     memset(conn, 0, sizeof(*conn));
-    conn->sockfd = INVALID_SOCKET;
 }
 
 static lcb_error_t reset_buffer(ringbuffer_t **rb, lcb_size_t defsz)
@@ -602,7 +603,13 @@ lcb_error_t lcb_connection_init(lcb_connection_t conn,
 {
     conn->iotable = iotable;
     conn->settings = settings;
-    conn->sockfd = INVALID_SOCKET;
+
+    if (IOT_IS_EVENT(iotable)) {
+        CN_E(conn)->sockfd = INVALID_SOCKET;
+    } else {
+        CN_C(conn)->sockptr = NULL;
+    }
+
     conn->state = LCB_CONNSTATE_UNINIT;
     conn->as_err = lcb_timer_create_simple(iotable, conn, 0, async_error_trigger);
     lcb_async_cancel(conn->as_err);
@@ -630,14 +637,17 @@ void lcb_connection_use(lcb_connection_t conn, const struct lcb_io_use_st *use)
         use = &use_proxy;
     }
 
-    conn->completion.read = use->u.ex.v1_read;
-    conn->completion.write = use->u.ex.v1_write;
-    conn->evinfo.handler = use->u.ex.v0_handler;
+    if (IOT_IS_EVENT(conn->iotable)) {
+        CN_E(conn)->handler = use->u.ex.v0_handler;
+        lcb_assert(CN_E(conn)->handler);
+    } else {
+        CN_C(conn)->read = use->u.ex.v1_read;
+        CN_C(conn)->write = use->u.ex.v1_write;
+        lcb_assert(CN_C(conn)->read);
+        lcb_assert(CN_C(conn)->write);
+    }
 
     lcb_assert(conn->errcb);
-    lcb_assert(conn->completion.read);
-    lcb_assert(conn->completion.write);
-    lcb_assert(conn->evinfo.handler);
 }
 
 void lcb_connuse_ex(struct lcb_io_use_st *use,
@@ -682,37 +692,41 @@ void lcb_connection_transfer_socket(lcb_connection_t from,
                                     lcb_connection_t to,
                                     const struct lcb_io_use_st *use)
 {
+    lcbio_Ectx *esrc = CN_E(from), *edst = CN_E(to);
+    lcbio_Cctx *csrc = CN_C(from), *cdst = CN_C(to);
+
     if (from == to) {
         return;
     }
 
     lcb_assert(to->state == LCB_CONNSTATE_UNINIT);
     lcb_assert(to->ioconn == NULL && from->ioconn == NULL);
-    if (IOT_IS_EVENT(from->iotable) && from->evinfo.active) {
+    if (IOT_IS_EVENT(from->iotable) && esrc->active) {
         IOT_V0EV(from->iotable).cancel(from->iotable->p,
-                                       from->sockfd, from->evinfo.ptr);
-        from->evinfo.active = 0;
+                                       esrc->sockfd, esrc->ptr);
+        esrc->active = 0;
     }
 
     to->iotable = from->iotable;
     to->settings = from->settings;
 
-    to->evinfo.ptr = from->evinfo.ptr; from->evinfo.ptr = NULL;
-    to->sockfd = from->sockfd; from->sockfd = INVALID_SOCKET;
-    to->sockptr = from->sockptr; from->sockptr = NULL;
+    if (IOT_IS_EVENT(from->iotable)) {
+        edst->ptr = esrc->ptr; esrc->ptr = NULL;
+        edst->sockfd = esrc->sockfd; esrc->sockfd = INVALID_SOCKET;
+    } else {
+        cdst->sockptr = csrc->sockptr; csrc->sockptr = NULL;
+        if (cdst->sockptr) {
+            cdst->sockptr->lcbconn = to;
+        }
+    }
+
     to->protoctx = from->protoctx; from->protoctx = NULL;
     to->protoctx_dtor = from->protoctx_dtor; from->protoctx_dtor = NULL;
     to->last_error = from->last_error;
     to->state = from->state; from->state = LCB_CONNSTATE_UNINIT;
     to->cur_host_ = from->cur_host_; from->cur_host_ = NULL;
     to->poolinfo = from->poolinfo; from->poolinfo = NULL;
-
-    if (to->sockptr) {
-        to->sockptr->lcbconn = to;
-    }
-
     lcb_connection_use(to, use);
-
 }
 
 const lcb_host_t * lcb_connection_get_host(const lcb_connection_t conn)

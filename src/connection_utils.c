@@ -101,7 +101,7 @@ int lcb_get_nameinfo(lcb_connection_t conn, struct lcb_nibufs_st *nistrs)
 
     if (!IOT_IS_EVENT(conn->iotable)) {
         rv = IOT_V1(conn->iotable).nameinfo(IOT_ARG(conn->iotable),
-                                            conn->sockptr, &ni);
+                                            conn->u_model.c.sockptr, &ni);
 
         if (ni.local.len == 0 || ni.remote.len == 0 || rv < 0) {
             return 0;
@@ -110,12 +110,12 @@ int lcb_get_nameinfo(lcb_connection_t conn, struct lcb_nibufs_st *nistrs)
     } else {
         socklen_t sl_tmp = sizeof(sa_local);
 
-        rv = getsockname(conn->sockfd, ni.local.name, &sl_tmp);
+        rv = getsockname(conn->u_model.e.sockfd, ni.local.name, &sl_tmp);
         n_salocal = sl_tmp;
         if (rv < 0) {
             return 0;
         }
-        rv = getpeername(conn->sockfd, ni.remote.name, &sl_tmp);
+        rv = getpeername(conn->u_model.e.sockfd, ni.remote.name, &sl_tmp);
         n_saremote = sl_tmp;
         if (rv < 0) {
             return 0;

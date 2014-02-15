@@ -95,10 +95,16 @@ static void negotiation_cleanup(struct negotiation_context *ctx)
     lcb_sockrw_set_want(conn, 0, 1);
     lcb_sockrw_apply_want(conn);
     memset(&conn->easy, 0, sizeof(conn->easy));
-    conn->evinfo.handler = NULL;
+
+    if (IOT_IS_EVENT(conn->iotable)) {
+        conn->u_model.e.handler = NULL;
+    } else {
+        conn->u_model.c.read = NULL;
+        conn->u_model.c.write = NULL;
+    }
+
     conn->errcb = NULL;
-    conn->completion.read = NULL;
-    conn->completion.write = NULL;
+
     if (ctx->timer) {
         lcb_timer_destroy(NULL, ctx->timer);
         ctx->timer = NULL;

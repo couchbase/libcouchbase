@@ -210,8 +210,9 @@ void lcb_flush_buffers(lcb_t instance, const void *cookie)
     lcb_size_t ii;
     for (ii = 0; ii < instance->nservers; ++ii) {
         lcb_server_t *c = instance->servers + ii;
-        if (c->connection_ready) {
-            v0_handler(c->connection.sockfd, LCB_READ_EVENT | LCB_WRITE_EVENT, c);
+        if (c->connection_ready && IOT_IS_EVENT(c->connection.iotable)) {
+            v0_handler(c->connection.u_model.e.sockfd,
+                       LCB_READ_EVENT | LCB_WRITE_EVENT, c);
         }
     }
     (void)cookie;

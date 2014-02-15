@@ -87,6 +87,21 @@ struct lcb_nibufs_st {
 
 struct lcb_settings_st;
 typedef void (*protoctx_dtor_t)(void*);
+
+typedef struct {
+    /** Callback for all socket events */
+    lcb_ioE_callback handler;
+    void *ptr;
+    lcb_socket_t sockfd;
+    int active;
+} lcbio_Ectx;
+
+typedef struct {
+    lcb_ioC_read_callback read;
+    lcb_ioC_write2_callback write;
+    lcb_sockdata_t *sockptr;
+} lcbio_Cctx;
+
 struct lcb_connection_st {
     ringbuffer_t *input;
     ringbuffer_t *output;
@@ -113,35 +128,14 @@ struct lcb_connection_st {
     /** Information for pools */
     void *poolinfo;
 
-    /**
-     * v0 event based I/O fields
-     */
-    struct {
-        /** The handler callback */
-        lcb_event_handler_cb handler;
-        /** The event from create_event */
-        void *ptr;
-        /** This is 0 if delete_event has been called */
-        int active;
-    } evinfo;
-
-    /**
-     * v1 completion based I/O fields
-     */
-    struct {
-        lcb_io_read_cb read;
-        lcb_ioC_write2_callback write;
-    } completion;
-
     struct {
         lcb_io_generic_cb read;
     } easy;
 
-    /** this is populated with the socket when the connection is done */
-    lcb_socket_t sockfd;
-
-    /** This is the v1 socket */
-    lcb_sockdata_t *sockptr;
+    union {
+        lcbio_Cctx c;
+        lcbio_Ectx e;
+    } u_model;
 
     lcb_io_generic_cb errcb;
     lcb_timer_t as_err;

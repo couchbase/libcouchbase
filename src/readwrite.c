@@ -29,6 +29,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
     struct lcb_iovec_st iov[2];
     lcb_ssize_t nr;
     lcb_iotable *iot = conn->iotable;
+    lcbio_Ectx *e = &conn->u_model.e;
 
     if (!ringbuffer_ensure_capacity(buf,
                                     conn->settings ? conn->settings->rbufsize :
@@ -37,7 +38,7 @@ lcb_sockrw_status_t lcb_sockrw_v0_read(lcb_connection_t conn, ringbuffer_t *buf)
     }
 
     ringbuffer_get_iov(buf, RINGBUFFER_WRITE, iov);
-    nr = IOT_V0IO(iot).recvv(IOT_ARG(iot), conn->sockfd, iov, 2);
+    nr = IOT_V0IO(iot).recvv(IOT_ARG(iot), e->sockfd, iov, 2);
     if (nr == -1) {
         switch (IOT_ERRNO(iot)) {
         case EINTR:
@@ -80,12 +81,13 @@ lcb_sockrw_status_t lcb_sockrw_v0_write(lcb_connection_t conn,
                                         ringbuffer_t *buf)
 {
     lcb_iotable *iot = conn->iotable;
+    lcbio_Ectx *e = &conn->u_model.e;
 
     while (buf->nbytes > 0) {
         struct lcb_iovec_st iov[2];
         lcb_ssize_t nw;
         ringbuffer_get_iov(buf, RINGBUFFER_READ, iov);
-        nw = IOT_V0IO(iot).sendv(IOT_ARG(iot), conn->sockfd, iov, 2);
+        nw = IOT_V0IO(iot).sendv(IOT_ARG(iot), e->sockfd, iov, 2);
         if (nw == -1) {
             switch (IOT_ERRNO(iot)) {
             case EINTR:
@@ -121,38 +123,35 @@ void lcb_sockrw_set_want(lcb_connection_t conn, short events, int clear_existing
 static void apply_want_v0(lcb_connection_t conn)
 {
     lcb_iotable *iot = conn->iotable;
-
+    lcbio_Ectx *e = &conn->u_model.e;
     if (!conn->want) {
-        if (conn->evinfo.active) {
-            conn->evinfo.active = 0;
-            IOT_V0EV(iot).cancel(IOT_ARG(iot), conn->sockfd, conn->evinfo.ptr);
+        if (e->active) {
+            e->active = 0;
+            IOT_V0EV(iot).cancel(IOT_ARG(iot), e->sockfd, e->ptr);
         }
         return;
     }
 
-    conn->evinfo.active = 1;
-    IOT_V0EV(iot).watch(IOT_ARG(iot),
-                        conn->sockfd,
-                        conn->evinfo.ptr,
-                        conn->want,
-                        conn,
-                        conn->evinfo.handler);
+    e->active = 1;
+    IOT_V0EV(iot).watch(IOT_ARG(iot), e->sockfd, e->ptr, conn->want, conn,
+                        e->handler);
 }
 
 static void apply_want_v1(lcb_connection_t conn)
 {
+    lcbio_Cctx *c = &conn->u_model.c;
     if (!conn->want) {
         return;
     }
-    if (!conn->sockptr) {
+    if (!c->sockptr) {
         return;
     }
-    if (conn->sockptr->closed) {
+    if (c->sockptr->closed) {
         return;
     }
 
     if (conn->want & LCB_READ_EVENT) {
-        lcb_sockrw_v1_start_read(conn, &conn->input, conn->completion.read);
+        lcb_sockrw_v1_start_read(conn, &conn->input, c->read);
     }
 
     if (conn->want & LCB_WRITE_EVENT) {
@@ -161,7 +160,7 @@ static void apply_want_v1(lcb_connection_t conn)
             return;
         }
 
-        lcb_sockrw_v1_start_write(conn, &conn->output, conn->completion.write);
+        lcb_sockrw_v1_start_write(conn, &conn->output, c->write);
     }
 
 }
@@ -208,9 +207,12 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
 {
     int ret;
     lcb_iotable *io;
-    struct lcb_buf_info *bi = &conn->sockptr->read_buffer;
+    lcbio_Cctx *c = &conn->u_model.c;
+    lcb_sockdata_t *sd = c->sockptr;
 
-    if (conn->sockptr->is_reading) {
+    struct lcb_buf_info *bi = &c->sockptr->read_buffer;
+
+    if (sd->is_reading) {
         return LCB_SOCKRW_PENDING;
     }
 
@@ -229,10 +231,10 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_read(lcb_connection_t conn,
 
 
     io = conn->iotable;
-    ret = IOT_V1(io).read(IOT_ARG(io), conn->sockptr, callback);
+    ret = IOT_V1(io).read(IOT_ARG(io), sd, callback);
 
     if (ret == 0) {
-        conn->sockptr->is_reading = 1;
+        sd->is_reading = 1;
         return LCB_SOCKRW_PENDING;
 
     } else {
@@ -259,11 +261,13 @@ lcb_sockrw_status_t lcb_sockrw_v1_start_write(lcb_connection_t conn,
     lcb_iotable *io;
     struct lcb_iovec_st iov[2];
     ringbuffer_t *rb = *buf;
+    lcbio_Cctx *c = &conn->u_model.c;
+
     io = conn->iotable;
     *buf = NULL;
 
     ringbuffer_get_iov(rb, RINGBUFFER_READ, iov);
-    ret = IOT_V1(io).write2(IOT_ARG(io), conn->sockptr, iov, 2, rb, callback);
+    ret = IOT_V1(io).write2(IOT_ARG(io), c->sockptr, iov, 2, rb, callback);
     if (ret == 0) {
         return LCB_SOCKRW_PENDING;
 
