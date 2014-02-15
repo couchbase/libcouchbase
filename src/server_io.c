@@ -128,13 +128,9 @@ static void v0_handler(lcb_socket_t sock, short which, void *arg)
     event_complete_common(c, LCB_SUCCESS);
 }
 
-static void v1_error(lcb_sockdata_t *sockptr)
+static void generic_error(lcb_connection_t conn)
 {
-    lcb_server_t *c;
-
-    if (!lcb_sockrw_v1_cb_common(sockptr, NULL, (void **)&c)) {
-        return;
-    }
+    lcb_server_t *c = conn->data;
     event_complete_common(c, LCB_NETWORK_ERROR);
 }
 
@@ -197,7 +193,7 @@ static void v1_write(lcb_sockdata_t *sockptr, int status, void *wbuf)
 static void wire_io(lcb_server_t *server, lcb_connection_t src)
 {
     struct lcb_io_use_st use;
-    lcb_connuse_ex(&use, server, v0_handler, v1_read, v1_write, v1_error);
+    lcb_connuse_ex(&use, server, v0_handler, v1_read, v1_write, generic_error);
 
     if (src != NULL) {
         lcb_connection_transfer_socket(src, &server->connection, &use);

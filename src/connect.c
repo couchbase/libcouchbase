@@ -592,7 +592,7 @@ lcb_error_t lcb_connection_reset_buffers(lcb_connection_t conn)
 static void async_error_trigger(lcb_timer_t t, lcb_t i, const void *arg)
 {
     lcb_connection_t conn = (lcb_connection_t )arg;
-    conn->completion.error(conn->sockptr);
+    conn->errcb(conn);
     (void)t; (void)i;
 }
 
@@ -621,21 +621,20 @@ void lcb_connection_use(lcb_connection_t conn, const struct lcb_io_use_st *use)
     struct lcb_io_use_st use_proxy;
 
     conn->data = use->udata;
+    conn->errcb = use->error;
 
     if (use->easy) {
-        conn->easy.error = use->u.easy.err;
         conn->easy.read = use->u.easy.read;
         memset(&use_proxy, 0, sizeof(use_proxy));
         lcb__io_wire_easy(&use_proxy);
         use = &use_proxy;
     }
 
-    conn->completion.error = use->u.ex.v1_error;
     conn->completion.read = use->u.ex.v1_read;
     conn->completion.write = use->u.ex.v1_write;
     conn->evinfo.handler = use->u.ex.v0_handler;
 
-    lcb_assert(conn->completion.error);
+    lcb_assert(conn->errcb);
     lcb_assert(conn->completion.read);
     lcb_assert(conn->completion.write);
     lcb_assert(conn->evinfo.handler);
@@ -646,21 +645,21 @@ void lcb_connuse_ex(struct lcb_io_use_st *use,
                     lcb_event_handler_cb v0_handler,
                     lcb_io_read_cb v1_read,
                     lcb_ioC_write2_callback v1_write,
-                    lcb_io_error_cb v1_error)
+                    lcb_io_generic_cb error)
 {
     lcb_assert(udata != NULL);
     lcb_assert(v0_handler != NULL);
     lcb_assert(v1_read != NULL);
     lcb_assert(v1_write != NULL);
-    lcb_assert(v1_error != NULL);
+    lcb_assert(error != NULL);
 
     memset(use, 0, sizeof(*use));
     use->udata = udata;
+    use->error = error;
 
     use->u.ex.v0_handler = v0_handler;
     use->u.ex.v1_read = v1_read;
     use->u.ex.v1_write = v1_write;
-    use->u.ex.v1_error = v1_error;
 }
 
 void lcb_connuse_easy(struct lcb_io_use_st *use,
@@ -674,7 +673,7 @@ void lcb_connuse_easy(struct lcb_io_use_st *use,
 
     use->easy = 1;
     use->u.easy.read = read_cb;
-    use->u.easy.err = err_cb;
+    use->error = err_cb;
     use->udata = data;
 }
 

@@ -96,7 +96,7 @@ static void negotiation_cleanup(struct negotiation_context *ctx)
     lcb_sockrw_apply_want(conn);
     memset(&conn->easy, 0, sizeof(conn->easy));
     conn->evinfo.handler = NULL;
-    conn->completion.error = NULL;
+    conn->errcb = NULL;
     conn->completion.read = NULL;
     conn->completion.write = NULL;
     if (ctx->timer) {

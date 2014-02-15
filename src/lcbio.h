@@ -146,11 +146,9 @@ extern "C" {
         struct {
             lcb_io_read_cb read;
             lcb_ioC_write2_callback write;
-            lcb_io_error_cb error;
         } completion;
 
         struct {
-            lcb_io_generic_cb error;
             lcb_io_generic_cb read;
         } easy;
 
@@ -160,6 +158,7 @@ extern "C" {
         /** This is the v1 socket */
         lcb_sockdata_t *sockptr;
 
+        lcb_io_generic_cb errcb;
         lcb_timer_t as_err;
 
         lcb_connstate_t state;
@@ -318,18 +317,18 @@ extern "C" {
         /** User data to be associated with the connection */
         void *udata;
 
+        lcb_io_generic_cb error;
+
         union {
             struct {
                 /** Event handler for V0 I/O */
                 lcb_event_handler_cb v0_handler;
                 lcb_ioC_write2_callback v1_write;
                 lcb_io_read_cb v1_read;
-                lcb_io_error_cb v1_error;
             } ex;
             struct {
                 /** Easy handlers */
                 lcb_io_generic_cb read;
-                lcb_io_generic_cb err;
             } easy;
         } u;
     };
@@ -352,7 +351,7 @@ extern "C" {
                         lcb_event_handler_cb v0_handler,
                         lcb_io_read_cb v1_read_cb,
                         lcb_ioC_write2_callback v1_write_cb,
-                        lcb_io_error_cb v1_error_cb);
+                        lcb_io_generic_cb error_cb);
 
     /**
      * Populates an 'io_use' structure for simple I/O callbacks
@@ -393,6 +392,9 @@ extern "C" {
                                         const struct lcb_io_use_st *use);
 
     const lcb_host_t * lcb_connection_get_host(const lcb_connection_t);
+
+    /** Schedule an asynchronous error to be sent to the handler */
+    void lcb_conn_senderr(lcb_connection_t conn, int err);
 
     #define LCB_CONN_DATA(conn) (conn->data)
 

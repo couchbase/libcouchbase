@@ -354,7 +354,7 @@ static void v0_generic_handler(lcb_socket_t sock, short which, void *arg)
             lcb_sockrw_apply_want(conn);
 
         } else {
-            conn->easy.error(conn);
+            conn->errcb(conn);
             return;
         }
     }
@@ -370,7 +370,7 @@ static void v0_generic_handler(lcb_socket_t sock, short which, void *arg)
     if (status != LCB_SOCKRW_READ &&
             status != LCB_SOCKRW_WOULDBLOCK && oldnr == newnr) {
 
-        conn->easy.error(conn);
+        conn->errcb(conn);
     } else {
         conn->easy.read(conn);
     }
@@ -390,7 +390,7 @@ static void v1_generic_write_handler(lcb_sockdata_t *sd,
     lcb_sockrw_v1_onwrite_common(sd, wdata, &sd->lcbconn->output);
 
     if (status) {
-        conn->easy.error(conn);
+        conn->errcb(conn);
     } else {
         lcb_sockrw_set_want(conn, LCB_READ_EVENT, 1);
         lcb_sockrw_apply_want(conn);
@@ -406,7 +406,7 @@ static void v1_generic_read_handler(lcb_sockdata_t *sd, lcb_ssize_t nr)
 
     lcb_sockrw_v1_onread_common(sd, &sd->lcbconn->input, nr);
     if (nr < 1) {
-        conn->easy.error(conn);
+        conn->errcb(conn);
         return;
 
     } else {
@@ -414,17 +414,10 @@ static void v1_generic_read_handler(lcb_sockdata_t *sd, lcb_ssize_t nr)
     }
 }
 
-static void v1_generic_error_handler(lcb_sockdata_t *sd)
-{
-    sd->lcbconn->easy.error(sd->lcbconn);
-}
-
-
 void lcb__io_wire_easy(struct lcb_io_use_st *use)
 {
     use->easy = 0;
     use->u.ex.v0_handler = v0_generic_handler;
     use->u.ex.v1_read = v1_generic_read_handler;
     use->u.ex.v1_write = v1_generic_write_handler;
-    use->u.ex.v1_error = v1_generic_error_handler;
 }
