@@ -64,6 +64,22 @@ void iocp_initialize_loop_globals(void)
 #define DO_IF_BREAKOUT(io, e) if (!LOOP_CAN_CONTINUE(io)) { e; }
 #define HAS_QUEUED_IO(io) (io)->n_iopending
 
+
+void iocp_write_done(iocp_t *io, iocp_write_t *w, int status)
+{
+    lcb_ioC_write2_callback callback = w->cb;
+    void *uarg = w->uarg;
+    iocp_sockdata_t *sd = w->ol_write.sd;
+
+    if (w->state == IOCP_WRITEBUF_ALLOCATED) {
+        free(w);
+    } else {
+        w->state = IOCP_WRITEBUF_AVAILABLE;
+    }
+
+    callback(&sd->sd_base, status, uarg);
+}
+
 /**
  * Handles a single OVERLAPPED entry, and invokes
  * the appropriate event
@@ -76,7 +92,6 @@ static void handle_single_overlapped(iocp_t *io,
     union {
         iocp_write_t *w;
         iocp_connect_t *conn;
-        iocp_async_error_t *errev;
     } u_ol;
 
     iocp_overlapped_t *ol = (iocp_overlapped_t *)lpOverlapped;
@@ -112,8 +127,7 @@ static void handle_single_overlapped(iocp_t *io,
 
     case LCBIOCP_ACTION_WRITE:
         u_ol.w = IOCP_WRITEOBJ_FROM_OVERLAPPED(lpOverlapped);
-        /** Invoke the callback */
-        u_ol.w->cb(&sd->sd_base, &u_ol.w->wbase, opstatus);
+        iocp_write_done(io, u_ol.w, opstatus);
         break;
 
     case LCBIOCP_ACTION_CONNECT:
@@ -133,12 +147,6 @@ static void handle_single_overlapped(iocp_t *io,
         }
         u_ol.conn->cb(&sd->sd_base, opstatus);
         pointer_to_free = u_ol.conn;
-        break;
-
-    case LCBIOCP_ACTION_ERROR:
-        u_ol.errev = (iocp_async_error_t *)lpOverlapped;
-        u_ol.errev->cb(&sd->sd_base);
-        pointer_to_free = u_ol.errev;
         break;
 
     default:
