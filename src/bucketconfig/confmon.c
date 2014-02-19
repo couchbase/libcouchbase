@@ -476,3 +476,31 @@ int lcb_confmon_get_state(lcb_confmon *mon)
     }
     return ret;
 }
+
+LCB_INTERNAL_API
+void lcb_confmon_set_provider_active(lcb_confmon *mon,
+                                     clconfig_method_t type, int enabled)
+{
+    int ii;
+    clconfig_provider *provider = mon->all_providers[type];
+    if (provider->enabled == enabled) {
+        return;
+    }
+
+    /** Reset the current state */
+    mon->cur_provider = NULL;
+    lcb_list_init(&mon->active_providers);
+
+    for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+        clconfig_provider *pb = mon->all_providers[ii];
+        if (!pb) {
+            continue;
+        }
+
+        memset(&pb->ll, 0, sizeof(pb->ll));
+        if (pb->pause) {
+            pb->pause(pb);
+        }
+    }
+    lcb_confmon_prepare(mon);
+}

@@ -7,6 +7,9 @@ struct lcb_bootstrap_st {
     lcb_timer_t timer;
     int active;
     hrtime_t last_refresh;
+
+    /** Flag set if we've already bootstrapped */
+    int bootstrapped;
 };
 
 #define LOGARGS(instance, lvl) \
@@ -30,8 +33,8 @@ static void config_callback(clconfig_listener *listener,
                             clconfig_event_t event,
                             clconfig_info *info)
 {
-    struct lcb_bootstrap_st *bootstrap = (struct lcb_bootstrap_st *)listener;
-    lcb_t instance = bootstrap->parent;
+    struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
+    lcb_t instance = bs->parent;
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         if (event == CLCONFIG_EVENT_PROVIDERS_CYCLED) {
@@ -45,19 +48,41 @@ static void config_callback(clconfig_listener *listener,
     }
 
     instance->last_error = LCB_SUCCESS;
-    bootstrap->active = 0;
+    bs->active = 0;
     /** Ensure we're not called directly twice again */
     listener->callback = async_step_callback;
 
-    if (bootstrap->timer) {
-        lcb_timer_destroy(instance, bootstrap->timer);
-        bootstrap->timer = NULL;
+    if (bs->timer) {
+        lcb_timer_destroy(instance, bs->timer);
+        bs->timer = NULL;
     }
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
 
     if (instance->type != LCB_TYPE_CLUSTER) {
         lcb_update_vbconfig(instance, info);
+    }
+
+    if (!bs->bootstrapped) {
+        bs->bootstrapped = 1;
+        if (instance->type == LCB_TYPE_BUCKET &&
+                instance->dist_type == VBUCKET_DISTRIBUTION_KETAMA) {
+            lcb_log(LOGARGS(instance, INFO),
+                    "Reverting to HTTP Config for memcached buckets");
+
+            /** Memcached bucket */
+            lcb_clconfig_set_http_always_on(
+                    lcb_confmon_get_provider(
+                            instance->confmon, LCB_CLCONFIG_HTTP));
+            lcb_confmon_set_provider_active(instance->confmon,
+                                            LCB_CLCONFIG_HTTP, 1);
+
+            lcb_confmon_set_provider_active(instance->confmon,
+                                            LCB_CLCONFIG_CCCP, 0);
+
+            lcb_confmon_set_provider_active(instance->confmon,
+                                            LCB_CLCONFIG_CCCP, 0);
+        }
     }
 
     lcb_maybe_breakout(instance);

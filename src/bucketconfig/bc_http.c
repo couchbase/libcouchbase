@@ -303,6 +303,11 @@ static void delayed_disconn(lcb_timer_t tm, lcb_t instance, const void *cookie)
 static lcb_error_t pause_http(clconfig_provider *pb)
 {
     http_provider *http = (http_provider *)pb;
+    if (http->always_on) {
+        lcb_timer_disarm(http->io_timer);
+        return LCB_SUCCESS;
+    }
+
     if (!lcb_timer_armed(http->disconn_timer)) {
         lcb_timer_rearm(http->disconn_timer,
                         PROVIDER_SETTING(pb, bc_http_stream_time));
@@ -320,14 +325,18 @@ static lcb_error_t get_refresh(clconfig_provider *provider)
      * so we issue a timer indicating how long we expect to wait for a
      * streaming update until we get something.
      */
-    if (lcb_timer_armed(http->disconn_timer)) {
-        lcb_timer_disarm(http->disconn_timer);
-        lcb_timer_rearm(http->io_timer, PROVIDER_SETTING(provider,
-                                                         config_node_timeout));
-        return LCB_SUCCESS;
+
+    /** If we need a new socket, we do connect_next. */
+    if (http->connection.state == LCB_CONNSTATE_UNINIT) {
+        return connect_next(http);
     }
 
-    return connect_next(http);
+    lcb_timer_disarm(http->disconn_timer);
+    if (http->connection.state == LCB_CONNSTATE_CONNECTED) {
+        lcb_timer_rearm(http->io_timer,
+                        PROVIDER_SETTING(provider, config_node_timeout));
+    }
+    return LCB_SUCCESS;
 }
 
 static clconfig_info* http_get_cached(clconfig_provider *provider)
@@ -680,6 +689,15 @@ lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon)
     return (lcb_host_t *)lcb_connection_get_host(&http->connection);
 }
 
+void lcb_clconfig_set_http_always_on(clconfig_provider *pb)
+{
+    http_provider *http = (http_provider *)pb;
+    if (!pb->enabled) {
+        return;
+    }
+    lcb_timer_disarm(http->disconn_timer);
+    http->always_on = 1;
+}
 
 void lcb_clconfig_http_enable(clconfig_provider *http, hostlist_t nodes)
 {

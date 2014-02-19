@@ -88,6 +88,12 @@ typedef struct clprovider_http_st {
     clconfig_info *current_config;
 
     int retry_on_missing;
+
+    /**
+     * This enables the old-style push configuration. Needed for memcached
+     * buckets
+     */
+    int always_on;
 } http_provider;
 
 

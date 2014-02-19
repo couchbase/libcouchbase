@@ -91,6 +91,10 @@ void KVOperation::leave(lcb_t instance)
 
 void KVOperation::assertOk(lcb_error_t err)
 {
+    if (ignoreErrors) {
+        return;
+    }
+
     if (allowableErrors.empty()) {
         ASSERT_EQ(LCB_SUCCESS, err);
         return;
@@ -215,6 +219,18 @@ void genStoreCommands(const std::vector<std::string> &keys,
     for (unsigned int ii = 0; ii < keys.size(); ii++) {
         cmdpp.push_back(&cmds[ii]);
     }
+}
+
+/**
+ * This doesn't _actually_ attempt to make sense of an operation. It simply
+ * will try to keep the event loop alive.
+ */
+void doDummyOp(lcb_t& instance)
+{
+    Item itm("foo", "bar");
+    KVOperation kvo(&itm);
+    kvo.ignoreErrors = true;
+    kvo.store(instance);
 }
 
 /**
