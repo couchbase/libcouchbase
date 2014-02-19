@@ -90,6 +90,12 @@ extern "C" {
         int sequence_changed;
     } VBUCKET_CONFIG_DIFF;
 
+    typedef enum {
+        VBUCKET_NO_CHANGES = 0,
+        VBUCKET_SERVERS_MODIFIED = 1 << 0,
+        VBUCKET_MAP_MODIFIED = 1 << 1
+    } VBUCKET_CHANGE_STATUS;
+
     /**
      * @}
      */
@@ -390,6 +396,9 @@ extern "C" {
      */
     LIBVBUCKET_PUBLIC_API
     void vbucket_free_diff(VBUCKET_CONFIG_DIFF *diff);
+
+    LIBVBUCKET_PUBLIC_API
+    VBUCKET_CHANGE_STATUS vbucket_what_changed(VBUCKET_CONFIG_DIFF *diff);
 
     /**
      * @}
