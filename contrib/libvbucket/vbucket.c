@@ -880,6 +880,17 @@ VBUCKET_CONFIG_DIFF* vbucket_compare(VBUCKET_CONFIG_HANDLE from,
     return rv;
 }
 
+VBUCKET_CHANGE_STATUS vbucket_what_changed(VBUCKET_CONFIG_DIFF *diff) {
+    VBUCKET_CHANGE_STATUS ret = 0;
+    if (diff->n_vb_changes) {
+        ret |= VBUCKET_MAP_MODIFIED;
+    }
+    if (*diff->servers_added || *diff->servers_removed || diff->sequence_changed) {
+        ret |= VBUCKET_SERVERS_MODIFIED;
+    }
+    return ret;
+}
+
 static void free_array_helper(char **l) {
     int i;
     for (i = 0; l[i]; i++) {
