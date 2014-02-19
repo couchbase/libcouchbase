@@ -160,6 +160,7 @@ extern "C" {
      *
      * This callback is invoked for each logging message emitted
      * @param procs the logging structure provided
+     * @param iid instance id
      * @param subsys a string describing the module which emitted the message
      * @param severity one of the LCB_LOG_* severity constants.
      * @param srcfile the source file which emitted this message
@@ -168,6 +169,7 @@ extern "C" {
      * @param ap a va_list for vprintf
      */
     typedef void (*lcb_logging_callback)(struct lcb_logprocs_st *procs,
+                                          unsigned int iid,
                                           const char *subsys,
                                           int severity,
                                           const char *srcfile,
@@ -201,6 +203,9 @@ extern "C" {
         LCB_CONFIG_TRANSPORT_CCCP
 
     } lcb_config_transport_t;
+
+#define LCB_CONFIG_MCD_PORT 11210
+#define LCB_CONFIG_HTTP_PORT 8091
 
 
 #ifdef __cplusplus

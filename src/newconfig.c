@@ -96,25 +96,25 @@ replace_config(lcb_t instance, clconfig_info *old_config,
     mc_PIPELINE **old;
     unsigned ii, nold;
     int *is_clean;
+    VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
 
 
     diff = vbucket_compare(old_config->vbc, next_config->vbc);
 
     if (diff) {
+        chstatus = vbucket_what_changed(diff);
         log_vbdiff(instance, diff);
+        vbucket_free_diff(diff);
     }
 
-    if (diff == NULL ||
-            (diff->sequence_changed == 0 && diff->n_vb_changes == 0)) {
+    if (diff == NULL || chstatus == VBUCKET_NO_CHANGES) {
         lcb_log(LOGARGS(instance, DEBUG),
-            "Ignoring config update. No server changes; DIFF=%p", diff);
-        vbucket_free_diff(diff);
+                "Ignoring config update. No server changes; DIFF=%p", diff);
         return LCB_CONFIGURATION_UNCHANGED;
     }
 
     old = mcreq_queue_take_pipelines(&instance->cmdq, &nold);
     dist_t = VB_DISTTYPE(next_config->vbc);
-    vbucket_free_diff(diff);
 
     if (allocate_new_servers(instance, next_config) != 0) {
         return -1;

@@ -66,13 +66,6 @@ int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
     return 1;
 }
 
-int lcb_getenv_boolean(const char *key)
-{
-    DWORD nvalue = GetEnvironmentVariable(key, NULL, 0);
-
-    return nvalue != 0;
-}
-
 #else
 int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
 {
@@ -84,13 +77,15 @@ int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len)
     strncpy(buf, cur, len);
     return 1;
 }
+#endif
 
 int lcb_getenv_boolean(const char *key)
 {
-    const char *value = getenv(key);
-    return value != NULL && *value;
+    char value[4096] = { 0 };
+    int rv;
+    rv = lcb_getenv_nonempty(key, value, sizeof(value));
+    return rv != 0 && value[0] != '\0' && value[0] != '0';
 }
-#endif
 
 #ifdef _WIN32
 lcb_error_t lcb_initialize_socket_subsystem(void)

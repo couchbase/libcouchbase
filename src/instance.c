@@ -41,6 +41,8 @@
  *          terminated). Do <b>not</b> try to release this string.
  *
  */
+static volatile unsigned int lcb_instance_index = 0;
+
 LIBCOUCHBASE_API
 const char *lcb_get_version(lcb_uint32_t *version)
 {
@@ -51,16 +53,69 @@ const char *lcb_get_version(lcb_uint32_t *version)
     return LCB_VERSION_STRING;
 }
 
+#define PARAM_CONFIG_HOST 1
+#define PARAM_CONFIG_PORT 2
+static const char *param_from_host(const lcb_host_t *host, int type)
+{
+    if (!host) {
+        return NULL;
+    }
+    if (type == PARAM_CONFIG_HOST) {
+        return *host->host ? host->host : NULL;
+    } else {
+        return *host->port ? host->port : NULL;
+    }
+}
+
+static const char *get_rest_param(lcb_t obj, int paramtype)
+{
+    const char *ret = NULL;
+    const lcb_host_t *host = lcb_confmon_get_rest_host(obj->confmon);
+    ret = param_from_host(host, paramtype);
+
+    if (ret) {
+        return ret;
+    }
+
+    /** Don't have a REST API connection? */
+    if (LCBT_VBCONFIG(obj)) {
+        unsigned ix;
+        lcb_server_t *server;
+
+        ix = gethrtime() % LCBT_NSERVERS(obj);
+        server = LCBT_GET_SERVER(obj, ix);
+        if (paramtype == PARAM_CONFIG_HOST) {
+            ret = param_from_host(&server->curhost, paramtype);
+            if (ret) {
+                return ret;
+            }
+        } else {
+            char *colon = strstr(server->resthost, ":");
+            if (colon) {
+                if (obj->scratch) {
+                    free(obj->scratch);
+                }
+                obj->scratch = malloc(NI_MAXSERV + 1);
+                strcpy(obj->scratch, colon+1);
+                if (*obj->scratch) {
+                    return obj->scratch;
+                }
+            }
+        }
+    }
+    return param_from_host(obj->usernodes->entries, paramtype);
+}
+
 LIBCOUCHBASE_API
 const char *lcb_get_host(lcb_t instance)
 {
-    return lcb_confmon_get_rest_host(instance->confmon)->host;
+    return get_rest_param(instance, PARAM_CONFIG_HOST);
 }
 
 LIBCOUCHBASE_API
 const char *lcb_get_port(lcb_t instance)
 {
-    return lcb_confmon_get_rest_host(instance->confmon)->port;
+    return get_rest_param(instance, PARAM_CONFIG_PORT);
 }
 
 
@@ -187,7 +242,8 @@ static lcb_error_t init_providers(lcb_t obj,
     }
 
     if (http_enabled) {
-        lcb_clconfig_http_enable(http, obj->usernodes);
+        lcb_clconfig_http_enable(http);
+        lcb_clconfig_http_set_nodes(http, obj->usernodes);
     }
 
     if (!cccp_enabled) {
@@ -202,7 +258,7 @@ static lcb_error_t init_providers(lcb_t obj,
     }
 
     if (hosts) {
-        err = hostlist_add_stringz(mc_nodes, hosts, 11210);
+        err = hostlist_add_stringz(mc_nodes, hosts, LCB_CONFIG_MCD_PORT);
         if (err != LCB_SUCCESS) {
             hostlist_destroy(mc_nodes);
             return err;
@@ -212,11 +268,12 @@ static lcb_error_t init_providers(lcb_t obj,
         lcb_size_t ii;
         for (ii = 0; ii < obj->usernodes->nentries; ii++) {
             lcb_host_t *cur = obj->usernodes->entries + ii;
-            hostlist_add_stringz(mc_nodes, cur->host, 11210);
+            hostlist_add_stringz(mc_nodes, cur->host, LCB_CONFIG_MCD_PORT);
         }
     }
 
-    lcb_clconfig_cccp_enable(cccp, mc_nodes, obj);
+    lcb_clconfig_cccp_enable(cccp, obj);
+    lcb_clconfig_cccp_set_nodes(cccp, mc_nodes);
     hostlist_destroy(mc_nodes);
     return LCB_SUCCESS;
 }
@@ -319,6 +376,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->settings = settings = lcb_settings_new();
     settings->bucket = strdup(bucket);
     settings->logger = lcb_init_console_logger();
+    settings->iid = lcb_instance_index++;
 
 
     if (user) {
@@ -346,7 +404,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
 
-    err = hostlist_add_string(obj->usernodes, host, -1, 8091);
+    err = hostlist_add_string(obj->usernodes, host, -1, LCB_CONFIG_HTTP_PORT);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;
@@ -439,6 +497,7 @@ void lcb_destroy(lcb_t instance)
     mcreq_queue_cleanup(&instance->cmdq);
     lcb_settings_unref(settings);
     free(instance->histogram);
+    free(instance->scratch);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }

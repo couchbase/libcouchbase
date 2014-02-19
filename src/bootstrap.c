@@ -5,8 +5,10 @@ struct lcb_bootstrap_st {
     clconfig_listener listener;
     lcb_t parent;
     lcb_timer_t timer;
-    int active;
     hrtime_t last_refresh;
+
+    /** Flag set if we've already bootstrapped */
+    int bootstrapped;
 };
 
 #define LOGARGS(instance, lvl) \
@@ -30,8 +32,8 @@ static void config_callback(clconfig_listener *listener,
                             clconfig_event_t event,
                             clconfig_info *info)
 {
-    struct lcb_bootstrap_st *bootstrap = (struct lcb_bootstrap_st *)listener;
-    lcb_t instance = bootstrap->parent;
+    struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
+    lcb_t instance = bs->parent;
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         if (event == CLCONFIG_EVENT_PROVIDERS_CYCLED) {
@@ -45,19 +47,35 @@ static void config_callback(clconfig_listener *listener,
     }
 
     instance->last_error = LCB_SUCCESS;
-    bootstrap->active = 0;
     /** Ensure we're not called directly twice again */
     listener->callback = async_step_callback;
 
-    if (bootstrap->timer) {
-        lcb_timer_destroy(instance, bootstrap->timer);
-        bootstrap->timer = NULL;
+    if (bs->timer) {
+        lcb_timer_destroy(instance, bs->timer);
+        bs->timer = NULL;
     }
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
 
     if (instance->type != LCB_TYPE_CLUSTER) {
         lcb_update_vbconfig(instance, info);
+    }
+
+    if (!bs->bootstrapped) {
+        bs->bootstrapped = 1;
+        if (instance->type == LCB_TYPE_BUCKET &&
+                instance->dist_type == VBUCKET_DISTRIBUTION_KETAMA) {
+            lcb_log(LOGARGS(instance, INFO),
+                    "Reverting to HTTP Config for memcached buckets");
+
+            /** Memcached bucket */
+            instance->settings->bc_http_stream_time = -1;
+            lcb_confmon_set_provider_active(instance->confmon,
+                                            LCB_CLCONFIG_HTTP, 1);
+
+            lcb_confmon_set_provider_active(instance->confmon,
+                                            LCB_CLCONFIG_CCCP, 0);
+        }
     }
 
     lcb_maybe_breakout(instance);
@@ -73,7 +91,6 @@ static void initial_bootstrap_error(lcb_t instance,
         instance->last_error = err;
     }
 
-    instance->bootstrap->active = 0 ;
     lcb_error_handler(instance, instance->last_error, errinfo);
     lcb_log(LOGARGS(instance, ERR),
             "Failed to bootstrap client=%p. Code=0x%x, Message=%s",
@@ -149,7 +166,7 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
 {
     struct lcb_bootstrap_st *bs = instance->bootstrap;
 
-    if (bs && bs->active) {
+    if (bs && lcb_confmon_is_refreshing(instance->confmon)) {
         return LCB_SUCCESS;
     }
 
@@ -165,7 +182,6 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
     }
 
     bs->last_refresh = gethrtime();
-    bs->active = 1;
 
     if (initial) {
         lcb_error_t err;

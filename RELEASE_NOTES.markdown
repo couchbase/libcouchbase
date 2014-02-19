@@ -3,6 +3,52 @@
 This document is a list of user visible feature changes and important
 bugfixes. Do not forget to update this doc in every important patch.
 
+## 2.3.0 GA (2014-04-07)
+
+* [major] CCBC-152: Provide a master-only observe option. This adds a new
+  struct version to the `lcb_observe_cmd_t` which allows to select only the
+  master node. One can use this to efficiently check if the key exists (without
+  retrieving it). It also allows one to get the CAS of the item without fetching
+  it.
+
+* [major] CCBC-281: Fix partial scheduling during multi operations. Previously
+  the library would deliver spurious callbacks  if multiple operations were
+  scheduled with a single command and one of the operations could not be mapped
+  to a server. This fixes this behavior and ensures that callbacks are only
+  invoked for items if the entire API call succeeded.
+
+* [major] CCBC-150: Multi-packet commands will no longer deliver spurious
+  callbacks on failure. Previously these commands would be relocated to the
+  same server during a configuration change, resulting in multiple callbacks
+  for the same command. In this case the client would think all the commands
+  had been completed, and when the next response arrived it would incorrectly
+  map it to a different request.
+
+* [minor] CCBC-327: Fix assumption of `vbucket_compare()` only returning if
+  a diff exists. This function actually returns a non-NULL pointer always
+  unless it cannot allocate more memory. This bug was introduced with the
+  _DP1_ release.
+
+* [minor] CCBC-326: Memcached buckets should use streaming config. This was
+  left unchecked in the _DP1_ release and has now been fixed.
+
+* [major] CCBC-351: Enhance performance for configuration parsing. In previous
+  versions receiving multiple configurations at once would cause CPU spikes on
+  slower systems. The configuration parser code has been optimized to alleviate
+  this issue.
+
+* [minor] CCBC-350: Provide `lcb_cntl()` API to retrieve the SCM changeset used
+  by the currently loaded binary. This is a more effective way to get the
+  revision as it does not depend on the specific headers the library was
+  compiled with.
+
+* [major] CCBC-340: Correctly parse `""`, `"0"` and `"1"` for environment
+  variables. In previous versions having the entry set to an empty string
+  or `0` would still be treated by the library as a true value for various
+  environment variables. This has been fixed so that clear "False" values
+  such as the empty string or 0 are treated as such.
+
+
 ## 2.3.0-dp1 (2014-02-04)
 
 * [major] CCBC-234: Implementation of

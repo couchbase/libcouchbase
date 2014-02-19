@@ -257,6 +257,7 @@ static lcb_error_t create_cached_compat(const struct lcb_cached_config_st *cfg,
         return rc;
     }
 
+    (*instance)->settings->bc_http_stream_time = LCB_MS2US(10000);
     file_provider = lcb_confmon_get_provider((*instance)->confmon,
                                              LCB_CLCONFIG_FILE);
 

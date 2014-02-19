@@ -459,7 +459,7 @@ mcserver_alloc(lcb_t instance, int ix)
 
     mcreq_pipeline_init(&ret->pipeline);
     ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
-    lcb_host_parsez(&ret->curhost, ret->datahost, 11210);
+    lcb_host_parsez(&ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
 
     ret->io_timer = lcb_timer_create_simple(
             instance->iotable, ret, MCSERVER_TIMEOUT(ret), timeout_server);

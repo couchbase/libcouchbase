@@ -38,6 +38,16 @@ extern "C" {
      * Get/Set. Operation timeout.
      * Arg: lcb_uint32_t* (microseconds)
      *
+     * Note that timeouts in libcouchbase are implemented via an event loop
+     * scheduler. As such their accuracy and promptness is limited by how
+     * often the event loop is invoked and how much wall time is spent in
+     * each of their handlers. Specifically if you issue long running blocking
+     * calls within any of the handlers (and this means any of the library's
+     * callbacks) then the timeout accuracy will be impacted.
+     *
+     * Further behavior is dependent on the event loop plugin itself and how
+     * it schedules timeouts.
+     *
      *      lcb_uint32_t tmo = 3500000;
      *      lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo);
      */
@@ -384,29 +394,59 @@ extern "C" {
     /**
      * Get/Set the idle timeout for HTTP bootstrap.
      *
-     * The library's current behavior when no CCCP config is available is to
-     * open a socket to the cluster's REST API and request a configuration via
-     * the streaming URI.
+     * By default the behavior of the library for HTTP bootstrap is to keep the
+     * stream open at all times (opening a new stream on a different host if the
+     * existing one is broken) in order to proactively receive configuration
+     * updates.
      *
-     * Once a configuration is received, rather than closing the socket
-     * immediately, an idle timer is set up after which it will be closed. This
-     * is to allow for more configuration updates to be received on this socket
-     * without re-opening the connection -- as typically configuration updates
-     * are received in batches.
+     * The default value for this setting is -1. Changing this to another number
+     * invokes the following semantics:
      *
-     * Modifying this value indicates the length of this idle timeout period.
-     * Setting this to a very high number effectively emulates pre-2.3
-     * behavior where the configuration streaming socket was never closed.
-     * Setting this to a small number will potentially conserve more resources
-     * on the cluster (at the expense of possibly excessive TCP connections) by
-     * not keeping a socket open for longer than needed.
+     * - The configuration stream is not kept alive indefinitely. It is kept open
+     *   for the number of seconds specified in this setting. The socket is closed
+     *   after a period of inactivity (indicated by this setting).
+     *
+     * - If the stream is broken (and no current refresh was requested by the
+     *   client) then a new stream is not opened.
      *
      * Arg: lcb_uint32_t*, Timeout in microseconds
      */
 #define LCB_CNTL_HTCONFIG_IDLE_TIMEOUT 0x1C
 
+    /**
+     * Set the nodes for the HTTP provider. This sets the initial list
+     * for the nodes to be used for bootstrapping the cluster. This may also
+     * be used subsequently in runtime to provide an updated list of nodes
+     * if the current list malfunctions.
+     *
+     * Arg: char*, a NUL-terminated string containing one or more nodes. The
+     *      format for the string is the same as the 'host' parameter in.
+     *      lcb_create_st.
+     *
+     *      Ports should specify the REST API port.
+     *
+     */
+#define LCB_CNTL_CONFIG_HTTP_NODES 0x1D
+
+    /**
+     * Similar to LCB_CNTL_CONFIG_HTTP_NODES, but affects the CCCP provider
+     * instead.
+     *
+     * Arg: char*, a NUL-terminated string containing one or more nodes with
+     *      their hosts. If the host is not specified the default of 11210 will
+     *      be used.
+     */
+#define LCB_CNTL_CONFIG_CCCP_NODES 0x1E
+
+    /**
+     * Get the current SCM changeset for the library binary
+     * Arg: char** to contain the resultant string. This string must not be
+     * freed
+     */
+#define LCB_CNTL_CHANGESET 0x1F
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x1D
+#define LCB_CNTL__MAX                    0x20
 
 
 #ifdef __cplusplus

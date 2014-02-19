@@ -105,6 +105,8 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
         cookie->parent = cccp;
         lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p", server);
+        lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base,
+                    config_node_timeout));
         return lcb_getconfig(cccp->instance, cookie, server);
 
     } else {
@@ -136,19 +138,42 @@ static void socket_timeout(lcb_timer_t tm, lcb_t instance, const void *cookie)
     (void)tm;
 }
 
-void lcb_clconfig_cccp_enable(clconfig_provider *pb,
-                              hostlist_t mcnodes, lcb_t instance)
+void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance)
 {
-    unsigned int ii;
     cccp_provider *cccp = (cccp_provider *)pb;
     lcb_assert(pb->type == LCB_CLCONFIG_CCCP);
-    for (ii = 0; ii < mcnodes->nentries; ii++) {
-        hostlist_add_host(cccp->nodes, mcnodes->entries + ii);
-    }
-    if (mcnodes->nentries) {
-        pb->enabled = 1;
-    }
     cccp->instance = instance;
+    pb->enabled = 1;
+}
+
+void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, const hostlist_t nodes)
+{
+    unsigned ii;
+    cccp_provider *cccp = (cccp_provider *)pb;
+    hostlist_clear(cccp->nodes);
+
+    for (ii = 0; ii < nodes->nentries; ii++) {
+        hostlist_add_host(cccp->nodes, nodes->entries + ii);
+    }
+    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
+        hostlist_randomize(cccp->nodes);
+    }
+}
+
+#define HOST_TOKEN "$HOST"
+static void sanitize_config(
+        const lcb_string *src, const char *host, lcb_string *dst)
+{
+    char *cur = src->base, *last = src->base;
+
+    while ((cur = strstr(cur, HOST_TOKEN))) {
+        lcb_string_append(dst, last, cur-last);
+        lcb_string_appendz(dst, host);
+        cur += sizeof(HOST_TOKEN)-1;
+        last = cur;
+    }
+
+    lcb_string_append(dst, last, src->base + src->nalloc - last);
 }
 
 /** Update the configuration from a server. */
@@ -157,6 +182,8 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
                             lcb_string *data)
 {
     VBUCKET_CONFIG_HANDLE vbc;
+    lcb_string sanitized;
+    int rv;
     clconfig_info *new_config;
     cccp_provider *cccp = (cccp_provider *)provider;
     vbc = vbucket_config_create();
@@ -165,12 +192,19 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
         return LCB_CLIENT_ENOMEM;
     }
 
-    if (vbucket_config_parse2(vbc, LIBVBUCKET_SOURCE_MEMORY, data->base, host)) {
+    lcb_string_init(&sanitized);
+    sanitize_config(data, host, &sanitized);
+    rv = vbucket_config_parse(vbc, LIBVBUCKET_SOURCE_MEMORY, sanitized.base);
+
+    if (rv) {
+        lcb_string_release(&sanitized);
         vbucket_config_destroy(vbc);
+        lcb_string_release(&sanitized);
         return LCB_PROTOCOL_ERROR;
     }
 
-    new_config = lcb_clconfig_create(vbc, data, LCB_CLCONFIG_CCCP);
+    new_config = lcb_clconfig_create(vbc, &sanitized, LCB_CLCONFIG_CCCP);
+    lcb_string_release(&sanitized);
 
     if (!new_config) {
         vbucket_config_destroy(vbc);
@@ -184,7 +218,7 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
     /** TODO: Figure out the comparison vector */
     new_config->cmpclock = gethrtime();
     cccp->config = new_config;
-    lcb_confmon_set_next(provider->parent, new_config, 0);
+    lcb_confmon_provider_success(provider, new_config);
     return LCB_SUCCESS;
 }
 
@@ -316,7 +350,11 @@ nodes_updated(clconfig_provider *provider, hostlist_t nodes,
     hostlist_clear(cccp->nodes);
     for (ii = 0; ii < vbucket_config_get_num_servers(vbc); ii++) {
         const char *mcaddr = vbucket_config_get_server(vbc, ii);
-        hostlist_add_stringz(cccp->nodes, mcaddr, 11210);
+        hostlist_add_stringz(cccp->nodes, mcaddr, LCB_CONFIG_MCD_PORT);
+    }
+
+    if (PROVIDER_SETTING(provider, randomize_bootstrap_nodes)) {
+        hostlist_randomize(cccp->nodes);
     }
 
     (void)nodes;
@@ -357,7 +395,7 @@ io_read_handler(lcbio_CTX *ioctx, unsigned nr)
 
     if (PACKET_STATUS(&pi) != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         lcb_log(LOGARGS(cccp, ERR), "CCCP Packet responded with 0x%x; nkey=%d, nbytes=%lu, cmd=0x%x, seq=0x%x",
-                PACKET_STATUS(&pi), PACKET_NKEY(&pi), PACKET_NBODY(&pi),
+                PACKET_STATUS(&pi), PACKET_NKEY(&pi), (unsigned long)PACKET_NBODY(&pi),
                 PACKET_OPCODE(&pi), PACKET_OPAQUE(&pi));
 
         switch (PACKET_STATUS(&pi)) {

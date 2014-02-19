@@ -115,14 +115,6 @@ static int load_cache(file_provider *provider)
     }
 
     if (provider->config) {
-        VBUCKET_CONFIG_DIFF *diff = vbucket_compare(provider->config->vbc, config);
-        if (diff == NULL) {
-            goto GT_DONE;
-        }
-        vbucket_free_diff(diff);
-    }
-
-    if (provider->config) {
         lcb_clconfig_decref(provider->config);
     }
 
@@ -131,6 +123,7 @@ static int load_cache(file_provider *provider)
                                            LCB_CLCONFIG_FILE);
     provider->config->cmpclock = gethrtime();
     provider->config->origin = provider->base.type;
+    provider->last_mtime = st.st_mtime;
     status = 0;
     config = NULL;
 
@@ -178,18 +171,23 @@ static void async_callback(lcb_timer_t timer,
                            lcb_t notused,
                            const void *cookie)
 {
+    time_t last_mtime;
     file_provider *provider = (file_provider *)cookie;
     lcb_async_destroy(NULL, timer);
     provider->async = NULL;
 
+
     LOG(provider, TRACE, "Got async callback. Will load");
+    last_mtime = provider->last_mtime;
 
     if (load_cache(provider) == 0) {
-        lcb_confmon_set_next(provider->base.parent, provider->config, 0);
-    } else {
-        lcb_confmon_provider_failed(&provider->base, LCB_ERROR);
+        if (last_mtime != provider->last_mtime) {
+            lcb_confmon_provider_success(&provider->base, provider->config);
+            return;
+        }
     }
 
+    lcb_confmon_provider_failed(&provider->base, LCB_ERROR);
     (void)notused;
 }
 

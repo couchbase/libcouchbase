@@ -196,11 +196,6 @@ public:
     virtual void TearDown();
 
     static MockEnvironment *getInstance(void);
-    static MockEnvironment *createSpecial(const char **argv,
-                                          std::string name = "default");
-    static void destroySpecial(MockEnvironment *mock) {
-        delete mock;
-    }
     static void Reset();
 
     /**
@@ -321,12 +316,14 @@ public:
         std::cerr << std::endl;
     }
 
+    MockEnvironment(const char **argv, std::string name = "default");
+    virtual ~MockEnvironment();
+
 protected:
     /**
      * Protected destructor to make it to a singleton
      */
     MockEnvironment();
-    virtual ~MockEnvironment();
     /**
      * Handle to the one and only instance of the mock environment
      */
@@ -348,6 +345,7 @@ protected:
 private:
     lcb_t innerClient;
     void setupInnerClient();
+    void init();
 };
 
 #define LCB_TEST_REQUIRE_CLUSTER_VERSION(v) \

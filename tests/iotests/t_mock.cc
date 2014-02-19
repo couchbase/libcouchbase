@@ -25,6 +25,7 @@
 #include "internal.h" /* vbucket_* things from lcb_t */
 #include "testutil.h"
 #include <lcbio/iotable.h>
+#include "bucketconfig/bc_http.h"
 
 #define LOGARGS(instance, lvl) \
     instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -715,7 +716,8 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
             "--replicas", "0", "--nodes", "10", NULL
     };
 
-    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
+    MockEnvironment mock_o(argv), *mock = &mock_o;
+
 
     std::vector<std::string> keys;
     std::vector<lcb_store_cmd_t> cmds;
@@ -754,8 +756,6 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     lcb_wait(instance);
     ctx.check((int)cmds.size());
     ASSERT_EQ(10, config_cnt);
-
-    MockEnvironment::destroySpecial(mock);
 }
 
 
@@ -786,7 +786,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     std::string val = "foo";
 
     const char *argv[] = { "--replicas", "0", "--nodes", "10", NULL };
-    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
+    MockEnvironment mock_o(argv), *mock = &mock_o;
 
     // We need to disable CCCP for this test to receive "Push" style
     // configuration.
@@ -856,8 +856,6 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     std::string bytes = std::string(rv.bytes, rv.nbytes);
     ASSERT_STREQ(bytes.c_str(), val.c_str());
     free(rv.bytes);
-
-    MockEnvironment::destroySpecial(mock);
 }
 
 TEST_F(MockUnitTest, testSaslMechs)
@@ -869,8 +867,7 @@ TEST_F(MockUnitTest, testSaslMechs)
 
     lcb_t instance;
     struct lcb_create_st crParams;
-    MockEnvironment *protectedEnv =
-            MockEnvironment::createSpecial(argv, "protected");
+    MockEnvironment mock_o(argv, "protected"), *protectedEnv = &mock_o;
     protectedEnv->makeConnectParams(crParams, NULL);
     protectedEnv->setCCCP(false);
 
@@ -911,5 +908,85 @@ TEST_F(MockUnitTest, testSaslMechs)
     kvo.store(instance);
 
     lcb_destroy(instance);
-    MockEnvironment::destroySpecial(protectedEnv);
+}
+
+
+struct mcd_listener {
+    clconfig_listener base;
+    bool called;
+};
+
+extern "C" {
+static void listener_callback(clconfig_listener *lsnbase,
+                              clconfig_event_t event,
+                              clconfig_info *)
+{
+    mcd_listener *lsn = (mcd_listener *)lsnbase;
+    if (event == CLCONFIG_EVENT_GOT_ANY_CONFIG ||
+            event == CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+        lsn->called = true;
+    }
+}
+}
+
+TEST_F(MockUnitTest, testMemcachedFailover)
+{
+    SKIP_UNLESS_MOCK();
+    const char *argv[] = { "--buckets", "cache::memcache", NULL };
+    lcb_t instance;
+    struct lcb_create_st crParams;
+    mcd_listener lsn;
+    memset(&lsn, 0, sizeof lsn);
+    lsn.base.callback = listener_callback;
+
+    MockEnvironment mock_o(argv, "cache"), *mock = &mock_o;
+    mock->makeConnectParams(crParams, NULL);
+    lcb_error_t err = lcb_create(&instance, &crParams);
+
+    // No disconnection interval. It's disconnected immediately.
+    instance->getSettings()->bc_http_stream_time = 0;
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    // Attach the listener
+    lcb_confmon_add_listener(instance->confmon, &lsn.base);
+
+    // Check internal setting here
+    lcb_connect(instance);
+    lcb_wait(instance);
+    ASSERT_TRUE(lsn.called);
+
+    doDummyOp(instance);
+    http_provider *htprov =
+            (http_provider *)lcb_confmon_get_provider(instance->confmon,
+                                                      LCB_CLCONFIG_HTTP);
+    ASSERT_EQ((lcb_uint32_t)-1, instance->getSettings()->bc_http_stream_time);
+    ASSERT_EQ(0, lcb_timer_armed(htprov->disconn_timer));
+
+    // Fail over the first node..
+    mock->failoverNode(1, "cache");
+    lsn.called = false;
+
+    for (int ii = 0; ii < 100; ii++) {
+        if (lsn.called) {
+            break;
+        }
+        doDummyOp(instance);
+    }
+    ASSERT_TRUE(lsn.called);
+    // Call again so the async callback may be invoked.
+    doDummyOp(instance);
+    ASSERT_EQ(9, lcb_get_num_nodes(instance));
+
+    doDummyOp(instance);
+    mock->respawnNode(1, "cache");
+    lsn.called = false;
+    for (int ii = 0; ii < 100; ii++) {
+        if (lsn.called) {
+            break;
+        }
+        doDummyOp(instance);
+    }
+    ASSERT_TRUE(lsn.called);
+    lcb_confmon_remove_listener(instance->confmon, &lsn.base);
+    lcb_destroy(instance);
 }

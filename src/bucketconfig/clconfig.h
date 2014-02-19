@@ -71,6 +71,7 @@ typedef enum {
     LCB_CLCONFIG_HTTP,
     LCB_CLCONFIG_MAX,
 
+    /** Ephemeral source, used for tests */
     LCB_CLCONFIG_PHONY
 } clconfig_method_t;
 
@@ -85,14 +86,39 @@ struct lcb_confmon_st;
  * when retrieving new configs.
  */
 typedef struct lcb_confmon_st {
-    lcb_list_t active_providers;
+    lcb_clist_t active_providers;
+
+    /**
+     * Current provider. This provider may either fail or succeed.
+     * In either case unless the provider can provide us with a specific
+     * config which is newer than the one we have, it will roll over to the
+     * next provider.
+     */
     struct clconfig_provider_st *cur_provider;
+
+    /**
+     * All providers we know about. Currently this means the 'builtin' providers
+     */
     struct clconfig_provider_st * all_providers[LCB_CLCONFIG_MAX];
+
+    /**
+     * The current configuration pointer
+     */
     struct clconfig_info_st * config;
-    int is_refreshing;
-    lcb_timer_t tm_retry;
-    lcb_async_t as_refresh;
-    lcb_async_t as_pause;
+
+    /* CONFMON_S_* values */
+    int state;
+
+    /** Last time the provider was stopped. As a microsecond timestamp */
+    lcb_uint32_t last_stop_us;
+
+    /** This is the async handle for a reentrant start */
+    lcb_async_t as_start;
+
+    /** Async handle for a reentrant stop */
+    lcb_async_t as_stop;
+
+    /**  List of listeners for events */
     lcb_list_t listeners;
     lcb_settings *settings;
     lcb_error_t last_error;
@@ -129,10 +155,25 @@ typedef struct clconfig_provider_st {
      * the cached configuration (i.e. 'get_cached') is deemed invalid. Thus
      * this function should unconditionally try to schedule getting the
      * newest configuration it can. When the configuration has been received,
-     * the provider may call set_next_config.
+     * the provider may call provider_success or provider_failed.
+     *
+     * XXX: Note that the PROVIDER is responsible for terminating its own
+     * process. In other words there is no safeguard within confmon itself
+     * against a provider taking an excessively long time; therefore a provider
+     * should implement a timeout mechanism of its choice to promptly deliver
+     * a success or failure.
      */
     lcb_error_t (*refresh)(struct clconfig_provider_st *);
 
+    /**
+     * Callback invoked to the provider to indicate that it should cease
+     * performing any "Active" configuration changes. Note that this is only
+     * a hint and a provider may perform its own hooking based on this. In any
+     * event receiving this callback is indicating that the provider will not
+     * be needed again in quite some time. How long this "time" is can range
+     * between 0 seconds and several minutes depending on how a user has
+     * configured the client.
+     */
     lcb_error_t (*pause)(struct clconfig_provider_st *);
 
     /**
@@ -177,7 +218,10 @@ typedef enum {
     CLCONFIG_EVENT_GOT_ANY_CONFIG,
 
     /** Called when all providers have been tried */
-    CLCONFIG_EVENT_PROVIDERS_CYCLED
+    CLCONFIG_EVENT_PROVIDERS_CYCLED,
+
+    /** The monitor has stopped */
+    CLCONFIG_EVENT_MONITOR_STOPPED
 } clconfig_event_t;
 
 typedef struct clconfig_listener_st {
@@ -257,29 +301,48 @@ lcb_error_t lcb_confmon_stop(lcb_confmon *mon);
 /**
  * NOT-CB-SAFE
  *
- * Sets the next configuration. If the next configuration is more recent than
- * the current configuration (or force is specified) then the current refresh
- * operation will stop. The next provider will be returned via
- * lcb_confmon_get_current().
  *
- * @param mon the monitor to use
- * @param info the new configuration info.
- * @param force whether to unconditionally set info as next config
- * @return true if the config was set, false otherwise.
- */
-LIBCOUCHBASE_API
-int lcb_confmon_set_next(lcb_confmon *mon, clconfig_info *info, int force);
-
-/**
- * NOT-CB-SAFE
+ * SPEC:
  *
  * Indicate that the current provider has failed to obtain a new configuration.
- * This is always called by a provider and may either be invoked after
- * set_next() returns false or if an explicit error was encountered.
+ * This is always called by a provider and should be invoked when the provider
+ * has encountered an internal error which caused it to be unable to fetch
+ * the configuration.
+ *
+ * Note that this function is safe to call from any provider at any time. If
+ * the provider is not the current provider then it is treated as an async
+ * push notification failure and ignored.
+ *
+ * IMPLEMENTATION NOTES:
+ *
+ * Once this is called, the confmon instance will either roll over to the next
+ * provider or enter the inactive state depending on the configuration and
+ * whether the current provider is the last provider in the list.
+ *
  */
 LIBCOUCHBASE_API
 void lcb_confmon_provider_failed(clconfig_provider *provider,
                                  lcb_error_t err);
+
+
+/**
+ * NOT-CB-SAFE
+ *
+ * SPEC:
+ * Indicates that the provider has fetched a new configuration from the network
+ * and that confmon should attempt to propagate it. It has similar semantics
+ * to lcb_confmon_provider_failed except that the second argument is a config
+ * object rather than an error code. The second argument must not be NULL
+ *
+ * IMPLEMENTATION NOTES:
+ * Internally this tries to compare the new config against the current config.
+ * If the new config does not feature any changes from the current config then
+ * it is ignored and the confmon instance will proceed to the next provider.
+ * This is done through a direct call to provider_failed(provider, LCB_SUCCESS).
+ */
+LIBCOUCHBASE_API
+void lcb_confmon_provider_success(clconfig_provider *provider,
+                                  clconfig_info *info);
 
 /**
  * Update a new set of nodes
@@ -315,18 +378,15 @@ LIBCOUCHBASE_API
 void lcb_confmon_remove_listener(lcb_confmon *mon, clconfig_listener *listener);
 
 typedef enum {
+    CONFMON_S_INACTIVE = 0,
     /** Confmon is active */
     CONFMON_S_ACTIVE = 1 << 0,
 
     /** Confmon is in the "Iteration grace" period */
-    CONFMON_S_ITERGRACE = 1 << 1,
+    CONFMON_S_ITERGRACE = 1 << 1
 } confmon_state_t;
 
-/**
- * Get the state of the 'confmon'.
- */
-LCB_INTERNAL_API
-int lcb_confmon_get_state(lcb_confmon *mon);
+#define lcb_confmon_get_state(mon) (mon)->state
 
 /**
  * Creates a new configuration wrapper object containing the vbucket config
@@ -367,13 +427,22 @@ lcbio_SOCKET* lcb_confmon_get_rest_connection(lcb_confmon *mon);
 lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon);
 
 LCB_INTERNAL_API
-void lcb_clconfig_http_enable(clconfig_provider *pb, hostlist_t restnodes);
+void lcb_confmon_set_provider_active(lcb_confmon *mon,
+                                     clconfig_method_t type, int enabled);
+
+LCB_INTERNAL_API
+void lcb_clconfig_http_enable(clconfig_provider *pb);
+
+LCB_INTERNAL_API
+void lcb_clconfig_http_set_nodes(clconfig_provider *pb, const hostlist_t nodes);
+
+/**  Check status of configuration monitor */
+LCB_INTERNAL_API
+int lcb_confmon_is_refreshing(lcb_confmon *mon);
 
 /** CCCP Routines */
 LCB_INTERNAL_API
-void lcb_clconfig_cccp_enable(clconfig_provider *pb,
-                                 hostlist_t mcnodes,
-                                 lcb_t instance);
+void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance);
 
 lcb_error_t lcb_cccp_update(clconfig_provider *provider, const char *host,
                             lcb_string *data);
@@ -383,6 +452,10 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
                       const lcb_host_t *origin);
 
 void lcb_clconfig_cccp_disable(clconfig_provider *provider);
+
+LCB_INTERNAL_API
+void lcb_clconfig_cccp_set_nodes(clconfig_provider *provider,
+                                 const hostlist_t nodes);
 
 #ifdef __cplusplus
 }

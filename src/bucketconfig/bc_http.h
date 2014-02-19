@@ -79,6 +79,8 @@ typedef struct clprovider_http_st {
      */
     lcb_timer_t disconn_timer;
     lcb_timer_t io_timer;
+    lcb_timer_t as_schederr;
+    lcb_error_t as_errcode;
 
     /** List of hosts to try */
     hostlist_t nodes;

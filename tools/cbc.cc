@@ -1227,6 +1227,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
     getopt.addOption(new CommandLineOption('C', "config-transport", true,
                                            "Specify transport for bootstrapping the connection: \"HTTP\" or \"CCCP\" (default)"));
+    string config_cache;
+    getopt.addOption(new CommandLineOption('Z', "config-cache", true,
+                                           "Path to cached configuration"));
 
     int replica_strategy = -1;
     int replica_idx = 0;
@@ -1378,6 +1381,9 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                     exit(EXIT_FAILURE);
                 }
                 default_transports[1] = LCB_CONFIG_TRANSPORT_LIST_END;
+                break;
+            case 'Z':
+                config_cache = (*iter)->argument;
                 break;
 
             case '?':
@@ -1556,7 +1562,16 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
         } else {
             cerr << "Cannot change configuration transport. Fallback to default" << endl;
         }
-        err = lcb_create(&instance, &options);
+
+        if (!config_cache.empty()) {
+            struct lcb_cached_config_st cache_params;
+            cache_params.createopt = options;
+            cache_params.cachefile = config_cache.c_str();
+            err = lcb_create_compat(LCB_CACHED_CONFIG,
+                                    &cache_params, &instance, NULL);
+        } else {
+            err = lcb_create(&instance, &options);
+        }
     }
     if (err != LCB_SUCCESS) {
         cerr << "Failed to create couchbase instance: " << endl

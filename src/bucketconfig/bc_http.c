@@ -33,6 +33,20 @@ static void read_common(lcbio_CTX *, unsigned);
 static lcb_error_t setup_request_header(http_provider *, const lcb_host_t *);
 static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype);
 
+/**
+ * Determine if we're in compatibility mode with the previous versions of the
+ * library - where the idle timeout is disabled and a perpetual streaming
+ * connection will always remain open (regardless of whether it was triggered
+ * by start_refresh/get_refresh).
+ */
+static int is_v220_compat(http_provider *http)
+{
+    lcb_uint32_t setting =  PROVIDER_SETTING(&http->base, bc_http_stream_time);
+    if (setting == (lcb_uint32_t)-1) {
+        return 1;
+    }
+    return 0;
+}
 
 /**
  * Closes the current connection and removes the disconn timer along with it
@@ -54,7 +68,7 @@ static void close_current(http_provider *http)
  * and timeouts.
  */
 static lcb_error_t
-io_error(http_provider *http)
+io_error(http_provider *http, lcb_error_t origerr)
 {
     lcb_confmon *mon = http->base.parent;
     lcb_settings *settings = mon->settings;
@@ -65,46 +79,17 @@ io_error(http_provider *http)
             on_connected, http);
 
     if (!http->creq) {
-        lcb_confmon_provider_failed(&http->base, LCB_NETWORK_ERROR);
+        lcb_confmon_provider_failed(&http->base, origerr);
         lcb_timer_disarm(http->io_timer);
-        return LCB_CONNECT_ERROR;
+        if (is_v220_compat(http)) {
+            lcb_log(LOGARGS(http, INFO),
+                    "HTTP node list finished. Looping again (disconn_tmo=-1)");
+            connect_next(http);
+        }
+        return origerr;
     }
 
     return LCB_SUCCESS;
-}
-
-static void
-protocol_error(http_provider *http, lcb_error_t err)
-{
-    int can_retry = 1;
-
-    lcb_log(LOGARGS(http, ERROR), "Got protocol-level error 0x%x", err);
-    PROVIDER_SET_ERROR(&http->base, err);
-    /**
-     * XXX: We only want to retry on some errors. Things which signify an
-     * obvious user error should be left out here; we only care about
-     * actual "network" errors
-     */
-
-    if (err == LCB_AUTH_ERROR ||
-            err == LCB_PROTOCOL_ERROR ||
-            err == LCB_BUCKET_ENOENT) {
-        can_retry = 0;
-    }
-
-    if (http->retry_on_missing &&
-            (err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR)) {
-        LOG(http, INFO, "Retrying on AUTH||BUCKET_ENOENT");
-        can_retry = 1;
-    }
-
-    if (!can_retry) {
-        close_current(http);
-        lcb_confmon_provider_failed(&http->base, err);
-
-    } else {
-        io_error(http);
-    }
 }
 
 /**
@@ -118,7 +103,7 @@ static void set_new_config(http_provider *http)
 
     http->current_config = http->stream.config;
     lcb_clconfig_incref(http->current_config);
-    lcb_confmon_set_next(http->base.parent, http->current_config, 0);
+    lcb_confmon_provider_success(&http->base, http->current_config);
     lcb_timer_disarm(http->io_timer);
 }
 
@@ -155,7 +140,7 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     }
 
     if (err != LCB_BUSY && err != LCB_SUCCESS) {
-        protocol_error(http, err);
+        io_error(http, err);
         return;
     }
 
@@ -227,7 +212,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Connection to REST API failed with code=0x%x (%d)", err, syserr);
-        io_error(http);
+        io_error(http, err);
         return;
     }
     host = lcbio_get_host(sock);
@@ -236,7 +221,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
 
     if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Couldn't setup request header");
-        io_error(http);
+        io_error(http, err);
         return;
     }
 
@@ -257,8 +242,22 @@ static void
 timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
     http_provider *http = (void *)cookie;
+
     lcb_log(LOGARGS(http, ERR), "HTTP Provider timed out waiting for I/O");
-    io_error(http);
+
+    /**
+     * If we're not the current provider then ignore the timeout until we're
+     * actively requested to do so
+     */
+    if (&http->base != http->base.parent->cur_provider ||
+            lcb_confmon_is_refreshing(http->base.parent) == 0) {
+        lcb_log(LOGARGS(http, DEBUG),
+                "Ignoring timeout because we're either not in a refresh "
+                "or not the current provider");
+        return;
+    }
+
+    io_error(http, LCB_ETIMEDOUT);
     (void)tm; (void)i;
 }
 
@@ -272,11 +271,11 @@ connect_next(http_provider *http)
     reset_stream_state(http);
     http->creq = lcbio_connect_hl(http->base.parent->iot, settings, http->nodes, 1,
                                   settings->config_node_timeout, on_connected, http);
-
-    if (!http->creq) {
-        lcb_log(LOGARGS(http, ERROR), "%p: Couldn't schedule connection", http);
+    if (http->creq) {
+        return LCB_SUCCESS;
     }
 
+    lcb_log(LOGARGS(http, ERROR), "%p: Couldn't schedule connection", http);
     return LCB_CONNECT_ERROR;
 }
 
@@ -297,11 +296,23 @@ static void delayed_disconn(lcb_timer_t tm, lcb_t instance, const void *cookie)
 static lcb_error_t pause_http(clconfig_provider *pb)
 {
     http_provider *http = (http_provider *)pb;
+    if (is_v220_compat(http)) {
+        return LCB_SUCCESS;
+    }
+
     if (!lcb_timer_armed(http->disconn_timer)) {
         lcb_timer_rearm(http->disconn_timer,
                         PROVIDER_SETTING(pb, bc_http_stream_time));
     }
     return LCB_SUCCESS;
+}
+
+static void delayed_schederr(lcb_timer_t tm, lcb_t instance, const void *cookie)
+{
+    http_provider *http = (void *)cookie;
+    lcb_log(LOGARGS(http, ERR), "Http failed with async=0x%x", http->as_errcode);
+    lcb_confmon_provider_failed(&http->base, http->as_errcode);
+    (void)tm; (void)instance;
 }
 
 static lcb_error_t get_refresh(clconfig_provider *provider)
@@ -314,14 +325,23 @@ static lcb_error_t get_refresh(clconfig_provider *provider)
      * so we issue a timer indicating how long we expect to wait for a
      * streaming update until we get something.
      */
-    if (lcb_timer_armed(http->disconn_timer)) {
-        lcb_timer_disarm(http->disconn_timer);
-        lcb_timer_rearm(http->io_timer, PROVIDER_SETTING(provider,
-                                                         config_node_timeout));
-        return LCB_SUCCESS;
+
+    /** If we need a new socket, we do connect_next. */
+    if (http->ioctx == NULL && http->creq == NULL) {
+        lcb_error_t rc = connect_next(http);
+        if (rc != LCB_SUCCESS) {
+            http->as_errcode = rc;
+            lcb_async_signal(http->as_schederr);
+        }
+        return rc;
     }
 
-    return connect_next(http);
+    lcb_timer_disarm(http->disconn_timer);
+    if (http->ioctx) {
+        lcb_timer_rearm(http->io_timer,
+                        PROVIDER_SETTING(provider, config_node_timeout));
+    }
+    return LCB_SUCCESS;
 }
 
 static clconfig_info* http_get_cached(clconfig_provider *provider)
@@ -331,7 +351,7 @@ static clconfig_info* http_get_cached(clconfig_provider *provider)
 }
 
 static void refresh_nodes(clconfig_provider *pb,
-                          hostlist_t newnodes,
+                          const hostlist_t newnodes,
                           VBUCKET_CONFIG_HANDLE newconfig)
 {
     unsigned int ii;
@@ -342,15 +362,20 @@ static void refresh_nodes(clconfig_provider *pb,
         for (ii = 0; ii < newnodes->nentries; ii++) {
             hostlist_add_host(http->nodes, newnodes->entries + ii);
         }
-        return;
+        goto GT_DONE;
     }
 
     for (ii = 0; (int)ii < vbucket_config_get_num_servers(newconfig); ii++) {
         lcb_error_t status;
         const char *ss = vbucket_config_get_rest_api_server(newconfig, ii);
         lcb_assert(ss != NULL);
-        status = hostlist_add_stringz(http->nodes, ss, 8091);
+        status = hostlist_add_stringz(http->nodes, ss, LCB_CONFIG_HTTP_PORT);
         lcb_assert(status ==  LCB_SUCCESS);
+    }
+
+    GT_DONE:
+    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
+        hostlist_randomize(http->nodes);
     }
 }
 
@@ -373,6 +398,9 @@ static void shutdown_http(clconfig_provider *provider)
     }
     if (http->io_timer) {
         lcb_timer_destroy(NULL, http->io_timer);
+    }
+    if (http->as_schederr) {
+        lcb_timer_destroy(NULL, http->as_schederr);
     }
     if (http->nodes) {
         hostlist_destroy(http->nodes);
@@ -400,17 +428,16 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.shutdown = shutdown_http;
     http->base.nodes_updated = refresh_nodes;
     http->base.enabled = 0;
-    http->io_timer = lcb_timer_create_simple(parent->iot,
-                                             http,
-                                             parent->settings->config_node_timeout,
-                                             timeout_handler);
+    http->io_timer = lcb_timer_create_simple(
+            parent->iot, http, 0, timeout_handler);
+    http->disconn_timer = lcb_timer_create_simple(
+            parent->iot, http, 0, delayed_disconn);
     lcb_timer_disarm(http->io_timer);
-
-    http->disconn_timer = lcb_timer_create_simple(parent->iot,
-                                                  http,
-                                                  parent->settings->bc_http_stream_time,
-                                                  delayed_disconn);
     lcb_timer_disarm(http->disconn_timer);
+    http->as_schederr = lcb_timer_create_simple(
+            parent->iot, http, 0, delayed_schederr);
+    lcb_timer_disarm(http->as_schederr);
+
     lcb_string_init(&http->stream.chunk);
     lcb_string_init(&http->stream.header);
     lcb_string_init(&http->stream.input);
@@ -421,7 +448,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
 static void
 io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
 {
-    io_error((http_provider *)lcbio_ctx_data(ctx));
+    io_error((http_provider *)lcbio_ctx_data(ctx), LCB_NETWORK_ERROR);
     (void)err;
 }
 
@@ -437,22 +464,6 @@ static lcb_error_t set_next_config(struct htvb_st *vbs)
     if (vbucket_config_parse(new_config, LIBVBUCKET_SOURCE_MEMORY, vbs->input.base)) {
         vbucket_config_destroy(new_config);
         return LCB_PROTOCOL_ERROR;
-    }
-
-    if (vbs->config) {
-        /** We have a previous configuration... */
-        VBUCKET_CONFIG_DIFF *diff = NULL;
-        VBUCKET_CONFIG_HANDLE old_config = vbs->config->vbc;
-        diff = vbucket_compare(old_config, new_config);
-
-        if (diff == NULL) {
-            vbs->config->cmpclock = gethrtime();
-            vbucket_config_destroy(new_config);
-            return LCB_SUCCESS;
-
-        } else {
-            vbucket_free_diff(diff);
-        }
     }
 
     if (vbs->config) {
@@ -632,10 +643,9 @@ static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype)
     return status;
 }
 
-void lcb_clconfig_http_enable(clconfig_provider *http, hostlist_t nodes)
+void lcb_clconfig_http_enable(clconfig_provider *http)
 {
     http->enabled = 1;
-    refresh_nodes(http, nodes, NULL);
 }
 
 lcbio_SOCKET *
@@ -657,4 +667,10 @@ lcb_confmon_get_rest_host(lcb_confmon *mon)
         return lcbio_get_host(sock);
     }
     return NULL;
+}
+
+void lcb_clconfig_http_set_nodes(clconfig_provider *http,
+                                 const hostlist_t nodes)
+{
+    refresh_nodes(http, nodes, NULL);
 }

@@ -21,10 +21,29 @@
     mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__
 
 #define LOG(mon, lvlbase, msg) lcb_log(LOGARGS(mon, lvlbase), msg)
+static void async_stop(lcb_timer_t tm, lcb_t i, const void *cookie);
+static void async_start(lcb_timer_t tm, lcb_t i, const void *cookie);
 static int do_next_provider(lcb_confmon *mon);
 static void invoke_listeners(lcb_confmon *mon,
                              clconfig_event_t event,
                              clconfig_info *info);
+
+#define IS_REFRESHING(mon) (mon)->state & CONFMON_S_ACTIVE
+
+static clconfig_provider *next_active(lcb_confmon *mon, clconfig_provider *cur)
+{
+    if (!LCB_LIST_HAS_NEXT((lcb_list_t *)&mon->active_providers, &cur->ll)) {
+        return NULL;
+    }
+    return LCB_LIST_ITEM(cur->ll.next, clconfig_provider, ll);
+}
+static clconfig_provider *first_active(lcb_confmon *mon)
+{
+    if (LCB_LIST_IS_EMPTY((lcb_list_t *)&mon->active_providers)) {
+        return NULL;
+    }
+    return LCB_LIST_ITEM(mon->active_providers.next, clconfig_provider, ll);
+}
 
 lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
 {
@@ -33,7 +52,7 @@ lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
     mon->settings = settings;
     mon->iot = iot;
     lcb_list_init(&mon->listeners);
-    lcb_list_init(&mon->active_providers);
+    lcb_clist_init(&mon->active_providers);
     lcbio_table_ref(mon->iot);
     lcb_settings_ref(mon->settings);
 
@@ -47,13 +66,20 @@ lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
         mon->all_providers[ii]->parent = mon;
     }
 
+    mon->as_stop = lcb_timer_create_simple(iot, mon, 0, async_stop);
+    mon->as_start = lcb_timer_create_simple(iot, mon, 0, async_start);
+    lcb_timer_disarm(mon->as_stop);
+    lcb_timer_disarm(mon->as_start);
+
     return mon;
 }
 
 void lcb_confmon_prepare(lcb_confmon *mon)
 {
     int ii;
-    int n_enabled = 0;
+
+    memset(&mon->active_providers, 0, sizeof(mon->active_providers));
+    lcb_clist_init(&mon->active_providers);
 
     for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = mon->all_providers[ii];
@@ -61,36 +87,30 @@ void lcb_confmon_prepare(lcb_confmon *mon)
             continue;
         }
 
-        lcb_list_append(&mon->active_providers, &cur->ll);
-        n_enabled++;
+        lcb_clist_append(&mon->active_providers, &cur->ll);
     }
 
-    lcb_assert(n_enabled);
-    lcb_log(LOGARGS(mon, DEBUG), "Have %d providers enabled", n_enabled);
+    lcb_assert(LCB_CLIST_SIZE(&mon->active_providers));
+    lcb_log(LOGARGS(mon, DEBUG), "Have %d providers enabled",
+            LCB_CLIST_SIZE(&mon->active_providers));
 
-    mon->cur_provider = LCB_LIST_ITEM(mon->active_providers.next,
-                                      clconfig_provider, ll);
+    mon->cur_provider = first_active(mon);
 }
 
 void lcb_confmon_destroy(lcb_confmon *mon)
 {
     unsigned int ii;
 
-    if (mon->tm_retry) {
-        lcb_timer_destroy(NULL, mon->tm_retry);
+    if (mon->as_start) {
+        lcb_async_destroy(NULL, mon->as_start);
     }
 
-    if (mon->as_refresh) {
-        lcb_async_destroy(NULL, mon->as_refresh);
+    if (mon->as_stop) {
+        lcb_async_destroy(NULL, mon->as_stop);
     }
 
-    if (mon->as_pause) {
-        lcb_async_destroy(NULL, mon->as_pause);
-    }
-
-    mon->as_pause = NULL;
-    mon->as_refresh = NULL;
-    mon->tm_retry = NULL;
+    mon->as_start = NULL;
+    mon->as_stop = NULL;
 
     if (mon->config) {
         lcb_clconfig_decref(mon->config);
@@ -113,21 +133,23 @@ void lcb_confmon_destroy(lcb_confmon *mon)
     free(mon);
 }
 
-int lcb_confmon_set_next(lcb_confmon *mon, clconfig_info *info, int force)
+static int do_set_next(lcb_confmon *mon, clconfig_info *info, int notify_miss)
 {
-
-    invoke_listeners(mon, CLCONFIG_EVENT_GOT_ANY_CONFIG, info);
-
-    if (mon->config && force == 0) {
-        VBUCKET_CONFIG_DIFF *diff =
-                vbucket_compare(mon->config->vbc, info->vbc);
+    if (mon->config) {
+        VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
+        VBUCKET_CONFIG_DIFF *diff = vbucket_compare(mon->config->vbc, info->vbc);
 
         if (!diff) {
             return 0;
         }
 
+        chstatus = vbucket_what_changed(diff);
         vbucket_free_diff(diff);
-        if (lcb_clconfig_compare(mon->config, info) >= 0) {
+
+        if (chstatus == 0 || lcb_clconfig_compare(mon->config, info) >= 0) {
+            if (notify_miss) {
+                invoke_listeners(mon, CLCONFIG_EVENT_GOT_ANY_CONFIG, info);
+            }
             return 0;
         }
     }
@@ -151,78 +173,50 @@ int lcb_confmon_set_next(lcb_confmon *mon, clconfig_info *info, int force)
     return 1;
 }
 
-
-static void retry_dispatch(lcb_timer_t timer, lcb_t instance, const void *cookie)
-{
-    lcb_confmon *mon = (lcb_confmon *)cookie;
-    lcb_timer_destroy(instance, timer);
-    mon->tm_retry = NULL;
-    do_next_provider(mon);
-}
-
-
 void lcb_confmon_provider_failed(clconfig_provider *provider,
                                  lcb_error_t reason)
 {
     lcb_confmon *mon = provider->parent;
-    lcb_uint32_t tmo;
-    lcb_list_t *next_ll;
-    int is_end;
+
     lcb_log(LOGARGS(mon, INFO), "Provider [%d] failed", provider->type);
 
     if (provider != mon->cur_provider) {
         lcb_log(LOGARGS(mon, TRACE),
                 "Ignoring failure. Current=%p", mon->cur_provider);
-
         return;
     }
-
-    is_end = !LCB_LIST_HAS_NEXT(&mon->active_providers, &mon->cur_provider->ll);
 
     if (reason != LCB_SUCCESS) {
         mon->last_error = reason;
     }
 
-    if (is_end) {
+    mon->cur_provider = next_active(mon, mon->cur_provider);
+
+    if (!mon->cur_provider) {
         LOG(mon, TRACE, "Maximum provider reached. Resetting index");
-        next_ll = mon->active_providers.next;
-        tmo = mon->settings->grace_next_cycle;
         invoke_listeners(mon, CLCONFIG_EVENT_PROVIDERS_CYCLED, NULL);
-
+        mon->cur_provider = first_active(mon);
+        lcb_confmon_stop(mon);
     } else {
-        next_ll = mon->cur_provider->ll.next;
-        tmo = mon->settings->grace_next_provider;
+        mon->state |= CONFMON_S_ITERGRACE;
+        lcb_timer_rearm(mon->as_start, mon->settings->grace_next_provider);
     }
+}
 
-    mon->cur_provider = LCB_LIST_ITEM(next_ll, clconfig_provider, ll);
-    lcb_log(LOGARGS(mon, TRACE), "Next provider: %d/%p",
-            mon->cur_provider->type, mon->cur_provider);
-
-    if (mon->cur_provider == provider) {
-        tmo = mon->settings->grace_next_cycle;
-    }
-
-    if (tmo == 0) {
-        LOG(mon, TRACE, "Starting next provider");
-        do_next_provider(mon);
-
-    } else {
-        if (mon->tm_retry) {
-            return;
-        }
-
-        LOG(mon, TRACE, "Waiting for grace interval");
-        mon->tm_retry = lcb_timer_create_simple(mon->iot,
-                                                mon, tmo, retry_dispatch);
-    }
+void lcb_confmon_provider_success(clconfig_provider *provider,
+                                  clconfig_info *config)
+{
+    do_set_next(provider->parent, config, 1);
+    lcb_confmon_stop(provider->parent);
 }
 
 
 static int do_next_provider(lcb_confmon *mon)
 {
     lcb_list_t *ii;
+    mon->state &= ~CONFMON_S_ITERGRACE;
 
-    LCB_LIST_FOR(ii, &mon->active_providers) {
+    LCB_LIST_FOR(ii, (lcb_list_t *)&mon->active_providers) {
         clconfig_info *info;
         clconfig_provider *cached_provider;
 
@@ -232,8 +226,7 @@ static int do_next_provider(lcb_confmon *mon)
             continue;
         }
 
-        if (lcb_confmon_set_next(mon, info, 0)) {
-            abort();
+        if (do_set_next(mon, info, 0)) {
             LOG(mon, DEBUG, "Using cached configuration");
             return 1;
         }
@@ -246,81 +239,68 @@ static int do_next_provider(lcb_confmon *mon)
     return 0;
 }
 
-static void async_dispatch(lcb_timer_t timer,
-                           lcb_t instance, const void *cookie)
+static void async_start(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
     lcb_confmon *mon = (lcb_confmon *)cookie;
-    lcb_async_destroy(NULL, timer);
-    mon->as_refresh = NULL;
     do_next_provider(mon);
 
-    (void)instance;
+    (void)i; (void)tm;
 }
 
 lcb_error_t lcb_confmon_start(lcb_confmon *mon)
 {
-    lcb_error_t err;
-
-
-    if (mon->as_pause) {
-        lcb_async_destroy(NULL, mon->as_pause);
-        mon->as_pause = NULL;
-    }
-
-    if (mon->as_refresh || mon->is_refreshing) {
+    lcb_uint32_t now_us, diff, tmonext;
+    lcb_async_cancel(mon->as_stop);
+    if (IS_REFRESHING(mon)) {
         LOG(mon, DEBUG, "Refresh already in progress...");
         return LCB_SUCCESS;
     }
 
     LOG(mon, TRACE, "Start refresh requested");
     lcb_assert(mon->cur_provider);
-    mon->is_refreshing = 1;
-    mon->as_refresh = lcb_async_create(mon->iot,
-                                       mon, async_dispatch, &err);
+    mon->state = CONFMON_S_ACTIVE|CONFMON_S_ITERGRACE;
 
-    return err;
+    now_us = LCB_NS2US(gethrtime());
+    diff = now_us - mon->last_stop_us;
+
+    if (diff > mon->settings->grace_next_cycle) {
+        tmonext = 0;
+    } else {
+        tmonext = mon->settings->grace_next_cycle - diff;
+    }
+
+    lcb_timer_rearm(mon->as_start, tmonext);
+    return LCB_SUCCESS;
 }
 
-static void async_stop(lcb_timer_t tm, lcb_t instance, const void *cookie)
+static void async_stop(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
     lcb_confmon *mon = (lcb_confmon *)cookie;
     lcb_list_t *ii;
 
-    lcb_async_destroy(instance, tm);
-    mon->as_pause = NULL;
-
-    LCB_LIST_FOR(ii, &mon->active_providers) {
+    LCB_LIST_FOR(ii, (lcb_list_t *)&mon->active_providers) {
         clconfig_provider *provider = LCB_LIST_ITEM(ii, clconfig_provider, ll);
         if (!provider->pause) {
             continue;
         }
         provider->pause(provider);
     }
+
+    mon->last_stop_us = LCB_NS2US(gethrtime());
+    invoke_listeners(mon, CLCONFIG_EVENT_MONITOR_STOPPED, NULL);
+    (void) i;
+    (void) tm;
 }
 
 lcb_error_t lcb_confmon_stop(lcb_confmon *mon)
 {
-    lcb_error_t err = LCB_SUCCESS;
-
-    if (mon->tm_retry) {
-        lcb_timer_destroy(NULL, mon->tm_retry);
-        mon->tm_retry = NULL;
+    if (!IS_REFRESHING(mon)) {
+        return LCB_SUCCESS;
     }
-
-    if (mon->as_refresh) {
-        lcb_async_destroy(NULL, mon->as_refresh);
-        mon->as_refresh = NULL;
-    }
-
-    if (!mon->as_pause) {
-        mon->as_pause = lcb_async_create(mon->iot,
-                                         mon,
-                                         async_stop,
-                                         &err);
-    }
-
-    mon->is_refreshing = 0;
-    return err;
+    lcb_timer_disarm(mon->as_start);
+    lcb_async_signal(mon->as_stop);
+    mon->state = CONFMON_S_INACTIVE;
+    return LCB_SUCCESS;
 }
 
 void lcb_clconfig_decref(clconfig_info *info)
@@ -384,7 +364,7 @@ static hostlist_t hosts_from_config(VBUCKET_CONFIG_HANDLE config)
     for (ii = 0; ii < srvmax; ii++) {
         const char *rest;
         rest = vbucket_config_get_rest_api_server(config, ii);
-        if (hostlist_add_stringz(ret, rest, 8091) == LCB_SUCCESS) {
+        if (hostlist_add_stringz(ret, rest, LCB_CONFIG_HTTP_PORT) == LCB_SUCCESS) {
             n_nodes++;
         }
     }
@@ -466,14 +446,41 @@ clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon)
 }
 
 LCB_INTERNAL_API
-int lcb_confmon_get_state(lcb_confmon *mon)
+int lcb_confmon_is_refreshing(lcb_confmon *mon)
 {
-    int ret = 0;
-    if (mon->is_refreshing || mon->as_refresh) {
-        ret |= CONFMON_S_ACTIVE;
+    if(IS_REFRESHING(mon)) {
+        LOG(mon, DEBUG, "Refresh already in progress...");
+        return 1;
     }
-    if (mon->tm_retry && lcb_timer_armed(mon->tm_retry)) {
-        ret |= CONFMON_S_ITERGRACE;
+    return 0;
+}
+
+LCB_INTERNAL_API
+void lcb_confmon_set_provider_active(lcb_confmon *mon,
+                                     clconfig_method_t type, int enabled)
+{
+    int ii;
+    clconfig_provider *provider = mon->all_providers[type];
+    if (provider->enabled == enabled) {
+        return;
+    } else {
+        provider->enabled = enabled;
     }
-    return ret;
+
+    /** Reset the current state */
+    mon->cur_provider = NULL;
+    lcb_clist_init(&mon->active_providers);
+
+    for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+        clconfig_provider *pb = mon->all_providers[ii];
+        if (!pb) {
+            continue;
+        }
+
+        memset(&pb->ll, 0, sizeof(pb->ll));
+        if (pb->pause) {
+            pb->pause(pb);
+        }
+    }
+    lcb_confmon_prepare(mon);
 }

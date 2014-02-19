@@ -49,8 +49,8 @@
 /* 100 ms */
 #define LCB_DEFAULT_CLCONFIG_GRACE_NEXT LCB_MS2US(100)
 
-/* 10 seconds */
-#define LCB_DEFAULT_BC_HTTP_DISCONNTMO LCB_MS2US(10000)
+/* Infinite (i.e. compat mode) */
+#define LCB_DEFAULT_BC_HTTP_DISCONNTMO -1
 
 
 #include "config.h"
@@ -67,6 +67,7 @@ struct lcb_logprocs_st;
  * which are intended to be passed around to other objects.
  */
 typedef struct lcb_settings_st {
+    unsigned int iid;
     lcb_uint32_t views_timeout;
     lcb_uint32_t http_timeout;
     lcb_uint32_t durability_timeout;

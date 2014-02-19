@@ -12,6 +12,7 @@ struct console_logprocs_st {
 };
 
 static void console_log(struct lcb_logprocs_st *procs,
+                        unsigned int iid,
                         const char *subsys,
                         int severity,
                         const char *srcfile,
@@ -55,6 +56,7 @@ static const char * level_to_string(int severity)
  * Default logging callback for the verbose logger.
  */
 static void console_log(struct lcb_logprocs_st *procs,
+                        unsigned int iid,
                         const char *subsys,
                         int severity,
                         const char *srcfile,
@@ -81,7 +83,8 @@ static void console_log(struct lcb_logprocs_st *procs,
 
     fprintf(stderr, "%lums ", (unsigned long)(now - start_time) / 1000000);
 
-    fprintf(stderr, "[%s] (%s - L:%d) ",
+    fprintf(stderr, "[I%d] [%s] (%s - L:%d) ",
+            iid,
             level_to_string(severity),
             subsys,
             srcline);
@@ -116,7 +119,7 @@ void lcb_log(const struct lcb_settings_st *settings,
     callback = settings->logger->v.v0.callback;
 
     va_start(ap, fmt);
-    callback(settings->logger, subsys, severity, srcfile, srcline, fmt, ap);
+    callback(settings->logger, settings->iid, subsys, severity, srcfile, srcline, fmt, ap);
     va_end(ap);
 }
 

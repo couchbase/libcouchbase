@@ -185,6 +185,8 @@ if ($CXX) {
 if ($USE_NINJA) {
     push @CM_OPTIONS, "-DCMAKE_MAKE_PROGRAM=$USE_NINJA";
     push @CM_OPTIONS, "-GNinja";
+} else {
+    push @CM_OPTIONS, "-GUnix Makefiles";
 }
 if ($CMAKE_HOST) {
     # Write the toolchain file
@@ -219,10 +221,11 @@ if ($origdir eq $srcdir) {
     chdir($origdir);
     open(my $fh, ">", "Makefile");
     print $fh <<EOF;
-all: dummy
+all:
 
-dummy:
-\t\$(MAKE) -C build
+\%::
+\t\$(MAKE) -C build \$\@
+
 EOF
     close($fh);
 }
