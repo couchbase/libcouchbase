@@ -113,14 +113,19 @@ int lcb_confmon_set_next(lcb_confmon *mon, clconfig_info *info, int force)
     invoke_listeners(mon, CLCONFIG_EVENT_GOT_ANY_CONFIG, info);
 
     if (mon->config && force == 0) {
-        VBUCKET_CONFIG_DIFF *diff =
-                vbucket_compare(mon->config->vbc, info->vbc);
-
+        VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
+        VBUCKET_CONFIG_DIFF *diff = vbucket_compare(mon->config->vbc, info->vbc);
         if (!diff) {
             return 0;
         }
 
+        chstatus = vbucket_what_changed(diff);
         vbucket_free_diff(diff);
+
+        if (!chstatus) {
+            return 0;
+        }
+
         if (lcb_clconfig_compare(mon->config, info) >= 0) {
             return 0;
         }

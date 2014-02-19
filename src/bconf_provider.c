@@ -146,6 +146,7 @@ static int replace_config(lcb_t instance, clconfig_info *old_config,
 {
     VBUCKET_CONFIG_DIFF *diff;
     VBUCKET_DISTRIBUTION_TYPE dist_t;
+    VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
 
     lcb_size_t ii, old_nservers;
     lcb_server_t *old_servers;
@@ -153,21 +154,20 @@ static int replace_config(lcb_t instance, clconfig_info *old_config,
     diff = vbucket_compare(old_config->vbc, next_config->vbc);
 
     if (diff) {
+        chstatus = vbucket_what_changed(diff);
         log_vbdiff(instance, diff);
+        vbucket_free_diff(diff);
     }
 
-    if (diff == NULL ||
-            (diff->sequence_changed == 0 && diff->n_vb_changes == 0)) {
+    if (diff == NULL || chstatus == VBUCKET_NO_CHANGES) {
         lcb_log(LOGARGS(instance, DEBUG),
-            "Ignoring config update. No server changes; DIFF=%p", diff);
-        vbucket_free_diff(diff);
+                "Ignoring config update. No server changes; DIFF=%p", diff);
         return LCB_CONFIGURATION_UNCHANGED;
     }
 
     old_nservers = instance->nservers;
     old_servers = instance->servers;
     dist_t = vbucket_config_get_distribution_type(next_config->vbc);
-    vbucket_free_diff(diff);
 
     if (allocate_new_servers(instance, next_config) != 0) {
         return -1;

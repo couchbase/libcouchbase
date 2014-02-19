@@ -115,11 +115,16 @@ static int load_cache(file_provider *provider)
     }
 
     if (provider->config) {
+        VBUCKET_CHANGE_STATUS chstatus;
         VBUCKET_CONFIG_DIFF *diff = vbucket_compare(provider->config->vbc, config);
         if (diff == NULL) {
             goto GT_DONE;
         }
+        chstatus = vbucket_what_changed(diff);
         vbucket_free_diff(diff);
+        if (chstatus == VBUCKET_NO_CHANGES) {
+            goto GT_DONE;
+        }
     }
 
     if (provider->config) {
