@@ -205,6 +205,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
 
         if (ringbuffer_is_continous(&rr->body, RINGBUFFER_READ, rr->nbody)) {
             tmp = ringbuffer_get_read_head(&rr->body);
+            TRACE_OBSERVE_BEGIN(&rr->packet, server->authority, tmp, rr->nbody);
             lcb_server_write_packet(server, tmp, rr->nbody);
         } else {
             tmp = malloc(ringbuffer_get_nbytes(&rr->body));
@@ -214,6 +215,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
                 return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
             } else {
                 ringbuffer_read(&rr->body, tmp, rr->nbody);
+                TRACE_OBSERVE_BEGIN(&rr->packet, server->authority, tmp, rr->nbody);
                 lcb_server_write_packet(server, tmp, rr->nbody);
             }
         }
@@ -247,7 +249,9 @@ void lcb_observe_invoke_callback(lcb_t instance,
                                  const struct lcb_command_data_st *ct,
                                  lcb_error_t error,
                                  const lcb_observe_resp_t *resp,
-                                 lcb_uint32_t opaque)
+                                 lcb_uint32_t opaque,
+                                 lcb_uint8_t opcode,
+                                 lcb_uint16_t vbucket)
 {
     struct lcb_observe_exdata_st *exd;
     exd = lcb_get_opaque(instance, opaque);
@@ -261,6 +265,7 @@ void lcb_observe_invoke_callback(lcb_t instance,
         instance->callbacks.exists(instance, ct->cookie, error, resp);
 
     } else {
+        TRACE_OBSERVE_PROGRESS(opaque, vbucket, opcode, error, resp);
         instance->callbacks.observe(instance, ct->cookie, error, resp);
     }
 
@@ -271,6 +276,8 @@ void lcb_observe_invoke_callback(lcb_t instance,
         free(exd);
         memset(&resp2, 0, sizeof(resp2));
         setup_lcb_observe_resp_t(&resp2, NULL, 0, 0, 0, 0, 0, 0);
-        lcb_observe_invoke_callback(instance, ct, error, &resp2, opaque);
+        TRACE_OBSERVE_END(opaque, vbucket, opcode, error);
+        lcb_observe_invoke_callback(instance, ct, error, &resp2, opaque,
+        		opcode, vbucket);
     }
 }

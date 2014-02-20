@@ -50,6 +50,7 @@ lcb_error_t lcb_flush(lcb_t instance, const void *command_cookie,
 
         for (ii = 0; ii < instance->nservers; ++ii) {
             server = instance->servers + ii;
+            TRACE_FLUSH_BEGIN(&flush, server->authority);
             lcb_server_complete_packet(server, command_cookie,
                                        flush.bytes,
                                        sizeof(flush.bytes));

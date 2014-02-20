@@ -18,6 +18,7 @@
 #define LIBCOUCHBASE_INTERNAL_H 1
 
 #include "config.h"
+#include "trace.h"
 
 #include <errno.h>
 #include <stddef.h>
@@ -547,7 +548,9 @@ extern "C" {
                                      const struct lcb_command_data_st *ct,
                                      lcb_error_t error,
                                      const lcb_observe_resp_t *resp,
-                                     lcb_uint32_t opaque);
+                                     lcb_uint32_t opaque,
+                                     lcb_uint8_t opcode,
+                                     lcb_uint16_t vbucket);
 
     lcb_error_t lcb_observe_ex(lcb_t instance,
                                const void *command_cookie,
