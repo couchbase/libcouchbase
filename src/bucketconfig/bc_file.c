@@ -190,7 +190,7 @@ static void async_callback(lcb_timer_t timer,
     LOG(provider, TRACE, "Got async callback. Will load");
 
     if (load_cache(provider) == 0) {
-        lcb_confmon_set_next(provider->base.parent, provider->config, 0);
+        lcb_confmon_provider_success(&provider->base, provider->config);
     } else {
         lcb_confmon_provider_failed(&provider->base, LCB_ERROR);
     }

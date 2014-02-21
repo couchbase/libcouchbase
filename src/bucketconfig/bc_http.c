@@ -115,7 +115,7 @@ static void set_new_config(http_provider *http)
 
     http->current_config = http->stream.config;
     lcb_clconfig_incref(http->current_config);
-    lcb_confmon_set_next(http->base.parent, http->current_config, 0);
+    lcb_confmon_provider_success(&http->base, http->current_config);
     lcb_timer_disarm(http->io_timer);
 }
 

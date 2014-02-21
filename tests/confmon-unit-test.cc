@@ -4,6 +4,7 @@
 #include "mock-environment.h"
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
+#include <set>
 
 class Confmon : public ::testing::Test
 {
@@ -75,10 +76,12 @@ struct listener2 {
     int call_count;
     lcb_io_opt_t io;
     clconfig_method_t last_source;
+    std::set<clconfig_event_t> expected_events;
 
     void reset() {
         call_count = 0;
         last_source = LCB_CLCONFIG_PHONY;
+        expected_events.clear();
     }
 };
 
@@ -95,18 +98,27 @@ static void listen_callback2(clconfig_listener *prov,
     // Increase the number of times we've received a callback..
     struct listener2* lsn = getListener2(prov);
 
-    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+    if (event == CLCONFIG_EVENT_MONITOR_STOPPED) {
+        lsn->io->v.v0.stop_event_loop(lsn->io);
         return;
+    }
+
+    if (!lsn->expected_events.empty()) {
+        if (lsn->expected_events.end() ==
+            lsn->expected_events.find(event)) {
+            return;
+        }
     }
 
     lsn->call_count++;
     lsn->last_source = info->origin;
-
-    int state = lcb_confmon_get_state(prov->parent);
-    if ((state & CONFMON_S_ACTIVE) == 0) {
-        lsn->io->v.v0.stop_event_loop(lsn->io);
-    }
+    lsn->io->v.v0.stop_event_loop(lsn->io);
 }
+}
+
+static void runConfmon(lcb_io_opt_t io, lcb_confmon *mon)
+{
+    io->v.v0.run_event_loop(io);
 }
 
 TEST_F(Confmon, testCycle)
@@ -117,7 +129,6 @@ TEST_F(Confmon, testCycle)
     MockEnvironment *mock = MockEnvironment::getInstance();
 
     if (mock->isRealCluster()) {
-        fprintf(stderr, "Skipping CONFMON CCCP tests on real cluster\n");
         return;
     }
 
@@ -147,24 +158,29 @@ TEST_F(Confmon, testCycle)
 
     lcb_confmon_prepare(mon);
     lcb_confmon_start(mon);
-    lsn.io->v.v0.run_event_loop(lsn.io);
+    
+    lsn.expected_events.insert(CLCONFIG_EVENT_GOT_NEW_CONFIG);
+    runConfmon(lsn.io, mon);
 
     // Ensure CCCP is functioning properly and we're called only once.
     ASSERT_EQ(1, lsn.call_count);
     ASSERT_EQ(LCB_CLCONFIG_CCCP, lsn.last_source);
 
-
     lcb_confmon_start(mon);
     lsn.reset();
-    lsn.io->v.v0.run_event_loop(lsn.io);
+    lsn.expected_events.insert(CLCONFIG_EVENT_GOT_ANY_CONFIG);
+    runConfmon(lsn.io, mon);
     ASSERT_EQ(1, lsn.call_count);
     ASSERT_EQ(LCB_CLCONFIG_CCCP, lsn.last_source);
 
     mock->setCCCP(false);
+    mock->failoverNode(5);
     lsn.reset();
     lcb_confmon_start(mon);
-    lsn.io->v.v0.run_event_loop(lsn.io);
-    ASSERT_EQ(1, lsn.call_count);
+    lsn.expected_events.insert(CLCONFIG_EVENT_GOT_ANY_CONFIG);
+    lsn.expected_events.insert(CLCONFIG_EVENT_GOT_NEW_CONFIG);
+    runConfmon(lsn.io, mon);
     ASSERT_EQ(LCB_CLCONFIG_HTTP, lsn.last_source);
+    ASSERT_EQ(1, lsn.call_count);
     lcb_confmon_destroy(mon);
 }

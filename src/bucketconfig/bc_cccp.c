@@ -217,7 +217,7 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
     /** TODO: Figure out the comparison vector */
     new_config->cmpclock = gethrtime();
     cccp->config = new_config;
-    lcb_confmon_set_next(provider->parent, new_config, 0);
+    lcb_confmon_provider_success(provider, new_config);
     return LCB_SUCCESS;
 }
 
