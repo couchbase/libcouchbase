@@ -228,6 +228,7 @@ libcouchbase_la_SOURCES = \
                         src/url_encoding.c \
                         src/url_encoding.h \
                         src/utilities.c \
+                        src/vbcheck.h \
                         src/verbosity.c \
                         src/wait.c
 
