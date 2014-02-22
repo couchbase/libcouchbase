@@ -103,6 +103,7 @@ MACRO(DEFINE_MOCKTEST plugin test)
             $<TARGET_FILE:check-all>
             --srcdir "${CMAKE_SOURCE_DIR}"
             --testdir "$<TARGET_FILE_DIR:check-all>"
+            --libdir "$<TARGET_FILE_DIR:couchbase>"
             --opt_plugins ${plugin}
             --tests ${test}
             --verbose
