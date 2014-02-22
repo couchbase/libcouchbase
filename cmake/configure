@@ -173,6 +173,8 @@ if ($STATIC_LIBS) {
 if ($USE_NINJA) {
     push @CM_OPTIONS, "-DCMAKE_MAKE_PROGRAM=$USE_NINJA";
     push @CM_OPTIONS, "-GNinja";
+} else {
+    push @CM_OPTIONS, "-GUnix Makefiles";
 }
 if ($CMAKE_HOST) {
     # Write the toolchain file
