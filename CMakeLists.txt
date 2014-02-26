@@ -150,6 +150,9 @@ SET_TARGET_PROPERTIES(couchbase_utils
             TRUE
         COMPILE_FLAGS "${LCB_CORE_CFLAGS}")
 
+
+ADD_LIBRARY(netbuf STATIC src/netbuf/netbuf.c)
+
 ADD_SUBDIRECTORY(contrib/libvbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
 IF(LCB_BUILD_STATIC)

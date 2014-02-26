@@ -204,6 +204,10 @@ libcouchbase_la_SOURCES = \
                         src/logging.c \
                         src/logging.h \
                         src/mcserver.h \
+                        src/netbuf/netbuf.c \
+                        src/netbuf/netbuf-mblock.h \
+                        src/netbuf/netbuf-defs.h \
+                        src/netbuf/netbuf.h \
                         src/observe.c \
                         src/packet.c \
                         src/packetutils.c \
@@ -290,6 +294,7 @@ tests_nonio_tests_SOURCES = \
                            src/simplestring.c \
                            src/hostlist.c \
                            src/packetutils.c \
+                           src/netbuf/netbuf.c \
                            tests/basic/t_base64.cc \
                            tests/basic/t_ccbc103.cc \
                            tests/basic/t_cluster.cc \
@@ -300,6 +305,7 @@ tests_nonio_tests_SOURCES = \
                            tests/basic/t_list.cc \
                            tests/basic/t_logger.cc \
                            tests/basic/t_memcached-compat.cc \
+                           tests/basic/t_netbuf.cc \
                            tests/basic/t_packet.cc \
                            tests/basic/t_ringbuffer.cc \
                            tests/basic/t_slist.cc \

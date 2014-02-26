@@ -81,7 +81,7 @@ ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
 # We're a library using the shared CRT. Don't use the static one
 INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 TARGET_LINK_LIBRARIES(unit-tests couchbase couchbase_utils gtest)
-TARGET_LINK_LIBRARIES(nonio-tests couchbase couchbase_utils gtest)
+TARGET_LINK_LIBRARIES(nonio-tests couchbase couchbase_utils netbuf gtest)
 TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils)
 
 
