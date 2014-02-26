@@ -278,7 +278,7 @@ libcouchbase_libuv_la_LIBADD = -luv
 libcouchbase_libuv_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 endif
 
-tests_unit_tests_SOURCES = \
+tests_nonio_tests_SOURCES = \
                            src/base64.c \
                            src/gethrtime.c \
                            src/hashset.c \
@@ -288,29 +288,28 @@ tests_unit_tests_SOURCES = \
                            src/simplestring.c \
                            src/hostlist.c \
                            src/packetutils.c \
-                           tests/base64-unit-test.cc \
-                           tests/behavior-unit-tests.cc \
-                           tests/ccbc_103.cc \
-                           tests/cluster-unit-tests.cc \
-                           tests/hashset-unit-test.cc \
-                           tests/hostname-unit-test.cc \
-                           tests/host-unit-test.cc \
-                           tests/list-unit-test.cc \
-                           tests/logger-unit-test.cc \
-                           tests/memcached-compat-unit-test.cc \
-                           tests/packet-unit-test.cc \
-                           tests/ringbuffer-unit-test.cc \
-                           tests/string-unit-test.cc \
-                           tests/strerror-unit-test.cc \
-                           tests/timeout.c \
-                           tests/unit_tests.cc \
-                           tests/url_encoding-tests.cc
+                           tests/basic/t_base64.cc \
+                           tests/basic/t_ccbc103.cc \
+                           tests/basic/t_cluster.cc \
+                           tests/basic/t_getopt.cc \
+                           tests/basic/t_hashset.cc \
+                           tests/basic/t_hostname.cc \
+                           tests/basic/t_host.cc \
+                           tests/basic/t_list.cc \
+                           tests/basic/t_logger.cc \
+                           tests/basic/t_memcached-compat.cc \
+                           tests/basic/t_packet.cc \
+                           tests/basic/t_ringbuffer.cc \
+                           tests/basic/t_string.cc \
+                           tests/basic/t_strerror.cc \
+                           tests/basic/t_urlencode.cc \
+                           tests/nonio_tests.cc
 
-tests_unit_tests_DEPENDENCIES = libcouchbase.la
-tests_unit_tests_LDADD = libcouchbase.la libvbucket.la
-tests_unit_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
-tests_unit_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
-tests_unit_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
+tests_nonio_tests_DEPENDENCIES = libcouchbase.la
+tests_nonio_tests_LDADD = libcouchbase.la libvbucket.la
+tests_nonio_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
+tests_nonio_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
+tests_nonio_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
 
 gtest-1.7.0.zip:
 	@echo "+--------------------------------+"
@@ -327,9 +326,12 @@ libgtest_la_SOURCES = tests/gtest-sources.cc
 libgtest_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
 libgtest_la_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
 
-tests_unit_tests_DEPENDENCIES += libgtest.la
-tests_unit_tests_LDADD += libgtest.la -lpthread
-tests_unit_tests_CPPFLAGS += -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include $(NO_WERROR)
+tests_nonio_tests_DEPENDENCIES += libgtest.la
+tests_nonio_tests_LDADD += libgtest.la -lpthread
+tests_nonio_tests_CPPFLAGS += \
+                             -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
+                             -Itests \
+                             $(NO_WERROR)
 endif
 endif
 
@@ -344,7 +346,7 @@ distclean-local:
 	@rm -rf gtest-1.7.0
 
 if !HAVE_GOOGLETEST_SRC
-tests_unit_tests_LDADD += -lgtest -lpthread
+tests_nonio_tests_LDADD += -lgtest -lpthread
 endif
 
 tests/CouchbaseMock.jar:
@@ -423,41 +425,57 @@ example_yajl_couchview_LDADD = libcouchbase.la -lyajl
 if HAVE_CXX
 if HAVE_GOOGLETEST
 # we can't build the test program without a C++ compiler
-check_PROGRAMS += tests/unit-tests
+check_PROGRAMS += tests/unit-tests tests/nonio-tests
 endif
 endif
 
 if HAVE_COUCHBASEMOCK
 noinst_LTLIBRARIES += libmockserver.la
-tests_unit_tests_SOURCES += \
-                            tests/arithmetic-unit-test.cc \
-                            tests/configcache-unit-test.cc \
-                            tests/confmon-unit-test.cc \
-                            tests/connmgr-unit-test.cc \
-                            tests/durability-unit-test.cc \
-                            tests/get-unit-test.cc \
-                            tests/getopt-unit-tests.cc \
-                            tests/http-tests.cc \
-                            tests/iops-unit-test.cc \
-                            tests/lock-unit-test.cc \
+tests_unit_tests_DEPENDENCIES = $(tests_nonio_tests_DEPENDENCIES)
+tests_unit_tests_CFLAGS = $(tests_nonio_tests_CFLAGS)
+tests_unit_tests_CPPFLAGS = $(tests_nonio_tests_CPPFLAGS)
+tests_unit_tests_CXXFLAGS = $(tests_nonio_tests_LDFLAGS)
+
+tests_unit_tests_SOURCES = \
+                            tests/iotests/t_arithmetic.cc \
+                            tests/iotests/t_behavior.cc \
+                            tests/iotests/t_configcache.cc \
+                            tests/iotests/t_confmon.cc \
+                            tests/iotests/t_connmgr.cc \
+                            tests/iotests/t_durability.cc \
+                            tests/iotests/t_get.cc \
+                            tests/iotests/t_http.cc \
+                            tests/iotests/t_iops.cc \
+                            tests/iotests/t_lock.cc \
+                            tests/iotests/t_regression.cc \
+                            tests/iotests/t_mutate.cc \
+                            tests/iotests/t_syncmode.cc \
+                            tests/iotests/t_serverops.cc \
+                            tests/iotests/t_timer.cc \
+                            tests/iotests/t_mock.cc \
                             tests/mock-environment.cc \
                             tests/mock-environment.h \
-                            tests/mock-unit-test.cc \
                             tests/mock-unit-test.h \
-                            tests/mutate-unit-test.cc \
-                            tests/regression-unit-test.cc \
                             tests/procutil.c \
                             tests/procutil.h \
                             tests/server.c \
                             tests/server.h \
-                            tests/serverops-unit-test.cc \
                             tests/serverparams.h \
-                            tests/syncmode-unit-tests.cc \
                             tests/testutil.cc \
                             tests/testutil.h \
-                            tests/timer-unit-test.cc
+                            tests/unit_tests.cc \
+                            src/base64.c \
+                            src/gethrtime.c \
+                            src/hashset.c \
+                            src/list.c \
+                            src/ringbuffer.c \
+                            src/url_encoding.c \
+                            src/simplestring.c \
+                            src/hostlist.c \
+                            src/packetutils.c \
+                            tests/timeout.c
 
-tests_unit_tests_LDADD += libmockserver.la
+tests_unit_tests_LDADD = $(tests_nonio_tests_LDADD) libmockserver.la
 check_PROGRAMS += tests/smoke-test
 endif
 
