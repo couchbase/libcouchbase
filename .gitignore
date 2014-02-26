@@ -21,6 +21,7 @@
 *.vcxproj.filters
 *.vcxproj.user
 *~
+.DS_Store
 ._*
 .deps/
 .libs/
@@ -134,6 +135,7 @@
 /tests/*.trs
 /tests/CouchbaseMock.jar
 /tests/check-all
+/tests/nonio-tests
 /tests/unit-tests
 /tools/cbc
 /tools/cbc-pillowfight
@@ -146,6 +148,7 @@ Project.opensdf
 Project.sdf
 Project.suo
 VERSION
+build/
 cbc-pillowfight.dir/
 cbc.dir/
 cmake_install.cmake
