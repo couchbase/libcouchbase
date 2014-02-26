@@ -220,6 +220,8 @@ libcouchbase_la_SOURCES = \
                         src/settings.h \
                         src/simplestring.c \
                         src/simplestring.h \
+                        src/sllist.h \
+                        src/sllist-inl.h \
                         src/stats.c \
                         src/store.c \
                         src/synchandler.c \
@@ -300,6 +302,7 @@ tests_nonio_tests_SOURCES = \
                            tests/basic/t_memcached-compat.cc \
                            tests/basic/t_packet.cc \
                            tests/basic/t_ringbuffer.cc \
+                           tests/basic/t_sllist.cc \
                            tests/basic/t_string.cc \
                            tests/basic/t_strerror.cc \
                            tests/basic/t_urlencode.cc \
