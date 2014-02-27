@@ -302,7 +302,7 @@ tests_nonio_tests_SOURCES = \
                            tests/basic/t_memcached-compat.cc \
                            tests/basic/t_packet.cc \
                            tests/basic/t_ringbuffer.cc \
-                           tests/basic/t_sllist.cc \
+                           tests/basic/t_slist.cc \
                            tests/basic/t_string.cc \
                            tests/basic/t_strerror.cc \
                            tests/basic/t_urlencode.cc \
