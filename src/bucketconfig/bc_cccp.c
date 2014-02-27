@@ -186,6 +186,9 @@ void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, const hostlist_t nodes)
     for (ii = 0; ii < nodes->nentries; ii++) {
         hostlist_add_host(cccp->nodes, nodes->entries + ii);
     }
+    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
+        hostlist_randomize(cccp->nodes);
+    }
 }
 
 /** Update the configuration from a server. */
@@ -380,6 +383,10 @@ static void nodes_updated(clconfig_provider *provider, hostlist_t nodes,
     for (ii = 0; ii < vbucket_config_get_num_servers(vbc); ii++) {
         const char *mcaddr = vbucket_config_get_server(vbc, ii);
         hostlist_add_stringz(cccp->nodes, mcaddr, LCB_CONFIG_MCD_PORT);
+    }
+
+    if (PROVIDER_SETTING(provider, randomize_bootstrap_nodes)) {
+        hostlist_randomize(cccp->nodes);
     }
 
     (void)nodes;

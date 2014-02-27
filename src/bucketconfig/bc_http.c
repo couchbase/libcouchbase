@@ -357,7 +357,7 @@ static void refresh_nodes(clconfig_provider *pb,
         for (ii = 0; ii < newnodes->nentries; ii++) {
             hostlist_add_host(http->nodes, newnodes->entries + ii);
         }
-        return;
+        goto GT_DONE;
     }
 
     for (ii = 0; (int)ii < vbucket_config_get_num_servers(newconfig); ii++) {
@@ -366,6 +366,11 @@ static void refresh_nodes(clconfig_provider *pb,
         lcb_assert(ss != NULL);
         status = hostlist_add_stringz(http->nodes, ss, LCB_CONFIG_HTTP_PORT);
         lcb_assert(status ==  LCB_SUCCESS);
+    }
+
+    GT_DONE:
+    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
+        hostlist_randomize(http->nodes);
     }
 }
 
