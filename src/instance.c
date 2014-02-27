@@ -202,7 +202,7 @@ static lcb_error_t init_providers(lcb_t obj,
     }
 
     if (hosts) {
-        err = hostlist_add_stringz(mc_nodes, hosts, 11210);
+        err = hostlist_add_stringz(mc_nodes, hosts, LCB_CONFIG_MCD_PORT);
         if (err != LCB_SUCCESS) {
             hostlist_destroy(mc_nodes);
             return err;
@@ -212,7 +212,7 @@ static lcb_error_t init_providers(lcb_t obj,
         lcb_size_t ii;
         for (ii = 0; ii < obj->usernodes->nentries; ii++) {
             lcb_host_t *cur = obj->usernodes->entries + ii;
-            hostlist_add_stringz(mc_nodes, cur->host, 11210);
+            hostlist_add_stringz(mc_nodes, cur->host, LCB_CONFIG_MCD_PORT);
         }
     }
 
@@ -368,7 +368,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
 
-    err = hostlist_add_string(obj->usernodes, host, -1, 8091);
+    err = hostlist_add_string(obj->usernodes, host, -1, LCB_CONFIG_HTTP_PORT);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;

@@ -362,7 +362,7 @@ static hostlist_t hosts_from_config(VBUCKET_CONFIG_HANDLE config)
     for (ii = 0; ii < srvmax; ii++) {
         const char *rest;
         rest = vbucket_config_get_rest_api_server(config, ii);
-        if (hostlist_add_stringz(ret, rest, 8091) == LCB_SUCCESS) {
+        if (hostlist_add_stringz(ret, rest, LCB_CONFIG_HTTP_PORT) == LCB_SUCCESS) {
             n_nodes++;
         }
     }

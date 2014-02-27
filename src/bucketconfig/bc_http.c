@@ -364,7 +364,7 @@ static void refresh_nodes(clconfig_provider *pb,
         lcb_error_t status;
         const char *ss = vbucket_config_get_rest_api_server(newconfig, ii);
         lcb_assert(ss != NULL);
-        status = hostlist_add_stringz(http->nodes, ss, 8091);
+        status = hostlist_add_stringz(http->nodes, ss, LCB_CONFIG_HTTP_PORT);
         lcb_assert(status ==  LCB_SUCCESS);
     }
 }

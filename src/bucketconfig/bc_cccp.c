@@ -379,7 +379,7 @@ static void nodes_updated(clconfig_provider *provider, hostlist_t nodes,
     hostlist_clear(cccp->nodes);
     for (ii = 0; ii < vbucket_config_get_num_servers(vbc); ii++) {
         const char *mcaddr = vbucket_config_get_server(vbc, ii);
-        hostlist_add_stringz(cccp->nodes, mcaddr, 11210);
+        hostlist_add_stringz(cccp->nodes, mcaddr, LCB_CONFIG_MCD_PORT);
     }
 
     (void)nodes;
