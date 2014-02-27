@@ -411,6 +411,42 @@ static lcb_error_t config_transport(int mode, lcb_t instance, int cmd, void *arg
     return LCB_SUCCESS;
 }
 
+static lcb_error_t config_nodes(int mode, lcb_t instance, int cmd, void *arg)
+{
+    const char *node_strs = arg;
+    clconfig_provider *target;
+    hostlist_t nodes_obj;
+    lcb_error_t err;
+
+    if (mode != LCB_CNTL_SET) {
+        return LCB_EINVAL;
+    }
+
+    nodes_obj = hostlist_create();
+    if (!nodes_obj) {
+        return LCB_CLIENT_ENOMEM;
+    }
+
+    err = hostlist_add_stringz(nodes_obj, node_strs,
+                               cmd == LCB_CNTL_CONFIG_HTTP_NODES
+                               ? LCB_CONFIG_HTTP_PORT : LCB_CONFIG_MCD_PORT);
+    if (err != LCB_SUCCESS) {
+        hostlist_destroy(nodes_obj);
+        return err;
+    }
+
+    if (cmd == LCB_CNTL_CONFIG_HTTP_NODES) {
+        target = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_HTTP);
+        lcb_clconfig_http_set_nodes(target, nodes_obj);
+    } else {
+        target = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
+        lcb_clconfig_cccp_set_nodes(target, nodes_obj);
+    }
+
+    hostlist_destroy(nodes_obj);
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -440,7 +476,9 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_CONFDELAY_THRESH */
     config_transport, /* LCB_CNTL_CONFIG_TRANSPORT */
     timeout_common, /* LCB_CNTL_CONFIG_NODE_TIMEOUT */
-    timeout_common /* LCB_CNTL_HTCONFIG_IDLE_TIMEOUT */
+    timeout_common, /* LCB_CNTL_HTCONFIG_IDLE_TIMEOUT */
+    config_nodes, /* LCB_CNTL_CONFIG_HTTP_NODES */
+    config_nodes /* LCB_CNTL_CONFIG_CCCP_NODES */
 };
 
 

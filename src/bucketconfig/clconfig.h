@@ -436,13 +436,14 @@ void lcb_confmon_set_provider_active(lcb_confmon *mon,
                                      clconfig_method_t type, int enabled);
 
 LCB_INTERNAL_API
-void lcb_clconfig_http_enable(clconfig_provider *pb, hostlist_t restnodes);
+void lcb_clconfig_http_enable(clconfig_provider *pb);
+
+LCB_INTERNAL_API
+void lcb_clconfig_http_set_nodes(clconfig_provider *pb, const hostlist_t nodes);
 
 /** CCCP Routines */
 LCB_INTERNAL_API
-void lcb_clconfig_cccp_enable(clconfig_provider *pb,
-                                 hostlist_t mcnodes,
-                                 lcb_t instance);
+void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance);
 
 lcb_error_t lcb_cccp_update(clconfig_provider *provider, const char *host,
                             lcb_string *data);
@@ -452,6 +453,10 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
                       const lcb_host_t *origin);
 
 void lcb_clconfig_cccp_disable(clconfig_provider *provider);
+
+LCB_INTERNAL_API
+void lcb_clconfig_cccp_set_nodes(clconfig_provider *provider,
+                                 const hostlist_t nodes);
 
 #ifdef __cplusplus
 }

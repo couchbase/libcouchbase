@@ -39,8 +39,9 @@ TEST_F(Confmon, testBasic)
 
     lcb_confmon *mon = lcb_confmon_create(&instance->settings);
     lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
-    lcb_clconfig_http_enable(lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP),
-                             instance->usernodes);
+    clconfig_provider *http = lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP);
+    lcb_clconfig_http_enable(http);
+    lcb_clconfig_http_set_nodes(http, instance->usernodes);
 
     lcb_confmon_prepare(mon);
 
@@ -149,11 +150,14 @@ TEST_F(Confmon, testCycle)
 
     mock->makeConnectParams(cropts, NULL);
     clconfig_provider *cccp = lcb_confmon_get_provider(mon, LCB_CLCONFIG_CCCP);
+    clconfig_provider *http = lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP);
+
     hostlist_t hl = hostlist_create();
     hostlist_add_stringz(hl, cropts.v.v2.mchosts, 11210);
-    lcb_clconfig_cccp_enable(cccp, hl, instance);
-    lcb_clconfig_http_enable(lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP),
-                             instance->usernodes);
+    lcb_clconfig_cccp_enable(cccp, instance);
+    lcb_clconfig_cccp_set_nodes(cccp, hl);
+    lcb_clconfig_http_enable(http);
+    lcb_clconfig_http_set_nodes(http, instance->usernodes);
     hostlist_destroy(hl);
 
     lcb_confmon_prepare(mon);

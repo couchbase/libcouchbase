@@ -169,19 +169,23 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
     }
 }
 
-void lcb_clconfig_cccp_enable(clconfig_provider *pb,
-                              hostlist_t mcnodes, lcb_t instance)
+void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance)
 {
-    unsigned int ii;
     cccp_provider *cccp = (cccp_provider *)pb;
     lcb_assert(pb->type == LCB_CLCONFIG_CCCP);
-    for (ii = 0; ii < mcnodes->nentries; ii++) {
-        hostlist_add_host(cccp->nodes, mcnodes->entries + ii);
-    }
-    if (mcnodes->nentries) {
-        pb->enabled = 1;
-    }
     cccp->instance = instance;
+    pb->enabled = 1;
+}
+
+void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, const hostlist_t nodes)
+{
+    unsigned ii;
+    cccp_provider *cccp = (cccp_provider *)pb;
+    hostlist_clear(cccp->nodes);
+
+    for (ii = 0; ii < nodes->nentries; ii++) {
+        hostlist_add_host(cccp->nodes, nodes->entries + ii);
+    }
 }
 
 /** Update the configuration from a server. */

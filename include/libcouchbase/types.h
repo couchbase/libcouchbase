@@ -583,6 +583,9 @@ extern "C" {
 
     } lcb_config_transport_t;
 
+#define LCB_CONFIG_MCD_PORT 11210
+#define LCB_CONFIG_HTTP_PORT 8091
+
 
 #ifdef __cplusplus
 }

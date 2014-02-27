@@ -408,8 +408,33 @@ extern "C" {
      */
 #define LCB_CNTL_HTCONFIG_IDLE_TIMEOUT 0x1C
 
+    /**
+     * Set the nodes for the HTTP provider. This sets the initial list
+     * for the nodes to be used for bootstrapping the cluster. This may also
+     * be used subsequently in runtime to provide an updated list of nodes
+     * if the current list malfunctions.
+     *
+     * Arg: char*, a NUL-terminated string containing one or more nodes. The
+     *      format for the string is the same as the 'host' parameter in.
+     *      lcb_create_st.
+     *
+     *      Ports should specify the REST API port.
+     *
+     */
+#define LCB_CNTL_CONFIG_HTTP_NODES 0x1D
+
+    /**
+     * Similar to LCB_CNTL_CONFIG_HTTP_NODES, but affects the CCCP provider
+     * instead.
+     *
+     * Arg: char*, a NUL-terminated string containing one or more nodes with
+     *      their hosts. If the host is not specified the default of 11210 will
+     *      be used.
+     */
+#define LCB_CNTL_CONFIG_CCCP_NODES 0x1D
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x1D
+#define LCB_CNTL__MAX                    0x1F
 
 
 #ifdef __cplusplus

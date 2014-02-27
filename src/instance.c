@@ -186,7 +186,8 @@ static lcb_error_t init_providers(lcb_t obj,
     }
 
     if (http_enabled) {
-        lcb_clconfig_http_enable(http, obj->usernodes);
+        lcb_clconfig_http_enable(http);
+        lcb_clconfig_http_set_nodes(http, obj->usernodes);
     }
 
     if (!cccp_enabled) {
@@ -215,7 +216,8 @@ static lcb_error_t init_providers(lcb_t obj,
         }
     }
 
-    lcb_clconfig_cccp_enable(cccp, mc_nodes, obj);
+    lcb_clconfig_cccp_enable(cccp, obj);
+    lcb_clconfig_cccp_set_nodes(cccp, mc_nodes);
     hostlist_destroy(mc_nodes);
     return LCB_SUCCESS;
 }

@@ -346,7 +346,7 @@ static clconfig_info* http_get_cached(clconfig_provider *provider)
 }
 
 static void refresh_nodes(clconfig_provider *pb,
-                          hostlist_t newnodes,
+                          const hostlist_t newnodes,
                           VBUCKET_CONFIG_HANDLE newconfig)
 {
     unsigned int ii;
@@ -699,8 +699,13 @@ void lcb_clconfig_set_http_always_on(clconfig_provider *pb)
     http->always_on = 1;
 }
 
-void lcb_clconfig_http_enable(clconfig_provider *http, hostlist_t nodes)
+void lcb_clconfig_http_enable(clconfig_provider *http)
 {
     http->enabled = 1;
+}
+
+void lcb_clconfig_http_set_nodes(clconfig_provider *http,
+                                 const hostlist_t nodes)
+{
     refresh_nodes(http, nodes, NULL);
 }
