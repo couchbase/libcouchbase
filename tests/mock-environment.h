@@ -348,6 +348,10 @@ protected:
     std::string bucketName;
     const char **argv;
     void clearAndReset();
+
+private:
+    lcb_t innerClient;
+    void setupInnerClient();
 };
 
 #define LCB_TEST_REQUIRE_CLUSTER_VERSION(v) \

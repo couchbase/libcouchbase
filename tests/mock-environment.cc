@@ -53,7 +53,8 @@ MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
     realCluster(false),
     serverVersion(VERSION_UNKNOWN),
     http(NULL),
-    argv(NULL)
+    argv(NULL),
+    innerClient(NULL)
 {
     // No extra init needed
 }
@@ -312,39 +313,44 @@ void MockEnvironment::clearAndReset()
         return;
     }
 
-    HandleWrap hw;
-    lcb_t instance;
-    lcb_error_t err;
-
-    createConnection(hw, instance);
-    lcb_set_flush_callback(instance, mock_flush_callback);
-
-    err = lcb_connect(instance);
-    ASSERT_EQ(LCB_SUCCESS, err);
-
-    err = lcb_wait(instance);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    if (!innerClient) {
+        lcb_create_st crParams;
+        lcb_config_transport_t transports[] = {
+                LCB_CONFIG_TRANSPORT_CCCP,
+                LCB_CONFIG_TRANSPORT_LIST_END
+        };
+        memset(&crParams, 0, sizeof(crParams));
+        // Use default I/O here..
+        serverParams.makeConnectParams(crParams, NULL);
+        crParams.v.v2.transports = transports;
+        lcb_create(&innerClient, &crParams);
+        EXPECT_FALSE(NULL == innerClient);
+        lcb_error_t err;
+        err = lcb_connect(innerClient);
+        EXPECT_EQ(LCB_SUCCESS, err);
+        lcb_wait(innerClient);
+        lcb_set_flush_callback(innerClient, mock_flush_callback);
+    }
 
     lcb_flush_cmd_t fcmd;
+    lcb_error_t err;
     const lcb_flush_cmd_t *fcmd_p = &fcmd;
     memset(&fcmd, 0, sizeof(fcmd));
 
-    err = lcb_flush(instance, NULL, 1, &fcmd_p);
+    err = lcb_flush(innerClient, NULL, 1, &fcmd_p);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    err = lcb_wait(instance);
+    err = lcb_wait(innerClient);
     ASSERT_EQ(LCB_SUCCESS, err);
 }
 
 void MockEnvironment::SetUp()
 {
-    if (mock) {
-        clearAndReset();
+    numNodes = 10;
+    if (!mock) {
+        mock = (struct test_server_info *)start_test_server((char **)argv);
     }
 
-    numNodes = 10;
-
-    mock = (struct test_server_info *)start_test_server((char **)argv);
     realCluster = is_using_real_cluster() != 0;
     ASSERT_NE((const void *)(NULL), mock);
     http = get_mock_http_server(mock);
@@ -386,6 +392,10 @@ MockEnvironment::~MockEnvironment()
 {
     shutdown_mock_server(mock);
     mock = NULL;
+    if (innerClient != NULL) {
+        lcb_destroy(innerClient);
+        innerClient = NULL;
+    }
 }
 
 void HandleWrap::destroy()
