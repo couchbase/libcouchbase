@@ -42,8 +42,7 @@ class HandleWrap;
 class MockUnitTest : public ::testing::Test
 {
 protected:
-    static void SetUpTestCase();
-    static void TearDownTestCase();
+    virtual void SetUp();
     virtual void createConnection(lcb_t &instance);
     virtual void createConnection(HandleWrap &handle);
     virtual void createConnection(HandleWrap &handle, lcb_t &instance);

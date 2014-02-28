@@ -23,10 +23,6 @@
 
 class ConfigCacheUnitTest : public MockUnitTest
 {
-protected:
-    static void SetUpTestCase() {
-        MockUnitTest::SetUpTestCase();
-    }
 };
 
 TEST_F(ConfigCacheUnitTest, testConfigCache)

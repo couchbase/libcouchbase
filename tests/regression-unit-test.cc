@@ -26,10 +26,6 @@
 
 class RegressionUnitTest : public MockUnitTest
 {
-protected:
-    static void SetUpTestCase() {
-        MockUnitTest::SetUpTestCase();
-    }
 };
 
 static bool callbackInvoked = false;
