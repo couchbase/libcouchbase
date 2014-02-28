@@ -265,6 +265,8 @@ static void socket_connected(connmgr_request *req)
     lcb_connection_t conn = req->conn;
     struct lcb_nibufs_st nistrs;
     struct lcb_io_use_st use;
+    struct negotiation_context *ctx;
+    lcb_error_t err;
 
     free(req);
     cccp->cur_connreq = NULL;
@@ -292,27 +294,21 @@ static void socket_connected(connmgr_request *req)
         return;
     }
 
-    if (cccp->base.parent->settings->username || 1) {
-        struct negotiation_context *ctx;
-        lcb_error_t err;
-
-        ctx = lcb_negotiation_create(&cccp->connection,
-                                     cccp->base.parent->settings,
-                                     PROVIDER_SETTING(&cccp->base,
-                                                      config_node_timeout),
-                                     nistrs.remote,
-                                     nistrs.local,
-                                     &err);
-        if (!ctx) {
-            mcio_error(cccp, err);
-        }
-
-        ctx->complete = negotiation_done;
-        ctx->data = cccp;
-        cccp->connection.protoctx = ctx;
-        cccp->connection.protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
-
+    ctx = lcb_negotiation_create(&cccp->connection,
+                                 cccp->base.parent->settings,
+                                 PROVIDER_SETTING(&cccp->base,
+                                                  config_node_timeout),
+                                 nistrs.remote,
+                                 nistrs.local,
+                                 &err);
+    if (!ctx) {
+        mcio_error(cccp, err);
     }
+
+    ctx->complete = negotiation_done;
+    ctx->data = cccp;
+    cccp->connection.protoctx = ctx;
+    cccp->connection.protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
 }
 
 static lcb_error_t cccp_get(clconfig_provider *pb)
