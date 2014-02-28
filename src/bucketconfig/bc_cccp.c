@@ -419,7 +419,7 @@ static void io_read_handler(lcb_connection_t conn)
                 "CCCP Packet responded with 0x%x; nkey=%d, nbytes=%lu, cmd=0x%x, seq=0x%x",
                 PACKET_STATUS(&pi),
                 PACKET_NKEY(&pi),
-                PACKET_NBODY(&pi),
+                (unsigned long)PACKET_NBODY(&pi),
                 PACKET_OPCODE(&pi),
                 PACKET_OPAQUE(&pi));
 
