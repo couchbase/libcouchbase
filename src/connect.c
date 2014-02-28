@@ -119,6 +119,11 @@ static void conn_do_callback(struct lcb_connection_st *conn,
         return;
     }
 
+    if (err != LCB_SUCCESS) {
+        lcb_log(LOGARGS(conn, ERROR),
+                "Connection=%p failedLCBERR=0x%x, OS Err=%d",
+                conn, err, conn->last_error);
+    }
     handler = conn->ioconn->callback;
     lcb_assert(handler != NULL);
     destroy_connstart(conn);
