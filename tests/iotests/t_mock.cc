@@ -31,9 +31,7 @@
 /**
  * Keep these around in case we do something useful here in the future
  */
-void MockUnitTest::SetUpTestCase() { }
-void MockUnitTest::TearDownTestCase()
-{
+void MockUnitTest::SetUp() {
     MockEnvironment::Reset();
 }
 

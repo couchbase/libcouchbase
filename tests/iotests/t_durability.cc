@@ -15,10 +15,6 @@ using namespace std;
 class DurabilityUnitTest : public MockUnitTest
 {
 protected:
-    static void SetUpTestCase() {
-        MockUnitTest::SetUpTestCase();
-    }
-
     static void defaultOptions(lcb_t instance, lcb_durability_opts_st &opts) {
         lcb_size_t nservers = lcb_get_num_nodes(instance);
         lcb_size_t nreplicas = lcb_get_num_replicas(instance);
