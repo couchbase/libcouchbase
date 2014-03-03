@@ -2,10 +2,9 @@
 
 [![Build Status](https://travis-ci.org/couchbase/libcouchbase.png?branch=master)](https://travis-ci.org/couchbase/libcouchbase)
 
-This is the C client library for
-[Couchbase](http://www.couchbase.com) It communicates with the cluster and
-speaks the relevant protocols necessary to connect to the cluster and execute
-data operations.
+This is the C client library for [Couchbase](http://www.couchbase.com)
+It communicates with the cluster and speaks the relevant protocols
+necessary to connect to the cluster and execute data operations.
 
 ## Features
 
@@ -24,31 +23,31 @@ data operations.
 
 ## Building
 
-Before you build from this repository, please check the
-[Couchbase C Portal](http://couchbase.com/communities/c) to see if there is a
-binary or release tarball available for your needs. Since the code here is not
-part of an official release it has therefore not gone through our release testing
-process.
+Before you build from this repository, please check the [Couchbase C
+Portal](http://couchbase.com/communities/c) to see if there is a binary
+or release tarball available for your needs. Since the code here is
+not part of an official release it has therefore not gone through our
+release testing process.
 
-For building you have two options; the first is via GNU autotools and the second
-is via CMake. Autotools provides more packaging flexibility while CMake
-integrates better into your normal (C/C++) development environment. CMake is also
-the only way to build the library on Windows.
+For building you have two options; the first is via GNU autotools and
+the second is via CMake. Autotools provides more packaging flexibility
+while CMake integrates better into your normal (C/C++) development
+environment. CMake is also the only way to build the library on Windows.
 
 ### Dependencies
-The library comes with no mandatory third party dependencies; however by default
-it will demand that at least `libevent`, `libev`, or `libuv` are installed as
-those are the most tested I/O platforms.
+The library comes with no mandatory third party dependencies; however
+by default it will demand that at least `libevent`, `libev`, or `libuv`
+are installed as those are the most tested I/O platforms.
 
-If you are building libcouchbase as a depdency for an application which contains
-its own event loop implementation then you may specify the `--disable-plugins`
-option to the configure script.
+If you are building libcouchbase as a depdency for an application which
+contains its own event loop implementation then you may specify the
+`--disable-plugins` option to the configure script.
 
-Additionally, in order to run the tests you will need to have java installed.
-The tests make use of a mock server written in Java.
+Additionally, in order to run the tests you will need to have java
+installed.  The tests make use of a mock server written in Java.
 
-The binary command line tools (i.e. `cbc`) and tests require a C++ compiler. The
-core library requires only C.
+The binary command line tools (i.e. `cbc`) and tests require a C++
+compiler. The core library requires only C.
 
 ### Building with autotools
 
@@ -67,8 +66,8 @@ You may run `./configure --help` to see a list of build options
 
 ### Building with CMake (*nix)
 
-Provided is a convenience script called `cmake/configure`. It is a Perl script
-and functions like a normal `autotools` script.
+Provided is a convenience script called `cmake/configure`. It is a Perl
+script and functions like a normal `autotools` script.
 
 ```shell
 $ mkdir lcb-build # sibling of the git tree
@@ -81,8 +80,8 @@ $ ctest
 
 ### Building with CMake (Windows)
 
-Spin up your visual studio shell and run cmake from there. It is best practice
-that you make an out-of-tree build; thus like so:
+Spin up your visual studio shell and run cmake from there. It is best
+practice that you make an out-of-tree build; thus like so:
 
 Assuming Visual Studio 2010
 
@@ -101,8 +100,8 @@ Windows builds are known to work on Visual Studio versions 2008, 2010 and
 
 ## Bugs, Support, Issues
 You may report issues in the library in our issue tracked at
-<http://couchbase.com/issues>. Sign up for an account and file an issue against
-the _Couchbase C Client Library_ project.
+<http://couchbase.com/issues>. Sign up for an account and file an issue
+against the _Couchbase C Client Library_ project.
 
 The developers of the library hang out in IRC on `#libcouchbase` on
 irc.freenode.net.
@@ -119,31 +118,34 @@ irc.freenode.net.
   Old example based on version 1.x of the library
 
 ## Documentation
-API Documentation exists inline with the headers in the `include/libcouchbase`
-directory. `man`-pages are also available in the `man` directory and are
-installed via `make install`.
+API Documentation exists inline with the headers in the
+`include/libcouchbase` directory. `man`-pages are also available in the
+`man` directory and are installed via `make install`.
 
 ## Contributing
 
-In addition to filing bugs, you may contribute by submitting patches to fix bugs
-in the library. Contributions may be submitting to <http://review.couchbase.com>.
-We use Gerrit as our code review system - and thus submitting a change would
-require an account there. Note that pull requests will not be ignored but will be responded to much quicker once they are converted into Gerrit.
+In addition to filing bugs, you may contribute by submitting patches
+to fix bugs in the library. Contributions may be submitting to
+<http://review.couchbase.com>.  We use Gerrit as our code review system -
+and thus submitting a change would require an account there. Note that
+pull requests will not be ignored but will be responded to much quicker
+once they are converted into Gerrit.
 
-For something to be accepted into the codebase, it must be formatted properly and
-have undergone proper testing. While there are no formatting guidelines per se,
-the code should look similar to the existing code within the library.
+For something to be accepted into the codebase, it must be formatted
+properly and have undergone proper testing. While there are no formatting
+guidelines per se, the code should look similar to the existing code
+within the library.
 
 ## Branches and Tags
 
-Released versions of the library are marked as annotated tags inside the
-repository.
+Released versions of the library are marked as annotated tags inside
+the repository.
 
 * The `release10` contains the older 1.x versions of the library.
-* The `master` branch represents the mainline branch. The master branch typically
-consists of content going into the next release.
-* The `packet-ng` branch contains the next generation version of the library with
-  improved packet handling.
+* The `master` branch represents the mainline branch. The master
+  branch typically consists of content going into the next release.
+* The `packet-ng` branch contains the next generation version of the
+  library with improved packet handling.
 
 
 ## Contributors
