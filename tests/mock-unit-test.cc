@@ -783,7 +783,8 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
             "--replicas", "0", "--nodes", "10", NULL
     };
 
-    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
+    MockEnvironment mock_o(argv), *mock = &mock_o;
+
 
     std::vector<std::string> keys;
     std::vector<lcb_store_cmd_t> cmds;
@@ -822,8 +823,6 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     lcb_wait(instance);
     ctx.check((int)cmds.size());
     ASSERT_EQ(10, config_cnt);
-
-    MockEnvironment::destroySpecial(mock);
 }
 
 
@@ -854,7 +853,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     std::string val = "foo";
 
     const char *argv[] = { "--replicas", "0", "--nodes", "10", NULL };
-    MockEnvironment *mock = MockEnvironment::createSpecial(argv);
+    MockEnvironment mock_o(argv), *mock = &mock_o;
 
     // We need to disable CCCP for this test to receive "Push" style
     // configuration.
@@ -924,8 +923,6 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     std::string bytes = std::string(rv.bytes, rv.nbytes);
     ASSERT_STREQ(bytes.c_str(), val.c_str());
     free(rv.bytes);
-
-    MockEnvironment::destroySpecial(mock);
 }
 
 TEST_F(MockUnitTest, testSaslMechs)
@@ -937,8 +934,7 @@ TEST_F(MockUnitTest, testSaslMechs)
 
     lcb_t instance;
     struct lcb_create_st crParams;
-    MockEnvironment *protectedEnv =
-            MockEnvironment::createSpecial(argv, "protected");
+    MockEnvironment mock_o(argv, "protected"), *protectedEnv = &mock_o;
     protectedEnv->makeConnectParams(crParams, NULL);
     protectedEnv->setCCCP(false);
 
@@ -979,7 +975,6 @@ TEST_F(MockUnitTest, testSaslMechs)
     kvo.store(instance);
 
     lcb_destroy(instance);
-    MockEnvironment::destroySpecial(protectedEnv);
 }
 
 
@@ -1011,7 +1006,7 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     memset(&lsn, 0, sizeof lsn);
     lsn.base.callback = listener_callback;
 
-    MockEnvironment *mock = MockEnvironment::createSpecial(argv, "cache");
+    MockEnvironment mock_o(argv, "cache"), *mock = &mock_o;
     mock->makeConnectParams(crParams, NULL);
     lcb_error_t err = lcb_create(&instance, &crParams);
 

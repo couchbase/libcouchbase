@@ -251,7 +251,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
     lcb_error_t err;
     struct lcb_create_st crOpts;
     const char *argv[] = { "--buckets", "protected:secret:couchbase", NULL };
-    MockEnvironment *mock = MockEnvironment::createSpecial(argv, "protected");
+    MockEnvironment mock_o(argv, "protected"), *mock = &mock_o;
     struct ccbc_275_info_st info = { 0, LCB_SUCCESS };
 
     mock->makeConnectParams(crOpts, NULL);
@@ -319,5 +319,4 @@ TEST_F(RegressionUnitTest, CCBC_275)
     ASSERT_EQ(LCB_KEY_ENOENT, info.last_err);
 
     lcb_destroy(instance);
-    MockEnvironment::destroySpecial(mock);
 }

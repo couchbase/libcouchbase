@@ -32,15 +32,6 @@ MockEnvironment *MockEnvironment::getInstance(void)
     return instance;
 }
 
-MockEnvironment *MockEnvironment::createSpecial(const char **argv, std::string bucketName)
-{
-    MockEnvironment *env = new MockEnvironment();
-    env->argv = argv;
-    env->bucketName = bucketName;
-    env->SetUp();
-    return env;
-}
-
 void MockEnvironment::Reset()
 {
     if (instance != NULL) {
@@ -49,14 +40,30 @@ void MockEnvironment::Reset()
     }
 }
 
-MockEnvironment::MockEnvironment() : mock(NULL), numNodes(10),
-    realCluster(false),
-    serverVersion(VERSION_UNKNOWN),
-    http(NULL),
-    argv(NULL),
-    innerClient(NULL)
+void MockEnvironment::init()
 {
-    // No extra init needed
+    mock = NULL;
+    http = NULL;
+    innerClient = NULL;
+    argv = NULL;
+    iops = NULL;
+
+    numNodes = 10;
+    realCluster = false;
+    serverVersion = VERSION_UNKNOWN;
+}
+
+MockEnvironment::MockEnvironment()
+{
+    init();
+}
+
+MockEnvironment::MockEnvironment(const char **args, std::string bucketname)
+{
+    init();
+    this->argv = args;
+    this->bucketName = bucketname;
+    SetUp();
 }
 
 void MockEnvironment::failoverNode(int index, std::string bucket)
@@ -323,9 +330,11 @@ void MockEnvironment::clearAndReset()
         // Use default I/O here..
         serverParams.makeConnectParams(crParams, NULL);
         crParams.v.v2.transports = transports;
-        lcb_create(&innerClient, &crParams);
+        lcb_error_t err = lcb_create(&innerClient, &crParams);
+        if (err != LCB_SUCCESS) {
+            printf("Error on create: 0x%x\n", err);
+        }
         EXPECT_FALSE(NULL == innerClient);
-        lcb_error_t err;
         err = lcb_connect(innerClient);
         EXPECT_EQ(LCB_SUCCESS, err);
         lcb_wait(innerClient);
