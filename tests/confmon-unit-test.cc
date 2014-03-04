@@ -8,6 +8,9 @@
 
 class Confmon : public ::testing::Test
 {
+    void SetUp() {
+        MockEnvironment::Reset();
+    }
 };
 
 struct evstop_listener {
@@ -156,6 +159,7 @@ TEST_F(Confmon, testCycle)
     hostlist_add_stringz(hl, cropts.v.v2.mchosts, 11210);
     lcb_clconfig_cccp_enable(cccp, instance);
     lcb_clconfig_cccp_set_nodes(cccp, hl);
+
     lcb_clconfig_http_enable(http);
     lcb_clconfig_http_set_nodes(http, instance->usernodes);
     hostlist_destroy(hl);
