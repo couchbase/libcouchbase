@@ -87,6 +87,12 @@ struct listener2 {
         last_source = LCB_CLCONFIG_PHONY;
         expected_events.clear();
     }
+
+    listener2() {
+        memset(&base, 0, sizeof(base));
+        io = NULL;
+        reset();
+    }
 };
 
 static struct listener2* getListener2(const void *p)
@@ -144,7 +150,6 @@ TEST_F(Confmon, testCycle)
     lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
 
     struct listener2 lsn;
-    memset(&lsn, 0, sizeof(lsn));
     lsn.base.callback = listen_callback2;
     lsn.io = hw.getIo();
     lsn.reset();
