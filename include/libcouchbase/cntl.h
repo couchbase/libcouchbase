@@ -431,7 +431,7 @@ extern "C" {
      *      their hosts. If the host is not specified the default of 11210 will
      *      be used.
      */
-#define LCB_CNTL_CONFIG_CCCP_NODES 0x1D
+#define LCB_CNTL_CONFIG_CCCP_NODES 0x1E
 
     /** This is not a command, but rather an indicator of the last item */
 #define LCB_CNTL__MAX                    0x1F
