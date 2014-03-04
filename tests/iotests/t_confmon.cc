@@ -7,6 +7,9 @@
 
 class Confmon : public ::testing::Test
 {
+    void SetUp() {
+        MockEnvironment::Reset();
+    }
 };
 
 struct evstop_listener {
