@@ -451,6 +451,8 @@ void lcb_confmon_set_provider_active(lcb_confmon *mon,
     clconfig_provider *provider = mon->all_providers[type];
     if (provider->enabled == enabled) {
         return;
+    } else {
+        provider->enabled = enabled;
     }
 
     /** Reset the current state */

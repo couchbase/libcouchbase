@@ -79,9 +79,6 @@ static void config_callback(clconfig_listener *listener,
 
             lcb_confmon_set_provider_active(instance->confmon,
                                             LCB_CLCONFIG_CCCP, 0);
-
-            lcb_confmon_set_provider_active(instance->confmon,
-                                            LCB_CLCONFIG_CCCP, 0);
         }
     }
 
