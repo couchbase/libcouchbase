@@ -44,6 +44,16 @@ ADD_EXECUTABLE(smoke-test EXCLUDE_FROM_ALL
 FILE(GLOB T_BASIC_SRC basic/*.cc)
 ADD_EXECUTABLE(nonio-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_BASIC_SRC})
 
+FILE(GLOB T_MC_SRC mc/*.cc)
+ADD_EXECUTABLE(mc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
+ADD_EXECUTABLE(mc-malloc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
+ADD_EXECUTABLE(netbuf-tests EXCLUDE_FROM_ALL nonio_tests.cc basic/t_netbuf.cc)
+
+IF(WIN32)
+    TARGET_LINK_LIBRARIES(mc-tests ws2_32.lib)
+    TARGET_LINK_LIBRARIES(mc-malloc-tests ws2_32.lib)
+ENDIF()
+
 FILE(GLOB T_IO_SRC iotests/*.cc)
 ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL
     ${T_IO_SRC}
@@ -82,6 +92,9 @@ ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
 INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 TARGET_LINK_LIBRARIES(unit-tests couchbase couchbase_utils gtest)
 TARGET_LINK_LIBRARIES(nonio-tests couchbase couchbase_utils netbuf gtest)
+TARGET_LINK_LIBRARIES(mc-tests mcreq netbuf vbucket gtest)
+TARGET_LINK_LIBRARIES(mc-malloc-tests mcreq netbuf-malloc vbucket gtest)
+TARGET_LINK_LIBRARIES(netbuf-tests netbuf gtest)
 TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils)
 
 
