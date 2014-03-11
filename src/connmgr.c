@@ -410,15 +410,31 @@ void connmgr_put(connmgr_t *mgr, lcbconn_t conn)
     info->state = CS_IDLE;
 }
 
-void connmgr_discard(connmgr_t *pool, lcbconn_t conn)
+static void
+discard_common(connmgr_t *pool, lcbconn_t conn, int clean_src)
 {
     connmgr_cinfo *cinfo = conn->poolinfo;
 
     lcb_log(LOGARGS(pool, DEBUG), "Discarding connection %p", conn);
     lcb_assert(cinfo);
-    lcbconn_cleanup(conn);
+    if (clean_src) {
+        lcbconn_cleanup(conn);
+    } else {
+        conn->poolinfo = NULL;
+    }
     cinfo->parent->n_leased--;
     destroy_cinfo(cinfo);
+}
+
+void connmgr_discard(connmgr_t *pool, lcbconn_t conn)
+{
+    discard_common(pool, conn, 1);
+}
+
+void
+connmgr_detach(connmgr_t *pool, lcbconn_t conn)
+{
+    discard_common(pool, conn, 0);
 }
 
 LCB_INTERNAL_API

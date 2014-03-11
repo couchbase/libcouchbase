@@ -179,6 +179,23 @@ void connmgr_put(connmgr_t *mgr, lcbconn_t conn);
 LCB_INTERNAL_API
 void connmgr_discard(connmgr_t *mgr, lcbconn_t conn);
 
+/**
+ * Like connmgr_discard() except the source connection is left untouched. It
+ * is removed from the pool instead.
+ *
+ * Because the connmgr object itself has internal limits and thresholds on how
+ * many leased and/or open connections it can contain, when a connection receives
+ * an error it must either be discarded back to the pool (in which case the
+ * connection is cleaned up and is freed) or it must be detached (in which case
+ * the connection object itself still remains valid, but the pool does not know
+ * about it, and all its counters are restored, as with connmgr_discard).
+ *
+ * connmgr_discard() itself is now implemented as the equivalent to:
+ *  connmgr_detach(mgr, conn);
+ *  lcbconn_cleanup(conn);
+ */
+LCB_INTERNAL_API
+void connmgr_detach(connmgr_t *mgr, lcbconn_t conn);
 
 /**
  * Dumps the connection manager state to stderr
