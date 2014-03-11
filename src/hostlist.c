@@ -161,7 +161,7 @@ lcb_error_t lcb_host_parse(lcb_host_t *host,
     return LCB_SUCCESS;
 }
 
-int lcb_host_equals(lcb_host_t *a, lcb_host_t *b)
+int lcb_host_equals(const lcb_host_t *a, const lcb_host_t *b)
 {
     return strcmp(a->host, b->host) == 0 && strcmp(a->port, b->port) == 0;
 }
