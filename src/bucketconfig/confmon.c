@@ -444,6 +444,16 @@ clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon)
 }
 
 LCB_INTERNAL_API
+int lcb_confmon_is_refreshing(lcb_confmon *mon)
+{
+    if(IS_REFRESHING(mon)) {
+        LOG(mon, DEBUG, "Refresh already in progress...");
+        return 1;
+    }
+    return 0;
+}
+
+LCB_INTERNAL_API
 void lcb_confmon_set_provider_active(lcb_confmon *mon,
                                      clconfig_method_t type, int enabled)
 {

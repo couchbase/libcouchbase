@@ -5,7 +5,6 @@ struct lcb_bootstrap_st {
     clconfig_listener listener;
     lcb_t parent;
     lcb_timer_t timer;
-    int active;
     hrtime_t last_refresh;
 
     /** Flag set if we've already bootstrapped */
@@ -48,7 +47,6 @@ static void config_callback(clconfig_listener *listener,
     }
 
     instance->last_error = LCB_SUCCESS;
-    bs->active = 0;
     /** Ensure we're not called directly twice again */
     listener->callback = async_step_callback;
 
@@ -95,7 +93,6 @@ static void initial_bootstrap_error(lcb_t instance,
         instance->last_error = err;
     }
 
-    instance->bootstrap->active = 0 ;
     lcb_error_handler(instance, instance->last_error, errinfo);
     lcb_log(LOGARGS(instance, ERR),
             "Failed to bootstrap client=%p. Code=0x%x, Message=%s",
@@ -171,7 +168,7 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
 {
     struct lcb_bootstrap_st *bs = instance->bootstrap;
 
-    if (bs && bs->active) {
+    if (bs && lcb_confmon_is_refreshing(instance->confmon)) {
         return LCB_SUCCESS;
     }
 
@@ -187,7 +184,6 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
     }
 
     bs->last_refresh = gethrtime();
-    bs->active = 1;
 
     if (initial) {
         lcb_error_t err;

@@ -441,6 +441,10 @@ void lcb_clconfig_http_enable(clconfig_provider *pb);
 LCB_INTERNAL_API
 void lcb_clconfig_http_set_nodes(clconfig_provider *pb, const hostlist_t nodes);
 
+/**  Check status of configuration monitor */
+LCB_INTERNAL_API
+int lcb_confmon_is_refreshing(lcb_confmon *mon);
+
 /** CCCP Routines */
 LCB_INTERNAL_API
 void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance);
