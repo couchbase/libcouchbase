@@ -129,6 +129,9 @@ struct KVOperation {
 
     void cbCommon(lcb_error_t error) {
         callCount++;
+        if (error != LCB_SUCCESS) {
+            globalErrors.insert(error);
+        }
         assertOk(error);
     }
 
