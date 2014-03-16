@@ -17,70 +17,59 @@
 
 #include "internal.h"
 
-/**
- * Send a delete command to the correct server
- *
- * @author Trond Norbye
- * @todo improve the error handling
- */
 LIBCOUCHBASE_API
-lcb_error_t lcb_remove(lcb_t instance,
-                       const void *command_cookie,
-                       lcb_size_t num,
-                       const lcb_remove_cmd_t *const *items)
+lcb_error_t
+lcb_remove3(lcb_t instance, const void *cookie, const lcb_remove3_cmd_t * cmd)
 {
-    lcb_size_t ii;
-    /* we need a vbucket config before we can start removing the item.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
-        }
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    mc_PIPELINE *pl;
+    mc_PACKET *pkt;
+    lcb_error_t err;
+    protocol_binary_request_header hdr;
+
+    err = mcreq_basic_packet(cq, cmd, &hdr, 0, &pkt, &pl);
+    if (err != LCB_SUCCESS) {
+        return err;
     }
 
-    for (ii = 0; ii < num; ++ii) {
-        lcb_server_t *server;
-        protocol_binary_request_delete req;
-        int vb, idx;
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        lcb_cas_t cas = items[ii]->v.v0.cas;
-        const void *hashkey = items[ii]->v.v0.hashkey;
-        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
 
-        if (nhashkey == 0) {
-            hashkey = key;
-            nhashkey = nkey;
+    hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr.request.magic = PROTOCOL_BINARY_REQ;
+    hdr.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
+    hdr.request.cas = cmd->options.cas;
+    hdr.request.opaque = pkt->opaque;
+    hdr.request.bodylen = htonl((lcb_uint32_t)ntohs(hdr.request.keylen));
+
+    pkt->u_rdata.reqdata.cookie = cookie;
+    pkt->u_rdata.reqdata.start = gethrtime();
+    memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
+    mcreq_sched_add(pl, pkt);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_remove(lcb_t instance, const void *cookie, lcb_size_t num,
+           const lcb_remove_cmd_t * const * items)
+{
+    unsigned ii;
+
+    for (ii = 0; ii < num; ii++) {
+        lcb_error_t err;
+        const lcb_remove_cmd_t *src = items[ii];
+        lcb_remove3_cmd_t dst;
+        memset(&dst, 0, sizeof(dst));
+        dst.key.contig.bytes = src->v.v0.key;
+        dst.key.contig.nbytes = src->v.v0.nkey;
+        dst.hashkey.contig.bytes = src->v.v0.hashkey;
+        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        dst.options.cas = src->v.v0.cas;
+        err = lcb_remove3(instance, cookie, &dst);
+        if (err != LCB_SUCCESS) {
+            mcreq_sched_fail(&instance->cmdq);
+            return err;
         }
-
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                          &vb, &idx);
-
-        if (idx < 0 || idx > (int)instance->nservers) {
-            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
-        }
-        server = instance->servers + idx;
-
-        memset(&req, 0, sizeof(req));
-        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
-        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-        req.message.header.request.extlen = 0;
-        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
-        req.message.header.request.opaque = ++instance->seqno;
-        req.message.header.request.cas = cas;
-
-        lcb_server_start_packet(server, command_cookie,
-                                req.bytes, sizeof(req.bytes));
-        lcb_server_write_packet(server, key, nkey);
-        lcb_server_end_packet(server);
-        lcb_server_send_packets(server);
     }
-
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
+    mcreq_sched_leave(&instance->cmdq, 1);
+    return LCB_SUCCESS;
 }

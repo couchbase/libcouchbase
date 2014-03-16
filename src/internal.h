@@ -41,7 +41,6 @@
 #include "genhash.h"
 #include "timer.h"
 #include "lcbio.h"
-#include "cookie.h"
 #include "mcserver.h"
 #include "settings.h"
 #include "logging.h"
@@ -360,13 +359,6 @@ extern "C" {
                                    const char *const *headers,
                                    const void *bytes,
                                    lcb_size_t nbytes);
-
-
-    void lcb_observe_invoke_callback(lcb_t instance,
-                                     const struct lcb_command_data_st *ct,
-                                     lcb_error_t error,
-                                     const lcb_observe_resp_t *resp,
-                                     lcb_uint32_t opaque);
 
     lcb_error_t lcb_observe_ex(lcb_t instance,
                                const void *command_cookie,

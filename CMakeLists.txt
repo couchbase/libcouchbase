@@ -176,17 +176,23 @@ ELSE()
     SET(_lcb_linkspec SHARED)
 ENDIF()
 ADD_LIBRARY(couchbase ${_lcb_linkspec}
+            src/arithmetic.c
             contrib/http_parser/http_parser.c
             src/bconf_provider.c
             src/bootstrap.c
+            src/bucketconfig/bc_cccp.c
             src/bucketconfig/bc_http.c
             src/bucketconfig/bc_file.c
             src/bucketconfig/confmon.c
+            src/callbacks.c
             src/cntl.c
             src/compat.c
             src/connmgr.c
             src/durability.c
             src/error.c
+            src/handler.c
+            src/getconfig.c
+            src/get.c
             src/http.c
             src/http_io.c
             src/http_parse.c
@@ -195,14 +201,19 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/connect.c
             src/connection_utils.c
             src/readwrite.c
+            src/remove.c
             src/iofactory.c
+            src/observe.c
             src/sanitycheck.c
             src/server.c
             src/server-connection.c
             src/server_negotiate.c
+            src/stats.c
+            src/store.c
             src/synchandler.c
             src/timer.c
             src/timings.c
+            src/touch.c
             ${CMAKE_BINARY_DIR}/dllversion.rc
             src/utilities.c
             src/wait.c)

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2012 Couchbase, Inc.
+ *     Copyright 2010-2014 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -17,395 +17,284 @@
 
 #include "internal.h"
 
-struct server_info_st {
-    int vb;
-    int idx;
-};
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sget3(lcb_t instance, const void *cookie, const lcb_sget3_cmd_t *cmd)
+{
+    mc_PIPELINE *pl;
+    mc_PACKET *pkt;
+    mc_REQDATA *rdata;
+    mc_CMDQUEUE *q = &instance->cmdq;
+    lcb_error_t err;
+    lcb_uint8_t extlen = 0;
+    lcb_uint8_t opcode = PROTOCOL_BINARY_CMD_GET;
+    protocol_binary_request_gat gcmd;
+    protocol_binary_request_header *hdr = &gcmd.message.header;
 
-static lcb_error_t single_get(lcb_t instance,
-                              const void *command_cookie,
-                              const lcb_get_cmd_t *item);
-static lcb_error_t multi_get(lcb_t instance,
-                             const void *command_cookie,
-                             lcb_size_t num,
-                             const lcb_get_cmd_t *const *items);
+    if (cmd->lock) {
+        extlen = 4;
+        opcode = CMD_GET_LOCKED;
+    } else if (cmd->options.exptime) {
+        extlen = 4;
+        opcode = PROTOCOL_BINARY_CMD_GAT;
+    }
 
-/**
- * libcouchbase_mget use the GETQ command followed by a NOOP command to avoid
- * transferring not-found responses. All of the not-found callbacks are
- * generated implicit by receiving a successful get or the NOOP.
- *
- * @author Trond Norbye
- * @todo improve the error handling
- */
+    err = mcreq_basic_packet(q, (const lcb_cmd_t *)cmd, hdr, extlen, &pkt, &pl);
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+
+    rdata = &pkt->u_rdata.reqdata;
+    rdata->cookie = cookie;
+    rdata->start = gethrtime();
+
+    hdr->request.magic = PROTOCOL_BINARY_REQ;
+    hdr->request.opcode = opcode;
+    hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr->request.bodylen = htonl(extlen + ntohs(hdr->request.keylen));
+    hdr->request.opaque = pkt->opaque;
+    hdr->request.cas = 0;
+
+    if (extlen) {
+        gcmd.message.body.expiration = htonl(cmd->options.exptime);
+    }
+
+    memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
+    mcreq_sched_add(pl, pkt);
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_get(lcb_t instance,
                     const void *command_cookie,
                     lcb_size_t num,
                     const lcb_get_cmd_t *const *items)
 {
-    if (num == 1) {
-        return single_get(instance, command_cookie, items[0]);
+    unsigned ii;
+
+    for (ii = 0; ii < num; ii++) {
+        const lcb_get_cmd_t *src = items[ii];
+        lcb_sget3_cmd_t dst;
+        lcb_error_t err;
+
+        memset(&dst, 0, sizeof(dst));
+        dst.key.contig.bytes = src->v.v0.key;
+        dst.key.contig.nbytes = src->v.v0.nkey;
+        dst.hashkey.contig.bytes = src->v.v0.hashkey;
+        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        dst.lock = src->v.v0.lock;
+        dst.options.exptime = src->v.v0.exptime;
+
+        err = lcb_sget3(instance, command_cookie, &dst);
+        if (err != LCB_SUCCESS) {
+            mcreq_sched_fail(&instance->cmdq);
+            return err;
+        }
+    }
+    mcreq_sched_leave(&instance->cmdq, 1);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_unlock3(lcb_t instance, const void *cookie, const lcb_unlock3_cmd_t *cmd)
+{
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    mc_PIPELINE *pl;
+    mc_PACKET *pkt;
+    mc_REQDATA *rd;
+    lcb_error_t err;
+
+    protocol_binary_request_header hdr;
+    err = mcreq_basic_packet(cq, cmd, &hdr, 0, &pkt, &pl);
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+
+    rd = &pkt->u_rdata.reqdata;
+    rd->cookie = cookie;
+    rd->start = gethrtime();
+
+    hdr.request.magic = PROTOCOL_BINARY_REQ;
+    hdr.request.opcode = CMD_UNLOCK_KEY;
+    hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr.request.bodylen = htonl((lcb_uint32_t)ntohs(hdr.request.keylen));
+    hdr.request.opaque = pkt->opaque;
+    hdr.request.cas = cmd->options.cas;
+
+    memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
+    mcreq_sched_add(pl, pkt);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
+           const lcb_unlock_cmd_t * const * items)
+{
+    unsigned ii;
+    lcb_error_t err = LCB_SUCCESS;
+
+    for (ii = 0; ii < num; ii++) {
+        const lcb_unlock_cmd_t *src = items[ii];
+        lcb_unlock3_cmd_t dst;
+        memset(&dst, 0, sizeof(dst));
+        dst.key.contig.bytes = src->v.v0.key;
+        dst.key.contig.nbytes = src->v.v0.nkey;
+        dst.hashkey.contig.bytes = src->v.v0.hashkey;
+        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        dst.options.cas = src->v.v0.cas;
+        err = lcb_unlock3(instance, cookie, &dst);
+        if (err != LCB_SUCCESS) {
+            break;
+        }
+    }
+    if (err != LCB_SUCCESS) {
+        mcreq_sched_fail(&instance->cmdq);
     } else {
-        return multi_get(instance, command_cookie, num, items);
+        mcreq_sched_leave(&instance->cmdq, 1);
     }
+    return err;
 }
 
-LIBCOUCHBASE_API
-lcb_error_t lcb_unlock(lcb_t instance,
-                       const void *command_cookie,
-                       lcb_size_t num,
-                       const lcb_unlock_cmd_t *const *items)
+typedef struct {
+    mc_REQDATAEX base;
+    unsigned r_cur;
+    unsigned r_max;
+    int remaining;
+    int vbucket;
+    lcb_replica_t strategy;
+    lcb_t instance;
+} rget_cookie;
+
+static void
+rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
 {
-    lcb_size_t ii;
+    rget_cookie *rck = (rget_cookie *)pkt->u_rdata.exdata;
+    const lcb_get_resp_t *resp = arg;
+    lcb_t instance = rck->instance;
 
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
-        }
-    }
-
-    for (ii = 0; ii < num; ++ii) {
-        lcb_server_t *server;
-        protocol_binary_request_no_extras req;
-        int vb, idx;
-        const void *hashkey = items[ii]->v.v0.hashkey;
-        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        lcb_cas_t cas = items[ii]->v.v0.cas;
-
-        if (nhashkey == 0) {
-            hashkey = key;
-            nhashkey = nkey;
-        }
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                          &vb, &idx);
-
-        if (idx < 0 || idx > (int)instance->nservers) {
-            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
-        }
-        server = instance->servers + idx;
-
-        memset(&req, 0, sizeof(req));
-        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey));
-        req.message.header.request.cas = cas;
-        req.message.header.request.opaque = ++instance->seqno;
-        req.message.header.request.opcode = CMD_UNLOCK_KEY;
-
-        lcb_server_start_packet(server, command_cookie, req.bytes,
-                                sizeof(req.bytes));
-        lcb_server_write_packet(server, key, nkey);
-        lcb_server_end_packet(server);
-        lcb_server_send_packets(server);
-    }
-
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
-}
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_get_replica(lcb_t instance,
-                            const void *command_cookie,
-                            lcb_size_t num,
-                            const lcb_get_replica_cmd_t *const *items)
-{
-    lcb_server_t *server;
-    protocol_binary_request_get req;
-    int vb, idx;
-    lcb_size_t ii, *affected_servers = NULL;
-
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
-        }
-    }
-
-    affected_servers = calloc(instance->nservers, sizeof(lcb_size_t));
-    if (affected_servers == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
-    }
-    memset(&req, 0, sizeof(req));
-    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.opcode = CMD_GET_REPLICA;
-    for (ii = 0; ii < num; ++ii) {
-        const void *key;
-        lcb_size_t nkey;
-        int r0, r1;
-        lcb_replica_t strategy;
-        struct lcb_command_data_st ct;
-
-        memset(&ct, 0, sizeof(struct lcb_command_data_st));
-        ct.start = gethrtime();
-        ct.cookie = command_cookie;
-        strategy = LCB_REPLICA_FIRST;
-        r0 = 0; /* begin */
-        r1 = 0; /* end */
-
-        switch (items[ii]->version) {
-        case 0:
-            key = items[ii]->v.v0.key;
-            nkey = items[ii]->v.v0.nkey;
-            break;
-        case 1:
-            key = items[ii]->v.v1.key;
-            nkey = items[ii]->v.v1.nkey;
-            strategy = items[ii]->v.v1.strategy;
-            switch (strategy) {
-            case LCB_REPLICA_FIRST:
-                r0 = r1 = 0;
-                /* iterate replicas in a sequence until first
-                 * successful response */
-                ct.replica = 0;
-                break;
-            case LCB_REPLICA_SELECT:
-                r0 = r1 = items[ii]->v.v1.index;
-                if (r0 >= instance->nreplicas) {
-                    return lcb_synchandler_return(instance, LCB_EINVAL);
-                }
-                ct.replica = -1; /* do not iterate */
-                break;
-            case LCB_REPLICA_ALL:
-                r0 = 0;
-                r1 = instance->nreplicas;
-                ct.replica = -1; /* do not iterate */
-                break;
-            }
-            break;
-        default:
-            return lcb_synchandler_return(instance, LCB_EINVAL);
-        }
-
+    /** Figure out what the strategy is.. */
+    if (rck->strategy == LCB_REPLICA_SELECT || rck->strategy == LCB_REPLICA_ALL) {
+        /** Simplest */
+        instance->callbacks.get(instance, rck->base.cookie, err, resp);
+    } else {
+        mc_CMDQUEUE *cq = &instance->cmdq;
+        mc_PIPELINE *nextpl = NULL;
+        /** FIRST */
         do {
-            vb = vbucket_get_vbucket_by_key(instance->vbucket_config,
-                                            key, nkey);
-            idx = vbucket_get_replica(instance->vbucket_config, vb, r0);
-            if (idx < 0 || idx > (int)instance->nservers) {
-                free(affected_servers);
-                /* FIXME: when 'packet' patch will be applied, here
-                 * should be rollback of all the previous commands
-                 * queued */
-                return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
+            int nextix;
+            rck->r_cur++;
+            nextix = vbucket_get_replica(cq->config, rck->vbucket, rck->r_cur);
+            if (nextix > -1 && nextix < (int)cq->npipelines) {
+                nextpl = cq->pipelines[nextix];
             }
-            affected_servers[idx]++;
-            server = instance->servers + idx;
-            req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-            req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-            req.message.header.request.bodylen = ntohl((lcb_uint32_t)nkey);
-            req.message.header.request.opaque = ++instance->seqno;
+        } while (rck->r_cur < rck->r_max);
 
-            lcb_server_start_packet_ex(server, &ct, req.bytes,
-                                       sizeof(req.bytes));
-            lcb_server_write_packet(server, key, nkey);
-            lcb_server_end_packet(server);
-            ++r0;
-        } while (r0 < r1);
-    }
-
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        if (affected_servers[ii]) {
-            server = instance->servers + ii;
-            lcb_server_send_packets(server);
+        if (err == LCB_SUCCESS || rck->r_cur == rck->r_max || nextpl == NULL) {
+            instance->callbacks.get(instance, rck->base.cookie, err, resp);
+            rck->remaining = 1;
+        } else if (err != LCB_SUCCESS) {
+            mc_PACKET *newpkt = mcreq_dup_packet(pkt);
+            mcreq_sched_add(nextpl, newpkt);
+            mcreq_sched_leave(cq, 1);
         }
     }
-
-    free(affected_servers);
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
+    if (!--rck->remaining) {
+        free(rck);
+    }
+    (void)pl;
 }
 
-static lcb_error_t single_get(lcb_t instance,
-                              const void *command_cookie,
-                              const lcb_get_cmd_t *item)
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_rget3(lcb_t instance, const void *cookie, const lcb_rget3_cmd_t *cmd)
 {
-    lcb_server_t *server;
-    protocol_binary_request_gat req;
-    int vb, idx;
-    lcb_size_t nbytes;
-    const void *hashkey = item->v.v0.hashkey;
-    lcb_size_t nhashkey = item->v.v0.nhashkey;
-    const void *key = item->v.v0.key;
-    lcb_size_t nkey = item->v.v0.nkey;
-    lcb_time_t exp = item->v.v0.exptime;
+    /**
+     * Because we need to direct these commands to specific servers, we can't
+     * just use the 'basic_packet()' function.
+     */
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    const void *hk;
+    lcb_size_t nhk;
+    int vbid;
+    unsigned r0, r1;
+    rget_cookie *rck = NULL;
 
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
-        }
-    }
+    mcreq_extract_hashkey(&cmd->key, &cmd->hashkey, MCREQ_PKT_BASESIZE, &hk, &nhk);
+    vbid = vbucket_get_vbucket_by_key(cq->config, hk, nhk);
 
-    if (nhashkey == 0) {
-        hashkey = key;
-        nhashkey = nkey;
-    }
-
-    (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                      &vb, &idx);
-
-    if (idx < 0 || idx > (int)instance->nservers) {
-        return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
-    }
-    server = instance->servers + idx;
-
-    memset(&req, 0, sizeof(req));
-    req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-    req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-    req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey));
-    req.message.header.request.opaque = ++instance->seqno;
-
-    if (!exp) {
-        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GET;
-        nbytes = sizeof(req.bytes) - 4;
+    /** Get the vbucket by index */
+    if (cmd->strategy == LCB_REPLICA_SELECT) {
+        r0 = r1 = cmd->index;
+    } else if (cmd->strategy == LCB_REPLICA_ALL) {
+        r0 = 0;
+        r1 = instance->nreplicas;
     } else {
-        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GAT;
-        req.message.header.request.extlen = 4;
-        req.message.body.expiration = ntohl((lcb_uint32_t)exp);
-        req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey) + 4);
-        nbytes = sizeof(req.bytes);
+        r0 = r1 = 0;
     }
 
-    if (item->v.v0.lock) {
-        /* the expiration is optional for GETL command */
-        req.message.header.request.opcode = CMD_GET_LOCKED;
+    if (r1 < r0 || r0 < cq->npipelines || r1 >= cq->npipelines) {
+        return LCB_NO_MATCHING_SERVER;
     }
-    lcb_server_start_packet(server, command_cookie, req.bytes, nbytes);
-    lcb_server_write_packet(server, key, nkey);
-    lcb_server_end_packet(server);
-    lcb_server_send_packets(server);
 
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
-}
+    rck = calloc(1, sizeof(*rck));
+    rck->base.cookie = cookie;
+    rck->base.start = gethrtime();
+    rck->base.callback = rget_callback;
+    rck->strategy = cmd->strategy;
+    rck->r_cur = r0;
+    rck->r_max = instance->nreplicas;
+    rck->instance = instance;
+    rck->vbucket = vbid;
 
-static lcb_error_t multi_get(lcb_t instance,
-                             const void *command_cookie,
-                             lcb_size_t num,
-                             const lcb_get_cmd_t *const *items)
-{
-    lcb_server_t *server = NULL;
-    protocol_binary_request_noop noop;
-    lcb_size_t ii, *affected_servers = NULL;
-    struct server_info_st *servers = NULL;
-
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+    do {
+        protocol_binary_request_header req;
+        mc_PIPELINE *pl = cq->pipelines[r0];
+        mc_PACKET *pkt = mcreq_allocate_packet(pl);
+        if (!pkt) {
+            return LCB_CLIENT_ENOMEM;
         }
-    }
-
-    affected_servers = calloc(instance->nservers, sizeof(lcb_size_t));
-    if (affected_servers == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
-    }
-
-    servers = malloc(num * sizeof(struct server_info_st));
-    if (servers == NULL) {
-        free(affected_servers);
-        return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
-    }
-
-    for (ii = 0; ii < num; ++ii) {
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        const void *hashkey = items[ii]->v.v0.hashkey;
-        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
-
-        if (nhashkey == 0) {
-            hashkey = key;
-            nhashkey = nkey;
-        }
-
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                          &servers[ii].vb, &servers[ii].idx);
-        if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
-            free(servers);
-            free(affected_servers);
-            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
-        }
-        affected_servers[servers[ii].idx]++;
-    }
-
-    for (ii = 0; ii < num; ++ii) {
-        protocol_binary_request_gat req;
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        lcb_time_t exp = items[ii]->v.v0.exptime;
-        lcb_size_t nreq = sizeof(req.bytes);
-        int vb;
-
-        server = instance->servers + servers[ii].idx;
-        vb = servers[ii].vb;
 
         memset(&req, 0, sizeof(req));
-        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey));
-        req.message.header.request.opaque = ++instance->seqno;
+        req.request.opcode = CMD_GET_REPLICA;
+        req.request.vbucket = htons((lcb_uint16_t)vbid);
+        req.request.keylen = htons((lcb_uint16_t)cmd->key.contig.nbytes);
+        mcreq_reserve_key(pl, pkt, sizeof(req.bytes), &cmd->key);
+        pkt->u_rdata.exdata = &rck->base;
+        rck->remaining++;
+        mcreq_sched_add(pl, pkt);
+    } while (++r0 < r1);
+    return LCB_SUCCESS;
+}
 
-        if (!exp) {
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GETQ;
-            nreq -= 4;
-        } else {
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GATQ;
-            req.message.header.request.extlen = 4;
-            req.message.body.expiration = ntohl((lcb_uint32_t)exp);
-            req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey) + 4);
-        }
-        if (items[ii]->v.v0.lock) {
-            /* the expiration is optional for GETL command */
-            req.message.header.request.opcode = CMD_GET_LOCKED;
-        }
-        lcb_server_start_packet(server, command_cookie, req.bytes, nreq);
-        lcb_server_write_packet(server, key, nkey);
-        lcb_server_end_packet(server);
-    }
-    free(servers);
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
+                const lcb_get_replica_cmd_t * const * items)
+{
+    unsigned ii;
+    lcb_error_t err = LCB_SUCCESS;
 
-    memset(&noop, 0, sizeof(noop));
-    noop.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    noop.message.header.request.opcode = PROTOCOL_BINARY_CMD_NOOP;
-    noop.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-
-    /*
-     ** We don't know which server we sent the data to, so examine
-     ** where to send the noop
-     */
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        if (affected_servers[ii]) {
-            server = instance->servers + ii;
-            noop.message.header.request.opaque = ++instance->seqno;
-            lcb_server_complete_packet(server, command_cookie,
-                                       noop.bytes, sizeof(noop.bytes));
-            lcb_server_send_packets(server);
+    for (ii = 0; ii < num; ii++) {
+        const lcb_get_replica_cmd_t *src = items[ii];
+        lcb_rget3_cmd_t dst;
+        memset(&dst, 0, sizeof(dst));
+        dst.key.contig.bytes = src->v.v1.key;
+        dst.key.contig.nbytes = src->v.v1.nkey;
+        dst.hashkey.contig.bytes = src->v.v1.hashkey;
+        dst.hashkey.contig.nbytes = src->v.v1.nhashkey;
+        dst.strategy = src->v.v1.strategy;
+        err = lcb_rget3(instance, cookie, &dst);
+        if (err != LCB_SUCCESS) {
+            break;
         }
     }
-    free(affected_servers);
 
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
+    if (err == LCB_SUCCESS) {
+        mcreq_sched_leave(&instance->cmdq, 1);
+    } else {
+        mcreq_sched_fail(&instance->cmdq);
+    }
+    return err;
 }

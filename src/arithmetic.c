@@ -16,87 +16,91 @@
  */
 #include "internal.h"
 
-/**
- * Spool an arithmetic request
- *
- * @author Trond Norbye
- * @todo add documentation
- */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_arithmetic3(
+        lcb_t instance, const void *cookie, const lcb_arithmetic3_cmd_t *cmd)
+{
+    mc_CMDQUEUE *q = &instance->cmdq;
+    mc_PIPELINE *pipeline;
+    mc_PACKET *packet;
+    mc_REQDATA *rdata;
+    lcb_error_t err;
+
+    protocol_binary_request_incr acmd;
+    protocol_binary_request_header *hdr = &acmd.message.header;
+
+    err = mcreq_basic_packet(
+            q, (const lcb_cmd_t *)cmd, hdr, 20, &packet, &pipeline);
+
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+
+    rdata = &packet->u_rdata.reqdata;
+    rdata->cookie = cookie;
+    rdata->start = gethrtime();
+    hdr->request.magic = PROTOCOL_BINARY_REQ;
+    hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr->request.cas = 0;
+    hdr->request.opaque = packet->opaque;
+    hdr->request.bodylen =
+            htonl(hdr->request.extlen + ntohs(hdr->request.keylen));
+
+    acmd.message.body.delta = ntohll((lcb_uint64_t)cmd->delta);
+    acmd.message.body.initial = ntohll(cmd->initial);
+    if (!cmd->create) {
+        memset(&acmd.message.body.expiration, 0xff,
+               sizeof(acmd.message.body.expiration));
+    } else {
+        acmd.message.body.expiration = htonl(cmd->options.exptime);
+    }
+
+    if (cmd->delta < 0) {
+        hdr->request.opcode = PROTOCOL_BINARY_CMD_DECREMENT;
+        acmd.message.body.delta = ntohll((lcb_uint64_t)(cmd->delta * -1));
+    } else {
+        hdr->request.opcode = PROTOCOL_BINARY_CMD_INCREMENT;
+    }
+
+    memcpy(SPAN_BUFFER(&packet->kh_span), acmd.bytes, sizeof(acmd.bytes));
+    mcreq_sched_add(pipeline, packet);
+    return LCB_SUCCESS;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_arithmetic(lcb_t instance,
-                           const void *command_cookie,
+                           const void *cookie,
                            lcb_size_t num,
                            const lcb_arithmetic_cmd_t *const *items)
 {
-    lcb_size_t ii;
+    unsigned ii;
 
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+    mcreq_sched_enter(&instance->cmdq);
+
+    for (ii = 0; ii < num; ii++) {
+        const lcb_arithmetic_cmd_t *src = items[ii];
+        lcb_arithmetic3_cmd_t dst;
+        lcb_error_t err;
+
+        memset(&dst, 0, sizeof(dst));
+
+        dst.create = src->v.v0.create;
+        dst.delta = src->v.v0.delta;
+        dst.initial = src->v.v0.initial;
+        dst.key.type = LCB_KV_COPY;
+        dst.key.contig.bytes = src->v.v0.key;
+        dst.key.contig.nbytes = src->v.v0.nkey;
+        dst.hashkey.type = LCB_KV_COPY;
+        dst.hashkey.contig.bytes = src->v.v0.hashkey;
+        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        err = lcb_arithmetic3(instance, cookie, &dst);
+        if (err != LCB_SUCCESS) {
+            mcreq_sched_fail(&instance->cmdq);
+            return err;
         }
     }
 
-    for (ii = 0; ii < num; ++ii) {
-        lcb_server_t *server;
-        protocol_binary_request_incr req;
-        int vb, idx;
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        lcb_time_t exp = items[ii]->v.v0.exptime;
-        int create = items[ii]->v.v0.create;
-        lcb_int64_t delta = items[ii]->v.v0.delta;
-        lcb_uint64_t initial = items[ii]->v.v0.initial;
-        const void *hashkey = items[ii]->v.v0.hashkey;
-        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
-
-        if (nhashkey == 0) {
-            hashkey = key;
-            nhashkey = nkey;
-        }
-
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                          &vb, &idx);
-
-        if (idx < 0 || idx > (int)instance->nservers) {
-            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
-        }
-        server = instance->servers + idx;
-
-        memset(&req, 0, sizeof(req));
-        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_INCREMENT;
-        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-        req.message.header.request.extlen = 20;
-        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey + 20));
-        req.message.header.request.opaque = ++instance->seqno;
-        req.message.body.delta = ntohll((lcb_uint64_t)(delta));
-        req.message.body.initial = ntohll(initial);
-        req.message.body.expiration = ntohl((lcb_uint32_t)exp);
-
-        if (delta < 0) {
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_DECREMENT;
-            req.message.body.delta = ntohll((lcb_uint64_t)(delta * -1));
-        }
-
-        if (!create) {
-            memset(&req.message.body.expiration, 0xff,
-                   sizeof(req.message.body.expiration));
-        }
-
-        lcb_server_start_packet(server, command_cookie, req.bytes,
-                                sizeof(req.bytes));
-        lcb_server_write_packet(server, key, nkey);
-        lcb_server_end_packet(server);
-        lcb_server_send_packets(server);
-    }
-
-
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
+    mcreq_sched_leave(&instance->cmdq, 1);
+    return LCB_SUCCESS;
 }

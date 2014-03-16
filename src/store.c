@@ -16,115 +16,121 @@
  */
 #include "internal.h"
 
-/**
- * Spool a store request
- *
- * @author Trond Norbye
- * @todo add documentation
- * @todo fix the expiration so that it works relative/absolute etc..
- * @todo we might want to wait to write the data to the sockets if the
- *       user want to run a batch of store requests?
- */
-LIBCOUCHBASE_API
-lcb_error_t lcb_store(lcb_t instance,
-                      const void *command_cookie,
-                      lcb_size_t num,
-                      const lcb_store_cmd_t *const *items)
+static lcb_size_t
+get_value_size(mc_PACKET *packet)
 {
-    lcb_size_t ii;
+    if (packet->flags & MCREQ_F_VALUE_IOV) {
+        return packet->u_value.multi.total_length;
+    } else {
+        return packet->u_value.single.size;
+    }
+}
 
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
-        }
+static lcb_error_t
+get_esize_and_opcode(
+        lcb_storage_t ucmd, lcb_uint8_t *opcode, lcb_uint8_t *esize)
+{
+    if (ucmd == LCB_SET) {
+        *opcode = PROTOCOL_BINARY_CMD_SET;
+        *esize = 8;
+    } else if (ucmd == LCB_ADD) {
+        *opcode = PROTOCOL_BINARY_CMD_ADD;
+        *esize = 8;
+    } else if (ucmd == LCB_REPLACE) {
+        *opcode = PROTOCOL_BINARY_CMD_REPLACE;
+        *esize = 8;
+    } else if (ucmd == LCB_APPEND) {
+        *opcode = PROTOCOL_BINARY_CMD_APPEND;
+        *esize = 0;
+    } else if (ucmd == LCB_PREPEND) {
+        *opcode = PROTOCOL_BINARY_CMD_PREPEND;
+        *esize = 0;
+    } else {
+        return LCB_EINVAL;
+    }
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_store3(lcb_t instance, const void *cookie, const lcb_store3_cmd_t *cmd)
+{
+    mc_PIPELINE *pipeline;
+    mc_PACKET *packet;
+    mc_REQDATA *rdata;
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    int hsize;
+    lcb_error_t err;
+
+    protocol_binary_request_set scmd;
+    protocol_binary_request_header *hdr = &scmd.message.header;
+
+    err = get_esize_and_opcode(
+            cmd->operation, &hdr->request.opcode, &hdr->request.extlen);
+    if (err != LCB_SUCCESS) {
+        return err;
     }
 
-    for (ii = 0; ii < num; ++ii) {
-        lcb_server_t *server;
-        protocol_binary_request_set req;
-        lcb_size_t headersize;
-        lcb_size_t bodylen;
-        int vb, idx;
+    hsize = hdr->request.extlen + sizeof(*hdr);
 
-        lcb_storage_t operation = items[ii]->v.v0.operation;
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        lcb_cas_t cas = items[ii]->v.v0.cas;
-        lcb_uint32_t flags = items[ii]->v.v0.flags;
-        lcb_time_t exp = items[ii]->v.v0.exptime;
-        const void *bytes = items[ii]->v.v0.bytes;
-        lcb_size_t nbytes = items[ii]->v.v0.nbytes;
-        const void *hashkey = items[ii]->v.v0.hashkey;
-        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
+    err = mcreq_basic_packet(
+            cq, (const lcb_cmd_t *)cmd, hdr, hdr->request.extlen,
+            &packet, &pipeline);
 
-        if (nhashkey == 0) {
-            hashkey = key;
-            nhashkey = nkey;
-        }
-
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                          &vb, &idx);
-        if (idx < 0 || idx > (int)instance->nservers) {
-            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
-        }
-        server = instance->servers + idx;
-
-        memset(&req, 0, sizeof(req));
-        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-        req.message.header.request.extlen = 8;
-        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-        req.message.header.request.opaque = ++instance->seqno;
-        req.message.header.request.cas = cas;
-        req.message.body.flags = htonl(flags);
-        req.message.body.expiration = htonl((lcb_uint32_t)exp);
-
-        headersize = sizeof(req.bytes);
-        switch (operation) {
-        case LCB_ADD:
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_ADD;
-            break;
-        case LCB_REPLACE:
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_REPLACE;
-            break;
-        case LCB_SET:
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_SET;
-            break;
-        case LCB_APPEND:
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_APPEND;
-            req.message.header.request.extlen = 0;
-            headersize -= 8;
-            break;
-        case LCB_PREPEND:
-            req.message.header.request.opcode = PROTOCOL_BINARY_CMD_PREPEND;
-            req.message.header.request.extlen = 0;
-            headersize -= 8;
-            break;
-        default:
-            /* We were given an unknown storage operation. */
-            return lcb_synchandler_return(instance,
-                                          lcb_error_handler(instance, LCB_EINVAL,
-                                                            "Invalid value passed as storage operation"));
-        }
-
-        /* Make it known that this was a success. */
-        lcb_error_handler(instance, LCB_SUCCESS, NULL);
-
-        bodylen = nkey + nbytes + req.message.header.request.extlen;
-        req.message.header.request.bodylen = htonl((lcb_uint32_t)bodylen);
-
-        lcb_server_start_packet(server, command_cookie, &req, headersize);
-        lcb_server_write_packet(server, key, nkey);
-        lcb_server_write_packet(server, bytes, nbytes);
-        lcb_server_end_packet(server);
-        lcb_server_send_packets(server);
+    if (err != LCB_SUCCESS) {
+        return err;
     }
 
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
+    mcreq_reserve_value(pipeline, packet, &cmd->value);
+
+    rdata = &packet->u_rdata.reqdata;
+    rdata->cookie = cookie;
+    rdata->start = gethrtime();
+
+    scmd.message.body.expiration = htonl(cmd->options.exptime);
+    scmd.message.body.flags = htonl(cmd->flags);
+    hdr->request.magic = PROTOCOL_BINARY_REQ;
+    hdr->request.cas = cmd->options.cas;
+    hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr->request.opaque = packet->opaque;
+    hdr->request.bodylen = htonl(
+            hdr->request.extlen + ntohs(hdr->request.keylen)
+            + get_value_size(packet));
+
+    memcpy(SPAN_BUFFER(&packet->kh_span), scmd.bytes, hsize);
+    mcreq_sched_add(pipeline, packet);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_store(lcb_t instance, const void *cookie, lcb_size_t num,
+          const lcb_store_cmd_t * const * items)
+{
+    unsigned ii;
+    lcb_error_t err = LCB_SUCCESS;
+    for (ii = 0; ii < num; ii++) {
+        const lcb_store_cmd_t *src = items[ii];
+        lcb_store3_cmd_t dst;
+        memset(&dst, 0, sizeof(dst));
+
+        dst.key.contig.bytes = src->v.v0.key;
+        dst.key.contig.nbytes = src->v.v0.nkey;
+        dst.hashkey.contig.bytes = src->v.v0.hashkey;
+        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        dst.value.u_buf.contig.bytes = src->v.v0.bytes;
+        dst.value.u_buf.contig.nbytes = src->v.v0.nbytes;
+        dst.operation = src->v.v0.operation;
+        dst.flags = src->v.v0.flags;
+        dst.datatype = src->v.v0.datatype;
+        dst.options.cas = src->v.v0.cas;
+        dst.options.exptime = src->v.v0.exptime;
+        err = lcb_store3(instance, cookie, &dst);
+        if (err != LCB_SUCCESS) {
+            mcreq_sched_fail(&instance->cmdq);
+            return err;
+        }
+    }
+    mcreq_sched_leave(&instance->cmdq, 1);
+    return LCB_SUCCESS;
 }

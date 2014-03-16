@@ -85,11 +85,8 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
                                          lcb_error_t err,
                                          int can_rollover)
 {
-    lcb_server_t *server = NULL;
-    lcb_size_t ii;
-
+    lcb_server_t *server;
     lcb_host_t *next_host = hostlist_shift_next(cccp->nodes, can_rollover);
-
     if (!next_host) {
         lcb_timer_disarm(cccp->timer);
         lcb_confmon_provider_failed(&cccp->base, err);
@@ -97,30 +94,15 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
         return err;
     }
 
-    /** See if we can find a server */
-    for (ii = 0; ii < cccp->instance->nservers; ii++) {
-        lcb_server_t *cur = cccp->instance->servers + ii;
-        if (lcb_host_equals(&cur->curhost, next_host)) {
-            server = cur;
-            break;
-        }
-    }
-
+    server = lcb_find_server_by_host(cccp->instance, next_host);
     if (server) {
-        protocol_binary_request_get_cluster_config req;
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
+        cookie->parent = cccp;
 
         lcb_log(LOGARGS(cccp, INFO),
                 "Re-Issuing CCCP Command on server struct %p", server);
 
-        cookie->parent = cccp;
-        memset(&req, 0, sizeof(req));
-        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.opcode = CMD_GET_CLUSTER_CONFIG;
-        req.message.header.request.opaque = ++cccp->instance->seqno;
-        lcb_server_start_packet(server, cookie, &req, sizeof(req.bytes));
-        lcb_server_end_packet(server);
-        lcb_server_send_packets(server);
+        return lcb_getconfig(cccp->instance, cookie, server);
 
     } else {
         cccp->cur_connreq = calloc(1, sizeof(*cccp->cur_connreq));

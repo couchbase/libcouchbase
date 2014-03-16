@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 #include <libcouchbase/couchbase.h>
-#include "cookie.h"
 #include "ringbuffer.h"
 #include "memcached/protocol_binary.h"
 
@@ -21,7 +20,6 @@ typedef struct packet_info_st {
     protocol_binary_response_header res;
     /** The payload of the response. This should only be used if there is a body */
     void *payload;
-    struct lcb_command_data_st ct;
     int is_allocated;
 } packet_info;
 

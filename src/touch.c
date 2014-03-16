@@ -17,90 +17,59 @@
 
 #include "internal.h"
 
-/**
- * lcb_mget use the GETQ command followed by a NOOP command to avoid
- * transferring not-found responses. All of the not-found callbacks are
- * generated implicit by receiving a successful get or the NOOP.
- *
- * @author Trond Norbye
- * @todo improve the error handling
- */
-struct server_info_st {
-    int vb;
-    int idx;
-};
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_touch3(lcb_t instance, const void *cookie, lcb_touch3_cmd_t *cmd)
+{
+    protocol_binary_request_touch tcmd;
+    protocol_binary_request_header *hdr = &tcmd.message.header;
+    mc_PIPELINE *pl;
+    mc_PACKET *pkt;
+    lcb_error_t err;
 
+    err = mcreq_basic_packet(&instance->cmdq, cmd, hdr, 4, &pkt, &pl);
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+
+    hdr->request.magic = PROTOCOL_BINARY_REQ;
+    hdr->request.opcode = PROTOCOL_BINARY_CMD_TOUCH;
+    hdr->request.cas = 0;
+    hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr->request.opaque = pkt->opaque;
+    hdr->request.bodylen = htonl(4 + ntohs(hdr->request.keylen));
+    tcmd.message.body.expiration = htonl(cmd->options.exptime);
+    memcpy(SPAN_BUFFER(&pkt->kh_span), tcmd.bytes, sizeof(tcmd.bytes));
+    pkt->u_rdata.reqdata.cookie = cookie;
+    pkt->u_rdata.reqdata.start = gethrtime();
+    mcreq_sched_add(pl, pkt);
+    return LCB_SUCCESS;
+}
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_touch(lcb_t instance,
-                      const void *command_cookie,
-                      lcb_size_t num,
-                      const lcb_touch_cmd_t *const *items)
+lcb_error_t
+lcb_touch(lcb_t instance, const void *cookie, lcb_size_t num,
+          const lcb_touch_cmd_t * const * items)
 {
-    lcb_server_t *server = NULL;
-    lcb_size_t ii;
-    int vb;
-    struct server_info_st *servers = NULL;
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    unsigned ii;
+    for (ii = 0; ii < num; ii++) {
+        const lcb_touch_cmd_t *src = items[ii];
+        lcb_touch3_cmd_t dst;
+        lcb_error_t err;
 
-    /* we need a vbucket config before we can start getting data.. */
-    if (instance->vbucket_config == NULL) {
-        switch (instance->type) {
-        case LCB_TYPE_CLUSTER:
-            return lcb_synchandler_return(instance, LCB_EBADHANDLE);
-        case LCB_TYPE_BUCKET:
-        default:
-            return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
+        memset(&dst, 0, sizeof(dst));
+        dst.key.contig.bytes = src->v.v0.key;
+        dst.key.contig.nbytes = src->v.v0.nkey;
+        dst.hashkey.contig.bytes = src->v.v0.hashkey;
+        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        dst.options.exptime = src->v.v0.exptime;
+        err = lcb_touch3(instance, cookie, &dst);
+        if (err != LCB_SUCCESS) {
+            mcreq_sched_fail(cq);
+            return err;
         }
     }
-
-    servers = malloc(num * sizeof(struct server_info_st));
-    if (servers == NULL) {
-        return lcb_synchandler_return(instance, LCB_CLIENT_ENOMEM);
-    }
-    for (ii = 0; ii < num; ++ii) {
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        const void *hashkey = items[ii]->v.v0.hashkey;
-        lcb_size_t nhashkey = items[ii]->v.v0.nhashkey;
-
-        if (nhashkey == 0) {
-            hashkey = key;
-            nhashkey = nkey;
-        }
-        (void)vbucket_map(instance->vbucket_config, hashkey, nhashkey,
-                          &servers[ii].vb, &servers[ii].idx);
-        if (servers[ii].idx < 0 || servers[ii].idx > (int)instance->nservers) {
-            free(servers);
-            return lcb_synchandler_return(instance, LCB_NO_MATCHING_SERVER);
-        }
-    }
-
-    for (ii = 0; ii < num; ++ii) {
-        protocol_binary_request_touch req;
-        const void *key = items[ii]->v.v0.key;
-        lcb_size_t nkey = items[ii]->v.v0.nkey;
-        lcb_time_t exp = items[ii]->v.v0.exptime;
-        server = instance->servers + servers[ii].idx;
-        vb = servers[ii].vb;
-
-        memset(&req, 0, sizeof(req));
-        req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-        req.message.header.request.opcode = PROTOCOL_BINARY_CMD_TOUCH;
-        req.message.header.request.extlen = 4;
-        req.message.header.request.keylen = ntohs((lcb_uint16_t)nkey);
-        req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-        req.message.header.request.vbucket = ntohs((lcb_uint16_t)vb);
-        req.message.header.request.bodylen = ntohl((lcb_uint32_t)(nkey) + 4);
-        req.message.header.request.opaque = ++instance->seqno;
-        /* @todo fix the relative time! */
-        req.message.body.expiration = htonl((lcb_uint32_t)exp);
-        lcb_server_start_packet(server, command_cookie,
-                                req.bytes, sizeof(req.bytes));
-        lcb_server_write_packet(server, key, nkey);
-        lcb_server_end_packet(server);
-        lcb_server_send_packets(server);
-    }
-    free(servers);
-
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
+    mcreq_sched_leave(cq, 1);
+    return LCB_SUCCESS;
 }
