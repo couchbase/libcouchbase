@@ -82,6 +82,13 @@ my @HELP_DESCRIPTIONS = (
     [ "enable-static", "",
         "Build static libraries",
         "%d", \(my $STATIC_LIBS = 0)],
+    [ "cc", "s",
+        "C Compiler",
+        "%s", \(my $CC = "") ],
+
+    [ "cxx", "s",
+        "C++ Compiler",
+        "%s", \(my $CXX = "") ],
 
     [ "help", "",
         "This message", "%s", \(my $WANT_HELP = 0) ]
@@ -169,7 +176,12 @@ if ($CMAKE_VERBOSE) {
 if ($STATIC_LIBS) {
     push @CM_OPTIONS, "-DBUILD_SHARED_LIBS=OFF", "-DLCB_BUILD_STATIC=1";
 }
-
+if ($CC) {
+    push @CM_OPTIONS, "-DCMAKE_C_COMPILER=$CC";
+}
+if ($CXX) {
+    push @CM_OPTIONS, "-DCMAKE_CXX_COMPILER=$CXX";
+}
 if ($USE_NINJA) {
     push @CM_OPTIONS, "-DCMAKE_MAKE_PROGRAM=$USE_NINJA";
     push @CM_OPTIONS, "-GNinja";
