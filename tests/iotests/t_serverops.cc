@@ -141,7 +141,6 @@ extern "C" {
         ASSERT_EQ(LCB_SUCCESS, error);
         if (resp->v.v0.server_endpoint == NULL) {
             EXPECT_EQ(MockEnvironment::getInstance()->getNumNodes(), *counter);
-            lcb_stop_loop(instance);
             return;
         } else if (verbosity_endpoint == NULL) {
             verbosity_endpoint = strdup(resp->v.v0.server_endpoint);
@@ -157,7 +156,7 @@ extern "C" {
         ASSERT_EQ(0, resp->version);
         ASSERT_EQ(LCB_SUCCESS, error);
         if (resp->v.v0.server_endpoint == NULL) {
-            lcb_stop_loop(instance);
+            return;
         } else {
             EXPECT_STREQ(verbosity_endpoint, resp->v.v0.server_endpoint);
         }
@@ -181,8 +180,7 @@ TEST_F(ServeropsUnitTest, testVerbosity)
     lcb_verbosity_cmd_t cmd(LCB_VERBOSITY_DEBUG);
     lcb_verbosity_cmd_t *commands[] = { &cmd };
     EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands));
-
-    lcb_run_loop(instance);
+    lcb_wait(instance);
 
     EXPECT_EQ(MockEnvironment::getInstance()->getNumNodes(), counter);
     EXPECT_NE((char *)NULL, verbosity_endpoint);
@@ -192,7 +190,7 @@ TEST_F(ServeropsUnitTest, testVerbosity)
     lcb_verbosity_cmd_t cmd2(LCB_VERBOSITY_DEBUG, verbosity_endpoint);
     lcb_verbosity_cmd_t *commands2[] = { &cmd2 };
     EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands2));
-    lcb_run_loop(instance);
+    lcb_wait(instance);
     free((void *)verbosity_endpoint);
     verbosity_endpoint = NULL;
 
