@@ -198,15 +198,15 @@ static lcb_server_t *get_view_node(lcb_t instance)
     lcb_size_t nn, nn_limit;
     lcb_server_t *server;
 
-    nn = (lcb_size_t)(gethrtime() >> 10) % instance->nservers;
+    nn = (lcb_size_t)(gethrtime() >> 10) % LCBT_NSERVERS(instance);
     nn_limit = nn;
 
     do {
-        server = instance->servers + nn;
+        server = LCBT_GET_SERVER(instance, nn);
         if (server->couch_api_base) {
             return server;
         }
-        nn = (nn + 1) % instance->nservers;
+        nn = (nn + 1) % LCBT_NSERVERS(instance);
     } while (nn != nn_limit);
     return NULL;
 }
@@ -407,7 +407,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         break;
     case LCB_TYPE_BUCKET:
         /* we need a vbucket config before we can start getting data.. */
-        if (instance->vbucket_config == NULL) {
+        if (LCBT_VBCONFIG(instance) == NULL) {
             return lcb_synchandler_return(instance, LCB_CLIENT_ETMPFAIL);
         }
         break;

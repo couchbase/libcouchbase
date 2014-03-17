@@ -114,7 +114,7 @@ static lcb_error_t get_vbconfig(int mode, lcb_t instance, int cmd, void *arg)
     if (mode != LCB_CNTL_GET) {
         return LCB_NOT_SUPPORTED;
     }
-    *(VBUCKET_CONFIG_HANDLE *)arg = instance->vbucket_config;
+    *(VBUCKET_CONFIG_HANDLE *)arg = LCBT_VBCONFIG(instance);
 
     (void)cmd;
     return LCB_SUCCESS;
@@ -140,7 +140,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    if (!instance->vbucket_config) {
+    if (!LCBT_VBCONFIG(instance)) {
         return LCB_CLIENT_ETMPFAIL;
     }
 
@@ -148,7 +148,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_EINVAL;
     }
 
-    vbucket_map(instance->vbucket_config,
+    vbucket_map(LCBT_VBCONFIG(instance),
                 vbi->v.v0.key,
                 vbi->v.v0.nkey,
                 &vbi->v.v0.vbucket,
@@ -187,12 +187,11 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
     if (cmd == LCB_CNTL_MEMDNODE_INFO) {
         lcb_server_t *server;
         int ix = si->v.v0.index;
-
-        if (ix < 0 || ix > (int)instance->nservers) {
+        if (ix < 0 || ix > (int)LCBT_NSERVERS(instance)) {
             return LCB_EINVAL;
         }
 
-        server = instance->servers + ix;
+        server = LCBT_GET_SERVER(instance, ix);
         if (!server) {
             return LCB_NETWORK_ERROR;
         }

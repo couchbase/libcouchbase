@@ -35,7 +35,7 @@ static void config_callback(clconfig_listener *listener,
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         if (event == CLCONFIG_EVENT_PROVIDERS_CYCLED) {
-            if (!instance->vbucket_config) {
+            if (!LCBT_VBCONFIG(instance)) {
                 initial_bootstrap_error(instance,
                                         LCB_ERROR,
                                         "No more bootstrap providers remain");

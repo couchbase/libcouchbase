@@ -791,7 +791,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
     instance->vbucket_state_listener = vbucket_state_callback;
-    genDistKeys(instance->vbucket_config, keys);
+    genDistKeys(LCBT_VBCONFIG(instance), keys);
     genStoreCommands(keys, cmds, ppcmds);
     StoreContext ctx;
 
@@ -872,7 +872,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 
     /* Determine what server should receive that operation */
     int vb, idx;
-    vbucket_map(instance->vbucket_config, key.c_str(), key.size(), &vb, &idx);
+    vbucket_map(LCBT_VBCONFIG(instance), key.c_str(), key.size(), &vb, &idx);
     mock->hiccupNodes(5000, 1);
 
     struct fo_context_st ctx = { mock, idx };

@@ -66,7 +66,7 @@ const char *lcb_get_port(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_replicas(lcb_t instance)
 {
-    if (instance->vbucket_config) {
+    if (LCBT_VBCONFIG(instance)) {
         return instance->nreplicas;
     } else {
         return -1;
@@ -76,7 +76,7 @@ lcb_int32_t lcb_get_num_replicas(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_nodes(lcb_t instance)
 {
-    if (instance->vbucket_config) {
+    if (LCBT_VBCONFIG(instance)) {
         return (lcb_int32_t)instance->nservers;
     } else {
         return -1;

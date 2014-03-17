@@ -53,12 +53,12 @@ static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
         lcb_server_t *dst;
         lcb_size_t nr;
 
-        idx = vbucket_get_master(dst_instance->vbucket_config, vb);
+        idx = vbucket_get_master(LCBT_VBCONFIG(dst_instance), vb);
         if (idx < 0) {
-            idx = vbucket_found_incorrect_master(dst_instance->vbucket_config, vb, idx);
+            idx = vbucket_found_incorrect_master(LCBT_VBCONFIG(dst_instance), vb, idx);
         }
 
-        dst = dst_instance->servers + (lcb_size_t)idx;
+        dst = LCBT_GET_SERVER(dst_instance, (lcb_size_t)idx);
 
         /* read from pending buffer first, because the only case so
          * far when we have cookies in both buffers is when we send
@@ -228,7 +228,7 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     old_config = instance->cur_configinfo;
     instance->cur_configinfo = config;
     instance->dist_type = vbucket_config_get_distribution_type(config->vbc);
-    instance->vbucket_config = config->vbc;
+    LCBT_VBCONFIG(instance) = config->vbc;
     lcb_clconfig_incref(config);
 
     instance->nreplicas =

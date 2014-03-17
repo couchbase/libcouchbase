@@ -244,6 +244,11 @@ extern "C" {
 #endif
     };
 
+    #define LCBT_VBCONFIG(instance) (instance)->vbucket_config
+    #define LCBT_NSERVERS(instance) (instance)->nservers
+    #define LCBT_NREPLICAS(instance) (instance)->nreplicas
+    #define LCBT_GET_SERVER(instance, ix) (instance)->servers + ix
+
     struct lcb_http_header_st {
         struct lcb_http_header_st *next;
         char *data;

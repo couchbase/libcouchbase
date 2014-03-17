@@ -473,7 +473,7 @@ static int verify_critera(lcb_t instance, lcb_durability_set_t *dset)
 {
     lcb_durability_opts_t *options = &dset->opts;
 
-    int replica_max = instance->nreplicas;
+    int replica_max = LCBT_NREPLICAS(instance);
     int persist_max = replica_max + 1;
 
     /**

@@ -51,15 +51,15 @@ lcb_error_t lcb_wait(lcb_t instance)
      */
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    if (instance->vbucket_config == NULL ||
+    if (LCBT_VBCONFIG(instance) == NULL ||
             lcb_flushing_buffers(instance) ||
             hashset_num_items(instance->timers) > 0 ||
             hashset_num_items(instance->durability_polls) > 0) {
 
         lcb_size_t ii;
 
-        for (ii = 0; ii < instance->nservers; ii++) {
-            lcb_server_t *c = instance->servers + ii;
+        for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+            lcb_server_t *c = LCBT_GET_SERVER(instance, ii);
 
             if (lcb_server_has_pending(c)) {
                 lcb_timer_rearm(c->io_timer,
@@ -71,7 +71,7 @@ lcb_error_t lcb_wait(lcb_t instance)
 
     instance->wait = 0;
 
-    if (instance->vbucket_config) {
+    if (LCBT_VBCONFIG(instance)) {
         return LCB_SUCCESS;
     }
 

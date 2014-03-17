@@ -856,7 +856,7 @@ static bool hash_impl(string filename, list<string> &keys, bool is_vbucket)
 
 static bool hash_impl(lcb_t instance, list<string> &keys, bool is_vbucket)
 {
-    return hash_exec(instance->vbucket_config, keys, is_vbucket);
+    return hash_exec(LCBT_VBCONFIG(instance), keys, is_vbucket);
 }
 
 static bool view_impl(lcb_t instance, string &query, string &data,
