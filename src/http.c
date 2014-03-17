@@ -203,7 +203,7 @@ static lcb_server_t *get_view_node(lcb_t instance)
 
     do {
         server = LCBT_GET_SERVER(instance, nn);
-        if (server->couch_api_base) {
+        if (server->viewshost) {
             return server;
         }
         nn = (nn + 1) % LCBT_NSERVERS(instance);
@@ -456,7 +456,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         if (!server) {
             return lcb_synchandler_return(instance, LCB_NOT_SUPPORTED);
         }
-        base = server->couch_api_base;
+        base = server->viewshost;
         nbase = strlen(base);
         username = instance->settings.username;
 

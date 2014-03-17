@@ -152,6 +152,21 @@ SET_TARGET_PROPERTIES(couchbase_utils
 
 
 ADD_LIBRARY(netbuf STATIC src/netbuf/netbuf.c)
+ADD_LIBRARY(mcreq STATIC src/mc/mcreq.c)
+ADD_LIBRARY(netbuf-malloc STATIC src/netbuf/netbuf.c)
+SET_TARGET_PROPERTIES(netbuf-malloc
+    PROPERTIES
+        COMPILE_DEFINITIONS NETBUF_LIBC_PROXY=1
+        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
+        POSITION_INDEPENDENT_CODE TRUE)
+SET_TARGET_PROPERTIES(mcreq
+    PROPERTIES
+        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
+        POSITION_INDEPENDENT_CODE TRUE)
+SET_TARGET_PROPERTIES(netbuf
+    PROPERTIES
+        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
+        POSITION_INDEPENDENT_CODE TRUE)
 
 ADD_SUBDIRECTORY(contrib/libvbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
@@ -162,10 +177,8 @@ ELSE()
 ENDIF()
 ADD_LIBRARY(couchbase ${_lcb_linkspec}
             contrib/http_parser/http_parser.c
-            src/arithmetic.c
             src/bconf_provider.c
             src/bootstrap.c
-            src/bucketconfig/bc_cccp.c
             src/bucketconfig/bc_http.c
             src/bucketconfig/bc_file.c
             src/bucketconfig/confmon.c
@@ -174,9 +187,6 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/connmgr.c
             src/durability.c
             src/error.c
-            src/flush.c
-            src/get.c
-            src/handler.c
             src/http.c
             src/http_io.c
             src/http_parse.c
@@ -186,23 +196,15 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/connection_utils.c
             src/readwrite.c
             src/iofactory.c
-            src/observe.c
-            src/packet.c
-            src/remove.c
             src/sanitycheck.c
             src/server.c
+            src/server-connection.c
             src/server_negotiate.c
-            src/server_io.c
-            src/server_parse.c
-            src/stats.c
-            src/store.c
             src/synchandler.c
             src/timer.c
             src/timings.c
-            src/touch.c
             ${CMAKE_BINARY_DIR}/dllversion.rc
             src/utilities.c
-            src/verbosity.c
             src/wait.c)
 
 SET_TARGET_PROPERTIES(couchbase
@@ -216,7 +218,7 @@ SET_TARGET_PROPERTIES(couchbase
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase
-    couchbase_select couchbase_utils vbucket cbsasl ${lcb_plat_libs})
+    couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl ${lcb_plat_libs})
 
 
 IF(NOT LCB_NO_TESTS)

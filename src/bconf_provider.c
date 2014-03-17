@@ -15,19 +15,10 @@
  *   limitations under the License.
  */
 
-/**
- * This file contains the abstraction layer for a bucket configuration
- * provider.
- *
- * Included are routines for scheduling refreshes and the like.
- *
- * Previously this was tied to the instance; however we'll now make it
- * its own structure
- */
-
 #include "internal.h"
 #include "packetutils.h"
 #include "bucketconfig/clconfig.h"
+#include "vb-aliases.h"
 
 #define LOGARGS(instance, lvl) \
     &instance->settings, "bconf", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -36,91 +27,8 @@
 
 static int allocate_new_servers(lcb_t instance, clconfig_info *config);
 
-
-
-static void relocate_packets(lcb_server_t *src, lcb_t dst_instance)
-{
-    packet_info pi;
-
-    lcb_log(LOGARGS(dst_instance, INFO),
-            "Relocating: %lu bytes from %p (%s ix=%d)",
-            (unsigned long)src->cmd_log.nbytes,
-            src, src->authority, src->index);
-
-    while (lcb_packet_read_ringbuffer(&pi, &src->cmd_log) > 0) {
-        int idx;
-        lcb_uint16_t vb = PACKET_REQ_VBID(&pi);
-        lcb_server_t *dst;
-        lcb_size_t nr;
-
-        idx = vbucket_get_master(LCBT_VBCONFIG(dst_instance), vb);
-        if (idx < 0) {
-            idx = vbucket_found_incorrect_master(LCBT_VBCONFIG(dst_instance), vb, idx);
-        }
-
-        dst = LCBT_GET_SERVER(dst_instance, (lcb_size_t)idx);
-
-        /* read from pending buffer first, because the only case so
-         * far when we have cookies in both buffers is when we send
-         * some commands to disconnected server (it will put them into
-         * pending buffer/cookies and also copy into log), after that
-         * SASL authenticator runs, and push its packets to output
-         * buffer/cookies and also copy into log.
-         *
-         * Here we are traversing the log only. Therefore we will see
-         * pending commands first.
-         *
-         * TODO it will be simplified when with the packet-oriented
-         * commands patch, where cookies will live along with command
-         * itself in the log
-         */
-        if (src->pending_cookies.nbytes) {
-            nr = ringbuffer_read(&src->pending_cookies, &pi.ct, sizeof(pi.ct));
-        } else {
-            nr = ringbuffer_read(&src->output_cookies, &pi.ct, sizeof(pi.ct));
-        }
-
-        lcb_assert(nr == sizeof(pi.ct));
-
-        switch (PACKET_OPCODE(&pi)) {
-        case CMD_GET_CLUSTER_CONFIG:
-            lcb_cccp_update2(pi.ct.cookie, LCB_EINTERNAL, NULL, 0, &src->curhost);
-            break;
-
-        default:
-            lcb_server_start_packet_ex(dst, &pi.ct, &pi.res, sizeof(pi.res));
-            if (PACKET_NBODY(&pi)) {
-                lcb_server_write_packet(dst, pi.payload, PACKET_NBODY(&pi));
-            }
-            lcb_server_end_packet(dst);
-            break;
-        }
-
-        lcb_packet_release_ringbuffer(&pi, &src->cmd_log);
-    }
-}
-
-/**
- * CONFIG REPLACEMENT AND PACKET RELOCATION.
- *
- * When we receive any sort of configuration update, all connections to all
- * servers are immediately reset, and a new server array is allocated with
- * new server structures.
- *
- * Before the old servers are destroyed, their buffers are relocated like so:
- * SRC->PENDING -> DST->PENDING
- * SRC->SENT    -> DST->PENDING
- * SRC->COOKIES -> DST->PENDING_COOKIES
- *
- * where 'src' is the old server struct, and 'dst' is the new server struct
- * which is the vBucket master for a given packet..
- *
- * When each server has connected, the code
- * (server.c, lcb_server_connected) will move the pending commands over to the
- * output commands.
- */
-
-static void log_vbdiff(lcb_t instance, VBUCKET_CONFIG_DIFF *diff)
+static void
+log_vbdiff(lcb_t instance, VBUCKET_CONFIG_DIFF *diff)
 {
     char **curserver;
     lcb_log(LOGARGS(instance, INFO),
@@ -141,14 +49,54 @@ static void log_vbdiff(lcb_t instance, VBUCKET_CONFIG_DIFF *diff)
     }
 }
 
-static int replace_config(lcb_t instance, clconfig_info *old_config,
-                          clconfig_info *next_config)
+
+static int
+iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
+{
+    protocol_binary_request_header hdr;
+    mc_PIPELINE *newpl;
+    mc_PACKET *newpkt;
+    int newix;
+
+    memcpy(&hdr, SPAN_BUFFER(&oldpkt->kh_span), sizeof(hdr.bytes));
+    if (hdr.request.opcode == CMD_OBSERVE ||
+            hdr.request.opcode == PROTOCOL_BINARY_CMD_STAT ||
+            hdr.request.opcode == CMD_GET_CLUSTER_CONFIG) {
+        /** Need special handling */
+        return MCREQ_KEEP_PACKET;
+    }
+
+    /** Find the new server for vBucket mapping */
+    newix = vbucket_get_master(cq->config, ntohs(hdr.request.vbucket));
+    if (newix < 0 || newix > (int)cq->npipelines) {
+        /** Need to fail this one out! */
+        return MCREQ_KEEP_PACKET;
+    }
+
+    newpl = cq->pipelines[newix];
+
+    /** Otherwise, copy over the packet and find the new vBucket to map to */
+    newpkt = mcreq_dup_packet(oldpkt);
+    newpkt->flags &= ~MCREQ_STATE_FLAGS;
+    mcreq_reenqueue_packet(newpl, newpkt);
+    mcreq_packet_handled(oldpl, oldpkt);
+
+    (void)arg;
+
+    return MCREQ_REMOVE_PACKET;
+}
+
+
+static int
+replace_config(lcb_t instance, clconfig_info *old_config,
+               clconfig_info *next_config)
 {
     VBUCKET_CONFIG_DIFF *diff;
     VBUCKET_DISTRIBUTION_TYPE dist_t;
+    mc_PIPELINE **old;
+    unsigned ii, nold;
+    int *is_clean;
 
-    lcb_size_t ii, old_nservers;
-    lcb_server_t *old_servers;
 
     diff = vbucket_compare(old_config->vbc, next_config->vbc);
 
@@ -164,58 +112,69 @@ static int replace_config(lcb_t instance, clconfig_info *old_config,
         return LCB_CONFIGURATION_UNCHANGED;
     }
 
-    old_nservers = instance->nservers;
-    old_servers = instance->servers;
-    dist_t = vbucket_config_get_distribution_type(next_config->vbc);
+    old = mcreq_queue_take_pipelines(&instance->cmdq, &nold);
+    dist_t = VB_DISTTYPE(next_config->vbc);
     vbucket_free_diff(diff);
 
     if (allocate_new_servers(instance, next_config) != 0) {
         return -1;
     }
 
-    for (ii = 0; ii < old_nservers; ++ii) {
-        lcb_server_t *ss = old_servers + ii;
+    is_clean = calloc(nold, sizeof(*is_clean));
+
+    for (ii = 0; ii < nold; ii++) {
+        mc_PIPELINE *pl = old[ii];
+        is_clean[ii] = mcserver_is_clean((mc_SERVER *)pl);
 
         if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
-            relocate_packets(ss, instance);
-
-        } else {
-            lcb_failout_server(ss, LCB_CLIENT_ETMPFAIL);
-        }
-
-        lcb_server_destroy(ss);
-    }
-
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        lcb_server_t *ss = instance->servers + ii;
-        if (ss->cmd_log.nbytes != 0) {
-            lcb_server_send_packets(ss);
+            mcreq_iterwipe(&instance->cmdq, pl, iterwipe_cb, NULL);
         }
     }
 
-    free(old_servers);
+    for (ii = 0; ii < nold; ii++) {
+        mc_PIPELINE *pl = old[ii];
+        mc_SERVER *server = (mc_SERVER *)pl;
+        mcserver_fail_chain(server, LCB_MAP_CHANGED);
+        lcb_log(LOGARGS(instance, TRACE),
+                "Server %p has a refcount of %d. Clean=%d",
+                server, server->refcount, is_clean[ii]);
+
+        mcserver_decref(server, is_clean[ii]);
+    }
+
+    for (ii = 0; ii < instance->cmdq.npipelines; ii++) {
+        mc_PIPELINE *pl = instance->cmdq.pipelines[ii];
+        pl->flush_start(pl);
+    }
+
+    free(is_clean);
+    free(old);
     return LCB_CONFIGURATION_CHANGED;
 }
 
-
-static int allocate_new_servers(lcb_t instance, clconfig_info *config)
+static int
+allocate_new_servers(lcb_t instance, clconfig_info *config)
 {
-    lcb_size_t ii;
+    unsigned ii;
+    unsigned nservers;
+    mc_PIPELINE **servers;
+    mc_CMDQUEUE *q = &instance->cmdq;
 
-    instance->nservers = vbucket_config_get_num_servers(config->vbc);
-    instance->servers = calloc(instance->nservers, sizeof(*instance->servers));
-    if (!instance->servers) {
+    nservers = VB_NSERVERS(config->vbc);
+    servers = malloc(sizeof(*servers) * nservers);
+    if (!servers) {
         return -1;
     }
 
-    for (ii = 0; ii < instance->nservers; ii++) {
-        lcb_server_t *cur = instance->servers + ii;
-        cur->instance = instance;
-        if (lcb_server_initialize(cur, ii) != LCB_SUCCESS) {
+    for (ii = 0; ii < nservers; ii++) {
+        mc_SERVER *srv = mcserver_alloc(instance, ii);
+        servers[ii] = &srv->pipeline;
+        if (!srv) {
             return -1;
         }
     }
 
+    mcreq_queue_add_pipelines(q, servers, nservers, config->vbc);
     return 0;
 }
 
@@ -224,15 +183,15 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     lcb_size_t ii;
     int change_status;
     clconfig_info *old_config;
+    mc_CMDQUEUE *q = &instance->cmdq;
 
     old_config = instance->cur_configinfo;
     instance->cur_configinfo = config;
-    instance->dist_type = vbucket_config_get_distribution_type(config->vbc);
-    LCBT_VBCONFIG(instance) = config->vbc;
+    instance->dist_type = VB_DISTTYPE(config->vbc);
     lcb_clconfig_incref(config);
-
-    instance->nreplicas =
-            (lcb_uint16_t)vbucket_config_get_num_replicas(config->vbc);
+    instance->nreplicas = (lcb_uint16_t)VB_NREPLICAS(config->vbc);
+    q->config = instance->cur_configinfo->vbc;
+    q->instance = instance;
 
     if (old_config) {
         change_status = replace_config(instance, old_config, config);
@@ -253,8 +212,9 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     /* Notify anyone interested in this event... */
     if (change_status != LCB_CONFIGURATION_UNCHANGED) {
         if (instance->vbucket_state_listener != NULL) {
-            for (ii = 0; ii < instance->nservers; ++ii) {
-                instance->vbucket_state_listener(instance->servers + ii);
+            for (ii = 0; ii < q->npipelines; ii++) {
+                lcb_server_t *server = (lcb_server_t *)q->pipelines[ii];
+                instance->vbucket_state_listener(server);
             }
         }
     }

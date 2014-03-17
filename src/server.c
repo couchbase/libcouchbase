@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2011-2013 Couchbase, Inc.
+ *     Copyright 2011-2014 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,686 +15,438 @@
  *   limitations under the License.
  */
 
-/**
- * This file contains the functions to operate on libembase_server objects
- *
- * @author Trond Norbye
- * @todo add more documentation
- */
-
 #include "internal.h"
 #include "logging.h"
+#include "vb-aliases.h"
+
 #include "bucketconfig/clconfig.h"
+#include "mc/mcreq-flush-inl.h"
 
 #define LOGARGS(c, lvl) \
     &(c)->instance->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
 
+#define MCREQ_MAXIOV 32
+#define LCBCONN_UNWANT(conn, flags) (conn)->want &= ~(flags)
 
-void lcb_failout_observe_request(lcb_server_t *server,
-                                 struct lcb_command_data_st *command_data,
-                                 const char *packet,
-                                 lcb_size_t npacket,
-                                 lcb_error_t err)
+/**
+ * Called immediately from the flush_start handler on a connected socket.
+ * This will try to flush to the socket until we either don't have any more
+ * data to send or we get an EWOULDBLOCK.
+ *
+ * Only applicable on "Event"-style I/O backends
+ */
+static void
+do_Eflush(lcb_server_t *server)
 {
-    lcb_t instance = server->instance;
-    protocol_binary_request_header *req = (void *)packet;
-    const char *ptr = packet + sizeof(req->bytes);
-    const char *end = packet + npacket;
-    lcb_observe_resp_t resp;
-
-    memset(&resp, 0, sizeof(resp));
-    resp.v.v0.status = LCB_OBSERVE_MAX;
-    while (ptr < end) {
-        lcb_uint16_t nkey;
-
-        /* ignore vbucket */
-        ptr += sizeof(lcb_uint16_t);
-        memcpy(&nkey, ptr, sizeof(nkey));
-        nkey = ntohs(nkey);
-
-        ptr += sizeof(lcb_uint16_t);
-        resp.v.v0.key = ptr;
-        resp.v.v0.nkey = nkey;
-
-        lcb_observe_invoke_callback(instance, command_data, err,
-                                    &resp, req->request.opaque);
-        ptr += nkey;
-    }
-}
-static void failout_single_request(lcb_server_t *server,
-                                   protocol_binary_request_header *req,
-                                   struct lcb_command_data_st *ct,
-                                   lcb_error_t error,
-                                   const void *keyptr,
-                                   lcb_size_t nkey,
-                                   const void *packet)
-{
-    lcb_t root = server->instance;
-    union {
-        lcb_get_resp_t get;
-        lcb_store_resp_t store;
-        lcb_remove_resp_t remove;
-        lcb_touch_resp_t touch;
-        lcb_unlock_resp_t unlock;
-        lcb_arithmetic_resp_t arithmetic;
-        lcb_observe_resp_t observe;
-        lcb_server_stat_resp_t stats;
-        lcb_server_version_resp_t versions;
-        lcb_verbosity_resp_t verbosity;
-        lcb_flush_resp_t flush;
-    } resp;
-
-    switch (req->request.opcode) {
-    case PROTOCOL_BINARY_CMD_NOOP:
-        break;
-    case CMD_GET_LOCKED:
-    case PROTOCOL_BINARY_CMD_GAT:
-    case PROTOCOL_BINARY_CMD_GATQ:
-    case PROTOCOL_BINARY_CMD_GET:
-    case PROTOCOL_BINARY_CMD_GETQ:
-        setup_lcb_get_resp_t(&resp.get, keyptr, nkey, NULL, 0, 0, 0, 0);
-        root->callbacks.get(root, ct->cookie, error, &resp.get);
-        break;
-    case CMD_UNLOCK_KEY:
-        setup_lcb_unlock_resp_t(&resp.unlock, keyptr, nkey);
-        root->callbacks.unlock(root, ct->cookie, error, &resp.unlock);
-        break;
-    case PROTOCOL_BINARY_CMD_FLUSH:
-        setup_lcb_flush_resp_t(&resp.flush, server->authority);
-        root->callbacks.flush(root, ct->cookie, error, &resp.flush);
-        if (lcb_lookup_server_with_command(root,
-                                           PROTOCOL_BINARY_CMD_FLUSH,
-                                           req->request.opaque,
-                                           server) < 0) {
-            setup_lcb_flush_resp_t(&resp.flush, NULL);
-            root->callbacks.flush(root, ct->cookie, error, &resp.flush);
-        }
-        break;
-    case PROTOCOL_BINARY_CMD_ADD:
-        setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
-        root->callbacks.store(root, ct->cookie, LCB_ADD, error, &resp.store);
-        break;
-    case PROTOCOL_BINARY_CMD_REPLACE:
-        setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
-        root->callbacks.store(root, ct->cookie, LCB_REPLACE, error,
-                              &resp.store);
-        break;
-    case PROTOCOL_BINARY_CMD_SET:
-        setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
-        root->callbacks.store(root, ct->cookie, LCB_SET, error, &resp.store);
-        break;
-    case PROTOCOL_BINARY_CMD_APPEND:
-        setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
-        root->callbacks.store(root, ct->cookie, LCB_APPEND, error,
-                              &resp.store);
-        break;
-    case PROTOCOL_BINARY_CMD_PREPEND:
-        setup_lcb_store_resp_t(&resp.store, keyptr, nkey, 0);
-        root->callbacks.store(root, ct->cookie, LCB_PREPEND, error,
-                              &resp.store);
-        break;
-    case PROTOCOL_BINARY_CMD_DELETE:
-        setup_lcb_remove_resp_t(&resp.remove, keyptr, nkey, 0);
-        root->callbacks.remove(root, ct->cookie, error, &resp.remove);
-        break;
-
-    case PROTOCOL_BINARY_CMD_INCREMENT:
-    case PROTOCOL_BINARY_CMD_DECREMENT:
-        setup_lcb_arithmetic_resp_t(&resp.arithmetic, keyptr, nkey, 0, 0);
-        root->callbacks.arithmetic(root, ct->cookie, error,
-                                   &resp.arithmetic);
-        break;
-    case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
-    case PROTOCOL_BINARY_CMD_SASL_AUTH:
-    case PROTOCOL_BINARY_CMD_SASL_STEP:
-        /* no need to notify user about these commands */
-        break;
-
-    case PROTOCOL_BINARY_CMD_TOUCH:
-        setup_lcb_touch_resp_t(&resp.touch, keyptr, nkey, 0);
-        root->callbacks.touch(root, ct->cookie, error, &resp.touch);
-        break;
-
-    case PROTOCOL_BINARY_CMD_STAT:
-        setup_lcb_server_stat_resp_t(&resp.stats, server->authority,
-                                     NULL, 0, NULL, 0);
-        root->callbacks.stat(root, ct->cookie, error, &resp.stats);
-
-        if (lcb_lookup_server_with_command(root,
-                                           PROTOCOL_BINARY_CMD_STAT,
-                                           req->request.opaque,
-                                           server) < 0) {
-            setup_lcb_server_stat_resp_t(&resp.stats,
-                                         NULL, NULL, 0, NULL, 0);
-            root->callbacks.stat(root, ct->cookie, error, &resp.stats);
-        }
-        break;
-
-    case PROTOCOL_BINARY_CMD_VERBOSITY:
-        setup_lcb_verbosity_resp_t(&resp.verbosity, server->authority);
-        root->callbacks.verbosity(root, ct->cookie, error, &resp.verbosity);
-
-        if (lcb_lookup_server_with_command(root,
-                                           PROTOCOL_BINARY_CMD_VERBOSITY,
-                                           req->request.opaque,
-                                           server) < 0) {
-            setup_lcb_verbosity_resp_t(&resp.verbosity, NULL);
-            root->callbacks.verbosity(root, ct->cookie, error, &resp.verbosity);
-        }
-        break;
-
-    case PROTOCOL_BINARY_CMD_VERSION:
-        setup_lcb_server_version_resp_t(&resp.versions, server->authority,
-                                        NULL, 0);
-        root->callbacks.version(root, ct->cookie, error, &resp.versions);
-        if (lcb_lookup_server_with_command(root,
-                                           PROTOCOL_BINARY_CMD_VERSION,
-                                           req->request.opaque,
-                                           server) < 0) {
-            setup_lcb_server_version_resp_t(&resp.versions, NULL, NULL, 0);
-            root->callbacks.version(root, ct->cookie, error, &resp.versions);
-        }
-        break;
-
-    case CMD_OBSERVE:
-        lcb_failout_observe_request(server, ct, packet,
-                                    sizeof(req->bytes) + ntohl(req->request.bodylen),
-                                    error);
-        break;
-
-    case CMD_GET_CLUSTER_CONFIG:
-        lcb_cccp_update2(ct->cookie, error, NULL, 0, NULL);
-        break;
-
-    default:
-        lcb_assert("unexpected opcode while purging the server" && 0);
-    }
-
-}
-
-static void purge_single_server(lcb_server_t *server, lcb_error_t error,
-                                hrtime_t min_nonstale,
-                                hrtime_t *tmo_next)
-{
-    protocol_binary_request_header req;
-    struct lcb_command_data_st ct;
-    lcb_size_t nr;
-    char *packet;
-    lcb_size_t packetsize;
-    char *keyptr;
-    ringbuffer_t rest;
-    ringbuffer_t *stream = &server->cmd_log;
-    ringbuffer_t *cookies;
-    ringbuffer_t *mirror = NULL; /* mirror buffer should be purged with main stream */
+    mc_PIPELINE *pl = &server->pipeline;
     lcbconn_t conn = &server->connection;
-    lcb_size_t send_size = 0;
-    lcb_size_t stream_size = ringbuffer_get_nbytes(stream);
-    hrtime_t now = gethrtime();
+    lcb_iotable *iot = conn->iotable;
+    nb_IOV iov[MCREQ_MAXIOV];
+    nb_SIZE toflush;
+    int niov;
+    int fd = conn->u_model.e.sockfd;
 
-    if (server->connection_ready) {
-        cookies = &server->output_cookies;
+    while ((toflush = mcreq_flush_iov_fill(pl, iov, MCREQ_MAXIOV, &niov))) {
+        lcb_ssize_t nw;
+        nw = IOT_V0IO(iot).sendv(
+                IOT_ARG(iot), fd, (struct lcb_iovec_st *)iov, niov);
+
+        /** Handle the errors.. */
+        if (nw > 0) {
+            mcreq_flush_done(pl, nw, toflush);
+            if (nw == toflush && niov < MCREQ_MAXIOV) {
+                LCBCONN_UNWANT(conn, LCB_WRITE_EVENT);
+                break;
+            }
+
+        } else if (nw == -1) {
+            switch (IOT_ERRNO(iot)) {
+            case EWOULDBLOCK:
+            #ifdef USE_EAGAIN
+            case EAGAIN:
+            #endif
+                mcreq_flush_done(pl, 0, toflush);
+                lcbconn_set_want(conn, LCB_WRITE_EVENT, 0);
+                goto GT_SCHEDNEXT;
+
+            case EINTR:
+                continue;
+
+            default:
+                /**
+                 * XXX:
+                 * For error handling with event models on flush, the data
+                 * is considered already to be flushed _immediately_. We rely
+                 * on the assumption that an error here will lead to an error
+                 * on subsequent flushes and so on.
+                 */
+                mcreq_flush_done(pl, toflush, toflush);
+                lcbconn_senderr(conn, conn->last_error);
+                return;
+            }
+        } else {
+            LCBCONN_UNWANT(conn, LCB_WRITE_EVENT);
+            break;
+        }
+    }
+
+    GT_SCHEDNEXT:
+    if (toflush == 0) {
+        LCBCONN_UNWANT(conn, LCB_WRITE_EVENT);
+    }
+
+    conn->want |= LCB_READ_EVENT;
+    if (!server->entered) {
+        lcbconn_apply_want(conn);
+    }
+}
+
+/**
+ * Write callback for the write invoked by do_Cflush. This callback decrements
+ * the flush count and invokes the 'flush_done' from mcreq
+ */
+static void
+handle_Cwr(lcb_sockdata_t *sd, int status, void *wdata)
+{
+    lcb_server_t *server = sd->lcbconn->data;
+    lcb_size_t nw = (uintptr_t)wdata;
+    server->nwpending--;
+
+    mcreq_flush_done(&server->pipeline, nw, nw);
+    if (server->cflush_errsize) {
+        mcreq_flush_done(&server->pipeline,
+                         server->cflush_errsize, server->cflush_errsize);
+        server->cflush_errsize = 0;
+    }
+
+    /**
+     * Complain about a socket error only if the server did not already
+     * acquire a new socket.
+     */
+
+    if (status && sd == server->connection.u_model.c.sockptr) {
+        mcserver_socket_error(server, status);
+    }
+
+    mcserver_decref(server, status == 0);
+}
+
+/**
+ * Starts flushing data for Completion-style I/O backends. This sends multiple
+ * write requests if more IOVs are needed than are statically allocated for.
+ */
+static void
+do_Cflush(lcb_server_t *server)
+{
+    nb_SIZE toflush;
+    mc_PIPELINE *pl = &server->pipeline;
+    lcbconn_t conn = &server->connection;
+    lcb_iotable *iot = conn->iotable;
+    lcbio_Cctx *c = &conn->u_model.c;
+    nb_IOV iov[MCREQ_MAXIOV];
+    int niov;
+
+    while ((toflush = mcreq_flush_iov_fill(pl, iov, MCREQ_MAXIOV, &niov))) {
+        int status = IOT_V1(iot).write2(
+                IOT_ARG(iot), c->sockptr, (struct lcb_iovec_st *)iov, niov,
+                (void *)(uintptr_t)toflush, handle_Cwr);
+
+        if (status) {
+            /**
+             * If we get an error here, we can't just immediately call
+             * flush_done because there may be prior flushes that are awaiting
+             * completion. If so, we increase a counter indicating the next
+             * flush size to use.
+             */
+            if (server->nwpending) {
+                server->cflush_errsize += toflush;
+            } else {
+                /**
+                 * No pending flushes, and therefore we will never get another
+                 * flush callback
+                 */
+                mcreq_flush_done(pl, toflush, toflush);
+            }
+            lcbconn_senderr(conn, LCB_NETWORK_ERROR);
+            break;
+        }
+        server->refcount++;
+        server->nwpending++;
+    }
+
+    if (c->sockptr->is_reading == 0 && server->entered == 0) {
+        conn->want = LCB_READ_EVENT;
+        lcbconn_apply_want(conn);
+    }
+}
+
+void
+mcserver_flush(mc_SERVER *server)
+{
+    lcb_assert(!MCCONN_IS_NEGOTIATING(&server->connection));
+    if (IOT_IS_EVENT(server->connection.iotable)) {
+        do_Eflush(server);
+        lcbconn_apply_want(&server->connection);
     } else {
-        cookies = &server->pending_cookies;
-        mirror = &server->pending;
+        do_Cflush(server);
     }
 
-    if (conn->output) {
-        /* This will usually be false for v1 */
-        send_size = ringbuffer_get_nbytes(conn->output);
+    if (!lcb_timer_armed(server->io_timer)) {
+        lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
     }
-
-    lcb_assert(ringbuffer_initialize(&rest, 1024));
-
-
-    do {
-        int allocated = 0;
-        lcb_uint32_t headersize;
-        lcb_uint16_t nkey;
-
-        nr = ringbuffer_peek(cookies, &ct, sizeof(ct));
-        if (nr != sizeof(ct)) {
-            break;
-        }
-        nr = ringbuffer_peek(stream, req.bytes, sizeof(req));
-        if (nr != sizeof(req)) {
-            break;
-        }
-        packetsize = (lcb_uint32_t)sizeof(req) + ntohl(req.request.bodylen);
-        if (stream->nbytes < packetsize) {
-            break;
-        }
-        if (min_nonstale && ct.start >= min_nonstale) {
-            lcb_log(LOGARGS(server, INFO),
-                    "Still have %d ms remaining for command",
-                    (ct.start - min_nonstale) / 1000000);
-
-            if (tmo_next) {
-                *tmo_next = (ct.start - min_nonstale) + 1;
-            }
-            break;
-        }
-
-        lcb_log(LOGARGS(server, INFO),
-                "Command with cookie=%p timed out from server %s:%s",
-                ct.cookie,
-                server->curhost.host,
-                server->curhost.port);
-
-        ringbuffer_consumed(cookies, sizeof(ct));
-
-        lcb_assert(nr == sizeof(req));
-        packet = stream->read_head;
-
-        if (server->instance->histogram) {
-            lcb_record_metrics(server->instance, now - ct.start,
-                               req.request.opcode);
-        }
-
-        if (server->connection_ready &&
-                stream_size > send_size && (stream_size - packetsize) < send_size) {
-            /* Copy the rest of the current packet into the
-               temporary stream */
-
-            /* I do believe I have some IOV functions to do that? */
-            lcb_size_t nbytes = packetsize - (stream_size - send_size);
-            lcb_assert(ringbuffer_memcpy(&rest,
-                                         conn->output,
-                                         nbytes) == 0);
-            ringbuffer_consumed(conn->output, nbytes);
-            send_size -= nbytes;
-        }
-        stream_size -= packetsize;
-        headersize = (lcb_uint32_t)sizeof(req) + req.request.extlen + htons(req.request.keylen);
-        if (!ringbuffer_is_continous(stream, RINGBUFFER_READ, headersize)) {
-            packet = malloc(headersize);
-            if (packet == NULL) {
-                lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
-                abort();
-            }
-
-            nr = ringbuffer_peek(stream, packet, headersize);
-            if (nr != headersize) {
-                lcb_error_handler(server->instance, LCB_EINTERNAL, NULL);
-                free(packet);
-                abort();
-            }
-            allocated = 1;
-        }
-
-        keyptr = packet + sizeof(req) + req.request.extlen;
-        nkey = ntohs(req.request.keylen);
-
-        failout_single_request(server, &req, &ct, error, keyptr, nkey, packet);
-
-        if (allocated) {
-            free(packet);
-        }
-        ringbuffer_consumed(stream, packetsize);
-        if (mirror) {
-            ringbuffer_consumed(mirror, packetsize);
-        }
-    } while (1); /* CONSTCOND */
-
-    if (server->connection_ready && conn->output) {
-        /* Preserve the rest of the stream */
-        lcb_size_t nbytes = ringbuffer_get_nbytes(stream);
-        send_size = ringbuffer_get_nbytes(conn->output);
-
-        if (send_size >= nbytes) {
-            ringbuffer_consumed(conn->output, send_size - nbytes);
-            lcb_assert(ringbuffer_memcpy(&rest, conn->output, nbytes) == 0);
-        }
-        ringbuffer_reset(conn->output);
-        ringbuffer_append(&rest, conn->output);
-    }
-
-    ringbuffer_destruct(&rest);
-    lcb_maybe_breakout(server->instance);
 }
 
-void lcb_purge_single_server(lcb_server_t *server, lcb_error_t error)
+void
+mcserver_errflush(mc_SERVER *server)
 {
-    purge_single_server(server, error, 0, NULL);
-    lcb_bootstrap_errcount_incr(server->instance);
-}
+    unsigned toflush;
+    nb_IOV iov;
+    mc_PIPELINE *pl = &server->pipeline;
 
-lcb_error_t lcb_failout_server(lcb_server_t *server,
-                               lcb_error_t error)
-{
-    lcb_purge_single_server(server, error);
-    ringbuffer_reset(&server->cmd_log);
-    ringbuffer_reset(&server->output_cookies);
-    ringbuffer_reset(&server->pending);
-    ringbuffer_reset(&server->pending_cookies);
-
-    server->connection_ready = 0;
-    lcb_server_release_connection(server, error);
-    return error;
-}
-
-void lcb_timeout_server(lcb_server_t *server)
-{
-    hrtime_t now, min_valid, next_ns = 0;
-    lcb_uint32_t next_us;
-
-    LOG(server, ERR, "Server timed out");
-    lcb_bootstrap_errcount_incr(server->instance);
-
-    if (!server->connection_ready) {
-        lcb_failout_server(server, LCB_ETIMEDOUT);
+    if (server->nwpending) {
         return;
     }
 
-    now = gethrtime();
-
-    /** The oldest valid command timestamp */
-    min_valid = now - ((hrtime_t)MCSERVER_TIMEOUT(server)) * 1000;
-
-    purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns);
-    if (next_ns) {
-        next_us = (lcb_uint32_t) (next_ns / 1000);
-
-    } else {
-        next_us = MCSERVER_TIMEOUT(server);
+    while ((toflush = mcreq_flush_iov_fill(pl, &iov, 1, NULL))) {
+        mcreq_flush_done(pl, toflush, toflush);
     }
-
-    lcb_log(LOGARGS(server, INFO),
-            "%p, Scheduling next timeout for %d ms",
-            server,
-            next_us / 1000);
-
-    lcb_timer_rearm(server->io_timer, next_us);
-    lcb_maybe_breakout(server->instance);
-}
-
-static void tmo_thunk(lcb_timer_t tm, lcb_t i, const void *cookie)
-{
-    lcb_server_t *server = (lcb_server_t *)cookie;
-    (void)tm;
-    (void)i;
-    lcb_timeout_server(server);
 }
 
 /**
- * Release all allocated resources for this server instance
- * @param server the server to destroy
- */
-void lcb_server_destroy(lcb_server_t *server)
-{
-    lcb_server_release_connection(server, LCB_SUCCESS);
-
-    /* Cancel all pending commands */
-    if (server->cmd_log.nbytes) {
-        lcb_server_purge_implicit_responses(server,
-                                            server->instance->seqno,
-                                            gethrtime(),
-                                            1);
-    }
-
-    if (server->io_timer) {
-        lcb_timer_destroy(NULL, server->io_timer);
-    }
-
-
-    lcbconn_cleanup(&server->connection);
-
-    free(server->rest_api_server);
-    free(server->couch_api_base);
-    free(server->authority);
-    ringbuffer_destruct(&server->output_cookies);
-    ringbuffer_destruct(&server->cmd_log);
-    ringbuffer_destruct(&server->pending);
-    ringbuffer_destruct(&server->pending_cookies);
-    memset(server, 0xff, sizeof(*server));
-}
-
-
-/**
- * Start the SASL auth for a given server.
+ * Invoked when get a NOT_MY_VBUCKET response. If the response contains a JSON
+ * payload then we refresh the configuration with it.
  *
- * @param server the server object to auth agains
+ * This function returns 1 if the operation was successfully rescheduled;
+ * otherwise it returns 0. If it returns 0 then we give the error back to the
+ * user.
  */
-
-void lcb_server_connected(lcb_server_t *server)
+static int
+handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
 {
-    lcbconn_t conn = &server->connection;
-    server->connection_ready = 1;
+    int idx;
+    mc_PACKET *newpkt;
+    lcb_server_t *newsrv;
+    lcb_error_t err = LCB_ERROR;
+    int vb;
+    lcb_t instance = oldsrv->instance;
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    mc_REQDATA *rd = MCREQ_PKT_RDATA(oldpkt);
+    protocol_binary_request_header hdr;
+    mcreq_read_hdr(oldpkt, &hdr);
+    vb = ntohs(hdr.request.vbucket);
 
-    if (server->pending.nbytes > 0) {
-        /*
-        ** @todo we might want to do this a bit more optimal later on..
-        **       We're only using the pending ringbuffer while we're
-        **       doing the SASL auth, so it shouldn't contain that
-        **       much data..
-        */
-        ringbuffer_t copy = server->pending;
-        ringbuffer_reset(&server->cmd_log);
-        ringbuffer_reset(&server->output_cookies);
-        ringbuffer_reset(conn->output);
-        if (!ringbuffer_append(&server->pending, conn->output) ||
-                !ringbuffer_append(&server->pending_cookies, &server->output_cookies) ||
-                !ringbuffer_append(&copy, &server->cmd_log)) {
-            ringbuffer_reset(&server->cmd_log);
-            ringbuffer_reset(&server->output_cookies);
-            lcb_server_release_connection(server, LCB_CLIENT_ENOMEM);
-            lcbconn_cleanup(conn);
-            lcb_error_handler(server->instance, LCB_CLIENT_ENOMEM, NULL);
+    lcb_log(LOGARGS(oldsrv, WARN),
+            "NOT_MY_VBUCKET; Server=%p,ix=%d,real_start=%lu,vb=%d",
+            (void*)oldsrv, oldsrv->pipeline.index, (unsigned long)rd->start, vb);
+
+
+    if (PACKET_NBODY(resinfo)) {
+        lcb_string s;
+        clconfig_provider *cccp;
+
+        lcb_string_init(&s);
+        cccp = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
+        lcb_string_append(&s, PACKET_VALUE(resinfo), PACKET_NVALUE(resinfo));
+        err = lcb_cccp_update(cccp, oldsrv->curhost.host, &s);
+        lcb_string_release(&s);
+    }
+
+
+    if (err != LCB_SUCCESS) {
+        lcb_bootstrap_refresh(instance);
+    }
+
+    /* re-schedule command to new server */
+    if (!instance->settings.vb_noguess) {
+        idx = VB_REMAP(cq->config, vb, (int)oldsrv->pipeline.index);
+    } else {
+        idx = oldsrv->pipeline.index;
+    }
+
+    if (idx == -1) {
+        lcb_log(LOGARGS(oldsrv, ERR), "no alternate server");
+        return 0;
+    }
+
+    lcb_log(LOGARGS(oldsrv, INFO), "Mapped key to new server %d -> %d",
+            oldsrv->pipeline.index, idx);
+
+    newpkt = mcreq_dup_packet(oldpkt);
+    newpkt->flags &= ~MCREQ_STATE_FLAGS;
+    newpkt->opaque = ++cq->seq;
+    mcreq_read_hdr(newpkt, &hdr);
+    hdr.request.opaque = newpkt->opaque;
+    mcreq_write_hdr(newpkt, &hdr);
+
+    newsrv = (lcb_server_t *)instance->cmdq.pipelines[idx];
+    mcreq_packet_handled(&oldsrv->pipeline, oldpkt);
+
+    lcb_assert((lcb_size_t)idx < cq->npipelines);
+    newsrv = (lcb_server_t *)cq->pipelines[idx];
+    mcreq_enqueue_packet(&newsrv->pipeline, newpkt);
+    newsrv->pipeline.flush_start(&newsrv->pipeline);
+    return 1;
+}
+
+static void
+handle_single_packet(lcb_server_t *server, packet_info *info)
+{
+    int is_final_response = 1;
+    mc_PACKET *packet;
+    mc_PIPELINE *pl = &server->pipeline;
+
+    if (PACKET_OPCODE(info) == PROTOCOL_BINARY_CMD_STAT && PACKET_NKEY(info) != 0) {
+        is_final_response = 0;
+    }
+
+    if (is_final_response) {
+        packet = mcreq_pipeline_remove(&server->pipeline, PACKET_OPAQUE(info));
+    } else {
+        packet = mcreq_pipeline_find(&server->pipeline, PACKET_OPAQUE(info));
+    }
+
+    if (!packet) {
+        lcb_log(LOGARGS(server, WARN),
+                "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)",
+                PACKET_OPCODE(info), PACKET_STATUS(info), PACKET_OPAQUE(info));
+        return;
+    }
+
+    /** Check for NOT_MY_VBUCKET; relocate as needed */
+    if (PACKET_STATUS(info) == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
+        if (handle_nmv(server, info, packet)) {
+            /** Handled */
             return;
         }
-
-        ringbuffer_reset(&server->pending);
-        ringbuffer_reset(&server->pending_cookies);
-        lcb_assert(conn->output->nbytes);
-        lcb_server_send_packets(server);
+    }
+    if (! (packet->flags & MCREQ_F_UFWD)) {
+        mcreq_dispatch_response(pl, packet, info, LCB_SUCCESS);
+    }
+    if (is_final_response) {
+        mcreq_packet_handled(pl, packet);
     }
 }
 
-lcb_error_t lcb_server_initialize(lcb_server_t *server, int servernum)
+static lcb_error_t
+parse_packet(lcb_server_t *server)
 {
-    /* Initialize all members */
-    lcb_error_t err;
-    char *p;
-    const char *n = vbucket_config_get_server(server->instance->vbucket_config,
-                                              servernum);
+    lcbconn_t conn = &server->connection;
 
-    err = lcbconn_init(&server->connection,
-                              server->instance->settings.io,
-                              &server->instance->settings);
-    if (err != LCB_SUCCESS) {
-        return err;
+    packet_info info;
+    while (1) {
+        int rv;
+        rv = lcb_packet_read_ringbuffer(&info, conn->input);
+
+        if (rv == -1) {
+            return LCB_PROTOCOL_ERROR;
+
+        } else if (rv == 0) {
+            return LCB_SUCCESS;
+        }
+
+        handle_single_packet(server, &info);
+        lcb_packet_release_ringbuffer(&info, conn->input);
     }
-
-    server->connection.data = server;
-    server->index = servernum;
-    server->authority = strdup(n);
-    strcpy(server->curhost.host, n);
-    p = strchr(server->curhost.host, ':');
-    *p = '\0';
-    strcpy(server->curhost.port, p + 1);
-
-    n = vbucket_config_get_couch_api_base(server->instance->vbucket_config,
-                                          servernum);
-    server->couch_api_base = (n != NULL) ? strdup(n) : NULL;
-    n = vbucket_config_get_rest_api_server(server->instance->vbucket_config,
-                                           servernum);
-    server->rest_api_server = strdup(n);
-    server->io_timer = lcb_timer_create_simple(server->instance->settings.io,
-                                               server, MCSERVER_TIMEOUT(server),
-                                               tmo_thunk);
-    lcb_timer_disarm(server->io_timer);
-
     return LCB_SUCCESS;
 }
 
-void lcb_server_send_packets(lcb_server_t *server)
+#define HANDLER_MAXTIME LCB_US2NS(5000)
+static void
+handler_E(lcb_socket_t sock, short which, void *arg)
 {
-    if (server->pending.nbytes > 0 || server->connection.output->nbytes > 0) {
-        if (server->connection_ready) {
-            lcbconn_set_want(&server->connection, LCB_WRITE_EVENT, 0);
-            if (!server->inside_handler) {
-                lcbconn_apply_want(&server->connection);
-                if (!lcb_timer_armed(server->io_timer)) {
-                    lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
-                }
-            }
+    lcbconn_t conn = arg;
+    lcb_server_t *server = conn->data;
+    hrtime_t now = gethrtime();
 
-        } else if (server->connection.state == LCBCONN_S_UNINIT) {
-            lcb_server_connect(server);
+    server->entered++;
+
+    if (which & LCB_READ_EVENT) {
+        lcbio_status_t status;
+        lcb_error_t err = LCB_SUCCESS;
+        do {
+            status = lcbconn_Erb_read(conn);
+            err = parse_packet(server);
+        } while (status == LCBIO_STATUS_CANREAD && err == LCB_SUCCESS &&
+                now - gethrtime() < HANDLER_MAXTIME);
+
+        if (!LCBIO_IS_OK(status) || err != LCB_SUCCESS) {
+            mcserver_socket_error(server, LCB_NETWORK_ERROR);
+            server->entered--;
+            return;
+        }
+
+        if (!SLLIST_IS_EMPTY(&server->pipeline.requests)) {
+            conn->want |= LCB_READ_EVENT;
+        } else {
+            conn->want &= ~LCB_READ_EVENT;
         }
     }
+
+    if ((which & LCB_WRITE_EVENT) || (conn->want & LCB_WRITE_EVENT)) {
+        do_Eflush(server);
+    }
+
+    server->entered--;
+    lcbconn_apply_want(conn);
+    lcb_maybe_breakout(server->instance);
+    (void)sock;
 }
 
-/*
- * Drop all packets with sequence number less than specified.
- *
- * The packets are considered as stale and the caller will receive
- * appropriate error code in the operation callback.
- *
- * Returns 0 on success
- */
-int lcb_server_purge_implicit_responses(lcb_server_t *c,
-                                        lcb_uint32_t seqno,
-                                        hrtime_t end,
-                                        int all)
+static void
+handle_Crd(lcb_sockdata_t *sd, lcb_ssize_t nr)
 {
-    protocol_binary_request_header req;
+    lcb_error_t err;
+    lcb_server_t *server;
 
-    /** Instance level allocated buffers */
-    ringbuffer_t *cmdlog, *cookies;
-
-    lcb_size_t nr = ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req));
-
-    /* There should at _LEAST_ be _ONE_ message in here if we're not
-     * trying to purge _ALL_ of the messages in the queue
-     */
-    if (all && nr == 0) {
-        return 0;
+    if (!lcbconn_Crb_enter(sd, LCB_READ_EVENT, nr, NULL, (void **)&server)) {
+        return;
     }
 
+    server->entered++;
 
-    /**
-     * Reading the command log is not re-entrant safe, as an additional
-     * command to the same server may result in the command log being modified.
-     * To this end, we must first buffer all the commands in a separate
-     * ringbuffer (or simple buffer) for that matter, and only *then*
-     * invoke the callbacks
-     */
-    lcb_assert(nr == sizeof(req));
-
-    if (req.request.opaque >= seqno) {
-        return 0;
+    if (nr > 0) {
+        err = parse_packet(server);
+    } else {
+        err = LCB_NETWORK_ERROR;
     }
 
-    cmdlog = &c->instance->purged_buf;
-    cookies = &c->instance->purged_cookies;
-    ringbuffer_reset(cmdlog);
-    ringbuffer_reset(cookies);
-
-    /**
-     * Move all the commands we want to purge into the relevant ("local") buffers.
-     * We will later read from these local buffers
-     */
-    while (req.request.opaque < seqno) {
-        lcb_size_t packetsize = ntohl(req.request.bodylen) + (lcb_uint32_t)sizeof(req);
-
-        ringbuffer_memcpy(cmdlog, &c->cmd_log, packetsize);
-        ringbuffer_consumed(&c->cmd_log, packetsize);
-
-
-        ringbuffer_memcpy(cookies, &c->output_cookies, sizeof(struct lcb_command_data_st));
-        ringbuffer_consumed(&c->output_cookies, sizeof(struct lcb_command_data_st));
-
-        nr = ringbuffer_peek(&c->cmd_log, req.bytes, sizeof(req.bytes));
-
-        if (!nr) {
-            break;
-        }
-
-        lcb_assert(nr == sizeof(req));
+    if (err != LCB_SUCCESS) {
+        mcserver_socket_error(server, err);
+        server->entered--;
+        return;
     }
 
-    nr = ringbuffer_peek(cmdlog, req.bytes, sizeof(req));
-    lcb_assert(nr == sizeof(req));
+    server->entered--;
 
-    if (!all) {
-        lcb_assert(c->cmd_log.nbytes);
+    lcbconn_apply_want(sd->lcbconn);
+    lcb_maybe_breakout(server->instance);
+}
+
+static void
+handle_CEerr(lcbconn_t conn)
+{
+    mc_SERVER *server = conn->data;
+    mcserver_socket_error(server, LCB_NETWORK_ERROR);
+}
+
+void
+mcserver_wire_io(mc_SERVER *server, lcbconn_t src)
+{
+    struct lcb_io_use_st use;
+    lcbconn_use_ex(&use, server, handler_E, handle_Crd, handle_Cwr, handle_CEerr);
+
+    if (src) {
+        lcbconn_transfer(src, &server->connection, &use);
+    } else {
+        lcbconn_use(&server->connection, &use);
     }
 
-    do {
-        struct lcb_command_data_st ct;
-        char *packet = cmdlog->read_head;
-        lcb_size_t packetsize = ntohl(req.request.bodylen) + (lcb_uint32_t)sizeof(req);
-        char *keyptr;
+    lcbconn_reset_bufs(&server->connection);
+}
 
-        union {
-            lcb_get_resp_t get;
-            lcb_store_resp_t store;
-            lcb_remove_resp_t remove;
-            lcb_touch_resp_t touch;
-            lcb_unlock_resp_t unlock;
-            lcb_arithmetic_resp_t arithmetic;
-            lcb_observe_resp_t observe;
-        } resp;
-
-        nr = ringbuffer_read(cookies, &ct, sizeof(ct));
-        lcb_assert(nr == sizeof(ct));
-
-        if (c->instance->histogram) {
-            lcb_record_metrics(c->instance, end - ct.start, req.request.opcode);
-        }
-
-        if (!ringbuffer_is_continous(cmdlog, RINGBUFFER_READ, packetsize)) {
-            packet = malloc(packetsize);
-            if (packet == NULL) {
-                lcb_error_handler(c->instance, LCB_CLIENT_ENOMEM, NULL);
-                return -1;
-            }
-
-            nr = ringbuffer_peek(cmdlog, packet, packetsize);
-            if (nr != packetsize) {
-                lcb_error_handler(c->instance, LCB_EINTERNAL, NULL);
-                free(packet);
-                return -1;
-            }
-        }
-
-        switch (req.request.opcode) {
-        case PROTOCOL_BINARY_CMD_GATQ:
-        case PROTOCOL_BINARY_CMD_GETQ:
-            keyptr = packet + sizeof(req) + req.request.extlen;
-            setup_lcb_get_resp_t(&resp.get, keyptr, ntohs(req.request.keylen),
-                                 NULL, 0, 0, 0, 0);
-            c->instance->callbacks.get(c->instance, ct.cookie, LCB_KEY_ENOENT, &resp.get);
-            break;
-        case CMD_OBSERVE:
-            lcb_failout_observe_request(c, &ct, packet,
-                                        sizeof(req.bytes) + ntohl(req.request.bodylen),
-                                        LCB_SERVER_BUG);
-            break;
-        case PROTOCOL_BINARY_CMD_NOOP:
-            break;
-        default: {
-            char errinfo[128] = { '\0' };
-            snprintf(errinfo, 128, "Unknown implicit send message op=%0x", req.request.opcode);
-            lcb_error_handler(c->instance, LCB_EINTERNAL, errinfo);
-            return -1;
-        }
-        }
-
-        if (packet != cmdlog->read_head) {
-            free(packet);
-        }
-
-        ringbuffer_consumed(cmdlog, packetsize);
-        nr = ringbuffer_peek(cmdlog, req.bytes, sizeof(req));
-
-        if (nr == 0) {
-            return 0;
-        }
-
-        lcb_assert(nr == sizeof(req));
-    } while (1); /* CONSTCOND */
-
-    return 0;
+int
+mcserver_has_pending(mc_SERVER *server)
+{
+    return !SLLIST_IS_EMPTY(&server->pipeline.requests);
 }

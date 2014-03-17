@@ -125,6 +125,42 @@ mcreq_reserve_value(
     return LCB_SUCCESS;
 }
 
+static int
+pkt_tmo_compar(sllist_node *a, sllist_node *b)
+{
+    mc_PACKET *pa, *pb;
+    hrtime_t tmo_a, tmo_b;
+
+    pa = SLLIST_ITEM(a, mc_PACKET, slnode);
+    pb = SLLIST_ITEM(b, mc_PACKET, slnode);
+
+    tmo_a = MCREQ_PKT_RDATA(pa)->start;
+    tmo_b = MCREQ_PKT_RDATA(pb)->start;
+
+    if (tmo_a == tmo_b) {
+        return 0;
+    } else if (tmo_a < tmo_b) {
+        return -1;
+    } else {
+        return 1;
+    }
+}
+
+void
+mcreq_reenqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
+{
+    sllist_node *old_tail = pipeline->requests.last;
+    mcreq_enqueue_packet(pipeline, packet);
+    /** Remove the packet from the list, though */
+    if (!old_tail) {
+        return;
+    }
+
+    old_tail->next = NULL;
+    pipeline->requests.last = old_tail;
+    sllist_insert_sorted(&pipeline->requests, &packet->slnode, pkt_tmo_compar);
+}
+
 void
 mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {

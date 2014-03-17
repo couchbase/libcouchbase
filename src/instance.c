@@ -77,7 +77,7 @@ LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_nodes(lcb_t instance)
 {
     if (LCBT_VBCONFIG(instance)) {
-        return (lcb_int32_t)instance->nservers;
+        return LCBT_NSERVERS(instance);
     } else {
         return -1;
     }
@@ -389,21 +389,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->durability_polls = hashset_create();
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
-    if ((obj->cmdht = lcb_hashtable_szt_new(32)) == NULL) {
-        lcb_destroy(obj);
-        return LCB_CLIENT_ENOMEM;
-    }
-
-
-    if (!ringbuffer_initialize(&obj->purged_buf, 4096)) {
-        lcb_destroy(obj);
-        return LCB_CLIENT_ENOMEM;
-    }
-    if (!ringbuffer_initialize(&obj->purged_cookies, 4096)) {
-        lcb_destroy(obj);
-        return LCB_CLIENT_ENOMEM;
-    }
-
     *instance = obj;
     return LCB_SUCCESS;
 }
@@ -419,10 +404,9 @@ void lcb_destroy(lcb_t instance)
         lcb_clconfig_decref(instance->cur_configinfo);
         instance->cur_configinfo = NULL;
     }
-    instance->vbucket_config = NULL;
+    instance->cmdq.config = NULL;
 
     lcb_bootstrap_destroy(instance);
-    lcb_confmon_destroy(instance->confmon);
     hostlist_destroy(instance->usernodes);
 
     if (instance->timers != NULL) {
@@ -449,8 +433,9 @@ void lcb_destroy(lcb_t instance)
         hashset_destroy(instance->durability_polls);
     }
 
-    for (ii = 0; ii < instance->nservers; ++ii) {
-        lcb_server_destroy(instance->servers + ii);
+    for (ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
+        lcb_server_t *server = LCBT_GET_SERVER(instance, ii);
+        mcserver_decref(server, 0);
     }
 
     if (instance->http_requests) {
@@ -471,29 +456,19 @@ void lcb_destroy(lcb_t instance)
         }
     }
 
+    lcb_confmon_destroy(instance->confmon);
     hashset_destroy(instance->http_requests);
-
-    free(instance->servers);
-
     connmgr_destroy(instance->memd_sockpool);
 
     if (settings->io && settings->io->p->v.v0.need_cleanup) {
         lcb_destroy_io_ops(settings->io->p);
     }
 
-    ringbuffer_destruct(&instance->purged_buf);
-    ringbuffer_destruct(&instance->purged_cookies);
-
     free(instance->histogram);
     free(settings->username);
     free(settings->password);
     free(settings->bucket);
     free(settings->sasl_mech_force);
-    if (instance->cmdht) {
-        genhash_free(instance->cmdht);
-        instance->cmdht = NULL;
-    }
-
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }
@@ -529,4 +504,28 @@ LCB_INTERNAL_API
 void lcb_stop_loop(lcb_t instance)
 {
     IOT_STOP(instance->settings.io);
+}
+
+void lcb_maybe_breakout(lcb_t instance)
+{
+    unsigned ii;
+    if (!instance->wait) {
+        return;
+    }
+
+    if (hashset_num_items(instance->timers) ||
+            hashset_num_items(instance->durability_polls) ||
+            hashset_num_items(instance->http_requests)) {
+        return;
+    }
+
+    for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+        lcb_server_t *ss = LCBT_GET_SERVER(instance, ii);
+        if (mcserver_has_pending(ss)) {
+            return;
+        }
+    }
+
+    instance->wait = 0;
+    instance->iotable.loop.stop(IOT_ARG(&instance->iotable));
 }

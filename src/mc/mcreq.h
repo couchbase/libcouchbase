@@ -354,6 +354,17 @@ void
 mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet);
 
 /**
+ * Like enqueue packet, except it will also inspect the packet's timeout field
+ * and if necessary, restructure the command inside the request list so that
+ * it appears before newer commands.
+ *
+ * The default enqueue_packet() just appends the command to the end of the
+ * queue while this will perform an additional check (and is less efficient)
+ */
+void
+mcreq_reenqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet);
+
+/**
  * Wipe the packet's internal buffers, releasing them. This should be called
  * when the underlying data buffer fields are no longer needed, usually this
  * is called directly before release_packet.

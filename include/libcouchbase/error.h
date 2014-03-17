@@ -189,7 +189,19 @@ extern "C" {
     \
     X(LCB_TOO_MANY_REDIRECTS, 0x29, LCB_ERRTYPE_NETWORK, \
       "Maximum allowed number of redirects reached. See lcb_cntl and the "\
-      "LCB_CNTL_MAX_REDIRECTS option to modify this limit")
+      "LCB_CNTL_MAX_REDIRECTS option to modify this limit") \
+    \
+    X(LCB_MAP_CHANGED, 0x2A, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
+      "The cluster map has changed and this operation could not be completed " \
+      "or retried internally. Try this operation again") \
+    \
+    X(LCB_INCOMPLETE_PACKET, 0x2B, LCB_ERRTYPE_TRANSIENT|LCB_ERRTYPE_INPUT, \
+      "Incomplete packet was passed to forward function") \
+    \
+    X(LCB_UNFORWADABLE, 0x2C, LCB_ERRTYPE_INPUT, \
+      "Opcode provided in packet cannot be sent to the upstream server. The " \
+      "packet contains no inherent server mapping information (i.e. has no key) " \
+      "and/or depends on client-visible cluster topologies")
 
     /**
      * Define the error codes in use by the library

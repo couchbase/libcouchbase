@@ -38,7 +38,9 @@ int lcb_is_waiting(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_error_t lcb_wait(lcb_t instance)
 {
-
+    unsigned ii;
+    int should_wait = 0;
+    mc_CMDQUEUE *cq = &instance->cmdq;
     if (instance->wait != 0) {
         return instance->last_error;
     }
@@ -51,21 +53,24 @@ lcb_error_t lcb_wait(lcb_t instance)
      */
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    if (LCBT_VBCONFIG(instance) == NULL ||
-            lcb_flushing_buffers(instance) ||
-            hashset_num_items(instance->timers) > 0 ||
-            hashset_num_items(instance->durability_polls) > 0) {
-
-        lcb_size_t ii;
-
-        for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-            lcb_server_t *c = LCBT_GET_SERVER(instance, ii);
-
-            if (lcb_server_has_pending(c)) {
-                lcb_timer_rearm(c->io_timer,
-                                instance->settings.operation_timeout);
-            }
+    for (ii = 0; ii < cq->npipelines; ii++) {
+        lcb_server_t *server = (lcb_server_t *)cq->pipelines[ii];
+        if (mcserver_has_pending(server)) {
+            lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
+            should_wait = 1;
         }
+    }
+
+    if (!should_wait) {
+        if (hashset_num_items(instance->timers) > 0 ||
+                hashset_num_items(instance->durability_polls) > 0 ||
+                hashset_num_items(instance->http_requests) > 0 ||
+                cq->config == NULL) {
+            should_wait = 1;
+        }
+    }
+
+    if (should_wait) {
         instance->settings.io->loop.start(instance->settings.io->p);
     }
 
