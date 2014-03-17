@@ -717,6 +717,11 @@ void lcbconn_transfer(lcbconn_t from, lcbconn_t to,
 
     to->protoctx = from->protoctx; from->protoctx = NULL;
     to->protoctx_dtor = from->protoctx_dtor; from->protoctx_dtor = NULL;
+    to->protoctx_transfer = from->protoctx_transfer; from->protoctx_transfer = NULL;
+
+    if (to->protoctx_transfer) {
+        to->protoctx_transfer(to->protoctx, to);
+    }
     to->last_error = from->last_error;
     to->state = from->state; from->state = LCBCONN_S_UNINIT;
     to->cur_host_ = from->cur_host_; from->cur_host_ = NULL;

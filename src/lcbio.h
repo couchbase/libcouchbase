@@ -93,6 +93,7 @@ struct lcb_nibufs_st {
 
 struct lcb_settings_st;
 typedef void (*protoctx_dtor_t)(void*);
+typedef void (*protoctx_xfr_t)(void *, struct lcb_connection_st *);
 
 typedef struct {
     /** Callback for all socket events */
@@ -128,6 +129,8 @@ struct lcb_connection_st {
 
     /** Destructor function called to clean up the protoctx pointer */
     protoctx_dtor_t protoctx_dtor;
+    /** Function called to update any internal references to the old connection */
+    protoctx_xfr_t protoctx_transfer;
 
     lcb_ioconnect_t ioconn;
 
@@ -234,7 +237,6 @@ void lcbconn_set_want(lcbconn_t conn, short events, int clear_existing);
 void lcbconn_apply_want(lcbconn_t conn);
 
 int lcb_flushing_buffers(lcb_t instance);
-
 
 /**
  * Call this to unpack any related data related with the operation and the
@@ -372,8 +374,7 @@ void lcbconn_transfer(lcbconn_t from,
 
 const lcb_host_t * lcbconn_get_host(const lcbconn_t);
 
-/** Schedule an asynchronous error to be sent to the handler */
-void lcb_conn_senderr(lcbconn_t conn, int err);
+void lcbconn_senderr(lcbconn_t conn, int err);
 
 #define LCB_CONN_DATA(conn) (conn->data)
 
