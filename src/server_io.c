@@ -277,8 +277,6 @@ static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
 
     if (err != LCB_SUCCESS) {
         lcb_negotiation_destroy(ctx);
-        server->connection.protoctx = NULL;
-        server->connection.protoctx_dtor = NULL;
 
         if (err == LCB_ETIMEDOUT) {
             lcb_timeout_server(server);
@@ -346,8 +344,6 @@ static void socket_connected(connmgr_request *req)
 
         saslctx->data = server;
         saslctx->complete = negotiation_done;
-        conn->protoctx = saslctx;
-        conn->protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
 
     } else {
         lcb_server_connected(server);
@@ -418,9 +414,4 @@ void lcb_server_release_connection(lcb_server_t *server, lcb_error_t err)
     } else {
         connmgr_discard(server->instance->memd_sockpool, conn);
     }
-}
-
-struct negotiation_context * lcb_negotiation_get(lcbconn_t conn)
-{
-    return (struct negotiation_context *)conn->protoctx;
 }

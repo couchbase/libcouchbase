@@ -151,6 +151,7 @@ static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
     struct negotiation_context *ctx = (struct negotiation_context *)cookie;
     negotiation_set_error_ex(ctx, LCB_ETIMEDOUT, "Negotiation timed out");
+    negotiation_bail(ctx);
     (void)tm;
     (void)i;
 }
@@ -403,6 +404,12 @@ static void io_error_handler(lcbconn_t conn)
     negotiation_bail(ctx);
 }
 
+static void connxfr_callback(void *ptr, lcbconn_t to)
+{
+    struct negotiation_context *ctx = ptr;
+    ctx->conn = to;
+}
+
 struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
                                                    lcb_settings *settings,
                                                    lcb_uint32_t timeout,
@@ -422,6 +429,9 @@ struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
     }
 
     conn->data = ctx;
+    conn->protoctx = ctx;
+    conn->protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
+    conn->protoctx_transfer = connxfr_callback;
     ctx->settings = settings;
     ctx->conn = conn;
     curhost = lcbconn_get_host(conn);
@@ -496,7 +506,6 @@ struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
 
 void lcb_negotiation_destroy(struct negotiation_context *ctx)
 {
-
     if (ctx->sasl) {
         cbsasl_dispose(&ctx->sasl);
     }
@@ -509,6 +518,16 @@ void lcb_negotiation_destroy(struct negotiation_context *ctx)
         lcb_timer_destroy(NULL, ctx->timer);
     }
 
+    if (ctx->conn) {
+        ctx->conn->protoctx = NULL;
+        ctx->conn->protoctx_dtor = NULL;
+    }
+
     free(ctx->errinfo.msg);
     free(ctx);
+}
+
+struct negotiation_context * lcb_negotiation_get(lcbconn_t conn)
+{
+    return conn->protoctx;
 }

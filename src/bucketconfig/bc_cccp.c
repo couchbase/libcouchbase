@@ -302,9 +302,6 @@ static void socket_connected(connmgr_request *req)
 
         ctx->complete = negotiation_done;
         ctx->data = cccp;
-        cccp->connection.protoctx = ctx;
-        cccp->connection.protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
-
     }
 }
 
