@@ -374,6 +374,16 @@ void lcbconn_transfer(lcbconn_t from,
 
 const lcb_host_t * lcbconn_get_host(const lcbconn_t);
 
+/**
+ * Schedule an asynchronous error to be sent to the error handler. The common
+ * error callback will be invoked
+ * @param conn the connection to set the error on
+ * @param err the error value visible as the 'last_error' variable within
+ * the connection object.
+ *
+ * It is safe to call this function multiple times. Multiple calls to this
+ * function may result in possibly only a single call.
+ */
 void lcbconn_senderr(lcbconn_t conn, int err);
 
 #define LCB_CONN_DATA(conn) (conn->data)

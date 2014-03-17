@@ -593,6 +593,12 @@ static void async_error_trigger(lcb_timer_t t, lcb_t i, const void *arg)
     (void)t; (void)i;
 }
 
+void lcbconn_senderr(lcbconn_t conn, int err)
+{
+    conn->last_error = err;
+    lcb_async_signal(conn->as_err);
+}
+
 lcb_error_t lcbconn_init(lcbconn_t conn,
                                 lcb_iotable *iotable,
                                 lcb_settings *settings)
