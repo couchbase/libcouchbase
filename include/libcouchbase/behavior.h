@@ -27,12 +27,6 @@ extern "C" {
 #endif
 
     LIBCOUCHBASE_API
-    void lcb_behavior_set_syncmode(lcb_t instance, lcb_syncmode_t syncmode);
-
-    LIBCOUCHBASE_API
-    lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t instance);
-
-    LIBCOUCHBASE_API
     void lcb_behavior_set_ipv6(lcb_t instance, lcb_ipv6_t mode);
 
     LIBCOUCHBASE_API

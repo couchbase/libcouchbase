@@ -210,7 +210,6 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/server_negotiate.c
             src/stats.c
             src/store.c
-            src/synchandler.c
             src/timer.c
             src/timings.c
             src/touch.c

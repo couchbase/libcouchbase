@@ -233,16 +233,8 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
 
 static lcb_error_t syncmode(int mode, lcb_t instance, int cmd, void *arg)
 {
-    lcb_syncmode_t *user = arg;
-
-    if (mode == LCB_CNTL_SET) {
-        instance->syncmode = *user;
-    } else {
-        *user = instance->syncmode;
-    }
-
-    (void)cmd;
-    return LCB_SUCCESS;
+    (void)mode; (void)instance; (void)cmd; (void)arg;
+    return LCB_NOT_SUPPORTED;
 }
 
 static lcb_error_t ippolicy(int mode, lcb_t instance, int cmd, void *arg)
@@ -458,23 +450,6 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
     }
 
     return handler(mode, instance, cmd, arg);
-}
-
-/**
- * These APIs are moved from behavior.c and implemented atop of lcb_cntl
- */
-LIBCOUCHBASE_API
-void lcb_behavior_set_syncmode(lcb_t instance, lcb_syncmode_t val)
-{
-    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_SYNCMODE, &val);
-}
-
-LIBCOUCHBASE_API
-lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t instance)
-{
-    lcb_syncmode_t ret;
-    lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_SYNCMODE, &ret);
-    return ret;
 }
 
 LIBCOUCHBASE_API

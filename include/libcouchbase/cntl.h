@@ -164,10 +164,7 @@ extern "C" {
      */
 #define LCB_CNTL_CONFIGNODE_INFO        0x09
 
-    /**
-     * Get/Set the "syncmode" behavior
-     * Arg: lcb_syncmode_t*
-     */
+    /** RESERVED */
 #define LCB_CNTL_SYNCMODE               0x0a
 
     /**

@@ -180,11 +180,7 @@ lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer)
     } else {
         destroy_timer(timer);
     }
-    if (!standalone) {
-        return lcb_synchandler_return(instance, LCB_SUCCESS);
-    } else {
-        return LCB_SUCCESS;
-    }
+    return LCB_SUCCESS;
 }
 
 LCB_INTERNAL_API

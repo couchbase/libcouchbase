@@ -593,7 +593,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     dset_ref(dset);
     hashset_add(instance->durability_polls, dset);
     timer_schedule(dset, 0, STATE_OBSPOLL);
-    return lcb_synchandler_return(instance, LCB_SUCCESS);
+    return LCB_SUCCESS;
 }
 
 /**

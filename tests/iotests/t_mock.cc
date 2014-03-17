@@ -123,64 +123,6 @@ TEST_F(MockUnitTest, testFlags)
     lcb_wait(instance);
 }
 
-
-extern "C" {
-    static void syncmode_store_callback(lcb_t,
-                                        const void *cookie,
-                                        lcb_storage_t,
-                                        lcb_error_t error,
-                                        const lcb_store_resp_t *)
-    {
-        int *status = (int *)cookie;
-        *status = error;
-    }
-}
-
-TEST_F(MockUnitTest, testSyncmodeDefault)
-{
-
-    lcb_t instance;
-    HandleWrap hw;
-
-    createConnection(hw, instance);
-    ASSERT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
-}
-
-TEST_F(MockUnitTest, testSyncmodeBehaviorToggle)
-{
-    lcb_t instance;
-    HandleWrap hw;
-
-    createConnection(hw, instance);
-    lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
-    ASSERT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
-}
-
-TEST_F(MockUnitTest, testSyncStore)
-{
-    lcb_t instance;
-    HandleWrap hw;
-    createConnection(hw, instance);
-
-    lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
-    ASSERT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
-
-    lcb_set_store_callback(instance, syncmode_store_callback);
-
-    int cookie = 0xffff;
-    lcb_store_cmd_t cmd(LCB_SET, "key", 3);
-    lcb_store_cmd_t *cmds[] = { &cmd };
-    lcb_error_t ret = lcb_store(instance, &cookie, 1, cmds);
-    ASSERT_EQ(LCB_SUCCESS, ret);
-    ASSERT_EQ((int)LCB_SUCCESS, cookie);
-    cookie = 0xffff;
-
-    cmd.v.v0.operation = LCB_ADD;
-    ret = lcb_store(instance, &cookie, 1, cmds);
-    ASSERT_TRUE(ret == LCB_KEY_EEXISTS &&
-                cookie == LCB_KEY_EEXISTS);
-}
-
 extern "C" {
     static void timings_callback(lcb_t,
                                  const void *cookie,

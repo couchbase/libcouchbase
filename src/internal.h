@@ -122,9 +122,6 @@ extern "C" {
 
         struct lcb_io_opt_st *io;
 
-        /* The current synchronous mode */
-        lcb_syncmode_t syncmode;
-
         mc_CMDQUEUE cmdq;
 
 
@@ -273,7 +270,6 @@ extern "C" {
         lcb_uint32_t timeout;
     };
 
-    lcb_error_t lcb_synchandler_return(lcb_t instance, lcb_error_t retcode);
 
     lcb_error_t lcb_error_handler(lcb_t instance,
                                   lcb_error_t error,

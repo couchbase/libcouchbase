@@ -127,11 +127,6 @@ extern "C" {
     } lcb_verbosity_level_t;
 
     typedef enum {
-        LCB_ASYNCHRONOUS = 0x00,
-        LCB_SYNCHRONOUS = 0xff
-    } lcb_syncmode_t;
-
-    typedef enum {
         LCB_IPV6_DISABLED = 0x00,
         LCB_IPV6_ONLY = 0x1,
         LCB_IPV6_ALLOW = 0x02

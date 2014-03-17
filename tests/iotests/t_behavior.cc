@@ -101,17 +101,8 @@ protected:
 
 TEST_F(Behavior, CheckDefaultValues)
 {
-    EXPECT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
     EXPECT_EQ(LCB_IPV6_DISABLED, lcb_behavior_get_ipv6(instance));
     return;
-}
-
-TEST_F(Behavior, CheckSyncmode)
-{
-    lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
-    EXPECT_EQ(LCB_SYNCHRONOUS, lcb_behavior_get_syncmode(instance));
-    lcb_behavior_set_syncmode(instance, LCB_ASYNCHRONOUS);
-    EXPECT_EQ(LCB_ASYNCHRONOUS, lcb_behavior_get_syncmode(instance));
 }
 
 TEST_F(Behavior, CheckIPv6)

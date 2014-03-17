@@ -339,7 +339,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_default_settings(settings);
     lcb_init_io_table(&obj->iotable, io_priv);
     settings->io = &obj->iotable;
-    obj->syncmode = LCB_ASYNCHRONOUS;
     settings->bucket = strdup(bucket);
     settings->logger = lcb_init_console_logger();
 
@@ -478,8 +477,7 @@ void lcb_destroy(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
-    return lcb_synchandler_return(instance,
-                                  lcb_bootstrap_initial(instance));
+    return lcb_bootstrap_initial(instance);
 }
 
 LIBCOUCHBASE_API
