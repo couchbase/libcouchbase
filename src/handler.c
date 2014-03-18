@@ -180,7 +180,7 @@ lcb_error_t lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
 
     switch (in) {
     case PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET:
-        return LCB_NO_MATCHING_SERVER;
+        return LCB_ETIMEDOUT;
     case PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE:
         return LCB_AUTH_CONTINUE;
     case PROTOCOL_BINARY_RESPONSE_EBUSY:
