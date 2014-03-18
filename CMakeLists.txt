@@ -175,8 +175,14 @@ IF(LCB_BUILD_STATIC)
 ELSE()
     SET(_lcb_linkspec SHARED)
 ENDIF()
+
+SET(LCB_OPFILES
+    src/operations/arithmetic.c src/operations/get.c src/operations/touch.c
+    src/operations/observe.c src/operations/durability.c src/operations/store.c
+    src/operations/stats.c src/operations/remove.c)
+
 ADD_LIBRARY(couchbase ${_lcb_linkspec}
-            src/arithmetic.c
+            ${LCB_OPFILES}
             contrib/http_parser/http_parser.c
             src/bootstrap.c
             src/bucketconfig/bc_cccp.c
@@ -187,11 +193,9 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/cntl.c
             src/compat.c
             src/connmgr.c
-            src/durability.c
             src/error.c
             src/handler.c
             src/getconfig.c
-            src/get.c
             src/http.c
             src/http_io.c
             src/http_parse.c
@@ -200,19 +204,14 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/connect.c
             src/connection_utils.c
             src/readwrite.c
-            src/remove.c
             src/newconfig.c
             src/iofactory.c
-            src/observe.c
             src/sanitycheck.c
             src/server.c
             src/server-connection.c
             src/server_negotiate.c
-            src/stats.c
-            src/store.c
             src/timer.c
             src/timings.c
-            src/touch.c
             ${CMAKE_BINARY_DIR}/dllversion.rc
             src/utilities.c
             src/wait.c)
