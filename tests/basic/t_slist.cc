@@ -170,3 +170,53 @@ TEST_F(SListTests, testExtendedIter)
         free(elem);
     }
 }
+
+struct NumberedItem {
+    sllist_node slnode;
+    int value;
+};
+static int
+ni_compare(sllist_node *a, sllist_node *b)
+{
+    NumberedItem *na = SLLIST_ITEM(a, NumberedItem, slnode);
+    NumberedItem *nb = SLLIST_ITEM(b, NumberedItem, slnode);
+    return na->value - nb->value;
+}
+TEST_F(SListTests, testSort)
+{
+    sllist_root l;
+    memset(&l, 0, sizeof(l));
+    NumberedItem items[10];
+    for (unsigned ii = 0; ii < 10; ii++) {
+        items[ii].value = ii;
+        sllist_insert_sorted(&l, &items[ii].slnode, ni_compare);
+    }
+
+    int last = -1;
+    sllist_node *cur;
+    SLLIST_FOREACH(&l, cur) {
+        NumberedItem *ni = SLLIST_ITEM(cur, NumberedItem, slnode);
+        ASSERT_EQ(last, ni->value-1);
+        last = ni->value;
+    }
+
+    /** Insert another item */
+    NumberedItem big1;
+    big1.value = 100;
+    sllist_insert_sorted(&l, &big1.slnode, ni_compare);
+    ASSERT_EQ(l.last, &big1.slnode);
+
+    NumberedItem small1;
+    small1.value = -100;
+    sllist_insert_sorted(&l, &small1.slnode, ni_compare);
+    ASSERT_EQ(l.first, &small1.slnode);
+
+    NumberedItem middle1;
+    middle1.value = 5;
+    sllist_insert_sorted(&l, &middle1.slnode, ni_compare);
+    NumberedItem *ni_next = SLLIST_ITEM(middle1.slnode.next, NumberedItem, slnode);
+    ASSERT_EQ(5, ni_next->value);
+
+    ni_next = SLLIST_ITEM(items[3].slnode.next, NumberedItem, slnode);
+    ASSERT_EQ(&middle1.slnode, ni_next->slnode.next);
+}

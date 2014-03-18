@@ -124,3 +124,43 @@ sllist_prepend(sllist_root *list, sllist_node *item)
     }
 }
 
+/**
+ * Insert a sorted item into the list. This is not a very fast operation but
+ * is maintained here for simplicity.
+ *
+ * It is assumed that the list is otherwise sorted, so that the item with
+ * the lowest value begins at the beginning and the highest value is at the
+ * tail.
+ */
+static INLINE void
+sllist_insert_sorted(sllist_root *list, sllist_node *item,
+                     int (*compar)(sllist_node*, sllist_node*))
+{
+    sllist_iterator iter;
+    if (SLLIST_IS_EMPTY(list)) {
+        sllist_append(list, item);
+        return;
+    }
+
+    SLLIST_ITERFOR(list, &iter) {
+        int rv;
+        if (!iter.next) {
+            /* end of list */
+            sllist_append(list, item);
+            break;
+        }
+
+        rv = compar(item, iter.next);
+        if (rv > 0) {
+            continue;
+        }
+
+        if (iter.cur == list->first) {
+            sllist_prepend(list, item);
+        } else {
+            item->next = iter.cur->next;
+            iter.cur->next = item;
+        }
+        return;
+    }
+}
