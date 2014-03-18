@@ -69,28 +69,6 @@ extern "C" {
         LCB_CONNECT_EUNHANDLED
     } lcb_connect_status_t;
 
-
-    typedef enum {
-        /** We have no configuration */
-        LCB_CONFSTATE_UNINIT = 0,
-
-        /** Configured OK */
-        LCB_CONFSTATE_CONFIGURED = 1,
-
-        /** We are retrying a new configuration */
-        LCB_CONFSTATE_RETRY = 2,
-
-        LCB_CONFSTATE_ERROR = 3
-    } lcb_config_status_t;
-
-    typedef enum {
-        /** Don't failout servers */
-        LCB_CONNFERR_NO_FAILOUT = 1 << 0,
-
-        /** Do not call lcb_maybe_breakout if reconnect fails */
-        LCB_CONFERR_NO_BREAKOUT = 1 << 1
-    } lcb_conferr_opt_t;
-
     typedef enum {
         /** Durability requirement. Poll all servers */
         LCB_OBSERVE_TYPE_DURABILITY,
@@ -99,20 +77,6 @@ extern "C" {
         /** Poll all servers only once */
         LCB_OBSERVE_TYPE_BCAST
     } lcb_observe_type_t;
-
-
-    typedef struct {
-        char *data;
-        lcb_size_t size;
-        lcb_size_t avail;
-    } buffer_t;
-
-    struct vbucket_stream_st {
-        char *header;
-        buffer_t input;
-        lcb_size_t chunk_size;
-        buffer_t chunk;
-    };
 
     struct lcb_histogram_st;
 
