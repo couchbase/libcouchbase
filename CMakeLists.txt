@@ -178,7 +178,6 @@ ENDIF()
 ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/arithmetic.c
             contrib/http_parser/http_parser.c
-            src/bconf_provider.c
             src/bootstrap.c
             src/bucketconfig/bc_cccp.c
             src/bucketconfig/bc_http.c
@@ -202,6 +201,7 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/connection_utils.c
             src/readwrite.c
             src/remove.c
+            src/newconfig.c
             src/iofactory.c
             src/observe.c
             src/sanitycheck.c
