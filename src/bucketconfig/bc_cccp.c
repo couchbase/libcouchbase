@@ -285,6 +285,11 @@ static void socket_connected(connmgr_request *req)
 
     if (cccp->connection.protoctx) {
         /** Already have SASL */
+        if ((err = lcb_connection_reset_buffers(&cccp->connection)) != LCB_SUCCESS) {
+            mcio_error(cccp, err);
+            return;
+        }
+
         request_config(cccp);
         return;
     }
