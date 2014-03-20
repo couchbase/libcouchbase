@@ -65,7 +65,7 @@ struct lcb_logprocs_st;
  */
 typedef struct lcb_settings_st {
     struct lcb_io_opt_st *io;
-
+    unsigned int iid;
     lcb_uint32_t views_timeout;
     lcb_uint32_t http_timeout;
     lcb_uint32_t durability_timeout;

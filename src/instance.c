@@ -40,6 +40,8 @@
  *          terminated). Do <b>not</b> try to release this string.
  *
  */
+static volatile unsigned int lcb_instance_index = 0;
+
 LIBCOUCHBASE_API
 const char *lcb_get_version(lcb_uint32_t *version)
 {
@@ -340,6 +342,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
     settings->bucket = strdup(bucket);
     settings->logger = lcb_init_console_logger();
+    settings->iid = lcb_instance_index++;
 
 
     if (user) {
