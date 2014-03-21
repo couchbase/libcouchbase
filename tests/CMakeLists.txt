@@ -42,12 +42,15 @@ ADD_EXECUTABLE(smoke-test EXCLUDE_FROM_ALL
     procutil.c)
 
 FILE(GLOB T_BASIC_SRC basic/*.cc)
-ADD_EXECUTABLE(nonio-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_BASIC_SRC})
-
 FILE(GLOB T_MC_SRC mc/*.cc)
+FILE(GLOB T_RDB_SRC rdb/*.cc)
+
+ADD_EXECUTABLE(nonio-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_BASIC_SRC})
 ADD_EXECUTABLE(mc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
 ADD_EXECUTABLE(mc-malloc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
 ADD_EXECUTABLE(netbuf-tests EXCLUDE_FROM_ALL nonio_tests.cc basic/t_netbuf.cc)
+ADD_EXECUTABLE(rdb-tests EXCLUDE_FROM_ALL nonio_tests.cc
+    ${T_RDB_SRC} ${SOURCE_ROOT}/src/list.c)
 
 IF(WIN32)
     TARGET_LINK_LIBRARIES(mc-tests ws2_32.lib)
@@ -96,6 +99,7 @@ TARGET_LINK_LIBRARIES(mc-tests mcreq netbuf vbucket gtest)
 TARGET_LINK_LIBRARIES(mc-malloc-tests mcreq netbuf-malloc vbucket gtest)
 TARGET_LINK_LIBRARIES(netbuf-tests netbuf gtest)
 TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils)
+TARGET_LINK_LIBRARIES(rdb-tests rdb gtest)
 
 
 MACRO(BUILD_TEST target)
