@@ -115,6 +115,12 @@ extern "C" {
 
 #define LCB_CLIST_SIZE(cl) (cl)->size
 
+#define LCB_LIST_TAIL(list) \
+    ((LCB_LIST_IS_EMPTY(list)) ? NULL : (list)->prev)
+
+#define LCB_LIST_HEAD(list) \
+    ((LCB_LIST_IS_EMPTY(list)) ? NULL : (list)->next)
+
 #ifdef __cplusplus
 }
 #endif
