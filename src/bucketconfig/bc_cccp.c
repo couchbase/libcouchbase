@@ -121,7 +121,8 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
         lcb_server_start_packet(server, cookie, &req, sizeof(req.bytes));
         lcb_server_end_packet(server);
         lcb_server_send_packets(server);
-
+        lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base,
+                    config_node_timeout));
     } else {
         cccp->cur_connreq = calloc(1, sizeof(*cccp->cur_connreq));
         connmgr_req_init(cccp->cur_connreq, next_host->host, next_host->port,
