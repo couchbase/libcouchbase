@@ -799,9 +799,16 @@ int vbucket_found_incorrect_master(VBUCKET_CONFIG_HANDLE vb, int vbucket,
         for (i = 0; i < vb->num_replicas; i++) {
             vb->vbuckets[vbucket].servers[i+1] = vb->fvbuckets[vbucket].servers[i+1];
         }
-    } else if (mappedServer == wrongserver) {
+        mappedServer = rv;
+    }
+
+    if (mappedServer == wrongserver) {
         rv = (rv + 1) % vb->num_servers;
         vb->vbuckets[vbucket].servers[0] = rv;
+    }
+
+    if (rv == wrongserver) {
+        return -1;
     }
 
     return rv;
