@@ -65,12 +65,134 @@ void cJSON_InitHooks(cJSON_Hooks* hooks)
     cJSON_free   = (hooks->free_fn)?hooks->free_fn:free;
 }
 
-/* Internal constructor. */
-static cJSON *cJSON_New_Item(void)
+/* The size of pool allocation groups.  Note that the allocation
+    pools are only used during parsing, and not generation.
+    Additionally, this default value is based on empirical
+    evidence of best performance with Couchbase configuration
+    data */
+#ifndef CJSON_POOL_ALLOC_SIZE
+    #define CJSON_POOL_ALLOC_SIZE 1024
+#endif
+
+/* Creates a new allocation pool. */
+static cJSON_PoolBlock *cJSON_New_PoolBlock(cJSON_Pool *pool)
 {
-    cJSON* node = (cJSON*)cJSON_malloc(sizeof(cJSON));
-    if (node) memset(node,0,sizeof(cJSON));
+    int i;
+    cJSON *item, *new_alloc;
+    cJSON_PoolBlock *new_block;
+
+    if (CJSON_POOL_ALLOC_SIZE <= 0) {
+        return 0;
+    }
+
+    new_block = (cJSON_PoolBlock*)cJSON_malloc(
+        sizeof(cJSON_PoolBlock) + sizeof(cJSON)*CJSON_POOL_ALLOC_SIZE);
+    if (!new_block) {
+        return 0;
+    }
+
+    new_alloc = (cJSON*)(new_block+1);
+
+    memset(new_block, 0,
+        sizeof(cJSON_PoolBlock) + sizeof(cJSON)*CJSON_POOL_ALLOC_SIZE);
+
+    new_block->next = pool->blocks;
+    pool->blocks = new_block;
+
+    for (i=0, item=new_alloc; i<CJSON_POOL_ALLOC_SIZE; ++i, ++item) {
+        item->next = pool->free_items;
+        pool->free_items = item;
+    }
+
+    return new_block;
+}
+
+/* This will create an allocation pool */
+static cJSON_Pool * cJSON_New_Pool()
+{
+    if (CJSON_POOL_ALLOC_SIZE <= 0) {
+        return 0;
+    } else {
+        cJSON_Pool * pool = (cJSON_Pool*)cJSON_malloc(sizeof(cJSON_Pool));
+        if (!pool) {
+            return 0;
+        }
+
+        memset(pool, 0, sizeof(cJSON_Pool));
+        pool->free_items = 0;
+        pool->blocks = 0;
+        pool->refcount = 0;
+
+        return pool;
+    }
+}
+
+/* This will destroy an allocation pool */
+static void cJSON_Destroy_Pool(cJSON_Pool *pool)
+{
+    cJSON_PoolBlock *cur = pool->blocks, *next;
+    while (cur) {
+        next = cur->next;
+        /* this frees all the allocations as well */
+        cJSON_free(cur);
+        cur = next;
+    }
+}
+
+/* allocate new item from a pool */
+static cJSON *cJSON_Pool_New_Item(cJSON_Pool *pool)
+{
+    if (!pool->free_items) {
+        cJSON_New_PoolBlock(pool);
+    }
+    if (pool->free_items) {
+        cJSON *node = pool->free_items;
+        pool->free_items = node->next;
+        pool->refcount++;
+        node->next = 0;
+        node->alloc_pool = pool;
+        /* all items in the pool are already zeroed */
+        return node;
+    }
+    return 0;
+}
+static void cJSON_Pool_Free_Item(cJSON_Pool *pool, cJSON *node)
+{
+    /* Note that this code intentially does not return the item
+        to the pool if we are destroying the pool anyways. */
+    if (--pool->refcount == 0) {
+        cJSON_Destroy_Pool(pool);
+    } else {
+        memset(node, 0, sizeof(cJSON));
+        node->next = pool->free_items;
+        pool->free_items = node;
+    }
+}
+
+/* Internal constructor. */
+static cJSON *cJSON_New_Item(cJSON *parent)
+{
+    cJSON* node = 0;
+    if (parent && parent->alloc_pool) {
+        node = cJSON_Pool_New_Item(parent->alloc_pool);
+    }
+    if (!node) {
+        node = (cJSON*)cJSON_malloc(sizeof(cJSON));
+        if (node) {
+            memset(node,0,sizeof(cJSON));
+        }
+    }
     return node;
+}
+
+static void cJSON_Free_Item(cJSON *node)
+{
+    cJSON_Pool *pool = node->alloc_pool;
+    if (pool) {
+        cJSON_Pool_Free_Item(pool, node);
+    } else {
+        cJSON_free(node);
+    }
 }
 
 /* Delete a cJSON structure. */
@@ -83,7 +205,7 @@ void cJSON_Delete(cJSON *c)
         if (!(c->type&cJSON_IsReference) && c->child) cJSON_Delete(c->child);
         if (!(c->type&cJSON_IsReference) && c->valuestring) cJSON_free(c->valuestring);
         if (c->string) cJSON_free(c->string);
-        cJSON_free(c);
+        cJSON_Free_Item(c);
         c=next;
     }
 }
@@ -230,8 +352,17 @@ static const char *skip(const char *in) {while (in && (unsigned char)*in<=32) in
 /* Parse an object - create a new root, and populate. */
 cJSON *cJSON_Parse(const char *value)
 {
-    cJSON *c=cJSON_New_Item();
+    cJSON_Pool *pool = cJSON_New_Pool();
+    cJSON *c = 0;
+    if (pool) {
+        c = cJSON_Pool_New_Item(pool);
+    }
+    if (!c) {
+        c = cJSON_New_Item(0);
+    }
     if (!c) return 0;       /* memory fail */
+
+    c->alloc_pool = pool;
 
     if (!parse_value(c,skip(value))) {cJSON_Delete(c);return 0;}
     return c;
@@ -284,7 +415,7 @@ static const char *parse_array(cJSON *item,const char *value)
     value=skip(value+1);
     if (*value==']') return value+1;    /* empty array. */
 
-    item->child=child=cJSON_New_Item();
+    item->child=child=cJSON_New_Item(item);
     if (!item->child) return 0;      /* memory fail */
     value=skip(parse_value(child,skip(value))); /* skip any spacing, get the value. */
     if (!value) return 0;
@@ -292,7 +423,7 @@ static const char *parse_array(cJSON *item,const char *value)
     while (*value==',')
     {
         cJSON *new_item;
-        if (!(new_item=cJSON_New_Item())) return 0;     /* memory fail */
+        if (!(new_item=cJSON_New_Item(item))) return 0;     /* memory fail */
         child->next=new_item;new_item->prev=child;child=new_item;
         value=skip(parse_value(child,skip(value+1)));
         if (!value) return 0;   /* memory fail */
@@ -363,7 +494,7 @@ static const char *parse_object(cJSON *item,const char *value)
     value=skip(value+1);
     if (*value=='}') return value+1;    /* empty array. */
 
-    item->child=child=cJSON_New_Item();
+    item->child=child=cJSON_New_Item(item);
     value=skip(parse_string(child,skip(value)));
     if (!value) return 0;
     child->string=child->valuestring;child->valuestring=0;
@@ -374,7 +505,7 @@ static const char *parse_object(cJSON *item,const char *value)
     while (*value==',')
     {
         cJSON *new_item;
-        if (!(new_item=cJSON_New_Item()))   return 0; /* memory fail */
+        if (!(new_item=cJSON_New_Item(item)))   return 0; /* memory fail */
         child->next=new_item;new_item->prev=child;child=new_item;
         value=skip(parse_string(child,skip(value+1)));
         if (!value) return 0;
@@ -454,7 +585,7 @@ cJSON *cJSON_GetObjectItem(cJSON *object,const char *string)    {cJSON *c=object
 /* Utility for array list handling. */
 static void suffix_object(cJSON *prev,cJSON *item) {prev->next=item;item->prev=prev;}
 /* Utility for handling references. */
-static cJSON *create_reference(cJSON *item) {cJSON *ref=cJSON_New_Item();memcpy(ref,item,sizeof(cJSON));ref->string=0;ref->type|=cJSON_IsReference;ref->next=ref->prev=0;return ref;}
+static cJSON *create_reference(cJSON *item) {cJSON *ref=cJSON_New_Item(item);memcpy(ref,item,sizeof(cJSON));ref->string=0;ref->type|=cJSON_IsReference;ref->next=ref->prev=0;return ref;}
 
 /* Add item to array/object. */
 void   cJSON_AddItemToArray(cJSON *array, cJSON *item)                      {cJSON *c=array->child;if (!c) {array->child=item;} else {while (c && c->next) c=c->next; suffix_object(c,item);}}
@@ -475,13 +606,13 @@ void   cJSON_ReplaceItemInArray(cJSON *array,int which,cJSON *newitem)      {cJS
 void   cJSON_ReplaceItemInObject(cJSON *object,const char *string,cJSON *newitem){int i=0;cJSON *c=object->child;while(c && cJSON_strcasecmp(c->string,string))i++,c=c->next;if(c){newitem->string=cJSON_strdup(string);cJSON_ReplaceItemInArray(object,i,newitem);}}
 
 /* Create basic types: */
-cJSON *cJSON_CreateNull()                       {cJSON *item=cJSON_New_Item();item->type=cJSON_NULL;return item;}
-cJSON *cJSON_CreateTrue()                       {cJSON *item=cJSON_New_Item();item->type=cJSON_True;return item;}
-cJSON *cJSON_CreateFalse()                      {cJSON *item=cJSON_New_Item();item->type=cJSON_False;return item;}
-cJSON *cJSON_CreateNumber(double num)           {cJSON *item=cJSON_New_Item();item->type=cJSON_Number;item->valuedouble=num;item->valueint=(int)num;return item;}
-cJSON *cJSON_CreateString(const char *string)   {cJSON *item=cJSON_New_Item();item->type=cJSON_String;item->valuestring=cJSON_strdup(string);return item;}
-cJSON *cJSON_CreateArray()                      {cJSON *item=cJSON_New_Item();item->type=cJSON_Array;return item;}
-cJSON *cJSON_CreateObject()                     {cJSON *item=cJSON_New_Item();item->type=cJSON_Object;return item;}
+cJSON *cJSON_CreateNull()                       {cJSON *item=cJSON_New_Item(0);item->type=cJSON_NULL;return item;}
+cJSON *cJSON_CreateTrue()                       {cJSON *item=cJSON_New_Item(0);item->type=cJSON_True;return item;}
+cJSON *cJSON_CreateFalse()                      {cJSON *item=cJSON_New_Item(0);item->type=cJSON_False;return item;}
+cJSON *cJSON_CreateNumber(double num)           {cJSON *item=cJSON_New_Item(0);item->type=cJSON_Number;item->valuedouble=num;item->valueint=(int)num;return item;}
+cJSON *cJSON_CreateString(const char *string)   {cJSON *item=cJSON_New_Item(0);item->type=cJSON_String;item->valuestring=cJSON_strdup(string);return item;}
+cJSON *cJSON_CreateArray()                      {cJSON *item=cJSON_New_Item(0);item->type=cJSON_Array;return item;}
+cJSON *cJSON_CreateObject()                     {cJSON *item=cJSON_New_Item(0);item->type=cJSON_Object;return item;}
 
 /* Create Arrays: */
 cJSON *cJSON_CreateIntArray(int *numbers,int count)             {int i;cJSON *n=0,*p=0,*a=cJSON_CreateArray();for(i=0;i<count;i++){n=cJSON_CreateNumber(numbers[i]);if(!i)a->child=n;else suffix_object(p,n);p=n;}return a;}
