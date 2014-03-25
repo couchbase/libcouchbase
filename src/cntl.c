@@ -447,6 +447,15 @@ static lcb_error_t config_nodes(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t get_changeset(int mode, lcb_t instance, int cmd, void *arg)
+{
+    *(char **)arg = LCB_VERSION_CHANGESET;
+    (void)instance;
+    (void)mode;
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -478,7 +487,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_CONFIG_NODE_TIMEOUT */
     timeout_common, /* LCB_CNTL_HTCONFIG_IDLE_TIMEOUT */
     config_nodes, /* LCB_CNTL_CONFIG_HTTP_NODES */
-    config_nodes /* LCB_CNTL_CONFIG_CCCP_NODES */
+    config_nodes, /* LCB_CNTL_CONFIG_CCCP_NODES */
+    get_changeset /* LCB_CNTL_CHANGESET */
 };
 
 

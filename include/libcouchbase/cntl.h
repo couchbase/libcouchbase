@@ -433,8 +433,15 @@ extern "C" {
      */
 #define LCB_CNTL_CONFIG_CCCP_NODES 0x1E
 
+    /**
+     * Get the current SCM changeset for the library binary
+     * Arg: char** to contain the resultant string. This string must not be
+     * freed
+     */
+#define LCB_CNTL_CHANGESET 0x1F
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x1F
+#define LCB_CNTL__MAX                    0x20
 
 
 #ifdef __cplusplus
