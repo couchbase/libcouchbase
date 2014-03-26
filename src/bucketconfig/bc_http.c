@@ -78,6 +78,11 @@ static lcb_error_t io_error(http_provider *http, lcb_error_t origerr)
     if (err != LCB_SUCCESS) {
         lcb_confmon_provider_failed(&http->base, origerr);
         lcb_timer_disarm(http->io_timer);
+        if (is_v220_compat(http)) {
+            lcb_log(LOGARGS(http, INFO),
+                    "HTTP node list finished. Looping again (disconn_tmo=-1)");
+            connect_next(http);
+        }
         return origerr;
     } else {
         setup_request_header(http);
