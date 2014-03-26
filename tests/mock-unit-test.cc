@@ -1026,7 +1026,7 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     http_provider *htprov =
             (http_provider *)lcb_confmon_get_provider(instance->confmon,
                                                       LCB_CLCONFIG_HTTP);
-    ASSERT_EQ(1, htprov->always_on);
+    ASSERT_EQ((lcb_uint32_t)-1, instance->settings.bc_http_stream_time);
     ASSERT_EQ(0, lcb_timer_armed(htprov->disconn_timer));
 
     // Fail over the first node..

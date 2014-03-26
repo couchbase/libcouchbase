@@ -425,12 +425,6 @@ struct lcb_connection_st* lcb_confmon_get_rest_connection(lcb_confmon *mon);
 
 lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon);
 
-/**
- * Enables old push-style behavior on the HTTP provider
- */
-LCB_INTERNAL_API
-void lcb_clconfig_set_http_always_on(clconfig_provider *pb);
-
 LCB_INTERNAL_API
 void lcb_confmon_set_provider_active(lcb_confmon *mon,
                                      clconfig_method_t type, int enabled);

@@ -69,9 +69,7 @@ static void config_callback(clconfig_listener *listener,
                     "Reverting to HTTP Config for memcached buckets");
 
             /** Memcached bucket */
-            lcb_clconfig_set_http_always_on(
-                    lcb_confmon_get_provider(
-                            instance->confmon, LCB_CLCONFIG_HTTP));
+            instance->settings.bc_http_stream_time = -1;
             lcb_confmon_set_provider_active(instance->confmon,
                                             LCB_CLCONFIG_HTTP, 1);
 

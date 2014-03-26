@@ -34,6 +34,14 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err);
 static lcb_error_t setup_request_header(http_provider *http);
 static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype);
 
+static int is_compat(http_provider *http)
+{
+    lcb_uint32_t setting =  PROVIDER_SETTING(&http->base, bc_http_stream_time);
+    if (setting == (lcb_uint32_t)-1) {
+        return 1;
+    }
+    return 0;
+}
 
 /**
  * Closes the current connection and removes the disconn timer along with it
@@ -270,8 +278,7 @@ static void delayed_disconn(lcb_timer_t tm, lcb_t instance, const void *cookie)
 static lcb_error_t pause_http(clconfig_provider *pb)
 {
     http_provider *http = (http_provider *)pb;
-    if (http->always_on) {
-        lcb_timer_disarm(http->io_timer);
+    if (is_compat(http)) {
         return LCB_SUCCESS;
     }
 
@@ -659,16 +666,6 @@ lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon)
     http_provider *http;
     http = (http_provider *)mon->all_providers[LCB_CLCONFIG_HTTP];
     return (lcb_host_t *)lcb_connection_get_host(&http->connection);
-}
-
-void lcb_clconfig_set_http_always_on(clconfig_provider *pb)
-{
-    http_provider *http = (http_provider *)pb;
-    if (!pb->enabled) {
-        return;
-    }
-    lcb_timer_disarm(http->disconn_timer);
-    http->always_on = 1;
 }
 
 void lcb_clconfig_http_enable(clconfig_provider *http)
