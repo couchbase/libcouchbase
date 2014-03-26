@@ -238,6 +238,18 @@ static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
             "HTTP Provider timed out on host %s:%s waiting for I/O",
             curhost->host, curhost->port);
 
+    /**
+     * If we're not the current provider then ignore the timeout until we're
+     * actively requested to do so
+     */
+    if (&http->base != http->base.parent->cur_provider ||
+            lcb_confmon_is_refreshing(http->base.parent) == 0) {
+        lcb_log(LOGARGS(http, DEBUG),
+                "Ignoring timeout because we're either not in a refresh "
+                "or not the current provider");
+        return;
+    }
+
     io_error(http, LCB_ETIMEDOUT);
 
     (void)tm;
