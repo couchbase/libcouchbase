@@ -276,8 +276,9 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         }
 
         lcb_log(LOGARGS(server, INFO),
-                "Command with cookie=%p timed out from server %s:%s",
+                "Command with cookie=%p failed with err=0x%x server %s:%s",
                 ct.cookie,
+                error,
                 server->curhost.host,
                 server->curhost.port);
 
