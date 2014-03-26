@@ -48,7 +48,7 @@ static void close_current(http_provider *http)
  * Call when there is an error in I/O. This includes read, write, connect
  * and timeouts.
  */
-static lcb_error_t io_error(http_provider *http)
+static lcb_error_t io_error(http_provider *http, lcb_error_t origerr)
 {
     lcb_error_t err;
     lcb_conn_params params;
@@ -62,46 +62,13 @@ static lcb_error_t io_error(http_provider *http)
                                    http->nodes, &params, &errinfo);
 
     if (err != LCB_SUCCESS) {
-        lcb_confmon_provider_failed(&http->base, err);
+        lcb_confmon_provider_failed(&http->base, origerr);
         lcb_timer_disarm(http->io_timer);
-        return err;
+        return origerr;
     } else {
         setup_request_header(http);
     }
     return LCB_SUCCESS;
-}
-
-static void protocol_error(http_provider *http, lcb_error_t err)
-{
-    int can_retry = 1;
-
-    lcb_log(LOGARGS(http, ERROR), "Got protocol-level error 0x%x", err);
-    PROVIDER_SET_ERROR(&http->base, err);
-    /**
-     * XXX: We only want to retry on some errors. Things which signify an
-     * obvious user error should be left out here; we only care about
-     * actual "network" errors
-     */
-
-    if (err == LCB_AUTH_ERROR ||
-            err == LCB_PROTOCOL_ERROR ||
-            err == LCB_BUCKET_ENOENT) {
-        can_retry = 0;
-    }
-
-    if (http->retry_on_missing &&
-            (err == LCB_BUCKET_ENOENT || err == LCB_AUTH_ERROR)) {
-        LOG(http, INFO, "Retrying on AUTH||BUCKET_ENOENT");
-        can_retry = 1;
-    }
-
-    if (!can_retry) {
-        close_current(http);
-        lcb_confmon_provider_failed(&http->base, err);
-
-    } else {
-        io_error(http);
-    }
 }
 
 /**
@@ -149,7 +116,7 @@ static void read_common(http_provider *http)
     }
 
     if (err != LCB_BUSY && err != LCB_SUCCESS) {
-        protocol_error(http, err);
+        io_error(http, err);
         return;
     }
 
@@ -225,7 +192,7 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err)
                 "Connection to REST API @%s:%s failed with code=0x%x",
                 host->host, host->port, err);
 
-        io_error(http);
+        io_error(http, err);
         return;
     }
 
@@ -252,7 +219,7 @@ static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
             "HTTP Provider timed out on host %s:%s waiting for I/O",
             curhost->host, curhost->port);
 
-    io_error(http);
+    io_error(http, LCB_ETIMEDOUT);
 
     (void)tm;
     (void)i;
@@ -457,7 +424,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
 
 static void io_error_handler(lcb_connection_t conn)
 {
-    io_error((http_provider *)conn->data);
+    io_error((http_provider *)conn->data, LCB_NETWORK_ERROR);
 }
 
 static void io_read_handler(lcb_connection_t conn)
