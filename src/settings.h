@@ -49,8 +49,8 @@
 /* 100 ms */
 #define LCB_DEFAULT_CLCONFIG_GRACE_NEXT LCB_MS2US(100)
 
-/* 10 seconds */
-#define LCB_DEFAULT_BC_HTTP_DISCONNTMO LCB_MS2US(10000)
+/* Infinite (i.e. compat mode) */
+#define LCB_DEFAULT_BC_HTTP_DISCONNTMO -1
 
 
 #include "config.h"
