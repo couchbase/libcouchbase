@@ -319,6 +319,7 @@ static int populate_buckets(struct vbucket_config_st *vb, cJSON *c, int is_forwa
 {
     int i, j;
     struct vbucket_st *vb_map = NULL;
+    cJSON *jBucket, *jServerId;
 
     if (is_forward) {
         if (!(vb->fvbuckets = vb_map = calloc(vb->num_vbuckets, sizeof(struct vbucket_st)))) {
@@ -332,15 +333,15 @@ static int populate_buckets(struct vbucket_config_st *vb, cJSON *c, int is_forwa
         }
     }
 
-    for (i = 0; i < vb->num_vbuckets; ++i) {
-        cJSON *jBucket = cJSON_GetArrayItem(c, i);
+    for (i = 0, jBucket = c->child; i < vb->num_vbuckets; ++i,
+            jBucket = jBucket->next) {
         if (jBucket == NULL || jBucket->type != cJSON_Array ||
             cJSON_GetArraySize(jBucket) != vb->num_replicas + 1) {
             vb->errmsg = strdup("Expected array of arrays each with numReplicas + 1 ints for vBucketMap");
             return -1;
         }
-        for (j = 0; j < vb->num_replicas + 1; ++j) {
-            cJSON *jServerId = cJSON_GetArrayItem(jBucket, j);
+        for (j = 0, jServerId = jBucket->child; j < vb->num_replicas + 1;
+                ++j, jServerId = jServerId->next) {
             if (jServerId == NULL || jServerId->type != cJSON_Number ||
                 jServerId->valueint < -1 || jServerId->valueint >= vb->num_servers) {
                 vb->errmsg = strdup("Server ID must be >= -1 and < num_servers");
