@@ -66,6 +66,7 @@ static int handle_not_my_vbucket(lcb_server_t *c,
     hrtime_t now;
     lcb_string config_string;
     lcb_error_t err = LCB_ERROR;
+    clconfig_provider *cccp;
 
     lcb_log(LOGARGS(c, WARN),
             "NOT_MY_VBUCKET; Server=%p,ix=%d,real_start=%lu,vb=%d",
@@ -73,16 +74,14 @@ static int handle_not_my_vbucket(lcb_server_t *c,
             (unsigned long)oldct->real_start,
             (int)ntohs(oldreq->request.vbucket));
 
+    cccp = lcb_confmon_get_provider(c->instance->confmon, LCB_CLCONFIG_CCCP);
     lcb_string_init(&config_string);
-    if (PACKET_NBODY(resinfo)) {
+    if (PACKET_NBODY(resinfo) && cccp->enabled) {
         lcb_string_append(&config_string,
                           PACKET_VALUE(resinfo),
                           PACKET_NVALUE(resinfo));
 
-        err = lcb_cccp_update(lcb_confmon_get_provider(c->instance->confmon,
-                                                       LCB_CLCONFIG_CCCP),
-                                                       c->curhost.host,
-                                                       &config_string);
+        err = lcb_cccp_update(cccp, c->curhost.host, &config_string);
     }
 
     lcb_string_release(&config_string);
