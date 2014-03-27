@@ -312,6 +312,13 @@ static lcb_error_t pause_http(clconfig_provider *pb)
     return LCB_SUCCESS;
 }
 
+static void delayed_schederr(lcb_timer_t tm, lcb_t instance, const void *cookie)
+{
+    http_provider *http = (void *)cookie;
+    lcb_confmon_provider_failed(&http->base, http->as_errcode);
+    (void)tm; (void)instance;
+}
+
 static lcb_error_t get_refresh(clconfig_provider *provider)
 {
     http_provider *http = (http_provider *)provider;
@@ -325,7 +332,12 @@ static lcb_error_t get_refresh(clconfig_provider *provider)
 
     /** If we need a new socket, we do connect_next. */
     if (http->connection.state == LCB_CONNSTATE_UNINIT) {
-        return connect_next(http);
+        lcb_error_t rc = connect_next(http);
+        if (rc != LCB_SUCCESS) {
+            http->as_errcode = rc;
+            lcb_async_signal(http->as_schederr);
+        }
+        return rc;
     }
 
     lcb_timer_disarm(http->disconn_timer);
@@ -393,6 +405,9 @@ static void shutdown_http(clconfig_provider *provider)
     if (http->io_timer) {
         lcb_timer_destroy(NULL, http->io_timer);
     }
+    if (http->as_schederr) {
+        lcb_timer_destroy(NULL, http->as_schederr);
+    }
     if (http->nodes) {
         hostlist_destroy(http->nodes);
     }
@@ -441,6 +456,10 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
                                                   parent->settings->bc_http_stream_time,
                                                   delayed_disconn);
     lcb_timer_disarm(http->disconn_timer);
+
+    http->as_schederr = lcb_timer_create_simple(
+            parent->settings->io, http, 0, delayed_schederr);
+    lcb_timer_disarm(http->as_schederr);
 
     lcb_connuse_easy(&use, http, io_read_handler, io_error_handler);
     lcb_connection_use(&http->connection, &use);
