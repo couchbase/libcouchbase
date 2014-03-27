@@ -48,8 +48,9 @@ lcb_error_t lcb_connection_cycle_nodes(lcb_connection_t conn,
         if (connres != LCB_CONN_INPROGRESS) {
             LOG(conn, ERR, "Couldn't start connection");
             lcb_connection_close(conn);
+        } else {
+            return LCB_SUCCESS;
         }
-        return LCB_SUCCESS;
     }
 
     LOG(conn, ERR, "Couldn't connect to any of the nodes");
