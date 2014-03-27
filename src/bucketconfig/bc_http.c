@@ -455,25 +455,6 @@ static lcb_error_t set_next_config(struct htvb_st *vbs)
     }
 
     if (vbs->config) {
-        /** We have a previous configuration... */
-        VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
-        VBUCKET_CONFIG_DIFF *diff = NULL;
-        VBUCKET_CONFIG_HANDLE old_config = vbs->config->vbc;
-        diff = vbucket_compare(old_config, new_config);
-        if (diff) {
-            chstatus = vbucket_what_changed(diff);
-            vbucket_free_diff(diff);
-        }
-
-        if (chstatus == VBUCKET_NO_CHANGES) {
-            vbs->config->cmpclock = gethrtime();
-            vbucket_config_destroy(new_config);
-            return LCB_SUCCESS;
-
-        }
-    }
-
-    if (vbs->config) {
         lcb_clconfig_decref(vbs->config);
     }
 

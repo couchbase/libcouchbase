@@ -171,18 +171,23 @@ static void async_callback(lcb_timer_t timer,
                            lcb_t notused,
                            const void *cookie)
 {
+    time_t last_mtime;
     file_provider *provider = (file_provider *)cookie;
     lcb_async_destroy(NULL, timer);
     provider->async = NULL;
 
+
     LOG(provider, TRACE, "Got async callback. Will load");
+    last_mtime = provider->last_mtime;
 
     if (load_cache(provider) == 0) {
-        lcb_confmon_provider_success(&provider->base, provider->config);
-    } else {
-        lcb_confmon_provider_failed(&provider->base, LCB_ERROR);
+        if (last_mtime != provider->last_mtime) {
+            lcb_confmon_provider_success(&provider->base, provider->config);
+            return;
+        }
     }
 
+    lcb_confmon_provider_failed(&provider->base, LCB_ERROR);
     (void)notused;
 }
 

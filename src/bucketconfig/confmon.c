@@ -200,12 +200,8 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
 void lcb_confmon_provider_success(clconfig_provider *provider,
                                   clconfig_info *config)
 {
-    int status;
-    lcb_confmon *mon = provider->parent;
-    status = do_set_next(mon, config, 1);
-    if (!status) {
-        lcb_confmon_provider_failed(provider, LCB_SUCCESS);
-    }
+    do_set_next(provider->parent, config, 1);
+    lcb_confmon_stop(provider->parent);
 }
 
 
