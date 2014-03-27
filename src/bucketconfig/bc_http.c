@@ -34,7 +34,13 @@ static void connect_done_handler(lcb_connection_t conn, lcb_error_t err);
 static lcb_error_t setup_request_header(http_provider *http);
 static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype);
 
-static int is_compat(http_provider *http)
+/**
+ * Determine if we're in compatibility mode with the previous versions of the
+ * library - where the idle timeout is disabled and a perpetual streaming
+ * connection will always remain open (regardless of whether it was triggered
+ * by start_refresh/get_refresh).
+ */
+static int is_v220_compat(http_provider *http)
 {
     lcb_uint32_t setting =  PROVIDER_SETTING(&http->base, bc_http_stream_time);
     if (setting == (lcb_uint32_t)-1) {
@@ -278,7 +284,7 @@ static void delayed_disconn(lcb_timer_t tm, lcb_t instance, const void *cookie)
 static lcb_error_t pause_http(clconfig_provider *pb)
 {
     http_provider *http = (http_provider *)pb;
-    if (is_compat(http)) {
+    if (is_v220_compat(http)) {
         return LCB_SUCCESS;
     }
 
