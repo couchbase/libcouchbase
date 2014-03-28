@@ -359,6 +359,9 @@ static void socket_connected(connmgr_request *req)
     } else {
         lcb_server_connected(server);
         lcb_sockrw_apply_want(&server->connection);
+        if (server->output_cookies.nbytes && !lcb_timer_armed(server->io_timer)) {
+            lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
+        }
     }
 
     server->inside_handler = 0;
