@@ -141,12 +141,6 @@ lcb_error_t lcb_get_replica(lcb_t instance,
     req.message.header.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     req.message.header.request.opcode = CMD_GET_REPLICA;
 
-    for (ii = 0; ii < num; ii++) {
-        const void *k;
-        lcb_size_t n;
-        VBC_GETK0(items[ii], k, n);
-    }
-
     for (ii = 0; ii < num; ++ii) {
         const void *key;
         lcb_size_t nkey;
