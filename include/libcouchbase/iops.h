@@ -38,6 +38,7 @@ struct lcb_nameinfo_st {
     } remote;
 };
 
+typedef struct lcb_iovec_st lcb_IOV;
 typedef struct lcb_io_opt_st* lcb_io_opt_t;
 
 /**
@@ -476,6 +477,40 @@ typedef int (*lcb_ioC_write2_fn)
                 void *uarg,
                 lcb_ioC_write2_callback callback);
 
+
+/**
+ * Alternate read callback
+ * @param sd the socket
+ * @param nread number of bytes read, or -1 on error
+ * @param arg user provided argument for callback.
+ */
+typedef void (*lcb_ioC_read2_callback)
+        (lcb_sockdata_t *sd, lcb_ssize_t nread, void *arg);
+
+/**
+ * Alternate read function. This does not use the embedded readbuf structure
+ * and can handle more than two IOV structures
+ * @param iops the I/O context
+ * @param sd the socket on which to read
+ * @param iov an array of IOV structures
+ * @param niov the number of IOV structures within the array
+ * @param uarg a pointer passed to the callback
+ * @param callback the callback to invoke
+ * @return 0 on success, nonzero on error
+ *
+ * The IOV array itself shall copied (if needed) into the I/O implementation
+ * and thus does not need to be kept in memory after the function has been
+ * called. Note that the underlying buffers _do_ need to remain valid until
+ * the callback is received.
+ */
+typedef int (*lcb_ioC_read2_fn)
+        (lcb_io_opt_t iops,
+                lcb_sockdata_t *sd,
+                lcb_IOV *iov,
+                lcb_size_t niov,
+                void *uarg,
+                lcb_ioC_read2_callback callback);
+
 /**
  * Request an asynchronous close for the specified socket. This merely releases
  * control from the library over to the plugin for the specified socket and
@@ -639,6 +674,7 @@ typedef struct {
     lcb_ioC_wbfree_fn wbfree;
     lcb_ioC_write_fn write;
     lcb_ioC_write2_fn write2;
+    lcb_ioC_read2_fn read2;
     lcb_ioC_serve_fn serve;
     lcb_ioC_nameinfo_fn nameinfo;
 } lcb_completion_procs;

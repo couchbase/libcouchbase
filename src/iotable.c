@@ -1,7 +1,7 @@
 #define LCB_IOPS_V12_NO_DEPRECATE
 #include "lcbio.h"
 
-struct _1to3_st {
+struct W_1to3_st {
     lcb_ioC_write2_callback callback;
     void *udata;
     unsigned int refcount;
@@ -9,9 +9,9 @@ struct _1to3_st {
 };
 
 static void
-_1to3_callback(lcb_sockdata_t *sd, lcb_io_writebuf_t *wb, int status)
+W_1to3_callback(lcb_sockdata_t *sd, lcb_io_writebuf_t *wb, int status)
 {
-    struct _1to3_st *ott = (struct _1to3_st*)wb->buffer.root;
+    struct W_1to3_st *ott = (struct W_1to3_st*)wb->buffer.root;
     wb->buffer.root = NULL;
     wb->buffer.ringbuffer = NULL;
     sd->parent->v.v1.release_writebuf(sd->parent, sd, wb);
@@ -27,7 +27,7 @@ _1to3_callback(lcb_sockdata_t *sd, lcb_io_writebuf_t *wb, int status)
 }
 
 static int
-_1to3_write(lcb_io_opt_t iops,
+W_1to3_write(lcb_io_opt_t iops,
             lcb_sockdata_t *sd,
             struct lcb_iovec_st *iov,
             lcb_size_t niov,
@@ -36,7 +36,7 @@ _1to3_write(lcb_io_opt_t iops,
 {
     unsigned int ii = 0;
 
-    struct _1to3_st *ott;
+    struct W_1to3_st *ott;
 
     /** Schedule IOV writes, two at a time... */
     ott = malloc(sizeof(*ott));
@@ -58,9 +58,51 @@ _1to3_write(lcb_io_opt_t iops,
             wb->buffer.iov[jj] = iov[ii];
         }
         ott->refcount++;
-        iops->v.v1.start_write(iops, sd, wb, _1to3_callback);
+        iops->v.v1.start_write(iops, sd, wb, W_1to3_callback);
     }
     return 0;
+}
+
+struct R_1to3_st {
+    lcb_ioC_read2_callback callback;
+    void *uarg;
+};
+
+static void
+R_1to3_callback(lcb_sockdata_t *sd, lcb_ssize_t nread)
+{
+    struct lcb_buf_info *bi = &sd->read_buffer;
+    struct R_1to3_st *st = (void *)bi->root;
+    bi->root = NULL;
+    st->callback(sd, nread, st->uarg);
+    free(st);
+}
+
+static int
+R_1to3_read(lcb_io_opt_t io, lcb_sockdata_t *sd, lcb_IOV *iov, lcb_size_t niov,
+            void *uarg, lcb_ioC_read2_callback callback)
+{
+    unsigned ii;
+    int rv;
+    struct R_1to3_st *st;
+    struct lcb_buf_info *bi = &sd->read_buffer;
+
+    st = calloc(1, sizeof(*st));
+    st->callback = callback;
+    st->uarg = uarg;
+
+    for (ii = 0; ii < 2 && ii < niov; ii++) {
+        bi->iov[ii] = iov[ii];
+    }
+
+    for (; ii < 2; ii++) {
+        bi->iov[ii].iov_base = NULL;
+        bi->iov[ii].iov_len = 0;
+    }
+
+    bi->root = (void *)st;
+    rv = io->v.v1.start_read(io, sd, R_1to3_callback);
+    return rv;
 }
 
 static int
@@ -77,7 +119,7 @@ init_v2_table(lcb_iotable *table, lcb_io_opt_t io)
     table->p = io;
     if (table->model == LCB_IOMODEL_COMPLETION) {
         if (!table->u_io.completion.write2) {
-            table->u_io.completion.write2 = _1to3_write;
+            table->u_io.completion.write2 = W_1to3_write;
         }
     }
 
@@ -131,10 +173,11 @@ lcb_init_io_table(lcb_iotable *table, lcb_io_opt_t io)
         cp->read = io->v.v1.start_read;
 
         /** Emulate it! */
-        cp->write2 = _1to3_write;
+        cp->write2 = W_1to3_write;
         cp->write = io->v.v1.start_write;
         cp->wballoc = io->v.v1.create_writebuf;
         cp->nameinfo = io->v.v1.get_nameinfo;
+        cp->read2 = R_1to3_read;
     }
 
     return 0;
