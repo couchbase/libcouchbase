@@ -437,6 +437,7 @@ void
 mcreq_queue_cleanup(mc_CMDQUEUE *queue)
 {
     free(queue->scheds);
+    free(queue->pipelines);
     queue->scheds = NULL;
 }
 

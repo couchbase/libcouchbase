@@ -468,6 +468,7 @@ void lcb_destroy(lcb_t instance)
     free(settings->password);
     free(settings->bucket);
     free(settings->sasl_mech_force);
+    mcreq_queue_cleanup(&instance->cmdq);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }
