@@ -15,7 +15,7 @@ ADD_EXECUTABLE(cbc-pillowfight
     commandlineparser.cc)
 
 SET_PROPERTY(TARGET cbc-pillowfight
-    PROPERTY DEBUG_OUTPUT_NAME "cbc-pillowight_d")
+    PROPERTY DEBUG_OUTPUT_NAME "cbc-pillowfight_d")
 
 TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
 
