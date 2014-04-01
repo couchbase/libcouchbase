@@ -445,18 +445,12 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.shutdown = shutdown_http;
     http->base.nodes_updated = refresh_nodes;
     http->base.enabled = 0;
-    http->io_timer = lcb_timer_create_simple(parent->settings->io,
-                                             http,
-                                             parent->settings->config_node_timeout,
-                                             timeout_handler);
+    http->io_timer = lcb_timer_create_simple(
+            parent->settings->io, http, 0, timeout_handler);
     lcb_timer_disarm(http->io_timer);
-
-    http->disconn_timer = lcb_timer_create_simple(parent->settings->io,
-                                                  http,
-                                                  parent->settings->bc_http_stream_time,
-                                                  delayed_disconn);
+    http->disconn_timer = lcb_timer_create_simple(
+            parent->settings->io, http, 0, delayed_disconn);
     lcb_timer_disarm(http->disconn_timer);
-
     http->as_schederr = lcb_timer_create_simple(
             parent->settings->io, http, 0, delayed_schederr);
     lcb_timer_disarm(http->as_schederr);
