@@ -21,6 +21,11 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#ifdef _WIN32
+#define flockfile(x) (void) 0
+#define funlockfile(x) (void) 0
+#endif
+
 
 #if defined(unix) || defined(__unix__) || defined(__unix) || defined(_POSIX_VERSION)
     #include <unistd.h>
@@ -120,6 +125,7 @@ static void console_log(struct lcb_logprocs_st *procs,
         now++;
     }
 
+    flockfile(stderr);
     fprintf(stderr, "%lums ", (unsigned long)(now - start_time) / 1000000);
 
     fprintf(stderr, "[I%d] {%"THREAD_ID_FMT"} [%s] (%s - L:%d) ",
@@ -130,6 +136,7 @@ static void console_log(struct lcb_logprocs_st *procs,
             srcline);
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
+    funlockfile(stderr);
 
     (void)procs;
     (void)srcfile;
