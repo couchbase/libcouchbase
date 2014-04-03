@@ -60,16 +60,13 @@
 extern "C" {
 #endif
 
-struct lcb_io_opt_st;
 struct lcb_logprocs_st;
-struct lcb_iotable_st;
 /**
  * Stateless setting structure.
  * Specifically this contains the 'environment' of the instance for things
  * which are intended to be passed around to other objects.
  */
 typedef struct lcb_settings_st {
-    struct lcb_iotable_st *io;
     lcb_uint32_t views_timeout;
     lcb_uint32_t http_timeout;
     lcb_uint32_t durability_timeout;
@@ -116,13 +113,23 @@ typedef struct lcb_settings_st {
     char *bucket;
     char *sasl_mech_force;
     struct lcb_logprocs_st *logger;
+    unsigned refcount;
 } lcb_settings;
 
 LCB_INTERNAL_API
 void lcb_default_settings(lcb_settings *settings);
 
+LCB_INTERNAL_API
+lcb_settings *
+lcb_settings_new(void);
+
+LCB_INTERNAL_API
+void
+lcb_settings_unref(lcb_settings *);
+
+#define lcb_settings_ref(settings) (settings)->refcount++
+
 #ifdef __cplusplus
 }
 #endif
-
 #endif

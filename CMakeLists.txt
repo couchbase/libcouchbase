@@ -154,7 +154,12 @@ SET_TARGET_PROPERTIES(couchbase_utils
 ADD_LIBRARY(netbuf STATIC src/netbuf/netbuf.c)
 ADD_LIBRARY(mcreq STATIC src/mc/mcreq.c)
 ADD_LIBRARY(netbuf-malloc STATIC src/netbuf/netbuf.c)
-ADD_LIBRARY(rdb STATIC src/rdb/rope.c src/rdb/bigalloc.c src/rdb/chunkalloc.c)
+ADD_LIBRARY(rdb STATIC
+    src/rdb/rope.c src/rdb/bigalloc.c src/rdb/chunkalloc.c
+    src/rdb/libcalloc.c)
+ADD_LIBRARY(lcbio STATIC
+    src/lcbio/connect.c src/lcbio/ctx.c src/lcbio/ioutils.c src/lcbio/iotable.c
+    src/lcbio/protoctx.c src/lcbio/manager.c src/lcbio/ioutils.c src/lcbio/timer.c)
 
 SET_TARGET_PROPERTIES(netbuf-malloc
     PROPERTIES
@@ -170,6 +175,10 @@ SET_TARGET_PROPERTIES(netbuf
         COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
         POSITION_INDEPENDENT_CODE TRUE)
 SET_TARGET_PROPERTIES(rdb
+    PROPERTIES
+        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
+        POSITION_INDEPENDENT_CODE TRUE)
+SET_TARGET_PROPERTIES(lcbio
     PROPERTIES
         COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
         POSITION_INDEPENDENT_CODE TRUE)
@@ -198,23 +207,17 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/callbacks.c
             src/cntl.c
             src/compat.c
-            src/connmgr.c
             src/error.c
             src/handler.c
             src/getconfig.c
             src/http.c
             src/http_io.c
-            src/http_parse.c
             src/instance.c
-            src/iotable.c
-            src/connect.c
-            src/connection_utils.c
-            src/readwrite.c
             src/newconfig.c
             src/iofactory.c
             src/sanitycheck.c
             src/server.c
-            src/server-connection.c
+            src/settings.c
             src/server_negotiate.c
             src/timer.c
             src/timings.c
@@ -233,7 +236,7 @@ SET_TARGET_PROPERTIES(couchbase
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase
-    couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl ${lcb_plat_libs})
+    couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl lcbio rdb ${lcb_plat_libs})
 
 
 IF(NOT LCB_NO_TESTS)

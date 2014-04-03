@@ -753,9 +753,11 @@ typedef void (*lcb_io_procs_fn)
                 lcb_completion_procs *completion_procs,
                 lcb_iomodel_t *iomodel);
 
+struct lcbio_TABLE;
 struct lcb_iops2_st {
     LCB_IOPS_BASE_FIELDS
     lcb_io_procs_fn get_procs;
+    struct lcbio_TABLE *iot;
 };
 
 /**

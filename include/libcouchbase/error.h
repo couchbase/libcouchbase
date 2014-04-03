@@ -201,7 +201,9 @@ extern "C" {
     X(LCB_UNFORWADABLE, 0x2C, LCB_ERRTYPE_INPUT, \
       "Opcode provided in packet cannot be sent to the upstream server. The " \
       "packet contains no inherent server mapping information (i.e. has no key) " \
-      "and/or depends on client-visible cluster topologies")
+      "and/or depends on client-visible cluster topologies") \
+    X(LCB_ECONNREFUSED, 0x2D, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
+      "The remote host refused the connection")
 
     /**
      * Define the error codes in use by the library

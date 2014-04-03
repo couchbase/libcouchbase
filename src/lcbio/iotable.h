@@ -3,13 +3,17 @@
 
 #include <libcouchbase/couchbase.h>
 
-/** NO INTERNAL DEPENDENCIES */
+/**
+ * This file defines the iotable layout as well as various macros associated
+ * with its use. The actual "Public" API (i.e. just for passing it around) can
+ * be found in <lcbio/connect.h>
+ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct lcb_iotable_st {
+typedef struct lcbio_TABLE {
     lcb_io_opt_t p;
     lcb_iomodel_t model;
     lcb_timer_procs timer;
@@ -22,7 +26,9 @@ typedef struct lcb_iotable_st {
         } v0;
         lcb_completion_procs completion;
     } u_io;
-} lcb_iotable;
+
+    unsigned refcount;
+} lcbio_TABLE;
 
 #define IOT_IS_EVENT(iot) (iot)->model == LCB_IOMODEL_EVENT
 #define IOT_V0EV(iot) (iot)->u_io.v0.ev
@@ -34,10 +40,6 @@ typedef struct lcb_iotable_st {
 
 /** First argument to IO Table */
 #define IOT_ARG(iot) (iot)->p
-
-LCB_INTERNAL_API
-int
-lcb_init_io_table(lcb_iotable *table, lcb_io_opt_t io);
 
 #ifdef __cplusplus
 }
