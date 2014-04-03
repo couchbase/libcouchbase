@@ -239,9 +239,12 @@ lcb_error_t lcb_init_providers(lcb_t obj,
     if (http_enabled) {
         lcb_clconfig_http_enable(http);
         lcb_clconfig_http_set_nodes(http, obj->usernodes);
+    } else {
+        lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_HTTP, 0);
     }
 
     if (!cccp_enabled) {
+        lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_CCCP, 0);
         return LCB_SUCCESS;
     }
 
