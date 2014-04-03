@@ -185,8 +185,8 @@ const void *lcb_get_cookie(lcb_t instance)
 }
 
 
-static lcb_error_t init_providers(lcb_t obj,
-                             const struct lcb_create_st2 *e_options)
+lcb_error_t lcb_init_providers(lcb_t obj,
+                               const struct lcb_create_st2 *e_options)
 {
     hostlist_t mc_nodes;
     lcb_error_t err;
@@ -426,7 +426,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         return err;
     }
 
-    err = init_providers(obj, e_options);
+    err = lcb_init_providers(obj, e_options);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;

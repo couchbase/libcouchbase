@@ -441,6 +441,7 @@ extern "C" {
      */
 #define LCB_CNTL_CONFIG_CCCP_NODES 0x1E
 
+
     /**
      * Get the current SCM changeset for the library binary
      * Arg: char** to contain the resultant string. This string must not be
@@ -448,8 +449,22 @@ extern "C" {
      */
 #define LCB_CNTL_CHANGESET 0x1F
 
+    /**
+     * Set the config nodes for the relevant providers. This is passed an
+     * lcb_create_st_v2 structure which is used to initialize
+     * the providers. Useful if you wish to reinitialize or modify the
+     * provider settings _after_ the instance itself has already been
+     * constructed.
+     *
+     * Note that the username, password, bucket, and io fields are
+     * ignored.
+     *
+     * Arg: lcb_create_st2 (<libcouchbase/arguments.h>)
+     */
+#define LCB_CNTL_CONFIG_ALL_NODES 0x20
+
     /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x20
+#define LCB_CNTL__MAX                    0x21
 
 
 #ifdef __cplusplus
