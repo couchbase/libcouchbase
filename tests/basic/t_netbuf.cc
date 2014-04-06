@@ -346,7 +346,7 @@ TEST_F(NetbufTest, testPduEnqueue)
     netbuf_pdu_enqueue(&mgr, &pdu, offsetof(my_PDU, slnode));
 
     /** Start the flush */
-    toflush = netbuf_start_flush(&mgr, iov, 1, NULL);
+    toflush = netbuf_start_flush(&mgr, iov, 2, NULL);
     ASSERT_EQ(16, toflush);
     netbuf_end_flush2(&mgr, toflush, pdu_callback, 0, NULL);
     ASSERT_EQ(0, pdu.is_flushed);

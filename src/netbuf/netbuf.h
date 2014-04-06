@@ -312,9 +312,13 @@ netbuf_pdu_enqueue(nb_MGR *mgr, void *pdu, nb_SIZE lloff);
  *        PDU the callback may change internal state within the packet to mark
  *        it as flushed.
  *
- *        Note that the size may represent a partial PDU. In this case the
- *        callback must return the full size of the PDU, and the remainder
- *        will be stored within netbuf itself so that
+ *        XXX:
+ *        If nremaining < pdusize then it <b>must</b> be ignored. The value
+ *        may have been previously passed to the same callback during a
+ *        prior iteration.
+ *
+ *        This is done by design in order to avoid forcing each PDU to maintain
+ *        a variable indicating "How much was flushed".
  *
  * @param arg A pointer passed to the start_flush call; used to correlate any
  *        data common to the queue itself.

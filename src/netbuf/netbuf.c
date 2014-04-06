@@ -559,7 +559,7 @@ nb_SIZE
 netbuf_start_flush(nb_MGR *mgr, nb_IOV *iovs, int niov, int *nused)
 {
     nb_SIZE ret = 0;
-    nb_IOV *iov_end = iovs + niov + 1, *iov_start = iovs;
+    nb_IOV *iov_end = iovs + niov, *iov_start = iovs;
     nb_IOV *iov = iovs;
     sllist_node *ll;
     nb_SENDQ *sq = &mgr->sendq;
@@ -622,7 +622,6 @@ netbuf_end_flush(nb_MGR *mgr, unsigned int nflushed)
         if (!win->len) {
             sllist_iter_remove(&q->pending, &iter);
             mblock_release_ptr(&mgr->sendq.elempool, (char *)win, sizeof(*win));
-
         } else {
             win->base +=  to_chop;
         }
@@ -651,25 +650,27 @@ netbuf_end_flush2(nb_MGR *mgr,
     nb_SENDQ *q = &mgr->sendq;
     netbuf_end_flush(mgr, nflushed);
 
+    /** Add to the nflushed overflow from last call */
     nflushed += q->pdu_offset;
     SLLIST_ITERFOR(&q->pdus, &iter) {
         nb_SIZE cursize;
         char *ptmp = (char *)iter.cur;
-
         cursize = callback(ptmp - lloff, nflushed, arg);
+
         if (cursize > nflushed) {
-            q->pdu_offset = nflushed;
             break;
         }
 
         nflushed -= cursize;
-
         sllist_iter_remove(&q->pdus, &iter);
 
         if (!nflushed) {
             break;
         }
     }
+
+    /** Store the remainder of data that wasn't processed for next call */
+    q->pdu_offset = nflushed;
 }
 
 /******************************************************************************
