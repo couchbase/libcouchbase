@@ -209,10 +209,11 @@ if ($origdir eq $srcdir) {
     chdir($origdir);
     open(my $fh, ">", "Makefile");
     print $fh <<EOF;
-all: dummy
+all:
 
-dummy:
-\t\$(MAKE) -C build
+\%::
+\t\$(MAKE) -C build \$\@
+
 EOF
     close($fh);
 }
