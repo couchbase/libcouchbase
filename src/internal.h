@@ -238,6 +238,7 @@ extern "C" {
 
         lcb_settings settings;
         genhash_t *cmdht;
+        char *scratch; /* storage for random strings, lcb_get_host, etc */
 
 #ifdef LCB_DEBUG
         lcb_debug_st debug;

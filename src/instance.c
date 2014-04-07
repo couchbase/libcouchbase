@@ -52,16 +52,65 @@ const char *lcb_get_version(lcb_uint32_t *version)
     return LCB_VERSION_STRING;
 }
 
+#define PARAM_CONFIG_HOST 1
+#define PARAM_CONFIG_PORT 2
+static const char *param_from_host(const lcb_host_t *host, int type)
+{
+    if (!host) {
+        return NULL;
+    }
+    if (type == PARAM_CONFIG_HOST) {
+        return *host->host ? host->host : NULL;
+    } else {
+        return *host->port ? host->port : NULL;
+    }
+}
+
+static const char *get_rest_param(lcb_t obj, int paramtype)
+{
+    const char *ret = NULL;
+    const lcb_host_t *host = lcb_confmon_get_rest_host(obj->confmon);
+    ret = param_from_host(host, paramtype);
+
+    if (ret) {
+        return ret;
+    }
+
+    /** Don't have a REST API connection? */
+    if (obj->vbucket_config) {
+        lcb_server_t *server = obj->servers + (gethrtime() % obj->nservers);
+        if (paramtype == PARAM_CONFIG_HOST) {
+            ret = param_from_host(&server->curhost, paramtype);
+            if (ret) {
+                return ret;
+            }
+        } else {
+            char *colon = strstr(server->rest_api_server, ":");
+            if (colon) {
+                if (obj->scratch) {
+                    free(obj->scratch);
+                }
+                obj->scratch = malloc(NI_MAXSERV + 1);
+                strcpy(obj->scratch, colon+1);
+                if (*obj->scratch) {
+                    return obj->scratch;
+                }
+            }
+        }
+    }
+    return param_from_host(obj->usernodes->entries, paramtype);
+}
+
 LIBCOUCHBASE_API
 const char *lcb_get_host(lcb_t instance)
 {
-    return lcb_confmon_get_rest_host(instance->confmon)->host;
+    return get_rest_param(instance, PARAM_CONFIG_HOST);
 }
 
 LIBCOUCHBASE_API
 const char *lcb_get_port(lcb_t instance)
 {
-    return lcb_confmon_get_rest_host(instance->confmon)->port;
+    return get_rest_param(instance, PARAM_CONFIG_PORT);
 }
 
 
@@ -486,6 +535,7 @@ void lcb_destroy(lcb_t instance)
     ringbuffer_destruct(&instance->purged_cookies);
 
     free(instance->histogram);
+    free(instance->scratch);
     free(settings->username);
     free(settings->password);
     free(settings->bucket);
