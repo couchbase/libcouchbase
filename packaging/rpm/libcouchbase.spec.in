@@ -17,14 +17,14 @@ This is the client and protocol library for Couchbase project.
 %package -n %{name}2-libevent
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library (libevent backend)
-Requires: %{name}2-core, libevent >= 1.4
+Requires: %{name}2-core = %{version}-%{release}, libevent >= 1.4
 %description -n %{name}2-libevent
 This package provides libevent backend for libcouchbase
 
 %package -n %{name}2-libev
 Group: System Environment/Libraries
 Summary: Couchbase Client & Protocol Library (libev backend)
-Requires: %{name}2-core, libev >= 3
+Requires: %{name}2-core = %{version}-%{release}, libev >= 3
 %description -n %{name}2-libev
 This package provides libev backend for libcouchbase
 
@@ -43,14 +43,14 @@ or write your own.
 %package -n %{name}2-bin
 Group: Development/Tools
 Summary: Couchbase Client Tools
-Requires: %{name}2-core
+Requires: %{name}2-core = %{version}-%{release}
 %description -n %{name}2-bin
 This is the CLI tools Couchbase project.
 
 %package devel
 Group: Development/Libraries
 Summary: Couchbase Client & Protocol Library - Header files
-Requires: %{name}2-core
+Requires: %{name}2-core = %{version}-%{release}
 %description devel
 Development files for the Couchbase Client & Protocol Library
 
