@@ -21,7 +21,7 @@
 #include "vb-aliases.h"
 
 #define LOGARGS(instance, lvl) \
-    &instance->settings, "bconf", LCB_LOG_##lvl, __FILE__, __LINE__
+    instance->settings, "bconf", LCB_LOG_##lvl, __FILE__, __LINE__
 
 #define LOG(instance, lvl, msg) lcb_log(LOGARGS(instance, lvl), msg)
 
@@ -135,11 +135,7 @@ replace_config(lcb_t instance, clconfig_info *old_config,
         mc_PIPELINE *pl = old[ii];
         mc_SERVER *server = (mc_SERVER *)pl;
         mcserver_fail_chain(server, LCB_MAP_CHANGED);
-        lcb_log(LOGARGS(instance, TRACE),
-                "Server %p has a refcount of %d. Clean=%d",
-                server, server->refcount, is_clean[ii]);
-
-        mcserver_decref(server, is_clean[ii]);
+        mcserver_close(server, is_clean[ii]);
     }
 
     for (ii = 0; ii < instance->cmdq.npipelines; ii++) {

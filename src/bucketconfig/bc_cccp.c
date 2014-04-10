@@ -26,7 +26,7 @@
 #include "packetutils.h"
 #include "simplestring.h"
 #include "mcserver.h"
-#include "connmgr.h"
+#include <lcbio/lcbio.h>
 
 #define LOGARGS(cccp, lvl) \
     cccp->base.parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -36,14 +36,14 @@ struct cccp_cookie_st;
 
 typedef struct {
     clconfig_provider base;
-    struct lcb_connection_st connection;
     hostlist_t nodes;
     clconfig_info *config;
     int server_active;
     int disabled;
     lcb_timer_t timer;
     lcb_t instance;
-    connmgr_request *cur_connreq;
+    lcbio_CONNREQ creq;
+    lcbio_CTX *ioctx;
     struct cccp_cookie_st *cmdcookie;
 } cccp_provider;
 
@@ -55,10 +55,22 @@ typedef struct cccp_cookie_st {
     int ignore_errors;
 } cccp_cookie;
 
-static void io_error_handler(lcbconn_t);
-static void io_read_handler(lcbconn_t);
+static void io_error_handler(lcbio_CTX *, lcb_error_t);
+static void io_read_handler(lcbio_CTX *, unsigned nr);
 static void request_config(cccp_provider *);
-static void socket_connected(connmgr_request *req);
+static void on_connected(lcbio_SOCKET *, void*, lcb_error_t, lcbio_OSERR);
+
+static void
+pooled_close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
+{
+    int *ru_ex = arg;
+    lcbio_ref(sock);
+    if (reusable && *ru_ex) {
+        lcbio_mgr_put(sock);
+    } else {
+        lcbio_mgr_discard(sock);
+    }
+}
 
 static void release_socket(cccp_provider *cccp, int can_reuse)
 {
@@ -68,22 +80,16 @@ static void release_socket(cccp_provider *cccp, int can_reuse)
         return;
     }
 
-    if (cccp->cur_connreq) {
-        connmgr_cancel(cccp->instance->memd_sockpool, cccp->cur_connreq);
-        free(cccp->cur_connreq);
-        cccp->cur_connreq = NULL;
-    } else if (cccp->connection.state != LCBCONN_S_UNINIT) {
-        if (can_reuse) {
-            connmgr_put(cccp->instance->memd_sockpool, &cccp->connection);
-        } else {
-            connmgr_discard(cccp->instance->memd_sockpool, &cccp->connection);
-        }
+    lcbio_connreq_cancel(&cccp->creq);
+
+    if (cccp->ioctx) {
+        lcbio_ctx_close(cccp->ioctx, pooled_close_cb, &can_reuse);
+        cccp->ioctx = NULL;
     }
 }
 
-static lcb_error_t schedule_next_request(cccp_provider *cccp,
-                                         lcb_error_t err,
-                                         int can_rollover)
+static lcb_error_t
+schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
 {
     lcb_server_t *server;
     lcb_host_t *next_host = hostlist_shift_next(cccp->nodes, can_rollover);
@@ -98,19 +104,15 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
     if (server) {
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
         cookie->parent = cccp;
-
-        lcb_log(LOGARGS(cccp, INFO),
-                "Re-Issuing CCCP Command on server struct %p", server);
-
+        lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p", server);
         return lcb_getconfig(cccp->instance, cookie, server);
 
     } else {
-        cccp->cur_connreq = calloc(1, sizeof(*cccp->cur_connreq));
-        connmgr_req_init(cccp->cur_connreq, next_host->host, next_host->port,
-                         socket_connected);
-        cccp->cur_connreq->data = cccp;
-        connmgr_get(cccp->instance->memd_sockpool, cccp->cur_connreq,
-                    PROVIDER_SETTING(&cccp->base, config_node_timeout));
+        lcbio_pMGRREQ preq = lcbio_mgr_get(
+                cccp->instance->memd_sockpool, next_host,
+                PROVIDER_SETTING(&cccp->base, config_node_timeout),
+                on_connected, cccp);
+        LCBIO_CONNREQ_MKPOOLED(&cccp->creq, preq);
     }
 
     cccp->server_active = 1;
@@ -132,23 +134,6 @@ static void socket_timeout(lcb_timer_t tm, lcb_t instance, const void *cookie)
 
     (void)instance;
     (void)tm;
-}
-
-static void negotiation_done(struct negotiation_context *ctx, lcb_error_t err)
-{
-    cccp_provider *cccp = ctx->data;
-    struct lcb_io_use_st use;
-
-    if (err != LCB_SUCCESS) {
-        LOG(cccp, ERR, "CCCP SASL negotiation failed");
-        mcio_error(cccp, err);
-
-    } else {
-        LOG(cccp, DEBUG, "CCCP SASL negotiation done");
-        lcbconn_use_easy(&use, cccp, io_read_handler, io_error_handler);
-        lcbconn_use(&cccp->connection, &use);
-        request_config(cccp);
-    }
 }
 
 void lcb_clconfig_cccp_enable(clconfig_provider *pb,
@@ -234,64 +219,42 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
     free(ck);
 }
 
-static void socket_connected(connmgr_request *req)
+static void
+on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr)
 {
-    cccp_provider *cccp = req->data;
-    lcbconn_t conn = req->conn;
-    struct lcb_nibufs_st nistrs;
-    struct lcb_io_use_st use;
-
-    free(req);
-    cccp->cur_connreq = NULL;
-
-    LOG(cccp, DEBUG, "CCCP Socket connected");
-
-    if (!conn) {
+    lcbio_EASYPROCS ioprocs;
+    cccp_provider *cccp = data;
+    LCBIO_CONNREQ_CLEAR(&cccp->creq);
+    if (err != LCB_SUCCESS) {
+        if (sock) {
+            lcbio_mgr_discard(sock);
+        }
         mcio_error(cccp, LCB_CONNECT_ERROR);
         return;
     }
 
-    lcbconn_use_easy(&use, cccp, io_read_handler, io_error_handler);
-    lcbconn_transfer(conn, &cccp->connection, &use);
-    conn = NULL;
-
-
-    if (cccp->connection.protoctx) {
-        /** Already have SASL */
-        request_config(cccp);
+    if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SASL) == NULL) {
+        mc_pSASLREQ sreq;
+        lcb_settings *settings = cccp->base.parent->settings;
+        sreq = mc_sasl_start(
+                sock, settings, settings->config_node_timeout, on_connected,
+                cccp);
+        LCBIO_CONNREQ_MKGENERIC(&cccp->creq, sreq, mc_sasl_cancel);
         return;
     }
 
-    if (!lcb_get_nameinfo(&cccp->connection, &nistrs)) {
-        mcio_error(cccp, LCB_EINTERNAL);
-        return;
-    }
+    ioprocs.cb_err = io_error_handler;
+    ioprocs.cb_read = io_read_handler;
+    cccp->ioctx = lcbio_ctx_new(sock, data, &ioprocs);
+    request_config(cccp);
 
-    if (cccp->base.parent->settings->username || 1) {
-        struct negotiation_context *ctx;
-        lcb_error_t err;
-
-        ctx = lcb_negotiation_create(&cccp->connection,
-                                     cccp->base.parent->settings,
-                                     PROVIDER_SETTING(&cccp->base,
-                                                      config_node_timeout),
-                                     nistrs.remote,
-                                     nistrs.local,
-                                     &err);
-        if (!ctx) {
-            mcio_error(cccp, err);
-        }
-
-        ctx->complete = negotiation_done;
-        ctx->data = cccp;
-    }
+    (void)syserr;
 }
 
 static lcb_error_t cccp_get(clconfig_provider *pb)
 {
     cccp_provider *cccp = (cccp_provider *)pb;
-
-    if (cccp->cur_connreq || cccp->server_active || cccp->cmdcookie) {
+    if (cccp->creq.u.p_generic || cccp->server_active || cccp->cmdcookie) {
         return LCB_BUSY;
     }
 
@@ -322,8 +285,6 @@ static void cccp_cleanup(clconfig_provider *pb)
     cccp_provider *cccp = (cccp_provider *)pb;
 
     release_socket(cccp, 0);
-    lcbconn_cleanup(&cccp->connection);
-
     if (cccp->config) {
         lcb_clconfig_decref(cccp->config);
     }
@@ -339,8 +300,9 @@ static void cccp_cleanup(clconfig_provider *pb)
     free(cccp);
 }
 
-static void nodes_updated(clconfig_provider *provider, hostlist_t nodes,
-                          VBUCKET_CONFIG_HANDLE vbc)
+static void
+nodes_updated(clconfig_provider *provider, hostlist_t nodes,
+              VBUCKET_CONFIG_HANDLE vbc)
 {
     int ii;
     cccp_provider *cccp = (cccp_provider *)provider;
@@ -360,74 +322,69 @@ static void nodes_updated(clconfig_provider *provider, hostlist_t nodes,
     (void)nodes;
 }
 
-static void io_error_handler(lcbconn_t conn)
+static void
+io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
 {
-    mcio_error((cccp_provider *)conn->data, LCB_NETWORK_ERROR);
+    cccp_provider *cccp = lcbio_ctx_data(ctx);
+    mcio_error(cccp, err);
 }
 
-static void io_read_handler(lcbconn_t conn)
+static void
+io_read_handler(lcbio_CTX *ioctx, unsigned nr)
 {
     packet_info pi;
-    cccp_provider *cccp = conn->data;
+    cccp_provider *cccp = lcbio_ctx_data(ioctx);
     lcb_string jsonstr;
     lcb_error_t err;
     int rv;
+    unsigned required;
     lcb_host_t curhost;
 
+    (void)nr;
+
+#define return_error(e) \
+    lcb_pktinfo_ectx_done(&pi, ioctx); \
+    mcio_error(cccp, e); \
+    return
+
     memset(&pi, 0, sizeof(pi));
-
-    rv = lcb_packet_read_ringbuffer(&pi, conn->input);
-
-    if (rv < 0) {
-        LOG(cccp, ERR, "Couldn't parse packet!?");
-        mcio_error(cccp, LCB_EINTERNAL);
-        return;
-
-    } else if (rv == 0) {
-        lcbconn_set_want(conn, LCB_READ_EVENT, 1);
-        lcbconn_apply_want(conn);
+    rv = lcb_pktinfo_ectx_get(&pi, ioctx, &required);
+    if (!rv) {
+        lcbio_ctx_rwant(ioctx, required);
+        lcbio_ctx_schedule(ioctx);
         return;
     }
 
     if (PACKET_STATUS(&pi) != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        lcb_log(LOGARGS(cccp, ERR),
-                "CCCP Packet responded with 0x%x; nkey=%d, nbytes=%lu, cmd=0x%x, seq=0x%x",
-                PACKET_STATUS(&pi),
-                PACKET_NKEY(&pi),
-                PACKET_NBODY(&pi),
-                PACKET_OPCODE(&pi),
-                PACKET_OPAQUE(&pi));
+        lcb_log(LOGARGS(cccp, ERR), "CCCP Packet responded with 0x%x; nkey=%d, nbytes=%lu, cmd=0x%x, seq=0x%x",
+                PACKET_STATUS(&pi), PACKET_NKEY(&pi), PACKET_NBODY(&pi),
+                PACKET_OPCODE(&pi), PACKET_OPAQUE(&pi));
 
         switch (PACKET_STATUS(&pi)) {
         case PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED:
         case PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND:
-            mcio_error(cccp, LCB_NOT_SUPPORTED);
-            break;
+            return_error(LCB_NOT_SUPPORTED);
         default:
-            mcio_error(cccp, LCB_PROTOCOL_ERROR);
-            break;
+            return_error(LCB_PROTOCOL_ERROR);
         }
 
         return;
     }
 
     if (!PACKET_NBODY(&pi)) {
-        mcio_error(cccp, LCB_PROTOCOL_ERROR);
-        return;
+        return_error(LCB_PROTOCOL_ERROR);
     }
 
     if (lcb_string_init(&jsonstr)) {
-        mcio_error(cccp, LCB_CLIENT_ENOMEM);
-        return;
+        return_error(LCB_CLIENT_ENOMEM);
     }
 
     if (lcb_string_append(&jsonstr, PACKET_BODY(&pi), PACKET_NBODY(&pi))) {
-        mcio_error(cccp, LCB_CLIENT_ENOMEM);
-        return;
+        return_error(LCB_CLIENT_ENOMEM);
     }
 
-    curhost = *lcbconn_get_host(&cccp->connection);
-    lcb_packet_release_ringbuffer(&pi, conn->input);
+    curhost = *lcbio_get_host(lcbio_ctx_sock(ioctx));
+    lcb_pktinfo_ectx_done(&pi, ioctx);
     release_socket(cccp, 1);
 
     err = lcb_cccp_update(&cccp->base, curhost.host, &jsonstr);
@@ -438,36 +395,21 @@ static void io_read_handler(lcbconn_t conn)
     } else {
         schedule_next_request(cccp, LCB_PROTOCOL_ERROR, 0);
     }
+
+#undef return_error
 }
 
 static void request_config(cccp_provider *cccp)
 {
     protocol_binary_request_set_cluster_config req;
-    lcbconn_t conn = &cccp->connection;
-    ringbuffer_t *buf = conn->output;
-
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
     req.message.header.request.opcode = CMD_GET_CLUSTER_CONFIG;
     req.message.header.request.opaque = 0xF00D;
-
-    if (!buf) {
-        if ((buf = calloc(1, sizeof(*buf))) == NULL) {
-            mcio_error(cccp, LCB_CLIENT_ENOMEM);
-            return;
-        }
-        conn->output = buf;
-    }
-
-    if (!ringbuffer_ensure_capacity(buf, sizeof(req.bytes))) {
-        mcio_error(cccp, LCB_CLIENT_ENOMEM);
-    }
-
-    ringbuffer_write(buf, req.bytes, sizeof(req.bytes));
-    lcbconn_set_want(conn, LCB_WRITE_EVENT, 1);
-    lcbconn_apply_want(conn);
-    lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base,
-                                                  config_node_timeout));
+    lcbio_ctx_put(cccp->ioctx, req.bytes, sizeof(req.bytes));
+    lcbio_ctx_rwant(cccp->ioctx, 24);
+    lcbio_ctx_schedule(cccp->ioctx);
+    lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base, config_node_timeout));
 }
 
 clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
@@ -482,23 +424,13 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
     cccp->base.nodes_updated = nodes_updated;
     cccp->base.parent = mon;
     cccp->base.enabled = 0;
-    cccp->timer = lcb_timer_create_simple(mon->settings->io,
-                                          cccp,
-                                          mon->settings->config_timeout,
-                                          socket_timeout);
+    cccp->timer = lcb_timer_create_simple(
+            mon->iot, cccp, mon->settings->config_timeout, socket_timeout);
     lcb_timer_disarm(cccp->timer);
 
     if (!cccp->nodes) {
         free(cccp);
         return NULL;
     }
-
-    if (lcbconn_init(&cccp->connection,
-                     cccp->base.parent->settings->io,
-                     cccp->base.parent->settings) != LCB_SUCCESS) {
-        free(cccp);
-        return NULL;
-    }
-
     return &cccp->base;
 }

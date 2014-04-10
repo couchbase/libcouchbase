@@ -1,24 +1,54 @@
 #include "packetutils.h"
 #include "simplestring.h"
-#include "lcbio.h"
 #include "mcserver.h"
 #include "logging.h"
 #include "settings.h"
+#include <lcbio/lcbio.h>
+#include <cbsasl/cbsasl.h>
 
 #define LOGARGS(ctx, lvl) \
-    ctx->settings, "negotiation", LCB_LOG_##lvl, __FILE__, __LINE__
+    ctx->inner->settings, "negotiation", LCB_LOG_##lvl, __FILE__, __LINE__
 
-#define LOG(ctx, lvl, msg) lcb_log(LOGARGS(ctx, lvl), msg)
+static void cleanup_pending(mc_pSASLREQ);
+static void cleanup_negotiated(mc_pSASLINFO);
+static void bail_pending(mc_pSASLREQ sreq);
 
-static void io_error_handler(lcbconn_t);
-static void io_read_handler(lcbconn_t);
+/**
+ * Inner negotiation structure which is maintained as part of a 'protocol
+ * context'.
+ */
+struct mc_SASLINFO {
+    lcbio_PROTOCTX base;
+    cbsasl_conn_t *sasl;
+    char *mech;
+    unsigned int nmech;
+    lcb_settings *settings;
+    lcbio_CONNDONE_cb complete;
+    union {
+        cbsasl_secret_t secret;
+        char buffer[256];
+    } u_auth;
+    cbsasl_callback_t sasl_callbacks[4];
+};
 
-static int sasl_get_username(void *context,
-                             int id,
-                             const char **result,
-                             unsigned int *len)
+/**
+ * Structure used only for initialization. This is only used for the duration
+ * of the request for negotiation and is deleted once negotiation has
+ * completed (or failed).
+ */
+typedef struct mc_SASLREQ {
+    lcbio_CTX *ctx;
+    lcbio_CONNDONE_cb cb;
+    void *data;
+    lcb_timer_t timer;
+    lcb_error_t err;
+    mc_pSASLINFO inner;
+} neg_PENDING;
+
+static int
+sasl_get_username(void *context, int id, const char **result, unsigned int *len)
 {
-    struct negotiation_context *ctx = context;
+    struct mc_SASLINFO *ctx = context;
     if (!context || !result || (id != CBSASL_CB_USER && id != CBSASL_CB_AUTHNAME)) {
         return SASL_BADPARAM;
     }
@@ -31,12 +61,11 @@ static int sasl_get_username(void *context,
     return SASL_OK;
 }
 
-static int sasl_get_password(cbsasl_conn_t *conn,
-                             void *context,
-                             int id,
-                             cbsasl_secret_t **psecret)
+static int
+sasl_get_password(cbsasl_conn_t *conn, void *context, int id,
+                  cbsasl_secret_t **psecret)
 {
-    struct negotiation_context *ctx = context;
+    struct mc_SASLINFO *ctx = context;
     if (!conn || ! psecret || id != CBSASL_CB_PASS || ctx == NULL) {
         return SASL_BADPARAM;
     }
@@ -45,7 +74,8 @@ static int sasl_get_password(cbsasl_conn_t *conn,
     return SASL_OK;
 }
 
-static lcb_error_t setup_sasl_params(struct negotiation_context *ctx)
+static lcb_error_t
+setup_sasl_params(struct mc_SASLINFO *ctx)
 {
     int ii;
     cbsasl_callback_t *callbacks = ctx->sasl_callbacks;
@@ -84,102 +114,83 @@ static lcb_error_t setup_sasl_params(struct negotiation_context *ctx)
             return LCB_EINVAL;
         }
     }
-
-
     return LCB_SUCCESS;
 }
 
-static void negotiation_cleanup(struct negotiation_context *ctx)
+static void
+close_cb(lcbio_SOCKET *s, int reusable, void *arg)
 {
-    lcbconn_t conn = ctx->conn;
-    lcbconn_set_want(conn, 0, 1);
-    lcbconn_apply_want(conn);
-    memset(&conn->easy, 0, sizeof(conn->easy));
+    *(lcbio_SOCKET **)arg = s;
+    lcbio_ref(s);
+    lcb_assert(reusable);
+}
 
-    if (IOT_IS_EVENT(conn->iotable)) {
-        conn->u_model.e.handler = NULL;
-    } else {
-        conn->u_model.c.read = NULL;
-        conn->u_model.c.write = NULL;
+static void
+negotiation_success(mc_pSASLREQ sreq)
+{
+    /** Dislodge the connection, and return it back to the caller */
+    lcbio_SOCKET *s;
+
+    lcbio_ctx_close(sreq->ctx, close_cb, &s);
+    sreq->ctx = NULL;
+
+    lcbio_protoctx_add(s, &sreq->inner->base);
+    sreq->inner = NULL;
+
+    /** Invoke the callback, marking it a success */
+    sreq->cb(s, sreq->data, LCB_SUCCESS, 0);
+    lcbio_unref(s);
+    cleanup_pending(sreq);
+}
+
+static void
+bail_pending(mc_pSASLREQ sreq)
+{
+    sreq->cb(NULL, sreq->data, sreq->err, 0);
+    cleanup_pending(sreq);
+}
+
+static void
+set_error_ex(mc_pSASLREQ sreq, lcb_error_t err, const char *msg)
+{
+    lcb_log(LOGARGS(sreq, ERR), "Received error for SASL req %p: 0x%x, %s", sreq, err, msg);
+    if (sreq->err == LCB_SUCCESS) {
+        sreq->err = err;
     }
-
-    conn->errcb = NULL;
-
-    if (ctx->timer) {
-        lcb_timer_destroy(NULL, ctx->timer);
-        ctx->timer = NULL;
-    }
 }
 
-static void negotiation_success(struct negotiation_context *ctx)
+static void
+timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
 {
-    negotiation_cleanup(ctx);
-    ctx->done_ = 1;
-    ctx->complete(ctx, LCB_SUCCESS);
-}
-
-static void negotiation_set_error_ex(struct negotiation_context *ctx,
-                                     lcb_error_t err,
-                                     const char *msg)
-{
-    ctx->errinfo.err = err;
-    if (msg) {
-        if (ctx->errinfo.msg) {
-            free(ctx->errinfo.msg);
-        }
-        ctx->errinfo.msg = strdup(msg);
-    }
-    (void)msg;
-}
-
-static void negotiation_set_error(struct negotiation_context *ctx,
-                                  const char *msg)
-{
-    negotiation_set_error_ex(ctx, LCB_AUTH_ERROR, msg);
-}
-
-
-static void negotiation_bail(struct negotiation_context *ctx)
-{
-    negotiation_cleanup(ctx);
-    ctx->complete(ctx, ctx->errinfo.err);
-}
-
-
-
-static void timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
-{
-    struct negotiation_context *ctx = (struct negotiation_context *)cookie;
-    negotiation_set_error_ex(ctx, LCB_ETIMEDOUT, "Negotiation timed out");
-    negotiation_bail(ctx);
-    (void)tm;
-    (void)i;
+    mc_pSASLREQ sreq = (void *)cookie;
+    set_error_ex(sreq, LCB_ETIMEDOUT, "Negotiation timed out");
+    bail_pending(sreq);
+    (void)tm; (void)i;
 }
 
 /**
  * Called to retrive the mechlist from the packet.
  */
-static int set_chosen_mech(struct negotiation_context *ctx,
-                           lcb_string *mechlist,
-                           const char **data,
-                           unsigned int *ndata)
+static int
+set_chosen_mech(mc_pSASLREQ sreq, lcb_string *mechlist, const char **data,
+                unsigned int *ndata)
 {
     cbsasl_error_t saslerr;
     const char *chosenmech;
+    mc_pSASLINFO ctx = sreq->inner;
 
+    lcb_assert(sreq->inner);
     if (ctx->settings->sasl_mech_force) {
         char *forcemech = ctx->settings->sasl_mech_force;
         if (!strstr(mechlist->base, forcemech)) {
             /** Requested mechanism not found */
-            negotiation_set_error_ex(ctx,
-                                     LCB_SASLMECH_UNAVAILABLE,
-                                     mechlist->base);
+            set_error_ex(sreq, LCB_SASLMECH_UNAVAILABLE, mechlist->base);
             return -1;
         }
 
         lcb_string_clear(mechlist);
         if (lcb_string_appendz(mechlist, forcemech)) {
-            negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
+            set_error_ex(sreq, LCB_CLIENT_ENOMEM, NULL);
             return -1;
         }
     }
@@ -187,13 +198,13 @@ static int set_chosen_mech(struct negotiation_context *ctx,
     saslerr = cbsasl_client_start(ctx->sasl, mechlist->base,
                                   NULL, data, ndata, &chosenmech);
     if (saslerr != SASL_OK) {
-        negotiation_set_error(ctx, "Couldn't start SASL client");
+        set_error_ex(sreq, LCB_EINTERNAL, "Couldn't start SASL client");
         return -1;
     }
 
     ctx->nmech = strlen(chosenmech);
     if (! (ctx->mech = strdup(chosenmech)) ) {
-        negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
+        set_error_ex(sreq, LCB_CLIENT_ENOMEM, NULL);
         return -1;
     }
 
@@ -203,15 +214,12 @@ static int set_chosen_mech(struct negotiation_context *ctx,
 /**
  * Given the specific mechanisms, send the auth packet to the server.
  */
-static int send_sasl_auth(struct negotiation_context *ctx,
-                          const char *sasl_data,
-                          unsigned int ndata)
+static int
+send_sasl_auth(neg_PENDING *pend, const char *sasl_data, unsigned ndata)
 {
+    mc_pSASLINFO ctx = pend->inner;
     protocol_binary_request_no_extras req;
     protocol_binary_request_header *hdr = &req.message.header;
-    lcbconn_t conn = ctx->conn;
-    lcb_size_t to_write;
-
     memset(&req, 0, sizeof(req));
 
     hdr->request.magic = PROTOCOL_BINARY_REQ;
@@ -220,76 +228,43 @@ static int send_sasl_auth(struct negotiation_context *ctx,
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr->request.bodylen = htonl((lcb_uint32_t)ndata + ctx->nmech);
 
-    /** Write the packet */
-    if (!conn->output) {
-        if (! (conn->output = calloc(1, sizeof(*conn->output)))) {
-            negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
-            return -1;
-        }
-    }
-
-    to_write = sizeof(req.bytes) + ctx->nmech + ndata;
-
-    if (!ringbuffer_ensure_capacity(conn->output, to_write)) {
-        negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
-        return -1;
-    }
-
-    ringbuffer_write(conn->output, req.bytes, sizeof(req.bytes));
-    ringbuffer_write(conn->output, ctx->mech, ctx->nmech);
-    ringbuffer_write(conn->output, sasl_data, ndata);
-    lcbconn_set_want(conn, LCB_WRITE_EVENT, 0);
+    lcbio_ctx_put(pend->ctx, req.bytes, sizeof(req.bytes));
+    lcbio_ctx_put(pend->ctx, ctx->mech, ctx->nmech);
+    lcbio_ctx_put(pend->ctx, sasl_data, ndata);
+    lcbio_ctx_rwant(pend->ctx, 24);
     return 0;
 }
 
-static int send_sasl_step(struct negotiation_context *ctx,
-                          packet_info *packet)
+static int
+send_sasl_step(mc_pSASLREQ sreq, packet_info *packet)
 {
     protocol_binary_request_no_extras req;
     protocol_binary_request_header *hdr = &req.message.header;
-    lcbconn_t conn = ctx->conn;
     cbsasl_error_t saslerr;
     const char *step_data;
     unsigned int ndata;
-    lcb_size_t to_write;
+    mc_pSASLINFO ctx = sreq->inner;
 
-    saslerr = cbsasl_client_step(ctx->sasl,
-                                 packet->payload,
-                                 PACKET_NBODY(packet),
-                                 NULL,
-                                 &step_data,
-                                 &ndata);
+    saslerr = cbsasl_client_step(
+            ctx->sasl, packet->payload, PACKET_NBODY(packet), NULL, &step_data,
+            &ndata);
 
     if (saslerr != SASL_CONTINUE) {
-        negotiation_set_error(ctx, "Unable to perform SASL STEP");
+        set_error_ex(sreq, LCB_EINTERNAL, "Unable to perform SASL STEP");
         return -1;
     }
-
 
     memset(&req, 0, sizeof(req));
     hdr->request.magic = PROTOCOL_BINARY_REQ;
     hdr->request.opcode = PROTOCOL_BINARY_CMD_SASL_STEP;
-    hdr->request.keylen = htons((lcb_uint16_t)ctx->nmech);
-    hdr->request.bodylen = htonl((lcb_uint32_t)ndata + ctx->nmech);
+    hdr->request.keylen = htons((uint16_t)ctx->nmech);
+    hdr->request.bodylen = htonl((uint32_t)ndata + ctx->nmech);
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
-    to_write = sizeof(req) + ctx->nmech + ndata;
-    if (!conn->output) {
-        if ( (conn->output = calloc(1, sizeof(*conn->output))) == NULL) {
-            negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
-            return -1;
-        }
-    }
-
-    if (!ringbuffer_ensure_capacity(conn->output, to_write)) {
-        negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
-        return -1;
-    }
-
-    ringbuffer_write(conn->output, req.bytes, sizeof(req.bytes));
-    ringbuffer_write(conn->output, ctx->mech, ctx->nmech);
-    ringbuffer_write(conn->output, step_data, ndata);
-    lcbconn_set_want(conn, LCB_WRITE_EVENT, 0);
+    lcbio_ctx_put(sreq->ctx, req.bytes, sizeof(req.bytes));
+    lcbio_ctx_put(sreq->ctx, ctx->mech, ctx->nmech);
+    lcbio_ctx_put(sreq->ctx, step_data, ndata);
+    lcbio_ctx_rwant(sreq->ctx, 24);
     return 0;
 }
 
@@ -297,26 +272,20 @@ static int send_sasl_step(struct negotiation_context *ctx,
  * It's assumed the server buffers will be reset upon close(), so we must make
  * sure to _not_ release the ringbuffer if that happens.
  */
-static void io_read_handler(lcbconn_t conn)
+static void
+handle_read(lcbio_CTX *ioctx, unsigned nb)
 {
+    mc_pSASLREQ sreq = lcbio_ctx_data(ioctx);
     packet_info info;
     int rv;
     int is_done = 0;
-    lcb_uint16_t status;
-    struct negotiation_context *ctx = conn->data;
+    unsigned required;
+    uint16_t status;
+
     memset(&info, 0, sizeof(info));
-
-
-    rv = lcb_packet_read_ringbuffer(&info, conn->input);
+    rv = lcb_pktinfo_ectx_get(&info, ioctx, &required);
     if (rv == 0) {
-        lcbconn_set_want(conn, LCB_READ_EVENT, 1);
-        lcbconn_apply_want(conn);
-        return;
-    }
-
-    if (rv == -1) {
-        negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
-        LOG(ctx, ERR, "Packet parse error");
+        LCBIO_CTX_RSCHEDULE(ioctx, required);
         return;
     }
 
@@ -327,21 +296,22 @@ static void io_read_handler(lcbconn_t conn)
         lcb_string str;
         const char *mechlist_data;
         unsigned int nmechlist_data;
-
         if (lcb_string_init(&str)) {
-            negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
+            set_error_ex(sreq, LCB_CLIENT_ENOMEM, NULL);
             rv = -1;
             break;
         }
 
         if (lcb_string_append(&str, info.payload, PACKET_NBODY(&info))) {
             lcb_string_release(&str);
-            negotiation_set_error_ex(ctx, LCB_CLIENT_ENOMEM, NULL);
+            set_error_ex(sreq, LCB_CLIENT_ENOMEM, NULL);
+            rv = -1;
+            break;
         }
 
-        rv = set_chosen_mech(ctx, &str, &mechlist_data, &nmechlist_data);
+        rv = set_chosen_mech(sreq, &str, &mechlist_data, &nmechlist_data);
         if (rv == 0) {
-            rv = send_sasl_auth(ctx, mechlist_data, nmechlist_data);
+            rv = send_sasl_auth(sreq, mechlist_data, nmechlist_data);
         }
 
         lcb_string_release(&str);
@@ -356,17 +326,17 @@ static void io_read_handler(lcbconn_t conn)
         }
 
         if (status != PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
-            negotiation_set_error(ctx, "SASL AUTH failed");
+            set_error_ex(sreq, LCB_AUTH_ERROR, "SASL AUTH failed");
             rv = -1;
             break;
         }
-        rv = send_sasl_step(ctx, &info);
+        rv = send_sasl_step(sreq, &info);
         break;
     }
 
     case PROTOCOL_BINARY_CMD_SASL_STEP: {
         if (status != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-            negotiation_set_error(ctx, "SASL Step Failed");
+            set_error_ex(sreq, LCB_AUTH_ERROR, "SASL Step Failed");
             rv = -1;
         } else {
             rv = 0;
@@ -377,86 +347,120 @@ static void io_read_handler(lcbconn_t conn)
 
     default: {
         rv = -1;
-        negotiation_set_error_ex(ctx, LCB_NOT_SUPPORTED,
-                             "Received unknown response");
+        set_error_ex(sreq, LCB_NOT_SUPPORTED, "Received unknown response");
         break;
     }
     }
 
-    lcb_packet_release_ringbuffer(&info, conn->input);
-
-    if (ctx->errinfo.err) {
-        negotiation_bail(ctx);
-        return;
-    }
-
-    if (is_done) {
-        negotiation_success(ctx);
-    } else if (rv == 0) {
-        lcbconn_apply_want(conn);
+    lcb_pktinfo_ectx_done(&info, ioctx);
+    if (sreq->err != LCB_SUCCESS) {
+        bail_pending(sreq);
+    } else if (is_done) {
+        negotiation_success(sreq);
+    } else {
+        lcbio_ctx_schedule(ioctx);
     }
 }
 
-static void io_error_handler(lcbconn_t conn)
+static void
+handle_ioerr(lcbio_CTX *ctx, lcb_error_t err)
 {
-    struct negotiation_context *ctx = conn->data;
-    negotiation_set_error_ex(ctx, LCB_NETWORK_ERROR, "IO Error");
-    negotiation_bail(ctx);
+    mc_pSASLREQ sreq = lcbio_ctx_data(ctx);
+    set_error_ex(sreq, err, "IO Error");
+    bail_pending(sreq);
 }
 
-static void connxfr_callback(void *ptr, lcbconn_t to)
+static void
+cleanup_negotiated(mc_pSASLINFO ctx)
 {
-    struct negotiation_context *ctx = ptr;
-    ctx->conn = to;
+    if (ctx->sasl) {
+        cbsasl_dispose(&ctx->sasl);
+    }
+    if (ctx->mech) {
+        free(ctx->mech);
+    }
+    free(ctx);
 }
 
-struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
-                                                   lcb_settings *settings,
-                                                   lcb_uint32_t timeout,
-                                                   const char *remote,
-                                                   const char *local,
-                                                   lcb_error_t *err)
+static void
+cleanup_pending(mc_pSASLREQ sreq)
 {
+    if (sreq->inner) {
+        cleanup_negotiated(sreq->inner);
+        sreq->inner = NULL;
+    }
+    if (sreq->timer) {
+        lcb_timer_destroy(NULL, sreq->timer);
+        sreq->timer = NULL;
+    }
+    if (sreq->ctx) {
+        lcbio_ctx_close(sreq->ctx, NULL, NULL);
+        sreq->ctx = NULL;
+    }
+    free(sreq);
+}
+
+void
+mc_sasl_cancel(mc_pSASLREQ sreq)
+{
+    cleanup_pending(sreq);
+}
+
+mc_pSASLREQ
+mc_sasl_start(lcbio_SOCKET *sock, lcb_settings *settings,
+              uint32_t tmo, lcbio_CONNDONE_cb callback, void *data)
+{
+    lcb_error_t err;
     cbsasl_error_t saslerr;
     protocol_binary_request_no_extras req;
-    struct negotiation_context *ctx = calloc(1, sizeof(*ctx));
-    struct lcb_io_use_st use;
     const lcb_host_t *curhost;
+    struct lcbio_NAMEINFO nistrs;
+    mc_pSASLREQ sreq;
+    mc_pSASLINFO sasl;
+    lcbio_EASYPROCS procs;
 
-    if (ctx == NULL) {
-        *err = LCB_CLIENT_ENOMEM;
+    if ((sreq = calloc(1, sizeof(*sreq))) == NULL) {
         return NULL;
     }
 
-    conn->data = ctx;
-    conn->protoctx = ctx;
-    conn->protoctx_dtor = (protoctx_dtor_t)lcb_negotiation_destroy;
-    conn->protoctx_transfer = connxfr_callback;
-    ctx->settings = settings;
-    ctx->conn = conn;
-    curhost = lcbconn_get_host(conn);
-
-    *err = setup_sasl_params(ctx);
-
-    if (*err != LCB_SUCCESS) {
-        lcb_negotiation_destroy(ctx);
+    if ((sasl = calloc(1, sizeof(*sasl))) == NULL) {
+        cleanup_pending(sreq);
         return NULL;
     }
 
-    saslerr = cbsasl_client_new("couchbase", curhost->host,
-                                local, remote,
-                                ctx->sasl_callbacks, 0,
-                                &ctx->sasl);
+    procs.cb_err = handle_ioerr;
+    procs.cb_read = handle_read;
+
+    lcbio_get_nameinfo(sock, &nistrs);
+    sreq->cb = callback;
+    sreq->data = data;
+    sreq->inner = sasl;
+    sreq->ctx = lcbio_ctx_new(sock, sreq, &procs);
+    sreq->timer = lcb_timer_create_simple(sock->io, sreq, tmo, timeout_handler);
+
+    if (!tmo) {
+        lcb_timer_disarm(sreq->timer);
+    }
+
+    sasl->base.id = LCBIO_PROTOCTX_SASL;
+    sasl->base.dtor = (void (*)(struct lcbio_PROTOCTX *))cleanup_negotiated;
+    sasl->settings = settings;
+
+    err = setup_sasl_params(sasl);
+    if (err != LCB_SUCCESS) {
+        cleanup_pending(sreq);
+        return NULL;
+    }
+
+
+    curhost = lcbio_get_host(sock);
+    saslerr = cbsasl_client_new(
+            "couchbase", curhost->host, nistrs.local, nistrs.remote,
+            sasl->sasl_callbacks, 0, &sasl->sasl);
 
     if (saslerr != SASL_OK) {
-        lcb_negotiation_destroy(ctx);
-        *err = LCB_CLIENT_ENOMEM;
+        cleanup_pending(sreq);
         return NULL;
-    }
-
-    if (timeout) {
-        ctx->timer = lcb_timer_create_simple(conn->iotable,
-                                             ctx, timeout, timeout_handler);
     }
 
     memset(&req, 0, sizeof(req));
@@ -467,67 +471,19 @@ struct negotiation_context* lcb_negotiation_create(lcbconn_t conn,
     req.message.header.request.keylen = 0;
     req.message.header.request.opaque = 0;
 
-    if ( (*err = lcbconn_reset_bufs(conn)) != LCB_SUCCESS) {
-        lcb_negotiation_destroy(ctx);
-        return NULL;
-    }
-
-    if (!conn->output) {
-        if ((conn->output = calloc(1, sizeof(*conn->output))) == NULL) {
-            *err = LCB_CLIENT_ENOMEM;
-            lcb_negotiation_destroy(ctx);
-            return NULL;
-        }
-    } else {
-        lcb_assert(conn->output->nbytes == 0);
-    }
-
-    if (!ringbuffer_ensure_capacity(conn->output, sizeof(req.bytes))) {
-        *err = LCB_CLIENT_ENOMEM;
-        lcb_negotiation_destroy(ctx);
-        return NULL;
-    }
-
-    if (ringbuffer_write(conn->output, req.bytes, sizeof(req.bytes)) != sizeof(req.bytes)) {
-        *err = LCB_EINTERNAL;
-        lcb_negotiation_destroy(ctx);
-        return NULL;
-    }
-
-    /** Set up the I/O handlers */
-    lcbconn_use_easy(&use, ctx, io_read_handler, io_error_handler);
-    lcbconn_use(conn, &use);
-    lcbconn_set_want(conn, LCB_WRITE_EVENT, 1);
-    lcbconn_apply_want(conn);
-    *err = LCB_SUCCESS;
-    return ctx;
+    lcbio_ctx_put(sreq->ctx, req.bytes, sizeof(req.bytes));
+    LCBIO_CTX_RSCHEDULE(sreq->ctx, 24);
+    return sreq;
 }
 
-
-void lcb_negotiation_destroy(struct negotiation_context *ctx)
+mc_pSASLINFO
+mc_sasl_get(lcbio_SOCKET *sock)
 {
-    if (ctx->sasl) {
-        cbsasl_dispose(&ctx->sasl);
-    }
-
-    if (ctx->mech) {
-        free(ctx->mech);
-    }
-
-    if (ctx->timer) {
-        lcb_timer_destroy(NULL, ctx->timer);
-    }
-
-    if (ctx->conn) {
-        ctx->conn->protoctx = NULL;
-        ctx->conn->protoctx_dtor = NULL;
-    }
-
-    free(ctx->errinfo.msg);
-    free(ctx);
+    return (void *)lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SASL);
 }
 
-struct negotiation_context * lcb_negotiation_get(lcbconn_t conn)
+const char *
+mc_sasl_getmech(mc_pSASLINFO info)
 {
-    return conn->protoctx;
+    return info->mech;
 }

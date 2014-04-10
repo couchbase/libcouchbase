@@ -1,11 +1,8 @@
 #ifndef LCB_MCSERVER_H
 #define LCB_MCSERVER_H
-
 #include <libcouchbase/couchbase.h>
-#include "cbsasl/cbsasl.h"
-#include "lcbio.h"
+#include <lcbio/lcbio.h>
 #include "timer.h"
-#include "connmgr.h"
 #include "mc/mcreq.h"
 #include "netbuf/netbuf.h"
 
@@ -14,47 +11,8 @@ extern "C" {
 #endif
 
 struct lcb_settings_st;
-struct negotiation_context;
-typedef void (*negotiation_callback)(struct negotiation_context *, lcb_error_t);
-
-struct negotiation_context {
-    cbsasl_conn_t *sasl;
-
-    /** Selected mechanism */
-    char *mech;
-
-    /** Mechanism length */
-    unsigned int nmech;
-
-    unsigned int done_;
-
-    /** Callback */
-    negotiation_callback complete;
-
-    /** Error context */
-    struct {
-        char *msg;
-        lcb_error_t err;
-    } errinfo;
-
-    void *data;
-
-    /** Connection */
-    lcbconn_t conn;
-
-    /** Settings structure from whence we get our username/password info */
-    struct lcb_settings_st *settings;
-
-    union {
-        cbsasl_secret_t secret;
-        char buffer[256];
-    } u_auth;
-
-    lcb_timer_t timer;
-
-    cbsasl_callback_t sasl_callbacks[4];
-};
-
+typedef struct mc_SASLREQ *mc_pSASLREQ;
+typedef struct mc_SASLINFO *mc_pSASLINFO;
 struct lcb_server_st;
 
 /**
@@ -73,75 +31,39 @@ typedef struct lcb_server_st {
     /** The REST API server as hostname:port */
     char *resthost;
 
-    /** Whether we are inside an I/O handler for this server */
-    int entered;
-
-    /** This is invoked when we have a timeout on an event */
-    int dirty;
-
-    /** Reference count on the server structure itself */
-    unsigned refcount;
-    unsigned nwpending;
-    unsigned cflush_errsize;
-
     /** Pointer back to the instance */
     lcb_t instance;
+
+    lcb_settings *settings;
+
+    /** Whether mcserver_close() was invoked on this server */
+    int closed;
 
     /** IO/Operation timer */
     lcb_timer_t io_timer;
 
-    struct lcb_connection_st connection;
+    lcbio_CTX *connctx;
+    lcbio_CONNREQ connreq;
 
     /** Request for current connection */
-    connmgr_request *connreq;
     lcb_host_t curhost;
 } lcb_server_t, mc_SERVER;
 
+mc_pSASLREQ
+mc_sasl_start(
+        lcbio_SOCKET *sock, struct lcb_settings_st *settings,
+        uint32_t tmo, lcbio_CONNDONE_cb callback, void *data);
 
-/**
- * Creates a negotiation context. The negotiation context shall use an
- * existing _connected_ connection object and perform memcached SASL
- * negotiation on it.
- *
- * @param conn a connected object
- *
- * @param settings a settings structure to use for retrieving username
- * and password information
- *
- * @param remote a string in the form of host:port representing the remote
- * server address
- *
- * @param local a string in the form of host:port representing the local end
- * of the connection
- *
- * @param err a pointer to an error which will be populated if this function
- * fails.
- *
- * @return a new negotiation context object, or NULL if initialization failed.
- * If initialization failed, err will be set with the reason.
- *
- */
-struct negotiation_context*
-lcb_negotiation_create(
-        lcbconn_t conn, struct lcb_settings_st *settings,lcb_uint32_t timeout,
-        const char *remote, const char *local, lcb_error_t *err);
+void
+mc_sasl_cancel(mc_pSASLREQ handle);
 
-struct negotiation_context* lcb_negotiation_get(lcbconn_t conn);
+mc_pSASLINFO
+mc_sasl_get(lcbio_SOCKET *sock);
 
-/**
- * Destroys any resources created by negotiation_init.
- * This is safe to call even if negotiation_init itself was not called.
- */
-void lcb_negotiation_destroy(struct negotiation_context *ctx);
+const char *
+mc_sasl_getmech(mc_pSASLINFO info);
 
-#define lcb_negotiation_is_busy(conn) \
-    ((struct negotiation_context *)ctx)->done_
-
-#define MCCONN_IS_NEGOTIATING(conn) \
-    ((conn)->protoctx && \
-            ((struct negotiation_context *)(conn)->protoctx)->done_ == 0)
-
-#define MCSERVER_TIMEOUT(c) (c)->instance->settings.operation_timeout
+#define MCSERVER_TIMEOUT(c) (c)->settings->operation_timeout
 
 /**
  * Allocate and initialize a new server object. The object will not be
@@ -153,22 +75,15 @@ void lcb_negotiation_destroy(struct negotiation_context *ctx);
 mc_SERVER *
 mcserver_alloc(lcb_t instance, int ix);
 
-#define mcserver_incref(server) (server)->refcount++
-
 /**
- * Decrease the reference count on the server object. When the count hits zero
- * the server's resources are freed.
- * @param server the server
- * @param ok whether the connection has been clean. This is the return value
- *        of a prior call to mcserver_is_clean().
- *
- * The normal way to use this function is like so:
- * int was_clean = mcserver_is_clean(server);
- * < fail out commands here >
- * mcserver_decref(server, was_clean)
+ * Close the server. The resources of the server may still continue to persist
+ * internally for a bit until all callbacks have been delivered and all buffers
+ * flushed and/or failed.
+ * @param server the server to release
+ * @param isok whether the server's socket may be reused.
  */
 void
-mcserver_decref(mc_SERVER *server, int ok);
+mcserver_close(mc_SERVER *server, int isok);
 
 /**
  * Determines if a server is 'clean'. A 'clean' server is one which does not
@@ -193,7 +108,7 @@ void
 mcserver_flush(mc_SERVER *server);
 
 void
-mcserver_wire_io(mc_SERVER *server, lcbconn_t src);
+mcserver_wire_io(mc_SERVER *server, lcbio_SOCKET *sock);
 
 /**
  * Handle a socket error. This function will close the current connection

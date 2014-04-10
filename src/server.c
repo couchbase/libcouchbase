@@ -18,179 +18,67 @@
 #include "internal.h"
 #include "logging.h"
 #include "vb-aliases.h"
+#include "settings.h"
 
 #include "bucketconfig/clconfig.h"
 #include "mc/mcreq-flush-inl.h"
 
 #define LOGARGS(c, lvl) \
-    &(c)->instance->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
+    (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
 
 #define MCREQ_MAXIOV 32
 #define LCBCONN_UNWANT(conn, flags) (conn)->want &= ~(flags)
 
-/**
- * Called immediately from the flush_start handler on a connected socket.
- * This will try to flush to the socket until we either don't have any more
- * data to send or we get an EWOULDBLOCK.
- *
- * Only applicable on "Event"-style I/O backends
- */
+static int check_closed(mc_SERVER *);
+
 static void
-do_Eflush(lcb_server_t *server)
+on_flush_ready(lcbio_CTX *ctx)
 {
-    mc_PIPELINE *pl = &server->pipeline;
-    lcbconn_t conn = &server->connection;
-    lcb_iotable *iot = conn->iotable;
+    mc_SERVER *server = lcbio_ctx_data(ctx);
     nb_IOV iov[MCREQ_MAXIOV];
-    nb_SIZE toflush;
-    int niov;
-    int fd = conn->u_model.e.sockfd;
+    int ready;
 
-    while ((toflush = mcreq_flush_iov_fill(pl, iov, MCREQ_MAXIOV, &niov))) {
-        lcb_ssize_t nw;
-        nw = IOT_V0IO(iot).sendv(
-                IOT_ARG(iot), fd, (struct lcb_iovec_st *)iov, niov);
-
-        /** Handle the errors.. */
-        if (nw > 0) {
-            mcreq_flush_done(pl, nw, toflush);
-            if (nw == toflush && niov < MCREQ_MAXIOV) {
-                LCBCONN_UNWANT(conn, LCB_WRITE_EVENT);
-                break;
-            }
-
-        } else if (nw == -1) {
-            switch (IOT_ERRNO(iot)) {
-            case EWOULDBLOCK:
-            #ifdef USE_EAGAIN
-            case EAGAIN:
-            #endif
-                mcreq_flush_done(pl, 0, toflush);
-                lcbconn_set_want(conn, LCB_WRITE_EVENT, 0);
-                goto GT_SCHEDNEXT;
-
-            case EINTR:
-                continue;
-
-            default:
-                /**
-                 * XXX:
-                 * For error handling with event models on flush, the data
-                 * is considered already to be flushed _immediately_. We rely
-                 * on the assumption that an error here will lead to an error
-                 * on subsequent flushes and so on.
-                 */
-                mcreq_flush_done(pl, toflush, toflush);
-                lcbconn_senderr(conn, conn->last_error);
-                return;
-            }
-        } else {
-            LCBCONN_UNWANT(conn, LCB_WRITE_EVENT);
+    do {
+        int niov = 0;
+        unsigned nb;
+        nb = mcreq_flush_iov_fill(&server->pipeline, iov, MCREQ_MAXIOV, &niov);
+        if (!nb) {
             break;
         }
-    }
-
-    GT_SCHEDNEXT:
-    if (toflush == 0) {
-        LCBCONN_UNWANT(conn, LCB_WRITE_EVENT);
-    }
-
-    conn->want |= LCB_READ_EVENT;
-    if (!server->entered) {
-        lcbconn_apply_want(conn);
-    }
+        ready = lcbio_ctx_put_ex(ctx, (lcb_IOV *)iov, niov, nb);
+    } while (ready);
 }
 
-/**
- * Write callback for the write invoked by do_Cflush. This callback decrements
- * the flush count and invokes the 'flush_done' from mcreq
- */
 static void
-handle_Cwr(lcb_sockdata_t *sd, int status, void *wdata)
+on_flush_done(lcbio_CTX *ctx, unsigned expected, unsigned actual)
 {
-    lcb_server_t *server = sd->lcbconn->data;
-    lcb_size_t nw = (uintptr_t)wdata;
-    server->nwpending--;
-
-    mcreq_flush_done(&server->pipeline, nw, nw);
-    if (server->cflush_errsize) {
-        mcreq_flush_done(&server->pipeline,
-                         server->cflush_errsize, server->cflush_errsize);
-        server->cflush_errsize = 0;
-    }
-
-    /**
-     * Complain about a socket error only if the server did not already
-     * acquire a new socket.
-     */
-
-    if (status && sd == server->connection.u_model.c.sockptr) {
-        mcserver_socket_error(server, status);
-    }
-
-    mcserver_decref(server, status == 0);
+    mc_SERVER *server = lcbio_ctx_data(ctx);
+    mcreq_flush_done(&server->pipeline, actual, expected);
+    check_closed(server);
 }
 
-/**
- * Starts flushing data for Completion-style I/O backends. This sends multiple
- * write requests if more IOVs are needed than are statically allocated for.
- */
 static void
-do_Cflush(lcb_server_t *server)
+on_error(lcbio_CTX *ctx, lcb_error_t err)
 {
-    nb_SIZE toflush;
-    mc_PIPELINE *pl = &server->pipeline;
-    lcbconn_t conn = &server->connection;
-    lcb_iotable *iot = conn->iotable;
-    lcbio_Cctx *c = &conn->u_model.c;
-    nb_IOV iov[MCREQ_MAXIOV];
-    int niov;
-
-    while ((toflush = mcreq_flush_iov_fill(pl, iov, MCREQ_MAXIOV, &niov))) {
-        int status = IOT_V1(iot).write2(
-                IOT_ARG(iot), c->sockptr, (struct lcb_iovec_st *)iov, niov,
-                (void *)(uintptr_t)toflush, handle_Cwr);
-
-        if (status) {
-            /**
-             * If we get an error here, we can't just immediately call
-             * flush_done because there may be prior flushes that are awaiting
-             * completion. If so, we increase a counter indicating the next
-             * flush size to use.
-             */
-            if (server->nwpending) {
-                server->cflush_errsize += toflush;
-            } else {
-                /**
-                 * No pending flushes, and therefore we will never get another
-                 * flush callback
-                 */
-                mcreq_flush_done(pl, toflush, toflush);
-            }
-            lcbconn_senderr(conn, LCB_NETWORK_ERROR);
-            break;
-        }
-        server->refcount++;
-        server->nwpending++;
+    mc_SERVER *server = lcbio_ctx_data(ctx);
+    lcb_log(LOGARGS(server, WARN), "Got socket [%p] error 0x%x", server, err);
+    if (check_closed(server)) {
+        return;
     }
-
-    if (c->sockptr->is_reading == 0 && server->entered == 0) {
-        conn->want = LCB_READ_EVENT;
-        lcbconn_apply_want(conn);
-    }
+    mcserver_socket_error(server, err);
 }
 
 void
 mcserver_flush(mc_SERVER *server)
 {
-    lcb_assert(!MCCONN_IS_NEGOTIATING(&server->connection));
-    if (IOT_IS_EVENT(server->connection.iotable)) {
-        do_Eflush(server);
-        lcbconn_apply_want(&server->connection);
-    } else {
-        do_Cflush(server);
+    /** Call into the wwant stuff.. */
+    if (!server->connctx->rdwant) {
+        lcbio_ctx_rwant(server->connctx, 24);
     }
+
+    lcbio_ctx_wwant(server->connctx);
+    lcbio_ctx_schedule(server->connctx);
 
     if (!lcb_timer_armed(server->io_timer)) {
         lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
@@ -203,11 +91,6 @@ mcserver_errflush(mc_SERVER *server)
     unsigned toflush;
     nb_IOV iov;
     mc_PIPELINE *pl = &server->pipeline;
-
-    if (server->nwpending) {
-        return;
-    }
-
     while ((toflush = mcreq_flush_iov_fill(pl, &iov, 1, NULL))) {
         mcreq_flush_done(pl, toflush, toflush);
     }
@@ -258,7 +141,7 @@ handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     }
 
     /* re-schedule command to new server */
-    if (!instance->settings.vb_noguess) {
+    if (!oldsrv->settings->vb_noguess) {
         idx = VB_REMAP(cq->config, vb, (int)oldsrv->pipeline.index);
     } else {
         idx = oldsrv->pipeline.index;
@@ -328,125 +211,344 @@ handle_single_packet(lcb_server_t *server, packet_info *info)
     }
 }
 
-static lcb_error_t
-parse_packet(lcb_server_t *server)
+static void
+on_read(lcbio_CTX *ctx, unsigned nb)
 {
-    lcbconn_t conn = &server->connection;
-
     packet_info info;
+    mc_SERVER *server = lcbio_ctx_data(ctx);
+    rdb_IOROPE *ior = &ctx->ior;
+
+    if (check_closed(server)) {
+        return;
+    }
+
+    (void)nb;
+
     while (1) {
         int rv;
-        rv = lcb_packet_read_ringbuffer(&info, conn->input);
-
-        if (rv == -1) {
-            return LCB_PROTOCOL_ERROR;
-
-        } else if (rv == 0) {
-            return LCB_SUCCESS;
-        }
-
-        handle_single_packet(server, &info);
-        lcb_packet_release_ringbuffer(&info, conn->input);
-    }
-    return LCB_SUCCESS;
-}
-
-#define HANDLER_MAXTIME LCB_US2NS(5000)
-static void
-handler_E(lcb_socket_t sock, short which, void *arg)
-{
-    lcbconn_t conn = arg;
-    lcb_server_t *server = conn->data;
-    hrtime_t now = gethrtime();
-
-    server->entered++;
-
-    if (which & LCB_READ_EVENT) {
-        lcbio_status_t status;
-        lcb_error_t err = LCB_SUCCESS;
-        do {
-            status = lcbconn_Erb_read(conn);
-            err = parse_packet(server);
-        } while (status == LCBIO_STATUS_CANREAD && err == LCB_SUCCESS &&
-                now - gethrtime() < HANDLER_MAXTIME);
-
-        if (!LCBIO_IS_OK(status) || err != LCB_SUCCESS) {
-            mcserver_socket_error(server, LCB_NETWORK_ERROR);
-            server->entered--;
+        unsigned required;
+        rv = lcb_pktinfo_ior_get(&info, ior, &required);
+        if (!rv) {
+            if (mcserver_has_pending(server)) {
+                lcbio_ctx_rwant(ctx, required);
+            }
+            lcbio_ctx_schedule(ctx);
+            lcb_maybe_breakout(server->instance);
             return;
         }
-
-        if (!SLLIST_IS_EMPTY(&server->pipeline.requests)) {
-            conn->want |= LCB_READ_EVENT;
-        } else {
-            conn->want &= ~LCB_READ_EVENT;
-        }
+        handle_single_packet(server, &info);
+        lcb_pktinfo_ior_done(&info, ior);
     }
-
-    if ((which & LCB_WRITE_EVENT) || (conn->want & LCB_WRITE_EVENT)) {
-        do_Eflush(server);
-    }
-
-    server->entered--;
-    lcbconn_apply_want(conn);
     lcb_maybe_breakout(server->instance);
-    (void)sock;
-}
-
-static void
-handle_Crd(lcb_sockdata_t *sd, lcb_ssize_t nr)
-{
-    lcb_error_t err;
-    lcb_server_t *server;
-
-    if (!lcbconn_Crb_enter(sd, LCB_READ_EVENT, nr, NULL, (void **)&server)) {
-        return;
-    }
-
-    server->entered++;
-
-    if (nr > 0) {
-        err = parse_packet(server);
-    } else {
-        err = LCB_NETWORK_ERROR;
-    }
-
-    if (err != LCB_SUCCESS) {
-        mcserver_socket_error(server, err);
-        server->entered--;
-        return;
-    }
-
-    server->entered--;
-
-    lcbconn_apply_want(sd->lcbconn);
-    lcb_maybe_breakout(server->instance);
-}
-
-static void
-handle_CEerr(lcbconn_t conn)
-{
-    mc_SERVER *server = conn->data;
-    mcserver_socket_error(server, LCB_NETWORK_ERROR);
-}
-
-void
-mcserver_wire_io(mc_SERVER *server, lcbconn_t src)
-{
-    struct lcb_io_use_st use;
-    lcbconn_use_ex(&use, server, handler_E, handle_Crd, handle_Cwr, handle_CEerr);
-
-    if (src) {
-        lcbconn_transfer(src, &server->connection, &use);
-    } else {
-        lcbconn_use(&server->connection, &use);
-    }
-
-    lcbconn_reset_bufs(&server->connection);
 }
 
 int
 mcserver_has_pending(mc_SERVER *server)
 {
     return !SLLIST_IS_EMPTY(&server->pipeline.requests);
+}
+
+static void flush_noop(mc_PIPELINE *pipeline) {
+    (void)pipeline;
+}
+static void server_connect(mc_SERVER *server);
+
+typedef enum {
+    REFRESH_ALWAYS,
+    REFRESH_ONFAILED,
+    REFRESH_NEVER
+} mc_REFRESHPOLICY;
+
+static void
+fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
+{
+    int rv;
+    packet_info info;
+    protocol_binary_request_header hdr;
+    protocol_binary_response_header *res = &info.res;
+
+    memset(&info, 0, sizeof(info));
+    memcpy(hdr.bytes, SPAN_BUFFER(&pkt->kh_span), sizeof(hdr.bytes));
+
+    res->response.status = ntohs(PROTOCOL_BINARY_RESPONSE_EINVAL);
+    res->response.opcode = hdr.request.opcode;
+    res->response.opaque = hdr.request.opaque;
+
+    rv = mcreq_dispatch_response(pipeline, pkt, &info, err);
+    lcb_assert(rv == 0);
+    (void)arg;
+}
+
+static void
+purge_single_server(lcb_server_t *server, lcb_error_t error,
+                    hrtime_t thresh, hrtime_t *next, int policy)
+{
+    unsigned affected;
+    mc_PIPELINE *pl = &server->pipeline;
+
+    if (thresh) {
+        affected = mcreq_pipeline_timeout(
+                pl, error, fail_callback, NULL, thresh, next);
+
+    } else {
+        mcreq_pipeline_fail(pl, error, fail_callback, NULL);
+        affected = -1;
+    }
+
+    if (policy == REFRESH_NEVER) {
+        return;
+    }
+
+    if (affected || policy == REFRESH_ALWAYS) {
+        lcb_bootstrap_errcount_incr(server->instance);
+    }
+}
+
+/** Called to handle a socket error */
+void
+mcserver_socket_error(mc_SERVER *server, lcb_error_t err)
+{
+    lcbio_connreq_cancel(&server->connreq);
+    if (server->connctx) {
+        lcbio_mgr_detach(lcbio_ctx_sock(server->connctx));
+    }
+
+    server->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
+
+    mcserver_errflush(server);
+    purge_single_server(server, err, 0, NULL, REFRESH_ALWAYS);
+    lcb_maybe_breakout(server->instance);
+}
+
+void
+mcserver_fail_chain(mc_SERVER *server, lcb_error_t err)
+{
+    mcserver_errflush(server);
+    purge_single_server(server, err, 0, NULL, REFRESH_NEVER);
+}
+
+static int
+server_is_ready(lcb_server_t *server)
+{
+    return server->connctx != NULL;
+}
+
+static void
+timeout_server(lcb_timer_t tm, lcb_t i, const void *arg)
+{
+    mc_SERVER *server = (void *)arg;
+    hrtime_t now, min_valid, next_ns = 0;
+    uint32_t next_us = 0;
+
+    (void)tm; (void)i;
+
+    lcb_log(LOGARGS(server, ERR), "Server %p timed out", server);
+
+    if (!server_is_ready(server)) {
+        purge_single_server(server, LCB_ETIMEDOUT, 0, NULL, REFRESH_ALWAYS);
+        lcb_maybe_breakout(server->instance);
+        return;
+    }
+
+    now = gethrtime();
+    min_valid = now - LCB_US2NS(MCSERVER_TIMEOUT(server));
+    purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns,
+                        REFRESH_ONFAILED);
+
+    /**
+     * The new timeout will be calculated when the next command actually
+     * expires. To determine the next expiration, we:
+     * (1) Add the timeout interval to the next_ns marker, giving us the
+     * absolute timeout value
+     * (2) Subtract now from the next absolute timeout, giving us the relative
+     * timeout.
+     */
+    if (next_ns) {
+        hrtime_t abstmo = next_ns + LCB_US2NS(MCSERVER_TIMEOUT(server));
+        next_us = LCB_NS2US(abstmo - now);
+
+    } else {
+        next_us = MCSERVER_TIMEOUT(server);
+    }
+
+    lcb_log(LOGARGS(server, INFO), "%p, Scheduling next timeout for %u ms", server, next_us / 1000);
+
+    lcb_timer_rearm(server->io_timer, next_us);
+    lcb_maybe_breakout(server->instance);
+}
+
+int
+mcserver_is_clean(mc_SERVER *server)
+{
+    return 0;
+}
+
+static void
+on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr)
+{
+    mc_SERVER *server = data;
+    lcbio_EASYPROCS procs;
+    LCBIO_CONNREQ_CLEAR(&server->connreq);
+
+    if (err != LCB_SUCCESS) {
+        lcb_log(LOGARGS(server, ERR), "Got error for connection! (OS=%d)", syserr);
+        mcserver_socket_error(server, err);
+        return;
+    }
+
+    lcb_assert(sock);
+
+    /** Do we need sasl? */
+    if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SASL) == NULL) {
+        mc_pSASLREQ sreq;
+        lcb_log(LOGARGS(server, INFO), "SASL Not yet negotiated. Negotiating");
+        sreq = mc_sasl_start(
+                sock, server->settings, MCSERVER_TIMEOUT(server),
+                on_connected, data);
+        LCBIO_CONNREQ_MKGENERIC(&server->connreq, sreq, mc_sasl_cancel);
+        return;
+    }
+
+    procs.cb_err = on_error;
+    procs.cb_read = on_read;
+    procs.cb_flush_done = on_flush_done;
+    procs.cb_flush_ready = on_flush_ready;
+    server->connctx = lcbio_ctx_new(sock, server, &procs);
+    server->connctx->subsys = "memcached";
+    server->pipeline.flush_start = (mcreq_flushstart_fn)mcserver_flush;
+    lcb_log(LOGARGS(server, INFO), "Starting initial flush for server!");
+    mcserver_flush(server);
+}
+
+static void
+server_connect(mc_SERVER *server)
+{
+    lcbio_pMGRREQ mr;
+    mr = lcbio_mgr_get(server->instance->memd_sockpool, &server->curhost,
+                       MCSERVER_TIMEOUT(server), on_connected, server);
+    LCBIO_CONNREQ_MKPOOLED(&server->connreq, mr);
+    server->pipeline.flush_start = flush_noop;
+}
+
+static char *
+dupstr_or_null(const char *s) {
+    if (s) {
+        return strdup(s);
+    }
+    return NULL;
+}
+
+mc_SERVER *
+mcserver_alloc(lcb_t instance, int ix)
+{
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    mc_SERVER *ret;
+
+    ret = calloc(1, sizeof(*ret));
+    if (!ret) {
+        return ret;
+    }
+
+    ret->instance = instance;
+    ret->settings = instance->settings;
+    ret->datahost = dupstr_or_null(VB_NODESTR(cq->config, ix));
+    ret->resthost = dupstr_or_null(VB_RESTURL(cq->config, ix));
+    ret->viewshost = dupstr_or_null(VB_VIEWSURL(cq->config, ix));
+
+    lcb_settings_ref(ret->settings);
+
+    mcreq_pipeline_init(&ret->pipeline);
+    ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
+    lcb_host_parsez(&ret->curhost, ret->datahost, 11210);
+
+    ret->io_timer = lcb_timer_create_simple(
+            instance->iotable, ret, MCSERVER_TIMEOUT(ret), timeout_server);
+    lcb_timer_disarm(ret->io_timer);
+    return ret;
+}
+
+
+static void
+server_free(mc_SERVER *server)
+{
+    mcreq_pipeline_cleanup(&server->pipeline);
+
+    if (server->io_timer) {
+        lcb_timer_destroy(NULL, server->io_timer);
+    }
+
+    free(server->resthost);
+    free(server->viewshost);
+    free(server->datahost);
+    lcb_settings_unref(server->settings);
+    free(server);
+}
+
+static void
+close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
+{
+    if (reusable) {
+        reusable = *(int *)arg;
+    }
+    lcbio_ref(sock);
+    if (reusable) {
+        lcbio_mgr_put(sock);
+    } else {
+        /* kill the socket */
+        lcbio_mgr_discard(sock);
+    }
+}
+
+void
+mcserver_close(mc_SERVER *server, int isok)
+{
+    lcbio_CTX *ctx = server->connctx;
+
+    lcb_assert(!server->closed);
+    lcbio_connreq_cancel(&server->connreq);
+
+    if (server->io_timer) {
+        lcb_timer_destroy(NULL, server->io_timer);
+        server->io_timer = NULL;
+    }
+
+    if (!ctx) {
+        server_free(server);
+        return;
+    }
+
+    if (ctx->npending == 0) {
+        lcb_log(LOGARGS(server, INFO), "Server %p may be closed. No pending events", server);
+        lcbio_ctx_close(ctx, close_cb, &isok);
+        server_free(server);
+
+    } else {
+        lcb_log(LOGARGS(server, WARN), "Server %p still has pending I/O. N=%d, Write=%d, Read=%d", server, ctx->npending, ctx->wwant, ctx->rdwant);
+        lcbio_ctx_schedule(ctx);
+        lcbio_shutdown(ctx->sock);
+        server->closed = 1;
+    }
+}
+
+/**
+ * This little function checks to see if the server struct is still valid, or
+ * whether it should just be cleaned once no pending I/O remainds.
+ *
+ * If this function returns false then the server is still valid; otherwise it
+ * is invalid and must not be used further.
+ */
+static int
+check_closed(mc_SERVER *server)
+{
+    int isok = 0;
+    if (!server->closed) {
+        return 0;
+    }
+
+    lcb_log(LOGARGS(server, INFO), "Server %p got handler after close. Checking pending calls", server);
+    if (!server->connctx->npending) {
+        lcbio_ctx_close(server->connctx, close_cb, &isok);
+        server_free(server);
+    }
+    return 1;
 }

@@ -81,30 +81,24 @@ public:
         memcpy(ptr, value.c_str(), (unsigned long)value.size());
     }
 
-    void rbWrite(ringbuffer_t *rb) {
-        EXPECT_NE(0, ringbuffer_ensure_capacity(rb, len));
-        lcb_size_t nw = ringbuffer_write(rb, pkt, len);
-        EXPECT_EQ(len, nw);
+    void rbWrite(rdb_IOROPE *ior) {
+        rdb_copywrite(ior, pkt, len);
     }
 
-    void rbWriteHeader(ringbuffer_t *rb) {
-        EXPECT_NE(0, ringbuffer_ensure_capacity(rb, 24));
-        lcb_size_t nw = ringbuffer_write(rb, pkt, 24);
-        EXPECT_EQ(24, nw);
+    void rbWriteHeader(rdb_IOROPE *ior) {
+        rdb_copywrite(ior, pkt, 24);
     }
 
-    void rbWriteBody(ringbuffer_t *rb) {
-        EXPECT_NE(0, ringbuffer_ensure_capacity( rb, len - 24));
-        lcb_size_t nw = ringbuffer_write(rb, pkt + 24, len - 24);
-        EXPECT_EQ(len - 24, nw);
+    void rbWriteBody(rdb_IOROPE *ior) {
+        rdb_copywrite(ior, pkt + 24, len - 24);
     }
 
-    void writeGenericHeader(unsigned long bodylen, ringbuffer_t *rb) {
+    void writeGenericHeader(unsigned long bodylen, rdb_IOROPE *ior) {
         protocol_binary_response_header hdr;
         memset(&hdr, 0, sizeof(hdr));
         hdr.response.opcode = 0;
         hdr.response.bodylen = htonl(bodylen);
-        ringbuffer_write(rb, hdr.bytes, sizeof(hdr.bytes));
+        rdb_copywrite(ior, hdr.bytes, sizeof(hdr.bytes));
     }
 
     ~Pkt() {
@@ -134,18 +128,17 @@ private:
 TEST_F(Packet, testParseBasic)
 {
     std::string value = "foo";
-    ringbuffer_t rb;
-
-    memset(&rb, 0, sizeof(rb));
-    ASSERT_NE(0, ringbuffer_initialize(&rb, 10));
+    rdb_IOROPE ior;
+    rdb_init(&ior, rdb_libcalloc_new());
 
     Pkt pkt;
     pkt.getq(value, 0);
-    pkt.rbWrite(&rb);
+    pkt.rbWrite(&ior);
 
     packet_info pi;
     memset(&pi, 0, sizeof(pi));
-    int rv = lcb_packet_read_ringbuffer(&pi, &rb);
+    unsigned wanted;
+    int rv = lcb_pktinfo_ior_get(&pi, &ior, &wanted);
     ASSERT_EQ(rv, 1);
 
     ASSERT_EQ(0, PACKET_STATUS(&pi));
@@ -155,31 +148,19 @@ TEST_F(Packet, testParseBasic)
     ASSERT_EQ(3, PACKET_NVALUE(&pi));
     ASSERT_EQ(0, PACKET_NKEY(&pi));
     ASSERT_EQ(4, PACKET_EXTLEN(&pi));
-    ASSERT_EQ(PACKET_NBODY(&pi), rb.nbytes);
+    ASSERT_EQ(PACKET_NBODY(&pi), rdb_get_nused(&ior));
     ASSERT_EQ(0, strncmp(value.c_str(), PACKET_VALUE(&pi), 3));
-    ASSERT_EQ(0, pi.is_allocated);
 
-    lcb_packet_release_ringbuffer(&pi, &rb);
-    ASSERT_EQ(0, rb.nbytes);
-    ringbuffer_destruct(&rb);
-}
-
-static void rbSetWrap(ringbuffer_t *rb, size_t contig_size)
-{
-    EXPECT_EQ(0, rb->nbytes);
-    EXPECT_TRUE(contig_size < rb->size);
-    char *offset = rb->root + (rb->size - contig_size);
-    rb->read_head = offset;
-    rb->write_head = offset;
-    EXPECT_EQ(0, ringbuffer_is_continous(rb, RINGBUFFER_WRITE, contig_size+1));
-    EXPECT_NE(0, ringbuffer_is_continous(rb, RINGBUFFER_WRITE, contig_size));
+    lcb_pktinfo_ior_done(&pi, &ior);
+    ASSERT_EQ(0, rdb_get_nused(&ior));
+    rdb_cleanup(&ior);
 }
 
 TEST_F(Packet, testParsePartial)
 {
-    ringbuffer_t rb;
-    memset(&rb, 0, sizeof(rb));
-    ASSERT_NE(0, ringbuffer_initialize(&rb, 4096));
+    rdb_IOROPE ior;
+    Pkt pkt;
+    rdb_init(&ior, rdb_libcalloc_new());
 
     std::string value;
     value.insert(0, 1024, '*');
@@ -187,68 +168,41 @@ TEST_F(Packet, testParsePartial)
     packet_info pi;
     int rv;
 
-    rbSetWrap(&rb, 12);
-    Pkt pkt;
-    pkt.getq(value, 0);
-    pkt.rbWrite(&rb);
-
-    rv = lcb_packet_read_ringbuffer(&pi, &rb);
-    ASSERT_EQ(1, rv);
-    ASSERT_EQ(1028, PACKET_NBODY(&pi));
-    ASSERT_EQ(1024, PACKET_NVALUE(&pi));
-    ASSERT_EQ(0, pi.is_allocated);
-    ASSERT_EQ(value.size(), PACKET_NVALUE(&pi));
-    ASSERT_EQ(0, memcmp(value.c_str(), PACKET_VALUE(&pi), value.size()));
-    lcb_packet_release_ringbuffer(&pi, &rb);
-    ASSERT_EQ(0, rb.nbytes);
-    ringbuffer_destruct(&rb);
-
-    memset(&rb, 0, sizeof(rb));
-    ASSERT_NE(0, ringbuffer_initialize(&rb, 4096));
-    rbSetWrap(&rb, 100);
-    pkt.rbWrite(&rb);
-    rv = lcb_packet_read_ringbuffer(&pi, &rb);
-    ASSERT_EQ(1, rv);
-    ASSERT_EQ(1, pi.is_allocated);
-    lcb_packet_release_ringbuffer(&pi, &rb);
-
     // Test where we're missing just one byte
-    ringbuffer_reset(&rb);
-    pkt.writeGenericHeader(10, &rb);
-    rv = lcb_packet_read_ringbuffer(&pi, &rb);
+    pkt.writeGenericHeader(10, &ior);
+    unsigned wanted;
+    rv = lcb_pktinfo_ior_get(&pi, &ior, &wanted);
     ASSERT_EQ(0, rv);
+
     for (int ii = 0; ii < 9; ii++) {
         char c = 'O';
-        ringbuffer_write(&rb, &c, 1);
-        rv = lcb_packet_read_ringbuffer(&pi, &rb);
+        rdb_copywrite(&ior, &c, 1);
+        rv = lcb_pktinfo_ior_get(&pi, &ior, &wanted);
         ASSERT_EQ(0, rv);
     }
     char tmp = 'O';
-    ringbuffer_write(&rb, &tmp, 1);
-    rv = lcb_packet_read_ringbuffer(&pi, &rb);
+    rdb_copywrite(&ior, &tmp, 1);
+    rv = lcb_pktinfo_ior_get(&pi, &ior, &wanted);
     ASSERT_EQ(1, rv);
-    lcb_packet_release_ringbuffer(&pi, &rb);
-
-
-    ringbuffer_destruct(&rb);
+    lcb_pktinfo_ior_done(&pi, &ior);
+    rdb_cleanup(&ior);
 }
 
 
 TEST_F(Packet, testKeys)
 {
-    ringbuffer_t rb;
-    memset(&rb, 0, sizeof(rb));
-    EXPECT_NE(0, ringbuffer_initialize(&rb, 10));
-
+    rdb_IOROPE ior;
+    rdb_init(&ior, rdb_libcalloc_new());
     std::string key = "a simple key";
     std::string value = "a simple value";
     Pkt pkt;
     pkt.get(key, value, 1000, PROTOCOL_BINARY_RESPONSE_ETMPFAIL, 0xdeadbeef, 50);
-    pkt.rbWrite(&rb);
+    pkt.rbWrite(&ior);
 
     packet_info pi;
     memset(&pi, 0, sizeof(pi));
-    int rv = lcb_packet_read_ringbuffer(&pi, &rb);
+    unsigned wanted;
+    int rv = lcb_pktinfo_ior_get(&pi, &ior, &wanted);
     ASSERT_EQ(1, rv);
 
     ASSERT_EQ(key.size(), PACKET_NKEY(&pi));
@@ -263,7 +217,6 @@ TEST_F(Packet, testKeys)
     ASSERT_NE(pi.payload, PACKET_VALUE(&pi));
     ASSERT_EQ(4 + key.size(), PACKET_VALUE(&pi) - (char *)pi.payload);
 
-    lcb_packet_release_ringbuffer(&pi, &rb);
-    ringbuffer_destruct(&rb);
-
+    lcb_pktinfo_ior_done(&pi, &ior);
+    rdb_cleanup(&ior);
 }
