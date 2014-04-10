@@ -29,7 +29,6 @@
 #include "simplestring.h"
 #include "clconfig.h"
 
-
 #define REQBUCKET_FMT "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n"
 #define REQPOOLS_FMT "GET /pools/ HTTP/1.1\r\n"
 #define HOSTHDR_FMT  "Host: %s:%s\r\n"
@@ -61,11 +60,11 @@ typedef struct clprovider_http_st {
     /** Base configuration structure */
     clconfig_provider base;
 
-    /** Connection object to our current server */
-    struct lcb_connection_st connection;
-
     /** Stream state/data for HTTP */
     struct htvb_st stream;
+
+    lcbio_pCONNSTART creq;
+    lcbio_CTX *ioctx;
 
     /**
      * Buffer to use for writing our request header. Recreated for each
