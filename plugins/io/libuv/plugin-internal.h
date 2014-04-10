@@ -77,8 +77,6 @@ typedef struct {
     /** Flag indicating whether uv_close has already been called  on the handle */
     unsigned char uv_close_called;
 
-    unsigned char lcb_close_called;
-
     struct {
         int read;
         int write;

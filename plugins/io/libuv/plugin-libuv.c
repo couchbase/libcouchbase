@@ -18,11 +18,10 @@
 #include "plugin-internal.h"
 
 static my_uvreq_t *alloc_uvreq(my_sockdata_t *sock, generic_callback_t callback);
-static void free_bufinfo_common(struct lcb_buf_info *bi);
 static void generic_close_cb(uv_handle_t *handle);
 static void set_last_error(my_iops_t *io, int error);
-static void wire_timer_ops(lcb_io_opt_t iop);
 static void socket_closed_callback(uv_handle_t *handle);
+
 static void wire_iops2(int version,
                        lcb_loop_procs *loop,
                        lcb_timer_procs *timer,
@@ -173,20 +172,6 @@ lcb_error_t lcb_create_libuv_io_opts(int version,
 #define SOCK_INCR_PENDING(s, fld) (s)->pending.fld++
 #define SOCK_DECR_PENDING(s, fld) (s)->pending.fld--
 
-static void free_bufinfo_common(struct lcb_buf_info *bi)
-{
-    if (bi->root || bi->ringbuffer) {
-        lcb_assert((void *)bi->root != (void *)bi->ringbuffer);
-    }
-    lcb_assert((bi->ringbuffer == NULL && bi->root == NULL) ||
-               (bi->root && bi->ringbuffer));
-
-    lcb_mem_free(bi->root);
-    lcb_mem_free(bi->ringbuffer);
-    bi->root = NULL;
-    bi->ringbuffer = NULL;
-}
-
 #ifdef DEBUG
 static void sock_dump_pending(my_sockdata_t *sock)
 {
@@ -256,12 +241,9 @@ static void socket_closed_callback(uv_handle_t *handle)
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, handle, tcp);
     my_iops_t *io = (my_iops_t *)sock->base.parent;
 
-    lcb_assert(sock->refcount == 0);
-
-    free_bufinfo_common(&sock->base.read_buffer);
-
-    lcb_assert(sock->base.read_buffer.root == NULL);
-    lcb_assert(sock->base.read_buffer.ringbuffer == NULL);
+    if (sock->pending.read) {
+        CbREQ(&sock->tcp)(&sock->base, -1);
+    }
 
     memset(sock, 0xEE, sizeof(*sock));
     free(sock);
@@ -270,54 +252,11 @@ static void socket_closed_callback(uv_handle_t *handle)
 }
 
 
-/**
- * This one is asynchronously triggered, so as to ensure we don't have any
- * silly re-entrancy issues.
- */
-static void socket_closing_cb(uv_idle_t *idle, int status)
-{
-    my_sockdata_t *sock = idle->data;
-
-    uv_idle_stop(idle);
-    uv_close((uv_handle_t *)idle, generic_close_cb);
-
-    if (sock->pending.read) {
-        /**
-         * UV doesn't invoke read callbacks once the handle has been closed
-         * so we must track this ourselves.
-         */
-        lcb_assert(sock->pending.read == 1);
-        uv_read_stop((uv_stream_t *)&sock->tcp);
-        sock->pending.read--;
-        decref_sock(sock);
-    }
-
-#ifdef DEBUG
-    if (sock->pending.read || sock->pending.write) {
-        sock_dump_pending(sock);
-    }
-#endif
-
-    decref_sock(sock);
-    sock_do_uv_close(sock);
-
-    (void)status;
-}
-
 static unsigned int close_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
 {
     my_sockdata_t *sock = (my_sockdata_t *)sockbase;
-    my_iops_t *io = (my_iops_t *)iobase;
-
-    uv_idle_t *idle = calloc(1, sizeof(*idle));
-
-    lcb_assert(sock->lcb_close_called == 0);
-
-    sock->lcb_close_called = 1;
-    idle->data = sock;
-    uv_idle_init(io->loop, idle);
-    uv_idle_start(idle, socket_closing_cb);
-
+    sock->uv_close_called = 1;
+    uv_close((uv_handle_t *)&sock->tcp, socket_closed_callback);
     return 0;
 }
 
@@ -632,12 +571,6 @@ static void set_last_error(my_iops_t *io, int error)
 {
     io->base.v.v1.error = uvc_last_errno(io->loop, error);
 }
-
-static void generic_close_cb(uv_handle_t *handle)
-{
-    free(handle);
-}
-
 
 static void wire_iops2(int version,
                        lcb_loop_procs *loop,
