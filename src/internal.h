@@ -31,6 +31,7 @@
 #include <ep-engine/command_ids.h>
 #include <libvbucket/vbucket.h>
 #include <libcouchbase/couchbase.h>
+#include <lcbio/lcbio.h>
 #include "cbsasl/cbsasl.h"
 
 #include "http_parser/http_parser.h"
@@ -40,12 +41,11 @@
 #include "hashset.h"
 #include "genhash.h"
 #include "timer.h"
-#include "lcbio.h"
 #include "mcserver.h"
 #include "settings.h"
 #include "logging.h"
-#include "connmgr.h"
 #include "mc/mcreq.h"
+#include "simplestring.h"
 
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 #define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
@@ -53,21 +53,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-
-    /**
-     * Define constants for connection attemptts
-     */
-    typedef enum {
-        LCB_CONNECT_OK = 0,
-        LCB_CONNECT_EINPROGRESS,
-        LCB_CONNECT_EALREADY,
-        LCB_CONNECT_EISCONN,
-        LCB_CONNECT_EINTR,
-        LCB_CONNECT_EFAIL,
-        LCB_CONNECT_EINVAL,
-        LCB_CONNECT_EUNHANDLED
-    } lcb_connect_status_t;
 
     typedef enum {
         /** Durability requirement. Poll all servers */
@@ -117,13 +102,8 @@ extern "C" {
          *      return LCB_EBADHANDLE
          */
         lcb_type_t type;
-
         VBUCKET_DISTRIBUTION_TYPE dist_type;
-
-        struct lcb_io_opt_st *io;
-
         mc_CMDQUEUE cmdq;
-
 
         /** The number of replicas */
         lcb_uint16_t nreplicas;
@@ -150,7 +130,7 @@ extern "C" {
         const void *cookie;
 
         /** Socket pool for memcached connections */
-        connmgr_t *memd_sockpool;
+        lcbio_MGR *memd_sockpool;
 
         lcb_error_t last_error;
 
@@ -163,11 +143,16 @@ extern "C" {
             } value;
         } compat;
 
-        lcb_settings settings;
-        lcb_iotable iotable;
+        lcb_settings *settings;
+        lcbio_pTABLE iotable;
 
 #ifdef LCB_DEBUG
         lcb_debug_st debug;
+#endif
+
+#ifdef __cplusplus
+        lcb_settings* getSettings() { return settings; }
+        lcbio_pTABLE getIOT() { return iotable; }
 #endif
     };
 
@@ -175,6 +160,7 @@ extern "C" {
     #define LCBT_NSERVERS(instance) (instance)->cmdq.npipelines
     #define LCBT_NREPLICAS(instance) (instance)->nreplicas
     #define LCBT_GET_SERVER(instance, ix) (lcb_server_t *)(instance)->cmdq.pipelines[ix]
+    #define LCBT_SETTING(instance, name) (instance)->settings->name
 
     struct lcb_http_header_st {
         struct lcb_http_header_st *next;
@@ -245,6 +231,7 @@ extern "C" {
         /** Redirect count */
         int redircount;
         char *redirect_to;
+        lcb_string outbuf;
 
         /** Current state */
         lcb_http_request_status_t status;
@@ -262,9 +249,10 @@ extern "C" {
         /** Number of headers **/
         lcb_size_t nheaders;
 
-        lcb_iotable* io;
+        lcbio_pTABLE io;
+        lcbio_CONNREQ creq;
+        lcbio_CTX *ioctx;
 
-        struct lcb_connection_st connection;
         lcb_timer_t io_timer;
         /** IO Timeout */
         lcb_uint32_t timeout;
@@ -284,17 +272,6 @@ extern "C" {
     LCB_INTERNAL_API
     void lcb_maybe_breakout(lcb_t instance);
 
-    lcb_connect_status_t lcb_connect_status(int err);
-
-    void lcb_sockconn_errinfo(int connerr,
-                              const char *hostname,
-                              const char *port,
-                              const struct addrinfo *root_ai,
-                              char *buf,
-                              lcb_size_t nbuf,
-                              lcb_error_t *uerr);
-
-
     struct clconfig_info_st;
     void lcb_update_vbconfig(lcb_t instance, struct clconfig_info_st *config);
     /**
@@ -311,7 +288,6 @@ extern "C" {
     lcb_error_t lcb_http_request_exec(lcb_http_request_t req);
     lcb_error_t lcb_http_parse_setup(lcb_http_request_t req);
     lcb_error_t lcb_http_request_connect(lcb_http_request_t req);
-    int lcb_http_request_do_parse(lcb_http_request_t req);
     void lcb_setup_lcb_http_resp_t(lcb_http_resp_t *resp,
                                    lcb_http_status_t status,
                                    const char *path,

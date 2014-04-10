@@ -24,9 +24,10 @@
 #include "mock-environment.h"
 #include "internal.h" /* vbucket_* things from lcb_t */
 #include "testutil.h"
+#include <lcbio/iotable.h>
 
 #define LOGARGS(instance, lvl) \
-    &instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
+    instance->settings, "tests-MUT", LCB_LOG_##lvl, __FILE__, __LINE__
 
 /**
  * Keep these around in case we do something useful here in the future
@@ -542,7 +543,7 @@ extern "C" {
         rv->error = error;
         store_cnt++;
         if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
-            IOT_STOP(instance->settings.io);
+            lcb_stop_loop(instance);
         }
     }
 
@@ -555,7 +556,7 @@ extern "C" {
         memcpy((void *)rv->bytes, resp->v.v0.bytes, resp->v.v0.nbytes);
         rv->nbytes = resp->v.v0.nbytes;
         if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
-            IOT_STOP(instance->settings.io);
+            lcb_stop_loop(instance);
         }
     }
 
@@ -724,7 +725,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     lcb_uint32_t newtmo = 7500000; // 7.5 sec
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &newtmo);
     ASSERT_EQ(LCB_SUCCESS, err);
-    instance->settings.vb_noguess = 1;
+    instance->settings->vb_noguess = 1;
     lcb_connect(instance);
     lcb_wait(instance);
     ASSERT_EQ(0, lcb_get_num_replicas(instance));
@@ -819,7 +820,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 
     struct fo_context_st ctx = { mock, idx };
 
-    lcb_timer_t timer = lcb_timer_create_simple(instance->settings.io,
+    lcb_timer_t timer = lcb_timer_create_simple(instance->iotable,
                                                 &ctx,
                                                 500000,
                                                 fo_callback);
@@ -881,7 +882,7 @@ TEST_F(MockUnitTest, testSaslMechs)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     // Make the socket pool disallow idle connections
-    instance->memd_sockpool->max_idle = 0;
+    instance->memd_sockpool->maxidle = 0;
 
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);

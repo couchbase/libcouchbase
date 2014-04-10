@@ -18,7 +18,8 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
-#include "iotable.h"
+#include <lcbio/lcbio.h>
+#include <lcbio/iotable.h>
 
 typedef void (*TimerCallback)(lcb_socket_t, short, void *);
 
@@ -28,10 +29,11 @@ public:
     virtual void SetUp() {
         lcb_error_t err = lcb_create_io_ops(&io, NULL);
         ASSERT_EQ(err, LCB_SUCCESS);
-        lcb_init_io_table(&iot, io);
+        iot = lcbio_table_new(io);
     }
 
     virtual void TearDown() {
+        lcbio_table_unref(iot);
         if (io) {
             lcb_destroy_io_ops(io);
             io = NULL;
@@ -39,13 +41,13 @@ public:
     }
 
     void *createTimer() {
-        void *ret = iot.timer.create(IOT_ARG(&iot));
+        void *ret = iot->timer.create(IOT_ARG(iot));
         EXPECT_TRUE(ret != NULL);
         return ret;
     }
 
     void cancelTimer(void *timer) {
-        iot.timer.cancel(IOT_ARG(&iot), timer);
+        iot->timer.cancel(IOT_ARG(iot), timer);
     }
 
     void scheduleTimer(void *timer,
@@ -53,24 +55,24 @@ public:
                        lcb_uint32_t us,
                        void *arg) {
 
-        iot.timer.schedule(IOT_ARG(&iot), timer, us, arg, cb);
+        iot->timer.schedule(IOT_ARG(iot), timer, us, arg, cb);
     }
 
     void freeTimer(void *timer) {
-        iot.timer.destroy(IOT_ARG(&iot), timer);
+        iot->timer.destroy(IOT_ARG(iot), timer);
     }
 
     void startLoop() {
-        IOT_START(&iot);
+        IOT_START(iot);
     }
 
     void stopLoop() {
-        IOT_STOP(&iot);
+        IOT_STOP(iot);
     }
 
 protected:
     lcb_io_opt_t io;
-    lcb_iotable iot;
+    lcbio_pTABLE iot;
 };
 
 

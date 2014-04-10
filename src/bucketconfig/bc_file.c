@@ -203,7 +203,7 @@ static lcb_error_t refresh_file(clconfig_provider *pb)
     }
 
     LOG(provider, TRACE, "Starting async file load");
-    provider->async = lcb_async_create(pb->parent->settings->io,
+    provider->async = lcb_async_create(pb->parent->iot,
                                        pb,
                                        async_callback,
                                        &err);

@@ -29,6 +29,7 @@
 
 #include "hostlist.h"
 #include "bucketconfig/clconfig.h"
+#include <lcbio/iotable.h>
 
 /**
  * Get the version of the library.
@@ -131,27 +132,6 @@ LIBCOUCHBASE_API
 const void *lcb_get_cookie(lcb_t instance)
 {
     return instance->cookie;
-}
-
-LCB_INTERNAL_API
-void lcb_default_settings(lcb_settings *settings)
-{
-    settings->ipv6 = LCB_IPV6_DISABLED;
-    settings->operation_timeout = LCB_DEFAULT_TIMEOUT;
-    settings->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
-    settings->config_node_timeout = LCB_DEFAULT_NODECONFIG_TIMEOUT;
-    settings->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
-    settings->rbufsize = LCB_DEFAULT_RBUFSIZE;
-    settings->wbufsize = LCB_DEFAULT_WBUFSIZE;
-    settings->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
-    settings->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
-    settings->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;
-    settings->weird_things_threshold = LCB_DEFAULT_CONFIG_ERRORS_THRESHOLD;
-    settings->weird_things_delay = LCB_DEFAULT_CONFIG_ERRORS_DELAY;
-    settings->max_redir = LCB_DEFAULT_CONFIG_MAXIMUM_REDIRECTS;
-    settings->grace_next_cycle = LCB_DEFAULT_CLCONFIG_GRACE_CYCLE;
-    settings->grace_next_provider = LCB_DEFAULT_CLCONFIG_GRACE_NEXT;
-    settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
 }
 
 
@@ -335,10 +315,8 @@ lcb_error_t lcb_create(lcb_t *instance,
         io_priv->v.v0.need_cleanup = 1;
     }
 
-    settings = &obj->settings;
-    lcb_default_settings(settings);
-    lcb_init_io_table(&obj->iotable, io_priv);
-    settings->io = &obj->iotable;
+    obj->iotable = lcbio_table_new(io_priv);
+    obj->settings = settings = lcb_settings_new();
     settings->bucket = strdup(bucket);
     settings->logger = lcb_init_console_logger();
 
@@ -354,12 +332,11 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     lcb_initialize_packet_handlers(obj);
+    obj->memd_sockpool = lcbio_mgr_create(settings, obj->iotable);
+    obj->memd_sockpool->maxidle = 1;
+    obj->memd_sockpool->tmoidle = 10000000;
 
-    obj->memd_sockpool = connmgr_create(settings, &obj->iotable);
-    obj->memd_sockpool->max_idle = 1;
-    obj->memd_sockpool->idle_timeout = 10000000;
-
-    obj->confmon = lcb_confmon_create(settings);
+    obj->confmon = lcb_confmon_create(settings, obj->iotable);
     obj->usernodes = hostlist_create();
 
     /** We might want to sanitize this a bit more later on.. */
@@ -397,7 +374,7 @@ LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
 {
     lcb_size_t ii;
-    lcb_settings *settings = &instance->settings;
+    lcb_settings *settings = instance->settings;
 
     if (instance->cur_configinfo) {
         lcb_clconfig_decref(instance->cur_configinfo);
@@ -434,7 +411,7 @@ void lcb_destroy(lcb_t instance)
 
     for (ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
         lcb_server_t *server = LCBT_GET_SERVER(instance, ii);
-        mcserver_decref(server, 0);
+        mcserver_close(server, 0);
     }
 
     if (instance->http_requests) {
@@ -457,18 +434,11 @@ void lcb_destroy(lcb_t instance)
 
     lcb_confmon_destroy(instance->confmon);
     hashset_destroy(instance->http_requests);
-    connmgr_destroy(instance->memd_sockpool);
-
-    if (settings->io && settings->io->p->v.v0.need_cleanup) {
-        lcb_destroy_io_ops(settings->io->p);
-    }
-
-    free(instance->histogram);
-    free(settings->username);
-    free(settings->password);
-    free(settings->bucket);
-    free(settings->sasl_mech_force);
+    lcbio_mgr_destroy(instance->memd_sockpool);
+    lcbio_table_unref(instance->iotable);
     mcreq_queue_cleanup(&instance->cmdq);
+    lcb_settings_unref(settings);
+    free(instance->histogram);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 }
@@ -496,13 +466,13 @@ void lcb_mem_free(void *ptr)
 LCB_INTERNAL_API
 void lcb_run_loop(lcb_t instance)
 {
-    IOT_START(instance->settings.io);
+    IOT_START(instance->iotable);
 }
 
 LCB_INTERNAL_API
 void lcb_stop_loop(lcb_t instance)
 {
-    IOT_STOP(instance->settings.io);
+    IOT_STOP(instance->iotable);
 }
 
 void lcb_maybe_breakout(lcb_t instance)
@@ -526,5 +496,5 @@ void lcb_maybe_breakout(lcb_t instance)
     }
 
     instance->wait = 0;
-    instance->iotable.loop.stop(IOT_ARG(&instance->iotable));
+    instance->iotable->loop.stop(IOT_ARG(instance->iotable));
 }

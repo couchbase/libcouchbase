@@ -16,6 +16,7 @@
  */
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
+#include <lcbio/iotable.h>
 /**
  * ioctl/fcntl-like interface for libcouchbase configuration properties
  */
@@ -25,7 +26,7 @@ typedef lcb_error_t (*ctl_handler)(int, lcb_t, int, void *);
 
 static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
 {
-    lcb_settings *settings = &instance->settings;
+    lcb_settings *settings = instance->settings;
     switch (cmd) {
 
     case LCB_CNTL_OP_TIMEOUT:
@@ -85,11 +86,11 @@ static lcb_error_t bufsize_common(int mode, lcb_t instance, int cmd, void *arg)
 
     switch (cmd) {
     case LCB_CNTL_WBUFSIZE:
-        ptr = &instance->settings.wbufsize;
+        ptr = &instance->settings->wbufsize;
         break;
 
     case LCB_CNTL_RBUFSIZE:
-        ptr = &instance->settings.rbufsize;
+        ptr = &instance->settings->rbufsize;
         break;
 
     default:
@@ -164,14 +165,14 @@ static lcb_error_t get_iops(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_NOT_SUPPORTED;
     }
 
-    *(lcb_io_opt_t *)arg = instance->settings.io->p;
+    *(lcb_io_opt_t *)arg = instance->iotable->p;
     (void)cmd;
     return LCB_SUCCESS;
 }
 
 static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
 {
-    lcbconn_t conn;
+    lcbio_SOCKET *sock;
     struct lcb_cntl_server_st *si = arg;
     const lcb_host_t *host;
 
@@ -196,32 +197,39 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
             return LCB_NETWORK_ERROR;
         }
 
-        if (si->version == 1) {
-            struct negotiation_context *ctx = lcb_negotiation_get(&server->connection);
-            si->v.v1.sasl_mech = ctx->mech;
+        sock = server->connctx->sock;
+
+        if (si->version == 1 && sock) {
+            mc_pSASLINFO sasl = mc_sasl_get(server->connctx->sock);
+            if (sasl) {
+                si->v.v1.sasl_mech = mc_sasl_getmech(sasl);
+            }
         }
 
-        conn = &server->connection;
 
     } else if (cmd == LCB_CNTL_CONFIGNODE_INFO) {
-        conn = lcb_confmon_get_rest_connection(instance->confmon);
+        sock = lcb_confmon_get_rest_connection(instance->confmon);
 
     } else {
         return LCB_EINVAL;
     }
 
-    host = lcbconn_get_host(conn);
-    si->v.v0.connected = conn->state == LCBCONN_S_CONNECTED;
+    if (!sock) {
+        return LCB_SUCCESS;
+    }
+
+    host = lcbio_get_host(sock);
+    si->v.v0.connected = 1;
     si->v.v0.host = host->host;
     si->v.v0.port = host->port;
 
-    switch (instance->settings.io->model) {
+    switch (instance->iotable->model) {
     case LCB_IOMODEL_EVENT:
-        si->v.v0.sock.sockfd = conn->u_model.e.sockfd;
+        si->v.v0.sock.sockfd = sock->u.fd;
         break;
 
     case LCB_IOMODEL_COMPLETION:
-        si->v.v0.sock.sockptr = conn->u_model.c.sockptr;
+        si->v.v0.sock.sockptr = sock->u.sd;
         break;
 
     default:
@@ -242,9 +250,9 @@ static lcb_error_t ippolicy(int mode, lcb_t instance, int cmd, void *arg)
     lcb_ipv6_t *user = arg;
 
     if (mode == LCB_CNTL_SET) {
-        instance->settings.ipv6 = *user;
+        instance->settings->ipv6 = *user;
     } else {
-        *user = instance->settings.ipv6;
+        *user = instance->settings->ipv6;
     }
 
     (void)cmd;
@@ -256,9 +264,9 @@ static lcb_error_t confthresh(int mode, lcb_t instance, int cmd, void *arg)
     lcb_size_t *user = arg;
 
     if (mode == LCB_CNTL_SET) {
-        instance->settings.weird_things_threshold = *user;
+        instance->settings->weird_things_threshold = *user;
     } else {
-        *user = instance->settings.weird_things_threshold;
+        *user = instance->settings->weird_things_threshold;
     }
 
     (void)cmd;
@@ -270,9 +278,9 @@ static lcb_error_t bummer_mode_handler(int mode, lcb_t instance, int cmd, void *
     int *skip = arg;
 
     if (mode == LCB_CNTL_SET) {
-        instance->settings.bummer = *skip;
+        instance->settings->bummer = *skip;
     } else {
-        *skip = instance->settings.bummer;
+        *skip = instance->settings->bummer;
     }
 
     (void)cmd;
@@ -291,9 +299,9 @@ static lcb_error_t randomize_bootstrap_hosts_handler(int mode,
     }
 
     if (mode == LCB_CNTL_SET) {
-        instance->settings.randomize_bootstrap_nodes = *randomize;
+        instance->settings->randomize_bootstrap_nodes = *randomize;
     } else {
-        *randomize = instance->settings.randomize_bootstrap_nodes;
+        *randomize = instance->settings->randomize_bootstrap_nodes;
     }
 
     return LCB_SUCCESS;
@@ -331,12 +339,12 @@ static lcb_error_t force_sasl_mech_handler(int mode,
     u_arg.set = arg;
 
     if (mode == LCB_CNTL_SET) {
-        free(instance->settings.sasl_mech_force);
+        free(instance->settings->sasl_mech_force);
         if (u_arg.set) {
-            instance->settings.sasl_mech_force = strdup(u_arg.set);
+            instance->settings->sasl_mech_force = strdup(u_arg.set);
         }
     } else {
-        *u_arg.get = instance->settings.sasl_mech_force;
+        *u_arg.get = instance->settings->sasl_mech_force;
     }
 
     (void)cmd;
@@ -352,9 +360,9 @@ static lcb_error_t max_redirects(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_EINVAL;
     }
     if (mode == LCB_CNTL_SET) {
-        instance->settings.max_redir = *val;
+        instance->settings->max_redir = *val;
     } else {
-        *val = instance->settings.max_redir;
+        *val = instance->settings->max_redir;
     }
 
     (void)cmd;
@@ -364,9 +372,9 @@ static lcb_error_t max_redirects(int mode, lcb_t instance, int cmd, void *arg)
 static lcb_error_t logprocs_handler(int mode, lcb_t instance, int cmd, void *arg)
 {
     if (mode == LCB_CNTL_SET) {
-        instance->settings.logger = (lcb_logprocs *)arg;
+        instance->settings->logger = (lcb_logprocs *)arg;
     } else {
-        *(lcb_logprocs**)arg = instance->settings.logger;
+        *(lcb_logprocs**)arg = instance->settings->logger;
     }
 
     (void)cmd;

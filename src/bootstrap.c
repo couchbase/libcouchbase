@@ -10,7 +10,7 @@ struct lcb_bootstrap_st {
 };
 
 #define LOGARGS(instance, lvl) \
-    &instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
+    instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
 
 static void async_step_callback(clconfig_listener *listener,
                                 clconfig_event_t event,
@@ -139,7 +139,7 @@ static void async_step_callback(clconfig_listener *listener,
 
     lcb_log(LOGARGS(bs->parent, INFO), "Got async step callback..");
 
-    bs->timer = lcb_async_create(bs->parent->settings.io,
+    bs->timer = lcb_async_create(bs->parent->iotable,
                                  bs, async_refresh, &err);
 
     (void)info;
@@ -171,7 +171,7 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
         lcb_error_t err;
         bs->listener.callback = config_callback;
         bs->timer = lcb_timer_create(instance, NULL,
-                                     instance->settings.config_timeout, 0,
+                                     LCBT_SETTING(instance, config_timeout), 0,
                                      initial_timeout, &err);
         if (err != LCB_SUCCESS) {
             return err;
@@ -203,14 +203,14 @@ void lcb_bootstrap_errcount_incr(lcb_t instance)
     instance->weird_things++;
 
     if (now - instance->bootstrap->last_refresh >
-            LCB_US2NS(instance->settings.weird_things_delay)) {
+            LCB_US2NS(LCBT_SETTING(instance, weird_things_delay))) {
 
         lcb_log(LOGARGS(instance, INFO),
                 "Max grace period for refresh exceeded");
         should_refresh = 1;
     }
 
-    if (instance->weird_things == instance->settings.weird_things_threshold) {
+    if (instance->weird_things == LCBT_SETTING(instance, weird_things_threshold)) {
         should_refresh = 1;
     }
 

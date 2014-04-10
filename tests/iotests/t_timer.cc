@@ -3,6 +3,7 @@
 #include <libcouchbase/couchbase.h>
 #include "mock-unit-test.h"
 #include "internal.h"
+#include <lcbio/iotable.h>
 
 class Timers : public MockUnitTest
 {
@@ -48,7 +49,7 @@ TEST_F(Timers, testStandalone)
     ASSERT_EQ(1, hashset_num_items(instance->timers));
     lcb_wait(instance);
 
-    tm = lcb_timer_create2(instance->settings.io,
+    tm = lcb_timer_create2(instance->iotable,
                            NULL, 0,
                            LCB_TIMER_STANDALONE,
                            timer_callback,
@@ -56,12 +57,12 @@ TEST_F(Timers, testStandalone)
                            &err);
 
     ASSERT_EQ(0, hashset_num_items(instance->timers));
-    IOT_START(instance->settings.io);
+    lcb_run_loop(instance);
 
-    lcb_async_t async = lcb_async_create(instance->settings.io,
+    lcb_async_t async = lcb_async_create(instance->getIOT(),
                                          NULL, timer_callback, &err);
     ASSERT_EQ(0, hashset_num_items(instance->timers));
-    IOT_START(instance->settings.io);
+    lcb_run_loop(instance);
 
     // Try a periodic timer...
     int ncalled = 0;
@@ -71,7 +72,7 @@ TEST_F(Timers, testStandalone)
 
     // Try a periodic, standalone timer
     ncalled = 0;
-    tm = lcb_timer_create2(instance->settings.io,
+    tm = lcb_timer_create2(instance->getIOT(),
                            &ncalled,
                            1,
                            (lcb_timer_options)(LCB_TIMER_STANDALONE|LCB_TIMER_PERIODIC),
@@ -79,7 +80,7 @@ TEST_F(Timers, testStandalone)
                            NULL,
                            &err);
 
-    IOT_START(instance->settings.io);
+    lcb_run_loop(instance);
     ASSERT_EQ(5, ncalled);
 
 }

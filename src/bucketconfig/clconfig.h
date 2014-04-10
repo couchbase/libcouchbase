@@ -96,6 +96,7 @@ typedef struct lcb_confmon_st {
     lcb_list_t listeners;
     lcb_settings *settings;
     lcb_error_t last_error;
+    lcbio_pTABLE iot;
 } lcb_confmon;
 
 /**
@@ -210,7 +211,7 @@ clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon);
  * Create a new configuration monitor server.
  */
 LIBCOUCHBASE_API
-lcb_confmon * lcb_confmon_create(lcb_settings *settings);
+lcb_confmon * lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot);
 
 /**
  * Compares two info structures. This function returns an integer less than
@@ -361,7 +362,7 @@ void lcb_clconfig_write_file(clconfig_provider *provider_base, lcb_string *data)
 /**
  * Get the REST connection object.
  */
-struct lcb_connection_st* lcb_confmon_get_rest_connection(lcb_confmon *mon);
+lcbio_SOCKET* lcb_confmon_get_rest_connection(lcb_confmon *mon);
 
 lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon);
 

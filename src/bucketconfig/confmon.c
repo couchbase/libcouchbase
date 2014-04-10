@@ -26,13 +26,16 @@ static void invoke_listeners(lcb_confmon *mon,
                              clconfig_event_t event,
                              clconfig_info *info);
 
-lcb_confmon* lcb_confmon_create(lcb_settings *settings)
+lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
 {
     int ii;
     lcb_confmon * mon = calloc(1, sizeof(*mon));
     mon->settings = settings;
+    mon->iot = iot;
     lcb_list_init(&mon->listeners);
     lcb_list_init(&mon->active_providers);
+    lcbio_table_ref(mon->iot);
+    lcb_settings_ref(mon->settings);
 
     LOG(mon, TRACE, "Creating monitor...");
     mon->all_providers[LCB_CLCONFIG_FILE] = lcb_clconfig_create_file(mon);
@@ -103,6 +106,9 @@ void lcb_confmon_destroy(lcb_confmon *mon)
         provider->shutdown(provider);
         mon->all_providers[ii] = NULL;
     }
+
+    lcbio_table_unref(mon->iot);
+    lcb_settings_unref(mon->settings);
 
     free(mon);
 }
@@ -206,7 +212,7 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
         }
 
         LOG(mon, TRACE, "Waiting for grace interval");
-        mon->tm_retry = lcb_timer_create_simple(mon->settings->io,
+        mon->tm_retry = lcb_timer_create_simple(mon->iot,
                                                 mon, tmo, retry_dispatch);
     }
 }
@@ -269,7 +275,7 @@ lcb_error_t lcb_confmon_start(lcb_confmon *mon)
     LOG(mon, TRACE, "Start refresh requested");
     lcb_assert(mon->cur_provider);
     mon->is_refreshing = 1;
-    mon->as_refresh = lcb_async_create(mon->settings->io,
+    mon->as_refresh = lcb_async_create(mon->iot,
                                        mon, async_dispatch, &err);
 
     return err;
@@ -307,7 +313,7 @@ lcb_error_t lcb_confmon_stop(lcb_confmon *mon)
     }
 
     if (!mon->as_pause) {
-        mon->as_pause = lcb_async_create(mon->settings->io,
+        mon->as_pause = lcb_async_create(mon->iot,
                                          mon,
                                          async_stop,
                                          &err);

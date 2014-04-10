@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 #include "internal.h"
+#include <lcbio/iotable.h>
 
 /**
  * Returns non zero if the event loop is running now
@@ -71,7 +72,7 @@ lcb_error_t lcb_wait(lcb_t instance)
     }
 
     if (should_wait) {
-        instance->settings.io->loop.start(instance->settings.io->p);
+        instance->iotable->loop.start(instance->iotable->p);
     }
 
     instance->wait = 0;
@@ -92,7 +93,7 @@ LIBCOUCHBASE_API
 void lcb_breakout(lcb_t instance)
 {
     if (instance->wait) {
-        instance->settings.io->loop.stop(instance->settings.io->p);
+        instance->iotable->loop.stop(instance->iotable->p);
         instance->wait = 0;
     }
 }

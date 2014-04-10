@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include <lcbio/iotable.h>
 
 #define TMR_IS_PERIODIC(timer) ((timer)->options & LCB_TIMER_PERIODIC)
 #define TMR_IS_DESTROYED(timer) ((timer)->state & LCB_TIMER_S_DESTROYED)
@@ -27,6 +28,7 @@ static void destroy_timer(lcb_timer_t timer)
     if (timer->event) {
         timer->io->timer.destroy(timer->io->p, timer->event);
     }
+    lcbio_table_unref(timer->io);
     memset(timer, 0xff, sizeof(*timer));
     free(timer);
 }
@@ -75,7 +77,7 @@ lcb_timer_t lcb_timer_create(lcb_t instance,
                              lcb_error_t *error)
 
 {
-    return lcb_timer_create2(instance->settings.io,
+    return lcb_timer_create2(instance->iotable,
                              command_cookie,
                              usec,
                              periodic ? LCB_TIMER_PERIODIC : 0,
@@ -85,7 +87,7 @@ lcb_timer_t lcb_timer_create(lcb_t instance,
 }
 
 LCB_INTERNAL_API
-lcb_async_t lcb_async_create(lcb_iotable *iotable,
+lcb_async_t lcb_async_create(lcbio_TABLE *iotable,
                              const void *command_cookie,
                              lcb_timer_callback callback,
                              lcb_error_t *error)
@@ -99,7 +101,7 @@ lcb_async_t lcb_async_create(lcb_iotable *iotable,
 }
 
 LCB_INTERNAL_API
-lcb_timer_t lcb_timer_create_simple(lcb_iotable *iotable,
+lcb_timer_t lcb_timer_create_simple(lcbio_TABLE *iotable,
                                     const void *cookie,
                                     lcb_uint32_t usec,
                                     lcb_timer_callback callback)
@@ -117,7 +119,7 @@ lcb_timer_t lcb_timer_create_simple(lcb_iotable *iotable,
 }
 
 LCB_INTERNAL_API
-lcb_timer_t lcb_timer_create2(lcb_iotable *io,
+lcb_timer_t lcb_timer_create2(lcbio_TABLE *io,
                               const void *cookie,
                               lcb_uint32_t usec,
                               lcb_timer_options options,
@@ -141,6 +143,7 @@ lcb_timer_t lcb_timer_create2(lcb_iotable *io,
         lcb_assert(instance);
     }
 
+    lcbio_table_ref(tmr->io);
     tmr->instance = instance;
     tmr->callback = callback;
     tmr->cookie = cookie;

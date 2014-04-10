@@ -45,9 +45,9 @@ TEST_F(Logger, testLogger)
 
     procs.v.v0.callback = fallback_logger;
 
-    LCB_LOG_BASIC(&instance->settings, "foo");
-    LCB_LOG_BASIC(&instance->settings, "bar");
-    LCB_LOG_BASIC(&instance->settings, "baz");
+    LCB_LOG_BASIC(instance->getSettings(), "foo");
+    LCB_LOG_BASIC(instance->getSettings(), "bar");
+    LCB_LOG_BASIC(instance->getSettings(), "baz");
 
     set<string>& msgs = procs.messages;
     ASSERT_FALSE(msgs.find("foo") == msgs.end());
@@ -58,7 +58,7 @@ TEST_F(Logger, testLogger)
     // Try without a logger
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_LOGGER, NULL);
     ASSERT_EQ(LCB_SUCCESS, err);
-    LCB_LOG_BASIC(&instance->settings, "this should not appear");
+    LCB_LOG_BASIC(instance->getSettings(), "this should not appear");
     ASSERT_TRUE(msgs.empty());
 
     lcb_destroy(instance);

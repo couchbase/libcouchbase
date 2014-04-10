@@ -69,6 +69,7 @@
 
 #include "internal.h"
 #include "durability_internal.h"
+#include <lcbio/iotable.h>
 
 #define RESFLD(e, f) (e)->result.v.v0.f
 #define REQFLD(e, f) (e)->request.v.v0.f
@@ -517,7 +518,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     hrtime_t now = gethrtime();
     lcb_durability_set_t *dset;
     lcb_size_t ii;
-    lcb_iotable *io = instance->settings.io;
+    lcbio_pTABLE io = instance->iotable;
 
     if (!ncmds) {
         return LCB_EINVAL;
@@ -532,7 +533,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     dset->instance = instance;
 
     if (!DSET_OPTFLD(dset, timeout)) {
-        DSET_OPTFLD(dset, timeout) = instance->settings.durability_timeout;
+        DSET_OPTFLD(dset, timeout) = LCBT_SETTING(instance, durability_timeout);
     }
 
     if (-1 == verify_critera(instance, dset)) {
@@ -617,7 +618,7 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
     lcb_t instance = dset->instance;
 
     if (dset->timer) {
-        lcb_iotable *io = instance->settings.io;
+        lcbio_TABLE *io = instance->iotable;
         io->timer.cancel(io->p, dset->timer);
         io->timer.destroy(io->p, dset->timer);
         dset->timer = NULL;
@@ -695,7 +696,7 @@ static void timer_schedule(lcb_durability_set_t *dset,
                            unsigned long delay,
                            unsigned int state)
 {
-    lcb_iotable* io = dset->instance->settings.io;
+    lcbio_TABLE* io = dset->instance->iotable;
     dset->next_state = state;
     if (!delay) {
         delay = 1;

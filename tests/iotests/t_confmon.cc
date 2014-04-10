@@ -4,6 +4,7 @@
 #include "mock-environment.h"
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
+#include <lcbio/iotable.h>
 
 class Confmon : public ::testing::Test
 {
@@ -14,7 +15,7 @@ class Confmon : public ::testing::Test
 
 struct evstop_listener {
     clconfig_listener base;
-    lcb_iotable *io;
+    lcbio_pTABLE io;
     int called;
 };
 
@@ -39,7 +40,7 @@ TEST_F(Confmon, testBasic)
     MockEnvironment::getInstance()->createConnection(hw, instance);
 
 
-    lcb_confmon *mon = lcb_confmon_create(&instance->settings);
+    lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
     lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
     lcb_clconfig_http_enable(lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP),
                              instance->usernodes);
@@ -61,11 +62,11 @@ TEST_F(Confmon, testBasic)
 
     listener.base.callback = listen_callback1;
     listener.base.parent = mon;
-    listener.io = instance->settings.io;
+    listener.io = instance->iotable;
 
     lcb_confmon_add_listener(mon, &listener.base);
     lcb_confmon_start(mon);
-    IOT_START(instance->settings.io);
+    IOT_START(instance->iotable);
     ASSERT_NE(0, listener.called);
 
     lcb_confmon_destroy(mon);
@@ -75,7 +76,7 @@ TEST_F(Confmon, testBasic)
 struct listener2 {
     clconfig_listener base;
     int call_count;
-    lcb_iotable *io;
+    lcbio_pTABLE io;
     clconfig_method_t last_source;
 
     void reset() {
@@ -124,16 +125,16 @@ TEST_F(Confmon, testCycle)
     }
 
     mock->createConnection(hw, instance);
-    instance->settings.bc_http_stream_time = 100000;
-    instance->memd_sockpool->idle_timeout = 100000;
+    instance->settings->bc_http_stream_time = 100000;
+    instance->memd_sockpool->tmoidle = 100000;
 
-    lcb_confmon *mon = lcb_confmon_create(&instance->settings);
+    lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
     lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
 
     struct listener2 lsn;
     memset(&lsn, 0, sizeof(lsn));
     lsn.base.callback = listen_callback2;
-    lsn.io = instance->settings.io;
+    lsn.io = instance->iotable;
     lsn.reset();
 
     lcb_confmon_add_listener(mon, &lsn.base);
