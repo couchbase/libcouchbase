@@ -142,7 +142,7 @@ extern "C" {
             struct {
                 LCB_CNTL_SERVER_COMMON_FIELDS
                 /** Chosen SASL mechanism */
-                char *sasl_mech;
+                const char *sasl_mech;
             } v1;
         } v;
     };
