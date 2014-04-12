@@ -39,11 +39,10 @@ get_wserr(lcb_socket_t sock)
         return ECONNREFUSED;
 
     default:
-        abort();
+        fprintf(stderr, "[couchbase] Unrecognized WSAError: %d. SO_ERROR=%d\n",
+                (int)error, (int)ext);
         return EINVAL;
     }
-
-    return EINVAL;
 }
 
 static lcb_ssize_t
