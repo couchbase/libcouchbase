@@ -314,13 +314,16 @@ extern "C" {
      *
      * They are mainly useful for Windows compatibility.
      */
+    LCB_INTERNAL_API
     int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len);
+    LCB_INTERNAL_API
     int lcb_getenv_boolean(const char *key);
 
     /**
      * Initialize the socket subsystem. For windows, this initializes Winsock.
      * On Unix, this does nothing
      */
+    LCB_INTERNAL_API
     lcb_error_t lcb_initialize_socket_subsystem(void);
 
     /**
