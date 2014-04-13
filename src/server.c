@@ -375,7 +375,7 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         }
     } while (1); /* CONSTCOND */
 
-    if (server->connection_ready && conn->output) {
+    if (server->connection_ready && conn->output && rest.nbytes > 0) {
         /* Preserve the rest of the stream */
         lcb_size_t nbytes = ringbuffer_get_nbytes(stream);
         send_size = ringbuffer_get_nbytes(conn->output);
