@@ -171,7 +171,6 @@ extern "C" {
 
     void iocp_initialize_loop_globals(void);
     LPFN_CONNECTEX iocp_initialize_connectex(SOCKET s);
-    void iocp_free_bufinfo_common(struct lcb_buf_info *bi);
 
     /** This safely invokes and restores the callback */
     void iocp_write_done(iocp_t *io, iocp_write_t *w, int status);

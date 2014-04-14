@@ -115,22 +115,6 @@ LPFN_CONNECTEX iocp_initialize_connectex(SOCKET sock)
     return ret;
 }
 
-
-
-void iocp_free_bufinfo_common(struct lcb_buf_info *bi)
-{
-    if (bi->root || bi->ringbuffer) {
-        assert((void *)bi->root != (void *)bi->ringbuffer);
-    }
-    assert((bi->ringbuffer && bi->root) ||
-           (bi->ringbuffer == NULL && bi->root == NULL));
-
-    free(bi->root);
-    free(bi->ringbuffer);
-    bi->root = NULL;
-    bi->ringbuffer = NULL;
-}
-
 int iocp_just_scheduled(iocp_t *io, iocp_overlapped_t *ol, int status)
 {
     DWORD err = GetLastError();
@@ -159,8 +143,6 @@ void iocp_socket_decref(iocp_t *io, iocp_sockdata_t *sd)
     if (sd->sSocket != INVALID_SOCKET) {
         closesocket(sd->sSocket);
     }
-
-    iocp_free_bufinfo_common(&sd->sd_base.read_buffer);
 
     lcb_list_delete(&sd->list);
 

@@ -403,6 +403,11 @@ static void iops_dtor(lcb_io_opt_t iobase)
             iocp_write_done(io, IOCP_WRITEOBJ_FROM_OVERLAPPED(ol), -1);
             break;
 
+        case LCBIOCP_ACTION_READ:
+            io->base.v.v0.error = WSAECONNRESET;
+            sd->rdcb(&sd->sd_base, -1);
+            break;
+
         default:
             /* We don't care about read */
             break;
