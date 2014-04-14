@@ -9,7 +9,12 @@
 extern "C" {
 #endif
 
+#ifdef _WIN32
+typedef SOCKET lcb_socket_t;
+#else
 typedef int lcb_socket_t;
+#endif
+
 struct sockaddr;
 
 #ifndef _WIN32
