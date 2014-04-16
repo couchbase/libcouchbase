@@ -165,3 +165,4 @@ libcouchbase.sdf
 libcouchbase.suo
 unit-tests.dir/
 win32/Debug/
+doc/

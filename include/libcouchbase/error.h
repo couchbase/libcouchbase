@@ -16,9 +16,10 @@
  */
 
 /**
- * Definition of all of the error codes used by libcouchbase
+ * @file
+ * @brief
  *
- * @author Trond Norbye
+ * Definition of all of the error codes used by libcouchbase
  */
 #ifndef LIBCOUCHBASE_ERROR_H
 #define LIBCOUCHBASE_ERROR_H 1
@@ -27,10 +28,27 @@
 #error "Include libcouchbase/couchbase.h instead"
 #endif
 
+
+/**
+ * @ingroup LCB_PUBAPI
+ * @defgroup LCB_ERRORS Error Codes
+ * @brief Status codes returned by the library
+ *
+ * @addtogroup LCB_ERRORS
+ * @{
+ */
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+    /**
+     * @brief Error Categories
+     *
+     * These error categories are assigned as a series of OR'd bits to each
+     * of the error codes in lcb_error_t.
+     *
+     * @see lcb_get_errtype
+     */
     typedef enum {
         /** Error type indicating a likely issue in user input */
         LCB_ERRTYPE_INPUT = 1 << 0,
@@ -54,6 +72,16 @@ extern "C" {
         LCB_ERRTYPE_PLUGIN = 1 << 6
     } lcb_errflags_t;
 
+
+/**
+ * @brief XMacro for all error types
+ * @param X macro to be invoked for each function. This will accept the following
+ * arguments:
+ *  - Raw unquoted literal error identifier (e.g. `LCB_EINVAL`)
+ *  - Code for the error (e.g. `0x23`)
+ *  - Set of categories for the specific error (e.g. `LCB_ERRTYPE_FOO|LCB_ERRTYPE_BAR`)
+ *  - Quoted string literal describing the error (e.g. `"This is sad"`)
+ */
 #define LCB_XERR(X) \
     /** Success */ \
     X(LCB_SUCCESS, 0x00, 0, "Success (Not an error)") \
@@ -231,17 +259,45 @@ extern "C" {
 #define lcb_is_error_etmpfail(a) ((a == LCB_CLIENT_ETMPFAIL) || \
                                   (a == LCB_ETMPFAIL))
 
+/** @brief If the error is a result of bad input */
 #define LCB_EIFINPUT(e) (lcb_get_errtype(e) & LCB_ERRTYPE_INPUT)
+
+/** @brief if the error is a result of a network condition */
 #define LCB_EIFNET(e) (lcb_get_errtype(e) & LCB_ERRTYPE_NETWORK)
+
+/** @brief if the error is fatal */
 #define LCB_EIFFATAL(e) (lcb_get_errtype(e) & LCB_ERRTYPE_FATAL)
+
+/** @brief if the error is transient */
 #define LCB_EIFTMP(e) (lcb_get_errtype(e) & LCB_ERRTYPE_TRANSIENT)
+
+/** @brief if the error is a routine negative server reply */
 #define LCB_EIFDATA(e) (lcb_get_errtype(e) & LCB_ERRTYPE_DATAOP)
+
+/** @brief if the error is a result of a plugin implementation */
 #define LCB_EIFPLUGIN(e) (lcb_get_errtype(e) & LCB_ERRTYPE_PLUGIN)
 
+/**
+ * @brief Get error categories for a specific code
+ * @param err the error received
+ * @return a set of flags containing the categories for the given error
+ */
 LIBCOUCHBASE_API
 int lcb_get_errtype(lcb_error_t err);
+
+/**
+ * Get a textual descrtiption for the given error code
+ * @param instance the instance the error code belongs to (you might
+ *                 want different localizations for the different instances)
+ * @param error the error code
+ * @return A textual description of the error message. The caller should
+ *         <b>not</b> release the memory returned from this function.
+ */
+LIBCOUCHBASE_API
+const char *lcb_strerror(lcb_t instance, lcb_error_t error);
 
 #ifdef __cplusplus
 }
 #endif
+/**@}*/
 #endif

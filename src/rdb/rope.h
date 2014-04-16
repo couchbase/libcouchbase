@@ -28,14 +28,14 @@ extern "C" {
  * previous data and the last segment contains the newest data (and potentially
  * free space for additional reads).
  *
- * The size of each segment is determined by either the Allocator or the
+ * The size of each segment is determined by either the allocator or the
  * library. The allocator determines the size for "Estimated" read-aheads, where it
  * decides on the best form of fragmentation (if any) for the TCP buffers.
  * The library determines the size of a segment if a specific sequence of data
  * must be represented as contiguous bytes in memory.
  *
  * The differentiation between these two modes is expressed in the
- * r_reserve() function (where the _allocator_ determines the best mode of
+ * r_reserve() function (where the allocator determines the best mode of
  * fragmentation) and the s_alloc/s_realloc functions where the library demands
  * a specific form of continuity.
  *
