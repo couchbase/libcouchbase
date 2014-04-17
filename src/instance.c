@@ -79,11 +79,7 @@ static const char *get_rest_param(lcb_t obj, int paramtype)
 
     /** Don't have a REST API connection? */
     if (LCBT_VBCONFIG(obj)) {
-        unsigned ix;
-        lcb_server_t *server;
-
-        ix = gethrtime() % LCBT_NSERVERS(obj);
-        server = LCBT_GET_SERVER(obj, ix);
+        lcb_server_t *server = LCBT_GET_SERVER(obj, 0);
         if (paramtype == PARAM_CONFIG_HOST) {
             ret = param_from_host(&server->curhost, paramtype);
             if (ret) {
