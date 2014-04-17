@@ -78,7 +78,7 @@ static const char *get_rest_param(lcb_t obj, int paramtype)
 
     /** Don't have a REST API connection? */
     if (obj->vbucket_config) {
-        lcb_server_t *server = obj->servers + (gethrtime() % obj->nservers);
+        lcb_server_t *server = obj->servers;
         if (paramtype == PARAM_CONFIG_HOST) {
             ret = param_from_host(&server->curhost, paramtype);
             if (ret) {
