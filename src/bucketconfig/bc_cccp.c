@@ -125,6 +125,10 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
 static lcb_error_t mcio_error(cccp_provider *cccp, lcb_error_t err)
 {
     lcb_log(LOGARGS(cccp, ERR), "Got I/O Error=0x%x", err);
+    if (err == LCB_AUTH_ERROR && cccp->base.parent->config == NULL) {
+        lcb_confmon_provider_failed(&cccp->base, err);
+        return err;
+    }
 
     release_socket(cccp, err == LCB_NOT_SUPPORTED);
     return schedule_next_request(cccp, err, 0);
