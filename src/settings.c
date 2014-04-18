@@ -19,6 +19,8 @@ void lcb_default_settings(lcb_settings *settings)
     settings->grace_next_cycle = LCB_DEFAULT_CLCONFIG_GRACE_CYCLE;
     settings->grace_next_provider = LCB_DEFAULT_CLCONFIG_GRACE_NEXT;
     settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
+    settings->retry_interval = LCB_DEFAULT_RETRY_INTERVAL;
+    settings->retry_backoff = LCB_DEFAULT_RETRY_BACKOFF;
 }
 
 LCB_INTERNAL_API

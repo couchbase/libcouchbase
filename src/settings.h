@@ -52,6 +52,11 @@
 /* Infinite (i.e. compat mode) */
 #define LCB_DEFAULT_BC_HTTP_DISCONNTMO -1
 
+/* 100ms */
+#define LCB_DEFAULT_RETRY_INTERVAL LCB_MS2US(100)
+
+/* 1.5x */
+#define LCB_DEFAULT_RETRY_BACKOFF 1.5
 
 #include "config.h"
 #include <libcouchbase/couchbase.h>
@@ -75,6 +80,8 @@ typedef struct lcb_settings_st {
     lcb_uint32_t operation_timeout;
     lcb_uint32_t config_timeout;
     lcb_uint32_t config_node_timeout;
+    lcb_uint32_t retry_interval;
+    float retry_backoff;
     lcb_size_t rbufsize;
     lcb_size_t wbufsize;
     lcb_size_t weird_things_threshold;

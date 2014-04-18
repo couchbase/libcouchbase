@@ -396,6 +396,7 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     obj->confmon = lcb_confmon_create(settings, obj->iotable);
     obj->usernodes = hostlist_create();
+    obj->retryq = lcb_retryq_new(&obj->cmdq, obj->iotable, obj->settings);
 
     /** We might want to sanitize this a bit more later on.. */
     if (strstr(host, "://") != NULL && strstr(host, "http://") == NULL) {
@@ -489,7 +490,7 @@ void lcb_destroy(lcb_t instance)
             }
         }
     }
-
+    lcb_retryq_destroy(instance->retryq);
     lcb_confmon_destroy(instance->confmon);
     hashset_destroy(instance->http_requests);
     lcbio_mgr_destroy(instance->memd_sockpool);
@@ -538,6 +539,9 @@ void lcb_maybe_breakout(lcb_t instance)
 {
     unsigned ii;
     if (!instance->wait) {
+        return;
+    }
+    if (!lcb_retryq_empty(instance->retryq)) {
         return;
     }
 

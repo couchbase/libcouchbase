@@ -234,6 +234,7 @@ mcreq_allocate_packet(mc_PIPELINE *pipeline)
     ret = (mc_PACKET *)SPAN_BUFFER(&span);
     ret->alloc_parent = span.parent;
     ret->flags = 0;
+    ret->retries = 0;
     ret->opaque = pipeline->parent->seq++;
     return ret;
 }
@@ -274,6 +275,7 @@ mcreq_dup_packet(const mc_PACKET *src)
     dst->alloc_parent = NULL;
     dst->sl_flushq.next = NULL;
     dst->slnode.next = NULL;
+    dst->retries = src->retries;
 
     if (src->flags & MCREQ_F_HASVALUE) {
         /** Get the length */

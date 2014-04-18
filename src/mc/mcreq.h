@@ -260,8 +260,8 @@ typedef struct mc_packet_st {
     /** Extras length */
     uint8_t extlen;
 
-    /* Padding */
-    uint8_t unused;
+    /** Retries */
+    uint8_t retries;
 
     /** flags for request. @see mcreq_flags */
     uint16_t flags;

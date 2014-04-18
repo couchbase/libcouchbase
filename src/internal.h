@@ -46,6 +46,7 @@
 #include "logging.h"
 #include "mc/mcreq.h"
 #include "simplestring.h"
+#include "retryq.h"
 
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 #define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
@@ -145,6 +146,7 @@ extern "C" {
 
         lcb_settings *settings;
         lcbio_pTABLE iotable;
+        lcb_RETRYQ *retryq;
         char *scratch; /* storage for random strings, lcb_get_host, etc */
 
 #ifdef LCB_DEBUG
