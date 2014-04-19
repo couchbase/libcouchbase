@@ -110,7 +110,8 @@ extern "C" {
         unsigned int refcount;
 
         SOCKET sSocket;
-        lcb_io_read_cb rdcb;
+        lcb_ioC_read2_callback rdcb;
+        void *rdarg;
         lcb_list_t list;
     } iocp_sockdata_t;
 

@@ -70,43 +70,30 @@ static int start_write(lcb_io_opt_t iobase,
 
 static int start_read(lcb_io_opt_t iobase,
                       lcb_sockdata_t *sockbase,
-                      lcb_io_read_cb callback)
+                      lcb_IOV *iov,
+                      lcb_size_t niov,
+                      void *uarg,
+                      lcb_ioC_read2_callback callback)
 {
     int ii;
     int rv;
-    int nbufs;
-    DWORD flags = 0;
-    DWORD dwNbytes;
-    WSABUF wsbuf[2];
+    DWORD flags = 0, dwNbytes;
     iocp_t *io = (iocp_t *)iobase;
     iocp_sockdata_t *sd = (iocp_sockdata_t *)sockbase;
     struct lcb_buf_info *bi = &sockbase->read_buffer;
 
     IOCP_LOG(IOCP_DEBUG, "Read Requested..");
-
-    for (nbufs = 0, ii = 0; ii < 2; ii++) {
-        struct lcb_iovec_st *iov = bi->iov + ii;
-        WSABUF *wsb = wsbuf + ii;
-
-        if (!(iov->iov_base && iov->iov_len)) {
-            break;
-        }
-
-        wsb->buf = iov->iov_base;
-        wsb->len = (ULONG)iov->iov_len;
-        nbufs++;
-    }
-
     sd->ol_read.action = LCBIOCP_ACTION_READ;
     sd->rdcb = callback;
+    sd->rdarg = uarg;
 
     /** Remove the leftover bits */
     ZeroMemory(&sd->ol_read.base, sizeof(OVERLAPPED));
 
     rv = WSARecv(
              sd->sSocket,
-             wsbuf,
-             nbufs,
+             (WSABUF *)iov,
+             niov,
              &dwNbytes,
              &flags,
              (OVERLAPPED *)&sd->ol_read,
@@ -405,7 +392,7 @@ static void iops_dtor(lcb_io_opt_t iobase)
 
         case LCBIOCP_ACTION_READ:
             io->base.v.v0.error = WSAECONNRESET;
-            sd->rdcb(&sd->sd_base, -1);
+            sd->rdcb(&sd->sd_base, -1, sd->rdarg);
             break;
 
         default:
@@ -454,7 +441,7 @@ static void get_procs(int version,
     loop->stop = iocp_stop;
 
     iocp->connect = start_connect;
-    iocp->read = start_read;
+    iocp->read2 = start_read;
     iocp->write2 = start_write;
     iocp->socket = create_socket;
     iocp->close = close_socket;

@@ -121,7 +121,7 @@ static void handle_single_overlapped(iocp_t *io,
          * Nothing special in the OVERLAPPED.
          */
         if (sd->rdcb) {
-            sd->rdcb(&sd->sd_base, dwNumberOfBytesTransferred);
+            sd->rdcb(&sd->sd_base, dwNumberOfBytesTransferred, sd->rdarg);
         }
         break;
 
