@@ -80,8 +80,12 @@ mcserver_flush(mc_SERVER *server)
     lcbio_ctx_wwant(server->connctx);
     lcbio_ctx_schedule(server->connctx);
 
-    if (!lcb_timer_armed(server->io_timer)) {
-        lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
+    if (!lcbio_timer_armed(server->io_timer)) {
+        /**
+         * XXX: Maybe use get_next_timeout(), although here we can assume
+         * that a command was just scheduled
+         */
+        lcbio_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
     }
 }
 
@@ -104,25 +108,17 @@ mcserver_errflush(mc_SERVER *server)
  * otherwise it returns 0. If it returns 0 then we give the error back to the
  * user.
  */
-static int
+static void
 handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
 {
-    int idx;
     mc_PACKET *newpkt;
-    lcb_server_t *newsrv;
     lcb_error_t err = LCB_ERROR;
-    int vb;
     lcb_t instance = oldsrv->instance;
-    mc_CMDQUEUE *cq = &instance->cmdq;
     mc_REQDATA *rd = MCREQ_PKT_RDATA(oldpkt);
-    protocol_binary_request_header hdr;
-    mcreq_read_hdr(oldpkt, &hdr);
-    vb = ntohs(hdr.request.vbucket);
 
     lcb_log(LOGARGS(oldsrv, WARN),
-            "NOT_MY_VBUCKET; Server=%p,ix=%d,real_start=%lu,vb=%d",
-            (void*)oldsrv, oldsrv->pipeline.index, (unsigned long)rd->start, vb);
-
+            "NOT_MY_VBUCKET; Server=%p,ix=%d,real_start=%lu",
+            (void*)oldsrv, oldsrv->pipeline.index, (unsigned long)rd->start);
 
     if (PACKET_NBODY(resinfo)) {
         lcb_string s;
@@ -135,41 +131,14 @@ handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
         lcb_string_release(&s);
     }
 
-
     if (err != LCB_SUCCESS) {
         lcb_bootstrap_refresh(instance);
     }
 
-    /* re-schedule command to new server */
-    if (!oldsrv->settings->vb_noguess) {
-        idx = VB_REMAP(cq->config, vb, (int)oldsrv->pipeline.index);
-    } else {
-        idx = oldsrv->pipeline.index;
-    }
-
-    if (idx == -1) {
-        lcb_log(LOGARGS(oldsrv, ERR), "no alternate server");
-        return 0;
-    }
-
-    lcb_log(LOGARGS(oldsrv, INFO), "Mapped key to new server %d -> %d",
-            oldsrv->pipeline.index, idx);
-
+    /** Reschedule the packet again .. */
     newpkt = mcreq_dup_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
-    newpkt->opaque = ++cq->seq;
-    mcreq_read_hdr(newpkt, &hdr);
-    hdr.request.opaque = newpkt->opaque;
-    mcreq_write_hdr(newpkt, &hdr);
-
-    newsrv = (lcb_server_t *)instance->cmdq.pipelines[idx];
-    mcreq_packet_handled(&oldsrv->pipeline, oldpkt);
-
-    lcb_assert((lcb_size_t)idx < cq->npipelines);
-    newsrv = (lcb_server_t *)cq->pipelines[idx];
-    mcreq_enqueue_packet(&newsrv->pipeline, newpkt);
-    newsrv->pipeline.flush_start(&newsrv->pipeline);
-    return 1;
+    lcb_retryq_add(instance->retryq, newpkt);
 }
 
 static void
@@ -198,14 +167,12 @@ handle_single_packet(lcb_server_t *server, packet_info *info)
 
     /** Check for NOT_MY_VBUCKET; relocate as needed */
     if (PACKET_STATUS(info) == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
-        if (handle_nmv(server, info, packet)) {
-            /** Handled */
-            return;
-        }
-    }
-    if (! (packet->flags & MCREQ_F_UFWD)) {
+        handle_nmv(server, info, packet);
+
+    } else if (! (packet->flags & MCREQ_F_UFWD)) {
         mcreq_dispatch_response(pl, packet, info, LCB_SUCCESS);
     }
+
     if (is_final_response) {
         mcreq_packet_handled(pl, packet);
     }
@@ -259,6 +226,31 @@ typedef enum {
     REFRESH_NEVER
 } mc_REFRESHPOLICY;
 
+static int
+maybe_retry(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err)
+{
+    mc_PACKET *newpkt;
+    VBUCKET_DISTRIBUTION_TYPE dist_t = VB_DISTTYPE(pipeline->parent->config);
+
+    if (dist_t != VBUCKET_DISTRIBUTION_VBUCKET) {
+        /** memcached bucket */
+        return 0;
+    }
+    if (err == LCB_ETIMEDOUT) {
+        return 0;
+    }
+
+    /** TODO: We can also use EIFTMP and maybe a more clever "backoff" algorithm */
+    if (err != LCB_AUTH_ERROR && LCB_EIFNET(err) == 0) {
+        return 0;
+    }
+
+    newpkt = mcreq_dup_packet(pkt);
+    newpkt->flags &= ~MCREQ_STATE_FLAGS;
+    lcb_retryq_add(pipeline->parent->instance->retryq, newpkt);
+    return 1;
+}
+
 static void
 fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
 {
@@ -266,6 +258,10 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
     packet_info info;
     protocol_binary_request_header hdr;
     protocol_binary_response_header *res = &info.res;
+
+    if (maybe_retry(pipeline, pkt, err)) {
+        return;
+    }
 
     memset(&info, 0, sizeof(info));
     memcpy(hdr.bytes, SPAN_BUFFER(&pkt->kh_span), sizeof(hdr.bytes));
@@ -333,14 +329,33 @@ server_is_ready(lcb_server_t *server)
     return server->connctx != NULL;
 }
 
-static void
-timeout_server(lcb_timer_t tm, lcb_t i, const void *arg)
+static uint32_t
+get_next_timeout(mc_SERVER *server)
 {
-    mc_SERVER *server = (void *)arg;
-    hrtime_t now, min_valid, next_ns = 0;
-    uint32_t next_us = 0;
+    hrtime_t now, expiry, diff;
+    mc_PACKET *pkt = mcreq_first_packet(&server->pipeline);
 
-    (void)tm; (void)i;
+    if (!pkt) {
+        return MCSERVER_TIMEOUT(server);
+    }
+
+    now = gethrtime();
+    expiry = MCREQ_PKT_RDATA(pkt)->start + LCB_US2NS(MCSERVER_TIMEOUT(server));
+    if (expiry <= now) {
+        diff = 0;
+    } else {
+        diff = expiry - now;
+    }
+
+    return diff / 1000;
+}
+
+static void
+timeout_server(void *arg)
+{
+    mc_SERVER *server = arg;
+    hrtime_t now, min_valid, next_ns = 0;
+    uint32_t next_us;
 
     lcb_log(LOGARGS(server, ERR), "Server %p timed out", server);
 
@@ -355,25 +370,9 @@ timeout_server(lcb_timer_t tm, lcb_t i, const void *arg)
     purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns,
                         REFRESH_ONFAILED);
 
-    /**
-     * The new timeout will be calculated when the next command actually
-     * expires. To determine the next expiration, we:
-     * (1) Add the timeout interval to the next_ns marker, giving us the
-     * absolute timeout value
-     * (2) Subtract now from the next absolute timeout, giving us the relative
-     * timeout.
-     */
-    if (next_ns) {
-        hrtime_t abstmo = next_ns + LCB_US2NS(MCSERVER_TIMEOUT(server));
-        next_us = LCB_NS2US(abstmo - now);
-
-    } else {
-        next_us = MCSERVER_TIMEOUT(server);
-    }
-
+    next_us = get_next_timeout(server);
     lcb_log(LOGARGS(server, INFO), "%p, Scheduling next timeout for %u ms", server, next_us / 1000);
-
-    lcb_timer_rearm(server->io_timer, next_us);
+    lcbio_timer_rearm(server->io_timer, next_us);
     lcb_maybe_breakout(server->instance);
 }
 
@@ -388,6 +387,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
 {
     mc_SERVER *server = data;
     lcbio_EASYPROCS procs;
+    uint32_t tmo;
     LCBIO_CONNREQ_CLEAR(&server->connreq);
 
     if (err != LCB_SUCCESS) {
@@ -416,7 +416,10 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     server->connctx = lcbio_ctx_new(sock, server, &procs);
     server->connctx->subsys = "memcached";
     server->pipeline.flush_start = (mcreq_flushstart_fn)mcserver_flush;
-    lcb_log(LOGARGS(server, INFO), "Starting initial flush for server!");
+
+    tmo = get_next_timeout(server);
+    lcb_log(LOGARGS(server, INFO), "Setting initial timeout=%ums", tmo/1000);
+    lcbio_timer_rearm(server->io_timer, get_next_timeout(server));
     mcserver_flush(server);
 }
 
@@ -460,10 +463,7 @@ mcserver_alloc(lcb_t instance, int ix)
     mcreq_pipeline_init(&ret->pipeline);
     ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
     lcb_host_parsez(&ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
-
-    ret->io_timer = lcb_timer_create_simple(
-            instance->iotable, ret, MCSERVER_TIMEOUT(ret), timeout_server);
-    lcb_timer_disarm(ret->io_timer);
+    ret->io_timer = lcbio_timer_new(instance->iotable, ret, timeout_server);
     return ret;
 }
 
@@ -474,7 +474,7 @@ server_free(mc_SERVER *server)
     mcreq_pipeline_cleanup(&server->pipeline);
 
     if (server->io_timer) {
-        lcb_timer_destroy(NULL, server->io_timer);
+        lcbio_timer_destroy(server->io_timer);
     }
 
     free(server->resthost);
@@ -508,7 +508,7 @@ mcserver_close(mc_SERVER *server, int isok)
     lcbio_connreq_cancel(&server->connreq);
 
     if (server->io_timer) {
-        lcb_timer_destroy(NULL, server->io_timer);
+        lcbio_timer_destroy(server->io_timer);
         server->io_timer = NULL;
     }
 

@@ -2,9 +2,9 @@
 #define LCB_MCSERVER_H
 #include <libcouchbase/couchbase.h>
 #include <lcbio/lcbio.h>
-#include "timer.h"
-#include "mc/mcreq.h"
-#include "netbuf/netbuf.h"
+#include <lcbio/timer-ng.h>
+#include <mc/mcreq.h>
+#include <netbuf/netbuf.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,7 +40,7 @@ typedef struct lcb_server_st {
     int closed;
 
     /** IO/Operation timer */
-    lcb_timer_t io_timer;
+    lcbio_pTIMER io_timer;
 
     lcbio_CTX *connctx;
     lcbio_CONNREQ connreq;
