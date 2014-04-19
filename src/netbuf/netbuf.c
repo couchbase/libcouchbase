@@ -454,6 +454,7 @@ free_blocklist(nb_MBPOOL *pool, sllist_root *list)
     sllist_iterator iter;
     SLLIST_ITERFOR(list, &iter) {
         nb_MBLOCK *block = SLLIST_ITEM(iter.cur, nb_MBLOCK, slnode);
+        sllist_iter_remove(list, &iter);
         mblock_wipe_block(block);
     }
     (void)pool;
