@@ -284,7 +284,6 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
 
     lcb_assert(ringbuffer_initialize(&rest, 1024));
 
-
     do {
         int allocated = 0;
         lcb_uint32_t headersize;
@@ -330,19 +329,39 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
                                req.request.opcode);
         }
 
-        if (server->connection_ready &&
-                stream_size > send_size && (stream_size - packetsize) < send_size) {
-            /* Copy the rest of the current packet into the
-               temporary stream */
+        if (server->connection_ready) {
+            if (stream_size > send_size && (stream_size - packetsize) < send_size) {
+                /* Copy the rest of the current packet into the
+                   temporary stream */
 
-            /* I do believe I have some IOV functions to do that? */
-            lcb_size_t nbytes = packetsize - (stream_size - send_size);
-            lcb_assert(ringbuffer_memcpy(&rest,
-                                         conn->output,
-                                         nbytes) == 0);
-            ringbuffer_consumed(conn->output, nbytes);
-            send_size -= nbytes;
+                /* I do believe I have some IOV functions to do that? */
+            	lcb_size_t nbytes = packetsize - (stream_size - send_size);
+                lcb_assert(ringbuffer_memcpy(&rest,
+                                             conn->output,
+                                             nbytes) == 0);
+                ringbuffer_consumed(conn->output, nbytes);
+                send_size -= nbytes;
+            } else if (send_size > stream_size) {
+                /* Copy the rest of the prev packet into the
+                   temporary stream */
+
+            	lcb_size_t nbytes = send_size - stream_size;
+                lcb_assert(ringbuffer_memcpy(&rest,
+                                             conn->output,
+                                             nbytes) == 0);
+                ringbuffer_consumed(conn->output, nbytes);
+                send_size -= nbytes;
+            }
+
+            if (send_size == stream_size) {
+                /* The packet is not sent any more
+                   so discard it*/
+
+                ringbuffer_consumed(conn->output, packetsize);
+                send_size -= packetsize;
+            }
         }
+
         stream_size -= packetsize;
         headersize = (lcb_uint32_t)sizeof(req) + req.request.extlen + htons(req.request.keylen);
         if (!ringbuffer_is_continous(stream, RINGBUFFER_READ, headersize)) {
@@ -380,12 +399,8 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         lcb_size_t nbytes = ringbuffer_get_nbytes(stream);
         send_size = ringbuffer_get_nbytes(conn->output);
 
-        if (send_size >= nbytes) {
-            ringbuffer_consumed(conn->output, send_size - nbytes);
-            lcb_assert(ringbuffer_memcpy(&rest, conn->output, nbytes) == 0);
-        }
-        ringbuffer_reset(conn->output);
-        ringbuffer_append(&rest, conn->output);
+		ringbuffer_append(conn->output, &rest);
+		ringbuffer_append(&rest, conn->output);
     }
 
     ringbuffer_destruct(&rest);
