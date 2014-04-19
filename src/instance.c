@@ -534,30 +534,3 @@ void lcb_stop_loop(lcb_t instance)
 {
     IOT_STOP(instance->iotable);
 }
-
-void lcb_maybe_breakout(lcb_t instance)
-{
-    unsigned ii;
-    if (!instance->wait) {
-        return;
-    }
-    if (!lcb_retryq_empty(instance->retryq)) {
-        return;
-    }
-
-    if (hashset_num_items(instance->timers) ||
-            hashset_num_items(instance->durability_polls) ||
-            hashset_num_items(instance->http_requests)) {
-        return;
-    }
-
-    for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-        lcb_server_t *ss = LCBT_GET_SERVER(instance, ii);
-        if (mcserver_has_pending(ss)) {
-            return;
-        }
-    }
-
-    instance->wait = 0;
-    instance->iotable->loop.stop(IOT_ARG(instance->iotable));
-}

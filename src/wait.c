@@ -16,6 +16,44 @@
  */
 #include "internal.h"
 #include <lcbio/iotable.h>
+#include <lcbio/timer-ng.h>
+
+static int
+has_pending(lcb_t instance)
+{
+    unsigned ii;
+
+    if (!lcb_retryq_empty(instance->retryq)) {
+        return 1;
+    }
+
+    if (hashset_num_items(instance->timers) ||
+            hashset_num_items(instance->durability_polls) ||
+            hashset_num_items(instance->http_requests)) {
+        return 1;
+    }
+
+    for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+        lcb_server_t *ss = LCBT_GET_SERVER(instance, ii);
+        if (mcserver_has_pending(ss)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+void
+lcb_maybe_breakout(lcb_t instance)
+{
+    if (!instance->wait) {
+        return;
+    }
+    if (has_pending(instance)) {
+        return;
+    }
+
+    instance->wait = 0;
+    instance->iotable->loop.stop(IOT_ARG(instance->iotable));
+}
 
 /**
  * Returns non zero if the event loop is running now
@@ -39,42 +77,17 @@ int lcb_is_waiting(lcb_t instance)
 LIBCOUCHBASE_API
 lcb_error_t lcb_wait(lcb_t instance)
 {
-    unsigned ii;
-    int should_wait = 0;
-    mc_CMDQUEUE *cq = &instance->cmdq;
     if (instance->wait != 0) {
         return instance->last_error;
     }
 
-    /*
-     * The API is designed for you to run your own event loop,
-     * but should also work if you don't do that.. In order to be
-     * able to know when to break out of the event loop, we're setting
-     * the wait flag to 1
-     */
+    if (!has_pending(instance)) {
+        return LCB_SUCCESS;
+    }
+
     instance->last_error = LCB_SUCCESS;
     instance->wait = 1;
-    for (ii = 0; ii < cq->npipelines; ii++) {
-        lcb_server_t *server = (lcb_server_t *)cq->pipelines[ii];
-        if (mcserver_has_pending(server)) {
-            lcb_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
-            should_wait = 1;
-        }
-    }
-
-    if (!should_wait) {
-        if (hashset_num_items(instance->timers) > 0 ||
-                hashset_num_items(instance->durability_polls) > 0 ||
-                hashset_num_items(instance->http_requests) > 0 ||
-                cq->config == NULL) {
-            should_wait = 1;
-        }
-    }
-
-    if (should_wait) {
-        instance->iotable->loop.start(instance->iotable->p);
-    }
-
+    IOT_START(instance->iotable);
     instance->wait = 0;
 
     if (LCBT_VBCONFIG(instance)) {
@@ -93,7 +106,7 @@ LIBCOUCHBASE_API
 void lcb_breakout(lcb_t instance)
 {
     if (instance->wait) {
-        instance->iotable->loop.stop(instance->iotable->p);
+        IOT_STOP(instance->iotable);
         instance->wait = 0;
     }
 }
