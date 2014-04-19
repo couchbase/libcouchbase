@@ -744,6 +744,10 @@ mcreq_dump_chain(const mc_PIPELINE *pipeline);
 #define mcreq_read_hdr(pkt, hdr) \
         memcpy( (hdr)->bytes, SPAN_BUFFER(&(pkt)->kh_span), sizeof((hdr)->bytes) )
 
+#define mcreq_first_packet(pipeline) \
+        SLLIST_IS_EMPTY(&(pipeline)->requests) ? NULL : \
+                SLLIST_ITEM((pipeline)->requests.first, mc_PACKET, slnode)
+
 /**@}*/
 
 #ifdef __cplusplus
