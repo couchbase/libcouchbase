@@ -75,57 +75,6 @@ void MockUnitTest::createConnection(HandleWrap &handle)
 }
 
 extern "C" {
-    static void flags_store_callback(lcb_t,
-                                     const void *,
-                                     lcb_storage_t operation,
-                                     lcb_error_t error,
-                                     const lcb_store_resp_t *resp)
-    {
-        ASSERT_EQ(LCB_SUCCESS, error);
-        ASSERT_EQ(5, resp->v.v0.nkey);
-        ASSERT_EQ(0, memcmp(resp->v.v0.key, "flags", 5));
-        ASSERT_EQ(LCB_SET, operation);
-    }
-
-    static void flags_get_callback(lcb_t, const void *,
-                                   lcb_error_t error,
-                                   const lcb_get_resp_t *resp)
-    {
-        ASSERT_EQ(LCB_SUCCESS, error);
-        ASSERT_EQ(5, resp->v.v0.nkey);
-        ASSERT_EQ(0, memcmp(resp->v.v0.key, "flags", 5));
-        ASSERT_EQ(1, resp->v.v0.nbytes);
-        ASSERT_EQ(0, memcmp(resp->v.v0.bytes, "x", 1));
-        ASSERT_EQ(0xdeadbeef, resp->v.v0.flags);
-    }
-}
-
-TEST_F(MockUnitTest, testFlags)
-{
-    lcb_t instance;
-    HandleWrap hw;
-
-    createConnection(hw, instance);
-
-    (void)lcb_set_get_callback(instance, flags_get_callback);
-    (void)lcb_set_store_callback(instance, flags_store_callback);
-
-    lcb_store_cmd_t storeCommand(LCB_SET, "flags", 5, "x", 1, 0xdeadbeef);
-    lcb_store_cmd_t *storeCommands[] = { &storeCommand };
-
-    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, NULL, 1, storeCommands));
-    // Wait for it to be persisted
-    lcb_wait(instance);
-
-    lcb_get_cmd_t cmd("flags", 5);
-    lcb_get_cmd_t *cmds[] = { &cmd };
-    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, NULL, 1, cmds));
-
-    /* Wait for it to be received */
-    lcb_wait(instance);
-}
-
-extern "C" {
     static void timings_callback(lcb_t,
                                  const void *cookie,
                                  lcb_timeunit_t timeunit,
@@ -294,12 +243,13 @@ struct timeout_test_cookie {
     lcb_error_t expected;
 };
 extern "C" {
-static void set_callback(lcb_t,
+static void set_callback(lcb_t instance,
                          const void *cookie,
                          lcb_storage_t, lcb_error_t err,
                          const lcb_store_resp_t *)
 {
     timeout_test_cookie *tc = (timeout_test_cookie*)cookie;;
+    lcb_log(LOGARGS(instance, INFO), "Got code 0x%x. Expected 0x%x", err, tc->expected);
     EXPECT_EQ(tc->expected, err);
     if (err == LCB_ETIMEDOUT) {
         // Remove the hiccup at the first timeout failure
@@ -319,6 +269,7 @@ static void reschedule_callback(lcb_timer_t timer,
 {
     lcb_error_t err;
     struct next_store_st *ns = (struct next_store_st *)cookie;
+    lcb_log(LOGARGS(instance, INFO), "Rescheduling operation..");
     err = lcb_store(instance, ns->tc, 1, ns->cmdpp);
     EXPECT_EQ(LCB_SUCCESS, err);
     lcb_timer_destroy(instance, timer);
@@ -379,27 +330,10 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
                                          &err);
     ASSERT_EQ(LCB_SUCCESS, err);
 
+    lcb_log(LOGARGS(instance, INFO), "Waiting..");
     lcb_wait(instance);
 
     ASSERT_EQ(0, nremaining);
-}
-
-
-TEST_F(MockUnitTest, testIssue59)
-{
-    // lcb_wait() blocks forever if there is nothing queued
-    lcb_t instance;
-    HandleWrap hw;
-    createConnection(hw, instance);
-
-    lcb_wait(instance);
-    lcb_wait(instance);
-    lcb_wait(instance);
-    lcb_wait(instance);
-    lcb_wait(instance);
-    lcb_wait(instance);
-    lcb_wait(instance);
-    lcb_wait(instance);
 }
 
 extern "C" {
@@ -561,19 +495,6 @@ extern "C" {
         }
     }
 
-    static void tpb_get_callback(lcb_t instance, const void *cookie,
-                                 lcb_error_t error, const lcb_get_resp_t *resp)
-    {
-        struct rvbuf *rv = (struct rvbuf *)cookie;
-        rv->error = error;
-        rv->counter--;
-        if (rv->counter <= 0) {
-            lcb_stop_loop(instance);
-        }
-
-        (void)resp;
-    }
-
     static void timer_callback(lcb_timer_t, lcb_t, const void *) {
         abort();
     }
@@ -600,80 +521,6 @@ private:
     lcb_timer_t tm;
     lcb_t instance;
 };
-
-TEST_F(MockUnitTest, DISABLED_testPurgedBody)
-{
-    SKIP_UNLESS_MOCK();
-    lcb_error_t err;
-    struct rvbuf rv;
-    const char key[] = "testPurgedBody";
-    lcb_size_t nkey = sizeof(key);
-
-    int nvalue = 100000;
-    std::string scoped_value;
-    scoped_value.assign(nvalue, 0xff);
-    const char *backed_value = scoped_value.c_str();
-
-    lcb_t instance;
-    HandleWrap hw;
-    lcb_io_opt_t io;
-
-    createConnection(hw, instance);
-
-    io = (lcb_io_opt_t)lcb_get_cookie(instance);
-
-    /* --enable-warnings --enable-werror won't let me use a simple void* */
-    void (*io_close_old)(lcb_io_opt_t, lcb_socket_t) = io->v.v0.close;
-
-    lcb_set_timeout(instance, 3100000); /* 3.1 seconds */
-    hrtime_t now = gethrtime(), begin_time = 0;
-    io->v.v0.close = io_close_wrap;
-
-    lcb_set_store_callback(instance, store_callback);
-    lcb_set_get_callback(instance, tpb_get_callback);
-
-    /*
-     * Store large 100000 bytes key in the bucket
-     */
-    lcb_store_cmd_t store_cmd(LCB_SET, key, nkey, backed_value, nvalue);
-    lcb_store_cmd_t *store_cmds[] = { &store_cmd };
-    err = lcb_store(instance, &rv, 1, store_cmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
-    rv.counter = 1;
-    lcb_run_loop(instance);
-    ASSERT_EQ(LCB_SUCCESS, rv.error);
-
-    /*
-     * Schedule GET operation for the key
-     */
-    lcb_get_cmd_t get_cmd(key, nkey);
-    lcb_get_cmd_t *get_cmds[] = { &get_cmd };
-    err = lcb_get(instance, &rv, 1, get_cmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
-
-    /*
-     * Setup mock to split response in two parts: send first 40 bytes
-     * immediately and send the rest after 3.5 seconds.
-     */
-    MockEnvironment::getInstance()->hiccupNodes(3500, 40); /* 3.5 seconds */
-
-    /*
-     * Run the IO loop and measure how long does it take to transfer the
-     * backed_value back.
-     */
-    begin_time = gethrtime();
-    io->v.v0.run_event_loop(io);
-    io->v.v0.close = io_close_old;
-
-    now = gethrtime();
-
-    /*
-     * The command must be timed out and it should take more than 2.8
-     * seconds
-     */
-    ASSERT_EQ(LCB_ETIMEDOUT, rv.error);
-    ASSERT_GE(now - begin_time, 2800000000LU); /* 2.8 seconds */
-}
 
 struct StoreContext {
     std::map<std::string, lcb_error_t> mm;

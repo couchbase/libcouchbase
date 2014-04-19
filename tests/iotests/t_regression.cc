@@ -196,3 +196,21 @@ TEST_F(RegressionUnitTest, CCBC_275)
 
     lcb_destroy(instance);
 }
+
+
+TEST_F(MockUnitTest, testIssue59)
+{
+    // lcb_wait() blocks forever if there is nothing queued
+    lcb_t instance;
+    HandleWrap hw;
+    createConnection(hw, instance);
+
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+    lcb_wait(instance);
+}

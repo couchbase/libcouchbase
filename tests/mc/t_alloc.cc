@@ -140,7 +140,7 @@ TEST_F(McAlloc, testValueAlloc)
     iov[1].iov_base = (void *)(value + 3);
     iov[1].iov_len = 2;
 
-    vreq.u_buf.multi.iov = iov;
+    vreq.u_buf.multi.iov = (lcb_IOV *)iov;
     vreq.u_buf.multi.niov = 2;
     vreq.vtype = LCB_KV_IOV;
     ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, &packet, &pipeline);
@@ -149,7 +149,7 @@ TEST_F(McAlloc, testValueAlloc)
     ASSERT_EQ(LCB_SUCCESS, ret);
     ASSERT_EQ(MCREQ_F_HASVALUE|MCREQ_F_VALUE_IOV|MCREQ_F_VALUE_NOCOPY,
               packet->flags);
-    ASSERT_NE(&iov[0], packet->u_value.multi.iov);
+    ASSERT_NE(&iov[0], (nb_IOV *)packet->u_value.multi.iov);
     ASSERT_EQ(2, packet->u_value.multi.niov);
     ASSERT_EQ(5, packet->u_value.multi.total_length);
     mcreq_wipe_packet(pipeline, packet);

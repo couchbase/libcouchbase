@@ -287,3 +287,54 @@ TEST_F(GetUnitTest, testMixedMultiGet)
         ASSERT_EQ(LCB_KEY_ENOENT, itm.err);
     }
 }
+
+extern "C" {
+    static void flags_store_callback(lcb_t,
+                                     const void *,
+                                     lcb_storage_t operation,
+                                     lcb_error_t error,
+                                     const lcb_store_resp_t *resp)
+    {
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(5, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "flags", 5));
+        ASSERT_EQ(LCB_SET, operation);
+    }
+
+    static void flags_get_callback(lcb_t, const void *,
+                                   lcb_error_t error,
+                                   const lcb_get_resp_t *resp)
+    {
+        ASSERT_EQ(LCB_SUCCESS, error);
+        ASSERT_EQ(5, resp->v.v0.nkey);
+        ASSERT_EQ(0, memcmp(resp->v.v0.key, "flags", 5));
+        ASSERT_EQ(1, resp->v.v0.nbytes);
+        ASSERT_EQ(0, memcmp(resp->v.v0.bytes, "x", 1));
+        ASSERT_EQ(0xdeadbeef, resp->v.v0.flags);
+    }
+}
+
+TEST_F(GetUnitTest, testFlags)
+{
+    lcb_t instance;
+    HandleWrap hw;
+
+    createConnection(hw, instance);
+
+    (void)lcb_set_get_callback(instance, flags_get_callback);
+    (void)lcb_set_store_callback(instance, flags_store_callback);
+
+    lcb_store_cmd_t storeCommand(LCB_SET, "flags", 5, "x", 1, 0xdeadbeef);
+    lcb_store_cmd_t *storeCommands[] = { &storeCommand };
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, NULL, 1, storeCommands));
+    // Wait for it to be persisted
+    lcb_wait(instance);
+
+    lcb_get_cmd_t cmd("flags", 5);
+    lcb_get_cmd_t *cmds[] = { &cmd };
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, NULL, 1, cmds));
+
+    /* Wait for it to be received */
+    lcb_wait(instance);
+}

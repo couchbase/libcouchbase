@@ -231,6 +231,6 @@ TEST_F(HttpUnitTest, testRefused)
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_wait(instance);
     ASSERT_EQ(true, ctx.received);
-    ASSERT_TRUE(ctx.err == LCB_CONNECT_ERROR || ctx.err == LCB_NETWORK_ERROR);
+    ASSERT_NE(0, LCB_EIFNET(ctx.err));
 
 }

@@ -29,7 +29,6 @@ struct CQWrap : mc_CMDQUEUE {
             mcreq_pipeline_cleanup(pipeline);
             free(pipeline);
         }
-        free(pipelines);
         mcreq_queue_cleanup(this);
         vbucket_config_destroy(config);
     }
