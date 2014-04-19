@@ -399,8 +399,6 @@ static void purge_single_server(lcb_server_t *server, lcb_error_t error,
         lcb_size_t nbytes = ringbuffer_get_nbytes(stream);
         send_size = ringbuffer_get_nbytes(conn->output);
 
-        lcb_assert(send_size == nbytes);
-
 		ringbuffer_append(conn->output, &rest);
 		ringbuffer_append(&rest, conn->output);
     }
