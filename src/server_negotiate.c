@@ -437,6 +437,7 @@ mc_sasl_start(lcbio_SOCKET *sock, lcb_settings *settings,
     sreq->inner = sasl;
     sreq->ctx = lcbio_ctx_new(sock, sreq, &procs);
     sreq->timer = lcb_timer_create_simple(sock->io, sreq, tmo, timeout_handler);
+    sreq->ctx->subsys = "sasl";
 
     if (!tmo) {
         lcb_timer_disarm(sreq->timer);
