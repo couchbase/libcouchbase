@@ -242,7 +242,7 @@ static void socket_closed_callback(uv_handle_t *handle)
     my_iops_t *io = (my_iops_t *)sock->base.parent;
 
     if (sock->pending.read) {
-        CbREQ(&sock->tcp)(&sock->base, -1);
+        CbREQ(&sock->tcp)(&sock->base, -1, sock->rdarg);
     }
 
     memset(sock, 0xEE, sizeof(*sock));
@@ -404,10 +404,8 @@ static UVC_ALLOC_CB(alloc_cb)
     UVC_ALLOC_CB_VARS()
 
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, handle, tcp);
-    struct lcb_buf_info *bi = &sock->base.read_buffer;
-    buf->base = bi->iov[sock->cur_iov].iov_base;
-    buf->len = (lcb_uvbuf_len_t)bi->iov[sock->cur_iov].iov_len;
-    sock->cur_iov++;
+    buf->base = sock->iov.iov_base;
+    buf->len = sock->iov.iov_len;
 
     (void)suggested_size;
     UVC_ALLOC_CB_RETURN();
@@ -419,7 +417,7 @@ static UVC_READ_CB(read_cb)
 
     my_tcp_t *mt = (my_tcp_t *)stream;
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, mt, tcp);
-    lcb_io_read_cb callback = CbREQ(mt);
+    lcb_ioC_read2_callback callback = CbREQ(mt);
 
     /**
      * XXX:
@@ -429,36 +427,27 @@ static UVC_READ_CB(read_cb)
      * that there is no more pending data within the socket buffer AND we have
      * outstanding data to deliver back to the caller.
      */
-    if (nread == 0) {
-        sock->cur_iov--;
-        return;
-    }
-
     SOCK_DECR_PENDING(sock, read);
     uv_read_stop(stream);
     CbREQ(mt) = NULL;
-
-    if (callback) {
-        callback(&sock->base, nread);
-#ifdef DEBUG
-    }  else {
-        printf("No callback specified!!\n");
-#endif
-    }
-
+    callback(&sock->base, nread, sock->rdarg);
     decref_sock(sock);
     (void)buf;
 }
 
 static int start_read(lcb_io_opt_t iobase,
                       lcb_sockdata_t *sockbase,
-                      lcb_io_read_cb callback)
+                      lcb_IOV *iov,
+                      lcb_size_t niov,
+                      void *uarg,
+                      lcb_ioC_read2_callback callback)
 {
     my_sockdata_t *sock = (my_sockdata_t *)sockbase;
     my_iops_t *io = (my_iops_t *)iobase;
     int ret;
 
-    sock->cur_iov = 0;
+    sock->iov = *iov;
+    sock->rdarg = uarg;
     sock->tcp.callback = callback;
 
     ret = uv_read_start((uv_stream_t *)&sock->tcp.t, alloc_cb, read_cb);
@@ -593,7 +582,7 @@ static void wire_iops2(int version,
     iocp->socket = create_socket;
     iocp->connect = start_connect;
     iocp->nameinfo = get_nameinfo;
-    iocp->read = start_read;
+    iocp->read2 = start_read;
     iocp->write2 = start_write2;
 
     /** Stuff we don't use */
