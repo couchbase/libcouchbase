@@ -11,8 +11,6 @@ extern "C" {
 #endif
 
 struct lcb_settings_st;
-typedef struct mc_SASLREQ *mc_pSASLREQ;
-typedef struct mc_SASLINFO *mc_pSASLINFO;
 struct lcb_server_st;
 
 /**
@@ -48,20 +46,6 @@ typedef struct lcb_server_st {
     /** Request for current connection */
     lcb_host_t curhost;
 } lcb_server_t, mc_SERVER;
-
-mc_pSASLREQ
-mc_sasl_start(
-        lcbio_SOCKET *sock, struct lcb_settings_st *settings,
-        uint32_t tmo, lcbio_CONNDONE_cb callback, void *data);
-
-void
-mc_sasl_cancel(mc_pSASLREQ handle);
-
-mc_pSASLINFO
-mc_sasl_get(lcbio_SOCKET *sock);
-
-const char *
-mc_sasl_getmech(mc_pSASLINFO info);
 
 #define MCSERVER_TIMEOUT(c) (c)->settings->operation_timeout
 

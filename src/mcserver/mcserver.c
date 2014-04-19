@@ -19,7 +19,7 @@
 #include "logging.h"
 #include "vb-aliases.h"
 #include "settings.h"
-
+#include "negotiate.h"
 #include "bucketconfig/clconfig.h"
 #include "mc/mcreq-flush-inl.h"
 

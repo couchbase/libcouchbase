@@ -17,6 +17,7 @@
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
 #include <lcbio/iotable.h>
+#include <mcserver/negotiate.h>
 /**
  * ioctl/fcntl-like interface for libcouchbase configuration properties
  */

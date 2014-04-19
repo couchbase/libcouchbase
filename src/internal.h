@@ -41,7 +41,7 @@
 #include "hashset.h"
 #include "genhash.h"
 #include "timer.h"
-#include "mcserver.h"
+#include "mcserver/mcserver.h"
 #include "settings.h"
 #include "logging.h"
 #include "mc/mcreq.h"

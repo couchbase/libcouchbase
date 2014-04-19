@@ -213,13 +213,13 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/http.c
             src/http_io.c
             src/instance.c
+            src/mcserver/negotiate.c
+            src/mcserver/mcserver.c
             src/newconfig.c
             src/iofactory.c
             src/retryq.c
             src/sanitycheck.c
-            src/server.c
             src/settings.c
-            src/server_negotiate.c
             src/timer.c
             src/timings.c
             ${CMAKE_BINARY_DIR}/dllversion.rc

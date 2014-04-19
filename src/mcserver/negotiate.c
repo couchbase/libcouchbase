@@ -5,6 +5,7 @@
 #include "settings.h"
 #include <lcbio/lcbio.h>
 #include <cbsasl/cbsasl.h>
+#include "negotiate.h"
 
 #define LOGARGS(ctx, lvl) \
     ctx->inner->settings, "negotiation", LCB_LOG_##lvl, __FILE__, __LINE__

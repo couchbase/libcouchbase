@@ -25,7 +25,7 @@
 #include "clconfig.h"
 #include "packetutils.h"
 #include "simplestring.h"
-#include "mcserver.h"
+#include <mcserver/negotiate.h>
 #include <lcbio/lcbio.h>
 
 #define LOGARGS(cccp, lvl) \
