@@ -30,7 +30,7 @@
 #endif
 
 #if defined(_WIN32) && defined(LIBCOUCHBASE_INTERNAL)
-#include "win32/win_errno_sock.h"
+#include <libcouchbase/plugins/io/wsaerr.h>
 #endif
 
 #ifndef UNKNOWN

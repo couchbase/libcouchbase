@@ -9,7 +9,7 @@ static void
 wire_lcb_bsd_impl(lcb_io_opt_t io);
 
 #ifdef _WIN32
-
+#include "wsaerr-inl.c"
 static int
 get_wserr(lcb_socket_t sock)
 {
@@ -19,30 +19,7 @@ get_wserr(lcb_socket_t sock)
 
     /* Retrieves extended error status and clear */
     getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&ext, &len);
-    switch (error) {
-    case WSAECONNRESET:
-    case WSAECONNABORTED:
-        return ECONNRESET;
-    case WSAEWOULDBLOCK:
-        return EWOULDBLOCK;
-    case WSAEINVAL:
-        return EINVAL;
-    case WSAEINPROGRESS:
-        return EINPROGRESS;
-    case WSAEALREADY:
-        return EALREADY;
-    case WSAEISCONN:
-        return EISCONN;
-    case WSAENOTCONN:
-        return ENOTCONN;
-    case WSAECONNREFUSED:
-        return ECONNREFUSED;
-
-    default:
-        fprintf(stderr, "[couchbase] Unrecognized WSAError: %d. SO_ERROR=%d\n",
-                (int)error, (int)ext);
-        return EINVAL;
-    }
+    return wsaerr_map_impl(error);
 }
 
 static lcb_ssize_t
