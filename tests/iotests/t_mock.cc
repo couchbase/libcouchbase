@@ -623,11 +623,11 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
     io = (lcb_io_opt_t)lcb_get_cookie(instance);
 
     /* --enable-warnings --enable-werror won't let me use a simple void* */
-    void (*io_close_old)(lcb_io_opt_t, lcb_socket_t) = io->v.v0_INTERNAL.close;
+    void (*io_close_old)(lcb_io_opt_t, lcb_socket_t) = io->v.v0.close;
 
     lcb_set_timeout(instance, 3100000); /* 3.1 seconds */
     hrtime_t now = gethrtime(), begin_time = 0;
-    io->v.v0_INTERNAL.close = io_close_wrap;
+    io->v.v0.close = io_close_wrap;
 
     lcb_set_store_callback(instance, store_callback);
     lcb_set_get_callback(instance, tpb_get_callback);
@@ -662,8 +662,8 @@ TEST_F(MockUnitTest, DISABLED_testPurgedBody)
      * backed_value back.
      */
     begin_time = gethrtime();
-    io->v.v0_INTERNAL.run_event_loop(io);
-    io->v.v0_INTERNAL.close = io_close_old;
+    io->v.v0.run_event_loop(io);
+    io->v.v0.close = io_close_old;
 
     now = gethrtime();
 
