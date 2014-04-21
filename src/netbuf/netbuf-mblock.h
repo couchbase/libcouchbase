@@ -8,14 +8,20 @@ extern "C" {
 #endif
 
 /**
+ * @file
+ *
+ * @ingroup NETBUFS
+ * @defgroup NETBUF_MBLOCK Netbuf Block Allocator
+ * @details
+ *
  * Managed block in-order allocator.
  *
  * This allocator attempts to provide unaligned segments of memory in the
  * order they were allocated in contiguous memory
- */
-
-/**
- * DIAGRAM LEGEND
+ *
+ * @verbatim
+ *
+ * LEGEND
  * In the following comments (and within the source as well) we will try to
  * display diagrams of blocks. The following symbols will be used:
  *
@@ -38,9 +44,7 @@ extern "C" {
  * [x]           Used data. This data is owned by a span
  * [o]           Unused data, but available for usage
  * [-]           Unreachable data. This is not used but cannot be reserved
- */
-
-/**
+ *
  * A block contains a single allocated buffer. The buffer itself may be
  * divided among multiple spans. We divide our buffers like so:
  *
@@ -75,6 +79,9 @@ extern "C" {
  *
  * (1) The number of bytes between [S]tart and [Wrap]
  * (2) If [C] != [W], then also add the value of [C]
+ * @endverbatim
+ * @addtogroup NETBUF_MBLOCK
+ * @{
  */
 
 struct netbuf_mblock_st;
@@ -95,12 +102,19 @@ typedef struct {
     nb_SIZE offset;
 } nb_ALLOCINFO;
 
+/**
+ * @brief Structure for an out-of-order dealloc
+ */
 typedef struct {
     sllist_node slnode;
-    nb_SIZE offset;
-    nb_SIZE size;
+    nb_SIZE offset; /**< Offset into the nb_MBLOCK to release */
+    nb_SIZE size; /**< Size to release */
 } nb_QDEALLOC;
 
+/**
+ * @brief Data Block
+ * This structure represents the head of an `MBLOCK`.
+ */
 typedef struct {
     sllist_node slnode;
 
@@ -115,9 +129,9 @@ typedef struct {
      *
      * If the block has two segments, this marks the end of the first segment.
      *
-     * In both cases:
-     *  I. wrap is always > start
-     *  II. wrap-start is the length of the first segment of data
+     * In both cases
+     *  1. `wrap` is always `> start`
+     *  2. `wrap-start` is the length of the first segment of data
      */
     nb_SIZE wrap;
 
@@ -127,21 +141,21 @@ typedef struct {
      *
      * If the block only has a single segment then both the following are true:
      *
-     *  I. cursor == wrap
-     *  II. cursor > start (if not empty)
+     *  1. `cursor == wrap`
+     *  2. `cursor > start` (if not empty)
      *
      * If the block has two segments, then both the following are true:
      *
-     *  I. cursor != wrap
-     *  II. cursor < start
+     *  1. `cursor != wrap`
+     *  2. `cursor < start`
      *
      * If the block is empty:
-     *  cursor == start
+     *  - `cursor == start`
      */
     nb_SIZE cursor;
 
     /**
-     * Total number of bytes allocated in root. This represents the absolute
+     * Total number of bytes allocated in `root`. This represents the absolute
      * limit on how much data can be supplied
      */
     nb_SIZE nalloc;
@@ -153,13 +167,16 @@ typedef struct {
     char *root;
 
     /**
-     * Pointer to a DEALLOC_QUEUE structure. This is only valid if an
+     * Pointer to a nb_DEALLOC_QUEUE structure. This is only valid if an
      * out-of-order dealloc has been performed on this block.
      */
     struct netbuf_mblock_dealloc_queue_st *deallocs;
     struct netbuf_mblock_st *parent;
 } nb_MBLOCK;
 
+/**
+ * @brief pool of nb_MBLOCK structures
+ */
 typedef struct netbuf_mblock_st {
     /** Active blocks that have at least one reserved span */
     sllist_root active;
@@ -182,11 +199,18 @@ typedef struct netbuf_mblock_st {
     struct netbuf_st *mgr;
 } nb_MBPOOL;
 
+/**
+ * @brief List of out-of-order deallocs
+ * This is attached to an nb_MBLOCK structure if allocations have been performed
+ * on it in an out-of-order fashion
+ */
 typedef struct netbuf_mblock_dealloc_queue_st {
     sllist_root pending;
-    nb_SIZE min_offset;
-    nb_MBPOOL qpool;
+    nb_SIZE min_offset; /**< The first offset contained in the list */
+    nb_MBPOOL qpool; /**< Used to allcate the nb_QDEALLOC structures themselves*/
 } nb_DEALLOC_QUEUE;
+
+/**@}*/
 
 #ifdef __cplusplus
 }

@@ -7,37 +7,59 @@
 #include "list.h"
 #include <stdio.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
+ * @file
+ * @brief Socket pooling routines
+ *
+ * @details
  * General purpose connection manager for LCB sockets. This object is
  * responsible for maintaining and properly handling idle connections
  * and pooling them (optionally).
  */
-struct lcbio_MGRREQ;
-struct lcbio_MGR;
 
+/**
+ * @ingroup LCBIO
+ * @defgroup LCBIO_Mgr Socket Pooling
+ * @addtogroup LCBIO_Mgr
+ * @{
+ */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** Cancellable pool request */
+struct lcbio_MGRREQ;
+
+/** @brief Socket Pool */
 typedef struct lcbio_MGR {
     genhash_t* ht;
     lcb_settings *settings;
     lcbio_pTABLE io;
+
+    /**
+     * Maximum number of microseconds for a connection to idle inside the pool
+     * before being closed
+     */
     uint32_t tmoidle;
     unsigned maxtotal;
-    unsigned maxidle;
+    unsigned maxidle; /**< Maximum number of idle connections, per host */
     unsigned refcount;
 } lcbio_MGR;
 
 /**
- * Create a socket pool controlled by the given settings and IO structure
+ * Create a socket pool controlled by the given settings and IO structure.
+ * This function will increment the refcount on both the settings and table
+ * objects.
  */
 LCB_INTERNAL_API
 lcbio_MGR*
 lcbio_mgr_create(lcb_settings *settings, lcbio_pTABLE io);
 
 /**
- * Free the socket pool
+ * Destroy the socket pool. Note that internally this just decrements the
+ * reference count. The object is only destroyed when its count hits zero.
  */
 LCB_INTERNAL_API
 void
@@ -47,12 +69,14 @@ lcbio_mgr_destroy(lcbio_MGR *);
  * Request a connection from the socket pool. The semantics and prototype
  * of this function are by design similar to lcbio_connect() as they do the
  * same things.
- * @param mgr the manager to use for connection
+ *
+ * @param mgr
  * @param dest the host to connect to
  * @param timeout amount of time to wait for a connection to be estblished
  * @param handler a callback to invoke when the result is ready
  * @param arg an argument passed to the callback
  * @return a request handle which may be cancelled
+ * @see lcbio_connect()
  */
 LCB_INTERNAL_API
 struct lcbio_MGRREQ *
@@ -62,7 +86,6 @@ lcbio_mgr_get(lcbio_MGR *mgr, lcb_host_t *dest, uint32_t timeout,
 /**
  * Cancel a pending request. The callback for the request must have not already
  * been invoked (if it has, use sockpool_put)
- * @param pool the pool which the request was made to
  * @param req the request to cancel
  */
 LCB_INTERNAL_API
@@ -87,7 +110,7 @@ LCB_INTERNAL_API
 void lcbio_mgr_discard(lcbio_SOCKET *sock);
 
 /**
- * Like lcbio_MGR_discard() except the source connection is left untouched. It
+ * Like lcbio_mgr_discard() except the source connection is left untouched. It
  * is removed from the pool instead.
  *
  * Because the lcbio_MGR object itself has internal limits and thresholds on how
@@ -95,10 +118,10 @@ void lcbio_mgr_discard(lcbio_SOCKET *sock);
  * an error it must either be discarded back to the pool (in which case the
  * connection is cleaned up and is freed) or it must be detached (in which case
  * the connection object itself still remains valid, but the pool does not know
- * about it, and all its counters are restored, as with lcbio_MGR_discard).
+ * about it, and all its counters are restored, as with lcbio_mgr_discard()).
  *
- * lcbio_MGR_discard() itself is now implemented as the equivalent to:
- *  lcbio_MGR_detach(mgr, conn);
+ * lcbio_mgr_discard() itself is now implemented as the equivalent to:
+ *  `lcbio_mgr_detach(mgr, conn)`;
  */
 LCB_INTERNAL_API
 void lcbio_mgr_detach(lcbio_SOCKET *sock);
@@ -112,4 +135,6 @@ void lcbio_mgr_dump(lcbio_MGR *mgr, FILE *out);
 #ifdef __cplusplus
 }
 #endif
+/**@}*/
+
 #endif /* LCB_SOCKPOOL_H */

@@ -176,7 +176,7 @@ mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
         unsigned int ii;
         lcb_kvbuf_multi_t *multi = &packet->u_value.multi;
         for (ii = 0; ii < multi->niov; ii++) {
-            netbuf_enqueue(&pipeline->nbmgr, multi->iov + ii);
+            netbuf_enqueue(&pipeline->nbmgr, (nb_IOV *)multi->iov + ii);
         }
 
     } else if (vspan->size) {
@@ -283,7 +283,7 @@ mcreq_dup_packet(const mc_PACKET *src)
             nvdata = src->u_value.multi.total_length;
             vdata = malloc(nvdata);
             for (ii = 0; ii < src->u_value.multi.niov; ii++) {
-                const nb_IOV *iov = src->u_value.multi.iov + ii;
+                const lcb_IOV *iov = src->u_value.multi.iov + ii;
                 memcpy(vdata + offset, iov[ii].iov_base, iov[ii].iov_len);
                 offset += iov[ii].iov_len;
             }

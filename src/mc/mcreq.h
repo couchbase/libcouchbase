@@ -7,25 +7,124 @@
 #include "netbuf/netbuf.h"
 #include "sllist.h"
 #include "config.h"
-#include "mcreq-public.h"
 #include "packetutils.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /** __cplusplus */
 
+/**
+ * @file
+ * @brief Core memcached client routines
+ */
+
+/**
+ * @defgroup MCREQ Memcached Packets
+ *
+ * @brief
+ * This module defines the core routines which are used to construct, handle,
+ * and enqueue packets. They also handle the retry mechanisms.
+ *
+ *
+ * # Initializing the Queue
+ *
+ * Using the mcreq system involves first establishing an mc_CMDQUEUE structure.
+ * This structure contains several mc_PIPELINE structures. The proper way to
+ * initialize the mc_CMDQEUE structure is to call mcreq_queue_init().
+ *
+ * Once the queue has been initialized, it must be assigned a
+ * `VBUCKET_CONFIG_HANDLE` (which it will _not_ own). This is done via the
+ * mcreq_queue_add_pipelines(). This function takes an array of pipeline pointers,
+ * and this will typically be a "subclass" (mc_SERVER) allocated via
+ * mcserver_alloc()
+ *
+ * Once the pipelines have been established, operations may be scheduled and
+ * distributed across the various pipelines.
+ *
+ * # Creating a Packet
+ *
+ * For each packet sent, the packet should first be reserved via the
+ * mcreq_basic_packet() call which allocates space for the actual packet
+ * as well as provides and populates the vbucket fields as needed.
+ *
+ * The header size must be the total size of the header plus any extras
+ * following the header but before the actual key data.
+ *
+ * If the command carries a body in addition to the key, it should be provided
+ * via mcreq_reserve_value().
+ *
+ * Once the packet has a key and value it must be assigned a cookie. The
+ * cookie may either be of a simple embedded type or an extended type. Whatever
+ * the case the appropriate flags should be set.
+ *
+ * # Scheduling Commands
+ *
+ * Scheduling commands is performed in an _enter_ and _leave_ sequence.
+ * mcreq_sched_enter() should be called before one or more commands are added.
+ * Then for each new command added, mcreq_sched_add() should be invoked with
+ * the new packet, and finally either mcreq_sched_leave() or mcreq_sched_fail()
+ * should be invoked to flush the commands to the network or free the resources
+ * allocated. In both cases the commands affected are scoped by the last call
+ * to mcreq_sched_enter().
+ *
+ * In order for commands to actually be flushed, the mc_PIPELINE::flush_start
+ * field must be set. This can vary depending on what the state of the underlying
+ * socket is. In server.c for example, the initial callback just schedules a
+ * connection. While the connection is in progress this field is set to a no-op
+ * callback, and finally when the socket is connected this field is set to
+ * interact with the I/O system which actually writes the buffers.
+ *
+ * # Flushing Responses
+ *
+ * This module does not do network I/O by design. Its only bridge is the
+ * mc_PIPELINE::flush_start function which should be set to actually flush
+ * the data.
+ *
+ * # Handling Reponses
+ *
+ * The I/O system reading the responses should place the response into a
+ * packet_info structure. Once this is done, the request for the response must
+ * be found using the opaque. This may be done with mcreq_pipeline_find()
+ * or mcreq_pipeline_remove() depending on whether this request expects multiple
+ * responses (such as the 'stat' command). These parameters should be passed
+ * to the mcreq_dispatch_response() function which will invoke the appropriate
+ * user-defined handler for it.
+ *
+ * If the packet does not expect more responses (as above), the application
+ * should call mcreq_packet_handled()
+ *
+ *
+ * # Error Handling and Failing Commands
+ *
+ * This module offers facilities for failing commands from a pipeline while
+ * safely allowing for their sharing of user-allocated data.
+ *
+ * The mcreq_pipeline_fail() and mcreq_pipeline_timeout() will fail packets
+ * in a single pipeline (the former failing all packets, the latter failing
+ * only packets older than a specified threshold).
+ *
+ * The mcreq_iterwipe() will clean a pipeline of its packets, invoking a
+ * callback which allows the user to relocate the packet to another pipeline.
+ * In this callback the user may invoke the mcreq_dup_packet() function to
+ * duplicate a packet's _data_ without duplicating its _state_.
+ *
+ * @addtogroup MCREQ
+ * @{
+ */
+
+
+/**
+ * @name Core Packet Structure
+ * @{
+ */
+
+/** @brief Constant defining the size of a memcached header */
 #define MCREQ_PKT_BASESIZE 24
 
-/******************************************************************************
- ******************************************************************************
- ** Datatypes                                                                **
- ******************************************************************************
- ******************************************************************************/
-
-/** Embedded user data for a simple request */
+/** @brief Embedded user data for a simple request */
 typedef struct {
-    const void *cookie; /** User pointer to place in callbacks */
-    hrtime_t start; /** Time of the initial request. Used for timeouts */
+    const void *cookie; /**< User pointer to place in callbacks */
+    hrtime_t start; /**< Time of the initial request. Used for timeouts */
 } mc_REQDATA;
 
 struct mc_packet_st;
@@ -43,11 +142,11 @@ typedef void (*mcreq_pktex_callback)
         (struct mc_pipeline_st *pipeline, struct mc_packet_st *pkt,
                 lcb_error_t rc, const void *res);
 
-/** Allocated user data for an extended request. */
+/** @brief Allocated user data for an extended request. */
 typedef struct {
-    const void *cookie;
-    hrtime_t start;
-    mcreq_pktex_callback callback;
+    const void *cookie; /**< User data */
+    hrtime_t start; /**< Start time */
+    mcreq_pktex_callback callback; /**< Callback to invoke upon being handled */
 } mc_REQDATAEX;
 
 /**
@@ -61,7 +160,8 @@ typedef struct {
 typedef void (*mcreq_bufdone_fn)(const void *ucookie, void *kbuf, void *vbuf);
 
 /**
- * Possible values for the 'flags' field in the packet structure. These provide
+ * Possible values for the mc_PACKET#flags field in the packet structure.
+ * These provide
  * information as to which fields in the various unions are in use, and how
  * to allocate/release data buffers for requests.
  */
@@ -74,16 +174,16 @@ typedef enum {
 
     /**
      * The value is user allocated and in the form of an IOV.
-     * Use mc_VALUE::multi
+     * Use mc_VALUE#multi
      */
     MCREQ_F_VALUE_IOV = 1 << 2,
 
-    /** The request has a value. Use mc_VALUE::single unless otherwise noted */
+    /** The request has a value. Use mc_VALUE#single unless otherwise noted */
     MCREQ_F_HASVALUE = 1 << 3,
 
     /**
      * The request is tied to an 'extended' user data structure.
-     * Use mc_USER::exdata
+     * Use mc_USER#exdata
      */
     MCREQ_F_REQEXT = 1 << 4,
 
@@ -113,9 +213,12 @@ typedef enum {
     MCREQ_F_DETACHED = 1 << 9
 } mcreq_flags;
 
+/** @brief mask of flags indicating user-allocated buffers */
 #define MCREQ_UBUF_FLAGS (MCREQ_F_KEY_NOCOPY|MCREQ_F_VALUE_NOCOPY)
+/** @brief mask of flags indicating response state of the packet */
 #define MCREQ_STATE_FLAGS (MCREQ_F_INVOKED|MCREQ_F_FLUSHED)
 
+/** Union representing the value within a packet */
 union mc_VALUE {
     /** For a single contiguous value */
     nb_SPAN single;
@@ -124,6 +227,7 @@ union mc_VALUE {
     lcb_kvbuf_multi_t multi;
 };
 
+/** Union representing application/command data within a packet structure */
 union mc_USER {
     /** Embedded command info for simple commands; 16 bytes, 48B */
     mc_REQDATA reqdata;
@@ -133,14 +237,21 @@ union mc_USER {
 };
 
 /**
- * PACKET STRUCTURE. A single packet structure is allocated for each request
+ * @brief Packet structure for a single Memcached command
+ *
+ * A single packet structure is allocated for each request
  * sent to a server. A packet structure may be associated with user data in the
  * u_rdata union field, either by using the embedded structure, or by referencing
  * an allocated chunk of 'extended' user data.
  */
 typedef struct mc_packet_st {
-    /** Node in the linked list */
+    /** Node in the linked list for logical command ordering */
     sllist_node slnode;
+
+    /**
+     * Node in the linked list for actual output ordering.
+     * @see netbuf_end_flush2(), netbuf_pdu_enqueue()
+     */
     sllist_node sl_flushq;
 
     /** Span for key and header */
@@ -152,8 +263,10 @@ typedef struct mc_packet_st {
     /* Padding */
     uint8_t unused;
 
-    /** flags for request */
+    /** flags for request. @see mcreq_flags */
     uint16_t flags;
+
+    /** Cached opaque value */
     uint32_t opaque;
 
     /** User/CMDAPI Data */
@@ -167,14 +280,21 @@ typedef struct mc_packet_st {
 } mc_PACKET;
 
 /**
- * Gets the request data from the packet structure itself
+ * @brief Gets the request data from the packet structure itself
+ * @return an mc_REQDATA or mc_REQDATAEX pointer
  */
 #define MCREQ_PKT_RDATA(pkt) \
     (((pkt)->flags & MCREQ_F_REQEXT) \
         ? ((mc_REQDATA *)(pkt)->u_rdata.exdata) \
         : (&(pkt)->u_rdata.reqdata))
 
+/**
+ * @brief Retrieve the cookie pointer from a packet
+ * @param pkt
+ */
 #define MCREQ_PKT_COOKIE(pkt) MCREQ_PKT_RDATA(pkt)->cookie
+
+/**@}*/
 
 /**
  * Callback invoked when APIs request that a pipeline start flushing. It
@@ -183,25 +303,37 @@ typedef struct mc_packet_st {
 typedef void (*mcreq_flushstart_fn)(struct mc_pipeline_st *pipeline);
 
 /**
+ * @brief Structure representing a single input/output queue for memcached
+ *
  * Memcached request pipeline. This contains the command log for
- * sending/receiving requests.
+ * sending/receiving requests. This is basically the non-I/O part of the server
  */
 typedef struct mc_pipeline_st {
-    /**
-     * Slist for requests. New requests are added to the end, and older
-     * commands remain at the beginning.
-     */
+    /** List of requests. Newer requests are appended at the end */
     sllist_root requests;
 
     /** Parent command queue */
     struct mc_cmdqueue_st *parent;
 
-    /** Flush handler */
+    /**
+     * Flush handler. This is invoked to schedule a flush operation
+     * the socket
+     */
     mcreq_flushstart_fn flush_start;
 
+    /** Index of this server within the configuration map */
     int index;
+
+    /**
+     * Intermediate queue where pending packets are placed. Moved to
+     * the `requests` list when mcreq_sched_leave() is called
+     */
     sllist_root ctxqueued;
 
+    /**
+     * Callback invoked for each packet (which has user-defined buffers) when
+     * it is no longer required
+     */
     mcreq_bufdone_fn buf_done_callback;
 
     /** Buffer manager for the respective requests. */
@@ -216,7 +348,7 @@ typedef struct mc_cmdqueue_st {
     mc_PIPELINE **pipelines;
 
     /**
-     * Small array of size npipelines, for sched_enter()/sched_leave()
+     * Small array of size npipelines, for mcreq_sched_enter()/mcreq_sched_leave()
      * stuff. See those functions for usage
      */
     char *scheds;
@@ -224,7 +356,7 @@ typedef struct mc_cmdqueue_st {
     /** Number of pipelines in the queue */
     unsigned npipelines;
 
-    /** Sequence number for pipeline */
+    /** Sequence number for pipeline. Incremented for each new packet */
     uint32_t seq;
 
     /** Configuration handle for vBucket mapping */
@@ -235,29 +367,6 @@ typedef struct mc_cmdqueue_st {
 
     lcb_t instance;
 } mc_CMDQUEUE;
-
-
-/******************************************************************************
- ******************************************************************************
- ** Flow Details                                                             **
- ******************************************************************************
- ******************************************************************************/
-
-/**
- * For each packet sent, the packet should first be reserved via the
- * mcreq_basic_packet() call which allocates space for the actual packet
- * as well as provides and populates the vbucket fields as needed.
- *
- * The header size must be the total size of the header plus any extras
- * following the header but before the actual key data.
- *
- * If the command carries a body in addition to the key, it should be provided
- * via reserve_value().
- *
- * Once the packet has a key and value it must be assigned a cookie. The
- * cookie may either be of a simple embedded type or an extended type. Whatever
- * the case the appropriate flags should be set.
- */
 
 /**
  * Allocate a packet belonging to a specific pipeline.
@@ -382,8 +491,8 @@ mcreq_wipe_packet(mc_PIPELINE *pipeline, mc_PACKET *packet);
  * @param key the key structure for the item key
  * @param hashkey the key structure for the hashkey
  * @param nheader the size of the header
- * @param target [out] the pointer to receive the target hashkey
- * @param ntarget [out] the pointer to receive the target length
+ * @param[out] target the pointer to receive the target hashkey
+ * @param[out] ntarget the pointer to receive the target length
  */
 void
 mcreq_extract_hashkey(
@@ -395,28 +504,40 @@ mcreq_extract_hashkey(
  * Handle the basic requirements of a packet common to all commands
  * @param queue the queue
  * @param cmd the command base structure
- * @param req the request header which will be set with key, vbucket, and extlen
+ *
+ * @param[out] req the request header which will be set with key, vbucket, and extlen
  *        fields. In other words, you do not need to initialize them once this
  *        function has completed.
  *
  * @param extlen the size of extras for this command
- * @param packet [out] a pointer set to the address of the allocated packet
- * @param pipeline [out] a pointer set to the target pipeline
+ * @param[out] packet a pointer set to the address of the allocated packet
+ * @param[out] pipeline a pointer set to the target pipeline
  */
 
 lcb_error_t
 mcreq_basic_packet(
         mc_CMDQUEUE *queue, const lcb_cmd_t *cmd,
-        protocol_binary_request_header *req, lcb_uint8_t extlen,
+        protocol_binary_request_header *req, uint8_t extlen,
         mc_PACKET **packet, mc_PIPELINE **pipeline);
 
+/**
+ * @brief Get the key from a packet
+ * @param[in] packet The packet from which to retrieve the key
+ * @param[out] key
+ * @param[out] nkey
+ */
 void
 mcreq_get_key(const mc_PACKET *packet, const void **key, lcb_size_t *nkey);
 
-/** Returns the size of the entire packet, in bytes */
-lcb_uint32_t
+/** @brief Returns the size of the entire packet, in bytes */
+uint32_t
 mcreq_get_bodysize(const mc_PACKET *packet);
 
+/**
+ * @brief get the total packet size (header+body)
+ * @param pkt the packet
+ * @return the total size
+ */
 #define mcreq_get_size(pkt) (mcreq_get_bodysize(pkt) + MCREQ_PKT_BASESIZE)
 
 /** Initializes a single pipeline object */
@@ -462,6 +583,12 @@ mcreq_queue_init(mc_CMDQUEUE *queue);
 void
 mcreq_queue_cleanup(mc_CMDQUEUE *queue);
 
+/**
+ * @brief Add a packet to the current scheduling context
+ * @param pipeline
+ * @param pkt
+ * @see mcreq_sched_enter()
+ */
 void
 mcreq_sched_add(mc_PIPELINE *pipeline, mc_PACKET *pkt);
 
@@ -469,13 +596,13 @@ mcreq_sched_add(mc_PIPELINE *pipeline, mc_PACKET *pkt);
  * Find a packet with the given opaque value
  */
 mc_PACKET *
-mcreq_pipeline_find(mc_PIPELINE *pipeline, lcb_uint32_t opaque);
+mcreq_pipeline_find(mc_PIPELINE *pipeline, uint32_t opaque);
 
 /**
  * Find and remove the packet with the given opaque value
  */
 mc_PACKET *
-mcreq_pipeline_remove(mc_PIPELINE *pipeline, lcb_uint32_t opaque);
+mcreq_pipeline_remove(mc_PIPELINE *pipeline, uint32_t opaque);
 
 /**
  * Handles a received packet in response to a command
@@ -483,7 +610,7 @@ mcreq_pipeline_remove(mc_PIPELINE *pipeline, lcb_uint32_t opaque);
  * @param request the original request
  * @param response the packet received in the response
  * @param immerr an immediate error message. If this is not LCB_SUCCESS then
- *  the packet in 'IMERR' shall contain only a header and the request itself
+ *  the packet in `response` shall contain only a header and the request itself
  *  should be analyzed
  *
  * @return 0 on success, nonzero if the handler could not be found for the
@@ -537,6 +664,13 @@ mcreq_iterwipe(mc_CMDQUEUE *queue, mc_PIPELINE *src,
 void
 mcreq_packet_done(mc_PIPELINE *pipeline, mc_PACKET *pkt);
 
+/**
+ * @brief Indicate that the packet was handled
+ * @param pipeline the pipeline
+ * @param pkt the packet which was handled
+ * If the packet has also been flushed, the packet's storage will be released
+ * and `pkt` will no longer point to valid memory.
+ */
 #define mcreq_packet_handled(pipeline, pkt) do { \
     (pkt)->flags |= MCREQ_F_INVOKED; \
     if ((pkt)->flags & MCREQ_F_FLUSHED) { \
@@ -610,6 +744,7 @@ mcreq_dump_chain(const mc_PIPELINE *pipeline);
 #define mcreq_read_hdr(pkt, hdr) \
         memcpy( (hdr)->bytes, SPAN_BUFFER(&(pkt)->kh_span), sizeof((hdr)->bytes) )
 
+/**@}*/
 
 #ifdef __cplusplus
 }

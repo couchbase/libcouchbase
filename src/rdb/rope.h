@@ -9,20 +9,19 @@
 extern "C" {
 #endif
 
-/******************************************************************************
- ******************************************************************************
- ** Overview                                                                 **
- ******************************************************************************
- ******************************************************************************
+/**
+ * @defgroup RDB
+ * @brief Read buffer system.
  *
- * Rope/Allocator design methodology:
+ * # Overview
  *
  * This subsystem provides an extensible means by which to deal with input
  * network buffers.
  *
- * Sequential network data is represented in something called a "ROPE" structure.
- * The rope structure itself consists of one or more "SEGMENT" structures;
- * where a segment represents a contiguous block of memory.
+ * Sequential network data is represented in something called an `rdb_ROPEBUF`
+ * structure. The rope structure itself consists of one or more
+ * `rdb_ROPESEG` structures; where a segment represents a contiguous block of
+ * memory.
  *
  * Segments are thus the base allocation unit. They are chained together in
  * a ROPE structure to form a sequence of data, where the first segment contains
@@ -30,9 +29,7 @@ extern "C" {
  * free space for additional reads).
  *
  * The size of each segment is determined by either the Allocator or the
- * library:
- *
- * The allocator determines the size for "Estimated" read-aheads, where it
+ * library. The allocator determines the size for "Estimated" read-aheads, where it
  * decides on the best form of fragmentation (if any) for the TCP buffers.
  * The library determines the size of a segment if a specific sequence of data
  * must be represented as contiguous bytes in memory.
@@ -45,13 +42,8 @@ extern "C" {
  * The API here is divided into two sections. One API deals with allocating
  * the relevant buffers (allocation API) while the other API deals with
  * extracting data from said buffers.
- */
-
-/******************************************************************************
- ******************************************************************************
- ** Extraction API                                                           **
- ******************************************************************************
- ******************************************************************************
+ *
+ * # Extraction API
  *
  * The extraction API provides means for receiving buffers for network reads
  * and for extracting data once these reads have been completed.
@@ -80,9 +72,7 @@ extern "C" {
  * will advance the start position by the specified number of bytes, releasing
  * any buffers which do not contain data back to the allocator.
  *
- ******************************************************************************
- ** Extended Extraction APIs                                                 **
- ******************************************************************************
+ * ## Extended Extraction API
  *
  * The more advanced rdb_refread_ex() will populate an array of IOV and
  * rdb_SEGMENT pointers with the first such element containing the offsets of
@@ -102,13 +92,9 @@ extern "C" {
  * partial read where remaining data has not been received yet, but you know
  * that you will need the current segment as well as a specified length
  * of incoming data to be contiguous.
- */
-
-/******************************************************************************
- ******************************************************************************
- ** Allocator API                                                            **
- ******************************************************************************
- ******************************************************************************
+ *
+ * # Allocator API
+ *
  * The allocator APIs determine the granularity and fragmentation of the
  * read buffers. They can also perform pooling and other sorts of optimizations
  * that would depend on the application-specific use case and not determinable
@@ -135,6 +121,11 @@ extern "C" {
  * Finally, there is the a_release() field which acts as a destructor for the
  * allocator. It signals to the allocator that no _new_ data will be allocated
  * from it.
+ */
+
+/**
+ * @addtogroup RDB
+ * @{
  */
 
 
@@ -166,22 +157,28 @@ enum rdb_ALLOCID {
 
 /** Segment within a rope buffer */
 typedef struct rdb_ROPESEG {
-    lcb_list_t llnode; /* linked list node */
-    char *root; /* Allocated buffer */
-    unsigned char shflags; /* ROPESEG_F_ */
-    unsigned char allocid; /* Allocator ID */
-    unsigned nalloc; /* total allocated length */
-    unsigned nused; /* number of bytes containing data */
-    unsigned start; /* offset where data begins */
-    unsigned refcnt; /* see ref/unref */
+    lcb_list_t llnode; /** linked list node */
+    char *root; /** Allocated buffer */
+    unsigned char shflags; /** rdb_SEGFLAGS */
+    unsigned char allocid; /** rdb_ALLOCID */
+    unsigned nalloc; /** total allocated length */
+    unsigned nused; /** number of bytes containing data */
+    unsigned start; /** offset where data begins */
+    unsigned refcnt; /** see ref/unref */
     rdb_pALLOCATOR allocator;
 } rdb_ROPESEG;
 
 typedef struct {
-    rdb_ROPEBUF recvd; /* rope containing read data */
-    rdb_ROPEBUF avail; /* rope used for subsequent network reads */
-    unsigned rdsize; /* preferred read size */
+    rdb_ROPEBUF recvd; /** rope containing read data */
+    rdb_ROPEBUF avail; /** rope used for subsequent network reads */
+    unsigned rdsize; /** preferred read size */
 } rdb_IOROPE;
+
+
+/**
+ * @name Allocator API
+ * @{
+ */
 
 /**
  * Extend an existing rope structure by adding additional space at the end.
@@ -193,8 +190,8 @@ typedef struct {
  * It is assumed that this will only be called when it is safe to relocate
  * the contents of the underlying buffer.
  *
- * Each of the appended ROPESEG structures should initially have the
- * RDB_ROPESEG_F_LIB indicating they are in use by the library.
+ * Each of the appended rdb_ROPESEG structures should initially have the
+ * `RDB_ROPESEG_F_LIB` indicating they are in use by the library.
  */
 typedef void (*rdb_buf_reserve_fn)
         (rdb_pALLOCATOR allocator, rdb_ROPEBUF *buf, unsigned total_capacity);
@@ -236,6 +233,10 @@ typedef struct rdb_ALLOCATOR {
 } rdb_ALLOCATOR;
 
 /**
+ * @}
+ */
+
+/**
  * Initialize the IOROPE structure
  * @param rope a rope to use
  * @param allocator the allocator to use for allocation. The IOROPE structure
@@ -247,6 +248,7 @@ rdb_init(rdb_IOROPE *rope, rdb_ALLOCATOR *allocator);
 /**
  * Change the allocator for the rope. This can be done at any time during
  * the application.
+ * @param rope
  * @param allocator The new allocator to use
  */
 void
@@ -255,10 +257,17 @@ rdb_challoc(rdb_IOROPE *rope, rdb_ALLOCATOR *allocator);
 void
 rdb_cleanup(rdb_IOROPE *ior);
 
+
 /**
- * Prepare a series of IOV structures for reading from the network.
+ * @name Basic Read API
+ * @{
+ */
+
+/**
+ * @brief Prepare a series of IOV structures for reading from the network.
+ *
  * @param ior the IOROPE structure
- * @param[in/out] iov an array of IOV elements
+ * @param[in,out] iov an array of IOV elements
  * @param niov the number of IOV elements
  */
 unsigned
@@ -302,6 +311,15 @@ char *
 rdb_get_consolidated(rdb_IOROPE *ior, unsigned n);
 
 /**
+ * @}
+ */
+
+/**
+ * @name Extended Read API
+ * @{
+ */
+
+/**
  * Copy n bytes of data from the beginning of the rope structure into the
  * buffer pointed to by buf
  */
@@ -317,7 +335,7 @@ rdb_copyread(rdb_IOROPE *ior, void *buf, unsigned n);
  * Populate an array of ROPESEG and IOV structures with data from the IOROPE.
  * @param ior
  * @param[out] iov the iov array containing buffer offsets
- * @param[out] seg an array to contain pointers to the segments for the IOVs
+ * @param[out] segs an array to contain pointers to the segments for the IOVs
  * @param[in] nelem number of elements in the array
  * @param[in] ndata number of bytes to populate the arrays with
  * @return the number of IOV elements actually used, or -1 if the arrays
@@ -353,8 +371,18 @@ rdb_seg_ref(rdb_ROPESEG *seg);
 void
 rdb_seg_unref(rdb_ROPESEG *seg);
 
-
+/** @private */
 #define rdb_seg_recyclable(seg) ((seg)->shflags & RDB_ROPESEG_F_USER) == 0
+
+/**
+ * @}
+ */
+
+/**
+ * @name Utility Macros
+ * @{
+ */
+
 /** number of unused bytes remaining in the segment */
 #define RDB_SEG_SPACE(seg) (seg)->nalloc - ((seg)->nused + (seg)->start)
 
@@ -375,6 +403,9 @@ rdb_seg_unref(rdb_ROPESEG *seg);
     (LCB_LIST_HEAD(&(rope)->segments)) \
     ? LCB_LIST_ITEM(LCB_LIST_HEAD(&(rope)->segments), rdb_ROPESEG, llnode) \
     : NULL
+/**
+ * @}
+ */
 
 #define rdb_get_nused(ior) (ior)->recvd.nused
 
@@ -416,3 +447,7 @@ rdb_libcalloc_new(void);
 }
 #endif
 #endif
+
+/**
+ * @}
+ */

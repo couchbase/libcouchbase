@@ -5,32 +5,34 @@
 extern "C" {
 #endif
 
-/******************************************************************************
- ******************************************************************************
- ** Introduction                                                             **
- ******************************************************************************
- ******************************************************************************/
+/**
+ * @file
+ * @brief Netbuf write buffers
+ */
 
 /**
- * NETBUF - Efficient write buffers
- * ================================
+ * @defgroup NETBUFS Netbufs
  *
- * GOALS
- * =====
+ * # Introduction
  *
- * (1) provide a simple buffer allocation API
+ * ## GOALS
+ *
+ * 1.  provide a simple buffer allocation API
  *     From a logic perspective it's simplest to deal with a straight
  *     contiguous buffer per packet.
  *
- * (2) provide an efficient way of sending multiple contiguous packets. This
+ * 2.  provide an efficient way of sending multiple contiguous packets. This
  *     will reduce IOV fragmentation and reduce the number of trips to the
  *     I/O plugin for multiple writes. Currently this is done very efficiently
  *     with the ringbuffer - however this comes at the cost of copying all
  *     request data to the ringbuffer itself. Our aim is to reduce the
  *     number of copies while still maintaining a packed buffer.
  *
- * (3) Allow a pluggable method by which user-provided data can be plugged
+ * 3.  Allow a pluggable method by which user-provided data can be plugged
  *     into the span/cursor/flush architecture.
+ *
+ * @addtogroup NETBUFS
+ * @{
  */
 
 #include "sllist.h"
@@ -38,37 +40,46 @@ extern "C" {
 #include "netbuf-mblock.h"
 
 /**
- * XXX: It is recommended that you maintain the individual fields in your
+ * @brief Structure representing a buffer within netbufs
+ *
+ * @note It is recommended that you maintain the individual fields in your
  * own structure and then re-create them as needed. The span structure is 16
  * bytes on 64 bit systems, but can be reduced to 12 if needed. Additionally,
  * you may already have the 'size' field stored/calculated elsewhere.
  */
 typedef struct {
-    /** PRIVATE: Parent block */
+    /** @private Parent block */
     nb_MBLOCK *parent;
 
-    /** PRIVATE: Offset from root at which this buffer begins */
+    /** @private Offset from root at which this buffer begins */
     nb_SIZE offset;
 
-    /** PUBLIC, write-once: Allocation size */
+    /** write-once: Allocation size */
     nb_SIZE size;
 } nb_SPAN;
 
 #define NETBUF_INVALID_OFFSET (nb_SIZE)-1
 
+/**
+ * Creates a span from a buffer _not_ owned by netbufs.
+ * @param span the span to initialize
+ * @param buf the buffer
+ * @param len the length of the buffer
+ */
 #define CREATE_STANDALONE_SPAN(span, buf, len) \
     (span)->parent = (nb_MBLOCK *)buf; \
     (span)->offset = NETBUF_INVALID_OFFSET; \
     (span)->size = len;
 
-
+/** @private */
 typedef struct {
     sllist_node slnode;
     char *base;
     nb_SIZE len;
-    /** Extra 4 bytes here. WHAT WE DO!!! */
+    /* Extra 4 bytes here. WHAT WE DO!!! */
 } nb_SNDQELEM;
 
+/** @private */
 typedef struct {
     /** Linked list of pending spans to send */
     sllist_root pending;
@@ -106,16 +117,36 @@ struct netbuf_st {
     nb_SETTINGS settings;
 };
 
+/**
+ * Quick way to get the span from a buffer, when the buffer is *known* to
+ * be standalone (i.e. CREATE_STANDALONE_SPAN()
+ * @param span The span from which to extract the buffer
+ * @return a pointer to the buffer
+ */
 #define SPAN_SABUFFER_NC(span) ((char *)(span)->parent)
+
+/**
+ * Quick way to get the span from a buffer when the buffer is known *not*
+ * to be standalone
+ * @param span The span from which to extract the buffer
+ * @return A pointer to a buffer
+ */
 #define SPAN_MBUFFER_NC(span) ((span)->parent->root + (span)->offset)
 
 /**
- * Retrieves a pointer to the buffer related to this span.
+ * @brief Retrieves a pointer to the buffer related to this span.
+ * @param span the span from which to extract the buffer
+ * @return a pointer to the buffer.
+ *
+ * @see SPAN_SABUFFER_NC
+ * @see SPAN_MBUFFER_NC
  */
 #define SPAN_BUFFER(span) \
         (((span)->offset == NETBUF_INVALID_OFFSET) ? SPAN_SABUFFER_NC(span) : SPAN_MBUFFER_NC(span))
 
 /**
+ * @brief allocate a span
+ *
  * Reserve a contiguous region of memory, in-order for a given span. The
  * span will be reserved from the last block to be flushed to the network.
  *
@@ -128,12 +159,14 @@ int
 netbuf_mblock_reserve(nb_MGR *mgr, nb_SPAN *span);
 
 /**
+ * @brief release a span
+ *
  * Release a span previously allocated via reserve_span. It is assumed that the
  * contents of the span have either:
  *
- * (1) been successfully sent to the network
- * (2) have just been scheduled (and are being removed due to error handling)
- * (3) have been partially sent to a connection which is being closed.
+ * 1. been successfully sent to the network
+ * 2. have just been scheduled (and are being removed due to error handling)
+ * 3. have been partially sent to a connection which is being closed.
  *
  * @param mgr the manager in which this span is reserved
  * @param span the span
@@ -142,6 +175,8 @@ void
 netbuf_mblock_release(nb_MGR *mgr, nb_SPAN *span);
 
 /**
+ * @brief Enqueue a span for serialization
+ *
  * Schedules an IOV to be placed inside the send queue. The storage of the
  * underlying buffer must not be freed or otherwise modified until it has
  * been sent.
@@ -150,8 +185,10 @@ netbuf_mblock_release(nb_MGR *mgr, nb_SPAN *span);
  * a response has arrived.
  *
  * Note that you may create the IOV from a SPAN object like so:
+ * @code{.c}
  * iov->iov_len = span->size;
  * iov->iov_base = SPAN_BUFFER(span);
+ * @endcode
  */
 void
 netbuf_enqueue(nb_MGR *mgr, const nb_IOV *bufinfo);
@@ -167,23 +204,26 @@ unsigned int
 netbuf_get_niov(nb_MGR *mgr);
 
 /**
+ * @brief
  * Populates an iovec structure for flushing a set of bytes from the various
  * blocks.
  *
  * You may call this function mutltiple times, so long as each call to
  * start_flush is eventually mapped with a call to end_flush.
  *
+ * @code{.c}
  * netbuf_start_flush(mgr, iov1, niov1);
  * netbuf_start_flush(mgr, iov2, niov2);
  * ...
  * netbuf_end_flush(mgr, nbytes1);
  * netbuf_end_flush(mgr, nbytes2);
+ * @endcode
  *
  * Additionally, only the LAST end_flush call may be supplied an nflushed
  * parameter which is smaller than the size returned by start_flush.
  *
  * @param mgr the manager object
- * @param iov an array of iovec structures
+ * @param iovs an array of iovec structures
  * @param niov the number of iovec structures allocated.
  * @param nused how many IOVs are actually required
  *
@@ -198,6 +238,8 @@ nb_SIZE
 netbuf_start_flush(nb_MGR *mgr, nb_IOV *iovs, int niov, int *nused);
 
 /**
+ * @brief Indicate that a flush has completed.
+ *
  * Indicate that a number of bytes have been flushed. This should be called after
  * the data retrieved by get_flushing_iov has been flushed to the TCP buffers.
  *
@@ -236,16 +278,17 @@ netbuf_get_size(const nb_MGR *mgr);
  * Get the maximum size of a span which can be satisfied without using an
  * additional block.
  *
+ * @param mgr
+ *
  * @param allow_wrap
  * Whether to take into consideration wrapping. If this is true then the span
  * size will allow wrapping. If disabled, then only the packed size will be
  * available. Consider:
- *
+ * <pre>
  * [ ooooooo{S:10}xxxxxxxxx{C:10}ooooo{A:5} ]
- *
+ * </pre>
  * If wrapping is allowed, then the maximum span size will be 10, from 0..10
  * but the last 5 bytes at the end will be lost for the duration of the block.
- *
  * If wrapping is not allowed then the maximum span size will be 5.
  *
  * @return
@@ -255,14 +298,15 @@ nb_SIZE
 netbuf_mblock_get_next_size(const nb_MGR *mgr, int allow_wrap);
 
 /**
- * Initializes an nb_MGR structure
+ * @brief Initializes an nb_MGR structure
  * @param mgr the manager to initialize
+ * @param settings
  */
 void
 netbuf_init(nb_MGR *mgr, const nb_SETTINGS *settings);
 
 /**
- * Frees up any allocated resources for a given manager
+ * @brief Frees up any allocated resources for a given manager
  * @param mgr the manager for which to release resources
  */
 void
@@ -360,6 +404,8 @@ netbuf_is_clean(nb_MGR *mgr);
  */
 int
 netbuf_has_flushdata(nb_MGR *mgr);
+
+/**@}*/
 
 #ifdef __cplusplus
 }

@@ -5,6 +5,16 @@ typedef struct netbuf_st nb_MGR;
 typedef unsigned int nb_SIZE;
 
 /**
+ * @file
+ * Netbuf Core Structures
+ * @addtogroup NETBUFS
+ * @{
+ */
+
+/**
+ * @name Cache Allocation
+ * @{
+ *
  * The following settings control the default allocation policy.
  * Each allocator pool has both blocks and the amount of data per block.
  *
@@ -12,23 +22,23 @@ typedef unsigned int nb_SIZE;
  * data segements allow each individual element to be spaced near the next.
  */
 
-/** How many blocks to preallocate for SNDQ elements, per manager */
+/** @brief How many blocks to preallocate for SNDQ elements, per manager */
 #define NB_SNDQ_CACHEBLOCKS 4
-/** How many SNDQELEM structures per block */
+/** @brief How many SNDQELEM structures per block */
 #define NB_SNDQ_BASEALLOC 128
 
 
-/** How many dealloc blocks to allocated per MBLOCK */
+/** @brief How many dealloc blocks to allocated per MBLOCK */
 #define NB_MBDEALLOC_CACHEBLOCKS 0
-/** Number of dealloc structures per block */
+/** @brief Number of dealloc structures per block */
 #define NB_MBDEALLOC_BASEALLOC 24
 
 
-/** How many data blocks to allocate per manager */
+/** @brief How many data blocks to allocate per manager */
 #define NB_DATA_CACHEBLOCKS 16
-/** Default data allocation size */
+/** @brief Default data allocation size */
 #define NB_DATA_BASEALLOC 32768
-
+/**@}*/
 
 typedef struct {
     nb_SIZE sndq_cacheblocks;
@@ -44,6 +54,10 @@ typedef struct {
     void *iov_base;
     size_t iov_len;
 } nb_IOV;
+
+/**Macro which serves as a static initializer for an nb_IOV. This works
+ * on both Windows and Unix despite the layout of the structure being different
+ */
 #define NETBUF_IOV_INIT(base, len) { base, len }
 #else
 typedef struct {
@@ -52,5 +66,7 @@ typedef struct {
 } nb_IOV;
 #define NETBUF_IOV_INIT(base, len) { len, base }
 #endif
+
+/**@}*/
 
 #endif /* NETBUF_DEFS_H */
