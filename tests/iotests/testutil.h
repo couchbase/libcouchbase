@@ -20,16 +20,6 @@
 #include <libcouchbase/couchbase.h>
 #include <string.h>
 #include <libvbucket/vbucket.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-    void setup_test_timeout_handler(void);
-
-#ifdef __cplusplus
-} // C linkage
-
 struct Item {
     void assign(const lcb_get_resp_t *resp, lcb_error_t e = LCB_SUCCESS) {
         key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);
@@ -169,7 +159,5 @@ void genStoreCommands(const std::vector<std::string> &keys,
  * will try to keep the event loop alive.
  */
 void doDummyOp(lcb_t& instance);
-
-#endif
 
 #endif

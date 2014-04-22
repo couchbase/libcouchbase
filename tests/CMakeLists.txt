@@ -25,9 +25,7 @@ ADD_SUBDIRECTORY(${SOURCE_ROOT}/gtest-1.7.0 gtest-1.7.0)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
 ADD_EXECUTABLE(check-all EXCLUDE_FROM_ALL
-    check-all.cc
-    ${SOURCE_ROOT}/tools/commandlineparser.cc
-    procutil.c)
+    check-all.cc ${SOURCE_ROOT}/tools/commandlineparser.cc mocksupport/procutil.c)
 
 SET_PROPERTY(TARGET check-all
     APPEND PROPERTY INCLUDE_DIRECTORIES
@@ -35,19 +33,17 @@ SET_PROPERTY(TARGET check-all
     ${SOURCE_ROOT}/tools)
 TARGET_LINK_LIBRARIES(check-all couchbase_utils couchbase)
 
-ADD_EXECUTABLE(smoke-test EXCLUDE_FROM_ALL
-    smoke-test.c
-    server.c
-    timeout.c
-    procutil.c)
 
 FILE(GLOB T_BASIC_SRC basic/*.cc)
 FILE(GLOB T_MC_SRC mc/*.cc)
 FILE(GLOB T_RDB_SRC rdb/*.cc)
 FILE(GLOB T_SOCK_SRC socktests/*.cc)
 FILE(GLOB T_IOSERVER_SRC ioserver/*.cc)
+FILE(GLOB T_MOCKSUPPORT_SRC mocksupport/*.c mocksupport/*.cc)
 
 ADD_LIBRARY(ioserver STATIC EXCLUDE_FROM_ALL ${T_IOSERVER_SRC})
+ADD_LIBRARY(mocksupport STATIC EXCLUDE_FROM_ALL ${T_MOCKSUPPORT_SRC})
+ADD_EXECUTABLE(smoke-test EXCLUDE_FROM_ALL smoke-test.c)
 ADD_EXECUTABLE(nonio-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_BASIC_SRC})
 ADD_EXECUTABLE(mc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
 ADD_EXECUTABLE(mc-malloc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
@@ -62,18 +58,9 @@ IF(WIN32)
     TARGET_LINK_LIBRARIES(sock-tests ws2_32.lib)
 ENDIF()
 
+
 FILE(GLOB T_IO_SRC iotests/*.cc)
-ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL
-    ${T_IO_SRC}
-
-    # Support files
-    procutil.c
-    server.c
-    timeout.c
-    testutil.cc
-    unit_tests.cc
-    mock-environment.cc)
-
+ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL ${T_IO_SRC} unit_tests.cc)
 
 # Normally defined by config.h
 SET_PROPERTY(
@@ -98,15 +85,14 @@ ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar)
 
 # We're a library using the shared CRT. Don't use the static one
 INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
-TARGET_LINK_LIBRARIES(unit-tests couchbase couchbase_utils gtest)
+TARGET_LINK_LIBRARIES(unit-tests couchbase couchbase_utils gtest mocksupport)
 TARGET_LINK_LIBRARIES(nonio-tests couchbase couchbase_utils netbuf gtest)
 TARGET_LINK_LIBRARIES(mc-tests mcreq netbuf vbucket gtest)
 TARGET_LINK_LIBRARIES(mc-malloc-tests mcreq netbuf-malloc vbucket gtest)
 TARGET_LINK_LIBRARIES(netbuf-tests netbuf gtest)
-TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils)
+TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils mocksupport)
 TARGET_LINK_LIBRARIES(rdb-tests rdb gtest)
 TARGET_LINK_LIBRARIES(sock-tests rdb ioserver couchbase gtest)
-
 
 MACRO(BUILD_TEST target)
     ADD_TEST(NAME BUILD-${target}

@@ -15,12 +15,7 @@
  *   limitations under the License.
  */
 #include "config.h"
-#include <gtest/gtest.h>
-#include <libcouchbase/couchbase.h>
-
-#include "server.h"
-#include "mock-unit-test.h"
-#include "testutil.h"
+#include "iotests.h"
 
 class ArithmeticUnitTest : public MockUnitTest
 {

@@ -20,9 +20,8 @@
 #include <sys/types.h>
 #include <stdlib.h>
 
-#include "server.h"
+#include <mocksupport/server.h>
 #include "test.h"
-#include "testutil.h"
 #include "config.h"
 
 lcb_t session = NULL;

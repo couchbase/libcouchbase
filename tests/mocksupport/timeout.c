@@ -15,7 +15,6 @@
  *   limitations under the License.
  */
 #include "config.h"
-#include "testutil.h"
 #include <stdio.h>
 /*
  * The current test suite should not take more than 5 minutes to run.

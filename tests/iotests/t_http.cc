@@ -1,7 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
-#include "mock-unit-test.h"
-#include "server.h"
+#include "iotests.h"
 
 #define DESIGN_DOC_NAME "lcb_design_doc"
 #define VIEW_NAME "lcb-test-view"

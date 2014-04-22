@@ -1,10 +1,5 @@
 #include "config.h"
-#include <gtest/gtest.h>
-#include <libcouchbase/couchbase.h>
-#include "server.h"
-#include "mock-unit-test.h"
-#include "mock-environment.h"
-#include "testutil.h"
+#include "iotests.h"
 #include "internal.h"
 #include <map>
 

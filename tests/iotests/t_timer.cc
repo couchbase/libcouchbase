@@ -1,9 +1,7 @@
 #include "config.h"
-#include <gtest/gtest.h>
-#include <libcouchbase/couchbase.h>
-#include "mock-unit-test.h"
 #include "internal.h"
 #include <lcbio/iotable.h>
+#include "iotests.h"
 
 class Timers : public MockUnitTest
 {

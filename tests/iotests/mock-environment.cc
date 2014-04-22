@@ -17,8 +17,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
-
-#include "server.h"
+#include <mocksupport/server.h>
 #include "mock-environment.h"
 #include <sstream>
 

@@ -1,7 +1,5 @@
+#include "iotests.h"
 #include "config.h"
-#include <gtest/gtest.h>
-#include <libcouchbase/couchbase.h>
-#include "mock-environment.h"
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
 #include <lcbio/iotable.h>

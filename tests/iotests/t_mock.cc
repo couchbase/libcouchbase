@@ -15,15 +15,10 @@
  *   limitations under the License.
  */
 #include "config.h"
-#include <gtest/gtest.h>
-#include <libcouchbase/couchbase.h>
+#include "iotests.h"
 #include <map>
 
-#include "server.h"
-#include "mock-unit-test.h"
-#include "mock-environment.h"
 #include "internal.h" /* vbucket_* things from lcb_t */
-#include "testutil.h"
 #include <lcbio/iotable.h>
 #include "bucketconfig/bc_http.h"
 

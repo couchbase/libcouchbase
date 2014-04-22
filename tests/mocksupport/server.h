@@ -63,6 +63,7 @@ extern "C" {
     void shutdown_mock_server(const void *);
 
     struct lcb_io_opt_st *get_test_io_opts(void);
+    void setup_test_timeout_handler(void);
 
 #ifdef __cplusplus
 }

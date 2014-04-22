@@ -35,17 +35,17 @@
 #include <list>
 
 #include "config.h"
-#include "procutil.h"
+#include "mocksupport/procutil.h"
 #include "commandlineparser.h"
 #include <libcouchbase/couchbase.h>
 
-
+#define TESTS_BASE "sock-tests;nonio-tests;rdb-tests;mc-tests;"
 #define PLUGIN_ENV_VAR "LIBCOUCHBASE_EVENT_PLUGIN_NAME"
 #define LCB_SRCROOT_ENV_VAR "srcdir"
 #ifdef HAVE_COUCHBASEMOCK
-#define DEFAULT_TEST_NAMES "unit-tests;nonio-tests;smoke-test"
+#define DEFAULT_TEST_NAMES TESTS_BASE "unit-tests;smoke-test"
 #else
-#define DEFAULT_TEST_NAMES "unit-tests;nonio-tests"
+#define DEFAULT_TEST_NAMES TESTS_BASE
 #endif
 
 #ifdef _WIN32

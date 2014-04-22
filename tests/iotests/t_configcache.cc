@@ -16,8 +16,7 @@
  */
 
 #include "config.h"
-#include "mock-unit-test.h"
-#include "testutil.h"
+#include "iotests.h"
 
 #include <cstdio>
 
