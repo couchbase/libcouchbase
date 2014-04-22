@@ -798,6 +798,27 @@ extern "C" {
     lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
 
     /**
+     * @brief Convenience function to set a value as an lcb_uint32_t
+     * @param instance
+     * @param cmd setting to modify
+     * @param arg the new value
+     * @return see lcb_cntl() for details
+     */
+    LIBCOUCHBASE_API
+    lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg);
+
+    /**
+     * @brief Retrieve an lcb_uint32_t setting
+     * @param instance
+     * @param cmd setting to retrieve
+     * @return the value.
+     * @warning This function does not return an error code. Ensure that the cntl is
+     * correct for this version, or use lcb_cntl() directly.
+     */
+    LIBCOUCHBASE_API
+    lcb_uint32_t lcb_cntl_getu32(lcb_t instance, int cmd);
+
+    /**
      * Schedule a durability check on a set of keys. This callback wraps (somewhat)
      * the lower-level OBSERVE (lcb_observe) operations so that users may check if
      * a key is endured, e.g. if a key is persisted accross "at least" n number of
@@ -917,7 +938,6 @@ extern "C" {
 
     LCB_INTERNAL_API
     void lcb_stop_loop(lcb_t instance);
-
 
 #ifdef __cplusplus
 }

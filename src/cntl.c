@@ -510,6 +510,21 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
 }
 
 LIBCOUCHBASE_API
+lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg)
+{
+    return lcb_cntl(instance, LCB_CNTL_SET, cmd, &arg);
+}
+
+LIBCOUCHBASE_API
+lcb_uint32_t lcb_cntl_getu32(lcb_t instance, int cmd)
+{
+    lcb_uint32_t ret = 0;
+    lcb_cntl(instance, LCB_CNTL_GET, cmd, &ret);
+    return ret;
+}
+
+
+LIBCOUCHBASE_API
 void lcb_behavior_set_ipv6(lcb_t instance, lcb_ipv6_t mode)
 {
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_IP6POLICY, &mode);
