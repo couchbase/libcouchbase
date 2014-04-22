@@ -1,6 +1,6 @@
 #include "ctx.h"
 #include "iotable.h"
-#include "rw-inl.c"
+#include "rw-inl.h"
 #include "timer-ng.h"
 #include <stdio.h>
 
