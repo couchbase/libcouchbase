@@ -91,7 +91,6 @@ static int getError(lcb_socket_t sock)
         return ECONNREFUSED;
 
     default:
-        abort();
         return EINVAL;
     }
 
