@@ -56,6 +56,7 @@
 /example/observe/observe
 /example/syncmode/syncmode
 /example/yajl/couchview
+filelist.mk
 /gtest-1.*
 /include/libcouchbase/configuration.h
 /libcouchbase*.changes
@@ -137,6 +138,9 @@
 /tests/check-all
 /tests/nonio-tests
 /tests/unit-tests
+/tests/mc-tests
+/tests/sock-tests
+/tests/rdb-tests
 /tools/cbc
 /tools/cbc-pillowfight
 /tools/cbc_debug.ilk

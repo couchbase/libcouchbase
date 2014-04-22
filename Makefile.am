@@ -1,3 +1,4 @@
+# vim: set expandtab:
 #
 #     Copyright 2010-2013 Couchbase, Inc.
 #
@@ -27,14 +28,10 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
-
-if BUILD_LIBCOUCHBASE_DEBUG
-lib_LTLIBRARIES += libcouchbase_debug.la
-endif
 noinst_LTLIBRARIES = libcbsasl.la libcrc32.la libhttpparser.la libketama.la libvbucket.la
-noinst_PROGRAMS = debug/sizes
 bin_PROGRAMS =
 check_PROGRAMS =
+noinst_PROGRAMS =
 
 man1_MANS =
 man3_MANS =
@@ -42,10 +39,10 @@ man3couchbase_MANS =
 man3lib_MANS =
 man4_MANS =
 man5_MANS =
-
 man_MANS =
 BUILT_SOURCES =
-CLEANFILES = tests/CouchbaseMock.jar \
+
+CLEANFILES = \
              check-all-libev-smoke-test.log \
              check-all-libev-unit-tests.log \
              check-all-libevent-smoke-test.log \
@@ -56,6 +53,7 @@ CLEANFILES = tests/CouchbaseMock.jar \
              check-all-select-unit-tests.log
 
 include Makefile.manpage.inc
+include filelist.mk
 
 if BUILD_TOOLS
 if HAVE_CXX
@@ -63,35 +61,6 @@ bin_PROGRAMS += tools/cbc tools/cbc-pillowfight
 check_PROGRAMS += tests/homebrew-acceptance-test
 endif
 endif
-
-pkginclude_HEADERS = \
-                     include/libcouchbase/arguments.h \
-                     include/libcouchbase/assert.h \
-                     include/libcouchbase/behavior.h \
-                     include/libcouchbase/callbacks.h \
-                     include/libcouchbase/cntl.h \
-                     include/libcouchbase/compat.h \
-                     include/libcouchbase/configuration.h \
-                     include/libcouchbase/couchbase.h \
-                     include/libcouchbase/durability.h \
-                     include/libcouchbase/error.h \
-                     include/libcouchbase/http.h \
-                     include/libcouchbase/sysdefs.h \
-                     include/libcouchbase/sanitycheck.h \
-                     include/libcouchbase/timings.h \
-                     include/libcouchbase/types.h \
-                     include/libcouchbase/visibility.h \
-                     plugins/io/iocp/iocp_iops.h \
-                     plugins/io/select/select_io_opts.h
-
-if BUILD_LIBCOUCHBASE_DEBUG
-pkginclude_HEADERS += include/libcouchbase/debug.h
-endif
-
-pkginclude_HEADERS += \
-                     plugins/io/libev/libev_io_opts.h \
-                     plugins/io/libevent/libevent_io_opts.h \
-                     plugins/io/libuv/libuv_io_opts.h
 
 nobase_pkginclude_HEADERS = \
                              plugins/io/libuv/plugin-internal.h \
@@ -140,119 +109,12 @@ libcrc32_la_SOURCES = contrib/libvbucket/crc32.c
 libcrc32_la_CFLAGS = $(AM_NOWARN_CFLAGS)
 libcrc32_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
 
-libcouchbase_debug_la_LDFLAGS = $(AM_LDFLAGS) \
-       -version-info 1:0:0 \
-       -no-undefined $(AM_PROFILE_SOLDFLAGS)
-libcouchbase_debug_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) \
-       -DLIBCOUCHBASE_INTERNAL=1
-
-libcouchbase_debug_la_DEPENDENCIES = libcouchbase.la
-libcouchbase_debug_la_LIBADD = libcouchbase.la
-
-libcouchbase_debug_la_SOURCES = \
-   debug/debug.cc
-
-libcouchbase_la_SOURCES = \
-                        include/ep-engine/command_ids.h \
-                        include/memcached/protocol_binary.h \
-                        include/memcached/vbucket.h \
-                        plugins/io/select/plugin-select.c \
-                        plugins/io/select/select_io_opts.h \
-                        src/bucketconfig/clconfig.h \
-                        src/bucketconfig/confmon.c \
-                        src/bucketconfig/bc_cccp.c \
-                        src/bucketconfig/bc_http.c \
-                        src/bucketconfig/bc_http.h \
-                        src/bucketconfig/bc_file.c \
-                        src/arithmetic.c \
-                        src/base64.c \
-                        src/bconf_provider.c \
-                        src/bootstrap.c \
-                        src/cntl.c \
-                        src/compat.c \
-                        src/cookie.h \
-                        src/config_static.h \
-                        src/connect.c \
-                        src/connection_utils.c \
-                        src/connmgr.c \
-                        src/connmgr.h \
-                        src/durability.c \
-                        src/durability_internal.h \
-                        src/error.c \
-                        src/flush.c \
-                        src/genhash.c \
-                        src/genhash.h \
-                        src/get.c \
-                        src/gethrtime.c \
-                        src/handler.c \
-                        src/handler.h \
-                        src/hashset.c \
-                        src/hashset.h \
-                        src/hashtable.c \
-                        src/hostlist.c \
-                        src/hostlist.h \
-                        src/http.c \
-                        src/http_io.c \
-                        src/http_parse.c \
-                        src/instance.c \
-                        src/internal.h \
-                        src/iotable.c \
-                        src/iotable.h \
-                        src/lcbio.h \
-                        src/list.c \
-                        src/list.h \
-                        src/logging.c \
-                        src/logging.h \
-                        src/mcserver.h \
-                        src/netbuf/netbuf.c \
-                        src/netbuf/netbuf-mblock.h \
-                        src/netbuf/netbuf-defs.h \
-                        src/netbuf/netbuf.h \
-                        src/observe.c \
-                        src/packet.c \
-                        src/packetutils.c \
-                        src/packetutils.h \
-                        src/readwrite.c \
-                        src/remove.c \
-                        src/ringbuffer.c \
-                        src/ringbuffer.h \
-                        src/sanitycheck.c \
-                        src/server.c \
-                        src/server_io.c \
-                        src/server_negotiate.c \
-                        src/server_parse.c \
-                        src/settings.h \
-                        src/simplestring.c \
-                        src/simplestring.h \
-                        src/sllist.h \
-                        src/sllist-inl.h \
-                        src/stats.c \
-                        src/store.c \
-                        src/synchandler.c \
-                        src/timer.c \
-                        src/timer.h \
-                        src/timings.c \
-                        src/touch.c \
-                        src/url_encoding.c \
-                        src/url_encoding.h \
-                        src/utilities.c \
-                        src/verbosity.c \
-                        src/wait.c
-
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -DLCB_LIBDIR="\"${libdir}\""
 libcouchbase_la_DEPENDENCIES=libcbsasl.la libhttpparser.la libvbucket.la
 libcouchbase_la_LIBADD=libcbsasl.la libhttpparser.la libvbucket.la
 
-libcouchbase_la_SOURCES += src/iofactory.c
 if HAVE_WINSOCK2
-libcouchbase_la_SOURCES += \
-                           plugins/io/iocp/iocp_iops.c \
-                           plugins/io/iocp/iocp_iops.h \
-                           plugins/io/iocp/iocp_loop.c \
-                           plugins/io/iocp/iocp_timer.c \
-                           plugins/io/iocp/iocp_util.c
-
 libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/iocp -DWINVER=0x0600 -D_WIN32_WINNT=0x0600
 endif
 if HAVE_LIBEVENT
@@ -284,42 +146,6 @@ libcouchbase_libuv_la_LIBADD = -luv
 libcouchbase_libuv_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 endif
 
-tests_nonio_tests_SOURCES = \
-                           src/base64.c \
-                           src/gethrtime.c \
-                           src/hashset.c \
-                           src/list.c \
-                           src/ringbuffer.c \
-                           src/url_encoding.c \
-                           src/simplestring.c \
-                           src/hostlist.c \
-                           src/packetutils.c \
-                           src/netbuf/netbuf.c \
-                           tests/basic/t_base64.cc \
-                           tests/basic/t_ccbc103.cc \
-                           tests/basic/t_cluster.cc \
-                           tests/basic/t_getopt.cc \
-                           tests/basic/t_hashset.cc \
-                           tests/basic/t_hostname.cc \
-                           tests/basic/t_host.cc \
-                           tests/basic/t_list.cc \
-                           tests/basic/t_logger.cc \
-                           tests/basic/t_memcached-compat.cc \
-                           tests/basic/t_netbuf.cc \
-                           tests/basic/t_packet.cc \
-                           tests/basic/t_ringbuffer.cc \
-                           tests/basic/t_slist.cc \
-                           tests/basic/t_string.cc \
-                           tests/basic/t_strerror.cc \
-                           tests/basic/t_urlencode.cc \
-                           tests/nonio_tests.cc
-
-tests_nonio_tests_DEPENDENCIES = libcouchbase.la
-tests_nonio_tests_LDADD = libcouchbase.la libvbucket.la
-tests_nonio_tests_CFLAGS = $(AM_NOWARN_CFLAGS)
-tests_nonio_tests_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
-tests_nonio_tests_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
-
 gtest-1.7.0.zip:
 	@echo "+--------------------------------+"
 	@echo "| Download Google test framework |"
@@ -328,19 +154,11 @@ gtest-1.7.0.zip:
 
 
 if HAVE_CXX
-# C++ compiler needed to build google test
 if HAVE_GOOGLETEST_SRC
 noinst_LTLIBRARIES += libgtest.la
 libgtest_la_SOURCES = tests/gtest-sources.cc
 libgtest_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
 libgtest_la_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
-
-tests_nonio_tests_DEPENDENCIES += libgtest.la
-tests_nonio_tests_LDADD += libgtest.la -lpthread
-tests_nonio_tests_CPPFLAGS += \
-                             -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include \
-                             -Itests \
-                             $(NO_WERROR)
 endif
 endif
 
@@ -348,14 +166,12 @@ if DOWNLOAD_GTEST
 gtest-1.7.0: gtest-1.7.0.zip
 	${UNZIP} -o -qq gtest-1.7.0.zip
 BUILT_SOURCES += gtest-1.7.0
-CLEANFILES += gtest-1.7.0.zip
 endif
 
 distclean-local:
 	@rm -rf gtest-1.7.0
 
 if !HAVE_GOOGLETEST_SRC
-tests_nonio_tests_LDADD += -lgtest -lpthread
 endif
 
 tests/CouchbaseMock.jar:
@@ -363,17 +179,6 @@ tests/CouchbaseMock.jar:
 	@echo "| Download CouchbaseMock for functional tests |"
 	@echo "+---------------------------------------------+"
 	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.7-SNAPSHOT/CouchbaseMock-0.7-20140129.023144-1.jar
-
-libmockserver_la_LDFLAGS = $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
-libmockserver_la_DEPENDENCIES = tests/CouchbaseMock.jar
-libmockserver_la_SOURCES = \
-                         tests/server.c tests/server.h \
-                         tests/procutil.c tests/procutil.h
-
-
-example_syncmode_syncmode_SOURCES = example/syncmode/main.c
-example_syncmode_syncmode_DEPENDENCIES = libcouchbase.la
-example_syncmode_syncmode_LDADD = libcouchbase.la
 
 example_minimal_minimal_SOURCES = example/minimal/minimal.c
 example_minimal_minimal_DEPENDENCIES = libcouchbase.la
@@ -417,84 +222,19 @@ noinst_PROGRAMS += \
                    example/db/vb \
                    example/instancepool/instancepool \
                    example/minimal/minimal \
-                   example/observe/observe \
-                   example/syncmode/syncmode
+                   example/observe/observe
 if HAVE_LIBYAJL2
 noinst_PROGRAMS += example/yajl/couchview
 endif
 endif
 
-if BUILD_LIBCOUCHBASE_DEBUG
-noinst_PROGRAMS += example/debug/debug
-endif
-
 example_yajl_couchview_SOURCES = example/yajl/couchview.c
 example_yajl_couchview_LDADD = libcouchbase.la -lyajl
-
-if HAVE_CXX
-if HAVE_GOOGLETEST
-# we can't build the test program without a C++ compiler
-check_PROGRAMS += tests/unit-tests tests/nonio-tests
-endif
-endif
-
-if HAVE_COUCHBASEMOCK
-noinst_LTLIBRARIES += libmockserver.la
-tests_unit_tests_DEPENDENCIES = $(tests_nonio_tests_DEPENDENCIES)
-tests_unit_tests_CFLAGS = $(tests_nonio_tests_CFLAGS)
-tests_unit_tests_CPPFLAGS = $(tests_nonio_tests_CPPFLAGS)
-tests_unit_tests_CXXFLAGS = $(tests_nonio_tests_LDFLAGS)
-
-tests_unit_tests_SOURCES = \
-                            tests/iotests/t_arithmetic.cc \
-                            tests/iotests/t_behavior.cc \
-                            tests/iotests/t_configcache.cc \
-                            tests/iotests/t_confmon.cc \
-                            tests/iotests/t_connmgr.cc \
-                            tests/iotests/t_durability.cc \
-                            tests/iotests/t_get.cc \
-                            tests/iotests/t_http.cc \
-                            tests/iotests/t_iops.cc \
-                            tests/iotests/t_lock.cc \
-                            tests/iotests/t_regression.cc \
-                            tests/iotests/t_mutate.cc \
-                            tests/iotests/t_syncmode.cc \
-                            tests/iotests/t_serverops.cc \
-                            tests/iotests/t_timer.cc \
-                            tests/iotests/t_mock.cc \
-                            tests/mock-environment.cc \
-                            tests/mock-environment.h \
-                            tests/mock-unit-test.h \
-                            tests/procutil.c \
-                            tests/procutil.h \
-                            tests/server.c \
-                            tests/server.h \
-                            tests/serverparams.h \
-                            tests/testutil.cc \
-                            tests/testutil.h \
-                            tests/unit_tests.cc \
-                            src/base64.c \
-                            src/gethrtime.c \
-                            src/hashset.c \
-                            src/list.c \
-                            src/ringbuffer.c \
-                            src/url_encoding.c \
-                            src/simplestring.c \
-                            src/hostlist.c \
-                            src/packetutils.c \
-                            tests/timeout.c
-
-tests_unit_tests_LDADD = $(tests_nonio_tests_LDADD) libmockserver.la
-check_PROGRAMS += tests/smoke-test
-endif
-
-tests_smoke_test_SOURCES = tests/test.h tests/smoke-test.c tests/timeout.c
-tests_smoke_test_LDADD = libcouchbase.la libmockserver.la
 
 if BUILD_TESTS
 check_PROGRAMS += tests/check-all
 endif
-tests_check_all_SOURCES = tests/check-all.cc tools/commandlineparser.cc tests/procutil.c
+tests_check_all_SOURCES = tests/check-all.cc tools/commandlineparser.cc tests/mocksupport/procutil.c
 tests_check_all_CPPFLAGS = $(AM_CPPFLAGS) -I"${srcdir}/tools"
 tests_check_all_LDADD = libcouchbase.la
 
@@ -531,11 +271,6 @@ if HAVE_CXX
 TESTS += tests/homebrew-acceptance-test
 endif
 endif
-
-example_debug_debug_SOURCES = example/debug/debug.cc
-example_debug_debug_LDADD = libcouchbase_debug.la
-
-debug_sizes_SOURCES = debug/sizes.c
 
 if BUILD_TOOLS
 CBC_LINKS = \
@@ -603,29 +338,6 @@ LINTFLAGS=-Iinclude -b -c -errchk=%all \
           -errsecurity=extended -fd -Ncheck=%all -Nlevel=4 -n -Xc99=none
 lint:
 	$(LINT.c) $(libcouchbase_la_SOURCES)
-
-reformat:
-	astyle --mode=c \
-               --quiet \
-               --style=1tbs \
-               --indent=spaces=4 \
-               --indent-namespaces \
-               --indent-col1-comments \
-               --max-instatement-indent=78 \
-               --pad-oper \
-               --pad-header \
-               --add-brackets \
-               --unpad-paren \
-               --align-pointer=name \
-               --align-reference=name \
-               $(top_srcdir)/debug/*.cc \
-               $(top_srcdir)/example/*/*.c \
-               $(top_srcdir)/include/libcouchbase/*.[ch] \
-               $(top_srcdir)/plugins/io/*/*.[ch] \
-               $(top_srcdir)/src/*.[ch] \
-               $(top_srcdir)/tests/*.{cc,c,h} \
-               $(top_srcdir)/tools/*.{cc,h} \
-               $(top_srcdir)/win32/*.[ch]
 
 regenerate-manpage:
 	$(top_srcdir)/man/generate.sh

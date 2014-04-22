@@ -8,3 +8,4 @@ m4_define([GIT_CHANGESET],[`git rev-parse HEAD`])
 EOF
 
 autoreconf -i --force
+./config/gensrclist.pl
