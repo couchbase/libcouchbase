@@ -32,10 +32,9 @@
 #include <libvbucket/vbucket.h>
 #include <libcouchbase/couchbase.h>
 #include <lcbio/lcbio.h>
-
+#include <strcodecs/strcodecs.h>
 #include "http_parser/http_parser.h"
 #include "list.h"
-#include "url_encoding.h"
 #include "hashset.h"
 #include "genhash.h"
 #include "timer.h"
@@ -257,7 +256,6 @@ extern "C" {
      * Returns true if this server has pending I/O on it
      */
     void lcb_initialize_packet_handlers(lcb_t instance);
-    int lcb_base64_encode(const char *src, char *dst, lcb_size_t sz);
     void lcb_record_metrics(lcb_t instance, hrtime_t delta,lcb_uint8_t opcode);
 
     LCB_INTERNAL_API

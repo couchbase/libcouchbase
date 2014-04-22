@@ -130,7 +130,8 @@ IF(WIN32)
 ENDIF()
 ADD_LIBRARY(couchbase_utils STATIC
             contrib/libvbucket/cJSON.c
-            src/base64.c
+            src/strcodecs/base64.c
+            src/strcodecs/url_encoding.c
             src/gethrtime.c
             src/genhash.c
             src/hashtable.c
@@ -141,7 +142,6 @@ ADD_LIBRARY(couchbase_utils STATIC
             src/packetutils.c
             src/ringbuffer.c
             src/simplestring.c
-            src/url_encoding.c
             ${lcb_getopt_src})
 
 SET_TARGET_PROPERTIES(couchbase_utils

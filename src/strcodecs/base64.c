@@ -14,7 +14,9 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-#include "internal.h"
+
+#include "strcodecs.h"
+#include <string.h>
 
 /*
  * Function to base64 encode a text string as described in RFC 4648

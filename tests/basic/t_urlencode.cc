@@ -17,7 +17,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
-#include "url_encoding.h"
+#include <strcodecs/strcodecs.h>
 
 class UrlEncoding : public ::testing::Test
 {

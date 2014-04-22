@@ -15,7 +15,10 @@
  *   limitations under the License.
  */
 
-#include "internal.h"
+#include "strcodecs.h"
+#include <ctype.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 static int maybe_skip_encoding(const char *p, lcb_size_t c, lcb_size_t l)
 {
