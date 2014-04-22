@@ -32,10 +32,8 @@
 #include <libvbucket/vbucket.h>
 #include <libcouchbase/couchbase.h>
 #include <lcbio/lcbio.h>
-#include "cbsasl/cbsasl.h"
 
 #include "http_parser/http_parser.h"
-#include "ringbuffer.h"
 #include "list.h"
 #include "url_encoding.h"
 #include "hashset.h"
