@@ -47,6 +47,9 @@ wsaerr_map_impl(DWORD in)
     case WSAEHOSTDOWN:
         return ENETUNREACH;
 
+    case WSAETIMEDOUT:
+        return ETIMEDOUT;
+
     case WSAENOTSOCK:
         return ENOTSOCK;
 
