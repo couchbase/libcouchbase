@@ -120,6 +120,21 @@ extern "C" {
                                     lcb_error_t err,
                                     const lcb_observe_resp_t *resp);
 
+    typedef enum {
+        /** Durability requirement. Poll all servers */
+        LCB_OBSERVE_TYPE_DURABILITY,
+        /** Poll the master for simple existence */
+        LCB_OBSERVE_TYPE_CHECK,
+        /** Poll all servers only once */
+        LCB_OBSERVE_TYPE_BCAST
+    } lcb_observe_type_t;
+
+    lcb_error_t lcb_observe_ex(lcb_t instance,
+                               const void *command_cookie,
+                               lcb_size_t num,
+                               const void *const *items,
+                               lcb_observe_type_t type);
+
 #ifdef __cplusplus
 }
 #endif

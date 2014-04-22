@@ -54,16 +54,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-    typedef enum {
-        /** Durability requirement. Poll all servers */
-        LCB_OBSERVE_TYPE_DURABILITY,
-        /** Poll the master for simple existence */
-        LCB_OBSERVE_TYPE_CHECK,
-        /** Poll all servers only once */
-        LCB_OBSERVE_TYPE_BCAST
-    } lcb_observe_type_t;
-
     struct lcb_histogram_st;
 
     typedef void (*vbucket_state_listener_t)(lcb_server_t *server);
@@ -298,12 +288,6 @@ extern "C" {
                                    const char *const *headers,
                                    const void *bytes,
                                    lcb_size_t nbytes);
-
-    lcb_error_t lcb_observe_ex(lcb_t instance,
-                               const void *command_cookie,
-                               lcb_size_t num,
-                               const void *const *items,
-                               lcb_observe_type_t type);
 
     struct lcb_durability_set_st;
     void lcb_durability_dset_destroy(struct lcb_durability_set_st *dset);
