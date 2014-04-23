@@ -53,7 +53,7 @@ static int is_v220_compat(http_provider *http)
  */
 static void close_current(http_provider *http)
 {
-    lcb_timer_disarm(http->disconn_timer);
+    lcbio_timer_disarm(http->disconn_timer);
     if (http->ioctx) {
         lcbio_ctx_close(http->ioctx, NULL, NULL);
     } else if (http->creq){
@@ -80,7 +80,7 @@ io_error(http_provider *http, lcb_error_t origerr)
 
     if (!http->creq) {
         lcb_confmon_provider_failed(&http->base, origerr);
-        lcb_timer_disarm(http->io_timer);
+        lcbio_timer_disarm(http->io_timer);
         if (is_v220_compat(http)) {
             lcb_log(LOGARGS(http, INFO),
                     "HTTP node list finished. Looping again (disconn_tmo=-1)");
@@ -104,7 +104,7 @@ static void set_new_config(http_provider *http)
     http->current_config = http->stream.config;
     lcb_clconfig_incref(http->current_config);
     lcb_confmon_provider_success(&http->base, http->current_config);
-    lcb_timer_disarm(http->io_timer);
+    lcbio_timer_disarm(http->io_timer);
 }
 
 /**
@@ -121,8 +121,8 @@ read_common(lcbio_CTX *ctx, unsigned nr)
 
     lcb_log(LOGARGS(http, TRACE), "Received %d bytes on HTTP stream", nr);
 
-    lcb_timer_rearm(http->io_timer,
-                    PROVIDER_SETTING(&http->base, config_node_timeout));
+    lcbio_timer_rearm(http->io_timer,
+                      PROVIDER_SETTING(&http->base, config_node_timeout));
 
     LCBIO_CTX_ITERFOR(ctx, &riter, nr) {
         unsigned nbuf = lcbio_ctx_risize(&riter);
@@ -234,14 +234,14 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     lcbio_ctx_put(http->ioctx, http->request_buf, strlen(http->request_buf));
     lcbio_ctx_rwant(http->ioctx, 1);
     lcbio_ctx_schedule(http->ioctx);
-    lcb_timer_rearm(http->io_timer,
-                    PROVIDER_SETTING(&http->base, config_node_timeout));
+    lcbio_timer_rearm(http->io_timer,
+                      PROVIDER_SETTING(&http->base, config_node_timeout));
 }
 
 static void
-timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
+timeout_handler(void *arg)
 {
-    http_provider *http = (void *)cookie;
+    http_provider *http = arg;
 
     lcb_log(LOGARGS(http, ERR), "HTTP Provider timed out waiting for I/O");
 
@@ -258,7 +258,6 @@ timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
     }
 
     io_error(http, LCB_ETIMEDOUT);
-    (void)tm; (void)i;
 }
 
 
@@ -279,18 +278,15 @@ connect_next(http_provider *http)
     return LCB_CONNECT_ERROR;
 }
 
-static void delayed_disconn(lcb_timer_t tm, lcb_t instance, const void *cookie)
+static void delayed_disconn(void *arg)
 {
-    http_provider *http = (http_provider *)cookie;
+    http_provider *http = arg;
     lcb_log(LOGARGS(http, DEBUG), "Stopping HTTP provider %p", http);
 
     /** closes the connection and cleans up the timer */
     close_current(http);
-    lcb_timer_disarm(http->io_timer);
+    lcbio_timer_disarm(http->io_timer);
     reset_stream_state(http);
-
-    (void)tm;
-    (void)instance;
 }
 
 static lcb_error_t pause_http(clconfig_provider *pb)
@@ -300,19 +296,18 @@ static lcb_error_t pause_http(clconfig_provider *pb)
         return LCB_SUCCESS;
     }
 
-    if (!lcb_timer_armed(http->disconn_timer)) {
-        lcb_timer_rearm(http->disconn_timer,
-                        PROVIDER_SETTING(pb, bc_http_stream_time));
+    if (!lcbio_timer_armed(http->disconn_timer)) {
+        lcbio_timer_rearm(http->disconn_timer,
+                          PROVIDER_SETTING(pb, bc_http_stream_time));
     }
     return LCB_SUCCESS;
 }
 
-static void delayed_schederr(lcb_timer_t tm, lcb_t instance, const void *cookie)
+static void delayed_schederr(void *arg)
 {
-    http_provider *http = (void *)cookie;
+    http_provider *http = arg;
     lcb_log(LOGARGS(http, ERR), "Http failed with async=0x%x", http->as_errcode);
     lcb_confmon_provider_failed(&http->base, http->as_errcode);
-    (void)tm; (void)instance;
 }
 
 static lcb_error_t get_refresh(clconfig_provider *provider)
@@ -331,15 +326,15 @@ static lcb_error_t get_refresh(clconfig_provider *provider)
         lcb_error_t rc = connect_next(http);
         if (rc != LCB_SUCCESS) {
             http->as_errcode = rc;
-            lcb_async_signal(http->as_schederr);
+            lcbio_async_signal(http->as_schederr);
         }
         return rc;
     }
 
-    lcb_timer_disarm(http->disconn_timer);
+    lcbio_timer_disarm(http->disconn_timer);
     if (http->ioctx) {
-        lcb_timer_rearm(http->io_timer,
-                        PROVIDER_SETTING(provider, config_node_timeout));
+        lcbio_timer_rearm(http->io_timer,
+                          PROVIDER_SETTING(provider, config_node_timeout));
     }
     return LCB_SUCCESS;
 }
@@ -394,13 +389,13 @@ static void shutdown_http(clconfig_provider *provider)
         lcb_clconfig_decref(http->current_config);
     }
     if (http->disconn_timer) {
-        lcb_timer_destroy(NULL, http->disconn_timer);
+        lcbio_timer_destroy(http->disconn_timer);
     }
     if (http->io_timer) {
-        lcb_timer_destroy(NULL, http->io_timer);
+        lcbio_timer_destroy(http->io_timer);
     }
     if (http->as_schederr) {
-        lcb_timer_destroy(NULL, http->as_schederr);
+        lcbio_timer_destroy(http->as_schederr);
     }
     if (http->nodes) {
         hostlist_destroy(http->nodes);
@@ -428,15 +423,9 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.shutdown = shutdown_http;
     http->base.nodes_updated = refresh_nodes;
     http->base.enabled = 0;
-    http->io_timer = lcb_timer_create_simple(
-            parent->iot, http, 0, timeout_handler);
-    http->disconn_timer = lcb_timer_create_simple(
-            parent->iot, http, 0, delayed_disconn);
-    lcb_timer_disarm(http->io_timer);
-    lcb_timer_disarm(http->disconn_timer);
-    http->as_schederr = lcb_timer_create_simple(
-            parent->iot, http, 0, delayed_schederr);
-    lcb_timer_disarm(http->as_schederr);
+    http->io_timer = lcbio_timer_new(parent->iot, http, timeout_handler);
+    http->disconn_timer = lcbio_timer_new(parent->iot, http, delayed_disconn);
+    http->as_schederr = lcbio_timer_new(parent->iot, http, delayed_schederr);
 
     lcb_string_init(&http->stream.chunk);
     lcb_string_init(&http->stream.header);

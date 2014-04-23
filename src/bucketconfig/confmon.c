@@ -21,8 +21,8 @@
     mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__
 
 #define LOG(mon, lvlbase, msg) lcb_log(LOGARGS(mon, lvlbase), msg)
-static void async_stop(lcb_timer_t tm, lcb_t i, const void *cookie);
-static void async_start(lcb_timer_t tm, lcb_t i, const void *cookie);
+static void async_stop(void *);
+static void async_start(void *);
 static int do_next_provider(lcb_confmon *mon);
 static void invoke_listeners(lcb_confmon *mon,
                              clconfig_event_t event,
@@ -65,12 +65,8 @@ lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
     for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         mon->all_providers[ii]->parent = mon;
     }
-
-    mon->as_stop = lcb_timer_create_simple(iot, mon, 0, async_stop);
-    mon->as_start = lcb_timer_create_simple(iot, mon, 0, async_start);
-    lcb_timer_disarm(mon->as_stop);
-    lcb_timer_disarm(mon->as_start);
-
+    mon->as_stop = lcbio_timer_new(iot, mon, async_stop);
+    mon->as_start = lcbio_timer_new(iot, mon, async_start);
     return mon;
 }
 
@@ -102,11 +98,11 @@ void lcb_confmon_destroy(lcb_confmon *mon)
     unsigned int ii;
 
     if (mon->as_start) {
-        lcb_async_destroy(NULL, mon->as_start);
+        lcbio_timer_destroy(mon->as_start);
     }
 
     if (mon->as_stop) {
-        lcb_async_destroy(NULL, mon->as_stop);
+        lcbio_timer_destroy(mon->as_stop);
     }
 
     mon->as_start = NULL;
@@ -199,7 +195,7 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
         lcb_confmon_stop(mon);
     } else {
         mon->state |= CONFMON_S_ITERGRACE;
-        lcb_timer_rearm(mon->as_start, mon->settings->grace_next_provider);
+        lcbio_timer_rearm(mon->as_start, mon->settings->grace_next_provider);
     }
 }
 
@@ -239,18 +235,15 @@ static int do_next_provider(lcb_confmon *mon)
     return 0;
 }
 
-static void async_start(lcb_timer_t tm, lcb_t i, const void *cookie)
+static void async_start(void *arg)
 {
-    lcb_confmon *mon = (lcb_confmon *)cookie;
-    do_next_provider(mon);
-
-    (void)i; (void)tm;
+    do_next_provider(arg);
 }
 
 lcb_error_t lcb_confmon_start(lcb_confmon *mon)
 {
     lcb_uint32_t now_us, diff, tmonext;
-    lcb_async_cancel(mon->as_stop);
+    lcbio_async_cancel(mon->as_stop);
     if (IS_REFRESHING(mon)) {
         LOG(mon, DEBUG, "Refresh already in progress...");
         return LCB_SUCCESS;
@@ -269,13 +262,13 @@ lcb_error_t lcb_confmon_start(lcb_confmon *mon)
         tmonext = mon->settings->grace_next_cycle - diff;
     }
 
-    lcb_timer_rearm(mon->as_start, tmonext);
+    lcbio_timer_rearm(mon->as_start, tmonext);
     return LCB_SUCCESS;
 }
 
-static void async_stop(lcb_timer_t tm, lcb_t i, const void *cookie)
+static void async_stop(void *arg)
 {
-    lcb_confmon *mon = (lcb_confmon *)cookie;
+    lcb_confmon *mon = arg;
     lcb_list_t *ii;
 
     LCB_LIST_FOR(ii, (lcb_list_t *)&mon->active_providers) {
@@ -288,8 +281,6 @@ static void async_stop(lcb_timer_t tm, lcb_t i, const void *cookie)
 
     mon->last_stop_us = LCB_NS2US(gethrtime());
     invoke_listeners(mon, CLCONFIG_EVENT_MONITOR_STOPPED, NULL);
-    (void) i;
-    (void) tm;
 }
 
 lcb_error_t lcb_confmon_stop(lcb_confmon *mon)
@@ -297,8 +288,8 @@ lcb_error_t lcb_confmon_stop(lcb_confmon *mon)
     if (!IS_REFRESHING(mon)) {
         return LCB_SUCCESS;
     }
-    lcb_timer_disarm(mon->as_start);
-    lcb_async_signal(mon->as_stop);
+    lcbio_timer_disarm(mon->as_start);
+    lcbio_async_signal(mon->as_stop);
     mon->state = CONFMON_S_INACTIVE;
     return LCB_SUCCESS;
 }

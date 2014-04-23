@@ -4,6 +4,7 @@
 #include "logging.h"
 #include "settings.h"
 #include <lcbio/lcbio.h>
+#include <lcbio/timer-ng.h>
 #include <cbsasl/cbsasl.h>
 #include "negotiate.h"
 
@@ -41,7 +42,7 @@ typedef struct mc_SASLREQ {
     lcbio_CTX *ctx;
     lcbio_CONNDONE_cb cb;
     void *data;
-    lcb_timer_t timer;
+    lcbio_pTIMER timer;
     lcb_error_t err;
     mc_pSASLINFO inner;
 } neg_PENDING;
@@ -161,12 +162,11 @@ set_error_ex(mc_pSASLREQ sreq, lcb_error_t err, const char *msg)
 }
 
 static void
-timeout_handler(lcb_timer_t tm, lcb_t i, const void *cookie)
+timeout_handler(void *arg)
 {
-    mc_pSASLREQ sreq = (void *)cookie;
+    mc_pSASLREQ sreq = arg;
     set_error_ex(sreq, LCB_ETIMEDOUT, "Negotiation timed out");
     bail_pending(sreq);
-    (void)tm; (void)i;
 }
 
 /**
@@ -391,7 +391,7 @@ cleanup_pending(mc_pSASLREQ sreq)
         sreq->inner = NULL;
     }
     if (sreq->timer) {
-        lcb_timer_destroy(NULL, sreq->timer);
+        lcbio_timer_destroy(sreq->timer);
         sreq->timer = NULL;
     }
     if (sreq->ctx) {
@@ -437,11 +437,11 @@ mc_sasl_start(lcbio_SOCKET *sock, lcb_settings *settings,
     sreq->data = data;
     sreq->inner = sasl;
     sreq->ctx = lcbio_ctx_new(sock, sreq, &procs);
-    sreq->timer = lcb_timer_create_simple(sock->io, sreq, tmo, timeout_handler);
+    sreq->timer = lcbio_timer_new(sock->io, sreq, timeout_handler);
     sreq->ctx->subsys = "sasl";
 
-    if (!tmo) {
-        lcb_timer_disarm(sreq->timer);
+    if (tmo) {
+        lcbio_timer_rearm(sreq->timer, tmo);
     }
 
     sasl->base.id = LCBIO_PROTOCTX_SASL;

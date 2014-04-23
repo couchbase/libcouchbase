@@ -27,6 +27,7 @@
 #include "simplestring.h"
 #include <mcserver/negotiate.h>
 #include <lcbio/lcbio.h>
+#include <lcbio/timer-ng.h>
 
 #define LOGARGS(cccp, lvl) \
     cccp->base.parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -40,7 +41,7 @@ typedef struct {
     clconfig_info *config;
     int server_active;
     int disabled;
-    lcb_timer_t timer;
+    lcbio_pTIMER timer;
     lcb_t instance;
     lcbio_CONNREQ creq;
     lcbio_CTX *ioctx;
@@ -94,7 +95,7 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
     lcb_server_t *server;
     lcb_host_t *next_host = hostlist_shift_next(cccp->nodes, can_rollover);
     if (!next_host) {
-        lcb_timer_disarm(cccp->timer);
+        lcbio_timer_disarm(cccp->timer);
         lcb_confmon_provider_failed(&cccp->base, err);
         cccp->server_active = 0;
         return err;
@@ -105,8 +106,8 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
         cookie->parent = cccp;
         lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p", server);
-        lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base,
-                    config_node_timeout));
+        lcbio_timer_rearm(
+                cccp->timer, PROVIDER_SETTING(&cccp->base, config_node_timeout));
         return lcb_getconfig(cccp->instance, cookie, server);
 
     } else {
@@ -129,13 +130,10 @@ static lcb_error_t mcio_error(cccp_provider *cccp, lcb_error_t err)
     return schedule_next_request(cccp, err, 0);
 }
 
-static void socket_timeout(lcb_timer_t tm, lcb_t instance, const void *cookie)
+static void socket_timeout(void *arg)
 {
-    cccp_provider *cccp = (cccp_provider *)cookie;
+    cccp_provider *cccp = arg;
     mcio_error(cccp, LCB_ETIMEDOUT);
-
-    (void)instance;
-    (void)tm;
 }
 
 void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance)
@@ -310,7 +308,7 @@ static lcb_error_t cccp_pause(clconfig_provider *pb)
 
     cccp->server_active = 0;
     release_socket(cccp, 0);
-    lcb_timer_disarm(cccp->timer);
+    lcbio_timer_disarm(cccp->timer);
     return LCB_SUCCESS;
 }
 
@@ -326,7 +324,7 @@ static void cccp_cleanup(clconfig_provider *pb)
         hostlist_destroy(cccp->nodes);
     }
     if (cccp->timer) {
-        lcb_timer_destroy(NULL, cccp->timer);
+        lcbio_timer_destroy(cccp->timer);
     }
     if (cccp->cmdcookie) {
         cccp->cmdcookie->ignore_errors = 1;
@@ -428,7 +426,7 @@ io_read_handler(lcbio_CTX *ioctx, unsigned nr)
     err = lcb_cccp_update(&cccp->base, curhost.host, &jsonstr);
     lcb_string_release(&jsonstr);
     if (err == LCB_SUCCESS) {
-        lcb_timer_disarm(cccp->timer);
+        lcbio_timer_disarm(cccp->timer);
         cccp->server_active = 0;
     } else {
         schedule_next_request(cccp, LCB_PROTOCOL_ERROR, 0);
@@ -447,7 +445,7 @@ static void request_config(cccp_provider *cccp)
     lcbio_ctx_put(cccp->ioctx, req.bytes, sizeof(req.bytes));
     lcbio_ctx_rwant(cccp->ioctx, 24);
     lcbio_ctx_schedule(cccp->ioctx);
-    lcb_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base, config_node_timeout));
+    lcbio_timer_rearm(cccp->timer, PROVIDER_SETTING(&cccp->base, config_node_timeout));
 }
 
 clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
@@ -462,9 +460,7 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
     cccp->base.nodes_updated = nodes_updated;
     cccp->base.parent = mon;
     cccp->base.enabled = 0;
-    cccp->timer = lcb_timer_create_simple(
-            mon->iot, cccp, mon->settings->config_timeout, socket_timeout);
-    lcb_timer_disarm(cccp->timer);
+    cccp->timer = lcbio_timer_new(mon->iot, cccp, socket_timeout);
 
     if (!cccp->nodes) {
         free(cccp);

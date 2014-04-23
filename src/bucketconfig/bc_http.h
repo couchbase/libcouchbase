@@ -77,9 +77,9 @@ typedef struct clprovider_http_st {
      * timer waits until the current stream times out and then proceeds to the
      * next connection.
      */
-    lcb_timer_t disconn_timer;
-    lcb_timer_t io_timer;
-    lcb_timer_t as_schederr;
+    lcbio_pTIMER disconn_timer;
+    lcbio_pTIMER io_timer;
+    lcbio_pTIMER as_schederr;
     lcb_error_t as_errcode;
 
     /** List of hosts to try */

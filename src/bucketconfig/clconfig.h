@@ -21,7 +21,7 @@
 #include "hostlist.h"
 #include "list.h"
 #include "simplestring.h"
-
+#include <lcbio/timer-ng.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -113,10 +113,10 @@ typedef struct lcb_confmon_st {
     lcb_uint32_t last_stop_us;
 
     /** This is the async handle for a reentrant start */
-    lcb_async_t as_start;
+    lcbio_pTIMER as_start;
 
     /** Async handle for a reentrant stop */
-    lcb_async_t as_stop;
+    lcbio_pTIMER as_stop;
 
     /**  List of listeners for events */
     lcb_list_t listeners;
