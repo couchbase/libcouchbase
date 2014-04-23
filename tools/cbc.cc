@@ -82,17 +82,23 @@ struct cp_params {
     lcb_uint32_t timeout;
 };
 
+static void die(lcb_t instance, lcb_error_t err, const char *msg)
+{
+    cerr << "ERROR: " << lcb_strerror(instance, err);
+    if (msg) {
+        cerr << " " << msg;
+    }
+    cerr << endl;
+    exit(EXIT_FAILURE);
+}
+
 extern "C" {
     // libcouchbase use a C linkage!
-
-    static void error_callback(lcb_t instance,
-                               lcb_error_t error,
-                               const char *errinfo)
-    {
-        cerr << "ERROR: " << lcb_strerror(instance, error) << endl;
-        if (errinfo) {
-            cerr << "\t\"" << errinfo << "\"" << endl;
+    static void bootstrap_callback(lcb_t instance, lcb_error_t err) {
+        if (err == LCB_SUCCESS) {
+            return;
         }
+        cerr << "ERROR: " << lcb_strerror(instance, err) << endl;
         exit(EXIT_FAILURE);
     }
 
@@ -119,7 +125,7 @@ extern "C" {
                           args);
         if (err != LCB_SUCCESS) {
             // report the issue and exit
-            error_callback(instance, err, "Failed to schedule observe query");
+            die(instance, err, "Failed to schedule observe query");
         }
 
         delete []items;
@@ -131,13 +137,13 @@ extern "C" {
     {
         lcb_error_t err;
         if (params->tries > params->max_tries) {
-            error_callback(instance, LCB_ETIMEDOUT, "Exceeded number of tries");
+            die(instance, LCB_ETIMEDOUT, "Exceeded number of tries");
         }
         lcb_timer_create(instance, params, params->timeout, 0,
                          observe_timer_callback, &err);
         if (err != LCB_SUCCESS) {
             // report the issue and exit
-            error_callback(instance, err, "Failed to setup timer for observe");
+            die(instance, err, "Failed to setup timer for observe");
         }
         params->timeout *= 2;
         params->tries++;
@@ -1582,7 +1588,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     if (sasl_mech) {
         lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_FORCE_SASL_MECH, (void *)sasl_mech);
     }
-    (void)lcb_set_error_callback(instance, error_callback);
+    (void)lcb_set_bootstrap_callback(instance, bootstrap_callback);
     (void)lcb_set_flush_callback(instance, flush_callback);
     (void)lcb_set_get_callback(instance, get_callback);
     (void)lcb_set_remove_callback(instance, remove_callback);
@@ -1595,7 +1601,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)lcb_set_verbosity_callback(instance, verbosity_callback);
 
     if (config.getTimeout() != 0) {
-        lcb_set_timeout(instance, config.getTimeout());
+        lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, config.getTimeout());
     }
 
     lcb_error_t ret = lcb_connect(instance);

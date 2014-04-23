@@ -33,24 +33,18 @@ void MockUnitTest::SetUp() {
 }
 
 extern "C" {
-    static void error_callback(lcb_t instance,
-                               lcb_error_t err,
-                               const char *errinfo)
-    {
-        std::cerr << "Error " << lcb_strerror(instance, err) << std::endl;
-        fflush(NULL);
-        if (errinfo) {
-            std::cerr << errinfo;
+    static void bootstrap_callback(lcb_t instance, lcb_error_t err) {
+        if (err != LCB_SUCCESS) {
+            std::cerr << "Error " << lcb_strerror(instance, err) << std::endl;
         }
-
-        ASSERT_TRUE(false);
+        EXPECT_EQ(LCB_SUCCESS, err);
     }
 }
 
 void MockUnitTest::createConnection(HandleWrap &handle, lcb_t &instance)
 {
     MockEnvironment::getInstance()->createConnection(handle, instance);
-    (void)lcb_set_error_callback(handle.getLcb(), error_callback);
+    (void)lcb_set_bootstrap_callback(handle.getLcb(), bootstrap_callback);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(handle.getLcb()));
     lcb_wait(handle.getLcb());
 }
@@ -58,7 +52,7 @@ void MockUnitTest::createConnection(HandleWrap &handle, lcb_t &instance)
 void MockUnitTest::createConnection(lcb_t &instance)
 {
     MockEnvironment::getInstance()->createConnection(instance);
-    (void)lcb_set_error_callback(instance, error_callback);
+    (void)lcb_set_bootstrap_callback(instance, bootstrap_callback);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     lcb_wait(instance);
 }
@@ -147,21 +141,6 @@ TEST_F(MockUnitTest, testTimings)
 
 
 extern "C" {
-    static void timeout_error_callback(lcb_t instance,
-                                       lcb_error_t err,
-                                       const char *errinfo)
-    {
-        if (err == LCB_ETIMEDOUT) {
-            return;
-        }
-        std::cerr << "Error " << lcb_strerror(instance, err);
-        if (errinfo) {
-            std::cerr << errinfo;
-        }
-        std::cerr << std::endl;
-        abort();
-    }
-
     int timeout_seqno = 0;
     int timeout_stats_done = 0;
 
@@ -221,7 +200,6 @@ TEST_F(MockUnitTest, testTimeout)
     HandleWrap hw;
     createConnection(hw, instance);
 
-    (void)lcb_set_error_callback(instance, timeout_error_callback);
     (void)lcb_set_stat_callback(instance, timeout_stat_callback);
     (void)lcb_set_store_callback(instance, timeout_store_callback);
 
@@ -438,7 +416,7 @@ TEST_F(MockUnitTest, testBrokenFirstNodeInList)
 
     lcb_t instance;
     ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
-    lcb_set_timeout(instance, 200000); /* 200 ms */
+    lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, LCB_MS2US(200));
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     lcb_destroy(instance);
 }

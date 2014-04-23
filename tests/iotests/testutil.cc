@@ -24,12 +24,6 @@
  * Helper functions
  */
 extern "C" {
-    static void kvoErrorHandler(lcb_t instance,
-                                lcb_error_t err, const char *msg)
-    {
-        KVOperation::handleInstanceError(instance, err, msg);
-    }
-
     static void storeKvoCallback(lcb_t, const void *cookie,
                                  lcb_storage_t operation,
                                  lcb_error_t error,
@@ -72,7 +66,6 @@ void KVOperation::handleInstanceError(lcb_t instance, lcb_error_t err,
 
 void KVOperation::enter(lcb_t instance)
 {
-    callbacks.err = lcb_set_error_callback(instance, kvoErrorHandler);
     callbacks.get = lcb_set_get_callback(instance, getKvoCallback);
     callbacks.rm = lcb_set_remove_callback(instance, removeKvoCallback);
     callbacks.store = lcb_set_store_callback(instance, storeKvoCallback);
@@ -82,7 +75,6 @@ void KVOperation::enter(lcb_t instance)
 
 void KVOperation::leave(lcb_t instance)
 {
-    lcb_set_error_callback(instance, callbacks.err);
     lcb_set_get_callback(instance, callbacks.get);
     lcb_set_remove_callback(instance, callbacks.rm);
     lcb_set_store_callback(instance, callbacks.store);

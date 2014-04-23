@@ -33,22 +33,6 @@ static lcb_config_transport_t enabled_transports[] = {
         LCB_CONFIG_TRANSPORT_LIST_END
 };
 
-static void error_callback(lcb_t instance,
-                           lcb_error_t err,
-                           const char *errinfo)
-{
-    err_exit("Error %s: %s", lcb_strerror(instance, err), errinfo);
-}
-
-static void error_callback2(lcb_t instance,
-                            lcb_error_t err,
-                            const char *errinfo)
-{
-    global_error = err;
-    (void)instance;
-    (void)errinfo;
-}
-
 static void setup(char **argv, const char *username, const char *password,
                   const char *bucket)
 {
@@ -82,12 +66,13 @@ static void setup(char **argv, const char *username, const char *password,
         err_exit("Failed to create libcouchbase session");
     }
 
-    (void)lcb_set_error_callback(session, error_callback);
-
     if (lcb_connect(session) != LCB_SUCCESS) {
         err_exit("Failed to connect to server");
     }
     lcb_wait(session);
+    if (lcb_get_bootstrap_status(session) != LCB_SUCCESS) {
+        err_exit("Failed to bootstrap");
+    }
 
     if (!mock->is_mock) {
         const char *const *servers;
@@ -465,13 +450,11 @@ static lcb_error_t test_connect(char **argv, const char *username,
         err_exit("Failed to create libcouchbase session");
     }
 
-    (void)lcb_set_error_callback(session, error_callback2);
-
     if (lcb_connect(session) != LCB_SUCCESS) {
         err_exit("Failed to connect to server");
     }
     lcb_wait(session);
-    rc = global_error;
+    rc = lcb_get_bootstrap_status(session);
 
     lcb_destroy(session);
     session = NULL;

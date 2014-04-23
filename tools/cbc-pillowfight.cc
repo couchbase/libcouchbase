@@ -369,7 +369,7 @@ public:
             if (!config.isDumb()) {
                 lcb_connect(instance);
                 lcb_wait(instance);
-                error = lcb_get_last_error(instance);
+                error = lcb_get_bootstrap_status(instance);
                 if (error != LCB_SUCCESS) {
                     std::cout << std::endl;
                     log("Failed to connect: %s", lcb_strerror(instance, error));

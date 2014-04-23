@@ -27,8 +27,6 @@ extern "C" {
                                  lcb_error_t, const lcb_store_resp_t *);
     static void get_callback(lcb_t, const void *, lcb_error_t,
                              const lcb_get_resp_t *);
-    static void error_callback(lcb_t instance, lcb_error_t error,
-                               const char *errinfo);
 }
 
 class MultiClusterClient {
@@ -112,13 +110,18 @@ public:
                 exit(1);
             }
 
-            lcb_set_error_callback(instance, error_callback);
             lcb_set_get_callback(instance, get_callback);
             lcb_set_store_callback(instance, storage_callback);
 
 
             lcb_connect(instance);
             lcb_wait(instance);
+            if ((err = lcb_get_bootstrap_status(instance)) != LCB_SUCCESS) {
+                std::cerr << "Failed to bootstrap: "
+                          << lcb_strerror(instance, err)
+                          << std::endl;
+                exit(1);
+            }
             std::cout << " done" << std::endl;
 
             instances.push_back(instance);

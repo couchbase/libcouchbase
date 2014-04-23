@@ -101,20 +101,28 @@ protected:
 
 TEST_F(Behavior, CheckDefaultValues)
 {
-    EXPECT_EQ(LCB_IPV6_DISABLED, lcb_behavior_get_ipv6(instance));
+    lcb_ipv6_t val;
+    lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_IP6POLICY, &val);
+    EXPECT_EQ(LCB_IPV6_DISABLED, val);
     return;
 }
 
 TEST_F(Behavior, CheckIPv6)
 {
-    lcb_behavior_set_ipv6(instance, LCB_IPV6_ONLY);
-    EXPECT_EQ(LCB_IPV6_ONLY, lcb_behavior_get_ipv6(instance));
+    lcb_ipv6_t val = LCB_IPV6_ONLY;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_IP6POLICY, &val);
+    lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_IP6POLICY, &val);
+    EXPECT_EQ(LCB_IPV6_ONLY, val);
 
-    lcb_behavior_set_ipv6(instance, LCB_IPV6_ALLOW);
-    EXPECT_EQ(LCB_IPV6_ALLOW, lcb_behavior_get_ipv6(instance));
+    val = LCB_IPV6_ALLOW;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_IP6POLICY, &val);
+    lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_IP6POLICY, &val);
+    ASSERT_EQ(LCB_IPV6_ALLOW, val);
 
-    lcb_behavior_set_ipv6(instance, LCB_IPV6_DISABLED);
-    EXPECT_EQ(LCB_IPV6_DISABLED, lcb_behavior_get_ipv6(instance));
+    val = LCB_IPV6_DISABLED;
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_IP6POLICY, &val);
+    lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_IP6POLICY, &val);
+    ASSERT_EQ(LCB_IPV6_DISABLED, val);
 }
 
 TEST_F(Behavior, PluginDefaults)
