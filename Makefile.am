@@ -594,11 +594,6 @@ EXTRA_DIST = \
              VERSION
 
 if HAVE_DOXYGEN
-docs:
-	(cd tests; $(DOXYGEN))
-else
-docs:
-	@echo "You need doxygen to generate test documentation"
 endif
 
 
