@@ -31,23 +31,10 @@ lcbio_mkcserr(int syserr)
     case EISCONN:
         return LCBIO_CSERR_CONNECTED;
 
-        /* Possible to get these from a bad dns lookup */
-    case EINVAL:
 #ifdef _WIN32
+    case EINVAL:
         return LCBIO_CSERR_EINVAL;
 #endif
-    case EAFNOSUPPORT:
-    case ECONNREFUSED:
-
-    case ENETUNREACH:
-    case ENETRESET:
-    case ENETDOWN:
-
-    case ETIMEDOUT:
-    case ECONNABORTED:
-
-    case EHOSTDOWN:
-    case EHOSTUNREACH:
     default:
         return LCBIO_CSERR_EFAIL;
     }
