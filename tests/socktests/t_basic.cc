@@ -46,7 +46,18 @@ TEST_F(SockConnTest, testBasic)
     sock.close();
 }
 
-
+static bool isRefused(lcbio_OSERR err)
+{
+    if (err == ECONNREFUSED || err == ECONNABORTED) {
+        return true;
+    }
+#ifdef _WIN32
+    if (err == WSAECONNREFUSED) {
+        return true;
+    }
+#endif
+    return false;
+}
 // Test a connect without an accept
 TEST_F(SockConnTest, testRefused)
 {
@@ -56,8 +67,7 @@ TEST_F(SockConnTest, testRefused)
     strcpy(host.port, "1");
     loop->connect(&sock, &host, 100000);
     ASSERT_TRUE(sock.sock == NULL);
-    ASSERT_TRUE(ECONNREFUSED == (int)sock.syserr ||
-                ECONNABORTED == (int)sock.syserr);
+    ASSERT_TRUE(isRefused(sock.syserr));
 }
 
 TEST_F(SockConnTest, testBadDomain)
