@@ -19,37 +19,62 @@
 #include "packetutils.h"
 #include "bucketconfig/clconfig.h"
 #include "vb-aliases.h"
+#include "sllist-inl.h"
 
 #define LOGARGS(instance, lvl) \
-    instance->settings, "bconf", LCB_LOG_##lvl, __FILE__, __LINE__
+    instance->settings, "newconfig", LCB_LOG_##lvl, __FILE__, __LINE__
 
 #define LOG(instance, lvl, msg) lcb_log(LOGARGS(instance, lvl), msg)
 
-static int allocate_new_servers(lcb_t instance, clconfig_info *config);
+/**
+ * Finds the index of an older server using the current config
+ * @param config The new configuration
+ * @param server The server to match
+ * @return The new index, or -1 if the current server is not present in the new
+ * config
+ */
+static int
+find_new_index(VBUCKET_CONFIG_HANDLE config, mc_SERVER *server)
+{
+    int ii, nnew;
+    nnew = VB_NSERVERS(config);
+    for (ii = 0; ii < nnew; ii++) {
+        /** get the 'authority' */
+        const char *newhost = VB_NODESTR(config, ii);
+        if (!newhost) {
+            continue;
+        }
+        if (strcmp(newhost, server->datahost) == 0) {
+            return ii;
+        }
+    }
+    return -1;
+}
 
 static void
 log_vbdiff(lcb_t instance, VBUCKET_CONFIG_DIFF *diff)
 {
     char **curserver;
-    lcb_log(LOGARGS(instance, INFO),
-            "Config Diff: [ vBuckets Modified=%d ], [Sequence Changed=%d]",
-            diff->n_vb_changes, diff->sequence_changed);
-
+    lcb_log(LOGARGS(instance, INFO), "Config Diff: [ vBuckets Modified=%d ], [Sequence Changed=%d]", diff->n_vb_changes, diff->sequence_changed);
     if (diff->servers_added) {
         for (curserver = diff->servers_added; *curserver; curserver++) {
-            lcb_log(LOGARGS(instance, INFO), "Detected server %s added",
-                    *curserver);
+            lcb_log(LOGARGS(instance, INFO), "Detected server %s added", *curserver);
         }
     }
     if (diff->servers_removed) {
         for (curserver = diff->servers_removed; *curserver; curserver++) {
-            lcb_log(LOGARGS(instance, INFO), "Detected server %s removed",
-                    *curserver);
+            lcb_log(LOGARGS(instance, INFO), "Detected server %s removed", *curserver);
         }
     }
 }
 
-
+/**
+ * This callback is invoked for packet relocation twice. It tries to relocate
+ * commands to their destination server. Some commands may not be relocated
+ * either because they have no explicit "Relocation Information" (i.e. no
+ * specific vbucket) or because the command is tied to a specific server (i.e.
+ * CMD_STAT)
+ */
 static int
 iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
 {
@@ -57,49 +82,42 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
     mc_PIPELINE *newpl;
     mc_PACKET *newpkt;
     int newix;
+    uint8_t op;
+
+    (void)arg;
 
     memcpy(&hdr, SPAN_BUFFER(&oldpkt->kh_span), sizeof(hdr.bytes));
-    if (hdr.request.opcode == CMD_OBSERVE ||
-            hdr.request.opcode == PROTOCOL_BINARY_CMD_STAT ||
-            hdr.request.opcode == CMD_GET_CLUSTER_CONFIG) {
-        /** Need special handling */
+    op = hdr.request.opcode;
+    if (op == CMD_OBSERVE || op == PROTOCOL_BINARY_CMD_STAT || op == CMD_GET_CLUSTER_CONFIG) {
         return MCREQ_KEEP_PACKET;
     }
 
-    /** Find the new server for vBucket mapping */
     newix = vbucket_get_master(cq->config, ntohs(hdr.request.vbucket));
     if (newix < 0 || newix > (int)cq->npipelines) {
-        /** Need to fail this one out! */
         return MCREQ_KEEP_PACKET;
     }
 
     newpl = cq->pipelines[newix];
+    if (newpl == oldpl || newpl == NULL) {
+        return MCREQ_KEEP_PACKET;
+    }
+
+    lcb_log(LOGARGS(cq->instance, INFO), "Remapped packet %p (%u) from %p to %p", oldpkt, oldpkt->opaque, oldpl, newpl);
 
     /** Otherwise, copy over the packet and find the new vBucket to map to */
     newpkt = mcreq_dup_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     mcreq_reenqueue_packet(newpl, newpkt);
     mcreq_packet_handled(oldpl, oldpkt);
-
-    (void)arg;
-
     return MCREQ_REMOVE_PACKET;
 }
 
-
 static int
-replace_config(lcb_t instance, clconfig_info *old_config,
-               clconfig_info *next_config)
+is_new_config(lcb_t instance, VBUCKET_CONFIG_HANDLE oldc, VBUCKET_CONFIG_HANDLE newc)
 {
     VBUCKET_CONFIG_DIFF *diff;
-    VBUCKET_DISTRIBUTION_TYPE dist_t;
-    mc_PIPELINE **old;
-    unsigned ii, nold;
-    int *is_clean;
     VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
-
-
-    diff = vbucket_compare(old_config->vbc, next_config->vbc);
+    diff = vbucket_compare(oldc, newc);
 
     if (diff) {
         chstatus = vbucket_what_changed(diff);
@@ -108,70 +126,85 @@ replace_config(lcb_t instance, clconfig_info *old_config,
     }
 
     if (diff == NULL || chstatus == VBUCKET_NO_CHANGES) {
-        lcb_log(LOGARGS(instance, DEBUG),
-                "Ignoring config update. No server changes; DIFF=%p", diff);
-        return LCB_CONFIGURATION_UNCHANGED;
+        lcb_log(LOGARGS(instance, DEBUG), "Ignoring config update. No server changes; DIFF=%p", diff);
+        return 0;
     }
-
-    old = mcreq_queue_take_pipelines(&instance->cmdq, &nold);
-    dist_t = VB_DISTTYPE(next_config->vbc);
-
-    if (allocate_new_servers(instance, next_config) != 0) {
-        return -1;
-    }
-
-    is_clean = calloc(nold, sizeof(*is_clean));
-
-    for (ii = 0; ii < nold; ii++) {
-        mc_PIPELINE *pl = old[ii];
-        is_clean[ii] = mcserver_is_clean((mc_SERVER *)pl);
-
-        if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
-            mcreq_iterwipe(&instance->cmdq, pl, iterwipe_cb, NULL);
-        }
-    }
-
-    for (ii = 0; ii < nold; ii++) {
-        mc_PIPELINE *pl = old[ii];
-        mc_SERVER *server = (mc_SERVER *)pl;
-        mcserver_fail_chain(server, LCB_MAP_CHANGED);
-        mcserver_close(server, is_clean[ii]);
-    }
-
-    for (ii = 0; ii < instance->cmdq.npipelines; ii++) {
-        mc_PIPELINE *pl = instance->cmdq.pipelines[ii];
-        pl->flush_start(pl);
-    }
-
-    free(is_clean);
-    free(old);
-    return LCB_CONFIGURATION_CHANGED;
+    return 1;
 }
 
 static int
-allocate_new_servers(lcb_t instance, clconfig_info *config)
+replace_config(lcb_t instance, clconfig_info *next_config)
 {
-    unsigned ii;
-    unsigned nservers;
-    mc_PIPELINE **servers;
-    mc_CMDQUEUE *q = &instance->cmdq;
+    VBUCKET_DISTRIBUTION_TYPE dist_t;
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    mc_PIPELINE **ppold, **ppnew;
+    unsigned ii, nold, nnew;
 
-    nservers = VB_NSERVERS(config->vbc);
-    servers = malloc(sizeof(*servers) * nservers);
-    if (!servers) {
-        return -1;
-    }
+    dist_t = VB_DISTTYPE(next_config->vbc);
+    nnew = VB_NSERVERS(next_config->vbc);
+    ppnew = calloc(nnew, sizeof(*ppnew));
+    ppold = mcreq_queue_take_pipelines(cq, &nold);
 
-    for (ii = 0; ii < nservers; ii++) {
-        mc_SERVER *srv = mcserver_alloc(instance, ii);
-        servers[ii] = &srv->pipeline;
-        if (!srv) {
-            return -1;
+    /**
+     * Determine which existing servers are still part of the new cluster config
+     * and place it inside the new list.
+     */
+    for (ii = 0; ii < nold; ii++) {
+        mc_SERVER *cur = (mc_SERVER *)ppold[ii];
+        int newix = find_new_index(next_config->vbc, cur);
+        if (newix > -1) {
+            cur->pipeline.index = newix;
+            ppnew[newix] = &cur->pipeline;
+            ppold[ii] = NULL;
+            lcb_log(LOGARGS(instance, INFO), "Reusing server %p. OldIndex=%d. NewIndex=%d", (void*)cur, ii, newix);
         }
     }
 
-    mcreq_queue_add_pipelines(q, servers, nservers, config->vbc);
-    return 0;
+    /**
+     * Once we've moved the kept servers to the new list, allocate new mc_SERVER
+     * structures for slots that don't have an existing mc_SERVER. We must do
+     * this before add_pipelines() is called, so that there are no holes inside
+     * ppnew
+     */
+    for (ii = 0; ii < nnew; ii++) {
+        if (!ppnew[ii]) {
+            ppnew[ii] = (mc_PIPELINE *)mcserver_alloc2(instance, next_config->vbc, ii);
+            ppnew[ii]->index = ii;
+        }
+    }
+
+    /**
+     * Once we have all the server structures in place for the new config,
+     * transfer the new config along with the new list over to the CQ structure.
+     */
+    mcreq_queue_add_pipelines(cq, ppnew, nnew, next_config->vbc);
+    if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
+        for (ii = 0; ii < nnew; ii++) {
+            mcreq_iterwipe(cq, ppnew[ii], iterwipe_cb, NULL);
+        }
+    }
+
+    /**
+     * Go through all the servers that are to be removed and relocate commands
+     * from their queues into the new queues
+     */
+    for (ii = 0; ii < nold; ii++) {
+        if (!ppold[ii]) {
+            continue;
+        }
+        if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
+            mcreq_iterwipe(cq, ppold[ii], iterwipe_cb, NULL);
+        }
+        mcserver_fail_chain((mc_SERVER *)ppold[ii], LCB_MAP_CHANGED);
+        mcserver_close((mc_SERVER *)ppold[ii], 0);
+    }
+
+    for (ii = 0; ii < nnew; ii++) {
+        ppnew[ii]->flush_start(ppnew[ii]);
+    }
+
+    free(ppold);
+    return LCB_CONFIGURATION_CHANGED;
 }
 
 void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
@@ -190,18 +223,33 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     q->instance = instance;
 
     if (old_config) {
-        change_status = replace_config(instance, old_config, config);
-        if (change_status == -1) {
-            LOG(instance, ERR, "Couldn't replace config");
-            return;
+        if (is_new_config(instance, old_config->vbc, config->vbc)) {
+            change_status = replace_config(instance, config);
+            if (change_status == -1) {
+                LOG(instance, ERR, "Couldn't replace config");
+                return;
+            }
+            lcb_clconfig_decref(old_config);
+        } else {
+            change_status = LCB_CONFIGURATION_UNCHANGED;
         }
-
-        lcb_clconfig_decref(old_config);
-
     } else {
-        if (allocate_new_servers(instance, config) != 0) {
-            return;
+        unsigned nservers;
+        mc_PIPELINE **servers;
+        nservers = VB_NSERVERS(config->vbc);
+        if ((servers = malloc(sizeof(*servers) * nservers)) == NULL) {
+            abort();
         }
+
+        for (ii = 0; ii < nservers; ii++) {
+            mc_SERVER *srv;
+            if ((srv = mcserver_alloc(instance, ii)) == NULL) {
+                abort();
+            }
+            servers[ii] = &srv->pipeline;
+        }
+
+        mcreq_queue_add_pipelines(q, servers, nservers, config->vbc);
         change_status = LCB_CONFIGURATION_NEW;
     }
 

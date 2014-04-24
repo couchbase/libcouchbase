@@ -442,11 +442,9 @@ dupstr_or_null(const char *s) {
 }
 
 mc_SERVER *
-mcserver_alloc(lcb_t instance, int ix)
+mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix)
 {
-    mc_CMDQUEUE *cq = &instance->cmdq;
     mc_SERVER *ret;
-
     ret = calloc(1, sizeof(*ret));
     if (!ret) {
         return ret;
@@ -454,17 +452,23 @@ mcserver_alloc(lcb_t instance, int ix)
 
     ret->instance = instance;
     ret->settings = instance->settings;
-    ret->datahost = dupstr_or_null(VB_NODESTR(cq->config, ix));
-    ret->resthost = dupstr_or_null(VB_RESTURL(cq->config, ix));
-    ret->viewshost = dupstr_or_null(VB_VIEWSURL(cq->config, ix));
+    ret->datahost = dupstr_or_null(VB_NODESTR(vbc, ix));
+    ret->resthost = dupstr_or_null(VB_RESTURL(vbc, ix));
+    ret->viewshost = dupstr_or_null(VB_VIEWSURL(vbc, ix));
 
     lcb_settings_ref(ret->settings);
-
     mcreq_pipeline_init(&ret->pipeline);
     ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
     lcb_host_parsez(&ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
     ret->io_timer = lcbio_timer_new(instance->iotable, ret, timeout_server);
     return ret;
+}
+
+mc_SERVER *
+mcserver_alloc(lcb_t instance, int ix)
+{
+    mc_CMDQUEUE *cq = &instance->cmdq;
+    return mcserver_alloc2(instance, cq->config, ix);
 }
 
 

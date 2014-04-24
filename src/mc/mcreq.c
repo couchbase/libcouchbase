@@ -149,16 +149,10 @@ pkt_tmo_compar(sllist_node *a, sllist_node *b)
 void
 mcreq_reenqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
-    sllist_node *old_tail = pipeline->requests.last;
+    sllist_root *reqs = &pipeline->requests;
     mcreq_enqueue_packet(pipeline, packet);
-    /** Remove the packet from the list, though */
-    if (!old_tail) {
-        return;
-    }
-
-    old_tail->next = NULL;
-    pipeline->requests.last = old_tail;
-    sllist_insert_sorted(&pipeline->requests, &packet->slnode, pkt_tmo_compar);
+    sllist_remove(reqs, &packet->slnode);
+    sllist_insert_sorted(reqs, &packet->slnode, pkt_tmo_compar);
 }
 
 void
