@@ -79,3 +79,15 @@ TEST_F(BigallocTest, testPooled)
     ASSERT_EQ(RDB_BIGALLOC_BLKCNT_MAX, LCB_CLIST_SIZE(&ba->bufs));
     a.release();
 }
+
+TEST_F(BigallocTest, testRealloc)
+{
+    RdbAllocator a(rdb_bigalloc_new());
+    rdb_ROPESEG *seg = a.alloc(5);
+    // well, we'll see what we have here
+    size_t cursize = seg->nalloc;
+    seg = a.realloc(seg, cursize+1);
+    ASSERT_GT(seg->nalloc, cursize);
+    a.free(seg);
+    a.release();
+}

@@ -145,6 +145,7 @@ seg_realloc(rdb_ALLOCATOR *abase, rdb_ROPESEG *seg, unsigned size)
     }
 
     seg->root = realloc(seg->root, size);
+    seg->nalloc = size;
     alloc->total_malloc++;
     recheck_thresholds((rdb_BIGALLOC *)abase);
     return seg;
