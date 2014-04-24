@@ -182,31 +182,11 @@ public:
 
 private:
     void wait(void) {
-        switch (iops->version) {
-        case 0:
-            iops->v.v0.run_event_loop(iops);
-            break;
-        case 1:
-            iops->v.v1.run_event_loop(iops);
-            break;
-        default:
-            std::cerr << "Unknown io version " << iops->version << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        lcb_run_loop(instances.front());
     }
 
     void resume(void) {
-        switch (iops->version) {
-        case 0:
-            iops->v.v0.stop_event_loop(iops);
-            break;
-        case 1:
-            iops->v.v1.stop_event_loop(iops);
-            break;
-        default:
-            std::cerr << "Unknown io version " << iops->version << std::endl;
-            exit(EXIT_FAILURE);
-        }
+        lcb_stop_loop(instances.front());
     }
 
     lcb_io_opt_t iops;
