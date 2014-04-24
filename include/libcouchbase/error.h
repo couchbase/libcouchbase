@@ -41,37 +41,36 @@
 extern "C" {
 #endif
 
-    /**
-     * @brief Error Categories
-     *
-     * These error categories are assigned as a series of OR'd bits to each
-     * of the error codes in lcb_error_t.
-     *
-     * @see lcb_get_errtype
-     */
-    typedef enum {
-        /** Error type indicating a likely issue in user input */
-        LCB_ERRTYPE_INPUT = 1 << 0,
+/**
+ * @brief Error Categories
+ *
+ * These error categories are assigned as a series of OR'd bits to each
+ * of the error codes in lcb_error_t.
+ *
+ * @see lcb_get_errtype
+ */
+typedef enum {
+    /** Error type indicating a likely issue in user input */
+    LCB_ERRTYPE_INPUT = 1 << 0,
 
-        /** Error type indicating a likely network failure */
-        LCB_ERRTYPE_NETWORK = 1 << 1,
+    /** Error type indicating a likely network failure */
+    LCB_ERRTYPE_NETWORK = 1 << 1,
 
-        /** Error type indicating a fatal condition within the server or library */
-        LCB_ERRTYPE_FATAL = 1 << 2,
+    /** Error type indicating a fatal condition within the server or library */
+    LCB_ERRTYPE_FATAL = 1 << 2,
 
-        /** Error type indicating a transient condition within the server */
-        LCB_ERRTYPE_TRANSIENT = 1 << 3,
+    /** Error type indicating a transient condition within the server */
+    LCB_ERRTYPE_TRANSIENT = 1 << 3,
 
-        /** Error type indicating a negative server reply for the data */
-        LCB_ERRTYPE_DATAOP = 1 << 4,
+    /** Error type indicating a negative server reply for the data */
+    LCB_ERRTYPE_DATAOP = 1 << 4,
 
-        /** Error codes which should never be visible to the user */
-        LCB_ERRTYPE_INTERNAL = 1 << 5,
+    /** Error codes which should never be visible to the user */
+    LCB_ERRTYPE_INTERNAL = 1 << 5,
 
-        /** Error code indicating a plugin failure */
-        LCB_ERRTYPE_PLUGIN = 1 << 6
-    } lcb_errflags_t;
-
+    /** Error code indicating a plugin failure */
+    LCB_ERRTYPE_PLUGIN = 1 << 6
+} lcb_errflags_t;
 
 /**
  * @brief XMacro for all error types
@@ -237,20 +236,20 @@ extern "C" {
      * Define the error codes in use by the library
      */
     typedef enum {
-#define X(n, v, cls, s) n = v,
+    #define X(n, v, cls, s) n = v,
         LCB_XERR(X)
-#undef X
+    #undef X
 
-#ifdef LIBCOUCHBASE_INTERNAL
-        /**
-         * This is a private value used by the tests in libcouchbase
-         */
-        LCB_MAX_ERROR_VAL,
-#endif
+    #ifdef LIBCOUCHBASE_INTERNAL
+    /**
+     * This is a private value used by the tests in libcouchbase
+     */
+    LCB_MAX_ERROR_VAL,
+    #endif
 
-        /* The errors below this value reserver for libcouchbase usage. */
-        LCB_MAX_ERROR = 0x1000
-    } lcb_error_t;
+    /* The errors below this value reserver for libcouchbase usage. */
+    LCB_MAX_ERROR = 0x1000
+} lcb_error_t;
 
 
 #define lcb_is_error_enomem(a) ((a == LCB_CLIENT_ENOMEM) || \
