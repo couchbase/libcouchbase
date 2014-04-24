@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "sllist.h"
 #include "sllist-inl.h"
-
+#include <list>
 #ifndef ASSERT_NZ
 #define ASSERT_NZ(e) ASSERT_NE(0, e)
 #endif
@@ -219,4 +219,209 @@ TEST_F(SListTests, testSort)
 
     ni_next = SLLIST_ITEM(items[3].slnode.next, NumberedItem, slnode);
     ASSERT_EQ(&middle1.slnode, ni_next->slnode.next);
+}
+
+template <typename T, sllist_node T::*m = &T::slnode>
+class SList : public sllist_root
+{
+public:
+    SList() {
+        clear();
+    };
+
+    void append(T& memb) {
+        sllist_append(this, getNode(memb));
+    }
+
+    void prepend(T& memb) {
+        sllist_prepend(this, getNode(memb));
+    }
+
+    void insert(T& memb, int (*compar)(sllist_node*,sllist_node*)) {
+        sllist_insert_sorted(this, getNode(memb), compar);
+    }
+
+    bool contains(T& memb) {
+        return sllist_contains(this, getNode(memb));
+    }
+
+    size_t size() {
+        return sllist_get_size(this);
+    }
+
+    void remove(T& memb) {
+        sllist_remove(this, getNode(memb));
+    }
+
+    bool empty() {
+        return SLLIST_IS_EMPTY(this);
+    }
+
+    void clear() {
+        first = NULL;
+        last = NULL;
+    }
+
+    T& front() {
+        if (empty()) {
+            throw std::out_of_range("List is empty");
+        }
+        return *llToItem(first);
+    }
+
+    T& back() {
+        if (empty()) {
+            throw std::out_of_range("List is empty");
+        }
+        return *llToItem(last);
+    }
+
+    T& operator[](int ix) {
+        int cur = 0;
+        sllist_node *ll;
+        SLLIST_FOREACH(this, ll) {
+            if (cur++ == ix) {
+                return *llToItem(ll);
+            }
+        }
+        throw std::out_of_range("No such index");
+    }
+
+private:
+    sllist_node * getNode(T& memb) const {
+        return &(memb.*m);
+    }
+
+    T* llToItem(sllist_node *node) {
+        // Get the offset
+        T *obj = 0;
+        sllist_node *offset = &(obj->*m);
+        char *diff = (char *) offset;
+        return (T *) (((char *) node) - diff);
+    }
+};
+
+TEST_F(SListTests, testSandwichSort)
+{
+    // moar sort tests
+    SList<NumberedItem> sl;
+    NumberedItem itm_1, itm_2, itm_3;
+    itm_1.value = 1;
+    itm_2.value = 2;
+    itm_3.value = 3;
+
+    // 1, 3, 2
+    sl.insert(itm_1, ni_compare);
+    ASSERT_TRUE(sl.contains(itm_1));
+    ASSERT_EQ(1, sl.size());
+    ASSERT_EQ(1, sl[0].value);
+
+    sl.insert(itm_3, ni_compare);
+    ASSERT_TRUE(sl.contains(itm_3));
+    ASSERT_EQ(1, sl[0].value);
+    ASSERT_EQ(3, sl[1].value);
+
+    sl.insert(itm_2, ni_compare);
+    ASSERT_TRUE(sl.contains(itm_2));
+    ASSERT_EQ(3, sl.size());
+    ASSERT_EQ(1, sl[0].value);
+    ASSERT_EQ(2, sl[1].value);
+    ASSERT_EQ(3, sl[2].value);
+
+    sl.clear();
+    // Insert 3,2,1
+    sl.insert(itm_3, ni_compare);
+    sl.insert(itm_2, ni_compare);
+    sl.insert(itm_1, ni_compare);
+    ASSERT_EQ(1, sl[0].value);
+    ASSERT_EQ(2, sl[1].value);
+    ASSERT_EQ(3, sl[2].value);
+}
+
+TEST_F(SListTests, testPrependSort)
+{
+    SList<NumberedItem> sl;
+    NumberedItem itm_1, itm_2, itm_3;
+    itm_1.value = 1;
+    itm_2.value = 2;
+    itm_3.value = 3;
+
+    // 2, 3, 1
+    sl.insert(itm_2, ni_compare);
+    sl.insert(itm_3, ni_compare);
+    ASSERT_EQ(2, sl.size());
+    ASSERT_EQ(2, sl[0].value);
+    ASSERT_EQ(3, sl[1].value);
+
+    // Prepend item 1
+    sl.insert(itm_1, ni_compare);
+    ASSERT_EQ(3, sl.size());
+    ASSERT_EQ(1, sl[0].value);
+    ASSERT_EQ(2, sl[1].value);
+    ASSERT_EQ(3, sl[2].value);
+}
+
+// Ensure removing the tail item inside an iterator does what we want it to
+TEST_F(SListTests, testRemoveTailIter)
+{
+    NumberedItem itm_1, itm_2, itm_3;
+    itm_1.value = 1;
+    itm_2.value = 2;
+    itm_3.value = 3;
+    SList<NumberedItem> sl;
+    sl.append(itm_1);
+    sl.append(itm_2);
+    sl.append(itm_3);
+
+    ASSERT_EQ(1, sl.front().value);
+    ASSERT_EQ(3, sl.back().value);
+
+    sllist_iterator iter;
+    bool removed = false;
+    SLLIST_ITERFOR(&sl, &iter) {
+        if (iter.cur == &itm_3.slnode) {
+            sllist_iter_remove(&sl, &iter);
+            removed = true;
+            break;
+        }
+    }
+
+    ASSERT_TRUE(removed);
+    ASSERT_EQ(2, sl.size());
+    ASSERT_EQ(1, sl.front().value);
+    ASSERT_EQ(2, sl.back().value);
+}
+
+TEST_F(SListTests, testRemoveEmptyTailIter)
+{
+    NumberedItem itm_1;
+    SList<NumberedItem> sl;
+    sl.append(itm_1);
+    sllist_iterator iter;
+    SLLIST_ITERFOR(&sl, &iter) {
+        sllist_iter_remove(&sl, &iter);
+    }
+    ASSERT_TRUE(sl.empty());
+}
+
+TEST_F(SListTests, testRemoveFirstIter)
+{
+    NumberedItem itm_1, itm_2, itm_3;
+    SList<NumberedItem> sl;
+    itm_1.value = 1;
+    itm_2.value = 2;
+    itm_3.value = 3;
+    sl.append(itm_1);
+    sl.append(itm_2);
+    sl.append(itm_3);
+    sllist_iterator iter;
+    SLLIST_ITERFOR(&sl, &iter) {
+        if (iter.cur == &itm_1.slnode) {
+            sllist_iter_remove(&sl, &iter);
+        }
+    }
+
+    ASSERT_EQ(2, sl.size());
+    ASSERT_EQ(2, sl.front().value);
+    ASSERT_EQ(3, sl.back().value);
 }

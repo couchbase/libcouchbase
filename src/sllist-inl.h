@@ -25,6 +25,17 @@ sllist_contains(sllist_root *list, sllist_node *item)
     return 0;
 }
 
+static INLINE unsigned
+sllist_get_size(sllist_root *list)
+{
+    unsigned ret = 0;
+    sllist_node *ll;
+    SLLIST_FOREACH(list, ll) {
+        ret++;
+    }
+    return ret;
+}
+
 /* #define SLLIST_DEBUG */
 
 #ifdef SLLIST_DEBUG
@@ -77,9 +88,13 @@ static INLINE void
 sllist_iter_remove(sllist_root *list, sllist_iterator *iter)
 {
     iter->prev->next = iter->next;
+
     /** GCC strict aliasing. Yay. */
     if (iter->prev->next == NULL && (void *)iter->prev == (void *)&list->first) {
         list->last = NULL;
+    } else if (iter->cur == list->last && iter->next == NULL) {
+        /* removing the last item */
+        list->last = iter->prev;
     }
     iter->removed = 1;
 }
@@ -96,6 +111,19 @@ sllist_remove_head(sllist_root *list)
     if (!list->first) {
         list->last = NULL;
     }
+}
+
+static INLINE void
+sllist_remove(sllist_root *list, sllist_node *item)
+{
+    sllist_iterator iter;
+    SLLIST_ITERFOR(list, &iter) {
+        if (iter.cur == item) {
+            sllist_iter_remove(list, &iter);
+            return;
+        }
+    }
+    abort();
 }
 
 static INLINE void
@@ -124,43 +152,28 @@ sllist_prepend(sllist_root *list, sllist_node *item)
     }
 }
 
-/**
- * Insert a sorted item into the list. This is not a very fast operation but
- * is maintained here for simplicity.
- *
- * It is assumed that the list is otherwise sorted, so that the item with
- * the lowest value begins at the beginning and the highest value is at the
- * tail.
- */
+static void
+sllist_insert(sllist_root *list, sllist_node *prev, sllist_node *item)
+{
+    item->next = prev->next;
+    prev->next = item;
+    if (item->next == NULL) {
+        list->last = item;
+    }
+}
+
 static INLINE void
 sllist_insert_sorted(sllist_root *list, sllist_node *item,
                      int (*compar)(sllist_node*, sllist_node*))
 {
     sllist_iterator iter;
-    if (SLLIST_IS_EMPTY(list)) {
-        sllist_append(list, item);
-        return;
-    }
-
     SLLIST_ITERFOR(list, &iter) {
-        int rv;
-        if (!iter.next) {
-            /* end of list */
-            sllist_append(list, item);
-            break;
+        int rv = compar(item, iter.cur);
+        /** if the item we have is before the current, prepend it here */
+        if (rv <= 0) {
+            sllist_insert(list, iter.prev, item);
+            return;
         }
-
-        rv = compar(item, iter.next);
-        if (rv > 0) {
-            continue;
-        }
-
-        if (iter.cur == list->first) {
-            sllist_prepend(list, item);
-        } else {
-            item->next = iter.cur->next;
-            iter.cur->next = item;
-        }
-        return;
     }
+    sllist_append(list, item);
 }
