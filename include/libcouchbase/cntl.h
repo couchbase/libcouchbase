@@ -464,8 +464,28 @@ extern "C" {
  */
 #define LCB_CNTL_CONFIG_ALL_NODES 0x20
 
+/**
+ * @brief file used for the configuration cache.
+ *
+ * The configuration
+ * cache allows to bootstrap from a cluster without using the initial
+ * bootstrap connection, considerably reducing latency. If the file passed
+ * does not exist, the normal bootstrap process is performed and the file
+ * is written to with the current information.
+ *
+ * Configuration cache is not supported for memcached buckets
+ *
+ * @uncommitted
+ *
+ * Mode|Arg
+ * ----|---
+ * Set | `char *`
+ * Get | `char **`
+ */
+#define LCB_CNTL_CONFIGCACHE 0x21
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x21
+#define LCB_CNTL__MAX                    0x22
 
 #ifdef __cplusplus
 }

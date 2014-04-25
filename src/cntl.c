@@ -466,6 +466,24 @@ static lcb_error_t init_providers(int mode, lcb_t instance, int cmd, void *arg)
     return lcb_init_providers(instance, opts);
 }
 
+static lcb_error_t config_cache_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    clconfig_provider *provider;
+    (void)cmd;
+
+    provider = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_FILE);
+    if (mode == LCB_CNTL_SET) {
+        if (lcb_clconfig_file_set_filename(provider, (char *)arg) == 0) {
+            instance->settings->bc_http_stream_time = LCB_MS2US(10000);
+            return LCB_SUCCESS;
+        }
+        return LCB_ERROR;
+    } else {
+        *(const char **)arg = lcb_clconfig_file_get_filename(provider);
+        return LCB_SUCCESS;
+    }
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -499,7 +517,8 @@ static ctl_handler handlers[] = {
     config_nodes, /* LCB_CNTL_CONFIG_HTTP_NODES */
     config_nodes, /* LCB_CNTL_CONFIG_CCCP_NODES */
     get_changeset, /* LCB_CNTL_CHANGESET */
-    init_providers /* LCB_CNTL_CONFIG_ALL_NODES */
+    init_providers, /* LCB_CNTL_CONFIG_ALL_NODES */
+    config_cache_handler /* LCB_CNTL_CONFIGCACHE */
 };
 
 
