@@ -280,13 +280,11 @@ lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_si
     if (base) {
         lcb_string urlbuf;
         lcb_string_init(&urlbuf);
+        lcb_string_appendz(&urlbuf, "http://");
 
         if (nbase > schemsize && memcmp(base, htscheme, schemsize) == 0) {
-            /* advance */
             base += schemsize;
             nbase -= schemsize;
-        } else {
-            lcb_string_appendz(&urlbuf, "http://");
         }
 
 
@@ -297,7 +295,7 @@ lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_si
         lcb_string_append(&urlbuf, req->path, req->npath);
 
         req->nurl = urlbuf.nused;
-        req->url = calloc(req->nurl + 1, sizeof(char));
+        req->url = calloc(req->nurl + 1, 1);
         memcpy(req->url, urlbuf.base, req->nurl);
         lcb_string_release(&urlbuf);
     }

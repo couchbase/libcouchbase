@@ -194,7 +194,9 @@ io_read(lcbio_CTX *ctx, unsigned nr)
 {
     lcb_http_request_t req = lcbio_ctx_data(ctx);
     lcb_t instance = req->instance;
-    int rv, is_done = 0;
+    /** this variable set to 0 (in progress), -1 (error), 1 (done) */
+    int rv = 0;
+    int is_done = 0;
     lcb_error_t err = LCB_SUCCESS;
     lcbio_CTXRDITER iter;
     req->refcount++;
@@ -208,27 +210,27 @@ io_read(lcbio_CTX *ctx, unsigned nr)
         char *buf;
         unsigned nbuf;
 
-        if (is_done || rv > 0) {
-            break;
-        }
-
         buf = lcbio_ctx_ribuf(&iter);
         nbuf = lcbio_ctx_risize(&iter);
         nb = _lcb_http_parser_execute(req->parser, &req->parser_settings, buf, nbuf);
 
-        if (nb != nbuf) {
-            if (HTTP_PARSER_ERRNO(req->parser) != HPE_OK) {
-                rv = -1;
-            }
-            if (req->status != LCB_HTREQ_S_ONGOING) {
-                rv = 0;
-            } else {
-                rv = nb;
-            }
+        if (nb == nbuf) {
+            continue;
         }
+
+        if (HTTP_PARSER_ERRNO(req->parser) != HPE_OK) {
+            /** Error */
+            rv = -1;
+        }
+        if (req->status != LCB_HTREQ_S_ONGOING) {
+            rv = 1;
+        } else {
+            rv = 0;
+        }
+        break;
     }
 
-    if (rv == 0) {
+    if (rv != 0) {
         is_done = 1;
 
     } else if (rv < 0) {
@@ -292,6 +294,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
 {
     lcb_http_request_t req = arg;
     lcbio_EASYPROCS procs;
+    LCBIO_CONNREQ_CLEAR(&req->creq);
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(req, ERR), "Connection to failed with Err=0x%x", err);
