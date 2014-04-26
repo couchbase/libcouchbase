@@ -69,8 +69,10 @@ IF(${MSVC})
     # put debug info into release build and revert /OPT defaults after
     # /DEBUG so that it won't degrade performance and size
     # http://msdn.microsoft.com/en-us/library/xe4t6fc1(v=vs.80).aspx
-    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /OPT:REF /OPT:ICF")
-    SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /OPT:REF /OPT:ICF")
+    # Since CMake for some odd reason strips 'incremental' and 'INCREMENTAL', we'll
+    # use weird casing here
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /OPT:REF /OPT:ICF /IncReMenTal:no")
+    SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /OPT:REF /OPT:ICF /InCreMenTal:no")
     SET(LCB_CORE_CXXFLAGS "")
     SET(LCB_CORE_CFLAGS "")
     SET(LCB_BASIC_CFLAGS "")
@@ -86,6 +88,7 @@ ELSE()
     ENDIF()
     SET(LCB_CORE_CFLAGS "${LCB_GNUC_C_WARNINGS}")
     SET(LCB_CORE_CXXFLAGS "${LCB_GNUC_CXX_WARNINGS}")
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
 ENDIF()
 
 IF(LCB_UNIVERSAL_BINARY AND (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
