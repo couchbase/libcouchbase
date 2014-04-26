@@ -273,22 +273,8 @@ INSTALL(TARGETS couchbase
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-INSTALL(FILES include/libcouchbase/arguments.h
-              include/libcouchbase/assert.h
-              include/libcouchbase/behavior.h
-              include/libcouchbase/callbacks.h
-              include/libcouchbase/cntl.h
-              include/libcouchbase/compat.h
-              include/libcouchbase/couchbase.h
-              include/libcouchbase/durability.h
-              include/libcouchbase/error.h
-              include/libcouchbase/http.h
-              include/libcouchbase/sanitycheck.h
-              include/libcouchbase/sysdefs.h
-              include/libcouchbase/timings.h
-              include/libcouchbase/types.h
-              include/libcouchbase/visibility.h
-              ${LCB_GENSRCDIR}/libcouchbase/configuration.h
-            DESTINATION include/libcouchbase)
+FILE(GLOB LCB_PKGHDRS include/libcouchbase/*.h)
+INSTALL(FILES ${LCB_PKGHDRS} ${LCB_GENSRCDIR}/libcouchbase/configuration.h
+    DESTINATION include/libcouchbase)
 
 INSTALL_PDBS(couchbase)
