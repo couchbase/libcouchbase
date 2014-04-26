@@ -134,7 +134,7 @@ lcbio_async_cancel(lcbio_TIMER *timer);
  * @param timer the timer to inspect
  * @return nonzero if armed, zero if unarmed.
  */
-#define lcbio_timer_armed(timer) (timer)->state & LCBIO_TIMER_S_ARMED
+#define lcbio_timer_armed(timer) ((timer)->state & LCBIO_TIMER_S_ARMED)
 
 /**@}*/
 

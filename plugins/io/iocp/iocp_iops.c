@@ -75,7 +75,6 @@ static int start_read(lcb_io_opt_t iobase,
                       void *uarg,
                       lcb_ioC_read2_callback callback)
 {
-    int ii;
     int rv;
     DWORD flags = 0, dwNbytes;
     iocp_t *io = (iocp_t *)iobase;

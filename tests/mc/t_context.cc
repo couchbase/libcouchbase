@@ -21,7 +21,6 @@ static void failcb(mc_PIPELINE *, mc_PACKET *pkt, lcb_error_t, void *)
 TEST_F(McContext, testBasicContext)
 {
     CQWrap cq;
-    lcb_error_t err;
     CtxCookie cookie;
 
     mcreq_sched_enter(&cq);
@@ -45,7 +44,7 @@ TEST_F(McContext, testBasicContext)
 
     mcreq_sched_fail(&cq);
 
-    for (int ii = 0; ii < cq.npipelines; ii++) {
+    for (unsigned ii = 0; ii < cq.npipelines; ii++) {
         unsigned nFail = 0;
         mc_PIPELINE *pl = cq.pipelines[ii];
         cookie.plLength = 0;
@@ -66,7 +65,6 @@ TEST_F(McContext, testBasicContext)
 TEST_F(McContext, testFailedContext)
 {
     CQWrap cq;
-    lcb_error_t err;
     CtxCookie cookie;
 
     mcreq_sched_enter(&cq);
@@ -86,7 +84,7 @@ TEST_F(McContext, testFailedContext)
 
     mcreq_sched_fail(&cq);
 
-    for (int ii = 0; ii < cq.npipelines; ii++) {
+    for (unsigned ii = 0; ii < cq.npipelines; ii++) {
         mc_PIPELINE *pl = cq.pipelines[ii];
         if (!cq.scheds[pl->index]) {
             continue;

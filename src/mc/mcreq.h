@@ -412,7 +412,7 @@ mcreq_dup_packet(const mc_PACKET *src);
  */
 lcb_error_t
 mcreq_reserve_header(
-        mc_PIPELINE *pipeline, mc_PACKET *packet, lcb_size_t hdrsize);
+        mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize);
 
 /**
  * Initialize the given packet's key structure
@@ -426,7 +426,7 @@ mcreq_reserve_header(
 lcb_error_t
 mcreq_reserve_key(
         mc_PIPELINE *pipeline, mc_PACKET *packet,
-        lcb_size_t hdrsize, const lcb_KEYBUF *kreq);
+        uint8_t hdrsize, const lcb_KEYBUF *kreq);
 
 
 /**

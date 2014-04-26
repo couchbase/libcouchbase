@@ -15,7 +15,7 @@
 #define LCB_S2NS(s) ((hrtime_t)s) / 1000000000
 
 /** Convert nanoseconds to microseconds */
-#define LCB_NS2US(s) (s) / 1000
+#define LCB_NS2US(s) (lcb_uint32_t) ((s) / 1000)
 
 #define LCB_MS2US(s) (s) * 1000
 

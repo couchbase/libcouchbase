@@ -34,7 +34,7 @@ struct CQWrap : mc_CMDQUEUE {
     }
 
     void clearPipelines() {
-        for (int ii = 0; ii < npipelines; ii++) {
+        for (unsigned ii = 0; ii < npipelines; ii++) {
             mc_PIPELINE *pipeline = pipelines[ii];
             sllist_iterator iter;
             SLLIST_ITERFOR(&pipeline->requests, &iter) {
@@ -47,7 +47,7 @@ struct CQWrap : mc_CMDQUEUE {
     }
 
     void setBufFreeCallback(mcreq_bufdone_fn cb) {
-        for (int ii = 0; ii < npipelines; ii++) {
+        for (unsigned ii = 0; ii < npipelines; ii++) {
             pipelines[ii]->buf_done_callback = cb;
         }
     }

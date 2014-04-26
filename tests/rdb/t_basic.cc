@@ -10,7 +10,7 @@ TEST_F(RopeTest, testBasic)
     unsigned niov = rdb_rdstart(&rope, &iovs, 1);
     ASSERT_EQ(1, niov);
     ASSERT_FALSE(iovs.iov_base == NULL);
-    ASSERT_GT(iovs.iov_len, 0);
+    ASSERT_GT(iovs.iov_len, 0U);
 
     memset(iovs.iov_base, 0x66, iovs.iov_len);
     rdb_rdend(&rope, iovs.iov_len);

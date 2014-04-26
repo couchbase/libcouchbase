@@ -83,7 +83,7 @@ TEST_F(McIOFlush, testIOCPFlush)
         flushes.push_back(fi);
     }
 
-    for (int ii = 0; ii < cq.npipelines; ii++) {
+    for (unsigned ii = 0; ii < cq.npipelines; ii++) {
         mcreq_pipeline_fail(cq.pipelines[ii], LCB_ERROR, failcb, NULL);
     }
 

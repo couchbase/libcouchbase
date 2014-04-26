@@ -24,19 +24,19 @@ TEST_F(SListTests, testBasic)
     sllist_root sl;
     memset(&sl, 0, sizeof(sl));
 
-    ASSERT_NZ(SLLIST_IS_EMPTY(&sl));
+    ASSERT_TRUE(SLLIST_IS_EMPTY(&sl));
     my_elem elem1, elem2, elem3;
 
     sllist_append(&sl, &elem1.slnode);
     ASSERT_NZ(sllist_contains(&sl, &elem1.slnode));
-    ASSERT_Z(SLLIST_IS_EMPTY(&sl));
+    ASSERT_FALSE(SLLIST_IS_EMPTY(&sl));
 
     sllist_node *tmpnode = sl.first;
     sllist_remove_head(&sl);
     ASSERT_NE(tmpnode, sl.first);
     ASSERT_EQ(tmpnode, &elem1.slnode);
     ASSERT_EQ(&elem1, SLLIST_ITEM(tmpnode, struct my_elem, slnode));
-    ASSERT_NZ(SLLIST_IS_EMPTY(&sl));
+    ASSERT_TRUE(SLLIST_IS_EMPTY(&sl));
 
     sllist_append(&sl, &elem1.slnode);
     sllist_append(&sl, &elem2.slnode);
@@ -150,7 +150,7 @@ TEST_F(SListTests, testExtendedIter)
             elemp[1] = NULL;
         }
     }
-    ASSERT_Z(SLLIST_IS_EMPTY(&sl));
+    ASSERT_FALSE(SLLIST_IS_EMPTY(&sl));
 
     // Delete only the last element
     fillDynamicSlist(&sl, elemp, BASIC_NELEM);
@@ -242,7 +242,7 @@ public:
     }
 
     bool contains(T& memb) {
-        return sllist_contains(this, getNode(memb));
+        return sllist_contains(this, getNode(memb)) != 0;
     }
 
     size_t size() {

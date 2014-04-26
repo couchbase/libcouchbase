@@ -7,7 +7,7 @@
 
 lcb_error_t
 mcreq_reserve_header(
-        mc_PIPELINE *pipeline, mc_PACKET *packet, lcb_size_t hdrsize)
+        mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize)
 {
     int rv;
     packet->extlen = hdrsize - MCREQ_PKT_BASESIZE;
@@ -21,7 +21,7 @@ mcreq_reserve_header(
 
 lcb_error_t
 mcreq_reserve_key(
-        mc_PIPELINE *pipeline, mc_PACKET *packet, lcb_size_t hdrsize,
+        mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize,
         const lcb_KEYBUF *kreq)
 {
     const struct lcb_CONTIGBUF *contig = &kreq->contig;

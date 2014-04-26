@@ -213,10 +213,10 @@ lcb_retryq_add(lcb_RETRYQ *rq, mc_PACKET *pkt)
      * Estimate the next retry timestamp. This is:
      * Base interval + (Number of retries x Backoff factor)
      */
-    op->trytime = now + (
+    op->trytime = now + (hrtime_t) (
             (float)RETRY_INTERVAL_NS(rq) *
-            pkt->retries *
-            rq->settings->retry_backoff);
+            (float)pkt->retries *
+            (float)rq->settings->retry_backoff);
 
     lcb_list_add_sorted(&rq->schedops, &op->ll_sched, cmpfn_retry);
     lcb_list_add_sorted(&rq->tmoops, &op->ll_tmo, cmpfn_tmo);

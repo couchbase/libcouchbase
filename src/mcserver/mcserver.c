@@ -347,7 +347,7 @@ get_next_timeout(mc_SERVER *server)
         diff = expiry - now;
     }
 
-    return diff / 1000;
+    return LCB_NS2US(diff);
 }
 
 static void

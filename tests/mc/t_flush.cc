@@ -136,7 +136,7 @@ TEST_F(McFlush, testMultiFlush)
         mcreq_pipeline_remove(pw->pipeline, pw->pkt->opaque);
     }
 
-    for (int ii = 0; ii < cq.npipelines; ii++) {
+    for (unsigned ii = 0; ii < cq.npipelines; ii++) {
         mc_PIPELINE *pipeline = cq.pipelines[ii];
         nb_IOV iov[10];
         unsigned toFlush = mcreq_flush_iov_fill(pipeline, iov, 10, NULL);
