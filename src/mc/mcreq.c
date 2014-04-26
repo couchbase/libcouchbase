@@ -326,6 +326,10 @@ mcreq_basic_packet(
     lcb_size_t nhashkey;
     int vb, srvix;
 
+    if (!queue->config) {
+        return LCB_CLIENT_ETMPFAIL;
+    }
+
     mcreq_extract_hashkey(&cmd->key, &cmd->hashkey,
                           sizeof(*req) + extlen, &hashkey, &nhashkey);
 
