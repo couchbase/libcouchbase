@@ -111,6 +111,7 @@ public:
         addOption(&opt_libdir, 'L', "libdir",
                 "Path to location where plugins are located. Useful on OS X",
                 "");
+        addOption(&opt_realcluster, 'C', "cluster", "Path to real cluster", "");
     }
 
     ~TestConfiguration() {
@@ -163,6 +164,7 @@ public:
         assignFromArg(testdir, opt_bindir, getEffectiveTestdir());
         assignFromArg(debugger, opt_debugger, "");
         assignFromArg(libDir, opt_libdir, "");
+        assignFromArg(realClusterEnv, opt_realcluster, "");
 
         // Verbosity
         isVerbose = opt_verbose->found;
@@ -209,6 +211,7 @@ public:
     std::string testdir;
     std::string debugger;
     std::string libDir;
+    std::string realClusterEnv;
 
     strlist plugins;
     strlist testnames;
@@ -229,6 +232,7 @@ private:
     CommandLineOption *opt_bins;
     CommandLineOption *opt_cycles;
     CommandLineOption *opt_libdir;
+    CommandLineOption *opt_realcluster;
     Getopt parser;
 
     void freeOptions() {
@@ -240,6 +244,7 @@ private:
         delete opt_interactive;
         delete opt_verbose;
         delete opt_libdir;
+        delete opt_realcluster;
     }
 
     void addOption(CommandLineOption **target,
@@ -596,6 +601,10 @@ int main(int argc, char **argv)
     fprintf(stderr, "%s=%s\n", LCB_SRCROOT_ENV_VAR, config.srcroot.c_str());
     setenv(LCB_SRCROOT_ENV_VAR, config.srcroot.c_str(), 1);
     setenv("LCB_VERBOSE_TESTS", "1", 1);
+    if (!config.realClusterEnv.empty()) {
+        // format the string
+        setenv("LCB_TEST_CLUSTER_CONF", config.realClusterEnv.c_str(), 0);
+    }
 
     for (int ii = 0; ii < config.maxCycles; ii++) {
         if (!runSingleCycle(config)) {

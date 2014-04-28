@@ -247,9 +247,6 @@ void MockEnvironment::bootstrapRealCluster()
     lcb_create_st options;
     serverParams.makeConnectParams(options, NULL);
 
-    bool verbose = getenv("LCB_VERBOSE_TESTS") != 0;
-
-
     ASSERT_EQ(LCB_SUCCESS, lcb_create(&tmphandle, &options));
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
     lcb_wait(tmphandle);
@@ -261,21 +258,10 @@ void MockEnvironment::bootstrapRealCluster()
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_wait(tmphandle);
 
-    if (verbose) {
-        std::cout << "Detected cluster version " << std::dec << serverVersion;
-        std::cout << std::endl;
-    }
-
     const char *const *servers = lcb_get_server_list(tmphandle);
-    if (verbose) {
-        std::cout << "Using the following servers: " << std::endl;
-    }
-
     int ii;
     for (ii = 0; servers[ii] != NULL; ii++) {
-        if (verbose) {
-            std::cout << "[" << servers[ii] << "]" << std::endl;
-        }
+        // no body
     }
 
     if (serverVersion == VERSION_20) {
