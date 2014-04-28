@@ -19,7 +19,7 @@
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_sget3(lcb_t instance, const void *cookie, const lcb_sget3_cmd_t *cmd)
+lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
 {
     mc_PIPELINE *pl;
     mc_PACKET *pkt;
@@ -39,7 +39,7 @@ lcb_sget3(lcb_t instance, const void *cookie, const lcb_sget3_cmd_t *cmd)
         opcode = PROTOCOL_BINARY_CMD_GAT;
     }
 
-    err = mcreq_basic_packet(q, (const lcb_cmd_t *)cmd, hdr, extlen, &pkt, &pl);
+    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, extlen, &pkt, &pl);
     if (err != LCB_SUCCESS) {
         return err;
     }
@@ -74,7 +74,7 @@ lcb_error_t lcb_get(lcb_t instance,
 
     for (ii = 0; ii < num; ii++) {
         const lcb_get_cmd_t *src = items[ii];
-        lcb_sget3_cmd_t dst;
+        lcb_CMDGET dst;
         lcb_error_t err;
 
         memset(&dst, 0, sizeof(dst));
@@ -85,7 +85,7 @@ lcb_error_t lcb_get(lcb_t instance,
         dst.lock = src->v.v0.lock;
         dst.options.exptime = src->v.v0.exptime;
 
-        err = lcb_sget3(instance, command_cookie, &dst);
+        err = lcb_get3(instance, command_cookie, &dst);
         if (err != LCB_SUCCESS) {
             mcreq_sched_fail(&instance->cmdq);
             return err;
@@ -97,7 +97,7 @@ lcb_error_t lcb_get(lcb_t instance,
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_unlock3(lcb_t instance, const void *cookie, const lcb_unlock3_cmd_t *cmd)
+lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     mc_PIPELINE *pl;
@@ -137,7 +137,7 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
 
     for (ii = 0; ii < num; ii++) {
         const lcb_unlock_cmd_t *src = items[ii];
-        lcb_unlock3_cmd_t dst;
+        lcb_CMDUNLOCK dst;
         memset(&dst, 0, sizeof(dst));
         dst.key.contig.bytes = src->v.v0.key;
         dst.key.contig.nbytes = src->v.v0.nkey;
@@ -208,7 +208,7 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_rget3(lcb_t instance, const void *cookie, const lcb_rget3_cmd_t *cmd)
+lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
 {
     /**
      * Because we need to direct these commands to specific servers, we can't
@@ -278,7 +278,7 @@ lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
 
     for (ii = 0; ii < num; ii++) {
         const lcb_get_replica_cmd_t *src = items[ii];
-        lcb_rget3_cmd_t dst;
+        lcb_CMDGETREPLICA dst;
         memset(&dst, 0, sizeof(dst));
         dst.key.contig.bytes = src->v.v1.key;
         dst.key.contig.nbytes = src->v.v1.nkey;

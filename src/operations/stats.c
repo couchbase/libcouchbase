@@ -61,7 +61,7 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_stats3(lcb_t instance, const void *cookie, const lcb_stats3_cmd_t * cmd)
+lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
 {
     unsigned ii;
     mc_CMDQUEUE *cq = &instance->cmdq;
@@ -220,7 +220,7 @@ pkt_bcast_simple(lcb_t instance, const void *cookie, int type)
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_server_versions3(lcb_t instance, const void *cookie, const lcb_cmd_t * cmd)
+lcb_server_versions3(lcb_t instance, const void *cookie, const lcb_CMDBASE * cmd)
 {
     (void)cmd;
     return pkt_bcast_simple(instance, cookie, C_VERSION);
@@ -229,7 +229,7 @@ lcb_server_versions3(lcb_t instance, const void *cookie, const lcb_cmd_t * cmd)
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_flush3(lcb_t instance, const void *cookie, const lcb_flush3_cmd_t *cmd)
+lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd)
 {
     (void)cmd;
     return pkt_bcast_simple(instance, cookie, C_FLUSH);
@@ -238,7 +238,7 @@ lcb_flush3(lcb_t instance, const void *cookie, const lcb_flush3_cmd_t *cmd)
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_server_verbosity3(lcb_t instance, const void *cookie,
-                      const lcb_verbosity3_cmd_t *cmd)
+                      const lcb_CMDVERBOSITY *cmd)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
@@ -314,7 +314,7 @@ lcb_server_stats(lcb_t instance, const void *cookie, lcb_size_t num,
 
     for (ii = 0; ii < num; ii++) {
         const lcb_server_stats_cmd_t *src = items[ii];
-        lcb_stats3_cmd_t dst;
+        lcb_CMDSTATS dst;
         lcb_error_t err;
 
         memset(&dst, 0, sizeof(dst));
@@ -338,7 +338,7 @@ lcb_set_verbosity(lcb_t instance, const void *cookie, lcb_size_t num,
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
     for (ii = 0; ii < num; ii++) {
-        lcb_verbosity3_cmd_t dst;
+        lcb_CMDVERBOSITY dst;
         lcb_error_t err;
         const lcb_verbosity_cmd_t *src = items[ii];
 

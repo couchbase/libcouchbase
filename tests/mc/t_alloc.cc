@@ -52,7 +52,7 @@ TEST_F(McAlloc, testKeyAlloc)
     CQWrap q;
     mc_PACKET *packet;
     mc_PIPELINE *pipeline;
-    lcb_cmd_t cmd;
+    lcb_CMDBASE cmd;
 
     protocol_binary_request_header hdr;
     memset(&cmd, 0, sizeof(cmd));
@@ -74,7 +74,7 @@ TEST_F(McAlloc, testKeyAlloc)
     // Copy the header
     memcpy(SPAN_BUFFER(&packet->kh_span), &hdr, sizeof(hdr));
 
-    lcb_value_request_t vreq;
+    lcb_VALBUF vreq;
     memset(&vreq, 0, sizeof(vreq));
 
     const void *key;
@@ -94,9 +94,9 @@ TEST_F(McAlloc, testValueAlloc)
     CQWrap q;
     mc_PACKET *packet;
     mc_PIPELINE *pipeline;
-    lcb_cmd_t cmd;
+    lcb_CMDBASE cmd;
     protocol_binary_request_header hdr;
-    lcb_value_request_t vreq;
+    lcb_VALBUF vreq;
 
     memset(&cmd, 0, sizeof(cmd));
     memset(&hdr, 0, sizeof(hdr));

@@ -2,6 +2,7 @@
 #define LCB_MCREQ_H
 
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/api3.h>
 #include <memcached/protocol_binary.h>
 #include <libvbucket/vbucket.h>
 #include "netbuf/netbuf.h"
@@ -224,7 +225,7 @@ union mc_VALUE {
     nb_SPAN single;
 
     /** For a set of multiple IOV buffers */
-    lcb_kvbuf_multi_t multi;
+    lcb_FRAGBUF multi;
 };
 
 /** Union representing application/command data within a packet structure */
@@ -425,7 +426,7 @@ mcreq_reserve_header(
 lcb_error_t
 mcreq_reserve_key(
         mc_PIPELINE *pipeline, mc_PACKET *packet,
-        lcb_size_t hdrsize, const lcb_key_request_t *kreq);
+        lcb_size_t hdrsize, const lcb_KEYBUF *kreq);
 
 
 /**
@@ -438,7 +439,7 @@ mcreq_reserve_key(
  */
 lcb_error_t
 mcreq_reserve_value(mc_PIPELINE *pipeline, mc_PACKET *packet,
-                    const lcb_value_request_t *vreq);
+                    const lcb_VALBUF *vreq);
 
 /**
  * Reserves value/body space, but doesn't actually copy the contents over
@@ -496,7 +497,7 @@ mcreq_wipe_packet(mc_PIPELINE *pipeline, mc_PACKET *packet);
  */
 void
 mcreq_extract_hashkey(
-        const lcb_key_request_t *key, const lcb_key_request_t *hashkey,
+        const lcb_KEYBUF *key, const lcb_KEYBUF *hashkey,
         lcb_size_t nheader, const void **target, lcb_size_t *ntarget);
 
 
@@ -516,7 +517,7 @@ mcreq_extract_hashkey(
 
 lcb_error_t
 mcreq_basic_packet(
-        mc_CMDQUEUE *queue, const lcb_cmd_t *cmd,
+        mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd,
         protocol_binary_request_header *req, uint8_t extlen,
         mc_PACKET **packet, mc_PIPELINE **pipeline);
 

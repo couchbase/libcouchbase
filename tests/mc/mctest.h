@@ -59,7 +59,7 @@ struct PacketWrap {
     mc_PACKET *pkt;
     mc_PIPELINE *pipeline;
     protocol_binary_request_header hdr;
-    lcb_cmd_t cmd;
+    lcb_CMDBASE cmd;
     char *pktbuf;
     char *kbuf;
 

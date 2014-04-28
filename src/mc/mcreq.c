@@ -22,9 +22,9 @@ mcreq_reserve_header(
 lcb_error_t
 mcreq_reserve_key(
         mc_PIPELINE *pipeline, mc_PACKET *packet, lcb_size_t hdrsize,
-        const lcb_key_request_t *kreq)
+        const lcb_KEYBUF *kreq)
 {
-    const struct lcb_kvbuf_contig_st *contig = &kreq->contig;
+    const struct lcb_CONTIGBUF *contig = &kreq->contig;
     int rv;
 
     /** Set the key offset which is the start of the key from the buffer */
@@ -80,9 +80,9 @@ mcreq_reserve_value2(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_size_t n)
 
 lcb_error_t
 mcreq_reserve_value(
-        mc_PIPELINE *pipeline, mc_PACKET *packet, const lcb_value_request_t *vreq)
+        mc_PIPELINE *pipeline, mc_PACKET *packet, const lcb_VALBUF *vreq)
 {
-    const lcb_kvbuf_contig_t *contig = &vreq->u_buf.contig;
+    const lcb_CONTIGBUF *contig = &vreq->u_buf.contig;
     nb_SPAN *vspan = &packet->u_value.single;
     int rv;
 
@@ -107,8 +107,8 @@ mcreq_reserve_value(
     } else {
         /** Multiple spans! */
         unsigned int ii;
-        const lcb_kvbuf_multi_t *msrc = &vreq->u_buf.multi;
-        lcb_kvbuf_multi_t *mdst = &packet->u_value.multi;
+        const lcb_FRAGBUF *msrc = &vreq->u_buf.multi;
+        lcb_FRAGBUF *mdst = &packet->u_value.multi;
 
         packet->flags |= MCREQ_F_VALUE_IOV | MCREQ_F_VALUE_NOCOPY;
         mdst->niov = msrc->niov;
@@ -168,7 +168,7 @@ mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 
     if (packet->flags & MCREQ_F_VALUE_IOV) {
         unsigned int ii;
-        lcb_kvbuf_multi_t *multi = &packet->u_value.multi;
+        lcb_FRAGBUF *multi = &packet->u_value.multi;
         for (ii = 0; ii < multi->niov; ii++) {
             netbuf_enqueue(&pipeline->nbmgr, (nb_IOV *)multi->iov + ii);
         }
@@ -296,7 +296,7 @@ mcreq_dup_packet(const mc_PACKET *src)
 
 void
 mcreq_extract_hashkey(
-        const lcb_key_request_t *key, const lcb_key_request_t *hashkey,
+        const lcb_KEYBUF *key, const lcb_KEYBUF *hashkey,
         lcb_size_t nheader, const void **target, lcb_size_t *ntarget)
 {
     if (hashkey->contig.bytes != NULL) {
@@ -318,7 +318,7 @@ mcreq_extract_hashkey(
 
 lcb_error_t
 mcreq_basic_packet(
-        mc_CMDQUEUE *queue, const lcb_cmd_t *cmd,
+        mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd,
         protocol_binary_request_header *req, lcb_uint8_t extlen,
         mc_PACKET **packet, mc_PIPELINE **pipeline)
 {

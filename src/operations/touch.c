@@ -19,7 +19,7 @@
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_touch3(lcb_t instance, const void *cookie, lcb_touch3_cmd_t *cmd)
+lcb_touch3(lcb_t instance, const void *cookie, lcb_CMDTOUCH *cmd)
 {
     protocol_binary_request_touch tcmd;
     protocol_binary_request_header *hdr = &tcmd.message.header;
@@ -55,7 +55,7 @@ lcb_touch(lcb_t instance, const void *cookie, lcb_size_t num,
     unsigned ii;
     for (ii = 0; ii < num; ii++) {
         const lcb_touch_cmd_t *src = items[ii];
-        lcb_touch3_cmd_t dst;
+        lcb_CMDTOUCH dst;
         lcb_error_t err;
 
         memset(&dst, 0, sizeof(dst));

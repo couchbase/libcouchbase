@@ -53,7 +53,7 @@ get_esize_and_opcode(
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_store3(lcb_t instance, const void *cookie, const lcb_store3_cmd_t *cmd)
+lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
 {
     mc_PIPELINE *pipeline;
     mc_PACKET *packet;
@@ -74,7 +74,7 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_store3_cmd_t *cmd)
     hsize = hdr->request.extlen + sizeof(*hdr);
 
     err = mcreq_basic_packet(
-            cq, (const lcb_cmd_t *)cmd, hdr, hdr->request.extlen,
+            cq, (const lcb_CMDBASE *)cmd, hdr, hdr->request.extlen,
             &packet, &pipeline);
 
     if (err != LCB_SUCCESS) {
@@ -111,7 +111,7 @@ lcb_store(lcb_t instance, const void *cookie, lcb_size_t num,
     lcb_error_t err = LCB_SUCCESS;
     for (ii = 0; ii < num; ii++) {
         const lcb_store_cmd_t *src = items[ii];
-        lcb_store3_cmd_t dst;
+        lcb_CMDSTORE dst;
         memset(&dst, 0, sizeof(dst));
 
         dst.key.contig.bytes = src->v.v0.key;

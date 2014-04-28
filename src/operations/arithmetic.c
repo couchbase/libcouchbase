@@ -19,7 +19,7 @@
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_arithmetic3(
-        lcb_t instance, const void *cookie, const lcb_arithmetic3_cmd_t *cmd)
+        lcb_t instance, const void *cookie, const lcb_CMDINCRDECR *cmd)
 {
     mc_CMDQUEUE *q = &instance->cmdq;
     mc_PIPELINE *pipeline;
@@ -31,7 +31,7 @@ lcb_arithmetic3(
     protocol_binary_request_header *hdr = &acmd.message.header;
 
     err = mcreq_basic_packet(
-            q, (const lcb_cmd_t *)cmd, hdr, 20, &packet, &pipeline);
+            q, (const lcb_CMDBASE *)cmd, hdr, 20, &packet, &pipeline);
 
     if (err != LCB_SUCCESS) {
         return err;
@@ -80,7 +80,7 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
 
     for (ii = 0; ii < num; ii++) {
         const lcb_arithmetic_cmd_t *src = items[ii];
-        lcb_arithmetic3_cmd_t dst;
+        lcb_CMDINCRDECR dst;
         lcb_error_t err;
 
         memset(&dst, 0, sizeof(dst));
