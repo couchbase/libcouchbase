@@ -18,7 +18,6 @@
 #include "plugin-internal.h"
 
 static my_uvreq_t *alloc_uvreq(my_sockdata_t *sock, generic_callback_t callback);
-static void generic_close_cb(uv_handle_t *handle);
 static void set_last_error(my_iops_t *io, int error);
 static void socket_closed_callback(uv_handle_t *handle);
 
