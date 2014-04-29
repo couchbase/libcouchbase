@@ -74,6 +74,7 @@ extern "C" {
         lcb_durability_callback durability;
         lcb_exists_callback exists;
         lcb_errmap_callback errmap;
+        lcb_bootstrap_callback bootstrap;
     };
 
     struct lcb_confmon_st;

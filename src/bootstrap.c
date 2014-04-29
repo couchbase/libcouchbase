@@ -76,6 +76,7 @@ static void config_callback(clconfig_listener *listener,
             lcb_confmon_set_provider_active(instance->confmon,
                                             LCB_CLCONFIG_CCCP, 0);
         }
+        instance->callbacks.bootstrap(instance, LCB_SUCCESS);
     }
 
     lcb_maybe_breakout(instance);
@@ -100,6 +101,7 @@ static void initial_bootstrap_error(lcb_t instance,
         instance->bootstrap->timer = NULL;
     }
 
+    instance->callbacks.bootstrap(instance, instance->last_error);
     lcb_maybe_breakout(instance);
 }
 
@@ -252,4 +254,17 @@ void lcb_bootstrap_destroy(lcb_t instance)
     lcb_confmon_remove_listener(instance->confmon, &bs->listener);
     free(bs);
     instance->bootstrap = NULL;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_get_bootstrap_status(lcb_t instance)
+{
+    if (instance->cur_configinfo) {
+        return LCB_SUCCESS;
+    }
+    if (instance->last_error != LCB_SUCCESS) {
+        return instance->last_error;
+    }
+    return LCB_ERROR;
 }

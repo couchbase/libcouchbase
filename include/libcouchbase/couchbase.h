@@ -206,6 +206,34 @@ extern "C" {
      */
     LIBCOUCHBASE_API
     void lcb_flush_buffers(lcb_t instance, const void *cookie);
+/**
+ * Bootstrap callback. Invoked once the instance is ready to perform operations
+ * @param instance The instance which was bootstrapped
+ * @param err The error code received. If this is not LCB_SUCCESS then the
+ * instance is not bootstrapped and must be recreated
+ *
+ * @attention This callback only receives information during instantiation.
+ */
+typedef void (*lcb_bootstrap_callback)(lcb_t instance, lcb_error_t err);
+
+LIBCOUCHBASE_API
+lcb_bootstrap_callback
+lcb_set_bootstrap_callback(lcb_t instance, lcb_bootstrap_callback callback);
+
+/**
+ * @brief Gets the initial bootstrap status
+ *
+ * This is an alternative to using the lcb_bootstrap_callback() and may be used
+ * after the initial lcb_connect() and lcb_wait() sequence.
+ * @param instance
+ * @return LCB_SUCCESS if properly bootstrapped or an error code otherwise.
+ *
+ * @attention
+ * Calling this function only makes sense during instantiation.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_get_bootstrap_status(lcb_t instance);
 
     /**
      * Associate a cookie with an instance of lcb

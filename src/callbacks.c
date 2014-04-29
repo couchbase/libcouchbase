@@ -176,6 +176,12 @@ static void dummy_durability_callback(lcb_t instance,
     (void)resp;
 }
 
+static void dummy_bootstrap_callback(lcb_t instance, lcb_error_t err)
+{
+    (void)instance;
+    (void)err;
+}
+
 void lcb_initialize_packet_handlers(lcb_t instance)
 {
     instance->callbacks.get = dummy_get_callback;
@@ -195,6 +201,7 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.verbosity = dummy_verbosity_callback;
     instance->callbacks.durability = dummy_durability_callback;
     instance->callbacks.errmap = lcb_errmap_default;
+    instance->callbacks.bootstrap = dummy_bootstrap_callback;
 }
 
 LIBCOUCHBASE_API
@@ -378,6 +385,17 @@ lcb_errmap_callback lcb_set_errmap_callback(lcb_t instance,
     lcb_errmap_callback ret = instance->callbacks.errmap;
     if (cb != NULL) {
         instance->callbacks.errmap = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+lcb_bootstrap_callback
+lcb_set_bootstrap_callback(lcb_t instance, lcb_bootstrap_callback cb)
+{
+    lcb_bootstrap_callback ret = instance->callbacks.bootstrap;
+    if (cb) {
+        instance->callbacks.bootstrap = cb;
     }
     return ret;
 }
