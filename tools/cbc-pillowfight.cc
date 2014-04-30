@@ -53,7 +53,6 @@ public:
         timings(false),
         loop(false),
         randomSeed(0),
-        dumb(false),
         saslMech() {
         transports.push_back(LCB_CONFIG_TRANSPORT_HTTP);
         transports.push_back(LCB_CONFIG_TRANSPORT_CCCP);
@@ -200,10 +199,6 @@ public:
         loop = val;
     }
 
-    void setDumb(bool val) {
-        dumb = val;
-    }
-
     void setDGM(bool val) {
         dgm = val;
     }
@@ -214,10 +209,6 @@ public:
 
     void setSkipPopulate(bool val) {
         skipPopulate = val;
-    }
-
-    bool isDumb() {
-        return dumb;
     }
 
     void setConfigTransport(string val) {
@@ -267,7 +258,6 @@ public:
     bool timings;
     bool loop;
     uint32_t randomSeed;
-    bool dumb;
     std::string saslMech;
     bool skipPopulate;
     bool dgm;
@@ -326,26 +316,17 @@ public:
             std::cout.flush();
 
             lcb_error_t error;
-            if (config.isDumb()) {
-                struct lcb_memcached_st memcached;
-
-                memset(&memcached, 0, sizeof(memcached));
-                memcached.serverlist = config.getHost();
-                error = lcb_create_compat(LCB_MEMCACHED_CLUSTER,
-                                          &memcached, &instance, io);
+            struct lcb_create_st options(config.getHost(),
+                                         config.getUser(),
+                                         config.getPasswd(),
+                                         config.getBucket(),
+                                         io);
+            if (options.version == 2) {
+                options.v.v2.transports = config.getConfigTransport();
             } else {
-                struct lcb_create_st options(config.getHost(),
-                                             config.getUser(),
-                                             config.getPasswd(),
-                                             config.getBucket(),
-                                             io);
-                if (options.version == 2) {
-                    options.v.v2.transports = config.getConfigTransport();
-                } else {
-                    log("Cannot change configuration transport. Fallback to default");
-                }
-                error = lcb_create(&instance, &options);
+                log("Cannot change configuration transport. Fallback to default");
             }
+            error = lcb_create(&instance, &options);
             if (error == LCB_SUCCESS) {
                 const char *sasl_mech = config.getSaslMech();
                 if (sasl_mech) {
@@ -366,15 +347,13 @@ public:
                     log("Failed to enable timings!: %s", lcb_strerror(instance, error));
                 }
             }
-            if (!config.isDumb()) {
-                lcb_connect(instance);
-                lcb_wait(instance);
-                error = lcb_get_bootstrap_status(instance);
-                if (error != LCB_SUCCESS) {
-                    std::cout << std::endl;
-                    log("Failed to connect: %s", lcb_strerror(instance, error));
-                    exit(EXIT_FAILURE);
-                }
+            lcb_connect(instance);
+            lcb_wait(instance);
+            error = lcb_get_bootstrap_status(instance);
+            if (error != LCB_SUCCESS) {
+                std::cout << std::endl;
+                log("Failed to connect: %s", lcb_strerror(instance, error));
+                exit(EXIT_FAILURE);
             }
         }
         std::cout << std::endl;
@@ -783,10 +762,6 @@ static void handle_options(int argc, char **argv)
 
             case 'M' :
                 config.setMaxSize(atoi((*iter)->argument));
-                break;
-
-            case 'd' :
-                config.setDumb(true);
                 break;
 
             case 'S':

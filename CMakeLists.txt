@@ -207,7 +207,6 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/bucketconfig/confmon.c
             src/callbacks.c
             src/cntl.c
-            src/compat.c
             src/error.c
             src/handler.c
             src/getconfig.c

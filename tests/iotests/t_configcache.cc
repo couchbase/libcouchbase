@@ -28,20 +28,18 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
 {
     lcb_t instance;
     lcb_error_t err;
-
-    struct lcb_cached_config_st cacheinfo;
+    lcb_create_st cropts;
 
     // Get the filename:
     char filename[L_tmpnam + 0];
     ASSERT_TRUE(NULL != tmpnam(filename));
+    memset(&cropts, 0, sizeof(cropts));
 
-    memset(&cacheinfo, 0, sizeof(cacheinfo));
-
-    cacheinfo.cachefile = filename;
-    MockEnvironment::getInstance()->makeConnectParams(cacheinfo.createopt, NULL);
-
-    err = lcb_create_compat(LCB_CACHED_CONFIG, &cacheinfo, &instance, NULL);
-    ASSERT_EQ(err, LCB_SUCCESS);
+    MockEnvironment::getInstance()->makeConnectParams(cropts, NULL);
+    err = lcb_create(&instance, &cropts);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIGCACHE, (void *)filename);
+    ASSERT_EQ(LCB_SUCCESS, err);
 
     int is_loaded;
     err = lcb_cntl(instance, LCB_CNTL_GET,
@@ -58,8 +56,10 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
 
     // now try another one
     lcb_destroy(instance);
-    err = lcb_create_compat(LCB_CACHED_CONFIG, &cacheinfo, &instance, NULL);
-    ASSERT_EQ(err, LCB_SUCCESS);
+    err = lcb_create(&instance, &cropts);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIGCACHE, (void *)filename);
+    ASSERT_EQ(LCB_SUCCESS, err);
 
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);

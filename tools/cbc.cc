@@ -1211,7 +1211,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 {
     Configuration config;
     Getopt getopt;
-    bool dumb = false;
 
     getopt.addOption(new CommandLineOption('?', "help", false,
                                            "Print this help text"));
@@ -1227,8 +1226,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
                                            "Enable command timings"));
     getopt.addOption(new CommandLineOption('t', "timeout", true,
                                            "Specify timeout value"));
-    getopt.addOption(new CommandLineOption('D', "dumb", false,
-                                           "Behave like legacy memcached client (default false)"));
     getopt.addOption(new CommandLineOption('S', "sasl", true,
                                            "Force SASL authentication mechanism (\"PLAIN\" or \"CRAM-MD5\")"));
     getopt.addOption(new CommandLineOption('C', "config-transport", true,
@@ -1365,10 +1362,6 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
             case 'T' :
                 config.setTimingsEnabled(true);
-                break;
-
-            case 'D':
-                dumb = true;
                 break;
 
             case 'S':
@@ -1545,40 +1538,33 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
 
     lcb_t instance;
     lcb_error_t err;
-    if (dumb) {
-        struct lcb_memcached_st memcached;
-
-        memset(&memcached, 0, sizeof(memcached));
-        memcached.serverlist = config.getHost();
-        err = lcb_create_compat(LCB_MEMCACHED_CLUSTER,
-                                &memcached, &instance, NULL);
-    } else {
-        struct lcb_create_st options(config.getHost(), config.getUser(),
-                                     config.getPassword(), config.getBucket());
-        if (cmd == cbc_admin || cmd == cbc_bucket_create ||
-                cmd == cbc_bucket_delete || cmd == cbc_bucket_flush) {
-            options.v.v1.type = LCB_TYPE_CLUSTER;
-            if (config.getPassword() == NULL || config.getUser() == NULL) {
-                cerr << "Username and password mandatory for admin operations." << endl;
-                exit(EXIT_FAILURE);
-            }
-        }
-        if (options.version == 2) {
-            options.v.v2.transports = default_transports;
-        } else {
-            cerr << "Cannot change configuration transport. Fallback to default" << endl;
-        }
-
-        if (!config_cache.empty()) {
-            struct lcb_cached_config_st cache_params;
-            cache_params.createopt = options;
-            cache_params.cachefile = config_cache.c_str();
-            err = lcb_create_compat(LCB_CACHED_CONFIG,
-                                    &cache_params, &instance, NULL);
-        } else {
-            err = lcb_create(&instance, &options);
+    struct lcb_create_st options(config.getHost(), config.getUser(),
+                                 config.getPassword(), config.getBucket());
+    if (cmd == cbc_admin || cmd == cbc_bucket_create ||
+            cmd == cbc_bucket_delete || cmd == cbc_bucket_flush) {
+        options.v.v1.type = LCB_TYPE_CLUSTER;
+        if (config.getPassword() == NULL || config.getUser() == NULL) {
+            cerr << "Username and password mandatory for admin operations." << endl;
+            exit(EXIT_FAILURE);
         }
     }
+    if (options.version == 2) {
+        options.v.v2.transports = default_transports;
+    } else {
+        cerr << "Cannot change configuration transport. Fallback to default" << endl;
+    }
+
+    err = lcb_create(&instance, &options);
+    if (err == LCB_SUCCESS && config_cache.empty() == false) {
+        err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIGCACHE, (void *)config_cache.c_str());
+        if (err != LCB_SUCCESS) {
+            cerr << "Failed to set config cache: " << endl
+                 << lcb_strerror(NULL, err);
+            exit(EXIT_FAILURE);
+            lcb_destroy(instance);
+        }
+    }
+
     if (err != LCB_SUCCESS) {
         cerr << "Failed to create couchbase instance: " << endl
              << lcb_strerror(NULL, err) << endl;

@@ -427,6 +427,44 @@ lcb_error_t lcb_create(lcb_t *instance,
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API
+lcb_error_t lcb_create_compat(
+        lcb_cluster_t type, const void *specific, lcb_t *instance,
+        struct lcb_io_opt_st *io)
+{
+    struct lcb_create_st cst = { 0 };
+    const struct lcb_cached_config_st *cfg = specific;
+    const struct lcb_create_st *crp = &cfg->createopt;
+    lcb_error_t err;
+    lcb_size_t to_copy = 0;
+
+    if (type != LCB_CACHED_CONFIG) {
+        return LCB_NOT_SUPPORTED;
+    }
+
+    if (crp->version == 0) {
+        to_copy = sizeof(cst.v.v0);
+    } else if (crp->version == 1) {
+        to_copy = sizeof(cst.v.v1);
+    } else if (crp->version >= 2) {
+        to_copy = sizeof(cst.v.v2);
+    }
+    memcpy(&cst, crp, to_copy);
+
+    if (io) {
+        cst.v.v0.io = io;
+    }
+    err = lcb_create(instance, &cst);
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+    err = lcb_cntl(*instance, LCB_CNTL_SET, LCB_CNTL_CONFIGCACHE,
+                   (void *)cfg->cachefile);
+    if (err != LCB_SUCCESS) {
+        lcb_destroy(*instance);
+    }
+    return err;
+}
 
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
