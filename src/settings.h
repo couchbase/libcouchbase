@@ -117,6 +117,8 @@ typedef struct lcb_settings_st {
     char *bucket;
     char *sasl_mech_force;
     struct lcb_logprocs_st *logger;
+    void (*dtorcb)(const void *);
+    void *dtorarg;
     unsigned refcount;
 } lcb_settings;
 

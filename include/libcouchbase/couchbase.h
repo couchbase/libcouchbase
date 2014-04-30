@@ -260,12 +260,7 @@ struct lcb_create_st2 {
      * Host list for memcached hosts. This is only used for bootstrap. See
      * structure description for more details.
      */
-<<<<<<< HEAD
-    LIBCOUCHBASE_API
-    void lcb_flush_buffers(lcb_t instance, const void *cookie);
-=======
     const char *mchosts;
->>>>>>> 6c67e41... CCBC-375: Add doxygen API docs. Remove man3 manpages
 
     /**
      * Pointer to an array of configuration transports to use. This should be
@@ -486,11 +481,56 @@ lcb_set_configuration_callback(lcb_t, lcb_configuration_callback);
  * Using instance after calling destroy will most likely cause your
  * application to crash.
  *
+ * Note that any pending operations will not have their callbacks invoked.
+ *
  * @param instance the instance to destroy.
  * @committed
  */
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance);
+
+/**
+ * @brief Callback received when instance is about to be destroyed
+ * @param cookie cookie passed to lcb_destroy_async()
+ */
+typedef void (*lcb_destroy_callback)(const void *cookie);
+
+/**
+ * @brief Set the callback to be invoked when the instance is destroyed
+ * asynchronously.
+ * @param callback the callback to set, or NULL to only get the previous callback
+ * @return the previous callback.
+ */
+LIBCOUCHBASE_API
+lcb_destroy_callback
+lcb_set_destroy_callback(lcb_t, lcb_destroy_callback);
+/**
+ * @brief Asynchronously schedule the destruction of an instance.
+ *
+ * This function provides a safe way for asynchronous environments to destroy
+ * the lcb_t handle without worrying about reentrancy issues.
+ *
+ * @param instance
+ * @param cb The callback to invoke once the instance has been destroyed.
+ * @param arg a pointer passed to the callback.
+ *
+ * While the callback and cookie are optional, they are very much recommended
+ * for testing scenarios where you wish to ensure that all resources allocated
+ * by the instance have been closed. Specifically when the callback is invoked,
+ * all timers (save for the one actually triggering the destruction) and sockets
+ * will have been closed.
+ *
+ * As with lcb_destroy() you may call this function only once. You may not
+ * call this function together with lcb_destroy as the two are mutually
+ * exclusive.
+ *
+ * If for whatever reason this function is being called in a synchronous
+ * flow, lcb_wait() must be invoked in order for the destruction to take effect.
+ *
+ * @committed
+ */
+LIBCOUCHBASE_API
+void lcb_destroy_async(lcb_t instance, const void *arg);
 
 /******************************************************************************
  ******************************************************************************

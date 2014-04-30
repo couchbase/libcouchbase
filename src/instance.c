@@ -534,7 +534,22 @@ void lcb_destroy(lcb_t instance)
     free(instance);
 }
 
+static void
+destroy_cb(void *arg)
+{
+    lcb_t instance = arg;
+    lcbio_timer_destroy(instance->dtor_timer);
+    lcb_destroy(instance);
+}
 
+LIBCOUCHBASE_API
+void
+lcb_destroy_async(lcb_t instance, const void *arg)
+{
+    instance->dtor_timer = lcbio_timer_new(instance->iotable, instance, destroy_cb);
+    instance->settings->dtorarg = (void *)arg;
+    lcbio_async_signal(instance->dtor_timer);
+}
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)

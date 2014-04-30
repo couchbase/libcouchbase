@@ -399,3 +399,14 @@ lcb_set_bootstrap_callback(lcb_t instance, lcb_bootstrap_callback cb)
     }
     return ret;
 }
+
+LIBCOUCHBASE_API
+lcb_destroy_callback
+lcb_set_destroy_callback(lcb_t instance, lcb_destroy_callback cb)
+{
+    lcb_destroy_callback ret = LCBT_SETTING(instance, dtorcb);
+    if (cb) {
+        LCBT_SETTING(instance, dtorcb) = cb;
+    }
+    return ret;
+}

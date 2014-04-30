@@ -42,5 +42,8 @@ lcb_settings_unref(lcb_settings *settings)
     free(settings->password);
     free(settings->bucket);
     free(settings->sasl_mech_force);
+    if (settings->dtorcb) {
+        settings->dtorcb(settings->dtorarg);
+    }
     free(settings);
 }

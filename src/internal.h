@@ -130,6 +130,7 @@ extern "C" {
         lcbio_pTABLE iotable;
         lcb_RETRYQ *retryq;
         char *scratch; /* storage for random strings, lcb_get_host, etc */
+        lcbio_pTIMER dtor_timer;
 
 #ifdef LCB_DEBUG
         lcb_debug_st debug;

@@ -810,3 +810,40 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     lcb_confmon_remove_listener(instance->confmon, &lsn.base);
     lcb_destroy(instance);
 }
+
+
+struct async_ctx {
+    int count;
+    lcbio_pTABLE table;
+};
+
+extern "C" {
+static void dtor_callback(const void *cookie)
+{
+    async_ctx *ctx = (async_ctx *)cookie;
+    ctx->count++;
+    IOT_STOP(ctx->table);
+}
+}
+
+TEST_F(MockUnitTest, testAsyncDestroy)
+{
+    lcb_t instance;
+    createConnection(instance);
+    lcbio_pTABLE iot = instance->iotable;
+    lcb_settings *settings = instance->settings;
+
+    storeKey(instance, "foo", "bar");
+    // Now destroy the instance
+    async_ctx ctx;
+    ctx.count = 0;
+    ctx.table = iot;
+    lcb_set_destroy_callback(instance, dtor_callback);
+    lcb_destroy_async(instance, &ctx);
+    lcb_settings_ref(settings);
+    lcbio_table_ref(iot);
+    lcb_run_loop(instance);
+    lcb_settings_unref(settings);
+    lcbio_table_unref(iot);
+    ASSERT_EQ(1, ctx.count);
+}
