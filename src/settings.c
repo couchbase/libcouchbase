@@ -8,8 +8,6 @@ void lcb_default_settings(lcb_settings *settings)
     settings->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
     settings->config_node_timeout = LCB_DEFAULT_NODECONFIG_TIMEOUT;
     settings->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
-    settings->rbufsize = LCB_DEFAULT_RBUFSIZE;
-    settings->wbufsize = LCB_DEFAULT_WBUFSIZE;
     settings->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;
     settings->durability_interval = LCB_DEFAULT_DURABILITY_INTERVAL;
     settings->http_timeout = LCB_DEFAULT_HTTP_TIMEOUT;

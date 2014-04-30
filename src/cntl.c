@@ -82,33 +82,11 @@ static lcb_error_t timeout_common(int mode,
 
 static lcb_error_t bufsize_common(int mode, lcb_t instance, int cmd, void *arg)
 {
-    lcb_size_t *ptr;
-    lcb_size_t *user = arg;
-
-    switch (cmd) {
-    case LCB_CNTL_WBUFSIZE:
-        ptr = &instance->settings->wbufsize;
-        break;
-
-    case LCB_CNTL_RBUFSIZE:
-        ptr = &instance->settings->rbufsize;
-        break;
-
-    default:
-        return LCB_EINVAL;
-    }
-
     if (mode == LCB_CNTL_GET) {
-        *user = *ptr;
-        return LCB_SUCCESS;
-
-    } else {
-        if (!*user) {
-            return LCB_EINVAL;
-        }
-        *ptr = *user;
-        return LCB_SUCCESS;
+        *(lcb_size_t *)arg = 0;
     }
+    (void)cmd; (void)instance;
+    return LCB_SUCCESS;
 }
 
 static lcb_error_t get_vbconfig(int mode, lcb_t instance, int cmd, void *arg)

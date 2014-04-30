@@ -32,8 +32,6 @@
 #define LCB_DEFAULT_NODECONFIG_TIMEOUT LCB_MS2US(2000)
 
 #define LCB_DEFAULT_VIEW_TIMEOUT LCB_MS2US(75000)
-#define LCB_DEFAULT_RBUFSIZE 32768
-#define LCB_DEFAULT_WBUFSIZE 32768
 #define LCB_DEFAULT_DURABILITY_TIMEOUT LCB_MS2US(5000)
 #define LCB_DEFAULT_DURABILITY_INTERVAL LCB_MS2US(100)
 #define LCB_DEFAULT_HTTP_TIMEOUT LCB_MS2US(75000)
@@ -82,8 +80,6 @@ typedef struct lcb_settings_st {
     lcb_uint32_t config_node_timeout;
     lcb_uint32_t retry_interval;
     float retry_backoff;
-    lcb_size_t rbufsize;
-    lcb_size_t wbufsize;
     lcb_size_t weird_things_threshold;
     lcb_uint32_t weird_things_delay;
     lcb_type_t conntype;
