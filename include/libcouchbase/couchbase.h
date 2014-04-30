@@ -424,6 +424,7 @@ lcb_error_t lcb_connect(lcb_t instance);
  * instance is not bootstrapped and must be recreated
  *
  * @attention This callback only receives information during instantiation.
+ * @committed
  */
 typedef void (*lcb_bootstrap_callback)(lcb_t instance, lcb_error_t err);
 
@@ -441,6 +442,7 @@ lcb_set_bootstrap_callback(lcb_t instance, lcb_bootstrap_callback callback);
  *
  * @attention
  * Calling this function only makes sense during instantiation.
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t
@@ -489,83 +491,6 @@ lcb_set_configuration_callback(lcb_t, lcb_configuration_callback);
  */
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance);
-
-/**@brief `type` for lcb_create_compat()
- * @uncommitted */
-typedef enum lcb_compat_t {
-    /**Create an instance communicating with a standalone memcached server.
-     * This will disable the "Configuration" connection via the REST API
-     * Use lcb_memcached_st for the `specific` argument.
-     *
-     * @todo This is probably broken..
-     */
-    LCB_MEMCACHED_CLUSTER = 0x00,
-
-    /**Use a file-based cache for configuration, rather than unconditionally
-     * retrieving configuration information from the network.
-     * Use lcb_cached_config_st for `specific`
-     */
-    LCB_CACHED_CONFIG = 0x01
-} lcb_compat_t;
-
-typedef lcb_compat_t lcb_cluster_t;
-
-/**
- * @brief Alternate construction APIs
- * This allows to create "Alternate" handles for creating new instances.
- * @param type the type of "extended" creation to use
- * @param specific `type`-specific data
- * @param[out] instance the instance to create
- * @param io unused
- *
- * Example: Create an instance with file-based caching:
- *
- * @code{.c}
- * lcb_t instance;
- * lcb_error_t err;
- * struct lcb_cached_config_st config;
- * memset(&config, 0, sizeof(config));
- * config.createopt.version = 1;
- * config.createopt.v.v1.host = "host1";
- * config.createopt.v.v1.user = "mybucket";
- * config.createopt.v.v1.passwd = "secret";
- * config.createopt.v.v1.bucket = "mybucket";
- * config.cachefile = "/var/tmp/couchbase-config-cache";
- * err = lcb_create_compat(LCB_CACHED_CONFIG, &config, &instance, NULL);
- * @endcode
- * @uncommitted
- */
-LIBCOUCHBASE_API
-lcb_error_t lcb_create_compat(lcb_compat_t type,
-                              const void *specific,
-                              lcb_t *instance,
-                              struct lcb_io_opt_st *io);
-/** @uncommitted */
-struct lcb_memcached_st {
-    const char *serverlist;
-    const char *username;
-    const char *password;
-};
-
-/**
- * @brief Structure for creating a file-cache-based instance
- * @uncommitted
- */
-struct lcb_cached_config_st {
-    /** Normal creation options */
-    struct lcb_create_st createopt;
-    /** Filename to store the cache in. The leading directories must exist
-     * but the file itself will be created if not found.
-     *
-     * If the file does not exist or if the client determines the file to contain
-     * stale and/or invalid information, it will still fetch the configuration
-     * information from the network, and write the new information to the file.
-     *
-     * @see LCB_CNTL_CONFIG_CACHE_LOADED
-     */
-    const char *cachefile;
-};
-
 
 /******************************************************************************
  ******************************************************************************
@@ -1966,6 +1891,7 @@ typedef struct lcb_durability_resp_st {
  *      }
  *  }
  * @endcode
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_durability_poll(lcb_t instance,
@@ -2171,6 +2097,7 @@ typedef struct lcb_server_version_resp_st {
  * The name of this function may be slightly misleading. This does **not**
  * retrieve the Couchbase Server version, but only the version of its _memcached_
  * component. See lcb_server_stats() for a way to retrieve the server version
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_server_versions(lcb_t instance,
@@ -2325,6 +2252,7 @@ typedef struct lcb_flush_resp_st {
  * @param num the total number of elements in the commands array
  * @param commands the array containing the flush commands
  * @return The status of the operation.
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_flush(lcb_t instance, const void *cookie,
@@ -2615,6 +2543,7 @@ lcb_set_http_data_callback(lcb_t, lcb_http_data_callback);
  * @param type The type of the request needed.
  * @param cmd The struct describing the command options
  * @param request Where to store request handle
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_make_http_request(lcb_t instance,
@@ -2632,6 +2561,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
  *
  * @param instance The handle to lcb
  * @param request The request handle
+ * @committed
  */
 LIBCOUCHBASE_API
 void lcb_cancel_http_request(lcb_t instance,
@@ -2661,11 +2591,13 @@ void lcb_cancel_http_request(lcb_t instance,
  * @return The hostname for the current REST API node. This string must not be
  * freed and is only valid until the next API call into libcouchbase
  * (excluding lcb_get_port())
+ * @committed
  */
 LIBCOUCHBASE_API
 const char *lcb_get_host(lcb_t instance);
 
-/** @brief Get the current port for lcb_get_host() */
+/**@brief Get the current port for lcb_get_host()
+ * @committed*/
 LIBCOUCHBASE_API
 const char *lcb_get_port(lcb_t instance);
 
@@ -2675,6 +2607,7 @@ const char *lcb_get_port(lcb_t instance);
  * @param instance The handle to lcb
  * @return -1 if the cluster wasn't configured yet, and number of replicas
  * otherwise. This may be `0` if there are no replicas.
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_replicas(lcb_t instance);
@@ -2683,6 +2616,7 @@ lcb_int32_t lcb_get_num_replicas(lcb_t instance);
  * @brief Get the number of the nodes in the cluster
  * @param instance The handle to lcb
  * @return -1 if the cluster wasn't configured yet, and number of nodes otherwise.
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_nodes(lcb_t instance);
@@ -2703,6 +2637,7 @@ lcb_int32_t lcb_get_num_nodes(lcb_t instance);
  *   printf("Have node %s\n", *curp);
  * }
  * @endcode
+ * @committed
  */
 LIBCOUCHBASE_API
 const char *const *lcb_get_server_list(lcb_t instance);
@@ -2711,6 +2646,7 @@ const char *const *lcb_get_server_list(lcb_t instance);
  * @brief Check if instance is blocked in the event loop
  * @param instance the instance to run the event loop for.
  * @return non-zero if nobody is waiting for IO interaction
+ * @uncomitted
  */
 LIBCOUCHBASE_API
 int lcb_is_waiting(lcb_t instance);
@@ -2759,6 +2695,7 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
 * @param cmd setting to modify
 * @param arg the new value
 * @return see lcb_cntl() for details
+* @committed
 */
 LIBCOUCHBASE_API
 lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg);
@@ -2770,6 +2707,7 @@ lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg);
 * @return the value.
 * @warning This function does not return an error code. Ensure that the cntl is
 * correct for this version, or use lcb_cntl() directly.
+* @committed
 */
 LIBCOUCHBASE_API
 lcb_uint32_t lcb_cntl_getu32(lcb_t instance, int cmd);
@@ -2870,6 +2808,7 @@ typedef enum lcb_timeunit_t lcb_timeunit_t;
  *
  * @param instance the handle to lcb
  * @return Status of the operation.
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_enable_timings(lcb_t instance);
@@ -2881,6 +2820,7 @@ lcb_error_t lcb_enable_timings(lcb_t instance);
  *
  * @param instance the handle to lcb
  * @return Status of the operation.
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_disable_timings(lcb_t instance);
@@ -2915,6 +2855,7 @@ typedef void (*lcb_timings_callback)(lcb_t instance,
  * @param cookie a cookie that will be present in all of the callbacks
  * @param callback Callback to invoke which will handle the timings
  * @return Status of the operation.
+ * @committed
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_get_timings(lcb_t instance,
@@ -2925,6 +2866,7 @@ lcb_error_t lcb_get_timings(lcb_t instance,
 /**
  * This may be used in conjunction with the errmap callback if it wishes
  * to fallback for default behavior for the given code.
+ * @uncomitted
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_errmap_default(lcb_t instance, lcb_uint16_t code);
@@ -2939,6 +2881,7 @@ lcb_error_t lcb_errmap_default(lcb_t instance, lcb_uint16_t code);
  */
 typedef lcb_error_t (*lcb_errmap_callback)(lcb_t instance, lcb_uint16_t bincode);
 
+/**@uncommitted*/
 LIBCOUCHBASE_API
 lcb_errmap_callback lcb_set_errmap_callback(lcb_t, lcb_errmap_callback);
 

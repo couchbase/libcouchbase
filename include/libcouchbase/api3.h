@@ -206,6 +206,7 @@ struct mc_pipeline_st;
  * @brief enter a scheduling scope
  * @param queue
  * @attention It is not safe to call this function twice
+ * @volatile
  */
 void
 mcreq_sched_enter(struct mc_cmdqueue_st *queue);
@@ -218,6 +219,7 @@ mcreq_sched_enter(struct mc_cmdqueue_st *queue);
  *
  * @param queue
  * @param do_flush Whether the items in the queue should be flushed
+ * @volatile
  */
 void
 mcreq_sched_leave(struct mc_cmdqueue_st *queue, int do_flush);
@@ -231,12 +233,15 @@ mcreq_sched_leave(struct mc_cmdqueue_st *queue, int do_flush);
 void
 mcreq_sched_fail(struct mc_cmdqueue_st *queue);
 
+/**@volatile*/
 LIBCOUCHBASE_API
 void lcb_sched_enter(lcb_t);
 
+/**@volatile*/
 LIBCOUCHBASE_API
 void lcb_sched_leave(lcb_t);
 
+/**@volatile*/
 LIBCOUCHBASE_API
 void lcb_sched_fail(lcb_t);
 
@@ -254,6 +259,7 @@ typedef struct {
 
 /**
  * @brief Spool a single get operation
+ * @volatile
  */
 LIBCOUCHBASE_API
 lcb_error_t
@@ -277,6 +283,7 @@ typedef struct {
 } lcb_CMDINCRDECR;
 /**
  * @brief Spool a single arithmetic operation
+ * @volatile
  */
 LIBCOUCHBASE_API
 lcb_error_t
@@ -325,6 +332,7 @@ typedef struct {
 } lcb_CMDSTORE;
 /**
  * @brief Spool a single storage request
+ * @volatile
  */
 LIBCOUCHBASE_API
 lcb_error_t
@@ -337,25 +345,27 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd);
  * retrieval
  */
 typedef lcb_CMDBASE lcb_remove3_cmd_t;
-/**@brief Schedule a removal of an item from the server */
+/**@brief Schedule a removal of an item from the server
+ * @volatile */
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_remove3(lcb_t instance, const void *cookie, const lcb_remove3_cmd_t * cmd);
 
-/**@brief Modify an item's expiration time*/
+/**@brief Modify an item's expiration time
+ * @volatile*/
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_touch3(lcb_t instance, const void *cookie, lcb_CMDTOUCH *cmd);
 
+/**@volatile*/
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd);
 
+/**@volatile*/
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_server_versions3(lcb_t instance, const void *cookie, const lcb_CMDBASE * cmd);
-
-
 
 typedef struct {
     /* unused */
@@ -364,10 +374,12 @@ typedef struct {
     lcb_verbosity_level_t level;
 } lcb_CMDVERBOSITY;
 
+/**@volatile*/
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_server_verbosity3(lcb_t instance, const void *cookie, const lcb_CMDVERBOSITY *cmd);
 
+/**@volatile*/
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);

@@ -756,14 +756,19 @@ typedef struct lcb_logprocs_st {
  * does not exist, the normal bootstrap process is performed and the file
  * is written to with the current information.
  *
- * Configuration cache is not supported for memcached buckets
+ * @note The leading directories for the file must exist, otherwise the file
+ * will never be created.
  *
- * @uncommitted
+ * @note Configuration cache is not supported for memcached buckets
+ *
  *
  * Mode|Arg
  * ----|---
  * Set | `char *`
  * Get | `char **`
+ *
+ * @uncommitted
+ * @see LCB_CNTL_CONFIG_CACHE_LOADED
  */
 #define LCB_CNTL_CONFIGCACHE 0x21
 

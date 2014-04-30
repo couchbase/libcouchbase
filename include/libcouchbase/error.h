@@ -280,6 +280,7 @@ typedef enum {
  * @brief Get error categories for a specific code
  * @param err the error received
  * @return a set of flags containing the categories for the given error
+ * @committed
  */
 LIBCOUCHBASE_API
 int lcb_get_errtype(lcb_error_t err);
@@ -291,6 +292,7 @@ int lcb_get_errtype(lcb_error_t err);
  * @param error the error code
  * @return A textual description of the error message. The caller should
  *         <b>not</b> release the memory returned from this function.
+ * @committed
  */
 LIBCOUCHBASE_API
 const char *lcb_strerror(lcb_t instance, lcb_error_t error);

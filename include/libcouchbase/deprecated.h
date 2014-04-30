@@ -71,6 +71,22 @@ lcb_timer_t lcb_timer_create(lcb_t instance, const void *command_cookie, lcb_uin
 LIBCOUCHBASE_API
 lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer);
 
+typedef enum lcb_compat_t { LCB_MEMCACHED_CLUSTER = 0x00, LCB_CACHED_CONFIG = 0x01 } lcb_compat_t;
+typedef lcb_compat_t lcb_cluster_t;
+LIBCOUCHBASE_API
+struct lcb_memcached_st { const char *serverlist; const char *username; const char *password; };
+struct lcb_cached_config_st {
+    struct lcb_create_st createopt;
+    const char *cachefile;
+};
+
+/**
+ * @deprecated
+ * Use @ref LCB_CNTL_CONFIGCACHE for configuration cache options
+ */
+LCB_DEPR_API(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io));
+
+
 /** WTF constants for sanity check */
 #define LCB_C_ST_ID 0
 #define LCB_C_ST_V 2
