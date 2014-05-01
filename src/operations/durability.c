@@ -592,7 +592,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
      */
 
     dset_ref(dset);
-    hashset_add(instance->durability_polls, dset);
+    lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_DURABILITY, dset);
     timer_schedule(dset, 0, STATE_OBSPOLL);
     return LCB_SUCCESS;
 }
@@ -628,8 +628,7 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
         lcb_durability_entry_t *ent = dset->entries + ii;
         free((void *)REQFLD(ent, key));
     }
-
-    hashset_remove(dset->instance->durability_polls, dset);
+    lcb_aspend_del(&dset->instance->pendops, LCB_PENDTYPE_DURABILITY, dset);
 
     if (dset->nentries > 1) {
         if (dset->ht) {

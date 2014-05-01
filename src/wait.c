@@ -27,9 +27,7 @@ has_pending(lcb_t instance)
         return 1;
     }
 
-    if (hashset_num_items(instance->timers) ||
-            hashset_num_items(instance->durability_polls) ||
-            hashset_num_items(instance->http_requests)) {
+    if (lcb_aspend_pending(&instance->pendops)) {
         return 1;
     }
 

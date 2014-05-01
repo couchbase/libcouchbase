@@ -417,10 +417,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     lcb_initialize_packet_handlers(obj);
-
-    obj->timers = hashset_create();
-    obj->http_requests = hashset_create();
-    obj->durability_polls = hashset_create();
+    lcb_aspend_init(&obj->pendops);
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
     *instance = obj;
@@ -471,6 +468,8 @@ void lcb_destroy(lcb_t instance)
 {
     lcb_size_t ii;
     lcb_settings *settings = instance->settings;
+    hashset_t hs;
+    lcb_ASPEND *po = &instance->pendops;
 
     if (instance->cur_configinfo) {
         lcb_clconfig_decref(instance->cur_configinfo);
@@ -480,29 +479,24 @@ void lcb_destroy(lcb_t instance)
 
     lcb_bootstrap_destroy(instance);
     hostlist_destroy(instance->usernodes);
-
-    if (instance->timers != NULL) {
-        for (ii = 0; ii < instance->timers->capacity; ++ii) {
-            if (instance->timers->items[ii] > 1) {
-                lcb_timer_destroy(instance,
-                                  (lcb_timer_t)instance->timers->items[ii]);
+    if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_TIMER))) {
+        for (ii = 0; ii < hs->capacity; ++ii) {
+            if (hs->items[ii] > 1) {
+                lcb_timer_destroy(instance, (lcb_timer_t)hs->items[ii]);
             }
         }
-        hashset_destroy(instance->timers);
     }
 
-    if (instance->durability_polls) {
+    if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_DURABILITY))) {
         struct lcb_durability_set_st **dset_list;
-        lcb_size_t nitems = hashset_num_items(instance->durability_polls);
-        dset_list = (struct lcb_durability_set_st **)
-                    hashset_get_items(instance->durability_polls, NULL);
+        lcb_size_t nitems = hashset_num_items(hs);
+        dset_list = (struct lcb_durability_set_st **)hashset_get_items(hs, NULL);
         if (dset_list) {
             for (ii = 0; ii < nitems; ii++) {
                 lcb_durability_dset_destroy(dset_list[ii]);
             }
             free(dset_list);
         }
-        hashset_destroy(instance->durability_polls);
     }
 
     for (ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
@@ -510,11 +504,10 @@ void lcb_destroy(lcb_t instance)
         mcserver_close(server, 0);
     }
 
-    if (instance->http_requests) {
-        for (ii = 0; ii < instance->http_requests->capacity; ++ii) {
-            if (instance->http_requests->items[ii] > 1) {
-                lcb_http_request_t htreq =
-                    (lcb_http_request_t)instance->http_requests->items[ii];
+    if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_HTTP))) {
+        for (ii = 0; ii < hs->capacity; ++ii) {
+            if (hs->items[ii] > 1) {
+                lcb_http_request_t htreq = (lcb_http_request_t)hs->items[ii];
 
                 /**
                  * We don't want to invoke callbacks *or* remove it from our
@@ -527,13 +520,14 @@ void lcb_destroy(lcb_t instance)
             }
         }
     }
+
     lcb_retryq_destroy(instance->retryq);
     lcb_confmon_destroy(instance->confmon);
-    hashset_destroy(instance->http_requests);
     lcbio_mgr_destroy(instance->memd_sockpool);
     lcbio_table_unref(instance->iotable);
     mcreq_queue_cleanup(&instance->cmdq);
     lcb_settings_unref(settings);
+    lcb_aspend_cleanup(po);
     free(instance->histogram);
     free(instance->scratch);
     memset(instance, 0xff, sizeof(*instance));
@@ -570,4 +564,45 @@ LCB_INTERNAL_API
 void lcb_stop_loop(lcb_t instance)
 {
     IOT_STOP(instance->iotable);
+}
+
+void
+lcb_aspend_init(lcb_ASPEND *ops)
+{
+    unsigned ii;
+    for (ii = 0; ii < LCB_PENDTYPE_MAX; ++ii) {
+        ops->items[ii] = hashset_create();
+    }
+    ops->count = 0;
+}
+
+void
+lcb_aspend_add(lcb_ASPEND *ops, lcb_ASPENDTYPE type, const void *item)
+{
+    ops->count++;
+    if (type == LCB_PENDTYPE_COUNTER) {
+        return;
+    }
+    hashset_add(ops->items[type], (void *)item);
+}
+
+void
+lcb_aspend_del(lcb_ASPEND *ops, lcb_ASPENDTYPE type, const void *item)
+{
+    if (type == LCB_PENDTYPE_COUNTER) {
+        ops->count--;
+        return;
+    }
+    if (hashset_remove(ops->items[type], (void *)item)) {
+        ops->count--;
+    }
+}
+
+void
+lcb_aspend_cleanup(lcb_ASPEND *ops)
+{
+    unsigned ii;
+    for (ii = 0; ii < LCB_PENDTYPE_MAX; ii++) {
+        hashset_destroy(ops->items[ii]);
+    }
 }

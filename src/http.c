@@ -259,8 +259,7 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
         lcb_http_request_decref(req);
         return rc;
     }
-
-    hashset_add(instance->http_requests, req);
+    lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_HTTP, req);
 
     rc = lcb_http_request_connect(req);
     if (rc != LCB_SUCCESS) {
@@ -552,7 +551,7 @@ void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
 
     request->status = LCB_HTREQ_S_HTREMOVED | LCB_HTREQ_S_CBINVOKED;
     if (request->instance) {
-        hashset_remove(instance->http_requests, request);
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_HTTP, request);
     }
     request->instance = NULL;
 

@@ -44,6 +44,7 @@
 #include "mc/mcreq.h"
 #include "simplestring.h"
 #include "retryq.h"
+#include "aspend.h"
 
 #define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
 #define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
@@ -105,16 +106,9 @@ extern "C" {
         unsigned int weird_things;
 
         vbucket_state_listener_t vbucket_state_listener;
-
-        /** The set of the timers */
-        hashset_t timers;
-        /** The set of the pointers to HTTP requests to Cluster */
-        hashset_t http_requests;
-        /** Set of pending durability polls */
-        hashset_t durability_polls;
-
         struct lcb_callback_st callbacks;
         struct lcb_histogram_st *histogram;
+        lcb_ASPEND pendops;
         int wait;
         const void *cookie;
 

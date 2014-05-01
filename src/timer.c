@@ -52,9 +52,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
     }
 
     if (! TMR_IS_STANDALONE(timer)) {
-        if (hashset_is_member(instance->timers, timer)) {
-            hashset_remove(instance->timers, timer);
-        }
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_TIMER, timer);
         lcb_maybe_breakout(instance);
     }
 
@@ -157,7 +155,7 @@ lcb_timer_t lcb_timer_create2(lcbio_TABLE *io,
     }
 
     if ( (options & LCB_TIMER_STANDALONE) == 0) {
-        hashset_add(instance->timers, tmr);
+        lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_TIMER, tmr);
     }
 
     lcb_timer_rearm(tmr, usec);
@@ -171,8 +169,8 @@ lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer)
 {
     int standalone = timer->options & LCB_TIMER_STANDALONE;
 
-    if (standalone == 0 && hashset_is_member(instance->timers, timer)) {
-        hashset_remove(instance->timers, timer);
+    if (!standalone) {
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_TIMER, timer);
     }
 
     lcb_timer_disarm(timer);

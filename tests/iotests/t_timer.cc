@@ -38,13 +38,14 @@ TEST_F(Timers, testStandalone)
     lcb_t instance;
     createConnection(hw, instance);
     lcb_error_t err;
+    hashset_t hs = lcb_aspend_get(&instance->pendops, LCB_PENDTYPE_TIMER);
 
     lcb_timer_t tm = lcb_timer_create(instance, NULL,
                                       1000,
                                       0,
                                       timer_callback,
                                       &err);
-    ASSERT_EQ(1, hashset_num_items(instance->timers));
+    ASSERT_EQ(1, hashset_num_items(hs));
     lcb_wait(instance);
 
     tm = lcb_timer_create2(instance->iotable,
@@ -54,12 +55,12 @@ TEST_F(Timers, testStandalone)
                            NULL,
                            &err);
 
-    ASSERT_EQ(0, hashset_num_items(instance->timers));
+    ASSERT_EQ(0, hashset_num_items(hs));
     lcb_run_loop(instance);
 
     lcb_async_t async = lcb_async_create(instance->getIOT(),
                                          NULL, timer_callback, &err);
-    ASSERT_EQ(0, hashset_num_items(instance->timers));
+    ASSERT_EQ(0, hashset_num_items(hs));
     lcb_run_loop(instance);
 
     // Try a periodic timer...
