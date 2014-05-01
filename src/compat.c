@@ -35,10 +35,10 @@ static lcb_error_t create_cached_compat(const struct lcb_cached_config_st *cfg,
                                         struct lcb_io_opt_st *io);
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_compat(lcb_cluster_t type,
-                              const void *specific,
-                              lcb_t *instance,
-                              struct lcb_io_opt_st *io)
+lcb_error_t lcb__create_compat_230(lcb_cluster_t type,
+                                   const void *specific,
+                                   lcb_t *instance,
+                                   struct lcb_io_opt_st *io)
 {
     switch (type) {
     case LCB_MEMCACHED_CLUSTER:
@@ -218,4 +218,68 @@ static lcb_error_t create_cached_compat(const struct lcb_cached_config_st *cfg,
         lcb_destroy(*instance);
     }
     return err;
+}
+
+
+struct compat_220 {
+    struct {
+        int version;
+        struct lcb_create_st1 v1;
+    } createopt;
+    const char *cachefile;
+};
+
+struct compat_230 {
+    struct {
+        int version;
+        struct lcb_create_st2 v2;
+    } createopt;
+    const char *cachefile;
+};
+
+#undef lcb_create_compat
+
+/**
+ * This is _only_ called for versions <= 2.3.0.
+ * >= 2.3.0 uses the _230() symbol.
+ *
+ * The big difference between this and the _230 function is the struct layout,
+ * where the newer one contains the filename _before_ the creation options.
+ *
+ * Woe to he who relies on the compat_st as a 'subclass' of create_st..
+ */
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_create_compat(lcb_cluster_t type,
+                               const void *specific,
+                               lcb_t *instance,
+                               struct lcb_io_opt_st *io);
+LIBCOUCHBASE_API
+lcb_error_t lcb_create_compat(lcb_cluster_t type,
+                              const void *specific,
+                              lcb_t *instance,
+                              struct lcb_io_opt_st *io)
+{
+    struct lcb_cached_config_st dst;
+    const struct compat_220* src220 = specific;
+
+    if (type == LCB_MEMCACHED_CLUSTER) {
+        return lcb__create_compat_230(type, specific, instance, io);
+    } else if (type != LCB_CACHED_CONFIG) {
+        return LCB_NOT_SUPPORTED;
+    }
+
+#define copy_compat(v) \
+    memcpy(&dst.createopt, &v->createopt, sizeof(v->createopt)); \
+    dst.cachefile = v->cachefile;
+
+    if (src220->createopt.version >= 2 || src220->cachefile == NULL) {
+        const struct compat_230* src230 = specific;
+        copy_compat(src230);
+    } else {
+        copy_compat(src220);
+    }
+
+    return lcb__create_compat_230(type, &dst, instance, io);
+
 }
