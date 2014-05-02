@@ -2,6 +2,8 @@
 #include "sllist.h"
 #include "sllist-inl.h"
 #include <list>
+#include <stdexcept>
+
 #ifndef ASSERT_NZ
 #define ASSERT_NZ(e) ASSERT_NE(0, e)
 #endif
