@@ -70,21 +70,7 @@ mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix);
  * @param isok whether the server's socket may be reused.
  */
 void
-mcserver_close(mc_SERVER *server, int isok);
-
-/**
- * Determines if a server is 'clean'. A 'clean' server is one which does not
- * have any pending I/O operations on it (and thus has no references either
- * in the server or locally pointing to it).
- *
- *
- * Since this function inspects the pending commands to determine whether it
- * is safe or not to re-release the connection, it should only be called _before_
- * any kind of fail-outs are performed. Otherwise a partially scheduled command
- * might still exist inside the network buffer, but be absent from the queue.
- */
-int
-mcserver_is_clean(mc_SERVER *server);
+mcserver_close(mc_SERVER *server);
 
 /**
  * Schedule a flush and potentially flush some immediate data on the server.

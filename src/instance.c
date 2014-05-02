@@ -501,7 +501,7 @@ void lcb_destroy(lcb_t instance)
 
     for (ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
         lcb_server_t *server = LCBT_GET_SERVER(instance, ii);
-        mcserver_close(server, 0);
+        mcserver_close(server);
     }
 
     if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_HTTP))) {

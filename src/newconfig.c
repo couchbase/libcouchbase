@@ -196,7 +196,7 @@ replace_config(lcb_t instance, clconfig_info *next_config)
             mcreq_iterwipe(cq, ppold[ii], iterwipe_cb, NULL);
         }
         mcserver_fail_chain((mc_SERVER *)ppold[ii], LCB_MAP_CHANGED);
-        mcserver_close((mc_SERVER *)ppold[ii], 0);
+        mcserver_close((mc_SERVER *)ppold[ii]);
     }
 
     for (ii = 0; ii < nnew; ii++) {

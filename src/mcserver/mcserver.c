@@ -376,12 +376,6 @@ timeout_server(void *arg)
     lcb_maybe_breakout(server->instance);
 }
 
-int
-mcserver_is_clean(mc_SERVER *server)
-{
-    return 0;
-}
-
 static void
 on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr)
 {
@@ -491,20 +485,13 @@ server_free(mc_SERVER *server)
 static void
 close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
 {
-    if (reusable) {
-        reusable = *(int *)arg;
-    }
     lcbio_ref(sock);
-    if (reusable) {
-        lcbio_mgr_put(sock);
-    } else {
-        /* kill the socket */
-        lcbio_mgr_discard(sock);
-    }
+    lcbio_mgr_discard(sock);
+    (void)reusable;(void)arg;
 }
 
 void
-mcserver_close(mc_SERVER *server, int isok)
+mcserver_close(mc_SERVER *server)
 {
     lcbio_CTX *ctx = server->connctx;
 
@@ -523,7 +510,7 @@ mcserver_close(mc_SERVER *server, int isok)
 
     if (ctx->npending == 0) {
         lcb_log(LOGARGS(server, INFO), "Server %p may be closed. No pending events", server);
-        lcbio_ctx_close(ctx, close_cb, &isok);
+        lcbio_ctx_close(ctx, close_cb, NULL);
         server_free(server);
 
     } else {
