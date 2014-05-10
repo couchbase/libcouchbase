@@ -417,6 +417,7 @@ lcbio_ctx_schedule(lcbio_CTX *ctx)
     }
 }
 
+/** Extended function used for write-on-callback mode */
 static int
 E_put_ex(lcbio_CTX *ctx, lcb_IOV *iov, unsigned niov, unsigned nb)
 {
@@ -433,18 +434,23 @@ E_put_ex(lcbio_CTX *ctx, lcb_IOV *iov, unsigned niov, unsigned nb)
     } else if (nw == -1) {
         switch (IOT_ERRNO(iot)) {
         case EINTR:
+            /* jump back to retry */
             goto GT_WRITE_AGAIN;
 
         case C_EAGAIN:
         case EWOULDBLOCK:
             nw = 0;
+            /* indicate zero bytes were written, but don't send an error */
             goto GT_WRITE0;
         default:
+            /* pretend all the bytes were written and deliver an error during
+             * the next event loop iteration. */
             nw = nb;
             lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
             goto GT_WRITE0;
         }
     } else {
+        /* connection closed. pretend everything was written and send an error */
         nw = nb;
         lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
         goto GT_WRITE0;
