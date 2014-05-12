@@ -145,12 +145,12 @@ ADD_LIBRARY(couchbase_utils STATIC
             src/simplestring.c
             ${lcb_getopt_src})
 
-SET_TARGET_PROPERTIES(couchbase_utils
-    PROPERTIES
-        POSITION_INDEPENDENT_CODE
-            TRUE
-        COMPILE_FLAGS "${LCB_CORE_CFLAGS}")
-
+MACRO(LCB_UTIL tgt)
+    SET_TARGET_PROPERTIES(${tgt}
+        PROPERTIES
+        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
+        POSITION_INDEPENDENT_CODE TRUE)
+ENDMACRO()
 
 ADD_LIBRARY(netbuf STATIC src/netbuf/netbuf.c)
 ADD_LIBRARY(mcreq STATIC src/mc/mcreq.c)
@@ -162,27 +162,13 @@ ADD_LIBRARY(lcbio STATIC
     src/lcbio/connect.c src/lcbio/ctx.c src/lcbio/ioutils.c src/lcbio/iotable.c
     src/lcbio/protoctx.c src/lcbio/manager.c src/lcbio/ioutils.c src/lcbio/timer.c)
 
-SET_TARGET_PROPERTIES(netbuf-malloc
-    PROPERTIES
-        COMPILE_DEFINITIONS NETBUF_LIBC_PROXY=1
-        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
-        POSITION_INDEPENDENT_CODE TRUE)
-SET_TARGET_PROPERTIES(mcreq
-    PROPERTIES
-        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
-        POSITION_INDEPENDENT_CODE TRUE)
-SET_TARGET_PROPERTIES(netbuf
-    PROPERTIES
-        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
-        POSITION_INDEPENDENT_CODE TRUE)
-SET_TARGET_PROPERTIES(rdb
-    PROPERTIES
-        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
-        POSITION_INDEPENDENT_CODE TRUE)
-SET_TARGET_PROPERTIES(lcbio
-    PROPERTIES
-        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
-        POSITION_INDEPENDENT_CODE TRUE)
+SET_TARGET_PROPERTIES(netbuf-malloc PROPERTIES COMPILE_DEFINITIONS NETBUF_LIBC_PROXY=1)
+LCB_UTIL(netbuf-malloc)
+LCB_UTIL(netbuf)
+LCB_UTIL(rdb)
+LCB_UTIL(lcbio)
+LCB_UTIL(couchbase_utils)
+LCB_UTIL(mcreq)
 
 ADD_SUBDIRECTORY(contrib/libvbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
