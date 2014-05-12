@@ -228,6 +228,11 @@ lcbio_table_unref(lcbio_TABLE *table)
         return;
     }
 
+    if (table->dtor) {
+        table->dtor(table);
+        return;
+    }
+
     if (table->p && table->p->v.v0.need_cleanup) {
         lcb_destroy_io_ops(table->p);
     }

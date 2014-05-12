@@ -33,8 +33,8 @@ typedef struct lcbio_TABLE {
         } v0;
         lcb_completion_procs completion;
     } u_io;
-
     unsigned refcount;
+    void (*dtor)(void *);
 } lcbio_TABLE;
 
 /** Whether the underlying model is event-based */
