@@ -59,8 +59,10 @@ lcbio_E_rb_write(lcbio_SOCKET *sock, ringbuffer_t *buf)
     lcb_ssize_t nw;
     lcbio_TABLE *iot = sock->io;
     while (buf->nbytes) {
+        unsigned niov;
         ringbuffer_get_iov(buf, RINGBUFFER_READ, iov);
-        nw = IOT_V0IO(iot).sendv(IOT_ARG(iot), sock->u.fd, iov, 2);
+        niov = iov[1].iov_len ? 2 : 1;
+        nw = IOT_V0IO(iot).sendv(IOT_ARG(iot), sock->u.fd, iov, niov);
         if (nw == -1) {
             switch (IOT_ERRNO(iot)) {
             case EINTR:

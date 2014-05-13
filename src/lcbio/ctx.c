@@ -348,8 +348,11 @@ C_schedule(lcbio_CTX *ctx)
     if (ctx->output && ctx->output->rb.nbytes) {
         /** Schedule a write */
         lcb_IOV iov[2];
+        unsigned niov;
+
         ringbuffer_get_iov(&ctx->output->rb, RINGBUFFER_READ, iov);
-        rv = IOT_V1(io).write2(IOT_ARG(io), sd, iov, 2, ctx->output, Cw_handler);
+        niov = iov[1].iov_len ? 2 : 1;
+        rv = IOT_V1(io).write2(IOT_ARG(io), sd, iov, niov, ctx->output, Cw_handler);
         if (rv) {
             lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
             return;
