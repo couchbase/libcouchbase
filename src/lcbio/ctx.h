@@ -51,6 +51,11 @@ extern "C" {
  * sockets where data may simply be copied to another buffer, use the iterator
  * API presented here.
  *
+ * @note The RDB interface requires you to explicitly advance the read
+ * cursor in addition to actually obtaining the data. This is handled within
+ * the iterator interface declared in this file (but of course must be done
+ * manually if employing RDB directly).
+ *
  *
  * # Writing
  *
