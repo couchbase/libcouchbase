@@ -416,6 +416,7 @@ static UVC_READ_CB(read_cb)
 
     my_tcp_t *mt = (my_tcp_t *)stream;
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, mt, tcp);
+    my_iops_t *io = (my_iops_t *)sock->base.parent;
     lcb_ioC_read2_callback callback = CbREQ(mt);
 
     /**
@@ -429,6 +430,13 @@ static UVC_READ_CB(read_cb)
     SOCK_DECR_PENDING(sock, read);
     uv_read_stop(stream);
     CbREQ(mt) = NULL;
+
+    if (nread < 0) {
+        set_last_error(io, uvc_last_errno(io->loop, nread));
+        if (uvc_is_eof(io->loop, nread)) {
+            nread = 0;
+        }
+    }
     callback(&sock->base, nread, sock->rdarg);
     decref_sock(sock);
     (void)buf;

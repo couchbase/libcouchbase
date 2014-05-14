@@ -113,6 +113,11 @@
   #define UVC_READ_CB_VARS() \
       const uv_buf_t *buf = &_buf;
 
+  static int uvc_is_eof(uv_loop_t *loop, int error) {
+      error = uv_last_error(loop).code;
+      return error == UV_EOF;
+  }
+
   static int uvc_last_errno(uv_loop_t *loop, int error) {
       int uverr = 0;
 
@@ -153,6 +158,11 @@
 
   static int uvc_last_errno(uv_loop_t *loop, int error) {
       return error;
+  }
+
+  static int uvc_is_eof(uv_loop_t *loop, int error) {
+      (void) loop;
+      return error == UV_EOF;
   }
 
 #endif
