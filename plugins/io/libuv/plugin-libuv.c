@@ -419,6 +419,11 @@ static UVC_READ_CB(read_cb)
     my_iops_t *io = (my_iops_t *)sock->base.parent;
     lcb_ioC_read2_callback callback = CbREQ(mt);
 
+    if (nread == 0) {
+        /* we have a fixed IOV between requests, so just retry again */
+        return;
+    }
+
     /**
      * XXX:
      * For multi-IOV support, we would require a counter to determine if this
