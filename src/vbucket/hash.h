@@ -19,21 +19,12 @@
 #define LIBVBUCKET_HASH_H 1
 
 #include "config.h"
-
-#ifndef HAVE_STDINT_H
-#include "win_stdint.h"
-#else
-#include <stdint.h>
-#endif
-
 #include <sys/types.h>
 #include <stdio.h>
 
-uint32_t hash_crc32(const char *key, size_t key_length);
-uint32_t hash_ketama(const char *key, size_t key_length);
-void hash_md5(const char *key, size_t key_length, unsigned char *result);
-
-void* hash_md5_update(void *ctx, const char *key, size_t key_length);
-void hash_md5_final(void *ctx, unsigned char *result);
+uint32_t vb__hash_ketama(const char *key, size_t key_length);
+void vb__hash_md5(const char *key, size_t key_length, unsigned char *result);
+void* vb__hash_md5_update(void *ctx, const char *key, size_t key_length);
+void vb__hash_md5_final(void *ctx, unsigned char *result);
 
 #endif

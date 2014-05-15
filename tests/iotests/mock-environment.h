@@ -20,7 +20,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
-#include "libvbucket/cJSON.h"
+#include "contrib/cJSON/cJSON.h"
 #include "serverparams.h"
 
 

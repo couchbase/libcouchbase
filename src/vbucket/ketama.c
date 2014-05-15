@@ -1,20 +1,15 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+#define PROTOTYPES 1
+
+#define MD5Final vb__MD5_final
+#define MD5Init vb__MD5Init
+#define MD5Update vb__MD5Update
+
 #include <stdlib.h>
+#include "rfc1321/md5c.c"
 #include "hash.h"
 
-/* Force md5 functions to be static. The compiler could show warnings but
- * it ok, we did it because we need to keep files in vendor/ directory
- * unmodified. */
-static void MD5Init();
-static void MD5Update();
-static void MD5Final();
-
-/* This library uses the reference MD5 implementation from [RFC1321] */
-#define PROTOTYPES 1
-#include "rfc1321/md5c.c"
-#undef  PROTOTYPES
-
-void hash_md5(const char *key, size_t key_length, unsigned char *result)
+void vb__hash_md5(const char *key, size_t key_length, unsigned char *result)
 {
     MD5_CTX ctx;
 
@@ -23,7 +18,7 @@ void hash_md5(const char *key, size_t key_length, unsigned char *result)
     MD5Final(result, &ctx);
 }
 
-void* hash_md5_update(void *ctx, const char *key, size_t key_length)
+void* vb__hash_md5_update(void *ctx, const char *key, size_t key_length)
 {
     if (ctx == NULL) {
         ctx = calloc(1, sizeof(MD5_CTX));
@@ -33,7 +28,7 @@ void* hash_md5_update(void *ctx, const char *key, size_t key_length)
     return ctx;
 }
 
-void hash_md5_final(void *ctx, unsigned char *result)
+void vb__hash_md5_final(void *ctx, unsigned char *result)
 {
     if (ctx == NULL) {
         return;
@@ -42,11 +37,11 @@ void hash_md5_final(void *ctx, unsigned char *result)
     free(ctx);
 }
 
-uint32_t hash_ketama(const char *key, size_t key_length)
+uint32_t vb__hash_ketama(const char *key, size_t key_length)
 {
     unsigned char digest[16];
 
-    hash_md5(key, key_length, digest);
+    vb__hash_md5(key, key_length, digest);
 
     return (uint32_t) ( (digest[3] << 24)
                        |(digest[2] << 16)

@@ -132,7 +132,7 @@ IF(WIN32)
     SET(lcb_getopt_src win32/getopt.c)
 ENDIF()
 ADD_LIBRARY(couchbase_utils STATIC
-            contrib/libvbucket/cJSON.c
+            contrib/cJSON/cJSON.c
             src/strcodecs/base64.c
             src/strcodecs/url_encoding.c
             src/gethrtime.c
@@ -173,7 +173,7 @@ LCB_UTIL(lcbio)
 LCB_UTIL(couchbase_utils)
 LCB_UTIL(mcreq)
 
-ADD_SUBDIRECTORY(contrib/libvbucket)
+ADD_SUBDIRECTORY(src/vbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
 ADD_SUBDIRECTORY(src/ssl)
 

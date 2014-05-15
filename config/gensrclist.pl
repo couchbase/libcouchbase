@@ -90,6 +90,7 @@ print $ofp "pkginclude_HEADERS = ".fmt_filelist(@PKGINCLUDE_HEADERS)."\n";
 my @LCB_SOURCES = (find_srcfiles("src"), find_srcfiles("plugins/io/select"));
 @LCB_SOURCES = grep { $_ !~ m,src/ssl, } @LCB_SOURCES;
 print $ofp "libcouchbase_la_SOURCES = ".fmt_filelist(@LCB_SOURCES)."\n";
+print $ofp "libcouchbase_la_SOURCES += contrib/cJSON/cJSON.c\n";
 print $ofp "if HAVE_WINSOCK2\n";
 print $ofp "libcouchbase_la_SOURCES +=".
             fmt_filelist(find_srcfiles("plugins/io/iocp"))."\n";
@@ -108,7 +109,7 @@ add_target_with_sources("libmcreq", "src/mc");
 add_target_with_sources("libnetbuf", "src/netbuf");
 add_target_with_sources("libioserver", "tests/ioserver");
 
-my @CBUTIL_SOURCES = qw(contrib/libvbucket/cJSON.c src/strcodecs/base64.c
+my @CBUTIL_SOURCES = qw(contrib/cJSON/cJSON.c src/strcodecs/base64.c
     src/strcodecs/url_encoding.c src/gethrtime.c src/genhash.c src/hashtable.c
     src/hashset.c src/hostlist.c src/list.c src/logging.c src/packetutils.c
     src/ringbuffer.c src/simplestring.c);

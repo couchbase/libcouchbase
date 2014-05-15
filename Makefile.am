@@ -28,7 +28,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
-noinst_LTLIBRARIES = libcbsasl.la libcrc32.la libhttpparser.la libketama.la libvbucket.la
+noinst_LTLIBRARIES = libcbsasl.la libhttpparser.la
 bin_PROGRAMS =
 check_PROGRAMS =
 noinst_PROGRAMS =
@@ -88,31 +88,10 @@ libcbsasl_la_SOURCES = \
 libcbsasl_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
 libcbsasl_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS) -DBUILDING_CBSASL=1 -I${top_srcdir}/contrib/cbsasl/src
 
-libvbucket_la_SOURCES = \
-                        include/libvbucket/vbucket.h \
-                        include/libvbucket/visibility.h \
-                        contrib/libvbucket/hash.h \
-                        contrib/libvbucket/cJSON.c \
-                        contrib/libvbucket/cJSON.h \
-                        contrib/libvbucket/vbucket.c
-libvbucket_la_LIBADD = libketama.la libcrc32.la
-libvbucket_la_DEPENDENCIES = libketama.la libcrc32.la
-libvbucket_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
-libvbucket_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-
-libketama_la_SOURCES = contrib/libvbucket/ketama.c
-libketama_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
-libketama_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
-
-
-libcrc32_la_SOURCES = contrib/libvbucket/crc32.c
-libcrc32_la_CFLAGS = $(AM_NOWARN_CFLAGS)
-libcrc32_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS)
-
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -DLCB_LIBDIR="\"${libdir}\""
-libcouchbase_la_DEPENDENCIES=libcbsasl.la libhttpparser.la libvbucket.la
-libcouchbase_la_LIBADD=libcbsasl.la libhttpparser.la libvbucket.la
+libcouchbase_la_DEPENDENCIES=libcbsasl.la libhttpparser.la
+libcouchbase_la_LIBADD=libcbsasl.la libhttpparser.la
 
 if ENABLE_SSL
 libcouchbase_la_LDFLAGS+=$(OPENSSL_LDFLAGS)
@@ -250,7 +229,7 @@ tests_check_all_SOURCES = tests/check-all.cc tools/commandlineparser.cc tests/mo
 tests_check_all_CPPFLAGS = $(AM_CPPFLAGS) -I"${srcdir}/tools"
 tests_check_all_LDADD = libcouchbase.la
 
-tools_cbc_DEPENDENCIES = libcouchbase.la libvbucket.la
+tools_cbc_DEPENDENCIES = libcouchbase.la
 tools_cbc_LDADD = $(tools_cbc_DEPENDENCIES)
 
 if HAVE_LIBYAJL2
@@ -322,14 +301,12 @@ EXTRA_DIST = \
              plugins/io/libuv/CMakeLists.txt \
              plugins/io/select/CMakeLists.txt \
              plugins/io/libevent/CMakeLists.txt \
-             contrib/libvbucket/CMakeLists.txt \
              contrib/cbsasl/CMakeLists.txt \
              CONTRIBUTING.md \
              LICENSE \
              Makefile.manpage.inc \
              README.markdown \
              RELEASE_NOTES.markdown \
-             contrib/libvbucket/rfc1321 \
              include/ep-engine/README \
              include/libcouchbase/configuration.h.in \
              include/memcached/COPYING \
