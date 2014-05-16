@@ -1,4 +1,5 @@
 #include "settings.h"
+#include <lcbio/ssl.h>
 
 LCB_INTERNAL_API
 void lcb_default_settings(lcb_settings *settings)
@@ -19,6 +20,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
     settings->retry_interval = LCB_DEFAULT_RETRY_INTERVAL;
     settings->retry_backoff = LCB_DEFAULT_RETRY_BACKOFF;
+    settings->sslopts = 0;
 }
 
 LCB_INTERNAL_API
@@ -42,6 +44,10 @@ lcb_settings_unref(lcb_settings *settings)
     free(settings->password);
     free(settings->bucket);
     free(settings->sasl_mech_force);
+    free(settings->capath);
+    if (settings->ssl_ctx) {
+        lcbio_ssl_free(settings->ssl_ctx);
+    }
     if (settings->dtorcb) {
         settings->dtorcb(settings->dtorarg);
     }

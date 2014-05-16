@@ -273,13 +273,22 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
 lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_size_t nbase)
 {
     unsigned int required_fields;
-    static const char htscheme[] = "http://";
-    static const unsigned schemsize = sizeof(htscheme)-1;
+    const char *htscheme;
+    unsigned schemsize;
+    if (LCBT_SETTING(req->instance, sslopts) & LCB_SSL_ENABLED) {
+        htscheme = "https://";
+        schemsize = sizeof("https://");
+    } else {
+        htscheme = "http://";
+        schemsize = sizeof("http://");
+    }
+    schemsize--;
+
 
     if (base) {
         lcb_string urlbuf;
         lcb_string_init(&urlbuf);
-        lcb_string_appendz(&urlbuf, "http://");
+        lcb_string_appendz(&urlbuf, htscheme);
 
         if (nbase > schemsize && memcmp(base, htscheme, schemsize) == 0) {
             base += schemsize;

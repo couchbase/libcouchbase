@@ -64,6 +64,7 @@ extern "C" {
 #endif
 
 struct lcb_logprocs_st;
+struct lcbio_SSLCTX;
 /**
  * Stateless setting structure.
  * Specifically this contains the 'environment' of the instance for things
@@ -109,6 +110,9 @@ typedef struct lcb_settings_st {
     /** Don't guess next vbucket server. Mainly for testing */
     int vb_noguess;
 
+    /** SSL settings */
+    lcb_SSLOPTS sslopts;
+
     /** Is IPv6 enabled */
     lcb_ipv6_t ipv6;
 
@@ -116,6 +120,8 @@ typedef struct lcb_settings_st {
     char *password;
     char *bucket;
     char *sasl_mech_force;
+    char *capath;
+    struct lcbio_SSLCTX *ssl_ctx;
     struct lcb_logprocs_st *logger;
     void (*dtorcb)(const void *);
     void *dtorarg;

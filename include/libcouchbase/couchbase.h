@@ -19,7 +19,9 @@
 #define LIBCOUCHBASE_COUCHBASE_H 1
 
 #define LCB_CONFIG_MCD_PORT 11210
+#define LCB_CONFIG_MCD_SSL_PORT 11207
 #define LCB_CONFIG_HTTP_PORT 8091
+#define LCB_CONFIG_HTTP_SSL_PORT 18091
 
 struct lcb_st;
 typedef struct lcb_st *lcb_t;

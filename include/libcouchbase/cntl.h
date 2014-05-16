@@ -772,8 +772,50 @@ typedef struct lcb_logprocs_st {
  */
 #define LCB_CNTL_CONFIGCACHE 0x21
 
+typedef enum {
+    LCB_SSL_ENABLED = 1 << 0, /**< Use SSL */
+    LCB_SSL_NOVERIFY = 1 << 1 /**< Don't verify certificates */
+} lcb_SSLOPTS;
+
+/**
+ * @brief SSL Mode
+ *
+ * Sets the SSL policy used by the library. This should only be used before
+ * the initial connection and _after_ the CA certificate (if any) has been
+ * loaded (see @ref LCB_CNTL_SSL_CACERT)
+ *
+ * @attention
+ * This option affects the `mchosts` parameter passed to lcb_create(). Any
+ * host which has its port set to the value of LCB_CONFIG_MCD_PORT will be
+ * replaced with the value of LCB_CONFIG_MCD_SSL_PORT. Otherwise it is assumed
+ * that the ports passed are already of the SSL variant.
+ *
+ * @attention
+ * SSL is only functional on servers versions 3.0 and higher. Setting this
+ * parameter for a server of a lower version (or a mixed environment) is not
+ * supported.
+ *
+ * Mode|Arg
+ * ----|---
+ * Set, Get | lcb_SSLOPTS*
+ */
+#define LCB_CNTL_SSL_MODE 0x22
+
+
+/**
+ * @brief SSL Certificate path
+ *
+ * Sets the path on the filesystem where the server's CA certificate is located.
+ *
+ * Mode|Arg
+ * ----|---
+ * Set | const char*
+ * Get | const char**
+ */
+#define LCB_CNTL_SSL_CACERT 0x23
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x22
+#define LCB_CNTL__MAX                    0x24
 /**@}*/
 
 #ifdef __cplusplus

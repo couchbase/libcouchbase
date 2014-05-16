@@ -30,6 +30,7 @@
 #include "hostlist.h"
 #include "bucketconfig/clconfig.h"
 #include <lcbio/iotable.h>
+#define LOGARGS(obj,lvl) (obj)->settings, "instance", LCB_LOG_##lvl, __FILE__, __LINE__
 
 /**
  * Get the version of the library.
@@ -305,6 +306,26 @@ static lcb_error_t normalize_options(struct lcb_create_st *myopts,
     return LCB_SUCCESS;
 }
 
+static void
+env_sslopts(lcb_t obj)
+{
+    char optbuf[4096];
+    if (lcb_getenv_nonempty("LCB_SSL_CACERT", optbuf, sizeof optbuf)) {
+        lcb_log(LOGARGS(obj, INFO), "SSL CA certificate %s specified on environment", optbuf);
+        lcb_cntl(obj, LCB_CNTL_SET, LCB_CNTL_SSL_CACERT, optbuf);
+    }
+
+    if (lcb_getenv_nonempty("LCB_SSL_MODE", optbuf, sizeof optbuf)) {
+        int policy = 0;
+        if (sscanf(optbuf, "%d", &policy) != 1) {
+            lcb_log(LOGARGS(obj, ERR), "Invalid value for environment LCB_SSL. (%s)", optbuf);
+        } else {
+            lcb_log(LOGARGS(obj, INFO), "SSL modified from environment. Policy is 0x%x", policy);
+            lcb_cntl(obj, LCB_CNTL_SET, LCB_CNTL_SSL_MODE, &policy);
+        }
+    }
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_create(lcb_t *instance,
                        const struct lcb_create_st *options)
@@ -416,8 +437,10 @@ lcb_error_t lcb_create(lcb_t *instance,
         return err;
     }
 
+
     lcb_initialize_packet_handlers(obj);
     lcb_aspend_init(&obj->pendops);
+    env_sslopts(obj);
     /* No error has occurred yet. */
     obj->last_error = LCB_SUCCESS;
     *instance = obj;

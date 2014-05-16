@@ -17,11 +17,12 @@
 
 #include "internal.h"
 #include "logging.h"
-#include "vb-aliases.h"
+#include "vbucket/aliases.h"
 #include "settings.h"
 #include "negotiate.h"
 #include "bucketconfig/clconfig.h"
 #include "mc/mcreq-flush-inl.h"
+#include <lcbio/ssl.h>
 
 #define LOGARGS(c, lvl) \
     (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -381,6 +382,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
 {
     mc_SERVER *server = data;
     lcbio_EASYPROCS procs;
+    lcb_settings *settings = server->settings;
     uint32_t tmo;
     LCBIO_CONNREQ_CLEAR(&server->connreq);
 
@@ -391,6 +393,11 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     }
 
     lcb_assert(sock);
+
+    if ((err = lcbio_sslify_if_needed(sock, settings)) != LCB_SUCCESS) {
+        mcserver_socket_error(server, err);
+        return;
+    }
 
     /** Do we need sasl? */
     if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SASL) == NULL) {
@@ -439,6 +446,7 @@ mc_SERVER *
 mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix)
 {
     mc_SERVER *ret;
+    lcbvb_SVCMODE mode;
     ret = calloc(1, sizeof(*ret));
     if (!ret) {
         return ret;
@@ -446,9 +454,12 @@ mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix)
 
     ret->instance = instance;
     ret->settings = instance->settings;
-    ret->datahost = dupstr_or_null(VB_NODESTR(vbc, ix));
-    ret->resthost = dupstr_or_null(VB_RESTURL(vbc, ix));
-    ret->viewshost = dupstr_or_null(VB_VIEWSURL(vbc, ix));
+    mode = ret->settings->sslopts & LCB_SSL_ENABLED
+            ? LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN;
+
+    ret->datahost = dupstr_or_null(VB_MEMDSTR(vbc, ix, mode));
+    ret->resthost = dupstr_or_null(VB_MGMTSTR(vbc, ix, mode));
+    ret->viewshost = dupstr_or_null(VB_CAPIURL(vbc, ix, mode));
 
     lcb_settings_ref(ret->settings);
     mcreq_pipeline_init(&ret->pipeline);

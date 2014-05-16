@@ -16,6 +16,8 @@
  */
 #include "internal.h"
 #include "logging.h"
+#include "settings.h"
+#include <lcbio/ssl.h>
 
 #define LOGARGS(req, lvl) \
     req->instance->settings, "http-io", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -294,6 +296,8 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
 {
     lcb_http_request_t req = arg;
     lcbio_EASYPROCS procs;
+    lcb_settings *settings = req->instance->settings;
+
     LCBIO_CONNREQ_CLEAR(&req->creq);
 
     if (err != LCB_SUCCESS) {
@@ -301,6 +305,8 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
         lcb_http_request_finish(req->instance, req, err);
         return;
     }
+
+    lcbio_sslify_if_needed(sock, settings);
 
     procs.cb_err = io_error;
     procs.cb_read = io_read;

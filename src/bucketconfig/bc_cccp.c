@@ -28,6 +28,7 @@
 #include <mcserver/negotiate.h>
 #include <lcbio/lcbio.h>
 #include <lcbio/timer-ng.h>
+#include <lcbio/ssl.h>
 
 #define LOGARGS(cccp, lvl) \
     cccp->base.parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -266,6 +267,8 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
 {
     lcbio_EASYPROCS ioprocs;
     cccp_provider *cccp = data;
+    lcb_settings *settings = cccp->base.parent->settings;
+
     LCBIO_CONNREQ_CLEAR(&cccp->creq);
     if (err != LCB_SUCCESS) {
         if (sock) {
@@ -275,9 +278,13 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
         return;
     }
 
+    if ((err = lcbio_sslify_if_needed(sock, settings)) != LCB_SUCCESS) {
+        mcio_error(cccp, err);
+        return;
+    }
+
     if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SASL) == NULL) {
         mc_pSASLREQ sreq;
-        lcb_settings *settings = cccp->base.parent->settings;
         sreq = mc_sasl_start(
                 sock, settings, settings->config_node_timeout, on_connected,
                 cccp);

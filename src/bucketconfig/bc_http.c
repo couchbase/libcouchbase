@@ -18,6 +18,7 @@
 #include "internal.h"
 #include "clconfig.h"
 #include "bc_http.h"
+#include <lcbio/ssl.h>
 
 #define LOGARGS(ht, lvlbase) \
     ht->base.parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
@@ -227,6 +228,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     host = lcbio_get_host(sock);
     lcb_log(LOGARGS(http, DEBUG), "Successfuly connected to REST API %s:%s", host->host, host->port);
 
+    lcbio_sslify_if_needed(sock, http->base.parent->settings);
 
     if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Couldn't setup request header");
@@ -360,6 +362,8 @@ static void refresh_nodes(clconfig_provider *pb,
 {
     unsigned int ii;
     http_provider *http = (http_provider *)pb;
+    lcb_SSLOPTS sopts;
+    lcbvb_SVCMODE mode;
 
     hostlist_clear(http->nodes);
     if (!newconfig) {
@@ -369,12 +373,26 @@ static void refresh_nodes(clconfig_provider *pb,
         goto GT_DONE;
     }
 
-    for (ii = 0; (int)ii < vbucket_config_get_num_servers(newconfig); ii++) {
+    sopts = PROVIDER_SETTING(pb, sslopts);
+    if (sopts & LCB_SSL_ENABLED) {
+        mode = LCBVB_SVCMODE_SSL;
+    } else {
+        mode = LCBVB_SVCMODE_PLAIN;
+    }
+
+    for (ii = 0; ii < newconfig->nsrv; ++ii) {
+        const char *ss;
         lcb_error_t status;
-        const char *ss = vbucket_config_get_rest_api_server(newconfig, ii);
-        lcb_assert(ss != NULL);
+        ss = lcbvb_get_hostport(newconfig, ii, LCBVB_SVCTYPE_MGMT, mode);
+        if (!ss) {
+            /* not supported? */
+            continue;
+        }
         status = hostlist_add_stringz(http->nodes, ss, LCB_CONFIG_HTTP_PORT);
-        lcb_assert(status ==  LCB_SUCCESS);
+        lcb_assert(status == LCB_SUCCESS);
+    }
+    if (!http->nodes->nentries) {
+        lcb_log(LOGARGS(http, FATAL), "New nodes do not contain management ports");
     }
 
     GT_DONE:
