@@ -383,6 +383,18 @@ static void refresh_nodes(clconfig_provider *pb,
     }
 }
 
+static void
+configure_nodes(clconfig_provider *pb, const hostlist_t newnodes)
+{
+    refresh_nodes(pb, newnodes, NULL);
+}
+
+static hostlist_t
+get_nodes(const clconfig_provider *pb)
+{
+    return ((http_provider *)pb)->nodes;
+}
+
 static void shutdown_http(clconfig_provider *provider)
 {
     http_provider *http = (http_provider *)provider;
@@ -431,6 +443,8 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.get_cached = http_get_cached;
     http->base.shutdown = shutdown_http;
     http->base.nodes_updated = refresh_nodes;
+    http->base.configure_nodes = configure_nodes;
+    http->base.get_nodes = get_nodes;
     http->base.enabled = 0;
     http->io_timer = lcbio_timer_new(parent->iot, http, timeout_handler);
     http->disconn_timer = lcbio_timer_new(parent->iot, http, delayed_disconn);
@@ -665,10 +679,4 @@ lcb_confmon_get_rest_host(lcb_confmon *mon)
         return lcbio_get_host(sock);
     }
     return NULL;
-}
-
-void lcb_clconfig_http_set_nodes(clconfig_provider *http,
-                                 const hostlist_t nodes)
-{
-    refresh_nodes(http, nodes, NULL);
 }

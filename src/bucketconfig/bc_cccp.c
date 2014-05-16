@@ -148,7 +148,8 @@ void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance)
     pb->enabled = 1;
 }
 
-void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, const hostlist_t nodes)
+static void
+configure_nodes(clconfig_provider *pb, const hostlist_t nodes)
 {
     unsigned ii;
     cccp_provider *cccp = (cccp_provider *)pb;
@@ -160,6 +161,11 @@ void lcb_clconfig_cccp_set_nodes(clconfig_provider *pb, const hostlist_t nodes)
     if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
         hostlist_randomize(cccp->nodes);
     }
+}
+
+static hostlist_t get_nodes(const clconfig_provider *pb)
+{
+    return ((cccp_provider *)pb)->nodes;
 }
 
 #define HOST_TOKEN "$HOST"
@@ -462,6 +468,8 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
     cccp->base.pause = cccp_pause;
     cccp->base.shutdown = cccp_cleanup;
     cccp->base.nodes_updated = nodes_updated;
+    cccp->base.configure_nodes = configure_nodes;
+    cccp->base.get_nodes = get_nodes;
     cccp->base.parent = mon;
     cccp->base.enabled = 0;
     cccp->timer = lcbio_timer_new(mon->iot, cccp, socket_timeout);

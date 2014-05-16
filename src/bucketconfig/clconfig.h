@@ -187,6 +187,20 @@ typedef struct clconfig_provider_st {
                            hostlist_t,
                            VBUCKET_CONFIG_HANDLE);
 
+    /**
+     * Retrieve the list of nodes from this provider, if applicable
+     * @param p the provider
+     * @return A list of nodes, or NULL if the provider does not have a list
+     */
+    hostlist_t (*get_nodes)(const struct clconfig_provider_st *p);
+
+    /**
+     * Call to change the configured nodes of this provider.
+     * @param p The provider
+     * @param l The list of nodes to apply
+     */
+    void (*configure_nodes)(struct clconfig_provider_st *p, const hostlist_t l);
+
     /** Destroy the resources created by this provider. */
     void (*shutdown)(struct clconfig_provider_st *);
 } clconfig_provider;
@@ -440,9 +454,6 @@ void lcb_confmon_set_provider_active(lcb_confmon *mon,
 LCB_INTERNAL_API
 void lcb_clconfig_http_enable(clconfig_provider *pb);
 
-LCB_INTERNAL_API
-void lcb_clconfig_http_set_nodes(clconfig_provider *pb, const hostlist_t nodes);
-
 /**  Check status of configuration monitor */
 LCB_INTERNAL_API
 int lcb_confmon_is_refreshing(lcb_confmon *mon);
@@ -460,10 +471,8 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
 
 void lcb_clconfig_cccp_disable(clconfig_provider *provider);
 
-LCB_INTERNAL_API
-void lcb_clconfig_cccp_set_nodes(clconfig_provider *provider,
-                                 const hostlist_t nodes);
-
+#define lcb_clconfig_cccp_set_nodes(pb, nodes) (pb)->configure_nodes(pb, nodes)
+#define lcb_clconfig_http_set_nodes lcb_clconfig_cccp_set_nodes
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
