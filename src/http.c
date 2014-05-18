@@ -148,17 +148,20 @@ void lcb_setup_lcb_http_resp_t(lcb_http_resp_t *resp,
 static void maybe_refresh_config(lcb_t instance,
                                  lcb_http_request_t req, lcb_error_t err)
 {
-
+    int htstatus_ok;
     if (!req->parser) {
         return;
     }
+    htstatus_ok = req->parser->status_code >= 200 &&
+            req->parser->status_code < 299;
 
-    if (err != LCB_SUCCESS) {
+    if (err != LCB_SUCCESS && (err == LCB_ESOCKSHUTDOWN && htstatus_ok) == 0) {
+        /* ignore graceful close */
         lcb_bootstrap_refresh(instance);
         return;
     }
 
-    if (req->parser->status_code >= 200 && req->parser->status_code < 299) {
+    if (htstatus_ok) {
         return;
     }
 
