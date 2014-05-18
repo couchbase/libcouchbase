@@ -89,7 +89,9 @@ my @HELP_DESCRIPTIONS = (
     [ "cxx", "s",
         "C++ Compiler",
         "%s", \(my $CXX = "") ],
-
+    [ "disable-ssl", "",
+        "Do not build SSL support",
+        "%d", \(my $NO_SSL = 0)],
     [ "help", "",
         "This message", "%s", \(my $WANT_HELP = 0) ]
 );
@@ -187,6 +189,9 @@ if ($USE_NINJA) {
     push @CM_OPTIONS, "-GNinja";
 } else {
     push @CM_OPTIONS, "-GUnix Makefiles";
+}
+if ($NO_SSL) {
+    push @CM_OPTIONS, "-DLCB_DISABLE_SSL=$NO_SSL";
 }
 if ($CMAKE_HOST) {
     # Write the toolchain file

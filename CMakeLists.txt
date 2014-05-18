@@ -39,6 +39,7 @@ OPTION(LCB_NO_TESTS "Disable building of tests" OFF)
 OPTION(LCB_NO_TOOLS "Disable building of additional tools" OFF)
 OPTION(LCB_NO_PLUGINS "Disable the building of IO plugins for external libs" OFF)
 OPTION(LCB_MAINTAINER_MODE "Enables maintainer mode" OFF)
+OPTION(LCB_DISABLE_SSL "Do not compile SSL support" OFF)
 
 ### END CONFIGURABLES ###
 IF(MSVC)
@@ -57,6 +58,7 @@ INCLUDE(cmake/Modules/GetVersionInfo.cmake)
 INCLUDE(cmake/Modules/GenerateConfigDotH.cmake)
 INCLUDE(cmake/Modules/CopyPDB.cmake)
 INCLUDE(CheckIncludeFiles)
+
 
 SET(CPACK_PACKAGE_VERSION_MAJOR "${LCB_VERSION_MAJOR}")
 SET(CPACK_PACKAGE_VERSION_MINOR "${LCB_VERSION_MINOR}")
@@ -162,6 +164,7 @@ ADD_LIBRARY(lcbio STATIC
     src/lcbio/connect.c src/lcbio/ctx.c src/lcbio/ioutils.c src/lcbio/iotable.c
     src/lcbio/protoctx.c src/lcbio/manager.c src/lcbio/ioutils.c src/lcbio/timer.c)
 
+
 SET_TARGET_PROPERTIES(netbuf-malloc PROPERTIES COMPILE_DEFINITIONS NETBUF_LIBC_PROXY=1)
 LCB_UTIL(netbuf-malloc)
 LCB_UTIL(netbuf)
@@ -172,6 +175,13 @@ LCB_UTIL(mcreq)
 
 ADD_SUBDIRECTORY(contrib/libvbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
+ADD_SUBDIRECTORY(src/ssl)
+
+IF(LCB_DISABLE_SSL)
+    MESSAGE("Adding LCB_NO_SSL=1")
+    ADD_DEFINITIONS(-DLCB_NO_SSL=1)
+ENDIF()
+
 IF(LCB_BUILD_STATIC)
     SET(_lcb_linkspec STATIC)
 ELSE()
@@ -223,7 +233,8 @@ SET_TARGET_PROPERTIES(couchbase
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase
-    couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl lcbio rdb ${lcb_plat_libs})
+    couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl lcbio rdb
+    ${lcb_plat_libs} ${lcb_ssl_libs})
 
 
 IF(NOT LCB_NO_TESTS)

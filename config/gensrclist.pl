@@ -21,7 +21,7 @@ sub fmt_filelist {
 sub add_target {
     my $name = shift;
     print $ofp "noinst_LTLIBRARIES += $name.la\n";
-    foreach my $cat (qw(CFLAGS CPPFLAGS DEPENDENCIES)) {
+    foreach my $cat (qw(CFLAGS CPPFLAGS)) {
         print $ofp "${name}_la_${cat} = \$(libcouchbase_la_${cat})\n";
     }
 }
@@ -88,10 +88,16 @@ push @PKGINCLUDE_HEADERS,
 
 print $ofp "pkginclude_HEADERS = ".fmt_filelist(@PKGINCLUDE_HEADERS)."\n";
 my @LCB_SOURCES = (find_srcfiles("src"), find_srcfiles("plugins/io/select"));
+@LCB_SOURCES = grep { $_ !~ m,src/ssl, } @LCB_SOURCES;
 print $ofp "libcouchbase_la_SOURCES = ".fmt_filelist(@LCB_SOURCES)."\n";
 print $ofp "if HAVE_WINSOCK2\n";
 print $ofp "libcouchbase_la_SOURCES +=".
             fmt_filelist(find_srcfiles("plugins/io/iocp"))."\n";
+print $ofp "endif\n";
+
+
+print $ofp "if ENABLE_SSL\n";
+add_target_with_sources("liblcbssl", "src/ssl");
 print $ofp "endif\n";
 
 # Find the basic test stuff

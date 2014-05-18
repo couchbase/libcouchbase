@@ -8,6 +8,7 @@
 #include "manager.h"
 #include "iotable.h"
 #include <stdio.h>
+#include "ssl.h"
 
 lcbio_CSERR
 lcbio_mkcserr(int syserr)
@@ -209,4 +210,14 @@ lcbio_connreq_cancel(lcbio_CONNREQ *req)
     }
 
     req->u.cs = NULL;
+}
+
+int
+lcbio_ssl_supported(void)
+{
+#ifdef LCB_NO_SSL
+    return 0;
+#else
+    return 1;
+#endif
 }

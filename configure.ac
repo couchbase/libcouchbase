@@ -350,6 +350,17 @@ AS_IF([test "x$ac_cv_enable_plugins" = "xyes" -a \
        "x${ac_cv_have_libev4}" != "xyes"],
       [AC_MSG_ERROR(Failed to locate usable event library. You must install either libev or libevent dev package or use --disable-plugins option)])
 
+AC_ARG_ENABLE([ssl], [AS_HELP_STRING([--disable-ssl], [Do not build SSL support. @<:@default=on@>>@])],
+    [ac_cv_enable_ssl="$enableval"], [ac_cv_enable_ssl="yes"])
+AM_CONDITIONAL(ENABLE_SSL, [ test "x${ac_cv_enable_ssl}" = "xyes"])
+AS_IF([test "x${ac_cv_enable_ssl}" = "xyes"], AC_DEFINE(ENABLE_SSL, [1], [SSL Support will be enabled]))
+
+m4_include([m4/ax_check_openssl.m4])
+AX_CHECK_OPENSSL([ac_cv_have_openssl="yes"], [ac_cv_have_openssl="no"])
+AM_CONDITIONAL(HAVE_OPENSSL, [test "x${ac_cv_have_openssl}" = "xyes"])
+AS_IF([test "x${ac_cv_have_openssl}" != "xyes" && test "x${ac_cv_enable_ssl}" = "xyes"],
+      [AC_MSG_ERROR(OpenSSL development files must be installed for SSL support. Use --disable-ssl to force)])
+
 dnl Check if we've got libyajl2
 AC_CACHE_CHECK([for libyajl], [ac_cv_have_libyajl2],
   [ saved_libs="$LIBS"
@@ -384,6 +395,7 @@ return htonll(0);
 ])
 AS_IF([test "x$ac_cv_have_htonll" = "xyes"],[
        AC_DEFINE([HAVE_HTONLL], [1], [Have ntohll])])
+
 
 AC_ARG_ENABLE([couchbasemock],
     [AS_HELP_STRING([--disable-couchbasemock],

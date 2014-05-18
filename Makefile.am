@@ -114,6 +114,18 @@ libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -D
 libcouchbase_la_DEPENDENCIES=libcbsasl.la libhttpparser.la libvbucket.la
 libcouchbase_la_LIBADD=libcbsasl.la libhttpparser.la libvbucket.la
 
+if ENABLE_SSL
+libcouchbase_la_LDFLAGS+=$(OPENSSL_LDFLAGS)
+libcouchbase_la_CPPFLAGS+=$(OPENSSL_INCLUDES)
+libcouchbase_la_LIBADD+=liblcbssl.la $(OPENSSL_LIBS)
+libcouchbase_la_DEPENDENCIES+=liblcbssl.la
+endif
+
+if !ENABLE_SSL
+libcouchbase_la_CPPFLAGS+=-DLCB_NO_SSL
+endif
+
+
 if HAVE_WINSOCK2
 libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/iocp -DWINVER=0x0600 -D_WIN32_WINNT=0x0600
 endif
