@@ -246,7 +246,9 @@ E_handler(lcb_socket_t sock, short which, void *arg)
             }
         }
         if (!LCBIO_IS_OK(status)) {
-            lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
+            lcb_error_t err = status ==
+                    LCBIO_SHUTDOWN ? LCB_ESOCKSHUTDOWN : LCB_NETWORK_ERROR;
+            lcbio_ctx_senderr(ctx, err);
             return;
         }
     }
@@ -328,8 +330,9 @@ Cr_handler(lcb_sockdata_t *sd, lcb_ssize_t nr, void *arg)
 
             lcbio_ctx_schedule(ctx);
         } else {
+            lcb_error_t err = nr ? LCB_NETWORK_ERROR : LCB_ESOCKSHUTDOWN;
             ctx->rdwant = 0;
-            invoke_entered_errcb(ctx, LCB_NETWORK_ERROR);
+            invoke_entered_errcb(ctx, err);
         }
     }
 

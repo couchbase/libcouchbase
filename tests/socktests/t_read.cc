@@ -72,7 +72,8 @@ TEST_F(SockReadTest, testBrokenRead)
     loop->setBreakCondition(&ebc);
     loop->start();
     cf.wait();
-    ASSERT_EQ(LCB_NETWORK_ERROR, sock.lasterr);
+    ASSERT_TRUE(sock.lasterr == LCB_NETWORK_ERROR ||
+            sock.lasterr == LCB_ESOCKSHUTDOWN);
 }
 
 TEST_F(SockReadTest, testReadAhead)

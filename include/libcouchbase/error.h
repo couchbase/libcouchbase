@@ -230,7 +230,9 @@ typedef enum {
       "packet contains no inherent server mapping information (i.e. has no key) " \
       "and/or depends on client-visible cluster topologies") \
     X(LCB_ECONNREFUSED, 0x2D, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
-      "The remote host refused the connection")
+      "The remote host refused the connection") \
+    X(LCB_ESOCKSHUTDOWN, 0x2E, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
+      "The remote host closed the connection")
 
     /**
      * Define the error codes in use by the library
