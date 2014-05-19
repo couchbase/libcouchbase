@@ -73,7 +73,6 @@ lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer);
 
 typedef enum lcb_compat_t { LCB_MEMCACHED_CLUSTER = 0x00, LCB_CACHED_CONFIG = 0x01 } lcb_compat_t;
 typedef lcb_compat_t lcb_cluster_t;
-LIBCOUCHBASE_API
 struct lcb_memcached_st { const char *serverlist; const char *username; const char *password; };
 struct lcb_cached_config_st {
     struct lcb_create_st createopt;
