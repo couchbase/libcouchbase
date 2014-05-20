@@ -105,6 +105,7 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
     server = lcb_find_server_by_host(cccp->instance, next_host);
     if (server) {
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
+        cccp->cmdcookie = cookie;
         cookie->parent = cccp;
         lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p", server);
         lcbio_timer_rearm(
