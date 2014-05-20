@@ -40,6 +40,7 @@ struct server_st {
     char *authority;        /* host:port */
     char *rest_api_authority;
     char *couchdb_api_base;
+    int nvbs; /* how many vbuckets are associated with this node */
     int config_node;        /* non-zero if server struct describes node,
                                which is listening */
 };
@@ -354,6 +355,24 @@ static int populate_buckets(struct vbucket_config_st *vb, cJSON *c, int is_forwa
     return 0;
 }
 
+static int count_vbs_for_server(struct vbucket_config_st *h, struct vbucket_st *vbs)
+{
+    int ii;
+    for (ii = 0; ii < h->num_vbuckets; ++ii) {
+        int jj;
+        for (jj = 0; jj < h->num_replicas+1; ++jj) {
+            int ix = vbs[ii].servers[jj];
+            if (ix < 0) {
+                continue;
+            }
+            if (ix >= h->num_servers) {
+                continue;
+            }
+            h->servers[ix].nvbs++;
+        }
+    }
+}
+
 static int parse_vbucket_config(VBUCKET_CONFIG_HANDLE vb, cJSON *c)
 {
     cJSON *json, *config;
@@ -410,6 +429,7 @@ static int parse_vbucket_config(VBUCKET_CONFIG_HANDLE vb, cJSON *c)
     if (populate_buckets(vb, json, 0) != 0) {
         return -1;
     }
+    count_vbs_for_server(vb, vb->vbuckets);
 
     /* vbucket forward map could possibly be null */
     json = cJSON_GetObjectItem(config, "vBucketMapForward");
@@ -421,6 +441,12 @@ static int parse_vbucket_config(VBUCKET_CONFIG_HANDLE vb, cJSON *c)
         if (populate_buckets(vb, json, 1) !=0) {
             return -1;
         }
+        /* also check any server for mentions in the fvbuckets. This should
+         * help us distinguish a recently-added node without any vbuckets (in
+         * which case it should be present inside the fast-forward map)
+         * and a recently-removed node (in which case it would be absent)
+         */
+        count_vbs_for_server(vb, vb->fvbuckets);
     }
 
     return 0;
@@ -810,9 +836,28 @@ int vbucket_found_incorrect_master(VBUCKET_CONFIG_HANDLE vb, int vbucket,
         mappedServer = rv;
     }
 
+    /* this path is usually only followed if fvbuckets is not present */
     if (mappedServer == wrongserver) {
-        rv = (rv + 1) % vb->num_servers;
-        vb->vbuckets[vbucket].servers[0] = rv;
+        int i;
+        int validrv = -1;
+        for (i = 0; i < vb->num_servers; i++) {
+            rv = (rv + 1) % vb->num_servers;
+            /* check that the new index has assigned vbuckets (master or replica) */
+            if (vb->servers[rv].nvbs) {
+                validrv = rv;
+                vb->vbuckets[vbucket].servers[0] = rv;
+                break;
+            }
+        }
+
+        if (validrv == -1) {
+            /* this should happen when there is only one valid node remaining
+             * in the cluster, and we've removed serveral other nodes that are
+             * still present in the map due to the grace period window.
+             *
+             */
+            return -1;
+        }
     }
 
     if (rv == wrongserver) {
