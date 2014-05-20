@@ -112,7 +112,7 @@ static lcb_error_t schedule_next_request(cccp_provider *cccp,
 
         lcb_log(LOGARGS(cccp, INFO),
                 "Re-Issuing CCCP Command on server struct %p", server);
-
+        cccp->cmdcookie = cookie;
         cookie->parent = cccp;
         memset(&req, 0, sizeof(req));
         req.message.header.request.magic = PROTOCOL_BINARY_REQ;
