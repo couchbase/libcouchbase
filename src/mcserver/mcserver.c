@@ -109,7 +109,7 @@ mcserver_errflush(mc_SERVER *server)
  * otherwise it returns 0. If it returns 0 then we give the error back to the
  * user.
  */
-static void
+static int
 handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
 {
     mc_PACKET *newpkt;
@@ -136,10 +136,15 @@ handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
         lcb_bootstrap_refresh(instance);
     }
 
+    if (!lcb_should_retry(oldsrv->settings, oldpkt, LCB_NOT_MY_VBUCKET)) {
+        return 0;
+    }
+
     /** Reschedule the packet again .. */
     newpkt = mcreq_dup_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     lcb_retryq_add(instance->retryq, newpkt);
+    return 1;
 }
 
 static void
@@ -168,7 +173,9 @@ handle_single_packet(lcb_server_t *server, packet_info *info)
 
     /** Check for NOT_MY_VBUCKET; relocate as needed */
     if (PACKET_STATUS(info) == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
-        handle_nmv(server, info, packet);
+        if (!handle_nmv(server, info, packet)) {
+            mcreq_dispatch_response(pl, packet, info, LCB_NOT_MY_VBUCKET);
+        }
 
     } else if (! (packet->flags & MCREQ_F_UFWD)) {
         mcreq_dispatch_response(pl, packet, info, LCB_SUCCESS);
@@ -230,6 +237,7 @@ typedef enum {
 static int
 maybe_retry(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err)
 {
+    mc_SERVER *srv = (mc_SERVER *)pipeline;
     mc_PACKET *newpkt;
     VBUCKET_DISTRIBUTION_TYPE dist_t = VB_DISTTYPE(pipeline->parent->config);
 
@@ -237,12 +245,7 @@ maybe_retry(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err)
         /** memcached bucket */
         return 0;
     }
-    if (err == LCB_ETIMEDOUT) {
-        return 0;
-    }
-
-    /** TODO: We can also use EIFTMP and maybe a more clever "backoff" algorithm */
-    if (err != LCB_AUTH_ERROR && LCB_EIFNET(err) == 0) {
+    if (!lcb_should_retry(srv->settings, pkt, err)) {
         return 0;
     }
 

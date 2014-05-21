@@ -542,6 +542,22 @@ ssl_capath_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+retrymode_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    uint8_t *p;
+    lcb_RETRYOPT *opt = arg;
+
+    p = &(LCBT_SETTING(instance, retry)[opt->mode]);
+    if (mode == LCB_CNTL_SET) {
+        *p = opt->cmd;
+    } else {
+        opt->cmd = *p;
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -578,7 +594,8 @@ static ctl_handler handlers[] = {
     init_providers, /* LCB_CNTL_CONFIG_ALL_NODES */
     config_cache_handler, /* LCB_CNTL_CONFIGCACHE */
     ssl_mode_handler, /* LCB_CNTL_SSL_MODE */
-    ssl_capath_handler /* LCB_CNTL_SSL_CAPATH */
+    ssl_capath_handler, /* LCB_CNTL_SSL_CAPATH */
+    retrymode_handler /* LCB_CNTL_RETRYMODE */
 };
 
 

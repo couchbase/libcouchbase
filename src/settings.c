@@ -21,6 +21,9 @@ void lcb_default_settings(lcb_settings *settings)
     settings->retry_interval = LCB_DEFAULT_RETRY_INTERVAL;
     settings->retry_backoff = LCB_DEFAULT_RETRY_BACKOFF;
     settings->sslopts = 0;
+    settings->retry[LCB_RETRY_ON_SOCKERR] = LCB_DEFAULT_NETRETRY;
+    settings->retry[LCB_RETRY_ON_TOPOCHANGE] = LCB_DEFAULT_TOPORETRY;
+    settings->retry[LCB_RETRY_ON_VBMAPERR] = LCB_DEFAULT_NMVRETRY;
 }
 
 LCB_INTERNAL_API

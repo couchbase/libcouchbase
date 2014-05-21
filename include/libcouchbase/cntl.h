@@ -814,8 +814,102 @@ typedef enum {
  */
 #define LCB_CNTL_SSL_CACERT 0x23
 
+/**
+ * @brief
+ * Select retry mode to manipulate
+ */
+typedef enum {
+    LCB_RETRY_ON_TOPOCHANGE = 0, /**< Select retry for topology */
+    LCB_RETRY_ON_SOCKERR, /**< Select retry for network errors */
+    LCB_RETRY_ON_VBMAPERR, /**< Select retry for NOT_MY_VBUCKET responses */
+    LCB_RETRY_ON_MAX /**<< maximum index */
+} lcb_RETRYMODEOPTS;
+
+typedef enum {
+    /**
+     * Don't retry any commands. A command which has been forwarded to
+     * a server and a not-my-vbucket has been received in response for it
+     * will result in a failure.
+     */
+    LCB_RETRY_CMDS_NONE = 0,
+
+    /**
+     * Only retry simple retrieval operations (excludes touch,
+     * get-and-touch, and get-locked) which may be retried many numbers of times
+     * without risking unintended data manipulation.
+     */
+    LCB_RETRY_CMDS_GET = 1 << 0, /**< Only retry simple retrievals */
+
+    /**
+     * Retry operations which may potentially fail because they have been
+     * accepted by a previous server, but will not silently corrupt data.
+     * Such commands include mutation operations containing a CAS.
+     */
+    LCB_RETRY_CMDS_SAFE = (1 << 1)|LCB_RETRY_CMDS_GET,
+
+    /**
+     * Retry all commands, disregarding any potential unintended receipt of
+     * errors or data mutation.
+     */
+    LCB_RETRY_CMDS_ALL = (LCB_RETRY_CMDS_SAFE|LCB_RETRY_CMDS_GET)
+} lcb_RETRYCMDOPTS;
+
+/** @brief argument for @ref LCB_CNTL_RETRYMODE */
+typedef struct {
+    lcb_RETRYMODEOPTS mode; /**< What was the trigger that induced the retry */
+    lcb_RETRYCMDOPTS cmd; /**< Policy of which commands should be retried */
+} lcb_RETRYOPT;
+
+/**
+ * @volatile
+ *
+ * @brief Set retry policies
+ *
+ * This function sets the retry behavior. The retry behavior is the action the
+ * library should take when a command has failed because of a failure which
+ * may be a result of environmental and/or topology issues. In such cases it
+ * may be possible to retry the command internally and have it succeed a second
+ * time without propagating an error back to the application.
+ *
+ * The behavior consists of a _mode_ and _command_ selectors. The _command_
+ * selector indicates which commands should be retried (and which should be
+ * propagated up to the user) whereas the _mode_ indicates under which
+ * circumstances should the _command_ policy be used.
+ *
+ * Disable retries anywhere:
+ * @code{.c}
+ * for (int ii = 0; ii < LCB_RETRY_ON_MAX; ++ii) {
+ *   lcb_RETRYOPT opts;
+ *   opts.mode = ii;
+ *   opts.cmd = LCB_RETRY_CMDS_NONE;
+ *   lcb_error_t err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &opts);
+ * }
+ * @endcode
+ *
+ * Only retry simple GET operations when retry is needed because of topology
+ * changes:
+ * @code{.c}
+ * lcb_RETRYOPT opts;
+ * opts.mode = LCB_RETRY_ON_TOPOCHANGE;
+ * opts.cmds = LCB_RETRY_CMDS_GET;
+ * lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &opts);
+ * @endcode
+ *
+ * Determine the behavior of the library when a `NOT_MY_VBUCKET` is received:
+ * @code{.c}
+ * lcb_RETRYOPT opts;
+ * opts.mode = LCB_RETRY_ON_VBMAPERR;
+ * lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &opts);
+ * @endcode
+ *
+ * Mode|Arg
+ * ----|---
+ * Set, Get | lcb_RETRYOPT
+ */
+#define LCB_CNTL_RETRYMODE 0x24
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x24
+#define LCB_CNTL__MAX                    0x25
 /**@}*/
 
 #ifdef __cplusplus

@@ -214,6 +214,7 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/newconfig.c
             src/iofactory.c
             src/retryq.c
+            src/retrychk.c
             src/sanitycheck.c
             src/settings.c
             src/timer.c

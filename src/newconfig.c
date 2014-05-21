@@ -79,6 +79,7 @@ static int
 iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
 {
     protocol_binary_request_header hdr;
+    mc_SERVER *srv = (mc_SERVER *)oldpl;
     mc_PIPELINE *newpl;
     mc_PACKET *newpkt;
     int newix;
@@ -94,6 +95,10 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
 
     newix = vbucket_get_master(cq->config, ntohs(hdr.request.vbucket));
     if (newix < 0 || newix > (int)cq->npipelines) {
+        return MCREQ_KEEP_PACKET;
+    }
+
+    if (!lcb_should_retry(srv->settings, oldpkt, LCB_MAX_ERROR)) {
         return MCREQ_KEEP_PACKET;
     }
 

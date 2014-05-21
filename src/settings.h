@@ -56,6 +56,10 @@
 /* 1.5x */
 #define LCB_DEFAULT_RETRY_BACKOFF 1.5
 
+#define LCB_DEFAULT_TOPORETRY LCB_RETRY_CMDS_ALL
+#define LCB_DEFAULT_NETRETRY LCB_RETRY_CMDS_ALL
+#define LCB_DEFAULT_NMVRETRY LCB_RETRY_CMDS_ALL
+
 #include "config.h"
 #include <libcouchbase/couchbase.h>
 
@@ -115,6 +119,8 @@ typedef struct lcb_settings_st {
 
     /** Is IPv6 enabled */
     lcb_ipv6_t ipv6;
+
+    uint8_t retry[LCB_RETRY_ON_MAX];
 
     char *username;
     char *password;

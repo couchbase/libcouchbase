@@ -321,6 +321,9 @@ extern "C" {
     lcb_error_t
     lcb_getconfig(lcb_t instance, const void *cookie, lcb_server_t *server);
 
+    int
+    lcb_should_retry(lcb_settings *settings, mc_PACKET *pkt, lcb_error_t err);
+
 #ifdef __cplusplus
 }
 #endif
