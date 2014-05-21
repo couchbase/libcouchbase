@@ -78,7 +78,7 @@ destroy_cinfo(mgr_CINFO *info)
 {
     info->parent->n_total--;
     if (info->state == CS_IDLE) {
-        lcb_list_delete(&info->llnode);
+        lcb_clist_delete(&info->parent->ll_idle, &info->llnode);
 
     } else if (info->state == CS_PENDING && info->cs) {
         lcbio_connect_cancel(info->cs);
