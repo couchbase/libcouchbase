@@ -29,8 +29,8 @@
 #include <ctype.h>
 #include <memcached/protocol_binary.h>
 #include <ep-engine/command_ids.h>
-#include <libvbucket/vbucket.h>
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/vbucket.h>
 #include <lcbio/lcbio.h>
 #include <strcodecs/strcodecs.h>
 #include "http_parser/http_parser.h"

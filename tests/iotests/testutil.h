@@ -18,8 +18,8 @@
 #define TESTS_TESTUTIL_H 1
 
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/vbucket.h>
 #include <string.h>
-#include <libvbucket/vbucket.h>
 struct Item {
     void assign(const lcb_get_resp_t *resp, lcb_error_t e = LCB_SUCCESS) {
         key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);

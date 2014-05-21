@@ -1,6 +1,5 @@
 #include "mcreq.h"
 #include "sllist-inl.h"
-#include <libvbucket/vbucket.h>
 #include "internal.h"
 
 #define PKT_HDRSIZE(pkt) (MCREQ_PKT_BASESIZE + (pkt)->extlen)

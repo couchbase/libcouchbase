@@ -18,7 +18,7 @@
 #include "internal.h"
 #include "packetutils.h"
 #include "bucketconfig/clconfig.h"
-#include "vb-aliases.h"
+#include "vbucket/aliases.h"
 #include "sllist-inl.h"
 
 #define LOGARGS(instance, lvl) \

@@ -3,8 +3,8 @@
 
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/api3.h>
+#include <libcouchbase/vbucket.h>
 #include <memcached/protocol_binary.h>
-#include <libvbucket/vbucket.h>
 #include "netbuf/netbuf.h"
 #include "sllist.h"
 #include "config.h"
