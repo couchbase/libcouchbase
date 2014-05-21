@@ -107,6 +107,10 @@ BUILD_TEST(nonio-tests)
 BUILD_TEST(rdb-tests)
 BUILD_TEST(sock-tests)
 BUILD_TEST(vbucket-tests)
+BUILD_TEST(mc-tests)
+
+ADD_CUSTOM_TARGET(alltests DEPENDS check-all smoke-test unit-tests nonio-tests
+    rdb-tests sock-tests vbucket-tests mc-tests)
 
 MACRO(DEFINE_MOCKTEST plugin test)
     ADD_TEST(
