@@ -46,9 +46,6 @@
 #include "retryq.h"
 #include "aspend.h"
 
-#define LCB_LAST_HTTP_HEADER "X-Libcouchbase: \r\n"
-#define LCB_CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -73,7 +70,6 @@ extern "C" {
         lcb_configuration_callback configuration;
         lcb_verbosity_callback verbosity;
         lcb_durability_callback durability;
-        lcb_exists_callback exists;
         lcb_errmap_callback errmap;
         lcb_bootstrap_callback bootstrap;
     };
@@ -117,24 +113,11 @@ extern "C" {
 
         lcb_error_t last_error;
 
-        struct {
-            lcb_compat_t type;
-            union {
-                struct {
-                    char *cachefile;
-                } cached;
-            } value;
-        } compat;
-
         lcb_settings *settings;
         lcbio_pTABLE iotable;
         lcb_RETRYQ *retryq;
         char *scratch; /* storage for random strings, lcb_get_host, etc */
         lcbio_pTIMER dtor_timer;
-
-#ifdef LCB_DEBUG
-        lcb_debug_st debug;
-#endif
 
 #ifdef __cplusplus
         lcb_settings* getSettings() { return settings; }

@@ -379,7 +379,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     obj->type = type;
-    obj->compat.type = (lcb_compat_t)0xdead;
 
     if (io_priv == NULL) {
         lcb_io_opt_t ops;

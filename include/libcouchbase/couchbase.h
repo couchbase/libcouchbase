@@ -2318,11 +2318,6 @@ lcb_flush_callback lcb_set_flush_callback(lcb_t, lcb_flush_callback);
 
 /**@}*/
 
-typedef void (*lcb_exists_callback)(lcb_t instance,
-                                    const void *cookie,
-                                    lcb_error_t err,
-                                    const lcb_observe_resp_t *resp);
-
 /******************************************************************************
  ******************************************************************************
  ******************************************************************************
