@@ -174,8 +174,151 @@ typedef lcb_CMDBASE lcb_CMDTOUCH;
 typedef lcb_CMDBASE lcb_CMDSTATS;
 typedef lcb_CMDBASE lcb_CMDFLUSH;
 
-struct mc_cmdqueue_st;
-struct mc_pipeline_st;
+#define LCB_RESP_BASE \
+    void *cookie; /**< User data associated with request */ \
+    const void *key; /**< Key for request */ \
+    lcb_SIZE nkey; /**< Size of key */ \
+    lcb_cas_t cas; /**< CAS for response (if applicable) */ \
+    lcb_error_t rc; /**< Status code */ \
+    lcb_U16 version; /**< ABI version for response */ \
+    lcb_U16 rflags; /**< Response specific flags */
+
+/**
+ * @brief
+ * Base response structure for callbacks
+ */
+typedef struct {
+    LCB_RESP_BASE
+} lcb_RESPBASE;
+
+typedef struct {
+    LCB_RESP_BASE
+    const void *value;
+    lcb_SIZE nvalue;
+    void* bufh;
+    lcb_datatype_t datatype;
+    lcb_U32 itmflags;
+} lcb_RESPGET;
+
+typedef struct {
+    LCB_RESP_BASE
+    lcb_U64 value;
+} lcb_RESPARITH;
+
+typedef struct {
+    LCB_RESP_BASE
+    lcb_U8 status;
+    lcb_U8 ismaster;
+    lcb_U32 ttp;
+    lcb_U32 ttr;
+} lcb_RESPOBSERVE;
+
+#define LCB_RESP_SERVER_BASE \
+    LCB_RESP_BASE \
+    const char *server;
+
+typedef struct {
+    LCB_RESP_SERVER_BASE
+} lcb_RESPSERVERBASE;
+
+typedef struct {
+    LCB_RESP_SERVER_BASE
+    const char *value;
+    lcb_SIZE nvalue;
+} lcb_RESPSTATS;
+
+typedef lcb_RESPSERVERBASE lcb_RESPFLUSH;
+typedef lcb_RESPSERVERBASE lcb_RESPVERBOSITY;
+
+typedef struct {
+    LCB_RESP_SERVER_BASE
+    const char *mcversion;
+    lcb_SIZE nversion;
+} lcb_RESPMCVERSION;
+
+typedef struct {
+    LCB_RESP_BASE
+    lcb_U16 nresponses;
+    lcb_U8 exists_master;
+    lcb_U8 persisted_master;
+    lcb_U8 npersisted;
+    lcb_U8 nreplicated;
+} lcb_RESPENDURE;
+
+typedef struct {
+    LCB_RESP_BASE
+    lcb_storage_t op;
+} lcb_RESPSTORE;
+
+typedef lcb_RESPBASE lcb_RESPDELETE;
+typedef lcb_RESPBASE lcb_RESPTOUCH;
+typedef lcb_RESPBASE lcb_RESPUNLOCK;
+
+
+/**Response flags. These provide additional 'meta' information about the
+ * response*/
+typedef enum {
+    /** No more responses are to be received for this request */
+    LCB_RESP_F_FINAL = 0x01,
+
+    /**The response was artificially generated inside the client.
+     * This does not contain reply data from the server for the command, but
+     * rather contains the basic fields to indicate success or failure and is
+     * otherwise empty.
+     */
+    LCB_RESP_F_CLIENTGEN = 0x02,
+
+    /**The response was a result of a not-my-vbucket error */
+    LCB_RESP_F_NMVGEN = 0x04
+} lcb_RESPFLAGS;
+
+/**
+ * The type of response passed to the callback. This is used to install callbacks
+ * for the library and to distinguish between responses if a single callback
+ * is used for multiple response types
+ */
+typedef enum {
+    /**Generic callback type. This is only ever used on input, and indicates
+     * that this callback should be invoked for any responses which do not have
+     * dedicated handlers */
+    LCB_CALLBACK_DEFAULT = 0,
+
+    /**Callback invoked for lcb_get3()*/
+    LCB_CALLBACK_GET,
+    /**Callback invoked for lcb_store3() */
+    LCB_CALLBACK_STORE,
+    /**Callback invoked for lcb_arithmetic3()*/
+    LCB_CALLBACK_ARITHMETIC,
+    /**Callback invoked for lcb_touch3()*/
+    LCB_CALLBACK_TOUCH,
+    /**Callback invoked for lcb_remove3()*/
+    LCB_CALLBACK_DELETE,
+    /**Callback invoked for lcb_unlock3()*/
+    LCB_CALLBACK_UNLOCK,
+    /**Callback invoked for lcb_stats3()*/
+    LCB_CALLBACK_STATS,
+    /**Callback invoked for lcb_server_versions3()*/
+    LCB_CALLBACK_VERSIONS,
+    /**Callback invoked for lcb_server_verbosity3()*/
+    LCB_CALLBACK_VERBOSITY,
+    /**Callback invoked for lcb_flush3()*/
+    LCB_CALLBACK_FLUSH,
+    /**Callback invoked for lcb_observe3()*/
+    LCB_CALLBACK_OBSERVE,
+    /**Callback invoked for lcb_rget3() */
+    LCB_CALLBACK_GETREPLICA,
+    /**Callback invoked for lcb_endure3() */
+    LCB_CALLBACK_ENDURE,
+    LCB_CALLBACK__MAX /* Number of callbacks */
+} lcb_CALLBACKTYPE;
+
+typedef void (*lcb_RESP_cb)
+        (lcb_t instance, lcb_CALLBACKTYPE cbtype, const lcb_RESPBASE* resp);
+
+
+LIBCOUCHBASE_API
+lcb_RESP_cb
+lcb_install_callback3(lcb_t instance, lcb_CALLBACKTYPE cbtype, lcb_RESP_cb cb);
 
 /**@volatile*/
 LIBCOUCHBASE_API

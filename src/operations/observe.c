@@ -45,7 +45,7 @@ handle_observe_callback(
         mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
 {
     struct obs_cookie_st *oc = (struct obs_cookie_st *)pkt->u_rdata.exdata;
-    const lcb_observe_resp_t *resp = arg;
+    lcb_RESPOBSERVE *resp = (void *)arg;
     lcb_server_t *server = (lcb_server_t *)pl;
     lcb_t instance = server->instance;;
 
@@ -56,15 +56,19 @@ handle_observe_callback(
         const char *end = ptr + pkt->u_value.single.size;
         while (ptr < end) {
             lcb_uint16_t nkey;
-            lcb_observe_resp_t cur;
+            lcb_RESPOBSERVE cur = { 0 };
+            cur.rflags = LCB_RESP_F_CLIENTGEN;
+
             ptr += 2;
             memcpy(&nkey, ptr, sizeof(nkey));
             nkey = ntohs(nkey);
             ptr += 2;
 
             memset(&cur, 0, sizeof(cur));
-            cur.v.v0.key = ptr;
-            cur.v.v0.nkey = nkey;
+            cur.key = ptr;
+            cur.nkey = nkey;
+            cur.cookie = (void *)oc->base.cookie;
+            cur.rc = err;
             handle_observe_callback(pl, pkt, err, &cur);
             ptr += nkey;
             nfailed++;
@@ -73,13 +77,15 @@ handle_observe_callback(
         return;
     }
 
-
+    resp->cookie = (void *)oc->base.cookie;
+    resp->rc = err;
     if (oc->otype & F_DURABILITY) {
         lcb_durability_dset_update(
                 instance,
                 (lcb_durability_set_t *)MCREQ_PKT_COOKIE(pkt), err, resp);
     } else {
-        instance->callbacks.observe(instance, MCREQ_PKT_COOKIE(pkt), err, resp);
+        lcb_RESP_cb callback = lcb_find_callback(instance, LCB_CALLBACK_OBSERVE);
+        callback(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPBASE *)resp);
     }
 
     if (oc->otype & F_DESTROY) {
@@ -89,9 +95,9 @@ handle_observe_callback(
     if (--oc->remaining) {
         return;
     } else {
-        lcb_observe_resp_t resp2;
-
-        memset(&resp2, 0, sizeof(resp2));
+        lcb_RESPOBSERVE resp2 = { 0 };
+        resp2.rc = err;
+        resp2.rflags = LCB_RESP_F_CLIENTGEN|LCB_RESP_F_FINAL;
         oc->otype |= F_DESTROY;
         handle_observe_callback(pl, pkt, err, &resp2);
         free(oc);

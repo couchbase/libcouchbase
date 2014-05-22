@@ -16,17 +16,11 @@
  */
 
 #include "internal.h"
-enum {
-    C_VERSION,
-    C_STATS,
-    C_VERBOSITY,
-    C_FLUSH
-};
 
 typedef struct {
     mc_REQDATAEX base;
+    lcb_CALLBACKTYPE type;
     int remaining;
-    int type;
 } bcast_cookie;
 
 static void
@@ -34,28 +28,31 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
 {
     bcast_cookie *ck = (bcast_cookie *)req->u_rdata.exdata;
     lcb_server_t *server = (lcb_server_t *)pl;
-    lcb_server_stat_resp_t *resp = (void *)arg;
+    lcb_RESPSTATS *resp = (void *)arg;
     char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
+    lcb_RESP_cb callback;
+    lcb_t instance = server->instance;
 
     sprintf(epbuf, "%s:%s", mcserver_get_host(server), mcserver_get_port(server));
+    callback = lcb_find_callback(instance, LCB_CALLBACK_STATS);
 
     if (!arg) {
-        lcb_server_stat_resp_t s_resp;
-
+        lcb_RESPSTATS s_resp = { 0 };
         if (--ck->remaining) {
             /* still have other servers which must reply. */
             return;
         }
 
-        memset(&s_resp, 0, sizeof(s_resp));
-        server->instance->callbacks.stat(
-                server->instance, ck->base.cookie, err, &s_resp);
+        s_resp.rc = err;
+        s_resp.cookie = (void *)ck->base.cookie;
+        s_resp.rflags = LCB_RESP_F_CLIENTGEN|LCB_RESP_F_FINAL;
+        callback(instance, LCB_CALLBACK_STATS, (lcb_RESPBASE *)&s_resp);
         free(ck);
 
     } else {
-        resp->v.v0.server_endpoint = epbuf;
-        server->instance->callbacks.stat(
-                server->instance, ck->base.cookie, err, resp);
+        resp->server = epbuf;
+        resp->cookie = (void *)ck->base.cookie;
+        callback(instance, LCB_CALLBACK_STATS, (lcb_RESPBASE *)resp);
         return;
     }
 }
@@ -111,9 +108,6 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
     return LCB_SUCCESS;
 }
 
-typedef void (*bcast_callback)
-        (lcb_t, const void *, lcb_error_t, const void *);
-
 static void
 handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
              const void *arg)
@@ -121,59 +115,52 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
     lcb_server_t *server = (lcb_server_t *)pipeline;
     char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
     bcast_cookie *ck = (bcast_cookie *)req->u_rdata.exdata;
-    bcast_callback callback;
+    lcb_RESP_cb callback;
 
     union {
-        lcb_verbosity_resp_t *verbosity;
-        lcb_server_version_resp_t *version;
-        lcb_flush_resp_t *flush;
+        lcb_RESPSERVERBASE *base;
+        lcb_RESPVERBOSITY *verbosity;
+        lcb_RESPMCVERSION *version;
+        lcb_RESPFLUSH *flush;
     } u_resp;
 
     union {
-        lcb_verbosity_resp_t verbosity;
-        lcb_server_version_resp_t version;
-        lcb_flush_resp_t flush;
+        lcb_RESPSERVERBASE base;
+        lcb_RESPVERBOSITY verbosity;
+        lcb_RESPMCVERSION version;
+        lcb_RESPFLUSH flush;
     } u_empty;
 
     memset(&u_empty, 0, sizeof(u_empty));
 
     if (arg) {
-        u_resp.verbosity = (void *)arg;
+        u_resp.base = (void *)arg;
     } else {
-        u_resp.verbosity = &u_empty.verbosity;
+        u_resp.base = &u_empty.base;
+        u_resp.base->rflags = LCB_RESP_F_CLIENTGEN;
     }
 
+    u_resp.base->rc = err;
+    u_resp.base->cookie = (void *)ck->base.cookie;
+    u_resp.base->server = epbuf;
     sprintf(epbuf, "%s:%s", mcserver_get_host(server), mcserver_get_port(server));
 
-    if (ck->type == C_VERBOSITY) {
-        u_resp.verbosity->version = 0;
-        u_resp.verbosity->v.v0.server_endpoint = epbuf;
-        callback = (bcast_callback)server->instance->callbacks.verbosity;
-
-    } else if (ck->type == C_FLUSH) {
-        u_resp.flush->version = 0;
-        u_resp.flush->v.v0.server_endpoint = epbuf;
-        callback = (bcast_callback)server->instance->callbacks.flush;
-
-    } else {
-        u_resp.version->version = 0;
-        u_resp.version->v.v0.server_endpoint = epbuf;
-        callback = (bcast_callback)server->instance->callbacks.version;
-    }
-
-    callback(server->instance, ck->base.cookie, err, u_resp.verbosity);
-
+    callback = lcb_find_callback(server->instance, ck->type);
+    callback(server->instance, ck->type, (lcb_RESPBASE *)u_resp.base);
     if (--ck->remaining) {
         return;
     }
 
-    memset(&u_empty, 0, sizeof(u_empty));
-    callback(server->instance, ck->base.cookie, err, &u_empty.verbosity);
+    u_empty.base.server = NULL;
+    u_empty.base.rc = err;
+    u_empty.base.rflags = LCB_RESP_F_CLIENTGEN|LCB_RESP_F_FINAL;
+    u_empty.base.cookie = (void *)ck->base.cookie;
+    callback(server->instance, ck->type, (lcb_RESPBASE *)&u_empty.base);
     free(ck);
 }
 
 static lcb_error_t
-pkt_bcast_simple(lcb_t instance, const void *cookie, int type)
+pkt_bcast_simple(lcb_t instance, const void *cookie, lcb_CALLBACKTYPE type)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
@@ -198,9 +185,9 @@ pkt_bcast_simple(lcb_t instance, const void *cookie, int type)
 
         hdr.request.magic = PROTOCOL_BINARY_REQ;
         hdr.request.opaque = pkt->opaque;
-        if (type == C_FLUSH) {
+        if (type == LCB_CALLBACK_FLUSH) {
             hdr.request.opcode = PROTOCOL_BINARY_CMD_FLUSH;
-        } else if (type == C_VERSION) {
+        } else if (type == LCB_CALLBACK_VERSIONS) {
             hdr.request.opcode = PROTOCOL_BINARY_CMD_VERSION;
         } else {
             abort();
@@ -224,7 +211,7 @@ lcb_error_t
 lcb_server_versions3(lcb_t instance, const void *cookie, const lcb_CMDBASE * cmd)
 {
     (void)cmd;
-    return pkt_bcast_simple(instance, cookie, C_VERSION);
+    return pkt_bcast_simple(instance, cookie, LCB_CALLBACK_VERSIONS);
 }
 
 
@@ -233,7 +220,7 @@ lcb_error_t
 lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd)
 {
     (void)cmd;
-    return pkt_bcast_simple(instance, cookie, C_FLUSH);
+    return pkt_bcast_simple(instance, cookie, LCB_CALLBACK_FLUSH);
 }
 
 LIBCOUCHBASE_API
@@ -247,7 +234,7 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
     ckwrap->base.callback = handle_bcast;
-    ckwrap->type = C_VERBOSITY;
+    ckwrap->type = LCB_CALLBACK_VERBOSITY;
 
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;

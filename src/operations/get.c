@@ -174,13 +174,19 @@ static void
 rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
 {
     rget_cookie *rck = (rget_cookie *)pkt->u_rdata.exdata;
-    const lcb_get_resp_t *resp = arg;
+    lcb_RESPGET *resp = (void *)arg;
+    lcb_RESP_cb callback;
     lcb_t instance = rck->instance;
+
+    callback = lcb_find_callback(instance, LCB_CALLBACK_GETREPLICA);
 
     /** Figure out what the strategy is.. */
     if (rck->strategy == LCB_REPLICA_SELECT || rck->strategy == LCB_REPLICA_ALL) {
         /** Simplest */
-        instance->callbacks.get(instance, rck->base.cookie, err, resp);
+        if (rck->strategy == LCB_REPLICA_SELECT || rck->remaining == 1) {
+            resp->rflags |= LCB_RESP_F_FINAL;
+        }
+        callback(instance, LCB_CALLBACK_GETREPLICA, (const lcb_RESPBASE *)resp);
     } else {
         mc_CMDQUEUE *cq = &instance->cmdq;
         mc_PIPELINE *nextpl = NULL;
@@ -198,7 +204,8 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
         } while (rck->r_cur < rck->r_max);
 
         if (err == LCB_SUCCESS || rck->r_cur == rck->r_max || nextpl == NULL) {
-            instance->callbacks.get(instance, rck->base.cookie, err, resp);
+            resp->rflags |= LCB_RESP_F_FINAL;
+            callback(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPBASE *)resp);
             /* refcount=1 . Free this now */
             rck->remaining = 1;
         } else if (err != LCB_SUCCESS) {
@@ -209,6 +216,7 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
             rck->remaining = 2;
         }
     }
+
     if (!--rck->remaining) {
         free(rck);
     }

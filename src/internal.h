@@ -54,6 +54,7 @@ extern "C" {
     struct lcb_string_st;
 
     struct lcb_callback_st {
+        lcb_RESP_cb v3callbacks[LCB_CALLBACK__MAX];
         lcb_get_callback get;
         lcb_store_callback store;
         lcb_arithmetic_callback arithmetic;
@@ -217,6 +218,9 @@ extern "C" {
 
     lcb_error_t
     lcb__synchandler_return(lcb_t instance);
+
+    lcb_RESP_cb
+    lcb_find_callback(lcb_t instance, lcb_CALLBACKTYPE cbtype);
 
 #define SYNCMODE_INTERCEPT(o) \
     if (LCBT_SETTING(o, syncmode) == LCB_ASYNCHRONOUS) { \

@@ -71,7 +71,7 @@
 #include "durability_internal.h"
 #include <lcbio/iotable.h>
 
-#define RESFLD(e, f) (e)->result.v.v0.f
+#define RESFLD(e, f) (e)->result.f
 #define REQFLD(e, f) (e)->request.v.v0.f
 #define OCMDFLD(e, f) (e)->ocmd.v.v0.f
 
@@ -135,6 +135,7 @@ static int ent_is_complete(lcb_durability_entry_t *ent)
  */
 static void ent_set_resdone(lcb_durability_entry_t *ent)
 {
+    lcb_RESP_cb callback;
     if (ent->done) {
         return;
     }
@@ -142,14 +143,10 @@ static void ent_set_resdone(lcb_durability_entry_t *ent)
     ent->done = 1;
     ent->parent->nremaining--;
 
-    /**
-     * Invoke the callback now :)
-     */
-    ent->parent->instance->callbacks.durability(ent->parent->instance,
-                                                ent->parent->cookie,
-                                                LCB_SUCCESS,
-                                                &ent->result);
-
+    /** Invoke the callback now :) */
+    ent->result.cookie = (void *)ent->parent->cookie;
+    callback = lcb_find_callback(ent->parent->instance, LCB_CALLBACK_ENDURE);
+    callback(ent->parent->instance, LCB_CALLBACK_ENDURE, (lcb_RESPBASE*)&ent->result);
     if (ent->parent->nremaining == 0) {
         dset_unref(ent->parent);
     }
@@ -193,7 +190,7 @@ static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err)
         if (ent->done) {
             continue;
         }
-        RESFLD(ent, err) = err;
+        RESFLD(ent, rc) = err;
         ent_set_resdone(ent);
     }
 
@@ -228,7 +225,7 @@ static void poll_once(lcb_durability_set_t *dset)
         RESFLD(ent, npersisted) = 0;
         RESFLD(ent, nreplicated) = 0;
         RESFLD(ent, cas) = 0;
-        RESFLD(ent, err) = LCB_SUCCESS;
+        RESFLD(ent, rc) = LCB_SUCCESS;
 
         dset->valid_entries[oix++] = ent;
     }
@@ -247,7 +244,7 @@ static void poll_once(lcb_durability_set_t *dset)
             if (ent->done) {
                 continue;
             }
-            RESFLD(ent, err) = err;
+            RESFLD(ent, rc) = err;
             ent_set_resdone(ent);
         }
 
@@ -281,9 +278,9 @@ static void poll_once(lcb_durability_set_t *dset)
  * Called when the criteria is to ensure the key exists somewhow
  */
 static void check_positive_durability(lcb_durability_entry_t *ent,
-                                      const lcb_observe_resp_t *res)
+                                      const lcb_RESPOBSERVE *res)
 {
-    switch (res->v.v0.status) {
+    switch (res->status) {
 
     case LCB_OBSERVE_NOT_FOUND:
     case LCB_OBSERVE_LOGICALLY_DELETED:
@@ -291,8 +288,8 @@ static void check_positive_durability(lcb_durability_entry_t *ent,
          * If we get NOT_FOUND from the master, this means the key
          * simply does not exists (and we don't have to continue polling)
          */
-        if (res->v.v0.from_master) {
-            RESFLD(ent, err) = LCB_KEY_ENOENT;
+        if (res->ismaster) {
+            RESFLD(ent, rc) = LCB_KEY_ENOENT;
             ent_set_resdone(ent);
         }
         return;
@@ -300,7 +297,7 @@ static void check_positive_durability(lcb_durability_entry_t *ent,
     case LCB_OBSERVE_PERSISTED:
         RESFLD(ent, npersisted)++;
 
-        if (res->v.v0.from_master) {
+        if (res->ismaster) {
             RESFLD(ent, persisted_master) = 1;
             RESFLD(ent, exists_master) = 1;
 
@@ -310,7 +307,7 @@ static void check_positive_durability(lcb_durability_entry_t *ent,
         break;
 
     case LCB_OBSERVE_FOUND:
-        if (res->v.v0.from_master) {
+        if (res->ismaster) {
             RESFLD(ent, exists_master) = 1;
             break; /* don't care */
         }
@@ -318,7 +315,7 @@ static void check_positive_durability(lcb_durability_entry_t *ent,
         break;
 
     default:
-        RESFLD(ent, err) = LCB_EINTERNAL;
+        RESFLD(ent, rc) = LCB_EINTERNAL;
         ent_set_resdone(ent);
         break;
     }
@@ -328,9 +325,9 @@ static void check_positive_durability(lcb_durability_entry_t *ent,
  * Called when the criteria is to ensure that the key is deleted somehow
  */
 static void check_negative_durability(lcb_durability_entry_t *ent,
-                                      const lcb_observe_resp_t *res)
+                                      const lcb_RESPOBSERVE *res)
 {
-    switch (res->v.v0.status) {
+    switch (res->status) {
     case LCB_OBSERVE_PERSISTED:
     case LCB_OBSERVE_FOUND:
         return;
@@ -342,7 +339,7 @@ static void check_negative_durability(lcb_durability_entry_t *ent,
          */
         RESFLD(ent, nreplicated)++;
 
-        if (res->v.v0.from_master) {
+        if (res->ismaster) {
             RESFLD(ent, exists_master) = 1;
         }
         break;
@@ -353,7 +350,7 @@ static void check_negative_durability(lcb_durability_entry_t *ent,
          */
         RESFLD(ent, npersisted)++;
 
-        if (res->v.v0.from_master) {
+        if (res->ismaster) {
             RESFLD(ent, persisted_master) = 1;
             RESFLD(ent, exists_master) = 1;
 
@@ -364,7 +361,7 @@ static void check_negative_durability(lcb_durability_entry_t *ent,
         break;
 
     default:
-        RESFLD(ent, err) = LCB_EINTERNAL;
+        RESFLD(ent, rc) = LCB_EINTERNAL;
         ent_set_resdone(ent);
         break;
     }
@@ -376,7 +373,7 @@ static void check_negative_durability(lcb_durability_entry_t *ent,
 void lcb_durability_dset_update(lcb_t instance,
                                 lcb_durability_set_t *dset,
                                 lcb_error_t err,
-                                const lcb_observe_resp_t *resp)
+                                const lcb_RESPOBSERVE *resp)
 {
     lcb_durability_entry_t *ent;
 
@@ -389,7 +386,7 @@ void lcb_durability_dset_update(lcb_t instance,
      * the entry's criteria have been satisfied
      */
 
-    if (resp->v.v0.key == NULL) {
+    if (resp->key == NULL) {
         dset_done_waiting(dset);
         return;
     }
@@ -397,7 +394,7 @@ void lcb_durability_dset_update(lcb_t instance,
     if (dset->nentries == 1) {
         ent = &dset->single.ent;
     } else {
-        ent = genhash_find(dset->ht, resp->v.v0.key, resp->v.v0.nkey);
+        ent = genhash_find(dset->ht, resp->key, resp->nkey);
     }
 
     if (ent->done) {
@@ -406,18 +403,18 @@ void lcb_durability_dset_update(lcb_t instance,
     }
 
     if (err != LCB_SUCCESS) {
-        RESFLD(ent, err) = err;
+        RESFLD(ent, rc) = err;
         return;
     }
 
     RESFLD(ent, nresponses)++;
 
-    if (resp->v.v0.cas && resp->v.v0.from_master) {
+    if (resp->cas && resp->ismaster) {
 
-        RESFLD(ent, cas) = resp->v.v0.cas;
+        RESFLD(ent, cas) = resp->cas;
 
-        if (REQFLD(ent, cas) && REQFLD(ent, cas) != resp->v.v0.cas) {
-            RESFLD(ent, err) = LCB_KEY_EEXISTS;
+        if (REQFLD(ent, cas) && REQFLD(ent, cas) != resp->cas) {
+            RESFLD(ent, rc) = LCB_KEY_EEXISTS;
             ent_set_resdone(ent);
             return;
         }
@@ -432,7 +429,7 @@ void lcb_durability_dset_update(lcb_t instance,
 
     if (ent_is_complete(ent)) {
         /* clear any transient errors */
-        RESFLD(ent, err) = LCB_SUCCESS;
+        RESFLD(ent, rc) = LCB_SUCCESS;
         ent_set_resdone(ent);
     }
 

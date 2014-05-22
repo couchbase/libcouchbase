@@ -32,7 +32,7 @@ extern "C" {
         struct lcb_durability_cmd_st request;
 
         /** result for this entry */
-        struct lcb_durability_resp_st result;
+        lcb_RESPENDURE result;
 
         /** pointer to the containing durability_set */
         struct lcb_durability_set_st *parent;
@@ -118,7 +118,7 @@ extern "C" {
     void lcb_durability_dset_update(lcb_t instance,
                                     lcb_durability_set_t *dset,
                                     lcb_error_t err,
-                                    const lcb_observe_resp_t *resp);
+                                    const lcb_RESPOBSERVE *resp);
 
     typedef enum {
         /** Durability requirement. Poll all servers */
