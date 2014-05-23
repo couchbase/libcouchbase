@@ -45,10 +45,11 @@ on_flush_ready(lcbio_CTX *ctx)
         unsigned nb;
         nb = mcreq_flush_iov_fill(&server->pipeline, iov, MCREQ_MAXIOV, &niov);
         if (!nb) {
-            break;
+            return;
         }
         ready = lcbio_ctx_put_ex(ctx, (lcb_IOV *)iov, niov, nb);
     } while (ready);
+    lcbio_ctx_wwant(ctx);
 }
 
 static void
