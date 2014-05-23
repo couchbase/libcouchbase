@@ -192,8 +192,8 @@ static int get_next_timeout(io_cookie_t *cookie, struct timeval *tmo, hrtime_t n
     }
 
     first = LCB_LIST_ITEM(cookie->timers.next, s_timer_t, list);
-    if (now > first->exptime) {
-        delta = now - first->exptime;
+    if (now < first->exptime) {
+        delta = first->exptime - now;
     } else {
         delta = 0;
     }
@@ -284,12 +284,6 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
             while ((tm = pop_next_timer(io, now))) {
                 tm->handler(-1, 0, tm->cb_data);
             }
-            if ((has_timers = get_next_timeout(io, &tmo, now))) {
-                t = &tmo;
-            } else {
-                t = NULL;
-            }
-
         }
 
         /* To be completely safe, we need to copy active events
