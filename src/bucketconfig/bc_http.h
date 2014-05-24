@@ -71,7 +71,6 @@ typedef struct clprovider_http_st {
     clconfig_info *current_config;
     clconfig_info *last_parsed;
     int generation;
-    int retry_on_missing;
 } http_provider;
 
 
