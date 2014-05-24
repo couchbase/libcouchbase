@@ -202,37 +202,6 @@ typedef lcb_CMDBASE lcb_CMDFLUSH;
 struct mc_cmdqueue_st;
 struct mc_pipeline_st;
 
-/**
- * @brief enter a scheduling scope
- * @param queue
- * @attention It is not safe to call this function twice
- * @volatile
- */
-void
-mcreq_sched_enter(struct mc_cmdqueue_st *queue);
-
-/**
- * @brief successfully exit a scheduling scope
- *
- * All operations enqueued since the last call to mcreq_sched_enter() will be
- * placed in their respective pipelines' operation queue.
- *
- * @param queue
- * @param do_flush Whether the items in the queue should be flushed
- * @volatile
- */
-void
-mcreq_sched_leave(struct mc_cmdqueue_st *queue, int do_flush);
-
-/**
- * @brief destroy all operations within the scheduling scope
- * All operations enqueued since the last call to mcreq_sched_enter() will
- * be destroyed
- * @param queue
- */
-void
-mcreq_sched_fail(struct mc_cmdqueue_st *queue);
-
 /**@volatile*/
 LIBCOUCHBASE_API
 void lcb_sched_enter(lcb_t);

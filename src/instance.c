@@ -643,3 +643,22 @@ lcb_aspend_cleanup(lcb_ASPEND *ops)
         hashset_destroy(ops->items[ii]);
     }
 }
+
+LIBCOUCHBASE_API
+void
+lcb_sched_enter(lcb_t instance)
+{
+    mcreq_sched_enter(&instance->cmdq);
+}
+LIBCOUCHBASE_API
+void
+lcb_sched_leave(lcb_t instance)
+{
+    mcreq_sched_leave(&instance->cmdq, 1);
+}
+LIBCOUCHBASE_API
+void
+lcb_sched_fail(lcb_t instance)
+{
+    mcreq_sched_fail(&instance->cmdq);
+}
