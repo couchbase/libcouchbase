@@ -27,18 +27,14 @@ static const char *method_strings[] = {
 
 static void request_free_headers(lcb_http_request_t req)
 {
-    struct lcb_http_header_st *tmp, *hdr = req->headers_list;
-
-    while (hdr) {
-        tmp = hdr->next;
-        free(hdr->data);
-        free(hdr);
-        hdr = tmp;
+    char **cur;
+    if (!req->headers) {
+        return;
     }
-    free((void *)req->headers);
-    req->headers = NULL;
-    req->nheaders = 0;
-    req->headers_list = NULL;
+    for (cur = req->headers; *cur; cur++) {
+        free(*cur);
+    }
+    free(req->headers);
 }
 
 static lcb_error_t render_http_preamble(lcb_http_request_t req, lcb_string *out)
@@ -105,15 +101,13 @@ void lcb_http_request_decref(lcb_http_request_t req)
     free(req->redirect_to);
 
     if (req->parser) {
-        free(req->parser->data);
+        lcbht_free(req->parser);
     }
     if (req->io_timer) {
         lcb_timer_destroy(NULL, req->io_timer);
         req->io_timer = NULL;
     }
 
-    free(req->parser);
-    ringbuffer_destruct(&req->result);
     request_free_headers(req);
     LCB_LIST_SAFE_FOR(ii, nn, &req->headers_out.list) {
         lcb_http_header_t *hdr = LCB_LIST_ITEM(ii, lcb_http_header_t, list);
@@ -149,11 +143,12 @@ static void maybe_refresh_config(lcb_t instance,
                                  lcb_http_request_t req, lcb_error_t err)
 {
     int htstatus_ok;
+    lcbht_RESPONSE *resp;
     if (!req->parser) {
         return;
     }
-    htstatus_ok = req->parser->status_code >= 200 &&
-            req->parser->status_code < 299;
+    resp = lcbht_get_response(req->parser);
+    htstatus_ok = resp->status >= 200 && resp->status < 299;
 
     if (err != LCB_SUCCESS && (err == LCB_ESOCKSHUTDOWN && htstatus_ok) == 0) {
         /* ignore graceful close */
@@ -177,8 +172,9 @@ void lcb_http_request_finish(lcb_t instance,
 
     if ((req->status & LCB_HTREQ_S_CBINVOKED) == 0 && req->on_complete) {
         lcb_http_resp_t resp;
+        lcbht_RESPONSE *htres = lcbht_get_response(req->parser);
         lcb_setup_lcb_http_resp_t(&resp,
-                                  req->parser->status_code,
+                                  htres->status,
                                   req->path,
                                   req->npath,
                                   NULL, /* headers */
@@ -254,14 +250,12 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
     }
     lcb_string_appendz(out, "\r\n");
     lcb_string_append(out, req->body, req->nbody);
-
-    /* Initialize HTTP parser */
-    free(req->parser);
-    rc = lcb_http_parse_setup(req);
-    if (rc != LCB_SUCCESS) {
-        lcb_http_request_decref(req);
-        return rc;
+    if (req->parser) {
+        lcbht_reset(req->parser);
+    } else {
+        req->parser = lcbht_new(req->instance->settings);
     }
+
     lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_HTTP, req);
 
     rc = lcb_http_request_connect(req);
@@ -448,6 +442,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             return LCB_NOT_SUPPORTED;
         }
         base = server->viewshost;
+        printf("Base is %s\n", base);
         nbase = strlen(base);
         username = settings->username;
 

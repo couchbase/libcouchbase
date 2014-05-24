@@ -45,6 +45,7 @@
 #include "simplestring.h"
 #include "retryq.h"
 #include "aspend.h"
+#include <lcbht/lcbht.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -131,11 +132,6 @@ extern "C" {
     #define LCBT_GET_SERVER(instance, ix) (lcb_server_t *)(instance)->cmdq.pipelines[ix]
     #define LCBT_SETTING(instance, name) (instance)->settings->name
 
-    struct lcb_http_header_st {
-        struct lcb_http_header_st *next;
-        char *data;
-    };
-
     typedef struct {
         lcb_list_t list;
         char *key;
@@ -176,9 +172,6 @@ extern "C" {
         lcb_size_t nbody;
         /** The type of HTTP request */
         lcb_http_method_t method;
-        /** The HTTP response parser */
-        http_parser *parser;
-        http_parser_settings parser_settings;
         char *host;
         lcb_size_t nhost;
         char *port;
@@ -191,8 +184,6 @@ extern "C" {
         lcb_http_complete_callback on_complete;
         /** This callback will be executed for each chunk of the response */
         lcb_http_data_callback on_data;
-        /** The accumulator for result (when chunked mode disabled) */
-        ringbuffer_t result;
         /** The cookie belonging to this request */
         const void *command_cookie;
         /** Reference count */
@@ -210,17 +201,12 @@ extern "C" {
 
         /** Request headers */
         lcb_http_header_t headers_out;
-
-        /** Linked list of headers */
-        struct lcb_http_header_st *headers_list;
         /** Headers array for passing to callbacks */
-        const char **headers;
-        /** Number of headers **/
-        lcb_size_t nheaders;
-
+        char **headers;
         lcbio_pTABLE io;
         lcbio_CONNREQ creq;
         lcbio_CTX *ioctx;
+        lcbht_pPARSER parser;
 
         lcb_timer_t io_timer;
         /** IO Timeout */
@@ -254,7 +240,6 @@ extern "C" {
     void lcb_http_request_decref(lcb_http_request_t req);
     lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_size_t nbase);
     lcb_error_t lcb_http_request_exec(lcb_http_request_t req);
-    lcb_error_t lcb_http_parse_setup(lcb_http_request_t req);
     lcb_error_t lcb_http_request_connect(lcb_http_request_t req);
     void lcb_setup_lcb_http_resp_t(lcb_http_resp_t *resp,
                                    lcb_http_status_t status,
