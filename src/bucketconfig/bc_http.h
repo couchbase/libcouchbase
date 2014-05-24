@@ -28,43 +28,25 @@
 #include "hostlist.h"
 #include "simplestring.h"
 #include "clconfig.h"
+#include <lcbht/lcbht.h>
 
 #define REQBUCKET_FMT "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n"
 #define REQPOOLS_FMT "GET /pools/ HTTP/1.1\r\n"
 #define HOSTHDR_FMT  "Host: %s:%s\r\n"
 #define AUTHDR_FMT "Authorization: Basic %s\r\n"
 #define LAST_HTTP_HEADER "X-Libcouchbase: " LCB_VERSION_STRING "\r\n"
+#define CONFIG_DELIMITER "\n\n\n\n"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-
-struct htvb_st {
-    /**
-     * This counter is incremented whenever a new configuration is received
-     * on the wire.
-     */
-    int generation;
-
-    /** The most recently received configuration */
-    clconfig_info *config;
-
-    lcb_string header;
-    lcb_string input;
-    lcb_string chunk;
-    lcb_size_t chunk_size;
-};
-
 typedef struct clprovider_http_st {
     /** Base configuration structure */
     clconfig_provider base;
-
-    /** Stream state/data for HTTP */
-    struct htvb_st stream;
-
     lcbio_pCONNSTART creq;
     lcbio_CTX *ioctx;
+    lcbht_pPARSER htp;
 
     /**
      * Buffer to use for writing our request header. Recreated for each
@@ -87,7 +69,8 @@ typedef struct clprovider_http_st {
 
     /** The cached configuration. */
     clconfig_info *current_config;
-
+    clconfig_info *last_parsed;
+    int generation;
     int retry_on_missing;
 } http_provider;
 

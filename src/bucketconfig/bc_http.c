@@ -20,11 +20,8 @@
 #include "bc_http.h"
 #include <lcbio/ssl.h>
 
-#define LOGARGS(ht, lvlbase) \
-    ht->base.parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
-
-#define LOG(ht, lvlbase, msg) \
-    lcb_log(LOGARGS(ht, lvlbase), msg)
+#define LOGARGS(ht, lvlbase) ht->base.parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
+#define LOG(ht, lvlbase, msg) lcb_log(LOGARGS(ht, lvlbase), msg)
 
 static void io_error_handler(lcbio_CTX *, lcb_error_t);
 static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
@@ -32,7 +29,6 @@ static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
 static lcb_error_t connect_next(http_provider *);
 static void read_common(lcbio_CTX *, unsigned);
 static lcb_error_t setup_request_header(http_provider *, const lcb_host_t *);
-static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype);
 
 /**
  * Determine if we're in compatibility mode with the previous versions of the
@@ -113,11 +109,88 @@ static void set_new_config(http_provider *http)
     }
 
     curhost = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
-    http->current_config = http->stream.config;
+    http->current_config = http->last_parsed;
     lcb_clconfig_incref(http->current_config);
     lcbvb_replace_host(http->current_config->vbc, curhost->host);
     lcb_confmon_provider_success(&http->base, http->current_config);
     lcbio_timer_disarm(http->io_timer);
+}
+
+static lcb_error_t
+process_chunk(http_provider *http, const void *buf, unsigned nbuf)
+{
+    lcb_error_t err = LCB_SUCCESS;
+    char *term;
+    int rv;
+    lcbvb_CONFIG *cfgh;
+    lcbht_RESPSTATE state, oldstate, diff;
+    lcbht_RESPONSE *resp = lcbht_get_response(http->htp);
+
+    oldstate = resp->state;
+    state = lcbht_parse(http->htp, buf, nbuf);
+    diff = state ^ oldstate;
+
+    if (state & LCBHT_S_ERROR) {
+        return LCB_PROTOCOL_ERROR;
+    }
+
+    if (diff & LCBHT_S_HEADER) {
+        /* see that we got a success? */
+        if (resp->status == 200) {
+            /* nothing */
+        } else if (resp->status == 404) {
+            err = LCB_BUCKET_ENOENT;
+        } else if (resp->status == 401) {
+            err = LCB_AUTH_ERROR;
+        } else {
+            err = LCB_ERROR;
+        }
+
+        if (err != LCB_SUCCESS) {
+            lcb_log(LOGARGS(http, ERR), "Got non-success HTTP status code %d", resp->status);
+            return err;
+        }
+    }
+
+    if (PROVIDER_SETTING(&http->base, conntype) == LCB_TYPE_CLUSTER) {
+        /* don't bother with parsing the actual config */
+        resp->body.nused = 0;
+        return LCB_SUCCESS;
+    }
+    if (!(state & LCBHT_S_BODY)) {
+        /* nothing to parse yet */
+        return LCB_SUCCESS;
+    }
+
+    /* seek ahead for strstr */
+    term = strstr(resp->body.base, CONFIG_DELIMITER);
+    if (!term) {
+        return LCB_SUCCESS;
+    }
+
+    *term = '\0';
+    cfgh = lcbvb_create();
+    if (!cfgh) {
+        return LCB_CLIENT_ENOMEM;
+    }
+    rv = lcbvb_load_json(cfgh, resp->body.base);
+    if (rv != 0) {
+        lcb_log(LOGARGS(http, ERR), "Failed to parse a valid config from HTTP stream: %s", cfgh->errstr);
+        lcbvb_destroy(cfgh);
+        return LCB_PROTOCOL_ERROR;
+    }
+    if (http->last_parsed) {
+        lcb_clconfig_decref(http->last_parsed);
+    }
+    http->last_parsed = lcb_clconfig_create(cfgh, LCB_CLCONFIG_HTTP);
+    http->last_parsed->cmpclock = gethrtime();
+    http->generation++;
+
+    /** Relocate the stream */
+    lcb_string_erase_beginning(&resp->body,
+        (term+sizeof(CONFIG_DELIMITER)-1)-resp->body.base);
+
+    return LCB_SUCCESS;
 }
 
 /**
@@ -127,10 +200,9 @@ static void set_new_config(http_provider *http)
 static void
 read_common(lcbio_CTX *ctx, unsigned nr)
 {
-    lcb_error_t err;
     lcbio_CTXRDITER riter;
     http_provider *http = lcbio_ctx_data(ctx);
-    int old_generation = http->stream.generation;
+    int old_generation = http->generation;
 
     lcb_log(LOGARGS(http, TRACE), "Received %d bytes on HTTP stream", nr);
 
@@ -140,21 +212,17 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     LCBIO_CTX_ITERFOR(ctx, &riter, nr) {
         unsigned nbuf = lcbio_ctx_risize(&riter);
         void *buf = lcbio_ctx_ribuf(&riter);
-        lcb_string_append(&http->stream.chunk, buf, nbuf);
+        lcb_error_t err = process_chunk(http, buf, nbuf);
+
+        if (err != LCB_SUCCESS) {
+            io_error(http, err);
+            return;
+        }
     }
 
-    err = htvb_parse(&http->stream, http->base.parent->settings->conntype);
-
-    if (http->stream.generation != old_generation) {
-        lcb_log(LOGARGS(http, DEBUG), "Generation %d -> %d", old_generation, http->stream.generation);
+    if (http->generation != old_generation) {
+        lcb_log(LOGARGS(http, DEBUG), "Generation %d -> %d", old_generation, http->generation);
         set_new_config(http);
-    } else {
-        lcb_log(LOGARGS(http, TRACE), "HTTP not yet done. Err=0x%x", err);
-    }
-
-    if (err != LCB_BUSY && err != LCB_SUCCESS) {
-        io_error(http, err);
-        return;
     }
 
     lcbio_ctx_rwant(ctx, 1);
@@ -204,15 +272,11 @@ setup_request_header(http_provider *http, const lcb_host_t *host)
 
 static void reset_stream_state(http_provider *http)
 {
-    lcb_string_clear(&http->stream.chunk);
-    lcb_string_clear(&http->stream.input);
-    lcb_string_clear(&http->stream.header);
-
-    if (http->stream.config) {
-        lcb_clconfig_decref(http->stream.config);
+    if (http->last_parsed) {
+        lcb_clconfig_decref(http->last_parsed);
+        http->last_parsed = NULL;
     }
-
-    http->stream.config = NULL;
+    lcbht_reset(http->htp);
 }
 
 static void
@@ -419,13 +483,9 @@ get_nodes(const clconfig_provider *pb)
 static void shutdown_http(clconfig_provider *provider)
 {
     http_provider *http = (http_provider *)provider;
-
     reset_stream_state(http);
-
-    lcb_string_release(&http->stream.chunk);
-    lcb_string_release(&http->stream.input);
-    lcb_string_release(&http->stream.header);
     close_current(http);
+    lcbht_free(http->htp);
 
     if (http->current_config) {
         lcb_clconfig_decref(http->current_config);
@@ -470,11 +530,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->io_timer = lcbio_timer_new(parent->iot, http, timeout_handler);
     http->disconn_timer = lcbio_timer_new(parent->iot, http, delayed_disconn);
     http->as_schederr = lcbio_timer_new(parent->iot, http, delayed_schederr);
-
-    lcb_string_init(&http->stream.chunk);
-    lcb_string_init(&http->stream.header);
-    lcb_string_init(&http->stream.input);
-
+    http->htp = lcbht_new(parent->settings);
     return &http->base;
 }
 
@@ -483,197 +539,6 @@ io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
 {
     io_error((http_provider *)lcbio_ctx_data(ctx), LCB_NETWORK_ERROR);
     (void)err;
-}
-
-static lcb_error_t set_next_config(struct htvb_st *vbs)
-{
-    VBUCKET_CONFIG_HANDLE new_config = NULL;
-
-    new_config = vbucket_config_create();
-    if (!new_config) {
-        return LCB_CLIENT_ENOMEM;
-    }
-
-    if (vbucket_config_parse(new_config, LIBVBUCKET_SOURCE_MEMORY, vbs->input.base)) {
-        vbucket_config_destroy(new_config);
-        return LCB_PROTOCOL_ERROR;
-    }
-
-    if (vbs->config) {
-        lcb_clconfig_decref(vbs->config);
-    }
-
-    vbs->config = lcb_clconfig_create(new_config, LCB_CLCONFIG_HTTP);
-    vbs->config->cmpclock = gethrtime();
-    vbs->generation++;
-    return LCB_SUCCESS;
-}
-
-/**
- * Try to parse the piece of data we've got available to see if we got all
- * the data for this "chunk"
- * @param instance the instance containing the data
- * @return 1 if we got all the data we need, 0 otherwise
- */
-static lcb_error_t parse_chunk(struct htvb_st *vbs)
-{
-    lcb_string *chunk = &vbs->chunk;
-    lcb_assert(vbs->chunk_size != 0);
-
-    if (vbs->chunk_size == (lcb_size_t) - 1) {
-        char *ptr = strstr(chunk->base, "\r\n");
-        long val;
-        if (ptr == NULL) {
-            /* We need more data! */
-            return LCB_BUSY;
-        }
-
-        ptr += 2;
-        val = strtol(chunk->base, NULL, 16);
-        val += 2;
-        vbs->chunk_size = (lcb_size_t)val;
-
-        lcb_string_erase_beginning(chunk, ptr - chunk->base);
-    }
-
-    if (chunk->nused < vbs->chunk_size) {
-        /* need more data! */
-        return LCB_BUSY;
-    }
-
-    return LCB_SUCCESS;
-}
-
-/**
- * Try to parse the headers in the input chunk.
- *
- * @param instance the instance containing the data
- * @return 0 success, 1 we need more data, -1 incorrect response
- */
-static lcb_error_t parse_header(struct htvb_st *vbs, lcb_type_t btype)
-{
-    int response_code;
-    lcb_string *chunk = &vbs->chunk;
-    char *ptr = strstr(chunk->base, "\r\n\r\n");
-
-    if (ptr != NULL) {
-        *ptr = '\0';
-        ptr += 4;
-    } else if ((ptr = strstr(chunk->base, "\n\n")) != NULL) {
-        *ptr = '\0';
-        ptr += 2;
-    } else {
-        /* We need more data! */
-        return LCB_BUSY;
-    }
-
-    /* parse the headers I care about... */
-    if (sscanf(chunk->base, "HTTP/1.1 %d", &response_code) != 1) {
-        return LCB_PROTOCOL_ERROR;
-
-    } else if (response_code != 200) {
-        switch (response_code) {
-        case 401:
-            return LCB_AUTH_ERROR;
-        case 404:
-            return LCB_BUCKET_ENOENT;
-        default:
-            return LCB_PROTOCOL_ERROR;
-            break;
-        }
-    }
-
-    /** TODO: Isn't a vBucket config only for BUCKET types? */
-    if (btype == LCB_TYPE_BUCKET &&
-            strstr(chunk->base, "Transfer-Encoding: chunked") == NULL &&
-            strstr(chunk->base, "Transfer-encoding: chunked") == NULL) {
-        return LCB_PROTOCOL_ERROR;
-    }
-
-    lcb_string_appendz(&vbs->header, chunk->base);
-
-
-    /* realign remaining data.. */
-    lcb_string_erase_beginning(chunk, ptr-chunk->base);
-    vbs->chunk_size = (lcb_size_t) - 1;
-
-    return LCB_SUCCESS;
-}
-
-static lcb_error_t parse_body(struct htvb_st *vbs, int *done)
-{
-    lcb_error_t err = LCB_BUSY;
-    char *term;
-
-
-    if ((err = parse_chunk(vbs)) != LCB_SUCCESS) {
-        *done = 1; /* no data */
-        lcb_assert(err == LCB_BUSY);
-        return err;
-    }
-
-    if (lcb_string_append(&vbs->input, vbs->chunk.base, vbs->chunk_size)) {
-        return LCB_CLIENT_ENOMEM;
-    }
-
-
-    lcb_string_erase_end(&vbs->input, 2);
-    lcb_string_erase_beginning(&vbs->chunk, vbs->chunk_size);
-
-    vbs->chunk_size = (lcb_size_t) - 1;
-
-    if (vbs->chunk.nused > 0) {
-        *done = 0;
-    }
-
-    term = strstr(vbs->input.base, "\n\n\n\n");
-
-    if (term != NULL) {
-        lcb_string tmp;
-        lcb_error_t ret;
-
-        /** Next input */
-        lcb_string_init(&tmp);
-        lcb_string_appendz(&tmp, term + 4);
-
-        *term = '\0';
-        ret = set_next_config(vbs);
-
-        /** Now, erase everything until the end of the 'term' */
-        if (vbs->input.base) {
-            lcb_string_release(&vbs->input);
-        }
-
-        lcb_string_transfer(&tmp, &vbs->input);
-        return ret;
-    }
-
-
-    return err;
-}
-
-static lcb_error_t htvb_parse(struct htvb_st *vbs, lcb_type_t btype)
-{
-    lcb_error_t status = LCB_ERROR;
-    int done = 0;
-
-    if (vbs->header.nused == 0) {
-        status = parse_header(vbs, btype);
-        if (status != LCB_SUCCESS) {
-            return status; /* BUSY or otherwise */
-        }
-    }
-
-    lcb_assert(vbs->header.nused);
-    if (btype == LCB_TYPE_CLUSTER) {
-        /* Do not parse payload for cluster connection type */
-        return LCB_SUCCESS;
-    }
-
-    do {
-        status = parse_body(vbs, &done);
-    } while (!done);
-    return status;
 }
 
 void lcb_clconfig_http_enable(clconfig_provider *http)
