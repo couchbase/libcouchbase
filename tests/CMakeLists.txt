@@ -53,6 +53,7 @@ ADD_EXECUTABLE(rdb-tests EXCLUDE_FROM_ALL nonio_tests.cc
     ${T_RDB_SRC} ${SOURCE_ROOT}/src/list.c)
 ADD_EXECUTABLE(sock-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_SOCK_SRC})
 ADD_EXECUTABLE(vbucket-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_VBTEST_SRC})
+ADD_EXECUTABLE(htparse-tests EXCLUDE_FROM_ALL nonio_tests.cc htparse/t_basic.cc)
 IF(WIN32)
     TARGET_LINK_LIBRARIES(mc-tests ws2_32.lib)
     TARGET_LINK_LIBRARIES(mc-malloc-tests ws2_32.lib)
@@ -94,6 +95,7 @@ TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils mocksupport)
 TARGET_LINK_LIBRARIES(rdb-tests rdb gtest)
 TARGET_LINK_LIBRARIES(sock-tests rdb ioserver couchbase gtest)
 TARGET_LINK_LIBRARIES(vbucket-tests gtest couchbase)
+TARGET_LINK_LIBRARIES(htparse-tests gtest couchbase)
 
 MACRO(BUILD_TEST target)
     ADD_TEST(NAME BUILD-${target}
@@ -108,9 +110,10 @@ BUILD_TEST(rdb-tests)
 BUILD_TEST(sock-tests)
 BUILD_TEST(vbucket-tests)
 BUILD_TEST(mc-tests)
+BUILD_TEST(htparse-tests)
 
 ADD_CUSTOM_TARGET(alltests DEPENDS check-all smoke-test unit-tests nonio-tests
-    rdb-tests sock-tests vbucket-tests mc-tests)
+    rdb-tests sock-tests vbucket-tests mc-tests htparse-tests)
 
 MACRO(DEFINE_MOCKTEST plugin test)
     ADD_TEST(
