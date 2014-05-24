@@ -908,6 +908,44 @@ typedef struct {
  */
 #define LCB_CNTL_RETRYMODE 0x24
 
+/**
+ * @brief Enumeration representing various URL forms to use for the configuration
+ * stream */
+typedef enum {
+    /** `/pools/default/b[s]/$bucket`: Introduced in Couchbase Server 2.5 */
+    LCB_HTCONFIG_URLTYPE_25PLUS = 0x01,
+
+    /** `/pools/default/buckets[Streaming]/$bucket`. */
+    LCB_HTCONFIG_URLTYPE_COMPAT = 0x02,
+
+    /** Try `25PLUS` first and fallback to `COMPAT` */
+    LCB_HTCONFIG_URLTYPE_TRYALL = 0x03
+} lcb_HTCONFIG_URLTYPE;
+
+/**
+ * @volatile - Primarily here to support tests and buggy HTTP servers/proxies
+ * which do not like to maintain a connection upon receipt of a 404.
+ *
+ * @brief Set the URL selection mode.
+ *
+ * The URL type can be a mask of the lcb_HTCONF_URLTYPE constants which
+ * indicate which URLs the HTTP provider should use.
+ *
+ * The default is to use the `25PLUS` URI first, and fallback on the compat uri
+ * if the terse one fails with an HTTP 404 (Not Found). The new-style URI is
+ * considered more efficient on cluster resources and can help the cluster
+ * maintain many more streaming connections than the compat version, however
+ * it is only available in Couchbase Server 2.5 and greater.
+ *
+ * This setting is only used when CCCP is disabled. This will typically be for
+ * older clusters or for memcached buckets.
+ *
+ * Mode|Arg
+ * ----|---
+ * Set, Get | lcb_HTCONFIG_URLTYPE
+ */
+#define LCB_CNTL_HTCONFIG_URLTYPE 0x25
+
 /** This is not a command, but rather an indicator of the last item */
 #define LCB_CNTL__MAX                    0x25
 /**@}*/

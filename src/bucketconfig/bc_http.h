@@ -30,7 +30,8 @@
 #include "clconfig.h"
 #include <lcbht/lcbht.h>
 
-#define REQBUCKET_FMT "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n"
+#define REQBUCKET_COMPAT_FMT "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n"
+#define REQBUCKET_TERSE_FMT "GET /pools/default/bs/%s HTTP/1.1\r\n"
 #define REQPOOLS_FMT "GET /pools/ HTTP/1.1\r\n"
 #define HOSTHDR_FMT  "Host: %s:%s\r\n"
 #define AUTHDR_FMT "Authorization: Basic %s\r\n"
@@ -71,8 +72,9 @@ typedef struct clprovider_http_st {
     clconfig_info *current_config;
     clconfig_info *last_parsed;
     int generation;
+    int try_nexturi;
+    lcb_HTCONFIG_URLTYPE uritype;
 } http_provider;
-
 
 #ifdef __cplusplus
 }

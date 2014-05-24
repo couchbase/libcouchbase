@@ -184,6 +184,12 @@ void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
 
     handle.instance = instance;
     handle.iops = io;
+
+    if (!isRealCluster()) {
+        lcb_HTCONFIG_URLTYPE urltype = LCB_HTCONFIG_URLTYPE_COMPAT;
+        err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTCONFIG_URLTYPE, &urltype);
+        ASSERT_EQ(LCB_SUCCESS, err);
+    }
 }
 
 void MockEnvironment::createConnection(lcb_t &instance)

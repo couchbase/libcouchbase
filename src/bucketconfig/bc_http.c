@@ -139,17 +139,51 @@ process_chunk(http_provider *http, const void *buf, unsigned nbuf)
         if (resp->status == 200) {
             /* nothing */
         } else if (resp->status == 404) {
+            const int urlmode = PROVIDER_SETTING(&http->base, bc_http_urltype);
             err = LCB_BUCKET_ENOENT;
+
+            if (++http->uritype > LCB_HTCONFIG_URLTYPE_COMPAT) {
+                lcb_log(LOGARGS(http, ERR), "Got 404 on config stream. Assuming bucket does not exist as we've tried both URL types");
+                goto GT_HT_ERROR;
+
+            } else if ((urlmode & LCB_HTCONFIG_URLTYPE_COMPAT) == 0) {
+                lcb_log(LOGARGS(http, ERR), "Got 404 on config stream for terse URI. Compat URI disabled, so not trying");
+
+            } else {
+                /* reissue the request; but wait for it to drain */
+                lcb_log(LOGARGS(http, WARN), "Got 404 on config stream. Assuming terse URI not supported on cluster");
+                http->try_nexturi = 1;
+                err = LCB_SUCCESS;
+                goto GT_CHECKDONE;
+            }
         } else if (resp->status == 401) {
             err = LCB_AUTH_ERROR;
         } else {
             err = LCB_ERROR;
         }
 
+        GT_HT_ERROR:
         if (err != LCB_SUCCESS) {
             lcb_log(LOGARGS(http, ERR), "Got non-success HTTP status code %d", resp->status);
             return err;
         }
+    }
+
+    GT_CHECKDONE:
+    if (http->try_nexturi) {
+        if (!(state & LCBHT_S_DONE)) {
+            return LCB_SUCCESS;
+        }
+        lcb_host_t *host = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
+        http->try_nexturi = 0;
+        if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
+            return err;
+        }
+
+        /* reset the state? */
+        lcbht_reset(http->htp);
+        lcbio_ctx_put(http->ioctx, http->request_buf, strlen(http->request_buf));
+        return LCB_SUCCESS;
     }
 
     if (PROVIDER_SETTING(&http->base, conntype) == LCB_TYPE_CLUSTER) {
@@ -241,7 +275,13 @@ setup_request_header(http_provider *http, const lcb_host_t *host)
     http->request_buf[0] = '\0';
 
     if (settings->conntype == LCB_TYPE_BUCKET) {
-        offset = snprintf(buf, nbuf, REQBUCKET_FMT, settings->bucket);
+        const char *fmt;
+        if (http->uritype == LCB_HTCONFIG_URLTYPE_25PLUS) {
+            fmt = REQBUCKET_TERSE_FMT;
+        } else {
+            fmt = REQBUCKET_COMPAT_FMT;
+        }
+        offset = snprintf(buf, nbuf, fmt, settings->bucket);
 
     } else if (settings->conntype == LCB_TYPE_CLUSTER) {
         offset = snprintf(buf, nbuf, REQPOOLS_FMT);
@@ -272,10 +312,17 @@ setup_request_header(http_provider *http, const lcb_host_t *host)
 
 static void reset_stream_state(http_provider *http)
 {
+    const int urlmode = PROVIDER_SETTING(&http->base, bc_http_urltype);
     if (http->last_parsed) {
         lcb_clconfig_decref(http->last_parsed);
         http->last_parsed = NULL;
     }
+    if (urlmode & LCB_HTCONFIG_URLTYPE_25PLUS) {
+        http->uritype = LCB_HTCONFIG_URLTYPE_25PLUS;
+    } else {
+        http->uritype = LCB_HTCONFIG_URLTYPE_COMPAT;
+    }
+    http->try_nexturi = 0;
     lcbht_reset(http->htp);
 }
 

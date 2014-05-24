@@ -558,6 +558,20 @@ retrymode_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+htconfig_urltype_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    lcb_HTCONFIG_URLTYPE *p = arg;
+    int *tgt = &LCBT_SETTING(instance, bc_http_urltype);
+    if (mode == LCB_CNTL_SET) {
+        *tgt = *p;
+    } else {
+        *p = *tgt;
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -595,7 +609,8 @@ static ctl_handler handlers[] = {
     config_cache_handler, /* LCB_CNTL_CONFIGCACHE */
     ssl_mode_handler, /* LCB_CNTL_SSL_MODE */
     ssl_capath_handler, /* LCB_CNTL_SSL_CAPATH */
-    retrymode_handler /* LCB_CNTL_RETRYMODE */
+    retrymode_handler, /* LCB_CNTL_RETRYMODE */
+    htconfig_urltype_handler /* LCB_CNTL_HTCONFIG_URLTYPE */
 };
 
 
