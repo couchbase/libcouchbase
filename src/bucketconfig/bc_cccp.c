@@ -169,29 +169,14 @@ static hostlist_t get_nodes(const clconfig_provider *pb)
     return ((cccp_provider *)pb)->nodes;
 }
 
-#define HOST_TOKEN "$HOST"
-static void sanitize_config(
-        const lcb_string *src, const char *host, lcb_string *dst)
-{
-    char *cur = src->base, *last = src->base;
-
-    while ((cur = strstr(cur, HOST_TOKEN))) {
-        lcb_string_append(dst, last, cur-last);
-        lcb_string_appendz(dst, host);
-        cur += sizeof(HOST_TOKEN)-1;
-        last = cur;
-    }
-
-    lcb_string_append(dst, last, src->base + src->nalloc - last);
-}
-
 /** Update the configuration from a server. */
 lcb_error_t lcb_cccp_update(clconfig_provider *provider,
                             const char *host,
                             lcb_string *data)
 {
+    /** TODO: replace this with lcbvb_ names */
+
     VBUCKET_CONFIG_HANDLE vbc;
-    lcb_string sanitized;
     int rv;
     clconfig_info *new_config;
     cccp_provider *cccp = (cccp_provider *)provider;
@@ -200,20 +185,15 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
     if (!vbc) {
         return LCB_CLIENT_ENOMEM;
     }
-
-    lcb_string_init(&sanitized);
-    sanitize_config(data, host, &sanitized);
-    rv = vbucket_config_parse(vbc, LIBVBUCKET_SOURCE_MEMORY, sanitized.base);
+    rv = vbucket_config_parse(vbc, LIBVBUCKET_SOURCE_MEMORY, data->base);
 
     if (rv) {
-        lcb_string_release(&sanitized);
         vbucket_config_destroy(vbc);
-        lcb_string_release(&sanitized);
         return LCB_PROTOCOL_ERROR;
     }
 
-    new_config = lcb_clconfig_create(vbc, &sanitized, LCB_CLCONFIG_CCCP);
-    lcb_string_release(&sanitized);
+    lcbvb_replace_host(vbc, host);
+    new_config = lcb_clconfig_create(vbc, LCB_CLCONFIG_CCCP);
 
     if (!new_config) {
         vbucket_config_destroy(vbc);

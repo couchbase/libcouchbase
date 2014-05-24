@@ -118,9 +118,7 @@ static int load_cache(file_provider *provider)
         lcb_clconfig_decref(provider->config);
     }
 
-    provider->config = lcb_clconfig_create(config,
-                                           &str,
-                                           LCB_CLCONFIG_FILE);
+    provider->config = lcb_clconfig_create(config, LCB_CLCONFIG_FILE);
     provider->config->cmpclock = gethrtime();
     provider->config->origin = provider->base.type;
     provider->last_mtime = st.st_mtime;
@@ -140,20 +138,22 @@ static int load_cache(file_provider *provider)
     return status;
 }
 
-void lcb_clconfig_write_file(clconfig_provider *provider_base, lcb_string *data)
+static void
+write_to_file(file_provider *provider, lcbvb_CONFIG *cfg)
 {
     FILE *fp;
-    file_provider *provider = (file_provider *)provider_base;
-    /** Get the provider */
 
     if (provider->filename == NULL) {
         return;
     }
 
+
     fp = fopen(provider->filename, "w");
     if (fp) {
-        fprintf(fp, "%s%s", data->base, CONFIG_CACHE_MAGIC);
+        char *json = lcbvb_save_json(cfg);
+        fprintf(fp, "%s%s", json, CONFIG_CACHE_MAGIC);
         fclose(fp);
+        free(json);
     }
 }
 
@@ -246,11 +246,7 @@ static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
         return;
     }
 
-    if (!info->raw.nused) {
-        return;
-    }
-
-    lcb_clconfig_write_file(&provider->base, &info->raw);
+    write_to_file(provider, info->vbc);
 }
 
 clconfig_provider * lcb_clconfig_create_file(lcb_confmon *parent)

@@ -107,12 +107,15 @@ io_error(http_provider *http, lcb_error_t origerr)
  */
 static void set_new_config(http_provider *http)
 {
+    const lcb_host_t *curhost;
     if (http->current_config) {
         lcb_clconfig_decref(http->current_config);
     }
 
+    curhost = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
     http->current_config = http->stream.config;
     lcb_clconfig_incref(http->current_config);
+    lcbvb_replace_host(http->current_config->vbc, curhost->host);
     lcb_confmon_provider_success(&http->base, http->current_config);
     lcbio_timer_disarm(http->io_timer);
 }
@@ -500,7 +503,7 @@ static lcb_error_t set_next_config(struct htvb_st *vbs)
         lcb_clconfig_decref(vbs->config);
     }
 
-    vbs->config = lcb_clconfig_create(new_config, &vbs->input, LCB_CLCONFIG_HTTP);
+    vbs->config = lcb_clconfig_create(new_config, LCB_CLCONFIG_HTTP);
     vbs->config->cmpclock = gethrtime();
     vbs->generation++;
     return LCB_SUCCESS;

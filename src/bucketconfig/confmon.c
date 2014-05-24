@@ -306,8 +306,6 @@ void lcb_clconfig_decref(clconfig_info *info)
         vbucket_config_destroy(info->vbc);
     }
 
-    lcb_string_release(&info->raw);
-
     free(info);
 }
 
@@ -331,9 +329,8 @@ int lcb_clconfig_compare(const clconfig_info *a, const clconfig_info *b)
     return 1;
 }
 
-clconfig_info * lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config,
-                                    lcb_string *raw,
-                                    clconfig_method_t origin)
+clconfig_info *
+lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config, clconfig_method_t origin)
 {
     clconfig_info *info = calloc(1, sizeof(*info));
     if (!info) {
@@ -341,9 +338,6 @@ clconfig_info * lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config,
     }
     info->refcount = 1;
     info->vbc = config;
-    if (raw) {
-        lcb_string_transfer(raw, &info->raw);
-    }
     info->origin = origin;
     return info;
 }

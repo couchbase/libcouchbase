@@ -219,9 +219,6 @@ typedef struct clconfig_info_st {
 
     /** Origin provider type which produced this config */
     clconfig_method_t origin;
-
-    /** Raw text of the config */
-    lcb_string raw;
 } clconfig_info;
 
 typedef enum {
@@ -407,12 +404,10 @@ typedef enum {
  * pointed to by 'config'. Its initial refcount will be set to 1.
  *
  * @param config a newly parsed configuration
- * @param raw (optional) the raw buffer used for the config
  * @param origin the type of provider from which the config originated.
  */
-clconfig_info * lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config,
-                                    lcb_string *raw,
-                                    clconfig_method_t origin);
+clconfig_info *
+lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config, clconfig_method_t origin);
 
 /**
  * Decrement the refcount. If the internal refcount reaches 0 then the internal
@@ -433,12 +428,6 @@ int lcb_clconfig_file_set_filename(clconfig_provider *p, const char *f);
  * @return the current filename being used.
  */
 const char * lcb_clconfig_file_get_filename(clconfig_provider *p);
-
-/**
- * Writes the configuration data within 'data' to the file in the provider.
- * If the file provider is not enabled, this does nothing.
- */
-void lcb_clconfig_write_file(clconfig_provider *provider_base, lcb_string *data);
 
 /**
  * Get the REST connection object.
