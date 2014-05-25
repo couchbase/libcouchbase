@@ -177,19 +177,19 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
 {
     /** TODO: replace this with lcbvb_ names */
 
-    VBUCKET_CONFIG_HANDLE vbc;
+    lcbvb_CONFIG* vbc;
     int rv;
     clconfig_info *new_config;
     cccp_provider *cccp = (cccp_provider *)provider;
-    vbc = vbucket_config_create();
+    vbc = lcbvb_create();
 
     if (!vbc) {
         return LCB_CLIENT_ENOMEM;
     }
-    rv = vbucket_config_parse(vbc, LIBVBUCKET_SOURCE_MEMORY, data->base);
+    rv = lcbvb_load_json(vbc, data->base);
 
     if (rv) {
-        vbucket_config_destroy(vbc);
+        lcbvb_destroy(vbc);
         return LCB_PROTOCOL_ERROR;
     }
 
@@ -197,7 +197,7 @@ lcb_error_t lcb_cccp_update(clconfig_provider *provider,
     new_config = lcb_clconfig_create(vbc, LCB_CLCONFIG_CCCP);
 
     if (!new_config) {
-        vbucket_config_destroy(vbc);
+        lcbvb_destroy(vbc);
         return LCB_CLIENT_ENOMEM;
     }
 
@@ -332,20 +332,27 @@ static void cccp_cleanup(clconfig_provider *pb)
 
 static void
 nodes_updated(clconfig_provider *provider, hostlist_t nodes,
-              VBUCKET_CONFIG_HANDLE vbc)
+              lcbvb_CONFIG* vbc)
 {
-    int ii;
+    unsigned ii;
+    lcbvb_SVCMODE mode;
     cccp_provider *cccp = (cccp_provider *)provider;
     if (!vbc) {
         return;
     }
-    if (vbucket_config_get_num_servers(vbc) < 1) {
+    if (lcbvb_get_nservers(vbc) < 1) {
         return;
     }
 
     hostlist_clear(cccp->nodes);
-    for (ii = 0; ii < vbucket_config_get_num_servers(vbc); ii++) {
-        const char *mcaddr = vbucket_config_get_server(vbc, ii);
+    if (PROVIDER_SETTING(provider, sslopts) & LCB_SSL_ENABLED) {
+        mode = LCBVB_SVCMODE_SSL;
+    } else {
+        mode = LCBVB_SVCMODE_PLAIN;
+    }
+    for (ii = 0; ii < lcbvb_get_nservers(vbc); ii++) {
+        const char *mcaddr = lcbvb_get_hostport(vbc,
+            ii, LCBVB_SVCTYPE_DATA, mode);
         hostlist_add_stringz(cccp->nodes, mcaddr, LCB_CONFIG_MCD_PORT);
     }
 
