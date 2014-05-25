@@ -216,6 +216,9 @@ LIBCOUCHBASE_API
 int
 lcbvb_k2vb(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE n);
 
+#define lcbvb_get_nservers(cfg) (cfg)->nsrv
+#define lcbvb_get_nreplicas(cfg) (cfg)->nrepl
+#define lcbvb_get_disttype(cfg) (cfg)->dtype
 /**
  * Gets the port associated with a given service of a given mode on a given
  * server
