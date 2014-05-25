@@ -17,8 +17,8 @@
 #ifndef LIBCOUCHBASE_INTERNAL_H
 #define LIBCOUCHBASE_INTERNAL_H 1
 
+/* System/Standard includes */
 #include "config.h"
-
 #include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -27,21 +27,22 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <ctype.h>
+
+/* Global Project Dependencies/Includes */
 #include <memcached/protocol_binary.h>
 #include <ep-engine/command_ids.h>
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/vbucket.h>
+
+/* Internal dependencies */
 #include <lcbio/lcbio.h>
 #include <strcodecs/strcodecs.h>
-#include "list.h"
-#include "hashset.h"
-#include "genhash.h"
-#include "timer.h"
 #include "mcserver/mcserver.h"
-#include "settings.h"
-#include "logging.h"
 #include "mc/mcreq.h"
-#include "simplestring.h"
+#include "settings.h"
+#include "genhash.h"
+
+/* lcb_t-specific includes */
 #include "retryq.h"
 #include "aspend.h"
 
