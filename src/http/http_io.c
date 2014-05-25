@@ -17,6 +17,7 @@
 #include "internal.h"
 #include "logging.h"
 #include "settings.h"
+#include "http.h"
 #include <lcbio/ssl.h>
 
 #define LOGARGS(req, lvl) \

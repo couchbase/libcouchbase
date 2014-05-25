@@ -207,8 +207,8 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/error.c
             src/handler.c
             src/getconfig.c
-            src/http.c
-            src/http_io.c
+            src/http/http.c
+            src/http/http_io.c
             src/instance.c
             src/mcserver/negotiate.c
             src/mcserver/mcserver.c

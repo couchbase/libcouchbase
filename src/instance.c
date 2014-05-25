@@ -28,6 +28,7 @@
 #include "logging.h"
 
 #include "hostlist.h"
+#include "http/http.h"
 #include "bucketconfig/clconfig.h"
 #include <lcbio/iotable.h>
 #define LOGARGS(obj,lvl) (obj)->settings, "instance", LCB_LOG_##lvl, __FILE__, __LINE__

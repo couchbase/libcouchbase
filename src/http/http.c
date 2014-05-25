@@ -17,6 +17,7 @@
 
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
+#include "http/http.h"
 
 static const char *method_strings[] = {
     "GET ",    /* LCB_HTTP_METHOD_GET */
