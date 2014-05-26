@@ -150,21 +150,6 @@ void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance)
     pb->enabled = 1;
 }
 
-static void
-configure_nodes(clconfig_provider *pb, const hostlist_t nodes)
-{
-    unsigned ii;
-    cccp_provider *cccp = (cccp_provider *)pb;
-    hostlist_clear(cccp->nodes);
-
-    for (ii = 0; ii < nodes->nentries; ii++) {
-        hostlist_add_host(cccp->nodes, nodes->entries + ii);
-    }
-    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
-        hostlist_randomize(cccp->nodes);
-    }
-}
-
 static hostlist_t get_nodes(const clconfig_provider *pb)
 {
     return ((cccp_provider *)pb)->nodes;
@@ -331,15 +316,26 @@ static void cccp_cleanup(clconfig_provider *pb)
 }
 
 static void
-nodes_updated(clconfig_provider *provider, hostlist_t nodes,
-              lcbvb_CONFIG* vbc)
+configure_nodes(clconfig_provider *pb, const hostlist_t nodes)
+{
+    unsigned ii;
+    cccp_provider *cccp = (cccp_provider *)pb;
+    hostlist_clear(cccp->nodes);
+
+    for (ii = 0; ii < nodes->nentries; ii++) {
+        hostlist_add_host(cccp->nodes, nodes->entries + ii);
+    }
+    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
+        hostlist_randomize(cccp->nodes);
+    }
+}
+
+static void
+config_updated(clconfig_provider *provider, lcbvb_CONFIG* vbc)
 {
     unsigned ii;
     lcbvb_SVCMODE mode;
     cccp_provider *cccp = (cccp_provider *)provider;
-    if (!vbc) {
-        return;
-    }
     if (lcbvb_get_nservers(vbc) < 1) {
         return;
     }
@@ -359,8 +355,6 @@ nodes_updated(clconfig_provider *provider, hostlist_t nodes,
     if (PROVIDER_SETTING(provider, randomize_bootstrap_nodes)) {
         hostlist_randomize(cccp->nodes);
     }
-
-    (void)nodes;
 }
 
 static void
@@ -462,7 +456,7 @@ clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon)
     cccp->base.get_cached = cccp_get_cached;
     cccp->base.pause = cccp_pause;
     cccp->base.shutdown = cccp_cleanup;
-    cccp->base.nodes_updated = nodes_updated;
+    cccp->base.config_updated = config_updated;
     cccp->base.configure_nodes = configure_nodes;
     cccp->base.get_nodes = get_nodes;
     cccp->base.parent = mon;

@@ -470,9 +470,8 @@ static clconfig_info* http_get_cached(clconfig_provider *provider)
     return http->current_config;
 }
 
-static void refresh_nodes(clconfig_provider *pb,
-                          const hostlist_t newnodes,
-                          VBUCKET_CONFIG_HANDLE newconfig)
+static void
+config_updated(clconfig_provider *pb, VBUCKET_CONFIG_HANDLE newconfig)
 {
     unsigned int ii;
     http_provider *http = (http_provider *)pb;
@@ -480,12 +479,6 @@ static void refresh_nodes(clconfig_provider *pb,
     lcbvb_SVCMODE mode;
 
     hostlist_clear(http->nodes);
-    if (!newconfig) {
-        for (ii = 0; ii < newnodes->nentries; ii++) {
-            hostlist_add_host(http->nodes, newnodes->entries + ii);
-        }
-        goto GT_DONE;
-    }
 
     sopts = PROVIDER_SETTING(pb, sslopts);
     if (sopts & LCB_SSL_ENABLED) {
@@ -509,7 +502,6 @@ static void refresh_nodes(clconfig_provider *pb,
         lcb_log(LOGARGS(http, FATAL), "New nodes do not contain management ports");
     }
 
-    GT_DONE:
     if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
         hostlist_randomize(http->nodes);
     }
@@ -518,7 +510,12 @@ static void refresh_nodes(clconfig_provider *pb,
 static void
 configure_nodes(clconfig_provider *pb, const hostlist_t newnodes)
 {
-    refresh_nodes(pb, newnodes, NULL);
+    unsigned ii;
+    http_provider *http = (void *)pb;
+    hostlist_clear(http->nodes);
+    for (ii = 0; ii < newnodes->nentries; ii++) {
+        hostlist_add_host(http->nodes, newnodes->entries + ii);
+    }
 }
 
 static hostlist_t
@@ -570,7 +567,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     http->base.pause = pause_http;
     http->base.get_cached = http_get_cached;
     http->base.shutdown = shutdown_http;
-    http->base.nodes_updated = refresh_nodes;
+    http->base.config_updated = config_updated;
     http->base.configure_nodes = configure_nodes;
     http->base.get_nodes = get_nodes;
     http->base.enabled = 0;

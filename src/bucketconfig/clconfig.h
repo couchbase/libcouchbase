@@ -214,15 +214,15 @@ typedef struct clconfig_provider_st {
     lcb_error_t (*pause)(struct clconfig_provider_st *pb);
 
     /**
-     * Called to update the list of new nodes.
+     * Called when a new configuration has been received.
+     *
      * @param provider the provider instance
-     * @param hosts a new list of hosts which was discovered
      * @param config the current configuration.
      * Note that this should only update the server list and do nothing
      * else.
      */
-    void (*nodes_updated)(struct clconfig_provider_st *provider,
-            hostlist_t hosts, VBUCKET_CONFIG_HANDLE config);
+    void (*config_updated)(struct clconfig_provider_st *provider,
+            VBUCKET_CONFIG_HANDLE config);
 
     /**
      * Retrieve the list of nodes from this provider, if applicable
@@ -365,6 +365,7 @@ LCB_INTERNAL_API
 void
 lcb_confmon_set_provider_active(lcb_confmon *mon,
     clconfig_method_t type, int enabled);
+
 
 /**
  * @brief Request a configuration refresh

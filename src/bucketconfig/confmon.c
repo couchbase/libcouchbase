@@ -389,10 +389,10 @@ void lcb_confmon_set_nodes(lcb_confmon *mon,
         if (provider == NULL || provider->enabled == 0) {
             continue;
         }
-        if (provider->nodes_updated == NULL) {
+        if (provider->config_updated == NULL) {
             continue;
         }
-        provider->nodes_updated(provider, nodes, config);
+        provider->config_updated(provider, config);
     }
 
     if (is_allocated) {
