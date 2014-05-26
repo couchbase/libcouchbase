@@ -163,7 +163,7 @@ ADD_LIBRARY(rdb STATIC
 ADD_LIBRARY(lcbio STATIC
     src/lcbio/connect.c src/lcbio/ctx.c src/lcbio/ioutils.c src/lcbio/iotable.c
     src/lcbio/protoctx.c src/lcbio/manager.c src/lcbio/ioutils.c src/lcbio/timer.c)
-
+ADD_LIBRARY(lcbht STATIC src/lcbht/lcbht.c contrib/http_parser/http_parser.c)
 
 SET_TARGET_PROPERTIES(netbuf-malloc PROPERTIES COMPILE_DEFINITIONS NETBUF_LIBC_PROXY=1)
 LCB_UTIL(netbuf-malloc)
@@ -172,6 +172,7 @@ LCB_UTIL(rdb)
 LCB_UTIL(lcbio)
 LCB_UTIL(couchbase_utils)
 LCB_UTIL(mcreq)
+LCB_UTIL(lcbht)
 
 ADD_SUBDIRECTORY(src/vbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
@@ -195,13 +196,11 @@ SET(LCB_OPFILES
 
 ADD_LIBRARY(couchbase ${_lcb_linkspec}
             ${LCB_OPFILES}
-            contrib/http_parser/http_parser.c
             src/bootstrap.c
             src/bucketconfig/bc_cccp.c
             src/bucketconfig/bc_http.c
             src/bucketconfig/bc_file.c
             src/bucketconfig/confmon.c
-            src/lcbht/lcbht.c
             src/callbacks.c
             src/cntl.c
             src/error.c
@@ -242,7 +241,7 @@ ENDIF()
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase
-    couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl lcbio rdb
+    couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl lcbio rdb lcbht
     ${lcb_plat_libs} ${lcb_ssl_libs} ${lcb_snappy_link})
 
 

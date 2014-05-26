@@ -171,10 +171,11 @@ process_chunk(http_provider *http, const void *buf, unsigned nbuf)
 
     GT_CHECKDONE:
     if (http->try_nexturi) {
+        lcb_host_t *host;
         if (!(state & LCBHT_S_DONE)) {
             return LCB_SUCCESS;
         }
-        lcb_host_t *host = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
+        host = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
         http->try_nexturi = 0;
         if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
             return err;
