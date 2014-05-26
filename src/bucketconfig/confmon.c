@@ -79,17 +79,18 @@ void lcb_confmon_prepare(lcb_confmon *mon)
 
     for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = mon->all_providers[ii];
-        if (cur == NULL || cur->enabled == 0) {
-            continue;
+        if (cur) {
+            if (cur->enabled) {
+                lcb_clist_append(&mon->active_providers, &cur->ll);
+            } else if (cur->pause){
+                cur->pause(cur);
+            }
         }
-
-        lcb_clist_append(&mon->active_providers, &cur->ll);
     }
 
     lcb_assert(LCB_CLIST_SIZE(&mon->active_providers));
-    lcb_log(LOGARGS(mon, DEBUG), "Have %d providers enabled",
-            LCB_CLIST_SIZE(&mon->active_providers));
 
+    lcb_log(LOGARGS(mon, DEBUG), "Have %d providers enabled", LCB_CLIST_SIZE(&mon->active_providers));
     mon->cur_provider = first_active(mon);
 }
 
@@ -398,31 +399,15 @@ int lcb_confmon_is_refreshing(lcb_confmon *mon)
 }
 
 LCB_INTERNAL_API
-void lcb_confmon_set_provider_active(lcb_confmon *mon,
-                                     clconfig_method_t type, int enabled)
+void
+lcb_confmon_set_provider_active(lcb_confmon *mon,
+    clconfig_method_t type, int enabled)
 {
-    int ii;
     clconfig_provider *provider = mon->all_providers[type];
     if (provider->enabled == enabled) {
         return;
     } else {
         provider->enabled = enabled;
-    }
-
-    /** Reset the current state */
-    mon->cur_provider = NULL;
-    lcb_clist_init(&mon->active_providers);
-
-    for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
-        clconfig_provider *pb = mon->all_providers[ii];
-        if (!pb) {
-            continue;
-        }
-
-        memset(&pb->ll, 0, sizeof(pb->ll));
-        if (pb->pause) {
-            pb->pause(pb);
-        }
     }
     lcb_confmon_prepare(mon);
 }
