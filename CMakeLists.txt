@@ -232,11 +232,18 @@ SET_TARGET_PROPERTIES(couchbase
         VERSION "2"
         SOVERSION "2.0.13")
 
+IF(NOT LCB_NO_SNAPPY)
+    ADD_SUBDIRECTORY(contrib/snappy)
+    SET(lcb_snappy_link lcbsnappy)
+ELSE()
+    SET(lcb_snappy_link "")
+ENDIF()
+
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase
     couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl lcbio rdb
-    ${lcb_plat_libs} ${lcb_ssl_libs})
+    ${lcb_plat_libs} ${lcb_ssl_libs} ${lcb_snappy_link})
 
 
 IF(NOT LCB_NO_TESTS)
@@ -256,6 +263,7 @@ IF(NOT LCB_NO_PLUGINS AND NOT WIN32)
         MESSAGE(FATAL_ERROR "Must have libevent or libev")
     ENDIF()
 ENDIF()
+
 
 IF(LCB_MAINTAINER_MODE)
     IF(NOT (HAVE_LIBEV AND HAVE_LIBEVENT AND HAVE_LIBUV))
