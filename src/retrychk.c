@@ -44,8 +44,10 @@ lcb_should_retry(lcb_settings *settings, mc_PACKET *pkt, lcb_error_t err)
     /* get is a safe operation which may be retried */
     case PROTOCOL_BINARY_CMD_GET:
     case PROTOCOL_BINARY_CMD_GETKQ:
-    case PROTOCOL_BINARY_CMD_ADD:
         return policy & LCB_RETRY_CMDS_GET;
+
+    case PROTOCOL_BINARY_CMD_ADD:
+        return policy & LCB_RETRY_CMDS_SAFE;
 
     /* mutation operations are retriable so long as they provide a CAS */
     case PROTOCOL_BINARY_CMD_SET:
