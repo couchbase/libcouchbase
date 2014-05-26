@@ -71,7 +71,7 @@ lcb_getconfig(lcb_t instance, const void *cookie, lcb_server_t *server)
     memset(&hdr, 0, sizeof(hdr));
     hdr.request.opaque = packet->opaque;
     hdr.request.magic = PROTOCOL_BINARY_REQ;
-    hdr.request.opcode = CMD_GET_CLUSTER_CONFIG;
+    hdr.request.opcode = PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG;
     memcpy(SPAN_BUFFER(&packet->kh_span), hdr.bytes, sizeof(hdr.bytes));
 
     mcreq_sched_enter(cq);

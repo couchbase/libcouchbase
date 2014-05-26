@@ -89,7 +89,9 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
 
     memcpy(&hdr, SPAN_BUFFER(&oldpkt->kh_span), sizeof(hdr.bytes));
     op = hdr.request.opcode;
-    if (op == CMD_OBSERVE || op == PROTOCOL_BINARY_CMD_STAT || op == CMD_GET_CLUSTER_CONFIG) {
+    if (op == PROTOCOL_BINARY_CMD_OBSERVE ||
+            op == PROTOCOL_BINARY_CMD_STAT ||
+            op == PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG) {
         return MCREQ_KEEP_PACKET;
     }
 

@@ -439,7 +439,7 @@ static void request_config(cccp_provider *cccp)
     protocol_binary_request_set_cluster_config req;
     memset(&req, 0, sizeof(req));
     req.message.header.request.magic = PROTOCOL_BINARY_REQ;
-    req.message.header.request.opcode = CMD_GET_CLUSTER_CONFIG;
+    req.message.header.request.opcode = PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG;
     req.message.header.request.opaque = 0xF00D;
     lcbio_ctx_put(cccp->ioctx, req.bytes, sizeof(req.bytes));
     lcbio_ctx_rwant(cccp->ioctx, 24);

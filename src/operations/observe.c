@@ -260,7 +260,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         mcreq_reserve_value2(pipeline, pkt, rr->body.nbytes);
 
         hdr.request.magic = PROTOCOL_BINARY_REQ;
-        hdr.request.opcode = CMD_OBSERVE;
+        hdr.request.opcode = PROTOCOL_BINARY_CMD_OBSERVE;
         hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
         hdr.request.keylen = 0;
         hdr.request.cas = 0;

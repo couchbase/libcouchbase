@@ -33,7 +33,7 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
 
     if (cmd->lock) {
         extlen = 4;
-        opcode = CMD_GET_LOCKED;
+        opcode = PROTOCOL_BINARY_CMD_GET_LOCKED;
     } else if (cmd->options.exptime) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GAT;
@@ -116,7 +116,7 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
     rd->start = gethrtime();
 
     hdr.request.magic = PROTOCOL_BINARY_REQ;
-    hdr.request.opcode = CMD_UNLOCK_KEY;
+    hdr.request.opcode = PROTOCOL_BINARY_CMD_UNLOCK_KEY;
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr.request.bodylen = htonl((lcb_uint32_t)ntohs(hdr.request.keylen));
     hdr.request.opaque = pkt->opaque;
@@ -257,7 +257,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
         }
 
         memset(&req, 0, sizeof(req));
-        req.request.opcode = CMD_GET_REPLICA;
+        req.request.opcode = PROTOCOL_BINARY_CMD_GET_REPLICA;
         req.request.vbucket = htons((lcb_uint16_t)vbid);
         req.request.keylen = htons((lcb_uint16_t)cmd->key.contig.nbytes);
         mcreq_reserve_key(pl, pkt, sizeof(req.bytes), &cmd->key);

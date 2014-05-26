@@ -55,7 +55,7 @@ lcb_should_retry(lcb_settings *settings, mc_PACKET *pkt, lcb_error_t err)
     case PROTOCOL_BINARY_CMD_APPEND:
     case PROTOCOL_BINARY_CMD_PREPEND:
     case PROTOCOL_BINARY_CMD_DELETE:
-    case CMD_UNLOCK_KEY:
+    case PROTOCOL_BINARY_CMD_UNLOCK_KEY:
         if (hdr.request.cas) {
             return policy & LCB_RETRY_CMDS_SAFE;
         } else {
@@ -67,7 +67,7 @@ lcb_should_retry(lcb_settings *settings, mc_PACKET *pkt, lcb_error_t err)
     case PROTOCOL_BINARY_CMD_DECREMENT:
     case PROTOCOL_BINARY_CMD_TOUCH:
     case PROTOCOL_BINARY_CMD_GAT:
-    case CMD_GET_LOCKED:
+    case PROTOCOL_BINARY_CMD_GET_LOCKED:
     default:
         return 0;
     }

@@ -457,7 +457,7 @@ mcreq_dispatch_response(
     case PROTOCOL_BINARY_CMD_GATQ:
     case PROTOCOL_BINARY_CMD_GET:
     case PROTOCOL_BINARY_CMD_GAT:
-    case CMD_GET_LOCKED:
+    case PROTOCOL_BINARY_CMD_GET_LOCKED:
         INVOKE_OP(H_get);
 
     case PROTOCOL_BINARY_CMD_ADD:
@@ -471,13 +471,13 @@ mcreq_dispatch_response(
     case PROTOCOL_BINARY_CMD_DECREMENT:
         INVOKE_OP(H_arithmetic);
 
-    case CMD_OBSERVE:
+    case PROTOCOL_BINARY_CMD_OBSERVE:
         INVOKE_OP(H_observe);
 
-    case CMD_GET_REPLICA:
+    case PROTOCOL_BINARY_CMD_GET_REPLICA:
         INVOKE_OP(H_getreplica);
 
-    case CMD_UNLOCK_KEY:
+    case PROTOCOL_BINARY_CMD_UNLOCK_KEY:
         INVOKE_OP(H_unlock);
 
     case PROTOCOL_BINARY_CMD_DELETE:
@@ -503,7 +503,7 @@ mcreq_dispatch_response(
         INVOKE_OP(H_noop);
 #endif
 
-    case CMD_GET_CLUSTER_CONFIG:
+    case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
         INVOKE_OP(H_config);
 
     default:
