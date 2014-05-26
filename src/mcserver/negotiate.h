@@ -85,6 +85,15 @@ mc_sasl_get(lcbio_SOCKET *sock);
 const char *
 mc_sasl_getmech(mc_pSASLINFO info);
 
+/**
+ * @brief Determine if a specific protocol feature is supported on the server
+ * @param info info pointer returned via mc_sasl_get()
+ * @param feature A feature ID
+ * @return true if supported, false otherwise
+ */
+int
+mc_sasl_chkfeature(mc_pSASLINFO info, lcb_U16 feature);
+
 /**@}*/
 
 #ifdef __cplusplus
