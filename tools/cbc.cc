@@ -102,54 +102,6 @@ extern "C" {
         exit(EXIT_FAILURE);
     }
 
-    void observe_timer_callback(lcb_timer_t timer,
-                                lcb_t instance,
-                                const void *cookie)
-    {
-        // perform observe query
-        struct cp_params *params = (struct cp_params *)cookie;
-        int idx = 0;
-        lcb_error_t err;
-
-        lcb_observe_cmd_t *items = new lcb_observe_cmd_t[params->keys->size()];
-        lcb_observe_cmd_t* *args = new lcb_observe_cmd_t* [params->keys->size()];
-
-        for (list<string>::iterator iter = params->keys->begin();
-                iter != params->keys->end(); ++iter, ++idx) {
-            args[idx] = &items[idx];
-            memset(&items[idx], 0, sizeof(items[idx]));
-            items[idx].v.v0.key = iter->c_str();
-            items[idx].v.v0.nkey = iter->length();
-        }
-        err = lcb_observe(instance, static_cast<const void *>(params), idx,
-                          args);
-        if (err != LCB_SUCCESS) {
-            // report the issue and exit
-            die(instance, err, "Failed to schedule observe query");
-        }
-
-        delete []items;
-        delete []args;
-        (void)timer;
-    }
-
-    void schedule_observe(lcb_t instance, struct cp_params *params)
-    {
-        lcb_error_t err;
-        if (params->tries > params->max_tries) {
-            die(instance, LCB_ETIMEDOUT, "Exceeded number of tries");
-        }
-        lcb_timer_create(instance, params, params->timeout, 0,
-                         observe_timer_callback, &err);
-        if (err != LCB_SUCCESS) {
-            // report the issue and exit
-            die(instance, err, "Failed to setup timer for observe");
-        }
-        params->timeout *= 2;
-        params->tries++;
-        params->total_persisted = params->total_replicated = 0;
-    }
-
     static void store_callback(lcb_t instance,
                                const void *cookie,
                                lcb_storage_t,
@@ -161,7 +113,24 @@ extern "C" {
             params->sent++;
             // if it is the latest key in the series
             if (params->sent == params->keys->size()) {
-                schedule_observe(instance, params);
+                lcb_durability_opts_t dopts = { 0 };
+                vector<lcb_durability_cmd_t> cmds;
+                vector<const lcb_durability_cmd_t *> cmdp;
+                dopts.v.v0.persist_to = params->need_persisted;
+                dopts.v.v0.replicate_to = params->need_replicated;
+                for (list<string>::iterator ii = params->keys->begin(); ii != params->keys->end(); ++ii) {
+                    lcb_durability_cmd_t cmd = { 0 };
+                    cmd.v.v0.key = ii->c_str();
+                    cmd.v.v0.nkey = ii->size();
+                    cmds.push_back(cmd);
+                }
+                for (size_t ii = 0; ii < cmds.size(); ++ii) {
+                    cmdp.push_back(&cmds[ii]);
+                }
+                error = lcb_durability_poll(instance, NULL, &dopts, cmdp.size(), &cmdp[0]);
+                if (error != LCB_SUCCESS) {
+                    cerr << "Couldn't start durability polling: " << lcb_strerror(instance, error) << std::endl;
+                }
             }
         } else {
             string key((const char *)item->v.v0.key, (size_t)item->v.v0.nkey);
@@ -404,6 +373,21 @@ extern "C" {
         cout.flush();
     }
 
+    static void durability_callback(lcb_t instance, const void *,
+        lcb_error_t err, const lcb_durability_resp_t *resp)
+    {
+        std::string key((const char *)resp->v.v0.key, resp->v.v0.nkey);
+        if (err == LCB_SUCCESS) {
+            err = resp->v.v0.err;
+        }
+        if (err != LCB_SUCCESS) {
+            fprintf(stderr, "Failed to stored '%s'. %s\n", key.c_str(),
+                lcb_strerror(instance, err));
+        }
+
+        fprintf(stderr, "Stored '%s'. CAS: %lx\n", key.c_str(), resp->v.v0.cas);
+    }
+
     static void observe_callback(lcb_t instance,
                                  const void *cookie,
                                  lcb_error_t error,
@@ -420,112 +404,37 @@ extern "C" {
         lcb_time_t ttp = resp->v.v0.ttp;
         lcb_time_t ttr = resp->v.v0.ttr;
 
-        if (cookie) {
-            struct cp_params *params = (struct cp_params *)cookie;
-            if (key) {
-                string key_str = string(static_cast<const char *>(key), nkey);
-                vector<lcb_cas_t> &res = params->results[key_str];
-                if (res.size() == 0) {
-                    res.resize(1);
-                }
-                if (status == LCB_OBSERVE_PERSISTED) {
-                    if (is_master) {
-                        params->total_persisted++;
-                        res[0] = cas;
-                    } else {
-                        params->total_replicated++;
-                        res.push_back(cas);
-                    }
-                } else {
-                    cas = 0;
-                }
-            } else {
-                // check persistence conditions
-                size_t nkeys = params->keys->size();
-                bool ok = true;
-
-                if (params->need_persisted) {
-                    ok &= params->total_persisted == nkeys;
-                }
-                if (params->need_replicated > 0) {
-                    ok &= params->total_replicated == (nkeys * params->need_replicated);
-                }
-                if (ok) {
-                    map<string, lcb_cas_t> done;
-                    for (list<string>::iterator ii = params->keys->begin();
-                            ii != params->keys->end(); ++ii) {
-                        string kk = *ii;
-                        vector<lcb_cas_t> &res = params->results[kk];
-                        lcb_cas_t cc = res[0];
-                        if (cc == 0) {
-                            // the key wasn't persisted on master, but
-                            // replicas might have old version persisted
-                            schedule_observe(instance, params);
-                            return;
-                        } else {
-                            if (params->need_replicated > 0) {
-                                int matching_cas = 0;
-                                for (vector<lcb_cas_t>::iterator jj = res.begin() + 1;
-                                        jj != res.end(); ++jj) {
-                                    if (*jj == cc) {
-                                        matching_cas++;
-                                    }
-                                }
-                                if (matching_cas != params->need_replicated) {
-                                    // some replicas has old value => retry
-                                    schedule_observe(instance, params);
-                                    return;
-                                }
-                            }
-                            done[kk] = cc;
-                        }
-                    }
-                    // all or nothing
-                    if (done.size() == params->keys->size()) {
-                        for (map<string, lcb_cas_t>::iterator ii = done.begin();
-                                ii != done.end(); ++ii) {
-                            cerr << "Stored \"" << ii->first << "\" CAS:" << hex << ii->second << endl;
-                        }
-                    } else {
-                        schedule_observe(instance, params);
-                    }
-                } else {
-                    schedule_observe(instance, params);
-                }
+        if (key == NULL) {
+            return; /* end of packet */
+        }
+        if (error == LCB_SUCCESS) {
+            switch (status) {
+            case LCB_OBSERVE_FOUND:
+                cerr << "FOUND";
+                break;
+            case LCB_OBSERVE_PERSISTED:
+                cerr << "PERSISTED";
+                break;
+            case LCB_OBSERVE_NOT_FOUND:
+                cerr << "NOT_FOUND";
+                break;
+            default:
+                cerr << "UNKNOWN";
+                break;
             }
+            cerr << " \"";
+            cerr.write(static_cast<const char *>(key), nkey);
+            cerr << "\"";
+            if (status == LCB_OBSERVE_FOUND ||
+                    status == LCB_OBSERVE_PERSISTED) {
+                cerr << " CAS:" << hex << cas;
+            }
+            cerr << " IsMaster:" << boolalpha << (is_master != 0)
+                 << dec << " TimeToPersist:" << ttp
+                 << " TimeToReplicate:" << ttr << endl;
         } else {
-            if (key == NULL) {
-                return; /* end of packet */
-            }
-            if (error == LCB_SUCCESS) {
-                switch (status) {
-                case LCB_OBSERVE_FOUND:
-                    cerr << "FOUND";
-                    break;
-                case LCB_OBSERVE_PERSISTED:
-                    cerr << "PERSISTED";
-                    break;
-                case LCB_OBSERVE_NOT_FOUND:
-                    cerr << "NOT_FOUND";
-                    break;
-                default:
-                    cerr << "UNKNOWN";
-                    break;
-                }
-                cerr << " \"";
-                cerr.write(static_cast<const char *>(key), nkey);
-                cerr << "\"";
-                if (status == LCB_OBSERVE_FOUND ||
-                        status == LCB_OBSERVE_PERSISTED) {
-                    cerr << " CAS:" << hex << cas;
-                }
-                cerr << " IsMaster:" << boolalpha << (is_master != 0)
-                     << dec << " TimeToPersist:" << ttp
-                     << " TimeToReplicate:" << ttr << endl;
-            } else {
-                cerr << "Failed to observe: " << lcb_strerror(instance, error) << endl;
-                *err = true;
-            }
+            cerr << "Failed to observe: " << lcb_strerror(instance, error) << endl;
+            *err = true;
         }
     }
 
@@ -1585,6 +1494,7 @@ static void handleCommandLineOptions(enum cbc_command_t cmd, int argc, char **ar
     (void)lcb_set_http_data_callback(instance, data_callback);
     (void)lcb_set_http_complete_callback(instance, complete_callback);
     (void)lcb_set_verbosity_callback(instance, verbosity_callback);
+    (void)lcb_set_durability_callback(instance, durability_callback);
 
     if (config.getTimeout() != 0) {
         lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, config.getTimeout());
