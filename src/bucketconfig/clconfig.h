@@ -472,22 +472,6 @@ void
 lcb_confmon_provider_success(clconfig_provider *provider, clconfig_info *info);
 
 /**
- * @brief Propagate a new list of nodes to the providers
- *
- * This function will attempt to notify each provider that a new list of nodes
- * has been received and that they should be used as configuration sources.
- *
- * @param mon the monitor object
- * @param nodes a list of updated nodes
- * @param config an optional configuration object from which the nodes were
- * derived. May be NULL.
- */
-LIBCOUCHBASE_API
-void lcb_confmon_set_nodes(lcb_confmon *mon,
-    hostlist_t nodes, VBUCKET_CONFIG_HANDLE config);
-
-
-/**
  * @brief Register a listener to be invoked on state changes and events
  *
  * Adds a 'listener' object to be called at each configuration update. The

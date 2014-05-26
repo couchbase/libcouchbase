@@ -40,7 +40,6 @@ TEST_F(Confmon, testBasic)
 
 
     lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
-    lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
     clconfig_provider *http = lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP);
     lcb_clconfig_http_enable(http);
     lcb_clconfig_http_set_nodes(http, instance->usernodes);
@@ -145,7 +144,6 @@ TEST_F(Confmon, testCycle)
     instance->memd_sockpool->tmoidle = 100000;
 
     lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
-    lcb_confmon_set_nodes(mon, instance->usernodes, NULL);
 
     struct listener2 lsn;
     lsn.base.callback = listen_callback2;

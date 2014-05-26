@@ -131,6 +131,8 @@ void lcb_confmon_destroy(lcb_confmon *mon)
 
 static int do_set_next(lcb_confmon *mon, clconfig_info *info, int notify_miss)
 {
+    unsigned ii;
+
     if (mon->config) {
         VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
         VBUCKET_CONFIG_DIFF *diff = vbucket_compare(mon->config->vbc, info->vbc);
@@ -158,7 +160,12 @@ static int do_set_next(lcb_confmon *mon, clconfig_info *info, int notify_miss)
         lcb_clconfig_decref(mon->config);
     }
 
-    lcb_confmon_set_nodes(mon, NULL, info->vbc);
+    for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+        clconfig_provider *cur = mon->all_providers[ii];
+        if (cur && cur->enabled && cur->config_updated) {
+            cur->config_updated(cur, info->vbc);
+        }
+    }
 
     lcb_clconfig_incref(info);
     mon->config = info;
@@ -340,64 +347,6 @@ lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config, clconfig_method_t origin)
     info->vbc = config;
     info->origin = origin;
     return info;
-}
-
-static hostlist_t hosts_from_config(VBUCKET_CONFIG_HANDLE config)
-{
-    hostlist_t ret;
-    int n_nodes = 0;
-    int ii;
-    int srvmax = vbucket_config_get_num_servers(config);
-
-    if (srvmax < 1) {
-        return NULL;
-    }
-
-    ret = hostlist_create();
-    for (ii = 0; ii < srvmax; ii++) {
-        const char *rest;
-        rest = vbucket_config_get_rest_api_server(config, ii);
-        if (hostlist_add_stringz(ret, rest, LCB_CONFIG_HTTP_PORT) == LCB_SUCCESS) {
-            n_nodes++;
-        }
-    }
-
-    if (!n_nodes) {
-        hostlist_destroy(ret);
-    }
-
-    return ret;
-
-}
-
-void lcb_confmon_set_nodes(lcb_confmon *mon,
-                           hostlist_t nodes,
-                           VBUCKET_CONFIG_HANDLE config)
-{
-    lcb_size_t ii;
-    int is_allocated = 0;
-
-    if (nodes == NULL) {
-        nodes = hosts_from_config(config);
-        if (nodes) {
-            is_allocated = 1;
-        }
-    }
-
-    for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
-        clconfig_provider *provider = mon->all_providers[ii];
-        if (provider == NULL || provider->enabled == 0) {
-            continue;
-        }
-        if (provider->config_updated == NULL) {
-            continue;
-        }
-        provider->config_updated(provider, config);
-    }
-
-    if (is_allocated) {
-        hostlist_destroy(nodes);
-    }
 }
 
 void lcb_confmon_add_listener(lcb_confmon *mon, clconfig_listener *listener)
