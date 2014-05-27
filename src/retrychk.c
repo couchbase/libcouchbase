@@ -4,7 +4,7 @@ int
 lcb_should_retry(lcb_settings *settings, mc_PACKET *pkt, lcb_error_t err)
 {
     lcb_RETRYCMDOPTS policy;
-    lcb_RETRYCMDOPTS mode;
+    lcb_RETRYMODEOPTS mode;
     protocol_binary_request_header hdr;
 
     if (err == LCB_ETIMEDOUT /* can't exceed */ ||
