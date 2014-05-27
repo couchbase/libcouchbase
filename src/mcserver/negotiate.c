@@ -11,15 +11,15 @@
 #define LOGARGS(ctx, lvl) \
     ctx->inner->settings, "negotiation", LCB_LOG_##lvl, __FILE__, __LINE__
 
-static void cleanup_pending(mc_pSASLREQ);
-static void cleanup_negotiated(mc_pSASLINFO);
-static void bail_pending(mc_pSASLREQ sreq);
+static void cleanup_pending(mc_pSESSREQ);
+static void cleanup_negotiated(mc_pSESSINFO);
+static void bail_pending(mc_pSESSREQ sreq);
 
 /**
  * Inner negotiation structure which is maintained as part of a 'protocol
  * context'.
  */
-struct mc_SASLINFO {
+struct mc_SESSINFO {
     lcbio_PROTOCTX base;
     cbsasl_conn_t *sasl;
     char *mech;
@@ -39,19 +39,19 @@ struct mc_SASLINFO {
  * of the request for negotiation and is deleted once negotiation has
  * completed (or failed).
  */
-typedef struct mc_SASLREQ {
+typedef struct mc_SESSREQ {
     lcbio_CTX *ctx;
     lcbio_CONNDONE_cb cb;
     void *data;
     lcbio_pTIMER timer;
     lcb_error_t err;
-    mc_pSASLINFO inner;
+    mc_pSESSINFO inner;
 } neg_PENDING;
 
 static int
 sasl_get_username(void *context, int id, const char **result, unsigned int *len)
 {
-    struct mc_SASLINFO *ctx = context;
+    struct mc_SESSINFO *ctx = context;
     if (!context || !result || (id != CBSASL_CB_USER && id != CBSASL_CB_AUTHNAME)) {
         return SASL_BADPARAM;
     }
@@ -68,7 +68,7 @@ static int
 sasl_get_password(cbsasl_conn_t *conn, void *context, int id,
                   cbsasl_secret_t **psecret)
 {
-    struct mc_SASLINFO *ctx = context;
+    struct mc_SESSINFO *ctx = context;
     if (!conn || ! psecret || id != CBSASL_CB_PASS || ctx == NULL) {
         return SASL_BADPARAM;
     }
@@ -78,7 +78,7 @@ sasl_get_password(cbsasl_conn_t *conn, void *context, int id,
 }
 
 static lcb_error_t
-setup_sasl_params(struct mc_SASLINFO *ctx)
+setup_sasl_params(struct mc_SESSINFO *ctx)
 {
     int ii;
     cbsasl_callback_t *callbacks = ctx->sasl_callbacks;
@@ -129,7 +129,7 @@ close_cb(lcbio_SOCKET *s, int reusable, void *arg)
 }
 
 static void
-negotiation_success(mc_pSASLREQ sreq)
+negotiation_success(mc_pSESSREQ sreq)
 {
     /** Dislodge the connection, and return it back to the caller */
     lcbio_SOCKET *s;
@@ -147,14 +147,14 @@ negotiation_success(mc_pSASLREQ sreq)
 }
 
 static void
-bail_pending(mc_pSASLREQ sreq)
+bail_pending(mc_pSESSREQ sreq)
 {
     sreq->cb(NULL, sreq->data, sreq->err, 0);
     cleanup_pending(sreq);
 }
 
 static void
-set_error_ex(mc_pSASLREQ sreq, lcb_error_t err, const char *msg)
+set_error_ex(mc_pSESSREQ sreq, lcb_error_t err, const char *msg)
 {
     lcb_log(LOGARGS(sreq, ERR), "Received error for SASL req %p: 0x%x, %s", sreq, err, msg);
     if (sreq->err == LCB_SUCCESS) {
@@ -165,7 +165,7 @@ set_error_ex(mc_pSASLREQ sreq, lcb_error_t err, const char *msg)
 static void
 timeout_handler(void *arg)
 {
-    mc_pSASLREQ sreq = arg;
+    mc_pSESSREQ sreq = arg;
     set_error_ex(sreq, LCB_ETIMEDOUT, "Negotiation timed out");
     bail_pending(sreq);
 }
@@ -174,12 +174,12 @@ timeout_handler(void *arg)
  * Called to retrive the mechlist from the packet.
  */
 static int
-set_chosen_mech(mc_pSASLREQ sreq, lcb_string *mechlist, const char **data,
+set_chosen_mech(mc_pSESSREQ sreq, lcb_string *mechlist, const char **data,
                 unsigned int *ndata)
 {
     cbsasl_error_t saslerr;
     const char *chosenmech;
-    mc_pSASLINFO ctx = sreq->inner;
+    mc_pSESSINFO ctx = sreq->inner;
 
     lcb_assert(sreq->inner);
     if (ctx->settings->sasl_mech_force) {
@@ -219,7 +219,7 @@ set_chosen_mech(mc_pSASLREQ sreq, lcb_string *mechlist, const char **data,
 static int
 send_sasl_auth(neg_PENDING *pend, const char *sasl_data, unsigned ndata)
 {
-    mc_pSASLINFO ctx = pend->inner;
+    mc_pSESSINFO ctx = pend->inner;
     protocol_binary_request_no_extras req;
     protocol_binary_request_header *hdr = &req.message.header;
     memset(&req, 0, sizeof(req));
@@ -238,14 +238,14 @@ send_sasl_auth(neg_PENDING *pend, const char *sasl_data, unsigned ndata)
 }
 
 static int
-send_sasl_step(mc_pSASLREQ sreq, packet_info *packet)
+send_sasl_step(mc_pSESSREQ sreq, packet_info *packet)
 {
     protocol_binary_request_no_extras req;
     protocol_binary_request_header *hdr = &req.message.header;
     cbsasl_error_t saslerr;
     const char *step_data;
     unsigned int ndata;
-    mc_pSASLINFO ctx = sreq->inner;
+    mc_pSESSINFO ctx = sreq->inner;
 
     saslerr = cbsasl_client_step(
             ctx->sasl, packet->payload, PACKET_NBODY(packet), NULL, &step_data,
@@ -271,7 +271,7 @@ send_sasl_step(mc_pSASLREQ sreq, packet_info *packet)
 }
 
 static int
-send_hello(mc_pSASLREQ sreq)
+send_hello(mc_pSESSREQ sreq)
 {
     protocol_binary_request_no_extras req;
     protocol_binary_request_header *hdr = &req.message.header;
@@ -302,7 +302,7 @@ send_hello(mc_pSASLREQ sreq)
 }
 
 static int
-parse_hello(mc_pSASLREQ sreq, packet_info *packet)
+parse_hello(mc_pSESSREQ sreq, packet_info *packet)
 {
     /* some caps */
     const char *cur;
@@ -333,7 +333,7 @@ typedef enum {
 static void
 handle_read(lcbio_CTX *ioctx, unsigned nb)
 {
-    mc_pSASLREQ sreq = lcbio_ctx_data(ioctx);
+    mc_pSESSREQ sreq = lcbio_ctx_data(ioctx);
     packet_info info;
     unsigned required;
     uint16_t status;
@@ -449,13 +449,13 @@ handle_read(lcbio_CTX *ioctx, unsigned nb)
 static void
 handle_ioerr(lcbio_CTX *ctx, lcb_error_t err)
 {
-    mc_pSASLREQ sreq = lcbio_ctx_data(ctx);
+    mc_pSESSREQ sreq = lcbio_ctx_data(ctx);
     set_error_ex(sreq, err, "IO Error");
     bail_pending(sreq);
 }
 
 static void
-cleanup_negotiated(mc_pSASLINFO ctx)
+cleanup_negotiated(mc_pSESSINFO ctx)
 {
     if (ctx->sasl) {
         cbsasl_dispose(&ctx->sasl);
@@ -467,7 +467,7 @@ cleanup_negotiated(mc_pSASLINFO ctx)
 }
 
 static void
-cleanup_pending(mc_pSASLREQ sreq)
+cleanup_pending(mc_pSESSREQ sreq)
 {
     if (sreq->inner) {
         cleanup_negotiated(sreq->inner);
@@ -485,13 +485,13 @@ cleanup_pending(mc_pSASLREQ sreq)
 }
 
 void
-mc_sasl_cancel(mc_pSASLREQ sreq)
+mc_sessreq_cancel(mc_pSESSREQ sreq)
 {
     cleanup_pending(sreq);
 }
 
-mc_pSASLREQ
-mc_sasl_start(lcbio_SOCKET *sock, lcb_settings *settings,
+mc_pSESSREQ
+mc_sessreq_start(lcbio_SOCKET *sock, lcb_settings *settings,
               uint32_t tmo, lcbio_CONNDONE_cb callback, void *data)
 {
     lcb_error_t err;
@@ -499,8 +499,8 @@ mc_sasl_start(lcbio_SOCKET *sock, lcb_settings *settings,
     protocol_binary_request_no_extras req;
     const lcb_host_t *curhost;
     struct lcbio_NAMEINFO nistrs;
-    mc_pSASLREQ sreq;
-    mc_pSASLINFO sasl;
+    mc_pSESSREQ sreq;
+    mc_pSESSINFO sasl;
     lcbio_EASYPROCS procs;
 
     if ((sreq = calloc(1, sizeof(*sreq))) == NULL) {
@@ -527,7 +527,7 @@ mc_sasl_start(lcbio_SOCKET *sock, lcb_settings *settings,
         lcbio_timer_rearm(sreq->timer, tmo);
     }
 
-    sasl->base.id = LCBIO_PROTOCTX_SASL;
+    sasl->base.id = LCBIO_PROTOCTX_SESSINFO;
     sasl->base.dtor = (void (*)(struct lcbio_PROTOCTX *))cleanup_negotiated;
     sasl->settings = settings;
 
@@ -561,20 +561,20 @@ mc_sasl_start(lcbio_SOCKET *sock, lcb_settings *settings,
     return sreq;
 }
 
-mc_pSASLINFO
-mc_sasl_get(lcbio_SOCKET *sock)
+mc_pSESSINFO
+mc_sess_get(lcbio_SOCKET *sock)
 {
-    return (void *)lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SASL);
+    return (void *)lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SESSINFO);
 }
 
 const char *
-mc_sasl_getmech(mc_pSASLINFO info)
+mc_sess_get_saslmech(mc_pSESSINFO info)
 {
     return info->mech;
 }
 
 int
-mc_sasl_chkfeature(mc_pSASLINFO info, lcb_U16 feature)
+mc_sess_chkfeature(mc_pSESSINFO info, lcb_U16 feature)
 {
     if (feature > MEMCACHED_TOTAL_HELLO_FEATURES) {
         return 0;

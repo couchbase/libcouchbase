@@ -194,7 +194,7 @@ lcbio_shutdown(lcbio_SOCKET *);
  */
 
 typedef enum {
-    LCBIO_PROTOCTX_SASL = 1,
+    LCBIO_PROTOCTX_SESSINFO = 1,
     LCBIO_PROTOCTX_POOL,
     LCBIO_PROTOCTX_HOSTINFO,
     LCBIO_PROTOCTX_SSL

@@ -180,9 +180,9 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         sock = server->connctx->sock;
 
         if (si->version == 1 && sock) {
-            mc_pSASLINFO sasl = mc_sasl_get(server->connctx->sock);
+            mc_pSESSINFO sasl = mc_sess_get(server->connctx->sock);
             if (sasl) {
-                si->v.v1.sasl_mech = mc_sasl_getmech(sasl);
+                si->v.v1.sasl_mech = mc_sess_get_saslmech(sasl);
             }
         }
 

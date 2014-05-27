@@ -20,11 +20,11 @@ extern "C" {
  */
 
 struct lcb_settings_st;
-typedef struct mc_SASLREQ *mc_pSASLREQ;
-typedef struct mc_SASLINFO *mc_pSASLINFO;
+typedef struct mc_SESSREQ *mc_pSESSREQ;
+typedef struct mc_SESSINFO *mc_pSESSINFO;
 
 /**
- * @brief Start SASL negotiation on a connected socket
+ * @brief Start negotiation on a connected socket
  *
  * This will start negotiation on the socket. Once complete (or an error has
  * taken place) the `callback` will be invoked with the result.
@@ -35,13 +35,13 @@ typedef struct mc_SASLINFO *mc_pSASLINFO;
  * @param tmo Time in microseconds to wait until the negotiation is done
  * @param callback A callback to invoke when a result has been received
  * @param data User-defined pointer passed to the callback
- * @return A new handle which may be cancelled via mc_sasl_cancel(). As with
+ * @return A new handle which may be cancelled via mc_sessreq_cancel(). As with
  * other cancellable requests, once this handle is cancelled a callback will
  * not be received for it, and once the callback is received the handle may not
  * be cancelled as it will point to invalid memory.
  *
  * Once the socket has been negotiated successfuly, you may then use the
- * mc_sasl_get() function to query the socket about various negotiation aspects
+ * mc_sess_get() function to query the socket about various negotiation aspects
  *
  * @code{.c}
  * lcbio_CONNREQ creq;
@@ -53,8 +53,8 @@ typedef struct mc_SASLINFO *mc_pSASLINFO;
  * @see lcbio_connreq_cancel()
  * @see LCBIO_CONNREQ_MKGENERIC
  */
-mc_pSASLREQ
-mc_sasl_start(
+mc_pSESSREQ
+mc_sessreq_start(
         lcbio_SOCKET *sock, struct lcb_settings_st *settings,
         uint32_t tmo, lcbio_CONNDONE_cb callback, void *data);
 
@@ -63,7 +63,7 @@ mc_sasl_start(
  * @param handle The handle to cancel
  */
 void
-mc_sasl_cancel(mc_pSASLREQ handle);
+mc_sessreq_cancel(mc_pSESSREQ handle);
 
 /**
  * @brief Get an opaque handle representing the negotiated state of the socket
@@ -73,8 +73,8 @@ mc_sasl_cancel(mc_pSASLREQ handle);
  *
  * @see mc_sasl_getmech()
  */
-mc_pSASLINFO
-mc_sasl_get(lcbio_SOCKET *sock);
+mc_pSESSINFO
+mc_sess_get(lcbio_SOCKET *sock);
 
 /**
  * @brief Get the mechanism employed for authentication
@@ -83,7 +83,7 @@ mc_sasl_get(lcbio_SOCKET *sock);
  * `CRAM-MD5`.
  */
 const char *
-mc_sasl_getmech(mc_pSASLINFO info);
+mc_sess_get_saslmech(mc_pSESSINFO info);
 
 /**
  * @brief Determine if a specific protocol feature is supported on the server
@@ -92,7 +92,7 @@ mc_sasl_getmech(mc_pSASLINFO info);
  * @return true if supported, false otherwise
  */
 int
-mc_sasl_chkfeature(mc_pSASLINFO info, lcb_U16 feature);
+mc_sess_chkfeature(mc_pSESSINFO info, lcb_U16 feature);
 
 /**@}*/
 

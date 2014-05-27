@@ -249,12 +249,12 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
         return;
     }
 
-    if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SASL) == NULL) {
-        mc_pSASLREQ sreq;
-        sreq = mc_sasl_start(
+    if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SESSINFO) == NULL) {
+        mc_pSESSREQ sreq;
+        sreq = mc_sessreq_start(
                 sock, settings, settings->config_node_timeout, on_connected,
                 cccp);
-        LCBIO_CONNREQ_MKGENERIC(&cccp->creq, sreq, mc_sasl_cancel);
+        LCBIO_CONNREQ_MKGENERIC(&cccp->creq, sreq, mc_sessreq_cancel);
         return;
     }
 
