@@ -946,8 +946,73 @@ typedef enum {
  */
 #define LCB_CNTL_HTCONFIG_URLTYPE 0x25
 
+
+/**
+ * Options for how to handle compression
+ */
+typedef enum {
+    /** Do not perform compression in any direction. Data which is received
+     * compressed via the server will be indicated as such by having the
+     * `LCB_VALUE_F_SNAPPYCOMP` flag set in the lcb_GETRESPv0::datatype field */
+    LCB_COMPRESS_NONE = 0x00,
+
+    /**
+     * Decompress incoming data, if the data has been compressed at the server.
+     * If this is set, the `datatype` field in responses will always be stripped
+     * of the `LCB_VALUE_F_SNAPPYCOMP` flag.
+     */
+    LCB_COMPRESS_IN = 1 << 0,
+
+    /**
+     * Compress outgoing data. Note that if the `datatype` field contains the
+     * `LCB_VALUE_F_SNAPPYCOMP` flag, then the data will never be compressed
+     * as it is assumed that it is already compressed.
+     */
+    LCB_COMPRESS_OUT = 1 << 1,
+
+
+    LCB_COMPRESS_INOUT = (LCB_COMPRESS_IN|LCB_COMPRESS_OUT),
+
+    /**
+     * By default the library will send a HELLO command to the server to
+     * determine whether compression is supported or not. Because commands may
+     * be pipelined prior to the scheduing of the HELLO command it is possible
+     * that the first few commands may not be compressed when schedule due to
+     * the library not yet having negotiated settings with the server. Setting
+     * this flag will force the client to assume that all servers support
+     * compression despite a HELLO not having been intially negotiated.
+     */
+    LCB_COMPRESS_FORCE = 1 << 2
+} lcb_COMPRESSOPTS;
+
+/**
+ * @committed
+ *
+ * @brief Control how the library handles compression and deflation to and from
+ * the server.
+ *
+ * Starting in Couchbase Server 3.0, compression can optionally be applied to
+ * incoming and outcoming data. For incoming (i.e. `GET` requests) the data
+ * may be received in compressed format and then allow the client to inflate
+ * the data upon receipt. For outgoing (i.e. `SET` requests) the data may be
+ * compressed on the client side and then be stored and recognized on the
+ * server itself.
+ *
+ * The default behavior is to transparently handle compression for both incoming
+ * and outgoing data.
+ *
+ * Note that if the lcb_STORECMDv0::datatype field is set with compression
+ * flags, the data will _never_ be compressed by the library as this is an
+ * indication that it is _already_ compressed.
+ *
+ * Mode|Arg
+ * ----|----
+ * Set, Get | `lcb_COMPRESSOPTS *`
+ */
+#define LCB_CNTL_COMPRESSION_OPTS 0x26
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x25
+#define LCB_CNTL__MAX                    0x27
 /**@}*/
 
 #ifdef __cplusplus

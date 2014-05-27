@@ -277,7 +277,10 @@ send_hello(mc_pSASLREQ sreq)
     protocol_binary_request_header *hdr = &req.message.header;
     unsigned ii;
     static const char client_id[] = LCB_VERSION_STRING;
-    lcb_U16 features[] = { PROTOCOL_BINARY_FEATURE_TLS };
+    lcb_U16 features[] = {
+            PROTOCOL_BINARY_FEATURE_TLS,
+            PROTOCOL_BINARY_FEATURE_DATATYPE };
+
     lcb_SIZE nfeatures = sizeof features / sizeof *features;
     lcb_SIZE nclistr = strlen(client_id);
 
@@ -309,7 +312,7 @@ parse_hello(mc_pSASLREQ sreq, packet_info *packet)
         lcb_U16 tmp;
         memcpy(&tmp, cur, sizeof(tmp));
         tmp = ntohs(tmp);
-        lcb_log(LOGARGS(sreq, DEBUG), "Found feature 0x%x", tmp);
+        lcb_log(LOGARGS(sreq, DEBUG), "Found feature 0x%x (%s)", tmp, protocol_feature_2_text(tmp));
         sreq->inner->features[tmp] = 1;
     }
     return 0;

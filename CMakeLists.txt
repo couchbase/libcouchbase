@@ -155,7 +155,7 @@ MACRO(LCB_UTIL tgt)
 ENDMACRO()
 
 ADD_LIBRARY(netbuf STATIC src/netbuf/netbuf.c)
-ADD_LIBRARY(mcreq STATIC src/mc/mcreq.c)
+ADD_LIBRARY(mcreq STATIC src/mc/mcreq.c src/mc/compress.c)
 ADD_LIBRARY(netbuf-malloc STATIC src/netbuf/netbuf.c)
 ADD_LIBRARY(rdb STATIC
     src/rdb/rope.c src/rdb/bigalloc.c src/rdb/chunkalloc.c
@@ -233,16 +233,16 @@ SET_TARGET_PROPERTIES(couchbase
 
 IF(NOT LCB_NO_SNAPPY)
     ADD_SUBDIRECTORY(contrib/snappy)
-    SET(lcb_snappy_link lcbsnappy)
+    SET(LCB_SNAPPY_LINK lcbsnappy)
 ELSE()
-    SET(lcb_snappy_link "")
+    SET(LCB_SNAPPY_LINK "")
 ENDIF()
 
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
 TARGET_LINK_LIBRARIES(couchbase
     couchbase_select couchbase_utils vbucket mcreq netbuf cbsasl lcbio rdb lcbht
-    ${lcb_plat_libs} ${lcb_ssl_libs} ${lcb_snappy_link})
+    ${lcb_plat_libs} ${lcb_ssl_libs} ${LCB_SNAPPY_LINK})
 
 
 IF(NOT LCB_NO_TESTS)

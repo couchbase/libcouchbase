@@ -60,6 +60,7 @@
 #define LCB_DEFAULT_NETRETRY LCB_RETRY_CMDS_ALL
 #define LCB_DEFAULT_NMVRETRY LCB_RETRY_CMDS_ALL
 #define LCB_DEFAULT_HTCONFIG_URLTYPE LCB_HTCONFIG_URLTYPE_TRYALL
+#define LCB_DEFAULT_COMPRESSOPTS LCB_COMPRESS_INOUT
 
 #include "config.h"
 #include <libcouchbase/couchbase.h>
@@ -77,6 +78,7 @@ struct lcbio_SSLCTX;
  */
 typedef struct lcb_settings_st {
     unsigned int iid;
+    lcb_COMPRESSOPTS compressopts;
     lcb_uint32_t views_timeout;
     lcb_uint32_t http_timeout;
     lcb_uint32_t durability_timeout;

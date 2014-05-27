@@ -37,6 +37,9 @@ typedef struct lcb_server_st {
     /** Whether mcserver_close() was invoked on this server */
     int closed;
 
+    /** Whether compression is supported */
+    int compsupport;
+
     /** IO/Operation timer */
     lcbio_pTIMER io_timer;
 

@@ -1,4 +1,5 @@
 #include "mcreq.h"
+#include "compress.h"
 #include "sllist-inl.h"
 #include "internal.h"
 
@@ -283,13 +284,41 @@ mcreq_dup_packet(const mc_PACKET *src)
                 offset += iov[ii].iov_len;
             }
         } else {
-            nvdata = src->u_value.single.size;
-            vdata = malloc(nvdata);
-            memcpy(vdata, SPAN_BUFFER(&src->u_value.single), nvdata);
+            protocol_binary_request_header hdr;
+            const nb_SPAN *origspan = &src->u_value.single;
+            mcreq_read_hdr(dst, &hdr);
+
+            if (hdr.request.datatype & PROTOCOL_BINARY_DATATYPE_COMPRESSED) {
+                /* For compressed payloads we need to uncompress it first
+                 * because it may be forwarded to a server without compression.
+                 * TODO: might be more clever to check a setting flag somewhere
+                 * and see if we should do this. */
+
+                lcb_SIZE n_inflated;
+                const void *inflated;
+                int rv;
+
+                vdata = NULL;
+                rv = mcreq_inflate_value(SPAN_BUFFER(origspan), origspan->size,
+                    &inflated, &n_inflated, (void**)&vdata);
+
+                assert(vdata == inflated);
+
+                if (rv != 0) {
+                    return NULL;
+                }
+                nvdata = n_inflated;
+                hdr.request.datatype &= ~PROTOCOL_BINARY_DATATYPE_COMPRESSED;
+                mcreq_write_hdr(dst, &hdr);
+
+            } else {
+                nvdata = origspan->size;
+                vdata = malloc(nvdata);
+                memcpy(vdata, SPAN_BUFFER(origspan), nvdata);
+            }
             CREATE_STANDALONE_SPAN(&dst->u_value.single, vdata, nvdata);
         }
     }
-
     return dst;
 }
 

@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 #include "internal.h"
+#include "mc/compress.h"
 
 static lcb_size_t
 get_value_size(mc_PACKET *packet)
@@ -51,6 +52,29 @@ get_esize_and_opcode(
     return LCB_SUCCESS;
 }
 
+
+static int
+can_compress(lcb_t instance, const mc_PIPELINE *pipeline,
+    const lcb_CMDSTORE *cmd)
+{
+    mc_SERVER *server = (mc_SERVER *)pipeline;
+    int compressopts = LCBT_SETTING(instance, compressopts);
+
+    if (cmd->value.vtype != LCB_KV_COPY) {
+        return 0;
+    }
+    if ((compressopts & LCB_COMPRESS_OUT) == 0) {
+        return 0;
+    }
+    if (server->compsupport == 0 && (compressopts & LCB_COMPRESS_FORCE) == 0) {
+        return 0;
+    }
+    if (cmd->datatype & LCB_VALUE_F_SNAPPYCOMP) {
+        return 0;
+    }
+    return 1;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
@@ -60,6 +84,7 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
     mc_REQDATA *rdata;
     mc_CMDQUEUE *cq = &instance->cmdq;
     int hsize;
+    int should_compress = 0;
     lcb_error_t err;
 
     protocol_binary_request_set scmd;
@@ -81,7 +106,16 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
         return err;
     }
 
-    mcreq_reserve_value(pipeline, packet, &cmd->value);
+    should_compress = can_compress(instance, pipeline, cmd);
+    if (should_compress) {
+        int rv = mcreq_compress_value(pipeline, packet, &cmd->value.u_buf.contig);
+        if (rv != 0) {
+            mcreq_release_packet(pipeline, packet);
+            return LCB_CLIENT_ENOMEM;
+        }
+    } else {
+        mcreq_reserve_value(pipeline, packet, &cmd->value);
+    }
 
     rdata = &packet->u_rdata.reqdata;
     rdata->cookie = cookie;
@@ -92,6 +126,14 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
     hdr->request.magic = PROTOCOL_BINARY_REQ;
     hdr->request.cas = cmd->options.cas;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+
+    if (should_compress || (cmd->datatype & LCB_VALUE_F_SNAPPYCOMP)) {
+        hdr->request.datatype |= PROTOCOL_BINARY_DATATYPE_COMPRESSED;
+    }
+    if (cmd->datatype & LCB_VALUE_F_JSON) {
+        hdr->request.datatype |= PROTOCOL_BINARY_DATATYPE_JSON;
+    }
+
     hdr->request.opaque = packet->opaque;
     hdr->request.bodylen = htonl(
             hdr->request.extlen + ntohs(hdr->request.keylen)

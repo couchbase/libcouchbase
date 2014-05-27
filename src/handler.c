@@ -2,6 +2,7 @@
 #include "internal.h"
 #include "packetutils.h"
 #include "mc/mcreq.h"
+#include "mc/compress.h"
 
 LIBCOUCHBASE_API
 lcb_error_t
@@ -112,6 +113,34 @@ if (! (req->flags & MCREQ_F_INVOKED)) { \
     cb args; \
 }
 
+/**
+ * Optionally decompress an incoming payload.
+ * @param o The instance
+ * @param resp The response received
+ * @param[out] bytes pointer to the final payload
+ * @param[out] nbytes pointer to the size of the final payload
+ * @param[out] freeptr pointer to free. This should be initialized to `NULL`.
+ * If temporary dynamic storage is required this will be set to the allocated
+ * pointer upon return. Otherwise it will be set to NULL. In any case it must
+ */
+static void
+maybe_decompress(lcb_t o, const packet_info *resp,
+    const void **bytes, lcb_SIZE *nbytes, void **freeptr)
+{
+    if (!(LCBT_SETTING(o, compressopts) & LCB_COMPRESS_IN)) {
+        return;
+    }
+    if ((PACKET_DATATYPE(resp) & PROTOCOL_BINARY_DATATYPE_COMPRESSED) == 0) {
+        return;
+    }
+    if (!PACKET_NVALUE(resp)) {
+        return;
+    }
+
+    mcreq_inflate_value(PACKET_VALUE(resp), PACKET_NVALUE(resp),
+        bytes, nbytes, freeptr);
+}
+
 static void
 H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
       lcb_error_t immerr)
@@ -119,6 +148,7 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     lcb_error_t rc;
     lcb_t o;
     lcb_get_resp_t resp;
+    void *freeptr = NULL;
 
     o = pipeline->parent->instance;
     MK_RESPKEY(&resp, 0, request);
@@ -142,8 +172,10 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.v.v0.flags = 0;
     }
 
+    maybe_decompress(o, response, &resp.v.v0.bytes, &resp.v.v0.nbytes, &freeptr);
     INVOKE_CALLBACK(request, o->callbacks.get,
                     (o, MCREQ_PKT_COOKIE(request), rc, &resp));
+    free(freeptr);
 }
 
 static void
@@ -153,6 +185,7 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     lcb_error_t rc;
     lcb_get_resp_t resp;
     lcb_t instance = pipeline->parent->instance;
+    void *freeptr = NULL;
 
     MK_RESPKEY(&resp, 0, request);
     MK_ERROR(instance, rc, response, immerr);
@@ -166,8 +199,10 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.v.v0.bytes = PACKET_VALUE(response);
         resp.v.v0.nbytes = PACKET_NVALUE(response);
     }
-
+    maybe_decompress(instance,
+        response, &resp.v.v0.bytes, &resp.v.v0.nbytes, &freeptr);
     request->u_rdata.exdata->callback(pipeline, request, rc, &resp);
+    free(freeptr);
 }
 
 static void

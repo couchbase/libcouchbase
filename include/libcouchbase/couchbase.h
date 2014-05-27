@@ -715,6 +715,18 @@ typedef struct lcb_get_cmd_st {
     #endif
 } lcb_get_cmd_t;
 
+/** Value is JSON */
+#define LCB_DATATYPE_JSON 0x01
+
+/**
+ * @brief Flags which can be returned int the the lcb_GETRESPv0::datatype
+ * field
+ */
+typedef enum {
+    LCB_VALUE_RAW = 0x00, /**< Value is raw bytes */
+    LCB_VALUE_F_JSON = 0x01, /**< Value is JSON */
+    LCB_VALUE_F_SNAPPYCOMP = 0x02 /**< Value is compressed as Snappy */
+} lcb_VALUEFLAGS;
 /**
  * @brief Inner response structure for a get operation
  */
@@ -725,7 +737,7 @@ typedef struct {
     lcb_size_t nbytes;
     lcb_uint32_t flags; /**< Server side flags stored with the item */
     lcb_cas_t cas; /**< CAS representing current mutation state of the item */
-    lcb_datatype_t datatype; /**< Currently unused */
+    lcb_U8 datatype; /**< Currently unused */
 } lcb_GETRESPv0;
 
 /**
@@ -1127,7 +1139,7 @@ typedef struct {
      * an @ref LCB_KEY_EEXISTS error
      */
     lcb_cas_t cas;
-    lcb_datatype_t datatype; /**< Currently unused */
+    lcb_U8 datatype; /**< See lcb_VALUEFLAGS */
     lcb_time_t exptime; /**< Expiration for the item. `0` means never expire */
     lcb_storage_t operation; /**< **Mandatory**. Mutation type */
     const void *hashkey;
