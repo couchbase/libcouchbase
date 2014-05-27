@@ -386,7 +386,6 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
 {
     mc_SERVER *server = data;
     lcbio_EASYPROCS procs;
-    lcb_settings *settings = server->settings;
     uint32_t tmo;
     mc_pSESSINFO sessinfo = NULL;
     LCBIO_CONNREQ_CLEAR(&server->connreq);
@@ -399,19 +398,13 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
 
     lcb_assert(sock);
 
-    if ((err = lcbio_sslify_if_needed(sock, settings)) != LCB_SUCCESS) {
-        mcserver_socket_error(server, err);
-        return;
-    }
-
     /** Do we need sasl? */
     sessinfo = mc_sess_get(sock);
     if (sessinfo == NULL) {
         mc_pSESSREQ sreq;
-        lcb_log(LOGARGS(server, INFO), "SASL Not yet negotiated. Negotiating");
-        sreq = mc_sessreq_start(
-                sock, server->settings, MCSERVER_TIMEOUT(server),
-                on_connected, data);
+        lcb_log(LOGARGS(server, INFO), "Session not yet negotiated. Negotiating");
+        sreq = mc_sessreq_start(sock, server->settings, MCSERVER_TIMEOUT(server),
+            on_connected, data);
         LCBIO_CONNREQ_MKGENERIC(&server->connreq, sreq, mc_sessreq_cancel);
         return;
     } else {

@@ -244,11 +244,6 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
         return;
     }
 
-    if ((err = lcbio_sslify_if_needed(sock, settings)) != LCB_SUCCESS) {
-        mcio_error(cccp, err);
-        return;
-    }
-
     if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SESSINFO) == NULL) {
         mc_pSESSREQ sreq;
         sreq = mc_sessreq_start(

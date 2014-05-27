@@ -5,6 +5,7 @@
 #include "settings.h"
 #include <lcbio/lcbio.h>
 #include <lcbio/timer-ng.h>
+#include <lcbio/ssl.h>
 #include <cbsasl/cbsasl.h>
 #include "negotiate.h"
 
@@ -519,8 +520,15 @@ mc_sessreq_start(lcbio_SOCKET *sock, lcb_settings *settings,
     sreq->cb = callback;
     sreq->data = data;
     sreq->inner = sasl;
-    sreq->ctx = lcbio_ctx_new(sock, sreq, &procs);
     sreq->timer = lcbio_timer_new(sock->io, sreq, timeout_handler);
+
+    if ((err = lcbio_sslify_if_needed(sock, settings)) != LCB_SUCCESS) {
+        set_error_ex(sreq, err, "Couldn't initialize SSL on socket");
+        lcbio_async_signal(sreq->timer);
+        return sreq;
+    }
+
+    sreq->ctx = lcbio_ctx_new(sock, sreq, &procs);
     sreq->ctx->subsys = "sasl";
 
     if (tmo) {
