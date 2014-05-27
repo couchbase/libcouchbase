@@ -36,8 +36,7 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
     memset(&cropts, 0, sizeof(cropts));
 
     MockEnvironment::getInstance()->makeConnectParams(cropts, NULL);
-    err = lcb_create(&instance, &cropts);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    doLcbCreate(&instance, &cropts, MockEnvironment::getInstance());
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIGCACHE, (void *)filename);
     ASSERT_EQ(LCB_SUCCESS, err);
 
@@ -56,7 +55,7 @@ TEST_F(ConfigCacheUnitTest, testConfigCache)
 
     // now try another one
     lcb_destroy(instance);
-    err = lcb_create(&instance, &cropts);
+    doLcbCreate(&instance, &cropts, MockEnvironment::getInstance());
     ASSERT_EQ(LCB_SUCCESS, err);
     err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CONFIGCACHE, (void *)filename);
     ASSERT_EQ(LCB_SUCCESS, err);

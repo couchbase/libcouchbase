@@ -318,6 +318,7 @@ public:
 
     MockEnvironment(const char **argv, std::string name = "default");
     virtual ~MockEnvironment();
+    void postCreate(lcb_t instance);
 
 protected:
     /**

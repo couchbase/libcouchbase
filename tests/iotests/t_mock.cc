@@ -415,7 +415,7 @@ TEST_F(MockUnitTest, testBrokenFirstNodeInList)
     options.v.v0.host = nodes.c_str();
 
     lcb_t instance;
-    ASSERT_EQ(LCB_SUCCESS, lcb_create(&instance, &options));
+    doLcbCreate(&instance, &options, mock);
     lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, LCB_MS2US(200));
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     lcb_destroy(instance);
@@ -686,6 +686,7 @@ TEST_F(MockUnitTest, testSaslMechs)
     const char *argv[] = { "--buckets", "protected:secret:couchbase", NULL };
 
     lcb_t instance;
+    lcb_error_t err;
     struct lcb_create_st crParams;
     MockEnvironment mock_o(argv, "protected"), *protectedEnv = &mock_o;
     protectedEnv->makeConnectParams(crParams, NULL);
@@ -694,9 +695,7 @@ TEST_F(MockUnitTest, testSaslMechs)
     crParams.v.v0.user = "protected";
     crParams.v.v0.passwd = "secret";
     crParams.v.v0.bucket = "protected";
-
-    lcb_error_t err = lcb_create(&instance, &crParams);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    doLcbCreate(&instance, &crParams, protectedEnv);
 
     // Make the socket pool disallow idle connections
     instance->memd_sockpool->maxidle = 0;
@@ -761,11 +760,10 @@ TEST_F(MockUnitTest, testMemcachedFailover)
 
     MockEnvironment mock_o(argv, "cache"), *mock = &mock_o;
     mock->makeConnectParams(crParams, NULL);
-    lcb_error_t err = lcb_create(&instance, &crParams);
+    doLcbCreate(&instance, &crParams, mock);
 
     // No disconnection interval. It's disconnected immediately.
     instance->getSettings()->bc_http_stream_time = 0;
-    ASSERT_EQ(LCB_SUCCESS, err);
 
     // Attach the listener
     lcb_confmon_add_listener(instance->confmon, &lsn.base);

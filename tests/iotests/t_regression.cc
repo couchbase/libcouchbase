@@ -128,9 +128,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
     crOpts.v.v0.user = "protected";
     crOpts.v.v0.passwd = "secret";
     crOpts.v.v0.bucket = "protected";
-
-    err = lcb_create(&instance, &crOpts);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    doLcbCreate(&instance, &crOpts, mock);
 
     err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);

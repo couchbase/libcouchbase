@@ -28,6 +28,7 @@ lcb_t session = NULL;
 const struct test_server_info *mock = NULL;
 lcb_error_t global_error = -1;
 int total_node_count = -1;
+static lcb_HTCONFIG_URLTYPE urltype = LCB_HTCONFIG_URLTYPE_COMPAT;
 static lcb_config_transport_t enabled_transports[] = {
         LCB_CONFIG_TRANSPORT_HTTP,
         LCB_CONFIG_TRANSPORT_LIST_END
@@ -65,7 +66,10 @@ static void setup(char **argv, const char *username, const char *password,
     if (lcb_create(&session, &options) != LCB_SUCCESS) {
         err_exit("Failed to create libcouchbase session");
     }
-
+    if (lcb_cntl(session, LCB_CNTL_SET,
+        LCB_CNTL_HTCONFIG_URLTYPE, &urltype) != LCB_SUCCESS) {
+        err_exit("Failed to set HTCONFIG_URLTYPE");
+    }
     if (lcb_connect(session) != LCB_SUCCESS) {
         err_exit("Failed to connect to server");
     }
@@ -448,6 +452,10 @@ static lcb_error_t test_connect(char **argv, const char *username,
 
     if (lcb_create(&session, &options) != LCB_SUCCESS) {
         err_exit("Failed to create libcouchbase session");
+    }
+    if (lcb_cntl(session, LCB_CNTL_SET,
+        LCB_CNTL_HTCONFIG_URLTYPE, &urltype) != LCB_SUCCESS) {
+        err_exit("Failed to set HTCONFIG_URLTYPE");
     }
 
     if (lcb_connect(session) != LCB_SUCCESS) {

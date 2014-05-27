@@ -167,6 +167,16 @@ void MockEnvironment::getResponse(MockResponse& ret)
     }
 }
 
+void MockEnvironment::postCreate(lcb_t instance)
+{
+    lcb_error_t err;
+    if (!isRealCluster()) {
+        lcb_HTCONFIG_URLTYPE urltype = LCB_HTCONFIG_URLTYPE_COMPAT;
+        err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTCONFIG_URLTYPE, &urltype);
+        ASSERT_EQ(LCB_SUCCESS, err);
+    }
+}
+
 void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
 {
     lcb_io_opt_t io;
@@ -179,17 +189,12 @@ void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
     makeConnectParams(options, io);
     lcb_error_t err = lcb_create(&instance, &options);
     ASSERT_EQ(LCB_SUCCESS, err);
+    postCreate(instance);
 
     (void)lcb_set_cookie(instance, io);
 
     handle.instance = instance;
     handle.iops = io;
-
-    if (!isRealCluster()) {
-        lcb_HTCONFIG_URLTYPE urltype = LCB_HTCONFIG_URLTYPE_COMPAT;
-        err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTCONFIG_URLTYPE, &urltype);
-        ASSERT_EQ(LCB_SUCCESS, err);
-    }
 }
 
 void MockEnvironment::createConnection(lcb_t &instance)
@@ -254,6 +259,7 @@ void MockEnvironment::bootstrapRealCluster()
     serverParams.makeConnectParams(options, NULL);
 
     ASSERT_EQ(LCB_SUCCESS, lcb_create(&tmphandle, &options));
+    postCreate(tmphandle);
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
     lcb_wait(tmphandle);
 
@@ -326,6 +332,7 @@ void MockEnvironment::clearAndReset()
             printf("Error on create: 0x%x\n", err);
         }
         EXPECT_FALSE(NULL == innerClient);
+        postCreate(innerClient);
         err = lcb_connect(innerClient);
         EXPECT_EQ(LCB_SUCCESS, err);
         lcb_wait(innerClient);
