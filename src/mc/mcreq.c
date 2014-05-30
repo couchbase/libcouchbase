@@ -309,6 +309,10 @@ mcreq_dup_packet(const mc_PACKET *src)
                 }
                 nvdata = n_inflated;
                 hdr.request.datatype &= ~PROTOCOL_BINARY_DATATYPE_COMPRESSED;
+                hdr.request.bodylen = htonl(
+                    ntohs(hdr.request.keylen) +
+                    hdr.request.extlen +
+                    n_inflated);
                 mcreq_write_hdr(dst, &hdr);
 
             } else {
