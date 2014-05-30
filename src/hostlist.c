@@ -301,9 +301,10 @@ void hostlist_randomize(hostlist_t hostlist)
         return;
     }
 
-
-    for (ii = 1; ii < hostlist->nentries; ii++) {
-        lcb_size_t nn = (lcb_size_t)(gethrtime() >> 10) % ii;
+    srand(gethrtime());
+    for (ii = 0; ii < hostlist->nentries - 1; ii++) {
+        lcb_size_t nn = ii + (rand() /
+                             ((RAND_MAX / (hostlist->nentries - ii)) + 1));
         lcb_host_t tmp = hostlist->entries[ii];
         hostlist->entries[ii] = hostlist->entries[nn];
         hostlist->entries[nn] = tmp;
