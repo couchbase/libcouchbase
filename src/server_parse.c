@@ -180,12 +180,6 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
     }
 
 
-    nr = ringbuffer_peek(&c->output_cookies, &info.ct, sizeof(info.ct));
-    if (nr != sizeof(info.ct)) {
-        lcb_error_handler(c->instance, LCB_EINTERNAL, NULL);
-        lcb_packet_release_ringbuffer(&info, conn->input);
-        return -1;
-    }
     info.ct.vbucket = ntohs(req.request.vbucket);
 
     switch (info.res.response.magic) {
@@ -206,7 +200,12 @@ int lcb_proto_parse_single(lcb_server_t *c, hrtime_t stop)
             lcb_packet_release_ringbuffer(&info, conn->input);
             return -1;
         }
-
+        nr = ringbuffer_peek(&c->output_cookies, &info.ct, sizeof(info.ct));
+        if (nr != sizeof(info.ct)) {
+            lcb_error_handler(c->instance, LCB_EINTERNAL, NULL);
+            lcb_packet_release_ringbuffer(&info, conn->input);
+            return -1;
+        }
         if (c->instance->histogram) {
             lcb_record_metrics(c->instance, stop - info.ct.start,
                                PACKET_OPCODE(&info));
