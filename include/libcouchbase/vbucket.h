@@ -319,6 +319,25 @@ lcbvb_CHANGETYPE
 lcbvb_get_changetype(lcbvb_CONFIGDIFF *diff);
 
 /**
+ * @brief Generate a sample configuration.
+ * @param vb a new configuration object returned via lcbvb_create()
+ * @param name the name of the bucket
+ * @param uuid UUID for the bucket
+ * @param servers an array of server objects which will serve as the basis
+ * for the server list within the configuration. The memory pointed to by
+ * servers may be released after this function has completed
+ * @param nservers number of servers in the array
+ * @param nreplica how many replicas for the bucket
+ * @param nvbuckets how many vbuckets for the bucket
+ */
+LIBCOUCHBASE_API
+int
+lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
+    const char *name, const char *uuid,
+    const lcbvb_SERVER *servers,
+    unsigned nservers, unsigned nreplica, unsigned nvbuckets);
+
+/**
  * @brief Generate a sample configuration used for testing.
  * @param vb a new configuration object returned via lcbvb_create()
  * @param nservers how many nodes to place into the configuration

@@ -1056,27 +1056,56 @@ lcbvb_get_revision(lcbvb_CONFIG *cfg)
  ** Generation Functions                                                     **
  ******************************************************************************
  ******************************************************************************/
+
+static void
+copy_service(const char *hostname,
+    const lcbvb_SERVICES *src, lcbvb_SERVICES *dst)
+{
+    char buf[4096];
+    *dst = *src;
+    memset(&dst->hoststrs, 0, sizeof dst->hoststrs);
+    if (src->views_base_) {
+        dst->views_base_ = strdup(src->views_base_);
+    }
+    if (dst->data) {
+        sprintf(buf, "%s:%d", hostname, dst->data);
+        dst->hoststrs[LCBVB_SVCTYPE_DATA] = strdup(buf);
+    }
+}
+
+LIBCOUCHBASE_API
 int
-lcbvb_genconfig(lcbvb_CONFIG *vb,
+lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
+    const char *name, const char *uuid,
+    const lcbvb_SERVER *servers,
     unsigned nservers, unsigned nreplica, unsigned nvbuckets)
 {
     unsigned ii;
     int srvix = 0;
 
+    assert(nservers);
+
+    if (!name) {
+        name = "default";
+    }
+
 #define INCR_SRVIX() srvix = (srvix + 1) % nservers
 
     memset(vb, 0, sizeof(*vb));
-
     vb->dtype = LCBVB_DIST_VBUCKET;
     vb->nvb = nvbuckets;
     vb->nrepl = nreplica;
     vb->nsrv = nservers;
-    vb->bname = strdup("default");
+    vb->bname = strdup(name);
+    if (uuid) {
+        vb->buuid = strdup(uuid);
+    }
 
     if (nreplica >= nservers) {
         vb->errstr = "nservers must be > nreplicas";
         return -1;
     }
+
     if (nreplica > 4) {
         vb->errstr = "Replicas must be <= 4";
         return -1;
@@ -1087,6 +1116,7 @@ lcbvb_genconfig(lcbvb_CONFIG *vb,
         vb->errstr = "Couldn't allocate vbucket array";
         return -1;
     }
+
     for (ii = 0; ii < vb->nvb; ii++) {
         lcbvb_VBUCKET *cur = vb->vbuckets + ii;
         cur->servers[0] = srvix;
@@ -1103,19 +1133,42 @@ lcbvb_genconfig(lcbvb_CONFIG *vb,
 
     vb->servers = calloc(nservers, sizeof(*vb->servers));
     for (ii = 0; ii < nservers; ii++) {
-        lcbvb_SERVER *server = vb->servers + ii;
-        char buf[1024];
+        lcbvb_SERVER *dst = vb->servers + ii;
+        const lcbvb_SERVER *src = servers + ii;
 
-        server->svc.data = 1000 + ii;
-        server->svc.mgmt = 3000 + ii;
-        server->svc.views = 2000 + ii;
-        sprintf(buf, "localhost:%d", (int)server->svc.data);
-        server->svc.hoststrs[LCBVB_SVCTYPE_DATA] = strdup(buf);
-        server->viewpath = strdup("/default");
-        server->hostname = strdup("localhost");
+        *dst = *src;
+        dst->hostname = strdup(src->hostname);
+        if (src->viewpath) {
+            dst->viewpath = strdup(src->viewpath);
+        }
+
+        copy_service(src->hostname, &src->svc, &dst->svc);
+        copy_service(src->hostname, &src->svc_ssl, &dst->svc_ssl);
     }
     return 0;
 #undef INCR_SRVIX
+}
+
+int
+lcbvb_genconfig(lcbvb_CONFIG *vb,
+    unsigned nservers, unsigned nreplica, unsigned nvbuckets)
+{
+    unsigned ii;
+    int rv;
+    lcbvb_SERVER *srvarry;
+
+    srvarry = calloc(nservers, sizeof(*srvarry));
+    for (ii = 0; ii < nservers; ii++) {
+        srvarry[ii].svc.data = 1000 + ii;
+        srvarry[ii].svc.views = 2000 + ii;
+        srvarry[ii].svc.mgmt = 3000 + ii;
+        srvarry[ii].hostname = "localhost";
+        srvarry[ii].svc.views_base_ = "/default";
+    }
+    rv = lcbvb_genconfig_ex(vb,
+        "default", NULL, srvarry, nservers, nreplica, nvbuckets);
+    free(srvarry);
+    return rv;
 }
 
 
