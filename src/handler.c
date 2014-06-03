@@ -124,21 +124,31 @@ if (! (req->flags & MCREQ_F_INVOKED)) { \
  * pointer upon return. Otherwise it will be set to NULL. In any case it must
  */
 static void
-maybe_decompress(lcb_t o, const packet_info *resp,
-    const void **bytes, lcb_SIZE *nbytes, void **freeptr)
+maybe_decompress(lcb_t o,
+    const packet_info *respkt, lcb_get_resp_t *rescmd, void **freeptr)
 {
-    if (!(LCBT_SETTING(o, compressopts) & LCB_COMPRESS_IN)) {
-        return;
-    }
-    if ((PACKET_DATATYPE(resp) & PROTOCOL_BINARY_DATATYPE_COMPRESSED) == 0) {
-        return;
-    }
-    if (!PACKET_NVALUE(resp)) {
+    lcb_U8 dtype = 0;
+    if (!PACKET_NVALUE(respkt)) {
         return;
     }
 
-    mcreq_inflate_value(PACKET_VALUE(resp), PACKET_NVALUE(resp),
-        bytes, nbytes, freeptr);
+    if (PACKET_DATATYPE(respkt) & PROTOCOL_BINARY_DATATYPE_JSON) {
+        dtype = LCB_VALUE_F_JSON;
+    }
+
+    if (PACKET_DATATYPE(respkt) & PROTOCOL_BINARY_DATATYPE_COMPRESSED) {
+        if (LCBT_SETTING(o, compressopts) & LCB_COMPRESS_IN) {
+            /* if we inflate, we don't set the flag */
+            mcreq_inflate_value(
+                PACKET_VALUE(respkt), PACKET_NVALUE(respkt),
+                &rescmd->v.v0.bytes, &rescmd->v.v0.nbytes, freeptr);
+
+        } else {
+            /* user doesn't want inflation. signal it's compressed */
+            dtype |= LCB_VALUE_F_SNAPPYCOMP;
+        }
+    }
+    rescmd->v.v0.datatype = dtype;
 }
 
 static void
@@ -172,7 +182,7 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.v.v0.flags = 0;
     }
 
-    maybe_decompress(o, response, &resp.v.v0.bytes, &resp.v.v0.nbytes, &freeptr);
+    maybe_decompress(o, response, &resp, &freeptr);
     INVOKE_CALLBACK(request, o->callbacks.get,
                     (o, MCREQ_PKT_COOKIE(request), rc, &resp));
     free(freeptr);
@@ -199,8 +209,7 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.v.v0.bytes = PACKET_VALUE(response);
         resp.v.v0.nbytes = PACKET_NVALUE(response);
     }
-    maybe_decompress(instance,
-        response, &resp.v.v0.bytes, &resp.v.v0.nbytes, &freeptr);
+    maybe_decompress(instance, response, &resp, &freeptr);
     request->u_rdata.exdata->callback(pipeline, request, rc, &resp);
     free(freeptr);
 }
