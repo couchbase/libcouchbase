@@ -312,6 +312,7 @@ lcb_server_stats(lcb_t instance, const void *cookie, lcb_size_t num,
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
 
+    mcreq_sched_enter(cq);
     for (ii = 0; ii < num; ii++) {
         const lcb_server_stats_cmd_t *src = items[ii];
         lcb_CMDSTATS dst;
@@ -337,6 +338,8 @@ lcb_set_verbosity(lcb_t instance, const void *cookie, lcb_size_t num,
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
+
+    mcreq_sched_enter(cq);
     for (ii = 0; ii < num; ii++) {
         lcb_CMDVERBOSITY dst;
         lcb_error_t err;
@@ -363,6 +366,7 @@ lcb_flush(lcb_t instance, const void *cookie, lcb_size_t num,
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
 
+    mcreq_sched_enter(cq);
     for (ii = 0; ii < num; ii++) {
         lcb_error_t rc = lcb_flush3(instance, cookie, NULL);
         if (rc != LCB_SUCCESS) {
@@ -383,6 +387,7 @@ lcb_server_versions(lcb_t instance, const void *cookie, lcb_size_t num,
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
     (void)items;
+    mcreq_sched_enter(cq);
 
     for (ii = 0; ii < num; ii++) {
         lcb_error_t rc = lcb_server_versions3(instance, cookie, NULL);

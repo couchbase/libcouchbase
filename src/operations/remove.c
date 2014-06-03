@@ -53,6 +53,7 @@ lcb_remove(lcb_t instance, const void *cookie, lcb_size_t num,
            const lcb_remove_cmd_t * const * items)
 {
     unsigned ii;
+    mcreq_sched_enter(&instance->cmdq);
 
     for (ii = 0; ii < num; ii++) {
         lcb_error_t err;

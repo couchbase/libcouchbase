@@ -242,6 +242,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         }
     }
 
+    mcreq_sched_enter(cq);
     for (ii = 0; ii < reqs.nrequests; ii++) {
         protocol_binary_request_header hdr;
         mc_PACKET *pkt;

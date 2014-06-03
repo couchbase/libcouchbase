@@ -71,6 +71,7 @@ lcb_error_t lcb_get(lcb_t instance,
                     const lcb_get_cmd_t *const *items)
 {
     unsigned ii;
+    mcreq_sched_enter(&instance->cmdq);
 
     for (ii = 0; ii < num; ii++) {
         const lcb_get_cmd_t *src = items[ii];
@@ -135,6 +136,7 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
     unsigned ii;
     lcb_error_t err = LCB_SUCCESS;
 
+    mcreq_sched_enter(&instance->cmdq);
     for (ii = 0; ii < num; ii++) {
         const lcb_unlock_cmd_t *src = items[ii];
         lcb_CMDUNLOCK dst;
@@ -276,6 +278,7 @@ lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
     unsigned ii;
     lcb_error_t err = LCB_SUCCESS;
 
+    mcreq_sched_enter(&instance->cmdq);
     for (ii = 0; ii < num; ii++) {
         const lcb_get_replica_cmd_t *src = items[ii];
         lcb_CMDGETREPLICA dst;
