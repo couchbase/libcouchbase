@@ -81,7 +81,8 @@ typedef enum {
     /** Use the HTTP (aka "REST API") connection for configuration */
     LCB_CONFIG_TRANSPORT_HTTP = 1,
     /** Use the memcached bootstrap protocol (Servers 2.5+ only) */
-    LCB_CONFIG_TRANSPORT_CCCP
+    LCB_CONFIG_TRANSPORT_CCCP,
+    LCB_CONFIG_TRANSPORT_MAX
 } lcb_config_transport_t;
 
 /**
