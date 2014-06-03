@@ -155,7 +155,7 @@ MACRO(LCB_UTIL tgt)
 ENDMACRO()
 
 ADD_LIBRARY(netbuf STATIC src/netbuf/netbuf.c)
-ADD_LIBRARY(mcreq STATIC src/mc/mcreq.c src/mc/compress.c)
+ADD_LIBRARY(mcreq STATIC src/mc/mcreq.c src/mc/compress.c src/mc/forward.c)
 ADD_LIBRARY(netbuf-malloc STATIC src/netbuf/netbuf.c)
 ADD_LIBRARY(rdb STATIC
     src/rdb/rope.c src/rdb/bigalloc.c src/rdb/chunkalloc.c
@@ -192,7 +192,7 @@ ENDIF()
 SET(LCB_OPFILES
     src/operations/arithmetic.c src/operations/get.c src/operations/touch.c
     src/operations/observe.c src/operations/durability.c src/operations/store.c
-    src/operations/stats.c src/operations/remove.c)
+    src/operations/stats.c src/operations/remove.c src/operations/pktfwd.c)
 
 ADD_LIBRARY(couchbase ${_lcb_linkspec}
             ${LCB_OPFILES}

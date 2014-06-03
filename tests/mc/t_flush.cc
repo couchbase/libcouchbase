@@ -11,7 +11,7 @@ struct MyCookie {
 
 extern "C" {
 static void
-buf_free_callback(const void *cookie, void *kbuf, void *vbuf)
+buf_free_callback(mc_PIPELINE *, const void *cookie, void *kbuf, void *vbuf)
 {
     MyCookie *ck = (MyCookie *)cookie;
     EXPECT_TRUE(kbuf == ck->exp_kbuf);

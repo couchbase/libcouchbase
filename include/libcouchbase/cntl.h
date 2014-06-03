@@ -1011,8 +1011,30 @@ typedef enum {
  */
 #define LCB_CNTL_COMPRESSION_OPTS 0x26
 
+struct rdb_ALLOCATOR;
+typedef struct rdb_ALLOCATOR* (*lcb_RDBALLOCFACTORY)(void);
+
+/**Structure being used because function pointers can't technically be cast
+ * to void*
+ */
+struct lcb_cntl_rdballocfactory {
+    lcb_RDBALLOCFACTORY factory;
+};
+/**
+ * @volatile
+ * Set the allocator factory used by libcouchbase. The allocator factory is
+ * a function invoked with no arguments which yields a new rdb_ALLOCATOR
+ * object. Currently the use and API of this object is considered internal
+ * and its API and header files are in `src/rdb`.
+ *
+ * Mode|Arg
+ * ----|---
+ * Set, Get | `lcb_cntl_rdballocfactory*`
+ */
+#define LCB_CNTL_RDBALLOCFACTORY 0x27
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x27
+#define LCB_CNTL__MAX                    0x28
 /**@}*/
 
 #ifdef __cplusplus

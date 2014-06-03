@@ -71,6 +71,8 @@ extern "C" {
 
 struct lcb_logprocs_st;
 struct lcbio_SSLCTX;
+struct rdb_ALLOCATOR;
+
 /**
  * Stateless setting structure.
  * Specifically this contains the 'environment' of the instance for things
@@ -128,6 +130,7 @@ typedef struct lcb_settings_st {
     char *bucket;
     char *sasl_mech_force;
     char *capath;
+    struct rdb_ALLOCATOR* (*allocator_factory)(void);
     struct lcbio_SSLCTX *ssl_ctx;
     struct lcb_logprocs_st *logger;
     void (*dtorcb)(const void *);

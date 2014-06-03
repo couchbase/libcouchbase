@@ -152,13 +152,15 @@ typedef struct {
 
 /**
  * Called when the buffers for a packet have been invoked
+ * @param pl the pipeline
  * @param ucookie the cookie passed to the scheduler
  * @param kbuf the pointer to the beginning of the key/header buffer, if
  *        passed to the scheduler
  * @param vbuf the pointer to the beginning of the value buffer or the first
  *        IOV within the buffer.
  */
-typedef void (*mcreq_bufdone_fn)(const void *ucookie, void *kbuf, void *vbuf);
+typedef void (*mcreq_bufdone_fn)(struct mc_pipeline_st *pl,
+        const void *ucookie, void *kbuf, void *vbuf);
 
 /**
  * Possible values for the mc_PACKET#flags field in the packet structure.

@@ -182,6 +182,16 @@ static void dummy_bootstrap_callback(lcb_t instance, lcb_error_t err)
     (void)err;
 }
 
+static void dummy_pktfwd_callback(lcb_t instance, const void *cookie,
+    lcb_error_t err, lcb_PKTFWDRESP *resp)
+{
+    (void)instance;(void)cookie;(void)err;(void)resp;
+}
+static void dummy_pktflushed_callback(lcb_t instance, const void *cookie)
+{
+    (void)instance;(void)cookie;
+}
+
 void lcb_initialize_packet_handlers(lcb_t instance)
 {
     instance->callbacks.get = dummy_get_callback;
@@ -202,6 +212,8 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.durability = dummy_durability_callback;
     instance->callbacks.errmap = lcb_errmap_default;
     instance->callbacks.bootstrap = dummy_bootstrap_callback;
+    instance->callbacks.pktflushed = dummy_pktflushed_callback;
+    instance->callbacks.pktfwd = dummy_pktfwd_callback;
 }
 
 LIBCOUCHBASE_API
@@ -407,6 +419,28 @@ lcb_set_destroy_callback(lcb_t instance, lcb_destroy_callback cb)
     lcb_destroy_callback ret = LCBT_SETTING(instance, dtorcb);
     if (cb) {
         LCBT_SETTING(instance, dtorcb) = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+lcb_pktfwd_callback
+lcb_set_pktfwd_callback(lcb_t instance, lcb_pktfwd_callback cb)
+{
+    lcb_pktfwd_callback ret = instance->callbacks.pktfwd;
+    if (cb) {
+        instance->callbacks.pktfwd = cb;
+    }
+    return ret;
+}
+
+LIBCOUCHBASE_API
+lcb_pktflushed_callback
+lcb_set_pktflushed_callback(lcb_t instance, lcb_pktflushed_callback cb)
+{
+    lcb_pktflushed_callback ret = instance->callbacks.pktflushed;
+    if (cb) {
+        instance->callbacks.pktflushed = cb;
     }
     return ret;
 }

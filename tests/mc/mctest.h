@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
 #include "mc/mcreq.h"
 #include "sllist-inl.h"
+#include <gtest/gtest.h>
 
 #define NUM_PIPELINES 4
 

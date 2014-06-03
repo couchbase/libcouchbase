@@ -565,6 +565,19 @@ compmode_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+allocfactory_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    struct lcb_cntl_rdballocfactory *cbw = arg;
+    if (mode == LCB_CNTL_SET) {
+        LCBT_SETTING(instance, allocator_factory) = cbw->factory;
+    } else {
+        cbw->factory = LCBT_SETTING(instance, allocator_factory);
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -605,6 +618,7 @@ static ctl_handler handlers[] = {
     retrymode_handler, /* LCB_CNTL_RETRYMODE */
     htconfig_urltype_handler, /* LCB_CNTL_HTCONFIG_URLTYPE */
     compmode_handler, /* LCB_CNTL_COMPRESSION_OPTS */
+    allocfactory_handler /* LCB_CNTL_RDBALLOCFACTORY */
 };
 
 typedef struct {

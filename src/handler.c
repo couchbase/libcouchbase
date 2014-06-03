@@ -486,12 +486,28 @@ record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *res)
     }
 }
 
+static void
+dispatch_ufwd_error(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t immerr)
+{
+    lcb_PKTFWDRESP resp = { 0 };
+    lcb_t instance = ((mc_SERVER*)pipeline)->instance;
+    assert(immerr != LCB_SUCCESS);
+    resp.version = 0;
+    instance->callbacks.pktfwd(instance, MCREQ_PKT_COOKIE(req), immerr, &resp);
+}
+
 int
 mcreq_dispatch_response(
         mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *res,
         lcb_error_t immerr)
 {
     record_metrics(pipeline, req, res);
+
+    if (req->flags & MCREQ_F_UFWD) {
+        dispatch_ufwd_error(pipeline, req, immerr);
+        return 0;
+    }
+
 
 #define INVOKE_OP(handler) \
     handler(pipeline, req, res, immerr); \

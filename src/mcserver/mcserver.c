@@ -146,49 +146,106 @@ handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     return 1;
 }
 
-static void
-handle_single_packet(lcb_server_t *server, packet_info *info)
+/* Call within a loop */
+static int
+try_read(lcbio_CTX *ctx, mc_SERVER *server, rdb_IOROPE *ior)
 {
-    int is_final_response = 1;
-    mc_PACKET *packet;
+    packet_info info_s, *info = &info_s;
+    mc_PACKET *request;
     mc_PIPELINE *pl = &server->pipeline;
+    unsigned pktsize = 24, is_last = 1;
 
+#define DO_ASSIGN_PAYLOAD() \
+    rdb_consumed(ior, sizeof(info->res.bytes)); \
+    if (PACKET_NBODY(info)) { \
+        info->payload = rdb_get_consolidated(ior, PACKET_NBODY(info)); \
+    } {
+
+#define DO_SWALLOW_PAYLOAD() \
+    } if (PACKET_NBODY(info)) { \
+        rdb_consumed(ior, PACKET_NBODY(info)); \
+    }
+
+    if (rdb_get_nused(ior) < pktsize) {
+        goto GT_NEEDMORE;
+    }
+
+    /* copy bytes into the info structure */
+    rdb_copyread(ior, info->res.bytes, sizeof info->res.bytes);
+
+    pktsize += PACKET_NBODY(info);
+    if (rdb_get_nused(ior) < pktsize) {
+        goto GT_NEEDMORE;
+    }
+
+    /* Find the packet */
     if (PACKET_OPCODE(info) == PROTOCOL_BINARY_CMD_STAT && PACKET_NKEY(info) != 0) {
-        is_final_response = 0;
-    }
-
-    if (is_final_response) {
-        packet = mcreq_pipeline_remove(&server->pipeline, PACKET_OPAQUE(info));
+        is_last = 0;
+        request = mcreq_pipeline_find(pl, PACKET_OPAQUE(info));
     } else {
-        packet = mcreq_pipeline_find(&server->pipeline, PACKET_OPAQUE(info));
+        is_last = 1;
+        request = mcreq_pipeline_remove(pl, PACKET_OPAQUE(info));
     }
 
-    if (!packet) {
-        lcb_log(LOGARGS(server, WARN),
-                "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)",
-                PACKET_OPCODE(info), PACKET_STATUS(info), PACKET_OPAQUE(info));
-        return;
+    if (!request) {
+        lcb_log(LOGARGS(server, WARN), "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)", PACKET_OPCODE(info), PACKET_STATUS(info), PACKET_OPAQUE(info));
+        rdb_consumed(ior, pktsize);
+        return 1;
     }
 
-    /** Check for NOT_MY_VBUCKET; relocate as needed */
     if (PACKET_STATUS(info) == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
-        if (!handle_nmv(server, info, packet)) {
-            mcreq_dispatch_response(pl, packet, info, LCB_NOT_MY_VBUCKET);
+        /* consume the header */
+        DO_ASSIGN_PAYLOAD()
+        if (!handle_nmv(server, info, request)) {
+            mcreq_dispatch_response(pl, request, info, LCB_NOT_MY_VBUCKET);
         }
-
-    } else if (! (packet->flags & MCREQ_F_UFWD)) {
-        mcreq_dispatch_response(pl, packet, info, LCB_SUCCESS);
+        DO_SWALLOW_PAYLOAD()
+        return 1;
     }
 
-    if (is_final_response) {
-        mcreq_packet_handled(pl, packet);
+    /* Figure out if the request is 'ufwd' or not */
+    if (!(request->flags & MCREQ_F_UFWD)) {
+        DO_ASSIGN_PAYLOAD();
+        mcreq_dispatch_response(pl, request, info, LCB_SUCCESS);
+        DO_SWALLOW_PAYLOAD()
+
+    } else {
+        /* figure out how many buffers we want to use as an upper limit for the
+         * IOV arrays. Currently we'll keep it simple and ensure the entire
+         * response is contiguous. */
+        lcb_PKTFWDRESP resp = { 0 };
+        rdb_ROPESEG *segs;
+        nb_IOV iov;
+
+        rdb_consolidate(ior, sizeof info->res.bytes + PACKET_NBODY(info));
+        rdb_refread_ex(ior,
+            &iov, &segs, 1, PACKET_NBODY(info) + sizeof info->res.bytes);
+
+        resp.bufs = &segs;
+        resp.iovs = (lcb_IOV*)&iov;
+        resp.nitems = 1;
+        resp.header = info->res.bytes;
+        server->instance->callbacks.pktfwd(
+            server->instance, MCREQ_PKT_COOKIE(request), LCB_SUCCESS, &resp);
+        rdb_consumed(ior, pktsize);
     }
+
+    if (is_last) {
+        mcreq_packet_handled(pl, request);
+    }
+    return 1;
+
+    GT_NEEDMORE:
+    if (mcserver_has_pending(server)) {
+        lcbio_ctx_rwant(ctx, pktsize);
+    }
+    return 0;
 }
 
 static void
 on_read(lcbio_CTX *ctx, unsigned nb)
 {
-    packet_info info;
+    int rv;
     mc_SERVER *server = lcbio_ctx_data(ctx);
     rdb_IOROPE *ior = &ctx->ior;
 
@@ -196,24 +253,11 @@ on_read(lcbio_CTX *ctx, unsigned nb)
         return;
     }
 
-    (void)nb;
-
-    while (1) {
-        int rv;
-        unsigned required;
-        rv = lcb_pktinfo_ior_get(&info, ior, &required);
-        if (!rv) {
-            if (mcserver_has_pending(server)) {
-                lcbio_ctx_rwant(ctx, required);
-            }
-            lcbio_ctx_schedule(ctx);
-            lcb_maybe_breakout(server->instance);
-            return;
-        }
-        handle_single_packet(server, &info);
-        lcb_pktinfo_ior_done(&info, ior);
-    }
+    while ((rv = try_read(ctx, server, ior)));
+    lcbio_ctx_schedule(ctx);
     lcb_maybe_breakout(server->instance);
+
+    (void)nb;
 }
 
 int
@@ -439,6 +483,14 @@ server_connect(mc_SERVER *server)
     server->pipeline.flush_start = flush_noop;
 }
 
+static void
+buf_done_cb(mc_PIPELINE *pl, const void *cookie, void *kbuf, void *vbuf)
+{
+    mc_SERVER *server = (mc_SERVER*)pl;
+    server->instance->callbacks.pktflushed(server->instance, cookie);
+    (void)kbuf; (void)vbuf;
+}
+
 static char *
 dupstr_or_null(const char *s) {
     if (s) {
@@ -469,6 +521,7 @@ mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix)
     lcb_settings_ref(ret->settings);
     mcreq_pipeline_init(&ret->pipeline);
     ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
+    ret->pipeline.buf_done_callback = buf_done_cb;
     lcb_host_parsez(&ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
     ret->io_timer = lcbio_timer_new(instance->iotable, ret, timeout_server);
     return ret;

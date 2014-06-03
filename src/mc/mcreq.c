@@ -590,7 +590,7 @@ mcreq_packet_done(mc_PIPELINE *pipeline, mc_PACKET *pkt)
             vbuf = NULL;
         }
 
-        pipeline->buf_done_callback(cookie, kbuf, vbuf);
+        pipeline->buf_done_callback(pipeline, cookie, kbuf, vbuf);
     }
     mcreq_wipe_packet(pipeline, pkt);
     mcreq_release_packet(pipeline, pkt);

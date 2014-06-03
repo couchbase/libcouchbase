@@ -36,7 +36,7 @@ lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_EASYPROCS *procs)
     ctx->as_err = lcbio_timer_new(ctx->io, ctx, err_handler);
     ctx->subsys = "unknown";
 
-    rdb_init(&ctx->ior, rdb_bigalloc_new());
+    rdb_init(&ctx->ior, sock->settings->allocator_factory());
     lcbio_ref(sock);
 
     if (IOT_IS_EVENT(ctx->io)) {

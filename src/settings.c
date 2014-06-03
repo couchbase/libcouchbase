@@ -1,5 +1,6 @@
 #include "settings.h"
 #include <lcbio/ssl.h>
+#include <rdb/rope.h>
 
 LCB_INTERNAL_API
 void lcb_default_settings(lcb_settings *settings)
@@ -26,6 +27,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->retry[LCB_RETRY_ON_VBMAPERR] = LCB_DEFAULT_NMVRETRY;
     settings->bc_http_urltype = LCB_DEFAULT_HTCONFIG_URLTYPE;
     settings->compressopts = LCB_DEFAULT_COMPRESSOPTS;
+    settings->allocator_factory = rdb_bigalloc_new;
 }
 
 LCB_INTERNAL_API

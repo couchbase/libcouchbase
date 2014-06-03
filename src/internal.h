@@ -33,6 +33,7 @@
 #include <ep-engine/command_ids.h>
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/vbucket.h>
+#include <libcouchbase/pktfwd.h>
 
 /* Internal dependencies */
 #include <lcbio/lcbio.h>
@@ -72,6 +73,8 @@ extern "C" {
         lcb_durability_callback durability;
         lcb_errmap_callback errmap;
         lcb_bootstrap_callback bootstrap;
+        lcb_pktfwd_callback pktfwd;
+        lcb_pktflushed_callback pktflushed;
     };
 
     struct lcb_confmon_st;
