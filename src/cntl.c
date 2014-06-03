@@ -19,12 +19,26 @@
 #include <lcbio/iotable.h>
 #include <mcserver/negotiate.h>
 #include <lcbio/ssl.h>
+
+#define CNTL__MODE_SETSTRING 0x1000
+
 /**
  * ioctl/fcntl-like interface for libcouchbase configuration properties
  */
 
 typedef lcb_error_t (*ctl_handler)(int, lcb_t, int, void *);
 
+static int
+boolean_from_string(const char *s)
+{
+    if (!strcmp(s, "true")) {
+        return 1;
+    } else if (!strcmp(s, "false")) {
+        return 0;
+    } else {
+        return atoi(s);
+    }
+}
 
 static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
 {
@@ -75,6 +89,14 @@ static lcb_error_t timeout_common(int mode,
     }
     if (mode == LCB_CNTL_GET) {
         *user = *ptr;
+    } else if (mode == CNTL__MODE_SETSTRING) {
+        int rv;
+        unsigned long tmp;
+        rv = sscanf(arg, "%lu", &tmp);
+        if (rv != 1) {
+            return LCB_EINVAL;
+        }
+        *ptr = tmp;
     } else {
         *ptr = *user;
     }
@@ -273,13 +295,21 @@ static lcb_error_t randomize_bootstrap_hosts_handler(int mode,
                                                      void *arg)
 {
     int *randomize = arg;
+    int argval;
+
+    if (mode == CNTL__MODE_SETSTRING) {
+        argval = boolean_from_string(arg);
+        mode = LCB_CNTL_SET;
+    } else {
+        argval = *randomize;
+    }
 
     if (cmd != LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS) {
         return LCB_EINTERNAL;
     }
 
     if (mode == LCB_CNTL_SET) {
-        instance->settings->randomize_bootstrap_nodes = *randomize;
+        instance->settings->randomize_bootstrap_nodes = argval;
     } else {
         *randomize = instance->settings->randomize_bootstrap_nodes;
     }
@@ -499,7 +529,22 @@ swap_ssl_ports(lcb_t instance, clconfig_method_t ptype, int defl, int ssldefl)
 static lcb_error_t
 ssl_mode_handler(int mode, lcb_t instance, int cmd, void *arg)
 {
-    lcb_SSLOPTS *sopt = arg;
+    lcb_SSLOPTS *sopt = arg, sopt_s = 0;
+
+    if (mode == CNTL__MODE_SETSTRING) {
+        sopt = &sopt_s;
+        if (!strcmp("on", arg)) {
+            sopt_s = LCB_SSL_ENABLED;
+        } else if (!strcmp("off", arg)) {
+            sopt_s = 0;
+        } else if (!strcmp("no_verify", arg)) {
+            sopt_s = LCB_SSL_ENABLED|LCB_SSL_NOVERIFY;
+        } else {
+            return LCB_EINVAL;
+        }
+        mode = LCB_CNTL_SET;
+    }
+
     if (mode == LCB_CNTL_GET) {
         *sopt = LCBT_SETTING(instance, sslopts);
     } else {
@@ -613,6 +658,28 @@ static ctl_handler handlers[] = {
     htconfig_urltype_handler /* LCB_CNTL_HTCONFIG_URLTYPE */
 };
 
+typedef struct {
+    const char *key;
+    int opcode;
+} cntl_OPCODESTRS;
+
+static cntl_OPCODESTRS stropcode_map[] = {
+        {"operation_timeout", LCB_CNTL_OP_TIMEOUT},
+        {"views_timeout", LCB_CNTL_VIEW_TIMEOUT},
+        {"durability_timeout", LCB_CNTL_DURABILITY_TIMEOUT},
+        {"durability_interval", LCB_CNTL_DURABILITY_INTERVAL},
+        {"http_timeout", LCB_CNTL_HTTP_TIMEOUT},
+        {"randomize_nodes", LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS},
+        {"sasl_mech_force", LCB_CNTL_FORCE_SASL_MECH},
+        {"error_thresh_count", LCB_CNTL_CONFERRTHRESH},
+        {"error_thresh_delay", LCB_CNTL_CONFDELAY_THRESH},
+        {"config_total_timeout", LCB_CNTL_CONFIGURATION_TIMEOUT},
+        {"config_node_timeout", LCB_CNTL_CONFIG_NODE_TIMEOUT},
+        {"ssl", LCB_CNTL_SSL_MODE},
+        {"compression", LCB_CNTL_COMPRESSION_OPTS},
+        {"ca_path", LCB_CNTL_SSL_CACERT},
+};
+
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
@@ -629,6 +696,21 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
     }
 
     return handler(mode, instance, cmd, arg);
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_cntl_string(lcb_t instance, const char *key, const char *value)
+{
+    cntl_OPCODESTRS *cur;
+
+    for (cur = stropcode_map; cur->key; cur++) {
+        if (!strcmp(cur->key, key)) {
+            return lcb_cntl(instance, CNTL__MODE_SETSTRING, cur->opcode,
+                (void *)value);
+        }
+    }
+    return LCB_NOT_SUPPORTED;
 }
 
 LIBCOUCHBASE_API

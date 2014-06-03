@@ -2735,9 +2735,51 @@ int lcb_is_waiting(lcb_t instance);
  *      command.
  *
  * @committed
+ * @see lcb_cntl_setu32()
+ * @see lcb_cntl_string()
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
+
+/**
+ * Alternate way to set configuration settings by passing a string key
+ * and value. This may be used to provide a simple interface from a command
+ * line or higher level language to allow the setting of specific key-value
+ * pairs.
+ *
+ * Unless otherwise specified, the string value for each option should be
+ * the numeric representation of the value passed to the actual lcb_cntl()
+ * function, parseable by the sscanf() function or equivalent.
+ *
+ * Boolean values may be specified as either `true` or `false`.
+ *
+ * * `operation_timeout`. See @ref LCB_CNTL_OP_TIMEOUT. Pass a numeric string
+ *   representing the timeout in microseconds
+ * * `views_timeout`. See @ref LCB_CNTL_VIEW_TIMEOUT
+ * * `durability_timeout`. See @ref LCB_CNTL_DURABILITY_TIMEOUT
+ * * `durability_interval`. See @ref LCB_CNTL_DURABILITY_INTERVAL
+ * * `http_timeout`. See @ref LCB_CNTL_HTTP_TIMEOUT.
+ * * `randomize_nodes`. See @ref LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS. Accepts a
+ *   _boolean_.
+ * * `sasl_mech_force`. See @ref LCB_CNTL_FORCE_SASL_MECH
+ * * `error_thresh_count`. See @ref LCB_CNTL_CONFERRTHRESH
+ * * `error_thresh_delay`. See @ref LCB_CNTL_CONFDELAY_THRESH
+ * * `config_total_timeout`. See @ref LCB_CNTL_CONFIGURATION_TIMEOUT
+ * * `config_node_timeout`. See @ref LCB_CNTL_CONFIG_NODE_TIMEOUT
+ * * `ssl`. Can be set to `off`, `on`, or `no_verify`. The latter will enbable
+ *   SSL encryption but ignore any failure to verify the certificate.
+ *   See @ref LCB_CNTL_SSL_MODE
+ * * `compression`. Can be set to `off`, `on`, or `inflate_only`. The latter
+ *   will only enable inbound compression but will not compress outgoing
+ *   data. See @ref LCB_CNTL_COMPRESSION_OPTS
+ * * `ca_path`. See @ref LCB_CNTL_CACERT
+ *
+ * @committed
+ * @see lcb_cntl()
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_cntl_string(lcb_t instance, const char *key, const char *value);
 
 /**
 * @brief Convenience function to set a value as an lcb_uint32_t
