@@ -2804,6 +2804,15 @@ lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg);
 LIBCOUCHBASE_API
 lcb_uint32_t lcb_cntl_getu32(lcb_t instance, int cmd);
 
+/**
+ * Determine if a specific control code exists
+ * @param ctl the code to check for
+ * @return 0 if it does not exist, nonzero if it exists.
+ */
+LIBCOUCHBASE_API
+int
+lcb_cntl_exists(int ctl);
+
 /**@}*/
 
 /**

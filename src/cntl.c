@@ -617,6 +617,37 @@ htconfig_urltype_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static
+lcb_error_t
+compmode_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    lcb_COMPRESSOPTS opts_s = 0, *opt_p;
+
+    if (mode == CNTL__MODE_SETSTRING) {
+        if (!strcmp(arg, "on")) {
+            opts_s = LCB_COMPRESS_INOUT;
+        } else if (!strcmp(arg, "off")) {
+            opts_s = LCB_COMPRESS_NONE;
+        } else if (!strcmp(arg, "inflate_only")) {
+            opts_s = LCB_COMPRESS_IN;
+        } else {
+            return LCB_EINVAL;
+        }
+
+        opt_p = &opts_s;
+        mode = LCB_CNTL_SET;
+    } else {
+        opt_p = arg;
+    }
+    if (mode == LCB_CNTL_SET) {
+        LCBT_SETTING(instance, compressopts) = *opt_p;
+    } else {
+        *opt_p = LCBT_SETTING(instance, compressopts);
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -655,7 +686,8 @@ static ctl_handler handlers[] = {
     ssl_mode_handler, /* LCB_CNTL_SSL_MODE */
     ssl_capath_handler, /* LCB_CNTL_SSL_CAPATH */
     retrymode_handler, /* LCB_CNTL_RETRYMODE */
-    htconfig_urltype_handler /* LCB_CNTL_HTCONFIG_URLTYPE */
+    htconfig_urltype_handler, /* LCB_CNTL_HTCONFIG_URLTYPE */
+    compmode_handler, /* LCB_CNTL_COMPRESSION_OPTS */
 };
 
 typedef struct {
@@ -680,12 +712,13 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"ca_path", LCB_CNTL_SSL_CACERT},
 };
 
+#define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
 {
     ctl_handler handler;
-    if (cmd > LCB_CNTL__MAX) {
+    if (cmd >= (int)CNTL_NUM_HANDLERS || cmd < 0) {
         return LCB_NOT_SUPPORTED;
     }
 
@@ -711,6 +744,16 @@ lcb_cntl_string(lcb_t instance, const char *key, const char *value)
         }
     }
     return LCB_NOT_SUPPORTED;
+}
+
+LIBCOUCHBASE_API
+int
+lcb_cntl_exists(int ctl)
+{
+    if (ctl >= (int)CNTL_NUM_HANDLERS || ctl < 0) {
+        return 0;
+    }
+    return handlers[ctl] != NULL;
 }
 
 LIBCOUCHBASE_API
