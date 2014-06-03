@@ -548,7 +548,7 @@ struct lcb_logprocs_st;
 /**
  * @brief Logger callback
  *
- * @volatile
+ * @uncommitted
  *
  * This callback is invoked for each logging message emitted
  * @param procs the logging structure provided
@@ -571,7 +571,7 @@ typedef void (*lcb_logging_callback)(struct lcb_logprocs_st *procs,
 
 /**
  * @brief Logging context
- * @volatile
+ * @uncommitted
  *
  * This structure defines the logging handlers. Currently there is only
  * a single field defined which is the default callback for the loggers.
@@ -588,7 +588,7 @@ typedef struct lcb_logprocs_st {
 
 /**
  * @brief Access the lcb_logprocs structure
- * @volatile
+ * @uncommitted
  *
  * Mode|Arg
  * ----|---
