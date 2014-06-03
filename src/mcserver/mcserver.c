@@ -268,6 +268,11 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
         return;
     }
 
+    if (err == LCB_AUTH_ERROR) {
+        /* In-situ auth errors are actually dead servers. Let's provide this
+         * as the actual error code. */
+        err = LCB_MAP_CHANGED;
+    }
     memset(&info, 0, sizeof(info));
     memcpy(hdr.bytes, SPAN_BUFFER(&pkt->kh_span), sizeof(hdr.bytes));
 
