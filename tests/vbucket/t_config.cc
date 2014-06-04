@@ -38,12 +38,12 @@ static string getConfigFile(const char *fname)
 
 class ConfigTest : public ::testing::Test {
 protected:
-    void testConfig(const char *fname);
+    void testConfig(const char *fname, bool checkNew = false);
 };
 
 
 void
-ConfigTest::testConfig(const char *fname)
+ConfigTest::testConfig(const char *fname, bool checkNew)
 {
     string testData = getConfigFile(fname);
     lcbvb_CONFIG *vbc = lcbvb_create();
@@ -71,7 +71,18 @@ ConfigTest::testConfig(const char *fname)
         ASSERT_GT(srv->svc.mgmt, 0);
         if (vbc->dtype == LCBVB_DIST_VBUCKET) {
             ASSERT_GT(srv->svc.views, 0);
+            if (checkNew) {
+                ASSERT_GT(srv->svc_ssl.views, 0);
+            }
         }
+        if (checkNew) {
+            ASSERT_GT(srv->svc_ssl.data, 0);
+            ASSERT_GT(srv->svc_ssl.mgmt, 0);
+        }
+    }
+    if (checkNew) {
+        ASSERT_FALSE(NULL == vbc->buuid);
+        ASSERT_GT(vbc->revid, -1);
     }
 
     const char *k = "Hello";
@@ -90,10 +101,10 @@ ConfigTest::testConfig(const char *fname)
 TEST_F(ConfigTest, testBasicConfigs)
 {
     testConfig("full_25.json");
-    testConfig("full_30.json");
     testConfig("terse_25.json");
-    testConfig("terse_30.json");
     testConfig("memd_25.json");
+    testConfig("terse_30.json", true);
+    testConfig("memd_30.json", true);
 }
 
 TEST_F(ConfigTest, testGeneration)

@@ -327,7 +327,7 @@ build_server_strings(lcbvb_CONFIG *cfg, lcbvb_SERVER *server)
 
     server->svc.hoststrs[LCBVB_SVCTYPE_DATA] = server->authority;
     if (server->viewpath == NULL && server->svc.views) {
-        server->viewpath = malloc(strlen(cfg->bname) + 1);
+        server->viewpath = malloc(strlen(cfg->bname) + 2);
         sprintf(server->viewpath, "/%s", cfg->bname);
     }
     return 1;
@@ -452,21 +452,6 @@ build_server_2x(lcbvb_CONFIG *cfg, lcbvb_SERVER *server, cJSON *js)
     } else {
         SET_ERRSTR(cfg, "Expected 'direct' field in 'ports'");
         goto GT_ERR;
-    }
-
-    /* XXX: mgmt plain port is extracted from hostname (see above) */
-
-    /* Check for 3.0+ SSL Ports */
-    if (get_jint(jsports, "sslDirect", &itmp)) {
-        server->svc_ssl.data = itmp;
-    }
-    /* SSL views port */
-    if (get_jint(jsports, "httpsCAPI", &itmp)) {
-        server->svc_ssl.views = itmp;
-    }
-    /* SSL mgmt port */
-    if (get_jint(jsports, "httpsMgmt", &itmp)) {
-        server->svc_ssl.mgmt = itmp;
     }
 
     /* set the authority */
