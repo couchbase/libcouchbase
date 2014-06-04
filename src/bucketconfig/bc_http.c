@@ -344,6 +344,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     lcb_log(LOGARGS(http, DEBUG), "Successfuly connected to REST API %s:%s", host->host, host->port);
 
     lcbio_sslify_if_needed(sock, http->base.parent->settings);
+    reset_stream_state(http);
 
     if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Couldn't setup request header");
@@ -393,7 +394,6 @@ connect_next(http_provider *http)
     lcb_settings *settings = http->base.parent->settings;
     lcb_log(LOGARGS(http, TRACE), "Starting HTTP Configuration Provider %p", http);
     close_current(http);
-    reset_stream_state(http);
     http->creq = lcbio_connect_hl(http->base.parent->iot, settings, http->nodes, 1,
                                   settings->config_node_timeout, on_connected, http);
     if (http->creq) {
@@ -412,7 +412,6 @@ static void delayed_disconn(void *arg)
     /** closes the connection and cleans up the timer */
     close_current(http);
     lcbio_timer_disarm(http->io_timer);
-    reset_stream_state(http);
 }
 
 static lcb_error_t pause_http(clconfig_provider *pb)
