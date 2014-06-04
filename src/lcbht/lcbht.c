@@ -135,8 +135,7 @@ lcbht_pPARSER
 lcbht_new(lcb_settings *settings)
 {
     lcbht_pPARSER ret = calloc(1, sizeof *ret);
-    _lcb_http_parser_init(&ret->parser, HTTP_RESPONSE);
-    lcbht_clear_response(&ret->resp);
+    lcbht_reset(ret);
     ret->settings = settings;
     lcb_settings_ref(settings);
     return ret;
@@ -213,6 +212,7 @@ void
 lcbht_reset(lcbht_pPARSER parser)
 {
     lcbht_clear_response(&parser->resp);
+    _lcb_http_parser_init(&parser->parser, HTTP_RESPONSE);
 }
 
 const char *
