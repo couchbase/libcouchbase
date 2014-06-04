@@ -203,6 +203,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     procs.cb_err = io_error;
     procs.cb_read = io_read;
     req->ioctx = lcbio_ctx_new(sock, arg, &procs);
+    req->ioctx->subsys = "mgmt/capi";
     lcbio_ctx_put(req->ioctx, req->outbuf.base, req->outbuf.nused);
     lcbio_ctx_rwant(req->ioctx, 1);
     lcbio_ctx_schedule(req->ioctx);
