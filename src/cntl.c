@@ -477,81 +477,14 @@ static lcb_error_t config_cache_handler(int mode, lcb_t instance, int cmd, void 
     }
 }
 
-static void
-swap_ssl_ports(lcb_t instance, clconfig_method_t ptype, int defl, int ssldefl)
-{
-    unsigned ii;
-    hostlist_t dst;
-    clconfig_provider *pb = lcb_confmon_get_provider(instance->confmon, ptype);
-    const hostlist_t src = pb->get_nodes(pb);
-
-    if (!pb->enabled) {
-        return;
-    }
-
-    dst = hostlist_create();
-
-    for (ii = 0; ii < src->nentries; ii++) {
-        int curport;
-        lcb_host_t *cur = src->entries + ii;
-
-        sscanf(cur->port, "%d", &curport);
-
-        if (curport == defl) {
-            lcb_host_t tmp = *cur;
-            sprintf(tmp.port, "%d", ssldefl);
-            hostlist_add_host(dst, &tmp);
-        } else {
-            hostlist_add_host(dst, cur);
-        }
-    }
-
-    pb->configure_nodes(pb, dst);
-    hostlist_destroy(dst);
-}
-
 static lcb_error_t
 ssl_mode_handler(int mode, lcb_t instance, int cmd, void *arg)
 {
-    lcb_SSLOPTS *sopt = arg, sopt_s = 0;
-
-    if (mode == CNTL__MODE_SETSTRING) {
-        sopt = &sopt_s;
-        if (!strcmp("on", arg)) {
-            sopt_s = LCB_SSL_ENABLED;
-        } else if (!strcmp("off", arg)) {
-            sopt_s = 0;
-        } else if (!strcmp("no_verify", arg)) {
-            sopt_s = LCB_SSL_ENABLED|LCB_SSL_NOVERIFY;
-        } else {
-            return LCB_EINVAL;
-        }
-        mode = LCB_CNTL_SET;
-    }
-
+    lcb_SSLOPTS *sopt = arg;
     if (mode == LCB_CNTL_GET) {
         *sopt = LCBT_SETTING(instance, sslopts);
     } else {
-        lcbio_pSSLCTX sctx;
-
-        LCBT_SETTING(instance, sslopts) = *sopt;
-        if ((*sopt & LCB_SSL_ENABLED) == 0) {
-            return LCB_SUCCESS;
-        }
-
-        lcbio_ssl_global_init();
-        sctx = lcbio_ssl_new(LCBT_SETTING(instance, capath),
-            *sopt & LCB_SSL_NOVERIFY);
-
-        if (!sctx) {
-            return LCB_ERROR;
-        }
-
-        LCBT_SETTING(instance, ssl_ctx) = sctx;
-        swap_ssl_ports(instance, LCB_CLCONFIG_HTTP,
-            LCB_CONFIG_HTTP_PORT, LCB_CONFIG_HTTP_SSL_PORT);
-        swap_ssl_ports(instance, LCB_CLCONFIG_CCCP,
-            LCB_CONFIG_MCD_PORT, LCB_CONFIG_MCD_SSL_PORT);
+        return LCB_NOT_SUPPORTED;
     }
 
     (void)cmd;
@@ -564,7 +497,7 @@ ssl_capath_handler(int mode, lcb_t instance, int cmd, void *arg)
     if (mode == LCB_CNTL_GET) {
         *(char ** const)arg = LCBT_SETTING(instance, capath);
     } else {
-        LCBT_SETTING(instance, capath) = strdup(arg);
+        return LCB_NOT_SUPPORTED;
     }
 
     (void)cmd;
@@ -691,9 +624,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"error_thresh_delay", LCB_CNTL_CONFDELAY_THRESH},
         {"config_total_timeout", LCB_CNTL_CONFIGURATION_TIMEOUT},
         {"config_node_timeout", LCB_CNTL_CONFIG_NODE_TIMEOUT},
-        {"ssl", LCB_CNTL_SSL_MODE},
         {"compression", LCB_CNTL_COMPRESSION_OPTS},
-        {"ca_path", LCB_CNTL_SSL_CACERT},
 };
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

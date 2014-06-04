@@ -67,20 +67,6 @@ TEST_F(CtlTest, testStringCtls)
     ASSERT_EQ(1, getSetting<int>(instance, LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS));
 
 
-    // try with SSL
-    err = lcb_cntl_string(instance, "ssl", "on");
-    ASSERT_EQ(LCB_SUCCESS, err);
-    ASSERT_EQ(LCB_SSL_ENABLED, getSetting<lcb_SSLOPTS>(instance, LCB_CNTL_SSL_MODE));
-
-    err = lcb_cntl_string(instance, "ssl", "off");
-    ASSERT_EQ(LCB_SUCCESS, err);
-    ASSERT_EQ(0, getSetting<lcb_SSLOPTS>(instance, LCB_CNTL_SSL_MODE));
-
-    err = lcb_cntl_string(instance, "ssl", "no_verify");
-    ASSERT_EQ(LCB_SUCCESS, err);
-    ASSERT_EQ(LCB_SSL_ENABLED|LCB_SSL_NOVERIFY,
-        getSetting<lcb_SSLOPTS>(instance, LCB_CNTL_SSL_MODE));
-
     // try with compression
     err = lcb_cntl_string(instance, "compression", "on");
     ASSERT_EQ(LCB_SUCCESS, err);

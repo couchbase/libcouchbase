@@ -70,24 +70,17 @@ typedef lcb_uint32_t lcb_USECS;
  * @{
  */
 
-
-/**
- * @brief Bootstrap transport options
- * @see lcb_create_st2::transports
- */
+/**@private*/
 typedef enum {
-    /** End of list for the config_transports array */
     LCB_CONFIG_TRANSPORT_LIST_END = 0,
-    /** Use the HTTP (aka "REST API") connection for configuration */
     LCB_CONFIG_TRANSPORT_HTTP = 1,
-    /** Use the memcached bootstrap protocol (Servers 2.5+ only) */
     LCB_CONFIG_TRANSPORT_CCCP,
     LCB_CONFIG_TRANSPORT_MAX
 } lcb_config_transport_t;
 
 /**
  * @brief Handle types
- * @see lcb_create_st2::type
+ * @see lcb_create_st3::type
  */
 typedef enum {
     LCB_TYPE_BUCKET = 0x00, /**< Handle for data access (default) */
@@ -117,6 +110,8 @@ typedef enum {
 struct lcb_create_st0 { LCB_CREATE_V0_FIELDS };
 /**@private*/
 struct lcb_create_st1 { LCB_CREATE_V1_FIELDS };
+/**@private*/
+struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
 
 /**
  * @brief Structure for lcb_create().
@@ -125,24 +120,124 @@ struct lcb_create_st1 { LCB_CREATE_V1_FIELDS };
  * with appropriate settings so that it may connect to the cluster and perform
  * operations.
  *
- * Cluster connection takes place in two steps:
+ * Connecting to the cluster involes the client knowing the necessary
+ * information needed to actually locate its services and connect to it.
  *
- * 1. The client connects to a given node and detects all other nodes. This is
- *    known as _bootstrap_
+ * A connection specification consists of:
  *
- * 2. The client connects to individual nodes as needed to perform data operations.
+ * 1. One or more hosts which comprise the cluster
+ * 2. The name of the bucket to access and perform operations on
+ * 3. The credentials of the bucket
+ *
+ * All these options are specified within the form of a URI in the form of
+ *
+ * `couchbase://$HOSTS/$BUCKET?$OPTIONS`
+ *
+ * @note
+ * If any of the fields (hosts, bucket, options) contain the `/` character then
+ * it _must_ be url-encoded; thus a bucket named `foo/bar` would be specified
+ * as `couchbase:///foo%2Fbar`
+ *
+ * ### Hosts
+ *
+ * In the most typical use case, you would specify a list of several hostnames
+ * delimited by a comma (`,`); each host specified should be a member of the
+ * cluster. The library will use this list to initially connect to the cluster.
+ *
+ * Note that it is not necessary to specify _all_ the nodes of the cluster as in
+ * a normal situation the library will only initially connect to one of the nodes.
+ * Passing multiple nodes increases the chance of a connection succeeding even
+ * if some of the nodes are currently down. Once connected to the cluster, the
+ * client will update itself with the other nodes actually found within the
+ * cluster and discard the list passed to it
+ *
+ * You can specify multiple hosts like so:
+ *
+ * `couchbase://foo.com,bar.com,baz.com`
+ *
+ * Or a single host:
+ *
+ * `couchbase://localhost`
+ *
+ * #### Specifying Ports
+ *
+ * By default the client will assume that all nodes listed have the following
+ * ports available:
+ *
+ * * `8091` (or `18091` for SSL) - REST API port
+ * * `11210` (or `11207` for SSL) - Data port
+ *
+ * If this is not the case, you must specify each `host:port=protocol`
+ * combination within the URI, where _host_ is the hostname, _port_ is a numeric
+ * port, and _protocol_ is a string describing what type of service is provided
+ * by this port.
+ *
+ * In the simple example above, an explicit `host:port=protocol` version would
+ * look like this:
+ *
+ * `couchbase://foo.com:8091=http,foo.com:18091=https,foo.com:11210=mcd,foo.com:11207=mcds`
+ *
+ * Of course, you only need to specify the protocol from which you intend to
+ * bootstrap from (thus for example, using a couchbase bucket on Server 3.0 with
+ * SSL, you would only need to specify `foo.com:$PORT=mcds` where `$PORT` is
+ * your custom port number).
+ *
+ * Identifier|Description
+ * ----------|-----------
+ * `http`    | Plain streaming HTTP port/Administrative port
+ * `mcd`     | Plain memcached ("data") port.
+ * `https`   | SSL-encrypted streaming HTTP port/administrative port
+ * `mcds`    | SSL-encrypted memcached ("data") port.
+ *
+ * * `couchbase://1.1.1.1,2.2.2.2` will assume default ports for both hosts
+ * * `couchbase://1.1.1.1,8091=http,2.2.2.2:9091=http` means that the host
+ *   `1.1.1.1` has a streaming port of `8091` while the host `9091` has a
+ *   streaming port of `9091`. The memcached ports are unchanged
+ * * `couchbase://1.1.1.1:11207=mcds` - Host `1.1.1.1` has its SSL-enabled
+ *   memcached port on `11207`.
+ *
+ * @note It is not allowed to specify some hosts without ports and some hosts
+ * with ports.
+ *
+ * ### Bucket
+ *
+ * A bucket may be specified by using the optional _path_ component of the URI
+ * For protected buckets a password will still need to be supplied out of band.
+ *
+ * * `couchbase://1.1.1.1,2.2.2.2,3.3.3.3/users` - Connect to the `users`
+ *   bucket.
  *
  *
- * ## Bucket Identification and Credentials
+ * ### Options
+ *
+ * Options can be specified as the _query_ part of the DSN/URI, for example:
+ *
+ * `couchbase://cbnode.net/beer?operation_timeout=10000000,ssl=no_verify`.
+ * Options may either be appropriate _key_ parameters for lcb_cntl_string()
+ * or one of the following:
+ *
+ * * `boostrap_on` - specify bootstrap protocols. Values can be `http` to force
+ *   old-style bootstrap mode for legacy clusters, `cccp` to force bootstrap
+ *   over the memcached port (For clusters 2.5 and above), or `all` to try with
+ *   _cccp_ and revert to _http_
+ *
+ * * `ssl` - Specify SSL behavior. Possible values are `on` to enable SSL,
+ *   `no_verify` which enables SSL but does not validate the certificate, or
+ *   `off` which does not use SSL (and is the default)
+ *
+ * * `capath` - Specify the path to the CA certificate which has been used
+ *   to sign the cluster's certificate. Only applicable if `ssl=on`.
+ *
+ * ### Bucket Identification and Credentials
  *
  * The most common settings you will wish to modify are the bucket name
- * (the `bucket` field) and the credentials field (`user` and `passwd`). If a
+ *  and the credentials field (`user` and `passwd`). If a
  * `bucket` is not specified it will revert to the `default` bucket (i.e. the
  * bucket which is created when Couchbase Server is installed).
  *
  * The `user` and `passwd` fields authenticate for the bucket. This is only
  * needed if you have configured your bucket to employ SASL auth. You can tell
- * if the bucket has been configured with SASL auth by:
+ * if the bucket has been configured with SASL auth by
  *
  * 1. Logging into the Couchbase Administration Console
  * 2. Going to the _Data Buckets_ tab
@@ -152,137 +247,66 @@ struct lcb_create_st1 { LCB_CREATE_V1_FIELDS };
  * 5. Click on _Edit_
  * 6. Inspect the _Access Control_ section in the pop-up
  *
+ * The bucket name is specified as the _path_ portion of the URI.
+ *
+ * For security purposes, the _user_ and _passwd_ cannot be specified within
+ * the URI
+ *
+ *
  * @note
  * You may not change the bucket or credentials after initializing the handle.
  *
- * ## Specifying a Node
- *
- * In addition to the bucket, the client must known at least one node upon which
- * the bucket resides; this is any node in your Couchbase cluster. This information
- * is passed into the `host` field. You do not need to specify all nodes in the
- * cluster. To specify a single node, simply place its IP address or hostname:
- *
- * @code{.c}
- * opts.host = "cbnode1";
- * @endcode
- *
- * ### Specifying Alternate Ports
- *
- * The client relies that the node is operational and has its REST API functional
- * on port 8091. If your administrator has configured the cluster to listen on
- * another port, specify the port after the hostname like so:
- *
- * @code{.c}
- * opts.host = "cbnode1:9091";
- * @endcode
- *
- * ### Specifying Multiple Nodes
- *
- * For the sake of redundancy you may sometimes wish to specify more than a single
- * node, in case the node specified is unavailable the client may contact another
- * node. To specify multiple nodes, specify each node delimited by a semicolon,
- * like so:
- *
- * @code{.c}
- * const char *nodes = "node1.my.org;node2.my.org;node3.my.org;";
- * @endcode
- *
- * ## Bootstrap Options
+ * #### Bootstrap Options
  *
  * The default configuration process will attempt to bootstrap first from
  * the new memcached configuration protocol (CCCP) and if that fails, use
  * the "HTTP" protocol via the REST API.
  *
  * The CCCP configuration will by default attempt to connect to one of
- * the nodes specified on the port 11200. While normally the memcached port
+ * the nodes specified on the port 11201. While normally the memcached port
  * is determined by the configuration itself, this is not possible when
  * the configuration has not been attained. You may specify a list of
  * alternate memcached servers by using the 'mchosts' field.
  *
  * If you wish to modify the default bootstrap protocol selection, you
- * can use the 'transports' field to pass an array of desired protocols
+ * can use the `bootstrap_on` option to specify the desired bootstrap
+ * specification
  * to use for configuration (note that the ordering of this array is
  * ignored). Using this mechanism, you can disable CCCP or HTTP.
  *
- * If the array is NULL or does not contain any protocols, the library
- * will bootstrap as if the following values had been specified for the
- * array:
+ * To force only "new-style" bootstrap, you may use `bootstrap_on=cccp`.
+ * To force only "old-style" bootstrap, use `bootstrap_on=http`. To force the
+ * default behavior, use `bootstrap_on=all`
  *
- * @code{.c}
- *   { LCB_CONFIG_TRANSPORT_CCCP,
- *     LCB_CONFIG_TRANSPORT_HTTP,
- *     LCB_CONFIG_TRANSPORT_LIST_END }
- * @endcode
  */
-#ifndef __LCB_DOXYGEN__
-struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
-#else
-struct lcb_create_st2 {
-    /**
-     * hosts A list of hosts:port separated by ';' to the
-     * administration port of the couchbase cluster. (ex:
-     * "host1;host2:9000;host3" would try to connect to
-     * host1 on port 8091, if that fails it'll connect to
-     * host2 on port 9000 etc).
-     *
-     * The hostname may also be specified as a URI looking
-     * like: http://localhost:8091/pools
-     */
-    const char *host;
-
-    /** The username to use for the bucket. At the time of writing (i.e. with
-     * Server 2.5) this field should either be set to the value of `bucket`, or
-     * `NULL`.
-     */
-    const char *user;
-
-    /** SASL password for the bucket */
-    const char *passwd;
-
-    /** Bucket name to use. If not specified, this is `default` */
-    const char *bucket;
-
-    /**
-     * IO instance to be used with this handle. If not specified, a new I/O
-     * instance will be created based on the current platform and compilation
-     * options.
-     */
-    struct lcb_io_opt_st *io;
-
-    /**
-     * the type of the connection:
-     * * LCB_TYPE_BUCKET
-     *      NULL for bucket means "default" bucket
-     * * LCB_TYPE_CLUSTER
-     *      the bucket argument ignored and all data commands
-     *      will return LCB_NOT_SUPPORTED
-     */
+struct lcb_create_st3 {
+    const char *dsn; /**< Connection string */
+    const char *username; /**< Username for bucket. Unused as of Server 2.5 */
+    const char *passwd; /**< Password for bucket */
+    void *_pad_bucket; /* Padding. Unused */
+    struct lcb_io_opt_st *io; /**< IO Options */
     lcb_type_t type;
-
-    /**
-     * Host list for memcached hosts. This is only used for bootstrap. See
-     * structure description for more details.
-     */
-    const char *mchosts;
-
-    /**
-     * Pointer to an array of configuration transports to use. This should be
-     * terminated by an LCB_CONFIG_TRANSPORT_LIST_END element
-     */
-    const lcb_config_transport_t *transports;
 };
-#endif
 
 /**@brief Wrapper structure for lcb_create()
- * @see lcb_create_st2
+ * @see lcb_create_st3
  */
 struct lcb_create_st {
-    int version; /**< Set this to `2` */
+    int version; /**< Set this to `3` */
     union {
         struct lcb_create_st0 v0;
         struct lcb_create_st1 v1;
         struct lcb_create_st2 v2;
+        struct lcb_create_st3 v3;
     } v;
+
+#define LCB_CREATEOPT_INIT(cropt, connstr, iops) do { \
+    memset(cropt, 0, sizeof(*cropt)); \
+    (cropt)->version = 3; \
+    (cropt)->v.v3.dsn = connstr; \
+    (cropt)->v.v3.iops = iops; \
+} while (0);
+
 
 #ifdef __cplusplus
     inline lcb_create_st(
@@ -315,8 +339,8 @@ struct lcb_create_st {
  * @code{.c}
  * struct lcb_create_st options;
  * memset(&options, 0, sizeof(options));
- * options.version = 2;
- * options.v.v2.host = "host1;host2;host3";
+ * options.version = 3;
+ * options.v.v3.dsn = "couchbase://host1,host2,host3";
  * err = lcb_create(&instance, &options);
  * @endcode
  *
@@ -326,14 +350,13 @@ struct lcb_create_st {
  * @code{.c}
  * struct lcb_create_st options;
  * memset(&options, 0, sizeof(options));
- * options.version = 1;
- * options.v.v1.host = "example.com:8091;example.org";
- * options.v.v1.bucket = "protected";
- * options.v.v1.user = "protected";
- * options.v.v1.passwd = "secret";
+ * options.version = 3;
+ * options.v.v3.host = "couchbase://example.com,example.org/protected"
+ * options.v.v3.passwd = "secret";
  * err = lcb_create(&instance, &options);
  * @endcode
  * @committed
+ * @see lcb_create_st3
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_create(lcb_t *instance,

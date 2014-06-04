@@ -411,7 +411,7 @@ TEST_F(MockUnitTest, testBrokenFirstNodeInList)
     lcb_create_st options;
     mock->makeConnectParams(options, NULL);
     std::string nodes = options.v.v0.host;
-    nodes = "1.2.3.4;" + nodes;
+    nodes = "1.2.3.4:4321;" + nodes;
     options.v.v0.host = nodes.c_str();
 
     lcb_t instance;

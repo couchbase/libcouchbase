@@ -42,7 +42,7 @@ TEST_F(Confmon, testBasic)
     lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
     clconfig_provider *http = lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP);
     lcb_clconfig_http_enable(http);
-    lcb_clconfig_http_set_nodes(http, instance->usernodes);
+    lcb_clconfig_http_set_nodes(http, instance->ht_nodes);
 
     lcb_confmon_prepare(mon);
 
@@ -162,7 +162,7 @@ TEST_F(Confmon, testCycle)
     lcb_clconfig_cccp_set_nodes(cccp, hl);
 
     lcb_clconfig_http_enable(http);
-    lcb_clconfig_http_set_nodes(http, instance->usernodes);
+    lcb_clconfig_http_set_nodes(http, instance->ht_nodes);
     hostlist_destroy(hl);
 
     lcb_confmon_prepare(mon);

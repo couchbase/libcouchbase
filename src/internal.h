@@ -95,7 +95,8 @@ extern "C" {
         lcb_uint16_t nreplicas;
 
         struct lcb_confmon_st *confmon;
-        struct hostlist_st *usernodes;
+        struct hostlist_st *mc_nodes;
+        struct hostlist_st *ht_nodes;
         struct clconfig_info_st *cur_configinfo;
         struct lcb_bootstrap_st *bootstrap;
 
