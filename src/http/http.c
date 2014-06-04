@@ -443,7 +443,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
             return LCB_NOT_SUPPORTED;
         }
         base = server->viewshost;
-        printf("Base is %s\n", base);
         nbase = strlen(base);
         username = settings->username;
 
