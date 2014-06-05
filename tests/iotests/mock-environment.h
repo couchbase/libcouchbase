@@ -206,7 +206,7 @@ public:
      * @param io the io ops to use (pass NULL if you don't have a
      *           special io ops you want to use
      */
-    void makeConnectParams(lcb_create_st &crst, lcb_io_opt_t io) {
+    void makeConnectParams(lcb_create_st &crst, lcb_io_opt_t io=NULL) {
         serverParams.makeConnectParams(crst, io);
     }
 

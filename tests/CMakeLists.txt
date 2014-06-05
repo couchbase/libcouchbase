@@ -44,7 +44,6 @@ FILE(GLOB T_VBTEST_SRC vbucket/*.cc)
 
 ADD_LIBRARY(ioserver STATIC EXCLUDE_FROM_ALL ${T_IOSERVER_SRC})
 ADD_LIBRARY(mocksupport STATIC EXCLUDE_FROM_ALL ${T_MOCKSUPPORT_SRC})
-ADD_EXECUTABLE(smoke-test EXCLUDE_FROM_ALL smoke-test.c)
 ADD_EXECUTABLE(nonio-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_BASIC_SRC})
 ADD_EXECUTABLE(mc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
 ADD_EXECUTABLE(mc-malloc-tests EXCLUDE_FROM_ALL mc_tests.cc ${T_MC_SRC})
@@ -66,13 +65,13 @@ ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL ${T_IO_SRC} unit_tests.cc)
 
 # Normally defined by config.h
 SET_PROPERTY(
-    TARGET unit-tests smoke-test
+    TARGET unit-tests
     APPEND PROPERTY COMPILE_DEFINITIONS
     BUILD_PLUGINS
     )
 
 IF(CMAKE_COMPILER_IS_GNUCXX)
-    SET_TARGET_PROPERTIES(unit-tests smoke-test
+    SET_TARGET_PROPERTIES(unit-tests
         PROPERTIES
         COMPILE_FLAGS "-Wno-sign-compare -Wno-missing-field-initializers")
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
@@ -91,7 +90,6 @@ TARGET_LINK_LIBRARIES(nonio-tests couchbase couchbase_utils netbuf gtest)
 TARGET_LINK_LIBRARIES(mc-tests mcreq netbuf vbucket gtest couchbase_utils ${LCB_SNAPPY_LINK})
 TARGET_LINK_LIBRARIES(mc-malloc-tests mcreq netbuf-malloc vbucket gtest ${LCB_SNAPPY_LINK})
 TARGET_LINK_LIBRARIES(netbuf-tests netbuf gtest)
-TARGET_LINK_LIBRARIES(smoke-test couchbase couchbase_utils mocksupport)
 TARGET_LINK_LIBRARIES(rdb-tests rdb gtest)
 TARGET_LINK_LIBRARIES(sock-tests rdb ioserver couchbase gtest)
 TARGET_LINK_LIBRARIES(vbucket-tests gtest couchbase)
@@ -103,7 +101,6 @@ MACRO(BUILD_TEST target)
 ENDMACRO()
 
 BUILD_TEST(check-all)
-BUILD_TEST(smoke-test)
 BUILD_TEST(unit-tests)
 BUILD_TEST(nonio-tests)
 BUILD_TEST(rdb-tests)
@@ -112,7 +109,7 @@ BUILD_TEST(vbucket-tests)
 BUILD_TEST(mc-tests)
 BUILD_TEST(htparse-tests)
 
-ADD_CUSTOM_TARGET(alltests DEPENDS check-all smoke-test unit-tests nonio-tests
+ADD_CUSTOM_TARGET(alltests DEPENDS check-all unit-tests nonio-tests
     rdb-tests sock-tests vbucket-tests mc-tests htparse-tests)
 
 MACRO(DEFINE_MOCKTEST plugin test)
@@ -136,25 +133,20 @@ ENDMACRO()
 ADD_TEST(NAME check-nonio COMMAND $<TARGET_FILE:nonio-tests>)
 
 DEFINE_MOCKTEST("select" "unit-tests")
-DEFINE_MOCKTEST("select" "smoke-test")
 DEFINE_MOCKTEST("select" "sock-tests")
 IF(WIN32)
     DEFINE_MOCKTEST("iocp" "unit-tests")
-    DEFINE_MOCKTEST("iocp" "smoke-test")
     DEFINE_MOCKTEST("iocp" "sock-tests")
 ENDIF()
 IF(HAVE_LIBEVENT)
     DEFINE_MOCKTEST("libevent" "unit-tests")
-    DEFINE_MOCKTEST("libevent" "smoke-test")
     DEFINE_MOCKTEST("libevent" "sock-tests")
 ENDIF()
 IF(HAVE_LIBEV)
     DEFINE_MOCKTEST("libev" "unit-tests")
-    DEFINE_MOCKTEST("libev" "smoke-test")
     DEFINE_MOCKTEST("libev" "sock-tests")
 ENDIF()
 IF(HAVE_LIBUV)
     DEFINE_MOCKTEST("libuv" "unit-tests")
-    DEFINE_MOCKTEST("libuv" "smoke-test")
     DEFINE_MOCKTEST("libuv" "sock-tests")
 ENDIF()
