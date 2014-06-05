@@ -21,10 +21,8 @@
 #include "vbucket/aliases.h"
 #include "sllist-inl.h"
 
-#define LOGARGS(instance, lvl) \
-    instance->settings, "newconfig", LCB_LOG_##lvl, __FILE__, __LINE__
-
-#define LOG(instance, lvl, msg) lcb_log(LOGARGS(instance, lvl), msg)
+#define LOGARGS(instance, lvl) instance->settings, "newconfig", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOG(instance, lvlbase, msg) lcb_log(instance->settings, "newconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__, msg)
 
 /**
  * Finds the index of an older server using the current config

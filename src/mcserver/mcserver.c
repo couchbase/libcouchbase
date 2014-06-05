@@ -24,9 +24,7 @@
 #include "mc/mcreq-flush-inl.h"
 #include <lcbio/ssl.h>
 
-#define LOGARGS(c, lvl) \
-    (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
-#define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
+#define LOGARGS(c, lvl) (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 
 #define MCREQ_MAXIOV 32
 #define LCBCONN_UNWANT(conn, flags) (conn)->want &= ~(flags)

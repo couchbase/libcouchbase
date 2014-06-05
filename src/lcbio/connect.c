@@ -10,9 +10,7 @@
 #ifndef EAI_SYSTEM
 #define EAI_SYSTEM 0
 #endif
-#define LOGARGS(conn, lvl) \
-    conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
-#define LOG(conn, lvl, msg) lcb_log(LOGARGS(conn, lvl), msg)
+#define LOGARGS(conn, lvl) conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
 
 /** Format string arguments for %p%s:%s */
 #define CSLOGID(sock) (void*)(sock), (sock)->info->ep.host, (sock)->info->ep.port

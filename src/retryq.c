@@ -4,9 +4,7 @@
 #include "logging.h"
 #include "internal.h"
 
-#define LOGARGS(rq, lvl) \
-    (rq)->settings, "retryq", LCB_LOG_##lvl, __FILE__, __LINE__
-#define LOG(c, lvl, msg) lcb_log(LOGARGS(c, lvl), msg)
+#define LOGARGS(rq, lvl) (rq)->settings, "retryq", LCB_LOG_##lvl, __FILE__, __LINE__
 
 typedef struct {
     lcb_list_t ll_sched;

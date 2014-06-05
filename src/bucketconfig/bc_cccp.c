@@ -30,9 +30,7 @@
 #include <lcbio/timer-ng.h>
 #include <lcbio/ssl.h>
 
-#define LOGARGS(cccp, lvl) \
-    cccp->base.parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
-#define LOG(cccp, lvl, msg) lcb_log(LOGARGS(cccp, lvl), msg)
+#define LOGARGS(cccp, lvl) cccp->base.parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
 
 struct cccp_cookie_st;
 

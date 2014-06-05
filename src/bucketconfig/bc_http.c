@@ -21,7 +21,6 @@
 #include <lcbio/ssl.h>
 
 #define LOGARGS(ht, lvlbase) ht->base.parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
-#define LOG(ht, lvlbase, msg) lcb_log(LOGARGS(ht, lvlbase), msg)
 
 static void io_error_handler(lcbio_CTX *, lcb_error_t);
 static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
