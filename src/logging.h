@@ -6,20 +6,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#ifdef DEBUG
-#warning "Undefining DEBUG"
-#undef DEBUG
-#endif
-
-#ifdef ERROR
-#warning "Undefining ERROR"
-#undef ERROR
-#endif
-
-#ifdef WARN
-#warning "Undefining WARN"
-#undef WARN
-#endif
 
 struct lcb_settings_st;
 struct lcb_st;
