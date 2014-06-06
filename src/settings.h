@@ -117,6 +117,10 @@ typedef struct lcb_settings_st {
     /** Don't guess next vbucket server. Mainly for testing */
     int vb_noguess;
 
+    /** Whether lcb_destroy is synchronous. This mode will run the I/O event
+     * loop as much as possible until no outstanding events remain.*/
+    int syncdtor;
+
     /** SSL settings */
     lcb_SSLOPTS sslopts;
 

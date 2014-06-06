@@ -426,6 +426,10 @@ lcb_error_t lcb_create(lcb_t *instance,
         }
     }
 
+    if (lcb_getenv_boolean("LCB_SYNC_DTOR")) {
+        settings->syncdtor = 1;
+    }
+
     populate_nodes(obj, &dsn);
     err = init_providers(obj, &dsn);
     if (err != LCB_SUCCESS) {
@@ -482,6 +486,23 @@ lcb_error_t lcb_create_compat(
         lcb_destroy(*instance);
     }
     return err;
+}
+
+typedef struct {
+    lcbio_pTABLE table;
+    lcbio_pTIMER timer;
+    int stopped;
+} SYNCDTOR;
+
+static void
+sync_dtor_cb(void *arg)
+{
+    SYNCDTOR *sd = arg;
+    if (sd->table->refcount == 2) {
+        lcbio_timer_destroy(sd->timer);
+        IOT_STOP(sd->table);
+        sd->stopped = 1;
+    }
 }
 
 LIBCOUCHBASE_API
@@ -543,10 +564,25 @@ void lcb_destroy(lcb_t instance)
     DESTROY(lcb_retryq_destroy, retryq);
     DESTROY(lcb_confmon_destroy, confmon);
     DESTROY(lcbio_mgr_destroy, memd_sockpool);
-    DESTROY(lcbio_table_unref, iotable);
     mcreq_queue_cleanup(&instance->cmdq);
-    DESTROY(lcb_settings_unref, settings);
     lcb_aspend_cleanup(po);
+
+    if (instance->iotable && instance->iotable->refcount > 1 &&
+            instance->settings && instance->settings->syncdtor) {
+        /* create an async object */
+        SYNCDTOR sd;
+        sd.table = instance->iotable;
+        sd.timer = lcbio_timer_new(instance->iotable, &sd, sync_dtor_cb);
+        sd.stopped = 0;
+        lcbio_async_signal(sd.timer);
+        lcb_log(LOGARGS(instance, WARN), "Running event loop to drain any pending I/O events");
+        do {
+            IOT_START(instance->iotable);
+        } while (!sd.stopped);
+    }
+
+    DESTROY(lcbio_table_unref, iotable);
+    DESTROY(lcb_settings_unref, settings);
     free(instance->histogram);
     free(instance->scratch);
     memset(instance, 0xff, sizeof(*instance));

@@ -1033,8 +1033,23 @@ struct lcb_cntl_rdballocfactory {
  */
 #define LCB_CNTL_RDBALLOCFACTORY 0x27
 
+/**
+ * @volatile
+ * Determines whether to run the event loop internally within lcb_destroy()
+ * until no more I/O resources remain for the library. This is usually only
+ * necessary if you are creating a lot of instances and/or are using memory
+ * leak analysis tools.
+ *
+ * Mode|Arg
+ * ----|----
+ * Set, Get | `int*`
+ *
+ * @see lcb_destroy_async() and lcb_set_destroy_callback()
+ */
+#define LCB_CNTL_SYNCDESTROY 0x28
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x28
+#define LCB_CNTL__MAX                    0x29
 /**@}*/
 
 #ifdef __cplusplus
