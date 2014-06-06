@@ -129,8 +129,14 @@ MACRO(DEFINE_MOCKTEST plugin test)
             --gtest_output=xml:"${CMAKE_BINARY_DIR}/REPORT_${plugin}_${test}.xml")
 ENDMACRO()
 
+# Since we need a plugin name, we'll use 'select'. However none of these
+# actually do any I/O
+DEFINE_MOCKTEST("select" "nonio-tests")
+DEFINE_MOCKTEST("select" "rdb-tests")
+DEFINE_MOCKTEST("select" "vbucket-tests")
+DEFINE_MOCKTEST("select" "mc-tests")
+DEFINE_MOCKTEST("select" "htparse-tests")
 
-ADD_TEST(NAME check-nonio COMMAND $<TARGET_FILE:nonio-tests>)
 
 DEFINE_MOCKTEST("select" "unit-tests")
 DEFINE_MOCKTEST("select" "sock-tests")
