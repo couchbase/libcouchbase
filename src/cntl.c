@@ -103,12 +103,10 @@ static lcb_error_t timeout_common(int mode,
     return LCB_SUCCESS;
 }
 
-static lcb_error_t bufsize_common(int mode, lcb_t instance, int cmd, void *arg)
+static lcb_error_t
+noop_handler(int mode, lcb_t instance, int cmd, void *arg)
 {
-    if (mode == LCB_CNTL_GET) {
-        *(lcb_size_t *)arg = 0;
-    }
-    (void)cmd; (void)instance;
+    (void)mode;(void)instance;(void)cmd;(void)arg;
     return LCB_SUCCESS;
 }
 
@@ -269,20 +267,6 @@ static lcb_error_t confthresh(int mode, lcb_t instance, int cmd, void *arg)
         instance->settings->weird_things_threshold = *user;
     } else {
         *user = instance->settings->weird_things_threshold;
-    }
-
-    (void)cmd;
-    return LCB_SUCCESS;
-}
-
-static lcb_error_t bummer_mode_handler(int mode, lcb_t instance, int cmd, void *arg)
-{
-    int *skip = arg;
-
-    if (mode == LCB_CNTL_SET) {
-        instance->settings->bummer = *skip;
-    } else {
-        *skip = instance->settings->bummer;
     }
 
     (void)cmd;
@@ -651,8 +635,8 @@ compmode_handler(int mode, lcb_t instance, int cmd, void *arg)
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
-    bufsize_common, /* LCB_CNTL_RBUFSIZE */
-    bufsize_common, /* LCB_CNTL_WBUFSIZE */
+    noop_handler, /* LCB_CNTL_RBUFSIZE */
+    noop_handler, /* LCB_CNTL_WBUFSIZE */
     get_htype,      /* LCB_CNTL_HANDLETYPE */
     get_vbconfig,   /* LCB_CNTL_VBCONFIG */
     get_iops,       /* LCB_CNTL_IOPS */
@@ -668,7 +652,7 @@ static ctl_handler handlers[] = {
     lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DEFAULT_TYPES */
     lcb_iops_cntl_handler, /* LCB_CNTL_IOPS_DLOPEN_DEBUG */
     timeout_common,  /* LCB_CNTL_CONFIGURATION_TIMEOUT */
-    bummer_mode_handler,   /* LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT */
+    noop_handler,   /* LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT */
     randomize_bootstrap_hosts_handler /* LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS */,
     config_cache_loaded_handler /* LCB_CNTL_CONFIG_CACHE_LOADED */,
     force_sasl_mech_handler, /* LCB_CNTL_FORCE_SASL_MECH */

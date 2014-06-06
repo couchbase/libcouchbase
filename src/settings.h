@@ -110,10 +110,6 @@ typedef struct lcb_settings_st {
     /** If we should randomize bootstrap nodes or not */
     int randomize_bootstrap_nodes;
 
-    /* if non-zero, skip nodes in list that seems like not
-     * configured or doesn't have the bucket needed */
-    int bummer;
-
     int bc_http_urltype;
 
     /** Don't guess next vbucket server. Mainly for testing */
