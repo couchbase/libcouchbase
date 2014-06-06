@@ -21,7 +21,7 @@ static string getConfigFile(const char *fname)
     } else {
         base = "./../";
     }
-    base += "tests/vbucket/confdata/";
+    base += "/tests/vbucket/confdata/";
     base += fname;
 
     // Open the file
