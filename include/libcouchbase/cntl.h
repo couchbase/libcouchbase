@@ -1048,8 +1048,31 @@ struct lcb_cntl_rdballocfactory {
  */
 #define LCB_CNTL_SYNCDESTROY 0x28
 
+/**
+ * @committed
+ *
+ * Sets the logging level for the console logger. If a logger is already
+ * initialized (either from the environment, or via lcb_cntl_logger() then
+ * this operation does nothing.
+ *
+ * This is mainly useful for applications which want to proxy the built in
+ * logging options via command line options and the like, rather than setting
+ * it from the environment.
+ *
+ * The argument passed to lcb_cntl() is an integer of 0 until
+ * `LCB_LOGLEVEL_MAX`, though the actual type is of `lcb_U32` rather than
+ * an enum type.
+ *
+ * Mode|Arg
+ * ----|---
+ * Set | `const lcb_U32*`
+ *
+ * @see LCB_CNTL_LOGGER
+ */
+#define LCB_CNTL_CONLOGGER_LEVEL 0x29
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x29
+#define LCB_CNTL__MAX                    0x2A
 /**@}*/
 
 #ifdef __cplusplus

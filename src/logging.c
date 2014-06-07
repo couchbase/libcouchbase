@@ -6,11 +6,6 @@
 
 static hrtime_t start_time = 0;
 
-struct console_logprocs_st {
-    struct lcb_logprocs_st base;
-    int minlevel;
-};
-
 static void console_log(struct lcb_logprocs_st *procs,
                         unsigned int iid,
                         const char *subsys,
@@ -20,7 +15,7 @@ static void console_log(struct lcb_logprocs_st *procs,
                         const char *fmt,
                         va_list ap);
 
-static struct console_logprocs_st console_logprocs = {
+static struct lcb_CONSOLELOGGER console_logprocs = {
         {0 /* version */, {{console_log} /* v1 */} /*v*/},
         /** Minimum severity */
         LCB_LOG_INFO
@@ -66,7 +61,7 @@ static void console_log(struct lcb_logprocs_st *procs,
 {
 
     hrtime_t now;
-    struct console_logprocs_st *vprocs = (struct console_logprocs_st *)procs;
+    struct lcb_CONSOLELOGGER *vprocs = (struct lcb_CONSOLELOGGER *)procs;
 
     if (severity < vprocs->minlevel) {
         return;

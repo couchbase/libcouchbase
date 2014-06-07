@@ -463,6 +463,9 @@ static lcb_error_t config_cache_handler(int mode, lcb_t instance, int cmd, void 
 {
     clconfig_provider *provider;
     (void)cmd;
+    if (mode == CNTL__MODE_SETSTRING) {
+        mode = LCB_CNTL_SET;
+    }
 
     provider = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_FILE);
     if (mode == LCB_CNTL_SET) {
@@ -591,6 +594,48 @@ syncdtor_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+console_log_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    lcb_U32 level;
+    struct lcb_CONSOLELOGGER *logger;
+    lcb_logprocs *procs;
+
+    if (mode == CNTL__MODE_SETSTRING) {
+        int iarg;
+        if (sscanf(arg, "%d", &iarg) != 1) {
+            return LCB_EINVAL;
+        }
+        level = iarg;
+        mode = LCB_CNTL_SET;
+    } else {
+        level = *(lcb_U32*)arg;
+    }
+
+    if (mode != LCB_CNTL_SET) {
+        return LCB_EINVAL;
+    }
+
+    procs = LCBT_SETTING(instance, logger);
+    if (procs) {
+        /* don't override previous config */
+        return LCB_SUCCESS;
+    }
+
+    if (procs == NULL && mode == LCB_CNTL_SET) {
+        procs = lcb_init_console_logger();
+        LCBT_SETTING(instance, logger) = procs;
+    }
+
+    logger = (struct lcb_CONSOLELOGGER* ) lcb_console_logprocs;
+    level = LCB_LOG_ERROR - level;
+    logger->minlevel = level;
+    LCBT_SETTING(instance, logger) = &logger->base;
+
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -632,7 +677,8 @@ static ctl_handler handlers[] = {
     htconfig_urltype_handler, /* LCB_CNTL_HTCONFIG_URLTYPE */
     compmode_handler, /* LCB_CNTL_COMPRESSION_OPTS */
     allocfactory_handler, /* LCB_CNTL_RDBALLOCFACTORY */
-    syncdtor_handler /* LCB_CNTL_SYNCDESTROY */
+    syncdtor_handler, /* LCB_CNTL_SYNCDESTROY */
+    console_log_handler /* LCB_CNTL_CONLOGGER_LEVEL */
 };
 
 typedef struct {
@@ -653,6 +699,8 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"config_total_timeout", LCB_CNTL_CONFIGURATION_TIMEOUT},
         {"config_node_timeout", LCB_CNTL_CONFIG_NODE_TIMEOUT},
         {"compression", LCB_CNTL_COMPRESSION_OPTS},
+        {"console_log_level", LCB_CNTL_CONLOGGER_LEVEL},
+        {"config_cache", LCB_CNTL_CONFIGCACHE }
 };
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

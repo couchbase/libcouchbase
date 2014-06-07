@@ -16,6 +16,11 @@ struct lcb_st;
  */
 extern struct lcb_logprocs_st *lcb_console_logprocs;
 
+struct lcb_CONSOLELOGGER {
+    struct lcb_logprocs_st base;
+    int minlevel;
+};
+
 /**
  * Log a message via the installed logger. The parameters correlate to the
  * arguments passed to the lcb_logging_callback function.
