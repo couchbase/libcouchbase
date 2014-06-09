@@ -24,8 +24,7 @@ extern "C" {
  *
  * The following operation APIs are low level entry points which create a
  * single operation. To use these operation APIs you should call the
- * mcreq_sched_enter() function which prepares the cmdqueue structure to
- * start scheduling operations.
+ * lcb_sched_enter() which creates a virtual scope in which to create operations.
  *
  * For each of these operation APIs, the actual API call will insert the
  * created packet into a "Scheduling Queue" (this is done through
@@ -38,13 +37,12 @@ extern "C" {
  * failed) then the command will not be placed into the queue.
  *
  * Once all operations have been scheduled you can call
- * mcreq_sched_leave() which will place all the commands in the scheduling
- * queue into the I/O queue. The do_flush parameter determines if each
- * affected pipeline's 'flush_start()' callback is called.
+ * lcb_sched_leave() which will place all commands scheduled into the I/O
+ * queue.
  *
  * If you wish to _discard_ all scheduled operations (for example, if one of
  * them errored, and your application cannot handle partial scheduling failures)
- * then you may call mcreq_sched_fail() which will release all the resources
+ * then you may call lcb_sched_fail() which will release all the resources
  * of the packets placed into the temporary queue.
  *
  * # Operation APIs
@@ -52,9 +50,6 @@ extern "C" {
  * Operation APIs each schedule only a single logical command. These differ from
  * the _V2_ APIs in libcouchbase which schedule multiple commands. In this
  * version of the library, the _V2_ APIs wrap the _V3_ APIs listed here.
- *
- * As noted above, you should use these function calls in conjunction with the
- * mcreq_sched_* routines
  *
  * @addtogroup MCREQ_PUBAPI
  * @{
