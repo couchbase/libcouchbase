@@ -313,12 +313,12 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd);
  * ensure the item is removed only if it has not been mutated since the last
  * retrieval
  */
-typedef lcb_CMDBASE lcb_remove3_cmd_t;
+typedef lcb_CMDBASE lcb_CMDREMOVE;
 /**@brief Schedule a removal of an item from the server
  * @volatile */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_remove3(lcb_t instance, const void *cookie, const lcb_remove3_cmd_t * cmd);
+lcb_remove3(lcb_t instance, const void *cookie, const lcb_CMDREMOVE * cmd);
 
 /**@brief Modify an item's expiration time
  * @volatile*/

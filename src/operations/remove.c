@@ -19,7 +19,7 @@
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_remove3(lcb_t instance, const void *cookie, const lcb_remove3_cmd_t * cmd)
+lcb_remove3(lcb_t instance, const void *cookie, const lcb_CMDREMOVE * cmd)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     mc_PIPELINE *pl;
@@ -58,7 +58,7 @@ lcb_remove(lcb_t instance, const void *cookie, lcb_size_t num,
     for (ii = 0; ii < num; ii++) {
         lcb_error_t err;
         const lcb_remove_cmd_t *src = items[ii];
-        lcb_remove3_cmd_t dst;
+        lcb_CMDREMOVE dst;
         memset(&dst, 0, sizeof(dst));
         dst.key.contig.bytes = src->v.v0.key;
         dst.key.contig.nbytes = src->v.v0.nkey;
