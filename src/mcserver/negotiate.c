@@ -278,18 +278,20 @@ send_hello(mc_pSESSREQ sreq)
     protocol_binary_request_header *hdr = &req.message.header;
     unsigned ii;
     static const char client_id[] = LCB_VERSION_STRING;
-    lcb_U16 features[] = {
-            PROTOCOL_BINARY_FEATURE_TLS,
-            PROTOCOL_BINARY_FEATURE_DATATYPE };
+    lcb_U16 features[MEMCACHED_TOTAL_HELLO_FEATURES];
+    unsigned nfeatures = 0;
 
-    lcb_SIZE nfeatures = sizeof features / sizeof *features;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
+    if (sreq->inner->settings->compressopts != LCB_COMPRESS_NONE) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_DATATYPE;
+    }
     lcb_SIZE nclistr = strlen(client_id);
 
     memset(&req, 0, sizeof req);
     hdr->request.opcode = PROTOCOL_BINARY_CMD_HELLO;
     hdr->request.magic = PROTOCOL_BINARY_REQ;
     hdr->request.keylen = htons((lcb_U16)nclistr);
-    hdr->request.bodylen = htonl((lcb_U32)(nclistr+sizeof features));
+    hdr->request.bodylen = htonl((lcb_U32)(nclistr+ (sizeof features[0]) * nfeatures));
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
     lcbio_ctx_put(sreq->ctx, req.bytes, sizeof req.bytes);
