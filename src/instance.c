@@ -276,7 +276,7 @@ init_providers(lcb_t obj, const lcb_DSNPARAMS *dsn)
         lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_HTTP, 0);
     }
 
-    if (cccp_enabled) {
+    if (cccp_enabled && obj->type != LCB_TYPE_CLUSTER) {
         lcb_clconfig_cccp_enable(cccp, obj);
         lcb_clconfig_cccp_set_nodes(cccp, obj->mc_nodes);
     } else {
