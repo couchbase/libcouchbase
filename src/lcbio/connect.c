@@ -29,7 +29,8 @@ typedef struct lcbio_CONNSTART {
     lcbio_OSERR syserr;
     void *arg;
     void *event;
-    int ev_active; /* whether the event pointer is active (Event only) */
+    short ev_active; /* whether the event pointer is active (Event only) */
+    short in_uhandler; /* Whether we're inside the user-defined handler */
     struct addrinfo *ai_root;
     struct addrinfo *ai;
     connect_state state;
@@ -91,6 +92,7 @@ cs_handler(void *cookie)
     }
 
     /** Handler section */
+    cs->in_uhandler = 1;
     cs->handler(err == LCB_SUCCESS ? s : NULL, cs->arg, err, cs->syserr);
 
     GT_DTOR:
@@ -131,7 +133,12 @@ cs_state_signal(lcbio_CONNSTART *cs, connect_state state, lcb_error_t err)
 void
 lcbio_connect_cancel(lcbio_pCONNSTART cs)
 {
-    cs_state_signal(cs, CS_CANCELLED, LCB_SUCCESS);
+    if (cs->in_uhandler) {
+        /* already inside user-defined handler */
+        return;
+    }
+    cs->state = CS_CANCELLED;
+    cs_handler(cs);
 }
 
 
