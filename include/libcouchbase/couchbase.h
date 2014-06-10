@@ -2792,7 +2792,8 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
  * * `ssl`. Can be set to `off`, `on`, or `no_verify`. The latter will enbable
  *   SSL encryption but ignore any failure to verify the certificate.
  *   See @ref LCB_CNTL_SSL_MODE
- * * `compression`. Can be set to `off`, `on`, or `inflate_only`. The latter
+ * * `compression`. Can be set to `off`, `on`, `force, or `inflate_only`.
+ *   The latter
  *   will only enable inbound compression but will not compress outgoing
  *   data. See @ref LCB_CNTL_COMPRESSION_OPTS
  * * `ca_path`. See @ref LCB_CNTL_CACERT

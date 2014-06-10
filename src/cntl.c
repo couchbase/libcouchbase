@@ -550,6 +550,8 @@ compmode_handler(int mode, lcb_t instance, int cmd, void *arg)
             opts_s = LCB_COMPRESS_NONE;
         } else if (!strcmp(arg, "inflate_only")) {
             opts_s = LCB_COMPRESS_IN;
+        } else if (!strcmp(arg, "force")) {
+            opts_s = LCB_COMPRESS_INOUT|LCB_COMPRESS_FORCE;
         } else {
             return LCB_EINVAL;
         }
