@@ -429,6 +429,15 @@ lcb_error_t lcb_create(lcb_t *instance,
     if (lcb_getenv_boolean("LCB_SYNC_DTOR")) {
         settings->syncdtor = 1;
     }
+    if (lcb_getenv_boolean("LCB_COMPRESSION")) {
+        char tmpbuf[4096];
+        lcb_getenv_nonempty("LCB_COMPRESSION", tmpbuf, sizeof tmpbuf);
+        err = lcb_cntl_string(obj, "compression", tmpbuf);
+        if (err != LCB_SUCCESS) {
+            err = LCB_BAD_ENVIRONMENT;
+            goto GT_DONE;
+        }
+    }
 
     populate_nodes(obj, &dsn);
     err = init_providers(obj, &dsn);
