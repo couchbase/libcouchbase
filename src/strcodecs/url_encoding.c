@@ -19,6 +19,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 static int maybe_skip_encoding(const char *p, lcb_size_t c, lcb_size_t l)
 {
@@ -157,4 +158,30 @@ lcb_error_t lcb_urlencode_path(const char *path,
     *nout = n;
 
     return LCB_SUCCESS;
+}
+
+int
+lcb_urldecode(const char *in, char *out, lcb_SSIZE n)
+{
+    unsigned iix, oix = 0;
+    if (n == -1) {
+        n = strlen(in);
+    }
+    for (iix = 0; iix < n && in[iix]; ++iix) {
+        if (in[iix] != '%') {
+            out[oix++] = in[iix];
+        } else {
+            unsigned octet = 0;
+            if (iix + 3 > n) {
+                return -1;
+            }
+            if (sscanf(&in[iix+1], "%2X", &octet) != 1) {
+                return -1;
+            }
+            out[oix++] = (char)octet;
+            iix += 2;
+        }
+    }
+    out[oix] = '\0';
+    return 0;
 }

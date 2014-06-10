@@ -156,3 +156,32 @@ TEST_F(UrlEncoding, internationalEncodedTest)
     EXPECT_EQ(exp, output);
     free(out);
 }
+
+TEST_F(UrlEncoding, testDecode)
+{
+    char obuf[4096];
+    ASSERT_EQ(0, lcb_urldecode("%22", obuf, 3)) << "Single character";
+    ASSERT_STREQ("\x22", obuf);
+
+    ASSERT_EQ(0, lcb_urldecode("Hello World", obuf, -1)) << "No pct encode";
+    ASSERT_STREQ("Hello World", obuf);
+
+    ASSERT_EQ(0, lcb_urldecode("Hello%20World", obuf, -1));
+    ASSERT_STREQ("Hello World", obuf);
+
+    ASSERT_EQ(0, lcb_urldecode("%2Ffoo%2Fbar%2Fbaz%2F", obuf, -1));
+    ASSERT_STREQ("/foo/bar/baz/", obuf);
+
+    ASSERT_EQ(0, lcb_urldecode("%01%02%03%04", obuf, -1)) << "Multiple octets";
+    ASSERT_STREQ("\x01\x02\x03\x04", obuf);
+
+    ASSERT_EQ(0, lcb_urldecode("%FFFF", obuf, -1)) << "Recognize only first two hex digits";
+    // Split the hex literal so we don't confuse the preprocessor
+    ASSERT_STREQ("\xff" "FF", obuf);
+
+    // Error tests
+    ASSERT_EQ(-1, lcb_urldecode("%", obuf, -1));
+    ASSERT_EQ(-1, lcb_urldecode("%22", obuf, 1));
+    ASSERT_EQ(-1, lcb_urldecode("%22", obuf, 2));
+    ASSERT_EQ(-1, lcb_urldecode("%RR", obuf, -1)) << "Invalid hex digits";
+}
