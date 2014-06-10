@@ -375,6 +375,8 @@ H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 
     exdata = request->u_rdata.exdata;
     if (rc != LCB_SUCCESS || PACKET_NKEY(response) == 0) {
+        /* Call the handler without a response, this indicates that this server
+         * has finished responding */
         exdata->callback(pipeline, request, rc, NULL);
         return;
     }

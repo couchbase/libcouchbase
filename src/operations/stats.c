@@ -43,6 +43,7 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
         lcb_server_stat_resp_t s_resp;
 
         if (--ck->remaining) {
+            /* still have other servers which must reply. */
             return;
         }
 
