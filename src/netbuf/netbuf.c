@@ -435,6 +435,7 @@ mblock_wipe_block(nb_MBLOCK *block)
 
         SLLIST_ITERFOR(&queue->pending, &dea_iter) {
             nb_QDEALLOC *qd = SLLIST_ITEM(dea_iter.cur, nb_QDEALLOC, slnode);
+            sllist_iter_remove(&queue->pending, &dea_iter);
             mblock_release_ptr(&queue->qpool, (char *)qd, sizeof(*qd));
         }
 
