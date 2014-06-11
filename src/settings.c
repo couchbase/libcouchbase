@@ -28,6 +28,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->bc_http_urltype = LCB_DEFAULT_HTCONFIG_URLTYPE;
     settings->compressopts = LCB_DEFAULT_COMPRESSOPTS;
     settings->allocator_factory = rdb_bigalloc_new;
+    settings->syncmode = LCB_ASYNCHRONOUS;
 }
 
 LCB_INTERNAL_API

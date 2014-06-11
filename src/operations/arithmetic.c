@@ -103,5 +103,5 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
     }
 
     mcreq_sched_leave(&instance->cmdq, 1);
-    return LCB_SUCCESS;
+    SYNCMODE_INTERCEPT(instance)
 }

@@ -289,7 +289,11 @@ lcb_error_t lcb_observe(lcb_t instance,
                         lcb_size_t num,
                         const lcb_observe_cmd_t *const *items)
 {
-    return lcb_observe_ex(instance, command_cookie, num,
-                          (const void * const *)items,
-                          LCB_OBSERVE_TYPE_BCAST);
+    lcb_error_t err = lcb_observe_ex(instance, command_cookie, num,
+        (const void * const *)items, LCB_OBSERVE_TYPE_BCAST);
+    if (err == LCB_SUCCESS) {
+        SYNCMODE_INTERCEPT(instance)
+    } else {
+        return err;
+    }
 }

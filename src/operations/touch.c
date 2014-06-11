@@ -73,5 +73,5 @@ lcb_touch(lcb_t instance, const void *cookie, lcb_size_t num,
         }
     }
     mcreq_sched_leave(cq, 1);
-    return LCB_SUCCESS;
+    SYNCMODE_INTERCEPT(instance)
 }

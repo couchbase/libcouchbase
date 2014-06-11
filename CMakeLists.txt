@@ -214,6 +214,7 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/retrychk.c
             src/sanitycheck.c
             src/settings.c
+            src/synchandler.c
             src/timer.c
             src/timings.c
             ${CMAKE_BINARY_DIR}/dllversion.rc

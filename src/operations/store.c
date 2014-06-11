@@ -176,5 +176,5 @@ lcb_store(lcb_t instance, const void *cookie, lcb_size_t num,
         }
     }
     mcreq_sched_leave(&instance->cmdq, 1);
-    return LCB_SUCCESS;
+    SYNCMODE_INTERCEPT(instance)
 }

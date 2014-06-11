@@ -594,7 +594,7 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     dset_ref(dset);
     lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_DURABILITY, dset);
     timer_schedule(dset, 0, STATE_OBSPOLL);
-    return LCB_SUCCESS;
+    SYNCMODE_INTERCEPT(instance)
 }
 
 /**

@@ -216,6 +216,16 @@ extern "C" {
     int
     lcb_should_retry(lcb_settings *settings, mc_PACKET *pkt, lcb_error_t err);
 
+    lcb_error_t
+    lcb__synchandler_return(lcb_t instance);
+
+#define SYNCMODE_INTERCEPT(o) \
+    if (LCBT_SETTING(o, syncmode) == LCB_ASYNCHRONOUS) { \
+        return LCB_SUCCESS; \
+    } else { \
+        return lcb__synchandler_return(o); \
+    }
+
 #ifdef __cplusplus
 }
 #endif

@@ -619,7 +619,12 @@ lcb_destroy_async(lcb_t instance, const void *arg)
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
-    return lcb_bootstrap_initial(instance);
+    lcb_error_t err = lcb_bootstrap_initial(instance);
+    if (err == LCB_SUCCESS) {
+        SYNCMODE_INTERCEPT(instance);
+    } else {
+        return err;
+    }
 }
 
 LIBCOUCHBASE_API

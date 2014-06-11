@@ -81,6 +81,7 @@ struct rdb_ALLOCATOR;
 typedef struct lcb_settings_st {
     unsigned int iid;
     lcb_COMPRESSOPTS compressopts;
+    lcb_syncmode_t syncmode;
     lcb_uint32_t views_timeout;
     lcb_uint32_t http_timeout;
     lcb_uint32_t durability_timeout;

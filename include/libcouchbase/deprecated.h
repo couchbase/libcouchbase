@@ -85,6 +85,12 @@ struct lcb_cached_config_st {
  */
 LCB_DEPR_API(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io));
 
+typedef enum {
+    LCB_ASYNCHRONOUS = 0x00,
+    LCB_SYNCHRONOUS = 0xff
+} lcb_syncmode_t;
+LCB_DEPR_API(void lcb_behavior_set_syncmode(lcb_t, lcb_syncmode_t));
+LCB_DEPR_API(lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t));
 
 /** WTF constants for sanity check */
 #define LCB_C_ST_ID 0

@@ -93,7 +93,7 @@ lcb_error_t lcb_get(lcb_t instance,
         }
     }
     mcreq_sched_leave(&instance->cmdq, 1);
-    return LCB_SUCCESS;
+    SYNCMODE_INTERCEPT(instance)
 }
 
 LIBCOUCHBASE_API
@@ -153,10 +153,11 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
     }
     if (err != LCB_SUCCESS) {
         mcreq_sched_fail(&instance->cmdq);
+        return err;
     } else {
         mcreq_sched_leave(&instance->cmdq, 1);
+        SYNCMODE_INTERCEPT(instance)
     }
-    return err;
 }
 
 typedef struct {
@@ -322,8 +323,9 @@ lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
 
     if (err == LCB_SUCCESS) {
         mcreq_sched_leave(&instance->cmdq, 1);
+        SYNCMODE_INTERCEPT(instance)
     } else {
         mcreq_sched_fail(&instance->cmdq);
+        return err;
     }
-    return err;
 }
