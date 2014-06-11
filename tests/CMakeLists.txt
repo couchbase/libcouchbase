@@ -25,12 +25,12 @@ ADD_SUBDIRECTORY(${SOURCE_ROOT}/gtest-1.7.0 gtest-1.7.0)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
 ADD_EXECUTABLE(check-all EXCLUDE_FROM_ALL
-    check-all.cc ${SOURCE_ROOT}/tools/commandlineparser.cc mocksupport/procutil.c)
+    check-all.cc ${SOURCE_ROOT}/contrib/cliopts/cliopts.c mocksupport/procutil.c)
 
 SET_PROPERTY(TARGET check-all
     APPEND PROPERTY INCLUDE_DIRECTORIES
     ${lcb_plat_includes}
-    ${SOURCE_ROOT}/tools)
+    ${SOURCE_ROOT})
 TARGET_LINK_LIBRARIES(check-all couchbase_utils couchbase)
 
 
@@ -121,7 +121,7 @@ MACRO(DEFINE_MOCKTEST plugin test)
             --srcdir "${CMAKE_SOURCE_DIR}"
             --testdir "$<TARGET_FILE_DIR:check-all>"
             --libdir "$<TARGET_FILE_DIR:couchbase>"
-            --opt_plugins ${plugin}
+            --plugins ${plugin}
             --tests ${test}
             --verbose
             --
