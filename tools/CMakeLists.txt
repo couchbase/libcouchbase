@@ -1,14 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
-ADD_EXECUTABLE(cbc
-    cbc-util.cc
-    cbc.cc
-    commandlineparser.cc
-    configuration.cc)
-
-SET_PROPERTY(TARGET cbc
-    PROPERTY DEBUG_OUTPUT_NAME "cbc_d")
-
-TARGET_LINK_LIBRARIES(cbc couchbase)
+INCLUDE_DIRECTORIES(${SOURCE_ROOT}/contrib/cliopts)
+ADD_LIBRARY(lcbtools STATIC histogram.cc options.cc ${SOURCE_ROOT}/contrib/cliopts/cliopts.c)
+ADD_EXECUTABLE(cbc cbc.cc)
+SET_PROPERTY(TARGET cbc PROPERTY DEBUG_OUTPUT_NAME "cbc_d")
+TARGET_LINK_LIBRARIES(cbc couchbase lcbtools)
 
 ADD_EXECUTABLE(cbc-pillowfight
     cbc-pillowfight.cc
