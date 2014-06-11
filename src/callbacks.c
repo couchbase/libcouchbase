@@ -1,196 +1,53 @@
 #include "internal.h"
 
-static void dummy_error_callback(lcb_t instance,
-                                 lcb_error_t error,
-                                 const char *errinfo)
-{
+#define DEFINE_DUMMY_CALLBACK(name, resptype) \
+    static void name(lcb_t i, const void *c, lcb_error_t e, const resptype *r) \
+    { (void)i;(void)e;(void)c;(void)r; }
+
+static void dummy_error_callback(lcb_t instance,lcb_error_t error, const char *errinfo) {
     lcb_breakout(instance);
     (void)error;
     (void)errinfo;
 }
 
-static void dummy_stat_callback(lcb_t instance,
-                                const void *cookie,
-                                lcb_error_t error,
-                                const lcb_server_stat_resp_t *resp)
-{
-    (void)instance;
-    (void)error;
-    (void)cookie;
-    (void)resp;
+static void dummy_store_callback(lcb_t instance, const void *cookie,
+    lcb_storage_t operation, lcb_error_t error, const lcb_store_resp_t *resp) {
+    (void)instance; (void)cookie; (void)operation; (void)error; (void)resp;
 }
 
-static void dummy_version_callback(lcb_t instance,
-                                   const void *cookie,
-                                   lcb_error_t error,
-                                   const lcb_server_version_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)resp;
-    (void)error;
+
+static void dummy_http_callback(lcb_http_request_t request, lcb_t instance,
+    const void *cookie, lcb_error_t error, const lcb_http_resp_t *resp) {
+    (void)request;(void)instance;(void)cookie;(void)error; (void)resp;
 }
 
-static void dummy_verbosity_callback(lcb_t instance,
-                                     const void *cookie,
-                                     lcb_error_t error,
-                                     const lcb_verbosity_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)resp;
-    (void)error;
+static void dummy_configuration_callback(lcb_t instance, lcb_configuration_t val) {
+    (void)instance; (void)val;
 }
 
-static void dummy_get_callback(lcb_t instance,
-                               const void *cookie,
-                               lcb_error_t error,
-                               const lcb_get_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_store_callback(lcb_t instance,
-                                 const void *cookie,
-                                 lcb_storage_t operation,
-                                 lcb_error_t error,
-                                 const lcb_store_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)operation;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_arithmetic_callback(lcb_t instance,
-                                      const void *cookie,
-                                      lcb_error_t error,
-                                      const lcb_arithmetic_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_remove_callback(lcb_t instance,
-                                  const void *cookie,
-                                  lcb_error_t error,
-                                  const lcb_remove_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_touch_callback(lcb_t instance,
-                                 const void *cookie,
-                                 lcb_error_t error,
-                                 const lcb_touch_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_flush_callback(lcb_t instance,
-                                 const void *cookie,
-                                 lcb_error_t error,
-                                 const lcb_flush_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)resp;
-    (void)error;
-}
-
-static void dummy_http_complete_callback(lcb_http_request_t request,
-                                         lcb_t instance,
-                                         const void *cookie,
-                                         lcb_error_t error,
-                                         const lcb_http_resp_t *resp)
-{
-    (void)request;
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_http_data_callback(lcb_http_request_t request,
-                                     lcb_t instance,
-                                     const void *cookie,
-                                     lcb_error_t error,
-                                     const lcb_http_resp_t *resp)
-{
-    (void)request;
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_unlock_callback(lcb_t instance,
-                                  const void *cookie,
-                                  lcb_error_t error,
-                                  const lcb_unlock_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_configuration_callback(lcb_t instance,
-                                         lcb_configuration_t val)
-{
-    (void)instance;
-    (void)val;
-}
-
-static void dummy_observe_callback(lcb_t instance,
-                                   const void *cookie,
-                                   lcb_error_t error,
-                                   const lcb_observe_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_durability_callback(lcb_t instance,
-                                      const void *cookie,
-                                      lcb_error_t error,
-                                      const lcb_durability_resp_t *resp)
-{
-    (void)instance;
-    (void)cookie;
-    (void)error;
-    (void)resp;
-}
-
-static void dummy_bootstrap_callback(lcb_t instance, lcb_error_t err)
-{
-    (void)instance;
-    (void)err;
+static void dummy_bootstrap_callback(lcb_t instance, lcb_error_t err) {
+    (void)instance; (void)err;
 }
 
 static void dummy_pktfwd_callback(lcb_t instance, const void *cookie,
-    lcb_error_t err, lcb_PKTFWDRESP *resp)
-{
+    lcb_error_t err, lcb_PKTFWDRESP *resp) {
     (void)instance;(void)cookie;(void)err;(void)resp;
 }
-static void dummy_pktflushed_callback(lcb_t instance, const void *cookie)
-{
+static void dummy_pktflushed_callback(lcb_t instance, const void *cookie) {
     (void)instance;(void)cookie;
 }
+
+DEFINE_DUMMY_CALLBACK(dummy_stat_callback, lcb_server_stat_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_version_callback, lcb_server_version_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_verbosity_callback, lcb_verbosity_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_get_callback, lcb_get_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_arithmetic_callback, lcb_arithmetic_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_remove_callback, lcb_remove_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_touch_callback, lcb_touch_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_flush_callback, lcb_flush_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_unlock_callback, lcb_unlock_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_observe_callback, lcb_observe_resp_t)
+DEFINE_DUMMY_CALLBACK(dummy_durability_callback, lcb_durability_resp_t)
 
 void lcb_initialize_packet_handlers(lcb_t instance)
 {
@@ -202,8 +59,8 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.error = dummy_error_callback;
     instance->callbacks.stat = dummy_stat_callback;
     instance->callbacks.version = dummy_version_callback;
-    instance->callbacks.http_complete = dummy_http_complete_callback;
-    instance->callbacks.http_data = dummy_http_data_callback;
+    instance->callbacks.http_complete = dummy_http_callback;
+    instance->callbacks.http_data = dummy_http_callback;
     instance->callbacks.flush = dummy_flush_callback;
     instance->callbacks.unlock = dummy_unlock_callback;
     instance->callbacks.configuration = dummy_configuration_callback;
@@ -216,200 +73,14 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.pktfwd = dummy_pktfwd_callback;
 }
 
-LIBCOUCHBASE_API
-lcb_get_callback lcb_set_get_callback(lcb_t instance,
-                                      lcb_get_callback cb)
-{
-    lcb_get_callback ret = instance->callbacks.get;
-    if (cb != NULL) {
-        instance->callbacks.get = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_store_callback lcb_set_store_callback(lcb_t instance,
-                                          lcb_store_callback cb)
-{
-    lcb_store_callback ret = instance->callbacks.store;
-    if (cb != NULL) {
-        instance->callbacks.store = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_arithmetic_callback lcb_set_arithmetic_callback(lcb_t instance,
-                                                    lcb_arithmetic_callback cb)
-{
-    lcb_arithmetic_callback ret = instance->callbacks.arithmetic;
-    if (cb != NULL) {
-        instance->callbacks.arithmetic = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_observe_callback lcb_set_observe_callback(lcb_t instance,
-                                              lcb_observe_callback cb)
-{
-    lcb_observe_callback ret = instance->callbacks.observe;
-    instance->callbacks.observe = cb;
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_remove_callback lcb_set_remove_callback(lcb_t instance,
-                                            lcb_remove_callback cb)
-{
-    lcb_remove_callback ret = instance->callbacks.remove;
-    if (cb != NULL) {
-        instance->callbacks.remove = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_touch_callback lcb_set_touch_callback(lcb_t instance,
-                                          lcb_touch_callback cb)
-{
-    lcb_touch_callback ret = instance->callbacks.touch;
-    if (cb != NULL) {
-        instance->callbacks.touch = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_stat_callback lcb_set_stat_callback(lcb_t instance,
-                                        lcb_stat_callback cb)
-{
-    lcb_stat_callback ret = instance->callbacks.stat;
-    if (cb != NULL) {
-        instance->callbacks.stat = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_version_callback lcb_set_version_callback(lcb_t instance,
-                                              lcb_version_callback cb)
-{
-    lcb_version_callback ret = instance->callbacks.version;
-    if (cb != NULL) {
-        instance->callbacks.version = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_error_callback lcb_set_error_callback(lcb_t instance,
-                                          lcb_error_callback cb)
-{
-    lcb_error_callback ret = instance->callbacks.error;
-    if (cb != NULL) {
-        instance->callbacks.error = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_flush_callback lcb_set_flush_callback(lcb_t instance,
-                                          lcb_flush_callback cb)
-{
-    lcb_flush_callback ret = instance->callbacks.flush;
-    if (cb != NULL) {
-        instance->callbacks.flush = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_http_complete_callback lcb_set_http_complete_callback(lcb_t instance,
-                                                          lcb_http_complete_callback cb)
-{
-    lcb_http_complete_callback ret = instance->callbacks.http_complete;
-    if (cb != NULL) {
-        instance->callbacks.http_complete = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_http_data_callback lcb_set_http_data_callback(lcb_t instance,
-                                                  lcb_http_data_callback cb)
-{
-    lcb_http_data_callback ret = instance->callbacks.http_data;
-    if (cb != NULL) {
-        instance->callbacks.http_data = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_unlock_callback lcb_set_unlock_callback(lcb_t instance,
-                                            lcb_unlock_callback cb)
-{
-    lcb_unlock_callback ret = instance->callbacks.unlock;
-    if (cb != NULL) {
-        instance->callbacks.unlock = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_configuration_callback lcb_set_configuration_callback(lcb_t instance,
-                                                          lcb_configuration_callback cb)
-{
-    lcb_configuration_callback ret = instance->callbacks.configuration;
-    if (cb != NULL) {
-        instance->callbacks.configuration = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_verbosity_callback lcb_set_verbosity_callback(lcb_t instance,
-                                                  lcb_verbosity_callback cb)
-{
-    lcb_verbosity_callback ret = instance->callbacks.verbosity;
-    if (cb != NULL) {
-        instance->callbacks.verbosity = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_durability_callback lcb_set_durability_callback(lcb_t instance,
-                                                    lcb_durability_callback cb)
-{
-    lcb_durability_callback ret = instance->callbacks.durability;
-    if (cb != NULL) {
-        instance->callbacks.durability = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_errmap_callback lcb_set_errmap_callback(lcb_t instance,
-                                            lcb_errmap_callback cb)
-{
-    lcb_errmap_callback ret = instance->callbacks.errmap;
-    if (cb != NULL) {
-        instance->callbacks.errmap = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_bootstrap_callback
-lcb_set_bootstrap_callback(lcb_t instance, lcb_bootstrap_callback cb)
-{
-    lcb_bootstrap_callback ret = instance->callbacks.bootstrap;
-    if (cb) {
-        instance->callbacks.bootstrap = cb;
-    }
-    return ret;
+#define CALLBACK_ACCESSOR(name, cbtype, field) \
+LIBCOUCHBASE_API \
+cbtype name(lcb_t instance, cbtype cb) { \
+    cbtype ret = instance->callbacks.field; \
+    if (cb != NULL) { \
+        instance->callbacks.field = cb; \
+    } \
+    return ret; \
 }
 
 LIBCOUCHBASE_API
@@ -423,24 +94,23 @@ lcb_set_destroy_callback(lcb_t instance, lcb_destroy_callback cb)
     return ret;
 }
 
-LIBCOUCHBASE_API
-lcb_pktfwd_callback
-lcb_set_pktfwd_callback(lcb_t instance, lcb_pktfwd_callback cb)
-{
-    lcb_pktfwd_callback ret = instance->callbacks.pktfwd;
-    if (cb) {
-        instance->callbacks.pktfwd = cb;
-    }
-    return ret;
-}
-
-LIBCOUCHBASE_API
-lcb_pktflushed_callback
-lcb_set_pktflushed_callback(lcb_t instance, lcb_pktflushed_callback cb)
-{
-    lcb_pktflushed_callback ret = instance->callbacks.pktflushed;
-    if (cb) {
-        instance->callbacks.pktflushed = cb;
-    }
-    return ret;
-}
+CALLBACK_ACCESSOR(lcb_set_get_callback, lcb_get_callback, get)
+CALLBACK_ACCESSOR(lcb_set_store_callback, lcb_store_callback, store)
+CALLBACK_ACCESSOR(lcb_set_arithmetic_callback, lcb_arithmetic_callback, arithmetic)
+CALLBACK_ACCESSOR(lcb_set_observe_callback, lcb_observe_callback, observe)
+CALLBACK_ACCESSOR(lcb_set_remove_callback, lcb_remove_callback, remove)
+CALLBACK_ACCESSOR(lcb_set_touch_callback, lcb_touch_callback, touch)
+CALLBACK_ACCESSOR(lcb_set_stat_callback, lcb_stat_callback, stat)
+CALLBACK_ACCESSOR(lcb_set_version_callback, lcb_version_callback, version)
+CALLBACK_ACCESSOR(lcb_set_error_callback, lcb_error_callback, error)
+CALLBACK_ACCESSOR(lcb_set_flush_callback, lcb_flush_callback, flush)
+CALLBACK_ACCESSOR(lcb_set_http_complete_callback, lcb_http_complete_callback, http_complete)
+CALLBACK_ACCESSOR(lcb_set_http_data_callback, lcb_http_data_callback, http_data)
+CALLBACK_ACCESSOR(lcb_set_unlock_callback, lcb_unlock_callback, unlock)
+CALLBACK_ACCESSOR(lcb_set_configuration_callback, lcb_configuration_callback, configuration)
+CALLBACK_ACCESSOR(lcb_set_verbosity_callback, lcb_verbosity_callback, verbosity)
+CALLBACK_ACCESSOR(lcb_set_durability_callback, lcb_durability_callback, durability)
+CALLBACK_ACCESSOR(lcb_set_errmap_callback, lcb_errmap_callback, errmap)
+CALLBACK_ACCESSOR(lcb_set_bootstrap_callback, lcb_bootstrap_callback, bootstrap)
+CALLBACK_ACCESSOR(lcb_set_pktfwd_callback, lcb_pktfwd_callback, pktfwd)
+CALLBACK_ACCESSOR(lcb_set_pktflushed_callback, lcb_pktflushed_callback, pktflushed)
