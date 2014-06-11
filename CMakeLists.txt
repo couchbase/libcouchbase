@@ -128,9 +128,6 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
 # These files are bundled in a static library.
 # They export no symbols of their own and may
 # be considered as 'static'
-IF(WIN32)
-    SET(lcb_getopt_src win32/getopt.c)
-ENDIF()
 ADD_LIBRARY(couchbase_utils STATIC
             contrib/cJSON/cJSON.c
             src/strcodecs/base64.c
@@ -144,8 +141,7 @@ ADD_LIBRARY(couchbase_utils STATIC
             src/logging.c
             src/packetutils.c
             src/ringbuffer.c
-            src/simplestring.c
-            ${lcb_getopt_src})
+            src/simplestring.c)
 
 MACRO(LCB_UTIL tgt)
     SET_TARGET_PROPERTIES(${tgt}
