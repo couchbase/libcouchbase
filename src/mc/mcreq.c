@@ -322,8 +322,10 @@ mcreq_dup_packet(const mc_PACKET *src)
                 vdata = malloc(nvdata);
                 memcpy(vdata, SPAN_BUFFER(origspan), nvdata);
             }
-            CREATE_STANDALONE_SPAN(&dst->u_value.single, vdata, nvdata);
         }
+
+        /* Declare the value as a standalone malloc'd span */
+        CREATE_STANDALONE_SPAN(&dst->u_value.single, vdata, nvdata);
     }
     return dst;
 }
