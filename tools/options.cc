@@ -159,9 +159,11 @@ ConnParams::doCtls(lcb_t instance)
         if (o_saslmech.passed()) {
             doPctl<const char *>(instance,LCB_CNTL_FORCE_SASL_MECH, o_saslmech.result().c_str());
         }
+        int vLevel = 1;
         if (o_verbose.passed()) {
-            doSctl<int>(instance, LCB_CNTL_CONLOGGER_LEVEL, o_verbose.numSpecified());
+            vLevel += o_verbose.numSpecified();
         }
+        doSctl<int>(instance, LCB_CNTL_CONLOGGER_LEVEL, vLevel);
     } catch (lcb_error_t &err) {
         return err;
     }
