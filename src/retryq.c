@@ -68,17 +68,21 @@ bail_op(lcb_RETRYQ *rq, lcb_RETRYOP *op, lcb_error_t err)
     packet_info info;
     protocol_binary_request_header hdr;
     protocol_binary_response_header *res = &info.res;
-    mc_PIPELINE pltmp; /** Temporary pipeline */
-    pltmp.parent = rq->cq;
+    mc_SERVER tmpsrv; /** Temporary pipeline */
+    mc_PIPELINE *pltmp = &tmpsrv.pipeline;
+
+    memset(&tmpsrv, 0, sizeof tmpsrv);
+    tmpsrv.instance = rq->cq->instance;
+    tmpsrv.pipeline.parent = rq->cq;
 
     memset(&info, 0, sizeof(info));
     mcreq_read_hdr(op->pkt, &hdr);
     res->response.opcode = hdr.request.opcode;
     res->response.status = ntohs(PROTOCOL_BINARY_RESPONSE_EINVAL);
     res->response.opaque = hdr.request.opaque;
-    mcreq_dispatch_response(&pltmp, op->pkt, &info, err);
+    mcreq_dispatch_response(pltmp, op->pkt, &info, err);
     op->pkt->flags |= MCREQ_F_FLUSHED|MCREQ_F_INVOKED;
-    mcreq_packet_done(&pltmp, op->pkt);
+    mcreq_packet_done(pltmp, op->pkt);
     free_op(op);
     lcb_maybe_breakout(rq->cq->instance);
 }
