@@ -322,12 +322,13 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
     res->response.opcode = hdr.request.opcode;
     res->response.opaque = hdr.request.opaque;
 
+    lcb_log(LOGARGS((mc_SERVER *)pipeline, WARN), "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error 0x%x", pkt, (unsigned long)pkt->opaque, hdr.request.opcode, err);
     rv = mcreq_dispatch_response(pipeline, pkt, &info, err);
     lcb_assert(rv == 0);
     (void)arg;
 }
 
-static void
+static int
 purge_single_server(lcb_server_t *server, lcb_error_t error,
                     hrtime_t thresh, hrtime_t *next, int policy)
 {
@@ -344,12 +345,13 @@ purge_single_server(lcb_server_t *server, lcb_error_t error,
     }
 
     if (policy == REFRESH_NEVER) {
-        return;
+        return affected;
     }
 
     if (affected || policy == REFRESH_ALWAYS) {
         lcb_bootstrap_errcount_incr(server->instance);
     }
+    return affected;
 }
 
 /** Called to handle a socket error */
@@ -408,10 +410,10 @@ timeout_server(void *arg)
     mc_SERVER *server = arg;
     hrtime_t now, min_valid, next_ns = 0;
     uint32_t next_us;
-
-    lcb_log(LOGARGS(server, ERR), "Server %p timed out", server);
+    int npurged;
 
     if (!server_is_ready(server)) {
+        lcb_log(LOGARGS(server, ERROR), "%p: Server timed out before being ready", server);
         purge_single_server(server, LCB_ETIMEDOUT, 0, NULL, REFRESH_ALWAYS);
         lcb_maybe_breakout(server->instance);
         return;
@@ -419,8 +421,11 @@ timeout_server(void *arg)
 
     now = gethrtime();
     min_valid = now - LCB_US2NS(MCSERVER_TIMEOUT(server));
-    purge_single_server(server, LCB_ETIMEDOUT, min_valid, &next_ns,
-                        REFRESH_ONFAILED);
+    npurged = purge_single_server(server,
+        LCB_ETIMEDOUT, min_valid, &next_ns, REFRESH_ONFAILED);
+    if (npurged) {
+        lcb_log(LOGARGS(server, ERROR), "%p: Server timed out. Some commands have failed", server);
+    }
 
     next_us = get_next_timeout(server);
     lcb_log(LOGARGS(server, INFO), "%p, Scheduling next timeout for %u ms", server, next_us / 1000);
