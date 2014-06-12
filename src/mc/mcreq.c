@@ -276,12 +276,14 @@ mcreq_dup_packet(const mc_PACKET *src)
         if (src->flags & MCREQ_F_VALUE_IOV) {
             unsigned ii;
             unsigned offset = 0;
+
             nvdata = src->u_value.multi.total_length;
             vdata = malloc(nvdata);
             for (ii = 0; ii < src->u_value.multi.niov; ii++) {
                 const lcb_IOV *iov = src->u_value.multi.iov + ii;
-                memcpy(vdata + offset, iov[ii].iov_base, iov[ii].iov_len);
-                offset += iov[ii].iov_len;
+
+                memcpy(vdata + offset, iov->iov_base, iov->iov_len);
+                offset += iov->iov_len;
             }
         } else {
             protocol_binary_request_header hdr;
