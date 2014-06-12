@@ -75,14 +75,15 @@ typedef enum lcb_compat_t { LCB_MEMCACHED_CLUSTER = 0x00, LCB_CACHED_CONFIG = 0x
 typedef lcb_compat_t lcb_cluster_t;
 struct lcb_memcached_st { const char *serverlist; const char *username; const char *password; };
 struct lcb_cached_config_st {
-    struct lcb_create_st createopt;
     const char *cachefile;
+    struct lcb_create_st createopt;
 };
 
 /**
  * @deprecated
  * Use @ref LCB_CNTL_CONFIGCACHE for configuration cache options
  */
+#define lcb_create_compat lcb__create_compat_230
 LCB_DEPR_API(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io));
 
 typedef enum {

@@ -929,7 +929,7 @@ lcb_error_t lcb_get(lcb_t instance,
 
 
 typedef struct {
-    const void *k; lcb_size_t n; const void *hk; lcb_size_t nhk;
+    const void *key; lcb_size_t nkey; const void *hashkey; lcb_size_t nhashkey;
 } lcb_GETREPLICACMDv0;
 
 /**@brief Select get-replica mode
