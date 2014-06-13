@@ -25,11 +25,32 @@
 #include <lcbio/ssl.h>
 
 #define LOGARGS(c, lvl) (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
-
 #define MCREQ_MAXIOV 32
 #define LCBCONN_UNWANT(conn, flags) (conn)->want &= ~(flags)
 
+typedef enum {
+    /* There are no known errored commands on this server */
+    S_CLEAN,
+
+    /* In the process of draining remaining commands to be flushed. The commands
+     * being drained may have already been rescheduled to another server or
+     * placed inside the error queue, but are pending being flushed. This will
+     * only happen in completion-style I/O plugins. When this state is in effect,
+     * subsequent attempts to connect will be blocked until all commands have
+     * been properly drained.
+     */
+    S_ERRDRAIN,
+
+    /* The server object has been closed, either because it has been removed
+     * from the cluster or because the related lcb_t has been destroyed.
+     */
+    S_CLOSED
+} mcserver_STATE;
+
 static int check_closed(mc_SERVER *);
+static void start_errored_ctx(mc_SERVER *server, mcserver_STATE next_state);
+static void finalize_errored_ctx(mc_SERVER *server);
+static void on_error(lcbio_CTX *ctx, lcb_error_t err);
 
 static void
 on_flush_ready(lcbio_CTX *ctx)
@@ -58,17 +79,6 @@ on_flush_done(lcbio_CTX *ctx, unsigned expected, unsigned actual)
     check_closed(server);
 }
 
-static void
-on_error(lcbio_CTX *ctx, lcb_error_t err)
-{
-    mc_SERVER *server = lcbio_ctx_data(ctx);
-    lcb_log(LOGARGS(server, WARN), "Got socket [%p] error 0x%x", server, err);
-    if (check_closed(server)) {
-        return;
-    }
-    mcserver_socket_error(server, err);
-}
-
 void
 mcserver_flush(mc_SERVER *server)
 {
@@ -86,17 +96,6 @@ mcserver_flush(mc_SERVER *server)
          * that a command was just scheduled
          */
         lcbio_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
-    }
-}
-
-void
-mcserver_errflush(mc_SERVER *server)
-{
-    unsigned toflush;
-    nb_IOV iov;
-    mc_PIPELINE *pl = &server->pipeline;
-    while ((toflush = mcreq_flush_iov_fill(pl, &iov, 1, NULL))) {
-        mcreq_flush_done(pl, toflush, toflush);
     }
 }
 
@@ -354,34 +353,21 @@ purge_single_server(lcb_server_t *server, lcb_error_t error,
     return affected;
 }
 
-/** Called to handle a socket error */
-void
-mcserver_socket_error(mc_SERVER *server, lcb_error_t err)
+static void flush_errdrain(mc_PIPELINE *pipeline)
 {
-    lcbio_connreq_cancel(&server->connreq);
-    if (server->connctx) {
-        lcbio_mgr_detach(lcbio_ctx_sock(server->connctx));
+    /* Called when we are draining errors. */
+    mc_SERVER *server = (mc_SERVER *)pipeline;
+    if (!lcbio_timer_armed(server->io_timer)) {
+        lcbio_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
     }
-
-    server->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
-
-    mcserver_errflush(server);
-    purge_single_server(server, err, 0, NULL, REFRESH_ALWAYS);
-    lcb_maybe_breakout(server->instance);
 }
 
 void
 mcserver_fail_chain(mc_SERVER *server, lcb_error_t err)
 {
-    mcserver_errflush(server);
     purge_single_server(server, err, 0, NULL, REFRESH_NEVER);
 }
 
-static int
-server_is_ready(lcb_server_t *server)
-{
-    return server->connctx != NULL;
-}
 
 static uint32_t
 get_next_timeout(mc_SERVER *server)
@@ -411,13 +397,6 @@ timeout_server(void *arg)
     hrtime_t now, min_valid, next_ns = 0;
     uint32_t next_us;
     int npurged;
-
-    if (!server_is_ready(server)) {
-        lcb_log(LOGARGS(server, ERROR), "%p: Server timed out before being ready", server);
-        purge_single_server(server, LCB_ETIMEDOUT, 0, NULL, REFRESH_ALWAYS);
-        lcb_maybe_breakout(server->instance);
-        return;
-    }
 
     now = gethrtime();
     min_valid = now - LCB_US2NS(MCSERVER_TIMEOUT(server));
@@ -486,6 +465,7 @@ server_connect(mc_SERVER *server)
                        MCSERVER_TIMEOUT(server), on_connected, server);
     LCBIO_CONNREQ_MKPOOLED(&server->connreq, mr);
     server->pipeline.flush_start = flush_noop;
+    server->state = S_CLEAN;
 }
 
 static void
@@ -565,33 +545,133 @@ close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
 }
 
 void
+mcserver_errflush(mc_SERVER *server)
+{
+    unsigned toflush;
+    nb_IOV iov;
+    mc_PIPELINE *pl = &server->pipeline;
+    while ((toflush = mcreq_flush_iov_fill(pl, &iov, 1, NULL))) {
+        mcreq_flush_done(pl, toflush, toflush);
+    }
+}
+
+static void
+on_error(lcbio_CTX *ctx, lcb_error_t err)
+{
+    mc_SERVER *server = lcbio_ctx_data(ctx);
+    lcb_log(LOGARGS(server, WARN), "Got socket [%p] error 0x%x", server, err);
+    if (check_closed(server)) {
+        return;
+    }
+    mcserver_socket_error(server, err);
+}
+
+void
+mcserver_socket_error(mc_SERVER *server, lcb_error_t err)
+{
+    if (check_closed(server)) {
+        return;
+    }
+
+    purge_single_server(server, err, 0, NULL, REFRESH_ALWAYS);
+    lcb_maybe_breakout(server->instance);
+    start_errored_ctx(server, S_ERRDRAIN);
+}
+
+void
 mcserver_close(mc_SERVER *server)
+{
+    /* Should never be called twice */
+    lcb_assert(server->state != S_CLOSED);
+    start_errored_ctx(server, S_CLOSED);
+}
+
+/**
+ * Call to signal an error or similar on the current socket.
+ * @param server The server
+ * @param next_state The next state (S_CLOSED or S_ERRDRAIN)
+ */
+static void
+start_errored_ctx(mc_SERVER *server, mcserver_STATE next_state)
 {
     lcbio_CTX *ctx = server->connctx;
 
-    lcb_assert(!server->closed);
+    server->state = next_state;
+    /* Cancel any pending connection attempt? */
     lcbio_connreq_cancel(&server->connreq);
 
-    if (server->io_timer) {
+    /* If the server is being destroyed, silence the timer */
+    if (next_state == S_CLOSED && server->io_timer != NULL) {
         lcbio_timer_destroy(server->io_timer);
         server->io_timer = NULL;
     }
 
-    if (!ctx) {
-        server_free(server);
+    if (ctx == NULL) {
+        if (next_state == S_CLOSED) {
+            server_free(server);
+            return;
+        } else {
+            /* Not closed but don't have a current context */
+            server->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
+            if (mcserver_has_pending(server)) {
+                if (!lcbio_timer_armed(server->io_timer)) {
+                    /* TODO: Maybe throttle reconnection attempts? */
+                    lcbio_timer_rearm(server->io_timer, MCSERVER_TIMEOUT(server));
+                }
+                server_connect(server);
+            }
+        }
+
+    } else {
+        if (ctx->npending) {
+            /* Have pending items? */
+
+            /* Flush any remaining events */
+            lcbio_ctx_schedule(ctx);
+
+            /* Close the socket not to leak resources */
+            lcbio_shutdown(lcbio_ctx_sock(ctx));
+            if (next_state == S_ERRDRAIN) {
+                server->pipeline.flush_start = (mcreq_flushstart_fn)flush_errdrain;
+            }
+        } else {
+            finalize_errored_ctx(server);
+        }
+    }
+}
+
+/**
+ * This function actually finalizes a ctx which has an error on it. If the
+ * ctx has pending operations remaining then this function returns immediately.
+ * Otherwise this will either reinitialize the connection or free the server
+ * object depending on the actual object state (i.e. if it was closed or
+ * simply errored).
+ */
+static void
+finalize_errored_ctx(mc_SERVER *server)
+{
+    if (server->connctx->npending) {
         return;
     }
 
-    if (ctx->npending == 0) {
-        lcb_log(LOGARGS(server, INFO), "Server %p may be closed. No pending events", server);
-        lcbio_ctx_close(ctx, close_cb, NULL);
-        server_free(server);
+    lcb_log(LOGARGS(server, DEBUG), "Finalizing ctx %p for server %p", server->connctx, server);
 
+    /* Always close the existing context. */
+    lcbio_ctx_close(server->connctx, close_cb, NULL);
+    server->connctx = NULL;
+
+    /* And pretend to flush any outstanding data. There's nothing pending! */
+    mcserver_errflush(server);
+
+    if (server->state == S_CLOSED) {
+        /* If the server is closed, time to free it */
+        server_free(server);
     } else {
-        lcb_log(LOGARGS(server, WARN), "Server %p still has pending I/O. N=%d, Write=%d, Read=%d", server, ctx->npending, ctx->wwant, ctx->rdwant);
-        lcbio_ctx_schedule(ctx);
-        lcbio_shutdown(ctx->sock);
-        server->closed = 1;
+        /* Otherwise, cycle the state back to CLEAN and reinit
+         * the connection */
+        server->state = S_CLEAN;
+        server->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
+        server_connect(server);
     }
 }
 
@@ -605,15 +685,10 @@ mcserver_close(mc_SERVER *server)
 static int
 check_closed(mc_SERVER *server)
 {
-    int isok = 0;
-    if (!server->closed) {
+    if (server->state == S_CLEAN) {
         return 0;
     }
-
     lcb_log(LOGARGS(server, INFO), "Server %p got handler after close. Checking pending calls", server);
-    if (!server->connctx->npending) {
-        lcbio_ctx_close(server->connctx, close_cb, &isok);
-        server_free(server);
-    }
+    finalize_errored_ctx(server);
     return 1;
 }

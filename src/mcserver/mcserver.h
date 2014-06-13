@@ -34,8 +34,8 @@ typedef struct lcb_server_st {
 
     lcb_settings *settings;
 
-    /** Whether mcserver_close() was invoked on this server */
-    int closed;
+    /* Defined in mcserver.c */
+    int state;
 
     /** Whether compression is supported */
     int compsupport;
