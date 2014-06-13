@@ -491,13 +491,12 @@ static int get_nameinfo(lcb_io_opt_t iobase,
  ** There are just copied from the old couchnode I/O code                    **
  ******************************************************************************
  ******************************************************************************/
-static void timer_cb(uv_timer_t *uvt, int status)
+static UVC_TIMER_CB(timer_cb)
 {
-    my_timer_t *timer = (my_timer_t *)uvt;
-    if (timer->callback) {
-        timer->callback(-1, 0, timer->cb_arg);
+    my_timer_t *mytimer = (my_timer_t *)timer;
+    if (mytimer->callback) {
+        mytimer->callback(-1, 0, mytimer->cb_arg);
     }
-    (void)status;
 }
 
 static void *create_timer(lcb_io_opt_t iobase)

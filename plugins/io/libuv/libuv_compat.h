@@ -113,6 +113,9 @@
   #define UVC_READ_CB_VARS() \
       const uv_buf_t *buf = &_buf;
 
+  #define UVC_TIMER_CB(func) \
+      void func(uv_timer_t *timer, int status)
+
   static int uvc_is_eof(uv_loop_t *loop, int error) {
       error = uv_last_error(loop).code;
       return error == UV_EOF;
@@ -155,6 +158,9 @@
       void func(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf)
 
   #define UVC_READ_CB_VARS()
+
+  #define UVC_TIMER_CB(func) \
+      void func(uv_timer_t *timer)
 
   static int uvc_last_errno(uv_loop_t *loop, int error) {
       return error;
