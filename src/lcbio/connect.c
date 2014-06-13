@@ -257,7 +257,6 @@ E_connect(lcb_socket_t sock, short events, void *arg)
             cs_state_signal(cs, CS_CONNECTED, LCB_SUCCESS);
             return;
         }
-        lcb_log(LOGARGS(s, TRACE), "connect() failed (RV=%d). Error code=%d [%s]", rv, IOT_ERRNO(io), strerror(IOT_ERRNO(io)));
     }
 
     connstatus = lcbio_mkcserr(IOT_ERRNO(io));
@@ -291,6 +290,7 @@ E_connect(lcb_socket_t sock, short events, void *arg)
     case LCBIO_CSERR_EFAIL:
     default:
         /* close the current socket and try again */
+        lcb_log(LOGARGS(s, TRACE), "connect() failed. Error code=%d [%s]", IOT_ERRNO(io), strerror(IOT_ERRNO(io)));
         destroy_cursock(cs);
         goto GT_NEXTSOCK;
     }
