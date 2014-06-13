@@ -1900,6 +1900,7 @@ static void printHelp()
          << "   bucket-create   create data bucket on the cluster" << endl
          << "   bucket-delete   delete data bucket" << endl
          << "   bucket-flush    flush data bucket" << endl
+         << "   pillowfight     workload generation tool" << endl
          << "Use 'cbc command --help' to show the options" << endl;
 }
 
