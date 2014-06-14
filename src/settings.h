@@ -79,59 +79,48 @@ struct rdb_ALLOCATOR;
  * which are intended to be passed around to other objects.
  */
 typedef struct lcb_settings_st {
-    unsigned int iid;
-    lcb_COMPRESSOPTS compressopts;
-    lcb_syncmode_t syncmode;
-    lcb_uint32_t views_timeout;
-    lcb_uint32_t http_timeout;
-    lcb_uint32_t durability_timeout;
-    lcb_uint32_t durability_interval;
-    lcb_uint32_t operation_timeout;
-    lcb_uint32_t config_timeout;
-    lcb_uint32_t config_node_timeout;
-    lcb_uint32_t retry_interval;
-    float retry_backoff;
-    lcb_size_t weird_things_threshold;
-    lcb_uint32_t weird_things_delay;
-    lcb_type_t conntype;
+    lcb_U16 iid;
+    lcb_U8 compressopts;
+    lcb_U8 syncmode;
+    lcb_U32 operation_timeout;
+    lcb_U32 views_timeout;
+    lcb_U32 http_timeout;
+    lcb_U32 durability_timeout;
+    lcb_U32 durability_interval;
+    lcb_U32 config_timeout;
+    lcb_U32 config_node_timeout;
+    lcb_U32 retry_interval;
+    lcb_U32 weird_things_threshold;
+    lcb_U32 weird_things_delay;
 
     /** Grace period to wait between querying providers */
-    lcb_uint32_t grace_next_provider;
+    lcb_U32 grace_next_provider;
 
     /** Grace period to wait between retrying from the beginning */
-    lcb_uint32_t grace_next_cycle;
+    lcb_U32 grace_next_cycle;
 
-    /**
-     * For bc_http, the amount of type to keep the stream open, for future
-     * updates.
-     */
-    lcb_uint32_t bc_http_stream_time;
+    /**For bc_http, the amount of type to keep the stream open, for future
+     * updates. */
+    lcb_U32 bc_http_stream_time;
 
-    /** maximum redirect hops. -1 means infinite redirects */
-    int max_redir;
-
-    /** If we should randomize bootstrap nodes or not */
-    int randomize_bootstrap_nodes;
-
-    int bc_http_urltype;
+    unsigned bc_http_urltype : 4;
 
     /** Don't guess next vbucket server. Mainly for testing */
-    int vb_noguess;
-
+    unsigned vb_noguess : 1;
     /** Whether lcb_destroy is synchronous. This mode will run the I/O event
      * loop as much as possible until no outstanding events remain.*/
-    int syncdtor;
+    unsigned syncdtor : 1;
+    unsigned detailed_neterr : 1;
+    unsigned randomize_bootstrap_nodes : 1;
+    unsigned conntype : 1;
+    unsigned sslopts : 2;
+    unsigned ipv6 : 2;
 
-    /** Return detailed network error codes */
-    int detailed_neterr;
-
-    /** SSL settings */
-    lcb_SSLOPTS sslopts;
-
-    /** Is IPv6 enabled */
-    lcb_ipv6_t ipv6;
+    short max_redir;
+    unsigned refcount;
 
     uint8_t retry[LCB_RETRY_ON_MAX];
+    float retry_backoff;
 
     char *username;
     char *password;
@@ -143,7 +132,6 @@ typedef struct lcb_settings_st {
     struct lcb_logprocs_st *logger;
     void (*dtorcb)(const void *);
     void *dtorarg;
-    unsigned refcount;
 } lcb_settings;
 
 LCB_INTERNAL_API

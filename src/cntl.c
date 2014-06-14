@@ -527,11 +527,10 @@ static lcb_error_t
 htconfig_urltype_handler(int mode, lcb_t instance, int cmd, void *arg)
 {
     lcb_HTCONFIG_URLTYPE *p = arg;
-    int *tgt = &LCBT_SETTING(instance, bc_http_urltype);
     if (mode == LCB_CNTL_SET) {
-        *tgt = *p;
+        LCBT_SETTING(instance, bc_http_urltype) = *p;
     } else {
-        *p = *tgt;
+        *p = LCBT_SETTING(instance, bc_http_urltype);
     }
     (void)cmd;
     return LCB_SUCCESS;
