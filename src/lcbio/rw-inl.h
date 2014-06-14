@@ -42,6 +42,7 @@ lcbio_E_rdb_slurp(lcbio_SOCKET *sock, rdb_IOROPE *ior)
             case EINTR:
                 goto GT_READ;
             default:
+                sock->last_error = IOT_ERRNO(iot);
                 return LCBIO_IOERR;
             }
         } else {
@@ -71,6 +72,7 @@ lcbio_E_rb_write(lcbio_SOCKET *sock, ringbuffer_t *buf)
             case C_EAGAIN:
                 return LCBIO_PENDING;
             default:
+                sock->last_error = IOT_ERRNO(iot);
                 return LCBIO_IOERR;
             }
         }
