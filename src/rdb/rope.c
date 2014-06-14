@@ -109,6 +109,8 @@ static void
 rope_consumed(rdb_ROPEBUF *rope, unsigned nr)
 {
     lcb_list_t *llcur, *llnext;
+    assert(nr <= rope->nused);
+
     LCB_LIST_SAFE_FOR(llcur, llnext, &rope->segments) {
         unsigned to_chop;
         rdb_ROPESEG *seg = LCB_LIST_ITEM(llcur, rdb_ROPESEG, llnode);
@@ -167,16 +169,22 @@ rope_consolidate(rdb_ROPEBUF *rope, unsigned nr)
     }
 
     try_compact(seg);
-    rope->nused -= seg->nused;
+    lcb_list_delete(&seg->llnode);
 
     if (rdb_seg_recyclable(seg)) {
         unsigned to_alloc = nr + seg->start;
-        lcb_list_delete(&seg->llnode);
         newseg = SEG_REALLOC(seg, to_alloc);
-        nr -= newseg->nused;
+        /* We re-add it back after traversal */
     } else {
         newseg = ROPE_SALLOC(rope, nr);
+        memcpy(RDB_SEG_WBUF(newseg), RDB_SEG_RBUF(seg), seg->nused);
+        newseg->nused = seg->nused;
+        /* "Free" it. Since this buffer is in use, we just unset our own flag */
+        seg->shflags &= ~RDB_ROPESEG_F_LIB;
     }
+
+    rope->nused -= seg->nused;
+    nr -= newseg->nused;
 
     LCB_LIST_SAFE_FOR(llcur, llnext, &rope->segments) {
         unsigned to_copy;
@@ -194,6 +202,7 @@ rope_consolidate(rdb_ROPEBUF *rope, unsigned nr)
 
     lcb_list_prepend(&rope->segments, &newseg->llnode);
     rope->nused += newseg->nused;
+    assert(rope->nused >= nr);
 }
 
 void

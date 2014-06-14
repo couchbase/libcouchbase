@@ -84,6 +84,7 @@ TEST_F(RefTest, testRefConsolidate)
 
     rdb_consolidate(ior, 6);
     ASSERT_NE(RDB_SEG_FIRST(&ior->recvd), rp.segments[0]);
+    ASSERT_EQ(6, ior->recvd.nused);
     rdb_consumed(ior, 6);
     rp.unrefSegment(0);
     delete ior;
@@ -95,5 +96,17 @@ TEST_F(RefTest, testRefConsolidate)
     char *p = rdb_get_consolidated(ior, 6);
     ASSERT_EQ(0, memcmp(p, "123456", 6));
     ASSERT_EQ(RDB_SEG_FIRST(&ior->recvd), rp2.segments[0]);
+    ASSERT_EQ(9, ior->recvd.nused);
+    delete ior;
+
+    ior = new IORope(rdb_chunkalloc_new(6));
+    ior->feed("123456789");
+    ReadPacket rp3(ior, 6);
+    rp3.refSegment(0);
+
+    p = rdb_get_consolidated(ior, 9);
+    ASSERT_EQ(0, memcmp(p, "123456789", 9));
+    ASSERT_EQ(9, ior->recvd.nused);
+    rp3.unrefSegment(0);
     delete ior;
 }
