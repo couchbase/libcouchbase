@@ -216,9 +216,8 @@ try_read(lcbio_CTX *ctx, mc_SERVER *server, rdb_IOROPE *ior)
         rdb_ROPESEG *segs;
         nb_IOV iov;
 
-        rdb_consolidate(ior, sizeof info->res.bytes + PACKET_NBODY(info));
-        rdb_refread_ex(ior,
-            &iov, &segs, 1, PACKET_NBODY(info) + sizeof info->res.bytes);
+        rdb_consolidate(ior, pktsize);
+        rdb_refread_ex(ior, &iov, &segs, 1, pktsize);
 
         resp.bufs = &segs;
         resp.iovs = (lcb_IOV*)&iov;
