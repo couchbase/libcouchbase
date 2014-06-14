@@ -102,7 +102,7 @@ mc_forward_packet(mc_CMDQUEUE *cq,
     }
 
     hdr.request.vbucket = htons(vbid);
-    pkt->opaque = hdr.request.opaque = ++cq->seq;
+    hdr.request.opaque = pkt->opaque;
     pkt->extlen = hdr.request.extlen;
     info->consumed = n_packet;
 
@@ -132,7 +132,7 @@ mc_forward_packet(mc_CMDQUEUE *cq,
         if (n_body_value) {
             pkt->flags |= MCREQ_F_HASVALUE | MCREQ_F_VALUE_NOCOPY;
             if (IOVCURSOR_HAS_CONTIG(mincur, n_body_value)) {
-                span_from_first(mincur, n_header, &pkt->u_value.single);
+                span_from_first(mincur, n_body_value, &pkt->u_value.single);
 
             } else {
                 /* body is fragmented */
