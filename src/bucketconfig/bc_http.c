@@ -580,8 +580,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
 static void
 io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
 {
-    io_error((http_provider *)lcbio_ctx_data(ctx), LCB_NETWORK_ERROR);
-    (void)err;
+    io_error((http_provider *)lcbio_ctx_data(ctx), err);
 }
 
 void lcb_clconfig_http_enable(clconfig_provider *http)

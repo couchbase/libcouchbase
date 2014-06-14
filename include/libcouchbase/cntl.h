@@ -1071,8 +1071,28 @@ struct lcb_cntl_rdballocfactory {
  */
 #define LCB_CNTL_CONLOGGER_LEVEL 0x29
 
+
+/**
+ * @committed
+ *
+ * Sets the behavior for reporting network errors. By default network errors
+ * are returned as `LCB_NETWORK_ERROR` return codes for compatibility reasons.
+ * More detailed error codes may be available by enabling this option which will
+ * return appropriate error codes which have a category of
+ * @ref LCB_ERRTYPE_NETWORK
+ *
+ * Using this option means your programming model is centered around the various
+ * LCB_EIF* macros (see <libcouchbase/error.h>) rather than individual codes.
+ *
+ *
+ * Mode|Arg
+ * ----|---
+ * Set, Get | `int*`
+ */
+#define LCB_CNTL_DETAILED_ERRCODES 0x2A
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x2A
+#define LCB_CNTL__MAX                    0x2B
 /**@}*/
 
 #ifdef __cplusplus

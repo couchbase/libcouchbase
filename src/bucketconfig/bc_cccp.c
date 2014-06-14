@@ -238,7 +238,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
         if (sock) {
             lcbio_mgr_discard(sock);
         }
-        mcio_error(cccp, LCB_CONNECT_ERROR);
+        mcio_error(cccp, err);
         return;
     }
 

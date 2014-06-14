@@ -2,6 +2,7 @@
 #include "iotable.h"
 #include "rw-inl.h"
 #include "timer-ng.h"
+#include "ioutils.h"
 #include <stdio.h>
 
 #define CTX_FD(ctx) (ctx)->fd
@@ -21,6 +22,20 @@ err_handler(void *cookie)
 {
     lcbio_CTX *ctx = (void *)cookie;
     ctx->procs.cb_err(ctx, ctx->err);
+}
+
+static lcb_error_t
+convert_lcberr(const lcbio_CTX *ctx, lcbio_IOSTATUS status)
+{
+    const lcb_settings *settings = ctx->sock->settings;
+    lcbio_OSERR oserr = IOT_ERRNO(ctx->sock->io);
+    if (status == LCBIO_SHUTDOWN) {
+        return lcbio_mklcberr(0, settings);
+    } else if (oserr != 0) {
+        return lcbio_mklcberr(oserr, settings);
+    } else {
+        return LCB_NETWORK_ERROR;
+    }
 }
 
 lcbio_CTX *
@@ -246,8 +261,7 @@ E_handler(lcb_socket_t sock, short which, void *arg)
             }
         }
         if (!LCBIO_IS_OK(status)) {
-            lcb_error_t err = status ==
-                    LCBIO_SHUTDOWN ? LCB_ESOCKSHUTDOWN : LCB_NETWORK_ERROR;
+            lcb_error_t err = convert_lcberr(ctx, status);
             lcbio_ctx_senderr(ctx, err);
             return;
         }
@@ -264,7 +278,7 @@ E_handler(lcb_socket_t sock, short which, void *arg)
             status = lcbio_E_rb_write(ctx->sock, &ctx->output->rb);
             if (!LCBIO_IS_OK(status)) {
                 deactivate_watcher(ctx);
-                ctx->err = LCB_NETWORK_ERROR;
+                ctx->err = convert_lcberr(ctx, status);
                 err_handler(ctx);
                 return;
             }
@@ -302,7 +316,7 @@ Cw_handler(lcb_sockdata_t *sd, int status, void *arg)
     }
 
     if (ctx->state == ES_ACTIVE && status) {
-        invoke_entered_errcb(ctx, LCB_NETWORK_ERROR);
+        invoke_entered_errcb(ctx, convert_lcberr(ctx, LCBIO_IOERR));
     }
 
     if (ctx->state != ES_ACTIVE && ctx->npending == 0) {
@@ -330,7 +344,8 @@ Cr_handler(lcb_sockdata_t *sd, lcb_ssize_t nr, void *arg)
 
             lcbio_ctx_schedule(ctx);
         } else {
-            lcb_error_t err = nr ? LCB_NETWORK_ERROR : LCB_ESOCKSHUTDOWN;
+            lcb_error_t err =
+                    convert_lcberr(ctx, nr ? LCBIO_SHUTDOWN : LCBIO_IOERR);
             ctx->rdwant = 0;
             invoke_entered_errcb(ctx, err);
         }
@@ -357,7 +372,7 @@ C_schedule(lcbio_CTX *ctx)
         niov = iov[1].iov_len ? 2 : 1;
         rv = IOT_V1(io).write2(IOT_ARG(io), sd, iov, niov, ctx->output, Cw_handler);
         if (rv) {
-            lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
+            lcbio_ctx_senderr(ctx, convert_lcberr(ctx, LCBIO_IOERR));
             return;
         } else {
             ctx->output = NULL;
@@ -377,7 +392,7 @@ C_schedule(lcbio_CTX *ctx)
 
         rv = IOT_V1(io).read2(IOT_ARG(io), sd, iov, niov, ctx, Cr_handler);
         if (rv) {
-            lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
+            lcbio_ctx_senderr(ctx, convert_lcberr(ctx, LCBIO_IOERR));
 
         } else {
             sd->is_reading = 1;
@@ -452,13 +467,13 @@ E_put_ex(lcbio_CTX *ctx, lcb_IOV *iov, unsigned niov, unsigned nb)
             /* pretend all the bytes were written and deliver an error during
              * the next event loop iteration. */
             nw = nb;
-            lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
+            lcbio_ctx_senderr(ctx, convert_lcberr(ctx, LCBIO_IOERR));
             goto GT_WRITE0;
         }
     } else {
         /* connection closed. pretend everything was written and send an error */
         nw = nb;
-        lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
+        lcbio_ctx_senderr(ctx, convert_lcberr(ctx, LCBIO_SHUTDOWN));
         goto GT_WRITE0;
     }
 
@@ -478,7 +493,7 @@ Cw_ex_handler(lcb_sockdata_t *sd, int status, void *wdata)
     assert(ctx->state == ES_ACTIVE);
 
     if (status != 0) {
-        lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
+        lcbio_ctx_senderr(ctx, convert_lcberr(ctx, LCBIO_IOERR));
     }
 }
 
@@ -491,8 +506,9 @@ C_put_ex(lcbio_CTX *ctx, lcb_IOV *iov, unsigned niov, unsigned nb)
             IOT_ARG(iot), sd, iov, niov, (void *)(uintptr_t)nb, Cw_ex_handler);
     if (status) {
         /** error! */
+        lcbio_OSERR saverr = IOT_ERRNO(iot);
         ctx->procs.cb_flush_done(ctx, nb, nb);
-        lcbio_ctx_senderr(ctx, LCB_NETWORK_ERROR);
+        lcbio_ctx_senderr(ctx, lcbio_mklcberr(saverr, ctx->sock->settings));
         return 0;
     } else {
         ctx->npending++;

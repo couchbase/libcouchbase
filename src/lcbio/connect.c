@@ -74,7 +74,11 @@ cs_handler(void *cookie)
         /* clear pending error */
         err = LCB_SUCCESS;
     } else {
-        err = cs->pending;
+        if (s != NULL && cs->pending == LCB_CONNECT_ERROR) {
+            err = lcbio_mklcberr(cs->syserr, s->settings);
+        } else {
+            err = cs->pending;
+        }
     }
 
     if (cs->state == CS_CANCELLED) {

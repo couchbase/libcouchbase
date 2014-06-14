@@ -29,6 +29,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->compressopts = LCB_DEFAULT_COMPRESSOPTS;
     settings->allocator_factory = rdb_bigalloc_new;
     settings->syncmode = LCB_ASYNCHRONOUS;
+    settings->detailed_neterr = 0;
 }
 
 LCB_INTERNAL_API

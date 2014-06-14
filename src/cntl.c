@@ -638,6 +638,29 @@ console_log_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+detailed_errcode_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    int newval = 0;
+    if (mode == CNTL__MODE_SETSTRING) {
+        if (sscanf(arg, "%d", &newval) != 1) {
+            return LCB_EINVAL;
+        }
+        mode = LCB_CNTL_SET;
+    } else if (mode == LCB_CNTL_SET) {
+        newval = *(int *)arg;
+    } else {
+        *(int *)arg = LCBT_SETTING(instance, detailed_neterr);
+        return LCB_SUCCESS;
+    }
+
+    if (mode == LCB_CNTL_SET) {
+        LCBT_SETTING(instance, detailed_neterr) = newval;
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -680,7 +703,8 @@ static ctl_handler handlers[] = {
     compmode_handler, /* LCB_CNTL_COMPRESSION_OPTS */
     allocfactory_handler, /* LCB_CNTL_RDBALLOCFACTORY */
     syncdtor_handler, /* LCB_CNTL_SYNCDESTROY */
-    console_log_handler /* LCB_CNTL_CONLOGGER_LEVEL */
+    console_log_handler, /* LCB_CNTL_CONLOGGER_LEVEL */
+    detailed_errcode_handler /* LCB_CNTL_DETAILED_ERRCODES */
 };
 
 typedef struct {
@@ -702,7 +726,8 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"config_node_timeout", LCB_CNTL_CONFIG_NODE_TIMEOUT},
         {"compression", LCB_CNTL_COMPRESSION_OPTS},
         {"console_log_level", LCB_CNTL_CONLOGGER_LEVEL},
-        {"config_cache", LCB_CNTL_CONFIGCACHE }
+        {"config_cache", LCB_CNTL_CONFIGCACHE },
+        {"detailed_errcodes", LCB_CNTL_DETAILED_ERRCODES}
 };
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

@@ -72,6 +72,7 @@ typedef enum {
     LCB_ERRTYPE_PLUGIN = 1 << 6
 } lcb_errflags_t;
 
+
 /**
  * @brief XMacro for all error types
  * @param X macro to be invoked for each function. This will accept the following
@@ -229,10 +230,26 @@ typedef enum {
       "Opcode provided in packet cannot be sent to the upstream server. The " \
       "packet contains no inherent server mapping information (i.e. has no key) " \
       "and/or depends on client-visible cluster topologies") \
+    \
     X(LCB_ECONNREFUSED, 0x2D, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
-      "The remote host refused the connection") \
+      "The remote host refused the connection. Is the service up?") \
+    \
     X(LCB_ESOCKSHUTDOWN, 0x2E, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
-      "The remote host closed the connection")
+      "The remote host closed the connection") \
+    \
+    X(LCB_ECONNRESET, 0x2F, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
+      "The connection was forcibly reset by the remote host") \
+    \
+    X(LCB_ECANTGETPORT, 0x30, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_FATAL, \
+      "Could not assign a local port for this socket. For client sockets this means " \
+      "there are too many TCP sockets open") \
+    \
+    X(LCB_EFDLIMITREACHED, 0x31, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_FATAL, \
+      "The system or process has reached its maximum number of file descriptors") \
+    \
+    X(LCB_ENETUNREACH, 0x32, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
+      "The remote host was unreachable - is your network OK?")
+
 
     /**
      * Define the error codes in use by the library

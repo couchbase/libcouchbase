@@ -61,6 +61,36 @@ lcbio_mksyserr(lcbio_OSERR in, lcbio_OSERR *out)
     }
 }
 
+lcb_error_t
+lcbio_mklcberr(lcbio_OSERR in, const lcb_settings *settings)
+{
+    if (settings->detailed_neterr == 0) {
+        return LCB_NETWORK_ERROR;
+    }
+
+    switch (in) {
+    case 0:
+        return LCB_ESOCKSHUTDOWN;
+    case ECONNREFUSED:
+        return LCB_ECONNREFUSED;
+    case ENETUNREACH:
+    case EHOSTUNREACH:
+    case EHOSTDOWN:
+        return LCB_ENETUNREACH;
+    case EMFILE:
+    case ENFILE:
+        return LCB_EFDLIMITREACHED;
+    case EADDRINUSE:
+    case EADDRNOTAVAIL:
+        return LCB_ECANTGETPORT;
+    case ECONNRESET:
+    case ECONNABORTED:
+        return LCB_ECONNRESET;
+    default:
+        return LCB_NETWORK_ERROR;
+    }
+}
+
 lcb_socket_t
 lcbio_E_ai2sock(lcbio_TABLE *io, struct addrinfo **ai, int *connerr)
 {

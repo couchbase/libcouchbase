@@ -122,6 +122,9 @@ typedef struct lcb_settings_st {
      * loop as much as possible until no outstanding events remain.*/
     int syncdtor;
 
+    /** Return detailed network error codes */
+    int detailed_neterr;
+
     /** SSL settings */
     lcb_SSLOPTS sslopts;
 

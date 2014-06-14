@@ -37,6 +37,15 @@ void
 lcbio_mksyserr(lcbio_OSERR in, lcbio_OSERR *out);
 
 /**
+ * Convert a system error code into one suitable for returning to the user
+ * @param in The code received. This can be 0, for graceful shutdown
+ * @param settings The settings for the library
+ * @return An error code.
+ */
+lcb_error_t
+lcbio_mklcberr(lcbio_OSERR in, const lcb_settings *settings);
+
+/**
  * Traverse the addrinfo structure and return a socket.
  * @param io the iotable structure used to create the socket
  * @param[in,out] ai an addrinfo structure
