@@ -592,6 +592,7 @@ int main(int argc, char **argv)
 
 #ifndef WIN32
     setup_sigint_handler(SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
