@@ -51,6 +51,7 @@ static int check_closed(mc_SERVER *);
 static void start_errored_ctx(mc_SERVER *server, mcserver_STATE next_state);
 static void finalize_errored_ctx(mc_SERVER *server);
 static void on_error(lcbio_CTX *ctx, lcb_error_t err);
+static void server_socket_failed(mc_SERVER *server, lcb_error_t err);
 
 static void
 on_flush_ready(lcbio_CTX *ctx)
@@ -422,7 +423,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(server, ERR), "Got error for connection! (OS=%d)", syserr);
-        mcserver_socket_error(server, err);
+        server_socket_failed(server, err);
         return;
     }
 
@@ -543,8 +544,12 @@ close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
     (void)reusable;(void)arg;
 }
 
-void
-mcserver_errflush(mc_SERVER *server)
+
+/**Marks any unflushed data inside this server as being already flushed. This
+ * should be done within error handling. If subsequent data is flushed on this
+ * pipeline to the same connection, the results are undefined. */
+static void
+release_unflushed_packets(mc_SERVER *server)
 {
     unsigned toflush;
     nb_IOV iov;
@@ -562,11 +567,14 @@ on_error(lcbio_CTX *ctx, lcb_error_t err)
     if (check_closed(server)) {
         return;
     }
-    mcserver_socket_error(server, err);
+    server_socket_failed(server, err);
 }
 
-void
-mcserver_socket_error(mc_SERVER *server, lcb_error_t err)
+/**Handle a socket error. This function will close the current connection
+ * and trigger a failout of any pending commands.
+ * This function triggers a configuration refresh */
+static void
+server_socket_failed(mc_SERVER *server, lcb_error_t err)
 {
     if (check_closed(server)) {
         return;
@@ -660,7 +668,7 @@ finalize_errored_ctx(mc_SERVER *server)
     server->connctx = NULL;
 
     /* And pretend to flush any outstanding data. There's nothing pending! */
-    mcserver_errflush(server);
+    release_unflushed_packets(server);
 
     if (server->state == S_CLOSED) {
         /* If the server is closed, time to free it */

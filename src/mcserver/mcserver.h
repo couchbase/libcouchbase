@@ -70,7 +70,6 @@ mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix);
  * internally for a bit until all callbacks have been delivered and all buffers
  * flushed and/or failed.
  * @param server the server to release
- * @param isok whether the server's socket may be reused.
  */
 void
 mcserver_close(mc_SERVER *server);
@@ -83,20 +82,16 @@ mcserver_close(mc_SERVER *server);
 void
 mcserver_flush(mc_SERVER *server);
 
-void
-mcserver_wire_io(mc_SERVER *server, lcbio_SOCKET *sock);
-
 /**
- * Handle a socket error. This function will close the current connection
- * and trigger a failout of any pending commands.
+ * Wrapper around mcreq_pipeline_timeout() and/or mcreq_pipeline_fail(). This
+ * function will purge all pending requests within the server and invoke
+ * their callbacks with the given error code passed as `err`. Depending on
+ * the error code, some operations may be retried.
+ * @param server the server to fail
+ * @param err the error code by which to fail the commands
  *
- * This function triggers a configuration refresh
- */
-void
-mcserver_socket_error(mc_SERVER *server, lcb_error_t err);
-
-/**
- *
+ * @note This function does not modify the server's socket or state in itself,
+ * but rather simply wipes the commands from its queue
  */
 void
 mcserver_fail_chain(mc_SERVER *server, lcb_error_t err);
@@ -107,14 +102,6 @@ mcserver_fail_chain(mc_SERVER *server, lcb_error_t err);
  */
 int
 mcserver_has_pending(mc_SERVER *server);
-
-/**
- * Marks any unflushed data inside this server as being already flushed. This
- * should be done within error handling. If subsequent data is flushed on this
- * pipeline to the same connection, the results are undefined.
- */
-void
-mcserver_errflush(mc_SERVER *server);
 
 #ifdef __cplusplus
 }
