@@ -484,8 +484,9 @@ private:
     void generateKey(string &key, uint32_t ii = static_cast<uint32_t>(-1)) {
         if (ii == static_cast<uint32_t>(-1)) {
             // get random key
-            ii = nextSeqno() % config.maxKey;
+            ii = nextSeqno();
         }
+        ii %= config.maxKey;
 
         char buffer[21];
         snprintf(buffer, sizeof(buffer), "%020d", ii);
