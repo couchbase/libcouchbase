@@ -76,9 +76,6 @@ iovcursor_peek_ex(const mc_IOVCURSOR *cursor,
                 return IOVCURSOR_STATUS_CONTIGPTR_OK;
             } else {
                 memcpy(copytgt, srcbuf, size);
-                if (contigref) {
-                    *contigref = NULL;
-                }
                 return IOVCURSOR_STATUS_BUFCOPY_OK;
             }
         } else if (copytgt == NULL) {
@@ -89,19 +86,21 @@ iovcursor_peek_ex(const mc_IOVCURSOR *cursor,
             unsigned to_copy = MINIMUM(size, cur->iov_len - tmpoff);
             memcpy(copytgt, srcbuf, to_copy);
             copytgt += to_copy;
+            if (contigref) {
+                *contigref = NULL;
+                contigref = NULL;
+            }
 
             /* We've copied, so ignore the 'contigref' */
             contigref = NULL;
             if (!(size -= to_copy)) {
-                if (contigref) {
-                    *contigref = NULL;
-                }
                 return IOVCURSOR_STATUS_BUFCOPY_OK;
             }
         }
     }
 
     assert(!size);
+    *contigref = NULL;
     return IOVCURSOR_STATUS_FRAGMENTED;
 }
 

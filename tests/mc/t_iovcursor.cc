@@ -62,10 +62,11 @@ TEST_F(McIOVC, testPeekEx)
     status = iovcursor_peek_ex(mincur, cptgt, &contigptr, 9, 0);
     ASSERT_EQ(IOVCURSOR_STATUS_BUFCOPY_OK, status);
     ASSERT_STREQ("ABCDEFGHI", cptgt);
+    ASSERT_TRUE(contigptr == NULL);
 
     status = iovcursor_peek_ex(mincur, NULL, &contigptr, 9, 0);
     ASSERT_EQ(IOVCURSOR_STATUS_FRAGMENTED, status);
-    ASSERT_EQ(NULL, contigptr);
+    ASSERT_TRUE(contigptr == NULL);
 
     // Contiguous pointer
     memset(cptgt, 0, sizeof cptgt);
@@ -76,10 +77,12 @@ TEST_F(McIOVC, testPeekEx)
     ASSERT_STREQ("ABC", cptgt);
 
     // With offsets: CDE
+    contigptr = (char *)0x1;
     memset(cptgt, 0, sizeof cptgt);
     status = iovcursor_peek_ex(mincur, cptgt, &contigptr, 3, 2);
     ASSERT_EQ(IOVCURSOR_STATUS_BUFCOPY_OK, status);
     ASSERT_STREQ("CDE", cptgt);
+    ASSERT_TRUE(contigptr == NULL);
 }
 
 TEST_F(McIOVC, testAdvCopy)
