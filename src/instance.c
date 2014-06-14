@@ -386,6 +386,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     settings->password = dsn.password; dsn.password = NULL;
     settings->logger = lcb_init_console_logger();
     settings->iid = lcb_instance_index++;
+    lcb_log(LOGARGS(obj, INFO), "Creating instance. Version=%s, Changeset=%s", lcb_get_version(NULL), LCB_VERSION_CHANGESET);
 
     /* Do not allow people use Administrator account for data access */
     if (type == LCB_TYPE_BUCKET && settings->username) {
