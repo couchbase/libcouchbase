@@ -95,6 +95,23 @@ lcb_error_t lcb_wait(lcb_t instance)
     return instance->last_error;
 }
 
+LIBCOUCHBASE_API
+void lcb_wait3(lcb_t instance, lcb_WAITFLAGS flags)
+{
+    if (flags == LCB_WAIT_DEFAULT) {
+        if (instance->wait) {
+            return;
+        }
+        if (has_pending(instance)) {
+            return;
+        }
+    }
+
+    instance->wait = 1;
+    IOT_START(instance->iotable);
+    instance->wait = 0;
+}
+
 /**
  * Stop event loop
  *

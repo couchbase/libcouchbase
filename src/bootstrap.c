@@ -274,3 +274,10 @@ lcb_get_bootstrap_status(lcb_t instance)
     }
     return LCB_ERROR;
 }
+
+LIBCOUCHBASE_API
+void
+lcb_refresh_config(lcb_t instance)
+{
+    lcb_bootstrap_refresh(instance);
+}

@@ -410,6 +410,31 @@ const void *lcb_get_cookie(lcb_t instance);
 LIBCOUCHBASE_API
 lcb_error_t lcb_wait(lcb_t instance);
 
+/**@brief Flags for lcb_wait3()*/
+typedef enum {
+    /**Behave like the old lcb_wait()*/
+    LCB_WAIT_DEFAULT = 0x00,
+
+    /**Do not check pending operations before running the event loop. By default
+     * lcb_wait() will traverse the server list to check if any operations are
+     * pending, and if nothing is pending the function will return without
+     * running the event loop. This is usually not necessary for applications
+     * which already _only_ call lcb_wait() when they know they have scheduled
+     * at least one command.
+     */
+    LCB_WAIT_NOCHECK = 0x01
+} lcb_WAITFLAGS;
+
+/**
+ * @committed
+ * @brief Wait for completion of scheduled operations.
+ * @param instance the instance
+ * @param flags flags to modify the behavior of lcb_wait(). Pass 0 to obtain
+ * behavior identical to lcb_wait().
+ */
+LIBCOUCHBASE_API
+void lcb_wait3(lcb_t instance, lcb_WAITFLAGS flags);
+
 /**
  * @brief Forcefully break from the event loop.
  *
@@ -468,6 +493,66 @@ lcb_set_bootstrap_callback(lcb_t instance, lcb_bootstrap_callback callback);
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_get_bootstrap_status(lcb_t instance);
+
+/**
+ * @uncommitted
+ *
+ * @brief Force the library to refetch the cluster configuration
+ *
+ * The library by default employs various heuristics to determine if a new
+ * configuration is needed from the cluster. However there are some situations
+ * in which an application may wish to force a refresh of the configuration:
+ *
+ * * If a specific node has been failed
+ *   over and the library has received a configuration in which there is no
+ *   master node for a given key, the library will immediately return the error
+ *   `LCB_NO_MATCHING_SERVER` for the given item and will not request a new
+ *   configuration. In this state, the client will not perform any network I/O
+ *   until a request has been made to it using a key that is mapped to a known
+ *   active node.
+ *
+ * * The library's heuristics may have failed to detect an error warranting
+ *   a configuration change, but the application either through its own
+ *   heuristics, or through an out-of-band channel knows that the configuration
+ *   has changed.
+ *
+ *
+ * This function is provided as an aid to assist in such situations
+ *
+ * If you wish for your application to block until a new configuration is
+ * received, you _must_ call lcb_wait3() with the LCB_WAIT_NO_CHECK flag as
+ * this function call is not bound to a specific operation. Additionally there
+ * is no status notification as to whether this operation succeeded or failed
+ * (the configuration callback via lcb_set_configuration_callback() may
+ * provide hints as to whether a configuration was received or not, but by no
+ * means should be considered to be part of this function's control flow).
+ *
+ * In general the use pattern of this function is like so:
+ *
+ * @code{.c}
+ * unsigned retries = 5;
+ * lcb_error_t err;
+ * do {
+ *   retries--;
+ *   err = lcb_get(instance, cookie, ncmds, cmds);
+ *   if (err == LCB_NO_MATCHING_SERVER) {
+ *     lcb_refresh_config(instance);
+ *     usleep(100000);
+ *     lcb_wait3(instance, LCB_WAIT_NO_CHECK);
+ *   } else {
+ *     break;
+ *   }
+ * } while (retries);
+ * if (err == LCB_SUCCESS) {
+ *   lcb_wait3(instance, 0); // equivalent to lcb_wait(instance);
+ * } else {
+ *   printf("Tried multiple times to fetch the key, but its node is down\n");
+ * }
+ * @endcode
+ */
+LIBCOUCHBASE_API
+void
+lcb_refresh_config(lcb_t instance);
 
 /**
  * @brief Argument indicating configuration change type
