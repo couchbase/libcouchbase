@@ -85,7 +85,7 @@ static lcb_error_t timeout_common(int mode,
 
     ptr = get_timeout_field(instance, cmd);
     if (!ptr) {
-        return LCB_EINVAL;
+        return LCB_ECTL_BADARG;
     }
     if (mode == LCB_CNTL_GET) {
         *user = *ptr;
@@ -94,7 +94,7 @@ static lcb_error_t timeout_common(int mode,
         unsigned long tmp;
         rv = sscanf(arg, "%lu", &tmp);
         if (rv != 1) {
-            return LCB_EINVAL;
+            return LCB_ECTL_BADARG;
         }
         *ptr = tmp;
     } else {
@@ -113,7 +113,7 @@ noop_handler(int mode, lcb_t instance, int cmd, void *arg)
 static lcb_error_t get_vbconfig(int mode, lcb_t instance, int cmd, void *arg)
 {
     if (mode != LCB_CNTL_GET) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
     *(VBUCKET_CONFIG_HANDLE *)arg = LCBT_VBCONFIG(instance);
 
@@ -124,7 +124,7 @@ static lcb_error_t get_vbconfig(int mode, lcb_t instance, int cmd, void *arg)
 static lcb_error_t get_htype(int mode, lcb_t instance, int cmd, void *arg)
 {
     if (mode != LCB_CNTL_GET) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     *(lcb_type_t *)arg = instance->type;
@@ -138,7 +138,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
     struct lcb_cntl_vbinfo_st *vbi = arg;
 
     if (mode != LCB_CNTL_GET) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     if (!LCBT_VBCONFIG(instance)) {
@@ -146,7 +146,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
     }
 
     if (vbi->version != 0) {
-        return LCB_EINVAL;
+        return LCB_ECTL_BADARG;
     }
 
     vbucket_map(LCBT_VBCONFIG(instance),
@@ -162,7 +162,7 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
 static lcb_error_t get_iops(int mode, lcb_t instance, int cmd, void *arg)
 {
     if (mode != LCB_CNTL_GET) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     *(lcb_io_opt_t *)arg = instance->iotable->p;
@@ -177,11 +177,11 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
     const lcb_host_t *host;
 
     if (mode != LCB_CNTL_GET) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     if (si->version < 0 || si->version > 1) {
-        return LCB_EINVAL;
+        return LCB_ECTL_BADARG;
 
     }
 
@@ -189,7 +189,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         lcb_server_t *server;
         int ix = si->v.v0.index;
         if (ix < 0 || ix > (int)LCBT_NSERVERS(instance)) {
-            return LCB_EINVAL;
+            return LCB_ECTL_BADARG;
         }
 
         server = LCBT_GET_SERVER(instance, ix);
@@ -211,7 +211,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         sock = lcb_confmon_get_rest_connection(instance->confmon);
 
     } else {
-        return LCB_EINVAL;
+        return LCB_ECTL_BADARG;
     }
 
     if (!sock) {
@@ -233,7 +233,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
         break;
 
     default:
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_BADARG;
     }
 
     return LCB_SUCCESS;
@@ -242,7 +242,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
 static lcb_error_t syncmode(int mode, lcb_t instance, int cmd, void *arg)
 {
     (void)mode; (void)instance; (void)cmd; (void)arg;
-    return LCB_NOT_SUPPORTED;
+    return LCB_ECTL_UNKNOWN;
 }
 
 static lcb_error_t ippolicy(int mode, lcb_t instance, int cmd, void *arg)
@@ -307,7 +307,7 @@ static lcb_error_t config_cache_loaded_handler(int mode,
                                                void *arg)
 {
     if (mode != LCB_CNTL_GET) {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     if (cmd != LCB_CNTL_CONFIG_CACHE_LOADED) {
@@ -351,7 +351,7 @@ static lcb_error_t max_redirects(int mode, lcb_t instance, int cmd, void *arg)
     int *val = arg;
 
     if (*val < -1) {
-        return LCB_EINVAL;
+        return LCB_ECTL_BADARG;
     }
     if (mode == LCB_CNTL_SET) {
         instance->settings->max_redir = *val;
@@ -380,7 +380,7 @@ static lcb_error_t config_transport(int mode, lcb_t instance, int cmd, void *arg
     lcb_config_transport_t *val = arg;
 
     if (mode == LCB_CNTL_SET) {
-        return LCB_EINVAL;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     if (!instance->cur_configinfo) {
@@ -412,7 +412,7 @@ static lcb_error_t config_nodes(int mode, lcb_t instance, int cmd, void *arg)
     lcb_error_t err;
 
     if (mode != LCB_CNTL_SET) {
-        return LCB_EINVAL;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     nodes_obj = hostlist_create();
@@ -453,7 +453,7 @@ static lcb_error_t init_providers(int mode, lcb_t instance, int cmd, void *arg)
 {
     struct lcb_create_st2 *opts = arg;
     if (mode != LCB_CNTL_SET) {
-        return LCB_EINVAL;
+        return LCB_ECTL_UNSUPPMODE;
     }
     (void)cmd;
     return lcb_init_providers(instance, opts);
@@ -487,7 +487,7 @@ ssl_mode_handler(int mode, lcb_t instance, int cmd, void *arg)
     if (mode == LCB_CNTL_GET) {
         *sopt = LCBT_SETTING(instance, sslopts);
     } else {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     (void)cmd;
@@ -500,7 +500,7 @@ ssl_capath_handler(int mode, lcb_t instance, int cmd, void *arg)
     if (mode == LCB_CNTL_GET) {
         *(char ** const)arg = LCBT_SETTING(instance, capath);
     } else {
-        return LCB_NOT_SUPPORTED;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     (void)cmd;
@@ -553,7 +553,7 @@ compmode_handler(int mode, lcb_t instance, int cmd, void *arg)
         } else if (!strcmp(arg, "force")) {
             opts_s = LCB_COMPRESS_INOUT|LCB_COMPRESS_FORCE;
         } else {
-            return LCB_EINVAL;
+            return LCB_ECTL_BADARG;
         }
 
         opt_p = &opts_s;
@@ -606,7 +606,7 @@ console_log_handler(int mode, lcb_t instance, int cmd, void *arg)
     if (mode == CNTL__MODE_SETSTRING) {
         int iarg;
         if (sscanf(arg, "%d", &iarg) != 1) {
-            return LCB_EINVAL;
+            return LCB_ECTL_BADARG;
         }
         level = iarg;
         mode = LCB_CNTL_SET;
@@ -615,7 +615,7 @@ console_log_handler(int mode, lcb_t instance, int cmd, void *arg)
     }
 
     if (mode != LCB_CNTL_SET) {
-        return LCB_EINVAL;
+        return LCB_ECTL_UNSUPPMODE;
     }
 
     procs = LCBT_SETTING(instance, logger);
@@ -643,9 +643,7 @@ detailed_errcode_handler(int mode, lcb_t instance, int cmd, void *arg)
 {
     int newval = 0;
     if (mode == CNTL__MODE_SETSTRING) {
-        if (sscanf(arg, "%d", &newval) != 1) {
-            return LCB_EINVAL;
-        }
+        newval = boolean_from_string(arg);
         mode = LCB_CNTL_SET;
     } else if (mode == LCB_CNTL_SET) {
         newval = *(int *)arg;
@@ -732,21 +730,43 @@ static cntl_OPCODESTRS stropcode_map[] = {
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))
 
+static lcb_error_t
+wrap_return(lcb_t instance, lcb_error_t retval)
+{
+    if (retval == LCB_SUCCESS) {
+        return retval;
+    }
+    if (instance && LCBT_SETTING(instance, detailed_neterr) == 0) {
+        switch (retval) {
+        case LCB_ECTL_UNKNOWN:
+            return LCB_NOT_SUPPORTED;
+        case LCB_ECTL_UNSUPPMODE:
+            return LCB_NOT_SUPPORTED;
+        case LCB_ECTL_BADARG:
+            return LCB_EINVAL;
+        default:
+            return retval;
+        }
+    } else {
+        return retval;
+    }
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
 {
     ctl_handler handler;
     if (cmd >= (int)CNTL_NUM_HANDLERS || cmd < 0) {
-        return LCB_NOT_SUPPORTED;
+        return wrap_return(instance, LCB_ECTL_UNKNOWN);
     }
 
     handler = handlers[cmd];
 
     if (!handler) {
-        return LCB_NOT_SUPPORTED;
+        return wrap_return(instance, LCB_ECTL_UNKNOWN);
     }
 
-    return handler(mode, instance, cmd, arg);
+    return wrap_return(instance, handler(mode, instance, cmd, arg));
 }
 
 LIBCOUCHBASE_API
@@ -761,7 +781,7 @@ lcb_cntl_string(lcb_t instance, const char *key, const char *value)
                 (void *)value);
         }
     }
-    return LCB_NOT_SUPPORTED;
+    return wrap_return(instance, LCB_NOT_SUPPORTED);
 }
 
 LIBCOUCHBASE_API

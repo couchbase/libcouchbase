@@ -248,7 +248,16 @@ typedef enum {
       "The system or process has reached its maximum number of file descriptors") \
     \
     X(LCB_ENETUNREACH, 0x32, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
-      "The remote host was unreachable - is your network OK?")
+      "The remote host was unreachable - is your network OK?") \
+    \
+    X(LCB_ECTL_UNKNOWN, 0x33, LCB_ERRTYPE_INPUT, \
+      "Control code passed was unrecognized") \
+    \
+    X(LCB_ECTL_UNSUPPMODE, 0x34, LCB_ERRTYPE_INPUT, \
+      "Invalid modifier for cntl operation (e.g. tried to read a write-only value") \
+    \
+    X(LCB_ECTL_BADARG, 0x35, LCB_ERRTYPE_INPUT, \
+      "Argument passed to cntl was badly formatted")
 
 
     /**
