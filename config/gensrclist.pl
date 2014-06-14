@@ -27,8 +27,14 @@ sub add_target {
 }
 
 sub add_target_with_sources {
-    my ($name,$path) = @_;
-    print $ofp "${name}_la_SOURCES = ".fmt_filelist(find_srcfiles($path)) . "\n";
+    my ($name,$path,$extras) = @_;
+    my @srclist = find_srcfiles($path);
+    if ($extras) {
+        foreach my $extra (@$extras) {
+            push @srclist, $extra;
+        }
+    }
+    print $ofp "${name}_la_SOURCES = ".fmt_filelist(@srclist) . "\n";
     add_target($name);
 }
 
@@ -44,6 +50,7 @@ sub add_test {
     my @deps = qw(
         libnetbuf.la librdb.la liblcbio.la libmcreq.la libcouchbase.la liblcbutils.la);
     $ltname =~ s,[-/],_,g;
+
     if ($options->{deps}) {
         push @deps, @{$options->{deps}};
     }
@@ -88,8 +95,8 @@ push @PKGINCLUDE_HEADERS,
 
 print $ofp "pkginclude_HEADERS = ".fmt_filelist(@PKGINCLUDE_HEADERS)."\n";
 my @LCB_SOURCES = (find_srcfiles("src"), find_srcfiles("plugins/io/select"));
-@LCB_SOURCES = grep { $_ !~ m,src/ssl, } @LCB_SOURCES;
-print $ofp "libcouchbase_la_SOURCES = ".fmt_filelist(@LCB_SOURCES)."\n";
+@LCB_SOURCES = grep { $_ !~ m,src/ssl, && $_ !~ m,src/lcbht, } @LCB_SOURCES;
+print $ofp "libcouchbase_la_SOURCES += ".fmt_filelist(@LCB_SOURCES)."\n";
 print $ofp "libcouchbase_la_SOURCES += contrib/cJSON/cJSON.c\n";
 print $ofp "if HAVE_WINSOCK2\n";
 print $ofp "libcouchbase_la_SOURCES +=".
@@ -101,13 +108,28 @@ print $ofp "if ENABLE_SSL\n";
 add_target_with_sources("liblcbssl", "src/ssl");
 print $ofp "endif\n";
 
+print $ofp "if BUILD_STATIC_SNAPPY\n";
+add_target_with_sources("liblcbsnappy", "contrib/snappy");
+print $ofp "else\n";
+add_target_with_sources("liblcbsnappy", "config/dummy-c.c");
+print $ofp "endif\n";
+print $ofp "libcouchbase_la_DEPENDENCIES += liblcbsnappy.la\n";
+print $ofp "libcouchbase_la_LIBADD += liblcbsnappy.la\n";
+
 # Find the basic test stuff
 
 add_target_with_sources("liblcbio", "src/lcbio");
 add_target_with_sources("librdb", "src/rdb");
 add_target_with_sources("libmcreq", "src/mc");
 add_target_with_sources("libnetbuf", "src/netbuf");
-add_target_with_sources("libioserver", "tests/ioserver");
+add_target_with_sources("libcliopts", "contrib/cliopts");
+add_target_with_sources("liblcbht", "src/lcbht", ["contrib/http_parser/http_parser.c"]);
+
+print $ofp "if HAVE_CXX\nif BUILD_TOOLS\n";
+add_target("liblcbtools");
+my @TOOLS_SOURCES = qw(tools/options.cc tools/histogram.cc);
+print $ofp "liblcbtools_la_SOURCES = ".fmt_filelist(@TOOLS_SOURCES) . "\n";
+print $ofp "endif\nendif\n";
 
 my @CBUTIL_SOURCES = qw(contrib/cJSON/cJSON.c src/strcodecs/base64.c
     src/strcodecs/url_encoding.c src/gethrtime.c src/genhash.c src/hashtable.c
@@ -117,17 +139,20 @@ my @CBUTIL_SOURCES = qw(contrib/cJSON/cJSON.c src/strcodecs/base64.c
 add_target("liblcbutils");
 print $ofp "liblcbutils_la_SOURCES = ".fmt_filelist(@CBUTIL_SOURCES) . "\n";
 
+print $ofp "if HAVE_CXX\nif HAVE_GOOGLETEST_SRC\n";
+add_target_with_sources("libioserver", "tests/ioserver");
 add_test("tests/nonio-tests", "tests/basic");
 add_test("tests/rdb-tests", "tests/rdb");
-add_test("tests/mc-tests", "tests/mc");
-add_test("tests/smoke-test", "tests/smoke-test.c",
-    {nomain=>1, deps=>["libmocksupport.la"], srcextra=>["tests/test.h"]});
+add_test("tests/mc-tests", "tests/mc", {deps=>["liblcbsnappy.la"]});
 add_test("tests/sock-tests", "tests/socktests", {deps=>["libioserver.la"]});
+add_test("tests/htparse-tests", "tests/htparse", {deps=>["liblcbht.la"]});
 
 print $ofp "if HAVE_COUCHBASEMOCK\n";
 add_test("tests/unit-tests", "tests/iotests",
     {deps => ["libmocksupport.la", "liblcbutils.la"], srcextra=>["tests/unit_tests.cc"], nomain=>1});
 print $ofp "endif\n";
+
+print $ofp "endif\nendif\n";
 
 my $MOCKSUPP_LIST = fmt_filelist(find_srcfiles("tests/mocksupport"));
 print $ofp <<"EOF";

@@ -45,7 +45,7 @@
 #define PLUGIN_ENV_VAR "LIBCOUCHBASE_EVENT_PLUGIN_NAME"
 #define LCB_SRCROOT_ENV_VAR "srcdir"
 #ifdef HAVE_COUCHBASEMOCK
-#define DEFAULT_TEST_NAMES TESTS_BASE "unit-tests;smoke-test"
+#define DEFAULT_TEST_NAMES TESTS_BASE "unit-tests"
 #else
 #define DEFAULT_TEST_NAMES TESTS_BASE
 #endif

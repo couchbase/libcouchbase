@@ -28,7 +28,7 @@
 ACLOCAL_AMFLAGS = -I m4 --force
 
 lib_LTLIBRARIES = libcouchbase.la
-noinst_LTLIBRARIES = libcbsasl.la libhttpparser.la
+noinst_LTLIBRARIES = libcbsasl.la
 bin_PROGRAMS =
 check_PROGRAMS =
 noinst_PROGRAMS =
@@ -43,15 +43,15 @@ man_MANS =
 BUILT_SOURCES =
 
 CLEANFILES = \
-             check-all-libev-smoke-test.log \
              check-all-libev-unit-tests.log \
-             check-all-libevent-smoke-test.log \
              check-all-libevent-unit-tests.log \
-             check-all-libuv-smoke-test.log \
              check-all-libuv-unit-tests.log \
-             check-all-select-smoke-test.log \
              check-all-select-unit-tests.log
 
+libcouchbase_la_CPPFLAGS =
+libcouchbase_la_DEPENDENCIES =
+libcouchbase_la_LIBADD =
+libcouchbase_la_SOURCES =
 include Makefile.manpage.inc
 include filelist.mk
 
@@ -66,12 +66,6 @@ nobase_pkginclude_HEADERS = \
                              plugins/io/libuv/plugin-internal.h \
                              plugins/io/libuv/libuv_compat.h \
                              plugins/io/libuv/plugin-libuv.c
-
-libhttpparser_la_SOURCES = \
-                        contrib/http_parser/http_parser.c \
-                        contrib/http_parser/http_parser.h
-libhttpparser_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
-libhttpparser_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS)
 
 libcbsasl_la_SOURCES = \
                        contrib/cbsasl/include/cbsasl/cbsasl.h \
@@ -89,9 +83,9 @@ libcbsasl_la_CFLAGS =  $(AM_NOWARN_CFLAGS)
 libcbsasl_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS) -DBUILDING_CBSASL=1 -I${top_srcdir}/contrib/cbsasl/src
 
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
-libcouchbase_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -DLCB_LIBDIR="\"${libdir}\""
-libcouchbase_la_DEPENDENCIES=libcbsasl.la libhttpparser.la
-libcouchbase_la_LIBADD=libcbsasl.la libhttpparser.la
+libcouchbase_la_CPPFLAGS += $(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -DLCB_LIBDIR="\"${libdir}\""
+libcouchbase_la_LIBADD += libcbsasl.la liblcbht.la
+libcouchbase_la_DEPENDENCIES += libcbsasl.la liblcbht.la
 
 if ENABLE_SSL
 libcouchbase_la_LDFLAGS+=$(OPENSSL_LDFLAGS)
@@ -102,6 +96,18 @@ endif
 
 if !ENABLE_SSL
 libcouchbase_la_CPPFLAGS+=-DLCB_NO_SSL
+endif
+
+if ENABLE_SNAPPY
+if BUILD_STATIC_SNAPPY
+libcouchbase_la_SOURCES += config/dummy-cxx.cc
+else
+libcouchbase_la_CPPFLAGS += $(SNAPPY_INCLUDES)
+libcouchbase_la_LDFLAGS += $(SNAPPY_LDFLAGS)
+libcouchbase_la_LIBADD += -lsnappy
+endif
+else
+libcouchbase_la_CPPFLAGS += -DLCB_NO_SNAPPY=1
 endif
 
 
@@ -225,29 +231,14 @@ example_yajl_couchview_LDADD = libcouchbase.la -lyajl
 if BUILD_TESTS
 check_PROGRAMS += tests/check-all
 endif
-tests_check_all_SOURCES = tests/check-all.cc tools/commandlineparser.cc tests/mocksupport/procutil.c
+tests_check_all_SOURCES = tests/check-all.cc tests/mocksupport/procutil.c
 tests_check_all_CPPFLAGS = $(AM_CPPFLAGS) -I"${srcdir}/tools"
-tests_check_all_LDADD = libcouchbase.la
+tests_check_all_LDADD = libcouchbase.la libcliopts.la
 
-tools_cbc_DEPENDENCIES = libcouchbase.la
-tools_cbc_LDADD = $(tools_cbc_DEPENDENCIES)
-
-if HAVE_LIBYAJL2
-tools_cbc_LDADD += -lyajl
-endif
-tools_cbc_SOURCES =	\
-					tools/cbc.cc \
-					tools/cbc-util.cc \
-					tools/cbc-util.h \
-					tools/configuration.cc	\
-					tools/commandlineparser.cc \
-					tools/commandlineparser.h \
-					tools/configuration.h
-
-tools_cbc_pillowfight_SOURCES = tools/commandlineparser.cc \
-                                tools/cbc-pillowfight.cc \
-                                src/gethrtime.c
-tools_cbc_pillowfight_LDADD = libcouchbase.la  -lpthread
+tools_cbc_SOURCES =	tools/cbc.cc tools/cbc-handlers.h
+tools_cbc_LDADD = libcouchbase.la liblcbtools.la libcliopts.la
+tools_cbc_pillowfight_SOURCES = tools/cbc-pillowfight.cc
+tools_cbc_pillowfight_LDADD = libcouchbase.la liblcbtools.la libcliopts.la liblcbutils.la -lpthread
 
 
 TESTS_ENVIRONMENT = export outdir="$(top_builddir)/tests";
