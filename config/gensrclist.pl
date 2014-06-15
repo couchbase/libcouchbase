@@ -70,6 +70,7 @@ sub add_test {
     print $ofp "${ltname}_LDADD = " . join(' ', @deps) . "\n";
     print $ofp <<"EOF";
 ${ltname}_LDADD += -lpthread
+${ltname}_LDFLAGS =
 ${ltname}_CFLAGS = \$(AM_NOWARN_CFLAGS)
 ${ltname}_CXXFLAGS = \$(AM_NOWARN_CXXFLAGS)
 ${ltname}_CPPFLAGS = \$(AM_NOWARN_CPPFLAGS) -I\$(GTEST_ROOT)
@@ -143,9 +144,9 @@ print $ofp "if HAVE_CXX\nif HAVE_GOOGLETEST_SRC\n";
 add_target_with_sources("libioserver", "tests/ioserver");
 add_test("tests/nonio-tests", "tests/basic");
 add_test("tests/rdb-tests", "tests/rdb");
-add_test("tests/mc-tests", "tests/mc", {deps=>["liblcbsnappy.la"]});
+add_test("tests/mc-tests", "tests/mc", {deps=>["liblcbsnappy.la", "libcouchbase.la"]});
 add_test("tests/sock-tests", "tests/socktests", {deps=>["libioserver.la"]});
-add_test("tests/htparse-tests", "tests/htparse", {deps=>["liblcbht.la"]});
+add_test("tests/htparse-tests", "tests/htparse", {deps=>["liblcbht.la", "liblcbutils.la"]});
 
 print $ofp "if HAVE_COUCHBASEMOCK\n";
 add_test("tests/unit-tests", "tests/iotests",

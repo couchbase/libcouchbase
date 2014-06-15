@@ -105,11 +105,18 @@ else
 libcouchbase_la_CPPFLAGS += $(SNAPPY_INCLUDES)
 libcouchbase_la_LDFLAGS += $(SNAPPY_LDFLAGS)
 libcouchbase_la_LIBADD += -lsnappy
+
+if HAVE_CXX
+if HAVE_GOOGLETEST_SRC
+tests_mc_tests_LDADD += -lsnappy
+tests_mc_tests_LDFLAGS += $(SNAPPY_LDFLAGS)
+endif
+endif
+
 endif
 else
 libcouchbase_la_CPPFLAGS += -DLCB_NO_SNAPPY=1
 endif
-
 
 if HAVE_WINSOCK2
 libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/iocp -DWINVER=0x0600 -D_WIN32_WINNT=0x0600

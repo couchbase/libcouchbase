@@ -1,3 +1,4 @@
+#include "my_inttypes.h"
 #include <map>
 #include <sstream>
 #include <iostream>
@@ -32,7 +33,7 @@ printKeyCasStatus(string& key, const T* resp, const char *message = NULL)
     if (message != NULL) {
         fprintf(stderr, "%s ", message);
     }
-    fprintf(stderr, "CAS=0x%lx\n", resp->v.v0.cas);
+    fprintf(stderr, "CAS=0x%"PRIx64"\n", resp->v.v0.cas);
 }
 
 extern "C" {
@@ -41,7 +42,7 @@ get_callback(lcb_t, const void *, lcb_error_t err, const lcb_get_resp_t *resp)
 {
     string key = getRespKey(resp);
     if (err == LCB_SUCCESS) {
-        fprintf(stderr, "%-20s CAS=0x%lx, Flags=0x%x, Datatype=0x%x\n",
+        fprintf(stderr, "%-20s CAS=0x%"PRIx64", Flags=0x%x, Datatype=0x%x\n",
             key.c_str(), resp->v.v0.cas, resp->v.v0.flags, resp->v.v0.datatype);
         fwrite(resp->v.v0.bytes, 1, resp->v.v0.nbytes, stdout);
         fprintf(stderr, "\n");
@@ -87,7 +88,7 @@ observe_callback(lcb_t, const void*,  lcb_error_t err, const lcb_observe_resp_t 
     string key = getRespKey(resp);
     if (err == LCB_SUCCESS) {
         fprintf(stderr,
-            "%-20s [%s] Status=0x%x, CAS=0x%lx\n", key.c_str(),
+            "%-20s [%s] Status=0x%x, CAS=0x%"PRIx64"\n", key.c_str(),
             resp->v.v0.from_master ? "Master" : "Replica",
                     resp->v.v0.status, resp->v.v0.cas);
     } else {
@@ -152,7 +153,7 @@ arithmetic_callback(lcb_t, const void*, lcb_error_t err, const lcb_arithmetic_re
         printKeyError(key, err);
     } else {
         char buf[4096] = { 0 };
-        sprintf(buf, "Current value is %lu.", resp->v.v0.value);
+        sprintf(buf, "Current value is %"PRIu64".", resp->v.v0.value);
         printKeyCasStatus(key, resp, buf);
     }
 }
@@ -489,7 +490,7 @@ UnlockHandler::run()
         const string& key = args[ii];
         unsigned long long cas;
         int rv;
-        rv = sscanf(args[ii+1].c_str(), "0x%llx", &cas);
+        rv = sscanf(args[ii+1].c_str(), "0x%"PRIx64, &cas);
         if (rv != 1) {
             throw "CAS must be formatted as a hex string beginning with '0x'";
         }
@@ -899,7 +900,7 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
 
     } catch (string& err) {
-        fprintf(stderr, err.c_str());
+        fprintf(stderr, "%s\n", err.c_str());
         exit(EXIT_FAILURE);
     }
 

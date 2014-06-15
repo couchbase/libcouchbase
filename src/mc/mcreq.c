@@ -225,7 +225,7 @@ mcreq_allocate_packet(mc_PIPELINE *pipeline)
         return NULL;
     }
 
-    ret = (mc_PACKET *)SPAN_BUFFER(&span);
+    ret = (void *) SPAN_MBUFFER_NC(&span);
     ret->alloc_parent = span.parent;
     ret->flags = 0;
     ret->retries = 0;
@@ -398,7 +398,7 @@ mcreq_get_bodysize(const mc_PACKET *packet)
     lcb_uint32_t ret;
     char *retptr = SPAN_BUFFER(&packet->kh_span) + 8;
     if ((uintptr_t)retptr % sizeof(ret) == 0) {
-        return ntohl(*(lcb_uint32_t*)retptr);
+        return ntohl(*(lcb_uint32_t*) (void *)retptr);
     } else {
         memcpy(&ret, retptr, sizeof(ret));
         return ntohl(ret);

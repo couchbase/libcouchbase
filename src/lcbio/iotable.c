@@ -15,7 +15,7 @@ struct W_1to3_st {
 static void
 W_1to3_callback(lcb_sockdata_t *sd, lcb_io_writebuf_t *wb, int status)
 {
-    struct W_1to3_st *ott = (struct W_1to3_st*)wb->buffer.root;
+    struct W_1to3_st *ott = (struct W_1to3_st*)(void *)wb->buffer.root;
     lcb_ioC_wbfree_fn wbfree;
 
     wb->buffer.root = NULL;

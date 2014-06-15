@@ -237,7 +237,7 @@ static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
         return;
     }
 
-    provider = (file_provider *) (((char *)lsn) - offsetof(file_provider, listener));
+    provider = (file_provider *) (void*)(((char *)lsn) - offsetof(file_provider, listener));
 
     LOG(provider, DEBUG, "Got updated configuration. Flushing to file");
 

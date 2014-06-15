@@ -101,7 +101,7 @@ extern "C" {
     ((list) == (list)->next && (list) == (list)->prev)
 
 #define LCB_LIST_ITEM(ptr, type, member) \
-    ((type *) ((char *)(ptr) - offsetof(type, member)))
+    ((type *) (void *) ((char *)(ptr) - offsetof(type, member)))
 
 #define LCB_LIST_FOR(pos, list) \
     for (pos = (list)->next; pos != (list); pos = pos->next)

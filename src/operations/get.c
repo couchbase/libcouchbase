@@ -272,13 +272,16 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
 
     do {
         int curix;
+        mc_PIPELINE *pl;
+        mc_PACKET *pkt;
+
         curix = lcbvb_vbreplica(cq->config, vbid, r0);
         if (curix == -1) {
             return LCB_NO_MATCHING_SERVER;
         }
 
-        mc_PIPELINE *pl = cq->pipelines[curix];
-        mc_PACKET *pkt = mcreq_allocate_packet(pl);
+        pl = cq->pipelines[curix];
+        pkt = mcreq_allocate_packet(pl);
         if (!pkt) {
             return LCB_CLIENT_ENOMEM;
         }

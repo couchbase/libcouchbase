@@ -1,5 +1,6 @@
 #ifndef CBC_HANDLERS_H
 #define CBC_HANDLERS_H
+#include "config.h"
 #include "options.h"
 #include "histogram.h"
 
@@ -191,9 +192,10 @@ protected:
 class HttpReceiver {
 public:
     HttpReceiver() : statusInvoked(false) {}
+    virtual ~HttpReceiver() {}
     void maybeInvokeStatus(lcb_error_t err, const lcb_http_resp_t *);
     void install(lcb_t);
-    virtual void handleStatus(lcb_error_t err, int code) {}
+    virtual void handleStatus(lcb_error_t, int) {}
     virtual void onDone() {}
     virtual void onChunk(const char *data, size_t size) {
         resbuf.append(data, size);
@@ -327,7 +329,7 @@ public:
     HANDLER_DESCRIPTION("Query a view")
     ViewsHandler() : HttpBaseHandler("view") {}
 protected:
-    bool isAdmin() { return false; }
+    bool isAdmin() const { return false; }
     std::string getURI() { return getRequiredArg(); }
     void onChunk(const char *s, size_t n) {
         fwrite(s, 1, n, stdout);

@@ -67,7 +67,7 @@ typedef struct {
  * @param len the length of the buffer
  */
 #define CREATE_STANDALONE_SPAN(span, buf, len) \
-    (span)->parent = (nb_MBLOCK *)buf; \
+    (span)->parent = (nb_MBLOCK *) (void *)buf; \
     (span)->offset = NETBUF_INVALID_OFFSET; \
     (span)->size = len;
 

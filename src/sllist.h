@@ -44,7 +44,7 @@ typedef struct sllist_iterator_st {
 #define sllist_iter_end(list, iter) ((iter)->cur == NULL)
 
 #define SLLIST_ITEM(ptr, type, member) \
-        ((type *) ((char *)(ptr) - offsetof(type, member)))
+        ((type *) (void *) ((char *)(ptr) - offsetof(type, member)))
 
 #define SLLIST_ITERFOR(list, iter) \
     for (slist_iter_init(list, iter); \

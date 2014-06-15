@@ -39,10 +39,10 @@ timings_callback(lcb_t, const void *cookie,
 }
 
 void
-Histogram::install(lcb_t instance, FILE *output)
+Histogram::install(lcb_t inst, FILE *out)
 {
-    this->output = output;
-    this->instance = instance;
+    this->output = out;
+    this->instance = inst;
     lcb_enable_timings(instance);
 }
 

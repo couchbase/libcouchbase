@@ -263,7 +263,7 @@ ooo_queue_dealoc(nb_MGR *mgr, nb_MBLOCK *block, nb_SPAN *span)
     qespan.size = sizeof(*qd);
     mblock_reserve_data(&queue->qpool, &qespan);
 
-    qd = (nb_QDEALLOC *)SPAN_BUFFER(&qespan);
+    qd = (nb_QDEALLOC *)(void *)SPAN_MBUFFER_NC(&qespan);
     qd->offset = span->offset;
     qd->size = span->size;
     if (queue->min_offset > qd->offset) {
@@ -521,7 +521,7 @@ get_sendqe(nb_SENDQ* sq, const nb_IOV *bufinfo)
     nb_SPAN span;
     span.size = sizeof(*sndqe);
     mblock_reserve_data(&sq->elempool, &span);
-    sndqe = (nb_SNDQELEM *)SPAN_BUFFER(&span);
+    sndqe = (nb_SNDQELEM *)(void *)SPAN_MBUFFER_NC(&span);
 
     sndqe->base = bufinfo->iov_base;
     sndqe->len = bufinfo->iov_len;
@@ -638,7 +638,7 @@ void
 netbuf_pdu_enqueue(nb_MGR *mgr, void *pdu, nb_SIZE lloff)
 {
     nb_SENDQ *q = &mgr->sendq;
-    sllist_append(&q->pdus, (sllist_node *) ( (char *)pdu + lloff));
+    sllist_append(&q->pdus, (sllist_node *) (void *)( (char *)pdu + lloff));
 }
 
 void

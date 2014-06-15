@@ -55,8 +55,8 @@ public:
         o_randSeed("random-seed"),
         o_setPercent("ratio"),
         o_minSize("min-size"),
-        o_noPopulate("no-population"),
-        o_maxSize("max-size")
+        o_maxSize("max-size"),
+        o_noPopulate("no-population")
     {
         o_iterations.setDefault(100).abbrev('i').description("Number of iterations to run");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -198,11 +198,6 @@ extern "C" {
 
     static void getCallback(lcb_t, const void *, lcb_error_t,
                             const lcb_get_resp_t *);
-
-    static void timingsCallback(lcb_t, const void *,
-                                lcb_timeunit_t, lcb_uint32_t,
-                                lcb_uint32_t, lcb_uint32_t,
-                                lcb_uint32_t);
 }
 
 class InstanceCookie {
@@ -347,7 +342,7 @@ public:
 
     template <typename T> void
     performWithRetry(lcb_t handle, size_t n, const T* const * cmds,
-        lcb_error_t (*lfunc)(lcb_t,const void*,size_t,const T*const*),
+        lcb_error_t (*lfunc)(lcb_t,const void*,lcb_size_t,const T*const*),
         const char *opname, int retry = -1)
     {
         if (retry == -1) {
