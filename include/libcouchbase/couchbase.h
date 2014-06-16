@@ -87,6 +87,8 @@ typedef enum {
     LCB_TYPE_CLUSTER = 0x01 /**< Handle for administrative access */
 } lcb_type_t;
 
+#ifndef __LCB_DOXYGEN__
+
 /**@private*/
 #define LCB_CREATE_V0_FIELDS \
     const char *host; \
@@ -112,6 +114,8 @@ struct lcb_create_st0 { LCB_CREATE_V0_FIELDS };
 struct lcb_create_st1 { LCB_CREATE_V1_FIELDS };
 /**@private*/
 struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
+
+#endif
 
 /**
  * @brief Structure for lcb_create().
@@ -656,6 +660,8 @@ void lcb_destroy_async(lcb_t instance, const void *arg);
 typedef enum {
     LCB_IO_OPS_INVALID = 0x00, /**< @private */
     LCB_IO_OPS_DEFAULT = 0x01, /**< @private */
+
+    /** Integrate with the libevent loop. See lcb_create_libevent_io_opts() */
     LCB_IO_OPS_LIBEVENT = 0x02,
     LCB_IO_OPS_WINSOCK = 0x03, /**< @private */
     LCB_IO_OPS_LIBEV = 0x04,
