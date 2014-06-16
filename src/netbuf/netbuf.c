@@ -616,22 +616,26 @@ netbuf_end_flush(nb_MGR *mgr, unsigned int nflushed)
 
         win->len -= to_chop;
         nflushed -= to_chop;
-        if (win == q->last_requested) {
-            q->last_requested = NULL;
-            q->last_offset = 0;
-        }
 
         if (!win->len) {
             sllist_iter_remove(&q->pending, &iter);
             mblock_release_ptr(&mgr->sendq.elempool, (char *)win, sizeof(*win));
+            if (win == q->last_requested) {
+                q->last_requested = NULL;
+                q->last_offset = 0;
+            }
         } else {
             win->base +=  to_chop;
+            if (win == q->last_requested) {
+                q->last_offset -= to_chop;
+            }
         }
 
         if (!nflushed) {
             break;
         }
     }
+    assert(!nflushed);
 }
 
 void

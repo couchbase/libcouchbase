@@ -136,7 +136,7 @@ TEST_F(NetbufTest, testFlush)
     netbuf_end_flush(&mgr, 20);
 
     sz = netbuf_start_flush(&mgr, iov, 1, NULL);
-    ASSERT_EQ(12, sz);
+    ASSERT_EQ(0, sz);
     netbuf_end_flush(&mgr, 12);
     netbuf_mblock_release(&mgr, &span);
 
@@ -297,6 +297,61 @@ TEST_F(NetbufTest, testMultipleFlush)
     netbuf_mblock_release(&mgr, &span1);
     netbuf_mblock_release(&mgr, &span2);
     netbuf_mblock_release(&mgr, &span3);
+    clean_check(&mgr);
+}
+
+TEST_F(NetbufTest, testCyclicFlush)
+{
+    nb_SPAN spans[10];
+    nb_IOV iov[4];
+    nb_MGR mgr;
+    nb_SETTINGS settings;
+    char cmparr[10];
+    int niov;
+    unsigned nb;
+
+    // Each call to netbuf_start_flush should be considered isolated; so that
+    // the next call to start_flush _never_ overlaps any data from the previous
+    // call to start_flush. Otherwise we might end up in a situation where
+    // the same data ends up being sent out twice. netbuf_reset_flush() should
+    // be called to invalidate any outstanding start_flush() calls, so that
+    // the next call to start_flush() will begin from the beginning of the
+    // send queue, rather than from the last call to start_flush().
+
+    netbuf_default_settings(&settings);
+    settings.data_basealloc = 50;
+    netbuf_init(&mgr, &settings);
+
+    for (size_t ii = 0; ii < 5; ii++) {
+        spans[ii].size = 10;
+        netbuf_mblock_reserve(&mgr, &spans[ii]);
+        memset(SPAN_BUFFER(&spans[ii]), ii, 10);
+        netbuf_enqueue_span(&mgr, &spans[ii]);
+        nb = netbuf_start_flush(&mgr, iov, 1, &niov);
+
+        ASSERT_EQ(10, nb);
+        ASSERT_EQ(1, niov);
+    }
+    // So far have 50 inside the span
+
+    // flush the first span (should have 40 bytes remaining)
+    netbuf_end_flush(&mgr, 10);
+    for (size_t ii = 5; ii < 7; ii++) {
+        spans[ii].size = 10;
+        netbuf_mblock_reserve(&mgr, &spans[ii]);
+        netbuf_enqueue_span(&mgr, &spans[ii]);
+        memset(SPAN_BUFFER(&spans[ii]), ii, 10);
+    }
+
+    nb = netbuf_start_flush(&mgr, iov, 4, &niov);
+    ASSERT_EQ(20, nb);
+    netbuf_end_flush(&mgr, 40);
+    netbuf_end_flush(&mgr, nb);
+    nb = netbuf_start_flush(&mgr, iov, 4, &niov);
+    ASSERT_EQ(0, nb);
+    for (size_t ii = 0; ii < 7; ii++) {
+        netbuf_mblock_release(&mgr, &spans[ii]);
+    }
     clean_check(&mgr);
 }
 

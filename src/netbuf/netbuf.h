@@ -220,12 +220,33 @@ netbuf_get_niov(nb_MGR *mgr);
  * @endcode
  *
  * Additionally, only the LAST end_flush call may be supplied an nflushed
- * parameter which is smaller than the size returned by start_flush.
+ * parameter which is smaller than the size returned by start_flush. If the
+ * entire contents of the `iovs` structure cannot be flushed immediately and
+ * you do not wish to persist it until such a time that it may be flushed, then
+ * netbuf_reset_flush() should be called. See that functions' documentation
+ * for more details.
+ *
+ * This function may be thought of advancing a virtual cursor which is mapped
+ * to a send queue. Each time this function is called the cursor is advanced
+ * by the number of bytes that the library expects you to flush (i.e. the return
+ * value of this function). Typically the cursor is never rewound and any
+ * operation that advances the cursor places the burden on the user to
+ * actually flush the data contained within the IOV objects.
+ * The netbuf_end_flush() function merely has the task of releasing any memory
+ * used for mapping of already-flushed data.
+ *
+ * From a different perspective, each call to netbuf_start_flush() establishes
+ * a contract between the library and the user: The library guarantees that
+ * this specific region (referred to within the IOVs) will not be flushed by
+ * any other subsystem (i.e. nothing else will try to flush the same data).
+ * The user guarantees that the data will eventually be flushed, and that the
+ * data will be flushed in the order it was received via start_flush().
+ *
  *
  * @param mgr the manager object
  * @param iovs an array of iovec structures
  * @param niov the number of iovec structures allocated.
- * @param nused how many IOVs are actually required
+ * @param[out] nused how many IOVs are actually required
  *
  * @return the number of bytes which can be flushed in this IOV. If the
  * return value is 0 then there are no more bytes to flush.
