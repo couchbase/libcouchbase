@@ -180,20 +180,7 @@ static int dequeue_io_impl_ex(iocp_t *io, DWORD msTimeout)
     for (ii = 0; ii < ulRemoved; ii++) {
         OVERLAPPED_ENTRY *ent = entries + ii;
 
-        if (!LOOP_CAN_CONTINUE(io)) {
-
-            PostQueuedCompletionStatus(
-                io->hCompletionPort,
-                ent->dwNumberOfBytesTransferred,
-                ent->lpCompletionKey,
-                ent->lpOverlapped);
-
-            continue;
-        }
-
-
         io->n_iopending--;
-
         handle_single_overlapped(
             io,
             ent->lpOverlapped,
