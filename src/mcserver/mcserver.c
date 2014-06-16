@@ -127,7 +127,7 @@ handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
         lcb_string_init(&s);
         cccp = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
         lcb_string_append(&s, PACKET_VALUE(resinfo), PACKET_NVALUE(resinfo));
-        err = lcb_cccp_update(cccp, oldsrv->curhost.host, &s);
+        err = lcb_cccp_update(cccp, mcserver_get_host(oldsrv), &s);
         lcb_string_release(&s);
     }
 
@@ -461,7 +461,7 @@ static void
 server_connect(mc_SERVER *server)
 {
     lcbio_pMGRREQ mr;
-    mr = lcbio_mgr_get(server->instance->memd_sockpool, &server->curhost,
+    mr = lcbio_mgr_get(server->instance->memd_sockpool, server->curhost,
                        MCSERVER_TIMEOUT(server), on_connected, server);
     LCBIO_CONNREQ_MKPOOLED(&server->connreq, mr);
     server->pipeline.flush_start = flush_noop;
@@ -496,6 +496,7 @@ mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix)
 
     ret->instance = instance;
     ret->settings = instance->settings;
+    ret->curhost = calloc(1, sizeof(*ret->curhost));
     mode = ret->settings->sslopts & LCB_SSL_ENABLED
             ? LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN;
 
@@ -507,7 +508,7 @@ mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix)
     mcreq_pipeline_init(&ret->pipeline);
     ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
     ret->pipeline.buf_done_callback = buf_done_cb;
-    lcb_host_parsez(&ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
+    lcb_host_parsez(ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
     ret->io_timer = lcbio_timer_new(instance->iotable, ret, timeout_server);
     return ret;
 }
@@ -532,6 +533,7 @@ server_free(mc_SERVER *server)
     free(server->resthost);
     free(server->viewshost);
     free(server->datahost);
+    free(server->curhost);
     lcb_settings_unref(server->settings);
     free(server);
 }

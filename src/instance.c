@@ -84,7 +84,7 @@ static const char *get_rest_param(lcb_t obj, int paramtype)
     if (LCBT_VBCONFIG(obj)) {
         lcb_server_t *server = LCBT_GET_SERVER(obj, 0);
         if (paramtype == PARAM_CONFIG_HOST) {
-            ret = param_from_host(&server->curhost, paramtype);
+            ret = param_from_host(server->curhost, paramtype);
             if (ret) {
                 return ret;
             }

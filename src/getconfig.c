@@ -8,7 +8,7 @@ lcb_find_server_by_host(lcb_t instance, const lcb_host_t *host)
     unsigned ii;
     for (ii = 0; ii < cq->npipelines; ii++) {
         lcb_server_t *server = (lcb_server_t *)cq->pipelines[ii];
-        if (lcb_host_equals(&server->curhost, host)) {
+        if (lcb_host_equals(server->curhost, host)) {
             return server;
         }
     }
@@ -35,7 +35,7 @@ ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t rc,
     const packet_info *res = resdata;
 
     lcb_cccp_update2(rd->cookie, rc, res->payload, PACKET_NBODY(res),
-                     &server->curhost);
+                     server->curhost);
     free(rd);
 }
 

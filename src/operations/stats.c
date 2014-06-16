@@ -37,7 +37,7 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
     lcb_server_stat_resp_t *resp = (void *)arg;
     char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
 
-    sprintf(epbuf, "%s:%s", server->curhost.host, server->curhost.port);
+    sprintf(epbuf, "%s:%s", mcserver_get_host(server), mcserver_get_port(server));
 
     if (!arg) {
         lcb_server_stat_resp_t s_resp;
@@ -143,7 +143,7 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
         u_resp.verbosity = &u_empty.verbosity;
     }
 
-    sprintf(epbuf, "%s:%s", server->curhost.host, server->curhost.port);
+    sprintf(epbuf, "%s:%s", mcserver_get_host(server), mcserver_get_port(server));
 
     if (ck->type == C_VERBOSITY) {
         u_resp.verbosity->version = 0;
@@ -258,7 +258,8 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
         protocol_binary_request_header *hdr = &vcmd.message.header;
         uint32_t level;
 
-        sprintf(cmpbuf, "%s:%s", server->curhost.host, server->curhost.port);
+        sprintf(cmpbuf, "%s:%s",
+            mcserver_get_host(server), mcserver_get_port(server));
         if (cmd->server && strncmp(cmpbuf, cmd->server, strlen(cmd->server))) {
             continue;
         }

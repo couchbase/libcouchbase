@@ -47,7 +47,7 @@ typedef struct lcb_server_st {
     lcbio_CONNREQ connreq;
 
     /** Request for current connection */
-    lcb_host_t curhost;
+    lcb_host_t *curhost;
 } lcb_server_t, mc_SERVER;
 
 #define MCSERVER_TIMEOUT(c) (c)->settings->operation_timeout
@@ -102,6 +102,9 @@ mcserver_fail_chain(mc_SERVER *server, lcb_error_t err);
  */
 int
 mcserver_has_pending(mc_SERVER *server);
+
+#define mcserver_get_host(server) (server)->curhost->host
+#define mcserver_get_port(server) (server)->curhost->port
 
 #ifdef __cplusplus
 }
