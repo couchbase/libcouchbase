@@ -1,6 +1,5 @@
 #include "ctx.h"
 #include "iotable.h"
-#include "rw-inl.h"
 #include "timer-ng.h"
 #include "ioutils.h"
 #include <stdio.h>
@@ -8,6 +7,7 @@
 #define CTX_FD(ctx) (ctx)->fd
 #define CTX_SD(ctx) (ctx)->sd
 #define CTX_IOT(ctx) (ctx)->io
+#include "rw-inl.h"
 
 #define LOGARGS(c, lvl) \
     (c)->sock->settings, "ioctx", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -251,7 +251,7 @@ E_handler(lcb_socket_t sock, short which, void *arg)
 
     if (which & LCB_READ_EVENT) {
         unsigned nb;
-        status = lcbio_E_rdb_slurp(ctx->sock, &ctx->ior);
+        status = lcbio_E_rdb_slurp(ctx, &ctx->ior);
         nb = rdb_get_nused(&ctx->ior);
 
         if (nb >= ctx->rdwant) {
@@ -275,7 +275,7 @@ E_handler(lcb_socket_t sock, short which, void *arg)
                 return;
             }
         } else if (ctx->output) {
-            status = lcbio_E_rb_write(ctx->sock, &ctx->output->rb);
+            status = lcbio_E_rb_write(ctx, &ctx->output->rb);
             if (!LCBIO_IS_OK(status)) {
                 deactivate_watcher(ctx);
                 ctx->err = convert_lcberr(ctx, status);
@@ -404,7 +404,6 @@ C_schedule(lcbio_CTX *ctx)
 static void
 E_schedule(lcbio_CTX *ctx)
 {
-    lcbio_SOCKET *s = ctx->sock;
     lcbio_TABLE *io = ctx->io;
     short which = 0;
 
@@ -420,7 +419,7 @@ E_schedule(lcbio_CTX *ctx)
         return;
     }
 
-    IOT_V0EV(io).watch(IOT_ARG(io), s->u.fd, ctx->event, which, ctx, E_handler);
+    IOT_V0EV(io).watch(IOT_ARG(io), CTX_FD(ctx), ctx->event, which, ctx, E_handler);
     ctx->evactive = 1;
 }
 
@@ -444,7 +443,7 @@ E_put_ex(lcbio_CTX *ctx, lcb_IOV *iov, unsigned niov, unsigned nb)
 {
     lcb_ssize_t nw;
     lcbio_TABLE *iot = ctx->io;
-    lcb_socket_t fd = ctx->sock->u.fd;
+    lcb_socket_t fd = CTX_FD(ctx);
 
     GT_WRITE_AGAIN:
     nw = IOT_V0IO(iot).sendv(IOT_ARG(iot), fd, iov, niov);
@@ -501,9 +500,9 @@ static int
 C_put_ex(lcbio_CTX *ctx, lcb_IOV *iov, unsigned niov, unsigned nb)
 {
     lcbio_TABLE *iot = ctx->io;
-    lcb_sockdata_t *sd = ctx->sock->u.sd;
-    int status = IOT_V1(iot).write2(
-            IOT_ARG(iot), sd, iov, niov, (void *)(uintptr_t)nb, Cw_ex_handler);
+    lcb_sockdata_t *sd = CTX_SD(ctx);
+    int status = IOT_V1(iot).write2(IOT_ARG(iot),
+        sd, iov, niov, (void *)(uintptr_t)nb, Cw_ex_handler);
     if (status) {
         /** error! */
         lcbio_OSERR saverr = IOT_ERRNO(iot);

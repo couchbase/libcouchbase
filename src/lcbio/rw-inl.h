@@ -21,17 +21,17 @@
 #endif
 
 static INLINE lcbio_IOSTATUS
-lcbio_E_rdb_slurp(lcbio_SOCKET *sock, rdb_IOROPE *ior)
+lcbio_E_rdb_slurp(lcbio_CTX *ctx, rdb_IOROPE *ior)
 {
     lcb_ssize_t rv;
     lcb_IOV iov[RWINL_IOVSIZE];
     unsigned niov;
-    lcbio_TABLE *iot = sock->io;
+    lcbio_TABLE *iot = ctx->io;
 
     do {
         niov = rdb_rdstart(ior, (nb_IOV *)iov, RWINL_IOVSIZE);
         GT_READ:
-        rv = IOT_V0IO(iot).recvv(IOT_ARG(iot), sock->u.fd, iov, niov);
+        rv = IOT_V0IO(iot).recvv(IOT_ARG(iot), CTX_FD(ctx), iov, niov);
         if (rv > 0) {
             rdb_rdend(ior, rv);
         } else if (rv == -1) {
@@ -42,7 +42,7 @@ lcbio_E_rdb_slurp(lcbio_SOCKET *sock, rdb_IOROPE *ior)
             case EINTR:
                 goto GT_READ;
             default:
-                sock->last_error = IOT_ERRNO(iot);
+                ctx->sock->last_error = IOT_ERRNO(iot);
                 return LCBIO_IOERR;
             }
         } else {
@@ -54,16 +54,16 @@ lcbio_E_rdb_slurp(lcbio_SOCKET *sock, rdb_IOROPE *ior)
 }
 
 static INLINE lcbio_IOSTATUS
-lcbio_E_rb_write(lcbio_SOCKET *sock, ringbuffer_t *buf)
+lcbio_E_rb_write(lcbio_CTX *ctx, ringbuffer_t *buf)
 {
     lcb_IOV iov[2];
     lcb_ssize_t nw;
-    lcbio_TABLE *iot = sock->io;
+    lcbio_TABLE *iot = ctx->io;
     while (buf->nbytes) {
         unsigned niov;
         ringbuffer_get_iov(buf, RINGBUFFER_READ, iov);
         niov = iov[1].iov_len ? 2 : 1;
-        nw = IOT_V0IO(iot).sendv(IOT_ARG(iot), sock->u.fd, iov, niov);
+        nw = IOT_V0IO(iot).sendv(IOT_ARG(iot), CTX_FD(ctx), iov, niov);
         if (nw == -1) {
             switch (IOT_ERRNO(iot)) {
             case EINTR:
@@ -72,7 +72,7 @@ lcbio_E_rb_write(lcbio_SOCKET *sock, ringbuffer_t *buf)
             case C_EAGAIN:
                 return LCBIO_PENDING;
             default:
-                sock->last_error = IOT_ERRNO(iot);
+                ctx->sock->last_error = IOT_ERRNO(iot);
                 return LCBIO_IOERR;
             }
         }

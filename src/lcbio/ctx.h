@@ -122,13 +122,13 @@ typedef struct lcbio_CTX {
     lcbio__EASYRB *output; /**< for lcbio_ctx_put() */
     lcb_socket_t fd; /**< cached FD for E-model I/O */
     char evactive; /**< watcher is active for E-model I/O */
-    lcb_error_t err; /**< pending error */
-    rdb_IOROPE ior; /**< for reads */
-    unsigned npending; /**< reference count on pending I/O */
-    unsigned rdwant; /**< number of remaining bytes to read */
     char wwant; /**< flag for lcbio_ctx_put_ex */
     char state; /**< internal state */
     char entered; /**< inside event handler */
+    unsigned npending; /**< reference count on pending I/O */
+    unsigned rdwant; /**< number of remaining bytes to read */
+    lcb_error_t err; /**< pending error */
+    rdb_IOROPE ior; /**< for reads */
     lcbio_pASYNC as_err; /**< async error handler */
     lcbio_EASYPROCS procs; /**< callbacks */
     const char *subsys; /**< Informational description of connection */
