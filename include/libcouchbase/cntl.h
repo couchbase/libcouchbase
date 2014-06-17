@@ -590,6 +590,9 @@ typedef struct lcb_logprocs_st {
  * @brief Access the lcb_logprocs structure
  * @uncommitted
  *
+ * The lcb_logoprocs structure passed must not be freed until the instance
+ * is completely destroyed. This will only happen once the destruction
+ * callback is called (see lcb_set_destroy_callback()).
  * Mode|Arg
  * ----|---
  * Get | lcb_logprocs **
