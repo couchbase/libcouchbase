@@ -178,6 +178,22 @@ const void *lcb_get_cookie(lcb_t instance)
 }
 
 static void
+add_and_log_host(lcb_t obj, const lcb_host_t *host, lcb_config_transport_t type)
+{
+    const char *typename = NULL;
+    hostlist_t target;
+    if (type == LCB_CONFIG_TRANSPORT_CCCP) {
+        typename = "CCCP";
+        target = obj->mc_nodes;
+    } else {
+        typename = "HTTP";
+        target = obj->ht_nodes;
+    }
+    lcb_log(LOGARGS(obj, DEBUG), "Adding host %s:%s to initial %s bootstrap list", host->host, host->port, typename);
+    hostlist_add_host(target, host);
+}
+
+static void
 populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
 {
     lcb_list_t *llcur;
@@ -197,14 +213,17 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
         const lcb_DSNHOST *dh = LCB_LIST_ITEM(llcur, lcb_DSNHOST, llnode);
         strcpy(host.host, dh->hostname);
 
+#define ADD_CCCP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_CCCP)
+#define ADD_HTTP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_HTTP)
+
         /* if we didn't specify any port in the spec, just use the simple
          * default port (based on the SSL settings) */
         if (dsn->has_no_ports) {
             sprintf(host.port, "%d", defl_http);
-            hostlist_add_host(obj->ht_nodes, &host);
+            ADD_HTTP();
 
             sprintf(host.port, "%d", defl_cccp);
-            hostlist_add_host(obj->mc_nodes, &host);
+            ADD_CCCP();
             continue;
         }
 
@@ -212,23 +231,25 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
         if (has_ssl) {
             if (dh->ssl_htport) {
                 sprintf(host.port, "%d", dh->ssl_htport);
-                hostlist_add_host(obj->ht_nodes, &host);
+                ADD_HTTP();
             }
             if (dh->ssl_memdport) {
                 sprintf(host.port, "%d", dh->ssl_memdport);
-                hostlist_add_host(obj->mc_nodes, &host);
+                ADD_CCCP();
             }
         } else {
             if (dh->htport) {
                 sprintf(host.port, "%d", dh->htport);
-                hostlist_add_host(obj->ht_nodes, &host);
+                ADD_HTTP();
             }
             if (dh->memdport) {
                 sprintf(host.port, "%d", dh->memdport);
-                hostlist_add_host(obj->mc_nodes, &host);
+                ADD_CCCP();
             }
         }
     }
+#undef ADD_HTTP
+#undef ADD_CCCP
 }
 
 
@@ -386,7 +407,13 @@ lcb_error_t lcb_create(lcb_t *instance,
     settings->password = dsn.password; dsn.password = NULL;
     settings->logger = lcb_init_console_logger();
     settings->iid = lcb_instance_index++;
-    lcb_log(LOGARGS(obj, INFO), "Creating instance. Version=%s, Changeset=%s", lcb_get_version(NULL), LCB_VERSION_CHANGESET);
+    if (dsn.loglevel) {
+        lcb_U32 val = dsn.loglevel;
+        lcb_cntl(obj, LCB_CNTL_SET, LCB_CNTL_CONLOGGER_LEVEL, &val);
+    }
+
+    lcb_log(LOGARGS(obj, INFO), "Version=%s, Changeset=%s", lcb_get_version(NULL), LCB_VERSION_CHANGESET);
+    lcb_log(LOGARGS(obj, INFO), "Effective connection string: %s. Bucket=%s", options && options->version >= 3 ? options->v.v3.dsn : dsn.origdsn, settings->bucket);
 
     /* Do not allow people use Administrator account for data access */
     if (type == LCB_TYPE_BUCKET && settings->username) {
@@ -421,6 +448,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     while ((lcb_dsn_next_option(&dsn, &key, &value, &itmp))) {
+        lcb_log(LOGARGS(obj, DEBUG), "Applying initial cntl %s=%s", key, value);
         err = lcb_cntl_string(obj, key, value);
         if (err != LCB_SUCCESS) {
             goto GT_DONE;

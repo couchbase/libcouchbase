@@ -24,6 +24,9 @@
 #define LOGARGS(instance, lvl) instance->settings, "newconfig", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(instance, lvlbase, msg) lcb_log(instance->settings, "newconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__, msg)
 
+#define SERVER_FMT "%s:%s (%p)"
+#define SERVER_ARGS(s) (s)->curhost->host, (s)->curhost->port, (void *)s
+
 /**
  * Finds the index of an older server using the current config
  * @param config The new configuration
@@ -107,7 +110,8 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
         return MCREQ_KEEP_PACKET;
     }
 
-    lcb_log(LOGARGS(cq->instance, INFO), "Remapped packet %p (%u) from %p to %p", oldpkt, oldpkt->opaque, oldpl, newpl);
+    lcb_log(LOGARGS(cq->instance, DEBUG), "Remapped packet %p (SEQ=%u) from "SERVER_FMT " to " SERVER_FMT,
+        (void*)oldpkt, oldpkt->opaque, SERVER_ARGS((mc_SERVER*)oldpl), SERVER_ARGS((mc_SERVER*)newpl));
 
     /** Otherwise, copy over the packet and find the new vBucket to map to */
     newpkt = mcreq_dup_packet(oldpkt);
@@ -131,7 +135,7 @@ is_new_config(lcb_t instance, VBUCKET_CONFIG_HANDLE oldc, VBUCKET_CONFIG_HANDLE 
     }
 
     if (diff == NULL || chstatus == VBUCKET_NO_CHANGES) {
-        lcb_log(LOGARGS(instance, DEBUG), "Ignoring config update. No server changes; DIFF=%p", diff);
+        lcb_log(LOGARGS(instance, DEBUG), "Ignoring config update. No server changes; DIFF=%p", (void*)diff);
         return 0;
     }
     return 1;
@@ -161,7 +165,7 @@ replace_config(lcb_t instance, clconfig_info *next_config)
             cur->pipeline.index = newix;
             ppnew[newix] = &cur->pipeline;
             ppold[ii] = NULL;
-            lcb_log(LOGARGS(instance, INFO), "Reusing server %p. OldIndex=%d. NewIndex=%d", (void*)cur, ii, newix);
+            lcb_log(LOGARGS(instance, INFO), "Reusing server "SERVER_FMT". OldIndex=%d. NewIndex=%d", SERVER_ARGS(cur), ii, newix);
         }
     }
 

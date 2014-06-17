@@ -23,8 +23,11 @@
 #include "bucketconfig/clconfig.h"
 #include "mc/mcreq-flush-inl.h"
 #include <lcbio/ssl.h>
+#include "ctx-log-inl.h"
 
 #define LOGARGS(c, lvl) (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGFMT "<%s:%s> (SRV=%p,IX=%d) "
+#define LOGID(server) get_ctx_host(server->connctx), get_ctx_port(server->connctx), (void*)server, server->pipeline.index
 #define MCREQ_MAXIOV 32
 #define LCBCONN_UNWANT(conn, flags) (conn)->want &= ~(flags)
 
@@ -112,13 +115,12 @@ static int
 handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
 {
     mc_PACKET *newpkt;
+    protocol_binary_request_header hdr;
     lcb_error_t err = LCB_ERROR;
     lcb_t instance = oldsrv->instance;
-    mc_REQDATA *rd = MCREQ_PKT_RDATA(oldpkt);
 
-    lcb_log(LOGARGS(oldsrv, WARN),
-            "NOT_MY_VBUCKET; Server=%p,ix=%d,real_start=%lu",
-            (void*)oldsrv, oldsrv->pipeline.index, (unsigned long)rd->start);
+    mcreq_read_hdr(oldpkt, &hdr);
+    lcb_log(LOGARGS(oldsrv, WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID(oldsrv), (void*)oldpkt, oldpkt->opaque, ntohs(hdr.request.vbucket));
 
     if (PACKET_NBODY(resinfo)) {
         lcb_string s;
@@ -188,7 +190,7 @@ try_read(lcbio_CTX *ctx, mc_SERVER *server, rdb_IOROPE *ior)
     }
 
     if (!request) {
-        lcb_log(LOGARGS(server, WARN), "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)", PACKET_OPCODE(info), PACKET_STATUS(info), PACKET_OPAQUE(info));
+        lcb_log(LOGARGS(server, WARN), LOGFMT "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID(server), PACKET_OPCODE(info), PACKET_STATUS(info), PACKET_OPAQUE(info));
         rdb_consumed(ior, pktsize);
         return 1;
     }
@@ -301,6 +303,7 @@ static void
 fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
 {
     int rv;
+    mc_SERVER *server = (mc_SERVER *)pipeline;
     packet_info info;
     protocol_binary_request_header hdr;
     protocol_binary_response_header *res = &info.res;
@@ -321,7 +324,7 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
     res->response.opcode = hdr.request.opcode;
     res->response.opaque = hdr.request.opaque;
 
-    lcb_log(LOGARGS((mc_SERVER *)pipeline, WARN), "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error 0x%x", pkt, (unsigned long)pkt->opaque, hdr.request.opcode, err);
+    lcb_log(LOGARGS(server, WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error 0x%x", LOGID(server), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, err);
     rv = mcreq_dispatch_response(pipeline, pkt, &info, err);
     lcb_assert(rv == 0);
     (void)arg;
@@ -403,11 +406,11 @@ timeout_server(void *arg)
     npurged = purge_single_server(server,
         LCB_ETIMEDOUT, min_valid, &next_ns, REFRESH_ONFAILED);
     if (npurged) {
-        lcb_log(LOGARGS(server, ERROR), "%p: Server timed out. Some commands have failed", server);
+        lcb_log(LOGARGS(server, ERROR), LOGFMT "Server timed out. Some commands have failed", LOGID(server));
     }
 
     next_us = get_next_timeout(server);
-    lcb_log(LOGARGS(server, INFO), "%p, Scheduling next timeout for %u ms", server, next_us / 1000);
+    lcb_log(LOGARGS(server, INFO), LOGFMT "Scheduling next timeout for %u ms", LOGID(server), next_us / 1000);
     lcbio_timer_rearm(server->io_timer, next_us);
     lcb_maybe_breakout(server->instance);
 }
@@ -422,7 +425,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     LCBIO_CONNREQ_CLEAR(&server->connreq);
 
     if (err != LCB_SUCCESS) {
-        lcb_log(LOGARGS(server, ERR), "Got error for connection! (OS=%d)", syserr);
+        lcb_log(LOGARGS(server, ERR), LOGFMT "Got error for connection! (OS=%d)", LOGID(server), syserr);
         server_socket_failed(server, err);
         return;
     }
@@ -433,7 +436,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     sessinfo = mc_sess_get(sock);
     if (sessinfo == NULL) {
         mc_pSESSREQ sreq;
-        lcb_log(LOGARGS(server, INFO), "Session not yet negotiated. Negotiating");
+        lcb_log(LOGARGS(server, TRACE), "<%s:%s> (SRV=%p) Session not yet negotiated. Negotiating", server->curhost->host, server->curhost->port, (void*)server);
         sreq = mc_sessreq_start(sock, server->settings, MCSERVER_TIMEOUT(server),
             on_connected, data);
         LCBIO_CONNREQ_MKGENERIC(&server->connreq, sreq, mc_sessreq_cancel);
@@ -452,7 +455,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     server->pipeline.flush_start = (mcreq_flushstart_fn)mcserver_flush;
 
     tmo = get_next_timeout(server);
-    lcb_log(LOGARGS(server, INFO), "Setting initial timeout=%ums", tmo/1000);
+    lcb_log(LOGARGS(server, INFO), LOGFMT "Setting initial timeout=%ums", LOGID(server), tmo/1000);
     lcbio_timer_rearm(server->io_timer, get_next_timeout(server));
     mcserver_flush(server);
 }
@@ -565,7 +568,7 @@ static void
 on_error(lcbio_CTX *ctx, lcb_error_t err)
 {
     mc_SERVER *server = lcbio_ctx_data(ctx);
-    lcb_log(LOGARGS(server, WARN), "Got socket [%p] error 0x%x", server, err);
+    lcb_log(LOGARGS(server, WARN), LOGFMT "Got socket error 0x%x", LOGID(server), err);
     if (check_closed(server)) {
         return;
     }
@@ -663,7 +666,7 @@ finalize_errored_ctx(mc_SERVER *server)
         return;
     }
 
-    lcb_log(LOGARGS(server, DEBUG), "Finalizing ctx %p for server %p", server->connctx, server);
+    lcb_log(LOGARGS(server, DEBUG), LOGFMT "Finalizing ctx %p", LOGID(server), (void*)server->connctx);
 
     /* Always close the existing context. */
     lcbio_ctx_close(server->connctx, close_cb, NULL);
@@ -697,7 +700,7 @@ check_closed(mc_SERVER *server)
     if (server->state == S_CLEAN) {
         return 0;
     }
-    lcb_log(LOGARGS(server, INFO), "Server %p got handler after close. Checking pending calls", server);
+    lcb_log(LOGARGS(server, INFO), LOGFMT "Got handler after close. Checking pending calls", LOGID(server));
     finalize_errored_ctx(server);
     return 1;
 }

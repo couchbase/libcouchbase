@@ -152,7 +152,7 @@ log_callback(const SSL *ssl, int where, int ret)
         retstr = SSL_alert_type_string(ret);
     }
     lcb_log(LOGARGS(ssl, LCB_LOG_TRACE), "sock=%p: ST(0x%x). %s. R(0x%x)%s",
-        sock, where, SSL_state_string_long(ssl), ret, retstr);
+        (void*)sock, where, SSL_state_string_long(ssl), ret, retstr);
 }
 
 #if 0

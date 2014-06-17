@@ -29,8 +29,10 @@
 #include <lcbio/lcbio.h>
 #include <lcbio/timer-ng.h>
 #include <lcbio/ssl.h>
-
+#include "ctx-log-inl.h"
 #define LOGARGS(cccp, lvl) cccp->base.parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGFMT "<%s:%s> "
+#define LOGID(cccp) get_ctx_host(cccp->ioctx), get_ctx_port(cccp->ioctx)
 
 struct cccp_cookie_st;
 
@@ -105,7 +107,7 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
         cccp->cmdcookie = cookie;
         cookie->parent = cccp;
-        lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p", server);
+        lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p", (void*)server);
         lcbio_timer_rearm(
                 cccp->timer, PROVIDER_SETTING(&cccp->base, config_node_timeout));
         return lcb_getconfig(cccp->instance, cookie, server);
@@ -124,7 +126,9 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
 
 static lcb_error_t mcio_error(cccp_provider *cccp, lcb_error_t err)
 {
-    lcb_log(LOGARGS(cccp, ERR), "Got I/O Error=0x%x", err);
+    if (err != LCB_NOT_SUPPORTED && err != LCB_UNKNOWN_COMMAND) {
+        lcb_log(LOGARGS(cccp, ERR), LOGFMT "Got I/O Error=0x%x", LOGID(cccp), err);
+    }
     if (err == LCB_AUTH_ERROR && cccp->base.parent->config == NULL) {
         lcb_confmon_provider_failed(&cccp->base, err);
         return err;
@@ -254,6 +258,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     ioprocs.cb_err = io_error_handler;
     ioprocs.cb_read = io_read_handler;
     cccp->ioctx = lcbio_ctx_new(sock, data, &ioprocs);
+    cccp->ioctx->subsys = "bc_cccp";
     request_config(cccp);
 
     (void)syserr;
@@ -384,7 +389,7 @@ io_read_handler(lcbio_CTX *ioctx, unsigned nr)
     }
 
     if (PACKET_STATUS(&pi) != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        lcb_log(LOGARGS(cccp, ERR), "CCCP Packet responded with 0x%x; nkey=%d, nbytes=%lu, cmd=0x%x, seq=0x%x",
+        lcb_log(LOGARGS(cccp, WARN), LOGFMT "CCCP Packet responded with 0x%x; nkey=%d, nbytes=%lu, cmd=0x%x, seq=0x%x", LOGID(cccp),
                 PACKET_STATUS(&pi), PACKET_NKEY(&pi), (unsigned long)PACKET_NBODY(&pi),
                 PACKET_OPCODE(&pi), PACKET_OPAQUE(&pi));
 

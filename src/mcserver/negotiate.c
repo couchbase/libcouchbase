@@ -8,13 +8,13 @@
 #include <lcbio/ssl.h>
 #include <cbsasl/cbsasl.h>
 #include "negotiate.h"
+#include "ctx-log-inl.h"
 
-#define LOGARGS(ctx, lvl) \
-    ctx->inner->settings, "negotiation", LCB_LOG_##lvl, __FILE__, __LINE__
-
+#define LOGARGS(ctx, lvl) ctx->inner->settings, "negotiation", LCB_LOG_##lvl, __FILE__, __LINE__
 static void cleanup_pending(mc_pSESSREQ);
 static void cleanup_negotiated(mc_pSESSINFO);
 static void bail_pending(mc_pSESSREQ sreq);
+#define SESSREQ_LOGFMT "<%s:%s> (SASLREQ=%p) "
 
 /**
  * Inner negotiation structure which is maintained as part of a 'protocol
@@ -48,6 +48,8 @@ typedef struct mc_SESSREQ {
     lcb_error_t err;
     mc_pSESSINFO inner;
 } neg_PENDING;
+
+#define SESSREQ_LOGID(s) get_ctx_host(s->ctx), get_ctx_port(s->ctx), (void*)s
 
 static int
 sasl_get_username(void *context, int id, const char **result, unsigned int *len)
@@ -157,7 +159,7 @@ bail_pending(mc_pSESSREQ sreq)
 static void
 set_error_ex(mc_pSESSREQ sreq, lcb_error_t err, const char *msg)
 {
-    lcb_log(LOGARGS(sreq, ERR), "Received error for SASL req %p: 0x%x, %s", sreq, err, msg);
+    lcb_log(LOGARGS(sreq, ERR), SESSREQ_LOGFMT "Error: 0x%x, %s", SESSREQ_LOGID(sreq), err, msg);
     if (sreq->err == LCB_SUCCESS) {
         sreq->err = err;
     }
@@ -316,7 +318,7 @@ parse_hello(mc_pSESSREQ sreq, packet_info *packet)
         lcb_U16 tmp;
         memcpy(&tmp, cur, sizeof(tmp));
         tmp = ntohs(tmp);
-        lcb_log(LOGARGS(sreq, DEBUG), "Found feature 0x%x (%s)", tmp, protocol_feature_2_text(tmp));
+        lcb_log(LOGARGS(sreq, DEBUG), SESSREQ_LOGFMT "Found feature 0x%x (%s)", SESSREQ_LOGID(sreq), tmp, protocol_feature_2_text(tmp));
         sreq->inner->features[tmp] = 1;
     }
     return 0;
@@ -421,7 +423,7 @@ handle_read(lcbio_CTX *ioctx, unsigned nb)
             parse_hello(sreq, &info);
         } else if (status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND ||
                 status == PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED) {
-            lcb_log(LOGARGS(sreq, DEBUG), "Server does not support HELLO");
+            lcb_log(LOGARGS(sreq, DEBUG), SESSREQ_LOGFMT "Server does not support HELLO", SESSREQ_LOGID(sreq));
             /* nothing */
         } else {
             set_error_ex(sreq, LCB_PROTOCOL_ERROR, "Hello response unexpected");
@@ -432,7 +434,7 @@ handle_read(lcbio_CTX *ioctx, unsigned nb)
 
     default: {
         state = SREQ_S_ERROR;
-        lcb_log(LOGARGS(sreq, ERROR), "Received unknown response. OP=0x%x. RC=0x%x", PACKET_OPCODE(&info), PACKET_STATUS(&info));
+        lcb_log(LOGARGS(sreq, ERROR), SESSREQ_LOGFMT "Received unknown response. OP=0x%x. RC=0x%x", SESSREQ_LOGID(sreq), PACKET_OPCODE(&info), PACKET_STATUS(&info));
         set_error_ex(sreq, LCB_NOT_SUPPORTED, "Received unknown response");
         break;
     }

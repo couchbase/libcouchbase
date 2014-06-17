@@ -4,8 +4,7 @@
 #include "timer-ng.h"
 #include "internal.h"
 
-#define LOGARGS(mgr, lvl) \
-    mgr->settings, "lcbio_mgr", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(mgr, lvl) mgr->settings, "lcbio_mgr", LCB_LOG_##lvl, __FILE__, __LINE__
 
 typedef enum {
     CS_PENDING,
@@ -65,6 +64,15 @@ static void mgr_unref(lcbio_MGR *mgr);
 
 #define he_ref(he) (he)->refcount++
 #define mgr_ref(mgr) (mgr)->refcount++
+
+static const char *get_hehost(mgr_HOST *h) {
+    if (!h) { return "NOHOST:NOPORT"; }
+    return h->key;
+}
+
+/** Format string arguments for %p%s:%s */
+#define HE_LOGID(h) get_hehost(h), (void*)h
+#define HE_LOGFMT "<%s> (HE=%p) "
 
 static mgr_CINFO *
 cinfo_from_sock(lcbio_SOCKET *sock)
@@ -195,6 +203,7 @@ invoke_request(mgr_REQ *req)
         info->state = CS_LEASED;
         req->state = RS_ASSIGNED;
         lcbio_timer_disarm(info->idle_timer);
+        lcb_log(LOGARGS(info->parent->parent, DEBUG), HE_LOGFMT "Assigning R=%p SOCKET=%p",HE_LOGID(info->parent), (void*)req, (void*)req->sock);
     }
 
     if (req->timer) {
@@ -228,9 +237,6 @@ connection_available(mgr_HOST *he)
         req->sock = info->sock;
         req->err = LCB_SUCCESS;
         he->n_leased++;
-
-        lcb_log(LOGARGS(he->parent, INFO), "Assigning R=%p,c=%p", req, req->sock);
-
         invoke_request(req);
     }
 }
@@ -246,8 +252,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR oserr)
     lcb_assert(info->state == CS_PENDING);
     info->cs = NULL;
 
-    lcb_log(LOGARGS(he->parent, INFO),
-            "Received result for I=%p,C=%p; E=0x%x", info, sock, err);
+    lcb_log(LOGARGS(he->parent, DEBUG), HE_LOGFMT "Received result for I=%p,C=%p; E=0x%x", HE_LOGID(he), (void*)info, (void*)sock, err);
     lcb_clist_delete(&he->ll_pending, &info->llnode);
 
     if (err != LCB_SUCCESS) {
@@ -293,7 +298,7 @@ start_new_connection(mgr_HOST *he, uint32_t tmo)
 
     err = lcb_host_parsez(&tmphost, he->key, 80);
     lcb_assert(err == LCB_SUCCESS);
-    lcb_log(LOGARGS(he->parent, INFO), "Starting connection on I=%p", info);
+    lcb_log(LOGARGS(he->parent, DEBUG), HE_LOGFMT "Starting connection on I=%p", HE_LOGID(he), (void*)info);
 
     info->cs = lcbio_connect(he->parent->io, he->parent->settings, &tmphost,
                              tmo, on_connected, info);
@@ -332,7 +337,6 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
     mgr_KEY key = { 0 };
 
     sprintf(key, "%s:%s", dest->host, dest->port);
-    lcb_log(LOGARGS(pool, DEBUG), "Got request for %s", key);
 
     req->callback = handler;
     req->arg = arg;
@@ -367,6 +371,7 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
         info->state = CS_LEASED;
         he->n_leased++;
         lcbio_async_signal(req->timer);
+        lcb_log(LOGARGS(pool, INFO), HE_LOGFMT "Found ready connection in pool. Reusing socket and not creating new connection", HE_LOGID(he));
 
     } else {
         req->state = RS_PENDING;
@@ -375,11 +380,11 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
 
         lcb_clist_append(&he->requests, &req->llnode);
         if (HE_NPEND(he) < HE_NREQS(he)) {
+            lcb_log(LOGARGS(pool, DEBUG), HE_LOGFMT "Creating new connection because none are available in the pool", HE_LOGID(he));
             start_new_connection(he, timeout);
 
         } else {
-            lcb_log(LOGARGS(pool, INFO),
-                    "Not creating a new connection. There are still pending ones");
+            lcb_log(LOGARGS(pool, DEBUG), HE_LOGFMT "Not creating a new connection. There are still pending ones", HE_LOGID(he));
         }
     }
 
@@ -407,12 +412,12 @@ lcbio_mgr_cancel(mgr_REQ *req)
     }
 
     if (req->sock) {
-        lcb_log(LOGARGS(mgr, DEBUG), "Cancelling request with existing connection");
+        lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Cancelling request=%p with existing connection", HE_LOGID(he), (void*)req);
         lcbio_mgr_put(req->sock);
         lcbio_async_signal(he->async);
 
     } else {
-        lcb_log(LOGARGS(mgr, DEBUG), "Request has no connection.. yet");
+        lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Request=%p has no connection.. yet", HE_LOGID(he), (void*)req);
         lcb_clist_delete(&he->requests, &req->llnode);
     }
     free(req);
@@ -423,8 +428,7 @@ on_idle_timeout(void *cookie)
 {
     mgr_CINFO *info = cookie;
 
-    lcb_log(LOGARGS(info->parent->parent, DEBUG),
-            "Idle connection %p to %s expired", info->sock, info->parent->key);
+    lcb_log(LOGARGS(info->parent->parent, DEBUG), HE_LOGFMT "Idle connection expired", HE_LOGID(info->parent));
 
     lcbio_unref(info->sock);
 }
@@ -448,12 +452,12 @@ lcbio_mgr_put(lcbio_SOCKET *sock)
     if (HE_NIDLE(he) >= mgr->maxidle &&
             HE_NREQS(he) <= (he->n_leased - he->n_leased)) {
 
-        lcb_log(LOGARGS(mgr, INFO), "Closing idle connection. Too many in quota");
+        lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Closing idle connection. Too many in quota", HE_LOGID(he));
         lcbio_unref(info->sock);
         return;
     }
 
-    lcb_log(LOGARGS(mgr, INFO), "Reclaiming connection I=%p,C=%p (%s)", info, sock, he->key);
+    lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Placing socket back into the pool. I=%p,C=%p", HE_LOGID(he), (void*)info, (void*)sock);
 
     he->n_leased--;
     lcbio_timer_rearm(info->idle_timer, mgr->tmoidle);

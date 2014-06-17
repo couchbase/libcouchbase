@@ -19,8 +19,10 @@
 #include "clconfig.h"
 #include "bc_http.h"
 #include <lcbio/ssl.h>
-
+#include "ctx-log-inl.h"
 #define LOGARGS(ht, lvlbase) ht->base.parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
+#define LOGFMT "<%s:%s> "
+#define LOGID(h) get_ctx_host(h->ioctx), get_ctx_port(h->ioctx)
 
 static void io_error_handler(lcbio_CTX *, lcb_error_t);
 static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
@@ -90,8 +92,7 @@ io_error(http_provider *http, lcb_error_t origerr)
     lcb_confmon_provider_failed(&http->base, origerr);
     lcbio_timer_disarm(http->io_timer);
     if (is_v220_compat(http)) {
-        lcb_log(LOGARGS(http, INFO),
-                "HTTP node list finished. Looping again (disconn_tmo=-1)");
+        lcb_log(LOGARGS(http, INFO), "HTTP node list finished. Trying to obtain connection from first node in list");
         connect_next(http);
     }
     return origerr;
@@ -142,15 +143,15 @@ process_chunk(http_provider *http, const void *buf, unsigned nbuf)
             err = LCB_BUCKET_ENOENT;
 
             if (++http->uritype > LCB_HTCONFIG_URLTYPE_COMPAT) {
-                lcb_log(LOGARGS(http, ERR), "Got 404 on config stream. Assuming bucket does not exist as we've tried both URL types");
+                lcb_log(LOGARGS(http, ERR), LOGFMT "Got 404 on config stream. Assuming bucket does not exist as we've tried both URL types", LOGID(http));
                 goto GT_HT_ERROR;
 
             } else if ((urlmode & LCB_HTCONFIG_URLTYPE_COMPAT) == 0) {
-                lcb_log(LOGARGS(http, ERR), "Got 404 on config stream for terse URI. Compat URI disabled, so not trying");
+                lcb_log(LOGARGS(http, ERR), LOGFMT "Got 404 on config stream for terse URI. Compat URI disabled, so not trying", LOGID(http));
 
             } else {
                 /* reissue the request; but wait for it to drain */
-                lcb_log(LOGARGS(http, WARN), "Got 404 on config stream. Assuming terse URI not supported on cluster");
+                lcb_log(LOGARGS(http, WARN), LOGFMT "Got 404 on config stream. Assuming terse URI not supported on cluster", LOGID(http));
                 http->try_nexturi = 1;
                 err = LCB_SUCCESS;
                 goto GT_CHECKDONE;
@@ -163,7 +164,7 @@ process_chunk(http_provider *http, const void *buf, unsigned nbuf)
 
         GT_HT_ERROR:
         if (err != LCB_SUCCESS) {
-            lcb_log(LOGARGS(http, ERR), "Got non-success HTTP status code %d", resp->status);
+            lcb_log(LOGARGS(http, ERR), LOGFMT "Got non-success HTTP status code %d", LOGID(http), resp->status);
             return err;
         }
     }
@@ -209,7 +210,7 @@ process_chunk(http_provider *http, const void *buf, unsigned nbuf)
     }
     rv = lcbvb_load_json(cfgh, resp->body.base);
     if (rv != 0) {
-        lcb_log(LOGARGS(http, ERR), "Failed to parse a valid config from HTTP stream: %s", cfgh->errstr);
+        lcb_log(LOGARGS(http, ERR), LOGFMT "Failed to parse a valid config from HTTP stream: %s", LOGID(http), cfgh->errstr);
         lcbvb_destroy(cfgh);
         return LCB_PROTOCOL_ERROR;
     }
@@ -238,7 +239,7 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     http_provider *http = lcbio_ctx_data(ctx);
     int old_generation = http->generation;
 
-    lcb_log(LOGARGS(http, TRACE), "Received %d bytes on HTTP stream", nr);
+    lcb_log(LOGARGS(http, TRACE), LOGFMT "Received %d bytes on HTTP stream", LOGID(http), nr);
 
     lcbio_timer_rearm(http->io_timer,
                       PROVIDER_SETTING(&http->base, config_node_timeout));
@@ -255,7 +256,7 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     }
 
     if (http->generation != old_generation) {
-        lcb_log(LOGARGS(http, DEBUG), "Generation %d -> %d", old_generation, http->generation);
+        lcb_log(LOGARGS(http, DEBUG), LOGFMT "Generation %d -> %d", LOGID(http), old_generation, http->generation);
         set_new_config(http);
     }
 
@@ -369,7 +370,7 @@ timeout_handler(void *arg)
 {
     http_provider *http = arg;
 
-    lcb_log(LOGARGS(http, ERR), "HTTP Provider timed out waiting for I/O");
+    lcb_log(LOGARGS(http, ERR), LOGFMT "HTTP Provider timed out waiting for I/O", LOGID(http));
 
     /**
      * If we're not the current provider then ignore the timeout until we're
@@ -377,9 +378,7 @@ timeout_handler(void *arg)
      */
     if (&http->base != http->base.parent->cur_provider ||
             lcb_confmon_is_refreshing(http->base.parent) == 0) {
-        lcb_log(LOGARGS(http, DEBUG),
-                "Ignoring timeout because we're either not in a refresh "
-                "or not the current provider");
+        lcb_log(LOGARGS(http, DEBUG), LOGFMT "Ignoring timeout because we're either not in a refresh or not the current provider", LOGID(http));
         return;
     }
 
@@ -391,22 +390,27 @@ static lcb_error_t
 connect_next(http_provider *http)
 {
     lcb_settings *settings = http->base.parent->settings;
-    lcb_log(LOGARGS(http, TRACE), "Starting HTTP Configuration Provider %p", http);
+    lcb_log(LOGARGS(http, TRACE), "Starting HTTP Configuration Provider %p", (void*)http);
     close_current(http);
+
+    if (!http->nodes->nentries) {
+        lcb_log(LOGARGS(http, ERROR), "Not scheduling HTTP provider since no nodes have been configured for HTTP bootstrap");
+        return LCB_CONNECT_ERROR;
+    }
+
     http->creq = lcbio_connect_hl(http->base.parent->iot, settings, http->nodes, 1,
                                   settings->config_node_timeout, on_connected, http);
     if (http->creq) {
         return LCB_SUCCESS;
     }
-
-    lcb_log(LOGARGS(http, ERROR), "%p: Couldn't schedule connection", http);
+    lcb_log(LOGARGS(http, ERROR), "%p: Couldn't schedule connection", (void*)http);
     return LCB_CONNECT_ERROR;
 }
 
 static void delayed_disconn(void *arg)
 {
     http_provider *http = arg;
-    lcb_log(LOGARGS(http, DEBUG), "Stopping HTTP provider %p", http);
+    lcb_log(LOGARGS(http, DEBUG), "Stopping HTTP provider %p", (void*)http);
 
     /** closes the connection and cleans up the timer */
     close_current(http);
@@ -430,7 +434,6 @@ static lcb_error_t pause_http(clconfig_provider *pb)
 static void delayed_schederr(void *arg)
 {
     http_provider *http = arg;
-    lcb_log(LOGARGS(http, ERR), "Http failed with async=0x%x", http->as_errcode);
     lcb_confmon_provider_failed(&http->base, http->as_errcode);
 }
 

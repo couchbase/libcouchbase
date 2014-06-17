@@ -9,8 +9,16 @@
 #define CTX_IOT(ctx) (ctx)->io
 #include "rw-inl.h"
 
-#define LOGARGS(c, lvl) \
-    (c)->sock->settings, "ioctx", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(c, lvl) (c)->sock->settings, "ioctx", LCB_LOG_##lvl, __FILE__, __LINE__
+static const lcb_host_t * get_ctx_host(const lcbio_CTX *ctx) {
+    static lcb_host_t host = { "NOHOST", "NOPORT" };
+    if (!ctx) { return &host; }
+    if (!ctx->sock) { return &host; }
+    if (!ctx->sock->info) { return &host; }
+    return &ctx->sock->info->ep;
+}
+#define CTX_LOGFMT "<%s:%s> (CTX=%p,%s) "
+#define CTX_LOGID(ctx) get_ctx_host(ctx)->host, get_ctx_host(ctx)->port, (void*)ctx, ctx?ctx->subsys : ""
 
 typedef enum {
     ES_ACTIVE = 0,
@@ -64,7 +72,7 @@ lcbio_ctx_new(lcbio_SOCKET *sock, void *data, const lcbio_EASYPROCS *procs)
     ctx->procs = *procs;
     ctx->state = ES_ACTIVE;
 
-    lcb_log(LOGARGS(ctx, INFO), "Pair CTX=%p <=> SOCK=%p", ctx, sock);
+    lcb_log(LOGARGS(ctx, DEBUG), CTX_LOGFMT "Pairing with SOCK=%p", CTX_LOGID(ctx), (void*)sock);
     return ctx;
 }
 
@@ -114,9 +122,7 @@ lcbio_ctx_close_ex(lcbio_CTX *ctx, lcbio_CTXCLOSE_cb cb, void *arg,
     }
 
     oldrc = ctx->sock->refcount;
-
-    lcb_log(LOGARGS(ctx, INFO), "Destroying [%s] CTX=%p. Pending=%d, Entered=%d. Sock RC=%d",
-            ctx->subsys, ctx, (int)ctx->npending, (int)ctx->entered, oldrc);
+    lcb_log(LOGARGS(ctx, DEBUG), CTX_LOGFMT "Destroying. PND=%d,ENT=%d,SORC=%d", CTX_LOGID(ctx), (int)ctx->npending, (int)ctx->entered, oldrc);
 
     if (cb) {
         int reusable =

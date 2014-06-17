@@ -11,9 +11,16 @@
 #define EAI_SYSTEM 0
 #endif
 #define LOGARGS(conn, lvl) conn->settings, "connection", LCB_LOG_##lvl, __FILE__, __LINE__
+static const lcb_host_t *get_loghost(lcbio_SOCKET *s) {
+    static lcb_host_t host = { "NOHOST", "NOPORT" };
+    if (!s) { return &host; }
+    if (!s->info) { return &host; }
+    return &s->info->ep;
+}
 
 /** Format string arguments for %p%s:%s */
-#define CSLOGID(sock) (void*)(sock), (sock)->info->ep.host, (sock)->info->ep.port
+#define CSLOGID(sock) get_loghost(sock)->host, get_loghost(sock)->port, (void*)s
+#define CSLOGFMT "<%s:%s> (SOCK=%p) "
 
 typedef enum {
     CS_PENDING = 0,
@@ -89,9 +96,9 @@ cs_handler(void *cookie)
     if (s) {
         lcbio__load_socknames(s);
         if (err == LCB_SUCCESS) {
-            lcb_log(LOGARGS(s, INFO), "SOCKET=%p => %s:%s Connected", CSLOGID(s));
+            lcb_log(LOGARGS(s, INFO), CSLOGFMT "Connected ", CSLOGID(s));
         } else {
-            lcb_log(LOGARGS(s, ERR), "SOCKET=%p => %s:%s failed. lcberr=0x%x, errno=%u", CSLOGID(s), err, cs->syserr);
+            lcb_log(LOGARGS(s, ERR), CSLOGFMT "Failed: lcb_err=0x%x, os_errno=%u", CSLOGID(s), err, cs->syserr);
         }
     }
 
@@ -231,7 +238,7 @@ E_connect(lcb_socket_t sock, short events, void *arg)
 
     (void)sock;
 
-    lcb_log(LOGARGS(s, TRACE), "Got E handler  for socket %p", s);
+    lcb_log(LOGARGS(s, TRACE), CSLOGFMT "Got event handler for new connection", CSLOGID(s));
 
     GT_NEXTSOCK:
     if (ensure_sock(cs) == -1) {
@@ -242,7 +249,7 @@ E_connect(lcb_socket_t sock, short events, void *arg)
     if (events & LCB_ERROR_EVENT) {
         socklen_t errlen = sizeof(int);
         int sockerr = 0;
-        lcb_log(LOGARGS(s, TRACE), "Received ERROR_EVENT for %p", s);
+        lcb_log(LOGARGS(s, TRACE), CSLOGFMT "Received ERROR_EVENT", CSLOGID(s));
         getsockopt(s->u.fd, SOL_SOCKET, SO_ERROR, (char *)&sockerr, &errlen);
         lcbio_mksyserr(sockerr, &cs->syserr);
         destroy_cursock(cs);
@@ -278,7 +285,7 @@ E_connect(lcb_socket_t sock, short events, void *arg)
         return;
 
     case LCBIO_CSERR_BUSY:
-        lcb_log(LOGARGS(s, TRACE), "Scheduling asynchronous watch for socket.");
+        lcb_log(LOGARGS(s, TRACE), CSLOGFMT "Scheduling asynchronous watch for socket.", CSLOGID(s));
         IOT_V0EV(io).watch(
                 IOT_ARG(io), s->u.fd, cs->event, LCB_WRITE_EVENT, cs, E_connect);
         cs->ev_active = 1;
@@ -294,7 +301,7 @@ E_connect(lcb_socket_t sock, short events, void *arg)
     case LCBIO_CSERR_EFAIL:
     default:
         /* close the current socket and try again */
-        lcb_log(LOGARGS(s, TRACE), "connect() failed. Error code=%d [%s]", IOT_ERRNO(io), strerror(IOT_ERRNO(io)));
+        lcb_log(LOGARGS(s, TRACE), CSLOGFMT "connect() failed. os_error=%d [%s]", CSLOGID(s), IOT_ERRNO(io), strerror(IOT_ERRNO(io)));
         destroy_cursock(cs);
         goto GT_NEXTSOCK;
     }
@@ -307,6 +314,8 @@ C_conncb(lcb_sockdata_t *sock, int status)
 {
     lcbio_SOCKET *s = (void *)sock->lcbconn;
     lcbio_CONNSTART *cs = (void *)s->ctx;
+
+    lcb_log(LOGARGS(s, TRACE), CSLOGFMT "Received completion handler. Status=%d", CSLOGID(s), status);
 
     if (!--s->refcount) {
         lcbio__destroy(s);
@@ -411,7 +420,7 @@ lcbio_connect(lcbio_TABLE *iot, lcb_settings *settings, lcb_host_t *dest,
     ret->async = lcbio_timer_new(iot, ret, cs_handler);
 
     lcbio_timer_rearm(ret->async, timeout);
-    lcb_log(LOGARGS(s, INFO), "Starting SOCKET=%p => %s:%s. Timeout=%uus", CSLOGID(s), timeout);
+    lcb_log(LOGARGS(s, INFO), CSLOGFMT "Starting. Timeout=%uus", CSLOGID(s), timeout);
 
     /** Hostname lookup: */
     memset(&hints, 0, sizeof(hints));
@@ -427,7 +436,7 @@ lcbio_connect(lcbio_TABLE *iot, lcb_settings *settings, lcb_host_t *dest,
 
     if ((rv = getaddrinfo(dest->host, dest->port, &hints, &ret->ai_root))) {
         const char *errstr = rv != EAI_SYSTEM ? gai_strerror(rv) : "";
-        lcb_log(LOGARGS(s, ERR), "Couldn't look up %s (%s)", dest->host, errstr);
+        lcb_log(LOGARGS(s, ERR), CSLOGFMT "Couldn't look up %s (%s)", CSLOGID(s), dest->host, errstr);
         cs_state_signal(ret, CS_ERROR, LCB_UNKNOWN_HOST);
     }
 

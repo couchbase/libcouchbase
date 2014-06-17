@@ -167,7 +167,7 @@ int lcb_host_equals(const lcb_host_t *a, const lcb_host_t *b)
 }
 
 
-lcb_error_t hostlist_add_host(hostlist_t hostlist, lcb_host_t *host)
+lcb_error_t hostlist_add_host(hostlist_t hostlist, const lcb_host_t *host)
 {
     lcb_size_t ii;
     lcb_size_t nalloc;

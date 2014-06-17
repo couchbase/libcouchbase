@@ -4,6 +4,33 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+
+#if defined(unix) || defined(__unix__) || defined(__unix) || defined(_POSIX_VERSION)
+    #include <unistd.h>
+    #include <pthread.h>
+    #include <sys/types.h>
+
+    #if defined(__linux__)
+        #include <sys/syscall.h>
+        #define GET_THREAD_ID() syscall(SYS_gettid)
+        #define THREAD_ID_FMT "d"
+
+    #elif defined(__APPLE__)
+        #define GET_THREAD_ID() pthread_mach_thread_np(pthread_self())
+        #define THREAD_ID_FMT "u"
+    #else
+        /* other unix? */
+        #define GET_THREAD_ID() 0
+        #define THREAD_ID_FMT "d"
+    #endif
+#elif defined(_WIN32)
+    #define GET_THREAD_ID() GetCurrentThreadId()
+    #define THREAD_ID_FMT "d"
+#else
+    #define GET_THREAD_ID() 0
+    #define THREAD_ID_FMT "d"
+#endif
+
 static hrtime_t start_time = 0;
 
 static void console_log(struct lcb_logprocs_st *procs,
@@ -78,8 +105,9 @@ static void console_log(struct lcb_logprocs_st *procs,
 
     fprintf(stderr, "%lums ", (unsigned long)(now - start_time) / 1000000);
 
-    fprintf(stderr, "[I%d] [%s] (%s - L:%d) ",
+    fprintf(stderr, "[I%d] {%"THREAD_ID_FMT"} [%s] (%s - L:%d) ",
             iid,
+            GET_THREAD_ID(),
             level_to_string(severity),
             subsys,
             srcline);

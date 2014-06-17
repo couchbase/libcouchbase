@@ -34,8 +34,11 @@ void lcb_log(const struct lcb_settings_st *settings,
              int severity,
              const char *srcfile,
              int srcline,
-             const char *fmt,
-             ...);
+             const char *fmt, ...)
+#ifdef __GNUC__
+             __attribute__ ((format(printf, 6, 7)))
+#endif
+             ;
 
 lcb_logprocs * lcb_init_console_logger(void);
 

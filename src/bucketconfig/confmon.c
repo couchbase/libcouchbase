@@ -44,6 +44,14 @@ static clconfig_provider *first_active(lcb_confmon *mon)
     return LCB_LIST_ITEM(mon->active_providers.next, clconfig_provider, ll);
 }
 
+static const char *
+provider_string(clconfig_method_t type) {
+    if (type == LCB_CLCONFIG_HTTP) { return "HTTP"; }
+    if (type == LCB_CLCONFIG_CCCP) { return "CCCP"; }
+    if (type == LCB_CLCONFIG_FILE) { return "FILE"; }
+    return "";
+}
+
 lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
 {
     int ii;
@@ -55,7 +63,6 @@ lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
     lcbio_table_ref(mon->iot);
     lcb_settings_ref(mon->settings);
 
-    LOG(mon, TRACE, "Creating monitor...");
     mon->all_providers[LCB_CLCONFIG_FILE] = lcb_clconfig_create_file(mon);
     mon->all_providers[LCB_CLCONFIG_CCCP] = lcb_clconfig_create_cccp(mon);
     mon->all_providers[LCB_CLCONFIG_HTTP] = lcb_clconfig_create_http(mon);
@@ -81,15 +88,15 @@ void lcb_confmon_prepare(lcb_confmon *mon)
         if (cur) {
             if (cur->enabled) {
                 lcb_clist_append(&mon->active_providers, &cur->ll);
+                lcb_log(LOGARGS(mon, DEBUG), "Provider %s is ENABLED", provider_string(cur->type));
             } else if (cur->pause){
                 cur->pause(cur);
+                lcb_log(LOGARGS(mon, DEBUG), "Provider %s is DISABLED", provider_string(cur->type));
             }
         }
     }
 
     lcb_assert(LCB_CLIST_SIZE(&mon->active_providers));
-
-    lcb_log(LOGARGS(mon, DEBUG), "Have %d providers enabled", LCB_CLIST_SIZE(&mon->active_providers));
     mon->cur_provider = first_active(mon);
 }
 
@@ -152,8 +159,7 @@ static int do_set_next(lcb_confmon *mon, clconfig_info *info, int notify_miss)
         }
     }
 
-    lcb_log(LOGARGS(mon, INFO),
-            "Setting new configuration of type %d", info->origin);
+    lcb_log(LOGARGS(mon, INFO), "Setting new configuration. Received via %s", provider_string(info->origin));
 
     if (mon->config) {
         /** DECREF the old one */
@@ -181,11 +187,10 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
 {
     lcb_confmon *mon = provider->parent;
 
-    lcb_log(LOGARGS(mon, INFO), "Provider [%d] failed", provider->type);
+    lcb_log(LOGARGS(mon, INFO), "Provider '%s' failed", provider_string(provider->type));
 
     if (provider != mon->cur_provider) {
-        lcb_log(LOGARGS(mon, TRACE),
-                "Ignoring failure. Current=%p", mon->cur_provider);
+        lcb_log(LOGARGS(mon, TRACE), "Ignoring failure. Current=%p (%s)", (void*)mon->cur_provider, provider_string(mon->cur_provider->type));
         return;
     }
 
@@ -235,8 +240,7 @@ static int do_next_provider(lcb_confmon *mon)
         }
     }
 
-    lcb_log(LOGARGS(mon, TRACE), "Current provider is %d",
-            mon->cur_provider->type);
+    lcb_log(LOGARGS(mon, TRACE), "Current provider is %s", provider_string(mon->cur_provider->type));
 
     mon->cur_provider->refresh(mon->cur_provider);
     return 0;

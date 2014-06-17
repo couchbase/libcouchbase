@@ -223,7 +223,7 @@ lcb_retryq_add(lcb_RETRYQ *rq, mc_PACKET *pkt)
     lcb_list_add_sorted(&rq->schedops, &op->ll_sched, cmpfn_retry);
     lcb_list_add_sorted(&rq->tmoops, &op->ll_tmo, cmpfn_tmo);
 
-    lcb_log(LOGARGS(rq, DEBUG), "Adding PKT=%p to retry queue. Try count=%u", pkt, pkt->retries);
+    lcb_log(LOGARGS(rq, DEBUG), "Adding PKT=%p to retry queue. Try count=%u", (void*)pkt, pkt->retries);
     do_schedule(rq, 0);
 }
 

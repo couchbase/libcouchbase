@@ -105,7 +105,7 @@ lcb_error_t hostlist_add_string(hostlist_t hostlist,
 #define hostlist_add_stringz(hostlist, spec, deflport) \
     hostlist_add_string(hostlist, spec, -1, deflport)
 
-lcb_error_t hostlist_add_host(hostlist_t hostlist, lcb_host_t *host);
+lcb_error_t hostlist_add_host(hostlist_t hostlist, const lcb_host_t *host);
 
 /**
  * Return the next host in the list.

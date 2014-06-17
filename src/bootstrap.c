@@ -216,23 +216,19 @@ lcb_error_t lcb_bootstrap_refresh(lcb_t instance)
 
 void lcb_bootstrap_errcount_incr(lcb_t instance)
 {
-    int should_refresh = 0;
-    hrtime_t now = gethrtime();
+    lcb_SIZE errthresh;
+    hrtime_t now = gethrtime(), next_refresh_time;
+
+    errthresh = LCBT_SETTING(instance, weird_things_threshold);
     instance->weird_things++;
+    next_refresh_time = instance->bootstrap->last_refresh;
+    next_refresh_time += LCB_US2NS(LCBT_SETTING(instance, weird_things_delay));
 
-    if (now - instance->bootstrap->last_refresh >
-            LCB_US2NS(LCBT_SETTING(instance, weird_things_delay))) {
-
+    if (now < next_refresh_time && instance->weird_things < errthresh) {
         lcb_log(LOGARGS(instance, INFO),
-                "Max grace period for refresh exceeded");
-        should_refresh = 1;
-    }
-
-    if (instance->weird_things == LCBT_SETTING(instance, weird_things_threshold)) {
-        should_refresh = 1;
-    }
-
-    if (!should_refresh) {
+            "Not requesting a config refresh because of throttling parameters. Next refresh possible in %ums or %u errors. "
+            "See LCB_CNTL_CONFDELAY_THRESH and LCB_CNTL_CONFERRTHRESH to modify the throttling settings",
+            LCB_NS2US(next_refresh_time-now)/1000, (unsigned)errthresh-instance->weird_things);
         return;
     }
 
