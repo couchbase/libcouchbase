@@ -219,7 +219,10 @@ parse_options(PARSECTX *ctx, const char *options, const char *dsnend)
                 SET_ERROR("Invalid value for 'ssl'. Choices are on, off, and no_verify");
             }
         } else if (!strcmp(key, "capath")) {
-
+        } else if (!strcmp(key, "console_log_level")) {
+            if (sscanf(value, "%d", &out->loglevel) != 1) {
+                SET_ERROR("console_log_level must be a numeric value");
+            }
         } else {
             lcb_string_appendz(&tmpstr, key);
             lcb_string_appendz(&tmpstr, "=");
@@ -375,6 +378,7 @@ lcb_dsn_clean(lcb_DSNPARAMS *params)
     free(params->username);
     free(params->password);
     free(params->ctlopts);
+    free(params->origdsn);
 
     LCB_LIST_SAFE_FOR(ll, llnext, &params->hosts) {
         lcb_DSNHOST *host = LCB_LIST_ITEM(ll, lcb_DSNHOST, llnode);
@@ -530,6 +534,10 @@ lcb_dsn_convert(lcb_DSNPARAMS *params, const struct lcb_create_st *cropts)
     }
 
     GT_DONE:
-    lcb_string_release(&tmpstr);
+    if (err == LCB_SUCCESS) {
+        params->origdsn = tmpstr.base;
+    } else {
+        lcb_string_release(&tmpstr);
+    }
     return err;
 }

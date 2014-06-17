@@ -26,10 +26,12 @@ typedef struct {
     char *username; /**< Username. Currently not used */
     char *password; /**< Password */
     char *capath; /**< Certificate path */
+    char *origdsn; /** Original DSN passed */
     lcb_SSLOPTS sslopts; /**< SSL Options */
     lcb_list_t hosts; /**< List of host information */
     char has_custom_ports; /**< Whether custom ports are specified */
     char has_no_ports; /**< Whether hosts don't have ports */
+    int loglevel; /* cached loglevel */
     unsigned flags; /**< Internal flags */
     lcb_config_transport_t transports[LCB_CONFIG_TRANSPORT_MAX];
 } lcb_DSNPARAMS;
