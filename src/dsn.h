@@ -12,11 +12,18 @@ extern "C" {
 
 typedef struct {
     lcb_list_t llnode;
-    lcb_U16 htport;
-    lcb_U16 memdport;
-    lcb_U16 ssl_htport;
-    lcb_U16 ssl_memdport;
+    lcb_U16 port;
+    short type;
     char hostname[1];
+#ifdef __cplusplus
+    bool isSSL() const { return type == LCB_CONFIG_MCD_SSL_PORT || type == LCB_CONFIG_HTTP_SSL_PORT; }
+    bool isHTTPS() const { return type == LCB_CONFIG_HTTP_SSL_PORT; }
+    bool isHTTP() const { return type == LCB_CONFIG_HTTP_PORT; }
+    bool isMCD() const { return type == LCB_CONFIG_MCD_PORT; }
+    bool isMCDS() const { return type == LCB_CONFIG_MCD_SSL_PORT; }
+    bool isTypeless() const { return type == 0 ; }
+#endif
+
 } lcb_DSNHOST;
 
 typedef struct {
@@ -29,14 +36,17 @@ typedef struct {
     char *origdsn; /** Original DSN passed */
     lcb_SSLOPTS sslopts; /**< SSL Options */
     lcb_list_t hosts; /**< List of host information */
-    char has_custom_ports; /**< Whether custom ports are specified */
-    char has_no_ports; /**< Whether hosts don't have ports */
+    lcb_U16 implicit_port; /**< Implicit port, based on scheme */
     int loglevel; /* cached loglevel */
     unsigned flags; /**< Internal flags */
     lcb_config_transport_t transports[LCB_CONFIG_TRANSPORT_MAX];
 } lcb_DSNPARAMS;
 
-#define LCB_DSN_SCHEME "couchbase://"
+#define LCB_DSN_SCHEME_RAW "couchbase+explicit://"
+#define LCB_DSN_SCHEME_MCD "couchbase://"
+#define LCB_DSN_SCHEME_MCD_SSL "couchbases://"
+#define LCB_DSN_SCHEME_HTTP "http://"
+#define LCB_DSN_SCHEME_HTTP_SSL "https-internal://"
 
 /**
  * Compile a DSN into a structure suitable for further processing. A Couchbase

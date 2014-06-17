@@ -71,14 +71,12 @@ TEST_F(DsnTest, testParseBasic)
     tmphost = findHost(&params, "1.2.3.4");
     ASSERT_EQ(1, countHosts(&params));
     ASSERT_FALSE(NULL == tmphost);
-    ASSERT_EQ(0, tmphost->htport);
-    ASSERT_EQ(0, tmphost->memdport);
-    ASSERT_EQ(0, tmphost->ssl_htport);
-    ASSERT_EQ(0, tmphost->ssl_memdport);
+    ASSERT_EQ(0, tmphost->port);
+    ASSERT_EQ(0, tmphost->type); // Nothing
 
     reinit();
     // test with bad scheme
-    err = lcb_dsn_parse("http://foo.com", &params, &errmsg);
+    err = lcb_dsn_parse("blah://foo.com", &params, &errmsg);
     ASSERT_NE(LCB_SUCCESS, err) << "Error on bad scheme";
 
     reinit();
@@ -115,12 +113,24 @@ TEST_F(DsnTest, testParseHosts)
     const lcb_DSNHOST *dh = findHost(&params, "foo.com");
     ASSERT_FALSE(NULL == dh);
     ASSERT_STREQ("foo.com", dh->hostname);
-    ASSERT_EQ(0, dh->htport);
+    ASSERT_EQ(8091, dh->port);
+    ASSERT_EQ(LCB_CONFIG_MCD_PORT, dh->type);
 
     // parse with invalid port, without specifying protocol
     reinit();
     err = lcb_dsn_parse("couchbase://foo.com:4444", &params, &errmsg);
-    ASSERT_NE(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    dh = findHost(&params, "foo.com");
+    ASSERT_EQ(4444, dh->port);
+    ASSERT_TRUE(dh->isMCD());
+
+    reinit();
+    err = lcb_dsn_parse("couchbases://foo.com:4444", &params, &errmsg);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    dh = findHost(&params, "foo.com");
+    ASSERT_EQ(LCB_SSL_ENABLED, params.sslopts);
+    ASSERT_EQ(4444, dh->port);
+    ASSERT_TRUE(dh->isMCDS());
 
     // Parse with recognized format
     reinit();
@@ -128,7 +138,8 @@ TEST_F(DsnTest, testParseHosts)
     ASSERT_EQ(LCB_SUCCESS, err);
     dh = findHost(&params, "foo.com");
     ASSERT_STREQ("foo.com", dh->hostname);
-    ASSERT_EQ(4444, dh->memdport);
+    ASSERT_EQ(4444, dh->port);
+    ASSERT_TRUE(dh->isMCD());
 
     //Parse multiple hosts with ports
     reinit();
@@ -139,16 +150,35 @@ TEST_F(DsnTest, testParseHosts)
     dh = findHost(&params, "foo.com");
     ASSERT_FALSE(dh == NULL);
     ASSERT_STREQ("foo.com", dh->hostname);
-    ASSERT_EQ(4444, dh->memdport);
+    ASSERT_EQ(4444, dh->port);
+    ASSERT_TRUE(dh->isMCD());
 
     dh = findHost(&params, "bar.com");
     ASSERT_FALSE(dh == NULL);
     ASSERT_STREQ("bar.com", dh->hostname);
-    ASSERT_EQ(5555, dh->memdport);
+    ASSERT_EQ(5555, dh->port);
+    ASSERT_TRUE(dh->isMCD());
 
     reinit();
-    err = lcb_dsn_parse("couchbase://foo.com,bar.com:4444=mcd", &params, &errmsg);
+    err = lcb_dsn_parse("couchbase+explicit://foo.com,bar.com:4444=mcd", &params, &errmsg);
     ASSERT_NE(LCB_SUCCESS, err) << "Error with mixed portless hosts";
+
+    reinit();
+    err = lcb_dsn_parse("couchbase://foo.com,bar.com:4444", &params, &errmsg);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    dh = findHost(&params, "bar.com");
+    ASSERT_EQ(4444, dh->port);
+    ASSERT_TRUE(dh->isMCD());
+    dh = findHost(&params, "foo.com");
+    ASSERT_TRUE(dh->isTypeless());
+
+    reinit();
+    err = lcb_dsn_parse("couchbase://foo.com;bar.com;baz.com", &params, &errmsg);
+    ASSERT_EQ(LCB_SUCCESS, err) << "Can parse old-style semicolons";
+    ASSERT_EQ(3, countHosts(&params));
+    ASSERT_FALSE(NULL == findHost(&params, "foo.com"));
+    ASSERT_FALSE(NULL == findHost(&params, "bar.com"));
+    ASSERT_FALSE(NULL == findHost(&params, "baz.com"));
 }
 
 TEST_F(DsnTest, testParseBucket)
@@ -219,8 +249,6 @@ TEST_F(DsnTest, testOptionsPassthrough)
     ASSERT_EQ(1, countHosts(&params));
     ASSERT_FALSE(NULL == findHost(&params, "localhost"));
     ASSERT_TRUE(findOption(&params, "compression", op));
-    ASSERT_EQ(1, params.has_no_ports);
-    ASSERT_EQ(0, params.has_custom_ports);
 
     reinit();
     err = lcb_dsn_parse("couchbase://?foo=foo&bar=bar&", &params, &errmsg);
@@ -233,6 +261,39 @@ TEST_F(DsnTest, testOptionsPassthrough)
     ASSERT_TRUE(findOption(&params, "foo", op));
     ASSERT_TRUE(findOption(&params, "bar", op));
     ASSERT_FALSE(findOption(&params, "bootstrap_on", op));
+}
+
+TEST_F(DsnTest, testRecognizedOptions)
+{
+    lcb_error_t err;
+    err = lcb_dsn_parse("couchbases://", &params, &errmsg);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SSL_ENABLED, params.sslopts);
+
+    reinit();
+    err = lcb_dsn_parse("couchbase://?ssl=on", &params, &errmsg);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SSL_ENABLED, params.sslopts);
+
+    reinit();
+    err = lcb_dsn_parse("couchbases://?ssl=no_verify", &params, &errmsg);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SSL_ENABLED|LCB_SSL_NOVERIFY, params.sslopts);
+
+    reinit();
+    err = lcb_dsn_parse("couchbases://?ssl=off", &params, &errmsg);
+    ASSERT_NE(LCB_SUCCESS, err);
+
+    // Loglevel
+    reinit();
+    err = lcb_dsn_parse("couchbase://?console_log_level=5", &params, &errmsg);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(5, params.loglevel);
+
+    reinit();
+    err = lcb_dsn_parse("couchbase://?console_log_level=gah", &params, &errmsg);
+    ASSERT_NE(LCB_SUCCESS, err);
+
 }
 
 TEST_F(DsnTest, testTransportOptions)

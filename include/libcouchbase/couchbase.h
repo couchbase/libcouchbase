@@ -163,45 +163,22 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  *
  * `couchbase://localhost`
  *
- * #### Specifying Ports
+ * #### Specifying Ports and Protocol Options
  *
- * By default the client will assume that all nodes listed have the following
- * ports available:
+ * The default `couchbase://` scheme will assume all hosts and/or ports
+ * specify the _memcached_ port. If no port is specified, it is assumed
+ * that the port is _11210). For more extended options there are additional
+ * schemes available:
  *
- * * `8091` (or `18091` for SSL) - REST API port
- * * `11210` (or `11207` for SSL) - Data port
+ * * `couchbases://` - Will assume all ports refer to the SSL-enabled memcached
+ *   ports. This setting implicitly enables SSL on the instance as well. If no
+ *   ports are provided for the hosts, the implicit port for each host will be
+ *   _11207_.
  *
- * If this is not the case, you must specify each `host:port=protocol`
- * combination within the URI, where _host_ is the hostname, _port_ is a numeric
- * port, and _protocol_ is a string describing what type of service is provided
- * by this port.
- *
- * In the simple example above, an explicit `host:port=protocol` version would
- * look like this:
- *
- * `couchbase://foo.com:8091=http,foo.com:18091=https,foo.com:11210=mcd,foo.com:11207=mcds`
- *
- * Of course, you only need to specify the protocol from which you intend to
- * bootstrap from (thus for example, using a couchbase bucket on Server 3.0 with
- * SSL, you would only need to specify `foo.com:$PORT=mcds` where `$PORT` is
- * your custom port number).
- *
- * Identifier|Description
- * ----------|-----------
- * `http`    | Plain streaming HTTP port/Administrative port
- * `mcd`     | Plain memcached ("data") port.
- * `https`   | SSL-encrypted streaming HTTP port/administrative port
- * `mcds`    | SSL-encrypted memcached ("data") port.
- *
- * * `couchbase://1.1.1.1,2.2.2.2` will assume default ports for both hosts
- * * `couchbase://1.1.1.1,8091=http,2.2.2.2:9091=http` means that the host
- *   `1.1.1.1` has a streaming port of `8091` while the host `9091` has a
- *   streaming port of `9091`. The memcached ports are unchanged
- * * `couchbase://1.1.1.1:11207=mcds` - Host `1.1.1.1` has its SSL-enabled
- *   memcached port on `11207`.
- *
- * @note It is not allowed to specify some hosts without ports and some hosts
- * with ports.
+ * * `http://` - Will assume all ports refer to the HTTP REST API ports used
+ *   by Couchbase 2.2 and lower. These are also used when connecting to a
+ *   memcached bucket. If no port is specified it will be assumed the port is
+ *   _8091_.
  *
  * ### Bucket
  *
@@ -210,7 +187,6 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  *
  * * `couchbase://1.1.1.1,2.2.2.2,3.3.3.3/users` - Connect to the `users`
  *   bucket.
- *
  *
  * ### Options
  *
@@ -227,7 +203,9 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  *
  * * `ssl` - Specify SSL behavior. Possible values are `on` to enable SSL,
  *   `no_verify` which enables SSL but does not validate the certificate, or
- *   `off` which does not use SSL (and is the default)
+ *   `off` which does not use SSL (and is the default). Note that SSL is also
+ *   implicitly enabled if the `couchbases://` scheme is used. It is an error
+ *   to specify `ssl=off` if such a scheme is used.
  *
  * * `capath` - Specify the path to the CA certificate which has been used
  *   to sign the cluster's certificate. Only applicable if `ssl=on`.

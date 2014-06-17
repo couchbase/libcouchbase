@@ -213,38 +213,30 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
         const lcb_DSNHOST *dh = LCB_LIST_ITEM(llcur, lcb_DSNHOST, llnode);
         strcpy(host.host, dh->hostname);
 
-#define ADD_CCCP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_CCCP)
-#define ADD_HTTP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_HTTP)
+        #define ADD_CCCP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_CCCP)
+        #define ADD_HTTP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_HTTP)
 
         /* if we didn't specify any port in the spec, just use the simple
          * default port (based on the SSL settings) */
-        if (dsn->has_no_ports) {
+        if (dh->type == 0) {
             sprintf(host.port, "%d", defl_http);
             ADD_HTTP();
-
             sprintf(host.port, "%d", defl_cccp);
             ADD_CCCP();
             continue;
-        }
-
-        /* otherwise, need to inspect the ports. First check HTTP */
-        if (has_ssl) {
-            if (dh->ssl_htport) {
-                sprintf(host.port, "%d", dh->ssl_htport);
-                ADD_HTTP();
-            }
-            if (dh->ssl_memdport) {
-                sprintf(host.port, "%d", dh->ssl_memdport);
-                ADD_CCCP();
-            }
         } else {
-            if (dh->htport) {
-                sprintf(host.port, "%d", dh->htport);
-                ADD_HTTP();
-            }
-            if (dh->memdport) {
-                sprintf(host.port, "%d", dh->memdport);
+            sprintf(host.port, "%d", dh->port);
+            switch (dh->type) {
+            case LCB_CONFIG_MCD_PORT:
+            case LCB_CONFIG_MCD_SSL_PORT:
                 ADD_CCCP();
+                break;
+            case LCB_CONFIG_HTTP_PORT:
+            case LCB_CONFIG_HTTP_SSL_PORT:
+                ADD_HTTP();
+                break;
+            default:
+                break;
             }
         }
     }
