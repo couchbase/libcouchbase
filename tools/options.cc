@@ -73,6 +73,11 @@ ConnParams::fillCropts(lcb_create_st& cropts)
 
     if (o_dsn.passed()) {
         dsn = o_dsn.const_result();
+        if (dsn.find('?') == string::npos) {
+            dsn += '?';
+        } else if (dsn[dsn.size()-1] != '&') {
+            dsn += '&';
+        }
     } else {
         dsn = "couchbase://";
         dsn += host;
@@ -112,6 +117,16 @@ ConnParams::fillCropts(lcb_create_st& cropts)
     if (isAdmin) {
         dsn += "username=";
         dsn += o_user.const_result();
+        dsn += '&';
+    }
+
+    int vLevel = 1;
+    if (o_verbose.passed()) {
+        vLevel += o_verbose.numSpecified();
+        std::stringstream ss;
+        ss << std::dec << vLevel;
+        dsn += "console_log_level=";
+        dsn += ss.str();
         dsn += '&';
     }
 
@@ -159,11 +174,6 @@ ConnParams::doCtls(lcb_t instance)
         if (o_saslmech.passed()) {
             doPctl<const char *>(instance,LCB_CNTL_FORCE_SASL_MECH, o_saslmech.result().c_str());
         }
-        int vLevel = 1;
-        if (o_verbose.passed()) {
-            vLevel += o_verbose.numSpecified();
-        }
-        doSctl<int>(instance, LCB_CNTL_CONLOGGER_LEVEL, vLevel);
     } catch (lcb_error_t &err) {
         return err;
     }
