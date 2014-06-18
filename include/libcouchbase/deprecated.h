@@ -13,23 +13,30 @@ extern "C" {
  */
 
 #define LCB_DEPR_API(X) LIBCOUCHBASE_API LCB_DEPRECATED(X)
+#define LCB_DEPR_API2(X, reason) LIBCOUCHBASE_API LCB_DEPRECATED2(X, reason)
 
 /** @deprecated Use @ref LCB_CNTL_IP6POLICY via lcb_cntl() */
-LCB_DEPR_API(void lcb_behavior_set_ipv6(lcb_t instance, lcb_ipv6_t mode));
+LCB_DEPR_API2(void lcb_behavior_set_ipv6(lcb_t instance, lcb_ipv6_t mode), "Use LCB_CNTL_IP6POLICY");
 /** @deprecated Use @ref LCB_CNTL_IP6POLICY via lcb_cntl() */
-LCB_DEPR_API(lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance));
+LCB_DEPR_API2(lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance), "Use LCB_CNTL_IP6POLICY");
 /** @deprecated Use @ref LCB_CNTL_CONFERRTHRESH via lcb_cntl() */
-LCB_DEPR_API(void lcb_behavior_set_config_errors_threshold(lcb_t instance, lcb_size_t num_events));
+LCB_DEPR_API2(void lcb_behavior_set_config_errors_threshold(lcb_t instance, lcb_size_t num_events),
+    "Use LCB_CNTL_CONFERRTHRESH");
 /** @deprecated Use @ref LCB_CNTL_CONFERRTHRESH via lcb_cntl() */
-LCB_DEPR_API(lcb_size_t lcb_behavior_get_config_errors_threshold(lcb_t instance));
+LCB_DEPR_API2(lcb_size_t lcb_behavior_get_config_errors_threshold(lcb_t instance),
+    "Use LCB_CNTL_CONFERRTHRESH");
 /** @deprecated Use @ref LCB_CNTL_OP_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API(void lcb_set_timeout(lcb_t instance, lcb_uint32_t usec));
+LCB_DEPR_API2(void lcb_set_timeout(lcb_t instance, lcb_uint32_t usec),
+    "Use LCB_CNTL_OP_TIMEOUT");
 /** @deprecated Use @ref LCB_CNTL_OP_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API(lcb_uint32_t lcb_get_timeout(lcb_t instance));
+LCB_DEPR_API2(lcb_uint32_t lcb_get_timeout(lcb_t instance),
+    "Use LCB_CNTL_OP_TIMEOUT");
 /** @deprecated Use @ref LCB_CNTL_VIEW_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API(void lcb_set_view_timeout(lcb_t instance, lcb_uint32_t usec));
+LCB_DEPR_API2(void lcb_set_view_timeout(lcb_t instance, lcb_uint32_t usec),
+    "Use LCB_CNTL_VIEW_TIMEOUT");
 /** @deprecated Use @ref LCB_CNTL_VIEW_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API(lcb_uint32_t lcb_get_view_timeout(lcb_t instance));
+LCB_DEPR_API2(lcb_uint32_t lcb_get_view_timeout(lcb_t instance),
+    "Use LCB_CNTL_VIEW_TIMEOUT");
 
 /**
  * @deprecated Do not use this function. Check the error code of the specific operation
@@ -38,10 +45,13 @@ LCB_DEPR_API(lcb_uint32_t lcb_get_view_timeout(lcb_t instance));
  * fruitful. Since most API calls are themselves only schedule-related, they cannot
  * possibly derive a "Real" error either
  */
-LCB_DEPR_API(lcb_error_t lcb_get_last_error(lcb_t instance));
+LCB_DEPR_API2(lcb_error_t lcb_get_last_error(lcb_t instance),
+    "This function does not returning meaningful information. Use the operation callbacks "
+    "and/or bootstrap callbacks");
 
 /** @deprecated This function does nothing */
-LCB_DEPR_API(void lcb_flush_buffers(lcb_t instance, const void *cookie));
+LCB_DEPR_API2(void lcb_flush_buffers(lcb_t instance, const void *cookie),
+    "This function does nothing");
 
 /** I'm not sure what uses this anymore */
 typedef enum {
@@ -58,7 +68,8 @@ typedef void (*lcb_error_callback)(lcb_t instance, lcb_error_t error, const char
  * information. For programmatic errors, use the operations interface. For bootstrap
  * status, use lcb_get_bootstrap_status() and lcb_set_bootstrap_callback()
  */
-LCB_DEPR_API(lcb_error_callback lcb_set_error_callback(lcb_t, lcb_error_callback));
+LCB_DEPR_API2(lcb_error_callback lcb_set_error_callback(lcb_t, lcb_error_callback),
+    "This function only reports bootstrap errors. Use lcb_set_bootstrap_callback instead");
 
 /**
  * Timer stuff is deprecated. It should not be used externally, and internal
@@ -84,14 +95,17 @@ struct lcb_cached_config_st {
  * Use @ref LCB_CNTL_CONFIGCACHE for configuration cache options
  */
 #define lcb_create_compat lcb__create_compat_230
-LCB_DEPR_API(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io));
+LCB_DEPR_API2(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io),
+    "Legacy memcached functionality not supported. For config cache, use LCB_CNTL_CONFIGCACHE");
 
 typedef enum {
     LCB_ASYNCHRONOUS = 0x00,
     LCB_SYNCHRONOUS = 0xff
 } lcb_syncmode_t;
-LCB_DEPR_API(void lcb_behavior_set_syncmode(lcb_t, lcb_syncmode_t));
-LCB_DEPR_API(lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t));
+LCB_DEPR_API2(void lcb_behavior_set_syncmode(lcb_t, lcb_syncmode_t),
+    "Syncmode will be removed in future versions. Use lcb_wait() instead");
+LCB_DEPR_API2(lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t),
+    "Syncmode will be removed in future versions. Use lcb_wait() instead");
 
 /** WTF constants for sanity check */
 #define LCB_C_ST_ID 0

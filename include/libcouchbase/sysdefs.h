@@ -78,10 +78,17 @@ typedef lcb_cas_t lcb_CAS;
 
 #ifdef __GNUC__
 #define LCB_DEPRECATED(X) X __attribute__((deprecated))
+    #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 7)
+    #define LCB_DEPRECATED2(X, reason) X __attribute__((deprecated(reason)))
+    #else
+    #define LCB_DEPRECATED2(X, reason) LCB_DEPRECATED(X)
+    #endif
 #elif defined(_MSC_VER)
 #define LCB_DEPRECATED(X) __declspec(deprecated) X
+#define LCB_DEPRECATED2(X, reason) __declspec(deprecated(reason)) X
 #else
 #define LCB_DEPRECATED(X) X
+#define LCB_DEPRECATED2(X, reason)
 #endif
 
 #ifdef __cplusplus
