@@ -1091,8 +1091,22 @@ struct lcb_cntl_rdballocfactory {
  */
 #define LCB_CNTL_DETAILED_ERRCODES 0x2A
 
+/**
+ * @volatile
+ * Reinitialize the instance using a connection string/DSN. Only options and
+ * the hostlists are used from this string. The bucket in the string (if specified)
+ * and any SSL options (i.e. `couchbases://` or `ssl=no_verify`) are ignored.
+ *
+ *
+ * This is the newer variant of @ref LCB_CNTL_CONFIG_ALL_NODES
+ * Mode|Arg
+ * ----|---
+ * Set | `const char *`
+ */
+#define LCB_CNTL_REINIT_DSN 0x2B
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x2B
+#define LCB_CNTL__MAX                    0x2C
 /**@}*/
 
 #ifdef __cplusplus

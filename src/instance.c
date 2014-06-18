@@ -244,7 +244,6 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
 #undef ADD_CCCP
 }
 
-
 static lcb_error_t
 init_providers(lcb_t obj, const lcb_DSNPARAMS *dsn)
 {
@@ -298,22 +297,6 @@ init_providers(lcb_t obj, const lcb_DSNPARAMS *dsn)
     return LCB_SUCCESS;
 }
 
-lcb_error_t
-lcb_init_providers(lcb_t obj, const struct lcb_create_st2 *options)
-{
-    lcb_DSNPARAMS params;
-    lcb_error_t err;
-    struct lcb_create_st cropts;
-    cropts.version = 2;
-    cropts.v.v2 = *options;
-    err = lcb_dsn_convert(&params, &cropts);
-    if (err == LCB_SUCCESS) {
-        err = init_providers(obj, &params);
-    }
-    lcb_dsn_clean(&params);
-    return err;
-}
-
 static lcb_error_t
 setup_ssl(lcb_t obj, lcb_DSNPARAMS *params)
 {
@@ -355,6 +338,72 @@ setup_ssl(lcb_t obj, lcb_DSNPARAMS *params)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+apply_dsn_options(lcb_t obj, lcb_DSNPARAMS *params)
+{
+    const char *key, *value;
+    int itmp = 0;
+    lcb_error_t err;
+    while ((lcb_dsn_next_option(params, &key, &value, &itmp))) {
+        lcb_log(LOGARGS(obj, DEBUG), "Applying initial cntl %s=%s", key, value);
+        err = lcb_cntl_string(obj, key, value);
+        if (err != LCB_SUCCESS) {
+            return err;
+        }
+    }
+    return LCB_SUCCESS;
+}
+
+lcb_error_t
+lcb_init_providers2(lcb_t obj, const struct lcb_create_st2 *options)
+{
+    lcb_DSNPARAMS params;
+    lcb_error_t err;
+    struct lcb_create_st cropts;
+    cropts.version = 2;
+    cropts.v.v2 = *options;
+    err = lcb_dsn_convert(&params, &cropts);
+    if (err == LCB_SUCCESS) {
+        err = init_providers(obj, &params);
+    }
+    lcb_dsn_clean(&params);
+    return err;
+}
+
+lcb_error_t
+lcb_reinit3(lcb_t obj, const char *dsn)
+{
+    lcb_DSNPARAMS params;
+    lcb_error_t err;
+    const char *errmsg = NULL;
+    memset(&params, 0, sizeof params);
+    err = lcb_dsn_parse(dsn, &params, &errmsg);
+
+    if (err != LCB_SUCCESS) {
+        lcb_log(LOGARGS(obj, ERROR), "Couldn't reinit: %s", errmsg);
+    }
+
+    if (params.sslopts != LCBT_SETTING(obj, sslopts) || params.capath) {
+        lcb_log(LOGARGS(obj, WARN), "Ignoring SSL reinit options");
+    }
+
+    /* apply the options */
+    err = apply_dsn_options(obj, &params);
+    if (err != LCB_SUCCESS) {
+        goto GT_DONE;
+    }
+
+    populate_nodes(obj, &params);
+    err = init_providers(obj, &params);
+    if (err != LCB_SUCCESS) {
+        goto GT_DONE;
+    }
+
+    GT_DONE:
+    lcb_dsn_clean(&params);
+    return err;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_create(lcb_t *instance,
                        const struct lcb_create_st *options)
@@ -365,8 +414,6 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_t obj = NULL;
     lcb_error_t err;
     lcb_settings *settings;
-    const char *key, *value;
-    int itmp = 0;
 
     if (options) {
         io_priv = options->v.v0.io;
@@ -439,12 +486,8 @@ lcb_error_t lcb_create(lcb_t *instance,
         goto GT_DONE;
     }
 
-    while ((lcb_dsn_next_option(&dsn, &key, &value, &itmp))) {
-        lcb_log(LOGARGS(obj, DEBUG), "Applying initial cntl %s=%s", key, value);
-        err = lcb_cntl_string(obj, key, value);
-        if (err != LCB_SUCCESS) {
-            goto GT_DONE;
-        }
+    if ((err = apply_dsn_options(obj, &dsn)) != LCB_SUCCESS) {
+        goto GT_DONE;
     }
 
     if (lcb_getenv_boolean("LCB_SYNC_DTOR")) {
