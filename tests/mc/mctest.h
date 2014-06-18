@@ -82,7 +82,9 @@ struct PacketWrap {
 
     void setContigKey(const char *key) {
         setKey(key);
-        LCB_KREQ_CONTIG(&cmd.key, pktbuf, strlen(key) + 24);
+        cmd.key.type = LCB_KV_HEADER_AND_KEY;
+        cmd.key.contig.bytes = pktbuf;
+        cmd.key.contig.nbytes = strlen(key) + 24;
     }
 
     void setCopyKey(const char *key) {
