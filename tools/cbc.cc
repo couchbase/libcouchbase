@@ -4,9 +4,11 @@
 #include <iostream>
 #include <fstream>
 #include <libcouchbase/vbucket.h>
+#include <stddef.h>
 #include "options.h"
 #include "histogram.h"
 #include "cbc-handlers.h"
+#include "dsn.h"
 using namespace cbc;
 
 using std::string;
@@ -796,6 +798,113 @@ BucketCreateHandler::run()
     AdminHandler::run();
 }
 
+struct HostEnt {
+    string protostr;
+    string hostname;
+    HostEnt(const char* host, const char* proto) {
+        protostr = proto;
+        hostname = host;
+    }
+    HostEnt(const char* host, const char* proto, int port) {
+        protostr = proto;
+        hostname = host;
+        stringstream ss;
+        ss << std::dec << port;
+        hostname += ":";
+        hostname += ss.str();
+    }
+};
+
+void
+DsnHandler::run()
+{
+    const string& dsn = getRequiredArg();
+    lcb_error_t err;
+    const char *errmsg;
+    lcb_DSNPARAMS params;
+    memset(&params, 0, sizeof params);
+    err = lcb_dsn_parse(dsn.c_str(), &params, &errmsg);
+    if (err != LCB_SUCCESS) {
+        throw errmsg;
+    }
+
+    printf("Bucket: %s\n", params.bucket);
+    printf("Implicit port: %d\n", params.implicit_port);
+    string sslOpts;
+    if (params.sslopts & LCB_SSL_ENABLED) {
+        sslOpts = "ENABLED";
+        if (params.sslopts & LCB_SSL_NOVERIFY) {
+            sslOpts += "|NOVERIFY";
+        }
+    }
+    printf("SSL: %s\n", sslOpts.c_str());
+
+    printf("Boostrap Protocols: ");
+    string bsStr;
+    for (size_t ii = 0; ii < LCB_CONFIG_TRANSPORT_MAX; ii++) {
+        if (params.transports[ii] == LCB_CONFIG_TRANSPORT_LIST_END) {
+            break;
+        }
+        switch (params.transports[ii]) {
+        case LCB_CONFIG_TRANSPORT_CCCP:
+            bsStr += "CCCP,";
+            break;
+        case LCB_CONFIG_TRANSPORT_HTTP:
+            bsStr += "HTTP,";
+            break;
+        default:
+            break;
+        }
+    }
+    if (bsStr.empty()) {
+        bsStr = "CCCP,HTTP";
+    } else {
+        bsStr.erase(bsStr.size()-1, 1);
+    }
+    printf("%s\n", bsStr.c_str());
+    printf("Hosts:\n");
+    lcb_list_t *llcur;
+    vector<HostEnt> hosts;
+
+    LCB_LIST_FOR(llcur, &params.hosts) {
+        lcb_DSNHOST *dh = LCB_LIST_ITEM(llcur, lcb_DSNHOST, llnode);
+        lcb_U16 port = dh->port;
+        if (!port) {
+            port = params.implicit_port;
+        }
+
+        if (dh->type == LCB_CONFIG_MCD_PORT) {
+            hosts.push_back(HostEnt(dh->hostname, "memcached", port));
+        } else if (dh->type == LCB_CONFIG_MCD_SSL_PORT) {
+            hosts.push_back(HostEnt(dh->hostname, "memcached+ssl", port));
+        } else if (dh->type == LCB_CONFIG_HTTP_PORT) {
+            hosts.push_back(HostEnt(dh->hostname, "restapi", port));
+        } else if (dh->type == LCB_CONFIG_HTTP_SSL_PORT) {
+            hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", port));
+        } else {
+            if (params.sslopts) {
+                hosts.push_back(HostEnt(dh->hostname, "memcached+ssl", LCB_CONFIG_MCD_SSL_PORT));
+                hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", LCB_CONFIG_HTTP_SSL_PORT));
+            } else {
+                hosts.push_back(HostEnt(dh->hostname, "memcached", LCB_CONFIG_MCD_PORT));
+                hosts.push_back(HostEnt(dh->hostname, "restapi", LCB_CONFIG_HTTP_PORT));
+            }
+        }
+    }
+    for (size_t ii = 0; ii < hosts.size(); ii++) {
+        HostEnt& ent = hosts[ii];
+        string protostr = "[" + ent.protostr + "]";
+        printf("  %-20s%s\n", protostr.c_str(), ent.hostname.c_str());
+    }
+
+    printf("Options: \n");
+    const char *key, *value;
+    int ictx = 0;
+    while (lcb_dsn_next_option(&params, &key, &value, &ictx)) {
+        printf("  %s=%s\n", key, value);
+    }
+}
+
 static map<string,Handler*> handlers;
 static map<string,Handler*> handlers_s;
 static const char* optionsOrder[] = {
@@ -819,6 +928,7 @@ static const char* optionsOrder[] = {
         "bucket-create",
         "bucket-delete",
         "bucket-flush",
+        "dsn",
         NULL
 };
 
@@ -860,6 +970,7 @@ setupHandlers()
     handlers_s["bucket-delete"] = new BucketDeleteHandler();
     handlers_s["bucket-flush"] = new BucketFlushHandler();
     handlers_s["view"] = new ViewsHandler();
+    handlers_s["dsn"] = new DsnHandler();
 
 
 

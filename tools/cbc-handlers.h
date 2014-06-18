@@ -336,5 +336,14 @@ protected:
     }
 };
 
+class DsnHandler : public Handler {
+public:
+    HANDLER_DESCRIPTION("Parse a connection string and provide info on its components")
+    DsnHandler() : Handler("dsn") {}
+protected:
+    void handleOptions() { }
+    void run();
+};
+
 }
 #endif
