@@ -98,7 +98,9 @@ print $ofp "pkginclude_HEADERS = ".fmt_filelist(@PKGINCLUDE_HEADERS)."\n";
 my @LCB_SOURCES = (find_srcfiles("src"), find_srcfiles("plugins/io/select"));
 @LCB_SOURCES = grep { $_ !~ m,src/ssl, && $_ !~ m,src/lcbht, } @LCB_SOURCES;
 print $ofp "libcouchbase_la_SOURCES += ".fmt_filelist(@LCB_SOURCES)."\n";
-print $ofp "libcouchbase_la_SOURCES += contrib/cJSON/cJSON.c\n";
+print $ofp "libcouchbase_la_SOURCES += ".fmt_filelist(find_srcfiles("contrib/cJSON"))."\n";
+print $ofp "libcouchbase_la_SOURCES += ".fmt_filelist(find_srcfiles("include/memcached"))."\n";
+print $ofp "libcouchbase_la_SOURCES += ".fmt_filelist(find_srcfiles("include/ep-engine"))."\n";
 print $ofp "if HAVE_WINSOCK2\n";
 print $ofp "libcouchbase_la_SOURCES +=".
             fmt_filelist(find_srcfiles("plugins/io/iocp"))."\n";
@@ -124,12 +126,10 @@ add_target_with_sources("librdb", "src/rdb");
 add_target_with_sources("libmcreq", "src/mc");
 add_target_with_sources("libnetbuf", "src/netbuf");
 add_target_with_sources("libcliopts", "contrib/cliopts");
-add_target_with_sources("liblcbht", "src/lcbht", ["contrib/http_parser/http_parser.c"]);
+add_target_with_sources("liblcbht", "src/lcbht", [find_srcfiles("contrib/http_parser")]);
 
 print $ofp "if HAVE_CXX\nif BUILD_TOOLS\n";
-add_target("liblcbtools");
-my @TOOLS_SOURCES = qw(tools/options.cc tools/histogram.cc);
-print $ofp "liblcbtools_la_SOURCES = ".fmt_filelist(@TOOLS_SOURCES) . "\n";
+add_target_with_sources("liblcbtools", "tools/common", [find_srcfiles("contrib/cliopts")]);
 print $ofp "endif\nendif\n";
 
 my @CBUTIL_SOURCES = qw(contrib/cJSON/cJSON.c src/strcodecs/base64.c
@@ -167,3 +167,14 @@ endif
 endif
 endif
 EOF
+
+
+# Write the EXTRA_DIST
+print $ofp "EXTRA_DIST =\n";
+my @cmakes = map { chomp($_); $_; } qx(git ls-files | grep CMakeLists.txt);
+push @cmakes, 'cmake';
+
+print $ofp "EXTRA_DIST +=".fmt_filelist(@cmakes)."\n";
+my @doxystuff = (qw(Doxyfile DoxygenLayout.xml));
+push @doxystuff, map { chomp($_); $_; } qx(git ls-files doc);
+print $ofp "EXTRA_DIST +=".fmt_filelist(@doxystuff)."\n";

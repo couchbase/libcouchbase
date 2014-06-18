@@ -289,31 +289,15 @@ uninstall-local:
 	cd $(DESTDIR)$(bindir) && $(RM) $(CBC_LINKS)
 endif
 
-EXTRA_DIST = \
-             CMakeLists.txt \
-             cmake \
-             tests/CMakeLists.txt \
-			 tools/CMakeLists.txt \
-             plugins/io/iocp/CMakeLists.txt \
-             plugins/io/libev/CMakeLists.txt \
-             plugins/io/libuv/CMakeLists.txt \
-             plugins/io/select/CMakeLists.txt \
-             plugins/io/libevent/CMakeLists.txt \
-             contrib/cbsasl/CMakeLists.txt \
-             CONTRIBUTING.md \
-             LICENSE \
-             Makefile.manpage.inc \
-             README.markdown \
-             RELEASE_NOTES.markdown \
-             include/ep-engine/README \
-             include/libcouchbase/configuration.h.in \
-             include/memcached/COPYING \
-             include/memcached/README \
-             man/bsd \
-             man/svr4 \
-             tests/start_mock.sh \
-             win32 \
-             VERSION
+EXTRA_DIST += CONTRIBUTING.md LICENSE Makefile.manpage.inc README.markdown \
+              RELEASE_NOTES.markdown \
+              include/libcouchbase/configuration.h.in \
+              include/memcached/README include/memcached/COPYING \
+              man/bsd \
+              man/svr4 \
+              tests/start_mock.sh \
+              win32 \
+              VERSION
 
 if HAVE_DOXYGEN
 endif
