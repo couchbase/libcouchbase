@@ -301,7 +301,7 @@ void hostlist_randomize(hostlist_t hostlist)
         return;
     }
 
-    srand(gethrtime());
+    srand((unsigned)(gethrtime()<<31));
     for (ii = 0; ii < hostlist->nentries - 1; ii++) {
         lcb_size_t nn = ii + (rand() /
                              ((RAND_MAX / (hostlist->nentries - ii)) + 1));

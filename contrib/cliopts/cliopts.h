@@ -162,13 +162,13 @@ public:
     typedef TOption<T,Targ> Ttype;
 
     TOption(char shortname, const char *longname = NULL, T deflval = T(),
-        const char *help = NULL) {
+        const char *helpstr = NULL) {
         memset((cliopts_entry *)this, 0, sizeof(cliopts_entry));
         ktype = Targ;
         klong = longname;
 
         abbrev(shortname);
-        description(help);
+        description(helpstr);
         setDefault(deflval);
     }
 

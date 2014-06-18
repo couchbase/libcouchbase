@@ -542,13 +542,13 @@ mcreq_sched_add(mc_PIPELINE *pipeline, mc_PACKET *pkt)
 }
 
 static mc_PACKET *
-pipeline_find(mc_PIPELINE *pipeline, lcb_uint32_t opaque, int remove)
+pipeline_find(mc_PIPELINE *pipeline, lcb_uint32_t opaque, int do_remove)
 {
     sllist_iterator iter;
     SLLIST_ITERFOR(&pipeline->requests, &iter) {
         mc_PACKET *pkt = SLLIST_ITEM(iter.cur, mc_PACKET, slnode);
         if (pkt->opaque == opaque) {
-            if (remove) {
+            if (do_remove) {
                 sllist_iter_remove(&pipeline->requests, &iter);
             }
             return pkt;

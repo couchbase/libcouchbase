@@ -256,6 +256,7 @@ static unsigned int close_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
     my_sockdata_t *sock = (my_sockdata_t *)sockbase;
     sock->uv_close_called = 1;
     uv_close((uv_handle_t *)&sock->tcp, socket_closed_callback);
+    (void)iobase;
     return 0;
 }
 

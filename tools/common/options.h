@@ -43,7 +43,6 @@ private:
     std::string bucket;
     std::string passwd;
     std::string host;
-    lcb_config_transport_t transports[3];
     bool isAdmin;
 };
 

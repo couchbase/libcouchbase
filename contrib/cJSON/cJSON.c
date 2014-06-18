@@ -109,7 +109,7 @@ static cJSON_PoolBlock *cJSON_New_PoolBlock(cJSON_Pool *pool)
 }
 
 /* This will create an allocation pool */
-static cJSON_Pool * cJSON_New_Pool()
+static cJSON_Pool * cJSON_New_Pool(void)
 {
     if (CJSON_POOL_ALLOC_SIZE <= 0) {
         return 0;

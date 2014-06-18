@@ -490,7 +490,7 @@ UnlockHandler::run()
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < args.size(); ii += 2) {
         const string& key = args[ii];
-        unsigned long long cas;
+        lcb_CAS cas;
         int rv;
         rv = sscanf(args[ii+1].c_str(), "0x%"PRIx64, &cas);
         if (rv != 1) {
@@ -818,22 +818,22 @@ struct HostEnt {
 void
 DsnHandler::run()
 {
-    const string& dsn = getRequiredArg();
+    const string& dsn_s = getRequiredArg();
     lcb_error_t err;
     const char *errmsg;
-    lcb_DSNPARAMS params;
-    memset(&params, 0, sizeof params);
-    err = lcb_dsn_parse(dsn.c_str(), &params, &errmsg);
+    lcb_DSNPARAMS dsn;
+    memset(&dsn, 0, sizeof dsn);
+    err = lcb_dsn_parse(dsn_s.c_str(), &dsn, &errmsg);
     if (err != LCB_SUCCESS) {
         throw errmsg;
     }
 
-    printf("Bucket: %s\n", params.bucket);
-    printf("Implicit port: %d\n", params.implicit_port);
+    printf("Bucket: %s\n", dsn.bucket);
+    printf("Implicit port: %d\n", dsn.implicit_port);
     string sslOpts;
-    if (params.sslopts & LCB_SSL_ENABLED) {
+    if (dsn.sslopts & LCB_SSL_ENABLED) {
         sslOpts = "ENABLED";
-        if (params.sslopts & LCB_SSL_NOVERIFY) {
+        if (dsn.sslopts & LCB_SSL_NOVERIFY) {
             sslOpts += "|NOVERIFY";
         }
     }
@@ -842,10 +842,10 @@ DsnHandler::run()
     printf("Boostrap Protocols: ");
     string bsStr;
     for (size_t ii = 0; ii < LCB_CONFIG_TRANSPORT_MAX; ii++) {
-        if (params.transports[ii] == LCB_CONFIG_TRANSPORT_LIST_END) {
+        if (dsn.transports[ii] == LCB_CONFIG_TRANSPORT_LIST_END) {
             break;
         }
-        switch (params.transports[ii]) {
+        switch (dsn.transports[ii]) {
         case LCB_CONFIG_TRANSPORT_CCCP:
             bsStr += "CCCP,";
             break;
@@ -866,11 +866,11 @@ DsnHandler::run()
     lcb_list_t *llcur;
     vector<HostEnt> hosts;
 
-    LCB_LIST_FOR(llcur, &params.hosts) {
+    LCB_LIST_FOR(llcur, &dsn.hosts) {
         lcb_DSNHOST *dh = LCB_LIST_ITEM(llcur, lcb_DSNHOST, llnode);
         lcb_U16 port = dh->port;
         if (!port) {
-            port = params.implicit_port;
+            port = dsn.implicit_port;
         }
 
         if (dh->type == LCB_CONFIG_MCD_PORT) {
@@ -882,7 +882,7 @@ DsnHandler::run()
         } else if (dh->type == LCB_CONFIG_HTTP_SSL_PORT) {
             hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", port));
         } else {
-            if (params.sslopts) {
+            if (dsn.sslopts) {
                 hosts.push_back(HostEnt(dh->hostname, "memcached+ssl", LCB_CONFIG_MCD_SSL_PORT));
                 hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", LCB_CONFIG_HTTP_SSL_PORT));
             } else {
@@ -900,7 +900,7 @@ DsnHandler::run()
     printf("Options: \n");
     const char *key, *value;
     int ictx = 0;
-    while (lcb_dsn_next_option(&params, &key, &value, &ictx)) {
+    while (lcb_dsn_next_option(&dsn, &key, &value, &ictx)) {
         printf("  %s=%s\n", key, value);
     }
 }

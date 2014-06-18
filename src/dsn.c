@@ -109,6 +109,7 @@ parse_hosts(PARSECTX *ctx, const char *hosts_end)
         port_s = strchr(ctx->scratch, ':');
         if (port_s == NULL) {
             hostlen = curlen;
+            portlen = 0;
             out->flags |= F_NOPORTS;
         } else {
             hostlen = port_s - ctx->scratch;

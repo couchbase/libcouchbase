@@ -6,7 +6,7 @@
 #define MD5Update vb__MD5Update
 
 #include <stdlib.h>
-#include "rfc1321/md5c.c"
+#include "rfc1321/md5c-inl.h"
 #include "hash.h"
 
 void vb__hash_md5(const char *key, size_t key_length, unsigned char *result)

@@ -13,9 +13,9 @@ static void* startfunc(void *arg)
 }
 }
 
-Thread::Thread(StartFunc fn, void *arg)
+Thread::Thread(StartFunc startfn, void *arg)
 {
-    this->fn = fn;
+    this->fn = startfn;
     this->fnparam = arg;
     initialized = true;
     pthread_create(&thr, NULL, startfunc, this);

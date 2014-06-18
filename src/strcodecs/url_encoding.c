@@ -163,7 +163,7 @@ lcb_error_t lcb_urlencode_path(const char *path,
 int
 lcb_urldecode(const char *in, char *out, lcb_SSIZE n)
 {
-    unsigned iix, oix = 0;
+    int iix, oix = 0;
     if (n == -1) {
         n = strlen(in);
     }

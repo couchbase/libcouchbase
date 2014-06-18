@@ -262,7 +262,7 @@ fake_signal(void *arg)
 }
 
 static int
-start_watch(lcb_io_opt_t iops, lcb_socket_t socket, void *event, short which,
+start_watch(lcb_io_opt_t iops, lcb_socket_t sock, void *event, short which,
             void *uarg, lcb_ioE_callback callback)
 {
     lcbio_ESSL *es = ES_FROM_IOPS(iops);
@@ -273,7 +273,7 @@ start_watch(lcb_io_opt_t iops, lcb_socket_t socket, void *event, short which,
     SCHEDULE_PENDING_SAFE(es);
 
     (void)event;
-    (void)socket;
+    (void)sock;
 
     return 0;
 

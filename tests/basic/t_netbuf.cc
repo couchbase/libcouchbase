@@ -306,7 +306,6 @@ TEST_F(NetbufTest, testCyclicFlush)
     nb_IOV iov[4];
     nb_MGR mgr;
     nb_SETTINGS settings;
-    char cmparr[10];
     int niov;
     unsigned nb;
 

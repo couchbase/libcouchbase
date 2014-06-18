@@ -450,6 +450,8 @@ handle_read(lcbio_CTX *ioctx, unsigned nb)
     } else {
         goto GT_NEXT_PACKET;
     }
+
+    (void)nb;
 }
 
 static void

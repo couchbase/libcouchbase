@@ -12,8 +12,8 @@
 
     #if defined(__linux__)
         #include <sys/syscall.h>
-        #define GET_THREAD_ID() syscall(SYS_gettid)
-        #define THREAD_ID_FMT "d"
+        #define GET_THREAD_ID() (long)syscall(SYS_gettid)
+        #define THREAD_ID_FMT "ld"
 
     #elif defined(__APPLE__)
         #define GET_THREAD_ID() pthread_mach_thread_np(pthread_self())

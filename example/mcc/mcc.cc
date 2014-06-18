@@ -218,18 +218,6 @@ static void get_callback(lcb_t, const void *cookie, lcb_error_t error,
     }
 }
 
-static void error_callback(lcb_t instance,
-                           lcb_error_t error,
-                           const char *errinfo)
-{
-    std::cerr << "An error occurred: " << lcb_strerror(instance, error);
-    if (errinfo) {
-        std::cerr << " (" << errinfo << ")";
-    }
-    std::cerr << std::endl;
-    exit(1);
-}
-
 int main(int argc, char **argv)
 {
     std::list<std::string> clusters;

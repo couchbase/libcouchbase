@@ -334,7 +334,11 @@ mblock_release_data(nb_MBPOOL *pool,
         }
 
     } else {
-        nb_SPAN span = { block, offset, size };
+        nb_SPAN span;
+
+        span.parent = block;
+        span.offset = offset;
+        span.size = size;
         ooo_queue_dealoc(pool->mgr, block, &span);
         return;
     }
@@ -553,7 +557,9 @@ netbuf_enqueue(nb_MGR *mgr, const nb_IOV *bufinfo)
 void
 netbuf_enqueue_span(nb_MGR *mgr, nb_SPAN *span)
 {
-    nb_IOV spinfo = NETBUF_IOV_INIT(SPAN_BUFFER(span), span->size);
+    nb_IOV spinfo;
+    spinfo.iov_base = SPAN_BUFFER(span);
+    spinfo.iov_len = span->size;
     netbuf_enqueue(mgr, &spinfo);
 }
 

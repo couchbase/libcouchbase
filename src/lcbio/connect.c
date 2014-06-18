@@ -27,7 +27,7 @@ typedef enum {
     CS_CANCELLED,
     CS_TIMEDOUT,
     CS_CONNECTED,
-    CS_ERROR,
+    CS_ERROR
 } connect_state;
 
 typedef struct lcbio_CONNSTART {

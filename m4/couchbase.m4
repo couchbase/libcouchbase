@@ -74,12 +74,11 @@ AC_DEFUN([COUCHBASE_GENERIC_COMPILER], [
   GCC_C99=-std=gnu99
   GCC_LDFLAGS=""
   GCC_CPP_WARNINGS="-Wall -pedantic -Wshadow -fdiagnostics-show-option -Wformat -fno-strict-aliasing -Wno-strict-aliasing -Wextra -Winit-self"
+  GCC_CPP_WARNINGS+=" -Wno-missing-field-initializers"
   AS_IF([test "$ac_cv_enable_wconversion" = "yes" ],
         [GCC_CPP_WARNINGS="$GCC_CPP_WARNINGS -Wconversion"])
   GCC_C_COMPILER_WARNINGS="-Wundef -Wstrict-prototypes -Wmissing-prototypes -Wredundant-decls -Wmissing-declarations -Wcast-align"
-  GCC_C_COMPILER_WARNINGS+=" -Wno-missing-field-initializers"
   GCC_CXX_COMPILER_WARNINGS="-std=gnu++98 -Woverloaded-virtual -Wnon-virtual-dtor -Wctor-dtor-privacy -Wno-long-long -Wno-redundant-decls"
-  GCC_CXX_COMPILER_WARNINGS+=" -Wno-missing-field-initializers"
 
   SPRO_NO_WERROR="-errwarn=%none"
   SPRO_WERROR="-errwarn=%all"

@@ -118,7 +118,7 @@ TEST_F(SListTests, testExtendedIter)
         free(elem);
     }
 
-    ASSERT_NZ(SLLIST_IS_EMPTY(&sl));
+    ASSERT_TRUE(SLLIST_IS_EMPTY(&sl));
     memset(elemp, 0, sizeof(*elemp) * BASIC_NELEM);
 
     // Delete only the first element of the list. Repopulate
@@ -139,7 +139,7 @@ TEST_F(SListTests, testExtendedIter)
         itercount++;
     }
     ASSERT_EQ(BASIC_NELEM-1, itercount);
-    ASSERT_NZ(SLLIST_IS_EMPTY(&sl));
+    ASSERT_TRUE(SLLIST_IS_EMPTY(&sl));
 
     // Delete only the middle element
     fillDynamicSlist(&sl, elemp, BASIC_NELEM);
@@ -165,7 +165,7 @@ TEST_F(SListTests, testExtendedIter)
             elemp[BASIC_NELEM-1] = NULL;
         }
     }
-    ASSERT_Z(SLLIST_IS_EMPTY(&sl));
+    ASSERT_FALSE(SLLIST_IS_EMPTY(&sl));
     SLLIST_ITERFOR(&sl, &iter) {
         my_elem *elem = SLLIST_ITEM(iter.cur, struct my_elem, slnode);
         sllist_iter_remove(&sl, &iter);

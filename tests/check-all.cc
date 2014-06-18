@@ -81,8 +81,8 @@ public:
     TestConfiguration() :
         opt_debugger("debugger"), opt_plugins("plugins"), opt_jobs("jobs"),
         opt_srcdir("srcdir"), opt_bindir("testdir"), opt_interactive("interactive"),
-        opt_verbose("verbose"), opt_bins("tests"), opt_cycles("repeat"),
-        opt_libdir("libdir"), opt_realcluster("cluster")
+        opt_verbose("verbose"), opt_cycles("repeat"), opt_libdir("libdir"),
+        opt_bins("tests"), opt_realcluster("cluster")
     {
         opt_debugger.abbrev('d')
                 .description("Verbatim string to prepend to the binary command line");

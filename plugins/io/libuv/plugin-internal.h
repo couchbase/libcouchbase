@@ -135,7 +135,7 @@ typedef struct {
  ** Common Macros                                                            **
  ******************************************************************************
  ******************************************************************************/
-#define PTR_FROM_FIELD(t, p, fld) ((t*)((char*)p-(offsetof(t, fld))))
+#define PTR_FROM_FIELD(t, p, fld) ((t*)(void*)((char*)p-(offsetof(t, fld))))
 
 #define incref_iops(io) (io)->iops_refcount++
 

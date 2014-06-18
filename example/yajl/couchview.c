@@ -379,19 +379,6 @@ static void complete_callback(lcb_http_request_t request,
     (void)instance;
 }
 
-static void error_callback(lcb_t instance,
-                           lcb_error_t error,
-                           const char *errinfo)
-{
-    (void)instance;
-    fprintf(stderr, "Error %d", error);
-    if (errinfo) {
-        fprintf(stderr, ": %s", errinfo);
-    }
-    fprintf(stderr, "\n");
-    exit(EXIT_FAILURE);
-}
-
 int main(int argc, char **argv)
 {
     char *uri;

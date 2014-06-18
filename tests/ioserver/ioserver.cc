@@ -54,7 +54,6 @@ TestServer::TestServer()
 
 TestServer::~TestServer()
 {
-    void *res;
     close();
     mutex.lock();
     std::list<TestConnection*>::iterator iter = conns.begin();

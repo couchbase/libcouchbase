@@ -101,7 +101,7 @@ seg_alloc(rdb_ALLOCATOR *abase, unsigned size)
         }
 
         while (newsize < size) {
-            newsize *= 1.5;
+            newsize = (unsigned) ((double)newsize * 1.5);
         }
 
         newseg->root = malloc(newsize);
