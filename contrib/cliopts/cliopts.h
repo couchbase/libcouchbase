@@ -142,6 +142,7 @@ class Option : protected cliopts_entry {
 public:
     bool passed() const { return found != 0; }
     int numSpecified() const { return found; }
+    Option() { memset(this, 0, sizeof (cliopts_entry)); }
 protected:
     union {
         int i;
