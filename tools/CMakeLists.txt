@@ -1,6 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 INCLUDE_DIRECTORIES(${SOURCE_ROOT}/contrib/cliopts)
-ADD_LIBRARY(lcbtools STATIC histogram.cc options.cc ${SOURCE_ROOT}/contrib/cliopts/cliopts.c)
+FILE(GLOB T_COMMONSRC common/*.cc)
+ADD_LIBRARY(lcbtools STATIC ${T_COMMONSRC} ${SOURCE_ROOT}/contrib/cliopts/cliopts.c)
 
 ADD_EXECUTABLE(cbc cbc.cc)
 SET_PROPERTY(TARGET cbc PROPERTY DEBUG_OUTPUT_NAME "cbc_d")

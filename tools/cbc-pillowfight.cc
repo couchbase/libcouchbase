@@ -33,8 +33,8 @@
 #define usleep(n) Sleep(n/1000)
 #endif
 #include <cstdarg>
-#include "options.h"
-#include "histogram.h"
+#include "common/options.h"
+#include "common/histogram.h"
 
 using namespace std;
 using namespace cbc;

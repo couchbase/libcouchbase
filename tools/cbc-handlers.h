@@ -1,8 +1,8 @@
 #ifndef CBC_HANDLERS_H
 #define CBC_HANDLERS_H
 #include "config.h"
-#include "options.h"
-#include "histogram.h"
+#include "common/options.h"
+#include "common/histogram.h"
 
 namespace cbc {
 #define HANDLER_DESCRIPTION(s) std::string description() const { return s; }

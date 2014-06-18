@@ -1,12 +1,12 @@
-#include "my_inttypes.h"
+#include "common/my_inttypes.h"
 #include <map>
 #include <sstream>
 #include <iostream>
 #include <fstream>
 #include <libcouchbase/vbucket.h>
 #include <stddef.h>
-#include "options.h"
-#include "histogram.h"
+#include "common/options.h"
+#include "common/histogram.h"
 #include "cbc-handlers.h"
 #include "dsn.h"
 using namespace cbc;
