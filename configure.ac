@@ -83,7 +83,9 @@ COUCHBASE_GENERIC_COMPILER(c99)
 AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
 AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
 CHANGESET=GIT_CHANGESET
+REVDESCRIBE=GIT_DESCRIBE
 AC_SUBST(CHANGESET)
+AC_SUBST(REVDESCRIBE)
 
 #
 # To ensure that we don't break applications in mysterious ways we need
