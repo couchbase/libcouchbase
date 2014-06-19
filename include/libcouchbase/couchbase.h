@@ -40,6 +40,7 @@ typedef struct lcb_timer_st *lcb_timer_t;
 #include <libcouchbase/iops.h>
 #include <libcouchbase/http.h>
 #include <libcouchbase/envvars.h>
+#include <libcouchbase/configuration.h>
 
 #ifdef __cplusplus
 #include <cstdlib>
@@ -3058,6 +3059,76 @@ lcb_error_t lcb_get_timings(lcb_t instance,
 /**@}*/
 
 /**
+* @ingroup LCB_PUBAPI
+* @defgroup LCB_BUILDINFO Build and version information for the library
+* These functions and macros may be used to conditionally compile features
+* depending on the version of the library being used. They may also be used
+* to employ various features at runtime and to retrieve the version for
+* informational purposes.
+* @addtogroup LCB_BUILDINFO
+* @{
+*/
+
+#if !defined(LCB_VERSION_STRING) || defined(__LCB_DOXYGEN__)
+/** @brief libcouchbase version string */
+#define LCB_VERSION_STRING "unknown"
+#endif
+
+#if !defined(LCB_VERSION) || defined(__LCB_DOXYGEN__)
+/**@brief libcouchbase hex version
+ *
+ * This number contains the hexadecimal representation of the library version.
+ * It is in a format of `0xXXYYZZ` where `XX` is the two digit major version
+ * (e.g. `02`), `YY` is the minor version (e.g. `05`) and `ZZ` is the patch
+ * version (e.g. `24`).
+ *
+ * For example:
+ *
+ * String   |Hex
+ * ---------|---------
+ * 2.0.0    | 0x020000
+ * 2.1.3    | 0x020103
+ * 3.0.15   | 0x030015
+ */
+#define LCB_VERSION 0x000000
+#endif
+
+#if !defined(LCB_VERSION_CHANGESET) || defined(__LCB_DOXYGEN__)
+/**@brief The SCM revision ID. @see LCB_CNTL_CHANGESET */
+#define LCB_VERSION_CHANGESET "0xdeadbeef"
+#endif
+
+/**
+ * Get the version of the library.
+ *
+ * @param version where to store the numeric representation of the
+ *         version (or NULL if you don't care)
+ *
+ * @return the textual description of the version ('\0'
+ *          terminated). Do <b>not</b> try to release this string.
+ *
+ */
+LIBCOUCHBASE_API
+const char *lcb_get_version(lcb_uint32_t *version);
+
+/**@brief Whether the library has SSL support*/
+#define LCB_SUPPORTS_SSL 1
+/**@brief Whether the library has experimental compression support */
+#define LCB_SUPPORTS_SNAPPY 2
+
+/**
+ * @committed
+ * Determine if this version has support for a particularl feature
+ * @param n the feature ID to check for
+ * @return 0 if not supported, nonzero if supported.
+ */
+LIBCOUCHBASE_API
+int
+lcb_supports_feature(int n);
+
+/**@}*/
+
+/**
  * This may be used in conjunction with the errmap callback if it wishes
  * to fallback for default behavior for the given code.
  * @uncomitted
@@ -3113,5 +3184,4 @@ void lcb_stop_loop(lcb_t instance);
 #include <libcouchbase/cntl.h>
 #include <libcouchbase/api3.h>
 #include <libcouchbase/deprecated.h>
-#include <libcouchbase/configuration.h>
-#endif
+#endif /* __cplusplus */

@@ -671,7 +671,7 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT = include/libcouchbase include/libcouchbase/configuration.h
+INPUT = include/libcouchbase
 INPUT += plugins/io/libevent/libevent_io_opts.h
 INPUT += plugins/io/libev/libev_io_opts.h
 INPUT += plugins/io/libuv/libuv_io_opts.h

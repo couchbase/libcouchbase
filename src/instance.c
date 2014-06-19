@@ -736,6 +736,23 @@ lcb_sched_fail(lcb_t instance)
     mcreq_sched_fail(&instance->cmdq);
 }
 
+LIBCOUCHBASE_API
+int
+lcb_supports_feature(int n)
+{
+    if (n == LCB_SUPPORTS_SNAPPY) {
+#ifdef LCB_NO_SNAPPY
+        return 0;
+#else
+        return 1;
+#endif
+    }
+    if (n == LCB_SUPPORTS_SSL) {
+        return lcbio_ssl_supported();
+    } else {
+        return 0;
+    }
+}
 
 LIBCOUCHBASE_API
 lcb_error_t lcb__create_compat_230(

@@ -546,16 +546,10 @@ VersionHandler::run()
         fprintf(stderr, "  IO: Default=%s, Current=%s\n",
             iops_to_string(info.v.v0.os_default), iops_to_string(info.v.v0.effective));
     }
-#ifdef LCB_NO_SNAPPY
-    fprintf(stderr, "  Compression: Not supported in compilation\n");
-#else
-    fprintf(stderr, "  Compression: Supported in compilation\n");
-#endif
-#ifdef LCB_NO_SSL
-    fprintf(stderr, "  SSL: Not supported in compilation\n");
-#else
-    fprintf(stderr, "  SSL: Supported in compilation\n");
-#endif
+    printf("  Compression (snappy): .. %s\n",
+            lcb_supports_feature(LCB_SUPPORTS_SNAPPY) ? "SUPPORTED" : "NOT SUPPORTED");
+    printf("  SSL: .. %s\n",
+            lcb_supports_feature(LCB_SUPPORTS_SSL) ? "SUPPORTED" : "NOT SUPPORTED");
 }
 
 void
