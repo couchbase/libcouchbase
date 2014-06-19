@@ -136,6 +136,7 @@ filelist.mk
 /tests/*.trs
 /tests/CouchbaseMock.jar
 /tests/check-all
+/tests/htparse-tests
 /tests/nonio-tests
 /tests/unit-tests
 /tests/mc-tests
