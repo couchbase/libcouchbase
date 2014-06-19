@@ -60,6 +60,10 @@ can_compress(lcb_t instance, const mc_PIPELINE *pipeline,
     mc_SERVER *server = (mc_SERVER *)pipeline;
     int compressopts = LCBT_SETTING(instance, compressopts);
 
+    if (mcreq_compression_supported() == 0) {
+        return 0;
+    }
+
     if (cmd->value.vtype != LCB_KV_COPY) {
         return 0;
     }
