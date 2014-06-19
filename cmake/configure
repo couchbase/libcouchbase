@@ -157,6 +157,55 @@ if ($NO_CXX) {
 }
 
 my @CM_OPTIONS = ();
+
+my @VARNAMES = (qw(CC CXX CFLAGS CPPFLAGS CXXFLAGS LDFLAGS LIBS));
+my %ENVOPTIONS = ();
+foreach my $var (@VARNAMES) {
+    $ENVOPTIONS{$var} = $ENV{$var};
+}
+
+foreach my $arg (@ARGV) {
+    my ($k,$v) = $arg =~ m/([^=]+)=(.*)/;
+    unless ($k && $v && exists $ENVOPTIONS{$k}) {
+        die("Invalid variable $arg");
+    }
+    $ENVOPTIONS{$k} = $v;
+}
+
+my $flags_common = "";
+my $flags_cxx = "";
+my $flags_cc = "";
+
+if ($ENVOPTIONS{CC}) { $CC = $ENVOPTIONS{CC}; }
+if ($ENVOPTIONS{CXX}) { $CXX = $ENVOPTIONS{CXX}; }
+if ($ENVOPTIONS{CPPFLAGS}) {
+    $flags_common = $ENVOPTIONS{CPPFLAGS};
+}
+$flags_cxx = $flags_common;
+$flags_cc = $flags_common;
+if ($ENVOPTIONS{CFLAGS}) {
+    $flags_cc .= " " . $ENVOPTIONS{CFLAGS};
+}
+if ($ENVOPTIONS{CXXFLAGS}) {
+    $flags_cxx .= " ".$ENVOPTIONS{CXXFLAGS};
+}
+if ($flags_cc) {
+    push @CM_OPTIONS, "-DCMAKE_C_FLAGS=$flags_cc";
+}
+if ($flags_cxx) {
+    push @CM_OPTIONS, "-DCMAKE_CXX_FLAGS=$flags_cxx";
+}
+if ($ENVOPTIONS{LDFLAGS}) {
+    # Flags for the linker
+    my $flags = $ENVOPTIONS{LDFLAGS};
+    foreach my $var (qw(EXE_LINKER_FLAGS SHARED_LINKER_FLAGS)) {
+        push @CM_OPTIONS, "-DCMAKE_${var}=$flags";
+    }
+}
+if ($ENVOPTIONS{LIBS}) {
+    warn("Don't know how to convert autotools 'LIBS' into CMake");
+}
+
 if ($DEBUG) {
     push @CM_OPTIONS, "-DCMAKE_BUILD_TYPE=DEBUG";
 } else {
@@ -221,6 +270,7 @@ if ($NO_SNAPPY) {
 if ($STATIC_SNAPPY) {
     push @CM_OPTIONS, "-DLCB_STATIC_SNAPPY";
 }
+
 if ($CMAKE_HOST) {
     # Write the toolchain file
     my $fname = "TOOLCHAIN-$CMAKE_HOST.cmake";
