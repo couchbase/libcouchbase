@@ -362,8 +362,8 @@ AS_IF([test "x${ac_cv_have_openssl}" != "xyes" && test "x${ac_cv_enable_ssl}" = 
       [AC_MSG_ERROR(OpenSSL development files must be installed for SSL support. Use --enable-ssl=no to force)])
 
 
-AC_ARG_ENABLE([snappy], [AS_HELP_STRING([--enable-snappy], [Enable snappy compression. @<:@default=on@:>@])],
-    [ac_cv_enable_snappy="$enableval"], [ac_cv_enable_snappy="yes"])
+AC_ARG_ENABLE([snappy], [AS_HELP_STRING([--enable-snappy], [Enable snappy compression. @<:@default=off@:>@])],
+    [ac_cv_enable_snappy="$enableval"], [ac_cv_enable_snappy="no"])
 
 AC_ARG_ENABLE([static-snappy], [AS_HELP_STRING([--enable-static-snappy], [Use bundled libsnappy. @<:@default=off@:>@])],
     [ac_cv_enable_static_snappy="$enableval"], [ac_cv_enable_static_snappy="no"])
