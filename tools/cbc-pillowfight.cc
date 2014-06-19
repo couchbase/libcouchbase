@@ -56,7 +56,8 @@ public:
         o_setPercent("ratio"),
         o_minSize("min-size"),
         o_maxSize("max-size"),
-        o_noPopulate("no-population")
+        o_noPopulate("no-population"),
+        o_pauseAtEnd("pause-at-end")
     {
         o_iterations.setDefault(100).abbrev('i').description("Number of iterations to run");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -69,6 +70,7 @@ public:
         o_minSize.setDefault(50).abbrev('m').description("Set minimum payload size");
         o_maxSize.setDefault(5120).abbrev('M').description("Set maximum payload size");
         o_noPopulate.setDefault(false).abbrev('n').description("Skip population");
+        o_pauseAtEnd.setDefault(false).abbrev('E').description("Pause at end of run (holding connections open) until user input");
     }
 
     void processOptions() {
@@ -93,6 +95,7 @@ public:
         parser.addOption(o_noPopulate);
         parser.addOption(o_minSize);
         parser.addOption(o_maxSize);
+        parser.addOption(o_pauseAtEnd);
         params.addToParser(parser);
     }
 
@@ -149,6 +152,7 @@ public:
     uint32_t getNumThreads() { return o_numThreads; }
     string& getKeyPrefix() { return prefix; }
     bool shouldntPopulate() { return o_noPopulate; }
+    bool shouldPauseAtEnd() { return o_pauseAtEnd; }
 
     void *data;
 
@@ -175,6 +179,8 @@ private:
     UIntOption o_minSize;
     UIntOption o_maxSize;
     BoolOption o_noPopulate;
+    BoolOption o_pauseAtEnd; // Should pillowfight pause execution (with
+                             // connections open) before exiting?
 } config;
 
 void log(const char *format, ...)
@@ -285,6 +291,11 @@ public:
     }
 
     ~InstancePool() {
+        if (config.shouldPauseAtEnd()) {
+            std::cout << "pause-at-end specified. " << std::endl
+                      << "Press any key to close connections and exit." << std::endl;
+            std::cin.get();
+        }
         while (!handles.empty()) {
             lcb_destroy(handles.back());
             handles.pop_back();
