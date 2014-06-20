@@ -334,7 +334,7 @@ config_updated(clconfig_provider *provider, lcbvb_CONFIG* vbc)
     unsigned ii;
     lcbvb_SVCMODE mode;
     cccp_provider *cccp = (cccp_provider *)provider;
-    if (lcbvb_get_nservers(vbc) < 1) {
+    if (LCBVB_NSERVERS(vbc) < 1) {
         return;
     }
 
@@ -344,7 +344,7 @@ config_updated(clconfig_provider *provider, lcbvb_CONFIG* vbc)
     } else {
         mode = LCBVB_SVCMODE_PLAIN;
     }
-    for (ii = 0; ii < lcbvb_get_nservers(vbc); ii++) {
+    for (ii = 0; ii < LCBVB_NSERVERS(vbc); ii++) {
         const char *mcaddr = lcbvb_get_hostport(vbc,
             ii, LCBVB_SVCTYPE_DATA, mode);
         hostlist_add_stringz(cccp->nodes, mcaddr, LCB_CONFIG_MCD_PORT);

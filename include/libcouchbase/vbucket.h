@@ -42,7 +42,10 @@ typedef enum {
     LCBVB_SVCMODE__MAX
 } lcbvb_SVCMODE;
 
-/** @brief Services which may be provided by a node */
+/**
+ * @volatile. ABI/API compatibility not guaranteed between versions
+ * @brief Services which may be provided by a node
+ */
 typedef struct {
     lcb_U16 data; /**< Data port for key-value operations (memcached protocol) */
     lcb_U16 mgmt; /**< Port for adminsitrative operations (HTTP) */
@@ -52,6 +55,8 @@ typedef struct {
 } lcbvb_SERVICES;
 
 /**
+ * @volatile. ABI/API compatibility not guaranteed between versions.
+ *
  * @brief Node in the cluster
  * This structure represents a node in the cluster. The node has a hostname
  * (@ref #hostname), and various services.
@@ -65,10 +70,12 @@ typedef struct {
     unsigned nvbs; /**< Total number of vbuckets the server has assigned */
 } lcbvb_SERVER;
 
+/**@volatile. ABI/API compatibility not guaranteed between versions */
 typedef struct {
     int servers[4];
 } lcbvb_VBUCKET;
 
+/**@volatile*/
 typedef struct {
     lcb_U32 index;
     lcb_U32 point;
@@ -81,6 +88,8 @@ typedef enum {
     LCBVB_DIST_KETAMA = 1 /**< Ketama hashing ("memcached") bucket */
 } lcbvb_DISTMODE;
 
+/**@volatile. ABI/API compatibility not guaranteed between versions.
+ * @brief Structure containing the configuration.*/
 typedef struct {
     lcbvb_DISTMODE dtype; /**< Type of bucket/distribution */
     unsigned nvb; /**< Number of vbuckets */
@@ -98,9 +107,15 @@ typedef struct {
     lcbvb_CONTINUUM *continuum; /* ketama continuums */
 } lcbvb_CONFIG;
 
+
+#define LCBVB_NSERVERS(cfg) (cfg)->nsrv
+#define LCBVB_NREPLICAS(cfg) (cfg)->nrepl
+#define LCBVB_DISTTYPE(cfg) (cfg)->dtype
+#define LCBVB_GET_SERVER(conf, ix) ((conf)->servers + ix)
+
 /**
+ * @uncommitted
  * @brief Allocate a new config
- *
  * This can be used to create new config object and load it with a JSON config,
  * optionally retrieving the error code
  * @code{.c}
@@ -116,6 +131,7 @@ lcbvb_CONFIG *
 lcbvb_create(void);
 
 /**
+ * @uncommitted
  * Parse the configuration string in `data` and return a new config object
  * @param data
  * @return A new config object, or NULL on error.
@@ -125,17 +141,21 @@ lcbvb_CONFIG *
 lcbvb_parse_json(const char *data);
 
 /**
+ * @committed
  * Load a JSON-based configuration string into a configuration object
  * @param vbc Object to populate
  * @param data NUL-terminated string to parse
  * @return 0 on success, nonzero on failure
+ * @note it is recommended to use this function rather than lcbvb_parse_json()
+ *  as this will contain the error string in the configuration in case of parse
+ *  failures.
  */
 LIBCOUCHBASE_API
 int
 lcbvb_load_json(lcbvb_CONFIG *vbc, const char *data);
 
 /**@brief Serialize the current config as a JSON string.
- *
+ * @volatile
  * Serialize the current configuration as a JSON string. The string returned is
  * NUL-terminated and should be freed using the free() function.
  */
@@ -144,6 +164,16 @@ char *
 lcbvb_save_json(lcbvb_CONFIG *vbc);
 
 /**
+ * @committed
+ * @brief Return a string indicating why parsing the configuration failed
+ * @return An error string. Do not free this string
+ */
+LIBCOUCHBASE_API
+const char *
+lcbvb_get_error(const lcbvb_CONFIG *vbc);
+
+/**
+ * @volatile
  * @brief Replace hostname placeholders with specific host string
  * This function shall replace hostname placeholists with the actual host string
  * specified in `hoststr`.
@@ -157,6 +187,7 @@ void
 lcbvb_replace_host(lcbvb_CONFIG *cfg, const char *hostname);
 
 /**
+ * @committed
  * Destroy the configuration object
  * @param conf
  */
@@ -165,6 +196,8 @@ void
 lcbvb_destroy(lcbvb_CONFIG *conf);
 
 /**
+ * @committed
+ *
  * Gets the master node index for the given vbucket
  * @param cfg The configuration
  * @param vbid The vbucket to query
@@ -177,6 +210,8 @@ int
 lcbvb_vbmaster(lcbvb_CONFIG *cfg, int vbid);
 
 /**
+ * @committed
+ *
  * Return the 0-based replica index for the given vbucket.
  * @param cfg The configuration object
  * @param vbid The vbucket to query
@@ -192,6 +227,8 @@ int
 lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix);
 
 /**
+ * @committed
+ *
  * Map a given string to a vbucket and server
  * @param cfg The configuration object
  * @param key Key to map
@@ -206,6 +243,8 @@ lcbvb_map_key(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE n,
     int *vbid, int *srvix);
 
 /**
+ * @committed
+ *
  * Maps a key to a vBucket ID
  * @param cfg The configuration
  * @param key The key to retrieve
@@ -216,11 +255,55 @@ LIBCOUCHBASE_API
 int
 lcbvb_k2vb(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE n);
 
-#define lcbvb_get_nservers(cfg) (cfg)->nsrv
-#define lcbvb_get_nreplicas(cfg) (cfg)->nrepl
-#define lcbvb_get_disttype(cfg) (cfg)->dtype
+/**@committed
+ * @brief Get the number of servers in the bucket. Note that not all servers
+ * may actually be available.
+ * @param cfg The configuration
+ * @return The number of servers
+ **/
+LIBCOUCHBASE_API
+unsigned
+lcbvb_get_nservers(const lcbvb_CONFIG *cfg);
+
+/**@committed
+ * @brief Get the number of replicas the bucket is configured with
+ * Note that not all replicas may necessarily be online or available.
+ * @param cfg the configuration
+ * @return the number of configured replicas
+ */
+LIBCOUCHBASE_API
+unsigned
+lcbvb_get_nreplicas(const lcbvb_CONFIG *cfg);
+
+/**@committed
+ * @brief Get the distribution mode (AKA bucket type) of the bucket
+ * @param cfg the configuration
+ * @return the distribution mode
+ */
+LIBCOUCHBASE_API
+lcbvb_DISTMODE
+lcbvb_get_distmode(const lcbvb_CONFIG *cfg);
+
 /**
- * Gets the port associated with a given service of a given mode on a given
+ * @committed
+ *
+ * @brief Get the revision for this configuration.
+ *
+ * The revision is an
+ * integer which is increased each time the cluster generates a new
+ * configuration. This feature is available only on configurations generated
+ * by nodes of Couchbase Server v2.5 or later.
+ *
+ * @param cfg the configuration
+ * @return The revision ID, or `-1` if the config does not have a revision
+ */
+LIBCOUCHBASE_API
+int
+lcbvb_get_revision(const lcbvb_CONFIG *cfg);
+
+/**
+ * @committed
+ * @brief Gets the port associated with a given service of a given mode on a given
  * server
  * @param cfg the config object
  * @param ix the index of the server to query
@@ -235,8 +318,9 @@ lcbvb_get_port(lcbvb_CONFIG *cfg, unsigned ix,
 
 
 /**
- * @brief Return a string for the given service
+ * @committed
  *
+ * @brief Return a string for the given service
  * This is like lcbvb_get_port but returns a string in the form of `host:port`
  * rather than the numeric port
  *
@@ -252,28 +336,6 @@ LIBCOUCHBASE_API
 const char *
 lcbvb_get_hostport(lcbvb_CONFIG *cfg, unsigned ix,
     lcbvb_SVCTYPE type, lcbvb_SVCMODE mode);
-
-/**
- * @brief Get the revision for this configuration.
- *
- * The revision is an
- * integer which is increased each time the cluster generates a new
- * configuration. This feature is available only on configurations generated
- * by nodes of Couchbase Server v2.5 or later.
- *
- * @param cfg the configuration
- * @return The revision ID, or `-1` if the config does not have a revision
- */
-LIBCOUCHBASE_API
-int
-lcbvb_get_revision(lcbvb_CONFIG *cfg);
-
-/**
- * Get the server structure for a given index
- * @param conf
- * @param ix the index for the server to fetch
- */
-#define LCBVB_GET_SERVER(conf, ix) ((conf)->servers + ix)
 
 /** @brief Structure representing changes between two configurations */
 typedef struct {
@@ -295,6 +357,8 @@ typedef enum {
 } lcbvb_CHANGETYPE, VBUCKET_CHANGE_STATUS;
 
 /**
+ * @volatile
+ *
  * @brief Compare two configurations and return information on the changes
  * @param from the original configuration to use as the base
  * @param to the new configuration
@@ -319,6 +383,8 @@ lcbvb_CHANGETYPE
 lcbvb_get_changetype(lcbvb_CONFIGDIFF *diff);
 
 /**
+ * @volatile
+ *
  * @brief Generate a sample configuration.
  * @param vb a new configuration object returned via lcbvb_create()
  * @param name the name of the bucket
@@ -338,6 +404,8 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
     unsigned nservers, unsigned nreplica, unsigned nvbuckets);
 
 /**
+ * @volatile
+ *
  * @brief Generate a sample configuration used for testing.
  * @param vb a new configuration object returned via lcbvb_create()
  * @param nservers how many nodes to place into the configuration
@@ -356,6 +424,8 @@ lcbvb_genconfig(lcbvb_CONFIG *vb,
     unsigned nservers, unsigned nreplica, unsigned nvbuckets);
 
 /**
+ * @committed
+ *
  * Get the views URL base.
  * @param cfg The configuration
  * @param ix The index of the server to fetch
@@ -365,7 +435,6 @@ lcbvb_genconfig(lcbvb_CONFIG *vb,
 LIBCOUCHBASE_API
 const char *
 lcbvb_get_capibase(lcbvb_CONFIG *cfg, unsigned ix, lcbvb_SVCMODE mode);
-
 /**@}*/
 
 /*the rest of these symbols are deprecated and should not be touched by

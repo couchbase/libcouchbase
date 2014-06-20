@@ -1029,13 +1029,21 @@ lcbvb_get_capibase(lcbvb_CONFIG *cfg, unsigned ix, lcbvb_SVCMODE mode)
     return *strp;
 }
 
-LIBCOUCHBASE_API
-int
-lcbvb_get_revision(lcbvb_CONFIG *cfg)
-{
+LIBCOUCHBASE_API int lcbvb_get_revision(const lcbvb_CONFIG *cfg) {
     return cfg->revid;
 }
-
+LIBCOUCHBASE_API unsigned lcbvb_get_nservers(const lcbvb_CONFIG *cfg) {
+    return cfg->nsrv;
+}
+LIBCOUCHBASE_API unsigned lcbvb_get_nreplicas(const lcbvb_CONFIG *cfg) {
+    return cfg->nrepl;
+}
+LIBCOUCHBASE_API lcbvb_DISTMODE lcbvb_get_distmode(const lcbvb_CONFIG *cfg) {
+    return cfg->dtype;
+}
+LIBCOUCHBASE_API const char *lcbvb_get_error(const lcbvb_CONFIG *cfg) {
+    return cfg->errstr;
+}
 /******************************************************************************
  ******************************************************************************
  ** Generation Functions                                                     **
