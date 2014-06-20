@@ -30,7 +30,7 @@
 #endif
 
 #if defined(_WIN32) && defined(LIBCOUCHBASE_INTERNAL)
-#include "win32/win_errno_sock.h"
+#include <libcouchbase/plugins/io/wsaerr.h>
 #endif
 
 #ifndef UNKNOWN
@@ -113,6 +113,14 @@
   #define UVC_READ_CB_VARS() \
       const uv_buf_t *buf = &_buf;
 
+  #define UVC_TIMER_CB(func) \
+      void func(uv_timer_t *timer, int status)
+
+  static int uvc_is_eof(uv_loop_t *loop, int error) {
+      error = uv_last_error(loop).code;
+      return error == UV_EOF;
+  }
+
   static int uvc_last_errno(uv_loop_t *loop, int error) {
       int uverr = 0;
 
@@ -151,8 +159,16 @@
 
   #define UVC_READ_CB_VARS()
 
+  #define UVC_TIMER_CB(func) \
+      void func(uv_timer_t *timer)
+
   static int uvc_last_errno(uv_loop_t *loop, int error) {
       return error;
+  }
+
+  static int uvc_is_eof(uv_loop_t *loop, int error) {
+      (void) loop;
+      return error == UV_EOF;
   }
 
 #endif

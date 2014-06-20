@@ -18,12 +18,16 @@
 #include "plugin-internal.h"
 
 static my_uvreq_t *alloc_uvreq(my_sockdata_t *sock, generic_callback_t callback);
-static void free_bufinfo_common(struct lcb_buf_info *bi);
-static void generic_close_cb(uv_handle_t *handle);
 static void set_last_error(my_iops_t *io, int error);
-static void wire_rw_ops(lcb_io_opt_t iop);
-static void wire_timer_ops(lcb_io_opt_t iop);
 static void socket_closed_callback(uv_handle_t *handle);
+
+static void wire_iops2(int version,
+                       lcb_loop_procs *loop,
+                       lcb_timer_procs *timer,
+                       lcb_bsd_procs *bsd,
+                       lcb_ev_procs *ev,
+                       lcb_completion_procs *iocp,
+                       lcb_iomodel_t *model);
 
 
 static void decref_iops(lcb_io_opt_t iobase)
@@ -140,16 +144,9 @@ lcb_error_t lcb_create_libuv_io_opts(int version,
     }
 
     iop = &ret->base;
-    iop->version = 1;
-
-    wire_timer_ops(iop);
-    wire_rw_ops(iop);
-
-    iop->v.v1.run_event_loop = run_event_loop;
-    iop->v.v1.stop_event_loop = stop_event_loop;
-
-    /* dtor */
+    iop->version = 2;
     iop->destructor = iops_lcb_dtor;
+    iop->v.v2.get_procs = wire_iops2;
 
     ret->iops_refcount = 1;
 
@@ -173,20 +170,6 @@ lcb_error_t lcb_create_libuv_io_opts(int version,
 
 #define SOCK_INCR_PENDING(s, fld) (s)->pending.fld++
 #define SOCK_DECR_PENDING(s, fld) (s)->pending.fld--
-
-static void free_bufinfo_common(struct lcb_buf_info *bi)
-{
-    if (bi->root || bi->ringbuffer) {
-        lcb_assert((void *)bi->root != (void *)bi->ringbuffer);
-    }
-    lcb_assert((bi->ringbuffer == NULL && bi->root == NULL) ||
-               (bi->root && bi->ringbuffer));
-
-    lcb_mem_free(bi->root);
-    lcb_mem_free(bi->ringbuffer);
-    bi->root = NULL;
-    bi->ringbuffer = NULL;
-}
 
 #ifdef DEBUG
 static void sock_dump_pending(my_sockdata_t *sock)
@@ -257,12 +240,9 @@ static void socket_closed_callback(uv_handle_t *handle)
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, handle, tcp);
     my_iops_t *io = (my_iops_t *)sock->base.parent;
 
-    lcb_assert(sock->refcount == 0);
-
-    free_bufinfo_common(&sock->base.read_buffer);
-
-    lcb_assert(sock->base.read_buffer.root == NULL);
-    lcb_assert(sock->base.read_buffer.ringbuffer == NULL);
+    if (sock->pending.read) {
+        CbREQ(&sock->tcp)(&sock->base, -1, sock->rdarg);
+    }
 
     memset(sock, 0xEE, sizeof(*sock));
     free(sock);
@@ -271,54 +251,12 @@ static void socket_closed_callback(uv_handle_t *handle)
 }
 
 
-/**
- * This one is asynchronously triggered, so as to ensure we don't have any
- * silly re-entrancy issues.
- */
-static void socket_closing_cb(uv_idle_t *idle, int status)
-{
-    my_sockdata_t *sock = idle->data;
-
-    uv_idle_stop(idle);
-    uv_close((uv_handle_t *)idle, generic_close_cb);
-
-    if (sock->pending.read) {
-        /**
-         * UV doesn't invoke read callbacks once the handle has been closed
-         * so we must track this ourselves.
-         */
-        lcb_assert(sock->pending.read == 1);
-        uv_read_stop((uv_stream_t *)&sock->tcp);
-        sock->pending.read--;
-        decref_sock(sock);
-    }
-
-#ifdef DEBUG
-    if (sock->pending.read || sock->pending.write) {
-        sock_dump_pending(sock);
-    }
-#endif
-
-    decref_sock(sock);
-    sock_do_uv_close(sock);
-
-    (void)status;
-}
-
 static unsigned int close_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
 {
     my_sockdata_t *sock = (my_sockdata_t *)sockbase;
-    my_iops_t *io = (my_iops_t *)iobase;
-
-    uv_idle_t *idle = calloc(1, sizeof(*idle));
-
-    lcb_assert(sock->lcb_close_called == 0);
-
-    sock->lcb_close_called = 1;
-    idle->data = sock;
-    uv_idle_init(io->loop, idle);
-    uv_idle_start(idle, socket_closing_cb);
-
+    sock->uv_close_called = 1;
+    uv_close((uv_handle_t *)&sock->tcp, socket_closed_callback);
+    (void)iobase;
     return 0;
 }
 
@@ -393,87 +331,50 @@ static int start_connect(lcb_io_opt_t iobase,
 
 /******************************************************************************
  ******************************************************************************
- ** my_writebuf_t functions                                                  **
- ******************************************************************************
- ******************************************************************************/
-static lcb_io_writebuf_t *create_writebuf(lcb_io_opt_t iobase, lcb_sockdata_t *sd)
-{
-    my_writebuf_t *ret = calloc(1, sizeof(*ret));
-
-    ret->base.parent = iobase;
-
-    (void)sd;
-    return (lcb_io_writebuf_t *)ret;
-}
-
-static void release_writebuf(lcb_io_opt_t iobase,
-                             lcb_sockdata_t *sd,
-                             lcb_io_writebuf_t *buf)
-{
-    free_bufinfo_common(&buf->buffer);
-    memset(buf, 0xff, sizeof(my_writebuf_t));
-    free(buf);
-
-    (void)iobase;
-    (void)sd;
-}
-
-
-/******************************************************************************
- ******************************************************************************
  ** Write Functions                                                          **
  ******************************************************************************
  ******************************************************************************/
-static void write_callback(uv_write_t *req, int status)
+static void write2_callback(uv_write_t *req, int status)
 {
     my_write_t *mw = (my_write_t *)req;
-    my_writebuf_t *wbuf = PTR_FROM_FIELD(my_writebuf_t, mw, write);
-    my_sockdata_t *sock = wbuf->sock;
-    lcb_io_write_cb callback = CbREQ(mw);
+    my_sockdata_t *sock = mw->sock;
 
-    if (callback) {
-        callback(&sock->base, &wbuf->base, status);
+    if (status != 0) {
+        set_last_error((my_iops_t *)sock->base.parent, status);
     }
 
-    SOCK_DECR_PENDING(sock, write);
-    decref_sock(sock);
+    mw->callback(&sock->base, status, mw->w.data);
+    free(mw);
 }
 
-static int start_write(lcb_io_opt_t iobase,
-                       lcb_sockdata_t *sockbase,
-                       lcb_io_writebuf_t *wbufbase,
-                       lcb_io_write_cb callback)
+static int start_write2(lcb_io_opt_t iobase,
+                        lcb_sockdata_t *sockbase,
+                        struct lcb_iovec_st *iov,
+                        lcb_size_t niov,
+                        void *uarg,
+                        lcb_ioC_write2_callback callback)
 {
-    my_sockdata_t *sock = (my_sockdata_t *)sockbase;
-    my_iops_t *io = (my_iops_t *)iobase;
-    my_writebuf_t *wbuf = (my_writebuf_t *)wbufbase;
-    int ii;
+    my_write_t *w;
+    my_sockdata_t *sd = (my_sockdata_t *)sockbase;
     int ret;
 
-    wbuf->sock = sock;
-    wbuf->write.callback = callback;
+    w = calloc(1, sizeof(*w));
+    w->w.data = uarg;
+    w->callback = callback;
+    w->sock = sd;
 
-    for (ii = 0; ii < 2; ii++) {
-        wbuf->uvbuf[ii].base = wbuf->base.buffer.iov[ii].iov_base;
-        wbuf->uvbuf[ii].len = (lcb_uvbuf_len_t)wbuf->base.buffer.iov[ii].iov_len;
-    }
+    ret = uv_write(&w->w, (uv_stream_t *)&sd->tcp,
+                   (uv_buf_t *)iov,
+                   niov,
+                   write2_callback);
 
-    ret = uv_write(&wbuf->write.w,
-                   (uv_stream_t *)&sock->tcp,
-                   wbuf->uvbuf,
-                   2,
-                   write_callback);
-
-    set_last_error(io, ret);
-
-    if (ret == 0) {
-        incref_sock(sock);
-        SOCK_INCR_PENDING(sock, write);
+    if (ret != 0) {
+        free(w);
+        set_last_error((my_iops_t *)iobase, -1);
     }
 
     return ret;
 }
-
 
 /******************************************************************************
  ******************************************************************************
@@ -503,10 +404,8 @@ static UVC_ALLOC_CB(alloc_cb)
     UVC_ALLOC_CB_VARS()
 
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, handle, tcp);
-    struct lcb_buf_info *bi = &sock->base.read_buffer;
-    buf->base = bi->iov[sock->cur_iov].iov_base;
-    buf->len = (lcb_uvbuf_len_t)bi->iov[sock->cur_iov].iov_len;
-    sock->cur_iov++;
+    buf->base = sock->iov.iov_base;
+    buf->len = sock->iov.iov_len;
 
     (void)suggested_size;
     UVC_ALLOC_CB_RETURN();
@@ -518,7 +417,13 @@ static UVC_READ_CB(read_cb)
 
     my_tcp_t *mt = (my_tcp_t *)stream;
     my_sockdata_t *sock = PTR_FROM_FIELD(my_sockdata_t, mt, tcp);
-    lcb_io_read_cb callback = CbREQ(mt);
+    my_iops_t *io = (my_iops_t *)sock->base.parent;
+    lcb_ioC_read2_callback callback = CbREQ(mt);
+
+    if (nread == 0) {
+        /* we have a fixed IOV between requests, so just retry again */
+        return;
+    }
 
     /**
      * XXX:
@@ -528,36 +433,34 @@ static UVC_READ_CB(read_cb)
      * that there is no more pending data within the socket buffer AND we have
      * outstanding data to deliver back to the caller.
      */
-    if (nread == 0) {
-        sock->cur_iov--;
-        return;
-    }
-
     SOCK_DECR_PENDING(sock, read);
     uv_read_stop(stream);
     CbREQ(mt) = NULL;
 
-    if (callback) {
-        callback(&sock->base, nread);
-#ifdef DEBUG
-    }  else {
-        printf("No callback specified!!\n");
-#endif
+    if (nread < 0) {
+        set_last_error(io, uvc_last_errno(io->loop, nread));
+        if (uvc_is_eof(io->loop, nread)) {
+            nread = 0;
+        }
     }
-
+    callback(&sock->base, nread, sock->rdarg);
     decref_sock(sock);
     (void)buf;
 }
 
 static int start_read(lcb_io_opt_t iobase,
                       lcb_sockdata_t *sockbase,
-                      lcb_io_read_cb callback)
+                      lcb_IOV *iov,
+                      lcb_size_t niov,
+                      void *uarg,
+                      lcb_ioC_read2_callback callback)
 {
     my_sockdata_t *sock = (my_sockdata_t *)sockbase;
     my_iops_t *io = (my_iops_t *)iobase;
     int ret;
 
-    sock->cur_iov = 0;
+    sock->iov = *iov;
+    sock->rdarg = uarg;
     sock->tcp.callback = callback;
 
     ret = uv_read_start((uv_stream_t *)&sock->tcp.t, alloc_cb, read_cb);
@@ -568,50 +471,6 @@ static int start_read(lcb_io_opt_t iobase,
         incref_sock(sock);
     }
     return ret;
-}
-
-/******************************************************************************
- ******************************************************************************
- ** Async Errors                                                             **
- ******************************************************************************
- ******************************************************************************/
-static void err_idle_cb(uv_idle_t *idle, int status)
-{
-    my_uvreq_t *uvr = (my_uvreq_t *)idle;
-    lcb_io_error_cb callback = uvr->cb.err;
-
-    uv_idle_stop(idle);
-    uv_close((uv_handle_t *)idle, generic_close_cb);
-
-    if (callback) {
-        callback(&uvr->socket->base);
-    }
-
-    decref_sock(uvr->socket);
-    (void)status;
-}
-
-
-static void send_error(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase,
-                       lcb_io_error_cb callback)
-{
-    my_sockdata_t *sock = (my_sockdata_t *)sockbase;
-    my_iops_t *io = (my_iops_t *)iobase;
-    my_uvreq_t *uvr;
-
-    if (!sock) {
-        return;
-    }
-
-    uvr = alloc_uvreq(sock, (generic_callback_t)callback);
-
-    if (!uvr) {
-        return;
-    }
-
-    uv_idle_init(io->loop, &uvr->uvreq.idle);
-    uv_idle_start(&uvr->uvreq.idle, err_idle_cb);
-    incref_sock(sock);
 }
 
 static int get_nameinfo(lcb_io_opt_t iobase,
@@ -627,33 +486,18 @@ static int get_nameinfo(lcb_io_opt_t iobase,
     return 0;
 }
 
-
-static void wire_rw_ops(lcb_io_opt_t iop)
-{
-    iop->v.v1.start_connect = start_connect;
-    iop->v.v1.create_writebuf = create_writebuf;
-    iop->v.v1.release_writebuf = release_writebuf;
-    iop->v.v1.start_write = start_write;
-    iop->v.v1.start_read = start_read;
-    iop->v.v1.create_socket = create_socket;
-    iop->v.v1.close_socket = close_socket;
-    iop->v.v1.send_error = send_error;
-    iop->v.v1.get_nameinfo = get_nameinfo;
-}
-
 /******************************************************************************
  ******************************************************************************
  ** Timer Functions                                                          **
  ** There are just copied from the old couchnode I/O code                    **
  ******************************************************************************
  ******************************************************************************/
-static void timer_cb(uv_timer_t *uvt, int status)
+static UVC_TIMER_CB(timer_cb)
 {
-    my_timer_t *timer = (my_timer_t *)uvt;
-    if (timer->callback) {
-        timer->callback(-1, 0, timer->cb_arg);
+    my_timer_t *mytimer = (my_timer_t *)timer;
+    if (mytimer->callback) {
+        mytimer->callback(-1, 0, mytimer->cb_arg);
     }
-    (void)status;
 }
 
 static void *create_timer(lcb_io_opt_t iobase)
@@ -711,17 +555,6 @@ static void destroy_timer(lcb_io_opt_t io, void *timer_opaque)
     uv_close((uv_handle_t *)timer_opaque, timer_close_cb);
 }
 
-static void wire_timer_ops(lcb_io_opt_t iop)
-{
-    /**
-     * v0 functions
-     */
-    iop->v.v1.create_timer = create_timer;
-    iop->v.v1.update_timer = update_timer;
-    iop->v.v1.delete_timer = delete_timer;
-    iop->v.v1.destroy_timer = destroy_timer;
-}
-
 static my_uvreq_t *alloc_uvreq(my_sockdata_t *sock, generic_callback_t callback)
 {
     my_uvreq_t *ret = calloc(1, sizeof(*ret));
@@ -740,7 +573,37 @@ static void set_last_error(my_iops_t *io, int error)
     io->base.v.v1.error = uvc_last_errno(io->loop, error);
 }
 
-static void generic_close_cb(uv_handle_t *handle)
+static void wire_iops2(int version,
+                       lcb_loop_procs *loop,
+                       lcb_timer_procs *timer,
+                       lcb_bsd_procs *bsd,
+                       lcb_ev_procs *ev,
+                       lcb_completion_procs *iocp,
+                       lcb_iomodel_t *model)
 {
-    free(handle);
+    *model = LCB_IOMODEL_COMPLETION;
+    loop->start = run_event_loop;
+    loop->stop = stop_event_loop;
+
+    timer->create = create_timer;
+    timer->cancel = delete_timer;
+    timer->schedule = update_timer;
+    timer->destroy = destroy_timer;
+
+    iocp->close = close_socket;
+    iocp->socket = create_socket;
+    iocp->connect = start_connect;
+    iocp->nameinfo = get_nameinfo;
+    iocp->read2 = start_read;
+    iocp->write2 = start_write2;
+
+    /** Stuff we don't use */
+    iocp->write = NULL;
+    iocp->wballoc = NULL;
+    iocp->wbfree = NULL;
+    iocp->serve = NULL;
+
+    (void)bsd;
+    (void)version;
+    (void)ev;
 }
