@@ -6,13 +6,13 @@
  */
 
 /** Convert seconds to millis */
-#define LCB_S2MS(s) ((lcb_uint32_t)s) / 1000
+#define LCB_S2MS(s) ((lcb_uint32_t)s) * 1000
 
 /** Convert seconds to microseconds */
-#define LCB_S2US(s) ((lcb_uint32_t)s) / 1000000
+#define LCB_S2US(s) ((lcb_uint32_t)s) * 1000000
 
 /** Convert seconds to nanoseconds */
-#define LCB_S2NS(s) ((hrtime_t)s) / 1000000000
+#define LCB_S2NS(s) ((hrtime_t)s) * 1000000000
 
 /** Convert nanoseconds to microseconds */
 #define LCB_NS2US(s) (lcb_uint32_t) ((s) / 1000)
