@@ -210,28 +210,37 @@ class InstanceCookie {
 public:
     InstanceCookie(lcb_t instance) {
         lcb_set_cookie(instance, this);
+        lastPrint = 0;
         if (config.isTimings()) {
             hg.install(instance, stdout);
         }
     }
+
     static InstanceCookie* get(lcb_t instance) {
         return (InstanceCookie *)lcb_get_cookie(instance);
     }
 
 
     static void dumpTimings(lcb_t instance, const char *header) {
+        time_t now = time(NULL);
         std::stringstream ss;
-        Histogram &h = get(instance)->hg;
+        InstanceCookie *ic = get(instance);
 
-        ss << "[" << std::fixed << gethrtime() / 1000000000.0 << "] " << header << std::endl;
+        if (now - ic->lastPrint > 0) {
+            ic->lastPrint = now;
+        } else {
+            return;
+        }
 
-        ss << "              +---------+---------+---------+---------+" << std::endl;
+        Histogram &h = ic->hg;
+        std::cout << "[" << std::fixed << gethrtime() / 1000000000.0 << "] " << header << std::endl;
+        std::cout << "              +---------+---------+---------+---------+" << std::endl;
         h.write();
-        ss << "              +----------------------------------------" << endl;
-        std::cout << ss.str();
+        std::cout << "              +----------------------------------------" << std::endl;
     }
 
 private:
+    time_t lastPrint;
     Histogram hg;
 };
 
