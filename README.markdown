@@ -2,6 +2,9 @@
 
 [![Build Status](https://travis-ci.org/couchbase/libcouchbase.png?branch=master)](https://travis-ci.org/couchbase/libcouchbase)
 
+**This is the maintenance branch for the 2.3 release. The current master
+branch contains a new codebase and additional features**
+
 This is the C client library for [Couchbase](http://www.couchbase.com)
 It communicates with the cluster and speaks the relevant protocols
 necessary to connect to the cluster and execute data operations.
