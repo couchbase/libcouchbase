@@ -457,6 +457,15 @@ lcb_error_t lcb_connect(lcb_t instance);
  */
 typedef void (*lcb_bootstrap_callback)(lcb_t instance, lcb_error_t err);
 
+/**
+ * @brief Set the callback for notification of success or failure of
+ * initial connection
+ * @param instance the instance
+ * @param callback the callback to set. If `NULL`, return the existing callback
+ * @return The existing (and previous) callback.
+ * @see lcb_connect()
+ * @see lcb_get_bootstrap_status()
+ */
 LIBCOUCHBASE_API
 lcb_bootstrap_callback
 lcb_set_bootstrap_callback(lcb_t instance, lcb_bootstrap_callback callback);
