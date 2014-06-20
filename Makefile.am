@@ -182,7 +182,7 @@ tests/CouchbaseMock.jar:
 	@echo "+---------------------------------------------+"
 	@echo "| Download CouchbaseMock for functional tests |"
 	@echo "+---------------------------------------------+"
-	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.7-SNAPSHOT/CouchbaseMock-0.7-20140129.023144-1.jar
+	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.8-SNAPSHOT/CouchbaseMock-0.8-20140621.030439-1.jar
 
 example_minimal_minimal_SOURCES = example/minimal/minimal.c
 example_minimal_minimal_DEPENDENCIES = libcouchbase.la
