@@ -50,7 +50,7 @@ public:
         o_numItems("num-items"),
         o_keyPrefix("key-prefix"),
         o_numThreads("num-threads"),
-        o_numInstances("num-instance"),
+        o_numInstances("num-instances"),
         o_loop("loop"),
         o_randSeed("random-seed"),
         o_setPercent("ratio"),
