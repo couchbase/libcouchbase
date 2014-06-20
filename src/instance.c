@@ -22,9 +22,6 @@
  * @todo add more documentation
  */
 #include "internal.h"
-#ifndef _WIN32
-#include <dlfcn.h>
-#endif
 #include "dsn.h"
 #include "logging.h"
 #include "hostlist.h"
