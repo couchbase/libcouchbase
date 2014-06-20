@@ -11,7 +11,7 @@ timings_callback(lcb_t, const void *cookie,
 {
     Histogram *h = (Histogram *)cookie;
     string buf;
-    fprintf(h->getOutput(), "[%3u - %3u]", min, max);
+    fprintf(h->getOutput(), "[%-4u - %-4u]", min, max);
     const char *unit = NULL;
     if (timeunit == LCB_TIMEUNIT_NSEC) {
         unit = "ns";
