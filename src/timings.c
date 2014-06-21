@@ -143,7 +143,6 @@ void lcb_record_metrics(lcb_t instance,
                         hrtime_t delta,
                         uint8_t opcode)
 {
-    (void)opcode;
     lcb_U32 num;
     struct lcb_histogram_st *hg = instance->histogram;
     if (hg == NULL) {
@@ -182,4 +181,5 @@ void lcb_record_metrics(lcb_t instance,
             hg->max = num;
         }
     }
+    (void)opcode;
 }
