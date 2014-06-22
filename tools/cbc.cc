@@ -239,11 +239,16 @@ Handler::run()
 }
 
 const string&
-Handler::getRequiredArg()
+Handler::getLoneArg(bool required)
 {
+    static string empty("");
+
     const vector<string>& args = parser.getRestArgs();
     if (args.empty() || args.size() != 1) {
-        throw "Command requires single argument";
+        if (required) {
+            throw "Command requires single argument";
+        }
+        return empty;
     }
     return args[0];
 }
@@ -899,6 +904,19 @@ DsnHandler::run()
     }
 }
 
+void
+WriteConfigHandler::run()
+{
+    lcb_create_st cropts;
+    params.fillCropts(cropts);
+    string outname = getLoneArg();
+    if (outname.empty()) {
+        outname = ConnParams::getConfigfileName();
+    }
+    // Generate the config
+    params.writeConfig(outname);
+}
+
 static map<string,Handler*> handlers;
 static map<string,Handler*> handlers_s;
 static const char* optionsOrder[] = {
@@ -923,6 +941,7 @@ static const char* optionsOrder[] = {
         "bucket-delete",
         "bucket-flush",
         "dsn",
+        "write-config",
         NULL
 };
 
@@ -965,6 +984,7 @@ setupHandlers()
     handlers_s["bucket-flush"] = new BucketFlushHandler();
     handlers_s["view"] = new ViewsHandler();
     handlers_s["dsn"] = new DsnHandler();
+    handlers_s["write-config"] = new WriteConfigHandler();
 
 
 

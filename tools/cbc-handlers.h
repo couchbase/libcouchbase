@@ -14,7 +14,8 @@ public:
     void execute(int argc, char **argv);
 
 protected:
-    virtual const std::string& getRequiredArg();
+    virtual const std::string& getLoneArg(bool required = false);
+    virtual const std::string& getRequiredArg() { return getLoneArg(true); }
     virtual void addOptions();
     virtual void run();
     cliopts::Parser parser;
@@ -342,6 +343,14 @@ public:
     DsnHandler() : Handler("dsn") {}
 protected:
     void handleOptions() { }
+    void run();
+};
+
+class WriteConfigHandler : public Handler {
+public:
+    HANDLER_DESCRIPTION("Write the configuration file based on arguments passed")
+    WriteConfigHandler() : Handler("write-config") {}
+protected:
     void run();
 };
 

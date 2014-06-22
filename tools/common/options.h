@@ -5,6 +5,9 @@
 #include <libcouchbase/couchbase.h>
 #include "contrib/cliopts/cliopts.h"
 
+#define CBC_CONFIG_FILENAME ".cbcrc"
+#define CBC_WIN32_APPDIR "Couchbase CBC Utility"
+
 namespace cbc {
 
 #define X_OPTIONS(X) \
@@ -31,6 +34,8 @@ public:
     lcb_error_t doCtls(lcb_t instance);
     bool useTimings() { return o_timings.result(); }
     void setAdminMode();
+    void writeConfig(const std::string& dest = getConfigfileName());
+    static std::string getConfigfileName();
 
 private:
 
@@ -44,6 +49,7 @@ private:
     std::string passwd;
     std::string host;
     bool isAdmin;
+    bool loadFileDefaults();
 };
 
 }
