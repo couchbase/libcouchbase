@@ -52,7 +52,6 @@ ConnParams::ConnParams() :
 void
 ConnParams::setAdminMode()
 {
-    o_passwd.mandatory(true);
     o_user.description("Administrative username").setDefault("Administrator");
     o_passwd.description("Administrative password");
     isAdmin = true;

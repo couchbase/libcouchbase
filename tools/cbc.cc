@@ -134,11 +134,11 @@ stats_callback(lcb_t, const void *, lcb_error_t err, const lcb_server_stat_resp_
     if (resp->v.v0.nbytes > 0) {
         value.assign((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
     }
-    fprintf(stderr, "%s\t%s", server.c_str(), key.c_str());
+    fprintf(stdout, "%s\t%s", server.c_str(), key.c_str());
     if (!value.empty()) {
-        fprintf(stderr, "\t%s", value.c_str());
+        fprintf(stdout, "\t%s", value.c_str());
     }
-    fprintf(stderr, "\n");
+    fprintf(stdout, "\n");
 }
 static void
 verbosity_callback(lcb_t,const void*, lcb_error_t err, const lcb_verbosity_resp_st *resp)
@@ -693,7 +693,7 @@ HttpBaseHandler::run()
     lcb_http_cmd_st cmd;
     memset(&cmd, 0, sizeof cmd);
     string uri = getURI();
-    string body = getBody();
+    const string& body = getBody();
 
     cmd.v.v0.method = getMethod();
     cmd.v.v0.chunked = 1;
@@ -735,6 +735,25 @@ HttpBaseHandler::getMethod()
     } else {
         throw "Unrecognized method string";
     }
+}
+
+const string&
+HttpBaseHandler::getBody()
+{
+    if (!body_cached.empty()) {
+        return body_cached;
+    }
+    lcb_http_method_t meth = getMethod();
+    if (meth == LCB_HTTP_METHOD_GET || meth == LCB_HTTP_METHOD_DELETE) {
+        return body_cached; // empty
+    }
+
+    char buf[4096];
+    size_t nr;
+    while ( (nr = fread(buf, 1, sizeof buf, stdin)) != 0) {
+        body_cached.append(buf, nr);
+    }
+    return body_cached;
 }
 
 void
@@ -996,25 +1015,60 @@ setupHandlers()
     handlers["cat"] = handlers["get"];
 }
 
+#if _POSIX_VERSION >= 200112L
+#include <libgen.h>
+#define HAVE_BASENAME
+#endif
+
+static void
+parseCommandname(string& cmdname, int& argc, char**& argv)
+{
+#ifdef HAVE_BASENAME
+    cmdname = basename(argv[0]);
+    size_t dashpos;
+
+    if ((dashpos = cmdname.find('-')) != string::npos &&
+            cmdname.find("cbc") != string::npos &&
+            dashpos+1 < cmdname.size()) {
+
+        // Get the actual command name
+        cmdname = cmdname.substr(dashpos+1);
+        return;
+    }
+#else
+    (void)argc;
+    (void)argv;
+#endif
+    cmdname.clear();
+}
+
 int main(int argc, char **argv)
 {
     setupHandlers();
+    string cmdname;
+    parseCommandname(cmdname, argc, argv);
 
-    if (argc < 2) {
-        fprintf(stderr, "Must provide an option name\n");
-        HelpHandler().execute(argc, argv);
-        exit(EXIT_FAILURE);
+    if (cmdname.empty()) {
+        if (argc < 2) {
+            fprintf(stderr, "Must provide an option name\n");
+            HelpHandler().execute(argc, argv);
+            exit(EXIT_FAILURE);
+        } else {
+            cmdname = argv[1];
+            argv++;
+            argc--;
+        }
     }
 
-    Handler *handler = handlers[argv[1]];
+    Handler *handler = handlers[cmdname];
     if (handler == NULL) {
-        fprintf(stderr, "Unknown command %s\n", argv[1]);
+        fprintf(stderr, "Unknown command %s\n", cmdname.c_str());
         HelpHandler().execute(argc, argv);
         exit(EXIT_FAILURE);
     }
 
     try {
-        handler->execute(argc-1, argv+1);
+        handler->execute(argc, argv);
     } catch (lcb_error_t &err) {
         fprintf(stderr, "Operation failed with code 0x%x (%s)\n",
             err, lcb_strerror(NULL, err));
