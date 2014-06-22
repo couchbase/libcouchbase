@@ -229,6 +229,9 @@ public:
     bool isInteractive;
     int maxJobs;
     int maxCycles;
+    int getVerbosityLevel() {
+        return opt_verbose.numSpecified();
+    }
 
 private:
     cliopts::StringOption opt_debugger;
@@ -565,6 +568,13 @@ int main(int argc, char **argv)
     fprintf(stderr, "%s=%s\n", LCB_SRCROOT_ENV_VAR, config.srcroot.c_str());
     setenv(LCB_SRCROOT_ENV_VAR, config.srcroot.c_str(), 1);
     setenv("LCB_VERBOSE_TESTS", "1", 1);
+
+    char loglevel_s[4096] = { 0 };
+    if (config.getVerbosityLevel() > 0) {
+        sprintf(loglevel_s, "%d", config.getVerbosityLevel());
+        setenv("LCB_LOGLEVEL", loglevel_s, 0);
+    }
+
     if (!config.realClusterEnv.empty()) {
         // format the string
         setenv("LCB_TEST_CLUSTER_CONF", config.realClusterEnv.c_str(), 0);
