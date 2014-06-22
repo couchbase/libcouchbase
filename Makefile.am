@@ -32,14 +32,9 @@ noinst_LTLIBRARIES = libcbsasl.la
 bin_PROGRAMS =
 check_PROGRAMS =
 noinst_PROGRAMS =
+man_MANS = man/cbc.1 man/cbc-pillowfight.1 man/cbcrc.4
+include man/manpages.mk
 
-man1_MANS =
-man3_MANS =
-man3couchbase_MANS =
-man3lib_MANS =
-man4_MANS =
-man5_MANS =
-man_MANS =
 BUILT_SOURCES =
 
 CLEANFILES = \
@@ -52,7 +47,6 @@ libcouchbase_la_CPPFLAGS =
 libcouchbase_la_DEPENDENCIES =
 libcouchbase_la_LIBADD =
 libcouchbase_la_SOURCES =
-include Makefile.manpage.inc
 include filelist.mk
 
 if BUILD_TOOLS
@@ -289,12 +283,11 @@ uninstall-local:
 	cd $(DESTDIR)$(bindir) && $(RM) $(CBC_LINKS)
 endif
 
-EXTRA_DIST += CONTRIBUTING.md LICENSE Makefile.manpage.inc README.markdown \
+EXTRA_DIST += CONTRIBUTING.md LICENSE README.markdown \
               RELEASE_NOTES.markdown \
               include/libcouchbase/configuration.h.in \
               include/memcached/README include/memcached/COPYING \
-              man/bsd \
-              man/svr4 \
+              doc/manout \
               tests/start_mock.sh \
               win32 \
               VERSION
@@ -309,8 +302,5 @@ LINTFLAGS=-Iinclude -b -c -errchk=%all \
           -errsecurity=extended -fd -Ncheck=%all -Nlevel=4 -n -Xc99=none
 lint:
 	$(LINT.c) $(libcouchbase_la_SOURCES)
-
-regenerate-manpage:
-	$(top_srcdir)/man/generate.sh
 
 sinclude packaging/*/package.mk
