@@ -735,7 +735,8 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"console_log_level", LCB_CNTL_CONLOGGER_LEVEL},
         {"config_cache", LCB_CNTL_CONFIGCACHE },
         {"detailed_errcodes", LCB_CNTL_DETAILED_ERRCODES},
-        {"_reinit_dsn", LCB_CNTL_REINIT_DSN }
+        {"_reinit_dsn", LCB_CNTL_REINIT_DSN },
+        {NULL, -1}
 };
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))
