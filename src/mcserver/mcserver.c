@@ -283,9 +283,9 @@ maybe_retry(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err)
 {
     mc_SERVER *srv = (mc_SERVER *)pipeline;
     mc_PACKET *newpkt;
-    VBUCKET_DISTRIBUTION_TYPE dist_t = VB_DISTTYPE(pipeline->parent->config);
+    lcbvb_DISTMODE dist_t = lcbvb_get_distmode(pipeline->parent->config);
 
-    if (dist_t != VBUCKET_DISTRIBUTION_VBUCKET) {
+    if (dist_t != LCBVB_DIST_VBUCKET) {
         /** memcached bucket */
         return 0;
     }
@@ -488,7 +488,7 @@ dupstr_or_null(const char *s) {
 }
 
 mc_SERVER *
-mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix)
+mcserver_alloc2(lcb_t instance, lcbvb_CONFIG* vbc, int ix)
 {
     mc_SERVER *ret;
     lcbvb_SVCMODE mode;

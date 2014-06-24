@@ -91,7 +91,7 @@ extern "C" {
          *      return LCB_EBADHANDLE
          */
         lcb_type_t type;
-        VBUCKET_DISTRIBUTION_TYPE dist_type;
+        lcbvb_DISTMODE dist_type;
         mc_CMDQUEUE cmdq;
 
         /** The number of replicas */

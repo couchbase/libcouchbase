@@ -479,7 +479,7 @@ static clconfig_info* http_get_cached(clconfig_provider *provider)
 }
 
 static void
-config_updated(clconfig_provider *pb, VBUCKET_CONFIG_HANDLE newconfig)
+config_updated(clconfig_provider *pb, lcbvb_CONFIG *newconfig)
 {
     unsigned int ii;
     http_provider *http = (http_provider *)pb;

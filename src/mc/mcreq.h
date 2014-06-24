@@ -34,7 +34,7 @@ extern "C" {
  * initialize the mc_CMDQEUE structure is to call mcreq_queue_init().
  *
  * Once the queue has been initialized, it must be assigned a
- * `VBUCKET_CONFIG_HANDLE` (which it will _not_ own). This is done via the
+ * `lcbvb_CONFIG*` (which it will _not_ own). This is done via the
  * mcreq_queue_add_pipelines(). This function takes an array of pipeline pointers,
  * and this will typically be a "subclass" (mc_SERVER) allocated via
  * mcserver_alloc()
@@ -363,7 +363,7 @@ typedef struct mc_cmdqueue_st {
     uint32_t seq;
 
     /** Configuration handle for vBucket mapping */
-    VBUCKET_CONFIG_HANDLE config;
+    lcbvb_CONFIG* config;
 
     /** Number of pending items which have not yet been marked as 'done' */
     unsigned nremaining;
@@ -565,7 +565,7 @@ mcreq_pipeline_cleanup(mc_PIPELINE *pipeline);
 void
 mcreq_queue_add_pipelines(
         mc_CMDQUEUE *queue, mc_PIPELINE **pipelines,
-        unsigned npipelines, VBUCKET_CONFIG_HANDLE config);
+        unsigned npipelines, lcbvb_CONFIG* config);
 
 
 /**

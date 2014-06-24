@@ -445,8 +445,9 @@ HashHandler::run()
         lcbvb_map_key(vbc, vkey, key.size(), &vbid, &srvix);
         fprintf(stderr, "%s: [vBucket=%d, Index=%d]", key.c_str(), vbid, srvix);
         if (srvix != -1) {
-            fprintf(stderr, " Server: %s", vbucket_config_get_server(vbc, srvix));
-            const char *vapi = vbucket_config_get_couch_api_base(vbc, srvix);
+            fprintf(stderr, " Server: %s",
+                lcbvb_get_hostport(vbc, srvix, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN));
+            const char *vapi = lcbvb_get_capibase(vbc, srvix, LCBVB_SVCMODE_PLAIN);
             if (vapi) {
                 fprintf(stderr, ", CouchAPI: %s", vapi);
             }

@@ -5,17 +5,17 @@
 #define NUM_PIPELINES 4
 
 struct CQWrap : mc_CMDQUEUE {
-    VBUCKET_CONFIG_HANDLE config;
+    lcbvb_CONFIG* config;
     mc_PIPELINE **pipelines;
     CQWrap() {
         pipelines = (mc_PIPELINE **)malloc(sizeof(*pipelines) * NUM_PIPELINES);
-        config = vbucket_config_create();
+        config = lcbvb_create();
         for (unsigned ii = 0; ii < NUM_PIPELINES; ii++) {
             mc_PIPELINE *pipeline = (mc_PIPELINE *)calloc(1, sizeof(*pipeline));
             mcreq_pipeline_init(pipeline);
             pipelines[ii] = pipeline;
         }
-        vbucket_config_generate(config, NUM_PIPELINES, 3, 1024);
+        lcbvb_genconfig(config, NUM_PIPELINES, 3, 1024);
         mcreq_queue_init(this);
         this->seq = 100;
         mcreq_queue_add_pipelines(this, pipelines, NUM_PIPELINES, config);
@@ -30,7 +30,7 @@ struct CQWrap : mc_CMDQUEUE {
             free(pipeline);
         }
         mcreq_queue_cleanup(this);
-        vbucket_config_destroy(config);
+        lcbvb_destroy(config);
     }
 
     void clearPipelines() {

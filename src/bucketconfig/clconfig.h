@@ -222,7 +222,7 @@ typedef struct clconfig_provider_st {
      * else.
      */
     void (*config_updated)(struct clconfig_provider_st *provider,
-            VBUCKET_CONFIG_HANDLE config);
+            lcbvb_CONFIG* config);
 
     /**
      * Retrieve the list of nodes from this provider, if applicable
@@ -246,7 +246,7 @@ typedef struct clconfig_provider_st {
 /** @brief refcounted object encapsulating a vbucket config */
 typedef struct clconfig_info_st {
     /** Actual configuration */
-    VBUCKET_CONFIG_HANDLE vbc;
+    lcbvb_CONFIG* vbc;
 
     /** Comparative clock with which to compare */
     lcb_uint64_t cmpclock;
@@ -525,7 +525,7 @@ typedef enum {
  * @param origin the type of provider from which the config originated.
  */
 clconfig_info *
-lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config, clconfig_method_t origin);
+lcb_clconfig_create(lcbvb_CONFIG* config, clconfig_method_t origin);
 
 /**
  * @brief Compares two info structures and determine which one is newer

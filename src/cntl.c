@@ -115,7 +115,7 @@ static lcb_error_t get_vbconfig(int mode, lcb_t instance, int cmd, void *arg)
     if (mode != LCB_CNTL_GET) {
         return LCB_ECTL_UNSUPPMODE;
     }
-    *(VBUCKET_CONFIG_HANDLE *)arg = LCBT_VBCONFIG(instance);
+    *(lcbvb_CONFIG **)arg = LCBT_VBCONFIG(instance);
 
     (void)cmd;
     return LCB_SUCCESS;
@@ -149,11 +149,8 @@ static lcb_error_t get_kvb(int mode, lcb_t instance, int cmd, void *arg)
         return LCB_ECTL_BADARG;
     }
 
-    vbucket_map(LCBT_VBCONFIG(instance),
-                vbi->v.v0.key,
-                vbi->v.v0.nkey,
-                &vbi->v.v0.vbucket,
-                &vbi->v.v0.server_index);
+    lcbvb_map_key(LCBT_VBCONFIG(instance), vbi->v.v0.key, vbi->v.v0.nkey,
+        &vbi->v.v0.vbucket, &vbi->v.v0.server_index);
 
     (void)cmd;
     return LCB_SUCCESS;

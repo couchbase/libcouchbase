@@ -169,7 +169,7 @@ extern "C" {
  *
  * Mode | Arg
  * -----|----
- * Get  | VBUCKET_CONFIG_HANDLE *
+ * Get  | lcbvb_CONFIG **
  * @uncommitted
  */
 #define LCB_CNTL_VBCONFIG               0x05

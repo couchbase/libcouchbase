@@ -35,7 +35,7 @@
  * config
  */
 static int
-find_new_index(VBUCKET_CONFIG_HANDLE config, mc_SERVER *server)
+find_new_index(lcbvb_CONFIG* config, mc_SERVER *server)
 {
     int ii, nnew;
     nnew = VB_NSERVERS(config);
@@ -53,7 +53,7 @@ find_new_index(VBUCKET_CONFIG_HANDLE config, mc_SERVER *server)
 }
 
 static void
-log_vbdiff(lcb_t instance, VBUCKET_CONFIG_DIFF *diff)
+log_vbdiff(lcb_t instance, lcbvb_CONFIGDIFF *diff)
 {
     char **curserver;
     lcb_log(LOGARGS(instance, INFO), "Config Diff: [ vBuckets Modified=%d ], [Sequence Changed=%d]", diff->n_vb_changes, diff->sequence_changed);
@@ -96,7 +96,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
         return MCREQ_KEEP_PACKET;
     }
 
-    newix = vbucket_get_master(cq->config, ntohs(hdr.request.vbucket));
+    newix = lcbvb_vbmaster(cq->config, ntohs(hdr.request.vbucket));
     if (newix < 0 || newix > (int)cq->npipelines) {
         return MCREQ_KEEP_PACKET;
     }
@@ -122,19 +122,19 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
 }
 
 static int
-is_new_config(lcb_t instance, VBUCKET_CONFIG_HANDLE oldc, VBUCKET_CONFIG_HANDLE newc)
+is_new_config(lcb_t instance, lcbvb_CONFIG* oldc, lcbvb_CONFIG* newc)
 {
-    VBUCKET_CONFIG_DIFF *diff;
-    VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
-    diff = vbucket_compare(oldc, newc);
+    lcbvb_CONFIGDIFF *diff;
+    lcbvb_CHANGETYPE chstatus = LCBVB_NO_CHANGES;
+    diff = lcbvb_compare(oldc, newc);
 
     if (diff) {
-        chstatus = vbucket_what_changed(diff);
+        chstatus = lcbvb_get_changetype(diff);
         log_vbdiff(instance, diff);
-        vbucket_free_diff(diff);
+        lcbvb_free_diff(diff);
     }
 
-    if (diff == NULL || chstatus == VBUCKET_NO_CHANGES) {
+    if (diff == NULL || chstatus == LCBVB_NO_CHANGES) {
         lcb_log(LOGARGS(instance, DEBUG), "Ignoring config update. No server changes; DIFF=%p", (void*)diff);
         return 0;
     }
@@ -144,13 +144,13 @@ is_new_config(lcb_t instance, VBUCKET_CONFIG_HANDLE oldc, VBUCKET_CONFIG_HANDLE 
 static int
 replace_config(lcb_t instance, clconfig_info *next_config)
 {
-    VBUCKET_DISTRIBUTION_TYPE dist_t;
+    lcbvb_DISTMODE dist_t;
     mc_CMDQUEUE *cq = &instance->cmdq;
     mc_PIPELINE **ppold, **ppnew;
     unsigned ii, nold, nnew;
 
-    dist_t = VB_DISTTYPE(next_config->vbc);
-    nnew = VB_NSERVERS(next_config->vbc);
+    dist_t = lcbvb_get_distmode(next_config->vbc);
+    nnew = LCBVB_NSERVERS(next_config->vbc);
     ppnew = calloc(nnew, sizeof(*ppnew));
     ppold = mcreq_queue_take_pipelines(cq, &nold);
 
@@ -187,7 +187,7 @@ replace_config(lcb_t instance, clconfig_info *next_config)
      * transfer the new config along with the new list over to the CQ structure.
      */
     mcreq_queue_add_pipelines(cq, ppnew, nnew, next_config->vbc);
-    if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
+    if (dist_t == LCBVB_DIST_VBUCKET) {
         for (ii = 0; ii < nnew; ii++) {
             mcreq_iterwipe(cq, ppnew[ii], iterwipe_cb, NULL);
         }
@@ -201,7 +201,7 @@ replace_config(lcb_t instance, clconfig_info *next_config)
         if (!ppold[ii]) {
             continue;
         }
-        if (dist_t == VBUCKET_DISTRIBUTION_VBUCKET) {
+        if (dist_t == LCBVB_DIST_VBUCKET) {
             mcreq_iterwipe(cq, ppold[ii], iterwipe_cb, NULL);
         }
         mcserver_fail_chain((mc_SERVER *)ppold[ii], LCB_MAP_CHANGED);

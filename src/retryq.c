@@ -162,7 +162,7 @@ rq_flush(lcb_RETRYQ *rq, int throttle)
 
         mcreq_read_hdr(op->pkt, &hdr);
         vbid = ntohs(hdr.request.vbucket);
-        srvix = vbucket_get_master(rq->cq->config, vbid);
+        srvix = lcbvb_vbmaster(rq->cq->config, vbid);
 
         if (srvix < 0 || (unsigned)srvix >= rq->cq->npipelines) {
             /**If there's no server to send it out to, place it inside the

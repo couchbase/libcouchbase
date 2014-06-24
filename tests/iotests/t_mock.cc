@@ -635,7 +635,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 
     /* Determine what server should receive that operation */
     int vb, idx;
-    vbucket_map(LCBT_VBCONFIG(instance), key.c_str(), key.size(), &vb, &idx);
+    lcbvb_map_key(LCBT_VBCONFIG(instance), key.c_str(), key.size(), &vb, &idx);
     mock->hiccupNodes(5000, 1);
 
     struct fo_context_st ctx = { mock, idx };

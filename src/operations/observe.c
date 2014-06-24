@@ -150,7 +150,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         return LCB_CLIENT_ETMPFAIL;
     }
 
-    if (instance->dist_type != VBUCKET_DISTRIBUTION_VBUCKET) {
+    if (instance->dist_type != LCBVB_DIST_VBUCKET) {
         return LCB_NOT_SUPPORTED;
     }
 
@@ -165,7 +165,7 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
 
     mcreq_sched_enter(cq);
 
-    maxix = vbucket_config_get_num_replicas(cq->config);
+    maxix = LCBVB_NREPLICAS(cq->config);
     if (type == LCB_OBSERVE_TYPE_DURABILITY) {
         ocookie->otype = F_DURABILITY | F_BCAST;
 
@@ -204,11 +204,11 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
             nhashkey = nkey;
         }
 
-        vbid = vbucket_get_vbucket_by_key(cq->config, hashkey, nhashkey);
+        vbid = lcbvb_k2vb(cq->config, hashkey, nhashkey);
 
         for (jj = -1; jj < (int)maxix; jj++) {
             struct observe_st *rr;
-            int idx = vbucket_get_replica(cq->config, vbid, jj);
+            int idx = lcbvb_vbreplica(cq->config, vbid, jj);
             if (idx < 0 || idx > (int)cq->npipelines) {
                 if (jj == -1) {
                     destroy_requests(&reqs);

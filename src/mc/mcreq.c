@@ -369,7 +369,7 @@ mcreq_basic_packet(
     mcreq_extract_hashkey(&cmd->key, &cmd->hashkey,
                           sizeof(*req) + extlen, &hashkey, &nhashkey);
 
-    vbucket_map(queue->config, hashkey, nhashkey, &vb, &srvix);
+    lcbvb_map_key(queue->config, hashkey, nhashkey, &vb, &srvix);
     if (srvix < 0 || (unsigned)srvix >= queue->npipelines) {
         return LCB_NO_MATCHING_SERVER;
     }
@@ -430,7 +430,7 @@ mcreq_pipeline_init(mc_PIPELINE *pipeline)
 void
 mcreq_queue_add_pipelines(
         mc_CMDQUEUE *queue, mc_PIPELINE **pipelines, unsigned npipelines,
-        VBUCKET_CONFIG_HANDLE config)
+        lcbvb_CONFIG* config)
 {
     unsigned ii;
 

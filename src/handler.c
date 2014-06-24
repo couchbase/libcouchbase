@@ -240,7 +240,7 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     uint32_t ttp;
     uint32_t ttr;
     lcb_size_t pos;
-    VBUCKET_CONFIG_HANDLE config;
+    lcbvb_CONFIG* config;
     const char *end, *ptr;
     mc_REQDATAEX *rd = request->u_rdata.exdata;
 
@@ -294,7 +294,7 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.v.v0.status = obs;
         resp.v.v0.ttp = 0;
         resp.v.v0.ttr = 0;
-        resp.v.v0.from_master = pipeline->index == vbucket_get_master(config, vb);
+        resp.v.v0.from_master = pipeline->index == lcbvb_vbmaster(config, vb);
         if (! (request->flags & MCREQ_F_INVOKED)) {
             rd->callback(pipeline, request, rc, &resp);
         }

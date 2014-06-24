@@ -68,7 +68,7 @@ TEST_F(McAlloc, testKeyAlloc)
     ASSERT_TRUE(pipeline != NULL);
     ASSERT_EQ(5, ntohs(hdr.request.keylen));
 
-    int vb = vbucket_get_vbucket_by_key(q.config, "Hello", 5);
+    int vb = lcbvb_k2vb(q.config, "Hello", 5);
     ASSERT_EQ(vb, ntohs(hdr.request.vbucket));
 
     // Copy the header

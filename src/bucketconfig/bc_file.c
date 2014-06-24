@@ -41,7 +41,7 @@ static int load_cache(file_provider *provider)
     lcb_ssize_t nr;
     int fail;
     FILE *fp = NULL;
-    VBUCKET_CONFIG_HANDLE config = NULL;
+    lcbvb_CONFIG *config = NULL;
     char *end;
     struct stat st;
     int status = -1;
@@ -69,7 +69,7 @@ static int load_cache(file_provider *provider)
         goto GT_DONE;
     }
 
-    config = vbucket_config_create();
+    config = lcbvb_create();
     if (config == NULL) {
         goto GT_DONE;
     }
@@ -102,7 +102,7 @@ static int load_cache(file_provider *provider)
         goto GT_DONE;
     }
 
-    fail = vbucket_config_parse(config, LIBVBUCKET_SOURCE_MEMORY, str.base);
+    fail = lcbvb_load_json(config, str.base);
     if (fail) {
         status = -1;
         lcb_log(LOGARGS(provider, ERROR), LOGFMT "Couldn't parse configuration", LOGID(provider));
@@ -110,7 +110,7 @@ static int load_cache(file_provider *provider)
         goto GT_DONE;
     }
 
-    if (vbucket_config_get_distribution_type(config) != VBUCKET_DISTRIBUTION_VBUCKET) {
+    if (lcbvb_get_distmode(config) != LCBVB_DIST_VBUCKET) {
         status = -1;
         lcb_log(LOGARGS(provider, ERROR), LOGFMT "Not applying cached memcached config", LOGID(provider));
         goto GT_DONE;
@@ -133,7 +133,7 @@ static int load_cache(file_provider *provider)
     }
 
     if (config != NULL) {
-        vbucket_config_destroy(config);
+        lcbvb_destroy(config);
     }
 
     lcb_string_release(&str);

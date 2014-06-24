@@ -63,7 +63,7 @@ mc_SERVER *
 mcserver_alloc(lcb_t instance, int ix);
 
 mc_SERVER *
-mcserver_alloc2(lcb_t instance, VBUCKET_CONFIG_HANDLE vbc, int ix);
+mcserver_alloc2(lcb_t instance, lcbvb_CONFIG* vbc, int ix);
 
 /**
  * Close the server. The resources of the server may still continue to persist

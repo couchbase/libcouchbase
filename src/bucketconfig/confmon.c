@@ -141,15 +141,15 @@ static int do_set_next(lcb_confmon *mon, clconfig_info *info, int notify_miss)
     unsigned ii;
 
     if (mon->config) {
-        VBUCKET_CHANGE_STATUS chstatus = VBUCKET_NO_CHANGES;
-        VBUCKET_CONFIG_DIFF *diff = vbucket_compare(mon->config->vbc, info->vbc);
+        lcbvb_CHANGETYPE chstatus = LCBVB_NO_CHANGES;
+        lcbvb_CONFIGDIFF *diff = lcbvb_compare(mon->config->vbc, info->vbc);
 
         if (!diff) {
             return 0;
         }
 
-        chstatus = vbucket_what_changed(diff);
-        vbucket_free_diff(diff);
+        chstatus = lcbvb_get_changetype(diff);
+        lcbvb_free_diff(diff);
 
         if (chstatus == 0 || lcb_clconfig_compare(mon->config, info) >= 0) {
             if (notify_miss) {
@@ -314,7 +314,7 @@ void lcb_clconfig_decref(clconfig_info *info)
     }
 
     if (info->vbc) {
-        vbucket_config_destroy(info->vbc);
+        lcbvb_destroy(info->vbc);
     }
 
     free(info);
@@ -324,8 +324,8 @@ int lcb_clconfig_compare(const clconfig_info *a, const clconfig_info *b)
 {
     /** First check if both have revisions */
     int rev_a, rev_b;
-    rev_a = vbucket_config_get_revision(a->vbc);
-    rev_b = vbucket_config_get_revision(b->vbc);
+    rev_a = lcbvb_get_revision(a->vbc);
+    rev_b = lcbvb_get_revision(b->vbc);
     if (rev_a >= 0  && rev_b >= 0) {
         return rev_a - rev_b;
     }
@@ -341,7 +341,7 @@ int lcb_clconfig_compare(const clconfig_info *a, const clconfig_info *b)
 }
 
 clconfig_info *
-lcb_clconfig_create(VBUCKET_CONFIG_HANDLE config, clconfig_method_t origin)
+lcb_clconfig_create(lcbvb_CONFIG* config, clconfig_method_t origin)
 {
     clconfig_info *info = calloc(1, sizeof(*info));
     if (!info) {
