@@ -423,6 +423,16 @@ int
 lcbvb_genconfig(lcbvb_CONFIG *vb,
     unsigned nservers, unsigned nreplica, unsigned nvbuckets);
 
+
+/**
+ * @volatile
+ * Convert the configuration to a ketama one.
+ * @param vb The configuration object.
+ */
+LIBCOUCHBASE_API
+void
+lcbvb_make_ketama(lcbvb_CONFIG *vb);
+
 /**
  * @committed
  *

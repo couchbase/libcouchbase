@@ -1164,6 +1164,18 @@ lcbvb_genconfig(lcbvb_CONFIG *vb,
     return rv;
 }
 
+void
+lcbvb_make_ketama(lcbvb_CONFIG *vb)
+{
+    if (vb->dtype == LCBVB_DIST_KETAMA) {
+        return;
+    }
+    vb->dtype = LCBVB_DIST_KETAMA;
+    vb->nrepl = 0;
+    vb->nvb = 0;
+    parse_ketama(vb);
+}
+
 
 /******************************************************************************
  ******************************************************************************
