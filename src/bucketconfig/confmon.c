@@ -85,6 +85,8 @@ void lcb_confmon_prepare(lcb_confmon *mon)
     memset(&mon->active_providers, 0, sizeof(mon->active_providers));
     lcb_clist_init(&mon->active_providers);
 
+    lcb_log(LOGARGS(mon, DEBUG), "Preparing providers (this may be called multiple times)");
+
     for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = mon->all_providers[ii];
         if (cur) {
