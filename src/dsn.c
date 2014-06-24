@@ -155,6 +155,9 @@ parse_hosts(PARSECTX *ctx, const char *hosts_end)
         } else if (rv == 1 && out->implicit_port) {
             /* Have an implicit port. Use that */
             tmp = (char *)deflproto; /* assigned previously */
+            if (out->implicit_port == itmp) {
+                continue;
+            }
 
         } else if (rv == 1 && (itmp == LCB_CONFIG_HTTP_PORT || itmp == LCB_CONFIG_MCD_PORT)) {
             continue;
