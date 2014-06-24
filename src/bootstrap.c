@@ -9,6 +9,7 @@ struct lcb_bootstrap_st {
 
     /** Flag set if we've already bootstrapped */
     int bootstrapped;
+    unsigned weird_things;
 };
 
 #define LOGARGS(instance, lvl) \
@@ -217,22 +218,23 @@ lcb_error_t lcb_bootstrap_refresh(lcb_t instance)
 void lcb_bootstrap_errcount_incr(lcb_t instance)
 {
     lcb_SIZE errthresh;
+    struct lcb_bootstrap_st *bs = instance->bootstrap;
     hrtime_t now = gethrtime(), next_refresh_time;
 
     errthresh = LCBT_SETTING(instance, weird_things_threshold);
-    instance->weird_things++;
+    bs->weird_things++;
     next_refresh_time = instance->bootstrap->last_refresh;
     next_refresh_time += LCB_US2NS(LCBT_SETTING(instance, weird_things_delay));
 
-    if (now < next_refresh_time && instance->weird_things < errthresh) {
+    if (now < next_refresh_time && bs->weird_things < errthresh) {
         lcb_log(LOGARGS(instance, INFO),
             "Not requesting a config refresh because of throttling parameters. Next refresh possible in %ums or %u errors. "
             "See LCB_CNTL_CONFDELAY_THRESH and LCB_CNTL_CONFERRTHRESH to modify the throttling settings",
-            LCB_NS2US(next_refresh_time-now)/1000, (unsigned)errthresh-instance->weird_things);
+            LCB_NS2US(next_refresh_time-now)/1000, (unsigned)errthresh-bs->weird_things);
         return;
     }
 
-    instance->weird_things = 0;
+    bs->weird_things = 0;
     lcb_bootstrap_refresh(instance);
 }
 

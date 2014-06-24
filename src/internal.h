@@ -100,9 +100,6 @@ extern "C" {
         struct hostlist_st *ht_nodes;
         struct clconfig_info_st *cur_configinfo;
         struct lcb_bootstrap_st *bootstrap;
-
-        unsigned int weird_things;
-
         struct lcb_callback_st callbacks;
         struct lcb_histogram_st *histogram;
         lcb_ASPEND pendops;
