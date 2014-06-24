@@ -422,13 +422,6 @@ TEST_F(MockUnitTest, testBrokenFirstNodeInList)
 }
 
 extern "C" {
-    int config_cnt;
-
-    static void vbucket_state_callback(lcb_server_t *server)
-    {
-        config_cnt++;
-    }
-
     int store_cnt;
 
     /* Needed for "testPurgedBody", to ensure preservation of connection */
@@ -555,7 +548,6 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
-    instance->vbucket_state_listener = vbucket_state_callback;
     genDistKeys(LCBT_VBCONFIG(instance), keys);
     genStoreCommands(keys, cmds, ppcmds);
     StoreContext ctx;
@@ -570,12 +562,10 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     ctx.clear();
     ASSERT_EQ(9, lcb_get_num_nodes(instance));
 
-    config_cnt = 0;
     mock->respawnNode(0);
     err = lcb_store(instance, &ctx, cmds.size(), &ppcmds[0]);
     lcb_wait(instance);
     ctx.check((int)cmds.size());
-    ASSERT_EQ(10, config_cnt);
 }
 
 
@@ -622,7 +612,6 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
 
     /* mock uses 10 nodes by default */
     ASSERT_EQ(10, mock->getNumNodes());
-    instance->vbucket_state_listener = vbucket_state_callback;
     lcb_set_store_callback(instance, store_callback);
     lcb_set_get_callback(instance, get_callback);
 
@@ -649,17 +638,14 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     err = lcb_store(instance, &rv, 1, storecmds);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    config_cnt = 0;
     store_cnt = 0;
     lcb_wait(instance);
     ASSERT_EQ(1, store_cnt);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
-    ASSERT_EQ(9, config_cnt);
 
     memset(&rv, 0, sizeof(rv));
     err = lcb_store(instance, &rv, 1, storecmds);
     ASSERT_EQ(LCB_SUCCESS, err);
-    config_cnt = 0;
     store_cnt = 0;
     lcb_wait(instance);
     ASSERT_EQ(1, store_cnt);

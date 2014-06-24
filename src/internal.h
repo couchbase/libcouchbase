@@ -52,8 +52,6 @@ extern "C" {
 #endif
     struct lcb_histogram_st;
 
-    typedef void (*vbucket_state_listener_t)(lcb_server_t *server);
-
     struct lcb_callback_st {
         lcb_get_callback get;
         lcb_store_callback store;
@@ -105,7 +103,6 @@ extern "C" {
 
         unsigned int weird_things;
 
-        vbucket_state_listener_t vbucket_state_listener;
         struct lcb_callback_st callbacks;
         struct lcb_histogram_st *histogram;
         lcb_ASPEND pendops;

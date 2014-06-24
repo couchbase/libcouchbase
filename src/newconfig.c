@@ -262,16 +262,6 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
         change_status = LCB_CONFIGURATION_NEW;
     }
 
-    /* Notify anyone interested in this event... */
-    if (change_status != LCB_CONFIGURATION_UNCHANGED) {
-        if (instance->vbucket_state_listener != NULL) {
-            for (ii = 0; ii < q->npipelines; ii++) {
-                lcb_server_t *server = (lcb_server_t *)q->pipelines[ii];
-                instance->vbucket_state_listener(server);
-            }
-        }
-    }
-
     instance->callbacks.configuration(instance, change_status);
     lcb_maybe_breakout(instance);
 }
