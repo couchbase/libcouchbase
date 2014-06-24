@@ -235,7 +235,7 @@ ConnParams::fillCropts(lcb_create_st& cropts)
             dsn += '&';
         }
     } else {
-        dsn = "couchbase://";
+        dsn = "http://";
         dsn += host;
         dsn += "/";
         dsn += o_bucket.const_result();
