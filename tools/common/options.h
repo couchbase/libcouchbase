@@ -45,9 +45,7 @@ private:
     X_OPTIONS(X)
 #undef X
     std::string dsn;
-    std::string bucket;
     std::string passwd;
-    std::string host;
     bool isAdmin;
     bool loadFileDefaults();
 };

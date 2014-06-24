@@ -25,7 +25,6 @@ makeLowerCase(string &s)
 #define X(tpname, varname, longname, shortname) o_##varname(longname),
 ConnParams::ConnParams() :
         X_OPTIONS(X)
-        bucket(""),
         isAdmin(false)
 {
     // Configure the options
@@ -36,7 +35,11 @@ ConnParams::ConnParams() :
     #undef X
 
     o_host.description("Hostname to connect to").setDefault("localhost");
+    o_host.hide();
+
     o_bucket.description("Bucket to use").setDefault("default");
+    o_bucket.hide();
+
     o_user.description("Username (currently unused)");
     o_passwd.description("Bucket password");
     o_saslmech.description("Force SASL mechanism").argdesc("PLAIN|CRAM_MD5");
@@ -218,14 +221,7 @@ ConnParams::writeConfig(const string& s)
 void
 ConnParams::fillCropts(lcb_create_st& cropts)
 {
-    host = o_host.result();
-    bucket = o_bucket.result();
     passwd = o_passwd.result();
-    for (size_t ii = 0; ii < host.size(); ++ii) {
-        if (host[ii] == ';') {
-            host[ii] = ',';
-        }
-    }
 
     if (o_dsn.passed()) {
         dsn = o_dsn.const_result();
@@ -235,10 +231,28 @@ ConnParams::fillCropts(lcb_create_st& cropts)
             dsn += '&';
         }
     } else {
+        string host = o_host.result();
+        string bucket = o_bucket.result();
+
+        for (size_t ii = 0; ii < host.size(); ++ii) {
+            if (host[ii] == ';') {
+                host[ii] = ',';
+            }
+        }
+
+        if (o_host.passed()) {
+            fprintf(stderr, "The -h/--host option is deprecated. Use DSN instead\n");
+            fprintf(stderr, "  e.g. couchbase://%s\n", host.c_str());
+        }
+        if (o_bucket.passed()) {
+            fprintf(stderr, "The -b/--bucket option is deprecated. Use DSN instead\n");
+            fprintf(stderr, "  e.g. couchbase://HOSTS/%s\n", bucket.c_str());
+        }
+
         dsn = "http://";
         dsn += host;
         dsn += "/";
-        dsn += o_bucket.const_result();
+        dsn += bucket;
         dsn += "?";
     }
     if (o_capath.passed()) {
