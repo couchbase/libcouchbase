@@ -192,7 +192,7 @@ extern "C" {
 
     lcb_error_t lcb_init_providers2(lcb_t obj,
                                    const struct lcb_create_st2 *e_options);
-    lcb_error_t lcb_reinit3(lcb_t obj, const char *dsn);
+    lcb_error_t lcb_reinit3(lcb_t obj, const char *connstr);
 
 
     LCB_INTERNAL_API

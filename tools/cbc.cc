@@ -8,7 +8,7 @@
 #include "common/options.h"
 #include "common/histogram.h"
 #include "cbc-handlers.h"
-#include "dsn.h"
+#include "connspec.h"
 using namespace cbc;
 
 using std::string;
@@ -835,24 +835,24 @@ struct HostEnt {
 };
 
 void
-DsnHandler::run()
+ConnstrHandler::run()
 {
-    const string& dsn_s = getRequiredArg();
+    const string& connstr_s = getRequiredArg();
     lcb_error_t err;
     const char *errmsg;
-    lcb_DSNPARAMS dsn;
-    memset(&dsn, 0, sizeof dsn);
-    err = lcb_dsn_parse(dsn_s.c_str(), &dsn, &errmsg);
+    lcb_CONNSPEC spec;
+    memset(&spec, 0, sizeof spec);
+    err = lcb_connspec_parse(connstr_s.c_str(), &spec, &errmsg);
     if (err != LCB_SUCCESS) {
         throw errmsg;
     }
 
-    printf("Bucket: %s\n", dsn.bucket);
-    printf("Implicit port: %d\n", dsn.implicit_port);
+    printf("Bucket: %s\n", spec.bucket);
+    printf("Implicit port: %d\n", spec.implicit_port);
     string sslOpts;
-    if (dsn.sslopts & LCB_SSL_ENABLED) {
+    if (spec.sslopts & LCB_SSL_ENABLED) {
         sslOpts = "ENABLED";
-        if (dsn.sslopts & LCB_SSL_NOVERIFY) {
+        if (spec.sslopts & LCB_SSL_NOVERIFY) {
             sslOpts += "|NOVERIFY";
         }
     }
@@ -861,10 +861,10 @@ DsnHandler::run()
     printf("Boostrap Protocols: ");
     string bsStr;
     for (size_t ii = 0; ii < LCB_CONFIG_TRANSPORT_MAX; ii++) {
-        if (dsn.transports[ii] == LCB_CONFIG_TRANSPORT_LIST_END) {
+        if (spec.transports[ii] == LCB_CONFIG_TRANSPORT_LIST_END) {
             break;
         }
-        switch (dsn.transports[ii]) {
+        switch (spec.transports[ii]) {
         case LCB_CONFIG_TRANSPORT_CCCP:
             bsStr += "CCCP,";
             break;
@@ -885,11 +885,11 @@ DsnHandler::run()
     lcb_list_t *llcur;
     vector<HostEnt> hosts;
 
-    LCB_LIST_FOR(llcur, &dsn.hosts) {
-        lcb_DSNHOST *dh = LCB_LIST_ITEM(llcur, lcb_DSNHOST, llnode);
+    LCB_LIST_FOR(llcur, &spec.hosts) {
+        lcb_HOSTSPEC *dh = LCB_LIST_ITEM(llcur, lcb_HOSTSPEC, llnode);
         lcb_U16 port = dh->port;
         if (!port) {
-            port = dsn.implicit_port;
+            port = spec.implicit_port;
         }
 
         if (dh->type == LCB_CONFIG_MCD_PORT) {
@@ -901,7 +901,7 @@ DsnHandler::run()
         } else if (dh->type == LCB_CONFIG_HTTP_SSL_PORT) {
             hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", port));
         } else {
-            if (dsn.sslopts) {
+            if (spec.sslopts) {
                 hosts.push_back(HostEnt(dh->hostname, "memcached+ssl", LCB_CONFIG_MCD_SSL_PORT));
                 hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", LCB_CONFIG_HTTP_SSL_PORT));
             } else {
@@ -919,7 +919,7 @@ DsnHandler::run()
     printf("Options: \n");
     const char *key, *value;
     int ictx = 0;
-    while (lcb_dsn_next_option(&dsn, &key, &value, &ictx)) {
+    while (lcb_connspec_next_option(&spec, &key, &value, &ictx)) {
         printf("  %s=%s\n", key, value);
     }
 }
@@ -960,7 +960,7 @@ static const char* optionsOrder[] = {
         "bucket-create",
         "bucket-delete",
         "bucket-flush",
-        "dsn",
+        "connstr",
         "write-config",
         NULL
 };
@@ -1003,7 +1003,7 @@ setupHandlers()
     handlers_s["bucket-delete"] = new BucketDeleteHandler();
     handlers_s["bucket-flush"] = new BucketFlushHandler();
     handlers_s["view"] = new ViewsHandler();
-    handlers_s["dsn"] = new DsnHandler();
+    handlers_s["connstr"] = new ConnstrHandler();
     handlers_s["write-config"] = new WriteConfigHandler();
 
 

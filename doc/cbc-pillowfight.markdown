@@ -74,7 +74,7 @@ The following options control workload generation:
 
 The following options control how `cbc-pillowfight` connects to the cluster
 
-* `--dsn`=_SPEC_:
+* `-U`, `--spec`=_SPEC_:
   A string describing the cluster to connect to. The string is in a URI-like syntax,
   and may also contain other options. See the [EXAMPLES](#examples) section for information.
   Typically such a URI will look like `couchbase://host1,host2,host3/bucket`.

@@ -1,4 +1,4 @@
-#include "dsn.h"
+#include "connspec.h"
 #include "hostlist.h"
 #include "strcodecs/strcodecs.h"
 #include <stdio.h>
@@ -19,12 +19,12 @@
 #define F_HASPORTS (1<<5)
 
 typedef struct {
-    char *scratch; /* temporary buffer. Sufficient for strlen(dsn) * 3 bytes */
+    char *scratch; /* temporary buffer. Sufficient for strlen(specstr) * 3 bytes */
     char *decoded; /* offset into 'scratch' */
-    const char *dsn; /* input string */
-    const char *dsnend; /* end of input */
+    const char *connstr; /* input string */
+    const char *endptr; /* end of input */
     const char **errmsg;
-    lcb_DSNPARAMS *params;
+    lcb_CONNSPEC *params;
 } PARSECTX;
 
 static int string_to_porttype(const char *s) {
@@ -65,9 +65,9 @@ parse_hosts(PARSECTX *ctx, const char *hosts_end)
     const char **errmsg = ctx->errmsg;
     lcb_error_t err = LCB_SUCCESS;
     const char *c;
-    lcb_DSNPARAMS *out = ctx->params;
+    lcb_CONNSPEC *out = ctx->params;
 
-    if (0 != lcb_urldecode(ctx->dsn, ctx->decoded, hosts_end - ctx->dsn)) {
+    if (0 != lcb_urldecode(ctx->connstr, ctx->decoded, hosts_end - ctx->connstr)) {
         SET_ERROR("Couldn't decode from url encoding");
     }
 
@@ -79,7 +79,7 @@ parse_hosts(PARSECTX *ctx, const char *hosts_end)
         const char *port_s;
         char *tmp;
         unsigned curlen, hostlen, portlen;
-        lcb_DSNHOST *dh;
+        lcb_HOSTSPEC *dh;
         int itmp, rv;
         char hpdummy[256];
         const char *deflproto = NULL;
@@ -180,18 +180,18 @@ parse_hosts(PARSECTX *ctx, const char *hosts_end)
 }
 
 static lcb_error_t
-parse_options(PARSECTX *ctx, const char *options, const char *dsnend)
+parse_options(PARSECTX *ctx, const char *options, const char *specend)
 {
     lcb_string tmpstr;
     char *scratch = ctx->scratch;
     char *tmp;
     const char **errmsg = ctx->errmsg;
-    lcb_DSNPARAMS *out = ctx->params;
+    lcb_CONNSPEC *out = ctx->params;
     lcb_error_t err = LCB_SUCCESS;
 
     lcb_string_init(&tmpstr);
 
-    while (options != NULL && options < dsnend) {
+    while (options != NULL && options < specend) {
         unsigned curlen;
         char *key, *value;
         const char *curend;
@@ -203,7 +203,7 @@ parse_options(PARSECTX *ctx, const char *options, const char *dsnend)
 
         curend = strchr(options, '&');
         if (!curend) {
-            curend = dsnend;
+            curend = specend;
         }
 
         curlen = curend - options;
@@ -301,7 +301,7 @@ parse_options(PARSECTX *ctx, const char *options, const char *dsnend)
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
+lcb_connspec_parse(const char *connstr, lcb_CONNSPEC *out, const char **errmsg)
 {
     PARSECTX ctx;
     lcb_error_t err = LCB_SUCCESS;
@@ -311,8 +311,8 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
     const char *hlend; /* end of hosts list */
     const char *bucket = NULL; /* beginning of bucket (path) string */
     const char *options = NULL; /* beginning of options (query) string */
-    const char *dsnend = NULL; /* end of DSN */
-    unsigned dsnlen; /* length of dsn string */
+    const char *specend = NULL; /* end of spec */
+    unsigned speclen; /* length of spec string */
     const char *found_scheme = NULL;
 
     if (!errmsg) {
@@ -320,54 +320,54 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
     }
 
     ctx.errmsg = errmsg;
-    ctx.dsn = dsn_in;
+    ctx.connstr = connstr;
     ctx.params = out;
 
     lcb_list_init(&out->hosts);
     out->transports[0] = LCB_CONFIG_TRANSPORT_LIST_END;
 
 #define SCHEME_MATCHES(scheme_const) \
-    strncmp(ctx.dsn, scheme_const, sizeof(scheme_const)-1) == 0 && \
+    strncmp(ctx.connstr, scheme_const, sizeof(scheme_const)-1) == 0 && \
     (found_scheme = scheme_const)
 
-    if (SCHEME_MATCHES(LCB_DSN_SCHEME_MCD_SSL)) {
+    if (SCHEME_MATCHES(LCB_SPECSCHEME_MCD_SSL)) {
         out->implicit_port = LCB_CONFIG_MCD_SSL_PORT;
         out->sslopts |= LCB_SSL_ENABLED;
         out->flags |= F_SSLSCHEME;
 
-    } else if (SCHEME_MATCHES(LCB_DSN_SCHEME_HTTP_SSL)) {
+    } else if (SCHEME_MATCHES(LCB_SPECSCHEME_HTTP_SSL)) {
         out->implicit_port = LCB_CONFIG_HTTP_SSL_PORT;
         out->sslopts |= LCB_SSL_ENABLED;
         out->flags |= F_SSLSCHEME;
 
-    } else if (SCHEME_MATCHES(LCB_DSN_SCHEME_HTTP)) {
+    } else if (SCHEME_MATCHES(LCB_SPECSCHEME_HTTP)) {
         out->implicit_port = LCB_CONFIG_HTTP_PORT;
 
-    } else if (SCHEME_MATCHES(LCB_DSN_SCHEME_MCD)) {
+    } else if (SCHEME_MATCHES(LCB_SPECSCHEME_MCD)) {
         out->implicit_port = LCB_CONFIG_MCD_PORT;
 
-    } else if (SCHEME_MATCHES(LCB_DSN_SCHEME_RAW)) {
+    } else if (SCHEME_MATCHES(LCB_SPECSCHEME_RAW)) {
         out->implicit_port = 0;
-    } else if (SCHEME_MATCHES(LCB_DSN_SCHEME_MCCOMPAT)) {
+    } else if (SCHEME_MATCHES(LCB_SPECSCHEME_MCCOMPAT)) {
         out->implicit_port = LCB_CONFIG_MCCOMPAT_PORT;
     } else {
         SET_ERROR("String must begin with ''couchbase://, 'couchbases://'");
     }
 
-    ctx.dsn += strlen(found_scheme);
-    dsnlen = strlen(ctx.dsn);
-    dsnend = ctx.dsn + dsnlen;
+    ctx.connstr += strlen(found_scheme);
+    speclen = strlen(ctx.connstr);
+    specend = ctx.connstr + speclen;
 
-    if (dsnlen * 3 > SCRATCHSIZE) {
-        scratch_d = malloc(dsnlen * 2);
+    if (speclen * 3 > SCRATCHSIZE) {
+        scratch_d = malloc(speclen * 2);
         ctx.scratch = scratch_d;
     } else {
         ctx.scratch = scratch_s;
     }
-    ctx.decoded = ctx.scratch + dsnlen * 2;
+    ctx.decoded = ctx.scratch + speclen * 2;
 
     /* if we have a path, the hosts end there */
-    if ((hlend = strchr(ctx.dsn, '/'))) {
+    if ((hlend = strchr(ctx.connstr, '/'))) {
         bucket = hlend + 1;
         if ((options = strchr(bucket, '?'))) {
             options++;
@@ -376,7 +376,7 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
 
     if (hlend == NULL) {
         bucket = NULL;
-        if ((options = hlend = strchr(ctx.dsn, '?'))) {
+        if ((options = hlend = strchr(ctx.connstr, '?'))) {
             options++;
         }
     }
@@ -384,12 +384,12 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
     if (hlend == NULL) {
         bucket = NULL;
         options = NULL;
-        hlend = dsnend;
+        hlend = specend;
     }
 
     if (bucket != NULL) {
         unsigned blen;
-        const char *b_end = options ? options-1 : dsnend;
+        const char *b_end = options ? options-1 : specend;
         /* scan each of the options */
         blen = b_end - bucket;
         memcpy(ctx.scratch, bucket, blen);
@@ -410,14 +410,14 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
 
     if (LCB_LIST_IS_EMPTY(&out->hosts)) {
         const char localhost[] = "localhost";
-        lcb_DSNHOST *host = calloc(1, sizeof(*host) + sizeof localhost);
+        lcb_HOSTSPEC *host = calloc(1, sizeof(*host) + sizeof localhost);
         memcpy(host->hostname, localhost, sizeof localhost);
         lcb_list_append(&out->hosts, &host->llnode);
         out->flags |= F_NOPORTS;
     }
 
     if (options != NULL) {
-        if ((err = parse_options(&ctx, options, dsnend)) != LCB_SUCCESS) {
+        if ((err = parse_options(&ctx, options, specend)) != LCB_SUCCESS) {
             goto GT_DONE;
         }
     }
@@ -428,7 +428,7 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
     GT_DONE:
 
     if (err != LCB_SUCCESS) {
-        lcb_dsn_clean(out);
+        lcb_connspec_clean(out);
     }
 
     free(scratch_d);
@@ -437,17 +437,17 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
 
 LIBCOUCHBASE_API
 void
-lcb_dsn_clean(lcb_DSNPARAMS *params)
+lcb_connspec_clean(lcb_CONNSPEC *params)
 {
     lcb_list_t *ll, *llnext;
     free(params->bucket);
     free(params->username);
     free(params->password);
     free(params->ctlopts);
-    free(params->origdsn);
+    free(params->connstr);
 
     LCB_LIST_SAFE_FOR(ll, llnext, &params->hosts) {
-        lcb_DSNHOST *host = LCB_LIST_ITEM(ll, lcb_DSNHOST, llnode);
+        lcb_HOSTSPEC *host = LCB_LIST_ITEM(ll, lcb_HOSTSPEC, llnode);
         lcb_list_delete(&host->llnode);
         free(host);
     }
@@ -458,7 +458,7 @@ lcb_dsn_clean(lcb_DSNPARAMS *params)
 
 LIBCOUCHBASE_API
 int
-lcb_dsn_next_option(const lcb_DSNPARAMS *params,
+lcb_connspec_next_option(const lcb_CONNSPEC *params,
     const char **key, const char **value, int *ctx)
 {
     if (!params->ctlopts) {
@@ -530,7 +530,7 @@ convert_hosts(lcb_string *outstr, const char *instr, int deflport)
 #define TRYDUP(s) (s) ? strdup(s) : NULL
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_dsn_convert(lcb_DSNPARAMS *params, const struct lcb_create_st *cropts)
+lcb_connspec_convert(lcb_CONNSPEC *params, const struct lcb_create_st *cropts)
 {
     const char *errmsg;
     lcb_string tmpstr;
@@ -554,7 +554,7 @@ lcb_dsn_convert(lcb_DSNPARAMS *params, const struct lcb_create_st *cropts)
     }
 
     if (cropts->version == 3) {
-        return lcb_dsn_parse(cropts->v.v3.dsn, params, &errmsg);
+        return lcb_connspec_parse(cropts->v.v3.connstr, params, &errmsg);
     }
 
     if (cropts->version > 2 || cropts->version < 0) {
@@ -562,7 +562,7 @@ lcb_dsn_convert(lcb_DSNPARAMS *params, const struct lcb_create_st *cropts)
     }
 
     lcb_string_init(&tmpstr);
-    lcb_string_appendz(&tmpstr, LCB_DSN_SCHEME_RAW);
+    lcb_string_appendz(&tmpstr, LCB_SPECSCHEME_RAW);
     lcb_list_init(&params->hosts);
 
     params->transports[0] = LCB_CONFIG_TRANSPORT_LIST_END;
@@ -583,7 +583,7 @@ lcb_dsn_convert(lcb_DSNPARAMS *params, const struct lcb_create_st *cropts)
 
     lcb_string_appendz(&tmpstr, "?");
 
-    err = lcb_dsn_parse(tmpstr.base, params, &errmsg);
+    err = lcb_connspec_parse(tmpstr.base, params, &errmsg);
     if (err == LCB_SUCCESS && cropts->version == 2 && cr2->transports) {
         /* copy over bootstrap list */
         unsigned ii, found_end = 0;
@@ -601,7 +601,7 @@ lcb_dsn_convert(lcb_DSNPARAMS *params, const struct lcb_create_st *cropts)
 
     GT_DONE:
     if (err == LCB_SUCCESS) {
-        params->origdsn = tmpstr.base;
+        params->connstr = tmpstr.base;
     } else {
         lcb_string_release(&tmpstr);
     }

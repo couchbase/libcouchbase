@@ -22,7 +22,7 @@
  * @todo add more documentation
  */
 #include "internal.h"
-#include "dsn.h"
+#include "connspec.h"
 #include "logging.h"
 #include "hostlist.h"
 #include "http/http.h"
@@ -191,13 +191,13 @@ add_and_log_host(lcb_t obj, const lcb_host_t *host, lcb_config_transport_t type)
 }
 
 static void
-populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
+populate_nodes(lcb_t obj, const lcb_CONNSPEC *spec)
 {
     lcb_list_t *llcur;
     int has_ssl = obj->settings->sslopts & LCB_SSL_ENABLED;
     int defl_http, defl_cccp;
 
-    if (dsn->implicit_port == LCB_CONFIG_MCCOMPAT_PORT) {
+    if (spec->implicit_port == LCB_CONFIG_MCCOMPAT_PORT) {
         defl_http = -1;
         defl_cccp = LCB_CONFIG_MCCOMPAT_PORT;
 
@@ -209,9 +209,9 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
         defl_cccp = LCB_CONFIG_MCD_PORT;
     }
 
-    LCB_LIST_FOR(llcur, &dsn->hosts) {
+    LCB_LIST_FOR(llcur, &spec->hosts) {
         lcb_host_t host;
-        const lcb_DSNHOST *dh = LCB_LIST_ITEM(llcur, lcb_DSNHOST, llnode);
+        const lcb_HOSTSPEC *dh = LCB_LIST_ITEM(llcur, lcb_HOSTSPEC, llnode);
         strcpy(host.host, dh->hostname);
 
         #define ADD_CCCP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_CCCP)
@@ -247,7 +247,7 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
 }
 
 static lcb_error_t
-init_providers(lcb_t obj, const lcb_DSNPARAMS *dsn)
+init_providers(lcb_t obj, const lcb_CONNSPEC *spec)
 {
     int http_enabled = 1, cccp_enabled = 1, cccp_found = 0, http_found = 0;
     const lcb_config_transport_t *cur;
@@ -257,13 +257,13 @@ init_providers(lcb_t obj, const lcb_DSNPARAMS *dsn)
     cccp = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_CCCP);
     mcraw = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_MCRAW);
 
-    if (dsn->implicit_port == LCB_CONFIG_MCCOMPAT_PORT) {
+    if (spec->implicit_port == LCB_CONFIG_MCCOMPAT_PORT) {
         lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_MCRAW, 1);
         mcraw->configure_nodes(mcraw, obj->mc_nodes);
         return LCB_SUCCESS;
     }
 
-    for (cur = dsn->transports; *cur != LCB_CONFIG_TRANSPORT_LIST_END; cur++) {
+    for (cur = spec->transports; *cur != LCB_CONFIG_TRANSPORT_LIST_END; cur++) {
         if (*cur == LCB_CONFIG_TRANSPORT_CCCP) {
             cccp_found = 1;
         } else if (*cur == LCB_CONFIG_TRANSPORT_HTTP) {
@@ -307,7 +307,7 @@ init_providers(lcb_t obj, const lcb_DSNPARAMS *dsn)
 }
 
 static lcb_error_t
-setup_ssl(lcb_t obj, lcb_DSNPARAMS *params)
+setup_ssl(lcb_t obj, lcb_CONNSPEC *params)
 {
     char optbuf[4096];
     int env_policy = -1;
@@ -348,12 +348,12 @@ setup_ssl(lcb_t obj, lcb_DSNPARAMS *params)
 }
 
 static lcb_error_t
-apply_dsn_options(lcb_t obj, lcb_DSNPARAMS *params)
+apply_spec_options(lcb_t obj, lcb_CONNSPEC *params)
 {
     const char *key, *value;
     int itmp = 0;
     lcb_error_t err;
-    while ((lcb_dsn_next_option(params, &key, &value, &itmp))) {
+    while ((lcb_connspec_next_option(params, &key, &value, &itmp))) {
         lcb_log(LOGARGS(obj, DEBUG), "Applying initial cntl %s=%s", key, value);
         err = lcb_cntl_string(obj, key, value);
         if (err != LCB_SUCCESS) {
@@ -366,27 +366,27 @@ apply_dsn_options(lcb_t obj, lcb_DSNPARAMS *params)
 lcb_error_t
 lcb_init_providers2(lcb_t obj, const struct lcb_create_st2 *options)
 {
-    lcb_DSNPARAMS params;
+    lcb_CONNSPEC params;
     lcb_error_t err;
     struct lcb_create_st cropts;
     cropts.version = 2;
     cropts.v.v2 = *options;
-    err = lcb_dsn_convert(&params, &cropts);
+    err = lcb_connspec_convert(&params, &cropts);
     if (err == LCB_SUCCESS) {
         err = init_providers(obj, &params);
     }
-    lcb_dsn_clean(&params);
+    lcb_connspec_clean(&params);
     return err;
 }
 
 lcb_error_t
-lcb_reinit3(lcb_t obj, const char *dsn)
+lcb_reinit3(lcb_t obj, const char *connstr)
 {
-    lcb_DSNPARAMS params;
+    lcb_CONNSPEC params;
     lcb_error_t err;
     const char *errmsg = NULL;
     memset(&params, 0, sizeof params);
-    err = lcb_dsn_parse(dsn, &params, &errmsg);
+    err = lcb_connspec_parse(connstr, &params, &errmsg);
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(obj, ERROR), "Couldn't reinit: %s", errmsg);
@@ -397,7 +397,7 @@ lcb_reinit3(lcb_t obj, const char *dsn)
     }
 
     /* apply the options */
-    err = apply_dsn_options(obj, &params);
+    err = apply_spec_options(obj, &params);
     if (err != LCB_SUCCESS) {
         goto GT_DONE;
     }
@@ -409,7 +409,7 @@ lcb_reinit3(lcb_t obj, const char *dsn)
     }
 
     GT_DONE:
-    lcb_dsn_clean(&params);
+    lcb_connspec_clean(&params);
     return err;
 }
 
@@ -417,7 +417,7 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_create(lcb_t *instance,
                        const struct lcb_create_st *options)
 {
-    lcb_DSNPARAMS dsn = { NULL };
+    lcb_CONNSPEC spec = { NULL };
     struct lcb_io_opt_st *io_priv = NULL;
     lcb_type_t type = LCB_TYPE_BUCKET;
     lcb_t obj = NULL;
@@ -429,10 +429,10 @@ lcb_error_t lcb_create(lcb_t *instance,
         if (options->version > 0) {
             type = options->v.v1.type;
         }
-        err = lcb_dsn_convert(&dsn, options);
+        err = lcb_connspec_convert(&spec, options);
     } else {
         const char *errmsg;
-        err = lcb_dsn_parse("couchbase://", &dsn, &errmsg);
+        err = lcb_connspec_parse("couchbase://", &spec, &errmsg);
     }
     if (err != LCB_SUCCESS) {
         goto GT_DONE;
@@ -450,18 +450,18 @@ lcb_error_t lcb_create(lcb_t *instance,
     /* initialize the settings */
     obj->type = type;
     obj->settings = settings;
-    settings->bucket = dsn.bucket; dsn.bucket = NULL;
-    settings->username = dsn.username; dsn.username = NULL;
-    settings->password = dsn.password; dsn.password = NULL;
+    settings->bucket = spec.bucket; spec.bucket = NULL;
+    settings->username = spec.username; spec.username = NULL;
+    settings->password = spec.password; spec.password = NULL;
     settings->logger = lcb_init_console_logger();
     settings->iid = lcb_instance_index++;
-    if (dsn.loglevel) {
-        lcb_U32 val = dsn.loglevel;
+    if (spec.loglevel) {
+        lcb_U32 val = spec.loglevel;
         lcb_cntl(obj, LCB_CNTL_SET, LCB_CNTL_CONLOGGER_LEVEL, &val);
     }
 
     lcb_log(LOGARGS(obj, INFO), "Version=%s, Changeset=%s", lcb_get_version(NULL), LCB_VERSION_CHANGESET);
-    lcb_log(LOGARGS(obj, INFO), "Effective connection string: %s. Bucket=%s", options && options->version >= 3 ? options->v.v3.dsn : dsn.origdsn, settings->bucket);
+    lcb_log(LOGARGS(obj, INFO), "Effective connection string: %s. Bucket=%s", options && options->version >= 3 ? options->v.v3.connstr : spec.connstr, settings->bucket);
 
     /* Do not allow people use Administrator account for data access */
     if (type == LCB_TYPE_BUCKET && settings->username) {
@@ -491,11 +491,11 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_initialize_packet_handlers(obj);
     lcb_aspend_init(&obj->pendops);
 
-    if ((err = setup_ssl(obj, &dsn)) != LCB_SUCCESS) {
+    if ((err = setup_ssl(obj, &spec)) != LCB_SUCCESS) {
         goto GT_DONE;
     }
 
-    if ((err = apply_dsn_options(obj, &dsn)) != LCB_SUCCESS) {
+    if ((err = apply_spec_options(obj, &spec)) != LCB_SUCCESS) {
         goto GT_DONE;
     }
 
@@ -512,8 +512,8 @@ lcb_error_t lcb_create(lcb_t *instance,
         }
     }
 
-    populate_nodes(obj, &dsn);
-    err = init_providers(obj, &dsn);
+    populate_nodes(obj, &spec);
+    err = init_providers(obj, &spec);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;
@@ -521,7 +521,7 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     obj->last_error = err;
     GT_DONE:
-    lcb_dsn_clean(&dsn);
+    lcb_connspec_clean(&spec);
     if (err != LCB_SUCCESS && obj) {
         lcb_destroy(obj);
         *instance = NULL;

@@ -18,7 +18,7 @@ namespace cbc {
     X(String, transport, "bootstrap-protocol", 'C') \
     X(String, configcache, "config-cache", 'Z') \
     X(String, saslmech, "force-sasl-mech", 'S') \
-    X(String, dsn, "dsn", '\0') \
+    X(String, connstr, "spec", 'U') \
     X(String, ssl, "ssl", '\0') \
     X(String, capath, "capath", '\0') \
     X(UInt, timeout, "timeout", 't') \
@@ -44,7 +44,7 @@ private:
 
     X_OPTIONS(X)
 #undef X
-    std::string dsn;
+    std::string connstr;
     std::string passwd;
     bool isAdmin;
     bool loadFileDefaults();

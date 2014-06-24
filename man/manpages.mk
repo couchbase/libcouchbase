@@ -14,4 +14,4 @@ man_MANS+=man/cbc-view.1
 man_MANS+=man/cbc-admin.1
 man_MANS+=man/cbc-bucket-create.1
 man_MANS+=man/cbc-bucket-delete.1
-man_MANS+=man/cbc-dsn.1
+man_MANS+=man/cbc-connstr.1

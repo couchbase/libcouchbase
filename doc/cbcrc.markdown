@@ -14,7 +14,7 @@ following form:
 The keys may be specified in random order, and if you specify the same
 key multiple times the last value "wins". The following keys exists:
 
-* `dsn`:
+* `connstr`:
   This is the URI-like string used to connect to the cluster. Its format
   consists of a _scheme_ followed by a list of hosts, an optional
   bucket for the path and an optional `?` followed by key-value options.

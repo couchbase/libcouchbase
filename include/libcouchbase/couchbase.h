@@ -192,7 +192,8 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  *
  * ### Options
  *
- * Options can be specified as the _query_ part of the DSN/URI, for example:
+ * Options can be specified as the _query_ part of the connection string,
+ * for example:
  *
  * `couchbase://cbnode.net/beer?operation_timeout=10000000,ssl=no_verify`.
  * Options may either be appropriate _key_ parameters for lcb_cntl_string()
@@ -264,7 +265,7 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  *
  */
 struct lcb_create_st3 {
-    const char *dsn; /**< Connection string */
+    const char *connstr; /**< Connection string */
     const char *username; /**< Username for bucket. Unused as of Server 2.5 */
     const char *passwd; /**< Password for bucket */
     void *_pad_bucket; /* Padding. Unused */
@@ -284,10 +285,10 @@ struct lcb_create_st {
         struct lcb_create_st3 v3;
     } v;
 
-#define LCB_CREATEOPT_INIT(cropt, connstr, iops) do { \
+#define LCB_CREATEOPT_INIT(cropt, s, iops) do { \
     memset(cropt, 0, sizeof(*cropt)); \
     (cropt)->version = 3; \
-    (cropt)->v.v3.dsn = connstr; \
+    (cropt)->v.v3.connstr = s; \
     (cropt)->v.v3.iops = iops; \
 } while (0);
 
@@ -324,7 +325,7 @@ struct lcb_create_st {
  * struct lcb_create_st options;
  * memset(&options, 0, sizeof(options));
  * options.version = 3;
- * options.v.v3.dsn = "couchbase://host1,host2,host3";
+ * options.v.v3.connstr = "couchbase://host1,host2,host3";
  * err = lcb_create(&instance, &options);
  * @endcode
  *

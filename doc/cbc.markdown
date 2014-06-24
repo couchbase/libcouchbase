@@ -22,7 +22,7 @@
 `cbc bucket-create` _-P PASSWORD_ _NAME_ [_OPTIONS_]<br>
 `cbc bucket-delete` _-P PASSWORD_ _NAME_ [_OPTIONS_]<br>
 `cbc bucket-flush` _NAME_ [_OPTIONS_]<br>
-`cbc dsn` _SPEC_<br>
+`cbc connstr` _SPEC_<br>
 
 ## DESCRIPTION
 
@@ -40,7 +40,7 @@ Options may be read either from the command line, or from a configuration file
 
 The following common options may be applied to most of the commands
 
-* `--dsn`=_SPEC_:
+* `-U`, `--spec`=_SPEC_:
   A string describing the cluster to connect to. The string is in a URI-like syntax,
   and may also contain other options. See the [EXAMPLES](#examples) section for information.
   Typically such a URI will look like `couchbase://host1,host2,host3/bucket`.
@@ -298,7 +298,7 @@ to the command on standard input.
 This command accepts one positional argument which is the _path_ (relative to the
 bucket) to execute. Thus to query the `brewery_beers` view in the `beer` design
 document within the `beer-sample` bucket one would do:
-    cbc view --dsn couchbase://localhost/beer-sample _design/beer/_view/brewery_beers
+    cbc view -U couchbase://localhost/beer-sample _design/beer/_view/brewery_beers
 
 In addition to the [OPTIONS](#OPTIONS) specified above, the following options are recognized:
 
@@ -366,7 +366,7 @@ require that _flush_ be enabled for the bucket.
 
 See the [OPTIONS](#OPTIONS) for accepted options
 
-### dsn
+### connstr 
 
 This command will parse a connection string into its constituent parts and
 display them on the screen. The command takes a single positional argument

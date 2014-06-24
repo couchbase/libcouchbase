@@ -656,7 +656,7 @@ detailed_errcode_handler(int mode, lcb_t instance, int cmd, void *arg)
 }
 
 static lcb_error_t
-reinit_dsn_handler(int mode, lcb_t instance, int cmd, void *arg) {
+reinit_spec_handler(int mode, lcb_t instance, int cmd, void *arg) {
     if (mode == LCB_CNTL_GET) {
         return LCB_ECTL_UNSUPPMODE;
     }
@@ -708,7 +708,7 @@ static ctl_handler handlers[] = {
     syncdtor_handler, /* LCB_CNTL_SYNCDESTROY */
     console_log_handler, /* LCB_CNTL_CONLOGGER_LEVEL */
     detailed_errcode_handler, /* LCB_CNTL_DETAILED_ERRCODES */
-    reinit_dsn_handler /* LCB_CNTL_REINIT_DSN */
+    reinit_spec_handler /* LCB_CNTL_REINIT_CONNSTR */
 };
 
 typedef struct {
@@ -732,7 +732,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"console_log_level", LCB_CNTL_CONLOGGER_LEVEL},
         {"config_cache", LCB_CNTL_CONFIGCACHE },
         {"detailed_errcodes", LCB_CNTL_DETAILED_ERRCODES},
-        {"_reinit_dsn", LCB_CNTL_REINIT_DSN },
+        {"_reinit_connstr", LCB_CNTL_REINIT_CONNSTR },
         {NULL, -1}
 };
 

@@ -342,10 +342,10 @@ protected:
     std::string getContentType() { return "application/json"; }
 };
 
-class DsnHandler : public Handler {
+class ConnstrHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Parse a connection string and provide info on its components")
-    DsnHandler() : Handler("dsn") {}
+    ConnstrHandler() : Handler("connstr") {}
 protected:
     void handleOptions() { }
     void run();

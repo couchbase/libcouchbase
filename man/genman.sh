@@ -9,7 +9,7 @@ ronn --pipe --roff $SRCDIR/cbc-pillowfight.markdown > $OUTDIR/cbc-pillowfight.1
 ronn --pipe --roff $SRCDIR/cbcrc.markdown > $OUTDIR/cbcrc.4
 
 MANLINKS="cat cp create observe flush hash lock unlock rm stats"
-MANLINKS="$MANLINKS version verbosity view admin bucket-create bucket-delete dsn"
+MANLINKS="$MANLINKS version verbosity view admin bucket-create bucket-delete connstr"
 
 > manpages.mk
 

@@ -67,7 +67,7 @@
 \fBcbc bucket\-flush\fR \fINAME\fR [\fIOPTIONS\fR]
 .
 .br
-\fBcbc dsn\fR \fISPEC\fR
+\fBcbc connstr\fR \fISPEC\fR
 .
 .br
 .
@@ -84,7 +84,7 @@ Options may be read either from the command line, or from a configuration file (
 The following common options may be applied to most of the commands
 .
 .TP
-\fB\-\-dsn\fR=\fISPEC\fR
+\fB\-U\fR, \fB\-\-spec\fR=\fISPEC\fR
 A string describing the cluster to connect to\. The string is in a URI\-like syntax, and may also contain other options\. See the \fIEXAMPLES\fR section for information\. Typically such a URI will look like \fBcouchbase://host1,host2,host3/bucket\fR\.
 .
 .IP
@@ -300,7 +300,7 @@ This command accepts one positional argument which is the \fIpath\fR (relative t
 .
 .nf
 
-cbc view \-\-dsn couchbase://localhost/beer\-sample _design/beer/_view/brewery_beers
+cbc view \-U couchbase://localhost/beer\-sample _design/beer/_view/brewery_beers
 .
 .fi
 .
@@ -366,7 +366,7 @@ This command does not require administrative level credentials, however it does 
 .P
 See the \fIOPTIONS\fR for accepted options
 .
-.SS "dsn"
+.SS "connstr"
 This command will parse a connection string into its constituent parts and display them on the screen\. The command takes a single positional argument which is the string to parse\.
 .
 .SH "EXAMPLES"
