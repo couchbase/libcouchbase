@@ -197,7 +197,11 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
     int has_ssl = obj->settings->sslopts & LCB_SSL_ENABLED;
     int defl_http, defl_cccp;
 
-    if (has_ssl) {
+    if (dsn->implicit_port == LCB_CONFIG_MCCOMPAT_PORT) {
+        defl_http = -1;
+        defl_cccp = LCB_CONFIG_MCCOMPAT_PORT;
+
+    } else if (has_ssl) {
         defl_http = LCB_CONFIG_HTTP_SSL_PORT;
         defl_cccp = LCB_CONFIG_MCD_SSL_PORT;
     } else {
@@ -226,6 +230,7 @@ populate_nodes(lcb_t obj, const lcb_DSNPARAMS *dsn)
             switch (dh->type) {
             case LCB_CONFIG_MCD_PORT:
             case LCB_CONFIG_MCD_SSL_PORT:
+            case LCB_CONFIG_MCCOMPAT_PORT:
                 ADD_CCCP();
                 break;
             case LCB_CONFIG_HTTP_PORT:
@@ -246,10 +251,17 @@ init_providers(lcb_t obj, const lcb_DSNPARAMS *dsn)
 {
     int http_enabled = 1, cccp_enabled = 1, cccp_found = 0, http_found = 0;
     const lcb_config_transport_t *cur;
-    clconfig_provider *http, *cccp;
+    clconfig_provider *http, *cccp, *mcraw;
 
     http = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_HTTP);
     cccp = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_CCCP);
+    mcraw = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_MCRAW);
+
+    if (dsn->implicit_port == LCB_CONFIG_MCCOMPAT_PORT) {
+        lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_MCRAW, 1);
+        mcraw->configure_nodes(mcraw, obj->mc_nodes);
+        return LCB_SUCCESS;
+    }
 
     for (cur = dsn->transports; *cur != LCB_CONFIG_TRANSPORT_LIST_END; cur++) {
         if (*cur == LCB_CONFIG_TRANSPORT_CCCP) {

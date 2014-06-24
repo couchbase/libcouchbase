@@ -96,7 +96,7 @@ struct lcb_cached_config_st {
  */
 #define lcb_create_compat lcb__create_compat_230
 LCB_DEPR_API2(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io),
-    "Legacy memcached functionality not supported. For config cache, use LCB_CNTL_CONFIGCACHE");
+    "Use memcached:// for legacy memcached. For config cache, use LCB_CNTL_CONFIGCACHE");
 
 typedef enum {
     LCB_ASYNCHRONOUS = 0x00,

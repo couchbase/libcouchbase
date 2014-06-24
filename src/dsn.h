@@ -47,6 +47,7 @@ typedef struct {
 #define LCB_DSN_SCHEME_MCD_SSL "couchbases://"
 #define LCB_DSN_SCHEME_HTTP "http://"
 #define LCB_DSN_SCHEME_HTTP_SSL "https-internal://"
+#define LCB_DSN_SCHEME_MCCOMPAT "memcached://"
 
 /**
  * Compile a DSN into a structure suitable for further processing. A Couchbase

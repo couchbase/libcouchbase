@@ -49,6 +49,7 @@ provider_string(clconfig_method_t type) {
     if (type == LCB_CLCONFIG_HTTP) { return "HTTP"; }
     if (type == LCB_CLCONFIG_CCCP) { return "CCCP"; }
     if (type == LCB_CLCONFIG_FILE) { return "FILE"; }
+    if (type == LCB_CLCONFIG_MCRAW) { return "MCRAW"; }
     return "";
 }
 
@@ -67,6 +68,7 @@ lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot)
     mon->all_providers[LCB_CLCONFIG_CCCP] = lcb_clconfig_create_cccp(mon);
     mon->all_providers[LCB_CLCONFIG_HTTP] = lcb_clconfig_create_http(mon);
     mon->all_providers[LCB_CLCONFIG_USER] = lcb_clconfig_create_user(mon);
+    mon->all_providers[LCB_CLCONFIG_MCRAW] = lcb_clconfig_create_mcraw(mon);
 
     for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         mon->all_providers[ii]->parent = mon;

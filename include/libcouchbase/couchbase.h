@@ -22,6 +22,7 @@
 #define LCB_CONFIG_MCD_SSL_PORT 11207
 #define LCB_CONFIG_HTTP_PORT 8091
 #define LCB_CONFIG_HTTP_SSL_PORT 18091
+#define LCB_CONFIG_MCCOMPAT_PORT 11211
 
 struct lcb_st;
 typedef struct lcb_st *lcb_t;

@@ -36,6 +36,8 @@ static int string_to_porttype(const char *s) {
         return LCB_CONFIG_HTTP_SSL_PORT;
     } else if (!strcmp(s, "MCDS")) {
         return LCB_CONFIG_MCD_SSL_PORT;
+    } else if (!strcmp(s, "MCCOMPAT")) {
+        return LCB_CONFIG_MCCOMPAT_PORT;
     } else {
         return -1;
     }
@@ -50,6 +52,8 @@ static const char* porttype_to_string(int porttype)
         return "MCD";
     } else if (porttype == LCB_CONFIG_MCD_SSL_PORT) {
         return "MCDS";
+    } else if (porttype == LCB_CONFIG_MCCOMPAT_PORT) {
+        return "MCCOMPAT";
     } else {
         return "";
     }
@@ -344,6 +348,8 @@ lcb_dsn_parse(const char *dsn_in, lcb_DSNPARAMS *out, const char **errmsg)
 
     } else if (SCHEME_MATCHES(LCB_DSN_SCHEME_RAW)) {
         out->implicit_port = 0;
+    } else if (SCHEME_MATCHES(LCB_DSN_SCHEME_MCCOMPAT)) {
+        out->implicit_port = LCB_CONFIG_MCCOMPAT_PORT;
     } else {
         SET_ERROR("String must begin with ''couchbase://, 'couchbases://'");
     }

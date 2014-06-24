@@ -104,6 +104,9 @@ typedef enum {
     LCB_CLCONFIG_CCCP,
     /** Old-style streaming HTTP provider. Implemented in bc_http.c */
     LCB_CLCONFIG_HTTP,
+    /** Raw memcached provided */
+    LCB_CLCONFIG_MCRAW,
+
     LCB_CLCONFIG_MAX,
 
     /** Ephemeral source, used for tests */
@@ -305,6 +308,7 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *mon);
 clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon);
 clconfig_provider * lcb_clconfig_create_file(lcb_confmon *mon);
 clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon);
+clconfig_provider * lcb_clconfig_create_mcraw(lcb_confmon *mon);
 
 /**@brief Get a provider by its type
  * @param mon the monitor
@@ -641,6 +645,13 @@ lcb_cccp_update2(const void *cookie, lcb_error_t err,
     const void *bytes, lcb_size_t nbytes, const lcb_host_t *origin);
 
 #define lcb_clconfig_cccp_set_nodes(pb, nodes) (pb)->configure_nodes(pb, nodes)
+/**@}*/
+
+/**@name Raw Memcached (MCRAW) Provider-specific APIs
+ * @{*/
+LCB_INTERNAL_API
+lcb_error_t
+lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes);
 /**@}*/
 
 /**@}*/

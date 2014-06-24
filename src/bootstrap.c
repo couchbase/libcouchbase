@@ -65,7 +65,8 @@ static void config_callback(clconfig_listener *listener,
     if (!bs->bootstrapped) {
         bs->bootstrapped = 1;
         if (instance->type == LCB_TYPE_BUCKET &&
-                instance->dist_type == LCBVB_DIST_KETAMA) {
+                instance->dist_type == LCBVB_DIST_KETAMA &&
+                instance->cur_configinfo->origin != LCB_CLCONFIG_MCRAW) {
             lcb_log(LOGARGS(instance, INFO),
                     "Reverting to HTTP Config for memcached buckets");
 
