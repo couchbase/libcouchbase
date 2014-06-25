@@ -2733,26 +2733,71 @@ void lcb_cancel_http_request(lcb_t instance,
  * @{
  */
 
+/**@brief
+ * Type of node to retrieve for the lcb_get_node() function
+ */
+typedef enum {
+    /** Get an HTTP configuration (Rest API) node */
+    LCB_NODE_HTCONFIG = 0x01,
+    /** Get a data (memcached) node */
+    LCB_NODE_DATA = 0x02,
+    /** Get a view (CAPI) node */
+    LCB_NODE_VIEWS = 0x04,
+    /** Only return a node which is connected, or a node which is known to be up */
+    LCB_NODE_CONNECTED = 0x08,
+    /** Never return NULL. Return the string "invalid_host:1" instead */
+    LCB_NODE_NEVERNULL = 0x10,
+    /** Equivalent to `LCB_NODE_HTCONFIG|LCB_NODE_CONNECTED` */
+    LCB_NODE_HTCONFIG_CONNECTED = 0x09,
+    /** Equivalent to `LCB_NODE_HTCONFIG|LCB_NODE_NEVERNULL` */
+    LCB_NODE_HTCONFIG_ANY = 0x11
+} lcb_GETNODETYPE;
+#define LCB_GETNODE_UNAVAILABLE "invalid_host:0"
+
 /**
- * @brief Get the current REST API host
+ * @brief Return a string of `host:port` for a node of the given type.
  *
- * This retrieves the current host that is used for configuration updates. If
- * the server and client have been configured to use the memcached protocol
- * for configuration updates, this function will still return a valid node,
- * however it will not be the "Current Node"
+ * @param instance the instance from which to retrieve the node
+ * @param type the type of node to return
+ * @param index the node number if index is out of bounds it will be wrapped
+ * around, thus there is never an invalid value for this parameter
  *
- * @return The hostname for the current REST API node. This string must not be
- * freed and is only valid until the next API call into libcouchbase
- * (excluding lcb_get_port())
- * @committed
+ * @return a string in the form of `host:port`. If LCB_NODE_NEVERNULL was specified
+ * as an option in `type` then the string constant LCB_GETNODE_UNAVAILABLE is
+ * returned. Otherwise `NULL` is returned if the type is unrecognized or the
+ * LCB_NODE_CONNECTED option was specified and no connected node could be found
+ * or a memory allocation failed.
+ *
+ * @note The index parameter is _ignored_ if `type` is
+ * LCB_NODE_HTCONFIG|LCB_NODE_CONNECTED as there will always be only a single
+ * HTTP bootstrap node.
+ *
+ * @code{.c}
+ * const char *viewnode = lcb_get_node(instance, LCB_NODE_VIEWS, 0);
+ * // Get the connected REST endpoint:
+ * const char *restnode = lcb_get_node(instance, LCB_NODE_HTCONFIG|LCB_NODE_CONNECTED, 0);
+ * if (!restnode) {
+ *   printf("Instance not connected via HTTP!\n");
+ * }
+ * @endcode
+ *
+ * Iterate over all the data nodes:
+ * @code{.c}
+ * unsigned ii;
+ * for (ii = 0; ii < lcb_get_num_servers(instance); ii++) {
+ *   const char *kvnode = lcb_get_node(instance, LCB_NODE_DATA, ii);
+ *   if (kvnode) {
+ *     printf("KV node %s exists at index %u\n", kvnode, ii);
+ *   } else {
+ *     printf("No node for index %u\n", ii);
+ *   }
+ * }
+ * @endcode
+ * @committed.
  */
 LIBCOUCHBASE_API
-const char *lcb_get_host(lcb_t instance);
-
-/**@brief Get the current port for lcb_get_host()
- * @committed*/
-LIBCOUCHBASE_API
-const char *lcb_get_port(lcb_t instance);
+const char *
+lcb_get_node(lcb_t instance, lcb_GETNODETYPE type, unsigned index);
 
 /**
  * @brief Get the number of the replicas in the cluster

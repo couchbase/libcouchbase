@@ -107,6 +107,11 @@ LCB_DEPR_API2(void lcb_behavior_set_syncmode(lcb_t, lcb_syncmode_t),
 LCB_DEPR_API2(lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t),
     "Syncmode will be removed in future versions. Use lcb_wait() instead");
 
+LCB_DEPR_API2(const char *lcb_get_host(lcb_t),
+    "Use lcb_get_node(instance, LCB_NODE_HTCONFIG, 0)");
+LCB_DEPR_API2(const char *lcb_get_port(lcb_t),
+    "Use lcb_get_node(instance, LCB_NODE_HTCONFIG, 0)");
+
 /** WTF constants for sanity check */
 #define LCB_C_ST_ID 0
 #define LCB_C_ST_V 2

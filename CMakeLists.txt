@@ -214,6 +214,7 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/mcserver/negotiate.c
             src/mcserver/mcserver.c
             src/newconfig.c
+            src/nodeinfo.c
             src/iofactory.c
             src/retryq.c
             src/retrychk.c

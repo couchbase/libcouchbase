@@ -51,6 +51,7 @@
 extern "C" {
 #endif
     struct lcb_histogram_st;
+    struct lcb_string_st;
 
     struct lcb_callback_st {
         lcb_get_callback get;
@@ -114,7 +115,7 @@ extern "C" {
         lcb_settings *settings;
         lcbio_pTABLE iotable;
         lcb_RETRYQ *retryq;
-        char *scratch; /* storage for random strings, lcb_get_host, etc */
+        struct lcb_string_st *scratch;
         lcbio_pTIMER dtor_timer;
 
 #ifdef __cplusplus

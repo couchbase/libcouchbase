@@ -377,8 +377,8 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
                                   lcb_http_request_t *request)
 {
     lcb_http_request_t req;
-    const char *username = NULL, *body, *path, *content_type;
-    char *password = NULL, *base = NULL;
+    const char *base = NULL, *username = NULL, *body, *path, *content_type;
+    char *password = NULL;
     lcb_size_t nbase, nbody, npath;
     lcb_http_method_t method;
     int chunked;
@@ -456,22 +456,11 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     break;
     case LCB_HTTP_TYPE_MANAGEMENT:
     {
-        const char *tmphost = lcb_get_host(instance);
-        const char *tmpport = lcb_get_port(instance);
-        if (tmphost == NULL || *tmphost == '\0' ||
-                tmpport == NULL || *tmpport == '\0') {
+        base = lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
+        if (base == NULL || *base == '\0') {
             return LCB_CLIENT_ETMPFAIL;
         }
-
-        nbase = strlen(tmphost) + strlen(tmpport) + 2;
-        base = calloc(nbase, sizeof(char));
-        if (!base) {
-            return LCB_CLIENT_ENOMEM;
-        }
-        if (snprintf(base, nbase, "%s:%s", tmphost, tmpport) < 0) {
-            return LCB_CLIENT_ENOMEM;
-        }
-        nbase -= 1; /* skip '\0' */
+        nbase = strlen(base);
         username = settings->username;
         if (settings->password) {
             password = strdup(settings->password);
@@ -531,9 +520,6 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
         return rc;
     }
     rc = lcb_http_verify_url(req, base, nbase);
-    if (type == LCB_HTTP_TYPE_MANAGEMENT) {
-        free(base);
-    }
     if (rc != LCB_SUCCESS) {
         lcb_http_request_decref(req);
         return rc;

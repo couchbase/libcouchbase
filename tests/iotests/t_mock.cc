@@ -831,3 +831,64 @@ TEST_F(MockUnitTest, testAsyncDestroy)
     lcbio_table_unref(iot);
     ASSERT_EQ(1, ctx.count);
 }
+
+TEST_F(MockUnitTest, testGetHostInfo)
+{
+    lcb_t instance;
+    createConnection(instance);
+    lcb_config_transport_t tx;
+    const char *hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
+    ASSERT_FALSE(hoststr == NULL);
+
+    hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG_CONNECTED, 0);
+    lcb_error_t err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_TRANSPORT, &tx);
+
+    ASSERT_EQ(LCB_SUCCESS, err);
+    if (tx == LCB_CONFIG_TRANSPORT_HTTP) {
+        ASSERT_FALSE(hoststr == NULL);
+        hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG_CONNECTED, 99);
+        ASSERT_FALSE(hoststr == NULL);
+    } else {
+        if (hoststr) {
+            printf("%s\n", hoststr);
+        }
+        ASSERT_TRUE(hoststr == NULL);
+    }
+
+    // Get any data node
+    using std::map;
+    using std::string;
+    map<string,bool> smap;
+
+    // Ensure we only get unique nodes
+    for (size_t ii = 0; ii < lcb_get_num_nodes(instance); ii++) {
+        const char *cur = lcb_get_node(instance, LCB_NODE_DATA, ii);
+        ASSERT_FALSE(cur == NULL);
+        ASSERT_FALSE(smap[cur]);
+        smap[cur] = true;
+    }
+    lcb_destroy(instance);
+
+    // Try with no connection
+    err = lcb_create(&instance, NULL);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG_CONNECTED, 0);
+    ASSERT_TRUE(NULL == hoststr);
+
+    hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
+    ASSERT_TRUE(NULL == hoststr);
+
+
+
+    // These older API functions are special as they should never return NULL
+    hoststr = lcb_get_host(instance);
+    ASSERT_FALSE(hoststr == NULL);
+    ASSERT_STREQ("localhost", hoststr);
+
+    hoststr = lcb_get_port(instance);
+    ASSERT_FALSE(hoststr == NULL);
+    ASSERT_STREQ("8091", hoststr);
+
+    lcb_destroy(instance);
+}

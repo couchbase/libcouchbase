@@ -35,7 +35,7 @@
  * Note that all API functions which update the position of the buffer ALSO
  * add a trailing NUL byte at the end.
  */
-typedef struct {
+typedef struct lcb_string_st {
     /** Buffer that's allocated */
     char *base;
 

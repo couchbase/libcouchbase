@@ -53,98 +53,6 @@ const char *lcb_get_version(lcb_uint32_t *version)
     return LCB_VERSION_STRING;
 }
 
-#define PARAM_CONFIG_HOST 1
-#define PARAM_CONFIG_PORT 2
-static const char *param_from_host(const lcb_host_t *host, int type)
-{
-    if (!host) {
-        return NULL;
-    }
-    if (type == PARAM_CONFIG_HOST) {
-        return *host->host ? host->host : NULL;
-    } else {
-        return *host->port ? host->port : NULL;
-    }
-}
-
-static const char *get_rest_param(lcb_t obj, int paramtype)
-{
-    const char *ret = NULL;
-    const lcb_host_t *host = lcb_confmon_get_rest_host(obj->confmon);
-    ret = param_from_host(host, paramtype);
-
-    if (ret) {
-        return ret;
-    }
-
-    /** Don't have a REST API connection? */
-    if (LCBT_VBCONFIG(obj)) {
-        lcb_server_t *server = LCBT_GET_SERVER(obj, 0);
-        if (paramtype == PARAM_CONFIG_HOST) {
-            ret = param_from_host(server->curhost, paramtype);
-            if (ret) {
-                return ret;
-            }
-        } else {
-            char *colon = strstr(server->resthost, ":");
-            if (colon) {
-                if (obj->scratch) {
-                    free(obj->scratch);
-                }
-                obj->scratch = malloc(NI_MAXSERV + 1);
-                strcpy(obj->scratch, colon+1);
-                if (*obj->scratch) {
-                    return obj->scratch;
-                }
-            }
-        }
-    }
-    return param_from_host(obj->ht_nodes->entries, paramtype);
-}
-
-LIBCOUCHBASE_API
-const char *lcb_get_host(lcb_t instance)
-{
-    return get_rest_param(instance, PARAM_CONFIG_HOST);
-}
-
-LIBCOUCHBASE_API
-const char *lcb_get_port(lcb_t instance)
-{
-    return get_rest_param(instance, PARAM_CONFIG_PORT);
-}
-
-
-LIBCOUCHBASE_API
-lcb_int32_t lcb_get_num_replicas(lcb_t instance)
-{
-    if (LCBT_VBCONFIG(instance)) {
-        return instance->nreplicas;
-    } else {
-        return -1;
-    }
-}
-
-LIBCOUCHBASE_API
-lcb_int32_t lcb_get_num_nodes(lcb_t instance)
-{
-    if (LCBT_VBCONFIG(instance)) {
-        return LCBT_NSERVERS(instance);
-    } else {
-        return -1;
-    }
-}
-
-/**
- * Return a NULL-terminated list of servers (host:port) for the entire cluster.
- */
-LIBCOUCHBASE_API
-const char *const *lcb_get_server_list(lcb_t instance)
-{
-    hostlist_ensure_strlist(instance->ht_nodes);
-    return (const char * const * )instance->ht_nodes->slentries;
-}
-
 /**
  * Associate a "cookie" with an instance of libcouchbase. You may only store
  * <b>one</b> cookie with each instance of libcouchbase.
@@ -626,8 +534,13 @@ void lcb_destroy(lcb_t instance)
 
     DESTROY(lcbio_table_unref, iotable);
     DESTROY(lcb_settings_unref, settings);
+    if (instance->scratch) {
+        lcb_string_release(instance->scratch);
+        free(instance->scratch);
+        instance->scratch = NULL;
+    }
+
     free(instance->histogram);
-    free(instance->scratch);
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 #undef DESTROY
