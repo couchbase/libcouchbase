@@ -190,7 +190,8 @@ pkt_bcast_simple(lcb_t instance, const void *cookie, lcb_CALLBACKTYPE type)
         } else if (type == LCB_CALLBACK_VERSIONS) {
             hdr.request.opcode = PROTOCOL_BINARY_CMD_VERSION;
         } else {
-            abort();
+            fprintf(stderr, "pkt_bcast_simple passed unknown type %u\n", type);
+            assert(0);
         }
 
         mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE);

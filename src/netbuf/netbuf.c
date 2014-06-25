@@ -388,7 +388,8 @@ mblock_release_ptr(nb_MBPOOL *pool, char * ptr, nb_SIZE size)
         return;
     }
 
-    abort();
+    fprintf(stderr, "NETBUF: Requested to release pointer %p which was not allocated\n", ptr);
+    assert(0);
 }
 
 static int

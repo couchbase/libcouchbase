@@ -247,13 +247,17 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
         mc_PIPELINE **servers;
         nservers = VB_NSERVERS(config->vbc);
         if ((servers = malloc(sizeof(*servers) * nservers)) == NULL) {
-            abort();
+            assert(servers);
+            lcb_log(LOGARGS(instance, FATAL), "Couldn't allocate memory for new server list! (n=%u)", nservers);
+            return;
         }
 
         for (ii = 0; ii < nservers; ii++) {
             mc_SERVER *srv;
             if ((srv = mcserver_alloc(instance, ii)) == NULL) {
-                abort();
+                assert(srv);
+                lcb_log(LOGARGS(instance, FATAL), "Couldn't allocate memory for server instance!");
+                return;
             }
             servers[ii] = &srv->pipeline;
         }
