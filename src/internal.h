@@ -166,6 +166,9 @@ extern "C" {
     int lcb_getenv_nonempty(const char *key, char *buf, lcb_size_t len);
     LCB_INTERNAL_API
     int lcb_getenv_boolean(const char *key);
+    LCB_INTERNAL_API
+    int lcb_getenv_nonempty_multi(char *buf, lcb_size_t nbuf, ...);
+    int lcb_getenv_boolean_multi(const char *key, ...);
 
     /**
      * Initialize the socket subsystem. For windows, this initializes Winsock.
