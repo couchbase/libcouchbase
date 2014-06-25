@@ -160,10 +160,6 @@ TEST_F(ConnstrTest, testParseHosts)
     ASSERT_TRUE(dh->isMCD());
 
     reinit();
-    err = lcb_connspec_parse("couchbase+explicit://foo.com,bar.com:4444=mcd", &params, &errmsg);
-    ASSERT_NE(LCB_SUCCESS, err) << "Error with mixed portless hosts";
-
-    reinit();
     err = lcb_connspec_parse("couchbase://foo.com,bar.com:4444", &params, &errmsg);
     ASSERT_EQ(LCB_SUCCESS, err);
     dh = findHost(&params, "bar.com");

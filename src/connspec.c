@@ -15,8 +15,6 @@
 #define F_HASPASSWD (1<<1)
 #define F_HASUSER (1<<2)
 #define F_SSLSCHEME (1<<3)
-#define F_NOPORTS (1<<4)
-#define F_HASPORTS (1<<5)
 
 typedef struct {
     char *scratch; /* temporary buffer. Sufficient for strlen(specstr) * 3 bytes */
@@ -114,18 +112,10 @@ parse_hosts(PARSECTX *ctx, const char *hosts_end)
         if (port_s == NULL) {
             hostlen = curlen;
             portlen = 0;
-            out->flags |= F_NOPORTS;
         } else {
             hostlen = port_s - ctx->scratch;
             portlen = (curlen - hostlen)-1;
             port_s++;
-            out->flags |= F_HASPORTS;
-        }
-
-        if ( (out->flags & F_NOPORTS) && (out->flags & F_HASPORTS)) {
-            if (!out->implicit_port) {
-                SET_ERROR("Cannot mix host:port and plain host specifiers");
-            }
         }
 
         dh = malloc(sizeof(*dh) + hostlen);
@@ -417,7 +407,6 @@ lcb_connspec_parse(const char *connstr, lcb_CONNSPEC *out, const char **errmsg)
         lcb_HOSTSPEC *host = calloc(1, sizeof(*host) + sizeof localhost);
         memcpy(host->hostname, localhost, sizeof localhost);
         lcb_list_append(&out->hosts, &host->llnode);
-        out->flags |= F_NOPORTS;
     }
 
     if (options != NULL) {
@@ -578,7 +567,6 @@ lcb_connspec_convert(lcb_CONNSPEC *params, const struct lcb_create_st *cropts)
     }
 
     if (cropts->version == 2 && cr2->mchosts) {
-        params->flags |= F_HASPORTS;
         err = convert_hosts(&tmpstr, cr2->mchosts, LCB_CONFIG_MCD_PORT);
         if (err != LCB_SUCCESS) {
             goto GT_DONE;
