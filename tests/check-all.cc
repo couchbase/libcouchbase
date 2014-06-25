@@ -42,7 +42,7 @@
 #include <libcouchbase/couchbase.h>
 
 #define TESTS_BASE "sock-tests;nonio-tests;rdb-tests;mc-tests;"
-#define PLUGIN_ENV_VAR "LIBCOUCHBASE_EVENT_PLUGIN_NAME"
+#define PLUGIN_ENV_VAR "LCB_IOPS_NAME"
 #define LCB_SRCROOT_ENV_VAR "srcdir"
 #ifdef HAVE_COUCHBASEMOCK
 #define DEFAULT_TEST_NAMES TESTS_BASE "unit-tests"
