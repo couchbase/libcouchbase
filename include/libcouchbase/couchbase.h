@@ -40,7 +40,6 @@ typedef struct lcb_timer_st *lcb_timer_t;
 #include <libcouchbase/error.h>
 #include <libcouchbase/iops.h>
 #include <libcouchbase/http.h>
-#include <libcouchbase/envvars.h>
 #include <libcouchbase/configuration.h>
 
 #ifdef __cplusplus
