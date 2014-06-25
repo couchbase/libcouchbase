@@ -82,16 +82,13 @@ int main(int argc, char *argv[])
     struct lcb_create_st create_options;
 
     memset(&create_options, 0, sizeof(create_options));
+    create_options.version = 3;
 
     if (argc > 1) {
-        create_options.v.v0.host = argv[1];
+        create_options.v.v3.connstr = argv[1];
     }
     if (argc > 2) {
-        create_options.v.v0.user = argv[2];
-        create_options.v.v0.bucket = argv[2];
-    }
-    if (argc > 3) {
-        create_options.v.v0.passwd = argv[3];
+        create_options.v.v3.passwd = argv[2];
     }
     err = lcb_create(&instance, &create_options);
     if (err != LCB_SUCCESS) {
