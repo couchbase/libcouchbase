@@ -211,6 +211,12 @@ ALIASES += "commited=committed"
 ALIASES += "uncommited=uncommitted"
 ALIASES += "uncomitted=uncommitted"
 
+# Make the lcb_cntl documentation less wordy in the header
+ALIASES += "cntl_arg_both{1}=@par Argument\nModes|Arg\n---|---\nGet, Set|\1\n"
+ALIASES += "cntl_arg_getonly{1}=@par Argument\nModes|Arg\n---|---\nGet|\1\n"
+ALIASES += "cntl_arg_setonly{1}=@par Argument\nModes|Arg\n---|---\nSet|\1\n"
+ALIASES += "cntl_arg_get_and_set{2}=@par Argument\nModes|Arg\n---|---\nGet|\1\nSet|\2\n"
+
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding
 # "class=itcl::class" will allow you to use the command class in the

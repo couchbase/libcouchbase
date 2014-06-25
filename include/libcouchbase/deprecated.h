@@ -263,6 +263,17 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_verify_struct_size(lcb_uint32_t id, lcb_uint32_t version,
                                    lcb_size_t size);
 
+/** Deprecated cntls */
+
+/**@deprecated It is currently not possible to adjust buffer sizes */
+#define LCB_CNTL_RBUFSIZE               0x02
+/**@deprecated It is currently not possible to adjust buffer sizes */
+#define LCB_CNTL_WBUFSIZE               0x03
+/** @deprecated */
+#define LCB_CNTL_SYNCMODE               0x0a
+/**@deprecated Initial connections are always attempted */
+#define LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT 0x13
+
 #ifdef __cplusplus
 }
 #endif

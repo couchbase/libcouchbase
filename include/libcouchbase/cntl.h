@@ -122,12 +122,10 @@ extern "C" {
  * lcb_uint32_t tmo = 3500000;
  * lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo);
  * @endcode
- * @see LCB_TIMEOUTS
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
  *
+ * @cntl_arg_both{lcbU32*}
  * @committed
+ * @see LCB_TIMEOUTS
  */
 #define LCB_CNTL_OP_TIMEOUT             0x00
 
@@ -135,51 +133,32 @@ extern "C" {
  * @brief Views Timeout
  * This is the I/O timeout for HTTP requests issues with LCB_HTTP_TYPE_VIEWS
  *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
- *
+ * @cntl_arg_both{lcb_U32*}
  * @committed
  */
 #define LCB_CNTL_VIEW_TIMEOUT           0x01
 
-/**@deprecated It is currently not possible to adjust buffer sizes */
-#define LCB_CNTL_RBUFSIZE               0x02
-
-/**@deprecated It is currently not possible to adjust buffer sizes */
-#define LCB_CNTL_WBUFSIZE               0x03
-
 /**
  * @brief Get the handle type.
- *
  * This returns the handle type - which is either LCB_TYPE_CLUSTER or
  * LCB_TYPE_BUCKET
  *
- * Mode | Arg
- * ---- |---
- * Get| lcb_type_t *
+ * @cntl_arg_getonly{lcb_type_t*}
  * @uncommitted
  */
 #define LCB_CNTL_HANDLETYPE             0x04
 
-/**
- * @brief Get the vBucket handle
- *
+/**@brief Get the vBucket handle.
  * Obtains the current cluster configuration from the client.
  *
- * Mode | Arg
- * -----|----
- * Get  | lcbvb_CONFIG **
+ * @cntl_arg_getonly{lcbvb_CONFIG**}
  * @uncommitted
  */
 #define LCB_CNTL_VBCONFIG               0x05
 
-/**
- * @brief Get the iops implementation instance
+/**@brief Get the iops implementation instance
  *
- * Mode | Arg
- * -----|----
- * Get|lcb_io_opt_t *
+ * @cntl_arg_getonly{lcb_io_opt_t*}
  * @uncommitted
  */
 #define LCB_CNTL_IOPS                   0x06
@@ -201,13 +180,9 @@ typedef struct lcb_cntl_vbinfo_st {
 } lcb_cntl_vbinfo_t;
 
 /**
- * @brief get vBucket information for a key
+ * @brief Get the vBucket ID for a given key, based on the current configuration
  *
- * Get the vBucket ID for a given key, based on the current configuration
- *
- * Mode | Arg
- * -----|----
- * Get  | lcb_cntl_vbinfo_t *
+ * @cntl_arg_getonly{lcb_cntl_vbinfo_t*}
  * @committed
  */
 #define LCB_CNTL_VBMAP                  0x07
@@ -265,16 +240,13 @@ typedef struct lcb_cntl_server_st {
  * This function will populate a structure containing various information
  * about the specific host
  *
- * Mode|Arg
- * ----|---
- * Get | lcb_cntl_server_t *
- *
  * Note that all fields in the structure are only valid until the following
  * happens (whichever is first)
  *
  * 1. Another libcouchbase API function is called
  * 2. The event loop regains control
  *
+ * @cntl_arg_getonly{lcb_cntl_server_t*}
  * @volatile
  */
 #define LCB_CNTL_MEMDNODE_INFO          0x08
@@ -282,34 +254,24 @@ typedef struct lcb_cntl_server_st {
 /**
  * @brief Get information about the configuration node.
  *
- * Note that this may not be available if the configuration mode is
- * not HTTP
+ * Note that this may not be available if the configuration mode is not HTTP
  *
- * Mode|Arg
- * ----|---
- * Get | lcb_cntl_server_t *
+ * @cntl_arg_getonly{lcb_cntl_server_t*}
  * @volatile
  */
 #define LCB_CNTL_CONFIGNODE_INFO        0x09
 
-/** @deprecated */
-#define LCB_CNTL_SYNCMODE               0x0a
 
 typedef enum {
-    LCB_IPV6_DISABLED = 0x00,
-    LCB_IPV6_ONLY = 0x1,
-    LCB_IPV6_ALLOW = 0x02
+    LCB_IPV6_DISABLED = 0x00, LCB_IPV6_ONLY = 0x1, LCB_IPV6_ALLOW = 0x02
 } lcb_ipv6_t;
 
 /**
  * @brief IPv4/IPv6 selection policy
  *
- * Setting which controls whether hostname lookups should prefer IPv4 or
- * IPv6
+ * Setting which controls whether hostname lookups should prefer IPv4 or IPv6
  *
- * Mode     |Arg
- * ---------|---
- * Get, Set | lcb_ipv6_t *
+ * @cntl_arg_both{lcb_ipv6_t*}
  * @uncommitted
  */
 #define LCB_CNTL_IP6POLICY              0x0b
@@ -321,9 +283,7 @@ typedef enum {
  * network/mapping/not-my-vbucket errors are received before a configuration
  * update is requested again.
  *
- * Mode     |Arg
- * ---------|---
- * Get, Set | lcb_size_t *
+ * @cntl_arg_both{lcb_size_t*}
  * @uncommitted
  */
 #define LCB_CNTL_CONFERRTHRESH          0x0c
@@ -336,34 +296,23 @@ typedef enum {
  * spend sending repeated probes to a given key's vBucket masters and replicas
  * before they are deemed not to have satisfied the durability requirements
  *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
+ * @cntl_arg_both{lcb_U32*}
  * @committed
  */
 #define LCB_CNTL_DURABILITY_TIMEOUT     0x0d
 
-/**
- * @brief Polling grace interval for lcb_durability_poll()
+/**@brief Polling grace interval for lcb_durability_poll()
  *
  * This is the time the client will wait between repeated probes to
  * a given server.
  *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
- * @committed
- */
+ * @cntl_arg_both{lcb_U32*}
+ * @committed*/
 #define LCB_CNTL_DURABILITY_INTERVAL    0x0e
 
-/**
- * @brief Timeout for non-views HTTP requests
- * @committed
- *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
- */
+/**@brief Timeout for non-views HTTP requests
+ * @cntl_arg_both{lcb_U32*}
+ * @committed*/
 #define LCB_CNTL_HTTP_TIMEOUT           0x0f
 
 /** @brief Information about the I/O plugin */
@@ -403,9 +352,7 @@ struct lcb_cntl_iops_info_st {
  * way to determine what libcouchbase will use for IO when not explicitly
  * specifying an iops structure to lcb_create()
  *
- * Mode | Arg
- * -----| ---
- * Get | lcb_cntl_io_ops_info_st *
+ * @cntl_arg_getonly{lcb_cntl_io_ops_info_st*}
  *
  * @note You may pass NULL to lcb_cntl for the 'instance' parameter,
  * as this does not read anything specific on the handle
@@ -424,30 +371,20 @@ struct lcb_cntl_iops_info_st {
  * "LIBCOUCHBASE_DLOPEN_DEBUG" environment variable (and if enabled from the
  * environment, will override the setting mentioned here).
  *
- * Mode     |Arg
- * ---------|---
- * Get, Set | int *
+ * @cntl_arg_both{int*}
  *
  * @note Pass NULL to lcb_cntl for the 'instance' parameter.
  * @volatile
  */
 #define LCB_CNTL_IOPS_DLOPEN_DEBUG       0x11
 
-/**
- * @brief Initial bootstrap timeout
+/**@brief Initial bootstrap timeout.
+ * This is how long the client will wait to obtain the initial configuration.
  *
- * This is
- * how long the client will wait to obtain the initial configuration.
- *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
- * @committed
- */
+ * @cntl_arg_both{lcb_U32*}
+ * @committed*/
 #define LCB_CNTL_CONFIGURATION_TIMEOUT   0x12
 
-/**@deprecated Initial connections are always attempted */
-#define LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT 0x13
 
 /**
  * @brief Randomize order of bootstrap nodes.
@@ -459,9 +396,7 @@ struct lcb_cntl_iops_info_st {
  * in the lcb_create_st structure. For subsequent connections this is the
  * order of nodes as received by the server.
  *
- * Mode     | Arg
- * ---------|----
- * Get, Set | int * (as a boolean)
+ * @cntl_arg_both{int*}
  * @committed
  */
 #define LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS 0x14
@@ -478,9 +413,7 @@ struct lcb_cntl_iops_info_st {
  * - The configuration cache did not exist or was empty
  * - The configuration cache contained stale information
  *
- * Mode|Arg
- * ----|---
- * Get | int *
+ * @cntl_arg_getonly{int*}
  * @uncommitted
  */
 #define LCB_CNTL_CONFIG_CACHE_LOADED 0x15
@@ -498,23 +431,17 @@ struct lcb_cntl_iops_info_st {
  * value (in LCB_CNTL_GET) is valid only until the next call to a
  * libcouchbase API, after which it may have been freed.
  *
- * Mode|Arg
- * ----|---
- * Get | char **
- * Set | char *
+ * @cntl_arg_get_and_set{char**, char*}
  * @uncommitted
  */
 #define LCB_CNTL_FORCE_SASL_MECH 0x16
 
 /**
  * @brief Maximum number of HTTP redirects to follow
+ * Set how many redirects the library should follow for the single request.
+ * Set to -1 to remove limit at all.
  *
- * Set how many redirects the library should follow for
- * the single request. Set to -1 to remove limit at all.
- *
- * Mode     |Arg
- * ---------|---
- * Get, Set | int *
+ * @cntl_arg_both{int*}
  * @uncommitted
  */
 #define LCB_CNTL_MAX_REDIRECTS 0x17
@@ -533,14 +460,8 @@ struct lcb_cntl_iops_info_st {
  */
 
 /** @brief Logging Levels */
-typedef enum {
-    LCB_LOG_TRACE = 0,
-    LCB_LOG_DEBUG,
-    LCB_LOG_INFO,
-    LCB_LOG_WARN,
-    LCB_LOG_ERROR,
-    LCB_LOG_FATAL,
-    LCB_LOG_MAX
+typedef enum { LCB_LOG_TRACE = 0, LCB_LOG_DEBUG, LCB_LOG_INFO, LCB_LOG_WARN,
+    LCB_LOG_ERROR, LCB_LOG_FATAL, LCB_LOG_MAX
 } lcb_log_severity_t;
 
 struct lcb_logprocs_st;
@@ -561,13 +482,8 @@ struct lcb_logprocs_st;
  * @param ap a va_list for vprintf
  */
 typedef void (*lcb_logging_callback)(struct lcb_logprocs_st *procs,
-                                      unsigned int iid,
-                                      const char *subsys,
-                                      int severity,
-                                      const char *srcfile,
-                                      int srcline,
-                                      const char *fmt,
-                                      va_list ap);
+        unsigned int iid, const char *subsys, int severity, const char *srcfile,
+        int srcline, const char *fmt, va_list ap);
 
 /**
  * @brief Logging context
@@ -579,11 +495,7 @@ typedef void (*lcb_logging_callback)(struct lcb_logprocs_st *procs,
  */
 typedef struct lcb_logprocs_st {
     int version;
-    union {
-        struct {
-            lcb_logging_callback callback;
-        } v0;
-    } v;
+    union { struct { lcb_logging_callback callback; } v0; } v;
 } lcb_logprocs;
 
 /**
@@ -593,11 +505,8 @@ typedef struct lcb_logprocs_st {
  * The lcb_logoprocs structure passed must not be freed until the instance
  * is completely destroyed. This will only happen once the destruction
  * callback is called (see lcb_set_destroy_callback()).
- * Mode|Arg
- * ----|---
- * Get | lcb_logprocs **
- * Set | lcb_logprocs *
- */
+ *
+ * @cntl_arg_get_and_set{lcb_logprocs**,lcb_logprocs*}*/
 #define LCB_CNTL_LOGGER 0x18
 /**@}*/
 
@@ -613,23 +522,15 @@ typedef struct lcb_logprocs_st {
  * should set this to a high number (along with `CONFERRTHRESH`). If you
  * are using the default timeout setting, then this value is likely optimal.
  *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
- *
+ * @cntl_arg_both{lcb_U32*}
  * @see LCB_CNTL_CONFERRTHRESH
  * @uncommitted
  */
 #define LCB_CNTL_CONFDELAY_THRESH 0x19
 
-/**
- * @brief Get the transport used to fetch cluster configuration.
- *
- * Mode|Arg
- * ----|---
- * Get | lcb_config_transport_t *
- * @uncommitted
- */
+/**@brief Get the transport used to fetch cluster configuration.
+ * @cntl_arg_getonly{lcb_config_transport_t*}
+ * @uncommitted*/
 #define LCB_CNTL_CONFIG_TRANSPORT 0x1A
 
 /**
@@ -647,10 +548,7 @@ typedef struct lcb_logprocs_st {
  * @note the `CONFIGURATION_TIMEOUT` should be higher than this number.
  * No check is made to ensure that this is the case, however.
  *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
- *
+ * @cntl_arg_both{lcb_U32*}
  * @see LCB_CNTL_CONFIGURATION_TIMEOUT
  * @committed
  */
@@ -674,9 +572,7 @@ typedef struct lcb_logprocs_st {
  * - If the stream is broken (and no current refresh was requested by the
  *   client) then a new stream is not opened.
  *
- * Modes    | Arg
- * ---------| ----------------
- * Get, Set | lcb_uint32_t*
+ * @cntl_arg_both{lcb_U32*}
  * @volatile
  */
 #define LCB_CNTL_HTCONFIG_IDLE_TIMEOUT 0x1C
@@ -696,11 +592,7 @@ typedef struct lcb_logprocs_st {
  * `host` parameter in lcb_create_st
  *
  * Ports should specify the REST API port.
- *
- * Mode|Arg
- * ----|---
- * Set | char ** (array of strings)
- *
+ * @cntl_arg_setonly{char** (Array of strings)}
  */
 #define LCB_CNTL_CONFIG_HTTP_NODES 0x1D
 
@@ -708,27 +600,15 @@ typedef struct lcb_logprocs_st {
  * @brief Set the nodes for the CCCP provider.
  *
  * Similar to @ref LCB_CNTL_CONFIG_HTTP_NODES, but affects the CCCP provider
- * instead.
- *
- * Ports should specify the _memcached_ port
- *
- * Mode|Arg
- * ----|---
- * Set | char ** (array of strings)
- *
+ * instead. Ports should specify the _memcached_ port
+ * @cntl_arg_setonly{char** (Array of strings)}
  * @uncomitted
  */
 #define LCB_CNTL_CONFIG_CCCP_NODES 0x1E
 
-/**
- * @brief Get the current SCM changeset for the library binary
- *
- * Mode|Arg
- * ----|---
- * Get | char **
- *
- * @committed
- */
+/**@brief Get the current SCM changeset for the library binary
+ * @cntl_arg_getonly{char**}
+ * @committed*/
 #define LCB_CNTL_CHANGESET 0x1F
 
 /**
@@ -742,11 +622,8 @@ typedef struct lcb_logprocs_st {
  * Note that the username, password, bucket, and io fields are
  * ignored.
  *
+ * @cntl_arg_setonly{lcb_create_st2*}
  * @uncommitted
- *
- * Mode|Arg
- * ----|---
- * Set | lcb_create_st2
  */
 #define LCB_CNTL_CONFIG_ALL_NODES 0x20
 
@@ -763,13 +640,7 @@ typedef struct lcb_logprocs_st {
  * will never be created.
  *
  * @note Configuration cache is not supported for memcached buckets
- *
- *
- * Mode|Arg
- * ----|---
- * Set | `char *`
- * Get | `char **`
- *
+ * @cntl_arg_get_and_set{char**, char*}
  * @uncommitted
  * @see LCB_CNTL_CONFIG_CACHE_LOADED
  */
@@ -798,9 +669,7 @@ typedef enum {
  * parameter for a server of a lower version (or a mixed environment) is not
  * supported.
  *
- * Mode|Arg
- * ----|---
- * Set, Get | lcb_SSLOPTS*
+ * @cntl_arg_both{lcb_SSLOPTS*}
  */
 #define LCB_CNTL_SSL_MODE 0x22
 
@@ -809,11 +678,7 @@ typedef enum {
  * @brief SSL Certificate path
  *
  * Sets the path on the filesystem where the server's CA certificate is located.
- *
- * Mode|Arg
- * ----|---
- * Set | const char*
- * Get | const char**
+ * @cntl_arg_get_and_set{char**,char*}
  */
 #define LCB_CNTL_SSL_CACERT 0x23
 
@@ -905,6 +770,8 @@ typedef struct {
  * lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &opts);
  * @endcode
  *
+ * @cntl_arg_both{lcb_RETRYOPT *}
+ *
  * Mode|Arg
  * ----|---
  * Set, Get | lcb_RETRYOPT
@@ -931,7 +798,7 @@ typedef enum {
  *
  * @brief Set the URL selection mode.
  *
- * The URL type can be a mask of the lcb_HTCONF_URLTYPE constants which
+ * The URL type can be a mask of the lcb_HTCONFIG_URLTYPE constants which
  * indicate which URLs the HTTP provider should use.
  *
  * The default is to use the `25PLUS` URI first, and fallback on the compat uri
@@ -942,10 +809,7 @@ typedef enum {
  *
  * This setting is only used when CCCP is disabled. This will typically be for
  * older clusters or for memcached buckets.
- *
- * Mode|Arg
- * ----|---
- * Set, Get | lcb_HTCONFIG_URLTYPE
+ * @cntl_arg_both{lcb_HTCONFIG_URLTYPE *}
  */
 #define LCB_CNTL_HTCONFIG_URLTYPE 0x25
 
@@ -1008,9 +872,7 @@ typedef enum {
  * flags, the data will _never_ be compressed by the library as this is an
  * indication that it is _already_ compressed.
  *
- * Mode|Arg
- * ----|----
- * Set, Get | `lcb_COMPRESSOPTS *`
+ * @cntl_arg_both{lcb_COMPRESSOPTS *}
  */
 #define LCB_CNTL_COMPRESSION_OPTS 0x26
 
@@ -1066,10 +928,7 @@ struct lcb_cntl_rdballocfactory {
  * `LCB_LOGLEVEL_MAX`, though the actual type is of `lcb_U32` rather than
  * an enum type.
  *
- * Mode|Arg
- * ----|---
- * Set | `const lcb_U32*`
- *
+ * @cntl_arg_setonly{const lcb_U32 *}
  * @see LCB_CNTL_LOGGER
  */
 #define LCB_CNTL_CONLOGGER_LEVEL 0x29
@@ -1087,10 +946,7 @@ struct lcb_cntl_rdballocfactory {
  * Using this option means your programming model is centered around the various
  * LCB_EIF* macros (see <libcouchbase/error.h>) rather than individual codes.
  *
- *
- * Mode|Arg
- * ----|---
- * Set, Get | `int*`
+ * @cntl_arg_both{int * (As a boolean)}
  */
 #define LCB_CNTL_DETAILED_ERRCODES 0x2A
 
@@ -1102,9 +958,7 @@ struct lcb_cntl_rdballocfactory {
  *
  *
  * This is the newer variant of @ref LCB_CNTL_CONFIG_ALL_NODES
- * Mode|Arg
- * ----|---
- * Set | `const char *`
+ * @cntl_arg_setonly{const char *}
  */
 #define LCB_CNTL_REINIT_CONNSTR 0x2B
 #define LCB_CNTL_REINIT_DSN LCB_CNTL_REINIT_CONNSTR
