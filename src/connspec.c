@@ -319,6 +319,10 @@ lcb_connspec_parse(const char *connstr, lcb_CONNSPEC *out, const char **errmsg)
         errmsg = &errmsg_s;
     }
 
+    if (!connstr) {
+        connstr = "couchbase://";
+    }
+
     ctx.errmsg = errmsg;
     ctx.connstr = connstr;
     ctx.params = out;
