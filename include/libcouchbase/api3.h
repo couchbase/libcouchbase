@@ -274,6 +274,13 @@ typedef struct {
     /**Must be assigned*/
     lcb_storage_t operation;
 } lcb_CMDSTORE;
+
+#define LCB_VALUE_SIMPLE(scmd, val_buf, val_len) do { \
+    scmd->value.type = LCB_KV_COPY; \
+    scmd->value.u_buf.contig.bytes = val_buf; \
+    scmd->value.u_buf.contig.nbytes = val_len; \
+} while (0);
+
 /**
  * @brief Spool a single storage request
  * @volatile
