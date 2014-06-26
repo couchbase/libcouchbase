@@ -51,14 +51,20 @@ extern "C" {
         LCB_ERRTYPE_INTERNAL = 1 << 5,
 
         /** Error code indicating a plugin failure */
-        LCB_ERRTYPE_PLUGIN = 1 << 6
+        LCB_ERRTYPE_PLUGIN = 1 << 6,
+
+        /** Error code indicating the server is under load */
+        LCB_ERRTYPE_SRVLOAD = 1 << 7,
+
+        /** Error code indicating the server generated this message */
+        LCB_ERRTYPE_SRVGEN = 1 << 8
     } lcb_errflags_t;
 
 #define LCB_XERR(X) \
     /** Success */ \
     X(LCB_SUCCESS, 0x00, 0, "Success (Not an error)") \
     \
-    X(LCB_AUTH_CONTINUE, 0x01, LCB_ERRTYPE_INTERNAL|LCB_ERRTYPE_FATAL, \
+    X(LCB_AUTH_CONTINUE, 0x01, LCB_ERRTYPE_INTERNAL|LCB_ERRTYPE_FATAL|LCB_ERRTYPE_SRVGEN, \
       "Error code used internally within libcouchbase for SASL auth. Should " \
       "not be visible from the API") \
     \
@@ -66,10 +72,10 @@ extern "C" {
       "Authentication failed. You may have provided an invalid " \
       "username/password combination") \
     \
-    X(LCB_DELTA_BADVAL, 0x03, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_DATAOP, \
+    X(LCB_DELTA_BADVAL, 0x03, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "The value requested to be incremented is not stored as a number") \
     \
-    X(LCB_E2BIG, 0x04, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_DATAOP, \
+    X(LCB_E2BIG, 0x04, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "The object requested is too big to store in the server") \
     \
     X(LCB_EBUSY, 0x05, LCB_ERRTYPE_TRANSIENT, \
@@ -84,20 +90,20 @@ extern "C" {
     X(LCB_ENOMEM, 0x08, LCB_ERRTYPE_TRANSIENT, \
       "The server is out of memory. Try again later") \
     \
-    X(LCB_ERANGE, 0x09, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_DATAOP, \
+    X(LCB_ERANGE, 0x09, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "Invalid range") \
     \
     X(LCB_ERROR, 0x0A, 0, \
       "Generic error") \
     \
-    X(LCB_ETMPFAIL, 0x0B, LCB_ERRTYPE_TRANSIENT, \
+    X(LCB_ETMPFAIL, 0x0B, LCB_ERRTYPE_TRANSIENT|LCB_ERRTYPE_SRVLOAD|LCB_ERRTYPE_SRVGEN, \
       "Temporary failure received from server. Try again later") \
     \
-    X(LCB_KEY_EEXISTS, 0x0C, LCB_ERRTYPE_DATAOP, \
+    X(LCB_KEY_EEXISTS, 0x0C, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "The key already exists in the server. If you have supplied a CAS then " \
       "the key exists with a CAS value different than specified") \
     \
-    X(LCB_KEY_ENOENT, 0x0D, LCB_ERRTYPE_DATAOP, \
+    X(LCB_KEY_ENOENT, 0x0D, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "The key does not exist on the server") \
     \
     X(LCB_DLOPEN_FAILED, 0x0E, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_FATAL|LCB_ERRTYPE_PLUGIN, \
@@ -109,16 +115,16 @@ extern "C" {
     X(LCB_NETWORK_ERROR, 0x10, LCB_ERRTYPE_NETWORK, \
       "Network failure") \
     \
-    X(LCB_NOT_MY_VBUCKET, 0x11, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT, \
+    X(LCB_NOT_MY_VBUCKET, 0x11, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_TRANSIENT|LCB_ERRTYPE_SRVGEN, \
       "The server which received this command claims it is not hosting this key") \
     \
-    X(LCB_NOT_STORED, 0x12, LCB_ERRTYPE_DATAOP, \
+    X(LCB_NOT_STORED, 0x12, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "Item not stored (did you try to append/prepend to a missing key?)") \
     \
     X(LCB_NOT_SUPPORTED, 0x13, 0, \
       "Operation not supported") \
     \
-    X(LCB_UNKNOWN_COMMAND, 0x14, 0, \
+    X(LCB_UNKNOWN_COMMAND, 0x14, LCB_ERRTYPE_SRVGEN, \
       "Unknown command") \
     \
     X(LCB_UNKNOWN_HOST, 0x15, LCB_ERRTYPE_NETWORK|LCB_ERRTYPE_INPUT, \
@@ -223,6 +229,8 @@ extern "C" {
 #define LCB_EIFTMP(e) (lcb_get_errtype(e) & LCB_ERRTYPE_TRANSIENT)
 #define LCB_EIFDATA(e) (lcb_get_errtype(e) & LCB_ERRTYPE_DATAOP)
 #define LCB_EIFPLUGIN(e) (lcb_get_errtype(e) & LCB_ERRTYPE_PLUGIN)
+#define LCB_EIFSRVLOAD(e) (lcb_get_errtype(e) & LCB_ERRTYPE_SRVLOAD)
+#define LCB_EIFSRVGEN(e) (lcb_get_errtype(e) & LCB_ERRTYPE_SRVGEN)
 
 LIBCOUCHBASE_API
 int lcb_get_errtype(lcb_error_t err);
