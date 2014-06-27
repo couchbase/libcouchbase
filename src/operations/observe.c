@@ -23,16 +23,15 @@ struct observe_st {
     ringbuffer_t body;
 };
 
-struct observe_requests_st {
-    struct observe_st *requests;
-    lcb_size_t nrequests;
-};
-
-struct obs_cookie_st {
+typedef struct {
     mc_REQDATAEX base;
-    unsigned remaining;
+    lcb_MULTICMD_CTX mctx;
+    lcb_t instance;
+    lcb_SIZE nrequests;
+    lcb_SIZE remaining;
     unsigned otype;
-};
+    struct observe_st requests[1];
+} OBSERVECTX;
 
 typedef enum {
     F_DURABILITY = 0x01,
@@ -44,7 +43,7 @@ static void
 handle_observe_callback(
         mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
 {
-    struct obs_cookie_st *oc = (struct obs_cookie_st *)pkt->u_rdata.exdata;
+    OBSERVECTX *oc = (void *)pkt->u_rdata.exdata;
     lcb_RESPOBSERVE *resp = (void *)arg;
     lcb_server_t *server = (lcb_server_t *)pl;
     lcb_t instance = server->instance;;
@@ -113,7 +112,7 @@ static int init_request(struct observe_st *reqinfo)
     return 1;
 }
 
-static void destroy_requests(struct observe_requests_st *reqs)
+static void destroy_requests(OBSERVECTX *reqs)
 {
     lcb_size_t ii;
     for (ii = 0; ii < reqs->nrequests; ii++) {
@@ -126,31 +125,21 @@ static void destroy_requests(struct observe_requests_st *reqs)
         ringbuffer_destruct(&rr->body);
         rr->allocated = 0;
     }
-    free(reqs->requests);
 }
 
-/**
- * Extended version of observe command. This allows us to service
- * various forms of higher level operations which use observe in one way
- * or another
- */
-lcb_error_t lcb_observe_ex(lcb_t instance,
-                           const void *ucookie,
-                           lcb_size_t num,
-                           const void *const *items,
-                           lcb_observe_type_t type)
+#define CTX_FROM_MULTI(mcmd) (void *) ((((char *) (mcmd))) - offsetof(OBSERVECTX, mctx))
+
+static lcb_error_t
+obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
 {
-    lcb_size_t ii;
-    lcb_size_t maxix;
-    struct observe_requests_st reqs;
-    struct obs_cookie_st *ocookie;
+    const void *hk;
+    lcb_SIZE nhk;
+    int vbid;
+    unsigned maxix;
+    int ii;
+    OBSERVECTX *ctx = CTX_FROM_MULTI(mctx);
+    lcb_t instance = ctx->instance;
     mc_CMDQUEUE *cq = &instance->cmdq;
-
-    memset(&reqs, 0, sizeof(reqs));
-
-    if (instance->type != LCB_TYPE_BUCKET) {
-        return LCB_EBADHANDLE;
-    }
 
     if (cq->config == NULL) {
         return LCB_CLIENT_ETMPFAIL;
@@ -160,100 +149,58 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         return LCB_NOT_SUPPORTED;
     }
 
-    ocookie = calloc(1, sizeof(*ocookie));
-    ocookie->base.start = gethrtime();
-    ocookie->base.cookie = ucookie;
-    ocookie->base.callback = handle_observe_callback;
-
-    if (!ocookie) {
-        return LCB_CLIENT_ENOMEM;
-    }
-
-    mcreq_sched_enter(cq);
-
+    mcreq_extract_hashkey(&cmd->key, &cmd->hashkey, 24, &hk, &nhk);
+    vbid = lcbvb_k2vb(cq->config, hk, nhk);
     maxix = LCBVB_NREPLICAS(cq->config);
-    if (type == LCB_OBSERVE_TYPE_DURABILITY) {
-        ocookie->otype = F_DURABILITY | F_BCAST;
 
-    } else {
-        ocookie->otype = F_BCAST;
-    }
+    for (ii = -1; ii < (int)maxix; ++ii) {
+        struct observe_st *rr;
+        lcb_U16 vb16, klen16;
+        int ix;
 
-    reqs.nrequests = cq->npipelines;
-    reqs.requests = calloc(reqs.nrequests, sizeof(*reqs.requests));
-
-    for (ii = 0; ii < num; ii++) {
-        const void *key, *hashkey;
-        lcb_size_t nkey, nhashkey;
-        int vbid, jj, master_only = 0;
-
-        if (type == LCB_OBSERVE_TYPE_DURABILITY) {
-            const lcb_durability_entry_t *ent = items[ii];
-            key = ent->request.v.v0.key;
-            nkey = ent->request.v.v0.nkey;
-            hashkey = ent->request.v.v0.hashkey;
-            nhashkey = ent->request.v.v0.nhashkey;
-        } else {
-            const lcb_observe_cmd_t *ocmd = items[ii];
-            key = ocmd->v.v1.key;
-            nkey = ocmd->v.v1.nkey;
-            hashkey = ocmd->v.v1.hashkey;
-            nhashkey = ocmd->v.v1.nhashkey;
-            if (ocmd->version == 1 &&
-                    (ocmd->v.v1.options & LCB_OBSERVE_MASTER_ONLY)) {
-                master_only = 1;
-            }
-        }
-
-        if (!nhashkey) {
-            hashkey = key;
-            nhashkey = nkey;
-        }
-
-        vbid = lcbvb_k2vb(cq->config, hashkey, nhashkey);
-
-        for (jj = -1; jj < (int)maxix; jj++) {
-            struct observe_st *rr;
-            int idx = lcbvb_vbreplica(cq->config, vbid, jj);
-            if (idx < 0 || idx > (int)cq->npipelines) {
-                if (jj == -1) {
-                    destroy_requests(&reqs);
-                    return LCB_NO_MATCHING_SERVER;
-                }
+        ix = lcbvb_vbreplica(cq->config, vbid, ii);
+        if (ix < 0 || ix > (int)cq->npipelines) {
+            if (ii == -1) {
+                return LCB_NO_MATCHING_SERVER;
+            } else {
                 continue;
             }
-            lcb_assert(idx < (int)reqs.nrequests);
-            rr = reqs.requests + idx;
-
-            if (!rr->allocated) {
-                if (!init_request(rr)) {
-                    destroy_requests(&reqs);
-                    return LCB_CLIENT_ENOMEM;
-                }
-            }
-
-            {
-                lcb_uint16_t vb = htons((lcb_uint16_t)vbid);
-                lcb_uint16_t len = htons((lcb_uint16_t)nkey);
-                ringbuffer_ensure_capacity(&rr->body, sizeof(vb) + sizeof(len) + nkey);
-                ringbuffer_write(&rr->body, &vb, sizeof(vb));
-                ringbuffer_write(&rr->body, &len, sizeof(len));
-                ringbuffer_write(&rr->body, key, nkey);
-            }
-            ocookie->remaining++;
-
-            if (master_only) {
-                break;
+        }
+        lcb_assert(ix < (int)ctx->nrequests);
+        rr = ctx->requests + ix;
+        if (!rr->allocated) {
+            if (!init_request(rr)) {
+                return LCB_CLIENT_ENOMEM;
             }
         }
-    }
 
-    mcreq_sched_enter(cq);
-    for (ii = 0; ii < reqs.nrequests; ii++) {
+        vb16 = htons((lcb_U16)vbid);
+        klen16 = htons((lcb_U16)cmd->key.contig.nbytes);
+        ringbuffer_ensure_capacity(&rr->body, sizeof(vb16) + sizeof(klen16));
+        ringbuffer_write(&rr->body, &vb16, sizeof vb16);
+        ringbuffer_write(&rr->body, &klen16, sizeof klen16);
+        ringbuffer_write(&rr->body, cmd->key.contig.bytes, cmd->key.contig.nbytes);
+        ctx->remaining++;
+        if (cmd->cmdflags & LCB_CMDOBSERVE_F_MASTER_ONLY) {
+            break;
+        }
+    }
+    return LCB_SUCCESS;
+}
+
+
+static void
+obs_ctxdone(lcb_MULTICMD_CTX *mctx, const void *cookie)
+{
+    unsigned ii;
+    OBSERVECTX *ctx = CTX_FROM_MULTI(mctx);
+    mc_CMDQUEUE *cq = &ctx->instance->cmdq;
+
+    for (ii = 0; ii < ctx->nrequests; ii++) {
         protocol_binary_request_header hdr;
         mc_PACKET *pkt;
         mc_PIPELINE *pipeline;
-        struct observe_st *rr = reqs.requests + ii;
+        struct observe_st *rr = ctx->requests + ii;
         pipeline = cq->pipelines[ii];
 
         if (!rr->allocated) {
@@ -280,26 +227,83 @@ lcb_error_t lcb_observe_ex(lcb_t instance,
         ringbuffer_read(&rr->body, SPAN_BUFFER(&pkt->u_value.single), rr->body.nbytes);
 
         pkt->flags |= MCREQ_F_REQEXT;
-        pkt->u_rdata.exdata = (mc_REQDATAEX *)ocookie;
+        pkt->u_rdata.exdata = (mc_REQDATAEX *)ctx;
         mcreq_sched_add(pipeline, pkt);
     }
+    destroy_requests(ctx);
+    ctx->base.start = gethrtime();
+    ctx->base.cookie = cookie;
+    ctx->base.callback = handle_observe_callback;
+}
 
-    destroy_requests(&reqs);
-    mcreq_sched_leave(cq, 1);
-    return LCB_SUCCESS;
+static void
+obs_ctxfail(lcb_MULTICMD_CTX *mctx)
+{
+    OBSERVECTX *ctx = CTX_FROM_MULTI(mctx);
+    destroy_requests(ctx);
+    free(ctx);
+}
+
+LIBCOUCHBASE_API
+lcb_MULTICMD_CTX *
+lcb_observe3_ctxnew(lcb_t instance)
+{
+    OBSERVECTX *ctx;
+    lcb_SIZE n_extra = LCBT_NSERVERS(instance)-1;
+    ctx = calloc(1, sizeof(*ctx) + sizeof(ctx->requests) * n_extra);
+    ctx->instance = instance;
+    ctx->nrequests = n_extra + 1;
+    ctx->mctx.addcmd = obs_ctxadd;
+    ctx->mctx.done = obs_ctxdone;
+    ctx->mctx.fail = obs_ctxfail;
+    ctx->otype = F_BCAST;
+    return &ctx->mctx;
+}
+
+lcb_MULTICMD_CTX *
+lcb_observe_ctx_dur_new(lcb_t instance)
+{
+    lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
+    if (mctx) {
+        OBSERVECTX *ctx = CTX_FROM_MULTI(mctx);
+        ctx->otype |= F_DURABILITY;
+    }
+    return mctx;
 }
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_observe(lcb_t instance,
-                        const void *command_cookie,
-                        lcb_size_t num,
-                        const lcb_observe_cmd_t *const *items)
+    const void *command_cookie, lcb_size_t num,
+    const lcb_observe_cmd_t *const *items)
 {
-    lcb_error_t err = lcb_observe_ex(instance, command_cookie, num,
-        (const void * const *)items, LCB_OBSERVE_TYPE_BCAST);
-    if (err == LCB_SUCCESS) {
-        SYNCMODE_INTERCEPT(instance)
-    } else {
-        return err;
+    unsigned ii;
+    lcb_error_t err;
+    lcb_MULTICMD_CTX *mctx;
+
+    lcb_sched_enter(instance);
+
+    mctx = lcb_observe3_ctxnew(instance);
+    if (mctx == NULL) {
+        return LCB_CLIENT_ENOMEM;
     }
+
+    for (ii = 0; ii < num; ii++) {
+        lcb_CMDOBSERVE cmd = { 0 };
+        const lcb_observe_cmd_t *src = items[ii];
+        if (src->version == 1 && (src->v.v1.options & LCB_OBSERVE_MASTER_ONLY)) {
+            cmd.cmdflags |= LCB_CMDOBSERVE_F_MASTER_ONLY;
+        }
+        LCB_KREQ_SIMPLE(&cmd.key, src->v.v0.key, src->v.v0.nkey);
+        LCB_KREQ_SIMPLE(&cmd.hashkey, src->v.v0.hashkey, src->v.v0.nhashkey);
+
+        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
+        if (err != LCB_SUCCESS) {
+            mctx->fail(mctx);
+            return err;
+        }
+    }
+    lcb_sched_enter(instance);
+    mctx->done(mctx, command_cookie);
+    lcb_sched_leave(instance);
+    SYNCMODE_INTERCEPT(instance)
 }

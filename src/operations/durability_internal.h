@@ -55,9 +55,6 @@ extern "C" {
         /** array of entries which are to be polled */
         struct lcb_durability_entry_st *entries;
 
-        /** Allocated as well for passing to observe_ex */
-        struct lcb_durability_entry_st **valid_entries;
-
         /** number of entries in the array */
         lcb_size_t nentries;
 
@@ -66,7 +63,6 @@ extern "C" {
              * Tweak for single entry, so we don't have to allocate tiny chunks
              */
             lcb_durability_entry_t ent;
-            lcb_durability_entry_t *entp;
         } single;
 
         /**
@@ -110,30 +106,12 @@ extern "C" {
         lcb_t instance;
     } lcb_durability_set_t;
 
-    void lcb_durability_update(lcb_t instance,
-                               const void *cookie,
-                               lcb_error_t err,
-                               lcb_observe_resp_t *resp);
-
     void lcb_durability_dset_update(lcb_t instance,
                                     lcb_durability_set_t *dset,
                                     lcb_error_t err,
                                     const lcb_RESPOBSERVE *resp);
-
-    typedef enum {
-        /** Durability requirement. Poll all servers */
-        LCB_OBSERVE_TYPE_DURABILITY,
-        /** Poll the master for simple existence */
-        LCB_OBSERVE_TYPE_CHECK,
-        /** Poll all servers only once */
-        LCB_OBSERVE_TYPE_BCAST
-    } lcb_observe_type_t;
-
-    lcb_error_t lcb_observe_ex(lcb_t instance,
-                               const void *command_cookie,
-                               lcb_size_t num,
-                               const void *const *items,
-                               lcb_observe_type_t type);
+    lcb_MULTICMD_CTX *
+    lcb_observe_ctx_dur_new(lcb_t instance);
 
 #ifdef __cplusplus
 }

@@ -173,6 +173,7 @@ typedef struct lcb_CMDBASE {
 typedef lcb_CMDBASE lcb_CMDTOUCH;
 typedef lcb_CMDBASE lcb_CMDSTATS;
 typedef lcb_CMDBASE lcb_CMDFLUSH;
+typedef lcb_CMDBASE lcb_CMDOBSERVE;
 
 #define LCB_RESP_BASE \
     void *cookie; /**< User data associated with request */ \
@@ -456,6 +457,79 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd);
 
+/**
+ * Multi Command Context API
+ * Some commands (notably, OBSERVE and its higher level equivalent, endue)
+ * are handled more efficiently at the cluster side by stuffing multiple
+ * items into a single packet.
+ *
+ * This structure defines three function pointers to invoke. The #addcmd()
+ * function will add a new command to the current packet, the #done()
+ * function will schedule the packet(s) into the current scheduling context
+ * and the #fail() function will destroy the context without progressing
+ * further.
+ *
+ * Some commands will return an lcb_MULTICMD_CTX object to be used for this
+ * purpose:
+ *
+ * @code{.c}
+ * lcb_MUTLICMD_CTX *ctx = lcb_observe3_ctxnew(instance);
+ *
+ * lcb_CMDOBSERVE cmd = { 0 };
+ * LCB_KREQ_SIMPLE(&cmd.key, "key1", strlen("key1"));
+ * ctx->addcmd(ctx, &cmd);
+ * LCB_KREQ_SIMPLE(&cmd.key, "key2", strlen("key2"));
+ * ctx->addcmd(ctx, &cmd);
+ * LCB_KREQ_SIMPLE(&cmd.key, "key3", strlen("key3"));
+ * ctx->addcmd(ctx, &cmd);
+ *
+ * lcb_sched_enter(instance);
+ * ctx->done(ctx);
+ * lcb_sched_leave(instance);
+ * lcb_wait(instance);
+ * @endcode
+ */
+struct lcb_MULTICMD_CTX_st;
+typedef struct lcb_MULTICMD_CTX_st {
+    /**
+     * Add a command to the current context
+     * @param ctx the context
+     * @param cmd the command to add. Note that `cmd` may be a subclass of lcb_CMDBASE
+     * @return LCB_SUCCESS, or failure if a command could not be added.
+     */
+    lcb_error_t (*addcmd)(struct lcb_MULTICMD_CTX_st *ctx, const lcb_CMDBASE *cmd);
+
+    /**
+     * Indicate that no more commands are added to this context, and that the
+     * context should assemble the packets and place them in the current
+     * scheduling context
+     * @param ctx The multi context
+     * @param cookie The cookie for all commands
+     */
+    void (*done)(struct lcb_MULTICMD_CTX_st *ctx, const void *cookie);
+
+    /**
+     * Indicate that no more commands should be added to this context, and that
+     * the context should not add its contents to the packet queues, but rather
+     * release its resources. Called if you don't want to actually perform
+     * the operations.
+     * @param ctx
+     */
+    void (*fail)(struct lcb_MULTICMD_CTX_st *ctx);
+} lcb_MULTICMD_CTX;
+
+/**Set this bit in the cmdflags field to indicate that only the master node
+ * should be contacted*/
+#define LCB_CMDOBSERVE_F_MASTER_ONLY 1<<16
+
+LIBCOUCHBASE_API
+lcb_MULTICMD_CTX *
+lcb_observe3_ctxnew(lcb_t instance);
+
+LIBCOUCHBASE_API
+lcb_MULTICMD_CTX *
+lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options);
+
 /**@volatile*/
 LIBCOUCHBASE_API
 lcb_error_t
@@ -477,8 +551,6 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie, const lcb_CMDVERBOSITY
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
-
-
 /**@}*/
 
 #ifdef __cplusplus

@@ -202,8 +202,9 @@ static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err)
  */
 static void poll_once(lcb_durability_set_t *dset)
 {
-    lcb_size_t ii, oix;
+    unsigned ii, n_added = 0;
     lcb_error_t err;
+    lcb_MULTICMD_CTX *mctx = NULL;
 
     /**
      * We should never be called while an 'iter' operation is still
@@ -211,10 +212,15 @@ static void poll_once(lcb_durability_set_t *dset)
      */
     lcb_assert(dset->waiting == 0);
     dset_ref(dset);
+    mctx = lcb_observe_ctx_dur_new(dset->instance);
+    if (!mctx) {
+        err = LCB_CLIENT_ENOMEM;
+        goto GT_ERR;
+    }
 
-    for (ii = 0, oix = 0; ii < dset->nentries; ii++) {
+    for (ii = 0; ii < dset->nentries; ii++) {
+        lcb_CMDOBSERVE cmd = { 0 };
         struct lcb_durability_entry_st *ent = dset->entries + ii;
-
         if (ent->done) {
             continue;
         }
@@ -227,18 +233,28 @@ static void poll_once(lcb_durability_set_t *dset)
         RESFLD(ent, cas) = 0;
         RESFLD(ent, rc) = LCB_SUCCESS;
 
-        dset->valid_entries[oix++] = ent;
+        LCB_KREQ_SIMPLE(&cmd.key, RESFLD(ent, key), RESFLD(ent, nkey));
+        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
+        if (err != LCB_SUCCESS) {
+            goto GT_ERR;
+        }
+        n_added ++;
     }
 
-    lcb_assert(oix == dset->nremaining);
+    lcb_assert(n_added == dset->nremaining);
 
-    err = lcb_observe_ex(dset->instance,
-                         dset,
-                         dset->nremaining,
-                         (const void * const *)dset->valid_entries,
-                         LCB_OBSERVE_TYPE_DURABILITY);
+    if (n_added) {
+        lcb_sched_enter(dset->instance);
+        mctx->done(mctx, dset);
+        lcb_sched_leave(dset->instance);
+    }
 
+    GT_ERR:
     if (err != LCB_SUCCESS) {
+        if (mctx) {
+            mctx->fail(mctx);
+        }
+
         for (ii = 0; ii < dset->nentries; ii++) {
             lcb_durability_entry_t *ent = dset->entries + ii;
             if (ent->done) {
@@ -253,20 +269,15 @@ static void poll_once(lcb_durability_set_t *dset)
         dset_ref(dset);
     }
 
-    if (dset->waiting && oix) {
+    if (dset->waiting && n_added) {
         lcb_uint32_t us_now = (lcb_uint32_t)(gethrtime() / 1000);
         lcb_uint32_t us_tmo;
-
         if (dset->us_timeout > us_now) {
             us_tmo = dset->us_timeout - us_now;
         } else {
             us_tmo = 1;
         }
-
-        timer_schedule(dset,
-                       us_tmo,
-                       STATE_TIMEOUT);
-
+        timer_schedule(dset, us_tmo, STATE_TIMEOUT);
     } else {
         purge_entries(dset, LCB_ERROR);
     }
@@ -553,13 +564,11 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
     /* list of observe commands to schedule */
     if (dset->nentries == 1) {
         dset->entries = &dset->single.ent;
-        dset->valid_entries = &dset->single.entp;
 
     } else {
         dset->ht = lcb_hashtable_nc_new(dset->nentries);
         dset->entries = calloc(dset->nentries, sizeof(*dset->entries));
-        dset->valid_entries = malloc(dset->nentries * sizeof(*dset->valid_entries));
-        if (dset->entries == NULL || dset->valid_entries == NULL) {
+        if (dset->entries == NULL) {
             lcb_durability_dset_destroy(dset);
             return LCB_CLIENT_ENOMEM;
         }
@@ -632,7 +641,6 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
             genhash_free(dset->ht);
         }
         free(dset->entries);
-        free(dset->valid_entries);
     }
 
     free(dset);
