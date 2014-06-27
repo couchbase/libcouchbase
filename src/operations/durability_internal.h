@@ -1,6 +1,7 @@
 #ifndef LCB_DURABILITY_INTERNAL_H
 #define LCB_DURABILITY_INTERNAL_H
 
+#include "simplestring.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,8 +27,6 @@ extern "C" {
      * Information a single entry in a durability set
      */
     typedef struct lcb_durability_entry_st {
-        lcb_list_t ll;
-
         /** Request for this structure */
         struct lcb_durability_cmd_st request;
 
@@ -49,6 +48,8 @@ extern "C" {
      * persistence
      */
     typedef struct lcb_durability_set_st {
+        lcb_MULTICMD_CTX mctx;
+
         /** options */
         struct lcb_durability_opts_st opts;
 
@@ -57,6 +58,7 @@ extern "C" {
 
         /** number of entries in the array */
         lcb_size_t nentries;
+        lcb_size_t ents_alloced; /* How many of those were allocated */
 
         struct {
             /**
@@ -90,6 +92,11 @@ extern "C" {
          * Hash table. Only used for multiple entries
          */
         genhash_t *ht;
+
+        /**
+         * Buffer for key data
+         */
+        lcb_string kvbufs;
 
         /**
          * User cookie

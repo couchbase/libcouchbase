@@ -449,32 +449,6 @@ void lcb_durability_dset_update(lcb_t instance,
 }
 
 /**
- * Initialize an entry from an API command.
- */
-static void ent_init(const lcb_durability_cmd_t *cmd,
-                     lcb_durability_entry_t *ent)
-{
-    REQFLD(ent, cas) = cmd->v.v0.cas;
-    REQFLD(ent, nkey) = cmd->v.v0.nkey;
-    REQFLD(ent, key) = malloc(REQFLD(ent, nkey));
-
-    /**
-     * Copy the request fields to the response fields. This way we only end up
-     * allocating the key once.
-     */
-    RESFLD(ent, key) = REQFLD(ent, key);
-    RESFLD(ent, nkey) = REQFLD(ent, nkey);
-
-    memcpy((void *)REQFLD(ent, key), cmd->v.v0.key, REQFLD(ent, nkey));
-
-    if (cmd->v.v0.nhashkey) {
-        REQFLD(ent, nhashkey) = cmd->v.v0.nhashkey;
-        REQFLD(ent, hashkey) = malloc(cmd->v.v0.nhashkey);
-        memcpy((void *)REQFLD(ent, hashkey), cmd->v.v0.hashkey, REQFLD(ent, nhashkey));
-    }
-}
-
-/**
  * Ensure that the user-specified criteria is possible; i.e. we have enough
  * servers and replicas. If the user requested capping, we do that here too.
  */
@@ -516,75 +490,90 @@ static int verify_critera(lcb_t instance, lcb_durability_set_t *dset)
     return 0;
 }
 
-LIBCOUCHBASE_API
-lcb_error_t lcb_durability_poll(lcb_t instance,
-                                const void *cookie,
-                                const lcb_durability_opts_t *options,
-                                lcb_size_t ncmds,
-                                const lcb_durability_cmd_t *const *cmds)
+#define CTX_FROM_MULTI(mcmd) (void *) ((((char *) (mcmd))) - offsetof(lcb_durability_set_t, mctx))
+
+static lcb_error_t
+dset_ctx_add(lcb_MULTICMD_CTX *mctx, const lcb_CMDBASE *cmd)
 {
-    hrtime_t now = gethrtime();
-    lcb_durability_set_t *dset;
-    lcb_size_t ii;
-    lcbio_pTABLE io = instance->iotable;
+    lcb_durability_set_t *dset = CTX_FROM_MULTI(mctx);
+    lcb_durability_entry_t *ent;
 
-    if (!ncmds) {
-        return LCB_EINVAL;
-    }
-
-    dset = calloc(1, sizeof(*dset));
-    if (!dset) {
-        return LCB_CLIENT_ENOMEM;
-    }
-
-    dset->opts = *options;
-    dset->instance = instance;
-
-    if (!DSET_OPTFLD(dset, timeout)) {
-        DSET_OPTFLD(dset, timeout) = LCBT_SETTING(instance, durability_timeout);
-    }
-
-    if (-1 == verify_critera(instance, dset)) {
-        free(dset);
-        return LCB_DURABILITY_ETOOMANY;
-    }
-
-    /* set our timeouts now */
-    dset->us_timeout = (lcb_uint32_t)(now / 1000) + DSET_OPTFLD(dset, timeout);
-    dset->timer = io->timer.create(io->p);
-    dset->cookie = cookie;
-    dset->nentries = ncmds;
-    dset->nremaining = ncmds;
-
-    /** Get the timings */
-    if (!DSET_OPTFLD(dset, interval)) {
-        DSET_OPTFLD(dset, interval) = LCB_DEFAULT_DURABILITY_INTERVAL;
-    }
-
-    /* list of observe commands to schedule */
-    if (dset->nentries == 1) {
+    /* ensure we have enough space first */
+    if (dset->nentries == 0) {
+        /* First entry. Optimize */
+        ent = &dset->single.ent;
         dset->entries = &dset->single.ent;
 
-    } else {
-        dset->ht = lcb_hashtable_nc_new(dset->nentries);
-        dset->entries = calloc(dset->nentries, sizeof(*dset->entries));
-        if (dset->entries == NULL) {
-            lcb_durability_dset_destroy(dset);
+    } else if (dset->nentries == 1) {
+        /* More than a single entry */
+        dset->ents_alloced = 2;
+        dset->entries = malloc(2 * sizeof(*dset->entries));
+        if (!dset->entries) {
             return LCB_CLIENT_ENOMEM;
         }
+        dset->entries[0] = dset->single.ent;
+        ent = &dset->entries[1];
+        dset->ht = lcb_hashtable_nc_new(16);
+        if (!dset->ht) {
+            return LCB_CLIENT_ENOMEM;
+        }
+    } else if (dset->nentries < dset->ents_alloced) {
+        ent = &dset->entries[dset->nentries];
+    } else {
+        lcb_durability_entry_t *newarr;
+        lcb_SIZE newsize = dset->ents_alloced * 1.5;
+        newarr = realloc(dset->entries, sizeof(*ent) * newsize);
+        if (!newarr) {
+            return LCB_CLIENT_ENOMEM;
+        }
+        dset->entries = newarr;
+        dset->ents_alloced = newsize;
+        ent = &dset->entries[dset->nentries];
     }
 
-    /* set up the observe commands */
+    /* ok. now let's initialize the entry..*/
+    memset(ent, 0, sizeof (*ent));
+    REQFLD(ent, cas) = cmd->options.cas;
+    REQFLD(ent, nkey) = cmd->key.contig.nbytes;
+    REQFLD(ent, nhashkey) = cmd->hashkey.contig.nbytes;
+    ent->parent = dset;
+
+    lcb_string_append(&dset->kvbufs,
+        cmd->key.contig.bytes, cmd->key.contig.nbytes);
+    if (REQFLD(ent, nhashkey)) {
+        lcb_string_append(&dset->kvbufs,
+            cmd->hashkey.contig.bytes,  cmd->hashkey.contig.nbytes);
+    }
+
+    dset->nentries++;
+    return LCB_SUCCESS;
+}
+
+static lcb_error_t
+dset_ctx_schedule(lcb_MULTICMD_CTX *mctx, const void *cookie)
+{
+    unsigned ii;
+    char *kptr;
+    lcb_durability_set_t *dset = CTX_FROM_MULTI(mctx);
+
+    kptr = dset->kvbufs.base;
     for (ii = 0; ii < dset->nentries; ii++) {
         lcb_durability_entry_t *ent = dset->entries + ii;
-        ent_init(cmds[ii], ent);
-        ent->parent = dset;
 
-        if (dset->nentries > 1) {
-            int mt = genhash_update(dset->ht,
-                                    REQFLD(ent, key),
-                                    REQFLD(ent, nkey),
-                                    ent, 0);
+        REQFLD(ent, key) = kptr;
+        kptr += REQFLD(ent, nkey);
+
+        if (REQFLD(ent, nhashkey)) {
+            REQFLD(ent, hashkey) = kptr;
+            kptr += REQFLD(ent, nhashkey);
+        }
+
+        RESFLD(ent, key) = REQFLD(ent, key);
+        RESFLD(ent, nkey) = REQFLD(ent, nkey);
+
+        if (dset->ht) {
+            int mt = genhash_update(dset->ht, RESFLD(ent, key),
+                RESFLD(ent, nkey), ent, 0);
             if (mt != NEW) {
                 lcb_durability_dset_destroy(dset);
                 return LCB_DUPLICATE_COMMANDS;
@@ -592,14 +581,106 @@ lcb_error_t lcb_durability_poll(lcb_t instance,
         }
     }
 
-    /**
-     * Increase the refcount by one. This will be decremented
-     * when the remaining_total count hits 0
-     */
-
     dset_ref(dset);
-    lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_DURABILITY, dset);
+    dset->cookie = cookie;
+    dset->nremaining = dset->nentries;
+
+    lcb_aspend_add(&dset->instance->pendops, LCB_PENDTYPE_DURABILITY, dset);
     timer_schedule(dset, 0, STATE_OBSPOLL);
+    return LCB_SUCCESS;
+}
+
+static void
+dset_ctx_fail(lcb_MULTICMD_CTX *mctx)
+{
+    lcb_durability_set_t *dset = CTX_FROM_MULTI(mctx);
+    lcb_durability_dset_destroy(dset);
+}
+
+LIBCOUCHBASE_API
+lcb_MULTICMD_CTX *
+lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
+    lcb_error_t *errp)
+{
+    lcb_durability_set_t *dset;
+    lcb_error_t err_s;
+    hrtime_t now;
+    lcbio_pTABLE io = instance->iotable;
+
+    if (!errp) {
+        errp = &err_s;
+    }
+    now = gethrtime();
+    dset = calloc(1, sizeof(*dset));
+
+    if (!dset) {
+        *errp = LCB_CLIENT_ENOMEM;
+        return NULL;
+    }
+
+    dset->opts = *options;
+    dset->instance = instance;
+    dset->mctx.addcmd = dset_ctx_add;
+    dset->mctx.done = dset_ctx_schedule;
+    dset->mctx.fail = dset_ctx_fail;
+
+    if (!DSET_OPTFLD(dset, timeout)) {
+        DSET_OPTFLD(dset, timeout) = LCBT_SETTING(instance, durability_timeout);
+    }
+    if (!DSET_OPTFLD(dset, interval)) {
+        DSET_OPTFLD(dset, interval) = LCB_DEFAULT_DURABILITY_INTERVAL;
+    }
+
+    if (-1 == verify_critera(instance, dset)) {
+        free(dset);
+        *errp = LCB_DURABILITY_ETOOMANY;
+        return NULL;
+    }
+
+    dset->us_timeout = (lcb_uint32_t)(now / 1000) + DSET_OPTFLD(dset, timeout);
+    dset->timer = io->timer.create(io->p);
+    lcb_string_init(&dset->kvbufs);
+    return &dset->mctx;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_durability_poll(lcb_t instance, const void *cookie,
+    const lcb_durability_opts_t *options, lcb_size_t ncmds,
+    const lcb_durability_cmd_t *const *cmds)
+{
+    lcb_MULTICMD_CTX *mctx;
+    unsigned ii;
+    lcb_error_t err;
+
+    if (ncmds == 0) {
+        return LCB_EINVAL;
+    }
+
+    mctx = lcb_endure3_ctxnew(instance, options, &err);
+    if (!mctx) {
+        return err;
+    }
+
+    for (ii = 0; ii < ncmds; ii++) {
+        lcb_CMDENDURE cmd = { 0 };
+        const lcb_DURABILITYCMDv0 *src = &cmds[ii]->v.v0;
+        cmd.key.contig.bytes = src->key;
+        cmd.key.contig.nbytes = src->nkey;
+        cmd.hashkey.contig.bytes = src->hashkey;
+        cmd.hashkey.contig.nbytes = src->nhashkey;
+        cmd.options.cas = src->cas;
+
+        err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+        if (err != LCB_SUCCESS) {
+            mctx->fail(mctx);
+            return err;
+        }
+    }
+
+    lcb_sched_enter(instance);
+    mctx->done(mctx, cookie);
+    lcb_sched_leave(instance);
     SYNCMODE_INTERCEPT(instance)
 }
 
@@ -620,7 +701,6 @@ static void dset_unref(lcb_durability_set_t *dset)
  */
 void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
 {
-    lcb_size_t ii;
     lcb_t instance = dset->instance;
 
     if (dset->timer) {
@@ -630,10 +710,6 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
         dset->timer = NULL;
     }
 
-    for (ii = 0; ii < dset->nentries; ii++) {
-        lcb_durability_entry_t *ent = dset->entries + ii;
-        free((void *)REQFLD(ent, key));
-    }
     lcb_aspend_del(&dset->instance->pendops, LCB_PENDTYPE_DURABILITY, dset);
 
     if (dset->nentries > 1) {
@@ -642,6 +718,7 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
         }
         free(dset->entries);
     }
+    lcb_string_release(&dset->kvbufs);
 
     free(dset);
     lcb_maybe_breakout(instance);

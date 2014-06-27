@@ -189,7 +189,7 @@ obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
 }
 
 
-static void
+static lcb_error_t
 obs_ctxdone(lcb_MULTICMD_CTX *mctx, const void *cookie)
 {
     unsigned ii;
@@ -234,6 +234,7 @@ obs_ctxdone(lcb_MULTICMD_CTX *mctx, const void *cookie)
     ctx->base.start = gethrtime();
     ctx->base.cookie = cookie;
     ctx->base.callback = handle_observe_callback;
+    return LCB_SUCCESS;
 }
 
 static void

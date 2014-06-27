@@ -174,6 +174,7 @@ typedef lcb_CMDBASE lcb_CMDTOUCH;
 typedef lcb_CMDBASE lcb_CMDSTATS;
 typedef lcb_CMDBASE lcb_CMDFLUSH;
 typedef lcb_CMDBASE lcb_CMDOBSERVE;
+typedef lcb_CMDBASE lcb_CMDENDURE;
 
 #define LCB_RESP_BASE \
     void *cookie; /**< User data associated with request */ \
@@ -505,8 +506,10 @@ typedef struct lcb_MULTICMD_CTX_st {
      * scheduling context
      * @param ctx The multi context
      * @param cookie The cookie for all commands
+     * @return LCB_SUCCESS if scheduled successfully, or an error code if there
+     * was a problem constructing the packet(s).
      */
-    void (*done)(struct lcb_MULTICMD_CTX_st *ctx, const void *cookie);
+    lcb_error_t (*done)(struct lcb_MULTICMD_CTX_st *ctx, const void *cookie);
 
     /**
      * Indicate that no more commands should be added to this context, and that
@@ -528,7 +531,8 @@ lcb_observe3_ctxnew(lcb_t instance);
 
 LIBCOUCHBASE_API
 lcb_MULTICMD_CTX *
-lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options);
+lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
+    lcb_error_t *err);
 
 /**@volatile*/
 LIBCOUCHBASE_API
