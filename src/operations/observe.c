@@ -81,7 +81,7 @@ handle_observe_callback(
     if (oc->otype & F_DURABILITY) {
         lcb_durability_dset_update(
                 instance,
-                (lcb_durability_set_t *)MCREQ_PKT_COOKIE(pkt), err, resp);
+                (lcb_DURSET *)MCREQ_PKT_COOKIE(pkt), err, resp);
     } else {
         lcb_RESP_cb callback = lcb_find_callback(instance, LCB_CALLBACK_OBSERVE);
         callback(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPBASE *)resp);

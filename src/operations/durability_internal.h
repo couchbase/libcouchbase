@@ -27,8 +27,8 @@ extern "C" {
      * Information a single entry in a durability set
      */
     typedef struct lcb_durability_entry_st {
-        /** Request for this structure */
-        struct lcb_durability_cmd_st request;
+        lcb_KEYBUF hashkey;
+        lcb_U64 reqcas;
 
         /** result for this entry */
         lcb_RESPENDURE result;
@@ -41,7 +41,7 @@ extern "C" {
          * further operations
          */
         unsigned char done;
-    } lcb_durability_entry_t;
+    } lcb_DURITEM;
 
     /**
      * A collection encompassing one or more keys which are to be checked for
@@ -64,7 +64,7 @@ extern "C" {
             /**
              * Tweak for single entry, so we don't have to allocate tiny chunks
              */
-            lcb_durability_entry_t ent;
+            lcb_DURITEM ent;
         } single;
 
         /**
@@ -111,10 +111,10 @@ extern "C" {
         void *timer;
 
         lcb_t instance;
-    } lcb_durability_set_t;
+    } lcb_DURSET;
 
     void lcb_durability_dset_update(lcb_t instance,
-                                    lcb_durability_set_t *dset,
+                                    lcb_DURSET *dset,
                                     lcb_error_t err,
                                     const lcb_RESPOBSERVE *resp);
     lcb_MULTICMD_CTX *

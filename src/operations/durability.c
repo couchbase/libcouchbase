@@ -72,8 +72,7 @@
 #include <lcbio/iotable.h>
 
 #define RESFLD(e, f) (e)->result.f
-#define REQFLD(e, f) (e)->request.v.v0.f
-#define OCMDFLD(e, f) (e)->ocmd.v.v0.f
+#define ENT_CAS(e) (e)->request.options.cas
 
 #define OPTFLD(opts, opt) (opts)->v.v0.opt
 #define DSET_OPTFLD(ds, opt) OPTFLD(&(ds)->opts, opt)
@@ -87,13 +86,13 @@ enum {
 };
 
 static void timer_callback(lcb_socket_t sock, short which, void *arg);
-static void timer_schedule(lcb_durability_set_t *dset,
+static void timer_schedule(lcb_DURSET *dset,
                            unsigned long delay,
                            unsigned int state);
-static void poll_once(lcb_durability_set_t *dset);
-static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err);
+static void poll_once(lcb_DURSET *dset);
+static void purge_entries(lcb_DURSET *dset, lcb_error_t err);
 #define dset_ref(dset) (dset)->refcnt++;
-static void dset_unref(lcb_durability_set_t *dset);
+static void dset_unref(lcb_DURSET *dset);
 
 
 
@@ -101,7 +100,7 @@ static void dset_unref(lcb_durability_set_t *dset);
  * Returns true if the entry is complete, false otherwise. This only assumes
  * successful entries.
  */
-static int ent_is_complete(lcb_durability_entry_t *ent)
+static int ent_is_complete(lcb_DURITEM *ent)
 {
     lcb_durability_opts_t *opts = &ent->parent->opts;
 
@@ -133,7 +132,7 @@ static int ent_is_complete(lcb_durability_entry_t *ent)
  * Set the logical state of the entry to done, and invoke the callback.
  * It is safe to call this multiple times
  */
-static void ent_set_resdone(lcb_durability_entry_t *ent)
+static void ent_set_resdone(lcb_DURITEM *ent)
 {
     lcb_RESP_cb callback;
     if (ent->done) {
@@ -155,7 +154,7 @@ static void ent_set_resdone(lcb_durability_entry_t *ent)
 /**
  * Called when the last (primitive) OBSERVE response is received for the entry.
  */
-static void dset_done_waiting(lcb_durability_set_t *dset)
+static void dset_done_waiting(lcb_DURSET *dset)
 {
     lcb_assert(dset->waiting || ("Got NULL callback twice!" && 0));
 
@@ -171,7 +170,7 @@ static void dset_done_waiting(lcb_durability_set_t *dset)
  * Purge all non-complete (i.e. not 'resdone') entries and invoke their
  * callback, setting the result's error code with the specified error
  */
-static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err)
+static void purge_entries(lcb_DURSET *dset, lcb_error_t err)
 {
     lcb_size_t ii;
     dset->us_timeout = 0;
@@ -186,7 +185,7 @@ static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err)
     dset_ref(dset);
 
     for (ii = 0; ii < dset->nentries; ii++) {
-        lcb_durability_entry_t *ent = dset->entries + ii;
+        lcb_DURITEM *ent = dset->entries + ii;
         if (ent->done) {
             continue;
         }
@@ -200,7 +199,7 @@ static void purge_entries(lcb_durability_set_t *dset, lcb_error_t err)
 /**
  * Schedules a single sweep of observe requests.
  */
-static void poll_once(lcb_durability_set_t *dset)
+static void poll_once(lcb_DURSET *dset)
 {
     unsigned ii, n_added = 0;
     lcb_error_t err;
@@ -234,6 +233,8 @@ static void poll_once(lcb_durability_set_t *dset)
         RESFLD(ent, rc) = LCB_SUCCESS;
 
         LCB_KREQ_SIMPLE(&cmd.key, RESFLD(ent, key), RESFLD(ent, nkey));
+        cmd.hashkey = ent->hashkey;
+
         err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
         if (err != LCB_SUCCESS) {
             goto GT_ERR;
@@ -256,7 +257,7 @@ static void poll_once(lcb_durability_set_t *dset)
         }
 
         for (ii = 0; ii < dset->nentries; ii++) {
-            lcb_durability_entry_t *ent = dset->entries + ii;
+            lcb_DURITEM *ent = dset->entries + ii;
             if (ent->done) {
                 continue;
             }
@@ -288,7 +289,7 @@ static void poll_once(lcb_durability_set_t *dset)
 /**
  * Called when the criteria is to ensure the key exists somewhow
  */
-static void check_positive_durability(lcb_durability_entry_t *ent,
+static void check_positive_durability(lcb_DURITEM *ent,
                                       const lcb_RESPOBSERVE *res)
 {
     switch (res->status) {
@@ -335,7 +336,7 @@ static void check_positive_durability(lcb_durability_entry_t *ent,
 /**
  * Called when the criteria is to ensure that the key is deleted somehow
  */
-static void check_negative_durability(lcb_durability_entry_t *ent,
+static void check_negative_durability(lcb_DURITEM *ent,
                                       const lcb_RESPOBSERVE *res)
 {
     switch (res->status) {
@@ -382,11 +383,11 @@ static void check_negative_durability(lcb_durability_entry_t *ent,
  * Observe callback. Called internally by libcouchbase's observe handlers
  */
 void lcb_durability_dset_update(lcb_t instance,
-                                lcb_durability_set_t *dset,
+                                lcb_DURSET *dset,
                                 lcb_error_t err,
                                 const lcb_RESPOBSERVE *resp)
 {
-    lcb_durability_entry_t *ent;
+    lcb_DURITEM *ent;
 
     /**
      * So we have two counters to decrement. One is the global 'done' counter
@@ -424,7 +425,7 @@ void lcb_durability_dset_update(lcb_t instance,
 
         RESFLD(ent, cas) = resp->cas;
 
-        if (REQFLD(ent, cas) && REQFLD(ent, cas) != resp->cas) {
+        if (ent->reqcas && ent->reqcas != resp->cas) {
             RESFLD(ent, rc) = LCB_KEY_EEXISTS;
             ent_set_resdone(ent);
             return;
@@ -452,7 +453,7 @@ void lcb_durability_dset_update(lcb_t instance,
  * Ensure that the user-specified criteria is possible; i.e. we have enough
  * servers and replicas. If the user requested capping, we do that here too.
  */
-static int verify_critera(lcb_t instance, lcb_durability_set_t *dset)
+static int verify_critera(lcb_t instance, lcb_DURSET *dset)
 {
     lcb_durability_opts_t *options = &dset->opts;
 
@@ -490,13 +491,13 @@ static int verify_critera(lcb_t instance, lcb_durability_set_t *dset)
     return 0;
 }
 
-#define CTX_FROM_MULTI(mcmd) (void *) ((((char *) (mcmd))) - offsetof(lcb_durability_set_t, mctx))
+#define CTX_FROM_MULTI(mcmd) (void *) ((((char *) (mcmd))) - offsetof(lcb_DURSET, mctx))
 
 static lcb_error_t
 dset_ctx_add(lcb_MULTICMD_CTX *mctx, const lcb_CMDBASE *cmd)
 {
-    lcb_durability_set_t *dset = CTX_FROM_MULTI(mctx);
-    lcb_durability_entry_t *ent;
+    lcb_DURSET *dset = CTX_FROM_MULTI(mctx);
+    lcb_DURITEM *ent;
 
     /* ensure we have enough space first */
     if (dset->nentries == 0) {
@@ -520,7 +521,7 @@ dset_ctx_add(lcb_MULTICMD_CTX *mctx, const lcb_CMDBASE *cmd)
     } else if (dset->nentries < dset->ents_alloced) {
         ent = &dset->entries[dset->nentries];
     } else {
-        lcb_durability_entry_t *newarr;
+        lcb_DURITEM *newarr;
         lcb_SIZE newsize = dset->ents_alloced * 1.5;
         newarr = realloc(dset->entries, sizeof(*ent) * newsize);
         if (!newarr) {
@@ -533,18 +534,17 @@ dset_ctx_add(lcb_MULTICMD_CTX *mctx, const lcb_CMDBASE *cmd)
 
     /* ok. now let's initialize the entry..*/
     memset(ent, 0, sizeof (*ent));
-    REQFLD(ent, cas) = cmd->options.cas;
-    REQFLD(ent, nkey) = cmd->key.contig.nbytes;
-    REQFLD(ent, nhashkey) = cmd->hashkey.contig.nbytes;
+    RESFLD(ent, nkey) = cmd->key.contig.nbytes;
+    ent->hashkey = cmd->hashkey;
+    ent->reqcas = cmd->options.cas;
     ent->parent = dset;
 
     lcb_string_append(&dset->kvbufs,
         cmd->key.contig.bytes, cmd->key.contig.nbytes);
-    if (REQFLD(ent, nhashkey)) {
+    if (cmd->hashkey.contig.nbytes) {
         lcb_string_append(&dset->kvbufs,
             cmd->hashkey.contig.bytes,  cmd->hashkey.contig.nbytes);
     }
-
     dset->nentries++;
     return LCB_SUCCESS;
 }
@@ -554,22 +554,18 @@ dset_ctx_schedule(lcb_MULTICMD_CTX *mctx, const void *cookie)
 {
     unsigned ii;
     char *kptr;
-    lcb_durability_set_t *dset = CTX_FROM_MULTI(mctx);
+    lcb_DURSET *dset = CTX_FROM_MULTI(mctx);
 
     kptr = dset->kvbufs.base;
     for (ii = 0; ii < dset->nentries; ii++) {
-        lcb_durability_entry_t *ent = dset->entries + ii;
+        lcb_DURITEM *ent = dset->entries + ii;
 
-        REQFLD(ent, key) = kptr;
-        kptr += REQFLD(ent, nkey);
-
-        if (REQFLD(ent, nhashkey)) {
-            REQFLD(ent, hashkey) = kptr;
-            kptr += REQFLD(ent, nhashkey);
+        RESFLD(ent, key) = kptr;
+        kptr += RESFLD(ent, nkey);
+        if (ent->hashkey.contig.nbytes) {
+            ent->hashkey.contig.bytes = kptr;
+            kptr += ent->hashkey.contig.nbytes;
         }
-
-        RESFLD(ent, key) = REQFLD(ent, key);
-        RESFLD(ent, nkey) = REQFLD(ent, nkey);
 
         if (dset->ht) {
             int mt = genhash_update(dset->ht, RESFLD(ent, key),
@@ -593,7 +589,7 @@ dset_ctx_schedule(lcb_MULTICMD_CTX *mctx, const void *cookie)
 static void
 dset_ctx_fail(lcb_MULTICMD_CTX *mctx)
 {
-    lcb_durability_set_t *dset = CTX_FROM_MULTI(mctx);
+    lcb_DURSET *dset = CTX_FROM_MULTI(mctx);
     lcb_durability_dset_destroy(dset);
 }
 
@@ -602,7 +598,7 @@ lcb_MULTICMD_CTX *
 lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
     lcb_error_t *errp)
 {
-    lcb_durability_set_t *dset;
+    lcb_DURSET *dset;
     lcb_error_t err_s;
     hrtime_t now;
     lcbio_pTABLE io = instance->iotable;
@@ -688,7 +684,7 @@ lcb_durability_poll(lcb_t instance, const void *cookie,
  * Decrement the refcount for the 'dset'. When it hits zero then the dset is
  * freed.
  */
-static void dset_unref(lcb_durability_set_t *dset)
+static void dset_unref(lcb_DURSET *dset)
 {
     if (--dset->refcnt == 0) {
         lcb_durability_dset_destroy(dset);
@@ -699,7 +695,7 @@ static void dset_unref(lcb_durability_set_t *dset)
  * Actually free the resources allocated by the dset (and all its entries).
  * Called by some other functions in libcouchbase
  */
-void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
+void lcb_durability_dset_destroy(lcb_DURSET *dset)
 {
     lcb_t instance = dset->instance;
 
@@ -729,7 +725,7 @@ void lcb_durability_dset_destroy(lcb_durability_set_t *dset)
  */
 static void timer_callback(lcb_socket_t sock, short which, void *arg)
 {
-    lcb_durability_set_t *dset = arg;
+    lcb_DURSET *dset = arg;
     hrtime_t ns_now = gethrtime();
     lcb_uint32_t us_now = (lcb_uint32_t)(ns_now / 1000);
 
@@ -773,7 +769,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
  * Schedules us to be notified with the given state within a particular amount
  * of time. This is used both for the timeout and for the interval
  */
-static void timer_schedule(lcb_durability_set_t *dset,
+static void timer_schedule(lcb_DURSET *dset,
                            unsigned long delay,
                            unsigned int state)
 {
