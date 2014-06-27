@@ -254,10 +254,11 @@ LIBCOUCHBASE_API
 lcb_RESP_cb
 lcb_install_callback3(lcb_t instance, lcb_CALLBACKTYPE cbtype, lcb_RESP_cb cb)
 {
+    lcb_RESP_cb ret;
     if (cbtype >= LCB_CALLBACK__MAX) {
         return NULL;
     }
-    lcb_RESP_cb ret = instance->callbacks.v3callbacks[cbtype];
+    ret = instance->callbacks.v3callbacks[cbtype];
     if (cb) {
         instance->callbacks.v3callbacks[cbtype] = cb;
     }
