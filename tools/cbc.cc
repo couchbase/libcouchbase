@@ -16,10 +16,13 @@ using std::map;
 using std::vector;
 using std::stringstream;
 
-template <typename T>
-string getRespKey(const T* resp)
+string getRespKey(const lcb_RESPBASE* resp)
 {
-    return string((const char*)resp->v.v0.key, resp->v.v0.nkey);
+    if (!resp->nkey) {
+        return "";
+    }
+
+    return string((const char *)resp->key, resp->nkey);
 }
 
 static void
@@ -28,111 +31,103 @@ printKeyError(string& key, lcb_error_t err)
     fprintf(stderr, "%-20s %s (0x%x)\n", key.c_str(), lcb_strerror(NULL, err), err);
 }
 
-template <typename T> void
-printKeyCasStatus(string& key, const T* resp, const char *message = NULL)
+static void
+printKeyCasStatus(string& key, const lcb_RESPBASE *resp, const char *message = NULL)
 {
     fprintf(stderr, "%-20s", key.c_str());
     if (message != NULL) {
         fprintf(stderr, "%s ", message);
     }
-    fprintf(stderr, "CAS=0x%"PRIx64"\n", resp->v.v0.cas);
+    fprintf(stderr, "CAS=0x%"PRIx64"\n", resp->cas);
 }
 
 extern "C" {
 static void
-get_callback(lcb_t, const void *, lcb_error_t err, const lcb_get_resp_t *resp)
+get_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
 {
-    string key = getRespKey(resp);
-    if (err == LCB_SUCCESS) {
+    string key = getRespKey((const lcb_RESPBASE *)resp);
+    if (resp->rc == LCB_SUCCESS) {
         fprintf(stderr, "%-20s CAS=0x%"PRIx64", Flags=0x%x, Datatype=0x%x\n",
-            key.c_str(), resp->v.v0.cas, resp->v.v0.flags, resp->v.v0.datatype);
-        fwrite(resp->v.v0.bytes, 1, resp->v.v0.nbytes, stdout);
+            key.c_str(), resp->cas, resp->itmflags, resp->datatype);
+        fwrite(resp->value, 1, resp->nvalue, stdout);
         fprintf(stderr, "\n");
     } else {
-        printKeyError(key, err);
+        printKeyError(key, resp->rc);
     }
 }
+
 static void
-store_callback(lcb_t, const void *cookie,
-    lcb_storage_t, lcb_error_t err, const lcb_store_resp_t *resp)
+store_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
 {
-    string key = getRespKey(resp);
-    if (err == LCB_SUCCESS) {
-        printKeyCasStatus(key, resp, "Stored.");
-        if (cookie != NULL) {
-            map<string,lcb_cas_t>& items = *(map<string,lcb_cas_t>*)cookie;
-            items[key] = resp->v.v0.cas;
+    string key = getRespKey((const lcb_RESPBASE*)resp);
+    if (resp->rc == LCB_SUCCESS) {
+        printKeyCasStatus(key, (const lcb_RESPBASE *)resp, "Stored.");
+        if (resp->cookie != NULL) {
+            map<string,lcb_cas_t>& items = *(map<string,lcb_cas_t>*)resp->cookie;
+            items[key] = resp->cas;
         }
     } else {
-        printKeyError(key, err);
+        printKeyError(key, resp->rc);
     }
 }
+
 static void
-durability_callback(lcb_t, const void*, lcb_error_t err, const lcb_durability_resp_t *resp)
+common_callback(lcb_t, lcb_CALLBACKTYPE type, const lcb_RESPBASE *resp)
 {
     string key = getRespKey(resp);
-    if (err == LCB_SUCCESS) {
-        err = resp->v.v0.err;
+    if (resp->rc != LCB_SUCCESS) {
+        printKeyError(key, resp->rc);
+        return;
     }
-    if (err == LCB_SUCCESS) {
+    switch (type) {
+    case LCB_CALLBACK_UNLOCK:
+        fprintf(stderr, "%-20s Unlocked\n", key.c_str());
+        break;
+    case LCB_CALLBACK_DELETE:
+        printKeyCasStatus(key, resp, "Deleted.");
+        break;
+    case LCB_CALLBACK_ENDURE:
         printKeyCasStatus(key, resp, "Persisted/Replicated.");
-    } else {
-        printKeyError(key, err);
+        break;
+    default:
+        abort(); // didn't request it
     }
 }
+
 static void
-observe_callback(lcb_t, const void*,  lcb_error_t err, const lcb_observe_resp_t *resp)
+observe_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPOBSERVE *resp)
 {
-    if (resp->v.v0.nkey == 0) {
+    if (resp->nkey == 0) {
         return;
     }
 
-    string key = getRespKey(resp);
-    if (err == LCB_SUCCESS) {
+    string key = getRespKey((const lcb_RESPBASE *)resp);
+    if (resp->rc == LCB_SUCCESS) {
         fprintf(stderr,
             "%-20s [%s] Status=0x%x, CAS=0x%"PRIx64"\n", key.c_str(),
-            resp->v.v0.from_master ? "Master" : "Replica",
-                    resp->v.v0.status, resp->v.v0.cas);
+            resp->ismaster ? "Master" : "Replica",
+                    resp->status, resp->cas);
     } else {
-        printKeyError(key, err);
+        printKeyError(key, resp->rc);
     }
 }
+
 static void
-unlock_callback(lcb_t, const void*, lcb_error_t err, const lcb_unlock_resp_t *resp)
+stats_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
 {
-    string key = getRespKey(resp);
-    if (err != LCB_SUCCESS) {
-        printKeyError(key, err);
-    } else {
-        fprintf(stderr, "%-20s Unlocked\n", key.c_str());
-    }
-}
-static void
-remove_callback(lcb_t, const void*, lcb_error_t err, const lcb_remove_resp_t *resp)
-{
-    string key = getRespKey(resp);
-    if (err != LCB_SUCCESS) {
-        printKeyError(key, err);
-    } else {
-        printKeyCasStatus(key, resp, "Removed.");
-    }
-}
-static void
-stats_callback(lcb_t, const void *, lcb_error_t err, const lcb_server_stat_resp_t *resp)
-{
-    if (err != LCB_SUCCESS) {
-        fprintf(stderr, "Got error %s (%d) in stats\n", lcb_strerror(NULL, err), err);
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "Got error %s (%d) in stats\n", lcb_strerror(NULL, resp->rc), resp->rc);
         return;
     }
-    if (resp->v.v0.server_endpoint == NULL || resp->v.v0.key == NULL) {
+    if (resp->server == NULL || resp->key == NULL) {
         return;
     }
 
-    string server = resp->v.v0.server_endpoint;
-    string key = getRespKey(resp);
+    string server = resp->server;
+    string key = getRespKey((const lcb_RESPBASE *)resp);
     string value;
-    if (resp->v.v0.nbytes > 0) {
-        value.assign((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
+    if (resp->nvalue >  0) {
+        value.assign((const char *)resp->value, resp->nvalue);
     }
     fprintf(stdout, "%s\t%s", server.c_str(), key.c_str());
     if (!value.empty()) {
@@ -141,22 +136,22 @@ stats_callback(lcb_t, const void *, lcb_error_t err, const lcb_server_stat_resp_
     fprintf(stdout, "\n");
 }
 static void
-verbosity_callback(lcb_t,const void*, lcb_error_t err, const lcb_verbosity_resp_st *resp)
+verbosity_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPVERBOSITY *resp)
 {
-    if (err != LCB_SUCCESS && resp->v.v0.server_endpoint) {
-        fprintf(stderr, "Failed to set verbosity for %s\n", resp->v.v0.server_endpoint);
+    if (resp->rc != LCB_SUCCESS && resp->server) {
+        fprintf(stderr, "Failed to set verbosity for %s\n", resp->server);
     }
 }
 static void
-arithmetic_callback(lcb_t, const void*, lcb_error_t err, const lcb_arithmetic_resp_t *resp)
+arithmetic_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPARITH *resp)
 {
-    string key = getRespKey(resp);
-    if (err != LCB_SUCCESS) {
-        printKeyError(key, err);
+    string key = getRespKey((const lcb_RESPBASE *)resp);
+    if (resp->rc != LCB_SUCCESS) {
+        printKeyError(key, resp->rc);
     } else {
         char buf[4096] = { 0 };
-        sprintf(buf, "Current value is %"PRIu64".", resp->v.v0.value);
-        printKeyCasStatus(key, resp, buf);
+        sprintf(buf, "Current value is %"PRIu64".", resp->value);
+        printKeyCasStatus(key, (const lcb_RESPBASE *)resp, buf);
     }
 }
 static void
@@ -273,7 +268,8 @@ void
 GetHandler::run()
 {
     Handler::run();
-    lcb_set_get_callback(instance, get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESP_cb)get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESP_cb)get_callback);
     const vector<string>& keys = parser.getRestArgs();
     lcb_error_t err;
 
@@ -302,28 +298,34 @@ static void
 endureItems(lcb_t instance, const map<string,lcb_cas_t> items,
     size_t persist_to, size_t replicate_to)
 {
-    lcb_set_durability_callback(instance, durability_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, common_callback);
     lcb_durability_opts_t options = { 0 };
-    vector<lcb_durability_cmd_t> cmds;
-    vector<const lcb_durability_cmd_t *> cmdlist;
     options.v.v0.persist_to = persist_to;
     options.v.v0.replicate_to = replicate_to;
     lcb_error_t err;
 
-    map<string,lcb_cas_t>::const_iterator iter;
-    for (iter = items.begin(); iter != items.end(); ++iter) {
-        lcb_durability_cmd_t cmd = { 0 };
-        cmd.v.v0.key = iter->first.c_str();
-        cmd.v.v0.nkey = iter->first.size();
-        cmd.v.v0.cas = iter->second;
-        cmds.push_back(cmd);
+    lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, &options, &err);
+    if (mctx == NULL) {
+        throw err;
     }
 
-    for (size_t ii = 0; ii < cmds.size(); ++ii) {
-        cmdlist.push_back(&cmds[ii]);
+    map<string,lcb_cas_t>::const_iterator iter;
+    for (iter = items.begin(); iter != items.end(); ++iter) {
+        lcb_CMDENDURE cmd = { 0 };
+        LCB_KREQ_SIMPLE(&cmd.key, iter->first.c_str(), iter->first.size());
+        cmd.options.cas = iter->second;
+        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
+        if (err != LCB_SUCCESS) {
+            throw err;
+        }
     }
-    err = lcb_durability_poll(instance, NULL, &options, cmds.size(), &cmdlist[0]);
-    if (err != LCB_SUCCESS) {
+
+    lcb_sched_enter(instance);
+    err = mctx->done(mctx, NULL);
+    if (err == LCB_SUCCESS) {
+        lcb_sched_leave(instance);
+    } else {
+        lcb_sched_fail(instance);
         throw err;
     }
     lcb_wait(instance);
@@ -390,7 +392,7 @@ void
 SetHandler::run()
 {
     Handler::run();
-    lcb_set_store_callback(instance, store_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESP_cb)store_callback);
     const vector<string>& keys = parser.getRestArgs();
 
     lcb_sched_enter(instance);
@@ -460,33 +462,39 @@ void
 ObserveHandler::run()
 {
     Handler::run();
-    lcb_set_observe_callback(instance, observe_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESP_cb)observe_callback);
     const vector<string>& keys = parser.getRestArgs();
-    vector<lcb_observe_cmd_t> cmds;
-    vector<const lcb_observe_cmd_t*> cmdlist;
-    for (size_t ii = 0; ii < keys.size(); ii++) {
-        lcb_observe_cmd_t cmd;
-        memset(&cmd, 0, sizeof cmd);
-        cmd.v.v0.key = (const void *)keys[ii].c_str();
-        cmd.v.v0.nkey = keys[ii].size();
-        cmds.push_back(cmd);
+    lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
+    if (mctx == NULL) {
+        throw LCB_CLIENT_ENOMEM;
     }
-    for (size_t ii = 0; ii < cmds.size(); ii++) {
-        cmdlist.push_back(&cmds[ii]);
-    }
+
     lcb_error_t err;
-    err = lcb_observe(instance, NULL, cmds.size(), &cmdlist[0]);
-    if (err != LCB_SUCCESS) {
+    for (size_t ii = 0; ii < keys.size(); ii++) {
+        lcb_CMDOBSERVE cmd = { 0 };
+        LCB_KREQ_SIMPLE(&cmd.key, keys[ii].c_str(), keys[ii].size());
+        err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+        if (err != LCB_SUCCESS) {
+            throw err;
+        }
+    }
+
+    lcb_sched_enter(instance);
+    err = mctx->done(mctx, NULL);
+    if (err == LCB_SUCCESS) {
+        lcb_sched_leave(instance);
+        lcb_wait(instance);
+    } else {
+        lcb_sched_fail(instance);
         throw err;
     }
-    lcb_wait(instance);
 }
 
 void
 UnlockHandler::run()
 {
     Handler::run();
-    lcb_set_unlock_callback(instance, unlock_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, common_callback);
     const vector<string>& args = parser.getRestArgs();
 
     if (args.size() % 2) {
@@ -564,7 +572,7 @@ RemoveHandler::run()
     Handler::run();
     const vector<string> &keys = parser.getRestArgs();
     lcb_sched_enter(instance);
-    lcb_set_remove_callback(instance, remove_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_DELETE, common_callback);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
         lcb_CMDREMOVE cmd;
         const string& key = keys[ii];
@@ -583,7 +591,7 @@ void
 StatsHandler::run()
 {
     Handler::run();
-    lcb_set_stat_callback(instance, stats_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESP_cb)stats_callback);
     vector<string> keys = parser.getRestArgs();
     if (keys.empty()) {
         keys.push_back("");
@@ -621,7 +629,7 @@ VerbosityHandler::run()
         throw "Verbosity level must be {detail,debug,info,warning}";
     }
 
-    lcb_set_verbosity_callback(instance, verbosity_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESP_cb)verbosity_callback);
     lcb_CMDVERBOSITY cmd = { 0 };
     cmd.level = level;
     lcb_error_t err;
@@ -640,7 +648,7 @@ ArithmeticHandler::run()
     Handler::run();
 
     const vector<string>& keys = parser.getRestArgs();
-    lcb_set_arithmetic_callback(instance, arithmetic_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_ARITHMETIC, (lcb_RESP_cb)arithmetic_callback);
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
         const string& key = keys[ii];
