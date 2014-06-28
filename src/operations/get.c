@@ -34,7 +34,7 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
     if (cmd->lock) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GET_LOCKED;
-    } else if (cmd->options.exptime) {
+    } else if (cmd->exptime) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GAT;
     }
@@ -56,7 +56,7 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
     hdr->request.cas = 0;
 
     if (extlen) {
-        gcmd.message.body.expiration = htonl(cmd->options.exptime);
+        gcmd.message.body.expiration = htonl(cmd->exptime);
     }
 
     memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
@@ -84,7 +84,7 @@ lcb_error_t lcb_get(lcb_t instance,
         dst.hashkey.contig.bytes = src->v.v0.hashkey;
         dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
         dst.lock = src->v.v0.lock;
-        dst.options.exptime = src->v.v0.exptime;
+        dst.exptime = src->v.v0.exptime;
 
         err = lcb_get3(instance, command_cookie, &dst);
         if (err != LCB_SUCCESS) {
@@ -121,7 +121,7 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr.request.bodylen = htonl((lcb_uint32_t)ntohs(hdr.request.keylen));
     hdr.request.opaque = pkt->opaque;
-    hdr.request.cas = cmd->options.cas;
+    hdr.request.cas = cmd->cas;
 
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
     mcreq_sched_add(pl, pkt);
@@ -145,7 +145,7 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
         dst.key.contig.nbytes = src->v.v0.nkey;
         dst.hashkey.contig.bytes = src->v.v0.hashkey;
         dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.options.cas = src->v.v0.cas;
+        dst.cas = src->v.v0.cas;
         err = lcb_unlock3(instance, cookie, &dst);
         if (err != LCB_SUCCESS) {
             break;

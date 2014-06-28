@@ -125,10 +125,10 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
     rdata->cookie = cookie;
     rdata->start = gethrtime();
 
-    scmd.message.body.expiration = htonl(cmd->options.exptime);
+    scmd.message.body.expiration = htonl(cmd->exptime);
     scmd.message.body.flags = htonl(cmd->flags);
     hdr->request.magic = PROTOCOL_BINARY_REQ;
-    hdr->request.cas = cmd->options.cas;
+    hdr->request.cas = cmd->cas;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
     if (should_compress || (cmd->datatype & LCB_VALUE_F_SNAPPYCOMP)) {
@@ -171,8 +171,8 @@ lcb_store(lcb_t instance, const void *cookie, lcb_size_t num,
         dst.operation = src->v.v0.operation;
         dst.flags = src->v.v0.flags;
         dst.datatype = src->v.v0.datatype;
-        dst.options.cas = src->v.v0.cas;
-        dst.options.exptime = src->v.v0.exptime;
+        dst.cas = src->v.v0.cas;
+        dst.exptime = src->v.v0.exptime;
         err = lcb_store3(instance, cookie, &dst);
         if (err != LCB_SUCCESS) {
             mcreq_sched_fail(&instance->cmdq);

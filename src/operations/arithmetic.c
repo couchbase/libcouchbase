@@ -53,7 +53,7 @@ lcb_arithmetic3(
         memset(&acmd.message.body.expiration, 0xff,
                sizeof(acmd.message.body.expiration));
     } else {
-        acmd.message.body.expiration = htonl(cmd->options.exptime);
+        acmd.message.body.expiration = htonl(cmd->exptime);
     }
 
     if (cmd->delta < 0) {
@@ -94,7 +94,7 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
         dst.hashkey.type = LCB_KV_COPY;
         dst.hashkey.contig.bytes = src->v.v0.hashkey;
         dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.options.exptime = src->v.v0.exptime;
+        dst.exptime = src->v.v0.exptime;
         err = lcb_arithmetic3(instance, cookie, &dst);
         if (err != LCB_SUCCESS) {
             mcreq_sched_fail(&instance->cmdq);

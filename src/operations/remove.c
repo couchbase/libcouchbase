@@ -36,7 +36,7 @@ lcb_remove3(lcb_t instance, const void *cookie, const lcb_CMDREMOVE * cmd)
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr.request.magic = PROTOCOL_BINARY_REQ;
     hdr.request.opcode = PROTOCOL_BINARY_CMD_DELETE;
-    hdr.request.cas = cmd->options.cas;
+    hdr.request.cas = cmd->cas;
     hdr.request.opaque = pkt->opaque;
     hdr.request.bodylen = htonl((lcb_uint32_t)ntohs(hdr.request.keylen));
 
@@ -64,7 +64,7 @@ lcb_remove(lcb_t instance, const void *cookie, lcb_size_t num,
         dst.key.contig.nbytes = src->v.v0.nkey;
         dst.hashkey.contig.bytes = src->v.v0.hashkey;
         dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.options.cas = src->v.v0.cas;
+        dst.cas = src->v.v0.cas;
         err = lcb_remove3(instance, cookie, &dst);
         if (err != LCB_SUCCESS) {
             mcreq_sched_fail(&instance->cmdq);

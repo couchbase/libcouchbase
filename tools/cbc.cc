@@ -279,7 +279,7 @@ GetHandler::run()
         const string& key = keys[ii];
         LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
         if (o_exptime.passed()) {
-            cmd.options.exptime = o_exptime.result();
+            cmd.exptime = o_exptime.result();
         }
         if (isLock()) {
             cmd.lock = 1;
@@ -313,7 +313,7 @@ endureItems(lcb_t instance, const map<string,lcb_cas_t> items,
     for (iter = items.begin(); iter != items.end(); ++iter) {
         lcb_CMDENDURE cmd = { 0 };
         LCB_KREQ_SIMPLE(&cmd.key, iter->first.c_str(), iter->first.size());
-        cmd.options.cas = iter->second;
+        cmd.cas = iter->second;
         err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
         if (err != LCB_SUCCESS) {
             throw err;
@@ -360,7 +360,7 @@ SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
         cmd.datatype = LCB_VALUE_F_JSON;
     }
     if (o_exp.passed()) {
-        cmd.options.exptime = o_exp.result();
+        cmd.exptime = o_exp.result();
     }
     if (o_flags.passed()) {
         cmd.flags = o_flags.result();
@@ -514,7 +514,7 @@ UnlockHandler::run()
         lcb_CMDUNLOCK cmd;
         memset(&cmd, 0, sizeof cmd);
         LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
-        cmd.options.cas = cas;
+        cmd.cas = cas;
         lcb_error_t err = lcb_unlock3(instance, NULL, &cmd);
         if (err != LCB_SUCCESS) {
             throw err;
@@ -659,7 +659,7 @@ ArithmeticHandler::run()
             cmd.initial = o_initial.result();
         }
         cmd.delta = getDelta();
-        cmd.options.exptime = o_expiry.result();
+        cmd.exptime = o_expiry.result();
         lcb_error_t err = lcb_arithmetic3(instance, NULL, &cmd);
         if (err != LCB_SUCCESS) {
             throw err;

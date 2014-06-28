@@ -536,7 +536,7 @@ dset_ctx_add(lcb_MULTICMD_CTX *mctx, const lcb_CMDBASE *cmd)
     memset(ent, 0, sizeof (*ent));
     RESFLD(ent, nkey) = cmd->key.contig.nbytes;
     ent->hashkey = cmd->hashkey;
-    ent->reqcas = cmd->options.cas;
+    ent->reqcas = cmd->cas;
     ent->parent = dset;
 
     lcb_string_append(&dset->kvbufs,
@@ -665,7 +665,7 @@ lcb_durability_poll(lcb_t instance, const void *cookie,
         cmd.key.contig.nbytes = src->nkey;
         cmd.hashkey.contig.bytes = src->hashkey;
         cmd.hashkey.contig.nbytes = src->nhashkey;
-        cmd.options.cas = src->cas;
+        cmd.cas = src->cas;
 
         err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
         if (err != LCB_SUCCESS) {

@@ -139,25 +139,16 @@ typedef struct lcb_VALBUF {
     } u_buf;
 } lcb_VALBUF;
 
-/**
- * @brief Common options for commands.
- *
- * This contains the CAS and expiration
- * of the item. These should be filled in if applicable, or they may be ignored.
- */
-typedef struct lcb_CMDOPTIONS {
-    lcb_cas_t cas;
-    lcb_time_t exptime;
-} lcb_CMDOPTIONS;
 
 /**
  * @brief Common ABI header for all commands
  */
 typedef struct lcb_CMDBASE {
-    lcb_uint32_t cmdflags; /**< Common flags for commands */
+    lcb_U32 cmdflags; /**< Common flags for commands */
+    lcb_U32 exptime; /**< Expiration (for mutations/locks) */
+    lcb_U64 cas; /**< CAS for the item (for mutations) */
     lcb_KEYBUF key; /**< Key for the command */
     lcb_KEYBUF hashkey; /**< Hashkey for command */
-    lcb_CMDOPTIONS options; /**< Common options */
 } lcb_CMDBASE;
 
 /**
@@ -165,10 +156,11 @@ typedef struct lcb_CMDBASE {
  * @see lcb_cmd_st
  */
 #define LCB_CMD_BASE \
-    lcb_uint32_t cmdflags; \
+    lcb_U32 cmdflags; \
+    lcb_U32 exptime; \
+    lcb_U64 cas; \
     lcb_KEYBUF key; \
-    lcb_KEYBUF hashkey; \
-    lcb_CMDOPTIONS options
+    lcb_KEYBUF hashkey \
 
 typedef lcb_CMDBASE lcb_CMDTOUCH;
 typedef lcb_CMDBASE lcb_CMDSTATS;
