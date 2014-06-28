@@ -1548,7 +1548,7 @@ PREDEFINED             = LCB_CREATE_V2_FIELDS= \
 
 EXPAND_AS_DEFINED      = LCB_XERR \
                          LCB_CMD_BASE \
-                         LCB_OBSERVE_FIELDS_COMMON
+                         LCB_OBSERVE_FIELDS_COMMON LCB_RESP_BASE LCB_CMD_BASE LCB_RESP_SERVER_FIELDS
 
 # If the SKIP_FUNCTION_MACROS tag is set to YES (the default) then
 # doxygen's preprocessor will remove all references to function-like macros

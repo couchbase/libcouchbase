@@ -9,6 +9,7 @@
  * * @subpage LCB_LCBT
  * * @subpage LCB_KVAPI
  * * @subpage LCB_CNTL
+ * * @subpage lcb_pubapi3
  *
  * You may read about related Couchbase software at http://docs.couchbase.com/
  *
