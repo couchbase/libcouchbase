@@ -194,6 +194,7 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.itmflags = ntohl(getq->message.body.flags);
         resp.value = PACKET_VALUE(response);
         resp.nvalue = PACKET_NVALUE(response);
+        resp.bufh = response->bufh;
     }
 
     maybe_decompress(o, response, &resp, &freeptr);
@@ -217,6 +218,7 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.datatype = PACKET_DATATYPE(response);
         resp.value = PACKET_VALUE(response);
         resp.nvalue = PACKET_NVALUE(response);
+        resp.bufh = response->bufh;
     }
 
     maybe_decompress(instance, response, &resp, &freeptr);

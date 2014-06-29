@@ -208,6 +208,7 @@ try_read(lcbio_CTX *ctx, mc_SERVER *server, rdb_IOROPE *ior)
     /* Figure out if the request is 'ufwd' or not */
     if (!(request->flags & MCREQ_F_UFWD)) {
         DO_ASSIGN_PAYLOAD();
+        info->bufh = rdb_get_first_segment(ior);
         mcreq_dispatch_response(pl, request, info, LCB_SUCCESS);
         DO_SWALLOW_PAYLOAD()
 

@@ -375,6 +375,14 @@ rdb_seg_unref(rdb_ROPESEG *seg);
 #define rdb_seg_recyclable(seg) ((seg)->shflags & RDB_ROPESEG_F_USER) == 0
 
 /**
+ * Get the first segment. Useful for associating a contiguous consolidated
+ * read without actually using refread
+ * @param ior the rope structure
+ * @return the segment of the contiguous read
+ */
+#define rdb_get_first_segment(ior) RDB_SEG_FIRST(&(ior)->recvd)
+
+/**
  * @}
  */
 
