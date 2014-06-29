@@ -638,7 +638,7 @@ typedef lcb_RESPBASE lcb_RESPTOUCH;
  */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_touch3(lcb_t instance, const void *cookie, lcb_CMDTOUCH *cmd);
+lcb_touch3(lcb_t instance, const void *cookie, const lcb_CMDTOUCH *cmd);
 /**@}*/
 
 

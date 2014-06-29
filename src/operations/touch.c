@@ -19,7 +19,7 @@
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_touch3(lcb_t instance, const void *cookie, lcb_CMDTOUCH *cmd)
+lcb_touch3(lcb_t instance, const void *cookie, const lcb_CMDTOUCH *cmd)
 {
     protocol_binary_request_touch tcmd;
     protocol_binary_request_header *hdr = &tcmd.message.header;
