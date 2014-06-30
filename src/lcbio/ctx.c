@@ -386,6 +386,11 @@ C_schedule(lcbio_CTX *ctx)
         }
     }
 
+    if (ctx->wwant) {
+        ctx->wwant = 0;
+        ctx->procs.cb_flush_ready(ctx);
+    }
+
     if (ctx->rdwant && sd->is_reading == 0) {
         lcb_IOV iov[RWINL_IOVSIZE];
         unsigned ii;
@@ -535,7 +540,7 @@ lcbio_ctx_put_ex(lcbio_CTX *ctx, lcb_IOV *iov, unsigned niov, unsigned nb)
 void
 lcbio_ctx_wwant(lcbio_CTX *ctx)
 {
-    if (!IOT_IS_EVENT(ctx->io)) {
+    if ((IOT_IS_EVENT(ctx->io)) == 0 && ctx->entered == 0) {
         ctx->procs.cb_flush_ready(ctx);
     } else {
         ctx->wwant = 1;
