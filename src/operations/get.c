@@ -175,7 +175,7 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
 {
     rget_cookie *rck = (rget_cookie *)pkt->u_rdata.exdata;
     lcb_RESPGET *resp = (void *)arg;
-    lcb_RESP_cb callback;
+    lcb_RESPCALLBACK callback;
     lcb_t instance = rck->instance;
 
     callback = lcb_find_callback(instance, LCB_CALLBACK_GETREPLICA);

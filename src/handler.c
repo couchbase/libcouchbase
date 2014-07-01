@@ -60,10 +60,10 @@ map_error(lcb_t instance, int in)
     }
 }
 
-static lcb_RESP_cb
+static lcb_RESPCALLBACK
 find_callback(lcb_t instance, lcb_CALLBACKTYPE type)
 {
-    lcb_RESP_cb cb = instance->callbacks.v3callbacks[type];
+    lcb_RESPCALLBACK cb = instance->callbacks.v3callbacks[type];
     if (!cb) {
         cb = lcb_find_callback(instance, type);
     }

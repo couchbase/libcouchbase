@@ -66,8 +66,7 @@ typedef union {
 } uRESP;
 
 static void
-compat_default_callback(lcb_t instance,
-    lcb_CALLBACKTYPE cbtype, const lcb_RESPBASE *r3base)
+compat_default_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *r3base)
 {
     const uRESP *r3 = (uRESP *)r3base;
     const void *cookie = r3base->cookie;
@@ -251,10 +250,10 @@ CALLBACK_ACCESSOR(lcb_set_pktfwd_callback, lcb_pktfwd_callback, pktfwd)
 CALLBACK_ACCESSOR(lcb_set_pktflushed_callback, lcb_pktflushed_callback, pktflushed)
 
 LIBCOUCHBASE_API
-lcb_RESP_cb
-lcb_install_callback3(lcb_t instance, lcb_CALLBACKTYPE cbtype, lcb_RESP_cb cb)
+lcb_RESPCALLBACK
+lcb_install_callback3(lcb_t instance, int cbtype, lcb_RESPCALLBACK cb)
 {
-    lcb_RESP_cb ret;
+    lcb_RESPCALLBACK ret;
     if (cbtype >= LCB_CALLBACK__MAX) {
         return NULL;
     }
@@ -266,14 +265,14 @@ lcb_install_callback3(lcb_t instance, lcb_CALLBACKTYPE cbtype, lcb_RESP_cb cb)
 }
 
 static void
-nocb_fallback(lcb_t instance, lcb_CALLBACKTYPE type, const lcb_RESPBASE *response)
+nocb_fallback(lcb_t instance, int type, const lcb_RESPBASE *response)
 {
     (void)instance; (void)type; (void)response;
 }
-lcb_RESP_cb
+lcb_RESPCALLBACK
 lcb_find_callback(lcb_t instance, lcb_CALLBACKTYPE cbtype)
 {
-    lcb_RESP_cb ret = instance->callbacks.v3callbacks[cbtype];
+    lcb_RESPCALLBACK ret = instance->callbacks.v3callbacks[cbtype];
     if (!ret) {
         ret = instance->callbacks.v3callbacks[LCB_CALLBACK_DEFAULT];
         if (!ret) {

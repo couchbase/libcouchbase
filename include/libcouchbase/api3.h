@@ -207,8 +207,8 @@ typedef enum {
  * @param resp The response for the operation. Depending on the operation this
  * response structure should be casted into a more specialized type.
  */
-typedef void (*lcb_RESP_cb)
-        (lcb_t instance, lcb_CALLBACKTYPE cbtype, const lcb_RESPBASE* resp);
+typedef void (*lcb_RESPCALLBACK)
+        (lcb_t instance, int cbtype, const lcb_RESPBASE* resp);
 
 /**
  * @volatile
@@ -217,7 +217,8 @@ typedef void (*lcb_RESP_cb)
  * with the relevant response structure.
  *
  * @param instance the handle
- * @param cbtype the type of operation for which this callback should be installed
+ * @param cbtype the type of operation for which this callback should be installed.
+ *        The value should be one of the lcb_CALLBACKTYPE constants
  * @param cb the callback to install
  * @return the old callback
  *
@@ -226,8 +227,8 @@ typedef void (*lcb_RESP_cb)
  * then your `2.x` callbacks _will not work_.
  */
 LIBCOUCHBASE_API
-lcb_RESP_cb
-lcb_install_callback3(lcb_t instance, lcb_CALLBACKTYPE cbtype, lcb_RESP_cb cb);
+lcb_RESPCALLBACK
+lcb_install_callback3(lcb_t instance, int cbtype, lcb_RESPCALLBACK cb);
 
 /**@}*/
 

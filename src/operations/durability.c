@@ -134,7 +134,7 @@ static int ent_is_complete(lcb_DURITEM *ent)
  */
 static void ent_set_resdone(lcb_DURITEM *ent)
 {
-    lcb_RESP_cb callback;
+    lcb_RESPCALLBACK callback;
     if (ent->done) {
         return;
     }

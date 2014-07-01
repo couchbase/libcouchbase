@@ -30,7 +30,7 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
     lcb_server_t *server = (lcb_server_t *)pl;
     lcb_RESPSTATS *resp = (void *)arg;
     char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
-    lcb_RESP_cb callback;
+    lcb_RESPCALLBACK callback;
     lcb_t instance = server->instance;
 
     sprintf(epbuf, "%s:%s", mcserver_get_host(server), mcserver_get_port(server));
@@ -115,7 +115,7 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
     lcb_server_t *server = (lcb_server_t *)pipeline;
     char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
     bcast_cookie *ck = (bcast_cookie *)req->u_rdata.exdata;
-    lcb_RESP_cb callback;
+    lcb_RESPCALLBACK callback;
 
     union {
         lcb_RESPSERVERBASE *base;

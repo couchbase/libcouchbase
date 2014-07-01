@@ -72,7 +72,7 @@ store_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
 }
 
 static void
-common_callback(lcb_t, lcb_CALLBACKTYPE type, const lcb_RESPBASE *resp)
+common_callback(lcb_t, int type, const lcb_RESPBASE *resp)
 {
     string key = getRespKey(resp);
     if (resp->rc != LCB_SUCCESS) {
@@ -268,8 +268,8 @@ void
 GetHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESP_cb)get_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESP_cb)get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)get_callback);
     const vector<string>& keys = parser.getRestArgs();
     lcb_error_t err;
 
@@ -392,7 +392,7 @@ void
 SetHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESP_cb)store_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
     const vector<string>& keys = parser.getRestArgs();
 
     lcb_sched_enter(instance);
@@ -462,7 +462,7 @@ void
 ObserveHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESP_cb)observe_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)observe_callback);
     const vector<string>& keys = parser.getRestArgs();
     lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
     if (mctx == NULL) {
@@ -591,7 +591,7 @@ void
 StatsHandler::run()
 {
     Handler::run();
-    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESP_cb)stats_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)stats_callback);
     vector<string> keys = parser.getRestArgs();
     if (keys.empty()) {
         keys.push_back("");
@@ -629,7 +629,7 @@ VerbosityHandler::run()
         throw "Verbosity level must be {detail,debug,info,warning}";
     }
 
-    lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESP_cb)verbosity_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)verbosity_callback);
     lcb_CMDVERBOSITY cmd = { 0 };
     cmd.level = level;
     lcb_error_t err;
@@ -648,7 +648,7 @@ ArithmeticHandler::run()
     Handler::run();
 
     const vector<string>& keys = parser.getRestArgs();
-    lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESP_cb)arithmetic_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_callback);
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
         const string& key = keys[ii];

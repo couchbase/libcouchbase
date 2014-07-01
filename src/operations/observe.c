@@ -83,7 +83,7 @@ handle_observe_callback(
                 instance,
                 (lcb_DURSET *)MCREQ_PKT_COOKIE(pkt), err, resp);
     } else {
-        lcb_RESP_cb callback = lcb_find_callback(instance, LCB_CALLBACK_OBSERVE);
+        lcb_RESPCALLBACK callback = lcb_find_callback(instance, LCB_CALLBACK_OBSERVE);
         callback(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPBASE *)resp);
     }
 
