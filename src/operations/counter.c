@@ -18,8 +18,8 @@
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_arithmetic3(
-        lcb_t instance, const void *cookie, const lcb_CMDINCRDECR *cmd)
+lcb_counter3(
+        lcb_t instance, const void *cookie, const lcb_CMDCOUNTER *cmd)
 {
     mc_CMDQUEUE *q = &instance->cmdq;
     mc_PIPELINE *pipeline;
@@ -80,7 +80,7 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
 
     for (ii = 0; ii < num; ii++) {
         const lcb_arithmetic_cmd_t *src = items[ii];
-        lcb_CMDINCRDECR dst;
+        lcb_CMDCOUNTER dst;
         lcb_error_t err;
 
         memset(&dst, 0, sizeof(dst));
@@ -95,7 +95,7 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
         dst.hashkey.contig.bytes = src->v.v0.hashkey;
         dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
         dst.exptime = src->v.v0.exptime;
-        err = lcb_arithmetic3(instance, cookie, &dst);
+        err = lcb_counter3(instance, cookie, &dst);
         if (err != LCB_SUCCESS) {
             mcreq_sched_fail(&instance->cmdq);
             return err;

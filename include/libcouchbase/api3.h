@@ -185,9 +185,9 @@ typedef enum {
     LCB_CALLBACK_DEFAULT = 0, /**< Default callback invoked as a fallback */
     LCB_CALLBACK_GET, /**< lcb_get3() */
     LCB_CALLBACK_STORE, /**< lcb_store3() */
-    LCB_CALLBACK_ARITHMETIC, /**< lcb_arithmetic3() */
+    LCB_CALLBACK_COUNTER, /**< lcb_counter3() */
     LCB_CALLBACK_TOUCH, /**< lcb_touch3() */
-    LCB_CALLBACK_DELETE, /**< lcb_remove3() */
+    LCB_CALLBACK_REMOVE, /**< lcb_remove3() */
     LCB_CALLBACK_UNLOCK, /**< lcb_unlock3() */
     LCB_CALLBACK_STATS, /**< lcb_stats3() */
     LCB_CALLBACK_VERSIONS, /**< lcb_server_versions3() */
@@ -277,7 +277,7 @@ lcb_install_callback3(lcb_t instance, lcb_CALLBACKTYPE cbtype, lcb_RESP_cb cb);
  * lcb_sched_enter(instance);
  * lcb_get3(...);
  * lcb_store3(...);
- * lcb_arithmetic3(...);
+ * lcb_counter3(...);
  * lcb_sched_leave(instance);
  * lcb_wait3(instance, LCB_WAIT_NOCHECK);
  * @endcode
@@ -405,7 +405,7 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd);
  */
 
 /**@brief Command for counter operations.
- * @see lcb_arithemetic3(), lcb_RESPARITH*/
+ * @see lcb_counter3(), lcb_RESPCOUNTER*/
 typedef struct {
     LCB_CMD_BASE;
     /**Delta value. If this number is negative the item on the server is
@@ -418,40 +418,40 @@ typedef struct {
     /**Boolean value. Create the item and set it to `initial` if it does not
      * already exist */
     int create;
-} lcb_CMDINCRDECR;
+} lcb_CMDCOUNTER;
 
 /**@brief Response structure for counter operations
- * @see lcb_arithmetic3()
+ * @see lcb_counter3()
  */
 typedef struct {
     LCB_RESP_BASE
     /** Contains the _current_ value after the operation was performed */
     lcb_U64 value;
-} lcb_RESPARITH;
+} lcb_RESPCOUNTER;
 
 /**@volatile
- * @brief Spool a single arithmetic operation
+ * @brief Spool a single counter operation
  * @param instance the instance
  * @param cookie the pointer to associate with the request
  * @param cmd the command to use
  * @return LCB_SUCCESS on success, other error on failure
  *
  * @code{.c}
- * lcb_CMDINCRDECR cmd = { 0 };
+ * lcb_CMDCOUNTER cmd = { 0 };
  * LCB_CMD_SET_KEY(&cmd, "counter", strlen("counter"));
  * cmd.delta = 1; // Increment by one
  * cmd.initial = 42; // Default value is 42 if it does not exist
  * cmd.exptime = 300; // Expire in 5 minutes
  * lcb_sched_enter(instance);
- * lcb_arithmetic3(instance, NULL, &cmd);
+ * lcb_counter3(instance, NULL, &cmd);
  * lcb_sched_leave(instance);
- * lcb_install_callback3(instance, LCB_CALLBACKTYPE_ARITHMETIC, cb);
+ * lcb_install_callback3(instance, LCB_CALLBACKTYPE_COUNTER, cb);
  * lcb_wait3(instance, LCB_WAIT_NOCHECK);
  * @endcode
  */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_arithmetic3(lcb_t instance, const void *cookie, const lcb_CMDINCRDECR *cmd);
+lcb_counter3(lcb_t instance, const void *cookie, const lcb_CMDCOUNTER *cmd);
 /**@}*/
 
 
@@ -570,15 +570,15 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd);
 typedef lcb_CMDBASE lcb_CMDREMOVE;
 
 /**@brief
- * Response structure for removal operation. The lcb_RESPDELETE::cas field
+ * Response structure for removal operation. The lcb_RESPREMOVE::cas field
  * contains the CAS of the item which may be used to check that it no longer
  * exists on any node's storage using the lcb_endure3_ctxnew() function.
  *
- * The lcb_RESPDELETE::rc field may be set to LCB_KEY_ENOENT if the item does
+ * The lcb_RESPREMOVE::rc field may be set to LCB_KEY_ENOENT if the item does
  * not exist, or LCB_KEY_EEXISTS if a CAS was specified and the item has since
  * been mutated.
  */
-typedef lcb_RESPBASE lcb_RESPDELETE;
+typedef lcb_RESPBASE lcb_RESPREMOVE;
 
 /**@volatile
  * @brief Spool a removal of an item

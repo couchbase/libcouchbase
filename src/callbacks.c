@@ -54,8 +54,8 @@ typedef union {
     lcb_RESPGET get;
     lcb_RESPSTORE store;
     lcb_RESPUNLOCK unlock;
-    lcb_RESPARITH arith;
-    lcb_RESPDELETE del;
+    lcb_RESPCOUNTER arith;
+    lcb_RESPREMOVE del;
     lcb_RESPENDURE endure;
     lcb_RESPUNLOCK unl;
     lcb_RESPFLUSH flush;
@@ -96,14 +96,14 @@ compat_default_callback(lcb_t instance,
         instance->callbacks.store(instance, cookie, r3->store.op, err, &r2);
         break;
     }
-    case LCB_CALLBACK_ARITHMETIC: {
+    case LCB_CALLBACK_COUNTER: {
         lcb_arithmetic_resp_t r2 = { 0 };
         FILL_KVC(&r2);
         r2.v.v0.value = r3->arith.value;
         instance->callbacks.arithmetic(instance, cookie, err, &r2);
         break;
     }
-    case LCB_CALLBACK_DELETE: {
+    case LCB_CALLBACK_REMOVE: {
         lcb_remove_resp_t r2 = { 0 };
         FILL_KVC(&r2)
         instance->callbacks.remove(instance, cookie, err, &r2);

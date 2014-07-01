@@ -83,7 +83,7 @@ common_callback(lcb_t, lcb_CALLBACKTYPE type, const lcb_RESPBASE *resp)
     case LCB_CALLBACK_UNLOCK:
         fprintf(stderr, "%-20s Unlocked\n", key.c_str());
         break;
-    case LCB_CALLBACK_DELETE:
+    case LCB_CALLBACK_REMOVE:
         printKeyCasStatus(key, resp, "Deleted.");
         break;
     case LCB_CALLBACK_ENDURE:
@@ -143,7 +143,7 @@ verbosity_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPVERBOSITY *resp)
     }
 }
 static void
-arithmetic_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPARITH *resp)
+arithmetic_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPCOUNTER *resp)
 {
     string key = getRespKey((const lcb_RESPBASE *)resp);
     if (resp->rc != LCB_SUCCESS) {
@@ -572,7 +572,7 @@ RemoveHandler::run()
     Handler::run();
     const vector<string> &keys = parser.getRestArgs();
     lcb_sched_enter(instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_DELETE, common_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, common_callback);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
         lcb_CMDREMOVE cmd;
         const string& key = keys[ii];
@@ -648,11 +648,11 @@ ArithmeticHandler::run()
     Handler::run();
 
     const vector<string>& keys = parser.getRestArgs();
-    lcb_install_callback3(instance, LCB_CALLBACK_ARITHMETIC, (lcb_RESP_cb)arithmetic_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESP_cb)arithmetic_callback);
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
         const string& key = keys[ii];
-        lcb_CMDINCRDECR cmd = { 0 };
+        lcb_CMDCOUNTER cmd = { 0 };
         LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
         if (o_initial.passed()) {
             cmd.create = 1;
@@ -660,7 +660,7 @@ ArithmeticHandler::run()
         }
         cmd.delta = getDelta();
         cmd.exptime = o_expiry.result();
-        lcb_error_t err = lcb_arithmetic3(instance, NULL, &cmd);
+        lcb_error_t err = lcb_counter3(instance, NULL, &cmd);
         if (err != LCB_SUCCESS) {
             throw err;
         }

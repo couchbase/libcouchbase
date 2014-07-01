@@ -231,9 +231,9 @@ H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, packet_info *response,
          lcb_error_t immerr)
 {
     lcb_t root = pipeline->parent->instance;
-    lcb_RESPDELETE resp = { 0 };
+    lcb_RESPREMOVE resp = { 0 };
     init_resp3(root, response, packet, immerr, (lcb_RESPBASE *)&resp);
-    INVOKE_CALLBACK3(packet, &resp, root, LCB_CALLBACK_DELETE);
+    INVOKE_CALLBACK3(packet, &resp, root, LCB_CALLBACK_REMOVE);
 }
 
 static void
@@ -336,7 +336,7 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
              lcb_error_t immerr)
 {
     lcb_t root = pipeline->parent->instance;
-    lcb_RESPARITH resp = { 0 };
+    lcb_RESPCOUNTER resp = { 0 };
     init_resp3(root, response, request, immerr, (lcb_RESPBASE*)&resp);
 
     if (resp.rc == LCB_SUCCESS) {
@@ -344,7 +344,7 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.value = ntohll(resp.value);
     }
     resp.cas = PACKET_CAS(response);
-    INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_ARITHMETIC);
+    INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_COUNTER);
 }
 
 static void

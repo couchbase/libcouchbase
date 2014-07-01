@@ -190,7 +190,7 @@ ELSE()
 ENDIF()
 
 SET(LCB_OPFILES
-    src/operations/arithmetic.c src/operations/get.c src/operations/touch.c
+    src/operations/counter.c src/operations/get.c src/operations/touch.c
     src/operations/observe.c src/operations/durability.c src/operations/store.c
     src/operations/stats.c src/operations/remove.c src/operations/pktfwd.c)
 
