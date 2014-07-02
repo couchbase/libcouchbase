@@ -416,7 +416,7 @@ typedef struct {
     lcb_int64_t delta;
     /**If the item does not exist on the server (and `create` is true) then
      * this will be the initial value for the item. */
-    lcb_uint64_t initial;
+    lcb_U64 initial;
     /**Boolean value. Create the item and set it to `initial` if it does not
      * already exist */
     int create;

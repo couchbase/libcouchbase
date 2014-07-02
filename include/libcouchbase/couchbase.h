@@ -48,8 +48,8 @@ typedef struct lcb_timer_st *lcb_timer_t;
 extern "C"{
 #endif
 
-typedef lcb_uint8_t lcb_datatype_t;
-typedef lcb_uint32_t lcb_USECS;
+typedef lcb_U8 lcb_datatype_t;
+typedef lcb_U32 lcb_USECS;
 
 /**
  * @file
@@ -778,7 +778,7 @@ lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t op);
  */
 typedef struct {
     const void *key; /**< Key to retrieve */
-    lcb_size_t nkey; /**< Key length */
+    lcb_SIZE nkey; /**< Key length */
 
     /**
      * If this parameter is specified and `lock` is _not_ set then the server
@@ -801,7 +801,7 @@ typedef struct {
      */
     int lock;
     const void *hashkey;
-    lcb_size_t nhashkey;
+    lcb_SIZE nhashkey;
 } lcb_GETCMDv0;
 
 /**
@@ -814,7 +814,7 @@ typedef struct lcb_get_cmd_st {
         lcb_GETCMDv0 v0;
     } v;
     #ifdef __cplusplus
-    inline lcb_get_cmd_st(const void *, lcb_size_t nkey = 0, lcb_time_t exptime = 0, int lock = 0);
+    inline lcb_get_cmd_st(const void *, lcb_SIZE nkey = 0, lcb_time_t exptime = 0, int lock = 0);
     inline lcb_get_cmd_st();
     #endif
 } lcb_get_cmd_t;
@@ -836,10 +836,10 @@ typedef enum {
  */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     const void *bytes;
-    lcb_size_t nbytes;
-    lcb_uint32_t flags; /**< Server side flags stored with the item */
+    lcb_SIZE nbytes;
+    lcb_U32 flags; /**< Server side flags stored with the item */
     lcb_cas_t cas; /**< CAS representing current mutation state of the item */
     lcb_U8 datatype; /**< Currently unused */
 } lcb_GETRESPv0;
@@ -934,7 +934,7 @@ lcb_get_callback lcb_set_get_callback(lcb_t, lcb_get_callback callback);
 LIBCOUCHBASE_API
 lcb_error_t lcb_get(lcb_t instance,
                     const void *command_cookie,
-                    lcb_size_t num,
+                    lcb_SIZE num,
                     const lcb_get_cmd_t *const *commands);
 /**@}*/
 
@@ -1009,7 +1009,7 @@ lcb_error_t lcb_get(lcb_t instance,
 
 
 typedef struct {
-    const void *key; lcb_size_t nkey; const void *hashkey; lcb_size_t nhashkey;
+    const void *key; lcb_SIZE nkey; const void *hashkey; lcb_SIZE nhashkey;
 } lcb_GETREPLICACMDv0;
 
 /**@brief Select get-replica mode
@@ -1032,9 +1032,9 @@ typedef enum {
  */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     const void *hashkey;
-    lcb_size_t nhashkey;
+    lcb_SIZE nhashkey;
     lcb_replica_t strategy; /**< Strategy to use */
     /**If #strategy is LCB_REPLICA_SELECT, specific the replica index to use */
     int index;
@@ -1053,7 +1053,7 @@ typedef struct lcb_get_replica_cmd_st {
 
     #ifdef __cplusplus
     inline lcb_get_replica_cmd_st();
-    inline lcb_get_replica_cmd_st(const void *key, lcb_size_t nkey, lcb_replica_t strategy = LCB_REPLICA_FIRST, int index = 0);
+    inline lcb_get_replica_cmd_st(const void *key, lcb_SIZE nkey, lcb_replica_t strategy = LCB_REPLICA_FIRST, int index = 0);
     #endif
 } lcb_get_replica_cmd_t;
 
@@ -1081,7 +1081,7 @@ typedef struct lcb_get_replica_cmd_st {
 LIBCOUCHBASE_API
 lcb_error_t lcb_get_replica(lcb_t instance,
                             const void *command_cookie,
-                            lcb_size_t num,
+                            lcb_SIZE num,
                             const lcb_get_replica_cmd_t *const *commands);
 
 /**@}*/
@@ -1107,10 +1107,10 @@ lcb_error_t lcb_get_replica(lcb_t instance,
  */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     lcb_cas_t cas; /**< You _must_ populate this with the CAS */
     const void *hashkey;
-    lcb_size_t nhashkey;
+    lcb_SIZE nhashkey;
 } lcb_UNLOCKCMDv0;
 
 /**@brief lcb_unlock() Wrapper structure
@@ -1123,14 +1123,14 @@ typedef struct lcb_unlock_cmd_st {
 
     #ifdef __cplusplus
     inline lcb_unlock_cmd_st();
-    inline lcb_unlock_cmd_st(const void *key, lcb_size_t nkey, lcb_cas_t cas);
+    inline lcb_unlock_cmd_st(const void *key, lcb_SIZE nkey, lcb_cas_t cas);
     #endif
 } lcb_unlock_cmd_t;
 
 /** @brief lcb_unlock() response structure */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
 } lcb_UNLOCKRESPv0;
 
 /**@brief lcb_unlock() wrapper response structure
@@ -1187,7 +1187,7 @@ lcb_unlock_callback lcb_set_unlock_callback(lcb_t, lcb_unlock_callback);
 LIBCOUCHBASE_API
 lcb_error_t lcb_unlock(lcb_t instance,
                        const void *command_cookie,
-                       lcb_size_t num,
+                       lcb_SIZE num,
                        const lcb_unlock_cmd_t *const *commands);
 /**@}*/
 
@@ -1233,10 +1233,10 @@ typedef enum {
  */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     const void *bytes; /**< Value to store */
-    lcb_size_t nbytes; /**< Length of value to store */
-    lcb_uint32_t flags; /**< User-defined flags stored along with the item */
+    lcb_SIZE nbytes; /**< Length of value to store */
+    lcb_U32 flags; /**< User-defined flags stored along with the item */
     /**
      * If present, the server will check that the item's _current_ CAS matches
      * the value specified here. If this check fails the command will fail with
@@ -1247,7 +1247,7 @@ typedef struct {
     lcb_time_t exptime; /**< Expiration for the item. `0` means never expire */
     lcb_storage_t operation; /**< **Mandatory**. Mutation type */
     const void *hashkey;
-    lcb_size_t nhashkey;
+    lcb_SIZE nhashkey;
 } lcb_STORECMDv0;
 
 /** @brief Wrapper structure for lcb_STORECMDv0 */
@@ -1258,13 +1258,13 @@ typedef struct lcb_store_cmd_st {
     } v;
     #ifdef __cplusplus
     inline lcb_store_cmd_st();
-    inline lcb_store_cmd_st(lcb_storage_t operation, const void *, lcb_size_t, const void *bytes = NULL, lcb_size_t nbytes = 0, lcb_uint32_t flags = 0, lcb_time_t exptime = 0, lcb_cas_t cas = 0, lcb_datatype_t datatype = 0);
+    inline lcb_store_cmd_st(lcb_storage_t operation, const void *, lcb_SIZE, const void *bytes = NULL, lcb_SIZE nbytes = 0, lcb_U32 flags = 0, lcb_time_t exptime = 0, lcb_cas_t cas = 0, lcb_datatype_t datatype = 0);
     #endif
 } lcb_store_cmd_t;
 
 typedef struct {
     const void *key; /**< Key that was stored */
-    lcb_size_t nkey; /**< Size of key that was stored */
+    lcb_SIZE nkey; /**< Size of key that was stored */
     lcb_cas_t cas; /**< Cas representing current mutation */
 } lcb_STORERESPv0;
 
@@ -1341,7 +1341,7 @@ lcb_store_callback lcb_set_store_callback(lcb_t, lcb_store_callback callback);
 LIBCOUCHBASE_API
 lcb_error_t lcb_store(lcb_t instance,
                       const void *command_cookie,
-                      lcb_size_t num,
+                      lcb_SIZE num,
                       const lcb_store_cmd_t *const *commands);
 /**@}*/
 
@@ -1362,7 +1362,7 @@ lcb_error_t lcb_store(lcb_t instance,
  */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     lcb_time_t exptime;
 
     /**
@@ -1377,15 +1377,15 @@ typedef struct {
      * negative then the current value will be decremented; if positive then
      * the current value will be incremented
      */
-    lcb_int64_t delta;
+    lcb_S64 delta;
 
     /**
      * If the `create` field is true, this is the initial value for the counter
      * iff the item does not yet exist.
      */
-    lcb_uint64_t initial;
+    lcb_U64 initial;
     const void *hashkey;
-    lcb_size_t nhashkey;
+    lcb_SIZE nhashkey;
 } lcb_ARITHCMDv0;
 
 typedef struct lcb_arithmetic_cmd_st {
@@ -1396,16 +1396,16 @@ typedef struct lcb_arithmetic_cmd_st {
 
     #ifdef __cplusplus
     inline lcb_arithmetic_cmd_st();
-    inline lcb_arithmetic_cmd_st(const void *key, lcb_size_t nkey, lcb_int64_t delta,
-                                 int create = 0, lcb_uint64_t initial = 0,
+    inline lcb_arithmetic_cmd_st(const void *key, lcb_SIZE nkey, lcb_S64 delta,
+                                 int create = 0, lcb_U64 initial = 0,
                                  lcb_time_t exptime = 0);
     #endif
 } lcb_arithmetic_cmd_t;
 
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
-    lcb_uint64_t value; /**< Current numerical value of the counter */
+    lcb_SIZE nkey;
+    lcb_U64 value; /**< Current numerical value of the counter */
     lcb_cas_t cas;
 } lcb_ARITHRESPv0;
 
@@ -1468,7 +1468,7 @@ lcb_arithmetic_callback lcb_set_arithmetic_callback(lcb_t,
 LIBCOUCHBASE_API
 lcb_error_t lcb_arithmetic(lcb_t instance,
                            const void *command_cookie,
-                           lcb_size_t num,
+                           lcb_SIZE num,
                            const lcb_arithmetic_cmd_t *const *commands);
 
 /**@}*/
@@ -1499,9 +1499,9 @@ typedef enum {
 
 #define LCB_OBSERVE_FIELDS_COMMON \
     const void *key; \
-    lcb_size_t nkey; \
+    lcb_SIZE nkey; \
     const void *hashkey; \
-    lcb_size_t nhashkey;
+    lcb_SIZE nhashkey;
 
 typedef struct {
     LCB_OBSERVE_FIELDS_COMMON
@@ -1524,7 +1524,7 @@ typedef struct lcb_observe_cmd_st {
 
     #ifdef __cplusplus
     inline lcb_observe_cmd_st();
-    inline lcb_observe_cmd_st(const void*,lcb_size_t);
+    inline lcb_observe_cmd_st(const void*,lcb_SIZE);
     #endif
 } lcb_observe_cmd_t;
 
@@ -1549,7 +1549,7 @@ typedef enum {
  */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     lcb_cas_t cas; /**< CAS of the item on this server */
     lcb_observe_t status; /**< Status flags */
     int from_master; /**< zero if key came from replica */
@@ -1604,7 +1604,7 @@ lcb_observe_callback lcb_set_observe_callback(lcb_t, lcb_observe_callback);
 LIBCOUCHBASE_API
 lcb_error_t lcb_observe(lcb_t instance,
                         const void *command_cookie,
-                        lcb_size_t num,
+                        lcb_SIZE num,
                         const lcb_observe_cmd_t *const *commands);
 /**@}*/
 
@@ -1625,10 +1625,10 @@ lcb_error_t lcb_observe(lcb_t instance,
  */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     lcb_cas_t cas;
     const void *hashkey;
-    lcb_size_t nhashkey;
+    lcb_SIZE nhashkey;
 } lcb_REMOVECMDv0;
 
 typedef struct lcb_remove_cmd_st {
@@ -1639,14 +1639,14 @@ typedef struct lcb_remove_cmd_st {
 
     #ifdef __cplusplus
     inline lcb_remove_cmd_st();
-    inline lcb_remove_cmd_st(const void*,lcb_size_t nkey=0,lcb_cas_t cas=0);
+    inline lcb_remove_cmd_st(const void*,lcb_SIZE nkey=0,lcb_cas_t cas=0);
     #endif
 } lcb_remove_cmd_t;
 
 
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     lcb_cas_t cas;
 } lcb_REMOVERESPv0;
 
@@ -1697,7 +1697,7 @@ lcb_remove_callback lcb_set_remove_callback(lcb_t, lcb_remove_callback);
 LIBCOUCHBASE_API
 lcb_error_t lcb_remove(lcb_t instance,
                        const void *command_cookie,
-                       lcb_size_t num,
+                       lcb_SIZE num,
                        const lcb_remove_cmd_t *const *commands);
 
 /**@}*/
@@ -1720,7 +1720,7 @@ lcb_error_t lcb_remove(lcb_t instance,
 typedef lcb_get_cmd_t lcb_touch_cmd_t;
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     lcb_cas_t cas;
 } lcb_TOUCHRESPv0;
 typedef struct {
@@ -1773,7 +1773,7 @@ lcb_touch_callback lcb_set_touch_callback(lcb_t, lcb_touch_callback);
 LIBCOUCHBASE_API
 lcb_error_t lcb_touch(lcb_t instance,
                       const void *command_cookie,
-                      lcb_size_t num,
+                      lcb_SIZE num,
                       const lcb_touch_cmd_t *const *commands);
 /**@}*/
 
@@ -1882,7 +1882,7 @@ typedef struct {
      * this timeout occurs, all remaining non-verified keys will have their
      * callbacks invoked with @c LCB_ETIMEDOUT
      */
-    lcb_uint32_t timeout;
+    lcb_U32 timeout;
 
     /**
      * The durability check may involve more than a single call to observe - or
@@ -1890,25 +1890,25 @@ typedef struct {
      * value determines the time to wait between multiple probes for the same
      * server. If left at 0, a sensible adaptive value will be used.
      */
-    lcb_uint32_t interval;
+    lcb_U32 interval;
 
     /** how many nodes the key should be persisted to (including master) */
-    lcb_uint16_t persist_to;
+    lcb_U16 persist_to;
 
     /** how many nodes the key should be replicated to (excluding master) */
-    lcb_uint16_t replicate_to;
+    lcb_U16 replicate_to;
 
     /**
      * this flag inverts the sense of the durability check and ensures that
      * the key does *not* exist
      */
-    lcb_uint8_t check_delete;
+    lcb_U8 check_delete;
 
     /**
      * If replication/persistence requirements are excessive, cap to
      * the maximum available
      */
-    lcb_uint8_t cap_max;
+    lcb_U8 cap_max;
 } lcb_DURABILITYOPTSv0;
 
 /**@brief Options for lcb_durability_poll() (wrapper)
@@ -1923,7 +1923,7 @@ typedef struct lcb_durability_opts_st {
 /** @brief Response structure for lcb_durability_poll() */
 typedef struct {
     const void *key;
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     /**
      * if this entry failed, this contains the reason, e.g.
      *
@@ -2055,7 +2055,7 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_durability_poll(lcb_t instance,
                                 const void *cookie,
                                 const lcb_durability_opts_t *options,
-                                lcb_size_t ncmds,
+                                lcb_SIZE ncmds,
                                 const lcb_durability_cmd_t *const *cmds);
 
 /**
@@ -2092,7 +2092,7 @@ lcb_durability_callback lcb_set_durability_callback(lcb_t,
  */
 typedef struct {
     const void *name; /**< The name of the stats group to get */
-    lcb_size_t nname; /**< The number of bytes in name */
+    lcb_SIZE nname; /**< The number of bytes in name */
 } lcb_STATSCMDv0;
 
 typedef struct lcb_server_stats_cmd_st {
@@ -2101,7 +2101,7 @@ typedef struct lcb_server_stats_cmd_st {
         lcb_STATSCMDv0 v0;
     } v;
     #ifdef __cplusplus
-    inline lcb_server_stats_cmd_st(const char *name = NULL, lcb_size_t nname = 0);
+    inline lcb_server_stats_cmd_st(const char *name = NULL, lcb_SIZE nname = 0);
     #endif
 } lcb_server_stats_cmd_t;
 
@@ -2127,9 +2127,9 @@ typedef struct lcb_server_stats_cmd_st {
 typedef struct {
     const char *server_endpoint; /**< Server which the statistic is from */
     const void *key; /**< Statistic name */
-    lcb_size_t nkey;
+    lcb_SIZE nkey;
     const void *bytes; /**< Statistic value */
-    lcb_size_t nbytes;
+    lcb_SIZE nbytes;
 } lcb_STATSRESPv0;
 
 /** @brief Wrapper structure for lcb_STATSRESPv0 */
@@ -2189,7 +2189,7 @@ lcb_stat_callback lcb_set_stat_callback(lcb_t, lcb_stat_callback);
 LIBCOUCHBASE_API
 lcb_error_t lcb_server_stats(lcb_t instance,
                              const void *command_cookie,
-                             lcb_size_t num,
+                             lcb_SIZE num,
                              const lcb_server_stats_cmd_t *const *commands);
 
 /**@}*/
@@ -2225,7 +2225,7 @@ typedef struct lcb_server_version_resp_st {
         struct {
             const char *server_endpoint;
             const char *vstring;
-            lcb_size_t nvstring;
+            lcb_SIZE nvstring;
         } v0;
     } v;
 } lcb_server_version_resp_t;
@@ -2260,7 +2260,7 @@ typedef struct lcb_server_version_resp_st {
 LIBCOUCHBASE_API
 lcb_error_t lcb_server_versions(lcb_t instance,
                                 const void *command_cookie,
-                                lcb_size_t num,
+                                lcb_SIZE num,
                                 const lcb_server_version_cmd_t *const *commands);
 
 /**
@@ -2351,7 +2351,7 @@ typedef struct lcb_verbosity_resp_st {
 LIBCOUCHBASE_API
 lcb_error_t lcb_set_verbosity(lcb_t instance,
                               const void *command_cookie,
-                              lcb_size_t num,
+                              lcb_SIZE num,
                               const lcb_verbosity_cmd_t *const *commands);
 
 /**
@@ -2414,7 +2414,7 @@ typedef struct lcb_flush_resp_st {
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_flush(lcb_t instance, const void *cookie,
-                      lcb_size_t num,
+                      lcb_SIZE num,
                       const lcb_flush_cmd_t *const *commands);
 
 /**
@@ -2496,9 +2496,9 @@ typedef enum {
 typedef struct {
     /** A view path string with optional query params (e.g. skip, limit etc.) */
     const char *path;
-    lcb_size_t npath; /**< Length of the path. Mandatory */
+    lcb_SIZE npath; /**< Length of the path. Mandatory */
     const void *body; /**< The POST body for HTTP request */
-    lcb_size_t nbody; /**< Length of the body. Mandatory if `body != NULL`*/
+    lcb_SIZE nbody; /**< Length of the body. Mandatory if `body != NULL`*/
     lcb_http_method_t method;
     /**If true the client will use lcb_http_data_callback to
      * notify about response and will call lcb_http_complete
@@ -2517,9 +2517,9 @@ typedef struct {
  */
 typedef struct {
     const char *path; /**< @see lcb_HTTPCMDv0::path */
-    lcb_size_t npath;
+    lcb_SIZE npath;
     const void *body; /**< @see lcb_HTTPCMDv0::body */
-    lcb_size_t nbody;
+    lcb_SIZE nbody;
     lcb_http_method_t method;
     int chunked;
     const char *content_type;
@@ -2541,7 +2541,7 @@ typedef struct lcb_http_cmd_st {
     #ifdef __cplusplus
     inline lcb_http_cmd_st();
     inline lcb_http_cmd_st(
-            const char *path, lcb_size_t npath, const void *body, lcb_size_t nbody,
+            const char *path, lcb_SIZE npath, const void *body, lcb_SIZE nbody,
             lcb_http_method_t method, int chunked, const char *content_type);
     #endif
 } lcb_http_cmd_t;
@@ -2562,10 +2562,10 @@ typedef struct lcb_http_cmd_st {
 typedef struct {
     lcb_http_status_t status; /**< HTTP status code */
     const char *path; /**< Path used for request */
-    lcb_size_t npath;
+    lcb_SIZE npath;
     const char *const *headers; /**< List of headers */
     const void *bytes; /**< Body (if any) */
-    lcb_size_t nbytes;
+    lcb_SIZE nbytes;
 } lcb_HTTPRESPv0;
 
 typedef struct {
@@ -2808,7 +2808,7 @@ lcb_get_node(lcb_t instance, lcb_GETNODETYPE type, unsigned index);
  * @committed
  */
 LIBCOUCHBASE_API
-lcb_int32_t lcb_get_num_replicas(lcb_t instance);
+lcb_S32 lcb_get_num_replicas(lcb_t instance);
 
 /**
  * @brief Get the number of the nodes in the cluster
@@ -2817,7 +2817,7 @@ lcb_int32_t lcb_get_num_replicas(lcb_t instance);
  * @committed
  */
 LIBCOUCHBASE_API
-lcb_int32_t lcb_get_num_nodes(lcb_t instance);
+lcb_S32 lcb_get_num_nodes(lcb_t instance);
 
 
 /**
@@ -2931,7 +2931,7 @@ lcb_error_t
 lcb_cntl_string(lcb_t instance, const char *key, const char *value);
 
 /**
-* @brief Convenience function to set a value as an lcb_uint32_t
+* @brief Convenience function to set a value as an lcb_U32
 * @param instance
 * @param cmd setting to modify
 * @param arg the new value
@@ -2939,10 +2939,10 @@ lcb_cntl_string(lcb_t instance, const char *key, const char *value);
 * @committed
 */
 LIBCOUCHBASE_API
-lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg);
+lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_U32 arg);
 
 /**
-* @brief Retrieve an lcb_uint32_t setting
+* @brief Retrieve an lcb_U32 setting
 * @param instance
 * @param cmd setting to retrieve
 * @return the value.
@@ -2951,7 +2951,7 @@ lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg);
 * @committed
 */
 LIBCOUCHBASE_API
-lcb_uint32_t lcb_cntl_getu32(lcb_t instance, int cmd);
+lcb_U32 lcb_cntl_getu32(lcb_t instance, int cmd);
 
 /**
  * Determine if a specific control code exists
@@ -2994,8 +2994,8 @@ lcb_cntl_exists(int ctl);
  * #include <libcouchbase/couchbase.h>
  *
  * static void callback(
- *  lcb_t instance, const void *cookie, lcb_timeunit_t timeunit, lcb_uint32_t min,
- *  lcb_uint32_t max, lcb_uint32_t total, lcb_uint32_t maxtotal)
+ *  lcb_t instance, const void *cookie, lcb_timeunit_t timeunit, lcb_U32 min,
+ *  lcb_U32 max, lcb_U32 total, lcb_U32 maxtotal)
  * {
  *   FILE* out = (void*)cookie;
  *   int num = (float)10.0 * (float)total / ((float)maxtotal);
@@ -3093,10 +3093,10 @@ lcb_error_t lcb_disable_timings(lcb_t instance);
 typedef void (*lcb_timings_callback)(lcb_t instance,
                                      const void *cookie,
                                      lcb_timeunit_t timeunit,
-                                     lcb_uint32_t min,
-                                     lcb_uint32_t max,
-                                     lcb_uint32_t total,
-                                     lcb_uint32_t maxtotal);
+                                     lcb_U32 min,
+                                     lcb_U32 max,
+                                     lcb_U32 total,
+                                     lcb_U32 maxtotal);
 
 /**
  * Get the timings histogram
@@ -3164,7 +3164,7 @@ lcb_error_t lcb_get_timings(lcb_t instance,
  *
  */
 LIBCOUCHBASE_API
-const char *lcb_get_version(lcb_uint32_t *version);
+const char *lcb_get_version(lcb_U32 *version);
 
 /**@brief Whether the library has SSL support*/
 #define LCB_SUPPORTS_SSL 1
@@ -3189,7 +3189,7 @@ lcb_supports_feature(int n);
  * @uncomitted
  */
 LIBCOUCHBASE_API
-lcb_error_t lcb_errmap_default(lcb_t instance, lcb_uint16_t code);
+lcb_error_t lcb_errmap_default(lcb_t instance, lcb_U16 code);
 
 /**
  * Callback for error mappings. This will be invoked when requesting whether
@@ -3199,7 +3199,7 @@ lcb_error_t lcb_errmap_default(lcb_t instance, lcb_uint16_t code);
  * use cases, or in cases where detailed response codes may be mapped to
  * more generic ones.
  */
-typedef lcb_error_t (*lcb_errmap_callback)(lcb_t instance, lcb_uint16_t bincode);
+typedef lcb_error_t (*lcb_errmap_callback)(lcb_t instance, lcb_U16 bincode);
 
 /**@uncommitted*/
 LIBCOUCHBASE_API
@@ -3211,7 +3211,7 @@ lcb_errmap_callback lcb_set_errmap_callback(lcb_t, lcb_errmap_callback);
  * are using two different CRTs
  */
 LIBCOUCHBASE_API
-void *lcb_mem_alloc(lcb_size_t size);
+void *lcb_mem_alloc(lcb_SIZE size);
 
 /** Use this to free memory allocated with lcb_mem_alloc */
 LIBCOUCHBASE_API

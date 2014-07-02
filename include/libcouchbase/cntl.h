@@ -79,7 +79,7 @@ extern "C" {
  * a different operation or fail the current one, depending on the specific
  * timeout).
  *
- * Timeouts are specified in _microseconds_ stored within an `lcb_uint32_t`.
+ * Timeouts are specified in _microseconds_ stored within an `lcb_U32`.
  *
  * Note that timeouts in libcouchbase are implemented via an event loop
  * scheduler. As such their accuracy and promptness is limited by how
@@ -119,7 +119,7 @@ extern "C" {
  * * An updated cluster configuration has not been promptly received
  *
  * @code{.c}
- * lcb_uint32_t tmo = 3500000;
+ * lcb_U32 tmo = 3500000;
  * lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmo);
  * @endcode
  *
@@ -172,7 +172,7 @@ typedef struct lcb_cntl_vbinfo_st {
         /** v0 */
         struct {
             const void *key; /**< **Input** Key */
-            lcb_size_t nkey; /**< **Input** Length of key */
+            lcb_SIZE nkey; /**< **Input** Length of key */
             int vbucket; /**< **Output** Mapped vBucket */
             int server_index; /**< **Output** Server index for vBucket */
         } v0;
@@ -283,7 +283,7 @@ typedef enum {
  * network/mapping/not-my-vbucket errors are received before a configuration
  * update is requested again.
  *
- * @cntl_arg_both{lcb_size_t*}
+ * @cntl_arg_both{lcb_SIZE*}
  * @uncommitted
  */
 #define LCB_CNTL_CONFERRTHRESH          0x0c
