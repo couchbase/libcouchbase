@@ -1,3 +1,6 @@
+IF(NOT GTEST_ZIP_PATH)
+    SET(GTEST_ZIP_PATH "${SOURCE_ROOT}/gtest-1.7.0.zip")
+ENDIF()
 INCLUDE(../cmake/Modules/FindCouchbaseGtest.cmake)
 MESSAGE(STATUS "Will use gtest from ${GTEST_ROOT}")
 SET(gtest_force_shared_crt ON CACHE BOOL "" )

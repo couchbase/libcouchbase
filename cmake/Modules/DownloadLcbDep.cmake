@@ -1,6 +1,7 @@
 # DownloadLcbDeb(url location)
 MACRO(DOWNLOAD_LCB_DEP url dest)
     IF(UNIX)
+        MESSAGE(STATUS "Downloading ${url} => ${dest}")
         EXECUTE_PROCESS(COMMAND wget -O "${dest}" "${url}")
     ELSEIF(WIN32)
         EXECUTE_PROCESS(COMMAND powershell -Command
