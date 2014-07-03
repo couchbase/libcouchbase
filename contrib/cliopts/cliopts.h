@@ -266,7 +266,7 @@ template<> inline UIntOption& UIntOption::setDefault(const unsigned& ui) {
 class Parser {
 public:
     Parser(const char *name = NULL) {
-        if (!name) {
+        if (name) {
             progname = name;
         }
     }
