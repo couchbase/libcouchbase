@@ -72,6 +72,9 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_HTCONFIG_IDLE_TIMEOUT:
         return &settings->bc_http_stream_time;
 
+    case LCB_CNTL_RETRY_INTERVAL:
+        return &settings->retry_interval;
+
     default:
         return NULL;
     }
@@ -664,6 +667,18 @@ reinit_spec_handler(int mode, lcb_t instance, int cmd, void *arg) {
     return lcb_reinit3(instance, arg);
 }
 
+static lcb_error_t
+retry_backoff_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    if (mode == LCB_CNTL_GET) {
+        *(float *)arg = LCBT_SETTING(instance, retry_backoff);
+    } else {
+        LCBT_SETTING(instance, retry_backoff) = *(float*)arg;
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -708,7 +723,9 @@ static ctl_handler handlers[] = {
     syncdtor_handler, /* LCB_CNTL_SYNCDESTROY */
     console_log_handler, /* LCB_CNTL_CONLOGGER_LEVEL */
     detailed_errcode_handler, /* LCB_CNTL_DETAILED_ERRCODES */
-    reinit_spec_handler /* LCB_CNTL_REINIT_CONNSTR */
+    reinit_spec_handler, /* LCB_CNTL_REINIT_CONNSTR */
+    timeout_common, /* LCB_CNTL_RETRY_INTERVAL */
+    retry_backoff_handler /* LCB_CNTL_RETRY_BACKOFF */
 };
 
 typedef struct {

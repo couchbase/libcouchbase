@@ -963,8 +963,38 @@ struct lcb_cntl_rdballocfactory {
 #define LCB_CNTL_REINIT_CONNSTR 0x2B
 #define LCB_CNTL_REINIT_DSN LCB_CNTL_REINIT_CONNSTR
 
+/**
+ * @uncommitted
+ *
+ * Sets the interval at which the retry queue will attempt to resend a failed
+ * operation. When an operation fails and the retry policy (see
+ * @ref LCB_CNTL_RETRYMODE) allows the operation to be retried, it shall be
+ * placed into a queue, and then be retried within a given interval.
+ *
+ * Setting a high value will be friendlier on the network but also potentially
+ * increase latency, while setting this to a low value may cause unnecessary
+ * network traffic for operations which are not yet ready to be retried.
+ *
+ * @cntl_arg_both{lcb_U32* (microseconds)}
+ *
+ * @see LCB_CNTL_RETRY_BACKOFF
+ */
+#define LCB_CNTL_RETRY_INTERVAL 0x2C
+
+/**
+ * @uncommitted
+ *
+ * When an operation has been retried more than once and it has still not
+ * succeeded, the library will attempt to back off for the operation by
+ * scheduling it to be retried in `LCB_CNTL_RETRY_INTEVAL * ${n}` microseconds,
+ * where `${n}` is the factor controlled by this setting.
+ *
+ * @cntl_arg_both{float*}
+ */
+#define LCB_CNTL_RETRY_BACKOFF 0x2D
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x2C
+#define LCB_CNTL__MAX                    0x2E
 /**@}*/
 
 #ifdef __cplusplus
