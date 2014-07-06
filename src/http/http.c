@@ -256,8 +256,6 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
         req->parser = lcbht_new(req->instance->settings);
     }
 
-    lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_HTTP, req);
-
     rc = lcb_http_request_connect(req);
     if (rc != LCB_SUCCESS) {
         /** Mark as having the callback invoked */
@@ -468,6 +466,9 @@ lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd)
     }
 
     rc = lcb_http_request_exec(req);
+    if (rc == LCB_SUCCESS) {
+        lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_HTTP, req);
+    }
     return rc;
 
 }
