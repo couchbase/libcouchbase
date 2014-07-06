@@ -196,7 +196,8 @@ typedef enum {
     LCB_CALLBACK_OBSERVE, /**< lcb_observe3_ctxnew() */
     LCB_CALLBACK_GETREPLICA, /**< lcb_rget3() */
     LCB_CALLBACK_ENDURE, /**< lcb_endure3_ctxnew() */
-    LCB_CALLBACK__MAX /* Number of callbacks */
+    LCB_CALLBACK_HTTP, /**< lcb_http3() */
+    LCB_CALLBACK__MAX, /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
 /**
@@ -929,6 +930,71 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
 /**@}*/
+
+
+/** Command flag for HTTP to indicate that the callback is to be invoked
+ * multiple times for each new chunk of incoming data. Once all the chunks
+ * have been received, the callback will be invoked once more with the
+ * LCB_RESP_F_FINAL flag and an empty content. */
+
+#define LCB_CMDHTTP_F_STREAM 1<<16
+/**
+ * @name Perform an HTTP operation
+ * @{
+ */
+
+/**
+ * Structure for performing an HTTP request.
+ * Note that the key and nkey fields indicate the _path_ for the API
+ */
+typedef struct {
+    LCB_CMD_BASE;
+    /**Type of request to issue. LCB_HTTP_TYPE_VIEW will issue a request
+     * against a random node's view API. LCB_HTTP_TYPE_MANAGEMENT will issue
+     * a request against a random node's administrative API, and
+     * LCB_HTTP_TYPE_RAW will issue a request against an arbitrary host. */
+    lcb_http_type_t type;
+    lcb_http_method_t method; /**< HTTP Method to use */
+
+    /** If the request requires a body (e.g. `PUT` or `POST`) then it will
+     * go here. Be sure to indicate the length of the body too. */
+    const char *body;
+
+    /** Length of the body for the request */
+    lcb_SIZE nbody;
+
+    /** If non-NULL, will be assigned a handle which may be used to
+     * subsequently cancel the request */
+    lcb_http_request_t *reqhandle;
+
+    /** For views, set this to `application/json` */
+    const char *content_type;
+
+    /** Username to authenticate with, if left empty, will use the credentials
+     * passed to lcb_create() */
+    const char *username;
+
+    /** Password to authenticate with, if left empty, will use the credentials
+     * passed to lcb_create() */
+    const char *password;
+
+    /** If set, this must be a string in the form of `http://host:port`. Should
+     * only be used for raw requests. */
+    const char *host;
+} lcb_CMDHTTP;
+
+typedef struct {
+    LCB_RESP_BASE
+    short htstatus; /** HTTP status code */
+    const char * const * headers;
+    const void *body;
+    lcb_SIZE nbody;
+    lcb_http_request_t _htreq; /* Private */
+} lcb_RESPHTTP;
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd);
 
 /**@}*/
 #ifdef __cplusplus

@@ -70,12 +70,16 @@ handle_parse_chunked(lcb_http_request_t req, const char *buf, unsigned nbuf)
 
         if (nbody) {
             if (req->chunked) {
-                lcb_http_resp_t htresp;
-                lcb_setup_lcb_http_resp_t(&htresp,
-                    res->status, req->path, req->npath,
-                    (const char * const *)req->headers, body, nbody);
-                req->on_data(req,
-                    req->instance, req->command_cookie, LCB_SUCCESS, &htresp);
+                lcb_RESPCALLBACK target;
+                lcb_RESPHTTP htresp = { 0 };
+
+                lcb_http_init_resp(req, &htresp);
+                htresp.body = body;
+                htresp.nbody = nbody;
+                htresp.rc = LCB_SUCCESS;
+                target = lcb_find_callback(req->instance, LCB_CALLBACK_HTTP);
+                target(req->instance, LCB_CALLBACK_HTTP, (const lcb_RESPBASE *)&htresp);
+
             } else {
                 lcb_string_append(&res->body, body, nbody);
             }
@@ -86,7 +90,9 @@ handle_parse_chunked(lcb_http_request_t req, const char *buf, unsigned nbuf)
     } while ((state & LCBHT_S_DONE) == 0 && IS_IN_PROGRESS(req) && nbuf);
 
     if ( (state & LCBHT_S_DONE) && IS_IN_PROGRESS(req)) {
-        lcb_http_resp_t htresp;
+        lcb_RESPHTTP resp = { 0 };
+        lcb_RESPCALLBACK target;
+
         if (req->chunked) {
             buf = NULL;
             nbuf = 0;
@@ -95,14 +101,13 @@ handle_parse_chunked(lcb_http_request_t req, const char *buf, unsigned nbuf)
             nbuf = res->body.nused;
         }
 
-        lcb_setup_lcb_http_resp_t(&htresp,
-            res->status, req->path, req->npath,
-            (const char * const *)req->headers, buf, nbuf);
-
-        if (req->on_complete) {
-            req->on_complete(req,
-                req->instance, req->command_cookie, LCB_SUCCESS, &htresp);
-        }
+        lcb_http_init_resp(req, &resp);
+        resp.rflags = LCB_RESP_F_FINAL;
+        resp.rc = LCB_SUCCESS;
+        resp.body = buf;
+        resp.nbody = nbuf;
+        target = lcb_find_callback(req->instance, LCB_CALLBACK_HTTP);
+        target(req->instance, LCB_CALLBACK_HTTP, (const lcb_RESPBASE*)&resp);
         req->status |= LCB_HTREQ_S_CBINVOKED;
     }
     return state;

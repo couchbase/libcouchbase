@@ -63,6 +63,7 @@ typedef union {
     lcb_RESPMCVERSION mcversion;
     lcb_RESPVERBOSITY verbosity;
     lcb_RESPOBSERVE observe;
+    lcb_RESPHTTP http;
 } uRESP;
 
 static void
@@ -174,6 +175,23 @@ compat_default_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *r3base)
             err = r3->endure.rc;
         }
         instance->callbacks.durability(instance, cookie, err, &r2);
+        break;
+    }
+    case LCB_CALLBACK_HTTP: {
+        lcb_http_callback target;
+        lcb_http_resp_t r2 = { 0 };
+        r2.v.v0.path = r3->http.key;
+        r2.v.v0.npath = r3->http.nkey;
+        r2.v.v0.bytes = r3->http.body;
+        r2.v.v0.nbytes = r3->http.nbody;
+        r2.v.v0.status = r3->http.htstatus;
+        r2.v.v0.headers = r3->http.headers;
+        if (!(r3base->rflags & LCB_RESP_F_FINAL)) {
+            target = instance->callbacks.http_data;
+        } else {
+            target = instance->callbacks.http_complete;
+        }
+        target(r3->http._htreq, instance, cookie, err, &r2);
         break;
     }
     default:
