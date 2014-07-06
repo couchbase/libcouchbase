@@ -111,6 +111,9 @@ extern "C" {
         /** Socket pool for memcached connections */
         lcbio_MGR *memd_sockpool;
 
+        /** Socket pool for HTTP connections */
+        lcbio_MGR *http_sockpool;
+
         lcb_error_t last_error;
 
         lcb_settings *settings;

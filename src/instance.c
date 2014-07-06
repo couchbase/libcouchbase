@@ -390,8 +390,11 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     obj->iotable = lcbio_table_new(io_priv);
     obj->memd_sockpool = lcbio_mgr_create(settings, obj->iotable);
+    obj->http_sockpool = lcbio_mgr_create(settings, obj->iotable);
     obj->memd_sockpool->maxidle = 1;
     obj->memd_sockpool->tmoidle = 10000000;
+    obj->http_sockpool->maxidle = 1;
+    obj->http_sockpool->tmoidle = 10000000;
     obj->confmon = lcb_confmon_create(settings, obj->iotable);
     obj->ht_nodes = hostlist_create();
     obj->mc_nodes = hostlist_create();
@@ -515,6 +518,7 @@ void lcb_destroy(lcb_t instance)
     DESTROY(lcb_retryq_destroy, retryq);
     DESTROY(lcb_confmon_destroy, confmon);
     DESTROY(lcbio_mgr_destroy, memd_sockpool);
+    DESTROY(lcbio_mgr_destroy, http_sockpool);
     mcreq_queue_cleanup(&instance->cmdq);
     lcb_aspend_cleanup(po);
 

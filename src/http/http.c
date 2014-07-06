@@ -83,6 +83,37 @@ static lcb_error_t add_header(lcb_http_request_t req, const char *key, const cha
     return LCB_SUCCESS;
 }
 
+
+static void
+pool_close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
+{
+    int close_ok = *(int *)arg;
+
+    lcbio_ref(sock);
+    if (reusable && close_ok) {
+        lcbio_mgr_put(sock);
+    } else {
+        lcbio_mgr_discard(sock);
+    }
+}
+
+static void
+do_close_ioctx(lcb_http_request_t req)
+{
+    int can_ka = 0;
+
+    if (!req->ioctx) {
+        return;
+    }
+
+    if (req->parser && req->reqtype == LCB_HTTP_TYPE_VIEW) {
+        can_ka = lcbht_can_keepalive(req->parser);
+    }
+
+    lcbio_ctx_close(req->ioctx, pool_close_cb, &can_ka);
+    req->ioctx = NULL;
+}
+
 void lcb_http_request_decref(lcb_http_request_t req)
 {
     lcb_list_t *ii, *nn;
@@ -91,10 +122,7 @@ void lcb_http_request_decref(lcb_http_request_t req)
         return;
     }
 
-    if (req->ioctx) {
-        lcbio_ctx_close(req->ioctx, NULL, NULL);
-        req->ioctx = NULL;
-    }
+    do_close_ioctx(req);
     lcbio_connreq_cancel(&req->creq);
 
     free(req->path);
@@ -216,11 +244,7 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
     lcb_string *out = &req->outbuf;
 
     request_free_headers(req);
-    if (req->ioctx) {
-        lcbio_ctx_close(req->ioctx, NULL, NULL);
-        req->ioctx = NULL;
-    }
-
+    do_close_ioctx(req);
     lcbio_connreq_cancel(&req->creq);
     if (req->nhost > sizeof(reqhost.host)) {
         lcb_http_request_decref(req);
@@ -321,10 +345,15 @@ static lcb_error_t setup_headers(lcb_http_request_t req,
     if (rc != LCB_SUCCESS) {
         return rc;
     }
-    rc = add_header(req, "Connection", "close");
-    if (rc != LCB_SUCCESS) {
-        return rc;
+
+    if (req->instance->http_sockpool->maxidle == 0 ||
+            req->reqtype != LCB_HTTP_TYPE_VIEW) {
+        rc = add_header(req, "Connection", "close");
+        if (rc != LCB_SUCCESS) {
+            return rc;
+        }
     }
+
     rc = add_header(req, "Accept", "application/json");
     if (rc != LCB_SUCCESS) {
         return rc;

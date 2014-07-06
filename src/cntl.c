@@ -679,6 +679,18 @@ retry_backoff_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+http_poolsz_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    if (mode == LCB_CNTL_GET) {
+        *(lcb_SIZE*)arg = instance->http_sockpool->maxidle;
+    } else {
+        instance->http_sockpool->maxidle = *(lcb_SIZE*)arg;
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -725,7 +737,8 @@ static ctl_handler handlers[] = {
     detailed_errcode_handler, /* LCB_CNTL_DETAILED_ERRCODES */
     reinit_spec_handler, /* LCB_CNTL_REINIT_CONNSTR */
     timeout_common, /* LCB_CNTL_RETRY_INTERVAL */
-    retry_backoff_handler /* LCB_CNTL_RETRY_BACKOFF */
+    retry_backoff_handler, /* LCB_CNTL_RETRY_BACKOFF */
+    http_poolsz_handler /* LCB_CNTL_HTTP_POOLSIZE */
 };
 
 typedef struct {

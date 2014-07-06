@@ -993,8 +993,19 @@ struct lcb_cntl_rdballocfactory {
  */
 #define LCB_CNTL_RETRY_BACKOFF 0x2D
 
+/**
+ * @volatile
+ *
+ * Set the maximum pool size for pooled http (view request) sockets. This should
+ * be set to 1 (the default) unless you plan to execute concurrent view requests.
+ * You may set this to 0 to disable pooling
+ *
+ * @cntl_arg_both{lcb_SIZE}
+ */
+#define LCB_CNTL_HTTP_POOLSIZE 0x2E
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x2E
+#define LCB_CNTL__MAX                    0x2F
 /**@}*/
 
 #ifdef __cplusplus

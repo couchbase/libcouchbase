@@ -219,8 +219,9 @@ lcb_error_t
 lcb_http_request_connect(lcb_http_request_t req)
 {
     lcb_host_t dest;
-    lcbio_pCONNSTART cs;
     lcb_settings *settings = req->instance->settings;
+    lcbio_MGR *pool = req->instance->http_sockpool;
+    lcbio_pMGRREQ poolreq;
 
     memcpy(dest.host, req->host, req->nhost);
     dest.host[req->nhost] = '\0';
@@ -230,12 +231,11 @@ lcb_http_request_connect(lcb_http_request_t req)
     req->timeout = req->reqtype == LCB_HTTP_TYPE_VIEW ?
             settings->views_timeout : settings->http_timeout;
 
-    cs = lcbio_connect(req->io, settings, &dest, req->timeout, on_connected, req);
-    if (!cs) {
+    poolreq = lcbio_mgr_get(pool, &dest, req->timeout, on_connected, req);
+    if (!poolreq) {
         return LCB_CONNECT_ERROR;
     }
-    req->creq.type = LCBIO_CONNREQ_RAW;
-    req->creq.u.cs = cs;
+    LCBIO_CONNREQ_MKPOOLED(&req->creq, poolreq);
 
     if (!req->io_timer) {
         req->io_timer = lcb_timer_create_simple(req->io,
