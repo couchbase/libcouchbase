@@ -411,7 +411,7 @@ timeout_server(void *arg)
     }
 
     next_us = get_next_timeout(server);
-    lcb_log(LOGARGS(server, INFO), LOGFMT "Scheduling next timeout for %u ms", LOGID(server), next_us / 1000);
+    lcb_log(LOGARGS(server, DEBUG), LOGFMT "Scheduling next timeout for %u ms", LOGID(server), next_us / 1000);
     lcbio_timer_rearm(server->io_timer, next_us);
     lcb_maybe_breakout(server->instance);
 }
@@ -456,7 +456,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     server->pipeline.flush_start = (mcreq_flushstart_fn)mcserver_flush;
 
     tmo = get_next_timeout(server);
-    lcb_log(LOGARGS(server, INFO), LOGFMT "Setting initial timeout=%ums", LOGID(server), tmo/1000);
+    lcb_log(LOGARGS(server, DEBUG), LOGFMT "Setting initial timeout=%ums", LOGID(server), tmo/1000);
     lcbio_timer_rearm(server->io_timer, get_next_timeout(server));
     mcserver_flush(server);
 }
