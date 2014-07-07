@@ -262,6 +262,16 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
         change_status = LCB_CONFIGURATION_NEW;
     }
 
+    /* Update the list of nodes here for server list */
+    hostlist_clear(instance->ht_nodes);
+    for (ii = 0; ii < LCBVB_NSERVERS(config->vbc); ++ii) {
+        const char *hp = lcbvb_get_hostport(config->vbc, ii,
+            LCBVB_SVCTYPE_MGMT, LCBVB_SVCMODE_PLAIN);
+        if (hp) {
+            hostlist_add_stringz(instance->ht_nodes, hp, LCB_CONFIG_HTTP_PORT);
+        }
+    }
+
     instance->callbacks.configuration(instance, change_status);
     lcb_maybe_breakout(instance);
 }
