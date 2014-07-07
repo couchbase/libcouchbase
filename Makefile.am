@@ -290,7 +290,8 @@ EXTRA_DIST += CONTRIBUTING.md LICENSE README.markdown \
               doc/manout \
               tests/start_mock.sh \
               win32 \
-              VERSION
+              VERSION \
+              $(man_MANS)
 
 if HAVE_DOXYGEN
 endif
