@@ -120,6 +120,7 @@ SEE ALSO
 Learn more at <http://www.couchbase.com/communities/c>.
 
 intro(3),
+cbc(1),
 lcb_arithmetic(3couchbase),
 lcb_attributes(5)
 lcb_behavior_get_config_errors_threshold(3couchbase),
