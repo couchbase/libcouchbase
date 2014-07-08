@@ -124,7 +124,7 @@ io_read(lcbio_CTX *ctx, unsigned nr)
     req->refcount++;
 
     /** Delay the timer */
-    lcb_timer_rearm(req->io_timer, req->timeout);
+    lcbio_timer_rearm(req->timer, req->timeout);
 
     LCBIO_CTX_ITERFOR(ctx, &iter, nr) {
         char *buf;
@@ -178,12 +178,10 @@ io_error(lcbio_CTX *ctx, lcb_error_t err)
 }
 
 static void
-request_timed_out(lcb_timer_t tm, lcb_t u, const void *cookie)
+request_timed_out(void *arg)
 {
-    lcb_http_request_t req = (lcb_http_request_t)cookie;
+    lcb_http_request_t req = (lcb_http_request_t)arg;
     lcb_http_request_finish(req->instance, req, LCB_ETIMEDOUT);
-    (void)u;
-    (void)tm;
 }
 
 
@@ -237,13 +235,12 @@ lcb_http_request_connect(lcb_http_request_t req)
     }
     LCBIO_CONNREQ_MKPOOLED(&req->creq, poolreq);
 
-    if (!req->io_timer) {
-        req->io_timer = lcb_timer_create_simple(req->io,
-                                                req,
-                                                req->timeout,
-                                                request_timed_out);
-    } else {
-        lcb_timer_rearm(req->io_timer, req->timeout);
+    if (!req->timer) {
+        req->timer = lcbio_timer_new(req->io, req, request_timed_out);
+    }
+
+    if (!lcbio_timer_armed(req->timer)) {
+        lcbio_timer_rearm(req->timer, req->timeout);
     }
 
     return LCB_SUCCESS;

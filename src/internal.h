@@ -225,6 +225,12 @@ extern "C" {
     lcb_RESPCALLBACK
     lcb_find_callback(lcb_t instance, lcb_CALLBACKTYPE cbtype);
 
+    /* These two functions exist to allow the tests to keep the loop alive while
+     * scheduling other operations asynchronously */
+
+    LCB_INTERNAL_API void lcb_loop_ref(lcb_t instance);
+    LCB_INTERNAL_API void lcb_loop_unref(lcb_t instance);
+
 #define SYNCMODE_INTERCEPT(o) \
     if (LCBT_SETTING(o, syncmode) == LCB_ASYNCHRONOUS) { \
         return LCB_SUCCESS; \

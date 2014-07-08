@@ -232,21 +232,19 @@ static void set_callback(lcb_t instance,
 }
 
 struct next_store_st {
+    lcb_t instance;
     struct timeout_test_cookie *tc;
     const lcb_store_cmd_t * const * cmdpp;
 };
 
-static void reschedule_callback(lcb_timer_t timer,
-                                lcb_t instance,
-                                const void *cookie)
+static void reschedule_callback(void *cookie)
 {
     lcb_error_t err;
     struct next_store_st *ns = (struct next_store_st *)cookie;
-    lcb_log(LOGARGS(instance, INFO), "Rescheduling operation..");
-    err = lcb_store(instance, ns->tc, 1, ns->cmdpp);
+    lcb_log(LOGARGS(ns->instance, INFO), "Rescheduling operation..");
+    err = lcb_store(ns->instance, ns->tc, 1, ns->cmdpp);
+    lcb_loop_unref(ns->instance);
     EXPECT_EQ(LCB_SUCCESS, err);
-    lcb_timer_destroy(instance, timer);
-
 }
 
 }
@@ -260,7 +258,6 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     lcb_t instance = hw.getLcb();
     lcb_uint32_t tmoval = 1000000;
     int nremaining = 2;
-    lcb_error_t err;
     struct timeout_test_cookie cookies[2];
     MockEnvironment *mock = MockEnvironment::getInstance();
 
@@ -296,15 +293,14 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     struct next_store_st ns;
     ns.cmdpp = &cmdp;
     ns.tc = cookies+1;
-    lcb_timer_t timer = lcb_timer_create(instance, &ns,
-                                         900000,
-                                         0,
-                                         reschedule_callback,
-                                         &err);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ns.instance = instance;
+    lcbio_pTIMER timer = lcbio_timer_new(instance->iotable, &ns, reschedule_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(timer, 900000);
 
     lcb_log(LOGARGS(instance, INFO), "Waiting..");
     lcb_wait(instance);
+    lcbio_timer_destroy(timer);
 
     ASSERT_EQ(0, nremaining);
 }
@@ -460,33 +456,7 @@ extern "C" {
             lcb_stop_loop(instance);
         }
     }
-
-    static void timer_callback(lcb_timer_t, lcb_t, const void *) {
-        abort();
-    }
 }
-
-class DummyTimer {
-public:
-    DummyTimer(lcb_t instance) : instance(instance) {
-        lcb_error_t err;
-        tm = lcb_timer_create(instance, this, 100 * 1000000, 1,
-                              timer_callback, &err);
-        EXPECT_EQ(LCB_SUCCESS, err);
-    }
-
-    void clear() {
-        lcb_timer_destroy(instance, tm);
-        tm = NULL;
-    }
-
-    ~DummyTimer() {
-    }
-
-private:
-    lcb_timer_t tm;
-    lcb_t instance;
-};
 
 struct StoreContext {
     std::map<std::string, lcb_error_t> mm;
@@ -573,15 +543,16 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 struct fo_context_st {
     MockEnvironment *env;
     int index;
+    lcb_t instance;
 };
 // Hiccup the server, then fail it over.
 extern "C" {
-static void fo_callback(lcb_timer_t tm, lcb_t instance, const void *cookie)
+static void fo_callback(void *cookie)
 {
     fo_context_st *ctx = (fo_context_st *)cookie;
     ctx->env->failoverNode(ctx->index);
     ctx->env->hiccupNodes(0, 0);
-    lcb_timer_destroy(instance, tm);
+    lcb_loop_unref(ctx->instance);
 }
 }
 
@@ -627,12 +598,11 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     lcbvb_map_key(LCBT_VBCONFIG(instance), key.c_str(), key.size(), &vb, &idx);
     mock->hiccupNodes(5000, 1);
 
-    struct fo_context_st ctx = { mock, idx };
-
-    lcb_timer_t timer = lcb_timer_create_simple(instance->iotable,
-                                                &ctx,
-                                                500000,
-                                                fo_callback);
+    struct fo_context_st ctx = { mock, idx, instance };
+    lcbio_pTIMER timer;
+    timer = lcbio_timer_new(instance->iotable, &ctx, fo_callback);
+    lcb_loop_ref(instance);
+    lcbio_timer_rearm(timer, 500000);
 
     lcb_store_cmd_t *storecmds[] = { &storecmd };
     err = lcb_store(instance, &rv, 1, storecmds);
@@ -657,6 +627,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     lcb_wait(instance);
+    lcbio_timer_destroy(timer);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_EQ(rv.nbytes, val.size());
     std::string bytes = std::string(rv.bytes, rv.nbytes);
@@ -764,7 +735,7 @@ TEST_F(MockUnitTest, testMemcachedFailover)
             (http_provider *)lcb_confmon_get_provider(instance->confmon,
                                                       LCB_CLCONFIG_HTTP);
     ASSERT_EQ((lcb_uint32_t)-1, instance->getSettings()->bc_http_stream_time);
-    ASSERT_EQ(0, lcb_timer_armed(htprov->disconn_timer));
+    ASSERT_EQ(0, lcbio_timer_armed(htprov->disconn_timer));
 
     // Fail over the first node..
     mock->failoverNode(1, "cache");

@@ -132,9 +132,9 @@ void lcb_http_request_decref(lcb_http_request_t req)
     if (req->parser) {
         lcbht_free(req->parser);
     }
-    if (req->io_timer) {
-        lcb_timer_destroy(NULL, req->io_timer);
-        req->io_timer = NULL;
+    if (req->timer) {
+        lcbio_timer_destroy(req->timer);
+        req->timer = NULL;
     }
 
     request_free_headers(req);
@@ -540,13 +540,11 @@ void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
     if (request->instance) {
         lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_HTTP, request);
     }
+
     request->instance = NULL;
-
-    if (request->io_timer) {
-        lcb_timer_destroy(NULL, request->io_timer);
-        request->io_timer = NULL;
+    if (request->timer) {
+        lcbio_timer_disarm(request->timer);
     }
-
     lcb_maybe_breakout(instance);
 }
 

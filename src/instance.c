@@ -790,3 +790,11 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type,
 LIBCOUCHBASE_API void lcb_flush_buffers(lcb_t instance, const void *cookie) {
     (void)instance;(void)cookie;
 }
+
+LCB_INTERNAL_API void lcb_loop_ref(lcb_t instance) {
+    lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
+}
+LCB_INTERNAL_API void lcb_loop_unref(lcb_t instance) {
+    lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
+    lcb_maybe_breakout(instance);
+}

@@ -67,7 +67,7 @@ struct lcb_http_request_st {
     /** Headers array for passing to callbacks */
     char **headers;
     lcbio_pTABLE io;
-    lcb_timer_t io_timer;
+    lcbio_pTIMER timer;
     lcbio_CONNREQ creq;
     lcbio_CTX *ioctx;
     lcbht_pPARSER parser;

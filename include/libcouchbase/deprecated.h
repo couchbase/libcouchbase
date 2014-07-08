@@ -71,16 +71,17 @@ typedef void (*lcb_error_callback)(lcb_t instance, lcb_error_t error, const char
 LCB_DEPR_API2(lcb_error_callback lcb_set_error_callback(lcb_t, lcb_error_callback),
     "This function only reports bootstrap errors. Use lcb_set_bootstrap_callback instead");
 
+
+
 /**
  * Timer stuff is deprecated. It should not be used externally, and internal
  * code should use the new lcbio_timer_ functions
  */
-
+struct lcb_timer_st;
+typedef struct lcb_timer_st *lcb_timer_t;
 typedef void (*lcb_timer_callback)(lcb_timer_t timer, lcb_t instance, const void *cookie);
-LIBCOUCHBASE_API
-lcb_timer_t lcb_timer_create(lcb_t instance, const void *command_cookie, lcb_uint32_t usec, int periodic, lcb_timer_callback callback, lcb_error_t *error);
-LIBCOUCHBASE_API
-lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer);
+LCB_DEPR_API(lcb_timer_t lcb_timer_create(lcb_t instance, const void *command_cookie, lcb_uint32_t usec, int periodic, lcb_timer_callback callback, lcb_error_t *error));
+LCB_DEPR_API(lcb_error_t lcb_timer_destroy(lcb_t instance, lcb_timer_t timer));
 
 typedef enum lcb_compat_t { LCB_MEMCACHED_CLUSTER = 0x00, LCB_CACHED_CONFIG = 0x01 } lcb_compat_t;
 typedef lcb_compat_t lcb_cluster_t;

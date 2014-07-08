@@ -4,7 +4,7 @@
 struct lcb_bootstrap_st {
     clconfig_listener listener;
     lcb_t parent;
-    lcb_timer_t timer;
+    lcbio_pTIMER tm;
     hrtime_t last_refresh;
 
     /** Flag set if we've already bootstrapped */
@@ -50,11 +50,7 @@ static void config_callback(clconfig_listener *listener,
     instance->last_error = LCB_SUCCESS;
     /** Ensure we're not called directly twice again */
     listener->callback = async_step_callback;
-
-    if (bs->timer) {
-        lcb_timer_destroy(instance, bs->timer);
-        bs->timer = NULL;
-    }
+    lcbio_timer_disarm(bs->tm);
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
 
@@ -64,6 +60,8 @@ static void config_callback(clconfig_listener *listener,
 
     if (!bs->bootstrapped) {
         bs->bootstrapped = 1;
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
+
         if (instance->type == LCB_TYPE_BUCKET &&
                 instance->dist_type == LCBVB_DIST_KETAMA &&
                 instance->cur_configinfo->origin != LCB_CLCONFIG_MCRAW) {
@@ -89,21 +87,20 @@ static void initial_bootstrap_error(lcb_t instance,
                                     lcb_error_t err,
                                     const char *errinfo)
 {
+    struct lcb_bootstrap_st *bs = instance->bootstrap;
+
     instance->last_error = lcb_confmon_last_error(instance->confmon);
     if (instance->last_error == LCB_SUCCESS) {
         instance->last_error = err;
     }
 
     lcb_error_handler(instance, instance->last_error, errinfo);
-    lcb_log(LOGARGS(instance, ERR),
-            "Failed to bootstrap client=%p. Code=0x%x, Message=%s",
-            (void *)instance, err, errinfo);
-    if (instance->bootstrap->timer) {
-        lcb_timer_destroy(instance, instance->bootstrap->timer);
-        instance->bootstrap->timer = NULL;
-    }
+    lcb_log(LOGARGS(instance, ERR), "Failed to bootstrap client=%p. Code=0x%x, Message=%s", (void *)instance, err, errinfo);
+    lcbio_timer_disarm(bs->tm);
 
     instance->callbacks.bootstrap(instance, instance->last_error);
+
+    lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
     lcb_maybe_breakout(instance);
 }
 
@@ -112,30 +109,23 @@ static void initial_bootstrap_error(lcb_t instance,
  * instance. It is only scheduled during the initial bootstrap and is only
  * triggered if the initial bootstrap fails to configure in time.
  */
-static void initial_timeout(lcb_timer_t timer, lcb_t instance,
-                            const void *unused)
+static void initial_timeout(void *arg)
 {
-    initial_bootstrap_error(instance,
-                            LCB_ETIMEDOUT,
-                            "Failed to bootstrap in time");
-    (void)timer;
-    (void)unused;
+    struct lcb_bootstrap_st *bs = arg;
+    initial_bootstrap_error(bs->parent, LCB_ETIMEDOUT, "Failed to bootstrap in time");
 }
 
 /**
  * Proxy async call to config_callback
  */
-static void async_refresh(lcb_timer_t timer, lcb_t unused, const void *cookie)
+static void async_refresh(void *arg)
 {
     /** Get the best configuration and run stuff.. */
-    struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)cookie;
+    struct lcb_bootstrap_st *bs = arg;
     clconfig_info *info;
 
     info = lcb_confmon_get_config(bs->parent->confmon);
     config_callback(&bs->listener, CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
-
-    (void)unused;
-    (void)timer;
 }
 
 /**
@@ -146,23 +136,22 @@ static void async_step_callback(clconfig_listener *listener,
                                 clconfig_event_t event,
                                 clconfig_info *info)
 {
-    lcb_error_t err;
     struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
     }
 
-    if (bs->timer) {
+
+    if (lcbio_timer_armed(bs->tm) && lcbio_timer_get_target(bs->tm) == async_refresh) {
         lcb_log(LOGARGS(bs->parent, DEBUG), "Timer already present..");
         return;
     }
 
     lcb_log(LOGARGS(bs->parent, INFO), "Got async step callback..");
 
-    bs->timer = lcb_async_create(bs->parent->iotable,
-                                 bs, async_refresh, &err);
-
+    lcbio_timer_set_target(bs->tm, async_refresh);
+    lcbio_async_signal(bs->tm);
     (void)info;
 }
 
@@ -180,6 +169,7 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
             return LCB_CLIENT_ENOMEM;
         }
 
+        bs->tm = lcbio_timer_new(instance->iotable, bs, initial_timeout);
         instance->bootstrap = bs;
         bs->parent = instance;
         lcb_confmon_add_listener(instance->confmon, &bs->listener);
@@ -188,14 +178,10 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
     bs->last_refresh = gethrtime();
 
     if (initial) {
-        lcb_error_t err;
         bs->listener.callback = config_callback;
-        bs->timer = lcb_timer_create(instance, NULL,
-                                     LCBT_SETTING(instance, config_timeout), 0,
-                                     initial_timeout, &err);
-        if (err != LCB_SUCCESS) {
-            return err;
-        }
+        lcbio_timer_set_target(bs->tm, initial_timeout);
+        lcbio_timer_rearm(bs->tm, LCBT_SETTING(instance, config_timeout));
+        lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
 
     } else {
         /** No initial timer */
@@ -246,8 +232,8 @@ void lcb_bootstrap_destroy(lcb_t instance)
         return;
     }
 
-    if (bs->timer) {
-        lcb_timer_destroy(instance, bs->timer);
+    if (bs->tm) {
+        lcbio_timer_destroy(bs->tm);
     }
 
     lcb_confmon_remove_listener(instance->confmon, &bs->listener);

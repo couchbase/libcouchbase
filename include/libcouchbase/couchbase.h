@@ -28,8 +28,6 @@ struct lcb_st;
 typedef struct lcb_st *lcb_t;
 struct lcb_http_request_st;
 typedef struct lcb_http_request_st *lcb_http_request_t;
-struct lcb_timer_st;
-typedef struct lcb_timer_st *lcb_timer_t;
 
 #include <stddef.h>
 #include <time.h>
