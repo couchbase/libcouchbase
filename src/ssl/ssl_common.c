@@ -248,7 +248,66 @@ lcbio_ssl_free(lcbio_pSSLCTX ctx)
     free(ctx);
 }
 
-/** TODO: Is this safe to call twice? */
+
+/**
+ * According to https://www.openssl.org/docs/crypto/threads.html we need
+ * to install two functions for locking support, a function that returns
+ * a thread ID, and a function which performs locking/unlocking. However later
+ * on in the link it says it will select a default implementation to return
+ * the thread ID, and thus we only need supply the locking function.
+ */
+#if defined(_POSIX_THREADS)
+#include <pthread.h>
+typedef pthread_mutex_t ossl_LOCKTYPE;
+static void ossl_lock_init(ossl_LOCKTYPE *l) { pthread_mutex_init(l, NULL); }
+static void ossl_lock_acquire(ossl_LOCKTYPE *l) { pthread_mutex_lock(l); }
+static void ossl_lock_release(ossl_LOCKTYPE *l) { pthread_mutex_unlock(l); }
+#elif defined(_WIN32)
+#include <windows.h>
+typedef CRITICAL_SECTION ossl_LOCKTYPE;
+static void ossl_lock_init(ossl_LOCKTYPE *l) { InitializeCriticalSection(l); }
+static void ossl_lock_acquire(ossl_LOCKTYPE *l) { EnterCriticalSection(l); }
+static void ossl_lock_release(ossl_LOCKTYPE *l) { LeaveCriticalSection(l); }
+#else
+typedef char ossl_LOCKTYPE;
+#define ossl_lock_init(l)
+#define ossl_lock_acquire(l)
+#define ossl_lock_release(l)
+#endif
+
+
+static ossl_LOCKTYPE *ossl_locks;
+static void
+ossl_lockfn(int mode, int lkid, const char *f, int line)
+{
+    ossl_LOCKTYPE *l = ossl_locks + lkid;
+
+    if (mode & CRYPTO_LOCK) {
+        ossl_lock_acquire(l);
+    } else {
+        ossl_lock_release(l);
+    }
+
+    (void)f;
+    (void)line;
+}
+
+static void
+ossl_init_locks(void)
+{
+    unsigned ii, nlocks;
+    if (CRYPTO_get_locking_callback() != NULL) {
+        /* Someone already set the callback before us. Don't destroy it! */
+        return;
+    }
+    nlocks = CRYPTO_num_locks();
+    ossl_locks = malloc(sizeof(*ossl_locks) * nlocks);
+    for (ii = 0; ii < nlocks; ii++) {
+        ossl_lock_init(ossl_locks + ii);
+    }
+    CRYPTO_set_locking_callback(ossl_lockfn);
+}
+
 static volatile int ossl_initialized = 0;
 void lcbio_ssl_global_init(void)
 {
@@ -258,6 +317,7 @@ void lcbio_ssl_global_init(void)
     ossl_initialized = 1;
     SSL_library_init();
     SSL_load_error_strings();
+    ossl_init_locks();
 }
 
 lcb_error_t
