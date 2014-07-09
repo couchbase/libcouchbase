@@ -241,6 +241,7 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
             lcb_clconfig_decref(old_config);
         } else {
             change_status = LCB_CONFIGURATION_UNCHANGED;
+            lcb_retryq_signal(instance->retryq);
         }
     } else {
         unsigned nservers;
