@@ -102,20 +102,24 @@ do_schedule(lcb_RETRYQ *q, hrtime_t now)
         lcbio_timer_disarm(q->timer);
         return;
     }
+
     /** Figure out which is first */
     first_tmo = LCB_LIST_ITEM(LCB_LIST_HEAD(&q->tmoops), lcb_RETRYOP, ll_tmo);
     first_sched = LCB_LIST_ITEM(LCB_LIST_HEAD(&q->schedops), lcb_RETRYOP, ll_sched);
 
     schednext = first_sched->trytime;
     tmonext = MCREQ_PKT_RDATA(first_tmo->pkt)->start;
+    tmonext += LCB_US2NS(q->settings->operation_timeout);
     selected = schednext > tmonext ? tmonext : schednext;
+
     if (selected <= now) {
         diff = 0;
     } else {
-        diff = now - selected;
+        diff = selected - now;
     }
 
     us_interval = LCB_NS2US(diff);
+    lcb_log(LOGARGS(q, TRACE), "Next tick in %u ms", (unsigned)us_interval/1000);
     lcbio_timer_rearm(q->timer, us_interval);
 }
 
