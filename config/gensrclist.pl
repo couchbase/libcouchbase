@@ -86,11 +86,15 @@ my @PKGINCLUDE_HEADERS;
 # Find the main source files
 push @PKGINCLUDE_HEADERS,
     find_srcfiles("include/libcouchbase"),
+    "include/libcouchbase/configuration.h",
     "plugins/io/libuv/libuv_io_opts.h",
     "plugins/io/libev/libev_io_opts.h",
     "plugins/io/libevent/libevent_io_opts.h",
     "plugins/io/select/select_io_opts.h",
     "plugins/io/iocp/iocp_iops.h";
+
+my %tmp = map { $_ => 1 } @PKGINCLUDE_HEADERS;
+@PKGINCLUDE_HEADERS = keys %tmp;
 
 # @PKGINCLUDE_HEADERS = grep { $_ !~ /configuration\.h/ } @PKGINCLUDE_HEADERS;
 
