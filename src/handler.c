@@ -3,6 +3,7 @@
 #include "packetutils.h"
 #include "mc/mcreq.h"
 #include "mc/compress.h"
+#include "trace.h"
 
 LIBCOUCHBASE_API
 lcb_error_t
@@ -198,6 +199,7 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     }
 
     maybe_decompress(o, response, &resp, &freeptr);
+    TRACE_GET_END(response, &resp);
     INVOKE_CALLBACK3(request, &resp, o, LCB_CALLBACK_GET);
     free(freeptr);
 }
@@ -233,6 +235,7 @@ H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, packet_info *response,
     lcb_t root = pipeline->parent->instance;
     lcb_RESPREMOVE resp = { 0 };
     init_resp3(root, response, packet, immerr, (lcb_RESPBASE *)&resp);
+    TRACE_REMOVE_END(response, &resp);
     INVOKE_CALLBACK3(packet, &resp, root, LCB_CALLBACK_REMOVE);
 }
 
@@ -296,10 +299,12 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.ismaster = pipeline->index == lcbvb_vbmaster(config, vb);
         resp.ttp = 0;
         resp.ttr = 0;
+        TRACE_OBSERVE_PROGRESS(response, &resp);
         if (! (request->flags & MCREQ_F_INVOKED)) {
             rd->callback(pipeline, request, resp.rc, &resp);
         }
     }
+    TRACE_OBSERVE_END(response);
 }
 
 static void
@@ -328,6 +333,7 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     } else if (opcode == PROTOCOL_BINARY_CMD_SET) {
         resp.op = LCB_SET;
     }
+    TRACE_STORE_END(response, &resp);
     INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_STORE);
 }
 
@@ -344,6 +350,7 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         resp.value = ntohll(resp.value);
     }
     resp.cas = PACKET_CAS(response);
+    TRACE_ARITHMETIC_END(response, &resp);
     INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_COUNTER);
 }
 
@@ -415,6 +422,7 @@ H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     lcb_RESPTOUCH resp = { 0 };
 
     init_resp3(root, response, request, immerr, &resp);
+    TRACE_TOUCH_END(response, &resp);
     INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_TOUCH);
 }
 
@@ -436,6 +444,7 @@ H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     lcb_t root = pipeline->parent->instance;
     lcb_RESPUNLOCK resp = { 0 };
     init_resp3(root, response, request, immerr, &resp);
+    TRACE_UNLOCK_END(response, &resp);
     INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_UNLOCK);
 }
 

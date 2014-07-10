@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 #include "internal.h"
+#include "trace.h"
 
 LIBCOUCHBASE_API
 lcb_error_t
@@ -64,6 +65,7 @@ lcb_counter3(
     }
 
     memcpy(SPAN_BUFFER(&packet->kh_span), acmd.bytes, sizeof(acmd.bytes));
+    TRACE_ARITHMETIC_BEGIN(hdr, cmd);
     mcreq_sched_add(pipeline, packet);
     return LCB_SUCCESS;
 }

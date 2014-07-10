@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include "trace.h"
 
 LIBCOUCHBASE_API
 lcb_error_t
@@ -61,6 +62,8 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
 
     memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
     mcreq_sched_add(pl, pkt);
+    TRACE_GET_BEGIN(hdr, cmd);
+
     return LCB_SUCCESS;
 }
 
@@ -124,6 +127,7 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
     hdr.request.cas = cmd->cas;
 
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
+    TRACE_UNLOCK_BEGIN(&hdr, cmd);
     mcreq_sched_add(pl, pkt);
     return LCB_SUCCESS;
 }

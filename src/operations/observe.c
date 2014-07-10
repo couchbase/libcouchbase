@@ -17,6 +17,7 @@
 
 #include "internal.h"
 #include "durability_internal.h"
+#include "trace.h"
 
 struct observe_st {
     int allocated;
@@ -229,6 +230,7 @@ obs_ctxdone(lcb_MULTICMD_CTX *mctx, const void *cookie)
         pkt->flags |= MCREQ_F_REQEXT;
         pkt->u_rdata.exdata = (mc_REQDATAEX *)ctx;
         mcreq_sched_add(pipeline, pkt);
+        TRACE_OBSERVE_BEGIN(&hdr, SPAN_BUFFER(&pkt->u_value.single));
     }
     destroy_requests(ctx);
     ctx->base.start = gethrtime();

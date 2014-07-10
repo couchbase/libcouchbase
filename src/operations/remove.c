@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include "trace.h"
 
 LIBCOUCHBASE_API
 lcb_error_t
@@ -43,6 +44,7 @@ lcb_remove3(lcb_t instance, const void *cookie, const lcb_CMDREMOVE * cmd)
     pkt->u_rdata.reqdata.cookie = cookie;
     pkt->u_rdata.reqdata.start = gethrtime();
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
+    TRACE_REMOVE_BEGIN(&hdr, cmd);
     mcreq_sched_add(pl, pkt);
     return LCB_SUCCESS;
 }

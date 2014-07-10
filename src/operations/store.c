@@ -16,6 +16,7 @@
  */
 #include "internal.h"
 #include "mc/compress.h"
+#include "trace.h"
 
 static lcb_size_t
 get_value_size(mc_PACKET *packet)
@@ -145,6 +146,7 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
 
     memcpy(SPAN_BUFFER(&packet->kh_span), scmd.bytes, hsize);
     mcreq_sched_add(pipeline, packet);
+    TRACE_STORE_BEGIN(hdr, cmd);
     return LCB_SUCCESS;
 }
 
