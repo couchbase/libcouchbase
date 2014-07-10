@@ -1004,8 +1004,21 @@ struct lcb_cntl_rdballocfactory {
  */
 #define LCB_CNTL_HTTP_POOLSIZE 0x2E
 
+
+/**
+ * @uncomitted
+ * Determine whether or not a new configuration should be received when an error
+ * is received over the HTTP API (i.e. via lcb_make_http_request().
+ *
+ * The default value is true, however you may wish to disable this if you are
+ * expectedly issuing a lot of requests which may result in an error.
+ *
+ * @cntl_arg_both{int (as boolean)}
+ */
+#define LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR 0x2F
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x2F
+#define LCB_CNTL__MAX                    0x30
 /**@}*/
 
 #ifdef __cplusplus

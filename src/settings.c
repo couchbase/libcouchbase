@@ -30,6 +30,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->allocator_factory = rdb_bigalloc_new;
     settings->syncmode = LCB_ASYNCHRONOUS;
     settings->detailed_neterr = 0;
+    settings->refresh_on_hterr = 1;
 }
 
 LCB_INTERNAL_API

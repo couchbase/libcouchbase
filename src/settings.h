@@ -113,6 +113,7 @@ typedef struct lcb_settings_st {
     unsigned detailed_neterr : 1;
     unsigned randomize_bootstrap_nodes : 1;
     unsigned conntype : 1;
+    unsigned refresh_on_hterr : 1;
     unsigned sslopts : 2;
     unsigned ipv6 : 2;
 

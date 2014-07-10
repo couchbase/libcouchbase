@@ -158,6 +158,11 @@ static void maybe_refresh_config(lcb_t instance,
     if (!req->parser) {
         return;
     }
+
+    if (!LCBT_SETTING(instance, refresh_on_hterr)) {
+        return;
+    }
+
     resp = lcbht_get_response(req->parser);
     htstatus_ok = resp->status >= 200 && resp->status < 299;
 

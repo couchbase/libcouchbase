@@ -55,6 +55,10 @@ bugfixes. Do not forget to update this doc in every important patch.
   cause the server to drop the connection.
   The error code returned is the newly added `LCB_EMPTY_KEY`
 
+* [minor] Provide setting to disable refreshing the configuration when an HTTP
+  API error is encountered (from one of the HTTP callback functions). This
+  adds the `LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR` setting.
+
 
 ## 2.4.0-dp1 (2014-06-18)
 

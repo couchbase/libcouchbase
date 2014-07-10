@@ -691,6 +691,22 @@ http_poolsz_handler(int mode, lcb_t instance, int cmd, void *arg)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+http_refresh_config_handler(int mode, lcb_t instance, int cmd, void *arg)
+{
+    if (mode == LCB_CNTL_GET) {
+        *(int*)arg = LCBT_SETTING(instance, refresh_on_hterr);
+    } else if (mode == CNTL__MODE_SETSTRING) {
+        LCBT_SETTING(instance, refresh_on_hterr) = boolean_from_string(arg);
+    } else if (mode == LCB_CNTL_SET) {
+        LCBT_SETTING(instance, refresh_on_hterr) = *(int*)arg;
+    } else {
+        return LCB_ECTL_UNSUPPMODE;
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -738,7 +754,8 @@ static ctl_handler handlers[] = {
     reinit_spec_handler, /* LCB_CNTL_REINIT_CONNSTR */
     timeout_common, /* LCB_CNTL_RETRY_INTERVAL */
     retry_backoff_handler, /* LCB_CNTL_RETRY_BACKOFF */
-    http_poolsz_handler /* LCB_CNTL_HTTP_POOLSIZE */
+    http_poolsz_handler, /* LCB_CNTL_HTTP_POOLSIZE */
+    http_refresh_config_handler /* LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR */
 };
 
 typedef struct {
