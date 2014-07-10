@@ -600,7 +600,6 @@ typedef void (*lcb_destroy_callback)(const void *cookie);
 /**
  * @brief Set the callback to be invoked when the instance is destroyed
  * asynchronously.
- * @param callback the callback to set, or NULL to only get the previous callback
  * @return the previous callback.
  */
 LIBCOUCHBASE_API
@@ -613,7 +612,6 @@ lcb_set_destroy_callback(lcb_t, lcb_destroy_callback);
  * the lcb_t handle without worrying about reentrancy issues.
  *
  * @param instance
- * @param cb The callback to invoke once the instance has been destroyed.
  * @param arg a pointer passed to the callback.
  *
  * While the callback and cookie are optional, they are very much recommended
@@ -627,7 +625,9 @@ lcb_set_destroy_callback(lcb_t, lcb_destroy_callback);
  * exclusive.
  *
  * If for whatever reason this function is being called in a synchronous
- * flow, lcb_wait() must be invoked in order for the destruction to take effect.
+ * flow, lcb_wait() must be invoked in order for the destruction to take effect
+ *
+ * @see lcb_set_destroy_callback
  *
  * @committed
  */
@@ -1752,25 +1752,25 @@ lcb_touch_callback lcb_set_touch_callback(lcb_t, lcb_touch_callback);
  * interpreted as absolute times (from the epoch). All other
  * members should be set to zero.
  *
- * Example:
- *   lcb_touch_cmd_t *touch = calloc(1, sizeof(*touch));
- *   touch->version = 0;
- *   touch->v.v0.key = "my-key";
- *   touch->v.v0.nkey = strlen(item->v.v0.key);
- *   touch->v.v0.exptime = 0x666;
- *   lcb_touch_cmd_t* commands[] = { touch };
- *   lcb_touch(instance, NULL, 1, commands);
+ * @par Example
+ * @code{.c}
+ * lcb_touch_cmd_t touch = { 0 };
+ * lcb_touch_cmd_t *cmdlist = { &touch; }
+ * touch->v.v0.key = "my-key";
+ * touch->v.v0.nkey = strlen(item->v.v0.key);
+ * touch->v.v0.exptime = 300; // 5 minutes
+ * lcb_touch(instance, NULL, 1, cmdlist);
+ * @endcode
  *
  * @param instance the instance used to batch the requests from
- * @param command_cookie A cookie passed to all of the notifications
- *                       from this command
+ * @param cookie A cookie passed to all of the notifications from this command
  * @param num the total number of elements in the commnands array
  * @param commands the array containing the items to touch
  * @return The status of the operation
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_touch(lcb_t instance,
-                      const void *command_cookie,
+                      const void *cookie,
                       lcb_SIZE num,
                       const lcb_touch_cmd_t *const *commands);
 /**@}*/
@@ -2731,6 +2731,9 @@ void lcb_cancel_http_request(lcb_t instance,
  * @{
  */
 
+/**@name Information about Nodes
+ * @{*/
+
 /**@brief
  * Type of node to retrieve for the lcb_get_node() function
  */
@@ -2791,7 +2794,8 @@ typedef enum {
  *   }
  * }
  * @endcode
- * @committed.
+ *
+ * @committed
  */
 LIBCOUCHBASE_API
 const char *
@@ -2838,6 +2842,8 @@ lcb_S32 lcb_get_num_nodes(lcb_t instance);
 LIBCOUCHBASE_API
 const char *const *lcb_get_server_list(lcb_t instance);
 
+/**@}*/
+
 /**
  * @brief Check if instance is blocked in the event loop
  * @param instance the instance to run the event loop for.
@@ -2846,6 +2852,13 @@ const char *const *lcb_get_server_list(lcb_t instance);
  */
 LIBCOUCHBASE_API
 int lcb_is_waiting(lcb_t instance);
+
+
+/**@name Modifying Settings
+ * The lcb_cntl() function and its various helpers are the means by which to
+ * modify settings within the library
+ * @{
+ */
 
 /**
  * This function exposes an ioctl/fcntl-like interface to read and write
@@ -2881,6 +2894,7 @@ int lcb_is_waiting(lcb_t instance);
  *      command.
  *
  * @committed
+ *
  * @see lcb_cntl_setu32()
  * @see lcb_cntl_string()
  */
@@ -2919,9 +2933,10 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
  *   The latter
  *   will only enable inbound compression but will not compress outgoing
  *   data. See @ref LCB_CNTL_COMPRESSION_OPTS
- * * `ca_path`. See @ref LCB_CNTL_CACERT
+ * * `ca_path`. See @ref LCB_CNTL_SSL_CACERT
  *
  * @committed
+ *
  * @see lcb_cntl()
  */
 LIBCOUCHBASE_API
@@ -2959,8 +2974,8 @@ lcb_U32 lcb_cntl_getu32(lcb_t instance, int cmd);
 LIBCOUCHBASE_API
 int
 lcb_cntl_exists(int ctl);
-
-/**@}*/
+/**@}*/ /* settings */
+/**@}*/ /* lcbt_info */
 
 /**
  * @ingroup LCB_PUBAPI

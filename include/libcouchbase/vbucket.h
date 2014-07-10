@@ -409,7 +409,7 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
  * @brief Generate a sample configuration used for testing.
  * @param vb a new configuration object returned via lcbvb_create()
  * @param nservers how many nodes to place into the configuration
- * @param nrepl how many replicas should be assigned to the bucket
+ * @param nreplica how many replicas should be assigned to the bucket
  * @param nvbuckets how many vbuckets to create
  * @return 0 on success, nonzero on error
  *

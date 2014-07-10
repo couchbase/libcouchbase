@@ -129,7 +129,7 @@ INLINE_INHERITED_MEMB  = NO
 # path before files name in the file list and in the header files. If set
 # to NO the shortest path that makes the file name unique will be used.
 
-FULL_PATH_NAMES        = YES
+FULL_PATH_NAMES        = NO
 
 # If the FULL_PATH_NAMES tag is set to YES then the STRIP_FROM_PATH tag
 # can be used to strip a user-defined part of the path. Stripping is
@@ -973,7 +973,7 @@ HTML_TIMESTAMP         = YES
 # documentation will contain sections that can be hidden and shown after the
 # page has loaded.
 
-HTML_DYNAMIC_SECTIONS  = YES
+HTML_DYNAMIC_SECTIONS  = NO
 
 # With HTML_INDEX_NUM_ENTRIES one can control the preferred number of
 # entries shown in the various tree structured indices initially; the user
@@ -1143,7 +1143,7 @@ ECLIPSE_DOC_ID         = org.doxygen.Project
 # navigation tree you can set this option to NO if you already set
 # GENERATE_TREEVIEW to YES.
 
-DISABLE_INDEX          = NO
+DISABLE_INDEX          = YES
 
 # The GENERATE_TREEVIEW tag is used to specify whether a tree-like index
 # structure should be generated to display hierarchical information.
@@ -1162,13 +1162,13 @@ GENERATE_TREEVIEW      = YES
 # documentation. Note that a value of 0 will completely suppress the enum
 # values from appearing in the overview section.
 
-ENUM_VALUES_PER_LINE   = 4
+ENUM_VALUES_PER_LINE   = 0
 
 # If the treeview is enabled (see GENERATE_TREEVIEW) then this tag can be
 # used to set the initial width (in pixels) of the frame in which the tree
 # is shown.
 
-TREEVIEW_WIDTH         = 250
+TREEVIEW_WIDTH         = 150
 
 # When the EXT_LINKS_IN_WINDOW option is set to YES doxygen will open
 # links to external symbols imported via tag files in a separate window.
@@ -1224,7 +1224,7 @@ MATHJAX_EXTENSIONS     =
 # typically be disabled. For large projects the javascript based search engine
 # can be slow, then enabling SERVER_BASED_SEARCH may provide a better solution.
 
-SEARCHENGINE           = YES
+SEARCHENGINE           = NO
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be
 # implemented using a PHP enabled web server instead of at the web client

@@ -774,7 +774,7 @@ typedef struct lcb_MULTICMD_CTX_st {
     void (*fail)(struct lcb_MULTICMD_CTX_st *ctx);
 } lcb_MULTICMD_CTX;
 
-/**@name Retrieve ('observe) replication and persistence status about an item
+/**@name Retrieve replication and persistence status about an item
  * @{
  */
 
@@ -937,11 +937,12 @@ lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
  * have been received, the callback will be invoked once more with the
  * LCB_RESP_F_FINAL flag and an empty content. */
 
-#define LCB_CMDHTTP_F_STREAM 1<<16
 /**
  * @name Perform an HTTP operation
  * @{
  */
+
+#define LCB_CMDHTTP_F_STREAM 1<<16
 
 /**
  * Structure for performing an HTTP request.
@@ -995,6 +996,7 @@ typedef struct {
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd);
+/**@}*/
 
 /**@}*/
 #ifdef __cplusplus
