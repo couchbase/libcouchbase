@@ -45,6 +45,9 @@ typedef struct lcb_KEYBUF {
     lcb_CONTIGBUF contig;
 } lcb_KEYBUF;
 
+/**@private*/
+#define LCB_KEYBUF_IS_EMPTY(k) (k)->contig.nbytes == 0
+
 /**
  * @brief Initialize a contiguous request backed by a buffer which should be
  * copied

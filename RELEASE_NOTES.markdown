@@ -51,6 +51,9 @@ bugfixes. Do not forget to update this doc in every important patch.
   effectively a busy loop. This would be reflected in higher CPU load and less
   throughput during topology changes.
 
+* [major] Return error if empty key is passed to an operation. Empty keys will
+  cause the server to drop the connection.
+  The error code returned is the newly added `LCB_EMPTY_KEY`
 
 
 ## 2.4.0-dp1 (2014-06-18)

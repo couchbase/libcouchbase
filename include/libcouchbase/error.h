@@ -382,7 +382,12 @@ typedef enum {
 
      @lcb_see_detailed_neterr  */ \
     X(LCB_ECTL_BADARG, 0x34, LCB_ERRTYPE_INPUT, \
-      "Argument passed to cntl was badly formatted")
+      "Argument passed to cntl was badly formatted") \
+    \
+    /**An empty key was passed to an operation. Most commands do not accept
+      empty keys. */ \
+    X(LCB_EMPTY_KEY, 0x35, LCB_ERRTYPE_INPUT, \
+      "An empty key was passed to an operation")
 
 /** Error codes returned by the library. */
 typedef enum {

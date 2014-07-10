@@ -95,6 +95,10 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
     protocol_binary_request_set scmd;
     protocol_binary_request_header *hdr = &scmd.message.header;
 
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     err = get_esize_and_opcode(
             cmd->operation, &hdr->request.opcode, &hdr->request.extlen);
     if (err != LCB_SUCCESS) {

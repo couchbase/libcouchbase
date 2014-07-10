@@ -499,6 +499,10 @@ dset_ctx_add(lcb_MULTICMD_CTX *mctx, const lcb_CMDBASE *cmd)
     lcb_DURSET *dset = CTX_FROM_MULTI(mctx);
     lcb_DURITEM *ent;
 
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     /* ensure we have enough space first */
     if (dset->nentries == 0) {
         /* First entry. Optimize */

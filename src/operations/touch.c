@@ -27,6 +27,10 @@ lcb_touch3(lcb_t instance, const void *cookie, const lcb_CMDTOUCH *cmd)
     mc_PACKET *pkt;
     lcb_error_t err;
 
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     err = mcreq_basic_packet(&instance->cmdq, cmd, hdr, 4, &pkt, &pl);
     if (err != LCB_SUCCESS) {
         return err;

@@ -863,3 +863,50 @@ TEST_F(MockUnitTest, testGetHostInfo)
 
     lcb_destroy(instance);
 }
+
+TEST_F(MockUnitTest, testEmptyKeys)
+{
+    lcb_t instance;
+    HandleWrap hw;
+    createConnection(hw, instance);
+
+    union {
+        lcb_CMDGET get;
+        lcb_CMDSTORE store;
+        lcb_CMDCOUNTER counter;
+        lcb_CMDENDURE endure;
+        lcb_CMDOBSERVE observe;
+        lcb_CMDTOUCH touch;
+        lcb_CMDUNLOCK unlock;
+        lcb_CMDGETREPLICA rget;
+        lcb_CMDBASE base;
+        lcb_CMDSTATS stats;
+    } u;
+    memset(&u, 0, sizeof u);
+
+    lcb_sched_enter(instance);
+
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_get3(instance, NULL, &u.get));
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_store3(instance, NULL, &u.store));
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_counter3(instance, NULL, &u.counter));
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_touch3(instance, NULL, &u.touch));
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_unlock3(instance, NULL, &u.unlock));
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_rget3(instance, NULL, &u.rget));
+
+    // Observe and such
+    lcb_MULTICMD_CTX *ctx = lcb_observe3_ctxnew(instance);
+    ASSERT_EQ(LCB_EMPTY_KEY, ctx->addcmd(ctx, &u.observe));
+    ctx->fail(ctx);
+
+    lcb_durability_opts_t dopts;
+    memset(&dopts, 0, sizeof dopts);
+    dopts.v.v0.persist_to = 1;
+
+    ctx = lcb_endure3_ctxnew(instance, &dopts, NULL);
+    ASSERT_TRUE(ctx != NULL);
+    ASSERT_EQ(LCB_EMPTY_KEY, ctx->addcmd(ctx, &u.endure));
+    ctx->fail(ctx);
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_stats3(instance, NULL, &u.stats));
+    lcb_sched_fail(instance);
+}

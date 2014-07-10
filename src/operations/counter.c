@@ -31,6 +31,10 @@ lcb_counter3(
     protocol_binary_request_incr acmd;
     protocol_binary_request_header *hdr = &acmd.message.header;
 
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     err = mcreq_basic_packet(
             q, (const lcb_CMDBASE *)cmd, hdr, 20, &packet, &pipeline);
 

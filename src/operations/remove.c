@@ -28,6 +28,10 @@ lcb_remove3(lcb_t instance, const void *cookie, const lcb_CMDREMOVE * cmd)
     lcb_error_t err;
     protocol_binary_request_header hdr;
 
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     err = mcreq_basic_packet(cq, cmd, &hdr, 0, &pkt, &pl);
     if (err != LCB_SUCCESS) {
         return err;

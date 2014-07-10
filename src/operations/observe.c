@@ -142,6 +142,10 @@ obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
     lcb_t instance = ctx->instance;
     mc_CMDQUEUE *cq = &instance->cmdq;
 
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     if (cq->config == NULL) {
         return LCB_CLIENT_ETMPFAIL;
     }

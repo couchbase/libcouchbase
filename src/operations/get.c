@@ -32,6 +32,10 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
     protocol_binary_request_gat gcmd;
     protocol_binary_request_header *hdr = &gcmd.message.header;
 
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     if (cmd->lock) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GET_LOCKED;
@@ -108,8 +112,12 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
     mc_PACKET *pkt;
     mc_REQDATA *rd;
     lcb_error_t err;
-
     protocol_binary_request_header hdr;
+
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
+
     err = mcreq_basic_packet(cq, cmd, &hdr, 0, &pkt, &pl);
     if (err != LCB_SUCCESS) {
         return err;
@@ -242,6 +250,10 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     protocol_binary_request_header req;
     unsigned r0, r1;
     rget_cookie *rck = NULL;
+
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
+        return LCB_EMPTY_KEY;
+    }
 
     mcreq_extract_hashkey(&cmd->key, &cmd->hashkey, MCREQ_PKT_BASESIZE, &hk, &nhk);
     vbid = lcbvb_k2vb(cq->config, hk, nhk);
