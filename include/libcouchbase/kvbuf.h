@@ -1,5 +1,12 @@
 #ifndef LCB_KVBUF_H
 #define LCB_KVBUF_H
+
+/**
+ * @file
+ *
+ * Low level structures used by commands for buffers.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
