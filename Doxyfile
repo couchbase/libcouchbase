@@ -210,6 +210,7 @@ ALIASES += "volatile=\par Stability\n\xrefitem lcb_apiattr_volatile \"Volatile\"
 ALIASES += "commited=committed"
 ALIASES += "uncommited=uncommitted"
 ALIASES += "uncomitted=uncommitted"
+ALIASES += "lcb_see_detailed_neterr=\n\note This error code is returned only if \ref LCB_CNTL_DETAILED_ERRCODES is set\n"
 
 # Make the lcb_cntl documentation less wordy in the header
 ALIASES += "cntl_arg_both{1}=@par Argument\nModes|Arg\n---|---\nGet, Set|\1\n"
@@ -1546,7 +1547,7 @@ PREDEFINED             = LCB_CREATE_V2_FIELDS= \
 # Use the PREDEFINED tag if you want to use a different macro definition that
 # overrules the definition found in the source code.
 
-EXPAND_AS_DEFINED      = LCB_XERR \
+EXPAND_AS_DEFINED      = LCB_XERR X \
                          LCB_CMD_BASE \
                          LCB_OBSERVE_FIELDS_COMMON LCB_RESP_BASE LCB_CMD_BASE LCB_RESP_SERVER_FIELDS
 
