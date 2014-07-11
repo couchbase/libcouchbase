@@ -3,6 +3,7 @@
 #include "timer-ng.h"
 #include "ioutils.h"
 #include <stdio.h>
+#include <lcbio/ssl.h>
 
 #define CTX_FD(ctx) (ctx)->fd
 #define CTX_SD(ctx) (ctx)->sd
@@ -37,6 +38,14 @@ convert_lcberr(const lcbio_CTX *ctx, lcbio_IOSTATUS status)
 {
     const lcb_settings *settings = ctx->sock->settings;
     lcbio_OSERR oserr = IOT_ERRNO(ctx->sock->io);
+
+    if (lcbio_ssl_check(ctx->sock)) {
+        lcb_error_t err = lcbio_ssl_get_error(ctx->sock);
+        if (err) {
+            return err;
+        }
+    }
+
     if (status == LCBIO_SHUTDOWN) {
         return lcbio_mklcberr(0, settings);
     } else if (oserr != 0) {

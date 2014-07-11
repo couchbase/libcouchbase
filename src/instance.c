@@ -186,6 +186,7 @@ setup_ssl(lcb_t obj, lcb_CONNSPEC *params)
     char optbuf[4096];
     int env_policy = -1;
     lcb_settings *settings = obj->settings;
+    lcb_error_t err;
 
     if (lcb_getenv_nonempty("LCB_SSL_CACERT", optbuf, sizeof optbuf)) {
         lcb_log(LOGARGS(obj, INFO), "SSL CA certificate %s specified on environment", optbuf);
@@ -213,9 +214,9 @@ setup_ssl(lcb_t obj, lcb_CONNSPEC *params)
     if (settings->sslopts & LCB_SSL_ENABLED) {
         lcbio_ssl_global_init();
         settings->ssl_ctx = lcbio_ssl_new(settings->capath,
-            settings->sslopts & LCB_SSL_NOVERIFY);
+            settings->sslopts & LCB_SSL_NOVERIFY, &err, settings);
         if (!settings->ssl_ctx) {
-            return LCB_EINTERNAL;
+            return err;
         }
     }
     return LCB_SUCCESS;

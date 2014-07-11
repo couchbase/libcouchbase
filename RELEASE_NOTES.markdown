@@ -2,6 +2,11 @@
 
 ## 2.4.0-beta
 
+* [major] Better error reporting for SSL failures.
+  This adds new error codes (`LCB_SSL_ERROR`, `LCB_SSL_CANTVERIFY`)
+  which are returned on initialization and verification failures
+  respectively.
+
 * [minor] Communication via legacy memcached servers is possible
   by using the `memcached://` scheme in the connection string.
 

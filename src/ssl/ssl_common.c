@@ -120,6 +120,40 @@ iotssl_log_errors(lcbio_XSSL *xs)
         char errbuf[4096];
         ERR_error_string_n(curerr, errbuf, sizeof errbuf);
         lcb_log(LOGARGS(xs->ssl, LCB_LOG_ERROR), "%s", errbuf);
+
+        if (xs->errcode != LCB_SUCCESS) {
+            continue; /* Already set */
+        }
+
+        if (ERR_GET_LIB(curerr) == ERR_LIB_SSL) {
+            switch (ERR_GET_REASON(curerr)) {
+            case SSL_R_CERTIFICATE_VERIFY_FAILED:
+            case SSL_R_MISSING_VERIFY_MESSAGE:
+                xs->errcode = LCB_SSL_CANTVERIFY;
+                break;
+
+            case SSL_R_BAD_PROTOCOL_VERSION_NUMBER:
+            case SSL_R_UNKNOWN_PROTOCOL:
+            case SSL_R_WRONG_VERSION_NUMBER:
+            case SSL_R_UNKNOWN_SSL_VERSION:
+            case SSL_R_UNSUPPORTED_SSL_VERSION:
+                xs->errcode = LCB_PROTOCOL_ERROR;
+                break;
+            default:
+                xs->errcode = LCB_SSL_ERROR;
+            }
+        }
+    }
+}
+
+static void
+log_global_errors(lcb_settings *settings)
+{
+    unsigned long curerr;
+    while ((curerr = ERR_get_error())) {
+        char errbuf[4096];
+        ERR_error_string_n(curerr, errbuf, sizeof errbuf);
+        lcb_log(settings, "SSL", LCB_LOG_ERROR, __FILE__, __LINE__, "SSL Error: %ld, %s", curerr, errbuf);
     }
 }
 
@@ -171,15 +205,35 @@ struct lcbio_SSLCTX {
 };
 
 lcbio_pSSLCTX
-lcbio_ssl_new(const char *cafile, int noverify)
+lcbio_ssl_new(const char *cafile, int noverify, lcb_error_t *errp,
+    lcb_settings *settings)
 {
-    lcbio_pSSLCTX ret = calloc(1, sizeof(*ret));
+    lcb_error_t err_s;
+    lcbio_pSSLCTX ret;
+
+    if (!errp) {
+        errp = &err_s;
+    }
+
+    ret = calloc(1, sizeof(*ret));
+    if (!ret) {
+        *errp = LCB_CLIENT_ENOMEM;
+        goto GT_ERR;
+    }
     ret->ctx = SSL_CTX_new(SSLv3_client_method());
-    assert(ret->ctx);
+    if (!ret->ctx) {
+        *errp = LCB_SSL_ERROR;
+        goto GT_ERR;
+
+    }
 
     if (cafile) {
-        SSL_CTX_load_verify_locations(ret->ctx, cafile, NULL);
+        if (!SSL_CTX_load_verify_locations(ret->ctx, cafile, NULL)) {
+            *errp = LCB_SSL_ERROR;
+            goto GT_ERR;
+        }
     }
+
     if (noverify) {
         SSL_CTX_set_verify(ret->ctx, SSL_VERIFY_NONE, NULL);
     } else {
@@ -200,6 +254,16 @@ lcbio_ssl_new(const char *cafile, int noverify)
      */
     SSL_CTX_set_mode(ret->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
     return ret;
+
+    GT_ERR:
+    log_global_errors(settings);
+    if (ret) {
+        if (ret->ctx) {
+            SSL_CTX_free(ret->ctx);
+        }
+        free(ret);
+    }
+    return NULL;
 }
 
 static void
@@ -239,6 +303,13 @@ int
 lcbio_ssl_check(lcbio_SOCKET *sock)
 {
     return lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SSL) != NULL;
+}
+
+lcb_error_t
+lcbio_ssl_get_error(lcbio_SOCKET *socket)
+{
+    lcbio_XSSL *xs = (lcbio_XSSL *)socket->io;
+    return xs->errcode;
 }
 
 void

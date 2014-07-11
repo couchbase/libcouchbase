@@ -387,7 +387,21 @@ typedef enum {
     /**An empty key was passed to an operation. Most commands do not accept
       empty keys. */ \
     X(LCB_EMPTY_KEY, 0x35, LCB_ERRTYPE_INPUT, \
-      "An empty key was passed to an operation")
+      "An empty key was passed to an operation") \
+    \
+    /** A problem with the SSL system was encountered. Use logging to discover
+     what happened. This error will only be thrown if something internal to the
+     SSL library failed (for example, a bad certificate or bad user input);
+     otherwise a network error will be thrown if an SSL connection was terminated */ \
+    X(LCB_SSL_ERROR, 0x36, LCB_ERRTYPE_FATAL, \
+      "A generic error related to the SSL subsystem was encountered. Enable logging " \
+      "to see more details") \
+    \
+    /** The certificate the server sent cannot be verified. This is a possible
+     case of a man-in-the-middle attack, but also of forgetting to supply
+     the path to the CA authority to the library. */ \
+    X(LCB_SSL_CANTVERIFY, 0x37, LCB_ERRTYPE_FATAL, \
+      "Client could not verify server's certificate")
 
 /** Error codes returned by the library. */
 typedef enum {
