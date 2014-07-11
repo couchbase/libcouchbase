@@ -340,10 +340,9 @@ EXTRA_DIST += CONTRIBUTING.md LICENSE README.markdown \
               RELEASE_NOTES.markdown \
               include/libcouchbase/configuration.h.in \
               include/memcached/README include/memcached/COPYING \
-              doc/manout \
               tests/start_mock.sh \
               win32 \
-              VERSION \
+              VERSION src/probes.d \
               $(man_MANS)
 
 if HAVE_DOXYGEN
