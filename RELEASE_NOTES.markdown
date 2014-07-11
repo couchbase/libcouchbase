@@ -1,8 +1,5 @@
 # Release Notes
 
-This document is a list of user visible feature changes and important
-bugfixes. Do not forget to update this doc in every important patch.
-
 ## 2.4.0-beta
 
 * [minor] Communication via legacy memcached servers is possible
