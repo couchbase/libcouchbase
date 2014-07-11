@@ -1036,6 +1036,12 @@ parseCommandname(string& cmdname, int& argc, char**& argv)
     cmdname = basename(argv[0]);
     size_t dashpos;
 
+    if (cmdname.find("cbc") != 0) {
+        cmdname.clear();
+        // Doesn't start with cbc
+        return;
+    }
+
     if ((dashpos = cmdname.find('-')) != string::npos &&
             cmdname.find("cbc") != string::npos &&
             dashpos+1 < cmdname.size()) {
