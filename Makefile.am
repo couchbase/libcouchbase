@@ -214,6 +214,13 @@ endif
 
 distclean-local:
 	@rm -rf gtest-1.7.0
+	$(MAKE) -f doc/Makefile clean || true
+
+doc-public:
+	$(MAKE) -f doc/Makefile public
+
+doc-internal:
+	$(MAKE) -f doc/Makefile internal
 
 if !HAVE_GOOGLETEST_SRC
 endif
