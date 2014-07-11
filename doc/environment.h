@@ -79,8 +79,7 @@
  * @section LCB_INTERNAL_ENVVARS Internal Environment Variables
  *
  * @note
- * (If you don't see anything here, it's because you haven't built the internal
- * documentation :) )
+ * This section will appear empty unless you have built internal documentation.
  *
  * @internal
  *
