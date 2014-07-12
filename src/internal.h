@@ -134,13 +134,6 @@ extern "C" {
     #define LCBT_GET_SERVER(instance, ix) (mc_SERVER *)(instance)->cmdq.pipelines[ix]
     #define LCBT_SETTING(instance, name) (instance)->settings->name
 
-
-    lcb_error_t lcb_error_handler(lcb_t instance,
-                                  lcb_error_t error,
-                                  const char *errinfo);
-    /**
-     * Returns true if this server has pending I/O on it
-     */
     void lcb_initialize_packet_handlers(lcb_t instance);
     void lcb_record_metrics(lcb_t instance, hrtime_t delta,lcb_uint8_t opcode);
 

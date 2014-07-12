@@ -93,8 +93,7 @@ static void initial_bootstrap_error(lcb_t instance,
     if (instance->last_error == LCB_SUCCESS) {
         instance->last_error = err;
     }
-
-    lcb_error_handler(instance, instance->last_error, errinfo);
+    instance->callbacks.error(instance, instance->last_error, errinfo);
     lcb_log(LOGARGS(instance, ERR), "Failed to bootstrap client=%p. Code=0x%x, Message=%s", (void *)instance, err, errinfo);
     lcbio_timer_disarm(bs->tm);
 

@@ -16,59 +16,8 @@
  */
 #include "internal.h"
 
-/**
- * Project-wide error handling.
- *
- * @author William Bowers
- */
-
-/**
- * Returns the last error that was seen within libcoubhase.
- *
- * @param instance the connection whose last error should be returned.
- */
 LIBCOUCHBASE_API
-lcb_error_t lcb_get_last_error(lcb_t instance)
-{
-    return instance->last_error;
-}
-
-/**
- * Called when an error occurs.
- *
- * This returns the error it was given so you can return it from a function
- * in 1 line:
- *
- *     return lcb_error_handler(instance, LCB_ERROR,
- *                                       "Something was wrong");
- *
- * rather than 3:
- *
- *     lcb_error_t error = LCB_ERROR;
- *     lcb_error_handler(instance, error, "Something was wrong");
- *     return error;
- *
- * @param instance the connection the error occurred on.
- * @param error the error that occurred.
- * @param errinfo the error description
- * @return the error that occurred.
- */
-lcb_error_t lcb_error_handler(lcb_t instance, lcb_error_t error,
-                              const char *errinfo)
-{
-    /* Set the last error value so it can be access without needing an
-    ** error callback.
-    */
-    instance->last_error = error;
-
-    /* TODO: Should we call the callback anyway, even if it's a SUCCESS? */
-    if (error != LCB_SUCCESS) {
-        /* Call the user's error callback. */
-        instance->callbacks.error(instance, error, errinfo);
-    }
-
-    return error;
-}
+lcb_error_t lcb_get_last_error(lcb_t instance){return instance->last_error;}
 
 LIBCOUCHBASE_API
 const char *lcb_strerror(lcb_t instance, lcb_error_t error)
