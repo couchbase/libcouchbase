@@ -14,13 +14,6 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
-
-/**
- * This file contains the functions to create / destroy the libcouchbase instance
- *
- * @author Trond Norbye
- * @todo add more documentation
- */
 #include "internal.h"
 #include "connspec.h"
 #include "logging.h"
@@ -31,16 +24,6 @@
 #include <lcbio/ssl.h>
 #define LOGARGS(obj,lvl) (obj)->settings, "instance", LCB_LOG_##lvl, __FILE__, __LINE__
 
-/**
- * Get the version of the library.
- *
- * @param version where to store the numeric representation of the
- *         version (or NULL if you don't care)
- *
- * @return the textual description of the version ('\0'
- *          terminated). Do <b>not</b> try to release this string.
- *
- */
 static volatile unsigned int lcb_instance_index = 0;
 
 LIBCOUCHBASE_API
@@ -53,29 +36,12 @@ const char *lcb_get_version(lcb_uint32_t *version)
     return LCB_VERSION_STRING;
 }
 
-/**
- * Associate a "cookie" with an instance of libcouchbase. You may only store
- * <b>one</b> cookie with each instance of libcouchbase.
- *
- * @param instance the instance to associate the cookie with
- * @param cookie the cookie to associate with this instance.
- *
- * @author Trond Norbye
- */
 LIBCOUCHBASE_API
 void lcb_set_cookie(lcb_t instance, const void *cookie)
 {
     instance->cookie = cookie;
 }
 
-/**
- * Get the cookie associated with a given instance of libcouchbase.
- *
- * @param instance the instance to query
- * @return The cookie associated with this instance.
- *
- * @author Trond Norbye
- */
 LIBCOUCHBASE_API
 const void *lcb_get_cookie(lcb_t instance)
 {
