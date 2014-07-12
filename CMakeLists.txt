@@ -134,10 +134,10 @@ INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
 # be considered as 'static'
 ADD_LIBRARY(couchbase_utils STATIC
             contrib/cJSON/cJSON.c
+            contrib/genhash/genhash.c
             src/strcodecs/base64.c
             src/strcodecs/url_encoding.c
             src/gethrtime.c
-            src/genhash.c
             src/hashtable.c
             src/hashset.c
             src/hostlist.c

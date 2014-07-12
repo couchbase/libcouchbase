@@ -99,7 +99,7 @@ my %tmp = map { $_ => 1 } @PKGINCLUDE_HEADERS;
 # @PKGINCLUDE_HEADERS = grep { $_ !~ /configuration\.h/ } @PKGINCLUDE_HEADERS;
 
 print $ofp "pkginclude_HEADERS = ".fmt_filelist(@PKGINCLUDE_HEADERS)."\n";
-my @LCB_SOURCES = (find_srcfiles("src"), find_srcfiles("plugins/io/select"));
+my @LCB_SOURCES = (find_srcfiles("src"), find_srcfiles("plugins/io/select"), find_srcfiles("contrib/genhash"));
 
 # Filter out libraries we're gonna build later on
 @LCB_SOURCES = grep { $_ !~ m,src/ssl, && $_ !~ m,src/lcbht, } @LCB_SOURCES;
@@ -143,7 +143,8 @@ add_target_with_sources("liblcbtools", "tools/common", [find_srcfiles("contrib/c
 print $ofp "endif\nendif\n";
 
 my @CBUTIL_SOURCES = qw(contrib/cJSON/cJSON.c src/strcodecs/base64.c
-    src/strcodecs/url_encoding.c src/gethrtime.c src/genhash.c src/hashtable.c
+    src/strcodecs/url_encoding.c src/gethrtime.c contrib/genhash/genhash.c
+    contrib/genhash/genhash.h src/hashtable.c
     src/hashset.c src/hostlist.c src/list.c src/logging.c src/packetutils.c
     src/ringbuffer.c src/simplestring.c);
 

@@ -41,7 +41,6 @@
 #include "mcserver/mcserver.h"
 #include "mc/mcreq.h"
 #include "settings.h"
-#include "genhash.h"
 
 /* lcb_t-specific includes */
 #include "retryq.h"
