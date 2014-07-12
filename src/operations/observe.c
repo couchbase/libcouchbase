@@ -46,7 +46,7 @@ handle_observe_callback(
 {
     OBSERVECTX *oc = (void *)pkt->u_rdata.exdata;
     lcb_RESPOBSERVE *resp = (void *)arg;
-    lcb_server_t *server = (lcb_server_t *)pl;
+    mc_SERVER *server = (mc_SERVER *)pl;
     lcb_t instance = server->instance;;
 
     if (resp == NULL) {

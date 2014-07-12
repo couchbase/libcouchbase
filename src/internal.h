@@ -131,7 +131,7 @@ extern "C" {
     #define LCBT_VBCONFIG(instance) (instance)->cmdq.config
     #define LCBT_NSERVERS(instance) (instance)->cmdq.npipelines
     #define LCBT_NREPLICAS(instance) (instance)->nreplicas
-    #define LCBT_GET_SERVER(instance, ix) (lcb_server_t *)(instance)->cmdq.pipelines[ix]
+    #define LCBT_GET_SERVER(instance, ix) (mc_SERVER *)(instance)->cmdq.pipelines[ix]
     #define LCBT_SETTING(instance, name) (instance)->settings->name
 
 
@@ -204,17 +204,17 @@ extern "C" {
 
 
     LCB_INTERNAL_API
-    lcb_server_t *
+    mc_SERVER *
     lcb_find_server_by_host(lcb_t instance, const lcb_host_t *host);
 
 
     LCB_INTERNAL_API
-    lcb_server_t *
+    mc_SERVER *
     lcb_find_server_by_index(lcb_t instance, int ix);
 
     LCB_INTERNAL_API
     lcb_error_t
-    lcb_getconfig(lcb_t instance, const void *cookie, lcb_server_t *server);
+    lcb_getconfig(lcb_t instance, const void *cookie, mc_SERVER *server);
 
     int
     lcb_should_retry(lcb_settings *settings, mc_PACKET *pkt, lcb_error_t err);

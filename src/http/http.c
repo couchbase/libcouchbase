@@ -221,11 +221,11 @@ void lcb_http_request_finish(lcb_t instance, lcb_http_request_t req,
     lcb_http_request_decref(req);
 }
 
-static lcb_server_t *get_view_node(lcb_t instance)
+static mc_SERVER *get_view_node(lcb_t instance)
 {
     /* pick random server */
     lcb_size_t nn, nn_limit;
-    lcb_server_t *server;
+    mc_SERVER *server;
 
     nn = (lcb_size_t)(gethrtime() >> 10) % LCBT_NSERVERS(instance);
     nn_limit = nn;

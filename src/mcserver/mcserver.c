@@ -112,7 +112,7 @@ mcserver_flush(mc_SERVER *server)
  * user.
  */
 static int
-handle_nmv(lcb_server_t *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
+handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
 {
     mc_PACKET *newpkt;
     protocol_binary_request_header hdr;
@@ -332,7 +332,7 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
 }
 
 static int
-purge_single_server(lcb_server_t *server, lcb_error_t error,
+purge_single_server(mc_SERVER *server, lcb_error_t error,
                     hrtime_t thresh, hrtime_t *next, int policy)
 {
     unsigned affected;

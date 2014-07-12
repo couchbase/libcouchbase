@@ -16,7 +16,7 @@ struct lcb_server_st;
 /**
  * The structure representing each couchbase server
  */
-typedef struct lcb_server_st {
+typedef struct {
     /** Pipeline object for command queues */
     mc_PIPELINE pipeline;
 
@@ -48,7 +48,7 @@ typedef struct lcb_server_st {
 
     /** Request for current connection */
     lcb_host_t *curhost;
-} lcb_server_t, mc_SERVER;
+} mc_SERVER;
 
 #define MCSERVER_TIMEOUT(c) (c)->settings->operation_timeout
 

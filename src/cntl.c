@@ -186,7 +186,7 @@ static lcb_error_t conninfo(int mode, lcb_t instance, int cmd, void *arg)
     }
 
     if (cmd == LCB_CNTL_MEMDNODE_INFO) {
-        lcb_server_t *server;
+        mc_SERVER *server;
         int ix = si->v.v0.index;
         if (ix < 0 || ix > (int)LCBT_NSERVERS(instance)) {
             return LCB_ECTL_BADARG;

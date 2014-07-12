@@ -93,7 +93,7 @@ static void release_socket(cccp_provider *cccp, int can_reuse)
 static lcb_error_t
 schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
 {
-    lcb_server_t *server;
+    mc_SERVER *server;
     lcb_host_t *next_host = hostlist_shift_next(cccp->nodes, can_rollover);
     if (!next_host) {
         lcbio_timer_disarm(cccp->timer);

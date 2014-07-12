@@ -27,7 +27,7 @@ static void
 stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
 {
     bcast_cookie *ck = (bcast_cookie *)req->u_rdata.exdata;
-    lcb_server_t *server = (lcb_server_t *)pl;
+    mc_SERVER *server = (mc_SERVER *)pl;
     lcb_RESPSTATS *resp = (void *)arg;
     char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
     lcb_RESPCALLBACK callback;
@@ -112,7 +112,7 @@ static void
 handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
              const void *arg)
 {
-    lcb_server_t *server = (lcb_server_t *)pipeline;
+    mc_SERVER *server = (mc_SERVER *)pipeline;
     char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
     bcast_cookie *ck = (bcast_cookie *)req->u_rdata.exdata;
     lcb_RESPCALLBACK callback;
@@ -240,7 +240,7 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;
         mc_PIPELINE *pl = cq->pipelines[ii];
-        lcb_server_t *server = (lcb_server_t *)pl;
+        mc_SERVER *server = (mc_SERVER *)pl;
         char cmpbuf[NI_MAXHOST + NI_MAXSERV + 4];
         protocol_binary_request_verbosity vcmd;
         protocol_binary_request_header *hdr = &vcmd.message.header;
