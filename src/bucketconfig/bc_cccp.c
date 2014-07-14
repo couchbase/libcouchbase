@@ -206,6 +206,11 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
     cccp_cookie *ck = (cccp_cookie *)cookie;
     cccp_provider *cccp = ck->parent;
 
+    if (ck == cccp->cmdcookie) {
+        lcbio_timer_disarm(cccp->timer);
+        cccp->cmdcookie = NULL;
+    }
+
     if (err == LCB_SUCCESS) {
         lcb_string ss;
 
@@ -213,18 +218,10 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
         lcb_string_append(&ss, bytes, nbytes);
         err = lcb_cccp_update(&cccp->base, origin->host, &ss);
         lcb_string_release(&ss);
-
-        if (err != LCB_SUCCESS && ck->ignore_errors == 0) {
-            mcio_error(cccp, err);
-        }
-
-
-    } else if (!ck->ignore_errors) {
-        mcio_error(cccp, err);
     }
 
-    if (ck == cccp->cmdcookie) {
-        cccp->cmdcookie = NULL;
+    if (err != LCB_SUCCESS && ck->ignore_errors == 0) {
+        mcio_error(cccp, err);
     }
 
     free(ck);

@@ -56,6 +56,9 @@
   API error is encountered (from one of the HTTP callback functions). This
   adds the `LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR` setting.
 
+* [major] Fix bug where the CCCP provider may prematurely fail, activating the
+  HTTP provider
+
 
 ## 2.4.0-dp1 (2014-06-18)
 

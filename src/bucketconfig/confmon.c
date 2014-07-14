@@ -197,6 +197,9 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
         lcb_log(LOGARGS(mon, TRACE), "Ignoring failure. Current=%p (%s)", (void*)mon->cur_provider, provider_string(mon->cur_provider->type));
         return;
     }
+    if (!lcb_confmon_is_refreshing(mon)) {
+        lcb_log(LOGARGS(mon, DEBUG), "Ignoring failure. Refresh not active");
+    }
 
     if (reason != LCB_SUCCESS) {
         mon->last_error = reason;
@@ -398,11 +401,7 @@ clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon)
 LCB_INTERNAL_API
 int lcb_confmon_is_refreshing(lcb_confmon *mon)
 {
-    if(IS_REFRESHING(mon)) {
-        LOG(mon, DEBUG, "Refresh already in progress...");
-        return 1;
-    }
-    return 0;
+    return IS_REFRESHING(mon);
 }
 
 LCB_INTERNAL_API
