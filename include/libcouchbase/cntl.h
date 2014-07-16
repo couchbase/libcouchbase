@@ -669,7 +669,7 @@ typedef enum {
  * parameter for a server of a lower version (or a mixed environment) is not
  * supported.
  *
- * @cntl_arg_both{lcb_SSLOPTS*}
+ * @cntl_arg_getonly{`int*` (value is one of @ref lcb_SSLOPTS)}
  */
 #define LCB_CNTL_SSL_MODE 0x22
 
@@ -724,8 +724,9 @@ typedef enum {
 
 /** @brief argument for @ref LCB_CNTL_RETRYMODE */
 typedef struct {
-    lcb_RETRYMODEOPTS mode; /**< What was the trigger that induced the retry */
-    lcb_RETRYCMDOPTS cmd; /**< Policy of which commands should be retried */
+    /** What was the trigger that induced the retry. See @ref lcb_RETRYMODEOPTS */
+    int mode;
+    int cmd; /**Policy of which commands should be retried. See @ref lcb_RETRYCMDOPTS*/
 } lcb_RETRYOPT;
 
 /**
@@ -770,11 +771,7 @@ typedef struct {
  * lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &opts);
  * @endcode
  *
- * @cntl_arg_both{lcb_RETRYOPT *}
- *
- * Mode|Arg
- * ----|---
- * Set, Get | lcb_RETRYOPT
+ * @cntl_arg_both{`lcb_RETRYOPT *`}
  */
 #define LCB_CNTL_RETRYMODE 0x24
 
@@ -809,7 +806,7 @@ typedef enum {
  *
  * This setting is only used when CCCP is disabled. This will typically be for
  * older clusters or for memcached buckets.
- * @cntl_arg_both{lcb_HTCONFIG_URLTYPE *}
+ * @cntl_arg_both{`int*` (value is one of @ref lcb_HTCONFIG_URLTYPE)}
  */
 #define LCB_CNTL_HTCONFIG_URLTYPE 0x25
 
@@ -872,7 +869,7 @@ typedef enum {
  * flags, the data will _never_ be compressed by the library as this is an
  * indication that it is _already_ compressed.
  *
- * @cntl_arg_both{lcb_COMPRESSOPTS *}
+ * @cntl_arg_both{`int*` (value is one of @ref lcb_COMPRESSOPTS)}
  */
 #define LCB_CNTL_COMPRESSION_OPTS 0x26
 

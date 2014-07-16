@@ -100,13 +100,13 @@ HANDLER(get_changeset) {
     (void)instance; RETURN_GET_ONLY(char*, LCB_VERSION_CHANGESET)
 }
 HANDLER(ssl_mode_handler) {
-    RETURN_GET_ONLY(lcb_SSLOPTS, LCBT_SETTING(instance, sslopts))
+    RETURN_GET_ONLY(int, LCBT_SETTING(instance, sslopts))
 }
 HANDLER(ssl_capath_handler) {
     RETURN_GET_ONLY(char*, LCBT_SETTING(instance, capath))
 }
 HANDLER(htconfig_urltype_handler) {
-    RETURN_GET_SET(lcb_HTCONFIG_URLTYPE, LCBT_SETTING(instance, bc_http_urltype));
+    RETURN_GET_SET(int, LCBT_SETTING(instance, bc_http_urltype));
 }
 HANDLER(syncdtor_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, syncdtor));
@@ -302,7 +302,7 @@ HANDLER(retrymode_handler) {
 }
 
 HANDLER(compmode_handler) {
-    lcb_COMPRESSOPTS opts_s = 0, *opt_p;
+    int opts_s = 0, *opt_p;
 
     if (mode == CNTL__MODE_SETSTRING) {
         if (!strcmp(arg, "on")) {
