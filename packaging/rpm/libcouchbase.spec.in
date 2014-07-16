@@ -1,7 +1,7 @@
 Summary: Couchbase Client & Protocol Library
 Name: libcouchbase
 Version: @VERSION@
-Release: @RELEASE@
+Release: @RELEASE@%{?dist}
 Vendor: Couchbase, Inc.
 Packager: Couchbase SDK Team <support@couchbase.com>
 License: Apache-2
