@@ -652,33 +652,23 @@ typedef enum {
 } lcb_SSLOPTS;
 
 /**
- * @brief SSL Mode
+ * @brief Get SSL Mode
  *
- * Sets the SSL policy used by the library. This should only be used before
- * the initial connection and _after_ the CA certificate (if any) has been
- * loaded (see @ref LCB_CNTL_SSL_CACERT)
- *
- * @attention
- * This option affects the `mchosts` parameter passed to lcb_create(). Any
- * host which has its port set to the value of LCB_CONFIG_MCD_PORT will be
- * replaced with the value of LCB_CONFIG_MCD_SSL_PORT. Otherwise it is assumed
- * that the ports passed are already of the SSL variant.
- *
- * @attention
- * SSL is only functional on servers versions 3.0 and higher. Setting this
- * parameter for a server of a lower version (or a mixed environment) is not
- * supported.
+ * Retrieve the SSL mode currently in use by the library. This is a read-only
+ * setting. To set the SSL mode at the library, specify the appropriate values
+ * within the connection string. See @ref lcb_create_st3 for details.
  *
  * @cntl_arg_getonly{`int*` (value is one of @ref lcb_SSLOPTS)}
  */
 #define LCB_CNTL_SSL_MODE 0x22
 
-
 /**
- * @brief SSL Certificate path
+ * @brief Get SSL Certificate path
  *
- * Sets the path on the filesystem where the server's CA certificate is located.
- * @cntl_arg_get_and_set{char**,char*}
+ * Retrieve the path to the CA certificate (if any) being used.
+ *
+ * @cntl_arg_getonly{`char**`}
+ * @see LCB_CNTL_SSL_MODE
  */
 #define LCB_CNTL_SSL_CACERT 0x23
 
