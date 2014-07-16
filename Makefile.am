@@ -341,7 +341,7 @@ uninstall-local:
 	cd $(DESTDIR)$(bindir) && $(RM) $(CBC_LINKS)
 endif
 
-EXTRA_DIST += CONTRIBUTING.md LICENSE README.markdown \
+EXTRA_DIST += LICENSE README.markdown \
               RELEASE_NOTES.markdown \
               include/libcouchbase/configuration.h.in \
               include/memcached/README include/memcached/COPYING \
