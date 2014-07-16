@@ -183,8 +183,10 @@ public:
         isInteractive = opt_interactive.result();
 
         // Jobs
-        setJobsFromEnvironment(opt_jobs.result());
+        maxJobs = opt_jobs.result();
         maxCycles = opt_cycles.result();
+        setJobsFromEnvironment();
+
 
         // Plugin list:
         splitSemicolonString(opt_plugins.result(), plugins);
@@ -246,12 +248,10 @@ private:
     cliopts::StringOption opt_bins;
     cliopts::StringOption opt_realcluster;
 
-    void setJobsFromEnvironment(int arg) {
-        maxJobs = arg;
+    void setJobsFromEnvironment() {
         char *tmp = getenv("MAKEFLAGS");
 
         if (tmp == NULL || *tmp == '\0') {
-            maxJobs = 1;
             return;
         }
 
