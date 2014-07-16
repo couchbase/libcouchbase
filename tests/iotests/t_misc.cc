@@ -17,7 +17,7 @@
 #include "config.h"
 #include "iotests.h"
 #include <map>
-
+#include <climits>
 #include "internal.h" /* vbucket_* things from lcb_t */
 #include <lcbio/iotable.h>
 #include "bucketconfig/bc_http.h"
@@ -246,4 +246,149 @@ TEST_F(MockUnitTest, testEmptyKeys)
 
     ASSERT_EQ(LCB_SUCCESS, lcb_stats3(instance, NULL, &u.stats));
     lcb_sched_fail(instance);
+}
+
+template <typename T>
+static bool ctlSet(lcb_t instance, int setting, T val)
+{
+    lcb_error_t err = lcb_cntl(instance, LCB_CNTL_SET, setting, &val);
+    return err == LCB_SUCCESS;
+}
+
+template<>
+bool ctlSet<const char*>(lcb_t instance, int setting, const char *val)
+{
+    return lcb_cntl(instance, LCB_CNTL_SET, setting, (void*)val) == LCB_SUCCESS;
+}
+
+template <typename T>
+static T ctlGet(lcb_t instance, int setting)
+{
+    T tmp;
+    lcb_error_t err = lcb_cntl(instance, LCB_CNTL_GET, setting, &tmp);
+    EXPECT_EQ(LCB_SUCCESS, err);
+    return tmp;
+}
+template <typename T>
+static void ctlGetSet(lcb_t instance, int setting, T val) {
+    EXPECT_TRUE(ctlSet<T>(instance, setting, val));
+    EXPECT_EQ(val, ctlGet<T>(instance, setting));
+}
+
+template <>
+void ctlGetSet<const char*>(lcb_t instance, int setting, const char *val)
+{
+    EXPECT_TRUE(ctlSet<const char*>(instance, setting, val));
+    EXPECT_STREQ(val, ctlGet<const char*>(instance, setting));
+}
+
+static bool ctlSetInt(lcb_t instance, int setting, int val) {
+    return ctlSet<int>(instance, setting, val);
+}
+static int ctlGetInt(lcb_t instance, int setting) {
+    return ctlGet<int>(instance, setting);
+}
+static bool ctlSetU32(lcb_t instance, int setting, lcb_U32 val) {
+    return ctlSet<lcb_U32>(instance, setting, val);
+}
+static lcb_U32 ctlGetU32(lcb_t instance, int setting) {
+    return ctlGet<lcb_U32>(instance, setting);
+}
+
+TEST_F(MockUnitTest, testCtls)
+{
+    lcb_t instance;
+    HandleWrap hw;
+    lcb_error_t err;
+    createConnection(hw, instance);
+
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_OP_TIMEOUT, UINT_MAX);
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_VIEW_TIMEOUT, UINT_MAX);
+
+    ASSERT_EQ(LCB_TYPE_BUCKET, ctlGet<lcb_type_t>(instance, LCB_CNTL_HANDLETYPE));
+    ASSERT_FALSE(ctlSet<lcb_type_t>(instance, LCB_CNTL_HANDLETYPE, LCB_TYPE_BUCKET));
+
+    lcbvb_CONFIG *cfg = ctlGet<lcbvb_CONFIG*>(instance, LCB_CNTL_VBCONFIG);
+    // Do we have a way to verify this?
+    ASSERT_FALSE(cfg == NULL);
+    ASSERT_GT(cfg->nsrv, 0);
+
+    lcb_io_opt_t io = ctlGet<lcb_io_opt_t>(instance, LCB_CNTL_IOPS);
+    ASSERT_TRUE(io == instance->getIOT()->p);
+    // Try to set it?
+    ASSERT_FALSE(ctlSet<lcb_io_opt_t>(instance, LCB_CNTL_IOPS, (lcb_io_opt_t)"Hello"));
+
+    // Map a key
+    lcb_cntl_vbinfo_t vbi = { 0 };
+    vbi.v.v0.key = "123";
+    vbi.v.v0.nkey = 3;
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBMAP, &vbi);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    // Try to modify it?
+    err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_VBMAP, &vbi);
+    ASSERT_NE(LCB_SUCCESS, err);
+
+    ctlGetSet<lcb_ipv6_t>(instance, LCB_CNTL_IP6POLICY, LCB_IPV6_DISABLED);
+    ctlGetSet<lcb_ipv6_t>(instance, LCB_CNTL_IP6POLICY, LCB_IPV6_ONLY);
+    ctlGetSet<lcb_SIZE>(instance, LCB_CNTL_CONFERRTHRESH, UINT_MAX);
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_DURABILITY_TIMEOUT, UINT_MAX);
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_DURABILITY_INTERVAL, UINT_MAX);
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_HTTP_TIMEOUT, UINT_MAX);
+    ctlGetSet<int>(instance, LCB_CNTL_IOPS_DLOPEN_DEBUG, 55);
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_CONFIGURATION_TIMEOUT, UINT_MAX);
+
+    ctlGetSet<int>(instance, LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS, 1);
+    ctlGetSet<int>(instance, LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS, 0);
+
+    ASSERT_EQ(0, ctlGetInt(instance, LCB_CNTL_CONFIG_CACHE_LOADED));
+    ASSERT_FALSE(ctlSetInt(instance, LCB_CNTL_CONFIG_CACHE_LOADED, 99));
+
+    ctlGetSet<const char*>(instance, LCB_CNTL_FORCE_SASL_MECH, "SECRET");
+
+    ctlGetSet<int>(instance, LCB_CNTL_MAX_REDIRECTS, SHRT_MAX);
+    ctlGetSet<int>(instance, LCB_CNTL_MAX_REDIRECTS, -1);
+    ctlGetSet<int>(instance, LCB_CNTL_MAX_REDIRECTS, 0);
+
+    // LCB_CNTL_LOGGER handled in other tests
+
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_CONFDELAY_THRESH, UINT_MAX);
+
+    // CONFIG_TRANSPORT. Test that we shouldn't be able to set it
+    ASSERT_FALSE(ctlSet<lcb_config_transport_t>(
+        instance, LCB_CNTL_CONFIG_TRANSPORT, LCB_CONFIG_TRANSPORT_LIST_END));
+
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_CONFIG_NODE_TIMEOUT, UINT_MAX);
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_HTCONFIG_IDLE_TIMEOUT, UINT_MAX);
+
+    ASSERT_FALSE(ctlSet<const char*>(instance, LCB_CNTL_CHANGESET, "deadbeef"));
+    ASSERT_FALSE(ctlGet<const char*>(instance, LCB_CNTL_CHANGESET) == NULL);
+    ctlGetSet<const char*>(instance, LCB_CNTL_CONFIGCACHE, "/foo/bar/baz");
+    ASSERT_FALSE(ctlSetInt(instance, LCB_CNTL_SSL_MODE, 90));
+    ASSERT_GE(ctlGetInt(instance, LCB_CNTL_SSL_MODE), 0);
+    ASSERT_FALSE(ctlSet<const char*>(instance, LCB_CNTL_SSL_CACERT, "/tmp"));
+
+    lcb_RETRYOPT ro_in, ro_out;
+    ro_in.cmd = LCB_RETRY_CMDS_GET;
+    ro_in.mode = LCB_RETRY_ON_SOCKERR;
+    ASSERT_TRUE(ctlSet<lcb_RETRYOPT>(instance, LCB_CNTL_RETRYMODE, ro_in));
+
+    ro_out.mode = LCB_RETRY_ON_SOCKERR;
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &ro_out);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_RETRY_ON_SOCKERR, ro_out.mode);
+
+    ctlGetSet<int>(instance, LCB_CNTL_HTCONFIG_URLTYPE, LCB_HTCONFIG_URLTYPE_COMPAT);
+    ctlGetSet<int>(instance, LCB_CNTL_COMPRESSION_OPTS, LCB_COMPRESS_FORCE);
+
+    ctlSetU32(instance, LCB_CNTL_CONLOGGER_LEVEL, 3);
+    lcb_U32 tmp;
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONLOGGER_LEVEL, &tmp);
+    ASSERT_NE(LCB_SUCCESS, err);
+
+    ctlGetSet<int>(instance, LCB_CNTL_DETAILED_ERRCODES, 1);
+    ctlGetSet<lcb_U32>(instance, LCB_CNTL_RETRY_INTERVAL, UINT_MAX);
+    ctlGetSet<float>(instance, LCB_CNTL_RETRY_BACKOFF, 3.4);
+    ctlGetSet<lcb_SIZE>(instance, LCB_CNTL_HTTP_POOLSIZE, UINT_MAX);
+    ctlGetSet<int>(instance, LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR, 0);
 }
