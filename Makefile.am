@@ -214,7 +214,11 @@ endif
 
 distclean-local:
 	@rm -rf gtest-1.7.0
+	@rm -rf check-all*.log
 	$(MAKE) -f doc/Makefile clean || true
+
+distcleancheck:
+	@:
 
 doc-public:
 	$(MAKE) -f doc/Makefile public
