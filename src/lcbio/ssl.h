@@ -75,6 +75,7 @@ lcbio_ssl_apply(lcbio_SOCKET *sock, lcbio_pSSLCTX sctx);
  * @param sock The socket to check
  * @return true if using SSL, false if plain (or not yet applied)
  */
+LCB_INTERNAL_API
 int
 lcbio_ssl_check(lcbio_SOCKET *sock);
 
@@ -86,6 +87,7 @@ lcbio_ssl_check(lcbio_SOCKET *sock);
  * @return An error code (if present), or LCB_SUCCESS if there is no internal
  * error code.
  */
+LCB_INTERNAL_API
 lcb_error_t
 lcbio_ssl_get_error(lcbio_SOCKET *sock);
 
@@ -118,7 +120,7 @@ lcbio_sslify_if_needed(lcbio_SOCKET *sock, struct lcb_settings_st *settings);
 
 #else
 /* SSL Disabled */
-#define lcbio_ssl_new(a,b) NULL
+#define lcbio_ssl_new(a,b,c,d) NULL
 #define lcbio_ssl_free(ctx)
 #define lcbio_ssl_apply(sock, sctx) LCB_NOT_SUPPORTED
 #define lcbio_ssl_check(sock) 0
