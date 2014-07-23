@@ -5,12 +5,15 @@
 #include "internal.h"
 
 #define LOGARGS(rq, lvl) (rq)->settings, "retryq", LCB_LOG_##lvl, __FILE__, __LINE__
+#define RETRY_PKT_KEY "retry_queue"
 
 typedef struct {
+    mc_EPKTDATUM epd;
     lcb_list_t ll_sched;
     lcb_list_t ll_tmo;
     hrtime_t trytime; /**< Next retry time */
     mc_PACKET *pkt;
+    lcb_error_t origerr;
 } lcb_RETRYOP;
 
 #define RETRY_INTERVAL_NS(q) LCB_US2NS((q)->settings->retry_interval)
@@ -55,11 +58,29 @@ cmpfn_retry(lcb_list_t *ll_a, lcb_list_t *ll_b)
 }
 
 static void
-free_op(lcb_RETRYOP *op)
+assign_error(lcb_RETRYOP *op, lcb_error_t err)
+{
+    if (op->origerr == LCB_SUCCESS) {
+        op->origerr = err;
+    }
+
+    if (err == LCB_ETIMEDOUT) {
+        return; /* Ignore timeout errors */
+    }
+
+    if (LCB_EIFNET(op->origerr) && op->origerr != LCB_ETIMEDOUT &&
+            (err == LCB_NETWORK_ERROR || err == LCB_CONNECT_ERROR)) {
+        return;
+    }
+
+    op->origerr = err;
+}
+
+static void
+clean_op(lcb_RETRYOP *op)
 {
     lcb_list_delete(&op->ll_sched);
     lcb_list_delete(&op->ll_tmo);
-    free(op);
 }
 
 static void
@@ -80,10 +101,12 @@ bail_op(lcb_RETRYQ *rq, lcb_RETRYOP *op, lcb_error_t err)
     res->response.opcode = hdr.request.opcode;
     res->response.status = ntohs(PROTOCOL_BINARY_RESPONSE_EINVAL);
     res->response.opaque = hdr.request.opaque;
-    mcreq_dispatch_response(pltmp, op->pkt, &info, err);
+
+    assign_error(op, err);
+    mcreq_dispatch_response(pltmp, op->pkt, &info, op->origerr);
     op->pkt->flags |= MCREQ_F_FLUSHED|MCREQ_F_INVOKED;
     mcreq_packet_done(pltmp, op->pkt);
-    free_op(op);
+    clean_op(op);
     lcb_maybe_breakout(rq->cq->instance);
 }
 
@@ -171,6 +194,7 @@ rq_flush(lcb_RETRYQ *rq, int throttle)
         if (srvix < 0 || (unsigned)srvix >= rq->cq->npipelines) {
             /**If there's no server to send it out to, place it inside the
              * queue again */
+            assign_error(op, LCB_NO_MATCHING_SERVER);
             lcb_list_delete(&op->ll_sched);
             lcb_list_delete(&op->ll_tmo);
             lcb_list_append(&resched_next, &op->ll_sched);
@@ -179,7 +203,7 @@ rq_flush(lcb_RETRYQ *rq, int throttle)
             mc_PIPELINE *newpl = rq->cq->pipelines[srvix];
             mcreq_enqueue_packet(newpl, op->pkt);
             newpl->flush_start(newpl);
-            free_op(op);
+            clean_op(op);
         }
     }
 
@@ -205,15 +229,33 @@ lcb_retryq_signal(lcb_RETRYQ *rq)
     rq_flush(rq, 0);
 }
 
+static void
+op_dtorfn(mc_EPKTDATUM *d)
+{
+    free(d);
+}
+
 void
-lcb_retryq_add(lcb_RETRYQ *rq, mc_PACKET *pkt)
+lcb_retryq_add(lcb_RETRYQ *rq, mc_EXPACKET *pkt, lcb_error_t err)
 {
     hrtime_t now;
-    lcb_RETRYOP *op = calloc(1, sizeof(*op));
+    lcb_RETRYOP *op;
+    mc_EPKTDATUM *d;
 
-    op->pkt = pkt;
-    pkt->retries++;
+    d = mcreq_epkt_find(pkt, RETRY_PKT_KEY);
+    if (d) {
+        op = (lcb_RETRYOP *)d;
+    } else {
+        op = calloc(1, sizeof *op);
+        op->epd.dtorfn = op_dtorfn;
+        op->epd.key = RETRY_PKT_KEY;
+        mcreq_epkt_insert(pkt, &op->epd);
+    }
+
+    op->pkt = &pkt->base;
+    pkt->base.retries++;
     now = gethrtime();
+    assign_error(op, err);
 
     /**
      * Estimate the next retry timestamp. This is:
@@ -221,13 +263,13 @@ lcb_retryq_add(lcb_RETRYQ *rq, mc_PACKET *pkt)
      */
     op->trytime = now + (hrtime_t) (
             (float)RETRY_INTERVAL_NS(rq) *
-            (float)pkt->retries *
+            (float)pkt->base.retries *
             (float)rq->settings->retry_backoff);
 
     lcb_list_add_sorted(&rq->schedops, &op->ll_sched, cmpfn_retry);
     lcb_list_add_sorted(&rq->tmoops, &op->ll_tmo, cmpfn_tmo);
 
-    lcb_log(LOGARGS(rq, DEBUG), "Adding PKT=%p to retry queue. Try count=%u", (void*)pkt, pkt->retries);
+    lcb_log(LOGARGS(rq, DEBUG), "Adding PKT=%p to retry queue. Try count=%u", (void*)pkt, pkt->base.retries);
     do_schedule(rq, 0);
 }
 

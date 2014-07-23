@@ -62,7 +62,7 @@ lcb_retryq_destroy(lcb_RETRYQ *rq);
  * map things here as a response for a not-my-vbucket).
  */
 void
-lcb_retryq_add(lcb_RETRYQ *rq, mc_PACKET *detchpkt);
+lcb_retryq_add(lcb_RETRYQ *rq, mc_EXPACKET *detchpkt, lcb_error_t err);
 
 /**
  * @brief Retry all queued operations
