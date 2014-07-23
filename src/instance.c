@@ -355,6 +355,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         io_priv->v.v0.need_cleanup = 1;
     }
 
+    obj->cmdq.cqdata = obj;
     obj->iotable = lcbio_table_new(io_priv);
     obj->memd_sockpool = lcbio_mgr_create(settings, obj->iotable);
     obj->http_sockpool = lcbio_mgr_create(settings, obj->iotable);

@@ -21,7 +21,7 @@
 #include "vbucket/aliases.h"
 #include "sllist-inl.h"
 
-#define LOGARGS(instance, lvl) instance->settings, "newconfig", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(instance, lvl) (instance)->settings, "newconfig", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOG(instance, lvlbase, msg) lcb_log(instance->settings, "newconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__, msg)
 
 #define SERVER_FMT "%s:%s (%p)"
@@ -110,7 +110,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
         return MCREQ_KEEP_PACKET;
     }
 
-    lcb_log(LOGARGS(cq->instance, DEBUG), "Remapped packet %p (SEQ=%u) from "SERVER_FMT " to " SERVER_FMT,
+    lcb_log(LOGARGS((lcb_t)cq->cqdata, DEBUG), "Remapped packet %p (SEQ=%u) from "SERVER_FMT " to " SERVER_FMT,
         (void*)oldpkt, oldpkt->opaque, SERVER_ARGS((mc_SERVER*)oldpl), SERVER_ARGS((mc_SERVER*)newpl));
 
     /** Otherwise, copy over the packet and find the new vBucket to map to */
@@ -231,7 +231,7 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     lcb_clconfig_incref(config);
     instance->nreplicas = (lcb_uint16_t)VB_NREPLICAS(config->vbc);
     q->config = instance->cur_configinfo->vbc;
-    q->instance = instance;
+    q->cqdata = instance;
 
     if (old_config) {
         if (is_new_config(instance, old_config->vbc, config->vbc)) {

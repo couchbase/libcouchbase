@@ -185,7 +185,7 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     lcb_RESPGET resp = { 0 };
     void *freeptr = NULL;
 
-    o = pipeline->parent->instance;
+    o = pipeline->parent->cqdata;
     init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
 
     if (resp.rc == LCB_SUCCESS) {
@@ -209,7 +209,7 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
              lcb_error_t immerr)
 {
     lcb_RESPGET resp = { 0 };
-    lcb_t instance = pipeline->parent->instance;
+    lcb_t instance = pipeline->parent->cqdata;
     void *freeptr = NULL;
 
     init_resp3(instance, response, request, immerr, (lcb_RESPBASE *)&resp);
@@ -232,7 +232,7 @@ static void
 H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, packet_info *response,
          lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPREMOVE resp = { 0 };
     init_resp3(root, response, packet, immerr, (lcb_RESPBASE *)&resp);
     TRACE_REMOVE_END(response, &resp);
@@ -243,7 +243,7 @@ static void
 H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
           lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     uint32_t ttp;
     uint32_t ttr;
     lcb_size_t pos;
@@ -311,7 +311,7 @@ static void
 H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPSTORE resp = { 0 };
     lcb_U8 opcode;
     init_resp3(root, response, request, immerr, (lcb_RESPBASE*)&resp);
@@ -341,7 +341,7 @@ static void
 H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
              lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPCOUNTER resp = { 0 };
     init_resp3(root, response, request, immerr, (lcb_RESPBASE*)&resp);
 
@@ -358,7 +358,7 @@ static void
 H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPSTATS resp = { 0 };
     mc_REQDATAEX *exdata;
 
@@ -387,7 +387,7 @@ static void
 H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
             lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPBASE dummy = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
     MK_ERROR(root, &dummy, response, immerr);
@@ -399,7 +399,7 @@ static void
 H_version(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
           lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPMCVERSION resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
 
@@ -418,7 +418,7 @@ static void
 H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPTOUCH resp = { 0 };
 
     init_resp3(root, response, request, immerr, &resp);
@@ -430,7 +430,7 @@ static void
 H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPFLUSH resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
     MK_ERROR(root, &resp, response, immerr);
@@ -441,7 +441,7 @@ static void
 H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
          lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->instance;
+    lcb_t root = pipeline->parent->cqdata;
     lcb_RESPUNLOCK resp = { 0 };
     init_resp3(root, response, request, immerr, &resp);
     TRACE_UNLOCK_END(response, &resp);
@@ -455,7 +455,7 @@ H_config(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     /** We just jump to the normal config handler */
     lcb_RESPBASE dummy;
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    MK_ERROR(pipeline->parent->instance, &dummy, response, immerr);
+    MK_ERROR(pipeline->parent->cqdata, &dummy, response, immerr);
 
     exdata->callback(pipeline, request, dummy.rc, response);
 }
@@ -463,7 +463,7 @@ H_config(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 static void
 record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *res)
 {
-    lcb_t instance = pipeline->parent->instance;
+    lcb_t instance = pipeline->parent->cqdata;
     if (instance->histogram) {
         lcb_record_metrics(
                 instance, gethrtime() - MCREQ_PKT_RDATA(req)->start,

@@ -284,6 +284,7 @@ maybe_retry(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err)
 {
     mc_SERVER *srv = (mc_SERVER *)pipeline;
     mc_PACKET *newpkt;
+    lcb_t instance = pipeline->parent->cqdata;
     lcbvb_DISTMODE dist_t = lcbvb_get_distmode(pipeline->parent->config);
 
     if (dist_t != LCBVB_DIST_VBUCKET) {
@@ -296,8 +297,7 @@ maybe_retry(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err)
 
     newpkt = mcreq_renew_packet(pkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
-    lcb_retryq_add(pipeline->parent->instance->retryq,
-        (mc_EXPACKET *)newpkt, err);
+    lcb_retryq_add(instance->retryq, (mc_EXPACKET *)newpkt, err);
     return 1;
 }
 

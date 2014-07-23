@@ -93,7 +93,7 @@ bail_op(lcb_RETRYQ *rq, lcb_RETRYOP *op, lcb_error_t err)
     mc_PIPELINE *pltmp = &tmpsrv.pipeline;
 
     memset(&tmpsrv, 0, sizeof tmpsrv);
-    tmpsrv.instance = rq->cq->instance;
+    tmpsrv.instance = rq->cq->cqdata;
     tmpsrv.pipeline.parent = rq->cq;
 
     memset(&info, 0, sizeof(info));
@@ -107,7 +107,7 @@ bail_op(lcb_RETRYQ *rq, lcb_RETRYOP *op, lcb_error_t err)
     op->pkt->flags |= MCREQ_F_FLUSHED|MCREQ_F_INVOKED;
     mcreq_packet_done(pltmp, op->pkt);
     clean_op(op);
-    lcb_maybe_breakout(rq->cq->instance);
+    lcb_maybe_breakout(rq->cq->cqdata);
 }
 
 static void

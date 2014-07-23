@@ -370,6 +370,9 @@ typedef struct mc_cmdqueue_st {
     /** Number of pending items which have not yet been marked as 'done' */
     unsigned nremaining;
 
+    /** Opaque pointer to be used by the application (in this case, lcb core) */
+    void* cqdata;
+
     lcb_t instance;
 } mc_CMDQUEUE;
 
