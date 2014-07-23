@@ -106,8 +106,9 @@ extern "C" {
  *
  * The mcreq_iterwipe() will clean a pipeline of its packets, invoking a
  * callback which allows the user to relocate the packet to another pipeline.
- * In this callback the user may invoke the mcreq_dup_packet() function to
- * duplicate a packet's _data_ without duplicating its _state_.
+ * In this callback the user may invoke the mcreq_renew_packet() function to
+ * create a copy of the packet, keeping the previous packet in tact, but
+ * returning a copy of the packet as the 'primary' version.
  *
  * @addtogroup MCREQ
  * @{
@@ -211,7 +212,7 @@ typedef enum {
      * Indicates that this packet and its constituent data members are not
      * part of a nb_MBLOCK but rather point to standalone malloc'd memory. This
      * also indicates that the packet is actually an mc_EXPACKET extended
-     * type. This is set by mcreq_dup_packet()
+     * type. This is set by mcreq_renew_packet()
      */
     MCREQ_F_DETACHED = 1 << 8
 } mcreq_flags;
@@ -281,6 +282,7 @@ typedef struct mc_packet_st {
     /** Allocation data for the PACKET structure itself */
     nb_MBLOCK *alloc_parent;
 } mc_PACKET;
+
 
 /**
  * @brief Gets the request data from the packet structure itself
@@ -389,6 +391,34 @@ mcreq_allocate_packet(mc_PIPELINE *pipeline);
 void
 mcreq_release_packet(mc_PIPELINE *pipeline, mc_PACKET *packet);
 
+struct mc_epkt_datum;
+
+/**
+ * Extended packet structure. This is returned by mcreq_renew_packet().
+ *
+ * The purpose of this structure is to be able to "tag" extra data to the packet
+ * (typically for retries, or "special" commands) without weighing down on the
+ * normal packet structure; thus it should be considered a 'subclass' of the
+ * normal packet structure.
+ */
+typedef struct mc_expacket_st {
+    /** The base packet structure */
+    mc_PACKET base;
+    /* Additional data for the packet itself */
+    sllist_root data;
+} mc_EXPACKET;
+
+typedef struct mc_epkt_datum {
+    sllist_node slnode;
+
+    /**Unique string key by which this datum will be identified, as more
+     * than a single datum can exist for a packet */
+    const char *key;
+
+    /**Free the data structure
+     * @param datum the datum object */
+    void (*dtorfn)(struct mc_epkt_datum *datum);
+} mc_EPKTDATUM;
 
 /**
  * Detatches the packet src belonging to the given pipeline. A detached
@@ -400,9 +430,35 @@ mcreq_release_packet(mc_PIPELINE *pipeline, mc_PACKET *packet);
  * @return a new packet structure. You should still clear the packet's data
  * with wipe_packet/release_packet but you may pass NULL as the pipeline
  * parameter.
+ *
+ * @attention
+ * Any 'Extended' packet data is **MOVED** from the source to the destination
+ * packet. This goes well with the typical use case of this function, which is
+ * not to actually duplicate the packet, but rather to provide a fresh copy
+ * which may be re-used.
  */
 mc_PACKET *
-mcreq_dup_packet(const mc_PACKET *src);
+mcreq_renew_packet(const mc_PACKET *src);
+
+/**
+ * Associates a datum with the packet. The packet must be a standalone packet,
+ * indicated by the MCREQ_F_DETACHED flag in the mc_PACKET::flags field.
+ * @param ep The packet to which the data should be added
+ * @param datum The datum object to add. The object is not copied and should
+ *  not be freed until the `dtorfn` or `copyfn` functions have been called
+ * @return 0 on success, nonzero on failure (i.e. if packet is not detached).
+ */
+int
+mcreq_epkt_insert(mc_EXPACKET *ep, mc_EPKTDATUM *datum);
+
+/**
+ * Locate the datum associated with the given key for the packet.
+ * @param ep The packet in which to search
+ * @param key A NUL-terminated string matching the mc_EPKTDATUM::key field
+ * @return The datum, or NULL if it does not exist.
+ */
+mc_EPKTDATUM *
+mcreq_epkt_find(mc_EXPACKET *ep, const char *key);
 
 /**
  * Reserve the packet's basic header structure, this is for use for frames

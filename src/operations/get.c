@@ -221,7 +221,7 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
             /* refcount=1 . Free this now */
             rck->remaining = 1;
         } else if (err != LCB_SUCCESS) {
-            mc_PACKET *newpkt = mcreq_dup_packet(pkt);
+            mc_PACKET *newpkt = mcreq_renew_packet(pkt);
             mcreq_sched_add(nextpl, newpkt);
             mcreq_sched_leave(cq, 1);
             /* wait */

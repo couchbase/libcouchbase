@@ -238,7 +238,15 @@ mcreq_release_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
     nb_SPAN span;
     if (packet->flags & MCREQ_F_DETACHED) {
-        free(packet);
+        sllist_iterator iter;
+        mc_EXPACKET *epkt = (mc_EXPACKET *)packet;
+
+        SLLIST_ITERFOR(&epkt->data, &iter) {
+            mc_EPKTDATUM *d = SLLIST_ITEM(iter.cur, mc_EPKTDATUM, slnode);
+            sllist_iter_remove(&epkt->data, &iter);
+            d->dtorfn(d);
+        }
+        free(epkt);
         return;
     }
 
@@ -252,12 +260,14 @@ mcreq_release_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 #define MCREQ_DETACH_WIPESRC 1
 
 mc_PACKET *
-mcreq_dup_packet(const mc_PACKET *src)
+mcreq_renew_packet(const mc_PACKET *src)
 {
     char *kdata, *vdata;
     unsigned nvdata;
+    mc_PACKET *dst;
+    mc_EXPACKET *edst = calloc(1, sizeof(*edst));
 
-    mc_PACKET *dst = calloc(1, sizeof (*dst));
+    dst = &edst->base;
     *dst = *src;
 
     kdata = malloc(src->kh_span.size);
@@ -327,7 +337,41 @@ mcreq_dup_packet(const mc_PACKET *src)
         /* Declare the value as a standalone malloc'd span */
         CREATE_STANDALONE_SPAN(&dst->u_value.single, vdata, nvdata);
     }
+
+    if (src->flags & MCREQ_F_DETACHED) {
+        mc_EXPACKET *esrc = (mc_EXPACKET *)src;
+        sllist_iterator iter;
+        SLLIST_ITERFOR(&esrc->data, &iter) {
+            sllist_node *cur = iter.cur;
+            sllist_iter_remove(&esrc->data, &iter);
+            sllist_append(&edst->data, cur);
+        }
+    }
     return dst;
+}
+
+int
+mcreq_epkt_insert(mc_EXPACKET *ep, mc_EPKTDATUM *datum)
+{
+    if (!(ep->base.flags & MCREQ_F_DETACHED)) {
+        return -1;
+    }
+    assert(!sllist_contains(&ep->data, &datum->slnode));
+    sllist_append(&ep->data, &datum->slnode);
+    return 0;
+}
+
+mc_EPKTDATUM *
+mcreq_epkt_find(mc_EXPACKET *ep, const char *key)
+{
+    sllist_iterator iter;
+    SLLIST_ITERFOR(&ep->data, &iter) {
+        mc_EPKTDATUM *d = SLLIST_ITEM(iter.cur, mc_EPKTDATUM, slnode);
+        if (!strcmp(key, d->key)) {
+            return d;
+        }
+    }
+    return NULL;
 }
 
 void

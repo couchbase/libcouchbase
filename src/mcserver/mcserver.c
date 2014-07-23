@@ -142,7 +142,7 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     }
 
     /** Reschedule the packet again .. */
-    newpkt = mcreq_dup_packet(oldpkt);
+    newpkt = mcreq_renew_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     lcb_retryq_add(instance->retryq, newpkt);
     return 1;
@@ -294,7 +294,7 @@ maybe_retry(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err)
         return 0;
     }
 
-    newpkt = mcreq_dup_packet(pkt);
+    newpkt = mcreq_renew_packet(pkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     lcb_retryq_add(pipeline->parent->instance->retryq, newpkt);
     return 1;

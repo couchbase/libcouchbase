@@ -114,7 +114,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
         (void*)oldpkt, oldpkt->opaque, SERVER_ARGS((mc_SERVER*)oldpl), SERVER_ARGS((mc_SERVER*)newpl));
 
     /** Otherwise, copy over the packet and find the new vBucket to map to */
-    newpkt = mcreq_dup_packet(oldpkt);
+    newpkt = mcreq_renew_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     mcreq_reenqueue_packet(newpl, newpkt);
     mcreq_packet_handled(oldpl, oldpkt);

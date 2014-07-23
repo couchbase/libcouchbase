@@ -33,7 +33,7 @@ TEST_F(McAlloc, testPacketFreeAlloc)
 
     // Check to see that we can also detach a packet and use it after the
     // other resources have been released
-    copied = mcreq_dup_packet(packet);
+    copied = mcreq_renew_packet(packet);
 
 
     mcreq_wipe_packet(&pipeline, packet);
@@ -44,6 +44,54 @@ TEST_F(McAlloc, testPacketFreeAlloc)
     memset(SPAN_BUFFER(&copied->kh_span), 0xff, copied->kh_span.size);
     mcreq_wipe_packet(NULL, copied);
     mcreq_release_packet(NULL, copied);
+}
+
+struct dummy_datum {
+    mc_EPKTDATUM base;
+    int refcount;
+};
+extern "C" {
+static void datum_free(mc_EPKTDATUM *epd) {
+    dummy_datum *dd = (dummy_datum *)epd;
+    dd->refcount--;
+}
+}
+
+TEST_F(McAlloc, testExdataAlloc)
+{
+    mc_PIPELINE pipeline;
+    mc_PACKET *copy1, *copy2;
+    setupPipeline(&pipeline);
+    mc_PACKET *packet = mcreq_allocate_packet(&pipeline);
+    mcreq_reserve_header(&pipeline, packet, 24);
+
+    copy1 = mcreq_renew_packet(packet);
+    ASSERT_FALSE((copy1->flags & MCREQ_F_DETACHED) == 0);
+
+    dummy_datum dd;
+    dd.base.key = "Dummy";
+    dd.base.dtorfn = datum_free;
+    dd.refcount = 1;
+    mcreq_epkt_insert((mc_EXPACKET*)copy1, &dd.base);
+    // Find it back
+    mc_EPKTDATUM *epd = mcreq_epkt_find((mc_EXPACKET*)copy1, "Dummy");
+    ASSERT_FALSE(epd == NULL);
+    ASSERT_TRUE(epd == &dd.base);
+
+    copy2 = mcreq_renew_packet(copy1);
+    epd = mcreq_epkt_find((mc_EXPACKET*)copy1, "Dummy");
+    ASSERT_TRUE(epd == NULL);
+    epd = mcreq_epkt_find((mc_EXPACKET*)copy2, "Dummy");
+    ASSERT_FALSE(epd == NULL);
+
+    mcreq_wipe_packet(&pipeline, packet);
+    mcreq_release_packet(&pipeline, packet);
+    mcreq_wipe_packet(NULL, copy1);
+    mcreq_release_packet(NULL, copy1);
+    mcreq_wipe_packet(NULL, copy2);
+    mcreq_release_packet(NULL, copy2);
+    ASSERT_EQ(0, dd.refcount);
+    mcreq_pipeline_cleanup(&pipeline);
 }
 
 
