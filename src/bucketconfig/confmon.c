@@ -149,6 +149,7 @@ static int do_set_next(lcb_confmon *mon, clconfig_info *info, int notify_miss)
         lcbvb_CONFIGDIFF *diff = lcbvb_compare(mon->config->vbc, info->vbc);
 
         if (!diff) {
+            lcb_log(LOGARGS(mon, DEBUG), "Couldn't create vbucket diff");
             return 0;
         }
 
@@ -156,6 +157,7 @@ static int do_set_next(lcb_confmon *mon, clconfig_info *info, int notify_miss)
         lcbvb_free_diff(diff);
 
         if (chstatus == 0 || lcb_clconfig_compare(mon->config, info) >= 0) {
+            lcb_log(LOGARGS(mon, INFO), "Not applying configuration received via %s. No changes detected", provider_string(info->origin));
             if (notify_miss) {
                 invoke_listeners(mon, CLCONFIG_EVENT_GOT_ANY_CONFIG, info);
             }
