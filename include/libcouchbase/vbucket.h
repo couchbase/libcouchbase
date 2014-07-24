@@ -226,6 +226,22 @@ LIBCOUCHBASE_API
 int
 lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix);
 
+
+/**
+ * @uncommitted
+ *
+ * Using various guesswork and heuristics, attempt to locate an alternate node
+ * for the master of a given vbucket. This should be used if the master index
+ * is -1 or if the master index is deemed incorrect by some other means.
+ *
+ * @param cfg the configuration object
+ * @param vbix the vbucket index to loop up
+ * @return the new index.
+ */
+LIBCOUCHBASE_API
+unsigned
+lcbvb_vbalternate(lcbvb_CONFIG *cfg, int vbix);
+
 /**
  * @committed
  *
