@@ -209,7 +209,9 @@ replace_config(lcb_t instance, clconfig_info *next_config)
     }
 
     for (ii = 0; ii < nnew; ii++) {
-        ppnew[ii]->flush_start(ppnew[ii]);
+        if (mcserver_has_pending((mc_SERVER*)ppnew[ii])) {
+            ppnew[ii]->flush_start(ppnew[ii]);
+        }
     }
 
     free(ppold);
