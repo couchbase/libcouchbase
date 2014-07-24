@@ -319,6 +319,14 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *arg)
          * as the actual error code. */
         err = LCB_MAP_CHANGED;
     }
+
+    if (err == LCB_ETIMEDOUT) {
+        lcb_error_t tmperr = lcb_retryq_origerr(pkt);
+        if (tmperr != LCB_SUCCESS) {
+            err = tmperr;
+        }
+    }
+
     memset(&info, 0, sizeof(info));
     memcpy(hdr.bytes, SPAN_BUFFER(&pkt->kh_span), sizeof(hdr.bytes));
 

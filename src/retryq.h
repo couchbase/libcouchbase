@@ -76,6 +76,18 @@ void
 lcb_retryq_signal(lcb_RETRYQ *rq);
 
 /**
+ * If this packet has been previously retried, this obtains the original error
+ * which caused it to be enqueued in the first place. This eliminates spurious
+ * timeout errors which mask the real cause of the error.
+ *
+ * @param pkt The packet to check for
+ * @return An error code, or LCB_SUCCESS if the packet does not have an
+ * original error.
+ */
+lcb_error_t
+lcb_retryq_origerr(const mc_PACKET *pkt);
+
+/**
  * @brief Check if there are operations to retry
  * @param rq the queue
  * @return nonzero if there are pending operations

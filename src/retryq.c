@@ -302,3 +302,22 @@ lcb_retryq_destroy(lcb_RETRYQ *rq)
     lcb_settings_unref(rq->settings);
     free(rq);
 }
+
+lcb_error_t
+lcb_retryq_origerr(const mc_PACKET *packet)
+{
+    mc_EPKTDATUM *d;
+    lcb_RETRYOP *op;
+
+    if (! (packet->flags & MCREQ_F_DETACHED)) {
+        return LCB_SUCCESS; /* Not detached */
+    }
+
+    d = mcreq_epkt_find((mc_EXPACKET*)packet, RETRY_PKT_KEY);
+    if (!d) {
+        return LCB_SUCCESS;
+    }
+
+    op = (lcb_RETRYOP *)d;
+    return op->origerr;
+}
