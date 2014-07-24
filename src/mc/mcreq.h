@@ -208,12 +208,12 @@ typedef enum {
     MCREQ_F_INVOKED = 1 << 7,
 
     /**
-     * Forwarded packet which should be passed through and not processed
-     * with extended callback logic. Just emit the frame data promptly.
+     * Indicates that this packet and its constituent data members are not
+     * part of a nb_MBLOCK but rather point to standalone malloc'd memory. This
+     * also indicates that the packet is actually an mc_EXPACKET extended
+     * type. This is set by mcreq_dup_packet()
      */
-    MCREQ_F_PASSTHROUGH = 1 << 8,
-
-    MCREQ_F_DETACHED = 1 << 9
+    MCREQ_F_DETACHED = 1 << 8
 } mcreq_flags;
 
 /** @brief mask of flags indicating user-allocated buffers */
