@@ -548,3 +548,53 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     lcb_confmon_remove_listener(instance->confmon, &lsn.base);
     lcb_destroy(instance);
 }
+
+struct NegativeIx {
+    lcb_error_t err;
+    int callCount;
+};
+
+extern "C" {
+static void get_callback3(lcb_t, int, const lcb_RESPBASE *resp)
+{
+    NegativeIx *ni = (NegativeIx *)resp->cookie;
+    ni->err = resp->rc;
+    ni->callCount++;
+}
+}
+/**
+ * This tests the case where a negative index appears for a vbucket ID for the
+ * mapped key. In this case we'd expect that the command would be retried
+ * at least once, and not receive an LCB_NO_MATCHING_SERVER.
+ *
+ * Unfortunately this test is a bit hacky since we need to modify the vbucket
+ * information, and hopefully get a new config afterwards. Additionally we'd
+ * want to mod
+ */
+TEST_F(MockUnitTest, testNegativeIndex)
+{
+    HandleWrap hw;
+    lcb_t instance;
+    createConnection(hw, instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, get_callback3);
+    std::string key("ni_key");
+    // Get the config
+    lcbvb_CONFIG *vbc = instance->cur_configinfo->vbc;
+    int vb = lcbvb_k2vb(vbc, key.c_str(), key.size());
+
+    // Set the index to -1
+    vbc->vbuckets[vb].servers[0] = -1;
+    NegativeIx ni = { LCB_SUCCESS };
+    lcb_CMDGET gcmd = { 0 };
+    LCB_CMD_SET_KEY(&gcmd, key.c_str(), key.size());
+    // Set the timeout to something a bit shorter
+    lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, 500000);
+
+    lcb_sched_enter(instance);
+    lcb_error_t err = lcb_get3(instance, &ni, &gcmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+    ASSERT_EQ(1, ni.callCount);
+    // That's it
+}

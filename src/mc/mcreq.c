@@ -400,7 +400,7 @@ lcb_error_t
 mcreq_basic_packet(
         mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd,
         protocol_binary_request_header *req, lcb_uint8_t extlen,
-        mc_PACKET **packet, mc_PIPELINE **pipeline)
+        mc_PACKET **packet, mc_PIPELINE **pipeline, int options)
 {
     const void *hashkey;
     lcb_size_t nhashkey;
@@ -414,11 +414,17 @@ mcreq_basic_packet(
                           sizeof(*req) + extlen, &hashkey, &nhashkey);
 
     lcbvb_map_key(queue->config, hashkey, nhashkey, &vb, &srvix);
-    if (srvix < 0 || (unsigned)srvix >= queue->npipelines) {
-        return LCB_NO_MATCHING_SERVER;
+    if (srvix > -1) {
+        *pipeline = queue->pipelines[srvix];
+
+    } else {
+        if ((options & MCREQ_BASICPACKET_F_FALLBACKOK) && queue->fallback) {
+            *pipeline = queue->fallback;
+        } else {
+            return LCB_NO_MATCHING_SERVER;
+        }
     }
 
-    *pipeline = queue->pipelines[srvix];
     *packet = mcreq_allocate_packet(*pipeline);
 
     mcreq_reserve_key(*pipeline, *packet, sizeof(*req) + extlen, &cmd->key);
@@ -480,17 +486,24 @@ mcreq_queue_add_pipelines(
 
     lcb_assert(queue->pipelines == NULL);
     queue->npipelines = npipelines;
+    queue->_npipelines_ex = queue->npipelines;
     queue->pipelines = malloc(sizeof(*pipelines) * (npipelines + 1));
     queue->config = config;
 
     memcpy(queue->pipelines, pipelines, sizeof(*pipelines) * npipelines);
 
     free(queue->scheds);
-    queue->scheds = calloc(npipelines, 1);
+    queue->scheds = calloc(npipelines+1, 1);
 
     for (ii = 0; ii < npipelines; ii++) {
         pipelines[ii]->parent = queue;
         pipelines[ii]->index = ii;
+    }
+
+    if (queue->fallback) {
+        queue->fallback->index = npipelines;
+        queue->pipelines[queue->npipelines] = queue->fallback;
+        queue->_npipelines_ex++;
     }
 }
 
@@ -510,6 +523,7 @@ mcreq_queue_init(mc_CMDQUEUE *queue)
     queue->seq = 0;
     queue->pipelines = NULL;
     queue->scheds = NULL;
+    queue->fallback = NULL;
     queue->npipelines = 0;
     queue->nremaining = 0;
     return 0;
@@ -518,6 +532,11 @@ mcreq_queue_init(mc_CMDQUEUE *queue)
 void
 mcreq_queue_cleanup(mc_CMDQUEUE *queue)
 {
+    if (queue->fallback) {
+        mcreq_pipeline_cleanup(queue->fallback);
+        free(queue->fallback);
+        queue->fallback = NULL;
+    }
     free(queue->scheds);
     free(queue->pipelines);
     queue->scheds = NULL;
@@ -529,11 +548,13 @@ mcreq_sched_enter(mc_CMDQUEUE *queue)
     (void)queue;
 }
 
+
+
 static void
 queuectx_leave(mc_CMDQUEUE *queue, int success, int flush)
 {
     unsigned ii;
-    for (ii = 0; ii < queue->npipelines; ii++) {
+    for (ii = 0; ii < queue->_npipelines_ex; ii++) {
         mc_PIPELINE *pipeline;
         sllist_node *ll_next, *ll;
 
@@ -699,6 +720,45 @@ mcreq_iterwipe(mc_CMDQUEUE *queue, mc_PIPELINE *src,
             sllist_iter_remove(&src->requests, &iter);
         }
     }
+}
+
+#include "mcreq-flush-inl.h"
+typedef struct {
+    mc_PIPELINE base;
+    mcreq_fallback_cb handler;
+} mc_FALLBACKPL;
+
+static void
+do_fallback_flush(mc_PIPELINE *pipeline)
+{
+    nb_IOV iov;
+    unsigned nb;
+    int nused;
+    sllist_iterator iter;
+    mc_FALLBACKPL *fpl = (mc_FALLBACKPL*)pipeline;
+
+    while ((nb = mcreq_flush_iov_fill(pipeline, &iov, 1, &nused))) {
+        mcreq_flush_done(pipeline, nb, nb);
+    }
+    /* Now handle all the packets, for real */
+    SLLIST_ITERFOR(&pipeline->requests, &iter) {
+        mc_PACKET *pkt = SLLIST_ITEM(iter.cur, mc_PACKET, slnode);
+        fpl->handler(pipeline->parent, pkt);
+        sllist_iter_remove(&pipeline->requests, &iter);
+        mcreq_packet_handled(pipeline, pkt);
+    }
+}
+
+void
+mcreq_set_fallback_handler(mc_CMDQUEUE *cq, mcreq_fallback_cb handler)
+{
+    assert(!cq->fallback);
+    cq->fallback = calloc(1, sizeof (mc_FALLBACKPL));
+    mcreq_pipeline_init(cq->fallback);
+    cq->fallback->parent = cq;
+    cq->fallback->index = cq->npipelines;
+    ((mc_FALLBACKPL*)cq->fallback)->handler = handler;
+    cq->fallback->flush_start = do_fallback_flush;
 }
 
 void

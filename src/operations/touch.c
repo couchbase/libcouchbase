@@ -31,7 +31,8 @@ lcb_touch3(lcb_t instance, const void *cookie, const lcb_CMDTOUCH *cmd)
         return LCB_EMPTY_KEY;
     }
 
-    err = mcreq_basic_packet(&instance->cmdq, cmd, hdr, 4, &pkt, &pl);
+    err = mcreq_basic_packet(&instance->cmdq, cmd, hdr, 4, &pkt, &pl,
+        MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;
     }

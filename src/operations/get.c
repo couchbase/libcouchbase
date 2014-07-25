@@ -44,7 +44,8 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
         opcode = PROTOCOL_BINARY_CMD_GAT;
     }
 
-    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, extlen, &pkt, &pl);
+    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, extlen, &pkt, &pl,
+        MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;
     }
@@ -118,7 +119,8 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
         return LCB_EMPTY_KEY;
     }
 
-    err = mcreq_basic_packet(cq, cmd, &hdr, 0, &pkt, &pl);
+    err = mcreq_basic_packet(cq, cmd, &hdr, 0, &pkt, &pl,
+        MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;
     }

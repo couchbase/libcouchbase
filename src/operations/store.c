@@ -107,9 +107,8 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
 
     hsize = hdr->request.extlen + sizeof(*hdr);
 
-    err = mcreq_basic_packet(
-            cq, (const lcb_CMDBASE *)cmd, hdr, hdr->request.extlen,
-            &packet, &pipeline);
+    err = mcreq_basic_packet(cq, (const lcb_CMDBASE *)cmd, hdr,
+        hdr->request.extlen, &packet, &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (err != LCB_SUCCESS) {
         return err;

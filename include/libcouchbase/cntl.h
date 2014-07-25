@@ -513,6 +513,10 @@ typedef enum {
     LCB_RETRY_ON_TOPOCHANGE = 0, /**< Select retry for topology */
     LCB_RETRY_ON_SOCKERR, /**< Select retry for network errors */
     LCB_RETRY_ON_VBMAPERR, /**< Select retry for NOT_MY_VBUCKET responses */
+
+    /** Retry when there is no node for the item. This case is special as the
+     * `cmd` setting is treated as a boolean rather than a bitmask*/
+    LCB_RETRY_ON_MISSINGNODE,
     LCB_RETRY_ON_MAX /**<< maximum index */
 } lcb_RETRYMODEOPTS;
 

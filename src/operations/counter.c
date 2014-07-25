@@ -35,8 +35,8 @@ lcb_counter3(
         return LCB_EMPTY_KEY;
     }
 
-    err = mcreq_basic_packet(
-            q, (const lcb_CMDBASE *)cmd, hdr, 20, &packet, &pipeline);
+    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, 20, &packet,
+        &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (err != LCB_SUCCESS) {
         return err;

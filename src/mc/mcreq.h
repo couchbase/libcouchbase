@@ -361,6 +361,9 @@ typedef struct mc_cmdqueue_st {
     /** Number of pipelines in the queue */
     unsigned npipelines;
 
+    /** Number of pipelines, with fallback included */
+    unsigned _npipelines_ex;
+
     /** Sequence number for pipeline. Incremented for each new packet */
     uint32_t seq;
 
@@ -373,7 +376,9 @@ typedef struct mc_cmdqueue_st {
     /** Opaque pointer to be used by the application (in this case, lcb core) */
     void* cqdata;
 
-    lcb_t instance;
+    /**Special pipeline used to contain orphaned packets within a scheduling
+     * context. This field is used by mcreq_set_fallback_handler() */
+    mc_PIPELINE *fallback;
 } mc_CMDQUEUE;
 
 /**
@@ -562,6 +567,11 @@ mcreq_extract_hashkey(
         lcb_size_t nheader, const void **target, lcb_size_t *ntarget);
 
 
+/**If the packet's vbucket does not have a master node, use the fallback pipeline
+ * and let it be handled by the handler installed via mcreq_set_fallback_handler()
+ */
+#define MCREQ_BASICPACKET_F_FALLBACKOK 0x01
+
 /**
  * Handle the basic requirements of a packet common to all commands
  * @param queue the queue
@@ -580,7 +590,7 @@ lcb_error_t
 mcreq_basic_packet(
         mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd,
         protocol_binary_request_header *req, uint8_t extlen,
-        mc_PACKET **packet, mc_PIPELINE **pipeline);
+        mc_PACKET **packet, mc_PIPELINE **pipeline, int options);
 
 /**
  * @brief Get the key from a packet
@@ -820,6 +830,28 @@ mcreq_pipeline_timeout(
         mcreq_pktfail_fn failcb, void *cbarg,
         hrtime_t oldest_valid,
         hrtime_t *oldest_start);
+
+/**
+ * This function is called when a packet could not be properly mapped to a real
+ * pipeline
+ * @param cq the command queue
+ * @param pkt the packet which needs to be relocated. The packet needs to be
+ * properly copied via mcreq_renew_packet()
+ */
+typedef void (*mcreq_fallback_cb)(mc_CMDQUEUE *cq, mc_PACKET *pkt);
+
+/**
+ * Set the callback function to be invoked when a packet could not be properly
+ * mapped to a node. The callback function is invoked from within the
+ * mcreq_sched_leave() function.
+ *
+ * The handler should be assigned only once, during initialization
+ *
+ * @param cq The command queue
+ * @param handler The handler to invoke
+ */
+void
+mcreq_set_fallback_handler(mc_CMDQUEUE *cq, mcreq_fallback_cb handler);
 
 void
 mcreq_dump_packet(const mc_PACKET *pkt);

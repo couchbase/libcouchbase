@@ -1,5 +1,19 @@
 # Release Notes
 
+## 2.4.0 GA
+
+* [major] Attempt to retry items that are mapped to a non-existent node in
+  a degraded cluster. Rather than returning `LCB_NO_MATCHING_SERVER` the
+  behavior should be to wait for the item to succeed and attempt to fetch
+  a new cluster configuration.
+
+  In order to control how such 'orphaned' commands are handled, a new value
+  has been added to the `lcb_RETRYMODEOPTS` called `LCB_RETRY_ON_MISSINGNODE`
+  which dictates how commands should be rescheduled if the associated vbucket
+  has no master. The default is to retry the command until it times out, but
+  by setting this value to `0` (See `LCB_CNTL_RETRYMODE`) it may only be
+  attempted once, causing 'fail fast' behavior in such a case.
+
 ## 2.4.0-beta
 
 * [major] Better error reporting for SSL failures.
