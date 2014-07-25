@@ -214,6 +214,7 @@ replace_config(lcb_t instance, clconfig_info *next_config)
         }
     }
 
+    free(ppnew);
     free(ppold);
     return LCB_CONFIGURATION_CHANGED;
 }
@@ -267,6 +268,7 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
 
         mcreq_queue_add_pipelines(q, servers, nservers, config->vbc);
         change_status = LCB_CONFIGURATION_NEW;
+        free(servers);
     }
 
     /* Update the list of nodes here for server list */

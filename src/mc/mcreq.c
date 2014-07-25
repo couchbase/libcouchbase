@@ -473,15 +473,17 @@ mcreq_pipeline_init(mc_PIPELINE *pipeline)
 
 void
 mcreq_queue_add_pipelines(
-        mc_CMDQUEUE *queue, mc_PIPELINE **pipelines, unsigned npipelines,
+        mc_CMDQUEUE *queue, mc_PIPELINE * const *pipelines, unsigned npipelines,
         lcbvb_CONFIG* config)
 {
     unsigned ii;
 
     lcb_assert(queue->pipelines == NULL);
     queue->npipelines = npipelines;
-    queue->pipelines = pipelines;
+    queue->pipelines = malloc(sizeof(*pipelines) * (npipelines + 1));
     queue->config = config;
+
+    memcpy(queue->pipelines, pipelines, sizeof(*pipelines) * npipelines);
 
     free(queue->scheds);
     queue->scheds = calloc(npipelines, 1);

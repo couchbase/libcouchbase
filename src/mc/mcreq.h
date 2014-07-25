@@ -614,8 +614,7 @@ mcreq_pipeline_cleanup(mc_PIPELINE *pipeline);
 /**
  * Set the pipelines that this queue will manage
  * @param queue the queue to take the pipelines
- * @param pipelines an array of pipeline pointers. The array itself will
- *        be owned by the queue but _not_ the underlying pipeline pointers
+ * @param pipelines an array of pipeline pointers. The array is copied
  * @param npipelines number of pipelines in the queue
  * @param config the configuration handle. The configuration is _not_ owned
  *        and _not_ copied and the caller must ensure it remains valid
@@ -623,12 +622,12 @@ mcreq_pipeline_cleanup(mc_PIPELINE *pipeline);
  */
 void
 mcreq_queue_add_pipelines(
-        mc_CMDQUEUE *queue, mc_PIPELINE **pipelines,
+        mc_CMDQUEUE *queue, mc_PIPELINE * const *pipelines,
         unsigned npipelines, lcbvb_CONFIG* config);
 
 
 /**
- * Take ownership of the pipeline array set via add_pipelines.
+ * Set the arra
  * @param queue the queue
  * @param count a pointer to the number of pipelines within the queue
  * @return the pipeline array.

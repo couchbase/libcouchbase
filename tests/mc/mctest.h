@@ -6,19 +6,20 @@
 
 struct CQWrap : mc_CMDQUEUE {
     lcbvb_CONFIG* config;
-    mc_PIPELINE **pipelines;
     CQWrap() {
-        pipelines = (mc_PIPELINE **)malloc(sizeof(*pipelines) * NUM_PIPELINES);
+        mc_PIPELINE **pll;
+        pll = (mc_PIPELINE **)malloc(sizeof(*pll) * NUM_PIPELINES);
         config = lcbvb_create();
         for (unsigned ii = 0; ii < NUM_PIPELINES; ii++) {
             mc_PIPELINE *pipeline = (mc_PIPELINE *)calloc(1, sizeof(*pipeline));
             mcreq_pipeline_init(pipeline);
-            pipelines[ii] = pipeline;
+            pll[ii] = pipeline;
         }
         lcbvb_genconfig(config, NUM_PIPELINES, 3, 1024);
         mcreq_queue_init(this);
         this->seq = 100;
-        mcreq_queue_add_pipelines(this, pipelines, NUM_PIPELINES, config);
+        mcreq_queue_add_pipelines(this, pll, NUM_PIPELINES, config);
+        free(pll);
     }
 
     ~CQWrap() {
