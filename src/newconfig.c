@@ -122,26 +122,6 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
 }
 
 static int
-is_new_config(lcb_t instance, lcbvb_CONFIG* oldc, lcbvb_CONFIG* newc)
-{
-    lcbvb_CONFIGDIFF *diff;
-    lcbvb_CHANGETYPE chstatus = LCBVB_NO_CHANGES;
-    diff = lcbvb_compare(oldc, newc);
-
-    if (diff) {
-        chstatus = lcbvb_get_changetype(diff);
-        log_vbdiff(instance, diff);
-        lcbvb_free_diff(diff);
-    }
-
-    if (diff == NULL || chstatus == LCBVB_NO_CHANGES) {
-        lcb_log(LOGARGS(instance, DEBUG), "Ignoring config update. No server changes; DIFF=%p", (void*)diff);
-        return 0;
-    }
-    return 1;
-}
-
-static int
 replace_config(lcb_t instance, clconfig_info *next_config)
 {
     lcbvb_DISTMODE dist_t;
@@ -235,17 +215,19 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     q->cqdata = instance;
 
     if (old_config) {
-        if (is_new_config(instance, old_config->vbc, config->vbc)) {
-            change_status = replace_config(instance, config);
-            if (change_status == -1) {
-                LOG(instance, ERR, "Couldn't replace config");
-                return;
-            }
-            lcb_clconfig_decref(old_config);
-        } else {
-            change_status = LCB_CONFIGURATION_UNCHANGED;
-            lcb_retryq_signal(instance->retryq);
+        lcbvb_CONFIGDIFF *diff = lcbvb_compare(old_config->vbc, config->vbc);
+
+        if (diff) {
+            log_vbdiff(instance, diff);
+            lcbvb_free_diff(diff);
         }
+
+        change_status = replace_config(instance, config);
+        if (change_status == -1) {
+            LOG(instance, ERR, "Couldn't replace config");
+            return;
+        }
+        lcb_clconfig_decref(old_config);
     } else {
         unsigned nservers;
         mc_PIPELINE **servers;
