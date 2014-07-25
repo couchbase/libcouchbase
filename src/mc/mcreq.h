@@ -370,9 +370,6 @@ typedef struct mc_cmdqueue_st {
     /** Configuration handle for vBucket mapping */
     lcbvb_CONFIG* config;
 
-    /** Number of pending items which have not yet been marked as 'done' */
-    unsigned nremaining;
-
     /** Opaque pointer to be used by the application (in this case, lcb core) */
     void* cqdata;
 

@@ -525,7 +525,6 @@ mcreq_queue_init(mc_CMDQUEUE *queue)
     queue->scheds = NULL;
     queue->fallback = NULL;
     queue->npipelines = 0;
-    queue->nremaining = 0;
     return 0;
 }
 
