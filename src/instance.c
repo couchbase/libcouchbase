@@ -766,3 +766,26 @@ LCB_INTERNAL_API void lcb_loop_unref(lcb_t instance) {
     lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
     lcb_maybe_breakout(instance);
 }
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_get_last_error(lcb_t instance){return instance->last_error;}
+
+LIBCOUCHBASE_API
+const char *lcb_strerror(lcb_t instance, lcb_error_t error)
+{
+    #define X(c, v, t, s) if (error == c) { return s; }
+    LCB_XERR(X)
+    #undef X
+
+    (void)instance;
+    return "Unknown error";
+}
+
+LIBCOUCHBASE_API
+int lcb_get_errtype(lcb_error_t err)
+{
+    #define X(c, v, t, s) if (err == c) { return t; }
+    LCB_XERR(X)
+    #undef X
+    return -1;
+}

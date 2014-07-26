@@ -205,7 +205,6 @@ ADD_LIBRARY(couchbase ${_lcb_linkspec}
             src/callbacks.c
             src/cntl.c
             src/connspec.c
-            src/error.c
             src/handler.c
             src/getconfig.c
             src/http/http.c
