@@ -789,3 +789,13 @@ int lcb_get_errtype(lcb_error_t err)
     #undef X
     return -1;
 }
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_verify_struct_size(lcb_U32 id, lcb_U32 version, lcb_SIZE size)
+{
+    #define X(sname, sabbrev, idval, vernum) \
+    if (idval == id && size == sizeof(sname) && version <= vernum) { return LCB_SUCCESS; }
+    LCB_XSSIZES(X);
+    #undef X
+    return LCB_EINVAL;
+}
