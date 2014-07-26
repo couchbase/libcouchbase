@@ -76,6 +76,10 @@ cmpfn_retry(lcb_list_t *ll_a, lcb_list_t *ll_b)
 static void
 assign_error(lcb_RETRYOP *op, lcb_error_t err)
 {
+    if (err == LCB_NOT_MY_VBUCKET) {
+        err = LCB_ETIMEDOUT; /* :( */
+    }
+
     if (op->origerr == LCB_SUCCESS) {
         op->origerr = err;
     }
