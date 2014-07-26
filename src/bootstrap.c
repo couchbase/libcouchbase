@@ -9,19 +9,13 @@ struct lcb_bootstrap_st {
 
     /** Flag set if we've already bootstrapped */
     int bootstrapped;
-    unsigned weird_things;
+    unsigned errcounter;
 };
 
-#define LOGARGS(instance, lvl) \
-    instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(instance, lvl) instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
 
-static void async_step_callback(clconfig_listener *listener,
-                                clconfig_event_t event,
-                                clconfig_info *info);
-
-static void initial_bootstrap_error(lcb_t instance,
-                                    lcb_error_t err,
-                                    const char *msg);
+static void async_step_callback(clconfig_listener*,clconfig_event_t,clconfig_info*);
+static void initial_bootstrap_error(lcb_t, lcb_error_t,const char*);
 
 /**
  * This function is where the configuration actually takes place. We ensure
@@ -29,9 +23,9 @@ static void initial_bootstrap_error(lcb_t instance,
  * loop stack frame (or one of the small mini functions here) so that we
  * don't accidentally end up destroying resources underneath us.
  */
-static void config_callback(clconfig_listener *listener,
-                            clconfig_event_t event,
-                            clconfig_info *info)
+static void
+config_callback(clconfig_listener *listener, clconfig_event_t event,
+    clconfig_info *info)
 {
     struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
     lcb_t instance = bs->parent;
@@ -39,9 +33,8 @@ static void config_callback(clconfig_listener *listener,
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         if (event == CLCONFIG_EVENT_PROVIDERS_CYCLED) {
             if (!LCBT_VBCONFIG(instance)) {
-                initial_bootstrap_error(instance,
-                                        LCB_ERROR,
-                                        "No more bootstrap providers remain");
+                initial_bootstrap_error(
+                    instance, LCB_ERROR, "No more bootstrap providers remain");
             }
         }
         return;
@@ -65,16 +58,13 @@ static void config_callback(clconfig_listener *listener,
         if (instance->type == LCB_TYPE_BUCKET &&
                 instance->dist_type == LCBVB_DIST_KETAMA &&
                 instance->cur_configinfo->origin != LCB_CLCONFIG_MCRAW) {
-            lcb_log(LOGARGS(instance, INFO),
-                    "Reverting to HTTP Config for memcached buckets");
 
-            /** Memcached bucket */
+            lcb_log(LOGARGS(instance, INFO), "Reverting to HTTP Config for memcached buckets");
             instance->settings->bc_http_stream_time = -1;
-            lcb_confmon_set_provider_active(instance->confmon,
-                                            LCB_CLCONFIG_HTTP, 1);
-
-            lcb_confmon_set_provider_active(instance->confmon,
-                                            LCB_CLCONFIG_CCCP, 0);
+            lcb_confmon_set_provider_active(
+                instance->confmon, LCB_CLCONFIG_HTTP, 1);
+            lcb_confmon_set_provider_active(
+                instance->confmon, LCB_CLCONFIG_CCCP, 0);
         }
         instance->callbacks.bootstrap(instance, LCB_SUCCESS);
     }
@@ -83,9 +73,8 @@ static void config_callback(clconfig_listener *listener,
 }
 
 
-static void initial_bootstrap_error(lcb_t instance,
-                                    lcb_error_t err,
-                                    const char *errinfo)
+static void
+initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
 {
     struct lcb_bootstrap_st *bs = instance->bootstrap;
 
@@ -131,9 +120,9 @@ static void async_refresh(void *arg)
  * set_next listener callback which schedules an async call to our config
  * callback.
  */
-static void async_step_callback(clconfig_listener *listener,
-                                clconfig_event_t event,
-                                clconfig_info *info)
+static void
+async_step_callback(clconfig_listener *listener, clconfig_event_t event,
+    clconfig_info *info)
 {
     struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
 
@@ -141,14 +130,12 @@ static void async_step_callback(clconfig_listener *listener,
         return;
     }
 
-
     if (lcbio_timer_armed(bs->tm) && lcbio_timer_get_target(bs->tm) == async_refresh) {
         lcb_log(LOGARGS(bs->parent, DEBUG), "Timer already present..");
         return;
     }
 
     lcb_log(LOGARGS(bs->parent, INFO), "Got async step callback..");
-
     lcbio_timer_set_target(bs->tm, async_refresh);
     lcbio_async_signal(bs->tm);
     (void)info;
@@ -208,19 +195,19 @@ void lcb_bootstrap_errcount_incr(lcb_t instance)
     hrtime_t now = gethrtime(), next_refresh_time;
 
     errthresh = LCBT_SETTING(instance, weird_things_threshold);
-    bs->weird_things++;
+    bs->errcounter++;
     next_refresh_time = instance->bootstrap->last_refresh;
     next_refresh_time += LCB_US2NS(LCBT_SETTING(instance, weird_things_delay));
 
-    if (now < next_refresh_time && bs->weird_things < errthresh) {
+    if (now < next_refresh_time && bs->errcounter < errthresh) {
         lcb_log(LOGARGS(instance, INFO),
             "Not requesting a config refresh because of throttling parameters. Next refresh possible in %ums or %u errors. "
             "See LCB_CNTL_CONFDELAY_THRESH and LCB_CNTL_CONFERRTHRESH to modify the throttling settings",
-            LCB_NS2US(next_refresh_time-now)/1000, (unsigned)errthresh-bs->weird_things);
+            LCB_NS2US(next_refresh_time-now)/1000, (unsigned)errthresh-bs->errcounter);
         return;
     }
 
-    bs->weird_things = 0;
+    bs->errcounter = 0;
     lcb_bootstrap_refresh(instance);
 }
 
@@ -230,7 +217,6 @@ void lcb_bootstrap_destroy(lcb_t instance)
     if (!bs) {
         return;
     }
-
     if (bs->tm) {
         lcbio_timer_destroy(bs->tm);
     }
