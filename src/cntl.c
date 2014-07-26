@@ -37,6 +37,18 @@
         (void)cmd; return LCB_SUCCESS;
 
 typedef lcb_error_t (*ctl_handler)(int, lcb_t, int, void *);
+typedef struct { const char *s; lcb_U32 u32; } STR_u32MAP;
+static const STR_u32MAP* u32_from_map(const char *s, const STR_u32MAP *lookup) {
+    const STR_u32MAP *ret;
+    for (ret = lookup; ret->s; ret++) {
+        lcb_SIZE maxlen = strlen(ret->s);
+        if (!strncmp(ret->s, s, maxlen)) { return ret; }
+    }
+    return NULL;
+}
+#define DO_CONVERT_STR2NUM(s, lookup, v) { \
+    const STR_u32MAP *str__rv = u32_from_map(s, lookup); \
+    if (str__rv) { v = str__rv->u32; } else { return LCB_ECTL_BADARG; } }
 
 static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
 {
@@ -122,6 +134,9 @@ HANDLER(http_poolsz_handler) {
 }
 HANDLER(http_refresh_config_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, refresh_on_hterr))
+}
+HANDLER(compmode_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, compressopts))
 }
 
 HANDLER(get_kvb) {
@@ -290,44 +305,19 @@ HANDLER(config_cache_handler) {
 }
 
 HANDLER(retrymode_handler) {
-    lcb_RETRYOPT *opt = arg;
-    uint8_t *p = &(LCBT_SETTING(instance, retry)[opt->mode]);
+    lcb_U32 *val = arg;
+    lcb_U32 rmode = LCB_RETRYOPT_GETMODE(*val);
+    uint8_t *p = NULL;
+
+    if (rmode >= LCB_RETRY_ON_MAX) { return LCB_ECTL_BADARG; }
+    p = &(LCBT_SETTING(instance, retry)[rmode]);
     if (mode == LCB_CNTL_SET) {
-        *p = opt->cmd;
+        *p = LCB_RETRYOPT_GETPOLICY(*val);
     } else {
-        opt->cmd = *p;
+        *val = LCB_RETRYOPT_CREATE(rmode, *p);
     }
     (void)cmd;
     return LCB_SUCCESS;
-}
-
-HANDLER(compmode_handler) {
-    int opts_s = 0, *opt_p;
-
-    if (mode == CNTL__MODE_SETSTRING) {
-        if (!strcmp(arg, "on")) {
-            opts_s = LCB_COMPRESS_INOUT;
-        } else if (!strcmp(arg, "off")) {
-            opts_s = LCB_COMPRESS_NONE;
-        } else if (!strcmp(arg, "inflate_only")) {
-            opts_s = LCB_COMPRESS_IN;
-        } else if (!strcmp(arg, "force")) {
-            opts_s = LCB_COMPRESS_INOUT|LCB_COMPRESS_FORCE;
-        } else {
-            return LCB_ECTL_BADARG;
-        }
-
-        opt_p = &opts_s;
-        mode = LCB_CNTL_SET;
-    } else {
-        opt_p = arg;
-    }
-    if (mode == LCB_CNTL_SET) {
-        LCBT_SETTING(instance, compressopts) = *opt_p;
-    } else {
-        *opt_p = LCBT_SETTING(instance, compressopts);
-    }
-    (void)cmd; return LCB_SUCCESS;
 }
 
 HANDLER(allocfactory_handler) {
@@ -484,6 +474,42 @@ static lcb_error_t convert_SIZE(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
+static lcb_error_t convert_compression(const char *arg, u_STRCONVERT *u) {
+    static const STR_u32MAP optmap[] = {
+        { "on", LCB_COMPRESS_INOUT },
+        { "off", LCB_COMPRESS_NONE },
+        { "inflate_only", LCB_COMPRESS_IN },
+        { "force", LCB_COMPRESS_INOUT|LCB_COMPRESS_FORCE },
+        { NULL }
+    };
+    DO_CONVERT_STR2NUM(arg, optmap, u->i);
+    return LCB_SUCCESS;
+}
+
+static lcb_error_t convert_retrymode(const char *arg, u_STRCONVERT *u) {
+    static const STR_u32MAP modemap[] = {
+        { "topochange", LCB_RETRY_ON_TOPOCHANGE },
+        { "sockerr", LCB_RETRY_ON_SOCKERR },
+        { "maperr", LCB_RETRY_ON_VBMAPERR },
+        { "missingnode", LCB_RETRY_ON_MISSINGNODE }, { NULL }
+    };
+    static const STR_u32MAP polmap[] = {
+        { "all", LCB_RETRY_CMDS_ALL },
+        { "get", LCB_RETRY_CMDS_GET },
+        { "safe", LCB_RETRY_CMDS_SAFE },
+        { "none", LCB_RETRY_CMDS_NONE }, { NULL }
+    };
+
+    lcb_U32 polval, modeval;
+    const char *polstr = strchr(arg, ':');
+    if (!polstr) { return LCB_ECTL_BADARG; }
+    polstr++;
+    DO_CONVERT_STR2NUM(arg, modemap, modeval);
+    DO_CONVERT_STR2NUM(polstr, polmap, polval);
+    u->u32 = LCB_RETRYOPT_CREATE(modeval, polval);
+    return LCB_SUCCESS;
+}
+
 static cntl_OPCODESTRS stropcode_map[] = {
         {"operation_timeout", LCB_CNTL_OP_TIMEOUT, convert_timeout},
         {"views_timeout", LCB_CNTL_VIEW_TIMEOUT, convert_timeout},
@@ -496,10 +522,11 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"error_thresh_delay", LCB_CNTL_CONFDELAY_THRESH, convert_timeout},
         {"config_total_timeout", LCB_CNTL_CONFIGURATION_TIMEOUT, convert_timeout},
         {"config_node_timeout", LCB_CNTL_CONFIG_NODE_TIMEOUT, convert_timeout},
-        {"compression", LCB_CNTL_COMPRESSION_OPTS},
+        {"compression", LCB_CNTL_COMPRESSION_OPTS, convert_compression},
         {"console_log_level", LCB_CNTL_CONLOGGER_LEVEL, convert_u32},
         {"config_cache", LCB_CNTL_CONFIGCACHE, convert_passthru },
         {"detailed_errcodes", LCB_CNTL_DETAILED_ERRCODES, convert_intbool},
+        {"retry_policy", LCB_CNTL_RETRYMODE, convert_retrymode},
         {"_reinit_connstr", LCB_CNTL_REINIT_CONNSTR },
         {NULL, -1}
 };

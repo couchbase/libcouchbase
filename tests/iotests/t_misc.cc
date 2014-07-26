@@ -368,15 +368,20 @@ TEST_F(MockUnitTest, testCtls)
     ASSERT_GE(ctlGetInt(instance, LCB_CNTL_SSL_MODE), 0);
     ASSERT_FALSE(ctlSet<const char*>(instance, LCB_CNTL_SSL_CACERT, "/tmp"));
 
-    lcb_RETRYOPT ro_in, ro_out;
-    ro_in.cmd = LCB_RETRY_CMDS_GET;
-    ro_in.mode = LCB_RETRY_ON_SOCKERR;
-    ASSERT_TRUE(ctlSet<lcb_RETRYOPT>(instance, LCB_CNTL_RETRYMODE, ro_in));
+    lcb_U32 ro_in, ro_out;
+    ro_in = LCB_RETRYOPT_CREATE(LCB_RETRY_ON_SOCKERR, LCB_RETRY_CMDS_GET);
+    ASSERT_TRUE(ctlSet<lcb_U32>(instance, LCB_CNTL_RETRYMODE, ro_in));
 
-    ro_out.mode = LCB_RETRY_ON_SOCKERR;
+    ro_out = LCB_RETRYOPT_CREATE(LCB_RETRY_ON_SOCKERR, 0);
     err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &ro_out);
     ASSERT_EQ(LCB_SUCCESS, err);
-    ASSERT_EQ(LCB_RETRY_ON_SOCKERR, ro_out.mode);
+    ASSERT_EQ(LCB_RETRY_CMDS_GET, LCB_RETRYOPT_GETPOLICY(ro_out));
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_cntl_string(instance, "retry_policy", "topochange:get"));
+    ro_out = LCB_RETRYOPT_CREATE(LCB_RETRY_ON_TOPOCHANGE, 0);
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &ro_out);
+    ASSERT_EQ(LCB_RETRY_CMDS_GET, LCB_RETRYOPT_GETPOLICY(ro_out));
+
 
     ctlGetSet<int>(instance, LCB_CNTL_HTCONFIG_URLTYPE, LCB_HTCONFIG_URLTYPE_COMPAT);
     ctlGetSet<int>(instance, LCB_CNTL_COMPRESSION_OPTS, LCB_COMPRESS_FORCE);

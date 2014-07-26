@@ -549,12 +549,17 @@ typedef enum {
     LCB_RETRY_CMDS_ALL = (LCB_RETRY_CMDS_SAFE|LCB_RETRY_CMDS_GET)
 } lcb_RETRYCMDOPTS;
 
-/** @brief argument for @ref LCB_CNTL_RETRYMODE */
-typedef struct {
-    /** What was the trigger that induced the retry. See @ref lcb_RETRYMODEOPTS */
-    int mode;
-    int cmd; /**Policy of which commands should be retried. See @ref lcb_RETRYCMDOPTS*/
-} lcb_RETRYOPT;
+/**@brief Create a retry setting value
+ * @param mode the mode to set (@see lcb_RETRYMODEOPTS)
+ * @param policy the policy determining which commands should be retried
+ * (@see lcb_RETRYCMDOPTS)
+ * @return a value which can be assigned to an `lcb_U32` and passed to
+ * the @ref LCB_CNTL_RETRYMODE setting
+ */
+#define LCB_RETRYOPT_CREATE(mode, policy) (((mode) << 16) | policy)
+
+#define LCB_RETRYOPT_GETMODE(u) (u) >> 16
+#define LCB_RETRYOPT_GETPOLICY(u) (u) & 0xffff
 
 /**
  * @volatile
@@ -575,30 +580,26 @@ typedef struct {
  * Disable retries anywhere:
  * @code{.c}
  * for (int ii = 0; ii < LCB_RETRY_ON_MAX; ++ii) {
- *   lcb_RETRYOPT opts;
- *   opts.mode = ii;
- *   opts.cmd = LCB_RETRY_CMDS_NONE;
- *   lcb_error_t err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &opts);
+ *   lcb_U32 val = LCB_RETRYOPT_CREATE(ii, LCB_RETRY_CMDS_NONE);
+ *   lcb_error_t err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &val);
  * }
  * @endcode
  *
  * Only retry simple GET operations when retry is needed because of topology
  * changes:
  * @code{.c}
- * lcb_RETRYOPT opts;
- * opts.mode = LCB_RETRY_ON_TOPOCHANGE;
- * opts.cmds = LCB_RETRY_CMDS_GET;
- * lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &opts);
+ * lcb_U32 val = LCB_RETRYOPT_CREATE(LCB_RETRY_ON_TOPOCHANGE, LCB_RETRY_CMDS_GET);
+ * lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &val);
  * @endcode
  *
  * Determine the behavior of the library when a `NOT_MY_VBUCKET` is received:
  * @code{.c}
- * lcb_RETRYOPT opts;
- * opts.mode = LCB_RETRY_ON_VBMAPERR;
- * lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &opts);
+ * lcb_U32 val = LCB_RETRYOPT_CREATE(LCB_RETRY_ON_VBMAPERR, 0);
+ * lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_RETRYMODE, &val);
+ * lcb_U32 policy = LCB_RETRYOPT_GETPOLICY(val);
  * @endcode
  *
- * @cntl_arg_both{`lcb_RETRYOPT *`}
+ * @cntl_arg_both{`lcb_U32 *`}
  */
 #define LCB_CNTL_RETRYMODE 0x24
 
@@ -607,13 +608,13 @@ typedef struct {
  * stream */
 typedef enum {
     /** `/pools/default/b[s]/$bucket`: Introduced in Couchbase Server 2.5 */
-    LCB_HTCONFIG_URLTYPE_25PLUS = 0x01,
+    LCB_HTCONFIG_URLTYPE_25PLUS = 0x01,//!< LCB_HTCONFIG_URLTYPE_25PLUS
 
     /** `/pools/default/buckets[Streaming]/$bucket`. */
-    LCB_HTCONFIG_URLTYPE_COMPAT = 0x02,
+    LCB_HTCONFIG_URLTYPE_COMPAT = 0x02,//!< LCB_HTCONFIG_URLTYPE_COMPAT
 
     /** Try `25PLUS` first and fallback to `COMPAT` */
-    LCB_HTCONFIG_URLTYPE_TRYALL = 0x03
+    LCB_HTCONFIG_URLTYPE_TRYALL = 0x03 //!< LCB_HTCONFIG_URLTYPE_TRYALL
 } lcb_HTCONFIG_URLTYPE;
 
 /**
