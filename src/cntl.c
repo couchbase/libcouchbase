@@ -587,7 +587,11 @@ lcb_cntl_string(lcb_t instance, const char *key, const char *value)
                 if (err != LCB_SUCCESS) {
                     return err;
                 }
-                return lcb_cntl(instance, LCB_CNTL_SET, cur->opcode, &u);
+                if (cur->converter == convert_passthru) {
+                    return lcb_cntl(instance, LCB_CNTL_SET, cur->opcode, u.p);
+                } else {
+                    return lcb_cntl(instance, LCB_CNTL_SET, cur->opcode, &u);
+                }
             }
 
             return lcb_cntl(instance, CNTL__MODE_SETSTRING, cur->opcode,
