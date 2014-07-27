@@ -255,13 +255,15 @@ example_libeventdirect_eventloop_SOURCES = example/libeventdirect/main.c
 example_libeventdirect_eventloop_DEPENDENCIES = libcouchbase.la
 example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
 
-example_instancepool_instancepool_SOURCES = example/instancepool/pool.c \
-                                            example/instancepool/pool.h \
-                                            example/instancepool/main.c
-example_instancepool_instancepool_DEPENDENCIES = libcouchbase.la
-example_instancepool_instancepool_LDADD = libcouchbase.la
 
 if HAVE_CXX
+noinst_PROGRAMS += example/instancepool/instancepool
+example_instancepool_instancepool_SOURCES = example/instancepool/pool.cc \
+                                            example/instancepool/pool.h \
+                                            example/instancepool/main.cc
+example_instancepool_instancepool_DEPENDENCIES = libcouchbase.la
+example_instancepool_instancepool_LDADD = libcouchbase.la -lpthread
+
 noinst_PROGRAMS += example/mcc/mcc
 example_mcc_mcc_SOURCES = example/mcc/mcc.cc
 example_mcc_mcc_DEPENDENCIES = libcouchbase.la
@@ -275,7 +277,6 @@ if BUILD_EXAMPLES
 noinst_PROGRAMS += \
                    example/db/db \
                    example/db/vb \
-                   example/instancepool/instancepool \
                    example/minimal/minimal \
                    example/observe/observe
 if HAVE_LIBYAJL2
