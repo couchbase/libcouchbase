@@ -187,20 +187,6 @@ typedef struct lcb_cntl_vbinfo_st {
  */
 #define LCB_CNTL_VBMAP                  0x07
 
-typedef enum {
-    LCB_IPV6_DISABLED = 0x00, LCB_IPV6_ONLY = 0x1, LCB_IPV6_ALLOW = 0x02
-} lcb_ipv6_t;
-
-/**
- * @brief IPv4/IPv6 selection policy
- *
- * Setting which controls whether hostname lookups should prefer IPv4 or IPv6
- *
- * @cntl_arg_both{lcb_ipv6_t*}
- * @uncommitted
- */
-#define LCB_CNTL_IP6POLICY              0x0b
-
 /**
  * @brief Configuration error threshold.
  *
@@ -608,13 +594,13 @@ typedef enum {
  * stream */
 typedef enum {
     /** `/pools/default/b[s]/$bucket`: Introduced in Couchbase Server 2.5 */
-    LCB_HTCONFIG_URLTYPE_25PLUS = 0x01,//!< LCB_HTCONFIG_URLTYPE_25PLUS
+    LCB_HTCONFIG_URLTYPE_25PLUS = 0x01,
 
     /** `/pools/default/buckets[Streaming]/$bucket`. */
-    LCB_HTCONFIG_URLTYPE_COMPAT = 0x02,//!< LCB_HTCONFIG_URLTYPE_COMPAT
+    LCB_HTCONFIG_URLTYPE_COMPAT = 0x02,
 
     /** Try `25PLUS` first and fallback to `COMPAT` */
-    LCB_HTCONFIG_URLTYPE_TRYALL = 0x03 //!< LCB_HTCONFIG_URLTYPE_TRYALL
+    LCB_HTCONFIG_URLTYPE_TRYALL = 0x03
 } lcb_HTCONFIG_URLTYPE;
 
 /**
@@ -639,18 +625,13 @@ typedef enum {
 #define LCB_CNTL_HTCONFIG_URLTYPE 0x25
 
 /**
- * @internal
- *
  * @volatile
  * Determines whether to run the event loop internally within lcb_destroy()
  * until no more I/O resources remain for the library. This is usually only
  * necessary if you are creating a lot of instances and/or are using memory
  * leak analysis tools.
  *
- * Mode|Arg
- * ----|----
- * Set, Get | `int*`
- *
+ * @cntl_arg_both{`int*` (as a boolean)}
  * @see lcb_destroy_async() and lcb_set_destroy_callback()
  */
 #define LCB_CNTL_SYNCDESTROY 0x28

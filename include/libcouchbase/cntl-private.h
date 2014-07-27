@@ -200,8 +200,6 @@ struct lcb_cntl_iops_info_st {
  * @cntl_arg_setonly{const char *}
  */
 #define LCB_CNTL_REINIT_CONNSTR 0x2B
-#define LCB_CNTL_REINIT_DSN LCB_CNTL_REINIT_CONNSTR
-
 
 /**
  * Options for how to handle compression
@@ -287,5 +285,20 @@ struct lcb_cntl_rdballocfactory {
  * Set, Get | `lcb_cntl_rdballocfactory*`
  */
 #define LCB_CNTL_RDBALLOCFACTORY 0x27
+
+
+typedef enum {
+    LCB_IPV6_DISABLED = 0x00, LCB_IPV6_ONLY = 0x1, LCB_IPV6_ALLOW = 0x02
+} lcb_ipv6_t;
+
+/**
+ * @brief IPv4/IPv6 selection policy
+ *
+ * Setting which controls whether hostname lookups should prefer IPv4 or IPv6
+ *
+ * @cntl_arg_both{lcb_ipv6_t*}
+ * @uncommitted
+ */
+#define LCB_CNTL_IP6POLICY              0x0b
 
 /**@}*/
