@@ -47,6 +47,13 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
 
+    if (info->origin != LCB_CLCONFIG_FILE) {
+        /* Set the timestamp for the current config to control throttling,
+         * but only if it's not an initial file-based config. See CCBC-482 */
+        bs->last_refresh = gethrtime();
+        bs->errcounter = 0;
+    }
+
     if (instance->type != LCB_TYPE_CLUSTER) {
         lcb_update_vbconfig(instance, info);
     }
@@ -196,7 +203,9 @@ lcb_bootstrap_common(lcb_t instance, int options)
 
     /* Reset the counters */
     bs->errcounter = 0;
-    bs->last_refresh = now;
+    if (options != LCB_BS_REFRESH_INITIAL) {
+        bs->last_refresh = now;
+    }
     return lcb_confmon_start(instance->confmon);
 }
 

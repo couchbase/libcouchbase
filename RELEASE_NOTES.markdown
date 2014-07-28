@@ -14,6 +14,13 @@
   by setting this value to `0` (See `LCB_CNTL_RETRYMODE`) it may only be
   attempted once, causing 'fail fast' behavior in such a case.
 
+* [major] Don't throttle config requests based on initial file-based config.
+  This allows the client to quickly recover from a stale config cache without
+  waiting for the `LCB_CNTL_CONFDELAY_THRESH` interval to elapse. Prior to this
+  fix, a client would appear to "not recover" if bootstrapping from a stale cache.
+  In reality the client would eventually recover but was waiting for the delay
+  threshold to elapse.
+
 ## 2.4.0-beta
 
 * [major] Better error reporting for SSL failures.
