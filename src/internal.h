@@ -174,22 +174,21 @@ extern "C" {
     LCB_INTERNAL_API
     lcb_error_t lcb_initialize_socket_subsystem(void);
 
-    /**
-     * These three functions are all reentrant safe. They control asynchronous
-     * scheduling of cluster configuration retrievals.
-     */
 
-    /** Call this for initial bootstrap */
-    lcb_error_t lcb_bootstrap_initial(lcb_t instance);
+    typedef enum {
+        LCB_BS_REFRESH_ALWAYS = 0x00,
+        LCB_BS_REFRESH_INITIAL = 0x02,
+        LCB_BS_REFRESH_INCRERR = 0x04,
+        LCB_BS_REFRESH_THROTTLE = 0x08,
+        LCB_BS_REFRESH_DEFAULT = (LCB_BS_REFRESH_THROTTLE|LCB_BS_REFRESH_INCRERR)
+    } lcb_BSFLAGS;
 
-    /** Call this on not-my-vbucket, or when a toplogy change is evident */
-    lcb_error_t lcb_bootstrap_refresh(lcb_t instance);
+    lcb_error_t lcb_bootstrap_common(lcb_t instance, int options);
 
-    /** Call this when a non-specicic error has taken place, such as a timeout */
-    void lcb_bootstrap_errcount_incr(lcb_t instance);
-
-    /** Like lcb_bootstrap_errcount_incr(), but does not increase the counter */
-    void lcb_bootstrap_maybe_refresh(lcb_t instance);
+#define lcb_bootstrap_initial(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_INITIAL)
+#define lcb_bootstrap_refresh(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS)
+#define lcb_bootstrap_errcount_incr(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_DEFAULT)
+#define lcb_bootstrap_maybe_refresh(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE)
 
     void lcb_bootstrap_destroy(lcb_t instance);
 

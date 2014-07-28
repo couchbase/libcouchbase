@@ -141,13 +141,11 @@ async_step_callback(clconfig_listener *listener, clconfig_event_t event,
     (void)info;
 }
 
-static lcb_error_t bootstrap_common(lcb_t instance, int initial)
+lcb_error_t
+lcb_bootstrap_common(lcb_t instance, int options)
 {
     struct lcb_bootstrap_st *bs = instance->bootstrap;
-
-    if (bs && lcb_confmon_is_refreshing(instance->confmon)) {
-        return LCB_SUCCESS;
-    }
+    hrtime_t now = gethrtime();
 
     if (!bs) {
         bs = calloc(1, sizeof(*instance->bootstrap));
@@ -161,68 +159,45 @@ static lcb_error_t bootstrap_common(lcb_t instance, int initial)
         lcb_confmon_add_listener(instance->confmon, &bs->listener);
     }
 
-    bs->last_refresh = gethrtime();
+    if (lcb_confmon_is_refreshing(instance->confmon)) {
+        return LCB_SUCCESS;
+    }
 
-    if (initial) {
+    if (options & LCB_BS_REFRESH_THROTTLE) {
+        /* Refresh throttle requested. This is not true if options == ALWAYS */
+        hrtime_t next_ts;
+        unsigned errthresh = LCBT_SETTING(instance, weird_things_threshold);
+
+        if (options & LCB_BS_REFRESH_INCRERR) {
+            bs->errcounter++;
+        }
+        next_ts = bs->last_refresh;
+        next_ts += LCB_US2NS(LCBT_SETTING(instance, weird_things_delay));
+        if (now < next_ts && bs->errcounter < errthresh) {
+            lcb_log(LOGARGS(instance, INFO),
+                "Not requesting a config refresh because of throttling parameters. Next refresh possible in %ums or %u errors. "
+                "See LCB_CNTL_CONFDELAY_THRESH and LCB_CNTL_CONFERRTHRESH to modify the throttling settings",
+                LCB_NS2US(next_ts-now)/1000, (unsigned)errthresh-bs->errcounter);
+            return LCB_SUCCESS;
+        }
+    }
+
+    if (options == LCB_BS_REFRESH_INITIAL) {
+        lcb_confmon_prepare(instance->confmon);
+
         bs->listener.callback = config_callback;
         lcbio_timer_set_target(bs->tm, initial_timeout);
         lcbio_timer_rearm(bs->tm, LCBT_SETTING(instance, config_timeout));
         lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
-
     } else {
         /** No initial timer */
         bs->listener.callback = async_step_callback;
     }
 
-    return lcb_confmon_start(instance->confmon);
-}
-
-lcb_error_t lcb_bootstrap_initial(lcb_t instance)
-{
-    lcb_confmon_prepare(instance->confmon);
-    return bootstrap_common(instance, 1);
-}
-
-lcb_error_t lcb_bootstrap_refresh(lcb_t instance)
-{
-    return bootstrap_common(instance, 0);
-}
-
-static void
-bs_refresh_throttled(lcb_t instance, int incr_errcount)
-{
-    lcb_SIZE errthresh;
-    struct lcb_bootstrap_st *bs = instance->bootstrap;
-    hrtime_t now = gethrtime(), next_refresh_time;
-
-    errthresh = LCBT_SETTING(instance, weird_things_threshold);
-    if (incr_errcount) {
-        bs->errcounter++;
-    }
-    next_refresh_time = instance->bootstrap->last_refresh;
-    next_refresh_time += LCB_US2NS(LCBT_SETTING(instance, weird_things_delay));
-
-    if (now < next_refresh_time && bs->errcounter < errthresh) {
-        lcb_log(LOGARGS(instance, INFO),
-            "Not requesting a config refresh because of throttling parameters. Next refresh possible in %ums or %u errors. "
-            "See LCB_CNTL_CONFDELAY_THRESH and LCB_CNTL_CONFERRTHRESH to modify the throttling settings",
-            LCB_NS2US(next_refresh_time-now)/1000, (unsigned)errthresh-bs->errcounter);
-        return;
-    }
-
+    /* Reset the counters */
     bs->errcounter = 0;
-    lcb_bootstrap_refresh(instance);
-}
-
-void
-lcb_bootstrap_errcount_incr(lcb_t instance)
-{
-    bs_refresh_throttled(instance, 1);
-}
-void
-lcb_bootstrap_maybe_refresh(lcb_t instance)
-{
-    bs_refresh_throttled(instance, 0);
+    bs->last_refresh = now;
+    return lcb_confmon_start(instance->confmon);
 }
 
 void lcb_bootstrap_destroy(lcb_t instance)
@@ -263,5 +238,5 @@ LIBCOUCHBASE_API
 void
 lcb_refresh_config(lcb_t instance)
 {
-    lcb_bootstrap_refresh(instance);
+    lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
 }
