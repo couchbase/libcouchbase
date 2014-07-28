@@ -189,6 +189,9 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  *
  * ### Options
  *
+ * @warning The key-value options here are considered to be a volatile interface
+ * as their names may change.
+ *
  * Options can be specified as the _query_ part of the connection string,
  * for example:
  *
