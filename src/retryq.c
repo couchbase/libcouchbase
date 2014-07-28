@@ -3,6 +3,7 @@
 #include "config.h"
 #include "logging.h"
 #include "internal.h"
+#include "bucketconfig/clconfig.h"
 
 #define LOGARGS(rq, lvl) (rq)->settings, "retryq", LCB_LOG_##lvl, __FILE__, __LINE__
 #define RETRY_PKT_KEY "retry_queue"
@@ -213,10 +214,19 @@ rq_flush(lcb_RETRYQ *rq, int throttle)
         srvix = lcbvb_vbmaster(rq->cq->config, vbid);
 
         if (srvix < 0 || (unsigned)srvix >= rq->cq->npipelines) {
-            /**If there's no server to send it out to, place it inside the
-             * queue again */
+            /* No server found to map to */
+            lcb_t instance = rq->cq->cqdata;
+
             assign_error(op, LCB_NO_MATCHING_SERVER);
-            if (rq->settings->retry[LCB_RETRY_ON_MISSINGNODE]) {
+
+            /* Request a new configuration. If it's time to request a new
+             * configuration (i.e. the attempt has not been throttled) then
+             * keep the command in there until it has a chance to be scheduled.
+             */
+            lcb_bootstrap_maybe_refresh(instance);
+            if (lcb_confmon_is_refreshing(instance->confmon) ||
+                    rq->settings->retry[LCB_RETRY_ON_MISSINGNODE]) {
+
                 lcb_list_delete(&op->ll_sched);
                 lcb_list_delete(&op->ll_tmo);
                 lcb_list_append(&resched_next, &op->ll_sched);
@@ -225,7 +235,6 @@ rq_flush(lcb_RETRYQ *rq, int throttle)
             } else {
                 bail_op(rq, op, LCB_NO_MATCHING_SERVER);
             }
-            lcb_bootstrap_errcount_incr(rq->cq->cqdata);
         } else {
             mc_PIPELINE *newpl = rq->cq->pipelines[srvix];
             mcreq_enqueue_packet(newpl, op->pkt);
@@ -262,8 +271,11 @@ op_dtorfn(mc_EPKTDATUM *d)
     free(d);
 }
 
-void
-lcb_retryq_add(lcb_RETRYQ *rq, mc_EXPACKET *pkt, lcb_error_t err)
+
+#define RETRY_SCHED_IMM 0x01
+
+static void
+add_op(lcb_RETRYQ *rq, mc_EXPACKET *pkt, lcb_error_t err, int options)
 {
     lcb_RETRYOP *op;
     mc_EPKTDATUM *d;
@@ -281,7 +293,11 @@ lcb_retryq_add(lcb_RETRYQ *rq, mc_EXPACKET *pkt, lcb_error_t err)
     op->pkt = &pkt->base;
     pkt->base.retries++;
     assign_error(op, err);
-    update_trytime(rq, op, 0);
+    if (options & RETRY_SCHED_IMM) {
+        op->trytime = gethrtime(); /* now */
+    } else {
+        update_trytime(rq, op, 0);
+    }
 
     lcb_list_add_sorted(&rq->schedops, &op->ll_sched, cmpfn_retry);
     lcb_list_add_sorted(&rq->tmoops, &op->ll_tmo, cmpfn_tmo);
@@ -290,12 +306,19 @@ lcb_retryq_add(lcb_RETRYQ *rq, mc_EXPACKET *pkt, lcb_error_t err)
     do_schedule(rq, 0);
 }
 
+void
+lcb_retryq_add(lcb_RETRYQ *rq, mc_EXPACKET *pkt, lcb_error_t err)
+{
+    add_op(rq, pkt, err, 0);
+}
+
 static void
 fallback_handler(mc_CMDQUEUE *cq, mc_PACKET *pkt)
 {
     lcb_t instance = cq->cqdata;
     mc_PACKET *copy = mcreq_renew_packet(pkt);
-    lcb_retryq_add(instance->retryq, (mc_EXPACKET*)copy, LCB_NO_MATCHING_SERVER);
+    add_op(instance->retryq, (mc_EXPACKET*)copy,
+        LCB_NO_MATCHING_SERVER, RETRY_SCHED_IMM);
 }
 
 lcb_RETRYQ *

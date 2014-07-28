@@ -188,6 +188,9 @@ extern "C" {
     /** Call this when a non-specicic error has taken place, such as a timeout */
     void lcb_bootstrap_errcount_incr(lcb_t instance);
 
+    /** Like lcb_bootstrap_errcount_incr(), but does not increase the counter */
+    void lcb_bootstrap_maybe_refresh(lcb_t instance);
+
     void lcb_bootstrap_destroy(lcb_t instance);
 
     lcb_error_t lcb_init_providers2(lcb_t obj,

@@ -25,7 +25,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->retry[LCB_RETRY_ON_SOCKERR] = LCB_DEFAULT_NETRETRY;
     settings->retry[LCB_RETRY_ON_TOPOCHANGE] = LCB_DEFAULT_TOPORETRY;
     settings->retry[LCB_RETRY_ON_VBMAPERR] = LCB_DEFAULT_NMVRETRY;
-    settings->retry[LCB_RETRY_ON_MISSINGNODE] = 1;
+    settings->retry[LCB_RETRY_ON_MISSINGNODE] = 0;
     settings->bc_http_urltype = LCB_DEFAULT_HTCONFIG_URLTYPE;
     settings->compressopts = LCB_DEFAULT_COMPRESSOPTS;
     settings->allocator_factory = rdb_bigalloc_new;

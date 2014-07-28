@@ -188,14 +188,17 @@ lcb_error_t lcb_bootstrap_refresh(lcb_t instance)
     return bootstrap_common(instance, 0);
 }
 
-void lcb_bootstrap_errcount_incr(lcb_t instance)
+static void
+bs_refresh_throttled(lcb_t instance, int incr_errcount)
 {
     lcb_SIZE errthresh;
     struct lcb_bootstrap_st *bs = instance->bootstrap;
     hrtime_t now = gethrtime(), next_refresh_time;
 
     errthresh = LCBT_SETTING(instance, weird_things_threshold);
-    bs->errcounter++;
+    if (incr_errcount) {
+        bs->errcounter++;
+    }
     next_refresh_time = instance->bootstrap->last_refresh;
     next_refresh_time += LCB_US2NS(LCBT_SETTING(instance, weird_things_delay));
 
@@ -209,6 +212,17 @@ void lcb_bootstrap_errcount_incr(lcb_t instance)
 
     bs->errcounter = 0;
     lcb_bootstrap_refresh(instance);
+}
+
+void
+lcb_bootstrap_errcount_incr(lcb_t instance)
+{
+    bs_refresh_throttled(instance, 1);
+}
+void
+lcb_bootstrap_maybe_refresh(lcb_t instance)
+{
+    bs_refresh_throttled(instance, 0);
 }
 
 void lcb_bootstrap_destroy(lcb_t instance)
