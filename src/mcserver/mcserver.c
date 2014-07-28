@@ -118,16 +118,16 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     protocol_binary_request_header hdr;
     lcb_error_t err = LCB_ERROR;
     lcb_t instance = oldsrv->instance;
+    clconfig_provider *cccp =
+            lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
 
     mcreq_read_hdr(oldpkt, &hdr);
     lcb_log(LOGARGS(oldsrv, WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID(oldsrv), (void*)oldpkt, oldpkt->opaque, ntohs(hdr.request.vbucket));
 
-    if (PACKET_NBODY(resinfo)) {
+    if (PACKET_NBODY(resinfo) && cccp->enabled) {
         lcb_string s;
-        clconfig_provider *cccp;
 
         lcb_string_init(&s);
-        cccp = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
         lcb_string_append(&s, PACKET_VALUE(resinfo), PACKET_NVALUE(resinfo));
         err = lcb_cccp_update(cccp, mcserver_get_host(oldsrv), &s);
         lcb_string_release(&s);

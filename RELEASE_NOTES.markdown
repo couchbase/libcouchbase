@@ -21,6 +21,11 @@
   In reality the client would eventually recover but was waiting for the delay
   threshold to elapse.
 
+* [major] Ignore `NOT_MY_VBUCKET` config payloads if CCCP provider is disabled.
+  This allows the client to circumvent any possible bugs in the CCCP response
+  payload and rely entirely on the HTTP config. It also allows 'rewriting'
+  proxies like confsed to function.
+
 ## 2.4.0-beta
 
 * [major] Better error reporting for SSL failures.
