@@ -266,7 +266,7 @@ ConnParams::fillCropts(lcb_create_st& cropts)
         connstr += '&';
     }
     if (o_transport.passed()) {
-        connstr += "boostrap_on=";
+        connstr += "bootstrap_on=";
         string tmp = o_transport.result();
         makeLowerCase(tmp);
         connstr += tmp;
