@@ -2587,12 +2587,12 @@ typedef struct {
  *
  * @param resp The response structure
  */
-typedef void (*lcb_http_callback)(
+typedef void (*lcb_http_res_callback)(
         lcb_http_request_t request, lcb_t instance, const void *cookie,
         lcb_error_t error, const lcb_http_resp_t *resp);
 
-typedef lcb_http_callback lcb_http_data_callback;
-typedef lcb_http_callback lcb_http_complete_callback;
+typedef lcb_http_res_callback lcb_http_data_callback;
+typedef lcb_http_res_callback lcb_http_complete_callback;
 
 /**
  * @brief Set the HTTP completion callback for HTTP request completion

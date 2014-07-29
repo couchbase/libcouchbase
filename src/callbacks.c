@@ -178,7 +178,7 @@ compat_default_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *r3base)
         break;
     }
     case LCB_CALLBACK_HTTP: {
-        lcb_http_callback target;
+        lcb_http_res_callback target;
         lcb_http_resp_t r2 = { 0 };
         r2.v.v0.path = r3->http.key;
         r2.v.v0.npath = r3->http.nkey;
