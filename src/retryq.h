@@ -54,6 +54,10 @@ lcb_retryq_destroy(lcb_RETRYQ *rq);
  * @brief Enqueue a failed command
  * @param rq The retried queue
  * @param detchpkt A detached packet allocated with mcreq_renew_packet()
+ * @param err the error code which caused the packet to be placed inside the
+ * retry queue. Depending on the error code and subsequent errors, this code
+ * will ultimately be sent back to the operation callback when the result is
+ * final.
  *
  * @attention Only simple commands containing vBuckets may be placed here.
  * Complex commands such as OBSERVE or STAT may _not_ be retried through this

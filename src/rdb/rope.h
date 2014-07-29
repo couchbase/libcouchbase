@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 /**
- * @defgroup RDB
+ * @defgroup RDB Network Read Buffers
  * @brief Read buffer system.
  *
  * # Overview

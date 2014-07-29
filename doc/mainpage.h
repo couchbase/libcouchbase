@@ -66,7 +66,6 @@
  * @addtogroup LCB_GENERICS
  * @{
  * @file src/simplestring.h
- * @file src/genhash.h
  * @file src/list.h
  * @file src/sllist.h
  * @file src/sllist-inl.h

@@ -58,7 +58,7 @@ typedef enum {
 } lcbio_TIMERSTATE;
 
 /**
- * @bried Timer callback
+ * @brief Timer callback
  * @see lcb_timer_new()
  */
 typedef void (*lcbio_TIMER_cb)(void *);

@@ -581,6 +581,9 @@ mcreq_extract_hashkey(
  * @param extlen the size of extras for this command
  * @param[out] packet a pointer set to the address of the allocated packet
  * @param[out] pipeline a pointer set to the target pipeline
+ * @param options a set of options to control creation behavior. Currently the
+ * only recognized options are `0` (i.e. default options), or @ref
+ * MCREQ_BASICPACKET_F_FALLBACKOK
  */
 
 lcb_error_t

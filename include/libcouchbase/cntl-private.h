@@ -93,7 +93,6 @@ typedef struct lcb_cntl_server_st {
 struct lcb_cntl_iops_info_st {
     int version;
     union {
-        /** .. */
         struct {
             /**
              * Pass here options, used to create IO structure with
