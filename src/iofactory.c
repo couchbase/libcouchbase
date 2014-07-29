@@ -17,6 +17,7 @@
 
 #include "internal.h"
 #include "plugins/io/select/select_io_opts.h"
+#include <libcouchbase/plugins/io/bsdio-inl.c>
 
 typedef lcb_error_t (*create_func_t)(int version, lcb_io_opt_t *io, void *cookie);
 
@@ -398,14 +399,36 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
         return err;
     }
 
-    switch (options.version) {
-    case 1:
-        return create_v1(io, &options);
-    case 2:
-        return create_v2(io, &options);
-    default:
+    if (options.version == 1) {
+        err = create_v1(io, &options);
+    } else if (options.version == 2) {
+        err = create_v2(io, &options);
+    } else {
         return LCB_NOT_SUPPORTED;
     }
+
+    if (err != LCB_SUCCESS) {
+        return err;
+    }
+    /*XXX:
+     * This block of code here because the Ruby SDK relies on undocumented
+     * functionality of older versions of libcouchbase in which its send/recv
+     * functions assert that the number of IOV elements passed is always going
+     * to be 2.
+     *
+     * This works around the issue by patching the send/recv functions of
+     * the ruby implementation at load-time.
+     *
+     * This block of code will go away once the Ruby SDK is fixed and a released
+     * version has been out for enough time that it won't break common existing
+     * deployments.
+     */
+    if (io_opts && io_opts->version == 1 && io_opts->v.v1.symbol != NULL) {
+        if (strstr(io_opts->v.v1.symbol, "cb_create_ruby")) {
+            wire_lcb_bsd_impl(*io);
+        }
+    }
+    return LCB_SUCCESS;
 }
 
 static lcb_error_t create_v1(lcb_io_opt_t *io,
