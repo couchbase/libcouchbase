@@ -168,15 +168,14 @@ static void maybe_refresh_config(lcb_t instance,
 
     if (err != LCB_SUCCESS && (err == LCB_ESOCKSHUTDOWN && htstatus_ok) == 0) {
         /* ignore graceful close */
-        lcb_bootstrap_refresh(instance);
+        lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
         return;
     }
 
     if (htstatus_ok) {
         return;
     }
-
-    lcb_bootstrap_refresh(instance);
+    lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
 }
 
 

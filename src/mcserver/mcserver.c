@@ -134,7 +134,7 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     }
 
     if (err != LCB_SUCCESS) {
-        lcb_bootstrap_refresh(instance);
+        lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
     }
 
     if (!lcb_should_retry(oldsrv->settings, oldpkt, LCB_NOT_MY_VBUCKET)) {
@@ -361,7 +361,8 @@ purge_single_server(mc_SERVER *server, lcb_error_t error,
     }
 
     if (affected || policy == REFRESH_ALWAYS) {
-        lcb_bootstrap_errcount_incr(server->instance);
+        lcb_bootstrap_common(server->instance,
+            LCB_BS_REFRESH_THROTTLE|LCB_BS_REFRESH_INCRERR);
     }
     return affected;
 }

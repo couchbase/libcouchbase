@@ -10,6 +10,7 @@ OUTDIR_PUB = doc/public
 OUTDIR_PRIV = doc/internal
 INTERNAL_SRC = \
 			   src/rdb \
+			   src/bootstrap.h \
 			   src/lcbio \
 			   src/netbuf \
 			   src/mc \

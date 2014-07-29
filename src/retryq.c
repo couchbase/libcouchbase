@@ -223,7 +223,7 @@ rq_flush(lcb_RETRYQ *rq, int throttle)
              * configuration (i.e. the attempt has not been throttled) then
              * keep the command in there until it has a chance to be scheduled.
              */
-            lcb_bootstrap_maybe_refresh(instance);
+            lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE);
             if (lcb_confmon_is_refreshing(instance->confmon) ||
                     rq->settings->retry[LCB_RETRY_ON_MISSINGNODE]) {
 

@@ -45,6 +45,7 @@
 /* lcb_t-specific includes */
 #include "retryq.h"
 #include "aspend.h"
+#include "bootstrap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,7 +79,7 @@ extern "C" {
 
     struct lcb_confmon_st;
     struct hostlist_st;
-    struct lcb_bootstrap_st;
+    struct lcb_BOOTSTRAP;
 
     struct lcb_st {
         /**
@@ -100,7 +101,7 @@ extern "C" {
         struct hostlist_st *mc_nodes;
         struct hostlist_st *ht_nodes;
         struct clconfig_info_st *cur_configinfo;
-        struct lcb_bootstrap_st *bootstrap;
+        struct lcb_BOOTSTRAP *bootstrap;
         struct lcb_callback_st callbacks;
         struct lcb_histogram_st *histogram;
         lcb_ASPEND pendops;
@@ -173,24 +174,6 @@ extern "C" {
      */
     LCB_INTERNAL_API
     lcb_error_t lcb_initialize_socket_subsystem(void);
-
-
-    typedef enum {
-        LCB_BS_REFRESH_ALWAYS = 0x00,
-        LCB_BS_REFRESH_INITIAL = 0x02,
-        LCB_BS_REFRESH_INCRERR = 0x04,
-        LCB_BS_REFRESH_THROTTLE = 0x08,
-        LCB_BS_REFRESH_DEFAULT = (LCB_BS_REFRESH_THROTTLE|LCB_BS_REFRESH_INCRERR)
-    } lcb_BSFLAGS;
-
-    lcb_error_t lcb_bootstrap_common(lcb_t instance, int options);
-
-#define lcb_bootstrap_initial(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_INITIAL)
-#define lcb_bootstrap_refresh(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS)
-#define lcb_bootstrap_errcount_incr(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_DEFAULT)
-#define lcb_bootstrap_maybe_refresh(instance) lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE)
-
-    void lcb_bootstrap_destroy(lcb_t instance);
 
     lcb_error_t lcb_init_providers2(lcb_t obj,
                                    const struct lcb_create_st2 *e_options);

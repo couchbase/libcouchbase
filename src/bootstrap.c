@@ -1,16 +1,6 @@
+#define LCB_BOOTSTRAP_DEFINE_STRUCT 1
 #include "internal.h"
-#include "bucketconfig/clconfig.h"
 
-struct lcb_bootstrap_st {
-    clconfig_listener listener;
-    lcb_t parent;
-    lcbio_pTIMER tm;
-    hrtime_t last_refresh;
-
-    /** Flag set if we've already bootstrapped */
-    int bootstrapped;
-    unsigned errcounter;
-};
 
 #define LOGARGS(instance, lvl) instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
 
@@ -27,7 +17,7 @@ static void
 config_callback(clconfig_listener *listener, clconfig_event_t event,
     clconfig_info *info)
 {
-    struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
+    struct lcb_BOOTSTRAP *bs = (struct lcb_BOOTSTRAP *)listener;
     lcb_t instance = bs->parent;
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
@@ -83,7 +73,7 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
 static void
 initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
 {
-    struct lcb_bootstrap_st *bs = instance->bootstrap;
+    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
 
     instance->last_error = lcb_confmon_last_error(instance->confmon);
     if (instance->last_error == LCB_SUCCESS) {
@@ -106,7 +96,7 @@ initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
  */
 static void initial_timeout(void *arg)
 {
-    struct lcb_bootstrap_st *bs = arg;
+    struct lcb_BOOTSTRAP *bs = arg;
     initial_bootstrap_error(bs->parent, LCB_ETIMEDOUT, "Failed to bootstrap in time");
 }
 
@@ -116,7 +106,7 @@ static void initial_timeout(void *arg)
 static void async_refresh(void *arg)
 {
     /** Get the best configuration and run stuff.. */
-    struct lcb_bootstrap_st *bs = arg;
+    struct lcb_BOOTSTRAP *bs = arg;
     clconfig_info *info;
 
     info = lcb_confmon_get_config(bs->parent->confmon);
@@ -131,7 +121,7 @@ static void
 async_step_callback(clconfig_listener *listener, clconfig_event_t event,
     clconfig_info *info)
 {
-    struct lcb_bootstrap_st *bs = (struct lcb_bootstrap_st *)listener;
+    struct lcb_BOOTSTRAP *bs = (struct lcb_BOOTSTRAP *)listener;
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
@@ -151,7 +141,7 @@ async_step_callback(clconfig_listener *listener, clconfig_event_t event,
 lcb_error_t
 lcb_bootstrap_common(lcb_t instance, int options)
 {
-    struct lcb_bootstrap_st *bs = instance->bootstrap;
+    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
     hrtime_t now = gethrtime();
 
     if (!bs) {
@@ -211,7 +201,7 @@ lcb_bootstrap_common(lcb_t instance, int options)
 
 void lcb_bootstrap_destroy(lcb_t instance)
 {
-    struct lcb_bootstrap_st *bs = instance->bootstrap;
+    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
     if (!bs) {
         return;
     }

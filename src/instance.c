@@ -538,7 +538,7 @@ lcb_destroy_async(lcb_t instance, const void *arg)
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
-    lcb_error_t err = lcb_bootstrap_initial(instance);
+    lcb_error_t err = lcb_bootstrap_common(instance, LCB_BS_REFRESH_INITIAL);
     if (err == LCB_SUCCESS) {
         SYNCMODE_INTERCEPT(instance);
     } else {
