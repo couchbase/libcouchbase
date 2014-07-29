@@ -513,6 +513,7 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     lcb_http_request_t *request)
 {
     lcb_CMDHTTP htcmd = { 0 };
+    lcb_error_t err;
     const lcb_HTTPCMDv0 *cmdbase = &cmd->v.v0;
 
     LCB_CMD_SET_KEY(&htcmd, cmdbase->path, cmdbase->npath);
@@ -531,7 +532,12 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
     if (cmdbase->chunked) {
         htcmd.cmdflags |= LCB_CMDHTTP_F_STREAM;
     }
-    return lcb_http3(instance, cookie, &htcmd);
+
+    err = lcb_http3(instance, cookie, &htcmd);
+    if (err == LCB_SUCCESS) {
+        SYNCMODE_INTERCEPT(instance);
+    }
+    return err;
 }
 
 LIBCOUCHBASE_API
