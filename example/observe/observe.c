@@ -39,7 +39,7 @@ typedef struct {
 } node_info;
 
 typedef struct {
-    int nresp;
+    unsigned nresp;
     node_info *nodeinfo;
 } observe_info;
 
@@ -47,7 +47,6 @@ static void
 observe_callback(lcb_t instance, const void *cookie, lcb_error_t error,
     const lcb_observe_resp_t *resp)
 {
-    lcb_U8 status;
     observe_info *obs_info = (observe_info *)cookie;
     node_info *ni = &obs_info->nodeinfo[obs_info->nresp];
 

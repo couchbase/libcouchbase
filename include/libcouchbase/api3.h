@@ -197,7 +197,7 @@ typedef enum {
     LCB_CALLBACK_GETREPLICA, /**< lcb_rget3() */
     LCB_CALLBACK_ENDURE, /**< lcb_endure3_ctxnew() */
     LCB_CALLBACK_HTTP, /**< lcb_http3() */
-    LCB_CALLBACK__MAX, /* Number of callbacks */
+    LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
 /**
