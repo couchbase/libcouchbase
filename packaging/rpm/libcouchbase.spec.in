@@ -100,6 +100,32 @@ Development files for the Couchbase Client & Protocol Library
 
 %changelog
 
+* Tue Jul 29 2014 Mark Nunberg <mark.nunberg@couchbase.com> - 2.4.0-1
+
+- [major] Attempt to retry items that are mapped to a non-existent node in
+  a degraded cluster. Rather than returning `LCB_NO_MATCHING_SERVER` the
+  behavior should be to wait for the item to succeed and attempt to fetch
+  a new cluster configuration.
+
+  In order to control how such 'orphaned' commands are handled, a new value
+  has been added to the `lcb_RETRYMODEOPTS` called `LCB_RETRY_ON_MISSINGNODE`
+  which dictates how commands should be rescheduled if the associated vbucket
+  has no master. The default is to retry the command until it times out, but
+  by setting this value to `0` (See `LCB_CNTL_RETRYMODE`) it may only be
+  attempted once, causing 'fail fast' behavior in such a case.
+
+- [major] Don't throttle config requests based on initial file-based config.
+  This allows the client to quickly recover from a stale config cache without
+  waiting for the `LCB_CNTL_CONFDELAY_THRESH` interval to elapse. Prior to this
+  fix, a client would appear to "not recover" if bootstrapping from a stale cache.
+  In reality the client would eventually recover but was waiting for the delay
+  threshold to elapse.
+
+- [major] Ignore `NOT_MY_VBUCKET` config payloads if CCCP provider is disabled.
+  This allows the client to circumvent any possible bugs in the CCCP response
+  payload and rely entirely on the HTTP config. It also allows 'rewriting'
+  proxies like confsed to function.
+
 * Fri Jul 11 2014 Mark Nunberg <mark.nunberg@couchbase.com> - 2.4.0-0.beta
 
 - [minor] Communication via legacy memcached servers is possible
