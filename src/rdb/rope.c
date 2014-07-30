@@ -362,3 +362,37 @@ rdb_copywrite(rdb_IOROPE *ior, void *buf, unsigned nbuf)
         rdb_rdend(ior, orig_nbuf - nbuf);
     }
 }
+
+static void
+dump_ropebuf(const rdb_ROPEBUF *buf, FILE *fp)
+{
+    lcb_list_t *llcur;
+    fprintf(fp, "TOTAL LENGTH: %u\n", buf->nused);
+    fprintf(fp, "WILL DUMP SEGMENTS..\n");
+    LCB_LIST_FOR(llcur, &buf->segments) {
+        const char *indent = "    ";
+        rdb_ROPESEG *seg = LCB_LIST_ITEM(llcur, rdb_ROPESEG, llnode);
+        fprintf(fp, "%sSEG=%p\n", indent, (void*)seg);
+        fprintf(fp, "%sALLOCATOR=%p [%u]\n", indent, (void*)seg->allocator, seg->allocid);
+        fprintf(fp, "%sBUFROOT=%p\n", indent, seg->root);
+        fprintf(fp, "%sALLOC SIZE: %u\n", indent, seg->nalloc);
+        fprintf(fp, "%sDATA SIZE: %u\n", indent, seg->nused);
+        fprintf(fp, "%sDATS OFFSET: %u\n", indent, seg->start);
+        fprintf(fp, "%sSEG FLAGS: 0x%x\n", indent, seg->shflags);
+        fprintf(fp, "%sSEG REFCNT: %u\n", indent, seg->refcnt);
+        fprintf(fp, "\n");
+    }
+}
+
+void
+rdb_dump(const rdb_IOROPE *ior, FILE *fp)
+{
+    fprintf(fp, "@@ DUMP IOROPE=%p\n", ior);
+    fprintf(fp, "@@ ROPEBUF[AVAIL]=%p\n", &ior->avail);
+    dump_ropebuf(&ior->avail, fp);
+    fprintf(fp, "@@ ROPEBUF[ACTIVE]=%p\n", &ior->recvd);
+    dump_ropebuf(&ior->recvd, fp);
+    if (ior->avail.allocator && ior->avail.allocator->dump) {
+        ior->avail.allocator->dump(ior->avail.allocator, fp);
+    }
+}

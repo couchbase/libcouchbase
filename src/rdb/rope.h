@@ -3,6 +3,7 @@
 #include <libcouchbase/sysdefs.h>
 #include <libcouchbase/visibility.h>
 #include <netbuf/netbuf-defs.h>
+#include <stdio.h>
 #include "list.h"
 
 #ifdef __cplusplus
@@ -230,6 +231,7 @@ typedef struct rdb_ALLOCATOR {
      * of any existing segments before freeing all its resources.
      */
     void (*a_release)(rdb_pALLOCATOR);
+    void (*dump)(rdb_pALLOCATOR,FILE*);
 } rdb_ALLOCATOR;
 
 /**
@@ -450,6 +452,14 @@ rdb_chunkalloc_new(unsigned chunksize);
 LCB_INTERNAL_API
 rdb_ALLOCATOR *
 rdb_libcalloc_new(void);
+
+/**
+ * Dump information about the iorope structure to a file
+ * @param ior The rope structure to dump
+ * @param fp The destination file.
+ */
+void
+rdb_dump(const rdb_IOROPE *ior, FILE *fp);
 
 #ifdef __cplusplus
 }

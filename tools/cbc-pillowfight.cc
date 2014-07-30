@@ -478,9 +478,11 @@ public:
             if (config.isTimings()) {
                 InstanceCookie::dumpTimings(instance, "Run");
             }
+            if (config.params.shouldDump()) {
+                lcb_dump(instance, stderr, LCB_DUMP_ALL);
+            }
             pool->push(instance);
         } while (!config.isLoopDone(++niter));
-
         return true;
     }
 

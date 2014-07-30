@@ -29,6 +29,13 @@
 
   **Issues**: [CCBC-474](http://couchbase.com/issues/browse/CCBC-474)
 
+* **Priority**: Minor
+  Provide `lcb_dump()` function call to dump state information about
+  a client handle. The function call itself is currently marked as
+  volatile and the output format is very much likely to change.
+
+  **Issues**: [CCBC-491](http://couchbase.com/issues/browse/CCBC-490)
+
 
 ## 2.4.0 GA
 

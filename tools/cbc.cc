@@ -199,6 +199,9 @@ Handler::Handler(const char *name) : parser(name), instance(NULL)
 
 Handler::~Handler()
 {
+    if (params.shouldDump()) {
+        lcb_dump(instance, stderr, LCB_DUMP_ALL);
+    }
     if (instance) {
         lcb_destroy(instance);
     }

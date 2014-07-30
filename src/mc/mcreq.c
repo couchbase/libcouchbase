@@ -766,56 +766,79 @@ mcreq_set_fallback_handler(mc_CMDQUEUE *cq, mcreq_fallback_cb handler)
     cq->fallback->flush_start = do_fallback_flush;
 }
 
+static void
+noop_dumpfn(const void *d, unsigned n, FILE *fp) { (void)d;(void)n;(void)fp; }
+
 void
-mcreq_dump_packet(const mc_PACKET *packet)
+mcreq_dump_packet(const mc_PACKET *packet, FILE *fp, mcreq_payload_dump_fn dumpfn)
 {
     const char *indent = "  ";
     const mc_REQDATA *rdata = MCREQ_PKT_RDATA(packet);
 
-    printf("Packet @%p\n", (void *)packet);
-    printf("%sOPAQUE: %u\n", indent, (unsigned int)packet->opaque);
-    printf("%sPKTFLAGS: 0x%x\n", indent, packet->flags);
-    printf("%sKey+Header Size: %u\n", indent, (unsigned int)packet->kh_span.size);
-    printf("%sKey Offset: %u\n", indent, MCREQ_PKT_BASESIZE + packet->extlen);
+    if (!dumpfn) {
+        dumpfn = noop_dumpfn;
+    }
+    if (!fp) {
+        fp = stderr;
+    }
+
+    fprintf(fp, "Packet @%p\n", (void *)packet);
+    fprintf(fp, "%sOPAQUE: %u\n", indent, (unsigned int)packet->opaque);
+    fprintf(fp, "%sPKTFLAGS: 0x%x\n", indent, packet->flags);
+    fprintf(fp, "%sKey+Header Size: %u\n", indent, (unsigned int)packet->kh_span.size);
+    fprintf(fp, "%sKey Offset: %u\n", indent, MCREQ_PKT_BASESIZE + packet->extlen);
+
 
     if (packet->flags & MCREQ_F_HASVALUE) {
         if (packet->flags & MCREQ_F_VALUE_IOV) {
-            printf("%sValue Length: %u\n", indent,
+            fprintf(fp, "%sValue Length: %u\n", indent,
                    packet->u_value.multi.total_length);
 
-            printf("%sValue IOV: [start=%p, n=%d]\n",
-                   indent,
-                   (void *)packet->u_value.multi.iov,
-                   packet->u_value.multi.niov);
+            fprintf(fp, "%sValue IOV: [start=%p, n=%d]\n", indent,
+                (void *)packet->u_value.multi.iov, packet->u_value.multi.niov);
         } else {
             if (packet->flags & MCREQ_F_VALUE_NOCOPY) {
-                printf("%sValue is user allocated\n", indent);
+                fprintf(fp, "%sValue is user allocated\n", indent);
             }
-            printf("%sValue: %p, %u bytes\n",
-                   indent,
-                   SPAN_BUFFER(&packet->u_value.single),
-                   packet->u_value.single.size);
+            fprintf(fp, "%sValue: %p, %u bytes\n", indent,
+                SPAN_BUFFER(&packet->u_value.single), packet->u_value.single.size);
         }
     }
 
-    printf("%sRDATA(%s): %p\n", indent,
-           (packet->flags & MCREQ_F_REQEXT) ? "ALLOC" : "EMBEDDED",
-                   (void *)rdata);
+    fprintf(fp, "%sRDATA(%s): %p\n", indent,
+        (packet->flags & MCREQ_F_REQEXT) ? "ALLOC" : "EMBEDDED", (void *)rdata);
 
     indent = "    ";
-    printf("%sStart: %lu\n", indent, (unsigned long)rdata->start);
-    printf("%sCookie: %p\n", indent, rdata->cookie);
+    fprintf(fp, "%sStart: %lu\n", indent, (unsigned long)rdata->start);
+    fprintf(fp, "%sCookie: %p\n", indent, rdata->cookie);
 
     indent = "  ";
-    printf("%sNEXT: %p\n", indent, (void *)packet->slnode.next);
+    fprintf(fp, "%sNEXT: %p\n", indent, (void *)packet->slnode.next);
+    if (dumpfn != noop_dumpfn) {
+        fprintf(fp, "PACKET CONTENTS:\n");
+    }
+
+    fwrite(SPAN_BUFFER(&packet->kh_span), 1, packet->kh_span.size, fp);
+    if (packet->flags & MCREQ_F_HASVALUE) {
+        if (packet->flags & MCREQ_F_VALUE_IOV) {
+            const lcb_IOV *iovs = packet->u_value.multi.iov;
+            unsigned ii, ixmax = packet->u_value.multi.niov;
+            for (ii = 0; ii < ixmax; ii++) {
+                dumpfn(iovs[ii].iov_base, iovs[ii].iov_len, fp);
+            }
+        } else {
+            const nb_SPAN *vspan = &packet->u_value.single;
+            dumpfn(SPAN_BUFFER(vspan), vspan->size, fp);
+        }
+    }
 }
 
 void
-mcreq_dump_chain(const mc_PIPELINE *pipeline)
+mcreq_dump_chain(const mc_PIPELINE *pipeline, FILE *fp, mcreq_payload_dump_fn dumpfn)
 {
     sllist_node *ll;
     SLLIST_FOREACH(&pipeline->requests, ll) {
         const mc_PACKET *pkt = SLLIST_ITEM(ll, mc_PACKET, slnode);
-        mcreq_dump_packet(pkt);
+        mcreq_dump_packet(pkt, fp, dumpfn);
     }
 }

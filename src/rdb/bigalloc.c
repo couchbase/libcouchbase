@@ -166,6 +166,9 @@ seg_release(rdb_ALLOCATOR *abase, rdb_ROPESEG *seg)
     alloc_decref(abase);
 }
 
+static void
+dump_wrap(rdb_pALLOCATOR alloc, FILE *fp) { rdb_bigalloc_dump((rdb_BIGALLOC*)alloc, fp); }
+
 rdb_ALLOCATOR *
 rdb_bigalloc_new(void)
 {
@@ -183,6 +186,7 @@ rdb_bigalloc_new(void)
     abase->s_alloc = seg_alloc;
     abase->s_realloc = seg_realloc;
     abase->a_release = alloc_decref;
+    abase->dump = dump_wrap;
     return &alloc->base;
 }
 

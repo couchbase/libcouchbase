@@ -151,6 +151,9 @@ lcbio_async_cancel(lcbio_TIMER *timer);
  */
 #define lcbio_timer_set_target(timer, tgt) (timer)->callback = tgt
 
+void
+lcbio_timer_dump(lcbio_TIMER *timer, FILE *fp);
+
 /**@}*/
 
 #ifdef __cplusplus

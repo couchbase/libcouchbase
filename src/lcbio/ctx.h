@@ -201,7 +201,7 @@ lcbio_ctx_close_ex(lcbio_CTX *ctx, lcbio_CTXCLOSE_cb cb, void *cbarg,
 
 /** Dump a textual representation of the context to the screen */
 void
-lcbio_ctx_dump(lcbio_CTX *ctx);
+lcbio_ctx_dump(lcbio_CTX *ctx, FILE *fp);
 
 /**@}*/
 

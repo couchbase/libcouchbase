@@ -50,6 +50,7 @@ ConnParams::ConnParams() :
     o_ssl.description("Enable SSL settings").argdesc("ON|OFF|NOVERIFY").setDefault("off");
     o_capath.description("Path to server CA certificate");
     o_verbose.description("Set debugging output (specify multiple times for greater verbosity");
+    o_dump.description("Dump verbose internal state after operations are done");
 }
 
 void

@@ -345,7 +345,7 @@ netbuf_default_settings(nb_SETTINGS *settings);
  * debugging.
  */
 void
-netbuf_dump_status(nb_MGR *mgr);
+netbuf_dump_status(nb_MGR *mgr, FILE *fp);
 
 
 /**

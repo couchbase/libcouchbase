@@ -370,3 +370,14 @@ lcb_retryq_origerr(const mc_PACKET *packet)
     op = (lcb_RETRYOP *)d;
     return op->origerr;
 }
+
+void
+lcb_retryq_dump(lcb_RETRYQ *rq, FILE *fp, mcreq_payload_dump_fn dumpfn)
+{
+    lcb_list_t *cur;
+    LCB_LIST_FOR(cur, &rq->schedops) {
+        lcb_RETRYOP *op = LCB_LIST_ITEM(cur, lcb_RETRYOP, ll_sched);
+        mcreq_dump_packet(op->pkt, fp, dumpfn);
+    }
+    (void)fp;
+}

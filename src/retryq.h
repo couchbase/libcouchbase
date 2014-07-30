@@ -92,6 +92,14 @@ lcb_error_t
 lcb_retryq_origerr(const mc_PACKET *pkt);
 
 /**
+ * Dumps the packets inside the queue
+ * @param rq The request queue
+ * @param fp The file to which the output should be written to
+ */
+void
+lcb_retryq_dump(lcb_RETRYQ *rq, FILE *fp, mcreq_payload_dump_fn dumpfn);
+
+/**
  * @brief Check if there are operations to retry
  * @param rq the queue
  * @return nonzero if there are pending operations

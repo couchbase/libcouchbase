@@ -32,6 +32,7 @@ typedef struct lcb_http_request_st *lcb_http_request_t;
 #include <stddef.h>
 #include <time.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <libcouchbase/sysdefs.h>
 #include <libcouchbase/assert.h>
 #include <libcouchbase/visibility.h>
@@ -3241,6 +3242,35 @@ void lcb_run_loop(lcb_t instance);
 
 LCB_INTERNAL_API
 void lcb_stop_loop(lcb_t instance);
+
+typedef enum {
+    /** Dump the raw vbucket configuration */
+    LCB_DUMP_VBCONFIG =  0x01,
+    /** Dump information about each packet */
+    LCB_DUMP_PKTINFO = 0x02,
+    /** Dump memory usage/reservation information about buffers */
+    LCB_DUMP_BUFINFO = 0x04,
+    /** Dump everything */
+    LCB_DUMP_ALL = 0xff
+} lcb_DUMPFLAGS;
+
+/**
+ * @volatile
+ * @brief Write a textual dump to a file.
+ *
+ * This function will inspect the various internal structures of the current
+ * client handle (indicated by `instance`) and write the state information
+ * to the file indicated by `fp`.
+ * @param instance the handle to dump
+ * @param fp the file to which the dump should be written
+ * @param flags a set of modifiers (of @ref lcb_DUMPFLAGS) indicating what
+ * information to dump. Note that a standard set of information is always
+ * dumped, but by default more verbose information is hidden, and may be
+ * enabled with these flags.
+ */
+LIBCOUCHBASE_API
+void
+lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags);
 
 #ifdef __cplusplus
 }

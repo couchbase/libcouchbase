@@ -862,11 +862,28 @@ typedef void (*mcreq_fallback_cb)(mc_CMDQUEUE *cq, mc_PACKET *pkt);
 void
 mcreq_set_fallback_handler(mc_CMDQUEUE *cq, mcreq_fallback_cb handler);
 
+/**
+ * Callback used by mcreq_dump_packet() and mcreq_dump_chain() to format the
+ * packet's payload
+ * @param data the data to dump
+ * @param size the size of the data
+ * @param fp the file to write the output to
+ */
+typedef void (*mcreq_payload_dump_fn)
+        (const void *data, unsigned size, FILE *fp);
+
+/**
+ * Dumps a single packet to the file indicated by `fp`
+ * @param pkt the packet to dump
+ * @param fp The file to write to
+ * @param dumpfn If specified, this function is called to handle the packet's
+ *  header and payload body
+ */
 void
-mcreq_dump_packet(const mc_PACKET *pkt);
+mcreq_dump_packet(const mc_PACKET *pkt, FILE *fp, mcreq_payload_dump_fn dumpfn);
 
 void
-mcreq_dump_chain(const mc_PIPELINE *pipeline);
+mcreq_dump_chain(const mc_PIPELINE *pipeline, FILE *fp, mcreq_payload_dump_fn dumpfn);
 
 #define mcreq_write_hdr(pkt, hdr) \
         memcpy( SPAN_BUFFER(&(pkt)->kh_span), (hdr)->bytes, sizeof((hdr)->bytes) )

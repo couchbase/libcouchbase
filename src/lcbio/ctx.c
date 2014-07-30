@@ -567,21 +567,23 @@ lcbio_ctx_senderr(lcbio_CTX *ctx, lcb_error_t err)
 }
 
 void
-lcbio_ctx_dump(lcbio_CTX *ctx)
+lcbio_ctx_dump(lcbio_CTX *ctx, FILE *fp)
 {
-    printf("IOCTX=%p. SUBSYS=%s\n", (void*)ctx, ctx->subsys);
-    printf("  Pending=%d\n", ctx->npending);
-    printf("  ReqRead=%d\n", ctx->rdwant);
-    printf("  WantWrite=%d\n", ctx->wwant);
-    printf("  Entered=%d\n", ctx->entered);
-    printf("  Active=%d\n", ctx->state == ES_ACTIVE);
-    printf("  SOCKET=%p\n", (void*)ctx->sock);
-    printf("    Model=%s\n", ctx->io->model == LCB_IOMODEL_EVENT ? "Event" : "Completion");
+    fprintf(fp, "IOCTX=%p. SUBSYS=%s\n", (void*)ctx, ctx->subsys);
+    fprintf(fp, "  Pending=%d\n", ctx->npending);
+    fprintf(fp, "  ReqRead=%d\n", ctx->rdwant);
+    fprintf(fp, "  WantWrite=%d\n", ctx->wwant);
+    fprintf(fp, "  Entered=%d\n", ctx->entered);
+    fprintf(fp, "  Active=%d\n", ctx->state == ES_ACTIVE);
+    fprintf(fp, "  SOCKET=%p\n", (void*)ctx->sock);
+    fprintf(fp, "    Model=%s\n", ctx->io->model == LCB_IOMODEL_EVENT ? "Event" : "Completion");
     if (IOT_IS_EVENT(ctx->io)) {
-        printf("    FD=%d\n", ctx->sock->u.fd);
-        printf("    Watcher Active=%d\n", ctx->evactive);
+        fprintf(fp, "    FD=%d\n", ctx->sock->u.fd);
+        fprintf(fp, "    Watcher Active=%d\n", ctx->evactive);
     } else {
-        printf("    SD=%p\n", (void *)ctx->sock->u.sd);
-        printf("    Reading=%d\n", ctx->sock->u.sd->is_reading);
+        fprintf(fp, "    SD=%p\n", (void *)ctx->sock->u.sd);
+        fprintf(fp, "    Reading=%d\n", ctx->sock->u.sd->is_reading);
     }
+    fprintf(fp, "    WILL DUMP IOR/READBUF INFO:\n");
+    rdb_dump(&ctx->ior, fp);
 }
