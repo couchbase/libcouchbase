@@ -163,14 +163,18 @@ obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
         lcb_U16 vb16, klen16;
         int ix;
 
-        ix = lcbvb_vbreplica(cq->config, vbid, ii);
-        if (ix < 0 || ix > (int)cq->npipelines) {
-            if (ii == -1) {
+        if (ii == -1) {
+            ix = lcbvb_vbmaster(cq->config, vbid);
+            if (ix < 0) {
                 return LCB_NO_MATCHING_SERVER;
-            } else {
+            }
+        } else {
+            ix = lcbvb_vbreplica(cq->config, vbid, ii);
+            if (ix < 0) {
                 continue;
             }
         }
+
         lcb_assert(ix < (int)ctx->nrequests);
         rr = ctx->requests + ix;
         if (!rr->allocated) {

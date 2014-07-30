@@ -160,3 +160,36 @@ TEST_F(ConfigTest, testAltMap)
     ASSERT_NE(cfg->vbuckets[vbix].servers[0], altix);
     lcbvb_destroy(cfg);
 }
+
+TEST_F(ConfigTest, testGetReplicaNode)
+{
+    lcbvb_CONFIG *cfg = lcbvb_create();
+    lcbvb_genconfig(cfg, 4, 1, 2);
+
+    // Select a random vbucket
+    int srvix = cfg->vbuckets[0].servers[0];
+    ASSERT_NE(-1, srvix);
+    int rv = lcbvb_vbmaster(cfg, 0);
+    ASSERT_EQ(srvix, rv);
+
+    srvix = cfg->vbuckets[0].servers[1];
+    ASSERT_NE(-1, srvix);
+    rv = lcbvb_vbreplica(cfg, 0, 0);
+    ASSERT_EQ(srvix, rv);
+
+    rv = lcbvb_vbreplica(cfg, 0, 1);
+    ASSERT_EQ(-1, rv);
+
+    rv = lcbvb_vbreplica(cfg, 0, 9999);
+    ASSERT_EQ(-1, rv);
+    lcbvb_destroy(cfg);
+
+    cfg = lcbvb_create();
+    lcbvb_genconfig(cfg, 1, 0, 2);
+    rv = lcbvb_vbmaster(cfg, 0);
+    ASSERT_NE(-1, rv);
+    rv = lcbvb_vbreplica(cfg, 0, 0);
+    ASSERT_EQ(-1, rv);
+    lcbvb_destroy(cfg);
+
+}

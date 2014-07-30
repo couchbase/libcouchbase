@@ -807,7 +807,7 @@ lcbvb_vbmaster(lcbvb_CONFIG *cfg, int vbid)
 int
 lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix)
 {
-    if (ix+1 < cfg->nsrv) {
+    if (ix < cfg->nrepl) {
         return cfg->vbuckets[vbid].servers[ix+1];
     } else {
         return -1;
@@ -1152,7 +1152,7 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         return -1;
     }
 
-    vb->vbuckets = calloc(vb->nvb, sizeof(*vb->vbuckets));
+    vb->vbuckets = malloc(vb->nvb * sizeof(*vb->vbuckets));
     if (!vb->vbuckets) {
         vb->errstr = "Couldn't allocate vbucket array";
         return -1;

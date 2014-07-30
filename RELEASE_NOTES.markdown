@@ -9,6 +9,14 @@
 
   **Issues**: [CCBC-486](http://couchbase.com/issues/browse/CCBC-486)
 
+* **Priority**: Major
+  Requests issued to an invalid replica via `lcb_get_replica()` should fail
+  with the `LCB_NO_MATCHING_SERVER_CODE`. Previously this sometimes went
+  through due to an incorrect bounds checking in the `lcbvb_vbreplica()`
+  function.
+
+  **Issues**: [CCBC-488](http://couchbase.com/issues/browse/CCBC-488)
+
 
 ## 2.4.0 GA
 
