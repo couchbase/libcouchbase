@@ -1,5 +1,15 @@
 # Release Notes
 
+## .NEXT
+
+* **Priority**: Minor
+
+  Implement `mcflush` subcommand for `cbc`. This was removed in the cbc
+  rewrite as the previous `flush` command.
+
+  **Issues**: [CCBC-486](http://couchbase.com/issues/browse/CCBC-486)
+
+
 ## 2.4.0 GA
 
 * [major] Attempt to retry items that are mapped to a non-existent node in

@@ -147,6 +147,14 @@ protected:
     void run();
 };
 
+class McFlushHandler : public Handler {
+public:
+    HANDLER_DESCRIPTION("Flush a memcached bucket")
+    McFlushHandler() : Handler("mcflush") {}
+protected:
+    void run();
+};
+
 class ArithmeticHandler : public Handler {
 public:
     ArithmeticHandler(const char *name) : Handler(name),

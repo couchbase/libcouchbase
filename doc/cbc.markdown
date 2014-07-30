@@ -285,6 +285,13 @@ processes write their logs. This command accepts a single positional argument wh
 is a string describing the verbosity level to be set. The options are `detail`, `debug`
 `info`, and `warning`.
 
+### mcflush
+
+Flush a _memcached_ bucket. This command takes no arguments, and will fail if the
+bucket specified is not a memcached bucket. You may also use [bucket-flush](#bucket-flush)
+to flush any bucket (including a couchbase bucket). The `mcflush` command may be
+quicker for memcached buckets, though.
+
 ### view
 
 Execute an HTTP request against the server's view (CAPI) interface.

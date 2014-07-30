@@ -321,7 +321,7 @@ CBC_LINKS = \
 			cbc-bucket-delete \
 			cbc-cp \
 			cbc-create \
-			cbc-flush \
+			cbc-mcflush \
 			cbc-hash \
 			cbc-lock \
 			cbc-rm \

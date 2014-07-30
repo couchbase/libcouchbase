@@ -135,13 +135,29 @@ stats_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
     }
     fprintf(stdout, "\n");
 }
+
 static void
-verbosity_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPVERBOSITY *resp)
+common_server_callback(lcb_t, int cbtype, const lcb_RESPSERVERBASE *sbase)
 {
-    if (resp->rc != LCB_SUCCESS && resp->server) {
-        fprintf(stderr, "Failed to set verbosity for %s\n", resp->server);
+    const char *msg;
+    if (cbtype == LCB_CALLBACK_VERBOSITY) {
+        msg = "Set verbosity";
+    } else if (cbtype == LCB_CALLBACK_FLUSH) {
+        msg = "Flush";
+    } else {
+        msg = "";
+    }
+    if (!sbase->server) {
+        return;
+    }
+    if (sbase->rc != LCB_SUCCESS) {
+        fprintf(stderr, "%s failed for server %s: %s\n", msg, sbase->server,
+            lcb_strerror(NULL, sbase->rc));
+    } else {
+        fprintf(stderr, "%s: %s\n", msg, sbase->server);
     }
 }
+
 static void
 arithmetic_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPCOUNTER *resp)
 {
@@ -615,6 +631,8 @@ StatsHandler::run()
 void
 VerbosityHandler::run()
 {
+    Handler::run();
+
     const string& slevel = getRequiredArg();
     lcb_verbosity_level_t level;
     if (slevel == "detail") {
@@ -629,12 +647,29 @@ VerbosityHandler::run()
         throw "Verbosity level must be {detail,debug,info,warning}";
     }
 
-    lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)verbosity_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)common_server_callback);
     lcb_CMDVERBOSITY cmd = { 0 };
     cmd.level = level;
     lcb_error_t err;
     lcb_sched_enter(instance);
     err = lcb_server_verbosity3(instance, NULL, &cmd);
+    if (err != LCB_SUCCESS) {
+        throw err;
+    }
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+void
+McFlushHandler::run()
+{
+    Handler::run();
+
+    lcb_CMDFLUSH cmd = { 0 };
+    lcb_error_t err;
+    lcb_install_callback3(instance, LCB_CALLBACK_FLUSH, (lcb_RESPCALLBACK)common_server_callback);
+    lcb_sched_enter(instance);
+    err = lcb_flush3(instance, NULL, &cmd);
     if (err != LCB_SUCCESS) {
         throw err;
     }
@@ -954,7 +989,7 @@ static const char* optionsOrder[] = {
         "observe",
         "incr",
         "decr",
-        // "flush",
+        "mcflush",
         "hash",
         "lock",
         "unlock",
@@ -1004,6 +1039,7 @@ setupHandlers()
     handlers_s["cp"] = new SetHandler("cp");
     handlers_s["stats"] = new StatsHandler();
     handlers_s["verbosity"] = new VerbosityHandler();
+    handlers_s["mcflush"] = new McFlushHandler();
     handlers_s["incr"] = new IncrHandler();
     handlers_s["decr"] = new DecrHandler();
     handlers_s["admin"] = new AdminHandler();
