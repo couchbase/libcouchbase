@@ -248,7 +248,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     mc_CMDQUEUE *cq = &instance->cmdq;
     const void *hk;
     lcb_size_t nhk;
-    int vbid;
+    int vbid, ixtmp;
     protocol_binary_request_header req;
     unsigned r0, r1;
     rget_cookie *rck = NULL;
@@ -260,15 +260,36 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     mcreq_extract_hashkey(&cmd->key, &cmd->hashkey, MCREQ_PKT_BASESIZE, &hk, &nhk);
     vbid = lcbvb_k2vb(cq->config, hk, nhk);
 
-    /** Get the vbucket by index */
+    /* The following blocks will also validate that the entire index range is
+     * valid. This is in order to ensure that we don't allocate the cookie
+     * if there aren't enough replicas online to satisfy the requirements */
+
     if (cmd->strategy == LCB_REPLICA_SELECT) {
         r0 = r1 = cmd->index;
+        if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, r0)) < 0) {
+            return LCB_NO_MATCHING_SERVER;
+        }
+
     } else if (cmd->strategy == LCB_REPLICA_ALL) {
+        unsigned ii;
         r0 = 0;
         r1 = instance->nreplicas;
+        /* Make sure they're all online */
+        for (ii = 0; ii < instance->nreplicas; ii++) {
+            if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, ii)) < 0) {
+                return LCB_NO_MATCHING_SERVER;
+            }
+        }
     } else {
-        /* first */
-        r0 = r1 = 0;
+        for (r0 = 0; r0 < instance->nreplicas; r0++) {
+            if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, r0)) > -1) {
+                r1 = r0;
+                break;
+            }
+        }
+        if (r0 == instance->nreplicas) {
+            return LCB_NO_MATCHING_SERVER;
+        }
     }
 
     if (r1 < r0 || r1 >= cq->npipelines) {
@@ -302,10 +323,6 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
         mc_PACKET *pkt;
 
         curix = lcbvb_vbreplica(cq->config, vbid, r0);
-        if (curix == -1) {
-            return LCB_NO_MATCHING_SERVER;
-        }
-
         pl = cq->pipelines[curix];
         pkt = mcreq_allocate_packet(pl);
         if (!pkt) {

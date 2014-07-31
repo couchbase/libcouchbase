@@ -17,6 +17,12 @@
 
   **Issues**: [CCBC-488](http://couchbase.com/issues/browse/CCBC-488)
 
+* **Priority**: Major
+  Fixed a memory leak in `lcb_get_replica()` when the operation would fail.
+
+  **Issues**: [CCBC-489](http://couchbase.com/issues/browse/CCBC-489)
+  [CCBC-490](http://couchbase.com/issues/browse/CCBC-490)
+
 
 ## 2.4.0 GA
 

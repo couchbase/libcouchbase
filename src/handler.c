@@ -211,6 +211,7 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     lcb_RESPGET resp = { 0 };
     lcb_t instance = pipeline->parent->cqdata;
     void *freeptr = NULL;
+    mc_REQDATAEX *rd = request->u_rdata.exdata;
 
     init_resp3(instance, response, request, immerr, (lcb_RESPBASE *)&resp);
 
@@ -224,7 +225,7 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     }
 
     maybe_decompress(instance, response, &resp, &freeptr);
-    INVOKE_CALLBACK3(request, &resp, instance, LCB_CALLBACK_GETREPLICA);
+    rd->callback(pipeline, request, resp.rc, &resp);
     free(freeptr);
 }
 
