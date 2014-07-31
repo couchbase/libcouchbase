@@ -23,6 +23,12 @@
   **Issues**: [CCBC-489](http://couchbase.com/issues/browse/CCBC-489)
   [CCBC-490](http://couchbase.com/issues/browse/CCBC-490)
 
+* **Prioriy** Major
+  Fix memory leak in `lcb_sched_fail()` when extended commands are in the
+  pipeline
+
+  **Issues**: [CCBC-474](http://couchbase.com/issues/browse/CCBC-474)
+
 
 ## 2.4.0 GA
 

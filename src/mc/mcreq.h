@@ -144,11 +144,20 @@ typedef void (*mcreq_pktex_callback)
         (struct mc_pipeline_st *pipeline, struct mc_packet_st *pkt,
                 lcb_error_t rc, const void *res);
 
+/**
+ * Destructor function called from within mcreq_sched_fail() for packets with
+ * extended data. This function should suitably free the data for the packet,
+ * if any.
+ * @param pkt The packet being unscheduled.
+ */
+typedef void (*mcreq_pktex_dtorcb)(struct mc_packet_st *pkt);
+
 /** @brief Allocated user data for an extended request. */
 typedef struct {
     const void *cookie; /**< User data */
     hrtime_t start; /**< Start time */
     mcreq_pktex_callback callback; /**< Callback to invoke upon being handled */
+    mcreq_pktex_dtorcb dtor; /**< Destructor for failed scheduling */
 } mc_REQDATAEX;
 
 /**

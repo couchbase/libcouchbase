@@ -184,6 +184,13 @@ typedef struct {
     lcb_t instance;
 } rget_cookie;
 
+static void rget_dtor(mc_PACKET *pkt) {
+    rget_cookie *rck = (rget_cookie *)pkt->u_rdata.exdata;
+    if (! --rck->remaining) {
+        free(rck);
+    }
+}
+
 static void
 rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
 {
@@ -301,6 +308,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     rck->base.cookie = cookie;
     rck->base.start = gethrtime();
     rck->base.callback = rget_callback;
+    rck->base.dtor = rget_dtor;
     rck->strategy = cmd->strategy;
     rck->r_cur = r0;
     rck->r_max = instance->nreplicas;

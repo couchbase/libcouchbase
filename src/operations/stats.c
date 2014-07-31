@@ -24,6 +24,15 @@ typedef struct {
 } bcast_cookie;
 
 static void
+refcnt_dtor_common(mc_PACKET *pkt)
+{
+    bcast_cookie *ck = (bcast_cookie *)pkt->u_rdata.exdata;
+    if (!--ck->remaining) {
+        free(ck);
+    }
+}
+
+static void
 stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
 {
     bcast_cookie *ck = (bcast_cookie *)req->u_rdata.exdata;
@@ -68,6 +77,7 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
     ckwrap->base.callback = stats_handler;
+    ckwrap->base.dtor = refcnt_dtor_common;
 
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;
@@ -168,6 +178,7 @@ pkt_bcast_simple(lcb_t instance, const void *cookie, lcb_CALLBACKTYPE type)
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
     ckwrap->base.callback = handle_bcast;
+    ckwrap->base.dtor = refcnt_dtor_common;
     ckwrap->type = type;
 
     for (ii = 0; ii < cq->npipelines; ii++) {

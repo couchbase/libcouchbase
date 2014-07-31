@@ -571,6 +571,12 @@ queuectx_leave(mc_CMDQUEUE *queue, int success, int flush)
             if (success) {
                 mcreq_enqueue_packet(pipeline, pkt);
             } else {
+                if (pkt->flags & MCREQ_F_REQEXT) {
+                    mc_REQDATAEX *rd = pkt->u_rdata.exdata;
+                    if (rd->dtor) {
+                        rd->dtor(pkt);
+                    }
+                }
                 mcreq_wipe_packet(pipeline, pkt);
                 mcreq_release_packet(pipeline, pkt);
             }
