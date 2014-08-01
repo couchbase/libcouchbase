@@ -2,39 +2,40 @@
 
 ## .NEXT
 
-* **Priority**: Minor
 
-  Implement `mcflush` subcommand for `cbc`. This was removed in the cbc
-  rewrite as the previous `flush` command.
+* Implement `mcflush` subcommand for `cbc`. This was removed in the cbc
+  rewrite as the previous `flush` command. 
+  * Priority: Minor
+  * Issues: [CCBC-486](http://couchbase.com/issues/browse/CCBC-486)
 
-  **Issues**: [CCBC-486](http://couchbase.com/issues/browse/CCBC-486)
 
-* **Priority**: Major
-  Requests issued to an invalid replica via `lcb_get_replica()` should fail
+* Requests issued to an invalid replica via `lcb_get_replica()` should fail
   with the `LCB_NO_MATCHING_SERVER_CODE`. Previously this sometimes went
   through due to an incorrect bounds checking in the `lcbvb_vbreplica()`
   function.
+  * Priority: Major
+  * Issues: [CCBC-488](http://couchbase.com/issues/browse/CCBC-488)
 
-  **Issues**: [CCBC-488](http://couchbase.com/issues/browse/CCBC-488)
 
-* **Priority**: Major
-  Fixed a memory leak in `lcb_get_replica()` when the operation would fail.
+* Fixed a memory leak in `lcb_get_replica()` when the operation would fail.
+  * Priority: Major
+  * Issues: [CCBC-489](http://couchbase.com/issues/browse/CCBC-489)
+    [CCBC-490](http://couchbase.com/issues/browse/CCBC-490)
 
-  **Issues**: [CCBC-489](http://couchbase.com/issues/browse/CCBC-489)
-  [CCBC-490](http://couchbase.com/issues/browse/CCBC-490)
 
-* **Prioriy** Major
-  Fix memory leak in `lcb_sched_fail()` when extended commands are in the
+
+* Fix memory leak in `lcb_sched_fail()` when extended commands are in the
   pipeline
+  * Priority: Major
+  * Issues: [CCBC-474](http://couchbase.com/issues/browse/CCBC-474)
 
-  **Issues**: [CCBC-474](http://couchbase.com/issues/browse/CCBC-474)
 
-* **Priority**: Minor
-  Provide `lcb_dump()` function call to dump state information about
+
+* Provide `lcb_dump()` function call to dump state information about
   a client handle. The function call itself is currently marked as
   volatile and the output format is very much likely to change.
-
-  **Issues**: [CCBC-491](http://couchbase.com/issues/browse/CCBC-490)
+  * Priority: Minor
+  * Issues: [CCBC-491](http://couchbase.com/issues/browse/CCBC-490)
 
 
 ## 2.4.0 GA
