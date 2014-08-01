@@ -1096,8 +1096,43 @@ parseCommandname(string& cmdname, int& argc, char**& argv)
     cmdname.clear();
 }
 
+static void
+wrapPillowfight(int argc, char **argv)
+{
+#ifdef _POSIX_VERSION
+    vector<char *> args;
+    string exePath(argv[0]);
+    size_t cbc_pos = exePath.find("cbc");
+
+    if (cbc_pos == string::npos) {
+        throw("Couldn't invoke pillowfight");
+    }
+
+    exePath.replace(cbc_pos, 3, "cbc-pillowfight");
+    args.push_back((char*)exePath.c_str());
+
+    // { "cbc", "pillowfight" }
+    argv += 2; argc -= 2;
+    for (int ii = 0; ii < argc; ii++) {
+        args.push_back(argv[ii]);
+    }
+    args.push_back((char*)NULL);
+    execvp(exePath.c_str(), &args[0]);
+    perror(exePath.c_str());
+    throw("Couldn't execute!");
+#else
+    throw ("Can't wrap around cbc-pillowfight on non-POSIX environments");
+#endif
+}
+
 int main(int argc, char **argv)
 {
+
+    // Wrap pillowfight immediately
+    if (argc >= 2 && strcmp(argv[1], "pillowfight") == 0) {
+        wrapPillowfight(argc, argv);
+    }
+
     setupHandlers();
     string cmdname;
     parseCommandname(cmdname, argc, argv);
