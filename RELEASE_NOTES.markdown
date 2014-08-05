@@ -38,6 +38,10 @@
   * Issues: [CCBC-491](http://couchbase.com/issues/browse/CCBC-490)
 
 
+* Fix `ratio` argument in `cbc-pillowfight`. This ensures that the
+  `ratio` argument will truly determine the ratio of gets to sets.
+  * Priority: Minor
+
 ## 2.4.0 GA
 
 * [major] Attempt to retry items that are mapped to a non-existent node in

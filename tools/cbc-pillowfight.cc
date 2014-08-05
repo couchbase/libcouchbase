@@ -431,7 +431,7 @@ public:
         for (size_t ii = 0; ii < config.opsPerCycle; ++ii) {
             const uint32_t nextseq = nextSeqno();
             generateKey(key, nextseq);
-            if (config.setprc > 0 && (nextseq % 100) > config.setprc) {
+            if (config.setprc > 0 && (nextseq % 100) % (config.setprc+1) == 0) {
                 lcb_store_cmd_t scmd;
                 size_t size;
                 if (config.minSize == config.maxSize) {
