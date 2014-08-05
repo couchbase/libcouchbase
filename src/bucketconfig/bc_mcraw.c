@@ -65,6 +65,9 @@ static void configure_nodes(clconfig_provider *pb, const hostlist_t hl)
         srv->hostname = (char *)curhost->host;
         sscanf(curhost->port, "%d", &itmp);
         srv->svc.data = itmp;
+        if (pb->parent->settings->sslopts) {
+            srv->svc_ssl.data = itmp;
+        }
     }
 
     newconfig = lcbvb_create();
