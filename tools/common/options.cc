@@ -127,7 +127,7 @@ ConnParams::loadFileDefaults()
     }
 
     string curline;
-    while ((std::getline(f, curline) == f) && !f.eof()) {
+    while ((std::getline(f, curline).good()) && !f.eof()) {
         string key, value;
         size_t pos;
 
