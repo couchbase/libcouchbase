@@ -36,6 +36,7 @@ static void request_free_headers(lcb_http_request_t req)
         free(*cur);
     }
     free(req->headers);
+    req->headers = NULL;
 }
 
 static lcb_error_t render_http_preamble(lcb_http_request_t req, lcb_string *out)

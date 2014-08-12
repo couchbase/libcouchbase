@@ -42,6 +42,11 @@
   `ratio` argument will truly determine the ratio of gets to sets.
   * Priority: Minor
 
+* Fix crash when HTTP request is retried. This may take place during topology
+  changes
+  * Priority: Major
+  * Issues: [CCBC-497](http://couchbase.com/issues/browse/CCBC-497)
+
 ## 2.4.0 GA
 
 * [major] Attempt to retry items that are mapped to a non-existent node in
