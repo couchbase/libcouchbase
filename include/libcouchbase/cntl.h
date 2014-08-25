@@ -489,7 +489,9 @@ typedef enum {
  * @cntl_arg_getonly{`char**`}
  * @see LCB_CNTL_SSL_MODE
  */
-#define LCB_CNTL_SSL_CACERT 0x23
+#define LCB_CNTL_SSL_CERT 0x23
+/* For back compat */
+#define LCB_CNTL_SSL_CACERT LCB_CNTL_SSL_CERT
 
 /**
  * @brief

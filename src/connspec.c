@@ -250,8 +250,8 @@ parse_options(PARSECTX *ctx, const char *options, const char *specend)
             } else {
                 SET_ERROR("Invalid value for 'ssl'. Choices are on, off, and no_verify");
             }
-        } else if (!strcmp(key, "capath")) {
-            out->capath = strdup(value);
+        } else if (!strcmp(key, "certpath")) {
+            out->certpath = strdup(value);
         } else if (!strcmp(key, "console_log_level")) {
             if (sscanf(value, "%d", &out->loglevel) != 1) {
                 SET_ERROR("console_log_level must be a numeric value");

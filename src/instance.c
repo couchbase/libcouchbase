@@ -190,7 +190,7 @@ setup_ssl(lcb_t obj, lcb_CONNSPEC *params)
 
     if (lcb_getenv_nonempty("LCB_SSL_CACERT", optbuf, sizeof optbuf)) {
         lcb_log(LOGARGS(obj, INFO), "SSL CA certificate %s specified on environment", optbuf);
-        settings->capath = strdup(optbuf);
+        settings->certpath = strdup(optbuf);
     }
 
     if (lcb_getenv_nonempty("LCB_SSL_MODE", optbuf, sizeof optbuf)) {
@@ -203,8 +203,8 @@ setup_ssl(lcb_t obj, lcb_CONNSPEC *params)
         }
     }
 
-    if (settings->capath == NULL && params->capath && *params->capath) {
-        settings->capath = params->capath; params->capath = NULL;
+    if (settings->certpath == NULL && params->certpath && *params->certpath) {
+        settings->certpath = params->certpath; params->certpath = NULL;
     }
 
     if (env_policy == -1) {
@@ -213,7 +213,7 @@ setup_ssl(lcb_t obj, lcb_CONNSPEC *params)
 
     if (settings->sslopts & LCB_SSL_ENABLED) {
         lcbio_ssl_global_init();
-        settings->ssl_ctx = lcbio_ssl_new(settings->capath,
+        settings->ssl_ctx = lcbio_ssl_new(settings->certpath,
             settings->sslopts & LCB_SSL_NOVERIFY, &err, settings);
         if (!settings->ssl_ctx) {
             return err;
@@ -267,7 +267,7 @@ lcb_reinit3(lcb_t obj, const char *connstr)
         lcb_log(LOGARGS(obj, ERROR), "Couldn't reinit: %s", errmsg);
     }
 
-    if (params.sslopts != LCBT_SETTING(obj, sslopts) || params.capath) {
+    if (params.sslopts != LCBT_SETTING(obj, sslopts) || params.certpath) {
         lcb_log(LOGARGS(obj, WARN), "Ignoring SSL reinit options");
     }
 

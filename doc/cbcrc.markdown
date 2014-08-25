@@ -19,11 +19,7 @@ key multiple times the last value "wins". The following keys exists:
   consists of a _scheme_ followed by a list of hosts, an optional
   bucket for the path and an optional `?` followed by key-value options.
 
-  Using SSL without verification:
-
-    couchbases://foo.com,bar.com,baz.com/mybucket?ssl=no_verify
-
-  Using custom REST API ports (without SSL)
+  Using custom REST API ports
 
     http://localhost:9000,localhost:9001,localhost:9002
 

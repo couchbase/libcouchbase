@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "CBC\-PILLOWFIGHT" "1" "June 2014" "" ""
+.TH "CBC\-PILLOWFIGHT" "1" "August 2014" "" ""
 .
 .SH "NAME"
 \fBcbc\-pillowfight\fR \- Stress Test for Couchbase Client and Cluster
@@ -111,8 +111,8 @@ Enables the client to make use of a file based configuration cache rather than c
 Use SSL for connecting to the cluster\. The options are \fBON\fR to enable full SSL support, \fBOFF\fR to disable SSL support, and \fBNO_VERIFY\fR to use SSL encryption but not attempt to verify the authenticity of the server\'s certificate\.
 .
 .TP
-\fB\-\-capath\fR=\fICERTIFICATE\fR
-The path to the CA certificate with which the server\'s certificate was signed\. May be necessary if the certificate is not recognized by the default OpenSSL installation\.
+\fB\-\-certpath\fR=\fICERTIFICATE\fR
+The path to the server\'s SSL certificate\. This is typically required for SSL connectivity unless the certificate has already been added to the openssl installation on the system\.
 .
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR

@@ -32,7 +32,7 @@ typedef struct {
     char *bucket; /**< Bucket string. Free with 'free()' */
     char *username; /**< Username. Currently not used */
     char *password; /**< Password */
-    char *capath; /**< Certificate path */
+    char *certpath; /**< Certificate path */
     char *connstr; /** Original spec string */
     lcb_SSLOPTS sslopts; /**< SSL Options */
     lcb_list_t hosts; /**< List of host information */

@@ -127,7 +127,7 @@ typedef struct lcb_settings_st {
     char *password;
     char *bucket;
     char *sasl_mech_force;
-    char *capath;
+    char *certpath;
     struct rdb_ALLOCATOR* (*allocator_factory)(void);
     struct lcbio_SSLCTX *ssl_ctx;
     struct lcb_logprocs_st *logger;

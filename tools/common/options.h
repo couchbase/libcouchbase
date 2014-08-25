@@ -20,7 +20,7 @@ namespace cbc {
     X(String, saslmech, "force-sasl-mech", 'S') \
     X(String, connstr, "spec", 'U') \
     X(String, ssl, "ssl", '\0') \
-    X(String, capath, "capath", '\0') \
+    X(String, certpath, "certpath", '\0') \
     X(UInt, timeout, "timeout", 't') \
     X(Bool, timings, "timings", 'T') \
     X(Bool, verbose, "verbose", 'v') \

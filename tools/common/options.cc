@@ -48,7 +48,7 @@ ConnParams::ConnParams() :
     o_transport.description("Bootstrap protocol").argdesc("HTTP|CCCP_BOTH").setDefault("BOTH");
     o_configcache.description("Path to cached configuration");
     o_ssl.description("Enable SSL settings").argdesc("ON|OFF|NOVERIFY").setDefault("off");
-    o_capath.description("Path to server CA certificate");
+    o_certpath.description("Path to server certificate");
     o_verbose.description("Set debugging output (specify multiple times for greater verbosity");
     o_dump.description("Dump verbose internal state after operations are done");
 }
@@ -166,8 +166,8 @@ ConnParams::loadFileDefaults()
             o_timeout.setDefault(ival);
         } else if (key == "connstr") {
             o_connstr.setDefault(value);
-        } else if (key == "capath") {
-            o_capath.setDefault(value);
+        } else if (key == "certpath") {
+            o_certpath.setDefault(value);
         } else if (key == "ssl") {
             o_ssl.setDefault(value);
         } else {
@@ -209,7 +209,7 @@ ConnParams::writeConfig(const string& s)
     writeOption(f, o_user, "user");
     writeOption(f, o_passwd, "password");
     writeOption(f, o_ssl, "ssl");
-    writeOption(f, o_capath, "capath");
+    writeOption(f, o_certpath, "certpath");
 
     if (o_timeout.passed()) {
         f << "timeout=" << std::dec << o_timeout.result() << endl;
@@ -256,9 +256,9 @@ ConnParams::fillCropts(lcb_create_st& cropts)
         connstr += bucket;
         connstr += "?";
     }
-    if (o_capath.passed()) {
-        connstr += "capath=";
-        connstr += o_capath.result();
+    if (o_certpath.passed()) {
+        connstr += "certpath=";
+        connstr += o_certpath.result();
         connstr += '&';
     }
     if (o_ssl.passed()) {

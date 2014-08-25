@@ -196,7 +196,7 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  * Options can be specified as the _query_ part of the connection string,
  * for example:
  *
- * `couchbase://cbnode.net/beer?operation_timeout=10000000,ssl=no_verify`.
+ * `couchbase://cbnode.net/beer?operation_timeout=10000000`.
  * Options may either be appropriate _key_ parameters for lcb_cntl_string()
  * or one of the following:
  *
@@ -205,14 +205,9 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  *   over the memcached port (For clusters 2.5 and above), or `all` to try with
  *   _cccp_ and revert to _http_
  *
- * * `ssl` - Specify SSL behavior. Possible values are `on` to enable SSL,
- *   `no_verify` which enables SSL but does not validate the certificate, or
- *   `off` which does not use SSL (and is the default). Note that SSL is also
- *   implicitly enabled if the `couchbases://` scheme is used. It is an error
- *   to specify `ssl=off` if such a scheme is used.
- *
- * * `capath` - Specify the path to the CA certificate which has been used
- *   to sign the cluster's certificate. Only applicable if `ssl=on`.
+ * * `certpath` - Specify the path (on the local filesystem) to the server's
+ *   SSL certificate. Only applicable if SSL is being used (i.e. the scheme is
+ *   `couchbases`)
  *
  * ### Bucket Identification and Credentials
  *

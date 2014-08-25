@@ -114,8 +114,8 @@ HANDLER(get_changeset) {
 HANDLER(ssl_mode_handler) {
     RETURN_GET_ONLY(int, LCBT_SETTING(instance, sslopts))
 }
-HANDLER(ssl_capath_handler) {
-    RETURN_GET_ONLY(char*, LCBT_SETTING(instance, capath))
+HANDLER(ssl_certpath_handler) {
+    RETURN_GET_ONLY(char*, LCBT_SETTING(instance, certpath))
 }
 HANDLER(htconfig_urltype_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, bc_http_urltype));
@@ -399,7 +399,7 @@ static ctl_handler handlers[] = {
     init_providers, /* LCB_CNTL_CONFIG_ALL_NODES */
     config_cache_handler, /* LCB_CNTL_CONFIGCACHE */
     ssl_mode_handler, /* LCB_CNTL_SSL_MODE */
-    ssl_capath_handler, /* LCB_CNTL_SSL_CAPATH */
+    ssl_certpath_handler, /* LCB_CNTL_SSL_CAPATH */
     retrymode_handler, /* LCB_CNTL_RETRYMODE */
     htconfig_urltype_handler, /* LCB_CNTL_HTCONFIG_URLTYPE */
     compmode_handler, /* LCB_CNTL_COMPRESSION_OPTS */

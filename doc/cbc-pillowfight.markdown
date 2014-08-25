@@ -124,10 +124,10 @@ The following options control how `cbc-pillowfight` connects to the cluster
   support, `OFF` to disable SSL support, and `NO_VERIFY` to use SSL encryption
   but not attempt to verify the authenticity of the server's certificate.
 
-* `--capath`=_CERTIFICATE_:
-  The path to the CA certificate with which the server's certificate was signed. May
-  be necessary if the certificate is not recognized by the default OpenSSL
-  installation.
+* `--certpath`=_CERTIFICATE_:
+  The path to the server's SSL certificate. This is typically required for SSL
+  connectivity unless the certificate has already been added to the openssl
+  installation on the system.
 
 * `-v`, `--verbose`:
   Specify more information to standard error about what the client is doing. You may
