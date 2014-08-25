@@ -1,10 +1,10 @@
 # Release Notes
 
-## .NEXT
+## 2.4.1
 
 
 * Implement `mcflush` subcommand for `cbc`. This was removed in the cbc
-  rewrite as the previous `flush` command. 
+  rewrite as the previous `flush` command.
   * Priority: Minor
   * Issues: [CCBC-486](http://couchbase.com/issues/browse/CCBC-486)
 

@@ -232,7 +232,7 @@ SET_TARGET_PROPERTIES(couchbase
         PREFIX "lib"
         IMPORT_PREFIX "lib"
         VERSION "2"
-        SOVERSION "2.0.16")
+        SOVERSION "2.0.17")
 
 IF(NOT LCB_NO_SNAPPY)
     IF(LCB_STATIC_SNAPPY)

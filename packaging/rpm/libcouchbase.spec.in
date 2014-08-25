@@ -100,6 +100,47 @@ Development files for the Couchbase Client & Protocol Library
 
 %changelog
 
+* Tue Aug 26 2014 Mark Nunberg <mark.nunberg@couchbase.com> - 2.4.1-1
+
+- Implement `mcflush` subcommand for `cbc`. This was removed in the cbc
+  rewrite as the previous `flush` command.
+  * Priority: Minor
+  * Issues: [CCBC-486](http://couchbase.com/issues/browse/CCBC-486)
+
+- Requests issued to an invalid replica via `lcb_get_replica()` should fail
+  with the `LCB_NO_MATCHING_SERVER_CODE`. Previously this sometimes went
+  through due to an incorrect bounds checking in the `lcbvb_vbreplica()`
+  function.
+  * Priority: Major
+  * Issues: [CCBC-488](http://couchbase.com/issues/browse/CCBC-488)
+
+- Fixed a memory leak in `lcb_get_replica()` when the operation would fail.
+  * Priority: Major
+  * Issues: [CCBC-489](http://couchbase.com/issues/browse/CCBC-489)
+    [CCBC-490](http://couchbase.com/issues/browse/CCBC-490)
+
+
+- Fix memory leak in `lcb_sched_fail()` when extended commands are in the
+  pipeline
+  * Priority: Major
+  * Issues: [CCBC-474](http://couchbase.com/issues/browse/CCBC-474)
+
+- Provide `lcb_dump()` function call to dump state information about
+  a client handle. The function call itself is currently marked as
+  volatile and the output format is very much likely to change.
+  * Priority: Minor
+  * Issues: [CCBC-491](http://couchbase.com/issues/browse/CCBC-490)
+
+
+- Fix `ratio` argument in `cbc-pillowfight`. This ensures that the
+  `ratio` argument will truly determine the ratio of gets to sets.
+  * Priority: Minor
+
+- Fix crash when HTTP request is retried. This may take place during topology
+  changes
+  * Priority: Major
+  * Issues: [CCBC-497](http://couchbase.com/issues/browse/CCBC-497)
+
 * Tue Jul 29 2014 Mark Nunberg <mark.nunberg@couchbase.com> - 2.4.0-1
 
 - [major] Attempt to retry items that are mapped to a non-existent node in
