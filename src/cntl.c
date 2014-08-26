@@ -461,6 +461,11 @@ static lcb_error_t convert_passthru(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
+static lcb_error_t convert_int(const char *arg, u_STRCONVERT *u) {
+    int rv = sscanf(arg, "%d", &u->i);
+    return rv == 1 ? LCB_SUCCESS : LCB_ECTL_BADARG;
+}
+
 static lcb_error_t convert_u32(const char *arg, u_STRCONVERT *u) {
     return convert_timeout(arg, u);
 }
@@ -527,6 +532,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"config_cache", LCB_CNTL_CONFIGCACHE, convert_passthru },
         {"detailed_errcodes", LCB_CNTL_DETAILED_ERRCODES, convert_intbool},
         {"retry_policy", LCB_CNTL_RETRYMODE, convert_retrymode},
+        {"http_urlmode", LCB_CNTL_HTCONFIG_URLTYPE, convert_int },
         {"_reinit_connstr", LCB_CNTL_REINIT_CONNSTR },
         {NULL, -1}
 };
