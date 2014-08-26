@@ -83,11 +83,11 @@
  *
  * @internal
  *
- * @subsection LCB_SYNC_DTOR
  *
- * Specifies that lcb_destroy() should run the event loop until the internal
- * lcb_settings structure has been destroyed. This may be necessary in some
- * cases to avoid minor memory leaks. It is mainly useful for debuggers
+ * @subsection LCB_OPTIONS
+ *
+ * A string containing extra options for the connection string. These options
+ * are processed right after the existing connection string options (if any).
  *
  * @endinternal
  */

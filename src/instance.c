@@ -238,6 +238,40 @@ apply_spec_options(lcb_t obj, lcb_CONNSPEC *params)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t
+apply_env_options(lcb_t obj)
+{
+    lcb_string tmpstr;
+    lcb_CONNSPEC tmpspec;
+    lcb_error_t err;
+    const char *errmsg = NULL;
+    const char *options = getenv("LCB_OPTIONS");
+
+    if (!options) {
+        return LCB_SUCCESS;
+    }
+
+    memset(&tmpspec, 0, sizeof tmpspec);
+    lcb_string_init(&tmpstr);
+    lcb_string_appendz(&tmpstr, "couchbase://?");
+    lcb_string_appendz(&tmpstr, options);
+    err = lcb_connspec_parse(tmpstr.base, &tmpspec, &errmsg);
+    if (err != LCB_SUCCESS) {
+        err = LCB_BAD_ENVIRONMENT;
+        goto GT_DONE;
+    }
+    err = apply_spec_options(obj, &tmpspec);
+    if (err != LCB_SUCCESS) {
+        err = LCB_BAD_ENVIRONMENT;
+    }
+
+    GT_DONE:
+    lcb_string_release(&tmpstr);
+    lcb_connspec_clean(&tmpspec);
+    return err;
+
+}
+
 lcb_error_t
 lcb_init_providers2(lcb_t obj, const struct lcb_create_st2 *options)
 {
@@ -377,18 +411,8 @@ lcb_error_t lcb_create(lcb_t *instance,
     if ((err = apply_spec_options(obj, &spec)) != LCB_SUCCESS) {
         goto GT_DONE;
     }
-
-    if (lcb_getenv_boolean("LCB_SYNC_DTOR")) {
-        settings->syncdtor = 1;
-    }
-    if (lcb_getenv_boolean("LCB_COMPRESSION")) {
-        char tmpbuf[4096];
-        lcb_getenv_nonempty("LCB_COMPRESSION", tmpbuf, sizeof tmpbuf);
-        err = lcb_cntl_string(obj, "compression", tmpbuf);
-        if (err != LCB_SUCCESS) {
-            err = LCB_BAD_ENVIRONMENT;
-            goto GT_DONE;
-        }
+    if ((err = apply_env_options(obj)) != LCB_SUCCESS) {
+        goto GT_DONE;
     }
 
     populate_nodes(obj, &spec);

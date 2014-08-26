@@ -533,6 +533,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"detailed_errcodes", LCB_CNTL_DETAILED_ERRCODES, convert_intbool},
         {"retry_policy", LCB_CNTL_RETRYMODE, convert_retrymode},
         {"http_urlmode", LCB_CNTL_HTCONFIG_URLTYPE, convert_int },
+        {"sync_dtor", LCB_CNTL_SYNCDESTROY, convert_intbool },
         {"_reinit_connstr", LCB_CNTL_REINIT_CONNSTR },
         {NULL, -1}
 };
