@@ -2782,13 +2782,25 @@ typedef enum {
     LCB_NODE_VIEWS = 0x04,
     /** Only return a node which is connected, or a node which is known to be up */
     LCB_NODE_CONNECTED = 0x08,
-    /** Never return NULL. Return the string "invalid_host:1" instead */
+
+    /** Specifying this flag adds additional semantics which instruct the library
+     * to search additional resources to return a host, and finally,
+     * if no host can be found, return the string
+     * constant @ref LCB_GETNODE_UNAVAILABLE. */
     LCB_NODE_NEVERNULL = 0x10,
+
     /** Equivalent to `LCB_NODE_HTCONFIG|LCB_NODE_CONNECTED` */
     LCB_NODE_HTCONFIG_CONNECTED = 0x09,
-    /** Equivalent to `LCB_NODE_HTCONFIG|LCB_NODE_NEVERNULL` */
+
+    /**Equivalent to `LCB_NODE_HTCONFIG|LCB_NODE_NEVERNULL`.
+     * When this is passed, some additional attempts may be made by the library
+     * to return any kind of host, including searching the initial list of hosts
+     * passed to the lcb_create() function. */
     LCB_NODE_HTCONFIG_ANY = 0x11
 } lcb_GETNODETYPE;
+
+/** String constant returned by lcb_get_node() when the @ref LCB_NODE_NEVERNULL
+ * flag is specified, and no node can be returned */
 #define LCB_GETNODE_UNAVAILABLE "invalid_host:0"
 
 /**
