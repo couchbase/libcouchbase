@@ -65,64 +65,18 @@ typedef lcb_U32 lcb_USECS;
 
 /**
  * @ingroup LCB_PUBAPI
- * @defgroup LCB_LCBT Creation and destruction
- * @addtogroup LCB_LCBT
- * @{
- */
-
-/**@private*/
-typedef enum {
-    LCB_CONFIG_TRANSPORT_LIST_END = 0,
-    LCB_CONFIG_TRANSPORT_HTTP = 1,
-    LCB_CONFIG_TRANSPORT_CCCP,
-    LCB_CONFIG_TRANSPORT_MAX
-} lcb_config_transport_t;
-
-/**
- * @brief Handle types
- * @see lcb_create_st3::type
- */
-typedef enum {
-    LCB_TYPE_BUCKET = 0x00, /**< Handle for data access (default) */
-    LCB_TYPE_CLUSTER = 0x01 /**< Handle for administrative access */
-} lcb_type_t;
-
-#ifndef __LCB_DOXYGEN__
-
-/**@private*/
-#define LCB_CREATE_V0_FIELDS \
-    const char *host; \
-    const char *user; \
-    const char *passwd; \
-    const char *bucket; \
-    struct lcb_io_opt_st *io;
-
-/**@private*/
-#define LCB_CREATE_V1_FIELDS \
-    LCB_CREATE_V0_FIELDS \
-    lcb_type_t type;
-
-/**@private*/
-#define LCB_CREATE_V2_FIELDS \
-    LCB_CREATE_V1_FIELDS \
-    const char *mchosts; \
-    const lcb_config_transport_t* transports;
-
-/**@private*/
-struct lcb_create_st0 { LCB_CREATE_V0_FIELDS };
-/**@private*/
-struct lcb_create_st1 { LCB_CREATE_V1_FIELDS };
-/**@private*/
-struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
-
-#endif
-
-/**
- * @brief Structure for lcb_create().
+ * @defgroup lcb_initialization Basic Library Routines
  *
- * This structure is used to initialize the library instance (i.e. the lcb_t)
- * with appropriate settings so that it may connect to the cluster and perform
- * operations.
+ * @details
+ *
+ * To communicate with a Couchbase cluster, a new library handle instance is
+ * created in the form of an lcb_t. To create such an object, the lcb_create()
+ * function is called, passing it a structure of type lcb_create_st. The structure
+ * acts as a container for a union of other structures which are extended
+ * as more features are added. This container is forwards and backwards
+ * compatible, meaning that if the structure is extended, you code and application
+ * will still function if using an older version of the structure. The current
+ * sub-field of the lcb_create_st structure is the `v3` field.
  *
  * Connecting to the cluster involes the client knowing the necessary
  * information needed to actually locate its services and connect to it.
@@ -197,6 +151,7 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  * for example:
  *
  * `couchbase://cbnode.net/beer?operation_timeout=10000000`.
+ *
  * Options may either be appropriate _key_ parameters for lcb_cntl_string()
  * or one of the following:
  *
@@ -259,6 +214,61 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
  * To force only "old-style" bootstrap, use `bootstrap_on=http`. To force the
  * default behavior, use `bootstrap_on=all`
  *
+ *
+ * @addtogroup lcb_initialization
+ * @{
+ */
+
+/**@private*/
+typedef enum {
+    LCB_CONFIG_TRANSPORT_LIST_END = 0,
+    LCB_CONFIG_TRANSPORT_HTTP = 1,
+    LCB_CONFIG_TRANSPORT_CCCP,
+    LCB_CONFIG_TRANSPORT_MAX
+} lcb_config_transport_t;
+
+/**
+ * @brief Handle types
+ * @see lcb_create_st3::type
+ */
+typedef enum {
+    LCB_TYPE_BUCKET = 0x00, /**< Handle for data access (default) */
+    LCB_TYPE_CLUSTER = 0x01 /**< Handle for administrative access */
+} lcb_type_t;
+
+#ifndef __LCB_DOXYGEN__
+
+/**@private*/
+#define LCB_CREATE_V0_FIELDS \
+    const char *host; \
+    const char *user; \
+    const char *passwd; \
+    const char *bucket; \
+    struct lcb_io_opt_st *io;
+
+/**@private*/
+#define LCB_CREATE_V1_FIELDS \
+    LCB_CREATE_V0_FIELDS \
+    lcb_type_t type;
+
+/**@private*/
+#define LCB_CREATE_V2_FIELDS \
+    LCB_CREATE_V1_FIELDS \
+    const char *mchosts; \
+    const lcb_config_transport_t* transports;
+
+/**@private*/
+struct lcb_create_st0 { LCB_CREATE_V0_FIELDS };
+/**@private*/
+struct lcb_create_st1 { LCB_CREATE_V1_FIELDS };
+/**@private*/
+struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
+
+#endif
+
+/**
+ * @brief Structure for lcb_create().
+ * @see lcb_initialization
  */
 struct lcb_create_st3 {
     const char *connstr; /**< Connection string */
@@ -344,6 +354,20 @@ lcb_error_t lcb_create(lcb_t *instance,
                        const struct lcb_create_st *options);
 
 /**
+ * @brief Schedule the initial connection
+ * This function will schedule the initial connection for the handle. This
+ * function _must_ be called before any operations can be performed.
+ *
+ * lcb_set_bootstrap_callback() or lcb_get_bootstrap_status() can be used to
+ * determine if the scheduled connection completed successfully.
+ *
+ * lcb_wait() should be called after this function.
+ * @committed
+ */
+LIBCOUCHBASE_API
+lcb_error_t lcb_connect(lcb_t instance);
+
+/**
  * Associate a cookie with an instance of lcb. The _cookie_ is a user defined
  * pointer which will remain attached to the specified `lcb_t` for its duration.
  * This is the way to associate user data with the `lcb_t`.
@@ -356,10 +380,36 @@ lcb_error_t lcb_create(lcb_t *instance,
  * thus you must ensure to manually free resources to the pointer (if it was
  * dynamically allocated) when it is no longer required.
  * @committed
+ *
+ * @code{.c}
+ * typedef struct {
+ *   const char *status;
+ *   // ....
+ * } instance_info;
+ *
+ * static void bootstrap_callback(lcb_t instance, lcb_error_t err) {
+ *   instance_info *info = (instance_info *)lcb_get_cookie(instance);
+ *   if (err == LCB_SUCCESS) {
+ *     info->status = "Connected";
+ *   } else {
+ *     info->status = "Error";
+ *   }
+ * }
+ *
+ * static void do_create(void) {
+ *   instance_info *info = calloc(1, sizeof(*info));
+ *   // info->status is currently NULL
+ *   // .. create the instance here
+ *   lcb_set_cookie(instance, info);
+ *   lcb_set_bootstrap_callback(instance, bootstrap_callback);
+ *   lcb_connect(instance);
+ *   lcb_wait(instance);
+ *   printf("Status of instance is %s\n", info->status);
+ * }
+ * @endcode
  */
 LIBCOUCHBASE_API
 void lcb_set_cookie(lcb_t instance, const void *cookie);
-
 
 /**
  * Retrieve the cookie associated with this instance
@@ -430,19 +480,6 @@ void lcb_wait3(lcb_t instance, lcb_WAITFLAGS flags);
 LIBCOUCHBASE_API
 void lcb_breakout(lcb_t instance);
 
-/**
- * @brief Schedule the initial connection
- * This function will schedule the initial connection for the handle. This
- * function _must_ be called before any operations can be performed.
- * 
- * lcb_set_bootstrap_callback() or lcb_get_bootstrap_status() can be used to
- * determine if the scheduled connection completed successfully.
- *
- * lcb_wait() should be called after this function.
- * @committed
- */
-LIBCOUCHBASE_API
-lcb_error_t lcb_connect(lcb_t instance);
 
 /**
  * Bootstrap callback. Invoked once the instance is ready to perform operations
