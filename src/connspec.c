@@ -345,7 +345,13 @@ lcb_connspec_parse(const char *connstr, lcb_CONNSPEC *out, const char **errmsg)
     } else if (SCHEME_MATCHES(LCB_SPECSCHEME_MCCOMPAT)) {
         out->implicit_port = LCB_CONFIG_MCCOMPAT_PORT;
     } else {
-        SET_ERROR("String must begin with ''couchbase://, 'couchbases://'");
+        /* If we don't have a scheme at all: */
+        if (strstr(ctx.connstr, "://")) {
+            SET_ERROR("String must begin with ''couchbase://, 'couchbases://', or 'http://'");
+        } else {
+            found_scheme = "";
+            out->implicit_port = LCB_CONFIG_HTTP_PORT;
+        }
     }
 
     ctx.connstr += strlen(found_scheme);

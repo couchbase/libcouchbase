@@ -47,6 +47,13 @@
   * Priority: Major
   * Issues: [CCBC-497](http://couchbase.com/issues/browse/CCBC-497)
 
+* Allow simple host-port string in connection string, giving it an implicit
+  `http://` scheme. This allows easier backwards compatibility with some
+  application
+  * Priority: Minor
+  * Issues: [CCBC-500](http://couchbase.com/issues/browse/CCBC-500)
+
+
 ## 2.4.0 GA
 
 * [major] Attempt to retry items that are mapped to a non-existent node in
