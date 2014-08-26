@@ -26,8 +26,8 @@
 
 ## DESCRIPTION
 
-`cbc` is a command line utility with your Couchbase Server cluster
-from the command line.
+`cbc` is a utility for communicating with a Couchbase cluster.
+
 `cbc` should be invoked with the command name first and then a series of command
 options appropriate for the specific command. `cbc help` will always show the full
 list of available commands.
