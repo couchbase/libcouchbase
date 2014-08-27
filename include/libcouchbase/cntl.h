@@ -139,6 +139,16 @@ extern "C" {
 #define LCB_CNTL_VIEW_TIMEOUT           0x01
 
 /**
+ * @brief Get the name of the bucket
+ * This returns the name of the bucket this instance is connected to, or `NULL`
+ * if not yet connected to a bucket
+ *
+ * @cntl_arg_getonly{`const char*`}
+ * @committed
+ */
+#define LCB_CNTL_BUCKETNAME             0x30
+
+/**
  * @brief Get the handle type.
  * This returns the handle type - which is either LCB_TYPE_CLUSTER or
  * LCB_TYPE_BUCKET
@@ -728,7 +738,7 @@ typedef enum {
 #define LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR 0x2F
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x30
+#define LCB_CNTL__MAX                    0x31
 /**@}*/
 
 #ifdef __cplusplus

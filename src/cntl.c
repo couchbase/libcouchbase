@@ -138,6 +138,9 @@ HANDLER(http_refresh_config_handler) {
 HANDLER(compmode_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, compressopts))
 }
+HANDLER(bucketname_handler) {
+    RETURN_GET_ONLY(const char*, LCBT_SETTING(instance, bucket))
+}
 
 HANDLER(get_kvb) {
     struct lcb_cntl_vbinfo_st *vbi = arg;
@@ -233,7 +236,6 @@ HANDLER(logprocs_handler) {
 
 HANDLER(config_transport) {
     lcb_config_transport_t *val = arg;
-
     if (mode == LCB_CNTL_SET) { return LCB_ECTL_UNSUPPMODE; }
     if (!instance->cur_configinfo) { return LCB_CLIENT_ETMPFAIL; }
 
@@ -411,7 +413,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_RETRY_INTERVAL */
     retry_backoff_handler, /* LCB_CNTL_RETRY_BACKOFF */
     http_poolsz_handler, /* LCB_CNTL_HTTP_POOLSIZE */
-    http_refresh_config_handler /* LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR */
+    http_refresh_config_handler, /* LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR */
+    bucketname_handler /* LCB_CNTL_BUCKETNAME */
 };
 
 /* Union used for conversion to/from string functions */
