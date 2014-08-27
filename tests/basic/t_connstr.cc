@@ -250,7 +250,7 @@ TEST_F(ConnstrTest, testOptionsPassthrough)
     reinit();
     err = lcb_connspec_parse("couchbase:///protected?ssl=on&compression=off",
         &params, &errmsg);
-    ASSERT_EQ(LCB_SUCCESS, err) << "Ok with bucketÊand no hosts";
+    ASSERT_EQ(LCB_SUCCESS, err) << "Ok with bucket and no hosts";
     ASSERT_EQ(1, countHosts(&params));
     ASSERT_FALSE(NULL == findHost(&params, "localhost"));
     ASSERT_TRUE(findOption(&params, "compression", op));
