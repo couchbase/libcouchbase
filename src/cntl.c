@@ -439,8 +439,17 @@ typedef struct {
 static lcb_error_t convert_timeout(const char *arg, u_STRCONVERT *u) {
     int rv;
     unsigned long tmp;
-    rv = sscanf(arg, "%lu", &tmp);
-    if (rv != 1) { return LCB_ECTL_BADARG; }
+    if (strchr(arg, '.')) {
+        /* Parse as a float */
+        float ftmp;
+        rv = sscanf(arg, "%f", &ftmp);
+        if (rv != 1) { return LCB_ECTL_BADARG; }
+        tmp = ftmp * 1000000;
+    } else {
+        rv = sscanf(arg, "%lu", &tmp);
+        if (rv != 1) { return LCB_ECTL_BADARG; }
+    }
+
     u->u32 = tmp;
     return LCB_SUCCESS;
 }

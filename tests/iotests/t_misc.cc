@@ -396,4 +396,12 @@ TEST_F(MockUnitTest, testCtls)
     ctlGetSet<float>(instance, LCB_CNTL_RETRY_BACKOFF, 3.4);
     ctlGetSet<lcb_SIZE>(instance, LCB_CNTL_HTTP_POOLSIZE, UINT_MAX);
     ctlGetSet<int>(instance, LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR, 0);
+
+    // Allow timeouts to be expressed as fractional seconds.
+    err = lcb_cntl_string(instance, "operation_timeout", "1.0");
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(1000000, ctlGet<lcb_U32>(instance, LCB_CNTL_OP_TIMEOUT));
+    err = lcb_cntl_string(instance, "operation_timeout", "0.255");
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(255000, ctlGet<lcb_U32>(instance, LCB_CNTL_OP_TIMEOUT));
 }
