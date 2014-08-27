@@ -208,6 +208,9 @@ extern "C" {
     LCB_INTERNAL_API void lcb_loop_ref(lcb_t instance);
     LCB_INTERNAL_API void lcb_loop_unref(lcb_t instance);
 
+    /* To suppress compiler warnings */
+    LCB_INTERNAL_API void lcb__timer_destroy_nowarn(lcb_t instance, lcb_timer_t timer);
+
 #define SYNCMODE_INTERCEPT(o) \
     if (LCBT_SETTING(o, syncmode) == LCB_ASYNCHRONOUS) { \
         return LCB_SUCCESS; \

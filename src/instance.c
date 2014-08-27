@@ -469,7 +469,7 @@ void lcb_destroy(lcb_t instance)
     if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_TIMER))) {
         for (ii = 0; ii < hs->capacity; ++ii) {
             if (hs->items[ii] > 1) {
-                lcb_timer_destroy(instance, (lcb_timer_t)hs->items[ii]);
+                lcb__timer_destroy_nowarn(instance, (lcb_timer_t)hs->items[ii]);
             }
         }
     }
