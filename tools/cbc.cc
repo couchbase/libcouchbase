@@ -474,6 +474,18 @@ HashHandler::run()
             }
         }
         fprintf(stderr, "\n");
+
+        for (size_t jj = 0; jj < lcbvb_get_nreplicas(vbc); jj++) {
+            int rix = lcbvb_vbreplica(vbc, vbid, jj);
+            const char *rname = NULL;
+            if (rix >= 0) {
+                rname = lcbvb_get_hostport(vbc, rix, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN);
+            }
+            if (rname == NULL) {
+                rname = "N/A";
+            }
+            fprintf(stderr, "Replica #%d: Index=%d, Host=%s\n", (int)jj, rix, rname);
+        }
     }
 }
 
