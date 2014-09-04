@@ -107,13 +107,16 @@ schedule_next_request(cccp_provider *cccp, lcb_error_t err, int can_rollover)
         cccp_cookie *cookie = calloc(1, sizeof(*cookie));
         cccp->cmdcookie = cookie;
         cookie->parent = cccp;
-        lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p", (void*)server);
+        lcb_log(LOGARGS(cccp, INFO), "Re-Issuing CCCP Command on server struct %p (%s:%s)", (void*)server, next_host->host, next_host->port);
         lcbio_timer_rearm(
                 cccp->timer, PROVIDER_SETTING(&cccp->base, config_node_timeout));
         return lcb_getconfig(cccp->instance, cookie, server);
 
     } else {
-        lcbio_pMGRREQ preq = lcbio_mgr_get(
+        lcbio_pMGRREQ preq;
+
+        lcb_log(LOGARGS(cccp, INFO), "Requesting connection to node %s:%s for CCCP configuration", next_host->host, next_host->port);
+        preq = lcbio_mgr_get(
                 cccp->instance->memd_sockpool, next_host,
                 PROVIDER_SETTING(&cccp->base, config_node_timeout),
                 on_connected, cccp);
