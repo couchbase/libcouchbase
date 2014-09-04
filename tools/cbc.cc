@@ -211,6 +211,8 @@ void
 Handler::execute(int argc, char **argv)
 {
     addOptions();
+    parser.default_settings.argstring = usagestr();
+    parser.default_settings.shortdesc = description();
     parser.parse(argc, argv, true);
     run();
     if (instance != NULL && params.useTimings()) {
@@ -1034,7 +1036,7 @@ protected:
         for (const char ** cur = optionsOrder; *cur; cur++) {
             const Handler *handler = handlers[*cur];
             fprintf(stderr, "   %-20s", *cur);
-            fprintf(stderr, "%s\n", handler->description().c_str());
+            fprintf(stderr, "%s\n", handler->description());
         }
     }
 };

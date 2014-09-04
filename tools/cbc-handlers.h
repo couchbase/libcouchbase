@@ -5,12 +5,14 @@
 #include "common/histogram.h"
 
 namespace cbc {
-#define HANDLER_DESCRIPTION(s) std::string description() const { return s; }
+#define HANDLER_DESCRIPTION(s) const char* description() const { return s; }
+#define HANDLER_USAGE(s) const char* usagestr() const { return s; }
 class Handler {
 public:
     Handler(const char *name);
     virtual ~Handler();
-    virtual std::string description() const = 0;
+    virtual const char * description() const = 0;
+    virtual const char * usagestr() const { return NULL; }
     void execute(int argc, char **argv);
 
 protected:
@@ -31,7 +33,7 @@ public:
     GetHandler(const char *name = "get") :
         Handler(name), o_replica("replica"), o_exptime("expiry") {}
 
-    std::string description() const {
+    const char* description() const {
         if (isLock()) {
             return "Lock keys and retrieve them from the cluster";
         } else {
@@ -64,11 +66,19 @@ public:
         o_json.abbrev('J').description("Indicate to the server that this item is JSON");
     }
 
-    std::string description() const {
+    const char* description() const {
         if (hasFileList()) {
             return "Store files to the server";
         } else {
             return "Store item to the server";
+        }
+    }
+
+    const char* usagestr() const {
+        if (hasFileList()) {
+            return "[OPTIONS...] FILE ...";
+        } else {
+            return "[OPTIONS...] KEY -V VALUE";
         }
     }
 
@@ -94,6 +104,7 @@ private:
 class HashHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Get mapping information for keys")
+    HANDLER_USAGE("KEY ... [OPTIONS ...]")
     HashHandler() : Handler("hash") {}
 protected:
     void run();
@@ -103,6 +114,7 @@ class ObserveHandler : public Handler {
 public:
     ObserveHandler() : Handler("observe") { }
     HANDLER_DESCRIPTION("Obtain persistence and replication status for keys")
+    HANDLER_USAGE("KEY ... ")
 protected:
     void run();
 };
@@ -110,6 +122,7 @@ protected:
 class UnlockHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Unlock keys")
+    HANDLER_USAGE("KEY CAS [OPTIONS ...]")
     UnlockHandler() : Handler("unlock") {}
 protected:
     void run();
@@ -126,6 +139,7 @@ public:
 class RemoveHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Remove items from the cluster")
+    HANDLER_USAGE("KEY ... [OPTIONS ...]")
     RemoveHandler() : Handler("rm") {}
 protected:
     void run();
@@ -134,6 +148,7 @@ protected:
 class StatsHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Retrieve cluster statistics")
+    HANDLER_USAGE("[STATS_KEY ...] [OPTIONS ...]")
     StatsHandler() : Handler("stats") {}
 protected:
     void run();
@@ -142,6 +157,7 @@ protected:
 class VerbosityHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Modify the memcached logging level")
+    HANDLER_USAGE("<detail|debug|info|warning> [OPTIONS ...]")
     VerbosityHandler() : Handler("verbosity") {}
 protected:
     void run();
@@ -157,6 +173,8 @@ protected:
 
 class ArithmeticHandler : public Handler {
 public:
+    HANDLER_USAGE("KEY ... [OPTIONS ...]")
+
     ArithmeticHandler(const char *name) : Handler(name),
         o_initial("initial"), o_delta("delta"), o_expiry("expiry") {
 
@@ -246,6 +264,7 @@ private:
 class AdminHandler : public HttpBaseHandler {
 public:
     HANDLER_DESCRIPTION("Invoke an administrative REST API")
+    HANDLER_USAGE("PATH ... [OPTIONS ...]")
     AdminHandler(const char *name = "admin") : HttpBaseHandler(name) {}
 protected:
     virtual void run();
@@ -257,6 +276,7 @@ protected:
 class BucketCreateHandler : public AdminHandler {
 public:
     HANDLER_DESCRIPTION("Create a bucket")
+    HANDLER_USAGE("NAME [OPTIONS ...]")
     BucketCreateHandler() : AdminHandler("bucket-create"),
         o_btype("bucket-type"),
         o_ramquota("ram-quota"),
@@ -302,6 +322,7 @@ private:
 class BucketDeleteHandler : public AdminHandler {
 public:
     HANDLER_DESCRIPTION("Delete a bucket")
+    HANDLER_USAGE("NAME [OPTIONS ...]")
     BucketDeleteHandler() : AdminHandler("bucket-delete") {}
 
 protected:
@@ -319,6 +340,7 @@ private:
 class BucketFlushHandler : public AdminHandler {
 public:
     HANDLER_DESCRIPTION("Flush a bucket")
+    HANDLER_USAGE("NAME [OPTIONS ...]")
     BucketFlushHandler() : AdminHandler("bucket-flush") {}
 protected:
     void run() {
@@ -340,6 +362,7 @@ private:
 class ViewsHandler : public HttpBaseHandler {
 public:
     HANDLER_DESCRIPTION("Query a view")
+    HANDLER_USAGE("VIEWPATH [ OPTIONS ...]")
     ViewsHandler() : HttpBaseHandler("view") {}
 protected:
     bool isAdmin() const { return false; }
@@ -353,6 +376,7 @@ protected:
 class ConnstrHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Parse a connection string and provide info on its components")
+    HANDLER_USAGE("CONNSTR")
     ConnstrHandler() : Handler("connstr") {}
 protected:
     void handleOptions() { }
