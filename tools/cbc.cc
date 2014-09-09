@@ -635,6 +635,9 @@ StatsHandler::run()
         const string& key = keys[ii];
         if (!key.empty()) {
             LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+            if (o_keystats.result()) {
+                cmd.cmdflags = LCB_CMDSTATS_F_KV;
+            }
         }
         lcb_error_t err = lcb_stats3(instance, NULL, &cmd);
         if (err != LCB_SUCCESS) {

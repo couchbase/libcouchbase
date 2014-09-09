@@ -653,6 +653,10 @@ lcb_touch3(lcb_t instance, const void *cookie, const lcb_CMDTOUCH *cmd);
  * if the default statistics are desired. */
 typedef lcb_CMDBASE lcb_CMDSTATS;
 
+/** The key is a stored item for which statistics should be retrieved. This
+ * invokes the 'keystats' semantics. Note that when using such semantics, a key
+ * must be present, and must not have any spaces in it. */
+#define LCB_CMDSTATS_F_KV (1 << 16)
 
 /**@brief Response structure for cluster statistics.
  * The lcb_RESPSTATS::key field contains the statistic name (_not_ the same

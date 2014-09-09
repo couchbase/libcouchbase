@@ -271,6 +271,20 @@ LIBCOUCHBASE_API
 int
 lcbvb_k2vb(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE n);
 
+/**
+ * @uncomitted
+ * Determines if a given server index is either a master or a replica for a
+ * vbucket
+ * @param vbc the configuration
+ * @param vbid the vbucket number
+ * @param ix the server index to check against
+ * @returns nonzero if the server `ix` is either a master or a replica for the
+ * vbucket `vbid`. Returns 0 otherwise.
+ */
+LIBCOUCHBASE_API
+int
+lcbvb_has_vbucket(lcbvb_CONFIG *vbc, int vbid, int ix);
+
 /**@committed
  * @brief Get the number of servers in the bucket. Note that not all servers
  * may actually be available.

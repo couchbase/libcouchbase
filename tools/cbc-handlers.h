@@ -149,9 +149,17 @@ class StatsHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Retrieve cluster statistics")
     HANDLER_USAGE("[STATS_KEY ...] [OPTIONS ...]")
-    StatsHandler() : Handler("stats") {}
+    StatsHandler() : Handler("stats"), o_keystats("keystats") {
+        o_keystats.description("Keys are document IDs. retrieve information about them");
+    }
 protected:
     void run();
+    void addOptions() {
+        Handler::addOptions();
+        parser.addOption(o_keystats);
+    }
+private:
+    cliopts::BoolOption o_keystats;
 };
 
 class VerbosityHandler : public Handler {

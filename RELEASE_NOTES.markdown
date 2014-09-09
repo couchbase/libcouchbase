@@ -2,6 +2,17 @@
 
 ## .NEXT
 
+* Add "key stats" mode to `lcb_CMDDSTATS`.
+  This adds an additional key stats mode to the `lcb_stats3()` API
+  which interprets the `key` field as being a document ID for which
+  information (such as expiry, status) should be retrieved, rather
+  than a system statistics key. Similar functionality already exists
+  in the Java client library as `getKeyStats()`. In addition to this
+  feature, a `cbc stats --keystats` option is also provided to employ
+  this functionality from the command line.
+  * Priority: Major
+  * Issues: [CCBC-318](http://couchbase.com/issues/CCBC-318)
+
 * Add more details about replica nodes in the `cbc hash` command.
   * Priority: Minor
   * Issues: [CCBC-504](http://couchbase.com/issues/browse/CCBC-504)

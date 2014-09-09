@@ -877,6 +877,19 @@ lcbvb_map_key(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE nkey,
     return 0;
 }
 
+int
+lcbvb_has_vbucket(lcbvb_CONFIG *vbc, int vbid, int ix)
+{
+    unsigned ii;
+    lcbvb_VBUCKET *vb = & vbc->vbuckets[vbid];
+    for (ii = 0; ii < vbc->nrepl+1; ii++) {
+        if (vb->servers[ii] == ix) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 /******************************************************************************
  ******************************************************************************
  ** Configuration Comparisons/Diffs                                          **

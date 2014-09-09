@@ -71,9 +71,43 @@ lcb_error_t
 lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
 {
     unsigned ii;
+    int vbid = -1;
+    char ksbuf[512] = { 0 };
     mc_CMDQUEUE *cq = &instance->cmdq;
-    bcast_cookie *ckwrap = calloc(1, sizeof(*ckwrap));
+    bcast_cookie *ckwrap = NULL;
+    lcbvb_CONFIG *vbc = cq->config;
+    const lcb_CONTIGBUF *kbuf_in = &cmd->key.contig;
+    lcb_KEYBUF kbuf_out;
 
+    kbuf_out.type = LCB_KV_COPY;
+
+    if (cmd->cmdflags & LCB_CMDSTATS_F_KV) {
+        if (kbuf_in->nbytes == 0 || kbuf_in->nbytes > sizeof(ksbuf) - 30) {
+            return LCB_EINVAL;
+        }
+        if (vbc == NULL) {
+            return LCB_CLIENT_ETMPFAIL;
+        }
+        if (lcbvb_get_distmode(vbc) != LCBVB_DIST_VBUCKET) {
+            return LCB_NOT_SUPPORTED;
+        }
+        vbid = lcbvb_k2vb(vbc, kbuf_in->bytes, kbuf_in->nbytes);
+        if (vbid < 0) {
+            return LCB_CLIENT_ETMPFAIL;
+        }
+        for (ii = 0; ii < kbuf_in->nbytes; ii++) {
+            if (isspace( ((char *)kbuf_in->bytes)[ii])) {
+                return LCB_EINVAL;
+            }
+        }
+        sprintf(ksbuf, "key %.*s %d", (int)kbuf_in->nbytes, kbuf_in->bytes, vbid);
+        kbuf_out.contig.nbytes = strlen(ksbuf);
+        kbuf_out.contig.bytes = ksbuf;
+    } else {
+        kbuf_out.contig = *kbuf_in;
+    }
+
+    ckwrap = calloc(1, sizeof(*ckwrap));
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
     ckwrap->base.callback = stats_handler;
@@ -82,8 +116,11 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;
         mc_PIPELINE *pl = cq->pipelines[ii];
-        protocol_binary_request_header hdr;
-        memset(&hdr, 0, sizeof(hdr));
+        protocol_binary_request_header hdr = { { 0 } };
+
+        if (vbid > -1 && lcbvb_has_vbucket(vbc, vbid, ii) == 0) {
+            continue;
+        }
 
         pkt = mcreq_allocate_packet(pl);
         if (!pkt) {
@@ -94,9 +131,9 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
         hdr.request.magic = PROTOCOL_BINARY_REQ;
 
         if (cmd->key.contig.nbytes) {
-            mcreq_reserve_key(pl, pkt, MCREQ_PKT_BASESIZE, &cmd->key);
-            hdr.request.keylen = ntohs((lcb_uint16_t)cmd->key.contig.nbytes);
-            hdr.request.bodylen = ntohl((lcb_uint32_t)cmd->key.contig.nbytes);
+            mcreq_reserve_key(pl, pkt, MCREQ_PKT_BASESIZE, &kbuf_out);
+            hdr.request.keylen = ntohs((lcb_U16)kbuf_out.contig.nbytes);
+            hdr.request.bodylen = ntohl((lcb_U32)kbuf_out.contig.nbytes);
         } else {
             mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE);
         }
