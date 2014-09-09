@@ -147,6 +147,7 @@ class Parser;
 class Option : protected cliopts_entry {
 public:
     bool passed() const { return found != 0; }
+    void setPassed(bool val = true) { found = val ? 1 : 0; }
     int numSpecified() const { return found; }
     Option() { memset(this, 0, sizeof (cliopts_entry)); }
 protected:

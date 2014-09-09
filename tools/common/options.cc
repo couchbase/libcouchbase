@@ -151,25 +151,25 @@ ConnParams::loadFileDefaults()
 
         if (key == "uri") {
             // URI isn't really supported anymore, but try to be compatible
-            o_host.setDefault(value);
+            o_host.setDefault(value).setPassed();
         } else if (key == "user") {
-            o_user.setDefault(value);
+            o_user.setDefault(value).setPassed();
         } else if (key == "password") {
-            o_passwd.setDefault(value);
+            o_passwd.setDefault(value).setPassed();
         } else if (key == "bucket") {
-            o_bucket.setDefault(value);
+            o_bucket.setDefault(value).setPassed();
         } else if (key == "timeout") {
             unsigned ival = 0;
             if (!sscanf(value.c_str(), "%u", &ival)) {
                 throw "Invalid formatting for timeout";
             }
-            o_timeout.setDefault(ival);
+            o_timeout.setDefault(ival).setPassed();
         } else if (key == "connstr") {
-            o_connstr.setDefault(value);
+            o_connstr.setDefault(value).setPassed();
         } else if (key == "certpath") {
-            o_certpath.setDefault(value);
+            o_certpath.setDefault(value).setPassed();
         } else if (key == "ssl") {
-            o_ssl.setDefault(value);
+            o_ssl.setDefault(value).setPassed();
         } else {
             throw string("Unrecognized key: ") + key;
         }
