@@ -1,5 +1,18 @@
 # Release Notes
 
+## .NEXT
+
+* Add more details about replica nodes in the `cbc hash` command.
+  * Priority: Minor
+  * Issues: [CCBC-504](http://couchbase.com/issues/browse/CCBC-504)
+
+* Add `lcb_cntl()` setting to retrieve bucket name.
+  Previously the library did not have a means by which the bucket name
+  could be retrieved. Using the `LCB_CNTL_BUCKETNAME` setting, the bucket
+  name will now be returned.
+  * Priority: Major
+  * Issues: [CCBC-502](http://couchbase.com/issues/CCBC-502)
+
 ## 2.4.1
 
 
