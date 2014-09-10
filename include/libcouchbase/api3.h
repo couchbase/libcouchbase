@@ -63,11 +63,19 @@ extern "C" {
      of servers with the value specified here. */ \
     lcb_U64 cas; \
     \
-    /**The key for the command. Every command has a key. Generally you will
-     be initializing this field using LCB_CMD_SET_KEY()*/ \
+    /**Note that hashkey/groupid is not a supported feature of Couchbase Server
+     and this client.  It should be considered volatile and experimental.
+     Using this could lead to an unbalanced cluster, inability to interoperate
+     with the data from other languages, not being able to use the
+     Couchbase Server UI to look up documents and other possible future
+     upgrade/migration concerns. */ \
     lcb_KEYBUF key; \
     \
-    lcb_KEYBUF hashkey
+    /**@private
+     * @volatile
+     * This exists purely to support the hashkey fields of the v2 API. This field
+     * will be _removed_ in future versions. */ \
+    lcb_KEYBUF _hashkey
 
 /**@brief Common ABI header for all commands. _Any_ command may be safely
  * casted to this type.*/

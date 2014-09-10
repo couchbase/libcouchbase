@@ -2,6 +2,12 @@
 
 ## .NEXT
 
+* Mark the `hashkey` fields as being _volatile_.
+  Usage of this field is not supported in many cluster systems and is thus not
+  supported functionality. It exists primarily as a legacy from an older API
+  * Priority: Major
+  * Issues: [CCBC-508](http://couchbase.com/issues/browse/CCBC-508)
+
 * Add "key stats" mode to `lcb_CMDDSTATS`.
   This adds an additional key stats mode to the `lcb_stats3()` API
   which interprets the `key` field as being a document ID for which

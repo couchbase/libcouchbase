@@ -748,6 +748,25 @@ lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t op);
 /**@}*/
 
 
+
+/**@private
+ * Note that hashkey/groupid is not a supported feature of Couchbase Server
+ * and this client.  It should be considered volatile and experimental.
+ * Using this could lead to an unbalanced cluster, inability to interoperate
+ * with the data from other languages, not being able to use the
+ * Couchbase Server UI to look up documents and other possible future
+ * upgrade/migration concerns.
+ */
+#define LCB__HKFIELDS \
+    /**
+     @private
+     @volatile
+     Do not use. This field exists to support older code. Using a dedicated
+     hashkey will cause problems with your data in various systems. */ \
+     const void *hashkey; \
+     \
+     lcb_SIZE nhashkey; /**<@private*/
+
 /**
  * @ingroup LCB_PUBAPI
  * @defgroup LCB_KVAPI Key-Value API
@@ -834,8 +853,7 @@ typedef struct {
      * 3. The item is modified with the `cas` returned in the response
      */
     int lock;
-    const void *hashkey;
-    lcb_SIZE nhashkey;
+    LCB__HKFIELDS
 } lcb_GETCMDv0;
 
 /**
@@ -1042,9 +1060,7 @@ lcb_error_t lcb_get(lcb_t instance,
  */
 
 
-typedef struct {
-    const void *key; lcb_SIZE nkey; const void *hashkey; lcb_SIZE nhashkey;
-} lcb_GETREPLICACMDv0;
+typedef struct { const void *key; lcb_SIZE nkey; LCB__HKFIELDS } lcb_GETREPLICACMDv0;
 
 /**@brief Select get-replica mode
  * @see lcb_rget3_cmd_t */
@@ -1067,8 +1083,7 @@ typedef enum {
 typedef struct {
     const void *key;
     lcb_SIZE nkey;
-    const void *hashkey;
-    lcb_SIZE nhashkey;
+    LCB__HKFIELDS
     lcb_replica_t strategy; /**< Strategy to use */
     /**If #strategy is LCB_REPLICA_SELECT, specific the replica index to use */
     int index;
@@ -1143,8 +1158,7 @@ typedef struct {
     const void *key;
     lcb_SIZE nkey;
     lcb_cas_t cas; /**< You _must_ populate this with the CAS */
-    const void *hashkey;
-    lcb_SIZE nhashkey;
+    LCB__HKFIELDS
 } lcb_UNLOCKCMDv0;
 
 /**@brief lcb_unlock() Wrapper structure
@@ -1280,8 +1294,7 @@ typedef struct {
     lcb_U8 datatype; /**< See lcb_VALUEFLAGS */
     lcb_time_t exptime; /**< Expiration for the item. `0` means never expire */
     lcb_storage_t operation; /**< **Mandatory**. Mutation type */
-    const void *hashkey;
-    lcb_SIZE nhashkey;
+    LCB__HKFIELDS
 } lcb_STORECMDv0;
 
 /** @brief Wrapper structure for lcb_STORECMDv0 */
@@ -1418,8 +1431,7 @@ typedef struct {
      * iff the item does not yet exist.
      */
     lcb_U64 initial;
-    const void *hashkey;
-    lcb_SIZE nhashkey;
+    LCB__HKFIELDS
 } lcb_ARITHCMDv0;
 
 typedef struct lcb_arithmetic_cmd_st {
@@ -1534,8 +1546,7 @@ typedef enum {
 #define LCB_OBSERVE_FIELDS_COMMON \
     const void *key; \
     lcb_SIZE nkey; \
-    const void *hashkey; \
-    lcb_SIZE nhashkey;
+    LCB__HKFIELDS /**<@private*/
 
 typedef struct {
     LCB_OBSERVE_FIELDS_COMMON
@@ -1661,8 +1672,7 @@ typedef struct {
     const void *key;
     lcb_SIZE nkey;
     lcb_cas_t cas;
-    const void *hashkey;
-    lcb_SIZE nhashkey;
+    LCB__HKFIELDS /**<@private*/
 } lcb_REMOVECMDv0;
 
 typedef struct lcb_remove_cmd_st {
@@ -1882,13 +1892,7 @@ lcb_error_t lcb_touch(lcb_t instance,
 typedef struct {
     const void *key;
     size_t nkey;
-
-    /**
-     * Hashkey and hashkey size to use for customized vbucket
-     * mapping
-     */
-    const void *hashkey;
-    size_t nhashkey;
+    LCB__HKFIELDS /**<@private*/
 
     /**
      * CAS to be checked against. If the key exists on the server

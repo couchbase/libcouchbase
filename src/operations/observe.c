@@ -154,7 +154,7 @@ obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
         return LCB_NOT_SUPPORTED;
     }
 
-    mcreq_extract_hashkey(&cmd->key, &cmd->hashkey, 24, &hk, &nhk);
+    mcreq_extract_hashkey(&cmd->key, &cmd->_hashkey, 24, &hk, &nhk);
     vbid = lcbvb_k2vb(cq->config, hk, nhk);
     maxix = LCBVB_NREPLICAS(cq->config);
 
@@ -305,7 +305,7 @@ lcb_error_t lcb_observe(lcb_t instance,
             cmd.cmdflags |= LCB_CMDOBSERVE_F_MASTER_ONLY;
         }
         LCB_KREQ_SIMPLE(&cmd.key, src->v.v0.key, src->v.v0.nkey);
-        LCB_KREQ_SIMPLE(&cmd.hashkey, src->v.v0.hashkey, src->v.v0.nhashkey);
+        LCB_KREQ_SIMPLE(&cmd._hashkey, src->v.v0.hashkey, src->v.v0.nhashkey);
 
         err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
         if (err != LCB_SUCCESS) {

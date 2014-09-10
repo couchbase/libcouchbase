@@ -89,8 +89,8 @@ lcb_error_t lcb_get(lcb_t instance,
         memset(&dst, 0, sizeof(dst));
         dst.key.contig.bytes = src->v.v0.key;
         dst.key.contig.nbytes = src->v.v0.nkey;
-        dst.hashkey.contig.bytes = src->v.v0.hashkey;
-        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        dst._hashkey.contig.bytes = src->v.v0.hashkey;
+        dst._hashkey.contig.nbytes = src->v.v0.nhashkey;
         dst.lock = src->v.v0.lock;
         dst.exptime = src->v.v0.exptime;
 
@@ -157,8 +157,8 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
         memset(&dst, 0, sizeof(dst));
         dst.key.contig.bytes = src->v.v0.key;
         dst.key.contig.nbytes = src->v.v0.nkey;
-        dst.hashkey.contig.bytes = src->v.v0.hashkey;
-        dst.hashkey.contig.nbytes = src->v.v0.nhashkey;
+        dst._hashkey.contig.bytes = src->v.v0.hashkey;
+        dst._hashkey.contig.nbytes = src->v.v0.nhashkey;
         dst.cas = src->v.v0.cas;
         err = lcb_unlock3(instance, cookie, &dst);
         if (err != LCB_SUCCESS) {
@@ -264,7 +264,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
         return LCB_EMPTY_KEY;
     }
 
-    mcreq_extract_hashkey(&cmd->key, &cmd->hashkey, MCREQ_PKT_BASESIZE, &hk, &nhk);
+    mcreq_extract_hashkey(&cmd->key, &cmd->_hashkey, MCREQ_PKT_BASESIZE, &hk, &nhk);
     vbid = lcbvb_k2vb(cq->config, hk, nhk);
 
     /* The following blocks will also validate that the entire index range is
@@ -365,8 +365,8 @@ lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
         memset(&dst, 0, sizeof(dst));
         dst.key.contig.bytes = src->v.v1.key;
         dst.key.contig.nbytes = src->v.v1.nkey;
-        dst.hashkey.contig.bytes = src->v.v1.hashkey;
-        dst.hashkey.contig.nbytes = src->v.v1.nhashkey;
+        dst._hashkey.contig.bytes = src->v.v1.hashkey;
+        dst._hashkey.contig.nbytes = src->v.v1.nhashkey;
         dst.strategy = src->v.v1.strategy;
         dst.index = src->v.v1.index;
         err = lcb_rget3(instance, cookie, &dst);

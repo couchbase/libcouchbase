@@ -233,7 +233,7 @@ static void poll_once(lcb_DURSET *dset)
         RESFLD(ent, rc) = LCB_SUCCESS;
 
         LCB_KREQ_SIMPLE(&cmd.key, RESFLD(ent, key), RESFLD(ent, nkey));
-        cmd.hashkey = ent->hashkey;
+        cmd._hashkey = ent->hashkey;
 
         err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
         if (err != LCB_SUCCESS) {
@@ -539,15 +539,15 @@ dset_ctx_add(lcb_MULTICMD_CTX *mctx, const lcb_CMDBASE *cmd)
     /* ok. now let's initialize the entry..*/
     memset(ent, 0, sizeof (*ent));
     RESFLD(ent, nkey) = cmd->key.contig.nbytes;
-    ent->hashkey = cmd->hashkey;
+    ent->hashkey = cmd->_hashkey;
     ent->reqcas = cmd->cas;
     ent->parent = dset;
 
     lcb_string_append(&dset->kvbufs,
         cmd->key.contig.bytes, cmd->key.contig.nbytes);
-    if (cmd->hashkey.contig.nbytes) {
+    if (cmd->_hashkey.contig.nbytes) {
         lcb_string_append(&dset->kvbufs,
-            cmd->hashkey.contig.bytes,  cmd->hashkey.contig.nbytes);
+            cmd->_hashkey.contig.bytes,  cmd->_hashkey.contig.nbytes);
     }
     dset->nentries++;
     return LCB_SUCCESS;
@@ -667,8 +667,8 @@ lcb_durability_poll(lcb_t instance, const void *cookie,
         const lcb_DURABILITYCMDv0 *src = &cmds[ii]->v.v0;
         cmd.key.contig.bytes = src->key;
         cmd.key.contig.nbytes = src->nkey;
-        cmd.hashkey.contig.bytes = src->hashkey;
-        cmd.hashkey.contig.nbytes = src->nhashkey;
+        cmd._hashkey.contig.bytes = src->hashkey;
+        cmd._hashkey.contig.nbytes = src->nhashkey;
         cmd.cas = src->cas;
 
         err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);

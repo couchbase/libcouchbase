@@ -410,7 +410,7 @@ mcreq_basic_packet(
         return LCB_CLIENT_ETMPFAIL;
     }
 
-    mcreq_extract_hashkey(&cmd->key, &cmd->hashkey,
+    mcreq_extract_hashkey(&cmd->key, &cmd->_hashkey,
                           sizeof(*req) + extlen, &hashkey, &nhashkey);
 
     lcbvb_map_key(queue->config, hashkey, nhashkey, &vb, &srvix);
