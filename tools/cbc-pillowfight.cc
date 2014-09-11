@@ -71,7 +71,7 @@ public:
         o_keyPrefix("key-prefix"),
         o_numThreads("num-threads"),
         o_randSeed("random-seed"),
-        o_setPercent("ratio"),
+        o_setPercent("set-pct"),
         o_minSize("min-size"),
         o_maxSize("max-size"),
         o_noPopulate("no-population"),
@@ -83,7 +83,7 @@ public:
         o_keyPrefix.abbrev('p').description("key prefix to use");
         o_numThreads.setDefault(1).abbrev('t').description("The number of threads to use");
         o_randSeed.setDefault(0).abbrev('s').description("Specify random seed");
-        o_setPercent.setDefault(33).abbrev('r').description("Specify SET command ratio");
+        o_setPercent.setDefault(33).abbrev('r').description("The percentage of operations which should be mutations");
         o_minSize.setDefault(50).abbrev('m').description("Set minimum payload size");
         o_maxSize.setDefault(5120).abbrev('M').description("Set maximum payload size");
         o_noPopulate.setDefault(false).abbrev('n').description("Skip population");
@@ -196,7 +196,7 @@ public:
 
     uint32_t maxKey;
     uint32_t opsPerCycle;
-    uint32_t setprc;
+    int setprc;
     string prefix;
     uint32_t maxSize;
     uint32_t minSize;
@@ -211,7 +211,7 @@ private:
     StringOption o_keyPrefix;
     UIntOption o_numThreads;
     UIntOption o_randSeed;
-    UIntOption o_setPercent;
+    IntOption o_setPercent;
     UIntOption o_minSize;
     UIntOption o_maxSize;
     BoolOption o_noPopulate;
@@ -424,6 +424,26 @@ public:
         } while (--retry > 0);
     }
 
+    bool shouldStore(uint32_t seqno) {
+        seqno %= 100;
+        // This is a percentage..
+
+        if (config.setprc > 0) {
+            if (seqno % (100 / config.setprc) == 0) {
+                return true;
+            }
+            return false;
+        } else if (config.setprc == 0) {
+            return false; // Always get
+        } else {
+            // Negative
+            if (seqno % (100 / config.setprc) == 0) {
+                return false;
+            }
+            return true;
+        }
+    }
+
     void singleLoop(lcb_t instance) {
         bool hasItems = false;
         string key;
@@ -432,7 +452,7 @@ public:
         for (size_t ii = 0; ii < config.opsPerCycle; ++ii) {
             const uint32_t nextseq = nextSeqno();
             generateKey(key, nextseq);
-            if (config.setprc > 0 && (nextseq % 100) % (config.setprc+1) == 0) {
+            if (shouldStore(nextseq)) {
                 lcb_CMDSTORE scmd = { 0 };
                 size_t size;
                 if (config.minSize == config.maxSize) {

@@ -43,9 +43,9 @@ The following options control workload generation:
   Set the number of threads (and thus the number of client instances) to run
   concurrently. Each thread is assigned its own client object.
 
-* `-r`, `--ratio`=_SETRATIO_:
-  Set the ratio of gets to sets. This controls how many get operations should
-  be performed before a set operation is performed.
+* `-r`, `--set-pct`=_PERCENTAGE_:
+  The percentage of operations which should be mutations. A value of 100 means
+  only mutations while a value of 0 means only retrievals.
 
 * `-n`, `--no-population`:
   By default `cbc-pillowfight` will load all the items (see `--num-items`) into
