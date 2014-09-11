@@ -236,12 +236,7 @@ void log(const char *format, ...)
 }
 
 extern "C" {
-    static void storageCallback(lcb_t, const void *,
-                                lcb_storage_t, lcb_error_t,
-                                const lcb_store_resp_t *);
-
-    static void getCallback(lcb_t, const void *, lcb_error_t,
-                            const lcb_get_resp_t *);
+static void operationCallback(lcb_t, int, const lcb_RESPBASE*);
 }
 
 class InstanceCookie {
@@ -313,8 +308,8 @@ public:
             options.v.v1.io = io;
             error = lcb_create(&instance, &options);
             if (error == LCB_SUCCESS) {
-                (void)lcb_set_store_callback(instance, storageCallback);
-                (void)lcb_set_get_callback(instance, getCallback);
+                lcb_install_callback3(instance, LCB_CALLBACK_STORE, operationCallback);
+                lcb_install_callback3(instance, LCB_CALLBACK_GET, operationCallback);
                 cp.doCtls(instance);
                 queue.push(instance);
                 handles.push_back(instance);
@@ -399,8 +394,8 @@ public:
     }
 
     template <typename T> void
-    performWithRetry(lcb_t handle, size_t n, const T* const * cmds,
-        lcb_error_t (*lfunc)(lcb_t,const void*,lcb_size_t,const T*const*),
+    performWithRetry(lcb_t handle, const T* cmd,
+        lcb_error_t (*lfunc)(lcb_t,const void*, const T*),
         const char *opname, int retry = -1)
     {
         if (retry == -1) {
@@ -408,10 +403,14 @@ public:
         }
 
         do {
-            error = lfunc(handle, this, n, cmds);
+            lcb_sched_enter(handle);
+            error = lfunc(handle, this, cmd);
             if (error != LCB_SUCCESS) {
                 log("Couldn't schedule %s. [0x%x, %s]", opname, error, lcb_strerror(NULL, error));
+                lcb_sched_fail(handle);
+                return;
             }
+            lcb_sched_leave(handle);
             lcb_wait(handle);
             if (error == LCB_SUCCESS) {
                 return;
@@ -428,33 +427,28 @@ public:
     void singleLoop(lcb_t instance) {
         bool hasItems = false;
         string key;
+        lcb_sched_enter(instance);
+
         for (size_t ii = 0; ii < config.opsPerCycle; ++ii) {
             const uint32_t nextseq = nextSeqno();
             generateKey(key, nextseq);
             if (config.setprc > 0 && (nextseq % 100) % (config.setprc+1) == 0) {
-                lcb_store_cmd_t scmd;
+                lcb_CMDSTORE scmd = { 0 };
                 size_t size;
                 if (config.minSize == config.maxSize) {
                     size = config.minSize;
                 } else {
                     size = config.minSize + nextseq % (config.maxSize - config.minSize);
                 }
-                memset(&scmd, 0, sizeof scmd);
-                scmd.v.v0.key = key.c_str();
-                scmd.v.v0.nkey = key.size();
-                scmd.v.v0.bytes = config.data;
-                scmd.v.v0.nbytes = size;
-                scmd.v.v0.operation = LCB_SET;
-                const lcb_store_cmd_t * const cmdlist[] = {  &scmd };
-                error = lcb_store(instance, this, 1, cmdlist);
+                scmd.operation = LCB_SET;
+                LCB_CMD_SET_KEY(&scmd, key.c_str(), key.size());
+                LCB_CMD_SET_VALUE(&scmd, config.data, size);
+                error = lcb_store3(instance, this, &scmd);
 
             } else {
-                lcb_get_cmd_t gcmd;
-                memset(&gcmd, 0, sizeof gcmd);
-                gcmd.v.v0.key = key.c_str();
-                gcmd.v.v0.nkey = key.size();
-                const lcb_get_cmd_t * const cmdlist[] = { &gcmd };
-                error = lcb_get(instance, this, 1, cmdlist);
+                lcb_CMDGET gcmd = { 0 };
+                LCB_CMD_SET_KEY(&gcmd, key.c_str(), key.size());
+                error = lcb_get3(instance, this, &gcmd);
             }
             if (error != LCB_SUCCESS) {
                 hasItems = false;
@@ -464,10 +458,13 @@ public:
             }
         }
         if (hasItems) {
+            lcb_sched_leave(instance);
             lcb_wait(instance);
             if (error != LCB_SUCCESS) {
                 log("Operation(s) failed: [0x%x] %s", error, lcb_strerror(instance, error));
             }
+        } else {
+            lcb_sched_fail(instance);
         }
     }
 
@@ -494,17 +491,11 @@ public:
         for (uint32_t ii = start; ii < stop; ++ii) {
             std::string key;
             generateKey(key, ii);
-            lcb_store_cmd_t item;
-            memset(&item, 0, sizeof item);
-            item.v.v0.key = key.c_str();
-            item.v.v0.nkey = key.size();
-            item.v.v0.bytes = config.data;
-            item.v.v0.nbytes = config.maxSize;
-            item.v.v0.operation = LCB_SET;
-            lcb_store_cmd_t *items[1] = { &item };
-
-            performWithRetry<lcb_store_cmd_t>(
-                instance, 1, items, lcb_store, "store/populate", 1000);
+            lcb_CMDSTORE scmd = { 0 };
+            LCB_CMD_SET_KEY(&scmd, key.c_str(), key.size());
+            LCB_CMD_SET_VALUE(&scmd, config.data, config.maxSize);
+            scmd.operation = LCB_SET;
+            performWithRetry<lcb_CMDSTORE>(instance, &scmd, lcb_store3, "store/populate", 1000);
         }
 
         if (timings) {
@@ -517,11 +508,7 @@ public:
 
 protected:
     // the callback methods needs to be able to set the error handler..
-    friend void storageCallback(lcb_t, const void *,
-                                lcb_storage_t, lcb_error_t,
-                                const lcb_store_resp_t *);
-    friend void getCallback(lcb_t, const void *, lcb_error_t,
-                            const lcb_get_resp_t *);
+    friend void operationCallback(lcb_t, int, const lcb_RESPBASE*);
     Histogram histogram;
 
     void setError(lcb_error_t e) { error = e; }
@@ -556,24 +543,13 @@ private:
     InstancePool *pool;
 };
 
-static void storageCallback(lcb_t, const void *cookie,
-                            lcb_storage_t, lcb_error_t error,
-                            const lcb_store_resp_t *)
+static void operationCallback(lcb_t, int, const lcb_RESPBASE *resp)
 {
     ThreadContext *tc;
-    tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(cookie));
-    tc->setError(error);
+    tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(resp->cookie));
+    tc->setError(resp->rc);
 }
 
-static void getCallback(lcb_t, const void *cookie,
-                        lcb_error_t error,
-                        const lcb_get_resp_t *)
-{
-    ThreadContext *tc;
-    tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(cookie));
-    tc->setError(error);
-
-}
 
 std::list<ThreadContext *> contexts;
 InstancePool *pool = NULL;
