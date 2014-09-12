@@ -345,7 +345,7 @@ C_connect(lcbio_CONNSTART *cs)
     GT_NEXTSOCK:
     if (ensure_sock(cs) != 0) {
         lcbio_mksyserr(IOT_ERRNO(io), &cs->syserr);
-        cs_state_signal(cs, CS_ERROR, LCB_UNKNOWN_HOST);
+        cs_state_signal(cs, CS_ERROR, LCB_CONNECT_ERROR);
         return;
     }
 
