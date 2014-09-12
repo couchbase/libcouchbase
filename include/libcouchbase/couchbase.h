@@ -844,13 +844,17 @@ typedef struct {
 
     /**
      * If this parameter is set then the server will in addition to retrieving
-     * the item also lock the item, making it so that other operations to
-     * access the same item will fail with an error (either @ref LCB_KEY_EEXISTS
-     * or @ref LCB_ETMPFAIL). The key will only be accessible again once:
+     * the item also lock the item, making it so that subsequent attempts to
+     * lock and/or modify the same item will fail with an error
+     * (either @ref LCB_KEY_EEXISTS or @ref LCB_ETMPFAIL).
      *
-     * 1. The lock timeout expires
-     * 2. The item is unlocked with the `cas` returned in the response
-     * 3. The item is modified with the `cas` returned in the response
+     * The lock will be released when one of the following happens:
+     *
+     * 1. The item is explicitly unlocked (see lcb_unlock())
+     * 2. The lock expires (See the #exptime parameter)
+     * 3. The item is modified using lcb_store(), and being provided with the
+     *    correct _CAS_.
+     *
      */
     int lock;
     LCB__HKFIELDS
