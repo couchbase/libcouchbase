@@ -61,6 +61,11 @@ nobase_pkginclude_HEADERS = \
                              plugins/io/libuv/libuv_compat.h \
                              plugins/io/libuv/plugin-libuv.c
 
+pkginclude_HEADERS += plugins/io/libuv/libuv_io_opts.h \
+                      plugins/io/select/select_io_opts.h \
+                      plugins/io/libev/libev_io_opts.h \
+                      plugins/io/libevent/libevent_io_opts.h
+
 libcbsasl_la_SOURCES = \
                        contrib/cbsasl/include/cbsasl/cbsasl.h \
                        contrib/cbsasl/include/cbsasl/visibility.h \

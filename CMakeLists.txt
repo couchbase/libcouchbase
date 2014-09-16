@@ -294,9 +294,9 @@ INSTALL(TARGETS couchbase
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib)
 
-FILE(GLOB LCB_PKGHDRS include/libcouchbase/*.h)
-INSTALL(FILES ${LCB_PKGHDRS} ${LCB_GENSRCDIR}/libcouchbase/configuration.h
-    DESTINATION include/libcouchbase)
+INSTALL(DIRECTORY include/libcouchbase ${LCB_GENSRCDIR}/libcouchbase
+    DESTINATION include
+    FILES_MATCHING PATTERN *.h PATTERN *.c)
 
 INSTALL_PDBS(couchbase)
 
