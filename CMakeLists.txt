@@ -299,3 +299,6 @@ INSTALL(FILES ${LCB_PKGHDRS} ${LCB_GENSRCDIR}/libcouchbase/configuration.h
     DESTINATION include/libcouchbase)
 
 INSTALL_PDBS(couchbase)
+
+ADD_CUSTOM_TARGET(uninstall
+    COMMAND xargs rm -vf < ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt)
