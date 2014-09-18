@@ -211,7 +211,13 @@ pkt_bcast_simple(lcb_t instance, const void *cookie, lcb_CALLBACKTYPE type)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
-    bcast_cookie *ckwrap = calloc(1, sizeof(*ckwrap));
+    bcast_cookie *ckwrap;
+
+    if (!cq->config) {
+        return LCB_CLIENT_ETMPFAIL;
+    }
+
+    ckwrap = calloc(1, sizeof(*ckwrap));
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
     ckwrap->base.callback = handle_bcast;
@@ -279,7 +285,13 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
-    bcast_cookie *ckwrap = calloc(1, sizeof(*ckwrap));
+    bcast_cookie *ckwrap;
+
+    if (!cq->config) {
+        return LCB_CLIENT_ETMPFAIL;
+    }
+
+    ckwrap = calloc(1, sizeof(*ckwrap));
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
     ckwrap->base.callback = handle_bcast;

@@ -263,6 +263,9 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_EMPTY_KEY;
     }
+    if (!cq->config) {
+        return LCB_CLIENT_ETMPFAIL;
+    }
 
     mcreq_extract_hashkey(&cmd->key, &cmd->_hashkey, MCREQ_PKT_BASESIZE, &hk, &nhk);
     vbid = lcbvb_k2vb(cq->config, hk, nhk);

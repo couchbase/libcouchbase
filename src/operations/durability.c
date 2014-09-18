@@ -610,6 +610,12 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
     if (!errp) {
         errp = &err_s;
     }
+
+    if (!LCBT_VBCONFIG(instance)) {
+        *errp = LCB_CLIENT_ETMPFAIL;
+        return NULL;
+    }
+
     now = gethrtime();
     dset = calloc(1, sizeof(*dset));
 
