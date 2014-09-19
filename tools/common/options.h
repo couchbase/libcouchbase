@@ -3,6 +3,7 @@
 
 #define CLIOPTS_ENABLE_CXX 1
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/api3.h>
 #include "contrib/cliopts/cliopts.h"
 
 #define CBC_CONFIG_FILENAME ".cbcrc"

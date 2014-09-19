@@ -3331,6 +3331,5 @@ lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags);
 
 /* Post-include some other headers */
 #include <libcouchbase/cntl.h>
-#include <libcouchbase/api3.h>
 #include <libcouchbase/deprecated.h>
 #endif /* __cplusplus */

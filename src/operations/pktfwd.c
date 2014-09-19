@@ -1,4 +1,5 @@
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/api3.h>
 #include <libcouchbase/pktfwd.h>
 #include "mc/mcreq.h"
 #include "mc/forward.h"
