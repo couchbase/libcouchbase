@@ -216,8 +216,14 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
         mon->cur_provider = first_active(mon);
         lcb_confmon_stop(mon);
     } else {
+        uint32_t interval = 0;
+        if (mon->config) {
+            /* Not first */
+            interval = PROVIDER_SETTING(provider, grace_next_provider);
+        }
+        lcb_log(LOGARGS(mon, DEBUG), "Will try next provider in %uus", interval);
         mon->state |= CONFMON_S_ITERGRACE;
-        lcbio_timer_rearm(mon->as_start, mon->settings->grace_next_provider);
+        lcbio_timer_rearm(mon->as_start, interval);
     }
 }
 
