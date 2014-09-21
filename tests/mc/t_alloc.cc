@@ -228,7 +228,8 @@ TEST_F(McAlloc, testRdataExDtor)
     memset(&basecmd, 0, sizeof basecmd);
     memset(&ec, 0, sizeof ec);
 
-    ec.base.dtor = pkt_dtor;
+    mc_REQDATAPROCS procs = { NULL, pkt_dtor };
+    ec.base.procs = &procs;
     basecmd.key.contig.bytes = "foo";
     basecmd.key.contig.nbytes = 3;
 

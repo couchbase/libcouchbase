@@ -66,6 +66,11 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
     }
 }
 
+static mc_REQDATAPROCS stats_procs = {
+        stats_handler,
+        refcnt_dtor_common
+};
+
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
@@ -110,8 +115,7 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
     ckwrap = calloc(1, sizeof(*ckwrap));
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
-    ckwrap->base.callback = stats_handler;
-    ckwrap->base.dtor = refcnt_dtor_common;
+    ckwrap->base.procs = &stats_procs;
 
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;
@@ -206,6 +210,11 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
     free(ck);
 }
 
+static mc_REQDATAPROCS bcast_procs = {
+        handle_bcast,
+        refcnt_dtor_common
+};
+
 static lcb_error_t
 pkt_bcast_simple(lcb_t instance, const void *cookie, lcb_CALLBACKTYPE type)
 {
@@ -220,8 +229,7 @@ pkt_bcast_simple(lcb_t instance, const void *cookie, lcb_CALLBACKTYPE type)
     ckwrap = calloc(1, sizeof(*ckwrap));
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
-    ckwrap->base.callback = handle_bcast;
-    ckwrap->base.dtor = refcnt_dtor_common;
+    ckwrap->base.procs = &bcast_procs;
     ckwrap->type = type;
 
     for (ii = 0; ii < cq->npipelines; ii++) {
@@ -294,7 +302,7 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
     ckwrap = calloc(1, sizeof(*ckwrap));
     ckwrap->base.cookie = cookie;
     ckwrap->base.start = gethrtime();
-    ckwrap->base.callback = handle_bcast;
+    ckwrap->base.procs = &bcast_procs;
     ckwrap->type = LCB_CALLBACK_VERBOSITY;
 
     for (ii = 0; ii < cq->npipelines; ii++) {

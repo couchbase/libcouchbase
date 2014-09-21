@@ -244,6 +244,11 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
     (void)pl;
 }
 
+static mc_REQDATAPROCS rget_procs = {
+        rget_callback,
+        rget_dtor
+};
+
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
@@ -310,8 +315,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     rck = calloc(1, sizeof(*rck));
     rck->base.cookie = cookie;
     rck->base.start = gethrtime();
-    rck->base.callback = rget_callback;
-    rck->base.dtor = rget_dtor;
+    rck->base.procs = &rget_procs;
     rck->strategy = cmd->strategy;
     rck->r_cur = r0;
     rck->r_max = instance->nreplicas;

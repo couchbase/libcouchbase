@@ -39,6 +39,8 @@ ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t rc,
     free(rd);
 }
 
+static mc_REQDATAPROCS procs = { ext_callback_proxy };
+
 LCB_INTERNAL_API
 lcb_error_t
 lcb_getconfig(lcb_t instance, const void *cookie, mc_SERVER *server)
@@ -62,7 +64,7 @@ lcb_getconfig(lcb_t instance, const void *cookie, mc_SERVER *server)
     }
 
     rd = calloc(1, sizeof(*rd));
-    rd->callback = ext_callback_proxy;
+    rd->procs = &procs;
     rd->cookie = cookie;
     rd->start = gethrtime();
     packet->u_rdata.exdata = rd;

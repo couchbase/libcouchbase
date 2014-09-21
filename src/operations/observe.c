@@ -197,6 +197,7 @@ obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
     return LCB_SUCCESS;
 }
 
+static mc_REQDATAPROCS obs_procs = { handle_observe_callback };
 
 static lcb_error_t
 obs_ctxdone(lcb_MULTICMD_CTX *mctx, const void *cookie)
@@ -243,7 +244,7 @@ obs_ctxdone(lcb_MULTICMD_CTX *mctx, const void *cookie)
     destroy_requests(ctx);
     ctx->base.start = gethrtime();
     ctx->base.cookie = cookie;
-    ctx->base.callback = handle_observe_callback;
+    ctx->base.procs = &obs_procs;
     return LCB_SUCCESS;
 }
 
