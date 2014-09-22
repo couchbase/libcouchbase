@@ -100,6 +100,7 @@ mcserver_fail_chain(mc_SERVER *server, lcb_error_t err);
  * Returns true or false depending on whether there are pending commands on
  * this server
  */
+LCB_INTERNAL_API
 int
 mcserver_has_pending(mc_SERVER *server);
 

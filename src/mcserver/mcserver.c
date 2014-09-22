@@ -262,6 +262,7 @@ on_read(lcbio_CTX *ctx, unsigned nb)
     (void)nb;
 }
 
+LCB_INTERNAL_API
 int
 mcserver_has_pending(mc_SERVER *server)
 {
