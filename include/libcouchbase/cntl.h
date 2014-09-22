@@ -737,8 +737,19 @@ typedef enum {
  */
 #define LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR 0x2F
 
+/**
+ * @volatile
+ * Set the behavior of the lcb_sched_leave() API call. By default the
+ * lcb_sched_leave() will also set up the necessary requirements for flushing
+ * to the network. If this option is off then an explicit call to
+ * lcb_sched_flush() must be performed instead.
+ *
+ * @cntl_arg_both{int (as boolean)}
+ */
+#define LCB_CNTL_SCHED_IMPLICIT_FLUSH 0x31
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x31
+#define LCB_CNTL__MAX                    0x32
 /**@}*/
 
 #ifdef __cplusplus

@@ -141,6 +141,9 @@ HANDLER(compmode_handler) {
 HANDLER(bucketname_handler) {
     RETURN_GET_ONLY(const char*, LCBT_SETTING(instance, bucket))
 }
+HANDLER(schedflush_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, sched_implicit_flush))
+}
 
 HANDLER(get_kvb) {
     struct lcb_cntl_vbinfo_st *vbi = arg;
@@ -414,7 +417,8 @@ static ctl_handler handlers[] = {
     retry_backoff_handler, /* LCB_CNTL_RETRY_BACKOFF */
     http_poolsz_handler, /* LCB_CNTL_HTTP_POOLSIZE */
     http_refresh_config_handler, /* LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR */
-    bucketname_handler /* LCB_CNTL_BUCKETNAME */
+    bucketname_handler, /* LCB_CNTL_BUCKETNAME */
+    schedflush_handler /* LCB_CNTL_SCHED_IMPLICIT_FLUSH */
 };
 
 /* Union used for conversion to/from string functions */

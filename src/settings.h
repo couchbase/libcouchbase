@@ -114,6 +114,7 @@ typedef struct lcb_settings_st {
     unsigned randomize_bootstrap_nodes : 1;
     unsigned conntype : 1;
     unsigned refresh_on_hterr : 1;
+    unsigned sched_implicit_flush : 1;
     unsigned sslopts : 2;
     unsigned ipv6 : 2;
 

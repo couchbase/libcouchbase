@@ -318,6 +318,23 @@ void lcb_sched_leave(lcb_t instance);
 LIBCOUCHBASE_API
 void lcb_sched_fail(lcb_t instance);
 
+/**
+ * @volatile
+ * @brief Request commands to be flushed to the network
+ *
+ * By default, the library will implicitly request a flush to the network upon
+ * a call to lcb_sched_leave() [ Note, this does not mean the items are flushed
+ * and I/O is performed, but it means the relevant event loop watchers are
+ * activated to perform the operations on the next iteration ]. If
+ * @ref LCB_CNTL_SCHED_NOFLUSH is set then this behavior is disabled and the
+ * application must explicitly call lcb_sched_flush(). This may be considered
+ * more performant in the cases where multiple discreet operations are scheduled
+ * in an lcb_sched_enter()/lcb_sched_leave() pair. With implicit flush enabled,
+ * each call to lcb_sched_leave() will possibly invoke system repeatedly.
+ */
+LIBCOUCHBASE_API
+void lcb_sched_flush(lcb_t instance);
+
 /**@}*/
 
 /**@name Simple Retrievals

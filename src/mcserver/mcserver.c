@@ -103,6 +103,21 @@ mcserver_flush(mc_SERVER *server)
     }
 }
 
+LIBCOUCHBASE_API
+void
+lcb_sched_flush(lcb_t instance)
+{
+    unsigned ii;
+    for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+        mc_SERVER *server = LCBT_GET_SERVER(instance, ii);
+
+        if (!mcserver_has_pending(server)) {
+            continue;
+        }
+        server->pipeline.flush_start(&server->pipeline);
+    }
+}
+
 /**
  * Invoked when get a NOT_MY_VBUCKET response. If the response contains a JSON
  * payload then we refresh the configuration with it.

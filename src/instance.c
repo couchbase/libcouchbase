@@ -645,7 +645,7 @@ LIBCOUCHBASE_API
 void
 lcb_sched_leave(lcb_t instance)
 {
-    mcreq_sched_leave(&instance->cmdq, 1);
+    mcreq_sched_leave(&instance->cmdq, LCBT_SETTING(instance, sched_implicit_flush));
 }
 LIBCOUCHBASE_API
 void
