@@ -51,20 +51,17 @@
  * is also the resource parent for them. Sets are reference-counted and are
  * destroyed when their reference count hits zero.
  *
- * The reference count semantics works as follows.
+ * The reference count semantics works as follows:
  *
- * It is incremented once during the creation of the operation (i.e.
- * lcb_durability_poll).
- *
- * It is incremented once for each polling 'sweep', at which this code (i.e.
- * poll_once) sends out observe broadcasts.
- *
- * It is decremented when all the responses for the observe broadcasts have been
- * received (indicated by a callback with the key appearing as NULL).
- *
- * Finally, it is decremented when all entries are set to 'done'.
- *
- * This mechanism allows users to be notified on a per-key basis
+ * 1. The reference counter has an initial value of 0 when the `DURSET` is
+ * first created. Any errors encountered before the command being submitted
+ * results in explicit resource destruction.
+ * 2. Once the commands have been submitted, the reference count is incremented
+ * once more.
+ * 3. When all callbacks have been received for a single polling loop, the
+ * reference count is decremented once more.
+ * 4. When all commands have been completed (i.e. `nremaining` is 0) the
+ * reference count is decremented again.
  */
 
 #include "internal.h"
@@ -222,7 +219,7 @@ static lcb_error_t poll_once(lcb_DURSET *dset, int initial)
 
     for (ii = 0; ii < dset->nentries; ii++) {
         lcb_CMDOBSERVE cmd = { 0 };
-        struct lcb_durability_entry_st *ent = dset->entries + ii;
+        struct lcb_DURITEM_st *ent = dset->entries + ii;
         if (ent->done) {
             continue;
         }
@@ -288,8 +285,8 @@ static lcb_error_t poll_once(lcb_DURSET *dset, int initial)
     }
 
     if (dset->waiting && n_added) {
-        lcb_uint32_t us_now = (lcb_uint32_t)(gethrtime() / 1000);
-        lcb_uint32_t us_tmo;
+        lcb_U32 us_now = (lcb_U32)(gethrtime() / 1000);
+        lcb_U32 us_tmo;
         if (dset->us_timeout > us_now) {
             us_tmo = dset->us_timeout - us_now;
         } else {
@@ -307,8 +304,8 @@ static lcb_error_t poll_once(lcb_DURSET *dset, int initial)
 /**
  * Called when the criteria is to ensure the key exists somewhow
  */
-static void check_positive_durability(lcb_DURITEM *ent,
-                                      const lcb_RESPOBSERVE *res)
+static void
+check_positive_durability(lcb_DURITEM *ent, const lcb_RESPOBSERVE *res)
 {
     switch (res->status) {
 
@@ -354,8 +351,8 @@ static void check_positive_durability(lcb_DURITEM *ent,
 /**
  * Called when the criteria is to ensure that the key is deleted somehow
  */
-static void check_negative_durability(lcb_DURITEM *ent,
-                                      const lcb_RESPOBSERVE *res)
+static void
+check_negative_durability(lcb_DURITEM *ent, const lcb_RESPOBSERVE *res)
 {
     switch (res->status) {
     case LCB_OBSERVE_PERSISTED:
@@ -658,7 +655,7 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
         return NULL;
     }
 
-    dset->us_timeout = (lcb_uint32_t)(now / 1000) + DSET_OPTFLD(dset, timeout);
+    dset->us_timeout = (lcb_U32)(now / 1000) + DSET_OPTFLD(dset, timeout);
     dset->timer = io->timer.create(io->p);
     lcb_string_init(&dset->kvbufs);
     return &dset->mctx;
@@ -752,7 +749,7 @@ static void timer_callback(lcb_socket_t sock, short which, void *arg)
 {
     lcb_DURSET *dset = arg;
     hrtime_t ns_now = gethrtime();
-    lcb_uint32_t us_now = (lcb_uint32_t)(ns_now / 1000);
+    lcb_U32 us_now = (lcb_U32)(ns_now / 1000);
 
     if (us_now >= (dset->us_timeout - 50)) {
         dset->next_state = STATE_TIMEOUT;

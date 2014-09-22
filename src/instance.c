@@ -475,9 +475,9 @@ void lcb_destroy(lcb_t instance)
     }
 
     if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_DURABILITY))) {
-        struct lcb_durability_set_st **dset_list;
+        struct lcb_DURSET_st **dset_list;
         lcb_size_t nitems = hashset_num_items(hs);
-        dset_list = (struct lcb_durability_set_st **)hashset_get_items(hs, NULL);
+        dset_list = (struct lcb_DURSET_st **)hashset_get_items(hs, NULL);
         if (dset_list) {
             for (ii = 0; ii < nitems; ii++) {
                 lcb_durability_dset_destroy(dset_list[ii]);
