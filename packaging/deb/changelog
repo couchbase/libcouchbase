@@ -1,3 +1,36 @@
+libcouchbase (2.4.1) stable; urgency=low
+
+   * Mark the `hashkey` fields as being _volatile_.
+     Usage of this field is not supported in many cluster systems and is thus not
+     supported functionality. It exists primarily as a legacy from an older API
+     * Priority: Major
+     * Issues: [CCBC-508](http://couchbase.com/issues/browse/CCBC-508)
+
+   * Add "key stats" mode to `lcb_CMDDSTATS`.
+     This adds an additional key stats mode to the `lcb_stats3()` API
+     which interprets the `key` field as being a document ID for which
+     information (such as expiry, status) should be retrieved, rather
+     than a system statistics key. Similar functionality already exists
+     in the Java client library as `getKeyStats()`. In addition to this
+     feature, a `cbc stats --keystats` option is also provided to employ
+     this functionality from the command line.
+     * Priority: Major
+     * Issues: [CCBC-318](http://couchbase.com/issues/CCBC-318)
+
+   * Add more details about replica nodes in the `cbc hash` command.
+     * Priority: Minor
+     * Issues: [CCBC-504](http://couchbase.com/issues/browse/CCBC-504)
+
+   * Add `lcb_cntl()` setting to retrieve bucket name.
+     Previously the library did not have a means by which the bucket name
+     could be retrieved. Using the `LCB_CNTL_BUCKETNAME` setting, the bucket
+     name will now be returned.
+     * Priority: Major
+     * Issues: [CCBC-502](http://couchbase.com/issues/CCBC-502)
+
+ -- Mark Nunberg <mark.nunberg@coucuhase.com>  Tue, 23 Sep 2014 15:09:11 -0700
+
+
 libcouchbase (2.4.1) stable; urgency=high
 
 

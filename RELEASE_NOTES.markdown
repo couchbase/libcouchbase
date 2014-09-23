@@ -1,6 +1,6 @@
 # Release Notes
 
-## .NEXT
+## 2.4.2 (Sep. 23 2014)
 
 * Mark the `hashkey` fields as being _volatile_.
   Usage of this field is not supported in many cluster systems and is thus not
