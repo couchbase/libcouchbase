@@ -444,10 +444,10 @@ static lcb_error_t convert_timeout(const char *arg, u_STRCONVERT *u) {
     unsigned long tmp;
     if (strchr(arg, '.')) {
         /* Parse as a float */
-        float ftmp;
-        rv = sscanf(arg, "%f", &ftmp);
+        double dtmp;
+        rv = sscanf(arg, "%lf", &dtmp);
         if (rv != 1) { return LCB_ECTL_BADARG; }
-        tmp = ftmp * 1000000;
+        tmp = dtmp * (double) 1000000;
     } else {
         rv = sscanf(arg, "%lu", &tmp);
         if (rv != 1) { return LCB_ECTL_BADARG; }
