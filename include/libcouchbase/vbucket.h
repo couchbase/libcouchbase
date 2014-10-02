@@ -253,11 +253,12 @@ lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix);
  *
  * @param cfg the configuration object
  * @param vbix the vbucket index to loop up
- * @return the new index.
+ * @param bad the index known to be bad. Passing this parameter allows the
+ *  handler to safely call this function and be sure that a previous call's
+ *  applied heuristics will not affect the modified map.
  */
-LIBCOUCHBASE_API
-unsigned
-lcbvb_vbalternate(lcbvb_CONFIG *cfg, int vbix);
+int
+lcbvb_nmv_remap(lcbvb_CONFIG *cfg, int vbid, int bad);
 
 /**
  * @committed

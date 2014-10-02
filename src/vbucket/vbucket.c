@@ -831,53 +831,85 @@ lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix)
     }
 }
 
-unsigned
-lcbvb_vbalternate(lcbvb_CONFIG *cfg, int vbix)
+/*
+ * (https://www.couchbase.com/issues/browse/MB-12268?focusedCommentId=101894&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-101894)
+ *
+ * So (from my possibly partially ignorant view of that matter) I'd do the following:
+ *
+ * 1) Send first request according to lated vbucket map you have.
+ *    If it works, we're good. Exit.
+ *
+ * 2) if that fails, look if you've newer vbucket map. If there's newer vbucket map
+ *    and it points to _different_ node, send request to that node and proceed
+ *    to step 3. Otherwise go to step 4
+ *
+ * 3) if newer node still gives you not-my-vbucket, go to step 4
+ *
+ * 4) if there's fast forward map in latest bucket info and fast forward map
+ *    points to different node, send request to that node. And go to step 5.
+ *    Otherwise (not ff map or it points to one of nodes you've tried already),
+ *    go to step 6
+ *
+ * 5) if ff map node request succeeds. Exit. Otherwise go to step 6.
+ *
+ * 6) Try first replica unless it's one of nodes you've already tried.
+ *    If it succeeds. Exit. Otherwise go to step 7.
+ *
+ * 7) Try all nodes in turn, prioritizing other replicas to beginning of list
+ *    and nodes you have already tried to end. If one of nodes agrees to perform
+ *    your request. Exit. Otherwise propagate error to back to app
+ */
+int
+lcbvb_nmv_remap(lcbvb_CONFIG *cfg, int vbid, int bad)
 {
-    unsigned ii, count;
-    lcbvb_VBUCKET *vb;
+    int cur = cfg->vbuckets[vbid].servers[0];
+    int rv = cur;
+    unsigned ii;
+
+    if (bad != cur) {
+        return cur;
+    }
+
+    /* if a forward table exists, then return the vbucket id from the forward table
+     * and update that information in the current table. We also need to Update the
+     * replica information for that vbucket */
 
     if (cfg->ffvbuckets) {
-        /* if the fast-forward map exists, check here first for any masters
-         * or replicas which may contain a valid node */
-        vb = &cfg->ffvbuckets[vbix];
-        for (ii = 0; ii < cfg->nrepl+1; ii++) {
-            if (vb->servers[ii] != -1) {
-                return vb->servers[ii];
+        rv = cfg->vbuckets[vbid].servers[0] = cfg->ffvbuckets[vbid].servers[0];
+        for (ii = 0; ii < cfg->nrepl; ii++) {
+            cfg->vbuckets[vbid].servers[ii+1] = cfg->ffvbuckets[vbid].servers[ii+1];
+        }
+        cur = rv;
+    }
+
+    /* this path is usually only followed if fvbuckets is not present */
+    if (cur == bad) {
+        int validrv = -1;
+        for (ii = 0; ii < cfg->nsrv; ii++) {
+            rv = (rv + 1) % cfg->nsrv;
+            /* check that the new index has assigned vbuckets (master or replica) */
+            if (cfg->servers[rv].nvbs) {
+                validrv = rv;
+                cfg->vbuckets[vbid].servers[0] = rv;
+                break;
             }
         }
-    }
 
-    /* If we couldn't get a valid node from the ff map (either because it does
-     * not exist, or because all the indices are -1). In this case we iterate
-     * starting from the first replica (and not the master, because we want
-     * to ignore the master). */
-    vb = &cfg->vbuckets[vbix];
-    for (ii = 1; ii < cfg->nrepl+1; ii++) {
-        if (vb->servers[ii] != -1) {
-            return vb->servers[ii];
+        if (validrv == -1) {
+            /* this should happen when there is only one valid node remaining
+             * in the cluster, and we've removed serveral other nodes that are
+             * still present in the map due to the grace period window.*/
+            return -1;
         }
     }
 
-    /* If none of the vbucket's master or replica nodes are acceptable, make
-     * use of a random server in the list. Ensure this server is not the same
-     * one as the current master, and also that it has vbuckets assigned to it */
-    count = 0;
-    ii = ((unsigned)rand()) % cfg->nsrv;
-
-    while (count < cfg->nsrv) {
-        if (cfg->servers[ii].nvbs && ii != (unsigned)cfg->vbuckets[vbix].servers[0]) {
-            return ii;
-        }
-        ii += 1;
-        ii %= cfg->nsrv;
-        count++;
+    if (rv == bad) {
+        return -1;
     }
 
-    /* If selecting a random server fails, be really random. At least we'll
-     * return something that can be used to dispatch an item */
-    return ((unsigned) rand()) % cfg->nsrv;
+    return rv;
 }
+
 
 int
 lcbvb_map_key(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE nkey,
@@ -1210,6 +1242,14 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
 
         copy_service(src->hostname, &src->svc, &dst->svc);
         copy_service(src->hostname, &src->svc_ssl, &dst->svc_ssl);
+    }
+    for (ii = 0; ii < vb->nvb; ii++) {
+        for (jj = 0; jj < vb->nrepl+1; jj++) {
+            int ix = vb->vbuckets[ii].servers[jj];
+            if (ix >= 0) {
+                vb->servers[ix].nvbs++;
+            }
+        }
     }
     return 0;
 #undef INCR_SRVIX

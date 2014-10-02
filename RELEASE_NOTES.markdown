@@ -1,5 +1,16 @@
 # Release Notes
 
+## .NEXT
+
+* Use forward map (and other heuristics) to get a next node for an item after
+  a not-my-vbucket reply. Since the server (see bug attached) does not always
+  guarantee that a given config is the most _correct_, the client must do some
+  guesswork in order to properly map a node when it gets a not-my-vbucket;
+  especially if the config says that the node is the correct one.
+
+  * Priority: Major
+  * Issues: [MB-12268](http://couchbase.com/issues/browse/MB-12268)
+
 ## 2.4.2 (Sep. 23 2014)
 
 * Mark the `hashkey` fields as being _volatile_.

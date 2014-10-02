@@ -133,11 +133,16 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     protocol_binary_request_header hdr;
     lcb_error_t err = LCB_ERROR;
     lcb_t instance = oldsrv->instance;
-    clconfig_provider *cccp =
-            lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
+    lcb_U16 vbid;
+    clconfig_provider *cccp = lcb_confmon_get_provider(instance->confmon,
+        LCB_CLCONFIG_CCCP);
 
     mcreq_read_hdr(oldpkt, &hdr);
-    lcb_log(LOGARGS(oldsrv, WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID(oldsrv), (void*)oldpkt, oldpkt->opaque, ntohs(hdr.request.vbucket));
+    vbid = ntohs(hdr.request.vbucket);
+    lcb_log(LOGARGS(oldsrv, WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID(oldsrv), (void*)oldpkt, oldpkt->opaque, vbid);
+
+    /* Notify of new map */
+    lcbvb_nmv_remap(LCBT_VBCONFIG(instance), vbid, oldsrv->pipeline.index);
 
     if (PACKET_NBODY(resinfo) && cccp->enabled) {
         lcb_string s;
