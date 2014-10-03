@@ -202,7 +202,7 @@ rope_consolidate(rdb_ROPEBUF *rope, unsigned nr)
         seg->shflags &= ~RDB_ROPESEG_F_LIB;
     }
 
-    rope->nused -= seg->nused;
+    rope->nused -= newseg->nused;
     nr -= newseg->nused;
 
     LCB_LIST_SAFE_FOR(llcur, llnext, &rope->segments) {
