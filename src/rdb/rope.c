@@ -27,6 +27,7 @@
 #define SEG_RELEASE(seg) (seg)->allocator->s_release((seg)->allocator, seg)
 #define SEG_REALLOC(seg, n) (seg)->allocator->s_realloc((seg)->allocator, seg, n)
 #define ROPE_SALLOC(rope, n) (rope)->allocator->s_alloc((rope)->allocator, n)
+static void wipe_rope(rdb_ROPEBUF *rope);
 
 unsigned
 rdb_rdstart(rdb_IOROPE *ior, nb_IOV *iov, unsigned niov)
@@ -70,6 +71,7 @@ rdb_rdstart(rdb_IOROPE *ior, nb_IOV *iov, unsigned niov)
     return orig_niov - niov;
 }
 
+
 void
 rdb_rdend(rdb_IOROPE *ior, unsigned nr)
 {
@@ -84,6 +86,7 @@ rdb_rdend(rdb_IOROPE *ior, unsigned nr)
         ior->recvd.nused += to_chop;
 
         if (! (nr -= to_chop)) {
+            wipe_rope(&ior->avail);
             return;
         }
     }
@@ -98,6 +101,7 @@ rdb_rdend(rdb_IOROPE *ior, unsigned nr)
         lcb_list_delete(&seg->llnode);
         lcb_list_append(&ior->recvd.segments, &seg->llnode);
         if (! (nr -= to_chop)) {
+            wipe_rope(&ior->avail);
             return;
         }
     }

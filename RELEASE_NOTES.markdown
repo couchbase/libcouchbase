@@ -2,6 +2,15 @@
 
 ## .NEXT
 
+* Fix memory leak when using large read buffers
+  In the case where large read buffers are used (and the `iovec` elements
+  becomes sizable, the library may end up incorrectly caching some memory
+  blocks for future use. This fix makes the blocks be cached at the allocator
+  level, so that they are properly (re) utilized.
+
+  * Priority: Major
+  * Issues: [CCBC-519](http://couchbase.com/issue/browse/CCBC-519)
+
 * Use forward map (and other heuristics) to get a next node for an item after
   a not-my-vbucket reply. Since the server (see bug attached) does not always
   guarantee that a given config is the most _correct_, the client must do some
