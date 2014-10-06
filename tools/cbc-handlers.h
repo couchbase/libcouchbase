@@ -362,6 +362,7 @@ protected:
         return uri;
     }
     lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_POST; }
+    const std::string& getBody() { static std::string e; return e; }
 
 private:
     std::string bname;
