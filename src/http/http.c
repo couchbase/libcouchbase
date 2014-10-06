@@ -388,9 +388,11 @@ static lcb_error_t setup_headers(lcb_http_request_t req,
     }
 
     if (req->method == LCB_HTTP_METHOD_PUT || req->method == LCB_HTTP_METHOD_POST) {
-        rc = add_header(req, "Content-Type", content_type);
-        if (rc != LCB_SUCCESS) {
-            return rc;
+        if (content_type) {
+            rc = add_header(req, "Content-Type", content_type);
+            if (rc != LCB_SUCCESS) {
+                return rc;
+            }
         }
         rc = add_header(req, "Content-Length", "%ld", (long)req->nbody);
         if (rc != LCB_SUCCESS) {
