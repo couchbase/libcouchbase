@@ -287,111 +287,6 @@ private:
     Histogram hg;
 };
 
-class InstancePool
-{
-public:
-    InstancePool(size_t size): io(NULL) {
-#ifndef WIN32
-        pthread_mutex_init(&mutex, NULL);
-        pthread_cond_init(&cond, NULL);
-#endif
-
-        if (config.getNumThreads() == 1) {
-            /* allow to share IO object in single-thread only */
-            lcb_error_t err = lcb_create_io_ops(&io, NULL);
-            if (err != LCB_SUCCESS) {
-                log("Failed to create IO option: %s", lcb_strerror(NULL, err));
-                exit(EXIT_FAILURE);
-            }
-        }
-
-        for (size_t ii = 0; ii < size; ++ii) {
-            lcb_t instance;
-            std::cout << "\rCreating instance " << ii;
-            std::cout.flush();
-
-            struct lcb_create_st options;
-            ConnParams& cp = config.params;
-            lcb_error_t error;
-
-            cp.fillCropts(options);
-            options.v.v1.io = io;
-            error = lcb_create(&instance, &options);
-            if (error == LCB_SUCCESS) {
-                lcb_install_callback3(instance, LCB_CALLBACK_STORE, operationCallback);
-                lcb_install_callback3(instance, LCB_CALLBACK_GET, operationCallback);
-                cp.doCtls(instance);
-                queue.push(instance);
-                handles.push_back(instance);
-            } else {
-                std::cout << std::endl;
-                log("Failed to create instance: %s", lcb_strerror(NULL, error));
-                exit(EXIT_FAILURE);
-            }
-
-            new InstanceCookie(instance);
-            lcb_connect(instance);
-            lcb_wait(instance);
-            error = lcb_get_bootstrap_status(instance);
-            if (error != LCB_SUCCESS) {
-                std::cout << std::endl;
-                log("Failed to connect: %s", lcb_strerror(instance, error));
-                exit(EXIT_FAILURE);
-            }
-        }
-        std::cout << std::endl;
-    }
-
-    ~InstancePool() {
-        if (config.shouldPauseAtEnd()) {
-            std::cout << "pause-at-end specified. " << std::endl
-                      << "Press any key to close connections and exit." << std::endl;
-            std::cin.get();
-        }
-        while (!handles.empty()) {
-            lcb_destroy(handles.back());
-            handles.pop_back();
-        }
-        lcb_destroy_io_ops(io);
-    }
-
-    lcb_t pop() {
-#ifndef WIN32
-        pthread_mutex_lock(&mutex);
-        while (queue.empty()) {
-            pthread_cond_wait(&cond, &mutex);
-        }
-        assert(!queue.empty());
-#endif
-        lcb_t ret = queue.front();
-        queue.pop();
-#ifndef WIN32
-        pthread_mutex_unlock(&mutex);
-#endif
-        return ret;
-    }
-
-    void push(lcb_t inst) {
-#ifndef WIN32
-        pthread_mutex_lock(&mutex);
-#endif
-        queue.push(inst);
-#ifndef WIN32
-        pthread_cond_signal(&cond);
-        pthread_mutex_unlock(&mutex);
-#endif
-    }
-
-private:
-    std::queue<lcb_t> queue;
-    std::list<lcb_t> handles;
-    lcb_io_opt_t io;
-#ifndef WIN32
-    pthread_mutex_t mutex;
-    pthread_cond_t cond;
-#endif
-};
-
 struct NextOp {
     NextOp() : seqno(0), valsize(0), isStore(false) {}
 
@@ -518,7 +413,7 @@ private:
 class ThreadContext
 {
 public:
-    ThreadContext(InstancePool *p, int ix) : niter(0), pool(p), kgen(ix) {
+    ThreadContext(lcb_t handle, int ix) : niter(0), instance(handle), kgen(ix) {
 
     }
 
@@ -561,7 +456,6 @@ public:
 
     bool run() {
         do {
-            lcb_t instance = pool->pop();
             singleLoop(instance);
             if (config.isTimings()) {
                 InstanceCookie::dumpTimings(instance, "Run");
@@ -569,10 +463,13 @@ public:
             if (config.params.shouldDump()) {
                 lcb_dump(instance, stderr, LCB_DUMP_ALL);
             }
-            pool->push(instance);
         } while (!config.isLoopDone(++niter));
         return true;
     }
+
+#ifndef _WIN32
+    pthread_t thr;
+#endif
 
 protected:
     // the callback methods needs to be able to set the error handler..
@@ -585,7 +482,7 @@ private:
     KeyGenerator kgen;
     size_t niter;
     lcb_error_t error;
-    InstancePool *pool;
+    lcb_t instance;
 };
 
 static void operationCallback(lcb_t, int, const lcb_RESPBASE *resp)
@@ -597,7 +494,6 @@ static void operationCallback(lcb_t, int, const lcb_RESPBASE *resp)
 
 
 std::list<ThreadContext *> contexts;
-InstancePool *pool = NULL;
 
 extern "C" {
     typedef void (*handler_t)(int);
@@ -607,104 +503,128 @@ extern "C" {
 }
 
 #ifndef WIN32
-static void setup_sigint_handler(handler_t handler);
-#endif
-
-#ifndef WIN32
-static void cruel_handler(int)
+static void sigint_handler(int)
 {
+    static int ncalled = 0;
+    ncalled++;
+
+    if (ncalled < 2) {
+        log("Termination requested. Waiting threads to finish. Ctrl-C to force termination.");
+        signal(SIGINT, sigint_handler); // Reinstall
+        config.maxCycles = 0;
+        return;
+    }
+
     std::list<ThreadContext *>::iterator it;
     for (it = contexts.begin(); it != contexts.end(); ++it) {
         delete *it;
     }
-    delete pool;
+    contexts.clear();
     exit(EXIT_FAILURE);
 }
 
-static void gentle_handler(int)
-{
-    config.maxCycles = 0;
-    log("Termination requested. Waiting threads to finish. "
-        "Ctrl-C to force termination.");
-    setup_sigint_handler(cruel_handler);
-}
-
-static void setup_sigint_handler(handler_t handler)
+static void setup_sigint_handler()
 {
     struct sigaction action;
-
     sigemptyset(&action.sa_mask);
-    action.sa_handler = handler;
+    action.sa_handler = sigint_handler;
     action.sa_flags = 0;
     sigaction(SIGINT, &action, NULL);
 }
+
+extern "C" {
+static void* thread_worker(void*);
+}
+
+static void start_worker(ThreadContext *ctx)
+{
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    int rc = pthread_create(&ctx->thr, &attr, thread_worker, ctx);
+    if (rc != 0) {
+        log("Couldn't create thread: (%d)", errno);
+        exit(EXIT_FAILURE);
+    }
+}
+static void join_worker(ThreadContext *ctx)
+{
+    void *arg = NULL;
+    int rc = pthread_join(ctx->thr, &arg);
+    if (rc != 0) {
+        log("Couldn't join thread (%d)", errno);
+        exit(EXIT_FAILURE);
+    }
+}
+
+#else
+static void setup_sigint_handler() {}
+static void start_worker(ThreadContext *ctx) { ctx->run(); }
+static void join_worker(ThreadContext *ctx) { (void)ctx; }
 #endif
 
 extern "C" {
-    static void *thread_worker(void *);
-}
-
 static void *thread_worker(void *arg)
 {
     ThreadContext *ctx = static_cast<ThreadContext *>(arg);
     ctx->run();
-#ifndef WIN32
-    pthread_exit(NULL);
-#endif
     return NULL;
 }
+}
 
-/**
- * Program entry point
- * @param argc argument count
- * @param argv argument vector
- * @return 0 success, 1 failure
- */
 int main(int argc, char **argv)
 {
     int exit_code = EXIT_SUCCESS;
-
-#ifndef WIN32
-    setup_sigint_handler(SIG_IGN);
-    signal(SIGPIPE, SIG_IGN);
-
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-#endif
+    setup_sigint_handler();
 
     Parser parser("cbc-pillowfight");
     config.addOptions(parser);
     parser.parse(argc, argv, false);
     config.processOptions();
-    pool = new InstancePool(config.getNumInstances());
-
-#ifndef WIN32
-    setup_sigint_handler(gentle_handler);
-#endif
+    size_t nthreads = config.getNumThreads();
     log("Running. Press Ctrl-C to terminate...");
+
 #ifdef WIN32
-    ThreadContext *ctx = new ThreadContext(pool, 0);
-    contexts.push_back(ctx);
-    thread_worker(ctx);
-
-
-
-#else
-    std::list<pthread_t> threads;
-    for (uint32_t ii = 0; ii < config.getNumThreads(); ++ii) {
-        ThreadContext *ctx = new ThreadContext(pool, ii);
-        contexts.push_back(ctx);
-
-        pthread_t tid;
-        int rc = pthread_create(&tid, &attr, thread_worker, ctx);
-        if (rc) {
-            log("Failed to create thread: %d", rc);
-            exit_code = EXIT_FAILURE;
-            break;
-        }
-        threads.push_back(tid);
+    if (nthreads > 1) {
+        log("WARNING: More than a single thread on Windows not supported. Forcing 1");
+        nthreads = 1;
     }
+#endif
+
+    std::list<pthread_t> threads;
+    struct lcb_create_st options;
+    ConnParams& cp = config.params;
+    lcb_error_t error;
+
+    for (uint32_t ii = 0; ii < nthreads; ++ii) {
+        cp.fillCropts(options);
+        lcb_t instance = NULL;
+        error = lcb_create(&instance, &options);
+        if (error != LCB_SUCCESS) {
+            log("Failed to create instance: %s", lcb_strerror(NULL, error));
+            exit(EXIT_FAILURE);
+        }
+        lcb_install_callback3(instance, LCB_CALLBACK_STORE, operationCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_GET, operationCallback);
+        cp.doCtls(instance);
+
+        new InstanceCookie(instance);
+
+        lcb_connect(instance);
+        lcb_wait(instance);
+        error = lcb_get_bootstrap_status(instance);
+
+        if (error != LCB_SUCCESS) {
+            std::cout << std::endl;
+            log("Failed to connect: %s", lcb_strerror(instance, error));
+            exit(EXIT_FAILURE);
+        }
+
+        ThreadContext *ctx = new ThreadContext(instance, ii);
+        contexts.push_back(ctx);
+        start_worker(ctx);
+    }
+
 
     if (contexts.size() == config.getNumThreads()) {
         for (std::list<pthread_t>::iterator it = threads.begin();
@@ -717,18 +637,9 @@ int main(int argc, char **argv)
             }
         }
     }
-#endif
-
     for (std::list<ThreadContext *>::iterator it = contexts.begin();
             it != contexts.end(); ++it) {
-        delete *it;
+        join_worker(*it);
     }
-    delete pool;
-
-#ifndef WIN32
-    pthread_attr_destroy(&attr);
-    pthread_exit(NULL);
-#endif
-
     return exit_code;
 }
