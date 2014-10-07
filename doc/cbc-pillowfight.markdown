@@ -68,6 +68,16 @@ The following options control workload generation:
   an amount of `--batch-size` operations are executed. Setting this to `-1`
   will cause the workload to run infinitely.
 
+* `--sequential`:
+  Specify that the access pattern should be done in a sequential manner. This
+  is useful for bulk-loading many documents in a single server.
+
+* `--start-at`:
+  This specifies the starting offset for the items. The items by default are
+  generated with the key prefix (`--key-prefix`) up to the number of items
+  (`--num-items`). The `--start-at` value will increase the lower limit of
+  the items. This is useful to resume a previously cancelled load operation.
+
 * `-T`, `--timings`:
   Dump a histogram of command timings and latencies to the screen every second.
 
