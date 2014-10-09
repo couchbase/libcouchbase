@@ -485,6 +485,13 @@ static lcb_error_t convert_int(const char *arg, u_STRCONVERT *u) {
 static lcb_error_t convert_u32(const char *arg, u_STRCONVERT *u) {
     return convert_timeout(arg, u);
 }
+static lcb_error_t convert_float(const char *arg, u_STRCONVERT *u) {
+    double d;
+    int rv = sscanf(arg, "%lf", &d);
+    if (rv != 1) { return LCB_ECTL_BADARG; }
+    u->f = d;
+    return LCB_SUCCESS;
+}
 
 static lcb_error_t convert_SIZE(const char *arg, u_STRCONVERT *u) {
     unsigned long lu;
@@ -551,6 +558,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"http_urlmode", LCB_CNTL_HTCONFIG_URLTYPE, convert_int },
         {"sync_dtor", LCB_CNTL_SYNCDESTROY, convert_intbool },
         {"_reinit_connstr", LCB_CNTL_REINIT_CONNSTR },
+        {"retry_backoff", LCB_CNTL_RETRY_BACKOFF, convert_float },
         {NULL, -1}
 };
 
