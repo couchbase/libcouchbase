@@ -17,6 +17,7 @@
 #include "config.h"
 #include <sys/types.h>
 #include <libcouchbase/couchbase.h>
+#include <errno.h>
 #include <iostream>
 #include <map>
 #include <sstream>
