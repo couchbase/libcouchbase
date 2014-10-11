@@ -468,7 +468,7 @@ public:
         return true;
     }
 
-#ifndef _WIN32
+#ifndef WIN32
     pthread_t thr;
 #endif
 
@@ -592,7 +592,6 @@ int main(int argc, char **argv)
     }
 #endif
 
-    std::list<pthread_t> threads;
     struct lcb_create_st options;
     ConnParams& cp = config.params;
     lcb_error_t error;
@@ -626,18 +625,6 @@ int main(int argc, char **argv)
         start_worker(ctx);
     }
 
-
-    if (contexts.size() == config.getNumThreads()) {
-        for (std::list<pthread_t>::iterator it = threads.begin();
-                it != threads.end(); ++it) {
-            int rc = pthread_join(*it, NULL);
-            if (rc) {
-                log("Failed to join thread: %d", rc);
-                exit_code = EXIT_FAILURE;
-                break;
-            }
-        }
-    }
     for (std::list<ThreadContext *>::iterator it = contexts.begin();
             it != contexts.end(); ++it) {
         join_worker(*it);
