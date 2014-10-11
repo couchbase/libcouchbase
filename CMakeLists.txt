@@ -184,7 +184,8 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:cbsasl>
     $<TARGET_OBJECTS:lcbio>
     $<TARGET_OBJECTS:rdb>
-    $<TARGET_OBJECTS:lcbht>)
+    $<TARGET_OBJECTS:lcbht>
+    ${lcb_ssl_objs})
 
 ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_SRC} ${LCB_CORE_OBJS})
 ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${LCB_CORE_SRC})
