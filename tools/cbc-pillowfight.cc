@@ -85,7 +85,7 @@ public:
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
         o_keyPrefix.abbrev('p').description("key prefix to use");
         o_numThreads.setDefault(1).abbrev('t').description("The number of threads to use");
-        o_randSeed.setDefault(0).abbrev('s').description("Specify random seed");
+        o_randSeed.setDefault(0).abbrev('s').description("Specify random seed").hide();
         o_setPercent.setDefault(33).abbrev('r').description("The percentage of operations which should be mutations");
         o_minSize.setDefault(50).abbrev('m').description("Set minimum payload size");
         o_maxSize.setDefault(5120).abbrev('M').description("Set maximum payload size");
