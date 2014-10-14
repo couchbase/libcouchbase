@@ -246,6 +246,8 @@ void log(const char *format, ...)
     va_end(args);
 }
 
+
+
 extern "C" {
 static void operationCallback(lcb_t, int, const lcb_RESPBASE*);
 }
@@ -319,6 +321,7 @@ public:
 
         offset = config.firstKeyOffset();
         offset += maxKey * ix;
+        id = ix;
     }
 
     void setNextOp(NextOp& op) {
@@ -328,6 +331,7 @@ public:
             if (++ngenerated < maxKey) {
                 store_override = true;
             } else {
+                printf("Thread %d has finished populating.\n", id);
                 isPopulate = false;
                 isSequential = config.sequentialAccess();
 
@@ -406,6 +410,7 @@ private:
     uint32_t offset;
     uint32_t maxKey;
     size_t ngenerated;
+    int id;
 
     bool isSequential;
     bool isPopulate;
@@ -489,8 +494,25 @@ private:
 static void operationCallback(lcb_t, int, const lcb_RESPBASE *resp)
 {
     ThreadContext *tc;
+
     tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(resp->cookie));
     tc->setError(resp->rc);
+
+#ifndef WIN32
+    static volatile unsigned long nops = 1;
+    static time_t start_time = time(NULL);
+    static int is_tty = isatty(STDOUT_FILENO);
+    if (is_tty) {
+        if (++nops % 1000 == 0) {
+            time_t now = time(NULL);
+            time_t nsecs = now - start_time;
+            if (!nsecs) { nsecs = 1; }
+            unsigned long ops_sec = nops / nsecs;
+            printf("OPS/SEC: %10lu\r", ops_sec);
+            fflush(stdout);
+        }
+    }
+#endif
 }
 
 
