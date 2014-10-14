@@ -1540,7 +1540,20 @@ PREDEFINED             = LCB_CREATE_V2_FIELDS= \
                          LCB_DEPRECATED \
                          LIBCOUCHBASE_API \
                          LCB_DEPR_API=/**@deprecated*/ \
-                         LCB__HKFIELDS
+                         LCB__HKFIELDS \
+                         LCB_DEPR_CTORS_GET \
+                         LCB_DEPR_CTORS_RGET \
+                         LCB_DEPR_CTORS_UNL \
+                         LCB_DEPR_CTORS_STORE \
+                         LCB_DEPR_CTORS_ARITH \
+                         LCB_DEPR_CTORS_OBS \
+                         LCB_DEPR_CTORS_RM \
+                         LCB_DEPR_CTORS_STATS \
+                         LCB_DEPR_CTORS_VERBOSITY \
+                         LCB_DEPR_CTORS_VERSIONS \
+                         LCB_DEPR_CTORS_FLUSH \
+                         LCB_DEPR_CTORS_HTTP \
+                         LCB_DEPR_CTORS_CRST
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then
 # this tag can be used to specify a list of macro names that should be expanded.

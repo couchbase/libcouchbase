@@ -40,10 +40,9 @@ typedef struct lcb_http_request_st *lcb_http_request_t;
 #include <libcouchbase/iops.h>
 #include <libcouchbase/http.h>
 #include <libcouchbase/configuration.h>
+#include <libcouchbase/_cxxwrap.h>
 
 #ifdef __cplusplus
-#include <cstdlib>
-#include <cstring>
 extern "C"{
 #endif
 
@@ -298,12 +297,7 @@ struct lcb_create_st {
     (cropt)->v.v3.iops = iops; \
 } while (0);
 
-
-#ifdef __cplusplus
-    inline lcb_create_st(
-            const char *host=NULL, const char *user=NULL, const char *pass=NULL,
-            const char *bucket=NULL, struct lcb_io_opt_st *io=NULL, lcb_type_t type=LCB_TYPE_BUCKET);
-#endif
+    LCB_DEPR_CTORS_CRST
 };
 
 /**
@@ -866,13 +860,8 @@ typedef struct {
  */
 typedef struct lcb_get_cmd_st {
     int version;
-    union {
-        lcb_GETCMDv0 v0;
-    } v;
-    #ifdef __cplusplus
-    inline lcb_get_cmd_st(const void *, lcb_SIZE nkey = 0, lcb_time_t exptime = 0, int lock = 0);
-    inline lcb_get_cmd_st();
-    #endif
+    union { lcb_GETCMDv0 v0; } v;
+    LCB_DEPR_CTORS_GET
 } lcb_get_cmd_t;
 
 /** Value is JSON */
@@ -1103,11 +1092,7 @@ typedef struct lcb_get_replica_cmd_st {
         lcb_GETREPLICACMDv0 v0;
         lcb_GETREPLICACMDv1 v1;
     } v;
-
-    #ifdef __cplusplus
-    inline lcb_get_replica_cmd_st();
-    inline lcb_get_replica_cmd_st(const void *key, lcb_SIZE nkey, lcb_replica_t strategy = LCB_REPLICA_FIRST, int index = 0);
-    #endif
+    LCB_DEPR_CTORS_RGET
 } lcb_get_replica_cmd_t;
 
 /**
@@ -1172,11 +1157,7 @@ typedef struct lcb_unlock_cmd_st {
     union {
         lcb_UNLOCKCMDv0 v0;
     } v;
-
-    #ifdef __cplusplus
-    inline lcb_unlock_cmd_st();
-    inline lcb_unlock_cmd_st(const void *key, lcb_SIZE nkey, lcb_cas_t cas);
-    #endif
+    LCB_DEPR_CTORS_UNL
 } lcb_unlock_cmd_t;
 
 /** @brief lcb_unlock() response structure */
@@ -1307,10 +1288,7 @@ typedef struct lcb_store_cmd_st {
     union {
         lcb_STORECMDv0 v0;
     } v;
-    #ifdef __cplusplus
-    inline lcb_store_cmd_st();
-    inline lcb_store_cmd_st(lcb_storage_t operation, const void *, lcb_SIZE, const void *bytes = NULL, lcb_SIZE nbytes = 0, lcb_U32 flags = 0, lcb_time_t exptime = 0, lcb_cas_t cas = 0, lcb_datatype_t datatype = 0);
-    #endif
+    LCB_DEPR_CTORS_STORE
 } lcb_store_cmd_t;
 
 typedef struct {
@@ -1444,12 +1422,7 @@ typedef struct lcb_arithmetic_cmd_st {
         lcb_ARITHCMDv0 v0;
     } v;
 
-    #ifdef __cplusplus
-    inline lcb_arithmetic_cmd_st();
-    inline lcb_arithmetic_cmd_st(const void *key, lcb_SIZE nkey, lcb_S64 delta,
-                                 int create = 0, lcb_U64 initial = 0,
-                                 lcb_time_t exptime = 0);
-    #endif
+    LCB_DEPR_CTORS_ARITH
 } lcb_arithmetic_cmd_t;
 
 typedef struct {
@@ -1571,10 +1544,7 @@ typedef struct lcb_observe_cmd_st {
         lcb_OBSERVECMDv1 v1;
     } v;
 
-    #ifdef __cplusplus
-    inline lcb_observe_cmd_st();
-    inline lcb_observe_cmd_st(const void*,lcb_SIZE);
-    #endif
+    LCB_DEPR_CTORS_OBS
 } lcb_observe_cmd_t;
 
 /**
@@ -1684,11 +1654,7 @@ typedef struct lcb_remove_cmd_st {
     union {
         lcb_REMOVECMDv0 v0;
     } v;
-
-    #ifdef __cplusplus
-    inline lcb_remove_cmd_st();
-    inline lcb_remove_cmd_st(const void*,lcb_SIZE nkey=0,lcb_cas_t cas=0);
-    #endif
+    LCB_DEPR_CTORS_RM
 } lcb_remove_cmd_t;
 
 
@@ -2139,12 +2105,8 @@ typedef struct {
 
 typedef struct lcb_server_stats_cmd_st {
     int version;
-    union {
-        lcb_STATSCMDv0 v0;
-    } v;
-    #ifdef __cplusplus
-    inline lcb_server_stats_cmd_st(const char *name = NULL, lcb_SIZE nname = 0);
-    #endif
+    union { lcb_STATSCMDv0 v0; } v;
+    LCB_DEPR_CTORS_STATS
 } lcb_server_stats_cmd_t;
 
 /**
@@ -2253,9 +2215,7 @@ lcb_error_t lcb_server_stats(lcb_t instance,
 typedef struct lcb_server_version_cmd_st {
     int version;
     union { struct { const void *notused; } v0; } v;
-    #ifdef __cplusplus
-    lcb_server_version_cmd_st() { std::memset(this, 0, sizeof(*this)); }
-    #endif
+    LCB_DEPR_CTORS_VERSIONS
 } lcb_server_version_cmd_t;
 
 /**
@@ -2357,10 +2317,7 @@ typedef struct lcb_verbosity_cmd_st {
     union {
         lcb_VERBOSITYCMDv0 v0;
     } v;
-
-    #ifdef __cplusplus
-    inline lcb_verbosity_cmd_st(lcb_verbosity_level_t level = LCB_VERBOSITY_WARNING, const char *server = NULL);
-    #endif
+    LCB_DEPR_CTORS_VERBOSITY
 } lcb_verbosity_cmd_t;
 
 typedef struct lcb_verbosity_resp_st {
@@ -2423,9 +2380,7 @@ lcb_verbosity_callback lcb_set_verbosity_callback(lcb_t,
 typedef struct lcb_flush_cmd_st {
     int version;
     union { struct { int unused; } v0; } v;
-    #ifdef __cplusplus
-    lcb_flush_cmd_st() { version = 0; }
-    #endif
+    LCB_DEPR_CTORS_FLUSH
 } lcb_flush_cmd_t;
 
 typedef struct lcb_flush_resp_st {
@@ -2580,12 +2535,7 @@ typedef struct lcb_http_cmd_st {
         lcb_HTTPCMDv0 v0;
         lcb_HTTPCMDv1 v1;
     } v;
-    #ifdef __cplusplus
-    inline lcb_http_cmd_st();
-    inline lcb_http_cmd_st(
-            const char *path, lcb_SIZE npath, const void *body, lcb_SIZE nbody,
-            lcb_http_method_t method, int chunked, const char *content_type);
-    #endif
+    LCB_DEPR_CTORS_HTTP
 } lcb_http_cmd_t;
 
 /**
@@ -3324,12 +3274,11 @@ LIBCOUCHBASE_API
 void
 lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags);
 
+/* Post-include some other headers */
 #ifdef __cplusplus
 }
-#include <libcouchbase/cxxwrap.h>
-#endif
+#endif /* __cplusplus */
 
-/* Post-include some other headers */
 #include <libcouchbase/cntl.h>
 #include <libcouchbase/deprecated.h>
-#endif /* __cplusplus */
+#endif /* LIBCOUCHBASE_COUCHBASE_H */
