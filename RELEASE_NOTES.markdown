@@ -2,6 +2,34 @@
 
 ## .NEXT
 
+* Pillowfight enhancements
+  Several behavior changes were made to pillowfight in this version. These are:
+  * The `-l` or `-c -1` option is in effect by default. This means that by
+    default `pillowfight` will run an infinite number of cycles. The previous
+    behavior was to default to a single cycle, requiring an explicit `--loop`
+    to ensure the workload ran for a considerable amount of time.
+
+  * When multiple threads are used, the workload is divided among the threads,
+    thus making it that each thread only operates on a subset of the data.
+
+  * A `--sequential` option has been added to allow the workload to operate
+    in _sequence_ on the total number of items. This is useful when wishing to
+    load a bucket with many items.
+
+  * A `--start-at` option has been added to allow the workload to specify an
+    alternate range of keys; effectively allowing resumption of a previous
+    run. The `--start-at` flag allows to specify the lower bound number which
+    will be used to generate keys. Thus a `--num-items=20000` and a
+    `--start-at=10000` will generate keys from 10000 through 30000.
+
+  * The _population_ phase has now been merged with the general workload
+    implementation. This means that all worker threads will participate in
+    the population phase. The previous behavior limited the populate phase to
+    a single thread.
+
+  * If `stdout` is detected to be a terminal, a simple "OPS/SEC" meter will
+    periodically write the estimated throughput to the screen.
+
 * Fix memory leak when using large read buffers
   In the case where large read buffers are used (and the `iovec` elements
   becomes sizable, the library may end up incorrectly caching some memory
