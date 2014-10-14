@@ -47,8 +47,8 @@ get_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
 {
     string key = getRespKey((const lcb_RESPBASE *)resp);
     if (resp->rc == LCB_SUCCESS) {
-        fprintf(stderr, "%-20s CAS=0x%"PRIx64", Flags=0x%x, Datatype=0x%x\n",
-            key.c_str(), resp->cas, resp->itmflags, resp->datatype);
+        fprintf(stderr, "%-20s CAS=0x%"PRIx64", Flags=0x%x",
+            key.c_str(), resp->cas, resp->itmflags);
         fwrite(resp->value, 1, resp->nvalue, stdout);
         fprintf(stderr, "\n");
     } else {
@@ -593,8 +593,6 @@ VersionHandler::run()
         fprintf(stderr, "  IO: Default=%s, Current=%s\n",
             iops_to_string(info.v.v0.os_default), iops_to_string(info.v.v0.effective));
     }
-    printf("  Compression (snappy): .. %s\n",
-            lcb_supports_feature(LCB_SUPPORTS_SNAPPY) ? "SUPPORTED" : "NOT SUPPORTED");
     printf("  SSL: .. %s\n",
             lcb_supports_feature(LCB_SUPPORTS_SSL) ? "SUPPORTED" : "NOT SUPPORTED");
 }
