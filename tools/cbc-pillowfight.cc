@@ -334,12 +334,6 @@ public:
                 printf("Thread %d has finished populating.\n", id);
                 isPopulate = false;
                 isSequential = config.sequentialAccess();
-
-                if (!isSequential) {
-                    // Load phase over
-                    offset = config.firstKeyOffset();
-                    maxKey = config.getNumItems();
-                }
             }
         }
 
