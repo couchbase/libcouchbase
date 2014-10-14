@@ -198,10 +198,25 @@ static void
 log_callback(const SSL *ssl, int where, int ret)
 {
     const char *retstr = "";
+    int should_log = 0;
     lcbio_SOCKET *sock = SSL_get_app_data(ssl);
+    /* Ignore low-level SSL stuff */
+
     if (where & SSL_CB_ALERT) {
-        retstr = SSL_alert_type_string(ret);
+        should_log = 1;
     }
+    if (where == SSL_CB_HANDSHAKE_START || where == SSL_CB_HANDSHAKE_DONE) {
+        should_log = 1;
+    }
+    if ((where & SSL_CB_EXIT) && ret == 0) {
+        should_log = 1;
+    }
+
+    if (!should_log) {
+        return;
+    }
+
+    retstr = SSL_alert_type_string(ret);
     lcb_log(LOGARGS(ssl, LCB_LOG_TRACE), "sock=%p: ST(0x%x). %s. R(0x%x)%s",
         (void*)sock, where, SSL_state_string_long(ssl), ret, retstr);
 }
