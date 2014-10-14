@@ -188,7 +188,8 @@ SET(LCB_CORE_OBJS
     ${lcb_ssl_objs})
 
 ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_SRC} ${LCB_CORE_OBJS})
-ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${LCB_CORE_SRC})
+ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${LCB_CORE_SRC}
+    ${CMAKE_BINARY_DIR}/dllversion.rc)
 
 SET_TARGET_PROPERTIES(couchbase
     PROPERTIES

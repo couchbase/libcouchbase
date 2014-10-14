@@ -42,7 +42,6 @@ FILE(GLOB LCB_BCONF_SRC src/bucketconfig/*.c)
 SET(LCB_CORE_SRC
     ${LCB_OP_SRC}
     ${LCB_BCONF_SRC}
-    ${CMAKE_BINARY_DIR}/dllversion.rc
     src/bootstrap.c
     src/callbacks.c
     src/cntl.c
