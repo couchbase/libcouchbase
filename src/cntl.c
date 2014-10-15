@@ -346,14 +346,12 @@ HANDLER(console_log_handler) {
     }
 
     procs = LCBT_SETTING(instance, logger);
+    if (!procs) {
+        procs = lcb_init_console_logger();
+    }
     if (procs) {
         /* don't override previous config */
         return LCB_SUCCESS;
-    }
-
-    if (procs == NULL && mode == LCB_CNTL_SET) {
-        procs = lcb_init_console_logger();
-        LCBT_SETTING(instance, logger) = procs;
     }
 
     logger = (struct lcb_CONSOLELOGGER* ) lcb_console_logprocs;
