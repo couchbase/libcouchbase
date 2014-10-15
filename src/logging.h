@@ -35,6 +35,7 @@ extern struct lcb_logprocs_st *lcb_console_logprocs;
 
 struct lcb_CONSOLELOGGER {
     struct lcb_logprocs_st base;
+    FILE *fp;
     int minlevel;
 };
 
