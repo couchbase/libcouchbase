@@ -47,9 +47,11 @@ get_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
 {
     string key = getRespKey((const lcb_RESPBASE *)resp);
     if (resp->rc == LCB_SUCCESS) {
-        fprintf(stderr, "%-20s CAS=0x%"PRIx64", Flags=0x%x",
+        fprintf(stderr, "%-20s CAS=0x%"PRIx64", Flags=0x%x\n",
             key.c_str(), resp->cas, resp->itmflags);
+        fflush(stderr);
         fwrite(resp->value, 1, resp->nvalue, stdout);
+        fflush(stdout);
         fprintf(stderr, "\n");
     } else {
         printKeyError(key, resp->rc);
