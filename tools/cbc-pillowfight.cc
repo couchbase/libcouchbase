@@ -267,22 +267,21 @@ public:
     }
 
 
-    static void dumpTimings(lcb_t instance, const char *header) {
+    static void dumpTimings(lcb_t instance, const char *header, bool force=false) {
         time_t now = time(NULL);
-        std::stringstream ss;
         InstanceCookie *ic = get(instance);
 
         if (now - ic->lastPrint > 0) {
             ic->lastPrint = now;
-        } else {
+        } else if (!force) {
             return;
         }
 
         Histogram &h = ic->hg;
-        std::cout << "[" << std::fixed << gethrtime() / 1000000000.0 << "] " << header << std::endl;
-        std::cout << "              +---------+---------+---------+---------+" << std::endl;
+        printf("[%lf %s]\n", gethrtime() / 1000000000.0, header);
+        printf("              +---------+---------+---------+---------+\n");
         h.write();
-        std::cout << "              +----------------------------------------" << std::endl;
+        printf("              +----------------------------------------\n");
     }
 
 private:
@@ -396,6 +395,13 @@ public:
         snprintf(buffer, sizeof(buffer), "%020d", seqno);
         op.key.assign(config.getKeyPrefix() + buffer);
     }
+    const char *getStageString() const {
+        if (isPopulate) {
+            return "Populate";
+        } else {
+            return "Run";
+        }
+    }
 
 private:
     uint32_t seqPool[8192];
@@ -458,12 +464,16 @@ public:
         do {
             singleLoop(instance);
             if (config.isTimings()) {
-                InstanceCookie::dumpTimings(instance, "Run");
+                InstanceCookie::dumpTimings(instance, kgen.getStageString());
             }
             if (config.params.shouldDump()) {
                 lcb_dump(instance, stderr, LCB_DUMP_ALL);
             }
         } while (!config.isLoopDone(++niter));
+
+        if (config.isTimings()) {
+            InstanceCookie::dumpTimings(instance, kgen.getStageString(), true);
+        }
         return true;
     }
 
