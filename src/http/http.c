@@ -387,7 +387,7 @@ static lcb_error_t setup_headers(lcb_http_request_t req,
         return rc;
     }
 
-    if (req->method == LCB_HTTP_METHOD_PUT || req->method == LCB_HTTP_METHOD_POST) {
+    if (req->nbody) {
         if (content_type) {
             rc = add_header(req, "Content-Type", content_type);
             if (rc != LCB_SUCCESS) {
@@ -477,7 +477,8 @@ lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd)
     req->method = method;
     req->reqtype = cmd->type;
     lcb_list_init(&req->headers_out.list);
-    if ((req->nbody = cmd->nbody)) {
+    if ((method == LCB_HTTP_METHOD_POST || method == LCB_HTTP_METHOD_PUT) &&
+            (req->nbody = cmd->nbody)) {
         if ((req->body = malloc(req->nbody)) == NULL) {
             lcb_http_request_decref(req);
             return LCB_CLIENT_ENOMEM;
