@@ -2,6 +2,13 @@
 
 ## .NEXT
 
+* Disable support for SSLv3
+  This works around the _POODLE_ SSLv3 vulnerability by disabling support for
+  anything below TLSv1.
+
+  * Priority: Critical
+  * Issues: [CCBC-523](http://couchbase.com/issues/browse/CCBC-523)
+
 * Pillowfight enhancements
   Several behavior changes were made to pillowfight in this version. These are:
   * The `-l` or `-c -1` option is in effect by default. This means that by

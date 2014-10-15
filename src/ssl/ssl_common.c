@@ -219,6 +219,10 @@ log_callback(const SSL *ssl, int where, int ret)
     retstr = SSL_alert_type_string(ret);
     lcb_log(LOGARGS(ssl, LCB_LOG_TRACE), "sock=%p: ST(0x%x). %s. R(0x%x)%s",
         (void*)sock, where, SSL_state_string_long(ssl), ret, retstr);
+
+    if (where == SSL_CB_HANDSHAKE_DONE) {
+        lcb_log(LOGARGS(ssl, LCB_LOG_DEBUG), "sock=%p. Using SSL version %s. Cipher=%s", (void*)sock, SSL_get_version(ssl), SSL_get_cipher_name(ssl));
+    }
 }
 
 #if 0
@@ -252,7 +256,7 @@ lcbio_ssl_new(const char *cafile, int noverify, lcb_error_t *errp,
         *errp = LCB_CLIENT_ENOMEM;
         goto GT_ERR;
     }
-    ret->ctx = SSL_CTX_new(SSLv3_client_method());
+    ret->ctx = SSL_CTX_new(SSLv23_client_method());
     if (!ret->ctx) {
         *errp = LCB_SSL_ERROR;
         goto GT_ERR;
@@ -285,6 +289,7 @@ lcbio_ssl_new(const char *cafile, int noverify, lcb_error_t *errp,
      * be using the same buffer.
      */
     SSL_CTX_set_mode(ret->ctx, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
+    SSL_CTX_set_options(ret->ctx, SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3);
     return ret;
 
     GT_ERR:
