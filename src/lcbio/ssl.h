@@ -51,6 +51,9 @@ typedef struct lcbio_SSLCTX *lcbio_pSSLCTX;
 int
 lcbio_ssl_supported(void);
 
+void*
+lcbio_ssl_new__fallback(const char *, int, lcb_error_t *, lcb_settings *);
+
 #ifndef LCB_NO_SSL
 
 /**
@@ -65,6 +68,7 @@ lcbio_ssl_supported(void);
 lcbio_pSSLCTX
 lcbio_ssl_new(const char *cafile, int noverify, lcb_error_t *errp,
     lcb_settings *settings);
+
 
 /**
  * Free the SSL context. This should be done when libcouchbase has nothing else
@@ -137,9 +141,9 @@ lcbio_sslify_if_needed(lcbio_SOCKET *sock, struct lcb_settings_st *settings);
 
 #else
 /* SSL Disabled */
-#define lcbio_ssl_new(a,b,c,d) NULL
+#define lcbio_ssl_new lcbio_ssl_new__fallback
 #define lcbio_ssl_free(ctx)
-#define lcbio_ssl_apply(sock, sctx) LCB_NOT_SUPPORTED
+#define lcbio_ssl_apply(sock, sctx) LCB_CLIENT_FEATURE_UNAVAILABLE
 #define lcbio_ssl_check(sock) 0
 #define lcbio_ssl_get_error(sock) LCB_SUCCESS
 #define lcbio_ssl_global_init() 0

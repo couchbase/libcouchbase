@@ -268,3 +268,12 @@ lcbio_ssl_supported(void)
     return 1;
 #endif
 }
+
+void*
+lcbio_ssl_new__fallback(const char *ca, int noverify, lcb_error_t *errp,
+    lcb_settings *settings)
+{
+    (void)ca; (void)noverify; (void)settings;
+    if (errp) { *errp = LCB_CLIENT_FEATURE_UNAVAILABLE; }
+    return NULL;
+}
