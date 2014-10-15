@@ -559,6 +559,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"sync_dtor", LCB_CNTL_SYNCDESTROY, convert_intbool },
         {"_reinit_connstr", LCB_CNTL_REINIT_CONNSTR },
         {"retry_backoff", LCB_CNTL_RETRY_BACKOFF, convert_float },
+        {"http_poolsize", LCB_CNTL_HTTP_POOLSIZE, convert_SIZE },
         {NULL, -1}
 };
 
