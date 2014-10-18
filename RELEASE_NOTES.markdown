@@ -1,5 +1,14 @@
 # Release Notes
 
+## .NEXT
+
+* Fix issue when sending out large _OBSERVE_ command.
+  This would cause a partial command to be sent out if the size of the output
+  packet was greater than 512 bytes. This has been fixed by dynamically growing
+  the output buffer for _OBSERVE_
+  * Priority: Minor
+  * Issues: [CCBC-528](http://couchbase.com/issues/browse/CCBC-528)
+
 ## 2.4.3 (Oct. 21 2014)
 
 * Disable support for SSLv3
