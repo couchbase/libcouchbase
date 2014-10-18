@@ -9,6 +9,12 @@
   * Priority: Minor
   * Issues: [CCBC-528](http://couchbase.com/issues/browse/CCBC-528)
 
+* Fix spurious timeouts when using `lcb_durability_poll`
+  This fixes an issue where sometimes the durability poll operation would
+  prematurely time out.
+  * Priority: Major
+  * Issues: [CCBC-527](http://couchbase.com/issues/browse/CCBC-527)
+
 ## 2.4.3 (Oct. 21 2014)
 
 * Disable support for SSLv3
