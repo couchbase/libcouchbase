@@ -1,6 +1,6 @@
 # Release Notes
 
-## .NEXT
+## 2.4.3 (Oct. 21 2014)
 
 * Disable support for SSLv3
   This works around the _POODLE_ SSLv3 vulnerability by disabling support for

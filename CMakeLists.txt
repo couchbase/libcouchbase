@@ -196,7 +196,7 @@ SET_TARGET_PROPERTIES(couchbase
         COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
         PREFIX "lib"
         IMPORT_PREFIX "lib"
-        VERSION "2.0.18"
+        VERSION "2.0.19"
         SOVERSION "2")
 
 SET_TARGET_PROPERTIES(couchbaseS
