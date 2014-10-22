@@ -1270,14 +1270,18 @@ typedef struct {
     const void *bytes; /**< Value to store */
     lcb_SIZE nbytes; /**< Length of value to store */
     lcb_U32 flags; /**< User-defined flags stored along with the item */
-    /**
-     * If present, the server will check that the item's _current_ CAS matches
+    /**If present, the server will check that the item's _current_ CAS matches
      * the value specified here. If this check fails the command will fail with
-     * an @ref LCB_KEY_EEXISTS error
-     */
+     * an @ref LCB_KEY_EEXISTS error.
+     *
+     * @warning For @ref LCB_APPEND and @ref LCB_PREPEND, this field should be
+     * `0`. */
     lcb_cas_t cas;
     lcb_U8 datatype; /**< See lcb_VALUEFLAGS */
-    lcb_time_t exptime; /**< Expiration for the item. `0` means never expire */
+    /**Expiration for the item. `0` means never expire.
+     * @warning for @ref LCB_APPEND and @ref LCB_PREPEND, this field should be
+     * `0`. */
+    lcb_time_t exptime;
     lcb_storage_t operation; /**< **Mandatory**. Mutation type */
     LCB__HKFIELDS
 } lcb_STORECMDv0;

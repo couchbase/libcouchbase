@@ -2,6 +2,13 @@
 
 ## .NEXT
 
+* Return error if ignored/conflicting options are found
+  This changes the behavior of the library to throw an error if a specific
+  option field was filled in which did not make sense for a given command, for
+  example, specifying a `cas` value using a `LCB_ADD` operation with `lcb_store`.
+  * Priority: Major
+  * Issues: [CCBC-529](http://couchbase.com/issues/browse/CCBC-529)
+
 * Fix issue when sending out large _OBSERVE_ command.
   This would cause a partial command to be sent out if the size of the output
   packet was greater than 512 bytes. This has been fixed by dynamically growing

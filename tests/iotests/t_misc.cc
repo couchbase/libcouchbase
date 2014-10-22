@@ -453,3 +453,64 @@ TEST_F(MockUnitTest, testFailedDurCtx)
     hashset_t hs = lcb_aspend_get(&instance->pendops, LCB_PENDTYPE_DURABILITY);
     ASSERT_EQ(0, hashset_num_items(hs));
 }
+
+TEST_F(MockUnitTest, testConflictingOptions)
+{
+    HandleWrap hw;
+    lcb_t instance;
+    createConnection(hw, instance);
+
+    lcb_sched_enter(instance);
+    const char *key = "key";
+    size_t nkey = 3;
+    const char *value = "value";
+    size_t nvalue = 5;
+
+    lcb_CMDSTORE scmd = { 0 };
+    scmd.operation = LCB_APPEND;
+    scmd.exptime = 1;
+    LCB_CMD_SET_KEY(&scmd, key, nkey);
+    LCB_CMD_SET_VALUE(&scmd, value, nvalue);
+
+    lcb_error_t err;
+    err = lcb_store3(instance, NULL, &scmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
+    scmd.exptime = 0;
+    scmd.flags = 99;
+    err = lcb_store3(instance, NULL, &scmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
+
+    scmd.flags = 0;
+    scmd.exptime = 0;
+    err = lcb_store3(instance, NULL, &scmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    scmd.operation = LCB_ADD;
+    scmd.cas = 0xdeadbeef;
+    err = lcb_store3(instance, NULL, &scmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
+
+    scmd.cas = 0;
+    err = lcb_store3(instance, NULL, &scmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    lcb_CMDCOUNTER ccmd = { 0 };
+    LCB_CMD_SET_KEY(&ccmd, key, nkey);
+    ccmd.cas = 0xdeadbeef;
+    err = lcb_counter3(instance, NULL, &ccmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
+    ccmd.cas = 0;
+    err = lcb_counter3(instance, NULL, &ccmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    lcb_CMDGET gcmd = { 0 };
+    LCB_CMD_SET_KEY(&gcmd, key, nkey);
+    gcmd.cas = 0xdeadbeef;
+    err = lcb_get3(instance, NULL, &gcmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
+
+    gcmd.cas = 0;
+    err = lcb_get3(instance, NULL, &gcmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_sched_fail(instance);
+}

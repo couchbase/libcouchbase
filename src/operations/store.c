@@ -105,6 +105,22 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd)
         return err;
     }
 
+    switch (cmd->operation) {
+    case LCB_APPEND:
+    case LCB_PREPEND:
+        if (cmd->exptime || cmd->flags) {
+            return LCB_OPTIONS_CONFLICT;
+        }
+        break;
+    case LCB_ADD:
+        if (cmd->cas) {
+            return LCB_OPTIONS_CONFLICT;
+        }
+        break;
+    default:
+        break;
+    }
+
     hsize = hdr->request.extlen + sizeof(*hdr);
 
     err = mcreq_basic_packet(cq, (const lcb_CMDBASE *)cmd, hdr,

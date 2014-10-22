@@ -414,7 +414,12 @@ typedef enum {
     X(LCB_CLIENT_FEATURE_UNAVAILABLE, 0x39, LCB_ERRTYPE_INPUT, \
       "The requested feature is not supported by the client, either because of " \
       "settings in the configured instance, or because of options disabled at " \
-      "the time the library was compiled")
+      "the time the library was compiled") \
+    \
+    /**An option was passed to a command which is incompatible with other
+     * options. This may happen if two fields are mutually exclusive */ \
+    X(LCB_OPTIONS_CONFLICT, 0x3A, LCB_ERRTYPE_INPUT, \
+      "The operation structure contains conflicting options")
 
 /** Error codes returned by the library. */
 typedef enum {

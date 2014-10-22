@@ -35,6 +35,9 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_EMPTY_KEY;
     }
+    if (cmd->cas) {
+        return LCB_OPTIONS_CONFLICT;
+    }
 
     if (cmd->lock) {
         extlen = 4;
