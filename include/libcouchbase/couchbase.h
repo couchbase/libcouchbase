@@ -1393,9 +1393,15 @@ lcb_error_t lcb_store(lcb_t instance,
  * @addtogroup LCB_ARITH
  * @{
  */
+
+/**@brief Command structure for arithmetic operations
+ * This is contained within the @ref lcb_arithmetic_cmd_t structure */
 typedef struct {
     const void *key;
     lcb_SIZE nkey;
+
+    /**Expiration time for the item. Note this is _only_ valid if #create is
+     * set to true. */
     lcb_time_t exptime;
 
     /**
@@ -1420,11 +1426,11 @@ typedef struct {
     LCB__HKFIELDS
 } lcb_ARITHCMDv0;
 
+/** @brief Wrapper structure for @ref lcb_ARITHCMDv0 */
 typedef struct lcb_arithmetic_cmd_st {
     int version;
-    union {
-        lcb_ARITHCMDv0 v0;
-    } v;
+    /** @brief Wrapper union for @ref lcb_ARITHCMDv0 */
+    union { /** @brief Fill this structure */ lcb_ARITHCMDv0 v0; } v;
 
     LCB_DEPR_CTORS_ARITH
 } lcb_arithmetic_cmd_t;

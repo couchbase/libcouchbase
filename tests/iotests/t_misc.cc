@@ -503,6 +503,15 @@ TEST_F(MockUnitTest, testConflictingOptions)
     err = lcb_counter3(instance, NULL, &ccmd);
     ASSERT_EQ(LCB_SUCCESS, err);
 
+    ccmd.exptime = 10;
+    ccmd.initial = 0;
+    ccmd.create = 0;
+    err = lcb_counter3(instance, NULL, &ccmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
+    ccmd.create = 1;
+    err = lcb_counter3(instance, NULL, &ccmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
     lcb_CMDGET gcmd = { 0 };
     LCB_CMD_SET_KEY(&gcmd, key, nkey);
     gcmd.cas = 0xdeadbeef;

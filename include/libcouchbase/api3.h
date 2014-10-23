@@ -362,7 +362,9 @@ void lcb_sched_flush(lcb_t instance);
 /**@brief Command for retrieving a single item
  *
  * @see lcb_get3()
- * @see lcb_RESPGET */
+ * @see lcb_RESPGET
+ * @note The #cas member should be set to 0 for this operation.
+ */
 typedef struct {
     LCB_CMD_BASE;
     /**If set to true, the `exptime` field inside `options` will take to mean
@@ -449,7 +451,15 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd);
  */
 
 /**@brief Command for counter operations.
- * @see lcb_counter3(), lcb_RESPCOUNTER*/
+ * @see lcb_counter3(), lcb_RESPCOUNTER.
+ *
+ * @warning You may only set the #exptime member if the #create member is set
+ * to a true value. Setting `exptime` otherwise will cause the operation to
+ * fail with @ref LCB_OPTIONS_CONFLICT
+ *
+ * @warning The #cas member should be set to 0 for this operation. As this
+ * operation itself is atomic, specifying a CAS is not necessary.
+ */
 typedef struct {
     LCB_CMD_BASE;
     /**Delta value. If this number is negative the item on the server is
@@ -540,6 +550,9 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd);
  * key to mutate, the value which should be set (or appended/prepended) in the
  * lcb_CMDSTORE::value field (see LCB_CMD_SET_VALUE()) and the operation indicating
  * the mutation type (lcb_CMDSTORE::operation).
+ *
+ * @warning #exptime *cannot* be used with #operation set to @ref LCB_APPEND
+ * or @ref LCB_PREPEND.
  */
 typedef struct {
     LCB_CMD_BASE;

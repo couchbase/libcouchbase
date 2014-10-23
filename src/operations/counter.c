@@ -34,7 +34,7 @@ lcb_counter3(
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_EMPTY_KEY;
     }
-    if (cmd->cas) {
+    if (cmd->cas || (cmd->create == 0 && cmd->exptime != 0)) {
         return LCB_OPTIONS_CONFLICT;
     }
 
