@@ -215,9 +215,7 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
 
     old_config = instance->cur_configinfo;
     instance->cur_configinfo = config;
-    instance->dist_type = VB_DISTTYPE(config->vbc);
     lcb_clconfig_incref(config);
-    instance->nreplicas = (lcb_uint16_t)VB_NREPLICAS(config->vbc);
     q->config = instance->cur_configinfo->vbc;
     q->cqdata = instance;
 

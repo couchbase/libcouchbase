@@ -291,21 +291,21 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     } else if (cmd->strategy == LCB_REPLICA_ALL) {
         unsigned ii;
         r0 = 0;
-        r1 = instance->nreplicas;
+        r1 = LCBT_NREPLICAS(instance);
         /* Make sure they're all online */
-        for (ii = 0; ii < instance->nreplicas; ii++) {
+        for (ii = 0; ii < LCBT_NREPLICAS(instance); ii++) {
             if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, ii)) < 0) {
                 return LCB_NO_MATCHING_SERVER;
             }
         }
     } else {
-        for (r0 = 0; r0 < instance->nreplicas; r0++) {
+        for (r0 = 0; r0 < LCBT_NREPLICAS(instance); r0++) {
             if ((ixtmp = lcbvb_vbreplica(cq->config, vbid, r0)) > -1) {
                 r1 = r0;
                 break;
             }
         }
-        if (r0 == instance->nreplicas) {
+        if (r0 == LCBT_NREPLICAS(instance)) {
             return LCB_NO_MATCHING_SERVER;
         }
     }
@@ -321,7 +321,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     rck->base.procs = &rget_procs;
     rck->strategy = cmd->strategy;
     rck->r_cur = r0;
-    rck->r_max = instance->nreplicas;
+    rck->r_max = LCBT_NREPLICAS(instance);
     rck->instance = instance;
     rck->vbucket = vbid;
 

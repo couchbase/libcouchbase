@@ -158,7 +158,7 @@ obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
         return LCB_CLIENT_ETMPFAIL;
     }
 
-    if (instance->dist_type != LCBVB_DIST_VBUCKET) {
+    if (LCBVB_DISTTYPE(LCBT_VBCONFIG(instance)) != LCBVB_DIST_VBUCKET) {
         return LCB_NOT_SUPPORTED;
     }
 
