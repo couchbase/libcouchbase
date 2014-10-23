@@ -2,6 +2,17 @@
 
 ## .NEXT
 
+* Add option to preserve vbucket ownership heuristics across config updates
+  This allows the learned configuration settings to persist between configuration
+  updates. The default behavior (up to, and including this change) is to
+  discard any "learned" configuration in favor of the explicitly new config
+  passed to the server. This new option allows this information to be persisted
+  when a new configuration update is received. This behavior is considered
+  experimental, and is primarily intended to reduce the time it takes for the
+  client to relearn the current node (which is typically under 1-2 seconds).
+  * Priority: Minor
+  * Issues: [CCBC-530](http://couchbase.com/issues/browse/CCBC-530)
+
 * Relocate memcached packets on topology changes for memcached buckets
   This enhances the behavior of the client when operating with a memcached
   bucket during a topology change. Previously the library would not relocate

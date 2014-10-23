@@ -511,6 +511,8 @@ void lcb_destroy(lcb_t instance)
     DESTROY(lcb_confmon_destroy, confmon);
     DESTROY(lcbio_mgr_destroy, memd_sockpool);
     DESTROY(lcbio_mgr_destroy, http_sockpool);
+    DESTROY(lcb_vbguess_destroy, vbguess);
+
     mcreq_queue_cleanup(&instance->cmdq);
     lcb_aspend_cleanup(po);
 

@@ -27,6 +27,42 @@
 #define SERVER_FMT "%s:%s (%p)"
 #define SERVER_ARGS(s) (s)->curhost->host, (s)->curhost->port, (void *)s
 
+typedef struct lcb_GUESSVB_st {
+    int newix; /**< New index, heuristically determined */
+    int oldix; /**< Original index, according to map */
+} lcb_GUESSVB;
+
+void
+lcb_vbguess_newconfig(lcbvb_CONFIG *cfg, lcb_GUESSVB *guesses)
+{
+    unsigned ii;
+    for (ii = 0; ii < cfg->nvb; ii++) {
+        lcb_GUESSVB *guess = guesses + ii;
+        lcbvb_VBUCKET *vb = cfg->vbuckets + ii;
+
+        if (guess->newix != guess->oldix && vb->servers[0] == guess->oldix) {
+            vb->servers[0] = guess->newix;
+        } else {
+            guess->newix = vb->servers[0];
+        }
+        guess->oldix = vb->servers[0];
+    }
+}
+
+int
+lcb_vbguess_remap(lcbvb_CONFIG *cfg, lcb_GUESSVB *guesses, int vbid, int bad)
+{
+    lcb_GUESSVB *guess = guesses + vbid;
+    int newix = lcbvb_nmv_remap(cfg, vbid, bad);
+
+    if (guesses && newix > -1 && newix != bad) {
+        guess->newix = newix;
+        guess->oldix = bad;
+    }
+
+    return newix;
+}
+
 /**
  * Finds the index of an older server using the current config
  * @param config The new configuration
@@ -219,12 +255,23 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     q->config = instance->cur_configinfo->vbc;
     q->cqdata = instance;
 
+    if (LCBT_SETTING(instance, keep_guess_vbs)) {
+        if (!instance->vbguess) {
+            instance->vbguess = calloc(config->vbc->nvb, sizeof(*instance->vbguess));
+        }
+    }
+
     if (old_config) {
         lcbvb_CONFIGDIFF *diff = lcbvb_compare(old_config->vbc, config->vbc);
 
         if (diff) {
             log_vbdiff(instance, diff);
             lcbvb_free_diff(diff);
+        }
+
+        /* Apply the vb guesses */
+        if (LCBT_SETTING(instance, keep_guess_vbs)) {
+            lcb_vbguess_newconfig(config->vbc, instance->vbguess);
         }
 
         change_status = replace_config(instance, config);
@@ -271,3 +318,5 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
     instance->callbacks.configuration(instance, change_status);
     lcb_maybe_breakout(instance);
 }
+
+

@@ -82,6 +82,7 @@ struct lcb_callback_st {
 struct lcb_confmon_st;
 struct hostlist_st;
 struct lcb_BOOTSTRAP;
+struct lcb_GUESSVB_st;
 
 struct lcb_st {
     mc_CMDQUEUE cmdq; /**< Base command queue object */
@@ -102,6 +103,7 @@ struct lcb_st {
     lcbio_pTABLE iotable; /**< IO Routine table */
     lcb_RETRYQ *retryq; /**< Retry queue for failed operations */
     struct lcb_string_st *scratch; /**< Generic buffer space */
+    struct lcb_GUESSVB_st *vbguess; /**< Heuristic masters for vbuckets */
     lcbio_pTIMER dtor_timer; /**< Asynchronous destruction timer */
     int type; /**< Type of connection */
 
@@ -199,6 +201,10 @@ LCB_INTERNAL_API void lcb__timer_destroy_nowarn(lcb_t instance, lcb_timer_t time
     } else { \
         return lcb__synchandler_return(o); \
     }
+
+void lcb_vbguess_newconfig(lcbvb_CONFIG *cfg, struct lcb_GUESSVB_st *guesses);
+int lcb_vbguess_remap(lcbvb_CONFIG *cfg, struct lcb_GUESSVB_st *guesses, int vbid, int bad);
+#define lcb_vbguess_destroy(p) free(p)
 
 #ifdef __cplusplus
 }
