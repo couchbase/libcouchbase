@@ -1414,7 +1414,14 @@ typedef struct {
     /**
      * This number will be added to the current value on the server; if this is
      * negative then the current value will be decremented; if positive then
-     * the current value will be incremented
+     * the current value will be incremented.
+     *
+     * On the server, the counter value is a 64 bit unsigned integer, whose
+     * maximum value is `UINT64_MAX` If an integer overflow occurs as a result
+     * of adding the `delta` value to the existing value on the server, then the
+     * value on the server will wrap around; thus for example, if the existing
+     * value was `UINT64_MAX-1` and `delta` was supplied as `2`, the new value
+     * would be `1`.
      */
     lcb_S64 delta;
 
