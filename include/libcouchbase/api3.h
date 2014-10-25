@@ -251,10 +251,30 @@ typedef void (*lcb_RESPCALLBACK)
  * @note LCB_CALLBACK_DEFAULT is initialized to the default handler which proxies
  * back to the older 2.x callbacks. If you set `cbtype` to LCB_CALLBACK_DEFAULT
  * then your `2.x` callbacks _will not work_.
+ *
+ * @note The old callback may be `NULL`. It is usually not an error to have a
+ * `NULL` callback installed. If the callback is `NULL`, then the default callback
+ * invocation pattern will take place (as desribed above). However it is an error
+ * to set the default callback to `NULL`.
  */
 LIBCOUCHBASE_API
 lcb_RESPCALLBACK
 lcb_install_callback3(lcb_t instance, int cbtype, lcb_RESPCALLBACK cb);
+
+/**
+ * @volatile
+ * Get the current callback installed as `cbtype`. Note that this does not
+ * perform any kind of resolution (as described in lcb_install_callback3) and
+ * will only return a non-`NULL` value if a callback had specifically been
+ * installed via lcb_install_callback3() with the given `cbtype`.
+ *
+ * @param instance the handle
+ * @param cbtype the type of callback to retrieve
+ * @return the installed callback for the type.
+ */
+LIBCOUCHBASE_API
+lcb_RESPCALLBACK
+lcb_get_callback3(lcb_t instance, int cbtype);
 
 /**@}*/
 
