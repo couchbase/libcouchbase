@@ -71,7 +71,7 @@ ESocket::assign(lcbio_SOCKET *s, lcb_error_t err)
         return;
     }
 
-    lcbio_EASYPROCS procs;
+    lcbio_CTXPROCS procs;
     procs.cb_err = ctx_error;
     procs.cb_read = ctx_read;
     procs.cb_flush_done = ctx_flush_done;

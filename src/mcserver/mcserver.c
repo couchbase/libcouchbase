@@ -455,7 +455,7 @@ static void
 on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr)
 {
     mc_SERVER *server = data;
-    lcbio_EASYPROCS procs;
+    lcbio_CTXPROCS procs;
     uint32_t tmo;
     mc_pSESSINFO sessinfo = NULL;
     LCBIO_CONNREQ_CLEAR(&server->connreq);

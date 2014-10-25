@@ -233,7 +233,7 @@ void lcb_cccp_update2(const void *cookie, lcb_error_t err,
 static void
 on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr)
 {
-    lcbio_EASYPROCS ioprocs;
+    lcbio_CTXPROCS ioprocs;
     cccp_provider *cccp = data;
     lcb_settings *settings = cccp->base.parent->settings;
 
