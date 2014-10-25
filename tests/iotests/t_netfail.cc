@@ -471,6 +471,21 @@ static void listener_callback(clconfig_listener *lsnbase,
 }
 }
 
+static void
+doManyItems(lcb_t instance, std::vector<std::string> keys)
+{
+    lcb_CMDSTORE cmd = { 0 };
+    cmd.operation = LCB_SET;
+    lcb_sched_enter(instance);
+    for (size_t ii = 0; ii < keys.size(); ii++) {
+        LCB_CMD_SET_KEY(&cmd, keys[ii].c_str(), keys[ii].size());
+        LCB_CMD_SET_VALUE(&cmd, keys[ii].c_str(), keys[ii].size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_store3(instance, NULL, &cmd));
+    }
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
 TEST_F(MockUnitTest, testMemcachedFailover)
 {
     SKIP_UNLESS_MOCK();
@@ -496,10 +511,12 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     lcb_wait(instance);
     ASSERT_TRUE(lsn.called);
 
-    doDummyOp(instance);
-    http_provider *htprov =
-            (http_provider *)lcb_confmon_get_provider(instance->confmon,
-                                                      LCB_CLCONFIG_HTTP);
+    // Get the command list:
+    std::vector<std::string> distKeys;
+    genDistKeys(LCBT_VBCONFIG(instance), distKeys);
+
+    doManyItems(instance, distKeys);
+    http_provider *htprov = (http_provider *)lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_HTTP);
     ASSERT_EQ((lcb_uint32_t)-1, instance->getSettings()->bc_http_stream_time);
     ASSERT_EQ(0, lcbio_timer_armed(htprov->disconn_timer));
 
@@ -507,25 +524,19 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     mock->failoverNode(1, "cache");
     lsn.called = false;
 
-    for (int ii = 0; ii < 100; ii++) {
-        if (lsn.called) {
-            break;
-        }
-        doDummyOp(instance);
+    for (int ii = 0; ii < 100 && lsn.called == false; ii++) {
+        doManyItems(instance, distKeys);
     }
     ASSERT_TRUE(lsn.called);
     // Call again so the async callback may be invoked.
-    doDummyOp(instance);
+    doManyItems(instance, distKeys);
     ASSERT_EQ(9, lcb_get_num_nodes(instance));
 
-    doDummyOp(instance);
+    doManyItems(instance, distKeys);
     mock->respawnNode(1, "cache");
     lsn.called = false;
-    for (int ii = 0; ii < 100; ii++) {
-        if (lsn.called) {
-            break;
-        }
-        doDummyOp(instance);
+    for (int ii = 0; ii < 100 && lsn.called == false; ii++) {
+        doManyItems(instance, distKeys);
     }
     ASSERT_TRUE(lsn.called);
     lcb_confmon_remove_listener(instance->confmon, &lsn.base);

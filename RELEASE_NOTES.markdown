@@ -2,6 +2,15 @@
 
 ## .NEXT
 
+* Relocate memcached packets on topology changes for memcached buckets
+  This enhances the behavior of the client when operating with a memcached
+  bucket during a topology change. Previously the library would not relocate
+  packets to new servers, resulting in errors for items which were now
+  mapped to wrong nodes. The new behavior remaps the key to the new server
+  using the updated ketama hashing. Note that as a current restriction, the
+  remapping will be performed based on the key of the item, not any `hashkey`
+  parameter being employed.
+
 * Return error if ignored/conflicting options are found
   This changes the behavior of the library to throw an error if a specific
   option field was filled in which did not make sense for a given command, for
