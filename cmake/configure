@@ -108,6 +108,9 @@ my @HELP_DESCRIPTIONS = (
     [ "disable-ssl", "",
         "Do not build SSL support",
         "%d", \(my $NO_SSL = 0)],
+    [ "enable-asan", "",
+        "Enable LLVM AddressSanitizer support",
+        "%d", \(my $LCB_USE_ASAN = 0)],
     [ "help", "",
         "This message", "%s", \(my $WANT_HELP = 0) ]
 );
@@ -269,6 +272,9 @@ if ($NO_SNAPPY) {
 }
 if ($STATIC_SNAPPY) {
     push @CM_OPTIONS, "-DLCB_STATIC_SNAPPY";
+}
+if ($LCB_USE_ASAN) {
+    push @CM_OPTIONS, "-DLCB_USE_ASAN=1";
 }
 
 if ($CMAKE_HOST) {

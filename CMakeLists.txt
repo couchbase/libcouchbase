@@ -41,6 +41,7 @@ OPTION(LCB_NO_PLUGINS "Disable the building of IO plugins for external libs" OFF
 OPTION(LCB_MAINTAINER_MODE "Enables maintainer mode" OFF)
 OPTION(LCB_NO_SSL "Do not compile SSL support" OFF)
 OPTION(LCB_NO_SNAPPY "Do not compile snappy support" ON)
+OPTION(LCB_USE_ASAN "Use AddressSanitizer support (Requires Clang)" OFF)
 OPTION(LCB_STATIC_SNAPPY "Use the bundled libsnappy. Do not link with system snappy"
     ${WIN32})
 

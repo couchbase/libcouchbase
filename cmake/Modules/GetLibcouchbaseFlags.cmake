@@ -26,9 +26,15 @@ LIST(APPEND LCB_GNUC_CPP_WARNINGS
     -Wno-missing-field-initializers)
 
 IF("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-    LIST(APPEND LCB_GNUC_CPP_WARNINGS
-        -Wno-cast-align)
+    LIST(APPEND LCB_GNUC_CPP_WARNINGS -Wno-cast-align)
 ENDIF()
+
+IF(LCB_USE_ASAN)
+    LIST(APPEND LCB_GNUC_CPP_WARNINGS -fno-omit-frame-pointer -fsanitize=address)
+    SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -undefined dynamic_lookup -fsanitize=address")
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+ENDIF()
+
 list2args(LCB_GNUC_CPP_WARNINGS)
 
 LIST(APPEND LCB_GNUC_C_WARNINGS
