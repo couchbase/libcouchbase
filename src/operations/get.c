@@ -265,7 +265,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     lcb_size_t nhk;
     int vbid, ixtmp;
     protocol_binary_request_header req;
-    unsigned r0, r1;
+    unsigned r0, r1 = 0;
     rget_cookie *rck = NULL;
 
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {

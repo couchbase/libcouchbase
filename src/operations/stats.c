@@ -105,7 +105,8 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
                 return LCB_EINVAL;
             }
         }
-        sprintf(ksbuf, "key %.*s %d", (int)kbuf_in->nbytes, kbuf_in->bytes, vbid);
+        sprintf(ksbuf, "key %.*s %d", (int)kbuf_in->nbytes,
+                (const char *)kbuf_in->bytes, vbid);
         kbuf_out.contig.nbytes = strlen(ksbuf);
         kbuf_out.contig.bytes = ksbuf;
     } else {

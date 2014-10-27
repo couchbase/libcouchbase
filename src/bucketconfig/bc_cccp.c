@@ -456,7 +456,7 @@ static void do_dump(clconfig_provider *pb, FILE *fp)
 
     fprintf(fp, "## BEGIN CCCP PROVIDER DUMP ##\n");
     fprintf(fp, "TIMER ACTIVE: %s\n", lcbio_timer_armed(cccp->timer) ? "YES" : "NO");
-    fprintf(fp, "PIPELINE RESPONSE COOKIE: %p\n", cccp->cmdcookie);
+    fprintf(fp, "PIPELINE RESPONSE COOKIE: %p\n", (void*)cccp->cmdcookie);
     if (cccp->ioctx) {
         fprintf(fp, "CCCP Owns connection:\n");
         lcbio_ctx_dump(cccp->ioctx, fp);
