@@ -507,3 +507,30 @@ TEST_F(MockUnitTest, testConflictingOptions)
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_sched_fail(instance);
 }
+
+TEST_F(MockUnitTest, testDump)
+{
+    const char *fpname;
+#ifdef _WIN32
+    fpname = "NUL:";
+#else
+    fpname = "/dev/null";
+#endif
+    FILE *fp = fopen(fpname, "w");
+    if (!fp) {
+        perror(fpname);
+        return;
+    }
+
+    // Simply try to dump the instance;
+    HandleWrap hw;
+    lcb_t instance;
+    createConnection(hw, instance);
+    std::vector<std::string> keys;
+    genDistKeys(LCBT_VBCONFIG(instance), keys);
+    for (size_t ii = 0; ii < keys.size(); ii++) {
+        storeKey(instance, keys[ii], keys[ii]);
+    }
+    lcb_dump(instance, fp, LCB_DUMP_ALL);
+    fclose(fp);
+}
