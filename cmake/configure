@@ -111,6 +111,9 @@ my @HELP_DESCRIPTIONS = (
     [ "enable-asan", "",
         "Enable LLVM AddressSanitizer support",
         "%d", \(my $LCB_USE_ASAN = 0)],
+    [ "enable-coverage", "",
+        "Compile with code coverage instrumentation",
+        "%d", \(my $LCB_USE_COVERAGE = 0)],
     [ "help", "",
         "This message", "%s", \(my $WANT_HELP = 0) ]
 );
@@ -275,6 +278,9 @@ if ($STATIC_SNAPPY) {
 }
 if ($LCB_USE_ASAN) {
     push @CM_OPTIONS, "-DLCB_USE_ASAN=1";
+}
+if ($LCB_USE_COVERAGE) {
+    push @CM_OPTIONS, "-DLCB_USE_COVERAGE=1";
 }
 
 if ($CMAKE_HOST) {

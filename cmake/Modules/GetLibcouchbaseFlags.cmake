@@ -35,6 +35,17 @@ IF(LCB_USE_ASAN)
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 ENDIF()
 
+IF(LCB_USE_COVERAGE)
+    SET(_covflags "-fprofile-arcs -ftest-coverage")
+    IF(CMAKE_COMPILER_IS_GNUCC)
+        SET(_covflags "--coverage ${_covflags}")
+    ENDIF()
+
+    LIST(APPEND LCB_GNUC_CPP_WARNINGS ${_covflags})
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${_covflags}")
+    SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${_covflags}")
+ENDIF()
+
 list2args(LCB_GNUC_CPP_WARNINGS)
 
 LIST(APPEND LCB_GNUC_C_WARNINGS
