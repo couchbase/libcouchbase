@@ -27,54 +27,38 @@
 
 
 extern "C" {
-    static void timings_callback(lcb_t,
-                                 const void *cookie,
-                                 lcb_timeunit_t timeunit,
-                                 lcb_uint32_t min,
-                                 lcb_uint32_t max,
-                                 lcb_uint32_t total,
-                                 lcb_uint32_t maxtotal)
-    {
-        FILE *fp = (FILE *)cookie;
-        if (fp != NULL) {
-            fprintf(fp, "[%3u - %3u]", min, max);
-
-            switch (timeunit) {
-            case LCB_TIMEUNIT_NSEC:
-                fprintf(fp, "ns");
-                break;
-            case LCB_TIMEUNIT_USEC:
-                fprintf(fp, "us");
-                break;
-            case LCB_TIMEUNIT_MSEC:
-                fprintf(fp, "ms");
-                break;
-            case LCB_TIMEUNIT_SEC:
-                fprintf(fp, "s");
-                break;
-            default:
-                ;
-            }
-
-            int num = (int)((float)20.0 * (float)total / (float)maxtotal);
-
-            fprintf(fp, " |");
-            for (int ii = 0; ii < num; ++ii) {
-                fprintf(fp, "#");
-            }
-
-            fprintf(fp, " - %u\n", total);
-        }
+static void timings_callback(lcb_t, const void *cookie, lcb_timeunit_t timeunit,
+    lcb_U32 min, lcb_U32 max, lcb_U32 total, lcb_U32 maxtotal)
+{
+    FILE *fp = (FILE *)cookie;
+    if (fp == NULL) {
+        return;
     }
+
+    fprintf(fp, "[%3u - %3u]", min, max);
+    const char *ts_str = "";
+
+    if (timeunit == LCB_TIMEUNIT_NSEC) { ts_str = "ns"; }
+    else if (timeunit == LCB_TIMEUNIT_USEC) { ts_str = "us"; }
+    else if (timeunit == LCB_TIMEUNIT_MSEC) { ts_str = "ms"; }
+    else if (timeunit == LCB_TIMEUNIT_SEC) { ts_str = ""; }
+
+    fprintf(fp, "%s", ts_str);
+
+    int num = (int)((float)20.0 * (float)total / (float)maxtotal);
+
+    fprintf(fp, " |");
+    for (int ii = 0; ii < num; ++ii) {
+        fprintf(fp, "#");
+    }
+
+    fprintf(fp, " - %u\n", total);
+}
 }
 
 TEST_F(MockUnitTest, testTimings)
 {
     FILE *fp = stdout;
-    if (getenv("LCB_VERBOSE_TESTS") == NULL) {
-        fp = NULL;
-    }
-
     lcb_t instance;
     HandleWrap hw;
     createConnection(hw, instance);
