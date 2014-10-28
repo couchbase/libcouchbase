@@ -534,3 +534,12 @@ TEST_F(MockUnitTest, testDump)
     lcb_dump(instance, fp, LCB_DUMP_ALL);
     fclose(fp);
 }
+
+TEST_F(MockUnitTest, testRefreshConfig)
+{
+    HandleWrap hw;
+    lcb_t instance;
+    createConnection(hw, instance);
+    lcb_refresh_config(instance);
+    lcb_wait3(instance, LCB_WAIT_NOCHECK);
+}
