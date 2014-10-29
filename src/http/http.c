@@ -202,7 +202,6 @@ void lcb_http_request_finish(lcb_t instance, lcb_http_request_t req,
 {
 
     lcb_RESPCALLBACK target;
-
     maybe_refresh_config(instance, req, error);
 
     if ((req->status & LCB_HTREQ_S_CBINVOKED) == 0) {
@@ -214,11 +213,20 @@ void lcb_http_request_finish(lcb_t instance, lcb_http_request_t req,
         resp.rc = error;
 
         target(instance, LCB_CALLBACK_HTTP, (lcb_RESPBASE*)&resp);
+        req->status |= LCB_HTREQ_S_CBINVOKED;
     }
 
-    req->status |= LCB_HTREQ_S_CBINVOKED;
-    lcb_cancel_http_request(instance, req);
+    if (!(req->status & LCB_HTREQ_S_HTREMOVED)) {
+        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_HTTP, req);
+        req->status |= LCB_HTREQ_S_HTREMOVED;
+    }
+
+    if (req->timer) {
+        lcbio_timer_disarm(req->timer);
+    }
+
     lcb_http_request_decref(req);
+    lcb_maybe_breakout(instance);
 }
 
 static mc_SERVER *get_view_node(lcb_t instance)
@@ -546,19 +554,11 @@ lcb_error_t lcb_make_http_request(lcb_t instance,
 LIBCOUCHBASE_API
 void lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request)
 {
-    if (request->status & LCB_HTREQ_S_HTREMOVED) {
+    if (request->status & (LCB_HTREQ_S_HTREMOVED|LCB_HTREQ_S_CBINVOKED)) {
+        /* Nothing to cancel */
         return;
     }
-
-    request->status = LCB_HTREQ_S_HTREMOVED | LCB_HTREQ_S_CBINVOKED;
-    if (request->instance) {
-        lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_HTTP, request);
-    }
-
-    request->instance = NULL;
-    if (request->timer) {
-        lcbio_timer_disarm(request->timer);
-    }
-    lcb_maybe_breakout(instance);
+    request->status |= LCB_HTREQ_S_CBINVOKED;
+    lcb_http_request_finish(instance, request, LCB_SUCCESS);
 }
 
