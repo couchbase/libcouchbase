@@ -85,7 +85,7 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
 {
     unsigned ii;
 
-    mcreq_sched_enter(&instance->cmdq);
+    lcb_sched_enter(instance);
 
     for (ii = 0; ii < num; ii++) {
         const lcb_arithmetic_cmd_t *src = items[ii];
@@ -106,11 +106,11 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
         dst.exptime = src->v.v0.exptime;
         err = lcb_counter3(instance, cookie, &dst);
         if (err != LCB_SUCCESS) {
-            mcreq_sched_fail(&instance->cmdq);
+            lcb_sched_fail(instance);
             return err;
         }
     }
 
-    mcreq_sched_leave(&instance->cmdq, 1);
+    lcb_sched_leave(instance);
     SYNCMODE_INTERCEPT(instance)
 }

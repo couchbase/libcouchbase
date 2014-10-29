@@ -82,7 +82,7 @@ lcb_error_t lcb_get(lcb_t instance,
                     const lcb_get_cmd_t *const *items)
 {
     unsigned ii;
-    mcreq_sched_enter(&instance->cmdq);
+    lcb_sched_enter(instance);
 
     for (ii = 0; ii < num; ii++) {
         const lcb_get_cmd_t *src = items[ii];
@@ -99,11 +99,11 @@ lcb_error_t lcb_get(lcb_t instance,
 
         err = lcb_get3(instance, command_cookie, &dst);
         if (err != LCB_SUCCESS) {
-            mcreq_sched_fail(&instance->cmdq);
+            lcb_sched_fail(instance);
             return err;
         }
     }
-    mcreq_sched_leave(&instance->cmdq, 1);
+    lcb_sched_leave(instance);
     SYNCMODE_INTERCEPT(instance)
 }
 
@@ -153,7 +153,7 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
     unsigned ii;
     lcb_error_t err = LCB_SUCCESS;
 
-    mcreq_sched_enter(&instance->cmdq);
+    lcb_sched_enter(instance);
     for (ii = 0; ii < num; ii++) {
         const lcb_unlock_cmd_t *src = items[ii];
         lcb_CMDUNLOCK dst;
@@ -169,10 +169,10 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
         }
     }
     if (err != LCB_SUCCESS) {
-        mcreq_sched_fail(&instance->cmdq);
+        lcb_sched_fail(instance);
         return err;
     } else {
-        mcreq_sched_leave(&instance->cmdq, 1);
+        lcb_sched_leave(instance);
         SYNCMODE_INTERCEPT(instance)
     }
 }
@@ -235,6 +235,8 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
         } else if (err != LCB_SUCCESS) {
             mc_PACKET *newpkt = mcreq_renew_packet(pkt);
             mcreq_sched_add(nextpl, newpkt);
+            /* Use this, rather than lcb_sched_leave(), because this is being
+             * invoked internally by the library. */
             mcreq_sched_leave(cq, 1);
             /* wait */
             rck->remaining = 2;
@@ -368,7 +370,7 @@ lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
     unsigned ii;
     lcb_error_t err = LCB_SUCCESS;
 
-    mcreq_sched_enter(&instance->cmdq);
+    lcb_sched_enter(instance);
     for (ii = 0; ii < num; ii++) {
         const lcb_get_replica_cmd_t *src = items[ii];
         lcb_CMDGETREPLICA dst;
@@ -386,10 +388,10 @@ lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
     }
 
     if (err == LCB_SUCCESS) {
-        mcreq_sched_leave(&instance->cmdq, 1);
+        lcb_sched_leave(instance);
         SYNCMODE_INTERCEPT(instance)
     } else {
-        mcreq_sched_fail(&instance->cmdq);
+        lcb_sched_fail(instance);
         return err;
     }
 }
