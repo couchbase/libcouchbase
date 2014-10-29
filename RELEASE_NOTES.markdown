@@ -10,6 +10,8 @@
   using the updated ketama hashing. Note that as a current restriction, the
   remapping will be performed based on the key of the item, not any `hashkey`
   parameter being employed.
+  * Priority: Major
+  * Issues: [CCBC-331](http://couchbase.com/issues/browse/CCBC-331)
 
 * Return error if ignored/conflicting options are found
   This changes the behavior of the library to throw an error if a specific
