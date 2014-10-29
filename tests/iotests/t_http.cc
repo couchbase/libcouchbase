@@ -1,6 +1,7 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 #include "config.h"
 #include "iotests.h"
+#include <map>
 
 #define DESIGN_DOC_NAME "lcb_design_doc"
 #define VIEW_NAME "lcb-test-view"
@@ -232,4 +233,98 @@ TEST_F(HttpUnitTest, testRefused)
     ASSERT_EQ(true, ctx.received);
     ASSERT_NE(0, LCB_EIFNET(ctx.err));
 
+}
+
+struct HtResult {
+    std::string body;
+    std::map<std::string,std::string> headers;
+
+    bool gotComplete;
+    bool gotChunked;
+    lcb_RESPHTTP res;
+    void reset() {
+        body.clear();
+        gotComplete = false;
+        gotChunked = false;
+        memset(&res, 0, sizeof res);
+    }
+};
+
+extern "C" {
+static void http_callback(lcb_t, int, const lcb_RESPBASE *rb)
+{
+    const lcb_RESPHTTP *htr = (const lcb_RESPHTTP *)rb;
+    HtResult *me = (HtResult *)htr->cookie;
+
+    if (htr->nbody) {
+        me->body.append((const char*)htr->body, (const char*)htr->body + htr->nbody);
+    }
+
+    if (htr->rflags & LCB_RESP_F_FINAL) {
+        me->res = *htr;
+        me->gotComplete = true;
+        const char * const * cur = htr->headers;
+        for (; *cur; cur+=2) {
+            me->headers[cur[0]] = cur[1];
+        }
+    } else {
+        me->gotChunked = true;
+    }
+}
+}
+
+// Some more basic HTTP tests for the administrative API. We use the admin
+// API since it's always available.
+TEST_F(HttpUnitTest, testAdminApi)
+{
+    using std::string;
+
+    lcb_t instance;
+    HandleWrap hw;
+    createConnection(hw, instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, http_callback);
+
+    // Make the request; this time we make it to the 'management' API
+    lcb_CMDHTTP cmd = { 0 };
+    string path("/pools/default/buckets/default");
+
+    LCB_CMD_SET_KEY(&cmd, path.c_str(), path.size());
+    cmd.type = LCB_HTTP_TYPE_MANAGEMENT;
+    cmd.method = LCB_HTTP_METHOD_GET;
+    HtResult htr;
+    htr.reset();
+
+    lcb_error_t err;
+    lcb_sched_enter(instance);
+    err = lcb_http3(instance, &htr, &cmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+
+    ASSERT_TRUE(htr.gotComplete);
+    ASSERT_EQ(LCB_SUCCESS, htr.res.rc);
+    ASSERT_EQ(200, htr.res.htstatus);
+    ASSERT_FALSE(htr.body.empty());
+
+    // Try with a chunked request
+    htr.reset();
+    cmd.cmdflags |= LCB_CMDHTTP_F_STREAM;
+    lcb_sched_enter(instance);
+    err = lcb_http3(instance, &htr, &cmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+
+    ASSERT_TRUE(htr.gotComplete);
+    ASSERT_TRUE(htr.gotChunked);
+
+    // try another one, but this time cancelling it..
+    lcb_http_request_t reqh;
+    cmd.reqhandle = &reqh;
+    lcb_sched_enter(instance);
+    err = lcb_http3(instance, NULL, &cmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_FALSE(reqh == NULL);
+    lcb_sched_leave(instance);
+    lcb_cancel_http_request(instance, reqh);
 }
