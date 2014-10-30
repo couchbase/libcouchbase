@@ -687,9 +687,14 @@ lcb_durability_poll(lcb_t instance, const void *cookie,
     }
 
     lcb_sched_enter(instance);
-    mctx->done(mctx, cookie);
-    lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    err = mctx->done(mctx, cookie);
+    if (err != LCB_SUCCESS) {
+        lcb_sched_fail(instance);
+        return err;
+    } else {
+        lcb_sched_leave(instance);
+        SYNCMODE_INTERCEPT(instance)
+    }
 }
 
 /**

@@ -2,6 +2,12 @@
 
 ## .NEXT
 
+* Fix errneous `LCB_SUCCESS` return when passed duplicate keys to
+  `lcb_durability_poll()`. This would cause applications to mistakenly wait
+  for a callback to arrive, when in fact the command had failed.
+  * Priority: Major
+  * Issues: [CCBC-536](http://couchbase.com/issues/browse/CCBC-535)
+
 * Add option to preserve vbucket ownership heuristics across config updates
   This allows the learned configuration settings to persist between configuration
   updates. The default behavior (up to, and including this change) is to
