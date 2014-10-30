@@ -80,9 +80,6 @@ INCLUDE(cmake/source_files.cmake)
 SET(CPACK_PACKAGE_VERSION_MAJOR "${LCB_VERSION_MAJOR}")
 SET(CPACK_PACKAGE_VERSION_MINOR "${LCB_VERSION_MINOR}")
 SET(CPACK_PACKAGE_VERSION_PATCH "${LCB_VERSION_PATCH}")
-SET(CPACK_SOURCE_GENERATOR "TBZ2")
-SET(CPACK_SOURCE_PACKAGE_FILE_NAME "libcouchbase-${LCB_VERSION}")
-SET(CPACK_SOURCE_IGNORE_FILES "${CMAKE_BINARY_DIR}/;build*;.git/;~$;${CPACK_SOURCE_IGNORE_FILES}")
 IF(NOT CMAKE_BUILD_TYPE)
     SET(CPACK_INSTALL_SCRIPT
         "${CMAKE_SOURCE_DIR}/cmake/Modules/DistScript.cmake")
@@ -285,5 +282,21 @@ INSTALL(DIRECTORY include/libcouchbase ${LCB_GENSRCDIR}/libcouchbase
 
 INSTALL_PDBS(couchbase)
 
+SET(_lcb_tarname "libcouchbase-${LCB_VERSION}")
+SET(_lcb_manifest "${CMAKE_SOURCE_DIR}/MANIFEST")
+
 ADD_CUSTOM_TARGET(uninstall
     COMMAND xargs rm -vf < ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt)
+
+ADD_CUSTOM_TARGET(file_manifest
+    COMMAND sh -c 'test -e ${_lcb_manifest} || git ls-files > ${_lcb_manifest}'
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+
+ADD_CUSTOM_TARGET(dist
+    COMMAND rm -rf "${_lcb_tarname}"
+    COMMAND mkdir "${_lcb_tarname}"
+    COMMAND tar -cf - -C ${CMAKE_SOURCE_DIR} -T ${_lcb_manifest} | tar xf - -C "${_lcb_tarname}"
+    COMMAND tar -czf "${_lcb_tarname}.tar.gz" "${_lcb_tarname}"
+    COMMAND rm -rf "${_lcb_tarname}"
+    DEPENDS file_manifest)
