@@ -327,4 +327,17 @@ TEST_F(HttpUnitTest, testAdminApi)
     ASSERT_FALSE(reqh == NULL);
     lcb_sched_leave(instance);
     lcb_cancel_http_request(instance, reqh);
+
+    // Try another one, allocating a request body. Unfortunately, we need
+    // to cancel this one too, as none of the mock's endpoints support a
+    // request body
+    cmd.reqhandle = &reqh;
+    cmd.body = "FOO";
+    cmd.nbody = 3;
+    cmd.method = LCB_HTTP_METHOD_PUT;
+    err = lcb_http3(instance, NULL, &cmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_FALSE(reqh == NULL);
+    lcb_sched_leave(instance);
+    lcb_cancel_http_request(instance, reqh);
 }

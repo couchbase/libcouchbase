@@ -2,6 +2,13 @@
 
 ## .NEXT
 
+* Fix memory leak with HTTP requests using a request body
+  Requests (such as `PUT`, `POST`, etc) which contained a request body
+  would cause a memory leak as the library forgot to free them when the
+  request object was destroyed.
+  * Priority: Major
+  * Issues: [CCBC-538](http://couchbase.com/issues/browse/CCBC-538)
+
 * Fix errneous `LCB_SUCCESS` return when passed duplicate keys to
   `lcb_durability_poll()`. This would cause applications to mistakenly wait
   for a callback to arrive, when in fact the command had failed.
