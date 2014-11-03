@@ -63,6 +63,7 @@ Development files for the Couchbase Client & Protocol Library
 
 %install
 %{__make} install DESTDIR="%{buildroot}" AM_INSTALL_PROGRAM_FLAGS=""
+find %{buildroot} -iname "*.la" -delete
 
 %clean
 %{__rm} -rf %{buildroot}
@@ -73,17 +74,14 @@ Development files for the Couchbase Client & Protocol Library
 
 %files -n %{name}2-core
 %defattr(-, root, root)
-%{_libdir}/libcouchbase.la
 %{_libdir}/libcouchbase.so.*
 
 %files -n %{name}2-libevent
 %defattr(-, root, root)
-%{_libdir}/libcouchbase_libevent.la
 %{_libdir}/libcouchbase_libevent.so
 
 %files -n %{name}2-libev
 %defattr(-, root, root)
-%{_libdir}/libcouchbase_libev.la
 %{_libdir}/libcouchbase_libev.so
 
 %files -n %{name}2-bin
