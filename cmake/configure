@@ -7,8 +7,9 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Path;
+use File::Basename qw(dirname);
 use Cwd qw(getcwd realpath);
-use FindBin qw($Bin);
+use FindBin qw($Bin $RealBin);
 
 # Format here is:
 # [ Argument Name,
@@ -114,6 +115,9 @@ my @HELP_DESCRIPTIONS = (
     [ "enable-coverage", "",
         "Compile with code coverage instrumentation",
         "%d", \(my $LCB_USE_COVERAGE = 0)],
+    [ "build-dir", "s",
+        "Directory to build in",
+        "%s", \(my $BUILD_DIR = "build") ],
     [ "help", "",
         "This message", "%s", \(my $WANT_HELP = 0) ]
 );
@@ -150,11 +154,12 @@ if ($WANT_HELP) {
 }
 
 my $origdir = getcwd();
-my $srcdir = realpath("$Bin/../");
+my $srcdir = realpath("$RealBin/..");
+
 if ($origdir eq $srcdir) {
-    printf("Detected in-source build. Making 'build' directory\n");
-    mkpath("build");
-    chdir("build");
+    printf("Detected in-source build. Making '$BUILD_DIR' directory\n");
+    mkpath($BUILD_DIR);
+    chdir($BUILD_DIR);
 }
 
 if ($NO_CXX) {
@@ -319,7 +324,11 @@ if ($origdir eq $srcdir) {
 all:
 
 \%::
-\t\$(MAKE) -C build \$\@
+\t\$(MAKE) -C $BUILD_DIR \$\@
+
+include $BUILD_DIR/defs.mk
+include packaging/rpm/package.mk
+include packaging/deb/package.mk
 
 EOF
     close($fh);

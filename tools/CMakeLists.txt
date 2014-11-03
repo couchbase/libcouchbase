@@ -10,7 +10,6 @@ ADD_EXECUTABLE(cbc-pillowfight cbc-pillowfight.cc $<TARGET_OBJECTS:lcbtools>
     ${SOURCE_ROOT}/src/gethrtime.c)
 TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
 
-INSTALL(TARGETS cbc cbc-pillowfight RUNTIME
-    DESTINATION bin)
+INSTALL(TARGETS cbc cbc-pillowfight RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 INSTALL_PDBS(cbc)
 INSTALL_PDBS(cbc-pillowfight)

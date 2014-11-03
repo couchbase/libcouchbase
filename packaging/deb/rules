@@ -1,11 +1,17 @@
 #!/usr/bin/make -f
 
+ifdef LCB_BUILDING_WITH_CMAKE
+	DH_AC_FLAGS=--buildsystem=cmake -- -DLCB_NO_TESTS=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo
+else
+	DH_AC_FLAGS=--buildsystem=autoconf -- --disable-couchbasemock --disable-tests
+endif
+
 %:
-	dh $@ --parallel
+	dh $@ --verbose --parallel
 
 override_dh_strip:
 	dh_strip -plibcouchbase2-bin -plibcouchbase2-core -plibcouchbase2-libevent -plibcouchbase2-libev --dbg-package=libcouchbase-dbg
 	dh_strip --remaining-packages
 
 override_dh_auto_configure:
-	dh_auto_configure -- --disable-couchbasemock --disable-tests
+	dh_auto_configure $(DH_AC_FLAGS)

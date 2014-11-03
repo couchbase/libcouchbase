@@ -43,8 +43,8 @@ OPTION(LCB_NO_SSL "Do not compile SSL support" OFF)
 OPTION(LCB_NO_SNAPPY "Do not compile snappy support" ON)
 OPTION(LCB_USE_ASAN "Use AddressSanitizer support (Requires Clang)" OFF)
 OPTION(LCB_USE_COVERAGE "Build with code coverage support" OFF)
-OPTION(LCB_STATIC_SNAPPY "Use the bundled libsnappy. Do not link with system snappy"
-    ${WIN32})
+OPTION(LCB_STATIC_SNAPPY "Use the bundled libsnappy. Do not link with system snappy" ${WIN32})
+OPTION(LCB_USE_ARCHLIBDIR "Use architecture-prefixed library installation directory, if possible" OFF)
 
 ### END CONFIGURABLES ###
 IF(MSVC)
@@ -76,6 +76,11 @@ INCLUDE(cmake/Modules/DownloadLcbDep.cmake)
 INCLUDE(CheckIncludeFiles)
 INCLUDE(cmake/source_files.cmake)
 
+IF(NOT LCB_USE_ARCHLIBDIR AND NOT CMAKE_INSTALL_LIBDIR)
+    SET(CMAKE_INSTALL_LIBDIR "lib")
+ENDIF()
+INCLUDE(GNUInstallDirs)
+
 
 SET(CPACK_PACKAGE_VERSION_MAJOR "${LCB_VERSION_MAJOR}")
 SET(CPACK_PACKAGE_VERSION_MINOR "${LCB_VERSION_MINOR}")
@@ -100,6 +105,10 @@ CONFIGURE_FILE(
     ${CMAKE_SOURCE_DIR}/include/libcouchbase/configuration.h.in
     ${LCB_GENSRCDIR}/libcouchbase/configuration.h
     @ONLY)
+
+CONFIGURE_FILE(
+    ${CMAKE_SOURCE_DIR}/cmake/defs.mk.in
+    ${CMAKE_BINARY_DIR}/defs.mk)
 
 UNSET(CHANGESET)
 CONFIGURE_FILE(
@@ -243,6 +252,8 @@ TARGET_LINK_LIBRARIES(couchbaseS ${LCB_LINK_DEPS})
 IF(NOT LCB_NO_TESTS)
     ENABLE_TESTING()
     ADD_SUBDIRECTORY(tests tests)
+ELSE()
+    ADD_CUSTOM_TARGET(test)
 ENDIF(NOT LCB_NO_TESTS)
 
 IF(NOT LCB_NO_TOOLS)
@@ -272,13 +283,16 @@ ADD_SUBDIRECTORY(plugins/io/select)
 ADD_SUBDIRECTORY(plugins/io/iocp)
 
 INSTALL(TARGETS couchbase
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib)
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 INSTALL(DIRECTORY include/libcouchbase ${LCB_GENSRCDIR}/libcouchbase
-    DESTINATION include
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN *.h PATTERN *.c)
+
+INSTALL(DIRECTORY man/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 FILES_MATCHING PATTERN *.1)
+INSTALL(DIRECTORY man/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man4  FILES_MATCHING PATTERN *.4)
 
 INSTALL_PDBS(couchbase)
 
