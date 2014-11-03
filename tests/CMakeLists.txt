@@ -2,9 +2,13 @@ IF(NOT GTEST_ZIP_PATH)
     SET(GTEST_ZIP_PATH "${SOURCE_ROOT}/gtest-1.7.0.zip")
 ENDIF()
 INCLUDE(../cmake/Modules/FindCouchbaseGtest.cmake)
+
+# For Windows+GCC we need to link statically
 MESSAGE(STATUS "Will use gtest from ${GTEST_ROOT}")
-SET(gtest_force_shared_crt ON CACHE BOOL "" )
-SET(BUILD_SHARED_LIBS ON)
+IF (NOT (WIN32 AND CMAKE_COMPILER_IS_GNUCC))
+    SET(gtest_force_shared_crt ON CACHE BOOL "" )
+    SET(BUILD_SHARED_LIBS ON)
+ENDIF()
 ADD_SUBDIRECTORY(${GTEST_ROOT} gtest)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -48,12 +52,6 @@ ADD_EXECUTABLE(sock-tests EXCLUDE_FROM_ALL nonio_tests.cc
 
 ADD_EXECUTABLE(vbucket-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_VBTEST_SRC})
 ADD_EXECUTABLE(htparse-tests EXCLUDE_FROM_ALL nonio_tests.cc htparse/t_basic.cc ${SOURCE_ROOT}/src/lcbht/lcbht.c)
-IF(WIN32)
-    TARGET_LINK_LIBRARIES(mc-tests ws2_32.lib)
-    TARGET_LINK_LIBRARIES(mc-malloc-tests ws2_32.lib)
-    TARGET_LINK_LIBRARIES(sock-tests ws2_32.lib)
-ENDIF()
-
 
 FILE(GLOB T_IO_SRC iotests/*.cc)
 ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL
@@ -91,6 +89,12 @@ TARGET_LINK_LIBRARIES(rdb-tests gtest)
 TARGET_LINK_LIBRARIES(sock-tests couchbaseS gtest)
 TARGET_LINK_LIBRARIES(vbucket-tests gtest couchbaseS)
 TARGET_LINK_LIBRARIES(htparse-tests gtest couchbaseS)
+
+IF(WIN32)
+    TARGET_LINK_LIBRARIES(mc-tests ws2_32.lib)
+    TARGET_LINK_LIBRARIES(mc-malloc-tests ws2_32.lib)
+ENDIF()
+
 
 MACRO(BUILD_TEST target)
     ADD_TEST(NAME BUILD-${target}
