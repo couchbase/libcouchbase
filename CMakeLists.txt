@@ -70,7 +70,6 @@ INCLUDE(cmake/Modules/FindCouchbaseLibev.cmake)
 INCLUDE(cmake/Modules/FindCouchbaseLibuv.cmake)
 INCLUDE(cmake/Modules/GetPlatformCCInfo.cmake)
 INCLUDE(cmake/Modules/GetVersionInfo.cmake)
-INCLUDE(cmake/Modules/GenerateConfigDotH.cmake)
 INCLUDE(cmake/Modules/CopyPDB.cmake)
 INCLUDE(cmake/Modules/DownloadLcbDep.cmake)
 INCLUDE(CheckIncludeFiles)
@@ -136,7 +135,6 @@ IF(WIN32)
     SET(lcb_plat_includes "${SOURCE_ROOT}/win32")
     SET(lcb_plat_libs couchbase_iocp ws2_32.lib)
 ELSE()
-    ADD_DEFINITIONS(-DLCB_LIBDIR="${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
     SET(lcb_plat_libs dl m pthread)
     SET(lcb_plat_includes "${SOURCE_ROOT}/cmake")
 ENDIF()
@@ -313,3 +311,6 @@ ADD_CUSTOM_TARGET(dist
     COMMAND tar -czf "${_lcb_tarname}.tar.gz" "${_lcb_tarname}"
     COMMAND rm -rf "${_lcb_tarname}"
     DEPENDS file_manifest)
+
+# Generate our configuration file _after_ we've collected everything
+INCLUDE(cmake/Modules/GenerateConfigDotH.cmake)
