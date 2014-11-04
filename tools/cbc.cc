@@ -1086,7 +1086,7 @@ setupHandlers()
 #endif
 
 static void
-parseCommandname(string& cmdname, int& argc, char**& argv)
+parseCommandname(string& cmdname, int&, char**& argv)
 {
 #ifdef HAVE_BASENAME
     cmdname = basename(argv[0]);
@@ -1107,7 +1107,6 @@ parseCommandname(string& cmdname, int& argc, char**& argv)
         return;
     }
 #else
-    (void)argc;
     (void)argv;
 #endif
     cmdname.clear();

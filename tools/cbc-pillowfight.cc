@@ -182,7 +182,7 @@ public:
         if (maxCycles == -1) {
             return false;
         }
-        return niter >= maxCycles;
+        return niter >= (size_t)maxCycles;
     }
 
     void setDGM(bool val) {
@@ -278,7 +278,7 @@ public:
         }
 
         Histogram &h = ic->hg;
-        printf("[%lf %s]\n", gethrtime() / 1000000000.0, header);
+        printf("[%f %s]\n", gethrtime() / 1000000000.0, header);
         printf("              +---------+---------+---------+---------+\n");
         h.write();
         printf("              +----------------------------------------\n");
@@ -419,11 +419,11 @@ private:
 class ThreadContext
 {
 public:
-    ThreadContext(lcb_t handle, int ix) : niter(0), instance(handle), kgen(ix) {
+    ThreadContext(lcb_t handle, int ix) : kgen(ix), niter(0), instance(handle) {
 
     }
 
-    void singleLoop(lcb_t instance) {
+    void singleLoop() {
         bool hasItems = false;
         lcb_sched_enter(instance);
         NextOp opinfo;
@@ -462,7 +462,7 @@ public:
 
     bool run() {
         do {
-            singleLoop(instance);
+            singleLoop();
             if (config.isTimings()) {
                 InstanceCookie::dumpTimings(instance, kgen.getStageString());
             }
@@ -524,9 +524,6 @@ std::list<ThreadContext *> contexts;
 
 extern "C" {
     typedef void (*handler_t)(int);
-
-    static void cruel_handler(int);
-    static void gentle_handler(int);
 }
 
 #ifndef WIN32
