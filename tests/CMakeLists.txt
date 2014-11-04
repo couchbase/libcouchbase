@@ -13,7 +13,7 @@ ADD_SUBDIRECTORY(${GTEST_ROOT} gtest)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 
 ADD_EXECUTABLE(check-all EXCLUDE_FROM_ALL
-    check-all.cc ${SOURCE_ROOT}/contrib/cliopts/cliopts.c mocksupport/procutil.c)
+    check-all.cc $<TARGET_OBJECTS:cliopts> mocksupport/procutil.c)
 
 SET_PROPERTY(TARGET check-all
     APPEND PROPERTY INCLUDE_DIRECTORIES

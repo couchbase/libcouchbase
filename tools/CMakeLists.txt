@@ -1,15 +1,21 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 INCLUDE_DIRECTORIES(${SOURCE_ROOT}/contrib/cliopts)
 FILE(GLOB T_COMMONSRC common/*.cc)
-ADD_LIBRARY(lcbtools OBJECT ${T_COMMONSRC} ${SOURCE_ROOT}/contrib/cliopts/cliopts.c)
+ADD_LIBRARY(lcbtools OBJECT ${T_COMMONSRC})
 
-ADD_EXECUTABLE(cbc cbc.cc $<TARGET_OBJECTS:lcbtools>)
+ADD_EXECUTABLE(cbc cbc.cc
+    $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts>)
 TARGET_LINK_LIBRARIES(cbc couchbase)
 
-ADD_EXECUTABLE(cbc-pillowfight cbc-pillowfight.cc $<TARGET_OBJECTS:lcbtools>
+ADD_EXECUTABLE(cbc-pillowfight cbc-pillowfight.cc
+    $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts>
     ${SOURCE_ROOT}/src/gethrtime.c)
+
 TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
 
 INSTALL(TARGETS cbc cbc-pillowfight RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 INSTALL_PDBS(cbc)
 INSTALL_PDBS(cbc-pillowfight)
+
+SET_TARGET_PROPERTIES(lcbtools PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
+SET_SOURCE_FILES_PROPERTIES(cbc.cc cbc-pillowfight.cc PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")

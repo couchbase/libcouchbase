@@ -181,6 +181,7 @@ LCB_UTIL(lcbcore)
 
 ADD_SUBDIRECTORY(src/vbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
+ADD_SUBDIRECTORY(contrib/cliopts)
 ADD_SUBDIRECTORY(src/ssl)
 
 IF(LCB_NO_SSL)

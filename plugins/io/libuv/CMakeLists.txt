@@ -17,10 +17,19 @@ IF(NOT HAVE_LIBUV)
 ENDIF()
 
 ADD_LIBRARY(couchbase_libuv SHARED plugin-libuv.c)
+
+# The macros abstracting UV versions dynamically inject special signatures. We
+# can't have the compiler whine about that.
+IF(CMAKE_COMPILER_IS_GNUCC)
+    SET(_lcbuv_cflags "-Wno-unused-parameters")
+ELSE()
+    SET(_lcbuv_cflags "")
+ENDIF()
 SET_TARGET_PROPERTIES(couchbase_libuv
     PROPERTIES
     PREFIX "lib"
-    IMPORT_PREFIX "lib")
+    IMPORT_PREFIX "lib"
+    COMPILE_FLAGS "${CMAKE_C_FLAGS} ${LCB_CORE_FLAGS} ${_lcbuv_cflags}")
 
 TARGET_LINK_LIBRARIES(couchbase_libuv ${LIBUV_LIBRARIES} couchbase)
 INCLUDE_DIRECTORIES(AFTER ${LIBUV_INCLUDE_DIR})
