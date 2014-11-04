@@ -19,3 +19,17 @@ INSTALL_PDBS(cbc-pillowfight)
 
 SET_TARGET_PROPERTIES(lcbtools PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
 SET_SOURCE_FILES_PROPERTIES(cbc.cc cbc-pillowfight.cc PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
+
+IF(NOT WIN32)
+    LIST(APPEND CBC_SUBCOMMANDS
+        admin bucket-create bucket-delete cat cp create hash lock mcflush
+        rm stats unlock verbosity verify version verbosity view)
+    FOREACH(subcmd IN ITEMS ${CBC_SUBCOMMANDS})
+        ADD_CUSTOM_COMMAND(TARGET cbc POST_BUILD
+                           COMMAND ln -sf cbc "cbc-${subcmd}"
+                           WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+                           COMMENT "Linking cbc -> cbc-${subcmd}")
+        INSTALL(FILES ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/cbc-${subcmd}
+                DESTINATION ${CMAKE_INSTALL_BINDIR})
+    ENDFOREACH()
+ENDIF()
