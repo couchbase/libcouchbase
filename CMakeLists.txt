@@ -167,6 +167,7 @@ ADD_LIBRARY(mcreq OBJECT ${LCB_MC_SRC})
 ADD_LIBRARY(rdb OBJECT ${LCB_RDB_SRC})
 ADD_LIBRARY(lcbio OBJECT ${LCB_IO_SRC})
 ADD_LIBRARY(lcbht OBJECT ${LCB_HT_SRC})
+ADD_LIBRARY(lcbcore OBJECT ${LCB_CORE_SRC})
 
 SET_TARGET_PROPERTIES(netbuf-malloc PROPERTIES COMPILE_DEFINITIONS NETBUF_LIBC_PROXY=1)
 LCB_UTIL(netbuf-malloc)
@@ -176,6 +177,7 @@ LCB_UTIL(lcbio)
 LCB_UTIL(couchbase_utils)
 LCB_UTIL(mcreq)
 LCB_UTIL(lcbht)
+LCB_UTIL(lcbcore)
 
 ADD_SUBDIRECTORY(src/vbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
@@ -203,23 +205,19 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:lcbio>
     $<TARGET_OBJECTS:rdb>
     $<TARGET_OBJECTS:lcbht>
+    $<TARGET_OBJECTS:lcbcore>
     ${lcb_ssl_objs})
 
-ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_SRC} ${LCB_CORE_OBJS})
-ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${LCB_CORE_SRC}
-    ${CMAKE_BINARY_DIR}/dllversion.rc)
+
+ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_OBJS})
+ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${CMAKE_BINARY_DIR}/dllversion.rc)
 
 SET_TARGET_PROPERTIES(couchbase
     PROPERTIES
-        COMPILE_FLAGS "${LCB_CORE_CFLAGS}"
         PREFIX "lib"
         IMPORT_PREFIX "lib"
         VERSION "2.0.19"
         SOVERSION "2")
-
-SET_TARGET_PROPERTIES(couchbaseS
-    PROPERTIES
-       COMPILE_FLAGS "${LCB_CORE_CFLAGS}")
 
 IF(NOT LCB_NO_SNAPPY)
     IF(LCB_STATIC_SNAPPY)
