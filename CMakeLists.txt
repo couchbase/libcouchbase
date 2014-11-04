@@ -136,7 +136,6 @@ IF(WIN32)
     SET(lcb_plat_libs couchbase_iocp ws2_32.lib)
 ELSE()
     SET(lcb_plat_libs dl m pthread)
-    SET(lcb_plat_includes "${SOURCE_ROOT}/cmake")
 ENDIF()
 
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
