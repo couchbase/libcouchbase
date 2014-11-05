@@ -45,6 +45,7 @@ OPTION(LCB_USE_ASAN "Use AddressSanitizer support (Requires Clang)" OFF)
 OPTION(LCB_USE_COVERAGE "Build with code coverage support" OFF)
 OPTION(LCB_STATIC_SNAPPY "Use the bundled libsnappy. Do not link with system snappy" ${WIN32})
 OPTION(LCB_USE_ARCHLIBDIR "Use architecture-prefixed library installation directory, if possible" OFF)
+OPTION(LCB_BUILD_EXAMPLES "Build example applications" OFF)
 
 ### END CONFIGURABLES ###
 IF(MSVC)
@@ -180,6 +181,9 @@ ADD_SUBDIRECTORY(src/vbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
 ADD_SUBDIRECTORY(contrib/cliopts)
 ADD_SUBDIRECTORY(src/ssl)
+IF(LCB_BUILD_EXAMPLES)
+    ADD_SUBDIRECTORY(example)
+ENDIF()
 
 IF(LCB_NO_SSL)
     MESSAGE(STATUS "SSL support will be disabled")
