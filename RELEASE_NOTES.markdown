@@ -2,6 +2,12 @@
 
 ## .NEXT
 
+* Don't ignore `LCB_CNTL_DURABILITY_INTERVAL`
+  Fix a bug where this interval would be ignored, if modified by the user; always
+  reverting to 100ms.
+  * Priority: Major
+  * Issues: [CCBC-543](http://couchbase.com/issues/browse/CCBC-543)
+
 * Fix memory leak with HTTP requests using a request body
   Requests (such as `PUT`, `POST`, etc) which contained a request body
   would cause a memory leak as the library forgot to free them when the

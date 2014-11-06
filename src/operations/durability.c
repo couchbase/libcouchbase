@@ -638,7 +638,7 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
         DSET_OPTFLD(dset, timeout) = LCBT_SETTING(instance, durability_timeout);
     }
     if (!DSET_OPTFLD(dset, interval)) {
-        DSET_OPTFLD(dset, interval) = LCB_DEFAULT_DURABILITY_INTERVAL;
+        DSET_OPTFLD(dset, interval) = LCBT_SETTING(instance, durability_interval);
     }
 
     if (-1 == verify_critera(instance, dset)) {
