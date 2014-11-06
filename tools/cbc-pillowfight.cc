@@ -101,8 +101,7 @@ public:
         prefix = o_keyPrefix.result();
         setprc = o_setPercent.result();
         shouldPopulate = !o_noPopulate.result();
-        setMinSize(o_minSize.result());
-        setMaxSize(o_maxSize.result());
+        setPayloadSizes(o_minSize.result(), o_maxSize.result());
 
         if (depr.loop.passed()) {
             fprintf(stderr, "The --loop/-l option is deprecated. Use --num-cycles\n");
@@ -139,22 +138,18 @@ public:
         delete []static_cast<char *>(data);
     }
 
-    void setMinSize(uint32_t val) {
-        if (val > maxSize) {
-            minSize = maxSize;
-        } else {
-            minSize = val;
+    void setPayloadSizes(uint32_t minsz, uint32_t maxsz) {
+        if (minsz > maxsz) {
+            minsz = maxsz;
         }
-    }
 
-    void setMaxSize(uint32_t val) {
+        minSize = minsz;
+        maxSize = maxsz;
+
         if (data) {
             delete []static_cast<char *>(data);
         }
-        maxSize = val;
-        if (minSize > maxSize) {
-            minSize = maxSize;
-        }
+
         data = static_cast<void *>(new char[maxSize]);
         /* fill data array with pattern */
         uint32_t *iptr = static_cast<uint32_t *>(data);

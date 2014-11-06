@@ -2,6 +2,13 @@
 
 ## .NEXT
 
+* Fix _pillowfight_ `--min-size` bug
+  This fixes a bug where pillowfight would sometimes compare the `min-size`
+  option to an uninitialized `max-size` option and round it down to that
+  value; then would set the `max-size` option.
+  * Priority: Major
+  * Issues: [CCBC-542](http://couchbase.com/issues/browse/CCBC-542)
+
 * Don't ignore `LCB_CNTL_DURABILITY_INTERVAL`
   Fix a bug where this interval would be ignored, if modified by the user; always
   reverting to 100ms.
