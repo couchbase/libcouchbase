@@ -1912,8 +1912,10 @@ typedef struct {
     /**
      * The durability check may involve more than a single call to observe - or
      * more than a single packet sent to a server to check the key status. This
-     * value determines the time to wait between multiple probes for the same
-     * server. If left at 0, a sensible adaptive value will be used.
+     * value determines the time to wait (in microseconds)
+     * between multiple probes for the same server.
+     * If left at 0, the @ref LCB_CNTL_DURABILITY_INTERVAL will be used
+     * instead.
      */
     lcb_U32 interval;
 
