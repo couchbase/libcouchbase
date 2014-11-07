@@ -12,8 +12,10 @@ RPM_VER			:= $(shell $(GITPARSE) --rpm-ver --input $(REVDESCRIBE))
 RPM_REL			:= $(shell $(GITPARSE) --rpm-rel --input $(REVDESCRIBE))
 TAR_VERSION		:= $(shell $(GITPARSE) --tar --input $(REVDESCRIBE))
 
+EXTRA_RPMDEFS	:=
+
 ifdef LCB_BUILDING_WITH_CMAKE
-	SED_EXTRA=;s/^\%configure.*$$/\%cmake -DLCB_NO_TESTS=1/g
+	EXTRA_RPMDEFS += --define "__lcb_is_cmake 1"
 endif
 
 dist-rpm: dist
@@ -25,7 +27,7 @@ dist-rpm: dist
 	mkdir $(RPM_DIR)/SRPMS
 	cp $(BUILDROOT)/$(PACKAGE)-$(TAR_VERSION).tar.gz $(RPM_DIR)/SOURCES
 	sed \
-		's/@VERSION@/$(RPM_VER)/g;s/@RELEASE@/$(RPM_REL)/g;s/@TARREDAS@/libcouchbase-$(TAR_VERSION)/g$(SED_EXTRA)' \
+		's/@VERSION@/$(RPM_VER)/g;s/@RELEASE@/$(RPM_REL)/g;s/@TARREDAS@/libcouchbase-$(TAR_VERSION)/g' \
 		< packaging/rpm/$(PACKAGE).spec.in > $(RPM_WORKSPACE)/$(PACKAGE).spec
 
 	(cd $(RPM_WORKSPACE) && \
@@ -33,6 +35,7 @@ dist-rpm: dist
 		--define "_topdir $(RPM_DIR)" \
 		--define "_source_filedigest_algorithm md5" \
 		--define "_binary_filedigest_algorithm md5" \
+		$(EXTRA_RPMDEFS) \
 		$(PACKAGE).spec \
 	)
 
