@@ -767,7 +767,7 @@ TEST_F(DurabilityUnitTest, testDuplicateCommands)
 {
     HandleWrap hw;
     lcb_t instance;
-    createConnection(instance);
+    createConnection(hw, instance);
     std::string key("key");
     std::vector<lcb_durability_cmd_t> cmds;
     std::vector<lcb_durability_cmd_t *> cmdlist;
