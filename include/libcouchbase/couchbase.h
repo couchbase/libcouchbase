@@ -218,51 +218,31 @@ typedef lcb_U32 lcb_USECS;
  * @{
  */
 
-/**@private*/
-typedef enum {
-    LCB_CONFIG_TRANSPORT_LIST_END = 0,
-    LCB_CONFIG_TRANSPORT_HTTP = 1,
-    LCB_CONFIG_TRANSPORT_CCCP,
-    LCB_CONFIG_TRANSPORT_MAX
-} lcb_config_transport_t;
 
-/**
- * @brief Handle types
- * @see lcb_create_st3::type
+/**@name Creating A Library Handle
+ *
+ * These structures contain the various options passed to the lcb_create()
+ * function.
+ * @{
  */
+
+/** @brief Handle types @see lcb_create_st3::type */
 typedef enum {
     LCB_TYPE_BUCKET = 0x00, /**< Handle for data access (default) */
     LCB_TYPE_CLUSTER = 0x01 /**< Handle for administrative access */
 } lcb_type_t;
 
 #ifndef __LCB_DOXYGEN__
-
-/**@private*/
-#define LCB_CREATE_V0_FIELDS \
-    const char *host; \
-    const char *user; \
-    const char *passwd; \
-    const char *bucket; \
-    struct lcb_io_opt_st *io;
-
-/**@private*/
-#define LCB_CREATE_V1_FIELDS \
-    LCB_CREATE_V0_FIELDS \
-    lcb_type_t type;
-
-/**@private*/
-#define LCB_CREATE_V2_FIELDS \
-    LCB_CREATE_V1_FIELDS \
-    const char *mchosts; \
-    const lcb_config_transport_t* transports;
-
-/**@private*/
+/* These are definitions for some of the older fields of the `lcb_create_st`
+ * structure. They are here for backwards compatibility and should not be
+ * used by new code */
+typedef enum { LCB_CONFIG_TRANSPORT_LIST_END = 0, LCB_CONFIG_TRANSPORT_HTTP = 1, LCB_CONFIG_TRANSPORT_CCCP, LCB_CONFIG_TRANSPORT_MAX } lcb_config_transport_t;
+#define LCB_CREATE_V0_FIELDS const char *host; const char *user; const char *passwd; const char *bucket; struct lcb_io_opt_st *io;
+#define LCB_CREATE_V1_FIELDS LCB_CREATE_V0_FIELDS lcb_type_t type;
+#define LCB_CREATE_V2_FIELDS LCB_CREATE_V1_FIELDS const char *mchosts; const lcb_config_transport_t* transports;
 struct lcb_create_st0 { LCB_CREATE_V0_FIELDS };
-/**@private*/
 struct lcb_create_st1 { LCB_CREATE_V1_FIELDS };
-/**@private*/
 struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
-
 #endif
 
 /**
@@ -279,15 +259,18 @@ struct lcb_create_st3 {
 };
 
 /**@brief Wrapper structure for lcb_create()
- * @see lcb_create_st3
- */
+ * @see lcb_create_st3 */
 struct lcb_create_st {
-    int version; /**< Set this to `3` */
-    union {
+    /** Indicates which field in the @ref lcb_CRST_u union should be used. Set this to `3` */
+    int version;
+
+    /**This union contains the set of current and historical options. The
+     * The #v3 field should be used. */
+    union lcb_CRST_u {
         struct lcb_create_st0 v0;
         struct lcb_create_st1 v1;
         struct lcb_create_st2 v2;
-        struct lcb_create_st3 v3;
+        struct lcb_create_st3 v3; /**< Use this field */
     } v;
 
 #define LCB_CREATEOPT_INIT(cropt, s, iops) do { \
@@ -344,8 +327,7 @@ struct lcb_create_st {
  * @see lcb_create_st3
  */
 LIBCOUCHBASE_API
-lcb_error_t lcb_create(lcb_t *instance,
-                       const struct lcb_create_st *options);
+lcb_error_t lcb_create(lcb_t *instance, const struct lcb_create_st *options);
 
 /**
  * @brief Schedule the initial connection
@@ -360,6 +342,8 @@ lcb_error_t lcb_create(lcb_t *instance,
  */
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance);
+
+/**@}*/
 
 /**
  * Associate a cookie with an instance of lcb. The _cookie_ is a user defined
@@ -576,39 +560,6 @@ void
 lcb_refresh_config(lcb_t instance);
 
 /**
- * @brief Argument indicating configuration change type
- * @see lcb_set_configuration_callback()
- * @uncommited
- */
-typedef enum {
-    /**New configuration (initial bootstrap). This status code is received
-     * only once per instance */
-    LCB_CONFIGURATION_NEW = 0x00,
-    /**Configuration updated*/
-    LCB_CONFIGURATION_CHANGED = 0x01,
-    /**Configuration propagated from cluster, but matches our current one */
-    LCB_CONFIGURATION_UNCHANGED = 0x02
-} lcb_configuration_t;
-/**
- * @brief Receive notification upon cluster configuration
- *
- * This callback may be used as a hook for the application to notify it that
- * operations may start being scheduled.
- *
- * @param instance The instance who received the new configuration
- * @param config The kind of configuration received
- * @uncommitted
- */
-typedef void (*lcb_configuration_callback)(lcb_t instance,
-                                           lcb_configuration_t config);
-/**
- * @uncommitted
- */
-LIBCOUCHBASE_API
-lcb_configuration_callback
-lcb_set_configuration_callback(lcb_t, lcb_configuration_callback);
-
-/**
  * Destroy (and release all allocated resources) an instance of lcb.
  * Using instance after calling destroy will most likely cause your
  * application to crash.
@@ -693,21 +644,11 @@ typedef struct {
     void *cookie; /**< Plugin-specific argument */
 } lcb_IOCREATEOPTS_BUILTIN;
 
-typedef struct {
-    const char *sofile;
-    const char *symbol;
-    void *cookie;
-} lcb_IOCREATEOPTS_DSO;
-
-/**@brief I/O Creation for function pointers */
-typedef struct {
-    lcb_io_create_fn create; /**< Function used to create the IO ops */
-    void *cookie; /**< `cookie` parameter passed to function */
-} lcb_IOCREATEOPS_FUNCTIONPOINTER;
-
-#define LCB_IOCREATE_T_BUILTIN 0
-#define LCB_IOCREATE_T_DSO 1
-#define LCB_IOCREATE_T_FUNCTIONPOINTER 2
+#ifndef __LCB_DOXYGEN__
+/* These are mostly internal structures which may be in use by older applications.*/
+typedef struct { const char *sofile; const char *symbol; void *cookie; } lcb_IOCREATEOPTS_DSO;
+typedef struct { lcb_io_create_fn create; void *cookie; } lcb_IOCREATEOPS_FUNCTIONPOINTER;
+#endif
 
 /** @uncommited */
 struct lcb_create_io_ops_st {
@@ -719,20 +660,33 @@ struct lcb_create_io_ops_st {
     } v;
 };
 
-
 /**
  * Create a new instance of one of the library-supplied io ops types.
- * @param op Where to store the io ops structure
+ *
+ * This function should only be used if you wish to override/customize the
+ * default I/O plugin behavior; for example to select a specific implementation
+ * (e.g. always for the _select_ plugin) and/or to integrate
+ * a builtin plugin with your own application (e.g. pass an existing `event_base`
+ * structure to the _libevent_ plugin).
+ *
+ * If you _do_ use this function, then you must call lcb_destroy_io_ops() on
+ * the plugin handle once it is no longer required (and no instance is using
+ * it).
+ *
+ * Whether a single `lcb_io_opt_t` may be used by multiple instances at once
+ * is dependent on the specific implementation, but as a general rule it should
+ * be assumed to be unsafe.
+ *
+ * @param[out] op The newly created io ops structure
  * @param options How to create the io ops structure
- * @return LCB_SUCCESS on success
+ * @return @ref LCB_SUCCESS on success
  * @uncommitted
  */
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_io_ops(lcb_io_opt_t *op,
-                              const struct lcb_create_io_ops_st *options);
+lcb_error_t lcb_create_io_ops(lcb_io_opt_t *op, const struct lcb_create_io_ops_st *options);
 
 /**
- * Destory io ops instance.
+ * Destroy the plugin handle created by lcb_create_io_ops()
  * @param op ops structure
  * @return LCB_SUCCESS on success
  * @uncommitted
