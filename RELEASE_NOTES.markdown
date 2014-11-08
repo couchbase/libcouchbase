@@ -2,6 +2,19 @@
 
 ## .NEXT
 
+* Detect disconnected pooled sockets
+  This allows the connection pool to detect dead sockets which were closed
+  by a server when they were idle. Sometimes servers will close connections
+  to open idle sockets to save resources, or because of bugs in their
+  implementations.
+  This will fix some issues experienced with views where queries would
+  randomly fail with `LCB_NETWORK_ERROR` or `LCB_ESOCKSHUTDOWN`, by first
+  checking if the socket is alive before returning it back to the library's
+  core.
+  Note that the `libuv` plugin does not implement this functionality yet.
+  * Priority: Critical
+  * Issues: [CCBC-546](http://couchbase.com/issues/browse/CCBC-546)
+
 * Fix _pillowfight_ `--min-size` bug
   This fixes a bug where pillowfight would sometimes compare the `min-size`
   option to an uninitialized `max-size` option and round it down to that
