@@ -344,6 +344,30 @@ sel_destroy_iops(struct lcb_io_opt_st *iops)
     free(iops);
 }
 
+static void
+procs2_sel_callback(int version, lcb_loop_procs *loop_procs,
+    lcb_timer_procs *timer_procs, lcb_bsd_procs *bsd_procs,
+    lcb_ev_procs *ev_procs, lcb_completion_procs *completion_procs,
+    lcb_iomodel_t *iomodel)
+{
+    ev_procs->create = sel_event_new;
+    ev_procs->destroy = sel_event_free;
+    ev_procs->watch = sel_event_update;
+    ev_procs->cancel = sel_event_cancel;
+
+    timer_procs->create = sel_timer_new;
+    timer_procs->destroy = sel_timer_free;
+    timer_procs->schedule = sel_timer_schedule;
+    timer_procs->cancel = sel_timer_cancel;
+
+    loop_procs->start = sel_run_loop;
+    loop_procs->stop = sel_stop_loop;
+
+    *iomodel = LCB_IOMODEL_EVENT;
+    wire_lcb_bsd_impl2(bsd_procs, version);
+    (void)completion_procs;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_create_select_io_opts(int version, lcb_io_opt_t *io, void *arg)
@@ -365,27 +389,15 @@ lcb_create_select_io_opts(int version, lcb_io_opt_t *io, void *arg)
     lcb_list_init(&cookie->timers);
 
     /* setup io iops! */
-    ret->version = 0;
+    ret->version = 2;
     ret->dlhandle = NULL;
     ret->destructor = sel_destroy_iops;
+
     /* consider that struct isn't allocated by the library,
      * `need_cleanup' flag might be set in lcb_create() */
-    ret->v.v0.need_cleanup = 0;
-    ret->v.v0.delete_event = sel_event_cancel;
-    ret->v.v0.destroy_event = sel_event_free;
-    ret->v.v0.create_event = sel_event_new;
-    ret->v.v0.update_event = sel_event_update;
-
-    ret->v.v0.delete_timer = sel_timer_cancel;
-    ret->v.v0.destroy_timer = sel_timer_free;
-    ret->v.v0.create_timer = sel_timer_new;
-    ret->v.v0.update_timer = sel_timer_schedule;
-
-    ret->v.v0.run_event_loop = sel_run_loop;
-    ret->v.v0.stop_event_loop = sel_stop_loop;
-    ret->v.v0.cookie = cookie;
-
-    wire_lcb_bsd_impl(ret);
+    ret->v.v2.need_cleanup = 0;
+    ret->v.v2.get_procs = procs2_sel_callback;
+    ret->v.v2.cookie = cookie;
 
     *io = ret;
     (void)arg;

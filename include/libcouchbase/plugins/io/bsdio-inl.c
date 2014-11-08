@@ -22,8 +22,8 @@
  * plugin instance.
  */
 
-static void
-wire_lcb_bsd_impl(lcb_io_opt_t io);
+static void wire_lcb_bsd_impl(lcb_io_opt_t io);
+static void wire_lcb_bsd_impl2(lcb_bsd_procs*,int);
 
 #ifdef _WIN32
 #include "wsaerr-inl.c"
@@ -237,4 +237,23 @@ wire_lcb_bsd_impl(lcb_io_opt_t io)
     io->v.v0.socket = socket_impl;
     io->v.v0.connect = connect_impl;
     io->v.v0.close = close_impl;
+
+    /* Avoid annoying 'unused' warnings */
+    if (0) { wire_lcb_bsd_impl2(NULL,0); }
+}
+
+/** For plugins which use v2 or higher */
+static void
+wire_lcb_bsd_impl2(lcb_bsd_procs *procs, int version)
+{
+    procs->recv = recv_impl;
+    procs->recvv = recvv_impl;
+    procs->send = send_impl;
+    procs->sendv = sendv_impl;
+    procs->socket0 = socket_impl;
+    procs->connect0 = connect_impl;
+    procs->close = close_impl;
+
+    if (0) { wire_lcb_bsd_impl(NULL); }
+    (void)version;
 }
