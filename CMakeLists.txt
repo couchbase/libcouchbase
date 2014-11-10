@@ -62,6 +62,11 @@ ELSE()
     ENDIF("${isSystemDir}" STREQUAL "-1")
 ENDIF()
 
+# If building from a configured autotools tree, bail.
+IF(EXISTS ${CMAKE_SOURCE_DIR}/src/config.h)
+    MESSAGE(FATAL_ERROR "config.h found in src/. This will break the CMake build. Remove it manually then rerun")
+ENDIF()
+
 SET(LCB_GENSRCDIR ${CMAKE_BINARY_DIR}/generated)
 INCLUDE_DIRECTORIES(${LCB_GENSRCDIR})
 
