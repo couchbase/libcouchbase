@@ -666,7 +666,7 @@ typedef lcb_RESPBASE lcb_RESPREMOVE;
  *
  * @code{.c}
  * lcb_CMDREMOVE cmd = { 0 };
- * LCB_CMD_SET_KEY(cmd, "deleteme", strlen("deleteme"));
+ * LCB_CMD_SET_KEY(&cmd, "deleteme", strlen("deleteme"));
  * lcb_sched_enter(instance);
  * lcb_remove3(instance, cookie, &cmd);
  * lcb_sched_leave(instance);
