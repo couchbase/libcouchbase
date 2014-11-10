@@ -127,6 +127,7 @@ print $ofp "if ENABLE_SSL\n";
 add_target_with_sources("liblcbssl", "src/ssl");
 print $ofp "endif\n";
 
+print $ofp "if ENABLE_SNAPPY\n";
 print $ofp "if BUILD_STATIC_SNAPPY\n";
 add_target_with_sources("liblcbsnappy", "contrib/snappy");
 print $ofp "else\n";
@@ -134,6 +135,7 @@ add_target_with_sources("liblcbsnappy", "config/dummy-c.c");
 print $ofp "endif\n";
 print $ofp "libcouchbase_la_DEPENDENCIES += liblcbsnappy.la\n";
 print $ofp "libcouchbase_la_LIBADD += liblcbsnappy.la\n";
+print $ofp "endif\n";
 
 # Find the basic test stuff
 
