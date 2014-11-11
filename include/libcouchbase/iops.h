@@ -32,8 +32,8 @@
  */
 
 /**
- * @ingroup LCBIO LCB_PUBAPI
- * @defgroup LCBIO_IOPS I/O Operations API
+ * @ingroup lcbio lcb-public-api
+ * @defgroup lcb-io-plugin-api I/O Operations API
  * @details
  *
  * I/O Integration comes in two flavors:
@@ -61,7 +61,7 @@
  * has been completed.
  *
  *
- * @addtogroup LCBIO_IOPS
+ * @addtogroup lcb-io-plugin-api
  * @{
  */
 

@@ -31,8 +31,8 @@ extern "C" {
  */
 
 /**
- * @ingroup LCBIO
- * @defgroup LCBIO_Ctx Reading/Writing Routines
+ * @ingroup lcbio
+ * @defgroup lcbio-ctx Reading/Writing Routines
  *
  * @details
  *
@@ -92,7 +92,7 @@ extern "C" {
  * current iteration, the lcbio_ctx_schedule() function should be called.
  *
  *
- * @addtogroup LCBIO_Ctx
+ * @addtogroup lcbio-ctx
  * @{ */
 
 typedef struct lcbio_CTX *lcbio_pCTX;

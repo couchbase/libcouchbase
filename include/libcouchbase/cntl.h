@@ -36,8 +36,8 @@ extern "C" {
 
 
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup LCB_CNTL Client Configuration
+ * @ingroup lcb-public-api
+ * @defgroup lcb-cntl-settings Client Configuration
  * @brief Adjust tunables for the client
  * @details
  *
@@ -73,7 +73,7 @@ extern "C" {
  * pointer types depending on whether the `mode` is retrieval or storage.
  *
  *
- * @section LCB_TIMEOUTS Timeout Settings
+ * @section lcb-timeout-info Timeout Settings
  *
  * Timeout settings control how long the library will wait for a certain event
  * before proceeding to the next course of action (which may either be to try
@@ -101,7 +101,7 @@ extern "C" {
  */
 
 /**
- * @addtogroup LCB_CNTL
+ * @addtogroup lcb-cntl-settings
  * @{
  */
 
@@ -133,7 +133,7 @@ extern "C" {
  *
  * @cntl_arg_both{lcbU32*}
  * @committed
- * @see LCB_TIMEOUTS
+ * @see lcb-timeout-info
  */
 #define LCB_CNTL_OP_TIMEOUT             0x00
 
@@ -219,7 +219,7 @@ typedef struct lcb_cntl_vbinfo_st {
 
 /**
  * @brief Default timeout for lcb_durability_poll()
- * @ingroup LCB_TIMEOUTS
+ * @ingroup lcb-timeout-info
  *
  * This is the time the client will
  * spend sending repeated probes to a given key's vBucket masters and replicas

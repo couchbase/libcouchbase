@@ -103,7 +103,7 @@ lcbio__load_socknames(lcbio_SOCKET *sock);
 
 
 /**
- * @addtogroup LCBIO
+ * @addtogroup lcbio
  * @{
  *
  * @name Pending Requests

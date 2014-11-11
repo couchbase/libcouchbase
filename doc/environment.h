@@ -1,5 +1,5 @@
 /**
- * @page LCB_ENVVARS_PAGE Environment Variables
+ * @page @lcb-env-vars-page Environment Variables
  *
  * @brief Environment variables controlling the behavior of the library
  *
@@ -13,7 +13,7 @@
  * hidden from the normal API.
  *
  *
- * @section LCB_ENVVARS Environment Variables
+ * @section lcb-env-vars Environment Variables
  *
  * @subsection LCB_IOPS_NAME
  * Specify the name of the backend to load. This can be one of the built-in

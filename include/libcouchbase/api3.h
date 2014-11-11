@@ -26,7 +26,7 @@ extern "C" {
 /**@file*/
 
 /**
- * @defgroup lcb_pubapi3 Experimental V3 API
+ * @defgroup lcb-public-api3 Experimental V3 API
  *
  * @brief Preview APIs for performing commands
  *
@@ -36,7 +36,7 @@ extern "C" {
  * to be volatile, however you are encouraged to try them out and provide
  * feedback on them.
  *
- * @addtogroup lcb_pubapi3
+ * @addtogroup lcb-public-api3
  * @{
  */
 

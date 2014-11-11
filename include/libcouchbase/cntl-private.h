@@ -19,7 +19,7 @@
 
 /**
  * @internal
- * @addtogroup LCB_CNTL
+ * @addtogroup lcb-cntl-settings
  * @{
  */
 

@@ -63,8 +63,8 @@ typedef lcb_U32 lcb_USECS;
  ******************************************************************************/
 
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup lcb_initialization Basic Library Routines
+ * @ingroup lcb-public-api
+ * @defgroup lcb-init Basic Library Routines
  *
  * @details
  *
@@ -214,7 +214,7 @@ typedef lcb_U32 lcb_USECS;
  * default behavior, use `bootstrap_on=all`
  *
  *
- * @addtogroup lcb_initialization
+ * @addtogroup lcb-init
  * @{
  */
 
@@ -247,7 +247,7 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
 
 /**
  * @brief Structure for lcb_create().
- * @see lcb_initialization
+ * @see lcb-init
  */
 struct lcb_create_st3 {
     const char *connstr; /**< Connection string */
@@ -716,8 +716,8 @@ lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t op);
      lcb_SIZE nhashkey; /**<@private*/
 
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup LCB_KVAPI Key-Value API
+ * @ingroup lcb-public-api
+ * @defgroup lcb-kv-api Key-Value API
  * @brief Operate on one or more key values
  * @details
  *
@@ -763,14 +763,14 @@ lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t op);
  ******************************************************************************/
 
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_GET Get items from the cluster
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-get Get items from the cluster
  * @brief
  * Get one or more keys from the cluster. Included in these functions are
  * means by which to temporarily lock access to an item, modify its expiration,
  * and retrieve an item from a replica.
  *
- * @addtogroup LCB_GET
+ * @addtogroup lcb-get
  * @{
  */
 
@@ -946,8 +946,8 @@ lcb_error_t lcb_get(lcb_t instance,
  ******************************************************************************/
 
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_GET_REPLICA Get items from replica
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-get-replica Get items from replica
  * @brief Get items from replica. This is like lcb_get() but is useful when
  * an item from the master cannot be retrieved.
  *
@@ -1002,7 +1002,7 @@ lcb_error_t lcb_get(lcb_t instance,
  * lcb_get_replica(instance, NULL, 1, commands);
  * @endcode
  *
- * @addtogroup LCB_GET_REPLICA
+ * @addtogroup lcb-get-replica
  * @{
  */
 
@@ -1086,10 +1086,10 @@ lcb_error_t lcb_get_replica(lcb_t instance,
  ******************************************************************************
  ******************************************************************************/
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_UNLOCK Unlocking items.
- * @brief See @ref LCB_GET
- * @addtogroup LCB_UNLOCK
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-unlock Unlocking items.
+ * @brief See @ref lcb-get
+ * @addtogroup lcb-unlock
  * @{
  */
 
@@ -1186,11 +1186,11 @@ lcb_error_t lcb_unlock(lcb_t instance,
  ******************************************************************************
  ******************************************************************************/
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_STORE Storing items
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-store Storing items
  * @brief Mutate an item within the cluster. Here you can create a new item,
  * replace an existing item, and append or prepend to an existing value
- * @addtogroup LCB_STORE
+ * @addtogroup lcb-store
  * @{
  */
 
@@ -1340,11 +1340,11 @@ lcb_error_t lcb_store(lcb_t instance,
  ******************************************************************************
  ******************************************************************************/
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_ARITH Arithmetic/Counter operations
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-arithmetic Arithmetic/Counter operations
  * @brief Atomic counter operations. Increment or decrement a numerical item
  * within the cluster.
- * @addtogroup LCB_ARITH
+ * @addtogroup lcb-arithmetic
  * @{
  */
 
@@ -1475,11 +1475,11 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
  ******************************************************************************
  ******************************************************************************/
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_OBSERVE Inspect item's Replication and Persistence
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-observe Inspect item's Replication and Persistence
  * @brief Determine if an item exists and if it has been replicated and persisted
  * to various nodes
- * @addtogroup LCB_OBSERVE
+ * @addtogroup lcb-observe
  * @{
  */
 typedef enum {
@@ -1607,10 +1607,10 @@ lcb_error_t lcb_observe(lcb_t instance,
  ******************************************************************************/
 
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_REMOVE Remove items from the cluster
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-remove Remove items from the cluster
  * @brief Delete items from the cluster
- * @addtogroup LCB_REMOVE
+ * @addtogroup lcb-remove
  * @{
  */
 typedef struct {
@@ -1695,11 +1695,11 @@ lcb_error_t lcb_remove(lcb_t instance,
  ******************************************************************************
  ******************************************************************************/
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_TOUCH Modify an item's expiration time
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-touch Modify an item's expiration time
  * @brief Modify an item's expiration time, keeping it alive without modifying
  * it
- * @addtogroup LCB_TOUCH
+ * @addtogroup lcb-touch
  * @{
  */
 typedef lcb_get_cmd_t lcb_touch_cmd_t;
@@ -1771,8 +1771,8 @@ lcb_error_t lcb_touch(lcb_t instance,
  ******************************************************************************/
 
 /**
- * @ingroup LCB_KVAPI
- * @defgroup LCB_ENDURE Ensure a key is replicated to a set of nodes
+ * @ingroup lcb-kv-api
+ * @defgroup lcb-durability Ensure a key is replicated to a set of nodes
  *
  * The lcb_durability_poll() is used to wait asynchronously until the item
  * have been persisted and/or replicated to at least the number of nodes
@@ -1825,7 +1825,7 @@ lcb_error_t lcb_touch(lcb_t instance,
  * number of nodes active in the cluster and the number of replicas the cluster
  * is configured with.
  *
- * @addtogroup LCB_ENDURE
+ * @addtogroup lcb-durability
  * @{
  */
 
@@ -2066,9 +2066,9 @@ lcb_durability_callback lcb_set_durability_callback(lcb_t,
  ******************************************************************************
  ******************************************************************************/
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup LCB_STATS Retrieve statistics from the cluster
- * @addtogroup LCB_STATS
+ * @ingroup lcb-public-api
+ * @defgroup lcb-stats Retrieve statistics from the cluster
+ * @addtogroup lcb-stats
  * @{
  */
 typedef struct {
@@ -2172,9 +2172,9 @@ lcb_error_t lcb_server_stats(lcb_t instance,
 /**@}*/
 
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup LCB_MEMD_MISC Miscellaneous memcached commands
- * @addtogroup LCB_MEMD_MISC
+ * @ingroup lcb-public-api
+ * @defgroup lcb-memcached-misc Miscellaneous memcached commands
+ * @addtogroup lcb-memcached-misc
  * @{
  */
 
@@ -2412,12 +2412,12 @@ lcb_flush_callback lcb_set_flush_callback(lcb_t, lcb_flush_callback);
  ******************************************************************************
  ******************************************************************************/
 /**
- * @ingroup LCB_PUBAPI
+ * @ingroup lcb-public-api
  *
- * @defgroup LCB_HTTP HTTP Operations
+ * @defgroup lcb-http HTTP Operations
  * @brief Schedule HTTP requests to the server. This includes management
  * and view requests
- * @addtogroup LCB_HTTP
+ * @addtogroup lcb-http
  * @{
  */
 
@@ -2687,14 +2687,14 @@ void lcb_cancel_http_request(lcb_t instance,
 /**@}*/
 
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup LCBT_INFO Retrieve status information from an lcb_t
+ * @ingroup lcb-public-api
+ * @defgroup lcb-instance-status Retrieve status information from an lcb_t
  * @brief These functions return status information about the handle, the current
  * connection, and the number of nodes found within the cluster.
  *
  * @see lcb_cntl() for more functions to retrieve status info
  *
- * @addtogroup LCBT_INFO
+ * @addtogroup lcb-instance-status
  * @{
  */
 
@@ -2926,7 +2926,7 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
  * subject to change.
  *
  * @see lcb_cntl()
- * @see LCB_CNTL
+ * @see lcb-cntl-settings
  */
 LIBCOUCHBASE_API
 lcb_error_t
@@ -2967,8 +2967,8 @@ lcb_cntl_exists(int ctl);
 /**@}*/ /* lcbt_info */
 
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup LCB_TIMINGS Instrument and inspect times for operations
+ * @ingroup lcb-public-api
+ * @defgroup lcb-timings Instrument and inspect times for operations
  * @brief Determine how long operations are taking to be completed
  *
  * libcouchbase provides a simple form of per-command timings you may use
@@ -3035,7 +3035,7 @@ lcb_cntl_exists(int ctl);
  * lcb_disable_timings(instance);
  * @endcode
  *
- * @addtogroup LCB_TIMINGS
+ * @addtogroup lcb-timings
  * @{
  */
 
@@ -3116,13 +3116,13 @@ lcb_error_t lcb_get_timings(lcb_t instance,
 /**@}*/
 
 /**
-* @ingroup LCB_PUBAPI
-* @defgroup LCB_BUILDINFO Build and version information for the library
+* @ingroup lcb-public-api
+* @defgroup lcb-build-info Build and version information for the library
 * These functions and macros may be used to conditionally compile features
 * depending on the version of the library being used. They may also be used
 * to employ various features at runtime and to retrieve the version for
 * informational purposes.
-* @addtogroup LCB_BUILDINFO
+* @addtogroup lcb-build-info
 * @{
 */
 

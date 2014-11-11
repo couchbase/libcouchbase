@@ -22,12 +22,12 @@ extern "C" {
 #endif
 
 /**
- * @ingroup LCB_PUBAPI
- * @defgroup LCB_PKTFWD Raw packet forwarding and dispatch routines
+ * @ingroup lcb-public-api
+ * @defgroup lcb-pktfwd Raw packet forwarding and dispatch routines
  * @brief These functions perform packet forwarding functions to send and
  * receive raw packets
  *
- * @addtogroup LCB_PKTFWD
+ * @addtogroup lcb-pktfwd
  * @{
  */
 
