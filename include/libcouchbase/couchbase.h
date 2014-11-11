@@ -2886,33 +2886,47 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
  * line or higher level language to allow the setting of specific key-value
  * pairs.
  *
- * Unless otherwise specified, the string value for each option should be
- * the numeric representation of the value passed to the actual lcb_cntl()
- * function, parseable by the sscanf() function or equivalent.
+ * The format for the value is dependent on the option passed, the following
+ * value types exist:
  *
- * Boolean values may be specified as either `true` or `false`.
+ * - **Timeout**. A _timeout_ value can either be specified as fractional
+ *   seconds (`"1.5"` for 1.5 seconds), or in microseconds (`"1500000"`).
+ * - **Number**. This is any valid numerical value. This may be signed or
+ *   unsigned depending on the setting.
+ * - **Boolean**. This specifies a boolean. A true value is either a positive
+ *   numeric value (i.e. `"1"`) or the string `"true"`. A false value
+ *   is a zero (i.e. `"0"`) or the string `"false"`.
+ * - **Float**. This is like a _Number_, but also allows fractional specification,
+ *   e.g. `"2.4"`.
  *
- * * `operation_timeout`. See @ref LCB_CNTL_OP_TIMEOUT. Pass a numeric string
- *   representing the timeout in microseconds
- * * `views_timeout`. See @ref LCB_CNTL_VIEW_TIMEOUT
- * * `durability_timeout`. See @ref LCB_CNTL_DURABILITY_TIMEOUT
- * * `durability_interval`. See @ref LCB_CNTL_DURABILITY_INTERVAL
- * * `http_timeout`. See @ref LCB_CNTL_HTTP_TIMEOUT.
- * * `randomize_nodes`. See @ref LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS. Accepts a
- *   _boolean_.
- * * `sasl_mech_force`. See @ref LCB_CNTL_FORCE_SASL_MECH
- * * `error_thresh_count`. See @ref LCB_CNTL_CONFERRTHRESH
- * * `error_thresh_delay`. See @ref LCB_CNTL_CONFDELAY_THRESH
- * * `config_total_timeout`. See @ref LCB_CNTL_CONFIGURATION_TIMEOUT
- * * `config_node_timeout`. See @ref LCB_CNTL_CONFIG_NODE_TIMEOUT
- * * `compression`. Can be set to `off`, `on`, `force, or `inflate_only`.
- *   The latter
- *   will only enable inbound compression but will not compress outgoing
- *   data. See @ref LCB_CNTL_COMPRESSION_OPTS
+ * | Code | Name | Type
+ * |------|------|-----
+ * |@ref LCB_CNTL_OP_TIMEOUT                | `"operation_timeout"` | Timeout |
+ * |@ref LCB_CNTL_VIEW_TIMEOUT              | `"view_timeout"`      | Timeout |
+ * |@ref LCB_CNTL_DURABILITY_TIMEOUT        | `"durability_timeout"` | Timeout |
+ * |@ref LCB_CNTL_DURABILITY_INTERVAL       | `"durability_interval"`| Timeout |
+ * |@ref LCB_CNTL_HTTP_TIMEOUT              | `"http_timeout"`      | Timeout |
+ * |@ref LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS | `"randomize_nodes"`   | Boolean|
+ * |@ref LCB_CNTL_CONFERRTHRESH             | `"error_thresh_count"`| Number (Positive)|
+ * |@ref LCB_CNTL_CONFDELAY_THRESH          |`"error_thresh_delay"` | Timeout |
+ * |@ref LCB_CNTL_CONFIGURATION_TIMEOUT     | `"config_total_timeout"`|Timeout|
+ * |@ref LCB_CNTL_CONFIG_NODE_TIMEOUT       | `"config_node_timeout"` | Timeout |
+ * |@ref LCB_CNTL_CONFIGCACHE               | `"config_cache"`      | Path |
+ * |@ref LCB_CNTL_DETAILED_ERRCODES         | `"detailed_errcodes"` | Boolean |
+ * |@ref LCB_CNTL_HTCONFIG_URLTYPE          | `"http_urlmode"`      | Number (values are the constant values) |
+ * |@ref LCB_CNTL_RETRY_BACKOFF             | `"retry_backoff"`     | Float |
+ * |@ref LCB_CNTL_HTTP_POOLSIZE             | `"http_poolsize"`     | Number |
+ * |@ref LCB_CNTL_VBGUESS_PERSIST           | `"vbguess_persist"`   | Boolean |
  *
- * @committed
+ *
+ * @committed - Note, the actual API call is considered committed and will
+ * not disappear, however the existence of the various string settings are
+ * dependendent on the actual settings they map to. It is recommended that
+ * applications use the numerical lcb_cntl() as the string names are
+ * subject to change.
  *
  * @see lcb_cntl()
+ * @see LCB_CNTL
  */
 LIBCOUCHBASE_API
 lcb_error_t

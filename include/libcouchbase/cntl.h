@@ -53,6 +53,15 @@ extern "C" {
  *
  * will retrieve the setting of `LCB_CNTL_FOO` into `something`.
  *
+ * You may also use the lcb_cntl_string() function, which operates on
+ * strings and can set various configuration properties fairly simply. Note
+ * however that string names are subject to change, and not all configuration
+ * directives have a string alias:
+ *
+ * @code{.c}
+ * rv = lcb_cntl_string("operation_timeout", "5.0");
+ * @endcode
+ *
  * Of the commands listed below, some will be read-only (i.e. you may only
  * _read_ the setting using the @ref LCB_CNTL_GET `mode`), some will be write-only
  * (i.e. you may only _modify_ the setting, and use @ref LCB_CNTL_SET for the `mode`)
@@ -64,16 +73,8 @@ extern "C" {
  * pointer types depending on whether the `mode` is retrieval or storage.
  *
  *
- * ### Configuration Stability Attributes
- *
- * Configuration parameters are still subject to the API classification used
- * in @ref lcb_attributes. For _deprecated_ control commands, lcb_cntl() will
- * either perform the operation, _or_ consider it a no-op, _or_ return an error
- * code.
- */
-
-/**
  * @section LCB_TIMEOUTS Timeout Settings
+ *
  * Timeout settings control how long the library will wait for a certain event
  * before proceeding to the next course of action (which may either be to try
  * a different operation or fail the current one, depending on the specific
@@ -90,6 +91,13 @@ extern "C" {
  *
  * Further behavior is dependent on the event loop plugin itself and how
  * it schedules timeouts.
+ *
+ *
+ * @par Configuration Stability Attributes
+ * Configuration parameters are still subject to the API classification used
+ * in @ref lcb_attributes. For _deprecated_ control commands, lcb_cntl() will
+ * either perform the operation, _or_ consider it a no-op, _or_ return an error
+ * code.
  */
 
 /**
