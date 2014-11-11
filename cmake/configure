@@ -79,7 +79,9 @@ my @HELP_DESCRIPTIONS = (
     [ "disable-cxx", "",
         "Disable C++ targets",
         "%d", \(my $NO_CXX = 0) ],
-
+    [ "disable-couchbasemock", "",
+        "Don't run tests with Mock",
+        "%d", \(my $NO_MOCK = 0) ],
     [ "enable-maintainer-mode", "",
         "Maintainer mode. Everything is strict",
         "%d", \(my $MAINTAINER_MODE = 0)],
@@ -286,6 +288,9 @@ if ($LCB_USE_ASAN) {
 }
 if ($LCB_USE_COVERAGE) {
     push @CM_OPTIONS, "-DLCB_USE_COVERAGE=1";
+}
+if ($NO_MOCK) {
+    push @CM_OPTIONS, "-DLCB_NO_MOCK=1";
 }
 
 if ($CMAKE_HOST) {

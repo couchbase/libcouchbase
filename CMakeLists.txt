@@ -46,6 +46,7 @@ OPTION(LCB_USE_COVERAGE "Build with code coverage support" OFF)
 OPTION(LCB_STATIC_SNAPPY "Use the bundled libsnappy. Do not link with system snappy" ${WIN32})
 OPTION(LCB_USE_ARCHLIBDIR "Use architecture-prefixed library installation directory, if possible" OFF)
 OPTION(LCB_BUILD_EXAMPLES "Build example applications" OFF)
+OPTION(LCB_NO_MOCK "Don't run tests which depend on the mock" OFF)
 
 ### END CONFIGURABLES ###
 IF(MSVC)
