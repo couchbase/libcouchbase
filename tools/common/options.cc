@@ -345,6 +345,9 @@ ConnParams::doCtls(lcb_t instance)
         if (o_saslmech.passed()) {
             doPctl<const char *>(instance,LCB_CNTL_FORCE_SASL_MECH, o_saslmech.result().c_str());
         }
+
+        // Set the detailed error codes option
+        doSctl<int>(instance, LCB_CNTL_DETAILED_ERRCODES, 1);
     } catch (lcb_error_t &err) {
         return err;
     }
