@@ -1025,6 +1025,7 @@ static const char* optionsOrder[] = {
         "bucket-flush",
         "connstr",
         "write-config",
+        "strerror",
         NULL
 };
 
@@ -1041,6 +1042,28 @@ protected:
             fprintf(stderr, "   %-20s", *cur);
             fprintf(stderr, "%s\n", handler->description());
         }
+    }
+};
+
+class StrErrorHandler : public Handler {
+public:
+    StrErrorHandler() : Handler("strerror") {}
+    HANDLER_DESCRIPTION("Decode library error code")
+    HANDLER_USAGE("HEX OR DECIMAL CODE")
+protected:
+    void handleOptions() { }
+    void run() {
+        std::string nn = getRequiredArg();
+        // Try to parse it as a hexadecimal number
+        unsigned errcode;
+        int rv = sscanf(nn.c_str(), "0x%x", &errcode);
+        if (rv != 1) {
+            rv = sscanf(nn.c_str(), "%u", &errcode);
+            if (rv != 1) {
+                throw ("Need decimal or hex code!");
+            }
+        }
+        fprintf(stderr, "0x%x: %s\n", errcode, lcb_strerror(NULL, (lcb_error_t)errcode));
     }
 };
 
@@ -1069,6 +1092,7 @@ setupHandlers()
     handlers_s["view"] = new ViewsHandler();
     handlers_s["connstr"] = new ConnstrHandler();
     handlers_s["write-config"] = new WriteConfigHandler();
+    handlers_s["strerror"] = new StrErrorHandler();
 
 
 
