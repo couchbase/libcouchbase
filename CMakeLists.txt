@@ -208,7 +208,9 @@ ELSE()
     SET(_lcb_linkspec SHARED)
 ENDIF()
 
-
+IF(NOT WIN32)
+    INCLUDE(cmake/Modules/ConfigureDtrace.cmake)
+ENDIF()
 SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:couchbase_select>
     $<TARGET_OBJECTS:couchbase_utils>
@@ -220,18 +222,32 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:rdb>
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
+    ${LCB_DTRACE_OBJECT}
     ${lcb_ssl_objs})
-
 
 ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_OBJS})
 ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${CMAKE_BINARY_DIR}/dllversion.rc)
+# This is done to be ABI-compatible with Autotools. On OSX, autotools generates
+# a library with a Compatibility and Current versions of 3.x despite our library
+# actually being versioned at 2.x. To make things worse, autotools also actually
+# provided a _symlink_ of libcouchbase.2.dylib. CMake cannot do this manually
+# and thus we disable the SOVERSION appending when on OS X, and revert to
+# inserting the version information by hand.
+IF(NOT APPLE)
+    SET_TARGET_PROPERTIES(couchbase PROPERTIES
+        SOVERSION "${LCB_SONAME_MAJOR}" VERSION "${LCB_SONAME_FULL}")
+ELSE()
+    SET_TARGET_PROPERTIES(couchbase PROPERTIES
+        LINK_FLAGS "-compatibility_version ${LCB_SONAME_MAJOR} -current_version ${LCB_SONAME_FULL}"
+        OUTPUT_NAME couchbase.2)
+    ADD_CUSTOM_COMMAND(TARGET couchbase POST_BUILD
+        COMMAND rm -f libcouchbase.dylib
+        COMMAND ln libcouchbase.2.dylib libcouchbase.dylib
+        WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    INSTALL(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libcouchbase.dylib
+        DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ENDIF()
 
-SET_TARGET_PROPERTIES(couchbase
-    PROPERTIES
-        PREFIX "lib"
-        IMPORT_PREFIX "lib"
-        VERSION "2.0.19"
-        SOVERSION "2")
 
 IF(NOT LCB_NO_SNAPPY)
     IF(LCB_STATIC_SNAPPY)
@@ -297,7 +313,6 @@ ENDIF()
 
 ADD_SUBDIRECTORY(plugins/io/select)
 ADD_SUBDIRECTORY(plugins/io/iocp)
-
 INSTALL(TARGETS couchbase
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
