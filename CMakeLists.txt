@@ -277,11 +277,11 @@ SET(LCB_LINK_DEPS
 TARGET_LINK_LIBRARIES(couchbase ${LCB_LINK_DEPS})
 TARGET_LINK_LIBRARIES(couchbaseS ${LCB_LINK_DEPS})
 
+ENABLE_TESTING()
 IF(NOT LCB_NO_TESTS)
-    ENABLE_TESTING()
     ADD_SUBDIRECTORY(tests tests)
 ELSE()
-    ADD_CUSTOM_TARGET(test)
+    ADD_TEST(NAME dummytest COMMAND echo "No Tests!")
 ENDIF(NOT LCB_NO_TESTS)
 
 IF(NOT LCB_NO_TOOLS)
@@ -342,6 +342,8 @@ ADD_CUSTOM_TARGET(dist
     COMMAND rm -rf "${_lcb_tarname}"
     COMMAND mkdir "${_lcb_tarname}"
     COMMAND tar -cf - -C ${CMAKE_SOURCE_DIR} -T ${_lcb_manifest} | tar xf - -C "${_lcb_tarname}"
+    COMMAND cp ${CMAKE_SOURCE_DIR}/VERSION "${_lcb_tarname}"
+    COMMAND cp ${CMAKE_SOURCE_DIR}/MANIFEST "${_lcb_tarname}"
     COMMAND tar -czf "${_lcb_tarname}.tar.gz" "${_lcb_tarname}"
     COMMAND rm -rf "${_lcb_tarname}"
     DEPENDS file_manifest)
