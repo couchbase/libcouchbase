@@ -20,7 +20,9 @@ dist-deb: dist
 	(cd $(DEB_WORKSPACE); tar zxvf $(PACKAGE)_$(DEB_VERSION).orig.tar.gz)
 	(\
 		cd $(DEB_DIR); \
-		dch --no-auto-nmu -b \
+		dch \
+		--package=libcouchbase \
+		--create \
 		--newversion="$(DEB_VERSION)" \
 		"Release package for $(DEB_VERSION)" && \
 		dpkg-buildpackage -rfakeroot ${DEB_FLAGS}\

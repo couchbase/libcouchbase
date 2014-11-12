@@ -44,3 +44,6 @@ override_dh_auto_configure:
 override_dh_auto_test:
 	$(DH_AT_CMD)
 	dh_auto_test $@
+
+override_dh_installchangelogs:
+	dh_installchangelogs -plibcouchbase2-core --keep RELEASE_NOTES.markdown
