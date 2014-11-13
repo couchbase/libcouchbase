@@ -85,7 +85,7 @@
 
 #define TRACE_OBSERVE_BEGIN(req, body) \
     TRACE(LIBCOUCHBASE_OBSERVE_BEGIN(\
-        (req)->request.opaque, "", (req)->request.opcode, body, \
+        (req)->request.opaque, 0, (req)->request.opcode, body, \
         ntohl( (req)->request.bodylen) ))
 
 #define TRACE_OBSERVE_PROGRESS(mcresp, resp) \
