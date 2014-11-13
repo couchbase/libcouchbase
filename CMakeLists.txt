@@ -222,8 +222,8 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:rdb>
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
-    ${LCB_DTRACE_OBJECT}
-    ${lcb_ssl_objs})
+    ${lcb_ssl_objs}
+    ${LCB_DTRACE_OBJECT})
 
 ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_OBJS})
 ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${CMAKE_BINARY_DIR}/dllversion.rc)

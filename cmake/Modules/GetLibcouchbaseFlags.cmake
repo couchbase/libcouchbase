@@ -26,7 +26,7 @@ LIST(APPEND LCB_GNUC_CPP_WARNINGS
     -Wno-missing-field-initializers)
 
 IF("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-    LIST(APPEND LCB_GNUC_CPP_WARNINGS -Wno-cast-align)
+    LIST(APPEND LCB_GNUC_CPP_WARNINGS -Wno-cast-align -Wno-dollar-in-identifier-extension)
 ENDIF()
 
 IF(LCB_USE_ASAN)
