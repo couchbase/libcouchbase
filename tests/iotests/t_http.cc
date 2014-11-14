@@ -273,24 +273,31 @@ static void http_callback(lcb_t, int, const lcb_RESPBASE *rb)
 }
 }
 
+static void
+makeAdminReq(lcb_CMDHTTP& cmd, std::string& bkbuf)
+{
+    memset(&cmd, 0, sizeof cmd);
+    bkbuf.assign("/pools/default/buckets/default");
+
+    cmd.type = LCB_HTTP_TYPE_MANAGEMENT;
+    cmd.method = LCB_HTTP_METHOD_GET;
+    LCB_CMD_SET_KEY(&cmd, bkbuf.c_str(), bkbuf.size());
+}
+
 // Some more basic HTTP tests for the administrative API. We use the admin
 // API since it's always available.
 TEST_F(HttpUnitTest, testAdminApi)
 {
-    using std::string;
-
     lcb_t instance;
     HandleWrap hw;
+    std::string pth;
     createConnection(hw, instance);
     lcb_install_callback3(instance, LCB_CALLBACK_HTTP, http_callback);
 
     // Make the request; this time we make it to the 'management' API
     lcb_CMDHTTP cmd = { 0 };
-    string path("/pools/default/buckets/default");
 
-    LCB_CMD_SET_KEY(&cmd, path.c_str(), path.size());
-    cmd.type = LCB_HTTP_TYPE_MANAGEMENT;
-    cmd.method = LCB_HTTP_METHOD_GET;
+    makeAdminReq(cmd, pth);
     HtResult htr;
     htr.reset();
 
@@ -340,4 +347,92 @@ TEST_F(HttpUnitTest, testAdminApi)
     ASSERT_FALSE(reqh == NULL);
     lcb_sched_leave(instance);
     lcb_cancel_http_request(instance, reqh);
+}
+
+
+extern "C" {
+static void doubleCancel_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
+{
+    const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)rb;
+    if (resp->rflags & LCB_RESP_F_FINAL) {
+        lcb_cancel_http_request(instance, resp->_htreq);
+        lcb_cancel_http_request(instance, resp->_htreq);
+    }
+}
+}
+
+TEST_F(HttpUnitTest, testDoubleCancel)
+{
+    lcb_t instance;
+    HandleWrap hw;
+    createConnection(hw, instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, doubleCancel_callback);
+
+    // Make the request; this time we make it to the 'management' API
+    lcb_CMDHTTP cmd = { 0 };
+    std::string bk;
+    makeAdminReq(cmd, bk);
+    lcb_sched_enter(instance);
+    ASSERT_EQ(LCB_SUCCESS, lcb_http3(instance, NULL, &cmd));
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+    // No crashes or errors here means we've done OK
+}
+
+
+extern "C" {
+static void cancelVerify_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
+{
+    const lcb_RESPHTTP *resp = (const lcb_RESPHTTP *)rb;
+    bool *bCancelled = (bool *)resp->cookie;
+
+    ASSERT_EQ(0, resp->rflags & LCB_RESP_F_FINAL);
+    ASSERT_FALSE(*bCancelled);
+
+    lcb_cancel_http_request(instance, resp->_htreq);
+    *bCancelled = true;
+}
+}
+// Ensure cancel actually does what it claims to do
+TEST_F(HttpUnitTest, testCancelWorks)
+{
+    lcb_t instance;
+    HandleWrap hw;
+    createConnection(hw, instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, cancelVerify_callback);
+    lcb_CMDHTTP cmd;
+    std::string ss;
+    makeAdminReq(cmd, ss);
+    // Make it chunked
+    cmd.cmdflags |= LCB_CMDHTTP_F_STREAM;
+    bool cookie = false;
+    lcb_sched_enter(instance);
+    ASSERT_EQ(LCB_SUCCESS, lcb_http3(instance, &cookie, &cmd));
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+extern "C" {
+static void noInvoke_callback(lcb_t, int, const lcb_RESPBASE*)
+{
+    EXPECT_FALSE(true) << "This callback should not be invoked!";
+}
+}
+TEST_F(HttpUnitTest, testDestroyWithActiveRequest)
+{
+    lcb_t instance;
+    // Note the one-arg form of createConnection which doesn't come with the
+    // magical HandleWrap; this is because we destroy our instance explicitly
+    // here.
+    createConnection(instance);
+
+    lcb_CMDHTTP cmd;
+    std::string ss;
+    makeAdminReq(cmd, ss);
+
+    lcb_install_callback3(instance,LCB_CALLBACK_HTTP, noInvoke_callback);
+    lcb_sched_enter(instance);
+    ASSERT_EQ(LCB_SUCCESS, lcb_http3(instance, NULL, &cmd));
+    lcb_sched_leave(instance);
+    lcb_destroy(instance);
 }

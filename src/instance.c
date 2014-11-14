@@ -496,13 +496,8 @@ void lcb_destroy(lcb_t instance)
             if (hs->items[ii] > 1) {
                 lcb_http_request_t htreq = (lcb_http_request_t)hs->items[ii];
 
-                /**
-                 * We don't want to invoke callbacks *or* remove it from our
-                 * hash table
-                 */
-                htreq->status |= LCB_HTREQ_S_CBINVOKED | LCB_HTREQ_S_HTREMOVED;
-
-                /* we should figure out a better error code for this.. */
+                /* Prevents lcb's globals from being modified during destruction */
+                htreq->status |= LCB_HTREQ_S_NOLCB;
                 lcb_http_request_finish(instance, htreq, LCB_ERROR);
             }
         }
