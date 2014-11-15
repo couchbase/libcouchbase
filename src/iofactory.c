@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 
+#define LCB_IOPS_V12_NO_DEPRECATE 1 /* For Ruby */
+
 #include "internal.h"
 #include "plugins/io/select/select_io_opts.h"
 #include <libcouchbase/plugins/io/bsdio-inl.c>

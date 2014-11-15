@@ -386,7 +386,7 @@ lcb_error_t lcb_create(lcb_t *instance,
             goto GT_DONE;
         }
         io_priv = ops;
-        io_priv->v.v0.need_cleanup = 1;
+        LCB_IOPS_BASEFLD(io_priv, need_cleanup) = 1;
     }
 
     obj->cmdq.cqdata = obj;
