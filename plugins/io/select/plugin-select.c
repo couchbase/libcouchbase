@@ -66,7 +66,7 @@ timer_cmp_asc(lcb_list_t *a, lcb_list_t *b)
 static void *
 sel_event_new(lcb_io_opt_t iops)
 {
-    sel_LOOP *io = iops->v.v0.cookie;
+    sel_LOOP *io = iops->v.v2.cookie;
     sel_EVENT *ret = calloc(1, sizeof(sel_EVENT));
     if (ret != NULL) {
         lcb_list_append(&io->events.list, &ret->list);
@@ -139,7 +139,7 @@ sel_timer_schedule(lcb_io_opt_t iops, void *timer, lcb_U32 usec, void *cb_data,
     lcb_ioE_callback handler)
 {
     sel_TIMER *tm = timer;
-    sel_LOOP *cookie = iops->v.v0.cookie;
+    sel_LOOP *cookie = iops->v.v2.cookie;
     lcb_assert(!tm->active);
     tm->exptime = gethrtime() + (usec * (hrtime_t)1000);
     tm->cb_data = cb_data;
@@ -154,7 +154,7 @@ sel_timer_schedule(lcb_io_opt_t iops, void *timer, lcb_U32 usec, void *cb_data,
 static void
 sel_stop_loop(struct lcb_io_opt_st *iops)
 {
-    sel_LOOP *io = iops->v.v0.cookie;
+    sel_LOOP *io = iops->v.v2.cookie;
     io->event_loop = 0;
 }
 
@@ -210,7 +210,7 @@ get_next_timeout(sel_LOOP *cookie, struct timeval *tmo, hrtime_t now)
 static void
 sel_run_loop(struct lcb_io_opt_st *iops)
 {
-    sel_LOOP *io = iops->v.v0.cookie;
+    sel_LOOP *io = iops->v.v2.cookie;
 
     sel_EVENT *ev;
     lcb_list_t *ii;
@@ -324,7 +324,7 @@ sel_run_loop(struct lcb_io_opt_st *iops)
 static void
 sel_destroy_iops(struct lcb_io_opt_st *iops)
 {
-    sel_LOOP *io = iops->v.v0.cookie;
+    sel_LOOP *io = iops->v.v2.cookie;
     lcb_list_t *nn, *ii;
     sel_EVENT *ev;
     sel_TIMER *tm;
@@ -332,12 +332,12 @@ sel_destroy_iops(struct lcb_io_opt_st *iops)
     assert(io->event_loop == 0);
     LCB_LIST_SAFE_FOR(ii, nn, &io->events.list) {
         ev = LCB_LIST_ITEM(ii, sel_EVENT, list);
-        iops->v.v0.destroy_event(iops, ev);
+        sel_event_free(iops, ev);
     }
     assert(LCB_LIST_IS_EMPTY(&io->events.list));
     LCB_LIST_SAFE_FOR(ii, nn, &io->timers) {
         tm = LCB_LIST_ITEM(ii, sel_TIMER, list);
-        iops->v.v0.destroy_timer(iops, tm);
+        sel_timer_free(iops, tm);
     }
     assert(LCB_LIST_IS_EMPTY(&io->timers));
     free(io);

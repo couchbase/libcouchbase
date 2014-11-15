@@ -42,7 +42,7 @@ struct lcb_iovec_st *iov, lcb_size_t niov, void *uarg,
     } else {
         w = calloc(1, sizeof(*w));
         assert(w);
-        if (!w) { iobase->v.v0.error = WSA_NOT_ENOUGH_MEMORY; return -1; }
+        if (!w) { iobase->v.v2.error = WSA_NOT_ENOUGH_MEMORY; return -1; }
 
         w->state = IOCP_WRITEBUF_ALLOCATED;
         w->ol_write.action = LCBIOCP_ACTION_WRITE;
@@ -102,7 +102,7 @@ start_connect(lcb_io_opt_t iobase, lcb_sockdata_t *sdbase,
     conn = calloc(1, sizeof(*conn));
 
     assert(conn);
-    if (conn == NULL) { iobase->v.v0.error = WSA_NOT_ENOUGH_MEMORY; return -1; }
+    if (conn == NULL) { iobase->v.v2.error = WSA_NOT_ENOUGH_MEMORY; return -1; }
 
     conn->cb = callback;
     conn->ol_conn.sd = sd;
@@ -116,7 +116,7 @@ start_connect(lcb_io_opt_t iobase, lcb_sockdata_t *sdbase,
         u_addr.in6.sin6_family = AF_INET6;
     } else {
         free(conn);
-        iobase->v.v0.error = WSAEINVAL;
+        iobase->v.v2.error = WSAEINVAL;
         return -1;
     }
 
@@ -370,7 +370,7 @@ iops_dtor(lcb_io_opt_t iobase)
         } else if (ol->action == LCBIOCP_ACTION_WRITE) {
             iocp_write_done(io, IOCP_WRITEOBJ_FROM_OVERLAPPED(ol), -1);
         } else if (ol->action == LCBIOCP_ACTION_READ) {
-            io->base.v.v0.error = WSAECONNRESET;
+            io->base.v.v2.error = WSAECONNRESET;
             sd->rdcb(&sd->sd_base, -1, sd->rdarg);
         }
         iocp_socket_decref(io, sd);

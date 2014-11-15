@@ -90,7 +90,7 @@ static int lcb_io_update_event(struct lcb_io_opt_st *iops,
                                                short which,
                                                void *cb_data))
 {
-    struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    struct libev_cookie *io_cookie = iops->v.v2.cookie;
     struct libev_event *evt = event;
     int events = EV_NONE;
 
@@ -120,7 +120,7 @@ static void lcb_io_delete_event(struct lcb_io_opt_st *iops,
                                 lcb_socket_t sock,
                                 void *event)
 {
-    struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    struct libev_cookie *io_cookie = iops->v.v2.cookie;
     struct libev_event *evt = event;
     ev_io_stop(io_cookie->loop, &evt->ev.io);
     ev_io_init(&evt->ev.io, NULL, 0, 0);
@@ -142,7 +142,7 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
                                                short which,
                                                void *cb_data))
 {
-    struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    struct libev_cookie *io_cookie = iops->v.v2.cookie;
     struct libev_event *evt = timer;
     ev_tstamp start;
     evt->data = cb_data;
@@ -157,7 +157,7 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
 static void lcb_io_delete_timer(struct lcb_io_opt_st *iops,
                                 void *event)
 {
-    struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    struct libev_cookie *io_cookie = iops->v.v2.cookie;
     struct libev_event *evt = event;
     ev_timer_stop(io_cookie->loop, &evt->ev.timer);
 }
@@ -171,7 +171,7 @@ static void lcb_io_destroy_timer(struct lcb_io_opt_st *iops,
 
 static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 {
-    struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    struct libev_cookie *io_cookie = iops->v.v2.cookie;
 #ifdef HAVE_LIBEV4
     ev_break(io_cookie->loop, EVBREAK_ONE);
 #else
@@ -181,7 +181,7 @@ static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
-    struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    struct libev_cookie *io_cookie = iops->v.v2.cookie;
     io_cookie->suspended = 0;
 #ifdef HAVE_LIBEV4
     ev_run(io_cookie->loop, 0);
@@ -193,7 +193,7 @@ static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 
 static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 {
-    struct libev_cookie *io_cookie = iops->v.v0.cookie;
+    struct libev_cookie *io_cookie = iops->v.v2.cookie;
     if (io_cookie->allocated) {
         ev_loop_destroy(io_cookie->loop);
     }

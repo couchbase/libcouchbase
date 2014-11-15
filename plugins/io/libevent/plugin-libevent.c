@@ -105,7 +105,7 @@ event_get_callback(const struct event *ev)
 
 static void *lcb_io_create_event(struct lcb_io_opt_st *iops)
 {
-    return event_new(((struct libevent_cookie *)iops->v.v0.cookie)->base,
+    return event_new(((struct libevent_cookie *)iops->v.v2.cookie)->base,
                      INVALID_SOCKET, 0, NULL, NULL);
 }
 
@@ -129,7 +129,7 @@ static int lcb_io_update_event(struct lcb_io_opt_st *iops,
         event_del(event);
     }
 
-    event_assign(event, ((struct libevent_cookie *)iops->v.v0.cookie)->base, sock, flags, handler, cb_data);
+    event_assign(event, ((struct libevent_cookie *)iops->v.v2.cookie)->base, sock, flags, handler, cb_data);
     return event_add(event, NULL);
 }
 
@@ -139,9 +139,9 @@ static void lcb_io_delete_timer(struct lcb_io_opt_st *iops,
 {
     (void)iops;
     if (event_pending(event, EV_TIMEOUT, 0) != 0 && event_del(event) == -1) {
-        iops->v.v0.error = EINVAL;
+        iops->v.v2.error = EINVAL;
     }
-    event_assign(event, ((struct libevent_cookie *)iops->v.v0.cookie)->base, -1, 0, NULL, NULL);
+    event_assign(event, ((struct libevent_cookie *)iops->v.v2.cookie)->base, -1, 0, NULL, NULL);
 }
 
 static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
@@ -164,7 +164,7 @@ static int lcb_io_update_timer(struct lcb_io_opt_st *iops,
         event_del(timer);
     }
 
-    event_assign(timer, ((struct libevent_cookie *)iops->v.v0.cookie)->base, -1, flags, handler, cb_data);
+    event_assign(timer, ((struct libevent_cookie *)iops->v.v2.cookie)->base, -1, flags, handler, cb_data);
     tmo.tv_sec = usec / 1000000;
     tmo.tv_usec = usec % 1000000;
     return event_add(timer, &tmo);
@@ -187,27 +187,27 @@ static void lcb_io_delete_event(struct lcb_io_opt_st *iops,
     (void)iops;
     (void)sock;
     if (event_del(event) == -1) {
-        iops->v.v0.error = EINVAL;
+        iops->v.v2.error = EINVAL;
     }
-    event_assign(event, ((struct libevent_cookie *)iops->v.v0.cookie)->base, -1, 0, NULL, NULL);
+    event_assign(event, ((struct libevent_cookie *)iops->v.v2.cookie)->base, -1, 0, NULL, NULL);
 }
 
 static void lcb_io_stop_event_loop(struct lcb_io_opt_st *iops)
 {
-    event_base_loopbreak(((struct libevent_cookie *)iops->v.v0.cookie)->base);
+    event_base_loopbreak(((struct libevent_cookie *)iops->v.v2.cookie)->base);
 }
 
 static void lcb_io_run_event_loop(struct lcb_io_opt_st *iops)
 {
-    event_base_loop(((struct libevent_cookie *)iops->v.v0.cookie)->base, 0);
+    event_base_loop(((struct libevent_cookie *)iops->v.v2.cookie)->base, 0);
 }
 
 static void lcb_destroy_io_opts(struct lcb_io_opt_st *iops)
 {
-    if (((struct libevent_cookie *)iops->v.v0.cookie)->allocated) {
-        event_base_free(((struct libevent_cookie *)iops->v.v0.cookie)->base);
+    if (((struct libevent_cookie *)iops->v.v2.cookie)->allocated) {
+        event_base_free(((struct libevent_cookie *)iops->v.v2.cookie)->base);
     }
-    free(iops->v.v0.cookie);
+    free(iops->v.v2.cookie);
     free(iops);
 }
 
