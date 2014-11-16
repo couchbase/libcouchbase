@@ -280,7 +280,7 @@ typedef enum {
     \
     /** Received from lcb_create() if the username does not match the bucket */ \
     X(LCB_INVALID_USERNAME, 0x26, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_FATAL, \
-      "The administrative account can no longer be used for data access") \
+      "The username must match the bucket name (or be NULL) for data access") \
     \
     X(LCB_CONFIG_CACHE_INVALID, 0x27, LCB_ERRTYPE_INPUT, \
       "The contents of the configuration cache file were invalid. Configuration " \
