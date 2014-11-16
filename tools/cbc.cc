@@ -1180,7 +1180,11 @@ int main(int argc, char **argv)
     if (cmdname.empty()) {
         if (argc < 2) {
             fprintf(stderr, "Must provide an option name\n");
-            HelpHandler().execute(argc, argv);
+            try {
+                HelpHandler().execute(argc, argv);
+            } catch (string& exc) {
+                std::cerr << exc << std::endl;
+            }
             exit(EXIT_FAILURE);
         } else {
             cmdname = argv[1];
