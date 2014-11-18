@@ -55,7 +55,7 @@ ADD_EXECUTABLE(sock-tests EXCLUDE_FROM_ALL nonio_tests.cc
     ${T_SOCK_SRC} $<TARGET_OBJECTS:ioserver>)
 
 ADD_EXECUTABLE(vbucket-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_VBTEST_SRC})
-ADD_EXECUTABLE(htparse-tests EXCLUDE_FROM_ALL nonio_tests.cc htparse/t_basic.cc ${SOURCE_ROOT}/src/lcbht/lcbht.c)
+ADD_EXECUTABLE(htparse-tests EXCLUDE_FROM_ALL nonio_tests.cc htparse/t_basic.cc)
 
 FILE(GLOB T_IO_SRC iotests/*.cc)
 IF(LCB_NO_MOCK)
