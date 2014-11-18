@@ -176,7 +176,6 @@ public:
         }
 
         binOptions = ss.str();
-
         srcroot = opt_srcdir.result();
         testdir = opt_bindir.result();
         debugger = opt_debugger.result();
@@ -201,6 +200,10 @@ public:
         // Test names:
         splitSemicolonString(opt_bins.result(), testnames);
 
+        // Set the library dir, if not set
+        if (libDir.empty()) {
+            libDir = testdir + "/../" + "lib";
+        }
         return true;
     }
 
