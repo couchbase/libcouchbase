@@ -1,6 +1,6 @@
 # Release Notes
 
-## .NEXT
+## 2.4.4 (Nov. 19 2014)
 
 * Detect disconnected pooled sockets
   This allows the connection pool to detect dead sockets which were closed
