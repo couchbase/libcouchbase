@@ -32,6 +32,8 @@ override_dh_auto_configure:
 		> debian/libcouchbase2-libev.install
 	echo "usr/lib/$(DEB_HOST_MULTIARCH)/libcouchbase.so" \
 		> debian/libcouchbase-dev.install
+	echo "usr/include/*" \
+		>> debian/libcouchbase-dev.install
 	# Generate 'cbc' files
 	echo "usr/bin/cbc*" \
 		> debian/libcouchbase2-bin.install
