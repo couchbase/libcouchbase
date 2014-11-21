@@ -61,22 +61,14 @@ Development files for the Couchbase Client & Protocol Library
 %define __lcb_cmake %cmake28
 %endif
 
-%if 0%{?__lcb_is_cmake:1}
-%define __lcb_build %{__lcb_cmake} -DLCB_NO_TESTS=1
-%else
-%define __lcb_build %configure --disable-couchbasemock --disable-tests --disable-libuv
-%endif
-
 %setup -q -n @TARREDAS@
-echo "CMAKE: $LCB_BUILDING_WITH_CMAKE"
-%{__lcb_build}
+%{__lcb_cmake} -DLCB_NO_TESTS=1 -DLCB_BUILD_LIBUV=OFF
 
 %build
 %{__make} %{_smp_mflags}
 
 %install
 %{__make} install DESTDIR="%{buildroot}" AM_INSTALL_PROGRAM_FLAGS=""
-find %{buildroot} -iname "*.la" -delete
 
 %clean
 %{__rm} -rf %{buildroot}
