@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "CBC\-PILLOWFIGHT" "1" "October 2014" "" ""
+.TH "CBC\-PILLOWFIGHT" "1" "November 2014" "" ""
 .
 .SH "NAME"
 \fBcbc\-pillowfight\fR \- Stress Test for Couchbase Client and Cluster
@@ -150,6 +150,58 @@ The path to the server\'s SSL certificate\. This is typically required for SSL c
 .TP
 \fB\-v\fR, \fB\-\-verbose\fR
 Specify more information to standard error about what the client is doing\. You may specify this option multiple times for increased output detail\.
+.
+.SH "EXAMPLES"
+Run against a bucket (\fBa_bucket\fR) on a cluster on a remote host:
+.
+.IP "" 4
+.
+.nf
+
+cbc\-pillowfight \-U couchbase://192\.168\.33\.101/a_bucket
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Run with 20 threads/instances, each doing one operation at a time:
+.
+.IP "" 4
+.
+.nf
+
+cbc\-pillowfight \-t 20 \-B 1
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Run 100 iterations of 2MB item sizes, using a dataset of 50 items
+.
+.IP "" 4
+.
+.nf
+
+cbc\-pillowfight \-M $(1024*1024) \-m $(1024*1024) \-c 100 \-I 50
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Connect to an SSL cluster at \fBsecure\.net\fR:
+.
+.IP "" 4
+.
+.nf
+
+cbc\-pillowfight \-U couchbases://secure\.net/topsecret_bucket
+.
+.fi
+.
+.IP "" 0
 .
 .SH "TODO"
 Rather than spawning threads for multiple instances, offer a way to have multiple instances function cooperatively inside an event loop\.

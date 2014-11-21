@@ -170,6 +170,24 @@ The following options control how `cbc-pillowfight` connects to the cluster
   Specify more information to standard error about what the client is doing. You may
   specify this option multiple times for increased output detail.
 
+## EXAMPLES
+
+Run against a bucket (`a_bucket`) on a cluster on a remote host:
+
+    cbc-pillowfight -U couchbase://192.168.33.101/a_bucket
+
+Run with 20 threads/instances, each doing one operation at a time:
+
+    cbc-pillowfight -t 20 -B 1
+
+Run 100 iterations of 2MB item sizes, using a dataset of 50 items
+
+    cbc-pillowfight -M $(1024*1024) -m $(1024*1024) -c 100 -I 50
+
+Connect to an SSL cluster at `secure.net`:
+
+    cbc-pillowfight -U couchbases://secure.net/topsecret_bucket
+
 
 ## TODO
 

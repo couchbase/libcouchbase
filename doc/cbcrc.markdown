@@ -1,12 +1,16 @@
 # cbcrc(4) - Configuration file for Couchbase command line tools
 
-# DESCRIPTION
+## SYNOPSIS
 
-cbcrc is an ASCII file that allows you to specify default
-configuration values for cbc.
+`~/.cbcrc`
 
-Each entry in the cbcrc file is a line with a key-value pair in the
-following form:
+## DESCRIPTION
+
+cbcrc is an optional configuration file used to provide default values for the
+cbc(1) and cbc-pillowfight(1) utilities. It should be placed in
+
+Each entry in the cbcrc file is a line with a key-value pair in the following
+form:
 
     # optional comments
     key=value
@@ -27,12 +31,19 @@ key multiple times the last value "wins". The following keys exists:
 
     couchbase://localhost:9100,localhost:9200,localhost:9300
 
-
-* `user`:
-    This is the username used during authentication to your cluster.
-
 * `password`:
     This is the password used during authentication to your bucket
 
 * `timeout`:
     The timeout value to use for the operations.
+
+## NOTES
+
+* You can generate such a file from the cbc(1) itself using the `write-config`
+  subcommand
+
+* Most other options can be specified within the connection string
+
+## SEE ALSO
+
+cbc(1), cbc-pillowfight(1)
