@@ -16,6 +16,13 @@
 AC_PREREQ(2.60)
 m4_include([m4/version.m4])
 AC_INIT(libcouchbase, VERSION_NUMBER, support@couchbase.com)
+AC_MSG_WARN([
+*** WARNING
+*** Building libcouchbase with Autotools and the ./configure script is no longer
+*** supported. It is recommended you build the library with CMake. This script is
+*** provided as a convenience for those platforms/systems on which building with CMake
+*** contains bugs.])
+
 AC_CONFIG_SRCDIR([src/internal.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CANONICAL_HOST
