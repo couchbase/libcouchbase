@@ -20,11 +20,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
 ### BEGIN CONFIGURABLES ###
 # These variables can be modified as needed
 
-# Gtest source archive to use
-SET(GTEST_ARCHIVE gtest-1.7.0.zip)
-# Where to download archive (if it doesn't exist)
-SET(GTEST_DLSERVER http://googletest.googlecode.com/files)
-
 # Couchbase mock path to download
 SET(COUCHBASE_MOCK_VERSION
     0.8-SNAPSHOT/CouchbaseMock-0.8-20140621.030439-1.jar)
