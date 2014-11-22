@@ -30,19 +30,12 @@ ACLOCAL_AMFLAGS = -I m4 --force
 lib_LTLIBRARIES = libcouchbase.la
 noinst_LTLIBRARIES = libcbsasl.la
 bin_PROGRAMS =
-check_PROGRAMS =
 noinst_PROGRAMS =
 man_MANS = man/cbc.1 man/cbc-pillowfight.1 man/cbcrc.4
 include man/manpages.mk
 
 BUILT_SOURCES =
-
-CLEANFILES = \
-             check-all-libev-unit-tests.log \
-             check-all-libevent-unit-tests.log \
-             check-all-libuv-unit-tests.log \
-             check-all-select-unit-tests.log
-
+CLEANFILES =
 libcouchbase_la_CPPFLAGS =
 libcouchbase_la_DEPENDENCIES =
 libcouchbase_la_LIBADD =
@@ -52,7 +45,6 @@ include filelist.mk
 if BUILD_TOOLS
 if HAVE_CXX
 bin_PROGRAMS += tools/cbc tools/cbc-pillowfight
-check_PROGRAMS += tests/homebrew-acceptance-test
 endif
 endif
 
@@ -83,14 +75,13 @@ libcbsasl_la_CPPFLAGS =  $(AM_NOWARN_CPPFLAGS) -DBUILDING_CBSASL=1 -I${top_srcdi
 
 libcouchbase_la_LDFLAGS= $(AM_LDFLAGS) -version-info $(API_CURRENT):$(API_REVISION):$(API_AGE) -no-undefined $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_la_CPPFLAGS += $(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1 -DLCB_LIBDIR="\"${libdir}\""
-libcouchbase_la_LIBADD += libcbsasl.la liblcbht.la
-libcouchbase_la_DEPENDENCIES += libcbsasl.la liblcbht.la
+libcouchbase_la_LIBADD += libcbsasl.la
+libcouchbase_la_DEPENDENCIES += libcbsasl.la
 
 if ENABLE_SSL
 libcouchbase_la_LDFLAGS+=$(OPENSSL_LDFLAGS)
 libcouchbase_la_CPPFLAGS+=$(OPENSSL_INCLUDES)
-libcouchbase_la_LIBADD+=liblcbssl.la $(OPENSSL_LIBS)
-libcouchbase_la_DEPENDENCIES+=liblcbssl.la
+libcouchbase_la_LIBADD+=$(OPENSSL_LIBS)
 endif
 
 if !ENABLE_SSL
@@ -104,14 +95,6 @@ else
 libcouchbase_la_CPPFLAGS += $(SNAPPY_INCLUDES)
 libcouchbase_la_LDFLAGS += $(SNAPPY_LDFLAGS)
 libcouchbase_la_LIBADD += -lsnappy
-
-if HAVE_CXX
-if HAVE_GOOGLETEST_SRC
-tests_mc_tests_LDADD += -lsnappy
-tests_mc_tests_LDFLAGS += $(SNAPPY_LDFLAGS)
-endif
-endif
-
 endif
 else
 libcouchbase_la_CPPFLAGS += -DLCB_NO_SNAPPY=1
@@ -172,11 +155,6 @@ libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
 libcouchbase_libevent_la_LDFLAGS=-avoid-version $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
 libcouchbase_libevent_la_LIBADD=-levent
 libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-if BUILD_EXAMPLES
-if HAVE_LIBEVENT2
-noinst_PROGRAMS += example/libeventdirect/eventloop
-endif
-endif
 endif
 
 if HAVE_LIBEV
@@ -195,130 +173,18 @@ libcouchbase_libuv_la_LIBADD = -luv
 libcouchbase_libuv_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
 endif
 
-gtest-1.7.0.zip:
-	@echo "+--------------------------------+"
-	@echo "| Download Google test framework |"
-	@echo "+--------------------------------+"
-	${DOWNLOAD} gtest-1.7.0.zip http://googletest.googlecode.com/files/gtest-1.7.0-rc1.zip
-
-
-if HAVE_CXX
-if HAVE_GOOGLETEST_SRC
-noinst_LTLIBRARIES += libgtest.la
-libgtest_la_SOURCES = tests/gtest-sources.cc
-libgtest_la_CPPFLAGS = $(AM_NOWARN_CPPFLAGS) -I$(GTEST_ROOT) -I$(GTEST_ROOT)/include
-libgtest_la_CXXFLAGS = $(AM_NOWARN_CXXFLAGS)
-endif
-endif
-
-if DOWNLOAD_GTEST
-gtest-1.7.0: gtest-1.7.0.zip
-	${UNZIP} -o -qq gtest-1.7.0.zip
-BUILT_SOURCES += gtest-1.7.0
-endif
-
-distclean-local:
-	@rm -rf gtest-1.7.0
-	@rm -rf check-all*.log
-	$(MAKE) -f doc/Makefile clean || true
-
-distcleancheck:
-	@:
-
 doc-public:
 	$(MAKE) -f doc/Makefile public
 
 doc-internal:
 	$(MAKE) -f doc/Makefile internal
 
-if !HAVE_GOOGLETEST_SRC
-endif
-
-tests/CouchbaseMock.jar:
-	@echo "+---------------------------------------------+"
-	@echo "| Download CouchbaseMock for functional tests |"
-	@echo "+---------------------------------------------+"
-	${DOWNLOAD} tests/CouchbaseMock.jar http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock/0.8-SNAPSHOT/CouchbaseMock-0.8-20140621.030439-1.jar
-
-example_minimal_minimal_SOURCES = example/minimal/minimal.c
-example_minimal_minimal_DEPENDENCIES = libcouchbase.la
-example_minimal_minimal_LDADD = libcouchbase.la
-
-example_observe_observe_SOURCES = example/observe/observe.c
-example_observe_observe_DEPENDENCIES = libcouchbase.la
-example_observe_observe_LDADD = libcouchbase.la
-
-example_db_db_SOURCES = example/db/db.c
-example_db_db_DEPENDENCIES = libcouchbase.la
-example_db_db_LDADD = libcouchbase.la
-
-example_db_vb_SOURCES = example/db/vb.c
-example_db_vb_DEPENDENCIES = libcouchbase.la
-example_db_vb_LDADD = libcouchbase.la
-
-example_libeventdirect_eventloop_SOURCES = example/libeventdirect/main.c
-example_libeventdirect_eventloop_DEPENDENCIES = libcouchbase.la
-example_libeventdirect_eventloop_LDADD = libcouchbase.la -levent
-
-
-if HAVE_CXX
-noinst_PROGRAMS += example/instancepool/instancepool
-example_instancepool_instancepool_SOURCES = example/instancepool/pool.cc \
-                                            example/instancepool/pool.h \
-                                            example/instancepool/main.cc
-example_instancepool_instancepool_DEPENDENCIES = libcouchbase.la
-example_instancepool_instancepool_LDADD = libcouchbase.la -lpthread
-
-noinst_PROGRAMS += example/mcc/mcc
-example_mcc_mcc_SOURCES = example/mcc/mcc.cc
-example_mcc_mcc_DEPENDENCIES = libcouchbase.la
-example_mcc_mcc_LDADD = libcouchbase.la
-endif
-
-#
-# Example programs using the library
-#
-if BUILD_EXAMPLES
-noinst_PROGRAMS += \
-                   example/db/db \
-                   example/db/vb \
-                   example/minimal/minimal \
-                   example/observe/observe
-if HAVE_LIBYAJL2
-noinst_PROGRAMS += example/yajl/couchview
-endif
-endif
-
-example_yajl_couchview_SOURCES = example/yajl/couchview.c
-example_yajl_couchview_LDADD = libcouchbase.la -lyajl
-
-if BUILD_TESTS
-check_PROGRAMS += tests/check-all
-endif
-tests_check_all_SOURCES = tests/check-all.cc tests/mocksupport/procutil.c
-tests_check_all_CPPFLAGS = $(AM_CPPFLAGS) -I"${srcdir}/tools"
-tests_check_all_LDADD = libcouchbase.la libcliopts.la
-
-tools_cbc_SOURCES =	tools/cbc.cc tools/cbc-handlers.h
+if BUILD_TOOLS
+tools_cbc_SOURCES =    tools/cbc.cc tools/cbc-handlers.h
 tools_cbc_LDADD = libcouchbase.la liblcbtools.la
 tools_cbc_pillowfight_SOURCES = tools/cbc-pillowfight.cc
-tools_cbc_pillowfight_LDADD = libcouchbase.la liblcbtools.la liblcbutils.la -lpthread
+tools_cbc_pillowfight_LDADD = libcouchbase.la liblcbtools.la -lpthread
 
-
-TESTS_ENVIRONMENT = export outdir="$(top_builddir)/tests";
-
-TESTS =
-if BUILD_TESTS
-TESTS += tests/check-all
-endif
-
-if BUILD_TOOLS
-if HAVE_CXX
-TESTS += tests/homebrew-acceptance-test
-endif
-endif
-
-if BUILD_TOOLS
 CBC_LINKS = \
 			cbc-admin \
 			cbc-cat \
@@ -354,10 +220,6 @@ EXTRA_DIST += LICENSE README.markdown \
               win32 \
               VERSION src/probes.d \
               $(man_MANS)
-
-if HAVE_DOXYGEN
-endif
-
 
 LINTFLAGS=-Iinclude -b -c -errchk=%all \
           -erroff=E_INCL_NUSD,E_CAST_INT_TO_SMALL_INT,E_PTRDIFF_OVERFLOW  \

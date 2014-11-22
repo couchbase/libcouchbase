@@ -73,11 +73,6 @@ esac
 ac_cv_func_malloc_0_nonnull=yes
 ac_cv_func_realloc_0_nonnull=yes
 
-AC_ARG_ENABLE([maintainer_mode],
-              [AS_HELP_STRING([--enable-maintainer-mode],
-                              [Forces all plugins, examples, and tools to be build. Forces compiler strictness])],
-              [ac_cv_enable_maintainer_mode="$enableval"])
-
 COUCHBASE_GENERIC_COMPILER(c99)
 
 AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
@@ -150,47 +145,6 @@ AC_SEARCH_LIBS(dlopen, dl)
 AC_SEARCH_LIBS(floor, m)
 AC_SEARCH_LIBS(pow, m)
 AC_SEARCH_LIBS(fabs, m)
-
-AC_PATH_PROG(JAVA, java, no)
-AC_PATH_PROG(WGET, wget, no)
-AC_PATH_PROG(CURL, curl, no)
-AC_PATH_PROG(UNZIP, unzip, no)
-AC_PATH_PROG(DOXYGEN, doxygen, no)
-AM_CONDITIONAL(HAVE_DOXYGEN, [test "x$DOXYGEN" != "xno"])
-AC_PATH_PROG(A2X, a2x, no)
-AM_CONDITIONAL(HAVE_A2X, [test "x$A2X" != "xno"])
-
-
-AC_SUBST(UNZIP)
-
-AS_IF([test "x${WGET}" != "xno"],
-      [DOWNLOAD="${WGET} -q -O"],
-      [AS_IF([test "x${CURL}" != "xno"],
-             [DOWNLOAD="${CURL} -s -L -o"],
-             [AC_MSG_WARN([You might need wget or curl in path to download extra files.])])])
-
-AC_SUBST(DOWNLOAD)
-
-AC_ARG_ENABLE([debug_library],
-    [AS_HELP_STRING([--enable-debug-library],
-                    [Build libcouchbase_debug.so @<:@default=off@:>@])],
-    [ac_cv_build_debug_library="$enableval"])
-
-AM_CONDITIONAL(BUILD_LIBCOUCHBASE_DEBUG, [ test "x$ac_cv_build_debug_library" = "xyes" ])
-AS_IF([test "x$ac_cv_build_debug_library" = "xyes" ], [
-      AC_DEFINE([HAVE_LIBCOUCHBASE_DEBUG], [1], [I will build libcouchbase_debug.so])])
-
-AC_ARG_WITH([couchbasemock],
-    [AC_HELP_STRING([--with-couchbasemock], [Use the specified file as the test mock server])],
-    [
-        AS_IF([test -f ${withval}],
-              [
-                    rm -f tests/CouchbaseMock.jar
-                    ln -s ${withval} tests/CouchbaseMock.jar
-              ],
-              [AC_MSG_ERROR([${withval} is not a file I can use as a mock server])])
-    ]
-)
 
 AC_CHECK_HEADERS_ONCE([mach/mach_time.h sys/socket.h sys/time.h
                        netinet/in.h inttypes.h netdb.h unistd.h
@@ -383,27 +337,6 @@ AM_CONDITIONAL(ENABLE_SNAPPY, [test "x${ac_cv_enable_snappy}" = "xyes"])
 AS_IF([test "x${ac_cv_have_snappy}" != "xyes" && test "x${ac_cv_enable_snappy}" = "xyes" && test "x${ac_cv_enable_static_snappy}" != "xyes"],
       [AC_MSG_ERROR(Snappy support requires either an installed libsnappy or the --enable-static-snappy option)])
 
-dnl Check if we've got libyajl2
-AC_CACHE_CHECK([for libyajl], [ac_cv_have_libyajl2],
-  [ saved_libs="$LIBS"
-    LIBS=-lyajl
-    AC_TRY_LINK([
-      #include <yajl/yajl_parse.h>
-      #include <yajl/yajl_tree.h>
-            ],[
-      yajl_handle parser = yajl_alloc(0, 0, 0);
-      yajl_val json = yajl_tree_parse(0, 0, 0);
-            ],[
-      ac_cv_have_libyajl2="yes"
-            ], [
-      ac_cv_have_libyajl2="no"
-      ])
-    LIBS="$saved_libs"
-  ])
-AM_CONDITIONAL(HAVE_LIBYAJL2, [test "x${ac_cv_have_libyajl2}" = "xyes"])
-AS_IF([test "x${ac_cv_have_libyajl2}" = "xyes"],
-      [AC_DEFINE([HAVE_LIBYAJL2], [1], [We have libyajl2])])
-
 AC_CACHE_CHECK([for htonll], [ac_cv_have_htonll],
     [AC_TRY_LINK([
 #include <sys/types.h>
@@ -417,26 +350,6 @@ return htonll(0);
 ])
 AS_IF([test "x$ac_cv_have_htonll" = "xyes"],[
        AC_DEFINE([HAVE_HTONLL], [1], [Have ntohll])])
-
-
-AC_ARG_ENABLE([couchbasemock],
-    [AS_HELP_STRING([--disable-couchbasemock],
-            [Build tests that use couchbasemock. @<:@default=on@:>@])],
-    [ac_cv_enable_couchbasemock="$enableval"],
-    [ac_cv_enable_couchbasemock="yes"])
-
-AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
-      [AS_IF([test "x${DOWNLOAD}" = "xno"],
-             [AC_MSG_ERROR([You need wget or curl in path to download the mock server. Use --disable-couchbasemock to avoid downloading of the mock server])])
-       AS_IF([test "x$JAVA" = "xno"],
-             [AC_MSG_ERROR([You need java in path to run the mock server.
-Try add --disable-couchbasemock
-])])])
-
-dnl It doesn't make sense to use CouchbaseMock.jar without plugins
-AM_CONDITIONAL(HAVE_COUCHBASEMOCK, [test "x${ac_cv_enable_couchbasemock}" = "xyes"])
-AS_IF([test "x${ac_cv_enable_couchbasemock}" = "xyes"],
-      [AC_DEFINE([HAVE_COUCHBASEMOCK], [1], [We have CouchbaseMock.jar])])
 
 AC_ARG_ENABLE([tools],
     [AS_HELP_STRING([--disable-tools],
@@ -456,68 +369,9 @@ AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
              [AC_MSG_ERROR([You need C++ compiler to build tools. Try add --disable-tools])])])
 AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
 
-AC_ARG_ENABLE([examples],
-    [AS_HELP_STRING([--disable-examples],
-            [Build examples. @<:@default=on@:>@])],
-    [ac_cv_enable_examples="$enableval"],
-    [ac_cv_enable_examples="yes"])
-AM_CONDITIONAL(BUILD_EXAMPLES, [test "x${ac_cv_enable_examples}" = "xyes"])
-
 AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday
                      QueryPerformanceCounter alarm setitimer])
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
-
-AC_ARG_ENABLE([tests],
-    [AS_HELP_STRING([--disable-tests],
-            [Build without tests. BE CAREFUL. @<:@default=on@:>@])],
-    [ac_cv_enable_tests="$enableval"],
-    [ac_cv_enable_tests="yes"])
-dnl Tests require google test framework, which might be not the case
-dnl for some targets. If you disable test you won't be able easily
-dnl prove that libcouchbase working.
-AM_CONDITIONAL(BUILD_TESTS, [test "x${ac_cv_enable_tests}" = "xyes"])
-
-AS_IF([test "x$GTEST_ROOT" != "x"], [
-  AC_CACHE_CHECK([for gtest source], [ac_cv_have_gtest_src], [
-    AS_IF([test -f "$GTEST_ROOT/src/gtest-all.cc"],
-          [ac_cv_have_gtest_src=yes],
-          [ac_cv_have_gtest_src=no]) ])
-], [
-  ac_cv_have_gtest_src=no
-  GTEST_ROOT=.
-])
-
-AC_SUBST(GTEST_ROOT)
-AS_IF([test "x$ac_cv_have_gtest_src" = "xno"], [
-  AC_CACHE_CHECK([for gtest], [ac_cv_have_gtest], [
-   AC_LANG_PUSH([C++])
-   SAVED_LIBS="$LIBS"
-   LIBS="-lgtest"
-   AC_LINK_IFELSE(
-     [AC_LANG_PROGRAM(
-       [
-#include "gtest/gtest.h"
-       ],
-       [
-return 0;
-       ])],
-     [ac_cv_have_gtest=yes],
-     [ac_cv_have_gtest=no])
-   AC_LANG_POP([C++])
-   LIBS="$SAVED_LIBS"
- ])
-])
-
-AS_IF([test "x$ac_cv_enable_tests" = "xyes" -a "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no" -a "x$DOWNLOAD" != "x" -a "x$UNZIP" != "xno"], [
-      ac_cv_download_gtest=yes
-      GTEST_ROOT=gtest-1.7.0
-      ac_cv_have_gtest_src=yes
-])
-
-AM_CONDITIONAL(DOWNLOAD_GTEST, [test "x$ac_cv_download_gtest" = "xyes"])
-AM_CONDITIONAL(HAVE_GOOGLETEST_SRC, [test "$ac_cv_have_gtest_src" = "yes"])
-AM_CONDITIONAL(HAVE_GOOGLETEST, [test "$ac_cv_have_gtest" = "yes" -o \
-                                 "$ac_cv_have_gtest_src" = "yes"])
 
 # On HP-UX we need to link libxnet(3lib)
 AC_CHECK_DECL([__hpux])
@@ -595,51 +449,6 @@ AC_CACHE_CHECK([if EWOULDBLOCK != EAGAIN],[ac_cv_eagain_neq_ewouldblock],
 AS_IF([test "x$ac_cv_eagain_neq_ewouldblock" = "xyes"],[
        AC_DEFINE([USE_EAGAIN], [1], [Defined for systems where EAGAIN != EWOULDBLOCK])])
 
-
-AS_IF([test "x${ac_cv_enable_maintainer_mode}" = "xyes"],
-      [
-       echo ""
-       echo "MAINT:"
-       echo "MAINT: Libcouchbase Maintainer Mode"
-       echo "MAINT: Will check for prequisites"
-
-       echo "MAINT: Checking that --disable-plugins was not passed"
-       AS_IF([test "x${ac_cv_enable_plugins}" != "xyes"],
-             [AC_MSG_ERROR([Maintainer mode requires all plugins enabled])])
-
-       echo "MAINT: Ensuring libuv has been found"
-       AS_IF([test "x${ac_cv_have_libuv}" != "xyes"],
-             [AC_MSG_ERROR([libuv not found])])
-
-       echo "MAINT: Ensuring libevent1.x or libevent2.x"
-       AS_IF([test "x${ac_cv_have_libevent}" != "xyes" && test "x${ac_cv_have_libevent2}" != "xyes"],
-             [AC_MSG_ERROR([libevent not found])])
-
-       echo "MAINT: Ensuring libev3 or libev4"
-       AS_IF([test "x${ac_cv_have_libev3}" != "xyes" && test "x${ac_cv_have_libev4}" != "xyes"],
-             [AC_MSG_ERROR([libev not found])])
-
-       echo "MAINT: Ensuring couchbasemock"
-       AS_IF([test "x${ac_cv_enable_couchbasemock}" != "xyes"],
-             [AC_MSG_ERROR([Mock must be enabled])])
-
-       echo "MAINT: Ensuring examples are enabled"
-       AS_IF([test "x${ac_cv_enable_examples}" != "xyes"],
-             [AC_MSG_ERROR([Examples must be enabled])])
-
-       echo "MAINT: Ensuring CXX is enabled"
-       AS_IF([test "x${ac_cv_enable_cxx}" != "xyes"],
-             [AC_MSG_ERROR([cxx must be enabled])])
-
-       echo "MAINT: Ensuring tools are enabled"
-       AS_IF([test "x${ac_cv_enable_tools}" != "xyes"],
-             [AC_MSG_ERROR([Tools must be enabled])])
-
-       AS_IF([test "x${ac_cv_enable_tests}" != "xyes"],
-             [AC_MSG_ERROR([Tests must be enabled])])
-      ])
-
-
 AH_TOP([
 #if defined(_WIN32) && !defined(HAVE_CONFIG_H)
   /* skip config.h contents on a non-autotools win32 build */
@@ -701,23 +510,3 @@ LDFLAGS="$SAVE_LDFLAGS"
 dnl ----------------------------------------------------------------------------
 AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h VERSION])
 AC_OUTPUT
-AS_IF([test "$ac_cv_have_gtest" = "no" -a "$ac_cv_have_gtest_src" = "no"],
-      [AS_IF([test "x$DOWNLOAD" = "x" -o "x$UNZIP" = "xno"],
-             [echo "*****"
-              echo "*"
-              echo "*  WARNING: You need to install unzip command and either"
-              echo "*           curl or wget in order to download googletest"
-              echo "*           library automatically."
-              echo "*"
-              echo "*****"
-             ],
-             [echo "*****"
-              echo "*"
-              echo "*  WARNING: I couldn't find the googletest testsuite framework."
-              echo "*           This means you cannot run the test suite to verify"
-              echo "*           that the library works as expected."
-              echo "*           You should consider installing it from:"
-              echo "*           http://code.google.com/p/googletest/"
-              echo "*"
-              echo "*****"
-              ])])
