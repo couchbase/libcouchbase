@@ -75,6 +75,11 @@ static int clock_gettime(int which, struct timespec *tp)
 #define HAVE_CLOCK_GETTIME 1
 #endif
 
+#ifdef __linux__
+#undef HAVE_CLOCK_GETTIME
+#define HAVE_CLOCK_GETTIME 1
+#endif
+
 hrtime_t gethrtime(void)
 {
 #if defined(HAVE_CLOCK_GETTIME)

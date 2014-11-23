@@ -376,8 +376,9 @@ AS_IF([test "x${ac_cv_enable_tools}" = "xyes"],
              [AC_MSG_ERROR([You need C++ compiler to build tools. Try add --disable-tools])])])
 AM_CONDITIONAL(BUILD_TOOLS, [test "x${ac_cv_enable_tools}" = "xyes"])
 
-AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday
-                     QueryPerformanceCounter alarm setitimer])
+AC_CHECK_FUNCS_ONCE([gethrtime clock_gettime gettimeofday QueryPerformanceCounter alarm setitimer])
+# For Linux
+AC_SEARCH_LIBS(clock_gettime, rt)
 AM_CONDITIONAL(HAVE_GETHRTIME, [test "x${ac_cv_func_gethrtime}" = "xyes"])
 
 # On HP-UX we need to link libxnet(3lib)
