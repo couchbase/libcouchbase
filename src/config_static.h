@@ -160,4 +160,8 @@ extern "C" {
 #endif
 #endif
 
+#if defined(EWOULDBLOCK) && defined(EAGAIN) && EWOULDBLOCK != EAGAIN
+#define USE_EAGAIN 1
+#endif
+
 #endif /* LIBCOUCHBASE_CONFIG_STATIC_H */

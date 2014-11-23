@@ -432,30 +432,6 @@ AM_CONDITIONAL([APPLE_DTRACE], [test "x$ac_cv_have_decl__APPLE__" = "xyes"])
 
 AM_CONDITIONAL(MANPAGE_BSD_LAYOUT, [test "x$ac_cv_have_decl___sun" != "xyes"])
 
-AC_CACHE_CHECK([if EWOULDBLOCK != EAGAIN],[ac_cv_eagain_neq_ewouldblock],
-               [AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-                    #include <errno.h>
-                    int error = EAGAIN;
-                    int main()
-                    {
-                        switch(error)
-                        {
-                        case EWOULDBLOCK:
-                        case EAGAIN:
-                            error = 1;
-                            break;
-                        default:
-                            error = 0;
-                        }
-                        return 0;
-                    }
-                ])],
-                [ ac_cv_eagain_neq_ewouldblock=yes ],
-                [ ac_cv_eagain_neq_ewouldblock=no])])
-
-AS_IF([test "x$ac_cv_eagain_neq_ewouldblock" = "xyes"],[
-       AC_DEFINE([USE_EAGAIN], [1], [Defined for systems where EAGAIN != EWOULDBLOCK])])
-
 AH_TOP([
 #if defined(_WIN32) && !defined(HAVE_CONFIG_H)
   /* skip config.h contents on a non-autotools win32 build */
