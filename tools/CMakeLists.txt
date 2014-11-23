@@ -8,8 +8,7 @@ ADD_EXECUTABLE(cbc cbc.cc
 TARGET_LINK_LIBRARIES(cbc couchbase)
 
 ADD_EXECUTABLE(cbc-pillowfight cbc-pillowfight.cc
-    $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts>
-    ${SOURCE_ROOT}/src/gethrtime.c)
+    $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts>)
 
 TARGET_LINK_LIBRARIES(cbc-pillowfight couchbase)
 

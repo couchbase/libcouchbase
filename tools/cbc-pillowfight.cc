@@ -235,7 +235,7 @@ void log(const char *format, ...)
     va_start(args, format);
     vsprintf(buffer, format, args);
     if (config.isTimings()) {
-        std::cerr << "[" << std::fixed << gethrtime() / 1000000000.0 << "] ";
+        std::cerr << "[" << std::fixed << lcb_nstime() / 1000000000.0 << "] ";
     }
     std::cerr << buffer << std::endl;
     va_end(args);
@@ -273,7 +273,7 @@ public:
         }
 
         Histogram &h = ic->hg;
-        printf("[%f %s]\n", gethrtime() / 1000000000.0, header);
+        printf("[%f %s]\n", lcb_nstime() / 1000000000.0, header);
         printf("              +---------+---------+---------+---------+\n");
         h.write();
         printf("              +----------------------------------------\n");

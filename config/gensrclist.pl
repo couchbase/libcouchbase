@@ -117,7 +117,6 @@ condition 'HAVE_CXX', sub {
         add_sources('libcliopts', find_srcfiles('contrib/cliopts'));
         add_target('liblcbtools');
         add_sources('liblcbtools', find_srcfiles('tools/common'));
-        add_sources('liblcbtools', 'src/gethrtime.c');
         add_dependency("liblcbtools", "libcliopts");
     };
 };

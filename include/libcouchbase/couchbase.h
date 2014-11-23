@@ -3232,6 +3232,10 @@ void lcb_run_loop(lcb_t instance);
 LCB_INTERNAL_API
 void lcb_stop_loop(lcb_t instance);
 
+/* This returns the library's idea of time */
+LCB_INTERNAL_API
+lcb_U64 lcb_nstime(void);
+
 typedef enum {
     /** Dump the raw vbucket configuration */
     LCB_DUMP_VBCONFIG =  0x01,

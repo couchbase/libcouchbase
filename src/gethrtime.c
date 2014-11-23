@@ -16,7 +16,7 @@
  */
 
 #include "config.h"
-#include <libcouchbase/assert.h>
+#include <libcouchbase/couchbase.h>
 
 #ifndef HAVE_GETHRTIME
 
@@ -87,5 +87,13 @@ hrtime_t gethrtime(void)
 #error "I don't know how to build a highres clock..."
 #endif
 }
+#endif /* HAVE_GETHRTIME */
 
-#endif
+/* Symbol usable so other subsystems can get the same idea of time the library
+ * has. This will also allow us to stop shipping the 'gethrtime' file around.
+ */
+
+LCB_INTERNAL_API
+lcb_U64 lcb_nstime(void) {
+    return gethrtime();
+}
