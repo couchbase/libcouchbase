@@ -22,8 +22,7 @@ ENDMACRO(list2args)
 
 LIST(APPEND LCB_GNUC_CPP_WARNINGS
     -Wall -pedantic -Wshadow -fdiagnostics-show-option -Wformat
-    -fno-strict-aliasing -Wno-strict-aliasing -Wextra -Winit-self
-    -Wno-missing-field-initializers)
+    -Wno-strict-aliasing -Wextra -Winit-self -Wno-missing-field-initializers)
 
 IF("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
     LIST(APPEND LCB_GNUC_CPP_WARNINGS -Wno-cast-align -Wno-dollar-in-identifier-extension)
@@ -113,6 +112,7 @@ ELSE()
     SET(LCB_CORE_CFLAGS "${LCB_GNUC_C_WARNINGS} -DHAVE_VISIBILITY -fvisibility=hidden")
     SET(LCB_CORE_CXXFLAGS "${LCB_GNUC_CXX_WARNINGS} -DHAVE_VISIBILITY -fvisibility=hidden")
     SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-strict-aliasing")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-strict-aliasing")
 ENDIF()
 
 IF(LCB_UNIVERSAL_BINARY AND (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
