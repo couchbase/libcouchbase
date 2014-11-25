@@ -834,6 +834,22 @@ struct lcb_iops2_st {
     struct lcbio_TABLE *iot;
 };
 
+/* This is here to provide backwards compatibility with older (broken) clients
+ * which attempt to 'subclass' the select plugin, or similar. In this case we
+ * provide 17 callback fields (unused here) which the plugin implementation
+ * may set, so that the older code can continue to function without upgrading
+ * the client to a newer version. This should not be used except by internal
+ * plugins; specifically the ABI layout of this field is subject to change
+ * (for example, additional fields may be added or existing fields may be
+ * renamed/removed) without notice.
+ */
+struct lcb_iops3_st {
+    LCB_IOPS_BASE_FIELDS
+    void (*pads[17]);
+    lcb_io_procs_fn get_procs;
+    struct lcbio_TABLE *iot;
+};
+
 /**
  * This number is bumped up each time a new field is added to any of the
  * function tables. This number is backwards compatible (i.e. version 3 contains
@@ -857,6 +873,7 @@ struct lcb_io_opt_st {
         struct lcb_iops_evented_st v0;
         struct lcb_iops_completion_st v1;
         struct lcb_iops2_st v2;
+        struct lcb_iops3_st v3;
     } v;
 };
 
