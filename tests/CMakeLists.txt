@@ -81,10 +81,10 @@ ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
 
 
-IF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar AND NOT LCB_NO_MOCK)
+IF(NOT EXISTS ${PROJECT_SOURCE_DIR}/tests/CouchbaseMock.jar AND NOT LCB_NO_MOCK)
     DOWNLOAD_LCB_DEP("${COUCHBASE_MOCK_DLSERVER}/${COUCHBASE_MOCK_VERSION}"
-        "${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar")
-ENDIF(NOT EXISTS ${CMAKE_SOURCE_DIR}/tests/CouchbaseMock.jar AND NOT LCB_NO_MOCK)
+        "${PROJECT_SOURCE_DIR}/tests/CouchbaseMock.jar")
+ENDIF(NOT EXISTS ${PROJECT_SOURCE_DIR}/tests/CouchbaseMock.jar AND NOT LCB_NO_MOCK)
 
 # We're a library using the shared CRT. Don't use the static one
 INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
@@ -107,7 +107,7 @@ ENDIF()
 
 MACRO(BUILD_TEST target)
     ADD_TEST(NAME BUILD-${target}
-        COMMAND ${CMAKE_COMMAND} --build "${CMAKE_BINARY_DIR}" --target ${target})
+        COMMAND ${CMAKE_COMMAND} --build "${PROJECT_BINARY_DIR}" --target ${target})
 ENDMACRO()
 
 BUILD_TEST(check-all)
@@ -128,7 +128,7 @@ MACRO(DEFINE_MOCKTEST plugin test)
             check-${plugin}-${test}
         COMMAND
             $<TARGET_FILE:check-all>
-            --srcdir "${CMAKE_SOURCE_DIR}"
+            --srcdir "${PROJECT_SOURCE_DIR}"
             --testdir "$<TARGET_FILE_DIR:check-all>"
             --libdir "$<TARGET_FILE_DIR:couchbase>"
             --plugins ${plugin}
@@ -136,7 +136,7 @@ MACRO(DEFINE_MOCKTEST plugin test)
             --verbose
             --
             --gtest_print_time=1
-            --gtest_output=xml:"${CMAKE_BINARY_DIR}/REPORT_${plugin}_${test}.xml")
+            --gtest_output=xml:"${PROJECT_BINARY_DIR}/REPORT_${plugin}_${test}.xml")
 ENDMACRO()
 
 # Since we need a plugin name, we'll use 'select'. However none of these

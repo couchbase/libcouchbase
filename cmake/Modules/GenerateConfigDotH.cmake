@@ -25,5 +25,5 @@ IF(UNIX)
 ENDIF()
 
 CONFIGURE_FILE(
-    ${CMAKE_SOURCE_DIR}/cmake/config-cmake.h.in
+    ${PROJECT_SOURCE_DIR}/cmake/config-cmake.h.in
     ${LCB_GENSRCDIR}/config.h)

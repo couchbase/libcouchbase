@@ -67,11 +67,11 @@ ELSE()
 ENDIF()
 
 # If building from a configured autotools tree, bail.
-IF(EXISTS ${CMAKE_SOURCE_DIR}/src/config.h)
+IF(EXISTS ${PROJECT_SOURCE_DIR}/src/config.h)
     MESSAGE(FATAL_ERROR "config.h found in src/. This will break the CMake build. Remove it manually then rerun")
 ENDIF()
 
-SET(LCB_GENSRCDIR ${CMAKE_BINARY_DIR}/generated)
+SET(LCB_GENSRCDIR ${PROJECT_BINARY_DIR}/generated)
 INCLUDE_DIRECTORIES(${LCB_GENSRCDIR})
 
 INCLUDE(cmake/Modules/GetLibcouchbaseFlags.cmake)
@@ -99,7 +99,7 @@ SET(CPACK_PACKAGE_VERSION_MINOR "${LCB_VERSION_MINOR}")
 SET(CPACK_PACKAGE_VERSION_PATCH "${LCB_VERSION_PATCH}")
 IF(NOT CMAKE_BUILD_TYPE)
     SET(CPACK_INSTALL_SCRIPT
-        "${CMAKE_SOURCE_DIR}/cmake/Modules/DistScript.cmake")
+        "${PROJECT_SOURCE_DIR}/cmake/Modules/DistScript.cmake")
 ENDIF()
 SET(lcb_package_name "libcouchbase-${LCB_VERSION}_${LCB_ARCH_STRING}_${LCB_CC_STRING}")
 SET(CPACK_PACKAGE_FILE_NAME ${lcb_package_name})
@@ -114,18 +114,18 @@ INCLUDE(CPack)
 
 SET(CHANGESET ${LCB_VERSION_CHANGESET})
 CONFIGURE_FILE(
-    ${CMAKE_SOURCE_DIR}/include/libcouchbase/configuration.h.in
+    ${PROJECT_SOURCE_DIR}/include/libcouchbase/configuration.h.in
     ${LCB_GENSRCDIR}/libcouchbase/configuration.h
     @ONLY)
 
 CONFIGURE_FILE(
-    ${CMAKE_SOURCE_DIR}/cmake/defs.mk.in
-    ${CMAKE_BINARY_DIR}/defs.mk)
+    ${PROJECT_SOURCE_DIR}/cmake/defs.mk.in
+    ${PROJECT_BINARY_DIR}/defs.mk)
 
 UNSET(CHANGESET)
 CONFIGURE_FILE(
-    ${CMAKE_SOURCE_DIR}/win32/dllversion.rc.in
-    ${CMAKE_BINARY_DIR}/dllversion.rc)
+    ${PROJECT_SOURCE_DIR}/win32/dllversion.rc.in
+    ${PROJECT_BINARY_DIR}/dllversion.rc)
 
 SET(NT_REQUIRED_VERSION 0x0600)
 
@@ -140,7 +140,7 @@ ELSE()
     SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 ENDIF()
 
-SET(SOURCE_ROOT ${CMAKE_SOURCE_DIR})
+SET(SOURCE_ROOT ${PROJECT_SOURCE_DIR})
 
 IF(WIN32)
     ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
@@ -226,7 +226,7 @@ SET(LCB_CORE_OBJS
     ${LCB_DTRACE_OBJECT})
 
 ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_OBJS})
-ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${CMAKE_BINARY_DIR}/dllversion.rc)
+ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${PROJECT_BINARY_DIR}/dllversion.rc)
 # This is done to be ABI-compatible with Autotools. On OSX, autotools generates
 # a library with a Compatibility and Current versions of 3.x despite our library
 # actually being versioned at 2.x. To make things worse, autotools also actually
@@ -330,22 +330,22 @@ INSTALL(DIRECTORY man/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man4  FILES_MATCHING 
 INSTALL_PDBS(couchbase)
 
 SET(_lcb_tarname "libcouchbase-${LCB_VERSION}")
-SET(_lcb_manifest "${CMAKE_SOURCE_DIR}/MANIFEST")
+SET(_lcb_manifest "${PROJECT_SOURCE_DIR}/MANIFEST")
 
 ADD_CUSTOM_TARGET(uninstall
     COMMAND xargs rm -vf < ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt)
 
 ADD_CUSTOM_TARGET(file_manifest
     COMMAND sh -c 'test -e ${_lcb_manifest} || git ls-files > ${_lcb_manifest}'
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 
 
 ADD_CUSTOM_TARGET(dist
     COMMAND rm -rf "${_lcb_tarname}"
     COMMAND mkdir "${_lcb_tarname}"
-    COMMAND tar -cf - -C ${CMAKE_SOURCE_DIR} -T ${_lcb_manifest} | tar xf - -C "${_lcb_tarname}"
-    COMMAND cp ${CMAKE_SOURCE_DIR}/VERSION "${_lcb_tarname}"
-    COMMAND cp ${CMAKE_SOURCE_DIR}/MANIFEST "${_lcb_tarname}"
+    COMMAND tar -cf - -C ${PROJECT_SOURCE_DIR} -T ${_lcb_manifest} | tar xf - -C "${_lcb_tarname}"
+    COMMAND cp ${PROJECT_SOURCE_DIR}/VERSION "${_lcb_tarname}"
+    COMMAND cp ${PROJECT_SOURCE_DIR}/MANIFEST "${_lcb_tarname}"
     COMMAND tar -czf "${_lcb_tarname}.tar.gz" "${_lcb_tarname}"
     COMMAND rm -rf "${_lcb_tarname}"
     DEPENDS file_manifest)
