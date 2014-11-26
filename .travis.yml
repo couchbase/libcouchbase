@@ -11,7 +11,7 @@ before_install:
   - sudo apt-get -y install libgtest-dev libssl-dev libev-dev libevent-dev cmake
 
 script: |
-  ./cmake/configure && make && make alltests && cd build && \
+  ./cmake/configure --enable-debug --disable-couchbasemock && make && make alltests && cd build && \
   (ctest -V || (cat check*.log; false))
 
 notifications:
