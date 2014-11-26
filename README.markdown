@@ -23,9 +23,9 @@ necessary to connect to the cluster and execute data operations.
 
 ## Building
 
-Before you build from this repository, please check the [Couchbase C
-Portal](http://couchbase.com/communities/c) to see if there is a binary
-or release tarball available for your needs. Since the code here is
+Before you build from this repository, please check the
+[installation page](http://docs.couchbase.com/developer/c-2.4/download-install.html)
+to see if there is a binary or release tarball available for your needs. Since the code here is
 not part of an official release it has therefore not gone through our
 release testing process.
 
@@ -49,8 +49,9 @@ Provided is a convenience script called `cmake/configure`. It is a Perl
 script and functions like a normal `autotools` script.
 
 ```shell
+$ git clone git://github.com/couchbase/libcouchbase.git
 $ cd libcouchbase && mkdir build && cd build
-$ ../libcouchbase/cmake/configure
+$ ../cmake/configure
 $ make
 $ ctest
 ```
