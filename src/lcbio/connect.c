@@ -489,6 +489,32 @@ lcbio_connect_hl(lcbio_TABLE *iot, lcb_settings *settings,
     return NULL;
 }
 
+lcbio_SOCKET *
+lcbio_wrap_fd(lcbio_pTABLE iot, lcb_settings *settings, lcb_socket_t fd)
+{
+    lcbio_SOCKET *ret = calloc(1, sizeof(*ret));
+    lcbio_CONNDONE_cb *ci = calloc(1, sizeof(*ci));
+
+    if (ret == NULL || ci == NULL) {
+        free(ret);
+        free(ci);
+        return NULL;
+    }
+
+    assert(iot->model = LCB_IOMODEL_EVENT);
+
+    lcb_list_init(&ret->protos);
+    ret->settings = settings;
+    ret->io = iot;
+    ret->refcount = 1;
+    ret->u.fd = fd;
+
+    lcbio_table_ref(ret->io);
+    lcb_settings_ref(ret->settings);
+    lcbio__load_socknames(ret);
+    return ret;
+}
+
 void
 lcbio_shutdown(lcbio_SOCKET *s)
 {
