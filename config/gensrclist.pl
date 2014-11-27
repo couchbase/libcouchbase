@@ -123,10 +123,3 @@ condition 'HAVE_CXX', sub {
 
 # Write the EXTRA_DIST
 ADDLINE 'EXTRA_DIST =';
-my @cmakes = map { chomp($_); $_; } qx(git ls-files | grep CMakeLists.txt);
-push @cmakes, 'cmake';
-
-ADDLINE 'EXTRA_DIST +='.fmt_filelist(@cmakes);
-my @doxystuff = (qw(Doxyfile DoxygenLayout.xml));
-push @doxystuff, map { chomp($_); $_; } qx(git ls-files doc);
-ADDLINE 'EXTRA_DIST +='.fmt_filelist(@doxystuff);

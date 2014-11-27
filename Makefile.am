@@ -31,8 +31,6 @@ lib_LTLIBRARIES = libcouchbase.la
 noinst_LTLIBRARIES = libcbsasl.la
 bin_PROGRAMS =
 noinst_PROGRAMS =
-man_MANS = man/cbc.1 man/cbc-pillowfight.1 man/cbcrc.4
-include man/manpages.mk
 
 BUILT_SOURCES =
 CLEANFILES =
@@ -216,10 +214,8 @@ EXTRA_DIST += LICENSE README.markdown \
               RELEASE_NOTES.markdown \
               include/libcouchbase/configuration.h.in \
               include/memcached/README include/memcached/COPYING \
-              tests/start_mock.sh \
               win32 \
-              VERSION src/probes.d \
-              $(man_MANS)
+              VERSION src/probes.d
 
 LINTFLAGS=-Iinclude -b -c -errchk=%all \
           -erroff=E_INCL_NUSD,E_CAST_INT_TO_SMALL_INT,E_PTRDIFF_OVERFLOW  \
