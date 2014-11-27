@@ -124,7 +124,7 @@ CONFIGURE_FILE(
 
 UNSET(CHANGESET)
 CONFIGURE_FILE(
-    ${PROJECT_SOURCE_DIR}/win32/dllversion.rc.in
+    ${PROJECT_SOURCE_DIR}/packaging/dllversion.rc.in
     ${PROJECT_BINARY_DIR}/dllversion.rc)
 
 SET(NT_REQUIRED_VERSION 0x0600)
@@ -145,7 +145,7 @@ SET(SOURCE_ROOT ${PROJECT_SOURCE_DIR})
 IF(WIN32)
     ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
     ADD_DEFINITIONS(-D_WIN32_WINNT=${NT_REQUIRED_VERSION})
-    SET(lcb_plat_includes "${SOURCE_ROOT}/win32")
+    SET(lcb_plat_includes "${SOURCE_ROOT}/contrib/win32-defs")
     SET(lcb_plat_libs couchbase_iocp ws2_32.lib)
 ELSE()
     SET(lcb_plat_libs dl m pthread)

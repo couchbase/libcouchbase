@@ -145,7 +145,7 @@ endif
 endif
 
 if HAVE_WINSOCK2
-libcouchbase_la_CPPFLAGS += -Iwin32 -Iplugins/io/iocp -DWINVER=0x0600 -D_WIN32_WINNT=0x0600
+libcouchbase_la_CPPFLAGS += -Icontrib/win32-defs -Iplugins/io/iocp -DWINVER=0x0600 -D_WIN32_WINNT=0x0600
 endif
 if HAVE_LIBEVENT
 lib_LTLIBRARIES += libcouchbase_libevent.la
@@ -214,7 +214,7 @@ EXTRA_DIST += LICENSE README.markdown \
               RELEASE_NOTES.markdown \
               include/libcouchbase/configuration.h.in \
               include/memcached/README include/memcached/COPYING \
-              win32 \
+              contrib/win32-defs \
               VERSION src/probes.d
 
 LINTFLAGS=-Iinclude -b -c -errchk=%all \
