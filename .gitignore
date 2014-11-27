@@ -122,3 +122,5 @@ MANIFEST
 m4
 configure.ac
 Makefile.am
+packaging/distinfo/distinfo.cmake
+packaging/distinfo/MANIFEST

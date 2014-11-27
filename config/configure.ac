@@ -84,9 +84,9 @@ COUCHBASE_GENERIC_COMPILER(c99)
 
 AM_CPPFLAGS="$AM_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
 AM_NOWARN_CPPFLAGS="$AM_NOWARN_CPPFLAGS -I\${top_srcdir}/src -I\${top_srcdir}/contrib -I\${top_srcdir}/contrib/cbsasl/include"
-CHANGESET=GIT_CHANGESET
+LCB_VERSION_CHANGESET=GIT_CHANGESET
 REVDESCRIBE=GIT_DESCRIBE
-AC_SUBST(CHANGESET)
+AC_SUBST(LCB_VERSION_CHANGESET)
 AC_SUBST(REVDESCRIBE)
 
 #
@@ -276,5 +276,5 @@ CPPFLAGS="$SAVE_CPPFLAGS"
 LDFLAGS="$SAVE_LDFLAGS"
 
 dnl ----------------------------------------------------------------------------
-AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h VERSION])
+AC_CONFIG_FILES([Makefile include/libcouchbase/configuration.h])
 AC_OUTPUT

@@ -31,21 +31,13 @@ if (GIT_EXECUTABLE)
 ENDIF()
 
 IF(LCB_VERSION)
-    SET(CHANGESET ${LCB_VERSION_CHANGESET})
     # Have the version information
-    CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/VERSION.in ${PROJECT_SOURCE_DIR}/VERSION
-        @ONLY)
-    UNSET(CHANGESET)
+    CONFIGURE_FILE(${LCB_GENINFODIR}/distinfo.cmake.in ${LCB_GENINFODIR}/distinfo.cmake)
 ENDIF()
 
 # library version
-IF(NOT LCB_VERSION AND EXISTS ${PROJECT_SOURCE_DIR}/VERSION)
-    FILE(STRINGS ${PROJECT_SOURCE_DIR}/VERSION lines)
-    FOREACH(line ${lines})
-        STRING(REGEX REPLACE "^([^=]+)=(.*)" "\\1" varname "${line}")
-        STRING(REGEX REPLACE "^([^=]+)=(.*)" "\\2" varvalue "${line}")
-        SET(LCB_${varname} "${varvalue}")
-    ENDFOREACH()
+IF(NOT LCB_VERSION AND EXISTS ${LCB_GENINFODIR}/distinfo.cmake)
+    INCLUDE(${LCB_GENINFODIR}/distinfo.cmake)
 ENDIF()
 
 IF (NOT LCB_VERSION)

@@ -73,6 +73,7 @@ ENDIF()
 
 SET(LCB_GENSRCDIR ${PROJECT_BINARY_DIR}/generated)
 INCLUDE_DIRECTORIES(${LCB_GENSRCDIR})
+SET(LCB_GENINFODIR ${PROJECT_SOURCE_DIR}/packaging/distinfo)
 
 INCLUDE(cmake/Modules/GetLibcouchbaseFlags.cmake)
 INCLUDE(cmake/Modules/FindCouchbaseLibevent.cmake)
@@ -112,7 +113,6 @@ ENDIF()
 
 INCLUDE(CPack)
 
-SET(CHANGESET ${LCB_VERSION_CHANGESET})
 CONFIGURE_FILE(
     ${PROJECT_SOURCE_DIR}/include/libcouchbase/configuration.h.in
     ${LCB_GENSRCDIR}/libcouchbase/configuration.h
@@ -122,7 +122,6 @@ CONFIGURE_FILE(
     ${PROJECT_SOURCE_DIR}/cmake/defs.mk.in
     ${PROJECT_BINARY_DIR}/defs.mk)
 
-UNSET(CHANGESET)
 CONFIGURE_FILE(
     ${PROJECT_SOURCE_DIR}/packaging/dllversion.rc.in
     ${PROJECT_BINARY_DIR}/dllversion.rc)
@@ -332,7 +331,7 @@ INSTALL(DIRECTORY doc/man/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man4  FILES_MATCH
 INSTALL_PDBS(couchbase)
 
 SET(_lcb_tarname "libcouchbase-${LCB_VERSION}")
-SET(_lcb_manifest "${PROJECT_SOURCE_DIR}/MANIFEST")
+SET(_lcb_manifest "${LCB_GENINFODIR}/MANIFEST")
 
 ADD_CUSTOM_TARGET(uninstall
     COMMAND xargs rm -vf < ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt)
@@ -346,8 +345,7 @@ ADD_CUSTOM_TARGET(dist
     COMMAND rm -rf "${_lcb_tarname}"
     COMMAND mkdir "${_lcb_tarname}"
     COMMAND tar -cf - -C ${PROJECT_SOURCE_DIR} -T ${_lcb_manifest} | tar xf - -C "${_lcb_tarname}"
-    COMMAND cp ${PROJECT_SOURCE_DIR}/VERSION "${_lcb_tarname}"
-    COMMAND cp ${PROJECT_SOURCE_DIR}/MANIFEST "${_lcb_tarname}"
+    COMMAND cp -a "${LCB_GENINFODIR}/" "${_lcb_tarname}/packaging/distinfo"
     COMMAND tar -czf "${_lcb_tarname}.tar.gz" "${_lcb_tarname}"
     COMMAND rm -rf "${_lcb_tarname}"
     DEPENDS file_manifest)
