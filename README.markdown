@@ -125,8 +125,26 @@ documentation.
 
 ## Contributors
 
-See the `AUTHORS` file
+The following people contributed to libcouchbase (in alphabetic order)
+(last updated Nov. 27 2014)
 
+* Brett Lawson <brett19@gmail.com>
+* Dave Rigby <daver@couchbase.com>
+* Jan Lehnardt <jan@apache.org>
+* Mark Nunberg <mnunberg@haskalah.org>
+* Matt Ingenthron <ingenthr@cep.net>
+* Patrick Varley <patrick@couchbase.com>
+* Paul Farag <pfarag@neuraliq.com>
+* Pierre Joye <pierre.php@gmail.com>
+* Sebastian <sebastian@chango.com>
+* Sergey Avseyev <sergey.avseyev@gmail.com>
+* Subhashni Balakrishnan <b.subhashni@gmail.com>
+* Sundar Sridharan <sundar.sridharan@gmail.com>
+* Trond Norbye <trond.norbye@gmail.com>
+* Volker Mische <vmx@couchbase.com>
+* William Bowers <wbowers@neuraliq.com>
+* Yura Sokolov <funny.falcon@gmail.com>
+* Yury Alioshinov <haster2010@gmail.com>
 
 ## License
 
