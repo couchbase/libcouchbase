@@ -146,7 +146,8 @@ IF(WIN32)
     ADD_DEFINITIONS(-DWINVER=${NT_REQUIRED_VERSION})
     ADD_DEFINITIONS(-D_WIN32_WINNT=${NT_REQUIRED_VERSION})
     SET(lcb_plat_includes "${SOURCE_ROOT}/contrib/win32-defs")
-    SET(lcb_plat_libs couchbase_iocp ws2_32.lib)
+    SET(lcb_plat_libs ws2_32.lib)
+    SET(lcb_plat_objs $<TARGET_OBJECTS:couchbase_iocp>)
 ELSE()
     SET(lcb_plat_libs dl m pthread)
 ENDIF()
@@ -222,6 +223,7 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:rdb>
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
+    ${lcb_plat_objs}
     ${lcb_ssl_objs}
     ${LCB_DTRACE_OBJECT})
 

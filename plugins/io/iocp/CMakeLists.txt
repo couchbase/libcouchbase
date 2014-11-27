@@ -1,6 +1,6 @@
 IF(WIN32)
     INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/contrib/win32-defs)
-    ADD_LIBRARY(couchbase_iocp STATIC
+    ADD_LIBRARY(couchbase_iocp OBJECT
         iocp_iops.c
         iocp_loop.c
         iocp_timer.c
