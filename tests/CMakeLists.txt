@@ -104,23 +104,10 @@ IF(WIN32)
     TARGET_LINK_LIBRARIES(mc-malloc-tests ws2_32.lib)
 ENDIF()
 
-
-MACRO(BUILD_TEST target)
-    ADD_TEST(NAME BUILD-${target}
-        COMMAND ${CMAKE_COMMAND} --build "${PROJECT_BINARY_DIR}" --target ${target})
-ENDMACRO()
-
-BUILD_TEST(check-all)
-BUILD_TEST(unit-tests)
-BUILD_TEST(nonio-tests)
-BUILD_TEST(rdb-tests)
-BUILD_TEST(sock-tests)
-BUILD_TEST(vbucket-tests)
-BUILD_TEST(mc-tests)
-BUILD_TEST(htparse-tests)
-
 ADD_CUSTOM_TARGET(alltests DEPENDS check-all unit-tests nonio-tests
     rdb-tests sock-tests vbucket-tests mc-tests htparse-tests)
+
+ADD_TEST(NAME BUILD-TESTS COMMAND ${CMAKE_COMMAND} --build "${PROJECT_BINARY_DIR}" --target alltests)
 
 MACRO(DEFINE_MOCKTEST plugin test)
     ADD_TEST(
