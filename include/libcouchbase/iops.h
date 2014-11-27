@@ -889,6 +889,41 @@ typedef lcb_error_t (*lcb_io_create_fn)
         (int version, lcb_io_opt_t *io, void *cookie);
 
 
+/**
+ * @volatile
+ *
+ * This is an alternative to copying the 'bsdio-inl.c' file around. It is
+ * designed specifically for the @ref lcb_io_procs_fn function and will do the
+ * job of applying the current _runtime_ version of the default event-based I/O
+ * implementation.
+ *
+ * e.g.
+ * @code{.c}
+ * static void getprocs_impl(int version, lcb_loop_procs *loop_procs,
+ *      lcb_timer_procs *timer_procs, lcb_bsd_procs *bsd_procs,
+ *      lcb_ev_procs *ev_procs, lcb_completion_procs *completion_procs,
+ *      lcb_iomodel_t *iomodel) {
+ *
+ *      // do stuff normally
+ *      // ..
+ *      // install the default I/O handlers:
+ *      lcb_iops_wire_bsd_impl2(bsd_procs, version);
+ * @endcode
+ *
+ * Use this function with care, and understand the implications between using
+ * this API call and embedding the `bsdio-inl.c` source file. Specifically:
+ *
+ * - If your application is using an _older_ version of the library, this
+ *   implementation may contain bugs not present in the version you compiled
+ *   against (and an embedded version may be newer)
+ * - If your application is using a _newer_ version, there may be some additional
+ *   I/O functions which you may wish to wrap or rather not implement at all,
+ *   but will be implemented if you call this function.
+ */
+LIBCOUCHBASE_API
+void
+lcb_iops_wire_bsd_impl2(lcb_bsd_procs *procs, int version);
+
 #ifdef __cplusplus
 }
 #endif

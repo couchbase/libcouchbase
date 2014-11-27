@@ -556,3 +556,11 @@ lcb_error_t lcb_iops_cntl_handler(int mode,
     }
 
 }
+
+/* In-library wrapper version */
+LIBCOUCHBASE_API
+void
+lcb_iops_wire_bsd_impl2(lcb_bsd_procs *procs, int version)
+{
+    wire_lcb_bsd_impl2(procs, version);
+}
