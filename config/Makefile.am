@@ -144,62 +144,14 @@ endif
 endif
 endif
 
-if HAVE_WINSOCK2
-libcouchbase_la_CPPFLAGS += -Icontrib/win32-defs -Iplugins/io/iocp -DWINVER=0x0600 -D_WIN32_WINNT=0x0600
-endif
-if HAVE_LIBEVENT
-lib_LTLIBRARIES += libcouchbase_libevent.la
-libcouchbase_libevent_la_SOURCES = plugins/io/libevent/plugin-libevent.c
-libcouchbase_libevent_la_LDFLAGS=-avoid-version $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
-libcouchbase_libevent_la_LIBADD=-levent
-libcouchbase_libevent_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-endif
-
-if HAVE_LIBEV
-lib_LTLIBRARIES += libcouchbase_libev.la
-libcouchbase_libev_la_SOURCES = plugins/io/libev/plugin-libev.c
-libcouchbase_libev_la_LDFLAGS=-avoid-version $(AM_LDFLAGS) $(AM_PROFILE_SOLDFLAGS)
-libcouchbase_libev_la_LIBADD=-lev
-libcouchbase_libev_la_CPPFLAGS=$(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-endif
-
-if HAVE_LIBUV
-lib_LTLIBRARIES += libcouchbase_libuv.la
-libcouchbase_libuv_la_SOURCES = plugins/io/libuv/plugin-libuv.c
-libcouchbase_libuv_la_LDFLAGS = $(AM_PROFILE_SOLDFLAGS)
-libcouchbase_libuv_la_LIBADD = -luv
-libcouchbase_libuv_la_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DLIBCOUCHBASE_INTERNAL=1
-endif
-
-doc-public:
-	$(MAKE) -f doc/Makefile public
-
-doc-internal:
-	$(MAKE) -f doc/Makefile internal
-
 if BUILD_TOOLS
 tools_cbc_SOURCES =    tools/cbc.cc tools/cbc-handlers.h
 tools_cbc_LDADD = libcouchbase.la liblcbtools.la
 tools_cbc_pillowfight_SOURCES = tools/cbc-pillowfight.cc
 tools_cbc_pillowfight_LDADD = libcouchbase.la liblcbtools.la -lpthread
 
-CBC_LINKS = \
-			cbc-admin \
-			cbc-cat \
-			cbc-bucket-create \
-			cbc-bucket-delete \
-			cbc-cp \
-			cbc-create \
-			cbc-mcflush \
-			cbc-hash \
-			cbc-lock \
-			cbc-rm \
-			cbc-stats \
-			cbc-unlock \
-			cbc-verify \
-			cbc-verbosity \
-			cbc-version \
-			cbc-view
+CBC_LINKS = cbc-admin cbc-cat cbc-bucket-create cbc-bucket-delete cbc-cp cbc-create cbc-mcflush cbc-hash \
+			cbc-lock cbc-rm cbc-stats cbc-unlock cbc-verify cbc-verbosity cbc-version cbc-view
 
 install-exec-hook:
 	cd $(DESTDIR)$(bindir) && \
@@ -214,7 +166,6 @@ EXTRA_DIST += LICENSE README.markdown \
               RELEASE_NOTES.markdown \
               include/libcouchbase/configuration.h.in \
               include/memcached/README include/memcached/COPYING \
-              contrib/win32-defs \
               VERSION src/probes.d
 
 LINTFLAGS=-Iinclude -b -c -errchk=%all \
@@ -223,5 +174,3 @@ LINTFLAGS=-Iinclude -b -c -errchk=%all \
           -errsecurity=extended -fd -Ncheck=%all -Nlevel=4 -n -Xc99=none
 lint:
 	$(LINT.c) $(libcouchbase_la_SOURCES)
-
-sinclude packaging/*/package.mk

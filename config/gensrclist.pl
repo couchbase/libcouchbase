@@ -93,9 +93,6 @@ add_sources('libcouchbase', find_srcfiles('contrib/cJSON'));
 add_sources('libcouchbase', find_srcfiles('include/memcached'));
 add_sources('libcouchbase', find_srcfiles('include/ep-engine'));
 
-condition 'HAVE_WINSOCK2', sub {
-    add_sources('libcouchbase', find_srcfiles('plugins/io/iocp'));
-};
 condition 'ENABLE_SSL', sub {
     add_sources('libcouchbase', find_srcfiles('src/ssl'));
 };
