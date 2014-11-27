@@ -32,7 +32,6 @@ SET(COUCHBASE_MOCK_VERSION
 # Maven repository where ${COUCHBASE_MOCK_VERSION} is to be found
 SET(COUCHBASE_MOCK_DLSERVER
     http://files.couchbase.com/maven2/org/couchbase/mock/CouchbaseMock)
-SET(HAVE_COUCHBASEMOCK 1)
 project(libcouchbase)
 
 OPTION(LCB_NO_TESTS "Disable building of tests" OFF)

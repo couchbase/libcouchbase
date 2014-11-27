@@ -44,11 +44,7 @@
 #define TESTS_BASE "sock-tests;nonio-tests;rdb-tests;mc-tests;"
 #define PLUGIN_ENV_VAR "LCB_IOPS_NAME"
 #define LCB_SRCROOT_ENV_VAR "srcdir"
-#ifdef HAVE_COUCHBASEMOCK
 #define DEFAULT_TEST_NAMES TESTS_BASE "unit-tests"
-#else
-#define DEFAULT_TEST_NAMES TESTS_BASE
-#endif
 
 #ifdef _WIN32
 const char default_plugins_string[] = "select;iocp;libuv";

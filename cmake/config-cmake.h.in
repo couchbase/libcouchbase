@@ -1,12 +1,3 @@
-#ifndef PACKAGE_STRING
-#define PACKAGE_STRING "libcouchbase"
-#endif
-#ifndef PACKAGE_NAME
-#define PACKAGE_NAME "libcouchbase"
-#endif
-#ifndef PACKAGE_VERSION
-#define PACKAGE_VERSION LCB_VERSION_STRING
-#endif
 #ifdef _WIN32
 #define CONFIG_H
 #define HAVE_WINSOCK2_H
@@ -17,11 +8,6 @@
 
 #ifndef CONFIG_H
 #define CONFIG_H
-
-#cmakedefine LCB_BUILD_PLUGINS
-#ifdef LCB_BUILD_PLUGINS
-#define BUILD_PLUGINS 1
-#endif
 
 #cmakedefine HAVE_CLOCK_GETTIME
 #cmakedefine HAVE_COUCHBASEMOCK
@@ -50,9 +36,6 @@
 #cmakedefine HAVE_WINSOCK2_H
 #cmakedefine HAVE_WS2TCPIP_H
 #cmakedefine HAVE_ARPA_INET_H
-#cmakedefine PACKAGE_STRING
-#cmakedefine PACKAGE_NAME
-#cmakedefine PACKAGE_VERSION
 
 #ifndef HAVE_LIBEVENT
 #cmakedefine HAVE_LIBEVENT

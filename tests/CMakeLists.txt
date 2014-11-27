@@ -66,13 +66,6 @@ ELSE()
     ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL ${T_IO_SRC} unit_tests.cc $<TARGET_OBJECTS:mocksupport>)
 ENDIF()
 
-# Normally defined by config.h
-SET_PROPERTY(
-    TARGET unit-tests
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    BUILD_PLUGINS
-    )
-
 IF(CMAKE_COMPILER_IS_GNUCXX)
     SET_TARGET_PROPERTIES(unit-tests
         PROPERTIES
