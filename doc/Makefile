@@ -5,7 +5,7 @@ ifneq ($(strip $(VERSINFO)),)
 endif
 
 DOXYGEN?=doxygen
-DOXYFILE=Doxyfile
+DOXYFILE=doc/Doxyfile
 OUTDIR_PUB = doc/public
 OUTDIR_PRIV = doc/internal
 INTERNAL_SRC = \
