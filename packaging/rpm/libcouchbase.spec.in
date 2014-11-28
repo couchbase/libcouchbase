@@ -80,7 +80,7 @@ Development files for the Couchbase Client & Protocol Library
 %files -n %{name}2-core
 %defattr(-, root, root)
 %{_libdir}/libcouchbase.so.*
-%doc README.markdown AUTHORS LICENSE RELEASE_NOTES.markdown
+%doc README.markdown LICENSE RELEASE_NOTES.markdown
 
 %files -n %{name}2-libevent
 %defattr(-, root, root)
