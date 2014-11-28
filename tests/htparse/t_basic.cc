@@ -33,7 +33,7 @@ TEST_F(HtparseTest, testBasic)
     ASSERT_EQ(0, state);
     buf += "Content-Length: 5\r\n\r\n";
     state = lcbht_parse(parser, buf.c_str(), buf.size());
-    ASSERT_EQ(LCBHT_S_HEADER|LCBHT_S_HEADER|LCBHT_S_HTSTATUS, state);
+    ASSERT_EQ(LCBHT_S_HEADER|LCBHT_S_HTSTATUS, state);
 
     lcbht_RESPONSE *resp = lcbht_get_response(parser);
     ASSERT_EQ(200, resp->status);

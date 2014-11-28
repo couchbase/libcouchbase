@@ -27,7 +27,7 @@ static void invoke_listeners(lcb_confmon *mon,
                              clconfig_event_t event,
                              clconfig_info *info);
 
-#define IS_REFRESHING(mon) (mon)->state & CONFMON_S_ACTIVE
+#define IS_REFRESHING(mon) ((mon)->state & CONFMON_S_ACTIVE)
 
 static clconfig_provider *next_active(lcb_confmon *mon, clconfig_provider *cur)
 {

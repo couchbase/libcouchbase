@@ -481,7 +481,7 @@ lcbio_mgr_put(lcbio_SOCKET *sock)
     mgr = he->parent;
 
     if (HE_NIDLE(he) >= mgr->maxidle &&
-            HE_NREQS(he) <= (he->n_leased - he->n_leased)) {
+            HE_NREQS(he) <= (he->n_total - he->n_leased)) {
 
         lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Closing idle connection. Too many in quota", HE_LOGID(he));
         lcbio_unref(info->sock);
