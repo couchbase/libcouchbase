@@ -272,14 +272,6 @@ struct lcb_create_st {
         struct lcb_create_st2 v2;
         struct lcb_create_st3 v3; /**< Use this field */
     } v;
-
-#define LCB_CREATEOPT_INIT(cropt, s, iops) do { \
-    memset(cropt, 0, sizeof(*cropt)); \
-    (cropt)->version = 3; \
-    (cropt)->v.v3.connstr = s; \
-    (cropt)->v.v3.iops = iops; \
-} while (0);
-
     LCB_DEPR_CTORS_CRST
 };
 
