@@ -36,10 +36,14 @@
         #include <sys/syscall.h>
         #define GET_THREAD_ID() (long)syscall(SYS_gettid)
         #define THREAD_ID_FMT "ld"
-
     #elif defined(__APPLE__)
         #define GET_THREAD_ID() pthread_mach_thread_np(pthread_self())
         #define THREAD_ID_FMT "u"
+    #elif defined(__sun) && defined(__SVR4)
+        #include <thread.h>
+        /* Thread IDs are not global in solaris, so it's nice to print the PID alongside it */
+        #define GET_THREAD_ID() getpid(), thr_self()
+        #define THREAD_ID_FMT "ld/%u"
     #else
         /* other unix? */
         #define GET_THREAD_ID() 0

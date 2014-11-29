@@ -49,6 +49,7 @@ OPTION(LCB_STATIC_SNAPPY "Use the bundled libsnappy. Do not link with system sna
 OPTION(LCB_USE_ARCHLIBDIR "Use architecture-prefixed library installation directory, if possible" OFF)
 OPTION(LCB_BUILD_EXAMPLES "Build example applications" OFF)
 OPTION(LCB_NO_MOCK "Don't run tests which depend on the mock" OFF)
+OPTION(LCB_BUILD_DTRACE "Build DTrace instrumentation, if available on platform" ON)
 
 ### END CONFIGURABLES ###
 IF(MSVC)
@@ -147,7 +148,10 @@ IF(WIN32)
     SET(lcb_plat_libs ws2_32.lib)
     SET(lcb_plat_objs $<TARGET_OBJECTS:couchbase_iocp>)
 ELSE()
-    SET(lcb_plat_libs dl m pthread)
+    SET(lcb_plat_libs dl m)
+    IF(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
+        SET(lcb_plat_libs ${lcb_plat_libs} nsl socket)
+    ENDIF()
 ENDIF()
 
 INCLUDE_DIRECTORIES(BEFORE ${SOURCE_ROOT}/include
@@ -207,9 +211,11 @@ ELSE()
     SET(_lcb_linkspec SHARED)
 ENDIF()
 
-IF(NOT WIN32)
+# CMake configuration
+IF(NOT WIN32 AND LCB_BUILD_DTRACE)
     INCLUDE(cmake/Modules/ConfigureDtrace.cmake)
 ENDIF()
+
 SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:couchbase_select>
     $<TARGET_OBJECTS:couchbase_utils>
@@ -221,12 +227,24 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:rdb>
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
+    ${LCB_DTRACE_OBJECT}
     ${lcb_plat_objs}
-    ${lcb_ssl_objs}
-    ${LCB_DTRACE_OBJECT})
+    ${lcb_ssl_objs})
 
 ADD_LIBRARY(couchbaseS STATIC ${LCB_CORE_OBJS})
 ADD_LIBRARY(couchbase ${_lcb_linkspec} ${LCB_CORE_OBJS} ${PROJECT_BINARY_DIR}/dllversion.rc)
+
+# For DTrace implementations which need to gain access to all the *.o files first
+# we need to hook the linker command to a custom perl script which will intercept
+# the object files passed to the linker, run dtrace on them, and inject the generated
+# object into the linker commandline. This is a bit fragile but we don't officially
+# support any of these platforms anyway
+IF(LCB_DTRACE_INSTRO)
+    SET(_lcb_linkhook "${PROJECT_SOURCE_DIR}/cmake/dtrace-instr-link.pl ${LCB_DTRACE_SRC}")
+    SET_TARGET_PROPERTIES(couchbase PROPERTIES RULE_LAUNCH_LINK ${_lcb_linkhook})
+    SET_TARGET_PROPERTIES(couchbaseS PROPERTIES RULE_LAUNCH_LINK ${_lcb_linkhook})
+ENDIF()
+
 # This is done to be ABI-compatible with Autotools. On OSX, autotools generates
 # a library with a Compatibility and Current versions of 3.x despite our library
 # actually being versioned at 2.x. To make things worse, autotools also actually
