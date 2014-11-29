@@ -1,7 +1,5 @@
 #ifdef _WIN32
 #define CONFIG_H
-#define HAVE_WINSOCK2_H
-#define HAVE_WS2TCPIP_H
 #define HAVE_QUERYPERFORMANCECOUNTER
 #include "config_static.h"
 #endif
@@ -9,23 +7,22 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+/* This file checks for platform-specific includes which may or may
+ * not be available during build time. The config_static.h file includes
+ * files mentioned here as well as other files whose availability can be
+ * inferred from compile-time macros
+ */
+
 #cmakedefine HAVE_CLOCK_GETTIME
-#cmakedefine HAVE_COUCHBASEMOCK
 #cmakedefine HAVE_DLFCN_H
-#cmakedefine HAVE_DTRACE
 #cmakedefine HAVE_GETHRTIME
 #cmakedefine HAVE_GETTIMEOFDAY
 #cmakedefine HAVE_INTTYPES_H
-#cmakedefine HAVE_LIMITS_H
-#cmakedefine HAVE_MACH_MACH_TIME_H
 #cmakedefine HAVE_NETDB_H
 #cmakedefine HAVE_SETITIMER
 #cmakedefine HAVE_STDINT_H
 #cmakedefine HAVE_FCNTL_H
 #cmakedefine HAVE_HTONLL
-#define HAVE_STDARG_H 1
-#define HAVE_STDLIB_H 1
-#define HAVE_STRING_H 1
 #cmakedefine HAVE_STRINGS_H
 #cmakedefine HAVE_SYS_SOCKET_H
 #cmakedefine HAVE_SYS_STAT_H
@@ -33,8 +30,6 @@
 #cmakedefine HAVE_SYS_TYPES_H
 #cmakedefine HAVE_SYS_UIO_H
 #cmakedefine HAVE_UNISTD_H
-#cmakedefine HAVE_WINSOCK2_H
-#cmakedefine HAVE_WS2TCPIP_H
 #cmakedefine HAVE_ARPA_INET_H
 
 #ifndef HAVE_LIBEVENT
