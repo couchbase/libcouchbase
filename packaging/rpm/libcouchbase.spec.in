@@ -6,6 +6,11 @@ Vendor: Couchbase, Inc.
 Packager: Couchbase SDK Team <support@couchbase.com>
 License: Apache-2
 Group: System Environment/Libraries
+%if %{?fedora} >= 18 || %{?rhel}0 >= 60
+BuildRequires: cmake >= 2.8.9
+%else
+BuildRequires: cmake28
+%endif
 BuildRequires: libevent-devel >= 1.4, libev-devel >= 3, openssl-devel
 URL: https://github.com/couchbase/libcouchbase
 Source: @TARREDAS@.tar.gz
