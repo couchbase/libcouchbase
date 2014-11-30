@@ -30,7 +30,6 @@
 
 /* Global Project Dependencies/Includes */
 #include <memcached/protocol_binary.h>
-#include <ep-engine/command_ids.h>
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/vbucket.h>
 #include <libcouchbase/api3.h>
