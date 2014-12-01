@@ -188,50 +188,6 @@ AS_IF([test "x$ac_cv_have_decl___hpux" = "xyes"],
       [AC_CHECK_LIB(xnet, t_error, ,
                     AC_MSG_ERROR([*** -lxnet needed on HP-UX ***]))])
 
-#
-# SystemTap and DTrace support
-#
-AC_CHECK_PROGS([DTRACE], [dtrace])
-
-# On Solaris we need to instrument all of the object files, but this isn't
-# true with DTrace on MacOSX or SystemTap. Instead of doing the hard
-# work of trying to check if we have to do this, just do it if __sun is
-# defined...
-AC_CHECK_DECL([__sun])
-AC_CHECK_DECL([__APPLE__])
-AS_IF([test "x$ac_cv_have_decl___APPLE__" != "xyes"],
-      [DTRACE_DASH_G="-G"])
-AC_SUBST(DTRACE_DASH_G)
-AC_CACHE_CHECK([for SystemTap/DTrace requirements], [ac_cv_enable_dtrace], [
-   AS_IF([test "x$ac_cv_prog_DTRACE" != "xno" -a "x$ac_cv_header_sys_sdt_h" = "xyes"], [
-         AS_IF([test "x$ac_cv_have_decl___APPLE__" = "xyes"],
-               [ ac_cv_enable_dtrace=no ],
-               [ ac_cv_enable_dtrace=yes ])
-      ], [
-         ac_cv_enable_dtrace=no
-      ])
-])
-AC_CACHE_CHECK([if dtrace works], [ac_cv_dtrace_works],
-               [
-                 cat > conftest.d <<EOF
-provider ConfTest {
-    probe ac_test(int);
-};
-EOF
-                 $DTRACE -h -o conftest.h -s conftest.d 2>/dev/zero
-                 AS_IF([test $? -eq 0],
-                       [ac_cv_dtrace_works=yes],
-                       [ac_cv_dtrace_works=no])
-                 rm -f conftest.h conftest.d
-               ])
-AS_IF([test "x$ac_cv_enable_dtrace" = "xyes" -a "x$ac_cv_dtrace_works" = "xyes"],
-      [AC_DEFINE([HAVE_DTRACE], [1], [Enables SystemTap / DTrace Support])])
-
-AM_CONDITIONAL([ENABLE_DTRACE], [test "x$ac_cv_enable_dtrace" = "xyes" -a "x$ac_cv_dtrace_works" = "xyes" ])
-AM_CONDITIONAL([DTRACE_INSTRUMENT_OBJECT],
-               [test "x$ac_cv_have_decl___sun" = "xyes"])
-AM_CONDITIONAL([APPLE_DTRACE], [test "x$ac_cv_have_decl__APPLE__" = "xyes"])
-
 AH_TOP([
 #ifndef CONFIG_H
 #define CONFIG_H

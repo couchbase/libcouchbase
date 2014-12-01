@@ -91,7 +91,10 @@ add_sources('libcouchbase', find_srcfiles('contrib/genhash'));
 add_sources('libcouchbase', find_srcfiles('contrib/http_parser'));
 add_sources('libcouchbase', find_srcfiles('contrib/cJSON'));
 add_sources('libcouchbase', find_srcfiles('include/memcached'));
-add_sources('libcouchbase', find_srcfiles('include/ep-engine'));
+
+add_target('libcbsasl', {nocore=>1});
+add_sources('libcbsasl', find_srcfiles('contrib/cbsasl'));
+add_dependency('libcouchbase', 'libcbsasl');
 
 condition 'ENABLE_SSL', sub {
     add_sources('libcouchbase', find_srcfiles('src/ssl'));
