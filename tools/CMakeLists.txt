@@ -21,7 +21,7 @@ SET_SOURCE_FILES_PROPERTIES(cbc.cc cbc-pillowfight.cc PROPERTIES COMPILE_FLAGS "
 
 IF(NOT WIN32)
     LIST(APPEND CBC_SUBCOMMANDS
-        admin bucket-create bucket-delete cat cp create hash lock mcflush
+        admin bucket-create bucket-delete cat cp create decr hash incr lock mcflush
         rm stats unlock verbosity verify version verbosity view)
     FOREACH(subcmd IN ITEMS ${CBC_SUBCOMMANDS})
         ADD_CUSTOM_COMMAND(TARGET cbc POST_BUILD
