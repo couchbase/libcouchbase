@@ -454,17 +454,17 @@ lcbio_connect(lcbio_TABLE *iot, lcb_settings *settings, lcb_host_t *dest,
 
     if ((rv = getaddrinfo(dest->host, dest->port, &hints, &ret->ai_root))) {
         const char *errstr = rv != EAI_SYSTEM ? gai_strerror(rv) : "";
-        lcb_log(LOGARGS(s, ERR), CSLOGFMT "Couldn't look up %s (%s)", CSLOGID(s), dest->host, errstr);
+        lcb_log(LOGARGS(s, ERR), CSLOGFMT "Couldn't look up %s (%s) [EAI=%d]", CSLOGID(s), dest->host, errstr, rv);
         cs_state_signal(ret, CS_ERROR, LCB_UNKNOWN_HOST);
-    }
-
-    ret->ai = ret->ai_root;
-
-    /** Figure out how to connect */
-    if (IOT_IS_EVENT(iot)) {
-        E_connect(-1, LCB_WRITE_EVENT, ret);
     } else {
-        C_connect(ret);
+        ret->ai = ret->ai_root;
+
+        /** Figure out how to connect */
+        if (IOT_IS_EVENT(iot)) {
+            E_connect(-1, LCB_WRITE_EVENT, ret);
+        } else {
+            C_connect(ret);
+        }
     }
     return ret;
 }
