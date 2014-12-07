@@ -934,7 +934,7 @@ mcreq_dump_chain(const mc_PIPELINE *pipeline, FILE *fp, mcreq_payload_dump_fn du
 
 #define mcreq_first_packet(pipeline) \
         SLLIST_IS_EMPTY(&(pipeline)->requests) ? NULL : \
-                SLLIST_ITEM((pipeline)->requests.first, mc_PACKET, slnode)
+                SLLIST_ITEM(SLLIST_FIRST(&(pipeline)->requests), mc_PACKET, slnode)
 
 /**@}*/
 
