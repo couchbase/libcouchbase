@@ -843,9 +843,10 @@ struct lcb_iops2_st {
  * (for example, additional fields may be added or existing fields may be
  * renamed/removed) without notice.
  */
+typedef void (*lcb__iops3fndummy)(void);
 struct lcb_iops3_st {
     LCB_IOPS_BASE_FIELDS
-    void (*pads[17]);
+    lcb__iops3fndummy pads[17];
     lcb_io_procs_fn get_procs;
     struct lcbio_TABLE *iot;
 };
