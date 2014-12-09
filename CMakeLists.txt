@@ -307,8 +307,9 @@ IF(NOT LCB_NO_TOOLS)
     ADD_SUBDIRECTORY(tools tools)
 ENDIF(NOT LCB_NO_TOOLS)
 
+# Always add this file, as we need the headers for this!
+ADD_SUBDIRECTORY(plugins/io/libuv)
 IF(NOT LCB_NO_PLUGINS AND LCB_BUILD_LIBUV)
-    ADD_SUBDIRECTORY(plugins/io/libuv)
 ENDIF()
 
 IF(NOT LCB_NO_PLUGINS AND NOT WIN32)
