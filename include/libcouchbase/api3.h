@@ -100,6 +100,9 @@ typedef struct lcb_CMDBASE {
     LCB_CMD_BASE;
 } lcb_CMDBASE;
 
+/* INTERNAL! */
+#define LCB_CMD_F_INTERNAL_CALLBACK (1 << 0)
+
 /**
  * Set the key for the command.
  * @param cmd A command derived from lcb_CMDBASE

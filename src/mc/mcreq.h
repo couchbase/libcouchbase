@@ -248,7 +248,20 @@ typedef enum {
      * also indicates that the packet is actually an mc_EXPACKET extended
      * type. This is set by mcreq_renew_packet()
      */
-    MCREQ_F_DETACHED = 1 << 8
+    MCREQ_F_DETACHED = 1 << 8,
+
+    /**
+     * Another way of signalling that the callback has an 'internal' variant.
+     * Dispatching this command requires a specially formatted cookie object,
+     * which itself is expected to _contain_ a pointer to the callback, and
+     * thus be formatted like so:
+     * @code{.c}
+     * struct {
+     *   lcb_RESPCALLBACK callback;
+     * };
+     * @endcode
+     */
+    MCREQ_F_PRIVCALLBACK = 1 << 9
 } mcreq_flags;
 
 /** @brief mask of flags indicating user-allocated buffers */
