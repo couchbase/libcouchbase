@@ -82,6 +82,8 @@ struct lcb_http_request_st {
     unsigned int refcount;
     /** Redirect count */
     int redircount;
+    /** IO reading temporarily disabled */
+    int paused;
     char *redirect_to;
     lcb_string outbuf;
 
@@ -95,6 +97,7 @@ struct lcb_http_request_st {
     lcb_http_header_t headers_out;
     /** Headers array for passing to callbacks */
     char **headers;
+    lcb_RESPCALLBACK callback;
     lcbio_pTABLE io;
     lcbio_pTIMER timer;
     lcbio_CONNREQ creq;
@@ -121,5 +124,27 @@ lcb_http_request_exec(lcb_http_request_t req);
 
 lcb_error_t
 lcb_http_request_connect(lcb_http_request_t req);
+
+#define lcb_htreq_setcb(htr, cb) (htr)->callback = cb
+
+#define LCB_HTREQ_GETCB(htreq) \
+    (htreq)->callback ? \
+            (htreq)->callback : \
+            lcb_find_callback((htreq->instance), LCB_CALLBACK_HTTP)
+
+/*
+ * Functions to control throttling of potentially long-running HTTP responses.
+ * This ensures that memory will not overflow the client.
+ *
+ * This function, together with lcb_htreq_resume() hint to the underlying
+ * IO implementation to stop monitoring the socket for reading until
+ * htreq_resume() is called.
+ */
+
+void
+lcb_htreq_pause(lcb_http_request_t req);
+
+void
+lcb_htreq_resume(lcb_http_request_t req);
 
 #endif

@@ -79,7 +79,7 @@ handle_parse_chunked(lcb_http_request_t req, const char *buf, unsigned nbuf)
                 htresp.body = body;
                 htresp.nbody = nbody;
                 htresp.rc = LCB_SUCCESS;
-                target = lcb_find_callback(req->instance, LCB_CALLBACK_HTTP);
+                target = LCB_HTREQ_GETCB(req);
                 target(req->instance, LCB_CALLBACK_HTTP, (const lcb_RESPBASE *)&htresp);
 
             } else {
@@ -108,7 +108,7 @@ handle_parse_chunked(lcb_http_request_t req, const char *buf, unsigned nbuf)
         resp.rc = LCB_SUCCESS;
         resp.body = buf;
         resp.nbody = nbuf;
-        target = lcb_find_callback(req->instance, LCB_CALLBACK_HTTP);
+        target = LCB_HTREQ_GETCB(req);
         target(req->instance, LCB_CALLBACK_HTTP, (const lcb_RESPBASE*)&resp);
         req->status |= LCB_HTREQ_S_CBINVOKED;
     }
@@ -165,12 +165,38 @@ io_read(lcbio_CTX *ctx, unsigned nr)
     } else if (rv == 1) {
         lcb_http_request_finish(instance, req, LCB_SUCCESS);
     } else {
-        lcbio_ctx_rwant(ctx, 1);
+        lcbio_ctx_rwant(ctx, req->paused ? 0 : 1);
         lcbio_ctx_schedule(ctx);
     }
 
     GT_DONE:
     lcb_http_request_decref(req);
+}
+
+void
+lcb_htreq_pause(lcb_http_request_t req)
+{
+    if (!req->paused) {
+        req->paused = 1;
+        if (req->ioctx) {
+            lcbio_ctx_rwant(req->ioctx, 0);
+            lcbio_ctx_schedule(req->ioctx);
+        }
+    }
+}
+
+void
+lcb_htreq_resume(lcb_http_request_t req)
+{
+    if (!req->paused) {
+        return;
+    }
+    if (req->ioctx == NULL) {
+        return;
+    }
+    req->paused = 0;
+    lcbio_ctx_rwant(req->ioctx, 1);
+    lcbio_ctx_schedule(req->ioctx);
 }
 
 static void

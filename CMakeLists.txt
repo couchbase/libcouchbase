@@ -215,6 +215,10 @@ IF(NOT WIN32 AND LCB_BUILD_DTRACE)
     INCLUDE(cmake/Modules/ConfigureDtrace.cmake)
 ENDIF()
 
+FILE(GLOB LCB_VIEWS_C_SRC src/views/*.c)
+ADD_LIBRARY(lcb_views_c OBJECT ${LCB_VIEWS_C_SRC})
+LCB_UTIL(lcb_views_c)
+
 SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:couchbase_select>
     $<TARGET_OBJECTS:couchbase_utils>
@@ -226,6 +230,7 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:rdb>
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
+    $<TARGET_OBJECTS:lcb_views_c>
     ${LCB_DTRACE_OBJECT}
     ${lcb_plat_objs}
     ${lcb_ssl_objs})

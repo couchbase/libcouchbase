@@ -214,7 +214,7 @@ lcb_http_request_finish(lcb_t instance, lcb_http_request_t req, lcb_error_t erro
         lcb_RESPCALLBACK target;
 
         lcb_http_init_resp(req, &resp);
-        target = lcb_find_callback(instance, LCB_CALLBACK_HTTP);
+        target = LCB_HTREQ_GETCB(req);
 
         resp.rflags = LCB_RESP_F_FINAL;
         resp.rc = error;
