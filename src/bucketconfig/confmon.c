@@ -210,7 +210,14 @@ void lcb_confmon_provider_failed(clconfig_provider *provider,
     }
 
     if (reason != LCB_SUCCESS) {
-        mon->last_error = reason;
+        if (mon->settings->detailed_neterr && mon->last_error != LCB_SUCCESS) {
+            /* Filter out any artificial 'connect error' or 'network error' codes */
+            if (reason != LCB_CONNECT_ERROR && reason != LCB_NETWORK_ERROR) {
+                mon->last_error = reason;
+            }
+        } else {
+            mon->last_error = reason;
+        }
     }
 
     mon->cur_provider = next_active(mon, mon->cur_provider);
