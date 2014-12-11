@@ -16,6 +16,7 @@
  */
 
 #include "config.h"
+#include "settings.h"
 #include <libcouchbase/couchbase.h>
 
 #ifndef HAVE_GETHRTIME
@@ -31,13 +32,22 @@
 #define HAVE_CLOCK_GETTIME 1
 #endif
 
+#define CLOCK_START_OFFSET (LCB_S2NS(3600 * 24))
+
 hrtime_t gethrtime(void)
 {
 #ifdef __APPLE__
+
+    /* Most things expect a pretty large timestamp - even though a smaller one
+     * may be perfectly valid. Initialize the default with an offset of one day,
+     * in nanoseconds
+     */
+
     /* Use the various mach stuff:
      * https://developer.apple.com/library/mac/qa/qa1398/_index.html */
-    static uint64_t start = 0;
-    uint64_t now;
+
+    static uint64_t start = CLOCK_START_OFFSET;
+    uint64_t now ;
     static mach_timebase_info_data_t tmbi;
 
     if (start == 0) {
@@ -46,7 +56,7 @@ hrtime_t gethrtime(void)
     }
 
     now = mach_absolute_time();
-    return (now - start) * tmbi.numer / tmbi.denom;
+    return ((now - start) * tmbi.numer / tmbi.denom) + CLOCK_START_OFFSET;
 
 #elif defined(HAVE_CLOCK_GETTIME)
     struct timespec tm;
@@ -82,7 +92,7 @@ hrtime_t gethrtime(void)
     QueryPerformanceCounter(&currtime);
 
     ret = (double)currtime.QuadPart * freq ;
-    return (hrtime_t)ret;
+    return (hrtime_t)ret + CLOCK_START_OFFSET;
 #else
 #error "I don't know how to build a highres clock..."
 #endif
