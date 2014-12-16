@@ -1,16 +1,21 @@
 FIND_PROGRAM(DTRACE dtrace)
 IF(DTRACE)
-    ADD_DEFINITIONS(-DHAVE_DTRACE)
     SET(LCB_DTRACE_HEADER "${LCB_GENSRCDIR}/probes.h")
     SET(LCB_DTRACE_SRC "${PROJECT_SOURCE_DIR}/src/probes.d")
 
     # Generate probes.h
-    EXECUTE_PROCESS(COMMAND ${DTRACE} -C -h -s ${LCB_DTRACE_SRC} -o ${LCB_DTRACE_HEADER})
+    EXECUTE_PROCESS(COMMAND ${DTRACE} -C -h -s ${LCB_DTRACE_SRC} -o ${LCB_DTRACE_HEADER}
+        RESULT_VARIABLE _rv)
+    IF(NOT ${_rv} EQUAL 0)
+        MESSAGE(WARNING "Could not execute DTrace. DTrace support will be disabled!")
+        RETURN()
+    ENDIF()
 
+    ADD_DEFINITIONS(-DHAVE_DTRACE)
     IF(NOT APPLE)
         SET(LCB_DTRACE_OBJECT "${LCB_GENSRCDIR}/probes.o")
         # Generate probes.o
-        IF(CMAKE_SYSTEM_NAME STREQUAL "SunOS")
+        IF(CMAKE_SYSTEM_NAME STREQUAL "SunOS" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
             SET(LCB_DTRACE_INSTRO ON)
             UNSET(LCB_DTRACE_OBJECT)
         ELSE()
