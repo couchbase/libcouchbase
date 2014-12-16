@@ -12,6 +12,7 @@
 #ifndef _WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #define closesocket close
@@ -70,6 +71,16 @@ public:
 
     std::string getRemoteHost() {
         return getHostCommon(&sa_remote);
+    }
+
+    template <typename T> bool setOption(int level, T val) {
+        int rv = setsockopt(fd, level, TCP_NODELAY, &val, sizeof val);
+        return rv == 0;
+    }
+
+    bool setNodelay(bool enabled = true) {
+        int isEnabled = enabled ? 1 : 0;
+        return setOption<int>(IPPROTO_TCP, isEnabled);
     }
 
     SockFD *acceptClient();

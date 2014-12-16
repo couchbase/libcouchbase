@@ -137,6 +137,7 @@ TestConnection::TestConnection(TestServer *server, SockFD *newsock)
 
     thr = new Thread(client_runfunc, this);
     ctlfd_user = SockFD::newClient(ctlfd_lsn);
+    ctlfd_user->setNodelay(true);
 
     mutex.lock();
     while (!ctlfd_loop) {
