@@ -73,14 +73,14 @@ public:
         return getHostCommon(&sa_remote);
     }
 
-    template <typename T> bool setOption(int level, T val) {
-        int rv = setsockopt(fd, level, TCP_NODELAY, &val, sizeof val);
+    template <typename T> bool setOption(int level, int option, T val) {
+        int rv = setsockopt(fd, level, option, (char *)&val, sizeof val);
         return rv == 0;
     }
 
     bool setNodelay(bool enabled = true) {
         int isEnabled = enabled ? 1 : 0;
-        return setOption<int>(IPPROTO_TCP, isEnabled);
+        return setOption<int>(IPPROTO_TCP, TCP_NODELAY, isEnabled);
     }
 
     SockFD *acceptClient();
