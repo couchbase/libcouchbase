@@ -6,7 +6,7 @@ Vendor: Couchbase, Inc.
 Packager: Couchbase SDK Team <support@couchbase.com>
 License: Apache-2
 Group: System Environment/Libraries
-%if %{?fedora} >= 18 || %{?rhel}0 >= 60
+%if %{?fedora}0 >= 180 || %{?rhel}0 >= 60
 BuildRequires: cmake >= 2.8.9
 %else
 BuildRequires: cmake28
