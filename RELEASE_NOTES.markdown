@@ -1,6 +1,6 @@
 # Release Notes
 
-## Upcoming Release (UNPLANNED)
+## 2.4.5 (December 17 2014)
 
 * Fix `pillowfight` ignoring `set-ratio` values above 50
   The program would ignore these values and act as if 100 was specified,
