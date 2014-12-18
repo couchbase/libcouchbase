@@ -370,7 +370,7 @@ ADD_CUSTOM_TARGET(dist
     COMMAND rm -rf "${_lcb_tarname}"
     COMMAND mkdir "${_lcb_tarname}"
     COMMAND tar -cf - -C ${PROJECT_SOURCE_DIR} -T ${_lcb_manifest} | tar xf - -C "${_lcb_tarname}"
-    COMMAND cp -a "${LCB_GENINFODIR}/" "${_lcb_tarname}/packaging/distinfo"
+    COMMAND cp -a "${LCB_GENINFODIR}" "${_lcb_tarname}/packaging"
     COMMAND tar -czf "${_lcb_tarname}.tar.gz" "${_lcb_tarname}"
     COMMAND rm -rf "${_lcb_tarname}"
     DEPENDS file_manifest)
