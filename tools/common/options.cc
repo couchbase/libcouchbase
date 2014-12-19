@@ -244,13 +244,10 @@ ConnParams::fillCropts(lcb_create_st& cropts)
             }
         }
 
-        if (o_host.passed()) {
-            fprintf(stderr, "The -h/--host option is deprecated. Use connection string instead\n");
-            fprintf(stderr, "  e.g. couchbase://%s\n", host.c_str());
-        }
-        if (o_bucket.passed()) {
-            fprintf(stderr, "The -b/--bucket option is deprecated. Use connection string instead\n");
-            fprintf(stderr, "  e.g. couchbase://HOSTS/%s\n", bucket.c_str());
+        if (o_host.passed() || o_bucket.passed()) {
+            fprintf(stderr, "CBC: WARNING\n");
+            fprintf(stderr, "  The -h/--host and -b/--bucket options are deprecated. Use connection string instead\n");
+            fprintf(stderr, "  e.g. -U couchbase://%s/%s\n", host.c_str(), o_bucket.const_result().c_str());
         }
 
         connstr = "http://";
@@ -259,6 +256,12 @@ ConnParams::fillCropts(lcb_create_st& cropts)
         connstr += bucket;
         connstr += "?";
     }
+
+    if (connstr.find("8091") != string::npos) {
+        fprintf(stderr, "CBC: WARNING\n");
+        fprintf(stderr, "  Specifying the default port (8091) has no effect\n");
+    }
+
     if (o_certpath.passed()) {
         connstr += "certpath=";
         connstr += o_certpath.result();
