@@ -353,6 +353,13 @@ INSTALL_PDBS(couchbase)
 SET(_lcb_tarname "libcouchbase-${LCB_VERSION}")
 SET(_lcb_manifest "${LCB_GENINFODIR}/MANIFEST")
 
+# pkg-config stuff goes with installation
+IF(NOT WIN32)
+    CONFIGURE_FILE(packaging/libcouchbase.pc.in packaging/libcouchbase.pc @ONLY)
+    INSTALL(FILES ${PROJECT_BINARY_DIR}/packaging/libcouchbase.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+ENDIF()
+
+
 ADD_CUSTOM_TARGET(uninstall
     COMMAND xargs rm -vf < ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt)
 
