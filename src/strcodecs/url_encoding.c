@@ -96,6 +96,7 @@ lcb_error_t lcb_urlencode_path(const char *path,
     lcb_size_t n = 0;
     int skip_encoding = 0;
     char *op;
+    lcb_error_t err;
 
     /* Allocate for a worst case scenario (it will probably not be
      * that bad anyway
@@ -121,8 +122,8 @@ lcb_error_t lcb_urlencode_path(const char *path,
 
         if (skip_encoding || is_legal_uri_character(path[ii])) {
             if (skip_encoding && path[ii] != '%' && !is_legal_uri_character(path[ii])) {
-                free(op);
-                return LCB_INVALID_CHAR;
+                err = LCB_INVALID_CHAR;
+                goto GT_ERR;
             }
 
             op[n++] = path[ii];
@@ -140,8 +141,8 @@ lcb_error_t lcb_urlencode_path(const char *path,
             } else if ((c & 0xF8) == 0xF0) {    /* 1111 0xxx */
                 numbytes = 4;
             } else {
-                free(op);
-                return LCB_INVALID_CHAR;
+                err = LCB_INVALID_CHAR;
+                goto GT_ERR;
             }
 
             for (xx = 0; xx < numbytes; ++xx, ++ii) {
@@ -158,6 +159,11 @@ lcb_error_t lcb_urlencode_path(const char *path,
     *nout = n;
 
     return LCB_SUCCESS;
+
+    GT_ERR:
+    free(op);
+    *out = NULL;
+    return err;
 }
 
 int
