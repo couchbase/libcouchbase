@@ -14,6 +14,33 @@ using std::ifstream;
 using std::ofstream;
 using std::endl;
 
+#ifndef _WIN32
+#include <unistd.h>
+#include <termios.h>
+#endif
+
+static string promptPassword(const char *prompt)
+{
+#ifndef _WIN32
+    termios oldattr, newattr;
+    tcgetattr(STDIN_FILENO, &oldattr);
+    newattr = oldattr;
+    newattr.c_lflag &= ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &newattr);
+#endif
+
+    fprintf(stderr, "%s", prompt);
+    fflush(stderr);
+    // Use cin here. A bit more convenient
+    string ret;
+    std::cin >> ret;
+#ifndef _WIN32
+    fprintf(stderr, "\n");
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldattr);
+#endif
+    return ret;
+}
+
 static void
 makeLowerCase(string &s)
 {
@@ -226,6 +253,9 @@ void
 ConnParams::fillCropts(lcb_create_st& cropts)
 {
     passwd = o_passwd.result();
+    if (passwd == "-") {
+        passwd = promptPassword("Bucket password: ");
+    }
 
     if (o_connstr.passed()) {
         connstr = o_connstr.const_result();
