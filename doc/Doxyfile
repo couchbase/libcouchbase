@@ -217,6 +217,8 @@ ALIASES += "cntl_arg_both{1}=@par Argument\nModes|Arg\n---|---\nGet, Set|\1\n"
 ALIASES += "cntl_arg_getonly{1}=@par Argument\nModes|Arg\n---|---\nGet|\1\n"
 ALIASES += "cntl_arg_setonly{1}=@par Argument\nModes|Arg\n---|---\nSet|\1\n"
 ALIASES += "cntl_arg_get_and_set{2}=@par Argument\nModes|Arg\n---|---\nGet|\1\nSet|\2\n"
+ALIASES += "return_rc=\return Status code indicating whether the operation was scheduled or not. See 'exceptions' section for errors received in callbacks"
+ALIASES += "cb_err=\li"
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding
