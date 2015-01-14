@@ -117,7 +117,7 @@ unit-tests.dir/
 win32/Debug/
 MANIFEST
 doc/public
-doc/private
+doc/internal
 
 # Symlinks
 m4
