@@ -1,4 +1,4 @@
-/**
+/*
  *     Copyright 2015 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,16 @@
 extern "C" {
 #endif
 
+/**
+ * @ingroup lcb-public-api
+ * @defgroup lcb-view-api Row-based View API
+ * @brief Higher level API which splits view results into rows
+ */
+
+/**
+ * @addtogroup lcb-view-api
+ * @{
+ */
 typedef struct lcb_RESPVIEW_st lcb_RESPVIEWQUERY;
 typedef struct lcbview_REQUEST_st *lcb_VIEWHANDLE;
 
@@ -102,9 +112,10 @@ typedef struct {
     lcb_VIEWHANDLE *handle;
 } lcb_CMDVIEWQUERY;
 
-/**
- * Response structure. This is provided for each invocation of the
- * lcb_CMDVIEWQUERY::callback invocation. The #key and #nkey fields here
+/**@brief Response structure representing a row.
+ *
+ * This is provided for each invocation of the
+ * lcb_CMDVIEWQUERY::callback invocation. The `key` and `nkey` fields here
  * refer to the first argument passed to the `emit` function by the
  * `map` function.
  *
@@ -114,16 +125,25 @@ typedef struct {
  *
  * @note
  * The #key and #value fields are JSON encoded. This means that if they are
- * bare strings, they will be surrounded by quotes. Please take note of this
- * if doing any form of string comparison/processing.
+ * bare strings, they will be surrounded by quotes. On the other hand, the
+ * #docid is _not_ JSON encoded and is provided with any surrounding quotes
+ * stripped out (this is because the document ID is always a string). Please
+ * take note of this if doing any form of string comparison/processing.
  *
  * @note
  * If the @ref LCB_CMDVIEWQUERY_F_NOROWPARSE flag has been set, the #value
  * field will contain the raw row contents, rather than the constituent
  * elements.
+ *
  */
 struct lcb_RESPVIEW_st {
+    #ifndef __LCB_DOXYGEN__
     LCB_RESP_BASE
+    #else
+    const char *key; /**< Emitted key */
+    size_t nkey; /**< Length of emitted key */
+    #endif
+
     const char *docid; /**< Document ID (i.e. memcached key) associated with this row */
     size_t ndocid; /**< Length of document ID */
 
@@ -262,6 +282,7 @@ LIBCOUCHBASE_API
 void
 lcb_view_cancel(lcb_t instance, lcb_VIEWHANDLE handle);
 
+/**@}*/
 
 #ifdef __cplusplus
 }

@@ -252,7 +252,7 @@ lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix);
  * is -1 or if the master index is deemed incorrect by some other means.
  *
  * @param cfg the configuration object
- * @param vbix the vbucket index to loop up
+ * @param vbid the vbucket index to loop up
  * @param bad the index known to be bad. Passing this parameter allows the
  *  handler to safely call this function and be sure that a previous call's
  *  applied heuristics will not affect the modified map.
