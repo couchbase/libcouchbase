@@ -559,7 +559,11 @@ mcserver_alloc2(lcb_t instance, lcbvb_CONFIG* vbc, int ix)
     mcreq_pipeline_init(&ret->pipeline);
     ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
     ret->pipeline.buf_done_callback = buf_done_cb;
-    lcb_host_parsez(ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
+    if (ret->datahost) {
+        lcb_host_parsez(ret->curhost, ret->datahost, LCB_CONFIG_MCD_PORT);
+    } else {
+        lcb_log(LOGARGS(ret, DEBUG), LOGFMT "Server does not have data service", LOGID(ret));
+    }
     ret->io_timer = lcbio_timer_new(instance->iotable, ret, timeout_server);
     return ret;
 }

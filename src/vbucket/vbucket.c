@@ -322,6 +322,9 @@ extract_services(lcbvb_CONFIG *cfg, cJSON *jsvc, lcbvb_SERVICES *svc, int is_ssl
     EXTRACT_SERVICE("kv", data);
     EXTRACT_SERVICE("mgmt", mgmt);
     EXTRACT_SERVICE("capi", views);
+    EXTRACT_SERVICE("n1ql", n1ql);
+    EXTRACT_SERVICE("indexAdmin", ixadmin);
+    EXTRACT_SERVICE("indexScan", ixquery);
 
     #undef EXTRACT_SERVICE
 
@@ -1068,6 +1071,12 @@ lcbvb_get_port(lcbvb_CONFIG *cfg,
         return svc->mgmt;
     } else if (type == LCBVB_SVCTYPE_VIEWS) {
         return svc->views;
+    } else if (type == LCBVB_SVCTYPE_IXADMIN) {
+        return svc->ixadmin;
+    } else if (type == LCBVB_SVCTYPE_IXQUERY) {
+        return svc->ixquery;
+    } else if (type == LCBVB_SVCTYPE_N1QL) {
+        return svc->n1ql;
     } else {
         return 0;
     }

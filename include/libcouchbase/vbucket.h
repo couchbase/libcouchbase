@@ -48,6 +48,9 @@ typedef enum {
     LCBVB_SVCTYPE_DATA = 0, /**< memcached/Data port */
     LCBVB_SVCTYPE_VIEWS, /**< Views/CAPI port */
     LCBVB_SVCTYPE_MGMT, /**< Administrative/'REST' UI */
+    LCBVB_SVCTYPE_IXQUERY, /**< Index query */
+    LCBVB_SVCTYPE_IXADMIN, /**< Index administration */
+    LCBVB_SVCTYPE_N1QL, /**< N1QL Query */
     LCBVB_SVCTYPE__MAX
 } lcbvb_SVCTYPE;
 
@@ -67,6 +70,9 @@ typedef struct {
     lcb_U16 data; /**< Data port for key-value operations (memcached protocol) */
     lcb_U16 mgmt; /**< Port for adminsitrative operations (HTTP) */
     lcb_U16 views; /**< Port for view queries (HTTP) */
+    lcb_U16 ixquery; /**< Indexing query port */
+    lcb_U16 ixadmin; /**< Indexing admin port (HTTP) */
+    lcb_U16 n1ql; /**< Query port */
     char *views_base_; /**< Views base URL */
     char *hoststrs[LCBVB_SVCTYPE__MAX];
 } lcbvb_SERVICES;
