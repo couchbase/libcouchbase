@@ -72,7 +72,7 @@ ConnParams::ConnParams() :
     o_saslmech.description("Force SASL mechanism").argdesc("PLAIN|CRAM_MD5");
     o_timings.description("Enable command timings");
     o_timeout.description("Operation timeout");
-    o_transport.description("Bootstrap protocol").argdesc("HTTP|CCCP_BOTH").setDefault("BOTH");
+    o_transport.description("Bootstrap protocol").argdesc("HTTP|CCCP|ALL").setDefault("ALL");
     o_configcache.description("Path to cached configuration");
     o_ssl.description("Enable SSL settings").argdesc("ON|OFF|NOVERIFY").setDefault("off");
     o_certpath.description("Path to server certificate");
