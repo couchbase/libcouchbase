@@ -66,11 +66,6 @@ IF(CMAKE_COMPILER_IS_GNUCXX)
         COMPILE_FLAGS "-Wno-sign-compare -Wno-missing-field-initializers")
 ENDIF(CMAKE_COMPILER_IS_GNUCXX)
 
-ADD_EXECUTABLE(views-example views-example.cc)
-TARGET_LINK_LIBRARIES(views-example couchbase)
-
-
-
 IF(NOT EXISTS ${PROJECT_SOURCE_DIR}/tests/CouchbaseMock.jar AND NOT LCB_NO_MOCK)
     DOWNLOAD_LCB_DEP("${COUCHBASE_MOCK_DLSERVER}/${COUCHBASE_MOCK_VERSION}"
         "${PROJECT_SOURCE_DIR}/tests/CouchbaseMock.jar")
