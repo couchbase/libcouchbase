@@ -366,6 +366,23 @@ void lcb_sched_leave(lcb_t instance);
  * The commands placed within the current
  * scheduling context are released and are never flushed to the network.
  * @param instance
+ *
+ * @warning
+ * This function only affects commands which have a direct correspondence
+ * to memcached packets. Currently these are commands scheduled by:
+ *
+ * * lcb_get3()
+ * * lcb_rget3()
+ * * lcb_unlock3()
+ * * lcb_touch3()
+ * * lcb_store3()
+ * * lcb_counter3()
+ * * lcb_remove3()
+ * * lcb_observe3()
+ * * lcb_stats3()
+ *
+ * Other commands are _compound_ commands and thus should be in their own
+ * scheduling context.
  */
 LIBCOUCHBASE_API
 void lcb_sched_fail(lcb_t instance);
@@ -939,6 +956,9 @@ typedef struct {
  * lcb_sched_leave(instance);
  * lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESP_cb)callback);
  * @endcode
+ *
+ * @warning
+ * Operations created by observe cannot be undone using lcb_sched_fail().
  */
 LIBCOUCHBASE_API
 lcb_MULTICMD_CTX *
