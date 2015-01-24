@@ -267,8 +267,6 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
      * just use the 'basic_packet()' function.
      */
     mc_CMDQUEUE *cq = &instance->cmdq;
-    const void *hk;
-    lcb_size_t nhk;
     int vbid, ixtmp;
     protocol_binary_request_header req;
     unsigned r0, r1 = 0;
@@ -281,8 +279,8 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
         return LCB_CLIENT_ETMPFAIL;
     }
 
-    mcreq_extract_hashkey(&cmd->key, &cmd->_hashkey, MCREQ_PKT_BASESIZE, &hk, &nhk);
-    vbid = lcbvb_k2vb(cq->config, hk, nhk);
+    mcreq_map_key(cq, &cmd->key, &cmd->_hashkey, MCREQ_PKT_BASESIZE,
+        &vbid, &ixtmp);
 
     /* The following blocks will also validate that the entire index range is
      * valid. This is in order to ensure that we don't allocate the cookie

@@ -114,6 +114,16 @@ typedef struct lcb_CMDBASE {
  */
 #define LCB_CMD_SET_KEY(cmd, keybuf, keylen) \
         LCB_KREQ_SIMPLE(&(cmd)->key, keybuf, keylen)
+
+/**
+ * @private
+ * Sets the vBucket ID for the item. This accomplishes the same effect as
+ * _hashkey_ except that this assumes the vBucket has already been obtained.
+ */
+#define LCB_CMD__SETVBID(cmd, vbid) do { \
+        (cmd)->_hashkey.type = LCB_KV_VBID; \
+        (cmd)->_hashkey.contig.nbytes = vbid; \
+} while (0);
 /**@}*/
 
 

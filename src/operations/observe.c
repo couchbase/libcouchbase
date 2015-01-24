@@ -141,9 +141,7 @@ static void destroy_requests(OBSERVECTX *reqs)
 static lcb_error_t
 obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
 {
-    const void *hk;
-    lcb_SIZE nhk;
-    int vbid;
+    int vbid, srvix_dummy;
     unsigned maxix;
     int ii;
     OBSERVECTX *ctx = CTX_FROM_MULTI(mctx);
@@ -162,8 +160,7 @@ obs_ctxadd(lcb_MULTICMD_CTX *mctx, const lcb_CMDOBSERVE *cmd)
         return LCB_NOT_SUPPORTED;
     }
 
-    mcreq_extract_hashkey(&cmd->key, &cmd->_hashkey, 24, &hk, &nhk);
-    vbid = lcbvb_k2vb(cq->config, hk, nhk);
+    mcreq_map_key(cq, &cmd->key, &cmd->_hashkey, 24, &vbid, &srvix_dummy);
     maxix = LCBVB_NREPLICAS(cq->config);
 
     for (ii = -1; ii < (int)maxix; ++ii) {
