@@ -2,7 +2,7 @@
 #include <libcouchbase/views.h>
 #include <libcouchbase/pktfwd.h>
 
-#include "parser.h"
+#include <jsparse/parser.h>
 #include "docreq.h"
 
 struct lcbview_REQUEST_st;
@@ -20,7 +20,7 @@ struct lcbview_REQUEST_st {
     const lcb_RESPHTTP *cur_htresp;
     /** HTTP request object, in case we need to cancel prematurely */
     struct lcb_http_request_st *htreq;
-    lcbvrow_PARSER *parser;
+    lcbjsp_PARSER *parser;
     const void *cookie;
     lcb_DOCQUEUE *docq;
     lcb_VIEWQUERYCALLBACK callback;

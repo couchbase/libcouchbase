@@ -6,7 +6,7 @@
 #define MAX_GET_URI_LENGTH 2048
 
 static void chunk_callback(lcb_t, int, const lcb_RESPBASE*);
-static void row_callback(lcbvrow_PARSER*, const lcbvrow_ROW*);
+static void row_callback(lcbjsp_PARSER*, const lcbjsp_ROW*);
 static void invoke_row(lcbview_REQUEST *req, lcb_RESPVIEWQUERY *resp);
 static void unref_request(lcbview_REQUEST *req);
 
@@ -83,7 +83,7 @@ chunk_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
     }
 
     req->refcount++;
-    lcbvrow_feed(req->parser, rh->body, rh->nbody);
+    lcbjsp_feed(req->parser, rh->body, rh->nbody);
     req->cur_htresp = NULL;
     unref_request(req);
     (void)instance;
@@ -101,12 +101,12 @@ mk_docreq_iov(lcbview_DOCREQ *dr,
 }
 
 static void
-row_callback(lcbvrow_PARSER *parser, const lcbvrow_ROW *datum)
+row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
 {
     lcbview_REQUEST *req = parser->data;
-    if (datum->type == LCB_VRESP_ROW) {
+    if (datum->type == LCBJSP_TYPE_ROW) {
         if (!req->no_parse_rows) {
-            lcbvrow_parse_row(req->parser, (lcbvrow_ROW*)datum);
+            lcbjsp_parse_viewrow(req->parser, (lcbjsp_ROW*)datum);
         }
 
         if (req->include_docs && datum->docid.iov_len && req->callback) {
@@ -134,9 +134,9 @@ row_callback(lcbvrow_PARSER *parser, const lcbvrow_ROW *datum)
             resp.htresp = req->cur_htresp;
             invoke_row(req, &resp);
         }
-    } else if (datum->type == LCB_VRESP_ERROR) {
+    } else if (datum->type == LCBJSP_TYPE_ERROR) {
         invoke_last(req, LCB_PROTOCOL_ERROR);
-    } else if (datum->type == LCB_VRESP_COMPLETE) {
+    } else if (datum->type == LCBJSP_TYPE_COMPLETE) {
         /* nothing */
     }
 }
@@ -182,7 +182,7 @@ destroy_request(lcbview_REQUEST *req)
     invoke_last(req, req->lasterr);
 
     if (req->parser != NULL) {
-        lcbvrow_free(req->parser);
+        lcbjsp_free(req->parser);
     }
     if (req->htreq != NULL) {
         lcb_cancel_http_request(req->instance, req->htreq);
@@ -258,7 +258,7 @@ lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
     }
 
     if ( (req = calloc(1, sizeof(*req))) == NULL ||
-            (req->parser = lcbvrow_create()) == NULL) {
+            (req->parser = lcbjsp_create(LCBJSP_MODE_VIEWS)) == NULL) {
         free(req);
         lcb_string_release(&path);
         return LCB_CLIENT_ENOMEM;

@@ -219,6 +219,10 @@ FILE(GLOB LCB_VIEWS_C_SRC src/views/*.c)
 ADD_LIBRARY(lcb_views_c OBJECT ${LCB_VIEWS_C_SRC})
 LCB_UTIL(lcb_views_c)
 
+FILE(GLOB LCB_JSPARSE_SRC src/jsparse/*.c)
+ADD_LIBRARY(lcb_jsparse OBJECT ${LCB_JSPARSE_SRC})
+LCB_UTIL(lcb_jsparse)
+
 SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:couchbase_select>
     $<TARGET_OBJECTS:couchbase_utils>
@@ -231,6 +235,7 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
     $<TARGET_OBJECTS:lcb_views_c>
+    $<TARGET_OBJECTS:lcb_jsparse>
     ${LCB_DTRACE_OBJECT}
     ${lcb_plat_objs}
     ${lcb_ssl_objs})

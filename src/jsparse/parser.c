@@ -1,5 +1,5 @@
-/**
- *     Copyright 2013 Couchbase, Inc.
+/*
+ *     Copyright 2013-2015 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
  *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
- **/
+ */
 #if defined(__GNUC__)
 #define JSONSL_API static __attribute__((unused))
 #elif defined(_MSC_VER)
@@ -49,7 +49,7 @@ DECLARE_JSONSL_CALLBACK(trailer_pop_callback);
  * returned in 'actual' (and may be less than desired, maybe even 0)
  */
 static const char *
-get_buffer_region(lcbvrow_PARSER *ctx, size_t pos, size_t desired, size_t *actual)
+get_buffer_region(lcbjsp_PARSER *ctx, size_t pos, size_t desired, size_t *actual)
 {
     const char *ret = ctx->current_buf.base + pos - ctx->min_pos;
     const char *end = ctx->current_buf.base + ctx->current_buf.nused;
@@ -72,7 +72,7 @@ get_buffer_region(lcbvrow_PARSER *ctx, size_t pos, size_t desired, size_t *actua
  * Consolidate the meta data into a single parsable string..
  */
 static void
-combine_meta(lcbvrow_PARSER *ctx)
+combine_meta(lcbjsp_PARSER *ctx)
 {
     const char *meta_trailer;
     size_t ntrailer;
@@ -98,7 +98,7 @@ meta_header_complete_callback(jsonsl_t jsn, jsonsl_action_t action,
     struct jsonsl_state_st *state, const jsonsl_char_t *at)
 {
 
-    lcbvrow_PARSER *ctx = jsn->data;
+    lcbjsp_PARSER *ctx = jsn->data;
     buffer_append(&ctx->meta_buf, ctx->current_buf.base, state->pos_begin);
 
     ctx->header_len = state->pos_begin;
@@ -112,8 +112,8 @@ static void
 row_pop_callback(jsonsl_t jsn, jsonsl_action_t action,
     struct jsonsl_state_st *state, const jsonsl_char_t *at)
 {
-    lcbvrow_ROW dt = { 0 };
-    lcbvrow_PARSER *ctx = jsn->data;
+    lcbjsp_ROW dt = { 0 };
+    lcbjsp_PARSER *ctx = jsn->data;
     const char *rowbuf;
     size_t szdummy;
 
@@ -146,7 +146,7 @@ row_pop_callback(jsonsl_t jsn, jsonsl_action_t action,
     }
 
     rowbuf = get_buffer_region(ctx, state->pos_begin, -1, &szdummy);
-    dt.type = LCB_VRESP_ROW;
+    dt.type = LCBJSP_TYPE_ROW;
     dt.row.iov_base = (void *)rowbuf;
     dt.row.iov_len = jsn->pos - state->pos_begin + 1;
     ctx->callback(ctx, &dt);
@@ -158,13 +158,13 @@ static int
 parse_error_callback(jsonsl_t jsn, jsonsl_error_t error,
     struct jsonsl_state_st *state, jsonsl_char_t *at)
 {
-    lcbvrow_PARSER *ctx = jsn->data;
-    lcbvrow_ROW dt = { 0 };
+    lcbjsp_PARSER *ctx = jsn->data;
+    lcbjsp_ROW dt = { 0 };
 
     ctx->have_error = 1;
 
     /* invoke the callback */
-    dt.type = LCB_VRESP_ERROR;
+    dt.type = LCBJSP_TYPE_ERROR;
     dt.row.iov_base = ctx->current_buf.base;
     dt.row.iov_len = ctx->current_buf.nused;
     ctx->callback(ctx, &dt);
@@ -178,15 +178,15 @@ static void
 trailer_pop_callback(jsonsl_t jsn, jsonsl_action_t action,
     struct jsonsl_state_st *state, const jsonsl_char_t *at)
 {
-    lcbvrow_PARSER *ctx = jsn->data;
-    lcbvrow_ROW dt = { 0 };
+    lcbjsp_PARSER *ctx = jsn->data;
+    lcbjsp_ROW dt = { 0 };
     if (state->data != JOBJ_RESPONSE_ROOT) {
         return;
     }
     combine_meta(ctx);
     dt.row.iov_base = ctx->meta_buf.base;
     dt.row.iov_len = ctx->meta_buf.nused;
-    dt.type = LCB_VRESP_COMPLETE;
+    dt.type = LCBJSP_TYPE_COMPLETE;
     ctx->callback(ctx, &dt);
 
     (void)action; (void)at;
@@ -196,7 +196,7 @@ static void
 initial_pop_callback(jsonsl_t jsn, jsonsl_action_t action,
     struct jsonsl_state_st *state, const jsonsl_char_t *at)
 {
-    lcbvrow_PARSER *ctx = jsn->data;
+    lcbjsp_PARSER *ctx = jsn->data;
     char *key;
     unsigned long len;
 
@@ -228,7 +228,7 @@ static void
 initial_push_callback(jsonsl_t jsn, jsonsl_action_t action,
     struct jsonsl_state_st *state, const jsonsl_char_t *at)
 {
-    lcbvrow_PARSER *ctx = (lcbvrow_PARSER*)jsn->data;
+    lcbjsp_PARSER *ctx = (lcbjsp_PARSER*)jsn->data;
     jsonsl_jpr_match_t match = JSONSL_MATCH_UNKNOWN;
 
     if (ctx->have_error) {
@@ -270,7 +270,7 @@ initial_push_callback(jsonsl_t jsn, jsonsl_action_t action,
 }
 
 static void
-feed_data(lcbvrow_PARSER *ctx, const char *data, size_t ndata)
+feed_data(lcbjsp_PARSER *ctx, const char *data, size_t ndata)
 {
     size_t old_len = ctx->current_buf.nused;
 
@@ -290,20 +290,25 @@ feed_data(lcbvrow_PARSER *ctx, const char *data, size_t ndata)
 
 /* Non-static wrapper */
 void
-lcbvrow_feed(lcbvrow_PARSER *ctx, const char *data, size_t ndata)
+lcbjsp_feed(lcbjsp_PARSER *ctx, const char *data, size_t ndata)
 {
     feed_data(ctx, data, ndata);
 }
 
-lcbvrow_PARSER*
-lcbvrow_create(void)
+lcbjsp_PARSER*
+lcbjsp_create(int mode)
 {
-    lcbvrow_PARSER *ctx;
+    lcbjsp_PARSER *ctx;
     jsonsl_error_t err;
 
     ctx = calloc(1, sizeof(*ctx));
     ctx->jsn = jsonsl_new(512);
-    ctx->jpr = jsonsl_jpr_new("/rows/^", &err);
+    ctx->mode = mode;
+    if (ctx->mode == LCBJSP_MODE_VIEWS) {
+        ctx->jpr = jsonsl_jpr_new("/rows/^", &err);
+    } else {
+        ctx->jpr = jsonsl_jpr_new("/results/^", &err);
+    }
     ctx->jsn_rdetails = jsonsl_new(32);
 
     lcb_string_init(&ctx->meta_buf);
@@ -316,13 +321,13 @@ lcbvrow_create(void)
     jsonsl_jpr_match_state_init(ctx->jsn, &ctx->jpr, 1);
     assert(ctx->jsn_rdetails);
 
-    lcbvrow_reset(ctx);
+    lcbjsp_reset(ctx);
     assert(ctx->jsn_rdetails);
     return ctx;
 }
 
 void
-lcbvrow_reset(lcbvrow_PARSER* ctx)
+lcbjsp_reset(lcbjsp_PARSER* ctx)
 {
     /**
      * We create a copy, and set its relevant fields. All other
@@ -355,7 +360,7 @@ lcbvrow_reset(lcbvrow_PARSER* ctx)
 }
 
 void
-lcbvrow_free(lcbvrow_PARSER *ctx)
+lcbjsp_free(lcbjsp_PARSER *ctx)
 {
     jsonsl_jpr_match_state_cleanup(ctx->jsn);
     jsonsl_destroy(ctx->jsn);
@@ -372,7 +377,7 @@ lcbvrow_free(lcbvrow_PARSER *ctx)
 typedef struct {
     const char *root;
     lcb_IOV *next_iov;
-    lcbvrow_ROW *datum;
+    lcbjsp_ROW *datum;
 } miniparse_ctx;
 
 static void
@@ -436,7 +441,7 @@ miniparse_callback(jsonsl_t jsn, jsonsl_action_t action,
 }
 
 void
-lcbvrow_parse_row(lcbvrow_PARSER *vp, lcbvrow_ROW *vr)
+lcbjsp_parse_viewrow(lcbjsp_PARSER *vp, lcbjsp_ROW *vr)
 {
     miniparse_ctx ctx = { NULL };
     ctx.datum = vr;
