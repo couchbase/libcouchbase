@@ -355,7 +355,7 @@ TEST_F(MockUnitTest, testEmptyKeys)
 
     // Observe and such
     lcb_MULTICMD_CTX *ctx = lcb_observe3_ctxnew(instance);
-    ASSERT_EQ(LCB_EMPTY_KEY, ctx->addcmd(ctx, &u.observe));
+    ASSERT_EQ(LCB_EMPTY_KEY, ctx->addcmd(ctx, (lcb_CMDBASE*)&u.observe));
     ctx->fail(ctx);
 
     lcb_durability_opts_t dopts;

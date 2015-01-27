@@ -886,7 +886,13 @@ typedef struct lcb_MULTICMD_CTX_st {
  * To request the status from _only_ the master node of the key, set the
  * LCB_CMDOBSERVE_F_MASTERONLY bit inside the lcb_CMDOBSERVE::cmdflags field
  */
-typedef lcb_CMDBASE lcb_CMDOBSERVE;
+typedef struct {
+    LCB_CMD_BASE;
+    /**For internal use: This determines the servers the command should be
+     * routed to. Each entry is an index within the server. */
+    const lcb_U16* servers_;
+    size_t nservers_;
+} lcb_CMDOBSERVE;
 
 /**@brief Response structure for an observe command.
  * Note that the lcb_RESPOBSERVE::cas contains the CAS of the item as it is
@@ -897,7 +903,7 @@ typedef struct {
     LCB_RESP_BASE
     lcb_U8 status; /**<Bit set of flags */
     lcb_U8 ismaster; /**< Set to true if this response came from the master node */
-    lcb_U32 ttp; /**<Unused */
+    lcb_U32 ttp; /**<Unused. For internal requests, contains the server index */
     lcb_U32 ttr; /**<Unused */
 } lcb_RESPOBSERVE;
 
