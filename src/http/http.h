@@ -147,4 +147,9 @@ lcb_htreq_pause(lcb_http_request_t req);
 void
 lcb_htreq_resume(lcb_http_request_t req);
 
+/* Deterimes if this request is a data API request (which means we can pool
+ * the socket) and intepret failures as reasons to get a new config */
+#define lcb_htreq_isdata(req) \
+    ((req)->reqtype == LCB_HTTP_TYPE_VIEW || (req)->reqtype == LCB_HTTP_TYPE_N1QL)
+
 #endif

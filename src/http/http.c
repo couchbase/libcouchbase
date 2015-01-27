@@ -107,7 +107,7 @@ do_close_ioctx(lcb_http_request_t req)
         return;
     }
 
-    if (req->parser && req->reqtype == LCB_HTTP_TYPE_VIEW) {
+    if (req->parser && lcb_htreq_isdata(req)) {
         can_ka = lcbht_can_keepalive(req->parser);
     }
 
@@ -243,23 +243,20 @@ lcb_http_request_finish(lcb_t instance, lcb_http_request_t req, lcb_error_t erro
     lcb_http_request_decref(req);
 }
 
-static mc_SERVER *get_view_node(lcb_t instance)
+static const char *
+get_api_node(lcb_t instance, int reqtype)
 {
-    /* pick random server */
-    lcb_size_t nn, nn_limit;
-    mc_SERVER *server;
+    int ix;
+    int svc = reqtype == LCB_HTTP_TYPE_VIEW ?
+            LCBVB_SVCTYPE_VIEWS : LCBVB_SVCTYPE_N1QL;
+    int mode = LCBT_SETTING(instance, sslopts) ?
+            LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN;
 
-    nn = (lcb_size_t)(gethrtime() >> 10) % LCBT_NSERVERS(instance);
-    nn_limit = nn;
-
-    do {
-        server = LCBT_GET_SERVER(instance, nn);
-        if (server->viewshost) {
-            return server;
-        }
-        nn = (nn + 1) % LCBT_NSERVERS(instance);
-    } while (nn != nn_limit);
-    return NULL;
+    ix = lcbvb_get_randhost(LCBT_VBCONFIG(instance), svc, mode);
+    if (ix < 0) {
+        return NULL;
+    }
+    return lcbvb_get_resturl(LCBT_VBCONFIG(instance), ix, svc, mode);
 }
 
 lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
@@ -373,8 +370,7 @@ static lcb_error_t setup_headers(lcb_http_request_t req,
         return rc;
     }
 
-    if (req->instance->http_sockpool->maxidle == 0 ||
-            req->reqtype != LCB_HTTP_TYPE_VIEW) {
+    if (req->instance->http_sockpool->maxidle == 0 || !lcb_htreq_isdata(req)) {
         rc = add_header(req, "Connection", "close");
         if (rc != LCB_SUCCESS) {
             return rc;
@@ -463,15 +459,14 @@ lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd)
             password = LCBT_SETTING(instance, password);
         }
 
-        if (cmd->type == LCB_HTTP_TYPE_VIEW) {
-            const mc_SERVER *server;
+        if (cmd->type == LCB_HTTP_TYPE_VIEW || cmd->type == LCB_HTTP_TYPE_N1QL) {
             if (!LCBT_VBCONFIG(instance)) {
                 return LCB_CLIENT_ETMPFAIL;
             }
-            if ((server = get_view_node(instance)) == NULL) {
+            base = get_api_node(instance, cmd->type);
+            if (base == NULL) {
                 return LCB_NOT_SUPPORTED;
             }
-            base = server->viewshost;
         } else {
             base = lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
             if (base == NULL || *base == '\0') {

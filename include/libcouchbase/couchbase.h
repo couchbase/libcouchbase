@@ -2511,7 +2511,11 @@ typedef enum {
      * Execute an arbitrary request against a host and port
      */
     LCB_HTTP_TYPE_RAW = 2,
-    LCB_HTTP_TYPE_MAX = 3
+
+    /** Execute an N1QL Query */
+    LCB_HTTP_TYPE_N1QL = 3,
+
+    LCB_HTTP_TYPE_MAX
 } lcb_http_type_t;
 
 /**
