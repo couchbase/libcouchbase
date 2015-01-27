@@ -67,13 +67,14 @@ chunk_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
         if (req->lasterr == LCB_SUCCESS && rh->htstatus != 200) {
             req->lasterr = LCB_HTTP_ERROR;
         }
+        req->refcount++;
         invoke_last(req, req->lasterr);
-
         if (rh->rflags & LCB_RESP_F_FINAL) {
             req->htreq = NULL;
             unref_request(req);
         }
         req->cur_htresp = NULL;
+        unref_request(req);
         return;
     }
 
@@ -81,8 +82,10 @@ chunk_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
         return;
     }
 
+    req->refcount++;
     lcbvrow_feed(req->parser, rh->body, rh->nbody);
     req->cur_htresp = NULL;
+    unref_request(req);
     (void)instance;
 }
 
