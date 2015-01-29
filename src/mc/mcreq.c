@@ -477,6 +477,19 @@ mcreq_get_bodysize(const mc_PACKET *packet)
     }
 }
 
+uint16_t
+mcreq_get_vbucket(const mc_PACKET *packet)
+{
+    uint16_t ret;
+    char *retptr = SPAN_BUFFER(&packet->kh_span) + 6;
+    if ((uintptr_t)retptr % sizeof(ret) == 0) {
+        return ntohs(*(uint16_t*)(void*)retptr);
+    } else {
+        memcpy(&ret, retptr, sizeof ret);
+        return ntohs(ret);
+    }
+}
+
 void
 mcreq_pipeline_cleanup(mc_PIPELINE *pipeline)
 {

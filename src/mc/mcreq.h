@@ -659,6 +659,14 @@ mcreq_get_bodysize(const mc_PACKET *packet);
  */
 #define mcreq_get_size(pkt) (mcreq_get_bodysize(pkt) + MCREQ_PKT_BASESIZE)
 
+/**
+ * @brief Get the vBucket for the request
+ * @param packet The packet
+ * @return The vBucket ID from the packet.
+ */
+uint16_t
+mcreq_get_vbucket(const mc_PACKET *packet);
+
 /** Initializes a single pipeline object */
 int
 mcreq_pipeline_init(mc_PIPELINE *pipeline);
