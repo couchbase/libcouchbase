@@ -192,3 +192,45 @@ lcb_urldecode(const char *in, char *out, lcb_SSIZE n)
     out[oix] = '\0';
     return 0;
 }
+
+/* See: https://url.spec.whatwg.org/#urlencoded-serializing: */
+/*
+ * 0x2A
+ * 0x2D
+ * 0x2E
+ * 0x30 to 0x39
+ * 0x41 to 0x5A
+ * 0x5F
+ * 0x61 to 0x7A
+ *  Append a code point whose value is byte to output.
+ * Otherwise
+ *  Append byte, percent encoded, to output.
+ */
+size_t
+lcb_formencode(const char *s, size_t n, char *out)
+{
+    size_t ii;
+    size_t oix = 0;
+
+    for (ii = 0; ii < n; ii++) {
+        unsigned char c = s[ii];
+        if (isalnum(c)) {
+            out[oix++] = c;
+            continue;
+        } else if (c == ' ') {
+            out[oix++] = '+';
+        } else if (
+                (c == 0x2A || c == 0x2D || c == 0x2E) ||
+                (c >= 0x30 && c <= 0x39) ||
+                (c >= 0x41 && c <= 0x5A) ||
+                (c == 0x5F) ||
+                (c >= 0x60 && c <= 0x7A)) {
+            out[oix++] = c;
+        } else {
+            out[oix++] = '%';
+            sprintf(out + oix, "%02X", c);
+            oix += 2;
+        }
+    }
+    return oix;
+}

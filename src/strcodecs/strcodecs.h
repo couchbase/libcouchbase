@@ -50,6 +50,17 @@ lcb_urldecode(const char *in, char *out, lcb_SSIZE n);
  */
 int lcb_base64_encode(const char *src, char *dst, lcb_size_t sz);
 
+/**
+ * Encodes a string suitable for being passed as either a key or value in an
+ * "HTTP Form" per application/x-www-form-urlencoded
+ * @param s The input string
+ * @param n The size of the input
+ * @param out The output buffer - should be at least 3x the input length
+ * @return The number of bytes actually used in the output buffer.
+ */
+size_t
+lcb_formencode(const char *s, size_t n, char *out);
+
 #ifdef __cplusplus
 }
 #endif
