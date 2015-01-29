@@ -490,6 +490,20 @@ mcreq_get_vbucket(const mc_PACKET *packet)
     }
 }
 
+uint32_t
+mcreq_get_size(const mc_PACKET *packet)
+{
+    uint32_t sz = packet->kh_span.size;
+    if (packet->flags & MCREQ_F_HASVALUE) {
+        if (packet->flags & MCREQ_F_VALUE_IOV) {
+            sz += packet->u_value.multi.total_length;
+        } else {
+            sz += packet->u_value.single.size;
+        }
+    }
+    return sz;
+}
+
 void
 mcreq_pipeline_cleanup(mc_PIPELINE *pipeline)
 {

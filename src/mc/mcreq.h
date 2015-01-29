@@ -657,7 +657,8 @@ mcreq_get_bodysize(const mc_PACKET *packet);
  * @param pkt the packet
  * @return the total size
  */
-#define mcreq_get_size(pkt) (mcreq_get_bodysize(pkt) + MCREQ_PKT_BASESIZE)
+uint32_t
+mcreq_get_size(const mc_PACKET *packet);
 
 /**
  * @brief Get the vBucket for the request
