@@ -152,7 +152,7 @@ io_read(lcbio_CTX *ctx, unsigned nr)
             req->url = req->redirect_to;
             req->nurl = strlen(req->url);
             req->redirect_to = NULL;
-            if ((err = lcb_http_verify_url(req, NULL, 0)) == LCB_SUCCESS) {
+            if ((err = lcb_htreq_initurl(req)) == LCB_SUCCESS) {
                 if ((err = lcb_http_request_exec(req)) == LCB_SUCCESS) {
                     goto GT_DONE;
                 }

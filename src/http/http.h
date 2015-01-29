@@ -61,9 +61,6 @@ struct lcb_http_request_st {
     lcb_size_t nurl;
     /** The URL info */
     struct http_parser_url url_info;
-    /** The requested path (without couch api endpoint) */
-    char *path;
-    lcb_size_t npath;
     /** The body buffer */
     char *body;
     lcb_size_t nbody;
@@ -116,8 +113,9 @@ lcb_http_request_finish(lcb_t instance, lcb_http_request_t req, lcb_error_t erro
 void
 lcb_http_request_decref(lcb_http_request_t req);
 
+/* Hack for handling redirect URLs */
 lcb_error_t
-lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_size_t nbase);
+lcb_htreq_initurl(lcb_http_request_t req);
 
 lcb_error_t
 lcb_http_request_exec(lcb_http_request_t req);

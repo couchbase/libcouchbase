@@ -127,7 +127,6 @@ void lcb_http_request_decref(lcb_http_request_t req)
     do_close_ioctx(req);
     lcbio_connreq_cancel(&req->creq);
 
-    free(req->path);
     free(req->url);
     free(req->redirect_to);
     free(req->body);
@@ -187,8 +186,8 @@ lcb_http_init_resp(const lcb_http_request_t req, lcb_RESPHTTP *res)
     const lcbht_RESPONSE *htres = lcbht_get_response(req->parser);
 
     res->cookie = (void*)req->command_cookie;
-    res->key = req->path;
-    res->nkey = req->npath;
+    res->key = req->url + req->url_info.field_data[UF_PATH].off;
+    res->nkey = req->url_info.field_data[UF_PATH].len;
     res->_htreq = req;
     if (req->headers) {
         res->headers = (const char * const *)req->headers;
@@ -313,7 +312,9 @@ lcb_error_t lcb_http_request_exec(lcb_http_request_t req)
     return rc;
 }
 
-lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_size_t nbase)
+static
+lcb_error_t prepare_url(lcb_http_request_t req,
+    const char *base, size_t nbase, const char *path, size_t npath)
 {
     unsigned int required_fields;
     const char *htscheme;
@@ -338,12 +339,24 @@ lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_si
             nbase -= schemsize;
         }
 
-
         lcb_string_append(&urlbuf, base, nbase);
-        if (*req->path != '/') {
-            lcb_string_appendz(&urlbuf, "/");
+        if (path) {
+            lcb_error_t rc;
+            char *pp;
+            lcb_size_t n_added;
+
+            lcb_string_reserve(&urlbuf, (npath * 3) + 1);
+            if (*path != '/' && urlbuf.base[urlbuf.nused-1] != '/') {
+                lcb_string_append(&urlbuf, "/", 1);
+            }
+
+            pp = urlbuf.base + urlbuf.nused;
+            rc = lcb_urlencode_path(path, npath, &pp, &n_added);
+            if (rc != LCB_SUCCESS) {
+                return rc;
+            }
+            lcb_string_added(&urlbuf, n_added);
         }
-        lcb_string_append(&urlbuf, req->path, req->npath);
 
         req->nurl = urlbuf.nused;
         req->url = calloc(req->nurl + 1, 1);
@@ -357,6 +370,14 @@ lcb_error_t lcb_http_verify_url(lcb_http_request_t req, const char *base, lcb_si
         return LCB_EINVAL;
     }
     return LCB_SUCCESS;
+}
+
+lcb_error_t
+lcb_htreq_initurl(lcb_http_request_t req)
+{
+    /* Reset the old field information: */
+    memset(&req->url_info, 0, sizeof req->url_info);
+    return prepare_url(req, NULL, 0, NULL, 0);
 }
 
 static lcb_error_t setup_headers(lcb_http_request_t req,
@@ -425,18 +446,11 @@ lcb_error_t
 lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd)
 {
     lcb_http_request_t req;
-    const char *base = NULL, *username, *password, *path;
-    lcb_size_t nbase = 0, npath;
+    const char *base = NULL, *username, *password;
+    lcb_size_t nbase = 0;
     lcb_http_method_t method;
     lcb_error_t rc;
     lcb_http_request_t *request = cmd->reqhandle;
-
-    if ((npath = cmd->key.contig.nbytes) == 0) {
-        path = "/";
-        npath = 1;
-    } else {
-        path = cmd->key.contig.bytes;
-    }
 
     if ((method = cmd->method) > LCB_HTTP_METHOD_MAX) {
         return LCB_EINVAL;
@@ -503,12 +517,9 @@ lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd)
         memcpy(req->body, cmd->body, req->nbody);
     }
 
-    rc = lcb_urlencode_path(path, npath, &req->path, &req->npath);
-    if (rc != LCB_SUCCESS) {
-        lcb_http_request_decref(req);
-        return rc;
-    }
-    rc = lcb_http_verify_url(req, base, nbase);
+    rc = prepare_url(req, base, nbase,
+        cmd->key.contig.bytes, cmd->key.contig.nbytes);
+
     if (rc != LCB_SUCCESS) {
         lcb_http_request_decref(req);
         return rc;
