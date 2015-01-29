@@ -327,6 +327,18 @@ lcbjsp_create(int mode)
 }
 
 void
+lcbjsp_get_postmortem(const lcbjsp_PARSER *v, lcb_IOV *out)
+{
+    if (v->meta_complete) {
+        out->iov_base = v->meta_buf.base;
+        out->iov_len = v->meta_buf.nused;
+    } else {
+        out->iov_base = v->current_buf.base;
+        out->iov_len = v->current_buf.nused;
+    }
+}
+
+void
 lcbjsp_reset(lcbjsp_PARSER* ctx)
 {
     /**

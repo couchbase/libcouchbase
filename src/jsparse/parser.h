@@ -148,6 +148,18 @@ lcbjsp_feed(lcbjsp_PARSER *ctx, const char *data, size_t ndata);
 void
 lcbjsp_parse_viewrow(lcbjsp_PARSER *vp, lcbjsp_ROW *vr);
 
+/**
+ * Get the raw contents of the current buffer. This can be used to debug errors.
+ *
+ * Note that the buffer may be partial or malformed or otherwise unsuitable
+ * for structured inspection, but may help human observers debug problems.
+ *
+ * @param v The parser
+ * @param out The iov structure to contain the buffer/offset
+ */
+void
+lcbjsp_get_postmortem(const lcbjsp_PARSER *v, lcb_IOV *out);
+
 #ifdef __cplusplus
 }
 #endif
