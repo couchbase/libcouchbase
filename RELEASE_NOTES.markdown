@@ -8,6 +8,15 @@
   * Priority: Major
   * Issues: [CCBC-571](http://issues.couchbase.com/browse/CCBC-571)
 
+* Add _experimental_ support for N1QL queries.
+  This adds support for contacting N1QL endpoints and retrieving their
+  result sets. The support at both the client and server components is
+  still a work in progress.
+  The API is similar to the view api (see `lcb_view_query()`) added in
+  version 2.4.6. See details in `<libcouchbase/n1ql.h>`
+  * Priority: Major
+  * Issues: [CCBC-572](http://issues.couchbase.com/browse/CCBC-572)
+
 ## 2.4.6 (January 20 2015)
 
 * Fix floating point exception on OS X.
