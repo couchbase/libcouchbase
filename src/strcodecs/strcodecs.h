@@ -29,7 +29,12 @@ lcb_error_t lcb_urlencode_path(const char *path,
 /**
  * Decode a string from 'percent-encoding'
  * @param in The input string
- * @param out The output buffer. Must be at least the same size as the input
+ * @param[in,out] out The output buffer.
+ *                If upon entry, out is not-NULL, it is assumed to be a buffer
+ *                containing sufficient size for the percent encoding (up to
+ *                3x the size of input). Otherwise on exit this will contain
+ *                a malloc'd buffer which should be free()d when no longer
+ *                required.
  * @param n The size of the input buffer. May be -1 if NUL-terminated
  * @return 0 if converted successfuly, -1 on error
  */

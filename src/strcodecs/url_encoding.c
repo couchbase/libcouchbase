@@ -94,18 +94,17 @@ lcb_error_t lcb_urlencode_path(const char *path,
 {
     lcb_size_t ii;
     lcb_size_t n = 0;
-    int skip_encoding = 0;
+    int skip_encoding = 0, is_ualloc = 0;
     char *op;
     lcb_error_t err;
 
-    /* Allocate for a worst case scenario (it will probably not be
-     * that bad anyway
-     */
-    if ((op = malloc(npath * 3)) == NULL) {
+    /* If the input buffer is not initialized, assume it's the correct size */
+    if (*out) {
+        is_ualloc = 1;
+        op = *out;
+    } else if ((*out = op = malloc(npath *3)) == NULL) {
         return LCB_CLIENT_ENOMEM;
     }
-
-    *out = op;
 
     for (ii = 0; ii < npath; ++ii) {
         if (skip_encoding == 0) {
@@ -161,8 +160,10 @@ lcb_error_t lcb_urlencode_path(const char *path,
     return LCB_SUCCESS;
 
     GT_ERR:
-    free(op);
-    *out = NULL;
+    if (!is_ualloc) {
+        free(op);
+        *out = NULL;
+    }
     return err;
 }
 
