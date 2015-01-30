@@ -7,6 +7,7 @@ SET(LCB_UTILS_SRC
     contrib/genhash/genhash.c
     src/strcodecs/base64.c
     src/gethrtime.c
+    src/dns-srv.c
     src/hashtable.c
     src/list.c
     src/logging.c

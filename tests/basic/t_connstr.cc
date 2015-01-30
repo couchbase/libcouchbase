@@ -391,3 +391,53 @@ TEST_F(ConnstrTest, testCertificateWithoutSSL)
         "couchbases://1.2.3.4/default?certpath=/foo/bar/baz", &errmsg);
     ASSERT_EQ(LCB_SUCCESS, err);
 }
+
+TEST_F(ConnstrTest, testDnsSrvExplicit)
+{
+    // Test various things relating to DNS SRV
+    lcb_error_t err;
+    err = params.parse("couchbase+dnssrv://1.1.1.1", &errmsg);
+    EXPECT_EQ(LCB_SUCCESS, err);
+    EXPECT_TRUE(params.can_dnssrv());
+    EXPECT_TRUE(params.is_explicit_dnssrv());
+
+    reinit();
+    err = params.parse("couchbase+dnssrv://1.1.1.1,2.2.2.2", &errmsg);
+    EXPECT_NE(LCB_SUCCESS, err);
+
+    reinit();
+    err = params.parse("couchbases+dnssrv://1.1.1.1", &errmsg);
+    EXPECT_EQ(LCB_SUCCESS, err);
+    EXPECT_NE(0, params.sslopts());
+    EXPECT_TRUE(params.can_dnssrv());
+    EXPECT_TRUE(params.is_explicit_dnssrv());
+}
+
+TEST_F(ConnstrTest, testDnsSrvImplicit)
+{
+    lcb_error_t err;
+    EXPECT_EQ(LCB_SUCCESS, params.parse("couchbase://"));
+    EXPECT_FALSE(params.can_dnssrv());
+    EXPECT_FALSE(params.is_explicit_dnssrv());
+
+    reinit();
+    EXPECT_EQ(LCB_SUCCESS, params.parse("couchbase://1.1.1.1"));
+    EXPECT_TRUE(params.can_dnssrv());
+    EXPECT_FALSE(params.is_explicit_dnssrv());
+
+    reinit();
+    EXPECT_EQ(LCB_SUCCESS, params.parse("couchbase://1.1.1.1,2.2.2.2"));
+    EXPECT_FALSE(params.can_dnssrv()) << "No implicit SRV on multiple hosts";
+
+    reinit();
+    EXPECT_EQ(LCB_SUCCESS, params.parse("couchbase://1.1.1.1:666"));
+    EXPECT_FALSE(params.can_dnssrv());
+
+    reinit();
+    EXPECT_EQ(LCB_SUCCESS, params.parse("couchbase://1.1.1.1:11210"));
+    EXPECT_TRUE(params.can_dnssrv());
+
+    reinit();
+    EXPECT_EQ(LCB_SUCCESS, params.parse("couchbases://1.1.1.1"));
+    EXPECT_TRUE(params.can_dnssrv());
+}

@@ -130,6 +130,7 @@ struct lcb_st {
     lcbio_pTABLE getIOT() { return iotable; }
     inline void add_bs_host(const char *host, int port, unsigned bstype);
     inline void add_bs_host(const lcb::Spechost& host, int defl_http, int defl_cccp);
+    inline lcb_error_t process_dns_srv(lcb::Connspec& spec);
     inline void populate_nodes(const lcb::Connspec&);
     lcb::Server *get_server(size_t index) const {
         return static_cast<lcb::Server*>(cmdq.pipelines[index]);

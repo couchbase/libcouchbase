@@ -116,6 +116,45 @@ lcb_st::populate_nodes(const Connspec& spec)
     }
 }
 
+lcb_error_t
+lcb_st::process_dns_srv(Connspec& spec)
+{
+    if (!spec.can_dnssrv()) {
+        return LCB_SUCCESS;
+    }
+    if (spec.hosts().empty()) {
+        lcb_log(LOGARGS(this, ERR), "Cannot use DNS SRV without a hostname");
+        return spec.is_explicit_dnssrv() ? LCB_EINVAL : LCB_SUCCESS;
+    }
+
+    const Spechost& host = spec.hosts().front();
+    lcb_error_t rc = LCB_ERROR;
+    Hostlist* hl = Hostlist::from_c(lcb_dnssrv_getbslist(
+        host.hostname.c_str(), host.isSSL(), &rc));
+
+    if (hl == NULL) {
+        lcb_log(LOGARGS(this, INFO), "DNS SRV lookup failed: %s", lcb_strerror(this, rc));
+        if (spec.is_explicit_dnssrv()) {
+            return rc;
+        } else {
+            return LCB_SUCCESS;
+        }
+    }
+
+    spec.clear_hosts();
+    for (size_t ii = 0; ii < hl->size(); ++ii) {
+        const lcb_host_t& src = (*hl)[ii];
+        Spechost sh;
+        sh.hostname = src.host;
+        sh.port = std::atoi(src.port);
+        sh.type = spec.default_port();
+        spec.add_host(sh);
+    }
+    delete hl;
+
+    return LCB_SUCCESS;
+}
+
 static lcb_error_t
 init_providers(lcb_t obj, const Connspec &spec)
 {
@@ -399,7 +438,13 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     obj->populate_nodes(spec);
-    err = init_providers(obj, spec);
+    if ((err = init_providers(obj, spec)) != LCB_SUCCESS) {
+        goto GT_DONE;
+    }
+
+    if ((err = obj->process_dns_srv(spec)) != LCB_SUCCESS) {
+        goto GT_DONE;
+    }
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
         return err;
