@@ -1,5 +1,13 @@
 # Release Notes
 
+## MASTER
+
+* Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
+  This would sometimes cause failures during early connection/negotiation
+  stages.
+  * Priority: Major
+  * Issues: [CCBC-571](http://issues.couchbase.com/browse/CCBC-571)
+
 ## 2.4.6 (January 20 2015)
 
 * Fix floating point exception on OS X.
