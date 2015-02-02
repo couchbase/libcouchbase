@@ -115,7 +115,7 @@ lcb_http_request_decref(lcb_http_request_t req);
 
 /* Hack for handling redirect URLs */
 lcb_error_t
-lcb_htreq_initurl(lcb_http_request_t req);
+lcb_htreq_redirect(lcb_http_request_t req);
 
 lcb_error_t
 lcb_http_request_exec(lcb_http_request_t req);

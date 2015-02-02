@@ -373,11 +373,25 @@ lcb_error_t prepare_url(lcb_http_request_t req,
 }
 
 lcb_error_t
-lcb_htreq_initurl(lcb_http_request_t req)
+lcb_htreq_redirect(lcb_http_request_t req)
 {
-    /* Reset the old field information: */
+    assert(req->redirect_to);
+
+    if (LCBT_SETTING(req->instance, max_redir) > -1) {
+        if (LCBT_SETTING(req->instance, max_redir) < ++req->redircount) {
+            return LCB_TOO_MANY_REDIRECTS;
+        }
+    }
+
     memset(&req->url_info, 0, sizeof req->url_info);
-    return prepare_url(req, NULL, 0, NULL, 0);
+    if (req->url) {
+        free(req->url);
+    }
+    req->url = req->redirect_to;
+    req->nurl = strlen(req->url);
+    req->redirect_to = NULL;
+    return prepare_url(req, NULL, 0, NULL, 0) == LCB_SUCCESS &&
+            lcb_http_request_exec(req) == LCB_SUCCESS;
 }
 
 static lcb_error_t setup_headers(lcb_http_request_t req,

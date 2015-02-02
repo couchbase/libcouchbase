@@ -36,6 +36,7 @@ handle_headers(lcb_http_request_t req)
     if (res->status >= 300 && res->status <= 400) {
         const char *redirto = lcbht_get_resphdr(res, "Location");
         if (redirto) {
+            /* XXX: Freed either as part of url, or redirect_to */
             req->redirect_to = strdup(redirto);
         }
     }
@@ -149,13 +150,8 @@ io_read(lcbio_CTX *ctx, unsigned nr)
     if (rv == -1) {
         lcb_error_t err;
         if (req->redirect_to) {
-            req->url = req->redirect_to;
-            req->nurl = strlen(req->url);
-            req->redirect_to = NULL;
-            if ((err = lcb_htreq_initurl(req)) == LCB_SUCCESS) {
-                if ((err = lcb_http_request_exec(req)) == LCB_SUCCESS) {
-                    goto GT_DONE;
-                }
+            if ((err = lcb_htreq_redirect(req)) == LCB_SUCCESS) {
+                goto GT_DONE;
             }
         } else {
             err = LCB_PROTOCOL_ERROR;
