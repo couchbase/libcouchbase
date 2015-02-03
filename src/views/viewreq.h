@@ -12,6 +12,7 @@ typedef struct {
     struct lcbview_REQUEST_st *parent;
     lcb_IOV key;
     lcb_IOV value;
+    lcb_IOV geo;
     char rowbuf[1];
 } lcbview_DOCREQ;
 

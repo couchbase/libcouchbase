@@ -17,6 +17,15 @@
   * Priority: Major
   * Issues: [CCBC-572](http://issues.couchbase.com/browse/CCBC-572)
 
+* Add _experimental_ support for geospatial view queries.
+  GeoSpatial views are available as an experimental feature in the
+  current releases of the server. This will soon be offered as a
+  stable feature in future releases.
+  Applications may now use the `lcb_RESPVIEWQUERY::geometry` field
+  and the `LCB_CMDVIEWQUERY_F_SPATIAL` to utilize geospatial views.
+  * Priority: Major
+  * Issues: [CCBC-573](http://issues.couchbase.com/browse/CCBC-573)
+
 ## 2.4.6 (January 20 2015)
 
 * Fix floating point exception on OS X.

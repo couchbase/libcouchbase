@@ -119,6 +119,7 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
             mk_docreq_iov(dreq, &datum->key, &dreq->key, orig);
             mk_docreq_iov(dreq, &datum->value, &dreq->value, orig);
             mk_docreq_iov(dreq, &datum->docid, &dreq->base.docid, orig);
+            mk_docreq_iov(dreq, &datum->geo, &dreq->geo,orig);
             lcbdocq_add(req->docq, &dreq->base);
             req->refcount++;
 
@@ -130,6 +131,7 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
                 IOV2PTRLEN(&datum->key, resp.key, resp.nkey);
                 IOV2PTRLEN(&datum->docid, resp.docid, resp.ndocid);
                 IOV2PTRLEN(&datum->value, resp.value, resp.nvalue);
+                IOV2PTRLEN(&datum->geo, resp.geometry, resp.ngeometry);
             }
             resp.htresp = req->cur_htresp;
             invoke_row(req, &resp);
@@ -150,6 +152,7 @@ cb_doc_ready(lcb_DOCQUEUE *q, lcb_DOCQREQ *req_base)
     IOV2PTRLEN(&dreq->key, resp.key, resp.nkey);
     IOV2PTRLEN(&dreq->value, resp.value, resp.nvalue);
     IOV2PTRLEN(&dreq->base.docid, resp.docid, resp.ndocid);
+    IOV2PTRLEN(&dreq->geo, resp.geometry, resp.ngeometry);
 
     if (q->parent) {
         invoke_row(q->parent, &resp);
@@ -212,6 +215,7 @@ lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
     lcbview_REQUEST *req = NULL;
     int include_docs = 0;
     int no_parse_rows = 0;
+    const char *vpstr = NULL;
 
     if (cmd->nddoc == 0 || cmd->nview == 0 || cmd->callback == NULL) {
         return LCB_EINVAL;
@@ -229,9 +233,15 @@ lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
     }
 
     lcb_string_init(&path);
+    if (cmd->cmdflags & LCB_CMDVIEWQUERY_F_SPATIAL) {
+        vpstr = "/_spatial/";
+    } else {
+        vpstr = "/_view/";
+    }
+
     if (lcb_string_appendv(&path,
         "_design/", (size_t)-1, cmd->ddoc, cmd->nddoc,
-        "/_view/", (size_t)-1, cmd->view, cmd->nview, NULL) != 0) {
+        vpstr, (size_t)-1, cmd->view, cmd->nview, NULL) != 0) {
 
         lcb_string_release(&path);
         return LCB_CLIENT_ENOMEM;
