@@ -147,6 +147,12 @@ HANDLER(schedflush_handler) {
 HANDLER(vbguess_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, keep_guess_vbs))
 }
+HANDLER(fetch_synctokens_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, fetch_synctokens))
+}
+HANDLER(dur_synctokens_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, dur_synctokens))
+}
 
 HANDLER(get_kvb) {
     struct lcb_cntl_vbinfo_st *vbi = arg;
@@ -445,7 +451,9 @@ static ctl_handler handlers[] = {
     bucketname_handler, /* LCB_CNTL_BUCKETNAME */
     schedflush_handler, /* LCB_CNTL_SCHED_IMPLICIT_FLUSH */
     vbguess_handler, /* LCB_CNTL_VBGUESS_PERSIST */
-    unsafe_optimize /* LCB_CNTL_UNSAFE_OPTIMIZE */
+    unsafe_optimize, /* LCB_CNTL_UNSAFE_OPTIMIZE */
+    fetch_synctokens_handler, /* LCB_CNTL_FETCH_SYNCTOKENS */
+    dur_synctokens_handler /* LCB_CNTL_DURABILITY_SYNCTOKENS */
 };
 
 /* Union used for conversion to/from string functions */
@@ -589,6 +597,8 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"http_poolsize", LCB_CNTL_HTTP_POOLSIZE, convert_SIZE },
         {"vbguess_persist", LCB_CNTL_VBGUESS_PERSIST, convert_intbool },
         {"unsafe_optimize", LCB_CNTL_UNSAFE_OPTIMIZE, convert_intbool },
+        {"fetch_synctokens", LCB_CNTL_FETCH_SYNCTOKENS, convert_intbool },
+        {"dur_synctokens", LCB_CNTL_DURABILITY_SYNCTOKENS, convert_intbool },
         {NULL, -1}
 };
 

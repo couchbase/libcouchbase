@@ -78,7 +78,6 @@ void MockEnvironment::respawnNode(int index, std::string bucket)
     MockBucketCommand bCmd(MockCommand::RESPAWN, index, bucket);
     sendCommand(bCmd);
     getResponse();
-    std::stringstream cmdbuf;
 }
 
 void MockEnvironment::hiccupNodes(int msecs, int offset)
@@ -90,6 +89,13 @@ void MockEnvironment::hiccupNodes(int msecs, int offset)
     getResponse();
 }
 
+void MockEnvironment::regenVbCoords(std::string bucket) {
+    MockBucketCommand bCmd(MockCommand::REGEN_VBCOORDS, 0, bucket);
+    MockResponse r;
+    sendCommand(bCmd);
+    getResponse(r);
+    EXPECT_TRUE(r.isOk());
+}
 
 std::vector<int> MockEnvironment::getMcPorts(std::string bucket)
 {
@@ -176,6 +182,8 @@ void MockEnvironment::postCreate(lcb_t instance)
         err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTCONFIG_URLTYPE, &urltype);
         ASSERT_EQ(LCB_SUCCESS, err);
     }
+    err = lcb_cntl_string(instance, "fetch_synctokens", "true");
+    ASSERT_EQ(LCB_SUCCESS, err);
 }
 
 void

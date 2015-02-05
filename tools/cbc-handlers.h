@@ -119,6 +119,17 @@ protected:
     void run();
 };
 
+class ObserveSeqnoHandler : public Handler {
+public:
+    ObserveSeqnoHandler() : Handler("observe-seqno") {}
+
+    HANDLER_DESCRIPTION("Request information about a particular vBucket UUID")
+    HANDLER_USAGE("UUID")
+
+protected:
+    void run();
+};
+
 class UnlockHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Unlock keys")

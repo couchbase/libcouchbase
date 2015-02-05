@@ -133,6 +133,8 @@ typedef struct lcb_settings_st {
     unsigned refresh_on_hterr : 1;
     unsigned sched_implicit_flush : 1;
     unsigned keep_guess_vbs : 1;
+    unsigned fetch_synctokens : 1;
+    unsigned dur_synctokens : 1;
     unsigned sslopts : 2;
     unsigned ipv6 : 2;
 

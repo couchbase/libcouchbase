@@ -429,7 +429,12 @@ typedef enum {
       "The operation structure contains conflicting options") \
     \
     X(LCB_HTTP_ERROR, 0x3B, 0, \
-      "HTTP Operation failed. Inspect status code for details")
+      "HTTP Operation failed. Inspect status code for details") \
+    \
+    X(LCB_DURABILITY_NO_SYNCTOKEN, 0x3C, LCB_ERRTYPE_INPUT, \
+      "The given item does not have a synctoken object associated with it. " \
+      "this is either because fetching synctokens was not enabled, or " \
+      "you are trying to check on something not stored by this instance")
 
 /** Error codes returned by the library. */
 typedef enum {

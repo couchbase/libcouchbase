@@ -103,6 +103,7 @@ struct lcb_st {
     lcb_RETRYQ *retryq; /**< Retry queue for failed operations */
     struct lcb_string_st *scratch; /**< Generic buffer space */
     struct lcb_GUESSVB_st *vbguess; /**< Heuristic masters for vbuckets */
+    lcb_SYNCTOKEN *dcpinfo; /**< Mapping of known vbucket to {uuid,seqno} info */
     lcbio_pTIMER dtor_timer; /**< Asynchronous destruction timer */
     int type; /**< Type of connection */
 

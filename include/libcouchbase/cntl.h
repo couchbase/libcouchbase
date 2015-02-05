@@ -748,8 +748,44 @@ typedef enum {
  */
 #define LCB_CNTL_SCHED_IMPLICIT_FLUSH 0x31
 
+/**
+ * @volatile
+ *
+ * Allow the server to return an additional 16 bytes of data for each
+ * mutation operation. This extra information may help with more reliable
+ * durability polling, but will also increase the size of the response packet.
+ *
+ * This should be set on the instance before issuing lcb_connect(). While this
+ * may also be set after lcb_connect() is called, it will currently only take
+ * effect when a server reconnects (which itself may be undefined).
+ *
+ * @cntl_arg_both{int (as boolean)}
+ */
+#define LCB_CNTL_FETCH_SYNCTOKENS 0x34
+
+/**
+ * @volatile
+ *
+ * This setting determines whether the lcb_durability_poll() function will
+ * transparently attempt to use synctoken functionality (rather than checking
+ * the CAS). This option is most useful for older code which does
+ * explicitly use synctokens but would like to use its benefits when
+ * ensuring durability constraints are satisfied.
+ *
+ * This option is enabled by default. Users may wish to disable this if they
+ * are performing durability operations against items stored from different
+ * client instances, as this will make use of a client-global state which is
+ * derived on a per-vBucket basis. This means that the last mutation performed
+ * on a given vBucket for the client will be used, which in some cases may be
+ * older or newer than the mutations passed to the lcb_durability_poll()
+ * function.
+ *
+ * @cntl_arg_both{int (as boolean)}
+ */
+#define LCB_CNTL_DURABILITY_SYNCTOKENS 0x35
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x34
+#define LCB_CNTL__MAX                    0x36
 /**@}*/
 
 #ifdef __cplusplus

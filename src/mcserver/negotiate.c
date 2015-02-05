@@ -309,11 +309,16 @@ send_hello(mc_pSESSREQ sreq)
     lcb_SIZE nclistr;
 
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
+
 #ifndef LCB_NO_SNAPPY
     if (sreq->inner->settings->compressopts != LCB_COMPRESS_NONE) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_DATATYPE;
     }
 #endif
+
+    if (sreq->inner->settings->fetch_synctokens) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO;
+    }
 
     nclistr = strlen(client_id);
     memset(&req, 0, sizeof req);

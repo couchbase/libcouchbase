@@ -236,6 +236,7 @@ typedef enum {
     LCB_CALLBACK_ENDURE, /**< lcb_endure3_ctxnew() */
     LCB_CALLBACK_HTTP, /**< lcb_http3() */
     LCB_CALLBACK_CBFLUSH, /**< lcb_cbflush3() */
+    LCB_CALLBACK_OBSEQNO, /**< For lcb_observe_synctoken3() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -516,6 +517,7 @@ typedef struct {
     LCB_RESP_BASE
     /** Contains the _current_ value after the operation was performed */
     lcb_U64 value;
+    lcb_SYNCTOKEN synctoken;
 } lcb_RESPCOUNTER;
 
 /**@volatile
@@ -606,6 +608,7 @@ typedef struct {
 typedef struct {
     LCB_RESP_BASE
     lcb_storage_t op;
+    lcb_SYNCTOKEN synctoken;
 } lcb_RESPSTORE;
 
 /**
@@ -670,7 +673,10 @@ typedef lcb_CMDBASE lcb_CMDREMOVE;
  * not exist, or LCB_KEY_EEXISTS if a CAS was specified and the item has since
  * been mutated.
  */
-typedef lcb_RESPBASE lcb_RESPREMOVE;
+typedef struct {
+    LCB_RESP_BASE
+    lcb_SYNCTOKEN synctoken;
+} lcb_RESPREMOVE;
 
 /**@volatile
  * @brief Spool a removal of an item
@@ -931,6 +937,63 @@ typedef struct {
 LIBCOUCHBASE_API
 lcb_MULTICMD_CTX *
 lcb_observe3_ctxnew(lcb_t instance);
+
+typedef struct {
+    LCB_CMD_BASE;
+    lcb_U16 server_index;
+    lcb_U16 vbid; /**< vBucket ID to query */
+    lcb_U64 uuid; /**< UUID known to client which should be queried */
+} lcb_CMDOBSEQNO;
+
+typedef struct {
+    LCB_RESP_BASE
+    lcb_U16 vbid; /**< vBucket ID (for potential mapping) */
+    lcb_U16 server_index; /**< Input server index */
+    lcb_U64 cur_uuid; /**< UUID for this vBucket as known to the server */
+    lcb_U64 persisted_seqno; /**< Highest persisted sequence */
+    lcb_U64 mem_seqno; /**< Highest known sequence */
+
+    /**In the case where the command's uuid is not the most current, this
+     * contains the last known UUID */
+    lcb_U64 old_uuid;
+    lcb_U64 old_seqno;
+} lcb_RESPOBSEQNO;
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_observe_seqno3(lcb_t instance, const void *cookie, const lcb_CMDOBSEQNO *cmd);
+
+/**
+ * Retrieves the synctoken from the response structure
+ * @param cbtype the type of callback invoked
+ * @param rb the pointer to the response
+ * @return The embedded synctoken, or NULL if the response does not have a
+ *         synctoken. This may be either because the command does not support
+ *         synctokens, or because they have been disabled at the connection
+ *         level.
+ */
+LIBCOUCHBASE_API
+const lcb_SYNCTOKEN *
+lcb_resp_get_synctoken(int cbtype, const lcb_RESPBASE *rb);
+
+/**
+ * @volatile
+ *
+ * Retrieves the last synctoken for a given key.
+ * This relies on the @ref LCB_CNTL_DUR_SYNCTOKENS option, and will check
+ * the instance-level log to determine the latest SYNCTOKEN for the given
+ * vBucket ID which the key maps to.
+ *
+ * @param instance the instance
+ * @param kb The buffer representing the key. The type of the buffer (see
+ * lcb_KEYBUF::type) may either be ::LCB_KV_COPY or ::LCB_KV_VBID
+ * @param[out] errp Set to an error if this function returns NULL
+ * @return The synctoken if successful, otherwise NULL.
+ */
+LIBCOUCHBASE_API
+const lcb_SYNCTOKEN *
+lcb_get_synctoken(lcb_t instance, const lcb_KEYBUF *kb, lcb_error_t *errp);
+
 /**@}*/
 
 /**@name Wait for items to be persisted or replicated to nodes
