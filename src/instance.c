@@ -36,6 +36,8 @@ const char *lcb_get_version(lcb_uint32_t *version)
     return LCB_VERSION_STRING;
 }
 
+const lcb_U32 lcb_version_g = LCB_VERSION;
+
 LIBCOUCHBASE_API
 void lcb_set_cookie(lcb_t instance, const void *cookie)
 {

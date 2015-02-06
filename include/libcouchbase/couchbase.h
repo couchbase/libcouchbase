@@ -3301,6 +3301,10 @@ lcb_error_t lcb_get_timings(lcb_t instance,
 LIBCOUCHBASE_API
 const char *lcb_get_version(lcb_U32 *version);
 
+/** Global/extern variable containing the version of the library */
+LIBCOUCHBASE_API LCB_EXTERN_VAR
+const lcb_U32 lcb_version_g;
+
 /**@brief Whether the library has SSL support*/
 #define LCB_SUPPORTS_SSL 1
 /**@brief Whether the library has experimental compression support */

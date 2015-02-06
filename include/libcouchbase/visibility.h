@@ -45,6 +45,13 @@
 
 #endif
 
+#ifdef _MSC_VER
+/* Already includes 'extern' in LIBCOUCHBASE_API def, don't use it twice! */
+#define LCB_EXTERN_VAR
+#else
+#define LCB_EXTERN_VAR extern
+#endif
+
 /**
  * This symbol declares internal APIs as accessible from other modules.
  * It should still not be used.
