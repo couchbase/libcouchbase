@@ -67,6 +67,7 @@ ConnParams::ConnParams() :
     o_bucket.description("Bucket to use").setDefault("default");
     o_bucket.hide();
 
+    o_connstr.description("Connection string").setDefault("couchbase://localhost/default");
     o_user.description("Username");
     o_passwd.description("Bucket password");
     o_saslmech.description("Force SASL mechanism").argdesc("PLAIN|CRAM_MD5");
