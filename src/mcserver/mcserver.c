@@ -244,7 +244,7 @@ try_read(lcbio_CTX *ctx, mc_SERVER *server, rdb_IOROPE *ior)
             mcreq_dispatch_response(pl, request, info, LCB_NOT_MY_VBUCKET);
         }
         DO_SWALLOW_PAYLOAD()
-        return PKT_READ_COMPLETE;
+        goto GT_DONE;
     }
 
     /* Figure out if the request is 'ufwd' or not */
@@ -274,6 +274,7 @@ try_read(lcbio_CTX *ctx, mc_SERVER *server, rdb_IOROPE *ior)
         rdb_consumed(ior, pktsize);
     }
 
+    GT_DONE:
     if (is_last) {
         mcreq_packet_handled(pl, request);
     }
