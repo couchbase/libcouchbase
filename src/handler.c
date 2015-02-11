@@ -368,7 +368,7 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 
     if (resp.rc == LCB_SUCCESS) {
         memcpy(&resp.value, response->payload, sizeof(resp.value));
-        resp.value = ntohll(resp.value);
+        resp.value = lcb_ntohll(resp.value);
     }
     resp.cas = PACKET_CAS(response);
     TRACE_ARITHMETIC_END(response, &resp);
