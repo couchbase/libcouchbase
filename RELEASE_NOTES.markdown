@@ -26,6 +26,13 @@
   * Priority: Major
   * Issues: [CCBC-573](http://issues.couchbase.com/browse/CCBC-573)
 
+* Fix memory leak for retried commands.
+  In cases where a given command needs to be retried more than once, a
+  memory leak was fixed in which the previous instance of the pacekt was
+  not properly freed.
+  * Priority: Major
+  * Issues: [CCBC-574](http://issues.couchbase.com/browse/CCBC-574)
+
 ## 2.4.6 (January 20 2015)
 
 * Fix floating point exception on OS X.
