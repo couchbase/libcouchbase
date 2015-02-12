@@ -12,7 +12,7 @@ typedef struct {
     lcb_N1QLCALLBACK callback;
     lcb_t instance;
     lcb_error_t lasterr;
-} N1QLREQ;
+} N1QLREQ, lcb_N1QLREQ;
 
 static void
 invoke_row(N1QLREQ *req, lcb_RESPN1QL *resp, int is_last)
