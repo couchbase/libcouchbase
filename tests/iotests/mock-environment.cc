@@ -17,6 +17,7 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/api3.h>
 #include <mocksupport/server.h>
 #include "mock-environment.h"
 #include <sstream>
@@ -301,13 +302,9 @@ void MockEnvironment::bootstrapRealCluster()
 }
 
 extern "C" {
-    static void mock_flush_callback(lcb_t instance,
-                                    const void *cookie,
-                                    lcb_error_t err,
-                                    const lcb_flush_resp_t *resp)
-    {
-        assert(err == LCB_SUCCESS);
-    }
+static void mock_flush_callback(lcb_t, int, const lcb_RESPBASE *resp) {
+    assert(resp->rc == LCB_SUCCESS);
+}
 }
 
 void MockEnvironment::clearAndReset()
@@ -347,19 +344,15 @@ void MockEnvironment::clearAndReset()
         err = lcb_connect(innerClient);
         EXPECT_EQ(LCB_SUCCESS, err);
         lcb_wait(innerClient);
-        lcb_set_flush_callback(innerClient, mock_flush_callback);
+        lcb_install_callback3(innerClient, LCB_CALLBACK_CBFLUSH, mock_flush_callback);
     }
 
-    lcb_flush_cmd_t fcmd;
+    lcb_CMDCBFLUSH fcmd = { 0 };
     lcb_error_t err;
-    const lcb_flush_cmd_t *fcmd_p = &fcmd;
-    memset(&fcmd, 0, sizeof(fcmd));
 
-    err = lcb_flush(innerClient, NULL, 1, &fcmd_p);
+    err = lcb_cbflush3(innerClient, NULL, &fcmd);
     ASSERT_EQ(LCB_SUCCESS, err);
-
-    err = lcb_wait(innerClient);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_wait(innerClient);
 }
 
 void MockEnvironment::SetUp()

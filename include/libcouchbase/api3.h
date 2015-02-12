@@ -235,6 +235,7 @@ typedef enum {
     LCB_CALLBACK_GETREPLICA, /**< lcb_rget3() */
     LCB_CALLBACK_ENDURE, /**< lcb_endure3_ctxnew() */
     LCB_CALLBACK_HTTP, /**< lcb_http3() */
+    LCB_CALLBACK_CBFLUSH, /**< lcb_cbflush3() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -1011,14 +1012,46 @@ lcb_error_t
 lcb_server_verbosity3(lcb_t instance, const void *cookie, const lcb_CMDVERBOSITY *cmd);
 /**@}*/
 
-/**@name Flush a memcached Bucket
- * @details Clear a memcached bucket of all items. Note that this will not
- * work on a Couchbase bucket. To flush a couchbase bucket, use the REST API
+/**@name Flush a Bucket
+ * Uses the REST API to flush a bucket.
  * @{
  */
+typedef lcb_CMDBASE lcb_CMDCBFLUSH;
+typedef lcb_RESPBASE lcb_RESPCBFLUSH;
+
+/**
+ * @uncomitted
+ *
+ * Flush a bucket
+ * This function will properly flush any type of bucket using the REST API
+ * via HTTP. This may be used in a manner similar to the older lcb_flush3().
+ *
+ * The callback invoked under ::LCB_CALLBACK_CBFLUSH will be invoked with either
+ * a success or failure status depending on the outcome of the operation. Note
+ * that in order for lcb_cbflush3() to succeed, flush must already be enabled
+ * on the bucket via the administrative interface.
+ *
+ * @param instance the library handle
+ * @param cookie the cookie passed in the callback
+ * @param cmd empty command structure. Currently there are no options for this
+ *  command.
+ * @return status code for scheduling.
+ *
+ * @attention
+ * Because this command is built using HTTP, this is not subject to operation
+ * pipeline calls such as lcb_sched_enter()/lcb_sched_leave()
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_cbflush3(lcb_t instance, const void *cookie, const lcb_CMDCBFLUSH *cmd);
+
+
 typedef lcb_CMDBASE lcb_CMDFLUSH;
 typedef lcb_RESPSERVERBASE lcb_RESPFLUSH;
-/**@volatile*/
+/**
+ * @volatile
+ * @deprecated
+ */
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
