@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <libcouchbase/vbucket.h>
+#include <libcouchbase/views.h>
 #include <stddef.h>
 #include "common/options.h"
 #include "common/histogram.h"
@@ -188,6 +189,47 @@ http_callback(lcb_t, int, const lcb_RESPHTTP *resp)
     }
     if (resp->rflags & LCB_RESP_F_FINAL) {
         ctx->onDone();
+    }
+}
+
+static void
+view_callback(lcb_t, int, const lcb_RESPVIEWQUERY *resp)
+{
+    if (resp->rflags & LCB_RESP_F_FINAL) {
+        fprintf(stderr, "View query complete!\n");
+    }
+
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "View query failed: 0x%x (%s)\n",
+            resp->rc, lcb_strerror(NULL, resp->rc));
+
+        if (resp->rc == LCB_HTTP_ERROR) {
+            if (resp->htresp != NULL) {
+                HttpReceiver ctx;
+                ctx.maybeInvokeStatus(resp->htresp);
+                if (resp->htresp->nbody) {
+                    fprintf(stderr, "%.*s", (int)resp->htresp->nbody, resp->htresp->body);
+                }
+            }
+        }
+    }
+
+    if (resp->rflags & LCB_RESP_F_FINAL) {
+        if (resp->value) {
+            fprintf(stderr, "Non-row data: %.*s\n",
+                (int)resp->nvalue, resp->value);
+        }
+        return;
+    }
+
+    printf("KEY: %.*s\n", (int)resp->nkey, resp->key);
+    printf("     VALUE: %.*s\n", (int)resp->nvalue, resp->value);
+    printf("     DOCID: %.*s\n", (int)resp->ndocid, resp->docid);
+    if (resp->docresp) {
+        get_callback(NULL, LCB_CALLBACK_GET, resp->docresp);
+    }
+    if (resp->geometry) {
+        printf("     GEO: %.*s\n", (int)resp->ngeometry, resp->geometry);
     }
 }
 }
@@ -725,6 +767,39 @@ ArithmeticHandler::run()
         }
     }
     lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+void
+ViewsHandler::run()
+{
+    Handler::run();
+
+    const string& s = getRequiredArg();
+    size_t pos = s.find('/');
+    if (pos == string::npos) {
+        throw "View must be in the format of design/view";
+    }
+
+    string ddoc = s.substr(0, pos);
+    string view = s.substr(pos+1);
+    string opts = o_params.result();
+
+    lcb_CMDVIEWQUERY cmd = { 0 };
+    lcb_view_query_initcmd(&cmd,
+        ddoc.c_str(), view.c_str(), opts.c_str(), view_callback);
+    if (o_spatial) {
+        cmd.cmdflags |= LCB_CMDVIEWQUERY_F_SPATIAL;
+    }
+    if (o_incdocs) {
+        cmd.cmdflags |= LCB_CMDVIEWQUERY_F_INCLUDE_DOCS;
+    }
+
+    lcb_error_t rc;
+    rc = lcb_view_query(instance, NULL, &cmd);
+    if (rc != LCB_SUCCESS) {
+        throw rc;
+    }
     lcb_wait(instance);
 }
 

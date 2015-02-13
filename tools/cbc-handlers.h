@@ -224,6 +224,28 @@ protected:
     int64_t getDelta() { return o_delta.result() * -1; }
 };
 
+class ViewsHandler : public Handler {
+public:
+    ViewsHandler() : Handler("view"),
+        o_spatial("spatial"), o_incdocs("with-docs"), o_params("params") {}
+
+    HANDLER_DESCRIPTION("Query a view")
+    HANDLER_USAGE("DESIGN/VIEW")
+
+protected:
+    void run();
+    void addOptions() {
+        Handler::addOptions();
+        parser.addOption(o_spatial);
+        parser.addOption(o_incdocs);
+        parser.addOption(o_params);
+    }
+private:
+    cliopts::BoolOption o_spatial;
+    cliopts::BoolOption o_incdocs;
+    cliopts::StringOption o_params;
+};
+
 class HttpReceiver {
 public:
     HttpReceiver() : statusInvoked(false) {}
@@ -366,20 +388,6 @@ protected:
 
 private:
     std::string bname;
-};
-
-class ViewsHandler : public HttpBaseHandler {
-public:
-    HANDLER_DESCRIPTION("Query a view")
-    HANDLER_USAGE("VIEWPATH [ OPTIONS ...]")
-    ViewsHandler() : HttpBaseHandler("view") {}
-protected:
-    bool isAdmin() const { return false; }
-    std::string getURI() { return getRequiredArg(); }
-    void onChunk(const char *s, size_t n) {
-        fwrite(s, 1, n, stdout);
-    }
-    std::string getContentType() { return "application/json"; }
 };
 
 class ConnstrHandler : public Handler {
