@@ -381,6 +381,7 @@ lcb_error_t prepare_url(lcb_http_request_t req,
 lcb_error_t
 lcb_htreq_redirect(lcb_http_request_t req)
 {
+    lcb_error_t rc;
     assert(req->redirect_to);
 
     if (LCBT_SETTING(req->instance, max_redir) > -1) {
@@ -396,8 +397,12 @@ lcb_htreq_redirect(lcb_http_request_t req)
     req->url = req->redirect_to;
     req->nurl = strlen(req->url);
     req->redirect_to = NULL;
-    return prepare_url(req, NULL, 0, NULL, 0) == LCB_SUCCESS &&
-            lcb_http_request_exec(req) == LCB_SUCCESS;
+
+    rc = prepare_url(req, NULL, 0, NULL, 0);
+    if (rc == LCB_SUCCESS) {
+        rc = lcb_http_request_exec(req);
+    }
+    return rc;
 }
 
 static lcb_error_t setup_headers(lcb_http_request_t req,
