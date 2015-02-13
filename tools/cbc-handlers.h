@@ -228,7 +228,7 @@ class HttpReceiver {
 public:
     HttpReceiver() : statusInvoked(false) {}
     virtual ~HttpReceiver() {}
-    void maybeInvokeStatus(lcb_error_t err, const lcb_http_resp_t *);
+    void maybeInvokeStatus(const lcb_RESPHTTP*);
     void install(lcb_t);
     virtual void handleStatus(lcb_error_t, int) {}
     virtual void onDone() {}

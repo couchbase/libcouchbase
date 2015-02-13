@@ -177,22 +177,18 @@ arithmetic_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPCOUNTER *resp)
         printKeyCasStatus(key, (const lcb_RESPBASE *)resp, buf);
     }
 }
+
 static void
-http_chunk_callback(lcb_http_request_t, lcb_t, const void *cookie,
-    lcb_error_t err, const lcb_http_resp_t *resp)
+http_callback(lcb_t, int, const lcb_RESPHTTP *resp)
 {
-    HttpReceiver *ctx = (HttpReceiver *)cookie;
-    ctx->maybeInvokeStatus(err, resp);
-    if (resp->v.v0.nbytes) {
-        ctx->onChunk((const char*)resp->v.v0.bytes, resp->v.v0.nbytes);
+    HttpReceiver *ctx = (HttpReceiver *)resp->cookie;
+    ctx->maybeInvokeStatus(resp);
+    if (resp->nbody) {
+        ctx->onChunk((const char*)resp->body, resp->nbody);
     }
-}
-static void
-http_done_callback(lcb_http_request_t, lcb_t, const void *cookie,
-    lcb_error_t err, const lcb_http_resp_t *resp) {
-    HttpReceiver *ctx = (HttpReceiver *)cookie;
-    ctx->maybeInvokeStatus(err, resp);
-    ctx->onDone();
+    if (resp->rflags & LCB_RESP_F_FINAL) {
+        ctx->onDone();
+    }
 }
 }
 
@@ -735,26 +731,26 @@ ArithmeticHandler::run()
 void
 HttpReceiver::install(lcb_t instance)
 {
-    lcb_set_http_data_callback(instance, http_chunk_callback);
-    lcb_set_http_complete_callback(instance, http_done_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP,
+        (lcb_RESPCALLBACK)http_callback);
 }
 
 void
-HttpReceiver::maybeInvokeStatus(lcb_error_t err, const lcb_http_resp_t *resp)
+HttpReceiver::maybeInvokeStatus(const lcb_RESPHTTP *resp)
 {
     if (statusInvoked) {
         return;
     }
 
     statusInvoked = true;
-    if (resp->v.v0.headers) {
-        for (const char * const *cur = resp->v.v0.headers; *cur; cur += 2) {
+    if (resp->headers) {
+        for (const char * const *cur = resp->headers; *cur; cur += 2) {
             string key = cur[0];
             string value = cur[1];
             headers[key] = value;
         }
     }
-    handleStatus(err, resp->v.v0.status);
+    handleStatus(resp->rc, resp->htstatus);
 }
 
 void
