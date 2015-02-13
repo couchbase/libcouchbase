@@ -369,6 +369,12 @@ lcb_error_t prepare_url(lcb_http_request_t req,
             || (req->url_info.field_set & required_fields) != required_fields) {
         return LCB_EINVAL;
     }
+
+    req->nhost = req->url_info.field_data[UF_HOST].len;
+    req->host = req->url + req->url_info.field_data[UF_HOST].off;
+    req->nport = req->url_info.field_data[UF_PORT].len;
+    req->port = req->url + req->url_info.field_data[UF_PORT].off;
+
     return LCB_SUCCESS;
 }
 
@@ -429,10 +435,6 @@ static lcb_error_t setup_headers(lcb_http_request_t req,
             }
         }
     }
-    req->nhost = req->url_info.field_data[UF_HOST].len;
-    req->host = req->url + req->url_info.field_data[UF_HOST].off;
-    req->nport = req->url_info.field_data[UF_PORT].len;
-    req->port = req->url + req->url_info.field_data[UF_PORT].off;
     rc = add_header(req, "Host", "%.*s%.*s",
                     (int)req->nhost, req->host,
                     (int)req->nport + 1, req->port - 1);
