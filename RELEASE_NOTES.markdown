@@ -1,6 +1,6 @@
 # Release Notes
 
-## MASTER
+## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
   This would sometimes cause failures during early connection/negotiation
