@@ -271,8 +271,8 @@ typedef enum {
      the key has been hashed to is not present. This will happen in the result
      of a node failover where no replica exists to replace it. */ \
     X(LCB_NO_MATCHING_SERVER, 0x23, LCB_ERRTYPE_TRANSIENT, \
-      "No node was found for servicing this key. This may be a result of a " \
-      "nonexistent/stale cluster configuration") \
+      "The node the request was mapped to does not exist in the current cluster " \
+      "map. This may be the result of a failover.") \
     \
     /** Received during initial creation (lcb_create()) if an environment variable
      was specified with an incorrect or invalid value.
