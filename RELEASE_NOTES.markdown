@@ -1,5 +1,12 @@
 # Release Notes
 
+## MASTER
+
+* Retry next nodes on initial bootstrap, even if first node says bucket does
+  not exist (or auth error), as this might be a recently removed node
+  * Priority: Major
+  * Issues: [CCBC-577](http://issues.couchbase.com/browse/CCBC-577)
+
 ## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
