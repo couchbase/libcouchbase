@@ -7,6 +7,13 @@
   * Priority: Major
   * Issues: [CCBC-577](http://issues.couchbase.com/browse/CCBC-577)
 
+* The `cbc` and `cbc-pillowfight` binaries on Windows are now distributed
+  in both _release_ and _debug_ variants. Previously they would be clobbered
+  by one or the other depending on the build host. This fixes some issues in
+  performance and dependency resolution when using these libraries.
+  * Priority: Minor
+  * Issues: [CCBC-581](http://issues.couchbase.com/browse/CCBC-581)
+
 ## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
