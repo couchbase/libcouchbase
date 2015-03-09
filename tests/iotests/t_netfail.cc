@@ -524,21 +524,27 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     mock->failoverNode(1, "cache");
     lsn.called = false;
 
-    for (int ii = 0; ii < 100 && lsn.called == false; ii++) {
+    // Because we don't always get prompt notifications
+    time_t begin = time(NULL);
+    const int durMax = 10;
+    do {
         doManyItems(instance, distKeys);
-    }
+    } while (lsn.called == false && time(NULL) - begin < durMax);
     ASSERT_TRUE(lsn.called);
-    // Call again so the async callback may be invoked.
-    doManyItems(instance, distKeys);
     ASSERT_EQ(9, lcb_get_num_nodes(instance));
 
+    // One more time to 'stabilize' state
     doManyItems(instance, distKeys);
     mock->respawnNode(1, "cache");
     lsn.called = false;
-    for (int ii = 0; ii < 100 && lsn.called == false; ii++) {
+
+    begin = time(NULL);
+    do {
         doManyItems(instance, distKeys);
-    }
+    } while (lsn.called == false && time(NULL) - begin < durMax);
     ASSERT_TRUE(lsn.called);
+    ASSERT_EQ(10, lcb_get_num_nodes(instance));
+
     lcb_confmon_remove_listener(instance->confmon, &lsn.base);
     lcb_destroy(instance);
 }
