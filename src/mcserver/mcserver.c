@@ -169,7 +169,7 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     /** Reschedule the packet again .. */
     newpkt = mcreq_renew_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
-    lcb_retryq_add(instance->retryq, (mc_EXPACKET*)newpkt, LCB_NOT_MY_VBUCKET);
+    lcb_retryq_nmvadd(instance->retryq, (mc_EXPACKET*)newpkt);
     return 1;
 }
 
