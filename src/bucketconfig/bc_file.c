@@ -124,6 +124,11 @@ static int load_cache(file_provider *provider)
         goto GT_DONE;
     }
 
+    if (strcmp(config->bname, PROVIDER_SETTING(&provider->base, bucket)) != 0) {
+        status = -1;
+        lcb_log(LOGARGS(provider, ERROR), LOGFMT "Bucket name in file is different from the one requested", LOGID(provider));
+    }
+
     if (provider->config) {
         lcb_clconfig_decref(provider->config);
     }
