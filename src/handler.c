@@ -145,7 +145,7 @@ init_resp3(lcb_t instance, const packet_info *mc_resp, const mc_PACKET *req,
  */
 static void
 handle_synctoken(lcb_t instance, const packet_info *mc_resp,
-    const mc_PACKET *req, lcb_SYNCTOKEN *sync)
+    const mc_PACKET *req, lcb_SYNCTOKEN *stok)
 {
     const char *sbuf;
     uint16_t vbid;
@@ -163,15 +163,15 @@ handle_synctoken(lcb_t instance, const packet_info *mc_resp,
 
     sbuf = PACKET_BODY(mc_resp);
     vbid = mcreq_get_vbucket(req);
-    sync->vbid_ = vbid;
-    memcpy(&sync->uuid_, sbuf, 8);
-    memcpy(&sync->seqno_, sbuf + 8, 8);
+    stok->vbid_ = vbid;
+    memcpy(&stok->uuid_, sbuf, 8);
+    memcpy(&stok->seqno_, sbuf + 8, 8);
 
-    sync->uuid_ = lcb_ntohll(sync->uuid_);
-    sync->seqno_ = lcb_ntohll(sync->seqno_);
+    stok->uuid_ = lcb_ntohll(stok->uuid_);
+    stok->seqno_ = lcb_ntohll(stok->seqno_);
 
     if (instance->dcpinfo) {
-        instance->dcpinfo[vbid] = *sync;
+        instance->dcpinfo[vbid] = *stok;
     }
 }
 
