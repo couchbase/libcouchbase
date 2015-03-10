@@ -20,6 +20,14 @@
   * Priority: Major
   * Issues: [CCBC-584](http://issues.couchbase.com/browse/CCBC-584)
 
+* Keep vBucket heuristic guesses for limited periods of time.
+  This will allow previously-learned vBucket master locations to persist
+  over a configuration change, providing these changes were discovered
+  recently. This allows the reduction of not-my-vbucket responses while
+  allowing new configs to overwrite our heuristic info, if the heuristic is
+  too old.
+  * Priority: Major
+
 ## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
