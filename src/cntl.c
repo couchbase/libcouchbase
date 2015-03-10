@@ -303,11 +303,14 @@ HANDLER(init_providers) {
 
 HANDLER(config_cache_handler) {
     clconfig_provider *provider;
-    (void)cmd;
 
     provider = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_FILE);
     if (mode == LCB_CNTL_SET) {
-        if (lcb_clconfig_file_set_filename(provider, (char *)arg) == 0) {
+        int rv;
+        rv = lcb_clconfig_file_set_filename(provider, arg,
+            cmd == LCB_CNTL_CONFIGCACHE_RO);
+
+        if (rv == 0) {
             instance->settings->bc_http_stream_time = LCB_MS2US(10000);
             return LCB_SUCCESS;
         }
@@ -453,7 +456,8 @@ static ctl_handler handlers[] = {
     vbguess_handler, /* LCB_CNTL_VBGUESS_PERSIST */
     unsafe_optimize, /* LCB_CNTL_UNSAFE_OPTIMIZE */
     fetch_synctokens_handler, /* LCB_CNTL_FETCH_SYNCTOKENS */
-    dur_synctokens_handler /* LCB_CNTL_DURABILITY_SYNCTOKENS */
+    dur_synctokens_handler, /* LCB_CNTL_DURABILITY_SYNCTOKENS */
+    config_cache_handler /* LCB_CNTL_CONFIGCACHE_READONLY */
 };
 
 /* Union used for conversion to/from string functions */
@@ -588,6 +592,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"compression", LCB_CNTL_COMPRESSION_OPTS, convert_compression},
         {"console_log_level", LCB_CNTL_CONLOGGER_LEVEL, convert_u32},
         {"config_cache", LCB_CNTL_CONFIGCACHE, convert_passthru },
+        {"config_cache_ro", LCB_CNTL_CONFIGCACHE_RO, convert_passthru },
         {"detailed_errcodes", LCB_CNTL_DETAILED_ERRCODES, convert_intbool},
         {"retry_policy", LCB_CNTL_RETRYMODE, convert_retrymode},
         {"http_urlmode", LCB_CNTL_HTCONFIG_URLTYPE, convert_int },

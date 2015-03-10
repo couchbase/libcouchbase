@@ -483,6 +483,17 @@ typedef struct lcb_logprocs_st {
  */
 #define LCB_CNTL_CONFIGCACHE 0x21
 
+/**
+ * @brief File used for read-only configuration cache
+ *
+ * This is identical to the @ref LCB_CNTL_CONFIGCACHE directive, except that
+ * it guarantees that the library will never overwrite or otherwise modify
+ * the path specified.
+ *
+ * @see LCB_CNTL_CONFIGCACHE
+ */
+#define LCB_CNTL_CONFIGCACHE_RO 0x36
+
 typedef enum {
     LCB_SSL_ENABLED = 1 << 0, /**< Use SSL */
     LCB_SSL_NOVERIFY = 1 << 1 /**< Don't verify certificates */
@@ -785,7 +796,7 @@ typedef enum {
 #define LCB_CNTL_DURABILITY_SYNCTOKENS 0x35
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x36
+#define LCB_CNTL__MAX                    0x37
 /**@}*/
 
 #ifdef __cplusplus

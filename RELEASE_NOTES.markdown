@@ -14,6 +14,12 @@
   * Priority: Minor
   * Issues: [CCBC-581](http://issues.couchbase.com/browse/CCBC-581)
 
+* Provide Read-Only config cache mode. In this mode the configuration cache
+  file is read but never updated. Additionally, a missing file in this mode
+  results in a hard error.
+  * Priority: Major
+  * Issues: [CCBC-584](http://issues.couchbase.com/browse/CCBC-584)
+
 ## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
