@@ -488,6 +488,15 @@ typedef struct mc_epkt_datum {
  * packet. This goes well with the typical use case of this function, which is
  * not to actually duplicate the packet, but rather to provide a fresh copy
  * which may be re-used.
+ *
+ * @attention
+ * This function attempts to be "dumb" in the sense of trying to make an
+ * exact effective clone of the original packet (the main goal of this function
+ * is to move the resources of the packet over to a new block of memory). This
+ * means things like non-buffer-related flags (i.e. the ones not specifying
+ * the layout of the buffer) are _preserved_, including the so-called
+ * "state flags" which indicate if a packet has been flushed and/or handled. If
+ * calling this function to retry a packet, ensure to clear these state flags.
  */
 mc_PACKET *
 mcreq_renew_packet(const mc_PACKET *src);
