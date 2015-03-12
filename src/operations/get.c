@@ -238,6 +238,7 @@ rget_callback(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_error_t err, const void *arg)
             rck->remaining = 1;
         } else if (err != LCB_SUCCESS) {
             mc_PACKET *newpkt = mcreq_renew_packet(pkt);
+            newpkt->flags &= ~MCREQ_STATE_FLAGS;
             mcreq_sched_add(nextpl, newpkt);
             /* Use this, rather than lcb_sched_leave(), because this is being
              * invoked internally by the library. */
@@ -277,6 +278,9 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
     }
     if (!cq->config) {
         return LCB_CLIENT_ETMPFAIL;
+    }
+    if (!LCBT_NREPLICAS(instance)) {
+        return LCB_NO_MATCHING_SERVER;
     }
 
     mcreq_map_key(cq, &cmd->key, &cmd->_hashkey, MCREQ_PKT_BASESIZE,
@@ -345,6 +349,10 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
         mc_PACKET *pkt;
 
         curix = lcbvb_vbreplica(cq->config, vbid, r0);
+        /* XXX: this is always expected to be in range. For the FIRST mode
+         * it will seek to the first valid index (checked above), and for the
+         * ALL mode, it will fail if not all replicas are already online
+         * (also checked above) */
         pl = cq->pipelines[curix];
         pkt = mcreq_allocate_packet(pl);
         if (!pkt) {
@@ -361,6 +369,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
         mcreq_write_hdr(pkt, &req);
         mcreq_sched_add(pl, pkt);
     } while (++r0 < r1);
+
     return LCB_SUCCESS;
 }
 

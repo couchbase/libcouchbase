@@ -28,6 +28,12 @@
   too old.
   * Priority: Major
 
+* Fix potential crashes in get-with-replica (`lcb_rget3`, `lcb_get_replica`)
+  when there are no replicas available, or if there is an error in retrieving
+  from one of the replicas.
+  * Priority: Major
+  * Issues: [CCBC-586](http://issues.couchbase.com/browse/CCBC-586)
+
 ## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
