@@ -151,10 +151,10 @@ LcbTimings::dump() const
                 ii->ns_start, ii->ns_end, ii->count);
         } else if (ii->ns_end < 10000000) {
             printf("[%llu-%llu us] %lu\n",
-                ii->ns_start / 1000LLU, ii->ns_end / 1000LLU, ii->count);
+                ii->ns_start / 1000, ii->ns_end / 1000, ii->count);
         } else {
             printf("[%llu-%llu ms] %lu\n",
-                ii->ns_start / 1000000LLU, ii->ns_end / 1000000LLU, ii->count);
+                ii->ns_start / 1000000, ii->ns_end / 1000000, ii->count);
         }
     }
 }
