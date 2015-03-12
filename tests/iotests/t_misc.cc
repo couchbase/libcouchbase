@@ -97,8 +97,8 @@ struct LcbTimings {
     void load(lcb_t);
     void clear();
 
-    TimingInfo infoAt(size_t duration, lcb_timeunit_t unit = LCB_TIMEUNIT_NSEC);
-    size_t countAt(size_t duration, lcb_timeunit_t unit = LCB_TIMEUNIT_NSEC) {
+    TimingInfo infoAt(hrtime_t duration, lcb_timeunit_t unit = LCB_TIMEUNIT_NSEC);
+    size_t countAt(hrtime_t duration, lcb_timeunit_t unit = LCB_TIMEUNIT_NSEC) {
         return infoAt(duration, unit).count;
     }
 
@@ -129,7 +129,7 @@ LcbTimings::load(lcb_t instance)
 }
 
 TimingInfo
-LcbTimings::infoAt(size_t duration, lcb_timeunit_t unit)
+LcbTimings::infoAt(hrtime_t duration, lcb_timeunit_t unit)
 {
     duration = intervalToNsec(duration, unit);
     std::vector<TimingInfo>::iterator ii;
@@ -147,14 +147,14 @@ LcbTimings::dump() const
     std::vector<TimingInfo>::const_iterator ii = m_info.begin();
     for (; ii != m_info.end(); ii++) {
         if (ii->ns_end < 1000) {
-            printf("[%lu-%lu ns] %lu\n",
+            printf("[%llu-%llu ns] %lu\n",
                 ii->ns_start, ii->ns_end, ii->count);
         } else if (ii->ns_end < 10000000) {
-            printf("[%lu-%lu us] %lu\n",
-                ii->ns_start / 1000, ii->ns_end / 1000, ii->count);
+            printf("[%llu-%llu us] %lu\n",
+                ii->ns_start / 1000LLU, ii->ns_end / 1000LLU, ii->count);
         } else {
-            printf("[%lu-%lu ms] %lu\n",
-                ii->ns_start / 1000000, ii->ns_end / 1000000, ii->count);
+            printf("[%llu-%llu ms] %lu\n",
+                ii->ns_start / 1000000LLU, ii->ns_end / 1000000LLU, ii->count);
         }
     }
 }
@@ -169,8 +169,8 @@ struct UnitInterval {
 
 static void addTiming(lcb_t instance, const UnitInterval& interval)
 {
-    size_t n = intervalToNsec(interval.n, interval.unit);
-    lcb_record_metrics(instance, (hrtime_t)n, 0);
+    hrtime_t n = intervalToNsec(interval.n, interval.unit);
+    lcb_record_metrics(instance, n, 0);
 }
 
 
@@ -207,7 +207,7 @@ TEST_F(MockUnitTest, testTimingsEx)
     LcbTimings timings;
     timings.load(instance);
 
-//    timings.dump();
+    //timings.dump();
 
     // Measuring in < us
     ASSERT_EQ(2, timings.countAt(50, LCB_TIMEUNIT_NSEC));
