@@ -48,7 +48,7 @@ void MockEnvironment::init()
     argv = NULL;
     iops = NULL;
 
-    numNodes = 10;
+    numNodes = 4;
     realCluster = false;
     serverVersion = VERSION_UNKNOWN;
 }
@@ -365,7 +365,7 @@ void MockEnvironment::clearAndReset()
 
 void MockEnvironment::SetUp()
 {
-    numNodes = 10;
+    numNodes = 4;
     if (!mock) {
         mock = (struct test_server_info *)start_test_server((char **)argv);
     }

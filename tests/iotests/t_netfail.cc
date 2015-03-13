@@ -262,7 +262,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     lcb_error_t err;
 
     const char *argv[] = {
-            "--replicas", "0", "--nodes", "10", NULL
+            "--replicas", "0", "--nodes", "4", NULL
     };
 
     MockEnvironment mock_o(argv), *mock = &mock_o;
@@ -281,9 +281,8 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     lcb_wait(instance);
     ASSERT_EQ(0, lcb_get_num_replicas(instance));
 
+    size_t numNodes = mock->getNumNodes();
 
-    /* mock uses 10 nodes by default */
-    ASSERT_EQ(10, mock->getNumNodes());
     genDistKeys(LCBT_VBCONFIG(instance), keys);
     genStoreCommands(keys, cmds, ppcmds);
     StoreContext ctx;
@@ -296,7 +295,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
 
     ctx.check((int)cmds.size());
     ctx.clear();
-    ASSERT_EQ(9, lcb_get_num_nodes(instance));
+    ASSERT_EQ(numNodes-1, lcb_get_num_nodes(instance));
 
     mock->respawnNode(0);
     err = lcb_store(instance, &ctx, cmds.size(), &ppcmds[0]);
@@ -332,7 +331,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     std::string key = "testBufferRelocationOnNodeFailover";
     std::string val = "foo";
 
-    const char *argv[] = { "--replicas", "0", "--nodes", "10", NULL };
+    const char *argv[] = { "--replicas", "0", "--nodes", "4", NULL };
     MockEnvironment mock_o(argv), *mock = &mock_o;
 
     // We need to disable CCCP for this test to receive "Push" style
@@ -347,8 +346,6 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     lcb_uint32_t tmoval = 15000000;
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
 
-    /* mock uses 10 nodes by default */
-    ASSERT_EQ(10, mock->getNumNodes());
     lcb_set_store_callback(instance, store_callback);
     lcb_set_get_callback(instance, get_callback);
 
@@ -520,6 +517,8 @@ TEST_F(MockUnitTest, testMemcachedFailover)
     ASSERT_EQ((lcb_uint32_t)-1, instance->getSettings()->bc_http_stream_time);
     ASSERT_EQ(0, lcbio_timer_armed(htprov->disconn_timer));
 
+    size_t numNodes = mock->getNumNodes();
+
     // Fail over the first node..
     mock->failoverNode(1, "cache");
     lsn.called = false;
@@ -531,7 +530,7 @@ TEST_F(MockUnitTest, testMemcachedFailover)
         doManyItems(instance, distKeys);
     } while (lsn.called == false && time(NULL) - begin < durMax);
     ASSERT_TRUE(lsn.called);
-    ASSERT_EQ(9, lcb_get_num_nodes(instance));
+    ASSERT_EQ(numNodes-1, lcb_get_num_nodes(instance));
 
     // One more time to 'stabilize' state
     doManyItems(instance, distKeys);
@@ -543,7 +542,7 @@ TEST_F(MockUnitTest, testMemcachedFailover)
         doManyItems(instance, distKeys);
     } while (lsn.called == false && time(NULL) - begin < durMax);
     ASSERT_TRUE(lsn.called);
-    ASSERT_EQ(10, lcb_get_num_nodes(instance));
+    ASSERT_EQ(numNodes, lcb_get_num_nodes(instance));
 
     lcb_confmon_remove_listener(instance->confmon, &lsn.base);
     lcb_destroy(instance);
