@@ -86,10 +86,18 @@ lcb_vbguess_newconfig(lcb_t instance, lcbvb_CONFIG *cfg, lcb_GUESSVB *guesses)
 }
 
 int
-lcb_vbguess_remap(lcbvb_CONFIG *cfg, lcb_GUESSVB *guesses, int vbid, int bad)
+lcb_vbguess_remap(lcb_t instance, int vbid, int bad)
 {
+
+    lcb_GUESSVB *guesses = instance->vbguess;
     lcb_GUESSVB *guess = guesses + vbid;
-    int newix = lcbvb_nmv_remap(cfg, vbid, bad);
+    int newix;
+
+    if (LCBT_SETTING(instance, vb_noguess)) {
+        return -1;
+    } else {
+        newix = lcbvb_nmv_remap(LCBT_VBCONFIG(instance), vbid, bad);
+    }
 
     if (guesses && newix > -1 && newix != bad) {
         guess->newix = newix;
