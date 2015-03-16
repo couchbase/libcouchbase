@@ -550,7 +550,7 @@ static void mcdFoVerifyCb(lcb_t, int, const lcb_RESPBASE *rb)
 }
 }
 
-TEST_F(MockUnitTest, testMemcachedFailover)
+TEST_F(MockUnitTest, DISABLED_testMemcachedFailover)
 {
     SKIP_UNLESS_MOCK();
     const char *argv[] = { "--buckets", "cache::memcache", NULL };
