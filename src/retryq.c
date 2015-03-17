@@ -332,7 +332,11 @@ lcb_retryq_add(lcb_RETRYQ *rq, mc_EXPACKET *pkt, lcb_error_t err)
 void
 lcb_retryq_nmvadd(lcb_RETRYQ *rq, mc_EXPACKET *detchpkt)
 {
-    add_op(rq, detchpkt, LCB_NOT_MY_VBUCKET, RETRY_SCHED_IMM);
+    int flags = 0;
+    if (rq->settings->nmv_retry_imm) {
+        flags = RETRY_SCHED_IMM;
+    }
+    add_op(rq, detchpkt, LCB_NOT_MY_VBUCKET, flags);
 }
 
 static void

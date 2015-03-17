@@ -727,6 +727,20 @@ typedef enum {
 
 /**
  * @volatile
+ * Whether commands are retried immediately upon receipt of not-my-vbucket
+ * replies.
+ *
+ * Since version 2.4.8, packets by default are retried immediately on a
+ * different node if it had previously failed with a not-my-vbucket
+ * response, and is thus not subject to the @ref LCB_CNTL_RETRY_INTERVAL
+ * and @ref LCB_CNTL_RETRY_BACKOFF settings. Disabling this setting will
+ * restore the older behavior. This may be used in case there are problems
+ * with the default heuristic/retry algorithm.
+ */
+#define LCB_CNTL_RETRY_NMV_IMM 0x37
+
+/**
+ * @volatile
  *
  * Set the maximum pool size for pooled http (view request) sockets. This should
  * be set to 1 (the default) unless you plan to execute concurrent view requests.
@@ -796,7 +810,7 @@ typedef enum {
 #define LCB_CNTL_DURABILITY_SYNCTOKENS 0x35
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x37
+#define LCB_CNTL__MAX                    0x38
 /**@}*/
 
 #ifdef __cplusplus

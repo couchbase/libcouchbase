@@ -34,6 +34,17 @@
   * Priority: Major
   * Issues: [CCBC-586](http://issues.couchbase.com/browse/CCBC-586)
 
+* Do not wait between not-my-vbucket retries
+  This behavior restores the pre 2.4.0 behavior of retrying not-my-vbucket
+  responses, with a more intelligent retry/rotation algorithm (see the
+  release note about "vbucket map heuristics"). Previously a wait-time
+  was introduced because of potential busy loops in retrying to the same
+  node. The `LCB_CNTL_RETRY_NMV_IMM` setting can be used to disable this
+  functionality (by disabling it, i.e. setting it to 0). This may also be
+  disabled in the connection string via `retry_nmv_imm=0`.
+  * Priority: Major
+  * Issues: [CCBC-588](http://issues.couchbase.com/browse/CCBC-588)
+
 ## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.

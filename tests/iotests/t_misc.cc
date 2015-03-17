@@ -527,6 +527,15 @@ TEST_F(MockUnitTest, testCtls)
     err = lcb_cntl_string(instance, "operation_timeout", "0.255");
     ASSERT_EQ(LCB_SUCCESS, err);
     ASSERT_EQ(255000, ctlGet<lcb_U32>(instance, LCB_CNTL_OP_TIMEOUT));
+
+    // Test default for nmv retry
+    int itmp = ctlGetInt(instance, LCB_CNTL_RETRY_NMV_IMM);
+    ASSERT_NE(0, itmp);
+
+    err = lcb_cntl_string(instance, "retry_nmv_imm", "0");
+    ASSERT_EQ(LCB_SUCCESS, err);
+    itmp = ctlGetInt(instance, LCB_CNTL_RETRY_NMV_IMM);
+    ASSERT_EQ(0, itmp);
 }
 
 

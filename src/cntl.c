@@ -153,6 +153,9 @@ HANDLER(fetch_synctokens_handler) {
 HANDLER(dur_synctokens_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, dur_synctokens))
 }
+HANDLER(nmv_imm_retry_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, nmv_retry_imm));
+}
 
 HANDLER(get_kvb) {
     struct lcb_cntl_vbinfo_st *vbi = arg;
@@ -457,7 +460,8 @@ static ctl_handler handlers[] = {
     unsafe_optimize, /* LCB_CNTL_UNSAFE_OPTIMIZE */
     fetch_synctokens_handler, /* LCB_CNTL_FETCH_SYNCTOKENS */
     dur_synctokens_handler, /* LCB_CNTL_DURABILITY_SYNCTOKENS */
-    config_cache_handler /* LCB_CNTL_CONFIGCACHE_READONLY */
+    config_cache_handler, /* LCB_CNTL_CONFIGCACHE_READONLY */
+    nmv_imm_retry_handler /* LCB_CNTL_RETRY_NMV_IMM */
 };
 
 /* Union used for conversion to/from string functions */
@@ -604,6 +608,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"unsafe_optimize", LCB_CNTL_UNSAFE_OPTIMIZE, convert_intbool },
         {"fetch_synctokens", LCB_CNTL_FETCH_SYNCTOKENS, convert_intbool },
         {"dur_synctokens", LCB_CNTL_DURABILITY_SYNCTOKENS, convert_intbool },
+        {"retry_nmv_imm", LCB_CNTL_RETRY_NMV_IMM, convert_intbool },
         {NULL, -1}
 };
 
