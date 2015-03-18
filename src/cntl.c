@@ -405,6 +405,25 @@ HANDLER(unsafe_optimize) {
     return LCB_SUCCESS;
 }
 
+HANDLER(synctok_supported_handler) {
+    size_t ii;
+    if (mode != LCB_CNTL_GET) {
+        return LCB_ECTL_UNSUPPMODE;
+    }
+
+    *(int *)arg = 0;
+
+    for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+        mc_SERVER *s = LCBT_GET_SERVER(instance, ii);
+        if (s->synctokens) {
+            *(int *)arg = 1;
+            break;
+        }
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -461,7 +480,8 @@ static ctl_handler handlers[] = {
     fetch_synctokens_handler, /* LCB_CNTL_FETCH_SYNCTOKENS */
     dur_synctokens_handler, /* LCB_CNTL_DURABILITY_SYNCTOKENS */
     config_cache_handler, /* LCB_CNTL_CONFIGCACHE_READONLY */
-    nmv_imm_retry_handler /* LCB_CNTL_RETRY_NMV_IMM */
+    nmv_imm_retry_handler, /* LCB_CNTL_RETRY_NMV_IMM */
+    synctok_supported_handler /* LCB_CNTL_SYNCTOKENS_SUPPORTED */
 };
 
 /* Union used for conversion to/from string functions */
