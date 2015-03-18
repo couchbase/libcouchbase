@@ -1,6 +1,6 @@
 # Release Notes
 
-## MASTER
+## 2.4.8 (Mar. 8 2015)
 
 * Retry next nodes on initial bootstrap, even if first node says bucket does
   not exist (or auth error), as this might be a recently removed node
