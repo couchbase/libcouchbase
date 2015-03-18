@@ -45,6 +45,30 @@
   * Priority: Major
   * Issues: [CCBC-588](http://issues.couchbase.com/browse/CCBC-588)
 
+* Fix compilation error with UV when `EAI_BADHINTS` is not defined in the
+  system. This is primarily an issue with newer UV versions and some versions
+  of Linux
+  * Priority: Major
+  * Issues: [CCBC-590](http://issues.couchbase.com/browse/CCBC-590)
+
+* Allow means to disable C++ behavior on public library structures, allowing
+  them to be initialized via C-style static initializers.
+  This allows the zeroing of structures such as `lcb_get_cmd_t cmd = { 0 }`,
+  which would ordinarily fail under C++ compilation because of that structure
+  having a defined C++ constructor. Applications can take advantage of this
+  feature by defining the `LCB_NO_DEPR_CXX_CTORS` preprocessor macro when
+  compiling.
+  * Priority: Major
+  * Issues: [CCBC-591](http://issues.couchbase.com/browse/CCBC-591)
+
+* Fix some bugs in timing behavior (`lcb_enable_timings`). Timings between
+  1000-2000ms are now reported accurately. Additionally for more common
+  handling, second timing ranges (between 1-9s) are reported in ms range
+  (i.e. timings of 4 seconds are reported as 3000-4000ms ).
+  * Priority: Minor
+  * Issues: [CCBC-582](http://issues.couchbase.com/browse/CCBC-582)
+
+
 ## 2.4.7 (Feb. 17 2015)
 
 * Fix SSL connection failures with `SSL_UNDEFINED_CONST_FUNCTION`.
