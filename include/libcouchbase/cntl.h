@@ -822,7 +822,7 @@ typedef enum {
 #define LCB_CNTL_SYNCTOKENS_SUPPORTED 0x38
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x39
+#define LCB_CNTL__MAX                    0x3A
 /**@}*/
 
 #ifdef __cplusplus

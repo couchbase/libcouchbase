@@ -156,6 +156,10 @@ HANDLER(dur_synctokens_handler) {
 HANDLER(nmv_imm_retry_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, nmv_retry_imm));
 }
+HANDLER(tcp_nodelay_handler) {
+    printf("NoDelay!\n");
+    RETURN_GET_SET(int, LCBT_SETTING(instance, tcp_nodelay));
+}
 
 HANDLER(get_kvb) {
     struct lcb_cntl_vbinfo_st *vbi = arg;
@@ -481,7 +485,8 @@ static ctl_handler handlers[] = {
     dur_synctokens_handler, /* LCB_CNTL_DURABILITY_SYNCTOKENS */
     config_cache_handler, /* LCB_CNTL_CONFIGCACHE_READONLY */
     nmv_imm_retry_handler, /* LCB_CNTL_RETRY_NMV_IMM */
-    synctok_supported_handler /* LCB_CNTL_SYNCTOKENS_SUPPORTED */
+    synctok_supported_handler, /* LCB_CNTL_SYNCTOKENS_SUPPORTED */
+    tcp_nodelay_handler /* LCB_CNTL_TCP_NODELAY */
 };
 
 /* Union used for conversion to/from string functions */
@@ -629,6 +634,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"fetch_synctokens", LCB_CNTL_FETCH_SYNCTOKENS, convert_intbool },
         {"dur_synctokens", LCB_CNTL_DURABILITY_SYNCTOKENS, convert_intbool },
         {"retry_nmv_imm", LCB_CNTL_RETRY_NMV_IMM, convert_intbool },
+        {"tcp_nodelay", LCB_CNTL_TCP_NODELAY, convert_intbool },
         {NULL, -1}
 };
 

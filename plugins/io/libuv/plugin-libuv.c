@@ -260,6 +260,30 @@ static unsigned int close_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase)
     return 0;
 }
 
+static int cntl_socket(lcb_io_opt_t iobase, lcb_sockdata_t *sockbase,
+    int mode, int option, void *arg)
+{
+    my_sockdata_t *sd = (my_sockdata_t *)sockbase;
+    int rv;
+
+    switch (option) {
+    case LCB_IO_CNTL_TCP_NODELAY:
+        if (mode == LCB_IO_CNTL_GET) {
+            rv = uv_tcp_nodelay(&sd->tcp.t, *(int *)arg);
+            if (rv != 0) {
+                set_last_error((my_iops_t*)iobase, rv);
+            }
+            return rv;
+        } else {
+            LCB_IOPS_ERRNO(iobase) = ENOTSUP;
+            return -1;
+        }
+    default:
+        LCB_IOPS_ERRNO(iobase) = ENOTSUP;
+        return -1;
+    }
+}
+
 
 /******************************************************************************
  ******************************************************************************
@@ -596,6 +620,7 @@ static void wire_iops2(int version,
     iocp->nameinfo = get_nameinfo;
     iocp->read2 = start_read;
     iocp->write2 = start_write2;
+    iocp->cntl = cntl_socket;
 
     /** Stuff we don't use */
     iocp->write = NULL;
