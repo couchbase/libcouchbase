@@ -1,5 +1,16 @@
 # Release Notes
 
+## MASTER
+
+* Disable HTTP provider when any CCCP config is received.
+  This makes the assumption that CCCP will always be available if even a
+  single node provides an HTTP configuration. This change may break some
+  corner-case upgrade scenarios from version 2.2 to 2.5 where a newly added
+  2.5 node is subsequently removed.
+  * Priority: Major
+  * Issues: [CCBC-526](http://issues.couchbase.com/browse/CCBC-526),
+    [CCBC-589](http://issues.couchbase.com/browse/CCBC-589)
+
 ## 2.4.8 (Mar. 8 2015)
 
 * Retry next nodes on initial bootstrap, even if first node says bucket does
