@@ -1220,6 +1220,19 @@ protected:
                 throw ("Need decimal or hex code!");
             }
         }
+
+        #define X(cname, code, cat, desc) \
+        if (code == errcode) { \
+            fprintf(stderr, "%s\n", #cname); \
+            fprintf(stderr, "  Type: 0x%x\n", cat); \
+            fprintf(stderr, "  Description: %s\n", desc); \
+            return; \
+        } \
+
+        LCB_XERR(X)
+        #undef X
+
+        fprintf(stderr, "-- Error code not found in header. Trying runtime..\n");
         fprintf(stderr, "0x%x: %s\n", errcode, lcb_strerror(NULL, (lcb_error_t)errcode));
     }
 };
