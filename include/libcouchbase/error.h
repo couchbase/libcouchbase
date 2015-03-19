@@ -434,7 +434,12 @@ typedef enum {
     X(LCB_DURABILITY_NO_SYNCTOKEN, 0x3C, LCB_ERRTYPE_INPUT, \
       "The given item does not have a synctoken object associated with it. " \
       "this is either because fetching synctokens was not enabled, or " \
-      "you are trying to check on something not stored by this instance")
+      "you are trying to check on something not stored by this instance") \
+    \
+    /** The server replied with an unrecognized status code */ \
+    X(LCB_UNKNOWN_MEMCACHED_ERROR, 0x3D, LCB_ERRTYPE_SRVGEN, \
+      "The server replied with an unrecognized status code. A newer version " \
+      "of this library may be able to decode it")
 
 /** Error codes returned by the library. */
 typedef enum {
