@@ -25,7 +25,8 @@ namespace cbc {
     X(UInt, timeout, "timeout", 't') \
     X(Bool, timings, "timings", 'T') \
     X(Bool, verbose, "verbose", 'v') \
-    X(Bool, dump, "dump", '\0')
+    X(Bool, dump, "dump", '\0') \
+    X(List, cparams, "cparam", 'D')
 
 
 class ConnParams {
