@@ -51,7 +51,8 @@ typedef struct {
 /**Information a single entry in a durability set. Each entry contains a single
  * key */
 typedef struct lcb_DURITEM_st {
-    lcb_U64 reqcas; /**< Last known CAS for the user */
+    lcb_U64 reqcas; /**< Last known CAS for the user; or the seqno */
+    lcb_U64 uuid;
     lcb_RESPENDURE result; /**< Result to be passed to user */
     struct lcb_DURSET_st *parent;
     lcb_RESPCALLBACK callback; /**< For F_INTERNAL_CALLBACK */
@@ -102,6 +103,9 @@ typedef struct lcbdur_PROCS_st {
 void
 lcbdur_cas_update(lcb_t instance, lcb_DURSET *dset, lcb_error_t err,
     const lcb_RESPOBSERVE *resp);
+void
+lcbdur_update_seqno(lcb_t instance, lcb_DURSET *dset,
+    const lcb_RESPOBSEQNO *resp);
 
 lcb_MULTICMD_CTX *
 lcb_observe_ctx_dur_new(lcb_t instance);
@@ -109,13 +113,15 @@ lcb_observe_ctx_dur_new(lcb_t instance);
 #ifdef LCBDUR_PRIV_SYMS
 
 extern lcbdur_PROCS lcbdur_cas_procs;
+extern lcbdur_PROCS lcbdur_seqno_procs;
 
 #define RESFLD(e, f) (e)->result.f
 #define ENT_CAS(e) (e)->request.options.cas
 #define DSET_OPTFLD(ds, opt) (ds)->opts.opt
 #define DSET_COUNT(ds) (ds)->entries_.count
 #define DSET_ENTRIES(ds) LCB_SSOBUF_ARRAY(&(ds)->entries_, lcb_DURITEM)
-#define DSET_PROCS(ds) (&lcbdur_cas_procs)
+#define DSET_PROCS(ds) ((ds)->opts.pollopts == LCB_DURABILITY_MODE_CAS \
+    ? (&lcbdur_cas_procs) : (&lcbdur_seqno_procs))
 #define ENT_NUMINFO(ent) 4
 
 /**

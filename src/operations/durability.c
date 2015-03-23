@@ -377,6 +377,30 @@ dset_ctx_fail(lcb_MULTICMD_CTX *mctx)
     lcbdur_destroy(dset);
 }
 
+static lcb_U8
+get_poll_meth(lcb_t instance, const lcb_DURABILITYOPTSv0 *options)
+{
+    /* Need to call this first, so we can actually allocate the appropriate
+     * data for this.. */
+    lcb_U8 meth = options->pollopts;
+    if (meth == LCB_DURABILITY_MODE_DEFAULT) {
+        meth = LCB_DURABILITY_MODE_CAS;
+
+        if (LCBT_SETTING(instance, fetch_synctokens) &&
+                LCBT_SETTING(instance, dur_synctokens)) {
+            size_t ii;
+            for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+                mc_SERVER *s = LCBT_GET_SERVER(instance, ii);
+                if (s->synctokens) {
+                    meth = LCB_DURABILITY_MODE_SEQNO;
+                    break;
+                }
+            }
+        }
+    }
+    return meth;
+}
+
 LIBCOUCHBASE_API
 lcb_MULTICMD_CTX *
 lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
@@ -385,6 +409,7 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
     lcb_DURSET *dset;
     lcb_error_t err_s;
     lcbio_pTABLE io = instance->iotable;
+    const lcb_DURABILITYOPTSv0 *opts_in = &options->v.v0;
 
     if (!errp) {
         errp = &err_s;
@@ -400,7 +425,21 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
         *errp = LCB_CLIENT_ENOMEM;
         return NULL;
     }
-    dset->opts = options->v.v0;
+
+    /* Ensure we don't clobber options from older versions */
+    dset->opts.cap_max = opts_in->cap_max;
+    dset->opts.check_delete = opts_in->check_delete;
+    dset->opts.interval = opts_in->interval;
+    dset->opts.persist_to = opts_in->persist_to;
+    dset->opts.replicate_to = opts_in->replicate_to;
+    dset->opts.timeout = opts_in->timeout;
+
+    if (options->version > 0) {
+        dset->opts.pollopts = opts_in->pollopts;
+    }
+
+    dset->opts.pollopts = get_poll_meth(instance, &dset->opts);
+
     dset->instance = instance;
     dset->mctx.addcmd = dset_ctx_add;
     dset->mctx.done = dset_ctx_schedule;
@@ -504,14 +543,6 @@ void lcbdur_destroy(lcb_DURSET *dset)
     lcb_string_release(&dset->kvbufs);
     free(dset);
     lcb_maybe_breakout(instance);
-}
-
-void lcbdur_maybe_schedfail(lcb_DURSET *dset)
-{
-    if (dset->next_state == LCBDUR_STATE_INIT) {
-        assert(dset->refcnt == 1);
-        lcbdur_unref(dset);
-    }
 }
 
 /**

@@ -1026,6 +1026,10 @@ lcb_get_synctoken(lcb_t instance, const lcb_KEYBUF *kb, lcb_error_t *errp);
  * @{
  */
 
+/**Must specify this flag if using the 'synctoken' field, as it was added in
+ * a later version */
+#define LCB_CMDENDURE_F_SYNCTOKEN 1<<16
+
 /**@brief Command structure for endure.
  * If the lcb_CMDENDURE::cas field is specified, the operation will check and
  * verify that the CAS found on each of the nodes matches the CAS specified
@@ -1033,7 +1037,10 @@ lcb_get_synctoken(lcb_t instance, const lcb_KEYBUF *kb, lcb_error_t *errp);
  * nodes. If the item exists on the master's cache with a different CAS then
  * the operation will fail
  */
-typedef lcb_CMDBASE lcb_CMDENDURE;
+typedef struct {
+    LCB_CMD_BASE;
+    const lcb_SYNCTOKEN *synctoken;
+} lcb_CMDENDURE;
 
 /**@brief Response structure for endure */
 typedef struct {
