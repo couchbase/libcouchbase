@@ -142,6 +142,7 @@ typedef struct lcb_settings_st {
     unsigned sslopts : 2;
     unsigned ipv6 : 2;
     unsigned tcp_nodelay : 1;
+    unsigned readj_ts_wait : 1;
 
     short max_redir;
     unsigned refcount;

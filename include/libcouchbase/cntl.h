@@ -821,8 +821,24 @@ typedef enum {
  */
 #define LCB_CNTL_SYNCTOKENS_SUPPORTED 0x38
 
+
+/**
+ * @uncommitted
+ * This setting determines if calls to lcb_wait() and lcb_wait3() will reset
+ * the timeout of pending operations to the time that lcb_wait() was called,
+ * rather than having the operation maintain the time of the call which
+ * scheduled it. If the time between lcb_store3() and family and the lcb_wait()
+ * functions is long, it is recommended to disable this setting in order to
+ * avoid prematurely having operations time out.
+ *
+ * @cntl_arg_getset{int (as boolean)}
+ *
+ * Use `"readj_wait_tmo"` for the string version
+ */
+#define LCB_CNTL_RESET_TIMEOUT_ON_WAIT 0x3A
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x3A
+#define LCB_CNTL__MAX                    0x3B
 /**@}*/
 
 #ifdef __cplusplus

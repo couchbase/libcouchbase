@@ -846,6 +846,16 @@ mcreq_packet_done(mc_PIPELINE *pipeline, mc_PACKET *pkt);
 } while (0);
 
 /**
+ * Reset the timeout (or rather, the start time) on all pending packets
+ * to the time specified.
+ *
+ * @param pl The pipeline
+ * @param nstime The new timestamp to use.
+ */
+void
+mcreq_reset_timeouts(mc_PIPELINE *pl, lcb_U64 nstime);
+
+/**
  * Callback to be invoked when a packet is about to be failed out from the
  * request queue. This should be used to possibly invoke handlers. The packet
  * will then be removed from the queue.
