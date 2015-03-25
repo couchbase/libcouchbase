@@ -23,6 +23,13 @@
   * Priority: Minor
   * Issues: [CCBC-597](http://issues.couchbase.com/browse/CCBC-597)
 
+* Add `cbc n1ql` subcommand, which executes N1QL queries.
+  This subcommand is still a bit rough around the edges, mainly because of
+  server-side support for "pretty=false" (which makes the rows display rather
+  weirdly).
+  * Priority: Major
+  * Issues: [CCBC-595](http://issues.couchbase.com/browse/CCBC-595)
+
 ## 2.4.8 (Mar. 8 2015)
 
 * Retry next nodes on initial bootstrap, even if first node says bucket does

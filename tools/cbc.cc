@@ -5,6 +5,7 @@
 #include <fstream>
 #include <libcouchbase/vbucket.h>
 #include <libcouchbase/views.h>
+#include <libcouchbase/n1ql.h>
 #include <stddef.h>
 #include "common/options.h"
 #include "common/histogram.h"
@@ -880,6 +881,99 @@ ViewsHandler::run()
     lcb_wait(instance);
 }
 
+static void
+splitKvParam(const string& src, string& key, string& value)
+{
+    size_t pp = src.find('=');
+    if (pp == string::npos) {
+        throw string("Param must be in the form of key=value");
+    }
+
+    key = src.substr(0, pp);
+    value = src.substr(pp+1);
+}
+
+extern "C" {
+static void n1qlCallback(lcb_t, int, const lcb_RESPN1QL *resp)
+{
+    if (resp->rflags & LCB_RESP_F_FINAL) {
+        fprintf(stderr, "** N1QL Response finished\n");
+        if (resp->rc != LCB_SUCCESS) {
+            fprintf(stderr, "N1QL query failed with library code 0x%x\n", resp->rc);
+            if (resp->htresp) {
+                fprintf(stderr, "Inner HTTP request failed with library code 0x%x and HTTP status %d\n",
+                    resp->htresp->rc, resp->htresp->htstatus);
+            }
+        }
+        if (resp->row) {
+            printf("%.*s\n", (int)resp->nrow, resp->row);
+        }
+    } else {
+        string ss(resp->row, resp->nrow);
+        size_t pp;
+
+        // Unfortunately, N1QL doesn't yet allow pretty=false!
+        while ( (pp = ss.find('\n')) != string::npos ||
+                (pp = ss.find('\t') != string::npos)) {
+            ss[pp] = ' ';
+        }
+        printf("ROW (%s)\n", ss.c_str());
+    }
+}
+}
+
+void
+N1qlHandler::run()
+{
+    Handler::run();
+    const string& qstr = getRequiredArg();
+
+    lcb_N1QLPARAMS *params = lcb_n1p_new();
+    lcb_error_t rc;
+
+    rc = lcb_n1p_setquery(params, qstr.c_str(), -1, LCB_N1P_QUERY_STATEMENT);
+    if (rc != LCB_SUCCESS) {
+        throw rc;
+    }
+
+    const vector<string>& vv_args = o_args.const_result();
+    for (size_t ii = 0; ii < vv_args.size(); ii++) {
+        string key, value;
+        splitKvParam(vv_args[ii], key, value);
+        string ktmp = "$" + key;
+        rc = lcb_n1p_namedparamz(params, ktmp.c_str(), value.c_str());
+        if (rc != LCB_SUCCESS) {
+            throw rc;
+        }
+    }
+
+    const vector<string>& vv_opts = o_opts.const_result();
+    for (size_t ii = 0; ii < vv_opts.size(); ii++) {
+        string key, value;
+        splitKvParam(vv_opts[ii], key, value);
+        rc = lcb_n1p_setoptz(params, key.c_str(), value.c_str());
+        if (rc != LCB_SUCCESS) {
+            throw rc;
+        }
+    }
+
+    lcb_CMDN1QL cmd = { 0 };
+    rc = lcb_n1p_mkcmd(params, &cmd);
+    if (rc != LCB_SUCCESS) {
+        throw rc;
+    }
+    if (o_althost.passed()) {
+        cmd.host = o_althost.const_result().c_str();
+    }
+    cmd.callback = n1qlCallback;
+    rc = lcb_n1ql_query(instance, NULL, &cmd);
+    if (rc != LCB_SUCCESS) {
+        throw rc;
+    }
+    lcb_n1p_free(params);
+    lcb_wait(instance);
+}
+
 void
 HttpReceiver::install(lcb_t instance)
 {
@@ -1176,6 +1270,7 @@ static const char* optionsOrder[] = {
         "version",
         "verbosity",
         "view",
+        "n1ql",
         "admin",
         "bucket-create",
         "bucket-delete",
@@ -1260,6 +1355,7 @@ setupHandlers()
     handlers_s["bucket-delete"] = new BucketDeleteHandler();
     handlers_s["bucket-flush"] = new BucketFlushHandler();
     handlers_s["view"] = new ViewsHandler();
+    handlers_s["n1ql"] = new N1qlHandler();
     handlers_s["connstr"] = new ConnstrHandler();
     handlers_s["write-config"] = new WriteConfigHandler();
     handlers_s["strerror"] = new StrErrorHandler();
