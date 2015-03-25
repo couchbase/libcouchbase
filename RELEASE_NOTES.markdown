@@ -17,6 +17,12 @@
   * Priority: Major
   * Issues: [CCBC-596](http://issues.couchbase.com/browse/CCBC-596)
 
+* Make connection string timeout parameters (e.g. `operation_timeout`) always
+  specify seconds; this will no longer require the decimal point to be used,
+  but will break any prior usages of this value for microseconds.
+  * Priority: Minor
+  * Issues: [CCBC-597](http://issues.couchbase.com/browse/CCBC-597)
+
 ## 2.4.8 (Mar. 8 2015)
 
 * Retry next nodes on initial bootstrap, even if first node says bucket does
