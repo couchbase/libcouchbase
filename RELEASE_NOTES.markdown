@@ -11,6 +11,12 @@
   * Issues: [CCBC-526](http://issues.couchbase.com/browse/CCBC-526),
     [CCBC-589](http://issues.couchbase.com/browse/CCBC-589)
 
+* Fix additional missing defines for UV's `EAI_*` symbols
+  This was not entirely fixed in 2.4.8, since some undefined macros still
+  remained.
+  * Priority: Major
+  * Issues: [CCBC-596](http://issues.couchbase.com/browse/CCBC-596)
+
 ## 2.4.8 (Mar. 8 2015)
 
 * Retry next nodes on initial bootstrap, even if first node says bucket does
