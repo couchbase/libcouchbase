@@ -115,6 +115,19 @@ lcb_error_t lcb_wait(lcb_t instance)
 }
 
 LIBCOUCHBASE_API
+lcb_error_t lcb_tick_nowait(lcb_t instance)
+{
+    lcb_io_tick_fn tick = instance->iotable->loop.tick;
+    if (!tick) {
+        return LCB_CLIENT_FEATURE_UNAVAILABLE;
+    } else {
+        maybe_reset_timeouts(instance);
+        tick(IOT_ARG(instance->iotable));
+        return LCB_SUCCESS;
+    }
+}
+
+LIBCOUCHBASE_API
 void lcb_wait3(lcb_t instance, lcb_WAITFLAGS flags)
 {
     if (flags == LCB_WAIT_DEFAULT) {
