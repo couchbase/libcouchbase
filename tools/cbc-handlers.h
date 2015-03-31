@@ -408,27 +408,13 @@ private:
     std::string bname;
 };
 
-class BucketFlushHandler : public AdminHandler {
+class BucketFlushHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Flush a bucket")
-    HANDLER_USAGE("NAME [OPTIONS ...]")
-    BucketFlushHandler() : AdminHandler("bucket-flush") {}
+    HANDLER_USAGE("[COMMON OPTIONS ...]")
+    BucketFlushHandler() : Handler("bucket-flush") {}
 protected:
-    void run() {
-        bname = getRequiredArg();
-        AdminHandler::run();
-    }
-    std::string getURI() {
-        std::string uri = "/pools/default/buckets/";
-        uri += bname;
-        uri += "/controller/doFlush";
-        return uri;
-    }
-    lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_POST; }
-    const std::string& getBody() { static std::string e; return e; }
-
-private:
-    std::string bname;
+    void run();
 };
 
 class ConnstrHandler : public Handler {

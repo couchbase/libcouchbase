@@ -821,6 +821,33 @@ McFlushHandler::run()
     lcb_wait(instance);
 }
 
+
+extern "C" {
+static void cbFlushCb(lcb_t, int, const lcb_RESPBASE *resp)
+{
+    if (resp->rc == LCB_SUCCESS) {
+        fprintf(stderr, "Flush OK\n");
+    } else {
+        fprintf(stderr, "Flush failed: %s (0x%x)\n",
+            lcb_strerror(NULL, resp->rc), resp->rc);
+    }
+}
+}
+void
+BucketFlushHandler::run()
+{
+    Handler::run();
+    lcb_CMDCBFLUSH cmd = { 0 };
+    lcb_error_t err;
+    lcb_install_callback3(instance, LCB_CALLBACK_CBFLUSH, cbFlushCb);
+    err = lcb_cbflush3(instance, NULL, &cmd);
+    if (err != LCB_SUCCESS) {
+        throw err;
+    } else {
+        lcb_wait(instance);
+    }
+}
+
 void
 ArithmeticHandler::run()
 {
