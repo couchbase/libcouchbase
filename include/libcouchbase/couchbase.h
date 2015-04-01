@@ -1278,6 +1278,8 @@ typedef struct {
     const void *key; /**< Key that was stored */
     lcb_SIZE nkey; /**< Size of key that was stored */
     lcb_cas_t cas; /**< Cas representing current mutation */
+    /** Synctoken for mutation. This is used with N1QL and durability */
+    const lcb_SYNCTOKEN *synctoken;
 } lcb_STORERESPv0;
 
 /** @brief Wrapper structure for lcb_STORERESPv0 */
@@ -1440,6 +1442,8 @@ typedef struct {
     lcb_SIZE nkey;
     lcb_U64 value; /**< Current numerical value of the counter */
     lcb_cas_t cas;
+    /** Synctoken for mutation. This is used with N1QL and durability */
+    const lcb_SYNCTOKEN *synctoken;
 } lcb_ARITHRESPv0;
 
 typedef struct {
@@ -1687,6 +1691,8 @@ typedef struct {
     const void *key;
     lcb_SIZE nkey;
     lcb_cas_t cas;
+    /** Synctoken for mutation. This is used with N1QL and durability */
+    const lcb_SYNCTOKEN *synctoken;
 } lcb_REMOVERESPv0;
 
 typedef struct {
