@@ -607,6 +607,7 @@ static lcb_error_t convert_retrymode(const char *arg, u_STRCONVERT *u) {
 
 static cntl_OPCODESTRS stropcode_map[] = {
         {"operation_timeout", LCB_CNTL_OP_TIMEOUT, convert_timeout},
+        {"timeout", LCB_CNTL_OP_TIMEOUT, convert_timeout},
         {"views_timeout", LCB_CNTL_VIEW_TIMEOUT, convert_timeout},
         {"durability_timeout", LCB_CNTL_DURABILITY_TIMEOUT, convert_timeout},
         {"durability_interval", LCB_CNTL_DURABILITY_INTERVAL, convert_timeout},
