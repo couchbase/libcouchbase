@@ -215,6 +215,7 @@ compat_default_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *r3base)
         break;
     }
     case LCB_CALLBACK_OBSEQNO:
+    case LCB_CALLBACK_CBFLUSH:
         /* Don't crash! */
         break;
 
