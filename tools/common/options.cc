@@ -83,8 +83,10 @@ ConnParams::ConnParams() :
     o_cparams.description("Additional options for connection");
     o_cparams.argdesc("OPTION=VALUE");
 
-    // Hide the timeout. Preferred is -Doperation_timeout=nnn
-    o_timeout.hide();
+    // Hide some more exotic options
+    o_saslmech.hide();
+    o_transport.hide();
+    o_ssl.hide();
 }
 
 void
