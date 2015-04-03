@@ -447,7 +447,8 @@ SetHandler::addOptions()
     if (!hasFileList()) {
         parser.addOption(o_value);
     }
-    parser.addOption(o_json);
+    // This may be enabled again if datatype support is re-added
+    // parser.addOption(o_json);
 }
 
 void
