@@ -72,6 +72,11 @@
 #define ESHUTDOWN WSAESHUTDOWN
 #endif
 
+#ifndef EHOSTDOWN
+/* missing only on Windows */
+#define EHOSTDOWN WSAEHOSTDOWN
+#endif
+
 /* Not all systems have these error codes */
 #ifndef EAI_FAIL
 #define EAI_FAIL (-1)
@@ -99,6 +104,9 @@
 #endif
 #ifndef EAI_MEMORY
 #define EAI_MEMORY EAI_FAIL
+#endif
+#ifndef EAI_OVERFLOW
+#define EAI_OVERFLOW EAI_FAIL
 #endif
 
 #define OK 0
