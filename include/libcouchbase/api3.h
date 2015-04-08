@@ -1154,16 +1154,19 @@ lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
 /**@}*/
 
 
-/** Command flag for HTTP to indicate that the callback is to be invoked
- * multiple times for each new chunk of incoming data. Once all the chunks
- * have been received, the callback will be invoked once more with the
- * LCB_RESP_F_FINAL flag and an empty content. */
-
 /**
  * @name Perform an HTTP operation
  * @{
  */
 
+/** Command flag for HTTP to indicate that the callback is to be invoked
+ * multiple times for each new chunk of incoming data. Once the entire body
+ * have been received, the callback will be invoked once more with the
+ * LCB_RESP_F_FINAL flag (in lcb_RESPHTTP::rflags) and an empty content.
+ *
+ * To use streaming requests, this flag should be set in the
+ * lcb_CMDHTTP::cmdflags field
+ */
 #define LCB_CMDHTTP_F_STREAM 1<<16
 
 /**
@@ -1206,12 +1209,32 @@ typedef struct {
     const char *host;
 } lcb_CMDHTTP;
 
+/**
+ * Structure for HTTP responses
+ */
 typedef struct {
     LCB_RESP_BASE
-    short htstatus; /** HTTP status code */
+    /**
+     * HTTP status code. It is recommended you first check if this has a
+     * nonzero value. If it's 0 then there was a problem in getting the
+     * response in the first place.
+     */
+    short htstatus;
+
+    /**
+     * List of key-value headers. This field itself may be `NULL`. The list
+     * is terminated by a `NULL` pointer to indicate no more headers.
+     */
     const char * const * headers;
+
+    /**
+     * If @ref LCB_CMDHTTP_F_STREAM is true, contains the current chunk
+     * of response content. Otherwise, contains the entire response body.
+     */
     const void *body;
-    lcb_SIZE nbody;
+
+    lcb_SIZE nbody; /**< Length of the buffer in #body */
+
     lcb_http_request_t _htreq; /* Private */
 } lcb_RESPHTTP;
 
