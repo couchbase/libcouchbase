@@ -39,8 +39,7 @@ typedef struct lcbview_REQUEST_st *lcb_VIEWHANDLE;
 /**
  * Callback function invoked for each row returned from the view
  * @param instance the library handle
- * @param cbtype the callback type. Note that this is currently unset, but is
- * provided for compatibility with the @ref lcb_RESPCALLBACK ABI.
+ * @param cbtype the callback type. This is set to @ref LCB_CALLBACK_VIEWQUERY
  * @param row Information about the current row
  *
  * Note that this callback's `row->rflags` will contain the @ref LCB_RESP_F_FINAL

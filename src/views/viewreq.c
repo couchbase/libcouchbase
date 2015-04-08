@@ -40,7 +40,7 @@ invoke_last(lcbview_REQUEST *req, lcb_error_t err)
     } else {
         resp.rflags |= LCB_RESP_F_CLIENTGEN;
     }
-    req->callback(req->instance, -1, &resp);
+    req->callback(req->instance, LCB_CALLBACK_VIEWQUERY, &resp);
     lcb_view_cancel(req->instance, req);
 }
 
@@ -52,7 +52,7 @@ invoke_row(lcbview_REQUEST *req, lcb_RESPVIEWQUERY *resp)
     }
     resp->htresp = req->cur_htresp;
     resp->cookie = (void *)req->cookie;
-    req->callback(req->instance, -1, resp);
+    req->callback(req->instance, LCB_CALLBACK_VIEWQUERY, resp);
 }
 
 static void

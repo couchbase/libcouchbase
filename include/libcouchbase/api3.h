@@ -240,6 +240,17 @@ typedef enum {
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
+/* The following callback types cannot be set using lcb_install_callback3(),
+ * however, their value is passed along as the second argument of their
+ * respective callbacks. This allows you to still use the same callback,
+ * differentiating their meaning by the type. */
+
+/** Callback type for views (cannot be used for lcb_install_callback3()) */
+#define LCB_CALLBACK_VIEWQUERY -1
+
+/** Callback type for N1QL (cannot be used for lcb_install_callback3()) */
+#define LCB_CALLBACK_N1QL -2
+
 /**
  * Callback invoked for responses.
  * @param instance The handle
