@@ -937,15 +937,7 @@ static void n1qlCallback(lcb_t, int, const lcb_RESPN1QL *resp)
             printf("%.*s\n", (int)resp->nrow, resp->row);
         }
     } else {
-        string ss(resp->row, resp->nrow);
-        size_t pp;
-
-        // Unfortunately, N1QL doesn't yet allow pretty=false!
-        while ( (pp = ss.find('\n')) != string::npos ||
-                (pp = ss.find('\t') != string::npos)) {
-            ss[pp] = ' ';
-        }
-        printf("ROW (%s)\n", ss.c_str());
+        printf("%.*s,\n", (int)resp->nrow, resp->row);
     }
 }
 }
@@ -990,6 +982,7 @@ N1qlHandler::run()
     if (rc != LCB_SUCCESS) {
         throw rc;
     }
+    fprintf(stderr, "Encoded query: %.*s\n", (int)cmd.nquery, cmd.query);
     if (o_althost.passed()) {
         cmd.host = o_althost.const_result().c_str();
     }
