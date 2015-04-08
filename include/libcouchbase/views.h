@@ -140,11 +140,16 @@ typedef struct {
  *
  */
 struct lcb_RESPVIEW_st {
-    #ifndef __LCB_DOXYGEN__
+    #ifndef __LCB_DOXYGEN__ /* Doxygen fails to substitute the base fields for some reason */
     LCB_RESP_BASE
     #else
-    const char *key; /**< Emitted key */
-    size_t nkey; /**< Length of emitted key */
+    void *cookie; /**< User data associated with request */
+    const void *key; /**< Emitted key */
+    lcb_SIZE nkey; /**< Length of emitted key */
+    lcb_cas_t cas; /**< unused */
+    lcb_error_t rc; /**< Status code */
+    lcb_U16 version; /**< unused */
+    lcb_U16 rflags; /**< Response specific flags. see lcb_RESPFLAGS */
     #endif
 
     const char *docid; /**< Document ID (i.e. memcached key) associated with this row */
