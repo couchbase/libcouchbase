@@ -1,6 +1,6 @@
 # Release Notes
 
-## MASTER
+## 2.4.9 (April 14 2015)
 
 * Disable HTTP provider when any CCCP config is received.
   This makes the assumption that CCCP will always be available if even a
@@ -29,6 +29,50 @@
   weirdly).
   * Priority: Major
   * Issues: [CCBC-595](http://issues.couchbase.com/browse/CCBC-595)
+
+* Allow usage of `-D` option in `cbc` and `cbc-pillowfight` tools.
+  This flag allows specifying connection string options in a more
+  concise form on the commandline. The `-D` option may be specified
+  multiple times in the form of `-Doption=value`.
+  * Priority: Minor
+
+* Interpret `couchbase://host:8091` connection string as `couchbase://host`
+  Previously the library would treat `8091` as a memcached port. While technically
+  correct according to the connection string semantics, would often be a
+  source of confusion for users migrating from older versions of the library
+  (or other SDKs) when using the form `http://host:8091`. A special provision
+  is thus made for such a cas.
+  * Priority: Major
+  * Issues: [CCBC-599](http://issues.couchbase.com/browse/CCBC-599)
+
+* Implement enhanced durability using sequence numbers.
+  This feature is available in Couchbase 4.0, and uses sequence numbers
+  (optionally specified in the response packet of each mutation).
+  sequence-based durability constraints help resolve some ambiguity in
+  the case of checking the durability of items which have since been
+  mutated, or in the case of a cluster failover. Using this functionality
+  requires the `LCB_CNTL_FETCH_SYNCTOKENS` (or `fetch_synctokens`) and the
+  `LCB_CNTL_DURABILITY_SYNCTOKENS` (or `dur_synctokens`)
+  settings to be enabled (using `lcb_cntl()` or `lcb_cntl_string()`, or
+  in the connection string). Enabling `LCB_CNTL_FETCH_SYNCTOKENS` will
+  cause mutation response packets from the server to return an additional
+  16 bytes of sequence data, and enabling `LCB_CNTL_DURABILITY_SYNCTOKENS`
+  will cause `lcb_durability_poll()` to transparently use this information
+  (rather than the CAS) to check for persistence/replication.
+  **Only available in Couchbase 4.0**. As a result of this feature, much
+  of the durability subsystem itself has been rewritten, making durability
+  overall more performant, even for CAS-based durability.
+  * Priority: Major
+  * Issues: [CCBC-569](http://issues.couchbase.com/browse/CCBC-569)
+
+* Add `lcb_version_g` extern symbol as alternative to `lcb_get_version()`.
+  This symbol is an extern global which allows simple runtime checking of
+  the library version. This is more convenient than `lcb_get_version()` as
+  it avoids the requirement to create a temporary variable on the stack
+  (`lcb_get_version()` returns a string, and requires an `lcb_U32` pointer
+  as its first argument to get the actual numeric version).
+  * Priority: Minor
+
 
 ## 2.4.8 (Mar. 8 2015)
 
