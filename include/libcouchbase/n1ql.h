@@ -202,13 +202,25 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_n1p_synctoken(lcb_N1QLPARAMS *params, const lcb_SYNCTOKEN *st);
 
+/**
+ * Encodes the request and returns it as a string. The string is valid
+ * until the next call to the params function.
+ * @param params the parameter object
+ * @param[out] rc an error code if there was an issue in encoding
+ * @return the NUL-terminated query string.
+ *
+ * @note Calling this function regenerates the query string internally,
+ *       and is implicitly called by lcb_n1p_mkcmd().
+ */
+LIBCOUCHBASE_API
+const char *
+lcb_n1p_encode(lcb_N1QLPARAMS *params, lcb_error_t *rc);
 
 /**
  * Populates the given low-level lcb_CMDN1QL structure with the relevant fields
  * from the params structure. If this function returns successfuly, you must
  * ensure that the params object is not modified until the command is
- * submitted. Afterwards, you can use lcb_n1p_free() or lcb_n1p_reset() to
- * free/reuse the structure for subsequent requests
+ * submitted.
  */
 LIBCOUCHBASE_API
 lcb_error_t
