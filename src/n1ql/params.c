@@ -109,7 +109,7 @@ lcb_n1p_posparam(lcb_N1QLPARAMS *params, const char *value, size_t nvalue)
     (sizeof(SCANVEC_BASEFMT) + (DIGITS_64 * 2) + DIGITS_16 + 5)
 
 lcb_error_t
-lcb_n1p_scanvec(lcb_N1QLPARAMS *params, const lcb_N1QLSCANVEC *sv)
+lcb_n1p_synctoken(lcb_N1QLPARAMS *params, const lcb_SYNCTOKEN *sv)
 {
     size_t np;
 
