@@ -1,5 +1,13 @@
 # Release Notes
 
+## NEXT
+
+* Add `cbc-n1qlback` - a simple benchmark for N1QL queries. This functions
+  by executing a line-delimited file containing query bodies using multiple
+  threads if possible.
+  * Priority: Major
+  * Issues: [CCBC-604](http://issues.couchbase.com/browse/CCBC-604)
+
 ## 2.4.9 (April 14 2015)
 
 * Disable HTTP provider when any CCCP config is received.

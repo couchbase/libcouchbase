@@ -1425,7 +1425,7 @@ parseCommandname(string& cmdname, int&, char**& argv)
 }
 
 static void
-wrapPillowfight(int argc, char **argv)
+wrapExternalBinary(int argc, char **argv, const std::string& name)
 {
 #ifdef _POSIX_VERSION
     vector<char *> args;
@@ -1433,13 +1433,13 @@ wrapPillowfight(int argc, char **argv)
     size_t cbc_pos = exePath.find("cbc");
 
     if (cbc_pos == string::npos) {
-        throw("Couldn't invoke pillowfight");
+        throw("Couldn't invoke " + name);
     }
 
-    exePath.replace(cbc_pos, 3, "cbc-pillowfight");
+    exePath.replace(cbc_pos, 3, name);
     args.push_back((char*)exePath.c_str());
 
-    // { "cbc", "pillowfight" }
+    // { "cbc", "name" }
     argv += 2; argc -= 2;
     for (int ii = 0; ii < argc; ii++) {
         args.push_back(argv[ii]);
@@ -1447,18 +1447,22 @@ wrapPillowfight(int argc, char **argv)
     args.push_back((char*)NULL);
     execvp(exePath.c_str(), &args[0]);
     perror(exePath.c_str());
-    throw("Couldn't execute!");
+    throw("Couldn't execute " + name + " !");
 #else
-    throw ("Can't wrap around cbc-pillowfight on non-POSIX environments");
+    throw ("Can't wrap around " + name + " on non-POSIX environments");
 #endif
 }
 
 int main(int argc, char **argv)
 {
 
-    // Wrap pillowfight immediately
-    if (argc >= 2 && strcmp(argv[1], "pillowfight") == 0) {
-        wrapPillowfight(argc, argv);
+    // Wrap external binaries immediately
+    if (argc >= 2) {
+        if (strcmp(argv[1], "pillowfight") == 0) {
+            wrapExternalBinary(argc, argv, "cbc-pillowfight");
+        } else if (strcmp(argv[1], "n1qlback") == 0) {
+            wrapExternalBinary(argc, argv, "cbc-n1qlback");
+        }
     }
 
     setupHandlers();
