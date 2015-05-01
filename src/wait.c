@@ -55,6 +55,7 @@ maybe_reset_timeouts(lcb_t instance)
         mc_SERVER *ss = LCBT_GET_SERVER(instance, ii);
         mcreq_reset_timeouts(&ss->pipeline, now);
     }
+    lcb_retryq_reset_timeouts(instance->retryq, now);
 }
 
 void

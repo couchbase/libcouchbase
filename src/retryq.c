@@ -350,6 +350,16 @@ fallback_handler(mc_CMDQUEUE *cq, mc_PACKET *pkt)
         LCB_NO_MATCHING_SERVER, RETRY_SCHED_IMM);
 }
 
+void
+lcb_retryq_reset_timeouts(lcb_RETRYQ *rq, lcb_U64 now)
+{
+    lcb_list_t *ll;
+    LCB_LIST_FOR(ll, &rq->schedops) {
+        lcb_RETRYOP *op = LCB_LIST_ITEM(ll, lcb_RETRYOP, ll_sched);
+        op->start = now;
+    }
+}
+
 lcb_RETRYQ *
 lcb_retryq_new(mc_CMDQUEUE *cq, lcbio_pTABLE table, lcb_settings *settings)
 {
