@@ -157,7 +157,6 @@ HANDLER(nmv_imm_retry_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, nmv_retry_imm));
 }
 HANDLER(tcp_nodelay_handler) {
-    printf("NoDelay!\n");
     RETURN_GET_SET(int, LCBT_SETTING(instance, tcp_nodelay));
 }
 HANDLER(readj_ts_wait_handler) {
