@@ -35,8 +35,10 @@ SET_SOURCE_FILES_PROPERTIES(cbc.cc cbc-pillowfight.cc cbc-n1qlback.cc PROPERTIES
 
 IF(NOT WIN32)
     LIST(APPEND CBC_SUBCOMMANDS
-        admin bucket-create bucket-delete cat cp create decr hash incr lock mcflush
-        rm stats unlock verbosity verify version verbosity view)
+        cat create observe observe-seqno incr decr mcflush hash lock
+        unlock rm stats version verbosity view n1ql admin
+        bucket-create bucket-delete bucket-flush connstr write-config strerror)
+
     FOREACH(subcmd IN ITEMS ${CBC_SUBCOMMANDS})
         ADD_CUSTOM_COMMAND(TARGET cbc POST_BUILD
                            COMMAND ln -sf cbc "cbc-${subcmd}"
