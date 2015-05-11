@@ -851,7 +851,7 @@ typedef enum {
  * functions is long, it is recommended to disable this setting in order to
  * avoid prematurely having operations time out.
  *
- * @cntl_arg_getset{int (as boolean)}
+ * @cntl_arg_both{int (as boolean)}
  *
  * Use `"readj_wait_tmo"` for the string version
  */

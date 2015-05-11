@@ -2014,8 +2014,8 @@ typedef struct {
      */
     lcb_U8 cap_max;
 
-    /**Set the polling method to use. If set, the ::version field must be set
-     * to > 1 */
+    /**Set the polling method to use. If set, the lcb_durability_cmd_t::version
+     * field must be set to > 1 */
     lcb_U8 pollopts;
 } lcb_DURABILITYOPTSv0;
 

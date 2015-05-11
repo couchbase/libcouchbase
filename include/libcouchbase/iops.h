@@ -378,7 +378,9 @@ typedef int (*lcb_ioE_chkclosed_fn)
         (lcb_io_opt_t iops, lcb_socket_t sock, int flags);
 
 
+/** For use with `io{E,C}_cntl_fn`, indicates the setting should be retrieved */
 #define LCB_IO_CNTL_GET 0
+/** For use with lcb_io{E,C}_cntl_fn`, indicates the setting should be modified */
 #define LCB_IO_CNTL_SET 1
 
 /** Disable Nagle's algorithm (use an int) */
