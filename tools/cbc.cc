@@ -243,7 +243,8 @@ view_callback(lcb_t, int, const lcb_RESPVIEWQUERY *resp)
                 HttpReceiver ctx;
                 ctx.maybeInvokeStatus(resp->htresp);
                 if (resp->htresp->nbody) {
-                    fprintf(stderr, "%.*s", (int)resp->htresp->nbody, resp->htresp->body);
+                    fprintf(stderr, "%.*s", (int)resp->htresp->nbody,
+                        static_cast<const char *>(resp->htresp->body));
                 }
             }
         }
@@ -257,7 +258,7 @@ view_callback(lcb_t, int, const lcb_RESPVIEWQUERY *resp)
         return;
     }
 
-    printf("KEY: %.*s\n", (int)resp->nkey, resp->key);
+    printf("KEY: %.*s\n", (int)resp->nkey, static_cast<const char*>(resp->key));
     printf("     VALUE: %.*s\n", (int)resp->nvalue, resp->value);
     printf("     DOCID: %.*s\n", (int)resp->ndocid, resp->docid);
     if (resp->docresp) {
@@ -948,10 +949,10 @@ N1qlHandler::run()
     Handler::run();
     const string& qstr = getRequiredArg();
 
-    lcb_N1QLPARAMS *params = lcb_n1p_new();
+    lcb_N1QLPARAMS *nparams = lcb_n1p_new();
     lcb_error_t rc;
 
-    rc = lcb_n1p_setquery(params, qstr.c_str(), -1, LCB_N1P_QUERY_STATEMENT);
+    rc = lcb_n1p_setquery(nparams, qstr.c_str(), -1, LCB_N1P_QUERY_STATEMENT);
     if (rc != LCB_SUCCESS) {
         throw rc;
     }
@@ -961,7 +962,7 @@ N1qlHandler::run()
         string key, value;
         splitKvParam(vv_args[ii], key, value);
         string ktmp = "$" + key;
-        rc = lcb_n1p_namedparamz(params, ktmp.c_str(), value.c_str());
+        rc = lcb_n1p_namedparamz(nparams, ktmp.c_str(), value.c_str());
         if (rc != LCB_SUCCESS) {
             throw rc;
         }
@@ -971,14 +972,14 @@ N1qlHandler::run()
     for (size_t ii = 0; ii < vv_opts.size(); ii++) {
         string key, value;
         splitKvParam(vv_opts[ii], key, value);
-        rc = lcb_n1p_setoptz(params, key.c_str(), value.c_str());
+        rc = lcb_n1p_setoptz(nparams, key.c_str(), value.c_str());
         if (rc != LCB_SUCCESS) {
             throw rc;
         }
     }
 
     lcb_CMDN1QL cmd = { 0 };
-    rc = lcb_n1p_mkcmd(params, &cmd);
+    rc = lcb_n1p_mkcmd(nparams, &cmd);
     if (rc != LCB_SUCCESS) {
         throw rc;
     }
@@ -991,7 +992,7 @@ N1qlHandler::run()
     if (rc != LCB_SUCCESS) {
         throw rc;
     }
-    lcb_n1p_free(params);
+    lcb_n1p_free(nparams);
     lcb_wait(instance);
 }
 
