@@ -278,6 +278,8 @@ private:
     volatile bool m_cancelled;
     #ifndef _WIN32
     pthread_t *m_thr;
+    #else
+    void *m_thr;
     #endif
 };
 
