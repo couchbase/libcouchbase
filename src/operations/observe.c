@@ -252,7 +252,7 @@ obs_ctxdone(lcb_MULTICMD_CTX *mctx, const void *cookie)
     ctx->base.cookie = cookie;
     ctx->base.procs = &obs_procs;
 
-    if (ctx->nrequests == 0) {
+    if (ctx->nrequests == 0 || ctx->remaining == 0) {
         free(ctx);
         return LCB_EINVAL;
     } else {
