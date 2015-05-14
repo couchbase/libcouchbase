@@ -346,6 +346,11 @@ dset_ctx_schedule(lcb_MULTICMD_CTX *mctx, const void *cookie)
     lcb_DURSET *dset = CTX_FROM_MULTI(mctx);
     char *kptr = dset->kvbufs.base;
 
+    if (!DSET_COUNT(dset)) {
+        lcbdur_destroy(dset);
+        return LCB_EINVAL;
+    }
+
     for (ii = 0; ii < DSET_COUNT(dset); ii++) {
         lcb_DURITEM *ent = DSET_ENTRIES(dset) + ii;
         RESFLD(ent, key) = kptr;
