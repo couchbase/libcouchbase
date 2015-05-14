@@ -420,6 +420,8 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
         errp = &err_s;
     }
 
+    *errp = LCB_SUCCESS;
+
     if (!LCBT_VBCONFIG(instance)) {
         *errp = LCB_CLIENT_ETMPFAIL;
         return NULL;
