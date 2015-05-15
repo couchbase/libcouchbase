@@ -342,6 +342,8 @@ static void real_main(int argc, char **argv) {
         instances.push_back(instance);
     }
 
+    GlobalMetrics.prepare_screen();
+
     for (size_t ii = 0; ii < threads.size(); ++ii) {
         threads[ii]->start();
     }
@@ -355,7 +357,6 @@ static void real_main(int argc, char **argv) {
 
 int main(int argc, char **argv)
 {
-    GlobalMetrics.prepare_screen();
     try {
         real_main(argc, argv);
         return 0;
