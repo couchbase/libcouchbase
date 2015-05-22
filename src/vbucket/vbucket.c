@@ -563,6 +563,7 @@ lcbvb_load_json(lcbvb_CONFIG *cfg, const char *data)
         }
     }
     cfg->servers = realloc(cfg->servers, sizeof(*cfg->servers) * cfg->nsrv);
+    cfg->randbuf = malloc(cfg->nsrv * sizeof(*cfg->randbuf));
     cJSON_Delete(cj);
     return 0;
 
@@ -675,6 +676,7 @@ lcbvb_destroy(lcbvb_CONFIG *conf)
     free(conf->bname);
     free(conf->vbuckets);
     free(conf->ffvbuckets);
+    free(conf->randbuf);
     free(conf);
 }
 
@@ -1128,13 +1130,14 @@ int
 lcbvb_get_randhost(const lcbvb_CONFIG *cfg,
     lcbvb_SVCTYPE type, lcbvb_SVCMODE mode)
 {
-    size_t nn, nn_limit;
+    size_t nn, oix = 0;
 
-    nn = rand();
-    nn %= cfg->nsrv;
-    nn_limit = nn;
-
-    do {
+    /*
+     * Since not all nodes support all service types, we need to make it a
+     * fair selection by pre-filtering the nodes which actually support the
+     * service, and then proceed to actually select a suitable node.
+     */
+    for (nn = 0; nn < cfg->nsrv; nn++) {
         const lcbvb_SERVER *server = cfg->servers + nn;
         const lcbvb_SERVICES *svcs = mode == LCBVB_SVCMODE_PLAIN ?
                 &server->svc : &server->svc_ssl;
@@ -1149,11 +1152,18 @@ lcbvb_get_randhost(const lcbvb_CONFIG *cfg,
                 (type == LCBVB_SVCTYPE_VIEWS && svcs->views);
 
         if (has_svc) {
-            return (int)nn;
+            cfg->randbuf[oix++] = (int)nn;
         }
-        nn = (nn + 1) % cfg->nsrv;
-    } while (nn != nn_limit);
-    return -1;
+    }
+
+    if (!oix) {
+        /* nothing supports it! */
+        return -1;
+    }
+
+    nn = rand();
+    nn %= oix;
+    return cfg->randbuf[nn];
 }
 
 LIBCOUCHBASE_API
@@ -1299,6 +1309,7 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
     }
 
     vb->servers = calloc(nservers, sizeof(*vb->servers));
+    vb->randbuf = calloc(nservers, sizeof(*vb->randbuf));
     for (ii = 0; ii < nservers; ii++) {
         lcbvb_SERVER *dst = vb->servers + ii;
         const lcbvb_SERVER *src = servers + ii;

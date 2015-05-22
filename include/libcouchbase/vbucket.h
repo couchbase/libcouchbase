@@ -130,6 +130,7 @@ typedef struct {
     lcbvb_VBUCKET *vbuckets; /* vbucket map */
     lcbvb_VBUCKET *ffvbuckets; /* fast-forward map */
     lcbvb_CONTINUUM *continuum; /* ketama continuums */
+    int *randbuf; /* Used for random server selection */
 } lcbvb_CONFIG;
 
 
