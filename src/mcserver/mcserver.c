@@ -590,8 +590,6 @@ mcserver_alloc2(lcb_t instance, lcbvb_CONFIG* vbc, int ix)
     datahost = lcbvb_get_hostport(vbc, ix, LCBVB_SVCTYPE_DATA, mode);
     if (datahost) {
         lcb_host_parsez(ret->curhost, datahost, LCB_CONFIG_MCD_PORT);
-    } else {
-        lcb_log(LOGARGS(ret, DEBUG), LOGFMT "Server does not have data service", LOGID(ret));
     }
     ret->io_timer = lcbio_timer_new(instance->iotable, ret, timeout_server);
     return ret;
