@@ -37,15 +37,6 @@ typedef struct mc_SERVER_st {
     /** Pipeline object for command queues */
     mc_PIPELINE pipeline;
 
-    /** The server endpoint as hostname:port */
-    char *datahost;
-
-    /** The Couchbase Views API endpoint base */
-    char *viewshost;
-
-    /** The REST API server as hostname:port */
-    char *resthost;
-
     /** Pointer back to the instance */
     lcb_t instance;
 
