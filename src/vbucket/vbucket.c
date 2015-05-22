@@ -969,8 +969,12 @@ compute_vb_list_diff(lcbvb_CONFIG *from, lcbvb_CONFIG *to, char **out)
             found |= (strcmp(newsrv->authority, oldsrv->authority) == 0);
         }
         if (!found) {
-            out[offset] = strdup(newsrv->authority);
-            assert(out[offset]);
+            char *infostr = malloc(strlen(newsrv->authority) + 128);
+            assert(infostr);
+            sprintf(infostr, "%s(Data=%d, Index=%d, Query=%d)",
+                newsrv->authority,
+                newsrv->svc.data, newsrv->svc.n1ql, newsrv->svc.ixquery);
+            out[offset] = infostr;
             ++offset;
         }
     }
