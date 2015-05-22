@@ -118,6 +118,7 @@ typedef enum {
 typedef struct {
     lcbvb_DISTMODE dtype; /**< Type of bucket/distribution */
     unsigned nvb; /**< Number of vbuckets */
+    unsigned ndatasrv; /**< Number of data (memcached) servers */
     unsigned nsrv; /** Number of servers */
     unsigned nrepl; /**< Number of replicas */
     unsigned ncontinuum; /* number of continuum points */

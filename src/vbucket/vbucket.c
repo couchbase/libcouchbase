@@ -279,11 +279,11 @@ parse_ketama(lcbvb_CONFIG *cfg)
     unsigned char digest[16];
     lcbvb_CONTINUUM *new_continuum, *old_continuum;
 
-    qsort(cfg->servers, cfg->nsrv, sizeof(*cfg->servers), server_cmp);
+    qsort(cfg->servers, cfg->ndatasrv, sizeof(*cfg->servers), server_cmp);
 
-    new_continuum = calloc(160 * cfg->nsrv, sizeof(*new_continuum));
+    new_continuum = calloc(160 * cfg->ndatasrv, sizeof(*new_continuum));
     /* 40 hashes, 4 numbers per hash = 160 points per server */
-    for (ss = 0, pp = 0; ss < cfg->nsrv; ++ss) {
+    for (ss = 0, pp = 0; ss < cfg->ndatasrv; ++ss) {
         /* we can add more points to server which have more memory */
         for (hh = 0; hh < 40; ++hh) {
             lcbvb_SERVER *srv = cfg->servers + ss;
@@ -551,6 +551,15 @@ lcbvb_load_json(lcbvb_CONFIG *cfg, const char *data)
             goto GT_ERROR;
         }
     }
+
+    /* Count the number of _data_ servers in the cluster. Per the spec,
+     * these will always appear in order (so that we won't ever have "holes") */
+    for (ii = 0; ii < cfg->nsrv; ii++) {
+        if (!cfg->servers[ii].svc.data) {
+            break;
+        }
+    }
+    cfg->ndatasrv = ii;
 
     if (cfg->dtype == LCBVB_DIST_VBUCKET) {
         if (!parse_vbucket(cfg, cj)) {
@@ -898,8 +907,8 @@ lcbvb_nmv_remap(lcbvb_CONFIG *cfg, int vbid, int bad)
     /* this path is usually only followed if fvbuckets is not present */
     if (cur == bad) {
         int validrv = -1;
-        for (ii = 0; ii < cfg->nsrv; ii++) {
-            rv = (rv + 1) % cfg->nsrv;
+        for (ii = 0; ii < cfg->ndatasrv; ii++) {
+            rv = (rv + 1) % cfg->ndatasrv;
             /* check that the new index has assigned vbuckets (master or replica) */
             if (cfg->servers[rv].nvbs) {
                 validrv = rv;
@@ -1278,6 +1287,7 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
     vb->nvb = nvbuckets;
     vb->nrepl = nreplica;
     vb->nsrv = nservers;
+    vb->ndatasrv = nservers;
     vb->bname = strdup(name);
     if (uuid) {
         vb->buuid = strdup(uuid);
