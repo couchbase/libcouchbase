@@ -234,6 +234,8 @@ replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
     mc_PIPELINE **ppold, **ppnew;
     unsigned ii, nold, nnew;
 
+    assert(LCBT_VBCONFIG(instance) == newconfig);
+
     nnew = LCBVB_NSERVERS(newconfig);
     ppnew = calloc(nnew, sizeof(*ppnew));
     ppold = mcreq_queue_take_pipelines(cq, &nold);
@@ -261,7 +263,7 @@ replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
      */
     for (ii = 0; ii < nnew; ii++) {
         if (!ppnew[ii]) {
-            ppnew[ii] = (mc_PIPELINE *)mcserver_alloc2(instance, newconfig, ii);
+            ppnew[ii] = (mc_PIPELINE *)mcserver_alloc(instance, ii);
             ppnew[ii]->index = ii;
         }
     }

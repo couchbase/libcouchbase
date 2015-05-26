@@ -565,7 +565,7 @@ buf_done_cb(mc_PIPELINE *pl, const void *cookie, void *kbuf, void *vbuf)
 }
 
 mc_SERVER *
-mcserver_alloc2(lcb_t instance, lcbvb_CONFIG* vbc, int ix)
+mcserver_alloc(lcb_t instance, int ix)
 {
     mc_SERVER *ret;
     lcbvb_SVCMODE mode;
@@ -587,21 +587,14 @@ mcserver_alloc2(lcb_t instance, lcbvb_CONFIG* vbc, int ix)
     ret->pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
     ret->pipeline.buf_done_callback = buf_done_cb;
 
-    datahost = lcbvb_get_hostport(vbc, ix, LCBVB_SVCTYPE_DATA, mode);
+    datahost = lcbvb_get_hostport(
+        LCBT_VBCONFIG(instance), ix, LCBVB_SVCTYPE_DATA, mode);
     if (datahost) {
         lcb_host_parsez(ret->curhost, datahost, LCB_CONFIG_MCD_PORT);
     }
     ret->io_timer = lcbio_timer_new(instance->iotable, ret, timeout_server);
     return ret;
 }
-
-mc_SERVER *
-mcserver_alloc(lcb_t instance, int ix)
-{
-    mc_CMDQUEUE *cq = &instance->cmdq;
-    return mcserver_alloc2(instance, cq->config, ix);
-}
-
 
 static void
 server_free(mc_SERVER *server)

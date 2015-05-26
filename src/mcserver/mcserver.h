@@ -73,9 +73,6 @@ typedef struct mc_SERVER_st {
 mc_SERVER *
 mcserver_alloc(lcb_t instance, int ix);
 
-mc_SERVER *
-mcserver_alloc2(lcb_t instance, lcbvb_CONFIG* vbc, int ix);
-
 /**
  * Close the server. The resources of the server may still continue to persist
  * internally for a bit until all callbacks have been delivered and all buffers
