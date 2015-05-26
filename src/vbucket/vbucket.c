@@ -1272,7 +1272,7 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
     unsigned nservers, unsigned nreplica, unsigned nvbuckets)
 {
     unsigned ii, jj;
-    int srvix = 0;
+    int srvix = 0, in_nondata = 0;
 
     assert(nservers);
 
@@ -1280,14 +1280,11 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         name = "default";
     }
 
-#define INCR_SRVIX() srvix = (srvix + 1) % nservers
-
     memset(vb, 0, sizeof(*vb));
     vb->dtype = LCBVB_DIST_VBUCKET;
     vb->nvb = nvbuckets;
     vb->nrepl = nreplica;
     vb->nsrv = nservers;
-    vb->ndatasrv = nservers;
     vb->bname = strdup(name);
     if (uuid) {
         vb->buuid = strdup(uuid);
@@ -1303,6 +1300,25 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         return -1;
     }
 
+    /* Count the number of data servers.. */
+    for (ii = 0; ii < nservers; ii++) {
+        const lcbvb_SERVER *server = servers + ii;
+        if (server->svc.data) {
+            if (in_nondata) {
+                vb->errstr = "All data servers must be specified before non-data servers";
+                return -1;
+            }
+            vb->ndatasrv++;
+        } else {
+            in_nondata = 1;
+        }
+    }
+
+    if (!vb->ndatasrv) {
+        vb->errstr = "No data servers in list";
+        return -1;
+    }
+
     vb->vbuckets = malloc(vb->nvb * sizeof(*vb->vbuckets));
     if (!vb->vbuckets) {
         vb->errstr = "Couldn't allocate vbucket array";
@@ -1313,14 +1329,15 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         lcbvb_VBUCKET *cur = vb->vbuckets + ii;
         cur->servers[0] = srvix;
         for (jj = 1; jj < vb->nrepl+1; jj++) {
-            cur->servers[jj] = (srvix + jj) % vb->nsrv;
+            cur->servers[jj] = (srvix + jj) % vb->ndatasrv;
         }
-        INCR_SRVIX();
+        srvix = (srvix + 1) % vb->ndatasrv;
     }
 
-    vb->servers = calloc(nservers, sizeof(*vb->servers));
-    vb->randbuf = calloc(nservers, sizeof(*vb->randbuf));
-    for (ii = 0; ii < nservers; ii++) {
+    vb->servers = calloc(vb->nsrv, sizeof(*vb->servers));
+    vb->randbuf = calloc(vb->nsrv, sizeof(*vb->randbuf));
+
+    for (ii = 0; ii < vb->nsrv; ii++) {
         lcbvb_SERVER *dst = vb->servers + ii;
         const lcbvb_SERVER *src = servers + ii;
 
@@ -1337,6 +1354,7 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         copy_service(src->hostname, &src->svc_ssl, &dst->svc_ssl);
         dst->authority = dst->svc.hoststrs[LCBVB_SVCTYPE_DATA];
     }
+
     for (ii = 0; ii < vb->nvb; ii++) {
         for (jj = 0; jj < vb->nrepl+1; jj++) {
             int ix = vb->vbuckets[ii].servers[jj];
@@ -1346,7 +1364,6 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         }
     }
     return 0;
-#undef INCR_SRVIX
 }
 
 int
