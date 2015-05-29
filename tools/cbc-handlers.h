@@ -259,10 +259,7 @@ private:
 
 class N1qlHandler : public Handler {
 public:
-    N1qlHandler() : Handler("view"),
-        o_args("qarg"),
-        o_opts("qopt"),
-        o_althost("n1ql-host") {}
+    N1qlHandler() : Handler("view"), o_args("qarg"), o_opts("qopt") {}
     HANDLER_DESCRIPTION("Execute a N1QL Query")
     HANDLER_USAGE("QUERY [--qarg PARAM1=VALUE1 --qopt PARAM2=VALUE2]")
 
@@ -273,18 +270,18 @@ protected:
         Handler::addOptions();
         o_args.description(
             "Specify values for placeholders (can be specified multiple times");
+        o_args.abbrev('A');
         o_args.argdesc("PLACEHOLDER_PARAM=PLACEHOLDER_VALUE");
 
         o_opts.description("Additional query options");
-        o_althost.description("Specify alternate query host");
+        o_opts.abbrev('Q');
+
         parser.addOption(o_args);
         parser.addOption(o_opts);
-        parser.addOption(o_althost);
     }
 private:
     cliopts::ListOption o_args;
     cliopts::ListOption o_opts;
-    cliopts::StringOption o_althost;
 };
 
 class HttpReceiver {

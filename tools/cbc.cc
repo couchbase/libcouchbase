@@ -174,7 +174,16 @@ stats_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
     }
     fprintf(stdout, "%s\t%s", server.c_str(), key.c_str());
     if (!value.empty()) {
-        fprintf(stdout, "\t%s", value.c_str());
+        if (*static_cast<bool*>(resp->cookie) && key == "key_flags") {
+            // Is keystats
+            // Flip the bits so the display formats correctly
+            unsigned flags_u = 0;
+            sscanf(value.c_str(), "%u", &flags_u);
+            flags_u = htonl(flags_u);
+            fprintf(stdout, "\t%u (cbc: converted via htonl)", flags_u);
+        } else {
+            fprintf(stdout, "\t%s", value.c_str());
+        }
     }
     fprintf(stdout, "\n");
 }
@@ -765,7 +774,8 @@ StatsHandler::run()
                 cmd.cmdflags = LCB_CMDSTATS_F_KV;
             }
         }
-        lcb_error_t err = lcb_stats3(instance, NULL, &cmd);
+        bool is_keystats = o_keystats.result();
+        lcb_error_t err = lcb_stats3(instance, &is_keystats, &cmd);
         if (err != LCB_SUCCESS) {
             throw err;
         }
@@ -984,9 +994,6 @@ N1qlHandler::run()
         throw rc;
     }
     fprintf(stderr, "Encoded query: %.*s\n", (int)cmd.nquery, cmd.query);
-    if (o_althost.passed()) {
-        cmd.host = o_althost.const_result().c_str();
-    }
     cmd.callback = n1qlCallback;
     rc = lcb_n1ql_query(instance, NULL, &cmd);
     if (rc != LCB_SUCCESS) {
