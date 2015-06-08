@@ -136,6 +136,7 @@ typedef struct {
 
 
 #define LCBVB_NSERVERS(cfg) (cfg)->nsrv
+#define LCBVB_NDATASERVERS(cfg) (cfg)->ndatasrv
 #define LCBVB_NREPLICAS(cfg) (cfg)->nrepl
 #define LCBVB_DISTTYPE(cfg) (cfg)->dtype
 #define LCBVB_GET_SERVER(conf, ix) ((conf)->servers + ix)

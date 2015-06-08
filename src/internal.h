@@ -115,6 +115,7 @@ struct lcb_st {
 
 #define LCBT_VBCONFIG(instance) (instance)->cmdq.config
 #define LCBT_NSERVERS(instance) (instance)->cmdq.npipelines
+#define LCBT_NDATASERVERS(instance) LCBVB_NDATASERVERS(LCBT_VBCONFIG(instance))
 #define LCBT_NREPLICAS(instance) LCBVB_NREPLICAS(LCBT_VBCONFIG(instance))
 #define LCBT_GET_SERVER(instance, ix) (mc_SERVER *)(instance)->cmdq.pipelines[ix]
 #define LCBT_SETTING(instance, name) (instance)->settings->name

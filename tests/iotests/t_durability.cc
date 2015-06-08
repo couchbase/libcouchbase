@@ -894,3 +894,56 @@ TEST_F(DurabilityUnitTest, testExternalSynctoken)
     // TODO: How to actually run this?
     ASSERT_EQ(LCB_SUCCESS, dop.resp.rc);
 }
+
+TEST_F(DurabilityUnitTest, testOptionValidation)
+{
+    HandleWrap hw;
+    lcb_t instance;
+    lcb_U16 persist = 0, replicate = 0;
+    int options;
+    lcb_error_t rc;
+
+    createConnection(hw, instance);
+
+    // Validate simple mode
+    persist = -1;
+    replicate = -1;
+    rc = lcb_durability_validate(instance, &persist, &replicate,
+        LCB_DURABILITY_VALIDATE_CAPMAX);
+
+    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_TRUE(persist > replicate);
+
+    lcbvb_CONFIG *vbc;
+    rc = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
+    ASSERT_EQ(LCB_SUCCESS, rc);
+
+    int replica_max = min(LCBVB_NREPLICAS(vbc), LCBVB_NDATASERVERS(vbc)-1);
+    int persist_max = replica_max + 1;
+
+    ASSERT_EQ(replica_max, replicate);
+    ASSERT_EQ(persist_max, persist);
+
+    persist = 0;
+    replicate = 0;
+    rc = lcb_durability_validate(instance, &persist, &replicate, 0);
+    ASSERT_EQ(LCB_EINVAL, rc);
+
+    persist = -1;
+    replicate = -1;
+    rc = lcb_durability_validate(instance, &persist, &replicate, 0);
+    ASSERT_EQ(LCB_DURABILITY_ETOOMANY, rc);
+
+    persist = persist_max;
+    replicate = replica_max;
+    rc = lcb_durability_validate(instance, &persist, &replicate, 0);
+    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_EQ(persist_max, persist);
+    ASSERT_EQ(replica_max, replicate);
+
+    rc = lcb_durability_validate(instance, &persist, &replicate,
+        LCB_DURABILITY_VALIDATE_CAPMAX);
+    ASSERT_EQ(LCB_SUCCESS, rc);
+    ASSERT_EQ(persist_max, persist);
+    ASSERT_EQ(replica_max, replicate);
+}

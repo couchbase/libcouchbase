@@ -2190,6 +2190,37 @@ typedef void (*lcb_durability_callback)(lcb_t instance,
 LIBCOUCHBASE_API
 lcb_durability_callback lcb_set_durability_callback(lcb_t,
                                                     lcb_durability_callback);
+
+#define LCB_DURABILITY_VALIDATE_CAPMAX 1<<1
+
+/**
+ * @committed
+ *
+ * Validate durability settings.
+ *
+ * This function will validate (and optionally modify) the settings. This is
+ * helpful to ensure the durability options are valid _before_ issuing a command
+ *
+ * @param instance the instance
+ * @param[in,out] persist_to The desired number of servers to persist to.
+ *  If the `CAPMAX` flag is set, on output this will contain the effective
+ *  number of servers the item can be persisted to
+ * @param[in,out] replicate_to The desired number of servers to replicate to.
+ *  If the `CAPMAX` flag is set, on output this will contain the effective
+ *  number of servers the item can be replicated to
+ * @param options Options to use for validating. The only recognized option
+ *  is currently `LCB_DURABILITY_VALIDATE_CAPMAX` which has the same semantics
+ *  as lcb_DURABILITYOPTSv0::cap_max.
+ * @return LCB_SUCCESS on success
+ * @return LCB_DURABILITY_ETOOMANY if the requirements exceed the number of
+ *  servers currently available, and `CAPMAX` was not specifie
+ * @return LCB_EINVAL if both `persist_to` and `replicate_to` are 0.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_durability_validate(lcb_t instance,
+    lcb_U16 *persist_to, lcb_U16 *replicate_to, int options);
+
 /**@}*/
 
 /******************************************************************************

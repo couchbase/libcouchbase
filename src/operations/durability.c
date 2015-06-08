@@ -258,47 +258,48 @@ static void poll_once(lcb_DURSET *dset)
 
 #define DUR_MIN(a,b) (a) < (b) ? (a) : (b)
 
-/**
- * Ensure that the user-specified criteria is possible; i.e. we have enough
- * servers and replicas. If the user requested capping, we do that here too.
- */
-static int verify_critera(lcb_t instance, lcb_DURSET *dset)
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_durability_validate(lcb_t instance,
+    lcb_U16 *persist_to, lcb_U16 *replicate_to, int options)
 {
-    lcb_DURABILITYOPTSv0 *opts = &dset->opts;
-
     int replica_max = DUR_MIN(
-            LCBT_NREPLICAS(instance),
-            LCBT_NSERVERS(instance)-1
-    );
-
+        LCBT_NREPLICAS(instance),
+        LCBT_NDATASERVERS(instance)-1);
     int persist_max = replica_max + 1;
 
+    if (*persist_to == 0 && *replicate_to == 0) {
+        /* Empty values! */
+        return LCB_EINVAL;
+    }
+
     /* persist_max is always one more than replica_max */
-    if ((int)opts->persist_to > persist_max) {
-        if (opts->cap_max) {
-            opts->persist_to = persist_max;
+    if ((int)*persist_to > persist_max) {
+        if (options & LCB_DURABILITY_VALIDATE_CAPMAX) {
+            *persist_to = persist_max;
         } else {
-            return -1;
+            return LCB_DURABILITY_ETOOMANY;
         }
     }
 
-    if (opts->replicate_to == 0) {
-        return 0;
+    if (*replicate_to == 0) {
+        return LCB_SUCCESS;
     }
 
     if (replica_max < 0) {
         replica_max = 0;
     }
+
     /* now, we need at least as many nodes as we have replicas */
-    if ((int)opts->replicate_to > replica_max) {
-        if (opts->cap_max) {
-            opts->replicate_to = replica_max;
+    if ((int)*replicate_to > replica_max) {
+        if (options & LCB_DURABILITY_VALIDATE_CAPMAX) {
+            *replicate_to = replica_max;
         } else {
-            return -1;
+            return LCB_DURABILITY_ETOOMANY;
         }
     }
+    return LCB_SUCCESS;
 
-    return 0;
 }
 
 #define CTX_FROM_MULTI(mcmd) (void *) ((((char *) (mcmd))) - offsetof(lcb_DURSET, mctx))
@@ -459,11 +460,15 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
         DSET_OPTFLD(dset, interval) = LCBT_SETTING(instance, durability_interval);
     }
 
-    if (-1 == verify_critera(instance, dset)) {
+    *errp = lcb_durability_validate(instance,
+        &dset->opts.persist_to, &dset->opts.replicate_to,
+        dset->opts.cap_max ? LCB_DURABILITY_VALIDATE_CAPMAX : 0);
+
+    if (*errp != LCB_SUCCESS) {
         free(dset);
-        *errp = LCB_DURABILITY_ETOOMANY;
         return NULL;
     }
+
     dset->timer = io->timer.create(io->p);
     lcb_string_init(&dset->kvbufs);
     return &dset->mctx;
