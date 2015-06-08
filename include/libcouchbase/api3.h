@@ -237,6 +237,7 @@ typedef enum {
     LCB_CALLBACK_HTTP, /**< lcb_http3() */
     LCB_CALLBACK_CBFLUSH, /**< lcb_cbflush3() */
     LCB_CALLBACK_OBSEQNO, /**< For lcb_observe_synctoken3() */
+    LCB_CALLBACK_STOREDUR, /** <for lcb_storedur3() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -676,6 +677,7 @@ typedef struct {
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd);
+
 /**@}*/
 
 /**@name Removing Items
@@ -1080,6 +1082,53 @@ LIBCOUCHBASE_API
 lcb_MULTICMD_CTX *
 lcb_endure3_ctxnew(lcb_t instance,
     const lcb_durability_opts_t *options, lcb_error_t *err);
+
+/**
+ * Command structure for lcb_storedur3()
+ * This is much like @ref lcb_CMDSTORE, but also includes durability options.
+ */
+typedef struct {
+    LCB_CMD_BASE;
+    lcb_VALBUF value;
+    lcb_U32 flags;
+    lcb_datatype_t datatype;
+    lcb_storage_t operation;
+
+    /**Number of nodes to persist to. If negative, will be capped at the maximum
+     * allowable for the current cluster*/
+    char persist_to;
+
+    /**Number of nodes to replicate to. If negative, will be capped at the maximum
+     * allowable for the current cluster */
+    char replicate_to;
+} lcb_CMDSTOREDUR;
+
+/**
+ * Response structure for `LCB_CALLBACK_STOREDUR.
+ */
+typedef struct {
+    LCB_RESP_BASE
+    /** Internal durability response structure. This should never be NULL */
+    const lcb_RESPENDURE *dur_resp;
+
+    /**If the ::rc field is not @ref LCB_SUCCESS, this field indicates
+     * what failed. If this field is nonzero, then the store operation failed,
+     * but the durability checking failed. If this field is zero then the
+     * actual storage operation failed. */
+    int store_ok;
+} lcb_RESPSTOREDUR;
+
+/**
+ * @volatile
+ *
+ * Schedule a storage operation with subsequent durability checking.
+ *
+ * This is a compound of a logical lcb_store3() followed by an
+ * lcb_endure3_ctxnew() upon success.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_storedur3(lcb_t instance, const void *cookie, const lcb_CMDSTOREDUR *cmd);
 /**@}*/
 
 /**@name Check the memcached server versions

@@ -196,6 +196,8 @@ lcbdur_ent_getinfo(lcb_DURITEM *item, int srvix)
 void lcbdur_ent_finish(lcb_DURITEM *ent)
 {
     lcb_RESPCALLBACK callback;
+    lcb_t instance;
+
     if (ent->done) {
         return;
     }
@@ -205,10 +207,24 @@ void lcbdur_ent_finish(lcb_DURITEM *ent)
 
     /** Invoke the callback now :) */
     ent->result.cookie = (void *)ent->parent->cookie;
+    instance = ent->parent->instance;
 
-    callback = lcb_find_callback(ent->parent->instance, LCB_CALLBACK_ENDURE);
-    callback(ent->parent->instance, LCB_CALLBACK_ENDURE,
-        (lcb_RESPBASE*)&ent->result);
+    if (ent->parent->is_durstore) {
+        lcb_RESPSTOREDUR resp = { 0 };
+        resp.key = ent->result.key;
+        resp.nkey = ent->result.nkey;
+        resp.rc = ent->result.rc;
+        resp.cas = ent->reqcas;
+        resp.cookie = ent->result.cookie;
+        resp.store_ok = 1;
+        resp.dur_resp = &ent->result;
+
+        callback = lcb_find_callback(instance, LCB_CALLBACK_STOREDUR);
+        callback(instance, LCB_CALLBACK_STOREDUR, (lcb_RESPBASE*)&resp);
+    } else {
+        callback = lcb_find_callback(instance, LCB_CALLBACK_ENDURE);
+        callback(instance, LCB_CALLBACK_ENDURE, (lcb_RESPBASE*)&ent->result);
+    }
 
     if (ent->parent->nremaining == 0) {
         lcbdur_unref(ent->parent);
@@ -229,7 +245,6 @@ void lcbdur_reqs_done(lcb_DURSET *dset)
     }
     lcbdur_unref(dset);
 }
-
 
 /**
  * Schedules a single sweep of observe requests.
@@ -381,6 +396,13 @@ dset_ctx_fail(lcb_MULTICMD_CTX *mctx)
 {
     lcb_DURSET *dset = CTX_FROM_MULTI(mctx);
     lcbdur_destroy(dset);
+}
+
+void lcbdurctx_set_durstore(lcb_MULTICMD_CTX *mctx, int enabled)
+{
+
+    lcb_DURSET *dset = CTX_FROM_MULTI(mctx);
+    dset->is_durstore = enabled;
 }
 
 static lcb_U8

@@ -431,7 +431,11 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     }
     handle_synctoken(root, response, request, &resp.synctoken);
     TRACE_STORE_END(response, &resp);
-    INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_STORE);
+    if (request->flags & MCREQ_F_REQEXT) {
+        request->u_rdata.exdata->procs->handler(pipeline, request, immerr, &resp);
+    } else {
+        INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_STORE);
+    }
 }
 
 static void
