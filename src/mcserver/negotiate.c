@@ -309,6 +309,9 @@ send_hello(mc_pSESSREQ sreq)
     lcb_SIZE nclistr;
 
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
+    if (sreq->inner->settings->tcp_nodelay) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TCPNODELAY;
+    }
 
 #ifndef LCB_NO_SNAPPY
     if (sreq->inner->settings->compressopts != LCB_COMPRESS_NONE) {
