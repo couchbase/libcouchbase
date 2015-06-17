@@ -1,5 +1,66 @@
 # Release Notes
 
+## 2.5.1 (June 17 2015)
+
+Bug fixes and improvements in 2.5.1
+
+* Fix hanging in durability operations if node is not present and constraints
+  include failed node. This condition may be triggered when only a single node
+  remains in the broadcast probe and a command sent to it could not be scheduled.
+  A symptom of this bug was durability operations 'hanging'
+  * Priority: Major
+  * Issues: [CCBC-607](http://issues.couchbase.com/browse/CCBC-607)
+
+* Improved handling of topology changes when non-data (N1QL, Index) nodes are
+  part of the cluster. This fixes some issues (mainly crashes) when non-data
+  nodes are found inside the cluster during a topology change. While the library
+  since version 2.4.8 was able to handle initial bootstrapping with non-data
+  nodes, it would still crash when such nodes were encountered during
+  configuration changes.
+  * Priority: Major
+  * Issues: [CCBC-609](http://issues.couchbase.com/browse/CCBC-609),
+    [CCBC-612](http://issues.couchbase.com/browse/CCBC-612)
+
+* Improved random host selection algorithm for REST services
+  This new algorithm ensures that the distribution is even among all _eligible_
+  nodes for a given service. The old algorithm would only distribute evenly when
+  the assumption that all nodes contained the same services were true. However
+  this assumption is no longer necessarily true with Couchbase 4.0. In this case
+  the algorithm ensures that the random selection inspects only the pool of
+  nodes which are known to have a given service enabled.
+  * Priority: Major
+  * Issues: [CCBC-611](http://issues.couchbase.com/browse/CCBC-611)
+
+* Ensure ketama/Memcached-bucket hashing works correctly when non-data nodes
+  are part of the cluster. In previous versions, ketama hashing would incorrectly
+  consider all nodes as candidates for keys, which would result in some items
+  being routed to non-data nodes, resulting in odd errors and inaccessible
+  data. This is only an issue for the still-unreleased Couchbase 4.0.
+  * Priority: Major
+  * Issues: [CCBC-613](http://issues.couchbase.com/browse/CCBC-613)
+
+* Set `TCP_NODELAY` as a server side option, if it's enabled on the client.
+  This uses the `HELLO` protocol functionality to enable this feature, if
+  this feature is also enabled on the client (enabled by default).
+
+
+New features in 2.5.1
+
+* Add `cmake/configure` option for enabling the embedding of the libevent
+  plugin. This option, named `--enable-embedded-libevent-plugin`, will cause
+  the plugin to be linked in with the core library (_libcouchbase_) rather
+  than built as its own object
+  * Priority: Minor
+
+* Add new combined "Store-with-durability" operation. This new API, called
+  `lcb_storedur3()` allows specifying the storage input options as well as
+  the associated durability options in a single command. Likewise, the status
+  of the operation (including durability) is returned in the operation's
+  callback.
+  * Priority: Major
+  * Issues: [CCBC-616](http://issues.couchbase.com/browse/CCBC-616)
+
+
 ## 2.5.0 (May 12 2015)
 
 This change in the major version number signals the addition of new features
