@@ -178,7 +178,7 @@ lcb_n1p_setopt(lcb_N1QLPARAMS *params, const char *name, size_t n_name,
 #define LCB_N1P_CONSISTENCY_REQUEST 2
 
 /** Refresh the snapshot for each statement */
-#define LCB_N1P_CONSISTENCY_STATMENT 3
+#define LCB_N1P_CONSISTENCY_STATEMENT 3
 
 /**
  * Sets the consistency mode for the request.

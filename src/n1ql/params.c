@@ -163,7 +163,7 @@ lcb_n1p_setconsistency(lcb_N1QLPARAMS *params, int mode)
     case LCB_N1P_CONSISTENCY_NONE:
     case LCB_N1P_CONSISTENCY_REQUEST:
     case LCB_N1P_CONSISTENCY_RYOW:
-    case LCB_N1P_CONSISTENCY_STATMENT:
+    case LCB_N1P_CONSISTENCY_STATEMENT:
         params->consist_type = mode;
         return LCB_SUCCESS;
     default:
@@ -248,7 +248,7 @@ lcb_n1p_encode(lcb_N1QLPARAMS *params, lcb_error_t *err)
         }
     } else if (params->consist_type == LCB_N1P_CONSISTENCY_REQUEST) {
         set_reqbuf_optz(params, PARAM_CONSISTENT, "request_plus");
-    } else if (params->consist_type == LCB_N1P_CONSISTENCY_STATMENT) {
+    } else if (params->consist_type == LCB_N1P_CONSISTENCY_STATEMENT) {
         set_reqbuf_optz(params, PARAM_CONSISTENT, "statement_plus");
     } else if (params->consist_type == LCB_N1P_CONSISTENCY_NONE) {
         /* Nothing */
