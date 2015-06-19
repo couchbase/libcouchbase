@@ -317,6 +317,19 @@ struct lcb_RESPN1QL {
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_n1ql_query(lcb_t instance, const void *cookie, const lcb_CMDN1QL *cmd);
+
+
+/**
+ * Cancels an in-progress request. This will ensure that further callbacks
+ * for the given request are not delivered.
+ *
+ * @param instance the instance
+ * @param handle the handle for the request. This is obtained during the
+ *  request as an 'out' parameter (see lcb_CMDN1QL::handle)
+ */
+LIBCOUCHBASE_API
+void
+lcb_n1ql_cancel(lcb_t instance, lcb_N1QLHANDLE handle);
 /**@}*/
 /**@}*/
 
