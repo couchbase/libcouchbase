@@ -527,7 +527,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     } else {
         server->compsupport = mc_sess_chkfeature(sessinfo,
             PROTOCOL_BINARY_FEATURE_DATATYPE);
-        server->synctokens = mc_sess_chkfeature(sessinfo,
+        server->mutation_tokens = mc_sess_chkfeature(sessinfo,
             PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO);
     }
 

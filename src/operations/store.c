@@ -51,8 +51,8 @@ handle_dur_storecb(mc_PIPELINE *pl, mc_PACKET *pkt,
     LCB_CMD_SET_KEY(&dcmd, sresp->key, sresp->nkey);
     dcmd.cas = sresp->cas;
 
-    if (LCB_SYNCTOKEN_ISVALID(&sresp->synctoken)) {
-        dcmd.synctoken = &sresp->synctoken;
+    if (LCB_MUTATION_TOKEN_ISVALID(&sresp->mutation_token)) {
+        dcmd.mutation_token = &sresp->mutation_token;
     }
 
     /* Set the options.. */

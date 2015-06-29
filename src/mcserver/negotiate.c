@@ -319,7 +319,7 @@ send_hello(mc_pSESSREQ sreq)
     }
 #endif
 
-    if (sreq->inner->settings->fetch_synctokens) {
+    if (sreq->inner->settings->fetch_mutation_tokens) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO;
     }
 

@@ -138,14 +138,14 @@ init_resp3(lcb_t instance, const packet_info *mc_resp, const mc_PACKET *req,
 }
 
 /**
- * Handles the propagation and population of the 'synctoken' information.
+ * Handles the propagation and population of the 'mutation token' information.
  * @param mc_resp The response packet
  * @param req The request packet (used to get the vBucket)
- * @param tgt Pointer to synctoken which should be populated.
+ * @param tgt Pointer to mutation token which should be populated.
  */
 static void
-handle_synctoken(lcb_t instance, const packet_info *mc_resp,
-    const mc_PACKET *req, lcb_SYNCTOKEN *stok)
+handle_mutation_token(lcb_t instance, const packet_info *mc_resp,
+    const mc_PACKET *req, lcb_MUTATION_TOKEN *stok)
 {
     const char *sbuf;
     uint16_t vbid;
@@ -154,7 +154,7 @@ handle_synctoken(lcb_t instance, const packet_info *mc_resp,
         return; /* No extras */
     }
 
-    if (!instance->dcpinfo && LCBT_SETTING(instance, dur_synctokens)) {
+    if (!instance->dcpinfo && LCBT_SETTING(instance, dur_mutation_tokens)) {
         size_t nvb = LCBT_VBCONFIG(instance)->nvb;
         if (nvb) {
             instance->dcpinfo = calloc(nvb, sizeof(*instance->dcpinfo));
@@ -294,7 +294,7 @@ H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, packet_info *response,
     lcb_t root = pipeline->parent->cqdata;
     lcb_RESPREMOVE resp = { 0 };
     init_resp3(root, response, packet, immerr, (lcb_RESPBASE *)&resp);
-    handle_synctoken(root, response, packet, &resp.synctoken);
+    handle_mutation_token(root, response, packet, &resp.mutation_token);
     TRACE_REMOVE_END(response, &resp);
     INVOKE_CALLBACK3(packet, &resp, root, LCB_CALLBACK_REMOVE);
 }
@@ -429,7 +429,7 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     } else if (opcode == PROTOCOL_BINARY_CMD_SET) {
         resp.op = LCB_SET;
     }
-    handle_synctoken(root, response, request, &resp.synctoken);
+    handle_mutation_token(root, response, request, &resp.mutation_token);
     TRACE_STORE_END(response, &resp);
     if (request->flags & MCREQ_F_REQEXT) {
         request->u_rdata.exdata->procs->handler(pipeline, request, immerr, &resp);
@@ -449,7 +449,7 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     if (resp.rc == LCB_SUCCESS) {
         memcpy(&resp.value, PACKET_VALUE(response), sizeof(resp.value));
         resp.value = lcb_ntohll(resp.value);
-        handle_synctoken(root, response, request, &resp.synctoken);
+        handle_mutation_token(root, response, request, &resp.mutation_token);
     }
     resp.cas = PACKET_CAS(response);
     TRACE_ARITHMETIC_END(response, &resp);

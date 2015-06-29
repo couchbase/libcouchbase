@@ -414,12 +414,12 @@ get_poll_meth(lcb_t instance, const lcb_DURABILITYOPTSv0 *options)
     if (meth == LCB_DURABILITY_MODE_DEFAULT) {
         meth = LCB_DURABILITY_MODE_CAS;
 
-        if (LCBT_SETTING(instance, fetch_synctokens) &&
-                LCBT_SETTING(instance, dur_synctokens)) {
+        if (LCBT_SETTING(instance, fetch_mutation_tokens) &&
+                LCBT_SETTING(instance, dur_mutation_tokens)) {
             size_t ii;
             for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
                 mc_SERVER *s = LCBT_GET_SERVER(instance, ii);
-                if (s->synctokens) {
+                if (s->mutation_tokens) {
                     meth = LCB_DURABILITY_MODE_SEQNO;
                     break;
                 }

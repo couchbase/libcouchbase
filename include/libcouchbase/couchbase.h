@@ -786,11 +786,11 @@ typedef struct {
     lcb_U64 uuid_;
     lcb_U64 seqno_;
     lcb_U16 vbid_;
-} lcb_SYNCTOKEN;
-#define LCB_SYNCTOKEN_ID(p) (p)->uuid_
-#define LCB_SYNCTOKEN_SEQ(p) (p)->seqno_
-#define LCB_SYNCTOKEN_VB(p) (p)->vbid_
-#define LCB_SYNCTOKEN_ISVALID(p) \
+} lcb_MUTATION_TOKEN;
+#define LCB_MUTATION_TOKEN_ID(p) (p)->uuid_
+#define LCB_MUTATION_TOKEN_SEQ(p) (p)->seqno_
+#define LCB_MUTATION_TOKEN_VB(p) (p)->vbid_
+#define LCB_MUTATION_TOKEN_ISVALID(p) \
     (p && !((p)->uuid_ == 0 && (p)->seqno_ == 0 && (p)->vbid_ == 0))
 
 /******************************************************************************
@@ -1307,8 +1307,8 @@ typedef struct {
     const void *key; /**< Key that was stored */
     lcb_SIZE nkey; /**< Size of key that was stored */
     lcb_cas_t cas; /**< Cas representing current mutation */
-    /** Synctoken for mutation. This is used with N1QL and durability */
-    const lcb_SYNCTOKEN *synctoken;
+    /** mutation tokenen for mutation. This is used with N1QL and durability */
+    const lcb_MUTATION_TOKEN *mutation_token;
 } lcb_STORERESPv0;
 
 /** @brief Wrapper structure for lcb_STORERESPv0 */
@@ -1471,8 +1471,8 @@ typedef struct {
     lcb_SIZE nkey;
     lcb_U64 value; /**< Current numerical value of the counter */
     lcb_cas_t cas;
-    /** Synctoken for mutation. This is used with N1QL and durability */
-    const lcb_SYNCTOKEN *synctoken;
+    /** mutation token for mutation. This is used with N1QL and durability */
+    const lcb_MUTATION_TOKEN *mutation_token;
 } lcb_ARITHRESPv0;
 
 typedef struct {
@@ -1720,8 +1720,8 @@ typedef struct {
     const void *key;
     lcb_SIZE nkey;
     lcb_cas_t cas;
-    /** Synctoken for mutation. This is used with N1QL and durability */
-    const lcb_SYNCTOKEN *synctoken;
+    /** mutation token for mutation. This is used with N1QL and durability */
+    const lcb_MUTATION_TOKEN *mutation_token;
 } lcb_REMOVERESPv0;
 
 typedef struct {
@@ -1943,7 +1943,7 @@ typedef struct {
      * LCB_KEY_EEXISTS
      */
     lcb_cas_t cas;
-    const lcb_SYNCTOKEN *synctok;
+    const lcb_MUTATION_TOKEN *mutation_token;
 } lcb_DURABILITYCMDv0;
 
 /**
@@ -1960,7 +1960,8 @@ typedef struct lcb_durability_cmd_st {
 
 /**
  * Use the default durability method. This will use METH_OBSSEQNO if both
- * @ref LCB_CNTL_FETCH_SYNCTOKENS and @ref LCB_CNTL_DURABILITY_SYNCTOKENS
+ * @ref LCB_CNTL_FETCH_MUTATION_TOKENS and
+ * @ref LCB_CNTL_DURABILITY_MUTATION_TOKENS
  * are enabled, and will revert to METH_OBSCOMPAT otherwise.
  */
 #define LCB_DURABILITY_MODE_DEFAULT 0

@@ -49,7 +49,7 @@ typedef struct mc_SERVER_st {
     short compsupport;
 
     /** Whether extended 'UUID' and 'seqno' are available for each mutation */
-    short synctokens;
+    short mutation_tokens;
 
     /** IO/Operation timer */
     lcbio_pTIMER io_timer;

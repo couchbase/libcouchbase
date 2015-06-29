@@ -45,7 +45,7 @@ printKeyCasStatus(string& key, int cbtype, const lcb_RESPBASE *resp,
         fprintf(stderr, "%s ", message);
     }
     fprintf(stderr, "CAS=0x%"PRIx64"\n", resp->cas);
-    const lcb_SYNCTOKEN *st = lcb_resp_get_synctoken(cbtype, resp);
+    const lcb_MUTATION_TOKEN *st = lcb_resp_get_mutation_token(cbtype, resp);
     if (st != NULL) {
         fprintf(stderr, "%-20sSYNCTOKEN=%u,%"PRIu64",%"PRIu64"\n",
             "", st->vbid_, st->uuid_, st->seqno_);

@@ -9,14 +9,14 @@ using namespace std;
     instance->settings, "tests-dur", LCB_LOG_##lvl, __FILE__, __LINE__
 #define SECS_USECS(f) ((f) * 1000000)
 
-static bool supportsSynctokens(lcb_t instance)
+static bool supportsMutationTokens(lcb_t instance)
 {
     // Ensure we have at least one connection
     storeKey(instance, "dummy_stok_test", "dummy");
 
     int val = 0;
     lcb_error_t rc;
-    rc = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_SYNCTOKENS_SUPPORTED, &val);
+    rc = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_MUTATION_TOKENS_SUPPORTED, &val);
 
 
     EXPECT_EQ(LCB_SUCCESS, rc);
@@ -448,7 +448,7 @@ TEST_F(DurabilityUnitTest, testDelete)
     ASSERT_EQ(LCB_ETIMEDOUT, dop.resp.rc);
 
     // With seqno
-    if (supportsSynctokens(instance)) {
+    if (supportsMutationTokens(instance)) {
         opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
         dop = DurabilityOperation();
         dop.run(instance, &opts, itm);
@@ -495,7 +495,7 @@ TEST_F(DurabilityUnitTest, testModified)
     dop.run(instance, &opts, kvo_stale.result);
     ASSERT_EQ(LCB_KEY_EEXISTS, dop.resp.rc);
 
-    if (supportsSynctokens(instance)) {
+    if (supportsMutationTokens(instance)) {
         opts.v.v0.pollopts = LCB_DURABILITY_MODE_SEQNO;
         dop = DurabilityOperation();
         dop.run(instance, &opts, kvo_stale.result);
@@ -833,7 +833,7 @@ TEST_F(DurabilityUnitTest, testMissingSynctoken)
     lcb_t instance;
     createConnection(hw, instance);
 
-    if (!supportsSynctokens(instance)) {
+    if (!supportsMutationTokens(instance)) {
         return;
     }
 
@@ -851,7 +851,7 @@ TEST_F(DurabilityUnitTest, testMissingSynctoken)
     LCB_CMD_SET_KEY(&cmd, "foo", 3);
 
     rc = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
-    ASSERT_EQ(LCB_DURABILITY_NO_SYNCTOKEN, rc);
+    ASSERT_EQ(LCB_DURABILITY_NO_MUTATION_TOKENS, rc);
 
     mctx->fail(mctx);
 }
@@ -863,7 +863,7 @@ TEST_F(DurabilityUnitTest, testExternalSynctoken)
     createConnection(hw1, instance1);
     createConnection(hw2, instance2);
 
-    if (!supportsSynctokens(instance1)) {
+    if (!supportsMutationTokens(instance1)) {
         return;
     }
 
@@ -871,13 +871,13 @@ TEST_F(DurabilityUnitTest, testExternalSynctoken)
     std::string value("world");
     storeKey(instance1, key, value);
 
-    const lcb_SYNCTOKEN *ss;
+    const lcb_MUTATION_TOKEN *ss;
     lcb_KEYBUF kb;
     lcb_error_t rc;
     LCB_KREQ_SIMPLE(&kb, key.c_str(), key.size());
-    ss = lcb_get_synctoken(instance1, &kb, &rc);
+    ss = lcb_get_mutation_token(instance1, &kb, &rc);
     ASSERT_FALSE(ss == NULL);
-    ASSERT_TRUE(LCB_SYNCTOKEN_ISVALID(ss));
+    ASSERT_TRUE(LCB_MUTATION_TOKEN_ISVALID(ss));
     ASSERT_EQ(LCB_SUCCESS, rc);
 
     lcb_durability_opts_t options = { 0 };
@@ -888,8 +888,8 @@ TEST_F(DurabilityUnitTest, testExternalSynctoken)
 
     // Initialize the command
     LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-    cmd.synctoken = ss;
-    cmd.cmdflags |= LCB_CMDENDURE_F_SYNCTOKEN;
+    cmd.mutation_token = ss;
+    cmd.cmdflags |= LCB_CMDENDURE_F_MUTATION_TOKEN;
 
     DurabilityOperation dop;
     dop.run(instance2, &options, cmd);
