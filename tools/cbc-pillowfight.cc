@@ -336,6 +336,8 @@ public:
             }
         }
 
+        op.seqno = rnum;
+
         if (isSequential) {
             rnum++;
             rnum %= maxKey;
@@ -346,8 +348,6 @@ public:
                 currSeqno = 0;
             }
         }
-
-        op.seqno = rnum;
 
         if (store_override) {
             op.isStore = true;
@@ -380,7 +380,7 @@ public:
     void generateKey(NextOp& op) {
         uint32_t seqno = op.seqno;
         seqno %= maxKey;
-        seqno += offset-1;
+        seqno += offset;
 
         char buffer[21];
         snprintf(buffer, sizeof(buffer), "%020d", seqno);
