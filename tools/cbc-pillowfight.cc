@@ -327,7 +327,7 @@ public:
         bool store_override = false;
 
         if (isPopulate) {
-            if (++ngenerated < maxKey) {
+            if (ngenerated++ < maxKey) {
                 store_override = true;
             } else {
                 printf("Thread %d has finished populating.\n", id);
