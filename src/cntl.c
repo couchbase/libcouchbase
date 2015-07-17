@@ -162,6 +162,9 @@ HANDLER(tcp_nodelay_handler) {
 HANDLER(readj_ts_wait_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, readj_ts_wait));
 }
+HANDLER(kv_hg_handler) {
+    RETURN_GET_ONLY(lcb_HISTOGRAM*, instance->kv_timings);
+}
 
 HANDLER(get_kvb) {
     struct lcb_cntl_vbinfo_st *vbi = arg;
@@ -509,7 +512,8 @@ static ctl_handler handlers[] = {
     mutation_tokens_supported_handler, /* LCB_CNTL_MUTATION_TOKENS_SUPPORTED */
     tcp_nodelay_handler, /* LCB_CNTL_TCP_NODELAY */
     readj_ts_wait_handler, /* LCB_CNTL_RESET_TIMEOUT_ON_WAIT */
-    console_fp_handler /* LCB_CNTL_CONLOGGER_FP */
+    console_fp_handler, /* LCB_CNTL_CONLOGGER_FP */
+    kv_hg_handler /* LCB_CNTL_KVTIMINGS */
 };
 
 /* Union used for conversion to/from string functions */

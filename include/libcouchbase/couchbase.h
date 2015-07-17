@@ -3469,6 +3469,53 @@ LIBCOUCHBASE_API
 void
 lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags);
 
+/** Internal histogram APIs, used by pillowfight and others */
+struct lcb_histogram_st;
+typedef struct lcb_histogram_st lcb_HISTOGRAM;
+
+/**
+ * @private
+ * Create a histogram structure
+ * @return a new histogram structure
+ */
+LCB_INTERNAL_API
+lcb_HISTOGRAM *
+lcb_histogram_create(void);
+
+/**
+ * @private free a histogram structure
+ * @param hg the histogram
+ */
+LCB_INTERNAL_API
+void
+lcb_histogram_destroy(lcb_HISTOGRAM *hg);
+
+/**
+ * @private
+ * Add an entry to a histogram structure
+ * @param hg the histogram
+ * @param duration the duration in nanoseconds
+ */
+LCB_INTERNAL_API
+void
+lcb_histogram_record(lcb_HISTOGRAM *hg, lcb_U64 duration);
+
+typedef void (*lcb_HISTOGRAM_CALLBACK)
+        (const void *cookie, lcb_timeunit_t timeunit, lcb_U32 min, lcb_U32 max,
+                lcb_U32 total, lcb_U32 maxtotal);
+
+/**
+ * @private
+ * Repeatedly invoke a callback for all entries in the histogram
+ * @param hg the histogram
+ * @param cookie pointer passed to callback
+ * @param cb callback to invoke
+ */
+LCB_INTERNAL_API
+void
+lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie,
+    lcb_HISTOGRAM_CALLBACK cb);
+
 /* Post-include some other headers */
 #ifdef __cplusplus
 }

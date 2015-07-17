@@ -566,11 +566,11 @@ static void
 record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *res)
 {
     lcb_t instance = pipeline->parent->cqdata;
-    if (instance->histogram) {
-        lcb_record_metrics(
-                instance, gethrtime() - MCREQ_PKT_RDATA(req)->start,
-                PACKET_OPCODE(res));
+    if (instance->kv_timings) {
+        lcb_histogram_record(instance->kv_timings,
+            gethrtime() - MCREQ_PKT_RDATA(req)->start);
     }
+    (void)res;
 }
 
 static void

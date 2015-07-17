@@ -170,7 +170,7 @@ struct UnitInterval {
 static void addTiming(lcb_t instance, const UnitInterval& interval)
 {
     hrtime_t n = intervalToNsec(interval.n, interval.unit);
-    lcb_record_metrics(instance, n, 0);
+    lcb_histogram_record(instance->kv_timings, n);
 }
 
 

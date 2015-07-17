@@ -858,7 +858,7 @@ typedef enum {
 #define LCB_CNTL_RESET_TIMEOUT_ON_WAIT 0x3A
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x3C
+#define LCB_CNTL__MAX                    0x3D
 /**@}*/
 
 #ifdef __cplusplus
