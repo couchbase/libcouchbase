@@ -46,6 +46,12 @@ using std::string;
 using std::cerr;
 using std::endl;
 
+#ifndef _WIN32
+static bool use_ansi_codes = true;
+#else
+static bool use_ansi_codes = false;
+#endif
+
 static void do_or_die(lcb_error_t rc)
 {
     if (rc != LCB_SUCCESS) {
@@ -65,6 +71,7 @@ public:
             abort();
         }
         #endif
+        start_time = last_update;
     }
 
     void update_row(size_t n = 1) { n_rows += n; update_display(); }
@@ -78,7 +85,7 @@ public:
     }
 
 #ifndef _WIN32
-    bool is_tty() const { return isatty(STDERR_FILENO); }
+    bool is_tty() const { return isatty(STDOUT_FILENO); }
     void lock() { pthread_mutex_lock(&m_lock); }
     void unlock() { pthread_mutex_unlock(&m_lock); }
 #else
@@ -88,7 +95,7 @@ public:
 #endif
     void prepare_screen()
     {
-        if (is_tty()) {
+        if (is_tty() && use_ansi_codes) {
             printf("\n\n\n");
         }
     }
@@ -104,10 +111,6 @@ public:
 private:
     void update_display()
     {
-        if (!is_tty()) {
-            return;
-        }
-
         time_t now = time(NULL);
         time_t duration = now - last_update;
 
@@ -117,11 +120,29 @@ private:
 
         last_update = now;
 
-        // Move up 3 cursors
-        printf("\x1B[2A");
-        printf("\x1B[KQUERIES/SEC: %lu\n", n_queries / duration);
-        printf("\x1B[KROWS/SEC:    %lu\n", n_rows / duration);
-        printf("\x1B[KERRORS:      %lu\r", n_errors);
+        const char *prefix = use_ansi_codes ? "\x1B[K" : "";
+        const char *final_suffix;
+
+        // Only use "ticker" style updates if we're a TTY and we have no
+        // following timings.
+        if (use_ansi_codes && is_tty() && hg == NULL) {
+            // Move up 3 cursors
+            printf("\x1B[2A");
+            prefix = "\x1B[K";
+            final_suffix = "\r";
+        } else {
+            // Determine the total number of time
+            unsigned total_duration = now - start_time;
+            printf("\n"); // Clear line..
+            printf("+%us\n", total_duration);
+            prefix = "";
+            final_suffix = "\n";
+        }
+
+        printf("%sQUERIES/SEC: %lu\n", prefix, n_queries / duration);
+        printf("%sROWS/SEC:    %lu\n", prefix, n_rows / duration);
+        printf("%sERRORS:      %lu%s", prefix, n_errors, final_suffix);
+
         if (hg != NULL) {
             hg->write();
         }
@@ -135,6 +156,7 @@ private:
     size_t n_queries;
     size_t n_errors;
     time_t last_update;
+    time_t start_time;
     cbc::Histogram *hg;
 #ifndef _WIN32
     pthread_mutex_t m_lock;
