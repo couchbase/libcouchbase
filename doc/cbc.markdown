@@ -167,9 +167,10 @@ In addition to the options in the [OPTIONS](#OPTIONS) section, the following opt
 * `e`, `--expiry`=_EXPIRATION_:
   The number of time in seconds from now at which the item should expire.
 
-* `a`, `--add`:
-  Fail the operation if the item already exists in the cluster. Without specifying
-  this option, if an existing item is already stored under the specified key
+* `M`, `--mode`=_upsert|insert|replace_:
+  Specify the storage mode. Mode can be one of `insert` (store item if it does
+  not yet exist), `replace` (only store item if key already exists), or
+  `upsert` (unconditionally store item)
 
 * `p`, `--persist-to`=_NUMNODES_:
   Wait until the item has been persisted to at least `NUMNODES` nodes' disk. If

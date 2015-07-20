@@ -3,6 +3,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include <libcouchbase/vbucket.h>
 #include <libcouchbase/views.h>
 #include <libcouchbase/n1ql.h>
@@ -421,6 +422,7 @@ void
 SetHandler::addOptions()
 {
     Handler::addOptions();
+    parser.addOption(o_mode);
     parser.addOption(o_flags);
     parser.addOption(o_exp);
     parser.addOption(o_add);
@@ -433,6 +435,31 @@ SetHandler::addOptions()
     // parser.addOption(o_json);
 }
 
+lcb_storage_t
+SetHandler::mode()
+{
+    if (o_add.passed()) {
+        return LCB_ADD;
+    }
+
+    string s = o_mode.const_result();
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    if (s == "upsert") {
+        return LCB_SET;
+    } else if (s == "replace") {
+        return LCB_REPLACE;
+    } else if (s == "insert") {
+        return LCB_ADD;
+    } else if (s == "append") {
+        return LCB_APPEND;
+    } else if (s == "prepend") {
+        return LCB_PREPEND;
+    } else {
+        throw string("Mode must be one of upsert, insert, replace. Got ") + s;
+        return LCB_SET;
+    }
+}
+
 void
 SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
 {
@@ -442,6 +469,7 @@ SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
     cmd.value.vtype = LCB_KV_COPY;
     cmd.value.u_buf.contig.bytes = value;
     cmd.value.u_buf.contig.nbytes = nvalue;
+    cmd.operation = mode();
 
     if (o_json.result()) {
         cmd.datatype = LCB_VALUE_F_JSON;
@@ -451,11 +479,6 @@ SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
     }
     if (o_flags.passed()) {
         cmd.flags = o_flags.result();
-    }
-    if (o_add.passed() && o_add.result()) {
-        cmd.operation = LCB_ADD;
-    } else {
-        cmd.operation = LCB_SET;
     }
     if (o_persist.passed() || o_replicate.passed()) {
         cmd.persist_to = o_persist.result();

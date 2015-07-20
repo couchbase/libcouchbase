@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "CBC" "1" "May 2015" "" ""
+.TH "CBC" "1" "July 2015" "" ""
 .
 .SH "NAME"
 \fBcbc\fR \- Couchbase Client Commandline Utility
@@ -197,8 +197,8 @@ A 32 bit unsigned integer to be stored alongside the value\. This number is retu
 The number of time in seconds from now at which the item should expire\.
 .
 .TP
-\fBa\fR, \fB\-\-add\fR
-Fail the operation if the item already exists in the cluster\. Without specifying this option, if an existing item is already stored under the specified key
+\fBM\fR, \fB\-\-mode\fR=\fIupsert|insert|replace\fR
+Specify the storage mode\. Mode can be one of \fBinsert\fR (store item if it does not yet exist), \fBreplace\fR (only store item if key already exists), or \fBupsert\fR (unconditionally store item)
 .
 .TP
 \fBp\fR, \fB\-\-persist\-to\fR=\fINUMNODES\fR
