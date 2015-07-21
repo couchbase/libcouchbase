@@ -579,7 +579,9 @@ Issue a N1QL query:
 
 ## FILES
 
-cbc(1) and cbc-pillowfight(1) may also read options from cbcrc(4)
+cbc(1) and cbc-pillowfight(1) may also read options from cbcrc(4). The default
+path for `cbcrc` is `$HOME/.cbcrc`, but may be overridden by setting the
+`CBC_CONFIG` evironment variable to an alternate path.
 
 ## BUGS
 
