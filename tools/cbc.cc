@@ -487,6 +487,9 @@ SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
     } else {
         err = lcb_store3(instance, NULL, reinterpret_cast<lcb_CMDSTORE*>(&cmd));
     }
+    if (err != LCB_SUCCESS) {
+        throw err;
+    }
 }
 
 void
