@@ -128,7 +128,7 @@ between them. It also creates indexes on the `travel-sample` bucket
     {"statement":"SELECT country, COUNT(country) FROM `travel-sample` GROUP BY country"}
     EOF
 
-    cbc-n1qlback -U couchbase://192.168.72.101/a_bucket -t 5
+    cbc-n1qlback -U couchbase://192.168.72.101/a_bucket -t 5 -f queries.txt
 
 ## BUGS
 
