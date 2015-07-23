@@ -95,14 +95,14 @@ AC_SUBST(REVDESCRIBE)
 # http://www.gnu.org/software/libtool/manual/libtool.html#Libtool-versioning
 #
 API_CURRENT=2
-API_REVISION=27
+API_REVISION=28
 API_AGE=0
 AC_SUBST(API_CURRENT)
 AC_SUBST(API_REVISION)
 AC_SUBST(API_AGE)
 
 # The actual version numbers for the developers ;)
-LCB_VERSION="2.5.1"
+LCB_VERSION="2.5.2"
 LCB_VERSION_HEX=`echo ${LCB_VERSION} | awk -F. '{printf "0x%0.2d%0.2d%0.2d", $1, $2, $3}'`
 AC_SUBST(LCB_VERSION)
 AC_SUBST(LCB_VERSION_HEX)
