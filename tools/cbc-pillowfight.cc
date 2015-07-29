@@ -14,6 +14,7 @@
  *   See the License for the specific language governing permissions and
  *   limitations under the License.
  */
+#define NOMINMAX // Because MS' CRT headers #define min and max :(
 #include "config.h"
 #include <sys/types.h>
 #include <libcouchbase/couchbase.h>
@@ -27,6 +28,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <signal.h>
 #ifndef WIN32
 #include <pthread.h>
@@ -36,13 +38,19 @@
 #include <cstdarg>
 #include "common/options.h"
 #include "common/histogram.h"
+#include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
+
+#include "docgen/seqgen.h"
+#include "docgen/docgen.h"
 
 using namespace std;
 using namespace cbc;
 using namespace cliopts;
+using namespace Pillowfight;
 using std::vector;
 using std::string;
 
+// Deprecated options which still exist from previous versions.
 struct DeprecatedOptions {
     UIntOption iterations;
     UIntOption instances;
@@ -63,6 +71,29 @@ struct DeprecatedOptions {
     }
 };
 
+static TemplateSpec
+parseTemplateSpec(const string& input)
+{
+    TemplateSpec spec;
+    // Just need to find the path
+    size_t endpos = input.find(',');
+    if (endpos == string::npos) {
+        throw std::runtime_error("invalid template spec: need field,min,max");
+    }
+    spec.term = input.substr(0, endpos);
+    int is_sequential = 0;
+    int rv = sscanf(input.c_str() + endpos + 1, "%u,%u,%u",
+        &spec.minval, &spec.maxval, &is_sequential);
+    if (rv < 2) {
+        throw std::runtime_error("invalid template spec: need field,min,max");
+    }
+    spec.sequential = is_sequential;
+    if (spec.minval > spec.maxval) {
+        throw std::runtime_error("min cannot be higher than max");
+    }
+    return spec;
+}
+
 class Configuration
 {
 public:
@@ -80,7 +111,10 @@ public:
         o_numCycles("num-cycles"),
         o_sequential("sequential"),
         o_startAt("start-at"),
-        o_rateLimit("rate-limit")
+        o_rateLimit("rate-limit"),
+        o_userdocs("docs"),
+        o_writeJson("json"),
+        o_templatePairs("template")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -96,6 +130,10 @@ public:
         o_sequential.setDefault(false).description("Use sequential access (instead of random)");
         o_startAt.setDefault(0).description("For sequential access, set the first item");
         o_rateLimit.setDefault(0).description("Set operations per second limit (per thread)");
+        o_userdocs.description("User documents to load (overrides --min-size and --max-size");
+        o_writeJson.description("Enable writing JSON values (rather than bytes)");
+        o_templatePairs.description("Values for templates to be inserted into user documents");
+        o_templatePairs.argdesc("FIELD,MIN,MAX[,SEQUENTIAL]");
     }
 
     void processOptions() {
@@ -103,7 +141,6 @@ public:
         prefix = o_keyPrefix.result();
         setprc = o_setPercent.result();
         shouldPopulate = !o_noPopulate.result();
-        setPayloadSizes(o_minSize.result(), o_maxSize.result());
 
         if (depr.loop.passed()) {
             fprintf(stderr, "The --loop/-l option is deprecated. Use --num-cycles\n");
@@ -115,6 +152,59 @@ public:
         if (depr.iterations.passed()) {
             fprintf(stderr, "The --num-iterations/-I option is deprecated. Use --batch-size\n");
             opsPerCycle = depr.iterations.result();
+        }
+
+        vector<TemplateSpec> specs;
+        vector<string> userdocs;
+
+        if (o_templatePairs.passed()) {
+            vector<string> specs_str = o_templatePairs.result();
+            for (size_t ii = 0; ii < specs_str.size(); ii++) {
+                specs.push_back(parseTemplateSpec(specs_str[ii]));
+            }
+        }
+
+        // Set the document sizes..
+        if (o_userdocs.passed()) {
+            if (o_minSize.passed() || o_maxSize.passed()) {
+                fprintf(stderr, "--min-size/--max-size invalid with userdocs\n");
+            }
+
+            vector<string> filenames = o_userdocs.result();
+            for (size_t ii = 0; ii < filenames.size(); ii++) {
+                std::stringstream ss;
+                std::ifstream ifs(filenames[ii].c_str());
+                if (!ifs.is_open()) {
+                    perror(filenames[ii].c_str());
+                    exit(EXIT_FAILURE);
+                }
+                ss << ifs.rdbuf();
+                userdocs.push_back(ss.str());
+            }
+        }
+
+        if (specs.empty()) {
+            if (o_writeJson.result()) {
+                docgen = new JsonDocGenerator(o_minSize.result(), o_maxSize.result());
+            } else if (!userdocs.empty()) {
+                docgen = new PresetDocGenerator(userdocs);
+            } else {
+                docgen = new RawDocGenerator(o_minSize.result(), o_maxSize.result());
+            }
+        } else {
+            if (o_writeJson.result()) {
+                if (userdocs.empty()) {
+                    docgen = new PlaceholderJsonGenerator(
+                        o_minSize.result(), o_maxSize.result(), specs);
+                } else {
+                    docgen = new PlaceholderJsonGenerator(userdocs, specs);
+                }
+            } else {
+                if (userdocs.empty()) {
+                    throw std::runtime_error("Must provide documents with placeholders!");
+                }
+                docgen = new PlaceholderDocGenerator(userdocs, specs);
+            }
         }
     }
 
@@ -133,45 +223,11 @@ public:
         parser.addOption(o_sequential);
         parser.addOption(o_startAt);
         parser.addOption(o_rateLimit);
+        parser.addOption(o_userdocs);
+        parser.addOption(o_writeJson);
+        parser.addOption(o_templatePairs);
         params.addToParser(parser);
         depr.addOptions(parser);
-    }
-
-    ~Configuration() {
-        delete []static_cast<char *>(data);
-    }
-
-    void setPayloadSizes(uint32_t minsz, uint32_t maxsz) {
-        if (minsz > maxsz) {
-            minsz = maxsz;
-        }
-
-        minSize = minsz;
-        maxSize = maxsz;
-
-        if (data) {
-            delete []static_cast<char *>(data);
-        }
-
-        data = static_cast<void *>(new char[maxSize]);
-        /* fill data array with pattern */
-        uint32_t *iptr = static_cast<uint32_t *>(data);
-        for (uint32_t ii = 0; ii < maxSize / sizeof(uint32_t); ++ii) {
-            iptr[ii] = 0xdeadbeef;
-        }
-        /* pad rest bytes with zeros */
-        size_t rest = maxSize % sizeof(uint32_t);
-        if (rest > 0) {
-            char *cptr = static_cast<char *>(data) + (maxSize / sizeof(uint32_t));
-            memset(cptr, 0, rest);
-        }
-    }
-
-    uint32_t getNumInstances(void) {
-        if (depr.instances.passed()) {
-            return depr.instances.result();
-        }
-        return o_numThreads.result();
     }
 
     bool isTimings(void) { return params.useTimings(); }
@@ -183,14 +239,6 @@ public:
         return niter >= (size_t)maxCycles;
     }
 
-    void setDGM(bool val) {
-        dgm = val;
-    }
-
-    void setWaitTime(uint32_t val) {
-        waitTime = val;
-    }
-
     uint32_t getRandomSeed() { return o_randSeed; }
     uint32_t getNumThreads() { return o_numThreads; }
     string& getKeyPrefix() { return prefix; }
@@ -200,18 +248,14 @@ public:
     uint32_t getNumItems() { return o_numItems; }
     uint32_t getRateLimit() { return o_rateLimit; }
 
-    void *data;
-
     uint32_t opsPerCycle;
     unsigned setprc;
     string prefix;
-    uint32_t maxSize;
-    uint32_t minSize;
     volatile int maxCycles;
-    bool dgm;
     bool shouldPopulate;
-    uint32_t waitTime;
+    bool hasTemplates;
     ConnParams params;
+    const DocGeneratorBase *docgen;
 
 private:
     UIntOption o_multiSize;
@@ -229,6 +273,16 @@ private:
     BoolOption o_sequential;
     UIntOption o_startAt;
     UIntOption o_rateLimit;
+
+    // List of paths to user documents to load.. They should all be valid JSON
+    ListOption o_userdocs;
+
+    // Whether generated values should be JSON
+    BoolOption o_writeJson;
+
+    // List of template ranges for value generation
+    ListOption o_templatePairs;
+
     DeprecatedOptions depr;
 } config;
 
@@ -290,80 +344,78 @@ private:
 };
 
 struct NextOp {
-    NextOp() : seqno(0), valsize(0), isStore(false) {}
+    NextOp() : m_seqno(0), m_mode(GET) {}
 
-    string key;
-    uint32_t seqno;
-    size_t valsize;
-    bool isStore;
+    string m_key;
+    uint32_t m_seqno;
+    vector<lcb_IOV> m_valuefrags;
+    // The mode here is for future use with subdoc
+    enum Mode { STORE, GET };
+    Mode m_mode;
 };
 
+/** Stateful, per-thread generator */
 class KeyGenerator {
 public:
-    KeyGenerator(int ix) :
-        currSeqno(0), rnum(0), ngenerated(0), isSequential(false),
-        isPopulate(config.shouldPopulate)
+    KeyGenerator(int ix)
+    : m_gencount(0), m_force_sequential(false),
+      m_in_population(config.shouldPopulate)
 {
         srand(config.getRandomSeed());
-        for (int ii = 0; ii < 8192; ++ii) {
-            seqPool[ii] = rand();
-        }
-        if (isPopulate) {
-            isSequential = true;
+
+        m_genrandom = new SeqGenerator(
+            config.firstKeyOffset(),
+            config.getNumItems() + config.firstKeyOffset());
+
+        m_gensequence = new SeqGenerator(
+            config.firstKeyOffset(),
+            config.getNumItems() + config.firstKeyOffset(),
+            config.getNumThreads(),
+            ix);
+
+        if (m_in_population) {
+            m_force_sequential = true;
         } else {
-            isSequential = config.sequentialAccess();
+            m_force_sequential = config.sequentialAccess();
         }
 
-
-        // Maximum number of keys for this thread
-        maxKey = config.getNumItems() /  config.getNumThreads();
-
-        offset = config.firstKeyOffset();
-        offset += maxKey * ix;
-        id = ix;
+        m_id = ix;
+        m_mode_read = NextOp::GET;
+        m_mode_write = NextOp::STORE;
+        m_local_genstate = config.docgen->createState(config.getNumThreads(), ix);
     }
 
     void setNextOp(NextOp& op) {
         bool store_override = false;
 
-        if (isPopulate) {
-            if (ngenerated++ < maxKey) {
+        if (m_in_population) {
+            if (m_gencount++ < m_gensequence->maxItems()) {
                 store_override = true;
             } else {
-                printf("Thread %d has finished populating.\n", id);
-                isPopulate = false;
-                isSequential = config.sequentialAccess();
+                printf("Thread %d has finished populating.\n", m_id);
+                m_in_population = false;
+                m_force_sequential = config.sequentialAccess();
             }
         }
 
-        op.seqno = rnum;
-
-        if (isSequential) {
-            rnum++;
-            rnum %= maxKey;
+        if (m_force_sequential) {
+            op.m_seqno = m_gensequence->next();
         } else {
-            rnum += seqPool[currSeqno];
-            currSeqno++;
-            if (currSeqno > 8191) {
-                currSeqno = 0;
-            }
+            op.m_seqno = m_genrandom->next();
         }
 
         if (store_override) {
-            op.isStore = true;
+            // Populate
+            op.m_mode = NextOp::STORE;
+            m_local_genstate->populateIov(op.m_seqno, op.m_valuefrags);
+
+        } else if (shouldStore(op.m_seqno)) {
+            op.m_mode = m_mode_write;
+            m_local_genstate->populateIov(op.m_seqno, op.m_valuefrags);
         } else {
-            op.isStore = shouldStore(op.seqno);
+            op.m_mode = m_mode_read;
         }
 
-        if (op.isStore) {
-            size_t size;
-            if (config.minSize == config.maxSize) {
-                size = config.minSize;
-            } else {
-                size = config.minSize + op.seqno % (config.maxSize - config.minSize);
-            }
-            op.valsize = size;
-        }
         generateKey(op);
     }
 
@@ -378,16 +430,14 @@ public:
     }
 
     void generateKey(NextOp& op) {
-        uint32_t seqno = op.seqno;
-        seqno %= maxKey;
-        seqno += offset;
-
+        uint32_t seqno = op.m_seqno;
         char buffer[21];
         snprintf(buffer, sizeof(buffer), "%020d", seqno);
-        op.key.assign(config.getKeyPrefix() + buffer);
+        op.m_key.assign(config.getKeyPrefix() + buffer);
     }
+
     const char *getStageString() const {
-        if (isPopulate) {
+        if (m_in_population) {
             return "Populate";
         } else {
             return "Run";
@@ -395,16 +445,16 @@ public:
     }
 
 private:
-    uint32_t seqPool[8192];
-    uint32_t currSeqno;
-    uint32_t rnum;
-    uint32_t offset;
-    uint32_t maxKey;
-    size_t ngenerated;
-    int id;
+    SeqGenerator *m_genrandom;
+    SeqGenerator *m_gensequence;
+    size_t m_gencount;
+    int m_id;
 
-    bool isSequential;
-    bool isPopulate;
+    bool m_force_sequential;
+    bool m_in_population;
+    NextOp::Mode m_mode_read;
+    NextOp::Mode m_mode_write;
+    GeneratorState *m_local_genstate;
 };
 
 class ThreadContext
@@ -421,18 +471,20 @@ public:
 
         for (size_t ii = 0; ii < config.opsPerCycle; ++ii) {
             kgen.setNextOp(opinfo);
-            if (opinfo.isStore) {
+
+            if (opinfo.m_mode == NextOp::STORE) {
                 lcb_CMDSTORE scmd = { 0 };
                 scmd.operation = LCB_SET;
-                LCB_CMD_SET_KEY(&scmd, opinfo.key.c_str(), opinfo.key.size());
-                LCB_CMD_SET_VALUE(&scmd, config.data, opinfo.valsize);
+                LCB_CMD_SET_KEY(&scmd, opinfo.m_key.c_str(), opinfo.m_key.size());
+                LCB_CMD_SET_VALUEIOV(&scmd, &opinfo.m_valuefrags[0], opinfo.m_valuefrags.size());
                 error = lcb_store3(instance, this, &scmd);
 
-            } else {
+            } else if (opinfo.m_mode == NextOp::GET) {
                 lcb_CMDGET gcmd = { 0 };
-                LCB_CMD_SET_KEY(&gcmd, opinfo.key.c_str(), opinfo.key.size());
+                LCB_CMD_SET_KEY(&gcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
                 error = lcb_get3(instance, this, &gcmd);
             }
+
             if (error != LCB_SUCCESS) {
                 hasItems = false;
                 log("Failed to schedule operation: [0x%x] %s", error, lcb_strerror(instance, error));
@@ -621,8 +673,16 @@ int main(int argc, char **argv)
 
     Parser parser("cbc-pillowfight");
     config.addOptions(parser);
-    parser.parse(argc, argv, false);
-    config.processOptions();
+    try {
+        parser.parse(argc, argv, false);
+        config.processOptions();
+    } catch (std::string& e) {
+        std::cerr << e << std::endl;
+        exit(EXIT_FAILURE);
+    } catch (std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        exit(EXIT_FAILURE);
+    }
     size_t nthreads = config.getNumThreads();
     log("Running. Press Ctrl-C to terminate...");
 
