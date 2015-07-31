@@ -147,6 +147,15 @@ extern "C" {
 #define LCB_CNTL_VIEW_TIMEOUT           0x01
 
 /**
+ * @brief N1QL Timeout
+ * This is the I/O timeout for N1QL queries, issued via lcb_n1ql_query()
+ *
+ * @cntl_arg_both{lcb_U32*}
+ * @committed
+ */
+#define LCB_CNTL_N1QL_TIMEOUT 0x3D
+
+/**
  * @brief Get the name of the bucket
  * This returns the name of the bucket this instance is connected to, or `NULL`
  * if not yet connected to a bucket
@@ -858,7 +867,7 @@ typedef enum {
 #define LCB_CNTL_RESET_TIMEOUT_ON_WAIT 0x3A
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x3D
+#define LCB_CNTL__MAX                    0x3E
 /**@}*/
 
 #ifdef __cplusplus
