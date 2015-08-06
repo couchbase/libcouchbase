@@ -194,6 +194,7 @@ ADD_LIBRARY(rdb OBJECT ${LCB_RDB_SRC})
 ADD_LIBRARY(lcbio OBJECT ${LCB_IO_SRC})
 ADD_LIBRARY(lcbht OBJECT ${LCB_HT_SRC})
 ADD_LIBRARY(lcbcore OBJECT ${LCB_CORE_SRC})
+ADD_LIBRARY(lcbcore-cxx OBJECT ${LCB_CORE_CXXSRC})
 
 SET_TARGET_PROPERTIES(netbuf-malloc PROPERTIES COMPILE_DEFINITIONS NETBUF_LIBC_PROXY=1)
 LCB_UTIL(netbuf-malloc)
@@ -204,6 +205,7 @@ LCB_UTIL(couchbase_utils)
 LCB_UTIL(mcreq)
 LCB_UTIL(lcbht)
 LCB_UTIL(lcbcore)
+LCB_CXXUTIL(lcbcore-cxx)
 
 ADD_SUBDIRECTORY(src/vbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
@@ -249,8 +251,10 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:rdb>
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
+    $<TARGET_OBJECTS:lcbcore-cxx>
     $<TARGET_OBJECTS:lcb_views_c>
     $<TARGET_OBJECTS:lcb_jsparse>
+    $<TARGET_OBJECTS:lcb_jsoncpp>
     ${LCB_DTRACE_OBJECT}
     ${lcb_plat_objs}
     ${lcb_ssl_objs})

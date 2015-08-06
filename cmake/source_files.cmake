@@ -68,3 +68,6 @@ SET(LCB_CORE_SRC
     src/timings.c
     src/utilities.c
     src/wait.c)
+
+SET(LCB_CORE_CXXSRC
+    src/n1ql/params.cc)
