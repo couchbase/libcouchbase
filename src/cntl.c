@@ -453,6 +453,18 @@ HANDLER(mutation_tokens_supported_handler) {
     return LCB_SUCCESS;
 }
 
+HANDLER(n1ql_cache_clear_handler) {
+    if (mode != LCB_CNTL_SET) {
+        return LCB_ECTL_UNSUPPMODE;
+    }
+
+    lcb_n1qlcache_clear(instance->n1ql_cache);
+
+    (void)cmd;
+    (void)arg;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -515,7 +527,8 @@ static ctl_handler handlers[] = {
     readj_ts_wait_handler, /* LCB_CNTL_RESET_TIMEOUT_ON_WAIT */
     console_fp_handler, /* LCB_CNTL_CONLOGGER_FP */
     kv_hg_handler, /* LCB_CNTL_KVTIMINGS */
-    timeout_common /* LCB_CNTL_N1QL_TIMEOUT */
+    timeout_common, /* LCB_CNTL_N1QL_TIMEOUT */
+    n1ql_cache_clear_handler /* LCB_CNTL_N1QL_CLEARCACHE */
 };
 
 /* Union used for conversion to/from string functions */

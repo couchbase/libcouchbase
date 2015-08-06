@@ -866,8 +866,16 @@ typedef enum {
  */
 #define LCB_CNTL_RESET_TIMEOUT_ON_WAIT 0x3A
 
+/**
+ * @volatile
+ * Clears the internal prepared statement cache for N1QL
+ *
+ * This does not take any arguments, and is valid only on @ref LCB_CNTL_SET
+ */
+#define LCB_CNTL_N1QL_CLEARACHE 0x3E
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x3E
+#define LCB_CNTL__MAX                    0x3F
 /**@}*/
 
 #ifdef __cplusplus
