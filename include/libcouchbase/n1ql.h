@@ -257,11 +257,7 @@ struct lcb_CMDN1QL {
     /** Length of the query data */
     size_t nquery;
 
-    /**cbq-engine host:port. If left NULL, the address will be discovered via
-     * the configuration. This field exists primarily because at the time of
-     * writing, N1QL is an experimental feature not advertised in the cluster
-     * configuration.
-     */
+    /** Unused */
     const char *host;
 
     /**Content type for query. Must be specified. */
@@ -303,9 +299,8 @@ struct lcb_RESPN1QL {
  *
  * Execute a N1QL query.
  *
- * This function will send the query to a query server in the cluster (or if
- * lcb_CMDN1QL::host is set, to the given host), and will invoke the callback
- * (lcb_CMDN1QL::callback) for each result returned.
+ * This function will send the query to a query server in the cluster
+ * and will invoke the callback (lcb_CMDN1QL::callback) for each result returned.
  *
  * @param instance The instance
  * @param cookie Pointer to application data
