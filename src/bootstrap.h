@@ -51,6 +51,9 @@ struct lcb_BOOTSTRAP {
      */
     lcbio_pTIMER tm;
 
+    /**Timer used for configuration polling, if enabled*/
+    lcbio_pTIMER polltm;
+
     /**
      * Timestamp indicating the most recent configuration activity. This
      * timestamp is used to control throttling, such that the @ref
@@ -85,22 +88,22 @@ struct lcb_BOOTSTRAP {
  */
 typedef enum {
     /** Always fetch a new configuration. No throttling checks are performed */
-    LCB_BS_REFRESH_ALWAYS = 0x00,
+    LCB_BS_REFRESH_ALWAYS = 0x00,  //!< LCB_BS_REFRESH_ALWAYS
     /** Special mode used to fetch the first configuration */
-    LCB_BS_REFRESH_INITIAL = 0x02,
+    LCB_BS_REFRESH_INITIAL = 0x02, //!< LCB_BS_REFRESH_INITIAL
 
     /** Make the request for a new configuration subject to throttling
      * limitations. Currently this will be subject to the interval specified
      * in the @ref LCB_CNTL_CONFDELAY_THRESH setting and the @ref
      * LCB_CNTL_CONFERRTHRESH setting. If the refresh has been throttled
      * the lcb_confmon_is_refreshing() function will return false */
-    LCB_BS_REFRESH_THROTTLE = 0x04,
+    LCB_BS_REFRESH_THROTTLE = 0x04,//!< LCB_BS_REFRESH_THROTTLE
 
     /** To be used in conjunction with ::LCB_BS_REFRESH_THROTTLE, this will
      * increment the error counter in case the current refresh is throttled,
      * such that when the error counter reaches the threshold, the throttle
      * limitations will expire and a new refresh will take place */
-    LCB_BS_REFRESH_INCRERR = 0x08
+    LCB_BS_REFRESH_INCRERR = 0x08  //!< LCB_BS_REFRESH_INCRERR
 } lcb_BSFLAGS;
 
 /**
@@ -120,6 +123,10 @@ lcb_bootstrap_common(lcb_t instance, int options);
 
 void
 lcb_bootstrap_destroy(lcb_t instance);
+
+/* Update config polling state */
+void
+lcb_bootstrap_setpoll(lcb_t instance, lcb_U32 tmo);
 
 /**@}*/
 

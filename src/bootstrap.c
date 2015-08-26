@@ -70,6 +70,14 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
             lcb_confmon_set_provider_active(
                 instance->confmon, LCB_CLCONFIG_HTTP, 0);
         }
+        /* Activate poll mode, if requested */
+        lcb_log(LOGARGS(instance, DEBUG), "Activating config poll timer");
+        if (!lcbio_timer_armed(bs->polltm)) {
+            if (LCBT_SETTING(instance, config_poll_interval)) {
+                lcbio_timer_rearm(bs->polltm,
+                    LCBT_SETTING(instance, config_poll_interval));
+            }
+        }
     }
 
     if (instance->type != LCB_TYPE_CLUSTER) {
@@ -166,6 +174,32 @@ async_step_callback(clconfig_listener *listener, clconfig_event_t event,
     (void)info;
 }
 
+static void do_poll(void *arg)
+{
+    struct lcb_BOOTSTRAP *bs = arg;
+    lcb_U32 curtmo = LCBT_SETTING(bs->parent, config_poll_interval);
+    if (curtmo) {
+        lcb_log(LOGARGS(bs->parent, DEBUG), "Polling per config_poll_interval");
+        lcb_bootstrap_common(bs->parent, LCB_BS_REFRESH_THROTTLE);
+        lcbio_timer_rearm(bs->polltm, curtmo);
+    }
+}
+
+
+void
+lcb_bootstrap_setpoll(lcb_t instance, lcb_U32 tmo)
+{
+    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
+    if (!bs) {
+        return;
+    }
+    if (tmo) {
+        lcbio_timer_rearm(bs->polltm, tmo);
+    } else {
+        lcbio_timer_disarm(bs->polltm);
+    }
+}
+
 lcb_error_t
 lcb_bootstrap_common(lcb_t instance, int options)
 {
@@ -179,6 +213,8 @@ lcb_bootstrap_common(lcb_t instance, int options)
         }
 
         bs->tm = lcbio_timer_new(instance->iotable, bs, initial_timeout);
+        bs->polltm = lcbio_timer_new(instance->iotable, bs, do_poll);
+
         instance->bootstrap = bs;
         bs->parent = instance;
         lcb_confmon_add_listener(instance->confmon, &bs->listener);
@@ -235,6 +271,9 @@ void lcb_bootstrap_destroy(lcb_t instance)
     }
     if (bs->tm) {
         lcbio_timer_destroy(bs->tm);
+    }
+    if (bs->polltm) {
+        lcbio_timer_destroy(bs->polltm);
     }
 
     lcb_confmon_remove_listener(instance->confmon, &bs->listener);

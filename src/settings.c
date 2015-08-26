@@ -26,6 +26,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->operation_timeout = LCB_DEFAULT_TIMEOUT;
     settings->config_timeout = LCB_DEFAULT_CONFIGURATION_TIMEOUT;
     settings->config_node_timeout = LCB_DEFAULT_NODECONFIG_TIMEOUT;
+    settings->config_poll_interval = LCB_DEFAULT_CONFIGPOLL_INTERVAL;
     settings->views_timeout = LCB_DEFAULT_VIEW_TIMEOUT;
     settings->n1ql_timeout = LCB_DEFAULT_N1QL_TIMEOUT;
     settings->durability_timeout = LCB_DEFAULT_DURABILITY_TIMEOUT;

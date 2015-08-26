@@ -48,6 +48,9 @@
 /** 2 seconds per node */
 #define LCB_DEFAULT_NODECONFIG_TIMEOUT LCB_MS2US(2000)
 
+/** Poll every 10 seconds */
+#define LCB_DEFAULT_CONFIGPOLL_INTERVAL LCB_MS2US(10000)
+
 #define LCB_DEFAULT_VIEW_TIMEOUT LCB_MS2US(75000)
 #define LCB_DEFAULT_N1QL_TIMEOUT LCB_MS2US(75000)
 #define LCB_DEFAULT_DURABILITY_TIMEOUT LCB_MS2US(5000)
@@ -111,6 +114,7 @@ typedef struct lcb_settings_st {
     lcb_U32 durability_interval;
     lcb_U32 config_timeout;
     lcb_U32 config_node_timeout;
+    lcb_U32 config_poll_interval;
     lcb_U32 retry_interval;
     lcb_U32 weird_things_threshold;
     lcb_U32 weird_things_delay;
