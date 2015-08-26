@@ -97,7 +97,7 @@ lcb_n1p_free(lcb_N1QLPARAMS *params);
 /** Query is a statement string */
 #define LCB_N1P_QUERY_STATEMENT 1
 
-/** Query is a prepared statement returned via the `PREPARE` statement */
+/** @private */
 #define LCB_N1P_QUERY_PREPARED 2
 
 /**
@@ -105,8 +105,8 @@ lcb_n1p_free(lcb_N1QLPARAMS *params);
  * @param params the params object
  * @param qstr the query string (either N1QL statement or prepared JSON)
  * @param nqstr the length of the string. Set to -1 if NUL-terminated
- * @param type the type of statement. Can be either ::LCB_N1P_QUERY_STATEMENT
- * or ::LCB_N1P_QUERY_PREPARED
+ * @param type the type of statement. Should be ::LCB_N1P_QUERY_STATEMENT,
+ *  currently.
  */
 LIBCOUCHBASE_API
 lcb_error_t
