@@ -297,6 +297,11 @@ N1QLREQ::maybe_retry()
     Json::Value root;
     lcb_IOV meta;
 
+    if (callback == NULL) {
+        // Cancelled
+        return false;
+    }
+
     if (nrows) {
         // Has results:
         return false;
