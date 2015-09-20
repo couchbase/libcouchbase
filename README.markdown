@@ -93,6 +93,7 @@ irc.freenode.net.
     * [node.js](http://github.com/couchbase/couchnode)
     * [Python](http://github.com/couchbase/couchbase-python-client)
     * [Ruby](http://github.com/couchbase/couchbase-ruby-client)
+    * [PHP](https://github.com/couchbaselabs/php-couchbase)
 
 ## Documentation
 
