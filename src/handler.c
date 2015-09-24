@@ -79,6 +79,8 @@ map_error(lcb_t instance, int in)
         return LCB_SUBDOC_DELTA_ERANGE;
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_EEXISTS:
         return LCB_SUBDOC_PATH_EEXISTS;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE:
+        return LCB_SUBDOC_MULTI_FAILURE;
     case PROTOCOL_BINARY_RESPONSE_EINVAL:
         return LCB_EINVAL;
     case PROTOCOL_BINARY_RESPONSE_NOT_STORED:
@@ -94,7 +96,11 @@ map_error(lcb_t instance, int in)
     case PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED:
         return LCB_NOT_SUPPORTED;
     default:
-        return instance->callbacks.errmap(instance, in);
+        if (instance != NULL) {
+            return instance->callbacks.errmap(instance, in);
+        } else {
+            return lcb_errmap_default(NULL, in);
+        }
     }
 }
 
@@ -361,6 +367,86 @@ H_sdcommon(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     o = pipeline->parent->cqdata;
     init_resp3(o, response, request, immerr, &resp);
     INVOKE_CALLBACK3(request, &resp, o, cbtype);
+}
+
+static void
+H_sdmmutate(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+    lcb_error_t immerr)
+{
+    lcb_t o;
+    lcb_RESPSDMMUTATE resp;
+
+    o = pipeline->parent->cqdata;
+
+    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
+
+    if (PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE) {
+        /* See what the actual failure was! */
+        lcb_U16 real_rc;
+        lcb_U8 failed_ix;
+        const char *buf = PACKET_BODY(response);
+
+        memcpy(&real_rc, buf, 2);
+        memcpy(&failed_ix, buf + 2, 1);
+
+        real_rc = ntohs(real_rc);
+        resp.rc = map_error(o, real_rc);
+        resp.failed_ix = failed_ix;
+    }
+    INVOKE_CALLBACK3(request, &resp, o, LCB_CALLBACK_SDMMUTATE);
+}
+
+static void
+H_sdmlookup(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+    lcb_error_t immerr)
+{
+    lcb_t o;
+    lcb_RESPSDMLOOKUP resp;
+
+    o = pipeline->parent->cqdata;
+
+    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
+
+    resp.responses = response;
+    resp.bufh = response->bufh;
+
+    INVOKE_CALLBACK3(request, &resp, o, LCB_CALLBACK_SDMLOOKUP);
+}
+
+LIBCOUCHBASE_API
+int
+lcb_sdmlookup_next(lcb_SDMLOOKUP_RESLIST resp, lcb_SDMLOOKUP_RESULT *out,
+    size_t *iter)
+{
+    packet_info *response = resp;
+    const char *buf;
+    lcb_U16 rc;
+    lcb_U32 vlen;
+
+    if (*iter == PACKET_NBODY(response)) {
+        return 0;
+    }
+
+    buf = PACKET_BODY(response);
+    buf += *iter;
+
+    memcpy(&rc, buf, 2);
+    memcpy(&vlen, buf + 2, 4);
+
+    rc = ntohs(rc);
+    vlen = ntohl(vlen);
+
+    out->status = map_error(NULL, rc);
+    out->nvalue = vlen;
+
+    if (out->status == LCB_SUCCESS) {
+        out->value = buf + 6;
+    } else {
+        out->value = NULL;
+    }
+
+    *iter += (6 + vlen);
+    return 1;
 }
 
 static void
@@ -709,6 +795,10 @@ mcreq_dispatch_response(
     case PROTOCOL_BINARY_CMD_SUBDOC_DELETE:
     case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
         INVOKE_OP(H_sdcommon);
+    case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
+        INVOKE_OP(H_sdmlookup);
+    case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION:
+        INVOKE_OP(H_sdmmutate);
 
     case PROTOCOL_BINARY_CMD_OBSERVE:
         INVOKE_OP(H_observe);

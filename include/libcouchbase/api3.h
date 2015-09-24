@@ -243,6 +243,8 @@ typedef enum {
     LCB_CALLBACK_SDCOUNTER, /**< lcb_sdcounter3() */
     LCB_CALLBACK_SDREMOVE, /**< lcb_sdremove3() */
     LCB_CALLBACK_SDSTORE, /**< lcb_sdstore() */
+    LCB_CALLBACK_SDMLOOKUP,
+    LCB_CALLBACK_SDMMUTATE,
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -735,6 +737,12 @@ typedef enum {
      * already in the array */
     LCB_SUBDOC_ARRAY_ADD_UNIQUE,
 
+    /** These should only be used when adding a 'multi' command */
+    LCB_SUBDOC_GET,
+    LCB_SUBDOC_EXISTS,
+    LCB_SUBDOC_COUNTER,
+    LCB_SUBDOC_REMOVE,
+
     LCB_SUBDOC_MAX
 } lcb_SUBDOCOP;
 
@@ -817,6 +825,76 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_sdcounter3(lcb_t instance, const void *cookie, const lcb_CMDSDCOUNTER *cmd);
 
+typedef struct lcb_SDMULTICTX_st lcb_SDMULTICTX;
+
+#define LCB_SDMULTI_MODE_LOOKUP 0
+#define LCB_SDMULTI_MODE_MUTATE 1
+typedef struct {
+    LCB_CMD_BASE;
+    int multimode;
+} lcb_CMDSDMULTI;
+
+/**
+ * Create a new multi lookup or multi mutation sub-document context. Additional
+ * path specifications may be added to the context using
+ */
+LIBCOUCHBASE_API
+lcb_SDMULTICTX *
+lcb_sdmultictx_new(lcb_t instance, const void *cookie,
+    const lcb_CMDSDMULTI *cmd, lcb_error_t *err);
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdmultictx_addcmd(lcb_SDMULTICTX *ctx, unsigned op, const lcb_CMDSDBASE *cmd);
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdmultictx_done(lcb_SDMULTICTX *ctx);
+
+LIBCOUCHBASE_API
+void
+lcb_sdmultictx_fail(lcb_SDMULTICTX *ctx);
+
+typedef void* lcb_SDMLOOKUP_RESLIST;
+
+/**
+ * Response structure for multi lookups. If the top level response is successful
+ * then the individual results may be retrieved using lcb_sdmlookup_next()
+ */
+typedef struct {
+    LCB_RESP_BASE
+    lcb_SDMLOOKUP_RESLIST responses;
+    /** Use with lcb_backbuf_ref/unref */
+    void *bufh;
+} lcb_RESPSDMLOOKUP;
+
+/**
+ * Structure for a single sub-document lookup
+ */
+typedef struct {
+    /* Value for the current lookup */
+    const void *value;
+    /* Length of current lookup value */
+    size_t nvalue;
+    /* Status code */
+    lcb_error_t status;
+} lcb_SDMLOOKUP_RESULT;
+
+/**
+ * Iterate over the results in a multi lookup operation
+ * @param resp the response received from within the callback
+ * @param[out] out structure to store the current result
+ * @param iter internal iterator. First call should initialize this to 0
+ */
+LIBCOUCHBASE_API
+int
+lcb_sdmlookup_next(lcb_SDMLOOKUP_RESLIST resp,
+    lcb_SDMLOOKUP_RESULT *out, size_t *iter);
+
+typedef struct {
+    LCB_RESP_BASE
+    int failed_ix;
+} lcb_RESPSDMMUTATE;
 
 /**@}*/
 

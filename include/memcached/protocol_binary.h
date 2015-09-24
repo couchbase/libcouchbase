@@ -181,7 +181,17 @@ extern "C"
 
         /** [For mutations only] Inserting the value would cause the document
          * to be too deep. */
-        PROTOCOL_BINARY_RESPONSE_SUBDOC_VALUE_ETOODEEP = 0xca
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_VALUE_ETOODEEP = 0xca,
+
+        /** [For multi-path commands only] An invalid combination of commands
+         * was specified. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_INVALID_COMBO = 0xcb,
+
+        /** [For multi-path commands only] Specified key was successfully
+         * found, but one or more path operations failed. Examine the individual
+         * lookup_result (MULTI_LOOKUP) / mutation_result (MULTI_MUTATION)
+         * structures for details. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE = 0xcc
 
     } protocol_binary_response_status;
 
@@ -238,6 +248,9 @@ extern "C"
         /* Audit */
         PROTOCOL_BINARY_CMD_AUDIT_PUT = 0x27,
         PROTOCOL_BINARY_CMD_AUDIT_CONFIG_RELOAD = 0x28,
+
+        /* Shutdown the server */
+        PROTOCOL_BINARY_CMD_SHUTDOWN = 0x29,
 
         /* These commands are used for range operations and exist within
          * this header for use in other projects.  Range operations are
@@ -424,6 +437,10 @@ extern "C"
         /* Arithmetic commands */
         PROTOCOL_BINARY_CMD_SUBDOC_COUNTER = 0xcf,
 
+        /* Multi-Path commands */
+        PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP = 0xd0,
+        PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION = 0xd1,
+
 
         /* Scrub the data */
         PROTOCOL_BINARY_CMD_SCRUB = 0xf0,
@@ -474,6 +491,9 @@ extern "C"
      * Definitions of sub-document flags.
      */
     typedef enum {
+        /* No flags set */
+        SUBDOC_FLAG_NONE = 0x0,
+
         /* (Mutation) Should non-existent intermediate paths be created? */
         SUBDOC_FLAG_MKDIR_P = 0x01
     } protocol_binary_subdoc_flag;
@@ -594,6 +614,10 @@ extern "C"
         struct {
             protocol_binary_request_header header;
             struct {
+                /*
+                 * Specifying a non-null expiration time is no longer
+                 * supported
+                 */
                 uint32_t expiration;
             } body;
         } message;
@@ -789,7 +813,7 @@ extern "C"
     typedef protocol_binary_response_get protocol_binary_response_gatq;
 
     /**
-     * Definition of the packet used by SUBDOCUMENT commands.
+     * Definition of the packet used by SUBDOCUMENT single-path commands.
      *
      * The path, which is always required, is in the Body, after the Key.
      *
@@ -823,6 +847,111 @@ extern "C"
         } message;
         uint8_t bytes[sizeof(protocol_binary_response_header)];
     } protocol_binary_response_subdocument;
+
+    /**
+     * Definition of the request packets used by SUBDOCUMENT multi-path commands.
+     *
+     * Multi-path sub-document commands differ from single-path in that they
+     * encode a series of multiple paths to operate on (from a single key).
+     * There are two multi-path commands - MULTI_LOOKUP and MULTI_MUTATION.
+     * - MULTI_LOOKUP consists of variable number of subdoc lookup commands
+     *                (SUBDOC_GET or SUBDOC_EXISTS).
+     * - MULTI_MUTATION consists of a variable number of subdoc mutation
+     *                  commands (i.e. all subdoc commands apart from
+     *                  SUBDOC_{GET,EXISTS}).
+     *
+     * Each path to be operated on is specified by an Operation Spec, which are
+     * contained in the body. This defines the opcode, path, and value
+     * (for mutations).
+     *
+     * A maximum of MULTI_MAX_PATHS paths (operations) can be encoded in a
+     * single multi-path command.
+     *
+     *  SUBDOC_MULTI_LOOKUP:
+     *    Header:                24 @0:  <protocol_binary_request_header>
+     *    Extras:                 0 @24: no extras
+     *    Body:         <variable>  @24:
+     *        Key            keylen @24: <variable>
+     *        1..MULTI_MAX_PATHS [Lookup Operation Spec]
+     *
+     *        Lookup Operation Spec:
+     *                            1 @0 : Opcode
+     *                            1 @1 : Flags
+     *                            2 @2 : Path Length
+     *                      pathlen @4 : Path
+     */
+    static const int PROTOCOL_BINARY_SUBDOC_MULTI_MAX_PATHS = 16;
+
+    typedef struct {
+        uint8_t opcode;
+        uint8_t flags;
+        uint16_t pathlen;
+     /* uint8_t path[pathlen] */
+    } protocol_binary_subdoc_multi_lookup_spec;
+
+    typedef protocol_binary_request_no_extras protocol_binary_request_subdocument_multi_lookup;
+
+    /*
+     *
+     * SUBDOC_MULTI_MUTATION
+     *    Header:                24 @0:  <protocol_binary_request_header>
+     *    Extras:                 0 @24:
+     *    Body:           variable  @24:
+     *        Key            keylen @24: <variable>
+     *        1..MULTI_MAX_PATHS [Mutation Operation Spec]
+     *
+     *        Mutation Operation Spec:
+     *                            1 @0         : Opcode
+     *                            1 @1         : Flags
+     *                            2 @2         : Path Length
+     *                            4 @4         : Value Length
+     *                      pathlen @8         : Path
+     *                       vallen @8+pathlen : Value
+     */
+    typedef struct {
+        uint8_t opcode;
+        uint8_t flags;
+        uint16_t pathlen;
+        uint32_t valuelen;
+     /* uint8_t path[pathlen] */
+     /* uint8_t value[valuelen]  */
+    } protocol_binary_subdoc_multi_mutation_spec;
+
+    typedef protocol_binary_request_no_extras protocol_binary_request_subdocument_multi_mutation;
+
+    /**
+     * Definition of the response packets used by SUBDOCUMENT multi-path
+     * commands.
+     *
+     * SUBDOC_MULTI_LOOKUP - Body consists of a series of lookup_result structs,
+     *                       one per lookup_spec in the request.
+     *
+     * Lookup Result:
+     *                            2 @0 : status
+     *                            4 @2 : resultlen
+     *                    resultlen @6 : result
+     */
+    typedef struct {
+        protocol_binary_request_header header;
+        /* Variable-length 1..PROTOCOL_BINARY_SUBDOC_MULTI_MAX_PATHS */
+        protocol_binary_subdoc_multi_lookup_spec body[1];
+    } protocol_binary_response_subdoc_multi_lookup;
+
+    /**
+     * SUBDOC_MULTI_MUTATION - Body is either empty (if all mutations
+     *                         successful), or contains the sub-code and
+     *                         index of the first failed mutation spec..
+     * Mutation Result (failure):
+     *                   2 @0 : Status code of first spec which failed.
+     *                   1 @2 : 0-based index of the first spec which failed.
+     */
+    typedef union {
+        struct {
+            protocol_binary_response_header header;
+        } message;
+        uint8_t bytes[sizeof(protocol_binary_response_header)];
+    } protocol_binary_response_subdoc_multi_mutation;
+
 
     /**
      * Definition of a request for a range operation.
@@ -1339,8 +1468,8 @@ extern "C"
             struct {
                 /**
                  * 0x01 - Active
-                 * 0x02 - Pending
-                 * 0x03 - Replica
+                 * 0x02 - Replica
+                 * 0x03 - Pending
                  * 0x04 - Dead
                  */
                 uint8_t state;
@@ -1643,6 +1772,16 @@ extern "C"
     } protocol_binary_request_audit_put;
 
     typedef protocol_binary_response_no_extras protocol_binary_response_audit_put;
+
+    /**
+     * The shutdown message is sent from ns_server to memcached to tell
+     * memcached to initiate a clean shutdown. This is a privileged
+     * command and carries no payload, but the CAS field needs to be
+     * set to the current session token (see GET/SET_CTRL_TOKEN)
+     */
+    typedef protocol_binary_request_no_extras protocol_binary_request_shutdown;
+    typedef protocol_binary_response_no_extras protocol_binary_response_shutdown;
+
 
     /**
      * The PROTOCOL_BINARY_CMD_OBSERVE_SEQNO command is used by the

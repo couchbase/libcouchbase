@@ -15,6 +15,8 @@
  *   limitations under the License.
  */
 #include "internal.h"
+#include <vector>
+#include <string>
 
 static lcb_size_t
 get_value_size(mc_PACKET *packet)
@@ -44,7 +46,7 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     mc_PIPELINE *pipeline = NULL;
     mc_PACKET *packet = NULL;
     mc_REQDATA *rdata = NULL;
-    lcb_VALBUF valbuf = { 0 };
+    lcb_VALBUF valbuf = { LCB_KV_COPY };
     const lcb_VALBUF *valbuf_p = &valbuf;
     lcb_IOV tmpiov[2];
     char numbuf[24] = { 0 };
@@ -166,6 +168,14 @@ sdmode_to_opcode(unsigned mode)
         return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST;
     } else if (mode == LCB_SUBDOC_ARRAY_ADD_UNIQUE) {
         return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE;
+    } else if (mode == LCB_SUBDOC_GET) {
+        return PROTOCOL_BINARY_CMD_SUBDOC_GET;
+    } else if (mode == LCB_SUBDOC_EXISTS) {
+        return PROTOCOL_BINARY_CMD_SUBDOC_EXISTS;
+    } else if (mode == LCB_SUBDOC_REMOVE) {
+        return PROTOCOL_BINARY_CMD_SUBDOC_DELETE;
+    } else if (mode == LCB_SUBDOC_COUNTER) {
+        return PROTOCOL_BINARY_CMD_SUBDOC_COUNTER;
     } else {
         return 0xff;
     }
@@ -213,4 +223,211 @@ lcb_sdcounter3(lcb_t instance, const void *cookie, const lcb_CMDSDCOUNTER *cmd)
 {
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
         PROTOCOL_BINARY_CMD_SUBDOC_COUNTER, SDTYPE_COUNTER);
+}
+
+struct lcb_SDMULTICTX_st {
+    lcb_t instance;
+    int mode;
+    mc_PACKET *pkt;
+    mc_PIPELINE *pipeline;
+    protocol_binary_request_header hdr;
+    std::vector<char> extra_body;
+
+    ~lcb_SDMULTICTX_st() {
+        if (pkt != NULL) {
+            mcreq_wipe_packet(pipeline, pkt);
+            mcreq_release_packet(pipeline, pkt);
+        }
+    }
+
+    template <typename T> void add_field(T itm, size_t len) {
+        const char *b = reinterpret_cast<const char *>(&itm);
+        extra_body.insert(extra_body.end(), b, b + len);
+    }
+
+    void add_buf(const void *bytes, size_t n) {
+        const char *b = reinterpret_cast<const char*>(bytes);
+        extra_body.insert(extra_body.end(), b, b + n);
+    }
+
+    inline lcb_error_t add_spec(lcb_U8 opcode,
+        const lcb_CMDSDBASE *cmd, const lcb_VALBUF *vb = NULL);
+
+    inline lcb_error_t addcmd(unsigned op, const lcb_CMDSDBASE *cmd);
+
+    inline lcb_error_t done();
+};
+
+lcb_error_t
+lcb_SDMULTICTX_st::add_spec(lcb_U8 opcode, const lcb_CMDSDBASE *cmd,
+    const lcb_VALBUF *vb)
+{
+    // opcode
+    add_field(opcode, 1);
+
+    // flags
+    lcb_U8 sdflags = 0;
+    if (cmd->cmdflags & LCB_CMDSUBDOC_F_MKINTERMEDIATES) {
+        sdflags = SUBDOC_FLAG_MKDIR_P;
+    }
+    add_field(sdflags, 1);
+
+    if (!cmd->npath) {
+        return LCB_EMPTY_KEY;
+    }
+
+    // Path length
+    add_field(static_cast<lcb_U16>(htons(cmd->npath)), 2);
+
+    // Body length (if needed)
+    if (vb != NULL) {
+        if (vb->vtype != LCB_KV_COPY) {
+            return LCB_EINVAL;
+        }
+        add_field(static_cast<lcb_U32>(htonl(vb->u_buf.contig.nbytes)), 4);
+    }
+
+    // Add the actual path
+
+    // Add the body, if present
+    add_buf(cmd->path, cmd->npath);
+    if (vb != NULL && vb->u_buf.contig.nbytes) {
+        add_buf(vb->u_buf.contig.bytes, vb->u_buf.contig.nbytes);
+    }
+    return LCB_SUCCESS;
+}
+
+lcb_error_t
+lcb_SDMULTICTX_st::addcmd(unsigned op, const lcb_CMDSDBASE *cmd)
+{
+    lcb_U8 sdcode = sdmode_to_opcode(op);
+    if (sdcode == 0xff) {
+        return LCB_EINVAL;
+    }
+
+    // Add the opcode to the spec:
+    if (op == LCB_SUBDOC_GET || op == LCB_SUBDOC_EXISTS) {
+        if (mode != LCB_SDMULTI_MODE_LOOKUP) {
+            return LCB_OPTIONS_CONFLICT;
+        }
+        return add_spec(sdcode, cmd);
+    }
+
+    if (mode != LCB_SDMULTI_MODE_MUTATE) {
+        return LCB_OPTIONS_CONFLICT;
+    }
+
+    if (op == LCB_SUBDOC_REMOVE) {
+        return add_spec(sdcode, cmd);
+
+    } else if (op == LCB_SUBDOC_COUNTER) {
+        const lcb_CMDSDCOUNTER *ccmd = reinterpret_cast<const lcb_CMDSDCOUNTER*>(cmd);
+        char buf[24];
+        size_t nbuf = sprintf(buf, "%lld", ccmd->delta);
+        lcb_VALBUF vb = { LCB_KV_COPY };
+        vb.u_buf.contig.bytes = buf;
+        vb.u_buf.contig.nbytes = nbuf;
+        return add_spec(sdcode, cmd, &vb);
+    } else {
+        const lcb_CMDSDSTORE *scmd = reinterpret_cast<const lcb_CMDSDSTORE*>(cmd);
+        return add_spec(sdcode, cmd, &scmd->value);
+    }
+}
+
+lcb_error_t
+lcb_SDMULTICTX_st::done()
+{
+    if (extra_body.empty()) {
+        delete this;
+        return LCB_EINVAL;
+    }
+
+    lcb_VALBUF vb = { LCB_KV_COPY };
+    vb.u_buf.contig.bytes = &extra_body[0];
+    vb.u_buf.contig.nbytes = extra_body.size();
+
+    lcb_error_t rc = mcreq_reserve_value(pipeline, pkt, &vb);
+    if (rc != LCB_SUCCESS) {
+        delete this;
+        return rc;
+    }
+
+    // Get the body size
+    hdr.request.bodylen = htonl(ntohs(hdr.request.keylen) + extra_body.size());
+    memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof hdr.bytes);
+    mcreq_sched_add(pipeline, pkt);
+
+    pkt = NULL;
+    pipeline = NULL;
+    delete this;
+
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API
+lcb_SDMULTICTX *
+lcb_sdmultictx_new(lcb_t instance, const void *cookie,
+    const lcb_CMDSDMULTI *cmd, lcb_error_t *err)
+{
+    *err = LCB_SUCCESS;
+    lcb_SDMULTICTX *ctx = NULL;
+    lcb_U8 opcode;
+
+    if (!cmd->key.contig.nbytes) {
+        *err = LCB_EMPTY_KEY;
+        return NULL;
+    }
+    if (cmd->multimode == LCB_SDMULTI_MODE_LOOKUP) {
+        opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP;
+    } else if (cmd->multimode == LCB_SDMULTI_MODE_MUTATE) {
+        opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION;
+    } else {
+        *err = LCB_EINVAL;
+        return NULL;
+    }
+
+    ctx = new lcb_SDMULTICTX();
+    ctx->instance = instance;
+    ctx->mode = cmd->multimode;
+
+    *err = mcreq_basic_packet(&instance->cmdq,
+        reinterpret_cast<const lcb_CMDBASE*>(cmd), &ctx->hdr, 0,
+        &ctx->pkt, &ctx->pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
+
+    if (*err != LCB_SUCCESS) {
+        delete ctx;
+        return NULL;
+    }
+
+    ctx->hdr.request.magic = PROTOCOL_BINARY_REQ;
+    ctx->hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    ctx->hdr.request.extlen = ctx->pkt->extlen;
+    ctx->hdr.request.opaque = ctx->pkt->opaque;
+    ctx->hdr.request.cas = cmd->cas;
+    ctx->hdr.request.opcode = opcode;
+
+    MCREQ_PKT_RDATA(ctx->pkt)->cookie = cookie;
+
+    return ctx;
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdmultictx_addcmd(lcb_SDMULTICTX *ctx, unsigned op, const lcb_CMDSDBASE *cmd)
+{
+    return ctx->addcmd(op, cmd);
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdmultictx_done(lcb_SDMULTICTX *ctx)
+{
+    return ctx->done();
+}
+
+LIBCOUCHBASE_API
+void
+lcb_sdmultictx_fail(lcb_SDMULTICTX *ctx)
+{
+    delete ctx;
 }
