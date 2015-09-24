@@ -11,6 +11,7 @@ FIND_PATH(LIBEVENT_INCLUDE_DIR evutil.h
                ENV LIBEVENT_DIR
           PATH_SUFFIXES include
           PATHS
+               ${LIBEVENT_ROOT}
                ${DEPS_INCLUDE_DIR}
                ~/Library/Frameworks
                /Library/Frameworks
@@ -23,7 +24,9 @@ FIND_LIBRARY(LIBEVENT_LIBRARIES
              NAMES event_core libevent_core
              HINTS
                  ENV LIBEVENT_DIR
+             PATH_SUFFIXES lib
              PATHS
+                 ${LIBEVENT_ROOT}
                  ${DEPS_LIB_DIR}
                  ~/Library/Frameworks
                  /Library/Frameworks
