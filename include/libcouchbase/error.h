@@ -462,7 +462,7 @@ typedef enum {
       "Sub-document contains too many components") \
     X(LCB_SUBDOC_DOC_E2DEEP, 0x43, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "Existing document contains too many levels of nesting") \
-    X(LCB_SUBDOC_DOC_CANTINSERT, 0x44, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN, \
+    X(LCB_SUBDOC_VALUE_CANTINSERT, 0x44, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN, \
       "Subdocument operation would invalidate the JSON") \
     X(LCB_SUBDOC_DOC_NOTJSON, 0x45, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
       "Existing document is not valid JSON") \
@@ -473,7 +473,9 @@ typedef enum {
     X(LCB_SUBDOC_PATH_EEXISTS, 0x48, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
        "The given path already exists in the document") \
     X(LCB_SUBDOC_MULTI_FAILURE, 0x49, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
-       "Could not execute one or more multi lookups or mutations")
+       "Could not execute one or more multi lookups or mutations") \
+    X(LCB_SUBDOC_VALUE_E2DEEP, 0x4A, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN, \
+        "Value is too deep to insert")
 
 /** Error codes returned by the library. */
 typedef enum {

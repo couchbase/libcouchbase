@@ -737,6 +737,9 @@ typedef enum {
      * already in the array */
     LCB_SUBDOC_ARRAY_ADD_UNIQUE,
 
+    /** Add the value at the given array index */
+    LCB_SUBDOC_ARRAY_INSERT,
+
     /** These should only be used when adding a 'multi' command */
     LCB_SUBDOC_GET,
     LCB_SUBDOC_EXISTS,

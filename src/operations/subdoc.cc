@@ -21,10 +21,14 @@
 static lcb_size_t
 get_value_size(mc_PACKET *packet)
 {
-    if (packet->flags & MCREQ_F_VALUE_IOV) {
-        return packet->u_value.multi.total_length;
+    if (packet->flags & MCREQ_F_HASVALUE) {
+        if (packet->flags & MCREQ_F_VALUE_IOV) {
+            return packet->u_value.multi.total_length;
+        } else {
+            return packet->u_value.single.size;
+        }
     } else {
-        return packet->u_value.single.size;
+        return 0;
     }
 }
 
@@ -168,6 +172,8 @@ sdmode_to_opcode(unsigned mode)
         return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST;
     } else if (mode == LCB_SUBDOC_ARRAY_ADD_UNIQUE) {
         return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE;
+    } else if (mode == LCB_SUBDOC_ARRAY_INSERT) {
+        return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT;
     } else if (mode == LCB_SUBDOC_GET) {
         return PROTOCOL_BINARY_CMD_SUBDOC_GET;
     } else if (mode == LCB_SUBDOC_EXISTS) {
