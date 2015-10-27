@@ -44,7 +44,6 @@ SET(LCB_CORE_SRC
     ${LCB_N1QL_SRC}
     src/bootstrap.c
     src/callbacks.c
-    src/cntl.c
     src/dump.c
     src/connspec.c
     src/handler.c
@@ -71,4 +70,5 @@ SET(LCB_CORE_CXXSRC
     src/n1ql/n1ql.cc
     src/n1ql/ixmgmt.cc
     src/cbft.cc
-    src/operations/subdoc.cc)
+    src/operations/subdoc.cc
+    src/cntl.cc)
