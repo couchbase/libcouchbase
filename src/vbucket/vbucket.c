@@ -1139,6 +1139,17 @@ lcbvb_get_hostport(lcbvb_CONFIG *cfg,
 }
 
 LIBCOUCHBASE_API
+const char *
+lcbvb_get_hostname(const lcbvb_CONFIG *cfg, unsigned ix)
+{
+    if (cfg->nsrv > ix) {
+        return cfg->servers[ix].hostname;
+    } else {
+        return NULL;
+    }
+}
+
+LIBCOUCHBASE_API
 int
 lcbvb_get_randhost(const lcbvb_CONFIG *cfg,
     lcbvb_SVCTYPE type, lcbvb_SVCMODE mode)
