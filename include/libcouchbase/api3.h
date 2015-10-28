@@ -1241,6 +1241,13 @@ lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
 #define LCB_CMDHTTP_F_STREAM 1<<16
 
 /**
+ * @private
+ * If specified, the lcb_CMDHTTP::cas field becomes the timeout for this
+ * specific request.
+ */
+#define LCB_CMDHTTP_F_CASTMO 1<<17
+
+/**
  * Structure for performing an HTTP request.
  * Note that the key and nkey fields indicate the _path_ for the API
  */
