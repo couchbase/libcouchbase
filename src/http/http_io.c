@@ -150,6 +150,7 @@ io_read(lcbio_CTX *ctx, unsigned nr)
     if (rv == -1) {
         lcb_error_t err;
         if (req->redirect_to) {
+            lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE);
             if ((err = lcb_htreq_redirect(req)) == LCB_SUCCESS) {
                 goto GT_DONE;
             }
