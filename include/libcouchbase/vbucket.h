@@ -115,7 +115,7 @@ typedef enum {
 
 /**@volatile. ABI/API compatibility not guaranteed between versions.
  * @brief Structure containing the configuration.*/
-typedef struct {
+typedef struct lcbvb_CONFIG_st {
     lcbvb_DISTMODE dtype; /**< Type of bucket/distribution */
     unsigned nvb; /**< Number of vbuckets */
     unsigned ndatasrv; /**< Number of data (memcached) servers */
