@@ -1151,8 +1151,8 @@ lcbvb_get_hostname(const lcbvb_CONFIG *cfg, unsigned ix)
 
 LIBCOUCHBASE_API
 int
-lcbvb_get_randhost(const lcbvb_CONFIG *cfg,
-    lcbvb_SVCTYPE type, lcbvb_SVCMODE mode)
+lcbvb_get_randhost_ex(const lcbvb_CONFIG *cfg,
+    lcbvb_SVCTYPE type, lcbvb_SVCMODE mode, int *used)
 {
     size_t nn, oix = 0;
 
@@ -1166,6 +1166,11 @@ lcbvb_get_randhost(const lcbvb_CONFIG *cfg,
         const lcbvb_SERVICES *svcs = mode == LCBVB_SVCMODE_PLAIN ?
                 &server->svc : &server->svc_ssl;
         int has_svc = 0;
+
+        // Check if this node is in the exclude list
+        if (used && used[nn]) {
+            continue;
+        }
 
         has_svc =
                 (type == LCBVB_SVCTYPE_DATA && svcs->data) ||
@@ -1188,6 +1193,14 @@ lcbvb_get_randhost(const lcbvb_CONFIG *cfg,
     nn = rand();
     nn %= oix;
     return cfg->randbuf[nn];
+}
+
+LIBCOUCHBASE_API
+int
+lcbvb_get_randhost(const lcbvb_CONFIG *cfg,
+    lcbvb_SVCTYPE type, lcbvb_SVCMODE mode)
+{
+    return lcbvb_get_randhost_ex(cfg, type, mode, NULL);
 }
 
 LIBCOUCHBASE_API

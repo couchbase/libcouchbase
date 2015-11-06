@@ -500,8 +500,8 @@ void lcb_destroy(lcb_t instance)
                 lcb_http_request_t htreq = (lcb_http_request_t)hs->items[ii];
 
                 /* Prevents lcb's globals from being modified during destruction */
-                htreq->status |= LCB_HTREQ_S_NOLCB;
-                lcb_http_request_finish(instance, htreq, LCB_ERROR);
+                lcb_htreq_block_callback(htreq);
+                lcb_htreq_finish(instance, htreq, LCB_ERROR);
             }
         }
     }
