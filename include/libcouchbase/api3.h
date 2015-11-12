@@ -666,6 +666,21 @@ typedef struct {
 } while (0);
 
 /**
+ * @brief Set value from a series of input buffers
+ * @param scmd the command which needs a value
+ * @param iov an array of @ref lcb_IOV structures
+ * @param niov number of items in the array.
+ *
+ * The buffers (and the IOV array itself)
+ * need to remain valid only until the scheduler function is called
+ */
+#define LCB_CMD_SET_VALUEIOV(scmd, iovs, niovs) do { \
+    (scmd)->value.vtype = LCB_KV_IOVCOPY; \
+    (scmd)->value.u_buf.multi.iov = iovs; \
+    (scmd)->value.u_buf.multi.niov = niovs; \
+} while (0);
+
+/**
  * @volatile
  * @brief Spool a single storage request
  * @param instance the handle
