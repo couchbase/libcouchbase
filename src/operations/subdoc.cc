@@ -41,6 +41,22 @@ get_value_size(mc_PACKET *packet)
 #define SDTYPE_COUNTER 1
 #define SDTYPE_STORE 2
 
+static bool
+empty_path_allowed(uint8_t opcode)
+{
+    switch (opcode) {
+    case PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD:
+    case PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT:
+    case PROTOCOL_BINARY_CMD_SUBDOC_DELETE:
+    case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT:
+    case PROTOCOL_BINARY_CMD_SUBDOC_REPLACE:
+    case PROTOCOL_BINARY_CMD_SUBDOC_COUNTER:
+        return false;
+    default:
+        return true;
+    }
+}
+
 static lcb_error_t
 sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     int sdtype, protocol_binary_request_subdocument *request,
@@ -138,6 +154,10 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     mc_PACKET *packet;
     mc_PIPELINE *pipeline;
     lcb_error_t err;
+
+    if (!cmd->npath && !empty_path_allowed(op)) {
+        return LCB_EINVAL;
+    }
 
     protocol_binary_request_subdocument scmd;
     protocol_binary_request_header *hdr = &scmd.message.header;
@@ -278,7 +298,7 @@ lcb_SDMULTICTX_st::add_spec(lcb_U8 opcode, const lcb_CMDSDBASE *cmd,
     }
     add_field(sdflags, 1);
 
-    if (!cmd->npath) {
+    if (!cmd->npath && !empty_path_allowed(opcode)) {
         return LCB_EMPTY_KEY;
     }
 
@@ -296,7 +316,9 @@ lcb_SDMULTICTX_st::add_spec(lcb_U8 opcode, const lcb_CMDSDBASE *cmd,
     // Add the actual path
 
     // Add the body, if present
-    add_buf(cmd->path, cmd->npath);
+    if (cmd->npath) {
+        add_buf(cmd->path, cmd->npath);
+    }
     if (vb != NULL && vb->u_buf.contig.nbytes) {
         add_buf(vb->u_buf.contig.bytes, vb->u_buf.contig.nbytes);
     }
