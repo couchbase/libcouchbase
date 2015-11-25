@@ -383,9 +383,6 @@ INSTALL_PDBS(couchbase)
 SET(_lcb_tarname "libcouchbase-${LCB_VERSION}")
 SET(_lcb_manifest "${LCB_GENINFODIR}/MANIFEST")
 
-ADD_EXECUTABLE(sdmulti ${SOURCE_ROOT}/tests/LOCAL/sdmulti.cc)
-TARGET_LINK_LIBRARIES(sdmulti couchbase)
-
 # pkg-config stuff goes with installation
 IF(NOT WIN32)
     CONFIGURE_FILE(packaging/libcouchbase.pc.in packaging/libcouchbase.pc @ONLY)
