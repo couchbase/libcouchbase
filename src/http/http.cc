@@ -297,7 +297,7 @@ Request::assign_url(const char *base, size_t nbase, const char *path, size_t npa
                 url.append("/");
             }
 
-            size_t n_added;
+            lcb_size_t n_added;
             std::vector<char> encpath;
             encpath.resize((npath * 3) + 1);
             char *pp = &encpath[0];
