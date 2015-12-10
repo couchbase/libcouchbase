@@ -51,6 +51,7 @@ empty_path_allowed(uint8_t opcode)
     case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT:
     case PROTOCOL_BINARY_CMD_SUBDOC_REPLACE:
     case PROTOCOL_BINARY_CMD_SUBDOC_COUNTER:
+    case PROTOCOL_BINARY_CMD_SUBDOC_GET:
         return false;
     default:
         return true;
