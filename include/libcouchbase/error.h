@@ -469,7 +469,8 @@ typedef enum {
     X(LCB_SUBDOC_NUM_ERANGE, 0x46, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
        "The existing numeric value is too large") \
     X(LCB_SUBDOC_DELTA_ERANGE, 0x47, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
-       "The numeric operation would yield a number that is too large") \
+       "The numeric operation would yield a number that is too large, or " \
+       "a zero delta was specified") \
     X(LCB_SUBDOC_PATH_EEXISTS, 0x48, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
        "The given path already exists in the document") \
     X(LCB_SUBDOC_MULTI_FAILURE, 0x49, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
