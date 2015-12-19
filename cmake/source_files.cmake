@@ -68,4 +68,5 @@ SET(LCB_CORE_CXXSRC
     src/http/http.cc
     src/http/http_io.cc
     src/n1ql/params.cc
-    src/n1ql/n1ql.cc)
+    src/n1ql/n1ql.cc
+    src/operations/subdoc.cc)
