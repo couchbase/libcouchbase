@@ -451,7 +451,27 @@ typedef enum {
     /** The server replied that the given mutation has been lost */ \
     X(LCB_MUTATION_LOST, 0x3E, LCB_ERRTYPE_SRVGEN,\
       "The given mutation has been permanently lost due to the node failing " \
-      "before replication")
+      "before replication") \
+    X(LCB_SUBDOC_PATH_ENOENT, 0x3F, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
+      "Sub-document path does not exist") \
+    X(LCB_SUBDOC_PATH_MISMATCH, 0x40, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
+      "Type of element in sub-document path conflicts with type in document") \
+    X(LCB_SUBDOC_PATH_EINVAL, 0x41, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN, \
+      "Malformed sub-document path") \
+    X(LCB_SUBDOC_PATH_E2BIG, 0x42, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN, \
+      "Sub-document contains too many components") \
+    X(LCB_SUBDOC_DOC_E2DEEP, 0x43, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
+      "Existing document contains too many levels of nesting") \
+    X(LCB_SUBDOC_DOC_CANTINSERT, 0x44, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN, \
+      "Subdocument operation would invalidate the JSON") \
+    X(LCB_SUBDOC_DOC_NOTJSON, 0x45, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
+      "Existing document is not valid JSON") \
+    X(LCB_SUBDOC_NUM_ERANGE, 0x46, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
+       "The existing numeric value is too large") \
+    X(LCB_SUBDOC_DELTA_ERANGE, 0x47, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
+       "The numeric operation would yield a number that is too large") \
+    X(LCB_SUBDOC_PATH_EEXISTS, 0x48, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
+       "The given path already exists in the document")
 
 /** Error codes returned by the library. */
 typedef enum {

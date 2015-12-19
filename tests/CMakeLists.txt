@@ -51,6 +51,9 @@ ADD_EXECUTABLE(sock-tests EXCLUDE_FROM_ALL nonio_tests.cc
 ADD_EXECUTABLE(vbucket-tests EXCLUDE_FROM_ALL nonio_tests.cc ${T_VBTEST_SRC})
 ADD_EXECUTABLE(htparse-tests EXCLUDE_FROM_ALL nonio_tests.cc htparse/t_basic.cc)
 
+ADD_EXECUTABLE(subdoc-example EXCLUDE_FROM_ALL subdoc-example.cc)
+TARGET_LINK_LIBRARIES(subdoc-example couchbase)
+
 FILE(GLOB T_IO_SRC iotests/*.cc)
 IF(LCB_NO_MOCK)
     ADD_EXECUTABLE(unit-tests EXCLUDE_FROM_ALL unit_tests.cc)

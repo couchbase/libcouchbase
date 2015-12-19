@@ -238,6 +238,11 @@ typedef enum {
     LCB_CALLBACK_CBFLUSH, /**< lcb_cbflush3() */
     LCB_CALLBACK_OBSEQNO, /**< For lcb_observe_seqno3() */
     LCB_CALLBACK_STOREDUR, /** <for lcb_storedur3() */
+    LCB_CALLBACK_SDGET, /**< lcb_sdget3() */
+    LCB_CALLBACK_SDEXISTS, /**< lcb_sdexists3() */
+    LCB_CALLBACK_SDCOUNTER, /**< lcb_sdcounter3() */
+    LCB_CALLBACK_SDREMOVE, /**< lcb_sdremove3() */
+    LCB_CALLBACK_SDSTORE, /**< lcb_sdstore() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -703,6 +708,115 @@ typedef struct {
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd);
+
+/**@}*/
+
+
+/**@name Sub-Document operations
+ * @{
+ */
+typedef enum {
+    /** Replace the value at the subdocument path */
+    LCB_SUBDOC_REPLACE = 1,
+
+    /** Add the value at the given path, if the given path does not exist */
+    LCB_SUBDOC_DICT_ADD,
+
+    /** Unconditionally set the value at the path */
+    LCB_SUBDOC_DICT_UPSERT,
+
+    /** Prepend the value to the array indicated by the path */
+    LCB_SUBDOC_ARRAY_ADD_FIRST,
+
+    /** Append the value to the array indicated by the path */
+    LCB_SUBDOC_ARRAY_ADD_LAST,
+
+    /**Add the value to the array indicated by the path, if the value is not
+     * already in the array */
+    LCB_SUBDOC_ARRAY_ADD_UNIQUE,
+
+    LCB_SUBDOC_MAX
+} lcb_SUBDOCOP;
+
+/** Create intermediate paths */
+#define LCB_CMDSUBDOC_F_MKINTERMEDIATES (1<<16)
+
+#define LCB_SUBDOC_CMD_BASE \
+    LCB_CMD_BASE; \
+    const void *path; /**< Sub-document path */ \
+    size_t npath /**< Length of path */
+
+#define LCB_SDCMD_SET_PATH(scmd, p, n) do { \
+    (scmd)->path = p; \
+    (scmd)->npath = n; \
+} while (0);
+
+typedef struct {
+    LCB_SUBDOC_CMD_BASE;
+} lcb_CMDSDBASE;
+
+typedef lcb_CMDSDBASE lcb_CMDSDGET;
+typedef lcb_CMDSDBASE lcb_CMDSDEXISTS;
+typedef lcb_CMDSDBASE lcb_CMDSDREMOVE;
+
+/**
+ * Gets the given path within the document.
+ * Upon completion, LCB_CALLBACK_SDGET callback is invoked with a response
+ * of type lcb_RESPGET
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdget3(lcb_t instance, const void *cookie, const lcb_CMDSDGET *cmd);
+
+/**
+ * Checks if the given path exists within the document
+ * Upon completion, the LCB_CALLBACK_SDEXISTS callback is invoked with a
+ * response type of lcb_RESPBASE, with the status code indicating success
+ * or failure.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdexists3(lcb_t instance, const void *cookie, const lcb_CMDSDEXISTS *cmd);
+
+typedef struct {
+    LCB_SUBDOC_CMD_BASE;
+    /** The value to use. This must be parseable as a JSON primitive */
+    lcb_VALBUF value;
+    /** The mode to use. See lcb_SUBDOCOP */
+    unsigned mode;
+} lcb_CMDSDSTORE;
+/**
+ * Store a given value in the given path within the document.
+ * Upon completion, the LCB_CALLBACK_SDSTORE callback will be invoked
+ * with a response type of lcb_RESPBASE.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdstore3(lcb_t instance, const void *cookie, const lcb_CMDSDSTORE *cmd);
+
+/**
+ * Remove a given path from a document
+ * Upon completion, the LCB_CALLBACK_SDREMOVE callback is invoked with a
+ * response type of lcb_RESBASE
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdremove3(lcb_t instance, const void *cookie, const lcb_CMDSDREMOVE *cmd);
+
+typedef struct {
+    LCB_SUBDOC_CMD_BASE;
+    lcb_S64 delta;
+} lcb_CMDSDCOUNTER;
+/**
+ * Perform arithmetic on the given path, combining the value with the new value
+ * and returning the counter's value
+ * Upon completion, the LCB_CALLBACK_SDCOUNTER callback is invoked with a
+ * response of type lcb_RESPGET, with the value being the new counter value.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_sdcounter3(lcb_t instance, const void *cookie, const lcb_CMDSDCOUNTER *cmd);
+
 
 /**@}*/
 

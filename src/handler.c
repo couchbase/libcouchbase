@@ -39,6 +39,7 @@ lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
     case PROTOCOL_BINARY_RESPONSE_EINTERNAL:
         return LCB_EINTERNAL;
     default:
+        fprintf(stderr, "COUCHBASE: Unhandled memcached status=0x%x\n", in);
         return LCB_UNKNOWN_MEMCACHED_ERROR;
     }
 }
@@ -58,6 +59,26 @@ map_error(lcb_t instance, int in)
         return LCB_ENOMEM;
     case PROTOCOL_BINARY_RESPONSE_KEY_EEXISTS:
         return LCB_KEY_EEXISTS;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_ENOENT:
+        return LCB_SUBDOC_PATH_ENOENT;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_MISMATCH:
+        return LCB_SUBDOC_PATH_MISMATCH;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_EINVAL:
+        return LCB_SUBDOC_PATH_EINVAL;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_E2BIG:
+        return LCB_SUBDOC_PATH_E2BIG;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_DOC_E2DEEP:
+        return LCB_SUBDOC_DOC_E2DEEP;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_VALUE_CANTINSERT:
+        return LCB_SUBDOC_DOC_CANTINSERT;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_DOC_NOTJSON:
+        return LCB_SUBDOC_DOC_NOTJSON;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_NUM_ERANGE:
+        return LCB_SUBDOC_NUM_ERANGE;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_DELTA_ERANGE:
+        return LCB_SUBDOC_DELTA_ERANGE;
+    case PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_EEXISTS:
+        return LCB_SUBDOC_PATH_EEXISTS;
     case PROTOCOL_BINARY_RESPONSE_EINVAL:
         return LCB_EINVAL;
     case PROTOCOL_BINARY_RESPONSE_NOT_STORED:
@@ -285,6 +306,61 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     maybe_decompress(instance, response, &resp, &freeptr);
     rd->procs->handler(pipeline, request, resp.rc, &resp);
     free(freeptr);
+}
+
+static void
+H_sdget(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+        lcb_error_t immerr)
+{
+    lcb_t o;
+    lcb_RESPGET resp = { 0 };
+    void *freeptr = NULL;
+
+    o = pipeline->parent->cqdata;
+    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
+    if (resp.rc == LCB_SUCCESS && PACKET_NVALUE(response)) {
+        resp.value = PACKET_VALUE(response);
+        resp.nvalue = PACKET_NVALUE(response);
+        resp.bufh = response->bufh;
+    }
+
+    maybe_decompress(o, response, &resp, &freeptr);
+
+    INVOKE_CALLBACK3(request, &resp, o,
+        PACKET_OPCODE(response) == PROTOCOL_BINARY_CMD_SUBDOC_COUNTER ?
+                LCB_CALLBACK_SDCOUNTER : LCB_CALLBACK_SDGET);
+
+    free(freeptr);
+}
+
+static void
+H_sdcommon(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+         lcb_error_t immerr)
+{
+    lcb_t o;
+    lcb_RESPBASE resp = { 0 };
+    int cbtype;
+    const uint8_t op = PACKET_OPCODE(response);
+
+    if (op == PROTOCOL_BINARY_CMD_SUBDOC_EXISTS) {
+        cbtype = LCB_CALLBACK_SDEXISTS;
+    } else if (op == PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE ||
+               op == PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST ||
+               op == PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST ||
+               op == PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD ||
+               op == PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT ||
+               op == PROTOCOL_BINARY_CMD_SUBDOC_REPLACE) {
+        cbtype = LCB_CALLBACK_SDSTORE;
+    } else if (op == PROTOCOL_BINARY_CMD_SUBDOC_DELETE) {
+        cbtype = LCB_CALLBACK_SDREMOVE;
+    } else {
+        abort();
+        cbtype = -1;
+    }
+
+    o = pipeline->parent->cqdata;
+    init_resp3(o, response, request, immerr, &resp);
+    INVOKE_CALLBACK3(request, &resp, o, cbtype);
 }
 
 static void
@@ -620,6 +696,20 @@ mcreq_dispatch_response(
     case PROTOCOL_BINARY_CMD_DECREMENT:
         INVOKE_OP(H_arithmetic);
 
+    case PROTOCOL_BINARY_CMD_SUBDOC_GET:
+    case PROTOCOL_BINARY_CMD_SUBDOC_COUNTER:
+        INVOKE_OP(H_sdget);
+
+    case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE:
+    case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST:
+    case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST:
+    case PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD:
+    case PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT:
+    case PROTOCOL_BINARY_CMD_SUBDOC_REPLACE:
+    case PROTOCOL_BINARY_CMD_SUBDOC_DELETE:
+    case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
+        INVOKE_OP(H_sdcommon);
+
     case PROTOCOL_BINARY_CMD_OBSERVE:
         INVOKE_OP(H_observe);
 
@@ -659,6 +749,7 @@ mcreq_dispatch_response(
         INVOKE_OP(H_config);
 
     default:
+        fprintf(stderr, "COUCHBASE: Received unknown opcode=0x%x\n", PACKET_OPCODE(res));
         return -1;
     }
 }

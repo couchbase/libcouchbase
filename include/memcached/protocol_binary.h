@@ -36,11 +36,7 @@
 #ifndef PROTOCOL_BINARY_H
 #define PROTOCOL_BINARY_H
 
-#if !defined HAVE_STDINT_H && defined _WIN32 && defined(_MSC_VER)
-# include "win_stdint.h"
-#else
-# include <stdint.h>
-#endif
+#include <stdint.h>
 #include <memcached/vbucket.h>
 
 /**
@@ -114,6 +110,10 @@ extern "C"
         PROTOCOL_BINARY_RESPONSE_ROLLBACK = 0x23,
         /** No access (could be opcode, value, bucket etc) */
         PROTOCOL_BINARY_RESPONSE_EACCESS = 0x24,
+        /** The Couchbase cluster is currently initializing this
+         * node, and the Cluster manager has not yet granted all
+         * users access to the cluster. */
+        PROTOCOL_BINARY_RESPONSE_NOT_INITIALIZED = 0x25,
         /** The server have no idea what this command is for */
         PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND = 0x81,
         /** Not enough memory */
@@ -135,7 +135,54 @@ extern "C"
          * temporary failure from the underlying persistence layer,
          * etc).
          */
-        PROTOCOL_BINARY_RESPONSE_ETMPFAIL = 0x86
+        PROTOCOL_BINARY_RESPONSE_ETMPFAIL = 0x86,
+
+        /*
+         * Sub-document specific responses.
+         */
+
+        /** The provided path does not exist in the document. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_ENOENT = 0xc0,
+
+        /** One of path components treats a non-dictionary as a dictionary, or
+         * a non-array as an array.
+         * [Arithmetic operations only] The value the path points to is not
+         * a number. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_MISMATCH = 0xc1,
+
+        /** The path’s syntax was incorrect. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_EINVAL = 0xc2,
+
+        /** The path provided is too large; either the string is too long,
+         * or it contains too many components. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_E2BIG = 0xc3,
+
+        /** The document has too many levels to parse. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_DOC_E2DEEP = 0xc4,
+
+        /** [For mutations only] The value provided will invalidate the JSON if
+         * inserted. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_VALUE_CANTINSERT = 0xc5,
+
+        /** The existing document is not valid JSON. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_DOC_NOTJSON = 0xc6,
+
+        /** [For arithmetic ops] The existing number is out of the valid range
+         * for arithmetic ops (cannot be represented as an int64_t). */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_NUM_ERANGE = 0xc7,
+
+        /** [For arithmetic ops] The operation would result in a number
+         * outside the valid range (cannot be represented as an int64_t). */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_DELTA_ERANGE = 0xc8,
+
+        /** [For mutations only] The requested operation requires the path to
+         * not already exist, but it exists. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_EEXISTS = 0xc9,
+
+        /** [For mutations only] Inserting the value would cause the document
+         * to be too deep. */
+        PROTOCOL_BINARY_RESPONSE_SUBDOC_VALUE_ETOODEEP = 0xca
+
     } protocol_binary_response_status;
 
     /**
@@ -227,6 +274,10 @@ extern "C"
         PROTOCOL_BINARY_CMD_TAP_CHECKPOINT_START = 0x46,
         PROTOCOL_BINARY_CMD_TAP_CHECKPOINT_END = 0x47,
         /* End TAP */
+
+        /* Vbucket command to get the VBUCKET sequence numbers for all
+         * vbuckets on the node */
+        PROTOCOL_BINARY_CMD_GET_ALL_VB_SEQNOS = 0x48,
 
         /* DCP */
         PROTOCOL_BINARY_CMD_DCP_OPEN = 0x50,
@@ -348,6 +399,32 @@ extern "C"
         PROTOCOL_BINARY_CMD_SET_DRIFT_COUNTER_STATE = 0xc1,
         PROTOCOL_BINARY_CMD_GET_ADJUSTED_TIME = 0xc2,
 
+        /**
+         * Commands for the Sub-document API.
+         */
+
+        /* Retrieval commands */
+        PROTOCOL_BINARY_CMD_SUBDOC_GET = 0xc5,
+        PROTOCOL_BINARY_CMD_SUBDOC_EXISTS = 0xc6,
+
+        /* Dictionary commands */
+        PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD = 0xc7,
+        PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT = 0xc8,
+
+        /* Generic modification commands */
+        PROTOCOL_BINARY_CMD_SUBDOC_DELETE = 0xc9,
+        PROTOCOL_BINARY_CMD_SUBDOC_REPLACE = 0xca,
+
+        /* Array commands */
+        PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST = 0xcb,
+        PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST = 0xcc,
+        PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT = 0xcd,
+        PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE = 0xce,
+
+        /* Arithmetic commands */
+        PROTOCOL_BINARY_CMD_SUBDOC_COUNTER = 0xcf,
+
+
         /* Scrub the data */
         PROTOCOL_BINARY_CMD_SCRUB = 0xf0,
         /* Refresh the ISASL data */
@@ -359,6 +436,9 @@ extern "C"
         /* ns_server - memcached session validation */
         PROTOCOL_BINARY_CMD_SET_CTRL_TOKEN = 0xf4,
         PROTOCOL_BINARY_CMD_GET_CTRL_TOKEN = 0xf5,
+
+        /* ns_server - memcached internal communication */
+        PROTOCOL_BINARY_CMD_INIT_COMPLETE = 0xf6,
 
         /* Reserved for being able to signal invalid opcode */
         PROTOCOL_BINARY_CMD_INVALID = 0xff
@@ -389,6 +469,14 @@ extern "C"
         FLEX_DATA_OFFSET = 1,
         EXT_META_LEN = 1
     } protocol_binary_flexmeta;
+
+    /**
+     * Definitions of sub-document flags.
+     */
+    typedef enum {
+        /* (Mutation) Should non-existent intermediate paths be created? */
+        SUBDOC_FLAG_MKDIR_P = 0x01
+    } protocol_binary_subdoc_flag;
 
     /**
      * Definition of the header structure for a request packet.
@@ -700,6 +788,41 @@ extern "C"
     typedef protocol_binary_response_get protocol_binary_response_gat;
     typedef protocol_binary_response_get protocol_binary_response_gatq;
 
+    /**
+     * Definition of the packet used by SUBDOCUMENT commands.
+     *
+     * The path, which is always required, is in the Body, after the Key.
+     *
+     *   Header:                        24 @0: <protocol_binary_request_header>
+     *   Extras:
+     *     Sub-document flags            1 @24: <protocol_binary_subdoc_flag>
+     *     Sub-document pathlen          2 @25: <variable>
+     *   Body:
+     *     Key                      keylen @27: <variable>
+     *     Path                    pathlen @27+keylen: <variable>
+     *     Value to insert/replace
+     *               vallen-keylen-pathlen @27+keylen+pathlen: [variable]
+     */
+    typedef union {
+        struct {
+            protocol_binary_request_header header;
+            struct {
+                uint16_t pathlen;      // Length in bytes of the sub-doc path.
+                uint8_t  subdoc_flags; // See protocol_binary_subdoc_flag
+            } extras;
+        } message;
+        uint8_t bytes[sizeof(protocol_binary_request_header) + 3];
+    } protocol_binary_request_subdocument;
+
+
+    /** Definition of the packet used by SUBDOCUMENT responses.
+     */
+    typedef union {
+        struct {
+            protocol_binary_response_header header;
+        } message;
+        uint8_t bytes[sizeof(protocol_binary_response_header)];
+    } protocol_binary_response_subdocument;
 
     /**
      * Definition of a request for a range operation.
@@ -970,17 +1093,19 @@ extern "C"
         PROTOCOL_BINARY_FEATURE_DATATYPE = 0x01,
         PROTOCOL_BINARY_FEATURE_TLS = 0x2,
         PROTOCOL_BINARY_FEATURE_TCPNODELAY = 0x03,
-        PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO = 0x04
+        PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO = 0x04,
+        PROTOCOL_BINARY_FEATURE_TCPDELAY = 0x05
     } protocol_binary_hello_features;
 
     #define MEMCACHED_FIRST_HELLO_FEATURE 0x01
-    #define MEMCACHED_TOTAL_HELLO_FEATURES 0x04
+    #define MEMCACHED_TOTAL_HELLO_FEATURES 0x05
 
 #define protocol_feature_2_text(a) \
     (a == PROTOCOL_BINARY_FEATURE_DATATYPE) ? "Datatype" : \
     (a == PROTOCOL_BINARY_FEATURE_TLS) ? "TLS" : \
     (a == PROTOCOL_BINARY_FEATURE_TCPNODELAY) ? "TCP NODELAY" : \
-    (a == PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO) ? "Mutation seqno" : "Unknown"
+    (a == PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO) ? "Mutation seqno" : \
+    (a == PROTOCOL_BINARY_FEATURE_TCPDELAY) ? "TCP DELAY" : "Unknown"
 
     /**
      * The HELLO command is used by the client and the server to agree
@@ -1255,6 +1380,19 @@ extern "C"
     typedef protocol_binary_request_no_extras protocol_binary_request_ssl_refresh;
     typedef protocol_binary_response_no_extras protocol_binary_response_ssl_refresh;
 
+    /**
+     * Request command timings for a bucket from memcached. Privileged
+     * connections may specify the name of the bucket in the "key" field,
+     * or the aggregated timings for the entire server by using the
+     * special name <code>/all/</code>.
+     *
+     * The returned payload is a json document of the following format:
+     *    { "us" : [ x, x, x, x, ... ],
+     *      "ms" : [ y, y, y, ...],
+     *      "500ms" : [ z, z, z, ...],
+     *      "wayout" : nnn
+     *    }
+     */
     typedef union {
         struct {
             protocol_binary_request_header header;
@@ -1396,6 +1534,13 @@ extern "C"
         } message;
         uint8_t bytes[sizeof(protocol_binary_request_header) + 12];
     } protocol_binary_request_return_meta;
+
+
+    /**
+     * Message format for CMD_INIT_COMPLETE
+     */
+    typedef protocol_binary_request_no_extras protocol_binary_request_init_complete;
+    typedef protocol_binary_response_no_extras protocol_binary_response_init_complete;
 
     /**
      * Message format for CMD_SET_CONFIG
@@ -1565,6 +1710,52 @@ extern "C"
      *       The other fields are the same as that mentioned in the normal case.
      */
     typedef protocol_binary_response_no_extras protocol_binary_response_observe_seqno;
+
+    /**
+     * Definition of the request packet for the command
+     * PROTOCOL_BINARY_CMD_GET_ALL_VB_SEQNOS
+     *
+     * Header: Only opcode field is used.
+     *
+     * Body: Contains the vbucket state for which the vb sequence numbers are
+     *       requested.
+     *       Please note that this field is optional, header.request.extlen is
+     *       checked to see if it is present. If not present, it implies request
+     *       is for all vbucket states.
+     */
+    typedef union {
+        struct {
+            protocol_binary_request_header header;
+            struct {
+                vbucket_state_t state;
+            } body;
+        } message;
+        uint8_t bytes[sizeof(protocol_binary_request_header) +
+                      sizeof(vbucket_state_t)];
+    } protocol_binary_request_get_all_vb_seqnos;
+
+    /**
+     * Definition of the payload in the PROTOCOL_BINARY_CMD_GET_ALL_VB_SEQNOS
+     * response.
+     *
+     * The body contains a "list" of "vbucket id - seqno pairs" for all
+     * active and replica buckets on the node in network byte order.
+     *
+     *
+     *    Byte/     0       |       1       |       2       |       3       |
+     *       /              |               |               |               |
+     *      |0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|0 1 2 3 4 5 6 7|
+     *      +---------------+---------------+---------------+---------------+
+     *     0| VBID          | VBID          | SEQNO         | SEQNO         |
+     *      +---------------+---------------+---------------+---------------+
+     *     4| SEQNO         | SEQNO         | SEQNO         | SEQNO         |
+     *      +---------------+---------------+---------------+---------------+
+     *     4| SEQNO         | SEQNO         |
+     *      +---------------+---------------+
+     */
+    typedef protocol_binary_response_no_extras protocol_binary_response_get_all_vb_seqnos;
+
+
 
     /**
      * @}
