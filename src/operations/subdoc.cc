@@ -17,6 +17,7 @@
 #include "internal.h"
 #include <vector>
 #include <string>
+#include <include/libcouchbase/api3.h>
 
 static lcb_size_t
 get_value_size(mc_PACKET *packet)
@@ -31,15 +32,6 @@ get_value_size(mc_PACKET *packet)
         return 0;
     }
 }
-
-/* We can still support subdocument paths along with non-copiable values
- * with the caveat that the path be encoded as part of the value (as the
- * first IOV).
- *
- */
-#define SDTYPE_PLAIN 0
-#define SDTYPE_COUNTER 1
-#define SDTYPE_STORE 2
 
 static bool
 empty_path_allowed(uint8_t opcode)
@@ -60,7 +52,7 @@ empty_path_allowed(uint8_t opcode)
 
 static lcb_error_t
 sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
-    int sdtype, protocol_binary_request_subdocument *request,
+    bool has_value, protocol_binary_request_subdocument *request,
     mc_PACKET **packet_p, mc_PIPELINE **pipeline_p)
 {
     lcb_error_t rc;
@@ -70,7 +62,6 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     lcb_VALBUF valbuf = { LCB_KV_COPY };
     const lcb_VALBUF *valbuf_p = &valbuf;
     lcb_IOV tmpiov[2];
-    char numbuf[24] = { 0 };
 
     lcb_FRAGBUF *fbuf = &valbuf.u_buf.multi;
     protocol_binary_request_header *hdr = &request->message.header;
@@ -87,7 +78,7 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     tmpiov[0].iov_base = (void *)cmd->path;
     tmpiov[0].iov_len = cmd->npath;
 
-    if (sdtype == SDTYPE_STORE) {
+    if (has_value) {
         const lcb_CMDSDSTORE *scmd = (const lcb_CMDSDSTORE*)cmd;
         if (scmd->value.vtype == LCB_KV_COPY) {
             fbuf->niov = 2;
@@ -98,12 +89,6 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
             /* Assume properly formatted packet */
             valbuf_p = &scmd->value;
         }
-    } else if (sdtype == SDTYPE_COUNTER) {
-        const lcb_CMDSDCOUNTER *ccmd = (const lcb_CMDSDCOUNTER *)cmd;
-        size_t nbuf = sprintf(numbuf, "%lld", ccmd->delta);
-        fbuf->niov = 2;
-        tmpiov[1].iov_base = numbuf;
-        tmpiov[1].iov_len = nbuf;
     }
 
     rc = mcreq_basic_packet(&instance->cmdq,
@@ -150,7 +135,7 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
  */
 static lcb_error_t
 sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
-          uint8_t op, int type)
+          uint8_t op, bool has_value)
 {
     mc_PACKET *packet;
     mc_PIPELINE *pipeline;
@@ -163,8 +148,8 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     protocol_binary_request_subdocument scmd;
     protocol_binary_request_header *hdr = &scmd.message.header;
 
-    err = sd_packet_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        type, &scmd, &packet, &pipeline);
+    err = sd_packet_common(
+            instance, cookie, cmd, has_value, &scmd, &packet, &pipeline);
 
     if (err != LCB_SUCCESS) {
         return err;
@@ -213,7 +198,7 @@ lcb_error_t
 lcb_sdget3(lcb_t instance, const void *cookie, const lcb_CMDSDGET *cmd)
 {
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        PROTOCOL_BINARY_CMD_SUBDOC_GET, SDTYPE_PLAIN);
+        PROTOCOL_BINARY_CMD_SUBDOC_GET, false);
 }
 
 LIBCOUCHBASE_API
@@ -221,7 +206,7 @@ lcb_error_t
 lcb_sdexists3(lcb_t instance, const void *cookie, const lcb_CMDSDEXISTS *cmd)
 {
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, SDTYPE_PLAIN);
+        PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, false);
 }
 
 LIBCOUCHBASE_API
@@ -229,7 +214,7 @@ lcb_error_t
 lcb_sdremove3(lcb_t instance, const void *cookie, const lcb_CMDSDREMOVE *cmd)
 {
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        PROTOCOL_BINARY_CMD_SUBDOC_DELETE, SDTYPE_PLAIN);
+        PROTOCOL_BINARY_CMD_SUBDOC_DELETE, false);
 }
 
 LIBCOUCHBASE_API
@@ -240,16 +225,37 @@ lcb_sdstore3(lcb_t instance, const void *cookie, const lcb_CMDSDSTORE *cmd)
     if (op == 0xff) {
         return LCB_EINVAL;
     }
-    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        op, SDTYPE_STORE);
+    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd, op, true);
+}
+
+static lcb_error_t
+counter_to_store(const lcb_CMDSDCOUNTER *counter, lcb_CMDSDSTORE *store, char buf[32])
+{
+    store->cmdflags = counter->cmdflags;
+    store->key = counter->key;
+    store->_hashkey = counter->_hashkey;
+    store->exptime = counter->exptime;
+    store->cas = counter->cas;
+    store->mode = LCB_SUBDOC_COUNTER;
+    store->path = counter->path;
+    store->npath = counter->npath;
+
+    size_t nbuf = sprintf(buf, "%lld", counter->delta);
+    LCB_CMD_SET_VALUE(store, buf, nbuf);
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_sdcounter3(lcb_t instance, const void *cookie, const lcb_CMDSDCOUNTER *cmd)
 {
-    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        PROTOCOL_BINARY_CMD_SUBDOC_COUNTER, SDTYPE_COUNTER);
+    lcb_CMDSDSTORE scmd = { 0 };
+    char buf[32];
+    lcb_error_t rc = counter_to_store(cmd, &scmd, buf);
+    if (rc != LCB_SUCCESS) {
+        return rc;
+    }
+    return lcb_sdstore3(instance, cookie, &scmd);
 }
 
 struct lcb_SDMULTICTX_st {
@@ -351,12 +357,13 @@ lcb_SDMULTICTX_st::addcmd(unsigned op, const lcb_CMDSDBASE *cmd)
 
     } else if (op == LCB_SUBDOC_COUNTER) {
         const lcb_CMDSDCOUNTER *ccmd = reinterpret_cast<const lcb_CMDSDCOUNTER*>(cmd);
-        char buf[24];
-        size_t nbuf = sprintf(buf, "%lld", ccmd->delta);
-        lcb_VALBUF vb = { LCB_KV_COPY };
-        vb.u_buf.contig.bytes = buf;
-        vb.u_buf.contig.nbytes = nbuf;
-        return add_spec(sdcode, cmd, &vb);
+        lcb_CMDSDSTORE scmd = { 0 };
+        char buf[32];
+        lcb_error_t rc = counter_to_store(ccmd, &scmd, buf);
+        if (rc != LCB_SUCCESS) {
+            return rc;
+        }
+        return add_spec(sdcode, cmd, &scmd.value);
     } else {
         const lcb_CMDSDSTORE *scmd = reinterpret_cast<const lcb_CMDSDSTORE*>(cmd);
         return add_spec(sdcode, cmd, &scmd->value);
