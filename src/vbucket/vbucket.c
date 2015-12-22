@@ -275,7 +275,7 @@ static int continuum_item_cmp(const void *t1, const void *t2)
 }
 
 static int
-parse_ketama(lcbvb_CONFIG *cfg)
+update_ketama(lcbvb_CONFIG *cfg)
 {
     char host[MAX_AUTHORITY_SIZE+10] = "";
     int nhost;
@@ -571,8 +571,12 @@ lcbvb_load_json(lcbvb_CONFIG *cfg, const char *data)
             goto GT_ERROR;
         }
     } else {
-        if (!parse_ketama(cfg)) {
-            SET_ERRSTR(cfg, "Failed to establish ketama continuums");
+        /* If there is no $HOST then we can update the ketama config, otherwise
+         * we must wait for the hostname to be replaced! */
+        if (strstr(data, "$HOST") == NULL) {
+            if (!update_ketama(cfg)) {
+                SET_ERRSTR(cfg, "Failed to establish ketama continuums");
+            }
         }
     }
     cfg->servers = realloc(cfg->servers, sizeof(*cfg->servers) * cfg->nsrv);
@@ -637,6 +641,9 @@ lcbvb_replace_host(lcbvb_CONFIG *cfg, const char *hoststr)
         }
         /* reassign authority */
         srv->authority = srv->svc.hoststrs[LCBVB_SVCTYPE_DATA];
+    }
+    if (cfg->dtype == LCBVB_DIST_KETAMA) {
+        update_ketama(cfg);
     }
 }
 
@@ -1425,7 +1432,7 @@ lcbvb_make_ketama(lcbvb_CONFIG *vb)
     vb->dtype = LCBVB_DIST_KETAMA;
     vb->nrepl = 0;
     vb->nvb = 0;
-    parse_ketama(vb);
+    update_ketama(vb);
 }
 
 
