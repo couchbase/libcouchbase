@@ -33,21 +33,104 @@ get_value_size(mc_PACKET *packet)
     }
 }
 
-static bool
-empty_path_allowed(uint8_t opcode)
-{
-    switch (opcode) {
-    case PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD:
-    case PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT:
-    case PROTOCOL_BINARY_CMD_SUBDOC_DELETE:
-    case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT:
-    case PROTOCOL_BINARY_CMD_SUBDOC_REPLACE:
-    case PROTOCOL_BINARY_CMD_SUBDOC_COUNTER:
-    case PROTOCOL_BINARY_CMD_SUBDOC_GET:
-        return false;
-    default:
-        return true;
+namespace SubdocCmdTraits {
+enum Options {
+    EMPTY_PATH = 1<<0,
+    ALLOW_EXPIRY = 1<<1,
+    HAS_VALUE = 1<<2,
+    ALLOW_MKDIRP = 1<<3
+};
+
+struct Traits {
+    const unsigned allow_empty_path;
+    const unsigned allow_expiry;
+    const unsigned has_value;
+    const unsigned allow_mkdir_p;
+    const uint8_t opcode;
+
+    inline bool valid() const {
+        return opcode != 0;
     }
+
+    inline Traits(uint8_t op, unsigned options) :
+        allow_empty_path(options & EMPTY_PATH),
+        allow_expiry(options & ALLOW_EXPIRY),
+        has_value(options & HAS_VALUE),
+        allow_mkdir_p(options & ALLOW_MKDIRP),
+        opcode(op) {}
+};
+
+static const Traits
+Get(PROTOCOL_BINARY_CMD_SUBDOC_GET, 0);
+
+static const Traits
+Exists(PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, 0);
+
+static const Traits
+DictAdd(PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD, ALLOW_EXPIRY|HAS_VALUE);
+
+static const Traits
+DictUpsert(PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT,
+    ALLOW_EXPIRY|HAS_VALUE|ALLOW_MKDIRP);
+
+static const Traits
+Remove(PROTOCOL_BINARY_CMD_SUBDOC_DELETE, ALLOW_EXPIRY);
+
+static const Traits
+ArrayInsert(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT,
+    ALLOW_EXPIRY|HAS_VALUE);
+
+static const Traits
+Replace(PROTOCOL_BINARY_CMD_SUBDOC_REPLACE, ALLOW_EXPIRY|HAS_VALUE);
+
+static const Traits
+ArrayAddFirst(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST,
+    ALLOW_EXPIRY|HAS_VALUE|EMPTY_PATH|ALLOW_MKDIRP);
+
+static const Traits
+ArrayAddLast(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST,
+    ALLOW_EXPIRY|HAS_VALUE|EMPTY_PATH|ALLOW_MKDIRP);
+
+static const Traits
+ArrayAddUnique(PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE,
+    ALLOW_EXPIRY|HAS_VALUE|EMPTY_PATH|ALLOW_MKDIRP);
+
+static const Traits
+Counter(PROTOCOL_BINARY_CMD_SUBDOC_COUNTER, ALLOW_EXPIRY|HAS_VALUE|ALLOW_MKDIRP);
+
+static const Traits
+Invalid(0, 0);
+
+const Traits&
+find(unsigned mode)
+{
+    switch (mode) {
+    case LCB_SUBDOC_REPLACE:
+        return Replace;
+    case LCB_SUBDOC_DICT_ADD:
+        return DictAdd;
+    case LCB_SUBDOC_DICT_UPSERT:
+        return DictUpsert;
+    case LCB_SUBDOC_ARRAY_ADD_FIRST:
+        return ArrayAddFirst;
+    case LCB_SUBDOC_ARRAY_ADD_LAST:
+        return ArrayAddLast;
+    case LCB_SUBDOC_ARRAY_ADD_UNIQUE:
+        return ArrayAddUnique;
+    case LCB_SUBDOC_ARRAY_INSERT:
+        return ArrayInsert;
+    case LCB_SUBDOC_GET:
+        return Get;
+    case LCB_SUBDOC_EXISTS:
+        return Exists;
+    case LCB_SUBDOC_REMOVE:
+        return Remove;
+    case LCB_SUBDOC_COUNTER:
+        return Counter;
+    default:
+        return Invalid;
+    }
+}
 }
 
 static lcb_error_t
@@ -135,13 +218,13 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
  */
 static lcb_error_t
 sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
-          uint8_t op, bool has_value)
+          const SubdocCmdTraits::Traits& traits, bool has_value)
 {
     mc_PACKET *packet;
     mc_PIPELINE *pipeline;
     lcb_error_t err;
 
-    if (!cmd->npath && !empty_path_allowed(op)) {
+    if (!cmd->npath && !traits.allow_empty_path) {
         return LCB_EINVAL;
     }
 
@@ -155,50 +238,20 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
         return err;
     }
 
-    hdr->request.opcode = op;
+    hdr->request.opcode = traits.opcode;
     memcpy(SPAN_BUFFER(&packet->kh_span), scmd.bytes, sizeof scmd.bytes);
     mcreq_sched_add(pipeline, packet);
     return LCB_SUCCESS;
 
 }
 
-/* Gets the opcode for the given mode. Returns 0xff if mode is invalid */
-static uint8_t
-sdmode_to_opcode(unsigned mode)
-{
-    if (mode == LCB_SUBDOC_REPLACE) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_REPLACE;
-    } else if (mode == LCB_SUBDOC_DICT_ADD) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD;
-    } else if (mode == LCB_SUBDOC_DICT_UPSERT) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT;
-    } else if (mode == LCB_SUBDOC_ARRAY_ADD_FIRST) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST;
-    } else if (mode == LCB_SUBDOC_ARRAY_ADD_LAST) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST;
-    } else if (mode == LCB_SUBDOC_ARRAY_ADD_UNIQUE) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE;
-    } else if (mode == LCB_SUBDOC_ARRAY_INSERT) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT;
-    } else if (mode == LCB_SUBDOC_GET) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_GET;
-    } else if (mode == LCB_SUBDOC_EXISTS) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_EXISTS;
-    } else if (mode == LCB_SUBDOC_REMOVE) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_DELETE;
-    } else if (mode == LCB_SUBDOC_COUNTER) {
-        return PROTOCOL_BINARY_CMD_SUBDOC_COUNTER;
-    } else {
-        return 0xff;
-    }
-}
 
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_sdget3(lcb_t instance, const void *cookie, const lcb_CMDSDGET *cmd)
 {
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        PROTOCOL_BINARY_CMD_SUBDOC_GET, false);
+        SubdocCmdTraits::Get, false);
 }
 
 LIBCOUCHBASE_API
@@ -206,7 +259,7 @@ lcb_error_t
 lcb_sdexists3(lcb_t instance, const void *cookie, const lcb_CMDSDEXISTS *cmd)
 {
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, false);
+        SubdocCmdTraits::Exists, false);
 }
 
 LIBCOUCHBASE_API
@@ -214,18 +267,18 @@ lcb_error_t
 lcb_sdremove3(lcb_t instance, const void *cookie, const lcb_CMDSDREMOVE *cmd)
 {
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        PROTOCOL_BINARY_CMD_SUBDOC_DELETE, false);
+        SubdocCmdTraits::Remove, false);
 }
 
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_sdstore3(lcb_t instance, const void *cookie, const lcb_CMDSDSTORE *cmd)
 {
-    uint8_t op = sdmode_to_opcode(cmd->mode);
-    if (op == 0xff) {
+    const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(cmd->mode);
+    if (!trait.valid()) {
         return LCB_EINVAL;
     }
-    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd, op, true);
+    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd, trait, true);
 }
 
 static lcb_error_t
@@ -283,7 +336,7 @@ struct lcb_SDMULTICTX_st {
         extra_body.insert(extra_body.end(), b, b + n);
     }
 
-    inline lcb_error_t add_spec(lcb_U8 opcode,
+    inline lcb_error_t add_spec(const SubdocCmdTraits::Traits& trait,
         const lcb_CMDSDBASE *cmd, const lcb_VALBUF *vb = NULL);
 
     inline lcb_error_t addcmd(unsigned op, const lcb_CMDSDBASE *cmd);
@@ -292,11 +345,11 @@ struct lcb_SDMULTICTX_st {
 };
 
 lcb_error_t
-lcb_SDMULTICTX_st::add_spec(lcb_U8 opcode, const lcb_CMDSDBASE *cmd,
+lcb_SDMULTICTX_st::add_spec(const SubdocCmdTraits::Traits& trait, const lcb_CMDSDBASE *cmd,
     const lcb_VALBUF *vb)
 {
     // opcode
-    add_field(opcode, 1);
+    add_field(trait.opcode, 1);
 
     // flags
     lcb_U8 sdflags = 0;
@@ -305,7 +358,7 @@ lcb_SDMULTICTX_st::add_spec(lcb_U8 opcode, const lcb_CMDSDBASE *cmd,
     }
     add_field(sdflags, 1);
 
-    if (!cmd->npath && !empty_path_allowed(opcode)) {
+    if (!cmd->npath && !trait.allow_empty_path) {
         return LCB_EMPTY_KEY;
     }
 
@@ -335,8 +388,8 @@ lcb_SDMULTICTX_st::add_spec(lcb_U8 opcode, const lcb_CMDSDBASE *cmd,
 lcb_error_t
 lcb_SDMULTICTX_st::addcmd(unsigned op, const lcb_CMDSDBASE *cmd)
 {
-    lcb_U8 sdcode = sdmode_to_opcode(op);
-    if (sdcode == 0xff) {
+    const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(op);
+    if (!trait.valid()) {
         return LCB_EINVAL;
     }
 
@@ -345,15 +398,15 @@ lcb_SDMULTICTX_st::addcmd(unsigned op, const lcb_CMDSDBASE *cmd)
         if (mode != LCB_SDMULTI_MODE_LOOKUP) {
             return LCB_OPTIONS_CONFLICT;
         }
-        return add_spec(sdcode, cmd);
+        return add_spec(trait, cmd);
     }
 
     if (mode != LCB_SDMULTI_MODE_MUTATE) {
         return LCB_OPTIONS_CONFLICT;
     }
 
-    if (op == LCB_SUBDOC_REMOVE) {
-        return add_spec(sdcode, cmd);
+    if (trait.opcode == LCB_SUBDOC_REMOVE) {
+        return add_spec(trait, cmd);
 
     } else if (op == LCB_SUBDOC_COUNTER) {
         const lcb_CMDSDCOUNTER *ccmd = reinterpret_cast<const lcb_CMDSDCOUNTER*>(cmd);
@@ -363,10 +416,10 @@ lcb_SDMULTICTX_st::addcmd(unsigned op, const lcb_CMDSDBASE *cmd)
         if (rc != LCB_SUCCESS) {
             return rc;
         }
-        return add_spec(sdcode, cmd, &scmd.value);
+        return add_spec(trait, cmd, &scmd.value);
     } else {
         const lcb_CMDSDSTORE *scmd = reinterpret_cast<const lcb_CMDSDSTORE*>(cmd);
-        return add_spec(sdcode, cmd, &scmd->value);
+        return add_spec(trait, cmd, &scmd->value);
     }
 }
 
