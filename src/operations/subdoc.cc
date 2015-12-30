@@ -133,24 +133,30 @@ find(unsigned mode)
 }
 }
 
+/* Handles the basic creation of the packet and value assignment.
+ * This dispatches to sd_packet_common which actually handles the
+ * encoding of the command
+ */
 static lcb_error_t
-sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
-    bool has_value, protocol_binary_request_subdocument *request,
-    mc_PACKET **packet_p, mc_PIPELINE **pipeline_p)
+sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
+          const SubdocCmdTraits::Traits& traits, bool has_value)
 {
+    mc_PACKET *packet;
+    mc_PIPELINE *pipeline;
     lcb_error_t rc;
-    mc_PIPELINE *pipeline = NULL;
-    mc_PACKET *packet = NULL;
     mc_REQDATA *rdata = NULL;
     lcb_VALBUF valbuf = { LCB_KV_COPY };
     const lcb_VALBUF *valbuf_p = &valbuf;
     lcb_IOV tmpiov[2];
 
     lcb_FRAGBUF *fbuf = &valbuf.u_buf.multi;
-    protocol_binary_request_header *hdr = &request->message.header;
+    protocol_binary_request_subdocument request;
+    protocol_binary_request_header *hdr = &request.message.header;
 
+    if (!cmd->npath && !traits.allow_empty_path) {
+        return LCB_EINVAL;
+    }
     if (!cmd->key.contig.nbytes) {
-        /* Path can be empty! */
         return LCB_EMPTY_KEY;
     }
 
@@ -174,9 +180,19 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
         }
     }
 
+    uint8_t extlen = 3;
+    uint32_t exptime = 0;
+    if (cmd->exptime) {
+        if (!traits.allow_expiry) {
+            return LCB_OPTIONS_CONFLICT;
+        }
+        exptime = cmd->exptime;
+        extlen = 7;
+    }
+
     rc = mcreq_basic_packet(&instance->cmdq,
         (const lcb_CMDBASE*)cmd,
-        hdr, 3, &packet, &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
+        hdr, extlen, &packet, &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (rc != LCB_SUCCESS) {
         return rc;
@@ -184,6 +200,8 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
 
     rc = mcreq_reserve_value(pipeline, packet, valbuf_p);
     if (rc != LCB_SUCCESS) {
+        mcreq_wipe_packet(pipeline, packet);
+        mcreq_release_packet(pipeline, packet);
         return rc;
     }
 
@@ -199,47 +217,20 @@ sd_packet_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     hdr->request.bodylen = htonl(hdr->request.extlen +
         ntohs(hdr->request.keylen) + get_value_size(packet));
 
-    request->message.extras.pathlen = htons(cmd->npath);
+    request.message.extras.pathlen = htons(cmd->npath);
 
     if (cmd->cmdflags & LCB_CMDSUBDOC_F_MKINTERMEDIATES) {
-        request->message.extras.subdoc_flags = SUBDOC_FLAG_MKDIR_P;
+        request.message.extras.subdoc_flags = SUBDOC_FLAG_MKDIR_P;
     } else {
-        request->message.extras.subdoc_flags = 0;
-    }
-
-    *packet_p = packet;
-    *pipeline_p = pipeline;
-    return rc;
-}
-
-/* Handles the basic creation of the packet and value assignment.
- * This dispatches to sd_packet_common which actually handles the
- * encoding of the command
- */
-static lcb_error_t
-sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
-          const SubdocCmdTraits::Traits& traits, bool has_value)
-{
-    mc_PACKET *packet;
-    mc_PIPELINE *pipeline;
-    lcb_error_t err;
-
-    if (!cmd->npath && !traits.allow_empty_path) {
-        return LCB_EINVAL;
-    }
-
-    protocol_binary_request_subdocument scmd;
-    protocol_binary_request_header *hdr = &scmd.message.header;
-
-    err = sd_packet_common(
-            instance, cookie, cmd, has_value, &scmd, &packet, &pipeline);
-
-    if (err != LCB_SUCCESS) {
-        return err;
+        request.message.extras.subdoc_flags = 0;
     }
 
     hdr->request.opcode = traits.opcode;
-    memcpy(SPAN_BUFFER(&packet->kh_span), scmd.bytes, sizeof scmd.bytes);
+    memcpy(SPAN_BUFFER(&packet->kh_span), request.bytes, sizeof request.bytes);
+    if (exptime) {
+        exptime = htonl(exptime);
+        memcpy(SPAN_BUFFER(&packet->kh_span) + sizeof request.bytes, &exptime, 4);
+    }
     mcreq_sched_add(pipeline, packet);
     return LCB_SUCCESS;
 
@@ -468,6 +459,10 @@ lcb_sdmultictx_new(lcb_t instance, const void *cookie,
     }
     if (cmd->multimode == LCB_SDMULTI_MODE_LOOKUP) {
         opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP;
+        if (cmd->exptime) {
+            *err = LCB_OPTIONS_CONFLICT;
+            return NULL;
+        }
     } else if (cmd->multimode == LCB_SDMULTI_MODE_MUTATE) {
         opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION;
     } else {
@@ -479,13 +474,21 @@ lcb_sdmultictx_new(lcb_t instance, const void *cookie,
     ctx->instance = instance;
     ctx->mode = cmd->multimode;
 
+    uint8_t extlen = cmd->exptime ? 4 : 0;
+
     *err = mcreq_basic_packet(&instance->cmdq,
-        reinterpret_cast<const lcb_CMDBASE*>(cmd), &ctx->hdr, 0,
+        reinterpret_cast<const lcb_CMDBASE*>(cmd), &ctx->hdr, extlen,
         &ctx->pkt, &ctx->pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (*err != LCB_SUCCESS) {
         delete ctx;
         return NULL;
+    }
+
+    if (extlen) {
+        uint32_t exp = htonl(cmd->exptime);
+        // Write the expiry, if passed
+        memcpy(SPAN_BUFFER(&ctx->pkt->kh_span) + 24, &exp, sizeof exp);
     }
 
     ctx->hdr.request.magic = PROTOCOL_BINARY_REQ;
