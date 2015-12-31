@@ -38,7 +38,8 @@ enum Options {
     EMPTY_PATH = 1<<0,
     ALLOW_EXPIRY = 1<<1,
     HAS_VALUE = 1<<2,
-    ALLOW_MKDIRP = 1<<3
+    ALLOW_MKDIRP = 1<<3,
+    IS_LOOKUP = 1<<4
 };
 
 struct Traits {
@@ -46,6 +47,7 @@ struct Traits {
     const unsigned allow_expiry;
     const unsigned has_value;
     const unsigned allow_mkdir_p;
+    const unsigned is_lookup;
     const uint8_t opcode;
 
     inline bool valid() const {
@@ -57,14 +59,15 @@ struct Traits {
         allow_expiry(options & ALLOW_EXPIRY),
         has_value(options & HAS_VALUE),
         allow_mkdir_p(options & ALLOW_MKDIRP),
+        is_lookup(options & IS_LOOKUP),
         opcode(op) {}
 };
 
 static const Traits
-Get(PROTOCOL_BINARY_CMD_SUBDOC_GET, 0);
+Get(PROTOCOL_BINARY_CMD_SUBDOC_GET, IS_LOOKUP);
 
 static const Traits
-Exists(PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, 0);
+Exists(PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, IS_LOOKUP);
 
 static const Traits
 DictAdd(PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD, ALLOW_EXPIRY|HAS_VALUE);
@@ -272,34 +275,35 @@ lcb_sdstore3(lcb_t instance, const void *cookie, const lcb_CMDSDSTORE *cmd)
     return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd, trait, true);
 }
 
-static lcb_error_t
-counter_to_store(const lcb_CMDSDCOUNTER *counter, lcb_CMDSDSTORE *store, char buf[32])
-{
-    store->cmdflags = counter->cmdflags;
-    store->key = counter->key;
-    store->_hashkey = counter->_hashkey;
-    store->exptime = counter->exptime;
-    store->cas = counter->cas;
-    store->mode = LCB_SUBDOC_COUNTER;
-    store->path = counter->path;
-    store->npath = counter->npath;
+struct CounterStoreCmd {
+    CounterStoreCmd(const lcb_CMDSDCOUNTER *counter) {
+        memset(&store, 0, sizeof store);
 
-    size_t nbuf = sprintf(buf, "%lld", counter->delta);
-    LCB_CMD_SET_VALUE(store, buf, nbuf);
-    return LCB_SUCCESS;
-}
+        store.cmdflags = counter->cmdflags;
+        store.key = counter->key;
+        store._hashkey = counter->_hashkey;
+        store.exptime = counter->exptime;
+        store.cas = counter->cas;
+        store.mode = LCB_SUBDOC_COUNTER;
+        store.path = counter->path;
+        store.npath = counter->npath;
+        size_t nbuf = sprintf(m_ctrbuf, "%lld", counter->delta);
+        LCB_CMD_SET_VALUE(&store, m_ctrbuf, nbuf);
+    }
+
+    // Actual storage command
+    lcb_CMDSDSTORE store;
+
+    // Buffer to hold the number
+    char m_ctrbuf[32];
+};
 
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_sdcounter3(lcb_t instance, const void *cookie, const lcb_CMDSDCOUNTER *cmd)
 {
-    lcb_CMDSDSTORE scmd = { 0 };
-    char buf[32];
-    lcb_error_t rc = counter_to_store(cmd, &scmd, buf);
-    if (rc != LCB_SUCCESS) {
-        return rc;
-    }
-    return lcb_sdstore3(instance, cookie, &scmd);
+    CounterStoreCmd ccmd(cmd);
+    return lcb_sdstore3(instance, cookie, &ccmd.store);
 }
 
 struct lcb_SDMULTICTX_st {
@@ -384,33 +388,27 @@ lcb_SDMULTICTX_st::addcmd(unsigned op, const lcb_CMDSDBASE *cmd)
         return LCB_EINVAL;
     }
 
-    // Add the opcode to the spec:
-    if (op == LCB_SUBDOC_GET || op == LCB_SUBDOC_EXISTS) {
-        if (mode != LCB_SDMULTI_MODE_LOOKUP) {
+    if (mode == LCB_SDMULTI_MODE_LOOKUP) {
+        if (!trait.is_lookup) {
             return LCB_OPTIONS_CONFLICT;
         }
         return add_spec(trait, cmd);
-    }
-
-    if (mode != LCB_SDMULTI_MODE_MUTATE) {
-        return LCB_OPTIONS_CONFLICT;
-    }
-
-    if (trait.opcode == LCB_SUBDOC_REMOVE) {
-        return add_spec(trait, cmd);
-
-    } else if (op == LCB_SUBDOC_COUNTER) {
-        const lcb_CMDSDCOUNTER *ccmd = reinterpret_cast<const lcb_CMDSDCOUNTER*>(cmd);
-        lcb_CMDSDSTORE scmd = { 0 };
-        char buf[32];
-        lcb_error_t rc = counter_to_store(ccmd, &scmd, buf);
-        if (rc != LCB_SUCCESS) {
-            return rc;
+    } else if (mode == LCB_SDMULTI_MODE_MUTATE) {
+        if (trait.is_lookup) {
+            return LCB_OPTIONS_CONFLICT;
+        } else if (op == LCB_SUBDOC_COUNTER) {
+            const lcb_CMDSDCOUNTER *ccmd = reinterpret_cast<const lcb_CMDSDCOUNTER*>(cmd);
+            CounterStoreCmd wrapcmd(ccmd);
+            return add_spec(trait, cmd, &wrapcmd.store.value);
         }
-        return add_spec(trait, cmd, &scmd.value);
+        if (trait.has_value) {
+            const lcb_CMDSDSTORE *scmd = reinterpret_cast<const lcb_CMDSDSTORE*>(cmd);
+            return add_spec(trait, cmd, &scmd->value);
+        } else {
+            return add_spec(trait, cmd);
+        }
     } else {
-        const lcb_CMDSDSTORE *scmd = reinterpret_cast<const lcb_CMDSDSTORE*>(cmd);
-        return add_spec(trait, cmd, &scmd->value);
+        return LCB_EINTERNAL; // Unknown mode!
     }
 }
 
