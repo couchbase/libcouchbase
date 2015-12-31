@@ -8,6 +8,7 @@
 #include <libcouchbase/views.h>
 #include <libcouchbase/n1ql.h>
 #include <stddef.h>
+#include <include/libcouchbase/api3.h>
 #include "common/options.h"
 #include "common/histogram.h"
 #include "cbc-handlers.h"
@@ -116,6 +117,9 @@ common_callback(lcb_t, int type, const lcb_RESPBASE *resp)
         break;
     case LCB_CALLBACK_REMOVE:
         printKeyCasStatus(key, type, resp, "Deleted.");
+        break;
+    case LCB_CALLBACK_TOUCH:
+        printKeyCasStatus(key, type, resp, "Touched.");
         break;
     default:
         abort(); // didn't request it
@@ -419,6 +423,35 @@ GetHandler::run()
 }
 
 void
+TouchHandler::addOptions()
+{
+    Handler::addOptions();
+    parser.addOption(o_exptime);
+}
+
+void
+TouchHandler::run()
+{
+    Handler::run();
+    lcb_install_callback3(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)common_callback);
+    const vector<string>& keys = parser.getRestArgs();
+    lcb_error_t err;
+    lcb_sched_enter(instance);
+    for (size_t ii = 0; ii < keys.size(); ++ii) {
+        lcb_CMDTOUCH cmd = { 0 };
+        const string& key = keys[ii];
+        LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+        cmd.exptime = o_exptime.result();
+        err = lcb_touch3(instance, this, &cmd);
+        if (err != LCB_SUCCESS) {
+            throw err;
+        }
+    }
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+void
 SetHandler::addOptions()
 {
     Handler::addOptions();
@@ -539,6 +572,166 @@ SetHandler::run()
 
     lcb_sched_leave(instance);
     lcb_wait(instance);
+}
+
+void
+SubdocGetHandler::run()
+{
+    Handler::run();
+    union {
+        lcb_CMDSDGET gcmd;
+        lcb_CMDSDEXISTS ecmd;
+    } u;
+    memset(&u, 0, sizeof u);
+
+    const vector<string>& v = parser.getRestArgs();
+    if (v.size() != 2) {
+        throw string("Need KEY PATH");
+    }
+
+    lcb_install_callback3(instance, LCB_CALLBACK_SDGET, (lcb_RESPCALLBACK) get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_SDEXISTS, (lcb_RESPCALLBACK) get_callback);
+
+    LCB_CMD_SET_KEY(&u.gcmd, v[0].c_str(), v[0].size());
+    LCB_SDCMD_SET_PATH(&u.gcmd, v[1].c_str(), v[1].size());
+    lcb_error_t rc;
+    lcb_sched_enter(instance);
+    if (!isExists()) {
+        rc = lcb_sdget3(instance, NULL, &u.gcmd);
+    } else {
+        rc = lcb_sdexists3(instance, NULL, &u.ecmd);
+    }
+
+    if (rc != LCB_SUCCESS) {
+        throw rc;
+    } else {
+        lcb_sched_leave(instance);
+        lcb_wait(instance);
+    }
+}
+
+SubdocModes::SubdocModes()
+{
+    info["dict_upsert"] = ModeInfo(
+        "Unconditionally store a dictionary value", LCB_SUBDOC_DICT_UPSERT);
+    info["dict_insert"] = ModeInfo(
+        "Store a new value in a dictionary", LCB_SUBDOC_DICT_ADD);
+    info["replace"] = ModeInfo(
+        "Replace existing path with a new value", LCB_SUBDOC_REPLACE);
+    info["array_append"] = ModeInfo(
+        "Add value to the end of an array", LCB_SUBDOC_ARRAY_ADD_LAST);
+    info["array_prepend"] = ModeInfo(
+        "Add value to the beginning of an array", LCB_SUBDOC_ARRAY_ADD_FIRST);
+    info["array_addunique"] = ModeInfo(
+        "Insert value into array if it does not yet exist", LCB_SUBDOC_ARRAY_ADD_UNIQUE);
+    info["array_insert"] = ModeInfo(
+        "Insert value into array at given position", LCB_SUBDOC_ARRAY_INSERT);
+}
+
+SubdocModes SubdocStoreHandler::AllModes;
+
+SubdocStoreHandler::SubdocStoreHandler(const char *name)
+: Handler(name), o_exp("expiry"), o_mode("mode"), o_persist("persist-to"),
+  o_replicate("replicate-to"), o_value("value"), o_cas("cas"),
+  o_mkparents("create-parents")
+{
+    o_exp.abbrev('e').description("Expiry for item");
+    o_mode.abbrev('M').description(
+        "Mode to use when storing. Use '--mode help' for a list of all modes");
+    o_mode.setDefault("dict_upsert");
+    o_persist.abbrev('p').description("Wait until item is persisted to this many nodes");
+    o_replicate.abbrev('r').description("Wait until item is replicated to this many replicas");
+    o_value.abbrev('V').description("JSON-encoded value to use for storing");
+    o_value.mandatory(true);
+    o_cas.description("hex-formatted CAS");
+
+    // TODO: Remove this when durability is implemented for subdoc
+    o_persist.hide();
+    o_replicate.hide();
+}
+
+void
+SubdocStoreHandler::dumpModeHelp()
+{
+    for (map<string, SubdocModes::ModeInfo>::iterator ii = AllModes.info.begin();
+            ii != AllModes.info.end(); ++ii) {
+        std::cerr << ii->first << ": " << ii->second.description << std::endl;
+    }
+}
+
+lcb_SUBDOCOP
+SubdocStoreHandler::getMode()
+{
+    const map<string,SubdocModes::ModeInfo>::iterator res =
+            AllModes.info.find(o_mode.const_result());
+    if (res == AllModes.info.end()) {
+        throw string("Unknown mode ") + o_mode.const_result();
+    }
+    return res->second.value;
+}
+
+void
+SubdocStoreHandler::addOptions()
+{
+    Handler::addOptions();
+    parser.addOption(o_mode);
+    parser.addOption(o_exp);
+    parser.addOption(o_persist);
+    parser.addOption(o_replicate);
+    parser.addOption(o_value);
+    parser.addOption(o_mkparents);
+}
+
+void
+SubdocStoreHandler::installHandler()
+{
+    lcb_install_callback3(instance, LCB_CALLBACK_SDSTORE, (lcb_RESPCALLBACK)store_callback);
+}
+
+void
+SubdocStoreHandler::run()
+{
+    Handler::run();
+    if (o_mode.const_result() == "help") {
+        dumpModeHelp();
+        exit(EXIT_SUCCESS);
+    }
+
+    installHandler();
+
+    lcb_CMDSDSTORE cmd;
+    memset(&cmd, 0, sizeof cmd);
+    cmd.mode = getMode();
+
+    const vector<string>& key_path = parser.getRestArgs();
+    if (key_path.size() != 2) {
+        throw string("Positional arguments must be KEY PATH");
+    }
+
+    LCB_CMD_SET_KEY(&cmd, key_path[0].c_str(), key_path[0].size());
+    LCB_SDCMD_SET_PATH(&cmd, key_path[1].c_str(), key_path[1].size());
+    const string& value = o_value.result();
+    LCB_CMD_SET_VALUE(&cmd, value.c_str(), value.size());
+    cmd.exptime = o_exp.result();
+    lcb_sched_enter(instance);
+    lcb_error_t rc = lcb_sdstore3(instance, NULL, &cmd);
+    if (rc != LCB_SUCCESS) {
+        throw rc;
+    }
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+void
+SubdocCounterHandler::installHandler()
+{
+    lcb_install_callback3(instance, LCB_CALLBACK_SDCOUNTER, (lcb_RESPCALLBACK)get_callback);
+}
+
+void
+SubdocRemoveHandler::installHandler()
+{
+    lcb_install_callback3(instance, LCB_CALLBACK_SDREMOVE, (lcb_RESPCALLBACK)store_callback);
 }
 
 void
@@ -1287,6 +1480,12 @@ static const char* optionsOrder[] = {
         "help",
         "cat",
         "create",
+        "touch",
+        "sdget",
+        "sdexists",
+        "sdstore",
+        "sdcounter",
+        "sdremove",
         "observe",
         "observe-seqno",
         "incr",
@@ -1391,6 +1590,12 @@ setupHandlers()
     handlers_s["write-config"] = new WriteConfigHandler();
     handlers_s["strerror"] = new StrErrorHandler();
     handlers_s["observe-seqno"] = new ObserveSeqnoHandler();
+    handlers_s["touch"] = new TouchHandler();
+    handlers_s["sdget"] = new SubdocGetHandler();
+    handlers_s["sdexists"] = new SubdocExistsHandler();
+    handlers_s["sdstore"] = new SubdocStoreHandler();
+    handlers_s["sdcounter"] = new SubdocCounterHandler();
+    handlers_s["sdremove"] = new SubdocRemoveHandler();
 
 
 

@@ -419,6 +419,19 @@ typedef struct lcb_logprocs_st {
  */
 #define LCB_CNTL_CONFDELAY_THRESH 0x19
 
+/**
+ * @brief Configuration polling
+ *
+ * Determine how frequently the library should proactively check if a new
+ * configuration is available. Polling for a new configuration is required
+ * if new non-KV (e.g. query, index) nodes are added, if the current instance
+ * is to take advantage of them.
+ *
+ * @cntl_arg_both{lcb_U32*}
+ * @uncommitted
+ */
+#define LCB_CNTL_CONFIG_POLL_INTERVAL 0x3F
+
 /**@brief Get the transport used to fetch cluster configuration.
  * @cntl_arg_getonly{lcb_config_transport_t*}
  * @uncommitted*/
@@ -504,8 +517,8 @@ typedef struct lcb_logprocs_st {
 #define LCB_CNTL_CONFIGCACHE_RO 0x36
 
 typedef enum {
-    LCB_SSL_ENABLED = 1 << 0, /**< Use SSL */
-    LCB_SSL_NOVERIFY = 1 << 1 /**< Don't verify certificates */
+    LCB_SSL_ENABLED = 1 << 0, /**< Use SSL */                  //!< LCB_SSL_ENABLED
+    LCB_SSL_NOVERIFY = 1 << 1 /**< Don't verify certificates *///!< LCB_SSL_NOVERIFY
 } lcb_SSLOPTS;
 
 /**
@@ -875,7 +888,7 @@ typedef enum {
 #define LCB_CNTL_N1QL_CLEARACHE 0x3E
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x3F
+#define LCB_CNTL__MAX                    0x40
 /**@}*/
 
 #ifdef __cplusplus

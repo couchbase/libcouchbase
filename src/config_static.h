@@ -98,7 +98,11 @@
 #include <libcouchbase/plugins/io/wsaerr.h>
 
 #ifndef __MINGW32__
+
+#ifndef HAVE_SNPRINTF
 #define snprintf _snprintf
+#endif
+
 #define strcasecmp(a,b) _stricmp(a,b)
 #define strncasecmp(a,b,c) _strnicmp(a,b,c)
 #undef strdup

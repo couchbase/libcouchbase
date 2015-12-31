@@ -51,6 +51,20 @@ private:
     bool isLock() const { return cmdname == "lock"; }
 };
 
+class TouchHandler : public Handler {
+public:
+    TouchHandler(const char *name = "touch") :
+            Handler(name), o_exptime("expiry") {
+        o_exptime.abbrev('e').mandatory(true);
+    }
+    HANDLER_DESCRIPTION("Updated expiry times for documents")
+protected:
+    void addOptions();
+    void run();
+private:
+    cliopts::UIntOption  o_exptime;
+};
+
 class SetHandler : public Handler {
 public:
     SetHandler(const char *name = "create") : Handler(name),
@@ -106,6 +120,94 @@ private:
     cliopts::BoolOption o_json;
     cliopts::StringOption o_mode;
     std::map<std::string, lcb_cas_t> items;
+};
+
+class SubdocGetHandler : public Handler {
+public:
+    SubdocGetHandler(const char *name = "sdget") : Handler(name) {}
+    HANDLER_DESCRIPTION("Retrieve sub-document paths")
+    HANDLER_USAGE("KEY PATH [OPTIONS ...]")
+protected:
+    virtual bool isExists() { return false; }
+    void run();
+};
+
+class SubdocExistsHandler : public SubdocGetHandler {
+public:
+    SubdocExistsHandler(const char *name = "sdeixsts") : SubdocGetHandler(name) {}
+    HANDLER_DESCRIPTION("Check if sub-document path exists")
+    HANDLER_USAGE("KEY PATH [OPTIONS ...]")
+protected:
+    virtual bool isExists() { return true; }
+};
+
+struct SubdocModes {
+    struct ModeInfo {
+        std::string description;
+        lcb_SUBDOCOP value;
+        ModeInfo(const char *desc, lcb_SUBDOCOP c) : description(desc), value(c) {}
+        ModeInfo() {}
+    };
+    std::map<std::string, ModeInfo> info;
+    SubdocModes();
+};
+
+class SubdocStoreHandler : public Handler {
+public:
+    SubdocStoreHandler(const char *name = "sdstore");
+    HANDLER_DESCRIPTION("Modify sub-document paths")
+    HANDLER_USAGE("KEY PATH -V VALUE [OPTIONS ...]")
+    static SubdocModes AllModes;
+protected:
+    void run();
+    virtual void addOptions();
+    void dumpModeHelp();
+    virtual lcb_SUBDOCOP getMode();
+    virtual void installHandler();
+    cliopts::UIntOption o_exp;
+    cliopts::StringOption o_mode;
+    cliopts::IntOption o_persist;
+    cliopts::IntOption o_replicate;
+    cliopts::StringOption o_value;
+    cliopts::StringOption o_cas;
+    cliopts::BoolOption o_mkparents;
+};
+
+class SubdocCounterHandler : public SubdocStoreHandler {
+public:
+    SubdocCounterHandler(const char *name = "sdcounter")
+            : SubdocStoreHandler(name) {
+    }
+
+    HANDLER_DESCRIPTION("Modify sub-document counters")
+    HANDLER_USAGE("KEY PATH -V delta [OPTIONS ...]")
+
+protected:
+    void addOptions() {
+        o_mode.hide();
+    }
+    lcb_SUBDOCOP getMode() {
+        return LCB_SUBDOC_COUNTER;
+    }
+    void installHandler();
+};
+
+class SubdocRemoveHandler : public SubdocStoreHandler {
+public:
+    SubdocRemoveHandler(const char *name = "sdremove") : SubdocStoreHandler(name) {
+    }
+    HANDLER_DESCRIPTION("Remove sub-document paths")
+    HANDLER_USAGE("KEY PATH [OPTIONS ...]")
+
+protected:
+    void addOptions() {
+        o_mode.hide();
+        o_value.hide();
+    }
+    lcb_SUBDOCOP getMode() {
+        return LCB_SUBDOC_REMOVE;
+    }
+    void installHandler();
 };
 
 class HashHandler : public Handler {

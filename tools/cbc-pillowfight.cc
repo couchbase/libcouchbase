@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
 #include <signal.h>
 #ifndef WIN32
 #include <pthread.h>
@@ -63,6 +64,132 @@ struct DeprecatedOptions {
     }
 };
 
+#define JSON_VALUE_SIZE 16
+
+// Writes a single json field "line". This returns something like:
+// "Field_$counter": "*********....",
+static size_t writeJsonLine(std::stringstream& ss, int docsize, int counter)
+{
+    size_t begin_size = ss.tellp();
+    ss << '"'; // Opening quote for key
+    ss << "Field_" << counter;
+    ss << '"'; // Closing quote for key
+    ss << ':'; // For dictionary value
+
+    // Handle the value:
+    // Determine how much of the value we can actually write..
+    size_t nw = static_cast<size_t>(ss.tellp()) - begin_size;
+    docsize -= nw;
+    docsize = std::max(docsize, 1);
+    docsize = std::min(docsize, JSON_VALUE_SIZE);
+
+    // Now write to the document again..
+    ss << '"'; // Opening quote for value
+    ss << string(docsize, '*'); // Fill '*' to remaining size
+    ss << '"'; // Closing quote
+    ss << ','; // For next value
+    ss << '\n'; // Easy to read
+
+    return static_cast<size_t>(ss.tellp()) - begin_size;
+}
+
+// Generates a "JSON" document of a given size. In order to remain
+// more or less in-tune with common document sizes, field names will be
+// "Field_$incr" and values will be evenly distributed as fixed 16 byte
+// strings. (See JSON_VALUE_SIZE)
+static string genJsonDocument(int docsize)
+{
+    std::stringstream ss;
+    int counter = 0;
+    ss << '{';
+    while (docsize > 0) {
+        docsize -= writeJsonLine(ss, docsize, counter++);
+    }
+    ss << "\"__E\":1\n";
+    ss << "}";
+    return ss.str();
+}
+
+class DocGenerator {
+public:
+    DocGenerator() : minSize(0), maxSize(0), mode(RAW) {
+    }
+
+    enum Mode {
+        RAW, // Just use a static buffer
+        JSON, // Generate something that looks like JSON
+        USER // Use user-defined values
+    };
+
+    void init(uint32_t minsz, uint32_t maxsz, Mode mode_) {
+        // Normalize the size
+        mode = mode_;
+        minSize = std::min(minsz, maxsz);
+        maxSize = maxsz;
+
+        int grades = 10;
+        size_t diff = maxSize - minSize;
+        size_t factor = diff / grades;
+        if (factor == 0) {
+            grades = 1;
+            factor = maxSize;
+        }
+
+        // Use raw buffer mode
+        if (mode == RAW) {
+            rawbuf.insert(0, maxSize, '#');
+            if (minSize == maxSize) {
+                // Use exact:
+                raw_sizes.push_back(1);
+                return;
+            }
+        }
+
+
+        printf("Grades=%d, Factor=%d, Diff=%d\n", grades, factor, diff);
+
+        for (int ii = 0; ii < grades+1; ii++) {
+            size_t size = minSize + (factor * ii);
+            printf("Using value size %lu\n", size);
+            string jdoc = genJsonDocument(size);
+            if (mode == RAW) {
+                raw_sizes.push_back(size);
+            } else {
+                doc_values.push_back(genJsonDocument(size));
+            }
+        }
+    }
+
+    void initUser(const vector<string>& userdocs) {
+        doc_values.assign(userdocs.begin(), userdocs.end());
+    }
+
+    /**
+     * Get a document buffer and size for a given iteration sequence
+     * @param seq The sequence number
+     * @param[out] docsize The size of the document
+     * @return the document buffer
+     */
+    const void *getDocValue(size_t seq, size_t *docsize) {
+        if (mode == RAW) {
+            *docsize = raw_sizes[seq % raw_sizes.size()];
+            return rawbuf.c_str();
+        } else {
+            const string& s = doc_values[seq % doc_values.size()];
+            *docsize = s.size();
+            return s.c_str();
+        }
+    }
+
+private:
+    uint32_t minSize;
+    uint32_t maxSize;
+    Mode mode;
+    vector<string> doc_values;
+    vector<size_t> raw_sizes;
+    string rawbuf;
+};
+
 class Configuration
 {
 public:
@@ -80,7 +207,11 @@ public:
         o_numCycles("num-cycles"),
         o_sequential("sequential"),
         o_startAt("start-at"),
-        o_rateLimit("rate-limit")
+        o_rateLimit("rate-limit"),
+        o_userdocs("docs"),
+        o_writeJson("json"),
+        o_sdpath("sd-path"),
+        o_sdvalsize("sd-size")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -96,6 +227,10 @@ public:
         o_sequential.setDefault(false).description("Use sequential access (instead of random)");
         o_startAt.setDefault(0).description("For sequential access, set the first item");
         o_rateLimit.setDefault(0).description("Set operations per second limit (per thread)");
+        o_sdpath.description("Sub-document path");
+        o_userdocs.description("User documents to load (overrides --min-size and --max-size");
+        o_writeJson.description("Enable writing JSON values (rather than bytes)");
+        o_sdvalsize.description("Sub-document value size").setDefault(16);
     }
 
     void processOptions() {
@@ -103,7 +238,6 @@ public:
         prefix = o_keyPrefix.result();
         setprc = o_setPercent.result();
         shouldPopulate = !o_noPopulate.result();
-        setPayloadSizes(o_minSize.result(), o_maxSize.result());
 
         if (depr.loop.passed()) {
             fprintf(stderr, "The --loop/-l option is deprecated. Use --num-cycles\n");
@@ -116,6 +250,44 @@ public:
             fprintf(stderr, "The --num-iterations/-I option is deprecated. Use --batch-size\n");
             opsPerCycle = depr.iterations.result();
         }
+
+        if (o_sdpath.passed()) {
+            // Set the path to use..
+            sd_path = o_sdpath.result();
+            isSubdoc = true;
+        } else {
+            isSubdoc = false;
+        }
+
+        // Set the document sizes..
+        if (o_userdocs.passed()) {
+            vector<string> inputs = o_userdocs.result();
+            vector<string> docs;
+            for (size_t ii = 0; ii < inputs.size(); ii++) {
+                std::stringstream ss;
+                std::ifstream ifs(inputs[ii].c_str());
+                if (!ifs.is_open()) {
+                    perror(inputs[ii].c_str());
+                    exit(EXIT_FAILURE);
+                }
+                ss << ifs.rdbuf();
+                docs.push_back(ss.str());
+            }
+            docgen.initUser(docs);
+
+        } else {
+            DocGenerator::Mode genmode;
+            if (o_writeJson.result() || !sd_path.empty()) {
+                genmode = DocGenerator::JSON;
+            } else {
+                genmode = DocGenerator::RAW;
+            }
+            docgen.init(o_minSize.result(), o_maxSize.result(), genmode);
+        }
+
+        sd_value += '"';
+        sd_value.insert(1, o_sdvalsize.result(), '@');
+        sd_value += '"';
     }
 
     void addOptions(Parser& parser) {
@@ -133,38 +305,13 @@ public:
         parser.addOption(o_sequential);
         parser.addOption(o_startAt);
         parser.addOption(o_rateLimit);
+        parser.addOption(o_userdocs);
+        parser.addOption(o_sdpath);
+        parser.addOption(o_userdocs);
+        parser.addOption(o_writeJson);
+        parser.addOption(o_sdvalsize);
         params.addToParser(parser);
         depr.addOptions(parser);
-    }
-
-    ~Configuration() {
-        delete []static_cast<char *>(data);
-    }
-
-    void setPayloadSizes(uint32_t minsz, uint32_t maxsz) {
-        if (minsz > maxsz) {
-            minsz = maxsz;
-        }
-
-        minSize = minsz;
-        maxSize = maxsz;
-
-        if (data) {
-            delete []static_cast<char *>(data);
-        }
-
-        data = static_cast<void *>(new char[maxSize]);
-        /* fill data array with pattern */
-        uint32_t *iptr = static_cast<uint32_t *>(data);
-        for (uint32_t ii = 0; ii < maxSize / sizeof(uint32_t); ++ii) {
-            iptr[ii] = 0xdeadbeef;
-        }
-        /* pad rest bytes with zeros */
-        size_t rest = maxSize % sizeof(uint32_t);
-        if (rest > 0) {
-            char *cptr = static_cast<char *>(data) + (maxSize / sizeof(uint32_t));
-            memset(cptr, 0, rest);
-        }
     }
 
     uint32_t getNumInstances(void) {
@@ -200,18 +347,20 @@ public:
     uint32_t getNumItems() { return o_numItems; }
     uint32_t getRateLimit() { return o_rateLimit; }
 
-    void *data;
+
+    std::string sd_path;
+    std::string sd_value;
 
     uint32_t opsPerCycle;
     unsigned setprc;
     string prefix;
-    uint32_t maxSize;
-    uint32_t minSize;
     volatile int maxCycles;
     bool dgm;
     bool shouldPopulate;
+    bool isSubdoc;
     uint32_t waitTime;
     ConnParams params;
+    DocGenerator docgen;
 
 private:
     UIntOption o_multiSize;
@@ -229,6 +378,19 @@ private:
     BoolOption o_sequential;
     UIntOption o_startAt;
     UIntOption o_rateLimit;
+
+    // List of paths to user documents to load.. They should all be valid JSON
+    ListOption o_userdocs;
+
+    // Whether generated values should be JSON
+    BoolOption o_writeJson;
+
+    // Sub-document path to access
+    StringOption o_sdpath;
+
+    // Size of subdoc value
+    UIntOption o_sdvalsize;
+
     DeprecatedOptions depr;
 } config;
 
@@ -290,12 +452,14 @@ private:
 };
 
 struct NextOp {
-    NextOp() : seqno(0), valsize(0), isStore(false) {}
+    NextOp() : seqno(0), valsize(0), data(NULL), mode(GET) {}
 
     string key;
     uint32_t seqno;
     size_t valsize;
-    bool isStore;
+    const void *data;
+    enum Mode { STORE, GET, SD_STORE, SD_GET };
+    Mode mode;
 };
 
 class KeyGenerator {
@@ -314,13 +478,20 @@ public:
             isSequential = config.sequentialAccess();
         }
 
-
         // Maximum number of keys for this thread
         maxKey = config.getNumItems() /  config.getNumThreads();
 
         offset = config.firstKeyOffset();
         offset += maxKey * ix;
         id = ix;
+
+        if (config.isSubdoc) {
+            modeGet = NextOp::SD_GET;
+            modeStore = NextOp::SD_STORE;
+        } else {
+            modeGet = NextOp::GET;
+            modeStore = NextOp::STORE;
+        }
     }
 
     void setNextOp(NextOp& op) {
@@ -350,21 +521,28 @@ public:
         }
 
         if (store_override) {
-            op.isStore = true;
+            // Populate
+            op.mode = NextOp::STORE;
+            setOpDocValue(op);
+
+        } else if (shouldStore(op.seqno)) {
+            op.mode = modeStore;
+            if (op.mode == NextOp::STORE) {
+                // KV Store
+                setOpDocValue(op);
+            } else {
+                op.data = config.sd_value.c_str();
+                op.valsize = config.sd_value.size();
+            }
         } else {
-            op.isStore = shouldStore(op.seqno);
+            op.mode = modeGet;
         }
 
-        if (op.isStore) {
-            size_t size;
-            if (config.minSize == config.maxSize) {
-                size = config.minSize;
-            } else {
-                size = config.minSize + op.seqno % (config.maxSize - config.minSize);
-            }
-            op.valsize = size;
-        }
         generateKey(op);
+    }
+
+    void setOpDocValue(NextOp& op) {
+        op.data = config.docgen.getDocValue(op.seqno, &op.valsize);
     }
 
     bool shouldStore(uint32_t seqno) {
@@ -405,6 +583,8 @@ private:
 
     bool isSequential;
     bool isPopulate;
+    NextOp::Mode modeGet;
+    NextOp::Mode modeStore;
 };
 
 class ThreadContext
@@ -421,17 +601,33 @@ public:
 
         for (size_t ii = 0; ii < config.opsPerCycle; ++ii) {
             kgen.setNextOp(opinfo);
-            if (opinfo.isStore) {
+
+            if (opinfo.mode == NextOp::STORE) {
                 lcb_CMDSTORE scmd = { 0 };
                 scmd.operation = LCB_SET;
                 LCB_CMD_SET_KEY(&scmd, opinfo.key.c_str(), opinfo.key.size());
-                LCB_CMD_SET_VALUE(&scmd, config.data, opinfo.valsize);
+                LCB_CMD_SET_VALUE(&scmd, opinfo.data, opinfo.valsize);
                 error = lcb_store3(instance, this, &scmd);
 
-            } else {
+            } else if (opinfo.mode == NextOp::GET) {
                 lcb_CMDGET gcmd = { 0 };
                 LCB_CMD_SET_KEY(&gcmd, opinfo.key.c_str(), opinfo.key.size());
                 error = lcb_get3(instance, this, &gcmd);
+
+            } else if (opinfo.mode == NextOp::SD_GET) {
+                lcb_CMDSDGET sd_gcmd = { 0 };
+                LCB_CMD_SET_KEY(&sd_gcmd, opinfo.key.c_str(), opinfo.key.size());
+                LCB_SDCMD_SET_PATH(&sd_gcmd, config.sd_path.c_str(), config.sd_path.size());
+                error = lcb_sdget3(instance, this, &sd_gcmd);
+
+            } else if (opinfo.mode == NextOp::SD_STORE) {
+                lcb_CMDSDSTORE sd_scmd = { 0 };
+                LCB_CMD_SET_KEY(&sd_scmd, opinfo.key.c_str(), opinfo.key.size());
+                LCB_CMD_SET_VALUE(&sd_scmd, opinfo.data, opinfo.valsize);
+                LCB_SDCMD_SET_PATH(&sd_scmd, config.sd_path.c_str(), config.sd_path.size());
+                sd_scmd.cmdflags = LCB_CMDSUBDOC_F_MKINTERMEDIATES;
+                sd_scmd.mode = LCB_SUBDOC_DICT_UPSERT;
+                error = lcb_sdstore3(instance, this, &sd_scmd);
             }
             if (error != LCB_SUCCESS) {
                 hasItems = false;
@@ -647,6 +843,8 @@ int main(int argc, char **argv)
         }
         lcb_install_callback3(instance, LCB_CALLBACK_STORE, operationCallback);
         lcb_install_callback3(instance, LCB_CALLBACK_GET, operationCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_SDGET, operationCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_SDSTORE, operationCallback);
         cp.doCtls(instance);
 
         new InstanceCookie(instance);

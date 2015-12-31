@@ -85,6 +85,21 @@ HANDLER(timeout_common) {
     return LCB_SUCCESS;
 }
 
+HANDLER(config_poll_handler) {
+    lcb_U32 *ptr;
+    lcb_U32 *user = arg;
+
+    ptr = &LCBT_SETTING(instance, config_poll_interval);
+    if (mode == LCB_CNTL_GET) {
+        *user = *ptr;
+    } else {
+        *ptr = *user;
+        lcb_bootstrap_setpoll(instance, *user);
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 HANDLER(noop_handler) {
     (void)mode;(void)instance;(void)cmd;(void)arg; return LCB_SUCCESS;
 }
@@ -528,7 +543,8 @@ static ctl_handler handlers[] = {
     console_fp_handler, /* LCB_CNTL_CONLOGGER_FP */
     kv_hg_handler, /* LCB_CNTL_KVTIMINGS */
     timeout_common, /* LCB_CNTL_N1QL_TIMEOUT */
-    n1ql_cache_clear_handler /* LCB_CNTL_N1QL_CLEARCACHE */
+    n1ql_cache_clear_handler, /* LCB_CNTL_N1QL_CLEARCACHE */
+    config_poll_handler /* LCB_CNTL_CONFIG_POLL_INTERVAL */
 };
 
 /* Union used for conversion to/from string functions */
@@ -676,6 +692,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"tcp_nodelay", LCB_CNTL_TCP_NODELAY, convert_intbool },
         {"readj_ts_wait", LCB_CNTL_RESET_TIMEOUT_ON_WAIT, convert_intbool },
         {"console_log_file", LCB_CNTL_CONLOGGER_FP, NULL },
+        {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timeout },
         {NULL, -1}
 };
 
