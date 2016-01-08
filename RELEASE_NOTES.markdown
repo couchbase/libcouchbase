@@ -1,5 +1,54 @@
 # Release Notes
 
+## 2.5.5 (January 12 2016)
+
+* Add `retry_interval` string option to adjust retry interval.
+  This allows the setting to be modified via `lcb_cntl_string()` and specified
+  in the connection string.
+  * Priority: Major
+  * Issues: [CCBC-654](https://issues.couchbase.com/browse/CCBC-654)
+
+* Handle backslashes in view row ID fields.
+  This would previously not be handled correctly as the backslashes would not
+  be removed, for example an ID of `has_a_"quote` would appear in the API as
+  `has_a_\"quote`. This has been fixed and document IDs are now properly
+  processed as JSON
+  * Priority: Major
+  * Issues: [CCBC-649](https://issues.couchbase.com/browse/CCBC-649)
+
+* Allow 'file-only' configuration mode.
+  This allows applications to make the library instance exclusively configured
+  from a file on the local filesystem rather than through network bootstrap.
+  This feature is undocumented and unsupported. It may be enabled using the
+  `bootstrap_on=file_only` connection string directive.
+  * Priority: Major
+  * Issues: [CCBC-652](https://issues.couchbase.com/browse/CCBC-652)
+
+* Log when squashing network errors.
+  This will make the library log the original error whenever a network error
+  is translated from a more detailed description into `LCB_NETWORK_ERROR`
+  (in case `detailed_errcodes` is not enabled), or if an OS-level error is
+  found which cannot be translated into a more specific library error.
+  * Priority: Major
+
+* Fix memcached/ketama hashing
+  This fixes a bug in the ketama hasing code which caused a key to be mapped
+  to an effectively arbitrary server for the library instance. In practice the
+  node a key was mapped to depended on the order in which the hosts were
+  specified in the connection string. This has been fixed to always use
+  hashing based on the lexical sort order of each server node.
+  It is highly recommended that applications upgrade to this version (2.5.5)
+  for proper memcached (cache) bucket functionality.
+  * Priority: Critical
+  * Issues: [CCBC-653](https://issues.couchbase.com/browse/CCBC-653)
+
+* Add `cbc-touch` subcommand.
+  This now allows the simple "touching", or modifying expiration time via the
+  `cbc` command line client.
+  * Priority: Major
+  * Issues: [CCBC-651](https://issues.couchbase.com/browse/CCBC-651)
+
+
 ## 2.5.4 (November 25 2015)
 
 * Validate vBucket master nodes for bounds when receiving new configuration.
