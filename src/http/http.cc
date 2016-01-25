@@ -431,7 +431,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
         return rc;
     }
 
-    add_header("User-Agent", "libcouchbase/"LCB_VERSION_STRING);
+    add_header("User-Agent", "libcouchbase/" LCB_VERSION_STRING);
     if (instance->http_sockpool->maxidle == 0 || !is_data_request()) {
         add_header("Connection", "close");
     }
