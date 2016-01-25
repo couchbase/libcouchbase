@@ -1249,6 +1249,42 @@ lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb);
  * lcb_KEYBUF::type) may either be ::LCB_KV_COPY or ::LCB_KV_VBID
  * @param[out] errp Set to an error if this function returns NULL
  * @return The mutation token if successful, otherwise NULL.
+ *
+ * Getting the latest mutation token for a key:
+ *
+ * @code{.c}
+ * lcb_KEYBUF kb;
+ * kb.type = LCB_KV_COPY;
+ * kb.contig.bytes = "Hello";
+ * kv.config.nbytes = 5;
+ * mt = lcb_get_mutation_token(instance, &kb, &rc);
+ * @endcode
+ *
+ * Getting the latest mutation token for a vbucket:
+ * @code{.c}
+ * lcb_KEYBUF kb;
+ * kv.type = LCB_KV_VBID;
+ * kv.contig.nbytes = 543;
+ * kv.config.bytes = NULL;
+ * mt = lcb_get_mutation_token(instance, &kb, &rc);
+ * @endcode
+ *
+ * Getting the mutation token for each vbucket
+ * @code{.c}
+ * size_t ii, nvb;
+ * lcbvb_CONFIG *vbc;
+ * lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
+ * nvb = vbucket_get_num_vbuckets(vbc);
+ * for (ii = 0; ii < nvb; ii++) {
+ *   lcb_KEYBUF kb;
+ *   const lcb_MUTATION_TOKEN *mt;
+ *   kb.type = LCB_KV_VBID;
+ *   kb.contig.nbytes = ii;
+ *   kb.config.bytes = NULL;
+ *   mt = lcb_get_mutation_token(instance, &kb, &rc);
+ * }
+ * @endcode
+ *
  */
 LIBCOUCHBASE_API
 const lcb_MUTATION_TOKEN *
