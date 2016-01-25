@@ -303,7 +303,7 @@ do_store3(lcb_t instance, const void *cookie,
             + get_value_size(packet));
 
     memcpy(SPAN_BUFFER(&packet->kh_span), scmd.bytes, hsize);
-    mcreq_sched_add(pipeline, packet);
+    LCB_SCHED_ADD(instance, pipeline, packet);
     TRACE_STORE_BEGIN(hdr, (lcb_CMDSTORE* )cmd);
     return LCB_SUCCESS;
 }

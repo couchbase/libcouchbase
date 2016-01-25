@@ -234,7 +234,7 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
         exptime = htonl(exptime);
         memcpy(SPAN_BUFFER(&packet->kh_span) + sizeof request.bytes, &exptime, 4);
     }
-    mcreq_sched_add(pipeline, packet);
+    LCB_SCHED_ADD(instance, pipeline, packet);
     return LCB_SUCCESS;
 
 }
@@ -433,7 +433,7 @@ lcb_SDMULTICTX_st::done()
     // Get the body size
     hdr.request.bodylen = htonl(ntohs(hdr.request.keylen) + extra_body.size());
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof hdr.bytes);
-    mcreq_sched_add(pipeline, pkt);
+    LCB_SCHED_ADD(instance, pipeline, pkt);
 
     pkt = NULL;
     pipeline = NULL;

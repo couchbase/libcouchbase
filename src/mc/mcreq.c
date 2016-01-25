@@ -621,7 +621,7 @@ mcreq_queue_cleanup(mc_CMDQUEUE *queue)
 void
 mcreq_sched_enter(mc_CMDQUEUE *queue)
 {
-    (void)queue;
+    queue->ctxenter = 1;
 }
 
 
@@ -630,6 +630,11 @@ static void
 queuectx_leave(mc_CMDQUEUE *queue, int success, int flush)
 {
     unsigned ii;
+
+    if (queue->ctxenter) {
+        queue->ctxenter = 0;
+    }
+
     for (ii = 0; ii < queue->_npipelines_ex; ii++) {
         mc_PIPELINE *pipeline;
         sllist_node *ll_next, *ll;
