@@ -476,7 +476,9 @@ typedef enum {
     X(LCB_SUBDOC_MULTI_FAILURE, 0x49, LCB_ERRTYPE_DATAOP|LCB_ERRTYPE_SRVGEN, \
        "Could not execute one or more multi lookups or mutations") \
     X(LCB_SUBDOC_VALUE_E2DEEP, 0x4A, LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN, \
-        "Value is too deep to insert")
+        "Value is too deep to insert") \
+    X(LCB_EINVAL_MCD, 0x4B, LCB_ERRTYPE_SRVGEN|LCB_ERRTYPE_INTERNAL, \
+        "A badly formatted packet was sent to the server. Please report this in a bug")
 
 /** Error codes returned by the library. */
 typedef enum {
