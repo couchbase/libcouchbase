@@ -26,15 +26,15 @@ extern "C" {
 /**@file*/
 
 /**
- * @defgroup lcb-public-api3 Experimental V3 API
+ * @defgroup lcb-public-api3 New KV API
  *
  * @brief Preview APIs for performing commands
  *
  * @details
  * Basic command and structure definitions for public API. This represents the
- * "V3" API of libcouchbase. All of the APIs in this group are considered
- * to be volatile, however you are encouraged to try them out and provide
- * feedback on them.
+ * "V3" API of libcouchbase. This API replaces the legacy API (which now wraps
+ * this one). It contains common definitions for scheduling, response structures
+ * and callback signatures.
  *
  * @addtogroup lcb-public-api3
  * @{
@@ -104,6 +104,8 @@ typedef struct lcb_CMDBASE {
 #define LCB_CMD_F_INTERNAL_CALLBACK (1 << 0)
 
 /**
+ * @comitted
+ *
  * Set the key for the command.
  * @param cmd A command derived from lcb_CMDBASE
  * @param keybuf the buffer for the key
@@ -260,6 +262,8 @@ typedef enum {
 #define LCB_CALLBACK_N1QL -2
 
 /**
+ * @comitted
+ *
  * Callback invoked for responses.
  * @param instance The handle
  * @param cbtype The type of callback - or in other words, the type of operation
@@ -271,7 +275,7 @@ typedef void (*lcb_RESPCALLBACK)
         (lcb_t instance, int cbtype, const lcb_RESPBASE* resp);
 
 /**
- * @volatile
+ * @committed
  *
  * Install a new-style callback for an operation. The callback will be invoked
  * with the relevant response structure.
@@ -296,7 +300,8 @@ lcb_RESPCALLBACK
 lcb_install_callback3(lcb_t instance, int cbtype, lcb_RESPCALLBACK cb);
 
 /**
- * @volatile
+ * @committed
+ *
  * Get the current callback installed as `cbtype`. Note that this does not
  * perform any kind of resolution (as described in lcb_install_callback3) and
  * will only return a non-`NULL` value if a callback had specifically been
@@ -312,6 +317,7 @@ lcb_get_callback3(lcb_t instance, int cbtype);
 
 /**
  * @committed
+ *
  * Returns the type of the callback as a string.
  * This function is helpful for debugging and demonstrative processes.
  * @param cbtype the type of the callback (the second argument to the callback)
@@ -320,120 +326,6 @@ lcb_get_callback3(lcb_t instance, int cbtype);
 LIBCOUCHBASE_API
 const char *
 lcb_strcbtype(int cbtype);
-
-/**@}*/
-
-/**@name General Spooling API
- *
- * @details
- * The following operation APIs are low level entry points which create a
- * single operation. To use these operation APIs you should call the
- * lcb_sched_enter() which creates a virtual scope in which to create operations.
- *
- * For each of these operation APIs, the actual API call will insert the
- * created packet into a "Scheduling Queue" (this is done through
- * mcreq_sched_add() which is in mcreq.h). You may add as many items to this
- * scheduling queue as you would like.
- *
- * Note that an operation is only added to the queue if it was able to be
- * scheduled properly. If a scheduling failure occurred (for example, if a
- * configuration is missing, the command had invalid input, or memory allocation
- * failed) then the command will not be placed into the queue.
- *
- * Once all operations have been scheduled you can call
- * lcb_sched_leave() which will place all commands scheduled into the I/O
- * queue.
- *
- * If you wish to _discard_ all scheduled operations (for example, if one of
- * them errored, and your application cannot handle partial scheduling failures)
- * then you may call lcb_sched_fail() which will release all the resources
- * of the packets placed into the temporary queue.
- *
- * @{*/
-
-/**
- * @volatile
- * @brief Enter a scheduling context.
- *
- * A scheduling context is an ephemeral list of
- * commands issued to various servers. Operations (like lcb_get3(), lcb_store3())
- * place packets into the current context.
- *
- * The context mechanism allows you to efficiently pipeline and schedule multiple
- * operations of different types and quantities. The network is not touched
- * and nothing is scheduled until the context is exited.
- *
- * @param instance the instance
- *
- * @code{.c}
- * lcb_sched_enter(instance);
- * lcb_get3(...);
- * lcb_store3(...);
- * lcb_counter3(...);
- * lcb_sched_leave(instance);
- * lcb_wait3(instance, LCB_WAIT_NOCHECK);
- * @endcode
- */
-LIBCOUCHBASE_API
-void lcb_sched_enter(lcb_t instance);
-
-/**
- * @volatile
- *
- * @brief Leave the current scheduling context, scheduling the commands within the
- * context to be flushed to the network.
- *
- * @param instance the instance
- */
-LIBCOUCHBASE_API
-void lcb_sched_leave(lcb_t instance);
-
-
-/**
- * @volatile
- * @brief Fail all commands in the current scheduling context.
- *
- * The commands placed within the current
- * scheduling context are released and are never flushed to the network.
- * @param instance
- *
- * @warning
- * This function only affects commands which have a direct correspondence
- * to memcached packets. Currently these are commands scheduled by:
- *
- * * lcb_get3()
- * * lcb_rget3()
- * * lcb_unlock3()
- * * lcb_touch3()
- * * lcb_store3()
- * * lcb_counter3()
- * * lcb_remove3()
- * * lcb_observe3()
- * * lcb_stats3()
- *
- * Other commands are _compound_ commands and thus should be in their own
- * scheduling context.
- */
-LIBCOUCHBASE_API
-void lcb_sched_fail(lcb_t instance);
-
-/**
- * @volatile
- * @brief Request commands to be flushed to the network
- *
- * By default, the library will implicitly request a flush to the network upon
- * a call to lcb_sched_leave() [ Note, this does not mean the items are flushed
- * and I/O is performed, but it means the relevant event loop watchers are
- * activated to perform the operations on the next iteration ]. If
- * @ref LCB_CNTL_SCHED_IMPLICIT_FLUSH
- * is disabled then this behavior is disabled and the
- * application must explicitly call lcb_sched_flush(). This may be considered
- * more performant in the cases where multiple discreet operations are scheduled
- * in an lcb_sched_enter()/lcb_sched_leave() pair. With implicit flush enabled,
- * each call to lcb_sched_leave() will possibly invoke system repeatedly.
- */
-LIBCOUCHBASE_API
-void lcb_sched_flush(lcb_t instance);
 
 /**@}*/
 
@@ -470,23 +362,19 @@ typedef struct {
 } lcb_RESPGET;
 
 /**
- * @volatile
+ * @committed
  *
  * @brief Spool a single get operation
  * @param instance the handle
  * @param cookie a pointer to be associated with the command
  * @param cmd the command structure
  * @return LCB_SUCCESS if successful, an error code otherwise
- * @see lcb_sched_enter(), lcb_sched_leave()
  *
  * @code{.c}
- * lcb_sched_enter(instance);
  * lcb_CMDGET cmd = { 0 };
  * LCB_CMD_SET_KEY(&cmd, "Hello", 5);
  * lcb_install_callback3(instance, LCB_CALLBACK_GET, a_callback);
  * lcb_get3(instance, cookie, &cmd);
- * lcb_sched_leave(instance);
- * lcb_wait3(instance, LCB_WAIT_NOCHECK);
  * @endcode
  */
 LIBCOUCHBASE_API
@@ -502,7 +390,7 @@ typedef lcb_CMDBASE lcb_CMDUNLOCK;
  * @note the lcb_RESPBASE::cas field does not contain the CAS of the item*/
 typedef lcb_RESPBASE lcb_RESPUNLOCK;
 
-/**@volatile
+/**@committed
  * @brief
  * Unlock a previously locked item using lcb_CMDGET::lock
  *
@@ -510,16 +398,14 @@ typedef lcb_RESPBASE lcb_RESPUNLOCK;
  * @param cookie the context pointer to associate with the command
  * @param cmd the command containing the information about the locked key
  * @return LCB_SUCCESS if successful, an error code otherwise
- * @see lcb_get3(), lcb_sched_enter(), lcb_sched_leave()
+ * @see lcb_get3()
  *
  * @code{.c}
  * static void locked_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPBASE *resp) {
  *   lcb_CMDUNLOCK cmd = { 0 };
  *   LCB_CMD_SET_KEY(&cmd, resp->key, resp->nkey);
  *   cmd.cas = resp->cas;
- *   lcb_sched_enter(instance);
  *   lcb_unlock3(instance, cookie, &cmd);
- *   lcb_sched_leave(instance);
  * }
  * @endcode
  */
@@ -567,7 +453,7 @@ typedef struct {
     lcb_MUTATION_TOKEN mutation_token;
 } lcb_RESPCOUNTER;
 
-/**@volatile
+/**@committed
  * @brief Spool a single counter operation
  * @param instance the instance
  * @param cookie the pointer to associate with the request
@@ -580,9 +466,7 @@ typedef struct {
  * cmd.delta = 1; // Increment by one
  * cmd.initial = 42; // Default value is 42 if it does not exist
  * cmd.exptime = 300; // Expire in 5 minutes
- * lcb_sched_enter(instance);
  * lcb_counter3(instance, NULL, &cmd);
- * lcb_sched_leave(instance);
  * lcb_install_callback3(instance, LCB_CALLBACKTYPE_COUNTER, cb);
  * lcb_wait3(instance, LCB_WAIT_NOCHECK);
  * @endcode
@@ -613,7 +497,7 @@ typedef struct {
     int index;
 } lcb_CMDGETREPLICA;
 
-/**@volatile
+/**@committed
  * @brief Spool a single get-with-replica request
  * @param instance
  * @param cookie
@@ -659,6 +543,8 @@ typedef struct {
 } lcb_RESPSTORE;
 
 /**
+ * @committed
+ *
  * @brief Set the value buffer for the command
  * @param scmd an lcb_CMDSTORE pointer
  * @param valbuf the buffer for the value
@@ -673,6 +559,8 @@ typedef struct {
 } while (0);
 
 /**
+ * @committed
+ *
  * @brief Set value from a series of input buffers
  * @param scmd the command which needs a value
  * @param iov an array of @ref lcb_IOV structures
@@ -688,8 +576,8 @@ typedef struct {
 } while (0);
 
 /**
- * @volatile
- * @brief Spool a single storage request
+ * @committed
+ * @brief Schedule a single storage request
  * @param instance the handle
  * @param cookie pointer to associate with the command
  * @param cmd the command structure
@@ -701,9 +589,7 @@ typedef struct {
  * LCB_CMD_SET_VALUE(&cmd, "value", 5);
  * cmd.operation = LCB_ADD; // Only create if it does not exist
  * cmd.exptime = 60; // expire in a minute
- * lcb_sched_enter(instance);
  * lcb_store3(instance, cookie, &cmd);
- * lcb_sched_leave(instance);
  * lcb_wait3(instance, LCB_WAIT_NOCHECK);
  * @endcode
  */
@@ -929,7 +815,7 @@ typedef struct {
     lcb_MUTATION_TOKEN mutation_token;
 } lcb_RESPREMOVE;
 
-/**@volatile
+/**@committed
  * @brief Spool a removal of an item
  * @param instance the handle
  * @param cookie pointer to associate with the request
@@ -939,9 +825,7 @@ typedef struct {
  * @code{.c}
  * lcb_CMDREMOVE cmd = { 0 };
  * LCB_CMD_SET_KEY(&cmd, "deleteme", strlen("deleteme"));
- * lcb_sched_enter(instance);
  * lcb_remove3(instance, cookie, &cmd);
- * lcb_sched_leave(instance);
  * @endcode
  */
 LIBCOUCHBASE_API
@@ -969,7 +853,7 @@ typedef lcb_CMDBASE lcb_CMDTOUCH;
  * @note the lcb_RESPTOUCH::cas field contains the current CAS of the item*/
 typedef lcb_RESPBASE lcb_RESPTOUCH;
 
-/**@volatile
+/**@committed
  * @brief Spool a touch request
  * @param instance the handle
  * @param cookie the pointer to associate with the request
@@ -980,9 +864,7 @@ typedef lcb_RESPBASE lcb_RESPTOUCH;
  * lcb_CMDTOUCH cmd = { 0 };
  * LCB_CMD_SET_KEY(&cmd, "keep_me", strlen("keep_me"));
  * cmd.exptime = 0; // Clear the expiration
- * lcb_sched_enter(instance);
  * lcb_touch3(instance, cookie, &cmd);
- * lcb_sched_leave(instance);
  * @endcode
  */
 LIBCOUCHBASE_API
@@ -1017,8 +899,8 @@ typedef struct {
 } lcb_RESPSTATS;
 
 
-/**@volatile
- * @brief Spool a request for statistics from the cluster.
+/**@committed
+ * @brief Schedule a request for statistics from the cluster.
  * @param instance the instance
  * @param cookie pointer to associate with the request
  * @param cmd the command
@@ -1051,9 +933,7 @@ typedef struct {
  *   lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESP_cb)stats_callback);
  *   lcb_CMDSTATS cmd = { 0 };
  *   // Using default stats, no further initialization
- *   lcb_sched_enter(instance);
  *   lcb_stats3(instance, fp, &cmd);
- *   lcb_sched_leave(instance);
  *   lcb_wait3(instance, LCB_WAIT_NOCHECK);
  * }
  * @endcode
@@ -1089,9 +969,7 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd);
  * LCB_CMD_SET_KEY(&cmd.key, "key3", strlen("key3"));
  * ctx->addcmd(ctx, &cmd);
  *
- * lcb_sched_enter(instance);
  * ctx->done(ctx);
- * lcb_sched_leave(instance);
  * lcb_wait(instance);
  * @endcode
  */
@@ -1185,9 +1063,7 @@ typedef struct {
  * lcb_CMDOBSERVE cmd = { 0 };
  * LCB_CMD_SET_KEY(&cmd, "key", 3);
  * mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
- * lcb_sched_enter(instance);
  * mctx->done(mctx, cookie);
- * lcb_sched_leave(instance);
  * lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESP_cb)callback);
  * @endcode
  *
@@ -1565,6 +1441,130 @@ typedef struct {
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd);
+/**@}*/
+
+
+/**@name General Spooling API
+ *
+ * @details
+ *
+ * An application may spool multiple operations into the library with the
+ * option of unspooling previously-spooled operations in case one of
+ * the operations cannot be spooled. These semantics exist primarily to
+ * support "all-or-nothing" scheduling found in the V2 API as well as in
+ * some other wrapping SDKs.
+ *
+ * As of version 2.5.6, the explicit spooling API is optional
+ *
+ * The following operation APIs are low level entry points which create a
+ * single operation. To use these operation APIs you should call the
+ * lcb_sched_enter() which creates a virtual scope in which to create operations.
+ *
+ * For each of these operation APIs, the actual API call will insert the
+ * created packet into a "Scheduling Queue" (this is done through
+ * mcreq_sched_add() which is in mcreq.h). You may add as many items to this
+ * scheduling queue as you would like.
+ *
+ * Note that an operation is only added to the queue if it was able to be
+ * scheduled properly. If a scheduling failure occurred (for example, if a
+ * configuration is missing, the command had invalid input, or memory allocation
+ * failed) then the command will not be placed into the queue.
+ *
+ * Once all operations have been scheduled you can call
+ * lcb_sched_leave() which will place all commands scheduled into the I/O
+ * queue.
+ *
+ * If you wish to _discard_ all scheduled operations (for example, if one of
+ * them errored, and your application cannot handle partial scheduling failures)
+ * then you may call lcb_sched_fail() which will release all the resources
+ * of the packets placed into the temporary queue.
+ *
+ * @{*/
+
+/**
+ * @committed
+ * @brief Enter a scheduling context.
+ *
+ * A scheduling context is an ephemeral list of
+ * commands issued to various servers. Operations (like lcb_get3(), lcb_store3())
+ * place packets into the current context.
+ *
+ * The context mechanism allows you to efficiently pipeline and schedule multiple
+ * operations of different types and quantities. The network is not touched
+ * and nothing is scheduled until the context is exited.
+ *
+ * @param instance the instance
+ *
+ * @code{.c}
+ * lcb_sched_enter(instance);
+ * lcb_get3(...);
+ * lcb_store3(...);
+ * lcb_counter3(...);
+ * lcb_sched_leave(instance);
+ * lcb_wait3(instance, LCB_WAIT_NOCHECK);
+ * @endcode
+ */
+LIBCOUCHBASE_API
+void lcb_sched_enter(lcb_t instance);
+
+/**
+ * @committed
+ *
+ * @brief Leave the current scheduling context, scheduling the commands within the
+ * context to be flushed to the network.
+ *
+ * @param instance the instance
+ */
+LIBCOUCHBASE_API
+void lcb_sched_leave(lcb_t instance);
+
+
+/**
+ * @committed
+ * @brief Fail all commands in the current scheduling context.
+ *
+ * The commands placed within the current
+ * scheduling context are released and are never flushed to the network.
+ * @param instance
+ *
+ * @warning
+ * This function only affects commands which have a direct correspondence
+ * to memcached packets. Currently these are commands scheduled by:
+ *
+ * * lcb_get3()
+ * * lcb_rget3()
+ * * lcb_unlock3()
+ * * lcb_touch3()
+ * * lcb_store3()
+ * * lcb_counter3()
+ * * lcb_remove3()
+ * * lcb_observe3()
+ * * lcb_stats3()
+ *
+ * Other commands are _compound_ commands and thus should be in their own
+ * scheduling context.
+ */
+LIBCOUCHBASE_API
+void lcb_sched_fail(lcb_t instance);
+
+/**
+ * @committed
+ * @brief Request commands to be flushed to the network
+ *
+ * By default, the library will implicitly request a flush to the network upon
+ * a call to lcb_sched_leave() [ Note, this does not mean the items are flushed
+ * and I/O is performed, but it means the relevant event loop watchers are
+ * activated to perform the operations on the next iteration ]. If
+ * @ref LCB_CNTL_SCHED_IMPLICIT_FLUSH
+ * is disabled then this behavior is disabled and the
+ * application must explicitly call lcb_sched_flush(). This may be considered
+ * more performant in the cases where multiple discreet operations are scheduled
+ * in an lcb_sched_enter()/lcb_sched_leave() pair. With implicit flush enabled,
+ * each call to lcb_sched_leave() will possibly invoke system repeatedly.
+ */
+LIBCOUCHBASE_API
+void lcb_sched_flush(lcb_t instance);
+
 /**@}*/
 
 /**@}*/
