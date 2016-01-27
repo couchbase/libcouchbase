@@ -3548,7 +3548,7 @@ lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie,
  * @param stream File to print the histogram to.
  */
 LCB_INTERNAL_API
-lcb_error_t lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream);
+void lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream);
 
 /* Post-include some other headers */
 #ifdef __cplusplus

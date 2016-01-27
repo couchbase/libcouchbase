@@ -160,7 +160,7 @@ default_timings_callback(const void *cookie,
 
 
 LCB_INTERNAL_API
-lcb_error_t lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream)
+void lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream)
 {
     lcb_histogram_read(hg, stream, default_timings_callback);
 }
