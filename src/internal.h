@@ -210,8 +210,7 @@ LCB_INTERNAL_API void lcb__timer_destroy_nowarn(lcb_t instance, lcb_timer_t time
 
 
 #define MAYBE_SCHEDLEAVE(o) \
-    if (o->cmdq.ctxenter) { \
-        o->cmdq.ctxenter = 0; \
+    if (!o->cmdq.ctxenter) { \
         lcb_sched_leave(o); \
     }
 
