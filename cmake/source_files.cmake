@@ -60,7 +60,6 @@ SET(LCB_CORE_SRC
     src/retryq.c
     src/retrychk.c
     src/settings.c
-    src/timings.c
     src/utilities.c
     src/wait.c)
 

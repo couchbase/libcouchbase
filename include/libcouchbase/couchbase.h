@@ -3537,6 +3537,19 @@ void
 lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie,
     lcb_HISTOGRAM_CALLBACK cb);
 
+/**
+ * Print the histogram to the specified FILE.
+ *
+ * This essentially outputs the same raw information as lcb_histogram_read(),
+ * except it prints in implementation-defined format. It's simpler to use
+ * than lcb_histogram_read, but less flexible.
+ *
+ * @param hg the histogram
+ * @param stream File to print the histogram to.
+ */
+LCB_INTERNAL_API
+lcb_error_t lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream);
+
 /* Post-include some other headers */
 #ifdef __cplusplus
 }
