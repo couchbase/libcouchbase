@@ -19,27 +19,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libcouchbase/couchbase.h>
+#include <libcouchbase/api3.h>
 #include <event2/event.h>
 
 static void
 bootstrap_callback(lcb_t instance, lcb_error_t err)
 {
-    lcb_store_cmd_t cmd;
-    const lcb_store_cmd_t *cmds[1];
-
+    lcb_CMDSTORE cmd = { 0 };
     if (err != LCB_SUCCESS) {
         fprintf(stderr, "ERROR: %s\n", lcb_strerror(instance, err));
         exit(EXIT_FAILURE);
     }
     /* Since we've got our configuration, let's go ahead and store a value */
-    cmds[0] = &cmd;
-    memset(&cmd, 0, sizeof(cmd));
-    cmd.v.v0.key = "foo";
-    cmd.v.v0.nkey = 3;
-    cmd.v.v0.bytes = "bar";
-    cmd.v.v0.nbytes = 3;
-    cmd.v.v0.operation = LCB_SET;
-    err = lcb_store(instance, NULL, 1, cmds);
+    LCB_CMD_SET_KEY(&cmd, "foo", 3);
+    LCB_CMD_SET_VALUE(&cmd, "bar", 3);
+    cmd.operation = LCB_SET;
+    err = lcb_store3(instance, NULL, &cmd);
     if (err != LCB_SUCCESS) {
         fprintf(stderr, "Failed to set up store request: %s\n", lcb_strerror(instance, err));
         exit(EXIT_FAILURE);
