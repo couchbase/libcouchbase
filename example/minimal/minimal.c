@@ -26,6 +26,7 @@
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/api3.h>
 #include <stdlib.h>
+#include <string.h> /* strlen */
 #ifdef _WIN32
 #define PRIx64 "I64x"
 #else
