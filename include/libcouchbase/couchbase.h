@@ -105,7 +105,7 @@ typedef lcb_U32 lcb_USECS;
  * it _must_ be url-encoded; thus a bucket named `foo/bar` would be specified
  * as `couchbase:///foo%2Fbar`
  *
- * ### Hosts
+ * @par Hosts
  *
  * In the most typical use case, you would specify a list of several hostnames
  * delimited by a comma (`,`); each host specified should be a member of the
@@ -728,6 +728,12 @@ lcb_strcbtype(int cbtype);
  * @addtogroup lcb-get
  * @{
  */
+
+/**
+ * If this bit is set in lcb_CMDGET::cmdflags then the expiry time is cleared if
+ * lcb_CMDGET::exptime is 0. This allows get-and-touch with an expiry of 0.
+ */
+#define LCB_CMDGET_F_CLEAREXP (1<<16)
 
 /**@brief Command for retrieving a single item
  *

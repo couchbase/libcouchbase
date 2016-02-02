@@ -42,7 +42,7 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
     if (cmd->lock) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GET_LOCKED;
-    } else if (cmd->exptime) {
+    } else if (cmd->exptime || (cmd->cmdflags & LCB_CMDGET_F_CLEAREXP)) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GAT;
     }
