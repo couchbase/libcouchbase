@@ -776,7 +776,7 @@ typedef struct {
     const void *value; /**< Value buffer for the item */
     lcb_SIZE nvalue; /**< Length of value */
     void* bufh;
-    lcb_datatype_t datatype;
+    lcb_datatype_t datatype; /**< @private */
     lcb_U32 itmflags; /**< User-defined flags for the item */
 } lcb_RESPGET;
 
@@ -3008,7 +3008,7 @@ void lcb_destroy_async(lcb_t instance, const void *arg);
 
 /**@}*/
 
-/** Value is JSON */
+/** @private */
 #define LCB_DATATYPE_JSON 0x01
 
 /** @private */

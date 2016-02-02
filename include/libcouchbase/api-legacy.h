@@ -139,7 +139,7 @@ typedef struct {
     lcb_SIZE nbytes;
     lcb_U32 flags; /**< Server side flags stored with the item */
     lcb_cas_t cas; /**< CAS representing current mutation state of the item */
-    lcb_U8 datatype; /**< Currently unused */
+    lcb_U8 datatype; /**< @private */
 } lcb_GETRESPv0;
 
 /**
@@ -457,7 +457,7 @@ typedef struct {
      * @warning For @ref LCB_APPEND and @ref LCB_PREPEND, this field should be
      * `0`. */
     lcb_cas_t cas;
-    lcb_U8 datatype; /**< See lcb_VALUEFLAGS */
+    lcb_U8 datatype; /**< @private */
     /**Expiration for the item. `0` means never expire.
      * @warning for @ref LCB_APPEND and @ref LCB_PREPEND, this field should be
      * `0`. */
@@ -538,7 +538,6 @@ lcb_store_callback lcb_set_store_callback(lcb_t, lcb_store_callback callback);
  *   store->v.v0.flags = 0xdeadcafe;
  *   store->v.v0.cas = 0x1234;
  *   store->v.v0.exptime = 0x666;
- *   store->v.v0.datatype = LCB_JSON;
  *   store->v.v0.operation = LCB_REPLACE;
  *   lcb_store_cmd_st* commands[] = { store };
  *   lcb_store(instance, NULL, 1, commands);
