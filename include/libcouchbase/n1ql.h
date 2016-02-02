@@ -25,7 +25,7 @@ extern "C" {
 
 /**
  * @ingroup lcb-public-api
- * @defgroup lcb-n1ql-api N1QL Query API
+ * @defgroup lcb-n1ql-api N1QL
  * @brief Execute N1QL queries and receive resultant rows
  */
 

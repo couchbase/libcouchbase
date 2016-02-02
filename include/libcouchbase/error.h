@@ -538,6 +538,28 @@ int lcb_get_errtype(lcb_error_t err);
 LIBCOUCHBASE_API
 const char *lcb_strerror(lcb_t instance, lcb_error_t error);
 
+/**
+ * This may be used in conjunction with the errmap callback if it wishes
+ * to fallback for default behavior for the given code.
+ * @uncomitted
+ */
+LIBCOUCHBASE_API
+lcb_error_t lcb_errmap_default(lcb_t instance, lcb_U16 code);
+
+/**
+ * Callback for error mappings. This will be invoked when requesting whether
+ * the user has a possible mapping for this error code.
+ *
+ * This will be called for response codes which may be ambiguous in most
+ * use cases, or in cases where detailed response codes may be mapped to
+ * more generic ones.
+ */
+typedef lcb_error_t (*lcb_errmap_callback)(lcb_t instance, lcb_U16 bincode);
+
+/**@uncommitted*/
+LIBCOUCHBASE_API
+lcb_errmap_callback lcb_set_errmap_callback(lcb_t, lcb_errmap_callback);
+
 #ifdef __cplusplus
 }
 #endif

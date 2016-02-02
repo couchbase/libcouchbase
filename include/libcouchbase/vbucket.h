@@ -31,7 +31,7 @@ extern "C" {
 
 /**
  * @ingroup lcb-public-api
- * @defgroup lcb-vbucket-api vBucket Mapping/Parsing API
+ * @defgroup lcb-vbucket-api vBucket
  * @details
  * These routines contain functionality for parsing a cluster topology configuration
  * and mapping keys to cluster nodes appropriately.
