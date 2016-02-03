@@ -433,6 +433,7 @@ lcb_SDMULTICTX_st::done()
     // Get the body size
     hdr.request.bodylen = htonl(ntohs(hdr.request.keylen) + extra_body.size());
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof hdr.bytes);
+    MCREQ_PKT_RDATA(pkt)->start = gethrtime();
     LCB_SCHED_ADD(instance, pipeline, pkt);
 
     pkt = NULL;
