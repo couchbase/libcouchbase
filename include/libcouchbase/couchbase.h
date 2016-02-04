@@ -601,7 +601,11 @@ typedef enum {
 
     /**The response has additional internal data.
      * Used by lcb_resp_get_mutation_token() */
-    LCB_RESP_F_EXTDATA = 0x08
+    LCB_RESP_F_EXTDATA = 0x08,
+
+    /**Flag, only valid for subdoc responses, indicates that the response was
+     * processed using the single-operation protocol. */
+    LCB_RESP_F_SDSINGLE = 0x010
 } lcb_RESPFLAGS;
 
 /**
@@ -636,13 +640,8 @@ typedef enum {
     LCB_CALLBACK_CBFLUSH, /**< lcb_cbflush3() */
     LCB_CALLBACK_OBSEQNO, /**< For lcb_observe_seqno3() */
     LCB_CALLBACK_STOREDUR, /** <for lcb_storedur3() */
-    LCB_CALLBACK_SDGET, /**< lcb_sdget3() */
-    LCB_CALLBACK_SDEXISTS, /**< lcb_sdexists3() */
-    LCB_CALLBACK_SDCOUNTER, /**< lcb_sdcounter3() */
-    LCB_CALLBACK_SDREMOVE, /**< lcb_sdremove3() */
-    LCB_CALLBACK_SDSTORE, /**< lcb_sdstore() */
-    LCB_CALLBACK_SDMLOOKUP,
-    LCB_CALLBACK_SDMMUTATE,
+    LCB_CALLBACK_SDLOOKUP,
+    LCB_CALLBACK_SDMUTATE,
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 

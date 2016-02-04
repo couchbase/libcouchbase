@@ -20,6 +20,17 @@
 #include "iotests.h"
 #include <string>
 
+namespace std {
+inline ostream& operator<<(ostream& os, const lcb_error_t& rc) {
+    os << "LcbError<";
+    os << std::hex << static_cast<unsigned>(rc);
+    os << " (";
+    os << lcb_strerror(NULL, rc);
+    os << ")>";
+    return os;
+}
+}
+
 class SubdocUnitTest : public MockUnitTest {
 public:
     SubdocUnitTest() {
@@ -50,7 +61,7 @@ struct Result {
         clear();
     }
 
-    Result(const lcb_SDMULTI_ENTRY *ent) {
+    Result(const lcb_SDENTRY *ent) {
         assign(ent);
     }
 
@@ -60,10 +71,12 @@ struct Result {
         index = -1;
         value.clear();
     }
-    void assign(const lcb_SDMULTI_ENTRY *ent) {
+    void assign(const lcb_SDENTRY *ent) {
         rc = ent->status;
-        value.assign(reinterpret_cast<const char*>(ent->value), ent->nvalue);
         index = ent->index;
+        if (ent->nvalue) {
+            value.assign(reinterpret_cast<const char*>(ent->value), ent->nvalue);
+        }
     }
 };
 
@@ -71,89 +84,156 @@ struct MultiResult {
     std::vector<Result> results;
     lcb_CAS cas;
     lcb_error_t rc;
+    unsigned cbtype;
+    bool is_single;
 
     void clear() {
         cas = 0;
         results.clear();
+        cbtype = 0;
+        rc = LCB_AUTH_CONTINUE;
+        is_single = false;
+    }
+
+    size_t size() const {
+        return results.size();
+    }
+
+    const Result& operator[](size_t ix) const {
+        if (cbtype == LCB_CALLBACK_SDMUTATE) {
+            for (size_t ii = 0; ii < results.size(); ++ii) {
+                if (results[ix].index == ix) {
+                    return results[ix];
+                }
+
+                // Force bad index behavior
+                return results[results.size()];
+            }
+        }
+        return results[ix];
+    }
+
+    const std::string& single_value() const {
+        return results[0].value;
     }
 
     MultiResult() { clear(); }
 };
 
-extern "C" {
-static void
-singleCallback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
+static
+::testing::AssertionResult
+verifySingleOk(const char *, const MultiResult& mr, const char *value = NULL)
 {
-    Result *res = reinterpret_cast<Result*>(rb->cookie);
-    res->rc = rb->rc;
-    res->cas = rb->cas;
-    if (cbtype == LCB_CALLBACK_GET ||
-            cbtype == LCB_CALLBACK_SDGET ||
-            cbtype == LCB_CALLBACK_SDCOUNTER) {
-        const lcb_RESPGET *rg = reinterpret_cast<const lcb_RESPGET*>(rb);
-        if (rg->nvalue) {
-            res->value.assign(reinterpret_cast<const char*>(rg->value), rg->nvalue);
-        }
+    using namespace ::testing;
+    if (!mr.is_single) {
+        return AssertionFailure() << "RESP_F_SDSINGLE not set!";
     }
+
+    if (mr.rc != LCB_SUCCESS) {
+        if (mr.rc == LCB_SUBDOC_MULTI_FAILURE) {
+            if (!mr.size()) {
+                return AssertionFailure() << "Top-level MULTI_FAILURE with no results";
+            } else {
+                return AssertionFailure() << "Got MULTI_FAILURE with sub-code: " << mr[0].rc;
+            }
+        }
+        return AssertionFailure() << "Top-level error code failed. " << mr.rc;
+    }
+    if (mr.size() != 1) {
+        return AssertionFailure() << "Expected a single result. Got " << mr.size();
+    }
+
+    if (mr[0].rc != LCB_SUCCESS) {
+        return AssertionFailure() << "Nested error code is " << mr[0].rc;
+    }
+    if (!mr.cas) {
+        return AssertionFailure() << "Got zero CAS for successful op";
+    }
+    if (value != NULL) {
+        if (value != mr.single_value()) {
+            return AssertionFailure() <<
+                    "Expected match: '" << value << "' Got '" << mr.single_value() << "'";
+        }
+    } else if (!mr.single_value().empty()) {
+        return AssertionFailure() << "Expected empty value. Got " << mr.single_value();
+    }
+
+    return AssertionSuccess();
 }
 
+static
+::testing::AssertionResult
+verifySingleOk(const char *, const char *, const MultiResult& mr, const char *value)
+{
+    return verifySingleOk(NULL, mr, value);
+}
+
+static
+::testing::AssertionResult
+verifySingleError(const char *, const char *, const MultiResult& mr, lcb_error_t exp)
+{
+    using namespace ::testing;
+    if (!mr.is_single) {
+        return AssertionFailure() << "RESP_F_SDSINGLE not set!";
+    }
+    if (mr.rc != LCB_SUBDOC_MULTI_FAILURE) {
+        return AssertionFailure() <<
+                "Top-level error code is not MULTI_FAILURE. Got" <<
+                mr.rc;
+    }
+    if (mr.size() != 1) {
+        return AssertionFailure() << "Expected single result. Got " << mr.size();
+    }
+    if (mr[0].rc != exp) {
+        return AssertionFailure() << "Expected sub-error " << exp << ". Got << " << mr.rc;
+    }
+    return AssertionSuccess();
+}
+
+#define ASSERT_SD_OK(res) ASSERT_PRED_FORMAT1(verifySingleOk, res)
+#define ASSERT_SD_VAL(res, val) ASSERT_PRED_FORMAT2(verifySingleOk, res, val)
+#define ASSERT_SD_ERR(res, err) ASSERT_PRED_FORMAT2(verifySingleError, res, err)
+
+extern "C" {
 static void
-multiMutateCallback(lcb_t, int, const lcb_RESPBASE *rb)
+subdocCallback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
 {
     MultiResult *mr = reinterpret_cast<MultiResult*>(rb->cookie);
-    const lcb_RESPSDMMUTATE *resp = reinterpret_cast<const lcb_RESPSDMMUTATE*>(rb);
+    const lcb_RESPSUBDOC *resp = reinterpret_cast<const lcb_RESPSUBDOC*>(rb);
 
     mr->rc = rb->rc;
     if (rb->rc == LCB_SUCCESS) {
         mr->cas = resp->cas;
     }
-
-    if (resp->rc == LCB_SUCCESS || resp->rc == LCB_SUBDOC_MULTI_FAILURE) {
-        size_t iterval = 0;
-        lcb_SDMULTI_ENTRY cur_res = { 0 };
-
-        while (lcb_sdmmutation_next(resp, &cur_res, &iterval)) {
-            mr->results.push_back(Result(&cur_res));
-        }
+    if (resp->rflags & LCB_RESP_F_SDSINGLE) {
+        mr->is_single = true;
+    }
+    size_t iterval = 0;
+    lcb_SDENTRY cur_res;
+    while (lcb_sdresult_next(resp, &cur_res, &iterval)) {
+        mr->results.push_back(Result(&cur_res));
     }
 }
-
-static void
-multiLookupCallback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
-{
-    MultiResult *mr = reinterpret_cast<MultiResult*>(rb->cookie);
-    const lcb_RESPSDMLOOKUP *resp = reinterpret_cast<const lcb_RESPSDMLOOKUP*>(rb);
-    mr->rc = resp->rc;
-    if (mr->rc == LCB_SUCCESS || mr->rc == LCB_SUBDOC_MULTI_FAILURE) {
-        mr->cas = resp->cas;
-        lcb_SDMULTI_ENTRY cur_res;
-        size_t iterval = 0;
-        while (lcb_sdmlookup_next(resp, &cur_res, &iterval)) {
-            mr->results.push_back(Result(&cur_res));
-        }
-    }
-}
-
 }
 
 bool
 SubdocUnitTest::createSubdocConnection(HandleWrap& hw, lcb_t& instance)
 {
     createConnection(hw, instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDGET, singleCallback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDSTORE, singleCallback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDCOUNTER, singleCallback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDEXISTS, singleCallback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDREMOVE, singleCallback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDMLOOKUP, multiLookupCallback);
-    lcb_install_callback3(instance, LCB_CALLBACK_SDMMUTATE, multiMutateCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_SDMUTATE, subdocCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_SDLOOKUP, subdocCallback);
 
-    lcb_CMDSDGET cmd = { 0 };
-    LCB_CMD_SET_KEY(&cmd, "foo", 3);
-    LCB_SDCMD_SET_PATH(&cmd, "pth", 3);
+    lcb_SDSPEC spec = { 0 };
+    lcb_CMDSUBDOC cmd = { 0 };
+    LCB_CMD_SET_KEY(&cmd, "key", 3);
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
 
-    Result res;
-    lcb_error_t rc = lcb_sdget3(instance, &res, &cmd);
+    spec.sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&spec, "pth", 3);
+
+    MultiResult res;
+    lcb_error_t rc = lcb_subdoc3(instance, &res, &cmd);
     EXPECT_EQ(LCB_SUCCESS, rc);
     if (rc != LCB_SUCCESS) {
         return false;
@@ -179,7 +259,7 @@ SubdocUnitTest::createSubdocConnection(HandleWrap& hw, lcb_t& instance)
     } while (0);
 
 template <typename T> lcb_error_t
-schedwait(lcb_t instance, Result *res, const T *cmd,
+schedwait(lcb_t instance, MultiResult *res, const T *cmd,
     lcb_error_t (*fn)(lcb_t, const void *, const T*))
 {
     res->clear();
@@ -190,17 +270,28 @@ schedwait(lcb_t instance, Result *res, const T *cmd,
     return rc;
 }
 
-static std::string
-getPathValue(lcb_t instance, const char *docid, const char *path)
+static ::testing::AssertionResult
+verifyPathValue(const char *, const char *, const char *, const char *,
+    lcb_t instance, const std::string& docid, const char *path, const char *exp)
 {
-    Result res;
-    lcb_CMDSDGET gcmd = { 0 };
-    LCB_CMD_SET_KEY(&gcmd, docid, strlen(docid));
-    LCB_SDCMD_SET_PATH(&gcmd, path, strlen(path));
-    EXPECT_EQ(LCB_SUCCESS, schedwait(instance, &res, &gcmd, lcb_sdget3));
-    EXPECT_EQ(LCB_SUCCESS, res.rc);
-    return res.value;
+    using namespace ::testing;
+    MultiResult mr;
+    lcb_CMDSUBDOC cmd = { 0 };
+    lcb_SDSPEC spec = { 0 };
+    LCB_CMD_SET_KEY(&cmd, docid.c_str(), docid.size());
+    spec.sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&spec, path, strlen(path));
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
+    lcb_error_t rc = schedwait(instance, &mr, &cmd, lcb_subdoc3);
+    if (rc != LCB_SUCCESS) {
+        return AssertionFailure() << "Couldn't schedule operation: " << rc;
+    }
+    return verifySingleOk(NULL, NULL, mr, exp);
 }
+
+#define ASSERT_PATHVAL_EQ(exp, instance, docid, path) \
+        ASSERT_PRED_FORMAT4(verifyPathValue, instance, docid, path, exp)
 
 TEST_F(SubdocUnitTest, testSdGetExists)
 {
@@ -208,96 +299,104 @@ TEST_F(SubdocUnitTest, testSdGetExists)
     lcb_t instance;
     CREATE_SUBDOC_CONNECTION(hw, instance);
 
-    Result res;
+    MultiResult res;
     lcb_error_t rc;
+    lcb_SDSPEC spec = { 0 };
+    lcb_CMDSUBDOC cmd = { 0 };
+    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
 
-    lcb_CMDSDGET sdgcmd = { 0 };
-    LCB_CMD_SET_KEY(&sdgcmd, key.c_str(), key.size());
-
-    LCB_SDCMD_SET_PATH(&sdgcmd, "dictkey", strlen("dictkey"));
+    LCB_SDSPEC_SET_PATH(&spec, "dictkey", strlen("dictkey"));
     // get
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("\"dictval\"", res.value) << "Get dict value";
+    spec.sdcmd = LCB_SDCMD_GET;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "\"dictval\"");
     // exists
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdexists3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc) << "Dict value exists";
-    ASSERT_TRUE(res.value.empty());
+    spec.sdcmd = LCB_SDCMD_EXISTS;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
 
-    LCB_SDCMD_SET_PATH(&sdgcmd, "array", strlen("array"));
+    LCB_SDSPEC_SET_PATH(&spec, "array", strlen("array"));
     // get
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("[1,2,3,4,[10,20,30,[100,200,300]]]", res.value) << "Get whole array";
+    spec.sdcmd = LCB_SDCMD_GET;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "[1,2,3,4,[10,20,30,[100,200,300]]]");
     // exists
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdexists3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc) << "Array exists";
-    ASSERT_TRUE(res.value.empty());
+    spec.sdcmd = LCB_SDCMD_EXISTS;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd , lcb_subdoc3));
+    ASSERT_SD_OK(res);
 
-    LCB_SDCMD_SET_PATH(&sdgcmd, "array[0]", strlen("array[0]"));
+    LCB_SDSPEC_SET_PATH(&spec, "array[0]", strlen("array[0]"));
     // get
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("1", res.value) << "Get array element";
+    spec.sdcmd = LCB_SDCMD_GET;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "1");
     // exists
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdexists3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc) << "Array element exists";
-    ASSERT_TRUE(res.value.empty());
+    spec.sdcmd = LCB_SDCMD_EXISTS;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
 
-    LCB_SDCMD_SET_PATH(&sdgcmd, "non-exist", strlen("non-exist"));
+    LCB_SDSPEC_SET_PATH(&spec, "non-exist", strlen("non-exist"));
     // get
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, res.rc) << "Get non-exist path";
+    spec.sdcmd = LCB_SDCMD_GET;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
     // exists
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdexists3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, res.rc);
+    spec.sdcmd = LCB_SDCMD_EXISTS;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
 
-    LCB_CMD_SET_KEY(&sdgcmd, "non-exist", strlen("non-exist"));
+    LCB_CMD_SET_KEY(&cmd, "non-exist", strlen("non-exist"));
     // get
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
+    spec.sdcmd = LCB_SDCMD_GET;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
     ASSERT_EQ(LCB_KEY_ENOENT, res.rc) << "Get non-exist document";
     // exists
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdexists3));
+    spec.sdcmd = LCB_SDCMD_EXISTS;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
     ASSERT_EQ(LCB_KEY_ENOENT, res.rc);
 
     // Store non-JSON document
-    LCB_CMD_SET_KEY(&sdgcmd, nonJsonKey.c_str(), nonJsonKey.size());
+    LCB_CMD_SET_KEY(&cmd, nonJsonKey.c_str(), nonJsonKey.size());
 
     // Get
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUBDOC_DOC_NOTJSON, res.rc) << "Get non-JSON document";
+    spec.sdcmd = LCB_SDCMD_GET;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_DOC_NOTJSON);
     // exists
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdexists3));
-    ASSERT_EQ(LCB_SUBDOC_DOC_NOTJSON, res.rc);
+    spec.sdcmd = LCB_SDCMD_EXISTS;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_DOC_NOTJSON);
 
     // Restore the key back to the document..
-    LCB_CMD_SET_KEY(&sdgcmd, key.c_str(), key.size());
+    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
 
     // Invalid paths
-    LCB_SDCMD_SET_PATH(&sdgcmd, "invalid..path", strlen("invalid..path"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_EINVAL, res.rc);
+    spec.sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&spec, "invalid..path", strlen("invalid..path"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EINVAL);
 
-    LCB_SDCMD_SET_PATH(&sdgcmd, "invalid[-2]", strlen("invalid[-2]"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_EINVAL, res.rc);
+    LCB_SDSPEC_SET_PATH(&spec, "invalid[-2]", strlen("invalid[-2]"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EINVAL);
 
     // Test negative paths
-    LCB_SDCMD_SET_PATH(&sdgcmd, "array[-1][-1][-1]", strlen("array[-1][-1][-1]"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc) << lcb_strerror(NULL, res.rc);
-    ASSERT_EQ("300", res.value);
+    LCB_SDSPEC_SET_PATH(&spec, "array[-1][-1][-1]", strlen("array[-1][-1][-1]"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "300");
 
     // Test nested arrays
-    LCB_SDCMD_SET_PATH(&sdgcmd, "array[4][3][2]", strlen("array[4][3][2]"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("300", res.value);
+    LCB_SDSPEC_SET_PATH(&spec, "array[4][3][2]", strlen("array[4][3][2]"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "300");
+    ASSERT_EQ("300", res.single_value());
 
     // Test path mismatch
-    LCB_SDCMD_SET_PATH(&sdgcmd, "array.key", strlen("array.key"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &sdgcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_MISMATCH, res.rc);
+    LCB_SDSPEC_SET_PATH(&spec, "array.key", strlen("array.key"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_MISMATCH);
 }
 
 TEST_F(SubdocUnitTest, testSdStore)
@@ -306,234 +405,217 @@ TEST_F(SubdocUnitTest, testSdStore)
     lcb_t instance;
     lcb_error_t rc;
     CREATE_SUBDOC_CONNECTION(hw, instance);
-    lcb_CMDSDSTORE cmd = { 0 };
-    lcb_CMDSDGET gcmd = { 0 };
+    lcb_CMDSUBDOC cmd = { 0 };
+    lcb_SDSPEC spec = { 0 };
+
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
 
     LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-    LCB_SDCMD_SET_PATH(&cmd, "newpath", strlen("newpath"));
-    LCB_CMD_SET_VALUE(&cmd, "123", strlen("123"));
-
-    Result res;
+    LCB_SDSPEC_SET_PATH(&spec, "newpath", strlen("newpath"));
+    LCB_SDSPEC_SET_VALUE(&spec, "123", strlen("123"));
+    MultiResult res;
 
     // Insert
-    cmd.mode = LCB_SUBDOC_DICT_ADD;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_NE(0, res.cas);
+    spec.sdcmd = LCB_SDCMD_DICT_ADD;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
 
-    cmd.mode = LCB_SUBDOC_DICT_ADD;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_EEXISTS, res.rc);
+    spec.sdcmd = LCB_SDCMD_DICT_ADD;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EEXISTS);
 
-    cmd.mode = LCB_SUBDOC_DICT_UPSERT;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-
+    spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
     // See if our value actually matches
-    LCB_CMD_SET_KEY(&gcmd, key.c_str(), key.size());
-    LCB_SDCMD_SET_PATH(&gcmd, "newpath", strlen("newpath"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &gcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("123", res.value);
+    ASSERT_PATHVAL_EQ("123", instance, key, "newpath");
 
     // Try with a bad CAS
     cmd.cas = res.cas + 1;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
     ASSERT_EQ(LCB_KEY_EEXISTS, res.rc);
     cmd.cas = 0; // Reset CAS
 
     // Try to add a compound value
-    LCB_SDCMD_SET_PATH(&cmd, "dict", strlen("dict"));
+    LCB_SDSPEC_SET_PATH(&spec, "dict", strlen("dict"));
     const char *v = "{\"key\":\"value\"}";
-    LCB_CMD_SET_VALUE(&cmd, v, strlen(v));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    LCB_SDSPEC_SET_VALUE(&spec, v, strlen(v));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
     // Get it back
-    LCB_CMD_SET_KEY(&gcmd, key.c_str(), key.size());
-    LCB_SDCMD_SET_PATH(&gcmd, "dict.key", strlen("dict.key"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &gcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("\"value\"", res.value);
+    ASSERT_PATHVAL_EQ("\"value\"", instance, key, "dict.key");
 
     // Try to insert a non-JSON value
-    LCB_CMD_SET_VALUE(&cmd, "non-json", strlen("non-json"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUBDOC_VALUE_CANTINSERT, res.rc);
+    LCB_SDSPEC_SET_VALUE(&spec, "non-json", strlen("non-json"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_VALUE_CANTINSERT);
 
     const char *p = "parent.with.missing.children";
 
     // Intermediate paths
-    LCB_SDCMD_SET_PATH(&cmd, p, strlen(p));
-    LCB_CMD_SET_VALUE(&cmd, "null", strlen("null"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, res.rc);
+    LCB_SDSPEC_SET_PATH(&spec, p, strlen(p));
+    LCB_SDSPEC_SET_VALUE(&spec, "null", strlen("null"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
 
     // set MKINTERMEDIATES (MKDIR_P)
-    cmd.cmdflags |= LCB_CMDSUBDOC_F_MKINTERMEDIATES;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    spec.options = LCB_SDSPEC_F_MKINTERMEDIATES;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
+    // Should succeed now..
+    ASSERT_PATHVAL_EQ("null", instance, key, p);
 
-    cmd.cmdflags = 0;
-    LCB_SDCMD_SET_PATH(&gcmd, p, strlen(p));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &gcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("null", res.value);
-
+    spec.options = 0;
     // Test replace
-    cmd.mode = LCB_SUBDOC_REPLACE;
-    LCB_SDCMD_SET_PATH(&cmd, "dict", strlen("dict"));
-    LCB_CMD_SET_VALUE(&cmd, "123", strlen("123"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    spec.sdcmd = LCB_SDCMD_REPLACE;
+    LCB_SDSPEC_SET_PATH(&spec, "dict", strlen("dict"));
+    LCB_SDSPEC_SET_VALUE(&spec, "123", strlen("123"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
 
     // Try replacing a non-existing path
-    LCB_SDCMD_SET_PATH(&cmd, "non-exist", strlen("non-exist"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, res.rc);
+    LCB_SDSPEC_SET_PATH(&spec, "non-exist", strlen("non-exist"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_ENOENT);
 
     // Try replacing root element. Invalid path for operation
-    LCB_SDCMD_SET_PATH(&cmd, "", 0);
-    ASSERT_EQ(LCB_EINVAL, schedwait(instance, &res, &cmd, lcb_sdstore3));
+    LCB_SDSPEC_SET_PATH(&spec, "", 0);
+    ASSERT_EQ(LCB_EMPTY_PATH, schedwait(instance, &res, &cmd, lcb_subdoc3));
 
     // Try replacing array element
-    LCB_SDCMD_SET_PATH(&cmd, "array[1]", strlen("array[1]"));
-    LCB_CMD_SET_VALUE(&cmd, "true", strlen("true"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-
-    LCB_SDCMD_SET_PATH(&gcmd, "array[1]", strlen("array[1]"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &gcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("true", res.value);
+    LCB_SDSPEC_SET_PATH(&spec, "array[1]", strlen("array[1]"));
+    LCB_SDSPEC_SET_VALUE(&spec, "true", strlen("true"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
+    ASSERT_PATHVAL_EQ("true", instance, key, "array[1]");
 }
 
 TEST_F(SubdocUnitTest, testUnique)
 {
     HandleWrap hw;
     lcb_t instance;
-    lcb_CMDSDSTORE cmd = { 0 };
-    lcb_CMDSDGET gcmd = { 0 };
-    Result res;
+    lcb_CMDSUBDOC cmd = { 0 };
+    lcb_SDSPEC spec = { 0 };
+    MultiResult res;
 
     CREATE_SUBDOC_CONNECTION(hw, instance);
 
     LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-    LCB_CMD_SET_KEY(&gcmd, key.c_str(), key.size());
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
 
     // Test array operations: ADD_UNIQUE
-    LCB_SDCMD_SET_PATH(&cmd, "a", strlen("a"));
-    LCB_CMD_SET_VALUE(&cmd, "1", strlen("1"));
-    cmd.mode = LCB_SUBDOC_ARRAY_ADD_UNIQUE;
-    cmd.cmdflags |= LCB_CMDSUBDOC_F_MKINTERMEDIATES;
+    LCB_SDSPEC_SET_PATH(&spec, "a", strlen("a"));
+    LCB_SDSPEC_SET_VALUE(&spec, "1", strlen("1"));
+    spec.sdcmd = LCB_SDCMD_ARRAY_ADD_UNIQUE;
+    spec.options |= LCB_SDSPEC_F_MKINTERMEDIATES;
+
     // Push to a non-existent array (without _P)
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
     cmd.cmdflags = 0;
 
     // Get the item back
-    LCB_SDCMD_SET_PATH(&gcmd, "a[0]", strlen("a[0]"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &gcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("1", res.value);
+    ASSERT_PATHVAL_EQ("1", instance, key, "a[0]");
 
     // Try adding the item again
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_EEXISTS, res.rc);
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_EEXISTS);
 
     // Try adding a primitive
-    LCB_CMD_SET_VALUE(&cmd, "{}", strlen("{}"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUBDOC_VALUE_CANTINSERT, res.rc);
+    LCB_SDSPEC_SET_VALUE(&spec, "{}", strlen("{}"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_VALUE_CANTINSERT);
 
     // Add the primitive using append
-    cmd.mode = LCB_SUBDOC_ARRAY_ADD_LAST;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
+    spec.sdcmd = LCB_SDCMD_ARRAY_ADD_LAST;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
+    ASSERT_PATHVAL_EQ("{}", instance, key, "a[-1]");
 
-    LCB_SDCMD_SET_PATH(&gcmd, "a[-1]", strlen("a[-1]"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &gcmd, lcb_sdget3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("{}", res.value);
-
-    cmd.mode = LCB_SUBDOC_ARRAY_ADD_UNIQUE;
-    LCB_CMD_SET_VALUE(&cmd, "null", strlen("null"));
+    spec.sdcmd = LCB_SDCMD_ARRAY_ADD_UNIQUE;
+    LCB_SDSPEC_SET_VALUE(&spec, "null", strlen("null"));
     // Add unique to array with non-primitive
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_MISMATCH, res.rc);
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_MISMATCH);
 }
 
 TEST_F(SubdocUnitTest, testCounter)
 {
     HandleWrap hw;
     lcb_t instance;
-    lcb_CMDSDCOUNTER cmd = { 0 };
+    lcb_CMDSUBDOC cmd = { 0 };
+    lcb_SDSPEC spec = { 0 };
     lcb_error_t rc;
-    Result res;
+    MultiResult res;
 
     CREATE_SUBDOC_CONNECTION(hw, instance);
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
 
     LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
-    LCB_SDCMD_SET_PATH(&cmd, "counter", strlen("counter"));
-    cmd.delta = 42;
+    LCB_SDSPEC_SET_PATH(&spec, "counter", strlen("counter"));
+    LCB_SDSPEC_SET_VALUE(&spec, "42", 2);
+    spec.sdcmd = LCB_SDCMD_COUNTER;
 
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdcounter3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("42", res.value);
-    ASSERT_NE(0, res.cas);
-
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "42");
     // Try it again
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdcounter3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("84", res.value);
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "84");
 
     static const char *si64max = "9223372036854775807";
-
     // Use a large value
-    lcb_CMDSDSTORE scmd = { 0 };
-    scmd.mode = LCB_SUBDOC_DICT_UPSERT;
-    LCB_CMD_SET_KEY(&scmd, key.c_str(), key.size());
-    LCB_SDCMD_SET_PATH(&scmd, "counter", strlen("counter"));
-    // INT64_MAX
-    LCB_CMD_SET_VALUE(&scmd, si64max, strlen(si64max));
-
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &scmd, lcb_sdstore3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ(si64max, getPathValue(instance, key.c_str(), "counter"));
+    LCB_SDSPEC_SET_VALUE(&spec, si64max, strlen(si64max));
+    spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
+    ASSERT_PATHVAL_EQ(si64max, instance, key, "counter");
 
     // Try to increment by 1
-    cmd.delta = 1;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdcounter3));
-    ASSERT_EQ(LCB_SUBDOC_DELTA_ERANGE, res.rc);
+    spec.sdcmd = LCB_SDCMD_COUNTER;
+    LCB_SDSPEC_SET_VALUE(&spec, "1", 1);
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_BAD_DELTA);
 
-    // Try to use an already large number
+    // Try to use an already large number (so the number is too big on the server)
     std::string biggerNum(si64max);
     biggerNum += "999999999999999999999999999999";
-    LCB_CMD_SET_VALUE(&scmd, biggerNum.c_str(), biggerNum.size());
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &scmd, lcb_sdstore3));
+    LCB_SDSPEC_SET_VALUE(&spec, biggerNum.c_str(), biggerNum.size());
+    spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
 
     // Try the counter op again
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdcounter3));
-    ASSERT_EQ(LCB_SUBDOC_NUM_ERANGE, res.rc);
+    LCB_SDSPEC_SET_VALUE(&spec, "1", 1);
+    spec.sdcmd = LCB_SDCMD_COUNTER;
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_NUM_ERANGE);
 
-    // Try the counter op with a non-JSON path
-    LCB_SDCMD_SET_PATH(&cmd, "dictkey", strlen("dictkey"));
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdcounter3));
-    ASSERT_EQ(LCB_SUBDOC_PATH_MISMATCH, res.rc);
+    // Try the counter op with a non-numeric existing value
+    LCB_SDSPEC_SET_PATH(&spec, "dictkey", strlen("dictkey"));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_ERR(res, LCB_SUBDOC_PATH_MISMATCH);
 
-    LCB_SDCMD_SET_PATH(&cmd, "counter", strlen("counter"));
-    LCB_CMD_SET_VALUE(&scmd, "0", 1);
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &scmd, lcb_sdstore3));
+    // Reset the value again to 0
+    spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
+    LCB_SDSPEC_SET_PATH(&spec, "counter", strlen("counter"));
+    LCB_SDSPEC_SET_VALUE(&spec, "0", 1);
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_OK(res);
     ASSERT_EQ(LCB_SUCCESS, res.rc);
 
     // Try decrement
-    cmd.delta = -42;
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdcounter3));
-    ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("-42", res.value);
+    spec.sdcmd = LCB_SDCMD_COUNTER;
+    LCB_SDSPEC_SET_PATH(&spec, "counter", strlen("counter"));
+    LCB_SDSPEC_SET_VALUE(&spec, "-42", 3)
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
+    ASSERT_SD_VAL(res, "-42");
     // Try it again
-    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_sdcounter3));
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
     ASSERT_EQ(LCB_SUCCESS, res.rc);
-    ASSERT_EQ("-84", res.value);
+    ASSERT_SD_VAL(res, "-84");
 }
 
 TEST_F(SubdocUnitTest, testMultiLookup)
@@ -545,40 +627,32 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     MultiResult mr;
     lcb_error_t rc;
 
-    lcb_CMDSDMULTI mcmd = { 0 };
+    lcb_CMDSUBDOC mcmd = { 0 };
     mcmd.multimode = LCB_SDMULTI_MODE_LOOKUP;
     LCB_CMD_SET_KEY(&mcmd, key.c_str(), key.size());
 
-    lcb_SDMULTICTX *ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-    ASSERT_FALSE(ctx == NULL);
+    lcb_SDSPEC specs[4] = { { 0 } };
+    specs[0].sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&specs[0], "dictkey", strlen("dictkey"));
 
-    lcb_CMDSDGET gcmd = { 0 };
+    specs[1].sdcmd = LCB_SDCMD_EXISTS;
+    LCB_SDSPEC_SET_PATH(&specs[1], "array[0]", strlen("array[0]"));
 
-    LCB_SDCMD_SET_PATH(&gcmd, "dictkey", strlen("dictkey"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&gcmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    specs[2].sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&specs[2], "nonexist", strlen("nonexist"));
 
-    LCB_SDCMD_SET_PATH(&gcmd, "array[0]", strlen("array[0]"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_EXISTS, (const lcb_CMDSDBASE*)&gcmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    specs[3].sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&specs[3], "array[1]", strlen("array[1]"));
 
-    // Sandwich a non-exist path between
-    LCB_SDCMD_SET_PATH(&gcmd, "nonexist", strlen("nonexist"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&gcmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
-    LCB_SDCMD_SET_PATH(&gcmd, "array[1]", strlen("array[1]"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&gcmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
-    rc = lcb_sdmultictx_done(ctx);
+    mcmd.specs = specs;
+    mcmd.nspecs = 4;
+    rc = lcb_subdoc3(instance, &mr, &mcmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance);
 
     ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);
     ASSERT_EQ(4, mr.results.size());
-    ASSERT_NE(0, mr.cas);
+//    ASSERT_NE(0, mr.cas);
 
     ASSERT_EQ("\"dictval\"", mr.results[0].value);
     ASSERT_EQ(LCB_SUCCESS, mr.results[0].rc);
@@ -593,10 +667,14 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     ASSERT_EQ(LCB_SUCCESS, mr.results[0].rc);
 
     // Test multi lookups with bad command types
-    ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
-    ASSERT_EQ(LCB_OPTIONS_CONFLICT,
-        lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_REMOVE, (const lcb_CMDSDBASE*)&gcmd));
-    lcb_sdmultictx_fail(ctx);
+    int erridx = 0;
+    specs[1].sdcmd = LCB_SDCMD_REMOVE;
+    mcmd.error_index = &erridx;
+    rc = lcb_subdoc3(instance, NULL, &mcmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, rc);
+    ASSERT_EQ(1, erridx);
+    // Reset it to its previous command
+    specs[1].sdcmd = LCB_SDCMD_GET;
 
     // Test multi lookups with missing key
     std::string missing_key("missing-key");
@@ -604,11 +682,7 @@ TEST_F(SubdocUnitTest, testMultiLookup)
 
     mr.clear();
     LCB_CMD_SET_KEY(&mcmd, missing_key.c_str(), missing_key.size());
-
-    ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&gcmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-    rc = lcb_sdmultictx_done(ctx);
+    rc = lcb_subdoc3(instance, &mr, &mcmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance);
     ASSERT_EQ(LCB_KEY_ENOENT, mr.rc);
@@ -621,70 +695,65 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     lcb_t instance;
     CREATE_SUBDOC_CONNECTION(hw, instance);
 
-    lcb_CMDSDMULTI mcmd = { 0 };
+    lcb_CMDSUBDOC mcmd = { 0 };
+    std::vector<lcb_SDSPEC> specs;
     LCB_CMD_SET_KEY(&mcmd, key.c_str(), key.size());
     mcmd.multimode = LCB_SDMULTI_MODE_MUTATE;
 
     MultiResult mr;
     lcb_error_t rc;
-    lcb_SDMULTICTX *ctx;
 
-    ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-    ASSERT_FALSE(ctx == NULL);
+    lcb_SDSPEC spec = { 0 };
+    LCB_SDSPEC_SET_PATH(&spec, "newPath", strlen("newPath"));
+    LCB_SDSPEC_SET_VALUE(&spec, "true", strlen("true"));
+    spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
+    specs.push_back(spec);
 
-    lcb_CMDSDSTORE scmd = { 0 };
-    LCB_SDCMD_SET_PATH(&scmd, "newPath", strlen("newPath"));
-    LCB_CMD_SET_VALUE(&scmd, "true", strlen("true"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_DICT_UPSERT, (const lcb_CMDSDBASE*)&scmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
-    lcb_CMDSDCOUNTER ccmd = { 0 };
-    LCB_SDCMD_SET_PATH(&ccmd, "counter", strlen("counter"));
-    ccmd.delta = 42;
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_COUNTER, (const lcb_CMDSDBASE*)&ccmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
-    // Should be OK for now
-    rc = lcb_sdmultictx_done(ctx);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_wait(instance);
+    LCB_SDSPEC_SET_PATH(&spec, "counter", strlen("counter"));
+    LCB_SDSPEC_SET_VALUE(&spec, "42", 2)
+    spec.sdcmd = LCB_SDCMD_COUNTER;
+    specs.push_back(spec);
+    mcmd.specs = specs.data();
+    mcmd.nspecs = specs.size();
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, &mcmd, lcb_subdoc3));
     ASSERT_EQ(LCB_SUCCESS, mr.rc);
 
-    // COUNTER returns a value here..
+    // COUNTER returns a value
     ASSERT_EQ(1, mr.results.size());
     ASSERT_EQ("42", mr.results[0].value);
+    ASSERT_EQ(1, mr.results[0].index);
     ASSERT_EQ(LCB_SUCCESS, mr.results[0].rc);
 
     // Ensure the parameters were encoded correctly..
-    ASSERT_EQ("true", getPathValue(instance, key.c_str(), "newPath"));
-    ASSERT_EQ("42", getPathValue(instance, key.c_str(), "counter"));
+    ASSERT_PATHVAL_EQ("true", instance, key, "newPath");
+    ASSERT_PATHVAL_EQ("42", instance, key, "counter");
 
     // New context. Try with mismatched commands
-    mr.clear();
-    ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&scmd);
+    specs.clear();
+
+    LCB_SDSPEC_INIT(&spec, LCB_SDCMD_GET, "p", 1, NULL, 0);
+    specs.push_back(spec);
+    int error_index = 0;
+    mcmd.error_index = &error_index;
+    mcmd.specs = specs.data();
+    mcmd.nspecs = specs.size();
+    rc = lcb_subdoc3(instance, NULL, &mcmd);
     ASSERT_EQ(LCB_OPTIONS_CONFLICT, rc);
+    ASSERT_EQ(0, error_index);
 
-    LCB_SDCMD_SET_PATH(&scmd, "newPath", strlen("newPath"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_REPLACE, (const lcb_CMDSDBASE*)&scmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
+    specs.clear();
+    LCB_SDSPEC_INIT(&spec, LCB_SDCMD_REPLACE, "newPath", strlen("newPath"), "null", 4);
+    specs.push_back(spec);
+    LCB_SDSPEC_SET_PATH(&spec, "nested.nonexist", strlen("nested.nonexist"));
+    specs.push_back(spec);
+    LCB_SDSPEC_SET_PATH(&spec, "bad..bad", strlen("bad..path"));
+    specs.push_back(spec);
 
-    // Add something with an invalid path
-    LCB_SDCMD_SET_PATH(&scmd, "nested.nonexist", strlen("nested.nonexist"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_REPLACE, (const lcb_CMDSDBASE*)&scmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
-    LCB_SDCMD_SET_PATH(&scmd, "bad..path", strlen("bad..path"));
-    rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_REPLACE, (const lcb_CMDSDBASE*)&scmd);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
-    rc = lcb_sdmultictx_done(ctx);
-    ASSERT_EQ(LCB_SUCCESS, rc);
-
-    lcb_wait(instance);
+    mcmd.specs = specs.data();
+    mcmd.nspecs = specs.size();
+    ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, &mcmd, lcb_subdoc3));
     ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);
-    ASSERT_EQ(1, mr.results.size());
+    ASSERT_EQ(1, mr.size());
     ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, mr.results[0].rc);
     ASSERT_EQ(1, mr.results[0].index);
 }

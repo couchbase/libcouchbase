@@ -27,6 +27,7 @@
 MK_RESPACK(respack_STORE, lcb_RESPSTORE);
 MK_RESPACK(respack_COUNTER, lcb_RESPCOUNTER);
 MK_RESPACK(respack_REMOVE, lcb_RESPREMOVE);
+MK_RESPACK(respack_SUBDOC, lcb_RESPSUBDOC);
 
 LIBCOUCHBASE_API
 lcb_error_t
@@ -85,12 +86,14 @@ map_error(lcb_t instance, int in)
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_NUM_ERANGE:
         return LCB_SUBDOC_NUM_ERANGE;
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_DELTA_ERANGE:
-        return LCB_SUBDOC_DELTA_ERANGE;
+        return LCB_SUBDOC_BAD_DELTA;
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_PATH_EEXISTS:
         return LCB_SUBDOC_PATH_EEXISTS;
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE:
         return LCB_SUBDOC_MULTI_FAILURE;
     case PROTOCOL_BINARY_RESPONSE_EINVAL:
+        printf("Got memcached EINVAL!\n");
+        abort();
         return LCB_EINVAL_MCD;
     case PROTOCOL_BINARY_RESPONSE_NOT_STORED:
         return LCB_NOT_STORED;
@@ -324,100 +327,51 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_sdget(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-        lcb_error_t immerr)
+H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+    lcb_error_t immerr)
 {
     lcb_t o;
-    lcb_RESPGET resp = { 0 };
-    void *freeptr = NULL;
-
-    o = pipeline->parent->cqdata;
-    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
-    if (resp.rc == LCB_SUCCESS && PACKET_NVALUE(response)) {
-        resp.value = PACKET_VALUE(response);
-        resp.nvalue = PACKET_NVALUE(response);
-        resp.bufh = response->bufh;
-    }
-
-    maybe_decompress(o, response, &resp, &freeptr);
-
-    INVOKE_CALLBACK3(request, &resp, o,
-        PACKET_OPCODE(response) == PROTOCOL_BINARY_CMD_SUBDOC_COUNTER ?
-                LCB_CALLBACK_SDCOUNTER : LCB_CALLBACK_SDGET);
-    free(freeptr);
-}
-
-static void
-H_sdcommon(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-         lcb_error_t immerr)
-{
-    lcb_t o;
-    lcb_RESPBASE resp = { 0 };
+    respack_SUBDOC w = { { 0 } };
     int cbtype;
-    const uint8_t op = PACKET_OPCODE(response);
+    o = pipeline->parent->cqdata;
+    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&w.resp);
 
-    if (op == PROTOCOL_BINARY_CMD_SUBDOC_EXISTS) {
-        cbtype = LCB_CALLBACK_SDEXISTS;
-    } else if (op == PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE ||
-               op == PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST ||
-               op == PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST ||
-               op == PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD ||
-               op == PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT ||
-               op == PROTOCOL_BINARY_CMD_SUBDOC_REPLACE) {
-        cbtype = LCB_CALLBACK_SDSTORE;
-    } else if (op == PROTOCOL_BINARY_CMD_SUBDOC_DELETE) {
-        cbtype = LCB_CALLBACK_SDREMOVE;
+    /* For mutations, add the mutation token */
+    switch (PACKET_OPCODE(response)) {
+    case PROTOCOL_BINARY_CMD_SUBDOC_GET:
+    case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
+    case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
+        cbtype = LCB_CALLBACK_SDLOOKUP;
+        break;
+
+    default:
+        handle_mutation_token(o, response, request, &w.mt);
+        w.resp.rflags |= LCB_RESP_F_EXTDATA;
+        cbtype = LCB_CALLBACK_SDMUTATE;
+        break;
+    }
+
+    if (PACKET_OPCODE(response) == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP ||
+            PACKET_OPCODE(response) == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION) {
+        if (w.resp.rc == LCB_SUCCESS || w.resp.rc == LCB_SUBDOC_MULTI_FAILURE) {
+            w.resp.responses = response;
+        }
     } else {
-        abort();
-        cbtype = -1;
+        /* Single response */
+        w.resp.rflags |= LCB_RESP_F_SDSINGLE;
+        if (w.resp.rc == LCB_SUCCESS) {
+            w.resp.responses = response;
+        } else if (LCB_EIFSUBDOC(w.resp.rc)) {
+            w.resp.responses = response;
+            w.resp.rc = LCB_SUBDOC_MULTI_FAILURE;
+        }
     }
-
-    o = pipeline->parent->cqdata;
-    init_resp3(o, response, request, immerr, &resp);
-    INVOKE_CALLBACK3(request, &resp, o, cbtype);
+    INVOKE_CALLBACK3(request, &w.resp, o, cbtype);
 }
 
-static void
-H_sdmmutate(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-    lcb_error_t immerr)
+static int
+sdlookup_next(const packet_info *response, lcb_SDENTRY *ent, size_t *iter)
 {
-    lcb_t o;
-    lcb_RESPSDMMUTATE resp = { 0 };
-
-    o = pipeline->parent->cqdata;
-
-    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
-
-    if (PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE ||
-            PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-        resp.responses = response;
-    }
-    INVOKE_CALLBACK3(request, &resp, o, LCB_CALLBACK_SDMMUTATE);
-}
-
-static void
-H_sdmlookup(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-    lcb_error_t immerr)
-{
-    lcb_t o;
-    lcb_RESPSDMLOOKUP resp;
-
-    o = pipeline->parent->cqdata;
-
-    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
-
-    resp.responses = response;
-    resp.bufh = response->bufh;
-
-    INVOKE_CALLBACK3(request, &resp, o, LCB_CALLBACK_SDMLOOKUP);
-}
-
-LIBCOUCHBASE_API
-int
-lcb_sdmlookup_next(const lcb_RESPSDMLOOKUP *resp, lcb_SDMULTI_ENTRY *out,
-    size_t *iter)
-{
-    packet_info *response = resp->responses;
     const char *buf;
     lcb_U16 rc;
     lcb_U32 vlen;
@@ -435,26 +389,23 @@ lcb_sdmlookup_next(const lcb_RESPSDMLOOKUP *resp, lcb_SDMULTI_ENTRY *out,
     rc = ntohs(rc);
     vlen = ntohl(vlen);
 
-    out->status = map_error(NULL, rc);
-    out->nvalue = vlen;
+    ent->status = map_error(NULL, rc);
+    ent->nvalue = vlen;
 
-    if (out->status == LCB_SUCCESS) {
-        out->value = buf + 6;
+    if (ent->status == LCB_SUCCESS) {
+        ent->value = buf + 6;
     } else {
-        out->value = NULL;
-        out->nvalue = 0;
+        ent->value = NULL;
+        ent->nvalue = 0;
     }
 
     *iter += (6 + vlen);
     return 1;
 }
 
-LIBCOUCHBASE_API
-int
-lcb_sdmmutation_next(const lcb_RESPSDMMUTATE *resp,
-    lcb_SDMULTI_ENTRY *out, size_t *iter)
+static int
+sdmutate_next(const packet_info *response, lcb_SDENTRY *ent, size_t *iter)
 {
-    packet_info *response = resp->responses;
     const char *buf, *buf_end;
     lcb_U16 rc;
     lcb_U32 vlen;
@@ -472,7 +423,7 @@ lcb_sdmmutation_next(const lcb_RESPSDMMUTATE *resp,
         assert(buf <= buf_end); \
 
     /* Index */
-    out->index = *(lcb_U8*)buf;
+    ent->index = *(lcb_U8*)buf;
     ADVANCE_BUF(1);
 
     /* Status */
@@ -480,24 +431,61 @@ lcb_sdmmutation_next(const lcb_RESPSDMMUTATE *resp,
     ADVANCE_BUF(2);
 
     rc = ntohs(rc);
-    out->status = map_error(NULL, rc);
+    ent->status = map_error(NULL, rc);
 
     if (rc == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         memcpy(&vlen, buf, 4);
         ADVANCE_BUF(4);
 
         vlen = ntohl(vlen);
-        out->nvalue = vlen;
-        out->value = buf;
+        ent->nvalue = vlen;
+        ent->value = buf;
         ADVANCE_BUF(vlen);
 
     } else {
-        out->value = NULL;
-        out->nvalue = 0;
+        ent->value = NULL;
+        ent->nvalue = 0;
     }
 
     return 1;
     #undef ADVANCE_BUF
+}
+
+LIBCOUCHBASE_API
+int
+lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
+{
+    size_t iter_s = 0;
+    const packet_info *response = (const packet_info*)resp->responses;
+    if (!response) {
+        return 0;
+    }
+    if (!iter) {
+        /* Single response */
+        iter = &iter_s;
+    }
+
+    switch (PACKET_OPCODE(response)) {
+    case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
+        return sdlookup_next(response, ent, iter);
+    case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION:
+        return sdmutate_next(response, ent, iter);
+    default:
+        if (*iter) {
+            return 0;
+        }
+        *iter = 1;
+
+        if (resp->rc == LCB_SUCCESS || resp->rc == LCB_SUBDOC_MULTI_FAILURE) {
+            ent->status = map_error(NULL, PACKET_STATUS(response));
+            ent->value = PACKET_VALUE(response);
+            ent->nvalue = PACKET_NVALUE(response);
+            ent->index = 0;
+            return 1;
+        } else {
+            return 0;
+        }
+    }
 }
 
 static void
@@ -837,22 +825,19 @@ mcreq_dispatch_response(
         INVOKE_OP(H_arithmetic);
 
     case PROTOCOL_BINARY_CMD_SUBDOC_GET:
-    case PROTOCOL_BINARY_CMD_SUBDOC_COUNTER:
-        INVOKE_OP(H_sdget);
-
+    case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
     case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE:
     case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST:
     case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST:
+    case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT:
     case PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD:
     case PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT:
     case PROTOCOL_BINARY_CMD_SUBDOC_REPLACE:
     case PROTOCOL_BINARY_CMD_SUBDOC_DELETE:
-    case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
-        INVOKE_OP(H_sdcommon);
+    case PROTOCOL_BINARY_CMD_SUBDOC_COUNTER:
     case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
-        INVOKE_OP(H_sdmlookup);
     case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION:
-        INVOKE_OP(H_sdmmutate);
+        INVOKE_OP(H_subdoc);
 
     case PROTOCOL_BINARY_CMD_OBSERVE:
         INVOKE_OP(H_observe);
@@ -917,6 +902,10 @@ lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb)
 
     case LCB_CALLBACK_REMOVE:
         ss = &((const respack_REMOVE*)rb)->mt;
+        break;
+
+    case LCB_CALLBACK_SDMUTATE:
+        ss = &((const respack_SUBDOC*)rb)->mt;
         break;
 
     default:

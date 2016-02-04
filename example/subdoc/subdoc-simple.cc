@@ -10,23 +10,44 @@ static void
 op_callback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
 {
     fprintf(stderr, "Got callback for %s.. ", lcb_strcbtype(cbtype));
-    if (rb->rc != LCB_SUCCESS) {
+    if (rb->rc != LCB_SUCCESS && rb->rc != LCB_SUBDOC_MULTI_FAILURE) {
         fprintf(stderr, "Operation failed (%s)\n", lcb_strerror(NULL, rb->rc));
         return;
     }
 
-    if (cbtype == LCB_CALLBACK_SDGET ||
-            cbtype == LCB_CALLBACK_GET ||
-            cbtype == LCB_CALLBACK_SDCOUNTER) {
+    if (cbtype == LCB_CALLBACK_GET) {
         const lcb_RESPGET *rg = reinterpret_cast<const lcb_RESPGET*>(rb);
         fprintf(stderr, "Value %.*s\n", (int)rg->nvalue, rg->value);
+    } else if (cbtype == LCB_CALLBACK_SDMUTATE || cbtype == LCB_CALLBACK_SDLOOKUP) {
+        const lcb_RESPSUBDOC *resp = reinterpret_cast<const lcb_RESPSUBDOC*>(rb);
+        lcb_SDENTRY ent;
+        size_t iter = 0;
+        if (lcb_sdresult_next(resp, &ent, &iter)) {
+            fprintf(stderr, "Status: 0x%x. Value: %.*s\n", ent.status, (int)ent.nvalue, ent.value);
+        } else {
+            fprintf(stderr, "No result!\n");
+        }
     } else {
         fprintf(stderr, "OK\n");
     }
 }
 
+// Function to issue an lcb_get3() (and print the state of the document)
+static void
+demoKey(lcb_t instance, const char *key)
+{
+    printf("Retrieving '%s'\n", key);
+    printf("====\n");
+    lcb_CMDGET gcmd = { 0 };
+    LCB_CMD_SET_KEY(&gcmd, key, strlen(key));
+    lcb_error_t rc = lcb_get3(instance, NULL, &gcmd);
+    assert(rc == LCB_SUCCESS);
+    lcb_wait(instance);
+    printf("====\n\n");
+}
+
 // cluster_run mode
-#define DEFAULT_CONNSTR "couchbase://localhost:12000"
+#define DEFAULT_CONNSTR "couchbase://localhost"
 int main(int argc, char **argv)
 {
     lcb_create_st crst = { 0 };
@@ -51,6 +72,8 @@ int main(int argc, char **argv)
 
     lcb_install_callback3(instance, LCB_CALLBACK_DEFAULT, op_callback);
 
+    // Store the initial document. Subdocument operations cannot create
+    // documents
     printf("Storing the initial item..\n");
     // Store an item
     lcb_CMDSTORE scmd = { 0 };
@@ -58,75 +81,109 @@ int main(int argc, char **argv)
     LCB_CMD_SET_KEY(&scmd, "key", 3);
     const char *initval = "{\"hello\":\"world\"}";
     LCB_CMD_SET_VALUE(&scmd, initval, strlen(initval));
-    lcb_sched_enter(instance);
     rc = lcb_store3(instance, NULL, &scmd);
     assert(rc == LCB_SUCCESS);
-
-    printf("Getting the 'hello' path from the document\n");
-    lcb_CMDSDGET sdgcmd = { 0 };
-    LCB_CMD_SET_KEY(&sdgcmd, "key", 3);
-    LCB_SDCMD_SET_PATH(&sdgcmd, "hello", 5);
-    lcb_sched_enter(instance);
-    rc = lcb_sdget3(instance, NULL, &sdgcmd);
-    assert(rc == LCB_SUCCESS);
-    lcb_sched_leave(instance);
     lcb_wait(instance);
+
+    lcb_CMDSUBDOC cmd;
+    lcb_SDSPEC spec;
+    memset(&cmd, 0, sizeof cmd);
+    memset(&spec, 0, sizeof spec);
+
+    /**
+     * Retrieve a single item from a document
+     */
+    printf("Getting the 'hello' path from the document\n");
+    LCB_CMD_SET_KEY(&cmd, "key", 3);
+    // Subdocument commands are composed of one or more lcb_SDSPEC objects
+    // Assign the spec to the command. In this case our "list" is a single spec.
+    // See subdoc-multi.cc for an example using multiple specs
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
+    // Populate the spec
+    spec.sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&spec, "hello", 5);
+    rc = lcb_subdoc3(instance, NULL, &cmd);
+    assert(rc == LCB_SUCCESS);
+    lcb_wait(instance);
+
+    /**
+     * Set a dictionary/object field
+     */
+    memset(&cmd, 0, sizeof cmd);
+    memset(&spec, 0, sizeof spec);
 
     printf("Adding new 'goodbye' path to document\n");
-    lcb_CMDSDSTORE sdscmd = { 0 };
-    LCB_CMD_SET_KEY(&sdscmd, "key", 3);
-    LCB_SDCMD_SET_PATH(&sdscmd, "goodbye", 7);
-    LCB_CMD_SET_VALUE(&sdscmd, "\"world\"", 7);
-    sdscmd.mode = LCB_SUBDOC_DICT_ADD;
-    lcb_sched_enter(instance);
-    rc = lcb_sdstore3(instance, NULL, &sdscmd);
-    assert(rc == LCB_SUCCESS);
-    lcb_sched_leave(instance);
-    lcb_wait(instance);
+    LCB_CMD_SET_KEY(&cmd, "key", 3);
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
 
-    printf("Getting entire document..\n");
-    // Perform the get after the store
-    lcb_CMDGET gcmd = { 0 };
-    LCB_CMD_SET_KEY(&gcmd, "key", 3);
-    lcb_sched_enter(instance);
-    rc = lcb_get3(instance, NULL, &gcmd);
-    assert(rc == LCB_SUCCESS);
-    lcb_sched_leave(instance);
-    lcb_wait(instance);
+    spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
+    LCB_SDSPEC_SET_PATH(&spec, "goodbye", 7);
+    LCB_SDSPEC_SET_VALUE(&spec, "\"world\"", 7);
 
+    rc = lcb_subdoc3(instance, NULL, &cmd);
+    assert(rc == LCB_SUCCESS);
+    lcb_wait(instance);
+    demoKey(instance, "key");
+
+    /**
+     * Add new element to end of an array
+     */
+    memset(&cmd, 0, sizeof cmd);
+    memset(&spec, 0, sizeof spec);
+    // Options can also be used
     printf("Appending element to array (array might be missing)\n");
-    // Add an array
-    LCB_SDCMD_SET_PATH(&sdscmd, "array", 5);
-    LCB_CMD_SET_VALUE(&sdscmd, "1", 1);
-    // Create the parent array, since it does not exist
-    sdscmd.cmdflags |= LCB_CMDSUBDOC_F_MKINTERMEDIATES;
-    sdscmd.mode = LCB_SUBDOC_ARRAY_ADD_LAST;
-    lcb_sched_enter(instance);
-    rc = lcb_sdstore3(instance, NULL, &sdscmd);
+    LCB_CMD_SET_KEY(&cmd, "key", 3);
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
+
+    // "push" to the end of the array
+    spec.sdcmd = LCB_SDCMD_ARRAY_ADD_LAST;
+
+    // Create the array if it doesn't exist. This option can be used with
+    // other commands as well..
+    spec.options = LCB_SDSPEC_F_MKINTERMEDIATES;
+
+    LCB_SDSPEC_SET_PATH(&spec, "array", 5);
+    LCB_SDSPEC_SET_VALUE(&spec, "1", 1);
+    rc = lcb_subdoc3(instance, NULL, &cmd);
     assert(rc == LCB_SUCCESS);
-    lcb_sched_leave(instance);
     lcb_wait(instance);
+    demoKey(instance, "key");
 
-    printf("Getting entire document...\n");
-    lcb_sched_enter(instance);
-    rc = lcb_get3(instance, NULL, &gcmd);
+    /**
+     * Add element to the beginning of an array
+     */
+    memset(&spec, 0, sizeof spec);
+    memset(&cmd, 0, sizeof cmd);
+    printf("Prepending element to array (array must exist)\n");
+    LCB_CMD_SET_KEY(&cmd, "key", 3);
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
+
+    spec.sdcmd = LCB_SDCMD_ARRAY_ADD_FIRST;
+    LCB_SDSPEC_SET_PATH(&spec, "array", 5);
+    LCB_SDSPEC_SET_VALUE(&spec, "2", 1);
+    rc = lcb_subdoc3(instance, NULL, &cmd);
     assert(rc == LCB_SUCCESS);
     lcb_wait(instance);
+    demoKey(instance, "key");
 
-    printf("Appending another element to array (array must exist)\n");
-    sdscmd.cmdflags = 0;
-    LCB_CMD_SET_VALUE(&sdscmd, "2", 1);
-    lcb_sched_enter(instance);
-    rc = lcb_sdstore3(instance, NULL, &sdscmd);
-    lcb_sched_leave(instance);
-    lcb_wait(instance);
-
+    /**
+     * Get the first element back..
+     */
+    memset(&spec, 0, sizeof spec);
+    memset(&cmd, 0, sizeof cmd);
     printf("Getting first array element...\n");
-    LCB_SDCMD_SET_PATH(&sdgcmd, "array[0]", strlen("array[0]"));
-    lcb_sched_enter(instance);
-    rc = lcb_sdget3(instance, NULL, &sdgcmd);
+    LCB_CMD_SET_KEY(&cmd, "key", 3);
+    cmd.specs = &spec;
+    cmd.nspecs = 1;
+
+    spec.sdcmd = LCB_SDCMD_GET;
+    LCB_SDSPEC_SET_PATH(&spec, "array[0]", strlen("array[0]"));
+    rc = lcb_subdoc3(instance, NULL, &cmd);
     assert(rc == LCB_SUCCESS);
-    lcb_sched_leave(instance);
     lcb_wait(instance);
 
     lcb_destroy(instance);

@@ -355,20 +355,10 @@ lcb_strcbtype(int cbtype)
         return "OBSEQNO";
     case LCB_CALLBACK_STOREDUR:
         return "STOREDUR";
-    case LCB_CALLBACK_SDCOUNTER:
-        return "SDCOUNTER";
-    case LCB_CALLBACK_SDEXISTS:
-        return "SDEXISTS";
-    case LCB_CALLBACK_SDGET:
-        return "SDGET";
-    case LCB_CALLBACK_SDMLOOKUP:
-        return "SDMLOOKUP";
-    case LCB_CALLBACK_SDMMUTATE:
-        return "SDMMUTATE";
-    case LCB_CALLBACK_SDREMOVE:
-        return "SDREMOVE";
-    case LCB_CALLBACK_SDSTORE:
-        return "SDSTORE";
+    case LCB_CALLBACK_SDMUTATE:
+        return "SDMUTATE";
+    case LCB_CALLBACK_SDLOOKUP:
+        return "SDLOOKUP";
     default:
         return "UNKNOWN";
     }

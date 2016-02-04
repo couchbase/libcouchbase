@@ -5,6 +5,8 @@
 #include <libcouchbase/api3.h>
 #include <assert.h>
 #include <string.h>
+#include <string>
+#include <vector>
 
 static void generic_callback(lcb_t, int type, const lcb_RESPBASE *rb)
 {
@@ -18,23 +20,24 @@ static void generic_callback(lcb_t, int type, const lcb_RESPBASE *rb)
     if (type == LCB_CALLBACK_GET) {
         const lcb_RESPGET *rg = (const lcb_RESPGET *)rb;
         printf("Result is: %.*s\n", (int)rg->nvalue, rg->value);
-    }
-
-    if (type == LCB_CALLBACK_SDMLOOKUP) {
+    } else if (type == LCB_CALLBACK_SDLOOKUP || type == LCB_CALLBACK_SDMUTATE) {
+        lcb_SDENTRY ent;
         size_t iter = 0;
-        int pos = 0;
-        const lcb_RESPSDMLOOKUP *rml = (const lcb_RESPSDMLOOKUP*)rb;
-        lcb_SDMULTI_ENTRY cur = { NULL };
-        printf("Dumping multi results...\n");
-        while ((lcb_sdmlookup_next(rml, &cur, &iter))) {
-            printf("[%d]: 0x%x. %.*s\n",
-                pos++, cur.status, (int)cur.nvalue, cur.value);
+        size_t oix = 0;
+        const lcb_RESPSUBDOC *resp = reinterpret_cast<const lcb_RESPSUBDOC*>(rb);
+        while (lcb_sdresult_next(resp, &ent, &iter)) {
+            size_t index = oix++;
+            if (type == LCB_CALLBACK_SDMUTATE) {
+                index = ent.index;
+            }
+            printf("[%lu]: 0x%x. %.*s\n",
+                index, ent.status, (int)ent.nvalue, ent.value);
         }
     }
 }
 
 // cluster_run mode
-#define DEFAULT_CONNSTR "couchbase://localhost:12000"
+#define DEFAULT_CONNSTR "couchbase://localhost"
 
 int main(int argc, char **argv) {
     lcb_create_st crst = { 0 };
@@ -64,54 +67,59 @@ int main(int argc, char **argv) {
     LCB_CMD_SET_KEY(&scmd, "key", 3);
     const char *initval = "{\"hello\":\"world\"}";
     LCB_CMD_SET_VALUE(&scmd, initval, strlen(initval));
-    lcb_sched_enter(instance);
     rc = lcb_store3(instance, NULL, &scmd);
     assert(rc == LCB_SUCCESS);
 
-    lcb_CMDSDMULTI mcmd = { 0 };
+    lcb_CMDSUBDOC mcmd = { 0 };
     LCB_CMD_SET_KEY(&mcmd, "key", 3);
-    mcmd.multimode = LCB_SDMULTI_MODE_MUTATE;
-    lcb_SDMULTICTX *sctx = lcb_sdmultictx_new(instance, NULL, &mcmd, &rc);
-    assert(sctx != NULL);
+
+    std::vector<lcb_SDSPEC> specs;
+    std::string bufs[10];
 
     // Add some mutations
     for (int ii = 0; ii < 5; ii++) {
-        char pbuf[24];
-        char vbuf[24];
-        size_t np = sprintf(pbuf, "pth%d", ii);
-        size_t nv = sprintf(vbuf, "\"Value_%d\"", ii);
+        std::string& path = bufs[ii * 2];
+        std::string& val = bufs[(ii * 2) + 1];
+        char pbuf[24], vbuf[24];
 
-        lcb_CMDSDSTORE sdstore = { 0 };
-        LCB_SDCMD_SET_PATH(&sdstore, pbuf, np);
-        LCB_CMD_SET_VALUE(&sdstore, vbuf, nv);
-        rc = lcb_sdmultictx_addcmd(sctx, LCB_SUBDOC_DICT_UPSERT, (const lcb_CMDSDBASE*)&sdstore);
-        assert(rc == LCB_SUCCESS);
+        sprintf(pbuf, "pth%d", ii);
+        sprintf(vbuf, "\"Value_%d\"", ii);
+        path = pbuf;
+        val = vbuf;
+
+        lcb_SDSPEC spec = { 0 };
+        LCB_SDSPEC_SET_PATH(&spec, path.c_str(), path.size());
+        LCB_CMD_SET_VALUE(&spec, val.c_str(), val.size());
+        spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
+        specs.push_back(spec);
     }
-    rc = lcb_sdmultictx_done(sctx);
+
+    mcmd.specs = specs.data();
+    mcmd.nspecs = specs.size();
+    rc = lcb_subdoc3(instance, NULL, &mcmd);
     assert(rc == LCB_SUCCESS);
 
-    mcmd.multimode = LCB_SDMULTI_MODE_LOOKUP;
-    sctx = lcb_sdmultictx_new(instance, NULL, &mcmd, &rc);
-    assert(sctx != NULL);
+    // Reset the specs
+    specs.clear();
     for (int ii = 0; ii < 5; ii++) {
         char pbuf[24];
-        size_t np = sprintf(pbuf, "pth%d", ii);
-        lcb_CMDSDGET sdget = { 0 };
-        LCB_SDCMD_SET_PATH(&sdget, pbuf, np);
-        rc = lcb_sdmultictx_addcmd(sctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&sdget);
-        assert(rc == LCB_SUCCESS);
+        std::string& path = bufs[ii];
+        sprintf(pbuf, "pth%d", ii);
+        path = pbuf;
+
+        lcb_SDSPEC spec = { 0 };
+        LCB_SDSPEC_SET_PATH(&spec, path.c_str(), path.size());
+        spec.sdcmd = LCB_SDCMD_GET;
+        specs.push_back(spec);
     }
 
-    lcb_CMDSDGET get2 = { 0 };
-    LCB_SDCMD_SET_PATH(&get2, "dummy", 5);
-    rc = lcb_sdmultictx_addcmd(sctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&get2);
-    assert(rc == LCB_SUCCESS);
-
-    LCB_SDCMD_SET_PATH(&get2, "hello", 5);
-    rc = lcb_sdmultictx_addcmd(sctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&get2);
-    assert(rc == LCB_SUCCESS);
-
-    rc = lcb_sdmultictx_done(sctx);
+    lcb_SDSPEC spec2 = { 0 };
+    LCB_SDSPEC_SET_PATH(&spec2, "dummy", 5);
+    spec2.sdcmd = LCB_SDCMD_GET;
+    specs.push_back(spec2);
+    mcmd.specs = specs.data();
+    mcmd.nspecs = specs.size();
+    rc = lcb_subdoc3(instance, NULL, &mcmd);
     assert(rc == LCB_SUCCESS);
 
     lcb_CMDGET gcmd = { 0 };
@@ -119,8 +127,6 @@ int main(int argc, char **argv) {
     rc = lcb_get3(instance, NULL, &gcmd);
     assert(rc == LCB_SUCCESS);
 
-    lcb_sched_leave(instance);
     lcb_wait(instance);
-
     lcb_destroy(instance);
 }

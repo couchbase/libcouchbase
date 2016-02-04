@@ -17,7 +17,7 @@
 #include "internal.h"
 #include <vector>
 #include <string>
-#include <include/libcouchbase/api3.h>
+#include <include/libcouchbase/subdoc.h>
 
 static lcb_size_t
 get_value_size(mc_PACKET *packet)
@@ -52,6 +52,10 @@ struct Traits {
 
     inline bool valid() const {
         return opcode != 0;
+    }
+
+    inline unsigned mode() const {
+        return is_lookup ? LCB_SDMULTI_MODE_LOOKUP : LCB_SDMULTI_MODE_MUTATE;
     }
 
     inline Traits(uint8_t op, unsigned options) :
@@ -108,27 +112,27 @@ const Traits&
 find(unsigned mode)
 {
     switch (mode) {
-    case LCB_SUBDOC_REPLACE:
+    case LCB_SDCMD_REPLACE:
         return Replace;
-    case LCB_SUBDOC_DICT_ADD:
+    case LCB_SDCMD_DICT_ADD:
         return DictAdd;
-    case LCB_SUBDOC_DICT_UPSERT:
+    case LCB_SDCMD_DICT_UPSERT:
         return DictUpsert;
-    case LCB_SUBDOC_ARRAY_ADD_FIRST:
+    case LCB_SDCMD_ARRAY_ADD_FIRST:
         return ArrayAddFirst;
-    case LCB_SUBDOC_ARRAY_ADD_LAST:
+    case LCB_SDCMD_ARRAY_ADD_LAST:
         return ArrayAddLast;
-    case LCB_SUBDOC_ARRAY_ADD_UNIQUE:
+    case LCB_SDCMD_ARRAY_ADD_UNIQUE:
         return ArrayAddUnique;
-    case LCB_SUBDOC_ARRAY_INSERT:
+    case LCB_SDCMD_ARRAY_INSERT:
         return ArrayInsert;
-    case LCB_SUBDOC_GET:
+    case LCB_SDCMD_GET:
         return Get;
-    case LCB_SUBDOC_EXISTS:
+    case LCB_SDCMD_EXISTS:
         return Exists;
-    case LCB_SUBDOC_REMOVE:
+    case LCB_SDCMD_REMOVE:
         return Remove;
-    case LCB_SUBDOC_COUNTER:
+    case LCB_SDCMD_COUNTER:
         return Counter;
     default:
         return Invalid;
@@ -136,50 +140,201 @@ find(unsigned mode)
 }
 }
 
-/* Handles the basic creation of the packet and value assignment.
- * This dispatches to sd_packet_common which actually handles the
- * encoding of the command
- */
-static lcb_error_t
-sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
-          const SubdocCmdTraits::Traits& traits, bool has_value)
+static size_t
+get_valbuf_size(const lcb_VALBUF& vb)
 {
-    mc_PACKET *packet;
-    mc_PIPELINE *pipeline;
-    lcb_error_t rc;
-    mc_REQDATA *rdata = NULL;
-    lcb_VALBUF valbuf = { LCB_KV_COPY };
-    const lcb_VALBUF *valbuf_p = &valbuf;
-    lcb_IOV tmpiov[2];
-
-    lcb_FRAGBUF *fbuf = &valbuf.u_buf.multi;
-    protocol_binary_request_subdocument request;
-    protocol_binary_request_header *hdr = &request.message.header;
-
-    if (!cmd->npath && !traits.allow_empty_path) {
-        return LCB_EINVAL;
+    if (vb.vtype == LCB_KV_COPY || LCB_KV_CONTIG) {
+        return vb.u_buf.contig.nbytes;
+    } else {
+        if (vb.u_buf.multi.total_length) {
+            return vb.u_buf.multi.total_length;
+        } else {
+            size_t tmp = 0;
+            for (size_t ii = 0; ii < vb.u_buf.multi.niov; ++ii) {
+                tmp += vb.u_buf.multi.iov[ii].iov_len;
+            }
+            return tmp;
+        }
     }
-    if (!cmd->key.contig.nbytes) {
+}
+
+struct MultiBuilder {
+    MultiBuilder(const lcb_CMDSUBDOC *cmd_)
+    : cmd(cmd_), payload_size(0), mode(0) {
+        size_t ebufsz = is_lookup() ? cmd->nspecs * 4 : cmd->nspecs * 8;
+        extra_body.reserve(ebufsz);
+    }
+
+    // IOVs which are fed into lcb_VALBUF for subsequent use
+    const lcb_CMDSUBDOC *cmd;
+    std::vector<lcb_IOV> iovs;
+    std::vector<char> extra_body;
+
+    // Total size of the payload itself
+    size_t payload_size;
+
+    unsigned mode;
+
+    bool is_lookup() const {
+        return mode == LCB_SDMULTI_MODE_LOOKUP;
+    }
+
+    bool is_mutate() const {
+        return mode == LCB_SDMULTI_MODE_MUTATE;
+    }
+
+    void maybe_setmode(const SubdocCmdTraits::Traits& t) {
+        if (mode == 0) {
+            mode = t.mode();
+        }
+    }
+
+    template <typename T> void add_field(T itm, size_t len) {
+        const char *b = reinterpret_cast<const char *>(&itm);
+        extra_body.insert(extra_body.end(), b, b + len);
+    }
+
+    const char *extra_mark() const {
+        return extra_body.data() + extra_body.size();
+    }
+
+    void add_extras_iov(const char *last_begin) {
+        const char *p_end = extra_mark();
+        add_iov(last_begin, p_end - last_begin);
+    }
+
+    void add_iov(const void *b, size_t n) {
+        if (!n) {
+            return;
+        }
+
+        lcb_IOV iov;
+        iov.iov_base = const_cast<void*>(b);
+        iov.iov_len = n;
+        iovs.push_back(iov);
+        payload_size += n;
+    }
+
+    void add_iov(const lcb_VALBUF& vb) {
+        if (vb.vtype == LCB_KV_CONTIG || vb.vtype == LCB_KV_COPY) {
+            add_iov(vb.u_buf.contig.bytes, vb.u_buf.contig.nbytes);
+        } else {
+            for (size_t ii = 0; ii < vb.u_buf.contig.nbytes; ++ii) {
+                const lcb_IOV& iov = vb.u_buf.multi.iov[ii];
+                if (!iov.iov_len) {
+                    continue; // Skip it
+                }
+                payload_size += iov.iov_len;
+                iovs.push_back(iov);
+            }
+        }
+    }
+
+    inline lcb_error_t add_spec(const lcb_SDSPEC *);
+};
+
+lcb_error_t
+MultiBuilder::add_spec(const lcb_SDSPEC *spec)
+{
+    const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(spec->sdcmd);
+    if (!trait.valid()) {
+        return LCB_UNKNOWN_SDCMD;
+    }
+    maybe_setmode(trait);
+
+    if (trait.mode() != mode) {
+        return LCB_OPTIONS_CONFLICT;
+    }
+
+    const char *p_begin = extra_mark();
+    // opcode
+    add_field(trait.opcode, 1);
+    // flags
+    uint8_t sdflags = 0;
+    if (spec->options & LCB_SDSPEC_F_MKINTERMEDIATES) {
+        sdflags = SUBDOC_FLAG_MKDIR_P;
+    }
+    add_field(sdflags, 1);
+
+    uint16_t npath = static_cast<uint16_t>(spec->path.contig.nbytes);
+    if (!npath && !trait.allow_empty_path) {
+        return LCB_EMPTY_PATH;
+    }
+
+    // Path length
+    add_field(static_cast<uint16_t>(htons(npath)), 2);
+
+    uint32_t vsize = 0;
+    if (is_mutate()) {
+        // Mutation needs an additional 'value' spec.
+        vsize = get_valbuf_size(spec->value);
+        add_field(static_cast<uint32_t>(htonl(vsize)), 4);
+    }
+
+    // Finalize the header..
+    add_extras_iov(p_begin);
+
+    // Add the actual path
+    add_iov(spec->path.contig.bytes, spec->path.contig.nbytes);
+    if (vsize) {
+        add_iov(spec->value);
+    }
+    return LCB_SUCCESS;
+}
+
+
+static lcb_error_t
+sd3_single(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
+{
+    // Find the trait
+    const lcb_SDSPEC *spec = cmd->specs;
+    const SubdocCmdTraits::Traits& traits = SubdocCmdTraits::find(spec->sdcmd);
+    lcb_error_t rc;
+
+    // Any error here is implicitly related to the only spec
+    if (cmd->error_index) {
+        *cmd->error_index = 0;
+    }
+
+    if (!traits.valid()) {
+        return LCB_UNKNOWN_SDCMD;
+    }
+
+    // Determine if the trait matches the mode. Technically we don't care
+    // about this (since it's always a single command) but we do want the
+    // API to remain consistent.
+    if (cmd->multimode != 0 && cmd->multimode != traits.mode()) {
+        return LCB_OPTIONS_CONFLICT;
+    }
+
+    if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_EMPTY_KEY;
     }
+    if (LCB_KEYBUF_IS_EMPTY(&spec->path) && !traits.allow_empty_path) {
+        return LCB_EMPTY_PATH;
+    }
+
+    lcb_VALBUF valbuf;
+    const lcb_VALBUF *valbuf_p = &valbuf;
+    lcb_IOV tmpiov[2];
+    lcb_FRAGBUF *fbuf = &valbuf.u_buf.multi;
 
     valbuf.vtype = LCB_KV_IOVCOPY;
     fbuf->iov = tmpiov;
     fbuf->niov = 1;
     fbuf->total_length = 0;
-    tmpiov[0].iov_base = (void *)cmd->path;
-    tmpiov[0].iov_len = cmd->npath;
+    tmpiov[0].iov_base = const_cast<void*>(spec->path.contig.bytes);
+    tmpiov[0].iov_len = spec->path.contig.nbytes;
 
-    if (has_value) {
-        const lcb_CMDSDSTORE *scmd = (const lcb_CMDSDSTORE*)cmd;
-        if (scmd->value.vtype == LCB_KV_COPY) {
+    if (traits.has_value) {
+        if (spec->value.vtype == LCB_KV_COPY) {
             fbuf->niov = 2;
             /* Subdoc value is the second IOV */
-            tmpiov[1].iov_base = (void *)scmd->value.u_buf.contig.bytes;
-            tmpiov[1].iov_len = scmd->value.u_buf.contig.nbytes;
+            tmpiov[1].iov_base = (void *)spec->value.u_buf.contig.bytes;
+            tmpiov[1].iov_len = spec->value.u_buf.contig.nbytes;
         } else {
             /* Assume properly formatted packet */
-            valbuf_p = &scmd->value;
+            valbuf_p = &spec->value;
         }
     }
 
@@ -192,6 +347,11 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
         exptime = cmd->exptime;
         extlen = 7;
     }
+
+    protocol_binary_request_subdocument request;
+    protocol_binary_request_header *hdr = &request.message.header;
+    mc_PACKET *packet;
+    mc_PIPELINE *pipeline;
 
     rc = mcreq_basic_packet(&instance->cmdq,
         (const lcb_CMDBASE*)cmd,
@@ -208,9 +368,8 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
         return rc;
     }
 
-    rdata = MCREQ_PKT_RDATA(packet);
-    rdata->cookie = cookie;
-    rdata->start = gethrtime();
+    MCREQ_PKT_RDATA(packet)->cookie = cookie;
+    MCREQ_PKT_RDATA(packet)->start = gethrtime();
 
     hdr->request.magic = PROTOCOL_BINARY_REQ;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
@@ -220,9 +379,9 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
     hdr->request.bodylen = htonl(hdr->request.extlen +
         ntohs(hdr->request.keylen) + get_value_size(packet));
 
-    request.message.extras.pathlen = htons(cmd->npath);
+    request.message.extras.pathlen = htons(spec->path.contig.nbytes);
 
-    if (cmd->cmdflags & LCB_CMDSUBDOC_F_MKINTERMEDIATES) {
+    if (spec->options & LCB_SDSPEC_F_MKINTERMEDIATES) {
         request.message.extras.subdoc_flags = SUBDOC_FLAG_MKDIR_P;
     } else {
         request.message.extras.subdoc_flags = 0;
@@ -234,291 +393,97 @@ sd_common(lcb_t instance, const void *cookie, const lcb_CMDSDBASE *cmd,
         exptime = htonl(exptime);
         memcpy(SPAN_BUFFER(&packet->kh_span) + sizeof request.bytes, &exptime, 4);
     }
+
     LCB_SCHED_ADD(instance, pipeline, packet);
     return LCB_SUCCESS;
-
-}
-
-
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_sdget3(lcb_t instance, const void *cookie, const lcb_CMDSDGET *cmd)
-{
-    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        SubdocCmdTraits::Get, false);
 }
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_sdexists3(lcb_t instance, const void *cookie, const lcb_CMDSDEXISTS *cmd)
+lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
 {
-    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        SubdocCmdTraits::Exists, false);
-}
-
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_sdremove3(lcb_t instance, const void *cookie, const lcb_CMDSDREMOVE *cmd)
-{
-    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd,
-        SubdocCmdTraits::Remove, false);
-}
-
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_sdstore3(lcb_t instance, const void *cookie, const lcb_CMDSDSTORE *cmd)
-{
-    const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(cmd->mode);
-    if (!trait.valid()) {
-        return LCB_EINVAL;
-    }
-    return sd_common(instance, cookie, (const lcb_CMDSDBASE*)cmd, trait, true);
-}
-
-struct CounterStoreCmd {
-    CounterStoreCmd(const lcb_CMDSDCOUNTER *counter) {
-        memset(&store, 0, sizeof store);
-
-        store.cmdflags = counter->cmdflags;
-        store.key = counter->key;
-        store._hashkey = counter->_hashkey;
-        store.exptime = counter->exptime;
-        store.cas = counter->cas;
-        store.mode = LCB_SUBDOC_COUNTER;
-        store.path = counter->path;
-        store.npath = counter->npath;
-        size_t nbuf = sprintf(m_ctrbuf, "%lld", counter->delta);
-        LCB_CMD_SET_VALUE(&store, m_ctrbuf, nbuf);
+    // First validate the command
+    if (cmd->nspecs == 0) {
+        return LCB_ENO_COMMANDS;
     }
 
-    // Actual storage command
-    lcb_CMDSDSTORE store;
+    if (cmd->nspecs == 1) {
+        return sd3_single(instance, cookie, cmd);
+    }
 
-    // Buffer to hold the number
-    char m_ctrbuf[32];
-};
+    uint32_t exp = cmd->exptime;
+    lcb_error_t rc = LCB_SUCCESS;
 
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_sdcounter3(lcb_t instance, const void *cookie, const lcb_CMDSDCOUNTER *cmd)
-{
-    CounterStoreCmd ccmd(cmd);
-    return lcb_sdstore3(instance, cookie, &ccmd.store);
-}
+    MultiBuilder ctx(cmd);
+    if (cmd->error_index) {
+        *cmd->error_index = -1;
+    }
 
-struct lcb_SDMULTICTX_st {
-    lcb_t instance;
-    int mode;
+    if (exp && !ctx.is_mutate()) {
+        return LCB_OPTIONS_CONFLICT;
+    }
+
+    for (size_t ii = 0; ii < cmd->nspecs; ++ii) {
+        if (cmd->error_index) {
+            *cmd->error_index = ii;
+        }
+        rc = ctx.add_spec(cmd->specs + ii);
+        if (rc != LCB_SUCCESS) {
+            return rc;
+        }
+    }
+
+    mc_PIPELINE *pl;
     mc_PACKET *pkt;
-    mc_PIPELINE *pipeline;
+    uint8_t extlen = exp ? 4 : 0;
     protocol_binary_request_header hdr;
-    std::vector<char> extra_body;
 
-    ~lcb_SDMULTICTX_st() {
-        if (pkt != NULL) {
-            mcreq_wipe_packet(pipeline, pkt);
-            mcreq_release_packet(pipeline, pkt);
-        }
+    if (cmd->error_index) {
+        *cmd->error_index = -1;
     }
 
-    template <typename T> void add_field(T itm, size_t len) {
-        const char *b = reinterpret_cast<const char *>(&itm);
-        extra_body.insert(extra_body.end(), b, b + len);
-    }
+    rc = mcreq_basic_packet(
+        &instance->cmdq, reinterpret_cast<const lcb_CMDBASE*>(cmd),
+        &hdr, extlen, &pkt, &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
 
-    void add_buf(const void *bytes, size_t n) {
-        const char *b = reinterpret_cast<const char*>(bytes);
-        extra_body.insert(extra_body.end(), b, b + n);
-    }
-
-    inline lcb_error_t add_spec(const SubdocCmdTraits::Traits& trait,
-        const lcb_CMDSDBASE *cmd, const lcb_VALBUF *vb = NULL);
-
-    inline lcb_error_t addcmd(unsigned op, const lcb_CMDSDBASE *cmd);
-
-    inline lcb_error_t done();
-};
-
-lcb_error_t
-lcb_SDMULTICTX_st::add_spec(const SubdocCmdTraits::Traits& trait, const lcb_CMDSDBASE *cmd,
-    const lcb_VALBUF *vb)
-{
-    // opcode
-    add_field(trait.opcode, 1);
-
-    // flags
-    lcb_U8 sdflags = 0;
-    if (cmd->cmdflags & LCB_CMDSUBDOC_F_MKINTERMEDIATES) {
-        sdflags = SUBDOC_FLAG_MKDIR_P;
-    }
-    add_field(sdflags, 1);
-
-    if (!cmd->npath && !trait.allow_empty_path) {
-        return LCB_EMPTY_KEY;
-    }
-
-    // Path length
-    add_field(static_cast<lcb_U16>(htons(cmd->npath)), 2);
-
-    // Body length (if needed)
-    if (vb != NULL) {
-        if (vb->vtype != LCB_KV_COPY) {
-            return LCB_EINVAL;
-        }
-        add_field(static_cast<lcb_U32>(htonl(vb->u_buf.contig.nbytes)), 4);
-    }
-
-    // Add the actual path
-
-    // Add the body, if present
-    if (cmd->npath) {
-        add_buf(cmd->path, cmd->npath);
-    }
-    if (vb != NULL && vb->u_buf.contig.nbytes) {
-        add_buf(vb->u_buf.contig.bytes, vb->u_buf.contig.nbytes);
-    }
-    return LCB_SUCCESS;
-}
-
-lcb_error_t
-lcb_SDMULTICTX_st::addcmd(unsigned op, const lcb_CMDSDBASE *cmd)
-{
-    const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(op);
-    if (!trait.valid()) {
-        return LCB_EINVAL;
-    }
-
-    if (mode == LCB_SDMULTI_MODE_LOOKUP) {
-        if (!trait.is_lookup) {
-            return LCB_OPTIONS_CONFLICT;
-        }
-        return add_spec(trait, cmd);
-    } else if (mode == LCB_SDMULTI_MODE_MUTATE) {
-        if (trait.is_lookup) {
-            return LCB_OPTIONS_CONFLICT;
-        } else if (op == LCB_SUBDOC_COUNTER) {
-            const lcb_CMDSDCOUNTER *ccmd = reinterpret_cast<const lcb_CMDSDCOUNTER*>(cmd);
-            CounterStoreCmd wrapcmd(ccmd);
-            return add_spec(trait, cmd, &wrapcmd.store.value);
-        }
-        if (trait.has_value) {
-            const lcb_CMDSDSTORE *scmd = reinterpret_cast<const lcb_CMDSDSTORE*>(cmd);
-            return add_spec(trait, cmd, &scmd->value);
-        } else {
-            return add_spec(trait, cmd);
-        }
-    } else {
-        return LCB_EINTERNAL; // Unknown mode!
-    }
-}
-
-lcb_error_t
-lcb_SDMULTICTX_st::done()
-{
-    if (extra_body.empty()) {
-        delete this;
-        return LCB_EINVAL;
-    }
-
-    lcb_VALBUF vb = { LCB_KV_COPY };
-    vb.u_buf.contig.bytes = &extra_body[0];
-    vb.u_buf.contig.nbytes = extra_body.size();
-
-    lcb_error_t rc = mcreq_reserve_value(pipeline, pkt, &vb);
     if (rc != LCB_SUCCESS) {
-        delete this;
         return rc;
     }
 
-    // Get the body size
-    hdr.request.bodylen = htonl(ntohs(hdr.request.keylen) + extra_body.size());
+    lcb_VALBUF vb = { LCB_KV_IOVCOPY };
+    vb.u_buf.multi.iov = &ctx.iovs[0];
+    vb.u_buf.multi.niov = ctx.iovs.size();
+    vb.u_buf.multi.total_length = ctx.payload_size;
+    rc = mcreq_reserve_value(pl, pkt, &vb);
+
+    if (rc != LCB_SUCCESS) {
+        mcreq_wipe_packet(pl, pkt);
+        mcreq_release_packet(pl, pkt);
+        return rc;
+    }
+
+    // Set the header fields.
+    hdr.request.magic = PROTOCOL_BINARY_REQ;
+    if (ctx.is_lookup()) {
+        hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP;
+    } else {
+        hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION;
+    }
+    hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+    hdr.request.extlen = pkt->extlen;
+    hdr.request.opaque = pkt->opaque;
+    hdr.request.cas = cmd->cas;
+    hdr.request.bodylen = htonl(hdr.request.extlen +
+        ntohs(hdr.request.keylen) + ctx.payload_size);
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof hdr.bytes);
+    if (exp) {
+        exp = htonl(exp);
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + 24, &exp, 4);
+    }
+
+    MCREQ_PKT_RDATA(pkt)->cookie = cookie;
     MCREQ_PKT_RDATA(pkt)->start = gethrtime();
-    LCB_SCHED_ADD(instance, pipeline, pkt);
-
-    pkt = NULL;
-    pipeline = NULL;
-    delete this;
-
+    LCB_SCHED_ADD(instance, pl, pkt);
     return LCB_SUCCESS;
 }
 
-LIBCOUCHBASE_API
-lcb_SDMULTICTX *
-lcb_sdmultictx_new(lcb_t instance, const void *cookie,
-    const lcb_CMDSDMULTI *cmd, lcb_error_t *err)
-{
-    *err = LCB_SUCCESS;
-    lcb_SDMULTICTX *ctx = NULL;
-    lcb_U8 opcode;
-
-    if (!cmd->key.contig.nbytes) {
-        *err = LCB_EMPTY_KEY;
-        return NULL;
-    }
-    if (cmd->multimode == LCB_SDMULTI_MODE_LOOKUP) {
-        opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP;
-        if (cmd->exptime) {
-            *err = LCB_OPTIONS_CONFLICT;
-            return NULL;
-        }
-    } else if (cmd->multimode == LCB_SDMULTI_MODE_MUTATE) {
-        opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION;
-    } else {
-        *err = LCB_EINVAL;
-        return NULL;
-    }
-
-    ctx = new lcb_SDMULTICTX();
-    ctx->instance = instance;
-    ctx->mode = cmd->multimode;
-
-    uint8_t extlen = cmd->exptime ? 4 : 0;
-
-    *err = mcreq_basic_packet(&instance->cmdq,
-        reinterpret_cast<const lcb_CMDBASE*>(cmd), &ctx->hdr, extlen,
-        &ctx->pkt, &ctx->pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
-
-    if (*err != LCB_SUCCESS) {
-        delete ctx;
-        return NULL;
-    }
-
-    if (extlen) {
-        uint32_t exp = htonl(cmd->exptime);
-        // Write the expiry, if passed
-        memcpy(SPAN_BUFFER(&ctx->pkt->kh_span) + 24, &exp, sizeof exp);
-    }
-
-    ctx->hdr.request.magic = PROTOCOL_BINARY_REQ;
-    ctx->hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    ctx->hdr.request.extlen = ctx->pkt->extlen;
-    ctx->hdr.request.opaque = ctx->pkt->opaque;
-    ctx->hdr.request.cas = cmd->cas;
-    ctx->hdr.request.opcode = opcode;
-
-    MCREQ_PKT_RDATA(ctx->pkt)->cookie = cookie;
-
-    return ctx;
-}
-
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_sdmultictx_addcmd(lcb_SDMULTICTX *ctx, unsigned op, const lcb_CMDSDBASE *cmd)
-{
-    return ctx->addcmd(op, cmd);
-}
-
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_sdmultictx_done(lcb_SDMULTICTX *ctx)
-{
-    return ctx->done();
-}
-
-LIBCOUCHBASE_API
-void
-lcb_sdmultictx_fail(lcb_SDMULTICTX *ctx)
-{
-    delete ctx;
-}
