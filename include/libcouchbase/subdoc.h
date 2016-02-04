@@ -176,30 +176,36 @@ LIBCOUCHBASE_API
 void
 lcb_sdmultictx_fail(lcb_SDMULTICTX *ctx);
 
-typedef void* lcb_SDMLOOKUP_RESLIST;
-
 /**
  * Response structure for multi lookups. If the top level response is successful
  * then the individual results may be retrieved using lcb_sdmlookup_next()
  */
 typedef struct {
     LCB_RESP_BASE
-    lcb_SDMLOOKUP_RESLIST responses;
+    void *responses;
     /** Use with lcb_backbuf_ref/unref */
     void *bufh;
 } lcb_RESPSDMLOOKUP;
 
 /**
- * Structure for a single sub-document lookup
+ * Structure for a single sub-document mutation or lookup result.
+ * Note that #value and #nvalue are only valid if #status is ::LCB_SUCCESS
  */
 typedef struct {
-    /* Value for the current lookup */
+    /** Value for the mutation (only applicable for ::LCB_SUBDOC_COUNTER, currently) */
     const void *value;
-    /* Length of current lookup value */
+    /** Length of the value */
     size_t nvalue;
-    /* Status code */
+    /** Status code */
     lcb_error_t status;
-} lcb_SDMLOOKUP_RESULT;
+
+    /**
+     * Request index which this result pertains to. This field only
+     * makes sense for multi mutations where not all request specs are returned
+     * in the result
+     */
+    lcb_U8 index;
+} lcb_SDMULTI_ENTRY;
 
 /**
  * Iterate over the results in a multi lookup operation
@@ -209,13 +215,36 @@ typedef struct {
  */
 LIBCOUCHBASE_API
 int
-lcb_sdmlookup_next(lcb_SDMLOOKUP_RESLIST resp,
-    lcb_SDMLOOKUP_RESULT *out, size_t *iter);
+lcb_sdmlookup_next(const lcb_RESPSDMLOOKUP *resp,
+    lcb_SDMULTI_ENTRY *out, size_t *iter);
 
 typedef struct {
     LCB_RESP_BASE
-    int failed_ix;
+    void *responses;
+    lcb_MUTATION_TOKEN mutation_token;
 } lcb_RESPSDMMUTATE;
+
+/**
+ * Iterate over the results in a multi-mutation operation
+ * Note that unlike multi-lookup operations, not all commands will have a
+ * response. The following rules apply:
+ *
+ * * If lcb_RESPSDMMUTATE::rc is ::LCB_SUCCESS then the results may contain zero
+ *   or more entries, which apply to operations which return a payload.
+ *
+ * * If lcb_RESPSDMMUTATE::rc is not ::LCB_SUCCESS then the result will contain
+ *   only a single entry with the error and the index of the failed operation.
+ *
+ * @param resp the response as received from the server
+ * @param[out] out the result structure to populate
+ * @param[in,out] iter internal iterator. First call should initialize to 0.
+ * @return nonzero if the iterator is still valid (and thus `resp` has content).
+ * 0 if there are no more entries (and thus `resp` does not have valid contents).
+ */
+LIBCOUCHBASE_API
+int
+lcb_sdmmutation_next(const lcb_RESPSDMMUTATE *resp,
+    lcb_SDMULTI_ENTRY *out, size_t *iter);
 
 /**@}*/
 #ifdef __cplusplus

@@ -381,19 +381,11 @@ H_sdmmutate(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     o = pipeline->parent->cqdata;
 
     init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
+    handle_mutation_token(o, response, request, &resp.mutation_token);
 
-    if (PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE) {
-        /* See what the actual failure was! */
-        lcb_U16 real_rc;
-        lcb_U8 failed_ix;
-        const char *buf = PACKET_BODY(response);
-
-        memcpy(&real_rc, buf, 2);
-        memcpy(&failed_ix, buf + 2, 1);
-
-        real_rc = ntohs(real_rc);
-        resp.rc = map_error(o, real_rc);
-        resp.failed_ix = failed_ix;
+    if (PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE ||
+            PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        resp.responses = response;
     }
     INVOKE_CALLBACK3(request, &resp, o, LCB_CALLBACK_SDMMUTATE);
 }
@@ -417,19 +409,19 @@ H_sdmlookup(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 
 LIBCOUCHBASE_API
 int
-lcb_sdmlookup_next(lcb_SDMLOOKUP_RESLIST resp, lcb_SDMLOOKUP_RESULT *out,
+lcb_sdmlookup_next(const lcb_RESPSDMLOOKUP *resp, lcb_SDMULTI_ENTRY *out,
     size_t *iter)
 {
-    packet_info *response = resp;
+    packet_info *response = resp->responses;
     const char *buf;
     lcb_U16 rc;
     lcb_U32 vlen;
 
-    if (*iter == PACKET_NBODY(response)) {
+    if (*iter == PACKET_NVALUE(response)) {
         return 0;
     }
 
-    buf = PACKET_BODY(response);
+    buf = PACKET_VALUE(response);
     buf += *iter;
 
     memcpy(&rc, buf, 2);
@@ -445,10 +437,62 @@ lcb_sdmlookup_next(lcb_SDMLOOKUP_RESLIST resp, lcb_SDMLOOKUP_RESULT *out,
         out->value = buf + 6;
     } else {
         out->value = NULL;
+        out->nvalue = 0;
     }
 
     *iter += (6 + vlen);
     return 1;
+}
+
+LIBCOUCHBASE_API
+int
+lcb_sdmmutation_next(const lcb_RESPSDMMUTATE *resp,
+    lcb_SDMULTI_ENTRY *out, size_t *iter)
+{
+    packet_info *response = resp->responses;
+    const char *buf, *buf_end;
+    lcb_U16 rc;
+    lcb_U32 vlen;
+
+    if (*iter == PACKET_NVALUE(response)) {
+        return 0;
+    }
+
+    buf_end = (const char *)PACKET_VALUE(response) + PACKET_NVALUE(response);
+    buf = ((const char *)(PACKET_VALUE(response))) + *iter;
+
+    #define ADVANCE_BUF(sz) \
+        buf += sz; \
+        *iter += sz; \
+        assert(buf <= buf_end); \
+
+    /* Index */
+    out->index = *(lcb_U8*)buf;
+    ADVANCE_BUF(1);
+
+    /* Status */
+    memcpy(&rc, buf, 2);
+    ADVANCE_BUF(2);
+
+    rc = ntohs(rc);
+    out->status = map_error(NULL, rc);
+
+    if (rc == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        memcpy(&vlen, buf, 4);
+        ADVANCE_BUF(4);
+
+        vlen = ntohl(vlen);
+        out->nvalue = vlen;
+        out->value = buf;
+        ADVANCE_BUF(vlen);
+
+    } else {
+        out->value = NULL;
+        out->nvalue = 0;
+    }
+
+    return 1;
+    #undef ADVANCE_BUF
 }
 
 static void

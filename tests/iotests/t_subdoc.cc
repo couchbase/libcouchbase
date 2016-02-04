@@ -44,24 +44,35 @@ struct Result {
     lcb_error_t rc;
     lcb_CAS cas;
     std::string value;
+    int index;
+
     Result() {
         clear();
     }
+
+    Result(const lcb_SDMULTI_ENTRY *ent) {
+        assign(ent);
+    }
+
     void clear() {
         rc = LCB_ERROR;
         cas = 0;
+        index = -1;
         value.clear();
+    }
+    void assign(const lcb_SDMULTI_ENTRY *ent) {
+        rc = ent->status;
+        value.assign(reinterpret_cast<const char*>(ent->value), ent->nvalue);
+        index = ent->index;
     }
 };
 
 struct MultiResult {
     std::vector<Result> results;
-    size_t last_errix;
     lcb_CAS cas;
     lcb_error_t rc;
 
     void clear() {
-        last_errix = -1;
         cas = 0;
         results.clear();
     }
@@ -91,12 +102,19 @@ multiMutateCallback(lcb_t, int, const lcb_RESPBASE *rb)
 {
     MultiResult *mr = reinterpret_cast<MultiResult*>(rb->cookie);
     const lcb_RESPSDMMUTATE *resp = reinterpret_cast<const lcb_RESPSDMMUTATE*>(rb);
-    mr->rc = rb->rc;
 
-    if (resp->rc != LCB_SUCCESS) {
-        mr->last_errix = resp->failed_ix;
-    } else {
+    mr->rc = rb->rc;
+    if (rb->rc == LCB_SUCCESS) {
         mr->cas = resp->cas;
+    }
+
+    if (resp->rc == LCB_SUCCESS || resp->rc == LCB_SUBDOC_MULTI_FAILURE) {
+        size_t iterval = 0;
+        lcb_SDMULTI_ENTRY cur_res = { 0 };
+
+        while (lcb_sdmmutation_next(resp, &cur_res, &iterval)) {
+            mr->results.push_back(Result(&cur_res));
+        }
     }
 }
 
@@ -108,14 +126,10 @@ multiLookupCallback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
     mr->rc = resp->rc;
     if (mr->rc == LCB_SUCCESS || mr->rc == LCB_SUBDOC_MULTI_FAILURE) {
         mr->cas = resp->cas;
-        lcb_SDMLOOKUP_RESULT cur_res;
+        lcb_SDMULTI_ENTRY cur_res;
         size_t iterval = 0;
-        while (lcb_sdmlookup_next(resp->responses, &cur_res, &iterval)) {
-            Result res;
-            res.rc = cur_res.status;
-            res.value.assign(reinterpret_cast<const char*>(cur_res.value),
-                cur_res.nvalue);
-            mr->results.push_back(res);
+        while (lcb_sdmlookup_next(resp, &cur_res, &iterval)) {
+            mr->results.push_back(Result(&cur_res));
         }
     }
 }
@@ -138,14 +152,12 @@ SubdocUnitTest::createSubdocConnection(HandleWrap& hw, lcb_t& instance)
     LCB_CMD_SET_KEY(&cmd, "foo", 3);
     LCB_SDCMD_SET_PATH(&cmd, "pth", 3);
 
-    lcb_sched_enter(instance);
     Result res;
     lcb_error_t rc = lcb_sdget3(instance, &res, &cmd);
     EXPECT_EQ(LCB_SUCCESS, rc);
     if (rc != LCB_SUCCESS) {
         return false;
     }
-    lcb_sched_leave(instance);
     lcb_wait(instance);
 
     if (res.rc == LCB_NOT_SUPPORTED || res.rc == LCB_UNKNOWN_COMMAND) {
@@ -171,13 +183,9 @@ schedwait(lcb_t instance, Result *res, const T *cmd,
     lcb_error_t (*fn)(lcb_t, const void *, const T*))
 {
     res->clear();
-    lcb_sched_enter(instance);
     lcb_error_t rc = fn(instance, res, cmd);
     if (rc == LCB_SUCCESS) {
-        lcb_sched_leave(instance);
         lcb_wait(instance);
-    } else {
-        lcb_sched_fail(instance);
     }
     return rc;
 }
@@ -541,7 +549,6 @@ TEST_F(SubdocUnitTest, testMultiLookup)
     mcmd.multimode = LCB_SDMULTI_MODE_LOOKUP;
     LCB_CMD_SET_KEY(&mcmd, key.c_str(), key.size());
 
-    lcb_sched_enter(instance);
     lcb_SDMULTICTX *ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
     ASSERT_EQ(LCB_SUCCESS, rc);
     ASSERT_FALSE(ctx == NULL);
@@ -567,7 +574,6 @@ TEST_F(SubdocUnitTest, testMultiLookup)
 
     rc = lcb_sdmultictx_done(ctx);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_sched_leave(instance);
     lcb_wait(instance);
 
     ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);
@@ -598,14 +604,12 @@ TEST_F(SubdocUnitTest, testMultiLookup)
 
     mr.clear();
     LCB_CMD_SET_KEY(&mcmd, missing_key.c_str(), missing_key.size());
-    lcb_sched_enter(instance);
 
     ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
     rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&gcmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     rc = lcb_sdmultictx_done(ctx);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_sched_leave(instance);
     lcb_wait(instance);
     ASSERT_EQ(LCB_KEY_ENOENT, mr.rc);
     ASSERT_TRUE(mr.results.empty());
@@ -624,8 +628,6 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     MultiResult mr;
     lcb_error_t rc;
     lcb_SDMULTICTX *ctx;
-
-    lcb_sched_enter(instance);
 
     ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
     ASSERT_EQ(LCB_SUCCESS, rc);
@@ -646,21 +648,23 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     // Should be OK for now
     rc = lcb_sdmultictx_done(ctx);
     ASSERT_EQ(LCB_SUCCESS, rc);
-    lcb_sched_leave(instance);
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, mr.rc);
+
+    // COUNTER returns a value here..
+    ASSERT_EQ(1, mr.results.size());
+    ASSERT_EQ("42", mr.results[0].value);
+    ASSERT_EQ(LCB_SUCCESS, mr.results[0].rc);
 
     // Ensure the parameters were encoded correctly..
     ASSERT_EQ("true", getPathValue(instance, key.c_str(), "newPath"));
     ASSERT_EQ("42", getPathValue(instance, key.c_str(), "counter"));
 
-    lcb_sched_enter(instance);
-    mr.clear();
     // New context. Try with mismatched commands
+    mr.clear();
     ctx = lcb_sdmultictx_new(instance, &mr, &mcmd, &rc);
     rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_GET, (const lcb_CMDSDBASE*)&scmd);
     ASSERT_EQ(LCB_OPTIONS_CONFLICT, rc);
-
 
     LCB_SDCMD_SET_PATH(&scmd, "newPath", strlen("newPath"));
     rc = lcb_sdmultictx_addcmd(ctx, LCB_SUBDOC_REPLACE, (const lcb_CMDSDBASE*)&scmd);
@@ -678,9 +682,9 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     rc = lcb_sdmultictx_done(ctx);
     ASSERT_EQ(LCB_SUCCESS, rc);
 
-    lcb_sched_leave(instance);
     lcb_wait(instance);
-    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, mr.rc);
-    ASSERT_EQ(1, mr.last_errix);
-
+    ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);
+    ASSERT_EQ(1, mr.results.size());
+    ASSERT_EQ(LCB_SUBDOC_PATH_ENOENT, mr.results[0].rc);
+    ASSERT_EQ(1, mr.results[0].index);
 }

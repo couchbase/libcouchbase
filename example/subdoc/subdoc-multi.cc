@@ -24,9 +24,9 @@ static void generic_callback(lcb_t, int type, const lcb_RESPBASE *rb)
         size_t iter = 0;
         int pos = 0;
         const lcb_RESPSDMLOOKUP *rml = (const lcb_RESPSDMLOOKUP*)rb;
-        lcb_SDMLOOKUP_RESULT cur = { NULL };
+        lcb_SDMULTI_ENTRY cur = { NULL };
         printf("Dumping multi results...\n");
-        while ((lcb_sdmlookup_next(rml->responses, &cur, &iter))) {
+        while ((lcb_sdmlookup_next(rml, &cur, &iter))) {
             printf("[%d]: 0x%x. %.*s\n",
                 pos++, cur.status, (int)cur.nvalue, cur.value);
         }
