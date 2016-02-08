@@ -36,8 +36,8 @@ lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
         return LCB_EBUSY;
     case PROTOCOL_BINARY_RESPONSE_ETMPFAIL:
         return LCB_ETMPFAIL;
+
     case PROTOCOL_BINARY_RESPONSE_EINTERNAL:
-        return LCB_EINTERNAL;
     default:
         fprintf(stderr, "COUCHBASE: Unhandled memcached status=0x%x\n", in);
         return LCB_UNKNOWN_MEMCACHED_ERROR;
