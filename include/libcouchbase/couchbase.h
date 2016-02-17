@@ -597,7 +597,11 @@ typedef enum {
     LCB_RESP_F_CLIENTGEN = 0x02,
 
     /**The response was a result of a not-my-vbucket error */
-    LCB_RESP_F_NMVGEN = 0x04
+    LCB_RESP_F_NMVGEN = 0x04,
+
+    /**The response has additional internal data.
+     * Used by lcb_resp_get_mutation_token() */
+    LCB_RESP_F_EXTDATA = 0x08
 } lcb_RESPFLAGS;
 
 /**
@@ -1054,9 +1058,6 @@ typedef struct {
 
     /** The type of operation which was performed */
     lcb_storage_t op;
-
-    /** For use with N1QL queries. See lcb_resp_get_mutation_token() */
-    lcb_MUTATION_TOKEN mutation_token;
 } lcb_RESPSTORE;
 
 /**
@@ -1175,20 +1176,16 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd);
 typedef lcb_CMDBASE lcb_CMDREMOVE;
 
 /**@brief
- * Response structure for removal operation. The lcb_RESPREMOVE::cas and
- * lcb_RESPREMOVE::mutation_token fields may be used to check that it no longer
- * exists on any node's storage using the lcb_endure3_ctxnew() function.
+ * Response structure for removal operation. The lcb_RESPREMOVE::cas  field
+ * may be used to check that it no longer exists on any node's storage
+ * using the lcb_endure3_ctxnew() function. You can also use the
+ * @ref lcb_MUTATION_TOKEN (via lcb_resp_get_mutation_token)
  *
  * The lcb_RESPREMOVE::rc field may be set to ::LCB_KEY_ENOENT if the item does
  * not exist, or ::LCB_KEY_EEXISTS if a CAS was specified and the item has since
  * been mutated.
  */
-typedef struct {
-    LCB_RESP_BASE
-
-    /** For use with N1QL queries */
-    lcb_MUTATION_TOKEN mutation_token;
-} lcb_RESPREMOVE;
+typedef lcb_RESPBASE lcb_RESPREMOVE;
 
 /**@committed
  * @brief Spool a removal of an item
@@ -1976,7 +1973,6 @@ typedef struct {
     LCB_RESP_BASE
     /** Contains the _current_ value after the operation was performed */
     lcb_U64 value;
-    lcb_MUTATION_TOKEN mutation_token;
 } lcb_RESPCOUNTER;
 
 /**@committed

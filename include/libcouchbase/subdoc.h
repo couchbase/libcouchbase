@@ -221,7 +221,6 @@ lcb_sdmlookup_next(const lcb_RESPSDMLOOKUP *resp,
 typedef struct {
     LCB_RESP_BASE
     void *responses;
-    lcb_MUTATION_TOKEN mutation_token;
 } lcb_RESPSDMMUTATE;
 
 /**

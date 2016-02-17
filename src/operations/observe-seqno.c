@@ -57,25 +57,6 @@ lcb_observe_seqno3(lcb_t instance, const void *cookie, const lcb_CMDOBSEQNO *cmd
 }
 
 const lcb_MUTATION_TOKEN *
-lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb)
-{
-    const lcb_MUTATION_TOKEN *ss = NULL;
-    if (cbtype == LCB_CALLBACK_STORE) {
-        ss = &((const lcb_RESPSTORE*)rb)->mutation_token;
-    } else if (cbtype == LCB_CALLBACK_COUNTER) {
-        ss = &((const lcb_RESPCOUNTER*)rb)->mutation_token;
-    } else if (cbtype == LCB_CALLBACK_REMOVE) {
-        ss = &((const lcb_RESPREMOVE*)rb)->mutation_token;
-    } else {
-        return NULL;
-    }
-    if (ss->uuid_ == 0 && ss->seqno_ == 0) {
-        return NULL;
-    }
-    return ss;
-}
-
-const lcb_MUTATION_TOKEN *
 lcb_get_mutation_token(lcb_t instance, const lcb_KEYBUF *kb, lcb_error_t *errp)
 {
     int vbix, srvix;
