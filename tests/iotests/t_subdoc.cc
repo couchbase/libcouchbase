@@ -713,7 +713,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     LCB_SDSPEC_SET_VALUE(&spec, "42", 2)
     spec.sdcmd = LCB_SDCMD_COUNTER;
     specs.push_back(spec);
-    mcmd.specs = specs.data();
+    mcmd.specs = &specs[0];
     mcmd.nspecs = specs.size();
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, &mcmd, lcb_subdoc3));
     ASSERT_EQ(LCB_SUCCESS, mr.rc);
@@ -735,7 +735,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     specs.push_back(spec);
     int error_index = 0;
     mcmd.error_index = &error_index;
-    mcmd.specs = specs.data();
+    mcmd.specs = &specs[0];
     mcmd.nspecs = specs.size();
     rc = lcb_subdoc3(instance, NULL, &mcmd);
     ASSERT_EQ(LCB_OPTIONS_CONFLICT, rc);
@@ -749,7 +749,7 @@ TEST_F(SubdocUnitTest, testMultiMutations)
     LCB_SDSPEC_SET_PATH(&spec, "bad..bad", strlen("bad..path"));
     specs.push_back(spec);
 
-    mcmd.specs = specs.data();
+    mcmd.specs = &specs[0];
     mcmd.nspecs = specs.size();
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &mr, &mcmd, lcb_subdoc3));
     ASSERT_EQ(LCB_SUBDOC_MULTI_FAILURE, mr.rc);

@@ -162,13 +162,23 @@ struct MultiBuilder {
     MultiBuilder(const lcb_CMDSUBDOC *cmd_)
     : cmd(cmd_), payload_size(0), mode(0) {
         size_t ebufsz = is_lookup() ? cmd->nspecs * 4 : cmd->nspecs * 8;
-        extra_body.reserve(ebufsz);
+        extra_body = new char[ebufsz];
+        bodysz = 0;
     }
+
+    ~MultiBuilder() {
+        if (extra_body != NULL) {
+            delete[] extra_body;
+        }
+    }
+
+    inline MultiBuilder(const MultiBuilder&);
 
     // IOVs which are fed into lcb_VALBUF for subsequent use
     const lcb_CMDSUBDOC *cmd;
     std::vector<lcb_IOV> iovs;
-    std::vector<char> extra_body;
+    char *extra_body;
+    size_t bodysz;
 
     // Total size of the payload itself
     size_t payload_size;
@@ -191,11 +201,12 @@ struct MultiBuilder {
 
     template <typename T> void add_field(T itm, size_t len) {
         const char *b = reinterpret_cast<const char *>(&itm);
-        extra_body.insert(extra_body.end(), b, b + len);
+        memcpy(extra_body + bodysz, b, len);
+        bodysz += len;
     }
 
     const char *extra_mark() const {
-        return extra_body.data() + extra_body.size();
+        return extra_body + bodysz;
     }
 
     void add_extras_iov(const char *last_begin) {
