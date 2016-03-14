@@ -327,6 +327,7 @@ extract_services(lcbvb_CONFIG *cfg, cJSON *jsvc, lcbvb_SERVICES *svc, int is_ssl
     EXTRACT_SERVICE("mgmt", mgmt);
     EXTRACT_SERVICE("capi", views);
     EXTRACT_SERVICE("n1ql", n1ql);
+    EXTRACT_SERVICE("fts", fts);
     EXTRACT_SERVICE("indexAdmin", ixadmin);
     EXTRACT_SERVICE("indexScan", ixquery);
 
@@ -356,6 +357,9 @@ build_server_strings(lcbvb_CONFIG *cfg, lcbvb_SERVER *server)
     }
     if (server->querypath == NULL && server->svc.n1ql) {
         server->querypath = strdup("/query/service");
+    }
+    if (server->ftspath == NULL && server->svc.fts) {
+        server->ftspath = strdup("/query");
     }
     return 1;
 }
@@ -676,6 +680,7 @@ free_service_strs(lcbvb_SERVICES *svc)
     }
     free(svc->views_base_);
     free(svc->query_base_);
+    free(svc->fts_base_);
 }
 
 void
@@ -687,6 +692,7 @@ lcbvb_destroy(lcbvb_CONFIG *conf)
         free(srv->hostname);
         free(srv->viewpath);
         free(srv->querypath);
+        free(srv->ftspath);
         free_service_strs(&srv->svc);
         free_service_strs(&srv->svc_ssl);
     }
@@ -1111,6 +1117,8 @@ lcbvb_get_port(lcbvb_CONFIG *cfg,
         return svc->ixquery;
     } else if (type == LCBVB_SVCTYPE_N1QL) {
         return svc->n1ql;
+    } else if (type == LCBVB_SVCTYPE_FTS) {
+        return svc->fts;
     } else {
         return 0;
     }
@@ -1185,6 +1193,7 @@ lcbvb_get_randhost_ex(const lcbvb_CONFIG *cfg,
                 (type == LCBVB_SVCTYPE_IXQUERY && svcs->ixquery) ||
                 (type == LCBVB_SVCTYPE_MGMT && svcs->mgmt) ||
                 (type == LCBVB_SVCTYPE_N1QL && svcs->n1ql) ||
+                (type == LCBVB_SVCTYPE_FTS && svcs->fts) ||
                 (type == LCBVB_SVCTYPE_VIEWS && svcs->views);
 
         if (has_svc) {
@@ -1219,9 +1228,9 @@ lcbvb_get_resturl(lcbvb_CONFIG *cfg, unsigned ix,
     char buf[4096];
     const char *prefix;
     const char *path;
-    int is_views = svc == LCBVB_SVCTYPE_VIEWS;
 
     lcbvb_SERVER *srv;
+    lcbvb_SERVICES *svcs;
     unsigned port;
     port = lcbvb_get_port(cfg, ix, svc, mode);
     if (!port) {
@@ -1229,26 +1238,35 @@ lcbvb_get_resturl(lcbvb_CONFIG *cfg, unsigned ix,
     }
 
     srv = cfg->servers + ix;
-    if (is_views && (path = srv->viewpath) == NULL) {
-        return NULL;
-    } else if (!is_views && (path = srv->querypath) == NULL) {
-        return NULL;
-    }
-
     if (mode == LCBVB_SVCMODE_PLAIN) {
         prefix = "http";
-        strp = is_views ? &srv->svc.views_base_ : &srv->svc.query_base_;
+        svcs = &srv->svc;
     } else {
         prefix = "https";
-        strp = is_views ? &srv->svc_ssl.views_base_ : &srv->svc_ssl.query_base_;
+        svcs = &srv->svc_ssl;
     }
 
-    if (*strp) {
-        return *strp;
+    if (svc == LCBVB_SVCTYPE_VIEWS) {
+        path = srv->viewpath;
+        strp = &svcs->views_base_;
+    } else if (svc == LCBVB_SVCTYPE_N1QL) {
+        path = srv->querypath;
+        strp = &svcs->query_base_;
+    } else if (svc == LCBVB_SVCTYPE_FTS) {
+        path = srv->ftspath;
+        strp = &svcs->fts_base_;
+    } else {
+        /* Unknown service! */
+        return NULL;
     }
 
-    sprintf(buf, "%s://%s:%d%s", prefix, srv->hostname, port, path);
-    *strp = strdup(buf);
+    if (path == NULL) {
+        return NULL;
+    } else if (!*strp) {
+        sprintf(buf, "%s://%s:%d%s", prefix, srv->hostname, port, path);
+        *strp = strdup(buf);
+    }
+
     return *strp;
 }
 
@@ -1292,6 +1310,9 @@ copy_service(const char *hostname,
     }
     if (src->query_base_) {
         dst->query_base_ = strdup(src->query_base_);
+    }
+    if (src->fts_base_) {
+        dst->fts_base_ = strdup(src->fts_base_);
     }
     if (dst->data) {
         sprintf(buf, "%s:%d", hostname, dst->data);
@@ -1383,6 +1404,9 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         }
         if (src->querypath) {
             dst->querypath = strdup(src->querypath);
+        }
+        if (src->ftspath) {
+            dst->ftspath = strdup(src->ftspath);
         }
 
         copy_service(src->hostname, &src->svc, &dst->svc);

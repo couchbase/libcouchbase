@@ -51,6 +51,7 @@ typedef enum {
     LCBVB_SVCTYPE_IXQUERY, /**< Index query */
     LCBVB_SVCTYPE_IXADMIN, /**< Index administration */
     LCBVB_SVCTYPE_N1QL, /**< N1QL Query */
+    LCBVB_SVCTYPE_FTS, /**< Fulltext */
     LCBVB_SVCTYPE__MAX
 } lcbvb_SVCTYPE;
 
@@ -73,8 +74,10 @@ typedef struct {
     lcb_U16 ixquery; /**< Indexing query port */
     lcb_U16 ixadmin; /**< Indexing admin port (HTTP) */
     lcb_U16 n1ql; /**< Query port */
+    lcb_U16 fts; /**< CBFT */
     char *views_base_; /**< Views base URL */
     char *query_base_; /**< N1QL base URL */
+    char *fts_base_;
     char *hoststrs[LCBVB_SVCTYPE__MAX];
 } lcbvb_SERVICES;
 
@@ -92,6 +95,7 @@ typedef struct {
     char *hostname; /**< Hostname for the node */
     char *viewpath; /**< Path prefix for view queries */
     char *querypath; /**< Path prefix for n1ql queries */
+    char *ftspath; /**< Path prefix for fulltext queries */
     unsigned nvbs; /**< Total number of vbuckets the server has assigned */
 } lcbvb_SERVER;
 

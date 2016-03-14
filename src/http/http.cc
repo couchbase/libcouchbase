@@ -349,6 +349,21 @@ Request::redirect()
     }
 }
 
+static lcbvb_SVCTYPE
+httype2svctype(unsigned httype)
+{
+    switch (httype) {
+    case LCB_HTTP_TYPE_VIEW:
+        return LCBVB_SVCTYPE_VIEWS;
+    case LCB_HTTP_TYPE_N1QL:
+        return LCBVB_SVCTYPE_N1QL;
+    case LCB_HTTP_TYPE_FTS:
+        return LCBVB_SVCTYPE_FTS;
+    default:
+        return LCBVB_SVCTYPE__MAX;
+    }
+}
+
 const char *
 Request::get_api_node(lcb_error_t &rc)
 {
@@ -361,8 +376,7 @@ Request::get_api_node(lcb_error_t &rc)
         return NULL;
     }
 
-    const lcbvb_SVCTYPE svc = reqtype == LCB_HTTP_TYPE_VIEW ?
-            LCBVB_SVCTYPE_VIEWS : LCBVB_SVCTYPE_N1QL;
+    const lcbvb_SVCTYPE svc = httype2svctype(reqtype);
     const lcbvb_SVCMODE mode = LCBT_SETTING(instance, sslopts) ?
             LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN;
 
@@ -490,6 +504,7 @@ Request::timeout() const
     }
     switch (reqtype) {
     case LCB_HTTP_TYPE_N1QL:
+    case LCB_HTTP_TYPE_FTS:
         return LCBT_SETTING(instance, n1ql_timeout);
     case LCB_HTTP_TYPE_VIEW:
         return LCBT_SETTING(instance, views_timeout);

@@ -140,7 +140,9 @@ struct Request {
      */
     uint32_t timeout() const;
     bool is_data_request() const {
-        return reqtype == LCB_HTTP_TYPE_N1QL || reqtype == LCB_HTTP_TYPE_VIEW;
+        return reqtype == LCB_HTTP_TYPE_N1QL ||
+                reqtype == LCB_HTTP_TYPE_VIEW ||
+                reqtype == LCB_HTTP_TYPE_FTS;
     }
 
     /**

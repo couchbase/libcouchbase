@@ -2353,6 +2353,9 @@ typedef enum {
     /** Execute an N1QL Query */
     LCB_HTTP_TYPE_N1QL = 3,
 
+    /** Search a fulltext index */
+    LCB_HTTP_TYPE_FTS = 4,
+
     LCB_HTTP_TYPE_MAX
 } lcb_http_type_t;
 
