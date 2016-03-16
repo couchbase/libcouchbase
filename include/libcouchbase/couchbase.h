@@ -656,6 +656,8 @@ typedef enum {
 /** Callback type for N1QL (cannot be used for lcb_install_callback3()) */
 #define LCB_CALLBACK_N1QL -2
 
+#define LCB_CALLBACK_IXMGMT -3
+
 /**
  * @committed
  *
