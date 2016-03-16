@@ -164,7 +164,21 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     }
 
     if (err != LCB_SUCCESS) {
-        lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
+        int bs_options;
+        if (instance->cur_configinfo->origin == LCB_CLCONFIG_CCCP) {
+            /**
+             * XXX: Not enough to see if cccp was enabled, since cccp might
+             * be requested by a user, but would still not actually be active
+             * for clusters < 2.5 If our current config is from CCCP
+             * then we can be fairly certain that CCCP is indeed working.
+             *
+             * For this reason, we don't use if (cccp->enabled) {...}
+             */
+            bs_options = LCB_BS_REFRESH_THROTTLE;
+        } else {
+            bs_options = LCB_BS_REFRESH_ALWAYS;
+        }
+        lcb_bootstrap_common(instance, bs_options);
     }
 
     if (!lcb_should_retry(oldsrv->settings, oldpkt, LCB_NOT_MY_VBUCKET)) {
