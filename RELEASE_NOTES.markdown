@@ -1,5 +1,47 @@
 # Release Notes
 
+## 2.5.7 (March 22 2016)
+
+* High-level index management operations.
+  A volatile API for high level index management operations has been added to
+  assist in common N1QL index operations such as creating the primary index
+  and removing indexes.
+  * Priority: Major
+  * Issues: [CCBC-662](https://issues.couchbase.com/browse/CCBC-662)
+
+* Fix N1QL mutation token queries.
+  This fixes some bugs in the previous implementation of the way mutation tokens
+  were handled with `lcb_N1QLPARAMS`. The bugs and fixes only affect consumers
+  of that API. Couchbase SDKs do not consume this API
+  * Priority: Minor
+  * Issues: [CCBC-658](https://issues.couchbase.com/browse/CCBC-658)
+
+* Throttle config request retries on empty NMVB responses.
+  This changes the previous behavior where a new configuration would be
+  retrieved _immediately_ upon a not-my-vbucket reply if a configuration
+  was not included within the error reply itself. The new behavior is to
+  request a delayed retry (i.e. subject to the default throttle settings)
+  if the current configuration originated from the CCCP (Memcached) provider.
+  * Priority: Major
+  * Issues: [CCBC-681](https://issues.couchbase.com/browse/CCBC-681)
+
+* Rename `LCB_CLIENT_ETMPFAIL` to `LCB_CLIENT_ENOCONF`.
+  This error code is returned only when there is no current client configuration.
+  This error condition is _not_ temporary and is actually fatal; a result of
+  an initial bootstrapping failure. Note that the older name is still valid
+  in older code for compatibility purposes.
+  * Priority: Minor
+  * Issues: [CCBC-679](https://issues.couchbase.com/browse/CCBC-679)
+
+* Include PID in log messages on OS X.
+  This makes the library logs (via `LCB_LOGLEVEL` etc.) easier to read on a
+  mac. Previously this used to display only the thread ID, which was identical
+  for multiple processes. Now the display reads as _pid/tid_, making it easier
+  to read the logs in a multi-process environment.
+  * Priority: Minor
+  * Issues: [CCBC-677](https://issues.couchbase.com/browse/CCBC-677)
+
+
 ## 2.5.6 (February 18 2016)
 
 * Sub-Document API (_experimental_)
