@@ -237,6 +237,7 @@ Request::submit()
     add_to_preamble(host);
     add_to_preamble(":");
     add_to_preamble(port);
+    add_to_preamble("\r\n");
 
     // Add the rest of the headers
     std::vector<Header>::const_iterator ii = request_headers.begin();
