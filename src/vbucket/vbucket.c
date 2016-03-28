@@ -359,7 +359,7 @@ build_server_strings(lcbvb_CONFIG *cfg, lcbvb_SERVER *server)
         server->querypath = strdup("/query/service");
     }
     if (server->ftspath == NULL && server->svc.fts) {
-        server->ftspath = strdup("/query");
+        server->ftspath = strdup("/");
     }
     return 1;
 }

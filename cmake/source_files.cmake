@@ -69,4 +69,5 @@ SET(LCB_CORE_CXXSRC
     src/n1ql/params.cc
     src/n1ql/n1ql.cc
     src/n1ql/ixmgmt.cc
+    src/cbft.cc
     src/operations/subdoc.cc)
