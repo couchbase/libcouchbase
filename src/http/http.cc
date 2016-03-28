@@ -311,13 +311,26 @@ Request::assign_url(const char *base, size_t nbase, const char *path, size_t npa
         }
     }
 
+
+    bool redir_checked = false;
+    static const unsigned required_fields =
+            ((1 << UF_HOST) | (1 << UF_PORT) | (1 << UF_PATH));
+
+    GT_REPARSE:
     if (_lcb_http_parser_parse_url(url.c_str(), url.size(), 0, &url_info)) {
         return LCB_EINVAL;
     }
 
-    static const unsigned required_fields =
-            ((1 << UF_HOST) | (1 << UF_PORT) | (1 << UF_PATH));
     if ((url_info.field_set & required_fields) != required_fields) {
+        if (base == NULL && path == NULL && !redir_checked) {
+            redir_checked = true;
+            std::string first_part(htscheme, schemsize);
+            first_part += host;
+            first_part += ':';
+            first_part += port;
+            url = first_part + url;
+            goto GT_REPARSE;
+        }
         return LCB_EINVAL;
     }
 
@@ -334,6 +347,7 @@ Request::redirect()
     if (LCBT_SETTING(instance, max_redir) > -1) {
         if (LCBT_SETTING(instance, max_redir) < ++redircount) {
             finish(LCB_TOO_MANY_REDIRECTS);
+            return;
         }
     }
 
@@ -342,7 +356,9 @@ Request::redirect()
     pending_redirect.clear();
 
     if ((rc = assign_url(NULL, 0, NULL, 0)) != LCB_SUCCESS) {
+        lcb_log(LOGARGS(this, ERR), LOGFMT "Failed to add redirect URL (%s)", LOGID(this), url.c_str());
         finish(rc);
+        return;
     }
 
     if ((rc = submit()) != LCB_SUCCESS) {
