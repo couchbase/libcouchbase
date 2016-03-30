@@ -668,6 +668,15 @@ LIBCOUCHBASE_API
 void
 lcb_n1ql_cancel(lcb_t instance, lcb_N1QLHANDLE handle)
 {
+    // Note that this function is just an elaborate way to nullify the
+    // callback. We are very particular about _not_ cancelling the underlying
+    // http request, because the handle's deletion is controlled
+    // from the HTTP callback, which checks if the callback is NULL before
+    // deleting.
+    // at worst, deferring deletion to the http response might cost a few
+    // extra network reads; whereas this function itself is intended as a
+    // bailout for unexpected destruction.
+
     if (handle->prepare_req) {
         lcb_n1ql_cancel(instance, handle->prepare_req);
         handle->prepare_req = NULL;
