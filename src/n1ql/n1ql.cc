@@ -132,6 +132,10 @@ struct lcb_N1QLCACHE_st {
         lru.clear();
         by_name.clear();
     }
+
+    ~lcb_N1QLCACHE_st() {
+        clear();
+    }
 };
 
 typedef struct lcb_N1QLREQ {
