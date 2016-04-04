@@ -53,16 +53,16 @@ const void *lcb_get_cookie(lcb_t instance)
 static void
 add_and_log_host(lcb_t obj, const lcb_host_t *host, lcb_config_transport_t type)
 {
-    const char *typename = NULL;
+    const char *tname = NULL;
     hostlist_t target;
     if (type == LCB_CONFIG_TRANSPORT_CCCP) {
-        typename = "CCCP";
+        tname = "CCCP";
         target = obj->mc_nodes;
     } else {
-        typename = "HTTP";
+        tname = "HTTP";
         target = obj->ht_nodes;
     }
-    lcb_log(LOGARGS(obj, DEBUG), "Adding host %s:%s to initial %s bootstrap list", host->host, host->port, typename);
+    lcb_log(LOGARGS(obj, DEBUG), "Adding host %s:%s to initial %s bootstrap list", host->host, host->port, tname);
     hostlist_add_host(target, host);
 }
 
@@ -360,7 +360,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         goto GT_DONE;
     }
 
-    if ((obj = calloc(1, sizeof(*obj))) == NULL) {
+    if ((obj = (lcb_t)calloc(1, sizeof(*obj))) == NULL) {
         err = LCB_CLIENT_ENOMEM;
         goto GT_DONE;
     }
@@ -457,7 +457,7 @@ typedef struct {
 static void
 sync_dtor_cb(void *arg)
 {
-    SYNCDTOR *sd = arg;
+    SYNCDTOR *sd = (SYNCDTOR*)arg;
     if (sd->table->refcount == 2) {
         lcbio_timer_destroy(sd->timer);
         IOT_STOP(sd->table);
@@ -558,7 +558,7 @@ void lcb_destroy(lcb_t instance)
 static void
 destroy_cb(void *arg)
 {
-    lcb_t instance = arg;
+    lcb_t instance = (lcb_t)arg;
     lcbio_timer_destroy(instance->dtor_timer);
     lcb_destroy(instance);
 }
@@ -725,7 +725,7 @@ static void
 timings_wrapper_callback(const void *cookie, lcb_timeunit_t unit, lcb_U32 start,
     lcb_U32 end, lcb_U32 val, lcb_U32 max)
 {
-    const timings_wrapper *wrap = cookie;
+    const timings_wrapper *wrap = (const timings_wrapper*)cookie;
     wrap->real_cb(wrap->instance, wrap->real_cookie, unit, start, end, val, max);
 }
 
