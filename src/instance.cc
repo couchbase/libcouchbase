@@ -540,8 +540,7 @@ void lcb_destroy(lcb_t instance)
     DESTROY(lcb_settings_unref, settings);
     DESTROY(lcb_histogram_destroy, kv_timings);
     if (instance->scratch) {
-        lcb_string_release(instance->scratch);
-        free(instance->scratch);
+        delete instance->scratch;
         instance->scratch = NULL;
     }
 

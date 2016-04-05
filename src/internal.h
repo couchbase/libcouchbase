@@ -86,6 +86,13 @@ struct lcb_confmon_st;
 struct lcb_BOOTSTRAP;
 struct lcb_GUESSVB_st;
 
+#ifdef __cplusplus
+#include <string>
+typedef std::string* lcb_pSCRATCHBUF;
+#else
+typedef struct lcb_SCRATCHBUF* lcb_pSCRATCHBUF;
+#endif
+
 struct lcb_st {
     mc_CMDQUEUE cmdq; /**< Base command queue object */
     const void *cookie; /**< User defined pointer */
@@ -104,7 +111,7 @@ struct lcb_st {
     lcb_settings *settings; /**< User settings */
     lcbio_pTABLE iotable; /**< IO Routine table */
     lcb_RETRYQ *retryq; /**< Retry queue for failed operations */
-    struct lcb_string_st *scratch; /**< Generic buffer space */
+    lcb_pSCRATCHBUF scratch; /**< Generic buffer space */
     struct lcb_GUESSVB_st *vbguess; /**< Heuristic masters for vbuckets */
     lcb_N1QLCACHE *n1ql_cache;
     lcb_MUTATION_TOKEN *dcpinfo; /**< Mapping of known vbucket to {uuid,seqno} info */

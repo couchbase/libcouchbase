@@ -60,6 +60,7 @@ struct Hostlist {
     void ensure_strlist();
     void reset_strlist();
     unsigned int ix;
+    const lcb_host_t& operator[](size_t ix_) const { return hosts[ix_]; }
 
     std::vector<lcb_host_t> hosts;
     std::vector<const char *> hoststrs;

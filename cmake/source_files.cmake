@@ -52,7 +52,6 @@ SET(LCB_CORE_SRC
     src/mcserver/negotiate.c
     src/mcserver/mcserver.c
     src/newconfig.c
-    src/nodeinfo.c
     src/iofactory.c
     src/retryq.c
     src/retrychk.c
@@ -63,6 +62,7 @@ SET(LCB_CORE_SRC
 SET(LCB_CORE_CXXSRC
     src/instance.cc
     src/auth.cc
+    src/nodeinfo.cc
     src/hostlist.cc
     src/http/http.cc
     src/http/http_io.cc
