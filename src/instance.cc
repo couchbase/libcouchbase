@@ -54,7 +54,7 @@ static void
 add_and_log_host(lcb_t obj, const lcb_host_t *host, lcb_config_transport_t type)
 {
     const char *tname = NULL;
-    hostlist_t target;
+    lcb::Hostlist* target;
     if (type == LCB_CONFIG_TRANSPORT_CCCP) {
         tname = "CCCP";
         target = obj->mc_nodes;

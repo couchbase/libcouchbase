@@ -10,7 +10,6 @@ SET(LCB_UTILS_SRC
     src/gethrtime.c
     src/hashtable.c
     src/hashset.c
-    src/hostlist.c
     src/list.c
     src/logging.c
     src/packetutils.c
@@ -65,6 +64,7 @@ SET(LCB_CORE_SRC
 SET(LCB_CORE_CXXSRC
     src/instance.cc
     src/auth.cc
+    src/hostlist.cc
     src/http/http.cc
     src/http/http_io.cc
     src/n1ql/params.cc

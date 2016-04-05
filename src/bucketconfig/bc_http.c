@@ -389,7 +389,7 @@ connect_next(http_provider *http)
     close_current(http);
     lcbio_timer_disarm(http->as_reconnect);
 
-    if (!http->nodes->nentries) {
+    if (!hostlist_size(http->nodes)) {
         lcb_log(LOGARGS(http, ERROR), "Not scheduling HTTP provider since no nodes have been configured for HTTP bootstrap");
         return LCB_CONNECT_ERROR;
     }
@@ -499,7 +499,7 @@ config_updated(clconfig_provider *pb, lcbvb_CONFIG *newconfig)
         status = hostlist_add_stringz(http->nodes, ss, LCB_CONFIG_HTTP_PORT);
         lcb_assert(status == LCB_SUCCESS);
     }
-    if (!http->nodes->nentries) {
+    if (!hostlist_size(http->nodes)) {
         lcb_log(LOGARGS(http, FATAL), "New nodes do not contain management ports");
     }
 
@@ -511,12 +511,8 @@ config_updated(clconfig_provider *pb, lcbvb_CONFIG *newconfig)
 static void
 configure_nodes(clconfig_provider *pb, const hostlist_t newnodes)
 {
-    unsigned ii;
     http_provider *http = (void *)pb;
-    hostlist_clear(http->nodes);
-    for (ii = 0; ii < newnodes->nentries; ii++) {
-        hostlist_add_host(http->nodes, newnodes->entries + ii);
-    }
+    hostlist_assign(http->nodes, newnodes);
     if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
         hostlist_randomize(http->nodes);
     }
