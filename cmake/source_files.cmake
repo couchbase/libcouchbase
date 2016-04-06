@@ -6,7 +6,6 @@
 SET(LCB_UTILS_SRC
     contrib/genhash/genhash.c
     src/strcodecs/base64.c
-    src/strcodecs/url_encoding.c
     src/gethrtime.c
     src/hashtable.c
     src/hashset.c

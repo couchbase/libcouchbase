@@ -55,8 +55,7 @@ Connspec::parse_hosts(const char *hostbegin,
     const char *hostend, const char **errmsg)
 {
     std::string decoded(hostbegin, hostend);
-    size_t newsize = 0;
-    if (!strcodecs::urldecode(decoded.begin(), decoded.end(), newsize)) {
+    if (!strcodecs::urldecode(decoded)) {
         SET_ERROR("Couldn't decode from URL encoding!");
     }
 
@@ -158,7 +157,6 @@ Connspec::parse_options(
 {
     while (options_ != NULL && options_ < specend) {
         unsigned curlen;
-        char *key, *value;
         const char *curend;
 
         if (*options_ == '&') {
@@ -177,8 +175,8 @@ Connspec::parse_options(
 
         options_ = curend+1;
 
-        key = &optpair[0];
-        value = strchr(key, '=');
+        char *key = &optpair[0];
+        char *value = strchr(key, '=');
         if (!value) {
             SET_ERROR("Option must be specified as a key=value pair");
         }
@@ -187,11 +185,8 @@ Connspec::parse_options(
         if (!*value) {
             SET_ERROR("Value cannot be empty");
         }
-        if (0 != lcb_urldecode(value, value, -1)) {
-            SET_ERROR("Couldn't decode value");
-        }
-        if (0 != lcb_urldecode(key, key, -1)) {
-            SET_ERROR("Couldn't decode key");
+        if (! (strcodecs::urldecode(value) && strcodecs::urldecode(key))) {
+            SET_ERROR("Couldn't decode key or value!");
         }
         if (!strcmp(key, "bootstrap_on")) {
             m_transports.clear();
@@ -328,18 +323,12 @@ Connspec::parse(const char *connstr_, const char **errmsg)
         /* scan each of the options */
         blen = b_end - bucket_s;
 
-        std::vector<char> bucket_v(bucket_s, bucket_s + blen);
-        bucket_v.push_back('\0');
+        m_bucket.assign(bucket_s, bucket_s + blen);
         if (!(m_flags & F_HASBUCKET)) {
-
-            if (0 != lcb_urldecode(&bucket_v[0], &bucket_v[0], -1)) {
+            if (!strcodecs::urldecode(m_bucket)) {
                 SET_ERROR("Couldn't decode bucket string");
             }
         }
-
-        bucket_v.pop_back();
-        m_bucket.assign(bucket_v.begin(), bucket_v.end());
-        m_bucket.resize(strlen(m_bucket.c_str()));
     } else if (bucket_s == NULL) {
         m_bucket = "default";
     }

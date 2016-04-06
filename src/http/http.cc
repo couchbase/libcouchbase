@@ -298,16 +298,9 @@ Request::assign_url(const char *base, size_t nbase, const char *path, size_t npa
                 url.append("/");
             }
 
-            lcb_size_t n_added;
-            std::vector<char> encpath;
-            encpath.resize((npath * 3) + 1);
-            char *pp = &encpath[0];
-            lcb_error_t rc = lcb_urlencode_path(path, npath, &pp, &n_added);
-            if (rc != LCB_SUCCESS) {
-                return rc;
+            if (!lcb::strcodecs::urlencode(path, path + npath, url)) {
+                return LCB_INVALID_CHAR;
             }
-            encpath.resize(n_added);
-            url.append(encpath.begin(), encpath.end());
         }
     }
 
