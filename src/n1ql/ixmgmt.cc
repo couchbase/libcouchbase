@@ -524,7 +524,7 @@ cb_watchix_tm(void *arg)
 #define DEFAULT_WATCH_TIMEOUT LCB_S2US(30)
 #define DEFAULT_WATCH_INTERVAL LCB_MS2US(500)
 
-WatchIndexCtx::WatchIndexCtx(lcb_t instance, const void *cookie, const lcb_CMDIXWATCH *cmd)
+WatchIndexCtx::WatchIndexCtx(lcb_t instance, const void *cookie_, const lcb_CMDIXWATCH *cmd)
 : m_instance(instance)
 {
     uint64_t now = lcb_nstime();
@@ -534,7 +534,7 @@ WatchIndexCtx::WatchIndexCtx(lcb_t instance, const void *cookie, const lcb_CMDIX
     m_tsend = now + LCB_US2NS(timeout);
 
     this->callback = cmd->callback;
-    this->cookie = const_cast<void*>(cookie);
+    this->cookie = const_cast<void*>(cookie_);
 
     m_timer = lcbio_timer_new(instance->iotable, this, cb_watchix_tm);
     lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
@@ -753,10 +753,10 @@ IndexSpec::load_fields(const Json::Value& root, bool do_copy)
 
 size_t
 IndexSpec::load_field(const Json::Value& root,
-    const char *name, const char **tgt_ptr, size_t *tgt_len, bool do_copy)
+    const char *name_, const char **tgt_ptr, size_t *tgt_len, bool do_copy)
 {
-    size_t namelen = strlen(name);
-    const Json::Value *val = root.find(name, name + namelen);
+    size_t namelen = strlen(name_);
+    const Json::Value *val = root.find(name_, name_ + namelen);
     const char *s_begin, *s_end;
     size_t n = 0;
     if (val != NULL &&
