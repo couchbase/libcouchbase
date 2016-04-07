@@ -826,7 +826,7 @@ new 2.5 version is built on the 2.4.x codebase.
   feature, a `cbc stats --keystats` option is also provided to employ
   this functionality from the command line.
   * Priority: Major
-  * Issues: [CCBC-318](http://couchbase.com/issues/CCBC-318)
+  * Issues: [CCBC-318](http://issues.couchbase.com/browse/CCBC-318)
 
 * Add more details about replica nodes in the `cbc hash` command.
   * Priority: Minor
@@ -837,7 +837,7 @@ new 2.5 version is built on the 2.4.x codebase.
   could be retrieved. Using the `LCB_CNTL_BUCKETNAME` setting, the bucket
   name will now be returned.
   * Priority: Major
-  * Issues: [CCBC-502](http://couchbase.com/issues/CCBC-502)
+  * Issues: [CCBC-502](http://issues.couchbase.com/browse/CCBC-502)
 
 ## 2.4.1
 
