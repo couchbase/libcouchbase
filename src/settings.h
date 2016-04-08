@@ -162,6 +162,7 @@ typedef struct lcb_settings_st {
     struct lcb_logprocs_st *logger;
     void (*dtorcb)(const void *);
     void *dtorarg;
+    char *client_string;
 } lcb_settings;
 
 LCB_INTERNAL_API

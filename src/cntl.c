@@ -410,6 +410,20 @@ HANDLER(reinit_spec_handler) {
     (void)cmd; return lcb_reinit3(instance, arg);
 }
 
+HANDLER(client_string_handler) {
+    if (mode == LCB_CNTL_SET) {
+        const char *val = arg;
+        free(LCBT_SETTING(instance, client_string));
+        if (val) {
+            LCBT_SETTING(instance, client_string) = strdup(val);
+        }
+    } else {
+        *(const char **)arg = LCBT_SETTING(instance, client_string);
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 HANDLER(unsafe_optimize) {
     lcb_error_t rc;
     int val = *(int *)arg;
@@ -528,7 +542,8 @@ static ctl_handler handlers[] = {
     console_fp_handler, /* LCB_CNTL_CONLOGGER_FP */
     kv_hg_handler, /* LCB_CNTL_KVTIMINGS */
     timeout_common, /* LCB_CNTL_N1QL_TIMEOUT */
-    n1ql_cache_clear_handler /* LCB_CNTL_N1QL_CLEARCACHE */
+    n1ql_cache_clear_handler, /* LCB_CNTL_N1QL_CLEARCACHE */
+    client_string_handler /* LCB_CNTL_CLIENT_STRING */
 };
 
 /* Union used for conversion to/from string functions */
@@ -677,6 +692,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"tcp_nodelay", LCB_CNTL_TCP_NODELAY, convert_intbool },
         {"readj_ts_wait", LCB_CNTL_RESET_TIMEOUT_ON_WAIT, convert_intbool },
         {"console_log_file", LCB_CNTL_CONLOGGER_FP, NULL },
+        {"client_string", LCB_CNTL_CLIENT_STRING, convert_passthru},
         {NULL, -1}
 };
 

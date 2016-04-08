@@ -874,8 +874,20 @@ typedef enum {
  */
 #define LCB_CNTL_N1QL_CLEARACHE 0x3E
 
+/**
+ * @committed
+ * Sets additional text for negotiation. This allows wrappers or applications
+ * to add additional identifying information which can then be seen in the
+ * server logs.
+ *
+ * @cntl_arg_get_and_set{`const char**`, `const char*`}
+ *
+ * Use `"client_string"` for the string version
+ */
+#define LCB_CNTL_CLIENT_STRING 0x3F
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x3F
+#define LCB_CNTL__MAX                    0x40
 /**@}*/
 
 #ifdef __cplusplus
