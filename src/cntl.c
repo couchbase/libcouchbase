@@ -479,6 +479,18 @@ HANDLER(n1ql_cache_clear_handler) {
     return LCB_SUCCESS;
 }
 
+HANDLER(bucket_auth_handler) {
+    const lcb_BUCKETCRED *cred;
+    if (mode != LCB_CNTL_SET) {
+        return LCB_ECTL_UNSUPPMODE;
+    }
+    /* Parse the bucket string... */
+    cred = (const lcb_BUCKETCRED *)arg;
+    lcbauth_set(instance->settings->auth, (*cred)[0], (*cred)[1], 0);
+    (void)cmd; (void)arg;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -543,7 +555,8 @@ static ctl_handler handlers[] = {
     kv_hg_handler, /* LCB_CNTL_KVTIMINGS */
     timeout_common, /* LCB_CNTL_N1QL_TIMEOUT */
     n1ql_cache_clear_handler, /* LCB_CNTL_N1QL_CLEARCACHE */
-    client_string_handler /* LCB_CNTL_CLIENT_STRING */
+    client_string_handler, /* LCB_CNTL_CLIENT_STRING */
+    bucket_auth_handler /* LCB_CNTL_BUCKET_CRED */
 };
 
 /* Union used for conversion to/from string functions */

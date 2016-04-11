@@ -886,8 +886,20 @@ typedef enum {
  */
 #define LCB_CNTL_CLIENT_STRING 0x3F
 
+typedef char *lcb_BUCKETCRED[2];
+
+/**
+ * Set credentials for a bucket. This is used for N1QL and CBFT APIs to allow
+ * access to multiple buckets. It can also be used to set the password
+ * of the current bucket when reconnecting (in case it changes).
+ *
+ * The format for the credentials is an array of two nul-terminated strings,
+ * the first refers to the bucket and the second refers to the password.
+ */
+#define LCB_CNTL_BUCKET_CRED 0x40
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x40
+#define LCB_CNTL__MAX                    0x41
 /**@}*/
 
 #ifdef __cplusplus

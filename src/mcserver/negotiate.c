@@ -72,11 +72,13 @@ static int
 sasl_get_username(void *context, int id, const char **result, unsigned int *len)
 {
     struct mc_SESSINFO *ctx = context;
+    const char *u = NULL, *p = NULL;
     if (!context || !result || (id != CBSASL_CB_USER && id != CBSASL_CB_AUTHNAME)) {
         return SASL_BADPARAM;
     }
 
-    *result = ctx->settings->username;
+    lcbauth_get_upass(ctx->settings->auth, &u, &p);
+    *result = u;
     if (len) {
         *len = (unsigned int)strlen(*result);
     }
@@ -102,7 +104,7 @@ setup_sasl_params(struct mc_SESSINFO *ctx)
 {
     int ii;
     cbsasl_callback_t *callbacks = ctx->sasl_callbacks;
-    const char *password = ctx->settings->password;
+    const char *pass = NULL, *user = NULL;
 
     callbacks[0].id = CBSASL_CB_USER;
     callbacks[0].proc = (int( *)(void)) &sasl_get_username;
@@ -122,17 +124,18 @@ setup_sasl_params(struct mc_SESSINFO *ctx)
     }
 
     memset(&ctx->u_auth, 0, sizeof(ctx->u_auth));
+    lcbauth_get_upass(ctx->settings->auth, &user, &pass);
 
-    if (password) {
+    if (pass) {
         unsigned long pwlen;
         lcb_size_t maxlen;
 
-        pwlen = (unsigned long)strlen(password);
+        pwlen = (unsigned long)strlen(pass);
         maxlen = sizeof(ctx->u_auth.buffer) - offsetof(cbsasl_secret_t, data);
         ctx->u_auth.secret.len = pwlen;
 
         if (pwlen < maxlen) {
-            memcpy(ctx->u_auth.secret.data, password, pwlen);
+            memcpy(ctx->u_auth.secret.data, pass, pwlen);
         } else {
             return LCB_EINVAL;
         }

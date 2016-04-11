@@ -64,6 +64,7 @@ SET(LCB_CORE_SRC
 
 SET(LCB_CORE_CXXSRC
     src/instance.cc
+    src/auth.cc
     src/http/http.cc
     src/http/http_io.cc
     src/n1ql/params.cc

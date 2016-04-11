@@ -264,6 +264,7 @@ setup_request_header(http_provider *http, const lcb_host_t *host)
     lcb_settings *settings = http->base.parent->settings;
 
     char *buf = http->request_buf;
+    const char *username = NULL, *password = NULL;
     lcb_size_t nbuf = sizeof(http->request_buf);
 
     lcb_size_t offset = 0;
@@ -284,11 +285,11 @@ setup_request_header(http_provider *http, const lcb_host_t *host)
     } else {
         return LCB_EINVAL;
     }
+    lcbauth_get_upass(settings->auth, &username, &password);
 
-    if (settings->password) {
+    if (password) {
         char cred[256], b64[256];
-        snprintf(cred, sizeof(cred), "%s:%s",
-                 settings->username, settings->password);
+        snprintf(cred, sizeof(cred), "%s:%s", username, password);
 
         if (lcb_base64_encode(cred, b64, sizeof(b64)) == -1) {
             return LCB_EINTERNAL;

@@ -436,9 +436,10 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
         if (cmd->host) {
             return LCB_EINVAL;
         }
-        if (username == NULL && password == NULL) {
-            username = LCBT_SETTING(instance, username);
-            password = LCBT_SETTING(instance, password);
+        if (cmd->cmdflags & LCB_CMDHTTP_F_NOUPASS) {
+            username = password = NULL;
+        } else if (username == NULL && password == NULL) {
+            lcbauth_get_upass(LCBT_SETTING(instance, auth), &username, &password);
         }
 
         base = get_api_node(rc);

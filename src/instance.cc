@@ -373,8 +373,22 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->type = type;
     obj->settings = settings;
     settings->bucket = spec.bucket; spec.bucket = NULL;
-    settings->username = spec.username; spec.username = NULL;
-    settings->password = spec.password; spec.password = NULL;
+    if (spec.password) {
+        settings->auth->m_buckets[settings->bucket] = spec.password;
+        settings->auth->m_password = spec.password;
+    }
+    if (spec.username) {
+        settings->auth->m_username = spec.username;
+        if (type == LCB_TYPE_BUCKET &&
+                settings->auth->m_username != settings->bucket) {
+            /* Do not allow people use Administrator account for data access */
+            err = LCB_INVALID_USERNAME;
+            goto GT_DONE;
+        }
+    } else {
+        settings->auth->m_password = spec.password;
+    }
+
     settings->logger = lcb_init_console_logger();
     settings->iid = lcb_instance_index++;
     if (spec.loglevel) {
@@ -384,14 +398,6 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     lcb_log(LOGARGS(obj, INFO), "Version=%s, Changeset=%s", lcb_get_version(NULL), LCB_VERSION_CHANGESET);
     lcb_log(LOGARGS(obj, INFO), "Effective connection string: %s. Bucket=%s", options && options->version >= 3 ? options->v.v3.connstr : spec.connstr, settings->bucket);
-
-    /* Do not allow people use Administrator account for data access */
-    if (type == LCB_TYPE_BUCKET && settings->username) {
-        if (strcmp(settings->username, settings->bucket) != 0) {
-            err = LCB_INVALID_USERNAME;
-            goto GT_DONE;
-        }
-    }
 
     if (io_priv == NULL) {
         lcb_io_opt_t ops;

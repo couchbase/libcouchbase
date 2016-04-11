@@ -2394,6 +2394,12 @@ typedef enum {
 #define LCB_CMDHTTP_F_CASTMO 1<<17
 
 /**
+ * @private
+ * Do not inject authentication header into the request.
+ */
+#define LCB_CMDHTTP_F_NOUPASS 1<<18
+
+/**
  * Structure for performing an HTTP request.
  * Note that the key and nkey fields indicate the _path_ for the API
  */
