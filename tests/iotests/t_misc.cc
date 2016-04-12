@@ -711,3 +711,22 @@ TEST_F(MockUnitTest, testEmptyCtx)
     err = mctx->done(mctx, NULL);
     ASSERT_NE(LCB_SUCCESS, err);
 }
+
+TEST_F(MockUnitTest, testMultiCreds)
+{
+    using lcb::Authenticator;
+
+    HandleWrap hw;
+    lcb_t instance;
+    createConnection(hw, instance);
+
+    lcb_BUCKETCRED cred;
+    cred[0] = "protected";
+    cred[1] = "secret";
+    lcb_error_t rc = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_BUCKET_CRED, cred);
+    ASSERT_EQ(LCB_SUCCESS, rc);
+    Authenticator& auth = *instance->settings->auth;
+    lcb::Authenticator::Map::const_iterator res = auth.buckets().find("protected");
+    ASSERT_NE(auth.buckets().end(), res);
+    ASSERT_EQ("secret", res->second);
+}
