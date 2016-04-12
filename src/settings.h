@@ -82,6 +82,8 @@
 #define LCB_DEFAULT_COMPRESSOPTS LCB_COMPRESS_NONE
 
 #define LCB_DEFAULT_NVM_RETRY_IMM 1
+#define LCB_DEFAULT_RETRY_NMV_INTERVAL LCB_MS2US(100)
+#define LCB_DEFAULT_VB_NOGUESS 1
 #define LCB_DEFAULT_TCP_NODELAY 1
 
 #include "config.h"
@@ -163,6 +165,7 @@ typedef struct lcb_settings_st {
     void (*dtorcb)(const void *);
     void *dtorarg;
     char *client_string;
+    lcb_U32 retry_nmv_interval;
 } lcb_settings;
 
 LCB_INTERNAL_API

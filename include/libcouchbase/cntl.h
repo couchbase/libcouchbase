@@ -898,8 +898,20 @@ typedef char *lcb_BUCKETCRED[2];
  */
 #define LCB_CNTL_BUCKET_CRED 0x40
 
+/**
+ * Set the amount of time the client should wait before retrying a
+ * not-my-vbucket response packet. The default is 100ms. The value should
+ * be specified in microseconds
+ *
+ * @committed
+ * @cntl_arg_both{lcb_U32*}
+ *
+ * Use `"retry_nmv_interval"` with lcb_cntl_string()
+ */
+#define LCB_CNTL_RETRY_NMV_INTERVAL 0x41
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x41
+#define LCB_CNTL__MAX                    0x42
 /**@}*/
 
 #ifdef __cplusplus

@@ -56,6 +56,8 @@ void lcb_default_settings(lcb_settings *settings)
     settings->dur_mutation_tokens = 1;
     settings->nmv_retry_imm = LCB_DEFAULT_NVM_RETRY_IMM;
     settings->tcp_nodelay = LCB_DEFAULT_TCP_NODELAY;
+    settings->retry_nmv_interval = LCB_DEFAULT_RETRY_NMV_INTERVAL;
+    settings->vb_noguess = LCB_DEFAULT_VB_NOGUESS;
 }
 
 LCB_INTERNAL_API

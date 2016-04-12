@@ -899,7 +899,7 @@ lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix)
  *    your request. Exit. Otherwise propagate error to back to app
  */
 int
-lcbvb_nmv_remap(lcbvb_CONFIG *cfg, int vbid, int bad)
+lcbvb_nmv_remap_ex(lcbvb_CONFIG *cfg, int vbid, int bad, int heuristic)
 {
     int cur = cfg->vbuckets[vbid].servers[0];
     int rv = cur;
@@ -913,16 +913,13 @@ lcbvb_nmv_remap(lcbvb_CONFIG *cfg, int vbid, int bad)
      * and update that information in the current table. We also need to Update the
      * replica information for that vbucket */
 
-    if (cfg->ffvbuckets) {
-        rv = cfg->vbuckets[vbid].servers[0] = cfg->ffvbuckets[vbid].servers[0];
-        for (ii = 0; ii < cfg->nrepl; ii++) {
-            cfg->vbuckets[vbid].servers[ii+1] = cfg->ffvbuckets[vbid].servers[ii+1];
-        }
-        cur = rv;
+    if (cfg->ffvbuckets &&
+            (rv = cfg->ffvbuckets[vbid].servers[0]) != bad && rv > -1) {
+        memcpy(&cfg->vbuckets[vbid], &cfg->ffvbuckets[vbid], sizeof (lcbvb_VBUCKET));
     }
 
     /* this path is usually only followed if fvbuckets is not present */
-    if (cur == bad) {
+    if (heuristic && cur == bad) {
         int validrv = -1;
         for (ii = 0; ii < cfg->ndatasrv; ii++) {
             rv = (rv + 1) % cfg->ndatasrv;
@@ -1445,6 +1442,25 @@ lcbvb_genconfig(lcbvb_CONFIG *vb,
         "default", NULL, srvarry, nservers, nreplica, nvbuckets);
     free(srvarry);
     return rv;
+}
+
+void
+lcbvb_genffmap(lcbvb_CONFIG *cfg)
+{
+    size_t ii;
+    assert(cfg->nrepl);
+    if (cfg->ffvbuckets) {
+        free(cfg->ffvbuckets);
+    }
+    cfg->ffvbuckets = calloc(cfg->nvb, sizeof *cfg->ffvbuckets);
+    for (ii = 0; ii < cfg->nvb; ++ii) {
+        size_t jj;
+        lcbvb_VBUCKET *vb = cfg->ffvbuckets + ii;
+        memcpy(vb, cfg->vbuckets + ii, sizeof *vb);
+        for (jj = 0; jj < cfg->ndatasrv; ++jj) {
+            vb->servers[jj] = (vb->servers[jj] + 1) % cfg->ndatasrv;
+        }
+    }
 }
 
 void

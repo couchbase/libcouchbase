@@ -65,6 +65,7 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_CONFIG_NODE_TIMEOUT: return &settings->config_node_timeout;
     case LCB_CNTL_HTCONFIG_IDLE_TIMEOUT: return &settings->bc_http_stream_time;
     case LCB_CNTL_RETRY_INTERVAL: return &settings->retry_interval;
+    case LCB_CNTL_RETRY_NMV_INTERVAL: return &settings->retry_nmv_interval;
     default: return NULL;
     }
 }
@@ -556,7 +557,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_N1QL_TIMEOUT */
     n1ql_cache_clear_handler, /* LCB_CNTL_N1QL_CLEARCACHE */
     client_string_handler, /* LCB_CNTL_CLIENT_STRING */
-    bucket_auth_handler /* LCB_CNTL_BUCKET_CRED */
+    bucket_auth_handler, /* LCB_CNTL_BUCKET_CRED */
+    timeout_common /* LCB_CNTL_RETRY_NMV_DELAY */
 };
 
 /* Union used for conversion to/from string functions */
@@ -706,6 +708,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"readj_ts_wait", LCB_CNTL_RESET_TIMEOUT_ON_WAIT, convert_intbool },
         {"console_log_file", LCB_CNTL_CONLOGGER_FP, NULL },
         {"client_string", LCB_CNTL_CLIENT_STRING, convert_passthru},
+        {"retry_nmv_delay", LCB_CNTL_RETRY_NMV_INTERVAL, convert_timeout},
         {NULL, -1}
 };
 

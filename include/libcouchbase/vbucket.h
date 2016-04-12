@@ -269,6 +269,15 @@ lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix);
 
 
 /**
+ * uncommitted
+ * Equivalent to
+ * @code{.c}
+ * lcbvb_nmv_remap_ex(cfg, vbid, bad, 0);
+ * @endcode
+ */
+#define lcbvb_nmv_remap(cfg, vbid, bad) lcbvb_nmv_remap_ex(cfg, vbid, bad, 0)
+
+/**
  * @uncommitted
  *
  * Using various guesswork and heuristics, attempt to locate an alternate node
@@ -280,9 +289,11 @@ lcbvb_vbreplica(lcbvb_CONFIG *cfg, int vbid, unsigned ix);
  * @param bad the index known to be bad. Passing this parameter allows the
  *  handler to safely call this function and be sure that a previous call's
  *  applied heuristics will not affect the modified map.
+ * @param use_heuristics whether additional heuristics should be used. If
+ *  heuristics is off, only the fast-forward map is employed.
  */
 int
-lcbvb_nmv_remap(lcbvb_CONFIG *cfg, int vbid, int bad);
+lcbvb_nmv_remap_ex(lcbvb_CONFIG *cfg, int vbid, int bad, int use_heuristics);
 
 /**
  * @committed
@@ -554,6 +565,15 @@ LIBCOUCHBASE_API
 int
 lcbvb_genconfig(lcbvb_CONFIG *vb,
     unsigned nservers, unsigned nreplica, unsigned nvbuckets);
+
+/**
+ * @volatile
+ * Generate a fast-forward vBucket map for the configuration. This simply
+ * provides alternate indices.
+ */
+LIBCOUCHBASE_API
+void
+lcbvb_genffmap(lcbvb_CONFIG *vb);
 
 
 /**
