@@ -19,7 +19,7 @@
 #include "bucketconfig/clconfig.h"
 #include "http/http.h"
 #include "http/http-priv.h"
-using namespace lcbhtapi;
+using namespace lcb::http;
 
 #define LOGFMT "<%s:%s>"
 #define LOGID(req) (req)->host.c_str(), (req)->port.c_str()

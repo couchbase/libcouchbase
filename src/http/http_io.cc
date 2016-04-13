@@ -23,7 +23,7 @@
 #include "sllist.h"
 #include <lcbio/ssl.h>
 
-using namespace lcbhtapi;
+using namespace lcb::http;
 
 #define LOGFMT "<%s:%s>"
 #define LOGID(req) get_ctx_host((req)->ioctx), get_ctx_port((req)->ioctx)

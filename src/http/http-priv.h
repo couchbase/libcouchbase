@@ -28,7 +28,8 @@
 #include <vector>
 #include <set>
 
-namespace lcbhtapi {
+namespace lcb {
+namespace http {
 
 // Simple object for header key and value
 struct Header {
@@ -298,8 +299,9 @@ struct Request {
     void incref() { refcount++; }
 };
 
-} // namespace
+} // namespace: http
+} // namespace: lcb
 
-struct lcb_http_request_st : public lcbhtapi::Request {};
+struct lcb_http_request_st : public lcb::http::Request {};
 
 #endif /* HEADER GUARD */
