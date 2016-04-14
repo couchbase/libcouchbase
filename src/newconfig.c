@@ -95,7 +95,11 @@ lcb_vbguess_remap(lcb_t instance, int vbid, int bad)
 {
 
     if (LCBT_SETTING(instance, vb_noguess)) {
-        return lcbvb_nmv_remap_ex(LCBT_VBCONFIG(instance), vbid, bad, 0);
+        int newix = lcbvb_nmv_remap_ex(LCBT_VBCONFIG(instance), vbid, bad, 0);
+        if (newix > -1 && newix != bad) {
+            lcb_log(LOGARGS(instance, TRACE), "Got new index from ffmap. VBID=%d. Old=%d. New=%d", vbid, bad, newix);
+        }
+        return newix;
 
     } else {
         lcb_GUESSVB *guesses = instance->vbguess;
@@ -110,6 +114,7 @@ lcb_vbguess_remap(lcb_t instance, int vbid, int bad)
             guess->oldix = bad;
             guess->used = 1;
             guess->last_update = time(NULL);
+            lcb_log(LOGARGS(instance, TRACE), "Guessed new heuristic index VBID=%d. Old=%d. New=%d", vbid, bad, newix);
         }
         return newix;
     }

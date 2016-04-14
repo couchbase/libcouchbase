@@ -150,9 +150,6 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
 
     /* Notify of new map */
     tmpix = lcb_vbguess_remap(instance, vbid, oldsrv->pipeline.index);
-    if (tmpix > -1 && tmpix != oldsrv->pipeline.index) {
-        lcb_log(LOGARGS(oldsrv, TRACE), LOGFMT "Heuristically set IX=%d as master for VBID=%u", LOGID(oldsrv), tmpix, vbid);
-    }
 
     if (PACKET_NBODY(resinfo) && cccp->enabled) {
         lcb_string s;
