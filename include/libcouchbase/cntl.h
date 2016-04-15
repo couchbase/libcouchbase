@@ -886,7 +886,7 @@ typedef enum {
  */
 #define LCB_CNTL_CLIENT_STRING 0x3F
 
-typedef char *lcb_BUCKETCRED[2];
+typedef const char *lcb_BUCKETCRED[2];
 
 /**
  * Set credentials for a bucket. This is used for N1QL and CBFT APIs to allow
