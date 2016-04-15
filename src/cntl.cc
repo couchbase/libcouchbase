@@ -16,6 +16,7 @@
  */
 #include "internal.h"
 #include "bucketconfig/clconfig.h"
+#include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 #include <lcbio/iotable.h>
 #include <mcserver/negotiate.h>
 #include <lcbio/ssl.h>
@@ -490,13 +491,27 @@ HANDLER(n1ql_cache_clear_handler) {
 
 HANDLER(bucket_auth_handler) {
     const lcb_BUCKETCRED *cred;
-    if (mode != LCB_CNTL_SET) {
+    if (mode == LCB_CNTL_SET) {
+        /* Parse the bucket string... */
+        cred = (const lcb_BUCKETCRED *)arg;
+        lcbauth_set(instance->settings->auth, (*cred)[0], (*cred)[1], 0);
+        (void)cmd; (void)arg;
+    } else if (mode == CNTL__MODE_SETSTRING) {
+        const char *ss = reinterpret_cast<const char *>(arg);
+        size_t sslen = strlen(ss);
+        Json::Value root;
+        if (!Json::Reader().parse(ss, ss + sslen, root)) {
+            return LCB_ECTL_BADARG;
+        }
+        if (!root.isArray() || root.size() != 2) {
+            return LCB_ECTL_BADARG;
+        }
+        lcbauth_set(instance->settings->auth,
+            root[0].asString().c_str(),
+            root[1].asString().c_str(), 0);
+    } else {
         return LCB_ECTL_UNSUPPMODE;
     }
-    /* Parse the bucket string... */
-    cred = (const lcb_BUCKETCRED *)arg;
-    lcbauth_set(instance->settings->auth, (*cred)[0], (*cred)[1], 0);
-    (void)cmd; (void)arg;
     return LCB_SUCCESS;
 }
 
@@ -717,6 +732,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"console_log_file", LCB_CNTL_CONLOGGER_FP, NULL },
         {"client_string", LCB_CNTL_CLIENT_STRING, convert_passthru},
         {"retry_nmv_delay", LCB_CNTL_RETRY_NMV_INTERVAL, convert_timeout},
+        {"bucket_cred", LCB_CNTL_BUCKET_CRED, NULL},
         {NULL, -1}
 };
 
