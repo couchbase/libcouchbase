@@ -45,6 +45,9 @@ public:
     Map m_buckets;
     std::string m_username;
     std::string m_password;
+
+    lcb_error_t init(const char *username,
+        const char *bucket, const char *password, lcb_type_t conntype);
 };
 }
 #endif

@@ -1,3 +1,4 @@
+#include <libcouchbase/couchbase.h>
 #include "auth.h"
 
 using namespace lcb;
@@ -55,4 +56,26 @@ lcbauth_get_upass(const lcb_AUTHENTICATOR *auth, const char **u, const char **p)
     } else {
         *p = NULL;
     }
+}
+
+lcb_error_t
+Authenticator::init(const char *username_, const char *bucket,
+    const char *passwd, lcb_type_t conntype)
+{
+    if (!username_) {
+        username_ = bucket;
+    }
+
+    m_username = username_;
+
+    if (conntype == LCB_TYPE_BUCKET && m_username != bucket) {
+        return LCB_INVALID_USERNAME;
+    }
+
+    if (!passwd) {
+        passwd = "";
+    }
+    m_password = passwd;
+    m_buckets[bucket] = m_password;
+    return LCB_SUCCESS;
 }

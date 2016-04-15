@@ -372,21 +372,11 @@ lcb_error_t lcb_create(lcb_t *instance,
     /* initialize the settings */
     obj->type = type;
     obj->settings = settings;
+
     settings->bucket = spec.bucket; spec.bucket = NULL;
-    if (spec.password) {
-        settings->auth->m_buckets[settings->bucket] = spec.password;
-        settings->auth->m_password = spec.password;
-    }
-    if (spec.username) {
-        settings->auth->m_username = spec.username;
-        if (type == LCB_TYPE_BUCKET &&
-                settings->auth->m_username != settings->bucket) {
-            /* Do not allow people use Administrator account for data access */
-            err = LCB_INVALID_USERNAME;
-            goto GT_DONE;
-        }
-    } else {
-        settings->auth->m_password = spec.password;
+    if ((err = settings->auth->init(spec.username, settings->bucket,
+        spec.password, type)) != LCB_SUCCESS) {
+        goto GT_DONE;
     }
 
     settings->logger = lcb_init_console_logger();
