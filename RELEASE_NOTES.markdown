@@ -1,5 +1,71 @@
 # Release Notes
 
+## 2.5.8 (April 19 2016)
+
+* Fix SSL connectivity errors with views and HTTP bootstrapping.
+  This would cause network connectivity issues when attempting to bootstrap
+  via `https://` or using views (`lcb_view_query()`). The fix is a workaround
+  to not advertise older SSL encryption methods.
+  * Priority: Major
+  * Issues: [CCBC-688](https://issues.couchbase.com/browse/CCBC-688)
+
+* Do not abort when receiving a memcached EINVAL response.
+  While the client should never end up in a situation where it receives an
+  `EINVAL` from the server, it should nevertheless not terminate the execution
+  of the current process. This bug was introduced in 2.5.6
+  * Issues: [CCBC-689](https://issues.couchbase.com/browse/CCBC-689)
+
+* Fix memory leak when using N1QL prepared statements.
+  Prepared statements would never be freed, even when the client handle was
+  destroyed (`lcb_destroy()`) causing a slight memory leak.
+
+* Append CRLF header after host header.
+  This would sometimes result in odd HTTP headers being sent out.
+  * Issues: [CCBC-694](https://issues.couchbase.com/browse/CCBC-694)
+
+* Experimental CBFT (Full-Text search API)
+  This version adds a new fulltext api. The API is a row-based API similar
+  to N1QL and MapReduce. See the `<libcouchbase/cbft.h>` header for more details.
+  The API is experimental and subject to change.
+  * Issues: [CCBC-638](https://issues.couchbase.com/browse/CCBC-638)
+
+* Allow additional client identifier for HELLO command.
+  The SDK sends a version string to the server when doing initial negotiation.
+  The server then uses this string in the context of any logging messages
+  pertaining to that connection. In this version, a new setting has been added
+  to allow 'user-defined' version strings to be appended to the logs. Note that
+  this feature is intended only for use with wrapping SDKs such as Python, node.js
+  and PHP so that their versions can be present in the log messages as well.
+  This setting is exposed as a string control (in the connection string, or
+  `lcb_cntl_string()` with the name of `client_string`.
+  * Issues: [CCBC-693](https://issues.couchbase.com/browse/CCBC-693)
+
+* vBucket retry logic changes.
+  The client will now retry at constant 100ms rate when receiving not-my-vbucket
+  error replies from the server (adjustable using `retry_nmv_interval`).
+  It will also only use fast-forward map to determine the new location for the
+  vbucket, and will not use extended hueristics.
+
+  The most noteworthy user-visible change is the 100ms retry interval which
+  will significantly decrease the network traffic used by the SDK
+  during a rebalance.
+
+  To restore the pre-2.5.8 behavior (i.e. use extended heuristics and and
+  exponential retry rate), specify `vb_noguess=false`.
+  * Priority: Major
+  * Issues: [CCBC-660](https://issues.couchbase.com/browse/CCBC-660)
+
+* Add interface for multi-bucket authentication.
+  A new API has been added to modify and add additional bucket/password
+  pairs in the library. This is done using `lcb_cntl` and the `LCB_CNTL_BUCKET_CRED`
+  setting.
+
+  Note that this functionality is not yet used in N1QL queries due to
+  [MB-16964](https://issues.couchbase.com/browse/MB-16964)
+  * Priority: Minor
+  * Issues: [CCBC-661](https://issues.couchbase.com/browse/CCBC-661)
+
+
 ## 2.5.7 (March 22 2016)
 
 * High-level index management operations.
