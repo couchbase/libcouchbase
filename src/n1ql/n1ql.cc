@@ -505,7 +505,7 @@ N1QLREQ::issue_htreq(const std::string& body)
     htcmd.content_type = "application/json";
     htcmd.method = LCB_HTTP_METHOD_POST;
     htcmd.type = LCB_HTTP_TYPE_N1QL;
-    htcmd.cmdflags = LCB_CMDHTTP_F_STREAM|LCB_CMDHTTP_F_NOUPASS|LCB_CMDHTTP_F_CASTMO;
+    htcmd.cmdflags = LCB_CMDHTTP_F_STREAM|LCB_CMDHTTP_F_CASTMO;
     htcmd.reqhandle = &htreq;
     htcmd.cas = timeout;
 
@@ -605,17 +605,6 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
         timeout = LCBT_SETTING(obj, n1ql_timeout);
     } else {
         timeout = lcb_n1qlreq_parsetmo(tmoval.asString());
-    }
-
-    // Inject the credentials
-    Json::Value& creds = json["creds"];
-    if (creds.isNull()) {
-        const lcb::Authenticator& auth = *instance->settings->auth;
-        lcb::Authenticator::Map::const_iterator ii = auth.buckets().begin();
-        for (; ii != auth.buckets().end(); ++ii) {
-            Json::Value& credPair = creds.append(Json::Value(Json::objectValue));
-            credPair[ii->first] = ii->second;
-        }
     }
 }
 
