@@ -156,6 +156,7 @@ typedef struct lcb_N1QLREQ {
 
     /** Request body as received from the application */
     Json::Value json;
+    const Json::Value& json_const() const { return json; }
 
     /** String of the original statement. Cached here to avoid jsoncpp lookups */
     std::string statement;
@@ -283,12 +284,15 @@ has_retriable_error(const Json::Value& root)
         if (!cur.isObject()) {
             continue; // eh?
         }
-        std::string msg = cur["msg"].asString();
-        unsigned code = cur["code"].asUInt();
-        if (code == 4050 || code == 4070) {
-            return true;
+        const Json::Value& jmsg = cur["msg"];
+        const Json::Value& jcode = cur["code"];
+        if (jcode.isNumeric()) {
+            unsigned code = jcode.asUInt();
+            if (code == 4050 || code == 4070) {
+                return true;
+            }
         }
-        if (msg.find(WTF_MAGIC_STRING) != std::string::npos) {
+        if (jmsg.isString() && strstr(jmsg.asCString(), WTF_MAGIC_STRING) != NULL) {
             return true;
         }
     }
@@ -590,9 +594,12 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
         return;
     }
 
-    statement = json["statement"].asString();
-    if (statement.empty()) {
-        json.removeMember("statement");
+    const Json::Value& j_statement = json_const()["statement"];
+    if (j_statement.isString()) {
+        statement = j_statement.asString();
+    } else if (!j_statement.isNull()) {
+        lasterr = LCB_EINVAL;
+        return;
     }
 
     Json::Value& tmoval = json["timeout"];
@@ -603,8 +610,11 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
         sprintf(buf, "%uus", LCBT_SETTING(obj, n1ql_timeout));
         tmoval = buf;
         timeout = LCBT_SETTING(obj, n1ql_timeout);
-    } else {
+    } else if (tmoval.isString()) {
         timeout = lcb_n1qlreq_parsetmo(tmoval.asString());
+    } else {
+        // Timeout is not a string!
+        lasterr = LCB_EINVAL;
     }
 }
 
