@@ -67,6 +67,7 @@ public:
         Retryer(duration), instance(instance), expCount(expCount) {
         genDistKeys(LCBT_VBCONFIG(instance), distKeys);
     }
+    virtual ~NumNodeRetryer() {}
 
 protected:
     virtual bool checkCondition() {
@@ -106,7 +107,7 @@ private:
 static bool
 syncWithNodeCount_(lcb_t instance, size_t expCount)
 {
-    NumNodeRetryer rr(300, instance, expCount);
+    NumNodeRetryer rr(60, instance, expCount);
     return rr.run();
 }
 
