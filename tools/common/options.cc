@@ -73,6 +73,7 @@ ConnParams::ConnParams() :
     o_saslmech.description("Force SASL mechanism").argdesc("PLAIN|CRAM_MD5");
     o_timings.description("Enable command timings");
     o_timeout.description("Operation timeout");
+    o_timeout.hide();
     o_transport.description("Bootstrap protocol").argdesc("HTTP|CCCP|ALL").setDefault("ALL");
     o_configcache.description("Path to cached configuration");
     o_ssl.description("Enable SSL settings").argdesc("ON|OFF|NOVERIFY").setDefault("off");
@@ -80,7 +81,8 @@ ConnParams::ConnParams() :
     o_verbose.description("Set debugging output (specify multiple times for greater verbosity");
     o_dump.description("Dump verbose internal state after operations are done");
 
-    o_cparams.description("Additional options for connection");
+    o_cparams.description("Additional options for connection. "
+        "Use -Dtimeout=SECONDS for KV operation timeout");
     o_cparams.argdesc("OPTION=VALUE");
 
     // Hide some more exotic options
@@ -329,6 +331,8 @@ ConnParams::fillCropts(lcb_create_st& cropts)
         connstr += '&';
     }
     if (o_timeout.passed()) {
+        std::cerr << "Warning: --timeout option is deprecated. Use -Dtimeout=SECONDS" << std::endl;
+        std::cerr << "         --timeout will be interpreted as SECONDS" << std::endl;
         connstr += "operation_timeout=";
         std::stringstream ss;
         ss << std::dec << o_timeout.result();
