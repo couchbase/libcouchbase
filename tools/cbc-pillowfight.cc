@@ -36,6 +36,8 @@
 #define usleep(n) Sleep(n/1000)
 #endif
 #include <cstdarg>
+#include <exception>
+#include <stdexcept>
 #include "common/options.h"
 #include "common/histogram.h"
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
@@ -114,7 +116,9 @@ public:
         o_rateLimit("rate-limit"),
         o_userdocs("docs"),
         o_writeJson("json"),
-        o_templatePairs("template")
+        o_templatePairs("template"),
+        o_subdoc("subdoc"),
+        o_sdPathCount("pathcount")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -134,6 +138,8 @@ public:
         o_writeJson.description("Enable writing JSON values (rather than bytes)");
         o_templatePairs.description("Values for templates to be inserted into user documents");
         o_templatePairs.argdesc("FIELD,MIN,MAX[,SEQUENTIAL]");
+        o_subdoc.description("Use subdoc instead of fulldoc operations");
+        o_sdPathCount.description("Number of subdoc paths per command").setDefault(1);
     }
 
     void processOptions() {
@@ -206,6 +212,11 @@ public:
                 docgen = new PlaceholderDocGenerator(userdocs, specs);
             }
         }
+
+        sdOpsPerCmd = o_sdPathCount.result();
+        if (o_sdPathCount.passed()) {
+            o_subdoc.setDefault(true);
+        }
     }
 
     void addOptions(Parser& parser) {
@@ -226,6 +237,8 @@ public:
         parser.addOption(o_userdocs);
         parser.addOption(o_writeJson);
         parser.addOption(o_templatePairs);
+        parser.addOption(o_subdoc);
+        parser.addOption(o_sdPathCount);
         params.addToParser(parser);
         depr.addOptions(parser);
     }
@@ -244,11 +257,13 @@ public:
     string& getKeyPrefix() { return prefix; }
     bool shouldPauseAtEnd() { return o_pauseAtEnd; }
     bool sequentialAccess() { return o_sequential; }
+    bool isSubdoc() { return o_subdoc; }
     unsigned firstKeyOffset() { return o_startAt; }
     uint32_t getNumItems() { return o_numItems; }
     uint32_t getRateLimit() { return o_rateLimit; }
 
     uint32_t opsPerCycle;
+    uint32_t sdOpsPerCmd;
     unsigned setprc;
     string prefix;
     volatile int maxCycles;
@@ -282,6 +297,8 @@ private:
 
     // List of template ranges for value generation
     ListOption o_templatePairs;
+    BoolOption o_subdoc;
+    UIntOption o_sdPathCount;
 
     DeprecatedOptions depr;
 } config;
@@ -349,8 +366,9 @@ struct NextOp {
     string m_key;
     uint32_t m_seqno;
     vector<lcb_IOV> m_valuefrags;
+    vector<lcb_SDSPEC> m_specs;
     // The mode here is for future use with subdoc
-    enum Mode { STORE, GET };
+    enum Mode { STORE, GET, SDSTORE, SDGET };
     Mode m_mode;
 };
 
@@ -380,9 +398,19 @@ public:
         }
 
         m_id = ix;
-        m_mode_read = NextOp::GET;
-        m_mode_write = NextOp::STORE;
         m_local_genstate = config.docgen->createState(config.getNumThreads(), ix);
+        if (config.isSubdoc()) {
+            m_mode_read = NextOp::SDGET;
+            m_mode_write = NextOp::SDSTORE;
+            m_sdgenstate = config.docgen->createSubdocState(config.getNumThreads(), ix);
+            if (!m_sdgenstate) {
+                std::cerr << "Current generator does not support subdoc. Did you try --json?" << std::endl;
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            m_mode_read = NextOp::GET;
+            m_mode_write = NextOp::STORE;
+        }
     }
 
     void setNextOp(NextOp& op) {
@@ -411,9 +439,21 @@ public:
 
         } else if (shouldStore(op.m_seqno)) {
             op.m_mode = m_mode_write;
-            m_local_genstate->populateIov(op.m_seqno, op.m_valuefrags);
+            if (op.m_mode == NextOp::STORE) {
+                m_local_genstate->populateIov(op.m_seqno, op.m_valuefrags);
+            } else if (op.m_mode == NextOp::SDSTORE) {
+                op.m_specs.resize(config.sdOpsPerCmd);
+                m_sdgenstate->populateMutate(op.m_seqno, op.m_specs);
+            } else {
+                fprintf(stderr, "Invalid mode for op: %d\n", op.m_mode);
+                abort();
+            }
         } else {
             op.m_mode = m_mode_read;
+            if (op.m_mode == NextOp::SDGET) {
+                op.m_specs.resize(config.sdOpsPerCmd);
+                m_sdgenstate->populateLookup(op.m_seqno, op.m_specs);
+            }
         }
 
         generateKey(op);
@@ -455,6 +495,7 @@ private:
     NextOp::Mode m_mode_read;
     NextOp::Mode m_mode_write;
     GeneratorState *m_local_genstate;
+    SubdocGeneratorState *m_sdgenstate;
 };
 
 class ThreadContext
@@ -472,17 +513,30 @@ public:
         for (size_t ii = 0; ii < config.opsPerCycle; ++ii) {
             kgen.setNextOp(opinfo);
 
-            if (opinfo.m_mode == NextOp::STORE) {
+            switch (opinfo.m_mode) {
+            case NextOp::STORE: {
                 lcb_CMDSTORE scmd = { 0 };
                 scmd.operation = LCB_SET;
                 LCB_CMD_SET_KEY(&scmd, opinfo.m_key.c_str(), opinfo.m_key.size());
                 LCB_CMD_SET_VALUEIOV(&scmd, &opinfo.m_valuefrags[0], opinfo.m_valuefrags.size());
                 error = lcb_store3(instance, this, &scmd);
-
-            } else if (opinfo.m_mode == NextOp::GET) {
+                break;
+            }
+            case NextOp::GET: {
                 lcb_CMDGET gcmd = { 0 };
                 LCB_CMD_SET_KEY(&gcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
                 error = lcb_get3(instance, this, &gcmd);
+                break;
+            }
+            case NextOp::SDSTORE:
+            case NextOp::SDGET: {
+                lcb_CMDSUBDOC sdcmd = { 0 };
+                LCB_CMD_SET_KEY(&sdcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
+                sdcmd.specs = &opinfo.m_specs[0];
+                sdcmd.nspecs = opinfo.m_specs.size();
+                error = lcb_subdoc3(instance, this, &sdcmd);
+                break;
+            }
             }
 
             if (error != LCB_SUCCESS) {
@@ -707,6 +761,8 @@ int main(int argc, char **argv)
         }
         lcb_install_callback3(instance, LCB_CALLBACK_STORE, operationCallback);
         lcb_install_callback3(instance, LCB_CALLBACK_GET, operationCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_SDMUTATE, operationCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_SDLOOKUP, operationCallback);
         cp.doCtls(instance);
 
         new InstanceCookie(instance);

@@ -43,6 +43,19 @@ public:
     virtual ~GeneratorState() {}
 };
 
+class SubdocGeneratorState {
+public:
+    /**
+     * Populates subdocument command specifications
+     * @param seq the sequence number of the current command
+     * @param[in,out] specs container to hold the actual spec array.
+     *  The spec array must have already been properly pre-sized.
+     */
+    virtual void populateLookup(uint32_t seq, std::vector<lcb_SDSPEC>& specs) = 0;
+    virtual void populateMutate(uint32_t seq, std::vector<lcb_SDSPEC>& specs) = 0;
+    virtual ~SubdocGeneratorState() {}
+};
+
 class DocGeneratorBase {
 public:
     /**
@@ -52,6 +65,7 @@ public:
      * @return An opaque state object. This should be deleted by the caller
      */
     virtual GeneratorState *createState(int total_gens, int cur_gen) const = 0;
+    virtual SubdocGeneratorState *createSubdocState(int, int) const { return NULL; }
     virtual ~DocGeneratorBase() {}
 };
 
@@ -132,7 +146,7 @@ public:
     /**
      * @param inputs List of fixed inputs to use
      */
-    PresetDocGenerator(const std::vector<std::string>& inputs) : bufs(inputs) {
+    PresetDocGenerator(const std::vector<std::string>& inputs) : m_bufs(inputs) {
     }
 
     class MyState : public GeneratorState {
@@ -157,31 +171,51 @@ protected:
 
     void populateIov(uint32_t seq, std::vector<lcb_IOV>& iov_out) const {
         iov_out.resize(1);
-        const std::string& s = bufs[seq % bufs.size()];
+        const std::string& s = m_bufs[seq % m_bufs.size()];
         iov_out[0].iov_base = const_cast<char *>(s.c_str());
         iov_out[0].iov_len = s.size();
     }
-    std::vector<std::string> bufs;
+    std::vector<std::string> m_bufs;
 };
 
 // This is the same as the normal document generator, except we generate
 // the JSON first
 class JsonDocGenerator : public PresetDocGenerator {
+private:
+    struct Doc {
+        std::string m_doc;
+        class Field {
+        public:
+            Field(const std::string& n, std::string& v) : m_name(n), m_value(v) {}
+            const std::string& name() const { return m_name; }
+            const std::string& value() const { return m_value; }
+        private:
+            std::string m_name;
+            std::string m_value;
+        };
+        std::vector<Field> m_fields;
+    };
+    std::vector<Doc> m_docs;
+
 public:
     /**
      * @param minsz Minimum JSON document size
      * @param maxsz Maximum JSON document size
      */
-    JsonDocGenerator(uint32_t minsz, uint32_t maxsz) {
-        genDocuments(minsz, maxsz, bufs);
+    JsonDocGenerator(uint32_t minsz, uint32_t maxsz)
+    {
+        genDocuments(minsz, maxsz, m_docs);
+        for (size_t ii = 0; ii < m_docs.size(); ++ii) {
+            m_bufs.push_back(m_docs[ii].m_doc);
+        }
     }
 
-    static void
-    genDocuments(uint32_t minsz, uint32_t maxsz, std::vector<std::string>& out) {
-        std::vector<size_t> sizes = RawDocGenerator::gen_graded_sizes(minsz, maxsz);
-        for (std::vector<size_t>::iterator ii = sizes.begin();
-                ii != sizes.end(); ++ii) {
-            out.push_back(generate(*ii));
+    static void genDocuments(uint32_t minsz, uint32_t maxsz, std::vector<std::string>& out)
+    {
+        std::vector<Doc> docs;
+        genDocuments(minsz, maxsz, docs);
+        for (size_t ii = 0; ii < docs.size(); ++ii) {
+            out.push_back(docs[ii].m_doc);
         }
     }
 
@@ -199,18 +233,29 @@ private:
         *orig = std::max(0, *orig - static_cast<int>(toDecr));
     }
 
+    static void
+    genDocuments(uint32_t minsz, uint32_t maxsz, std::vector<Doc>& out)
+    {
+        std::vector<size_t> sizes = RawDocGenerator::gen_graded_sizes(minsz, maxsz);
+        for (std::vector<size_t>::iterator ii = sizes.begin();
+                ii != sizes.end(); ++ii) {
+            out.push_back(generate(*ii));
+        }
+    }
+
     /**
      * Generates a "JSON" document of a given size. In order to remain
      * more or less in-tune with common document sizes, field names will be
      * "Field_$incr" and values will be evenly distributed as fixed 16 byte
      * strings. (See JSON_VALUE_SIZE)
      */
-    static std::string generate(int docsize)
+    static Doc generate(int docsize)
     {
         int counter = 0;
         char keybuf[128] = { 0 };
         Json::Value root(Json::objectValue);
         Json::FastWriter writer;
+        Doc ret;
 
         while (docsize > 0) {
             decrSize(&docsize, sprintf(keybuf, "Field_%d", ++counter) + 3);
@@ -221,8 +266,50 @@ private:
             std::string value(valsize, '*');
             decrSize(&docsize, valsize + 3);
             root[keybuf] = value;
+            value = '"' + value;
+            value += '"';
+            ret.m_fields.push_back(Doc::Field(keybuf, value));
         }
-        return writer.write(root);
+        ret.m_doc = writer.write(root);
+        return ret;
+    }
+
+    class SDGenstate: public SubdocGeneratorState {
+    public:
+        SDGenstate(const std::vector<Doc>& docs) : m_pathix(0), m_docs(docs) {
+        }
+
+        void populateLookup(uint32_t seq, std::vector<lcb_SDSPEC>& specs) {
+            populate(seq, specs, false);
+        }
+        void populateMutate(uint32_t seq, std::vector<lcb_SDSPEC>& specs) {
+            populate(seq, specs, true);
+        }
+
+    private:
+        void populate(uint32_t seq, std::vector<lcb_SDSPEC>& specs, bool mutate) {
+            const Doc& d = doc(seq);
+            specs.resize(std::min(d.m_fields.size(), specs.size()));
+            for (size_t ii = 0; ii < d.m_fields.size() && ii < specs.size(); ++ii) {
+                const Doc::Field& f = d.m_fields[m_pathix++ % d.m_fields.size()];
+                lcb_SDSPEC& cur_spec = specs[ii];
+                LCB_SDSPEC_SET_PATH(&cur_spec, f.name().c_str(), f.name().size());
+                if (mutate) {
+                    LCB_SDSPEC_SET_VALUE(&cur_spec, f.value().c_str(), f.value().size());
+                    specs[ii].sdcmd = LCB_SDCMD_DICT_UPSERT;
+                } else {
+                    specs[ii].sdcmd = LCB_SDCMD_GET;
+                }
+            }
+        }
+
+        const Doc& doc(uint32_t seq) const { return m_docs[seq % m_docs.size()]; }
+        size_t m_pathix;
+        const std::vector<Doc>& m_docs;
+    };
+public:
+    virtual SubdocGeneratorState *createSubdocState(int, int) const {
+        return new SDGenstate(m_docs);
     }
 };
 
