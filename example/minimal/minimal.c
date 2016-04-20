@@ -27,9 +27,7 @@
 #include <libcouchbase/api3.h>
 #include <stdlib.h>
 #include <string.h> /* strlen */
-#ifdef _WIN32
-#define PRIx64 "I64x"
-#else
+#ifndef _WIN32
 #include <inttypes.h>
 #endif
 
@@ -47,7 +45,7 @@ op_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
     fprintf(stderr, "=== %s ===\n", lcb_strcbtype(cbtype));
     if (rb->rc == LCB_SUCCESS) {
         fprintf(stderr, "KEY: %.*s\n", (int)rb->nkey, rb->key);
-        fprintf(stderr, "CAS: 0x%"PRIx64"\n", rb->cas);
+        fprintf(stderr, "CAS: 0x%I64x\n", rb->cas);
         if (cbtype == LCB_CALLBACK_GET) {
             const lcb_RESPGET *rg = (const lcb_RESPGET *)rb;
             fprintf(stderr, "VALUE: %.*s\n", (int)rg->nvalue, rg->value);

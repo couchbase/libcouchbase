@@ -12,6 +12,12 @@
 #include "common/histogram.h"
 #include "cbc-handlers.h"
 #include "connspec.h"
+
+#ifndef _WIN32
+#include <signal.h>
+#include <inttypes.h>
+#endif
+
 using namespace cbc;
 
 using std::string;
@@ -45,10 +51,10 @@ printKeyCasStatus(string& key, int cbtype, const lcb_RESPBASE *resp,
     if (message != NULL) {
         fprintf(stderr, "%s ", message);
     }
-    fprintf(stderr, "CAS=0x%"PRIx64"\n", resp->cas);
+    fprintf(stderr, "CAS=0x%I64x\n", resp->cas);
     const lcb_MUTATION_TOKEN *st = lcb_resp_get_mutation_token(cbtype, resp);
     if (st != NULL) {
-        fprintf(stderr, "%-20sSYNCTOKEN=%u,%"PRIu64",%"PRIu64"\n",
+        fprintf(stderr, "%-20sSYNCTOKEN=%u,%I64u,%I64u\n",
             "", st->vbid_, st->uuid_, st->seqno_);
     }
 }
@@ -59,7 +65,7 @@ get_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
 {
     string key = getRespKey((const lcb_RESPBASE *)resp);
     if (resp->rc == LCB_SUCCESS) {
-        fprintf(stderr, "%-20s CAS=0x%"PRIx64", Flags=0x%x. Size=%lu\n",
+        fprintf(stderr, "%-20s CAS=0x%I64x, Flags=0x%x. Size=%lu\n",
             key.c_str(), resp->cas, resp->itmflags, (unsigned long)resp->nvalue);
         fflush(stderr);
         fwrite(resp->value, 1, resp->nvalue, stdout);
@@ -135,7 +141,7 @@ observe_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPOBSERVE *resp)
     string key = getRespKey((const lcb_RESPBASE *)resp);
     if (resp->rc == LCB_SUCCESS) {
         fprintf(stderr,
-            "%-20s [%s] Status=0x%x, CAS=0x%"PRIx64"\n", key.c_str(),
+            "%-20s [%s] Status=0x%x, CAS=0x%I64x\n", key.c_str(),
             resp->ismaster ? "Master" : "Replica",
                     resp->status, resp->cas);
     } else {
@@ -161,11 +167,11 @@ obseqno_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPOBSEQNO *resp)
         seq_disk = resp->persisted_seqno;
         seq_mem = resp->mem_seqno;
     }
-    fprintf(stderr, "[%d] UUID=0x%"PRIx64", Cache=%"PRIu64", Disk=%"PRIu64,
+    fprintf(stderr, "[%d] UUID=0x%I64x, Cache=%I64u, Disk=%I64u",
         ix, uuid, seq_mem, seq_disk);
     if (resp->old_uuid) {
         fprintf(stderr, "\n");
-        fprintf(stderr, "    FAILOVER. New: UUID=%"PRIx64", Cache=%"PRIu64", Disk=%"PRIu64,
+        fprintf(stderr, "    FAILOVER. New: UUID=%I64x, Cache=%I64u, Disk=%I64u",
             resp->cur_uuid, resp->mem_seqno, resp->persisted_seqno);
     }
     fprintf(stderr, "\n");
@@ -234,7 +240,7 @@ arithmetic_callback(lcb_t, lcb_CALLBACKTYPE type, const lcb_RESPCOUNTER *resp)
         printKeyError(key, resp->rc);
     } else {
         char buf[4096] = { 0 };
-        sprintf(buf, "Current value is %"PRIu64".", resp->value);
+        sprintf(buf, "Current value is %I64u.", resp->value);
         printKeyCasStatus(key, type, (const lcb_RESPBASE *)resp, buf);
     }
 }
@@ -707,7 +713,7 @@ UnlockHandler::run()
         const string& key = args[ii];
         lcb_CAS cas;
         int rv;
-        rv = sscanf(args[ii+1].c_str(), "0x%"PRIx64, &cas);
+        rv = sscanf(args[ii+1].c_str(), "0x%I64x", &cas);
         if (rv != 1) {
             throw "CAS must be formatted as a hex string beginning with '0x'";
         }

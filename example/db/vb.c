@@ -38,9 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#ifdef _WIN32
-#define PRIu64 "I64u"
-#else
+#ifndef _WIN32
 #include <signal.h>
 #include <inttypes.h>
 #endif
@@ -63,7 +61,7 @@ static void
 store_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
 {
     if (rb->rc == LCB_SUCCESS) {
-        fprintf(stderr, "STORED \"%.*s\" CAS: %"PRIu64"\n", (int)rb->nkey, rb->key, rb->cas);
+        fprintf(stderr, "STORED \"%.*s\" CAS: %I64u\n", (int)rb->nkey, rb->key, rb->cas);
     } else {
         fprintf(stderr, "STORE ERROR: %s (0x%x)\n", lcb_strerror(instance, rb->rc), rb->rc);
         exit(EXIT_FAILURE);
