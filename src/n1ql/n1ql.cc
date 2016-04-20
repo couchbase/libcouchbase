@@ -13,6 +13,9 @@
 #define LOGID(req) static_cast<const void*>(req)
 #define LOGARGS(req, lvl) req->instance->settings, "n1ql", LCB_LOG_##lvl, __FILE__, __LINE__
 
+// Indicate that the 'creds' field is to be used.
+#define F_CMDN1QL_CREDSAUTH 1<<15
+
 class Plan {
 private:
     friend struct lcb_N1QLCACHE_st;
@@ -510,6 +513,9 @@ N1QLREQ::issue_htreq(const std::string& body)
     htcmd.method = LCB_HTTP_METHOD_POST;
     htcmd.type = LCB_HTTP_TYPE_N1QL;
     htcmd.cmdflags = LCB_CMDHTTP_F_STREAM|LCB_CMDHTTP_F_CASTMO;
+    if (flags & F_CMDN1QL_CREDSAUTH) {
+        htcmd.cmdflags |= LCB_CMDHTTP_F_NOUPASS;
+    }
     htcmd.reqhandle = &htreq;
     htcmd.cas = timeout;
 
@@ -615,6 +621,30 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
     } else {
         // Timeout is not a string!
         lasterr = LCB_EINVAL;
+        return;
+    }
+
+    // Determine if we need to add more credentials.
+    // Because N1QL multi-bucket auth will not work on server versions < 4.5
+    // using JSON encoding, we need to only use the multi-bucket auth feature
+    // if there are actually multiple credentials to employ.
+    const lcb::Authenticator& auth = *instance->settings->auth;
+    if (auth.buckets().size() > 1) {
+        flags |= F_CMDN1QL_CREDSAUTH;
+        Json::Value& creds = json["creds"];
+        lcb::Authenticator::Map::const_iterator ii = auth.buckets().begin();
+        if (! (creds.isNull() || creds.isArray())) {
+            lasterr = LCB_EINVAL;
+            return;
+        }
+        for (; ii != auth.buckets().end(); ++ii) {
+            if (ii->second.empty()) {
+                continue;
+            }
+            Json::Value& curCreds = creds.append(Json::Value(Json::objectValue));
+            curCreds["user"] = ii->first;
+            curCreds["pass"] = ii->second;
+        }
     }
 }
 
