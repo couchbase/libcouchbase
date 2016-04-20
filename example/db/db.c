@@ -35,9 +35,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#ifdef _WIN32
-#define PRIu64 "I64u"
-#else
+#ifndef _WIN32
 #include <signal.h>
 #include <inttypes.h>
 #endif

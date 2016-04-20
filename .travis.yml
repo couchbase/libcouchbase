@@ -16,4 +16,4 @@ script: |
 
 notifications:
   email:
-    - mark.nunberg@couchbase.com
+    - stephen.tunney@gmail.com
