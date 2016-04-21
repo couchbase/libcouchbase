@@ -53,6 +53,10 @@
 #include "hostlist.h"
 
 #ifdef __cplusplus
+namespace lcb {
+class Connspec;
+struct Spechost;
+}
 extern "C" {
 #endif
 
@@ -121,6 +125,9 @@ struct lcb_st {
     #ifdef __cplusplus
     lcb_settings* getSettings() { return settings; }
     lcbio_pTABLE getIOT() { return iotable; }
+    inline void add_bs_host(const char *host, int port, unsigned bstype);
+    inline void add_bs_host(const lcb::Spechost& host, int defl_http, int defl_cccp);
+    inline void populate_nodes(const lcb::Connspec&);
     #endif
 };
 

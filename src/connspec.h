@@ -36,6 +36,13 @@ struct Spechost {
     bool isMCD() const { return type == LCB_CONFIG_MCD_PORT; }
     bool isMCDS() const { return type == LCB_CONFIG_MCD_SSL_PORT; }
     bool isTypeless() const { return type == 0 ; }
+
+    bool isAnyMcd() const {
+        return isMCD() || isMCDS() || type == LCB_CONFIG_MCCOMPAT_PORT;
+    }
+    bool isAnyHttp() const {
+        return isHTTP() || isHTTPS();
+    }
 };
 
 #define LCB_CONNSPEC_F_FILEONLY (1<<4)

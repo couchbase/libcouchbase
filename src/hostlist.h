@@ -47,6 +47,7 @@ struct Hostlist {
 
     void add(const lcb_host_t&);
     lcb_error_t add(const char *s, long len, int deflport);
+    lcb_error_t add(const char *s, int deflport) { return add(s, -1, deflport); }
     bool exists(const lcb_host_t&) const;
     bool exists(const char *hostport) const;
     lcb_host_t *next(bool wrap);

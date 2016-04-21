@@ -51,26 +51,40 @@ const void *lcb_get_cookie(lcb_t instance)
     return instance->cookie;
 }
 
-static void
-add_and_log_host(lcb_t obj, const lcb_host_t *host, lcb_config_transport_t type)
+void
+lcb_st::add_bs_host(const char *host, int port, unsigned bstype)
 {
     const char *tname = NULL;
     lcb::Hostlist* target;
-    if (type == LCB_CONFIG_TRANSPORT_CCCP) {
+    if (bstype == LCB_CONFIG_TRANSPORT_CCCP) {
         tname = "CCCP";
-        target = obj->mc_nodes;
+        target = mc_nodes;
     } else {
         tname = "HTTP";
-        target = obj->ht_nodes;
+        target = ht_nodes;
     }
-    lcb_log(LOGARGS(obj, DEBUG), "Adding host %s:%s to initial %s bootstrap list", host->host, host->port, tname);
-    hostlist_add_host(target, host);
+    lcb_log(LOGARGS(this, DEBUG), "Adding host %s:%d to initial %s bootstrap list", host, port, tname);
+    target->add(host, port);
 }
 
-static void
-populate_nodes(lcb_t obj, const Connspec& spec)
+void
+lcb_st::add_bs_host(const lcb::Spechost& host, int defl_http, int defl_cccp)
 {
-    int has_ssl = obj->settings->sslopts & LCB_SSL_ENABLED;
+    if (host.isTypeless()) {
+        add_bs_host(host.hostname.c_str(), defl_http, LCB_CONFIG_TRANSPORT_HTTP);
+        add_bs_host(host.hostname.c_str(), defl_cccp, LCB_CONFIG_TRANSPORT_CCCP);
+        return;
+    } else {
+        add_bs_host(host.hostname.c_str(), host.port,
+            host.isAnyHttp()
+            ? LCB_CONFIG_TRANSPORT_HTTP : LCB_CONFIG_TRANSPORT_CCCP);
+    }
+}
+
+void
+lcb_st::populate_nodes(const Connspec& spec)
+{
+    int has_ssl = settings->sslopts & LCB_SSL_ENABLED;
     int defl_http, defl_cccp;
 
     if (spec.default_port() == LCB_CONFIG_MCCOMPAT_PORT) {
@@ -86,40 +100,9 @@ populate_nodes(lcb_t obj, const Connspec& spec)
     }
 
     for (size_t ii = 0; ii < spec.hosts().size(); ++ii) {
-        lcb_host_t host;
         const Spechost &dh = spec.hosts()[ii];
-        strcpy(host.host, dh.hostname.c_str());
-
-        #define ADD_CCCP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_CCCP)
-        #define ADD_HTTP() add_and_log_host(obj, &host, LCB_CONFIG_TRANSPORT_HTTP)
-
-        /* if we didn't specify any port in the spec, just use the simple
-         * default port (based on the SSL settings) */
-        if (dh.type == 0) {
-            sprintf(host.port, "%d", defl_http);
-            ADD_HTTP();
-            sprintf(host.port, "%d", defl_cccp);
-            ADD_CCCP();
-            continue;
-        } else {
-            sprintf(host.port, "%d", dh.port);
-            switch (dh.type) {
-            case LCB_CONFIG_MCD_PORT:
-            case LCB_CONFIG_MCD_SSL_PORT:
-            case LCB_CONFIG_MCCOMPAT_PORT:
-                ADD_CCCP();
-                break;
-            case LCB_CONFIG_HTTP_PORT:
-            case LCB_CONFIG_HTTP_SSL_PORT:
-                ADD_HTTP();
-                break;
-            default:
-                break;
-            }
-        }
+        add_bs_host(dh, defl_http, defl_cccp);
     }
-#undef ADD_HTTP
-#undef ADD_CCCP
 }
 
 static lcb_error_t
@@ -300,8 +283,7 @@ lcb_reinit3(lcb_t obj, const char *connstr)
     if (err != LCB_SUCCESS) {
         goto GT_DONE;
     }
-
-    populate_nodes(obj, params);
+    obj->populate_nodes(params);
     err = init_providers(obj, params);
     if (err != LCB_SUCCESS) {
         goto GT_DONE;
@@ -401,7 +383,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         goto GT_DONE;
     }
 
-    populate_nodes(obj, spec);
+    obj->populate_nodes(spec);
     err = init_providers(obj, spec);
     if (err != LCB_SUCCESS) {
         lcb_destroy(obj);
