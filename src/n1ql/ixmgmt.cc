@@ -198,12 +198,54 @@ dispatch_common(lcb_t instance,
         reqbuf.c_str(), reqbuf.size(), obj);
 }
 
+
+// Class to back the storage for the actual lcb_IXSPEC without doing too much
+// mind-numbing buffer copies. Maybe this can be done via a macro instead?
+class IndexSpec : public lcb_INDEXSPEC {
+public:
+    IndexSpec(const char *s, size_t n) {
+        memset(static_cast<lcb_INDEXSPEC*>(this), 0, sizeof (lcb_INDEXSPEC));
+        load_json(s, n);
+    }
+    inline IndexSpec(const lcb_INDEXSPEC *spec);
+    static inline void to_key(const lcb_INDEXSPEC *spec, std::string& out);
+
+private:
+    // Load fields from a JSON string
+    inline void load_json(const char *s, size_t n);
+
+    // Load all fields
+    inline size_t load_fields(const Json::Value& root, bool do_copy);
+
+    size_t total_fields_size(const Json::Value& src) {
+        return load_fields(src, false);
+    }
+
+    // Load field from a JSON object
+    inline size_t load_json_field(
+        const Json::Value& root,
+        const char *name, const char **tgt_ptr, size_t *tgt_len, bool do_copy);
+
+    // Load field from another pointer
+    void load_field(const char **dest, const char *src, size_t n) {
+        m_buf.append(src, n);
+        if (n) {
+            *dest = &m_buf.c_str()[m_buf.size()-n];
+        } else {
+            *dest = NULL;
+        }
+    }
+
+    string m_buf;
+    IndexSpec(const IndexSpec&);
+};
+
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_ixmgmt_mkindex(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd)
 {
     string ss;
-    const lcb_INDEXSPEC& spec = cmd->spec;
+    IndexSpec spec(&cmd->spec);
 
     if (!spec.nkeyspace) {
         return LCB_EMPTY_KEY;
@@ -239,42 +281,9 @@ lcb_ixmgmt_mkindex(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd)
         ss.append(" WITH {\"defer_build\": true}");
     }
 
-
     return dispatch_common<IndexOpCtx>(instance, cookie, cmd->callback, cb_generic, ss);
 }
 
-// Class to back the storage for the actual lcb_IXSPEC without doing too much
-// mind-numbing buffer copies. Maybe this can be done via a macro instead?
-class IndexSpec : public lcb_INDEXSPEC {
-public:
-    IndexSpec(const char *s, size_t n) {
-        load_json(s, n);
-    }
-    inline IndexSpec(const lcb_INDEXSPEC *spec);
-    static inline void to_key(const lcb_INDEXSPEC *spec, std::string& out);
-
-private:
-    IndexSpec(const IndexSpec&);
-    inline void load_json(const char *s, size_t n);
-    inline size_t load_fields(const Json::Value& root, bool do_copy);
-
-    // Load field from a JSON object
-    inline size_t load_field(
-        const Json::Value& root,
-        const char *name, const char **tgt_ptr, size_t *tgt_len, bool do_copy);
-
-    // Load field from another pointer
-    void load_field(const char **dest, const char *src, size_t n) {
-        buf.append(src, n);
-        if (n) {
-            *dest = &buf.c_str()[buf.size()-n];
-        } else {
-            *dest = NULL;
-        }
-    }
-
-    string buf;
-};
 
 class ListIndexCtx : public IndexOpCtx {
 public:
@@ -328,7 +337,7 @@ do_index_list(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd,
     ListIndexCtx *ctx)
 {
     string ss;
-    const lcb_INDEXSPEC& spec = cmd->spec;
+    IndexSpec spec(&cmd->spec);
     ss = "SELECT idx.* FROM system:indexes idx WHERE";
 
     if (spec.flags & LCB_IXSPEC_F_PRIMARY) {
@@ -374,7 +383,8 @@ lcb_error_t
 lcb_ixmgmt_rmindex(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd)
 {
     string ss;
-    const lcb_INDEXSPEC& spec = cmd->spec;
+    IndexSpec spec(&cmd->spec);
+
     if (!spec.nkeyspace) {
         return LCB_EMPTY_KEY;
     }
@@ -591,14 +601,16 @@ WatchIndexCtx::read_state(const lcb_RESPIXMGMT *resp)
     }
 
     std::map<std::string, IndexSpec*>::iterator it_remain = m_defspend.begin();
-
     while (it_remain != m_defspend.end()) {
         // See if the index is 'online' yet!
         std::map<std::string,const lcb_INDEXSPEC*>::iterator res;
         res = in_specs.find(it_remain->first);
         if (res == in_specs.end()) {
-            continue;
+            // We can't find our own index. Someone else deleted it. Bail!
+            finish(LCB_KEY_ENOENT, resp);
+            return;
         }
+
         std::string s_state(res->second->state, res->second->nstate);
         if (s_state == "online") {
             m_defsok.push_back(it_remain->second);
@@ -607,6 +619,7 @@ WatchIndexCtx::read_state(const lcb_RESPIXMGMT *resp)
             ++it_remain;
         }
     }
+
     if (m_defspend.empty()) {
         finish(LCB_SUCCESS, resp);
     } else {
@@ -619,8 +632,9 @@ WatchIndexCtx::load_defs(const lcb_CMDIXWATCH *cmd)
 {
     for (size_t ii = 0; ii < cmd->nspec; ++ii) {
         std::string key;
-        IndexSpec::to_key(cmd->specs[ii], key);
-        m_defspend[key] = new IndexSpec(cmd->specs[ii]);
+        IndexSpec *extspec = new IndexSpec(cmd->specs[ii]);
+        IndexSpec::to_key(extspec, key);
+        m_defspend[key] = extspec;
     }
     if (m_defspend.empty()) {
         return LCB_ENO_COMMANDS;
@@ -693,22 +707,22 @@ lcb_ixmgmt_build_watch(lcb_t instance, const void *cookie, const lcb_CMDIXWATCH 
 
 void
 IndexSpec::load_json(const char *s, size_t n) {
-    Json::Reader rr;
     Json::Value root;
-    memset(static_cast<lcb_INDEXSPEC*>(this), 0, sizeof (lcb_INDEXSPEC));
+    // Set the JSON first!
+    m_buf.assign(s, n);
+    nrawjson = n;
 
-    if (!rr.parse(s, s + n, root)) {
-        buf.assign(s, n);
-        rawjson = buf.c_str();
-        nrawjson = buf.size();
+    if (!Json::Reader().parse(s, s + n, root)) {
+        rawjson = m_buf.c_str();
         return;
     }
 
-    size_t to_reserve = n;
-    to_reserve += load_fields(root, false);
-    buf.reserve(to_reserve);
-    buf.append(s, n);
+    m_buf.reserve(n + total_fields_size(root));
     load_fields(root, true);
+
+    // Once all the fields are loaded, it's time to actually assign the
+    // rawjson field, which is simply the beginning of the buffer
+    rawjson = m_buf.c_str();
 
     // Get the index type
     string ixtype_s = root["using"].asString();
@@ -725,12 +739,13 @@ IndexSpec::load_json(const char *s, size_t n) {
 // IndexSpec stuff
 IndexSpec::IndexSpec(const lcb_INDEXSPEC *spec)
 {
+    *static_cast<lcb_INDEXSPEC*>(this) = *spec;
     if (spec->nrawjson) {
         load_json(spec->rawjson, spec->nrawjson);
+        return;
     }
-    *static_cast<lcb_INDEXSPEC*>(this) = *spec;
     // Initialize the bufs
-    buf.reserve(nname + nkeyspace + nnspace + nstate + nfields + nrawjson + nstate);
+    m_buf.reserve(nname + nkeyspace + nnspace + nstate + nfields + nrawjson + nstate);
     load_field(&rawjson, spec->rawjson, nrawjson);
     load_field(&name, spec->name, nname);
     load_field(&keyspace, spec->keyspace, nkeyspace);
@@ -743,16 +758,16 @@ size_t
 IndexSpec::load_fields(const Json::Value& root, bool do_copy)
 {
     size_t size = 0;
-    size += load_field(root, "name", &name, &nname, do_copy);
-    size += load_field(root, "keyspace_id", &keyspace, &nkeyspace, do_copy);
-    size += load_field(root, "namespace_id", &nspace, &nnspace, do_copy);
-    size += load_field(root, "state", &state, &nstate, do_copy);
-    size += load_field(root, "index_key", &fields, &nfields, do_copy);
+    size += load_json_field(root, "name", &name, &nname, do_copy);
+    size += load_json_field(root, "keyspace_id", &keyspace, &nkeyspace, do_copy);
+    size += load_json_field(root, "namespace_id", &nspace, &nnspace, do_copy);
+    size += load_json_field(root, "state", &state, &nstate, do_copy);
+    size += load_json_field(root, "index_key", &fields, &nfields, do_copy);
     return size;
 }
 
 size_t
-IndexSpec::load_field(const Json::Value& root,
+IndexSpec::load_json_field(const Json::Value& root,
     const char *name_, const char **tgt_ptr, size_t *tgt_len, bool do_copy)
 {
     size_t namelen = strlen(name_);
@@ -764,10 +779,10 @@ IndexSpec::load_field(const Json::Value& root,
             (n = s_end - s_begin) &&
             do_copy) {
 
-        buf.insert(buf.end(), s_begin, s_end);
+        m_buf.insert(m_buf.end(), s_begin, s_end);
         *tgt_len = n;
         // Assign the pointer correctly:
-        *tgt_ptr = &(buf.c_str()[buf.size()-n]);
+        *tgt_ptr = &(m_buf.c_str()[m_buf.size()-n]);
     }
     return n;
 }
