@@ -40,8 +40,11 @@ The SDK is cross-platform and can be used on Linux, Mac OS X, or Windows.";
 			#destination : ${d_include}libcouchbase;
 			"${SDK_ROOT}include\libcouchbase\**\*.h*";
 		};
-
-
+		nestedInclude += {
+			#destination : ${d_include}libcouchbase;
+			"${SDK_ROOT}build_v140_x64\generated\libcouchbase\*.h"
+		};
+		
         [x64,v140,release] { 
             lib: { ${SDK_ROOT}build_v140_x64\lib\RelWithDebInfo\libcouchbase.lib };
 			bin: { ${SDK_ROOT}build_v140_x64\bin\RelWithDebInfo\libcouchbase.dll };
