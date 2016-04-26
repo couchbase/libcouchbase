@@ -140,7 +140,6 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     lcb_error_t err = LCB_ERROR;
     lcb_t instance = oldsrv->instance;
     lcb_U16 vbid;
-    int tmpix;
     clconfig_provider *cccp = lcb_confmon_get_provider(instance->confmon,
         LCB_CLCONFIG_CCCP);
 
@@ -149,7 +148,7 @@ handle_nmv(mc_SERVER *oldsrv, packet_info *resinfo, mc_PACKET *oldpkt)
     lcb_log(LOGARGS(oldsrv, WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID(oldsrv), (void*)oldpkt, oldpkt->opaque, vbid);
 
     /* Notify of new map */
-    tmpix = lcb_vbguess_remap(instance, vbid, oldsrv->pipeline.index);
+    lcb_vbguess_remap(instance, vbid, oldsrv->pipeline.index);
 
     if (PACKET_NBODY(resinfo) && cccp->enabled) {
         lcb_string s;
