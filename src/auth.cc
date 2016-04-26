@@ -59,23 +59,16 @@ lcbauth_get_upass(const lcb_AUTHENTICATOR *auth, const char **u, const char **p)
 }
 
 lcb_error_t
-Authenticator::init(const char *username_, const char *bucket,
-    const char *passwd, lcb_type_t conntype)
+Authenticator::init(const std::string& username_, const std::string& bucket,
+    const std::string& passwd, lcb_type_t conntype)
 {
-    if (!username_) {
-        username_ = bucket;
-    }
-
-    m_username = username_;
+    m_username = (!username_.empty()) ? username_ : bucket;
+    m_password = passwd;
 
     if (conntype == LCB_TYPE_BUCKET && m_username != bucket) {
         return LCB_INVALID_USERNAME;
     }
 
-    if (!passwd) {
-        passwd = "";
-    }
-    m_password = passwd;
     m_buckets[bucket] = m_password;
     return LCB_SUCCESS;
 }

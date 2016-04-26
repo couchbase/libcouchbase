@@ -1196,11 +1196,11 @@ BucketCreateHandler::run()
 struct HostEnt {
     string protostr;
     string hostname;
-    HostEnt(const char* host, const char* proto) {
+    HostEnt(const std::string& host, const char *proto) {
         protostr = proto;
         hostname = host;
     }
-    HostEnt(const char* host, const char* proto, int port) {
+    HostEnt(const std::string& host, const char* proto, int port) {
         protostr = proto;
         hostname = host;
         stringstream ss;
@@ -1216,19 +1216,19 @@ ConnstrHandler::run()
     const string& connstr_s = getRequiredArg();
     lcb_error_t err;
     const char *errmsg;
-    lcb_CONNSPEC spec;
+    lcb::Connspec spec;
     memset(&spec, 0, sizeof spec);
-    err = lcb_connspec_parse(connstr_s.c_str(), &spec, &errmsg);
+    err = spec.parse(connstr_s.c_str(), &errmsg);
     if (err != LCB_SUCCESS) {
         throw BadArg(errmsg);
     }
 
-    printf("Bucket: %s\n", spec.bucket);
-    printf("Implicit port: %d\n", spec.implicit_port);
+    printf("Bucket: %s\n", spec.bucket().c_str());
+    printf("Implicit port: %d\n", spec.default_port());
     string sslOpts;
-    if (spec.sslopts & LCB_SSL_ENABLED) {
+    if (spec.sslopts() & LCB_SSL_ENABLED) {
         sslOpts = "ENABLED";
-        if (spec.sslopts & LCB_SSL_NOVERIFY) {
+        if (spec.sslopts() & LCB_SSL_NOVERIFY) {
             sslOpts += "|NOVERIFY";
         }
     }
@@ -1236,20 +1236,11 @@ ConnstrHandler::run()
 
     printf("Boostrap Protocols: ");
     string bsStr;
-    for (size_t ii = 0; ii < LCB_CONFIG_TRANSPORT_MAX; ii++) {
-        if (spec.transports[ii] == LCB_CONFIG_TRANSPORT_LIST_END) {
-            break;
-        }
-        switch (spec.transports[ii]) {
-        case LCB_CONFIG_TRANSPORT_CCCP:
-            bsStr += "CCCP,";
-            break;
-        case LCB_CONFIG_TRANSPORT_HTTP:
-            bsStr += "HTTP,";
-            break;
-        default:
-            break;
-        }
+    if (spec.is_bs_cccp()) {
+        bsStr += "CCCP, ";
+    }
+    if (spec.is_bs_cccp()) {
+        bsStr += "HTTP, ";
     }
     if (bsStr.empty()) {
         bsStr = "CCCP,HTTP";
@@ -1258,14 +1249,13 @@ ConnstrHandler::run()
     }
     printf("%s\n", bsStr.c_str());
     printf("Hosts:\n");
-    lcb_list_t *llcur;
     vector<HostEnt> hosts;
 
-    LCB_LIST_FOR(llcur, &spec.hosts) {
-        lcb_HOSTSPEC *dh = LCB_LIST_ITEM(llcur, lcb_HOSTSPEC, llnode);
+    for (size_t ii = 0; ii < spec.hosts().size(); ++ii) {
+        const lcb::Spechost *dh = &spec.hosts()[ii];
         lcb_U16 port = dh->port;
         if (!port) {
-            port = spec.implicit_port;
+            port = spec.default_port();
         }
 
         if (dh->type == LCB_CONFIG_MCD_PORT) {
@@ -1277,7 +1267,7 @@ ConnstrHandler::run()
         } else if (dh->type == LCB_CONFIG_HTTP_SSL_PORT) {
             hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", port));
         } else {
-            if (spec.sslopts) {
+            if (spec.sslopts()) {
                 hosts.push_back(HostEnt(dh->hostname, "memcached+ssl", LCB_CONFIG_MCD_SSL_PORT));
                 hosts.push_back(HostEnt(dh->hostname, "restapi+ssl", LCB_CONFIG_HTTP_SSL_PORT));
             } else {
@@ -1293,10 +1283,9 @@ ConnstrHandler::run()
     }
 
     printf("Options: \n");
-    const char *key, *value;
-    int ictx = 0;
-    while (lcb_connspec_next_option(&spec, &key, &value, &ictx)) {
-        printf("  %s=%s\n", key, value);
+    lcb::Connspec::Options::const_iterator it = spec.options().begin();
+    for (; it != spec.options().end(); ++it) {
+        printf("  %s=%s\n", it->first.c_str(), it->second.c_str());
     }
 }
 

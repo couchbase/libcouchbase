@@ -63,5 +63,53 @@ lcb_formencode(const char *s, size_t n, char *out);
 
 #ifdef __cplusplus
 }
+
+#include <string>
+namespace lcb {
+namespace strcodecs {
+template <typename T>
+bool urldecode(T begin, T end, size_t& nout) {
+    T oix = begin;
+
+    for (T ii = begin; ii != end && *ii != '\0'; ++ii) {
+        if (*ii == '%') {
+            char nextbuf[3] = { 0 };
+            size_t jj = 0;
+            for (; ii != end && jj < 2; ++ii, ++jj) {
+                nextbuf[jj] = *ii;
+            }
+            if (jj != 2) {
+                return false;
+            }
+
+            unsigned octet = 0;
+            if (sscanf(nextbuf, "%2X", &octet) != 1) {
+                return false;
+            }
+
+            *oix = static_cast<char>(octet);
+            nout++;
+
+        } else {
+            *oix = *ii;
+            oix++;
+            nout++;
+        }
+    }
+    return true;
+}
+}
+
+template <typename T>
+bool urldecode(T obj) {
+    size_t n = 0;
+    if (urldecode(obj.begin(), obj.end(), n)) {
+        obj.resize(n);
+        return true;
+    }
+    return false;
+}
+
+}
 #endif
 #endif

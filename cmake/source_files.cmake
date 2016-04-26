@@ -45,7 +45,6 @@ SET(LCB_CORE_SRC
     src/bootstrap.c
     src/callbacks.c
     src/dump.c
-    src/connspec.c
     src/handler.c
     src/getconfig.c
     src/legacy.c
@@ -62,6 +61,7 @@ SET(LCB_CORE_SRC
 SET(LCB_CORE_CXXSRC
     src/instance.cc
     src/auth.cc
+    src/connspec.cc
     src/nodeinfo.cc
     src/hostlist.cc
     src/http/http.cc

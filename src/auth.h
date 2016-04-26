@@ -46,8 +46,8 @@ public:
     std::string m_username;
     std::string m_password;
 
-    lcb_error_t init(const char *username,
-        const char *bucket, const char *password, lcb_type_t conntype);
+    lcb_error_t init(const std::string& username_, const std::string& bucket,
+        const std::string& password, lcb_type_t conntype);
 };
 }
 #endif
