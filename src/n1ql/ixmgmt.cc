@@ -26,6 +26,10 @@
 #include "settings.h"
 #include "internal.h"
 
+#define LOGFMT "(mgreq=%p) "
+#define LOGID(req) static_cast<const void*>(req)
+#define LOGARGS(req, lvl) req->m_instance->settings, "ixmgmt", LCB_LOG_##lvl, __FILE__, __LINE__
+
 using std::vector;
 using std::string;
 
@@ -575,7 +579,6 @@ IndexSpec::to_key(const lcb_INDEXSPEC* spec, std::string& s)
     s.append(spec->nspace, spec->nnspace).append(" ");
     s.append(spec->keyspace, spec->nkeyspace).append(" ");
     s.append(spec->name, spec->nname).append(" ");
-    s.append(spec->flags & LCB_IXSPEC_F_PRIMARY ? "P" : "S").append(" ");
     const char *type_s = ixtype_2_str(spec->ixtype);
     if (!type_s) {
         type_s = "<UNKNOWN>";
@@ -589,6 +592,7 @@ WatchIndexCtx::read_state(const lcb_RESPIXMGMT *resp)
     // We examine the indexes here to see which ones have been completed
     // Make them all into an std::map
     if (resp->rc != LCB_SUCCESS) {
+        lcb_log(LOGARGS(this, INFO), LOGFMT "Error 0x%x while listing indexes. Rescheduling", LOGID(this), resp->rc);
         reschedule();
         return;
     }
@@ -606,6 +610,7 @@ WatchIndexCtx::read_state(const lcb_RESPIXMGMT *resp)
         std::map<std::string,const lcb_INDEXSPEC*>::iterator res;
         res = in_specs.find(it_remain->first);
         if (res == in_specs.end()) {
+            lcb_log(LOGARGS(this, INFO), LOGFMT "Index [%s] not in cluster", LOGID(this), it_remain->first.c_str());
             // We can't find our own index. Someone else deleted it. Bail!
             finish(LCB_KEY_ENOENT, resp);
             return;
@@ -613,6 +618,7 @@ WatchIndexCtx::read_state(const lcb_RESPIXMGMT *resp)
 
         std::string s_state(res->second->state, res->second->nstate);
         if (s_state == "online") {
+            lcb_log(LOGARGS(this, DEBUG), LOGFMT "Index [%s] is ready", LOGID(this), it_remain->first.c_str());
             m_defsok.push_back(it_remain->second);
             m_defspend.erase(it_remain++);
         } else {
@@ -685,6 +691,7 @@ WatchIndexCtx::do_poll()
     lcb_CMDIXMGMT cmd;
     memset(&cmd, 0, sizeof cmd);
     cmd.callback = cb_watch_gotlist;
+    lcb_log(LOGARGS(this, DEBUG), LOGFMT "Will check for index readiness of %lu indexes. %lu completed", LOGID(this), m_defspend.size(), m_defsok.size());
     return lcb_ixmgmt_list(m_instance, this, &cmd);
 }
 
