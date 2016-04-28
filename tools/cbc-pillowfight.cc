@@ -83,7 +83,7 @@ parseTemplateSpec(const string& input)
         throw std::runtime_error("invalid template spec: need field,min,max");
     }
     spec.term = input.substr(0, endpos);
-    int is_sequential = 0;
+    unsigned is_sequential = 0;
     int rv = sscanf(input.c_str() + endpos + 1, "%u,%u,%u",
         &spec.minval, &spec.maxval, &is_sequential);
     if (rv < 2) {
