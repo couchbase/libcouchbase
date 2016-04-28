@@ -137,7 +137,7 @@ public:
         o_userdocs.description("User documents to load (overrides --min-size and --max-size");
         o_writeJson.description("Enable writing JSON values (rather than bytes)");
         o_templatePairs.description("Values for templates to be inserted into user documents");
-        o_templatePairs.argdesc("FIELD,MIN,MAX[,SEQUENTIAL]");
+        o_templatePairs.argdesc("FIELD,MIN,MAX[,SEQUENTIAL]").hide();
         o_subdoc.description("Use subdoc instead of fulldoc operations");
         o_sdPathCount.description("Number of subdoc paths per command").setDefault(1);
     }
