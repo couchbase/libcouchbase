@@ -28,7 +28,7 @@
 
 #define LOGFMT "(mgreq=%p) "
 #define LOGID(req) static_cast<const void*>(req)
-#define LOGARGS(req, lvl) req->m_instance->settings, "ixmgmt", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(req, lvl) (req)->m_instance->settings, "ixmgmt", LCB_LOG_##lvl, __FILE__, __LINE__
 
 using std::vector;
 using std::string;
@@ -91,7 +91,7 @@ extract_n1ql_errors(const char *s, size_t n, T& err_out)
         spec.code = err["code"].asUInt();
         err_out.insert(err_out.end(), spec);
     }
-    return LCB_QUERY_ERROR;
+    return LCB_ERROR;
 }
 
 static lcb_error_t
@@ -114,7 +114,7 @@ cb_generic(lcb_t instance, int, const lcb_RESPN1QL *resp)
     lcb_RESPIXMGMT w_resp = { 0 };
     w_resp.cookie = ctx->cookie;
 
-    if ((w_resp.rc = resp->rc) == LCB_SUCCESS) {
+    if ((w_resp.rc = resp->rc) == LCB_SUCCESS || resp->rc == LCB_HTTP_ERROR) {
         // Check if the top-level N1QL response succeeded, and then
         // descend to determine additional errors. This is primarily
         // required to support EEXIST for GSI primary indexes
@@ -127,6 +127,8 @@ cb_generic(lcb_t instance, int, const lcb_RESPN1QL *resp)
                 const std::string& msg = errors[ii].msg;
                 if (msg.find("already exist") != string::npos) {
                     w_resp.rc = LCB_KEY_EEXISTS; // Index entry already exists
+                } else if (msg.find("not found") != string::npos) {
+                    w_resp.rc = LCB_KEY_ENOENT;
                 }
             }
         } else {
@@ -163,6 +165,7 @@ dispatch_common(lcb_t instance,
     lcb_error_t rc = LCB_SUCCESS;
     bool our_alloc = false;
     lcb_CMDN1QL cmd = { 0 };
+    struct { lcb_t m_instance; } ixwrap = { instance }; // For logging
 
     if (obj == NULL) {
         obj = new T();
@@ -179,7 +182,7 @@ dispatch_common(lcb_t instance,
     cmd.query = s;
     cmd.nquery = n;
     cmd.callback = i_callback;
-
+    lcb_log(LOGARGS(&ixwrap, DEBUG), LOGFMT "Issuing query %.*s", LOGID(obj), (int)n, s);
     rc = lcb_n1ql_query(instance, obj, &cmd);
 
     GT_ERROR:
@@ -392,16 +395,16 @@ lcb_ixmgmt_rmindex(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd)
     if (!spec.nkeyspace) {
         return LCB_EMPTY_KEY;
     }
-    if (spec.flags & LCB_IXSPEC_F_PRIMARY) {
-        ss = "DROP PRIMARY INDEX ON";
-        ss.append(" `").append(spec.keyspace, spec.nkeyspace).append("`");
-    } else {
-        if (!spec.nname) {
-            return LCB_EMPTY_KEY;
-        }
+
+    if (spec.nname) {
         ss = "DROP INDEX";
         ss.append(" `").append(spec.keyspace, spec.nkeyspace).append("`");
         ss.append(".`").append(spec.name, spec.nname).append("`");
+    } else if (spec.flags & LCB_IXSPEC_F_PRIMARY) {
+        ss = "DROP PRIMARY INDEX ON";
+        ss.append(" `").append(spec.keyspace, spec.nkeyspace).append("`");
+    } else {
+        return LCB_EMPTY_KEY;
     }
 
     if (spec.ixtype) {
