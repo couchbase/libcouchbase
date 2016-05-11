@@ -43,11 +43,14 @@ typedef struct {
     const char *rawjson;
     size_t nrawjson;
 
-    /** Name of the index */
+    /** Name of the index. For raw JSON, use the `name` propery */
     const char *name;
     size_t nname;
 
-    /** Keyspace or "bucket" of the index */
+    /**
+     * Keyspace or "bucket" of the index. For raw JSON, use the
+     * `keyspace_id` property
+     */
     const char *keyspace;
     size_t nkeyspace;
 
@@ -59,54 +62,61 @@ typedef struct {
     const char *state;
     size_t nstate;
 
-    /** Actual index text */
+    /** Actual index text. For raw JSON use the `index_key` property */
     const char *fields;
     size_t nfields;
 
+    /**Indexing condition. If set, only field values matching this condition
+     * will be indexed */
+    const char *cond;
+    size_t ncond;
+
     /**
-     * Modifiers for the index itself. This might be F_PRIMARY if the index
-     * is primary.
+     * Modifiers for the index itself. This might be
+     * LCB_IXSPEC_F_PRIMARY if the index is primary. For raw JSON,
+     * use `"is_primary":true`
      *
-     * For creation the F_DEFER option is also accepted to indicate that
-     * the building of this index should be deferred.
+     * For creation the LCB_IXSPEC_F_DEFER option is also accepted to
+     * indicate that the building of this index should be deferred.
      */
     unsigned flags;
 
     /**
      * Type of this index, Can be T_DEFAULT for the default server type, or
      * an explicit T_GSI or T_VIEW.
+     * When using JSON, specify `"using":"gsi"`
      */
     unsigned ixtype;
-} lcb_INDEXSPEC;
+} lcb_N1XSPEC;
 
 /** Input/Output flag. The index is the primary index for the bucket */
-#define LCB_IXSPEC_F_PRIMARY 1<<16
+#define LCB_N1XSPEC_F_PRIMARY 1<<16
 
 /**
  * Input flag for creation. Defer the index building until later. This may
  * be used to accelerate the building of multiple indexes, so that the index
  * builder can construct all indexes by scanning items only once
  */
-#define LCB_IXSPEC_F_DEFER 1<<17
+#define LCB_N1XSPEC_F_DEFER 1<<17
 
 /**
  * Input for index type. It's best to just leave this value to 0 (DEFAULT)
  * unless you know what you're doing.
  */
-#define LCB_IXSPEC_T_DEFAULT 0
-#define LCB_IXSPEC_T_GSI 1
-#define LCB_IXSPEC_T_VIEW 2
+#define LCB_N1XSPEC_T_DEFAULT 0
+#define LCB_N1XSPEC_T_GSI 1
+#define LCB_N1XSPEC_T_VIEW 2
 
-struct lcb_RESPIXMGMT_st;
+struct lcb_RESPN1XMGMT_st;
 
 /**
  * Callback for index management operations
  * @param instance
- * @param cbtype - set to LCB_CALLBACK_IXMGMT
+ * @param cbtype - set to LCB_CALLBACK_N1XMGMT
  * @param resp the response structure
  */
-typedef void (*lcb_IXMGMTCALLBACK)(lcb_t instance,
-        int cbtype, const struct lcb_RESPIXMGMT_st *resp);
+typedef void (*lcb_N1XMGMTCALLBACK)(lcb_t instance,
+        int cbtype, const struct lcb_RESPN1XMGMT_st *resp);
 
 /**
  * @volatile
@@ -119,43 +129,43 @@ typedef struct {
      * or a partial definition (when listing or building
      * indexes)
      */
-    lcb_INDEXSPEC spec;
+    lcb_N1XSPEC spec;
 
     /**
      * Callback to be invoked when operation is complete.
      */
-    lcb_IXMGMTCALLBACK callback;
-} lcb_CMDIXMGMT;
+    lcb_N1XMGMTCALLBACK callback;
+} lcb_CMDN1XMGMT;
 
 /**
  * @volatile
  *
  * Response structure for index management operations
  */
-typedef struct lcb_RESPIXMGMT_st {
+typedef struct lcb_RESPN1XMGMT_st {
     LCB_RESP_BASE
 
     /**
      * A list of pointers to specs. This isn't a simple array of specs because
      * the spec structure internally is backed by additional internal data.
      */
-    const lcb_INDEXSPEC *const *specs;
+    const lcb_N1XSPEC *const *specs;
     /** Number of specs */
     size_t nspecs;
 
     /** Inner N1QL response. Examine on error */
     const lcb_RESPN1QL *inner;
-} lcb_RESPIXMGMT;
+} lcb_RESPN1XMGMT;
 
 /**
  * @volatile
  *
- * Retrieve a list of all indexes in the cluster. If lcb_CMDIXMGMT::spec
+ * Retrieve a list of all indexes in the cluster. If lcb_CMDN1XMGMT::spec
  * contains entries then the search will be limited to the appropriate criteria.
  */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_ixmgmt_list(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd);
+lcb_n1x_list(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd);
 
 /**
  * @volatile
@@ -165,7 +175,7 @@ lcb_ixmgmt_list(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd);
  */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_ixmgmt_mkindex(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd);
+lcb_n1x_create(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd);
 
 /**
  * @volatile
@@ -173,20 +183,20 @@ lcb_ixmgmt_mkindex(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd)
  */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_ixmgmt_rmindex(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd);
+lcb_n1x_drop(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd);
 
 /**
  * @volatile
  *
- * Build defered indexes. This may be used with the @ref LCB_IXSPEC_F_DEFER
- * option (see lcb_ixmgmt_mkindex()) to initiate the background creation of
+ * Build defered indexes. This may be used with the @ref LCB_N1XSPEC_F_DEFER
+ * option (see lcb_n1x_create()) to initiate the background creation of
  * indexes.
  *
- * lcb_ixmgmt_watch may be used to wait on the status of those indexes.
+ * lcb_n1x_watchbuild may be used to wait on the status of those indexes.
  */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_ixmgmt_build_begin(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *cmd);
+lcb_n1x_startbuild(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd);
 
 /**
  * @volatile
@@ -195,11 +205,11 @@ lcb_ixmgmt_build_begin(lcb_t instance, const void *cookie, const lcb_CMDIXMGMT *
  */
 typedef struct {
     /**
-     * Input specs. This should be the specs received from lcb_ixmgmt_build()'s
-     * callback. If you are building from scratch, only the lcb_INDEXSPEC::rawjson
+     * Input specs. This should be the specs received from lcb_n1x_startbuild()'s
+     * callback. If you are building from scratch, only the lcb_N1XSPEC::rawjson
      * and lcb_INDEXSPEC::nrawjson need to be populated
      */
-    const lcb_INDEXSPEC * const *specs;
+    const lcb_N1XSPEC * const *specs;
     /** Number of specs */
     size_t nspec;
 
@@ -221,18 +231,18 @@ typedef struct {
      *
      * The callback is only invoked once.
      */
-    lcb_IXMGMTCALLBACK callback;
-} lcb_CMDIXWATCH;
+    lcb_N1XMGMTCALLBACK callback;
+} lcb_CMDN1XWATCH;
 
 /**
  * @volatile
  * Poll indexes being built. This allows you to wait until the specified indexes
- * which are being built (using lcb_ixmgmt_build_begin()) have been fully
+ * which are being built (using lcb_n1x_startbuild()) have been fully
  * created.
  */
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_ixmgmt_build_watch(lcb_t instance, const void *cookie, const lcb_CMDIXWATCH *cmd);
+lcb_n1x_watchbuild(lcb_t instance, const void *cookie, const lcb_CMDN1XWATCH *cmd);
 
 #ifdef __cplusplus
 }
