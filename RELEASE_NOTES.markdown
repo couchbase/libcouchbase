@@ -1,5 +1,14 @@
 # Release Notes
 
+## 2.6.0 (May 17 2016)
+
+* Improve index management API and implementation. The `rawjson` field was
+  being ignored and the `condition` field was missing as well.
+
+* Add pillowfight support for subdoc. At the simplest level you can simply
+  invoke pillowfight as `cbc-pillowfight --subdoc --json <other args>`.
+  Refer to the pillowfight documentation for more details.
+
 ## 2.5.8 (April 19 2016)
 
 * Fix SSL connectivity errors with views and HTTP bootstrapping.
