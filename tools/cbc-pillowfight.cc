@@ -118,7 +118,8 @@ public:
         o_writeJson("json"),
         o_templatePairs("template"),
         o_subdoc("subdoc"),
-        o_sdPathCount("pathcount")
+        o_sdPathCount("pathcount"),
+        o_populateOnly("populate-only")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -140,6 +141,7 @@ public:
         o_templatePairs.argdesc("FIELD,MIN,MAX[,SEQUENTIAL]").hide();
         o_subdoc.description("Use subdoc instead of fulldoc operations");
         o_sdPathCount.description("Number of subdoc paths per command").setDefault(1);
+        o_populateOnly.description("Exit after documents have been populated");
     }
 
     void processOptions() {
@@ -153,6 +155,20 @@ public:
             maxCycles = -1;
         } else {
             maxCycles = o_numCycles.result();
+        }
+
+        if (o_populateOnly.passed()) {
+            // Determine how many iterations are required.
+            if (o_numCycles.passed()) {
+                throw std::runtime_error("--num-cycles incompatible with --populate-only");
+            }
+            size_t est = (o_numItems / o_numThreads) / o_multiSize;
+            while (est * o_numThreads * o_multiSize < o_numItems) {
+                est++;
+            }
+            maxCycles = est;
+            o_sequential.setDefault(true);
+            fprintf(stderr, "Populating using %lu cycles\n", maxCycles);
         }
 
         if (depr.iterations.passed()) {
@@ -239,6 +255,7 @@ public:
         parser.addOption(o_templatePairs);
         parser.addOption(o_subdoc);
         parser.addOption(o_sdPathCount);
+        parser.addOption(o_populateOnly);
         params.addToParser(parser);
         depr.addOptions(parser);
     }
@@ -299,6 +316,9 @@ private:
     ListOption o_templatePairs;
     BoolOption o_subdoc;
     UIntOption o_sdPathCount;
+
+    // Compound option
+    BoolOption o_populateOnly;
 
     DeprecatedOptions depr;
 } config;
