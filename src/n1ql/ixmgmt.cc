@@ -275,8 +275,34 @@ lcb_n1x_create(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd)
         if (!spec.nfields) {
             return LCB_EMPTY_KEY;
         }
-        ss.append(" (").append(spec.fields, spec.nfields).append(")");
+        ss.append(" (");
+        // See if we can parse 'fields' properly. First, try to parse as
+        // JSON:
+        Json::Value fields_arr;
+        Json::Reader r;
+        if (r.parse(spec.fields, spec.fields  + spec.nfields, fields_arr)
+                & fields_arr.isArray()) {
+            if (!fields_arr.size()) {
+                return LCB_EMPTY_KEY;
+            }
+            for (size_t ii = 0; ii < fields_arr.size(); ++ii) {
+                static Json::Value empty;
+                const Json::Value& field = fields_arr.get(ii, empty);
+                if (!field.isString()) {
+                    return LCB_EINVAL;
+                }
+                ss.append(field.asString());
+                if (ii != fields_arr.size()-1) {
+                    ss.append(",");
+                }
+            }
+        }
+    } else {
+        // ','-delimited field
+        ss.append(spec.fields, spec.nfields);
     }
+    ss.append(") ");
+
     if (spec.ncond) {
         if (spec.is_primary()) {
             return LCB_EINVAL;
@@ -792,17 +818,29 @@ IndexSpec::load_json_field(const Json::Value& root,
 {
     size_t namelen = strlen(name_);
     const Json::Value *val = root.find(name_, name_ + namelen);
-    const char *s_begin, *s_end;
     size_t n = 0;
-    if (val != NULL &&
-            val->getString(&s_begin, &s_end) &&
-            (n = s_end - s_begin) &&
-            do_copy) {
 
-        m_buf.insert(m_buf.end(), s_begin, s_end);
-        *tgt_len = n;
-        // Assign the pointer correctly:
+    if (val == NULL) {
+        return 0;
+    }
+
+    if (val->isString()) {
+        const char *s_begin, *s_end;
+        if (val->getString(&s_begin, &s_end) && (n = s_end - s_begin) && do_copy) {
+            m_buf.insert(m_buf.end(), s_begin, s_end);
+        }
+    } else {
+        n = m_buf.size();
+        m_buf.append(Json::FastWriter().write(*val));
+        n = m_buf.size() - n;
+    }
+
+    if (n) {
         *tgt_ptr = &(m_buf.c_str()[m_buf.size()-n]);
+        *tgt_len = n;
+    } else {
+        *tgt_ptr = NULL;
+        *tgt_len = 0;
     }
     return n;
 }

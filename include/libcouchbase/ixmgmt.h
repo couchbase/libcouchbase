@@ -36,9 +36,15 @@ typedef struct {
      * Can be used to decode fields in future versions not present within the
      * library.
      *
-     * This can also be used as the sole input field when watching indexes
-     * that are in the process of building (so you don't need to copy out
-     * all the fields)
+     * This field can also be used as an input field to populate the other
+     * fields in this structure. This means that if you have a raw JSON
+     * representation of an index, you need only set this field (and
+     * `nrawjson`). The library will internally parse the raw JSON and
+     * populate the internal equivalents of the fields in this structure.
+     *
+     * Note that when using this field as an input for creating indexes, you
+     * should still set the ::flags field if you wish to set flags (e.g. in
+     * order to create a deferred-build index).
      */
     const char *rawjson;
     size_t nrawjson;
@@ -62,7 +68,14 @@ typedef struct {
     const char *state;
     size_t nstate;
 
-    /** Actual index text. For raw JSON use the `index_key` property */
+    /** Actual index text. For raw JSON use the `index_key` property.
+     * The value for this field is a properly-encoded JSON array of fields
+     * to index. e.g.
+     *
+     * @code{c}
+     * spec.fields = "[\"`name`\", \"`email`\", \"`ctime`\"]"
+     * @endcode
+     */
     const char *fields;
     size_t nfields;
 
