@@ -73,17 +73,17 @@ typedef struct {
 
     /**
      * Modifiers for the index itself. This might be
-     * LCB_IXSPEC_F_PRIMARY if the index is primary. For raw JSON,
+     * LCB_N1XSPEC_F_PRIMARY if the index is primary. For raw JSON,
      * use `"is_primary":true`
      *
-     * For creation the LCB_IXSPEC_F_DEFER option is also accepted to
+     * For creation the LCB_N1XSPEC_F_DEFER option is also accepted to
      * indicate that the building of this index should be deferred.
      */
     unsigned flags;
 
     /**
-     * Type of this index, Can be T_DEFAULT for the default server type, or
-     * an explicit T_GSI or T_VIEW.
+     * Type of this index, Can be LCB_N1XSPEC_T_DEFAULT for the default
+     * server type, or an explicit LCB_N1XSPEC_T_GSI or LCB_N1XSPEC_T_VIEW.
      * When using JSON, specify `"using":"gsi"`
      */
     unsigned ixtype;
