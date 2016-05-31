@@ -468,6 +468,13 @@ typedef struct lcb_CMDBASE {
 #define LCB_CMD_F_INTERNAL_CALLBACK (1 << 0)
 
 /**
+ * If this flag is set, then multiple authentication credentials will be passed
+ * to the server. By default only the bucket's credentials (i.e. bucket SASL
+ * password) are passed.
+ */
+#define LCB_CMD_F_MULTIAUTH (1<<1)
+
+/**
  * @committed
  *
  * Set the key for the command.
