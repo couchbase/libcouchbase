@@ -218,6 +218,13 @@ public:
     static inline void to_key(const lcb_N1XSPEC *spec, std::string& out);
     bool is_primary() const { return flags & LCB_N1XSPEC_F_PRIMARY; }
     bool is_defer() const { return flags & LCB_N1XSPEC_F_DEFER; }
+    void ensure_keyspace(lcb_t instance) {
+        if (nkeyspace) {
+            return;
+        }
+        keyspace = LCBT_SETTING(instance, bucket);
+        nkeyspace = strlen(keyspace);
+    }
 
 private:
     // Load fields from a JSON string
@@ -255,10 +262,7 @@ lcb_n1x_create(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd)
 {
     string ss;
     IndexSpec spec(&cmd->spec);
-
-    if (!spec.nkeyspace) {
-        return LCB_EMPTY_KEY;
-    }
+    spec.ensure_keyspace(instance);
 
     ss = "CREATE";
     if (spec.is_primary()) {
@@ -425,10 +429,7 @@ lcb_n1x_drop(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd)
 {
     string ss;
     IndexSpec spec(&cmd->spec);
-
-    if (!spec.nkeyspace) {
-        return LCB_EMPTY_KEY;
-    }
+    spec.ensure_keyspace(instance);
 
     if (spec.nname) {
         ss = "DROP INDEX";
