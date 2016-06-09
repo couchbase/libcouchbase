@@ -779,7 +779,7 @@ check_closed(mc_SERVER *server)
     if (server->state == S_CLEAN) {
         return 0;
     }
-    lcb_log(LOGARGS(server, INFO), LOGFMT "Got handler after close. Checking pending calls", LOGID(server));
+    lcb_log(LOGARGS(server, INFO), LOGFMT "Got handler after close. Checking pending calls (pending=%u)", LOGID(server), server->connctx->npending);
     finalize_errored_ctx(server);
     return 1;
 }
