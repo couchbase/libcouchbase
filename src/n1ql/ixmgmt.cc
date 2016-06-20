@@ -202,7 +202,7 @@ dispatch_common(lcb_t instance,
     string reqbuf = Json::FastWriter().write(root);
     return dispatch_common<T>(instance,
         cookie, u_callback, i_callback,
-        reqbuf.c_str(), reqbuf.size(), obj);
+        reqbuf.c_str(), reqbuf.size()-1 /*newline*/, obj);
 }
 
 
@@ -275,17 +275,23 @@ lcb_n1x_create(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd)
         ss.append(" `").append(spec.name, spec.nname).append("` ");
     }
     ss.append(" ON `").append(spec.keyspace, spec.nkeyspace).append("`");
+
     if (!spec.is_primary()) {
         if (!spec.nfields) {
             return LCB_EMPTY_KEY;
         }
-        ss.append(" (");
+
         // See if we can parse 'fields' properly. First, try to parse as
         // JSON:
         Json::Value fields_arr;
         Json::Reader r;
-        if (r.parse(spec.fields, spec.fields  + spec.nfields, fields_arr)
-                & fields_arr.isArray()) {
+        if (!r.parse(spec.fields, spec.fields + spec.nfields, fields_arr)) {
+            // Invalid JSON!
+            return LCB_EINVAL;
+        }
+
+        ss.append(" (");
+        if (fields_arr.isArray()) {
             if (!fields_arr.size()) {
                 return LCB_EMPTY_KEY;
             }
@@ -300,12 +306,17 @@ lcb_n1x_create(lcb_t instance, const void *cookie, const lcb_CMDN1XMGMT *cmd)
                     ss.append(",");
                 }
             }
+        } else if (fields_arr.isString()) {
+            std::string field_list = fields_arr.asString();
+            if (field_list.empty()) {
+                return LCB_EMPTY_KEY;
+            }
+            ss.append(field_list);
+        } else {
+            return LCB_EINVAL;
         }
-    } else {
-        // ','-delimited field
-        ss.append(spec.fields, spec.nfields);
+        ss.append(") ");
     }
-    ss.append(") ");
 
     if (spec.ncond) {
         if (spec.is_primary()) {
@@ -831,9 +842,11 @@ IndexSpec::load_json_field(const Json::Value& root,
             m_buf.insert(m_buf.end(), s_begin, s_end);
         }
     } else {
-        n = m_buf.size();
-        m_buf.append(Json::FastWriter().write(*val));
-        n = m_buf.size() - n;
+        std::string frag = Json::FastWriter().write(*val);
+        n = frag.size();
+        if (do_copy) {
+            m_buf.append(frag);
+        }
     }
 
     if (n) {
