@@ -1,5 +1,30 @@
 # Release Notes
 
+## 2.6.1 (June 21 2016)
+
+* Index management API now properly handles 'fields' field. Previously this
+  was treated as a csv string, when it is in fact a JSON array.
+
+* `pillowfight` now has a `--populate-only` option, which is useful when simply
+  trying to populate buckets with large amounts of data.
+
+* Allow to bypass OpenSSL initialization. This allows applications which already
+  have OpenSSL intialization code in place to suppress libcouchbase's own
+  OpenSSL initialization code. You can disable SSL initialization by using
+  `ssl=no_global_init` in the connection string.
+
+* Allow to toggle sending of multiple credentials in N1QL queries.
+  You can use the `LCB_CMD_F_MULTIAUTH` in the `lcb_CMDN1QL::cmdflags` field
+  to indicate that multiple credentials should be added. Otherwise only the
+  current bucket's credentials will be sent.
+
+* Fix infinite loop on completion (UV,nodejs,IOCP) type IO plugins.
+  This bug would be triggered when only a single server remained in the cluster
+  and that single server failed. This would result in the client never being
+  able to perform operations due to a delayed reference count decrement.
+  * Priority: Major
+  * Issues: [CCBC-704](https://issues.couchbase.com/browse/CCBC-704)
+
 ## 2.6.0 (May 17 2016)
 
 * Improve index management API and implementation. The `rawjson` field was
