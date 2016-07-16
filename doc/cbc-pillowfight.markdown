@@ -107,6 +107,11 @@ The following options control workload generation:
 
 * `-T`, `--timings`:
   Dump a histogram of command timings and latencies to the screen every second.
+  
+* `-e`, `--expiry`=_SECONDS_:
+  Set the expiration time on the document for _SECONDS_ when performing each
+  operation. Note that setting this too low may cause not-found errors to
+  appear on the screen.
 
 * `-U`, `--spec`=_SPEC_:
   A string describing the cluster to connect to. The string is in a URI-like syntax,
