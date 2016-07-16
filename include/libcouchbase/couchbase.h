@@ -989,6 +989,17 @@ typedef enum {
     LCB_SET = 0x03,
 
     /**
+     * The default storage mode. This constant was added in version 2.6.2 for
+     * the sake of maintaining a default storage mode, eliminating the need
+     * for simple storage operations to explicitly define
+     * lcb_CMDSTORE::operation. Behaviorally it is identical to @ref LCB_SET
+     * in that it will make the server unconditionally store the item, whether
+     * it exists or not.
+     */
+    LCB_UPSERT = 0x00,
+
+
+    /**
      * Rather than setting the contents of the entire document, take the value
      * specified in lcb_CMDSTORE::value and _append_ it to the existing bytes in
      * the value.
