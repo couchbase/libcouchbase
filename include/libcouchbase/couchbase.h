@@ -998,32 +998,10 @@ typedef enum {
      */
     LCB_UPSERT = 0x00,
 
-
     /**
      * Rather than setting the contents of the entire document, take the value
      * specified in lcb_CMDSTORE::value and _append_ it to the existing bytes in
      * the value.
-     *
-     * This is functionally equivalent to the following:
-     * @code{.c}
-     * static void get_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
-     * {
-     *     const lcb_RESPGET *resp = (const lcb_RESPGET *)rb;
-     *     const char *to_append = "stuff to append";
-     *     char *new_value;
-     *     size_t new_value_len;
-     *     lcb_CMDSTORE cmd = { 0 };
-     *     lcb_IOV iov[2];
-     *     cmd.operation = LCB_APPEND;
-     *     iov[0].iov_base = (void *)resp->value;
-     *     iov[0].iov_len = resp->nvalue;
-     *     iov[1].iov_base = (void *)to_append;
-     *     iov[1].iov_len = strlen(to_append);
-     *     LCB_CMD_SET_VALUEIOV(&cmd, iov, 2);
-     *     LCB_CMD_SET_KEY(&cmd, resp->key, resp->nkey);
-     *     lcb_store3(instance, NULL, &cmd);
-     * }
-     * @endcode
      */
     LCB_APPEND = 0x04,
 
