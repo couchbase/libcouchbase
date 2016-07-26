@@ -1,5 +1,37 @@
 # Release Notes
 
+## 2.6.2 (July 26 2016)
+
+* Don't crash on high number of FDs with select plugin. Because `select(2)`
+  can only accomodate up to a certain number of file descriptors in the
+  application, if opening a socket results in a too-high-numbered FD, the
+  plugin will return an error rather than silently failing during polling.
+  * Priority: Major
+  * Issues: [CCBC-567](https://issues.couchbase.com/browse/CCBC-567)
+
+* Pillowfight can now set ttl (expiry). This is done via the `-e` or `--expiry`
+  option.
+  * Priority: Major
+  * Issues: [CCBC-637](https://issues.couchbase.com/browse/CCBC-637)
+
+* Log URLs of HTTP requests. This may make it easier to debug some HTTP-based
+  APIs. The URLs are printed as part of the `TRACE` logging level.
+  * Priority: Major
+  * Issues: [CCBC-641](https://issues.couchbase.com/browse/CCBC-641)
+
+* Fix crash on shutdown with completion-based I/O. The crash was a result
+  of dereferencing the `lcb_t` after it had been destroyed. This bug affected
+  completion-based I/O subsystems such as libuv and IOCP.
+  * Priority: Major
+  * Issues: [CCBC-707](https://issues.couchbase.com/browse/CCBC-707)
+
+* Do not require `operation` field to be set on `lcb_CMDSTORE`.
+  Starting from this version, a new `lcb_storage_t` constant, `LCB_UPSERT`
+  has been added with a value of 0. This means that upsert operations no
+  longer need to explicitly use `LCB_SET`, it being the default.
+  * Priority: Major
+  * Issues: [CCBC-545](https://issues.couchbase.com/browse/CCBC-545)
+
 ## 2.6.1 (June 21 2016)
 
 * Index management API now properly handles 'fields' field. Previously this
