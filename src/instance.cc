@@ -15,6 +15,7 @@
  *   limitations under the License.
  */
 #include "internal.h"
+#include "auth-priv.h"
 #include "connspec.h"
 #include "logging.h"
 #include "hostlist.h"
@@ -49,6 +50,16 @@ LIBCOUCHBASE_API
 const void *lcb_get_cookie(lcb_t instance)
 {
     return instance->cookie;
+}
+
+LIBCOUCHBASE_API
+void
+lcb_set_auth(lcb_t instance, lcb_AUTHENTICATOR *auth)
+{
+    /* First increase refcount in case they are the same object(!) */
+    lcbauth_ref(auth);
+    lcbauth_unref(instance->settings->auth);
+    instance->settings->auth = auth;
 }
 
 void

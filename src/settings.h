@@ -17,7 +17,6 @@
 
 #ifndef LCB_SETTINGS_H
 #define LCB_SETTINGS_H
-#include "auth.h"
 
 /**
  * Handy macros for converting between different time resolutions

@@ -76,8 +76,8 @@ sasl_get_username(void *context, int id, const char **result, unsigned int *len)
     if (!context || !result || (id != CBSASL_CB_USER && id != CBSASL_CB_AUTHNAME)) {
         return SASL_BADPARAM;
     }
-
-    lcbauth_get_upass(ctx->settings->auth, &u, &p);
+    u = ctx->settings->bucket;
+    p = lcbauth_get_bpass(ctx->settings->auth, ctx->settings->bucket);
     *result = u;
     if (len) {
         *len = (unsigned int)strlen(*result);
@@ -124,7 +124,8 @@ setup_sasl_params(struct mc_SESSINFO *ctx)
     }
 
     memset(&ctx->u_auth, 0, sizeof(ctx->u_auth));
-    lcbauth_get_upass(ctx->settings->auth, &user, &pass);
+    user = ctx->settings->bucket;
+    pass = lcbauth_get_bpass(ctx->settings->auth, user);
 
     if (pass) {
         unsigned long pwlen;
