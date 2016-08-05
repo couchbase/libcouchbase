@@ -289,7 +289,7 @@ do_store3(lcb_t instance, const void *cookie,
     scmd.message.body.expiration = htonl(cmd->exptime);
     scmd.message.body.flags = htonl(flags);
     hdr->request.magic = PROTOCOL_BINARY_REQ;
-    hdr->request.cas = cmd->cas;
+    hdr->request.cas = lcb_htonll(cmd->cas);
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
 
     if (should_compress || (datatype & LCB_VALUE_F_SNAPPYCOMP)) {

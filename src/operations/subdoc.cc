@@ -386,7 +386,7 @@ sd3_single(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr->request.extlen = packet->extlen;
     hdr->request.opaque = packet->opaque;
-    hdr->request.cas = cmd->cas;
+    hdr->request.cas = lcb_htonll(cmd->cas);
     hdr->request.bodylen = htonl(hdr->request.extlen +
         ntohs(hdr->request.keylen) + get_value_size(packet));
 
@@ -483,7 +483,7 @@ lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
     hdr.request.extlen = pkt->extlen;
     hdr.request.opaque = pkt->opaque;
-    hdr.request.cas = cmd->cas;
+    hdr.request.cas = lcb_htonll(cmd->cas);
     hdr.request.bodylen = htonl(hdr.request.extlen +
         ntohs(hdr.request.keylen) + ctx.payload_size);
     memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof hdr.bytes);

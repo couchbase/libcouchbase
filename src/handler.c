@@ -556,7 +556,7 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 
         resp.key = key;
         resp.nkey = nkey;
-        resp.cas = cas;
+        resp.cas = lcb_ntohll(cas);
         resp.status = obs;
         resp.ismaster = pipeline->index == lcbvb_vbmaster(config, vb);
         resp.ttp = 0;
