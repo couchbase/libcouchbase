@@ -143,7 +143,7 @@ find(unsigned mode)
 static size_t
 get_valbuf_size(const lcb_VALBUF& vb)
 {
-    if (vb.vtype == LCB_KV_COPY || LCB_KV_CONTIG) {
+    if (vb.vtype == LCB_KV_COPY || vb.vtype == LCB_KV_CONTIG) {
         return vb.u_buf.contig.nbytes;
     } else {
         if (vb.u_buf.multi.total_length) {
