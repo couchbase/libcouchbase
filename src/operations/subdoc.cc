@@ -74,6 +74,9 @@ static const Traits
 Exists(PROTOCOL_BINARY_CMD_SUBDOC_EXISTS, IS_LOOKUP);
 
 static const Traits
+GetCount(PROTOCOL_BINARY_CMD_SUBDOC_GET_COUNT, IS_LOOKUP|EMPTY_PATH);
+
+static const Traits
 DictAdd(PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD, ALLOW_EXPIRY|HAS_VALUE);
 
 static const Traits
@@ -130,6 +133,8 @@ find(unsigned mode)
         return Get;
     case LCB_SDCMD_EXISTS:
         return Exists;
+    case LCB_SDCMD_GET_COUNT:
+        return GetCount;
     case LCB_SDCMD_REMOVE:
         return Remove;
     case LCB_SDCMD_COUNTER:
@@ -265,6 +270,9 @@ MultiBuilder::add_spec(const lcb_SDSPEC *spec)
     if (spec->options & LCB_SDSPEC_F_MKINTERMEDIATES) {
         sdflags = SUBDOC_FLAG_MKDIR_P;
     }
+    if (spec->options & LCB_SDSPEC_F_MKDOCUMENT) {
+        sdflags |= SUBDOC_FLAG_MKDOC;
+    }
     add_field(sdflags, 1);
 
     uint16_t npath = static_cast<uint16_t>(spec->path.contig.nbytes);
@@ -391,11 +399,13 @@ sd3_single(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
         ntohs(hdr->request.keylen) + get_value_size(packet));
 
     request.message.extras.pathlen = htons(spec->path.contig.nbytes);
+    request.message.extras.subdoc_flags = 0;
 
     if (spec->options & LCB_SDSPEC_F_MKINTERMEDIATES) {
-        request.message.extras.subdoc_flags = SUBDOC_FLAG_MKDIR_P;
-    } else {
-        request.message.extras.subdoc_flags = 0;
+        request.message.extras.subdoc_flags |= SUBDOC_FLAG_MKDIR_P;
+    }
+    if (spec->options & LCB_SDSPEC_F_MKDOCUMENT) {
+        request.message.extras.subdoc_flags |= SUBDOC_FLAG_MKDOC;
     }
 
     hdr->request.opcode = traits.opcode;
