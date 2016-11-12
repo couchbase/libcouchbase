@@ -380,8 +380,8 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->http_sockpool->maxidle = 1;
     obj->http_sockpool->tmoidle = 10000000;
     obj->confmon = lcb_confmon_create(settings, obj->iotable);
-    obj->ht_nodes = hostlist_create();
-    obj->mc_nodes = hostlist_create();
+    obj->ht_nodes = new Hostlist();
+    obj->mc_nodes = new Hostlist();
     obj->retryq = lcb_retryq_new(&obj->cmdq, obj->iotable, obj->settings);
     obj->n1ql_cache = lcb_n1qlcache_create();
     lcb_initialize_packet_handlers(obj);
@@ -446,8 +446,8 @@ void lcb_destroy(lcb_t instance)
     instance->cmdq.config = NULL;
 
     lcb_bootstrap_destroy(instance);
-    DESTROY(hostlist_destroy, ht_nodes);
-    DESTROY(hostlist_destroy, mc_nodes);
+    DESTROY(delete, ht_nodes);
+    DESTROY(delete, mc_nodes);
 
     if ((pendq = po->items[LCB_PENDTYPE_TIMER])) {
         for (it = pendq->begin(); it != pendq->end(); ++it) {
