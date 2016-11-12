@@ -8,7 +8,6 @@ SET(LCB_UTILS_SRC
     src/strcodecs/base64.c
     src/gethrtime.c
     src/hashtable.c
-    src/hashset.c
     src/list.c
     src/logging.c
     src/packetutils.c

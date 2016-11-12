@@ -438,9 +438,9 @@ void lcb_destroy(lcb_t instance)
 {
     #define DESTROY(fn,fld) if(instance->fld){fn(instance->fld);instance->fld=NULL;}
 
-    lcb_size_t ii;
-    hashset_t hs;
     lcb_ASPEND *po = &instance->pendops;
+    lcb_ASPEND_SETTYPE::iterator it;
+    lcb_ASPEND_SETTYPE *pendq;
 
     DESTROY(lcb_clconfig_decref, cur_configinfo);
     instance->cmdq.config = NULL;
@@ -448,42 +448,34 @@ void lcb_destroy(lcb_t instance)
     lcb_bootstrap_destroy(instance);
     DESTROY(hostlist_destroy, ht_nodes);
     DESTROY(hostlist_destroy, mc_nodes);
-    if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_TIMER))) {
-        for (ii = 0; ii < hs->capacity; ++ii) {
-            if (hs->items[ii] > 1) {
-                lcb__timer_destroy_nowarn(instance, (lcb_timer_t)hs->items[ii]);
-            }
+
+    if ((pendq = po->items[LCB_PENDTYPE_TIMER])) {
+        for (it = pendq->begin(); it != pendq->end(); ++it) {
+            lcb__timer_destroy_nowarn(instance, (lcb_timer_t)*it);
         }
     }
 
-    if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_DURABILITY))) {
-        struct lcb_DURSET_st **dset_list;
-        lcb_size_t nitems = hashset_num_items(hs);
-        dset_list = (struct lcb_DURSET_st **)hashset_get_items(hs, NULL);
-        if (dset_list) {
-            for (ii = 0; ii < nitems; ii++) {
-                lcbdur_destroy(dset_list[ii]);
-            }
-            free(dset_list);
+    if ((pendq = po->items[LCB_PENDTYPE_DURABILITY])) {
+        std::vector<void*> dsets(pendq->begin(), pendq->end());
+        for (size_t ii = 0; ii < dsets.size(); ++ii) {
+            lcbdur_destroy(reinterpret_cast<lcb_DURSET_st*>(dsets[ii]));
         }
+        pendq->clear();
     }
 
-    for (ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
+    for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
         mc_SERVER *server = LCBT_GET_SERVER(instance, ii);
         mcserver_close(server);
     }
 
-    if ((hs = lcb_aspend_get(po, LCB_PENDTYPE_HTTP))) {
-        for (ii = 0; ii < hs->capacity; ++ii) {
-            if (hs->items[ii] > 1) {
-                lcb_http_request_t htreq = (lcb_http_request_t)hs->items[ii];
-
-                /* Prevents lcb's globals from being modified during destruction */
-                lcb_htreq_block_callback(htreq);
-                lcb_htreq_finish(instance, htreq, LCB_ERROR);
-            }
+    if ((pendq = po->items[LCB_PENDTYPE_HTTP])) {
+        for (it = pendq->begin(); it != pendq->end(); ++it) {
+            lcb_http_request_t htreq = reinterpret_cast<lcb_http_request_t>(*it);
+            lcb_htreq_block_callback(htreq);
+            lcb_htreq_finish(instance, htreq, LCB_ERROR);
         }
     }
+
     DESTROY(lcb_retryq_destroy, retryq);
     DESTROY(lcb_confmon_destroy, confmon);
     DESTROY(lcbio_mgr_destroy, memd_sockpool);
@@ -579,7 +571,7 @@ lcb_aspend_init(lcb_ASPEND *ops)
 {
     unsigned ii;
     for (ii = 0; ii < LCB_PENDTYPE_MAX; ++ii) {
-        ops->items[ii] = hashset_create();
+        ops->items[ii] = new lcb_ASPEND_SETTYPE();
     }
     ops->count = 0;
 }
@@ -591,7 +583,7 @@ lcb_aspend_add(lcb_ASPEND *ops, lcb_ASPENDTYPE type, const void *item)
     if (type == LCB_PENDTYPE_COUNTER) {
         return;
     }
-    hashset_add(ops->items[type], (void *)item);
+    ops->items[type]->insert(const_cast<void*>(item));
 }
 
 void
@@ -601,7 +593,7 @@ lcb_aspend_del(lcb_ASPEND *ops, lcb_ASPENDTYPE type, const void *item)
         ops->count--;
         return;
     }
-    if (hashset_remove(ops->items[type], (void *)item)) {
+    if (ops->items[type]->erase(const_cast<void*>(item)) != 0) {
         ops->count--;
     }
 }
@@ -611,7 +603,7 @@ lcb_aspend_cleanup(lcb_ASPEND *ops)
 {
     unsigned ii;
     for (ii = 0; ii < LCB_PENDTYPE_MAX; ii++) {
-        hashset_destroy(ops->items[ii]);
+        delete ops->items[ii];
     }
 }
 
