@@ -109,7 +109,7 @@ mc_sess_get_saslmech(mc_pSESSINFO info);
  * @return true if supported, false otherwise
  */
 int
-mc_sess_chkfeature(mc_pSESSINFO info, lcb_U16 feature);
+mc_sess_chkfeature(mc_pSESSINFO info, uint16_t feature);
 
 /**@}*/
 

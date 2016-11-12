@@ -18,10 +18,11 @@
 #ifndef LCB_PACKETUTILS_H
 #define LCB_PACKETUTILS_H
 
+#include "config.h"
+
 #include <libcouchbase/couchbase.h>
-#include "ringbuffer.h"
+#include <memcached/protocol_binary.h>
 #include "rdb/rope.h"
-#include "memcached/protocol_binary.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -141,6 +142,91 @@ lcb_pktinfo_ior_done(packet_info *info, rdb_IOROPE *ior);
 
 
 #ifdef __cplusplus
+}
+
+
+namespace lcb {
+
+class MemcachedRequest {
+public:
+    /**
+     * Declare the extras, key, and value size for the packet
+     * @param extlen Length of extras
+     * @param keylen Length of key
+     * @param valuelen Length of value (i.e. minus extras and key)
+     */
+    void sizes(uint8_t extlen, uint16_t keylen, uint32_t valuelen) {
+        hdr.request.bodylen = htonl(extlen + keylen + valuelen);
+        hdr.request.keylen = htons(keylen);
+        hdr.request.extlen = extlen;
+    }
+
+    void vbucket(uint16_t vb) {
+        hdr.request.vbucket = htons(vb);
+    }
+
+    void opaque(uint32_t opaque_) {
+        hdr.request.opaque = opaque_;
+    }
+
+    MemcachedRequest(uint8_t opcode) {
+        hdr.request.opcode = opcode;
+        hdr.request.magic = PROTOCOL_BINARY_REQ;
+        hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
+        hdr.request.cas = 0;
+        hdr.request.vbucket = 0;
+        hdr.request.opaque = 0;
+        hdr.request.bodylen = 0;
+        hdr.request.extlen = 0;
+        hdr.request.keylen = 0;
+        hdr.request.opaque = 0;
+    }
+
+    const void *data() const { return hdr.bytes; }
+    size_t size() const { return sizeof hdr.bytes; }
+
+private:
+    protocol_binary_request_header hdr;
+};
+
+class MemcachedResponse : private packet_info {
+public:
+    bool load(rdb_IOROPE *ior, unsigned *required) {
+        return lcb_pktinfo_ior_get(this, ior, required) != 0;
+    }
+
+    template <typename T>
+    bool load(T ctx, unsigned *required) {
+        return lcb_pktinfo_ectx_get(this, ctx, required);
+    }
+
+    void release(rdb_IOROPE *ior) {
+        lcb_pktinfo_ior_done(this, ior);
+    }
+
+    template <typename T>
+    void release(T ctx) {
+        lcb_pktinfo_ectx_done(this, ctx);
+    }
+
+    uint8_t opcode() const {
+        return PACKET_OPCODE(this);
+    }
+
+    uint16_t status() const {
+        return PACKET_STATUS(this);
+    }
+
+    template <typename T>
+    const T body() const {
+        return reinterpret_cast<const T>(packet_info::payload);
+    }
+
+    size_t bodylen() const {
+        return PACKET_NBODY(this);
+    }
+};
+
 }
 #endif
 
