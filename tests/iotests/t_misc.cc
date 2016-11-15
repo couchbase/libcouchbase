@@ -20,6 +20,7 @@
 #include <climits>
 #include <algorithm>
 #include "internal.h" /* vbucket_* things from lcb_t */
+#include "auth-priv.h"
 #include <lcbio/iotable.h>
 #include "bucketconfig/bc_http.h"
 
