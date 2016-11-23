@@ -67,6 +67,7 @@ lcb_settings_new(void)
     lcb_default_settings(settings);
     settings->refcount = 1;
     settings->auth = lcbauth_new();
+    settings->errmap = lcb_errmap_new();
     return settings;
 }
 
@@ -83,6 +84,7 @@ lcb_settings_unref(lcb_settings *settings)
     free(settings->client_string);
 
     lcbauth_unref(settings->auth);
+    lcb_errmap_free(settings->errmap);
 
     if (settings->ssl_ctx) {
         lcbio_ssl_free(settings->ssl_ctx);

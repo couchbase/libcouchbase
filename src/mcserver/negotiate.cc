@@ -16,6 +16,10 @@
  */
 
 #include <algorithm>
+#include <string>
+#include <sstream>
+#include <vector>
+
 #include "packetutils.h"
 #include "mcserver.h"
 #include "logging.h"
@@ -33,6 +37,7 @@ using namespace lcb;
 static void cleanup_negotiated(SessionInfo* info);
 static void handle_ioerr(lcbio_CTX *ctx, lcb_error_t err);
 #define SESSREQ_LOGFMT "<%s:%s> (SASLREQ=%p) "
+
 
 static void timeout_handler(void *arg);
 
@@ -68,6 +73,8 @@ public:
 
     enum MechStatus { MECH_UNAVAILABLE, MECH_NOT_NEEDED, MECH_OK };
     MechStatus set_chosen_mech(std::string& mechlist, const char **data, unsigned int *ndata);
+    bool request_errmap();
+    bool update_errmap(const lcb::MemcachedResponse& packet);
 
     SessionRequestImpl(lcbio_CONNDONE_cb callback, void *data, uint32_t timeout, lcbio_TABLE *iot, lcb_settings* settings_)
         : ctx(NULL), cb(callback), cbdata(data),
@@ -324,6 +331,9 @@ SessionRequestImpl::send_hello()
     unsigned nfeatures = 0;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XATTR;
+    if (settings->use_errmap) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XERROR;
+    }
     if (settings->tcp_nodelay) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TCPNODELAY;
     }
@@ -360,6 +370,7 @@ SessionRequestImpl::send_hello()
         lcb_U16 tmp = htons(features[ii]);
         lcbio_ctx_put(ctx, &tmp, sizeof tmp);
     }
+
     lcbio_ctx_rwant(ctx, 24);
     return true;
 }
@@ -381,12 +392,51 @@ SessionRequestImpl::read_hello(const lcb::MemcachedResponse& resp)
     return true;
 }
 
+bool
+SessionRequestImpl::request_errmap() {
+    lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_GET_ERROR_MAP);
+    uint16_t version = htons(1);
+    hdr.sizes(0, 0, 2);
+    const char *p = reinterpret_cast<const char *>(&version);
+
+    lcbio_ctx_put(ctx, hdr.data(), hdr.size());
+    lcbio_ctx_put(ctx, p, 2);
+    lcbio_ctx_rwant(ctx, 24);
+    return true;
+}
+
+bool
+SessionRequestImpl::update_errmap(const lcb::MemcachedResponse& resp)
+{
+    // Get the error map object
+    using lcb::errmap::ErrorMap;
+
+    std::string errmsg;
+    ErrorMap& mm = *settings->errmap;
+    ErrorMap::ParseStatus status = mm.parse(
+        resp.body<const char*>(), resp.bodylen(), errmsg);
+
+    if (status != ErrorMap::UPDATED && status != ErrorMap::NOT_UPDATED) {
+        errmsg = "Couldn't update error map: " + errmsg;
+        set_error(LCB_PROTOCOL_ERROR, errmsg.c_str());
+        return false;
+    }
+
+    return true;
+}
+
 typedef enum {
     SREQ_S_WAIT,
     SREQ_S_AUTHDONE,
-    SREQ_S_HELLODONE,
+    SREQ_S_COMPLETED,
     SREQ_S_ERROR
 } sreq_STATE;
+
+static bool isUnsupported(uint16_t status) {
+    return status == PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED ||
+            status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND ||
+            status == PROTOCOL_BINARY_RESPONSE_EACCESS;
+}
 
 /**
  * It's assumed the server buffers will be reset upon close(), so we must make
@@ -420,7 +470,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         } else if (mechrc == MECH_UNAVAILABLE) {
             state = SREQ_S_ERROR;
         } else {
-            state = SREQ_S_HELLODONE;
+            state = SREQ_S_COMPLETED;
         }
         break;
     }
@@ -458,17 +508,40 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
     }
 
     case PROTOCOL_BINARY_CMD_HELLO: {
-        state = SREQ_S_HELLODONE;
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
             if (!read_hello(resp)) {
                 set_error(LCB_PROTOCOL_ERROR, "Couldn't parse HELLO");
             }
-        } else if (status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND ||
-                status == PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED) {
+            if (info->has_feature(PROTOCOL_BINARY_FEATURE_XERROR)) {
+                request_errmap();
+                state = SREQ_S_WAIT;
+            } else {
+                lcb_log(LOGARGS(this, TRACE), SESSREQ_LOGFMT "GET_ERRORMAP unsupported/disabled", SESSREQ_LOGID(this));
+                state = SREQ_S_COMPLETED;
+            }
+        } else if (isUnsupported(status)) {
             lcb_log(LOGARGS(this, DEBUG), SESSREQ_LOGFMT "Server does not support HELLO", SESSREQ_LOGID(this));
-            /* nothing */
         } else {
             set_error(LCB_PROTOCOL_ERROR, "Hello response unexpected");
+            state = SREQ_S_ERROR;
+        }
+        break;
+    }
+
+    case PROTOCOL_BINARY_CMD_GET_ERROR_MAP: {
+        state = SREQ_S_COMPLETED;
+
+        if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+            if (update_errmap(resp)) {
+                state = SREQ_S_COMPLETED;
+            } else {
+                state = SREQ_S_ERROR;
+            }
+        } else if (isUnsupported(status)) {
+            lcb_log(LOGARGS(this, DEBUG), SESSREQ_LOGFMT "Server does not support GET_ERRMAP (0x%x)", SESSREQ_LOGID(this), status);
+        } else {
+            lcb_log(LOGARGS(this, ERROR), SESSREQ_LOGFMT "Unexpected status 0x%x received for GET_ERRMAP", SESSREQ_LOGID(this), status);
+            set_error(LCB_PROTOCOL_ERROR, "GET_ERRMAP response unexpected");
             state = SREQ_S_ERROR;
         }
         break;
@@ -492,7 +565,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         fail();
     } else if (state == SREQ_S_ERROR) {
         fail(LCB_ERROR, "FIXME: Error code set without description");
-    } else if (state == SREQ_S_HELLODONE) {
+    } else if (state == SREQ_S_COMPLETED) {
         success();
     } else {
         goto GT_NEXT_PACKET;

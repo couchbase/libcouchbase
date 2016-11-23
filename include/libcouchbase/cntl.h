@@ -924,8 +924,19 @@ typedef const char *lcb_BUCKETCRED[2];
  */
 #define LCB_CNTL_READ_CHUNKSIZE 0x42
 
+/**
+ * Enable/Disable the Error Map feature. This is disabled by default.
+ * Works only on servers which support error map
+ *
+ * Use `enable_errmap` in the connection string
+ *
+ * @volatile
+ * @cntl_arg_both{int* (as boolean)}
+ */
+#define LCB_CNTL_ENABLE_ERRMAP 0x43
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x43
+#define LCB_CNTL__MAX                    0x44
 /**@}*/
 
 #ifdef __cplusplus

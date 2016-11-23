@@ -57,6 +57,7 @@ SET(LCB_CORE_CXXSRC
     src/connspec.cc
     src/dns-srv.cc
     src/dump.cc
+    src/errmap.cc
     src/getconfig.cc
     src/nodeinfo.cc
     src/handler.cc

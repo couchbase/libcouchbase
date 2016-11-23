@@ -264,6 +264,9 @@ extern "C"
         /* Subdoc additions for Spock: */
         PROTOCOL_BINARY_CMD_SUBDOC_GET_COUNT = 0xd2,
 
+        /* get error code mappings */
+        PROTOCOL_BINARY_CMD_GET_ERROR_MAP = 0xfe,
+
         /* Reserved for being able to signal invalid opcode */
         PROTOCOL_BINARY_CMD_INVALID = 0xff
     } protocol_binary_command;
@@ -665,7 +668,8 @@ extern "C"
         PROTOCOL_BINARY_FEATURE_TCPNODELAY = 0x03,
         PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO = 0x04,
         PROTOCOL_BINARY_FEATURE_TCPDELAY = 0x05,
-        PROTOCOL_BINARY_FEATURE_XATTR = 0x06
+        PROTOCOL_BINARY_FEATURE_XATTR = 0x06,
+        PROTOCOL_BINARY_FEATURE_XERROR = 0x07
     } protocol_binary_hello_features;
 
     #define MEMCACHED_FIRST_HELLO_FEATURE 0x01
@@ -677,7 +681,8 @@ extern "C"
     (a == PROTOCOL_BINARY_FEATURE_TCPNODELAY) ? "TCP NODELAY" : \
     (a == PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO) ? "Mutation seqno" : \
     (a == PROTOCOL_BINARY_FEATURE_TCPDELAY) ? "TCP DELAY" : \
-    (a == PROTOCOL_BINARY_FEATURE_XATTR) ? "XATTR" : "Unknown"
+    (a == PROTOCOL_BINARY_FEATURE_XATTR) ? "XATTR" : \
+    (a == PROTOCOL_BINARY_FEATURE_XERROR) ? "Error Map": "Unknown"
 
     /**
      * The HELLO command is used by the client and the server to agree

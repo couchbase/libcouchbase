@@ -87,6 +87,7 @@
 
 #include "config.h"
 #include <libcouchbase/couchbase.h>
+#include "errmap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -148,6 +149,7 @@ typedef struct lcb_settings_st {
     unsigned ipv6 : 2;
     unsigned tcp_nodelay : 1;
     unsigned readj_ts_wait : 1;
+    unsigned use_errmap : 1;
 
     short max_redir;
     unsigned refcount;
@@ -165,6 +167,7 @@ typedef struct lcb_settings_st {
     void (*dtorcb)(const void *);
     void *dtorarg;
     char *client_string;
+    lcb_pERRMAP errmap;
     lcb_U32 retry_nmv_interval;
 } lcb_settings;
 
