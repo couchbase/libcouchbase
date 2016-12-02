@@ -43,7 +43,6 @@ SET(LCB_CORE_SRC
     src/bootstrap.c
     src/callbacks.c
     src/dump.c
-    src/handler.c
     src/getconfig.c
     src/legacy.c
     # src/mcserver/negotiate.c
@@ -61,6 +60,7 @@ SET(LCB_CORE_CXXSRC
     src/auth.cc
     src/connspec.cc
     src/nodeinfo.cc
+    src/handler.cc
     src/hostlist.cc
     src/http/http.cc
     src/http/http_io.cc

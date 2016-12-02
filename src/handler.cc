@@ -21,20 +21,23 @@
 #include "mc/compress.h"
 #include "trace.h"
 
-/** Define a compound response structure for use with mutation tokens */
-#define MK_RESPACK(dstname, srcname) \
-    typedef struct { srcname resp; lcb_MUTATION_TOKEN mt; } dstname
-MK_RESPACK(respack_STORE, lcb_RESPSTORE);
-MK_RESPACK(respack_COUNTER, lcb_RESPCOUNTER);
-MK_RESPACK(respack_REMOVE, lcb_RESPREMOVE);
-MK_RESPACK(respack_SUBDOC, lcb_RESPSUBDOC);
+template <typename T>
+class ResponsePack {
+public:
+    T resp;
+    lcb_MUTATION_TOKEN mt;
+
+    static const lcb_MUTATION_TOKEN*
+    get_mt(const lcb_RESPBASE *rb) {
+        const ResponsePack *rp = reinterpret_cast<const ResponsePack*>(rb);
+        return &rp->mt;
+    }
+};
 
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
 {
-    (void)instance;
-
     switch (in) {
     case PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET:
         return LCB_ETIMEDOUT;
@@ -47,7 +50,11 @@ lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
 
     case PROTOCOL_BINARY_RESPONSE_EINTERNAL:
     default:
-        fprintf(stderr, "COUCHBASE: Unhandled memcached status=0x%x\n", in);
+        if (instance) {
+            lcb_log(instance->settings, "handler", LCB_LOG_ERROR, __FILE__, __LINE__, "Got unhandled memcached error 0x%X", in);
+        } else {
+            fprintf(stderr, "COUCHBASE: Unhandled memcached status=0x%x\n", in);
+        }
         return LCB_UNKNOWN_MEMCACHED_ERROR;
     }
 }
@@ -55,7 +62,6 @@ lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
 static lcb_error_t
 map_error(lcb_t instance, int in)
 {
-    (void)instance;
     switch (in) {
     case PROTOCOL_BINARY_RESPONSE_SUCCESS:
         return LCB_SUCCESS;
@@ -153,24 +159,26 @@ find_callback(lcb_t instance, lcb_CALLBACKTYPE type)
  *  satisfied.
  */
 
-#define MK_ERROR(root, resp, response, imm) do { \
-    if (imm) { \
-        (resp)->rc = imm; \
-        (resp)->rflags |= LCB_RESP_F_CLIENTGEN; \
-    } else if (PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUCCESS) { \
-        (resp)->rc = LCB_SUCCESS; \
-    } else { \
-        (resp)->rc = map_error(root, PACKET_STATUS(response)); \
-    } \
-}  while (0);
+template <typename T>
+void make_error(lcb_t instance, T* resp,
+    const packet_info *response, lcb_error_t imm) {
+    if (imm) {
+        resp->rc = imm;
+        resp->rflags |= LCB_RESP_F_CLIENTGEN;
+    } else if (PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        resp->rc = LCB_SUCCESS;
+    } else {
+        resp->rc = map_error(instance, PACKET_STATUS(response));
+    }
+}
 
-static void
-init_resp3(lcb_t instance, const packet_info *mc_resp, const mc_PACKET *req,
-    lcb_error_t immerr, lcb_RESPBASE *resp)
+template <typename T>
+void init_resp(lcb_t instance, const packet_info *mc_resp, const mc_PACKET *req,
+    lcb_error_t immerr, T *resp)
 {
-    MK_ERROR(instance, resp, mc_resp, immerr);
+    make_error(instance, resp, mc_resp, immerr);
     resp->cas = PACKET_CAS(mc_resp);
-    resp->cookie = (void *)MCREQ_PKT_COOKIE(req);
+    resp->cookie = const_cast<void*>(MCREQ_PKT_COOKIE(req));
     mcreq_get_key(req, &resp->key, &resp->nkey);
 }
 
@@ -194,11 +202,12 @@ handle_mutation_token(lcb_t instance, const packet_info *mc_resp,
     if (!instance->dcpinfo && LCBT_SETTING(instance, dur_mutation_tokens)) {
         size_t nvb = LCBT_VBCONFIG(instance)->nvb;
         if (nvb) {
-            instance->dcpinfo = calloc(nvb, sizeof(*instance->dcpinfo));
+            instance->dcpinfo = new lcb_MUTATION_TOKEN[nvb];
+            memset(instance->dcpinfo, 0, sizeof(*instance->dcpinfo) * nvb);
         }
     }
 
-    sbuf = PACKET_BODY(mc_resp);
+    sbuf = reinterpret_cast<const char *>(PACKET_BODY(mc_resp));
     vbid = mcreq_get_vbucket(req);
     stok->vbid_ = vbid;
     memcpy(&stok->uuid_, sbuf, 8);
@@ -212,26 +221,30 @@ handle_mutation_token(lcb_t instance, const packet_info *mc_resp,
     }
 }
 
-#define MK_RESPKEY3(resp, req) do { \
-    mcreq_get_key(req, &(resp)->key, &(resp)->nkey); \
-} while (0);
+static lcb_t get_instance(mc_PIPELINE *pipeline) {
+    return reinterpret_cast<lcb_t>(pipeline->parent->cqdata);
+}
 
-
-static void
-invoke_callback3(const mc_PACKET *pkt,
-    lcb_t instance,lcb_CALLBACKTYPE cbtype, lcb_RESPBASE * resp)
+template <typename T>
+void invoke_callback(const mc_PACKET *pkt,
+    lcb_t instance, T* resp, lcb_CALLBACKTYPE cbtype)
 {
     if (!(pkt->flags & MCREQ_F_INVOKED)) {
-        resp->cookie = (void *)MCREQ_PKT_COOKIE(pkt);
+        resp->cookie = const_cast<void*>(MCREQ_PKT_COOKIE(pkt));
+        const lcb_RESPBASE *base = reinterpret_cast<const lcb_RESPBASE*>(resp);
         if ((pkt->flags & MCREQ_F_PRIVCALLBACK) == 0) {
-            find_callback(instance, cbtype)(instance, cbtype, resp);
+            find_callback(instance, cbtype)(instance, cbtype, base);
         } else {
-            (*(lcb_RESPCALLBACK*)resp->cookie)(instance, cbtype, resp);
+            (*(lcb_RESPCALLBACK*)resp->cookie)(instance, cbtype, base);
         }
     }
 }
-#define INVOKE_CALLBACK3(req, res_, instance, type) { \
-    invoke_callback3(req, instance, type, (lcb_RESPBASE *)res_); \
+
+template <typename T>
+void invoke_callback(const mc_PACKET *pkt, mc_PIPELINE *pipeline, T *resp,
+    lcb_CALLBACKTYPE cbtype)
+{
+    invoke_callback(pkt, get_instance(pipeline), cbtype, resp);
 }
 
 /**
@@ -276,27 +289,27 @@ static void
 H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
       lcb_error_t immerr)
 {
-    lcb_t o;
     lcb_RESPGET resp = { 0 };
-    void *freeptr = NULL;
 
-    o = pipeline->parent->cqdata;
-    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&resp);
+    lcb_t o = get_instance(pipeline);
+    init_resp(o, response, request, immerr, &resp);
     resp.rflags |= LCB_RESP_F_FINAL;
 
     if (resp.rc == LCB_SUCCESS) {
-        const protocol_binary_response_getq *getq =
-                PACKET_EPHEMERAL_START(response);
+        const protocol_binary_response_get *get =
+                reinterpret_cast<const protocol_binary_response_get*>(
+                        PACKET_EPHEMERAL_START(response));
         resp.datatype = PACKET_DATATYPE(response);
-        resp.itmflags = ntohl(getq->message.body.flags);
+        resp.itmflags = ntohl(get->message.body.flags);
         resp.value = PACKET_VALUE(response);
         resp.nvalue = PACKET_NVALUE(response);
         resp.bufh = response->bufh;
     }
 
+    void *freeptr = NULL;
     maybe_decompress(o, response, &resp, &freeptr);
     TRACE_GET_END(response, &resp);
-    INVOKE_CALLBACK3(request, &resp, o, LCB_CALLBACK_GET);
+    invoke_callback(request, o, &resp, LCB_CALLBACK_GET);
     free(freeptr);
 }
 
@@ -305,14 +318,16 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
              lcb_error_t immerr)
 {
     lcb_RESPGET resp = { 0 };
-    lcb_t instance = pipeline->parent->cqdata;
+    lcb_t instance = get_instance(pipeline);
     void *freeptr = NULL;
     mc_REQDATAEX *rd = request->u_rdata.exdata;
 
-    init_resp3(instance, response, request, immerr, (lcb_RESPBASE *)&resp);
+    init_resp(instance, response, request, immerr, &resp);
 
     if (resp.rc == LCB_SUCCESS) {
-        const protocol_binary_response_get *get = PACKET_EPHEMERAL_START(response);
+        const protocol_binary_response_get *get =
+                reinterpret_cast<const protocol_binary_response_get*>(
+                        PACKET_EPHEMERAL_START(response));
         resp.itmflags = ntohl(get->message.body.flags);
         resp.datatype = PACKET_DATATYPE(response);
         resp.value = PACKET_VALUE(response);
@@ -329,11 +344,10 @@ static void
 H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     lcb_error_t immerr)
 {
-    lcb_t o;
-    respack_SUBDOC w = { { 0 } };
-    int cbtype;
-    o = pipeline->parent->cqdata;
-    init_resp3(o, response, request, immerr, (lcb_RESPBASE *)&w.resp);
+    lcb_t o = get_instance(pipeline);
+    ResponsePack<lcb_RESPSUBDOC> w = {{ 0 }};
+    lcb_CALLBACKTYPE cbtype;
+    init_resp(o, response, request, immerr, &w.resp);
     w.resp.rflags |= LCB_RESP_F_FINAL;
 
     /* For mutations, add the mutation token */
@@ -366,15 +380,15 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
             w.resp.rc = LCB_SUBDOC_MULTI_FAILURE;
         }
     }
-    INVOKE_CALLBACK3(request, &w.resp, o, cbtype);
+    invoke_callback(request, o, &w.resp, cbtype);
 }
 
 static int
 sdlookup_next(const packet_info *response, lcb_SDENTRY *ent, size_t *iter)
 {
     const char *buf;
-    lcb_U16 rc;
-    lcb_U32 vlen;
+    uint16_t rc;
+    uint32_t vlen;
 
     if (*iter == PACKET_NVALUE(response)) {
         return 0;
@@ -407,8 +421,8 @@ static int
 sdmutate_next(const packet_info *response, lcb_SDENTRY *ent, size_t *iter)
 {
     const char *buf, *buf_end;
-    lcb_U16 rc;
-    lcb_U32 vlen;
+    uint16_t rc;
+    uint32_t vlen;
 
     if (*iter == PACKET_NVALUE(response)) {
         return 0;
@@ -492,28 +506,28 @@ static void
 H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, packet_info *response,
          lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
-    respack_REMOVE w = { { 0 } };
+    lcb_t root = get_instance(pipeline);
+    ResponsePack<lcb_RESPREMOVE> w = { { 0 } };
     w.resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
-    init_resp3(root, response, packet, immerr, (lcb_RESPBASE *)&w.resp);
+    init_resp(root, response, packet, immerr, &w.resp);
     handle_mutation_token(root, response, packet, &w.mt);
     TRACE_REMOVE_END(response, &w.resp);
-    INVOKE_CALLBACK3(packet, &w.resp, root, LCB_CALLBACK_REMOVE);
+    invoke_callback(packet, root, &w.resp, LCB_CALLBACK_REMOVE);
 }
 
 static void
 H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
           lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     uint32_t ttp;
     uint32_t ttr;
-    lcb_size_t pos;
+    size_t pos;
     lcbvb_CONFIG* config;
     const char *end, *ptr;
     mc_REQDATAEX *rd = request->u_rdata.exdata;
     lcb_RESPOBSERVE resp = { 0 };
-    MK_ERROR(root, &resp, response, immerr);
+    make_error(root, &resp, response, immerr);
 
     if (resp.rc != LCB_SUCCESS) {
         if (! (request->flags & MCREQ_F_INVOKED)) {
@@ -531,14 +545,14 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     ttr = ntohl(ttr);
 
     /** Actual payload sequence of (vb, nkey, key). Repeats multiple times */
-    ptr = response->payload;
+    ptr = reinterpret_cast<const char *>(response->payload);
     end = (char *)ptr + PACKET_NBODY(response);
     config = pipeline->parent->config;
 
     for (pos = 0; ptr < end; pos++) {
-        lcb_cas_t cas;
-        lcb_uint8_t obs;
-        lcb_uint16_t nkey, vb;
+        uint64_t cas;
+        uint8_t obs;
+        uint16_t nkey, vb;
         const char *key;
 
         memcpy(&vb, ptr, sizeof(vb));
@@ -573,15 +587,15 @@ static void
 H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
     packet_info *response, lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     lcb_RESPOBSEQNO resp = { 0 };
-    init_resp3(root, response, request, immerr, (lcb_RESPBASE*)&resp);
+    init_resp(root, response, request, immerr, &resp);
 
     resp.server_index = pipeline->index;
 
     if (resp.rc == LCB_SUCCESS) {
-        const lcb_U8 *data = PACKET_BODY(response);
-        int is_failover = *data != 0;
+        const uint8_t *data = reinterpret_cast<const uint8_t*>(PACKET_BODY(response));
+        bool is_failover = *data != 0;
 
         data++;
         #define COPY_ADV(dstfld, n, conv_fn) \
@@ -602,17 +616,17 @@ H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
         /* Get the server for this command. Note that since this is a successful
          * operation, the server is never a dummy */
     }
-    INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_OBSEQNO);
+    invoke_callback(request, root, &resp, LCB_CALLBACK_OBSEQNO);
 }
 
 static void
 H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
-    respack_STORE w = { { 0 } };
-    lcb_U8 opcode;
-    init_resp3(root, response, request, immerr, (lcb_RESPBASE*)&w.resp);
+    lcb_t root = get_instance(pipeline);
+    ResponsePack<lcb_RESPSTORE> w = { { 0 } };
+    uint8_t opcode;
+    init_resp(root, response, request, immerr, &w.resp);
     if (!immerr) {
         opcode = PACKET_OPCODE(response);
     } else {
@@ -637,7 +651,7 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     if (request->flags & MCREQ_F_REQEXT) {
         request->u_rdata.exdata->procs->handler(pipeline, request, immerr, &w.resp);
     } else {
-        INVOKE_CALLBACK3(request, &w.resp, root, LCB_CALLBACK_STORE);
+        invoke_callback(request, root, &w.resp, LCB_CALLBACK_STORE);
     }
 }
 
@@ -645,9 +659,9 @@ static void
 H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
              lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
-    respack_COUNTER w = { { 0 } };
-    init_resp3(root, response, request, immerr, (lcb_RESPBASE*)&w.resp);
+    lcb_t root = get_instance(pipeline);
+    ResponsePack<lcb_RESPCOUNTER> w = { { 0 } };
+    init_resp(root, response, request, immerr, &w.resp);
 
     if (w.resp.rc == LCB_SUCCESS) {
         memcpy(&w.resp.value, PACKET_VALUE(response), sizeof(w.resp.value));
@@ -658,18 +672,18 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     w.resp.rflags |= LCB_RESP_F_FINAL;
     w.resp.cas = PACKET_CAS(response);
     TRACE_ARITHMETIC_END(response, &w.resp);
-    INVOKE_CALLBACK3(request, &w.resp, root, LCB_CALLBACK_COUNTER);
+    invoke_callback(request, root, &w.resp, LCB_CALLBACK_COUNTER);
 }
 
 static void
 H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     lcb_RESPSTATS resp = { 0 };
     mc_REQDATAEX *exdata;
 
-    MK_ERROR(root, &resp, response, immerr);
+    make_error(root, &resp, response, immerr);
     resp.version = 0;
 
     exdata = request->u_rdata.exdata;
@@ -694,10 +708,10 @@ static void
 H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
             lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     lcb_RESPBASE dummy = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    MK_ERROR(root, &dummy, response, immerr);
+    make_error(root, &dummy, response, immerr);
 
     exdata->procs->handler(pipeline, request, dummy.rc, NULL);
 }
@@ -706,14 +720,14 @@ static void
 H_version(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
           lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     lcb_RESPMCVERSION resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
 
-    MK_ERROR(root, &resp, response, immerr);
+    make_error(root, &resp, response, immerr);
 
     if (PACKET_NBODY(response)) {
-        resp.mcversion = response->payload;
+        resp.mcversion = reinterpret_cast<const char *>(response->payload);
         resp.nversion = PACKET_NBODY(response);
     }
 
@@ -725,22 +739,22 @@ static void
 H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     lcb_RESPTOUCH resp = { 0 };
-    init_resp3(root, response, request, immerr, &resp);
+    init_resp(root, response, request, immerr, &resp);
     resp.rflags |= LCB_RESP_F_FINAL;
     TRACE_TOUCH_END(response, &resp);
-    INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_TOUCH);
+    invoke_callback(request, root, &resp, LCB_CALLBACK_TOUCH);
 }
 
 static void
 H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     lcb_RESPFLUSH resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    MK_ERROR(root, &resp, response, immerr);
+    make_error(root, &resp, response, immerr);
     exdata->procs->handler(pipeline, request, resp.rc, &resp);
 }
 
@@ -748,12 +762,12 @@ static void
 H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
          lcb_error_t immerr)
 {
-    lcb_t root = pipeline->parent->cqdata;
+    lcb_t root = get_instance(pipeline);
     lcb_RESPUNLOCK resp = { 0 };
-    init_resp3(root, response, request, immerr, &resp);
+    init_resp(root, response, request, immerr, &resp);
     resp.rflags |= LCB_RESP_F_FINAL;
     TRACE_UNLOCK_END(response, &resp);
-    INVOKE_CALLBACK3(request, &resp, root, LCB_CALLBACK_UNLOCK);
+    invoke_callback(request, root, &resp, LCB_CALLBACK_UNLOCK);
 }
 
 static void
@@ -763,20 +777,19 @@ H_config(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     /** We just jump to the normal config handler */
     lcb_RESPBASE dummy;
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    MK_ERROR(pipeline->parent->cqdata, &dummy, response, immerr);
+    make_error(get_instance(pipeline), &dummy, response, immerr);
 
     exdata->procs->handler(pipeline, request, dummy.rc, response);
 }
 
 static void
-record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *res)
+record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *)
 {
-    lcb_t instance = pipeline->parent->cqdata;
+    lcb_t instance = get_instance(pipeline);
     if (instance->kv_timings) {
         lcb_histogram_record(instance->kv_timings,
             gethrtime() - MCREQ_PKT_RDATA(req)->start);
     }
-    (void)res;
 }
 
 static void
@@ -896,19 +909,19 @@ lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb)
 
     switch (cbtype) {
     case LCB_CALLBACK_STORE:
-        ss = &((const respack_STORE*)rb)->mt;
+        ss = ResponsePack<lcb_RESPSTORE>::get_mt(rb);
         break;
 
     case LCB_CALLBACK_COUNTER:
-        ss = &((const respack_COUNTER*)rb)->mt;
+        ss = ResponsePack<lcb_RESPCOUNTER>::get_mt(rb);
         break;
 
     case LCB_CALLBACK_REMOVE:
-        ss = &((const respack_REMOVE*)rb)->mt;
+        ss = ResponsePack<lcb_RESPREMOVE>::get_mt(rb);
         break;
 
     case LCB_CALLBACK_SDMUTATE:
-        ss = &((const respack_SUBDOC*)rb)->mt;
+        ss = ResponsePack<lcb_RESPSUBDOC>::get_mt(rb);
         break;
 
     default:

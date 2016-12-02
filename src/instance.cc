@@ -508,7 +508,7 @@ void lcb_destroy(lcb_t instance)
         instance->scratch = NULL;
     }
 
-    free(instance->dcpinfo);
+    delete[] instance->dcpinfo;
     memset(instance, 0xff, sizeof(*instance));
     free(instance);
 #undef DESTROY

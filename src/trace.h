@@ -18,9 +18,14 @@
 #ifndef LIBCOUCHBASE_TRACE_H
 #define LIBCOUCHBASE_TRACE_H 1
 
-#ifdef __clang__
+#if defined(__clang__) || defined(__GNUC__)
 #pragma GCC diagnostic push
+
+#ifdef __clang__
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#else
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
+#endif
 #endif
 
 #ifdef HAVE_DTRACE
@@ -42,11 +47,11 @@
         (cmd)->key.contig.bytes, (cmd)->key.contig.nbytes)
 
 #define TRACE_END_COMMON(TGT, mcresp, resp, ...) \
-    TGT(PACKET_OPAQUE(mcresp), 0, PACKET_OPCODE(mcresp), (resp)->rc, (resp)->key, (resp)->nkey, \
+    TGT(PACKET_OPAQUE(mcresp), 0, PACKET_OPCODE(mcresp), (resp)->rc, (const char *)(resp)->key, (resp)->nkey, \
         ## __VA_ARGS__)
 
 #define TRACE_END_SIMPLE(TGT, mcresp, resp) \
-    TGT(PACKET_OPAQUE(mcresp), 0, PACKET_OPCODE(mcresp), (resp)->rc, (resp)->key, (resp)->nkey)
+    TGT(PACKET_OPAQUE(mcresp), 0, PACKET_OPCODE(mcresp), (resp)->rc, (const char *)(resp)->key, (resp)->nkey)
 
 #define TRACE_GET_BEGIN(req, cmd) \
     TRACE(TRACE_BEGIN_COMMON(LIBCOUCHBASE_GET_BEGIN, req, cmd, (cmd)->exptime))
