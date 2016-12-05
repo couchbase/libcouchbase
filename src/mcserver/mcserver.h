@@ -42,17 +42,11 @@ typedef struct mc_SERVER_st {
 
     lcb_settings *settings;
 
-    /* Defined in mcserver.c */
-    int state;
-
     /** Whether compression is supported */
     short compsupport;
 
     /** Whether extended 'UUID' and 'seqno' are available for each mutation */
     short mutation_tokens;
-
-    /** IO/Operation timer */
-    lcbio_pTIMER io_timer;
 
     lcbio_CTX *connctx;
     lcbio_CONNREQ connreq;
@@ -61,7 +55,6 @@ typedef struct mc_SERVER_st {
     lcb_host_t *curhost;
 } mc_SERVER;
 
-#define MCSERVER_TIMEOUT(c) (c)->settings->operation_timeout
 
 /**
  * Allocate and initialize a new server object. The object will not be

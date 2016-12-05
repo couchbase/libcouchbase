@@ -46,7 +46,6 @@ SET(LCB_CORE_SRC
     src/getconfig.c
     src/legacy.c
     # src/mcserver/negotiate.c
-    src/mcserver/mcserver.c
     src/newconfig.c
     src/iofactory.c
     src/retryq.c
@@ -69,5 +68,6 @@ SET(LCB_CORE_CXXSRC
     src/n1ql/ixmgmt.cc
     src/cbft.cc
     src/operations/subdoc.cc
+    src/mcserver/mcserver.cc
     src/mcserver/negotiate.cc
     src/cntl.cc)
