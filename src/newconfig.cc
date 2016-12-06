@@ -106,8 +106,8 @@ lcb_vbguess_remap(lcb_t instance, int vbid, int bad)
         lcb_GUESSVB *guess = guesses + vbid;
         int newix = lcbvb_nmv_remap_ex(LCBT_VBCONFIG(instance), vbid, bad, 1);
         if (!guesses) {
-            guesses = instance->vbguess = calloc(
-                LCBT_VBCONFIG(instance)->nvb, sizeof *guesses);
+            guesses = instance->vbguess = reinterpret_cast<lcb_GUESSVB*>(calloc(
+                LCBT_VBCONFIG(instance)->nvb, sizeof *guesses));
         }
         if (newix > -1 && newix != bad) {
             guess->newix = newix;
@@ -138,7 +138,6 @@ static int
 find_new_data_index(lcbvb_CONFIG *oldconfig, lcbvb_CONFIG* newconfig,
     mc_SERVER *server)
 {
-    size_t ii;
     const char *old_datahost = lcbvb_get_hostport(oldconfig,
         server->pipeline.index, LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN);
 
@@ -147,7 +146,7 @@ find_new_data_index(lcbvb_CONFIG *oldconfig, lcbvb_CONFIG* newconfig,
         return -1;
     }
 
-    for (ii = 0; ii < LCBVB_NSERVERS(newconfig); ii++) {
+    for (size_t ii = 0; ii < LCBVB_NSERVERS(newconfig); ii++) {
         const char *new_datahost = lcbvb_get_hostport(newconfig, ii,
             LCBVB_SVCTYPE_DATA, LCBVB_SVCMODE_PLAIN);
         if (new_datahost && strcmp(new_datahost, old_datahost) == 0) {
@@ -160,15 +159,14 @@ find_new_data_index(lcbvb_CONFIG *oldconfig, lcbvb_CONFIG* newconfig,
 static void
 log_vbdiff(lcb_t instance, lcbvb_CONFIGDIFF *diff)
 {
-    char **curserver;
     lcb_log(LOGARGS(instance, INFO), "Config Diff: [ vBuckets Modified=%d ], [Sequence Changed=%d]", diff->n_vb_changes, diff->sequence_changed);
     if (diff->servers_added) {
-        for (curserver = diff->servers_added; *curserver; curserver++) {
+        for (char **curserver = diff->servers_added; *curserver; curserver++) {
             lcb_log(LOGARGS(instance, INFO), "Detected server %s added", *curserver);
         }
     }
     if (diff->servers_removed) {
-        for (curserver = diff->servers_removed; *curserver; curserver++) {
+        for (char **curserver = diff->servers_removed; *curserver; curserver++) {
             lcb_log(LOGARGS(instance, INFO), "Detected server %s removed", *curserver);
         }
     }
@@ -187,15 +185,11 @@ log_vbdiff(lcb_t instance, lcbvb_CONFIGDIFF *diff)
  * another server.
  */
 static int
-iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
+iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *)
 {
     protocol_binary_request_header hdr;
     mc_SERVER *srv = (mc_SERVER *)oldpl;
-    mc_PIPELINE *newpl;
-    mc_PACKET *newpkt;
     int newix;
-
-    (void)arg;
 
     mcreq_read_hdr(oldpkt, &hdr);
 
@@ -222,7 +216,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
     }
 
 
-    newpl = cq->pipelines[newix];
+    mc_PIPELINE *newpl = cq->pipelines[newix];
     if (newpl == oldpl || newpl == NULL) {
         return MCREQ_KEEP_PACKET;
     }
@@ -231,14 +225,14 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *arg)
         (void*)oldpkt, oldpkt->opaque, SERVER_ARGS((mc_SERVER*)oldpl), SERVER_ARGS((mc_SERVER*)newpl));
 
     /** Otherwise, copy over the packet and find the new vBucket to map to */
-    newpkt = mcreq_renew_packet(oldpkt);
+    mc_PACKET *newpkt = mcreq_renew_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
     mcreq_reenqueue_packet(newpl, newpkt);
     mcreq_packet_handled(oldpl, oldpkt);
     return MCREQ_REMOVE_PACKET;
 }
 
-static int
+static lcb_configuration_t
 replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
@@ -248,7 +242,7 @@ replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
     assert(LCBT_VBCONFIG(instance) == newconfig);
 
     nnew = LCBVB_NSERVERS(newconfig);
-    ppnew = calloc(nnew, sizeof(*ppnew));
+    ppnew = reinterpret_cast<mc_PIPELINE**>(calloc(nnew, sizeof(*ppnew)));
     ppold = mcreq_queue_take_pipelines(cq, &nold);
 
     /**
@@ -315,12 +309,10 @@ replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
 
 void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
 {
-    lcb_size_t ii;
-    int change_status;
-    clconfig_info *old_config;
+    lcb_configuration_t change_status;
+    clconfig_info *old_config = instance->cur_configinfo;
     mc_CMDQUEUE *q = &instance->cmdq;
 
-    old_config = instance->cur_configinfo;
     instance->cur_configinfo = config;
     lcb_clconfig_incref(config);
     q->config = instance->cur_configinfo->vbc;
@@ -344,42 +336,33 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
         }
         lcb_clconfig_decref(old_config);
     } else {
-        unsigned nservers;
-        mc_PIPELINE **servers;
-        nservers = VB_NSERVERS(config->vbc);
-        if ((servers = malloc(sizeof(*servers) * nservers)) == NULL) {
-            assert(servers);
-            lcb_log(LOGARGS(instance, FATAL), "Couldn't allocate memory for new server list! (n=%u)", nservers);
-            return;
-        }
+        size_t nservers = VB_NSERVERS(config->vbc);
+        std::vector<mc_PIPELINE*> servers;
 
-        for (ii = 0; ii < nservers; ii++) {
-            mc_SERVER *srv;
-            if ((srv = mcserver_alloc(instance, ii)) == NULL) {
+        for (size_t ii = 0; ii < nservers; ii++) {
+            mc_SERVER *srv = mcserver_alloc(instance, ii);
+            if (srv == NULL) {
                 assert(srv);
                 lcb_log(LOGARGS(instance, FATAL), "Couldn't allocate memory for server instance!");
                 return;
             }
-            servers[ii] = &srv->pipeline;
+            servers.push_back(&srv->pipeline);
         }
 
-        mcreq_queue_add_pipelines(q, servers, nservers, config->vbc);
+        mcreq_queue_add_pipelines(q, &servers[0], nservers, config->vbc);
         change_status = LCB_CONFIGURATION_NEW;
-        free(servers);
     }
 
     /* Update the list of nodes here for server list */
-    hostlist_clear(instance->ht_nodes);
-    for (ii = 0; ii < LCBVB_NSERVERS(config->vbc); ++ii) {
+    instance->ht_nodes->clear();
+    for (size_t ii = 0; ii < LCBVB_NSERVERS(config->vbc); ++ii) {
         const char *hp = lcbvb_get_hostport(config->vbc, ii,
             LCBVB_SVCTYPE_MGMT, LCBVB_SVCMODE_PLAIN);
         if (hp) {
-            hostlist_add_stringz(instance->ht_nodes, hp, LCB_CONFIG_HTTP_PORT);
+            instance->ht_nodes->add(hp, LCB_CONFIG_HTTP_PORT);
         }
     }
 
     instance->callbacks.configuration(instance, change_status);
     lcb_maybe_breakout(instance);
 }
-
-

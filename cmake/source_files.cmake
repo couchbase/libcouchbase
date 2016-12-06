@@ -46,7 +46,6 @@ SET(LCB_CORE_SRC
     src/getconfig.c
     src/legacy.c
     # src/mcserver/negotiate.c
-    src/newconfig.c
     src/iofactory.c
     src/retryq.c
     src/retrychk.c
@@ -63,6 +62,7 @@ SET(LCB_CORE_CXXSRC
     src/hostlist.cc
     src/http/http.cc
     src/http/http_io.cc
+    src/newconfig.cc
     src/n1ql/params.cc
     src/n1ql/n1ql.cc
     src/n1ql/ixmgmt.cc
