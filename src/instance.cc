@@ -433,6 +433,10 @@ sync_dtor_cb(void *arg)
     }
 }
 
+extern "C" {
+void lcbdur_destroy(void*);
+}
+
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
 {
@@ -458,7 +462,7 @@ void lcb_destroy(lcb_t instance)
     if ((pendq = po->items[LCB_PENDTYPE_DURABILITY])) {
         std::vector<void*> dsets(pendq->begin(), pendq->end());
         for (size_t ii = 0; ii < dsets.size(); ++ii) {
-            lcbdur_destroy(reinterpret_cast<lcb_DURSET_st*>(dsets[ii]));
+            lcbdur_destroy(dsets[ii]);
         }
         pendq->clear();
     }
