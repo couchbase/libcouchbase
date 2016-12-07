@@ -108,6 +108,9 @@ mcserver_has_pending(mc_SERVER *server);
 #define mcserver_get_host(server) (server)->curhost->host
 #define mcserver_get_port(server) (server)->curhost->port
 
+int
+mcserver_supports_compression(mc_SERVER *server);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
