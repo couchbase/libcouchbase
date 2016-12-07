@@ -48,8 +48,7 @@ SET(LCB_CORE_SRC
     src/retryq.c
     src/retrychk.c
     src/settings.c
-    src/utilities.c
-    src/wait.c)
+    src/utilities.c)
 
 SET(LCB_CORE_CXXSRC
     src/instance.cc
@@ -75,4 +74,5 @@ SET(LCB_CORE_CXXSRC
     src/operations/subdoc.cc
     src/mcserver/mcserver.cc
     src/mcserver/negotiate.cc
-    src/cntl.cc)
+    src/cntl.cc
+    src/wait.cc)
