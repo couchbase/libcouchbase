@@ -170,6 +170,21 @@ public:
     }
 
     MemcachedRequest(uint8_t opcode) {
+        assign(opcode);
+    }
+
+    MemcachedRequest(uint8_t opcode, uint32_t opaque_) {
+        assign(opcode);
+        hdr.request.opaque = opaque_;
+    }
+
+    const void *data() const { return hdr.bytes; }
+    size_t size() const { return sizeof hdr.bytes; }
+
+private:
+    protocol_binary_request_header hdr;
+
+    void assign(uint8_t opcode) {
         hdr.request.opcode = opcode;
         hdr.request.magic = PROTOCOL_BINARY_REQ;
         hdr.request.datatype = PROTOCOL_BINARY_RAW_BYTES;
@@ -181,12 +196,6 @@ public:
         hdr.request.keylen = 0;
         hdr.request.opaque = 0;
     }
-
-    const void *data() const { return hdr.bytes; }
-    size_t size() const { return sizeof hdr.bytes; }
-
-private:
-    protocol_binary_request_header hdr;
 };
 
 class MemcachedResponse : private packet_info {

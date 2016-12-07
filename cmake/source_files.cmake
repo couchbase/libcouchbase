@@ -42,7 +42,6 @@ SET(LCB_CORE_SRC
     ${LCB_N1QL_SRC}
     src/bootstrap.c
     src/callbacks.c
-    src/getconfig.c
     src/legacy.c
     # src/mcserver/negotiate.c
     src/iofactory.c
@@ -57,6 +56,7 @@ SET(LCB_CORE_CXXSRC
     src/auth.cc
     src/connspec.cc
     src/dump.cc
+    src/getconfig.cc
     src/nodeinfo.cc
     src/handler.cc
     src/hostlist.cc

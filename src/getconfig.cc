@@ -16,6 +16,7 @@
  */
 
 #include "internal.h"
+#include "packetutils.h"
 #include <bucketconfig/clconfig.h>
 LCB_INTERNAL_API
 mc_SERVER *
@@ -24,7 +25,7 @@ lcb_find_server_by_host(lcb_t instance, const lcb_host_t *host)
     mc_CMDQUEUE *cq = &instance->cmdq;
     unsigned ii;
     for (ii = 0; ii < cq->npipelines; ii++) {
-        mc_SERVER *server = (mc_SERVER *)cq->pipelines[ii];
+        mc_SERVER *server = reinterpret_cast<mc_SERVER *>(cq->pipelines[ii]);
         if (lcb_host_equals(server->curhost, host)) {
             return server;
         }
@@ -37,10 +38,10 @@ mc_SERVER *
 lcb_find_server_by_index(lcb_t instance, int ix)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
-    if (ix < 0 || ix >= (int)cq->npipelines) {
+    if (ix < 0 || ix >= static_cast<int>(cq->npipelines)) {
         return NULL;
     }
-    return (mc_SERVER *)cq->pipelines[ix];
+    return reinterpret_cast<mc_SERVER *>(cq->pipelines[ix]);
 }
 
 static void
@@ -49,7 +50,7 @@ ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t rc,
 {
     mc_SERVER *server = (mc_SERVER *)pl;
     mc_REQDATAEX *rd = req->u_rdata.exdata;
-    const packet_info *res = resdata;
+    const packet_info *res = reinterpret_cast<const packet_info*>(resdata);
 
     lcb_cccp_update2(rd->cookie, rc, res->payload, PACKET_NBODY(res),
                      server->curhost);
@@ -64,11 +65,10 @@ lcb_getconfig(lcb_t instance, const void *cookie, mc_SERVER *server)
 {
     lcb_error_t err;
     mc_CMDQUEUE *cq = &instance->cmdq;
-    mc_PIPELINE *pipeline = (mc_PIPELINE *)server;
+    mc_PIPELINE *pipeline = reinterpret_cast<mc_PIPELINE*>(server);
     mc_PACKET *packet;
     mc_REQDATAEX *rd;
 
-    protocol_binary_request_header hdr;
     packet = mcreq_allocate_packet(pipeline);
     if (!packet) {
         return LCB_CLIENT_ENOMEM;
@@ -80,18 +80,17 @@ lcb_getconfig(lcb_t instance, const void *cookie, mc_SERVER *server)
         return err;
     }
 
-    rd = calloc(1, sizeof(*rd));
+    rd = reinterpret_cast<mc_REQDATAEX*>(calloc(1, sizeof(*rd)));
     rd->procs = &procs;
     rd->cookie = cookie;
     rd->start = gethrtime();
     packet->u_rdata.exdata = rd;
     packet->flags |= MCREQ_F_REQEXT;
 
-    memset(&hdr, 0, sizeof(hdr));
-    hdr.request.opaque = packet->opaque;
-    hdr.request.magic = PROTOCOL_BINARY_REQ;
-    hdr.request.opcode = PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG;
-    memcpy(SPAN_BUFFER(&packet->kh_span), hdr.bytes, sizeof(hdr.bytes));
+    lcb::MemcachedRequest hdr(
+        PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG, packet->opaque);
+    hdr.opaque(packet->opaque);
+    memcpy(SPAN_BUFFER(&packet->kh_span), hdr.data(), hdr.size());
 
     mcreq_sched_enter(cq);
     mcreq_sched_add(pipeline, packet);
