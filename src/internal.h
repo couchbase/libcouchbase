@@ -56,6 +56,7 @@
 namespace lcb {
 class Connspec;
 struct Spechost;
+class RetryQueue;
 }
 extern "C" {
 #endif
@@ -93,8 +94,10 @@ struct lcb_GUESSVB_st;
 #ifdef __cplusplus
 #include <string>
 typedef std::string* lcb_pSCRATCHBUF;
+typedef lcb::RetryQueue lcb_RETRYQ;
 #else
 typedef struct lcb_SCRATCHBUF* lcb_pSCRATCHBUF;
+typedef struct lcb_RETRYQ_st lcb_RETRYQ;
 #endif
 
 struct lcb_st {

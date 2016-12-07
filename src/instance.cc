@@ -382,7 +382,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->confmon = lcb_confmon_create(settings, obj->iotable);
     obj->ht_nodes = new Hostlist();
     obj->mc_nodes = new Hostlist();
-    obj->retryq = lcb_retryq_new(&obj->cmdq, obj->iotable, obj->settings);
+    obj->retryq = new RetryQueue(&obj->cmdq, obj->iotable, obj->settings);
     obj->n1ql_cache = lcb_n1qlcache_create();
     lcb_initialize_packet_handlers(obj);
     lcb_aspend_init(&obj->pendops);
@@ -480,7 +480,7 @@ void lcb_destroy(lcb_t instance)
         }
     }
 
-    DESTROY(lcb_retryq_destroy, retryq);
+    DESTROY(delete, retryq);
     DESTROY(lcb_confmon_destroy, confmon);
     DESTROY(lcbio_mgr_destroy, memd_sockpool);
     DESTROY(lcbio_mgr_destroy, http_sockpool);

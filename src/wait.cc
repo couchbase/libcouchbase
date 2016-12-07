@@ -22,7 +22,7 @@ static bool
 has_pending(lcb_t instance)
 {
 
-    if (!lcb_retryq_empty(instance->retryq)) {
+    if (!instance->retryq->empty()) {
         return true;
     }
 
@@ -52,7 +52,7 @@ maybe_reset_timeouts(lcb_t instance)
         mc_SERVER *ss = LCBT_GET_SERVER(instance, ii);
         mcreq_reset_timeouts(&ss->pipeline, now);
     }
-    lcb_retryq_reset_timeouts(instance->retryq, now);
+    instance->retryq->reset_timeouts(now);
 }
 
 void

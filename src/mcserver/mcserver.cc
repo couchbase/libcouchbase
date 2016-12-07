@@ -239,7 +239,7 @@ Server::handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt)
     /** Reschedule the packet again .. */
     mc_PACKET *newpkt = mcreq_renew_packet(oldpkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
-    lcb_retryq_nmvadd(instance->retryq, (mc_EXPACKET*)newpkt);
+    instance->retryq->nmvadd((mc_EXPACKET*)newpkt);
     return true;
 }
 
@@ -393,7 +393,7 @@ Server::maybe_retry_packet(mc_PACKET *pkt, lcb_error_t err)
 
     mc_PACKET *newpkt = mcreq_renew_packet(pkt);
     newpkt->flags &= ~MCREQ_STATE_FLAGS;
-    lcb_retryq_add(instance->retryq, (mc_EXPACKET *)newpkt, err);
+    instance->retryq->add((mc_EXPACKET *)newpkt, err);
     return true;
 }
 
@@ -417,7 +417,7 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *)
     }
 
     if (err == LCB_ETIMEDOUT) {
-        lcb_error_t tmperr = lcb_retryq_origerr(pkt);
+        lcb_error_t tmperr = lcb::RetryQueue::error_for(pkt);
         if (tmperr != LCB_SUCCESS) {
             err = tmperr;
         }

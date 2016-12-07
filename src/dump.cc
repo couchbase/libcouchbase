@@ -50,10 +50,10 @@ lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags)
     } else {
         fprintf(fp, "NO CLUSTER CONFIG\n");
     }
-    fprintf(fp,"Retry queue has items: %s\n", lcb_retryq_empty(instance->retryq) ? "No" : "Yes");
+    fprintf(fp,"Retry queue has items: %s\n", instance->retryq->empty() ? "No" : "Yes");
     if (flags & LCB_DUMP_PKTINFO) {
         fprintf(fp, "=== BEGIN RETRY QUEUE DUMP ===\n");
-        lcb_retryq_dump(instance->retryq, fp, NULL);
+        instance->retryq->dump(fp, NULL);
         fprintf(fp, "=== END RETRY QUEUE DUMP ===\n");
     } else {
         fprintf(fp, "=== NOT DUMPING PACKET INFO. LCB_DUMP_PKTINFO not passed\n");
