@@ -30,85 +30,15 @@
 
 #define LOGFMT "<%s:%s> (SRV=%p,IX=%d) "
 
-#define LOGID(server) get_ctx_host(server->connctx), get_ctx_port(server->connctx), (void*)server, server->pipeline.index
+#define LOGID(server) get_ctx_host(server->connctx), get_ctx_port(server->connctx), (void*)server, server->index
 #define LOGID_T() LOGID(this)
 
 #define MCREQ_MAXIOV 32
 #define LCBCONN_UNWANT(conn, flags) (conn)->want &= ~(flags)
 
+using namespace lcb;
+
 static void on_error(lcbio_CTX *ctx, lcb_error_t err);
-
-struct Server : mc_SERVER {
-    Server(lcb_t, int);
-    ~Server();
-
-    enum State {
-        /* There are no known errored commands on this server */
-        S_CLEAN,
-
-        /* In the process of draining remaining commands to be flushed. The commands
-         * being drained may have already been rescheduled to another server or
-         * placed inside the error queue, but are pending being flushed. This will
-         * only happen in completion-style I/O plugins. When this state is in effect,
-         * subsequent attempts to connect will be blocked until all commands have
-         * been properly drained.
-         */
-        S_ERRDRAIN,
-
-        /* The server object has been closed, either because it has been removed
-         * from the cluster or because the related lcb_t has been destroyed.
-         */
-        S_CLOSED
-    };
-
-
-    State state;
-
-    /** IO/Operation timer */
-    lcbio_pTIMER io_timer;
-
-    static Server* get(lcbio_CTX *ctx) {
-        return reinterpret_cast<Server*>(lcbio_ctx_data(ctx));
-    }
-
-    uint32_t default_timeout() const {
-        return settings->operation_timeout;
-    }
-    uint32_t next_timeout() const;
-
-    bool has_pending() const {
-        return !SLLIST_IS_EMPTY(&pipeline.requests);
-    }
-
-    bool check_closed();
-    void start_errored_ctx(State next_state);
-    void finalize_errored_ctx();
-    void socket_failed(lcb_error_t);
-    void io_timeout();
-
-    enum RefreshPolicy {
-        REFRESH_ALWAYS,
-        REFRESH_ONFAILED,
-        REFRESH_NEVER
-    };
-    int purge(lcb_error_t error, hrtime_t thresh, hrtime_t *next,
-              RefreshPolicy policy);
-
-    void flush();
-    void connect();
-    void close();
-    void handle_connected(lcbio_SOCKET *socket, lcb_error_t err, lcbio_OSERR syserr);
-
-    enum ReadState {
-        PKT_READ_COMPLETE,
-        PKT_READ_PARTIAL
-    };
-
-    ReadState try_read(lcbio_CTX *ctx, rdb_IOROPE *ior);
-    bool handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt);
-    bool maybe_retry_packet(mc_PACKET *pkt, lcb_error_t err);
-    bool maybe_reconnect_on_fake_timeout(lcb_error_t received_error);
-};
 
 static void
 on_flush_ready(lcbio_CTX *ctx)
@@ -120,7 +50,7 @@ on_flush_ready(lcbio_CTX *ctx)
     do {
         int niov = 0;
         unsigned nb;
-        nb = mcreq_flush_iov_fill(&server->pipeline, iov, MCREQ_MAXIOV, &niov);
+        nb = mcreq_flush_iov_fill(server, iov, MCREQ_MAXIOV, &niov);
         if (!nb) {
             return;
         }
@@ -138,12 +68,8 @@ on_flush_done(lcbio_CTX *ctx, unsigned expected, unsigned actual)
         now = gethrtime();
     }
 
-    mcreq_flush_done_ex(&server->pipeline, actual, expected, now);
+    mcreq_flush_done_ex(server, actual, expected, now);
     server->check_closed();
-}
-
-void mcserver_flush(mc_SERVER *server) {
-    static_cast<Server*>(server)->flush();
 }
 
 void
@@ -170,14 +96,13 @@ LIBCOUCHBASE_API
 void
 lcb_sched_flush(lcb_t instance)
 {
-    unsigned ii;
-    for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-        mc_SERVER *server = LCBT_GET_SERVER(instance, ii);
+    for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+        Server *server = LCBT_GET_SERVER(instance, ii);
 
-        if (!mcserver_has_pending(server)) {
+        if (!server->has_pending()) {
             continue;
         }
-        server->pipeline.flush_start(&server->pipeline);
+        server->flush_start(server);
     }
 }
 
@@ -203,7 +128,7 @@ Server::handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt)
     lcb_log(LOGARGS_T(WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID_T(), (void*)oldpkt, oldpkt->opaque, vbid);
 
     /* Notify of new map */
-    lcb_vbguess_remap(instance, vbid, pipeline.index);
+    lcb_vbguess_remap(instance, vbid, index);
 
     if (PACKET_NBODY(resinfo) && cccp->enabled) {
         lcb_string s;
@@ -291,10 +216,10 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     /* Find the packet */
     if (PACKET_OPCODE(info) == PROTOCOL_BINARY_CMD_STAT && PACKET_NKEY(info) != 0) {
         is_last = 0;
-        request = mcreq_pipeline_find(&pipeline, PACKET_OPAQUE(info));
+        request = mcreq_pipeline_find(this, PACKET_OPAQUE(info));
     } else {
         is_last = 1;
-        request = mcreq_pipeline_remove(&pipeline, PACKET_OPAQUE(info));
+        request = mcreq_pipeline_remove(this, PACKET_OPAQUE(info));
     }
 
     if (!request) {
@@ -307,7 +232,7 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
         if (!handle_nmv(info, request)) {
-            mcreq_dispatch_response(&pipeline, request, info, LCB_NOT_MY_VBUCKET);
+            mcreq_dispatch_response(this, request, info, LCB_NOT_MY_VBUCKET);
         }
         DO_SWALLOW_PAYLOAD()
         goto GT_DONE;
@@ -317,7 +242,7 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     if (!(request->flags & MCREQ_F_UFWD)) {
         DO_ASSIGN_PAYLOAD();
         info->bufh = rdb_get_first_segment(ior);
-        mcreq_dispatch_response(&pipeline, request, info, LCB_SUCCESS);
+        mcreq_dispatch_response(this, request, info, LCB_SUCCESS);
         DO_SWALLOW_PAYLOAD()
 
     } else {
@@ -342,7 +267,7 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
 
     GT_DONE:
     if (is_last) {
-        mcreq_packet_handled(&pipeline, request);
+        mcreq_packet_handled(this, request);
     }
     return PKT_READ_COMPLETE;
 }
@@ -363,13 +288,6 @@ on_read(lcbio_CTX *ctx, unsigned)
     lcb_maybe_breakout(server->instance);
 }
 
-LCB_INTERNAL_API
-int
-mcserver_has_pending(mc_SERVER *server)
-{
-    return static_cast<Server*>(server)->has_pending();
-}
-
 static void flush_noop(mc_PIPELINE *pipeline) {
     (void)pipeline;
 }
@@ -381,7 +299,7 @@ static void server_connect(Server *server) {
 bool
 Server::maybe_retry_packet(mc_PACKET *pkt, lcb_error_t err)
 {
-    lcbvb_DISTMODE dist_t = lcbvb_get_distmode(pipeline.parent->config);
+    lcbvb_DISTMODE dist_t = lcbvb_get_distmode(parent->config);
 
     if (dist_t != LCBVB_DIST_VBUCKET) {
         /** memcached bucket */
@@ -401,7 +319,7 @@ static void
 fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *)
 {
     int rv;
-    Server *server = reinterpret_cast<Server *>(pipeline);
+    Server *server = static_cast<Server *>(pipeline);
     packet_info info;
     protocol_binary_request_header hdr;
     protocol_binary_response_header *res = &info.res;
@@ -443,10 +361,10 @@ Server::purge(lcb_error_t error, hrtime_t thresh, hrtime_t *next,
 
     if (thresh) {
         affected = mcreq_pipeline_timeout(
-                &pipeline, error, fail_callback, NULL, thresh, next);
+                this, error, fail_callback, NULL, thresh, next);
 
     } else {
-        mcreq_pipeline_fail(&pipeline, error, fail_callback, NULL);
+        mcreq_pipeline_fail(this, error, fail_callback, NULL);
         affected = -1;
     }
 
@@ -470,16 +388,11 @@ static void flush_errdrain(mc_PIPELINE *pipeline)
     }
 }
 
-void mcserver_fail_chain(mc_SERVER *server, lcb_error_t err) {
-    static_cast<Server*>(server)->purge(err, 0, NULL, Server::REFRESH_NEVER);
-}
-
-
 uint32_t
 Server::next_timeout() const
 {
     hrtime_t now, expiry, diff;
-    mc_PACKET *pkt = mcreq_first_packet(&pipeline);
+    mc_PACKET *pkt = mcreq_first_packet(this);
 
     if (!pkt) {
         return default_timeout();
@@ -552,6 +465,8 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR syserr
     server->handle_connected(sock, err, syserr);
 }
 
+static void mcserver_flush(Server *s) { s->flush(); }
+
 void
 Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr)
 {
@@ -588,7 +503,7 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
     procs.cb_flush_ready = on_flush_ready;
     connctx = lcbio_ctx_new(sock, this, &procs);
     connctx->subsys = "memcached";
-    pipeline.flush_start = (mcreq_flushstart_fn)mcserver_flush;
+    mc_PIPELINE::flush_start = (mcreq_flushstart_fn)mcserver_flush;
 
     uint32_t tmo = next_timeout();
     lcb_log(LOGARGS_T(DEBUG), LOGFMT "Setting initial timeout=%ums", LOGID_T(), tmo/1000);
@@ -602,33 +517,35 @@ Server::connect()
     lcbio_pMGRREQ mr = lcbio_mgr_get(instance->memd_sockpool, curhost,
         default_timeout(), on_connected, this);
     LCBIO_CONNREQ_MKPOOLED(&connreq, mr);
-    pipeline.flush_start = flush_noop;
+    mc_PIPELINE::flush_start = flush_noop;
     state = Server::S_CLEAN;
 }
 
 static void
 buf_done_cb(mc_PIPELINE *pl, const void *cookie, void *, void *)
 {
-    Server *server = reinterpret_cast<Server*>(pl);
+    Server *server = static_cast<Server*>(pl);
     server->instance->callbacks.pktflushed(server->instance, cookie);
 }
 
-Server::Server(lcb_t instance_, int ix) : state(S_CLEAN) {
+Server::Server(lcb_t instance_, int ix)
+    : state(S_CLEAN),
+      io_timer(lcbio_timer_new(instance_->iotable, this, timeout_server)),
+      instance(instance_),
+      settings(lcb_settings_ref2(instance_->settings)),
+      compsupport(0),
+      mutation_tokens(0),
+      connctx(NULL),
+      curhost(new lcb_host_t())
+{
+    std::memset(static_cast<mc_PIPELINE*>(this), 0, sizeof(mc_PIPELINE));
+    mcreq_pipeline_init(this);
+    mc_PIPELINE::flush_start = (mcreq_flushstart_fn)server_connect;
+    mc_PIPELINE::buf_done_callback = buf_done_cb;
+    mc_PIPELINE::index = ix;
 
-    // Reset all C level data to 0.
-    std::memset(static_cast<mc_SERVER*>(this), 0, sizeof(mc_SERVER));
-
-    instance = instance_;
-    settings = instance->settings;
-
-    curhost = new lcb_host_t();
+    std::memset(&connreq, 0, sizeof connreq);
     std::memset(curhost, 0, sizeof *curhost);
-
-    lcb_settings_ref(settings);
-
-    mcreq_pipeline_init(&pipeline);
-    pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
-    pipeline.buf_done_callback = buf_done_cb;
 
     const char *datahost = lcbvb_get_hostport(
         LCBT_VBCONFIG(instance), ix,
@@ -637,15 +554,21 @@ Server::Server(lcb_t instance_, int ix) : state(S_CLEAN) {
     if (datahost) {
         lcb_host_parsez(curhost, datahost, LCB_CONFIG_MCD_PORT);
     }
-    io_timer = lcbio_timer_new(instance->iotable, this, timeout_server);
 }
 
-mc_SERVER* mcserver_alloc(lcb_t instance, int ix) {
-    return new Server(instance, ix);
+Server::Server()
+    : state(S_TEMPORARY),
+      io_timer(NULL), instance(NULL), settings(NULL), compsupport(0),
+      mutation_tokens(0), connctx(NULL), curhost(NULL)
+{
 }
 
 Server::~Server() {
-    mcreq_pipeline_cleanup(&pipeline);
+    if (state == S_TEMPORARY) {
+        return;
+    }
+
+    mcreq_pipeline_cleanup(this);
 
     if (io_timer) {
         lcbio_timer_destroy(io_timer);
@@ -689,12 +612,6 @@ Server::socket_failed(lcb_error_t err)
 }
 
 void
-mcserver_close(mc_SERVER *mcserver)
-{
-    static_cast<Server*>(mcserver)->close();
-}
-
-void
 Server::close()
 {
     /* Should never be called twice */
@@ -728,8 +645,8 @@ Server::start_errored_ctx(State next_state)
             return;
         } else {
             /* Not closed but don't have a current context */
-            pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
-            if (mcserver_has_pending(this)) {
+            mc_PIPELINE::flush_start = (mcreq_flushstart_fn)server_connect;
+            if (has_pending()) {
                 if (!lcbio_timer_armed(io_timer)) {
                     /* TODO: Maybe throttle reconnection attempts? */
                     lcbio_timer_rearm(io_timer, default_timeout());
@@ -748,7 +665,7 @@ Server::start_errored_ctx(State next_state)
             /* Close the socket not to leak resources */
             lcbio_shutdown(lcbio_ctx_sock(ctx));
             if (next_state == Server::S_ERRDRAIN) {
-                pipeline.flush_start = (mcreq_flushstart_fn)flush_errdrain;
+                mc_PIPELINE::flush_start = (mcreq_flushstart_fn)flush_errdrain;
             }
         } else {
             finalize_errored_ctx();
@@ -782,8 +699,8 @@ Server::finalize_errored_ctx()
 
     unsigned toflush;
     nb_IOV iov;
-    while ((toflush = mcreq_flush_iov_fill(&pipeline, &iov, 1, NULL))) {
-        mcreq_flush_done(&pipeline, toflush, toflush);
+    while ((toflush = mcreq_flush_iov_fill(this, &iov, 1, NULL))) {
+        mcreq_flush_done(this, toflush, toflush);
     }
 
     if (state == Server::S_CLOSED) {
@@ -793,7 +710,7 @@ Server::finalize_errored_ctx()
         /* Otherwise, cycle the state back to CLEAN and reinit
          * the connection */
         state = Server::S_CLEAN;
-        pipeline.flush_start = (mcreq_flushstart_fn)server_connect;
+        mc_PIPELINE::flush_start = (mcreq_flushstart_fn)server_connect;
         connect();
     }
 }

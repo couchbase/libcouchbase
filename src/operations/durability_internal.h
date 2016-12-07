@@ -81,7 +81,7 @@ namespace durability {
  * instance.
  */
 struct ServerInfo {
-    const mc_SERVER *server; /**< Server pointer (for comparison only) */
+    const lcb::Server *server; /**< Server pointer (for comparison only) */
     lcb_U16 persisted; /**< Exists on server */
     lcb_U16 exists; /**< Persisted to server */
 

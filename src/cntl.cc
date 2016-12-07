@@ -206,7 +206,7 @@ HANDLER(conninfo) {
     if (si->version < 0 || si->version > 1) { return LCB_ECTL_BADARG; }
 
     if (cmd == LCB_CNTL_MEMDNODE_INFO) {
-        mc_SERVER *server;
+        lcb::Server *server;
         int ix = si->v.v0.index;
 
         if (ix < 0 || ix > (int)LCBT_NSERVERS(instance)) {
@@ -470,8 +470,7 @@ HANDLER(mutation_tokens_supported_handler) {
     *(int *)arg = 0;
 
     for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-        mc_SERVER *s = LCBT_GET_SERVER(instance, ii);
-        if (s->mutation_tokens) {
+        if (instance->get_server(ii)->supports_mutation_tokens()) {
             *(int *)arg = 1;
             break;
         }

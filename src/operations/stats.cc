@@ -42,15 +42,23 @@ refcnt_dtor_common(mc_PACKET *pkt)
     }
 }
 
+static const char *
+make_hp_string(const lcb::Server& server, std::string& out) {
+    out.assign(server.get_host().host);
+    out.append(":");
+    out.append(server.get_host().port);
+    return out.c_str();
+}
+
 static void
 stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
 {
     BcastCookie *ck = static_cast<BcastCookie *>(req->u_rdata.exdata);
-    mc_SERVER *server = reinterpret_cast<mc_SERVER*>(pl);
+    lcb::Server *server = static_cast<lcb::Server*>(pl);
     lcb_RESPSTATS *resp = reinterpret_cast<lcb_RESPSTATS*>(const_cast<void*>(arg));
 
     lcb_RESPCALLBACK callback;
-    lcb_t instance = server->instance;
+    lcb_t instance = server->get_instance();
 
     callback = lcb_find_callback(instance, LCB_CALLBACK_STATS);
 
@@ -68,9 +76,8 @@ stats_handler(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t err, const void *arg)
         delete ck;
 
     } else {
-        std::string epbuf(mcserver_get_host(server));
-        epbuf.append(":").append(mcserver_get_port(server));
-        resp->server = epbuf.c_str();
+        std::string epbuf;
+        resp->server = make_hp_string(*server, epbuf);
         resp->cookie = const_cast<void *>(ck->cookie);
         callback(instance, LCB_CALLBACK_STATS, (lcb_RESPBASE *)resp);
         return;
@@ -173,8 +180,7 @@ static void
 handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
              const void *arg)
 {
-    mc_SERVER *server = (mc_SERVER *)pipeline;
-    char epbuf[NI_MAXHOST + NI_MAXSERV + 4];
+    lcb::Server *server = static_cast<lcb::Server*>(pipeline);
     BcastCookie *ck = (BcastCookie *)req->u_rdata.exdata;
     lcb_RESPCALLBACK callback;
 
@@ -203,11 +209,12 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
 
     u_resp.base->rc = err;
     u_resp.base->cookie = const_cast<void*>(ck->cookie);
-    u_resp.base->server = epbuf;
-    sprintf(epbuf, "%s:%s", mcserver_get_host(server), mcserver_get_port(server));
 
-    callback = lcb_find_callback(server->instance, ck->type);
-    callback(server->instance, ck->type, (lcb_RESPBASE *)u_resp.base);
+    std::string epbuf;
+    u_resp.base->server = make_hp_string(*server, epbuf);
+
+    callback = lcb_find_callback(server->get_instance(), ck->type);
+    callback(server->get_instance(), ck->type, (lcb_RESPBASE *)u_resp.base);
     if (--ck->remaining) {
         return;
     }
@@ -216,7 +223,7 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
     u_empty.base.rc = err;
     u_empty.base.rflags = LCB_RESP_F_CLIENTGEN|LCB_RESP_F_FINAL;
     u_empty.base.cookie = const_cast<void*>(ck->cookie);
-    callback(server->instance, ck->type, (lcb_RESPBASE *)&u_empty.base);
+    callback(server->get_instance(), ck->type, (lcb_RESPBASE *)&u_empty.base);
     delete ck;
 }
 
@@ -307,16 +314,14 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
 
     for (ii = 0; ii < cq->npipelines; ii++) {
         mc_PACKET *pkt;
-        mc_PIPELINE *pl = cq->pipelines[ii];
-        mc_SERVER *server = (mc_SERVER *)pl;
-        char cmpbuf[NI_MAXHOST + NI_MAXSERV + 4];
+        lcb::Server *server = static_cast<lcb::Server*>(cq->pipelines[ii]);
         protocol_binary_request_verbosity vcmd;
         protocol_binary_request_header *hdr = &vcmd.message.header;
         uint32_t level;
 
-        sprintf(cmpbuf, "%s:%s",
-            mcserver_get_host(server), mcserver_get_port(server));
-        if (cmd->server && strncmp(cmpbuf, cmd->server, strlen(cmd->server))) {
+        std::string cmpbuf;
+        make_hp_string(*server, cmpbuf);
+        if (cmd->server && cmpbuf != cmd->server) {
             continue;
         }
 
@@ -330,7 +335,7 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
             level = 0;
         }
 
-        pkt = mcreq_allocate_packet(pl);
+        pkt = mcreq_allocate_packet(server);
         if (!pkt) {
             return LCB_CLIENT_ENOMEM;
         }
@@ -338,7 +343,7 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
         pkt->u_rdata.exdata = ckwrap;
         pkt->flags |= MCREQ_F_REQEXT;
 
-        mcreq_reserve_header(pl, pkt, MCREQ_PKT_BASESIZE + 4);
+        mcreq_reserve_header(server, pkt, MCREQ_PKT_BASESIZE + 4);
         hdr->request.magic = PROTOCOL_BINARY_REQ;
         hdr->request.opcode = PROTOCOL_BINARY_CMD_VERBOSITY;
         hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
@@ -351,7 +356,7 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie,
         vcmd.message.body.level = htonl((uint32_t)level);
 
         memcpy(SPAN_BUFFER(&pkt->kh_span), vcmd.bytes, sizeof(vcmd.bytes));
-        mcreq_sched_add(pl, pkt);
+        mcreq_sched_add(server, pkt);
         ckwrap->remaining++;
     }
 

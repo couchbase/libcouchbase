@@ -468,8 +468,7 @@ void lcb_destroy(lcb_t instance)
     }
 
     for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
-        mc_SERVER *server = LCBT_GET_SERVER(instance, ii);
-        mcserver_close(server);
+        instance->get_server(ii)->close();
     }
 
     if ((pendq = po->items[LCB_PENDTYPE_HTTP])) {

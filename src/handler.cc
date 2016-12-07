@@ -796,7 +796,7 @@ static void
 dispatch_ufwd_error(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t immerr)
 {
     lcb_PKTFWDRESP resp = { 0 };
-    lcb_t instance = ((mc_SERVER*)pipeline)->instance;
+    lcb_t instance = static_cast<lcb::Server*>(pipeline)->get_instance();
     assert(immerr != LCB_SUCCESS);
     resp.version = 0;
     instance->callbacks.pktfwd(instance, MCREQ_PKT_COOKIE(req), immerr, &resp);

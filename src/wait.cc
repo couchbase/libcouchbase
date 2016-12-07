@@ -31,8 +31,7 @@ has_pending(lcb_t instance)
     }
 
     for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-        mc_SERVER *ss = LCBT_GET_SERVER(instance, ii);
-        if (mcserver_has_pending(ss)) {
+        if (instance->get_server(ii)->has_pending()) {
             return true;
         }
     }
@@ -49,8 +48,7 @@ maybe_reset_timeouts(lcb_t instance)
 
     uint64_t now = lcb_nstime();
     for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ++ii) {
-        mc_SERVER *ss = LCBT_GET_SERVER(instance, ii);
-        mcreq_reset_timeouts(&ss->pipeline, now);
+        mcreq_reset_timeouts(instance->get_server(ii), now);
     }
     instance->retryq->reset_timeouts(now);
 }

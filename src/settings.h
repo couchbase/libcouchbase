@@ -179,7 +179,8 @@ LCB_INTERNAL_API
 void
 lcb_settings_unref(lcb_settings *);
 
-#define lcb_settings_ref(settings) (settings)->refcount++
+#define lcb_settings_ref(settings) ((void)(settings)->refcount++)
+#define lcb_settings_ref2(settings) ((settings)->refcount++, settings)
 
 #ifdef __cplusplus
 }

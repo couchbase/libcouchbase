@@ -113,7 +113,7 @@ Item::prepare(uint16_t ixarray[4])
             continue;
         }
 
-        const mc_SERVER *s_exp = LCBT_GET_SERVER(instance, cur_ix);
+        const lcb::Server *s_exp = instance->get_server(cur_ix);
         if (s_exp != info.server) {
             info.clear();
 
@@ -135,7 +135,7 @@ Item::prepare(uint16_t ixarray[4])
         }
 
         /* Otherwise, write the expected server out */
-        ixarray[oix++] = s_exp->pipeline.index;
+        ixarray[oix++] = s_exp->get_index();
     }
 
     return oix;
@@ -156,7 +156,7 @@ Item::update(int flags, int srvix)
 
     lcb_t instance = parent->instance;
     bool is_master = lcbvb_vbmaster(LCBT_VBCONFIG(instance), vbid) == srvix;
-    const mc_SERVER *server = LCBT_GET_SERVER(instance, srvix);
+    const lcb::Server *server = instance->get_server(srvix);
 
     memset(info, 0, sizeof(*info));
     info->server = server;
@@ -423,10 +423,8 @@ get_poll_meth(lcb_t instance, const lcb_durability_opts_t *options)
 
         if (LCBT_SETTING(instance, fetch_mutation_tokens) &&
                 LCBT_SETTING(instance, dur_mutation_tokens)) {
-            size_t ii;
-            for (ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-                mc_SERVER *s = LCBT_GET_SERVER(instance, ii);
-                if (s->mutation_tokens) {
+            for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
+                if (instance->get_server(ii)->supports_mutation_tokens()) {
                     meth = LCB_DURABILITY_MODE_SEQNO;
                     break;
                 }
