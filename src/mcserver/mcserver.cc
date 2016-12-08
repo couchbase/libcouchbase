@@ -115,7 +115,7 @@ lcb_sched_flush(lcb_t instance)
  * user.
  */
 bool
-Server::handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt)
+Server::handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt)
 {
     protocol_binary_request_header hdr;
     lcb_error_t err = LCB_ERROR;
@@ -130,9 +130,8 @@ Server::handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt)
     /* Notify of new map */
     lcb_vbguess_remap(instance, vbid, index);
 
-    if (PACKET_NBODY(resinfo) && cccp->enabled) {
-        std::string s(reinterpret_cast<const char*>(PACKET_VALUE(resinfo)),
-                      PACKET_NVALUE(resinfo));
+    if (resinfo.bodylen() && cccp->enabled) {
+        std::string s(resinfo.body<const char*>(), resinfo.vallen());
         err = lcb_cccp_update(cccp, curhost->host, s.c_str());
     }
 
@@ -177,7 +176,7 @@ Server::handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt)
 Server::ReadState
 Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
 {
-    packet_info info_s, *info = &info_s;
+    MemcachedResponse mcresp;
     mc_PACKET *request;
     unsigned pktsize = 24, is_last = 1;
 
@@ -188,14 +187,14 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         return PKT_READ_PARTIAL; \
 
     #define DO_ASSIGN_PAYLOAD() \
-        rdb_consumed(ior, sizeof(info->res.bytes)); \
-        if (PACKET_NBODY(info)) { \
-            info->payload = rdb_get_consolidated(ior, PACKET_NBODY(info)); \
+        rdb_consumed(ior, mcresp.hdrsize()); \
+        if (mcresp.bodylen()) { \
+            mcresp.payload = rdb_get_consolidated(ior, mcresp.bodylen()); \
         } {
 
     #define DO_SWALLOW_PAYLOAD() \
-        } if (PACKET_NBODY(info)) { \
-            rdb_consumed(ior, PACKET_NBODY(info)); \
+        } if (mcresp.bodylen()) { \
+            rdb_consumed(ior, mcresp.bodylen()); \
         }
 
     if (rdb_get_nused(ior) < pktsize) {
@@ -203,33 +202,33 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     }
 
     /* copy bytes into the info structure */
-    rdb_copyread(ior, info->res.bytes, sizeof info->res.bytes);
+    rdb_copyread(ior, mcresp.hdrbytes(), mcresp.hdrsize());
 
-    pktsize += PACKET_NBODY(info);
+    pktsize += mcresp.bodylen();
     if (rdb_get_nused(ior) < pktsize) {
         RETURN_NEED_MORE(pktsize);
     }
 
     /* Find the packet */
-    if (PACKET_OPCODE(info) == PROTOCOL_BINARY_CMD_STAT && PACKET_NKEY(info) != 0) {
+    if (mcresp.opcode() == PROTOCOL_BINARY_CMD_STAT && mcresp.keylen() != 0) {
         is_last = 0;
-        request = mcreq_pipeline_find(this, PACKET_OPAQUE(info));
+        request = mcreq_pipeline_find(this, mcresp.opaque());
     } else {
         is_last = 1;
-        request = mcreq_pipeline_remove(this, PACKET_OPAQUE(info));
+        request = mcreq_pipeline_remove(this, mcresp.opaque());
     }
 
     if (!request) {
-        lcb_log(LOGARGS_T(WARN), LOGFMT "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(), PACKET_OPCODE(info), PACKET_STATUS(info), PACKET_OPAQUE(info));
+        lcb_log(LOGARGS_T(WARN), LOGFMT "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(), mcresp.opcode(), mcresp.status(), mcresp.opaque());
         rdb_consumed(ior, pktsize);
         return PKT_READ_COMPLETE;
     }
 
-    if (PACKET_STATUS(info) == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
+    if (mcresp.status() == PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET) {
         /* consume the header */
         DO_ASSIGN_PAYLOAD()
-        if (!handle_nmv(info, request)) {
-            mcreq_dispatch_response(this, request, info, LCB_NOT_MY_VBUCKET);
+        if (!handle_nmv(mcresp, request)) {
+            mcreq_dispatch_response(this, request, &mcresp, LCB_NOT_MY_VBUCKET);
         }
         DO_SWALLOW_PAYLOAD()
         goto GT_DONE;
@@ -238,8 +237,8 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     /* Figure out if the request is 'ufwd' or not */
     if (!(request->flags & MCREQ_F_UFWD)) {
         DO_ASSIGN_PAYLOAD();
-        info->bufh = rdb_get_first_segment(ior);
-        mcreq_dispatch_response(this, request, info, LCB_SUCCESS);
+        mcresp.bufh = rdb_get_first_segment(ior);
+        mcreq_dispatch_response(this, request, &mcresp, LCB_SUCCESS);
         DO_SWALLOW_PAYLOAD()
 
     } else {
@@ -256,7 +255,7 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         resp.bufs = &segs;
         resp.iovs = (lcb_IOV*)&iov;
         resp.nitems = 1;
-        resp.header = info->res.bytes;
+        resp.header = mcresp.hdrbytes();
         instance->callbacks.pktfwd(
             instance, MCREQ_PKT_COOKIE(request), LCB_SUCCESS, &resp);
         rdb_consumed(ior, pktsize);
@@ -313,15 +312,12 @@ Server::maybe_retry_packet(mc_PACKET *pkt, lcb_error_t err)
 }
 
 static void
-fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *)
-{
-    int rv;
-    Server *server = static_cast<Server *>(pipeline);
-    packet_info info;
-    protocol_binary_request_header hdr;
-    protocol_binary_response_header *res = &info.res;
+fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *) {
+    static_cast<Server*>(pipeline)->purge_single(pkt, err);
+}
 
-    if (server->maybe_retry_packet(pkt, err)) {
+void Server::purge_single(mc_PACKET *pkt, lcb_error_t err) {
+    if (maybe_retry_packet(pkt, err)) {
         return;
     }
 
@@ -338,15 +334,14 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *)
         }
     }
 
-    memset(&info, 0, sizeof(info));
+    protocol_binary_request_header hdr;
     memcpy(hdr.bytes, SPAN_BUFFER(&pkt->kh_span), sizeof(hdr.bytes));
+    MemcachedResponse resp(protocol_binary_command(hdr.request.opcode),
+                           hdr.request.opaque,
+                           PROTOCOL_BINARY_RESPONSE_EINVAL);
 
-    res->response.status = ntohs(PROTOCOL_BINARY_RESPONSE_EINVAL);
-    res->response.opcode = hdr.request.opcode;
-    res->response.opaque = hdr.request.opaque;
-
-    lcb_log(LOGARGS(server, WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error 0x%x", LOGID(server), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, err);
-    rv = mcreq_dispatch_response(pipeline, pkt, &info, err);
+    lcb_log(LOGARGS_T(WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error 0x%x", LOGID_T(), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, err);
+    int rv = mcreq_dispatch_response(this, pkt, &resp, err);
     lcb_assert(rv == 0);
 }
 

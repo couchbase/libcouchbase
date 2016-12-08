@@ -74,6 +74,9 @@ public:
         purge(err, 0, NULL, Server::REFRESH_NEVER);
     }
 
+    /** Callback for mc_pipeline_fail_chain */
+    inline void purge_single(mc_PACKET*, lcb_error_t);
+
     /**
      * Returns true or false depending on whether there are pending commands on
      * this server
@@ -173,7 +176,7 @@ public:
     };
 
     ReadState try_read(lcbio_CTX *ctx, rdb_IOROPE *ior);
-    bool handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt);
+    bool handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt);
     bool maybe_retry_packet(mc_PACKET *pkt, lcb_error_t err);
     bool maybe_reconnect_on_fake_timeout(lcb_error_t received_error);
 

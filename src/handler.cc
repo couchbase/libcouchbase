@@ -21,6 +21,8 @@
 #include "mc/compress.h"
 #include "trace.h"
 
+using lcb::MemcachedResponse;
+
 template <typename T>
 class ResponsePack {
 public:
@@ -161,23 +163,22 @@ find_callback(lcb_t instance, lcb_CALLBACKTYPE type)
 
 template <typename T>
 void make_error(lcb_t instance, T* resp,
-    const packet_info *response, lcb_error_t imm) {
+                const MemcachedResponse *response, lcb_error_t imm) {
     if (imm) {
         resp->rc = imm;
         resp->rflags |= LCB_RESP_F_CLIENTGEN;
-    } else if (PACKET_STATUS(response) == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+    } else if (response->status() == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
         resp->rc = LCB_SUCCESS;
     } else {
-        resp->rc = map_error(instance, PACKET_STATUS(response));
+        resp->rc = map_error(instance, response->status());
     }
 }
 
 template <typename T>
-void init_resp(lcb_t instance, const packet_info *mc_resp, const mc_PACKET *req,
-    lcb_error_t immerr, T *resp)
-{
+void init_resp(lcb_t instance, const MemcachedResponse* mc_resp,
+               const mc_PACKET *req, lcb_error_t immerr, T *resp) {
     make_error(instance, resp, mc_resp, immerr);
-    resp->cas = PACKET_CAS(mc_resp);
+    resp->cas = mc_resp->cas();
     resp->cookie = const_cast<void*>(MCREQ_PKT_COOKIE(req));
     mcreq_get_key(req, &resp->key, &resp->nkey);
 }
@@ -189,13 +190,12 @@ void init_resp(lcb_t instance, const packet_info *mc_resp, const mc_PACKET *req,
  * @param tgt Pointer to mutation token which should be populated.
  */
 static void
-handle_mutation_token(lcb_t instance, const packet_info *mc_resp,
+handle_mutation_token(lcb_t instance, const MemcachedResponse *mc_resp,
     const mc_PACKET *req, lcb_MUTATION_TOKEN *stok)
 {
     const char *sbuf;
     uint16_t vbid;
-
-    if (PACKET_EXTLEN(mc_resp) == 0) {
+    if (mc_resp->extlen() == 0) {
         return; /* No extras */
     }
 
@@ -207,7 +207,7 @@ handle_mutation_token(lcb_t instance, const packet_info *mc_resp,
         }
     }
 
-    sbuf = reinterpret_cast<const char *>(PACKET_BODY(mc_resp));
+    sbuf = mc_resp->body<const char*>();
     vbid = mcreq_get_vbucket(req);
     stok->vbid_ = vbid;
     memcpy(&stok->uuid_, sbuf, 8);
@@ -259,22 +259,22 @@ void invoke_callback(const mc_PACKET *pkt, mc_PIPELINE *pipeline, T *resp,
  */
 static void
 maybe_decompress(lcb_t o,
-    const packet_info *respkt, lcb_RESPGET *rescmd, void **freeptr)
+    const MemcachedResponse* respkt, lcb_RESPGET *rescmd, void **freeptr)
 {
     lcb_U8 dtype = 0;
-    if (!PACKET_NVALUE(respkt)) {
+    if (!respkt->vallen()) {
         return;
     }
 
-    if (PACKET_DATATYPE(respkt) & PROTOCOL_BINARY_DATATYPE_JSON) {
+    if (respkt->datatype() & PROTOCOL_BINARY_DATATYPE_JSON) {
         dtype = LCB_VALUE_F_JSON;
     }
 
-    if (PACKET_DATATYPE(respkt) & PROTOCOL_BINARY_DATATYPE_COMPRESSED) {
+    if (respkt->datatype() & PROTOCOL_BINARY_DATATYPE_COMPRESSED) {
         if (LCBT_SETTING(o, compressopts) & LCB_COMPRESS_IN) {
             /* if we inflate, we don't set the flag */
             mcreq_inflate_value(
-                PACKET_VALUE(respkt), PACKET_NVALUE(respkt),
+                respkt->value(), respkt->vallen(),
                 &rescmd->value, &rescmd->nvalue, freeptr);
 
         } else {
@@ -286,7 +286,7 @@ maybe_decompress(lcb_t o,
 }
 
 static void
-H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+H_get(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse* response,
       lcb_error_t immerr)
 {
     lcb_RESPGET resp = { 0 };
@@ -298,12 +298,12 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     if (resp.rc == LCB_SUCCESS) {
         const protocol_binary_response_get *get =
                 reinterpret_cast<const protocol_binary_response_get*>(
-                        PACKET_EPHEMERAL_START(response));
-        resp.datatype = PACKET_DATATYPE(response);
+                        response->ephemeral_start());
+        resp.datatype = response->datatype();
         resp.itmflags = ntohl(get->message.body.flags);
-        resp.value = PACKET_VALUE(response);
-        resp.nvalue = PACKET_NVALUE(response);
-        resp.bufh = response->bufh;
+        resp.value = response->value();
+        resp.nvalue = response->vallen();
+        resp.bufh = response->bufseg();
     }
 
     void *freeptr = NULL;
@@ -314,8 +314,8 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-             lcb_error_t immerr)
+H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request,
+             MemcachedResponse *response, lcb_error_t immerr)
 {
     lcb_RESPGET resp = { 0 };
     lcb_t instance = get_instance(pipeline);
@@ -327,12 +327,12 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     if (resp.rc == LCB_SUCCESS) {
         const protocol_binary_response_get *get =
                 reinterpret_cast<const protocol_binary_response_get*>(
-                        PACKET_EPHEMERAL_START(response));
+                        response->ephemeral_start());
         resp.itmflags = ntohl(get->message.body.flags);
-        resp.datatype = PACKET_DATATYPE(response);
-        resp.value = PACKET_VALUE(response);
-        resp.nvalue = PACKET_NVALUE(response);
-        resp.bufh = response->bufh;
+        resp.datatype = response->datatype();
+        resp.value = response->value();
+        resp.nvalue = response->vallen();
+        resp.bufh = response->bufseg();
     }
 
     maybe_decompress(instance, response, &resp, &freeptr);
@@ -341,8 +341,8 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-    lcb_error_t immerr)
+H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
+         MemcachedResponse *response, lcb_error_t immerr)
 {
     lcb_t o = get_instance(pipeline);
     ResponsePack<lcb_RESPSUBDOC> w = {{ 0 }};
@@ -351,7 +351,7 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     w.resp.rflags |= LCB_RESP_F_FINAL;
 
     /* For mutations, add the mutation token */
-    switch (PACKET_OPCODE(response)) {
+    switch (response->opcode()) {
     case PROTOCOL_BINARY_CMD_SUBDOC_GET:
     case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
     case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
@@ -365,8 +365,8 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
         break;
     }
 
-    if (PACKET_OPCODE(response) == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP ||
-            PACKET_OPCODE(response) == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION) {
+    if (response->opcode() == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP ||
+            response->opcode() == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION) {
         if (w.resp.rc == LCB_SUCCESS || w.resp.rc == LCB_SUBDOC_MULTI_FAILURE) {
             w.resp.responses = response;
         }
@@ -384,17 +384,17 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static int
-sdlookup_next(const packet_info *response, lcb_SDENTRY *ent, size_t *iter)
+sdlookup_next(const MemcachedResponse *response, lcb_SDENTRY *ent, size_t *iter)
 {
     const char *buf;
     uint16_t rc;
     uint32_t vlen;
 
-    if (*iter == PACKET_NVALUE(response)) {
+    if (*iter == response->vallen()) {
         return 0;
     }
 
-    buf = PACKET_VALUE(response);
+    buf = response->value();
     buf += *iter;
 
     memcpy(&rc, buf, 2);
@@ -418,18 +418,18 @@ sdlookup_next(const packet_info *response, lcb_SDENTRY *ent, size_t *iter)
 }
 
 static int
-sdmutate_next(const packet_info *response, lcb_SDENTRY *ent, size_t *iter)
+sdmutate_next(const MemcachedResponse *response, lcb_SDENTRY *ent, size_t *iter)
 {
     const char *buf, *buf_end;
     uint16_t rc;
     uint32_t vlen;
 
-    if (*iter == PACKET_NVALUE(response)) {
+    if (*iter == response->vallen()) {
         return 0;
     }
 
-    buf_end = (const char *)PACKET_VALUE(response) + PACKET_NVALUE(response);
-    buf = ((const char *)(PACKET_VALUE(response))) + *iter;
+    buf_end = (const char *)response->value() + response->vallen();
+    buf = ((const char *)(response->value())) + *iter;
 
     #define ADVANCE_BUF(sz) \
         buf += sz; \
@@ -470,7 +470,8 @@ int
 lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
 {
     size_t iter_s = 0;
-    const packet_info *response = (const packet_info*)resp->responses;
+    const MemcachedResponse *response =
+                reinterpret_cast<const MemcachedResponse*>(resp->responses);
     if (!response) {
         return 0;
     }
@@ -479,7 +480,7 @@ lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
         iter = &iter_s;
     }
 
-    switch (PACKET_OPCODE(response)) {
+    switch (response->opcode()) {
     case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
         return sdlookup_next(response, ent, iter);
     case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION:
@@ -491,9 +492,9 @@ lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
         *iter = 1;
 
         if (resp->rc == LCB_SUCCESS || resp->rc == LCB_SUBDOC_MULTI_FAILURE) {
-            ent->status = map_error(NULL, PACKET_STATUS(response));
-            ent->value = PACKET_VALUE(response);
-            ent->nvalue = PACKET_NVALUE(response);
+            ent->status = map_error(NULL, response->status());
+            ent->value = response->value();
+            ent->nvalue = response->vallen();
             ent->index = 0;
             return 1;
         } else {
@@ -503,7 +504,7 @@ lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
 }
 
 static void
-H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, packet_info *response,
+H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, MemcachedResponse *response,
          lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
@@ -516,7 +517,7 @@ H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, packet_info *response,
 }
 
 static void
-H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
           lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
@@ -537,7 +538,8 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     }
 
     /** The CAS field is split into TTP/TTR values */
-    ptr = (char *)&response->res.response.cas;
+    uint64_t tmpcas = lcb_htonll(response->cas());
+    ptr = reinterpret_cast<char*>(&tmpcas);
     memcpy(&ttp, ptr, sizeof(ttp));
     memcpy(&ttr, ptr + sizeof(ttp), sizeof(ttp));
 
@@ -545,8 +547,8 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     ttr = ntohl(ttr);
 
     /** Actual payload sequence of (vb, nkey, key). Repeats multiple times */
-    ptr = reinterpret_cast<const char *>(response->payload);
-    end = (char *)ptr + PACKET_NBODY(response);
+    ptr = response->body<const char *>();
+    end = ptr + response->bodylen();
     config = pipeline->parent->config;
 
     for (pos = 0; ptr < end; pos++) {
@@ -585,8 +587,7 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 
 static void
 H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
-    packet_info *response, lcb_error_t immerr)
-{
+                MemcachedResponse *response, lcb_error_t immerr) {
     lcb_t root = get_instance(pipeline);
     lcb_RESPOBSEQNO resp = { 0 };
     init_resp(root, response, request, immerr, &resp);
@@ -594,7 +595,7 @@ H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
     resp.server_index = pipeline->index;
 
     if (resp.rc == LCB_SUCCESS) {
-        const uint8_t *data = reinterpret_cast<const uint8_t*>(PACKET_BODY(response));
+        const uint8_t *data = response->body<const uint8_t*>();
         bool is_failover = *data != 0;
 
         data++;
@@ -620,7 +621,7 @@ H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
 }
 
 static void
-H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
         lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
@@ -628,7 +629,7 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     uint8_t opcode;
     init_resp(root, response, request, immerr, &w.resp);
     if (!immerr) {
-        opcode = PACKET_OPCODE(response);
+        opcode = response->opcode();
     } else {
         protocol_binary_request_header hdr;
         mcreq_read_hdr(request, &hdr);
@@ -656,28 +657,28 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-             lcb_error_t immerr)
+H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request,
+             MemcachedResponse *response, lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
     ResponsePack<lcb_RESPCOUNTER> w = { { 0 } };
     init_resp(root, response, request, immerr, &w.resp);
 
     if (w.resp.rc == LCB_SUCCESS) {
-        memcpy(&w.resp.value, PACKET_VALUE(response), sizeof(w.resp.value));
+        memcpy(&w.resp.value, response->value(), sizeof(w.resp.value));
         w.resp.value = lcb_ntohll(w.resp.value);
         w.resp.rflags |= LCB_RESP_F_EXTDATA;
         handle_mutation_token(root, response, request, &w.mt);
     }
     w.resp.rflags |= LCB_RESP_F_FINAL;
-    w.resp.cas = PACKET_CAS(response);
+    w.resp.cas = response->cas();
     TRACE_ARITHMETIC_END(response, &w.resp);
     invoke_callback(request, root, &w.resp, LCB_CALLBACK_COUNTER);
 }
 
 static void
-H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-        lcb_error_t immerr)
+H_stats(mc_PIPELINE *pipeline, mc_PACKET *request,
+        MemcachedResponse *response, lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
     lcb_RESPSTATS resp = { 0 };
@@ -687,17 +688,17 @@ H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
     resp.version = 0;
 
     exdata = request->u_rdata.exdata;
-    if (resp.rc != LCB_SUCCESS || PACKET_NKEY(response) == 0) {
+    if (resp.rc != LCB_SUCCESS || response->keylen() == 0) {
         /* Call the handler without a response, this indicates that this server
          * has finished responding */
         exdata->procs->handler(pipeline, request, resp.rc, NULL);
         return;
     }
 
-    if ((resp.nkey = PACKET_NKEY(response))) {
-        resp.key = PACKET_KEY(response);
-        if ((resp.value = PACKET_VALUE(response))) {
-            resp.nvalue = PACKET_NVALUE(response);
+    if ((resp.nkey = response->keylen())) {
+        resp.key = response->key();
+        if ((resp.value = response->value())) {
+            resp.nvalue = response->vallen();
         }
     }
 
@@ -705,8 +706,8 @@ H_stats(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-            lcb_error_t immerr)
+H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request,
+            MemcachedResponse *response, lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
     lcb_RESPBASE dummy = { 0 };
@@ -717,8 +718,8 @@ H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_version(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
-          lcb_error_t immerr)
+H_version(mc_PIPELINE *pipeline, mc_PACKET *request,
+          MemcachedResponse *response, lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
     lcb_RESPMCVERSION resp = { 0 };
@@ -726,9 +727,9 @@ H_version(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 
     make_error(root, &resp, response, immerr);
 
-    if (PACKET_NBODY(response)) {
-        resp.mcversion = reinterpret_cast<const char *>(response->payload);
-        resp.nversion = PACKET_NBODY(response);
+    if (response->bodylen()) {
+        resp.mcversion = response->body<const char *>();
+        resp.nversion = response->bodylen();
     }
 
 
@@ -736,7 +737,7 @@ H_version(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
         lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
@@ -748,7 +749,7 @@ H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
         lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
@@ -759,7 +760,7 @@ H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
          lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
@@ -771,7 +772,7 @@ H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-H_config(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
+H_config(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
          lcb_error_t immerr)
 {
     /** We just jump to the normal config handler */
@@ -783,7 +784,7 @@ H_config(mc_PIPELINE *pipeline, mc_PACKET *request, packet_info *response,
 }
 
 static void
-record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *)
+record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *)
 {
     lcb_t instance = get_instance(pipeline);
     if (instance->kv_timings) {
@@ -804,7 +805,7 @@ dispatch_ufwd_error(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t immerr)
 
 int
 mcreq_dispatch_response(
-        mc_PIPELINE *pipeline, mc_PACKET *req, packet_info *res,
+        mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *res,
         lcb_error_t immerr)
 {
     record_metrics(pipeline, req, res);
@@ -820,7 +821,7 @@ mcreq_dispatch_response(
     return 0; \
     break;
 
-    switch (PACKET_OPCODE(res)) {
+    switch (res->opcode()) {
     case PROTOCOL_BINARY_CMD_GETQ:
     case PROTOCOL_BINARY_CMD_GATQ:
     case PROTOCOL_BINARY_CMD_GET:
@@ -894,7 +895,7 @@ mcreq_dispatch_response(
         INVOKE_OP(H_config);
 
     default:
-        fprintf(stderr, "COUCHBASE: Received unknown opcode=0x%x\n", PACKET_OPCODE(res));
+        fprintf(stderr, "COUCHBASE: Received unknown opcode=0x%x\n", res->opcode());
         return -1;
     }
 }

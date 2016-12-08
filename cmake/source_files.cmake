@@ -10,7 +10,6 @@ SET(LCB_UTILS_SRC
     src/hashtable.c
     src/list.c
     src/logging.c
-    src/packetutils.c
     src/ringbuffer.c
     src/simplestring.c)
 

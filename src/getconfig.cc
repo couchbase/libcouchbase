@@ -50,9 +50,10 @@ ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t rc,
 {
     lcb::Server *server = static_cast<lcb::Server*>(pl);
     mc_REQDATAEX *rd = req->u_rdata.exdata;
-    const packet_info *res = reinterpret_cast<const packet_info*>(resdata);
+    const lcb::MemcachedResponse *res =
+            reinterpret_cast<const lcb::MemcachedResponse*>(resdata);
 
-    lcb_cccp_update2(rd->cookie, rc, res->payload, PACKET_NBODY(res),
+    lcb_cccp_update2(rd->cookie, rc, res->body<const char*>(), res->bodylen(),
                      &server->get_host());
     free(rd);
 }

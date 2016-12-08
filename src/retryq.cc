@@ -127,23 +127,21 @@ RetryQueue::erase(RetryOp *op)
 void
 RetryQueue::fail(RetryOp *op, lcb_error_t err)
 {
-    packet_info info;
     protocol_binary_request_header hdr;
-    protocol_binary_response_header *res = &info.res;
 
     lcb::Server tmpsrv; /** Temporary pipeline */
     tmpsrv.instance = get_instance();
     tmpsrv.parent = cq;
 
-    memset(&info, 0, sizeof(info));
     mcreq_read_hdr(op->pkt, &hdr);
-    res->response.opcode = hdr.request.opcode;
-    res->response.status = ntohs(PROTOCOL_BINARY_RESPONSE_EINVAL);
-    res->response.opaque = hdr.request.opaque;
+    MemcachedResponse resp(protocol_binary_command(hdr.request.opcode),
+                           hdr.request.opaque,
+                           PROTOCOL_BINARY_RESPONSE_EINVAL);
 
     assign_error(op, err);
     lcb_log(LOGARGS(this, WARN), "Failing command (seq=%u) from retry queue with error code 0x%x", op->pkt->opaque, op->origerr);
-    mcreq_dispatch_response(&tmpsrv, op->pkt, &info, op->origerr);
+
+    mcreq_dispatch_response(&tmpsrv, op->pkt, &resp, op->origerr);
     op->pkt->flags |= MCREQ_F_FLUSHED|MCREQ_F_INVOKED;
     erase(op);
     mcreq_packet_done(&tmpsrv, op->pkt);
