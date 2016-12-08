@@ -231,8 +231,16 @@ public:
         return reinterpret_cast<const T>(packet_info::payload);
     }
 
-    size_t bodylen() const {
+    uint32_t bodylen() const {
         return PACKET_NBODY(this);
+    }
+
+    uint16_t keylen() const {
+        return PACKET_NKEY(this);
+    }
+
+    uint32_t opaque() const {
+        return PACKET_OPAQUE(this);
     }
 };
 

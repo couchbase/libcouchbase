@@ -131,12 +131,9 @@ Server::handle_nmv(packet_info *resinfo, mc_PACKET *oldpkt)
     lcb_vbguess_remap(instance, vbid, index);
 
     if (PACKET_NBODY(resinfo) && cccp->enabled) {
-        lcb_string s;
-
-        lcb_string_init(&s);
-        lcb_string_append(&s, PACKET_VALUE(resinfo), PACKET_NVALUE(resinfo));
-        err = lcb_cccp_update(cccp, curhost->host, &s);
-        lcb_string_release(&s);
+        std::string s(reinterpret_cast<const char*>(PACKET_VALUE(resinfo)),
+                      PACKET_NVALUE(resinfo));
+        err = lcb_cccp_update(cccp, curhost->host, s.c_str());
     }
 
     if (err != LCB_SUCCESS) {
