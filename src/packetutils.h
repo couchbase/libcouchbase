@@ -28,7 +28,7 @@
 typedef struct packet_info_st packet_info;
 #else
 namespace lcb {
-struct Server;
+class Server;
 
 /**
  * Response packet informational structure.
@@ -219,7 +219,7 @@ protected:
     /** Segment for payload */
     void *bufh;
 
-    friend struct lcb::Server;
+    friend class lcb::Server;
 };
 
 #define PACKET_REQUEST(pkt) \
