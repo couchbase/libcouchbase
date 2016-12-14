@@ -1234,7 +1234,8 @@ extern "C"
         PROTOCOL_BINARY_FEATURE_TLS = 0x2,
         PROTOCOL_BINARY_FEATURE_TCPNODELAY = 0x03,
         PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO = 0x04,
-        PROTOCOL_BINARY_FEATURE_TCPDELAY = 0x05
+        PROTOCOL_BINARY_FEATURE_TCPDELAY = 0x05,
+        PROTOCOL_BINARY_FEATURE_XATTR = 0x06
     } protocol_binary_hello_features;
 
     #define MEMCACHED_FIRST_HELLO_FEATURE 0x01
@@ -1245,7 +1246,8 @@ extern "C"
     (a == PROTOCOL_BINARY_FEATURE_TLS) ? "TLS" : \
     (a == PROTOCOL_BINARY_FEATURE_TCPNODELAY) ? "TCP NODELAY" : \
     (a == PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO) ? "Mutation seqno" : \
-    (a == PROTOCOL_BINARY_FEATURE_TCPDELAY) ? "TCP DELAY" : "Unknown"
+    (a == PROTOCOL_BINARY_FEATURE_TCPDELAY) ? "TCP DELAY" : \
+    (a == PROTOCOL_BINARY_FEATURE_XATTR) ? "XATTR" : "Unknown"
 
     /**
      * The HELLO command is used by the client and the server to agree

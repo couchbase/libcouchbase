@@ -323,6 +323,7 @@ SessionRequestImpl::send_hello()
 
     unsigned nfeatures = 0;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XATTR;
     if (settings->tcp_nodelay) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TCPNODELAY;
     }
