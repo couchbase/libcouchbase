@@ -475,17 +475,16 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
     lcb_assert(sock);
 
     /** Do we need sasl? */
-    mc_pSESSINFO sessinfo = mc_sess_get(sock);
+    SessionInfo* sessinfo = SessionInfo::get(sock);
     if (sessinfo == NULL) {
-        mc_pSESSREQ sreq;
         lcb_log(LOGARGS_T(TRACE), "<%s:%s> (SRV=%p) Session not yet negotiated. Negotiating", curhost->host, curhost->port, (void*)this);
-        sreq = mc_sessreq_start(sock, settings, default_timeout(),
-                                on_connected, this);
-        LCBIO_CONNREQ_MKGENERIC(&connreq, sreq, mc_sessreq_cancel);
+        SessionRequest *sreq = SessionRequest::start(
+            sock, settings, default_timeout(), on_connected, this);
+        LCBIO_CONNREQ_MKGENERIC(&connreq, sreq, lcb::sessreq_cancel);
         return;
     } else {
-        compsupport = mc_sess_chkfeature(sessinfo, PROTOCOL_BINARY_FEATURE_DATATYPE);
-        mutation_tokens = mc_sess_chkfeature(sessinfo, PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO);
+        compsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_DATATYPE);
+        mutation_tokens = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO);
     }
 
     lcbio_CTXPROCS procs;

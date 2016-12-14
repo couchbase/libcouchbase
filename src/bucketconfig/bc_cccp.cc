@@ -249,11 +249,10 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR)
     }
 
     if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SESSINFO) == NULL) {
-        mc_pSESSREQ sreq;
-        sreq = mc_sessreq_start(
+        lcb::SessionRequest *sreq = lcb::SessionRequest::start(
                 sock, settings, settings->config_node_timeout, on_connected,
                 cccp);
-        LCBIO_CONNREQ_MKGENERIC(&cccp->creq, sreq, mc_sessreq_cancel);
+        LCBIO_CONNREQ_MKGENERIC(&cccp->creq, sreq, lcb::sessreq_cancel);
         return;
     }
 

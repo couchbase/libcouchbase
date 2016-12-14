@@ -218,9 +218,9 @@ HANDLER(conninfo) {
         }
         sock = server->connctx->sock;
         if (si->version == 1 && sock) {
-            mc_pSESSINFO sasl = mc_sess_get(server->connctx->sock);
-            if (sasl) {
-                si->v.v1.sasl_mech = mc_sess_get_saslmech(sasl);
+            lcb::SessionInfo *info = lcb::SessionInfo::get(server->connctx->sock);
+            if (info) {
+                si->v.v1.sasl_mech = info->get_mech().c_str();
             }
         }
     } else if (cmd == LCB_CNTL_CONFIGNODE_INFO) {
