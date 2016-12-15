@@ -97,9 +97,14 @@ struct ServerInfo {
 
 struct Durset;
 
+// For use in conjunction with MCREQ_F_PRIVCALLBACK
+struct CallbackCookie {
+    lcb_RESPCALLBACK callback;
+};
+
 /**Information a single entry in a durability set. Each entry contains a single
  * key */
-struct Item {
+struct Item : public CallbackCookie {
     /**
      * Returns true if the entry is complete, false otherwise. This only assumes
      * successful entries.
@@ -175,7 +180,6 @@ struct Item {
     lcb_U64 uuid;
     lcb_RESPENDURE result; /**< Result to be passed to user */
     Durset *parent;
-    lcb_RESPCALLBACK callback; /**< For F_INTERNAL_CALLBACK */
     lcb_U16 vbid; /**< vBucket ID (computed via hashkey) */
     lcb_U8 done; /**< Whether we have a conclusive result for this entry */
 

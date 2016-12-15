@@ -50,12 +50,8 @@ static void
 seqno_callback(lcb_t, int, const lcb_RESPBASE *rb)
 {
     const lcb_RESPOBSEQNO *resp = (const lcb_RESPOBSEQNO*)rb;
-    const char *pp = reinterpret_cast<const char *>(resp->cookie);
     int flags = 0;
-
-    pp -= offsetof(Item, callback);
-
-    Item *ent = reinterpret_cast<Item*>(const_cast<char*>(pp));
+    Item *ent = static_cast<Item*>(reinterpret_cast<CallbackCookie*>(resp->cookie));
 
     /* Now, process the response */
     if (resp->rc != LCB_SUCCESS) {
