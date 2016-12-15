@@ -484,7 +484,6 @@ CccpProvider::CccpProvider(lcb_confmon *mon)
     clconfig_provider::parent = mon;
     clconfig_provider::enabled = 0;
 
-    nodes = new lcb::Hostlist();
     timer = lcbio_timer_new(mon->iot, this, socket_timeout);
     std::memset(&creq, 0, sizeof creq);
 }
