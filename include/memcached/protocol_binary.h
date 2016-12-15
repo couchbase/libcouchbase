@@ -506,7 +506,10 @@ extern "C"
         /* (Mutation) Create the document if it does not exist. Implies
          * SUBDOC_FLAG_MKDIR_P.
          */
-        SUBDOC_FLAG_MKDOC = 0x02
+        SUBDOC_FLAG_MKDOC = 0x02,
+
+        SUBDOC_FLAG_XATTR_PATH = 0x04,
+        SUBDOC_FLAG_EXPAND_MACROS = 0x010
     } protocol_binary_subdoc_flag;
 
     /**
