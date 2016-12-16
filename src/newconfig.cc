@@ -232,7 +232,7 @@ iterwipe_cb(mc_CMDQUEUE *cq, mc_PIPELINE *oldpl, mc_PACKET *oldpkt, void *)
     return MCREQ_REMOVE_PACKET;
 }
 
-static lcb_configuration_t
+static void
 replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
 {
     mc_CMDQUEUE *cq = &instance->cmdq;
@@ -303,7 +303,6 @@ replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
 
     free(ppnew);
     free(ppold);
-    return LCB_CONFIGURATION_CHANGED;
 }
 
 void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
@@ -328,12 +327,9 @@ void lcb_update_vbconfig(lcb_t instance, clconfig_info *config)
         /* Apply the vb guesses */
         lcb_vbguess_newconfig(instance, config->vbc, instance->vbguess);
 
-        change_status = replace_config(instance, old_config->vbc, config->vbc);
-        if (change_status == -1) {
-            LOG(instance, ERR, "Couldn't replace config");
-            return;
-        }
+        replace_config(instance, old_config->vbc, config->vbc);
         lcb_clconfig_decref(old_config);
+        change_status = LCB_CONFIGURATION_CHANGED;
     } else {
         size_t nservers = VB_NSERVERS(config->vbc);
         std::vector<mc_PIPELINE*> servers;
