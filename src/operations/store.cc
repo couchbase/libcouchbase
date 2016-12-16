@@ -26,9 +26,10 @@ struct DurStoreCtx : mc_REQDATAEX {
 
     static mc_REQDATAPROCS proctable;
 
-    inline DurStoreCtx(lcb_t instance_, lcb_U16 persist_, lcb_U16 replicate_)
-        : instance(instance_), persist_to(persist_), replicate_to(replicate_) {
-        mc_REQDATAEX::procs = &proctable;
+    DurStoreCtx(lcb_t instance_, lcb_U16 persist_, lcb_U16 replicate_,
+                const void *cookie_)
+        : mc_REQDATAEX(cookie_, proctable, gethrtime()),
+          instance(instance_), persist_to(persist_), replicate_to(replicate_) {
     }
 };
 
@@ -180,7 +181,6 @@ do_store3(lcb_t instance, const void *cookie,
 {
     mc_PIPELINE *pipeline;
     mc_PACKET *packet;
-    mc_REQDATA *rdata;
     mc_CMDQUEUE *cq = &instance->cmdq;
     int hsize;
     int should_compress = 0;
@@ -271,14 +271,15 @@ do_store3(lcb_t instance, const void *cookie,
             return err;
         }
 
-        DurStoreCtx *dctx = new DurStoreCtx(instance, persist_u, replicate_u);
+        DurStoreCtx *dctx = new DurStoreCtx(instance, persist_u, replicate_u,
+                                            cookie);
         packet->u_rdata.exdata = dctx;
         packet->flags |= MCREQ_F_REQEXT;
+    } else {
+        mc_REQDATA *rdata = MCREQ_PKT_RDATA(packet);
+        rdata->cookie = cookie;
+        rdata->start = gethrtime();
     }
-
-    rdata = MCREQ_PKT_RDATA(packet);
-    rdata->cookie = cookie;
-    rdata->start = gethrtime();
 
     scmd.message.body.expiration = htonl(cmd->exptime);
     scmd.message.body.flags = htonl(flags);
