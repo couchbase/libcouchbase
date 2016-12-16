@@ -131,9 +131,11 @@ struct lcb_st {
     inline void add_bs_host(const char *host, int port, unsigned bstype);
     inline void add_bs_host(const lcb::Spechost& host, int defl_http, int defl_cccp);
     inline void populate_nodes(const lcb::Connspec&);
-    mc_SERVER *get_server(size_t index) const {
-        return static_cast<mc_SERVER*>(cmdq.pipelines[index]);
+    lcb::Server *get_server(size_t index) const {
+        return static_cast<lcb::Server*>(cmdq.pipelines[index]);
     }
+    lcb::Server *find_server(const lcb_host_t& host) const;
+    lcb_error_t request_config(const void *cookie, lcb::Server* server);
     #endif
 };
 
@@ -141,7 +143,7 @@ struct lcb_st {
 #define LCBT_NSERVERS(instance) (instance)->cmdq.npipelines
 #define LCBT_NDATASERVERS(instance) LCBVB_NDATASERVERS(LCBT_VBCONFIG(instance))
 #define LCBT_NREPLICAS(instance) LCBVB_NREPLICAS(LCBT_VBCONFIG(instance))
-#define LCBT_GET_SERVER(instance, ix) ((mc_SERVER *)(instance)->cmdq.pipelines[ix])
+#define LCBT_GET_SERVER(instance, ix) (instance)->cmdq.pipelines[ix]
 #define LCBT_SETTING(instance, name) (instance)->settings->name
 
 void lcb_initialize_packet_handlers(lcb_t instance);
@@ -185,20 +187,6 @@ lcb_error_t lcb_initialize_socket_subsystem(void);
 lcb_error_t lcb_init_providers2(lcb_t obj,
                                const struct lcb_create_st2 *e_options);
 lcb_error_t lcb_reinit3(lcb_t obj, const char *connstr);
-
-
-LCB_INTERNAL_API
-mc_SERVER *
-lcb_find_server_by_host(lcb_t instance, const lcb_host_t *host);
-
-
-LCB_INTERNAL_API
-mc_SERVER *
-lcb_find_server_by_index(lcb_t instance, int ix);
-
-LCB_INTERNAL_API
-lcb_error_t
-lcb_getconfig(lcb_t instance, const void *cookie, mc_SERVER *server);
 
 int
 lcb_should_retry(const lcb_settings *settings, const mc_PACKET *pkt, lcb_error_t err);

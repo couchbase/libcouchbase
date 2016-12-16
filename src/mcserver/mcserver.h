@@ -24,9 +24,6 @@
 #include <netbuf/netbuf.h>
 
 #ifdef __cplusplus
-struct lcb_settings_st;
-struct lcb_server_st;
-
 namespace lcb {
 
 class RetryQueue;
@@ -210,10 +207,5 @@ public:
     lcb_host_t *curhost;
 };
 }
-
-typedef lcb::Server mc_SERVER;
-#else
-/* C only */
-typedef struct mc_SERVER mc_SERVER;
 #endif /* __cplusplus */
 #endif /* LCB_MCSERVER_H */

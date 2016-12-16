@@ -112,13 +112,13 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
         return err;
     }
 
-    server = lcb_find_server_by_host(instance, next_host);
+    server = instance->find_server(*next_host);
     if (server) {
         CccpCookie *cookie = new CccpCookie(this);
         cmdcookie = cookie;
         lcb_log(LOGARGS(this, INFO), "Re-Issuing CCCP Command on server struct %p (%s:%s)", (void*)server, next_host->host, next_host->port);
         lcbio_timer_rearm(timer, PROVIDER_SETTING_T(config_node_timeout));
-        return lcb_getconfig(instance, cookie, server);
+        instance->request_config(cookie, server);
 
     } else {
         lcbio_pMGRREQ preq;

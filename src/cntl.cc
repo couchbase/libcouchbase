@@ -212,7 +212,7 @@ HANDLER(conninfo) {
         if (ix < 0 || ix > (int)LCBT_NSERVERS(instance)) {
             return LCB_ECTL_BADARG;
         }
-        server = LCBT_GET_SERVER(instance, ix);
+        server = instance->get_server(ix);
         if (!server) {
             return LCB_NETWORK_ERROR;
         }

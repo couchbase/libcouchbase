@@ -97,7 +97,7 @@ void
 lcb_sched_flush(lcb_t instance)
 {
     for (size_t ii = 0; ii < LCBT_NSERVERS(instance); ii++) {
-        Server *server = LCBT_GET_SERVER(instance, ii);
+        Server *server = instance->get_server(ii);
 
         if (!server->has_pending()) {
             continue;

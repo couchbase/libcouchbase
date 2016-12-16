@@ -534,6 +534,19 @@ lcb_destroy_async(lcb_t instance, const void *arg)
     lcbio_async_signal(instance->dtor_timer);
 }
 
+lcb::Server *
+lcb_st::find_server(const lcb_host_t& host) const
+{
+    unsigned ii;
+    for (ii = 0; ii < cmdq.npipelines; ii++) {
+        lcb::Server *server = static_cast<lcb::Server*>(cmdq.pipelines[ii]);
+        if (lcb_host_equals(&server->get_host(), &host)) {
+            return server;
+        }
+    }
+    return NULL;
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
