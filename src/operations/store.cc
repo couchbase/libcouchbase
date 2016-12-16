@@ -19,23 +19,29 @@
 #include "trace.h"
 #include "durability_internal.h"
 
-typedef struct {
-    mc_REQDATAEX base;
+struct DurStoreCtx : mc_REQDATAEX {
     lcb_t instance;
     lcb_U16 persist_to;
     lcb_U16 replicate_to;
-} DURSTORECTX;
+
+    static mc_REQDATAPROCS proctable;
+
+    inline DurStoreCtx(lcb_t instance_, lcb_U16 persist_, lcb_U16 replicate_)
+        : instance(instance_), persist_to(persist_), replicate_to(replicate_) {
+        mc_REQDATAEX::procs = &proctable;
+    }
+};
 
 /** Observe stuff */
 static void
-handle_dur_storecb(mc_PIPELINE *pl, mc_PACKET *pkt,
+handle_dur_storecb(mc_PIPELINE *, mc_PACKET *pkt,
     lcb_error_t err, const void *arg)
 {
     lcb_RESPCALLBACK cb;
     lcb_RESPSTOREDUR resp = { 0 };
     lcb_CMDENDURE dcmd = { 0 };
     const lcb_MUTATION_TOKEN *mt;
-    DURSTORECTX *dctx = (DURSTORECTX *)pkt->u_rdata.exdata;
+    DurStoreCtx *dctx = static_cast<DurStoreCtx*>(pkt->u_rdata.exdata);
     lcb_MULTICMD_CTX *mctx;
     lcb_durability_opts_t opts = { 0 };
     const lcb_RESPSTORE *sresp = (const lcb_RESPSTORE *)arg;
@@ -78,7 +84,7 @@ handle_dur_storecb(mc_PIPELINE *pl, mc_PACKET *pkt,
 
     if (err == LCB_SUCCESS) {
         /* Everything OK? */
-        free(dctx);
+        delete dctx;
         return;
     }
 
@@ -92,20 +98,15 @@ handle_dur_storecb(mc_PIPELINE *pl, mc_PACKET *pkt,
         resp.dur_resp = &dresp;
         cb = lcb_find_callback(dctx->instance, LCB_CALLBACK_STOREDUR);
         cb(dctx->instance, LCB_CALLBACK_STOREDUR, (const lcb_RESPBASE*)&resp);
-        free(dctx);
+        delete dctx;
     }
-
-    (void)pl;
 }
 
-static void
-handle_dur_schedfail(mc_PACKET *pkt)
-{
-    DURSTORECTX *dctx = (void *)pkt->u_rdata.exdata;
-    free(dctx);
+static void handle_dur_schedfail(mc_PACKET *pkt) {
+    delete static_cast<DurStoreCtx*>(pkt->u_rdata.exdata);
 }
 
-mc_REQDATAPROCS storedur_procs = {
+mc_REQDATAPROCS DurStoreCtx::proctable = {
         handle_dur_storecb,
         handle_dur_schedfail
 };
@@ -150,7 +151,7 @@ static int
 can_compress(lcb_t instance, const mc_PIPELINE *pipeline,
     const lcb_VALBUF *vbuf, lcb_datatype_t datatype)
 {
-    mc_SERVER *server = (mc_SERVER *)pipeline;
+    const lcb::Server *server = static_cast<const lcb::Server*>(pipeline);
     int compressopts = LCBT_SETTING(instance, compressopts);
 
     if (mcreq_compression_supported() == 0) {
@@ -163,7 +164,8 @@ can_compress(lcb_t instance, const mc_PIPELINE *pipeline,
     if ((compressopts & LCB_COMPRESS_OUT) == 0) {
         return 0;
     }
-    if (mcserver_supports_compression(server) == 0 && (compressopts & LCB_COMPRESS_FORCE) == 0) {
+    if (server->supports_compression() == false &&
+            (compressopts & LCB_COMPRESS_FORCE) == 0) {
         return 0;
     }
     if (datatype & LCB_VALUE_F_SNAPPYCOMP) {
@@ -256,8 +258,6 @@ do_store3(lcb_t instance, const void *cookie,
         int duropts = 0;
         lcb_U16 persist_u , replicate_u;
         const lcb_CMDSTOREDUR *dcmd = (const lcb_CMDSTOREDUR *)cmd;
-        DURSTORECTX *dctx = calloc(1, sizeof(*dctx));
-
         persist_u = dcmd->persist_to;
         replicate_u = dcmd->replicate_to;
         if (dcmd->replicate_to == -1 || dcmd->persist_to == -1) {
@@ -268,18 +268,12 @@ do_store3(lcb_t instance, const void *cookie,
         if (err != LCB_SUCCESS) {
             mcreq_wipe_packet(pipeline, packet);
             mcreq_release_packet(pipeline, packet);
-            free(dctx);
             return err;
         }
 
-        dctx->instance = instance;
-        dctx->persist_to = persist_u;
-        dctx->replicate_to = replicate_u;
-        packet->u_rdata.exdata = &dctx->base;
+        DurStoreCtx *dctx = new DurStoreCtx(instance, persist_u, replicate_u);
+        packet->u_rdata.exdata = dctx;
         packet->flags |= MCREQ_F_REQEXT;
-
-        dctx->base.cookie = cookie;
-        dctx->base.procs = &storedur_procs;
     }
 
     rdata = MCREQ_PKT_RDATA(packet);

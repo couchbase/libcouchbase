@@ -723,8 +723,3 @@ Server::check_closed()
     finalize_errored_ctx();
     return 1;
 }
-
-int
-mcserver_supports_compression(mc_SERVER *server) {
-    return server->compsupport;
-}

@@ -70,6 +70,7 @@ SET(LCB_CORE_CXXSRC
     src/operations/durability-seqno.cc
     src/operations/observe-seqno.cc
     src/operations/stats.cc
+    src/operations/store.cc
     src/operations/subdoc.cc
     src/mcserver/mcserver.cc
     src/mcserver/negotiate.cc

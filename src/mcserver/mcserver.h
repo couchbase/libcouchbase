@@ -109,6 +109,10 @@ public:
         return mutation_tokens;
     }
 
+    bool supports_compression() const {
+        return compsupport;
+    }
+
     bool is_connected() const {
         return connctx != NULL;
     }
@@ -208,11 +212,8 @@ public:
 }
 
 typedef lcb::Server mc_SERVER;
-extern "C" {int mcserver_supports_compression(mc_SERVER*);}
-
 #else
 /* C only */
 typedef struct mc_SERVER mc_SERVER;
-int mcserver_supports_compression(mc_SERVER *server);
 #endif /* __cplusplus */
 #endif /* LCB_MCSERVER_H */
