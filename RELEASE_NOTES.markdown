@@ -1,5 +1,10 @@
 # Release Notes
 
+## 2.7.0 (December 21 2016)
+
+This release consists mainly of internal refactoring. Many of the internals
+have been 'upgraded' to C++
+
 ## 2.6.4 (November 28 2016)
 
 * Fix bug in pillowfight where large value sizes would cause a segfault.
