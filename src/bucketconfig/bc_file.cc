@@ -42,14 +42,17 @@ struct FileProvider : clconfig_provider, clconfig_listener {
     }
     void write_cache(lcbvb_CONFIG *vbc);
 
+    /* Overrides */
+    clconfig_info *get_cached();
+    lcb_error_t refresh();
+    void dump(FILE *) const;
+
     std::string filename;
     clconfig_info *config;
     time_t last_mtime;
     int last_errno;
     bool is_readonly; /* Whether the config cache should _not_ overwrite the file */
     lcbio_pTIMER timer;
-
-
 };
 
 FileProvider::Status FileProvider::load_cache()
@@ -157,14 +160,8 @@ void FileProvider::write_cache(lcbvb_CONFIG *cfg)
     }
 }
 
-static clconfig_info * get_cached(clconfig_provider *pb)
-{
-    FileProvider *provider = static_cast<FileProvider*>(pb);
-    if (provider->filename.empty()) {
-        return NULL;
-    }
-
-    return provider->config;
+clconfig_info* FileProvider::get_cached() {
+    return filename.empty() ? NULL : config;
 }
 
 static void async_callback(void *cookie)
@@ -177,20 +174,12 @@ static void async_callback(void *cookie)
     }
 }
 
-static lcb_error_t refresh_file(clconfig_provider *pb)
-{
-    FileProvider *provider = static_cast<FileProvider*>(pb);
-    if (lcbio_timer_armed(provider->timer)) {
+lcb_error_t FileProvider::refresh() {
+    if (lcbio_timer_armed(timer)) {
         return LCB_SUCCESS;
     }
 
-    lcbio_async_signal(provider->timer);
-    return LCB_SUCCESS;
-}
-
-static lcb_error_t pause_file(clconfig_provider *pb)
-{
-    (void)pb;
+    lcbio_async_signal(timer);
     return LCB_SUCCESS;
 }
 
@@ -201,11 +190,6 @@ FileProvider::~FileProvider() {
     if (config) {
         lcb_clconfig_decref(config);
     }
-}
-
-static void shutdown_file(clconfig_provider *pb)
-{
-    delete static_cast<FileProvider*>(pb);
 }
 
 static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
@@ -228,42 +212,26 @@ static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
     provider->write_cache(info->vbc);
 }
 
-static void
-do_file_dump(clconfig_provider *pb, FILE *fp)
-{
-    FileProvider *pr = static_cast<FileProvider*>(pb);
-
+void FileProvider::dump(FILE *fp) const {
     fprintf(fp, "## BEGIN FILE PROVIEDER DUMP ##\n");
-    if (!pr->filename.empty()) {
-        fprintf(fp, "FILENAME: %s\n", pr->filename.c_str());
+    if (!filename.empty()) {
+        fprintf(fp, "FILENAME: %s\n", filename.c_str());
     }
-    fprintf(fp, "LAST SYSTEM ERRNO: %d\n", pr->last_errno);
-    fprintf(fp, "LAST MTIME: %lu\n", (unsigned long)pr->last_mtime);
+    fprintf(fp, "LAST SYSTEM ERRNO: %d\n", last_errno);
+    fprintf(fp, "LAST MTIME: %lu\n", (unsigned long)last_mtime);
     fprintf(fp, "## END FILE PROVIDER DUMP ##\n");
 
 }
 
 FileProvider::FileProvider(lcb_confmon *parent_)
-    : config(NULL), last_mtime(0), last_errno(0), is_readonly(false),
+    : clconfig_provider_st(parent_, LCB_CLCONFIG_FILE),
+      config(NULL), last_mtime(0), last_errno(0), is_readonly(false),
       timer(lcbio_timer_new(parent_->iot, this, async_callback)) {
 
-    memset(static_cast<clconfig_provider*>(this), 0, sizeof(clconfig_provider));
     memset(static_cast<clconfig_listener*>(this), 0, sizeof(clconfig_listener));
-
-    clconfig_provider::get_cached = ::get_cached;
-    clconfig_provider::refresh = ::refresh_file;
-    clconfig_provider::pause = ::pause_file;
-    clconfig_provider::shutdown = ::shutdown_file;
-    clconfig_provider::dump = ::do_file_dump;
-    clconfig_provider::type = LCB_CLCONFIG_FILE;
     clconfig_listener::callback = ::config_listener;
 
     lcb_confmon_add_listener(parent_, this);
-}
-
-clconfig_provider * lcb_clconfig_create_file(lcb_confmon *parent)
-{
-    return new FileProvider(parent);
 }
 
 static std::string mkcachefile(const char *name, const char *bucket)
@@ -315,4 +283,8 @@ void
 lcb_clconfig_file_set_readonly(clconfig_provider *p, int val)
 {
     static_cast<FileProvider*>(p)->is_readonly = bool(val);
+}
+
+clconfig_provider_st* lcb::clconfig::new_file_provider(lcb_confmon *mon) {
+    return new FileProvider(mon);
 }

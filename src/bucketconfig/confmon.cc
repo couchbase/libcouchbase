@@ -103,7 +103,6 @@ provider_string(clconfig_method_t type) {
     if (type == LCB_CLCONFIG_CCCP) { return "CCCP"; }
     if (type == LCB_CLCONFIG_FILE) { return "FILE"; }
     if (type == LCB_CLCONFIG_MCRAW) { return "MCRAW"; }
-    if (type == LCB_CLCONFIG_USER) { return "USER"; }
     return "";
 }
 
@@ -124,11 +123,10 @@ Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_)
     lcbio_table_ref(iot);
     lcb_settings_ref(settings);
 
-    all_providers[LCB_CLCONFIG_FILE] = lcb_clconfig_create_file(this);
-    all_providers[LCB_CLCONFIG_CCCP] = lcb_clconfig_create_cccp(this);
-    all_providers[LCB_CLCONFIG_HTTP] = lcb_clconfig_create_http(this);
-    all_providers[LCB_CLCONFIG_USER] = lcb_clconfig_create_user(this);
-    all_providers[LCB_CLCONFIG_MCRAW] = lcb_clconfig_create_mcraw(this);
+    all_providers[LCB_CLCONFIG_FILE] = lcb::clconfig::new_file_provider(this);
+    all_providers[LCB_CLCONFIG_CCCP] = lcb::clconfig::new_cccp_provider(this);
+    all_providers[LCB_CLCONFIG_HTTP] = lcb::clconfig::new_http_provider(this);
+    all_providers[LCB_CLCONFIG_MCRAW] = lcb::clconfig::new_mcraw_provider(this);
 
     for (size_t ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         all_providers[ii]->parent = this;
@@ -149,8 +147,7 @@ void Confmon::prepare() {
             if (cur->enabled) {
                 active_providers.push_back(cur);
                 lcb_log(LOGARGS(this, DEBUG), "Provider %s is ENABLED", provider_string(cur->type));
-            } else if (cur->pause){
-                cur->pause(cur);
+            } else if (cur->pause()) {
                 lcb_log(LOGARGS(this, DEBUG), "Provider %s is DISABLED", provider_string(cur->type));
             }
         }
@@ -185,8 +182,7 @@ Confmon::~Confmon() {
         if (provider == NULL) {
             continue;
         }
-
-        provider->shutdown(provider);
+        delete provider;
         all_providers[ii] = NULL;
     }
 
@@ -233,8 +229,8 @@ int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
 
     for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = all_providers[ii];
-        if (cur && cur->enabled && cur->config_updated) {
-            cur->config_updated(cur, new_config->vbc);
+        if (cur && cur->enabled) {
+            cur->config_updated(new_config->vbc);
         }
     }
 
@@ -310,7 +306,7 @@ bool Confmon::do_next_provider()
             ii != active_providers.end(); ++ii) {
         clconfig_info *info;
         Provider* cached_provider = *ii;
-        info = cached_provider->get_cached(cached_provider);
+        info = cached_provider->get_cached();
         if (!info) {
             continue;
         }
@@ -323,7 +319,7 @@ bool Confmon::do_next_provider()
 
     lcb_log(LOGARGS(this, TRACE), "Current provider is %s", provider_string(cur_provider->type));
 
-    cur_provider->refresh(cur_provider);
+    cur_provider->refresh();
     return false;
 }
 
@@ -366,11 +362,7 @@ static void async_stop(void *arg) {
 void Confmon::stop_real() {
     ProviderList::const_iterator ii;
     for (ii = active_providers.begin(); ii != active_providers.end(); ++ii) {
-        Provider *provider = *ii;
-        if (!provider->pause) {
-            continue;
-        }
-        provider->pause(provider);
+        (*ii)->pause();
     }
 
     last_stop_us = LCB_NS2US(gethrtime());
@@ -389,6 +381,14 @@ void Confmon::stop() {
     lcbio_timer_disarm(as_start);
     lcbio_async_signal(as_stop);
     state = CONFMON_S_INACTIVE;
+}
+
+clconfig_provider_st::clconfig_provider_st(lcb_confmon *parent_, clconfig_method_t type_)
+    : type(type_), enabled(false), parent(parent_) {
+}
+
+clconfig_provider_st::~clconfig_provider_st() {
+    parent = NULL;
 }
 
 void lcb_clconfig_decref(clconfig_info *info)
@@ -459,21 +459,6 @@ void Confmon::invoke_listeners(clconfig_event_t event, clconfig_info *info) {
     }
 }
 
-static void generic_shutdown(clconfig_provider *provider)
-{
-    free(provider);
-}
-
-clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon)
-{
-    clconfig_provider *provider = reinterpret_cast<clconfig_provider*>(calloc(1, sizeof(*provider)));
-    provider->type = LCB_CLCONFIG_USER;
-    provider->shutdown = generic_shutdown;
-
-    (void)mon;
-    return provider;
-}
-
 LCB_INTERNAL_API
 int lcb_confmon_is_refreshing(lcb_confmon *mon)
 {
@@ -523,9 +508,7 @@ void Confmon::dump(FILE *fp) {
         fprintf(fp, "** PROVIDER: 0x%x (%s) %p\n", cur->type, provider_string(cur->type), (void*)cur);
         fprintf(fp, "** ENABLED: %s\n", cur->enabled ? "YES" : "NO");
         fprintf(fp, "** CURRENT: %s\n", cur == cur_provider ? "YES" : "NO");
-        if (cur->dump) {
-            cur->dump(cur, fp);
-        }
+        cur->dump(fp);
         fprintf(fp, "\n");
     }
 }

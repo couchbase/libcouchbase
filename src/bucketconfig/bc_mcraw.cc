@@ -33,6 +33,11 @@ struct McRawProvider : clconfig_provider {
 
     McRawProvider(lcb_confmon*);
     ~McRawProvider();
+
+    /* Overrides */
+    clconfig_info* get_cached();
+    lcb_error_t refresh();
+    void configure_nodes(const lcb::Hostlist& l);
 };
 
 
@@ -47,43 +52,36 @@ async_update(void *arg)
     lcb_confmon_provider_success(mcr, mcr->config);
 }
 
-static clconfig_info* get_cached(clconfig_provider *pb) {
-    return static_cast<McRawProvider*>(pb)->config;
+clconfig_info* McRawProvider::get_cached() {
+    return config;
 }
-static lcb_error_t get_refresh(clconfig_provider *pb) {
-    lcbio_async_signal(static_cast<McRawProvider*>(pb)->async);
-    return LCB_SUCCESS;
-}
-static lcb_error_t pause_mcr(clconfig_provider *) {
+
+lcb_error_t McRawProvider::refresh() {
+    lcbio_async_signal(async);
     return LCB_SUCCESS;
 }
 
-static void configure_nodes(clconfig_provider *pb, const hostlist_t hl)
+void McRawProvider::configure_nodes(const lcb::Hostlist& hl)
 {
-    McRawProvider *mcr = static_cast<McRawProvider*>(pb);
     lcbvb_SERVER *servers;
     lcbvb_CONFIG *newconfig;
-    unsigned ii, nsrv;
-
-    nsrv = hostlist_size(hl);
+    unsigned nsrv = hl.size();
 
     if (!nsrv) {
-        lcb_log(LOGARGS(mcr, FATAL), "No nodes provided");
+        lcb_log(LOGARGS(this, FATAL), "No nodes provided");
         return;
     }
 
     servers = reinterpret_cast<lcbvb_SERVER*>(calloc(nsrv, sizeof(*servers)));
-    for (ii = 0; ii < nsrv; ii++) {
-        int itmp;
-        const lcb_host_t *curhost = hostlist_get(hl, ii);
+    for (size_t ii = 0; ii < nsrv; ii++) {
+        const lcb_host_t& curhost = hl[ii];
         lcbvb_SERVER *srv = servers + ii;
 
         /* just set the memcached port and hostname */
-        srv->hostname = (char *)curhost->host;
-        sscanf(curhost->port, "%d", &itmp);
-        srv->svc.data = itmp;
-        if (pb->parent->settings->sslopts) {
-            srv->svc_ssl.data = itmp;
+        srv->hostname = (char *)curhost.host;
+        srv->svc.data = std::atoi(curhost.port);
+        if (parent->settings->sslopts) {
+            srv->svc_ssl.data = srv->svc.data;
         }
     }
 
@@ -92,12 +90,12 @@ static void configure_nodes(clconfig_provider *pb, const hostlist_t hl)
     lcbvb_make_ketama(newconfig);
     newconfig->revid = -1;
 
-    if (mcr->config) {
-        lcb_clconfig_decref(mcr->config);
-        mcr->config = NULL;
+    if (config) {
+        lcb_clconfig_decref(config);
+        config = NULL;
     }
-    mcr->config = lcb_clconfig_create(newconfig, LCB_CLCONFIG_MCRAW);
-    mcr->config->cmpclock = gethrtime();
+    config = lcb_clconfig_create(newconfig, LCB_CLCONFIG_MCRAW);
+    config->cmpclock = gethrtime();
 }
 
 lcb_error_t
@@ -105,21 +103,15 @@ lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes)
 {
     lcb_error_t err;
     McRawProvider *mcr = static_cast<McRawProvider*>(pb);
-    hostlist_t hl = hostlist_create();
-    err = hostlist_add_stringz(hl, nodes, LCB_CONFIG_MCCOMPAT_PORT);
+    lcb::Hostlist hl;
+    err = hl.add(nodes, LCB_CONFIG_MCCOMPAT_PORT);
     if (err != LCB_SUCCESS) {
-        hostlist_destroy(hl);
         return err;
     }
 
-    configure_nodes(pb, hl);
-    hostlist_destroy(hl);
+    pb->configure_nodes(hl);
     lcbio_async_signal(mcr->async);
     return LCB_SUCCESS;
-}
-
-static void mcraw_shutdown(clconfig_provider *pb) {
-    delete static_cast<McRawProvider*>(pb);
 }
 
 McRawProvider::~McRawProvider() {
@@ -131,19 +123,11 @@ McRawProvider::~McRawProvider() {
     }
 }
 
-clconfig_provider * lcb_clconfig_create_mcraw(lcb_confmon *parent) {
+clconfig_provider_st* lcb::clconfig::new_mcraw_provider(lcb_confmon* parent) {
     return new McRawProvider(parent);
 }
 
 McRawProvider::McRawProvider(lcb_confmon *parent_)
-    : config(NULL), async(lcbio_timer_new(parent_->iot, this, async_update)) {
-    memset(static_cast<clconfig_provider*>(this), 0, sizeof(clconfig_provider));
-
-    clconfig_provider::parent = parent_;
-    clconfig_provider::type = LCB_CLCONFIG_MCRAW;
-    clconfig_provider::get_cached = ::get_cached;
-    clconfig_provider::refresh = get_refresh;
-    clconfig_provider::pause = pause_mcr;
-    clconfig_provider::configure_nodes = ::configure_nodes;
-    clconfig_provider::shutdown = mcraw_shutdown;
+    : clconfig_provider_st(parent_, LCB_CLCONFIG_MCRAW),
+      config(NULL), async(lcbio_timer_new(parent->iot, this, async_update)) {
 }

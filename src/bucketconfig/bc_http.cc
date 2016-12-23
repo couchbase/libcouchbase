@@ -38,13 +38,9 @@ static lcb_error_t setup_request_header(HttpProvider *, const lcb_host_t *);
  * connection will always remain open (regardless of whether it was triggered
  * by start_refresh/get_refresh).
  */
-static bool is_v220_compat(HttpProvider *http)
-{
-    lcb_uint32_t setting =  PROVIDER_SETTING(http, bc_http_stream_time);
-    if (setting == (lcb_uint32_t)-1) {
-        return 1;
-    }
-    return 0;
+bool HttpProvider::is_v220_compat() const {
+    lcb_uint32_t setting =  parent->settings->bc_http_stream_time;
+    return setting == (lcb_uint32_t)-1;
 }
 
 void HttpProvider::close_current()
@@ -80,7 +76,7 @@ io_error(HttpProvider *http, lcb_error_t origerr)
 
     lcb_confmon_provider_failed(http, origerr);
     lcbio_timer_disarm(http->io_timer);
-    if (is_v220_compat(http) && http->parent->config != NULL) {
+    if (http->is_v220_compat() && http->parent->config != NULL) {
         lcb_log(LOGARGS(http, INFO), "HTTP node list finished. Trying to obtain connection from first node in list");
         if (!lcbio_timer_armed(http->as_reconnect)) {
             lcbio_timer_rearm(http->as_reconnect,
@@ -422,24 +418,18 @@ static void delayed_reconnect(void *arg)
     }
 }
 
-static lcb_error_t pause_http(clconfig_provider *pb)
-{
-    HttpProvider *http = static_cast<HttpProvider *>(pb);
-    if (is_v220_compat(http)) {
+bool HttpProvider::pause() {
+    if (is_v220_compat()) {
         return LCB_SUCCESS;
     }
 
-    if (!lcbio_timer_armed(http->disconn_timer)) {
-        lcbio_timer_rearm(http->disconn_timer,
-                          PROVIDER_SETTING(pb, bc_http_stream_time));
+    if (!lcbio_timer_armed(disconn_timer)) {
+        lcbio_timer_rearm(disconn_timer, parent->settings->bc_http_stream_time);
     }
     return LCB_SUCCESS;
 }
 
-static lcb_error_t get_refresh(clconfig_provider *provider)
-{
-    HttpProvider *http = static_cast<HttpProvider *>(provider);
-
+lcb_error_t HttpProvider::refresh() {
     /**
      * We want a grace interval here because we might already be fetching a
      * connection. HOWEVER we don't want to indefinitely wait on a socket
@@ -448,41 +438,35 @@ static lcb_error_t get_refresh(clconfig_provider *provider)
      */
 
     /** If we need a new socket, we do connect_next. */
-    if (http->ioctx == NULL && http->creq == NULL) {
-        lcbio_async_signal(http->as_reconnect);
+    if (ioctx == NULL && creq == NULL) {
+        lcbio_async_signal(as_reconnect);
     }
 
-    lcbio_timer_disarm(http->disconn_timer);
-    if (http->ioctx) {
-        lcbio_timer_rearm(http->io_timer,
-                          PROVIDER_SETTING(provider, config_node_timeout));
+    lcbio_timer_disarm(disconn_timer);
+    if (ioctx) {
+        lcbio_timer_rearm(io_timer, parent->settings->config_node_timeout);
     }
     return LCB_SUCCESS;
 }
 
-static clconfig_info* http_get_cached(clconfig_provider *provider)
-{
-    HttpProvider *http = static_cast<HttpProvider *>(provider);
-    return http->current_config;
+clconfig_info* HttpProvider::get_cached() {
+    return current_config;
 }
 
-static void
-config_updated(clconfig_provider *pb, lcbvb_CONFIG *newconfig)
+void HttpProvider::config_updated(lcbvb_CONFIG *newconfig)
 {
-    unsigned int ii;
-    HttpProvider *http = static_cast<HttpProvider *>(pb);
     unsigned sopts;
     lcbvb_SVCMODE mode;
-    http->nodes->clear();
+    nodes->clear();
 
-    sopts = PROVIDER_SETTING(pb, sslopts);
+    sopts = PROVIDER_SETTING(this, sslopts);
     if (sopts & LCB_SSL_ENABLED) {
         mode = LCBVB_SVCMODE_SSL;
     } else {
         mode = LCBVB_SVCMODE_PLAIN;
     }
 
-    for (ii = 0; ii < newconfig->nsrv; ++ii) {
+    for (size_t ii = 0; ii < newconfig->nsrv; ++ii) {
         const char *ss;
         lcb_error_t status;
         ss = lcbvb_get_hostport(newconfig, ii, LCBVB_SVCTYPE_MGMT, mode);
@@ -490,37 +474,27 @@ config_updated(clconfig_provider *pb, lcbvb_CONFIG *newconfig)
             /* not supported? */
             continue;
         }
-        status = http->nodes->add(ss, LCB_CONFIG_HTTP_PORT);
+        status = nodes->add(ss, LCB_CONFIG_HTTP_PORT);
         lcb_assert(status == LCB_SUCCESS);
     }
-    if (http->nodes->empty()) {
-        lcb_log(LOGARGS(http, FATAL), "New nodes do not contain management ports");
+    if (nodes->empty()) {
+        lcb_log(LOGARGS(this, FATAL), "New nodes do not contain management ports");
     }
 
-    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
-        http->nodes->randomize();
-    }
-}
-
-static void
-configure_nodes(clconfig_provider *pb, const hostlist_t newnodes)
-{
-    HttpProvider *http = static_cast<HttpProvider*>(pb);
-    http->nodes->assign(*newnodes);
-    if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
-        http->nodes->randomize();
+    if (PROVIDER_SETTING(this, randomize_bootstrap_nodes)) {
+        nodes->randomize();
     }
 }
 
-static hostlist_t
-get_nodes(const clconfig_provider *pb)
-{
-    return static_cast<const HttpProvider*>(pb)->nodes;
+void HttpProvider::configure_nodes(const lcb::Hostlist& newnodes) {
+    nodes->assign(newnodes);
+    if (PROVIDER_SETTING(this, randomize_bootstrap_nodes)) {
+        nodes->randomize();
+    }
 }
 
-static void shutdown_http(clconfig_provider *provider)
-{
-    delete static_cast<HttpProvider*>(provider);
+const lcb::Hostlist* HttpProvider::get_nodes() const {
+    return nodes;
 }
 
 HttpProvider::~HttpProvider() {
@@ -545,35 +519,29 @@ HttpProvider::~HttpProvider() {
     }
 }
 
-static void
-do_http_dump(clconfig_provider *pb, FILE *fp)
-{
-    HttpProvider *ht = static_cast<HttpProvider *>(pb);
+void HttpProvider::dump(FILE *fp) const {
     fprintf(fp, "## BEGIN HTTP PROVIDER DUMP\n");
-    fprintf(fp, "NUMBER OF CONFIGS RECEIVED: %u\n", ht->generation);
+    fprintf(fp, "NUMBER OF CONFIGS RECEIVED: %u\n", generation);
     fprintf(fp, "DUMPING I/O TIMER\n");
-    lcbio_timer_dump(ht->io_timer, fp);
-    if (ht->ioctx) {
+    lcbio_timer_dump(io_timer, fp);
+    if (ioctx) {
         fprintf(fp, "DUMPING CURRENT CONNECTION:\n");
-        lcbio_ctx_dump(ht->ioctx, fp);
-    } else if (ht->creq) {
+        lcbio_ctx_dump(ioctx, fp);
+    } else if (creq) {
         fprintf(fp, "CURRENTLY CONNECTING..\n");
     } else {
         fprintf(fp, "NO CONNECTION ACTIVE\n");
     }
 }
 
-clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
-{
-    return new HttpProvider(parent);
-}
 
 HttpProvider::HttpProvider(lcb_confmon *parent_)
-    : ioctx(NULL),
-      htp(lcbht_new(parent_->settings)),
-      disconn_timer(lcbio_timer_new(parent_->iot, this, delayed_disconn)),
-      io_timer(lcbio_timer_new(parent_->iot, this, timeout_handler)),
-      as_reconnect(lcbio_timer_new(parent_->iot, this, delayed_reconnect)),
+    : clconfig_provider_st(parent_, LCB_CLCONFIG_HTTP),
+      ioctx(NULL),
+      htp(lcbht_new(parent->settings)),
+      disconn_timer(lcbio_timer_new(parent->iot, this, delayed_disconn)),
+      io_timer(lcbio_timer_new(parent->iot, this, timeout_handler)),
+      as_reconnect(lcbio_timer_new(parent->iot, this, delayed_reconnect)),
       nodes(new Hostlist()),
       current_config(NULL),
       last_parsed(NULL),
@@ -582,18 +550,6 @@ HttpProvider::HttpProvider(lcb_confmon *parent_)
       uritype(0) {
 
     memset(&creq, 0, sizeof creq);
-    memset(static_cast<clconfig_provider*>(this), 0, sizeof(clconfig_provider));
-
-    clconfig_provider::type = LCB_CLCONFIG_HTTP;
-    clconfig_provider::refresh = ::get_refresh;
-    clconfig_provider::pause = ::pause_http;
-    clconfig_provider::get_cached = ::http_get_cached;
-    clconfig_provider::shutdown = ::shutdown_http;
-    clconfig_provider::config_updated = ::config_updated;
-    clconfig_provider::configure_nodes = ::configure_nodes;
-    clconfig_provider::get_nodes = ::get_nodes;
-    clconfig_provider::dump = ::do_http_dump;
-    clconfig_provider::enabled = 0;
 }
 
 static void
@@ -626,4 +582,8 @@ lcb_confmon_get_rest_host(lcb_confmon *mon)
         return lcbio_get_host(sock);
     }
     return NULL;
+}
+
+clconfig_provider_st* lcb::clconfig::new_http_provider(lcb_confmon* mon) {
+    return new HttpProvider(mon);
 }

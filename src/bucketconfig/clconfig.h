@@ -22,9 +22,6 @@
 #include "list.h"
 #include "simplestring.h"
 #include <lcbio/timer-ng.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /** @file */
 
@@ -95,9 +92,6 @@ extern "C" {
  * The type of methods available. These are enumerated in order of preference
  */
 typedef enum {
-    /** Currently unused. The intent here is to allow a user to provide means
-     * by which the application may give a configuration file to the library */
-    LCB_CLCONFIG_USER,
     /** File-based "configcache" provider. Implemented in bc_file.c */
     LCB_CLCONFIG_FILE,
     /** New-style config-over-memcached provider. Implemented in bc_cccp.c */
@@ -115,7 +109,7 @@ typedef enum {
 
 
 struct clconfig_info_st;
-struct clconfig_provider_st;
+typedef struct clconfig_provider_st clconfig_provider;
 struct clconfig_listener_st;
 struct lcb_confmon_st;
 
@@ -128,10 +122,10 @@ typedef struct lcb_confmon_st {
      * In either case unless the provider can provide us with a specific
      * config which is newer than the one we have, it will roll over to the
      * next provider. */
-    struct clconfig_provider_st *cur_provider;
+    clconfig_provider *cur_provider;
 
     /** All providers we know about. Currently this means the 'builtin' providers */
-    struct clconfig_provider_st * all_providers[LCB_CLCONFIG_MAX];
+    clconfig_provider* all_providers[LCB_CLCONFIG_MAX];
 
     /** The current configuration pointer. This contains the most recent accepted
      * configuration */
@@ -148,25 +142,19 @@ typedef struct lcb_confmon_st {
  * The base structure of a provider. This structure is intended to be
  * 'subclassed' by implementors.
  */
-typedef struct clconfig_provider_st {
-    /** The type of provider */
-    clconfig_method_t type;
+struct clconfig_provider_st {
+    clconfig_provider_st(lcb_confmon*, clconfig_method_t type_);
 
-    /** Whether this provider has been disabled/enabled explicitly by a user */
-    int enabled;
-
-    /** The parent manager object */
-    struct lcb_confmon_st *parent;
+    /** Destroy the resources created by this provider. */
+    virtual ~clconfig_provider_st();
 
     /**
      * Get the current map known to this provider. This should not perform
      * any blocking operations. Providers which use a push model may use
      * this method as an asynchronous return value for a previously-received
      * configuration.
-     *
-     * @param pb
      */
-    struct clconfig_info_st* (*get_cached)(struct clconfig_provider_st *pb);
+    virtual clconfig_info_st* get_cached() = 0;
 
 
     /**
@@ -185,7 +173,7 @@ typedef struct clconfig_provider_st {
      *
      * @param pb
      */
-    lcb_error_t (*refresh)(struct clconfig_provider_st *pb);
+    virtual lcb_error_t refresh() = 0;
 
     /**
      * Callback invoked to the provider to indicate that it should cease
@@ -196,8 +184,11 @@ typedef struct clconfig_provider_st {
      * between 0 seconds and several minutes depending on how a user has
      * configured the client.
      * @param pb
+     * @return true if actually paused
      */
-    lcb_error_t (*pause)(struct clconfig_provider_st *pb);
+    virtual bool pause() {
+        return false;
+    }
 
     /**
      * Called when a new configuration has been received.
@@ -207,34 +198,53 @@ typedef struct clconfig_provider_st {
      * Note that this should only update the server list and do nothing
      * else.
      */
-    void (*config_updated)(struct clconfig_provider_st *provider,
-            lcbvb_CONFIG* config);
+    virtual void config_updated(lcbvb_CONFIG*) {
+    }
 
     /**
      * Retrieve the list of nodes from this provider, if applicable
      * @param p the provider
      * @return A list of nodes, or NULL if the provider does not have a list
      */
-    hostlist_t (*get_nodes)(const struct clconfig_provider_st *p);
+    virtual const lcb::Hostlist* get_nodes() const {
+        return NULL;
+    }
 
     /**
      * Call to change the configured nodes of this provider.
      * @param p The provider
      * @param l The list of nodes to apply
      */
-    void (*configure_nodes)(struct clconfig_provider_st *p, const hostlist_t l);
-
-    /** Destroy the resources created by this provider. */
-    void (*shutdown)(struct clconfig_provider_st *);
+    virtual void configure_nodes(const lcb::Hostlist&) {
+    }
 
     /**
      * Dump state information. This callback is optional
      * @param p the provider
      * @param f the file to write to
      */
-    void (*dump)(struct clconfig_provider_st *p, FILE *f);
-} clconfig_provider;
+    virtual void dump(FILE *) const {
+    }
 
+    /** The type of provider */
+    const clconfig_method_t type;
+
+    /** Whether this provider has been disabled/enabled explicitly by a user */
+    bool enabled;
+
+    /** The parent manager object */
+    struct lcb_confmon_st *parent;
+
+};
+
+namespace lcb {
+namespace clconfig {
+clconfig_provider_st *new_cccp_provider(lcb_confmon*);
+clconfig_provider_st *new_file_provider(lcb_confmon*);
+clconfig_provider_st *new_http_provider(lcb_confmon*);
+clconfig_provider_st *new_mcraw_provider(lcb_confmon*);
+}
+}
 
 /** @brief refcounted object encapsulating a vbucket config */
 typedef struct clconfig_info_st {
@@ -294,12 +304,6 @@ typedef struct clconfig_listener_st {
 
 /* Method-specific setup methods.. */
 
-clconfig_provider * lcb_clconfig_create_http(lcb_confmon *mon);
-clconfig_provider * lcb_clconfig_create_cccp(lcb_confmon *mon);
-clconfig_provider * lcb_clconfig_create_file(lcb_confmon *mon);
-clconfig_provider * lcb_clconfig_create_user(lcb_confmon *mon);
-clconfig_provider * lcb_clconfig_create_mcraw(lcb_confmon *mon);
-
 /**@brief Get a provider by its type
  * @param mon the monitor
  * @param ix a clconfig_method_t indicating the type of provider to fetch
@@ -321,6 +325,8 @@ clconfig_provider * lcb_clconfig_create_mcraw(lcb_confmon *mon);
  * @param e the error code
  */
 #define PROVIDER_SET_ERROR(p, e) (p)->parent->last_error = e
+
+extern "C" {
 
 /**
  * @brief Create a new configuration monitor.
@@ -483,7 +489,6 @@ lcb_confmon_provider_success(clconfig_provider *provider, clconfig_info *info);
  */
 LIBCOUCHBASE_API
 void lcb_confmon_add_listener(lcb_confmon *mon, clconfig_listener *listener);
-
 /**
  * @brief Unregister (and remove) a listener added via lcb_confmon_add_listener()
  * @param mon the monitor
@@ -646,7 +651,6 @@ void
 lcb_cccp_update2(const void *cookie, lcb_error_t err,
     const void *bytes, lcb_size_t nbytes, const lcb_host_t *origin);
 
-#define lcb_clconfig_cccp_set_nodes(pb, nodes) (pb)->configure_nodes(pb, nodes)
 /**@}*/
 
 /**@name Raw Memcached (MCRAW) Provider-specific APIs
@@ -654,11 +658,7 @@ lcb_cccp_update2(const void *cookie, lcb_error_t err,
 LCB_INTERNAL_API
 lcb_error_t
 lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes);
+} // Extern "C"
 /**@}*/
-
 /**@}*/
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 #endif /* LCB_CLCONFIG_H */

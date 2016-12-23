@@ -310,11 +310,11 @@ HANDLER(config_nodes) {
 
     if (cmd == LCB_CNTL_CONFIG_HTTP_NODES) {
         target = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_HTTP);
-        lcb_clconfig_http_set_nodes(target, &hostlist);
     } else {
         target = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
-        lcb_clconfig_cccp_set_nodes(target, &hostlist);
     }
+
+    target->configure_nodes(hostlist);
 
     return LCB_SUCCESS;
 }

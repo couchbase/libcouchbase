@@ -165,7 +165,7 @@ init_providers(lcb_t obj, const Connspec &spec)
 
     if (spec.default_port() == LCB_CONFIG_MCCOMPAT_PORT) {
         lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_MCRAW, 1);
-        mcraw->configure_nodes(mcraw, obj->mc_nodes);
+        mcraw->configure_nodes(*obj->mc_nodes);
         return LCB_SUCCESS;
     }
 
@@ -204,14 +204,14 @@ init_providers(lcb_t obj, const Connspec &spec)
 
     if (http_enabled) {
         lcb_clconfig_http_enable(http);
-        lcb_clconfig_http_set_nodes(http, obj->ht_nodes);
+        http->configure_nodes(*obj->ht_nodes);
     } else {
         lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_HTTP, 0);
     }
 
     if (cccp_enabled && obj->type != LCB_TYPE_CLUSTER) {
         lcb_clconfig_cccp_enable(cccp, obj);
-        lcb_clconfig_cccp_set_nodes(cccp, obj->mc_nodes);
+        cccp->configure_nodes(*obj->mc_nodes);
     } else {
         lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_CCCP, 0);
     }

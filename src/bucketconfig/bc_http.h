@@ -52,6 +52,18 @@ struct HttpProvider : clconfig_provider {
      */
     void close_current();
 
+    bool is_v220_compat() const;
+
+    /* Overrides */
+    bool pause();
+    lcb_error_t refresh();
+    clconfig_info* get_cached();
+    void config_updated(lcbvb_CONFIG*);
+    void configure_nodes(const lcb::Hostlist&);
+    const lcb::Hostlist* get_nodes() const;
+    void dump(FILE*) const;
+    /* END Overrides */
+
     /** Base configuration structure */
     lcbio_pCONNSTART creq;
     lcbio_CTX *ioctx;
