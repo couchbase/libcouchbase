@@ -29,8 +29,10 @@
 #define LOGFMT "(cache=%s) "
 #define LOGID(fb) fb->filename.c_str()
 
-struct FileProvider : clconfig_provider, clconfig_listener {
-    FileProvider(lcb_confmon* confmon);
+using namespace lcb::clconfig;
+
+struct FileProvider : Provider, Listener {
+    FileProvider(Confmon* confmon);
     ~FileProvider();
 
     enum Status { CACHE_ERROR, NO_CHANGES, UPDATED };
@@ -127,7 +129,7 @@ FileProvider::Status FileProvider::load_cache()
         lcb_clconfig_decref(config);
     }
 
-    config = lcb_clconfig_create(vbc, LCB_CLCONFIG_FILE);
+    config = lcb_clconfig_create(vbc, CLCONFIG_FILE);
     config->cmpclock = gethrtime();
     last_mtime = st.st_mtime;
 
@@ -204,7 +206,7 @@ static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
         return;
     }
 
-    if (info->origin == LCB_CLCONFIG_PHONY || info->origin == LCB_CLCONFIG_FILE) {
+    if (info->origin == CLCONFIG_PHONY || info->origin == CLCONFIG_FILE) {
         lcb_log(LOGARGS(provider, TRACE), "Not writing configuration originating from PHONY or FILE to cache");
         return;
     }
@@ -224,7 +226,7 @@ void FileProvider::dump(FILE *fp) const {
 }
 
 FileProvider::FileProvider(lcb_confmon *parent_)
-    : clconfig_provider_st(parent_, LCB_CLCONFIG_FILE),
+    : Provider(parent_, CLCONFIG_FILE),
       config(NULL), last_mtime(0), last_errno(0), is_readonly(false),
       timer(lcbio_timer_new(parent_->iot, this, async_callback)) {
 

@@ -158,13 +158,14 @@ lcb_st::process_dns_srv(Connspec& spec)
 static lcb_error_t
 init_providers(lcb_t obj, const Connspec &spec)
 {
-    clconfig_provider *http, *cccp, *mcraw;
-    http = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_HTTP);
-    cccp = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_CCCP);
-    mcraw = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_MCRAW);
+    using namespace lcb::clconfig;
+    Provider *http, *cccp, *mcraw;
+    http = obj->confmon->get_provider(CLCONFIG_HTTP);
+    cccp = obj->confmon->get_provider(CLCONFIG_CCCP);
+    mcraw = obj->confmon->get_provider(CLCONFIG_MCRAW);
 
     if (spec.default_port() == LCB_CONFIG_MCCOMPAT_PORT) {
-        lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_MCRAW, 1);
+        lcb_confmon_set_provider_active(obj->confmon, CLCONFIG_MCRAW, 1);
         mcraw->configure_nodes(*obj->mc_nodes);
         return LCB_SUCCESS;
     }
@@ -194,7 +195,7 @@ init_providers(lcb_t obj, const Connspec &spec)
         if (spec.is_bs_file()) {
             /* If the 'file_only' provider is set, just assume something else
              * will provide us with the config, and forget about it. */
-            clconfig_provider *prov = lcb_confmon_get_provider(obj->confmon, LCB_CLCONFIG_FILE);
+            Provider *prov = obj->confmon->get_provider(CLCONFIG_FILE);
             if (prov && prov->enabled) {
                 return LCB_SUCCESS;
             }
@@ -206,14 +207,14 @@ init_providers(lcb_t obj, const Connspec &spec)
         lcb_clconfig_http_enable(http);
         http->configure_nodes(*obj->ht_nodes);
     } else {
-        lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_HTTP, 0);
+        lcb_confmon_set_provider_active(obj->confmon, CLCONFIG_HTTP, 0);
     }
 
     if (cccp_enabled && obj->type != LCB_TYPE_CLUSTER) {
         lcb_clconfig_cccp_enable(cccp, obj);
         cccp->configure_nodes(*obj->mc_nodes);
     } else {
-        lcb_confmon_set_provider_active(obj->confmon, LCB_CLCONFIG_CCCP, 0);
+        lcb_confmon_set_provider_active(obj->confmon, CLCONFIG_CCCP, 0);
     }
     return LCB_SUCCESS;
 }

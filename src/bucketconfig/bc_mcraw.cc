@@ -24,6 +24,8 @@
 #define LOGFMT "(MCRAW=%p)> "
 #define LOGID(mcr) (void *)mcr
 
+using namespace lcb::clconfig;
+
 /* Raw memcached provider */
 
 struct McRawProvider : clconfig_provider {
@@ -94,7 +96,7 @@ void McRawProvider::configure_nodes(const lcb::Hostlist& hl)
         lcb_clconfig_decref(config);
         config = NULL;
     }
-    config = lcb_clconfig_create(newconfig, LCB_CLCONFIG_MCRAW);
+    config = lcb_clconfig_create(newconfig, CLCONFIG_MCRAW);
     config->cmpclock = gethrtime();
 }
 
@@ -128,6 +130,6 @@ clconfig_provider_st* lcb::clconfig::new_mcraw_provider(lcb_confmon* parent) {
 }
 
 McRawProvider::McRawProvider(lcb_confmon *parent_)
-    : clconfig_provider_st(parent_, LCB_CLCONFIG_MCRAW),
+    : Provider(parent_, CLCONFIG_MCRAW),
       config(NULL), async(lcbio_timer_new(parent->iot, this, async_update)) {
 }

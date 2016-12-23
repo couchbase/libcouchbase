@@ -24,7 +24,7 @@
 #define LOGFMT "<%s:%s> "
 #define LOGID(h) get_ctx_host(h->ioctx), get_ctx_port(h->ioctx)
 
-using namespace lcb;
+using namespace lcb::clconfig;
 
 static void io_error_handler(lcbio_CTX *, lcb_error_t);
 static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
@@ -202,7 +202,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
     if (http->last_parsed) {
         lcb_clconfig_decref(http->last_parsed);
     }
-    http->last_parsed = lcb_clconfig_create(cfgh, LCB_CLCONFIG_HTTP);
+    http->last_parsed = lcb_clconfig_create(cfgh, CLCONFIG_HTTP);
     http->last_parsed->cmpclock = gethrtime();
     http->generation++;
 
@@ -535,8 +535,8 @@ void HttpProvider::dump(FILE *fp) const {
 }
 
 
-HttpProvider::HttpProvider(lcb_confmon *parent_)
-    : clconfig_provider_st(parent_, LCB_CLCONFIG_HTTP),
+HttpProvider::HttpProvider(Confmon *parent_)
+    : Provider(parent_, CLCONFIG_HTTP),
       ioctx(NULL),
       htp(lcbht_new(parent->settings)),
       disconn_timer(lcbio_timer_new(parent->iot, this, delayed_disconn)),
@@ -566,7 +566,7 @@ void lcb_clconfig_http_enable(clconfig_provider *http)
 lcbio_SOCKET *
 lcb_confmon_get_rest_connection(lcb_confmon *mon)
 {
-    HttpProvider *http = static_cast<HttpProvider *>(mon->all_providers[LCB_CLCONFIG_HTTP]);
+    HttpProvider *http = static_cast<HttpProvider *>(mon->all_providers[CLCONFIG_HTTP]);
     if (!http->ioctx) {
         return NULL;
     }

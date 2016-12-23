@@ -39,9 +39,9 @@
 #define CONFIG_DELIMITER "\n\n\n\n"
 
 namespace lcb {
-
-struct HttpProvider : clconfig_provider {
-    HttpProvider(lcb_confmon*);
+namespace clconfig {
+struct HttpProvider : Provider {
+    HttpProvider(Confmon*);
     ~HttpProvider();
 
     void reset_stream_state();
@@ -96,5 +96,6 @@ struct HttpProvider : clconfig_provider {
     int uritype;
 };
 
+} // namespace
 } // namespace
 #endif /* LCB_CLPROVIDER_HTTP_H */

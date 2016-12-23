@@ -57,6 +57,10 @@ namespace lcb {
 class Connspec;
 struct Spechost;
 class RetryQueue;
+namespace clconfig {
+struct Confmon;
+struct ConfigInfo;
+}
 }
 extern "C" {
 #endif
@@ -87,7 +91,6 @@ struct lcb_callback_st {
     lcb_pktflushed_callback pktflushed;
 };
 
-struct lcb_confmon_st;
 struct lcb_BOOTSTRAP;
 struct lcb_GUESSVB_st;
 
@@ -95,18 +98,22 @@ struct lcb_GUESSVB_st;
 #include <string>
 typedef std::string* lcb_pSCRATCHBUF;
 typedef lcb::RetryQueue lcb_RETRYQ;
+typedef lcb::clconfig::Confmon* lcb_pCONFMON;
+typedef lcb::clconfig::ConfigInfo *lcb_pCONFIGINFO;
 #else
 typedef struct lcb_SCRATCHBUF* lcb_pSCRATCHBUF;
 typedef struct lcb_RETRYQ_st lcb_RETRYQ;
+typedef struct lcb_CONFMON_st* lcb_pCONFMON;
+typedef struct lcb_CONFIGINFO_st* lcb_pCONFIGINFO;
 #endif
 
 struct lcb_st {
     mc_CMDQUEUE cmdq; /**< Base command queue object */
     const void *cookie; /**< User defined pointer */
-    struct lcb_confmon_st *confmon; /**< Cluster config manager */
+    lcb_pCONFMON confmon; /**< Cluster config manager */
     hostlist_t mc_nodes; /**< List of current memcached endpoints */
     hostlist_t ht_nodes; /**< List of current management endpoints */
-    struct clconfig_info_st *cur_configinfo; /**< Pointer to current config */
+    lcb_pCONFIGINFO cur_configinfo; /**< Pointer to current config */
     struct lcb_BOOTSTRAP *bootstrap; /**< Bootstrapping state */
     struct lcb_callback_st callbacks; /**< Callback table */
     lcb_HISTOGRAM *kv_timings; /**< Histogram object (for timing) */
@@ -152,8 +159,7 @@ void lcb_initialize_packet_handlers(lcb_t instance);
 LCB_INTERNAL_API
 void lcb_maybe_breakout(lcb_t instance);
 
-struct clconfig_info_st;
-void lcb_update_vbconfig(lcb_t instance, struct clconfig_info_st *config);
+void lcb_update_vbconfig(lcb_t instance, lcb_pCONFIGINFO config);
 /**
  * Hashtable wrappers
  */

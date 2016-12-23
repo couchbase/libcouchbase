@@ -7,12 +7,16 @@
 #include <lcbio/iotable.h>
 #include <set>
 
-class Confmon : public ::testing::Test
+using namespace lcb::clconfig;
+
+namespace {
+class ConfmonTest : public ::testing::Test
 {
     void SetUp() {
         MockEnvironment::Reset();
     }
 };
+}
 
 struct evstop_listener {
     clconfig_listener base;
@@ -34,7 +38,7 @@ static void listen_callback1(clconfig_listener *lsn, clconfig_event_t event,
 }
 }
 
-TEST_F(Confmon, testBasic)
+TEST_F(ConfmonTest, testBasic)
 {
     HandleWrap hw;
     lcb_t instance;
@@ -42,7 +46,7 @@ TEST_F(Confmon, testBasic)
 
 
     lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
-    clconfig_provider *http = lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP);
+    clconfig_provider *http = mon->get_provider(CLCONFIG_HTTP);
     lcb_clconfig_http_enable(http);
     http->configure_nodes(*instance->ht_nodes);
 
@@ -55,7 +59,7 @@ TEST_F(Confmon, testBasic)
     EXPECT_EQ(LCB_SUCCESS, lcb_confmon_stop(mon));
 
     // Try to find a provider..
-    clconfig_provider *provider = lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP);
+    clconfig_provider *provider = mon->get_provider(CLCONFIG_HTTP);
     ASSERT_NE(0, provider->enabled);
 
     struct evstop_listener listener;
@@ -83,7 +87,7 @@ struct listener2 {
 
     void reset() {
         call_count = 0;
-        last_source = LCB_CLCONFIG_PHONY;
+        last_source = CLCONFIG_PHONY;
         expected_events.clear();
     }
 
@@ -125,12 +129,12 @@ static void listen_callback2(clconfig_listener *prov,
 }
 }
 
-static void runConfmon(lcbio_pTABLE io, lcb_confmon *mon)
+static void runConfmonTest(lcbio_pTABLE io, lcb_confmon *mon)
 {
     IOT_START(io);
 }
 
-TEST_F(Confmon, testCycle)
+TEST_F(ConfmonTest, testCycle)
 {
     HandleWrap hw;
     lcb_t instance;
@@ -155,8 +159,8 @@ TEST_F(Confmon, testCycle)
     lcb_confmon_add_listener(mon, &lsn.base);
 
     mock->makeConnectParams(cropts, NULL);
-    clconfig_provider *cccp = lcb_confmon_get_provider(mon, LCB_CLCONFIG_CCCP);
-    clconfig_provider *http = lcb_confmon_get_provider(mon, LCB_CLCONFIG_HTTP);
+    clconfig_provider *cccp = mon->get_provider(CLCONFIG_CCCP);
+    clconfig_provider *http = mon->get_provider(CLCONFIG_HTTP);
 
     hostlist_t hl = hostlist_create();
     hostlist_add_stringz(hl, cropts.v.v2.mchosts, 11210);
@@ -170,18 +174,18 @@ TEST_F(Confmon, testCycle)
     lcb_confmon_prepare(mon);
     lcb_confmon_start(mon);
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_NEW_CONFIG);
-    runConfmon(lsn.io, mon);
+    runConfmonTest(lsn.io, mon);
 
     // Ensure CCCP is functioning properly and we're called only once.
     ASSERT_EQ(1, lsn.call_count);
-    ASSERT_EQ(LCB_CLCONFIG_CCCP, lsn.last_source);
+    ASSERT_EQ(CLCONFIG_CCCP, lsn.last_source);
 
     lcb_confmon_start(mon);
     lsn.reset();
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_ANY_CONFIG);
-    runConfmon(lsn.io, mon);
+    runConfmonTest(lsn.io, mon);
     ASSERT_EQ(1, lsn.call_count);
-    ASSERT_EQ(LCB_CLCONFIG_CCCP, lsn.last_source);
+    ASSERT_EQ(CLCONFIG_CCCP, lsn.last_source);
 
     mock->setCCCP(false);
     mock->failoverNode(5);
@@ -189,13 +193,13 @@ TEST_F(Confmon, testCycle)
     lcb_confmon_start(mon);
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_ANY_CONFIG);
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_NEW_CONFIG);
-    runConfmon(lsn.io, mon);
-    ASSERT_EQ(LCB_CLCONFIG_HTTP, lsn.last_source);
+    runConfmonTest(lsn.io, mon);
+    ASSERT_EQ(CLCONFIG_HTTP, lsn.last_source);
     ASSERT_EQ(1, lsn.call_count);
     lcb_confmon_destroy(mon);
 }
 
-TEST_F(Confmon, testBootstrapMethods)
+TEST_F(ConfmonTest, testBootstrapMethods)
 {
     lcb_t instance;
     HandleWrap hw;

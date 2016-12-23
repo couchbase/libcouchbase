@@ -17,9 +17,6 @@
 
 #ifndef LCB_BOOTSTRAP_H
 #define LCB_BOOTSTRAP_H
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**@file
  * Core bootstrap/cluster configuration routines */
@@ -102,6 +99,9 @@ typedef enum {
     LCB_BS_REFRESH_INCRERR = 0x08
 } lcb_BSFLAGS;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /**
  * @brief Request that the handle update its configuration.
  *

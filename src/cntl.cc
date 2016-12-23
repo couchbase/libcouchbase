@@ -246,7 +246,8 @@ HANDLER(conninfo) {
 
 HANDLER(config_cache_loaded_handler) {
     if (mode != LCB_CNTL_GET) { return LCB_ECTL_UNSUPPMODE; }
-    *(int *)arg = instance->cur_configinfo && instance->cur_configinfo->origin == LCB_CLCONFIG_FILE;
+    *(int *)arg = instance->cur_configinfo &&
+            instance->cur_configinfo->origin == lcb::clconfig::CLCONFIG_FILE;
     (void)cmd; return LCB_SUCCESS;
 }
 
@@ -283,8 +284,8 @@ HANDLER(config_transport) {
     if (!instance->cur_configinfo) { return LCB_CLIENT_ETMPFAIL; }
 
     switch (instance->cur_configinfo->origin) {
-        case LCB_CLCONFIG_HTTP: *val = LCB_CONFIG_TRANSPORT_HTTP; break;
-        case LCB_CLCONFIG_CCCP: *val = LCB_CONFIG_TRANSPORT_CCCP; break;
+        case lcb::clconfig::CLCONFIG_HTTP: *val = LCB_CONFIG_TRANSPORT_HTTP; break;
+        case lcb::clconfig::CLCONFIG_CCCP: *val = LCB_CONFIG_TRANSPORT_CCCP; break;
         default: return LCB_CLIENT_ETMPFAIL;
     }
     (void)cmd; return LCB_SUCCESS;
@@ -309,9 +310,9 @@ HANDLER(config_nodes) {
     }
 
     if (cmd == LCB_CNTL_CONFIG_HTTP_NODES) {
-        target = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_HTTP);
+        target = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_HTTP);
     } else {
-        target = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_CCCP);
+        target = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_CCCP);
     }
 
     target->configure_nodes(hostlist);
@@ -329,7 +330,7 @@ HANDLER(init_providers) {
 HANDLER(config_cache_handler) {
     clconfig_provider *provider;
 
-    provider = lcb_confmon_get_provider(instance->confmon, LCB_CLCONFIG_FILE);
+    provider = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_FILE);
     if (mode == LCB_CNTL_SET) {
         int rv;
         rv = lcb_clconfig_file_set_filename(provider,

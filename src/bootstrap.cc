@@ -34,6 +34,7 @@ static void
 config_callback(clconfig_listener *listener, clconfig_event_t event,
     clconfig_info *info)
 {
+    using namespace lcb::clconfig;
     struct lcb_BOOTSTRAP *bs = static_cast<lcb_BOOTSTRAP *>(listener);
     lcb_t instance = bs->parent;
 
@@ -54,21 +55,21 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
 
-    if (info->origin != LCB_CLCONFIG_FILE) {
+    if (info->origin != CLCONFIG_FILE) {
         /* Set the timestamp for the current config to control throttling,
          * but only if it's not an initial file-based config. See CCBC-482 */
         bs->last_refresh = gethrtime();
         bs->errcounter = 0;
     }
 
-    if (info->origin == LCB_CLCONFIG_CCCP) {
+    if (info->origin == CLCONFIG_CCCP) {
         /* Disable HTTP provider if we've received something via CCCP */
 
         if (instance->cur_configinfo == NULL ||
-                instance->cur_configinfo->origin != LCB_CLCONFIG_HTTP) {
+                instance->cur_configinfo->origin != CLCONFIG_HTTP) {
             /* Never disable HTTP if it's still being used */
             lcb_confmon_set_provider_active(
-                instance->confmon, LCB_CLCONFIG_HTTP, 0);
+                instance->confmon, CLCONFIG_HTTP, 0);
         }
     }
 
@@ -82,14 +83,14 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
 
         if (instance->type == LCB_TYPE_BUCKET &&
                 LCBVB_DISTTYPE(LCBT_VBCONFIG(instance)) == LCBVB_DIST_KETAMA &&
-                instance->cur_configinfo->origin != LCB_CLCONFIG_MCRAW) {
+                instance->cur_configinfo->origin != CLCONFIG_MCRAW) {
 
             lcb_log(LOGARGS(instance, INFO), "Reverting to HTTP Config for memcached buckets");
             instance->settings->bc_http_stream_time = -1;
             lcb_confmon_set_provider_active(
-                instance->confmon, LCB_CLCONFIG_HTTP, 1);
+                instance->confmon, CLCONFIG_HTTP, 1);
             lcb_confmon_set_provider_active(
-                instance->confmon, LCB_CLCONFIG_CCCP, 0);
+                instance->confmon, CLCONFIG_CCCP, 0);
         }
         instance->callbacks.bootstrap(instance, LCB_SUCCESS);
     }
@@ -138,7 +139,7 @@ static void async_refresh(void *arg)
     clconfig_info *info;
 
     info = lcb_confmon_get_config(bs->parent->confmon);
-    config_callback(bs, CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
+    config_callback(bs, lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
 }
 
 /**
@@ -151,7 +152,7 @@ async_step_callback(clconfig_listener *listener, clconfig_event_t event,
 {
     lcb_BOOTSTRAP *bs = static_cast<lcb_BOOTSTRAP *>(listener);
 
-    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+    if (event != lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
     }
 

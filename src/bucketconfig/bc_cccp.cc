@@ -38,7 +38,9 @@
 
 struct CccpCookie;
 
-struct CccpProvider : public clconfig_provider {
+using namespace lcb::clconfig;
+
+struct CccpProvider : public Provider {
     CccpProvider(lcb_confmon *);
     ~CccpProvider();
 
@@ -166,7 +168,7 @@ static void socket_timeout(void *arg) {
 void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance)
 {
     CccpProvider *cccp = static_cast<CccpProvider*>(pb);
-    lcb_assert(pb->type == LCB_CLCONFIG_CCCP);
+    lcb_assert(pb->type == CLCONFIG_CCCP);
     cccp->instance = instance;
     pb->enabled = true;
 }
@@ -199,7 +201,7 @@ CccpProvider::update(const char *host, const char *data)
     }
 
     lcbvb_replace_host(vbc, host);
-    new_config = lcb_clconfig_create(vbc, LCB_CLCONFIG_CCCP);
+    new_config = lcb_clconfig_create(vbc, CLCONFIG_CCCP);
 
     if (!new_config) {
         lcbvb_destroy(vbc);
@@ -449,7 +451,7 @@ void CccpProvider::dump(FILE *fp) const {
 }
 
 CccpProvider::CccpProvider(lcb_confmon *mon)
-    : clconfig_provider_st(mon, LCB_CLCONFIG_CCCP),
+    : Provider(mon, CLCONFIG_CCCP),
       nodes(new lcb::Hostlist()),
       config(NULL),
       server_active(false),

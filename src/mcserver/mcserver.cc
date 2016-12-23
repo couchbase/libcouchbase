@@ -120,8 +120,8 @@ Server::handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt)
     protocol_binary_request_header hdr;
     lcb_error_t err = LCB_ERROR;
     lcb_U16 vbid;
-    clconfig_provider *cccp = lcb_confmon_get_provider(instance->confmon,
-        LCB_CLCONFIG_CCCP);
+    lcb::clconfig::Provider *cccp =
+            instance->confmon->get_provider(lcb::clconfig::CLCONFIG_CCCP);
 
     mcreq_read_hdr(oldpkt, &hdr);
     vbid = ntohs(hdr.request.vbucket);
@@ -137,7 +137,7 @@ Server::handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt)
 
     if (err != LCB_SUCCESS) {
         int bs_options;
-        if (instance->cur_configinfo->origin == LCB_CLCONFIG_CCCP) {
+        if (instance->cur_configinfo->origin == lcb::clconfig::CLCONFIG_CCCP) {
             /**
              * XXX: Not enough to see if cccp was enabled, since cccp might
              * be requested by a user, but would still not actually be active

@@ -26,56 +26,7 @@
 static void async_stop(void *);
 static void async_start(void *);
 
-typedef clconfig_provider Provider;
-typedef clconfig_listener Listener;
-
-namespace lcb {
-
-struct Confmon : lcb_confmon_st {
-    Confmon(lcb_settings*, lcbio_pTABLE iot);
-    ~Confmon();
-
-    /**
-     * Get the provider following the current provider, or NULL if this is
-     * the last provider in the list.
-     * @param cur The current provider.
-     * @return The next provider, or NULL if no more providers remain.
-     */
-    Provider *next_active(Provider *cur);
-    Provider *first_active();
-    void prepare();
-    void stop();
-    void stop_real();
-    void start();
-    bool do_next_provider();
-    int do_set_next(clconfig_info*, bool notify_miss);
-    void invoke_listeners(clconfig_event_t, clconfig_info*);
-    void provider_failed(Provider *which, lcb_error_t why);
-    void provider_got_config(Provider *which, clconfig_info *config);
-    bool is_refreshing() const {
-        return (state & CONFMON_S_ACTIVE) != 0;
-    }
-    void dump(FILE *fp);
-
-
-    /** This is the async handle for a reentrant start */
-    lcbio_pTIMER as_start;
-
-    /** Async handle for a reentrant stop */
-    lcbio_pTIMER as_stop;
-
-    /* CONFMON_S_* values. Used internally */
-    int state;
-
-    /** Last time the provider was stopped. As a microsecond timestamp */
-    lcb_uint32_t last_stop_us;
-
-    typedef std::list<Provider*> ProviderList;
-    ProviderList active_providers;
-};
-}
-
-using lcb::Confmon;
+using namespace lcb::clconfig;
 
 Provider* Confmon::next_active(clconfig_provider *cur) {
     ProviderList::iterator ii = std::find(
@@ -99,10 +50,10 @@ Provider* Confmon::first_active()
 
 static const char *
 provider_string(clconfig_method_t type) {
-    if (type == LCB_CLCONFIG_HTTP) { return "HTTP"; }
-    if (type == LCB_CLCONFIG_CCCP) { return "CCCP"; }
-    if (type == LCB_CLCONFIG_FILE) { return "FILE"; }
-    if (type == LCB_CLCONFIG_MCRAW) { return "MCRAW"; }
+    if (type == CLCONFIG_HTTP) { return "HTTP"; }
+    if (type == CLCONFIG_CCCP) { return "CCCP"; }
+    if (type == CLCONFIG_FILE) { return "FILE"; }
+    if (type == CLCONFIG_MCRAW) { return "MCRAW"; }
     return "";
 }
 
@@ -111,24 +62,26 @@ lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot) {
 }
 
 Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_)
-    : as_start(lcbio_timer_new(iot_, this, async_start)),
+    : cur_provider(NULL),
+      config(NULL),
+      settings(settings_),
+      last_error(LCB_SUCCESS),
+      iot(iot_),
+      as_start(lcbio_timer_new(iot_, this, async_start)),
       as_stop(lcbio_timer_new(iot_, this, async_stop)),
       state(0),
       last_stop_us(0) {
 
-    memset(static_cast<lcb_confmon*>(this), 0, sizeof(lcb_confmon));
-    lcb_confmon::settings = settings_;
-    lcb_confmon::iot = iot_;
     lcb_list_init(&listeners);
     lcbio_table_ref(iot);
     lcb_settings_ref(settings);
 
-    all_providers[LCB_CLCONFIG_FILE] = lcb::clconfig::new_file_provider(this);
-    all_providers[LCB_CLCONFIG_CCCP] = lcb::clconfig::new_cccp_provider(this);
-    all_providers[LCB_CLCONFIG_HTTP] = lcb::clconfig::new_http_provider(this);
-    all_providers[LCB_CLCONFIG_MCRAW] = lcb::clconfig::new_mcraw_provider(this);
+    all_providers[CLCONFIG_FILE] = new_file_provider(this);
+    all_providers[CLCONFIG_CCCP] = new_cccp_provider(this);
+    all_providers[CLCONFIG_HTTP] = new_http_provider(this);
+    all_providers[CLCONFIG_MCRAW] = new_mcraw_provider(this);
 
-    for (size_t ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
         all_providers[ii]->parent = this;
     }
 }
@@ -141,7 +94,7 @@ void Confmon::prepare() {
     active_providers.clear();
     lcb_log(LOGARGS(this, DEBUG), "Preparing providers (this may be called multiple times)");
 
-    for (size_t ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = all_providers[ii];
         if (cur) {
             if (cur->enabled) {
@@ -177,7 +130,7 @@ Confmon::~Confmon() {
         config = NULL;
     }
 
-    for (size_t ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
         clconfig_provider *provider = all_providers[ii];
         if (provider == NULL) {
             continue;
@@ -227,7 +180,7 @@ int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
         lcb_clconfig_decref(config);
     }
 
-    for (ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+    for (ii = 0; ii < CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = all_providers[ii];
         if (cur && cur->enabled) {
             cur->config_updated(new_config->vbc);
@@ -383,11 +336,11 @@ void Confmon::stop() {
     state = CONFMON_S_INACTIVE;
 }
 
-clconfig_provider_st::clconfig_provider_st(lcb_confmon *parent_, clconfig_method_t type_)
+Provider::Provider(lcb_confmon *parent_, clconfig_method_t type_)
     : type(type_), enabled(false), parent(parent_) {
 }
 
-clconfig_provider_st::~clconfig_provider_st() {
+Provider::~Provider() {
     parent = NULL;
 }
 
@@ -499,7 +452,7 @@ void Confmon::dump(FILE *fp) {
     fprintf(fp, "LAST ERROR: 0x%x\n", last_error);
 
 
-    for (size_t ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
+    for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = all_providers[ii];
         if (!cur) {
             continue;
