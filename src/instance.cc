@@ -165,7 +165,7 @@ init_providers(lcb_t obj, const Connspec &spec)
     mcraw = obj->confmon->get_provider(CLCONFIG_MCRAW);
 
     if (spec.default_port() == LCB_CONFIG_MCCOMPAT_PORT) {
-        lcb_confmon_set_provider_active(obj->confmon, CLCONFIG_MCRAW, 1);
+        obj->confmon->set_active(CLCONFIG_MCRAW, true);
         mcraw->configure_nodes(*obj->mc_nodes);
         return LCB_SUCCESS;
     }
@@ -207,14 +207,14 @@ init_providers(lcb_t obj, const Connspec &spec)
         lcb_clconfig_http_enable(http);
         http->configure_nodes(*obj->ht_nodes);
     } else {
-        lcb_confmon_set_provider_active(obj->confmon, CLCONFIG_HTTP, 0);
+        obj->confmon->set_active(CLCONFIG_HTTP, false);
     }
 
     if (cccp_enabled && obj->type != LCB_TYPE_CLUSTER) {
         lcb_clconfig_cccp_enable(cccp, obj);
         cccp->configure_nodes(*obj->mc_nodes);
     } else {
-        lcb_confmon_set_provider_active(obj->confmon, CLCONFIG_CCCP, 0);
+        obj->confmon->set_active(CLCONFIG_CCCP, false);
     }
     return LCB_SUCCESS;
 }
@@ -419,7 +419,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->memd_sockpool->tmoidle = 10000000;
     obj->http_sockpool->maxidle = 1;
     obj->http_sockpool->tmoidle = 10000000;
-    obj->confmon = lcb_confmon_create(settings, obj->iotable);
+    obj->confmon = new clconfig::Confmon(settings, obj->iotable);
     obj->ht_nodes = new Hostlist();
     obj->mc_nodes = new Hostlist();
     obj->retryq = new RetryQueue(&obj->cmdq, obj->iotable, obj->settings);
@@ -529,7 +529,7 @@ void lcb_destroy(lcb_t instance)
     }
 
     DESTROY(delete, retryq);
-    DESTROY(lcb_confmon_destroy, confmon);
+    DESTROY(delete, confmon);
     DESTROY(lcbio_mgr_destroy, memd_sockpool);
     DESTROY(lcbio_mgr_destroy, http_sockpool);
     DESTROY(lcb_vbguess_destroy, vbguess);

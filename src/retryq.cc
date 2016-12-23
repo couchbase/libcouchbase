@@ -232,7 +232,7 @@ RetryQueue::flush(bool throttle)
              * keep the command in there until it has a chance to be scheduled.
              */
             lcb_bootstrap_common(get_instance(), LCB_BS_REFRESH_THROTTLE);
-            if (lcb_confmon_is_refreshing(get_instance()->confmon) ||
+            if (get_instance()->confmon->is_refreshing() ||
                     settings->retry[LCB_RETRY_ON_MISSINGNODE]) {
 
                 lcb_list_delete(static_cast<SchedNode*>(op));

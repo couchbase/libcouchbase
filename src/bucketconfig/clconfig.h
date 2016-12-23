@@ -150,7 +150,21 @@ class ConfigInfo;
  * when retrieving new configs.
  */
 struct Confmon {
+    /**
+     * @brief Create a new configuration monitor.
+     * This function creates a new `confmon` object which can be used to manage
+     * configurations and their providers.
+     *
+     * @param settings
+     * @param iot
+     *
+     * Once the confmon object has been created you may enable or disable various
+     * providers (see lcb_confmon_set_provider_active()). Once no more providers
+     * remain to be activated you should call lcb_confmon_prepare() once. Then
+     * call the rest of the functions.
+     */
     Confmon(lcb_settings*, lcbio_pTABLE iot);
+    void destroy() { delete this; }
     ~Confmon();
 
     /**
@@ -160,19 +174,152 @@ struct Confmon {
      * @return The next provider, or NULL if no more providers remain.
      */
     Provider *next_active(Provider *cur);
+
+    /**
+     * Gets the first active provider.
+     * @return the first provider, or NULL if no providers exist.
+     */
     Provider *first_active();
+
+    /**
+     * Prepares the configuration monitor object for operations. This will insert
+     * all the enabled providers into a list. Call this function each time a
+     * provider has been enabled.
+     * @param mon
+     */
     void prepare();
-    void stop();
-    void stop_real();
+
+    /**
+     * Set a given provider as being 'active'. This will activate the
+     * provider as well as call #prepare() to update the list.
+     * @param type The ID of the provider to activate
+     * @param enabled true for activate, false for deactivate
+     */
+    void set_active(Method type, bool enabled);
+
+    /**
+     * @brief Request a configuration refresh
+     *
+     * Start traversing the list of current providers, requesting a new
+     * configuration for each. This function will asynchronously loop through all
+     * providers until one provides a new configuration.
+     *
+     * You may call #stop() to asynchronously break out of the loop.
+     * If the confmon is already in a refreshing state
+     * (i.e. #is_refreshing()) returns true then this function does
+     * nothing.
+     *
+     * This function is reentrant safe and may be called at any time.
+     *
+     * @param mon
+     * @see lcb_confmon_add_listener()
+     * @see #stop()
+     * @see #is_refreshing()
+     */
     void start();
-    bool do_next_provider();
-    int do_set_next(ConfigInfo*, bool notify_miss);
-    void invoke_listeners(EventType, ConfigInfo*);
-    void provider_failed(Provider *which, lcb_error_t why);
-    void provider_got_config(Provider *which, ConfigInfo* config);
+
+    /**
+     * @brief Cancel a pending configuration refresh.
+     *
+     * Stops the monitor. This will call clconfig_provider::pause() for each active
+     * provider. Typically called before destruction or when a new configuration
+     * has been found.
+     *
+     * This function is safe to call anywhere. If the monitor is already stopped
+     * then this function does nothing.
+     *
+     * @param mon
+     * @see #start()
+     * @see #is_refreshing()
+     */
+    void stop();
+
+    /**
+     * @brief Check if the monitor is waiting for a new config from a provider
+     * @param mon
+     * @return true if refreshing, false if idle
+     */
     bool is_refreshing() const {
         return (state & CONFMON_S_ACTIVE) != 0;
     }
+
+    /**
+     * Get the current configuration
+     * @return The configuration
+     */
+    ConfigInfo* get_config() const {
+        return config;
+    }
+
+    /**
+     * Get the last error which occurred on this object
+     * @return The last error
+     */
+    lcb_error_t get_last_error() const {
+        return last_error;
+    }
+
+    /**
+     * @brief Get the current monitor state
+     * @param mon the monitor
+     * @return a set of flags consisting of @ref State values.
+     */
+    int get_state() const {
+        return state;
+    }
+
+    void stop_real();
+    bool do_next_provider();
+    int do_set_next(ConfigInfo*, bool notify_miss);
+    void invoke_listeners(EventType, ConfigInfo*);
+
+    /**
+     * @brief Indicate that a provider has failed and advance the monitor
+     *
+     * Indicate that the current provider has failed to obtain a new configuration.
+     * This is always called by a provider and should be invoked when the provider
+     * has encountered an internal error which caused it to be unable to fetch
+     * the configuration.
+     *
+     * Note that this function is safe to call from any provider at any time. If
+     * the provider is not the current provider then it is treated as an async
+     * push notification failure and ignored. This function is _not_ safe to call
+     * from consumers of providers
+     *
+     * Once this is called, the confmon instance will either roll over to the next
+     * provider or enter the inactive state depending on the configuration and
+     * whether the current provider is the last provider in the list.
+     *
+     * @param provider
+     * @param err
+     */
+    void provider_failed(Provider *which, lcb_error_t why);
+
+    /**
+     * @brief Indicate that a provider has successfuly retrieved a configuration.
+     *
+     * Indicates that the provider has fetched a new configuration from the network
+     * and that confmon should attempt to propagate it. It has similar semantics
+     * to lcb_confmon_provider_failed() except that the second argument is a config
+     * object rather than an error code. The second argument must not be `NULL`
+     *
+     * The monitor will compare the new config against the current config.
+     * If the new config does not feature any changes from the current config then
+     * it is ignored and the confmon instance will proceed to the next provider.
+     * This is done through a direct call to provider_failed(provider, LCB_SUCCESS).
+     *
+     * This function should _not_ be called outside of an asynchronous provider's
+     * handler.
+     *
+     * @param provider the provider which yielded the new configuration
+     * @param info the new configuration
+     */
+    void provider_got_config(Provider *which, ConfigInfo* config);
+
+    /** Dump information about the monitor
+     * @param mon the monitor object
+     * @param fp the file to which information should be written
+     */
     void dump(FILE *fp);
 
     Provider* get_provider(Method m) const {
@@ -446,149 +593,6 @@ typedef lcb::clconfig::Listener clconfig_listener;
 extern "C" {
 
 /**
- * @brief Create a new configuration monitor.
- * This function creates a new `confmon` object which can be used to manage
- * configurations and their providers.
- *
- * @param settings
- * @param iot
- *
- * Once the confmon object has been created you may enable or disable various
- * providers (see lcb_confmon_set_provider_active()). Once no more providers
- * remain to be activated you should call lcb_confmon_prepare() once. Then
- * call the rest of the functions.
- */
-LIBCOUCHBASE_API
-lcb_confmon *
-lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot);
-
-/**Destroy the confmon object.
- * @param mon */
-LIBCOUCHBASE_API
-void
-lcb_confmon_destroy(lcb_confmon *mon);
-
-/**
- * Prepares the configuration monitor object for operations. This will insert
- * all the enabled providers into a list. Call this function each time a
- * provider has been enabled.
- * @param mon
- */
-LIBCOUCHBASE_API
-void
-lcb_confmon_prepare(lcb_confmon *mon);
-
-LCB_INTERNAL_API
-void
-lcb_confmon_set_provider_active(lcb_confmon *mon,
-    clconfig_method_t type, int enabled);
-
-
-/**
- * @brief Request a configuration refresh
- *
- * Start traversing the list of current providers, requesting a new
- * configuration for each. This function will asynchronously loop through all
- * providers until one provides a new configuration.
- *
- * You may call lcb_confmon_stop() to asynchronously break out of the loop.
- * If the confmon is already in a refreshing state
- * (i.e. lcb_confmon_is_refreshing()) returns true then this function does
- * nothing.
- *
- * This function is reentrant safe and may be called at any time.
- *
- * @param mon
- * @see lcb_confmon_add_listener()
- * @see lcb_confmon_stop()
- * @see lcb_confmon_is_refreshing()
- */
-LIBCOUCHBASE_API
-lcb_error_t lcb_confmon_start(lcb_confmon *mon);
-
-/**
- * @brief Cancel a pending configuration refresh.
- *
- * Stops the monitor. This will call clconfig_provider::pause() for each active
- * provider. Typically called before destruction or when a new configuration
- * has been found.
- *
- * This function is safe to call anywhere. If the monitor is already stopped
- * then this function does nothing.
- *
- * @param mon
- * @see lcb_confmon_start()
- * @see lcb_confmon_is_refreshing()
- */
-LIBCOUCHBASE_API
-lcb_error_t lcb_confmon_stop(lcb_confmon *mon);
-
-/**
- * @brief Check if the monitor is waiting for a new config from a provider
- * @param mon
- * @return true if refreshing, false if idle
- */
-LCB_INTERNAL_API
-int lcb_confmon_is_refreshing(lcb_confmon *mon);
-
-
-/**@brief Get the current configuration object
- * @return The current configuration */
-#define lcb_confmon_get_config(mon) (mon)->config
-
-/**@brief Get the last error code set by a provider
- * @return the last error code (if failure) */
-#define lcb_confmon_last_error(mon) (mon)->last_error
-
-/**
- * @brief Indicate that a provider has failed and advance the monitor
- *
- * Indicate that the current provider has failed to obtain a new configuration.
- * This is always called by a provider and should be invoked when the provider
- * has encountered an internal error which caused it to be unable to fetch
- * the configuration.
- *
- * Note that this function is safe to call from any provider at any time. If
- * the provider is not the current provider then it is treated as an async
- * push notification failure and ignored. This function is _not_ safe to call
- * from consumers of providers
- *
- * Once this is called, the confmon instance will either roll over to the next
- * provider or enter the inactive state depending on the configuration and
- * whether the current provider is the last provider in the list.
- *
- * @param provider
- * @param err
- */
-LIBCOUCHBASE_API
-void
-lcb_confmon_provider_failed(clconfig_provider *provider, lcb_error_t err);
-
-
-/**
- * @brief Indicate that a provider has successfuly retrieved a configuration.
- *
- * Indicates that the provider has fetched a new configuration from the network
- * and that confmon should attempt to propagate it. It has similar semantics
- * to lcb_confmon_provider_failed() except that the second argument is a config
- * object rather than an error code. The second argument must not be `NULL`
- *
- * The monitor will compare the new config against the current config.
- * If the new config does not feature any changes from the current config then
- * it is ignored and the confmon instance will proceed to the next provider.
- * This is done through a direct call to provider_failed(provider, LCB_SUCCESS).
- *
- * This function should _not_ be called outside of an asynchronous provider's
- * handler.
- *
- * @param provider the provider which yielded the new configuration
- * @param info the new configuration
- */
-LIBCOUCHBASE_API
-void
-lcb_confmon_provider_success(clconfig_provider *provider, clconfig_info *info);
-
-/**
  * @brief Register a listener to be invoked on state changes and events
  *
  * Adds a 'listener' object to be called at each configuration update. The
@@ -613,19 +617,6 @@ void lcb_confmon_add_listener(lcb_confmon *mon, clconfig_listener *listener);
  */
 LIBCOUCHBASE_API
 void lcb_confmon_remove_listener(lcb_confmon *mon, clconfig_listener *listener);
-
-/**
- * @brief Get the current monitor state
- * @param mon the monitor
- * @return a set of flags consisting of confmon_state_t values.
- */
-#define lcb_confmon_get_state(mon) (mon)->state
-
-/** Dump information about the monitor
- * @param mon the monitor object
- * @param fp the file to which information should be written
- */
-void lcb_confmon_dump(lcb_confmon *mon, FILE *fp);
 
 /**
  * @name File Provider-specific APIs

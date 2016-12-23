@@ -45,18 +45,18 @@ TEST_F(ConfmonTest, testBasic)
     MockEnvironment::getInstance()->createConnection(hw, instance);
 
 
-    lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
+    lcb_confmon *mon = new Confmon(instance->settings, instance->iotable);
     clconfig_provider *http = mon->get_provider(CLCONFIG_HTTP);
     lcb_clconfig_http_enable(http);
     http->configure_nodes(*instance->ht_nodes);
 
-    lcb_confmon_prepare(mon);
+    mon->prepare();
 
-    EXPECT_EQ(NULL, lcb_confmon_get_config(mon));
-    EXPECT_EQ(LCB_SUCCESS, lcb_confmon_start(mon));
-    EXPECT_EQ(LCB_SUCCESS, lcb_confmon_start(mon));
-    EXPECT_EQ(LCB_SUCCESS, lcb_confmon_stop(mon));
-    EXPECT_EQ(LCB_SUCCESS, lcb_confmon_stop(mon));
+    EXPECT_EQ(NULL, mon->get_config());
+    mon->start();
+    mon->start(); // Twice!
+    mon->stop();
+    mon->stop();
 
     // Try to find a provider..
     clconfig_provider *provider = mon->get_provider(CLCONFIG_HTTP);
@@ -70,11 +70,10 @@ TEST_F(ConfmonTest, testBasic)
     listener.io = instance->iotable;
 
     lcb_confmon_add_listener(mon, &listener.base);
-    lcb_confmon_start(mon);
+    mon->start();
     IOT_START(instance->iotable);
     ASSERT_NE(0, listener.called);
-
-    lcb_confmon_destroy(mon);
+    delete mon;
 }
 
 
@@ -149,7 +148,7 @@ TEST_F(ConfmonTest, testCycle)
     instance->settings->bc_http_stream_time = 100000;
     instance->memd_sockpool->tmoidle = 100000;
 
-    lcb_confmon *mon = lcb_confmon_create(instance->settings, instance->iotable);
+    lcb_confmon *mon = new Confmon(instance->settings, instance->iotable);
 
     struct listener2 lsn;
     lsn.base.callback = listen_callback2;
@@ -171,8 +170,8 @@ TEST_F(ConfmonTest, testCycle)
     http->configure_nodes(*instance->ht_nodes);
     hostlist_destroy(hl);
 
-    lcb_confmon_prepare(mon);
-    lcb_confmon_start(mon);
+    mon->prepare();
+    mon->start();
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_NEW_CONFIG);
     runConfmonTest(lsn.io, mon);
 
@@ -180,7 +179,7 @@ TEST_F(ConfmonTest, testCycle)
     ASSERT_EQ(1, lsn.call_count);
     ASSERT_EQ(CLCONFIG_CCCP, lsn.last_source);
 
-    lcb_confmon_start(mon);
+    mon->start();
     lsn.reset();
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_ANY_CONFIG);
     runConfmonTest(lsn.io, mon);
@@ -190,13 +189,13 @@ TEST_F(ConfmonTest, testCycle)
     mock->setCCCP(false);
     mock->failoverNode(5);
     lsn.reset();
-    lcb_confmon_start(mon);
+    mon->start();
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_ANY_CONFIG);
     lsn.expected_events.insert(CLCONFIG_EVENT_GOT_NEW_CONFIG);
     runConfmonTest(lsn.io, mon);
     ASSERT_EQ(CLCONFIG_HTTP, lsn.last_source);
     ASSERT_EQ(1, lsn.call_count);
-    lcb_confmon_destroy(mon);
+    delete mon;
 }
 
 TEST_F(ConfmonTest, testBootstrapMethods)
@@ -213,11 +212,11 @@ TEST_F(ConfmonTest, testBootstrapMethods)
 
     // Reset it for the time being
     bs->last_refresh = 0;
-    lcb_confmon_stop(instance->confmon);
+    instance->confmon->stop();
 
     // Refreshing now should work
     lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE);
-    ASSERT_NE(0, lcb_confmon_is_refreshing(instance->confmon));
+    ASSERT_TRUE(instance->confmon->is_refreshing());
 
     cur = bs->last_refresh;
     ASSERT_GT(cur, 0);
@@ -225,8 +224,8 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     last = cur;
 
     // Stop it, so the state is reset
-    lcb_confmon_stop(instance->confmon);
-    ASSERT_EQ(0, lcb_confmon_is_refreshing(instance->confmon));
+    instance->confmon->stop();
+    ASSERT_FALSE(instance->confmon->is_refreshing());
 
     lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE|LCB_BS_REFRESH_INCRERR);
     ASSERT_EQ(last, bs->last_refresh);
@@ -237,9 +236,9 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     ASSERT_EQ(1, bs->errcounter);
 
     // No refresh yet
-    ASSERT_EQ(0, lcb_confmon_is_refreshing(instance->confmon));
+    ASSERT_FALSE(instance->confmon->is_refreshing());
 
     lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
-    ASSERT_NE(0, lcb_confmon_is_refreshing(instance->confmon));
-    lcb_confmon_stop(instance->confmon);
+    ASSERT_TRUE(instance->confmon->is_refreshing());
+    instance->confmon->stop();
 }

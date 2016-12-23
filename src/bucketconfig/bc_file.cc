@@ -169,9 +169,9 @@ static void async_callback(void *cookie)
 {
     FileProvider *provider = reinterpret_cast<FileProvider*>(cookie);
     if (provider->load_cache() == FileProvider::UPDATED) {
-        lcb_confmon_provider_success(provider, provider->config);
+        provider->Provider::parent->provider_got_config(provider, provider->config);
     } else {
-        lcb_confmon_provider_failed(provider, LCB_ERROR);
+        provider->Provider::parent->provider_failed(provider, LCB_ERROR);
     }
 }
 

@@ -57,10 +57,6 @@ provider_string(clconfig_method_t type) {
     return "";
 }
 
-lcb_confmon* lcb_confmon_create(lcb_settings *settings, lcbio_pTABLE iot) {
-    return new Confmon(settings, iot);
-}
-
 Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_)
     : cur_provider(NULL),
       config(NULL),
@@ -86,10 +82,6 @@ Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_)
     }
 }
 
-void lcb_confmon_prepare(lcb_confmon *mon) {
-    static_cast<Confmon*>(mon)->prepare();
-}
-
 void Confmon::prepare() {
     active_providers.clear();
     lcb_log(LOGARGS(this, DEBUG), "Preparing providers (this may be called multiple times)");
@@ -108,10 +100,6 @@ void Confmon::prepare() {
 
     lcb_assert(!active_providers.empty());
     cur_provider = first_active();
-}
-
-void lcb_confmon_destroy(lcb_confmon *mon) {
-    delete static_cast<Confmon*>(mon);
 }
 
 Confmon::~Confmon() {
@@ -189,16 +177,11 @@ int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
 
     new_config->incref();
     config = new_config;
-    lcb_confmon_stop(this);
+    stop();
 
     invoke_listeners(CLCONFIG_EVENT_GOT_NEW_CONFIG, new_config);
 
     return 1;
-}
-
-void lcb_confmon_provider_failed(clconfig_provider *provider,
-                                 lcb_error_t reason) {
-    static_cast<Confmon*>(provider->parent)->provider_failed(provider, reason);
 }
 
 void Confmon::provider_failed(Provider *provider, lcb_error_t reason) {
@@ -242,11 +225,6 @@ void Confmon::provider_failed(Provider *provider, lcb_error_t reason) {
     }
 }
 
-void lcb_confmon_provider_success(clconfig_provider *provider,
-                                  clconfig_info *config) {
-    static_cast<Confmon*>(provider->parent)->provider_got_config(provider, config);
-}
-
 void Confmon::provider_got_config(Provider *, clconfig_info *config_) {
     do_set_next(config_, true);
     stop();
@@ -276,14 +254,8 @@ bool Confmon::do_next_provider()
     return false;
 }
 
-static void async_start(void *arg)
-{
+static void async_start(void *arg) {
     reinterpret_cast<Confmon*>(arg)->do_next_provider();
-}
-
-lcb_error_t lcb_confmon_start(lcb_confmon *mon) {
-    static_cast<Confmon*>(mon)->start();
-    return LCB_SUCCESS;
 }
 
 void Confmon::start() {
@@ -320,11 +292,6 @@ void Confmon::stop_real() {
 
     last_stop_us = LCB_NS2US(gethrtime());
     invoke_listeners(CLCONFIG_EVENT_MONITOR_STOPPED, NULL);
-}
-
-lcb_error_t lcb_confmon_stop(lcb_confmon *mon) {
-    static_cast<Confmon*>(mon)->stop();
-    return LCB_SUCCESS;
 }
 
 void Confmon::stop() {
@@ -393,28 +360,16 @@ void Confmon::invoke_listeners(clconfig_event_t event, clconfig_info *info) {
     }
 }
 
-LCB_INTERNAL_API
-int lcb_confmon_is_refreshing(lcb_confmon *mon)
-{
-    return static_cast<Confmon*>(mon)->is_refreshing();
-}
 
-LCB_INTERNAL_API
-void
-lcb_confmon_set_provider_active(lcb_confmon *mon,
-    clconfig_method_t type, int enabled)
+void Confmon::set_active(Method type, bool enabled)
 {
-    clconfig_provider *provider = mon->all_providers[type];
+    Provider *provider = all_providers[type];
     if (provider->enabled == enabled) {
         return;
     } else {
         provider->enabled = enabled;
     }
-    lcb_confmon_prepare(mon);
-}
-
-void lcb_confmon_dump(lcb_confmon *mon, FILE *fp) {
-    static_cast<Confmon*>(mon)->dump(fp);
+    prepare();
 }
 
 void Confmon::dump(FILE *fp) {

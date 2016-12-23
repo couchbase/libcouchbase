@@ -90,6 +90,6 @@ lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags)
     fprintf(fp, "=== END PIPELINE DUMP ===\n");
 
     fprintf(fp, "=== BEGIN CONFMON DUMP ===\n");
-    lcb_confmon_dump(instance->confmon, fp);
+    instance->confmon->dump(fp);
     fprintf(fp, "=== END CONFMON DUMP ===\n");
 }

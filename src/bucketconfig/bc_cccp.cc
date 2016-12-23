@@ -122,7 +122,7 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
     lcb_host_t *next_host = nodes->next(can_rollover);
     if (!next_host) {
         lcbio_timer_disarm(timer);
-        lcb_confmon_provider_failed(this, err);
+        parent->provider_failed(this, err);
         server_active = false;
         return err;
     }
@@ -214,7 +214,7 @@ CccpProvider::update(const char *host, const char *data)
 
     /** TODO: Figure out the comparison vector */
     config = new_config;
-    lcb_confmon_provider_success(this, new_config);
+    parent->provider_got_config(this, new_config);
     return LCB_SUCCESS;
 }
 

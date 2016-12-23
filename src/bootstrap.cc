@@ -68,8 +68,7 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
         if (instance->cur_configinfo == NULL ||
                 instance->cur_configinfo->get_origin() != CLCONFIG_HTTP) {
             /* Never disable HTTP if it's still being used */
-            lcb_confmon_set_provider_active(
-                instance->confmon, CLCONFIG_HTTP, 0);
+            instance->confmon->set_active(CLCONFIG_HTTP, false);
         }
     }
 
@@ -87,10 +86,8 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
 
             lcb_log(LOGARGS(instance, INFO), "Reverting to HTTP Config for memcached buckets");
             instance->settings->bc_http_stream_time = -1;
-            lcb_confmon_set_provider_active(
-                instance->confmon, CLCONFIG_HTTP, 1);
-            lcb_confmon_set_provider_active(
-                instance->confmon, CLCONFIG_CCCP, 0);
+            instance->confmon->set_active(CLCONFIG_HTTP, true);
+            instance->confmon->set_active(CLCONFIG_CCCP, false);
         }
         instance->callbacks.bootstrap(instance, LCB_SUCCESS);
     }
@@ -104,7 +101,7 @@ initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
 {
     struct lcb_BOOTSTRAP *bs = instance->bootstrap;
 
-    instance->last_error = lcb_confmon_last_error(instance->confmon);
+    instance->last_error = instance->confmon->get_last_error();
     if (instance->last_error == LCB_SUCCESS) {
         instance->last_error = err;
     }
@@ -138,7 +135,7 @@ static void async_refresh(void *arg)
     lcb_BOOTSTRAP *bs = reinterpret_cast<lcb_BOOTSTRAP*>(arg);
     clconfig_info *info;
 
-    info = lcb_confmon_get_config(bs->parent->confmon);
+    info = bs->parent->confmon->get_config();
     config_callback(bs, lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
 }
 
@@ -185,7 +182,7 @@ lcb_bootstrap_common(lcb_t instance, int options)
         lcb_confmon_add_listener(instance->confmon, bs);
     }
 
-    if (lcb_confmon_is_refreshing(instance->confmon)) {
+    if (instance->confmon->is_refreshing()) {
         return LCB_SUCCESS;
     }
 
@@ -209,7 +206,7 @@ lcb_bootstrap_common(lcb_t instance, int options)
     }
 
     if (options == LCB_BS_REFRESH_INITIAL) {
-        lcb_confmon_prepare(instance->confmon);
+        instance->confmon->prepare();
 
         bs->clconfig_listener::callback = config_callback;
         lcbio_timer_set_target(bs->tm, initial_timeout);
@@ -225,7 +222,8 @@ lcb_bootstrap_common(lcb_t instance, int options)
     if (options != LCB_BS_REFRESH_INITIAL) {
         bs->last_refresh = now;
     }
-    return lcb_confmon_start(instance->confmon);
+    instance->confmon->start();
+    return LCB_SUCCESS;
 }
 
 void lcb_bootstrap_destroy(lcb_t instance)

@@ -73,8 +73,7 @@ io_error(HttpProvider *http, lcb_error_t origerr)
     if (http->creq) {
         return LCB_SUCCESS;
     }
-
-    lcb_confmon_provider_failed(http, origerr);
+    mon->provider_failed(http, origerr);
     lcbio_timer_disarm(http->io_timer);
     if (http->is_v220_compat() && http->parent->config != NULL) {
         lcb_log(LOGARGS(http, INFO), "HTTP node list finished. Trying to obtain connection from first node in list");
@@ -97,7 +96,7 @@ void set_new_config(HttpProvider *http)
     http->current_config = http->last_parsed;
     http->current_config->incref();
     lcbvb_replace_host(http->current_config->vbc, curhost->host);
-    lcb_confmon_provider_success(http, http->current_config);
+    http->parent->provider_got_config(http, http->current_config);
 }
 
 static lcb_error_t
@@ -361,8 +360,7 @@ timeout_handler(void *arg)
      * If we're not the current provider then ignore the timeout until we're
      * actively requested to do so
      */
-    if (http != http->parent->cur_provider ||
-            lcb_confmon_is_refreshing(http->parent) == 0) {
+    if (http != http->parent->cur_provider || !http->parent->is_refreshing()) {
         lcb_log(LOGARGS(http, DEBUG), LOGFMT "Ignoring timeout because we're either not in a refresh or not the current provider", LOGID(http));
         return;
     }

@@ -51,7 +51,7 @@ async_update(void *arg)
         lcb_log(LOGARGS(mcr, WARN), "No current config set. Not setting configuration");
         return;
     }
-    lcb_confmon_provider_success(mcr, mcr->config);
+    mcr->parent->provider_got_config(mcr, mcr->config);
 }
 
 clconfig_info* McRawProvider::get_cached() {
