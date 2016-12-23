@@ -53,6 +53,7 @@ SET(LCB_CORE_CXXSRC
     src/instance.cc
     src/auth.cc
     src/bucketconfig/bc_cccp.cc
+    src/bucketconfig/bc_file.cc
     src/connspec.cc
     src/dump.cc
     src/getconfig.cc
