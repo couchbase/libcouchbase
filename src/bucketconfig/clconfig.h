@@ -124,9 +124,6 @@ struct lcb_confmon_st;
  * when retrieving new configs.
  */
 typedef struct lcb_confmon_st {
-    /** Linked list of active/enabled providers */
-    lcb_clist_t active_providers;
-
     /**Current provider. This provider may either fail or succeed.
      * In either case unless the provider can provide us with a specific
      * config which is newer than the one we have, it will roll over to the
@@ -152,8 +149,6 @@ typedef struct lcb_confmon_st {
  * 'subclassed' by implementors.
  */
 typedef struct clconfig_provider_st {
-    lcb_list_t ll; /**< Node in linked list of active providers (if active) */
-
     /** The type of provider */
     clconfig_method_t type;
 

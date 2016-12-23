@@ -17,6 +17,8 @@
 
 #include "internal.h"
 #include "clconfig.h"
+#include <list>
+
 #define LOGARGS(mon, lvlbase) mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__
 #define LOG(mon, lvlbase, msg) lcb_log(mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__, msg)
 
@@ -32,6 +34,12 @@ struct Confmon : lcb_confmon_st {
     Confmon(lcb_settings*, lcbio_pTABLE iot);
     ~Confmon();
 
+    /**
+     * Get the provider following the current provider, or NULL if this is
+     * the last provider in the list.
+     * @param cur The current provider.
+     * @return The next provider, or NULL if no more providers remain.
+     */
     Provider *next_active(Provider *cur);
     Provider *first_active();
     void prepare();
@@ -60,25 +68,32 @@ struct Confmon : lcb_confmon_st {
 
     /** Last time the provider was stopped. As a microsecond timestamp */
     lcb_uint32_t last_stop_us;
+
+    typedef std::list<Provider*> ProviderList;
+    ProviderList active_providers;
 };
 }
 
 using lcb::Confmon;
 
-Provider* Confmon::next_active(clconfig_provider *cur)
-{
-    if (!LCB_LIST_HAS_NEXT((lcb_list_t *)&active_providers, &cur->ll)) {
+Provider* Confmon::next_active(clconfig_provider *cur) {
+    ProviderList::iterator ii = std::find(
+        active_providers.begin(), active_providers.end(), cur);
+
+    if (ii == active_providers.end() || (++ii) == active_providers.end()) {
         return NULL;
+    } else {
+        return *ii;
     }
-    return LCB_LIST_ITEM(cur->ll.next, clconfig_provider, ll);
 }
 
 Provider* Confmon::first_active()
 {
-    if (LCB_LIST_IS_EMPTY((lcb_list_t *)&active_providers)) {
+    if (active_providers.empty()) {
         return NULL;
+    } else {
+        return active_providers.front();
     }
-    return LCB_LIST_ITEM(active_providers.next, clconfig_provider, ll);
 }
 
 static const char *
@@ -105,7 +120,6 @@ Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_)
     lcb_confmon::settings = settings_;
     lcb_confmon::iot = iot_;
     lcb_list_init(&listeners);
-    lcb_clist_init(&active_providers);
     lcbio_table_ref(iot);
     lcb_settings_ref(settings);
 
@@ -125,16 +139,14 @@ void lcb_confmon_prepare(lcb_confmon *mon) {
 }
 
 void Confmon::prepare() {
-    memset(&active_providers, 0, sizeof(active_providers));
-    lcb_clist_init(&active_providers);
-
+    active_providers.clear();
     lcb_log(LOGARGS(this, DEBUG), "Preparing providers (this may be called multiple times)");
 
     for (size_t ii = 0; ii < LCB_CLCONFIG_MAX; ii++) {
         clconfig_provider *cur = all_providers[ii];
         if (cur) {
             if (cur->enabled) {
-                lcb_clist_append(&active_providers, &cur->ll);
+                active_providers.push_back(cur);
                 lcb_log(LOGARGS(this, DEBUG), "Provider %s is ENABLED", provider_string(cur->type));
             } else if (cur->pause){
                 cur->pause(cur);
@@ -143,7 +155,7 @@ void Confmon::prepare() {
         }
     }
 
-    lcb_assert(LCB_CLIST_SIZE(&active_providers));
+    lcb_assert(!active_providers.empty());
     cur_provider = first_active();
 }
 
@@ -292,14 +304,11 @@ void Confmon::provider_got_config(Provider *provider, clconfig_info *config) {
 
 bool Confmon::do_next_provider()
 {
-    lcb_list_t *ii;
     state &= ~CONFMON_S_ITERGRACE;
-
-    LCB_LIST_FOR(ii, (lcb_list_t *)&active_providers) {
+    for (ProviderList::const_iterator ii = active_providers.begin();
+            ii != active_providers.end(); ++ii) {
         clconfig_info *info;
-        clconfig_provider *cached_provider;
-
-        cached_provider = LCB_LIST_ITEM(ii, clconfig_provider, ll);
+        Provider* cached_provider = *ii;
         info = cached_provider->get_cached(cached_provider);
         if (!info) {
             continue;
@@ -354,10 +363,9 @@ static void async_stop(void *arg) {
 }
 
 void Confmon::stop_real() {
-    lcb_list_t *ii;
-
-    LCB_LIST_FOR(ii, (lcb_list_t *)&active_providers) {
-        clconfig_provider *provider = LCB_LIST_ITEM(ii, clconfig_provider, ll);
+    ProviderList::const_iterator ii;
+    for (ii = active_providers.begin(); ii != active_providers.end(); ++ii) {
+        Provider *provider = *ii;
         if (!provider->pause) {
             continue;
         }
