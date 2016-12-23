@@ -20,15 +20,17 @@
 #include "bc_http.h"
 #include <lcbio/ssl.h>
 #include "ctx-log-inl.h"
-#define LOGARGS(ht, lvlbase) ht->base.parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
+#define LOGARGS(ht, lvlbase) ht->parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
 #define LOGFMT "<%s:%s> "
 #define LOGID(h) get_ctx_host(h->ioctx), get_ctx_port(h->ioctx)
 
+using namespace lcb;
+
 static void io_error_handler(lcbio_CTX *, lcb_error_t);
 static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
-static lcb_error_t connect_next(http_provider *);
+static lcb_error_t connect_next(HttpProvider *);
 static void read_common(lcbio_CTX *, unsigned);
-static lcb_error_t setup_request_header(http_provider *, const lcb_host_t *);
+static lcb_error_t setup_request_header(HttpProvider *, const lcb_host_t *);
 
 /**
  * Determine if we're in compatibility mode with the previous versions of the
@@ -36,28 +38,25 @@ static lcb_error_t setup_request_header(http_provider *, const lcb_host_t *);
  * connection will always remain open (regardless of whether it was triggered
  * by start_refresh/get_refresh).
  */
-static int is_v220_compat(http_provider *http)
+static bool is_v220_compat(HttpProvider *http)
 {
-    lcb_uint32_t setting =  PROVIDER_SETTING(&http->base, bc_http_stream_time);
+    lcb_uint32_t setting =  PROVIDER_SETTING(http, bc_http_stream_time);
     if (setting == (lcb_uint32_t)-1) {
         return 1;
     }
     return 0;
 }
 
-/**
- * Closes the current connection and removes the disconn timer along with it
- */
-static void close_current(http_provider *http)
+void HttpProvider::close_current()
 {
-    lcbio_timer_disarm(http->disconn_timer);
-    if (http->ioctx) {
-        lcbio_ctx_close(http->ioctx, NULL, NULL);
-    } else if (http->creq){
-        lcbio_connect_cancel(http->creq);
+    lcbio_timer_disarm(disconn_timer);
+    if (ioctx) {
+        lcbio_ctx_close(ioctx, NULL, NULL);
+    } else if (creq){
+        lcbio_connect_cancel(creq);
     }
-    http->creq = NULL;
-    http->ioctx = NULL;
+    creq = NULL;
+    ioctx = NULL;
 }
 
 /**
@@ -65,12 +64,12 @@ static void close_current(http_provider *http)
  * and timeouts.
  */
 static lcb_error_t
-io_error(http_provider *http, lcb_error_t origerr)
+io_error(HttpProvider *http, lcb_error_t origerr)
 {
-    lcb_confmon *mon = http->base.parent;
+    lcb_confmon *mon = http->parent;
     lcb_settings *settings = mon->settings;
 
-    close_current(http);
+    http->close_current();
 
     http->creq = lcbio_connect_hl(
             mon->iot, settings, http->nodes, 0, settings->config_node_timeout,
@@ -79,22 +78,19 @@ io_error(http_provider *http, lcb_error_t origerr)
         return LCB_SUCCESS;
     }
 
-    lcb_confmon_provider_failed(&http->base, origerr);
+    lcb_confmon_provider_failed(http, origerr);
     lcbio_timer_disarm(http->io_timer);
-    if (is_v220_compat(http) && http->base.parent->config != NULL) {
+    if (is_v220_compat(http) && http->parent->config != NULL) {
         lcb_log(LOGARGS(http, INFO), "HTTP node list finished. Trying to obtain connection from first node in list");
         if (!lcbio_timer_armed(http->as_reconnect)) {
             lcbio_timer_rearm(http->as_reconnect,
-                PROVIDER_SETTING(&http->base, grace_next_cycle));
+                PROVIDER_SETTING(http, grace_next_cycle));
         }
     }
     return origerr;
 }
 
-/**
- * Call this if the configuration generation has changed.
- */
-static void set_new_config(http_provider *http)
+void set_new_config(HttpProvider *http)
 {
     const lcb_host_t *curhost;
     if (http->current_config) {
@@ -105,17 +101,17 @@ static void set_new_config(http_provider *http)
     http->current_config = http->last_parsed;
     lcb_clconfig_incref(http->current_config);
     lcbvb_replace_host(http->current_config->vbc, curhost->host);
-    lcb_confmon_provider_success(&http->base, http->current_config);
+    lcb_confmon_provider_success(http, http->current_config);
 }
 
 static lcb_error_t
-process_chunk(http_provider *http, const void *buf, unsigned nbuf)
+process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
 {
     lcb_error_t err = LCB_SUCCESS;
     char *term;
     int rv;
     lcbvb_CONFIG *cfgh;
-    lcbht_RESPSTATE state, oldstate, diff;
+    unsigned state, oldstate, diff;
     lcbht_RESPONSE *resp = lcbht_get_response(http->htp);
 
     oldstate = resp->state;
@@ -131,7 +127,7 @@ process_chunk(http_provider *http, const void *buf, unsigned nbuf)
         if (resp->status == 200) {
             /* nothing */
         } else if (resp->status == 404) {
-            const int urlmode = PROVIDER_SETTING(&http->base, bc_http_urltype);
+            const int urlmode = PROVIDER_SETTING(http, bc_http_urltype);
             err = LCB_BUCKET_ENOENT;
 
             if (++http->uritype > LCB_HTCONFIG_URLTYPE_COMPAT) {
@@ -179,7 +175,7 @@ process_chunk(http_provider *http, const void *buf, unsigned nbuf)
         return LCB_SUCCESS;
     }
 
-    if (PROVIDER_SETTING(&http->base, conntype) == LCB_TYPE_CLUSTER) {
+    if (PROVIDER_SETTING(http, conntype) == LCB_TYPE_CLUSTER) {
         /* don't bother with parsing the actual config */
         resp->body.nused = 0;
         return LCB_SUCCESS;
@@ -229,13 +225,13 @@ static void
 read_common(lcbio_CTX *ctx, unsigned nr)
 {
     lcbio_CTXRDITER riter;
-    http_provider *http = lcbio_ctx_data(ctx);
+    HttpProvider *http = reinterpret_cast<HttpProvider*>(lcbio_ctx_data(ctx));
     int old_generation = http->generation;
 
     lcb_log(LOGARGS(http, TRACE), LOGFMT "Received %d bytes on HTTP stream", LOGID(http), nr);
 
     lcbio_timer_rearm(http->io_timer,
-                      PROVIDER_SETTING(&http->base, config_node_timeout));
+                      PROVIDER_SETTING(http, config_node_timeout));
 
     LCBIO_CTX_ITERFOR(ctx, &riter, nr) {
         unsigned nbuf = lcbio_ctx_risize(&riter);
@@ -259,9 +255,9 @@ read_common(lcbio_CTX *ctx, unsigned nr)
 }
 
 static lcb_error_t
-setup_request_header(http_provider *http, const lcb_host_t *host)
+setup_request_header(HttpProvider *http, const lcb_host_t *host)
 {
-    lcb_settings *settings = http->base.parent->settings;
+    lcb_settings *settings = http->parent->settings;
 
     char *buf = http->request_buf;
     const char *username = NULL, *password = NULL;
@@ -306,26 +302,25 @@ setup_request_header(http_provider *http, const lcb_host_t *host)
     return LCB_SUCCESS;
 }
 
-static void reset_stream_state(http_provider *http)
-{
-    const int urlmode = PROVIDER_SETTING(&http->base, bc_http_urltype);
-    if (http->last_parsed) {
-        lcb_clconfig_decref(http->last_parsed);
-        http->last_parsed = NULL;
+void HttpProvider::reset_stream_state() {
+    const int urlmode = PROVIDER_SETTING(this, bc_http_urltype);
+    if (last_parsed) {
+        lcb_clconfig_decref(last_parsed);
+        last_parsed = NULL;
     }
     if (urlmode & LCB_HTCONFIG_URLTYPE_25PLUS) {
-        http->uritype = LCB_HTCONFIG_URLTYPE_25PLUS;
+        uritype = LCB_HTCONFIG_URLTYPE_25PLUS;
     } else {
-        http->uritype = LCB_HTCONFIG_URLTYPE_COMPAT;
+        uritype = LCB_HTCONFIG_URLTYPE_COMPAT;
     }
-    http->try_nexturi = 0;
-    lcbht_reset(http->htp);
+    try_nexturi = false;
+    lcbht_reset(htp);
 }
 
 static void
 on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
 {
-    http_provider *http = arg;
+    HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
     lcb_host_t *host;
     lcbio_CTXPROCS procs;
     http->creq = NULL;
@@ -338,8 +333,8 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     host = lcbio_get_host(sock);
     lcb_log(LOGARGS(http, DEBUG), "Successfuly connected to REST API %s:%s", host->host, host->port);
 
-    lcbio_sslify_if_needed(sock, http->base.parent->settings);
-    reset_stream_state(http);
+    lcbio_sslify_if_needed(sock, http->parent->settings);
+    http->reset_stream_state();
 
     if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Couldn't setup request header");
@@ -357,13 +352,13 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     lcbio_ctx_rwant(http->ioctx, 1);
     lcbio_ctx_schedule(http->ioctx);
     lcbio_timer_rearm(http->io_timer,
-                      PROVIDER_SETTING(&http->base, config_node_timeout));
+                      PROVIDER_SETTING(http, config_node_timeout));
 }
 
 static void
 timeout_handler(void *arg)
 {
-    http_provider *http = arg;
+    HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
 
     lcb_log(LOGARGS(http, ERR), LOGFMT "HTTP Provider timed out waiting for I/O", LOGID(http));
 
@@ -371,8 +366,8 @@ timeout_handler(void *arg)
      * If we're not the current provider then ignore the timeout until we're
      * actively requested to do so
      */
-    if (&http->base != http->base.parent->cur_provider ||
-            lcb_confmon_is_refreshing(http->base.parent) == 0) {
+    if (http != http->parent->cur_provider ||
+            lcb_confmon_is_refreshing(http->parent) == 0) {
         lcb_log(LOGARGS(http, DEBUG), LOGFMT "Ignoring timeout because we're either not in a refresh or not the current provider", LOGID(http));
         return;
     }
@@ -382,19 +377,19 @@ timeout_handler(void *arg)
 
 
 static lcb_error_t
-connect_next(http_provider *http)
+connect_next(HttpProvider *http)
 {
-    lcb_settings *settings = http->base.parent->settings;
+    lcb_settings *settings = http->parent->settings;
     lcb_log(LOGARGS(http, TRACE), "Starting HTTP Configuration Provider %p", (void*)http);
-    close_current(http);
+    http->close_current();
     lcbio_timer_disarm(http->as_reconnect);
 
-    if (!hostlist_size(http->nodes)) {
+    if (http->nodes->empty()) {
         lcb_log(LOGARGS(http, ERROR), "Not scheduling HTTP provider since no nodes have been configured for HTTP bootstrap");
         return LCB_CONNECT_ERROR;
     }
 
-    http->creq = lcbio_connect_hl(http->base.parent->iot, settings, http->nodes, 1,
+    http->creq = lcbio_connect_hl(http->parent->iot, settings, http->nodes, 1,
                                   settings->config_node_timeout, on_connected, http);
     if (http->creq) {
         return LCB_SUCCESS;
@@ -405,17 +400,17 @@ connect_next(http_provider *http)
 
 static void delayed_disconn(void *arg)
 {
-    http_provider *http = arg;
+    HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
     lcb_log(LOGARGS(http, DEBUG), "Stopping HTTP provider %p", (void*)http);
 
     /** closes the connection and cleans up the timer */
-    close_current(http);
+    http->close_current();
     lcbio_timer_disarm(http->io_timer);
 }
 
 static void delayed_reconnect(void *arg)
 {
-    http_provider *http = arg;
+    HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
     lcb_error_t err;
     if (http->ioctx) {
         /* have a context already */
@@ -429,7 +424,7 @@ static void delayed_reconnect(void *arg)
 
 static lcb_error_t pause_http(clconfig_provider *pb)
 {
-    http_provider *http = (http_provider *)pb;
+    HttpProvider *http = static_cast<HttpProvider *>(pb);
     if (is_v220_compat(http)) {
         return LCB_SUCCESS;
     }
@@ -443,7 +438,7 @@ static lcb_error_t pause_http(clconfig_provider *pb)
 
 static lcb_error_t get_refresh(clconfig_provider *provider)
 {
-    http_provider *http = (http_provider *)provider;
+    HttpProvider *http = static_cast<HttpProvider *>(provider);
 
     /**
      * We want a grace interval here because we might already be fetching a
@@ -467,7 +462,7 @@ static lcb_error_t get_refresh(clconfig_provider *provider)
 
 static clconfig_info* http_get_cached(clconfig_provider *provider)
 {
-    http_provider *http = (http_provider *)provider;
+    HttpProvider *http = static_cast<HttpProvider *>(provider);
     return http->current_config;
 }
 
@@ -475,11 +470,10 @@ static void
 config_updated(clconfig_provider *pb, lcbvb_CONFIG *newconfig)
 {
     unsigned int ii;
-    http_provider *http = (http_provider *)pb;
-    lcb_SSLOPTS sopts;
+    HttpProvider *http = static_cast<HttpProvider *>(pb);
+    unsigned sopts;
     lcbvb_SVCMODE mode;
-
-    hostlist_clear(http->nodes);
+    http->nodes->clear();
 
     sopts = PROVIDER_SETTING(pb, sslopts);
     if (sopts & LCB_SSL_ENABLED) {
@@ -496,63 +490,65 @@ config_updated(clconfig_provider *pb, lcbvb_CONFIG *newconfig)
             /* not supported? */
             continue;
         }
-        status = hostlist_add_stringz(http->nodes, ss, LCB_CONFIG_HTTP_PORT);
+        status = http->nodes->add(ss, LCB_CONFIG_HTTP_PORT);
         lcb_assert(status == LCB_SUCCESS);
     }
-    if (!hostlist_size(http->nodes)) {
+    if (http->nodes->empty()) {
         lcb_log(LOGARGS(http, FATAL), "New nodes do not contain management ports");
     }
 
     if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
-        hostlist_randomize(http->nodes);
+        http->nodes->randomize();
     }
 }
 
 static void
 configure_nodes(clconfig_provider *pb, const hostlist_t newnodes)
 {
-    http_provider *http = (void *)pb;
-    hostlist_assign(http->nodes, newnodes);
+    HttpProvider *http = static_cast<HttpProvider*>(pb);
+    http->nodes->assign(*newnodes);
     if (PROVIDER_SETTING(pb, randomize_bootstrap_nodes)) {
-        hostlist_randomize(http->nodes);
+        http->nodes->randomize();
     }
 }
 
 static hostlist_t
 get_nodes(const clconfig_provider *pb)
 {
-    return ((http_provider *)pb)->nodes;
+    return static_cast<const HttpProvider*>(pb)->nodes;
 }
 
 static void shutdown_http(clconfig_provider *provider)
 {
-    http_provider *http = (http_provider *)provider;
-    reset_stream_state(http);
-    close_current(http);
-    lcbht_free(http->htp);
+    delete static_cast<HttpProvider*>(provider);
+}
 
-    if (http->current_config) {
-        lcb_clconfig_decref(http->current_config);
+HttpProvider::~HttpProvider() {
+    reset_stream_state();
+    close_current();
+    lcbht_free(htp);
+
+    if (current_config) {
+        lcb_clconfig_decref(current_config);
     }
-    if (http->disconn_timer) {
-        lcbio_timer_destroy(http->disconn_timer);
+    if (disconn_timer) {
+        lcbio_timer_destroy(disconn_timer);
     }
-    if (http->io_timer) {
-        lcbio_timer_destroy(http->io_timer);
+    if (io_timer) {
+        lcbio_timer_destroy(io_timer);
     }
-    if (http->as_reconnect) {
-        lcbio_timer_destroy(http->as_reconnect);
+    if (as_reconnect) {
+        lcbio_timer_destroy(as_reconnect);
     }
-    if (http->nodes) {
-        hostlist_destroy(http->nodes);
+    if (nodes) {
+        delete nodes;
     }
-    free(http);
 }
 
 static void
 do_http_dump(clconfig_provider *pb, FILE *fp)
 {
-    http_provider *ht = (http_provider *)pb;
+    HttpProvider *ht = static_cast<HttpProvider *>(pb);
     fprintf(fp, "## BEGIN HTTP PROVIDER DUMP\n");
     fprintf(fp, "NUMBER OF CONFIGS RECEIVED: %u\n", ht->generation);
     fprintf(fp, "DUMPING I/O TIMER\n");
@@ -569,38 +565,41 @@ do_http_dump(clconfig_provider *pb, FILE *fp)
 
 clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
 {
-    http_provider *http = calloc(1, sizeof(*http));
+    return new HttpProvider(parent);
+}
 
-    if (!http) {
-        return NULL;
-    }
+HttpProvider::HttpProvider(lcb_confmon *parent)
+    : ioctx(NULL),
+      htp(lcbht_new(parent->settings)),
+      disconn_timer(lcbio_timer_new(parent->iot, this, delayed_disconn)),
+      io_timer(lcbio_timer_new(parent->iot, this, timeout_handler)),
+      as_reconnect(lcbio_timer_new(parent->iot, this, delayed_reconnect)),
+      nodes(new Hostlist()),
+      current_config(NULL),
+      last_parsed(NULL),
+      generation(0),
+      try_nexturi(false),
+      uritype(0) {
 
-    if (! (http->nodes = hostlist_create())) {
-        free(http);
-        return NULL;
-    }
+    memset(&creq, 0, sizeof creq);
+    memset(static_cast<clconfig_provider*>(this), 0, sizeof(clconfig_provider));
 
-    http->base.type = LCB_CLCONFIG_HTTP;
-    http->base.refresh = get_refresh;
-    http->base.pause = pause_http;
-    http->base.get_cached = http_get_cached;
-    http->base.shutdown = shutdown_http;
-    http->base.config_updated = config_updated;
-    http->base.configure_nodes = configure_nodes;
-    http->base.get_nodes = get_nodes;
-    http->base.dump = do_http_dump;
-    http->base.enabled = 0;
-    http->io_timer = lcbio_timer_new(parent->iot, http, timeout_handler);
-    http->disconn_timer = lcbio_timer_new(parent->iot, http, delayed_disconn);
-    http->as_reconnect = lcbio_timer_new(parent->iot, http, delayed_reconnect);
-    http->htp = lcbht_new(parent->settings);
-    return &http->base;
+    clconfig_provider::type = LCB_CLCONFIG_HTTP;
+    clconfig_provider::refresh = ::get_refresh;
+    clconfig_provider::pause = ::pause_http;
+    clconfig_provider::get_cached = ::http_get_cached;
+    clconfig_provider::shutdown = ::shutdown_http;
+    clconfig_provider::config_updated = ::config_updated;
+    clconfig_provider::configure_nodes = ::configure_nodes;
+    clconfig_provider::get_nodes = ::get_nodes;
+    clconfig_provider::dump = ::do_http_dump;
+    clconfig_provider::enabled = 0;
 }
 
 static void
 io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
 {
-    io_error((http_provider *)lcbio_ctx_data(ctx), err);
+    io_error(reinterpret_cast<HttpProvider *>(lcbio_ctx_data(ctx)), err);
 }
 
 void lcb_clconfig_http_enable(clconfig_provider *http)
@@ -611,7 +610,7 @@ void lcb_clconfig_http_enable(clconfig_provider *http)
 lcbio_SOCKET *
 lcb_confmon_get_rest_connection(lcb_confmon *mon)
 {
-    http_provider *http = (http_provider *)mon->all_providers[LCB_CLCONFIG_HTTP];
+    HttpProvider *http = static_cast<HttpProvider *>(mon->all_providers[LCB_CLCONFIG_HTTP]);
     if (!http->ioctx) {
         return NULL;
     }

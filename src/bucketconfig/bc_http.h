@@ -38,13 +38,21 @@
 #define LAST_HTTP_HEADER "X-Libcouchbase: " LCB_VERSION_STRING "\r\n"
 #define CONFIG_DELIMITER "\n\n\n\n"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace lcb {
 
-typedef struct clprovider_http_st {
+struct HttpProvider : clconfig_provider {
+    HttpProvider(lcb_confmon*);
+    ~HttpProvider();
+
+    void reset_stream_state();
+
+
+    /**
+     * Closes the current connection and removes the disconn timer along with it
+     */
+    void close_current();
+
     /** Base configuration structure */
-    clconfig_provider base;
     lcbio_pCONNSTART creq;
     lcbio_CTX *ioctx;
     lcbht_pPARSER htp;
@@ -65,18 +73,16 @@ typedef struct clprovider_http_st {
     lcbio_pTIMER as_reconnect;
 
     /** List of hosts to try */
-    hostlist_t nodes;
+    lcb::Hostlist *nodes;
 
     /** The cached configuration. */
     clconfig_info *current_config;
     clconfig_info *last_parsed;
+
     int generation;
-    int try_nexturi;
-    lcb_HTCONFIG_URLTYPE uritype;
-} http_provider;
+    bool try_nexturi;
+    int uritype;
+};
 
-#ifdef __cplusplus
-}
-#endif
-
+} // namespace
 #endif /* LCB_CLPROVIDER_HTTP_H */
