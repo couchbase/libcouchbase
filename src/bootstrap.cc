@@ -34,7 +34,7 @@ static void
 config_callback(clconfig_listener *listener, clconfig_event_t event,
     clconfig_info *info)
 {
-    struct lcb_BOOTSTRAP *bs = (struct lcb_BOOTSTRAP *)listener;
+    struct lcb_BOOTSTRAP *bs = static_cast<lcb_BOOTSTRAP *>(listener);
     lcb_t instance = bs->parent;
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
@@ -124,7 +124,7 @@ initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
  */
 static void initial_timeout(void *arg)
 {
-    struct lcb_BOOTSTRAP *bs = arg;
+    struct lcb_BOOTSTRAP *bs = reinterpret_cast<lcb_BOOTSTRAP*>(arg);
     initial_bootstrap_error(bs->parent, LCB_ETIMEDOUT, "Failed to bootstrap in time");
 }
 
@@ -134,11 +134,11 @@ static void initial_timeout(void *arg)
 static void async_refresh(void *arg)
 {
     /** Get the best configuration and run stuff.. */
-    struct lcb_BOOTSTRAP *bs = arg;
+    lcb_BOOTSTRAP *bs = reinterpret_cast<lcb_BOOTSTRAP*>(arg);
     clconfig_info *info;
 
     info = lcb_confmon_get_config(bs->parent->confmon);
-    config_callback(&bs->listener, CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
+    config_callback(bs, CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
 }
 
 /**
@@ -149,7 +149,7 @@ static void
 async_step_callback(clconfig_listener *listener, clconfig_event_t event,
     clconfig_info *info)
 {
-    struct lcb_BOOTSTRAP *bs = (struct lcb_BOOTSTRAP *)listener;
+    lcb_BOOTSTRAP *bs = static_cast<lcb_BOOTSTRAP *>(listener);
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
@@ -173,7 +173,7 @@ lcb_bootstrap_common(lcb_t instance, int options)
     hrtime_t now = gethrtime();
 
     if (!bs) {
-        bs = calloc(1, sizeof(*instance->bootstrap));
+        bs = reinterpret_cast<lcb_BOOTSTRAP*>(calloc(1, sizeof(*instance->bootstrap)));
         if (!bs) {
             return LCB_CLIENT_ENOMEM;
         }
@@ -181,7 +181,7 @@ lcb_bootstrap_common(lcb_t instance, int options)
         bs->tm = lcbio_timer_new(instance->iotable, bs, initial_timeout);
         instance->bootstrap = bs;
         bs->parent = instance;
-        lcb_confmon_add_listener(instance->confmon, &bs->listener);
+        lcb_confmon_add_listener(instance->confmon, bs);
     }
 
     if (lcb_confmon_is_refreshing(instance->confmon)) {
@@ -210,13 +210,13 @@ lcb_bootstrap_common(lcb_t instance, int options)
     if (options == LCB_BS_REFRESH_INITIAL) {
         lcb_confmon_prepare(instance->confmon);
 
-        bs->listener.callback = config_callback;
+        bs->clconfig_listener::callback = config_callback;
         lcbio_timer_set_target(bs->tm, initial_timeout);
         lcbio_timer_rearm(bs->tm, LCBT_SETTING(instance, config_timeout));
         lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
     } else {
         /** No initial timer */
-        bs->listener.callback = async_step_callback;
+        bs->clconfig_listener::callback = async_step_callback;
     }
 
     /* Reset the counters */
@@ -237,7 +237,7 @@ void lcb_bootstrap_destroy(lcb_t instance)
         lcbio_timer_destroy(bs->tm);
     }
 
-    lcb_confmon_remove_listener(instance->confmon, &bs->listener);
+    lcb_confmon_remove_listener(instance->confmon, bs);
     free(bs);
     instance->bootstrap = NULL;
 }

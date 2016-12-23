@@ -40,7 +40,6 @@ SET(LCB_CORE_SRC
     ${LCB_OP_SRC}
     ${LCB_BCONF_SRC}
     ${LCB_N1QL_SRC}
-    src/bootstrap.c
     src/callbacks.c
     src/legacy.c
     # src/mcserver/negotiate.c
@@ -52,6 +51,7 @@ SET(LCB_CORE_SRC
 SET(LCB_CORE_CXXSRC
     src/instance.cc
     src/auth.cc
+    src/bootstrap.cc
     src/bucketconfig/bc_cccp.cc
     src/bucketconfig/bc_http.cc
     src/bucketconfig/bc_file.cc
