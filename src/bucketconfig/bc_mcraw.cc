@@ -20,47 +20,47 @@
 #include <libcouchbase/vbucket.h>
 #include "clconfig.h"
 
-#define LOGARGS(mcr, lvlbase) mcr->base.parent->settings, "mcraw", LCB_LOG_##lvlbase, __FILE__, __LINE__
+#define LOGARGS(mcr, lvlbase) mcr->parent->settings, "mcraw", LCB_LOG_##lvlbase, __FILE__, __LINE__
 #define LOGFMT "(MCRAW=%p)> "
 #define LOGID(mcr) (void *)mcr
 
 /* Raw memcached provider */
 
-typedef struct {
-    /* Base provider */
-    clconfig_provider base;
+struct McRawProvider : clconfig_provider {
     /* Current (user defined) configuration */
     clconfig_info *config;
     lcbio_pTIMER async;
-} bc_MCRAW;
+
+    McRawProvider(lcb_confmon*);
+    ~McRawProvider();
+};
 
 
 static void
 async_update(void *arg)
 {
-    bc_MCRAW *mcr = arg;
+    McRawProvider *mcr = reinterpret_cast<McRawProvider*>(arg);
     if (!mcr->config) {
         lcb_log(LOGARGS(mcr, WARN), "No current config set. Not setting configuration");
         return;
     }
-    lcb_confmon_provider_success(&mcr->base, mcr->config);
+    lcb_confmon_provider_success(mcr, mcr->config);
 }
 
 static clconfig_info* get_cached(clconfig_provider *pb) {
-    return ((bc_MCRAW *)pb)->config;
+    return static_cast<McRawProvider*>(pb)->config;
 }
 static lcb_error_t get_refresh(clconfig_provider *pb) {
-    lcbio_async_signal( ((bc_MCRAW*)pb)->async );
+    lcbio_async_signal(static_cast<McRawProvider*>(pb)->async);
     return LCB_SUCCESS;
 }
-static lcb_error_t pause_mcr(clconfig_provider *pb) {
-    (void)pb;
+static lcb_error_t pause_mcr(clconfig_provider *) {
     return LCB_SUCCESS;
 }
 
 static void configure_nodes(clconfig_provider *pb, const hostlist_t hl)
 {
-    bc_MCRAW *mcr = (bc_MCRAW *)pb;
+    McRawProvider *mcr = static_cast<McRawProvider*>(pb);
     lcbvb_SERVER *servers;
     lcbvb_CONFIG *newconfig;
     unsigned ii, nsrv;
@@ -72,7 +72,7 @@ static void configure_nodes(clconfig_provider *pb, const hostlist_t hl)
         return;
     }
 
-    servers = calloc(nsrv, sizeof(*servers));
+    servers = reinterpret_cast<lcbvb_SERVER*>(calloc(nsrv, sizeof(*servers)));
     for (ii = 0; ii < nsrv; ii++) {
         int itmp;
         const lcb_host_t *curhost = hostlist_get(hl, ii);
@@ -104,7 +104,7 @@ lcb_error_t
 lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes)
 {
     lcb_error_t err;
-    bc_MCRAW *mcr = (bc_MCRAW *)pb;
+    McRawProvider *mcr = static_cast<McRawProvider*>(pb);
     hostlist_t hl = hostlist_create();
     err = hostlist_add_stringz(hl, nodes, LCB_CONFIG_MCCOMPAT_PORT);
     if (err != LCB_SUCCESS) {
@@ -118,33 +118,32 @@ lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes)
     return LCB_SUCCESS;
 }
 
-static void
-mcraw_shutdown(clconfig_provider *pb)
-{
-    bc_MCRAW *mcr = (bc_MCRAW *)pb;
-    if (mcr->config) {
-        lcb_clconfig_decref(mcr->config);
-    }
-    if (mcr->async) {
-        lcbio_timer_destroy(mcr->async);
-    }
-    free(mcr);
+static void mcraw_shutdown(clconfig_provider *pb) {
+    delete static_cast<McRawProvider*>(pb);
 }
 
-clconfig_provider *
-lcb_clconfig_create_mcraw(lcb_confmon *parent)
-{
-    bc_MCRAW *mcr = calloc(1, sizeof(*mcr));
-    if (!mcr) {
-        return NULL;
+McRawProvider::~McRawProvider() {
+    if (config) {
+        lcb_clconfig_decref(config);
     }
-    mcr->async = lcbio_timer_new(parent->iot, mcr, async_update);
-    mcr->base.parent = parent;
-    mcr->base.type = LCB_CLCONFIG_MCRAW;
-    mcr->base.get_cached = get_cached;
-    mcr->base.refresh = get_refresh;
-    mcr->base.pause = pause_mcr;
-    mcr->base.configure_nodes = configure_nodes;
-    mcr->base.shutdown = mcraw_shutdown;
-    return &mcr->base;
+    if (async) {
+        lcbio_timer_destroy(async);
+    }
+}
+
+clconfig_provider * lcb_clconfig_create_mcraw(lcb_confmon *parent) {
+    return new McRawProvider(parent);
+}
+
+McRawProvider::McRawProvider(lcb_confmon *parent)
+    : config(NULL), async(lcbio_timer_new(parent->iot, this, async_update)) {
+    memset(static_cast<clconfig_provider*>(this), 0, sizeof(clconfig_provider));
+
+    clconfig_provider::parent = parent;
+    clconfig_provider::type = LCB_CLCONFIG_MCRAW;
+    clconfig_provider::get_cached = get_cached;
+    clconfig_provider::refresh = get_refresh;
+    clconfig_provider::pause = pause_mcr;
+    clconfig_provider::configure_nodes = configure_nodes;
+    clconfig_provider::shutdown = mcraw_shutdown;
 }
