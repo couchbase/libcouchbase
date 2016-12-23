@@ -126,7 +126,7 @@ Confmon::~Confmon() {
     }
 
     if (config) {
-        lcb_clconfig_decref(config);
+        config->decref();
         config = NULL;
     }
 
@@ -159,13 +159,13 @@ int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
         chstatus = lcbvb_get_changetype(diff);
         lcbvb_free_diff(diff);
 
-        if (chstatus == 0 || lcb_clconfig_compare(config, new_config) >= 0) {
+        if (chstatus == 0 || config->compare(*new_config) >= 0) {
             const lcbvb_CONFIG *ca, *cb;
 
             ca = config->vbc;
             cb = new_config->vbc;
 
-            lcb_log(LOGARGS(this, INFO), "Not applying configuration received via %s. No changes detected. A.rev=%d, B.rev=%d", provider_string(new_config->origin), ca->revid, cb->revid);
+            lcb_log(LOGARGS(this, INFO), "Not applying configuration received via %s. No changes detected. A.rev=%d, B.rev=%d", provider_string(new_config->get_origin()), ca->revid, cb->revid);
             if (notify_miss) {
                 invoke_listeners(CLCONFIG_EVENT_GOT_ANY_CONFIG, new_config);
             }
@@ -173,11 +173,11 @@ int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
         }
     }
 
-    lcb_log(LOGARGS(this, INFO), "Setting new configuration. Received via %s", provider_string(new_config->origin));
+    lcb_log(LOGARGS(this, INFO), "Setting new configuration. Received via %s", provider_string(new_config->get_origin()));
 
     if (config) {
         /** DECREF the old one */
-        lcb_clconfig_decref(config);
+        config->decref();
     }
 
     for (ii = 0; ii < CLCONFIG_MAX; ii++) {
@@ -187,7 +187,7 @@ int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
         }
     }
 
-    lcb_clconfig_incref(new_config);
+    new_config->incref();
     config = new_config;
     lcb_confmon_stop(this);
 
@@ -344,52 +344,33 @@ Provider::~Provider() {
     parent = NULL;
 }
 
-void lcb_clconfig_decref(clconfig_info *info)
-{
-    lcb_assert(info->refcount);
-
-    if (--info->refcount) {
-        return;
+ConfigInfo::~ConfigInfo() {
+    if (vbc) {
+        lcbvb_destroy(vbc);
     }
-
-    if (info->vbc) {
-        lcbvb_destroy(info->vbc);
-    }
-
-    free(info);
 }
 
-int lcb_clconfig_compare(const clconfig_info *a, const clconfig_info *b)
-{
+int ConfigInfo::compare(const ConfigInfo& other) {
     /** First check if both have revisions */
     int rev_a, rev_b;
-    rev_a = lcbvb_get_revision(a->vbc);
-    rev_b = lcbvb_get_revision(b->vbc);
+    rev_a = lcbvb_get_revision(this->vbc);
+    rev_b = lcbvb_get_revision(other.vbc);
     if (rev_a >= 0  && rev_b >= 0) {
         return rev_a - rev_b;
     }
 
-    if (a->cmpclock == b->cmpclock) {
+    if (this->cmpclock == other.cmpclock) {
         return 0;
 
-    } else if (a->cmpclock < b->cmpclock) {
+    } else if (this->cmpclock < other.cmpclock) {
         return -1;
     }
 
     return 1;
 }
 
-clconfig_info *
-lcb_clconfig_create(lcbvb_CONFIG* config, clconfig_method_t origin)
-{
-    clconfig_info *info = reinterpret_cast<clconfig_info*>(calloc(1, sizeof(*info)));
-    if (!info) {
-        return NULL;
-    }
-    info->refcount = 1;
-    info->vbc = config;
-    info->origin = origin;
-    return info;
+ConfigInfo::ConfigInfo(lcbvb_CONFIG *config_, Method origin_)
+    : vbc(config_), cmpclock(gethrtime()), refcount(1), origin(origin_) {
 }
 
 void lcb_confmon_add_listener(lcb_confmon *mon, clconfig_listener *listener)

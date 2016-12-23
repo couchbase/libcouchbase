@@ -124,7 +124,7 @@ static void listen_callback2(clconfig_listener *prov,
     }
 
     lsn->call_count++;
-    lsn->last_source = info->origin;
+    lsn->last_source = info->get_origin();
     IOT_STOP(lsn->io);
 }
 }

@@ -201,7 +201,7 @@ CccpProvider::update(const char *host, const char *data)
     }
 
     lcbvb_replace_host(vbc, host);
-    new_config = lcb_clconfig_create(vbc, CLCONFIG_CCCP);
+    new_config = ConfigInfo::create(vbc, CLCONFIG_CCCP);
 
     if (!new_config) {
         lcbvb_destroy(vbc);
@@ -209,11 +209,10 @@ CccpProvider::update(const char *host, const char *data)
     }
 
     if (config) {
-        lcb_clconfig_decref(config);
+        config->decref();
     }
 
     /** TODO: Figure out the comparison vector */
-    new_config->cmpclock = gethrtime();
     config = new_config;
     lcb_confmon_provider_success(this, new_config);
     return LCB_SUCCESS;
@@ -299,7 +298,7 @@ CccpProvider::~CccpProvider() {
     release_socket(false);
 
     if (config) {
-        lcb_clconfig_decref(config);
+        config->decref();
     }
     if (nodes) {
         delete nodes;

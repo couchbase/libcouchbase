@@ -126,11 +126,10 @@ FileProvider::Status FileProvider::load_cache()
     }
 
     if (config) {
-        lcb_clconfig_decref(config);
+        config->decref();
     }
 
-    config = lcb_clconfig_create(vbc, CLCONFIG_FILE);
-    config->cmpclock = gethrtime();
+    config = ConfigInfo::create(vbc, CLCONFIG_FILE);
     last_mtime = st.st_mtime;
 
     status = UPDATED;
@@ -190,7 +189,7 @@ FileProvider::~FileProvider() {
         lcbio_timer_destroy(timer);
     }
     if (config) {
-        lcb_clconfig_decref(config);
+        config->decref();
     }
 }
 
@@ -206,7 +205,8 @@ static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
         return;
     }
 
-    if (info->origin == CLCONFIG_PHONY || info->origin == CLCONFIG_FILE) {
+    if (info->get_origin() == CLCONFIG_PHONY ||
+            info->get_origin() == CLCONFIG_FILE) {
         lcb_log(LOGARGS(provider, TRACE), "Not writing configuration originating from PHONY or FILE to cache");
         return;
     }

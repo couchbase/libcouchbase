@@ -143,7 +143,7 @@ enum State {
 
 struct Provider;
 struct Listener;
-struct ConfigInfo;
+class ConfigInfo;
 
 /**
  * This object contains the information needed for libcouchbase to deal with
@@ -320,12 +320,68 @@ Provider *new_mcraw_provider(Confmon*);
 
 
 /** @brief refcounted object encapsulating a vbucket config */
-struct ConfigInfo {
+class ConfigInfo {
+public:
+    /**
+     * Creates a new configuration wrapper object containing the vbucket config
+     * pointed to by 'config'. Its initial refcount will be set to 1.
+     *
+     * @param config a newly parsed configuration
+     * @param origin the type of provider from which the config originated.
+     * @return a new ConfigInfo object. This should be incref()'d/decref()'d
+     * as needed.
+     */
+    static ConfigInfo* create(lcbvb_CONFIG *vbc, Method origin) {
+        return new ConfigInfo(vbc, origin);
+    }
+    /**
+     * @brief Compares two info structures and determine which one is newer
+     *
+     * This function returns an integer less than
+     * zero, zero or greater than zero if the first argument is considered older
+     * than, equal to, or later than the second argument.
+     * @param a
+     * @param b
+     * @see lcbvb_get_revision
+     * @see ConfigInfo::cmpclock
+     */
+    int compare(const ConfigInfo&);
+
+    /**
+     * @brief Increment the refcount on a config object
+     */
+    void incref() { refcount++; }
+
+    /**
+     * @brief Decrement the refcount on a config object.
+     * Decrement the refcount. If the internal refcount reaches 0 then the internal
+     * members (including the vbucket config handle itself) will be freed.
+     * @param info the configuration
+     */
+    void decref() {
+        if (!--refcount) {
+            delete this;
+        }
+    }
+
+    operator lcbvb_CONFIG*() const {
+        return vbc;
+    }
+
+    Method get_origin() const {
+        return origin;
+    }
+
     /** Actual configuration */
     lcbvb_CONFIG* vbc;
 
+private:
+    ConfigInfo(lcbvb_CONFIG *vbc, Method origin);
+
+    ~ConfigInfo();
+
     /** Comparative clock with which to compare */
-    lcb_uint64_t cmpclock;
+    uint64_t cmpclock;
 
     /** Reference counter */
     unsigned int refcount;
@@ -564,44 +620,6 @@ void lcb_confmon_remove_listener(lcb_confmon *mon, clconfig_listener *listener);
  * @return a set of flags consisting of confmon_state_t values.
  */
 #define lcb_confmon_get_state(mon) (mon)->state
-
-/**
- * Creates a new configuration wrapper object containing the vbucket config
- * pointed to by 'config'. Its initial refcount will be set to 1.
- *
- * @param config a newly parsed configuration
- * @param origin the type of provider from which the config originated.
- */
-clconfig_info *
-lcb_clconfig_create(lcbvb_CONFIG* config, clconfig_method_t origin);
-
-/**
- * @brief Compares two info structures and determine which one is newer
- *
- * This function returns an integer less than
- * zero, zero or greater than zero if the first argument is considered older
- * than, equal to, or later than the second argument.
- * @param a
- * @param b
- * @see lcbvb_get_revision
- * @see clconfig_info::cmpclock
- */
-LIBCOUCHBASE_API
-int lcb_clconfig_compare(const clconfig_info *a, const clconfig_info *b);
-
-/**
- * @brief Decrement the refcount on a config object.
- * Decrement the refcount. If the internal refcount reaches 0 then the internal
- * members (including the vbucket config handle itself) will be freed.
- * @param info the configuration
- */
-void lcb_clconfig_decref(clconfig_info *info);
-
-/**
- * @brief Increment the refcount on a config object
- * @param info the config object
- */
-#define lcb_clconfig_incref(info) (info)->refcount++
 
 /** Dump information about the monitor
  * @param mon the monitor object

@@ -59,7 +59,7 @@ struct Spechost;
 class RetryQueue;
 namespace clconfig {
 struct Confmon;
-struct ConfigInfo;
+class ConfigInfo;
 }
 }
 extern "C" {

@@ -93,11 +93,10 @@ void McRawProvider::configure_nodes(const lcb::Hostlist& hl)
     newconfig->revid = -1;
 
     if (config) {
-        lcb_clconfig_decref(config);
+        config->decref();
         config = NULL;
     }
-    config = lcb_clconfig_create(newconfig, CLCONFIG_MCRAW);
-    config->cmpclock = gethrtime();
+    config = ConfigInfo::create(newconfig, CLCONFIG_MCRAW);
 }
 
 lcb_error_t
@@ -118,7 +117,7 @@ lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes)
 
 McRawProvider::~McRawProvider() {
     if (config) {
-        lcb_clconfig_decref(config);
+        config->decref();
     }
     if (async) {
         lcbio_timer_destroy(async);

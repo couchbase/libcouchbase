@@ -492,7 +492,10 @@ void lcb_destroy(lcb_t instance)
     lcb_ASPEND_SETTYPE::iterator it;
     lcb_ASPEND_SETTYPE *pendq;
 
-    DESTROY(lcb_clconfig_decref, cur_configinfo);
+    if (instance->cur_configinfo) {
+        instance->cur_configinfo->decref();
+        instance->cur_configinfo = NULL;
+    }
     instance->cmdq.config = NULL;
 
     lcb_bootstrap_destroy(instance);

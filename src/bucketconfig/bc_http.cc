@@ -90,12 +90,12 @@ void set_new_config(HttpProvider *http)
 {
     const lcb_host_t *curhost;
     if (http->current_config) {
-        lcb_clconfig_decref(http->current_config);
+        http->current_config->decref();
     }
 
     curhost = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
     http->current_config = http->last_parsed;
-    lcb_clconfig_incref(http->current_config);
+    http->current_config->incref();
     lcbvb_replace_host(http->current_config->vbc, curhost->host);
     lcb_confmon_provider_success(http, http->current_config);
 }
@@ -200,10 +200,9 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
         return LCB_PROTOCOL_ERROR;
     }
     if (http->last_parsed) {
-        lcb_clconfig_decref(http->last_parsed);
+        http->last_parsed->decref();
     }
-    http->last_parsed = lcb_clconfig_create(cfgh, CLCONFIG_HTTP);
-    http->last_parsed->cmpclock = gethrtime();
+    http->last_parsed = ConfigInfo::create(cfgh, CLCONFIG_HTTP);
     http->generation++;
 
     /** Relocate the stream */
@@ -301,7 +300,7 @@ setup_request_header(HttpProvider *http, const lcb_host_t *host)
 void HttpProvider::reset_stream_state() {
     const int urlmode = PROVIDER_SETTING(this, bc_http_urltype);
     if (last_parsed) {
-        lcb_clconfig_decref(last_parsed);
+        last_parsed->decref();
         last_parsed = NULL;
     }
     if (urlmode & LCB_HTCONFIG_URLTYPE_25PLUS) {
@@ -503,7 +502,7 @@ HttpProvider::~HttpProvider() {
     lcbht_free(htp);
 
     if (current_config) {
-        lcb_clconfig_decref(current_config);
+        current_config->decref();
     }
     if (disconn_timer) {
         lcbio_timer_destroy(disconn_timer);

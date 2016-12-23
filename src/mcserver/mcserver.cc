@@ -137,7 +137,7 @@ Server::handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt)
 
     if (err != LCB_SUCCESS) {
         int bs_options;
-        if (instance->cur_configinfo->origin == lcb::clconfig::CLCONFIG_CCCP) {
+        if (instance->cur_configinfo->get_origin() == lcb::clconfig::CLCONFIG_CCCP) {
             /**
              * XXX: Not enough to see if cccp was enabled, since cccp might
              * be requested by a user, but would still not actually be active

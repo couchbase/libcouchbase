@@ -247,7 +247,7 @@ HANDLER(conninfo) {
 HANDLER(config_cache_loaded_handler) {
     if (mode != LCB_CNTL_GET) { return LCB_ECTL_UNSUPPMODE; }
     *(int *)arg = instance->cur_configinfo &&
-            instance->cur_configinfo->origin == lcb::clconfig::CLCONFIG_FILE;
+            instance->cur_configinfo->get_origin() == lcb::clconfig::CLCONFIG_FILE;
     (void)cmd; return LCB_SUCCESS;
 }
 
@@ -283,7 +283,7 @@ HANDLER(config_transport) {
     if (mode == LCB_CNTL_SET) { return LCB_ECTL_UNSUPPMODE; }
     if (!instance->cur_configinfo) { return LCB_CLIENT_ETMPFAIL; }
 
-    switch (instance->cur_configinfo->origin) {
+    switch (instance->cur_configinfo->get_origin()) {
         case lcb::clconfig::CLCONFIG_HTTP: *val = LCB_CONFIG_TRANSPORT_HTTP; break;
         case lcb::clconfig::CLCONFIG_CCCP: *val = LCB_CONFIG_TRANSPORT_CCCP; break;
         default: return LCB_CLIENT_ETMPFAIL;
