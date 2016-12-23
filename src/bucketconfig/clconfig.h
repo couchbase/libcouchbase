@@ -140,18 +140,6 @@ typedef struct lcb_confmon_st {
      * configuration */
     struct clconfig_info_st * config;
 
-    /* CONFMON_S_* values. Used internally */
-    int state;
-
-    /** Last time the provider was stopped. As a microsecond timestamp */
-    lcb_uint32_t last_stop_us;
-
-    /** This is the async handle for a reentrant start */
-    lcbio_pTIMER as_start;
-
-    /** Async handle for a reentrant stop */
-    lcbio_pTIMER as_stop;
-
     /**  List of listeners for events */
     lcb_list_t listeners;
     lcb_settings *settings;
