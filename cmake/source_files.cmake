@@ -14,6 +14,7 @@ SET(LCB_UTILS_SRC
 
 # lcbio
 FILE(GLOB LCB_IO_SRC src/lcbio/*.c)
+FILE(GLOB LCB_IO_CXXSRC src/lcbio/*.cc)
 
 # common memcached operations
 FILE(GLOB LCB_OP_SRC src/operations/*.c)

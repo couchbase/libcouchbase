@@ -82,7 +82,7 @@ cs_unwatch(lcbio_CONNSTART *cs)
 static void
 cs_handler(void *cookie)
 {
-    lcbio_CONNSTART *cs = cookie;
+    lcbio_CONNSTART *cs = reinterpret_cast<lcbio_CONNSTART*>(cookie);
     lcb_error_t err;
     lcbio_SOCKET *s = cs->sock;
 
@@ -211,7 +211,7 @@ ensure_sock(lcbio_CONNSTART *cs)
         while (s->u.sd == NULL && cs->ai != NULL) {
             s->u.sd = lcbio_C_ai2sock(io, &cs->ai, &errtmp);
             if (s->u.sd) {
-                s->u.sd->lcbconn = (void *) cs->sock;
+                s->u.sd->lcbconn = const_cast<lcbio_SOCKET*>(cs->sock);
                 s->u.sd->parent = IOT_ARG(io);
                 return 0;
             }
@@ -255,15 +255,15 @@ destroy_cursock(lcbio_CONNSTART *cs)
 }
 
 static void
-E_connect(lcb_socket_t sock, short events, void *arg)
+E_connect(lcb_socket_t, short events, void *arg)
 {
-    lcbio_CONNSTART *cs = arg;
+    lcbio_CONNSTART *cs = reinterpret_cast<lcbio_CONNSTART*>(arg);
     lcbio_SOCKET *s = cs->sock;
     lcbio_TABLE *io = s->io;
     int retry_once = 0;
     lcbio_CSERR connstatus;
-
-    (void)sock;
+    int rv = 0;
+    struct addrinfo *ai = NULL;
 
     GT_NEXTSOCK:
     if (ensure_sock(cs) == -1) {
@@ -281,8 +281,8 @@ E_connect(lcb_socket_t sock, short events, void *arg)
         goto GT_NEXTSOCK;
 
     } else {
-        int rv = 0;
-        struct addrinfo *ai = cs->ai;
+        rv = 0;
+        ai = cs->ai;
 
         GT_CONNECT:
         rv = IOT_V0IO(io).connect0(
@@ -337,8 +337,8 @@ static void C_connect(lcbio_CONNSTART *cs);
 static void
 C_conncb(lcb_sockdata_t *sock, int status)
 {
-    lcbio_SOCKET *s = (void *)sock->lcbconn;
-    lcbio_CONNSTART *cs = (void *)s->ctx;
+    lcbio_SOCKET *s = reinterpret_cast<lcbio_SOCKET*>(sock->lcbconn);
+    lcbio_CONNSTART *cs = reinterpret_cast<lcbio_CONNSTART*>(s->ctx);
 
     lcb_log(LOGARGS(s, TRACE), CSLOGFMT "Received completion handler. Status=%d. errno=%d", CSLOGID(s), status, IOT_ERRNO(s->io));
 
@@ -420,15 +420,15 @@ lcbio_connect(lcbio_TABLE *iot, lcb_settings *settings, const lcb_host_t *dest,
     struct addrinfo hints;
     int rv;
 
-    s = calloc(1, sizeof(*s));
-    ret = calloc(1, sizeof(*ret));
+    s = reinterpret_cast<lcbio_SOCKET*>(calloc(1, sizeof(*s)));
+    ret = reinterpret_cast<lcbio_CONNSTART*>(calloc(1, sizeof(*ret)));
 
     /** Initialize the socket first */
     s->io = iot;
     s->settings = settings;
     s->ctx = ret;
     s->refcount = 1;
-    s->info = calloc(1, sizeof(*s->info));
+    s->info = reinterpret_cast<lcbio_CONNINFO*>(calloc(1, sizeof(*s->info)));
     s->info->ep = *dest;
     lcbio_table_ref(s->io);
     lcb_settings_ref(s->settings);
@@ -501,8 +501,8 @@ lcbio_connect_hl(lcbio_TABLE *iot, lcb_settings *settings,
 lcbio_SOCKET *
 lcbio_wrap_fd(lcbio_pTABLE iot, lcb_settings *settings, lcb_socket_t fd)
 {
-    lcbio_SOCKET *ret = calloc(1, sizeof(*ret));
-    lcbio_CONNDONE_cb *ci = calloc(1, sizeof(*ci));
+    lcbio_SOCKET *ret = reinterpret_cast<lcbio_SOCKET*>(calloc(1, sizeof(*ret)));
+    lcbio_CONNDONE_cb *ci = reinterpret_cast<lcbio_CONNDONE_cb*>(calloc(1, sizeof(*ci)));
 
     if (ret == NULL || ci == NULL) {
         free(ret);
