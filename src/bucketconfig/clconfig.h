@@ -606,14 +606,6 @@ typedef lcb::clconfig::Listener clconfig_listener;
  */
 #define PROVIDER_SETTING(p, n) ((p)->parent->settings->n)
 
-/**
- * @brief Macro used by a provider to set the failure code in the parent
- * lcb_confmon object
- * @param p the provider pointer
- * @param e the error code
- */
-#define PROVIDER_SET_ERROR(p, e) (p)->parent->last_error = e
-
 extern "C" {
 
 /**
