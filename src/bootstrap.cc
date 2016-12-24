@@ -246,8 +246,7 @@ lcb_get_bootstrap_status(lcb_t instance)
         return instance->last_error;
     }
     if (instance->type == LCB_TYPE_CLUSTER) {
-        lcbio_SOCKET *restconn = lcb_confmon_get_rest_connection(instance->confmon);
-        if (restconn) {
+        if (lcb::clconfig::http_get_conn(instance->confmon) != NULL) {
             return LCB_SUCCESS;
         }
     }

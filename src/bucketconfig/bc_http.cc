@@ -555,15 +555,9 @@ io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
     io_error(reinterpret_cast<HttpProvider *>(lcbio_ctx_data(ctx)), err);
 }
 
-void lcb_clconfig_http_enable(clconfig_provider *http)
-{
-    http->enabled = 1;
-}
 
-lcbio_SOCKET *
-lcb_confmon_get_rest_connection(lcb_confmon *mon)
-{
-    HttpProvider *http = static_cast<HttpProvider *>(mon->all_providers[CLCONFIG_HTTP]);
+const lcbio_SOCKET* lcb::clconfig::http_get_conn(const Provider *p) {
+    const HttpProvider *http = static_cast<const HttpProvider *>(p);
     if (!http->ioctx) {
         return NULL;
     }
@@ -571,16 +565,15 @@ lcb_confmon_get_rest_connection(lcb_confmon *mon)
 
 }
 
-lcb_host_t *
-lcb_confmon_get_rest_host(lcb_confmon *mon)
+const lcb_host_t* lcb::clconfig::http_get_host(const Provider *p)
 {
-    lcbio_SOCKET *sock = lcb_confmon_get_rest_connection(mon);
+    const lcbio_SOCKET *sock = http_get_conn(p);
     if (sock) {
         return lcbio_get_host(sock);
     }
     return NULL;
 }
 
-clconfig_provider_st* lcb::clconfig::new_http_provider(lcb_confmon* mon) {
+Provider* lcb::clconfig::new_http_provider(lcb_confmon* mon) {
     return new HttpProvider(mon);
 }

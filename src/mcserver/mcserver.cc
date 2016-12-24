@@ -132,7 +132,7 @@ Server::handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt)
 
     if (resinfo.bodylen() && cccp->enabled) {
         std::string s(resinfo.body<const char*>(), resinfo.vallen());
-        err = lcb_cccp_update(cccp, curhost->host, s.c_str());
+        err = lcb::clconfig::cccp_update(cccp, curhost->host, s.c_str());
     }
 
     if (err != LCB_SUCCESS) {

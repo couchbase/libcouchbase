@@ -475,6 +475,14 @@ struct Provider {
     virtual void dump(FILE *) const {
     }
 
+    void enable() {
+        enabled = 1;
+    }
+
+    virtual void enable(void *) {
+        assert("Must be implemented in subclass if used" && 0);
+    }
+
     /** The type of provider */
     const Method type;
 
@@ -589,20 +597,7 @@ struct Listener {
     virtual void clconfig_lsn(EventType event, ConfigInfo *config) = 0;
 };
 
-} // clconfig
-} // lcb
-
-typedef lcb::clconfig::Provider clconfig_provider, clconfig_provider_st;
-typedef lcb::clconfig::Confmon lcb_confmon;
-typedef lcb::clconfig::Confmon lcb_confmon_st;
-typedef lcb::clconfig::Method clconfig_method_t;
-typedef lcb::clconfig::EventType clconfig_event_t;
-typedef lcb::clconfig::ConfigInfo clconfig_info;
-typedef lcb::clconfig::Listener clconfig_listener;
-
 /* Method-specific setup methods.. */
-
-extern "C" {
 
 /**
  * @name File Provider-specific APIs
@@ -615,18 +610,17 @@ extern "C" {
  * @param p the provider
  * @param f the filename (if NULL, a temporary filename will be created)
  * @param ro whether the client will never modify the file
- * @return zero on success, nonzero on failure.
+ * @return true on success, false on failure.
  */
-int lcb_clconfig_file_set_filename(clconfig_provider *p, const char *f, int ro);
+bool file_set_filename(Provider *p, const char *f, bool ro);
 
 /**
  * Retrieve the filename for the provider
  * @param p The provider of type LCB_CLCONFIG_FILE
  * @return the current filename being used.
  */
-const char * lcb_clconfig_file_get_filename(clconfig_provider *p);
-
-void lcb_clconfig_file_set_readonly(clconfig_provider *p, int val);
+const char* file_get_filename(Provider *p);
+void file_set_readonly(Provider *p, bool val);
 /**@}*/
 
 /**
@@ -640,30 +634,32 @@ void lcb_clconfig_file_set_readonly(clconfig_provider *p, int val);
  * @param mon
  * @return
  */
-lcbio_SOCKET* lcb_confmon_get_rest_connection(lcb_confmon *mon);
+const lcbio_SOCKET* http_get_conn(const Provider *p);
+
+static inline const lcbio_SOCKET* http_get_conn(Confmon *c) {
+    return http_get_conn(c->get_provider(CLCONFIG_HTTP));
+}
 
 /**
  * Get the hostname for the current REST connection to the cluster
  * @param mon
  * @return
  */
-lcb_host_t * lcb_confmon_get_rest_host(lcb_confmon *mon);
-
-/**
- * Enables the HTTP provider
- * @param pb a provider of type LCB_CLCONFIG_HTTP
- */
-LCB_INTERNAL_API
-void lcb_clconfig_http_enable(clconfig_provider *pb);
-#define lcb_clconfig_http_set_nodes lcb_clconfig_cccp_set_nodes
+const lcb_host_t * http_get_host(const Provider *p);
+static inline const lcb_host_t* http_get_host(Confmon *c) {
+    return http_get_host(c->get_provider(CLCONFIG_HTTP));
+}
 /**@}*/
 
 /**
  * @name CCCP Provider-specific APIs
  * @{
  */
-LCB_INTERNAL_API
-void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance);
+
+/**
+ * Note, to initialize the CCCP provider, you should use
+ * cccp->enable(instance);
+ */
 
 /**
  * @brief Notify the CCCP provider about a new configuration from a
@@ -679,7 +675,7 @@ void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance);
  * set
  */
 lcb_error_t
-lcb_cccp_update(clconfig_provider *provider, const char *host, const char *data);
+cccp_update(Provider *provider, const char *host, const char *data);
 
 /**
  * @brief Notify the CCCP provider about a configuration received from a
@@ -691,18 +687,25 @@ lcb_cccp_update(clconfig_provider *provider, const char *host, const char *data)
  * @param nbytes Size of payload
  * @param origin Host object from which the packet was received
  */
-void
-lcb_cccp_update2(const void *cookie, lcb_error_t err,
-    const void *bytes, lcb_size_t nbytes, const lcb_host_t *origin);
+void cccp_update(const void *cookie, lcb_error_t err,
+    const void *bytes, size_t nbytes, const lcb_host_t *origin);
 
 /**@}*/
 
 /**@name Raw Memcached (MCRAW) Provider-specific APIs
  * @{*/
-LCB_INTERNAL_API
-lcb_error_t
-lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes);
-} // Extern "C"
+lcb_error_t mcraw_update(Provider *pb, const char *nodes);
 /**@}*/
 /**@}*/
+
+} // clconfig
+} // lcb
+
+typedef lcb::clconfig::Provider clconfig_provider, clconfig_provider_st;
+typedef lcb::clconfig::Confmon lcb_confmon;
+typedef lcb::clconfig::Confmon lcb_confmon_st;
+typedef lcb::clconfig::Method clconfig_method_t;
+typedef lcb::clconfig::EventType clconfig_event_t;
+typedef lcb::clconfig::ConfigInfo clconfig_info;
+typedef lcb::clconfig::Listener clconfig_listener;
 #endif /* LCB_CLCONFIG_H */

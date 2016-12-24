@@ -50,7 +50,7 @@ TEST_F(ConfmonTest, testBasic)
 
     lcb_confmon *mon = new Confmon(instance->settings, instance->iotable);
     clconfig_provider *http = mon->get_provider(CLCONFIG_HTTP);
-    lcb_clconfig_http_enable(http);
+    http->enable();
     http->configure_nodes(*instance->ht_nodes);
 
     mon->prepare();
@@ -145,10 +145,10 @@ TEST_F(ConfmonTest, testCycle)
 
     hostlist_t hl = hostlist_create();
     hostlist_add_stringz(hl, cropts.v.v2.mchosts, 11210);
-    lcb_clconfig_cccp_enable(cccp, instance);
+    cccp->enable(instance);
     cccp->configure_nodes(*hl);
 
-    lcb_clconfig_http_enable(http);
+    http->enable();
     http->configure_nodes(*instance->ht_nodes);
     hostlist_destroy(hl);
 

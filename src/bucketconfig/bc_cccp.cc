@@ -63,6 +63,11 @@ struct CccpProvider : public Provider {
         return nodes;
     }
 
+    void enable(void *arg) {
+        instance = reinterpret_cast<lcb_t>(arg);
+        Provider::enable();
+    }
+
     lcb::Hostlist *nodes;
     clconfig_info *config;
     bool server_active;
@@ -163,17 +168,9 @@ static void socket_timeout(void *arg) {
     reinterpret_cast<CccpProvider*>(arg)->mcio_error(LCB_ETIMEDOUT);
 }
 
-void lcb_clconfig_cccp_enable(clconfig_provider *pb, lcb_t instance)
-{
-    CccpProvider *cccp = static_cast<CccpProvider*>(pb);
-    lcb_assert(pb->type == CLCONFIG_CCCP);
-    cccp->instance = instance;
-    pb->enabled = true;
-}
-
 /** Update the configuration from a server. */
 lcb_error_t
-lcb_cccp_update(clconfig_provider *provider, const char *host, const char *data) {
+lcb::clconfig::cccp_update(Provider *provider, const char *host, const char *data) {
     return static_cast<CccpProvider*>(provider)->update(host, data);
 }
 
@@ -216,9 +213,9 @@ CccpProvider::update(const char *host, const char *data)
     return LCB_SUCCESS;
 }
 
-void lcb_cccp_update2(const void *cookie, lcb_error_t err,
-                      const void *bytes, lcb_size_t nbytes,
-                      const lcb_host_t *origin)
+void lcb::clconfig::cccp_update(
+    const void *cookie, lcb_error_t err,
+    const void *bytes, size_t nbytes, const lcb_host_t *origin)
 {
     CccpCookie *ck = reinterpret_cast<CccpCookie*>(const_cast<void*>(cookie));
     CccpProvider *cccp = ck->parent;

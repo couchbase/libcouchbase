@@ -204,14 +204,14 @@ init_providers(lcb_t obj, const Connspec &spec)
     }
 
     if (http_enabled) {
-        lcb_clconfig_http_enable(http);
+        http->enable();
         http->configure_nodes(*obj->ht_nodes);
     } else {
         obj->confmon->set_active(CLCONFIG_HTTP, false);
     }
 
     if (cccp_enabled && obj->type != LCB_TYPE_CLUSTER) {
-        lcb_clconfig_cccp_enable(cccp, obj);
+        cccp->enable(obj);
         cccp->configure_nodes(*obj->mc_nodes);
     } else {
         obj->confmon->set_active(CLCONFIG_CCCP, false);

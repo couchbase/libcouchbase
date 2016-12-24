@@ -28,8 +28,9 @@ ext_callback_proxy(mc_PIPELINE *pl, mc_PACKET *req, lcb_error_t rc,
     const lcb::MemcachedResponse *res =
             reinterpret_cast<const lcb::MemcachedResponse*>(resdata);
 
-    lcb_cccp_update2(rd->cookie, rc, res->body<const char*>(), res->bodylen(),
-                     &server->get_host());
+    lcb::clconfig::cccp_update(
+        rd->cookie, rc, res->body<const char*>(), res->bodylen(),
+        &server->get_host());
     free(rd);
 }
 

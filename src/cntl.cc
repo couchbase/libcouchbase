@@ -198,7 +198,7 @@ HANDLER(get_kvb) {
 
 
 HANDLER(conninfo) {
-    lcbio_SOCKET *sock;
+    const lcbio_SOCKET *sock;
     lcb_cntl_server_st *si = reinterpret_cast<lcb_cntl_server_st*>(arg);
     const lcb_host_t *host;
 
@@ -224,7 +224,7 @@ HANDLER(conninfo) {
             }
         }
     } else if (cmd == LCB_CNTL_CONFIGNODE_INFO) {
-        sock = lcb_confmon_get_rest_connection(instance->confmon);
+        sock = lcb::clconfig::http_get_conn(instance->confmon);
     } else {
         return LCB_ECTL_BADARG;
     }
@@ -332,18 +332,17 @@ HANDLER(config_cache_handler) {
 
     provider = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_FILE);
     if (mode == LCB_CNTL_SET) {
-        int rv;
-        rv = lcb_clconfig_file_set_filename(provider,
+        bool rv = lcb::clconfig::file_set_filename(provider,
             reinterpret_cast<const char*>(arg),
             cmd == LCB_CNTL_CONFIGCACHE_RO);
 
-        if (rv == 0) {
+        if (rv) {
             instance->settings->bc_http_stream_time = LCB_MS2US(10000);
             return LCB_SUCCESS;
         }
         return LCB_ERROR;
     } else {
-        *(const char **)arg = lcb_clconfig_file_get_filename(provider);
+        *(const char **)arg = lcb::clconfig::file_get_filename(provider);
         return LCB_SUCCESS;
     }
 }

@@ -244,7 +244,7 @@ static std::string mkcachefile(const char *name, const char *bucket)
     }
 }
 
-int lcb_clconfig_file_set_filename(clconfig_provider *p, const char *f, int ro)
+bool lcb::clconfig::file_set_filename(clconfig_provider *p, const char *f, bool ro)
 {
     FileProvider *provider = static_cast<FileProvider*>(p);
     provider->enabled = 1;
@@ -255,16 +255,16 @@ int lcb_clconfig_file_set_filename(clconfig_provider *p, const char *f, int ro)
         FILE *fp_tmp = fopen(provider->filename.c_str(), "r");
         if (!fp_tmp) {
             lcb_log(LOGARGS(provider, ERROR), LOGFMT "Couldn't open for reading: %s", LOGID(provider), strerror(errno));
-            return -1;
+            return false;
         } else {
             fclose(fp_tmp);
         }
     }
-    return 0;
+    return true;
 }
 
 const char *
-lcb_clconfig_file_get_filename(clconfig_provider *p)
+lcb::clconfig::file_get_filename(clconfig_provider *p)
 {
     FileProvider *fp = static_cast<FileProvider*>(p);
     if (fp->filename.empty()) {
@@ -275,9 +275,9 @@ lcb_clconfig_file_get_filename(clconfig_provider *p)
 }
 
 void
-lcb_clconfig_file_set_readonly(clconfig_provider *p, int val)
+lcb::clconfig::file_set_readonly(clconfig_provider *p, bool val)
 {
-    static_cast<FileProvider*>(p)->is_readonly = bool(val);
+    static_cast<FileProvider*>(p)->is_readonly = val;
 }
 
 clconfig_provider_st* lcb::clconfig::new_file_provider(lcb_confmon *mon) {
