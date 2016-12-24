@@ -34,8 +34,6 @@
 #define LOGFMT "<%s:%s> "
 #define LOGID(cccp) get_ctx_host(cccp->ioctx), get_ctx_port(cccp->ioctx)
 
-#define PROVIDER_SETTING_T(fld) PROVIDER_SETTING(this, fld)
-
 struct CccpCookie;
 
 using namespace lcb::clconfig;
@@ -132,7 +130,7 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
         CccpCookie *cookie = new CccpCookie(this);
         cmdcookie = cookie;
         lcb_log(LOGARGS(this, INFO), "Re-Issuing CCCP Command on server struct %p (%s:%s)", (void*)server, next_host->host, next_host->port);
-        lcbio_timer_rearm(timer, PROVIDER_SETTING_T(config_node_timeout));
+        lcbio_timer_rearm(timer, settings().config_node_timeout);
         instance->request_config(cookie, server);
 
     } else {
@@ -141,7 +139,7 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
         lcb_log(LOGARGS(this, INFO), "Requesting connection to node %s:%s for CCCP configuration", next_host->host, next_host->port);
         preq = lcbio_mgr_get(
                 instance->memd_sockpool, next_host,
-                PROVIDER_SETTING_T(config_node_timeout),
+                settings().config_node_timeout,
                 on_connected, this);
         LCBIO_CONNREQ_MKPOOLED(&creq, preq);
     }
@@ -329,7 +327,7 @@ CccpProvider::config_updated(lcbvb_CONFIG *vbc)
     }
 
     nodes->clear();
-    if (PROVIDER_SETTING_T(sslopts) & LCB_SSL_ENABLED) {
+    if (settings().sslopts & LCB_SSL_ENABLED) {
         mode = LCBVB_SVCMODE_SSL;
     } else {
         mode = LCBVB_SVCMODE_PLAIN;
@@ -344,7 +342,7 @@ CccpProvider::config_updated(lcbvb_CONFIG *vbc)
         nodes->add(mcaddr, LCB_CONFIG_MCD_PORT);
     }
 
-    if (PROVIDER_SETTING_T(randomize_bootstrap_nodes)) {
+    if (settings().randomize_bootstrap_nodes) {
         nodes->randomize();
     }
 }
@@ -422,7 +420,7 @@ void CccpProvider::request_config()
     lcbio_ctx_put(ioctx, req.data(), req.size());
     lcbio_ctx_rwant(ioctx, 24);
     lcbio_ctx_schedule(ioctx);
-    lcbio_timer_rearm(timer, PROVIDER_SETTING(this, config_node_timeout));
+    lcbio_timer_rearm(timer, settings().config_node_timeout);
 }
 
 void CccpProvider::dump(FILE *fp) const {

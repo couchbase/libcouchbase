@@ -216,7 +216,7 @@ void Confmon::provider_failed(Provider *provider, lcb_error_t reason) {
         uint32_t interval = 0;
         if (config) {
             /* Not first */
-            interval = PROVIDER_SETTING(provider, grace_next_provider);
+            interval = settings->grace_next_provider;
         }
         lcb_log(LOGARGS(this, DEBUG), "Will try next provider in %uus", interval);
         state |= CONFMON_S_ITERGRACE;

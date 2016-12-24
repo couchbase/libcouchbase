@@ -484,6 +484,9 @@ struct Provider {
     /** The parent manager object */
     Confmon *parent;
 
+    lcb_settings& settings() const {
+        return *parent->settings;
+    }
 };
 
 Provider *new_cccp_provider(Confmon*);
@@ -598,13 +601,6 @@ typedef lcb::clconfig::ConfigInfo clconfig_info;
 typedef lcb::clconfig::Listener clconfig_listener;
 
 /* Method-specific setup methods.. */
-
-/**
- * @brief Macro used to retrieve a setting from a provider
- * @param p the provider pointer
- * @param n the name of the setting field to retrieve as token
- */
-#define PROVIDER_SETTING(p, n) ((p)->parent->settings->n)
 
 extern "C" {
 

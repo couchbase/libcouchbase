@@ -79,7 +79,7 @@ io_error(HttpProvider *http, lcb_error_t origerr)
         lcb_log(LOGARGS(http, INFO), "HTTP node list finished. Trying to obtain connection from first node in list");
         if (!lcbio_timer_armed(http->as_reconnect)) {
             lcbio_timer_rearm(http->as_reconnect,
-                PROVIDER_SETTING(http, grace_next_cycle));
+                http->settings().grace_next_cycle);
         }
     }
     return origerr;
@@ -122,7 +122,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
         if (resp->status == 200) {
             /* nothing */
         } else if (resp->status == 404) {
-            const int urlmode = PROVIDER_SETTING(http, bc_http_urltype);
+            const int urlmode = http->settings().bc_http_urltype;
             err = LCB_BUCKET_ENOENT;
 
             if (++http->uritype > LCB_HTCONFIG_URLTYPE_COMPAT) {
@@ -170,7 +170,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
         return LCB_SUCCESS;
     }
 
-    if (PROVIDER_SETTING(http, conntype) == LCB_TYPE_CLUSTER) {
+    if (http->settings().conntype == LCB_TYPE_CLUSTER) {
         /* don't bother with parsing the actual config */
         resp->body.nused = 0;
         return LCB_SUCCESS;
@@ -225,7 +225,7 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     lcb_log(LOGARGS(http, TRACE), LOGFMT "Received %d bytes on HTTP stream", LOGID(http), nr);
 
     lcbio_timer_rearm(http->io_timer,
-                      PROVIDER_SETTING(http, config_node_timeout));
+                      http->settings().config_node_timeout);
 
     LCBIO_CTX_ITERFOR(ctx, &riter, nr) {
         unsigned nbuf = lcbio_ctx_risize(&riter);
@@ -297,7 +297,7 @@ setup_request_header(HttpProvider *http, const lcb_host_t *host)
 }
 
 void HttpProvider::reset_stream_state() {
-    const int urlmode = PROVIDER_SETTING(this, bc_http_urltype);
+    const int urlmode = settings().bc_http_urltype;
     if (last_parsed) {
         last_parsed->decref();
         last_parsed = NULL;
@@ -346,7 +346,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     lcbio_ctx_rwant(http->ioctx, 1);
     lcbio_ctx_schedule(http->ioctx);
     lcbio_timer_rearm(http->io_timer,
-                      PROVIDER_SETTING(http, config_node_timeout));
+                      http->settings().config_node_timeout);
 }
 
 static void
@@ -456,7 +456,7 @@ void HttpProvider::config_updated(lcbvb_CONFIG *newconfig)
     lcbvb_SVCMODE mode;
     nodes->clear();
 
-    sopts = PROVIDER_SETTING(this, sslopts);
+    sopts = settings().sslopts;
     if (sopts & LCB_SSL_ENABLED) {
         mode = LCBVB_SVCMODE_SSL;
     } else {
@@ -478,14 +478,14 @@ void HttpProvider::config_updated(lcbvb_CONFIG *newconfig)
         lcb_log(LOGARGS(this, FATAL), "New nodes do not contain management ports");
     }
 
-    if (PROVIDER_SETTING(this, randomize_bootstrap_nodes)) {
+    if (settings().randomize_bootstrap_nodes) {
         nodes->randomize();
     }
 }
 
 void HttpProvider::configure_nodes(const lcb::Hostlist& newnodes) {
     nodes->assign(newnodes);
-    if (PROVIDER_SETTING(this, randomize_bootstrap_nodes)) {
+    if (settings().randomize_bootstrap_nodes) {
         nodes->randomize();
     }
 }
