@@ -48,6 +48,7 @@ struct FileProvider : Provider, Listener {
     clconfig_info *get_cached();
     lcb_error_t refresh();
     void dump(FILE *) const;
+    void clconfig_lsn(EventType, ConfigInfo*);
 
     std::string filename;
     clconfig_info *config;
@@ -193,25 +194,21 @@ FileProvider::~FileProvider() {
     }
 }
 
-static void config_listener(clconfig_listener *lsn, clconfig_event_t event,
-                            clconfig_info *info)
-{
+void FileProvider::clconfig_lsn(EventType event, ConfigInfo *info) {
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
     }
-
-    FileProvider *provider = static_cast<FileProvider*>(lsn);
-    if (!provider->enabled) {
+    if (!enabled) {
         return;
     }
 
     if (info->get_origin() == CLCONFIG_PHONY ||
             info->get_origin() == CLCONFIG_FILE) {
-        lcb_log(LOGARGS(provider, TRACE), "Not writing configuration originating from PHONY or FILE to cache");
+        lcb_log(LOGARGS(this, TRACE), "Not writing configuration originating from PHONY or FILE to cache");
         return;
     }
 
-    provider->write_cache(info->vbc);
+    write_cache(info->vbc);
 }
 
 void FileProvider::dump(FILE *fp) const {
@@ -229,11 +226,7 @@ FileProvider::FileProvider(lcb_confmon *parent_)
     : Provider(parent_, CLCONFIG_FILE),
       config(NULL), last_mtime(0), last_errno(0), is_readonly(false),
       timer(lcbio_timer_new(parent_->iot, this, async_callback)) {
-
-    memset(static_cast<clconfig_listener*>(this), 0, sizeof(clconfig_listener));
-    clconfig_listener::callback = ::config_listener;
-
-    lcb_confmon_add_listener(parent_, this);
+    parent->add_listener(this);
 }
 
 static std::string mkcachefile(const char *name, const char *bucket)

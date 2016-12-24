@@ -39,6 +39,20 @@
  * HTTP streaming configurations or Not-My-Vbucket "Carrier" updates.
  */
 struct lcb_BOOTSTRAP : clconfig_listener {
+    lcb_BOOTSTRAP(lcb_t);
+    ~lcb_BOOTSTRAP();
+
+    // Override
+    void clconfig_lsn(lcb::clconfig::EventType e, lcb::clconfig::ConfigInfo* i) {
+        if (configcb_indirect) {
+            schedule_config_callback(e);
+        } else {
+            config_callback(e, i);
+        }
+    }
+    void schedule_config_callback(lcb::clconfig::EventType event);
+    void config_callback(lcb::clconfig::EventType, lcb::clconfig::ConfigInfo*);
+
     lcb_t parent;
 
     /**Timer used for initial bootstrap as an interval timer, and for subsequent
@@ -70,7 +84,13 @@ struct lcb_BOOTSTRAP : clconfig_listener {
     unsigned errcounter;
 
     /** Flag indicating whether the _initial_ configuration has been received */
-    int bootstrapped;
+    bool bootstrapped;
+
+    /**
+     * Whether the config_callback should be called indirectly, i.e.
+     * asynchronously.
+     */
+    bool configcb_indirect;
 };
 #endif
 

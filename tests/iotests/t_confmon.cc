@@ -18,23 +18,26 @@ class ConfmonTest : public ::testing::Test
 };
 }
 
-struct evstop_listener {
-    clconfig_listener base;
+struct evstop_listener : Listener {
     lcbio_pTABLE io;
     int called;
+
+    void clconfig_lsn(EventType event, ConfigInfo*) {
+        if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+            return;
+        }
+        called = 1;
+        IOT_STOP(io);
+    }
+
+    evstop_listener() : Listener(), io(NULL), called(0) {
+    }
 };
 
 extern "C" {
 static void listen_callback1(clconfig_listener *lsn, clconfig_event_t event,
                              clconfig_info *info)
 {
-    if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
-        return;
-    }
-
-    evstop_listener *me = reinterpret_cast<evstop_listener*>(lsn);
-    me->called = 1;
-    IOT_STOP(me->io);
 }
 }
 
@@ -62,14 +65,9 @@ TEST_F(ConfmonTest, testBasic)
     clconfig_provider *provider = mon->get_provider(CLCONFIG_HTTP);
     ASSERT_NE(0, provider->enabled);
 
-    struct evstop_listener listener;
-    memset(&listener, 0, sizeof(listener));
-
-    listener.base.callback = listen_callback1;
-    listener.base.parent = mon;
+    evstop_listener listener;
     listener.io = instance->iotable;
-
-    lcb_confmon_add_listener(mon, &listener.base);
+    mon->add_listener(&listener);
     mon->start();
     IOT_START(instance->iotable);
     ASSERT_NE(0, listener.called);
@@ -77,8 +75,7 @@ TEST_F(ConfmonTest, testBasic)
 }
 
 
-struct listener2 {
-    clconfig_listener base;
+struct listener2 : Listener {
     int call_count;
     lcbio_pTABLE io;
     clconfig_method_t last_source;
@@ -90,43 +87,30 @@ struct listener2 {
         expected_events.clear();
     }
 
-    listener2() {
-        memset(&base, 0, sizeof(base));
+    listener2() : Listener() {
         io = NULL;
         reset();
     }
-};
 
-static struct listener2* getListener2(const void *p)
-{
-    return reinterpret_cast<struct listener2*>(const_cast<void*>(p));
-}
-
-extern "C" {
-static void listen_callback2(clconfig_listener *prov,
-                             clconfig_event_t event,
-                             clconfig_info *info)
-{
-    // Increase the number of times we've received a callback..
-    struct listener2* lsn = getListener2(prov);
-
-    if (event == CLCONFIG_EVENT_MONITOR_STOPPED) {
-        IOT_START(lsn->io);
-        return;
-    }
-
-    if (!lsn->expected_events.empty()) {
-        if (lsn->expected_events.end() ==
-            lsn->expected_events.find(event)) {
+    void clconfig_lsn(EventType event, ConfigInfo *info) {
+        if (event == CLCONFIG_EVENT_MONITOR_STOPPED) {
+            IOT_START(io);
             return;
         }
-    }
 
-    lsn->call_count++;
-    lsn->last_source = info->get_origin();
-    IOT_STOP(lsn->io);
-}
-}
+        if (!expected_events.empty()) {
+            if (expected_events.end() ==
+                expected_events.find(event)) {
+                return;
+            }
+        }
+
+        call_count++;
+        last_source = info->get_origin();
+        IOT_STOP(io);
+
+    }
+};
 
 static void runConfmonTest(lcbio_pTABLE io, lcb_confmon *mon)
 {
@@ -151,11 +135,9 @@ TEST_F(ConfmonTest, testCycle)
     lcb_confmon *mon = new Confmon(instance->settings, instance->iotable);
 
     struct listener2 lsn;
-    lsn.base.callback = listen_callback2;
     lsn.io = instance->iotable;
     lsn.reset();
-
-    lcb_confmon_add_listener(mon, &lsn.base);
+    mon->add_listener(&lsn);
 
     mock->makeConnectParams(cropts, NULL);
     clconfig_provider *cccp = mon->get_provider(CLCONFIG_CCCP);

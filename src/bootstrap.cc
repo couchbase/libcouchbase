@@ -20,9 +20,10 @@
 
 
 #define LOGARGS(instance, lvl) instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
-
-static void async_step_callback(clconfig_listener*,clconfig_event_t,clconfig_info*);
 static void initial_bootstrap_error(lcb_t, lcb_error_t,const char*);
+
+using lcb::clconfig::EventType;
+using lcb::clconfig::ConfigInfo;
 
 /**
  * This function is where the configuration actually takes place. We ensure
@@ -30,13 +31,9 @@ static void initial_bootstrap_error(lcb_t, lcb_error_t,const char*);
  * loop stack frame (or one of the small mini functions here) so that we
  * don't accidentally end up destroying resources underneath us.
  */
-static void
-config_callback(clconfig_listener *listener, clconfig_event_t event,
-    clconfig_info *info)
-{
+void lcb_BOOTSTRAP::config_callback(EventType event, ConfigInfo *info) {
     using namespace lcb::clconfig;
-    struct lcb_BOOTSTRAP *bs = static_cast<lcb_BOOTSTRAP *>(listener);
-    lcb_t instance = bs->parent;
+    lcb_t instance = parent;
 
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         if (event == CLCONFIG_EVENT_PROVIDERS_CYCLED) {
@@ -49,17 +46,18 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
     }
 
     instance->last_error = LCB_SUCCESS;
+
     /** Ensure we're not called directly twice again */
-    listener->callback = async_step_callback;
-    lcbio_timer_disarm(bs->tm);
+    configcb_indirect = true;
+    lcbio_timer_disarm(tm);
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
 
     if (info->get_origin() != CLCONFIG_FILE) {
         /* Set the timestamp for the current config to control throttling,
          * but only if it's not an initial file-based config. See CCBC-482 */
-        bs->last_refresh = gethrtime();
-        bs->errcounter = 0;
+        last_refresh = gethrtime();
+        errcounter = 0;
     }
 
     if (info->get_origin() == CLCONFIG_CCCP) {
@@ -76,8 +74,8 @@ config_callback(clconfig_listener *listener, clconfig_event_t event,
         lcb_update_vbconfig(instance, info);
     }
 
-    if (!bs->bootstrapped) {
-        bs->bootstrapped = 1;
+    if (!bootstrapped) {
+        bootstrapped = true;
         lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
 
         if (instance->type == LCB_TYPE_BUCKET &&
@@ -136,32 +134,36 @@ static void async_refresh(void *arg)
     clconfig_info *info;
 
     info = bs->parent->confmon->get_config();
-    config_callback(bs, lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
+    bs->config_callback(lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
 }
 
 /**
  * set_next listener callback which schedules an async call to our config
  * callback.
  */
-static void
-async_step_callback(clconfig_listener *listener, clconfig_event_t event,
-    clconfig_info *info)
-{
-    lcb_BOOTSTRAP *bs = static_cast<lcb_BOOTSTRAP *>(listener);
-
+void
+lcb_BOOTSTRAP::schedule_config_callback(lcb::clconfig::EventType event) {
     if (event != lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
     }
 
-    if (lcbio_timer_armed(bs->tm) && lcbio_timer_get_target(bs->tm) == async_refresh) {
-        lcb_log(LOGARGS(bs->parent, DEBUG), "Timer already present..");
+    if (lcbio_timer_armed(tm) && lcbio_timer_get_target(tm) == async_refresh) {
+        lcb_log(LOGARGS(parent, DEBUG), "Timer already present..");
         return;
     }
 
-    lcb_log(LOGARGS(bs->parent, INFO), "Got async step callback..");
-    lcbio_timer_set_target(bs->tm, async_refresh);
-    lcbio_async_signal(bs->tm);
-    (void)info;
+    lcb_log(LOGARGS(parent, INFO), "Got async step callback..");
+    lcbio_timer_set_target(tm, async_refresh);
+    lcbio_async_signal(tm);
+}
+
+lcb_BOOTSTRAP::lcb_BOOTSTRAP(lcb_t instance)
+    : parent(instance),
+      tm(lcbio_timer_new(parent->iotable, this, initial_timeout)),
+      last_refresh(0),
+      errcounter(0),
+      bootstrapped(false),
+      configcb_indirect(false) {
 }
 
 lcb_error_t
@@ -171,15 +173,9 @@ lcb_bootstrap_common(lcb_t instance, int options)
     hrtime_t now = gethrtime();
 
     if (!bs) {
-        bs = reinterpret_cast<lcb_BOOTSTRAP*>(calloc(1, sizeof(*instance->bootstrap)));
-        if (!bs) {
-            return LCB_CLIENT_ENOMEM;
-        }
-
-        bs->tm = lcbio_timer_new(instance->iotable, bs, initial_timeout);
+        bs = new lcb_BOOTSTRAP(instance);
         instance->bootstrap = bs;
-        bs->parent = instance;
-        lcb_confmon_add_listener(instance->confmon, bs);
+        instance->confmon->add_listener(bs);
     }
 
     if (instance->confmon->is_refreshing()) {
@@ -206,15 +202,11 @@ lcb_bootstrap_common(lcb_t instance, int options)
     }
 
     if (options == LCB_BS_REFRESH_INITIAL) {
+        bs->configcb_indirect = false;
         instance->confmon->prepare();
-
-        bs->clconfig_listener::callback = config_callback;
         lcbio_timer_set_target(bs->tm, initial_timeout);
         lcbio_timer_rearm(bs->tm, LCBT_SETTING(instance, config_timeout));
         lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
-    } else {
-        /** No initial timer */
-        bs->clconfig_listener::callback = async_step_callback;
     }
 
     /* Reset the counters */
@@ -226,19 +218,21 @@ lcb_bootstrap_common(lcb_t instance, int options)
     return LCB_SUCCESS;
 }
 
+lcb_BOOTSTRAP::~lcb_BOOTSTRAP() {
+    if (tm) {
+        lcbio_timer_destroy(tm);
+    }
+}
+
 void lcb_bootstrap_destroy(lcb_t instance)
 {
     struct lcb_BOOTSTRAP *bs = instance->bootstrap;
     if (!bs) {
         return;
     }
-    if (bs->tm) {
-        lcbio_timer_destroy(bs->tm);
-    }
-
-    lcb_confmon_remove_listener(instance->confmon, bs);
-    free(bs);
+    instance->confmon->remove_listener(bs);
     instance->bootstrap = NULL;
+    delete bs;
 }
 
 LIBCOUCHBASE_API

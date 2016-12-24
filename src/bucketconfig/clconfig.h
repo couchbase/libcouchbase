@@ -19,9 +19,7 @@
 #define LCB_CLCONFIG_H
 
 #include "hostlist.h"
-#include "list.h"
 #include <list>
-#include "simplestring.h"
 #include <lcbio/timer-ng.h>
 
 /** @file */
@@ -326,6 +324,32 @@ struct Confmon {
         return all_providers[m];
     }
 
+    /**
+     * @brief Register a listener to be invoked on state changes and events
+     *
+     * Adds a 'listener' object to be called at each configuration update. The
+     * listener may co-exist with other listeners (though it should never be added
+     * twice). When a new configuration is received and accept, the listener's
+     * clconfig_listener::callback field will be invoked with it.
+     *
+     * The callback will continue to be invoked for each new configuration received
+     * until remove_listener is called. Note that the listener is not allocated
+     * by the confmon and its responsibility is the user's
+     *
+     * @param mon the monitor
+     * @param listener the listener. The listener's contents are not copied into
+     * confmon and should thus remain valid until it is removed
+     */
+    void add_listener(Listener* lsn);
+
+    /**
+     * @brief Unregister (and remove) a listener added via lcb_confmon_add_listener()
+     * @param mon the monitor
+     * @param listener the listener
+     */
+    void remove_listener(Listener *lsn);
+
+
     /**Current provider. This provider may either fail or succeed.
      * In either case unless the provider can provide us with a specific
      * config which is newer than the one we have, it will roll over to the
@@ -339,8 +363,10 @@ struct Confmon {
      * configuration */
     ConfigInfo * config;
 
+    typedef std::list<Listener*> ListenerList;
     /**  List of listeners for events */
-    lcb_list_t listeners;
+    ListenerList listeners;
+
     lcb_settings *settings;
     lcb_error_t last_error;
     lcbio_pTABLE iot;
@@ -544,22 +570,20 @@ private:
  * for a variety of events the listener can know.
  */
 struct Listener {
+    virtual ~Listener() {
+    }
+
     /** Linked list node */
     lcb_list_t ll;
-
-    /** Monitor object */
-    Confmon *parent;
 
     /**
      * Callback invoked for significant events
      *
-     * @param lsn the listener structure itself
      * @param event the event which took place
      * @param config the configuration associated with the event. Note that
      * `config` may also be NULL
      */
-    void (*callback)(Listener *lsn, EventType event, ConfigInfo *config);
-
+    virtual void clconfig_lsn(EventType event, ConfigInfo *config) = 0;
 };
 
 } // clconfig
@@ -591,32 +615,6 @@ typedef lcb::clconfig::Listener clconfig_listener;
 #define PROVIDER_SET_ERROR(p, e) (p)->parent->last_error = e
 
 extern "C" {
-
-/**
- * @brief Register a listener to be invoked on state changes and events
- *
- * Adds a 'listener' object to be called at each configuration update. The
- * listener may co-exist with other listeners (though it should never be added
- * twice). When a new configuration is received and accept, the listener's
- * clconfig_listener::callback field will be invoked with it.
- *
- * The callback will continue to be invoked for each new configuration received
- * until remove_listener is called. Note that the listener is not allocated
- * by the confmon and its responsibility is the user's
- *
- * @param mon the monitor
- * @param listener the listener. The listener's contents are not copied into
- * confmon and should thus remain valid until it is removed
- */
-LIBCOUCHBASE_API
-void lcb_confmon_add_listener(lcb_confmon *mon, clconfig_listener *listener);
-/**
- * @brief Unregister (and remove) a listener added via lcb_confmon_add_listener()
- * @param mon the monitor
- * @param listener the listener
- */
-LIBCOUCHBASE_API
-void lcb_confmon_remove_listener(lcb_confmon *mon, clconfig_listener *listener);
 
 /**
  * @name File Provider-specific APIs

@@ -68,7 +68,6 @@ Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_)
       state(0),
       last_stop_us(0) {
 
-    lcb_list_init(&listeners);
     lcbio_table_ref(iot);
     lcb_settings_ref(settings);
 
@@ -340,23 +339,19 @@ ConfigInfo::ConfigInfo(lcbvb_CONFIG *config_, Method origin_)
     : vbc(config_), cmpclock(gethrtime()), refcount(1), origin(origin_) {
 }
 
-void lcb_confmon_add_listener(lcb_confmon *mon, clconfig_listener *listener)
-{
-    listener->parent = mon;
-    lcb_list_append(&mon->listeners, &listener->ll);
+void Confmon::add_listener(Listener *lsn) {
+    listeners.push_back(lsn);
 }
 
-void lcb_confmon_remove_listener(lcb_confmon *mon, clconfig_listener *listener)
-{
-    lcb_list_delete(&listener->ll);
-    (void)mon;
+void Confmon::remove_listener(Listener *lsn) {
+    listeners.remove(lsn);
 }
 
 void Confmon::invoke_listeners(clconfig_event_t event, clconfig_info *info) {
-    lcb_list_t *ll, *ll_next;
-    LCB_LIST_SAFE_FOR(ll, ll_next, &listeners) {
-        clconfig_listener *lsn = LCB_LIST_ITEM(ll, clconfig_listener, ll);
-        lsn->callback(lsn, event, info);
+    ListenerList::iterator ii = listeners.begin();
+    while (ii != listeners.end()) {
+        ListenerList::iterator cur = ii++;
+        (*cur)->clconfig_lsn(event, info);
     }
 }
 
