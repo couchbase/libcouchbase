@@ -28,7 +28,7 @@ static void async_start(void *);
 
 using namespace lcb::clconfig;
 
-Provider* Confmon::next_active(clconfig_provider *cur) {
+Provider* Confmon::next_active(Provider *cur) {
     ProviderList::iterator ii = std::find(
         active_providers.begin(), active_providers.end(), cur);
 
@@ -49,7 +49,7 @@ Provider* Confmon::first_active()
 }
 
 static const char *
-provider_string(clconfig_method_t type) {
+provider_string(Method type) {
     if (type == CLCONFIG_HTTP) { return "HTTP"; }
     if (type == CLCONFIG_CCCP) { return "CCCP"; }
     if (type == CLCONFIG_FILE) { return "FILE"; }
@@ -86,7 +86,7 @@ void Confmon::prepare() {
     lcb_log(LOGARGS(this, DEBUG), "Preparing providers (this may be called multiple times)");
 
     for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
-        clconfig_provider *cur = all_providers[ii];
+        Provider *cur = all_providers[ii];
         if (cur) {
             if (cur->enabled) {
                 active_providers.push_back(cur);
@@ -118,7 +118,7 @@ Confmon::~Confmon() {
     }
 
     for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
-        clconfig_provider *provider = all_providers[ii];
+        Provider *provider = all_providers[ii];
         if (provider == NULL) {
             continue;
         }
@@ -130,7 +130,7 @@ Confmon::~Confmon() {
     lcb_settings_unref(settings);
 }
 
-int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
+int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
 {
     unsigned ii;
 
@@ -168,7 +168,7 @@ int Confmon::do_set_next(clconfig_info *new_config, bool notify_miss)
     }
 
     for (ii = 0; ii < CLCONFIG_MAX; ii++) {
-        clconfig_provider *cur = all_providers[ii];
+        Provider *cur = all_providers[ii];
         if (cur && cur->enabled) {
             cur->config_updated(new_config->vbc);
         }
@@ -224,7 +224,7 @@ void Confmon::provider_failed(Provider *provider, lcb_error_t reason) {
     }
 }
 
-void Confmon::provider_got_config(Provider *, clconfig_info *config_) {
+void Confmon::provider_got_config(Provider *, ConfigInfo *config_) {
     do_set_next(config_, true);
     stop();
 }
@@ -234,7 +234,7 @@ bool Confmon::do_next_provider()
     state &= ~CONFMON_S_ITERGRACE;
     for (ProviderList::const_iterator ii = active_providers.begin();
             ii != active_providers.end(); ++ii) {
-        clconfig_info *info;
+        ConfigInfo *info;
         Provider* cached_provider = *ii;
         info = cached_provider->get_cached();
         if (!info) {
@@ -302,7 +302,7 @@ void Confmon::stop() {
     state = CONFMON_S_INACTIVE;
 }
 
-Provider::Provider(lcb_confmon *parent_, clconfig_method_t type_)
+Provider::Provider(Confmon *parent_, Method type_)
     : type(type_), enabled(false), parent(parent_) {
 }
 
@@ -347,7 +347,7 @@ void Confmon::remove_listener(Listener *lsn) {
     listeners.remove(lsn);
 }
 
-void Confmon::invoke_listeners(clconfig_event_t event, clconfig_info *info) {
+void Confmon::invoke_listeners(EventType event, ConfigInfo *info) {
     ListenerList::iterator ii = listeners.begin();
     while (ii != listeners.end()) {
         ListenerList::iterator cur = ii++;
@@ -384,7 +384,7 @@ void Confmon::dump(FILE *fp) {
 
 
     for (size_t ii = 0; ii < CLCONFIG_MAX; ii++) {
-        clconfig_provider *cur = all_providers[ii];
+        Provider *cur = all_providers[ii];
         if (!cur) {
             continue;
         }

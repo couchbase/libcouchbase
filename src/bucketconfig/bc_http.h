@@ -57,7 +57,7 @@ struct HttpProvider : Provider {
     /* Overrides */
     bool pause();
     lcb_error_t refresh();
-    clconfig_info* get_cached();
+    ConfigInfo* get_cached();
     void config_updated(lcbvb_CONFIG*);
     void configure_nodes(const lcb::Hostlist&);
     const lcb::Hostlist* get_nodes() const;
@@ -88,8 +88,8 @@ struct HttpProvider : Provider {
     lcb::Hostlist *nodes;
 
     /** The cached configuration. */
-    clconfig_info *current_config;
-    clconfig_info *last_parsed;
+    ConfigInfo *current_config;
+    ConfigInfo *last_parsed;
 
     int generation;
     bool try_nexturi;

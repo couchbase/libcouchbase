@@ -293,7 +293,7 @@ HANDLER(config_transport) {
 
 HANDLER(config_nodes) {
     const char *node_strs = reinterpret_cast<const char*>(arg);
-    clconfig_provider *target;
+    lcb::clconfig::Provider *target;
     lcb::Hostlist hostlist;
     lcb_error_t err;
 
@@ -328,11 +328,12 @@ HANDLER(init_providers) {
 }
 
 HANDLER(config_cache_handler) {
-    clconfig_provider *provider;
+    using namespace lcb::clconfig;
+    Provider *provider;
 
     provider = instance->confmon->get_provider(lcb::clconfig::CLCONFIG_FILE);
     if (mode == LCB_CNTL_SET) {
-        bool rv = lcb::clconfig::file_set_filename(provider,
+        bool rv = file_set_filename(provider,
             reinterpret_cast<const char*>(arg),
             cmd == LCB_CNTL_CONFIGCACHE_RO);
 
@@ -342,7 +343,7 @@ HANDLER(config_cache_handler) {
         }
         return LCB_ERROR;
     } else {
-        *(const char **)arg = lcb::clconfig::file_get_filename(provider);
+        *(const char **)arg = file_get_filename(provider);
         return LCB_SUCCESS;
     }
 }

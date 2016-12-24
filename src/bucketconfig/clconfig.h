@@ -41,22 +41,22 @@
  * <ol>
  *
  * <li>
- * There is a _Configuration Monitor_ object (lcb_confmon) which acts
+ * There is a _Configuration Monitor_ object (Confmon) which acts
  * as the configuration supervisor. It is responsible for returning
  * configuration objects to those entities which request it.
  * </li>
  *
  * <li>
- * There are multiple _Configuration Provider_ (clconfig_provider) objects.
+ * There are multiple _Configuration Provider_ (Provider) objects.
  * These providers aggregate configurations from multiple sources and
  * implement a common interface to:
  *
  *  <ol>
  *  <li>Return a _quick_ configuration without fetching from network or disk
- *  (see clconfig_provider::get_cached())</i>
+ *  (see Provider::get_cached())</i>
 
  *  <li>Schedule a refresh to retrieve the latest configuration from the
- *  network (see clconfig_provider::refresh())</li>
+ *  network (see Provider::refresh())</li>
  *
  *  <li>Notify the monitor that it has received a new configuration. The
  *  monitor itself will determine whether or not to accept the new
@@ -68,7 +68,7 @@
  * _Configuration Info_ objects. These objects are refcounted wrappers
  * around vbucket configuration handles. They have a refcount and also an
  * integer which can be used to compare with other objects for 'freshness'.
- * See clconfig_info
+ * See ConfigInfo
  * </li>
  *
  * <li>
@@ -76,7 +76,7 @@
  * and are invoked whenever a new valid configuration is detected. This is
  * really only ever used during bootstrap or testing where we are explicitly
  * waiting for a configuration without having any actual commands to schedule.
- * See clconfig_listener
+ * See Listener
  * </li>
  * </ol>
  */
@@ -219,7 +219,7 @@ struct Confmon {
     /**
      * @brief Cancel a pending configuration refresh.
      *
-     * Stops the monitor. This will call clconfig_provider::pause() for each active
+     * Stops the monitor. This will call Provider::pause() for each active
      * provider. Typically called before destruction or when a new configuration
      * has been found.
      *
@@ -330,7 +330,7 @@ struct Confmon {
      * Adds a 'listener' object to be called at each configuration update. The
      * listener may co-exist with other listeners (though it should never be added
      * twice). When a new configuration is received and accept, the listener's
-     * clconfig_listener::callback field will be invoked with it.
+     * Listener::callback field will be invoked with it.
      *
      * The callback will continue to be invoked for each new configuration received
      * until remove_listener is called. Note that the listener is not allocated
@@ -700,12 +700,4 @@ lcb_error_t mcraw_update(Provider *pb, const char *nodes);
 
 } // clconfig
 } // lcb
-
-typedef lcb::clconfig::Provider clconfig_provider, clconfig_provider_st;
-typedef lcb::clconfig::Confmon lcb_confmon;
-typedef lcb::clconfig::Confmon lcb_confmon_st;
-typedef lcb::clconfig::Method clconfig_method_t;
-typedef lcb::clconfig::EventType clconfig_event_t;
-typedef lcb::clconfig::ConfigInfo clconfig_info;
-typedef lcb::clconfig::Listener clconfig_listener;
 #endif /* LCB_CLCONFIG_H */

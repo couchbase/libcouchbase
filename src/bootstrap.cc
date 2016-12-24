@@ -131,7 +131,7 @@ static void async_refresh(void *arg)
 {
     /** Get the best configuration and run stuff.. */
     lcb_BOOTSTRAP *bs = reinterpret_cast<lcb_BOOTSTRAP*>(arg);
-    clconfig_info *info;
+    ConfigInfo *info;
 
     info = bs->parent->confmon->get_config();
     bs->config_callback(lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, info);

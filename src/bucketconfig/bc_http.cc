@@ -62,7 +62,7 @@ void HttpProvider::close_current()
 static lcb_error_t
 io_error(HttpProvider *http, lcb_error_t origerr)
 {
-    lcb_confmon *mon = http->parent;
+    Confmon *mon = http->parent;
     lcb_settings *settings = mon->settings;
 
     http->close_current();
@@ -446,7 +446,7 @@ lcb_error_t HttpProvider::refresh() {
     return LCB_SUCCESS;
 }
 
-clconfig_info* HttpProvider::get_cached() {
+ConfigInfo* HttpProvider::get_cached() {
     return current_config;
 }
 
@@ -574,6 +574,6 @@ const lcb_host_t* lcb::clconfig::http_get_host(const Provider *p)
     return NULL;
 }
 
-Provider* lcb::clconfig::new_http_provider(lcb_confmon* mon) {
+Provider* lcb::clconfig::new_http_provider(Confmon* mon) {
     return new HttpProvider(mon);
 }

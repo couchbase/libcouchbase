@@ -308,7 +308,7 @@ replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
 void lcb_update_vbconfig(lcb_t instance, lcb_pCONFIGINFO config)
 {
     lcb_configuration_t change_status;
-    clconfig_info *old_config = instance->cur_configinfo;
+    lcb::clconfig::ConfigInfo *old_config = instance->cur_configinfo;
     mc_CMDQUEUE *q = &instance->cmdq;
 
     instance->cur_configinfo = config;

@@ -39,7 +39,7 @@ struct CccpCookie;
 using namespace lcb::clconfig;
 
 struct CccpProvider : public Provider {
-    CccpProvider(lcb_confmon *);
+    CccpProvider(Confmon *);
     ~CccpProvider();
 
     void release_socket(bool can_reuse);
@@ -55,7 +55,7 @@ struct CccpProvider : public Provider {
     void dump(FILE*) const; // Override
     lcb_error_t refresh(); // Override
 
-    clconfig_info *get_cached() /* Override */ {
+    ConfigInfo *get_cached() /* Override */ {
         return config;
     }
 
@@ -69,7 +69,7 @@ struct CccpProvider : public Provider {
     }
 
     lcb::Hostlist *nodes;
-    clconfig_info *config;
+    ConfigInfo *config;
     bool server_active;
     lcbio_pTIMER timer;
     lcb_t instance;
@@ -180,7 +180,7 @@ CccpProvider::update(const char *host, const char *data)
     /** TODO: replace this with lcbvb_ names */
     lcbvb_CONFIG* vbc;
     int rv;
-    clconfig_info *new_config;
+    ConfigInfo *new_config;
     vbc = lcbvb_create();
 
     if (!vbc) {
@@ -444,7 +444,7 @@ void CccpProvider::dump(FILE *fp) const {
     fprintf(fp, "## END CCCP PROVIDER DUMP ##\n");
 }
 
-CccpProvider::CccpProvider(lcb_confmon *mon)
+CccpProvider::CccpProvider(Confmon *mon)
     : Provider(mon, CLCONFIG_CCCP),
       nodes(new lcb::Hostlist()),
       config(NULL),
@@ -456,6 +456,6 @@ CccpProvider::CccpProvider(lcb_confmon *mon)
     std::memset(&creq, 0, sizeof creq);
 }
 
-clconfig_provider_st* lcb::clconfig::new_cccp_provider(lcb_confmon *mon) {
+Provider* lcb::clconfig::new_cccp_provider(Confmon *mon) {
     return new CccpProvider(mon);
 }

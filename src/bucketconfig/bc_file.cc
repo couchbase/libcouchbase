@@ -25,7 +25,7 @@
 
 #define CONFIG_CACHE_MAGIC "{{{fb85b563d0a8f65fa8d3d58f1b3a0708}}}"
 
-#define LOGARGS(pb, lvl) static_cast<clconfig_provider*>(pb)->parent->settings, "bc_file", LCB_LOG_##lvl, __FILE__, __LINE__
+#define LOGARGS(pb, lvl) static_cast<Provider*>(pb)->parent->settings, "bc_file", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOGFMT "(cache=%s) "
 #define LOGID(fb) fb->filename.c_str()
 
@@ -45,13 +45,13 @@ struct FileProvider : Provider, Listener {
     void write_cache(lcbvb_CONFIG *vbc);
 
     /* Overrides */
-    clconfig_info *get_cached();
+    ConfigInfo *get_cached();
     lcb_error_t refresh();
     void dump(FILE *) const;
     void clconfig_lsn(EventType, ConfigInfo*);
 
     std::string filename;
-    clconfig_info *config;
+    ConfigInfo *config;
     time_t last_mtime;
     int last_errno;
     bool is_readonly; /* Whether the config cache should _not_ overwrite the file */
@@ -121,7 +121,7 @@ FileProvider::Status FileProvider::load_cache()
         goto GT_DONE;
     }
 
-    if (strcmp(vbc->bname, clconfig_provider::parent->settings->bucket) != 0) {
+    if (strcmp(vbc->bname, Provider::parent->settings->bucket) != 0) {
         lcb_log(LOGARGS(this, ERROR), LOGFMT "Bucket name in file is different from the one requested", LOGID(this));
         goto GT_DONE;
     }
@@ -162,7 +162,7 @@ void FileProvider::write_cache(lcbvb_CONFIG *cfg)
     }
 }
 
-clconfig_info* FileProvider::get_cached() {
+ConfigInfo* FileProvider::get_cached() {
     return filename.empty() ? NULL : config;
 }
 
@@ -222,7 +222,7 @@ void FileProvider::dump(FILE *fp) const {
 
 }
 
-FileProvider::FileProvider(lcb_confmon *parent_)
+FileProvider::FileProvider(Confmon *parent_)
     : Provider(parent_, CLCONFIG_FILE),
       config(NULL), last_mtime(0), last_errno(0), is_readonly(false),
       timer(lcbio_timer_new(parent_->iot, this, async_callback)) {
@@ -244,7 +244,7 @@ static std::string mkcachefile(const char *name, const char *bucket)
     }
 }
 
-bool lcb::clconfig::file_set_filename(clconfig_provider *p, const char *f, bool ro)
+bool lcb::clconfig::file_set_filename(Provider *p, const char *f, bool ro)
 {
     FileProvider *provider = static_cast<FileProvider*>(p);
     provider->enabled = 1;
@@ -264,7 +264,7 @@ bool lcb::clconfig::file_set_filename(clconfig_provider *p, const char *f, bool 
 }
 
 const char *
-lcb::clconfig::file_get_filename(clconfig_provider *p)
+lcb::clconfig::file_get_filename(Provider *p)
 {
     FileProvider *fp = static_cast<FileProvider*>(p);
     if (fp->filename.empty()) {
@@ -275,11 +275,11 @@ lcb::clconfig::file_get_filename(clconfig_provider *p)
 }
 
 void
-lcb::clconfig::file_set_readonly(clconfig_provider *p, bool val)
+lcb::clconfig::file_set_readonly(Provider *p, bool val)
 {
     static_cast<FileProvider*>(p)->is_readonly = val;
 }
 
-clconfig_provider_st* lcb::clconfig::new_file_provider(lcb_confmon *mon) {
+Provider* lcb::clconfig::new_file_provider(Confmon *mon) {
     return new FileProvider(mon);
 }

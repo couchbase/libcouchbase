@@ -32,13 +32,13 @@
 /**
  * Structure containing the bootstrap state for the instance.
  *
- * Derived from clconfig_listener,
+ * Derived from Listener,
  * used to react when a new configuration is received. This
  * is used for both requested configurations (i.e. an explicit call to
  * lcb_bootstrap_common()) as well as unsolicited updates such as
  * HTTP streaming configurations or Not-My-Vbucket "Carrier" updates.
  */
-struct lcb_BOOTSTRAP : clconfig_listener {
+struct lcb_BOOTSTRAP : lcb::clconfig::Listener {
     lcb_BOOTSTRAP(lcb_t);
     ~lcb_BOOTSTRAP();
 

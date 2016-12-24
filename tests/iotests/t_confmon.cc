@@ -35,8 +35,8 @@ struct evstop_listener : Listener {
 };
 
 extern "C" {
-static void listen_callback1(clconfig_listener *lsn, clconfig_event_t event,
-                             clconfig_info *info)
+static void listen_callback1(Listener *lsn, EventType event,
+                             ConfigInfo *info)
 {
 }
 }
@@ -48,8 +48,8 @@ TEST_F(ConfmonTest, testBasic)
     MockEnvironment::getInstance()->createConnection(hw, instance);
 
 
-    lcb_confmon *mon = new Confmon(instance->settings, instance->iotable);
-    clconfig_provider *http = mon->get_provider(CLCONFIG_HTTP);
+    Confmon *mon = new Confmon(instance->settings, instance->iotable);
+    Provider *http = mon->get_provider(CLCONFIG_HTTP);
     http->enable();
     http->configure_nodes(*instance->ht_nodes);
 
@@ -62,7 +62,7 @@ TEST_F(ConfmonTest, testBasic)
     mon->stop();
 
     // Try to find a provider..
-    clconfig_provider *provider = mon->get_provider(CLCONFIG_HTTP);
+    Provider *provider = mon->get_provider(CLCONFIG_HTTP);
     ASSERT_NE(0, provider->enabled);
 
     evstop_listener listener;
@@ -78,8 +78,8 @@ TEST_F(ConfmonTest, testBasic)
 struct listener2 : Listener {
     int call_count;
     lcbio_pTABLE io;
-    clconfig_method_t last_source;
-    std::set<clconfig_event_t> expected_events;
+    Method last_source;
+    std::set<EventType> expected_events;
 
     void reset() {
         call_count = 0;
@@ -112,7 +112,7 @@ struct listener2 : Listener {
     }
 };
 
-static void runConfmonTest(lcbio_pTABLE io, lcb_confmon *mon)
+static void runConfmonTest(lcbio_pTABLE io, Confmon *mon)
 {
     IOT_START(io);
 }
@@ -132,7 +132,7 @@ TEST_F(ConfmonTest, testCycle)
     instance->settings->bc_http_stream_time = 100000;
     instance->memd_sockpool->tmoidle = 100000;
 
-    lcb_confmon *mon = new Confmon(instance->settings, instance->iotable);
+    Confmon *mon = new Confmon(instance->settings, instance->iotable);
 
     struct listener2 lsn;
     lsn.io = instance->iotable;
@@ -140,8 +140,8 @@ TEST_F(ConfmonTest, testCycle)
     mon->add_listener(&lsn);
 
     mock->makeConnectParams(cropts, NULL);
-    clconfig_provider *cccp = mon->get_provider(CLCONFIG_CCCP);
-    clconfig_provider *http = mon->get_provider(CLCONFIG_HTTP);
+    Provider *cccp = mon->get_provider(CLCONFIG_CCCP);
+    Provider *http = mon->get_provider(CLCONFIG_HTTP);
 
     hostlist_t hl = hostlist_create();
     hostlist_add_stringz(hl, cropts.v.v2.mchosts, 11210);

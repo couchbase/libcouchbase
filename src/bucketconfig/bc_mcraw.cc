@@ -28,16 +28,16 @@ using namespace lcb::clconfig;
 
 /* Raw memcached provider */
 
-struct McRawProvider : clconfig_provider {
+struct McRawProvider : Provider {
     /* Current (user defined) configuration */
-    clconfig_info *config;
+    ConfigInfo *config;
     lcbio_pTIMER async;
 
-    McRawProvider(lcb_confmon*);
+    McRawProvider(Confmon*);
     ~McRawProvider();
 
     /* Overrides */
-    clconfig_info* get_cached();
+    ConfigInfo* get_cached();
     lcb_error_t refresh();
     void configure_nodes(const lcb::Hostlist& l);
 };
@@ -54,7 +54,7 @@ async_update(void *arg)
     mcr->parent->provider_got_config(mcr, mcr->config);
 }
 
-clconfig_info* McRawProvider::get_cached() {
+ConfigInfo* McRawProvider::get_cached() {
     return config;
 }
 
@@ -100,7 +100,7 @@ void McRawProvider::configure_nodes(const lcb::Hostlist& hl)
 }
 
 lcb_error_t
-lcb_clconfig_mcraw_update(clconfig_provider *pb, const char *nodes)
+lcb_clconfig_mcraw_update(Provider *pb, const char *nodes)
 {
     lcb_error_t err;
     McRawProvider *mcr = static_cast<McRawProvider*>(pb);
@@ -124,11 +124,11 @@ McRawProvider::~McRawProvider() {
     }
 }
 
-clconfig_provider_st* lcb::clconfig::new_mcraw_provider(lcb_confmon* parent) {
+Provider* lcb::clconfig::new_mcraw_provider(Confmon* parent) {
     return new McRawProvider(parent);
 }
 
-McRawProvider::McRawProvider(lcb_confmon *parent_)
+McRawProvider::McRawProvider(Confmon *parent_)
     : Provider(parent_, CLCONFIG_MCRAW),
       config(NULL), async(lcbio_timer_new(parent->iot, this, async_update)) {
 }
