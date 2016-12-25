@@ -21,6 +21,7 @@
 #include "hostlist.h"
 #include <list>
 #include <lcbio/timer-ng.h>
+#include <lcbio/timer-cxx.h>
 
 /** @file */
 
@@ -267,7 +268,7 @@ struct Confmon {
     }
 
     void stop_real();
-    bool do_next_provider();
+    void do_next_provider();
     int do_set_next(ConfigInfo*, bool notify_miss);
     void invoke_listeners(EventType, ConfigInfo*);
 
@@ -349,7 +350,6 @@ struct Confmon {
      */
     void remove_listener(Listener *lsn);
 
-
     /**Current provider. This provider may either fail or succeed.
      * In either case unless the provider can provide us with a specific
      * config which is newer than the one we have, it will roll over to the
@@ -372,10 +372,10 @@ struct Confmon {
     lcbio_pTABLE iot;
 
     /** This is the async handle for a reentrant start */
-    lcbio_pTIMER as_start;
+    lcb::io::Timer<Confmon, &Confmon::do_next_provider> as_start;
 
     /** Async handle for a reentrant stop */
-    lcbio_pTIMER as_stop;
+    lcb::io::Timer<Confmon, &Confmon::stop_real> as_stop;
 
     /* CONFMON_S_* values. Used internally */
     int state;

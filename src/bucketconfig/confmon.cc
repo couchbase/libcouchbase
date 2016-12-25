@@ -23,9 +23,6 @@
 #define LOGARGS(mon, lvlbase) mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__
 #define LOG(mon, lvlbase, msg) lcb_log(mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__, msg)
 
-static void async_stop(void *);
-static void async_start(void *);
-
 using namespace lcb::clconfig;
 
 Provider* Confmon::next_active(Provider *cur) {
@@ -63,8 +60,8 @@ Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_)
       settings(settings_),
       last_error(LCB_SUCCESS),
       iot(iot_),
-      as_start(lcbio_timer_new(iot_, this, async_start)),
-      as_stop(lcbio_timer_new(iot_, this, async_stop)),
+      as_start(iot_, this),
+      as_stop(iot_, this),
       state(0),
       last_stop_us(0) {
 
@@ -102,15 +99,8 @@ void Confmon::prepare() {
 }
 
 Confmon::~Confmon() {
-    if (as_start) {
-        lcbio_timer_destroy(as_start);
-        as_start = NULL;
-    }
-
-    if (as_stop) {
-        lcbio_timer_destroy(as_stop);
-        as_stop = NULL;
-    }
+    as_start.release();
+    as_stop.release();
 
     if (config) {
         config->decref();
@@ -220,7 +210,7 @@ void Confmon::provider_failed(Provider *provider, lcb_error_t reason) {
         }
         lcb_log(LOGARGS(this, DEBUG), "Will try next provider in %uus", interval);
         state |= CONFMON_S_ITERGRACE;
-        lcbio_timer_rearm(as_start, interval);
+        as_start.rearm(interval);
     }
 }
 
@@ -229,7 +219,7 @@ void Confmon::provider_got_config(Provider *, ConfigInfo *config_) {
     stop();
 }
 
-bool Confmon::do_next_provider()
+void Confmon::do_next_provider()
 {
     state &= ~CONFMON_S_ITERGRACE;
     for (ProviderList::const_iterator ii = active_providers.begin();
@@ -243,23 +233,17 @@ bool Confmon::do_next_provider()
 
         if (do_set_next(info, false)) {
             LOG(this, DEBUG, "Using cached configuration");
-            return true;
         }
     }
 
     lcb_log(LOGARGS(this, TRACE), "Current provider is %s", provider_string(cur_provider->type));
 
     cur_provider->refresh();
-    return false;
-}
-
-static void async_start(void *arg) {
-    reinterpret_cast<Confmon*>(arg)->do_next_provider();
 }
 
 void Confmon::start() {
     lcb_U32 tmonext = 0;
-    lcbio_async_cancel(as_stop);
+    as_stop.cancel();
     if (is_refreshing()) {
         LOG(this, DEBUG, "Refresh already in progress...");
         return;
@@ -276,11 +260,7 @@ void Confmon::start() {
         }
     }
 
-    lcbio_timer_rearm(as_start, tmonext);
-}
-
-static void async_stop(void *arg) {
-    reinterpret_cast<Confmon*>(arg)->stop_real();
+    as_start.rearm(tmonext);
 }
 
 void Confmon::stop_real() {
@@ -297,8 +277,8 @@ void Confmon::stop() {
     if (!is_refreshing()) {
         return;
     }
-    lcbio_timer_disarm(as_start);
-    lcbio_async_signal(as_stop);
+    as_start.cancel();
+    as_stop.cancel();
     state = CONFMON_S_INACTIVE;
 }
 
