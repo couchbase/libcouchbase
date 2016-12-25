@@ -28,7 +28,6 @@ using namespace lcb::clconfig;
 
 static void io_error_handler(lcbio_CTX *, lcb_error_t);
 static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
-static lcb_error_t connect_next(HttpProvider *);
 static void read_common(lcbio_CTX *, unsigned);
 static lcb_error_t setup_request_header(HttpProvider *, const lcb_host_t *);
 
@@ -45,7 +44,7 @@ bool HttpProvider::is_v220_compat() const {
 
 void HttpProvider::close_current()
 {
-    lcbio_timer_disarm(disconn_timer);
+    disconn_timer.cancel();
     if (ioctx) {
         lcbio_ctx_close(ioctx, NULL, NULL);
     } else if (creq){
@@ -59,28 +58,21 @@ void HttpProvider::close_current()
  * Call when there is an error in I/O. This includes read, write, connect
  * and timeouts.
  */
-static lcb_error_t
-io_error(HttpProvider *http, lcb_error_t origerr)
+lcb_error_t HttpProvider::on_io_error(lcb_error_t origerr)
 {
-    Confmon *mon = http->parent;
-    lcb_settings *settings = mon->settings;
+    close_current();
 
-    http->close_current();
-
-    http->creq = lcbio_connect_hl(
-            mon->iot, settings, http->nodes, 0, settings->config_node_timeout,
-            on_connected, http);
-    if (http->creq) {
+    creq = lcbio_connect_hl(
+            parent->iot, &settings(), nodes, 0, settings().config_node_timeout,
+            on_connected, this);
+    if (creq) {
         return LCB_SUCCESS;
     }
-    mon->provider_failed(http, origerr);
-    lcbio_timer_disarm(http->io_timer);
-    if (http->is_v220_compat() && http->parent->config != NULL) {
-        lcb_log(LOGARGS(http, INFO), "HTTP node list finished. Trying to obtain connection from first node in list");
-        if (!lcbio_timer_armed(http->as_reconnect)) {
-            lcbio_timer_rearm(http->as_reconnect,
-                http->settings().grace_next_cycle);
-        }
+    parent->provider_failed(this, origerr);
+    io_timer.cancel();
+    if (is_v220_compat() && parent->config != NULL) {
+        lcb_log(LOGARGS(this, INFO), "HTTP node list finished. Trying to obtain connection from first node in list");
+        as_reconnect.arm_if_disarmed(settings().grace_next_cycle);
     }
     return origerr;
 }
@@ -223,9 +215,7 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     int old_generation = http->generation;
 
     lcb_log(LOGARGS(http, TRACE), LOGFMT "Received %d bytes on HTTP stream", LOGID(http), nr);
-
-    lcbio_timer_rearm(http->io_timer,
-                      http->settings().config_node_timeout);
+    http->io_timer.rearm(http->settings().config_node_timeout);
 
     LCBIO_CTX_ITERFOR(ctx, &riter, nr) {
         unsigned nbuf = lcbio_ctx_risize(&riter);
@@ -233,14 +223,14 @@ read_common(lcbio_CTX *ctx, unsigned nr)
         lcb_error_t err = process_chunk(http, buf, nbuf);
 
         if (err != LCB_SUCCESS) {
-            io_error(http, err);
+           http->on_io_error(err);
             return;
         }
     }
 
     if (http->generation != old_generation) {
         lcb_log(LOGARGS(http, DEBUG), LOGFMT "Generation %d -> %d", LOGID(http), old_generation, http->generation);
-        lcbio_timer_disarm(http->io_timer);
+        http->io_timer.cancel();
         set_new_config(http);
     }
 
@@ -321,7 +311,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Connection to REST API failed with code=0x%x (%d)", err, syserr);
-        io_error(http, err);
+        http->on_io_error(err);
         return;
     }
     host = lcbio_get_host(sock);
@@ -332,7 +322,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
 
     if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Couldn't setup request header");
-        io_error(http, err);
+        http->on_io_error(err);
         return;
     }
 
@@ -345,73 +335,60 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     lcbio_ctx_put(http->ioctx, http->request_buf, strlen(http->request_buf));
     lcbio_ctx_rwant(http->ioctx, 1);
     lcbio_ctx_schedule(http->ioctx);
-    lcbio_timer_rearm(http->io_timer,
-                      http->settings().config_node_timeout);
+    http->io_timer.rearm(http->settings().config_node_timeout);
 }
 
-static void
-timeout_handler(void *arg)
-{
-    HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
-
-    lcb_log(LOGARGS(http, ERR), LOGFMT "HTTP Provider timed out waiting for I/O", LOGID(http));
+void HttpProvider::on_timeout() {
+    lcb_log(LOGARGS(this, ERR), LOGFMT "HTTP Provider timed out waiting for I/O", LOGID(this));
 
     /**
      * If we're not the current provider then ignore the timeout until we're
      * actively requested to do so
      */
-    if (http != http->parent->cur_provider || !http->parent->is_refreshing()) {
-        lcb_log(LOGARGS(http, DEBUG), LOGFMT "Ignoring timeout because we're either not in a refresh or not the current provider", LOGID(http));
+    if (this != parent->cur_provider || !parent->is_refreshing()) {
+        lcb_log(LOGARGS(this, DEBUG), LOGFMT "Ignoring timeout because we're either not in a refresh or not the current provider", LOGID(this));
         return;
     }
 
-    io_error(http, LCB_ETIMEDOUT);
+    on_io_error(LCB_ETIMEDOUT);
 }
 
 
-static lcb_error_t
-connect_next(HttpProvider *http)
-{
-    lcb_settings *settings = http->parent->settings;
-    lcb_log(LOGARGS(http, TRACE), "Starting HTTP Configuration Provider %p", (void*)http);
-    http->close_current();
-    lcbio_timer_disarm(http->as_reconnect);
+lcb_error_t HttpProvider::connect_next() {
+    lcb_log(LOGARGS(this, TRACE), "Starting HTTP Configuration Provider %p", (void*)this);
+    close_current();
+    as_reconnect.cancel();
 
-    if (http->nodes->empty()) {
-        lcb_log(LOGARGS(http, ERROR), "Not scheduling HTTP provider since no nodes have been configured for HTTP bootstrap");
+    if (nodes->empty()) {
+        lcb_log(LOGARGS(this, ERROR), "Not scheduling HTTP provider since no nodes have been configured for HTTP bootstrap");
         return LCB_CONNECT_ERROR;
     }
 
-    http->creq = lcbio_connect_hl(http->parent->iot, settings, http->nodes, 1,
-                                  settings->config_node_timeout, on_connected, http);
-    if (http->creq) {
+    creq = lcbio_connect_hl(parent->iot, &settings(), nodes, 1,
+                            settings().config_node_timeout, on_connected, this);
+    if (creq) {
         return LCB_SUCCESS;
     }
-    lcb_log(LOGARGS(http, ERROR), "%p: Couldn't schedule connection", (void*)http);
+    lcb_log(LOGARGS(this, ERROR), "%p: Couldn't schedule connection", (void*)this);
     return LCB_CONNECT_ERROR;
 }
 
-static void delayed_disconn(void *arg)
-{
-    HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
-    lcb_log(LOGARGS(http, DEBUG), "Stopping HTTP provider %p", (void*)http);
+void HttpProvider::delayed_disconn() {
+    lcb_log(LOGARGS(this, DEBUG), "Stopping HTTP provider %p", (void*)this);
 
     /** closes the connection and cleans up the timer */
-    http->close_current();
-    lcbio_timer_disarm(http->io_timer);
+    close_current();
+    io_timer.cancel();
 }
 
-static void delayed_reconnect(void *arg)
-{
-    HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
-    lcb_error_t err;
-    if (http->ioctx) {
+void HttpProvider::delayed_reconnect() {
+    if (ioctx) {
         /* have a context already */
         return;
     }
-    err = connect_next(http);
+    lcb_error_t err = connect_next();
     if (err != LCB_SUCCESS) {
-        io_error(http, err);
+        on_io_error(err);
     }
 }
 
@@ -419,10 +396,7 @@ bool HttpProvider::pause() {
     if (is_v220_compat()) {
         return LCB_SUCCESS;
     }
-
-    if (!lcbio_timer_armed(disconn_timer)) {
-        lcbio_timer_rearm(disconn_timer, parent->settings->bc_http_stream_time);
-    }
+    disconn_timer.arm_if_disarmed(settings().bc_http_stream_time);
     return LCB_SUCCESS;
 }
 
@@ -436,12 +410,11 @@ lcb_error_t HttpProvider::refresh() {
 
     /** If we need a new socket, we do connect_next. */
     if (ioctx == NULL && creq == NULL) {
-        lcbio_async_signal(as_reconnect);
+        as_reconnect.signal();
     }
-
-    lcbio_timer_disarm(disconn_timer);
+    disconn_timer.cancel();
     if (ioctx) {
-        lcbio_timer_rearm(io_timer, parent->settings->config_node_timeout);
+        io_timer.rearm(settings().config_node_timeout);
     }
     return LCB_SUCCESS;
 }
@@ -498,18 +471,12 @@ HttpProvider::~HttpProvider() {
     reset_stream_state();
     close_current();
     lcbht_free(htp);
+    disconn_timer.release();
+    io_timer.release();
+    as_reconnect.release();
 
     if (current_config) {
         current_config->decref();
-    }
-    if (disconn_timer) {
-        lcbio_timer_destroy(disconn_timer);
-    }
-    if (io_timer) {
-        lcbio_timer_destroy(io_timer);
-    }
-    if (as_reconnect) {
-        lcbio_timer_destroy(as_reconnect);
     }
     if (nodes) {
         delete nodes;
@@ -520,7 +487,7 @@ void HttpProvider::dump(FILE *fp) const {
     fprintf(fp, "## BEGIN HTTP PROVIDER DUMP\n");
     fprintf(fp, "NUMBER OF CONFIGS RECEIVED: %u\n", generation);
     fprintf(fp, "DUMPING I/O TIMER\n");
-    lcbio_timer_dump(io_timer, fp);
+    io_timer.dump(fp);
     if (ioctx) {
         fprintf(fp, "DUMPING CURRENT CONNECTION:\n");
         lcbio_ctx_dump(ioctx, fp);
@@ -536,9 +503,9 @@ HttpProvider::HttpProvider(Confmon *parent_)
     : Provider(parent_, CLCONFIG_HTTP),
       ioctx(NULL),
       htp(lcbht_new(parent->settings)),
-      disconn_timer(lcbio_timer_new(parent->iot, this, delayed_disconn)),
-      io_timer(lcbio_timer_new(parent->iot, this, timeout_handler)),
-      as_reconnect(lcbio_timer_new(parent->iot, this, delayed_reconnect)),
+      disconn_timer(parent->iot, this),
+      io_timer(parent->iot, this),
+      as_reconnect(parent->iot, this),
       nodes(new Hostlist()),
       current_config(NULL),
       last_parsed(NULL),
@@ -552,7 +519,7 @@ HttpProvider::HttpProvider(Confmon *parent_)
 static void
 io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
 {
-    io_error(reinterpret_cast<HttpProvider *>(lcbio_ctx_data(ctx)), err);
+    reinterpret_cast<HttpProvider *>(lcbio_ctx_data(ctx))->on_io_error(err);
 }
 
 

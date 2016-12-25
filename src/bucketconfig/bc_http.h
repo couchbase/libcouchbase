@@ -46,6 +46,10 @@ struct HttpProvider : Provider {
 
     void reset_stream_state();
 
+    void delayed_disconn();
+    void delayed_reconnect();
+    void on_timeout();
+    lcb_error_t on_io_error(lcb_error_t origerr);
 
     /**
      * Closes the current connection and removes the disconn timer along with it
@@ -53,6 +57,8 @@ struct HttpProvider : Provider {
     void close_current();
 
     bool is_v220_compat() const;
+
+    lcb_error_t connect_next();
 
     /* Overrides */
     bool pause();
@@ -80,9 +86,9 @@ struct HttpProvider : Provider {
      * timer waits until the current stream times out and then proceeds to the
      * next connection.
      */
-    lcbio_pTIMER disconn_timer;
-    lcbio_pTIMER io_timer;
-    lcbio_pTIMER as_reconnect;
+    lcb::io::Timer<HttpProvider, &HttpProvider::delayed_disconn> disconn_timer;
+    lcb::io::Timer<HttpProvider, &HttpProvider::on_timeout> io_timer;
+    lcb::io::Timer<HttpProvider, &HttpProvider::delayed_reconnect> as_reconnect;
 
     /** List of hosts to try */
     lcb::Hostlist *nodes;
