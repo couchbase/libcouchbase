@@ -27,7 +27,7 @@
 #include "simplestring.h"
 #include <mcserver/negotiate.h>
 #include <lcbio/lcbio.h>
-#include <lcbio/timer-ng.h>
+#include <lcbio/timer-cxx.h>
 #include <lcbio/ssl.h>
 #include "ctx-log-inl.h"
 #define LOGARGS(cccp, lvl) cccp->parent->settings, "cccp", LCB_LOG_##lvl, __FILE__, __LINE__
@@ -45,6 +45,7 @@ struct CccpProvider : public Provider {
     void release_socket(bool can_reuse);
     lcb_error_t schedule_next_request(lcb_error_t why, bool can_rollover);
     lcb_error_t mcio_error(lcb_error_t why);
+    void on_timeout() { mcio_error(LCB_ETIMEDOUT); }
     lcb_error_t update(const char *host, const char* data);
     void request_config();
     void on_io_read();
@@ -71,7 +72,7 @@ struct CccpProvider : public Provider {
     lcb::Hostlist *nodes;
     ConfigInfo *config;
     bool server_active;
-    lcbio_pTIMER timer;
+    lcb::io::Timer<CccpProvider, &CccpProvider::on_timeout> timer;
     lcb_t instance;
     lcbio_CONNREQ creq;
     lcbio_CTX *ioctx;
@@ -124,7 +125,7 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
     lcb::Server *server;
     lcb_host_t *next_host = nodes->next(can_rollover);
     if (!next_host) {
-        lcbio_timer_disarm(timer);
+        timer.cancel();
         parent->provider_failed(this, err);
         server_active = false;
         return err;
@@ -135,7 +136,7 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
         CccpCookie *cookie = new CccpCookie(this);
         cmdcookie = cookie;
         lcb_log(LOGARGS(this, INFO), "Re-Issuing CCCP Command on server struct %p (%s:%s)", (void*)server, next_host->host, next_host->port);
-        lcbio_timer_rearm(timer, settings().config_node_timeout);
+        timer.rearm(settings().config_node_timeout);
         instance->request_config(cookie, server);
 
     } else {
@@ -162,10 +163,6 @@ CccpProvider::mcio_error(lcb_error_t err)
 
     release_socket(err == LCB_NOT_SUPPORTED);
     return schedule_next_request(err, false);
-}
-
-static void socket_timeout(void *arg) {
-    reinterpret_cast<CccpProvider*>(arg)->mcio_error(LCB_ETIMEDOUT);
 }
 
 /** Update the configuration from a server. */
@@ -221,7 +218,7 @@ void lcb::clconfig::cccp_update(
     CccpProvider *cccp = ck->parent;
 
     if (ck == cccp->cmdcookie) {
-        lcbio_timer_disarm(cccp->timer);
+        cccp->timer.cancel();
         cccp->cmdcookie = NULL;
     }
 
@@ -285,7 +282,7 @@ CccpProvider::pause()
 
     server_active = 0;
     release_socket(false);
-    lcbio_timer_disarm(timer);
+    timer.cancel();
     return true;
 }
 
@@ -298,9 +295,7 @@ CccpProvider::~CccpProvider() {
     if (nodes) {
         delete nodes;
     }
-    if (timer) {
-        lcbio_timer_destroy(timer);
-    }
+    timer.release();
     if (cmdcookie) {
         cmdcookie->ignore_errors = 1;
     }
@@ -401,7 +396,7 @@ CccpProvider::on_io_read()
     lcb_error_t err = update(hoststr.c_str(), jsonstr.c_str());
 
     if (err == LCB_SUCCESS) {
-        lcbio_timer_disarm(timer);
+        timer.cancel();
         server_active = false;
     } else {
         schedule_next_request(LCB_PROTOCOL_ERROR, 0);
@@ -417,7 +412,7 @@ void CccpProvider::request_config()
     lcbio_ctx_put(ioctx, req.data(), req.size());
     lcbio_ctx_rwant(ioctx, 24);
     lcbio_ctx_schedule(ioctx);
-    lcbio_timer_rearm(timer, settings().config_node_timeout);
+    timer.rearm(settings().config_node_timeout);
 }
 
 void CccpProvider::dump(FILE *fp) const {
@@ -426,7 +421,7 @@ void CccpProvider::dump(FILE *fp) const {
     }
 
     fprintf(fp, "## BEGIN CCCP PROVIDER DUMP ##\n");
-    fprintf(fp, "TIMER ACTIVE: %s\n", lcbio_timer_armed(timer) ? "YES" : "NO");
+    fprintf(fp, "TIMER ACTIVE: %s\n", timer.is_armed() ? "YES" : "NO");
     fprintf(fp, "PIPELINE RESPONSE COOKIE: %p\n", (void*)cmdcookie);
     if (ioctx) {
         fprintf(fp, "CCCP Owns connection:\n");
@@ -449,7 +444,7 @@ CccpProvider::CccpProvider(Confmon *mon)
       nodes(new lcb::Hostlist()),
       config(NULL),
       server_active(false),
-      timer(lcbio_timer_new(mon->iot, this, socket_timeout)),
+      timer(mon->iot, this),
       instance(NULL),
       ioctx(NULL),
       cmdcookie(NULL) {
