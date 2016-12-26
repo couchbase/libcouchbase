@@ -29,7 +29,6 @@ using namespace lcb::clconfig;
 static void io_error_handler(lcbio_CTX *, lcb_error_t);
 static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
 static void read_common(lcbio_CTX *, unsigned);
-static lcb_error_t setup_request_header(HttpProvider *, const lcb_host_t *);
 
 /**
  * Determine if we're in compatibility mode with the previous versions of the
@@ -152,13 +151,13 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
         }
         host = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
         http->try_nexturi = 0;
-        if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
+        if ((err = http->setup_request_header(*host)) != LCB_SUCCESS) {
             return err;
         }
 
         /* reset the state? */
         lcbht_reset(http->htp);
-        lcbio_ctx_put(http->ioctx, http->request_buf, strlen(http->request_buf));
+        lcbio_ctx_put(http->ioctx, http->request_buf.c_str(), http->request_buf.size());
         return LCB_SUCCESS;
     }
 
@@ -238,34 +237,24 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     lcbio_ctx_schedule(ctx);
 }
 
-static lcb_error_t
-setup_request_header(HttpProvider *http, const lcb_host_t *host)
-{
-    lcb_settings *settings = http->parent->settings;
-
-    char *buf = http->request_buf;
-    const char *username = NULL, *password = NULL;
-    lcb_size_t nbuf = sizeof(http->request_buf);
-
-    lcb_size_t offset = 0;
-    http->request_buf[0] = '\0';
-
-    if (settings->conntype == LCB_TYPE_BUCKET) {
-        const char *fmt;
-        if (http->uritype == LCB_HTCONFIG_URLTYPE_25PLUS) {
-            fmt = REQBUCKET_TERSE_FMT;
+lcb_error_t HttpProvider::setup_request_header(const lcb_host_t &host) {
+    request_buf.assign("GET ");
+    if (settings().conntype == LCB_TYPE_BUCKET) {
+        if (uritype == LCB_HTCONFIG_URLTYPE_25PLUS) {
+            request_buf.append(REQBUCKET_TERSE_PREFIX);
         } else {
-            fmt = REQBUCKET_COMPAT_FMT;
+            request_buf.append(REQBUCKET_COMPAT_PREFIX);
         }
-        offset = snprintf(buf, nbuf, fmt, settings->bucket);
-
-    } else if (settings->conntype == LCB_TYPE_CLUSTER) {
-        offset = snprintf(buf, nbuf, REQPOOLS_FMT);
-
+        request_buf.append(settings().bucket);
+    } else if (settings().conntype == LCB_TYPE_CLUSTER) {
+        request_buf.append(REQPOOLS_URI);
     } else {
         return LCB_EINVAL;
     }
-    lcbauth_get_upass(settings->auth, &username, &password);
+
+    request_buf.append(" HTTP/1.1\r\n");
+    const char *username = NULL, *password = NULL;
+    lcbauth_get_upass(settings().auth, &username, &password);
 
     if (password) {
         char cred[256], b64[256];
@@ -274,15 +263,11 @@ setup_request_header(HttpProvider *http, const lcb_host_t *host)
         if (lcb_base64_encode(cred, b64, sizeof(b64)) == -1) {
             return LCB_EINTERNAL;
         }
-
-        offset += snprintf(buf + offset, nbuf - offset, AUTHDR_FMT, b64);
+        request_buf.append("Authorization: Basic ").append(b64).append("\r\n");
     }
-
-    offset += snprintf(buf + offset, nbuf - offset, HOSTHDR_FMT,
-                       host->host, host->port);
-
-    offset += snprintf(buf + offset, nbuf - offset, "%s\r\n", LAST_HTTP_HEADER);
-
+    request_buf.append("Host: ").append(host.host).append(":").append(host.port).append("\r\n");
+    request_buf.append("User-Agent: libcouchbase/").append(LCB_VERSION_STRING).append("\r\n");
+    request_buf.append("\r\n");
     return LCB_SUCCESS;
 }
 
@@ -320,7 +305,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     lcbio_sslify_if_needed(sock, http->parent->settings);
     http->reset_stream_state();
 
-    if ((err = setup_request_header(http, host)) != LCB_SUCCESS) {
+    if ((err = http->setup_request_header(*host)) != LCB_SUCCESS) {
         lcb_log(LOGARGS(http, ERR), "Couldn't setup request header");
         http->on_io_error(err);
         return;
@@ -332,7 +317,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     http->ioctx = lcbio_ctx_new(sock, http, &procs);
     http->ioctx->subsys = "bc_http";
 
-    lcbio_ctx_put(http->ioctx, http->request_buf, strlen(http->request_buf));
+    lcbio_ctx_put(http->ioctx, http->request_buf.c_str(), http->request_buf.size());
     lcbio_ctx_rwant(http->ioctx, 1);
     lcbio_ctx_schedule(http->ioctx);
     http->io_timer.rearm(http->settings().config_node_timeout);

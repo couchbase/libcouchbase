@@ -30,11 +30,11 @@
 #include "clconfig.h"
 #include <lcbht/lcbht.h>
 
-#define REQBUCKET_COMPAT_FMT "GET /pools/default/bucketsStreaming/%s HTTP/1.1\r\n"
-#define REQBUCKET_TERSE_FMT "GET /pools/default/bs/%s HTTP/1.1\r\n"
-#define REQPOOLS_FMT "GET /pools/ HTTP/1.1\r\n"
+#define REQBUCKET_COMPAT_PREFIX "/pools/default/bucketsStreaming/"
+#define REQBUCKET_TERSE_PREFIX "/pools/default/bs/"
+
+#define REQPOOLS_URI "/pools/"
 #define HOSTHDR_FMT  "Host: %s:%s\r\n"
-#define AUTHDR_FMT "Authorization: Basic %s\r\n"
 #define LAST_HTTP_HEADER "X-Libcouchbase: " LCB_VERSION_STRING "\r\n"
 #define CONFIG_DELIMITER "\n\n\n\n"
 
@@ -68,6 +68,7 @@ struct HttpProvider : Provider {
     void configure_nodes(const lcb::Hostlist&);
     const lcb::Hostlist* get_nodes() const;
     void dump(FILE*) const;
+    lcb_error_t setup_request_header(const lcb_host_t& host);
     /* END Overrides */
 
     /** Base configuration structure */
@@ -79,7 +80,7 @@ struct HttpProvider : Provider {
      * Buffer to use for writing our request header. Recreated for each
      * connection because of the Host: header
      */
-    char request_buf[1024];
+    std::string request_buf;
 
     /**
      * We only recreate the connection if our current stream 'times out'. This
