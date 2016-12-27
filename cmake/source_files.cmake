@@ -43,7 +43,6 @@ SET(LCB_CORE_SRC
     src/legacy.c
     # src/mcserver/negotiate.c
     src/iofactory.c
-    src/retrychk.c
     src/settings.c
     src/utilities.c)
 
@@ -86,6 +85,7 @@ SET(LCB_CORE_CXXSRC
     src/operations/touch.cc
     src/mcserver/mcserver.cc
     src/mcserver/negotiate.cc
+    src/retrychk.cc
     src/retryq.cc
     src/cntl.cc
     src/wait.cc)
