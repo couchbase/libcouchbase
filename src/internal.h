@@ -57,7 +57,7 @@ namespace lcb {
 class Connspec;
 struct Spechost;
 class RetryQueue;
-struct Bootstrap;
+class Bootstrap;
 namespace clconfig {
 struct Confmon;
 class ConfigInfo;

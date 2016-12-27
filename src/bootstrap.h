@@ -28,6 +28,7 @@
 
 #ifdef __cplusplus
 #include "bucketconfig/clconfig.h"
+#include <lcbio/timer-cxx.h>
 
 namespace lcb {
 /**
@@ -39,21 +40,29 @@ namespace lcb {
  * lcb_bootstrap_common()) as well as unsolicited updates such as
  * HTTP streaming configurations or Not-My-Vbucket "Carrier" updates.
  */
-struct Bootstrap : lcb::clconfig::Listener {
+class Bootstrap : lcb::clconfig::Listener {
+public:
     Bootstrap(lcb_t);
     ~Bootstrap();
-
-    // Override
-    void clconfig_lsn(lcb::clconfig::EventType e, lcb::clconfig::ConfigInfo* i) {
-        if (configcb_indirect) {
-            schedule_config_callback(e);
-        } else {
-            config_callback(e, i);
-        }
-    }
-    void schedule_config_callback(lcb::clconfig::EventType event);
-    void config_callback(lcb::clconfig::EventType, lcb::clconfig::ConfigInfo*);
     lcb_error_t bootstrap(unsigned options);
+
+    hrtime_t get_last_refresh() const {
+        return last_refresh;
+    }
+    void reset_last_refresh() {
+        last_refresh = 0;
+    }
+    size_t get_errcounter() const {
+        return errcounter;
+    }
+
+private:
+    // Override
+    void clconfig_lsn(lcb::clconfig::EventType e, lcb::clconfig::ConfigInfo* i);
+
+    inline void config_callback(lcb::clconfig::EventType, lcb::clconfig::ConfigInfo*);
+    inline void initial_error(lcb_error_t, const char *);
+    void timer_dispatch();
 
     lcb_t parent;
 
@@ -61,7 +70,7 @@ struct Bootstrap : lcb::clconfig::Listener {
      * updates as an asynchronous event (to allow safe updates and avoid
      * reentrancy issues)
      */
-    lcbio_pTIMER tm;
+    lcb::io::Timer<Bootstrap, &Bootstrap::timer_dispatch> tm;
 
     /**
      * Timestamp indicating the most recent configuration activity. This
@@ -85,14 +94,15 @@ struct Bootstrap : lcb::clconfig::Listener {
      */
     unsigned errcounter;
 
-    /** Flag indicating whether the _initial_ configuration has been received */
-    bool bootstrapped;
-
-    /**
-     * Whether the config_callback should be called indirectly, i.e.
-     * asynchronously.
-     */
-    bool configcb_indirect;
+    enum State {
+        /** Initial 'blank' state */
+        S_INITIAL_PRE = 0,
+        /** We got something after our initial callback */
+        S_INITIAL_TRIGGERED,
+        /** Have received at least one valid configuration */
+        S_BOOTSTRAPPED
+    };
+    State state;
 };
 
 /**

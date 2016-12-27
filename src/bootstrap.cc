@@ -20,7 +20,6 @@
 
 
 #define LOGARGS(instance, lvl) instance->settings, "bootstrap", LCB_LOG_##lvl, __FILE__, __LINE__
-static void initial_bootstrap_error(lcb_t, lcb_error_t,const char*);
 
 using lcb::clconfig::EventType;
 using lcb::clconfig::ConfigInfo;
@@ -39,8 +38,7 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
     if (event != CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         if (event == CLCONFIG_EVENT_PROVIDERS_CYCLED) {
             if (!LCBT_VBCONFIG(instance)) {
-                initial_bootstrap_error(
-                    instance, LCB_ERROR, "No more bootstrap providers remain");
+                initial_error(LCB_ERROR, "No more bootstrap providers remain");
             }
         }
         return;
@@ -49,8 +47,11 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
     instance->last_error = LCB_SUCCESS;
 
     /** Ensure we're not called directly twice again */
-    configcb_indirect = true;
-    lcbio_timer_disarm(tm);
+    if (state < S_INITIAL_TRIGGERED) {
+        state = S_INITIAL_TRIGGERED;
+    }
+
+    tm.cancel();
 
     lcb_log(LOGARGS(instance, DEBUG), "Instance configured!");
 
@@ -75,8 +76,8 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
         lcb_update_vbconfig(instance, info);
     }
 
-    if (!bootstrapped) {
-        bootstrapped = true;
+    if (state < S_BOOTSTRAPPED) {
+        state = S_BOOTSTRAPPED;
         lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
 
         if (instance->type == LCB_TYPE_BUCKET &&
@@ -94,24 +95,13 @@ void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
     lcb_maybe_breakout(instance);
 }
 
-
-static void
-initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
-{
-    Bootstrap *bs = instance->bs_state;
-
-    instance->last_error = instance->confmon->get_last_error();
-    if (instance->last_error == LCB_SUCCESS) {
-        instance->last_error = err;
+void Bootstrap::clconfig_lsn(EventType e, ConfigInfo *i) {
+    if (state == S_INITIAL_PRE) {
+        config_callback(e, i);
+    } else if (e == clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG) {
+        lcb_log(LOGARGS(parent, INFO), "Got new config. Will refresh asynchronously");
+        tm.signal();
     }
-    instance->callbacks.error(instance, instance->last_error, errinfo);
-    lcb_log(LOGARGS(instance, ERR), "Failed to bootstrap client=%p. Code=0x%x, Message=%s", (void *)instance, err, errinfo);
-    lcbio_timer_disarm(bs->tm);
-
-    instance->callbacks.bootstrap(instance, instance->last_error);
-
-    lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
-    lcb_maybe_breakout(instance);
 }
 
 /**
@@ -119,51 +109,38 @@ initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
  * instance. It is only scheduled during the initial bootstrap and is only
  * triggered if the initial bootstrap fails to configure in time.
  */
-static void initial_timeout(void *arg)
-{
-    Bootstrap *bs = reinterpret_cast<Bootstrap*>(arg);
-    initial_bootstrap_error(bs->parent, LCB_ETIMEDOUT, "Failed to bootstrap in time");
+void Bootstrap::timer_dispatch() {
+    if (state > S_INITIAL_PRE) {
+        config_callback(clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG,
+            parent->confmon->get_config());
+    } else {
+        // Not yet bootstrapped!
+        initial_error(LCB_ETIMEDOUT, "Failed to bootstrap in time");
+    }
 }
 
-/**
- * Proxy async call to config_callback
- */
-static void async_refresh(void *arg)
-{
-    /** Get the best configuration and run stuff.. */
-    Bootstrap *bs = reinterpret_cast<Bootstrap*>(arg);
-    ConfigInfo *info;
 
-    info = bs->parent->confmon->get_config();
-    bs->config_callback(lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG, info);
-}
-
-/**
- * set_next listener callback which schedules an async call to our config
- * callback.
- */
-void Bootstrap::schedule_config_callback(lcb::clconfig::EventType event) {
-    if (event != lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG) {
-        return;
+void Bootstrap::initial_error(lcb_error_t err, const char *errinfo) {
+    parent->last_error = parent->confmon->get_last_error();
+    if (parent->last_error == LCB_SUCCESS) {
+        parent->last_error = err;
     }
+    parent->callbacks.error(parent, parent->last_error, errinfo);
+    lcb_log(LOGARGS(parent, ERR), "Failed to bootstrap client=%p. Code=0x%x, Message=%s", (void *)parent, err, errinfo);
+    tm.cancel();
 
-    if (lcbio_timer_armed(tm) && lcbio_timer_get_target(tm) == async_refresh) {
-        lcb_log(LOGARGS(parent, DEBUG), "Timer already present..");
-        return;
-    }
+    parent->callbacks.bootstrap(parent, parent->last_error);
 
-    lcb_log(LOGARGS(parent, INFO), "Got async step callback..");
-    lcbio_timer_set_target(tm, async_refresh);
-    lcbio_async_signal(tm);
+    lcb_aspend_del(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
+    lcb_maybe_breakout(parent);
 }
 
 Bootstrap::Bootstrap(lcb_t instance)
     : parent(instance),
-      tm(lcbio_timer_new(parent->iotable, this, initial_timeout)),
+      tm(parent->iotable, this),
       last_refresh(0),
       errcounter(0),
-      bootstrapped(false),
-      configcb_indirect(false) {
+      state(S_INITIAL_PRE) {
     parent->confmon->add_listener(this);
 }
 
@@ -193,10 +170,9 @@ lcb_error_t Bootstrap::bootstrap(unsigned options) {
     }
 
     if (options == BS_REFRESH_INITIAL) {
-        configcb_indirect = false;
+        state = S_INITIAL_PRE;
         parent->confmon->prepare();
-        lcbio_timer_set_target(tm, initial_timeout);
-        lcbio_timer_rearm(tm, LCBT_SETTING(parent, config_timeout));
+        tm.rearm(LCBT_SETTING(parent, config_timeout));
         lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
     }
 
@@ -210,9 +186,7 @@ lcb_error_t Bootstrap::bootstrap(unsigned options) {
 }
 
 Bootstrap::~Bootstrap() {
-    if (tm) {
-        lcbio_timer_destroy(tm);
-    }
+    tm.release();
     parent->confmon->remove_listener(this);
 }
 

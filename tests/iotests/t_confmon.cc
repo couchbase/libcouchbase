@@ -9,14 +9,12 @@
 
 using namespace lcb::clconfig;
 
-namespace {
 class ConfmonTest : public ::testing::Test
 {
     void SetUp() {
         MockEnvironment::Reset();
     }
 };
-}
 
 struct evstop_listener : Listener {
     lcbio_pTABLE io;
@@ -190,19 +188,19 @@ TEST_F(ConfmonTest, testBootstrapMethods)
 
     // Try the various bootstrap times
     lcb::Bootstrap* bs = instance->bs_state;
-    hrtime_t last = bs->last_refresh, cur = 0;
+    hrtime_t last = bs->get_last_refresh(), cur = 0;
 
     // Reset it for the time being
-    bs->last_refresh = 0;
+    bs->reset_last_refresh();
     instance->confmon->stop();
 
     // Refreshing now should work
     instance->bootstrap(lcb::BS_REFRESH_THROTTLE);
     ASSERT_TRUE(instance->confmon->is_refreshing());
 
-    cur = bs->last_refresh;
+    cur = bs->get_last_refresh();
     ASSERT_GT(cur, 0);
-    ASSERT_EQ(0, bs->errcounter);
+    ASSERT_EQ(0, bs->get_errcounter());
     last = cur;
 
     // Stop it, so the state is reset
@@ -210,12 +208,12 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     ASSERT_FALSE(instance->confmon->is_refreshing());
 
     instance->bootstrap(lcb::BS_REFRESH_THROTTLE|lcb::BS_REFRESH_INCRERR);
-    ASSERT_EQ(last, bs->last_refresh);
-    ASSERT_EQ(1, bs->errcounter);
+    ASSERT_EQ(last, bs->get_last_refresh());
+    ASSERT_EQ(1, bs->get_errcounter());
 
     // Ensure that a throttled-without-incr doesn't actually incr
     instance->bootstrap(lcb::BS_REFRESH_THROTTLE);
-    ASSERT_EQ(1, bs->errcounter);
+    ASSERT_EQ(1, bs->get_errcounter());
 
     // No refresh yet
     ASSERT_FALSE(instance->confmon->is_refreshing());
