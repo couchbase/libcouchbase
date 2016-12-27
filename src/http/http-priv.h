@@ -118,7 +118,7 @@ struct Request {
     std::vector<const char*> response_headers_clist;
 
     /** Backing buffers for response headers */
-    std::vector<Header> response_headers;
+    std::vector<lcb::htparse::MimeHeader> response_headers;
 
     /** Callback to invoke */
     lcb_RESPCALLBACK callback;
@@ -130,7 +130,7 @@ struct Request {
     lcbio_CONNREQ creq;
 
     /** HTTP Protocol parser */
-    lcbht_pPARSER parser;
+    lcb::htparse::Parser* parser;
 
     /** overrides default timeout if nonzero */
     const uint32_t user_timeout;
@@ -241,7 +241,7 @@ struct Request {
 
     // Helper functions for parsing response data from network
     inline int handle_parse_chunked(const char *buf, unsigned nbuf);
-    inline void assign_response_headers(const lcbht_RESPONSE*);
+    inline void assign_response_headers(const lcb::htparse::Response&);
 
     /**
      * Called when a redirect has happened. pending_redirect must not be empty.

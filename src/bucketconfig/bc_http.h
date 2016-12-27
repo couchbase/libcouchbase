@@ -74,7 +74,7 @@ struct HttpProvider : Provider {
     /** Base configuration structure */
     lcbio_pCONNSTART creq;
     lcbio_CTX *ioctx;
-    lcbht_pPARSER htp;
+    lcb::htparse::Parser* htp;
 
     /**
      * Buffer to use for writing our request header. Recreated for each

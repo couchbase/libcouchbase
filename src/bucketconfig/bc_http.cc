@@ -93,26 +93,26 @@ void set_new_config(HttpProvider *http)
 static lcb_error_t
 process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
 {
+    namespace htp = lcb::htparse;
     lcb_error_t err = LCB_SUCCESS;
-    char *term;
     int rv;
     lcbvb_CONFIG *cfgh;
     unsigned state, oldstate, diff;
-    lcbht_RESPONSE *resp = lcbht_get_response(http->htp);
+    htp::Response& resp = http->htp->get_cur_response();
 
-    oldstate = resp->state;
-    state = lcbht_parse(http->htp, buf, nbuf);
+    oldstate = resp.state;
+    state = http->htp->parse(buf, nbuf);
     diff = state ^ oldstate;
 
-    if (state & LCBHT_S_ERROR) {
+    if (state & htp::Parser::S_ERROR) {
         return LCB_PROTOCOL_ERROR;
     }
 
-    if (diff & LCBHT_S_HEADER) {
+    if (diff & htp::Parser::S_HEADER) {
         /* see that we got a success? */
-        if (resp->status == 200) {
+        if (resp.status == 200) {
             /* nothing */
-        } else if (resp->status == 404) {
+        } else if (resp.status == 404) {
             const int urlmode = http->settings().bc_http_urltype;
             err = LCB_BUCKET_ENOENT;
 
@@ -130,7 +130,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
                 err = LCB_SUCCESS;
                 goto GT_CHECKDONE;
             }
-        } else if (resp->status == 401) {
+        } else if (resp.status == 401) {
             err = LCB_AUTH_ERROR;
         } else {
             err = LCB_ERROR;
@@ -138,7 +138,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
 
         GT_HT_ERROR:
         if (err != LCB_SUCCESS) {
-            lcb_log(LOGARGS(http, ERR), LOGFMT "Got non-success HTTP status code %d", LOGID(http), resp->status);
+            lcb_log(LOGARGS(http, ERR), LOGFMT "Got non-success HTTP status code %d", LOGID(http), resp.status);
             return err;
         }
     }
@@ -146,7 +146,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
     GT_CHECKDONE:
     if (http->try_nexturi) {
         lcb_host_t *host;
-        if (!(state & LCBHT_S_DONE)) {
+        if (!(state & htp::Parser::S_DONE)) {
             return LCB_SUCCESS;
         }
         host = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
@@ -156,36 +156,35 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
         }
 
         /* reset the state? */
-        lcbht_reset(http->htp);
+        http->htp->reset();
         lcbio_ctx_put(http->ioctx, http->request_buf.c_str(), http->request_buf.size());
         return LCB_SUCCESS;
     }
 
     if (http->settings().conntype == LCB_TYPE_CLUSTER) {
         /* don't bother with parsing the actual config */
-        resp->body.nused = 0;
+        resp.body.clear();
         return LCB_SUCCESS;
     }
-    if (!(state & LCBHT_S_BODY)) {
+    if (!(state & htp::Parser::S_BODY)) {
         /* nothing to parse yet */
         return LCB_SUCCESS;
     }
 
     /* seek ahead for strstr */
-    term = strstr(resp->body.base, CONFIG_DELIMITER);
-    if (!term) {
+    size_t termpos = resp.body.find(CONFIG_DELIMITER);
+    if (termpos == std::string::npos) {
         return LCB_SUCCESS;
     }
-
-    *term = '\0';
+    resp.body[termpos] = '\0';
     cfgh = lcbvb_create();
     if (!cfgh) {
         return LCB_CLIENT_ENOMEM;
     }
-    rv = lcbvb_load_json(cfgh, resp->body.base);
+    rv = lcbvb_load_json(cfgh, resp.body.c_str());
     if (rv != 0) {
         lcb_log(LOGARGS(http, ERR), LOGFMT "Failed to parse a valid config from HTTP stream", LOGID(http));
-        lcb_log_badconfig(LOGARGS(http, ERR), cfgh, resp->body.base);
+        lcb_log_badconfig(LOGARGS(http, ERR), cfgh, resp.body.c_str());
         lcbvb_destroy(cfgh);
         return LCB_PROTOCOL_ERROR;
     }
@@ -196,9 +195,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
     http->generation++;
 
     /** Relocate the stream */
-    lcb_string_erase_beginning(&resp->body,
-        (term+sizeof(CONFIG_DELIMITER)-1)-resp->body.base);
-
+    resp.body.erase(0, termpos + sizeof(CONFIG_DELIMITER)-1);
     return LCB_SUCCESS;
 }
 
@@ -283,7 +280,7 @@ void HttpProvider::reset_stream_state() {
         uritype = LCB_HTCONFIG_URLTYPE_COMPAT;
     }
     try_nexturi = false;
-    lcbht_reset(htp);
+    htp->reset();
 }
 
 static void
@@ -455,7 +452,7 @@ const lcb::Hostlist* HttpProvider::get_nodes() const {
 HttpProvider::~HttpProvider() {
     reset_stream_state();
     close_current();
-    lcbht_free(htp);
+    delete htp;
     disconn_timer.release();
     io_timer.release();
     as_reconnect.release();
@@ -487,7 +484,7 @@ void HttpProvider::dump(FILE *fp) const {
 HttpProvider::HttpProvider(Confmon *parent_)
     : Provider(parent_, CLCONFIG_HTTP),
       ioctx(NULL),
-      htp(lcbht_new(parent->settings)),
+      htp(new lcb::htparse::Parser(parent->settings)),
       disconn_timer(parent->iot, this),
       io_timer(parent->iot, this),
       as_reconnect(parent->iot, this),

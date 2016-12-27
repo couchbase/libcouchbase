@@ -30,7 +30,6 @@ FILE(GLOB LCB_RDB_SRC src/rdb/*.c)
 FILE(GLOB LCB_NETBUF_SRC src/netbuf/*.c)
 
 # HTTP protocol management
-FILE(GLOB LCB_HT_SRC src/lcbht/*.c)
 LIST(APPEND LCB_HT_SRC "contrib/http_parser/http_parser.c")
 
 # bucket config ("confmon")
@@ -65,6 +64,7 @@ SET(LCB_CORE_CXXSRC
     src/hostlist.cc
     src/http/http.cc
     src/http/http_io.cc
+    src/lcbht/lcbht.cc
     src/newconfig.cc
     src/n1ql/params.cc
     src/n1ql/n1ql.cc
