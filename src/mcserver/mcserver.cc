@@ -146,11 +146,11 @@ Server::handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt)
              *
              * For this reason, we don't use if (cccp->enabled) {...}
              */
-            bs_options = LCB_BS_REFRESH_THROTTLE;
+            bs_options = BS_REFRESH_THROTTLE;
         } else {
-            bs_options = LCB_BS_REFRESH_ALWAYS;
+            bs_options = BS_REFRESH_ALWAYS;
         }
-        lcb_bootstrap_common(instance, bs_options);
+        instance->bootstrap(bs_options);
     }
 
     if (!lcb_should_retry(settings, oldpkt, LCB_NOT_MY_VBUCKET)) {
@@ -365,8 +365,7 @@ Server::purge(lcb_error_t error, hrtime_t thresh, hrtime_t *next,
     }
 
     if (affected || policy == REFRESH_ALWAYS) {
-        lcb_bootstrap_common(instance,
-            LCB_BS_REFRESH_THROTTLE|LCB_BS_REFRESH_INCRERR);
+        instance->bootstrap(BS_REFRESH_THROTTLE|BS_REFRESH_INCRERR);
     }
     return affected;
 }

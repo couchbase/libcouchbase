@@ -231,7 +231,7 @@ RetryQueue::flush(bool throttle)
              * configuration (i.e. the attempt has not been throttled) then
              * keep the command in there until it has a chance to be scheduled.
              */
-            lcb_bootstrap_common(get_instance(), LCB_BS_REFRESH_THROTTLE);
+            get_instance()->bootstrap(lcb::BS_REFRESH_THROTTLE);
             if (get_instance()->confmon->is_refreshing() ||
                     settings->retry[LCB_RETRY_ON_MISSINGNODE]) {
 

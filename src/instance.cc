@@ -497,8 +497,7 @@ void lcb_destroy(lcb_t instance)
         instance->cur_configinfo = NULL;
     }
     instance->cmdq.config = NULL;
-
-    lcb_bootstrap_destroy(instance);
+    DESTROY(delete, bs_state);
     DESTROY(delete, ht_nodes);
     DESTROY(delete, mc_nodes);
 
@@ -599,7 +598,7 @@ lcb_st::find_server(const lcb_host_t& host) const
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
-    lcb_error_t err = lcb_bootstrap_common(instance, LCB_BS_REFRESH_INITIAL);
+    lcb_error_t err = instance->bootstrap(BS_REFRESH_INITIAL);
     if (err == LCB_SUCCESS) {
         SYNCMODE_INTERCEPT(instance);
     } else {

@@ -189,7 +189,7 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     // Try the various bootstrap times
-    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
+    lcb::Bootstrap* bs = instance->bs_state;
     hrtime_t last = bs->last_refresh, cur = 0;
 
     // Reset it for the time being
@@ -197,7 +197,7 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     instance->confmon->stop();
 
     // Refreshing now should work
-    lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE);
+    instance->bootstrap(lcb::BS_REFRESH_THROTTLE);
     ASSERT_TRUE(instance->confmon->is_refreshing());
 
     cur = bs->last_refresh;
@@ -209,18 +209,18 @@ TEST_F(ConfmonTest, testBootstrapMethods)
     instance->confmon->stop();
     ASSERT_FALSE(instance->confmon->is_refreshing());
 
-    lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE|LCB_BS_REFRESH_INCRERR);
+    instance->bootstrap(lcb::BS_REFRESH_THROTTLE|lcb::BS_REFRESH_INCRERR);
     ASSERT_EQ(last, bs->last_refresh);
     ASSERT_EQ(1, bs->errcounter);
 
     // Ensure that a throttled-without-incr doesn't actually incr
-    lcb_bootstrap_common(instance, LCB_BS_REFRESH_THROTTLE);
+    instance->bootstrap(lcb::BS_REFRESH_THROTTLE);
     ASSERT_EQ(1, bs->errcounter);
 
     // No refresh yet
     ASSERT_FALSE(instance->confmon->is_refreshing());
 
-    lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
+    instance->bootstrap(lcb::BS_REFRESH_ALWAYS);
     ASSERT_TRUE(instance->confmon->is_refreshing());
     instance->confmon->stop();
 }

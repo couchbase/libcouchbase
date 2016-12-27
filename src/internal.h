@@ -57,6 +57,7 @@ namespace lcb {
 class Connspec;
 struct Spechost;
 class RetryQueue;
+struct Bootstrap;
 namespace clconfig {
 struct Confmon;
 class ConfigInfo;
@@ -91,7 +92,6 @@ struct lcb_callback_st {
     lcb_pktflushed_callback pktflushed;
 };
 
-struct lcb_BOOTSTRAP;
 struct lcb_GUESSVB_st;
 
 #ifdef __cplusplus
@@ -100,11 +100,13 @@ typedef std::string* lcb_pSCRATCHBUF;
 typedef lcb::RetryQueue lcb_RETRYQ;
 typedef lcb::clconfig::Confmon* lcb_pCONFMON;
 typedef lcb::clconfig::ConfigInfo *lcb_pCONFIGINFO;
+typedef lcb::Bootstrap lcb_BOOTSTRAP;
 #else
 typedef struct lcb_SCRATCHBUF* lcb_pSCRATCHBUF;
 typedef struct lcb_RETRYQ_st lcb_RETRYQ;
 typedef struct lcb_CONFMON_st* lcb_pCONFMON;
 typedef struct lcb_CONFIGINFO_st* lcb_pCONFIGINFO;
+typedef struct lcb_BOOTSTRAP_st lcb_BOOTSTRAP;
 #endif
 
 struct lcb_st {
@@ -114,7 +116,7 @@ struct lcb_st {
     hostlist_t mc_nodes; /**< List of current memcached endpoints */
     hostlist_t ht_nodes; /**< List of current management endpoints */
     lcb_pCONFIGINFO cur_configinfo; /**< Pointer to current config */
-    struct lcb_BOOTSTRAP *bootstrap; /**< Bootstrapping state */
+    lcb_BOOTSTRAP *bs_state; /**< Bootstrapping state */
     struct lcb_callback_st callbacks; /**< Callback table */
     lcb_HISTOGRAM *kv_timings; /**< Histogram object (for timing) */
     lcb_ASPEND pendops; /**< Pending asynchronous requests */
@@ -144,6 +146,27 @@ struct lcb_st {
     }
     lcb::Server *find_server(const lcb_host_t& host) const;
     lcb_error_t request_config(const void *cookie, lcb::Server* server);
+
+    /**
+     * @brief Request that the handle update its configuration.
+     *
+     * This function acts as a gateway to the more abstract confmon interface.
+     *
+     * @param instance The instance
+     * @param options A set of options specified as flags, indicating under what
+     * conditions a new configuration should be refetched.
+     *
+     * This should be a combination of one or more @ref lcb::BootstrapOptions
+     *
+     * Note, the definition for this function (and the flags)
+     * are found in bootstrap.cc
+     */
+    inline lcb_error_t bootstrap(unsigned options) {
+        if (!bs_state) {
+            bs_state = new lcb::Bootstrap(this);
+        }
+        return bs_state->bootstrap(options);
+    }
     #endif
 };
 

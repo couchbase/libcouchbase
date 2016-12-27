@@ -24,6 +24,7 @@ static void initial_bootstrap_error(lcb_t, lcb_error_t,const char*);
 
 using lcb::clconfig::EventType;
 using lcb::clconfig::ConfigInfo;
+using namespace lcb;
 
 /**
  * This function is where the configuration actually takes place. We ensure
@@ -31,7 +32,7 @@ using lcb::clconfig::ConfigInfo;
  * loop stack frame (or one of the small mini functions here) so that we
  * don't accidentally end up destroying resources underneath us.
  */
-void lcb_BOOTSTRAP::config_callback(EventType event, ConfigInfo *info) {
+void Bootstrap::config_callback(EventType event, ConfigInfo *info) {
     using namespace lcb::clconfig;
     lcb_t instance = parent;
 
@@ -97,7 +98,7 @@ void lcb_BOOTSTRAP::config_callback(EventType event, ConfigInfo *info) {
 static void
 initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
 {
-    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
+    Bootstrap *bs = instance->bs_state;
 
     instance->last_error = instance->confmon->get_last_error();
     if (instance->last_error == LCB_SUCCESS) {
@@ -120,7 +121,7 @@ initial_bootstrap_error(lcb_t instance, lcb_error_t err, const char *errinfo)
  */
 static void initial_timeout(void *arg)
 {
-    struct lcb_BOOTSTRAP *bs = reinterpret_cast<lcb_BOOTSTRAP*>(arg);
+    Bootstrap *bs = reinterpret_cast<Bootstrap*>(arg);
     initial_bootstrap_error(bs->parent, LCB_ETIMEDOUT, "Failed to bootstrap in time");
 }
 
@@ -130,7 +131,7 @@ static void initial_timeout(void *arg)
 static void async_refresh(void *arg)
 {
     /** Get the best configuration and run stuff.. */
-    lcb_BOOTSTRAP *bs = reinterpret_cast<lcb_BOOTSTRAP*>(arg);
+    Bootstrap *bs = reinterpret_cast<Bootstrap*>(arg);
     ConfigInfo *info;
 
     info = bs->parent->confmon->get_config();
@@ -141,8 +142,7 @@ static void async_refresh(void *arg)
  * set_next listener callback which schedules an async call to our config
  * callback.
  */
-void
-lcb_BOOTSTRAP::schedule_config_callback(lcb::clconfig::EventType event) {
+void Bootstrap::schedule_config_callback(lcb::clconfig::EventType event) {
     if (event != lcb::clconfig::CLCONFIG_EVENT_GOT_NEW_CONFIG) {
         return;
     }
@@ -157,82 +157,63 @@ lcb_BOOTSTRAP::schedule_config_callback(lcb::clconfig::EventType event) {
     lcbio_async_signal(tm);
 }
 
-lcb_BOOTSTRAP::lcb_BOOTSTRAP(lcb_t instance)
+Bootstrap::Bootstrap(lcb_t instance)
     : parent(instance),
       tm(lcbio_timer_new(parent->iotable, this, initial_timeout)),
       last_refresh(0),
       errcounter(0),
       bootstrapped(false),
       configcb_indirect(false) {
+    parent->confmon->add_listener(this);
 }
 
-lcb_error_t
-lcb_bootstrap_common(lcb_t instance, int options)
-{
-    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
+lcb_error_t Bootstrap::bootstrap(unsigned options) {
     hrtime_t now = gethrtime();
-
-    if (!bs) {
-        bs = new lcb_BOOTSTRAP(instance);
-        instance->bootstrap = bs;
-        instance->confmon->add_listener(bs);
-    }
-
-    if (instance->confmon->is_refreshing()) {
+    if (parent->confmon->is_refreshing()) {
         return LCB_SUCCESS;
     }
 
-    if (options & LCB_BS_REFRESH_THROTTLE) {
+    if (options & BS_REFRESH_THROTTLE) {
         /* Refresh throttle requested. This is not true if options == ALWAYS */
         hrtime_t next_ts;
-        unsigned errthresh = LCBT_SETTING(instance, weird_things_threshold);
+        unsigned errthresh = LCBT_SETTING(parent, weird_things_threshold);
 
-        if (options & LCB_BS_REFRESH_INCRERR) {
-            bs->errcounter++;
+        if (options & BS_REFRESH_INCRERR) {
+            errcounter++;
         }
-        next_ts = bs->last_refresh;
-        next_ts += LCB_US2NS(LCBT_SETTING(instance, weird_things_delay));
-        if (now < next_ts && bs->errcounter < errthresh) {
-            lcb_log(LOGARGS(instance, INFO),
+        next_ts = last_refresh;
+        next_ts += LCB_US2NS(LCBT_SETTING(parent, weird_things_delay));
+        if (now < next_ts && errcounter < errthresh) {
+            lcb_log(LOGARGS(parent, INFO),
                 "Not requesting a config refresh because of throttling parameters. Next refresh possible in %ums or %u errors. "
                 "See LCB_CNTL_CONFDELAY_THRESH and LCB_CNTL_CONFERRTHRESH to modify the throttling settings",
-                LCB_NS2US(next_ts-now)/1000, (unsigned)errthresh-bs->errcounter);
+                LCB_NS2US(next_ts-now)/1000, (unsigned)errthresh-errcounter);
             return LCB_SUCCESS;
         }
     }
 
-    if (options == LCB_BS_REFRESH_INITIAL) {
-        bs->configcb_indirect = false;
-        instance->confmon->prepare();
-        lcbio_timer_set_target(bs->tm, initial_timeout);
-        lcbio_timer_rearm(bs->tm, LCBT_SETTING(instance, config_timeout));
-        lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
+    if (options == BS_REFRESH_INITIAL) {
+        configcb_indirect = false;
+        parent->confmon->prepare();
+        lcbio_timer_set_target(tm, initial_timeout);
+        lcbio_timer_rearm(tm, LCBT_SETTING(parent, config_timeout));
+        lcb_aspend_add(&parent->pendops, LCB_PENDTYPE_COUNTER, NULL);
     }
 
     /* Reset the counters */
-    bs->errcounter = 0;
-    if (options != LCB_BS_REFRESH_INITIAL) {
-        bs->last_refresh = now;
+    errcounter = 0;
+    if (options != BS_REFRESH_INITIAL) {
+        last_refresh = now;
     }
-    instance->confmon->start();
+    parent->confmon->start();
     return LCB_SUCCESS;
 }
 
-lcb_BOOTSTRAP::~lcb_BOOTSTRAP() {
+Bootstrap::~Bootstrap() {
     if (tm) {
         lcbio_timer_destroy(tm);
     }
-}
-
-void lcb_bootstrap_destroy(lcb_t instance)
-{
-    struct lcb_BOOTSTRAP *bs = instance->bootstrap;
-    if (!bs) {
-        return;
-    }
-    instance->confmon->remove_listener(bs);
-    instance->bootstrap = NULL;
-    delete bs;
+    parent->confmon->remove_listener(this);
 }
 
 LIBCOUCHBASE_API
@@ -257,5 +238,5 @@ LIBCOUCHBASE_API
 void
 lcb_refresh_config(lcb_t instance)
 {
-    lcb_bootstrap_common(instance, LCB_BS_REFRESH_ALWAYS);
+    instance->bootstrap(BS_REFRESH_ALWAYS);
 }
