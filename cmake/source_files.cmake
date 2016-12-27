@@ -73,6 +73,7 @@ SET(LCB_CORE_CXXSRC
     src/operations/durability.cc
     src/operations/durability-cas.cc
     src/operations/durability-seqno.cc
+    src/operations/get.cc
     src/operations/observe-seqno.cc
     src/operations/stats.cc
     src/operations/store.cc
