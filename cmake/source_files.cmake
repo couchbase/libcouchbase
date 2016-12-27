@@ -80,6 +80,7 @@ SET(LCB_CORE_CXXSRC
     src/operations/stats.cc
     src/operations/store.cc
     src/operations/subdoc.cc
+    src/operations/touch.cc
     src/mcserver/mcserver.cc
     src/mcserver/negotiate.cc
     src/retryq.cc
