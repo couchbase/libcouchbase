@@ -17,6 +17,7 @@
 
 #include <lcbio/lcbio.h>
 #include <lcbio/timer-ng.h>
+#include <lcbio/timer-cxx.h>
 #include <libcouchbase/vbucket.h>
 #include "clconfig.h"
 
@@ -29,10 +30,6 @@ using namespace lcb::clconfig;
 /* Raw memcached provider */
 
 struct McRawProvider : Provider {
-    /* Current (user defined) configuration */
-    ConfigInfo *config;
-    lcbio_pTIMER async;
-
     McRawProvider(Confmon*);
     ~McRawProvider();
 
@@ -40,18 +37,20 @@ struct McRawProvider : Provider {
     ConfigInfo* get_cached();
     lcb_error_t refresh();
     void configure_nodes(const lcb::Hostlist& l);
+    void async_update();
+
+    /* Current (user defined) configuration */
+    ConfigInfo *config;
+    lcb::io::Timer<McRawProvider, &McRawProvider::async_update> async;
 };
 
 
-static void
-async_update(void *arg)
-{
-    McRawProvider *mcr = reinterpret_cast<McRawProvider*>(arg);
-    if (!mcr->config) {
-        lcb_log(LOGARGS(mcr, WARN), "No current config set. Not setting configuration");
+void McRawProvider::async_update() {
+    if (!config) {
+        lcb_log(LOGARGS(this, WARN), "No current config set. Not setting configuration");
         return;
     }
-    mcr->parent->provider_got_config(mcr, mcr->config);
+    parent->provider_got_config(this, config);
 }
 
 ConfigInfo* McRawProvider::get_cached() {
@@ -59,7 +58,7 @@ ConfigInfo* McRawProvider::get_cached() {
 }
 
 lcb_error_t McRawProvider::refresh() {
-    lcbio_async_signal(async);
+    async.signal();
     return LCB_SUCCESS;
 }
 
@@ -111,7 +110,7 @@ lcb_clconfig_mcraw_update(Provider *pb, const char *nodes)
     }
 
     pb->configure_nodes(hl);
-    lcbio_async_signal(mcr->async);
+    mcr->async.signal();
     return LCB_SUCCESS;
 }
 
@@ -119,9 +118,7 @@ McRawProvider::~McRawProvider() {
     if (config) {
         config->decref();
     }
-    if (async) {
-        lcbio_timer_destroy(async);
-    }
+    async.release();
 }
 
 Provider* lcb::clconfig::new_mcraw_provider(Confmon* parent) {
@@ -130,5 +127,5 @@ Provider* lcb::clconfig::new_mcraw_provider(Confmon* parent) {
 
 McRawProvider::McRawProvider(Confmon *parent_)
     : Provider(parent_, CLCONFIG_MCRAW),
-      config(NULL), async(lcbio_timer_new(parent->iot, this, async_update)) {
+      config(NULL), async(parent->iot, this) {
 }
