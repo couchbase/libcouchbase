@@ -19,6 +19,7 @@
 #include "clconfig.h"
 #include <lcbio/lcbio.h>
 #include <lcbio/timer-ng.h>
+#include <lcbio/timer-cxx.h>
 #include <fstream>
 #include <iostream>
 #include <istream>
@@ -37,6 +38,7 @@ struct FileProvider : Provider, Listener {
 
     enum Status { CACHE_ERROR, NO_CHANGES, UPDATED };
     Status load_cache();
+    void reload_cache();
     void maybe_remove_file() {
         if (!is_readonly && !filename.empty()) {
             remove(filename.c_str());
@@ -55,7 +57,7 @@ struct FileProvider : Provider, Listener {
     time_t last_mtime;
     int last_errno;
     bool is_readonly; /* Whether the config cache should _not_ overwrite the file */
-    lcbio_pTIMER timer;
+    lcb::io::Timer<FileProvider, &FileProvider::reload_cache> timer;
 };
 
 FileProvider::Status FileProvider::load_cache()
@@ -166,29 +168,23 @@ ConfigInfo* FileProvider::get_cached() {
     return filename.empty() ? NULL : config;
 }
 
-static void async_callback(void *cookie)
-{
-    FileProvider *provider = reinterpret_cast<FileProvider*>(cookie);
-    if (provider->load_cache() == FileProvider::UPDATED) {
-        provider->Provider::parent->provider_got_config(provider, provider->config);
+void FileProvider::reload_cache() {
+    if (load_cache() == UPDATED) {
+        Provider::parent->provider_got_config(this, config);
     } else {
-        provider->Provider::parent->provider_failed(provider, LCB_ERROR);
+        Provider::parent->provider_failed(this, LCB_ERROR);
     }
 }
 
 lcb_error_t FileProvider::refresh() {
-    if (lcbio_timer_armed(timer)) {
-        return LCB_SUCCESS;
+    if (!timer.is_armed()) {
+        timer.signal();
     }
-
-    lcbio_async_signal(timer);
     return LCB_SUCCESS;
 }
 
 FileProvider::~FileProvider() {
-    if (timer) {
-        lcbio_timer_destroy(timer);
-    }
+    timer.release();
     if (config) {
         config->decref();
     }
@@ -225,7 +221,7 @@ void FileProvider::dump(FILE *fp) const {
 FileProvider::FileProvider(Confmon *parent_)
     : Provider(parent_, CLCONFIG_FILE),
       config(NULL), last_mtime(0), last_errno(0), is_readonly(false),
-      timer(lcbio_timer_new(parent_->iot, this, async_callback)) {
+      timer(parent_->iot, this) {
     parent->add_listener(this);
 }
 
