@@ -694,7 +694,6 @@ void cccp_update(const void *cookie, lcb_error_t err,
 
 /**@name Raw Memcached (MCRAW) Provider-specific APIs
  * @{*/
-lcb_error_t mcraw_update(Provider *pb, const char *nodes);
 /**@}*/
 /**@}*/
 

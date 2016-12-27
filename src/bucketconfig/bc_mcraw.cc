@@ -98,22 +98,6 @@ void McRawProvider::configure_nodes(const lcb::Hostlist& hl)
     config = ConfigInfo::create(newconfig, CLCONFIG_MCRAW);
 }
 
-lcb_error_t
-lcb_clconfig_mcraw_update(Provider *pb, const char *nodes)
-{
-    lcb_error_t err;
-    McRawProvider *mcr = static_cast<McRawProvider*>(pb);
-    lcb::Hostlist hl;
-    err = hl.add(nodes, LCB_CONFIG_MCCOMPAT_PORT);
-    if (err != LCB_SUCCESS) {
-        return err;
-    }
-
-    pb->configure_nodes(hl);
-    mcr->async.signal();
-    return LCB_SUCCESS;
-}
-
 McRawProvider::~McRawProvider() {
     if (config) {
         config->decref();
