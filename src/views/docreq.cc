@@ -16,7 +16,7 @@ static void doc_callback(lcb_t,int, const lcb_RESPBASE *);
 lcb_DOCQUEUE *
 lcbdocq_create(lcb_t instance)
 {
-    lcb_DOCQUEUE *q = calloc(1, sizeof *q);
+    lcb_DOCQUEUE *q = reinterpret_cast<lcb_DOCQUEUE*>(calloc(1, sizeof *q));
     q->timer = lcbio_timer_new(instance->iotable, q, docreq_handler);
     q->refcount = 1;
     q->instance = instance;
@@ -79,7 +79,7 @@ lcbdocq_add(lcb_DOCQUEUE *q, lcb_DOCQREQ *req)
 static void
 docreq_handler(void *arg)
 {
-    lcb_DOCQUEUE *q = arg;
+    lcb_DOCQUEUE *q = reinterpret_cast<lcb_DOCQUEUE*>(arg);
     sllist_iterator iter;
     lcb_t instance = q->instance;
 
@@ -157,7 +157,7 @@ invoke_pending(lcb_DOCQUEUE *q)
 
         q->cb_ready(q, dreq);
         if (bufh) {
-            lcb_backbuf_unref(bufh);
+            lcb_backbuf_unref(reinterpret_cast<lcb_BACKBUF>(bufh));
         }
         DOCQ_UNREF(q);
     }
@@ -168,7 +168,7 @@ static void
 doc_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
 {
     const lcb_RESPGET *rg = (const lcb_RESPGET *)rb;
-    lcb_DOCQREQ *dreq = rb->cookie;
+    lcb_DOCQREQ *dreq = reinterpret_cast<lcb_DOCQREQ*>(rb->cookie);
     lcb_DOCQUEUE *q = dreq->parent;
 
     DOCQ_REF(q);
@@ -182,7 +182,7 @@ doc_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
     /* Reference the response data, since we might not be invoking this right
      * away */
     if (rg->rc == LCB_SUCCESS) {
-        lcb_backbuf_ref(dreq->docresp.bufh);
+        lcb_backbuf_ref(reinterpret_cast<lcb_BACKBUF>(dreq->docresp.bufh));
     }
 
     /* Ensure the invoke_pending doesn't destroy us */

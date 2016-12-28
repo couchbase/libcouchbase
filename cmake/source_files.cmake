@@ -87,5 +87,7 @@ SET(LCB_CORE_CXXSRC
     src/mcserver/negotiate.cc
     src/retrychk.cc
     src/retryq.cc
+    src/views/docreq.cc
+    src/views/viewreq.cc
     src/cntl.cc
     src/wait.cc)

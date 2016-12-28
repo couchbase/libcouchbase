@@ -1,20 +1,22 @@
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/views.h>
 #include <libcouchbase/pktfwd.h>
-
 #include <jsparse/parser.h>
+#include <string>
 #include "docreq.h"
 
 struct lcbview_REQUEST_st;
 
-typedef struct {
-    lcb_DOCQREQ base;
+struct lcbview_DOCREQ : lcb_DOCQREQ {
+    lcbview_DOCREQ() : parent(NULL) {
+    }
+
     struct lcbview_REQUEST_st *parent;
     lcb_IOV key;
     lcb_IOV value;
     lcb_IOV geo;
-    char rowbuf[1];
-} lcbview_DOCREQ;
+    std::string rowbuf;
+};
 
 struct lcbview_REQUEST_st {
     /** Current HTTP response to provide in callbacks */

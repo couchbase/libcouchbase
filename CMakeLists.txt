@@ -245,10 +245,6 @@ IF(NOT WIN32 AND LCB_BUILD_DTRACE)
     INCLUDE(cmake/Modules/ConfigureDtrace.cmake)
 ENDIF()
 
-FILE(GLOB LCB_VIEWS_C_SRC src/views/*.c)
-ADD_LIBRARY(lcb_views_c OBJECT ${LCB_VIEWS_C_SRC})
-LCB_UTIL(lcb_views_c)
-
 FILE(GLOB LCB_JSPARSE_SRC src/jsparse/*.cc)
 ADD_LIBRARY(lcb_jsparse OBJECT ${LCB_JSPARSE_SRC})
 LCB_CXXUTIL(lcb_jsparse)
@@ -265,7 +261,6 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:lcbht>
     $<TARGET_OBJECTS:lcbcore>
     $<TARGET_OBJECTS:lcbcore-cxx>
-    $<TARGET_OBJECTS:lcb_views_c>
     $<TARGET_OBJECTS:lcb_jsparse>
     $<TARGET_OBJECTS:lcb_jsoncpp>
     ${LCB_DTRACE_OBJECT}
