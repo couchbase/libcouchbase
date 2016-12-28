@@ -8,8 +8,6 @@ using namespace lcb::views;
 
 static void chunk_callback(lcb_t, int, const lcb_RESPBASE*);
 static void row_callback(lcbjsp_PARSER*, const lcbjsp_ROW*);
-static void invoke_row(ViewRequest *req, lcb_RESPVIEWQUERY *resp);
-static void unref_request(ViewRequest *req);
 
 template <typename value_type, typename size_type>
 void IOV2PTRLEN(const lcb_IOV* iov, value_type*& ptr, size_type& len) {
@@ -21,40 +19,36 @@ void IOV2PTRLEN(const lcb_IOV* iov, value_type*& ptr, size_type& len) {
 #define CAN_CONTINUE(req) ((req)->callback != NULL)
 #define LOGARGS(instance, lvl) instance->settings, "views", LCB_LOG_##lvl, __FILE__, __LINE__
 
-static void
-invoke_last(ViewRequest *req, lcb_error_t err)
-{
+void ViewRequest::invoke_last(lcb_error_t err) {
     lcb_RESPVIEWQUERY resp = { 0 };
-    if (req->callback == NULL) {
+    if (callback == NULL) {
         return;
     }
-    if (req->docq && req->docq->has_pending()) {
+    if (docq && docq->has_pending()) {
         return;
     }
 
     resp.rc = err;
-    resp.htresp = req->cur_htresp;
-    resp.cookie = (void *)req->cookie;
+    resp.htresp = cur_htresp;
+    resp.cookie = const_cast<void*>(cookie);
     resp.rflags = LCB_RESP_F_FINAL;
-    if (req->parser && req->parser->meta_complete) {
-        resp.value = req->parser->meta_buf.base;
-        resp.nvalue = req->parser->meta_buf.nused;
+    if (parser && parser->meta_complete) {
+        resp.value = parser->meta_buf.base;
+        resp.nvalue = parser->meta_buf.nused;
     } else {
         resp.rflags |= LCB_RESP_F_CLIENTGEN;
     }
-    req->callback(req->instance, LCB_CALLBACK_VIEWQUERY, &resp);
-    lcb_view_cancel(req->instance, req);
+    callback(instance, LCB_CALLBACK_VIEWQUERY, &resp);
+    cancel();
 }
 
-static void
-invoke_row(ViewRequest *req, lcb_RESPVIEWQUERY *resp)
-{
-    if (req->callback == NULL) {
+void ViewRequest::invoke_row(lcb_RESPVIEWQUERY *resp) {
+    if (callback == NULL) {
         return;
     }
-    resp->htresp = req->cur_htresp;
-    resp->cookie = (void *)req->cookie;
-    req->callback(req->instance, LCB_CALLBACK_VIEWQUERY, resp);
+    resp->htresp = cur_htresp;
+    resp->cookie = const_cast<void*>(cookie);
+    callback(instance, LCB_CALLBACK_VIEWQUERY, resp);
 }
 
 static void
@@ -74,14 +68,14 @@ chunk_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
                 req->lasterr = LCB_HTTP_ERROR;
             }
         }
-        req->refcount++;
-        invoke_last(req, req->lasterr);
+        req->ref();
+        req->invoke_last();
         if (rh->rflags & LCB_RESP_F_FINAL) {
             req->htreq = NULL;
-            unref_request(req);
+            req->unref();
         }
         req->cur_htresp = NULL;
-        unref_request(req);
+        req->unref();
         return;
     }
 
@@ -92,7 +86,7 @@ chunk_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
     req->refcount++;
     lcbjsp_feed(req->parser, reinterpret_cast<const char*>(rh->body), rh->nbody);
     req->cur_htresp = NULL;
-    unref_request(req);
+    req->unref();
 }
 
 static void
@@ -126,11 +120,11 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
 {
     ViewRequest *req = reinterpret_cast<ViewRequest*>(parser->data);
     if (datum->type == LCBJSP_TYPE_ROW) {
-        if (!req->no_parse_rows) {
+        if (!req->is_no_rowparse()) {
             lcbjsp_parse_viewrow(req->parser, (lcbjsp_ROW*)datum);
         }
 
-        if (req->include_docs && datum->docid.iov_len && req->callback) {
+        if (req->is_include_docs() && datum->docid.iov_len && req->callback) {
             VRDocRequest *dreq = mk_docreq(datum);
             dreq->parent = req;
             req->docq->add(dreq);
@@ -138,7 +132,7 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
 
         } else {
             lcb_RESPVIEWQUERY resp = { 0 };
-            if (req->no_parse_rows) {
+            if (req->is_no_rowparse()) {
                 IOV2PTRLEN(&datum->row, resp.value, resp.nvalue);
             } else {
                 IOV2PTRLEN(&datum->key, resp.key, resp.nkey);
@@ -147,10 +141,10 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
                 IOV2PTRLEN(&datum->geo, resp.geometry, resp.ngeometry);
             }
             resp.htresp = req->cur_htresp;
-            invoke_row(req, &resp);
+            req->invoke_row(&resp);
         }
     } else if (datum->type == LCBJSP_TYPE_ERROR) {
-        invoke_last(req, LCB_PROTOCOL_ERROR);
+        req->invoke_last(LCB_PROTOCOL_ERROR);
     } else if (datum->type == LCBJSP_TYPE_COMPLETE) {
         /* nothing */
     }
@@ -168,13 +162,13 @@ cb_doc_ready(lcb::docreq::Queue *q, lcb::docreq::DocRequest *req_base)
     IOV2PTRLEN(&dreq->geo, resp.geometry, resp.ngeometry);
 
     if (q->parent) {
-        invoke_row(reinterpret_cast<ViewRequest*>(q->parent), &resp);
+        reinterpret_cast<ViewRequest*>(q->parent)->invoke_row(&resp);
     }
 
     delete dreq;
 
     if (q->parent) {
-        unref_request(reinterpret_cast<ViewRequest*>(q->parent));
+        reinterpret_cast<ViewRequest*>(q->parent)->unref();
     }
 }
 
@@ -192,85 +186,34 @@ cb_docq_throttle(lcb::docreq::Queue *q, int enabled)
     }
 }
 
-static void
-destroy_request(ViewRequest *req)
-{
-    invoke_last(req, req->lasterr);
+ViewRequest::~ViewRequest() {
+    invoke_last();
 
-    if (req->parser != NULL) {
-        lcbjsp_free(req->parser);
+    if (parser != NULL) {
+        lcbjsp_free(parser);
     }
-    if (req->htreq != NULL) {
-        lcb_cancel_http_request(req->instance, req->htreq);
+    if (htreq != NULL) {
+        lcb_cancel_http_request(instance, htreq);
     }
-    if (req->docq != NULL) {
-        req->docq->parent = NULL;
-        req->docq->unref();
-    }
-    free(req);
-}
-
-static void
-unref_request(ViewRequest *req)
-{
-    if (!--req->refcount) {
-        destroy_request(req);
+    if (docq != NULL) {
+        docq->parent = NULL;
+        docq->unref();
     }
 }
 
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
-{
-    lcb_string path;
+lcb_error_t ViewRequest::request_http(const lcb_CMDVIEWQUERY *cmd) {
     lcb_CMDHTTP htcmd = { 0 };
-    lcb_error_t rc;
-    ViewRequest *req = NULL;
-    int include_docs = 0;
-    int no_parse_rows = 0;
-    const char *vpstr = NULL;
-
-    if (cmd->nddoc == 0 || cmd->nview == 0 || cmd->callback == NULL) {
-        return LCB_EINVAL;
-    }
-
     htcmd.method = LCB_HTTP_METHOD_GET;
     htcmd.type = LCB_HTTP_TYPE_VIEW;
     htcmd.cmdflags = LCB_CMDHTTP_F_STREAM;
 
-    include_docs = cmd->cmdflags & LCB_CMDVIEWQUERY_F_INCLUDE_DOCS;
-    no_parse_rows = cmd->cmdflags & LCB_CMDVIEWQUERY_F_NOROWPARSE;
-
-    if (include_docs && no_parse_rows) {
-        return LCB_OPTIONS_CONFLICT;
-    }
-
-    lcb_string_init(&path);
-    if (cmd->cmdflags & LCB_CMDVIEWQUERY_F_SPATIAL) {
-        vpstr = "/_spatial/";
-    } else {
-        vpstr = "/_view/";
-    }
-
-    if (lcb_string_appendv(&path,
-        "_design/", (size_t)-1, cmd->ddoc, cmd->nddoc,
-        vpstr, (size_t)-1, cmd->view, cmd->nview, NULL) != 0) {
-
-        lcb_string_release(&path);
-        return LCB_CLIENT_ENOMEM;
-    }
-
-    if (cmd->optstr) {
-        if (cmd->noptstr > MAX_GET_URI_LENGTH) {
-            return LCB_E2BIG;
-        } else {
-            if (lcb_string_appendv(&path,
-                "?", (size_t)-1, cmd->optstr, cmd->noptstr, NULL) != 0) {
-
-                lcb_string_release(&path);
-                return LCB_CLIENT_ENOMEM;
-            }
-        }
+    std::string path;
+    path.append("_design/");
+    path.append(cmd->ddoc, cmd->nddoc);
+    path.append(is_spatial() ? "/_spatial/" : "/_view/");
+    path.append(cmd->view, cmd->nview);
+    if (cmd->noptstr) {
+        path.append("?").append(cmd->optstr, cmd->noptstr);
     }
 
     if (cmd->npostdata) {
@@ -280,48 +223,69 @@ lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
         htcmd.content_type = "application/json";
     }
 
-    if ( (req = reinterpret_cast<ViewRequest*>(calloc(1, sizeof(*req)))) == NULL ||
-            (req->parser = lcbjsp_create(LCBJSP_MODE_VIEWS)) == NULL) {
-        free(req);
-        lcb_string_release(&path);
-        return LCB_CLIENT_ENOMEM;
+    LCB_CMD_SET_KEY(&htcmd, path.c_str(), path.size());
+    htcmd.reqhandle = &htreq;
+
+    lcb_error_t err = lcb_http3(instance, this, &htcmd);
+    if (err == LCB_SUCCESS) {
+        lcb_htreq_setcb(htreq, chunk_callback);
+    }
+    return err;
+}
+
+ViewRequest::ViewRequest(lcb_t instance_, const void *cookie_,
+                         const lcb_CMDVIEWQUERY* cmd)
+    : cur_htresp(NULL), htreq(NULL),
+      parser(lcbjsp_create(LCBJSP_MODE_VIEWS)),
+      cookie(cookie_), docq(NULL), callback(cmd->callback),
+      instance(instance_), refcount(1),
+      cmdflags(cmd->cmdflags),
+      lasterr(LCB_SUCCESS) {
+
+    // Validate:
+    if (cmd->nddoc == 0 || cmd->nview == 0 || callback == NULL) {
+        lasterr = LCB_EINVAL;
+    } else if (is_include_docs() && is_no_rowparse()) {
+        lasterr = LCB_OPTIONS_CONFLICT;
+    } else if (cmd->noptstr > MAX_GET_URI_LENGTH) {
+        lasterr = LCB_E2BIG;
+    }
+    if (lasterr != LCB_SUCCESS) {
+        return;
     }
 
-    req->instance = instance;
-    req->cookie = cookie;
-    req->include_docs = include_docs;
-    req->no_parse_rows = no_parse_rows;
-    req->callback = cmd->callback;
-    req->parser->callback = row_callback;
-    req->parser->data = req;
-
-    LCB_CMD_SET_KEY(&htcmd, path.base, path.nused);
-    htcmd.reqhandle = &req->htreq;
-
-    rc = lcb_http3(instance, req, &htcmd);
-    lcb_string_release(&path);
-
-    if (rc == LCB_SUCCESS) {
-        lcb_htreq_setcb(req->htreq, chunk_callback);
-        req->refcount++;
-        if (cmd->handle) {
-            *cmd->handle = req;
+    if (is_include_docs()) {
+        docq = new lcb::docreq::Queue(instance);
+        docq->parent = this;
+        docq->cb_ready = cb_doc_ready;
+        docq->cb_throttle = cb_docq_throttle;
+        if (cmd->docs_concurrent_max) {
+            docq->max_pending_response = cmd->docs_concurrent_max;
         }
-        if (include_docs) {
-            req->docq = new lcb::docreq::Queue(instance);
-            req->docq->parent = req;
-            req->docq->cb_ready = cb_doc_ready;
-            req->docq->cb_throttle = cb_docq_throttle;
-            if (cmd->docs_concurrent_max) {
-                req->docq->max_pending_response = cmd->docs_concurrent_max;
-            }
-        }
-        lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
-    } else {
-        req->callback = NULL;
-        destroy_request(req);
     }
-    return rc;
+
+    if (cmd->handle) {
+        *cmd->handle = this;
+    }
+
+    lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
+
+    parser->callback = row_callback;
+    parser->data = this;
+    lasterr = request_http(cmd);
+}
+
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
+{
+    ViewRequest *req = new ViewRequest(instance, cookie, cmd);
+    lcb_error_t err = req->lasterr;
+    if (err != LCB_SUCCESS) {
+        req->cancel();
+        delete req;
+    }
+    return err;
 }
 
 LIBCOUCHBASE_API
@@ -342,14 +306,16 @@ lcb_view_query_initcmd(lcb_CMDVIEWQUERY *vq,
 }
 
 LIBCOUCHBASE_API
-void
-lcb_view_cancel(lcb_t instance, lcb_VIEWHANDLE handle)
-{
-    if (handle->callback) {
-        handle->callback = NULL;
+void lcb_view_cancel(lcb_t, lcb_VIEWHANDLE handle) {
+    handle->cancel();
+}
+
+void ViewRequest::cancel() {
+    if (callback) {
+        callback = NULL;
         lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
-        if (handle->docq) {
-            handle->docq->cancel();
+        if (docq) {
+            docq->cancel();
         }
     }
 }
