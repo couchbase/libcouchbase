@@ -5,20 +5,19 @@
 #include <string>
 #include "docreq.h"
 
-struct lcbview_REQUEST_st;
+namespace lcb {
+namespace views {
 
-struct lcbview_DOCREQ : lcb_DOCQREQ {
-    lcbview_DOCREQ() : parent(NULL) {
-    }
-
-    struct lcbview_REQUEST_st *parent;
+struct ViewRequest;
+struct VRDocRequest : lcb_DOCQREQ {
+    ViewRequest *parent;
     lcb_IOV key;
     lcb_IOV value;
     lcb_IOV geo;
     std::string rowbuf;
 };
 
-struct lcbview_REQUEST_st {
+struct ViewRequest {
     /** Current HTTP response to provide in callbacks */
     const lcb_RESPHTTP *cur_htresp;
     /** HTTP request object, in case we need to cancel prematurely */
@@ -35,4 +34,5 @@ struct lcbview_REQUEST_st {
     lcb_error_t lasterr;
 };
 
-typedef struct lcbview_REQUEST_st lcbview_REQUEST;
+}
+}

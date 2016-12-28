@@ -4,11 +4,12 @@
 #include "internal.h"
 
 #define MAX_GET_URI_LENGTH 2048
+using namespace lcb::views;
 
 static void chunk_callback(lcb_t, int, const lcb_RESPBASE*);
 static void row_callback(lcbjsp_PARSER*, const lcbjsp_ROW*);
-static void invoke_row(lcbview_REQUEST *req, lcb_RESPVIEWQUERY *resp);
-static void unref_request(lcbview_REQUEST *req);
+static void invoke_row(ViewRequest *req, lcb_RESPVIEWQUERY *resp);
+static void unref_request(ViewRequest *req);
 
 template <typename value_type, typename size_type>
 void IOV2PTRLEN(const lcb_IOV* iov, value_type*& ptr, size_type& len) {
@@ -21,7 +22,7 @@ void IOV2PTRLEN(const lcb_IOV* iov, value_type*& ptr, size_type& len) {
 #define LOGARGS(instance, lvl) instance->settings, "views", LCB_LOG_##lvl, __FILE__, __LINE__
 
 static void
-invoke_last(lcbview_REQUEST *req, lcb_error_t err)
+invoke_last(ViewRequest *req, lcb_error_t err)
 {
     lcb_RESPVIEWQUERY resp = { 0 };
     if (req->callback == NULL) {
@@ -46,7 +47,7 @@ invoke_last(lcbview_REQUEST *req, lcb_error_t err)
 }
 
 static void
-invoke_row(lcbview_REQUEST *req, lcb_RESPVIEWQUERY *resp)
+invoke_row(ViewRequest *req, lcb_RESPVIEWQUERY *resp)
 {
     if (req->callback == NULL) {
         return;
@@ -60,7 +61,7 @@ static void
 chunk_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
 {
     const lcb_RESPHTTP *rh = (const lcb_RESPHTTP *)rb;
-    lcbview_REQUEST *req = reinterpret_cast<lcbview_REQUEST*>(rh->cookie);
+    ViewRequest *req = reinterpret_cast<ViewRequest*>(rh->cookie);
 
     req->cur_htresp = rh;
 
@@ -102,16 +103,16 @@ do_copy_iov(std::string& dstbuf, lcb_IOV *dstiov, const lcb_IOV *srciov)
     dstbuf.append(reinterpret_cast<const char*>(srciov->iov_base), srciov->iov_len);
 }
 
-static lcbview_DOCREQ *
+static VRDocRequest *
 mk_docreq(const lcbjsp_ROW *datum)
 {
     size_t extra_alloc = 0;
-    lcbview_DOCREQ *dreq;
+    VRDocRequest *dreq;
     extra_alloc =
             datum->key.iov_len + datum->value.iov_len +
             datum->geo.iov_len + datum->docid.iov_len;
 
-    dreq = new lcbview_DOCREQ();
+    dreq = new VRDocRequest();
     dreq->rowbuf.reserve(extra_alloc);
     do_copy_iov(dreq->rowbuf, &dreq->key, &datum->key);
     do_copy_iov(dreq->rowbuf, &dreq->value, &datum->value);
@@ -123,14 +124,14 @@ mk_docreq(const lcbjsp_ROW *datum)
 static void
 row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
 {
-    lcbview_REQUEST *req = reinterpret_cast<lcbview_REQUEST*>(parser->data);
+    ViewRequest *req = reinterpret_cast<ViewRequest*>(parser->data);
     if (datum->type == LCBJSP_TYPE_ROW) {
         if (!req->no_parse_rows) {
             lcbjsp_parse_viewrow(req->parser, (lcbjsp_ROW*)datum);
         }
 
         if (req->include_docs && datum->docid.iov_len && req->callback) {
-            lcbview_DOCREQ *dreq = mk_docreq(datum);
+            VRDocRequest *dreq = mk_docreq(datum);
             dreq->parent = req;
             lcbdocq_add(req->docq, dreq);
             req->refcount++;
@@ -159,7 +160,7 @@ static void
 cb_doc_ready(lcb_DOCQUEUE *q, lcb_DOCQREQ *req_base)
 {
     lcb_RESPVIEWQUERY resp = { 0 };
-    lcbview_DOCREQ *dreq = (lcbview_DOCREQ*)req_base;
+    VRDocRequest *dreq = (VRDocRequest*)req_base;
     resp.docresp = &dreq->docresp;
     IOV2PTRLEN(&dreq->key, resp.key, resp.nkey);
     IOV2PTRLEN(&dreq->value, resp.value, resp.nvalue);
@@ -167,20 +168,20 @@ cb_doc_ready(lcb_DOCQUEUE *q, lcb_DOCQREQ *req_base)
     IOV2PTRLEN(&dreq->geo, resp.geometry, resp.ngeometry);
 
     if (q->parent) {
-        invoke_row(reinterpret_cast<lcbview_REQUEST*>(q->parent), &resp);
+        invoke_row(reinterpret_cast<ViewRequest*>(q->parent), &resp);
     }
 
     delete dreq;
 
     if (q->parent) {
-        unref_request(reinterpret_cast<lcbview_REQUEST*>(q->parent));
+        unref_request(reinterpret_cast<ViewRequest*>(q->parent));
     }
 }
 
 static void
 cb_docq_throttle(lcb_DOCQUEUE *q, int enabled)
 {
-    lcbview_REQUEST *req = reinterpret_cast<lcbview_REQUEST*>(q->parent);
+    ViewRequest *req = reinterpret_cast<ViewRequest*>(q->parent);
     if (req == NULL || req->htreq == NULL) {
         return;
     }
@@ -192,7 +193,7 @@ cb_docq_throttle(lcb_DOCQUEUE *q, int enabled)
 }
 
 static void
-destroy_request(lcbview_REQUEST *req)
+destroy_request(ViewRequest *req)
 {
     invoke_last(req, req->lasterr);
 
@@ -210,7 +211,7 @@ destroy_request(lcbview_REQUEST *req)
 }
 
 static void
-unref_request(lcbview_REQUEST *req)
+unref_request(ViewRequest *req)
 {
     if (!--req->refcount) {
         destroy_request(req);
@@ -224,7 +225,7 @@ lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
     lcb_string path;
     lcb_CMDHTTP htcmd = { 0 };
     lcb_error_t rc;
-    lcbview_REQUEST *req = NULL;
+    ViewRequest *req = NULL;
     int include_docs = 0;
     int no_parse_rows = 0;
     const char *vpstr = NULL;
@@ -279,7 +280,7 @@ lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
         htcmd.content_type = "application/json";
     }
 
-    if ( (req = reinterpret_cast<lcbview_REQUEST*>(calloc(1, sizeof(*req)))) == NULL ||
+    if ( (req = reinterpret_cast<ViewRequest*>(calloc(1, sizeof(*req)))) == NULL ||
             (req->parser = lcbjsp_create(LCBJSP_MODE_VIEWS)) == NULL) {
         free(req);
         lcb_string_release(&path);
