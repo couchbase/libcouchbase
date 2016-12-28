@@ -9,7 +9,7 @@ namespace lcb {
 namespace views {
 
 struct ViewRequest;
-struct VRDocRequest : lcb_DOCQREQ {
+struct VRDocRequest : docreq::DocRequest {
     ViewRequest *parent;
     lcb_IOV key;
     lcb_IOV value;
@@ -24,7 +24,7 @@ struct ViewRequest {
     struct lcb_http_request_st *htreq;
     lcbjsp_PARSER *parser;
     const void *cookie;
-    lcb_DOCQUEUE *docq;
+    docreq::Queue *docq;
     lcb_VIEWQUERYCALLBACK callback;
     lcb_t instance;
 

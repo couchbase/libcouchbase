@@ -28,7 +28,7 @@ invoke_last(ViewRequest *req, lcb_error_t err)
     if (req->callback == NULL) {
         return;
     }
-    if (req->docq && lcbdocq_has_pending(req->docq)) {
+    if (req->docq && req->docq->has_pending()) {
         return;
     }
 
@@ -133,7 +133,7 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
         if (req->include_docs && datum->docid.iov_len && req->callback) {
             VRDocRequest *dreq = mk_docreq(datum);
             dreq->parent = req;
-            lcbdocq_add(req->docq, dreq);
+            req->docq->add(dreq);
             req->refcount++;
 
         } else {
@@ -157,7 +157,7 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
 }
 
 static void
-cb_doc_ready(lcb_DOCQUEUE *q, lcb_DOCQREQ *req_base)
+cb_doc_ready(lcb::docreq::Queue *q, lcb::docreq::DocRequest *req_base)
 {
     lcb_RESPVIEWQUERY resp = { 0 };
     VRDocRequest *dreq = (VRDocRequest*)req_base;
@@ -179,7 +179,7 @@ cb_doc_ready(lcb_DOCQUEUE *q, lcb_DOCQREQ *req_base)
 }
 
 static void
-cb_docq_throttle(lcb_DOCQUEUE *q, int enabled)
+cb_docq_throttle(lcb::docreq::Queue *q, int enabled)
 {
     ViewRequest *req = reinterpret_cast<ViewRequest*>(q->parent);
     if (req == NULL || req->htreq == NULL) {
@@ -205,7 +205,7 @@ destroy_request(ViewRequest *req)
     }
     if (req->docq != NULL) {
         req->docq->parent = NULL;
-        lcbdocq_unref(req->docq);
+        req->docq->unref();
     }
     free(req);
 }
@@ -308,7 +308,7 @@ lcb_view_query(lcb_t instance, const void *cookie, const lcb_CMDVIEWQUERY *cmd)
             *cmd->handle = req;
         }
         if (include_docs) {
-            req->docq = lcbdocq_create(instance);
+            req->docq = new lcb::docreq::Queue(instance);
             req->docq->parent = req;
             req->docq->cb_ready = cb_doc_ready;
             req->docq->cb_throttle = cb_docq_throttle;
@@ -349,8 +349,7 @@ lcb_view_cancel(lcb_t instance, lcb_VIEWHANDLE handle)
         handle->callback = NULL;
         lcb_aspend_del(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
         if (handle->docq) {
-            lcbdocq_cancel(handle->docq);
+            handle->docq->cancel();
         }
     }
-    (void)instance;
 }
