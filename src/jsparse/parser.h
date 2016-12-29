@@ -20,60 +20,109 @@
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/views.h>
 #include "contrib/jsonsl/jsonsl.h"
-#include "simplestring.h"
+#include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
+#include <string>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace lcb {
+namespace jsparse {
 
-typedef struct lcbvrow_PARSER_st lcbjsp_PARSER;
-
-typedef enum {
-    LCBJSP_MODE_VIEWS,
-    LCBJSP_MODE_N1QL,
-    LCBJSP_MODE_FTS
-} lcbjsp_MODE;
-
-typedef enum {
-    /**This is a row of view data. You can parse this as JSON from your
-     * favorite decoder/converter */
-    LCBJSP_TYPE_ROW,
-
-    /**
-     * All the rows have been returned. In this case, the data is the 'meta'.
-     * This is a valid JSON payload which was returned from the server.
-     * The "rows" : [] array will be empty.
-     */
-    LCBJSP_TYPE_COMPLETE,
-
-    /**
-     * A JSON parse error occured. The payload will contain string data. This
-     * may be JSON (but this is not likely).
-     * The callback will be delivered twice. First when the error is noticed,
-     * and second at the end (instead of a COMPLETE callback)
-     */
-    LCBJSP_TYPE_ERROR
-} lcbjsp_ROWTYPE;
-
+struct Parser;
 
 typedef struct {
-    lcbjsp_ROWTYPE type; /**< The type of data encapsulated */
+    enum Type {
+        /**This is a row of view data. You can parse this as JSON from your
+         * favorite decoder/converter */
+        ROW_ROW,
+
+        /**
+         * All the rows have been returned. In this case, the data is the 'meta'.
+         * This is a valid JSON payload which was returned from the server.
+         * The "rows" : [] array will be empty.
+         */
+        ROW_COMPLETE,
+
+        /**
+         * A JSON parse error occured. The payload will contain string data. This
+         * may be JSON (but this is not likely).
+         * The callback will be delivered twice. First when the error is noticed,
+         * and second at the end (instead of a COMPLETE callback)
+         */
+        ROW_ERROR
+    };
+
+    Type type; /**< The type of data encapsulated */
     lcb_IOV docid;
     lcb_IOV key;
     lcb_IOV value;
     lcb_IOV row;
     lcb_IOV geo;
-} lcbjsp_ROW;
+} Row;
 
-typedef void (*lcbjsp_CALLBACK)(lcbjsp_PARSER*,const lcbjsp_ROW*);
+typedef void (*Callback)(Parser*,const Row*);
 
-struct lcbvrow_PARSER_st {
+struct Parser {
+    enum Mode {
+        MODE_VIEWS,
+        MODE_N1QL,
+        MODE_FTS
+    };
+
+    /**
+     * Creates a new vrow context object.
+     * You must set callbacks on this object if you wish it to be useful.
+     * You must feed it data (calling vrow_feed) as well. The data may be fed
+     * in chunks and callbacks will be invoked as each row is read.
+     */
+    Parser(Mode mode);
+    ~Parser();
+
+    /**
+     * Resets the context to a pristine state. Callbacks and cookies are kept.
+     * This may be more efficient than allocating/freeing a context each time
+     * (as this can be expensive with the jsonsl structures)
+     */
+    void reset();
+
+    /**
+     * Feeds data into the vrow. The callback may be invoked multiple times
+     * in this function. In the context of normal lcb usage, this will typically
+     * be invoked from within an http_data_callback.
+     */
+    void feed(const char *s, size_t n);
+    void feed(const std::string& s) {
+        feed(s.c_str(), s.size());
+    }
+
+    /**
+     * Parse the row buffer into its constituent parts. This should be called
+     * if you want to split the row into its basic 'docid', 'key' and 'value'
+     * fields
+     * @param vp The parser to use
+     * @param vr The row to parse. This assumes the row's "row" field is properly
+     * set.
+     */
+    void parse_viewrow(Row& vr);
+
+    /**
+     * Get the raw contents of the current buffer. This can be used to debug errors.
+     *
+     * Note that the buffer may be partial or malformed or otherwise unsuitable
+     * for structured inspection, but may help human observers debug problems.
+     *
+     * @param out The iov structure to contain the buffer/offset
+     */
+    void get_postmortem(lcb_IOV& out) const;
+
+    inline const char *get_buffer_region(size_t pos, size_t desired, size_t* actual);
+    inline void combine_meta();
+    inline static const char *jprstr_for_mode(Mode);
+
     jsonsl_t jsn; /**< Parser for the row itself */
     jsonsl_t jsn_rdetails; /**< Parser for the row details */
     jsonsl_jpr_t jpr; /**< jsonpointer match object */
-    lcb_string meta_buf; /**< String containing the skeleton (outer layer) */
-    lcb_string current_buf; /**< Scratch/read buffer */
-    lcb_string last_hk; /**< Last hashkey */
+    std::string meta_buf; /**< String containing the skeleton (outer layer) */
+    std::string current_buf; /**< Scratch/read buffer */
+    std::string last_hk; /**< Last hashkey */
 
     lcb_U8 mode;
 
@@ -106,68 +155,12 @@ struct lcbvrow_PARSER_st {
     /**
      * std::string to contain parsed document ID.
      */
-    void *cxx_data;
+    Json::Value cxx_data;
 
     /* callback to invoke */
-    lcbjsp_CALLBACK callback;
+    Callback callback;
 };
 
-/**
- * Creates a new vrow context object.
- * You must set callbacks on this object if you wish it to be useful.
- * You must feed it data (calling vrow_feed) as well. The data may be fed
- * in chunks and callbacks will be invoked as each row is read.
- */
-lcbjsp_PARSER*
-lcbjsp_create(int);
-
-/**
- * Resets the context to a pristine state. Callbacks and cookies are kept.
- * This may be more efficient than allocating/freeing a context each time
- * (as this can be expensive with the jsonsl structures)
- */
-void
-lcbjsp_reset(lcbjsp_PARSER *ctx);
-
-/**
- * Frees a vrow object created by vrow_create
- */
-void
-lcbjsp_free(lcbjsp_PARSER *ctx);
-
-/**
- * Feeds data into the vrow. The callback may be invoked multiple times
- * in this function. In the context of normal lcb usage, this will typically
- * be invoked from within an http_data_callback.
- */
-void
-lcbjsp_feed(lcbjsp_PARSER *ctx, const char *data, size_t ndata);
-
-/**
- * Parse the row buffer into its constituent parts. This should be called
- * if you want to split the row into its basic 'docid', 'key' and 'value'
- * fields
- * @param vp The parser to use
- * @param vr The row to parse. This assumes the row's "row" field is properly
- * set.
- */
-void
-lcbjsp_parse_viewrow(lcbjsp_PARSER *vp, lcbjsp_ROW *vr);
-
-/**
- * Get the raw contents of the current buffer. This can be used to debug errors.
- *
- * Note that the buffer may be partial or malformed or otherwise unsuitable
- * for structured inspection, but may help human observers debug problems.
- *
- * @param v The parser
- * @param out The iov structure to contain the buffer/offset
- */
-void
-lcbjsp_get_postmortem(const lcbjsp_PARSER *v, lcb_IOV *out);
-
-#ifdef __cplusplus
 }
-#endif
-
+}
 #endif /* LCB_VIEWROW_H_ */

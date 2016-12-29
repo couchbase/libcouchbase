@@ -145,7 +145,7 @@ struct lcb_N1QLCACHE_st {
 typedef struct lcb_N1QLREQ {
     const lcb_RESPHTTP *cur_htresp;
     struct lcb_http_request_st *htreq;
-    lcbjsp_PARSER *parser;
+    lcb::jsparse::Parser *parser;
     const void *cookie;
     lcb_N1QLCALLBACK callback;
     lcb_t instance;
@@ -330,8 +330,7 @@ N1QLREQ::maybe_retry()
     }
 
     was_retried = true;
-
-    lcbjsp_get_postmortem(parser, &meta);
+    parser->get_postmortem(meta);
     if (!parse_json(static_cast<const char*>(meta.iov_base), meta.iov_len, root)) {
         return false; // Not JSON
     }
@@ -351,7 +350,7 @@ N1QLREQ::maybe_retry()
 
     } else {
         // We'll be parsing more rows later on..
-        lcbjsp_reset(parser);
+        parser->reset();
     }
     return true;
 }
@@ -366,7 +365,7 @@ N1QLREQ::invoke_row(lcb_RESPN1QL *resp, bool is_last)
         lcb_IOV meta;
         resp->rflags |= LCB_RESP_F_FINAL;
         resp->rc = lasterr;
-        lcbjsp_get_postmortem(parser, &meta);
+        parser->get_postmortem(meta);
         resp->row = static_cast<const char*>(meta.iov_base);
         resp->nrow = meta.iov_len;
     }
@@ -392,7 +391,7 @@ lcb_N1QLREQ::~lcb_N1QLREQ()
     }
 
     if (parser) {
-        lcbjsp_free(parser);
+        delete parser;
     }
     if (prepare_req) {
         lcb_n1ql_cancel(instance, prepare_req);
@@ -400,19 +399,19 @@ lcb_N1QLREQ::~lcb_N1QLREQ()
 }
 
 static void
-row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
+row_callback(lcb::jsparse::Parser *parser, const lcb::jsparse::Row *datum)
 {
     N1QLREQ *req = static_cast<N1QLREQ*>(parser->data);
     lcb_RESPN1QL resp = { 0 };
 
-    if (datum->type == LCBJSP_TYPE_ROW) {
+    if (datum->type == lcb::jsparse::Row::ROW_ROW) {
         resp.row = static_cast<const char*>(datum->row.iov_base);
         resp.nrow = datum->row.iov_len;
         req->nrows++;
         req->invoke_row(&resp, 0);
-    } else if (datum->type == LCBJSP_TYPE_ERROR) {
+    } else if (datum->type == lcb::jsparse::Row::ROW_ERROR) {
         req->lasterr = resp.rc = LCB_PROTOCOL_ERROR;
-    } else if (datum->type == LCBJSP_TYPE_COMPLETE) {
+    } else if (datum->type == lcb::jsparse::Row::ROW_COMPLETE) {
         /* Nothing */
     }
 }
@@ -444,8 +443,7 @@ chunk_callback(lcb_t instance, int ign, const lcb_RESPBASE *rb)
         delete req;
         return;
     }
-
-    lcbjsp_feed(req->parser, static_cast<const char*>(rh->body), rh->nbody);
+    req->parser->feed(static_cast<const char*>(rh->body), rh->nbody);
 }
 
 #define QUERY_PATH "/query/service"
@@ -586,7 +584,8 @@ lcb_n1qlreq_parsetmo(const std::string& s)
 
 lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
     const void *user_cookie, const lcb_CMDN1QL *cmd)
-    : cur_htresp(NULL), htreq(NULL), parser(lcbjsp_create(LCBJSP_MODE_N1QL)),
+    : cur_htresp(NULL), htreq(NULL),
+      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL)),
       cookie(user_cookie), callback(cmd->callback), instance(obj),
       lasterr(LCB_SUCCESS), flags(cmd->cmdflags), timeout(0),
       nrows(0), prepare_req(NULL), was_retried(false)

@@ -47,7 +47,7 @@ struct ViewRequest {
     const lcb_RESPHTTP *cur_htresp;
     /** HTTP request object, in case we need to cancel prematurely */
     struct lcb_http_request_st *htreq;
-    lcbjsp_PARSER *parser;
+    lcb::jsparse::Parser *parser;
     const void *cookie;
     docreq::Queue *docq;
     lcb_VIEWQUERYCALLBACK callback;

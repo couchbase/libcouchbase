@@ -30,7 +30,7 @@
 struct lcb_FTSREQ {
     const lcb_RESPHTTP *cur_htresp;
     lcb_http_request_t htreq;
-    lcbjsp_PARSER *parser;
+    lcb::jsparse::Parser *parser;
     const void *cookie;
     lcb_FTSCALLBACK callback;
     lcb_t instance;
@@ -44,19 +44,20 @@ struct lcb_FTSREQ {
 };
 
 static void
-row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
+row_callback(lcb::jsparse::Parser *parser, const lcb::jsparse::Row *datum)
 {
     lcb_FTSREQ *req = static_cast<lcb_FTSREQ*>(parser->data);
     lcb_RESPFTS resp = { 0 };
+    using lcb::jsparse::Row;
 
-    if (datum->type == LCBJSP_TYPE_ROW) {
+    if (datum->type == Row::ROW_ROW) {
         resp.row = static_cast<const char*>(datum->row.iov_base);
         resp.nrow = datum->row.iov_len;
         req->nrows++;
         req->invoke_row(&resp);
-    } else if (datum->type == LCBJSP_TYPE_ERROR) {
+    } else if (datum->type == Row::ROW_ERROR) {
         req->lasterr = resp.rc = LCB_PROTOCOL_ERROR;
-    } else if (datum->type == LCBJSP_TYPE_COMPLETE) {
+    } else if (datum->type == Row::ROW_COMPLETE) {
         /* Nothing */
     }
 }
@@ -83,7 +84,7 @@ chunk_callback(lcb_t, int, const lcb_RESPBASE *rb)
          * should remain alive (so we can cancel it later on) */
         delete req;
     } else {
-        lcbjsp_feed(req->parser, static_cast<const char*>(rh->body), rh->nbody);
+        req->parser->feed(static_cast<const char*>(rh->body), rh->nbody);
     }
 }
 
@@ -107,7 +108,7 @@ lcb_FTSREQ::invoke_last()
 
     if (parser) {
         lcb_IOV meta;
-        lcbjsp_get_postmortem(parser, &meta);
+        parser->get_postmortem(meta);
         resp.row = static_cast<const char*>(meta.iov_base);
         resp.nrow = meta.iov_len;
     }
@@ -116,7 +117,8 @@ lcb_FTSREQ::invoke_last()
 }
 
 lcb_FTSREQ::lcb_FTSREQ(lcb_t instance_, const void *cookie_, const lcb_CMDFTS *cmd)
-: cur_htresp(NULL), htreq(NULL), parser(lcbjsp_create(LCBJSP_MODE_FTS)),
+: cur_htresp(NULL), htreq(NULL),
+  parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_FTS)),
   cookie(cookie_), callback(cmd->callback), instance(instance_), nrows(0),
   lasterr(LCB_SUCCESS)
 {
@@ -184,7 +186,7 @@ lcb_FTSREQ::~lcb_FTSREQ()
         htreq = NULL;
     }
     if (parser) {
-        lcbjsp_free(parser);
+        delete parser;
         parser = NULL;
     }
 }

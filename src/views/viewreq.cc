@@ -7,7 +7,7 @@
 using namespace lcb::views;
 
 static void chunk_callback(lcb_t, int, const lcb_RESPBASE*);
-static void row_callback(lcbjsp_PARSER*, const lcbjsp_ROW*);
+static void row_callback(lcb::jsparse::Parser*, const lcb::jsparse::Row*);
 
 template <typename value_type, typename size_type>
 void IOV2PTRLEN(const lcb_IOV* iov, value_type*& ptr, size_type& len) {
@@ -33,8 +33,8 @@ void ViewRequest::invoke_last(lcb_error_t err) {
     resp.cookie = const_cast<void*>(cookie);
     resp.rflags = LCB_RESP_F_FINAL;
     if (parser && parser->meta_complete) {
-        resp.value = parser->meta_buf.base;
-        resp.nvalue = parser->meta_buf.nused;
+        resp.value = parser->meta_buf.c_str();
+        resp.nvalue = parser->meta_buf.size();
     } else {
         resp.rflags |= LCB_RESP_F_CLIENTGEN;
     }
@@ -84,7 +84,7 @@ chunk_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
     }
 
     req->refcount++;
-    lcbjsp_feed(req->parser, reinterpret_cast<const char*>(rh->body), rh->nbody);
+    req->parser->feed(reinterpret_cast<const char*>(rh->body), rh->nbody);
     req->cur_htresp = NULL;
     req->unref();
 }
@@ -98,7 +98,7 @@ do_copy_iov(std::string& dstbuf, lcb_IOV *dstiov, const lcb_IOV *srciov)
 }
 
 static VRDocRequest *
-mk_docreq(const lcbjsp_ROW *datum)
+mk_docreq(const lcb::jsparse::Row *datum)
 {
     size_t extra_alloc = 0;
     VRDocRequest *dreq;
@@ -116,12 +116,13 @@ mk_docreq(const lcbjsp_ROW *datum)
 }
 
 static void
-row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
+row_callback(lcb::jsparse::Parser *parser, const lcb::jsparse::Row *datum)
 {
+    using lcb::jsparse::Row;
     ViewRequest *req = reinterpret_cast<ViewRequest*>(parser->data);
-    if (datum->type == LCBJSP_TYPE_ROW) {
+    if (datum->type == Row::ROW_ROW) {
         if (!req->is_no_rowparse()) {
-            lcbjsp_parse_viewrow(req->parser, (lcbjsp_ROW*)datum);
+            req->parser->parse_viewrow(const_cast<Row&>(*datum));
         }
 
         if (req->is_include_docs() && datum->docid.iov_len && req->callback) {
@@ -143,9 +144,9 @@ row_callback(lcbjsp_PARSER *parser, const lcbjsp_ROW *datum)
             resp.htresp = req->cur_htresp;
             req->invoke_row(&resp);
         }
-    } else if (datum->type == LCBJSP_TYPE_ERROR) {
+    } else if (datum->type == Row::ROW_ERROR) {
         req->invoke_last(LCB_PROTOCOL_ERROR);
-    } else if (datum->type == LCBJSP_TYPE_COMPLETE) {
+    } else if (datum->type == Row::ROW_COMPLETE) {
         /* nothing */
     }
 }
@@ -190,7 +191,7 @@ ViewRequest::~ViewRequest() {
     invoke_last();
 
     if (parser != NULL) {
-        lcbjsp_free(parser);
+        delete parser;
     }
     if (htreq != NULL) {
         lcb_cancel_http_request(instance, htreq);
@@ -236,7 +237,7 @@ lcb_error_t ViewRequest::request_http(const lcb_CMDVIEWQUERY *cmd) {
 ViewRequest::ViewRequest(lcb_t instance_, const void *cookie_,
                          const lcb_CMDVIEWQUERY* cmd)
     : cur_htresp(NULL), htreq(NULL),
-      parser(lcbjsp_create(LCBJSP_MODE_VIEWS)),
+      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_VIEWS)),
       cookie(cookie_), docq(NULL), callback(cmd->callback),
       instance(instance_), refcount(1),
       cmdflags(cmd->cmdflags),
