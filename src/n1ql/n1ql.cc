@@ -142,7 +142,7 @@ struct lcb_N1QLCACHE_st {
     }
 };
 
-typedef struct lcb_N1QLREQ {
+typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
     const lcb_RESPHTTP *cur_htresp;
     struct lcb_http_request_st *htreq;
     lcb::jsparse::Parser *parser;
@@ -229,6 +229,21 @@ typedef struct lcb_N1QLREQ {
 
     inline lcb_N1QLREQ(lcb_t obj, const void *user_cookie, const lcb_CMDN1QL *cmd);
     inline ~lcb_N1QLREQ();
+
+    // Parser overrides:
+    void JSPARSE_on_row(const lcb::jsparse::Row& row) {
+        lcb_RESPN1QL resp = { 0 };
+        resp.row = static_cast<const char *>(row.row.iov_base);
+        resp.nrow = row.row.iov_len;
+        nrows++;
+        invoke_row(&resp, false);
+    }
+    void JSPARSE_on_error(const std::string&) {
+        lasterr = LCB_PROTOCOL_ERROR;
+    }
+    void JSPARSE_on_complete(const std::string&) {
+        // Nothing
+    }
 
 } N1QLREQ;
 
@@ -395,24 +410,6 @@ lcb_N1QLREQ::~lcb_N1QLREQ()
     }
     if (prepare_req) {
         lcb_n1ql_cancel(instance, prepare_req);
-    }
-}
-
-static void
-row_callback(lcb::jsparse::Parser *parser, const lcb::jsparse::Row *datum)
-{
-    N1QLREQ *req = static_cast<N1QLREQ*>(parser->data);
-    lcb_RESPN1QL resp = { 0 };
-
-    if (datum->type == lcb::jsparse::Row::ROW_ROW) {
-        resp.row = static_cast<const char*>(datum->row.iov_base);
-        resp.nrow = datum->row.iov_len;
-        req->nrows++;
-        req->invoke_row(&resp, 0);
-    } else if (datum->type == lcb::jsparse::Row::ROW_ERROR) {
-        req->lasterr = resp.rc = LCB_PROTOCOL_ERROR;
-    } else if (datum->type == lcb::jsparse::Row::ROW_COMPLETE) {
-        /* Nothing */
     }
 }
 
@@ -585,13 +582,11 @@ lcb_n1qlreq_parsetmo(const std::string& s)
 lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
     const void *user_cookie, const lcb_CMDN1QL *cmd)
     : cur_htresp(NULL), htreq(NULL),
-      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL)),
+      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj),
       lasterr(LCB_SUCCESS), flags(cmd->cmdflags), timeout(0),
       nrows(0), prepare_req(NULL), was_retried(false)
 {
-    parser->data = this;
-    parser->callback = row_callback;
     if (cmd->handle) {
         *cmd->handle = this;
     }

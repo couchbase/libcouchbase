@@ -7,7 +7,6 @@
 using namespace lcb::views;
 
 static void chunk_callback(lcb_t, int, const lcb_RESPBASE*);
-static void row_callback(lcb::jsparse::Parser*, const lcb::jsparse::Row*);
 
 template <typename value_type, typename size_type>
 void IOV2PTRLEN(const lcb_IOV* iov, value_type*& ptr, size_type& len) {
@@ -115,40 +114,39 @@ mk_docreq(const lcb::jsparse::Row *datum)
     return dreq;
 }
 
-static void
-row_callback(lcb::jsparse::Parser *parser, const lcb::jsparse::Row *datum)
-{
+void ViewRequest::JSPARSE_on_row(const lcb::jsparse::Row& datum) {
     using lcb::jsparse::Row;
-    ViewRequest *req = reinterpret_cast<ViewRequest*>(parser->data);
-    if (datum->type == Row::ROW_ROW) {
-        if (!req->is_no_rowparse()) {
-            req->parser->parse_viewrow(const_cast<Row&>(*datum));
-        }
-
-        if (req->is_include_docs() && datum->docid.iov_len && req->callback) {
-            VRDocRequest *dreq = mk_docreq(datum);
-            dreq->parent = req;
-            req->docq->add(dreq);
-            req->refcount++;
-
-        } else {
-            lcb_RESPVIEWQUERY resp = { 0 };
-            if (req->is_no_rowparse()) {
-                IOV2PTRLEN(&datum->row, resp.value, resp.nvalue);
-            } else {
-                IOV2PTRLEN(&datum->key, resp.key, resp.nkey);
-                IOV2PTRLEN(&datum->docid, resp.docid, resp.ndocid);
-                IOV2PTRLEN(&datum->value, resp.value, resp.nvalue);
-                IOV2PTRLEN(&datum->geo, resp.geometry, resp.ngeometry);
-            }
-            resp.htresp = req->cur_htresp;
-            req->invoke_row(&resp);
-        }
-    } else if (datum->type == Row::ROW_ERROR) {
-        req->invoke_last(LCB_PROTOCOL_ERROR);
-    } else if (datum->type == Row::ROW_COMPLETE) {
-        /* nothing */
+    if (!is_no_rowparse()) {
+        parser->parse_viewrow(const_cast<Row&>(datum));
     }
+
+    if (is_include_docs() && datum.docid.iov_len && callback) {
+        VRDocRequest *dreq = mk_docreq(&datum);
+        dreq->parent = this;
+        docq->add(dreq);
+        ref();
+
+    } else {
+        lcb_RESPVIEWQUERY resp = { 0 };
+        if (is_no_rowparse()) {
+            IOV2PTRLEN(&datum.row, resp.value, resp.nvalue);
+        } else {
+            IOV2PTRLEN(&datum.key, resp.key, resp.nkey);
+            IOV2PTRLEN(&datum.docid, resp.docid, resp.ndocid);
+            IOV2PTRLEN(&datum.value, resp.value, resp.nvalue);
+            IOV2PTRLEN(&datum.geo, resp.geometry, resp.ngeometry);
+        }
+        resp.htresp = cur_htresp;
+        invoke_row(&resp);
+    }
+}
+
+void ViewRequest::JSPARSE_on_error(const std::string&) {
+    invoke_last(LCB_PROTOCOL_ERROR);
+}
+
+void ViewRequest::JSPARSE_on_complete(const std::string&) {
+    // Nothing
 }
 
 static void
@@ -237,7 +235,7 @@ lcb_error_t ViewRequest::request_http(const lcb_CMDVIEWQUERY *cmd) {
 ViewRequest::ViewRequest(lcb_t instance_, const void *cookie_,
                          const lcb_CMDVIEWQUERY* cmd)
     : cur_htresp(NULL), htreq(NULL),
-      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_VIEWS)),
+      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_VIEWS, this)),
       cookie(cookie_), docq(NULL), callback(cmd->callback),
       instance(instance_), refcount(1),
       cmdflags(cmd->cmdflags),
@@ -271,8 +269,6 @@ ViewRequest::ViewRequest(lcb_t instance_, const void *cookie_,
 
     lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_COUNTER, NULL);
 
-    parser->callback = row_callback;
-    parser->data = this;
     lasterr = request_http(cmd);
 }
 

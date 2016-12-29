@@ -27,7 +27,7 @@
 #define LOGID(req) static_cast<const void*>(req)
 #define LOGARGS(req, lvl) req->instance->settings, "n1ql", LCB_LOG_##lvl, __FILE__, __LINE__
 
-struct lcb_FTSREQ {
+struct lcb_FTSREQ : lcb::jsparse::Parser::Actions {
     const lcb_RESPHTTP *cur_htresp;
     lcb_http_request_t htreq;
     lcb::jsparse::Parser *parser;
@@ -41,26 +41,20 @@ struct lcb_FTSREQ {
 
     lcb_FTSREQ(lcb_t, const void *, const lcb_CMDFTS *);
     ~lcb_FTSREQ();
-};
-
-static void
-row_callback(lcb::jsparse::Parser *parser, const lcb::jsparse::Row *datum)
-{
-    lcb_FTSREQ *req = static_cast<lcb_FTSREQ*>(parser->data);
-    lcb_RESPFTS resp = { 0 };
-    using lcb::jsparse::Row;
-
-    if (datum->type == Row::ROW_ROW) {
-        resp.row = static_cast<const char*>(datum->row.iov_base);
-        resp.nrow = datum->row.iov_len;
-        req->nrows++;
-        req->invoke_row(&resp);
-    } else if (datum->type == Row::ROW_ERROR) {
-        req->lasterr = resp.rc = LCB_PROTOCOL_ERROR;
-    } else if (datum->type == Row::ROW_COMPLETE) {
-        /* Nothing */
+    void JSPARSE_on_row(const lcb::jsparse::Row& datum) {
+        lcb_RESPFTS resp = { 0 };
+        resp.row = static_cast<const char*>(datum.row.iov_base);
+        resp.nrow = datum.row.iov_len;
+        nrows++;
+        invoke_row(&resp);
     }
-}
+    void JSPARSE_on_error(const std::string&) {
+        lasterr = LCB_PROTOCOL_ERROR;
+    }
+    void JSPARSE_on_complete(const std::string&) {
+        // Nothing
+    }
+};
 
 static void
 chunk_callback(lcb_t, int, const lcb_RESPBASE *rb)
@@ -117,8 +111,9 @@ lcb_FTSREQ::invoke_last()
 }
 
 lcb_FTSREQ::lcb_FTSREQ(lcb_t instance_, const void *cookie_, const lcb_CMDFTS *cmd)
-: cur_htresp(NULL), htreq(NULL),
-  parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_FTS)),
+: lcb::jsparse::Parser::Actions(),
+  cur_htresp(NULL), htreq(NULL),
+  parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_FTS, this)),
   cookie(cookie_), callback(cmd->callback), instance(instance_), nrows(0),
   lasterr(LCB_SUCCESS)
 {
@@ -167,8 +162,6 @@ lcb_FTSREQ::lcb_FTSREQ(lcb_t instance_, const void *cookie_, const lcb_CMDFTS *c
     std::string qbody(Json::FastWriter().write(root));
     htcmd.body = qbody.c_str();
     htcmd.nbody = qbody.size();
-    parser->data = this;
-    parser->callback = row_callback;
 
     lasterr = lcb_http3(instance, this, &htcmd);
     if (lasterr == LCB_SUCCESS) {

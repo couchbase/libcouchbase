@@ -10,7 +10,11 @@ class JsonParseTest : public ::testing::Test {
 
 using namespace lcb::jsparse;
 
-struct Context {
+static std::string iov2s(const lcb_IOV& iov) {
+    return std::string(reinterpret_cast<const char*>(iov.iov_base), iov.iov_len);
+}
+
+struct Context : Parser::Actions {
     lcb_error_t rc;
     bool received_done;
     std::string meta;
@@ -24,35 +28,23 @@ struct Context {
         meta.clear();
         rows.clear();
     }
-};
-
-static std::string iov2s(const lcb_IOV& iov) {
-    return std::string(reinterpret_cast<const char*>(iov.iov_base), iov.iov_len);
-}
-
-extern "C" {
-static void rowCallback(Parser *parser, const Row *row) {
-    Context *ctx = reinterpret_cast<Context*>(parser->data);
-    if (row->type == Row::ROW_ERROR) {
-        ctx->rc = LCB_PROTOCOL_ERROR;
-        ctx->received_done = true;
-    } else if (row->type == Row::ROW_ROW) {
-        ctx->rows.push_back(iov2s(row->row));
-    } else if (row->type == Row::ROW_COMPLETE) {
-        ctx->meta = iov2s(row->row);
-        ctx->received_done = true;
+    void JSPARSE_on_row(const Row& row) {
+        rows.push_back(iov2s(row.row));
     }
-}
-}
+    void JSPARSE_on_complete(const std::string& s) {
+        meta.assign(s);
+        received_done = true;
+    }
+    void JSPARSE_on_error(const std::string&) {
+        rc = LCB_PROTOCOL_ERROR;
+        received_done = true;
+    }
+};
 
 static bool validateJsonRows(const char *txt, size_t ntxt, Parser::Mode mode)
 {
-    Parser parser(mode);
-
-    // Feed it once
     Context cx;
-    parser.callback = rowCallback;
-    parser.data = &cx;
+    Parser parser(mode, &cx);
 
     for (size_t ii = 0; ii < ntxt; ii++) {
         parser.feed(txt + ii, 1);
@@ -69,18 +61,13 @@ static bool validateJsonRows(const char *txt, size_t ntxt, Parser::Mode mode)
 
 static bool validateBadParse(const char *txt, size_t ntxt, Parser::Mode mode)
 {
-    Parser p(mode);
     Context cx;
-    p.callback = rowCallback;
-    p.data = &cx;
+    Parser p(mode, &cx);
     p.feed(JSON_fts_bad, sizeof(JSON_fts_bad));
     EXPECT_EQ(LCB_PROTOCOL_ERROR, cx.rc);
 
     p.reset();
     cx.reset();
-
-    p.callback = rowCallback;
-    p.data = &cx;
 
     return true;
 }

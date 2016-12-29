@@ -17,7 +17,7 @@ struct VRDocRequest : docreq::DocRequest {
     std::string rowbuf;
 };
 
-struct ViewRequest {
+struct ViewRequest : lcb::jsparse::Parser::Actions {
     ViewRequest(lcb_t, const void*, const lcb_CMDVIEWQUERY*);
     ~ViewRequest();
     void invoke_last(lcb_error_t err);
@@ -42,6 +42,10 @@ struct ViewRequest {
     bool is_spatial() const {
         return cmdflags & LCB_CMDVIEWQUERY_F_SPATIAL;
     }
+
+    void JSPARSE_on_row(const lcb::jsparse::Row&);
+    void JSPARSE_on_error(const std::string&);
+    void JSPARSE_on_complete(const std::string&);
 
     /** Current HTTP response to provide in callbacks */
     const lcb_RESPHTTP *cur_htresp;

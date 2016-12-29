@@ -28,37 +28,13 @@ namespace jsparse {
 
 struct Parser;
 
-typedef struct {
-    enum Type {
-        /**This is a row of view data. You can parse this as JSON from your
-         * favorite decoder/converter */
-        ROW_ROW,
-
-        /**
-         * All the rows have been returned. In this case, the data is the 'meta'.
-         * This is a valid JSON payload which was returned from the server.
-         * The "rows" : [] array will be empty.
-         */
-        ROW_COMPLETE,
-
-        /**
-         * A JSON parse error occured. The payload will contain string data. This
-         * may be JSON (but this is not likely).
-         * The callback will be delivered twice. First when the error is noticed,
-         * and second at the end (instead of a COMPLETE callback)
-         */
-        ROW_ERROR
-    };
-
-    Type type; /**< The type of data encapsulated */
+struct Row {
     lcb_IOV docid;
     lcb_IOV key;
     lcb_IOV value;
     lcb_IOV row;
     lcb_IOV geo;
-} Row;
-
-typedef void (*Callback)(Parser*,const Row*);
+};
 
 struct Parser {
     enum Mode {
@@ -67,13 +43,39 @@ struct Parser {
         MODE_FTS
     };
 
+    struct Actions {
+        /**
+         * Called when a row is received.
+         * This is a row of view data. You can parse this as JSON from your
+         * favorite decoder/converter
+         */
+        virtual void JSPARSE_on_row(const Row&) = 0;
+
+        /**
+         * A JSON parse error occured. The payload will contain string data. This
+         * may be JSON (but this is not likely).
+         * The callback will be delivered twice. First when the error is noticed,
+         * and second at the end (instead of a COMPLETE callback)
+         */
+        virtual void JSPARSE_on_error(const std::string& buf) = 0;
+
+        /**
+         * All the rows have been returned. In this case, the data is the 'meta'.
+         * This is a valid JSON payload which was returned from the server.
+         * The "rows" : [] array will be empty.
+         */
+        virtual void JSPARSE_on_complete(const std::string& meta) = 0;
+
+        virtual ~Actions(){}
+    };
+
     /**
      * Creates a new vrow context object.
      * You must set callbacks on this object if you wish it to be useful.
      * You must feed it data (calling vrow_feed) as well. The data may be fed
      * in chunks and callbacks will be invoked as each row is read.
      */
-    Parser(Mode mode);
+    Parser(Mode mode, Actions* actions_);
     ~Parser();
 
     /**
@@ -150,15 +152,13 @@ struct Parser {
      */
     size_t last_row_endpos;
 
-    void *data;
-
     /**
      * std::string to contain parsed document ID.
      */
     Json::Value cxx_data;
 
     /* callback to invoke */
-    Callback callback;
+    Actions *actions;
 };
 
 }

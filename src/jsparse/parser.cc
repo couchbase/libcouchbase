@@ -47,7 +47,6 @@ void NORMALIZE_OFFSETS(const char *& buf, T& len) {
     len--;
 }
 
-
 /**
  * Gets a buffer, given an (absolute) position offset.
  * It will try to get a buffer of size desired. The actual size is
@@ -114,7 +113,6 @@ static void
 row_pop_callback(jsonsl_t jsn, jsonsl_action_t,
     struct jsonsl_state_st *state, const jsonsl_char_t *)
 {
-    Row dt = { Row::ROW_ROW };
     Parser *ctx = get_ctx(jsn);
     const char *rowbuf;
     size_t szdummy;
@@ -142,16 +140,15 @@ row_pop_callback(jsonsl_t jsn, jsonsl_action_t,
     }
 
     ctx->rowcount++;
-
-    if (!ctx->callback) {
+    if (!ctx->actions) {
         return;
     }
 
     rowbuf = ctx->get_buffer_region(state->pos_begin, -1, &szdummy);
-    dt.type = Row::ROW_ROW;
+    Row dt = {{0}};
     dt.row.iov_base = (void *)rowbuf;
     dt.row.iov_len = jsn->pos - state->pos_begin + 1;
-    ctx->callback(ctx, &dt);
+    ctx->actions->JSPARSE_on_row(dt);
 }
 
 static int
@@ -159,16 +156,13 @@ parse_error_callback(jsonsl_t jsn, jsonsl_error_t,
     struct jsonsl_state_st *, jsonsl_char_t *)
 {
     Parser *ctx = get_ctx(jsn);
-    Row dt;
-
     ctx->have_error = 1;
 
     /* invoke the callback */
-    dt.type = Row::ROW_ERROR;
-    dt.row.iov_base = const_cast<char*>(ctx->current_buf.c_str());
-    dt.row.iov_len = ctx->current_buf.size();
-    ctx->callback(ctx, &dt);
-
+    if (ctx->actions) {
+        ctx->actions->JSPARSE_on_error(ctx->current_buf);
+        ctx->actions = NULL;
+    }
     return 0;
 }
 
@@ -177,15 +171,14 @@ trailer_pop_callback(jsonsl_t jsn, jsonsl_action_t,
     struct jsonsl_state_st *state, const jsonsl_char_t *)
 {
     Parser *ctx = get_ctx(jsn);
-    Row dt;
     if (state->data != JOBJ_RESPONSE_ROOT) {
         return;
     }
     ctx->combine_meta();
-    dt.row.iov_base = const_cast<char*>(ctx->meta_buf.c_str());
-    dt.row.iov_len = ctx->meta_buf.size();
-    dt.type = Row::ROW_COMPLETE;
-    ctx->callback(ctx, &dt);
+    if (ctx->actions) {
+        ctx->actions->JSPARSE_on_complete(ctx->meta_buf);
+        ctx->actions = NULL;
+    }
 }
 
 static void
@@ -284,7 +277,7 @@ const char* Parser::jprstr_for_mode(Mode mode) {
     }
 }
 
-Parser::Parser(Mode mode_) :
+Parser::Parser(Mode mode_, Parser::Actions* actions_) :
     jsn(jsonsl_new(512)),
     jsn_rdetails(jsonsl_new(32)),
     jpr(jsonsl_jpr_new(jprstr_for_mode(mode_), NULL)),
@@ -297,9 +290,8 @@ Parser::Parser(Mode mode_) :
     keep_pos(0),
     header_len(0),
     last_row_endpos(0),
-    data(NULL),
     cxx_data(),
-    callback(NULL) {
+    actions(actions_) {
 
     jsonsl_jpr_match_state_init(jsn, &jpr, 1);
     reset();
