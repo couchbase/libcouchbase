@@ -66,8 +66,6 @@ class ConfigInfo;
 extern "C" {
 #endif
 
-struct lcb_string_st;
-
 struct lcb_callback_st {
     lcb_RESPCALLBACK v3callbacks[LCB_CALLBACK__MAX];
     lcb_get_callback get;

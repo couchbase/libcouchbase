@@ -24,7 +24,6 @@
 #include "internal.h"
 #include "clconfig.h"
 #include "packetutils.h"
-#include "simplestring.h"
 #include <mcserver/negotiate.h>
 #include <lcbio/lcbio.h>
 #include <lcbio/timer-cxx.h>

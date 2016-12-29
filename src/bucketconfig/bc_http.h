@@ -26,7 +26,6 @@
 
 #include "config.h"
 #include "hostlist.h"
-#include "simplestring.h"
 #include "clconfig.h"
 #include <lcbht/lcbht.h>
 

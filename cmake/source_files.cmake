@@ -10,8 +10,7 @@ SET(LCB_UTILS_SRC
     src/hashtable.c
     src/list.c
     src/logging.c
-    src/ringbuffer.c
-    src/simplestring.c)
+    src/ringbuffer.c)
 
 # lcbio
 FILE(GLOB LCB_IO_SRC src/lcbio/*.c)
