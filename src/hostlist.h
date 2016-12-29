@@ -71,6 +71,9 @@ struct Hostlist {
 };
 }
 typedef lcb::Hostlist* hostlist_t;
+
+struct hostlist_st : lcb::Hostlist {
+};
 #endif
 
 #ifdef __cplusplus

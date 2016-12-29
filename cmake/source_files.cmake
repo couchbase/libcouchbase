@@ -7,7 +7,6 @@ SET(LCB_UTILS_SRC
     contrib/genhash/genhash.c
     src/strcodecs/base64.c
     src/gethrtime.c
-    src/dns-srv.c
     src/hashtable.c
     src/list.c
     src/logging.c
@@ -56,6 +55,7 @@ SET(LCB_CORE_CXXSRC
     src/bucketconfig/bc_mcraw.cc
     src/bucketconfig/confmon.cc
     src/connspec.cc
+    src/dns-srv.cc
     src/dump.cc
     src/getconfig.cc
     src/nodeinfo.cc

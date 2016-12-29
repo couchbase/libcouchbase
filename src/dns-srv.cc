@@ -1,7 +1,6 @@
 #include <libcouchbase/couchbase.h>
 
 #include "config.h"
-#include "simplestring.h"
 #include "hostlist.h"
 
 #ifndef _WIN32
@@ -15,49 +14,39 @@
 
 #if defined(HAVE_ARPA_NAMESER_H) && defined(HAVE_RES_SEARCH)
 #define CAN_SRV_LOOKUP
-
+#include <string>
+#include <cstdio>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <resolv.h>
-#include <stdio.h>
 
 LCB_INTERNAL_API
 lcb_error_t
 lcb_dnssrv_query(const char *name, hostlist_t hostlist)
 {
-    lcb_string ss_resp;
     ns_msg msg;
 
     int rv = 0, nresp, ii;
     lcb_U16 dns_rv;
-    char *dname_p;
 
-#define DO_RETURN(err) \
-    lcb_string_release(&ss_resp); \
-    return err;
-
-    lcb_string_init(&ss_resp);
-    lcb_string_reserve(&ss_resp, NS_PACKETSZ + NS_MAXDNAME);
-
-    dname_p = ss_resp.base + NS_PACKETSZ;
-
-    nresp = res_search(name, ns_c_in, ns_t_srv, (lcb_U8*)ss_resp.base, NS_PACKETSZ);
+    std::vector<unsigned char> pkt(NS_PACKETSZ);
+    nresp = res_search(name, ns_c_in, ns_t_srv, &pkt[0], NS_PACKETSZ);
     if (nresp < 0) {
-        DO_RETURN(LCB_UNKNOWN_HOST);
+        return LCB_UNKNOWN_HOST;
     }
 
-    rv = ns_initparse((lcb_U8*)ss_resp.base, nresp, &msg);
+    rv = ns_initparse(&pkt[0], nresp, &msg);
     if (rv != 0) {
-        DO_RETURN(LCB_PROTOCOL_ERROR);
+        return LCB_PROTOCOL_ERROR;
     }
 
     dns_rv = ns_msg_getflag(msg, ns_f_rcode);
     if (dns_rv != ns_r_noerror) {
-        DO_RETURN(LCB_UNKNOWN_HOST);
+        return LCB_UNKNOWN_HOST;
     }
 
     if (!ns_msg_count(msg, ns_s_an)) {
-        DO_RETURN(LCB_UNKNOWN_HOST);
+        return LCB_UNKNOWN_HOST;
     }
 
     for (ii = 0; ii < ns_msg_count(msg, ns_s_an); ii++) {
@@ -89,14 +78,13 @@ lcb_dnssrv_query(const char *name, hostlist_t hostlist)
         #undef do_get_16
 
         (void)srv_prio; (void)srv_weight; /* Handle these in the future */
-
+        std::vector<char> dname(NS_MAXDNAME + 1);
         ns_name_uncompress(
             ns_msg_base(msg), ns_msg_end(msg),
-            rdata, dname_p, NS_MAXDNAME);
-        hostlist_add_stringz(hostlist, dname_p, srv_port);
+            rdata, &dname[0], NS_MAXDNAME);
+        hostlist->add(&dname[0], srv_port);
     }
-    DO_RETURN(LCB_SUCCESS);
-#undef DO_RETURN
+    return LCB_SUCCESS;
 }
 #endif /* HAVE_RES_SEARCH */
 
@@ -129,9 +117,8 @@ lcb_dnssrv_query(const char *addr, hostlist_t hs)
 
 
 #ifndef CAN_SRV_LOOKUP
-LCB_INTERNAL_API lcb_error_t lcb_dnssrv_query(const char *addr, hostlist_t hs)
-{
-    (void)addr;(void)hs; return LCB_CLIENT_FEATURE_UNAVAILABLE;
+LCB_INTERNAL_API lcb_error_t lcb_dnssrv_query(const char *, hostlist_t) {
+    return LCB_CLIENT_FEATURE_UNAVAILABLE;
 }
 #endif
 
@@ -139,21 +126,17 @@ LCB_INTERNAL_API lcb_error_t lcb_dnssrv_query(const char *addr, hostlist_t hs)
 #define SVCNAME_SSL "_couchbases._tcp."
 
 LCB_INTERNAL_API
-hostlist_t
-lcb_dnssrv_getbslist(const char *addr, int is_ssl, lcb_error_t *errp)
-{
-    lcb_string ss;
+hostlist_st*
+lcb_dnssrv_getbslist(const char *addr, int is_ssl, lcb_error_t *errp) {
+    std::string ss;
+    lcb::Hostlist *ret = new lcb::Hostlist();
+    ss.append(is_ssl ? SVCNAME_SSL : SVCNAME_PLAIN);
+    ss.append(addr);
 
-    hostlist_t ret = hostlist_create();
-    lcb_string_init(&ss);
-    lcb_string_appendv(&ss, is_ssl ? SVCNAME_SSL : SVCNAME_PLAIN, (size_t)-1,
-            addr, (size_t)-1, NULL);
-
-    *errp = lcb_dnssrv_query(ss.base, ret);
-    lcb_string_release(&ss);
+    *errp = lcb_dnssrv_query(ss.c_str(), ret);
     if (*errp != LCB_SUCCESS) {
-        hostlist_destroy(ret);
+        delete ret;
         ret = NULL;
     }
-    return ret;
+    return static_cast<hostlist_st*>(ret);
 }
