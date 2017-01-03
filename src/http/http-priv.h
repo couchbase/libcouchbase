@@ -191,6 +191,16 @@ struct Request {
     void finish_or_retry(lcb_error_t rc);
 
     /**
+     * Change the callback for this request. This is used to indicate that
+     * a custom internal callback is used, rather than the one installed via
+     * lcb_install_callback3
+     * @param callback_ The internal callback to invoke
+     */
+    void set_callback(lcb_RESPCALLBACK callback_) {
+        callback = callback_;
+    }
+
+    /**
      * Let the request finish its normal course, suppressing any callbacks.
      * Unlike cancel(), this does not dispatch to finish. Finish is called
      * when any final I/O has been completed, which may happen after the

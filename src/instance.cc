@@ -520,9 +520,9 @@ void lcb_destroy(lcb_t instance)
 
     if ((pendq = po->items[LCB_PENDTYPE_HTTP])) {
         for (it = pendq->begin(); it != pendq->end(); ++it) {
-            lcb_http_request_t htreq = reinterpret_cast<lcb_http_request_t>(*it);
-            lcb_htreq_block_callback(htreq);
-            lcb_htreq_finish(instance, htreq, LCB_ERROR);
+            http::Request *htreq = reinterpret_cast<http::Request*>(*it);
+            htreq->block_callback();
+            htreq->finish(LCB_ERROR);
         }
     }
 

@@ -165,7 +165,7 @@ lcb_FTSREQ::lcb_FTSREQ(lcb_t instance_, const void *cookie_, const lcb_CMDFTS *c
 
     lasterr = lcb_http3(instance, this, &htcmd);
     if (lasterr == LCB_SUCCESS) {
-        lcb_htreq_setcb(htreq, chunk_callback);
+        htreq->set_callback(chunk_callback);
         if (cmd->handle) {
             *cmd->handle = reinterpret_cast<lcb_FTSREQ*>(this);
         }

@@ -179,9 +179,9 @@ cb_docq_throttle(lcb::docreq::Queue *q, int enabled)
         return;
     }
     if (enabled) {
-        lcb_htreq_pause(req->htreq);
+        req->htreq->pause();
     } else {
-        lcb_htreq_resume(req->htreq);
+        req->htreq->resume();
     }
 }
 
@@ -227,7 +227,7 @@ lcb_error_t ViewRequest::request_http(const lcb_CMDVIEWQUERY *cmd) {
 
     lcb_error_t err = lcb_http3(instance, this, &htcmd);
     if (err == LCB_SUCCESS) {
-        lcb_htreq_setcb(htreq, chunk_callback);
+        htreq->set_callback(chunk_callback);
     }
     return err;
 }

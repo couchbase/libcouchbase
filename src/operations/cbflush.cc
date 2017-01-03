@@ -58,6 +58,6 @@ lcb_cbflush3(lcb_t instance, const void *cookie, const lcb_CMDBASE *)
     if (rc != LCB_SUCCESS) {
         return rc;
     }
-    lcb_htreq_setcb(htr, flush_cb);
+    htr->set_callback(flush_cb);
     return LCB_SUCCESS;
 }

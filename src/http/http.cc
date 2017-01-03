@@ -610,23 +610,6 @@ Request::cancel()
     finish(LCB_SUCCESS);
 }
 
-// Wrappers
-void lcb_htreq_setcb(lcb_http_request_t req, lcb_RESPCALLBACK callback) {
-    req->callback = callback;
-}
-void lcb_htreq_block_callback(lcb_http_request_t req) {
-    req->block_callback();
-}
-void lcb_htreq_pause(lcb_http_request_t req) {
-    req->pause();
-}
-void lcb_htreq_resume(lcb_http_request_t req) {
-    req->resume();
-}
-void lcb_htreq_finish(lcb_t, lcb_http_request_t req, lcb_error_t rc) {
-    req->finish(rc);
-}
-
 LIBCOUCHBASE_API
 void
 lcb_cancel_http_request(lcb_t, lcb_http_request_t req)

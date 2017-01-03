@@ -517,7 +517,7 @@ N1QLREQ::issue_htreq(const std::string& body)
 
     lcb_error_t rc = lcb_http3(instance, this, &htcmd);
     if (rc == LCB_SUCCESS) {
-        lcb_htreq_setcb(htreq, chunk_callback);
+        htreq->set_callback(chunk_callback);
     }
     return rc;
 }
