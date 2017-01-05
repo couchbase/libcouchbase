@@ -298,8 +298,8 @@ void lcb_confmon_provider_success(clconfig_provider *provider,
     static_cast<Confmon*>(provider->parent)->provider_got_config(provider, config);
 }
 
-void Confmon::provider_got_config(Provider *provider, clconfig_info *config) {
-    do_set_next(config, true);
+void Confmon::provider_got_config(Provider *, clconfig_info *config_) {
+    do_set_next(config_, true);
     stop();
 }
 

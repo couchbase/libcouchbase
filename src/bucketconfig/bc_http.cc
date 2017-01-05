@@ -568,12 +568,12 @@ clconfig_provider * lcb_clconfig_create_http(lcb_confmon *parent)
     return new HttpProvider(parent);
 }
 
-HttpProvider::HttpProvider(lcb_confmon *parent)
+HttpProvider::HttpProvider(lcb_confmon *parent_)
     : ioctx(NULL),
-      htp(lcbht_new(parent->settings)),
-      disconn_timer(lcbio_timer_new(parent->iot, this, delayed_disconn)),
-      io_timer(lcbio_timer_new(parent->iot, this, timeout_handler)),
-      as_reconnect(lcbio_timer_new(parent->iot, this, delayed_reconnect)),
+      htp(lcbht_new(parent_->settings)),
+      disconn_timer(lcbio_timer_new(parent_->iot, this, delayed_disconn)),
+      io_timer(lcbio_timer_new(parent_->iot, this, timeout_handler)),
+      as_reconnect(lcbio_timer_new(parent_->iot, this, delayed_reconnect)),
       nodes(new Hostlist()),
       current_config(NULL),
       last_parsed(NULL),

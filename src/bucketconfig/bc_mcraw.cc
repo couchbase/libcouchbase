@@ -135,15 +135,15 @@ clconfig_provider * lcb_clconfig_create_mcraw(lcb_confmon *parent) {
     return new McRawProvider(parent);
 }
 
-McRawProvider::McRawProvider(lcb_confmon *parent)
-    : config(NULL), async(lcbio_timer_new(parent->iot, this, async_update)) {
+McRawProvider::McRawProvider(lcb_confmon *parent_)
+    : config(NULL), async(lcbio_timer_new(parent_->iot, this, async_update)) {
     memset(static_cast<clconfig_provider*>(this), 0, sizeof(clconfig_provider));
 
-    clconfig_provider::parent = parent;
+    clconfig_provider::parent = parent_;
     clconfig_provider::type = LCB_CLCONFIG_MCRAW;
-    clconfig_provider::get_cached = get_cached;
+    clconfig_provider::get_cached = ::get_cached;
     clconfig_provider::refresh = get_refresh;
     clconfig_provider::pause = pause_mcr;
-    clconfig_provider::configure_nodes = configure_nodes;
+    clconfig_provider::configure_nodes = ::configure_nodes;
     clconfig_provider::shutdown = mcraw_shutdown;
 }

@@ -169,9 +169,7 @@ static clconfig_info * get_cached(clconfig_provider *pb)
 
 static void async_callback(void *cookie)
 {
-    time_t last_mtime;
     FileProvider *provider = reinterpret_cast<FileProvider*>(cookie);
-    last_mtime = provider->last_mtime;
     if (provider->load_cache() == FileProvider::UPDATED) {
         lcb_confmon_provider_success(provider, provider->config);
     } else {
