@@ -18,6 +18,7 @@
 #include "internal.h"
 #include "clconfig.h"
 #include <list>
+#include <algorithm>
 
 #define LOGARGS(mon, lvlbase) mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__
 #define LOG(mon, lvlbase, msg) lcb_log(mon->settings, "confmon", LCB_LOG_##lvlbase, __FILE__, __LINE__, msg)
