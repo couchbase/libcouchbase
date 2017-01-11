@@ -276,8 +276,8 @@ static void op_dtorfn(mc_EPKTDATUM *d) {
     delete static_cast<RetryOp*>(d);
 }
 
-RetryOp::RetryOp() {
-    memset(this, 0, sizeof *this);
+RetryOp::RetryOp()
+    : mc_EPKTDATUM(), start(0), trytime(0), pkt(NULL), origerr(LCB_SUCCESS) {
     mc_EPKTDATUM::dtorfn = op_dtorfn;
     mc_EPKTDATUM::key = RETRY_PKT_KEY;
 }

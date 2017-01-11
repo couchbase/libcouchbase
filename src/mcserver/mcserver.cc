@@ -519,7 +519,7 @@ buf_done_cb(mc_PIPELINE *pl, const void *cookie, void *, void *)
 }
 
 Server::Server(lcb_t instance_, int ix)
-    : state(S_CLEAN),
+    : mc_PIPELINE(), state(S_CLEAN),
       io_timer(lcbio_timer_new(instance_->iotable, this, timeout_server)),
       instance(instance_),
       settings(lcb_settings_ref2(instance_->settings)),
@@ -528,7 +528,6 @@ Server::Server(lcb_t instance_, int ix)
       connctx(NULL),
       curhost(new lcb_host_t())
 {
-    std::memset(static_cast<mc_PIPELINE*>(this), 0, sizeof(mc_PIPELINE));
     mcreq_pipeline_init(this);
     mc_PIPELINE::flush_start = (mcreq_flushstart_fn)server_connect;
     mc_PIPELINE::buf_done_callback = buf_done_cb;

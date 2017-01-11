@@ -23,10 +23,9 @@ using namespace lcb::htparse;
 
 
 Parser::Parser(lcb_settings_st *settings_)
-    : settings(settings_), lastcall(CB_NONE),
+    : http_parser(), settings(settings_), lastcall(CB_NONE),
       last_body(0), last_bodylen(0), paused(false), is_ex(false) {
     lcb_settings_ref(settings);
-    memset(static_cast<http_parser*>(this), 0, sizeof(http_parser));
     reset();
 }
 
