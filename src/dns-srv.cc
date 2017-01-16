@@ -4,6 +4,7 @@
 #include "hostlist.h"
 
 #ifndef _WIN32
+#include <string>
 
 #ifdef HAVE_ARPA_NAMESER_H
 #include <arpa/nameser.h>
@@ -14,7 +15,6 @@
 
 #if defined(HAVE_ARPA_NAMESER_H) && defined(HAVE_RES_SEARCH)
 #define CAN_SRV_LOOKUP
-#include <string>
 #include <cstdio>
 #include <sys/types.h>
 #include <netinet/in.h>
