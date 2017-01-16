@@ -123,7 +123,7 @@ FileProvider::Status FileProvider::load_cache()
         goto GT_DONE;
     }
 
-    if (strcmp(vbc->bname, Provider::parent->settings->bucket) != 0) {
+    if (strcmp(vbc->bname, settings().bucket) != 0) {
         lcb_log(LOGARGS(this, ERROR), LOGFMT "Bucket name in file is different from the one requested", LOGID(this));
         goto GT_DONE;
     }
@@ -170,9 +170,9 @@ ConfigInfo* FileProvider::get_cached() {
 
 void FileProvider::reload_cache() {
     if (load_cache() == UPDATED) {
-        Provider::parent->provider_got_config(this, config);
+        parent->provider_got_config(this, config);
     } else {
-        Provider::parent->provider_failed(this, LCB_ERROR);
+        parent->provider_failed(this, LCB_ERROR);
     }
 }
 

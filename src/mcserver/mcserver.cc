@@ -493,7 +493,7 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
     procs.cb_flush_ready = on_flush_ready;
     connctx = lcbio_ctx_new(sock, this, &procs);
     connctx->subsys = "memcached";
-    mc_PIPELINE::flush_start = (mcreq_flushstart_fn)mcserver_flush;
+    flush_start = (mcreq_flushstart_fn)mcserver_flush;
 
     uint32_t tmo = next_timeout();
     lcb_log(LOGARGS_T(DEBUG), LOGFMT "Setting initial timeout=%ums", LOGID_T(), tmo/1000);
@@ -507,7 +507,7 @@ Server::connect()
     lcbio_pMGRREQ mr = lcbio_mgr_get(instance->memd_sockpool, curhost,
         default_timeout(), on_connected, this);
     LCBIO_CONNREQ_MKPOOLED(&connreq, mr);
-    mc_PIPELINE::flush_start = flush_noop;
+    flush_start = flush_noop;
     state = Server::S_CLEAN;
 }
 
@@ -529,9 +529,9 @@ Server::Server(lcb_t instance_, int ix)
       curhost(new lcb_host_t())
 {
     mcreq_pipeline_init(this);
-    mc_PIPELINE::flush_start = (mcreq_flushstart_fn)server_connect;
-    mc_PIPELINE::buf_done_callback = buf_done_cb;
-    mc_PIPELINE::index = ix;
+    flush_start = (mcreq_flushstart_fn)server_connect;
+    buf_done_callback = buf_done_cb;
+    index = ix;
 
     std::memset(&connreq, 0, sizeof connreq);
     std::memset(curhost, 0, sizeof *curhost);
@@ -634,7 +634,7 @@ Server::start_errored_ctx(State next_state)
             return;
         } else {
             /* Not closed but don't have a current context */
-            mc_PIPELINE::flush_start = (mcreq_flushstart_fn)server_connect;
+            flush_start = (mcreq_flushstart_fn)server_connect;
             if (has_pending()) {
                 if (!lcbio_timer_armed(io_timer)) {
                     /* TODO: Maybe throttle reconnection attempts? */
@@ -654,7 +654,7 @@ Server::start_errored_ctx(State next_state)
             /* Close the socket not to leak resources */
             lcbio_shutdown(lcbio_ctx_sock(ctx));
             if (next_state == Server::S_ERRDRAIN) {
-                mc_PIPELINE::flush_start = (mcreq_flushstart_fn)flush_errdrain;
+                flush_start = (mcreq_flushstart_fn)flush_errdrain;
             }
         } else {
             finalize_errored_ctx();
@@ -699,7 +699,6 @@ Server::finalize_errored_ctx()
         /* Otherwise, cycle the state back to CLEAN and reinit
          * the connection */
         state = Server::S_CLEAN;
-        mc_PIPELINE::flush_start = (mcreq_flushstart_fn)server_connect;
         connect();
     }
 }
