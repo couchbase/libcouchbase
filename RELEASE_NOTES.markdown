@@ -1,5 +1,25 @@
 # Release Notes
 
+## 2.7.1 (January 19 2016)
+
+This release consists of additional internal refactoring. More internals have
+been converted to C++.
+
+* Provide XATTR (Extended Attribute) prototype support.
+  This provides a prototype implementation of xattrs, allowing the client to
+  access extended (hidden) attributes of a document. This feature can be used
+  on the client side by simply setting the `LCB_SDSPEC_F_XATTRPATH` bit in
+  the `lcb_SDSPEC::options` field.
+  * Issues: [CCBC-728](https://issues.couchbase.com/browse/CCBC-728)
+
+* Add automatic DNS SRV record lookup when simple hostname supplied.
+  The library will now automatically attempt to look up SRV records
+  for various couchbase services if only one host is present in the
+  connection string. Automatic lookup will not be performed if more
+  than a single host is provded. See the [Java Documentation](https://developer.couchbase.com/documentation/server/current/sdk/java/managing-connections.html)
+  on the matter (go to the bottom of the page).
+  * Issues: [CCBC-566](https://issues.couchbase.com/browse/CCBC-566)
+
 ## 2.7.0 (December 21 2016)
 
 This release consists mainly of internal refactoring. Many of the internals
