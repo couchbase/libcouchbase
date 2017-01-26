@@ -95,7 +95,7 @@ irc.freenode.net.
     * [PHP](http://github.com/couchbase/php-couchbase) (uses the old < 2.6 API)
 * Community projects using libcouchbase
     * [C++11 wrapper](https://github.com/couchbaselabs/libcouchbase-cxx)
-    * [cberl - Couchbase NIF](https://github.com/chitika/cberl)
+    * [cberl - Couchbase NIF](https://github.com/wcummings/cberl)
     * [Perl client](https://github.com/mnunberg/perl-Couchbase-Client)
 
 ## Documentation
