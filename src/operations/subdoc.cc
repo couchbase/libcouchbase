@@ -66,7 +66,7 @@ struct Traits {
             return false;
         }
 
-        return (options & (LCB_SDSPEC_F_VIRTPATH|LCB_SDSPEC_F_XATTRPATH)) != 0;
+        return (options & LCB_SDSPEC_F_XATTRPATH) != 0;
     }
 
     inline Traits(uint8_t op, unsigned options) :
@@ -187,8 +187,11 @@ make_subdoc_flags(const uint32_t user)
     if (user & LCB_SDSPEC_F_XATTRPATH) {
         subdoc_flags |= SUBDOC_FLAG_XATTR_PATH;
     }
-    if (user & LCB_SDSPEC_F_VIRTPATH) {
+    if (user & LCB_SDSPEC_F_XATTR_MACROVALUES) {
         subdoc_flags |= (SUBDOC_FLAG_EXPAND_MACROS | SUBDOC_FLAG_XATTR_PATH);
+    }
+    if (user & LCB_SDSPEC_F_XATTR_DELETED_OK) {
+        subdoc_flags |= (SUBDOC_FLAG_XATTR_PATH|SUBDOC_FLAG_ACCESS_DELETED);
     }
     return subdoc_flags;
 }

@@ -184,7 +184,10 @@ typedef struct {
 #define LCB_SDSPEC_F_XATTRPATH (1<<18)
 
 /** Access document virtual/materialized path. Implies F_XATTRPATH */
-#define LCB_SDSPEC_F_VIRTPATH (1<<19)
+#define LCB_SDSPEC_F_XATTR_MACROVALUES (1<<19)
+
+/** Access Xattrs of deleted documents */
+#define LCB_SDSPEC_F_XATTR_DELETED_OK (1<<20)
 
 /**
  * Set the path for an @ref lcb_SDSPEC structure

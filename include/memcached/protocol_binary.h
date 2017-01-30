@@ -509,6 +509,7 @@ extern "C"
         SUBDOC_FLAG_MKDOC = 0x02,
 
         SUBDOC_FLAG_XATTR_PATH = 0x04,
+        SUBDOC_FLAG_ACCESS_DELETED = 0x8,
         SUBDOC_FLAG_EXPAND_MACROS = 0x010
     } protocol_binary_subdoc_flag;
 
