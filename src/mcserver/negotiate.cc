@@ -375,7 +375,7 @@ SessionRequestImpl::read_hello(const lcb::MemcachedResponse& resp)
         lcb_U16 tmp;
         memcpy(&tmp, cur, sizeof(tmp));
         tmp = ntohs(tmp);
-        lcb_log(LOGARGS(this, DEBUG), SESSREQ_LOGFMT "Found feature 0x%x (%s)", SESSREQ_LOGID(this), tmp, protocol_feature_2_text(tmp));
+        lcb_log(LOGARGS(this, DEBUG), SESSREQ_LOGFMT "Server supports feature: 0x%x (%s)", SESSREQ_LOGID(this), tmp, protocol_feature_2_text(tmp));
         info->server_features.push_back(tmp);
     }
     return true;

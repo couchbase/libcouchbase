@@ -132,7 +132,7 @@ lcb_st::process_dns_srv(Connspec& spec)
     Hostlist* hl = lcb_dnssrv_getbslist(host.hostname.c_str(), host.isSSL(), &rc);
 
     if (hl == NULL) {
-        lcb_log(LOGARGS(this, INFO), "DNS SRV lookup failed: %s", lcb_strerror(this, rc));
+        lcb_log(LOGARGS(this, INFO), "DNS SRV lookup failed: %s. Ignore this if not relying on DNS SRV records", lcb_strerror(this, rc));
         if (spec.is_explicit_dnssrv()) {
             return rc;
         } else {
@@ -776,6 +776,15 @@ const char *lcb_strerror(lcb_t instance, lcb_error_t error)
 
     (void)instance;
     return "Unknown error";
+}
+
+LCB_INTERNAL_API
+const char *lcb_strerror_short(lcb_error_t error)
+{
+#define X(c, v, t, s) if (error == c) { return #c " (" #v ")"; }
+    LCB_XERR(X)
+#undef X
+    return "<FIXME: Not an LCB error>";
 }
 
 LIBCOUCHBASE_API

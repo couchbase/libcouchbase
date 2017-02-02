@@ -292,7 +292,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     http->creq = NULL;
 
     if (err != LCB_SUCCESS) {
-        lcb_log(LOGARGS(http, ERR), "Connection to REST API failed with code=0x%x (%d)", err, syserr);
+        lcb_log(LOGARGS(http, ERR), "Connection to REST API failed with %s (os errno = %d)", lcb_strerror_short(err), syserr);
         http->on_io_error(err);
         return;
     }

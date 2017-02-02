@@ -236,7 +236,7 @@ void Confmon::do_next_provider()
         }
     }
 
-    lcb_log(LOGARGS(this, TRACE), "Current provider is %s", provider_string(cur_provider->type));
+    lcb_log(LOGARGS(this, TRACE), "Attempting to retrieve cluster map via %s", provider_string(cur_provider->type));
 
     cur_provider->refresh();
 }
@@ -245,11 +245,11 @@ void Confmon::start() {
     lcb_U32 tmonext = 0;
     as_stop.cancel();
     if (is_refreshing()) {
-        LOG(this, DEBUG, "Refresh already in progress...");
+        LOG(this, DEBUG, "Cluster map refresh already in progress");
         return;
     }
 
-    LOG(this, TRACE, "Start refresh requested");
+    LOG(this, TRACE, "Refreshing current cluster map");
     lcb_assert(cur_provider);
     state = CONFMON_S_ACTIVE|CONFMON_S_ITERGRACE;
 

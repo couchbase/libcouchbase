@@ -157,7 +157,7 @@ lcb_error_t
 CccpProvider::mcio_error(lcb_error_t err)
 {
     if (err != LCB_NOT_SUPPORTED && err != LCB_UNKNOWN_COMMAND) {
-        lcb_log(LOGARGS(this, ERR), LOGFMT "Got I/O Error=0x%x", LOGID(this), err);
+        lcb_log(LOGARGS(this, ERR), LOGFMT "Could not get configuration: %s", LOGID(this), lcb_strerror_short(err));
     }
 
     release_socket(err == LCB_NOT_SUPPORTED);

@@ -219,7 +219,7 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     }
 
     if (!request) {
-        lcb_log(LOGARGS_T(WARN), LOGFMT "Found stale packet (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(), mcresp.opcode(), mcresp.status(), mcresp.opaque());
+        lcb_log(LOGARGS_T(WARN), LOGFMT "Server sent us reply for a timed-out command. (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(), mcresp.opcode(), mcresp.status(), mcresp.opaque());
         rdb_consumed(ior, pktsize);
         return PKT_READ_COMPLETE;
     }
@@ -340,7 +340,7 @@ void Server::purge_single(mc_PACKET *pkt, lcb_error_t err) {
                            hdr.request.opaque,
                            PROTOCOL_BINARY_RESPONSE_EINVAL);
 
-    lcb_log(LOGARGS_T(WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error 0x%x", LOGID_T(), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, err);
+    lcb_log(LOGARGS_T(WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error %s", LOGID_T(), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, lcb_strerror_short(err));
     int rv = mcreq_dispatch_response(this, pkt, &resp, err);
     lcb_assert(rv == 0);
 }
@@ -419,7 +419,7 @@ void Server::io_timeout()
     }
 
     uint32_t next_us = next_timeout();
-    lcb_log(LOGARGS_T(DEBUG), LOGFMT "Scheduling next timeout for %u ms", LOGID_T(), next_us / 1000);
+    lcb_log(LOGARGS_T(TRACE), LOGFMT "Scheduling next timeout for %u ms. This is not an error", LOGID_T(), next_us / 1000);
     lcbio_timer_rearm(io_timer, next_us);
     lcb_maybe_breakout(instance);
 }
@@ -464,7 +464,7 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
     LCBIO_CONNREQ_CLEAR(&connreq);
 
     if (err != LCB_SUCCESS) {
-        lcb_log(LOGARGS_T(ERR), LOGFMT "Got error for connection! (OS=%d)", LOGID_T(), syserr);
+        lcb_log(LOGARGS_T(ERR), LOGFMT "Connection attempt failed. Received %s from libcouchbase, received %d from operating system", LOGID_T(), lcb_strerror_short(err), syserr);
         if (!maybe_reconnect_on_fake_timeout(err)) {
             socket_failed(err);
         }
@@ -496,7 +496,6 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
     flush_start = (mcreq_flushstart_fn)mcserver_flush;
 
     uint32_t tmo = next_timeout();
-    lcb_log(LOGARGS_T(DEBUG), LOGFMT "Setting initial timeout=%ums", LOGID_T(), tmo/1000);
     lcbio_timer_rearm(io_timer, tmo);
     flush();
 }
@@ -578,7 +577,7 @@ static void
 on_error(lcbio_CTX *ctx, lcb_error_t err)
 {
     Server *server = Server::get(ctx);
-    lcb_log(LOGARGS(server, WARN), LOGFMT "Got socket error 0x%x", LOGID(server), err);
+    lcb_log(LOGARGS(server, WARN), LOGFMT "Got socket error %s", LOGID(server), lcb_strerror_short(err));
     if (server->check_closed()) {
         return;
     }
