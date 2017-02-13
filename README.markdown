@@ -78,7 +78,7 @@ If you wish to link against OpenSSL, you should set the value of
 
 ## Bugs, Support, Issues
 You may report issues in the library in our issue tracked at
-<http://couchbase.com/issues>. Sign up for an account and file an issue
+<https://issues.couchbase.com>. Sign up for an account and file an issue
 against the _Couchbase C Client Library_ project.
 
 The developers of the library hang out in IRC on `#libcouchbase` on
