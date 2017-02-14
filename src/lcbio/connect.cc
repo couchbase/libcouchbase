@@ -60,7 +60,6 @@ typedef struct lcbio_CONNSTART {
     connect_state state;
     lcb_error_t pending;
     lcbio_ASYNC *async;
-    char *hoststr;
 } lcbio_CONNSTART;
 
 static void
