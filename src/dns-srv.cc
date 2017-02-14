@@ -97,16 +97,17 @@ lcb_error_t
 lcb_dnssrv_query(const char *addr, hostlist_t hs)
 {
     DNS_STATUS status;
-    PDNS_RECORD root, cur;
+    PDNS_RECORDA root, cur;
 
     status = DnsQuery_A(
-        addr, DNS_TYPE_SRV, DNS_QUERY_STANDARD, NULL, &root, NULL);
+        addr, DNS_TYPE_SRV, DNS_QUERY_STANDARD, NULL, (PDNS_RECORD*)&root, NULL);
     if (status != 0) {
         return LCB_UNKNOWN_HOST;
     }
 
     for (cur = root; cur; cur = cur->pNext) {
-        const DNS_SRV_DATA *srv = &cur->Data.SRV;
+        // Use the ASCII version of the DNS lookup structure
+        const DNS_SRV_DATAA *srv = &cur->Data.SRV;
         hostlist_add_stringz(hs, srv->pNameTarget, srv->wPort);
     }
     DnsRecordListFree(root, DnsFreeRecordList);
