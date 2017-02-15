@@ -488,15 +488,13 @@ Connstart::Connstart(lcbio_TABLE* iot_, lcb_settings* settings_,
 
 Connstart *
 lcbio_connect_hl(lcbio_TABLE *iot, lcb_settings *settings,
-                 hostlist_t hl, int rollover, uint32_t timeout,
+                 lcb::Hostlist* hl, int rollover, uint32_t timeout,
                  lcbio_CONNDONE_cb handler, void *arg)
 {
     const lcb_host_t *cur;
-    unsigned ii, hlmax;
-    ii = 0;
-    hlmax = hostlist_size(hl);
+    unsigned ii = 0, hlmax = hl->size();
 
-    while ( (cur = hostlist_shift_next(hl, rollover)) && ii++ < hlmax) {
+    while ( (cur = hl->next(rollover)) && ii++ < hlmax) {
         Connstart *ret = lcbio_connect(
                 iot, settings, cur, timeout, handler, arg);
         if (ret) {
