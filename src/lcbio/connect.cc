@@ -42,6 +42,9 @@ static const lcb_host_t *get_loghost(lcbio_SOCKET *s) {
 #define CSLOGID(sock) get_loghost(sock)->host, get_loghost(sock)->port, (void*)sock
 #define CSLOGFMT "<%s:%s> (SOCK=%p) "
 
+#define LOGARGS_T(lvl) LOGARGS(this->sock, lvl)
+#define CSLOGID_T() CSLOGID(this->sock)
+
 namespace lcb {
 namespace io {
 struct Connstart {
@@ -124,18 +127,18 @@ void Connstart::handler() {
     if (sock) {
         lcbio__load_socknames(sock);
         if (err == LCB_SUCCESS) {
-            lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Connected established", CSLOGID(sock));
+            lcb_log(LOGARGS_T(INFO), CSLOGFMT "Connected established", CSLOGID_T());
 
             if (sock->settings->tcp_nodelay) {
                 lcb_error_t ndrc = lcbio_disable_nagle(sock);
                 if (ndrc != LCB_SUCCESS) {
-                    lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Couldn't set TCP_NODELAY", CSLOGID(sock));
+                    lcb_log(LOGARGS_T(INFO), CSLOGFMT "Couldn't set TCP_NODELAY", CSLOGID_T());
                 } else {
-                    lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Successfuly set TCP_NODELAY", CSLOGID(sock));
+                    lcb_log(LOGARGS_T(DEBUG), CSLOGFMT "Successfuly set TCP_NODELAY", CSLOGID_T());
                 }
             }
         } else {
-            lcb_log(LOGARGS(sock, ERR), CSLOGFMT "Failed to establish connection: %s, os errno=%u", CSLOGID(sock), lcb_strerror_short(err), syserr);
+            lcb_log(LOGARGS_T(ERR), CSLOGFMT "Failed to establish connection: %s, os errno=%u", CSLOGID_T(), lcb_strerror_short(err), syserr);
         }
     }
 
@@ -217,7 +220,7 @@ bool Connstart::ensure_sock() {
         while (sock->u.fd == INVALID_SOCKET && ai != NULL) {
             sock->u.fd = lcbio_E_ai2sock(io, &ai, &errtmp);
             if (sock->u.fd != INVALID_SOCKET) {
-                lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Created new socket with FD=%d", CSLOGID(sock), sock->u.fd);
+                lcb_log(LOGARGS_T(DEBUG), CSLOGFMT "Created new socket with FD=%d", CSLOGID_T(), sock->u.fd);
                 return true;
             }
         }
@@ -456,7 +459,7 @@ Connstart::Connstart(lcbio_TABLE* iot_, lcb_settings* settings_,
     }
 
     timer.rearm(timeout);
-    lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Starting. Timeout=%uus", CSLOGID(sock), timeout);
+    lcb_log(LOGARGS_T(INFO), CSLOGFMT "Starting. Timeout=%uus", CSLOGID_T(), timeout);
 
     /** Hostname lookup: */
     memset(&hints, 0, sizeof(hints));
@@ -472,7 +475,7 @@ Connstart::Connstart(lcbio_TABLE* iot_, lcb_settings* settings_,
 
     if ((rv = getaddrinfo(dest->host, dest->port, &hints, &ai_root))) {
         const char *errstr = rv != EAI_SYSTEM ? gai_strerror(rv) : "";
-        lcb_log(LOGARGS(sock, ERR), CSLOGFMT "Couldn't look up %s (%s) [EAI=%d]", CSLOGID(sock), dest->host, errstr, rv);
+        lcb_log(LOGARGS_T(ERR), CSLOGFMT "Couldn't look up %s (%s) [EAI=%d]", CSLOGID_T(), dest->host, errstr, rv);
         notify_error(LCB_UNKNOWN_HOST);
     } else {
         ai = ai_root;
