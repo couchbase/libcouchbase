@@ -87,7 +87,7 @@ struct Connstart {
 void Connstart::unwatch() {
     if (sock && ev_active) {
         lcb_assert(sock->u.fd != INVALID_SOCKET);
-        IOT_V0EV(sock->io).cancel(IOT_ARG(sock->io), sock->u.fd, event);
+        sock->io->E_event_cancel(sock->u.fd, event);
         ev_active = false;
     }
 }
@@ -102,7 +102,7 @@ void Connstart::handler() {
 
     if (sock && event) {
         unwatch();
-        IOT_V0EV(sock->io).destroy(IOT_ARG(sock->io), event);
+        sock->io->E_event_destroy(event);
     }
 
     if (state == CS_PENDING) {
@@ -211,7 +211,7 @@ bool Connstart::ensure_sock() {
         return false;
     }
 
-    if (IOT_IS_EVENT(io)) {
+    if (io->is_E()) {
         if (sock->u.fd != INVALID_SOCKET) {
             /* already have one? */
             return true;
@@ -256,13 +256,13 @@ void Connstart::clear_sock() {
         return;
     }
 
-    if (IOT_IS_EVENT(iot)) {
+    if (iot->is_E()) {
         unwatch();
-        IOT_V0IO(iot).close(IOT_ARG(iot), sock->u.fd);
+        iot->E_close(sock->u.fd);
         sock->u.fd = INVALID_SOCKET;
     } else {
         if (sock->u.sd) {
-            IOT_V1(iot).close(IOT_ARG(iot), sock->u.sd);
+            iot->C_close(sock->u.sd);
             sock->u.sd = NULL;
         }
     }
@@ -299,9 +299,7 @@ E_conncb(lcb_socket_t, short events, void *arg)
         ai = cs->ai;
 
         GT_CONNECT:
-        rv = IOT_V0IO(io).connect0(
-                IOT_ARG(io), s->u.fd, ai->ai_addr, (unsigned)ai->ai_addrlen);
-
+        rv = io->E_connect(s->u.fd, ai->ai_addr, ai->ai_addrlen);
         if (rv == 0) {
             cs->unwatch();
             cs->notify_success();
@@ -309,8 +307,8 @@ E_conncb(lcb_socket_t, short events, void *arg)
         }
     }
 
-    connstatus = lcbio_mkcserr(IOT_ERRNO(io));
-    lcbio_mksyserr(IOT_ERRNO(io), &cs->syserr);
+    connstatus = lcbio_mkcserr(io->get_errno());
+    lcbio_mksyserr(io->get_errno(), &cs->syserr);
 
 
     switch (connstatus) {
@@ -325,8 +323,7 @@ E_conncb(lcb_socket_t, short events, void *arg)
 
     case LCBIO_CSERR_BUSY:
         lcb_log(LOGARGS(s, TRACE), CSLOGFMT "Scheduling I/O watcher for asynchronous connection completion.", CSLOGID(s));
-        IOT_V0EV(io).watch(
-                IOT_ARG(io), s->u.fd, cs->event, LCB_WRITE_EVENT, cs, E_conncb);
+        io->E_event_watch(s->u.fd, cs->event, LCB_WRITE_EVENT, cs, E_conncb);
         cs->ev_active = 1;
         return;
 
@@ -366,7 +363,7 @@ C_conncb(lcb_sockdata_t *sock, int status)
         }
         cs->handler();
     } else {
-        lcbio_mksyserr(IOT_ERRNO(s->io), &cs->syserr);
+        lcbio_mksyserr(s->io->get_errno(), &cs->syserr);
         cs->clear_sock();
         cs->C_connect();
     }
@@ -387,15 +384,14 @@ void Connstart::C_connect()
     }
 
     GT_CONNECT:
-    rv = IOT_V1(io).connect(IOT_ARG(io), sock->u.sd, ai->ai_addr,
-                            (unsigned)ai->ai_addrlen, C_conncb);
+    rv = io->C_connect(sock->u.sd, ai->ai_addr, ai->ai_addrlen, C_conncb);
     if (rv == 0) {
         lcbio_ref(sock);
         return;
     }
 
-    lcbio_mksyserr(IOT_ERRNO(io), &syserr);
-    status = lcbio_mkcserr(IOT_ERRNO(io));
+    lcbio_mksyserr(io->get_errno(), &syserr);
+    status = lcbio_mkcserr(io->get_errno());
     switch (status) {
 
     case LCBIO_CSERR_INTR:
@@ -453,9 +449,9 @@ Connstart::Connstart(lcbio_TABLE* iot_, lcb_settings* settings_,
     lcb_settings_ref(sock->settings);
     lcb_list_init(&sock->protos);
 
-    if (IOT_IS_EVENT(iot_)) {
+    if (iot_->is_E()) {
         sock->u.fd = INVALID_SOCKET;
-        event = IOT_V0EV(iot_).create(IOT_ARG(iot_));
+        event = iot_->E_event_create();
     }
 
     timer.rearm(timeout);
@@ -481,7 +477,7 @@ Connstart::Connstart(lcbio_TABLE* iot_, lcb_settings* settings_,
         ai = ai_root;
 
         /** Figure out how to connect */
-        if (IOT_IS_EVENT(iot_)) {
+        if (iot_->is_E()) {
             E_conncb(-1, LCB_WRITE_EVENT, this);
         } else {
             C_connect();
@@ -542,12 +538,12 @@ lcbio_shutdown(lcbio_SOCKET *s)
     lcbio__protoctx_delall(s);
     if (IOT_IS_EVENT(io)) {
         if (s->u.fd != INVALID_SOCKET) {
-            IOT_V0IO(io).close(IOT_ARG(io), s->u.fd);
+            io->E_close(s->u.fd);
             s->u.fd = INVALID_SOCKET;
         }
     } else {
         if (s->u.sd) {
-            IOT_V1(io).close(IOT_ARG(io), s->u.sd);
+            io->C_close(s->u.sd);
             s->u.sd = NULL;
         }
     }
