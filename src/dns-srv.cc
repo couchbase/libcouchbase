@@ -2,9 +2,9 @@
 
 #include "config.h"
 #include "hostlist.h"
+#include <string>
 
 #ifndef _WIN32
-#include <string>
 
 #ifdef HAVE_ARPA_NAMESER_H
 #include <arpa/nameser.h>
