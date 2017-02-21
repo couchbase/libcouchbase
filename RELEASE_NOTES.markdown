@@ -1,6 +1,30 @@
 # Release Notes
 
-## 2.7.1 (January 19 2016)
+## 2.7.2 (February 21 2017)
+
+This release consists of additional internal refactoring and some improved
+logging messages. There is enhanced experimental XATTR support. This release
+also contains some bug fixes:
+
+* Fix build issues on FreeBSD. This allows normal BSD `make` to be used, rather
+  than forcing `gmake`
+
+* Fixed broken JIRA link in README
+
+* Fix hanging SSL connections in IOCP/Completion mode. This would sometimes
+  stall the connection by not requesting a write if a read was in progress.
+  This would result in the command not being sent and the client hanging.
+  Note that this only affects completion-style I/O plugins such as IOCP and
+  libuv.
+  * Issues: [CCBC-744](https://issues.couchbase.com/browse/CCBC-744)
+
+* Rename `LCB_SDSPEC_F_VIRTPATH` to `LCB_SDSPEC_F_MACROVALUES`. `VIRTPATH`
+  is intended for possible future materialized XATTRs.
+
+* Add `LCB_SDSPEC_F_XATTR_DELETED_OK`, which maps to the protocol flag of
+  roughly the same name.
+
+## 2.7.1 (January 19 2017)
 
 This release consists of additional internal refactoring. More internals have
 been converted to C++.
