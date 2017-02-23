@@ -97,3 +97,13 @@ Authenticator::init(const std::string& username_, const std::string& bucket,
     m_buckets[bucket] = m_password;
     return LCB_SUCCESS;
 }
+
+Authenticator::Authenticator(const Authenticator& other)
+    : m_buckets(other.m_buckets), m_username(other.m_username),
+      m_password(other.m_password), m_refcount(1) {
+}
+
+lcb_AUTHENTICATOR *
+lcbauth_clone(const lcb_AUTHENTICATOR *src) {
+    return new Authenticator(*src);
+}
