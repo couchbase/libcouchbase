@@ -71,7 +71,8 @@ class MockCommand
     X(GET_MCPORTS) \
     X(SET_CCCP) \
     X(REGEN_VBCOORDS) \
-    X(RESET_QUERYSTATE)
+    X(RESET_QUERYSTATE) \
+    X(OPFAIL)
 
 public:
     enum Code {
