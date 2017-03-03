@@ -224,6 +224,8 @@ extern "C"
 
         PROTOCOL_BINARY_CMD_GET_REPLICA = 0x83,
 
+        PROTOCOL_BINARY_CMD_SELECT_BUCKET = 0x89,
+
         PROTOCOL_BINARY_CMD_OBSERVE_SEQNO = 0x91,
         PROTOCOL_BINARY_CMD_OBSERVE = 0x92,
 
@@ -669,11 +671,12 @@ extern "C"
         PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO = 0x04,
         PROTOCOL_BINARY_FEATURE_TCPDELAY = 0x05,
         PROTOCOL_BINARY_FEATURE_XATTR = 0x06,
-        PROTOCOL_BINARY_FEATURE_XERROR = 0x07
+        PROTOCOL_BINARY_FEATURE_XERROR = 0x07,
+        PROTOCOL_BINARY_FEATURE_SELECT_BUCKET = 0x08
     } protocol_binary_hello_features;
 
     #define MEMCACHED_FIRST_HELLO_FEATURE 0x01
-    #define MEMCACHED_TOTAL_HELLO_FEATURES 0x05
+    #define MEMCACHED_TOTAL_HELLO_FEATURES 10
 
 #define protocol_feature_2_text(a) \
     (a == PROTOCOL_BINARY_FEATURE_DATATYPE) ? "Datatype" : \
@@ -682,7 +685,8 @@ extern "C"
     (a == PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO) ? "Mutation seqno" : \
     (a == PROTOCOL_BINARY_FEATURE_TCPDELAY) ? "TCP DELAY" : \
     (a == PROTOCOL_BINARY_FEATURE_XATTR) ? "XATTR" : \
-    (a == PROTOCOL_BINARY_FEATURE_XERROR) ? "Error Map": "Unknown"
+    (a == PROTOCOL_BINARY_FEATURE_XERROR) ? "Error Map": \
+    (a == PROTOCOL_BINARY_FEATURE_SELECT_BUCKET) ? "Select Bucket": "Unknown"
 
     /**
      * The HELLO command is used by the client and the server to agree

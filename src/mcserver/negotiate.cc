@@ -30,6 +30,7 @@
 #include <cbsasl/cbsasl.h>
 #include "negotiate.h"
 #include "ctx-log-inl.h"
+#include "auth-priv.h"
 
 using namespace lcb;
 
@@ -70,6 +71,7 @@ public:
     bool read_hello(const lcb::MemcachedResponse& packet);
     void send_auth(const char *sasl_data, unsigned ndata);
     void handle_read(lcbio_CTX *ioctx);
+    bool maybe_select_bucket();
 
     enum MechStatus { MECH_UNAVAILABLE, MECH_NOT_NEEDED, MECH_OK };
     MechStatus set_chosen_mech(std::string& mechlist, const char **data, unsigned int *ndata);
@@ -331,6 +333,7 @@ SessionRequestImpl::send_hello()
     unsigned nfeatures = 0;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XATTR;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SELECT_BUCKET;
     if (settings->use_errmap) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XERROR;
     }
@@ -425,6 +428,30 @@ SessionRequestImpl::update_errmap(const lcb::MemcachedResponse& resp)
     return true;
 }
 
+// Returns true if sending the SELECT_BUCKET command, false otherwise.
+bool
+SessionRequestImpl::maybe_select_bucket() {
+
+    // Only send a SELECT_BUCKET if we have the SELECT_BUCKET bit enabled.
+    if (!info->has_feature(PROTOCOL_BINARY_FEATURE_SELECT_BUCKET)) {
+        return false;
+    }
+
+    if (!settings->select_bucket) {
+        lcb_log(LOGARGS(this, WARN), SESSREQ_LOGFMT "SELECT_BUCKET Disabled by application", SESSREQ_LOGID(this));
+        return false;
+    }
+
+    // send the SELECT_BUCKET command:
+    lcb_log(LOGARGS(this, INFO), SESSREQ_LOGFMT "Sending SELECT_BUCKET", SESSREQ_LOGID(this));
+    lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SELECT_BUCKET);
+    req.sizes(0, strlen(settings->bucket), 0);
+    lcbio_ctx_put(ctx, req.data(), req.size());
+    lcbio_ctx_put(ctx, settings->bucket, strlen(settings->bucket));
+    LCBIO_CTX_RSCHEDULE(ctx, 24);
+    return true;
+}
+
 static bool isUnsupported(uint16_t status) {
     return status == PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED ||
             status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND ||
@@ -462,14 +489,14 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         } else if (mechrc == MECH_UNAVAILABLE) {
             // Do nothing - error already set
         } else {
-            completed = true;
+            completed = !maybe_select_bucket();
         }
         break;
     }
 
     case PROTOCOL_BINARY_CMD_SASL_AUTH: {
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-            completed = true;
+            completed = !maybe_select_bucket();
             break;
         } else if (status == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
             send_step(resp);
@@ -482,7 +509,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
 
     case PROTOCOL_BINARY_CMD_SASL_STEP: {
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-            completed = true;
+            completed = !maybe_select_bucket();
         } else {
             lcb_log(LOGARGS(this, WARN), SESSREQ_LOGFMT "SASL auth failed with STATUS=0x%x", SESSREQ_LOGID(this), status);
             set_error(LCB_AUTH_ERROR, "SASL Step Failed");
@@ -529,6 +556,18 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         }
         // Note, there is no explicit state transition here. LIST_MECHS is
         // pipelined after this request.
+        break;
+    }
+
+    case PROTOCOL_BINARY_CMD_SELECT_BUCKET: {
+        if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+            completed = true;
+        } else if (status == PROTOCOL_BINARY_RESPONSE_EACCESS) {
+            set_error(LCB_AUTH_ERROR, "Provided credentials not allowed for bucket");
+        } else {
+            lcb_log(LOGARGS(this, ERROR), SESSREQ_LOGFMT "Unexpected status 0x%x received for SELECT_BUCKET", SESSREQ_LOGID(this), status);
+            set_error(LCB_PROTOCOL_ERROR, "Other auth error");
+        }
         break;
     }
 
