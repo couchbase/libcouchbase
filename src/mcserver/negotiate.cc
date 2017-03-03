@@ -469,27 +469,23 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
 
     case PROTOCOL_BINARY_CMD_SASL_AUTH: {
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-            send_hello();
+            completed = true;
             break;
-        }
-
-        if (status != PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
+        } else if (status == PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
+            send_step(resp);
+        } else {
             set_error(LCB_AUTH_ERROR, "SASL AUTH failed");
             break;
-        }
-
-        if (send_step(resp)) {
-            send_hello();
         }
         break;
     }
 
     case PROTOCOL_BINARY_CMD_SASL_STEP: {
-        if (status != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+        if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
+            completed = true;
+        } else {
             lcb_log(LOGARGS(this, WARN), SESSREQ_LOGFMT "SASL auth failed with STATUS=0x%x", SESSREQ_LOGID(this), status);
             set_error(LCB_AUTH_ERROR, "SASL Step Failed");
-        } else {
-            /* Wait for pipelined HELLO response */
         }
         break;
     }
@@ -511,13 +507,17 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
             request_errmap();
         } else {
             lcb_log(LOGARGS(this, TRACE), SESSREQ_LOGFMT "GET_ERRORMAP unsupported/disabled", SESSREQ_LOGID(this));
-            completed = true;
         }
+
+        // In any event, it's also time to send the LIST_MECHS request
+        lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SASL_LIST_MECHS);
+        lcbio_ctx_put(ctx, req.data(), req.size());
+        LCBIO_CTX_RSCHEDULE(ctx, 24);
+
         break;
     }
 
     case PROTOCOL_BINARY_CMD_GET_ERROR_MAP: {
-        completed = true;
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
             if (!update_errmap(resp)) {
             }
@@ -527,6 +527,8 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
             lcb_log(LOGARGS(this, ERROR), SESSREQ_LOGFMT "Unexpected status 0x%x received for GET_ERRMAP", SESSREQ_LOGID(this), status);
             set_error(LCB_PROTOCOL_ERROR, "GET_ERRMAP response unexpected");
         }
+        // Note, there is no explicit state transition here. LIST_MECHS is
+        // pipelined after this request.
         break;
     }
 
@@ -590,8 +592,7 @@ SessionRequestImpl::start(lcbio_SOCKET *sock) {
         return;
     }
 
-    lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_SASL_LIST_MECHS);
-    lcbio_ctx_put(ctx, hdr.data(), hdr.size());
+    send_hello();
     LCBIO_CTX_RSCHEDULE(ctx, 24);
 }
 
