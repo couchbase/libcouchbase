@@ -90,10 +90,6 @@ Authenticator::init(const std::string& username_, const std::string& bucket,
     m_username = (!username_.empty()) ? username_ : bucket;
     m_password = passwd;
 
-    if (conntype == LCB_TYPE_BUCKET && m_username != bucket) {
-        return LCB_INVALID_USERNAME;
-    }
-
     m_buckets[bucket] = m_password;
     return LCB_SUCCESS;
 }
