@@ -425,13 +425,6 @@ SessionRequestImpl::update_errmap(const lcb::MemcachedResponse& resp)
     return true;
 }
 
-typedef enum {
-    SREQ_S_WAIT,
-    SREQ_S_AUTHDONE,
-    SREQ_S_COMPLETED,
-    SREQ_S_ERROR
-} sreq_STATE;
-
 static bool isUnsupported(uint16_t status) {
     return status == PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED ||
             status == PROTOCOL_BINARY_RESPONSE_UNKNOWN_COMMAND ||
@@ -447,7 +440,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
 {
     lcb::MemcachedResponse resp;
     unsigned required;
-    sreq_STATE state = SREQ_S_WAIT;
+    bool completed = false;
 
     GT_NEXT_PACKET:
 
@@ -466,11 +459,10 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         MechStatus mechrc = set_chosen_mech(mechs, &mechlist_data, &nmechlist_data);
         if (mechrc == MECH_OK) {
             send_auth(mechlist_data, nmechlist_data);
-            state = SREQ_S_WAIT;
         } else if (mechrc == MECH_UNAVAILABLE) {
-            state = SREQ_S_ERROR;
+            // Do nothing - error already set
         } else {
-            state = SREQ_S_COMPLETED;
+            completed = true;
         }
         break;
     }
@@ -478,19 +470,16 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
     case PROTOCOL_BINARY_CMD_SASL_AUTH: {
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
             send_hello();
-            state = SREQ_S_AUTHDONE;
             break;
         }
 
         if (status != PROTOCOL_BINARY_RESPONSE_AUTH_CONTINUE) {
             set_error(LCB_AUTH_ERROR, "SASL AUTH failed");
-            state = SREQ_S_ERROR;
             break;
         }
-        if (send_step(resp) && send_hello()) {
-            state = SREQ_S_WAIT;
-        } else {
-            state = SREQ_S_ERROR;
+
+        if (send_step(resp)) {
+            send_hello();
         }
         break;
     }
@@ -499,10 +488,8 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         if (status != PROTOCOL_BINARY_RESPONSE_SUCCESS) {
             lcb_log(LOGARGS(this, WARN), SESSREQ_LOGFMT "SASL auth failed with STATUS=0x%x", SESSREQ_LOGID(this), status);
             set_error(LCB_AUTH_ERROR, "SASL Step Failed");
-            state = SREQ_S_ERROR;
         } else {
             /* Wait for pipelined HELLO response */
-            state = SREQ_S_AUTHDONE;
         }
         break;
     }
@@ -511,44 +498,39 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
             if (!read_hello(resp)) {
                 set_error(LCB_PROTOCOL_ERROR, "Couldn't parse HELLO");
-            }
-            if (info->has_feature(PROTOCOL_BINARY_FEATURE_XERROR)) {
-                request_errmap();
-                state = SREQ_S_WAIT;
-            } else {
-                lcb_log(LOGARGS(this, TRACE), SESSREQ_LOGFMT "GET_ERRORMAP unsupported/disabled", SESSREQ_LOGID(this));
-                state = SREQ_S_COMPLETED;
+                break;
             }
         } else if (isUnsupported(status)) {
             lcb_log(LOGARGS(this, DEBUG), SESSREQ_LOGFMT "Server does not support HELLO", SESSREQ_LOGID(this));
         } else {
             set_error(LCB_PROTOCOL_ERROR, "Hello response unexpected");
-            state = SREQ_S_ERROR;
+            break;
+        }
+
+        if (info->has_feature(PROTOCOL_BINARY_FEATURE_XERROR)) {
+            request_errmap();
+        } else {
+            lcb_log(LOGARGS(this, TRACE), SESSREQ_LOGFMT "GET_ERRORMAP unsupported/disabled", SESSREQ_LOGID(this));
+            completed = true;
         }
         break;
     }
 
     case PROTOCOL_BINARY_CMD_GET_ERROR_MAP: {
-        state = SREQ_S_COMPLETED;
-
+        completed = true;
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
-            if (update_errmap(resp)) {
-                state = SREQ_S_COMPLETED;
-            } else {
-                state = SREQ_S_ERROR;
+            if (!update_errmap(resp)) {
             }
         } else if (isUnsupported(status)) {
             lcb_log(LOGARGS(this, DEBUG), SESSREQ_LOGFMT "Server does not support GET_ERRMAP (0x%x)", SESSREQ_LOGID(this), status);
         } else {
             lcb_log(LOGARGS(this, ERROR), SESSREQ_LOGFMT "Unexpected status 0x%x received for GET_ERRMAP", SESSREQ_LOGID(this), status);
             set_error(LCB_PROTOCOL_ERROR, "GET_ERRMAP response unexpected");
-            state = SREQ_S_ERROR;
         }
         break;
     }
 
     default: {
-        state = SREQ_S_ERROR;
         lcb_log(LOGARGS(this, ERROR), SESSREQ_LOGFMT "Received unknown response. OP=0x%x. RC=0x%x", SESSREQ_LOGID(this), resp.opcode(), resp.status());
         set_error(LCB_NOT_SUPPORTED, "Received unknown response");
         break;
@@ -563,9 +545,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
     // or fail the request, potentially destroying the underlying connection
     if (has_error()) {
         fail();
-    } else if (state == SREQ_S_ERROR) {
-        fail(LCB_ERROR, "FIXME: Error code set without description");
-    } else if (state == SREQ_S_COMPLETED) {
+    } else if (completed) {
         success();
     } else {
         goto GT_NEXT_PACKET;
