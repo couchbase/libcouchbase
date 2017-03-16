@@ -65,14 +65,13 @@ struct Hostlist {
 
     std::vector<lcb_host_t> hosts;
     std::vector<const char *> hoststrs;
-    static Hostlist* from_c(hostlist_st* src) {
-        return reinterpret_cast<Hostlist*>(src);
-    }
 };
 }
 typedef lcb::Hostlist* hostlist_t;
 
 struct hostlist_st : lcb::Hostlist {
+    hostlist_st() : Hostlist() {
+    }
 };
 #endif
 

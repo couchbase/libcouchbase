@@ -175,7 +175,6 @@ struct lcb_st {
         lcbvb_map_key(getConfig(), key.c_str(), key.size(), &tmpvb, &srvix);
         return srvix;
     }
-
     #endif
 };
 
