@@ -353,6 +353,7 @@ protected:
     lcb_io_opt_st *iops;
     std::set<std::string> featureRegistry;
     std::string bucketName;
+    std::string userName;
     const char **argv;
     void clearAndReset();
 
