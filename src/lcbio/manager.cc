@@ -36,16 +36,45 @@ typedef enum {
 
 typedef char mgr_KEY[NI_MAXSERV + NI_MAXHOST + 2];
 
-typedef struct lcbio_MGRHOST {
+struct mgr_HOST {
+    inline mgr_HOST(lcbio_MGR *, const std::string&);
+    inline void connection_available();
+    inline void start_new_connection(uint32_t timeout);
+
+    void ref() {
+        refcount++;
+    }
+
+    void unref() {
+        if (!--refcount) {
+            delete this;
+        }
+    }
+
+    inline void dump(FILE *fp) const;
+
+    size_t num_pending() const {
+        return LCB_CLIST_SIZE(&ll_pending);
+    }
+    size_t num_idle() const {
+        return LCB_CLIST_SIZE(&ll_idle);
+    }
+    size_t num_requests() const {
+        return LCB_CLIST_SIZE(&requests);
+    }
+    size_t num_leased() const {
+        return n_total - (num_idle() + num_pending());
+    }
+
     lcb_clist_t ll_idle; /* idle connections */
     lcb_clist_t ll_pending; /* pending cinfo */
     lcb_clist_t requests; /* pending requests */
-    mgr_KEY key; /* host:port */
+    const std::string key; /* host:port */
     struct lcbio_MGR *parent;
-    lcbio_pASYNC async;
+    lcb::io::Timer<mgr_HOST, &mgr_HOST::connection_available> async;
     unsigned n_total; /* number of total connections */
     unsigned refcount;
-} mgr_HOST;
+};
 
 struct CinfoNode : lcb_list_t {};
 
@@ -88,22 +117,13 @@ struct lcbio_MGRREQ : ReqNode {
 
 typedef lcbio_MGRREQ mgr_REQ;
 
-#define HE_NPEND(he) LCB_CLIST_SIZE(&(he)->ll_pending)
-#define HE_NIDLE(he) LCB_CLIST_SIZE(&(he)->ll_idle)
-#define HE_NREQS(he) LCB_CLIST_SIZE(&(he)->requests)
-#define HE_NLEASED(he) ((he)->n_total - (HE_NIDLE(he) + HE_NPEND(he)))
-
-static void he_available_notify(void *cookie);
-static void he_dump(mgr_HOST *he, FILE *out);
-static void he_unref(mgr_HOST *he);
 static void mgr_unref(lcbio_MGR *mgr);
 
-#define he_ref(he) (he)->refcount++
 #define mgr_ref(mgr) (mgr)->refcount++
 
 static const char *get_hehost(mgr_HOST *h) {
     if (!h) { return "NOHOST:NOPORT"; }
-    return h->key;
+    return h->key.c_str();
 }
 
 /** Format string arguments for %p%s:%s */
@@ -125,7 +145,7 @@ mgr_CINFO::~mgr_CINFO() {
         lcbio_protoctx_delptr(sock, this, 0);
         lcbio_unref(sock);
     }
-    he_unref(parent);
+    parent->unref();
 }
 
 static void
@@ -155,11 +175,13 @@ lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io)
     return pool;
 }
 
+typedef std::vector<mgr_HOST*> HeList;
+
 static void
 iterfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
 {
-    lcb_clist_t *he_list = (lcb_clist_t *)arg;
-    mgr_HOST *he = (mgr_HOST *)v;
+    HeList *he_list = reinterpret_cast<HeList*>(arg);
+    mgr_HOST *he = reinterpret_cast<mgr_HOST*>(const_cast<void*>(v));
     lcb_list_t *cur, *next;
 
     LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&he->ll_idle) {
@@ -170,19 +192,7 @@ iterfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
         delete mgr_CINFO::from_llnode(cur);
     }
 
-    memset(&he->ll_idle, 0, sizeof(he->ll_idle));
-    lcb_clist_append(he_list, (lcb_list_t *)&he->ll_idle);
-}
-
-static void
-he_unref(mgr_HOST *host)
-{
-    if (--host->refcount) {
-        return;
-    }
-
-    mgr_unref(host->parent);
-    free(host);
+    he_list->push_back(he);
 }
 
 static void
@@ -198,19 +208,14 @@ mgr_unref(lcbio_MGR *mgr)
 void
 lcbio_mgr_destroy(lcbio_MGR *mgr)
 {
-    lcb_clist_t hes;
-    lcb_list_t *cur, *next;
-    lcb_clist_init(&hes);
-
+    HeList hes;
     genhash_iter(mgr->ht, iterfunc, &hes);
 
-    LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t*)&hes) {
-        mgr_HOST *he = LCB_LIST_ITEM(cur, mgr_HOST, ll_idle);
-        genhash_delete(mgr->ht, he->key, strlen(he->key));
-        lcb_clist_delete(&hes, (lcb_list_t *)&he->ll_idle);
-        lcbio_timer_destroy(he->async);
-        he->async = NULL;
-        he_unref(he);
+    for (HeList::iterator it = hes.begin(); it != hes.end(); ++it) {
+        mgr_HOST *he = *it;
+        genhash_delete(mgr->ht, he->key.c_str(), he->key.size());
+        he->async.release();
+        he->unref();
     }
     mgr_unref(mgr);
 }
@@ -242,12 +247,11 @@ invoke_request(mgr_REQ *req)
 /**
  * Called to notify that a connection has become available.
  */
-static void
-connection_available(mgr_HOST *he)
-{
-    while (LCB_CLIST_SIZE(&he->requests) && LCB_CLIST_SIZE(&he->ll_idle)) {
-        lcb_list_t *reqitem = lcb_clist_shift(&he->requests);
-        lcb_list_t *connitem = lcb_clist_pop(&he->ll_idle);
+void
+mgr_HOST::connection_available() {
+    while (LCB_CLIST_SIZE(&requests) && LCB_CLIST_SIZE(&ll_idle)) {
+        lcb_list_t *reqitem = lcb_clist_shift(&requests);
+        lcb_list_t *connitem = lcb_clist_pop(&ll_idle);
 
         mgr_REQ* req = mgr_REQ::from_llnode(reqitem);
         mgr_CINFO* info = mgr_CINFO::from_llnode(connitem);
@@ -294,7 +298,7 @@ void mgr_CINFO::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
 
         lcb_clist_append(&parent->ll_idle, this);
         idle_timer.rearm(parent->parent->tmoidle);
-        connection_available(parent);
+        parent->connection_available();
     }
 }
 
@@ -307,7 +311,7 @@ mgr_CINFO::mgr_CINFO(mgr_HOST *he, uint32_t timeout)
     dtor = cinfo_protoctx_dtor;
 
     lcb_host_t tmphost;
-    lcb_error_t err = lcb_host_parsez(&tmphost, he->key, 80);
+    lcb_error_t err = lcb_host_parsez(&tmphost, he->key.c_str(), 80);
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(he->parent, ERROR), HE_LOGFMT "Could not parse host! Will supply dummy host (I=%p)", HE_LOGID(he), (void*)this);
         strcpy(tmphost.host, "BADHOST");
@@ -319,13 +323,13 @@ mgr_CINFO::mgr_CINFO(mgr_HOST *he, uint32_t timeout)
                        timeout, ::on_connected, this);
 }
 
-static void
-start_new_connection(mgr_HOST *he, uint32_t tmo)
+void
+mgr_HOST::start_new_connection(uint32_t tmo)
 {
-    mgr_CINFO *info = new mgr_CINFO(he, tmo);
-    lcb_clist_append(&he->ll_pending, info);
-    he->n_total++;
-    he_ref(he);
+    mgr_CINFO *info = new mgr_CINFO(this, tmo);
+    lcb_clist_append(&ll_pending, info);
+    n_total++;
+    refcount++;
 }
 
 static void
@@ -346,6 +350,15 @@ async_invoke_request(void *cookie)
     invoke_request(req);
 }
 
+mgr_HOST::mgr_HOST(lcbio_MGR *parent_, const std::string& key_)
+    : key(key_), parent(parent_), async(parent->io, this),
+      n_total(0), refcount(1) {
+
+    lcb_clist_init(&ll_idle);
+    lcb_clist_init(&ll_pending);
+    lcb_clist_init(&requests);
+}
+
 mgr_REQ *
 lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
               lcbio_CONNDONE_cb handler, void *arg)
@@ -353,27 +366,19 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
     mgr_HOST *he;
     lcb_list_t *cur;
     mgr_REQ *req = reinterpret_cast<mgr_REQ*>(calloc(1, sizeof(*req)));
-    mgr_KEY key = { 0 };
 
-    sprintf(key, "%s:%s", dest->host, dest->port);
+    std::string key(dest->host);
+    key.append(":").append(dest->port);
 
     req->callback = handler;
     req->arg = arg;
 
-    he = reinterpret_cast<mgr_HOST*>(genhash_find(pool->ht, key, strlen(key)));
+    he = reinterpret_cast<mgr_HOST*>(genhash_find(pool->ht, key.c_str(), key.size()));
     if (!he) {
-        he = reinterpret_cast<mgr_HOST*>(calloc(1, sizeof(*he)));
-        he->parent = pool;
-        he->async = lcbio_timer_new(pool->io, he, he_available_notify);
-        strcpy(he->key, key);
-
-        lcb_clist_init(&he->ll_idle);
-        lcb_clist_init(&he->ll_pending);
-        lcb_clist_init(&he->requests);
+        he = new mgr_HOST(pool, key);
 
         /** Not copied */
-        genhash_store(pool->ht, he->key, strlen(he->key), he, 0);
-        he_ref(he);
+        genhash_store(pool->ht, he->key.c_str(), he->key.size(), he, 0);
         mgr_ref(pool);
     }
 
@@ -411,9 +416,9 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
         lcbio_timer_rearm(req->timer, timeout);
 
         lcb_clist_append(&he->requests, req);
-        if (HE_NPEND(he) < HE_NREQS(he)) {
+        if (he->num_pending() < he->num_requests()) {
             lcb_log(LOGARGS(pool, DEBUG), HE_LOGFMT "Creating new connection because none are available in the pool", HE_LOGID(he));
-            start_new_connection(he, timeout);
+            he->start_new_connection(timeout);
 
         } else {
             lcb_log(LOGARGS(pool, DEBUG), HE_LOGFMT "Not creating a new connection. There are still pending ones", HE_LOGID(he));
@@ -421,16 +426,6 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
     }
 
     return req;
-}
-
-/**
- * Invoked when a new socket is available for allocation within the
- * request queue.
- */
-static void
-he_available_notify(void *cookie)
-{
-    connection_available((mgr_HOST *)cookie);
 }
 
 void
@@ -446,7 +441,7 @@ lcbio_mgr_cancel(mgr_REQ *req)
     if (req->sock) {
         lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Cancelling request=%p with existing connection", HE_LOGID(he), (void*)req);
         lcbio_mgr_put(req->sock);
-        lcbio_async_signal(he->async);
+        he->async.signal();
 
     } else {
         lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Request=%p has no connection.. yet", HE_LOGID(he), (void*)req);
@@ -476,7 +471,7 @@ lcbio_mgr_put(lcbio_SOCKET *sock)
     he = info->parent;
     mgr = he->parent;
 
-    if (HE_NIDLE(he) >= mgr->maxidle) {
+    if (he->num_idle() >= mgr->maxidle) {
         lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Closing idle connection. Too many in quota", HE_LOGID(he));
         lcbio_unref(info->sock);
         return;
@@ -504,7 +499,7 @@ lcbio_mgr_detach(lcbio_SOCKET *sock)
 #define CONN_INDENT "    "
 
 static void
-write_he_list(lcb_clist_t *ll, FILE *out)
+write_he_list(const lcb_clist_t *ll, FILE *out)
 {
     lcb_list_t *llcur;
     LCB_LIST_FOR(llcur, (lcb_list_t *)ll) {
@@ -523,21 +518,20 @@ write_he_list(lcb_clist_t *ll, FILE *out)
 
 }
 
-static void
-he_dump(mgr_HOST *he, FILE *out)
-{
+void
+mgr_HOST::dump(FILE *out) const {
     lcb_list_t *llcur;
-    fprintf(out, "HOST=%s", he->key);
-    fprintf(out, "Requests=%d, Idle=%d, Pending=%d, Leased=%d\n",
-            (int)HE_NREQS(he), (int)HE_NIDLE(he), (int)HE_NPEND(he), (int)HE_NLEASED(he));
+    fprintf(out, "HOST=%s", key.c_str());
+    fprintf(out, "Requests=%lu, Idle=%lu, Pending=%lu, Leased=%lu\n",
+            num_requests(), num_idle(), num_pending(), num_leased());
 
     fprintf(out, CONN_INDENT "Idle Connections:\n");
-    write_he_list(&he->ll_idle, out);
+    write_he_list(&ll_idle, out);
     fprintf(out, CONN_INDENT "Pending Connections: \n");
-    write_he_list(&he->ll_pending, out);
+    write_he_list(&ll_pending, out);
     fprintf(out, CONN_INDENT "Pending Requests:\n");
 
-    LCB_LIST_FOR(llcur, (lcb_list_t *)&he->requests) {
+    LCB_LIST_FOR(llcur, (lcb_list_t *)&requests) {
         mgr_REQ *req = mgr_REQ::from_llnode(llcur);
         union {
             lcbio_CONNDONE_cb cb;
@@ -556,11 +550,8 @@ he_dump(mgr_HOST *he, FILE *out)
 }
 
 static void
-dumpfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
-{
-    FILE *out = (FILE *)arg;
-    mgr_HOST *he = reinterpret_cast<mgr_HOST*>(const_cast<void*>(v));
-    he_dump(he, out);
+dumpfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg) {
+    reinterpret_cast<const mgr_HOST*>(v)->dump(reinterpret_cast<FILE*>(arg));
 }
 
 /**
