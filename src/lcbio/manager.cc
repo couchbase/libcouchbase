@@ -52,7 +52,7 @@ typedef struct mgr_CINFO_st {
     lcb_list_t llnode;
     mgr_HOST *parent;
     lcbio_SOCKET *sock;
-    struct lcbio_CONNSTART *cs;
+    lcbio_pCONNSTART cs;
     lcbio_pTIMER idle_timer;
     int state;
 } mgr_CINFO;
@@ -123,7 +123,7 @@ destroy_cinfo(mgr_CINFO *info)
 static void
 cinfo_protoctx_dtor(lcbio_PROTOCTX *ctx)
 {
-    mgr_CINFO *info = (void *)ctx;
+    mgr_CINFO *info = reinterpret_cast<mgr_CINFO*>(ctx);
     info->sock = NULL;
     destroy_cinfo(info);
 }
@@ -131,7 +131,7 @@ cinfo_protoctx_dtor(lcbio_PROTOCTX *ctx)
 lcbio_MGR *
 lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io)
 {
-    lcbio_MGR *pool = calloc(1, sizeof(*pool));
+    lcbio_MGR *pool = reinterpret_cast<lcbio_MGR*>(calloc(1, sizeof(*pool)));
     if (!pool) {
         return NULL;
     }
@@ -148,7 +148,7 @@ lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io)
 }
 
 static void
-iterfunc(const void *k, lcb_size_t nk, const void *v, lcb_size_t nv, void *arg)
+iterfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
 {
     lcb_clist_t *he_list = (lcb_clist_t *)arg;
     mgr_HOST *he = (mgr_HOST *)v;
@@ -166,8 +166,6 @@ iterfunc(const void *k, lcb_size_t nk, const void *v, lcb_size_t nv, void *arg)
 
     memset(&he->ll_idle, 0, sizeof(he->ll_idle));
     lcb_clist_append(he_list, (lcb_list_t *)&he->ll_idle);
-
-    (void)k; (void)nk; (void)nv;
 }
 
 static void
@@ -261,9 +259,9 @@ connection_available(mgr_HOST *he)
  * Connection callback invoked from lcbio_connect() when a result is received
  */
 static void
-on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR oserr)
+on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR)
 {
-    mgr_CINFO *info = arg;
+    mgr_CINFO *info = reinterpret_cast<mgr_CINFO*>(arg);
     mgr_HOST *he = info->parent;
     lcb_assert(info->state == CS_PENDING);
     info->cs = NULL;
@@ -294,8 +292,6 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR oserr)
         lcbio_timer_rearm(info->idle_timer, he->parent->tmoidle);
         connection_available(info->parent);
     }
-
-    (void)oserr;
 }
 
 static void
@@ -304,7 +300,7 @@ start_new_connection(mgr_HOST *he, uint32_t tmo)
     lcb_host_t tmphost;
     lcb_error_t err;
 
-    mgr_CINFO *info = calloc(1, sizeof(*info));
+    mgr_CINFO *info = reinterpret_cast<mgr_CINFO*>(calloc(1, sizeof(*info)));
     info->state = CS_PENDING;
     info->parent = he;
 
@@ -331,7 +327,7 @@ start_new_connection(mgr_HOST *he, uint32_t tmo)
 static void
 on_request_timeout(void *cookie)
 {
-    mgr_REQ *req = cookie;
+    mgr_REQ *req = reinterpret_cast<mgr_REQ*>(cookie);
     lcb_clist_delete(&req->host->requests, &req->llnode);
     req->err = LCB_ETIMEDOUT;
     invoke_request(req);
@@ -341,7 +337,7 @@ static void
 async_invoke_request(void *cookie)
 {
 
-    mgr_REQ *req = cookie;
+    mgr_REQ *req = reinterpret_cast<mgr_REQ*>(cookie);
     mgr_CINFO *cinfo = cinfo_from_sock(req->sock);
     cinfo->state = CS_IDLE;
     invoke_request(req);
@@ -353,7 +349,7 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
 {
     mgr_HOST *he;
     lcb_list_t *cur;
-    mgr_REQ *req = calloc(1, sizeof(*req));
+    mgr_REQ *req = reinterpret_cast<mgr_REQ*>(calloc(1, sizeof(*req)));
     mgr_KEY key = { 0 };
 
     sprintf(key, "%s:%s", dest->host, dest->port);
@@ -361,9 +357,9 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
     req->callback = handler;
     req->arg = arg;
 
-    he = genhash_find(pool->ht, key, strlen(key));
+    he = reinterpret_cast<mgr_HOST*>(genhash_find(pool->ht, key, strlen(key)));
     if (!he) {
-        he = calloc(1, sizeof(*he));
+        he = reinterpret_cast<mgr_HOST*>(calloc(1, sizeof(*he)));
         he->parent = pool;
         he->async = lcbio_timer_new(pool->io, he, he_available_notify);
         strcpy(he->key, key);
@@ -459,7 +455,7 @@ lcbio_mgr_cancel(mgr_REQ *req)
 static void
 on_idle_timeout(void *cookie)
 {
-    mgr_CINFO *info = cookie;
+    mgr_CINFO *info = reinterpret_cast<mgr_CINFO*>(cookie);
 
     lcb_log(LOGARGS(info->parent->parent, DEBUG), HE_LOGFMT "Idle connection expired", HE_LOGID(info->parent));
 
@@ -562,12 +558,11 @@ he_dump(mgr_HOST *he, FILE *out)
 }
 
 static void
-dumpfunc(const void *k, lcb_size_t nk, const void *v, lcb_size_t nv, void *arg)
+dumpfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
 {
     FILE *out = (FILE *)arg;
-    mgr_HOST *he = (void *)v;
+    mgr_HOST *he = reinterpret_cast<mgr_HOST*>(const_cast<void*>(v));
     he_dump(he, out);
-    (void)nk;(void)k;(void)nv;
 }
 
 /**
