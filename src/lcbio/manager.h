@@ -42,14 +42,27 @@
  */
 
 #ifdef __cplusplus
-extern "C" {
-#endif
-
-/** Cancellable pool request */
-struct lcbio_MGRREQ;
+namespace lcb {
+namespace io {
 
 /** @brief Socket Pool */
-typedef struct lcbio_MGR lcbio_MGR;
+struct Pool;
+
+/** @brief Pooled connection */
+struct PoolConnInfo;
+
+/** @brief Cancellable pool request */
+struct PoolRequest;
+}
+}
+
+typedef lcb::io::Pool lcbio_MGR;
+extern "C" {
+
+#else
+/* C only */
+typedef struct lcbio_MGR_CDUMMY lcbio_MGR;
+#endif
 
 /**
  * Create a socket pool controlled by the given settings and IO structure.
@@ -82,7 +95,7 @@ lcbio_mgr_destroy(lcbio_MGR *);
  * @see lcbio_connect()
  */
 LCB_INTERNAL_API
-struct lcbio_MGRREQ *
+lcbio_MGRREQ *
 lcbio_mgr_get(lcbio_MGR *mgr, lcb_host_t *dest, uint32_t timeout,
               lcbio_CONNDONE_cb handler, void *arg);
 
@@ -93,7 +106,7 @@ lcbio_mgr_get(lcbio_MGR *mgr, lcb_host_t *dest, uint32_t timeout,
  */
 LCB_INTERNAL_API
 void
-lcbio_mgr_cancel(struct lcbio_MGRREQ *req);
+lcbio_mgr_cancel(lcbio_MGRREQ *req);
 
 /**
  * Release a socket back into the pool. This means the socket is no longer
@@ -137,10 +150,13 @@ void lcbio_mgr_dump(lcbio_MGR *mgr, FILE *out);
 
 #ifdef __cplusplus
 }
-struct lcbio_MGR {
-    lcbio_MGR(lcb_settings*, lcbio_pTABLE);
-    ~lcbio_MGR();
-    lcbio_MGRREQ* get(const lcb_host_t&, uint32_t, lcbio_CONNDONE_cb, void *);
+
+namespace lcb {
+namespace io {
+struct Pool {
+    Pool(lcb_settings*, lcbio_pTABLE);
+    ~Pool();
+    PoolRequest* get(const lcb_host_t&, uint32_t, lcbio_CONNDONE_cb, void *);
     void dump(FILE *) const;
     void ref() {
         refcount++;
@@ -165,8 +181,9 @@ struct lcbio_MGR {
     unsigned maxtotal;
     unsigned maxidle; /**< Maximum number of idle connections, per host */
     unsigned refcount;
-
 };
+} // namespace io
+} // namespace lcb
 #endif
 /**@}*/
 

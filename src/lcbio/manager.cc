@@ -36,8 +36,11 @@ typedef enum {
 
 typedef char mgr_KEY[NI_MAXSERV + NI_MAXHOST + 2];
 
-struct mgr_HOST {
-    inline mgr_HOST(lcbio_MGR *, const std::string&);
+using namespace lcb::io;
+
+namespace {
+struct PoolHost {
+    inline PoolHost(Pool*, const std::string&);
     inline void connection_available();
     inline void start_new_connection(uint32_t timeout);
 
@@ -70,54 +73,61 @@ struct mgr_HOST {
     lcb_clist_t ll_pending; /* pending cinfo */
     lcb_clist_t requests; /* pending requests */
     const std::string key; /* host:port */
-    struct lcbio_MGR *parent;
-    lcb::io::Timer<mgr_HOST, &mgr_HOST::connection_available> async;
+    Pool *parent;
+    lcb::io::Timer<PoolHost, &PoolHost::connection_available> async;
     unsigned n_total; /* number of total connections */
     unsigned refcount;
 };
+}
 
 struct CinfoNode : lcb_list_t {};
 
-struct mgr_CINFO : lcbio_PROTOCTX, CinfoNode {
-    inline mgr_CINFO(mgr_HOST *parent, uint32_t timeout);
-    inline ~mgr_CINFO();
+namespace lcb {
+namespace io {
+struct PoolConnInfo : lcbio_PROTOCTX, CinfoNode {
+    inline PoolConnInfo(PoolHost *parent, uint32_t timeout);
+    inline ~PoolConnInfo();
     inline void on_idle_timeout();
     inline void on_connected(lcbio_SOCKET *sock, lcb_error_t err);
 
-    static mgr_CINFO *from_llnode(lcb_list_t *node) {
-        return static_cast<mgr_CINFO*>(static_cast<CinfoNode*>(node));
+    static PoolConnInfo *from_llnode(lcb_list_t *node) {
+        return static_cast<PoolConnInfo*>(static_cast<CinfoNode*>(node));
     }
 
-    static mgr_CINFO *from_sock(lcbio_SOCKET *sock) {
+    static PoolConnInfo *from_sock(lcbio_SOCKET *sock) {
         lcbio_PROTOCTX *ctx = lcbio_protoctx_get(sock, LCBIO_PROTOCTX_POOL);
-        return static_cast<mgr_CINFO*>(ctx);
+        return static_cast<PoolConnInfo*>(ctx);
     }
 
-    mgr_HOST *parent;
+    PoolHost *parent;
     lcbio_SOCKET *sock;
     lcbio_pCONNSTART cs;
-    lcb::io::Timer<mgr_CINFO, &mgr_CINFO::on_idle_timeout> idle_timer;
+    lcb::io::Timer<PoolConnInfo, &PoolConnInfo::on_idle_timeout> idle_timer;
     int state;
 };
+}
+}
 
 struct ReqNode : lcb_list_t {};
-struct lcbio_MGRREQ : ReqNode {
-    static lcbio_MGRREQ *from_llnode(lcb_list_t *node) {
-        return static_cast<lcbio_MGRREQ*>(static_cast<ReqNode*>(node));
+namespace lcb {
+namespace io {
+struct PoolRequest : ReqNode {
+    static PoolRequest *from_llnode(lcb_list_t *node) {
+        return static_cast<PoolRequest*>(static_cast<ReqNode*>(node));
     }
 
     lcbio_CONNDONE_cb callback;
     void *arg;
-    mgr_HOST *host;
+    PoolHost *host;
     lcbio_pTIMER timer;
     int state;
     lcbio_SOCKET *sock;
     lcb_error_t err;
 };
+}
+}
 
-typedef lcbio_MGRREQ mgr_REQ;
-
-static const char *get_hehost(mgr_HOST *h) {
+static const char *get_hehost(PoolHost *h) {
     if (!h) { return "NOHOST:NOPORT"; }
     return h->key.c_str();
 }
@@ -126,7 +136,7 @@ static const char *get_hehost(mgr_HOST *h) {
 #define HE_LOGID(h) get_hehost(h), (void*)h
 #define HE_LOGFMT "<%s> (HE=%p) "
 
-mgr_CINFO::~mgr_CINFO() {
+PoolConnInfo::~PoolConnInfo() {
     parent->n_total--;
     if (state == CS_IDLE) {
         lcb_clist_delete(&parent->ll_idle, this);
@@ -147,55 +157,55 @@ mgr_CINFO::~mgr_CINFO() {
 static void
 cinfo_protoctx_dtor(lcbio_PROTOCTX *ctx)
 {
-    mgr_CINFO *info = reinterpret_cast<mgr_CINFO*>(ctx);
+    PoolConnInfo *info = reinterpret_cast<PoolConnInfo*>(ctx);
     info->sock = NULL;
     delete info;
 }
 
-lcbio_MGR::lcbio_MGR(lcb_settings* settings_, lcbio_pTABLE io_)
+Pool::Pool(lcb_settings* settings_, lcbio_pTABLE io_)
     : ht(lcb_hashtable_nc_new(32)), settings(settings_), io(io_),
       tmoidle(0), maxidle(0), maxtotal(0), refcount(1) {
 }
 
-lcbio_MGR *lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io) {
-    return new lcbio_MGR(settings, io);
+Pool *lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io) {
+    return new Pool(settings, io);
 }
 
 
-typedef std::vector<mgr_HOST*> HeList;
+typedef std::vector<PoolHost*> HeList;
 
 static void
 iterfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
 {
     HeList *he_list = reinterpret_cast<HeList*>(arg);
-    mgr_HOST *he = reinterpret_cast<mgr_HOST*>(const_cast<void*>(v));
+    PoolHost *he = reinterpret_cast<PoolHost*>(const_cast<void*>(v));
     lcb_list_t *cur, *next;
 
     LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&he->ll_idle) {
-        delete mgr_CINFO::from_llnode(cur);
+        delete PoolConnInfo::from_llnode(cur);
     }
 
     LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&he->ll_pending) {
-        delete mgr_CINFO::from_llnode(cur);
+        delete PoolConnInfo::from_llnode(cur);
     }
 
     he_list->push_back(he);
 }
 
-void lcbio_mgr_destroy(lcbio_MGR *mgr) {
+void lcbio_mgr_destroy(Pool *mgr) {
     mgr->shutdown();
 }
 
-lcbio_MGR::~lcbio_MGR() {
+Pool::~Pool() {
     genhash_free(ht);
 }
 
-void lcbio_MGR::shutdown() {
+void Pool::shutdown() {
     HeList hes;
     genhash_iter(ht, iterfunc, &hes);
 
     for (HeList::iterator it = hes.begin(); it != hes.end(); ++it) {
-        mgr_HOST *he = *it;
+        PoolHost *he = *it;
         genhash_delete(ht, he->key.c_str(), he->key.size());
         he->async.release();
         he->unref();
@@ -204,10 +214,10 @@ void lcbio_MGR::shutdown() {
 }
 
 static void
-invoke_request(mgr_REQ *req)
+invoke_request(PoolRequest *req)
 {
     if (req->sock) {
-        mgr_CINFO *info = mgr_CINFO::from_sock(req->sock);
+        PoolConnInfo *info = PoolConnInfo::from_sock(req->sock);
         lcb_assert(info->state == CS_IDLE);
         info->state = CS_LEASED;
         req->state = RS_ASSIGNED;
@@ -231,13 +241,13 @@ invoke_request(mgr_REQ *req)
  * Called to notify that a connection has become available.
  */
 void
-mgr_HOST::connection_available() {
+PoolHost::connection_available() {
     while (LCB_CLIST_SIZE(&requests) && LCB_CLIST_SIZE(&ll_idle)) {
         lcb_list_t *reqitem = lcb_clist_shift(&requests);
         lcb_list_t *connitem = lcb_clist_pop(&ll_idle);
 
-        mgr_REQ* req = mgr_REQ::from_llnode(reqitem);
-        mgr_CINFO* info = mgr_CINFO::from_llnode(connitem);
+        PoolRequest* req = PoolRequest::from_llnode(reqitem);
+        PoolConnInfo* info = PoolConnInfo::from_llnode(connitem);
         req->sock = info->sock;
         req->err = LCB_SUCCESS;
         invoke_request(req);
@@ -250,11 +260,11 @@ mgr_HOST::connection_available() {
 static void
 on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR)
 {
-    reinterpret_cast<mgr_CINFO*>(arg)->on_connected(sock, err);
+    reinterpret_cast<PoolConnInfo*>(arg)->on_connected(sock, err);
 }
 
 
-void mgr_CINFO::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
+void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
     lcb_assert(state == CS_PENDING);
     cs = NULL;
 
@@ -265,7 +275,7 @@ void mgr_CINFO::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
         /** If the connection failed, fail out all remaining requests */
         lcb_list_t *cur, *next;
         LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&parent->requests) {
-            mgr_REQ *req = mgr_REQ::from_llnode(cur);
+            PoolRequest *req = PoolRequest::from_llnode(cur);
             lcb_clist_delete(&parent->requests, req);
             req->sock = NULL;
             req->err = err;
@@ -285,7 +295,7 @@ void mgr_CINFO::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
     }
 }
 
-mgr_CINFO::mgr_CINFO(mgr_HOST *he, uint32_t timeout)
+PoolConnInfo::PoolConnInfo(PoolHost *he, uint32_t timeout)
     : parent(he), sock(NULL), cs(NULL), idle_timer(he->parent->io, this),
       state(CS_PENDING) {
 
@@ -307,9 +317,9 @@ mgr_CINFO::mgr_CINFO(mgr_HOST *he, uint32_t timeout)
 }
 
 void
-mgr_HOST::start_new_connection(uint32_t tmo)
+PoolHost::start_new_connection(uint32_t tmo)
 {
-    mgr_CINFO *info = new mgr_CINFO(this, tmo);
+    PoolConnInfo *info = new PoolConnInfo(this, tmo);
     lcb_clist_append(&ll_pending, info);
     n_total++;
     refcount++;
@@ -318,7 +328,7 @@ mgr_HOST::start_new_connection(uint32_t tmo)
 static void
 on_request_timeout(void *cookie)
 {
-    mgr_REQ *req = reinterpret_cast<mgr_REQ*>(cookie);
+    PoolRequest *req = reinterpret_cast<PoolRequest*>(cookie);
     lcb_clist_delete(&req->host->requests, req);
     req->err = LCB_ETIMEDOUT;
     invoke_request(req);
@@ -327,13 +337,13 @@ on_request_timeout(void *cookie)
 static void
 async_invoke_request(void *cookie)
 {
-    mgr_REQ *req = reinterpret_cast<mgr_REQ*>(cookie);
-    mgr_CINFO *cinfo = mgr_CINFO::from_sock(req->sock);
+    PoolRequest *req = reinterpret_cast<PoolRequest*>(cookie);
+    PoolConnInfo *cinfo = PoolConnInfo::from_sock(req->sock);
     cinfo->state = CS_IDLE;
     invoke_request(req);
 }
 
-mgr_HOST::mgr_HOST(lcbio_MGR *parent_, const std::string& key_)
+PoolHost::PoolHost(Pool *parent_, const std::string& key_)
     : key(key_), parent(parent_), async(parent->io, this),
       n_total(0), refcount(1) {
 
@@ -342,19 +352,19 @@ mgr_HOST::mgr_HOST(lcbio_MGR *parent_, const std::string& key_)
     lcb_clist_init(&requests);
 }
 
-mgr_REQ *lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
+PoolRequest *lcbio_mgr_get(Pool *pool, lcb_host_t *dest, uint32_t timeout,
               lcbio_CONNDONE_cb handler, void *arg)
 {
     return pool->get(*dest, timeout, handler, arg);
 }
 
-mgr_REQ*
-lcbio_MGR::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
+PoolRequest*
+Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
                void *cbarg)
 {
-    mgr_HOST *he;
+    PoolHost *he;
     lcb_list_t *cur;
-    mgr_REQ *req = reinterpret_cast<mgr_REQ*>(calloc(1, sizeof(*req)));
+    PoolRequest *req = reinterpret_cast<PoolRequest*>(calloc(1, sizeof(*req)));
 
     std::string key(dest.host);
     key.append(":").append(dest.port);
@@ -362,9 +372,9 @@ lcbio_MGR::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     req->callback = cb;
     req->arg = cbarg;
 
-    he = reinterpret_cast<mgr_HOST*>(genhash_find(ht, key.c_str(), key.size()));
+    he = reinterpret_cast<PoolHost*>(genhash_find(ht, key.c_str(), key.size()));
     if (!he) {
-        he = new mgr_HOST(this, key);
+        he = new PoolHost(this, key);
 
         /** Not copied */
         genhash_store(ht, he->key.c_str(), he->key.size(), he, 0);
@@ -378,7 +388,7 @@ lcbio_MGR::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     cur = lcb_clist_pop(&he->ll_idle);
     if (cur) {
         int clstatus;
-        mgr_CINFO *info = mgr_CINFO::from_llnode(cur);
+        PoolConnInfo *info = PoolConnInfo::from_llnode(cur);
 
         clstatus = lcbio_is_netclosed(info->sock, LCB_IO_SOCKCHECK_PEND_IS_ERROR);
 
@@ -417,10 +427,10 @@ lcbio_MGR::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
 }
 
 void
-lcbio_mgr_cancel(mgr_REQ *req)
+lcbio_mgr_cancel(PoolRequest *req)
 {
-    mgr_HOST *he = req->host;
-    lcbio_MGR *mgr = he->parent;
+    PoolHost *he = req->host;
+    Pool *mgr = he->parent;
     if (req->timer) {
         lcbio_timer_destroy(req->timer);
         req->timer = NULL;
@@ -438,7 +448,7 @@ lcbio_mgr_cancel(mgr_REQ *req)
     free(req);
 }
 
-void mgr_CINFO::on_idle_timeout() {
+void PoolConnInfo::on_idle_timeout() {
     lcb_log(LOGARGS(parent->parent, DEBUG), HE_LOGFMT "Idle connection expired", HE_LOGID(parent));
     lcbio_unref(sock);
 }
@@ -446,9 +456,9 @@ void mgr_CINFO::on_idle_timeout() {
 void
 lcbio_mgr_put(lcbio_SOCKET *sock)
 {
-    mgr_HOST *he;
-    lcbio_MGR *mgr;
-    mgr_CINFO *info = mgr_CINFO::from_sock(sock);
+    PoolHost *he;
+    Pool *mgr;
+    PoolConnInfo *info = PoolConnInfo::from_sock(sock);
 
     if (!info) {
         fprintf(stderr, "Requested put() for non-pooled (or detached) socket=%p\n", (void *)sock);
@@ -491,7 +501,7 @@ write_he_list(const lcb_clist_t *ll, FILE *out)
 {
     lcb_list_t *llcur;
     LCB_LIST_FOR(llcur, (lcb_list_t *)ll) {
-        mgr_CINFO *info = mgr_CINFO::from_llnode(llcur);
+        PoolConnInfo *info = PoolConnInfo::from_llnode(llcur);
         fprintf(out, "%sCONN [I=%p,C=%p ",
                 CONN_INDENT, (void *)info, (void *)&info->sock);
 
@@ -507,7 +517,7 @@ write_he_list(const lcb_clist_t *ll, FILE *out)
 }
 
 void
-mgr_HOST::dump(FILE *out) const {
+PoolHost::dump(FILE *out) const {
     lcb_list_t *llcur;
     fprintf(out, "HOST=%s", key.c_str());
     fprintf(out, "Requests=%lu, Idle=%lu, Pending=%lu, Leased=%lu\n",
@@ -520,7 +530,7 @@ mgr_HOST::dump(FILE *out) const {
     fprintf(out, CONN_INDENT "Pending Requests:\n");
 
     LCB_LIST_FOR(llcur, (lcb_list_t *)&requests) {
-        mgr_REQ *req = mgr_REQ::from_llnode(llcur);
+        PoolRequest *req = PoolRequest::from_llnode(llcur);
         union {
             lcbio_CONNDONE_cb cb;
             void *ptr;
@@ -539,17 +549,17 @@ mgr_HOST::dump(FILE *out) const {
 
 static void
 dumpfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg) {
-    reinterpret_cast<const mgr_HOST*>(v)->dump(reinterpret_cast<FILE*>(arg));
+    reinterpret_cast<const PoolHost*>(v)->dump(reinterpret_cast<FILE*>(arg));
 }
 
 /**
  * Dumps the connection manager state to stderr
  */
-LCB_INTERNAL_API void lcbio_mgr_dump(lcbio_MGR *mgr, FILE *out) {
+LCB_INTERNAL_API void lcbio_mgr_dump(Pool *mgr, FILE *out) {
     mgr->dump(out);
 }
 
-void lcbio_MGR::dump(FILE *out) const {
+void Pool::dump(FILE *out) const {
     if (out == NULL) {
         out = stderr;
     }
