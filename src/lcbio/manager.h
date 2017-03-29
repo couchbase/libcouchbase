@@ -19,7 +19,6 @@
 #define LCBIO_MANAGER_H
 #include "connect.h"
 #include "settings.h"
-#include "contrib/genhash/genhash.h"
 #include "list.h"
 #include <stdio.h>
 
@@ -42,6 +41,8 @@
  */
 
 #ifdef __cplusplus
+#include <map>
+
 namespace lcb {
 namespace io {
 
@@ -53,6 +54,8 @@ struct PoolConnInfo;
 
 /** @brief Cancellable pool request */
 struct PoolRequest;
+
+struct PoolHost;
 }
 }
 
@@ -168,8 +171,8 @@ struct Pool {
     }
 
     inline void shutdown();
-
-    genhash_t* ht;
+    typedef std::map<std::string, PoolHost*> HostMap;
+    HostMap ht;
     lcb_settings *settings;
     lcbio_pTABLE io;
 

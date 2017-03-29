@@ -38,7 +38,9 @@ typedef char mgr_KEY[NI_MAXSERV + NI_MAXHOST + 2];
 
 using namespace lcb::io;
 
-namespace {
+namespace lcb {
+namespace io {
+
 struct PoolHost {
     inline PoolHost(Pool*, const std::string&);
     inline void connection_available();
@@ -78,6 +80,7 @@ struct PoolHost {
     unsigned n_total; /* number of total connections */
     unsigned refcount;
 };
+}
 }
 
 struct CinfoNode : lcb_list_t {};
@@ -163,7 +166,7 @@ cinfo_protoctx_dtor(lcbio_PROTOCTX *ctx)
 }
 
 Pool::Pool(lcb_settings* settings_, lcbio_pTABLE io_)
-    : ht(lcb_hashtable_nc_new(32)), settings(settings_), io(io_),
+    : settings(settings_), io(io_),
       tmoidle(0), maxidle(0), maxtotal(0), refcount(1) {
 }
 
@@ -174,39 +177,34 @@ Pool *lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io) {
 
 typedef std::vector<PoolHost*> HeList;
 
-static void
-iterfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
-{
-    HeList *he_list = reinterpret_cast<HeList*>(arg);
-    PoolHost *he = reinterpret_cast<PoolHost*>(const_cast<void*>(v));
-    lcb_list_t *cur, *next;
-
-    LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&he->ll_idle) {
-        delete PoolConnInfo::from_llnode(cur);
-    }
-
-    LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&he->ll_pending) {
-        delete PoolConnInfo::from_llnode(cur);
-    }
-
-    he_list->push_back(he);
-}
-
 void lcbio_mgr_destroy(Pool *mgr) {
     mgr->shutdown();
 }
 
 Pool::~Pool() {
-    genhash_free(ht);
 }
 
 void Pool::shutdown() {
     HeList hes;
-    genhash_iter(ht, iterfunc, &hes);
+    HostMap::iterator h_it;
+
+    for (h_it = ht.begin(); h_it != ht.end(); ++h_it) {
+        PoolHost *he = h_it->second;
+
+        lcb_list_t *cur, *next;
+        LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&he->ll_idle) {
+            delete PoolConnInfo::from_llnode(cur);
+        }
+
+        LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&he->ll_pending) {
+            delete PoolConnInfo::from_llnode(cur);
+        }
+        hes.push_back(he);
+    }
 
     for (HeList::iterator it = hes.begin(); it != hes.end(); ++it) {
         PoolHost *he = *it;
-        genhash_delete(ht, he->key.c_str(), he->key.size());
+        ht.erase(he->key);
         he->async.release();
         he->unref();
     }
@@ -372,13 +370,13 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     req->callback = cb;
     req->arg = cbarg;
 
-    he = reinterpret_cast<PoolHost*>(genhash_find(ht, key.c_str(), key.size()));
-    if (!he) {
+    HostMap::iterator m = ht.find(key);
+    if (m == ht.end()) {
         he = new PoolHost(this, key);
-
-        /** Not copied */
-        genhash_store(ht, he->key.c_str(), he->key.size(), he, 0);
+        ht.insert(std::make_pair(key, he));
         ref();
+    } else {
+        he = m->second;
     }
 
     req->host = he;
@@ -547,11 +545,6 @@ PoolHost::dump(FILE *out) const {
 
 }
 
-static void
-dumpfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg) {
-    reinterpret_cast<const PoolHost*>(v)->dump(reinterpret_cast<FILE*>(arg));
-}
-
 /**
  * Dumps the connection manager state to stderr
  */
@@ -563,6 +556,8 @@ void Pool::dump(FILE *out) const {
     if (out == NULL) {
         out = stderr;
     }
-
-    genhash_iter(ht, dumpfunc, out);
+    HostMap::const_iterator ii;
+    for (ii = ht.begin(); ii != ht.end(); ++ii) {
+        ii->second->dump(out);
+    }
 }
