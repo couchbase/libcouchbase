@@ -34,8 +34,6 @@ typedef enum {
     RS_ASSIGNED
 } request_state;
 
-typedef char mgr_KEY[NI_MAXSERV + NI_MAXHOST + 2];
-
 using namespace lcb::io;
 
 namespace lcb {
