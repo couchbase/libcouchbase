@@ -117,10 +117,6 @@ struct lcbio_MGRREQ : ReqNode {
 
 typedef lcbio_MGRREQ mgr_REQ;
 
-static void mgr_unref(lcbio_MGR *mgr);
-
-#define mgr_ref(mgr) (mgr)->refcount++
-
 static const char *get_hehost(mgr_HOST *h) {
     if (!h) { return "NOHOST:NOPORT"; }
     return h->key.c_str();
@@ -156,24 +152,15 @@ cinfo_protoctx_dtor(lcbio_PROTOCTX *ctx)
     delete info;
 }
 
-lcbio_MGR *
-lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io)
-{
-    lcbio_MGR *pool = reinterpret_cast<lcbio_MGR*>(calloc(1, sizeof(*pool)));
-    if (!pool) {
-        return NULL;
-    }
-
-    if ((pool->ht = lcb_hashtable_nc_new(32)) == NULL) {
-        free(pool);
-        return NULL;
-    }
-
-    pool->settings = settings;
-    pool->io = io;
-    mgr_ref(pool);
-    return pool;
+lcbio_MGR::lcbio_MGR(lcb_settings* settings_, lcbio_pTABLE io_)
+    : ht(lcb_hashtable_nc_new(32)), settings(settings_), io(io_),
+      tmoidle(0), maxidle(0), maxtotal(0), refcount(1) {
 }
+
+lcbio_MGR *lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io) {
+    return new lcbio_MGR(settings, io);
+}
+
 
 typedef std::vector<mgr_HOST*> HeList;
 
@@ -195,29 +182,25 @@ iterfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg)
     he_list->push_back(he);
 }
 
-static void
-mgr_unref(lcbio_MGR *mgr)
-{
-    if (--mgr->refcount) {
-        return;
-    }
-    genhash_free(mgr->ht);
-    free(mgr);
+void lcbio_mgr_destroy(lcbio_MGR *mgr) {
+    mgr->shutdown();
 }
 
-void
-lcbio_mgr_destroy(lcbio_MGR *mgr)
-{
+lcbio_MGR::~lcbio_MGR() {
+    genhash_free(ht);
+}
+
+void lcbio_MGR::shutdown() {
     HeList hes;
-    genhash_iter(mgr->ht, iterfunc, &hes);
+    genhash_iter(ht, iterfunc, &hes);
 
     for (HeList::iterator it = hes.begin(); it != hes.end(); ++it) {
         mgr_HOST *he = *it;
-        genhash_delete(mgr->ht, he->key.c_str(), he->key.size());
+        genhash_delete(ht, he->key.c_str(), he->key.size());
         he->async.release();
         he->unref();
     }
-    mgr_unref(mgr);
+    unref();
 }
 
 static void
@@ -359,27 +342,33 @@ mgr_HOST::mgr_HOST(lcbio_MGR *parent_, const std::string& key_)
     lcb_clist_init(&requests);
 }
 
-mgr_REQ *
-lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
+mgr_REQ *lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
               lcbio_CONNDONE_cb handler, void *arg)
+{
+    return pool->get(*dest, timeout, handler, arg);
+}
+
+mgr_REQ*
+lcbio_MGR::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
+               void *cbarg)
 {
     mgr_HOST *he;
     lcb_list_t *cur;
     mgr_REQ *req = reinterpret_cast<mgr_REQ*>(calloc(1, sizeof(*req)));
 
-    std::string key(dest->host);
-    key.append(":").append(dest->port);
+    std::string key(dest.host);
+    key.append(":").append(dest.port);
 
-    req->callback = handler;
-    req->arg = arg;
+    req->callback = cb;
+    req->arg = cbarg;
 
-    he = reinterpret_cast<mgr_HOST*>(genhash_find(pool->ht, key.c_str(), key.size()));
+    he = reinterpret_cast<mgr_HOST*>(genhash_find(ht, key.c_str(), key.size()));
     if (!he) {
-        he = new mgr_HOST(pool, key);
+        he = new mgr_HOST(this, key);
 
         /** Not copied */
-        genhash_store(pool->ht, he->key.c_str(), he->key.size(), he, 0);
-        mgr_ref(pool);
+        genhash_store(ht, he->key.c_str(), he->key.size(), he, 0);
+        ref();
     }
 
     req->host = he;
@@ -394,7 +383,7 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
         clstatus = lcbio_is_netclosed(info->sock, LCB_IO_SOCKCHECK_PEND_IS_ERROR);
 
         if (clstatus == LCB_IO_SOCKCHECK_STATUS_CLOSED) {
-            lcb_log(LOGARGS(pool, WARN), HE_LOGFMT "Pooled socket is dead. Continuing to next one", HE_LOGID(he));
+            lcb_log(LOGARGS(this, WARN), HE_LOGFMT "Pooled socket is dead. Continuing to next one", HE_LOGID(he));
 
             /* Set to CS_LEASED, since it's not inside any of our lists */
             info->state = CS_LEASED;
@@ -405,26 +394,25 @@ lcbio_mgr_get(lcbio_MGR *pool, lcb_host_t *dest, uint32_t timeout,
         info->idle_timer.cancel();
         req->sock = info->sock;
         req->state = RS_ASSIGNED;
-        req->timer = lcbio_timer_new(pool->io, req, async_invoke_request);
+        req->timer = lcbio_timer_new(io, req, async_invoke_request);
         info->state = CS_LEASED;
         lcbio_async_signal(req->timer);
-        lcb_log(LOGARGS(pool, INFO), HE_LOGFMT "Found ready connection in pool. Reusing socket and not creating new connection", HE_LOGID(he));
+        lcb_log(LOGARGS(this, INFO), HE_LOGFMT "Found ready connection in pool. Reusing socket and not creating new connection", HE_LOGID(he));
 
     } else {
         req->state = RS_PENDING;
-        req->timer = lcbio_timer_new(pool->io, req, on_request_timeout);
+        req->timer = lcbio_timer_new(io, req, on_request_timeout);
         lcbio_timer_rearm(req->timer, timeout);
 
         lcb_clist_append(&he->requests, req);
         if (he->num_pending() < he->num_requests()) {
-            lcb_log(LOGARGS(pool, DEBUG), HE_LOGFMT "Creating new connection because none are available in the pool", HE_LOGID(he));
+            lcb_log(LOGARGS(this, DEBUG), HE_LOGFMT "Creating new connection because none are available in the pool", HE_LOGID(he));
             he->start_new_connection(timeout);
 
         } else {
-            lcb_log(LOGARGS(pool, DEBUG), HE_LOGFMT "Not creating a new connection. There are still pending ones", HE_LOGID(he));
+            lcb_log(LOGARGS(this, DEBUG), HE_LOGFMT "Not creating a new connection. There are still pending ones", HE_LOGID(he));
         }
     }
-
     return req;
 }
 
@@ -557,12 +545,14 @@ dumpfunc(const void *, lcb_size_t, const void *v, lcb_size_t, void *arg) {
 /**
  * Dumps the connection manager state to stderr
  */
-LCB_INTERNAL_API
-void lcbio_mgr_dump(lcbio_MGR *mgr, FILE *out)
-{
+LCB_INTERNAL_API void lcbio_mgr_dump(lcbio_MGR *mgr, FILE *out) {
+    mgr->dump(out);
+}
+
+void lcbio_MGR::dump(FILE *out) const {
     if (out == NULL) {
         out = stderr;
     }
 
-    genhash_iter(mgr->ht, dumpfunc, out);
+    genhash_iter(ht, dumpfunc, out);
 }

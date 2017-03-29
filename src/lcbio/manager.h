@@ -49,20 +49,7 @@ extern "C" {
 struct lcbio_MGRREQ;
 
 /** @brief Socket Pool */
-typedef struct lcbio_MGR {
-    genhash_t* ht;
-    lcb_settings *settings;
-    lcbio_pTABLE io;
-
-    /**
-     * Maximum number of microseconds for a connection to idle inside the pool
-     * before being closed
-     */
-    uint32_t tmoidle;
-    unsigned maxtotal;
-    unsigned maxidle; /**< Maximum number of idle connections, per host */
-    unsigned refcount;
-} lcbio_MGR;
+typedef struct lcbio_MGR lcbio_MGR;
 
 /**
  * Create a socket pool controlled by the given settings and IO structure.
@@ -150,6 +137,36 @@ void lcbio_mgr_dump(lcbio_MGR *mgr, FILE *out);
 
 #ifdef __cplusplus
 }
+struct lcbio_MGR {
+    lcbio_MGR(lcb_settings*, lcbio_pTABLE);
+    ~lcbio_MGR();
+    lcbio_MGRREQ* get(const lcb_host_t&, uint32_t, lcbio_CONNDONE_cb, void *);
+    void dump(FILE *) const;
+    void ref() {
+        refcount++;
+    }
+    void unref() {
+        if (!--refcount) {
+            delete this;
+        }
+    }
+
+    inline void shutdown();
+
+    genhash_t* ht;
+    lcb_settings *settings;
+    lcbio_pTABLE io;
+
+    /**
+     * Maximum number of microseconds for a connection to idle inside the pool
+     * before being closed
+     */
+    uint32_t tmoidle;
+    unsigned maxtotal;
+    unsigned maxidle; /**< Maximum number of idle connections, per host */
+    unsigned refcount;
+
+};
 #endif
 /**@}*/
 
