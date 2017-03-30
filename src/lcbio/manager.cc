@@ -23,17 +23,6 @@
 
 #define LOGARGS(mgr, lvl) mgr->settings, "lcbio_mgr", LCB_LOG_##lvl, __FILE__, __LINE__
 
-typedef enum {
-    CS_PENDING,
-    CS_IDLE,
-    CS_LEASED
-} cinfo_state;
-
-typedef enum {
-    RS_PENDING,
-    RS_ASSIGNED
-} request_state;
-
 using namespace lcb::io;
 
 namespace lcb {
@@ -91,6 +80,12 @@ struct PoolConnInfo : lcbio_PROTOCTX, CinfoNode {
     inline void on_idle_timeout();
     inline void on_connected(lcbio_SOCKET *sock, lcb_error_t err);
 
+    void set_leased() {
+        lcb_assert(state == IDLE);
+        state = LEASED;
+        idle_timer.cancel();
+    }
+
     static PoolConnInfo *from_llnode(lcb_list_t *node) {
         return static_cast<PoolConnInfo*>(static_cast<CinfoNode*>(node));
     }
@@ -104,7 +99,9 @@ struct PoolConnInfo : lcbio_PROTOCTX, CinfoNode {
     lcbio_SOCKET *sock;
     lcbio_pCONNSTART cs;
     lcb::io::Timer<PoolConnInfo, &PoolConnInfo::on_idle_timeout> idle_timer;
-    int state;
+
+    enum State { PENDING, IDLE, LEASED };
+    State state;
 };
 }
 }
@@ -113,15 +110,41 @@ struct ReqNode : lcb_list_t {};
 namespace lcb {
 namespace io {
 struct PoolRequest : ReqNode {
+    PoolRequest(PoolHost *host_, lcbio_CONNDONE_cb cb, void *cbarg)
+        : host(host_), callback(cb), arg(cbarg), timer(host->parent->io, this),
+          state(PENDING), sock(NULL), err(LCB_SUCCESS) {
+    }
+
+    inline void cancel();
+    inline void invoke();
+    void invoke(lcb_error_t err_) {
+        err = err_;
+        invoke();
+    }
+
+    inline void timer_handler();
+    inline void set_ready(PoolConnInfo *cinfo) {
+        cinfo->set_leased();
+        sock = cinfo->sock;
+        state = ASSIGNED;
+        timer.signal();
+    }
+
+    inline void set_pending(uint32_t timeout) {
+        timer.rearm(timeout);
+    }
+
     static PoolRequest *from_llnode(lcb_list_t *node) {
         return static_cast<PoolRequest*>(static_cast<ReqNode*>(node));
     }
 
+    PoolHost *host;
     lcbio_CONNDONE_cb callback;
     void *arg;
-    PoolHost *host;
-    lcbio_pTIMER timer;
-    int state;
+    Timer<PoolRequest, &PoolRequest::timer_handler> timer;
+
+    enum State { ASSIGNED, PENDING };
+    State state;
     lcbio_SOCKET *sock;
     lcb_error_t err;
 };
@@ -139,10 +162,10 @@ static const char *get_hehost(PoolHost *h) {
 
 PoolConnInfo::~PoolConnInfo() {
     parent->n_total--;
-    if (state == CS_IDLE) {
+    if (state == IDLE) {
         lcb_clist_delete(&parent->ll_idle, this);
 
-    } else if (state == CS_PENDING && cs) {
+    } else if (state == PENDING && cs) {
         lcbio_connect_cancel(cs);
     }
 
@@ -209,28 +232,20 @@ void Pool::shutdown() {
     unref();
 }
 
-static void
-invoke_request(PoolRequest *req)
-{
-    if (req->sock) {
-        PoolConnInfo *info = PoolConnInfo::from_sock(req->sock);
-        lcb_assert(info->state == CS_IDLE);
-        info->state = CS_LEASED;
-        req->state = RS_ASSIGNED;
-        info->idle_timer.cancel();
-        lcb_log(LOGARGS(info->parent->parent, DEBUG), HE_LOGFMT "Assigning R=%p SOCKET=%p",HE_LOGID(info->parent), (void*)req, (void*)req->sock);
+void
+PoolRequest::invoke() {
+    if (sock) {
+        PoolConnInfo *info = PoolConnInfo::from_sock(sock);
+        info->set_leased();
+        state = ASSIGNED;
+        lcb_log(LOGARGS(info->parent->parent, DEBUG), HE_LOGFMT "Assigning R=%p SOCKET=%p",HE_LOGID(info->parent), (void*)this, (void*)sock);
     }
 
-    if (req->timer) {
-        lcbio_timer_destroy(req->timer);
-        req->timer = NULL;
+    callback(sock, arg, err, 0);
+    if (sock) {
+        lcbio_unref(sock);
     }
-
-    req->callback(req->sock, req->arg, req->err, 0);
-    if (req->sock) {
-        lcbio_unref(req->sock);
-    }
-    free(req);
+    delete this;
 }
 
 /**
@@ -245,8 +260,7 @@ PoolHost::connection_available() {
         PoolRequest* req = PoolRequest::from_llnode(reqitem);
         PoolConnInfo* info = PoolConnInfo::from_llnode(connitem);
         req->sock = info->sock;
-        req->err = LCB_SUCCESS;
-        invoke_request(req);
+        req->invoke();
     }
 }
 
@@ -261,7 +275,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR)
 
 
 void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
-    lcb_assert(state == CS_PENDING);
+    lcb_assert(state == PENDING);
     cs = NULL;
 
     lcb_log(LOGARGS(parent->parent, DEBUG), HE_LOGFMT "Received result for I=%p,C=%p; E=0x%x", HE_LOGID(parent), (void*)this, (void*)sock, err);
@@ -274,13 +288,12 @@ void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
             PoolRequest *req = PoolRequest::from_llnode(cur);
             lcb_clist_delete(&parent->requests, req);
             req->sock = NULL;
-            req->err = err;
-            invoke_request(req);
+            req->invoke(err);
         }
         delete this;
 
     } else {
-        state = CS_IDLE;
+        state = IDLE;
         sock = sock_;
         lcbio_ref(sock);
         lcbio_protoctx_add(sock, this);
@@ -293,7 +306,7 @@ void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
 
 PoolConnInfo::PoolConnInfo(PoolHost *he, uint32_t timeout)
     : parent(he), sock(NULL), cs(NULL), idle_timer(he->parent->io, this),
-      state(CS_PENDING) {
+      state(PENDING) {
 
     // protoctx fields
     id = LCBIO_PROTOCTX_POOL;
@@ -321,22 +334,18 @@ PoolHost::start_new_connection(uint32_t tmo)
     refcount++;
 }
 
-static void
-on_request_timeout(void *cookie)
-{
-    PoolRequest *req = reinterpret_cast<PoolRequest*>(cookie);
-    lcb_clist_delete(&req->host->requests, req);
-    req->err = LCB_ETIMEDOUT;
-    invoke_request(req);
-}
-
-static void
-async_invoke_request(void *cookie)
-{
-    PoolRequest *req = reinterpret_cast<PoolRequest*>(cookie);
-    PoolConnInfo *cinfo = PoolConnInfo::from_sock(req->sock);
-    cinfo->state = CS_IDLE;
-    invoke_request(req);
+void PoolRequest::timer_handler() {
+    if (state == ASSIGNED) {
+        PoolConnInfo *cinfo = PoolConnInfo::from_sock(sock);
+        // Note - invoke() checks to make sure we've been passed an IDLE
+        // connection. We should probably add a dedicated state for this
+        // in a separate commit.
+        cinfo->state = PoolConnInfo::IDLE;
+        invoke();
+    } else {
+        lcb_clist_delete(&host->requests, this);
+        invoke(LCB_ETIMEDOUT);
+    }
 }
 
 PoolHost::PoolHost(Pool *parent_, const std::string& key_)
@@ -360,13 +369,9 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
 {
     PoolHost *he;
     lcb_list_t *cur;
-    PoolRequest *req = reinterpret_cast<PoolRequest*>(calloc(1, sizeof(*req)));
 
     std::string key(dest.host);
     key.append(":").append(dest.port);
-
-    req->callback = cb;
-    req->arg = cbarg;
 
     HostMap::iterator m = ht.find(key);
     if (m == ht.end()) {
@@ -377,7 +382,7 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
         he = m->second;
     }
 
-    req->host = he;
+    PoolRequest *req = new PoolRequest(he, cb, cbarg);
 
     GT_POPAGAIN:
 
@@ -391,24 +396,17 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
         if (clstatus == LCB_IO_SOCKCHECK_STATUS_CLOSED) {
             lcb_log(LOGARGS(this, WARN), HE_LOGFMT "Pooled socket is dead. Continuing to next one", HE_LOGID(he));
 
-            /* Set to CS_LEASED, since it's not inside any of our lists */
-            info->state = CS_LEASED;
+            /* Set to LEASED, since it's not inside any of our lists */
+            info->state = PoolConnInfo::LEASED;
             delete info;
             goto GT_POPAGAIN;
         }
 
-        info->idle_timer.cancel();
-        req->sock = info->sock;
-        req->state = RS_ASSIGNED;
-        req->timer = lcbio_timer_new(io, req, async_invoke_request);
-        info->state = CS_LEASED;
-        lcbio_async_signal(req->timer);
+        req->set_ready(info);
         lcb_log(LOGARGS(this, INFO), HE_LOGFMT "Found ready connection in pool. Reusing socket and not creating new connection", HE_LOGID(he));
 
     } else {
-        req->state = RS_PENDING;
-        req->timer = lcbio_timer_new(io, req, on_request_timeout);
-        lcbio_timer_rearm(req->timer, timeout);
+        req->set_pending(timeout);
 
         lcb_clist_append(&he->requests, req);
         if (he->num_pending() < he->num_requests()) {
@@ -422,26 +420,22 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     return req;
 }
 
-void
-lcbio_mgr_cancel(PoolRequest *req)
-{
-    PoolHost *he = req->host;
-    Pool *mgr = he->parent;
-    if (req->timer) {
-        lcbio_timer_destroy(req->timer);
-        req->timer = NULL;
-    }
+void lcbio_mgr_cancel(PoolRequest *req) {
+    req->cancel();
+}
 
-    if (req->sock) {
-        lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Cancelling request=%p with existing connection", HE_LOGID(he), (void*)req);
-        lcbio_mgr_put(req->sock);
-        he->async.signal();
+void PoolRequest::cancel() {
+    Pool *mgr = host->parent;
 
+    if (sock) {
+        lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Cancelling request=%p with existing connection", HE_LOGID(host), (void*)this);
+        lcbio_mgr_put(sock);
+        host->async.signal();
     } else {
-        lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Request=%p has no connection.. yet", HE_LOGID(he), (void*)req);
-        lcb_clist_delete(&he->requests, req);
+        lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Request=%p has no connection.. yet", HE_LOGID(host), (void*)this);
+        lcb_clist_delete(&host->requests, this);
     }
-    free(req);
+    delete this;
 }
 
 void PoolConnInfo::on_idle_timeout() {
@@ -474,7 +468,7 @@ lcbio_mgr_put(lcbio_SOCKET *sock)
     lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Placing socket back into the pool. I=%p,C=%p", HE_LOGID(he), (void*)info, (void*)sock);
     info->idle_timer.rearm(mgr->tmoidle);
     lcb_clist_append(&he->ll_idle, info);
-    info->state = CS_IDLE;
+    info->state = PoolConnInfo::IDLE;
 }
 
 void
