@@ -38,7 +38,7 @@
 struct lcb_settings_st;
 
 namespace lcb {
-class SessionRequest {
+class SessionRequest : public lcb::io::ConnectionRequest {
 public:
     /**
      * @brief Start negotiation on a connected socket
