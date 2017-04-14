@@ -250,7 +250,7 @@ Request::start_io(lcb_host_t& dest)
     lcbio_MGR *pool = instance->http_sockpool;
     lcbio_pMGRREQ poolreq;
 
-    poolreq = lcbio_mgr_get(pool, &dest, timeout(), on_connected, this);
+    poolreq = pool->get(dest, timeout(), on_connected, this);
     if (!poolreq) {
         return LCB_CONNECT_ERROR;
     }
@@ -275,9 +275,9 @@ pool_close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
 
     lcbio_ref(sock);
     if (reusable && close_ok) {
-        lcbio_mgr_put(sock);
+        lcb::io::Pool::put(sock);
     } else {
-        lcbio_mgr_discard(sock);
+        lcb::io::Pool::discard(sock);
     }
 }
 

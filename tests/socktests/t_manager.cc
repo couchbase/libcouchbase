@@ -32,8 +32,7 @@ TEST_F(SockMgrTest, testCancellation)
 {
     lcb_host_t host;
     loop->populateHost(&host);
-    lcbio_MGRREQ *req = lcbio_mgr_get(loop->sockpool,
-                                      &host, LCB_MS2US(1000), NULL, NULL);
+    lcbio_MGRREQ *req = loop->sockpool->get(host, LCB_MS2US(1000), NULL, NULL);
     ASSERT_FALSE(req == NULL);
     lcbio_mgr_cancel(req);
     loop->sockpool->tmoidle = LCB_MS2US(2);

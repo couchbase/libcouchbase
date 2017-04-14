@@ -619,7 +619,7 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
 void
 Server::connect()
 {
-    lcbio_pMGRREQ mr = lcbio_mgr_get(instance->memd_sockpool, curhost,
+    lcbio_pMGRREQ mr = instance->memd_sockpool->get(*curhost,
         default_timeout(), on_connected, this);
     LCBIO_CONNREQ_MKPOOLED(&connreq, mr);
     flush_start = flush_noop;
@@ -686,7 +686,7 @@ static void
 close_cb(lcbio_SOCKET *sock, int, void *)
 {
     lcbio_ref(sock);
-    lcbio_mgr_discard(sock);
+    lcb::io::Pool::discard(sock);
 }
 
 static void

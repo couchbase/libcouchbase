@@ -422,8 +422,8 @@ lcb_error_t lcb_create(lcb_t *instance,
 
     obj->cmdq.cqdata = obj;
     obj->iotable = lcbio_table_new(io_priv);
-    obj->memd_sockpool = lcbio_mgr_create(settings, obj->iotable);
-    obj->http_sockpool = lcbio_mgr_create(settings, obj->iotable);
+    obj->memd_sockpool = new io::Pool(settings, obj->iotable);
+    obj->http_sockpool = new io::Pool(settings, obj->iotable);
     obj->memd_sockpool->maxidle = 1;
     obj->memd_sockpool->tmoidle = 10000000;
     obj->http_sockpool->maxidle = 1;
@@ -493,6 +493,8 @@ extern "C" {
 void lcbdur_destroy(void*);
 }
 
+static void do_pool_shutdown(io::Pool *pool) { pool->shutdown(); }
+
 LIBCOUCHBASE_API
 void lcb_destroy(lcb_t instance)
 {
@@ -539,8 +541,8 @@ void lcb_destroy(lcb_t instance)
 
     DESTROY(delete, retryq);
     DESTROY(delete, confmon);
-    DESTROY(lcbio_mgr_destroy, memd_sockpool);
-    DESTROY(lcbio_mgr_destroy, http_sockpool);
+    DESTROY(do_pool_shutdown, memd_sockpool);
+    DESTROY(do_pool_shutdown, http_sockpool);
     DESTROY(lcb_vbguess_destroy, vbguess);
     DESTROY(lcb_n1qlcache_destroy, n1ql_cache);
 

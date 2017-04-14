@@ -105,9 +105,9 @@ pooled_close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
     bool *ru_ex = reinterpret_cast<bool*>(arg);
     lcbio_ref(sock);
     if (reusable && *ru_ex) {
-        lcbio_mgr_put(sock);
+        lcb::io::Pool::put(sock);
     } else {
-        lcbio_mgr_discard(sock);
+        lcb::io::Pool::discard(sock);
     }
 }
 
@@ -147,10 +147,9 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
     } else {
 
         lcb_log(LOGARGS(this, INFO), "Requesting connection to node %s:%s for CCCP configuration", next_host->host, next_host->port);
-        lcbio_pMGRREQ preq = lcbio_mgr_get(
-                instance->memd_sockpool, next_host,
-                settings().config_node_timeout,
-                on_connected, this);
+        lcbio_pMGRREQ preq = instance->memd_sockpool->get(*next_host,
+            settings().config_node_timeout,
+            on_connected, this);
         LCBIO_CONNREQ_MKPOOLED(&creq, preq);
     }
 
@@ -246,7 +245,7 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR)
     LCBIO_CONNREQ_CLEAR(&cccp->creq);
     if (err != LCB_SUCCESS) {
         if (sock) {
-            lcbio_mgr_discard(sock);
+            lcb::io::Pool::discard(sock);
         }
         cccp->mcio_error(err);
         return;

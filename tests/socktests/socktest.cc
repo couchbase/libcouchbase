@@ -95,7 +95,7 @@ close_cb(lcbio_SOCKET *s, int reusable, void *arg)
     (void)arg;
     if (reusable) {
         lcbio_ref(s);
-        lcbio_mgr_put(s);
+        lcb::io::Pool::put(s);
     }
 }
 }
@@ -151,14 +151,14 @@ Loop::Loop()
     server = new TestServer();
     breakTimer = new BreakTimer(this);
     bcond = NULL;
-    sockpool = lcbio_mgr_create(settings, iot);
+    sockpool = new lcb::io::Pool(settings, iot);
 }
 
 Loop::~Loop()
 {
     delete breakTimer;
     delete server;
-    lcbio_mgr_destroy(sockpool);
+    sockpool->shutdown();
     lcbio_table_unref(iot);
     lcb_destroy_io_ops(io);
     lcb_settings_unref(settings);
@@ -213,8 +213,7 @@ Loop::connectPooled(ESocket *sock, lcb_host_t *host, unsigned mstmo)
         host = &tmphost;
     }
     sock->creq.type = LCBIO_CONNREQ_POOLED;
-    sock->creq.u.preq = lcbio_mgr_get(
-            sockpool, host, LCB_MS2US(mstmo), conn_cb, sock);
+    sock->creq.u.preq = sockpool->get(*host, LCB_MS2US(mstmo), conn_cb, sock);
     start();
     if (sock->sock) {
         initSockCommon(sock);

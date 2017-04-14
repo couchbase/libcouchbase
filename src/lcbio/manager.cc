@@ -191,18 +191,19 @@ Pool::Pool(lcb_settings* settings_, lcbio_pTABLE io_)
       tmoidle(0), maxidle(0), maxtotal(0), refcount(1) {
 }
 
-Pool *lcbio_mgr_create(lcb_settings *settings, lcbio_TABLE *io) {
-    return new Pool(settings, io);
-}
-
-
 typedef std::vector<PoolHost*> HeList;
 
-void lcbio_mgr_destroy(Pool *mgr) {
-    mgr->shutdown();
+Pool::~Pool() {
 }
 
-Pool::~Pool() {
+void Pool::ref() {
+    refcount++;
+}
+
+void Pool::unref() {
+    if (!--refcount) {
+        delete this;
+    }
 }
 
 void Pool::shutdown() {
@@ -357,12 +358,6 @@ PoolHost::PoolHost(Pool *parent_, const std::string& key_)
     lcb_clist_init(&requests);
 }
 
-PoolRequest *lcbio_mgr_get(Pool *pool, lcb_host_t *dest, uint32_t timeout,
-              lcbio_CONNDONE_cb handler, void *arg)
-{
-    return pool->get(*dest, timeout, handler, arg);
-}
-
 PoolRequest*
 Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
                void *cbarg)
@@ -429,7 +424,7 @@ void PoolRequest::cancel() {
 
     if (sock) {
         lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Cancelling request=%p with existing connection", HE_LOGID(host), (void*)this);
-        lcbio_mgr_put(sock);
+        Pool::put(sock);
         host->async.signal();
     } else {
         lcb_log(LOGARGS(mgr, DEBUG), HE_LOGFMT "Request=%p has no connection.. yet", HE_LOGID(host), (void*)this);
@@ -443,8 +438,7 @@ void PoolConnInfo::on_idle_timeout() {
     lcbio_unref(sock);
 }
 
-void
-lcbio_mgr_put(lcbio_SOCKET *sock)
+void Pool::put(lcbio_SOCKET *sock)
 {
     PoolHost *he;
     Pool *mgr;
@@ -471,15 +465,11 @@ lcbio_mgr_put(lcbio_SOCKET *sock)
     info->state = PoolConnInfo::IDLE;
 }
 
-void
-lcbio_mgr_discard(lcbio_SOCKET *sock)
-{
+void Pool::discard(lcbio_SOCKET *sock) {
     lcbio_unref(sock);
 }
 
-void
-lcbio_mgr_detach(lcbio_SOCKET *sock)
-{
+void Pool::detach(lcbio_SOCKET *sock) {
     lcbio_protoctx_delid(sock, LCBIO_PROTOCTX_POOL, 1);
 }
 
@@ -535,13 +525,6 @@ PoolHost::dump(FILE *out) const {
 
     fprintf(out, "\n");
 
-}
-
-/**
- * Dumps the connection manager state to stderr
- */
-LCB_INTERNAL_API void lcbio_mgr_dump(Pool *mgr, FILE *out) {
-    mgr->dump(out);
 }
 
 void Pool::dump(FILE *out) const {
