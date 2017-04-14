@@ -199,5 +199,24 @@ lcbio_connreq_cancel(lcbio_CONNREQ *req);
 
 #ifdef __cplusplus
 }
+
+namespace lcb {
+namespace io {
+
+class ConnectionRequest {
+public:
+    virtual void cancel() = 0;
+    virtual ~ConnectionRequest() {}
+    static void cancel(ConnectionRequest **pp) {
+        if (*pp) {
+            (*pp)->cancel();
+            *pp = NULL;
+        }
+    }
+};
+
+}
+}
+
 #endif
 #endif
