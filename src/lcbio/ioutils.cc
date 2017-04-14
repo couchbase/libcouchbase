@@ -298,35 +298,29 @@ lcbio_ssl_supported(void)
 }
 
 lcbio_pSSLCTX
-lcbio_ssl_new__fallback(const char *ca, int noverify, lcb_error_t *errp,
-    lcb_settings *settings)
+lcbio_ssl_new__fallback(const char *, int, lcb_error_t *errp,
+    lcb_settings *)
 {
-    (void)ca; (void)noverify; (void)settings;
     if (errp) { *errp = LCB_CLIENT_FEATURE_UNAVAILABLE; }
     return NULL;
 }
 
 
 #ifdef LCB_NO_SSL
-void lcbio_ssl_free(lcbio_pSSLCTX a) {
-    (void)a;
+void lcbio_ssl_free(lcbio_pSSLCTX) {
 }
-lcb_error_t lcbio_ssl_apply(lcbio_SOCKET *a, lcbio_pSSLCTX b) {
-    (void)a;(void)b;
+lcb_error_t lcbio_ssl_apply(lcbio_SOCKET*, lcbio_pSSLCTX) {
     return LCB_CLIENT_FEATURE_UNAVAILABLE;
 }
-int lcbio_ssl_check(lcbio_SOCKET *s) {
-    (void)s;
+int lcbio_ssl_check(lcbio_SOCKET*) {
     return 0;
 }
-lcb_error_t lcbio_ssl_get_error(lcbio_SOCKET *s) {
-    (void)s;
+lcb_error_t lcbio_ssl_get_error(lcbio_SOCKET *) {
     return LCB_SUCCESS;
 }
 void lcbio_ssl_global_init(void) {
 }
-lcb_error_t lcbio_sslify_if_needed(lcbio_SOCKET *s, lcb_settings *st) {
-    (void)s;(void)st;
+lcb_error_t lcbio_sslify_if_needed(lcbio_SOCKET *, lcb_settings *) {
     return LCB_SUCCESS;
 }
 #endif
