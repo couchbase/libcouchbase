@@ -92,6 +92,15 @@ void Connstart::unwatch() {
     }
 }
 
+static void try_enable_sockopt(lcbio_SOCKET *sock, int cntl) {
+    lcb_error_t rv = lcbio_enable_sockopt(sock, cntl);
+    if (rv == LCB_SUCCESS) {
+        lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Successfuly set %s", CSLOGID(sock), lcbio_strsockopt(cntl));
+    } else {
+        lcb_log(LOGARGS(sock, INFO), CSLOGFMT "Couldn't set %s", CSLOGID(sock), lcbio_strsockopt(cntl));
+    }
+}
+
 /**
  * Handler invoked to deliver final status for a connection. This will invoke
  * the user supplied callback with the relevant status (if it has not been
@@ -130,12 +139,10 @@ void Connstart::handler() {
             lcb_log(LOGARGS_T(INFO), CSLOGFMT "Connected established", CSLOGID_T());
 
             if (sock->settings->tcp_nodelay) {
-                lcb_error_t ndrc = lcbio_disable_nagle(sock);
-                if (ndrc != LCB_SUCCESS) {
-                    lcb_log(LOGARGS_T(INFO), CSLOGFMT "Couldn't set TCP_NODELAY", CSLOGID_T());
-                } else {
-                    lcb_log(LOGARGS_T(DEBUG), CSLOGFMT "Successfuly set TCP_NODELAY", CSLOGID_T());
-                }
+                try_enable_sockopt(sock, LCB_IO_CNTL_TCP_NODELAY);
+            }
+            if (sock->settings->tcp_keepalive) {
+                try_enable_sockopt(sock, LCB_IO_CNTL_TCP_KEEPALIVE);
             }
         } else {
             lcb_log(LOGARGS_T(ERR), CSLOGFMT "Failed to establish connection: %s, os errno=%u", CSLOGID_T(), lcb_strerror_short(err), syserr);

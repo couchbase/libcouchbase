@@ -92,9 +92,17 @@ lcbio_get_nameinfo(lcbio_SOCKET *sock, struct lcbio_NAMEINFO *nistrs);
 int
 lcbio_is_netclosed(lcbio_SOCKET *sock, int flags);
 
-/** Disable Nagle's algorithm on the socket */
+/**
+ * Enable an option on a socket
+ * @param sock The socket
+ * @param cntl The option (LCB_IO_CNTL_xxx)
+ * @return
+ */
 lcb_error_t
-lcbio_disable_nagle(lcbio_SOCKET *s);
+lcbio_enable_sockopt(lcbio_SOCKET *sock, int cntl);
+
+const char *
+lcbio_strsockopt(int cntl);
 
 void
 lcbio__load_socknames(lcbio_SOCKET *sock);

@@ -174,6 +174,9 @@ HANDLER(nmv_imm_retry_handler) {
 HANDLER(tcp_nodelay_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, tcp_nodelay));
 }
+HANDLER(tcp_keepalive_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, tcp_keepalive));
+}
 HANDLER(readj_ts_wait_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, readj_ts_wait));
 }
@@ -594,7 +597,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_RETRY_NMV_DELAY */
     read_chunk_size_handler, /*LCB_CNTL_READ_CHUNKSIZE */
     enable_errmap_handler, /* LCB_CNTL_ENABLE_ERRMAP */
-    select_bucket_handler /* LCB_CNTL_SELECT_BUCKET */
+    select_bucket_handler, /* LCB_CNTL_SELECT_BUCKET */
+    tcp_keepalive_handler /* LCB_CNTL_TCP_KEEPALIVE */
 };
 
 /* Union used for conversion to/from string functions */
@@ -748,6 +752,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"read_chunk_size", LCB_CNTL_READ_CHUNKSIZE, convert_u32},
         {"enable_errmap", LCB_CNTL_ENABLE_ERRMAP, convert_intbool},
         {"select_bucket", LCB_CNTL_SELECT_BUCKET, convert_intbool},
+        {"tcp_keepalive", LCB_CNTL_TCP_KEEPALIVE, convert_intbool},
         {NULL, -1}
 };
 

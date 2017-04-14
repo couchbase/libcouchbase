@@ -258,23 +258,35 @@ lcbio_is_netclosed(lcbio_SOCKET *sock, int flags)
 }
 
 lcb_error_t
-lcbio_disable_nagle(lcbio_SOCKET *s)
-{
+lcbio_enable_sockopt(lcbio_SOCKET *s, int cntl) {
     lcbio_pTABLE iot = s->io;
-    int val = 1, rv;
+    int rv;
+    int value = 1;
 
     if (!iot->has_cntl()) {
         return LCB_NOT_SUPPORTED;
     }
     if (iot->is_E()) {
-        rv = iot->E_cntl(s->u.fd, LCB_IO_CNTL_SET, LCB_IO_CNTL_TCP_NODELAY, &val);
+        rv = iot->E_cntl(s->u.fd, LCB_IO_CNTL_SET, cntl, &value);
     } else {
-        rv = iot->C_cntl(s->u.sd, LCB_IO_CNTL_SET, LCB_IO_CNTL_TCP_NODELAY, &val);
+        rv = iot->C_cntl(s->u.sd, LCB_IO_CNTL_SET, cntl, &value);
     }
     if (rv != 0) {
         return lcbio_mklcberr(IOT_ERRNO(iot), s->settings);
     } else {
         return LCB_SUCCESS;
+    }
+}
+
+const char *
+lcbio_strsockopt(int cntl) {
+    switch (cntl) {
+    case LCB_IO_CNTL_TCP_KEEPALIVE:
+        return "TCP_KEEPALIVE";
+    case LCB_IO_CNTL_TCP_NODELAY:
+        return "TCP_NODELAY";
+    default:
+        return "FIXME: Unknown option";
     }
 }
 

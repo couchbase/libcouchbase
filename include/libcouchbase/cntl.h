@@ -950,8 +950,19 @@ typedef const char *lcb_BUCKETCRED[2];
  */
 #define LCB_CNTL_SELECT_BUCKET 0x44
 
+/**
+ * Enable/Disable setting the `TCP_KEEPALIVE` option on created sockets.
+ * This is enabled by default for I/O backends which support it.
+ *
+ * The keepalive interval will be set to the operating system default.
+ *
+ * @committed
+ * @cntl_arg_both{int* (as boolean)}
+ */
+#define LCB_CNTL_TCP_KEEPALIVE 0x45
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x45
+#define LCB_CNTL__MAX                    0x46
 /**@}*/
 
 #ifdef __cplusplus

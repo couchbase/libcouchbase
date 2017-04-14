@@ -85,6 +85,7 @@
 #define LCB_DEFAULT_VB_NOGUESS 1
 #define LCB_DEFAULT_TCP_NODELAY 1
 #define LCB_DEFAULT_SELECT_BUCKET 1
+#define LCB_DEFAULT_TCP_KEEPALIVE 1
 
 #include "config.h"
 #include <libcouchbase/couchbase.h>
@@ -152,6 +153,7 @@ typedef struct lcb_settings_st {
     unsigned readj_ts_wait : 1;
     unsigned use_errmap : 1;
     unsigned select_bucket : 1;
+    unsigned tcp_keepalive : 1;
 
     short max_redir;
     unsigned refcount;
