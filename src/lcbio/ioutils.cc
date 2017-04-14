@@ -100,7 +100,7 @@ ioerr2lcberr(lcbio_OSERR in, const lcb_settings *settings)
     case ECONNABORTED:
         return LCB_ECONNRESET;
     default:
-        lcb_log(settings, "lcbio", LCB_LOG_WARN, __FILE__, __LINE__, "FIXME: Unknown iops/os error code %d. Using NETWORK_ERROR", in);
+        lcb_log(settings, "lcbio", LCB_LOG_WARN, __FILE__, __LINE__, "OS errno %d (%s) does not have a direct client error code equivalent. Using NETWORK_ERROR", in, strerror(in));
         return LCB_NETWORK_ERROR;
     }
 }
