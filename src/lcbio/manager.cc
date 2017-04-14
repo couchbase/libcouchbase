@@ -109,13 +109,14 @@ struct PoolConnInfo : lcbio_PROTOCTX, CinfoNode {
 struct ReqNode : lcb_list_t {};
 namespace lcb {
 namespace io {
-struct PoolRequest : ReqNode {
+struct PoolRequest : ReqNode, ConnectionRequest {
     PoolRequest(PoolHost *host_, lcbio_CONNDONE_cb cb, void *cbarg)
         : host(host_), callback(cb), arg(cbarg), timer(host->parent->io, this),
           state(PENDING), sock(NULL), err(LCB_SUCCESS) {
     }
 
-    inline void cancel();
+    virtual ~PoolRequest() {}
+    virtual void cancel();
     inline void invoke();
     void invoke(lcb_error_t err_) {
         err = err_;
@@ -357,7 +358,7 @@ PoolHost::PoolHost(Pool *parent_, const std::string& key_)
     lcb_clist_init(&requests);
 }
 
-PoolRequest*
+ConnectionRequest*
 Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
                void *cbarg)
 {
@@ -414,7 +415,7 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     return req;
 }
 
-void lcbio_mgr_cancel(PoolRequest *req) {
+void lcbio_mgr_cancel(ConnectionRequest *req) {
     req->cancel();
 }
 

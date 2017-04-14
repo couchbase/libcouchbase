@@ -27,10 +27,11 @@ namespace lcb {
 namespace io {
 struct Connstart;
 struct PoolRequest;
+class ConnectionRequest;
 }
 }
 typedef lcb::io::Connstart* lcbio_pCONNSTART;
-typedef lcb::io::PoolRequest lcbio_MGRREQ;
+typedef lcb::io::ConnectionRequest lcbio_MGRREQ;
 extern "C" {
 #else
 struct lcbio_CONNSTART;

@@ -20,6 +20,7 @@
 #include "connect.h"
 #include "settings.h"
 #include "list.h"
+#include "ioutils.h"
 #include <stdio.h>
 
 
@@ -110,7 +111,7 @@ public:
      * @return a request handle which may be cancelled
      * @see lcbio_connect()
      */
-    PoolRequest* get(const lcb_host_t&, uint32_t, lcbio_CONNDONE_cb, void *);
+    ConnectionRequest* get(const lcb_host_t&, uint32_t, lcbio_CONNDONE_cb, void *);
 
     /**
      * Release a socket back into the pool. This means the socket is no longer
