@@ -187,8 +187,7 @@ cinfo_protoctx_dtor(lcbio_PROTOCTX *ctx)
 }
 
 Pool::Pool(lcb_settings* settings_, lcbio_pTABLE io_)
-    : settings(settings_), io(io_),
-      tmoidle(0), maxidle(0), maxtotal(0), refcount(1) {
+    : settings(settings_), io(io_), refcount(1) {
 }
 
 typedef std::vector<PoolHost*> HeList;
@@ -300,7 +299,7 @@ void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
         lcbio_protoctx_add(sock, this);
 
         lcb_clist_append(&parent->ll_idle, this);
-        idle_timer.rearm(parent->parent->tmoidle);
+        idle_timer.rearm(parent->parent->options.maxidle);
         parent->connection_available();
     }
 }
@@ -453,14 +452,14 @@ void Pool::put(lcbio_SOCKET *sock)
     he = info->parent;
     mgr = he->parent;
 
-    if (he->num_idle() >= mgr->maxidle) {
+    if (he->num_idle() >= mgr->options.maxidle) {
         lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Closing idle connection. Too many in quota", HE_LOGID(he));
         lcbio_unref(info->sock);
         return;
     }
 
     lcb_log(LOGARGS(mgr, INFO), HE_LOGFMT "Placing socket back into the pool. I=%p,C=%p", HE_LOGID(he), (void*)info, (void*)sock);
-    info->idle_timer.rearm(mgr->tmoidle);
+    info->idle_timer.rearm(mgr->options.tmoidle);
     lcb_clist_append(&he->ll_idle, info);
     info->state = PoolConnInfo::IDLE;
 }

@@ -424,10 +424,16 @@ lcb_error_t lcb_create(lcb_t *instance,
     obj->iotable = lcbio_table_new(io_priv);
     obj->memd_sockpool = new io::Pool(settings, obj->iotable);
     obj->http_sockpool = new io::Pool(settings, obj->iotable);
-    obj->memd_sockpool->maxidle = 1;
-    obj->memd_sockpool->tmoidle = 10000000;
-    obj->http_sockpool->maxidle = 1;
-    obj->http_sockpool->tmoidle = 10000000;
+
+    {
+        // Needs its own scope because there are prior GOTOs
+        io::Pool::Options pool_opts;
+        pool_opts.maxidle = 1;
+        pool_opts.tmoidle = LCB_MS2US(10000); // 10 seconds
+        obj->memd_sockpool->set_options(pool_opts);
+        obj->http_sockpool->set_options(pool_opts);
+    }
+
     obj->confmon = new clconfig::Confmon(settings, obj->iotable);
     obj->ht_nodes = new Hostlist();
     obj->mc_nodes = new Hostlist();

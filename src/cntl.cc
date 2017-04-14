@@ -145,7 +145,7 @@ HANDLER(retry_backoff_handler) {
     RETURN_GET_SET(float, LCBT_SETTING(instance, retry_backoff))
 }
 HANDLER(http_poolsz_handler) {
-    RETURN_GET_SET(lcb_SIZE, instance->http_sockpool->maxidle)
+    RETURN_GET_SET(lcb_SIZE, instance->http_sockpool->get_options().maxidle)
 }
 HANDLER(http_refresh_config_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, refresh_on_hterr))

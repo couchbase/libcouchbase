@@ -47,7 +47,7 @@ namespace lcb {
 namespace io {
 
 /** @brief Socket Pool */
-struct Pool;
+class Pool;
 
 /** @brief Pooled connection */
 struct PoolConnInfo;
@@ -81,7 +81,8 @@ lcbio_mgr_cancel(lcbio_MGRREQ *req);
 
 namespace lcb {
 namespace io {
-struct Pool {
+class Pool {
+public:
     /**
      * Create a socket pool controlled by the given settings and IO structure.
      * This function will increment the refcount on both the settings and table
@@ -150,18 +151,46 @@ struct Pool {
     inline void ref();
     inline void unref();
 
+    struct Options {
+        Options() : maxtotal(0), maxidle(0), tmoidle(0) {
+        }
+
+        /** Maximum *total* number of connections opened by the pool. If this
+         * number is exceeded, the pool will black hole future requests until
+         * a new slot becomes available.
+         */
+        unsigned maxtotal;
+
+        /**
+         * Maximum number of idle connections to keep around
+         */
+        unsigned maxidle;
+
+        /**
+         * The amount of time the pool should wait before closing idle
+         * connections. In microseconds
+         */
+        uint32_t tmoidle;
+    };
+
+    void set_options(const Options& opts) {
+        options = opts;
+    }
+
+    Options& get_options() {
+        return options;
+    }
+
+private:
+    friend struct PoolRequest;
+    friend struct PoolConnInfo;
+    friend struct PoolHost;
+
     typedef std::map<std::string, PoolHost*> HostMap;
     HostMap ht;
     lcb_settings *settings;
     lcbio_pTABLE io;
-
-    /**
-     * Maximum number of microseconds for a connection to idle inside the pool
-     * before being closed
-     */
-    uint32_t tmoidle;
-    unsigned maxtotal;
-    unsigned maxidle; /**< Maximum number of idle connections, per host */
+    Options options;
     unsigned refcount;
 };
 } // namespace io
