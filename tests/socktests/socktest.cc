@@ -67,7 +67,7 @@ IOActions ESocket::defaultActions;
 void
 ESocket::assign(lcbio_SOCKET *s, lcb_error_t err)
 {
-    creq.u.cs = NULL;
+    creq = NULL;
     if (s == NULL) {
         lasterr = err;
         return;
@@ -107,7 +107,7 @@ ESocket::close()
         return;
     }
 
-    if (creq.type == LCBIO_CONNREQ_POOLED) {
+    if (lcb::io::Pool::is_from_pool(ctx->sock)) {
         lcbio_ctx_close(ctx, close_cb, NULL);
     } else {
         lcbio_ctx_close(ctx, NULL, NULL);
@@ -212,8 +212,7 @@ Loop::connectPooled(ESocket *sock, lcb_host_t *host, unsigned mstmo)
         populateHost(&tmphost);
         host = &tmphost;
     }
-    sock->creq.type = LCBIO_CONNREQ_POOLED;
-    sock->creq.u.preq = sockpool->get(*host, LCB_MS2US(mstmo), conn_cb, sock);
+    sock->creq = sockpool->get(*host, LCB_MS2US(mstmo), conn_cb, sock);
     start();
     if (sock->sock) {
         initSockCommon(sock);
@@ -231,8 +230,7 @@ Loop::connect(ESocket *sock, lcb_host_t *host, unsigned mstmo)
     }
 
     sock->parent = this;
-    sock->creq.type = LCBIO_CONNREQ_RAW;
-    sock->creq.u.cs = lcbio_connect(
+    sock->creq = lcbio_connect(
             iot, settings, host, LCB_MS2US(mstmo), conn_cb, sock);
 
     start();

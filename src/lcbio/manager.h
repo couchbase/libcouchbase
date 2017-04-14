@@ -68,15 +68,6 @@ extern "C" {
 typedef struct lcbio_MGR_CDUMMY lcbio_MGR;
 #endif
 
-/**
- * Cancel a pending request. The callback for the request must have not already
- * been invoked (if it has, use sockpool_put)
- * @param req the request to cancel
- */
-LCB_INTERNAL_API
-void
-lcbio_mgr_cancel(lcbio_MGRREQ *req);
-
 #ifdef __cplusplus
 }
 
@@ -143,6 +134,8 @@ public:
      *  `lcbio_mgr_detach(mgr, conn)`;
      */
     static void detach(lcbio_SOCKET *sock);
+
+    static bool is_from_pool(const lcbio_SOCKET *sock);
 
     /**
      * Dumps the connection manager state to stderr

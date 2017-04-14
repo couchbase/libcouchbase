@@ -220,8 +220,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     Request *req = reinterpret_cast<Request*>(arg);
     lcbio_CTXPROCS procs;
     lcb_settings *settings = req->instance->settings;
-
-    LCBIO_CONNREQ_CLEAR(&req->creq);
+    req->creq = NULL;
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(req, ERR), "Connection to failed with Err=0x%x", err);
@@ -248,14 +247,11 @@ lcb_error_t
 Request::start_io(lcb_host_t& dest)
 {
     lcbio_MGR *pool = instance->http_sockpool;
-    lcbio_pMGRREQ poolreq;
 
-    poolreq = pool->get(dest, timeout(), on_connected, this);
-    if (!poolreq) {
+    creq = pool->get(dest, timeout(), on_connected, this);
+    if (!creq) {
         return LCB_CONNECT_ERROR;
     }
-
-    LCBIO_CONNREQ_MKPOOLED(&creq, poolreq);
 
     if (!timer) {
         timer = lcbio_timer_new(io, this, request_timed_out);
@@ -284,7 +280,7 @@ pool_close_cb(lcbio_SOCKET *sock, int reusable, void *arg)
 void
 Request::close_io()
 {
-    lcbio_connreq_cancel(&creq);
+    lcb::io::ConnectionRequest::cancel(&creq);
 
     if (!ioctx) {
         return;

@@ -82,8 +82,6 @@ public:
 };
 class SessionRequestImpl;
 
-extern "C" { void sessreq_cancel(SessionRequest *); }
-
 class SessionInfo : public lcbio_PROTOCTX {
 public:
     /**

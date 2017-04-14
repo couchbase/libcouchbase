@@ -647,10 +647,6 @@ SessionRequestImpl::~SessionRequestImpl()
     }
 }
 
-void lcb::sessreq_cancel(SessionRequest *sreq) {
-    sreq->cancel();
-}
-
 SessionRequest *
 SessionRequest::start(lcbio_SOCKET *sock, lcb_settings_st *settings,
              uint32_t tmo, lcbio_CONNDONE_cb callback, void *data)

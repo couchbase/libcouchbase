@@ -287,24 +287,6 @@ lcbio_disable_nagle(lcbio_SOCKET *s)
     }
 }
 
-void
-lcbio_connreq_cancel(lcbio_CONNREQ *req)
-{
-    if (!req->u.cs) {
-        return;
-    }
-
-    if (req->type == LCBIO_CONNREQ_POOLED) {
-        lcbio_mgr_cancel(req->u.preq);
-    } else if (req->type == LCBIO_CONNREQ_RAW) {
-        lcbio_connect_cancel(req->u.cs);
-    } else {
-        req->dtor(req->u.p_generic);
-    }
-
-    req->u.cs = NULL;
-}
-
 int
 lcbio_ssl_supported(void)
 {

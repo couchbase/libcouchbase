@@ -415,10 +415,6 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     return req;
 }
 
-void lcbio_mgr_cancel(ConnectionRequest *req) {
-    req->cancel();
-}
-
 void PoolRequest::cancel() {
     Pool *mgr = host->parent;
 
@@ -471,6 +467,10 @@ void Pool::discard(lcbio_SOCKET *sock) {
 
 void Pool::detach(lcbio_SOCKET *sock) {
     lcbio_protoctx_delid(sock, LCBIO_PROTOCTX_POOL, 1);
+}
+
+bool Pool::is_from_pool(const lcbio_SOCKET *sock) {
+    return lcbio_protoctx_get(sock, LCBIO_PROTOCTX_POOL) != NULL;
 }
 
 

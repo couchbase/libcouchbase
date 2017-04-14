@@ -76,14 +76,14 @@ struct CccpProvider : public Provider {
 
     // Whether there is a pending CCCP config request.
     bool has_pending_request() const {
-        return creq.u.p_generic != NULL || cmdcookie != NULL || ioctx != NULL;
+        return creq != NULL || cmdcookie != NULL || ioctx != NULL;
     }
 
     lcb::Hostlist *nodes;
     ConfigInfo *config;
     lcb::io::Timer<CccpProvider, &CccpProvider::on_timeout> timer;
     lcb_t instance;
-    lcbio_CONNREQ creq;
+    lcb::io::ConnectionRequest *creq;
     lcbio_CTX *ioctx;
     CccpCookie *cmdcookie;
 };
@@ -119,7 +119,7 @@ CccpProvider::stop_current_request(bool is_clean)
         cmdcookie =  NULL;
     }
 
-    lcbio_connreq_cancel(&creq);
+    lcb::io::ConnectionRequest::cancel(&creq);
 
     if (ioctx) {
         lcbio_ctx_close(ioctx, pooled_close_cb, &is_clean);
@@ -147,10 +147,9 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
     } else {
 
         lcb_log(LOGARGS(this, INFO), "Requesting connection to node %s:%s for CCCP configuration", next_host->host, next_host->port);
-        lcbio_pMGRREQ preq = instance->memd_sockpool->get(*next_host,
+        creq = instance->memd_sockpool->get(*next_host,
             settings().config_node_timeout,
             on_connected, this);
-        LCBIO_CONNREQ_MKPOOLED(&creq, preq);
     }
 
     return LCB_SUCCESS;
@@ -241,8 +240,8 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR)
     lcbio_CTXPROCS ioprocs;
     CccpProvider *cccp = reinterpret_cast<CccpProvider*>(data);
     lcb_settings *settings = cccp->parent->settings;
+    cccp->creq = NULL;
 
-    LCBIO_CONNREQ_CLEAR(&cccp->creq);
     if (err != LCB_SUCCESS) {
         if (sock) {
             lcb::io::Pool::discard(sock);
@@ -252,10 +251,9 @@ on_connected(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR)
     }
 
     if (lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SESSINFO) == NULL) {
-        lcb::SessionRequest *sreq = lcb::SessionRequest::start(
+        cccp->creq = lcb::SessionRequest::start(
                 sock, settings, settings->config_node_timeout, on_connected,
                 cccp);
-        LCBIO_CONNREQ_MKGENERIC(&cccp->creq, sreq, lcb::sessreq_cancel);
         return;
     }
 
@@ -422,7 +420,7 @@ void CccpProvider::dump(FILE *fp) const {
     if (ioctx) {
         fprintf(fp, "CCCP Owns connection:\n");
         lcbio_ctx_dump(ioctx, fp);
-    } else if (creq.u.p_generic) {
+    } else if (creq) {
         fprintf(fp, "CCCP Is connecting\n");
     } else {
         fprintf(fp, "CCCP does not have a dedicated connection\n");

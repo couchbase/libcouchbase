@@ -32,9 +32,9 @@ TEST_F(SockMgrTest, testCancellation)
 {
     lcb_host_t host;
     loop->populateHost(&host);
-    lcbio_MGRREQ *req = loop->sockpool->get(host, LCB_MS2US(1000), NULL, NULL);
+    lcb::io::ConnectionRequest *req = loop->sockpool->get(host, LCB_MS2US(1000), NULL, NULL);
     ASSERT_FALSE(req == NULL);
-    lcbio_mgr_cancel(req);
+    req->cancel();
     loop->sockpool->get_options().tmoidle = LCB_MS2US(2);
     loop->start();
 }
