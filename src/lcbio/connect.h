@@ -30,7 +30,7 @@ struct PoolRequest;
 class ConnectionRequest;
 }
 }
-typedef lcb::io::Connstart* lcbio_pCONNSTART;
+typedef lcb::io::ConnectionRequest* lcbio_pCONNSTART;
 typedef lcb::io::ConnectionRequest lcbio_MGRREQ;
 extern "C" {
 #else

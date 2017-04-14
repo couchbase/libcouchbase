@@ -47,7 +47,7 @@ static const lcb_host_t *get_loghost(lcbio_SOCKET *s) {
 
 namespace lcb {
 namespace io {
-struct Connstart {
+struct Connstart : ConnectionRequest {
     Connstart(lcbio_TABLE*, lcb_settings*, const lcb_host_t*,
               uint32_t, lcbio_CONNDONE_cb, void*);
 
@@ -418,7 +418,7 @@ void Connstart::C_connect()
     }
 }
 
-Connstart *
+ConnectionRequest *
 lcbio_connect(lcbio_TABLE *iot, lcb_settings *settings, const lcb_host_t *dest,
               uint32_t timeout, lcbio_CONNDONE_cb handler, void *arg)
 {
@@ -485,7 +485,7 @@ Connstart::Connstart(lcbio_TABLE* iot_, lcb_settings* settings_,
     }
 }
 
-Connstart *
+ConnectionRequest *
 lcbio_connect_hl(lcbio_TABLE *iot, lcb_settings *settings,
                  lcb::Hostlist* hl, int rollover, uint32_t timeout,
                  lcbio_CONNDONE_cb handler, void *arg)
@@ -494,7 +494,7 @@ lcbio_connect_hl(lcbio_TABLE *iot, lcb_settings *settings,
     unsigned ii = 0, hlmax = hl->size();
 
     while ( (cur = hl->next(rollover)) && ii++ < hlmax) {
-        Connstart *ret = lcbio_connect(
+        ConnectionRequest *ret = lcbio_connect(
                 iot, settings, cur, timeout, handler, arg);
         if (ret) {
             return ret;
