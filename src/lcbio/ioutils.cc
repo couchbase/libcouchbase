@@ -124,14 +124,12 @@ lcbio_E_ai2sock(lcbio_TABLE *io, struct addrinfo **ai, int *connerr)
     *connerr = 0;
 
     for (; *ai; *ai = (*ai)->ai_next) {
-        ret = IOT_V0IO(io).socket0(
-                IOT_ARG(io), (*ai)->ai_family, (*ai)->ai_socktype,
-                (*ai)->ai_protocol);
+        ret = io->E_socket(*ai);
 
         if (ret != INVALID_SOCKET) {
             return ret;
         } else {
-            *connerr = IOT_ERRNO(io);
+            *connerr = io->get_errno();
         }
     }
 
@@ -143,9 +141,7 @@ lcbio_C_ai2sock(lcbio_TABLE *io, struct addrinfo **ai, int *connerr)
 {
     lcb_sockdata_t *ret = NULL;
     for (; *ai; *ai = (*ai)->ai_next) {
-        ret = IOT_V1(io).socket(
-                IOT_ARG(io), (*ai)->ai_family, (*ai)->ai_socktype,
-                (*ai)->ai_protocol);
+        ret = io->C_socket(*ai);
         if (ret) {
             return ret;
         } else {
@@ -254,10 +250,10 @@ lcbio_is_netclosed(lcbio_SOCKET *sock, int flags)
 {
     lcbio_pTABLE iot = sock->io;
 
-    if (IOT_IS_EVENT(iot)) {
-        return IOT_V0IO(iot).is_closed(IOT_ARG(iot), sock->u.fd, flags);
+    if (iot->is_E()) {
+        return iot->E_is_closed(sock->u.fd, flags);
     } else {
-        return IOT_V1(iot).is_closed(IOT_ARG(iot), sock->u.sd, flags);
+        return iot->C_is_closed(sock->u.sd, flags);
     }
 }
 
@@ -266,19 +262,14 @@ lcbio_disable_nagle(lcbio_SOCKET *s)
 {
     lcbio_pTABLE iot = s->io;
     int val = 1, rv;
-    int is_supp = ((IOT_IS_EVENT(iot) && IOT_V0IO(iot).cntl)) ||
-            (!IOT_IS_EVENT(iot) && IOT_V1(iot).cntl);
 
-    if (!is_supp) {
+    if (!iot->has_cntl()) {
         return LCB_NOT_SUPPORTED;
     }
-
-    if (IOT_IS_EVENT(iot)) {
-        rv = IOT_V0IO(iot).cntl(IOT_ARG(iot), s->u.fd, LCB_IO_CNTL_SET,
-            LCB_IO_CNTL_TCP_NODELAY, &val);
+    if (iot->is_E()) {
+        rv = iot->E_cntl(s->u.fd, LCB_IO_CNTL_SET, LCB_IO_CNTL_TCP_NODELAY, &val);
     } else {
-        rv = IOT_V1(iot).cntl(IOT_ARG(iot), s->u.sd, LCB_IO_CNTL_SET,
-            LCB_IO_CNTL_TCP_NODELAY, &val);
+        rv = iot->C_cntl(s->u.sd, LCB_IO_CNTL_SET, LCB_IO_CNTL_TCP_NODELAY, &val);
     }
     if (rv != 0) {
         return lcbio_mklcberr(IOT_ERRNO(iot), s->settings);
