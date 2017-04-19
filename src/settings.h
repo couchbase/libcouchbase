@@ -131,6 +131,9 @@ typedef struct lcb_settings_st {
      * updates. */
     lcb_U32 bc_http_stream_time;
 
+    /** Time to wait in between background config polls. 0 disables this */
+    lcb_U32 config_poll_interval;
+
     unsigned bc_http_urltype : 4;
 
     /** Don't guess next vbucket server. Mainly for testing */

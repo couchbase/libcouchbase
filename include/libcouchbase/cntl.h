@@ -961,8 +961,36 @@ typedef const char *lcb_BUCKETCRED[2];
  */
 #define LCB_CNTL_TCP_KEEPALIVE 0x45
 
+/**
+ * Set the amount of time to wait in between polling for a new configuration.
+ * This will have no effect if connected to a Memcached buckets, or using
+ * HTTP or File-based configurations (see the `bootstrap_on` connection
+ * string option).
+ *
+ * This option facilitates 'fast failover' - in that the client can preemptively
+ * check for any cluster topology updates before encountering an error.
+ *
+ * @volatile
+ * @cntl_arg_both{lcb_U32*}
+ *
+ * The value for this option is a time value. See the top of this header
+ * in respect to how to specify this.
+ *
+ * Using a value of `0` disables this feature.
+ *
+ * You can also use `config_poll_interval` in the connection string.
+ *
+ * @note
+ * Background polling is implemented in the library's non-blocking event loop.
+ * Synchronous clients (i.e. those using `lcb_wait()`) will only be able to
+ * poll as often as the library's event loop is active. If the library is
+ * suspended, that is, if not inside an `lcb_wait()` call, the library will
+ * be unable to do any kind of background polling.
+ */
+#define LCB_CNTL_CONFIG_POLL_INTERVAL 0x46
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x46
+#define LCB_CNTL__MAX                    0x47
 /**@}*/
 
 #ifdef __cplusplus
