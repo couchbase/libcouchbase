@@ -910,7 +910,7 @@ ArithmeticHandler::run()
             cmd.initial = o_initial.result();
         }
         uint64_t delta = o_delta.result();
-        if (delta > std::numeric_limits<int64_t>::max()) {
+        if (delta > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
             throw BadArg("Delta too big");
         }
         cmd.delta = static_cast<int64_t>(delta);
