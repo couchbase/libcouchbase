@@ -911,7 +911,7 @@ mcreq_dump_packet(const mc_PACKET *packet, FILE *fp, mcreq_payload_dump_fn dumpf
                 fprintf(fp, "%sValue is user allocated\n", indent);
             }
             fprintf(fp, "%sValue: %p, %u bytes\n", indent,
-                SPAN_BUFFER(&packet->u_value.single), packet->u_value.single.size);
+                (void *)SPAN_BUFFER(&packet->u_value.single), packet->u_value.single.size);
         }
     }
 

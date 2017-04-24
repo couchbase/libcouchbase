@@ -170,7 +170,7 @@ public:
             }
             maxCycles = est;
             o_sequential.setDefault(true);
-            fprintf(stderr, "Populating using %lu cycles\n", maxCycles);
+            fprintf(stderr, "Populating using %d cycles\n", maxCycles);
         }
 
         if (depr.iterations.passed()) {
