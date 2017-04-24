@@ -1495,6 +1495,14 @@ wrapExternalBinary(int argc, char **argv, const std::string& name)
 #endif
 }
 
+static void cleanupHandlers()
+{
+    map<string,Handler*>::iterator iter = handlers_s.begin();
+    for (; iter != handlers_s.end(); iter++) {
+        delete iter->second;
+    }
+}
+
 int main(int argc, char **argv)
 {
 
@@ -1508,6 +1516,8 @@ int main(int argc, char **argv)
     }
 
     setupHandlers();
+    std::atexit(cleanupHandlers);
+
     string cmdname;
     parseCommandname(cmdname, argc, argv);
 
@@ -1541,10 +1551,4 @@ int main(int argc, char **argv)
         fprintf(stderr, "%s\n", err.what());
         exit(EXIT_FAILURE);
     }
-
-    map<string,Handler*>::iterator iter = handlers_s.begin();
-    for (; iter != handlers_s.end(); iter++) {
-        delete iter->second;
-    }
-    exit(EXIT_SUCCESS);
 }
