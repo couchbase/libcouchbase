@@ -217,21 +217,22 @@ void lcb::clconfig::cccp_update(
     CccpCookie *cookie = reinterpret_cast<CccpCookie*>(const_cast<void*>(cookie_));
     CccpProvider *cccp = cookie->parent;
 
+    bool was_active = cookie->active;
     if (cookie->active) {
         cookie->active = false;
         cccp->timer.cancel();
         cccp->cmdcookie = NULL;
     }
+    delete cookie;
 
     if (err == LCB_SUCCESS) {
         std::string ss(reinterpret_cast<const char *>(bytes), nbytes);
         err = cccp->update(origin->host, ss.c_str());
     }
 
-    if (err != LCB_SUCCESS && cookie->active) {
+    if (err != LCB_SUCCESS && was_active) {
         cccp->mcio_error(err);
     }
-    delete cookie;
 }
 
 static void
