@@ -119,7 +119,7 @@ typedef struct lcbio_TABLE {
         IOT_V0EV(this).cancel(p, fd, event);
     }
 
-    bool E_is_closed(lcb_socket_t s, int flags) {
+    int E_check_closed(lcb_socket_t s, int flags) {
         return IOT_V0IO(this).is_closed(p, s, flags);
     }
 
@@ -144,7 +144,7 @@ typedef struct lcbio_TABLE {
         return C_socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
     }
 
-    bool C_is_closed(lcb_sockdata_t *sock, int flags) {
+    int C_check_closed(lcb_sockdata_t *sock, int flags) {
         return IOT_V1(this).is_closed(p, sock, flags);
     }
 

@@ -251,9 +251,9 @@ lcbio_is_netclosed(lcbio_SOCKET *sock, int flags)
     lcbio_pTABLE iot = sock->io;
 
     if (iot->is_E()) {
-        return iot->E_is_closed(sock->u.fd, flags);
+        return iot->E_check_closed(sock->u.fd, flags);
     } else {
-        return iot->C_is_closed(sock->u.sd, flags);
+        return iot->C_check_closed(sock->u.sd, flags);
     }
 }
 
