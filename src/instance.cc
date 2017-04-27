@@ -385,6 +385,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     /* initialize the settings */
     obj->type = type;
     obj->settings = settings;
+    obj->settings->conntype = type;
 
     settings->bucket = strdup(spec.bucket().c_str());
 
