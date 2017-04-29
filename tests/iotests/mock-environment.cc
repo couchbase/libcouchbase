@@ -166,6 +166,7 @@ void MockEnvironment::getResponse(MockResponse& ret)
     ret.assign(rbuf);
     if (!ret.isOk()) {
         std::cerr << "Mock command failed!" << std::endl;
+        std::cerr << ret.constResp()["error"].asString() << std::endl;
         std::cerr << ret;
     }
 }
