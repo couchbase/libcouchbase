@@ -365,16 +365,14 @@ N1QLREQ::maybe_retry()
     // Let's see if we can actually retry. First remove the existing prepared
     // entry:
     cache().remove_entry(statement);
-    lcb_error_t rc = request_plan();
-    if (rc != LCB_SUCCESS) {
-        lasterr = rc;
-        return false;
 
-    } else {
+    if ((lasterr = request_plan()) == LCB_SUCCESS) {
         // We'll be parsing more rows later on..
         parser->reset();
+        return true;
     }
-    return true;
+
+    return false;
 }
 
 void
