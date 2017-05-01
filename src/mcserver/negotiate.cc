@@ -522,6 +522,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         } else if (isUnsupported(status)) {
             lcb_log(LOGARGS(this, DEBUG), SESSREQ_LOGFMT "Server does not support HELLO", SESSREQ_LOGID(this));
         } else {
+            lcb_log(LOGARGS(this, ERROR), SESSREQ_LOGFMT "Unexpected status 0x%x received for HELLO", SESSREQ_LOGID(this), status);
             set_error(LCB_PROTOCOL_ERROR, "Hello response unexpected");
             break;
         }
