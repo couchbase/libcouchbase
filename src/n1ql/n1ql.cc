@@ -291,8 +291,12 @@ lcb_n1qlcache_getplan(lcb_N1QLCACHE *cache,
     }
 }
 
-#define WTF_MAGIC_STRING \
-    "index deleted or node hosting the index is down - cause: queryport.indexNotFound"
+
+static const char *wtf_magic_strings[] = {
+        "index deleted or node hosting the index is down - cause: queryport.indexNotFound",
+        "Index Not Found - cause: queryport.indexNotFound",
+        NULL
+};
 
 static bool
 has_retriable_error(const Json::Value& root)
@@ -318,8 +322,13 @@ has_retriable_error(const Json::Value& root)
                 return true;
             }
         }
-        if (jmsg.isString() && strstr(jmsg.asCString(), WTF_MAGIC_STRING) != NULL) {
-            return true;
+        if (jmsg.isString()) {
+            const char *jmstr = jmsg.asCString();
+            for (const char **curs = wtf_magic_strings; *curs; curs++) {
+                if (!strstr(jmstr, *curs)) {
+                    return true;
+                }
+            }
         }
     }
     return false;
