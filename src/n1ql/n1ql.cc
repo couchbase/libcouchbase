@@ -377,7 +377,8 @@ N1QLREQ::maybe_retry()
 
     if ((lasterr = request_plan()) == LCB_SUCCESS) {
         // We'll be parsing more rows later on..
-        parser->reset();
+        delete parser;
+        parser = new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this);
         return true;
     }
 
