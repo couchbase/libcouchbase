@@ -66,6 +66,7 @@ public:
     bool setup(const lcbio_NAMEINFO& nistrs, const lcb_host_t& host,
         const lcb::Authenticator& auth);
     void start(lcbio_SOCKET *sock);
+    void send_list_mechs();
     bool send_hello();
     bool send_step(const lcb::MemcachedResponse& packet);
     bool read_hello(const lcb::MemcachedResponse& packet);
@@ -374,6 +375,14 @@ SessionRequestImpl::send_hello()
     return true;
 }
 
+void
+SessionRequestImpl::send_list_mechs()
+{
+    lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SASL_LIST_MECHS);
+    lcbio_ctx_put(ctx, req.data(), req.size());
+    LCBIO_CTX_RSCHEDULE(ctx, 24);
+}
+
 bool
 SessionRequestImpl::read_hello(const lcb::MemcachedResponse& resp)
 {
@@ -534,10 +543,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         }
 
         // In any event, it's also time to send the LIST_MECHS request
-        lcb::MemcachedRequest req(PROTOCOL_BINARY_CMD_SASL_LIST_MECHS);
-        lcbio_ctx_put(ctx, req.data(), req.size());
-        LCBIO_CTX_RSCHEDULE(ctx, 24);
-
+        send_list_mechs();
         break;
     }
 
@@ -628,7 +634,12 @@ SessionRequestImpl::start(lcbio_SOCKET *sock) {
         return;
     }
 
-    send_hello();
+    if (settings->send_hello) {
+        send_hello();
+    } else {
+        lcb_log(LOGARGS(this, INFO), SESSREQ_LOGFMT "HELLO negotiation disabled by user", SESSREQ_LOGID(this));
+        send_list_mechs();
+    }
     LCBIO_CTX_RSCHEDULE(ctx, 24);
 }
 

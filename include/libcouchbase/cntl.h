@@ -989,8 +989,24 @@ typedef const char *lcb_BUCKETCRED[2];
  */
 #define LCB_CNTL_CONFIG_POLL_INTERVAL 0x46
 
+/**
+ * From version 2.7.4, the C library sends a HELLO command before
+ * authentication. This works on all modern server versions, but may cause
+ * disconnects on more ancient variants (Couchbase 2.x for example).
+ *
+ * This setting will disable the sending of the HELLO command (which older
+ * servers don't understand anyway). To disable the sending of hello, set this
+ * value to false.
+ *
+ * @uncommitted
+ * @cntl_arg_both{int* (as boolean)}
+ *
+ * You can also use `send_hello=false` in the connection string.
+ */
+#define LCB_CNTL_SEND_HELLO 0x47
+
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x47
+#define LCB_CNTL__MAX                    0x48
 /**@}*/
 
 #ifdef __cplusplus

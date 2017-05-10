@@ -193,6 +193,9 @@ HANDLER(enable_errmap_handler) {
 HANDLER(select_bucket_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, select_bucket));
 }
+HANDLER(send_hello_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, send_hello));
+}
 HANDLER(config_poll_interval_handler) {
     lcb_error_t rv = timeout_common(mode, instance, cmd, arg);
     if (rv == LCB_SUCCESS &&
@@ -610,7 +613,8 @@ static ctl_handler handlers[] = {
     enable_errmap_handler, /* LCB_CNTL_ENABLE_ERRMAP */
     select_bucket_handler, /* LCB_CNTL_SELECT_BUCKET */
     tcp_keepalive_handler, /* LCB_CNTL_TCP_KEEPALIVE */
-    config_poll_interval_handler /* LCB_CNTL_CONFIG_POLL_INTERVAL */
+    config_poll_interval_handler, /* LCB_CNTL_CONFIG_POLL_INTERVAL */
+    send_hello_handler /* LCB_CNTL_SEND_HELLO */
 };
 
 /* Union used for conversion to/from string functions */
@@ -766,6 +770,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"select_bucket", LCB_CNTL_SELECT_BUCKET, convert_intbool},
         {"tcp_keepalive", LCB_CNTL_TCP_KEEPALIVE, convert_intbool},
         {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timeout},
+        {"send_hello", LCB_CNTL_SEND_HELLO, convert_intbool},
         {NULL, -1}
 };
 
