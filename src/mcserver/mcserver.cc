@@ -195,6 +195,7 @@ static bool is_fastpath_error(uint16_t rc) {
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_DELTA_ERANGE:
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_INVALID_COMBO:
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE:
+    case PROTOCOL_BINARY_RESPONSE_EACCESS:
         return true;
     default:
         if (rc >= 0xc0 && rc <= 0xcc) {

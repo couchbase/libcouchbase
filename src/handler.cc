@@ -113,6 +113,8 @@ map_error(lcb_t instance, int in)
         return LCB_UNKNOWN_COMMAND;
     case PROTOCOL_BINARY_RESPONSE_NOT_SUPPORTED:
         return LCB_NOT_SUPPORTED;
+    case PROTOCOL_BINARY_RESPONSE_EACCESS:
+        return LCB_NOT_AUTHORIZED;
     default:
         if (instance != NULL) {
             return instance->callbacks.errmap(instance, in);
