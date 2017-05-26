@@ -193,9 +193,6 @@ Pool::Pool(lcb_settings* settings_, lcbio_pTABLE io_)
 
 typedef std::vector<PoolHost*> HeList;
 
-Pool::~Pool() {
-}
-
 void Pool::ref() {
     refcount++;
 }
