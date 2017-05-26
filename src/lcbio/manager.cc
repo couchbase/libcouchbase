@@ -43,6 +43,13 @@ struct PoolHost {
         }
     }
 
+    ~PoolHost() {
+        if (parent) {
+            parent->unref();
+            parent = NULL;
+        }
+    }
+
     inline void dump(FILE *fp) const;
 
     size_t num_pending() const {
@@ -227,6 +234,7 @@ void Pool::shutdown() {
         he->async.release();
         he->unref();
     }
+
     unref();
 }
 
@@ -353,6 +361,7 @@ PoolHost::PoolHost(Pool *parent_, const std::string& key_)
     lcb_clist_init(&ll_idle);
     lcb_clist_init(&ll_pending);
     lcb_clist_init(&requests);
+    parent->ref();
 }
 
 ConnectionRequest*
@@ -369,7 +378,6 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     if (m == ht.end()) {
         he = new PoolHost(this, key);
         ht.insert(std::make_pair(key, he));
-        ref();
     } else {
         he = m->second;
     }
