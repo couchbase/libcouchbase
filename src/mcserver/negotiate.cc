@@ -131,7 +131,7 @@ public:
     void set_error(lcb_error_t error, const char *msg, const lcb::MemcachedResponse *packet = NULL) {
         char *err_ref = NULL, *err_ctx = NULL;
         if (packet) {
-            packet->parse_enhanced_error(&err_ref, &err_ctx);
+            MemcachedResponse::parse_enhanced_error(packet->value(), packet->vallen(), &err_ref, &err_ctx);
         }
         if (err_ref || err_ctx) {
             std::stringstream emsg;

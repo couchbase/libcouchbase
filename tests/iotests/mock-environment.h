@@ -74,7 +74,8 @@ class MockCommand
     X(RESET_QUERYSTATE) \
     X(OPFAIL) \
     X(START_RETRY_VERIFY) \
-    X(CHECK_RETRY_VERIFY)
+    X(CHECK_RETRY_VERIFY) \
+    X(SET_ENHANCED_ERRORS)
 
 public:
     enum Code {
@@ -311,6 +312,19 @@ public:
     void setCCCP(bool enabled,
                  std::string bucket = "",
                  const std::vector<int>* nodes = NULL);
+
+    /**
+     * Enable enhanced errors on the mock cluster
+     *
+     * This includes generation event id (ref), and setting context for some errors
+     * .
+     * @param bucket the bucket on which to enable enhanced errors
+     * @param nodes a list of by-index nodes on which to enable Enhanced Errors. If NULL
+     * then all nodes are enabled
+     */
+    void setEnhancedErrors(bool enabled,
+                           std::string bucket = "",
+                           const std::vector<int>* nodes = NULL);
 
     /**
      * Create a connection to the mock/real server.

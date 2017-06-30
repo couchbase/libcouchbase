@@ -212,30 +212,31 @@ public:
         return bufh;
     }
 
-    void parse_enhanced_error(char **err_ref, char **err_ctx) const {
-        if (status() != PROTOCOL_BINARY_RESPONSE_SUCCESS
-            && datatype() & PROTOCOL_BINARY_DATATYPE_JSON
-            && vallen() > 0)
-        {
-            Json::Value jval;
-            if (!Json::Reader().parse(value(), value() + vallen(), jval)) {
-                return;
-            }
-            if (jval.empty()) {
-                return;
-            }
-            Json::Value jerr = jval["error"];
-            if (jerr.empty()) {
-                return;
-            }
-            std::string emsg;
-            if (!jerr["ref"].empty()) {
-                *err_ref = strdup(jerr["ref"].asString().c_str());
-            }
-            if (!jerr["context"].empty()) {
-                *err_ctx = strdup(jerr["context"].asString().c_str());
-            }
+    static lcb_error_t
+    parse_enhanced_error(const char *value, lcb_SIZE nvalue, char **err_ref, char **err_ctx)
+    {
+        if (value == NULL || nvalue == 0) {
+            return LCB_EINVAL;
         }
+        Json::Value jval;
+        if (!Json::Reader().parse(value, value + nvalue, jval)) {
+            return LCB_EINVAL;
+        }
+        if (jval.empty()) {
+            return LCB_EINVAL;
+        }
+        Json::Value jerr = jval["error"];
+        if (jerr.empty()) {
+            return LCB_EINVAL;
+        }
+        std::string emsg;
+        if (!jerr["ref"].empty()) {
+            *err_ref = strdup(jerr["ref"].asString().c_str());
+        }
+        if (!jerr["context"].empty()) {
+            *err_ctx = strdup(jerr["context"].asString().c_str());
+        }
+        return LCB_SUCCESS;
     }
 
 protected:
