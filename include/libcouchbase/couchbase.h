@@ -3703,6 +3703,7 @@ void lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream);
  *
  * @return the pointer to string or NULL if context wasn't specified.
  */
+LIBCOUCHBASE_API
 const char *
 lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb);
 
@@ -3716,6 +3717,7 @@ lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb);
  *
  * @return the pointer to string or NULL if ref wasn't specified.
  */
+LIBCOUCHBASE_API
 const char *
 lcb_resp_get_error_ref(int cbtype, const lcb_RESPBASE *rb);
 

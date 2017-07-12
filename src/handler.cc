@@ -1018,6 +1018,7 @@ lcb_resp_get_mutation_token(int cbtype, const lcb_RESPBASE *rb)
     X(UNLOCK)                                   \
 
 
+LIBCOUCHBASE_API
 const char *
 lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb)
 {
@@ -1031,6 +1032,7 @@ lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb)
     return NULL;
 }
 
+LIBCOUCHBASE_API
 const char *
 lcb_resp_get_error_ref(int cbtype, const lcb_RESPBASE *rb)
 {
