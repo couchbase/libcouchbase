@@ -55,7 +55,7 @@ public:
             cur_interval = num_attempts * interval;
         } else if (strategy == EXPONENTIAL) {
             // Convert to ms for pow(), convert result back to us.
-            cur_interval = std::pow(interval / 1000, num_attempts) * 1000;
+            cur_interval = std::pow((size_t)(interval / 1000), num_attempts) * 1000;
         }
         if (ceil != 0) {
             // Note, I *could* use std::min here, but this file gets
