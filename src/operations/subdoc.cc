@@ -128,6 +128,9 @@ static const Traits
 SetDoc(PROTOCOL_BINARY_CMD_SET, EMPTY_PATH|NO_STANDALONE);
 
 static const Traits
+DeleteDoc(PROTOCOL_BINARY_CMD_DELETE, EMPTY_PATH|NO_STANDALONE);
+
+static const Traits
 Invalid(PROTOCOL_BINARY_CMD_INVALID, 0);
 
 const Traits&
@@ -162,6 +165,8 @@ find(unsigned mode)
         return GetDoc;
     case LCB_SDCMD_SET_FULLDOC:
         return SetDoc;
+    case LCB_SDCMD_REMOVE_FULLDOC:
+        return DeleteDoc;
     default:
         return Invalid;
     }
@@ -502,6 +507,7 @@ lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
         switch (cmd->specs[0].sdcmd) {
         case LCB_SDCMD_GET_FULLDOC:
         case LCB_SDCMD_SET_FULLDOC:
+        case LCB_SDCMD_REMOVE_FULLDOC:
             break;
         default:
             return sd3_single(instance, cookie, cmd);
@@ -594,4 +600,3 @@ lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     LCB_SCHED_ADD(instance, pl, pkt);
     return LCB_SUCCESS;
 }
-
