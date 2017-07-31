@@ -34,6 +34,10 @@ SET_TARGET_PROPERTIES(lcbtools PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
 SET_SOURCE_FILES_PROPERTIES(cbc.cc cbc-pillowfight.cc cbc-n1qlback.cc PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
 
 IF(NOT WIN32)
+    FILE(GLOB T_LINENOSE_SRC linenoise/*.c)
+    ADD_LIBRARY(linenoise OBJECT ${T_LINENOSE_SRC})
+    SET_TARGET_PROPERTIES(linenoise PROPERTIES COMPILE_FLAGS "${LCB_CORE_CFLAGS}")
+
     LIST(APPEND CBC_SUBCOMMANDS
         cat create observe observe-seqno incr decr mcflush hash lock
         unlock rm stats version verbosity view n1ql admin
