@@ -184,7 +184,7 @@ ConnParams::loadFileDefaults()
 
         pos = curline.find('=');
         if (pos == string::npos || pos == curline.size()-1) {
-            throw BadArg("Configuration file must be formatted as key-value pairs");
+            throw BadArg("Configuration file must be formatted as key-value pairs. Check " + getConfigfileName());
         }
 
         key = curline.substr(0, pos);
@@ -192,7 +192,7 @@ ConnParams::loadFileDefaults()
         stripWhitespacePadding(key);
         stripWhitespacePadding(value);
         if (key.empty() || value.empty()) {
-            throw BadArg("Key and value cannot be empty");
+            throw BadArg("Key and value cannot be empty. Check " + getConfigfileName());
         }
 
         if (key == "uri") {
@@ -207,7 +207,7 @@ ConnParams::loadFileDefaults()
         } else if (key == "timeout") {
             unsigned ival = 0;
             if (!sscanf(value.c_str(), "%u", &ival)) {
-                throw BadArg("Invalid formatting for timeout");
+                throw BadArg("Invalid formatting for timeout. Check " + getConfigfileName());
             }
             o_timeout.setDefault(ival).setPassed();
         } else if (key == "connstr") {
@@ -217,7 +217,7 @@ ConnParams::loadFileDefaults()
         } else if (key == "ssl") {
             o_ssl.setDefault(value).setPassed();
         } else {
-            throw BadArg(string("Unrecognized key: ") + key);
+            throw BadArg(string("Unrecognized key: ") + key + ". Check " + getConfigfileName());
         }
     }
     return true;

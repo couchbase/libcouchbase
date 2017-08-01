@@ -758,8 +758,8 @@ int main(int argc, char **argv)
     setup_sigint_handler();
 
     Parser parser("cbc-pillowfight");
-    config.addOptions(parser);
     try {
+        config.addOptions(parser);
         parser.parse(argc, argv, false);
         config.processOptions();
     } catch (std::string& e) {
