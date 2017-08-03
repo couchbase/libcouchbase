@@ -45,6 +45,11 @@ IF(NOT WIN32)
     ADD_LIBRARY(linenoise OBJECT ${T_LINENOSE_SRC})
     SET_TARGET_PROPERTIES(linenoise PROPERTIES COMPILE_FLAGS "${LCB_CORE_CFLAGS}")
 
+    ADD_EXECUTABLE(cbc-subdoc cbc-subdoc.cc $<TARGET_OBJECTS:lcbtools> $<TARGET_OBJECTS:cliopts> $<TARGET_OBJECTS:linenoise>)
+    TARGET_LINK_LIBRARIES(cbc-subdoc couchbase)
+    INSTALL(TARGETS cbc-subdoc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    SET_SOURCE_FILES_PROPERTIES(cbc-subdoc.cc PROPERTIES COMPILE_FLAGS "${LCB_CORE_CXXFLAGS}")
+
     LIST(APPEND CBC_SUBCOMMANDS
         cat create observe observe-seqno incr decr mcflush hash lock
         unlock rm stats version verbosity view n1ql admin

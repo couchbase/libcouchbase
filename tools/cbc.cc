@@ -1682,6 +1682,8 @@ int main(int argc, char **argv)
             wrapExternalBinary(argc, argv, "cbc-pillowfight");
         } else if (strcmp(argv[1], "n1qlback") == 0) {
             wrapExternalBinary(argc, argv, "cbc-n1qlback");
+        } else if (strcmp(argv[1], "subdoc") == 0) {
+            wrapExternalBinary(argc, argv, "cbc-subdoc");
         }
     }
 
