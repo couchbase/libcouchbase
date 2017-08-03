@@ -723,7 +723,9 @@ cliopts_parse_options(cliopts_entry *entries,
             }
 
             print_help(&ctx, settings);
-            exit(0);
+            if (!settings->help_noexit) {
+                exit(0);
+            }
 
         } else if (curmode == MODE_RESTARGS) {
             ii++;

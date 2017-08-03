@@ -98,6 +98,8 @@ struct cliopts_extra_settings {
     int error_nohelp;
     /** Don't interpret --help or -? as help flags */
     int help_noflag;
+    /** Don't exit on --help or -? */
+    int help_noexit;
     /** Program name (defaults to argv[0]) */
     const char *progname;
     /** Usage string (defaults to "[OPTIONS..]") */
