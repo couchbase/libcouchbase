@@ -234,8 +234,20 @@ make_doc_flags(const uint32_t user) {
 }
 
 struct MultiBuilder {
+    static unsigned infer_mode(const lcb_CMDSUBDOC *cmd) {
+        if (cmd->nspecs == 0) {
+            return 0;
+        }
+        const SubdocCmdTraits::Traits& trait = SubdocCmdTraits::find(cmd->specs[0].sdcmd);
+        if (!trait.valid()) {
+            return 0;
+        }
+        return trait.mode();
+    }
+
     MultiBuilder(const lcb_CMDSUBDOC *cmd_)
-    : cmd(cmd_), payload_size(0), mode(0) {
+    : cmd(cmd_), payload_size(0) {
+        mode = infer_mode(cmd_);
         size_t ebufsz = is_lookup() ? cmd->nspecs * 4 : cmd->nspecs * 8;
         extra_body = new char[ebufsz];
         bodysz = 0;
