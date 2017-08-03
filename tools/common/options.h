@@ -61,6 +61,7 @@ public:
     void setAdminMode();
     bool shouldDump() { return o_dump.result(); }
     void writeConfig(const std::string& dest = getConfigfileName());
+    static std::string getUserHome();
     static std::string getConfigfileName();
 
 private:

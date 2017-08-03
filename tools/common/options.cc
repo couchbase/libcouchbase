@@ -124,13 +124,8 @@ ConnParams::addToParser(Parser& parser)
 }
 
 string
-ConnParams::getConfigfileName()
+ConnParams::getUserHome()
 {
-    const char *override = getenv("CBC_CONFIG");
-    if (override && *override) {
-        return override;
-    }
-
     string ret;
 #if _WIN32
     const char *v = getenv("APPDATA");
@@ -139,7 +134,6 @@ ConnParams::getConfigfileName()
         ret += "\\";
         ret += CBC_WIN32_APPDIR;
         ret += "\\";
-        ret += CBC_CONFIG_FILENAME;
     }
 #else
     const char *home = getenv("HOME");
@@ -147,9 +141,19 @@ ConnParams::getConfigfileName()
         ret = home;
         ret += "/";
     }
-    ret += CBC_CONFIG_FILENAME;
 #endif
     return ret;
+}
+
+string
+ConnParams::getConfigfileName()
+{
+    const char *override = getenv("CBC_CONFIG");
+    if (override && *override) {
+        return override;
+    }
+
+    return getUserHome() + CBC_CONFIG_FILENAME;
 }
 
 static void
