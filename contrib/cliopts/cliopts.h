@@ -270,6 +270,22 @@ public:
         doCopy(other);
     }
 
+    ~TOption() {
+        freeInnerVal();
+    }
+
+    /**
+     * Reset result to the default value for the option
+     * @return the option object, for method chaining.
+     */
+    inline Ttype& reset() {
+        freeInnerVal();
+        innerVal = createDefault();
+        priv = Tpriv();
+        found = 0;
+        return *this;
+    }
+
     /**
      * Set the default value for the option
      * @param val the default value
@@ -332,6 +348,17 @@ public:
 protected:
     /** Called from within copy constructor */
     inline void doCopy(TOption&) {}
+
+    inline void freeInnerVal() {
+        switch (ktype) {
+            case CLIOPTS_ARGT_LIST:
+                cliopts_list_clear((cliopts_list *)&innerVal);
+                break;
+            default:
+                /* nothing to do */
+                break;
+        }
+    }
 
     /** Create the default value for the option */
     static inline Taccum createDefault() { return Taccum(); }
@@ -440,6 +467,14 @@ public:
     void addOption(Option *opt) { options.push_back(opt); }
 
     void addOption(Option& opt) { options.push_back(&opt); }
+
+    /**
+     * Resets internal state.
+     */
+    void reset() {
+        options.clear();
+        restargs.clear();
+    }
 
     /**
      * Parses the options from the commandline
