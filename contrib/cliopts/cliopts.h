@@ -163,6 +163,14 @@ cliopts_parse_options(cliopts_entry *entries,
                       char **argv,
                       int *lastidx,
                       struct cliopts_extra_settings *settings);
+
+/**
+ * Split string for arguments, handling single quotes for grouping
+ */
+CLIOPTS_API
+int
+cliopts_split_args(char *args, int *argc, char ***argv);
+
 #ifdef __cplusplus
 }
 

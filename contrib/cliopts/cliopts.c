@@ -778,3 +778,85 @@ cliopts_parse_options(cliopts_entry *entries,
     }
     return ret;
 }
+
+CLIOPTS_API
+int cliopts_split_args(char *args, int *argc, char ***argv)
+{
+    char *p = args;
+    char *current = NULL;
+    int skip = 0;
+
+    *argc = 0;
+    *argv = NULL;
+
+#define ch(x) (*(x + skip))
+
+    while (1) {
+
+        while (ch(p) && isspace(ch(p))) {
+            p++;
+        }
+        if (*p) {
+            int insq = 0;
+            int done = 0;
+
+            if (current == NULL) {
+                current = p;
+            }
+            while (!done) {
+                if (insq) {
+                    if (ch(p) == '\\' && ch(p + 1) == '\'') {
+                        skip++;
+                    } else if (ch(p) == '\'') {
+                        if (ch(p + 1) && !isspace(ch(p + 1))) {
+                            // do not consider single quote inside word as terminating
+                        } else {
+                            *p = '\0';
+                            p++;
+                            done = 1;
+                        }
+                    } else if (!*p) {
+                        cliopt_debug("unterminated single quote");
+                        goto err;
+                    }
+                } else {
+                    switch (ch(p)) {
+                    case '\'':
+                        if (current == p) {
+                            current++;
+                            insq = 1;
+                        }
+                        break;
+                    case ' ':
+                    case '\n':
+                    case '\r':
+                    case '\t':
+                        *p = '\0';
+                        p++;
+                    case '\0':
+                        done = 1;
+                        break;
+                    }
+                }
+                if (skip) {
+                    *p = ch(p);
+                }
+                if (*p && !done) {
+                    p++;
+                }
+            }
+            *argv = realloc(*argv, (*argc + 1) * sizeof(char *));
+            (*argv)[*argc] = current;
+            (*argc)++;
+            current = NULL;
+        } else {
+            return 0;
+        }
+    }
+
+err:
+    free(*argv);
+    *argc = 0;
+    *argv = NULL;
+    return 1;
+}
