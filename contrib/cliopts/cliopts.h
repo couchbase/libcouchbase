@@ -47,7 +47,13 @@ typedef enum {
      * string. You can use this option type to build -Doption=value style
      * options which can be processed later on.
      */
-    CLIOPTS_ARGT_LIST
+    CLIOPTS_ARGT_LIST,
+
+    /**
+     * Destination should be cliopts_pair_list. Argument type is assumed to be a
+     * string with '=' separator in form of KEY=VALUE.
+     */
+    CLIOPTS_ARGT_PAIR_LIST
 } cliopts_argtype_t;
 
 typedef struct {
@@ -134,6 +140,19 @@ typedef struct {
     size_t nalloc;
 } cliopts_list;
 
+typedef struct {
+    /** Array of string pointers. Allocated via standard malloc functions */
+    char **keys;
+    /** Number of valid entries */
+    size_t nkeys;
+    /** Array of string pointers. Allocated via standard malloc functions */
+    char **values;
+    /** Number of valid entries */
+    size_t nvalues;
+    /** Number of entries allocated */
+    size_t nalloc;
+} cliopts_pair_list;
+
 /**
  * Clear a list of its contents
  * @param l The list
@@ -141,6 +160,14 @@ typedef struct {
 CLIOPTS_API
 void
 cliopts_list_clear(cliopts_list *l);
+
+/**
+ * Clear a pair list of its contents
+ * @param l The pair list
+ */
+CLIOPTS_API
+void
+cliopts_pair_list_clear(cliopts_pair_list *l);
 
 /**
  * Parse options.
@@ -354,6 +381,9 @@ protected:
             case CLIOPTS_ARGT_LIST:
                 cliopts_list_clear((cliopts_list *)&innerVal);
                 break;
+            case CLIOPTS_ARGT_PAIR_LIST:
+                cliopts_pair_list_clear((cliopts_pair_list *)&innerVal);
+                break;
             default:
                 /* nothing to do */
                 break;
@@ -373,6 +403,11 @@ typedef TOption<std::vector<std::string>,
         CLIOPTS_ARGT_LIST,
         cliopts_list,
         std::vector<std::string> > ListOption;
+
+typedef TOption<std::vector<std::pair<std::string, std::string> >,
+        CLIOPTS_ARGT_PAIR_LIST,
+        cliopts_pair_list,
+        std::vector<std::pair<std::string, std::string> > > PairListOption;
 
 typedef TOption<bool,
         CLIOPTS_ARGT_NONE,
@@ -431,6 +466,19 @@ template<> inline std::vector<std::string>& ListOption::const_result() {
     return priv;
 }
 template<> inline std::vector<std::string> ListOption::result() {
+    return const_result();
+}
+
+// PAIR LIST ROUTINES
+template<> inline std::vector<std::pair<std::string, std::string> >& PairListOption::const_result() {
+    if (priv.empty()) {
+        for (size_t ii = 0; ii < innerVal.nvalues; ii++) {
+            priv.push_back(std::make_pair(innerVal.keys[ii], innerVal.values[ii]));
+        }
+    }
+    return priv;
+}
+template<> inline std::vector<std::pair<std::string, std::string> > PairListOption::result() {
     return const_result();
 }
 

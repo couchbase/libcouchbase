@@ -103,6 +103,66 @@ cliopts_list_clear(cliopts_list *l)
     l->nalloc = 0;
 }
 
+static void
+add_pair_list_value(const char *src, size_t nsrc, cliopts_pair_list *l)
+{
+    char *key = NULL, *val = NULL;
+    char *sep = memchr(src, '=', nsrc);
+    if (sep == NULL) {
+        key = malloc(nsrc + 1);
+        memcpy(key, src, nsrc);
+        key[nsrc] = '\0';
+        val = malloc(1);
+        val[0] = '\0';
+    } else {
+        char *pp = sep;
+        size_t nkey = sep - src;
+        size_t nval = nsrc - nkey - 1;
+        for (; pp > src; pp--, nkey--) {
+            if (*pp != ' ' && *pp != '\t' && *pp != '\0') {
+                break;
+            }
+        }
+        key = malloc(nkey + 1);
+        memcpy(key, src, nkey);
+        key[nkey] = '\0';
+        val = malloc(nval + 1);
+        memcpy(val, sep + 1, nval);
+        val[nval] = '\0';
+    }
+
+    if (!l->nalloc) {
+        l->nalloc = 2;
+        l->keys = malloc(l->nalloc * sizeof(*l->keys));
+        l->values = malloc(l->nalloc * sizeof(*l->values));
+    } else {
+        l->nalloc *= 1.5;
+        l->keys = realloc(l->keys, sizeof(*l->keys) * l->nalloc);
+        l->values = realloc(l->values, sizeof(*l->values) * l->nalloc);
+    }
+
+    l->keys[l->nvalues] = key;
+    l->values[l->nvalues] = val;
+    l->nvalues++;
+}
+
+CLIOPTS_API
+void
+cliopts_pair_list_clear(cliopts_pair_list *l)
+{
+    size_t ii;
+    for (ii = 0; ii < l->nvalues; ii++) {
+        free(l->keys[ii]);
+        free(l->values[ii]);
+    }
+    free(l->keys);
+    free(l->values);
+    l->keys = NULL;
+    l->values = NULL;
+    l->nvalues = 0;
+    l->nalloc = 0;
+}
+
 /**
  * Various extraction/conversion functions for numerics
  */
@@ -236,6 +296,10 @@ parse_value(struct cliopts_priv *ctx,
 
     if (entry->ktype == CLIOPTS_ARGT_LIST) {
         add_list_value(value, vlen, (cliopts_list *)entry->dest);
+        return WANT_OPTION;
+    }
+    if (entry->ktype == CLIOPTS_ARGT_PAIR_LIST) {
+        add_pair_list_value(value, vlen, (cliopts_pair_list *)entry->dest);
         return WANT_OPTION;
     }
 
@@ -590,6 +654,17 @@ print_help(struct cliopts_priv *ctx, struct cliopts_extra_settings *settings)
                 cliopts_list *l = (cliopts_list *)cur->dest;
                 for (ii = 0; ii < l->nvalues; ii++) {
                     fprintf(stderr, "'%s'", l->values[ii]);
+                    if (ii != l->nvalues-1) {
+                        fprintf(stderr, ", ");
+                    }
+                }
+                break;
+            }
+            case CLIOPTS_ARGT_PAIR_LIST: {
+                size_t ii;
+                cliopts_pair_list *l = (cliopts_pair_list *)cur->dest;
+                for (ii = 0; ii < l->nvalues; ii++) {
+                    fprintf(stderr, "'%s=%s'", l->keys[ii], l->values[ii]);
                     if (ii != l->nvalues-1) {
                         fprintf(stderr, ", ");
                     }
