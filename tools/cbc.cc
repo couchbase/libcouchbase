@@ -17,6 +17,10 @@
 #include "connspec.h"
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 
+#ifndef LCB_NO_SSL
+#include <openssl/crypto.h>
+#endif
+
 using namespace cbc;
 
 using std::string;
@@ -766,8 +770,20 @@ VersionHandler::run()
         fprintf(stderr, "  IO: Default=%s, Current=%s\n",
             iops_to_string(info.v.v0.os_default), iops_to_string(info.v.v0.effective));
     }
-    printf("  SSL: .. %s\n",
-            lcb_supports_feature(LCB_SUPPORTS_SSL) ? "SUPPORTED" : "NOT SUPPORTED");
+    if (lcb_supports_feature(LCB_SUPPORTS_SSL)) {
+#ifdef LCB_NO_SSL
+        printf("  SSL: SUPPORTED\n");
+#else
+#if defined(OPENSSL_VERSION)
+        printf("  SSL Runtime: %s\n", OpenSSL_version(OPENSSL_VERSION));
+#elif defined(SSLEAY_VERSION)
+        printf("  SSL Runtime: %s\n", SSLeay_version(SSLEAY_VERSION));
+#endif
+        printf("  SSL Headers: %s\n", OPENSSL_VERSION_TEXT);
+#endif
+    } else {
+        printf("  SSL: NOT SUPPORTED\n");
+    }
 }
 
 void
