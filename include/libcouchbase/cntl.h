@@ -166,6 +166,22 @@ extern "C" {
 #define LCB_CNTL_BUCKETNAME             0x30
 
 /**
+ * @brief Get the bucket type.
+ * This returns the bucket type - which is either of the following:
+ *
+ *  * LCB_BTYPE_UNSPEC
+ *  * LCB_BTYPE_COUCHBASE
+ *  * LCB_BTYPE_EPHEMERAL
+ *  * LCB_BTYPE_MEMCACHED
+ *
+ * @see https://developer.couchbase.com/documentation/server/5.0/architecture/core-data-access-buckets.html
+ *
+ * @cntl_arg_getonly{lcb_type_t*}
+ * @uncommitted
+ */
+#define LCB_CNTL_BUCKETTYPE             0x48
+
+/**
  * @brief Get the handle type.
  * This returns the handle type - which is either LCB_TYPE_CLUSTER or
  * LCB_TYPE_BUCKET
@@ -1006,7 +1022,7 @@ typedef const char *lcb_BUCKETCRED[2];
 #define LCB_CNTL_SEND_HELLO 0x47
 
 /** This is not a command, but rather an indicator of the last item */
-#define LCB_CNTL__MAX                    0x48
+#define LCB_CNTL__MAX                    0x49
 /**@}*/
 
 #ifdef __cplusplus

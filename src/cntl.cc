@@ -157,6 +157,9 @@ HANDLER(compmode_handler) {
 HANDLER(bucketname_handler) {
     RETURN_GET_ONLY(const char*, LCBT_SETTING(instance, bucket))
 }
+HANDLER(buckettype_handler) {
+    RETURN_GET_ONLY(lcb_BTYPE, static_cast<lcb_BTYPE>(instance->btype))
+}
 HANDLER(schedflush_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, sched_implicit_flush))
 }
@@ -614,7 +617,8 @@ static ctl_handler handlers[] = {
     select_bucket_handler, /* LCB_CNTL_SELECT_BUCKET */
     tcp_keepalive_handler, /* LCB_CNTL_TCP_KEEPALIVE */
     config_poll_interval_handler, /* LCB_CNTL_CONFIG_POLL_INTERVAL */
-    send_hello_handler /* LCB_CNTL_SEND_HELLO */
+    send_hello_handler, /* LCB_CNTL_SEND_HELLO */
+    buckettype_handler /* LCB_CNTL_BUCKETTYPE */
 };
 
 /* Union used for conversion to/from string functions */

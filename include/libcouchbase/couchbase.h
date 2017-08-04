@@ -235,6 +235,19 @@ typedef enum {
     LCB_TYPE_CLUSTER = 0x01 /**< Handle for administrative access */
 } lcb_type_t;
 
+/**
+ * @brief Type of the bucket
+ *
+ * @see https://developer.couchbase.com/documentation/server/5.0/architecture/core-data-access-buckets.html
+ */
+typedef enum {
+    LCB_BTYPE_UNSPEC = 0x00,    /**< Unknown or unspecified */
+    LCB_BTYPE_COUCHBASE = 0x01, /**< Data persisted and replicated */
+    LCB_BTYPE_EPHEMERAL = 0x02, /**< Data not persisted, but replicated */
+    LCB_BTYPE_MEMCACHED = 0x03  /**< Data not persisted and not replicated */
+} lcb_BTYPE;
+
+
 #ifndef __LCB_DOXYGEN__
 /* These are definitions for some of the older fields of the `lcb_create_st`
  * structure. They are here for backwards compatibility and should not be
