@@ -767,9 +767,34 @@ VersionHandler::run()
     memset(&info, 0, sizeof info);
     err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES, &info);
     if (err == LCB_SUCCESS) {
-        fprintf(stderr, "  IO: Default=%s, Current=%s\n",
+        fprintf(stderr, "  IO: Default=%s, Current=%s, Accessible=",
             iops_to_string(info.v.v0.os_default), iops_to_string(info.v.v0.effective));
     }
+    {
+        size_t ii;
+        char buf[256] = {0}, *p = buf;
+        lcb_io_ops_type_t known_io[] = {
+            LCB_IO_OPS_WINIOCP,
+            LCB_IO_OPS_LIBEVENT,
+            LCB_IO_OPS_LIBUV,
+            LCB_IO_OPS_LIBEV,
+            LCB_IO_OPS_SELECT
+        };
+
+
+        for (ii = 0; ii < sizeof(known_io) / sizeof(known_io[0]); ii++) {
+            struct lcb_create_io_ops_st cio = {0};
+            lcb_io_opt_t io = NULL;
+
+            cio.v.v0.type = known_io[ii];
+            if (lcb_create_io_ops(&io, &cio) == LCB_SUCCESS) {
+                p += sprintf(p, "%s,", iops_to_string(known_io[ii]));
+            }
+        }
+        *(--p) = '\n';
+        fprintf(stderr, "%s", buf);
+    }
+
     if (lcb_supports_feature(LCB_SUPPORTS_SSL)) {
 #ifdef LCB_NO_SSL
         printf("  SSL: SUPPORTED\n");
