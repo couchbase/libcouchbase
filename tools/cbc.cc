@@ -1403,6 +1403,8 @@ ConnstrHandler::run()
         if (spec.sslopts() & LCB_SSL_NOVERIFY) {
             sslOpts += "|NOVERIFY";
         }
+    } else {
+        sslOpts = "DISABLED";
     }
     printf("SSL: %s\n", sslOpts.c_str());
 
