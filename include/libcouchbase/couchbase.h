@@ -688,6 +688,7 @@ typedef enum {
     LCB_CALLBACK_STOREDUR, /** <for lcb_storedur3() */
     LCB_CALLBACK_SDLOOKUP,
     LCB_CALLBACK_SDMUTATE,
+    LCB_CALLBACK_NOOP, /**< lcb_noop3() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -2350,6 +2351,31 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
 /**@} (Group: Flush) */
+
+/**@ingroup lcb-public-api
+ * @defgroup lcb-noop NOOP
+ * @brief Send NOOP command to server
+ *
+ * @addtogroup lcb-noop
+ * @{
+ */
+typedef lcb_CMDBASE lcb_CMDNOOP;
+typedef lcb_RESPBASE lcb_RESPNOOP;
+
+/**
+ * @uncomitted
+ *
+ * Send NOOP to the node
+ *
+ * @param instance the library handle
+ * @param cookie the cookie passed in the callback
+ * @param cmd empty command structure.
+ * @return status code for scheduling.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_noop3(lcb_t instance, const void *cookie, const lcb_CMDNOOP *cmd);
+/**@} (Group: NOOP) */
 
 /**@ingroup lcb-public-api
  * @defgroup lcb-http HTTP Client
