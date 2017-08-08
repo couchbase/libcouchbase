@@ -1,7 +1,5 @@
 # Couchbase C Client
 
-[![Build Status](https://travis-ci.org/couchbase/libcouchbase.png?branch=master)](https://travis-ci.org/couchbase/libcouchbase)
-
 This is the C client library for [Couchbase](http://www.couchbase.com)
 It communicates with the cluster and speaks the relevant protocols
 necessary to connect to the cluster and execute data operations.
