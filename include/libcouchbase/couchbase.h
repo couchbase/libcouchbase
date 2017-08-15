@@ -2360,10 +2360,10 @@ lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
  * @{
  */
 typedef lcb_CMDBASE lcb_CMDNOOP;
-typedef lcb_RESPBASE lcb_RESPNOOP;
+typedef lcb_RESPSERVERBASE lcb_RESPNOOP;
 
 /**
- * @uncomitted
+ * @uncommitted
  *
  * Send NOOP to the node
  *

@@ -813,11 +813,12 @@ H_noop(mc_PIPELINE *pipeline, mc_PACKET *request,
        MemcachedResponse *response, lcb_error_t immerr)
 {
     lcb_t root = get_instance(pipeline);
-    lcb_RESPBASE dummy = { 0 };
+    lcb_RESPNOOP resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
-    make_error(root, &dummy, response, immerr);
 
-    exdata->procs->handler(pipeline, request, dummy.rc, NULL);
+    make_error(root, &resp, response, immerr);
+
+    exdata->procs->handler(pipeline, request, resp.rc, &resp);
 }
 
 static void

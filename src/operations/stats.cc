@@ -184,6 +184,7 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
         lcb_RESPVERBOSITY *verbosity;
         lcb_RESPMCVERSION *version;
         lcb_RESPFLUSH *flush;
+        lcb_RESPNOOP *noop;
     } u_resp;
 
     union {
@@ -191,6 +192,7 @@ handle_bcast(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t err,
         lcb_RESPVERBOSITY verbosity;
         lcb_RESPMCVERSION version;
         lcb_RESPFLUSH flush;
+        lcb_RESPNOOP noop;
     } u_empty;
 
     memset(&u_empty, 0, sizeof(u_empty));
