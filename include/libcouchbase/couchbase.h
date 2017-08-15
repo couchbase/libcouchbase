@@ -689,6 +689,7 @@ typedef enum {
     LCB_CALLBACK_SDLOOKUP,
     LCB_CALLBACK_SDMUTATE,
     LCB_CALLBACK_NOOP, /**< lcb_noop3() */
+    LCB_CALLBACK_PING, /**< lcb_ping3() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -2376,6 +2377,153 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_noop3(lcb_t instance, const void *cookie, const lcb_CMDNOOP *cmd);
 /**@} (Group: NOOP) */
+
+/**@ingroup lcb-public-api
+ * @defgroup lcb-ping PING
+ * @brief Broadcast NOOP-like commands to each service in the cluster
+ *
+ * @addtogroup lcb-ping
+ * @{
+ */
+
+/**
+ * Ping data (Key/Value) service. Used in lcb_CMDPING#services
+ */
+#define LCB_PINGSVC_F_KV 0x01
+
+/**
+ * Ping query (N1QL) service. Used in lcb_CMDPING#services
+ */
+#define LCB_PINGSVC_F_N1QL 0x02
+
+/**
+ * Ping views (Map/Reduce) service. Used in lcb_CMDPING#services
+ */
+#define LCB_PINGSVC_F_VIEWS 0x04
+
+/**
+ * Ping full text search (FTS) service. Used in lcb_CMDPING#services
+ */
+#define LCB_PINGSVC_F_FTS 0x08
+
+/**
+ * Do not record any metrics or status codes from ping responses.
+ * This might be useful to reduce overhead, when user-space
+ * keep-alive mechanism is not interested in actual latencies,
+ * but rather need keep sockets active. Used in lcb_CMDPING#options
+ */
+#define LCB_PINGOPT_F_NOMETRICS 0x01
+
+/**
+ * Automatically encode PING result as JSON. See njson/json fields
+ * of #lcb_RESPPING structure. Used in lcb_CMDPING#options
+ */
+#define LCB_PINGOPT_F_JSON 0x02
+
+/**
+ * Add extra details about service status into generated JSON.
+ * Requires LCB_PINGOPT_F_JSON to be set. Used in lcb_CMDPING#options
+ */
+#define LCB_PINGOPT_F_JSONDETAILS 0x04
+
+/**
+ * Generate indented JSON, which is better for reading. Used in lcb_CMDPING#options
+ */
+#define LCB_PINGOPT_F_JSONPRETTY 0x08
+
+/**
+ * Structure for PING requests.
+ *
+ * @uncommitted
+ */
+typedef struct {
+    LCB_CMD_BASE;
+    int services; /**< bitmap for services to ping */
+    int options; /**< extra options, e.g. for result representation */
+} lcb_CMDPING;
+
+/**
+ * Type of the service. This enumeration is used in PING responses.
+ *
+ * @uncommitted
+ */
+typedef enum {
+    LCB_PINGSVC_KV = 0,
+    LCB_PINGSVC_VIEWS,
+    LCB_PINGSVC_N1QL,
+    LCB_PINGSVC_FTS,
+    LCB_PINGSVC__MAX
+} lcb_PINGSVCTYPE;
+
+/**
+ * Entry describing the status of the service in the cluster.
+ * It is part of lcb_RESPING structure.
+ *
+ * @uncommitted
+ */
+typedef struct {
+    lcb_PINGSVCTYPE type; /**< type of the service */
+    char *server; /**< server host:port */
+    lcb_U64 latency; /**< latency in nanoseconds */
+    lcb_error_t status; /**< status of the operation */
+} lcb_PINGSVC;
+
+/**
+ * Structure for PING responses.
+ *
+ * @uncommitted
+ */
+typedef struct {
+    LCB_RESP_BASE
+    LCB_RESP_SERVER_FIELDS
+    lcb_SIZE nservices; /**< number of the nodes, replied to ping */
+    lcb_PINGSVC *services; /**< the nodes, replied to ping, if any */
+    lcb_SIZE njson; /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
+    const char *json; /**< pointer to JSON string */
+} lcb_RESPPING;
+
+/**
+ * @brief Check connections by sending NOOP-like messages to all services.
+ *
+ * @uncommitted
+ *
+ * When no metrics, required, it is possible to reduce memory overhead
+ * by turning off response contents using #LCB_PINGOPT_F_NOMETRICS.
+ *
+ * @par Request
+ * @code{.c}
+ * lcb_CMDPING cmd = { 0 };
+ * // select services to ping
+ * cmd.services = LCB_PINGSVC_F_KV | LCB_PINGSVC_F_N1QL;
+ * lcb_ping3(instance, fp, &cmd);
+ * lcb_wait(instance);
+ * @endcode
+ *
+ * @par Response
+ * @code{.c}
+ * lcb_install_callback3(instance, LCB_CALLBACK_PING, ping_callback);
+ * void ping_callback(lcb_t, int, const lcb_RESPBASE *rb)
+ * {
+ *     const lcb_RESPPING *resp = (const lcb_RESPPING*)rb;
+ *     int ii;
+ *     for (ii = 0; ii < resp->nservices; ii++) {
+ *         printf("service: %s, status: %d, host: %s, latency: %lu nanoseconds\n",
+ *             resp->services[ii].type == LCB_PINGSVC_KV ? "KV" : "N1QL",
+ *             resp->services[ii].status,
+ *             resp->services[ii].server,
+ *             (unsigned long)resp->services[ii].latency);
+ *     }
+ * }
+ * @endcode
+ * @param instance the library handle
+ * @param cookie the cookie passed in the callback
+ * @param cmd empty command structure.
+ * @return status code for scheduling.
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd);
+/**@} (Group: PING) */
 
 /**@ingroup lcb-public-api
  * @defgroup lcb-http HTTP Client

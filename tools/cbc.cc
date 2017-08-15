@@ -236,6 +236,18 @@ common_server_callback(lcb_t, int cbtype, const lcb_RESPSERVERBASE *sbase)
 }
 
 static void
+ping_callback(lcb_t, int, const lcb_RESPPING *resp)
+{
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "failed: %s\n", lcb_strerror(NULL, resp->rc));
+    } else {
+        if (resp->njson) {
+            printf("%.*s", (int)resp->njson, resp->json);
+        }
+    }
+}
+
+static void
 arithmetic_callback(lcb_t, lcb_CALLBACKTYPE type, const lcb_RESPCOUNTER *resp)
 {
     string key = getRespKey((const lcb_RESPBASE *)resp);
@@ -909,6 +921,28 @@ VerbosityHandler::run()
 }
 
 void
+PingHandler::run()
+{
+    Handler::run();
+
+    lcb_install_callback3(instance, LCB_CALLBACK_PING, (lcb_RESPCALLBACK)ping_callback);
+    lcb_CMDPING cmd = { 0 };
+    lcb_error_t err;
+    cmd.services = LCB_PINGSVC_F_KV | LCB_PINGSVC_F_N1QL | LCB_PINGSVC_F_VIEWS | LCB_PINGSVC_F_FTS;
+    cmd.options = LCB_PINGOPT_F_JSON | LCB_PINGOPT_F_JSONPRETTY;
+    if (o_details.passed()) {
+        cmd.options |= LCB_PINGOPT_F_JSONDETAILS;
+    }
+    lcb_sched_enter(instance);
+    err = lcb_ping3(instance, NULL, &cmd);
+    if (err != LCB_SUCCESS) {
+        throw LcbError(err);
+    }
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+void
 McFlushHandler::run()
 {
     Handler::run();
@@ -1525,6 +1559,7 @@ static const char* optionsOrder[] = {
         "connstr",
         "write-config",
         "strerror",
+        "ping",
         NULL
 };
 
@@ -1594,6 +1629,7 @@ setupHandlers()
     handlers_s["cp"] = new SetHandler("cp");
     handlers_s["stats"] = new StatsHandler();
     handlers_s["verbosity"] = new VerbosityHandler();
+    handlers_s["ping"] = new PingHandler();
     handlers_s["mcflush"] = new McFlushHandler();
     handlers_s["incr"] = new IncrHandler();
     handlers_s["decr"] = new DecrHandler();

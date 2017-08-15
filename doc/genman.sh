@@ -14,7 +14,7 @@ ronn --pipe --roff $SRCDIR/cbcrc.markdown > $OUTDIR/cbcrc.4
 
 MANLINKS="cat cp create observe flush hash lock unlock rm stats \
 version verbosity view admin bucket-create bucket-delete connstr \
-role-list user-list user-upsert user-delete"
+role-list user-list user-upsert user-delete ping"
 
 for link in $MANLINKS; do
     dest="$OUTDIR/cbc-${link}.1"
