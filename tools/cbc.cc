@@ -407,21 +407,36 @@ GetHandler::run()
     lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
     lcb_install_callback3(instance, LCB_CALLBACK_GETREPLICA, (lcb_RESPCALLBACK)get_callback);
     const vector<string>& keys = parser.getRestArgs();
-    lcb_error_t err;
+    std::string replica_mode = o_replica.result();
 
     lcb_sched_enter(instance);
     for (size_t ii = 0; ii < keys.size(); ++ii) {
-        lcb_CMDGET cmd = { 0 };
-        const string& key = keys[ii];
-        LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
-        if (o_exptime.passed()) {
-            cmd.exptime = o_exptime.result();
+        lcb_error_t err;
+        if (o_replica.passed()) {
+            lcb_CMDGETREPLICA cmd = { 0 };
+            const string& key = keys[ii];
+            LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+            if (replica_mode == "first") {
+                cmd.strategy = LCB_REPLICA_FIRST;
+            } else if (replica_mode == "all") {
+                cmd.strategy = LCB_REPLICA_ALL;
+            } else {
+                cmd.strategy = LCB_REPLICA_SELECT;
+                cmd.index = std::atoi(replica_mode.c_str());
+            }
+            err = lcb_rget3(instance, this, &cmd);
+        } else {
+            lcb_CMDGET cmd = { 0 };
+            const string& key = keys[ii];
+            LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+            if (o_exptime.passed()) {
+                cmd.exptime = o_exptime.result();
+            }
+            if (isLock()) {
+                cmd.lock = 1;
+            }
+            err = lcb_get3(instance, this, &cmd);
         }
-        if (isLock()) {
-            cmd.lock = 1;
-        }
-
-        err = lcb_get3(instance, this, &cmd);
         if (err != LCB_SUCCESS) {
             throw LcbError(err);
         }
