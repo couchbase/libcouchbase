@@ -176,7 +176,7 @@ extern "C" {
  *
  * @see https://developer.couchbase.com/documentation/server/5.0/architecture/core-data-access-buckets.html
  *
- * @cntl_arg_getonly{lcb_type_t*}
+ * @cntl_arg_getonly{lcb_BTYPE*}
  * @uncommitted
  */
 #define LCB_CNTL_BUCKETTYPE             0x48
