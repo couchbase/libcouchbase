@@ -478,7 +478,11 @@ class UpsertHandler : public Handler
         if (args.size() != 2) {
             throw BadArg("Exactly two arguments required: KEY and VALUE");
         }
+        // currently it is not possible to upsert document without XATTRs
+        // so lets allocate "_cbc" object with some useful stuff
         std::string ver = "\"libcouchbase/" LCB_VERSION_STRING "\"";
+        std::string path = "_cbc.version";
+
         std::string key = args[0];
         std::string value = args[1];
         std::vector< std::pair< std::string, std::string > > xattrs = o_xattrs.result();
@@ -499,9 +503,6 @@ class UpsertHandler : public Handler
                 specs.push_back(spec);
             }
         } else {
-            // currently it is not possible to upsert document without XATTRs
-            // so lets allocate "_cbc" object with some useful stuff
-            std::string path = "_cbc.version";
             lcb_SDSPEC spec = lcb_SDSPEC();
             spec.sdcmd = LCB_SDCMD_DICT_UPSERT;
             spec.options = LCB_SDSPEC_F_XATTRPATH | LCB_SDSPEC_F_MKINTERMEDIATES;
