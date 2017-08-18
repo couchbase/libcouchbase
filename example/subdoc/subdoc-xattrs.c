@@ -124,8 +124,7 @@ static void n1qlrow_callback(lcb_t instance, int type, const lcb_RESPN1QL *resp)
     lcb_sched_leave(instance);
 }
 
-// #define DEFAULT_CONNSTR "couchbase://localhost/travel-sample"
-#define DEFAULT_CONNSTR "couchbase://192.168.1.194/travel-sample"
+#define DEFAULT_CONNSTR "couchbase://localhost/travel-sample"
 
 static lcb_t connect_as(char *username, char *password)
 {
