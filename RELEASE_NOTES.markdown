@@ -1,6 +1,6 @@
 # Release Notes
 
-## 2.7.7 (July 16 2017)
+## 2.7.7 (August 17 2017)
 
 * Implement new function `lcb_ping3`, which sends NOOP-like message to
   each service in the cluster and allows to measure latency along with
