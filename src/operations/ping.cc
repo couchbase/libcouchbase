@@ -288,7 +288,6 @@ lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd)
             htcmd.cmdflags = LCB_CMDHTTP_F_CASTMO;                      \
             htcmd.cas = LCBT_SETTING(instance, TMO);                    \
             rc = lcb_http3(instance, ckwrap, &htcmd);                   \
-            free((char *)htcmd.host);                                   \
             if (rc == LCB_SUCCESS) {                                    \
                 htreq->set_callback(CB);                                \
             }                                                           \
