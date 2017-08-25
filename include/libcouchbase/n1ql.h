@@ -141,6 +141,66 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_n1p_posparam(lcb_N1QLPARAMS *params, const char *value, size_t n_value);
 
+
+/**
+ * Marks query as read-only.
+ *
+ * If the user knows the request is only ever a select, for security
+ * reasons it can make sense to tell the server this thing is readonly
+ * and it will prevent mutations from happening.
+ *
+ * If readonly is set, then the following statements are not allowed:
+ *   * CREATE INDEX
+ *   * DROP INDEX
+ *   * INSERT
+ *   * MERGE
+ *   * UPDATE
+ *   * UPSERT
+ *   * DELETE
+ *
+ * @param params the params object
+ * @param readonly if non-zero, the query will be read-only
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_n1p_readonly(lcb_N1QLPARAMS *params, int readonly);
+
+/**
+ * Sets maximum buffered channel size between the indexer client
+ * and the query service for index scans.
+ *
+ * This parameter controls when to use scan backfill. Use 0 or
+ * a negative number to disable.
+ *
+ * @param params the params object
+ * @param scancap channel size
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_n1p_scancap(lcb_N1QLPARAMS *params, int scancap);
+
+/**
+ * Sets maximum number of items each execution operator can buffer
+ * between various operators.
+ *
+ * @param params the params object
+ * @param pipelinecap number of items
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_n1p_pipelinecap(lcb_N1QLPARAMS *params, int pipelinecap);
+
+/**
+ * Sets the number of items execution operators can batch for
+ * fetch from the KV.
+ *
+ * @param params the params object
+ * @param pipelinebatch number of items
+ */
+LIBCOUCHBASE_API
+lcb_error_t
+lcb_n1p_pipelinebatch(lcb_N1QLPARAMS *params, int pipelinebatch);
+
 /**
  * Set a query option
  * @param params the params object
