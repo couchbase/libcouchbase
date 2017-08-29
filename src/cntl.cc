@@ -21,6 +21,8 @@
 #include <mcserver/negotiate.h>
 #include <lcbio/ssl.h>
 
+#define LOGARGS(instance, lvl) instance->settings, "cntl", LCB_LOG_##lvl, __FILE__, __LINE__
+
 #define CNTL__MODE_SETSTRING 0x1000
 
 /* Basic definition/declaration for handlers */
@@ -200,6 +202,11 @@ HANDLER(send_hello_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, send_hello));
 }
 HANDLER(config_poll_interval_handler) {
+    lcb_U32 *user = reinterpret_cast<lcb_U32*>(arg);
+    if (mode == LCB_CNTL_SET && *user > 0 && *user < LCB_CONFIG_POLL_INTERVAL_FLOOR) {
+        lcb_log(LOGARGS(instance, ERROR), "Interval for background poll is too low: %dus (min: %dus)", *user, LCB_CONFIG_POLL_INTERVAL_FLOOR);
+        return LCB_ECTL_BADARG;
+    }
     lcb_error_t rv = timeout_common(mode, instance, cmd, arg);
     if (rv == LCB_SUCCESS &&
             (mode == LCB_CNTL_SET || CNTL__MODE_SETSTRING) &&
