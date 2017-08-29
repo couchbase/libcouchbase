@@ -271,7 +271,12 @@ typedef struct lcb_cntl_vbinfo_st {
  * @committed*/
 #define LCB_CNTL_DURABILITY_INTERVAL    0x0e
 
-/**@brief Timeout for non-views HTTP requests
+/**
+ * @brief Timeout for otherwise unspecified HTTP requests
+ *
+ * Examples of these kinds of HTTP requests might be cluster management,
+ * user management, etc.
+ *
  * @cntl_arg_both{lcb_U32*}
  * @committed*/
 #define LCB_CNTL_HTTP_TIMEOUT           0x0f
