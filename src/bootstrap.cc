@@ -141,7 +141,7 @@ void Bootstrap::check_bgpoll() {
 
 void Bootstrap::bgpoll() {
     lcb_log(LOGARGS(parent, TRACE), "Background-polling for new configuration");
-    bootstrap(BS_REFRESH_THROTTLE);
+    bootstrap(BS_REFRESH_ALWAYS);
     check_bgpoll();
 }
 
