@@ -207,6 +207,7 @@ ALIASES                =
 ALIASES += "committed=\par Stability\n\xrefitem lcb_apiattr_committed \"Committed\" \"Committed Interfaces\""
 ALIASES += "uncommitted=\par Stability\n\xrefitem lcb_apiattr_uncommitted \"Uncommitted\" \"Unommitted Interfaces\""
 ALIASES += "volatile=\par Stability\n\xrefitem lcb_apiattr_volatile \"Volatile\" \"Volatile Interfaces\""
+ALIASES += "internal=\par Stability\n\xrefitem lcb_apiattr_internal \"Internal\" \"Internal Interfaces\""
 ALIASES += "commited=committed"
 ALISES  += "comitted=committed"
 ALIASES += "uncommited=uncommitted"

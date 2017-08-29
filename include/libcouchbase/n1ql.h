@@ -1,5 +1,5 @@
 /*
- *     Copyright 2015 Couchbase, Inc.
+ *     Copyright 2017 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ lcb_n1p_free(lcb_N1QLPARAMS *params);
 /** Query is a statement string */
 #define LCB_N1P_QUERY_STATEMENT 1
 
-/** @private */
+/** @internal */
 #define LCB_N1P_QUERY_PREPARED 2
 
 /**
@@ -112,6 +112,7 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_n1p_setquery(lcb_N1QLPARAMS *params, const char *qstr, size_t nqstr, int type);
 
+/** Shortcut to set NUL-terminated string as statement via @ref lcb_n1p_setquery */
 #define lcb_n1p_setstmtz(params, qstr) \
     lcb_n1p_setquery(params, qstr, -1, LCB_N1P_QUERY_STATEMENT)
 
@@ -128,6 +129,7 @@ lcb_error_t
 lcb_n1p_namedparam(lcb_N1QLPARAMS *params, const char *name, size_t n_name,
     const char *value, size_t n_value);
 
+/** Shortcut to set NUL-terminated string as named param via @ref lcb_n1p_namedparam */
 #define lcb_n1p_namedparamz(params, name, value) \
     lcb_n1p_namedparam(params, name, -1, value, -1)
 
@@ -318,7 +320,7 @@ lcb_n1p_mkcmd(lcb_N1QLPARAMS *params, lcb_CMDN1QL *cmd);
  */
 #define LCB_CMDN1QL_F_PREPCACHE 1<<16
 
-/** @private The lcb_CMDN1QL::query member is an internal JSON structure */
+/** The lcb_CMDN1QL::query member is an internal JSON structure. @internal */
 #define LCB_CMDN1QL_F_JSONQUERY 1<<17
 
 /**
@@ -326,7 +328,7 @@ lcb_n1p_mkcmd(lcb_N1QLPARAMS *params, lcb_CMDN1QL *cmd);
  * to target. When this flag is set, things like prepared queries and
  * parametrized statements will not work.
  *
- * @uncommited
+ * @uncommitted
  */
 #define LCB_CMDN1QL_F_CBASQUERY 1<<18
 

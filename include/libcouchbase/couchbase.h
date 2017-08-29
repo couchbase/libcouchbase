@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2012 Couchbase, Inc.
+ *     Copyright 2010-2017 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ struct lcb_st;
 
 /**
  * @ingroup lcb-init
- * Library handle representing a connection to a data bucket. The contents
+ * Library handle representing a connection to a cluster and its data buckets. The contents
  * of this structure are opaque.
  * @see lcb_create
  * @see lcb_destroy
@@ -154,7 +154,7 @@ typedef lcb_U32 lcb_USECS;
  *
  * ### Options
  *
- * @warning The key-value options here are considered to be a volatile interface
+ * @warning The key-value options here are considered to be an uncommitted interface
  * as their names may change.
  *
  * Options can be specified as the _query_ part of the connection string,
@@ -238,7 +238,7 @@ typedef enum {
 /**
  * @brief Type of the bucket
  *
- * @see https://developer.couchbase.com/documentation/server/5.0/architecture/core-data-access-buckets.html
+ * @see https://developer.couchbase.com/documentation/server/current/architecture/core-data-access-buckets.html
  */
 typedef enum {
     LCB_BTYPE_UNSPEC = 0x00,    /**< Unknown or unspecified */
@@ -283,8 +283,10 @@ struct lcb_create_st3 {
     lcb_type_t type;
 };
 
-/**@brief Wrapper structure for lcb_create()
- * @see lcb_create_st3 */
+/**
+ * @brief Wrapper structure for lcb_create()
+ * @see lcb_create_st3
+ */
 struct lcb_create_st {
     /** Indicates which field in the @ref lcb_CRST_u union should be used. Set this to `3` */
     int version;
@@ -496,10 +498,11 @@ typedef struct lcb_CMDBASE {
 } lcb_CMDBASE;
 
 /**
- * @private
  * Flag for lcb_CMDBASE::cmdflags which indicates that the lcb_CMDBASE::cookie
  * is a special callback object. This flag is used internally within the
  * library.
+ *
+ * @internal
  */
 #define LCB_CMD_F_INTERNAL_CALLBACK (1 << 0)
 
@@ -511,8 +514,6 @@ typedef struct lcb_CMDBASE {
 #define LCB_CMD_F_MULTIAUTH (1<<1)
 
 /**
- * @committed
- *
  * Set the key for the command.
  * @param cmd A command derived from lcb_CMDBASE
  * @param keybuf the buffer for the key
@@ -530,8 +531,6 @@ typedef struct lcb_CMDBASE {
         LCB_KREQ_SIMPLE(&(cmd)->key, keybuf, keylen)
 
 /**
- * @volatile
- *
  * Sets the vBucket ID for the item. This accomplishes the same effect as
  * _hashkey_ except that this assumes the vBucket has already been obtained.
  *
@@ -539,6 +538,7 @@ typedef struct lcb_CMDBASE {
  *
  * @param cmd the command structure
  * @param vbid the vBucket ID for the key.
+ * @volatile
  */
 #define LCB_CMD__SETVBID(cmd, vbid) do { \
         (cmd)->_hashkey.type = LCB_KV_VBID; \
@@ -590,7 +590,8 @@ typedef struct lcb_CMDBASE {
     lcb_CAS cas; /**< CAS for response (if applicable) */ \
     lcb_error_t rc; /**< Status code */ \
     lcb_U16 version; /**< ABI version for response */ \
-    lcb_U16 rflags; /**< Response specific flags. see ::lcb_RESPFLAGS */
+    /** Response specific flags. see ::lcb_RESPFLAGS */ \
+    lcb_U16 rflags;
 
 
 /**
@@ -607,7 +608,8 @@ typedef struct {
     /** String containing the `host:port` of the server which sent this response */ \
     const char *server;
 
-/**@brief Base structure for informational commands from servers
+/**
+ * @brief Base structure for informational commands from servers
  * This contains an additional lcb_RESPSERVERBASE::server field containing the
  * server which emitted this response.
  */
@@ -704,11 +706,10 @@ typedef enum {
 /** Callback type for N1QL (cannot be used for lcb_install_callback3()) */
 #define LCB_CALLBACK_N1QL -2
 
+/** Callback type for N1QL index management (cannot be used for lcb_install_callback3()) */
 #define LCB_CALLBACK_IXMGMT -3
 
 /**
- * @committed
- *
  * Callback invoked for responses.
  * @param instance The handle
  * @param cbtype The type of callback - or in other words, the type of operation
@@ -761,8 +762,6 @@ lcb_RESPCALLBACK
 lcb_get_callback3(lcb_t instance, int cbtype);
 
 /**
- * @committed
- *
  * Returns the type of the callback as a string.
  * This function is helpful for debugging and demonstrative processes.
  * @param cbtype the type of the callback (the second argument to the callback)
@@ -829,7 +828,7 @@ typedef struct {
     const void *value; /**< Value buffer for the item */
     lcb_SIZE nvalue; /**< Length of value */
     void* bufh;
-    lcb_datatype_t datatype; /**< @private */
+    lcb_datatype_t datatype; /**< @internal */
     lcb_U32 itmflags; /**< User-defined flags for the item */
 } lcb_RESPGET;
 
@@ -1645,7 +1644,7 @@ typedef struct {
     LCB_CMD_BASE;
     lcb_VALBUF value; /**< @see lcb_CMDSTORE::value */
     lcb_U32 flags; /**< @see lcb_CMDSTORE::flags */
-    lcb_datatype_t datatype; /**< @private */
+    lcb_datatype_t datatype; /**< @internal */
     lcb_storage_t operation; /**< @see lcb_CMDSTORE::operation */
 
     /**
@@ -1776,10 +1775,11 @@ typedef struct {
     lcb_U32 ttr; /**<Unused */
 } lcb_RESPOBSERVE;
 
-/**@committed
+/**
  * @brief Create a new multi context for an observe operation
  * @param instance the instance
  * @return a new multi command context, or NULL on allocation failure.
+ * @committed
  *
  * Note that the callback for this command will be invoked multiple times,
  * one for each node. To determine when no more callbacks will be invoked,
@@ -1969,7 +1969,8 @@ lcb_get_mutation_token(lcb_t instance, const lcb_KEYBUF *kb, lcb_error_t *errp);
 
 /**@} (Group: Mutation Tokens) */
 
-/**@ingroup lcb-kv-api
+/**
+ * @ingroup lcb-kv-api
  * @defgroup lcb-counter Counters
  * @brief Manipulate the numeric content of a document
  * @details Counter operations treat the document being accessed as a numeric
@@ -1980,7 +1981,8 @@ lcb_get_mutation_token(lcb_t instance, const lcb_KEYBUF *kb, lcb_error_t *errp);
  * @{
  */
 
-/**@brief Command for counter operations.
+/**
+ * @brief Command for counter operations.
  * @see lcb_counter3(), lcb_RESPCOUNTER.
  *
  * @warning You may only set the #exptime member if the #create member is set
@@ -2004,7 +2006,8 @@ typedef struct {
     int create;
 } lcb_CMDCOUNTER;
 
-/**@brief Response structure for counter operations
+/**
+ * @brief Response structure for counter operations
  * @see lcb_counter3()
  */
 typedef struct {
@@ -2269,14 +2272,17 @@ typedef struct {
     lcb_SIZE nversion; /**< Length of the version string */
 } lcb_RESPMCVERSION;
 
-/**@volatile*/
+/**
+ * @volatile
+ */
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_server_versions3(lcb_t instance, const void *cookie, const lcb_CMDBASE * cmd);
 
 /**@} (Name: MCversion) */
 
-/**@name Server Log Verbosity
+/**
+ * @name Server Log Verbosity
  * @{
  */
 
@@ -2302,7 +2308,8 @@ lcb_server_verbosity3(lcb_t instance, const void *cookie, const lcb_CMDVERBOSITY
 /**@} (Name: Verbosity) */
 /**@} (Group: Misc) */
 
-/**@ingroup lcb-public-api
+/**
+ * @ingroup lcb-public-api
  * @defgroup lcb-flush Flush
  * @brief Clear the contents of a bucket
  *
@@ -2353,7 +2360,8 @@ lcb_error_t
 lcb_flush3(lcb_t instance, const void *cookie, const lcb_CMDFLUSH *cmd);
 /**@} (Group: Flush) */
 
-/**@ingroup lcb-public-api
+/**
+ * @ingroup lcb-public-api
  * @defgroup lcb-noop NOOP
  * @brief Send NOOP command to server
  *
@@ -2378,7 +2386,8 @@ lcb_error_t
 lcb_noop3(lcb_t instance, const void *cookie, const lcb_CMDNOOP *cmd);
 /**@} (Group: NOOP) */
 
-/**@ingroup lcb-public-api
+/**
+ * @ingroup lcb-public-api
  * @defgroup lcb-ping PING
  * @brief Broadcast NOOP-like commands to each service in the cluster
  *
@@ -2596,14 +2605,14 @@ typedef enum {
 #define LCB_CMDHTTP_F_STREAM 1<<16
 
 /**
- * @private
+ * @internal
  * If specified, the lcb_CMDHTTP::cas field becomes the timeout for this
  * specific request.
  */
 #define LCB_CMDHTTP_F_CASTMO 1<<17
 
 /**
- * @private
+ * @internal
  * Do not inject authentication header into the request.
  */
 #define LCB_CMDHTTP_F_NOUPASS 1<<18
@@ -2672,7 +2681,7 @@ typedef struct {
     const void *body;
     /** Length of buffer in #body */
     lcb_SIZE nbody;
-    /**@private*/
+    /**@internal*/
     lcb_http_request_t _htreq;
 } lcb_RESPHTTP;
 
@@ -2762,7 +2771,8 @@ void
 lcb_cancel_http_request(lcb_t instance, lcb_http_request_t request);
 /**@} (Group: HTTP) */
 
-/**@ingroup lcb-public-api
+/**
+ * @ingroup lcb-public-api
  * @defgroup lcb-cookie User Cookies
  * @brief Associate user-defined data with operations
  * @details
@@ -3223,10 +3233,10 @@ void lcb_destroy_async(lcb_t instance, const void *arg);
 
 /**@}*/
 
-/** @private */
+/** @internal */
 #define LCB_DATATYPE_JSON 0x01
 
-/** @private */
+/** @internal */
 typedef enum { LCB_VALUE_RAW = 0x00, LCB_VALUE_F_JSON = 0x01, LCB_VALUE_F_SNAPPYCOMP } lcb_VALUEFLAGS;
 
 
@@ -3788,7 +3798,7 @@ LIBCOUCHBASE_API
 void lcb_mem_free(void *ptr);
 
 /**
- * @private
+ * @internal
  *
  * These two functions unconditionally start and stop the event loop. These
  * should be used _only_ when necessary. Use lcb_wait and lcb_breakout
@@ -3799,11 +3809,11 @@ void lcb_mem_free(void *ptr);
 LCB_INTERNAL_API
 void lcb_run_loop(lcb_t instance);
 
-/** @private */
+/** @internal */
 LCB_INTERNAL_API
 void lcb_stop_loop(lcb_t instance);
 
-/** @private */
+/** @internal */
 /* This returns the library's idea of time */
 LCB_INTERNAL_API
 lcb_U64 lcb_nstime(void);
@@ -3819,34 +3829,34 @@ typedef enum {
     LCB_DUMP_ALL = 0xff
 } lcb_DUMPFLAGS;
 
-/** Internal histogram APIs, used by pillowfight and others */
+/** Volatile histogram APIs, used by pillowfight and others */
 struct lcb_histogram_st;
 typedef struct lcb_histogram_st lcb_HISTOGRAM;
 
 /**
- * @private
+ * @volatile
  * Create a histogram structure
  * @return a new histogram structure
  */
-LCB_INTERNAL_API
+LIBCOUCHBASE_API
 lcb_HISTOGRAM *
 lcb_histogram_create(void);
 
 /**
- * @private free a histogram structure
+ * @volatile free a histogram structure
  * @param hg the histogram
  */
-LCB_INTERNAL_API
+LIBCOUCHBASE_API
 void
 lcb_histogram_destroy(lcb_HISTOGRAM *hg);
 
 /**
- * @private
+ * @volatile
  * Add an entry to a histogram structure
  * @param hg the histogram
  * @param duration the duration in nanoseconds
  */
-LCB_INTERNAL_API
+LIBCOUCHBASE_API
 void
 lcb_histogram_record(lcb_HISTOGRAM *hg, lcb_U64 duration);
 
@@ -3855,13 +3865,13 @@ typedef void (*lcb_HISTOGRAM_CALLBACK)
                 lcb_U32 total, lcb_U32 maxtotal);
 
 /**
- * @private
+ * @volatile
  * Repeatedly invoke a callback for all entries in the histogram
  * @param hg the histogram
  * @param cookie pointer passed to callback
  * @param cb callback to invoke
  */
-LCB_INTERNAL_API
+LIBCOUCHBASE_API
 void
 lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie,
     lcb_HISTOGRAM_CALLBACK cb);
@@ -3876,7 +3886,7 @@ lcb_histogram_read(const lcb_HISTOGRAM *hg, const void *cookie,
  * @param hg the histogram
  * @param stream File to print the histogram to.
  */
-LCB_INTERNAL_API
+LIBCOUCHBASE_API
 void lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream);
 
 /**
@@ -3895,7 +3905,7 @@ const char *
 lcb_resp_get_error_context(int cbtype, const lcb_RESPBASE *rb);
 
 /**
- * @volatile
+ * @uncommitted
  *
  * Retrieves the error reference id from the response structure.
  *

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2013 Couchbase, Inc.
+ *     Copyright 2017 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -174,10 +174,9 @@ extern "C" {
  *  * LCB_BTYPE_EPHEMERAL
  *  * LCB_BTYPE_MEMCACHED
  *
- * @see https://developer.couchbase.com/documentation/server/5.0/architecture/core-data-access-buckets.html
+ * @see https://developer.couchbase.com/documentation/server/current/architecture/core-data-access-buckets.html
  *
  * @cntl_arg_getonly{lcb_BTYPE*}
- * @uncommitted
  */
 #define LCB_CNTL_BUCKETTYPE             0x48
 
@@ -187,7 +186,6 @@ extern "C" {
  * LCB_TYPE_BUCKET
  *
  * @cntl_arg_getonly{lcb_type_t*}
- * @uncommitted
  */
 #define LCB_CNTL_HANDLETYPE             0x04
 
@@ -195,7 +193,6 @@ extern "C" {
  * Obtains the current cluster configuration from the client.
  *
  * @cntl_arg_getonly{lcbvb_CONFIG**}
- * @uncommitted
  */
 #define LCB_CNTL_VBCONFIG               0x05
 
@@ -238,7 +235,6 @@ typedef struct lcb_cntl_vbinfo_st {
  * update is requested again.
  *
  * @cntl_arg_both{lcb_SIZE*}
- * @uncommitted
  */
 #define LCB_CNTL_CONFERRTHRESH          0x0c
 
@@ -339,7 +335,6 @@ typedef struct lcb_cntl_vbinfo_st {
  * libcouchbase API, after which it may have been freed.
  *
  * @cntl_arg_get_and_set{char**, char*}
- * @uncommitted
  */
 #define LCB_CNTL_FORCE_SASL_MECH 0x16
 
@@ -376,7 +371,6 @@ struct lcb_logprocs_st;
 /**
  * @brief Logger callback
  *
- * @uncommitted
  *
  * This callback is invoked for each logging message emitted
  * @param procs the logging structure provided
@@ -394,7 +388,7 @@ typedef void (*lcb_logging_callback)(struct lcb_logprocs_st *procs,
 
 /**
  * @brief Logging context
- * @uncommitted
+ * @volatile
  *
  * This structure defines the logging handlers. Currently there is only
  * a single field defined which is the default callback for the loggers.
@@ -431,13 +425,14 @@ typedef struct lcb_logprocs_st {
  *
  * @cntl_arg_both{lcb_U32*}
  * @see LCB_CNTL_CONFERRTHRESH
- * @uncommitted
  */
 #define LCB_CNTL_CONFDELAY_THRESH 0x19
 
-/**@brief Get the transport used to fetch cluster configuration.
+/**
+ * @brief Get the transport used to fetch cluster configuration.
  * @cntl_arg_getonly{lcb_config_transport_t*}
- * @uncommitted*/
+ * @uncommitted
+ */
 #define LCB_CNTL_CONFIG_TRANSPORT 0x1A
 
 /**
@@ -484,19 +479,22 @@ typedef struct lcb_logprocs_st {
  */
 #define LCB_CNTL_HTCONFIG_IDLE_TIMEOUT 0x1C
 
-/**@brief Get the current SCM changeset for the library binary
+/**
+ * @brief Get the current SCM changeset for the library binary
  * @cntl_arg_getonly{char**}
- * @committed*/
+ */
 #define LCB_CNTL_CHANGESET 0x1F
 
 /**
- * @brief file used for the configuration cache.
+ * @brief File used for the configuration cache.
  *
  * The configuration
  * cache allows to bootstrap from a cluster without using the initial
  * bootstrap connection, considerably reducing latency. If the file passed
  * does not exist, the normal bootstrap process is performed and the file
- * is written to with the current information.
+ * is written to with the current information.  File will be updated as
+ * the configuration in the cluster changes.  Multiple instances may race
+ * to update the file, and that is the intended behavior.
  *
  * @note The leading directories for the file must exist, otherwise the file
  * will never be created.
@@ -545,12 +543,14 @@ typedef enum {
  * @see LCB_CNTL_SSL_MODE
  */
 #define LCB_CNTL_SSL_CERT 0x23
-/* For back compat */
+/**
+ * Alias for @ref LCB_CNTL_SSL_CERT for backward compatibility.
+ * @deprecated
+ */
 #define LCB_CNTL_SSL_CACERT LCB_CNTL_SSL_CERT
 
 /**
- * @brief
- * Select retry mode to manipulate
+ * @brief Select retry mode to manipulate
  */
 typedef enum {
     LCB_RETRY_ON_TOPOCHANGE = 0, /**< Select retry for topology */
@@ -593,7 +593,9 @@ typedef enum {
  */
 #define LCB_RETRYOPT_CREATE(mode, policy) (((mode) << 16) | policy)
 
+/** Get mode from retry setting value */
 #define LCB_RETRYOPT_GETMODE(u) (u) >> 16
+/** Get policy from retry setting value */
 #define LCB_RETRYOPT_GETPOLICY(u) (u) & 0xffff
 
 /**
@@ -653,9 +655,6 @@ typedef enum {
 } lcb_HTCONFIG_URLTYPE;
 
 /**
- * @volatile - Primarily here to support tests and buggy HTTP servers/proxies
- * which do not like to maintain a connection upon receipt of a 404.
- *
  * @brief Set the URL selection mode.
  *
  * The URL type can be a mask of the lcb_HTCONFIG_URLTYPE constants which
@@ -670,11 +669,13 @@ typedef enum {
  * This setting is only used when CCCP is disabled. This will typically be for
  * older clusters or for memcached buckets.
  * @cntl_arg_both{`int*` (value is one of @ref lcb_HTCONFIG_URLTYPE)}
+
+ * @volatile Primarily here to support tests and buggy HTTP servers/proxies
+ * which do not like to maintain a connection upon receipt of a 404.
  */
 #define LCB_CNTL_HTCONFIG_URLTYPE 0x25
 
 /**
- * @volatile
  * Determines whether to run the event loop internally within lcb_destroy()
  * until no more I/O resources remain for the library. This is usually only
  * necessary if you are creating a lot of instances and/or are using memory
@@ -682,12 +683,11 @@ typedef enum {
  *
  * @cntl_arg_both{`int*` (as a boolean)}
  * @see lcb_destroy_async() and lcb_set_destroy_callback()
+ * @volatile
  */
 #define LCB_CNTL_SYNCDESTROY 0x28
 
 /**
- * @committed
- *
  * Sets the logging level for the console logger. If a logger is already
  * initialized (either from the environment, or via lcb_cntl_logger() then
  * this operation does nothing.
@@ -706,7 +706,6 @@ typedef enum {
 #define LCB_CNTL_CONLOGGER_LEVEL 0x29
 
 /**
- * @uncommitted
  *
  * Sets the output file (as a `FILE*`) for the console logger. Note that
  * any existing file pointer will be cleared (but not `fclose()`d.
@@ -726,8 +725,6 @@ typedef enum {
 #define LCB_CNTL_CONLOGGER_FP 0x3B
 
 /**
- * @committed
- *
  * Sets the behavior for reporting network errors. By default network errors
  * are returned as `LCB_NETWORK_ERROR` return codes for compatibility reasons.
  * More detailed error codes may be available by enabling this option which will
@@ -742,7 +739,6 @@ typedef enum {
 #define LCB_CNTL_DETAILED_ERRCODES 0x2A
 
 /**
- * @uncommitted
  *
  * Sets the interval at which the retry queue will attempt to resend a failed
  * operation. When an operation fails and the retry policy (see
@@ -760,7 +756,6 @@ typedef enum {
 #define LCB_CNTL_RETRY_INTERVAL 0x2C
 
 /**
- * @uncommitted
  *
  * When an operation has been retried more than once and it has still not
  * succeeded, the library will attempt to back off for the operation by
@@ -772,7 +767,6 @@ typedef enum {
 #define LCB_CNTL_RETRY_BACKOFF 0x2D
 
 /**
- * @volatile
  * Whether commands are retried immediately upon receipt of not-my-vbucket
  * replies.
  *
@@ -782,22 +776,22 @@ typedef enum {
  * and @ref LCB_CNTL_RETRY_BACKOFF settings. Disabling this setting will
  * restore the older behavior. This may be used in case there are problems
  * with the default heuristic/retry algorithm.
+ *
+ * @volatile
  */
 #define LCB_CNTL_RETRY_NMV_IMM 0x37
 
 /**
- * @volatile
- *
  * Set the maximum pool size for pooled http (view request) sockets. This should
  * be set to 1 (the default) unless you plan to execute concurrent view requests.
  * You may set this to 0 to disable pooling
  *
  * @cntl_arg_both{lcb_SIZE}
+ * @volatile
  */
 #define LCB_CNTL_HTTP_POOLSIZE 0x2E
 
 /**
- * @uncomitted
  * Determine whether or not a new configuration should be received when an error
  * is received over the HTTP API (i.e. via lcb_make_http_request().
  *
@@ -805,24 +799,24 @@ typedef enum {
  * expectedly issuing a lot of requests which may result in an error.
  *
  * @cntl_arg_both{int (as boolean)}
+ * @uncommitted
  */
 #define LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR 0x2F
 
 /**
- * @volatile
  * Set the behavior of the lcb_sched_leave() API call. By default the
  * lcb_sched_leave() will also set up the necessary requirements for flushing
  * to the network. If this option is off then an explicit call to
  * lcb_sched_flush() must be performed instead.
  *
  * @cntl_arg_both{int (as boolean)}
+ * @volatile
  */
 #define LCB_CNTL_SCHED_IMPLICIT_FLUSH 0x31
 
 /**
- * @volatile
  *
- * Allow the server to return an additional 16 bytes of data for each
+ * Request the server to return an additional 16 bytes of data for each
  * mutation operation. This extra information may help with more reliable
  * durability polling, but will also increase the size of the response packet.
  *
@@ -835,8 +829,6 @@ typedef enum {
 #define LCB_CNTL_FETCH_MUTATION_TOKENS 0x34
 
 /**
- * @volatile
- *
  * This setting determines whether the lcb_durability_poll() function will
  * transparently attempt to use mutation token functionality (rather than checking
  * the CAS). This option is most useful for older code which does
@@ -852,24 +844,23 @@ typedef enum {
  * function.
  *
  * @cntl_arg_both{int (as boolean)}
+ * @volatile
  */
 #define LCB_CNTL_DURABILITY_MUTATION_TOKENS 0x35
 
 /**
- * @volatile
- *
  * This read-only property determines if the mutation token mechanism is supported
  * on the cluster itself. This will only be accurate once a single operation
  * has been performed on the cluster - or in other words, once a connection
  * to a data node has been established for the purposes of normal operations.
  *
  * @cntl_arg_getonly{int (as boolean)}
+ * @uncommitted
  */
 #define LCB_CNTL_MUTATION_TOKENS_SUPPORTED 0x38
 
 
 /**
- * @uncommitted
  * This setting determines if calls to lcb_wait() and lcb_wait3() will reset
  * the timeout of pending operations to the time that lcb_wait() was called,
  * rather than having the operation maintain the time of the call which
@@ -878,21 +869,21 @@ typedef enum {
  * avoid prematurely having operations time out.
  *
  * @cntl_arg_both{int (as boolean)}
+ * @uncommitted
  *
  * Use `"readj_wait_tmo"` for the string version
  */
 #define LCB_CNTL_RESET_TIMEOUT_ON_WAIT 0x3A
 
 /**
- * @volatile
  * Clears the internal prepared statement cache for N1QL
  *
  * This does not take any arguments, and is valid only on @ref LCB_CNTL_SET
+ * @uncommitted
  */
 #define LCB_CNTL_N1QL_CLEARACHE 0x3E
 
 /**
- * @committed
  * Sets additional text for negotiation. This allows wrappers or applications
  * to add additional identifying information which can then be seen in the
  * server logs.
@@ -918,12 +909,11 @@ typedef const char *lcb_BUCKETCRED[2];
 /**
  * Set the amount of time the client should wait before retrying a
  * not-my-vbucket response packet. The default is 100ms. The value should
- * be specified in microseconds
- *
- * @committed
- * @cntl_arg_both{lcb_U32*}
+ * be specified in microseconds.
  *
  * Use `"retry_nmv_interval"` with lcb_cntl_string()
+ *
+ * @cntl_arg_both{lcb_U32*}
  */
 #define LCB_CNTL_RETRY_NMV_INTERVAL 0x41
 
@@ -935,7 +925,6 @@ typedef const char *lcb_BUCKETCRED[2];
  * @note This setting only works for event-style I/O plugins. This means it
  * has no effect on completion style plugins such as libuv or Windows IOCP
  *
- * @committed
  * @cntl_arg_both{lcb_U32*}
  */
 #define LCB_CNTL_READ_CHUNKSIZE 0x42
@@ -946,7 +935,6 @@ typedef const char *lcb_BUCKETCRED[2];
  *
  * Use `enable_errmap` in the connection string
  *
- * @volatile
  * @cntl_arg_both{int* (as boolean)}
  */
 #define LCB_CNTL_ENABLE_ERRMAP 0x43
@@ -961,7 +949,6 @@ typedef const char *lcb_BUCKETCRED[2];
  *
  * Use `select_bucket` in the connection string
  *
- * @volatile
  * @cntl_arg_both{int* (as boolean)}
  */
 #define LCB_CNTL_SELECT_BUCKET 0x44
@@ -972,7 +959,6 @@ typedef const char *lcb_BUCKETCRED[2];
  *
  * The keepalive interval will be set to the operating system default.
  *
- * @committed
  * @cntl_arg_both{int* (as boolean)}
  */
 #define LCB_CNTL_TCP_KEEPALIVE 0x45
@@ -986,7 +972,6 @@ typedef const char *lcb_BUCKETCRED[2];
  * This option facilitates 'fast failover' - in that the client can preemptively
  * check for any cluster topology updates before encountering an error.
  *
- * @volatile
  * @cntl_arg_both{lcb_U32*}
  *
  * The value for this option is a time value. See the top of this header
@@ -1014,14 +999,17 @@ typedef const char *lcb_BUCKETCRED[2];
  * servers don't understand anyway). To disable the sending of hello, set this
  * value to false.
  *
- * @uncommitted
  * @cntl_arg_both{int* (as boolean)}
+ * @committed
  *
  * You can also use `send_hello=false` in the connection string.
  */
 #define LCB_CNTL_SEND_HELLO 0x47
 
-/** This is not a command, but rather an indicator of the last item */
+/**
+ * This is not a command, but rather an indicator of the last item.
+ * @internal
+ */
 #define LCB_CNTL__MAX                    0x49
 /**@}*/
 
