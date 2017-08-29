@@ -73,14 +73,25 @@ extern "C" {
  * pointer types depending on whether the `mode` is retrieval or storage.
  *
  *
- * @section lcb-timeout-info Timeout Settings
+ * @section lcb-time-info Timeout and Time Value Settings
+ *
+ * There are various settings on the library that control behavior with
+ * respect to wall clock time.
  *
  * Timeout settings control how long the library will wait for a certain event
  * before proceeding to the next course of action (which may either be to try
  * a different operation or fail the current one, depending on the specific
  * timeout).
  *
- * Timeouts are specified in _microseconds_ stored within an `lcb_U32`.
+ * Other settings may configure how often the library proactively polls for
+ * a configuration update, retries various interally retried operations and
+ * so forth.
+ *
+ * Time values are specified in _microseconds_ stored within an `lcb_U32`.
+ *
+ * When specified as an argument to lcb_cntl_string() or through the connection
+ * string, it will be parsed from a string float value where the integer-part
+ * is in seconds and the fractional-part is in fractions of a second.
  *
  * Note that timeouts in libcouchbase are implemented via an event loop
  * scheduler. As such their accuracy and promptness is limited by how
@@ -133,7 +144,7 @@ extern "C" {
  *
  * @cntl_arg_both{lcbU32*}
  * @committed
- * @see lcb-timeout-info
+ * @see lcb-time-info
  */
 #define LCB_CNTL_OP_TIMEOUT             0x00
 
@@ -240,7 +251,7 @@ typedef struct lcb_cntl_vbinfo_st {
 
 /**
  * @brief Default timeout for lcb_durability_poll()
- * @ingroup lcb-timeout-info
+ * @ingroup lcb-time-info
  *
  * This is the time the client will
  * spend sending repeated probes to a given key's vBucket masters and replicas
