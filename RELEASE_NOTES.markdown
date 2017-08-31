@@ -1,5 +1,48 @@
 # Release Notes
 
+## 2.8.0 (August 31 2017)
+
+* Add support for OpenSSL-1.1.
+  * Issues: [CCBC-832](https://issues.couchbase.com/browse/CCBC-832)
+
+* Mask `LOCKED` status code for backward compatibility. This code
+  (as well as others possible codes with 'item-locked' attribute)
+  replaced with `LCB_KEY_EEXISTS` for `SET`, `REPLACE` and `DELETE`
+  operations, and with `LCB_ETMPFAIL` for the rest.
+  * Issues: [CCBC-832](https://issues.couchbase.com/browse/CCBC-832)
+
+* Stop enumerating bootstrap nodes and mechanisms when the server
+  returns authentication error.
+  * Issues: [CCBC-825](https://issues.couchbase.com/browse/CCBC-825)
+
+* Fixed double free error with `lcb_ping3`.
+  * Issues: [CCBC-826](https://issues.couchbase.com/browse/CCBC-826)
+
+* Exposed additional N1QL query parameters: `lcb_n1p_readonly`,
+  `lcb_n1p_scancap`, `lcb_n1p_pipelinecap`.
+  * Issues: [CCBC-823](https://issues.couchbase.com/browse/CCBC-823)
+
+* Fixed `cbc-subdoc/upsert` without XATTR.
+  * Issues: [CCBC-823](https://issues.couchbase.com/browse/CCBC-823)
+
+* XERROR attributes synchronized with recent list on server.
+  * Issues: [CCBC-828](https://issues.couchbase.com/browse/CCBC-828)
+
+* Add missing documentation, and update stability of the API.
+  * Issues:
+  [CCBC-830](https://issues.couchbase.com/browse/CCBC-830),
+  [CCBC-831](https://issues.couchbase.com/browse/CCBC-831),
+  [CCBC-827](https://issues.couchbase.com/browse/CCBC-827)
+
+* Do not throttle background configuration polling by throttle interval
+  of configuration error handler.
+  * Issues: [CCBC-829](https://issues.couchbase.com/browse/CCBC-829)
+
+* Turn on background polling by default. The library will try
+  to schedule configuration update every 2.5 seconds. To disable it
+  use `config_poll_interval=0`.
+  * Issues: [CCBC-836](https://issues.couchbase.com/browse/CCBC-836)
+
 ## 2.7.7 (August 17 2017)
 
 * Implement new function `lcb_ping3`, which sends NOOP-like message to
