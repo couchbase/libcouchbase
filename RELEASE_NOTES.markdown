@@ -3,7 +3,7 @@
 ## 2.8.0 (August 31 2017)
 
 * Add support for OpenSSL-1.1.
-  * Issues: [CCBC-832](https://issues.couchbase.com/browse/CCBC-832)
+  * Issues: [CCBC-814](https://issues.couchbase.com/browse/CCBC-814)
 
 * Mask `LOCKED` status code for backward compatibility. This code
   (as well as others possible codes with 'item-locked' attribute)
