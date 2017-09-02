@@ -1069,11 +1069,11 @@ extern "C" {
 static void n1qlCallback(lcb_t, int, const lcb_RESPN1QL *resp)
 {
     if (resp->rflags & LCB_RESP_F_FINAL) {
-        fprintf(stderr, "** N1QL Response finished\n");
+        fprintf(stderr, "---> Query response finished\n");
         if (resp->rc != LCB_SUCCESS) {
-            fprintf(stderr, "N1QL query failed with library code 0x%x\n", resp->rc);
+            fprintf(stderr, "---> Query failed with library code 0x%x (%s)\n", resp->rc, lcb_strerror(NULL, resp->rc));
             if (resp->htresp) {
-                fprintf(stderr, "Inner HTTP request failed with library code 0x%x and HTTP status %d\n",
+                fprintf(stderr, "---> Inner HTTP request failed with library code 0x%x and HTTP status %d\n",
                     resp->htresp->rc, resp->htresp->htstatus);
             }
         }
@@ -1129,7 +1129,10 @@ N1qlHandler::run()
     if (o_prepare.passed()) {
         cmd.cmdflags |= LCB_CMDN1QL_F_PREPCACHE;
     }
-    fprintf(stderr, "Encoded query: %.*s\n", (int)cmd.nquery, cmd.query);
+    if (o_analytics.passed()) {
+        cmd.cmdflags |= LCB_CMDN1QL_F_CBASQUERY;
+    }
+    fprintf(stderr, "---> Encoded query: %.*s\n", (int)cmd.nquery, cmd.query);
     cmd.callback = n1qlCallback;
     rc = lcb_n1ql_query(instance, NULL, &cmd);
     if (rc != LCB_SUCCESS) {
@@ -1547,7 +1550,7 @@ static const char* optionsOrder[] = {
         "version",
         "verbosity",
         "view",
-        "n1ql",
+        "query",
         "admin",
         "bucket-create",
         "bucket-delete",
@@ -1638,7 +1641,7 @@ setupHandlers()
     handlers_s["bucket-delete"] = new BucketDeleteHandler();
     handlers_s["bucket-flush"] = new BucketFlushHandler();
     handlers_s["view"] = new ViewsHandler();
-    handlers_s["n1ql"] = new N1qlHandler();
+    handlers_s["query"] = new N1qlHandler();
     handlers_s["connstr"] = new ConnstrHandler();
     handlers_s["write-config"] = new WriteConfigHandler();
     handlers_s["strerror"] = new StrErrorHandler();
@@ -1655,6 +1658,7 @@ setupHandlers()
     }
 
     handlers["cat"] = handlers["get"];
+    handlers["n1ql"] = handlers["query"];
 }
 
 #if _POSIX_VERSION >= 200112L

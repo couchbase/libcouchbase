@@ -155,9 +155,6 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
     // How many rows were received. Used to avoid parsing the meta
     size_t nrows;
 
-    // Host for CBAS/Analytics query
-    std::string cbashost;
-
     /** The PREPARE query itself */
     struct lcb_N1QLREQ *prepare_req;
 
@@ -170,6 +167,9 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
 
     /** Whether we're retrying this */
     bool was_retried;
+
+    /** Is this query to Analytics (CBAS) service */
+    bool is_cbas;
 
     lcb_N1QLCACHE& cache() { return *instance->n1ql_cache; }
 
@@ -229,10 +229,6 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
      * @param err The error code
      */
     inline void fail_prepared(const lcb_RESPN1QL *orig, lcb_error_t err);
-
-    bool is_cbas() const {
-        return !cbashost.empty();
-    }
 
     inline lcb_N1QLREQ(lcb_t obj, const void *user_cookie, const lcb_CMDN1QL *cmd);
     inline ~lcb_N1QLREQ();
@@ -458,8 +454,6 @@ chunk_callback(lcb_t instance, int ign, const lcb_RESPBASE *rb)
     req->parser->feed(static_cast<const char*>(rh->body), rh->nbody);
 }
 
-#define QUERY_PATH "/query/service"
-
 void
 N1QLREQ::fail_prepared(const lcb_RESPN1QL *orig, lcb_error_t err)
 {
@@ -523,9 +517,8 @@ N1QLREQ::issue_htreq(const std::string& body)
     htcmd.content_type = "application/json";
     htcmd.method = LCB_HTTP_METHOD_POST;
 
-    if (is_cbas()) {
-        htcmd.type = LCB_HTTP_TYPE_RAW;
-        htcmd.host = cbashost.c_str();
+    if (is_cbas) {
+        htcmd.type = LCB_HTTP_TYPE_CBAS;
     } else {
         htcmd.type = LCB_HTTP_TYPE_N1QL;
     }
@@ -607,7 +600,7 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
       parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_N1QL, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj),
       lasterr(LCB_SUCCESS), flags(cmd->cmdflags), timeout(0),
-      nrows(0), prepare_req(NULL), was_retried(false)
+      nrows(0), prepare_req(NULL), was_retried(false), is_cbas(false)
 {
     if (cmd->handle) {
         *cmd->handle = this;
@@ -621,19 +614,11 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
     }
 
     if (flags & LCB_CMDN1QL_F_CBASQUERY) {
-        if (!cmd->host) {
-            lasterr = LCB_EINVAL;
-            return;
-        }
-        cbashost.assign(cmd->host);
-        if (cbashost.empty()) {
-            lasterr = LCB_EINVAL;
-            return;
-        }
-        if (flags & LCB_CMDN1QL_F_PREPCACHE) {
-            lasterr = LCB_OPTIONS_CONFLICT;
-            return;
-        }
+        is_cbas = true;
+    }
+    if (is_cbas && (flags & LCB_CMDN1QL_F_PREPCACHE)) {
+        lasterr = LCB_OPTIONS_CONFLICT;
+        return;
     }
 
     const Json::Value& j_statement = json_const()["statement"];

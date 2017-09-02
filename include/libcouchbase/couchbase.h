@@ -2576,6 +2576,9 @@ typedef enum {
     /** Search a fulltext index */
     LCB_HTTP_TYPE_FTS = 4,
 
+    /** Execute an Analytics Query */
+    LCB_HTTP_TYPE_CBAS = 5,
+
     LCB_HTTP_TYPE_MAX
 } lcb_http_type_t;
 

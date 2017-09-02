@@ -329,6 +329,7 @@ extract_services(lcbvb_CONFIG *cfg, cJSON *jsvc, lcbvb_SERVICES *svc, int is_ssl
     EXTRACT_SERVICE("fts", fts);
     EXTRACT_SERVICE("indexAdmin", ixadmin);
     EXTRACT_SERVICE("indexScan", ixquery);
+    EXTRACT_SERVICE("cbas", cbas);
 
     #undef EXTRACT_SERVICE
 
@@ -359,6 +360,9 @@ build_server_strings(lcbvb_CONFIG *cfg, lcbvb_SERVER *server)
     }
     if (server->ftspath == NULL && server->svc.fts) {
         server->ftspath = strdup("/");
+    }
+    if (server->cbaspath == NULL && server->svc.cbas) {
+        server->cbaspath = strdup("/query/service");
     }
     return 1;
 }
@@ -710,6 +714,7 @@ free_service_strs(lcbvb_SERVICES *svc)
     free(svc->views_base_);
     free(svc->query_base_);
     free(svc->fts_base_);
+    free(svc->cbas_base_);
 }
 
 void
@@ -722,6 +727,7 @@ lcbvb_destroy(lcbvb_CONFIG *conf)
         free(srv->viewpath);
         free(srv->querypath);
         free(srv->ftspath);
+        free(srv->cbaspath);
         free_service_strs(&srv->svc);
         free_service_strs(&srv->svc_ssl);
     }
@@ -1145,6 +1151,8 @@ lcbvb_get_port(lcbvb_CONFIG *cfg,
         return svc->n1ql;
     } else if (type == LCBVB_SVCTYPE_FTS) {
         return svc->fts;
+    } else if (type == LCBVB_SVCTYPE_CBAS) {
+        return svc->cbas;
     } else {
         return 0;
     }
@@ -1220,7 +1228,8 @@ lcbvb_get_randhost_ex(const lcbvb_CONFIG *cfg,
                 (type == LCBVB_SVCTYPE_MGMT && svcs->mgmt) ||
                 (type == LCBVB_SVCTYPE_N1QL && svcs->n1ql) ||
                 (type == LCBVB_SVCTYPE_FTS && svcs->fts) ||
-                (type == LCBVB_SVCTYPE_VIEWS && svcs->views);
+                (type == LCBVB_SVCTYPE_VIEWS && svcs->views) ||
+                (type == LCBVB_SVCTYPE_CBAS && svcs->cbas);
 
         if (has_svc) {
             cfg->randbuf[oix++] = (int)nn;
@@ -1281,6 +1290,9 @@ lcbvb_get_resturl(lcbvb_CONFIG *cfg, unsigned ix,
     } else if (svc == LCBVB_SVCTYPE_FTS) {
         path = srv->ftspath;
         strp = &svcs->fts_base_;
+    } else if (svc == LCBVB_SVCTYPE_CBAS) {
+        path = srv->cbaspath;
+        strp = &svcs->cbas_base_;
     } else {
         /* Unknown service! */
         return NULL;
@@ -1339,6 +1351,9 @@ copy_service(const char *hostname,
     }
     if (src->fts_base_) {
         dst->fts_base_ = strdup(src->fts_base_);
+    }
+    if (src->cbas_base_) {
+        dst->cbas_base_ = strdup(src->cbas_base_);
     }
     if (dst->data) {
         sprintf(buf, "%s:%d", hostname, dst->data);
@@ -1430,6 +1445,9 @@ lcbvb_genconfig_ex(lcbvb_CONFIG *vb,
         }
         if (src->ftspath) {
             dst->ftspath = strdup(src->ftspath);
+        }
+        if (src->cbaspath) {
+            dst->cbaspath = strdup(src->cbaspath);
         }
 
         copy_service(src->hostname, &src->svc, &dst->svc);

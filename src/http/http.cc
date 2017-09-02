@@ -368,6 +368,8 @@ httype2svctype(unsigned httype)
         return LCBVB_SVCTYPE_N1QL;
     case LCB_HTTP_TYPE_FTS:
         return LCBVB_SVCTYPE_FTS;
+    case LCB_HTTP_TYPE_CBAS:
+        return LCBVB_SVCTYPE_CBAS;
     default:
         return LCBVB_SVCTYPE__MAX;
     }

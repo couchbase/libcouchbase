@@ -78,7 +78,8 @@ struct Request {
     bool is_data_request() const {
         return reqtype == LCB_HTTP_TYPE_N1QL ||
                 reqtype == LCB_HTTP_TYPE_VIEW ||
-                reqtype == LCB_HTTP_TYPE_FTS;
+                reqtype == LCB_HTTP_TYPE_FTS ||
+                reqtype == LCB_HTTP_TYPE_CBAS;
     }
 
     /**
