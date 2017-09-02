@@ -542,8 +542,7 @@ lcbvb_load_json(lcbvb_CONFIG *cfg, const char *data)
     {
         cJSON *jcaps = NULL;
         if (get_jarray(cj, "bucketCapabilities", &jcaps)) {
-            int ncaps = cJSON_GetArraySize(jcaps);
-            int ii;
+            unsigned ncaps = cJSON_GetArraySize(jcaps);
             for (ii = 0; ii < ncaps; ii++) {
                 cJSON *jcap = cJSON_GetArrayItem(jcaps, ii);
                 if (jcap || jcap->type == cJSON_String) {

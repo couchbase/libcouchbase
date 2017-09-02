@@ -289,8 +289,8 @@ void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
 
     if (err != LCB_SUCCESS) {
         /** If the connection failed, fail out all remaining requests */
-        lcb_list_t *cur, *next;
-        LCB_LIST_SAFE_FOR(cur, next, (lcb_list_t *)&parent->requests) {
+        lcb_list_t *cur, *nxt;
+        LCB_LIST_SAFE_FOR(cur, nxt, (lcb_list_t *)&parent->requests) {
             PoolRequest *req = PoolRequest::from_llnode(cur);
             lcb_clist_delete(&parent->requests, req);
             req->sock = NULL;

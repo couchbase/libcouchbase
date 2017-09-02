@@ -434,8 +434,8 @@ lcbio_connect(lcbio_TABLE *iot, lcb_settings *settings, const lcb_host_t *dest,
 
 Connstart::Connstart(lcbio_TABLE* iot_, lcb_settings* settings_,
                     const lcb_host_t *dest, uint32_t timeout,
-                    lcbio_CONNDONE_cb handler, void *arg)
-    : user_handler(handler), user_arg(arg), sock(NULL), syserr(0),
+                    lcbio_CONNDONE_cb handler_, void *arg)
+    : user_handler(handler_), user_arg(arg), sock(NULL), syserr(0),
       event(NULL), ev_active(false), in_uhandler(false),
       ai_root(NULL), ai(NULL), state(CS_PENDING), last_error(LCB_SUCCESS),
       timer(iot_, this) {
