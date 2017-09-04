@@ -152,7 +152,7 @@ void ErrmapUnitTest::checkRetryVerify(uint16_t errcode) {
 #ifdef __APPLE__
     // FIXME: on Jenkins OSX actual expected time does not match actual and mock raises exception like following:
     // VerificationException: Not enough/too many retries. Last TS=1498594892704. Last expected=1498594892728. Diff=24. MaxDiff=20
-    verifyCmd.set("fuzz_ms", 26);
+    verifyCmd.set("fuzz_ms", 30);
 #else
     verifyCmd.set("fuzz_ms", 20);
 #endif

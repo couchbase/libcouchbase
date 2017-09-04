@@ -273,8 +273,8 @@ class LookupHandler : public Handler
   public:
     HANDLER_USAGE("[OPTIONS...] KEY...")
 
-    LookupHandler(const char *name, lcb_SUBDOCOP opcode, const char *description)
-        : Handler(name), m_opcode(opcode), m_description(description), o_paths("path"), o_xattrs("xattr"),
+    LookupHandler(const char *name, lcb_SUBDOCOP opcode, const char *description_)
+        : Handler(name), m_opcode(opcode), m_description(description_), o_paths("path"), o_xattrs("xattr"),
           o_deleted("deleted")
     {
         o_paths.abbrev('p').argdesc("PATH").description("JSON path in the document");
@@ -545,8 +545,8 @@ class MutationHandler : public Handler
   public:
     HANDLER_USAGE("[OPTIONS...] KEY...")
 
-    MutationHandler(const char *name, lcb_SUBDOCOP opcode, const char *description, bool enable_intermediates = true)
-        : Handler(name), m_opcode(opcode), m_description(description), o_paths("path"), o_xattrs("xattr"),
+    MutationHandler(const char *name, lcb_SUBDOCOP opcode, const char *description_, bool enable_intermediates = true)
+        : Handler(name), m_opcode(opcode), m_description(description_), o_paths("path"), o_xattrs("xattr"),
           o_expiry("expiry"), o_intermediates("intermediates"), o_upsert("upsert"),
           m_enable_intermediates(enable_intermediates)
     {
