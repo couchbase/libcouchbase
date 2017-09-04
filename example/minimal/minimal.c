@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     if (argc > 2) {
         create_options.v.v3.passwd = argv[2];
     }
-    if (argc > 2) {
+    if (argc > 3) {
         create_options.v.v3.username = argv[3];
     }
 
