@@ -816,6 +816,7 @@ VersionHandler::run()
             cio.v.v0.type = known_io[ii];
             if (lcb_create_io_ops(&io, &cio) == LCB_SUCCESS) {
                 p += sprintf(p, "%s,", iops_to_string(known_io[ii]));
+                lcb_destroy_io_ops(io);
             }
         }
         *(--p) = '\n';
