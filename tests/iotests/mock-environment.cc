@@ -66,9 +66,10 @@ MockEnvironment::MockEnvironment(const char **args, std::string bucketname)
     SetUp();
 }
 
-void MockEnvironment::failoverNode(int index, std::string bucket)
+void MockEnvironment::failoverNode(int index, std::string bucket, bool rebalance)
 {
     MockBucketCommand bCmd(MockCommand::FAILOVER, index, bucket);
+    bCmd.set("rebalance", rebalance);
     sendCommand(bCmd);
     getResponse();
 }
