@@ -11,6 +11,7 @@
 #include <libcouchbase/n1ql.h>
 #include <limits>
 #include <stddef.h>
+#include <errno.h>
 #include "common/options.h"
 #include "common/histogram.h"
 #include "cbc-handlers.h"
@@ -1711,7 +1712,8 @@ wrapExternalBinary(int argc, char **argv, const std::string& name)
     size_t cbc_pos = exePath.find("cbc");
 
     if (cbc_pos == string::npos) {
-        throw BadArg("Couldn't invoke " + name);
+        fprintf(stderr, "Failed to invoke %s (%s)\n", name.c_str(), exePath.c_str());
+        exit(EXIT_FAILURE);
     }
 
     exePath.replace(cbc_pos, 3, name);
@@ -1724,11 +1726,11 @@ wrapExternalBinary(int argc, char **argv, const std::string& name)
     }
     args.push_back((char*)NULL);
     execvp(exePath.c_str(), &args[0]);
-    perror(exePath.c_str());
-    throw BadArg("Couldn't execute " + name + " !");
+    fprintf(stderr, "Failed to execute execute %s (%s): %s\n", name.c_str(), exePath.c_str(), strerror(errno));
 #else
-    throw BadArg("Can't wrap around " + name + " on non-POSIX environments");
+    fprintf(stderr, "Can't wrap around %s on non-POSIX environments", name.c_str());
 #endif
+    exit(EXIT_FAILURE);
 }
 
 static void cleanupHandlers()
@@ -1750,6 +1752,8 @@ int main(int argc, char **argv)
             wrapExternalBinary(argc, argv, "cbc-n1qlback");
         } else if (strcmp(argv[1], "subdoc") == 0) {
             wrapExternalBinary(argc, argv, "cbc-subdoc");
+        } else if (strcmp(argv[1], "proxy") == 0) {
+            wrapExternalBinary(argc, argv, "cbc-proxy");
         }
     }
 

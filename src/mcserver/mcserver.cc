@@ -398,7 +398,7 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         /* figure out how many buffers we want to use as an upper limit for the
          * IOV arrays. Currently we'll keep it simple and ensure the entire
          * response is contiguous. */
-        lcb_PKTFWDRESP resp = { 0 };
+        lcb_PKTFWDRESP resp = { 0 }; /* TODO: next ABI version should include is_last flag */
         rdb_ROPESEG *segs;
         nb_IOV iov;
 
