@@ -15,6 +15,11 @@
  *   limitations under the License.
  */
 
+/**
+ * gcc -levent -lcouchbase main.c
+ * ./a.out couchbase://localhost password Administrator
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,7 +99,7 @@ create_libevent_io_ops(struct event_base *evbase)
 }
 
 static lcb_t
-create_libcouchbase_handle(lcb_io_opt_t ioops)
+create_libcouchbase_handle(lcb_io_opt_t ioops, int argc, char **argv)
 {
     lcb_t instance;
     lcb_error_t error;
@@ -103,10 +108,17 @@ create_libcouchbase_handle(lcb_io_opt_t ioops)
     memset(&copts, 0, sizeof(copts));
 
     /* If NULL, will default to localhost */
-    copts.v.v0.host = getenv("LCB_EVENT_SERVER");
-    copts.v.v0.user = getenv("LCB_USERNAME");
-    copts.v.v0.passwd = getenv("LCB_PASSWORD");
-    copts.v.v0.io = ioops;
+    copts.version = 3;
+    if (argc > 1) {
+        copts.v.v3.connstr = argv[1];
+    }
+    if (argc > 2) {
+        copts.v.v3.passwd = argv[2];
+    }
+    if (argc > 3) {
+        copts.v.v3.username = argv[3];
+    }
+    copts.v.v3.io = ioops;
     error = lcb_create(&instance, &copts);
 
     if (error != LCB_SUCCESS) {
@@ -130,11 +142,11 @@ create_libcouchbase_handle(lcb_io_opt_t ioops)
 
 /* This example shows how we can hook ourself into an external event loop.
  * You may find more information in the blogpost: http://goo.gl/fCTrX */
-int main(void)
+int main(int argc, char **argv)
 {
     struct event_base *evbase = event_base_new();
     lcb_io_opt_t ioops = create_libevent_io_ops(evbase);
-    lcb_t instance = create_libcouchbase_handle(ioops);
+    lcb_t instance = create_libcouchbase_handle(ioops, argc, argv);
 
     /*Store the event base as the user cookie in our instance so that
      * we may terminate the program when we're done */
@@ -144,7 +156,9 @@ int main(void)
     event_base_loop(evbase, 0);
 
     /* Cleanup */
-    event_base_free(evbase);
     lcb_destroy(instance);
-    exit(EXIT_SUCCESS);
+    lcb_destroy_io_ops(ioops);
+    event_base_free(evbase);
+
+    return EXIT_SUCCESS;
 }
