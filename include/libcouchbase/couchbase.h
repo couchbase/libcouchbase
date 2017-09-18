@@ -3478,16 +3478,6 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
 
 
-/* TODO: document these appropriately:
- * {"console_log_level", LCB_CNTL_CONLOGGER_LEVEL, convert_u32}, <<
- * {"fetch_mutation_tokens", LCB_CNTL_FETCH_MUTATION_TOKENS, convert_intbool }, <<
- * {"dur_mutation_tokens", LCB_CNTL_DURABILITY_MUTATION_TOKENS, convert_intbool }, <<
- * {"tcp_nodelay", LCB_CNTL_TCP_NODELAY, convert_intbool }, <<
- * {"console_log_file", LCB_CNTL_CONLOGGER_FP, NULL },  <<
- * {"client_string", LCB_CNTL_CLIENT_STRING, convert_passthru},  <<
- * {"tcp_keepalive", LCB_CNTL_TCP_KEEPALIVE, convert_intbool}, <<
- * {"config_poll_interval", LCB_CNTL_CONFIG_POLL_INTERVAL, convert_timevalue}, <<
- */
 /**
  * Alternatively one may change configuration settings by passing a string key
  * and value. This may be used to provide a simple interface from a command
@@ -3507,29 +3497,41 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
  *   is a zero (i.e. `"0"`) or the string `"false"`.
  * - **Float**. This is like a _Number_, but also allows fractional specification,
  *   e.g. `"2.4"`.
+ * - **String**. Arbitrary string as `char *`, e.g. for client identification
+ *   string.
+ * - **Path**. File path.
+ * - **FILE*, Path**. Set file stream pointer (lcb_cntl() style) or file path
+ *   (lcb_cntl_string() style).
  *
- * | Code | Name | Type
- * |------|------|-----
- * |@ref LCB_CNTL_OP_TIMEOUT                | `"operation_timeout"` | Timeval |
- * |@ref LCB_CNTL_VIEW_TIMEOUT              | `"view_timeout"`      | Timeval |
- * |@ref LCB_CNTL_N1QL_TIMEOUT              | `"n1ql_timeout"`      | Timeval |
- * |@ref LCB_CNTL_HTTP_TIMEOUT              | `"http_timeout"`      | Timeval |
- * |@ref LCB_CNTL_CONFIG_POLL_INTERVAL      | `"config_poll_interval"` | Timeval |
- * |@ref LCB_CNTL_CONFERRTHRESH             | `"error_thresh_count"`| Number (Positive)|
- * |@ref LCB_CNTL_CONFIGURATION_TIMEOUT     | `"config_total_timeout"`|Timeval|
- * |@ref LCB_CNTL_CONFIG_NODE_TIMEOUT       | `"config_node_timeout"` | Timeval |
- * |@ref LCB_CNTL_CONFDELAY_THRESH          | `"error_thresh_delay"` | Timeval |
- * |@ref LCB_CNTL_DURABILITY_TIMEOUT        | `"durability_timeout"` | Timeval |
- * |@ref LCB_CNTL_DURABILITY_INTERVAL       | `"durability_interval"`| Timeval |
- * |@ref LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS | `"randomize_nodes"`   | Boolean|
- * |@ref LCB_CNTL_CONFIGCACHE               | `"config_cache"`      | Path |
- * |@ref LCB_CNTL_DETAILED_ERRCODES         | `"detailed_errcodes"` | Boolean |
- * |@ref LCB_CNTL_HTCONFIG_URLTYPE          | `"http_urlmode"`      | Number (values are the constant values) |
- * |@ref LCB_CNTL_RETRY_BACKOFF             | `"retry_backoff"`     | Float |
- * |@ref LCB_CNTL_RETRY_INTERVAL            | `"retry_interval"`    | Timeval |
- * |@ref LCB_CNTL_HTTP_POOLSIZE             | `"http_poolsize"`     | Number |
- * |@ref LCB_CNTL_VBGUESS_PERSIST           | `"vbguess_persist"`   | Boolean |
- *
+ * | Code                                    | Name                      | Type              |
+ * |-----------------------------------------|---------------------------|-------------------|
+ * |@ref LCB_CNTL_OP_TIMEOUT                 | `"operation_timeout"`     | Timeval           |
+ * |@ref LCB_CNTL_VIEW_TIMEOUT               | `"view_timeout"`          | Timeval           |
+ * |@ref LCB_CNTL_N1QL_TIMEOUT               | `"n1ql_timeout"`          | Timeval           |
+ * |@ref LCB_CNTL_HTTP_TIMEOUT               | `"http_timeout"`          | Timeval           |
+ * |@ref LCB_CNTL_CONFIG_POLL_INTERVAL       | `"config_poll_interval"`  | Timeval           |
+ * |@ref LCB_CNTL_CONFERRTHRESH              | `"error_thresh_count"`    | Number (Positive) |
+ * |@ref LCB_CNTL_CONFIGURATION_TIMEOUT      | `"config_total_timeout"`  | Timeval           |
+ * |@ref LCB_CNTL_CONFIG_NODE_TIMEOUT        | `"config_node_timeout"`   | Timeval           |
+ * |@ref LCB_CNTL_CONFDELAY_THRESH           | `"error_thresh_delay"`    | Timeval           |
+ * |@ref LCB_CNTL_DURABILITY_TIMEOUT         | `"durability_timeout"`    | Timeval           |
+ * |@ref LCB_CNTL_DURABILITY_INTERVAL        | `"durability_interval"`   | Timeval           |
+ * |@ref LCB_CNTL_RANDOMIZE_BOOTSTRAP_HOSTS  | `"randomize_nodes"`       | Boolean           |
+ * |@ref LCB_CNTL_CONFIGCACHE                | `"config_cache"`          | Path              |
+ * |@ref LCB_CNTL_DETAILED_ERRCODES          | `"detailed_errcodes"`     | Boolean           |
+ * |@ref LCB_CNTL_HTCONFIG_URLTYPE           | `"http_urlmode"`          | Number (enum #lcb_HTCONFIG_URLTYPE) |
+ * |@ref LCB_CNTL_RETRY_BACKOFF              | `"retry_backoff"`         | Float             |
+ * |@ref LCB_CNTL_RETRY_INTERVAL             | `"retry_interval"`        | Timeval           |
+ * |@ref LCB_CNTL_HTTP_POOLSIZE              | `"http_poolsize"`         | Number            |
+ * |@ref LCB_CNTL_VBGUESS_PERSIST            | `"vbguess_persist"`       | Boolean           |
+ * |@ref LCB_CNTL_CONLOGGER_LEVEL            | `"console_log_level"`     | Number (enum #lcb_log_severity_t) |
+ * |@ref LCB_CNTL_FETCH_MUTATION_TOKENS      | `"fetch_mutation_tokens"` | Boolean           |
+ * |@ref LCB_CNTL_DURABILITY_MUTATION_TOKENS | `"dur_mutation_tokens"`   | Boolean           |
+ * |@ref LCB_CNTL_TCP_NODELAY                | `"tcp_nodelay"`           | Boolean           |
+ * |@ref LCB_CNTL_CONLOGGER_FP               | `"console_log_file"`      | FILE*, Path       |
+ * |@ref LCB_CNTL_CLIENT_STRING              | `"client_string"`         | String            |
+ * |@ref LCB_CNTL_TCP_KEEPALIVE              | `"tcp_keepalive"`         | Boolean           |
+ * |@ref LCB_CNTL_CONFIG_POLL_INTERVAL       | `"config_poll_interval"`  | Timeval           |
  *
  * @committed - Note, the actual API call is considered committed and will
  * not disappear, however the existence of the various string settings are

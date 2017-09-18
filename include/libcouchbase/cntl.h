@@ -673,7 +673,7 @@ typedef enum {
 /**
  * @brief Set the URL selection mode.
  *
- * The URL type can be a mask of the lcb_HTCONFIG_URLTYPE constants which
+ * The URL type can be a mask of the #lcb_HTCONFIG_URLTYPE constants which
  * indicate which URLs the HTTP provider should use.
  *
  * The default is to use the `25PLUS` URI first, and fallback on the compat uri
@@ -713,8 +713,8 @@ typedef enum {
  * it from the environment.
  *
  * The argument passed to lcb_cntl() is an integer of 0 until
- * `LCB_LOGLEVEL_MAX`, though the actual type is of `lcb_U32` rather than
- * an enum type.
+ * `LCB_LOG_MAX`, though the actual type is of `lcb_U32` rather than
+ * an enum type #lcb_log_severity_t.
  *
  * @cntl_arg_setonly{const lcb_U32 *}
  * @see LCB_CNTL_LOGGER
