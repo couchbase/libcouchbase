@@ -209,6 +209,11 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
     inline bool maybe_retry();
 
     /**
+     * Returns true if payload matches retry conditions.
+     */
+    inline bool has_retriable_error(const Json::Value& root);
+
+    /**
      * Did the application request this query to use prepared statements
      * @return true if using prepared statements
      */
@@ -294,8 +299,8 @@ static const char *wtf_magic_strings[] = {
         NULL
 };
 
-static bool
-has_retriable_error(const Json::Value& root)
+bool
+N1QLREQ::has_retriable_error(const Json::Value& root)
 {
     if (!root.isObject()) {
         return false;
@@ -312,9 +317,11 @@ has_retriable_error(const Json::Value& root)
         }
         const Json::Value& jmsg = cur["msg"];
         const Json::Value& jcode = cur["code"];
+        unsigned code = 0;
         if (jcode.isNumeric()) {
-            unsigned code = jcode.asUInt();
+            code = jcode.asUInt();
             if (code == 4050 || code == 4070) {
+                lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
                 return true;
             }
         }
@@ -322,6 +329,7 @@ has_retriable_error(const Json::Value& root)
             const char *jmstr = jmsg.asCString();
             for (const char **curs = wtf_magic_strings; *curs; curs++) {
                 if (!strstr(jmstr, *curs)) {
+                    lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d, msg: %s", LOGID(this), code, jmstr);
                     return true;
                 }
             }
