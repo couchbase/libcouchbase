@@ -1,5 +1,33 @@
 # Release Notes
 
+## 2.8.1 (September 20 2017)
+
+* Check nodes number for durability checks. The store with durability
+  requirements will report more specific error when the library cannot
+  fulfill the condition during failover.
+  * Issues: [CCBC-817](https://issues.couchbase.com/browse/CCBC-817)
+
+* Handle enhanced error messages for subdoc operations. The subdoc
+  responses will now expose context and reference ID if present.
+  * Issues: [CCBC-846](https://issues.couchbase.com/browse/CCBC-846)
+
+* Discover and bootstrap analytics service from cluster configuration.
+  * Issues: [CCBC-840](https://issues.couchbase.com/browse/CCBC-840)
+
+* Improve documentation of configuration parameters.
+  * Issues: [CCBC-835](https://issues.couchbase.com/browse/CCBC-835)
+
+* Enable Error Map feature by default.
+  * Issues: [CCBC-838](https://issues.couchbase.com/browse/CCBC-838)
+
+* Cleanup and extend `minimal`, `libeventdirect`, `instancepool` examples
+
+* Tools:
+  * improve error reporting
+  * experimental subcommand `cbc-proxy`
+  * fix memory leaks
+  * retry store operations during population phase in `cbc-pillowfight`
+
 ## 2.8.0 (August 31 2017)
 
 * Add support for OpenSSL-1.1.
