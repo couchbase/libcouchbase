@@ -49,6 +49,9 @@ or write your own.
 Group: Development/Tools
 Summary: Couchbase Client Tools
 Requires: %{name}2-core = %{version}-%{release}
+%if %{?fedora}0 >= 180 || %{?rhel}0 >= 70
+Requires: %{name}2-libevent = %{version}-%{release}
+%endif
 %description -n %{name}2-bin
 This is the CLI tools Couchbase project.
 
