@@ -353,6 +353,12 @@ static lcb_STATUS generate_options(plugin_info *pi, const struct lcb_create_io_o
                 }
                 ret = get_create_func(ours->v.v1.sofile, ours->v.v1.symbol, &plugin, want_debug);
                 if (ret != LCB_SUCCESS) {
+                    char path[PATH_MAX];
+                    /* try to look up the so-file in the libdir */
+                    snprintf(path, PATH_MAX, "%s/%s", LCB_LIBDIR, ours->v.v1.sofile);
+                    ret = get_create_func(path, ours->v.v1.symbol, &plugin, want_debug);
+                }
+                if (ret != LCB_SUCCESS) {
                     if (type) {
                         *type = LCB_IO_OPS_SELECT;
                     }
