@@ -869,7 +869,7 @@ H_config(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
          lcb_error_t immerr)
 {
     /** We just jump to the normal config handler */
-    lcb_RESPBASE dummy;
+    lcb_RESPBASE dummy = {0};
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
     make_error(get_instance(pipeline), &dummy, response, immerr);
 
