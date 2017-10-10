@@ -476,6 +476,9 @@ mcreq_basic_packet(
     }
 
     *packet = mcreq_allocate_packet(*pipeline);
+    if (*packet == NULL) {
+        return LCB_CLIENT_ENOMEM;
+    }
 
     mcreq_reserve_key(*pipeline, *packet, sizeof(*req) + extlen, &cmd->key);
 
