@@ -294,8 +294,9 @@ static void conn_eventcb(struct bufferevent *bev, short events, void *cookie)
         lcb_log(LOGARGS(ERROR), CL_LOGFMT "got an error on the connection: %s\n", CL_LOGID(cl), strerror(errno));
         bufferevent_free(bev);
         delete cl;
+    } else {
+        lcb_log(LOGARGS(DEBUG), CL_LOGFMT "ignore event 0x%02x", CL_LOGID(cl), events);
     }
-    lcb_log(LOGARGS(DEBUG), CL_LOGFMT "ignore event 0x%02x", CL_LOGID(cl), events);
 }
 
 static void listener_cb(struct evconnlistener *, evutil_socket_t fd, struct sockaddr *addr, int naddr, void *)
