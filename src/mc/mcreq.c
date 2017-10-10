@@ -362,6 +362,8 @@ mcreq_renew_packet(const mc_PACKET *src)
                 assert(vdata == inflated);
 
                 if (rv != 0) {
+                    /* TODO: log error details when snappy will be enabled */
+                    free(edst);
                     return NULL;
                 }
                 nvdata = n_inflated;
