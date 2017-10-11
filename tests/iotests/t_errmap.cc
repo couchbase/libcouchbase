@@ -16,8 +16,10 @@ protected:
     void checkRetryVerify(uint16_t errcode);
 
     void TearDown() {
-        MockOpFailClearCommand clearCmd(MockEnvironment::getInstance()->getNumNodes());
-        doMockTxn(clearCmd);
+        if (!MockEnvironment::getInstance()->isRealCluster()) {
+            MockOpFailClearCommand clearCmd(MockEnvironment::getInstance()->getNumNodes());
+            doMockTxn(clearCmd);
+        }
         MockUnitTest::TearDown();
     }
 };
@@ -174,5 +176,6 @@ TEST_F(ErrmapUnitTest, retrySpecLinear) {
 }
 
 TEST_F(ErrmapUnitTest, retrySpecExponential) {
+    SKIP_UNLESS_MOCK();
     checkRetryVerify(ERRCODE_EXPONENTIAL);
 }

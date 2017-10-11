@@ -715,6 +715,7 @@ TEST_F(MockUnitTest, testEmptyCtx)
 
 TEST_F(MockUnitTest, testMultiCreds)
 {
+    SKIP_IF_CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_50);
     using lcb::Authenticator;
 
     HandleWrap hw;
