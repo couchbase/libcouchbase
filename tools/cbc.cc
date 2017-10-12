@@ -1451,7 +1451,6 @@ ConnstrHandler::run()
     lcb_error_t err;
     const char *errmsg;
     lcb::Connspec spec;
-    memset(&spec, 0, sizeof spec);
     err = spec.parse(connstr_s.c_str(), &errmsg);
     if (err != LCB_SUCCESS) {
         throw BadArg(errmsg);
