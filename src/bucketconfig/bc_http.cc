@@ -128,7 +128,6 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
                 /* reissue the request; but wait for it to drain */
                 lcb_log(LOGARGS(http, WARN), LOGFMT "Got 404 on config stream. Assuming terse URI not supported on cluster", LOGID(http));
                 http->try_nexturi = 1;
-                err = LCB_SUCCESS;
                 goto GT_CHECKDONE;
             }
         } else if (resp.status == 401) {

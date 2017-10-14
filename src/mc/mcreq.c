@@ -463,6 +463,9 @@ mcreq_basic_packet(
     if (!queue->config) {
         return LCB_CLIENT_ETMPFAIL;
     }
+    if (!cmd) {
+        return LCB_EINVAL;
+    }
 
     mcreq_map_key(queue, &cmd->key, &cmd->_hashkey,
         sizeof(*req) + extlen, &vb, &srvix);

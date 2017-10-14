@@ -302,7 +302,6 @@ E_conncb(lcb_socket_t, short events, void *arg)
         goto GT_NEXTSOCK;
 
     } else {
-        rv = 0;
         ai = cs->ai;
 
         GT_CONNECT:
