@@ -1,5 +1,24 @@
 # Release Notes
 
+## 2.8.2 (October 17 2017)
+
+* [CCBC-833](https://issues.couchbase.com/browse/CCBC-833), [CCBC-834](https://issues.couchbase.com/browse/CCBC-834):
+  Update real cluster integration in the test suite.
+
+* [CCBC-860](https://issues.couchbase.com/browse/CCBC-860): cbc-connstr: Do not zero out C++ instances.
+
+* [CCBC-859](https://issues.couchbase.com/browse/CCBC-859): Fix libm shared object detection on Debian 9.
+
+* Bugs reported by [clang analyzer](http://clang-analyzer.llvm.org/):
+
+  * [CCBC-858](https://issues.couchbase.com/browse/CCBC-858): Fix memory leak for compressed packet.
+  * [CCBC-857](https://issues.couchbase.com/browse/CCBC-857): Fix possible NULL pointer dereference in `mcreq_reserve_key`.
+  * [CCBC-856](https://issues.couchbase.com/browse/CCBC-856): Initialize response struct in `H_config`.
+  * [CCBC-855](https://issues.couchbase.com/browse/CCBC-855): Fix dead assignments in `contrib/genhash`.
+  * [CCBC-854](https://issues.couchbase.com/browse/CCBC-854): Init vbguess array before entry lookup.
+  * [CCBC-853](https://issues.couchbase.com/browse/CCBC-853): cbc-proxy: do not use client object after free.
+  * [CCBC-852](https://issues.couchbase.com/browse/CCBC-852): Do not free memory twice in N1QL index manager.
+
 ## 2.8.1 (September 20 2017)
 
 * Check nodes number for durability checks. The store with durability
