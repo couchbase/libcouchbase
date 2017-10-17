@@ -610,9 +610,9 @@ typedef enum {
 #define LCB_RETRYOPT_CREATE(mode, policy) (((mode) << 16) | policy)
 
 /** Get mode from retry setting value */
-#define LCB_RETRYOPT_GETMODE(u) (u) >> 16
+#define LCB_RETRYOPT_GETMODE(u) ((u) >> 16)
 /** Get policy from retry setting value */
-#define LCB_RETRYOPT_GETPOLICY(u) (u) & 0xffff
+#define LCB_RETRYOPT_GETPOLICY(u) ((u)&0xffff)
 
 /**
  * @volatile
