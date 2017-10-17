@@ -1463,7 +1463,7 @@ typedef struct lcb_durability_opts_st {
 
 /**Must specify this flag if using the 'mutation_token' field, as it was added in
  * a later version */
-#define LCB_CMDENDURE_F_MUTATION_TOKEN 1<<16
+#define LCB_CMDENDURE_F_MUTATION_TOKEN (1<<16)
 
 /**@brief Command structure for endure.
  * If the lcb_CMDENDURE::cas field is specified, the operation will check and
@@ -1689,7 +1689,7 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_storedur3(lcb_t instance, const void *cookie, const lcb_CMDSTOREDUR *cmd);
 
-#define LCB_DURABILITY_VALIDATE_CAPMAX 1<<1
+#define LCB_DURABILITY_VALIDATE_CAPMAX (1<<1)
 
 /**
  * @committed
@@ -1732,7 +1732,7 @@ lcb_durability_validate(lcb_t instance,
 
 /**Set this bit in the cmdflags field to indicate that only the master node
  * should be contacted*/
-#define LCB_CMDOBSERVE_F_MASTER_ONLY 1<<16
+#define LCB_CMDOBSERVE_F_MASTER_ONLY (1<<16)
 
 /**@brief Structure for an observe request.
  * To request the status from _only_ the master node of the key, set the
@@ -2605,20 +2605,20 @@ typedef enum {
  * To use streaming requests, this flag should be set in the
  * lcb_CMDHTTP::cmdflags field
  */
-#define LCB_CMDHTTP_F_STREAM 1<<16
+#define LCB_CMDHTTP_F_STREAM (1<<16)
 
 /**
  * @internal
  * If specified, the lcb_CMDHTTP::cas field becomes the timeout for this
  * specific request.
  */
-#define LCB_CMDHTTP_F_CASTMO 1<<17
+#define LCB_CMDHTTP_F_CASTMO (1<<17)
 
 /**
  * @internal
  * Do not inject authentication header into the request.
  */
-#define LCB_CMDHTTP_F_NOUPASS 1<<18
+#define LCB_CMDHTTP_F_NOUPASS (1<<18)
 
 /**
  * Structure for performing an HTTP request.
