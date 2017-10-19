@@ -705,12 +705,7 @@ lcb_st::find_server(const lcb_host_t& host) const
 LIBCOUCHBASE_API
 lcb_error_t lcb_connect(lcb_t instance)
 {
-    lcb_error_t err = instance->bootstrap(BS_REFRESH_INITIAL);
-    if (err == LCB_SUCCESS) {
-        SYNCMODE_INTERCEPT(instance);
-    } else {
-        return err;
-    }
+    return instance->bootstrap(BS_REFRESH_INITIAL);
 }
 
 LIBCOUCHBASE_API

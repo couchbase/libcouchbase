@@ -123,9 +123,6 @@ HANDLER(get_htype) {
 HANDLER(get_iops) {
     RETURN_GET_ONLY(lcb_io_opt_t, instance->iotable->p)
 }
-HANDLER(syncmode) {
-    (void)mode; (void)instance; (void)cmd; (void)arg; return LCB_ECTL_UNKNOWN;
-}
 HANDLER(ippolicy) {
     RETURN_GET_SET(lcb_ipv6_t, instance->settings->ipv6)
 }
@@ -670,7 +667,7 @@ static ctl_handler handlers[] = {
     get_kvb,                              /* LCB_CNTL_VBMAP */
     conninfo,                             /* LCB_CNTL_MEMDNODE_INFO */
     conninfo,                             /* LCB_CNTL_CONFIGNODE_INFO */
-    syncmode,                             /* LCB_CNTL_SYNCMODE */
+    NULL,                                 /* deprecated LCB_CNTL_SYNCMODE (0x0a) */
     ippolicy,                             /* LCB_CNTL_IP6POLICY */
     confthresh,                           /* LCB_CNTL_CONFERRTHRESH */
     timeout_common,                       /* LCB_CNTL_DURABILITY_INTERVAL */

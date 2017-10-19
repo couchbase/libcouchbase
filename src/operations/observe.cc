@@ -363,5 +363,5 @@ lcb_error_t lcb_observe(lcb_t instance, const void *command_cookie, lcb_size_t n
     lcb_sched_enter(instance);
     mctx->done(mctx, command_cookie);
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }

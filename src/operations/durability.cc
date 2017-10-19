@@ -554,7 +554,7 @@ lcb_durability_poll(lcb_t instance, const void *cookie,
         return err;
     } else {
         lcb_sched_leave(instance);
-        SYNCMODE_INTERCEPT(instance)
+        return LCB_SUCCESS;
     }
 }
 

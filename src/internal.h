@@ -241,9 +241,6 @@ lcb_error_t lcb_reinit3(lcb_t obj, const char *connstr);
 int
 lcb_should_retry(const lcb_settings *settings, const mc_PACKET *pkt, lcb_error_t err);
 
-lcb_error_t
-lcb__synchandler_return(lcb_t instance);
-
 lcb_RESPCALLBACK
 lcb_find_callback(lcb_t instance, lcb_CALLBACKTYPE cbtype);
 
@@ -255,14 +252,6 @@ LCB_INTERNAL_API void lcb_loop_unref(lcb_t instance);
 
 /* To suppress compiler warnings */
 LCB_INTERNAL_API void lcb__timer_destroy_nowarn(lcb_t instance, lcb_timer_t timer);
-
-#define SYNCMODE_INTERCEPT(o) \
-    if (LCBT_SETTING(o, syncmode) == LCB_ASYNCHRONOUS) { \
-        return LCB_SUCCESS; \
-    } else { \
-        return lcb__synchandler_return(o); \
-    }
-
 
 #define MAYBE_SCHEDLEAVE(o) \
     if (!o->cmdq.ctxenter) { \

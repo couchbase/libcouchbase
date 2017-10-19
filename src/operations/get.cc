@@ -109,7 +109,7 @@ lcb_error_t lcb_get(lcb_t instance,
         }
     }
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API
@@ -179,7 +179,7 @@ lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
         return err;
     } else {
         lcb_sched_leave(instance);
-        SYNCMODE_INTERCEPT(instance)
+        return LCB_SUCCESS;
     }
 }
 
@@ -401,7 +401,7 @@ lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
 
     if (err == LCB_SUCCESS) {
         lcb_sched_leave(instance);
-        SYNCMODE_INTERCEPT(instance)
+        return LCB_SUCCESS;
     } else {
         lcb_sched_fail(instance);
         return err;

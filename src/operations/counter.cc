@@ -113,5 +113,5 @@ lcb_error_t lcb_arithmetic(lcb_t instance,
     }
 
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }

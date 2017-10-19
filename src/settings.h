@@ -133,7 +133,6 @@ typedef struct lcb_settings_st {
     /* TODO: [SDK3] change to uint64_t as per RFC. logging API exposes it as unsigned int currently */
     lcb_U32 iid;
     lcb_U8 compressopts;
-    lcb_U8 syncmode;
     lcb_U32 read_chunk_size;
     lcb_U32 operation_timeout;
     lcb_U32 views_timeout;

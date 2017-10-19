@@ -94,15 +94,6 @@ struct lcb_cached_config_st {
 LCB_DEPR_API2(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io),
     "Use memcached:// for legacy memcached. For config cache, use LCB_CNTL_CONFIGCACHE");
 
-typedef enum {
-    LCB_ASYNCHRONOUS = 0x00,
-    LCB_SYNCHRONOUS = 0xff
-} lcb_syncmode_t;
-LCB_DEPR_API2(void lcb_behavior_set_syncmode(lcb_t, lcb_syncmode_t),
-    "Syncmode will be removed in future versions. Use lcb_wait() instead");
-LCB_DEPR_API2(lcb_syncmode_t lcb_behavior_get_syncmode(lcb_t),
-    "Syncmode will be removed in future versions. Use lcb_wait() instead");
-
 LCB_DEPR_API2(const char *lcb_get_host(lcb_t),
     "Use lcb_get_node(instance, LCB_NODE_HTCONFIG, 0)");
 LCB_DEPR_API2(const char *lcb_get_port(lcb_t),
@@ -198,8 +189,6 @@ lcb_error_t lcb_verify_struct_size(lcb_uint32_t id, lcb_uint32_t version,
 #define LCB_CNTL_RBUFSIZE               0x02
 /**@deprecated It is currently not possible to adjust buffer sizes */
 #define LCB_CNTL_WBUFSIZE               0x03
-/** @deprecated */
-#define LCB_CNTL_SYNCMODE               0x0a
 /**@deprecated Initial connections are always attempted */
 #define LCB_CNTL_SKIP_CONFIGURATION_ERRORS_ON_CONNECT 0x13
 

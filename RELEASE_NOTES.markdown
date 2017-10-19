@@ -25,6 +25,11 @@
 
   Migration path: only arguments/fields in operation and bootstrap callbacks should be used.
 
+* [CCBC-463](https://issues.couchbase.com/browse/CCBC-463): Removed syncmode. This simplifies internals of the library,
+  Synchronous mode was never implemented for REST server APIs, or for new subdocument features, and was deprecated.
+
+  Migration path: use `lcb_wait()` and `lcb_wait3()` to implement synchronous interaction.
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use

@@ -48,7 +48,6 @@ void lcb_default_settings(lcb_settings *settings)
     settings->compress_min_size = LCB_DEFAULT_COMPRESS_MIN_SIZE;
     settings->compress_min_ratio = LCB_DEFAULT_COMPRESS_MIN_RATIO;
     settings->allocator_factory = rdb_bigalloc_new;
-    settings->syncmode = LCB_ASYNCHRONOUS;
     settings->detailed_neterr = 0;
     settings->refresh_on_hterr = 1;
     settings->sched_implicit_flush = 1;

@@ -357,5 +357,5 @@ lcb_store(lcb_t instance, const void *cookie, lcb_size_t num,
         }
     }
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }

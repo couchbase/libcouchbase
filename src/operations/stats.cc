@@ -394,7 +394,7 @@ lcb_server_stats(lcb_t instance, const void *cookie, lcb_size_t num,
         }
     }
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API
@@ -418,7 +418,7 @@ lcb_set_verbosity(lcb_t instance, const void *cookie, lcb_size_t num,
         }
     }
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API
@@ -435,7 +435,7 @@ lcb_flush(lcb_t instance, const void *cookie, lcb_size_t num,
         }
     }
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }
 
 LIBCOUCHBASE_API
@@ -455,5 +455,5 @@ lcb_server_versions(lcb_t instance, const void *cookie, lcb_size_t num,
 
 
     lcb_sched_leave(instance);
-    SYNCMODE_INTERCEPT(instance)
+    return LCB_SUCCESS;
 }

@@ -20,6 +20,7 @@ TEST_F(CtlTest, testExists)
 {
     for (int ii = 0; ii < LCB_CNTL__MAX; ii++) {
         switch (ii) {
+            case 0x0a: /* LCB_CNTL_SYNCMODE */
             case 0x2d: /* LCB_CNTL_RETRY_BACKOFF */
                 ASSERT_FALSE(lcb_cntl_exists(ii));
                 break;
