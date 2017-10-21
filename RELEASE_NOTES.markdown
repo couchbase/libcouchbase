@@ -30,6 +30,12 @@
 
   Migration path: use `lcb_wait()` and `lcb_wait3()` to implement synchronous interaction.
 
+* [CCBC-863](https://issues.couchbase.com/browse/CCBC-863): Removed `lcb_configuration_callback` and related functions.
+  This API has been superseded by bootstrap callback, which can not just signal about configuration update, but also
+  provide errors code.
+
+  Migration path: the application should use `lcb_bootstrap_callback` instead.
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use

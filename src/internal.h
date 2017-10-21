@@ -84,7 +84,6 @@ struct lcb_callback_st {
     lcb_http_complete_callback http_complete;
     lcb_http_data_callback http_data;
     lcb_unlock_callback unlock;
-    lcb_configuration_callback configuration;
     lcb_verbosity_callback verbosity;
     lcb_durability_callback durability;
     lcb_errmap_callback errmap;

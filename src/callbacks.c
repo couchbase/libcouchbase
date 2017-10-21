@@ -32,10 +32,6 @@ static void dummy_http_callback(lcb_http_request_t request, lcb_t instance,
     (void)request;(void)instance;(void)cookie;(void)error; (void)resp;
 }
 
-static void dummy_configuration_callback(lcb_t instance, lcb_configuration_t val) {
-    (void)instance; (void)val;
-}
-
 static void dummy_bootstrap_callback(lcb_t instance, lcb_error_t err) {
     (void)instance; (void)err;
 }
@@ -227,7 +223,6 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.http_data = dummy_http_callback;
     instance->callbacks.flush = dummy_flush_callback;
     instance->callbacks.unlock = dummy_unlock_callback;
-    instance->callbacks.configuration = dummy_configuration_callback;
     instance->callbacks.observe = dummy_observe_callback;
     instance->callbacks.verbosity = dummy_verbosity_callback;
     instance->callbacks.durability = dummy_durability_callback;
@@ -271,7 +266,6 @@ CALLBACK_ACCESSOR(lcb_set_flush_callback, lcb_flush_callback, flush)
 CALLBACK_ACCESSOR(lcb_set_http_complete_callback, lcb_http_complete_callback, http_complete)
 CALLBACK_ACCESSOR(lcb_set_http_data_callback, lcb_http_data_callback, http_data)
 CALLBACK_ACCESSOR(lcb_set_unlock_callback, lcb_unlock_callback, unlock)
-CALLBACK_ACCESSOR(lcb_set_configuration_callback, lcb_configuration_callback, configuration)
 CALLBACK_ACCESSOR(lcb_set_verbosity_callback, lcb_verbosity_callback, verbosity)
 CALLBACK_ACCESSOR(lcb_set_durability_callback, lcb_durability_callback, durability)
 CALLBACK_ACCESSOR(lcb_set_errmap_callback, lcb_errmap_callback, errmap)

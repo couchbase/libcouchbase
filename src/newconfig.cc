@@ -315,7 +315,6 @@ replace_config(lcb_t instance, lcbvb_CONFIG *oldconfig, lcbvb_CONFIG *newconfig)
 
 void lcb_update_vbconfig(lcb_t instance, lcb_pCONFIGINFO config)
 {
-    lcb_configuration_t change_status;
     lcb::clconfig::ConfigInfo *old_config = instance->cur_configinfo;
     mc_CMDQUEUE *q = &instance->cmdq;
 
@@ -337,7 +336,6 @@ void lcb_update_vbconfig(lcb_t instance, lcb_pCONFIGINFO config)
 
         replace_config(instance, old_config->vbc, config->vbc);
         old_config->decref();
-        change_status = LCB_CONFIGURATION_CHANGED;
     } else {
         size_t nservers = VB_NSERVERS(config->vbc);
         std::vector<mc_PIPELINE*> servers;
@@ -347,7 +345,6 @@ void lcb_update_vbconfig(lcb_t instance, lcb_pCONFIGINFO config)
         }
 
         mcreq_queue_add_pipelines(q, &servers[0], nservers, config->vbc);
-        change_status = LCB_CONFIGURATION_NEW;
     }
 
     /* Update the list of nodes here for server list */
@@ -360,6 +357,5 @@ void lcb_update_vbconfig(lcb_t instance, lcb_pCONFIGINFO config)
         }
     }
 
-    instance->callbacks.configuration(instance, change_status);
     lcb_maybe_breakout(instance);
 }
