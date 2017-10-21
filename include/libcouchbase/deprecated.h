@@ -32,29 +32,6 @@ extern "C" {
 #define LCB_DEPR_API(X) LIBCOUCHBASE_API LCB_DEPRECATED(X)
 #define LCB_DEPR_API2(X, reason) LIBCOUCHBASE_API LCB_DEPRECATED2(X, reason)
 
-/** @deprecated Use @ref LCB_CNTL_IP6POLICY via lcb_cntl() */
-LCB_DEPR_API2(void lcb_behavior_set_ipv6(lcb_t instance, lcb_ipv6_t mode), "Use LCB_CNTL_IP6POLICY");
-/** @deprecated Use @ref LCB_CNTL_IP6POLICY via lcb_cntl() */
-LCB_DEPR_API2(lcb_ipv6_t lcb_behavior_get_ipv6(lcb_t instance), "Use LCB_CNTL_IP6POLICY");
-/** @deprecated Use @ref LCB_CNTL_CONFERRTHRESH via lcb_cntl() */
-LCB_DEPR_API2(void lcb_behavior_set_config_errors_threshold(lcb_t instance, lcb_size_t num_events),
-    "Use LCB_CNTL_CONFERRTHRESH");
-/** @deprecated Use @ref LCB_CNTL_CONFERRTHRESH via lcb_cntl() */
-LCB_DEPR_API2(lcb_size_t lcb_behavior_get_config_errors_threshold(lcb_t instance),
-    "Use LCB_CNTL_CONFERRTHRESH");
-/** @deprecated Use @ref LCB_CNTL_OP_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API2(void lcb_set_timeout(lcb_t instance, lcb_uint32_t usec),
-    "Use LCB_CNTL_OP_TIMEOUT");
-/** @deprecated Use @ref LCB_CNTL_OP_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API2(lcb_uint32_t lcb_get_timeout(lcb_t instance),
-    "Use LCB_CNTL_OP_TIMEOUT");
-/** @deprecated Use @ref LCB_CNTL_VIEW_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API2(void lcb_set_view_timeout(lcb_t instance, lcb_uint32_t usec),
-    "Use LCB_CNTL_VIEW_TIMEOUT");
-/** @deprecated Use @ref LCB_CNTL_VIEW_TIMEOUT via lcb_cntl() */
-LCB_DEPR_API2(lcb_uint32_t lcb_get_view_timeout(lcb_t instance),
-    "Use LCB_CNTL_VIEW_TIMEOUT");
-
 /** I'm not sure what uses this anymore */
 typedef enum {
     LCB_VBUCKET_STATE_ACTIVE = 1,   /* Actively servicing a vbucket. */

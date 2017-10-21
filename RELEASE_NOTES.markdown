@@ -55,6 +55,22 @@
 
   Migration path: Remove all usages of this function.
 
+* [CCBC-865](https://issues.couchbase.com/browse/CCBC-865): Removed old-style setting accessors. They were implemented
+  before `lcb_cntl`, and should not be used.
+
+  Migration path: the following list represents mapping between old accessors and their `lcb_cntl` equivalents:
+
+  | old                                        | new                                              |
+  |--------------------------------------------|--------------------------------------------------|
+  | `lcb_behavior_set_ipv6`                    | `lcb_cntl(LCB_CNTL_SET, LCB_CNTL_IP6POLICY)`     |
+  | `lcb_behavior_get_ipv6`                    | `lcb_cntl(LCB_CNTL_GET, LCB_CNTL_IP6POLICY)`     |
+  | `lcb_behavior_set_config_errors_threshold` | `lcb_cntl(LCB_CNTL_SET, LCB_CNTL_CONFERRTHRESH)` |
+  | `lcb_behavior_get_config_errors_threshold` | `lcb_cntl(LCB_CNTL_GET, LCB_CNTL_CONFERRTHRESH)` |
+  | `lcb_behavior_set_timeout`                 | `lcb_cntl(LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT)`    |
+  | `lcb_behavior_get_timeout`                 | `lcb_cntl(LCB_CNTL_GET, LCB_CNTL_OP_TIMEOUT)`    |
+  | `lcb_behavior_set_view_timeout`            | `lcb_cntl(LCB_CNTL_SET, LCB_CNTL_VIEW_TIMEOUT)`  |
+  | `lcb_behavior_get_view_timeout`            | `lcb_cntl(LCB_CNTL_GET, LCB_CNTL_VIEW_TIMEOUT)`  |
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use

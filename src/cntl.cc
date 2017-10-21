@@ -1041,14 +1041,3 @@ lcb_uint32_t lcb_cntl_getu32(lcb_t instance, int cmd)
     lcb_cntl(instance, LCB_CNTL_GET, cmd, &ret);
     return ret;
 }
-
-#define DECL_DEPR_FUNC(T, name_set, name_get, ctl) \
-LIBCOUCHBASE_API void name_set(lcb_t instance, T input) { \
-    lcb_cntl(instance, LCB_CNTL_SET, ctl, &input); } \
-LIBCOUCHBASE_API T name_get(lcb_t instance) { T output = (T)0; \
-    lcb_cntl(instance, LCB_CNTL_GET, ctl, &output); return (T)output; }
-
-DECL_DEPR_FUNC(lcb_ipv6_t, lcb_behavior_set_ipv6, lcb_behavior_get_ipv6, LCB_CNTL_IP6POLICY)
-DECL_DEPR_FUNC(lcb_size_t, lcb_behavior_set_config_errors_threshold, lcb_behavior_get_config_errors_threshold, LCB_CNTL_CONFERRTHRESH)
-DECL_DEPR_FUNC(lcb_U32, lcb_set_timeout, lcb_get_timeout, LCB_CNTL_OP_TIMEOUT)
-DECL_DEPR_FUNC(lcb_U32, lcb_set_view_timeout, lcb_get_view_timeout, LCB_CNTL_VIEW_TIMEOUT)
