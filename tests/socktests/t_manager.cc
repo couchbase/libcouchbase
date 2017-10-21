@@ -42,25 +42,6 @@ TEST_F(SockMgrTest, testCancellation)
 // See if a connection closed when it was idle is returned or not!
 TEST_F(SockMgrTest, testIdleClosed)
 {
-    struct lcb_cntl_iops_info_st info = { 0 };
-    lcb_error_t err = lcb_cntl(NULL,
-        LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES, &info);
-
-    ASSERT_EQ(LCB_SUCCESS, err);
-    switch (info.v.v0.effective) {
-        case LCB_IO_OPS_SELECT:
-        case LCB_IO_OPS_LIBEV:
-        case LCB_IO_OPS_LIBEVENT:
-        case LCB_IO_OPS_WINIOCP:
-            break;
-
-        case LCB_IO_OPS_LIBUV:
-        default:
-            fprintf(stderr, "SockMgrTest::testIdleClosed: IOPS Type=0x%x does not have a known check_closed. Skipping\n", info.v.v0.effective);
-            return;
-    }
-
-
     lcb_socket_t llfd;
     ESocket *sock1 = new ESocket();
     loop->connectPooled(sock1);
