@@ -265,13 +265,3 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type, const void *specific, lcb_t *i
 LIBCOUCHBASE_API void lcb_flush_buffers(lcb_t instance, const void *cookie) {
     (void)instance;(void)cookie;
 }
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_verify_struct_size(lcb_U32 id, lcb_U32 version, lcb_SIZE size)
-{
-    #define X(sname, sabbrev, idval, vernum) \
-    if (idval == id && size == sizeof(sname) && version <= vernum) { return LCB_SUCCESS; }
-    LCB_XSSIZES(X);
-    #undef X
-    return LCB_EINVAL;
-}

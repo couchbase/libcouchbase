@@ -36,6 +36,14 @@
 
   Migration path: the application should use `lcb_bootstrap_callback` instead.
 
+* [CCBC-467](https://issues.couchbase.com/browse/CCBC-467): Removed `lcb_verify_struct_size` and related definitions.
+   These functions have not been widely used or maintained. Their purpose was to assist applications in verifying the
+   structure sizes used by the library conformed to that of what their application was expecting. However in reality the
+   structure sizes rarely changed, and when they did change, they only changed in compatible ways so that applications
+   compiled against older versions would never break anyway.
+
+   Migration path: If the application directly call this API, all the calls could be safely removed.
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use
