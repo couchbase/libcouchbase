@@ -55,10 +55,6 @@ LCB_DEPR_API2(void lcb_set_view_timeout(lcb_t instance, lcb_uint32_t usec),
 LCB_DEPR_API2(lcb_uint32_t lcb_get_view_timeout(lcb_t instance),
     "Use LCB_CNTL_VIEW_TIMEOUT");
 
-/** @deprecated This function does nothing */
-LCB_DEPR_API2(void lcb_flush_buffers(lcb_t instance, const void *cookie),
-    "This function does nothing");
-
 /** I'm not sure what uses this anymore */
 typedef enum {
     LCB_VBUCKET_STATE_ACTIVE = 1,   /* Actively servicing a vbucket. */

@@ -51,6 +51,10 @@
   Migration path: Remove all usages of timer API function and structures. If they are necessary, consider using
   external IO loop, and use its timers API (see `lcb_create_io_ops()`).
 
+* [CCBC-864](https://issues.couchbase.com/browse/CCBC-864): Removed `lcb_flush_buffers`. This function does nothing.
+
+  Migration path: Remove all usages of this function.
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use

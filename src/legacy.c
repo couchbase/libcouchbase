@@ -113,6 +113,3 @@ lcb_error_t lcb_create_compat(lcb_cluster_t type, const void *specific, lcb_t *i
     }
     return lcb__create_compat_230(type, &dst, instance, io);
 }
-LIBCOUCHBASE_API void lcb_flush_buffers(lcb_t instance, const void *cookie) {
-    (void)instance;(void)cookie;
-}
