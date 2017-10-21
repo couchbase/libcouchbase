@@ -19,7 +19,13 @@ T getSetting(lcb_t instance, int ctl)
 TEST_F(CtlTest, testExists)
 {
     for (int ii = 0; ii < LCB_CNTL__MAX; ii++) {
-        ASSERT_NE(0, lcb_cntl_exists(ii));
+        switch (ii) {
+            case 0x2d: /* LCB_CNTL_RETRY_BACKOFF */
+                ASSERT_FALSE(lcb_cntl_exists(ii));
+                break;
+            default:
+                ASSERT_TRUE(lcb_cntl_exists(ii));
+        }
     }
     ASSERT_EQ(0, lcb_cntl_exists(-1));
     ASSERT_EQ(0, lcb_cntl_exists(LCB_CNTL__MAX));

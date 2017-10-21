@@ -3649,7 +3649,6 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
  * |@ref LCB_CNTL_CONFIGCACHE                | `"config_cache"`          | Path              |
  * |@ref LCB_CNTL_DETAILED_ERRCODES          | `"detailed_errcodes"`     | Boolean           |
  * |@ref LCB_CNTL_HTCONFIG_URLTYPE           | `"http_urlmode"`          | Number (enum #lcb_HTCONFIG_URLTYPE) |
- * |@ref LCB_CNTL_RETRY_BACKOFF              | `"retry_backoff"`         | Float             |
  * |@ref LCB_CNTL_RETRY_INTERVAL             | `"retry_interval"`        | Timeval           |
  * |@ref LCB_CNTL_HTTP_POOLSIZE              | `"http_poolsize"`         | Number            |
  * |@ref LCB_CNTL_VBGUESS_PERSIST            | `"vbguess_persist"`       | Boolean           |

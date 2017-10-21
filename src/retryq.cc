@@ -98,11 +98,7 @@ RetryQueue::update_trytime(RetryOp *op, hrtime_t now)
         op->trytime = now + (LCB_US2NS(us_trytime));
     } else {
         GT_DEFAULT:
-        op->trytime = now + (hrtime_t) (
-                (float)get_retry_interval() *
-                (float)op->pkt->retries *
-                (float)settings->retry_backoff);
-
+            op->trytime = now + (hrtime_t)((float)get_retry_interval() * (float)op->pkt->retries);
     }
 }
 

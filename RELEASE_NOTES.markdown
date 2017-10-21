@@ -1,5 +1,19 @@
 # Release Notes
 
+## 3.0.0 (TBD)
+
+* [CCBC-655](https://issues.couchbase.com/browse/CCBC-655): Removed `retry_backoff` setting. This is a redundant
+  property, as the wait period is always `retry_interval * retry_backoff * num_attempts`. In this case, `retry_interval`
+  itself can be specified as `retry_interval * retry_backoff` as a single setting.
+
+  Migration path:
+  * if the application used `"retry_backoff"` setting via connection string or `lcb_cntl_string()`, it should remove
+    that call, and set only `"retry_interval"` with new value equal `retry_interval * retry_backoff` (the value is time
+    in seconds represented as floating point number).
+  * if the application used `LCB_CNTL_RETRY_BACKOFF` setting via `lcb_cntl`, it should remove that call, and set only
+    `LCB_CNTL_RETRY_INTERVAL` with new value equal `retry_interval * retry_backoff` (the value is time in microseconds
+    represented as unsigned 32-bit integer).
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use

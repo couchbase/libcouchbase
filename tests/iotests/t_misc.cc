@@ -517,7 +517,6 @@ TEST_F(MockUnitTest, testCtls)
 
     ctlGetSet<int>(instance, LCB_CNTL_DETAILED_ERRCODES, 1);
     ctlGetSet<lcb_U32>(instance, LCB_CNTL_RETRY_INTERVAL, UINT_MAX);
-    ctlGetSet<float>(instance, LCB_CNTL_RETRY_BACKOFF, (float)3.4);
     ctlGetSet<lcb_SIZE>(instance, LCB_CNTL_HTTP_POOLSIZE, UINT_MAX);
     ctlGetSet<int>(instance, LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR, 0);
 

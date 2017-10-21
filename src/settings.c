@@ -38,7 +38,6 @@ void lcb_default_settings(lcb_settings *settings)
     settings->grace_next_provider = LCB_DEFAULT_CLCONFIG_GRACE_NEXT;
     settings->bc_http_stream_time = LCB_DEFAULT_BC_HTTP_DISCONNTMO;
     settings->retry_interval = LCB_DEFAULT_RETRY_INTERVAL;
-    settings->retry_backoff = LCB_DEFAULT_RETRY_BACKOFF;
     settings->sslopts = 0;
     settings->retry[LCB_RETRY_ON_SOCKERR] = LCB_DEFAULT_NETRETRY;
     settings->retry[LCB_RETRY_ON_TOPOCHANGE] = LCB_DEFAULT_TOPORETRY;

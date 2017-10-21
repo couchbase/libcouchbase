@@ -159,9 +159,6 @@ HANDLER(syncdtor_handler) {
 HANDLER(detailed_errcode_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, detailed_neterr))
 }
-HANDLER(retry_backoff_handler) {
-    RETURN_GET_SET(float, LCBT_SETTING(instance, retry_backoff))
-}
 HANDLER(http_poolsz_handler) {
     RETURN_GET_SET(lcb_SIZE, instance->http_sockpool->get_options().maxidle)
 }
@@ -544,7 +541,6 @@ HANDLER(unsafe_optimize) {
     APPLY_UNSAFE("retry_policy", "sockerr:none");
     APPLY_UNSAFE("retry_policy", "maperr:none");
     APPLY_UNSAFE("retry_policy", "missingnode:none");
-    APPLY_UNSAFE("retry_backoff", "0.0");
     (void)cmd;
     return LCB_SUCCESS;
 }
@@ -709,7 +705,7 @@ static ctl_handler handlers[] = {
     detailed_errcode_handler,             /* LCB_CNTL_DETAILED_ERRCODES */
     reinit_spec_handler,                  /* LCB_CNTL_REINIT_CONNSTR */
     timeout_common,                       /* LCB_CNTL_RETRY_INTERVAL */
-    retry_backoff_handler,                /* LCB_CNTL_RETRY_BACKOFF */
+    NULL,                                 /* deprecated LCB_CNTL_RETRY_BACKOFF (0x2D) */
     http_poolsz_handler,                  /* LCB_CNTL_HTTP_POOLSIZE */
     http_refresh_config_handler,          /* LCB_CNTL_HTTP_REFRESH_CONFIG_ON_ERROR */
     bucketname_handler,                   /* LCB_CNTL_BUCKETNAME */
@@ -821,6 +817,7 @@ static lcb_error_t convert_u32(const char *arg, u_STRCONVERT *u) {
     u->u32 = tmp;
     return rv == 1 ? LCB_SUCCESS : LCB_ECTL_BADARG;
 }
+
 static lcb_error_t convert_float(const char *arg, u_STRCONVERT *u) {
     double d;
     int rv = sscanf(arg, "%lf", &d);
@@ -910,7 +907,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"http_urlmode", LCB_CNTL_HTCONFIG_URLTYPE, convert_int},
     {"sync_dtor", LCB_CNTL_SYNCDESTROY, convert_intbool},
     {"_reinit_connstr", LCB_CNTL_REINIT_CONNSTR},
-    {"retry_backoff", LCB_CNTL_RETRY_BACKOFF, convert_float},
+    {"", -1}, /* deprecated "retry_backoff" */
     {"retry_interval", LCB_CNTL_RETRY_INTERVAL, convert_timevalue},
     {"http_poolsize", LCB_CNTL_HTTP_POOLSIZE, convert_SIZE},
     {"vbguess_persist", LCB_CNTL_VBGUESS_PERSIST, convert_intbool},
@@ -1002,6 +999,9 @@ lcb_cntl_string(lcb_t instance, const char *key, const char *value)
 
     for (cur = stropcode_map; cur->key; cur++) {
         if (!strcmp(cur->key, key)) {
+            if (cur->opcode < 0) {
+                return LCB_ECTL_UNKNOWN;
+            }
             if (cur->converter) {
                 err = cur->converter(value, &u);
                 if (err != LCB_SUCCESS) {
