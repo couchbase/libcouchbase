@@ -44,6 +44,13 @@
 
    Migration path: If the application directly call this API, all the calls could be safely removed.
 
+* [CCBC-468](https://issues.couchbase.com/browse/CCBC-468): Removed `lcb_timer_t` API. The timer API was never really
+  used and should have always been private (its use came in before we started having 'interface attributes' within the
+  library).
+
+  Migration path: Remove all usages of timer API function and structures. If they are necessary, consider using
+  external IO loop, and use its timers API (see `lcb_create_io_ops()`).
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use

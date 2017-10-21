@@ -585,12 +585,6 @@ void lcb_destroy(lcb_t instance)
     DESTROY(delete, ht_nodes);
     DESTROY(delete, mc_nodes);
 
-    if ((pendq = po->items[LCB_PENDTYPE_TIMER])) {
-        for (it = pendq->begin(); it != pendq->end(); ++it) {
-            lcb__timer_destroy_nowarn(instance, (lcb_timer_t)*it);
-        }
-    }
-
     if ((pendq = po->items[LCB_PENDTYPE_DURABILITY])) {
         std::vector<void*> dsets(pendq->begin(), pendq->end());
         for (size_t ii = 0; ii < dsets.size(); ++ii) {

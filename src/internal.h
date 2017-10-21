@@ -249,9 +249,6 @@ lcb_find_callback(lcb_t instance, lcb_CALLBACKTYPE cbtype);
 LCB_INTERNAL_API void lcb_loop_ref(lcb_t instance);
 LCB_INTERNAL_API void lcb_loop_unref(lcb_t instance);
 
-/* To suppress compiler warnings */
-LCB_INTERNAL_API void lcb__timer_destroy_nowarn(lcb_t instance, lcb_timer_t timer);
-
 #define MAYBE_SCHEDLEAVE(o) \
     if (!o->cmdq.ctxenter) { \
         lcb_sched_leave(o); \
