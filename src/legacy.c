@@ -323,9 +323,6 @@ lcb_behavior_get_syncmode(lcb_t instance)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_get_last_error(lcb_t instance){return instance->last_error;}
-
-LIBCOUCHBASE_API
 lcb_error_t lcb__create_compat_230(lcb_cluster_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io)
 {
     struct lcb_create_st cst = { 0 };

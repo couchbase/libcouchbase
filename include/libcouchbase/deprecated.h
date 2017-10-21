@@ -55,17 +55,6 @@ LCB_DEPR_API2(void lcb_set_view_timeout(lcb_t instance, lcb_uint32_t usec),
 LCB_DEPR_API2(lcb_uint32_t lcb_get_view_timeout(lcb_t instance),
     "Use LCB_CNTL_VIEW_TIMEOUT");
 
-/**
- * @deprecated Do not use this function. Check the error code of the specific operation
- * to determine if something succeeded or not. Because the library has many
- * asynchronous "flows" of control, determining the "last error" is not very
- * fruitful. Since most API calls are themselves only schedule-related, they cannot
- * possibly derive a "Real" error either
- */
-LCB_DEPR_API2(lcb_error_t lcb_get_last_error(lcb_t instance),
-    "This function does not returning meaningful information. Use the operation callbacks "
-    "and/or bootstrap callbacks");
-
 /** @deprecated This function does nothing */
 LCB_DEPR_API2(void lcb_flush_buffers(lcb_t instance, const void *cookie),
     "This function does nothing");
