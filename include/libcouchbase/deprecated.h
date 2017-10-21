@@ -78,17 +78,6 @@ typedef enum {
     LCB_VBUCKET_STATE_DEAD = 4      /* Not in use, pending deletion. */
 } lcb_vbucket_state_t;
 
-typedef void (*lcb_error_callback)(lcb_t instance, lcb_error_t error, const char *errinfo);
-
-/**
- * @deprecated Use the logging API (@ref LCB_CNTL_LOGGER) instead to receive error
- * information. For programmatic errors, use the operations interface. For bootstrap
- * status, use lcb_get_bootstrap_status() and lcb_set_bootstrap_callback()
- */
-LCB_DEPR_API2(lcb_error_callback lcb_set_error_callback(lcb_t, lcb_error_callback),
-    "This function only reports bootstrap errors. Use lcb_set_bootstrap_callback instead");
-
-
 
 /**
  * Timer stuff is deprecated. It should not be used externally, and internal

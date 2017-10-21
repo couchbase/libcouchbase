@@ -81,7 +81,6 @@ struct lcb_callback_st {
     lcb_version_callback version;
     lcb_touch_callback touch;
     lcb_flush_callback flush;
-    lcb_error_callback error;
     lcb_http_complete_callback http_complete;
     lcb_http_data_callback http_data;
     lcb_unlock_callback unlock;

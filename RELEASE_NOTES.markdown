@@ -14,6 +14,11 @@
     `LCB_CNTL_RETRY_INTERVAL` with new value equal `retry_interval * retry_backoff` (the value is time in microseconds
     represented as unsigned 32-bit integer).
 
+* [CCBC-465](https://issues.couchbase.com/browse/CCBC-465): Removed `lcb_error_callback` and related function to get
+  and set it for the instance.
+
+  Migration path: the application should use `lcb_bootstrap_callback` instead.
+
 ## 2.10.3 (December 20 2018)
 
 * [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use

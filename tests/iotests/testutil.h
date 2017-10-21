@@ -137,7 +137,6 @@ private:
     struct {
         lcb_get_callback get;
         lcb_store_callback store;
-        lcb_error_callback err;
         lcb_remove_callback rm;
     } callbacks;
 };

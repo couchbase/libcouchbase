@@ -21,12 +21,6 @@
     static void name(lcb_t i, const void *c, lcb_error_t e, const resptype *r) \
     { (void)i;(void)e;(void)c;(void)r; }
 
-static void dummy_error_callback(lcb_t instance,lcb_error_t error, const char *errinfo) {
-    lcb_breakout(instance);
-    (void)error;
-    (void)errinfo;
-}
-
 static void dummy_store_callback(lcb_t instance, const void *cookie,
     lcb_storage_t operation, lcb_error_t error, const lcb_store_resp_t *resp) {
     (void)instance; (void)cookie; (void)operation; (void)error; (void)resp;
@@ -227,7 +221,6 @@ void lcb_initialize_packet_handlers(lcb_t instance)
     instance->callbacks.arithmetic = dummy_arithmetic_callback;
     instance->callbacks.remove = dummy_remove_callback;
     instance->callbacks.touch = dummy_touch_callback;
-    instance->callbacks.error = dummy_error_callback;
     instance->callbacks.stat = dummy_stat_callback;
     instance->callbacks.version = dummy_version_callback;
     instance->callbacks.http_complete = dummy_http_callback;
@@ -274,7 +267,6 @@ CALLBACK_ACCESSOR(lcb_set_remove_callback, lcb_remove_callback, remove)
 CALLBACK_ACCESSOR(lcb_set_touch_callback, lcb_touch_callback, touch)
 CALLBACK_ACCESSOR(lcb_set_stat_callback, lcb_stat_callback, stat)
 CALLBACK_ACCESSOR(lcb_set_version_callback, lcb_version_callback, version)
-CALLBACK_ACCESSOR(lcb_set_error_callback, lcb_error_callback, error)
 CALLBACK_ACCESSOR(lcb_set_flush_callback, lcb_flush_callback, flush)
 CALLBACK_ACCESSOR(lcb_set_http_complete_callback, lcb_http_complete_callback, http_complete)
 CALLBACK_ACCESSOR(lcb_set_http_data_callback, lcb_http_data_callback, http_data)

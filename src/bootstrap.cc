@@ -166,7 +166,6 @@ void Bootstrap::initial_error(lcb_error_t err, const char *errinfo) {
     if (parent->last_error == LCB_SUCCESS) {
         parent->last_error = err;
     }
-    parent->callbacks.error(parent, parent->last_error, errinfo);
     lcb_log(LOGARGS(parent, ERR), "Failed to bootstrap client=%p. Error=%s, Message=%s", (void *)parent, lcb_strerror_short(parent->last_error), errinfo);
     tm.cancel();
 

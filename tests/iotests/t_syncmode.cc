@@ -17,9 +17,9 @@
 #include "iotests.h"
 
 extern "C" {
-    static void error_callback(lcb_t, lcb_error_t err, const char *)
-    {
-        ASSERT_EQ(LCB_SUCCESS, err);
+static void bootstrap_callback(lcb_t, lcb_error_t err)
+{
+    ASSERT_EQ(LCB_SUCCESS, err);
     }
 
     static void store_callback(lcb_t, const void *cookie,
@@ -40,7 +40,7 @@ class SyncmodeUnitTest : public MockUnitTest
 protected:
     void createConnection(lcb_t &instance) {
         MockEnvironment::getInstance()->createConnection(instance);
-        (void)lcb_set_error_callback(instance, error_callback);
+        (void)lcb_set_bootstrap_callback(instance, bootstrap_callback);
         (void)lcb_behavior_set_syncmode(instance, LCB_SYNCHRONOUS);
         ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
     }
