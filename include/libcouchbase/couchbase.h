@@ -1166,7 +1166,7 @@ typedef struct {
  *     if (rb->rc == LCB_SUCCESS) {
  *         printf("Store success: CAS=%llx\n", rb->cas);
  *     } else {
- *         printf("Store failed: %s\n", lcb_strerorr(NULL, rb->rc);
+ *         printf("Store failed: %s\n", lcb_strerror(NULL, rb->rc);
  *     }
  * }
  * @endcode
