@@ -3845,6 +3845,8 @@ typedef enum {
     LCB_DUMP_PKTINFO = 0x02,
     /** Dump memory usage/reservation information about buffers */
     LCB_DUMP_BUFINFO = 0x04,
+    /** Dump various metrics information */
+    LCB_DUMP_METRICS = 0x08,
     /** Dump everything */
     LCB_DUMP_ALL = 0xff
 } lcb_DUMPFLAGS;

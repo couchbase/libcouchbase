@@ -94,6 +94,9 @@ lcb_settings_unref(lcb_settings *settings)
     if (settings->ssl_ctx) {
         lcbio_ssl_free(settings->ssl_ctx);
     }
+    if (settings->metrics) {
+        lcb_metrics_destroy(settings->metrics);
+    }
     if (settings->dtorcb) {
         settings->dtorcb(settings->dtorarg);
     }

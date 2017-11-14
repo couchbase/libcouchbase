@@ -125,6 +125,8 @@ Server::handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt)
     lcb::clconfig::Provider *cccp =
             instance->confmon->get_provider(lcb::clconfig::CLCONFIG_CCCP);
 
+    MC_INCR_METRIC(this, packets_nmv, 1);
+
     mcreq_read_hdr(oldpkt, &hdr);
     vbid = ntohs(hdr.request.vbucket);
     lcb_log(LOGARGS_T(WARN), LOGFMT "NOT_MY_VBUCKET. Packet=%p (S=%u). VBID=%u", LOGID_T(), (void*)oldpkt, oldpkt->opaque, vbid);
@@ -334,6 +336,8 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
         RETURN_NEED_MORE(pktsize)
     }
 
+    MC_INCR_METRIC(this, packets_read, 1);
+
     /* copy bytes into the info structure */
     rdb_copyread(ior, mcresp.hdrbytes(), mcresp.hdrsize());
 
@@ -352,6 +356,7 @@ Server::try_read(lcbio_CTX *ctx, rdb_IOROPE *ior)
     }
 
     if (!request) {
+        MC_INCR_METRIC(this, packets_ownerless, 1);
         lcb_log(LOGARGS_T(WARN), LOGFMT "Server sent us reply for a timed-out command. (OP=0x%x, RC=0x%x, SEQ=%u)", LOGID_T(), mcresp.opcode(), mcresp.status(), mcresp.opaque());
         rdb_consumed(ior, pktsize);
         return PKT_READ_COMPLETE;
@@ -514,6 +519,7 @@ Server::purge(lcb_error_t error, hrtime_t thresh, hrtime_t *next,
         affected = -1;
     }
 
+    MC_INCR_METRIC(this, packets_errored, affected);
     if (policy == REFRESH_NEVER) {
         return affected;
     }
@@ -569,6 +575,7 @@ void Server::io_timeout()
     int npurged = purge(LCB_ETIMEDOUT, min_valid, &next_ns,
                         Server::REFRESH_ONFAILED);
     if (npurged) {
+        MC_INCR_METRIC(this, packets_timeout, npurged);
         lcb_log(LOGARGS_T(ERR), LOGFMT "Server timed out. Some commands have failed", LOGID_T());
     }
 
@@ -619,6 +626,7 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
 
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS_T(ERR), LOGFMT "Connection attempt failed. Received %s from libcouchbase, received %d from operating system", LOGID_T(), lcb_strerror_short(err), syserr);
+        MC_INCR_METRIC(this, iometrics.io_error, 1);
         if (!maybe_reconnect_on_fake_timeout(err)) {
             socket_failed(err);
         }
@@ -626,6 +634,9 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
     }
 
     lcb_assert(sock);
+    if (metrics) {
+        lcbio_set_metrics(sock, &metrics->iometrics);
+    }
 
     /** Do we need sasl? */
     SessionInfo* sessinfo = SessionInfo::get(sock);
@@ -693,6 +704,12 @@ Server::Server(lcb_t instance_, int ix)
                 LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN);
     if (datahost) {
         lcb_host_parsez(curhost, datahost, LCB_CONFIG_MCD_PORT);
+    }
+
+    if (settings->metrics) {
+        /** Allocate / reinitialize the metrics here */
+        metrics = lcb_metrics_getserver(settings->metrics, curhost->host, curhost->port, 1);
+        lcb_metrics_reset_pipeline_gauges(metrics);
     }
 }
 
