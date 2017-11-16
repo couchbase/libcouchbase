@@ -372,17 +372,17 @@ Handler::run()
     lcb_error_t err;
     err = lcb_create(&instance, &cropts);
     if (err != LCB_SUCCESS) {
-        throw LcbError(err);
+        throw LcbError(err, "Failed to create instance");
     }
     params.doCtls(instance);
     err = lcb_connect(instance);
     if (err != LCB_SUCCESS) {
-        throw LcbError(err);
+        throw LcbError(err, "Failed to connect instance");
     }
     lcb_wait(instance);
     err = lcb_get_bootstrap_status(instance);
     if (err != LCB_SUCCESS) {
-        throw LcbError(err);
+        throw LcbError(err, "Failed to bootstrap instance");
     }
 
     if (params.useTimings()) {
