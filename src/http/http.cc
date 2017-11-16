@@ -22,8 +22,9 @@
 #include "auth-priv.h"
 using namespace lcb::http;
 
-#define LOGFMT "<%s:%s> "
-#define LOGID(req) (req)->host.c_str(), (req)->port.c_str()
+#define LOGFMT "<%s%s%s:%s> "
+#define LOGID(req) ((req)->ipv6 ? "[" : ""), (req)->host.c_str(), ((req)->ipv6 ? "]" : ""), (req)->port.c_str()
+
 #define LOGARGS(req, lvl) req->instance->settings, "http-io", LCB_LOG_##lvl, __FILE__, __LINE__
 
 static const char *method_strings[] = {
@@ -215,7 +216,7 @@ lcb_error_t
 Request::submit()
 {
     lcb_error_t rc;
-    lcb_host_t reqhost;
+    lcb_host_t reqhost = {0};
 
     // Stop any pending socket/request
     close_io();
@@ -231,6 +232,7 @@ Request::submit()
     strncpy(reqhost.port, port.c_str(), port.size());
     reqhost.host[host.size()] = '\0';
     reqhost.port[port.size()] = '\0';
+    reqhost.ipv6 = ipv6;
 
     // Add the HTTP verb (e.g. "GET ") [note, the string contains a trailing space]
     add_to_preamble(method_strings[method]);
@@ -344,6 +346,7 @@ Request::assign_url(const char *base, size_t nbase, const char *path, size_t npa
 
     assign_from_urlfield(UF_HOST, host);
     assign_from_urlfield(UF_PORT, port);
+    ipv6 = host.find(':') != std::string::npos;
     return LCB_SUCCESS;
 }
 
@@ -433,7 +436,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
 {
     const char *base = NULL, *username, *password;
     size_t nbase = 0;
-    lcb_error_t rc;
+    lcb_error_t rc = LCB_SUCCESS;
 
     if (method > LCB_HTTP_METHOD_MAX) {
         return LCB_EINVAL;

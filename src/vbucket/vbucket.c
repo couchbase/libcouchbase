@@ -91,6 +91,16 @@ build_vbmap(lcbvb_CONFIG *cfg, cJSON *cj, unsigned *nitems)
     return NULL;
 }
 
+static void copy_address(char *buf, size_t nbuf, const char *host, lcb_U16 port)
+{
+    if (strchr(host, ':')) {
+        // IPv6 and should be bracketed
+        snprintf(buf, nbuf, "[%s]:%d", host, port);
+    } else {
+        snprintf(buf, nbuf, "%s:%d", host, port);
+    }
+}
+
 static lcbvb_SERVER *
 find_server_memd(lcbvb_SERVER *servers, unsigned n, const char *s)
 {
@@ -98,7 +108,7 @@ find_server_memd(lcbvb_SERVER *servers, unsigned n, const char *s)
     for (ii = 0; ii < n; ii++) {
         char buf[4096] = { 0 };
         lcbvb_SERVER *cur = servers + ii;
-        snprintf(buf, sizeof(buf), "%s:%d", cur->hostname, cur->svc.data);
+        copy_address(buf, sizeof(buf), cur->hostname, cur->svc.data);
         if (!strncmp(s, buf, sizeof(buf))) {
             return cur;
         }
@@ -343,7 +353,7 @@ build_server_strings(lcbvb_CONFIG *cfg, lcbvb_SERVER *server)
     /* get the authority */
     char tmpbuf[4096];
 
-    sprintf(tmpbuf, "%s:%d", server->hostname, server->svc.data);
+    copy_address(tmpbuf, sizeof(tmpbuf), server->hostname, server->svc.data);
     server->authority = strdup(tmpbuf);
     if (!server->authority) {
         SET_ERRSTR(cfg, "Couldn't allocate authority");
@@ -1181,8 +1191,9 @@ lcbvb_get_hostport(lcbvb_CONFIG *cfg,
 
     strp = &svc->hoststrs[type];
     if (*strp == NULL) {
-        *strp = malloc(strlen(srv->hostname) + 20);
-        sprintf(*strp, "%s:%d", srv->hostname, port);
+        size_t strn = strlen(srv->hostname) + 20;
+        *strp = calloc(strn, sizeof(char));
+        copy_address(*strp, strn, srv->hostname, port);
     }
     return *strp;
 }
@@ -1260,7 +1271,6 @@ lcbvb_get_resturl(lcbvb_CONFIG *cfg, unsigned ix,
     lcbvb_SVCTYPE svc, lcbvb_SVCMODE mode)
 {
     char **strp;
-    char buf[4096];
     const char *prefix;
     const char *path;
 
@@ -1301,7 +1311,13 @@ lcbvb_get_resturl(lcbvb_CONFIG *cfg, unsigned ix,
     if (path == NULL) {
         return NULL;
     } else if (!*strp) {
-        sprintf(buf, "%s://%s:%d%s", prefix, srv->hostname, port, path);
+        char buf[4096];
+        if (strchr(srv->hostname, ':')) {
+            // IPv6 and should be bracketed
+            snprintf(buf, sizeof(buf), "%s://[%s]:%d%s", prefix, srv->hostname, port, path);
+        } else {
+            snprintf(buf, sizeof(buf), "%s://%s:%d%s", prefix, srv->hostname, port, path);
+        }
         *strp = strdup(buf);
     }
 
@@ -1336,9 +1352,7 @@ LIBCOUCHBASE_API const char *lcbvb_get_error(const lcbvb_CONFIG *cfg) {
  ******************************************************************************
  ******************************************************************************/
 
-static void
-copy_service(const char *hostname,
-    const lcbvb_SERVICES *src, lcbvb_SERVICES *dst)
+static void copy_service(const char *hostname, const lcbvb_SERVICES *src, lcbvb_SERVICES *dst)
 {
     char buf[4096];
     *dst = *src;
@@ -1356,7 +1370,7 @@ copy_service(const char *hostname,
         dst->cbas_base_ = strdup(src->cbas_base_);
     }
     if (dst->data) {
-        sprintf(buf, "%s:%d", hostname, dst->data);
+        copy_address(buf, sizeof(buf), hostname, dst->data);
         dst->hoststrs[LCBVB_SVCTYPE_DATA] = strdup(buf);
     }
 }

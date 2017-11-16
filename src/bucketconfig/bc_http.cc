@@ -22,8 +22,9 @@
 #include <lcbio/ssl.h>
 #include "ctx-log-inl.h"
 #define LOGARGS(ht, lvlbase) ht->parent->settings, "htconfig", LCB_LOG_##lvlbase, __FILE__, __LINE__
-#define LOGFMT "<%s:%s> "
-#define LOGID(h) get_ctx_host(h->ioctx), get_ctx_port(h->ioctx)
+
+#define LOGFMT CTX_LOGFMT
+#define LOGID(p) CTX_LOGID(p->ioctx)
 
 using namespace lcb::clconfig;
 
@@ -294,7 +295,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
         return;
     }
     host = lcbio_get_host(sock);
-    lcb_log(LOGARGS(http, DEBUG), "Successfuly connected to REST API %s:%s", host->host, host->port);
+    lcb_log(LOGARGS(http, DEBUG), "Successfuly connected to REST API " LCB_HOST_FMT, LCB_HOST_ARG(host));
 
     lcbio_sslify_if_needed(sock, http->parent->settings);
     http->reset_stream_state();

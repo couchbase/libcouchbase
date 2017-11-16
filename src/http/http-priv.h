@@ -221,6 +221,7 @@ struct Request {
     std::string url; /**<Base URL: http://host:port/path?query*/
     std::string host; /**< Host, derived from URL */
     std::string port; /**< Port, derived from URL */
+    bool ipv6;
 
     std::string pending_redirect; /**< New redirected URL */
 

@@ -318,7 +318,7 @@ PoolConnInfo::PoolConnInfo(PoolHost *he, uint32_t timeout)
     id = LCBIO_PROTOCTX_POOL;
     dtor = cinfo_protoctx_dtor;
 
-    lcb_host_t tmphost;
+    lcb_host_t tmphost = {0};
     lcb_error_t err = lcb_host_parsez(&tmphost, he->key.c_str(), 80);
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(he->parent, ERROR), HE_LOGFMT "Could not parse host! Will supply dummy host (I=%p)", HE_LOGID(he), (void*)this);
@@ -371,8 +371,12 @@ Pool::get(const lcb_host_t& dest, uint32_t timeout, lcbio_CONNDONE_cb cb,
     PoolHost *he;
     lcb_list_t *cur;
 
-    std::string key(dest.host);
-    key.append(":").append(dest.port);
+    std::string key;
+    if (dest.ipv6) {
+        key.append("[").append(dest.host).append("]:").append(dest.port);
+    } else {
+        key.append(dest.host).append(":").append(dest.port);
+    }
 
     HostMap::iterator m = ht.find(key);
     if (m == ht.end()) {

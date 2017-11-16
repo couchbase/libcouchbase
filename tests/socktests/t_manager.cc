@@ -30,7 +30,7 @@ TEST_F(SockMgrTest, testBasic)
 
 TEST_F(SockMgrTest, testCancellation)
 {
-    lcb_host_t host;
+    lcb_host_t host = {0};
     loop->populateHost(&host);
     lcb::io::ConnectionRequest *req = loop->sockpool->get(host, LCB_MS2US(1000), NULL, NULL);
     ASSERT_FALSE(req == NULL);

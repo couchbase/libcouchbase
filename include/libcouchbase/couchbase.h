@@ -3477,7 +3477,6 @@ lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags);
 LIBCOUCHBASE_API
 lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
 
-
 /**
  * Alternatively one may change configuration settings by passing a string key
  * and value. This may be used to provide a simple interface from a command
@@ -3532,6 +3531,7 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg);
  * |@ref LCB_CNTL_CLIENT_STRING              | `"client_string"`         | String            |
  * |@ref LCB_CNTL_TCP_KEEPALIVE              | `"tcp_keepalive"`         | Boolean           |
  * |@ref LCB_CNTL_CONFIG_POLL_INTERVAL       | `"config_poll_interval"`  | Timeval           |
+ * |@ref LCB_CNTL_IP6POLICY                  | `"ipv6"`                  | String ("disabled", "only", "allow") |
  *
  * @committed - Note, the actual API call is considered committed and will
  * not disappear, however the existence of the various string settings are

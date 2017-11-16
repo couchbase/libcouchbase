@@ -38,8 +38,8 @@ using namespace lcb;
 static void cleanup_negotiated(SessionInfo* info);
 static void handle_ioerr(lcbio_CTX *ctx, lcb_error_t err);
 
-#define LOGFMT "<%s:%s> (SASLREQ=%p) "
-#define LOGID(s) get_ctx_host(s->ctx), get_ctx_port(s->ctx), (void*)s
+#define LOGFMT CTX_LOGFMT_PRE ",SASLREQ=%p) "
+#define LOGID(s) CTX_LOGID(s->ctx), (void *)s
 
 static void timeout_handler(void *arg);
 

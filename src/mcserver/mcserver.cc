@@ -28,11 +28,11 @@
 #define LOGARGS(c, lvl) (c)->settings, "server", LCB_LOG_##lvl, __FILE__, __LINE__
 #define LOGARGS_T(lvl) LOGARGS(this, lvl)
 
-#define LOGFMT "<%s:%s> (SRV=%p,IX=%d) "
+#define LOGFMT CTX_LOGFMT_PRE ",SRV=%p,IX=%d) "
 #define PKTFMT "OP=0x%x, RC=0x%x, SEQ=%u"
 #define PKTARGS(pkt) (pkt).opcode(), (pkt).status(), (pkt).opaque()
 
-#define LOGID(server) get_ctx_host(server->connctx), get_ctx_port(server->connctx), (void*)server, server->index
+#define LOGID(server) CTX_LOGID(server->connctx), (void *)server, server->index
 #define LOGID_T() LOGID(this)
 
 #define MCREQ_MAXIOV 32
@@ -829,7 +829,7 @@ Server::finalize_errored_ctx()
         return;
     }
 
-    lcb_log(LOGARGS_T(DEBUG), LOGFMT "Finalizing ctx %p", LOGID_T(), (void*)connctx);
+    lcb_log(LOGARGS_T(DEBUG), LOGFMT "Finalizing context", LOGID_T());
 
     /* Always close the existing context. */
     lcbio_ctx_close(connctx, close_cb, NULL);

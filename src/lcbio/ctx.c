@@ -26,17 +26,9 @@
 #define CTX_SD(ctx) (ctx)->sd
 #define CTX_IOT(ctx) (ctx)->io
 #include "rw-inl.h"
+#include "ctx-log-inl.h"
 
 #define LOGARGS(c, lvl) (c)->sock->settings, "ioctx", LCB_LOG_##lvl, __FILE__, __LINE__
-static const lcb_host_t * get_ctx_host(const lcbio_CTX *ctx) {
-    static lcb_host_t host = { "NOHOST", "NOPORT" };
-    if (!ctx) { return &host; }
-    if (!ctx->sock) { return &host; }
-    if (!ctx->sock->info) { return &host; }
-    return &ctx->sock->info->ep;
-}
-#define CTX_LOGFMT "<%s:%s> (CTX=%p,%s) "
-#define CTX_LOGID(ctx) get_ctx_host(ctx)->host, get_ctx_host(ctx)->port, (void*)ctx, ctx?ctx->subsys : ""
 
 typedef enum {
     ES_ACTIVE = 0,
