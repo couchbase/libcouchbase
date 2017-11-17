@@ -390,6 +390,7 @@ SessionRequestImpl::send_hello()
     for (size_t ii = 0; ii < nfeatures; ii++) {
         lcb_U16 tmp = htons(features[ii]);
         lcbio_ctx_put(ctx, &tmp, sizeof tmp);
+        lcb_log(LOGARGS(this, DEBUG), LOGFMT "Request feature: 0x%x (%s)", LOGID(this), features[ii], protocol_feature_2_text(features[ii]));
     }
 
     lcbio_ctx_rwant(ctx, 24);
