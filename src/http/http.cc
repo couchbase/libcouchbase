@@ -83,19 +83,35 @@ Request::finish_or_retry(lcb_error_t rc)
         finish(rc);
         return;
     }
+    struct http_parser_url next_info;
+    if (_lcb_http_parser_parse_url(nextnode, strlen(nextnode), 0, &next_info)) {
+        lcb_log(LOGARGS(this, WARN), LOGFMT "Not retrying. Invalid API endpoint", LOGID(this));
+        finish(LCB_EINVAL);
+        return;
+    }
 
     // Reassemble URL:
+    lcb_log(LOGARGS(this, DEBUG), LOGFMT "Retrying request on new node %s. Reason: 0x%02x (%s)", LOGID(this), nextnode,
+            rc, lcb_strerror(NULL, rc));
 
-    // get offset and length of host bits
-    size_t host_begin = url_info.field_data[UF_HOST].off;
-    size_t hplen =
-            url_info.field_data[UF_HOST].len +
-            url_info.field_data[UF_PORT].len + 1; // +1 for ":"
+    url.replace(url_info.field_data[UF_PORT].off, url_info.field_data[UF_PORT].len,
+                nextnode + next_info.field_data[UF_PORT].off, next_info.field_data[UF_PORT].len);
+    url.replace(url_info.field_data[UF_HOST].off, url_info.field_data[UF_HOST].len,
+                nextnode + next_info.field_data[UF_HOST].off, next_info.field_data[UF_HOST].len);
 
-    url.replace(host_begin, hplen, nextnode);
-    lcb_error_t newrc = submit();
+    lcb_error_t newrc;
+    newrc = assign_url(NULL, 0, NULL, 0);
     if (newrc != LCB_SUCCESS) {
-        lcb_log(LOGARGS(this, WARN), LOGFMT "Retry failed!", LOGID(this));
+        lcb_log(LOGARGS(this, ERR), LOGFMT "Failed to assign URL for retry request on next endpoint (%s): 0x%02x (%s)",
+                LOGID(this), nextnode, newrc, lcb_strerror(NULL, newrc));
+        finish(rc);
+        return;
+    }
+
+    newrc = submit();
+    if (newrc != LCB_SUCCESS) {
+        lcb_log(LOGARGS(this, WARN), LOGFMT "Failed to retry request on next endpoint (%s): 0x%02x (%s)", LOGID(this),
+                nextnode, newrc, lcb_strerror(NULL, newrc));
         finish(rc);
     }
 }
