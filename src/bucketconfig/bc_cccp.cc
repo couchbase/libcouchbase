@@ -141,7 +141,7 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
     lcb::Server* server = instance->find_server(*next_host);
     if (server) {
         cmdcookie = new CccpCookie(this);
-        lcb_log(LOGARGS(this, DEBUG), "Re-Issuing CCCP Command on server struct %p (" LCB_HOST_FMT ")", (void *)server,
+        lcb_log(LOGARGS(this, TRACE), "Re-Issuing CCCP Command on server struct %p (" LCB_HOST_FMT ")", (void *)server,
                 LCB_HOST_ARG(next_host));
         timer.rearm(settings().config_node_timeout);
         instance->request_config(cmdcookie, server);
