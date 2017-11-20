@@ -63,6 +63,8 @@ static lcb_t instance = NULL;
 static struct event_base *evbase = NULL;
 static Histogram hg;
 
+static char app_client_string[] = "cbc-proxy";
+
 #define LOGARGS(lvl) (instance)->settings, "proxy", LCB_LOG_##lvl, __FILE__, __LINE__
 #define CL_LOGFMT "<%s:%s> (cl=%p,fd=%d) "
 #define CL_LOGID(cl) cl->host, cl->port, (void *)cl, cl->fd
@@ -452,6 +454,25 @@ static void sigint_handler(int)
     }
 }
 
+static void health_callback(lcb_t, int, const lcb_RESPBASE *rb)
+{
+    const lcb_RESPHEALTH *resp = (const lcb_RESPHEALTH *)rb;
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "failed: %s\n", lcb_strerror(NULL, resp->rc));
+    } else {
+        if (resp->njson) {
+            fprintf(stderr, "\n%.*s", (int)resp->njson, resp->json);
+        }
+    }
+}
+
+static void sigquit_handler(int)
+{
+    lcb_CMDHEALTH req = {};
+    req.options = LCB_PINGOPT_F_JSONPRETTY;
+    lcb_health(instance, NULL, &req);
+}
+
 static void real_main(int argc, char **argv)
 {
     Parser parser;
@@ -474,8 +495,10 @@ static void real_main(int argc, char **argv)
 
     good_or_die(lcb_create(&instance, &cropts), "Failed to create connection");
     config.doCtls();
+    lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CLIENT_STRING, app_client_string);
     lcb_set_bootstrap_callback(instance, bootstrap_callback);
     lcb_set_pktfwd_callback(instance, pktfwd_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_HEALTH, health_callback);
 
     good_or_die(lcb_connect(instance), "Failed to connect to cluster");
     if (config.useTimings()) {
@@ -489,6 +512,12 @@ static void real_main(int argc, char **argv)
     action.sa_handler = sigint_handler;
     action.sa_flags = 0;
     sigaction(SIGINT, &action, NULL);
+
+    /* setup CTRL-\ handler */
+    sigemptyset(&action.sa_mask);
+    action.sa_handler = sigquit_handler;
+    action.sa_flags = 0;
+    sigaction(SIGQUIT, &action, NULL);
 
     event_base_dispatch(evbase);
 }
