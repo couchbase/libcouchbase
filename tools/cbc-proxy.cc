@@ -23,6 +23,8 @@
 #include <libcouchbase/vbucket.h>
 #include <libcouchbase/api3.h>
 #include <libcouchbase/pktfwd.h>
+#include <libcouchbase/n1ql.h>
+#include <libcouchbase/cbft.h>
 #include <memcached/protocol_binary.h>
 #include <iostream>
 #include <iomanip>
@@ -152,9 +154,10 @@ struct client {
     struct bufferevent *bev;
     char host[NI_MAXHOST + 1];
     char port[NI_MAXSERV + 1];
+    long cnt;
 };
 
-static void dump_bytes(const struct client *cl, const char *msg, void *ptr, size_t len)
+static void dump_bytes(const struct client *cl, const char *msg, const void *ptr, size_t len)
 {
     if (!config.isTrace()) {
         return;
@@ -246,6 +249,50 @@ static void pktfwd_callback(lcb_t, const void *cookie, lcb_error_t err, lcb_PKTF
     }
 }
 
+extern "C" {
+#define DEFINE_ROW_CALLBACK(cbname, resptype)                                                                          \
+    static void cbname(lcb_t, int, const resptype *resp)                                                               \
+    {                                                                                                                  \
+        char key[100] = {0};                                                                                           \
+        size_t nkey;                                                                                                   \
+        struct client *cl = (struct client *)resp->cookie;                                                             \
+                                                                                                                       \
+        protocol_binary_response_header header = {0};                                                                  \
+        header.response.magic = PROTOCOL_BINARY_RES;                                                                   \
+        header.response.opcode = PROTOCOL_BINARY_CMD_STAT;                                                             \
+                                                                                                                       \
+        struct evbuffer *output = bufferevent_get_output(cl->bev);                                                     \
+                                                                                                                       \
+        if (resp->rflags & LCB_RESP_F_FINAL) {                                                                         \
+            memcpy(key, "meta", 4);                                                                                    \
+        } else {                                                                                                       \
+            snprintf(key, sizeof(key), "row-%ld", cl->cnt++);                                                          \
+        }                                                                                                              \
+        nkey = strlen(key);                                                                                            \
+        header.response.keylen = htons(nkey);                                                                          \
+        header.response.bodylen = htonl(resp->nrow + nkey);                                                            \
+                                                                                                                       \
+        evbuffer_expand(output, resp->nrow + sizeof(header.bytes));                                                    \
+        dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));                                                \
+        evbuffer_add(output, header.bytes, sizeof(header.bytes));                                                      \
+        dump_bytes(cl, "response", key, nkey);                                                                         \
+        evbuffer_add(output, key, nkey);                                                                               \
+        dump_bytes(cl, "response", resp->row, resp->nrow);                                                             \
+        evbuffer_add(output, resp->row, resp->nrow);                                                                   \
+                                                                                                                       \
+        if (resp->rflags & LCB_RESP_F_FINAL) {                                                                         \
+            header.response.keylen = 0;                                                                                \
+            header.response.bodylen = 0;                                                                               \
+            evbuffer_expand(output, sizeof(header.bytes));                                                             \
+            dump_bytes(cl, "response", header.bytes, sizeof(header.bytes));                                            \
+            evbuffer_add(output, header.bytes, sizeof(header.bytes));                                                  \
+        }                                                                                                              \
+    }
+
+DEFINE_ROW_CALLBACK(n1ql_callback, lcb_RESPN1QL)
+DEFINE_ROW_CALLBACK(fts_callback, lcb_RESPFTS)
+}
+
 static void conn_readcb(struct bufferevent *bev, void *cookie)
 {
     struct client *cl = (struct client *)cookie;
@@ -273,12 +320,67 @@ static void conn_readcb(struct bufferevent *bev, void *cookie)
     evbuffer_remove(input, pkt, pktlen);
 
     lcb_sched_enter(instance);
+    dump_bytes(cl, "request", pkt, pktlen);
+    if (header.request.opcode == PROTOCOL_BINARY_CMD_STAT) {
+        lcb_U8 extlen = ntohs(header.request.extlen);
+        lcb_U16 keylen = ntohs(header.request.keylen);
+        if (keylen < 5) {
+            goto FWD;
+        }
+        char *key = (char *)pkt + sizeof(header) + extlen;
+        lcb_error_t rc;
+        int cbas = memcmp(key, "cbas ", 5) == 0;
+        if (cbas || memcmp(key, "n1ql ", 5) == 0) {
+            lcb_N1QLPARAMS *nparams = lcb_n1p_new();
+
+            rc = lcb_n1p_setquery(nparams, key + 5, keylen - 5, LCB_N1P_QUERY_STATEMENT);
+            if (rc != LCB_SUCCESS) {
+                lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to set query for %s", CL_LOGID(cl),
+                        cbas ? "analytics" : "N1QL");
+                goto FWD;
+            }
+            lcb_CMDN1QL cmd = {0};
+            rc = lcb_n1p_mkcmd(nparams, &cmd);
+            if (rc != LCB_SUCCESS) {
+                lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to generate %s command", CL_LOGID(cl),
+                        cbas ? "analytics" : "N1QL");
+                goto FWD;
+            }
+            cmd.callback = n1ql_callback;
+            cl->cnt = 0;
+            if (cbas) {
+                cmd.cmdflags |= LCB_CMDN1QL_F_CBASQUERY;
+            }
+            rc = lcb_n1ql_query(instance, cl, &cmd);
+            if (rc != LCB_SUCCESS) {
+                lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to schedule %s command", CL_LOGID(cl),
+                        cbas ? "analytics" : "N1QL");
+                goto FWD;
+            }
+            lcb_n1p_free(nparams);
+            goto DONE;
+        } else if (memcmp(key, "fts ", 4) == 0) {
+            lcb_CMDFTS cmd = {0};
+            cmd.query = key + 4;
+            cmd.nquery = keylen - 4;
+            rc = lcb_fts_query(instance, cl, &cmd);
+            cmd.callback = fts_callback;
+            cl->cnt = 0;
+            if (rc != LCB_SUCCESS) {
+                lcb_log(LOGARGS(INFO), CL_LOGFMT "failed to schedule FTS command", CL_LOGID(cl));
+                goto FWD;
+            }
+            goto DONE;
+        }
+    }
+FWD : {
     lcb_CMDPKTFWD cmd = {0};
     cmd.vb.vtype = LCB_KV_COPY;
     cmd.vb.u_buf.contig.bytes = pkt;
     cmd.vb.u_buf.contig.nbytes = pktlen;
-    dump_bytes(cl, "request", pkt, pktlen);
     good_or_die(lcb_pktfwd3(instance, cl, &cmd), "Failed to forward packet");
+}
+DONE:
     lcb_sched_leave(instance);
 }
 
