@@ -692,6 +692,7 @@ typedef enum {
     LCB_CALLBACK_SDMUTATE,
     LCB_CALLBACK_NOOP, /**< lcb_noop3() */
     LCB_CALLBACK_PING, /**< lcb_ping3() */
+    LCB_CALLBACK_HEALTH, /**< lcb_health() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -2465,6 +2466,18 @@ typedef enum {
 } lcb_PINGSVCTYPE;
 
 /**
+ * Status of the service
+ *
+ * @uncommitted
+ */
+typedef enum {
+    LCB_PINGSTATUS_OK = 0,
+    LCB_PINGSTATUS_TIMEOUT,
+    LCB_PINGSTATUS_ERROR,
+    LCB_PINGSTATUS__MAX
+} lcb_PINGSTATUS;
+
+/**
  * Entry describing the status of the service in the cluster.
  * It is part of lcb_RESPING structure.
  *
@@ -2472,9 +2485,14 @@ typedef enum {
  */
 typedef struct {
     lcb_PINGSVCTYPE type; /**< type of the service */
-    char *server; /**< server host:port */
+    /* TODO: rename to "remote" */
+    const char *server; /**< server host:port */
     lcb_U64 latency; /**< latency in nanoseconds */
-    lcb_error_t status; /**< status of the operation */
+    lcb_error_t rc; /**< raw return code of the operation */
+    const char *local; /**< server host:port */
+    const char *id; /**< service identifier (unique in scope of lcb_t connection instance) */
+    const char *scope; /**< optional scope name (typically equals to the bucket name) */
+    lcb_PINGSTATUS status; /**< status of the operation */
 } lcb_PINGSVC;
 
 /**
@@ -2532,6 +2550,21 @@ typedef struct {
 LIBCOUCHBASE_API
 lcb_error_t
 lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd);
+
+typedef struct {
+    LCB_CMD_BASE;
+    int options;  /**< extra options, e.g. for result representation */
+    const char *id; /**< optional, zero-terminated string to identify the report */
+} lcb_CMDHEALTH;
+
+typedef struct {
+    LCB_RESP_BASE
+    lcb_SIZE njson;   /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
+    const char *json; /**< pointer to JSON string */
+} lcb_RESPHEALTH;
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_health(lcb_t instance, const void *cookie, const lcb_CMDHEALTH *cmd);
 /**@} (Group: PING) */
 
 /**@ingroup lcb-public-api

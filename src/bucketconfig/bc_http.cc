@@ -315,6 +315,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     procs.cb_read = read_common;
     http->ioctx = lcbio_ctx_new(sock, http, &procs);
     http->ioctx->subsys = "bc_http";
+    sock->service = LCBIO_SERVICE_CFG;
 
     lcbio_ctx_put(http->ioctx, http->request_buf.c_str(), http->request_buf.size());
     lcbio_ctx_rwant(http->ioctx, 1);
