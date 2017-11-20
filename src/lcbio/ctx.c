@@ -152,6 +152,7 @@ lcbio_ctx_close_ex(lcbio_CTX *ctx, lcbio_CTXCLOSE_cb cb, void *arg,
         cb(ctx->sock, reusable, arg);
     }
 
+    ctx->sock->ctx = NULL;
     if (oldrc == ctx->sock->refcount) {
         lcbio_shutdown(ctx->sock);
     }
