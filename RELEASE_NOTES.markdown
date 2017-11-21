@@ -1,5 +1,37 @@
 # Release Notes
 
+## 2.8.3 (November 21 2017)
+
+* [CCBC-415](https://issues.couchbase.com/browse/CCBC-415): Fixes in IPv6 support.
+  To use IPv6 addresses, the application should connect to IPv6-enabled Couchbase Server,
+  and explicitly switch on option via connection string `ipv6=allow` or `ipv6=only`,
+  where first variant permits the library to use both IPv6 and IPv4, and the second --
+  disables IPv6. Alternatively this setting controlled with `LCB_CNTL_IP6POLICY` and
+  `lcb_cntl`.
+
+* [CCBC-872](https://issues.couchbase.com/browse/CCBC-872): Metrics management
+  These metrics are intended at providing information on libcouchbase operations performed
+  over the lifetime of the current `lcb_t` instance (processed request packets, processed
+  response packets, request packets pending emission, server errors, server timeouts,
+  misrouted operations, retried operations).
+
+  Metrics collection is currently disabled by default. To enable metrics collection,
+  the user should call:
+
+        int activate = 1;
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_METRICS, &activate);
+
+  Access to the collected metrics is done using:
+
+        lcb_METRICS* my_metrics;
+        lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_METRICS, &my_metrics);
+
+* [CCBC-870](https://issues.couchbase.com/CCBC-870): Fix updating URL on retry. When retrying HTTP request, instead of replacing just `host:port` part of the old URL, the library inserted full URL.
+
+* [CCBC-547](https://issues.couchbase.com/browse/CCBC-547): Detect dead sockets under libuv.
+
+* Ensure macros safe by surrounding values with parentheses
+
 ## 2.8.2 (October 17 2017)
 
 * [CCBC-833](https://issues.couchbase.com/browse/CCBC-833), [CCBC-834](https://issues.couchbase.com/browse/CCBC-834):
