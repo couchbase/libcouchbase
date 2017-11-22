@@ -387,6 +387,7 @@ SessionRequestImpl::send_hello()
 
     lcbio_ctx_put(ctx, hdr.data(), hdr.size());
     lcbio_ctx_put(ctx, clistr, nclistr);
+    lcb_log(LOGARGS(this, DEBUG), LOGFMT "HELLO identificator: \"%.*s\"", LOGID(this), (int)nclistr, clistr);
     for (size_t ii = 0; ii < nfeatures; ii++) {
         lcb_U16 tmp = htons(features[ii]);
         lcbio_ctx_put(ctx, &tmp, sizeof tmp);
