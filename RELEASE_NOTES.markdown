@@ -26,7 +26,7 @@
         lcb_METRICS* my_metrics;
         lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_METRICS, &my_metrics);
 
-* [CCBC-870](https://issues.couchbase.com/CCBC-870): Fix updating URL on retry. When retrying HTTP request, instead of replacing just `host:port` part of the old URL, the library inserted full URL.
+* [CCBC-870](https://issues.couchbase.com/browse/CCBC-870): Fix updating URL on retry. When retrying HTTP request, instead of replacing just `host:port` part of the old URL, the library inserted full URL.
 
 * [CCBC-547](https://issues.couchbase.com/browse/CCBC-547): Detect dead sockets under libuv.
 
