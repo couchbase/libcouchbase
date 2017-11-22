@@ -66,7 +66,7 @@ Connspec::parse_hosts(const char *hostbegin,
     while (*c) {
         // get the current host
         const char *curend;
-        unsigned curlen, hostlen;
+        unsigned curlen, hostlen, hoststart;
         int rv;
 
         /* Seek ahead, chopping off any ',' */
@@ -98,6 +98,7 @@ Connspec::parse_hosts(const char *hostbegin,
         size_t rcolonpos = scratch.rfind(":");
         std::string port;
 
+        hoststart = 0;
         if (colonpos == std::string::npos) {
             hostlen = scratch.size();
         } else if (colonpos == rcolonpos) {
@@ -110,11 +111,13 @@ Connspec::parse_hosts(const char *hostbegin,
         } else {
             size_t rbracket = scratch.rfind(']');
             if (scratch[0] == '[' && rbracket != std::string::npos) {
-                hostlen = rbracket + 1;
-                ;
-                port = scratch.substr(rbracket + 1);
+                hoststart = 1;
+                hostlen = rbracket - hoststart;
+                if (scratch.size() > rbracket + 1) {
+                    port = scratch.substr(rbracket + 2);
+                }
             } else {
-                hostlen = colonpos;
+                hostlen = scratch.size();
             }
         }
 
@@ -128,7 +131,7 @@ Connspec::parse_hosts(const char *hostbegin,
 
         m_hosts.resize(m_hosts.size() + 1);
         Spechost *dh = &m_hosts.back();
-        dh->hostname = scratch.substr(0, hostlen);
+        dh->hostname = scratch.substr(hoststart, hostlen);
 
         if (port.empty()) {
             continue;

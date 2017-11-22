@@ -671,7 +671,16 @@ LIBCOUCHBASE_API
 void
 lcbvb_replace_host(lcbvb_CONFIG *cfg, const char *hoststr)
 {
-    unsigned ii;
+    unsigned ii, copy = 0;
+    char *replacement = (char *)hoststr;
+    if (strchr(replacement, ':')) {
+        size_t len = strlen(hoststr);
+        replacement = calloc(len + 2, sizeof(char));
+        replacement[0] = '[';
+        memcpy(replacement + 1, hoststr, len);
+        replacement[len + 1] = ']';
+        copy = 1;
+    }
     for (ii = 0; ii < cfg->nsrv; ++ii) {
         unsigned jj;
         lcbvb_SERVER *srv = cfg->servers + ii;
@@ -681,13 +690,16 @@ lcbvb_replace_host(lcbvb_CONFIG *cfg, const char *hoststr)
         for (jj = 0; jj < 2; ++jj) {
             unsigned kk;
             lcbvb_SERVICES *cursvc = svcs[jj];
-            replace_hoststr(&cursvc->views_base_, hoststr);
+            replace_hoststr(&cursvc->views_base_, replacement);
             for (kk = 0; kk < LCBVB_SVCTYPE__MAX; ++kk) {
-                replace_hoststr(&cursvc->hoststrs[kk], hoststr);
+                replace_hoststr(&cursvc->hoststrs[kk], replacement);
             }
         }
         /* reassign authority */
         srv->authority = srv->svc.hoststrs[LCBVB_SVCTYPE_DATA];
+    }
+    if (copy) {
+        free(replacement);
     }
     if (cfg->dtype == LCBVB_DIST_KETAMA) {
         update_ketama(cfg);
@@ -1354,7 +1366,6 @@ LIBCOUCHBASE_API const char *lcbvb_get_error(const lcbvb_CONFIG *cfg) {
 
 static void copy_service(const char *hostname, const lcbvb_SERVICES *src, lcbvb_SERVICES *dst)
 {
-    char buf[4096];
     *dst = *src;
     memset(&dst->hoststrs, 0, sizeof dst->hoststrs);
     if (src->views_base_) {
@@ -1370,6 +1381,7 @@ static void copy_service(const char *hostname, const lcbvb_SERVICES *src, lcbvb_
         dst->cbas_base_ = strdup(src->cbas_base_);
     }
     if (dst->data) {
+        char buf[4096];
         copy_address(buf, sizeof(buf), hostname, dst->data);
         dst->hoststrs[LCBVB_SVCTYPE_DATA] = strdup(buf);
     }
