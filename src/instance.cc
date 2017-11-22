@@ -74,7 +74,9 @@ lcb_st::add_bs_host(const char *host, int port, unsigned bstype)
         tname = "HTTP";
         target = ht_nodes;
     }
-    lcb_log(LOGARGS(this, DEBUG), "Adding host %s:%d to initial %s bootstrap list", host, port, tname);
+    bool ipv6 = strchr(host, ':') != NULL;
+    lcb_log(LOGARGS(this, DEBUG), "Adding host %s%s%s:%d to initial %s bootstrap list", ipv6 ? "[" : "", host,
+            ipv6 ? "]" : "", port, tname);
     target->add(host, port);
 }
 
@@ -150,7 +152,9 @@ lcb_st::process_dns_srv(Connspec& spec)
         sh.port = std::atoi(src.port);
         sh.type = spec.default_port();
         spec.add_host(sh);
-        lcb_log(LOGARGS(this, INFO), "Found host %s:%d via DNS SRV", sh.hostname.c_str(), sh.port);
+        bool ipv6 = sh.hostname.find(':') != std::string::npos;
+        lcb_log(LOGARGS(this, INFO), "Found host %s%s%s:%d via DNS SRV", ipv6 ? "[" : "", sh.hostname.c_str(),
+                ipv6 ? "]" : "", (int)sh.port);
     }
     delete hl;
 
