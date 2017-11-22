@@ -381,9 +381,9 @@ public:
 
         Histogram &h = ic->hg;
         printf("[%f %s]\n", lcb_nstime() / 1000000000.0, header);
-        printf("              +---------+---------+---------+---------+\n");
+        printf("                +---------+---------+---------+---------+\n");
         h.write();
-        printf("              +----------------------------------------\n");
+        printf("                +----------------------------------------\n");
     }
 
 private:
@@ -561,7 +561,6 @@ private:
     SeqGenerator *m_genrandom;
     SeqGenerator *m_gensequence;
     size_t m_gencount;
-    int m_id;
 
     bool m_force_sequential;
     bool m_in_population;
