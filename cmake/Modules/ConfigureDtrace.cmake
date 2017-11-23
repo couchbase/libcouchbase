@@ -26,7 +26,7 @@ IF(DTRACE)
     IF(NOT APPLE)
         SET(LCB_DTRACE_OBJECT "${LCB_GENSRCDIR}/probes.o")
         IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-            SET(LCB_DTRACE_OPTIONS "${LCB_DTRACE_OPTIONS} -k")
+            SET(LCB_DTRACE_OPTIONS "-k")
         ENDIF()
         # Generate probes.o
         IF(CMAKE_SYSTEM_NAME STREQUAL "SunOS" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
@@ -35,7 +35,7 @@ IF(DTRACE)
         ELSE()
             ADD_CUSTOM_COMMAND(OUTPUT ${LCB_DTRACE_OBJECT}
                 DEPENDS ${LCB_DTRACE_SRC}
-                COMMAND ${DTRACE} -k -C -G ${LCB_DTRACE_OPTIONS} -s ${LCB_DTRACE_SRC} -o ${LCB_DTRACE_OBJECT})
+                COMMAND ${DTRACE} -C -G ${LCB_DTRACE_OPTIONS} -s ${LCB_DTRACE_SRC} -o ${LCB_DTRACE_OBJECT})
         ENDIF()
     ENDIF()
 ENDIF()
