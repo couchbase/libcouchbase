@@ -846,6 +846,9 @@ VersionHandler::run()
     } else {
         printf("  SSL: NOT SUPPORTED\n");
     }
+    printf("  System: %s; %s\n", LCB_SYSTEM, LCB_SYSTEM_PROCESSOR);
+    printf("  CC: %s; %s\n", LCB_C_COMPILER, LCB_C_FLAGS);
+    printf("  CXX: %s; %s\n", LCB_CXX_COMPILER, LCB_CXX_FLAGS);
 }
 
 void

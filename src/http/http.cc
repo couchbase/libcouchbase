@@ -487,7 +487,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
         return rc;
     }
 
-    std::string ua("libcouchbase/" LCB_VERSION_STRING);
+    std::string ua(LCB_CLIENT_ID);
     if (instance->settings->client_string) {
         ua.append(" ").append(instance->settings->client_string);
     }

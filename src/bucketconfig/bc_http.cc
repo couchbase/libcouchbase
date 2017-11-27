@@ -261,7 +261,11 @@ lcb_error_t HttpProvider::setup_request_header(const lcb_host_t &host) {
     }
 
     request_buf.append("Host: ").append(host.host).append(":").append(host.port).append("\r\n");
-    request_buf.append("User-Agent: libcouchbase/").append(LCB_VERSION_STRING).append("\r\n");
+    request_buf.append("User-Agent: ").append(LCB_CLIENT_ID);
+    if (settings().client_string) {
+        request_buf.append(" ").append(settings().client_string);
+    }
+    request_buf.append("\r\n");
     request_buf.append("\r\n");
     return LCB_SUCCESS;
 }

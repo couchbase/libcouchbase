@@ -340,7 +340,7 @@ SessionRequestImpl::send_step(const lcb::MemcachedResponse& packet)
     return true;
 }
 
-#define LCB_HELLO_DEFL_STRING "libcouchbase/" LCB_VERSION_STRING
+#define LCB_HELLO_DEFL_STRING LCB_CLIENT_ID
 #define LCB_HELLO_DEFL_LENGTH (sizeof(LCB_HELLO_DEFL_STRING)-1)
 
 bool
@@ -375,7 +375,7 @@ SessionRequestImpl::send_hello()
 
     if (settings->client_string) {
         client_string.assign(LCB_HELLO_DEFL_STRING);
-        client_string += ", ";
+        client_string += " ";
         client_string += settings->client_string;
 
         clistr = client_string.c_str();
