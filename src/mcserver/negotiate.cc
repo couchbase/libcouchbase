@@ -361,7 +361,7 @@ SessionRequestImpl::send_hello()
 
 #ifndef LCB_NO_SNAPPY
     if (settings->compressopts != LCB_COMPRESS_NONE) {
-        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_DATATYPE;
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SNAPPY;
     }
 #endif
 
