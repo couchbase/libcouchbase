@@ -62,6 +62,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->send_hello = 1;
     settings->config_poll_interval = LCB_DEFAULT_CONFIG_POLL_INTERVAL;
     settings->use_errmap = 1;
+    settings->use_collections = 0;
 }
 
 LCB_INTERNAL_API

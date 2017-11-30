@@ -152,6 +152,11 @@ extern "C"
          */
         PROTOCOL_BINARY_RESPONSE_XATTR_EINVAL = 0x87,
 
+        /**
+         * Operation attempted with an unknown collection.
+         */
+        PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION = 0x88,
+
         /*
          * Sub-document specific responses.
          */

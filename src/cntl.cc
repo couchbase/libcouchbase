@@ -570,6 +570,9 @@ HANDLER(metrics_handler) {
     (void)cmd;
 }
 
+HANDLER(collections_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, use_collections));
+}
 
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
@@ -645,7 +648,8 @@ static ctl_handler handlers[] = {
     config_poll_interval_handler, /* LCB_CNTL_CONFIG_POLL_INTERVAL */
     send_hello_handler, /* LCB_CNTL_SEND_HELLO */
     buckettype_handler, /* LCB_CNTL_BUCKETTYPE */
-    metrics_handler /* LCB_CNTL_METRICS */
+    metrics_handler, /* LCB_CNTL_METRICS */
+    collections_handler /* LCB_CNTL_USE_COLLECTIONS */
 };
 
 /* Union used for conversion to/from string functions */

@@ -368,6 +368,9 @@ SessionRequestImpl::send_hello()
     if (settings->fetch_mutation_tokens) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO;
     }
+    if (settings->use_collections) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_COLLECTIONS;
+    }
 
     std::string client_string;
     const char *clistr = LCB_HELLO_DEFL_STRING;
