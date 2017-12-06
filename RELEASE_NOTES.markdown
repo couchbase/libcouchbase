@@ -6,7 +6,7 @@
   To use IPv6 addresses, the application should connect to IPv6-enabled Couchbase Server,
   and explicitly switch on option via connection string `ipv6=allow` or `ipv6=only`,
   where first variant permits the library to use both IPv6 and IPv4, and the second --
-  disables IPv6. Alternatively this setting controlled with `LCB_CNTL_IP6POLICY` and
+  disables IPv4. Alternatively this setting controlled with `LCB_CNTL_IP6POLICY` and
   `lcb_cntl`.
 
 * [CCBC-872](https://issues.couchbase.com/browse/CCBC-872): Metrics management
