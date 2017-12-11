@@ -174,6 +174,12 @@ typedef lcb_U32 lcb_USECS;
  *   SSL certificate. Only applicable if SSL is being used (i.e. the scheme is
  *   `couchbases`)
  *
+ * * `keypath` - Specify the path (on the local filesystem) to the client
+ *   SSL private key. Only applicable if SSL client certificate authentication
+ *   is being used (i.e. the scheme is `couchbases` and `certpath` contains
+ *   client certificate). Read more in the server documentation:
+ *   https://developer.couchbase.com/documentation/server/5.0/security/security-certs-auth.html
+ *
  * ### Bucket Identification and Credentials
  *
  * The most common settings you will wish to modify are the bucket name

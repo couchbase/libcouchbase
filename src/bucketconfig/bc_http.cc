@@ -244,20 +244,23 @@ lcb_error_t HttpProvider::setup_request_header(const lcb_host_t &host) {
     }
 
     request_buf.append(" HTTP/1.1\r\n");
-    const std::string password = (settings().conntype == LCB_TYPE_BUCKET)
-                                      ? settings().auth->password_for(host.host, host.port, settings().bucket)
-                                      : settings().auth->password();
-    if (!password.empty()) {
-        const std::string username = (settings().conntype == LCB_TYPE_BUCKET)
-                                          ? settings().auth->username_for(host.host, host.port, settings().bucket)
-                                          : settings().auth->username();
-        std::string cred;
-        cred.append(username).append(":").append(password);
-        char b64[256] = { 0 };
-        if (lcb_base64_encode(cred.c_str(), b64, sizeof(b64)) == -1) {
-            return LCB_EINTERNAL;
+    if (!settings().keypath) {
+        // not using SSL client certificate to authenticate
+        const std::string password = (settings().conntype == LCB_TYPE_BUCKET)
+            ? settings().auth->password_for(host.host, host.port, settings().bucket)
+            : settings().auth->password();
+        if (!password.empty()) {
+            const std::string username = (settings().conntype == LCB_TYPE_BUCKET)
+                ? settings().auth->username_for(host.host, host.port, settings().bucket)
+                : settings().auth->username();
+            std::string cred;
+            cred.append(username).append(":").append(password);
+            char b64[256] = { 0 };
+            if (lcb_base64_encode(cred.c_str(), b64, sizeof(b64)) == -1) {
+                return LCB_EINTERNAL;
+            }
+            request_buf.append("Authorization: Basic ").append(b64).append("\r\n");
         }
-        request_buf.append("Authorization: Basic ").append(b64).append("\r\n");
     }
 
     request_buf.append("Host: ").append(host.host).append(":").append(host.port).append("\r\n");

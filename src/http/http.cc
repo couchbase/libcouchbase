@@ -462,7 +462,10 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
                 return rc;
             }
         }
-        if (cmd->cmdflags & LCB_CMDHTTP_F_NOUPASS) {
+
+        if ((cmd->cmdflags & LCB_CMDHTTP_F_NOUPASS) || instance->settings->keypath) {
+            // explicitly asked to skip Authorization header,
+            // or using SSL client certificate to authenticate
             username.clear();
             password.clear();
         } else if (username.empty() && password.empty()) {

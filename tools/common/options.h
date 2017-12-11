@@ -25,6 +25,7 @@ namespace cbc {
     X(String, connstr, "spec", 'U') \
     X(String, ssl, "ssl", '\0') \
     X(String, certpath, "certpath", '\0') \
+    X(String, keypath, "keypath", '\0') \
     X(UInt, timeout, "timeout", '\0') \
     X(Bool, timings, "timings", 'T') \
     X(Bool, verbose, "verbose", 'v') \

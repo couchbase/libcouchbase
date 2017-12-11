@@ -568,8 +568,12 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
             lcb_log(LOGARGS(this, TRACE), LOGFMT "GET_ERRORMAP unsupported/disabled", LOGID(this));
         }
 
-        // In any event, it's also time to send the LIST_MECHS request
-        send_list_mechs();
+        if (settings->keypath) {
+            completed = !maybe_select_bucket();
+        } else {
+            // In any event, it's also time to send the LIST_MECHS request
+            send_list_mechs();
+        }
         break;
     }
 
