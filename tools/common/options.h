@@ -29,6 +29,7 @@ namespace cbc {
     X(Bool, timings, "timings", 'T') \
     X(Bool, verbose, "verbose", 'v') \
     X(Bool, dump, "dump", '\0') \
+    X(Bool, compress, "compress", 'y') \
     X(List, cparams, "cparam", 'D')
 
 

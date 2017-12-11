@@ -77,6 +77,17 @@ The following common options may be applied to most of the commands
   pair (for example, `-Doperation_timeout=10 -Dconfig_cache=/foo/bar/baz`).
   See [ADDITIONAL OPTIONS](#additional-options) for more information
 
+* `-y`, `--compress`:
+  Enable compressing of documents. When library compiled with compression
+  support, this option will enable Snappy compression for outgoing data.
+  Incoming compressed data handled automatically regardless of this option.
+  Note, that because the compression support have to be negotiated with the
+  server, first packets might be sent uncompressed even when this switch
+  was specified. This is because the library might queue data commands before
+  socket connection has been established, and the library will negotiate
+  compression feature. If it is known that all server support compression
+  repeating the switch (like `-yy`) will force compression for all outgoing
+  mutations, even scheduled before establishing connection.
 
 <a name="additional-options"></a>
 ## ADDITIONAL OPTIONS

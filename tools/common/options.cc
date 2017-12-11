@@ -80,6 +80,7 @@ ConnParams::ConnParams() :
     o_certpath.description("Path to server certificate");
     o_verbose.description("Set debugging output (specify multiple times for greater verbosity");
     o_dump.description("Dump verbose internal state after operations are done");
+    o_compress.description("Turn on compression of outgoing data (second time to force compression)").setDefault(false);
 
     o_cparams.description("Additional options for connection. "
         "Use -Dtimeout=SECONDS for KV operation timeout");
@@ -417,6 +418,19 @@ ConnParams::doCtls(lcb_t instance)
 
         // Set the detailed error codes option
         doSctl<int>(instance, LCB_CNTL_DETAILED_ERRCODES, 1);
+
+#ifndef LCB_NO_SNAPPY
+        {
+            int opts = LCB_COMPRESS_IN;
+            if (o_compress.passed()) {
+                opts |= LCB_COMPRESS_OUT;
+                if (o_compress.numSpecified() > 1) {
+                    opts |= LCB_COMPRESS_FORCE;
+                }
+            }
+            doPctl(instance, LCB_CNTL_COMPRESSION_OPTS, &opts);
+        }
+#endif
     } catch (lcb_error_t &err) {
         return err;
     }

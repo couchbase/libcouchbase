@@ -71,3 +71,4 @@
 #define LCB_C_FLAGS "${CMAKE_C_FLAGS}"
 
 #define LCB_CLIENT_ID "libcouchbase/" LCB_VERSION_STRING " (" LCB_SYSTEM "; " LCB_SYSTEM_PROCESSOR "; " LCB_C_COMPILER ")"
+#cmakedefine LCB_STATIC_SNAPPY
