@@ -511,7 +511,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
     }
 
     add_header("Accept", "application/json");
-    if (!password.empty() && !username.empty()) {
+    if (!username.empty()) {
         char auth[256];
         std::string upassbuf;
         upassbuf.append(username).append(":").append(password);
