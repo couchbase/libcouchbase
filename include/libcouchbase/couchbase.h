@@ -692,7 +692,7 @@ typedef enum {
     LCB_CALLBACK_SDMUTATE,
     LCB_CALLBACK_NOOP, /**< lcb_noop3() */
     LCB_CALLBACK_PING, /**< lcb_ping3() */
-    LCB_CALLBACK_HEALTH, /**< lcb_health() */
+    LCB_CALLBACK_DIAG, /**< lcb_diag() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -2450,6 +2450,7 @@ typedef struct {
     LCB_CMD_BASE;
     int services; /**< bitmap for services to ping */
     int options; /**< extra options, e.g. for result representation */
+    const char *id; /**< optional, zero-terminated string to identify the report */
 } lcb_CMDPING;
 
 /**
@@ -2555,16 +2556,49 @@ typedef struct {
     LCB_CMD_BASE;
     int options;  /**< extra options, e.g. for result representation */
     const char *id; /**< optional, zero-terminated string to identify the report */
-} lcb_CMDHEALTH;
+} lcb_CMDDIAG;
 
 typedef struct {
     LCB_RESP_BASE
     lcb_SIZE njson;   /**< length of JSON string (when #LCB_PINGOPT_F_JSON was specified) */
     const char *json; /**< pointer to JSON string */
-} lcb_RESPHEALTH;
+} lcb_RESPDIAG;
 
+/**
+ * @brief Returns diagnostics report about network connections.
+ *
+ * @uncommitted
+ *
+ * @par Request
+ * @code{.c}
+ * lcb_CMDDIAG cmd = { 0 };
+ * lcb_diag(instance, fp, &cmd);
+ * lcb_wait(instance);
+ * @endcode
+ *
+ * @par Response
+ * @code{.c}
+ * lcb_install_callback3(instance, LCB_CALLBACK_DIAG, diag_callback);
+ * void diag_callback(lcb_t, int, const lcb_RESPBASE *rb)
+ * {
+ *     const lcb_RESPDIAG *resp = (const lcb_RESPDIAG *)rb;
+ *     if (resp->rc != LCB_SUCCESS) {
+ *         fprintf(stderr, "failed: %s\n", lcb_strerror(NULL, resp->rc));
+ *     } else {
+ *         if (resp->njson) {
+ *             fprintf(stderr, "\n%.*s", (int)resp->njson, resp->json);
+ *         }
+ *     }
+ * }
+ * @endcode
+ *
+ * @param instance the library handle
+ * @param cookie the cookie passed in the callback
+ * @param cmd command structure.
+ * @return status code for scheduling.
+ */
 LIBCOUCHBASE_API
-lcb_error_t lcb_health(lcb_t instance, const void *cookie, const lcb_CMDHEALTH *cmd);
+lcb_error_t lcb_diag(lcb_t instance, const void *cookie, const lcb_CMDDIAG *cmd);
 /**@} (Group: PING) */
 
 /**@ingroup lcb-public-api

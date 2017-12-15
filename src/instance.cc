@@ -822,6 +822,15 @@ const char *lcb_strerror_short(lcb_error_t error)
     return "<FIXME: Not an LCB error>";
 }
 
+LCB_INTERNAL_API
+const char *lcb_strerror_long(lcb_error_t error)
+{
+#define X(c, v, t, s) if (error == c) { return #c " (" #v "): " s; }
+    LCB_XERR(X)
+#undef X
+    return "<FIXME: Not an LCB error>";
+}
+
 LIBCOUCHBASE_API
 int lcb_get_errtype(lcb_error_t err)
 {

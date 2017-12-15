@@ -630,113 +630,132 @@ Issue a N1QL query:
     $ cbc n1ql 'SELECT * FROM `travel-sample` WHERE type="airport" AND city=$city' -Qscan_consistency=request_plus -A'$city=\"Reno\"'
 
 
-Check health of the cluster services:
+Ping cluster services:
 
     $ cbc ping --details  -Ucouchbase://192.168.1.101
     {
+       "version" : 1,
+       "config_rev" : 54,
+       "id" : "0x1d67af0",
+       "sdk" : "libcouchbase/2.8.4",
        "services" : {
           "fts" : [
              {
-                "details" : "Success (Not an error)",
-                "latency" : "7.833ms",
-                "server" : "192.168.1.101:8094",
-                "status" : 0
+                "id" : "0x1d75e90",
+                "latency_us" : 1500,
+                "local" : "192.168.1.12:35232",
+                "remote" : "192.168.1.101:8094",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "9.898ms",
-                "server" : "192.168.1.102:8094",
-                "status" : 0
+                "id" : "0x1da6800",
+                "latency_us" : 2301,
+                "local" : "192.168.1.12:40344",
+                "remote" : "192.168.1.103:8094",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "10.979ms",
-                "server" : "192.168.1.103:8094",
-                "status" : 0
+                "id" : "0x1da3270",
+                "latency_us" : 2820,
+                "local" : "192.168.1.12:42730",
+                "remote" : "192.168.1.102:8094",
+                "status" : "ok"
              },
              {
-                "details" : "Client-Side timeout exceeded for operation. Inspect network conditions or increase the timeout",
-                "latency" : "75.000s",
-                "server" : "192.168.1.104:8094",
-                "status" : 23
+                "details" : "LCB_ENETUNREACH (0x31): The remote host was unreachable - is your network OK?",
+                "latency_us" : 3071733,
+                "remote" : "192.168.1.104:8094",
+                "status" : "error"
              }
           ],
           "kv" : [
              {
-                "details" : "Success (Not an error)",
-                "latency" : "2.617ms",
-                "server" : "192.168.1.101:11210",
-                "status" : 0
+                "id" : "0x1d6bde0",
+                "latency_us" : 3700,
+                "local" : "192.168.1.12:42006",
+                "remote" : "192.168.1.101:11210",
+                "scope" : "default",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "19.330ms",
-                "server" : "192.168.1.102:11210",
-                "status" : 0
+                "id" : "0x1dadcf0",
+                "latency_us" : 5509,
+                "local" : "192.168.1.12:39936",
+                "remote" : "192.168.1.103:11210",
+                "scope" : "default",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "19.334ms",
-                "server" : "192.168.1.103:11210",
-                "status" : 0
+                "id" : "0x1dac500",
+                "latency_us" : 5594,
+                "local" : "192.168.1.12:33868",
+                "remote" : "192.168.1.102:11210",
+                "scope" : "default",
+                "status" : "ok"
              },
              {
-                "details" : "Client-Side timeout exceeded for operation. Inspect network conditions or increase the timeout",
-                "latency" : "2.505s",
-                "server" : "192.168.1.104:11210",
-                "status" : 23
+                "latency_us" : 2501688,
+                "remote" : "192.168.1.104:11210",
+                "scope" : "default",
+                "status" : "timeout"
              }
           ],
           "n1ql" : [
              {
-                "details" : "Success (Not an error)",
-                "latency" : "5.671ms",
-                "server" : "192.168.1.102:8093",
-                "status" : 0
+                "id" : "0x1d7f280",
+                "latency_us" : 3235,
+                "local" : "192.168.1.12:54210",
+                "remote" : "192.168.1.101:8093",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "6.595ms",
-                "server" : "192.168.1.103:8093",
-                "status" : 0
+                "id" : "0x1d76f20",
+                "latency_us" : 4625,
+                "local" : "192.168.1.12:58454",
+                "remote" : "192.168.1.102:8093",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "11.106ms",
-                "server" : "192.168.1.101:8093",
-                "status" : 0
+                "id" : "0x1da44b0",
+                "latency_us" : 4477,
+                "local" : "192.168.1.12:36678",
+                "remote" : "192.168.1.103:8093",
+                "status" : "ok"
              },
              {
-                "details" : "Client-Side timeout exceeded for operation. Inspect network conditions or increase the timeout",
-                "latency" : "75.000s",
-                "server" : "192.168.1.104:8093",
-                "status" : 23
+                "details" : "LCB_ENETUNREACH (0x31): The remote host was unreachable - is your network OK?",
+                "latency_us" : 3071843,
+                "remote" : "192.168.1.104:8093",
+                "status" : "error"
              }
           ],
           "views" : [
              {
-                "details" : "Success (Not an error)",
-                "latency" : "7.001ms",
-                "server" : "192.168.1.101:8092",
-                "status" : 0
+                "id" : "0x1da55c0",
+                "latency_us" : 1762,
+                "local" : "192.168.1.12:52166",
+                "remote" : "192.168.1.103:8092",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "9.022ms",
-                "server" : "192.168.1.102:8092",
-                "status" : 0
+                "id" : "0x1da20d0",
+                "latency_us" : 2016,
+                "local" : "192.168.1.12:59420",
+                "remote" : "192.168.1.102:8092",
+                "status" : "ok"
              },
              {
-                "details" : "Success (Not an error)",
-                "latency" : "10.866ms",
-                "server" : "192.168.1.103:8092",
-                "status" : 0
+                "id" : "0x1d6a740",
+                "latency_us" : 2567,
+                "local" : "192.168.1.12:38614",
+                "remote" : "192.168.1.101:8092",
+                "status" : "ok"
              },
              {
-                "details" : "Client-Side timeout exceeded for operation. Inspect network conditions or increase the timeout",
-                "latency" : "75.000s",
-                "server" : "192.168.1.104:8092",
-                "status" : 23
+                "details" : "LCB_ENETUNREACH (0x31): The remote host was unreachable - is your network OK?",
+                "latency_us" : 3071798,
+                "remote" : "192.168.1.104:8092",
+                "status" : "error"
              }
           ]
        }

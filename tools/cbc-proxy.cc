@@ -454,9 +454,9 @@ static void sigint_handler(int)
     }
 }
 
-static void health_callback(lcb_t, int, const lcb_RESPBASE *rb)
+static void diag_callback(lcb_t, int, const lcb_RESPBASE *rb)
 {
-    const lcb_RESPHEALTH *resp = (const lcb_RESPHEALTH *)rb;
+    const lcb_RESPDIAG *resp = (const lcb_RESPDIAG *)rb;
     if (resp->rc != LCB_SUCCESS) {
         fprintf(stderr, "failed: %s\n", lcb_strerror(NULL, resp->rc));
     } else {
@@ -468,10 +468,10 @@ static void health_callback(lcb_t, int, const lcb_RESPBASE *rb)
 
 static void sigquit_handler(int)
 {
-    lcb_CMDHEALTH req = {};
+    lcb_CMDDIAG req = {};
     req.options = LCB_PINGOPT_F_JSONPRETTY;
     req.id = app_client_string;
-    lcb_health(instance, NULL, &req);
+    lcb_diag(instance, NULL, &req);
 }
 
 static void real_main(int argc, char **argv)
@@ -499,7 +499,7 @@ static void real_main(int argc, char **argv)
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_CLIENT_STRING, app_client_string);
     lcb_set_bootstrap_callback(instance, bootstrap_callback);
     lcb_set_pktfwd_callback(instance, pktfwd_callback);
-    lcb_install_callback3(instance, LCB_CALLBACK_HEALTH, health_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_DIAG, diag_callback);
 
     good_or_die(lcb_connect(instance), "Failed to connect to cluster");
     if (config.useTimings()) {

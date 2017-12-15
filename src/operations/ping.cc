@@ -32,6 +32,7 @@ struct PingCookie : mc_REQDATAEX {
     int remaining;
     int options;
     std::list<lcb_PINGSVC> responses;
+    std::string id;
 
     PingCookie(const void *cookie_, int _options)
         : mc_REQDATAEX(cookie_, ping_procs, gethrtime()),
@@ -94,7 +95,7 @@ static const char* svc_to_string(lcb_PINGSVCTYPE type)
 }
 
 static void
-build_ping_json(lcb_RESPPING &ping, Json::Value &root, bool details)
+build_ping_json(lcb_t instance, lcb_RESPPING &ping, Json::Value &root, PingCookie *ck)
 {
     Json::Value services;
     for (size_t ii = 0; ii < ping.nservices; ii++) {
@@ -120,13 +121,28 @@ build_ping_json(lcb_RESPPING &ping, Json::Value &root, bool details)
             break;
         default:
             service["status"] = "error";
-            if (details) {
-                service["details"] = lcb_strerror(NULL, svc.rc);
+            if (ck->needDetails()) {
+                service["details"] = lcb_strerror_long(svc.rc);
             }
         }
         services[svc_to_string(svc.type)].append(service);
     }
     root["services"] = services;
+    root["version"] = 1;
+
+    std::string sdk("libcouchbase/" LCB_VERSION_STRING);
+    if (LCBT_SETTING(instance, client_string)) {
+        sdk.append(" ").append(LCBT_SETTING(instance, client_string));
+    }
+    root["sdk"] = sdk.c_str();
+    root["id"] = ck->id;
+
+    int config_rev = -1;
+    if (instance->cur_configinfo) {
+        lcb::clconfig::ConfigInfo *cfg = instance->cur_configinfo;
+        config_rev = cfg->vbc->revid;
+    }
+    root["config_rev"] = config_rev;
 }
 
 static void
@@ -144,7 +160,7 @@ invoke_ping_callback(lcb_t instance, PingCookie *ck)
         }
         if (ck->needJSON()) {
             Json::Value root;
-            build_ping_json(ping, root, ck->needDetails());
+            build_ping_json(instance, ping, root, ck);
             Json::Writer *w;
             if (ck->needPretty()) {
                 w = new Json::StyledWriter();
@@ -288,6 +304,14 @@ lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd)
     }
 
     PingCookie *ckwrap = new PingCookie(cookie, cmd->options);
+    {
+        char id[20] = {0};
+        snprintf(id, sizeof(id), "%p", (void *)instance);
+        ckwrap->id = id;
+        if (cmd->id) {
+            ckwrap->id.append("/").append(cmd->id);
+        }
+    }
 
     if (cmd->services & LCB_PINGSVC_F_KV) {
         for (ii = 0; ii < cq->npipelines; ii++) {
@@ -369,7 +393,7 @@ lcb_ping3(lcb_t instance, const void *cookie, const lcb_CMDPING *cmd)
 
 LIBCOUCHBASE_API
 lcb_error_t
-lcb_health(lcb_t instance, const void *cookie, const lcb_CMDHEALTH *cmd)
+lcb_diag(lcb_t instance, const void *cookie, const lcb_CMDDIAG *cmd)
 {
     Json::Value root;
     hrtime_t now = LCB_NS2US(gethrtime());
@@ -390,13 +414,6 @@ lcb_health(lcb_t instance, const void *cookie, const lcb_CMDHEALTH *cmd)
         }
         root["id"] = idstr;
     }
-
-    int config_rev = -1;
-    if (instance->cur_configinfo) {
-        lcb::clconfig::ConfigInfo *cfg = instance->cur_configinfo;
-        config_rev = cfg->vbc->revid;
-    }
-    root["config_rev"] = config_rev;
 
     size_t ii;
     Json::Value kv;
@@ -457,15 +474,15 @@ lcb_health(lcb_t instance, const void *cookie, const lcb_CMDHEALTH *cmd)
     std::string json = w->write(root);
     delete w;
 
-    lcb_RESPHEALTH resp = {0};
+    lcb_RESPDIAG resp = {0};
     lcb_RESPCALLBACK callback;
 
     resp.njson = json.size();
     resp.json = json.c_str();
 
-    callback = lcb_find_callback(instance, LCB_CALLBACK_HEALTH);
+    callback = lcb_find_callback(instance, LCB_CALLBACK_DIAG);
     resp.cookie = const_cast<void*>(cookie);
-    callback(instance, LCB_CALLBACK_HEALTH, (lcb_RESPBASE *)&resp);
+    callback(instance, LCB_CALLBACK_DIAG, (lcb_RESPBASE *)&resp);
 
     return LCB_SUCCESS;
 }
