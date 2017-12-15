@@ -384,10 +384,11 @@ lcb_health(lcb_t instance, const void *cookie, const lcb_CMDHEALTH *cmd)
     {
         char id[20] = {0};
         snprintf(id, sizeof(id), "%p", (void *)instance);
-        root["id"] = id;
+        std::string idstr(id);
         if (cmd->id) {
-            root["id"].append("/").append(cmd->id);
+            idstr.append("/").append(cmd->id);
         }
+        root["id"] = idstr;
     }
 
     int config_rev = -1;

@@ -470,6 +470,7 @@ static void sigquit_handler(int)
 {
     lcb_CMDHEALTH req = {};
     req.options = LCB_PINGOPT_F_JSONPRETTY;
+    req.id = app_client_string;
     lcb_health(instance, NULL, &req);
 }
 
