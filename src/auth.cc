@@ -18,6 +18,10 @@ lcbauth_add_pass(lcb_AUTHENTICATOR *auth, const char *u, const char *p, int flag
 lcb_error_t
 Authenticator::add(const char *u, const char *p, int flags)
 {
+    if (!u) {
+        return LCB_EINVAL;
+    }
+
     if (!(flags & (LCBAUTH_F_BUCKET|LCBAUTH_F_CLUSTER))) {
         return LCB_EINVAL;
     }
