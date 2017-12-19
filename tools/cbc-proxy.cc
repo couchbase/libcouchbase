@@ -259,7 +259,7 @@ extern "C" {
         size_t nkey;                                                                                                   \
         struct client *cl = (struct client *)resp->cookie;                                                             \
                                                                                                                        \
-        protocol_binary_response_header header = {0};                                                                  \
+        protocol_binary_response_header header = {};                                                                   \
         header.response.magic = PROTOCOL_BINARY_RES;                                                                   \
         header.response.opcode = PROTOCOL_BINARY_CMD_STAT;                                                             \
                                                                                                                        \

@@ -344,7 +344,7 @@ PoolConnInfo::PoolConnInfo(PoolHost *he, uint32_t timeout)
     id = LCBIO_PROTOCTX_POOL;
     dtor = cinfo_protoctx_dtor;
 
-    lcb_host_t tmphost = {0};
+    lcb_host_t tmphost = {};
     lcb_error_t err = lcb_host_parsez(&tmphost, he->key.c_str(), 80);
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(he->parent, ERROR), HE_LOGFMT "Could not parse host! Will supply dummy host (I=%p)", HE_LOGID(he), (void*)this);
