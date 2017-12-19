@@ -581,6 +581,7 @@ TEST_F(MockUnitTest, testDynamicAuth)
     KVOperation kvo(&itm);
     kvo.store(instance);
     lcb_destroy(instance);
+    lcbauth_unref(auth);
 }
 
 static void
