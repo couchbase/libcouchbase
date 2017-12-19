@@ -237,7 +237,7 @@ SessionRequestImpl::setup(const lcbio_NAMEINFO& nistrs, const lcb_host_t& host,
 
     // Get the credentials
     username = auth.username_for(host.host, host.port, settings->bucket);
-    const std::string &pass = auth.password_for(host.host, host.port, settings->bucket);
+    const std::string pass = auth.password_for(host.host, host.port, settings->bucket);
 
     if (!pass.empty()) {
         size_t maxlen = sizeof(u_auth.buffer) - offsetof(cbsasl_secret_t, data);

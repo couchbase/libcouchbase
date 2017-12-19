@@ -244,11 +244,11 @@ lcb_error_t HttpProvider::setup_request_header(const lcb_host_t &host) {
     }
 
     request_buf.append(" HTTP/1.1\r\n");
-    const std::string &password = (settings().conntype == LCB_TYPE_BUCKET)
+    const std::string password = (settings().conntype == LCB_TYPE_BUCKET)
                                       ? settings().auth->password_for(host.host, host.port, settings().bucket)
                                       : settings().auth->password();
     if (!password.empty()) {
-        const std::string &username = (settings().conntype == LCB_TYPE_BUCKET)
+        const std::string username = (settings().conntype == LCB_TYPE_BUCKET)
                                           ? settings().auth->username_for(host.host, host.port, settings().bucket)
                                           : settings().auth->username();
         std::string cred;
