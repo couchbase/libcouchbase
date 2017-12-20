@@ -78,8 +78,17 @@ get_callback(lcb_t, lcb_CALLBACKTYPE cbtype, const lcb_RESPGET *resp)
 {
     string key = getRespKey((const lcb_RESPBASE *)resp);
     if (resp->rc == LCB_SUCCESS) {
-        fprintf(stderr, "%-20s CAS=0x%" PRIx64 ", Flags=0x%x. Size=%lu\n",
-            key.c_str(), resp->cas, resp->itmflags, (unsigned long)resp->nvalue);
+        fprintf(stderr, "%-20s CAS=0x%" PRIx64 ", Flags=0x%x, Size=%lu, Datatype=0x%02x",
+                key.c_str(), resp->cas, resp->itmflags, (unsigned long)resp->nvalue,
+                (int)resp->datatype);
+        if (resp->datatype) {
+            fprintf(stderr, "(");
+            if (resp->datatype & LCB_VALUE_F_JSON) {
+                fprintf(stderr, "JSON");
+            }
+            fprintf(stderr, ")");
+        }
+        fprintf(stderr, "\n");
         fflush(stderr);
         fwrite(resp->value, 1, resp->nvalue, stdout);
         fflush(stdout);
@@ -509,8 +518,7 @@ SetHandler::addOptions()
     if (!hasFileList()) {
         parser.addOption(o_value);
     }
-    // This may be enabled again if datatype support is re-added
-    // parser.addOption(o_json);
+    parser.addOption(o_json);
 }
 
 lcb_storage_t

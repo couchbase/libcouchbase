@@ -351,6 +351,7 @@ SessionRequestImpl::send_hello()
     unsigned nfeatures = 0;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TLS;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XATTR;
+    features[nfeatures++] = PROTOCOL_BINARY_FEATURE_JSON;
     features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SELECT_BUCKET;
     if (settings->use_errmap) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_XERROR;

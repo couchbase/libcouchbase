@@ -304,6 +304,7 @@ public:
     bool isSubdoc() { return o_subdoc; }
     bool isNoop() { return o_noop.result(); }
     bool useCollections() { return o_collection.passed(); }
+    bool writeJson() { return o_writeJson.result(); }
     unsigned firstKeyOffset() { return o_startAt; }
     uint32_t getNumItems() { return o_numItems; }
     uint32_t getRateLimit() { return o_rateLimit; }
@@ -632,6 +633,9 @@ public:
             case NextOp::STORE: {
                 lcb_CMDSTORE scmd = { 0 };
                 scmd.operation = LCB_SET;
+                if (config.writeJson()) {
+                    scmd.datatype = LCB_VALUE_F_JSON;
+                }
                 scmd.exptime = exptime;
                 LCB_CMD_SET_KEY(&scmd, opinfo.m_key.c_str(), opinfo.m_key.size());
                 LCB_CMD_SET_VALUEIOV(&scmd, &opinfo.m_valuefrags[0], opinfo.m_valuefrags.size());

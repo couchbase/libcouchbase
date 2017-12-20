@@ -3313,7 +3313,7 @@ void lcb_destroy_async(lcb_t instance, const void *arg);
 #define LCB_DATATYPE_JSON 0x01
 
 /** @internal */
-typedef enum { LCB_VALUE_RAW = 0x00, LCB_VALUE_F_JSON = 0x01, LCB_VALUE_F_SNAPPYCOMP } lcb_VALUEFLAGS;
+typedef enum { LCB_VALUE_RAW = 0x00, LCB_VALUE_F_JSON = 0x01, LCB_VALUE_F_SNAPPYCOMP = 0x02 } lcb_VALUEFLAGS;
 
 
 /**
