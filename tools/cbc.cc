@@ -853,13 +853,21 @@ VersionHandler::run()
 #ifdef LCB_NO_SNAPPY
         printf("  Snappy: SUPPORTED\n");
 #else
-        printf("  Snappy: %d.%d.%d ("
 #ifdef LCB_STATIC_SNAPPY
-               "static"
+#define LCB_SNAPPY_LINK "static"
 #else
-               "dynamic"
+#define LCB_SNAPPY_LINK "dynamic"
 #endif
-               ")\n", SNAPPY_MAJOR, SNAPPY_MINOR, SNAPPY_PATCHLEVEL);
+#define EXPAND(VAR)   VAR ## 1
+#define IS_EMPTY(VAR) EXPAND(VAR)
+
+#if defined(SNAPPY_MAJOR) && (IS_EMPTY(SNAPPY_MAJOR) != 1)
+        printf("  Snappy: %d.%d.%d (%s)\n", SNAPPY_MAJOR, SNAPPY_MINOR, SNAPPY_PATCHLEVEL, LCB_SNAPPY_LINK);
+#elif defined(LCB_SNAPPY_PKG_VERSION)
+        printf("  Snappy: %s (%s)\n", LCB_SNAPPY_PKG_VERSION, LCB_SNAPPY_LINK);
+#else
+        printf("  Snappy: unknown (%s)\n", LCB_SNAPPY_LINK);
+#endif
 #endif
     } else {
         printf("  Snappy: NOT SUPPORTED\n");
