@@ -145,6 +145,11 @@ extern "C" {
 typedef struct {
     const void *cookie; /**< User pointer to place in callbacks */
     hrtime_t start; /**< Time of the initial request. Used for timeouts */
+    /**
+     * Time when dispatching response has begun for the command.
+     * Used for metrics/tracing. Might be zero, when tracing is not enabled.
+     */
+    hrtime_t dispatch;
 } mc_REQDATA;
 
 struct mc_packet_st;
@@ -183,12 +188,17 @@ typedef struct {
 typedef struct mc_REQDATAEX {
     const void *cookie; /**< User data */
     hrtime_t start; /**< Start time */
+    /**
+     * Time when dispatching response has begun for the command.
+     * Used for metrics/tracing. Might be zero, when tracing is not enabled.
+     */
+    hrtime_t dispatch;
     const mc_REQDATAPROCS *procs; /**< Common routines for the packet */
 
     #ifdef __cplusplus
-    mc_REQDATAEX(const void *cookie_,
-                const mc_REQDATAPROCS &procs_, hrtime_t start_)
-        : cookie(cookie_), start(start_), procs(&procs_) {
+    mc_REQDATAEX(const void *cookie_, const mc_REQDATAPROCS &procs_, hrtime_t start_)
+        : cookie(cookie_), start(start_), dispatch(0), procs(&procs_)
+    {
     }
     #endif
 } mc_REQDATAEX;

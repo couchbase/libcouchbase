@@ -20,6 +20,8 @@
 #include "http/http.h"
 #include "http/http-priv.h"
 #include "auth-priv.h"
+#include "trace.h"
+
 using namespace lcb::http;
 
 #define LOGFMT "<%s%s%s:%s> "
@@ -182,6 +184,7 @@ Request::finish(lcb_error_t error)
         return;
     }
 
+    TRACE_HTTP_END(this, error, parser->get_cur_response().status);
     status |= FINISHED;
 
     if (!(status & NOLCB)) {
@@ -277,6 +280,7 @@ Request::submit()
         }
         response_headers.clear();
         response_headers_clist.clear();
+        TRACE_HTTP_BEGIN(this);
     }
 
     return rc;
