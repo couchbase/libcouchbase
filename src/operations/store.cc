@@ -155,10 +155,6 @@ can_compress(lcb_t instance, const mc_PIPELINE *pipeline,
     const lcb::Server *server = static_cast<const lcb::Server*>(pipeline);
     int compressopts = LCBT_SETTING(instance, compressopts);
 
-    if (mcreq_compression_supported() == 0) {
-        return 0;
-    }
-
     if (vbuf->vtype != LCB_KV_COPY) {
         return 0;
     }

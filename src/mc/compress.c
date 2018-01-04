@@ -18,16 +18,11 @@
 #include "mcreq.h"
 #include "compress.h"
 
-#ifndef LCB_NO_SNAPPY
 #include <snappy-c.h>
-#endif
 
 int
 mcreq_compress_value(mc_PIPELINE *pl, mc_PACKET *pkt, const lcb_CONTIGBUF *vbuf)
 {
-#ifdef LCB_NO_SNAPPY
-    (void)pl;(void)pkt;(void)vbuf;return -1;
-#else
     /* get the desired size */
     size_t maxsize, compsize;
     snappy_status status;
@@ -55,17 +50,12 @@ mcreq_compress_value(mc_PIPELINE *pl, mc_PACKET *pkt, const lcb_CONTIGBUF *vbuf)
         outspan->size = compsize;
     }
     return 0;
-#endif
 }
 
 int
 mcreq_inflate_value(const void *compressed, lcb_SIZE ncompressed,
     const void **bytes, lcb_SIZE *nbytes, void **freeptr)
 {
-#ifdef LCB_NO_SNAPPY
-    (void)compressed;(void)ncompressed;(void)bytes;(void)nbytes;(void)freeptr;
-    return -1;
-#else
     lcb_SIZE cursize, compsize;
     snappy_status status;
     cursize = ncompressed;
@@ -86,5 +76,4 @@ mcreq_inflate_value(const void *compressed, lcb_SIZE ncompressed,
     *bytes = *freeptr;
     *nbytes = compsize;
     return 0;
-#endif
 }

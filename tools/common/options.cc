@@ -428,7 +428,6 @@ ConnParams::doCtls(lcb_t instance)
         // Set the detailed error codes option
         doSctl<int>(instance, LCB_CNTL_DETAILED_ERRCODES, 1);
 
-#ifndef LCB_NO_SNAPPY
         {
             int opts = LCB_COMPRESS_IN;
             if (o_compress.passed()) {
@@ -439,7 +438,6 @@ ConnParams::doCtls(lcb_t instance)
             }
             doPctl(instance, LCB_CNTL_COMPRESSION_OPTS, &opts);
         }
-#endif
     } catch (lcb_error_t &err) {
         return err;
     }

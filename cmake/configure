@@ -64,15 +64,9 @@ my @HELP_DESCRIPTIONS = (
         "Path to snappy installation",
         "%s", \(my $SNAPPY_ROOT = "")],
 
-    [ "disable-snappy", "",
-        "Do not build static snappy",
-        "%d", \(my $NO_SNAPPY = 0)],
-    [ "enable-snappy", "",
-        "Enable experimental snappy support",
-        "%d", \(my $ENABLE_SNAPPY = 0)],
-    [ "enable-static-snappy", "",
-        "Build the bundled snappy and do not link against the system version",
-        "%d", \(my $STATIC_SNAPPY = 0) ],
+    [ "system-snappy", "",
+        "Use system snappy",
+        "%d", \(my $SYSTEM_SNAPPY = 0)],
 
     [ "disable-plugins", "",
         "Disable building of external plugins",
@@ -283,16 +277,10 @@ if ($OPENSSL_ROOT) {
     push @CM_OPTIONS, "-DOPENSSL_ROOT_DIR=$OPENSSL_ROOT";
 }
 if ($SNAPPY_ROOT) {
-    push @CM_OPTIONS, "-DSNAPPY_ROOT=$SNAPPY_ROOT";
+    push @CM_OPTIONS, "-DSNAPPY_ROOT_DIR=$SNAPPY_ROOT";
 }
-if ($NO_SNAPPY) {
-    push @CM_OPTIONS, "-DLCB_NO_SNAPPY=1";
-}
-if ($ENABLE_SNAPPY) {
-    push @CM_OPTIONS, "-DLCB_NO_SNAPPY=0";
-}
-if ($STATIC_SNAPPY) {
-    push @CM_OPTIONS, "-DLCB_STATIC_SNAPPY=1";
+if ($SYSTEM_SNAPPY) {
+    push @CM_OPTIONS, "-DLCB_SYSTEM_SNAPPY=1";
 }
 if ($LCB_USE_ASAN) {
     push @CM_OPTIONS, "-DLCB_USE_ASAN=1";
