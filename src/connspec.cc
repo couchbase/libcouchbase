@@ -264,6 +264,16 @@ Connspec::parse_options(
             if (sscanf(value, "%d", &m_loglevel) != 1) {
                 SET_ERROR("console_log_level must be a numeric value");
             }
+        } else if (!strcmp(key, "log_redaction")) {
+            int btmp = 0;
+            if (!strcmp(value, "on") || !strcmp(value, "true")) {
+                btmp = 1;
+            } else if (!strcmp(value, "off") || !strcmp(value, "false")) {
+                btmp = 0;
+            } else if (sscanf(value, "%d", &btmp) != 1) {
+                SET_ERROR("log_redaction must have numeric (boolean) value");
+            }
+            m_logredact = btmp != 0;
         } else if (!strcmp(key, "dnssrv")) {
             if ((m_flags & F_DNSSRV_EXPLICIT) == F_DNSSRV_EXPLICIT) {
                 SET_ERROR("Cannot use dnssrv scheme with dnssrv option");

@@ -216,7 +216,7 @@ lcb_error_t
 Request::submit()
 {
     lcb_error_t rc;
-    lcb_host_t reqhost = {};
+    lcb_host_t reqhost = {"", "", 0};
 
     // Stop any pending socket/request
     close_io();

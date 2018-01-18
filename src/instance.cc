@@ -80,8 +80,10 @@ lcb_st::add_bs_host(const char *host, int port, unsigned bstype)
         target = ht_nodes;
     }
     bool ipv6 = strchr(host, ':') != NULL;
-    lcb_log(LOGARGS(this, DEBUG), "Adding host %s%s%s:%d to initial %s bootstrap list", ipv6 ? "[" : "", host,
-            ipv6 ? "]" : "", port, tname);
+    lcb_log(LOGARGS(this, DEBUG), "Adding host " LCB_LOG_SPEC("%s%s%s:%d") "to initial %s bootstrap list",
+            this->settings->log_redaction ? LCB_LOG_SD_OTAG : "",
+            ipv6 ? "[" : "", host, ipv6 ? "]" : "", port,
+            this->settings->log_redaction ? LCB_LOG_SD_CTAG : "", tname);
     target->add(host, port);
 }
 
@@ -446,9 +448,16 @@ lcb_error_t lcb_create(lcb_t *instance,
         lcb_U32 val = spec.loglevel();
         lcb_cntl(obj, LCB_CNTL_SET, LCB_CNTL_CONLOGGER_LEVEL, &val);
     }
+    settings->log_redaction = spec.logredact();
+    if (settings->log_redaction) {
+        lcb_log(LOGARGS(obj, INFO), "Logging redaction enabled. Logs have reduced identifying information. Diagnosis "
+                                    "and support of issues may be challenging or not possible in this configuration");
+    }
 
     lcb_log(LOGARGS(obj, INFO), "Version=%s, Changeset=%s", lcb_get_version(NULL), LCB_VERSION_CHANGESET);
-    lcb_log(LOGARGS(obj, INFO), "Effective connection string: %s. Bucket=%s", spec.connstr().c_str(), settings->bucket);
+    lcb_log(LOGARGS(obj, INFO), "Effective connection string: " LCB_LOG_SPEC("%s") ". Bucket=" LCB_LOG_SPEC("%s"),
+            settings->log_redaction ? LCB_LOG_SD_OTAG : "", spec.connstr().c_str(), settings->log_redaction ? LCB_LOG_SD_CTAG : "",
+            settings->log_redaction ? LCB_LOG_MD_OTAG : "", settings->bucket, settings->log_redaction ? LCB_LOG_MD_CTAG : "");
 
     if (io_priv == NULL) {
         lcb_io_opt_t ops;
@@ -515,6 +524,12 @@ lcb_error_t lcb_create(lcb_t *instance,
         *instance = obj;
     }
     return err;
+}
+
+LIBCOUCHBASE_API
+int lcb_is_redacting_logs(lcb_t instance)
+{
+    return instance && instance->settings && instance->settings->log_redaction;
 }
 
 typedef struct {

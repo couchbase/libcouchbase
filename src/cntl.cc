@@ -204,6 +204,9 @@ HANDLER(select_bucket_handler) {
 HANDLER(send_hello_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, send_hello));
 }
+HANDLER(log_redaction_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, log_redaction));
+}
 HANDLER(config_poll_interval_handler) {
     lcb_U32 *user = reinterpret_cast<lcb_U32*>(arg);
     if (mode == LCB_CNTL_SET && *user > 0 && *user < LCB_CONFIG_POLL_INTERVAL_FLOOR) {
@@ -656,7 +659,8 @@ static ctl_handler handlers[] = {
     buckettype_handler, /* LCB_CNTL_BUCKETTYPE */
     metrics_handler, /* LCB_CNTL_METRICS */
     collections_handler, /* LCB_CNTL_USE_COLLECTIONS */
-    ssl_keypath_handler /* LCB_CNTL_SSL_KEY */
+    ssl_keypath_handler, /* LCB_CNTL_SSL_KEY */
+    log_redaction_handler /* LCB_CNTL_LOG_REDACTION */
 };
 
 /* Union used for conversion to/from string functions */
@@ -827,6 +831,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"send_hello", LCB_CNTL_SEND_HELLO, convert_intbool},
         {"ipv6", LCB_CNTL_IP6POLICY, convert_ipv6},
         {"metrics", LCB_CNTL_METRICS, convert_intbool },
+        {"log_redaction", LCB_CNTL_LOG_REDACTION, convert_intbool},
         {NULL, -1}
 };
 

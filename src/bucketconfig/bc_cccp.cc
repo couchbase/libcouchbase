@@ -142,14 +142,14 @@ CccpProvider::schedule_next_request(lcb_error_t err, bool can_rollover)
     if (server) {
         cmdcookie = new CccpCookie(this);
         lcb_log(LOGARGS(this, TRACE), "Re-Issuing CCCP Command on server struct %p (" LCB_HOST_FMT ")", (void *)server,
-                LCB_HOST_ARG(next_host));
+                LCB_HOST_ARG(this->parent->settings, next_host));
         timer.rearm(settings().config_node_timeout);
         instance->request_config(cmdcookie, server);
 
     } else {
 
         lcb_log(LOGARGS(this, INFO), "Requesting connection to node " LCB_HOST_FMT " for CCCP configuration",
-                LCB_HOST_ARG(next_host));
+                LCB_HOST_ARG(this->parent->settings, next_host));
         creq = instance->memd_sockpool->get(*next_host,
             settings().config_node_timeout,
             on_connected, this);
@@ -433,7 +433,8 @@ void CccpProvider::dump(FILE *fp) const {
 
     for (size_t ii = 0; ii < nodes->size(); ii++) {
         const lcb_host_t &curhost = (*nodes)[ii];
-        fprintf(fp, "CCCP NODE: " LCB_HOST_FMT "\n", LCB_HOST_ARG(&curhost));
+        lcb_settings *dummy = NULL;
+        fprintf(fp, "CCCP NODE: " LCB_HOST_FMT "\n", LCB_HOST_ARG(dummy, &curhost));
     }
     fprintf(fp, "## END CCCP PROVIDER DUMP ##\n");
 }

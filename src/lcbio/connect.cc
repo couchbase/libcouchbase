@@ -39,10 +39,15 @@ static const lcb_host_t *get_loghost(lcbio_SOCKET *s) {
 }
 
 /** Format string arguments for %p%s:%s */
-#define CSLOGID(sock)                                                                                                  \
-    get_loghost(sock)->ipv6 ? "[" : "", get_loghost(sock)->host, get_loghost(sock)->ipv6 ? "]" : "",                   \
-        get_loghost(sock)->port, (void *)sock
-#define CSLOGFMT "<%s%s%s:%s> (SOCK=%p) "
+#define CSLOGID(sock)                                           \
+    sock->settings->log_redaction ? LCB_LOG_SD_OTAG : "",       \
+        get_loghost(sock)->ipv6 ? "[" : "",                     \
+        get_loghost(sock)->host,                                \
+        get_loghost(sock)->ipv6 ? "]" : "",                     \
+        get_loghost(sock)->port,                                \
+        sock->settings->log_redaction ? LCB_LOG_SD_CTAG : "",   \
+        (void *)sock
+#define CSLOGFMT "<" LCB_LOG_SPEC("%s%s%s:%s") "> (SOCK=%p) "
 
 #define LOGARGS_T(lvl) LOGARGS(this->sock, lvl)
 #define CSLOGID_T() CSLOGID(this->sock)

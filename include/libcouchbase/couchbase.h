@@ -4013,6 +4013,15 @@ LIBCOUCHBASE_API
 const char *
 lcb_resp_get_error_ref(int cbtype, const lcb_RESPBASE *rb);
 
+/**
+ * @volatile
+ * Returns whether the library redacting logs for this connection instance.
+ *
+ * @return non-zero if the logs are being redacted for this instance.
+ */
+LIBCOUCHBASE_API
+int lcb_is_redacting_logs(lcb_t instance);
+
 /* Post-include some other headers */
 #ifdef __cplusplus
 }
