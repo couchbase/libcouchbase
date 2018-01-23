@@ -426,9 +426,9 @@ lcb_diag(lcb_t instance, const void *cookie, const lcb_CMDDIAG *cmd)
             snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
             endpoint["id"] = id;
             if (server->curhost->ipv6) {
-                endpoint["remote"] = std::string(server->curhost->host) + ":" + std::string(server->curhost->port);
-            } else {
                 endpoint["remote"] = "[" + std::string(server->curhost->host) + "]:" + std::string(server->curhost->port);
+            } else {
+                endpoint["remote"] = std::string(server->curhost->host) + ":" + std::string(server->curhost->port);
             }
             endpoint["local"] = lcbio__inet_ntop(&ctx->sock->info->sa_local);
             endpoint["last_activity_us"] = (Json::Value::UInt64)(now - ctx->sock->atime);
