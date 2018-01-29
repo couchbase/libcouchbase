@@ -32,6 +32,7 @@
 #include <signal.h>
 #ifndef WIN32
 #include <pthread.h>
+#include <libcouchbase/metrics.h>
 #else
 #define usleep(n) Sleep(n/1000)
 #endif
@@ -733,6 +734,10 @@ public:
     pthread_t thr;
 #endif
 
+    lcb_t getInstance() {
+        return instance;
+    }
+
 protected:
     // the callback methods needs to be able to set the error handler..
     friend void operationCallback(lcb_t, int, const lcb_RESPBASE*);
@@ -805,10 +810,61 @@ static void operationCallback(lcb_t, int cbtype, const lcb_RESPBASE *resp)
 std::list<ThreadContext *> contexts;
 
 extern "C" {
-    typedef void (*handler_t)(int);
-}
+typedef void (*handler_t)(int);
 
 #ifndef WIN32
+static void diag_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
+{
+    const lcb_RESPDIAG *resp = (const lcb_RESPDIAG *)rb;
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "%p, diag failed: %s\n", (void *)instance, lcb_strerror(NULL, resp->rc));
+    } else {
+        if (resp->njson) {
+            fprintf(stderr, "\n%.*s", (int)resp->njson, resp->json);
+        }
+
+        {
+            lcb_METRICS* metrics;
+            size_t ii;
+            lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_METRICS, &metrics);
+
+            fprintf(stderr, "%p: retried: %lu packets\n", (void *)instance, (unsigned long)metrics->packets_retried);
+            for (ii = 0; ii < metrics->nservers; ii++) {
+                fprintf(stderr, "  [srv-%d] snt: %lu, rcv: %lu, q: %lu, err: %lu, tmo: %lu, nmv: %lu, orph: %lu\n",
+                        (int)ii,
+                        (unsigned long)metrics->servers[ii]->packets_sent,
+                        (unsigned long)metrics->servers[ii]->packets_read,
+                        (unsigned long)metrics->servers[ii]->packets_queued,
+                        (unsigned long)metrics->servers[ii]->packets_errored,
+                        (unsigned long)metrics->servers[ii]->packets_timeout,
+                        (unsigned long)metrics->servers[ii]->packets_nmv,
+                        (unsigned long)metrics->servers[ii]->packets_ownerless);
+            }
+        }
+    }
+}
+
+static void sigquit_handler(int)
+{
+    std::list<ThreadContext *>::iterator it;
+    for (it = contexts.begin(); it != contexts.end(); ++it) {
+        lcb_t instance = (*it)->getInstance();
+        lcb_CMDDIAG req = {};
+        req.options = LCB_PINGOPT_F_JSONPRETTY;
+        lcb_diag(instance, NULL, &req);
+    }
+    signal(SIGQUIT, sigquit_handler); // Reinstall
+}
+
+static void setup_sigquit_handler()
+{
+    struct sigaction action;
+    sigemptyset(&action.sa_mask);
+    action.sa_handler = sigquit_handler;
+    action.sa_flags = 0;
+    sigaction(SIGQUIT, &action, NULL);
+}
+
 static void sigint_handler(int)
 {
     static int ncalled = 0;
@@ -838,9 +894,7 @@ static void setup_sigint_handler()
     sigaction(SIGINT, &action, NULL);
 }
 
-extern "C" {
 static void* thread_worker(void*);
-}
 
 static void start_worker(ThreadContext *ctx)
 {
@@ -864,12 +918,12 @@ static void join_worker(ThreadContext *ctx)
 }
 
 #else
+static void setup_sigquit_handler() {}
 static void setup_sigint_handler() {}
 static void start_worker(ThreadContext *ctx) { ctx->run(); }
 static void join_worker(ThreadContext *ctx) { (void)ctx; }
 #endif
 
-extern "C" {
 static void *thread_worker(void *arg)
 {
     ThreadContext *ctx = static_cast<ThreadContext *>(arg);
@@ -882,6 +936,7 @@ int main(int argc, char **argv)
 {
     int exit_code = EXIT_SUCCESS;
     setup_sigint_handler();
+    setup_sigquit_handler();
 
     Parser parser("cbc-pillowfight");
     try {
@@ -922,6 +977,13 @@ int main(int argc, char **argv)
         lcb_install_callback3(instance, LCB_CALLBACK_SDMUTATE, operationCallback);
         lcb_install_callback3(instance, LCB_CALLBACK_SDLOOKUP, operationCallback);
         lcb_install_callback3(instance, LCB_CALLBACK_NOOP, operationCallback);
+#ifndef WIN32
+        lcb_install_callback3(instance, LCB_CALLBACK_DIAG, diag_callback);
+        {
+            int activate = 1;
+            lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_METRICS, &activate);
+        }
+#endif
         cp.doCtls(instance);
         if (config.useCollections()) {
             int use = 1;
