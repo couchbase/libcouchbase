@@ -340,12 +340,10 @@ SessionRequestImpl::send_step(const lcb::MemcachedResponse& packet)
     return true;
 }
 
-#define LCB_HELLO_DEFL_STRING LCB_CLIENT_ID
-
 std::string
 SessionRequestImpl::generate_agent_json()
 {
-    std::string client_string(LCB_HELLO_DEFL_STRING);
+    std::string client_string(LCB_CLIENT_ID);
     if (settings->client_string) {
         client_string += " ";
         client_string += settings->client_string;

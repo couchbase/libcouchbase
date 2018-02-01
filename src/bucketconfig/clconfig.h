@@ -383,7 +383,7 @@ struct Confmon {
     int state;
 
     /** Last time the provider was stopped. As a microsecond timestamp */
-    lcb_uint32_t last_stop_us;
+    lcb_uint64_t last_stop_us;
 
     typedef std::list<Provider*> ProviderList;
     ProviderList active_providers;

@@ -47,7 +47,7 @@
 #define __STDC_FORMAT_MACROS 1
 #endif
 #include <inttypes.h>
-#elif _MSC_VER
+#elif defined(_MSC_VER)
 #ifndef PRIx64
 #define PRIx64 "I64x"
 #endif

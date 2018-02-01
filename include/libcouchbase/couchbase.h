@@ -55,6 +55,7 @@ typedef struct lcb_http_request_st *lcb_http_request_t;
 #include <libcouchbase/configuration.h>
 #include <libcouchbase/kvbuf.h>
 #include <libcouchbase/auth.h>
+#include <libcouchbase/tracing.h>
 #include <libcouchbase/_cxxwrap.h>
 
 #ifdef __cplusplus
@@ -3870,6 +3871,8 @@ const lcb_U32 lcb_version_g;
 #define LCB_SUPPORTS_SSL 1
 /**@brief Whether the library has experimental compression support */
 #define LCB_SUPPORTS_SNAPPY 2
+/**@brief Whether the library has experimental tracing support */
+#define LCB_SUPPORTS_TRACING 3
 
 /**
  * @committed

@@ -41,10 +41,13 @@ SET(LCB_CORE_SRC
     ${LCB_N1QL_SRC}
     src/callbacks.c
     src/legacy.c
-    # src/mcserver/negotiate.c
     src/iofactory.c
     src/settings.c
     src/utilities.c)
+
+IF (LCB_TRACING)
+  FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
+ENDIF()
 
 SET(LCB_CORE_CXXSRC
     src/instance.cc
@@ -95,4 +98,6 @@ SET(LCB_CORE_CXXSRC
     src/views/docreq.cc
     src/views/viewreq.cc
     src/cntl.cc
-    src/wait.cc)
+    src/wait.cc
+    ${LCB_TRACING_SRC}
+    )

@@ -394,6 +394,7 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse* response,
 
     void *freeptr = NULL;
     maybe_decompress(o, response, &resp, &freeptr);
+    LCBTRACE_KV_FINISH(pipeline, request, response);
     TRACE_GET_END(o, request, response, &resp);
     invoke_callback(request, o, &resp, LCB_CALLBACK_GET);
     free(freeptr);
@@ -606,6 +607,7 @@ H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, MemcachedResponse *response,
     init_resp(root, response, packet, immerr, &w.resp);
     handle_error_info(response, &w);
     handle_mutation_token(root, response, packet, &w.mt);
+    LCBTRACE_KV_FINISH(pipeline, packet, response);
     TRACE_REMOVE_END(root, packet, response, &w.resp);
     invoke_callback(packet, root, &w.resp, LCB_CALLBACK_REMOVE);
 }
@@ -743,6 +745,7 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
     }
     w.resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
     handle_mutation_token(root, response, request, &w.mt);
+    LCBTRACE_KV_FINISH(pipeline, request, response);
     TRACE_STORE_END(root, request, response, &w.resp);
     if (request->flags & MCREQ_F_REQEXT) {
         request->u_rdata.exdata->procs->handler(pipeline, request, immerr, &w.resp);
@@ -769,6 +772,7 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request,
     }
     w.resp.rflags |= LCB_RESP_F_FINAL;
     w.resp.cas = response->cas();
+    LCBTRACE_KV_FINISH(pipeline, request, response);
     TRACE_ARITHMETIC_END(root, request, response, &w.resp);
     invoke_callback(request, root, &w.resp, LCB_CALLBACK_COUNTER);
 }
@@ -856,6 +860,7 @@ H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
     init_resp(root, response, request, immerr, &resp);
     handle_error_info(response, &w);
     resp.rflags |= LCB_RESP_F_FINAL;
+    LCBTRACE_KV_FINISH(pipeline, request, response);
     TRACE_TOUCH_END(root, request, response, &resp);
     invoke_callback(request, root, &resp, LCB_CALLBACK_TOUCH);
 }
@@ -881,6 +886,7 @@ H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
     init_resp(root, response, request, immerr, &resp);
     handle_error_info(response, &w);
     resp.rflags |= LCB_RESP_F_FINAL;
+    LCBTRACE_KV_FINISH(pipeline, request, response);
     TRACE_UNLOCK_END(root, request, response, &resp);
     invoke_callback(request, root, &resp, LCB_CALLBACK_UNLOCK);
 }

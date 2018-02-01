@@ -771,6 +771,13 @@ LIBCOUCHBASE_API
 int
 lcb_supports_feature(int n)
 {
+    if (n == LCB_SUPPORTS_TRACING) {
+#ifdef LCB_TRACING
+        return 1;
+#else
+        return 0;
+#endif
+    }
     if (n == LCB_SUPPORTS_SNAPPY) {
         return 1;
     }

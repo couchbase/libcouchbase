@@ -64,7 +64,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->use_errmap = 1;
     settings->use_collections = 0;
     settings->log_redaction = 0;
-    settings->use_tracing = 0;
+    settings->use_tracing = 1;
 }
 
 LCB_INTERNAL_API
@@ -101,6 +101,11 @@ lcb_settings_unref(lcb_settings *settings)
     if (settings->metrics) {
         lcb_metrics_destroy(settings->metrics);
     }
+#ifdef LCB_TRACING
+    if (settings->tracer) {
+        lcbtrace_destroy(settings->tracer);
+    }
+#endif
     if (settings->dtorcb) {
         settings->dtorcb(settings->dtorarg);
     }

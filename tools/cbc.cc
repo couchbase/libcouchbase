@@ -894,6 +894,7 @@ VersionHandler::run()
     } else {
         printf("  Snappy: NOT SUPPORTED\n");
     }
+    printf("  Tracing: %sSUPPORTED\n", lcb_supports_feature(LCB_SUPPORTS_TRACING) ? "" : "NOT ");
     printf("  System: %s; %s\n", LCB_SYSTEM, LCB_SYSTEM_PROCESSOR);
     printf("  CC: %s; %s\n", LCB_C_COMPILER, LCB_C_FLAGS);
     printf("  CXX: %s; %s\n", LCB_CXX_COMPILER, LCB_CXX_FLAGS);

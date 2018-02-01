@@ -111,7 +111,8 @@ build_ping_json(lcb_t instance, lcb_RESPPING &ping, Json::Value &root, PingCooki
         if (svc.scope) {
             service["scope"] = svc.scope;
         }
-        service["latency_us"] = LCB_NS2US(svc.latency);
+
+        service["latency_us"] = (Json::Value::UInt64)LCB_NS2US(svc.latency);
         switch (svc.status) {
         case LCB_PINGSTATUS_OK:
             service["status"] = "ok";

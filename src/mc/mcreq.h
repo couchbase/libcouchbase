@@ -27,6 +27,9 @@
 #include "sllist.h"
 #include "config.h"
 #include "packetutils.h"
+#ifdef LCB_TRACING
+#include <libcouchbase/tracing.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -142,7 +145,7 @@ extern "C" {
 #define MCREQ_PKT_BASESIZE 24
 
 /** @brief Embedded user data for a simple request. */
-typedef struct {
+typedef struct mc_REQDATA {
     const void *cookie; /**< User pointer to place in callbacks */
     hrtime_t start; /**< Time of the initial request. Used for timeouts */
     /**
@@ -150,6 +153,9 @@ typedef struct {
      * Used for metrics/tracing. Might be zero, when tracing is not enabled.
      */
     hrtime_t dispatch;
+#ifdef LCB_TRACING
+    lcbtrace_SPAN *span;
+#endif
 } mc_REQDATA;
 
 struct mc_packet_st;
@@ -193,11 +199,18 @@ typedef struct mc_REQDATAEX {
      * Used for metrics/tracing. Might be zero, when tracing is not enabled.
      */
     hrtime_t dispatch;
+#ifdef LCB_TRACING
+    lcbtrace_SPAN *span;
+#endif
     const mc_REQDATAPROCS *procs; /**< Common routines for the packet */
 
     #ifdef __cplusplus
     mc_REQDATAEX(const void *cookie_, const mc_REQDATAPROCS &procs_, hrtime_t start_)
-        : cookie(cookie_), start(start_), dispatch(0), procs(&procs_)
+        : cookie(cookie_), start(start_), dispatch(0),
+#ifdef LCB_TRACING
+        span(NULL),
+#endif
+        procs(&procs_)
     {
     }
     #endif

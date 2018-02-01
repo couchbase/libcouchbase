@@ -32,7 +32,7 @@
 #define LCB_S2NS(s) (((hrtime_t)s) * 1000000000)
 
 /** Convert nanoseconds to microseconds */
-#define LCB_NS2US(s) (lcb_uint32_t) ((s) / 1000)
+#define LCB_NS2US(s) ((s) / 1000)
 
 #define LCB_MS2US(s) ((s) * 1000)
 
@@ -97,6 +97,10 @@
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/metrics.h>
 #include "errmap.h"
+
+#ifdef LCB_TRACING
+#include <libcouchbase/tracing.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -192,6 +196,9 @@ typedef struct lcb_settings_st {
     lcb_pERRMAP errmap;
     lcb_U32 retry_nmv_interval;
     struct lcb_METRICS_st *metrics;
+#ifdef LCB_TRACING
+    lcbtrace_TRACER *tracer;
+#endif
 } lcb_settings;
 
 LCB_INTERNAL_API
