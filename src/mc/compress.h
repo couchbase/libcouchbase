@@ -31,8 +31,7 @@ extern "C" {
  * @return 0 if successful, nonzero on error.
  */
 int
-mcreq_compress_value(mc_PIPELINE *pl, mc_PACKET *pkt, const lcb_CONTIGBUF *vbuf);
-
+mcreq_compress_value(mc_PIPELINE *pl, mc_PACKET *pkt, const lcb_VALBUF *vbuf);
 
 /**
  * Inflate a compressed value

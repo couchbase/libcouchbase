@@ -21,6 +21,7 @@ FILE(GLOB LCB_OP_SRC src/operations/*.c)
 
 # memcached packets
 FILE(GLOB LCB_MC_SRC src/mc/*.c)
+FILE(GLOB LCB_MC_CXXSRC src/mc/*.cc)
 
 # read buffer management
 FILE(GLOB LCB_RDB_SRC src/rdb/*.c)

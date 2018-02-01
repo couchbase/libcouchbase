@@ -155,9 +155,6 @@ can_compress(lcb_t instance, const mc_PIPELINE *pipeline,
     const lcb::Server *server = static_cast<const lcb::Server*>(pipeline);
     int compressopts = LCBT_SETTING(instance, compressopts);
 
-    if (vbuf->vtype != LCB_KV_COPY) {
-        return 0;
-    }
     if ((compressopts & LCB_COMPRESS_OUT) == 0) {
         return 0;
     }
@@ -241,7 +238,7 @@ do_store3(lcb_t instance, const void *cookie,
 
     should_compress = can_compress(instance, pipeline, vbuf, datatype);
     if (should_compress) {
-        int rv = mcreq_compress_value(pipeline, packet, &vbuf->u_buf.contig);
+        int rv = mcreq_compress_value(pipeline, packet, vbuf);
         if (rv != 0) {
             mcreq_release_packet(pipeline, packet);
             return LCB_CLIENT_ENOMEM;

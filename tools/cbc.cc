@@ -856,20 +856,13 @@ VersionHandler::run()
         printf("  SSL: NOT SUPPORTED\n");
     }
     if (lcb_supports_feature(LCB_SUPPORTS_SNAPPY)) {
-#ifdef LCB_STATIC_SNAPPY
-#define LCB_SNAPPY_LINK "static"
-#else
-#define LCB_SNAPPY_LINK "dynamic"
-#endif
 #define EXPAND(VAR)   VAR ## 1
 #define IS_EMPTY(VAR) EXPAND(VAR)
 
 #if defined(SNAPPY_MAJOR) && (IS_EMPTY(SNAPPY_MAJOR) != 1)
-        printf("  Snappy: %d.%d.%d (%s)\n", SNAPPY_MAJOR, SNAPPY_MINOR, SNAPPY_PATCHLEVEL, LCB_SNAPPY_LINK);
-#elif defined(LCB_SNAPPY_PKG_VERSION)
-        printf("  Snappy: %s (%s)\n", LCB_SNAPPY_PKG_VERSION, LCB_SNAPPY_LINK);
+        printf("  Snappy: %d.%d.%d\n", SNAPPY_MAJOR, SNAPPY_MINOR, SNAPPY_PATCHLEVEL);
 #else
-        printf("  Snappy: unknown (%s)\n", LCB_SNAPPY_LINK);
+        printf("  Snappy: unknown\n");
 #endif
     } else {
         printf("  Snappy: NOT SUPPORTED\n");
