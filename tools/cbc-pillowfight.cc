@@ -106,6 +106,7 @@ public:
         o_keyPrefix("key-prefix"),
         o_numThreads("num-threads"),
         o_randSeed("random-seed"),
+        o_randomBody("random-body"),
         o_setPercent("set-pct"),
         o_minSize("min-size"),
         o_maxSize("max-size"),
@@ -131,6 +132,7 @@ public:
         o_keyPrefix.abbrev('p').description("key prefix to use");
         o_numThreads.setDefault(1).abbrev('t').description("The number of threads to use");
         o_randSeed.setDefault(0).abbrev('s').description("Specify random seed").hide();
+        o_randomBody.setDefault(false).abbrev('R').description("Randomize document body (otherwise use 'x' and '*' to fill)");
         o_setPercent.setDefault(33).abbrev('r').description("The percentage of operations which should be mutations");
         o_minSize.setDefault(50).abbrev('m').description("Set minimum payload size");
         o_maxSize.setDefault(5120).abbrev('M').description("Set maximum payload size");
@@ -141,7 +143,7 @@ public:
         o_startAt.setDefault(0).description("For sequential access, set the first item");
         o_rateLimit.setDefault(0).description("Set operations per second limit (per thread)");
         o_userdocs.description("User documents to load (overrides --min-size and --max-size");
-        o_writeJson.description("Enable writing JSON values (rather than bytes)");
+        o_writeJson.abbrev('J').description("Enable writing JSON values (rather than bytes)");
         o_templatePairs.description("Values for templates to be inserted into user documents");
         o_templatePairs.argdesc("FIELD,MIN,MAX[,SEQUENTIAL]").hide();
         o_subdoc.description("Use subdoc instead of fulldoc operations");
@@ -219,17 +221,17 @@ public:
 
         if (specs.empty()) {
             if (o_writeJson.result()) {
-                docgen = new JsonDocGenerator(o_minSize.result(), o_maxSize.result());
+                docgen = new JsonDocGenerator(o_minSize.result(), o_maxSize.result(), o_randomBody.numSpecified());
             } else if (!userdocs.empty()) {
                 docgen = new PresetDocGenerator(userdocs);
             } else {
-                docgen = new RawDocGenerator(o_minSize.result(), o_maxSize.result());
+                docgen = new RawDocGenerator(o_minSize.result(), o_maxSize.result(), o_randomBody.numSpecified());
             }
         } else {
             if (o_writeJson.result()) {
                 if (userdocs.empty()) {
                     docgen = new PlaceholderJsonGenerator(
-                        o_minSize.result(), o_maxSize.result(), specs);
+                        o_minSize.result(), o_maxSize.result(), specs, o_randomBody.numSpecified());
                 } else {
                     docgen = new PlaceholderJsonGenerator(userdocs, specs);
                 }
@@ -264,6 +266,7 @@ public:
         parser.addOption(o_keyPrefix);
         parser.addOption(o_numThreads);
         parser.addOption(o_randSeed);
+        parser.addOption(o_randomBody);
         parser.addOption(o_setPercent);
         parser.addOption(o_noPopulate);
         parser.addOption(o_minSize);
@@ -327,6 +330,7 @@ private:
     StringOption o_keyPrefix;
     UIntOption o_numThreads;
     UIntOption o_randSeed;
+    BoolOption o_randomBody;
     UIntOption o_setPercent;
     UIntOption o_minSize;
     UIntOption o_maxSize;
