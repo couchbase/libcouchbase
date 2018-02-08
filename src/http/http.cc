@@ -243,7 +243,8 @@ Request::submit()
     size_t path_len = url.size() - path_off;
     preamble.insert(preamble.end(),
         url_s + path_off, url_s + path_off + path_len);
-    lcb_log(LOGARGS(this, TRACE), LOGFMT "%s %s. Body=%lu bytes", LOGID(this), method_strings[method], url.c_str(), body.size());
+    lcb_log(LOGARGS(this, TRACE), LOGFMT "%s %s. Body=%lu bytes", LOGID(this), method_strings[method], url.c_str(),
+            (unsigned long int)body.size());
 
     add_to_preamble(" HTTP/1.1\r\n");
 
@@ -526,7 +527,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
 
     if (!body.empty()) {
         char lenbuf[64];
-        sprintf(lenbuf, "%ld", body.size());
+        sprintf(lenbuf, "%lu", (unsigned long int)body.size());
         add_header("Content-Length", lenbuf);
         if (cmd->content_type) {
             add_header("Content-Type", cmd->content_type);

@@ -149,8 +149,7 @@ get_esize_and_opcode(
 
 
 static int
-can_compress(lcb_t instance, const mc_PIPELINE *pipeline,
-    const lcb_VALBUF *vbuf, lcb_datatype_t datatype)
+can_compress(lcb_t instance, const mc_PIPELINE *pipeline, lcb_datatype_t datatype)
 {
     const lcb::Server *server = static_cast<const lcb::Server*>(pipeline);
     int compressopts = LCBT_SETTING(instance, compressopts);
@@ -236,7 +235,7 @@ do_store3(lcb_t instance, const void *cookie,
         return err;
     }
 
-    should_compress = can_compress(instance, pipeline, vbuf, datatype);
+    should_compress = can_compress(instance, pipeline, datatype);
     if (should_compress) {
         int rv = mcreq_compress_value(pipeline, packet, vbuf);
         if (rv != 0) {
@@ -253,7 +252,7 @@ do_store3(lcb_t instance, const void *cookie,
         const lcb_CMDSTOREDUR *dcmd = (const lcb_CMDSTOREDUR *)cmd;
         persist_u = dcmd->persist_to;
         replicate_u = dcmd->replicate_to;
-        if (dcmd->replicate_to == -1 || dcmd->persist_to == -1) {
+        if (dcmd->replicate_to == (char)-1 || dcmd->persist_to == (char)-1) {
             duropts = LCB_DURABILITY_VALIDATE_CAPMAX;
         }
 

@@ -328,7 +328,7 @@ CccpProvider::config_updated(lcbvb_CONFIG *vbc)
         const char *mcaddr = lcbvb_get_hostport(vbc,
             ii, LCBVB_SVCTYPE_DATA, mode);
         if (!mcaddr) {
-            lcb_log(LOGARGS(this, DEBUG), "Node %lu has no data service", ii);
+            lcb_log(LOGARGS(this, DEBUG), "Node %lu has no data service", (unsigned long int)ii);
             continue;
         }
         nodes->add(mcaddr, LCB_CONFIG_MCD_PORT);

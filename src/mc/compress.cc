@@ -54,7 +54,6 @@ class FragBufSource : public snappy::Source
 
     virtual void Skip(size_t n)
     {
-        const char *oldptr = ptr;
         lcb_IOV &v = buf->iov[idx];
         if (ptr == static_cast< const char * >(v.iov_base) && n == v.iov_len) {
             ptr = static_cast< const char * >(buf->iov[++idx].iov_base);

@@ -535,6 +535,7 @@ sdmutate_next(const MemcachedResponse *response, lcb_SDENTRY *ent, size_t *iter)
         ent->nvalue = 0;
     }
 
+    (void)buf_end;
     return 1;
     #undef ADVANCE_BUF
 }

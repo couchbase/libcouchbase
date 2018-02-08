@@ -536,7 +536,8 @@ PoolHost::dump(FILE *out) const {
     lcb_list_t *llcur;
     fprintf(out, "HOST=%s", key.c_str());
     fprintf(out, "Requests=%lu, Idle=%lu, Pending=%lu, Leased=%lu\n",
-            num_requests(), num_idle(), num_pending(), num_leased());
+            (unsigned long int)num_requests(), (unsigned long int)num_idle(),
+            (unsigned long int)num_pending(), (unsigned long int)num_leased());
 
     fprintf(out, CONN_INDENT "Idle Connections:\n");
     write_he_list(&ll_idle, out);
