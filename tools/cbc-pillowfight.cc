@@ -125,7 +125,9 @@ public:
         o_populateOnly("populate-only"),
         o_exptime("expiry"),
         o_collection("collection"),
-        o_separator("separator")
+        o_separator("separator"),
+        o_persist("persist-to"),
+        o_replicate("replicate-to")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -153,6 +155,8 @@ public:
         o_exptime.description("Set TTL for items").abbrev('e');
         o_collection.description("Allowed collection name (could be specified multiple times)").hide();
         o_separator.setDefault(":").description("Separator for collection prefix in keys").hide();
+        o_persist.description("Wait until item is persisted to this number of nodes").setDefault(0);
+        o_replicate.description("Wait until item is replicated to this number of nodes").setDefault(0);
     }
 
     void processOptions() {
@@ -160,6 +164,8 @@ public:
         prefix = o_keyPrefix.result();
         setprc = o_setPercent.result();
         shouldPopulate = !o_noPopulate.result();
+        persistTo = o_persist.result();
+        replicateTo = o_replicate.result();
 
         if (o_keyPrefix.passed() && o_collection.passed()) {
             throw std::runtime_error("The --collection is not compatible with --key-prefix");
@@ -286,6 +292,8 @@ public:
         parser.addOption(o_exptime);
         parser.addOption(o_collection);
         parser.addOption(o_separator);
+        parser.addOption(o_persist);
+        parser.addOption(o_replicate);
         params.addToParser(parser);
         depr.addOptions(parser);
     }
@@ -323,6 +331,8 @@ public:
     ConnParams params;
     const DocGeneratorBase *docgen;
     vector<string> collections;
+    int replicateTo;
+    int persistTo;
 
 private:
     UIntOption o_multiSize;
@@ -361,6 +371,8 @@ private:
 
     ListOption o_collection;
     StringOption o_separator;
+    IntOption o_persist;
+    IntOption o_replicate;
 
     DeprecatedOptions depr;
 } config;
@@ -635,7 +647,7 @@ public:
 
             switch (opinfo.m_mode) {
             case NextOp::STORE: {
-                lcb_CMDSTORE scmd = { 0 };
+                lcb_CMDSTOREDUR scmd = { 0 };
                 scmd.operation = LCB_SET;
                 if (config.writeJson()) {
                     scmd.datatype = LCB_VALUE_F_JSON;
@@ -643,7 +655,13 @@ public:
                 scmd.exptime = exptime;
                 LCB_CMD_SET_KEY(&scmd, opinfo.m_key.c_str(), opinfo.m_key.size());
                 LCB_CMD_SET_VALUEIOV(&scmd, &opinfo.m_valuefrags[0], opinfo.m_valuefrags.size());
-                error = lcb_store3(instance, this, &scmd);
+                if (config.persistTo > 0 || config.replicateTo > 0) {
+                    scmd.persist_to = config.persistTo;
+                    scmd.replicate_to = config.replicateTo;
+                    error = lcb_storedur3(instance, this, &scmd);
+                } else {
+                    error = lcb_store3(instance, this, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
+                }
                 break;
             }
             case NextOp::GET: {
@@ -694,12 +712,18 @@ public:
             while (!retryq.empty()) {
                 opinfo = retryq.front();
                 retryq.pop();
-                lcb_CMDSTORE scmd = { 0 };
+                lcb_CMDSTOREDUR scmd = { 0 };
                 scmd.operation = LCB_SET;
                 scmd.exptime = exptime;
                 LCB_CMD_SET_KEY(&scmd, opinfo.m_key.c_str(), opinfo.m_key.size());
                 LCB_CMD_SET_VALUEIOV(&scmd, &opinfo.m_valuefrags[0], opinfo.m_valuefrags.size());
-                error = lcb_store3(instance, this, &scmd);
+                if (config.persistTo > 0 || config.replicateTo > 0) {
+                    scmd.persist_to = config.persistTo;
+                    scmd.replicate_to = config.replicateTo;
+                    error = lcb_storedur3(instance, this, &scmd);
+                } else {
+                    error = lcb_store3(instance, this, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
+                }
             }
             lcb_sched_leave(instance);
             lcb_wait(instance);
@@ -788,7 +812,8 @@ static void operationCallback(lcb_t, int cbtype, const lcb_RESPBASE *resp)
     ThreadContext *tc;
 
     tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(resp->cookie));
-    if (cbtype == LCB_CALLBACK_STORE && resp->rc != LCB_SUCCESS && tc->inPopulation()) {
+    if ((cbtype == LCB_CALLBACK_STOREDUR || cbtype == LCB_CALLBACK_STORE)
+        && resp->rc != LCB_SUCCESS && tc->inPopulation()) {
         NextOp op;
         op.m_mode = NextOp::STORE;
         op.m_key.assign((char *)resp->key, resp->nkey);
@@ -879,7 +904,7 @@ static void sigint_handler(int)
     ncalled++;
 
     if (ncalled < 2) {
-        log("Termination requested. Waiting threads to finish. Ctrl-C to force termination.");
+        log("\nTermination requested. Waiting threads to finish. Ctrl-C to force termination.");
         signal(SIGINT, sigint_handler); // Reinstall
         config.maxCycles = 0;
         return;
