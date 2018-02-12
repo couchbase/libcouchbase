@@ -92,6 +92,7 @@ public:
     const std::string& bucket() const { return m_bucket; }
     const std::string& username() const { return m_username; }
     const std::string& password() const { return m_password; }
+    const std::string& truststorepath() const { return m_truststorepath; }
     const std::string& certpath() const { return m_certpath; }
     const std::string& keypath() const { return m_keypath; }
     unsigned sslopts() const { return m_sslopts; }
@@ -107,6 +108,7 @@ private:
     std::string m_bucket;
     std::string m_username;
     std::string m_password;
+    std::string m_truststorepath;
     std::string m_certpath;
     std::string m_keypath;
     std::string m_connstr;

@@ -132,6 +132,9 @@ HANDLER(get_changeset) {
 HANDLER(ssl_mode_handler) {
     RETURN_GET_ONLY(int, LCBT_SETTING(instance, sslopts))
 }
+HANDLER(ssl_truststorepath_handler) {
+    RETURN_GET_ONLY(char*, LCBT_SETTING(instance, truststorepath))
+}
 HANDLER(ssl_certpath_handler) {
     RETURN_GET_ONLY(char*, LCBT_SETTING(instance, certpath))
 }
@@ -660,7 +663,8 @@ static ctl_handler handlers[] = {
     metrics_handler, /* LCB_CNTL_METRICS */
     collections_handler, /* LCB_CNTL_USE_COLLECTIONS */
     ssl_keypath_handler, /* LCB_CNTL_SSL_KEY */
-    log_redaction_handler /* LCB_CNTL_LOG_REDACTION */
+    log_redaction_handler, /* LCB_CNTL_LOG_REDACTION */
+    ssl_truststorepath_handler /* LCB_CNTL_SSL_TRUSTSTORE */
 };
 
 /* Union used for conversion to/from string functions */

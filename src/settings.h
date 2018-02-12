@@ -177,6 +177,7 @@ typedef struct lcb_settings_st {
 
     char *bucket;
     char *sasl_mech_force;
+    char *truststorepath;
     char *certpath;
     char *keypath;
     lcb_AUTHENTICATOR *auth;

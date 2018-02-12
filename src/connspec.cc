@@ -250,6 +250,11 @@ Connspec::parse_options(
             } else {
                 SET_ERROR("Invalid value for 'ssl'. Choices are on, off, and no_verify");
             }
+        } else if (!strcmp(key, "truststorepath")) {
+            if (! (m_flags & F_SSLSCHEME)) {
+                SET_ERROR("Trust store path must be specified with SSL host or scheme");
+            }
+            m_truststorepath = value;
         } else if (!strcmp(key, "certpath")) {
             if (! (m_flags & F_SSLSCHEME)) {
                 SET_ERROR("Certificate path must be specified with SSL host or scheme");

@@ -263,6 +263,7 @@ ConnParams::writeConfig(const string& s)
     writeOption(f, o_user, "user");
     writeOption(f, o_passwd, "password");
     writeOption(f, o_ssl, "ssl");
+    writeOption(f, o_truststorepath, "truststorepath");
     writeOption(f, o_certpath, "certpath");
     writeOption(f, o_keypath, "keypath");
 
@@ -322,6 +323,11 @@ ConnParams::fillCropts(lcb_create_st& cropts)
         fprintf(stderr, "  Specifying the default port (8091) has no effect\n");
     }
 
+    if (o_truststorepath.passed()) {
+        connstr += "truststorepath=";
+        connstr += o_truststorepath.result();
+        connstr += '&';
+    }
     if (o_certpath.passed()) {
         connstr += "certpath=";
         connstr += o_certpath.result();

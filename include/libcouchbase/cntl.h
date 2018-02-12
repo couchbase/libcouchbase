@@ -628,6 +628,17 @@ typedef enum {
 #define LCB_CNTL_SSL_KEY 0x4b
 
 /**
+ * @brief Get SSL trust store path
+ *
+ * Trust store might be NULL, in this case the library expects it to be concatenated with certificate.
+ *
+ * @cntl_arg_getonly{`char**`}
+ * @see LCB_CNTL_SSL_MODE
+ * @see https://developer.couchbase.com/documentation/server/5.0/security/security-certs-auth.html
+ */
+#define LCB_CNTL_SSL_TRUSTSTORE 0x4d
+
+/**
  * Alias for @ref LCB_CNTL_SSL_CERT for backward compatibility.
  * @deprecated
  */
@@ -1106,7 +1117,7 @@ typedef const char *lcb_BUCKETCRED[2];
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX                    0x4d
+#define LCB_CNTL__MAX                    0x4e
 /**@}*/
 
 #ifdef __cplusplus

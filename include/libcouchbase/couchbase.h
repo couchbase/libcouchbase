@@ -170,6 +170,12 @@ typedef lcb_U32 lcb_USECS;
  *   over the memcached port (For clusters 2.5 and above), or `all` to try with
  *   _cccp_ and revert to _http_
  *
+ * * `truststorepath` - Specify the path (on the local filesystem) to the server's
+ *   SSL certificate truststore. Only applicable if SSL is being used (i.e. the
+ *   scheme is `couchbases`). The trust store is optional, and when missing,
+ *   the library will use `certpath` as location for verification, and expect
+ *   any extra certificates to be concatenated in there.
+ *
  * * `certpath` - Specify the path (on the local filesystem) to the server's
  *   SSL certificate. Only applicable if SSL is being used (i.e. the scheme is
  *   `couchbases`)

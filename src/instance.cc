@@ -268,6 +268,10 @@ setup_ssl(lcb_t obj, const Connspec& params)
         }
     }
 
+    if (settings->truststorepath == NULL && !params.truststorepath().empty()) {
+        settings->truststorepath = strdup(params.truststorepath().c_str());
+    }
+
     if (settings->certpath == NULL && !params.certpath().empty()) {
         settings->certpath = strdup(params.certpath().c_str());
     }
@@ -291,7 +295,8 @@ setup_ssl(lcb_t obj, const Connspec& params)
             return LCB_EINVAL;
         }
         settings->ssl_ctx =
-            lcbio_ssl_new(settings->certpath, settings->keypath, settings->sslopts & LCB_SSL_NOVERIFY, &err, settings);
+            lcbio_ssl_new(settings->truststorepath, settings->certpath, settings->keypath,
+                          settings->sslopts & LCB_SSL_NOVERIFY, &err, settings);
         if (!settings->ssl_ctx) {
             return err;
         }
