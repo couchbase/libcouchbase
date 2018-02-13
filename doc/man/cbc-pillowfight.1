@@ -140,6 +140,18 @@ Specify more information to standard error about what the client is doing\. You 
 Provide additional client options\. Acceptable options can also be placed in the connection string, however this option is provided as a convenience\. This option may be specified multiple times, each time specifying a key=value pair (for example, \fB\-Doperation_timeout=10 \-Dconfig_cache=/foo/bar/baz\fR)\. See \fIADDITIONAL OPTIONS\fR for more information
 .
 .TP
+\fBp\fR, \fB\-\-persist\-to\fR=\fINUMNODES\fR
+Wait until the item has been persisted to at least \fBNUMNODES\fR nodes\' disk\. If \fBNUMNODES\fR is 1 then wait until only the master node has persisted the item for this key\. You may not specify a number greater than the number of nodes actually in the cluster\. \fB\-1\fR is special value, which mean to use all available nodes\.
+.
+.TP
+\fBr\fR \fB\-\-replicate\-to\fR=\fINREPLICAS\fR
+Wait until the item has been replicated to at least \fBNREPLICAS\fR replica nodes\. The bucket must be configured with at least one replica, and at least \fBNREPLICAS\fR replica nodes must be online\. \fB\-1\fR is special value, which mean to use all available replicas\.
+.
+.TP
+\fB\-\-lock\fR=\fITIME\fR
+This will retrieve and lock an item before update, making it inaccessible for modification until the update completed, or \fBTIME\fR has passed\.
+.
+.TP
 \fB\-y\fR, \fB\-\-compress\fR
 Enable compressing of documents\. When library compiled with compression support, this option will enable Snappy compression for outgoing data\. Incoming compressed data handled automatically regardless of this option\. Note, that because the compression support have to be negotiated with the server, first packets might be sent uncompressed even when this switch was specified\. This is because the library might queue data commands before socket connection has been established, and the library will negotiate compression feature\. If it is known that all server support compression repeating the switch (like \fB\-yy\fR) will force compression for all outgoing mutations, even scheduled before establishing connection\.
 .

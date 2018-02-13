@@ -149,6 +149,22 @@ The following options control workload generation:
   pair (for example, `-Doperation_timeout=10 -Dconfig_cache=/foo/bar/baz`).
   See [ADDITIONAL OPTIONS](#additional-options) for more information
 
+* `p`, `--persist-to`=_NUMNODES_:
+  Wait until the item has been persisted to at least `NUMNODES` nodes' disk. If
+  `NUMNODES` is 1 then wait until only the master node has persisted the item for
+  this key. You may not specify a number greater than the number of nodes actually
+  in the cluster. `-1` is special value, which mean to use all available nodes.
+
+* `r` `--replicate-to`=_NREPLICAS_:
+  Wait until the item has been replicated to at least `NREPLICAS` replica nodes.
+  The bucket must be configured with at least one replica, and at least `NREPLICAS`
+  replica nodes must be online. `-1` is special value, which mean to use all
+  available replicas.
+
+* `--lock`=_TIME_:
+  This will retrieve and lock an item before update, making it inaccessible for
+  modification until the update completed, or `TIME` has passed.
+
 * `-y`, `--compress`:
   Enable compressing of documents. When library compiled with compression
   support, this option will enable Snappy compression for outgoing data.

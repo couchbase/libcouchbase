@@ -127,7 +127,8 @@ public:
         o_collection("collection"),
         o_separator("separator"),
         o_persist("persist-to"),
-        o_replicate("replicate-to")
+        o_replicate("replicate-to"),
+        o_lock("lock")
     {
         o_multiSize.setDefault(100).abbrev('B').description("Number of operations to batch");
         o_numItems.setDefault(1000).abbrev('I').description("Number of items to operate on");
@@ -155,8 +156,9 @@ public:
         o_exptime.description("Set TTL for items").abbrev('e');
         o_collection.description("Allowed collection name (could be specified multiple times)").hide();
         o_separator.setDefault(":").description("Separator for collection prefix in keys").hide();
-        o_persist.description("Wait until item is persisted to this number of nodes").setDefault(0);
-        o_replicate.description("Wait until item is replicated to this number of nodes").setDefault(0);
+        o_persist.description("Wait until item is persisted to this number of nodes (-1 for master+replicas)").setDefault(0);
+        o_replicate.description("Wait until item is replicated to this number of nodes (-1 for all replicas)").setDefault(0);
+        o_lock.description("Lock keys for updates for given time (will not lock when set to zero)").setDefault(0);
     }
 
     void processOptions() {
@@ -166,6 +168,12 @@ public:
         shouldPopulate = !o_noPopulate.result();
         persistTo = o_persist.result();
         replicateTo = o_replicate.result();
+        lockTime = o_lock.result();
+        if (lockTime && o_numItems < opsPerCycle * o_numThreads) {
+            fprintf(stderr, "The --num-items=%d cannot be smaller than --batch-size=%d multiplied to --num-thread=%d when used with --lock=%d\n",
+                    (int)o_numItems, (int)opsPerCycle, (int)o_numThreads, (int)lockTime);
+            exit(EXIT_FAILURE);
+        }
 
         if (o_keyPrefix.passed() && o_collection.passed()) {
             throw std::runtime_error("The --collection is not compatible with --key-prefix");
@@ -294,11 +302,12 @@ public:
         parser.addOption(o_separator);
         parser.addOption(o_persist);
         parser.addOption(o_replicate);
+        parser.addOption(o_lock);
         params.addToParser(parser);
         depr.addOptions(parser);
     }
 
-    bool isTimings(void) { return params.useTimings(); }
+    int isTimings(void) { return params.useTimings(); }
 
     bool isLoopDone(size_t niter) {
         if (maxCycles == -1) {
@@ -333,6 +342,7 @@ public:
     vector<string> collections;
     int replicateTo;
     int persistTo;
+    int lockTime;
 
 private:
     UIntOption o_multiSize;
@@ -374,6 +384,7 @@ private:
     IntOption o_persist;
     IntOption o_replicate;
 
+    IntOption o_lock;
     DeprecatedOptions depr;
 } config;
 
@@ -395,7 +406,10 @@ void log(const char *format, ...)
 
 extern "C" {
 static void operationCallback(lcb_t, int, const lcb_RESPBASE*);
+static void storeCallback(lcb_t, int, const lcb_RESPBASE *);
 }
+
+class ThreadContext;
 
 class InstanceCookie {
 public:
@@ -429,13 +443,22 @@ public:
         printf("                +----------------------------------------\n");
     }
 
+    void setContext(ThreadContext *context) {
+        m_context = context;
+    }
+
+    ThreadContext * getContext() {
+        return m_context;
+    }
+
 private:
     time_t lastPrint;
     Histogram hg;
+    ThreadContext *m_context;
 };
 
 struct NextOp {
-    NextOp() : m_seqno(0), m_mode(GET) {}
+    NextOp() : m_seqno(0), m_mode(GET), m_cas(0) {}
 
     string m_key;
     uint32_t m_seqno;
@@ -444,6 +467,7 @@ struct NextOp {
     // The mode here is for future use with subdoc
     enum Mode { STORE, GET, SDSTORE, SDGET, NOOP };
     Mode m_mode;
+    uint64_t m_cas;
 };
 
 class OpGenerator {
@@ -453,7 +477,9 @@ public:
     virtual ~OpGenerator() {};
     virtual void setNextOp(NextOp& op) = 0;
     virtual void setValue(NextOp& op) = 0;
+    virtual void populateIov(uint32_t, vector<lcb_IOV>&) = 0;
     virtual bool inPopulation() const = 0;
+    virtual void checkin(uint32_t) = 0;
     virtual const char *getStageString() const = 0;
 
 protected:
@@ -470,10 +496,13 @@ public:
     }
 
     void setValue(NextOp&) {}
+    void populateIov(uint32_t, vector<lcb_IOV>&) {}
 
     bool inPopulation() const {
         return false;
     }
+
+    void checkin(uint32_t) {}
 
     const char *getStageString() const {
         return "Run";
@@ -524,6 +553,10 @@ public:
         m_local_genstate->populateIov(op.m_seqno, op.m_valuefrags);
     }
 
+    void populateIov(uint32_t seq, vector<lcb_IOV>& iov_out) {
+        m_local_genstate->populateIov(seq, iov_out);
+    }
+
     void setNextOp(NextOp& op) {
         bool store_override = false;
 
@@ -537,10 +570,10 @@ public:
             }
         }
 
-        if (m_force_sequential) {
-            op.m_seqno = m_gensequence->next();
+        if (m_in_population || !config.lockTime) {
+            op.m_seqno = (m_force_sequential ? m_gensequence : m_genrandom)->next();
         } else {
-            op.m_seqno = m_genrandom->next();
+            op.m_seqno = (m_force_sequential ? m_gensequence : m_genrandom)->checkout();
         }
 
         if (store_override) {
@@ -572,6 +605,10 @@ public:
 
     bool inPopulation() const {
         return m_in_population;
+    }
+
+    void checkin(uint32_t seqno) {
+        (m_force_sequential ? m_gensequence : m_genrandom)->checkin(seqno);
     }
 
     const char *getStageString() const {
@@ -616,6 +653,8 @@ private:
     SubdocGeneratorState *m_sdgenstate;
 };
 
+#define OPFLAGS_LOCKED 0x01
+
 class ThreadContext
 {
 public:
@@ -636,78 +675,35 @@ public:
         return gen && (gen->inPopulation() || !retryq.empty());
     }
 
+    void checkin(uint32_t seqno) {
+        if (gen) {
+            gen->checkin(seqno);
+        }
+    }
+
     void singleLoop() {
         bool hasItems = false;
-        NextOp opinfo;
-        unsigned exptime = config.getExptime();
 
         lcb_sched_enter(instance);
         for (size_t ii = 0; ii < config.opsPerCycle; ++ii) {
-            gen->setNextOp(opinfo);
-
-            switch (opinfo.m_mode) {
-            case NextOp::STORE: {
-                lcb_CMDSTOREDUR scmd = { 0 };
-                scmd.operation = LCB_SET;
-                if (config.writeJson()) {
-                    scmd.datatype = LCB_VALUE_F_JSON;
-                }
-                scmd.exptime = exptime;
-                LCB_CMD_SET_KEY(&scmd, opinfo.m_key.c_str(), opinfo.m_key.size());
-                LCB_CMD_SET_VALUEIOV(&scmd, &opinfo.m_valuefrags[0], opinfo.m_valuefrags.size());
-                if (config.persistTo > 0 || config.replicateTo > 0) {
-                    scmd.persist_to = config.persistTo;
-                    scmd.replicate_to = config.replicateTo;
-                    error = lcb_storedur3(instance, this, &scmd);
-                } else {
-                    error = lcb_store3(instance, this, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
-                }
-                break;
-            }
-            case NextOp::GET: {
-                lcb_CMDGET gcmd = { 0 };
-                LCB_CMD_SET_KEY(&gcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
-                gcmd.exptime = exptime;
-                error = lcb_get3(instance, this, &gcmd);
-                break;
-            }
-            case NextOp::SDSTORE:
-            case NextOp::SDGET: {
-                lcb_CMDSUBDOC sdcmd = { 0 };
-                if (opinfo.m_mode == NextOp::SDSTORE) {
-                    sdcmd.exptime = exptime;
-                }
-                LCB_CMD_SET_KEY(&sdcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
-                sdcmd.specs = &opinfo.m_specs[0];
-                sdcmd.nspecs = opinfo.m_specs.size();
-                error = lcb_subdoc3(instance, this, &sdcmd);
-                break;
-            }
-            case NextOp::NOOP: {
-                lcb_CMDNOOP ncmd = { 0 };
-                error = lcb_noop3(instance, this, &ncmd);
-                break;
-            }
-            }
-
-            if (error != LCB_SUCCESS) {
-                hasItems = false;
-                log("Failed to schedule operation: [0x%x] %s", error, lcb_strerror(instance, error));
-            } else {
-                hasItems = true;
-            }
+            hasItems = scheduleNextOperation();
         }
         if (hasItems) {
+            error = LCB_SUCCESS;
             lcb_sched_leave(instance);
             lcb_wait(instance);
-            if (error != LCB_SUCCESS) {
-                log("Operation(s) failed: [0x%x] %s", error, lcb_strerror(instance, error));
-            }
         } else {
             lcb_sched_fail(instance);
         }
+        purgeRetryQueue();
+    }
+
+    void purgeRetryQueue() {
+        NextOp opinfo;
+        InstanceCookie *cookie = InstanceCookie::get(instance);
 
         while (!retryq.empty()) {
+            unsigned exptime = config.getExptime();
             lcb_sched_enter(instance);
             while (!retryq.empty()) {
                 opinfo = retryq.front();
@@ -720,9 +716,9 @@ public:
                 if (config.persistTo > 0 || config.replicateTo > 0) {
                     scmd.persist_to = config.persistTo;
                     scmd.replicate_to = config.replicateTo;
-                    error = lcb_storedur3(instance, this, &scmd);
+                    error = lcb_storedur3(instance, NULL, &scmd);
                 } else {
-                    error = lcb_store3(instance, this, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
+                    error = lcb_store3(instance, NULL, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
                 }
             }
             lcb_sched_leave(instance);
@@ -730,6 +726,72 @@ public:
             if (error != LCB_SUCCESS) {
                 log("Operation(s) failed: [0x%x] %s", error, lcb_strerror(instance, error));
             }
+        }
+    }
+
+    bool scheduleNextOperation()
+    {
+        NextOp opinfo;
+        unsigned exptime = config.getExptime();
+        gen->setNextOp(opinfo);
+
+        switch (opinfo.m_mode) {
+        case NextOp::STORE: {
+            if (!gen->inPopulation() && config.lockTime > 0) {
+                lcb_CMDGET gcmd = { 0 };
+                LCB_CMD_SET_KEY(&gcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
+                gcmd.lock = config.lockTime;
+                error = lcb_get3(instance, (void *)OPFLAGS_LOCKED, &gcmd);
+            } else {
+                lcb_CMDSTOREDUR scmd = { 0 };
+                scmd.operation = LCB_SET;
+                scmd.exptime = exptime;
+                if (config.writeJson()) {
+                    scmd.datatype = LCB_VALUE_F_JSON;
+                }
+                LCB_CMD_SET_KEY(&scmd, opinfo.m_key.c_str(), opinfo.m_key.size());
+                LCB_CMD_SET_VALUEIOV(&scmd, &opinfo.m_valuefrags[0], opinfo.m_valuefrags.size());
+                if (config.persistTo > 0 || config.replicateTo > 0) {
+                    scmd.persist_to = config.persistTo;
+                    scmd.replicate_to = config.replicateTo;
+                    error = lcb_storedur3(instance, NULL, &scmd);
+                } else {
+                    error = lcb_store3(instance, NULL, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
+                }
+            }
+            break;
+        }
+        case NextOp::GET: {
+            lcb_CMDGET gcmd = { 0 };
+            LCB_CMD_SET_KEY(&gcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
+            gcmd.exptime = exptime;
+            error = lcb_get3(instance, this, &gcmd);
+            break;
+        }
+        case NextOp::SDSTORE:
+        case NextOp::SDGET: {
+            lcb_CMDSUBDOC sdcmd = { 0 };
+            if (opinfo.m_mode == NextOp::SDSTORE) {
+                sdcmd.exptime = exptime;
+            }
+            LCB_CMD_SET_KEY(&sdcmd, opinfo.m_key.c_str(), opinfo.m_key.size());
+            sdcmd.specs = &opinfo.m_specs[0];
+            sdcmd.nspecs = opinfo.m_specs.size();
+            error = lcb_subdoc3(instance, NULL, &sdcmd);
+            break;
+        }
+        case NextOp::NOOP: {
+            lcb_CMDNOOP ncmd = { 0 };
+            error = lcb_noop3(instance, NULL, &ncmd);
+            break;
+        }
+        }
+
+        if (error != LCB_SUCCESS) {
+            log("Failed to schedule operation: [0x%x] %s", error, lcb_strerror(instance, error));
+            return false;
+        } else {
+            return true;
         }
     }
 
@@ -762,6 +824,12 @@ public:
         retryq.push(op);
     }
 
+    void populateIov(uint32_t seq, vector<lcb_IOV>& iov_out)
+    {
+        gen->populateIov(seq, iov_out);
+    }
+
+
 #ifndef WIN32
     pthread_t thr;
 #endif
@@ -773,6 +841,8 @@ public:
 protected:
     // the callback methods needs to be able to set the error handler..
     friend void operationCallback(lcb_t, int, const lcb_RESPBASE*);
+    friend void storeCallback(lcb_t, int, const lcb_RESPBASE *);
+
     Histogram histogram;
 
     void setError(lcb_error_t e) { error = e; }
@@ -807,28 +877,15 @@ private:
     std::queue<NextOp> retryq;
 };
 
-static void operationCallback(lcb_t, int cbtype, const lcb_RESPBASE *resp)
+static void updateOpsPerSecDisplay()
 {
-    ThreadContext *tc;
-
-    tc = const_cast<ThreadContext *>(reinterpret_cast<const ThreadContext *>(resp->cookie));
-    if ((cbtype == LCB_CALLBACK_STOREDUR || cbtype == LCB_CALLBACK_STORE)
-        && resp->rc != LCB_SUCCESS && tc->inPopulation()) {
-        NextOp op;
-        op.m_mode = NextOp::STORE;
-        op.m_key.assign((char *)resp->key, resp->nkey);
-        op.m_seqno = atoi(op.m_key.c_str());
-        tc->retry(op);
-    } else {
-        tc->setError(resp->rc);
-    }
-
 #ifndef WIN32
-    static volatile unsigned long nops = 1;
+
     static time_t start_time = time(NULL);
     static int is_tty = isatty(STDERR_FILENO);
     if (is_tty) {
-        if (++nops % 1000 == 0) {
+        static volatile unsigned long nops = 0;
+        if (++nops % 10000 == 0) {
             time_t now = time(NULL);
             time_t nsecs = now - start_time;
             if (!nsecs) { nsecs = 1; }
@@ -839,6 +896,73 @@ static void operationCallback(lcb_t, int cbtype, const lcb_RESPBASE *resp)
 #endif
 }
 
+static void operationCallback(lcb_t instance, int cbtype, const lcb_RESPBASE *resp)
+{
+    InstanceCookie *cookie = InstanceCookie::get(instance);
+    ThreadContext *tc = cookie->getContext();
+    tc->setError(resp->rc);
+
+    uintptr_t flags = 0;
+    if (resp->cookie) {
+        flags = (uintptr_t)resp->cookie;
+    }
+    bool done = true;
+    string key((const char*)resp->key, resp->nkey);
+    uint32_t seqno = atoi(key.c_str());
+    if (cbtype == LCB_CALLBACK_GET && (flags & OPFLAGS_LOCKED)) {
+        if (resp->rc == LCB_SUCCESS) {
+            lcb_CMDSTOREDUR scmd = { 0 };
+            vector<lcb_IOV> valuefrags;
+            scmd.operation = LCB_SET;
+            scmd.exptime = config.getExptime();
+            scmd.cas = resp->cas;
+            tc->populateIov(seqno, valuefrags);
+            LCB_CMD_SET_KEY(&scmd, resp->key, resp->nkey);
+            LCB_CMD_SET_VALUEIOV(&scmd, &valuefrags[0], valuefrags.size());
+            if (config.persistTo > 0 || config.replicateTo > 0) {
+                scmd.persist_to = config.persistTo;
+                scmd.replicate_to = config.replicateTo;
+                lcb_storedur3(instance, NULL, &scmd);
+            } else {
+                lcb_store3(instance, NULL, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
+            }
+            done = false;
+        } else if (resp->rc == LCB_ETMPFAIL) {
+            NextOp op;
+            op.m_mode = NextOp::STORE;
+            op.m_key = key;
+            op.m_seqno = seqno;
+            tc->retry(op);
+            done = false;
+        }
+    }
+
+    if (done) {
+        tc->checkin(seqno);
+    }
+    updateOpsPerSecDisplay();
+}
+
+static void storeCallback(lcb_t instance, int, const lcb_RESPBASE *resp)
+{
+    InstanceCookie *cookie = InstanceCookie::get(instance);
+    ThreadContext *tc = cookie->getContext();
+    tc->setError(resp->rc);
+
+    string key((const char*)resp->key, resp->nkey);
+    uint32_t seqno = atoi(key.c_str());
+    if (resp->rc != LCB_SUCCESS && tc->inPopulation()) {
+        NextOp op;
+        op.m_mode = NextOp::STORE;
+        op.m_key = key;
+        op.m_seqno = seqno;
+        tc->retry(op);
+    } else {
+        tc->checkin(seqno);
+    }
+
+    updateOpsPerSecDisplay();
+}
 
 std::list<ThreadContext *> contexts;
 
@@ -1005,7 +1129,8 @@ int main(int argc, char **argv)
             log("Failed to create instance: %s", lcb_strerror(NULL, error));
             exit(EXIT_FAILURE);
         }
-        lcb_install_callback3(instance, LCB_CALLBACK_STORE, operationCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_STOREDUR, storeCallback);
+        lcb_install_callback3(instance, LCB_CALLBACK_STORE, storeCallback);
         lcb_install_callback3(instance, LCB_CALLBACK_GET, operationCallback);
         lcb_install_callback3(instance, LCB_CALLBACK_SDMUTATE, operationCallback);
         lcb_install_callback3(instance, LCB_CALLBACK_SDLOOKUP, operationCallback);
@@ -1023,7 +1148,7 @@ int main(int argc, char **argv)
             lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_USE_COLLECTIONS, &use);
         }
 
-        new InstanceCookie(instance);
+        InstanceCookie *cookie = new InstanceCookie(instance);
 
         lcb_connect(instance);
         lcb_wait(instance);
@@ -1036,6 +1161,7 @@ int main(int argc, char **argv)
         }
 
         ThreadContext *ctx = new ThreadContext(instance, ii);
+        cookie->setContext(ctx);
         contexts.push_back(ctx);
         start_worker(ctx);
     }
