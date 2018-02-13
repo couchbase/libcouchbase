@@ -43,6 +43,9 @@ Limiting the working set (i\.e\. \fB\-\-num\-items\fR) will decrease the working
 .
 .IP "" 0
 .
+.P
+The benchmark tool sets up SIGQUIT (CTRL\-/) handler and dumps useful diagnostics and metrics to STDERR on this signal\.
+.
 .SH "OPTIONS"
 Options may be read either from the command line, or from a configuration file (see cbcrc(4)):
 .
@@ -103,7 +106,7 @@ This specifies the starting offset for the items\. The items by default are gene
 .
 .TP
 \fB\-T\fR, \fB\-\-timings\fR
-Dump a histogram of command timings and latencies to the screen every second\.
+Enabled timing recorded\. Timing histogram will be dumped to STDERR on SIGQUIT (CTRL\-/)\. When specified second time, it will dump a histogram of command timings and latencies to the screen every second\.
 .
 .TP
 \fB\-e\fR, \fB\-\-expiry\fR=\fISECONDS\fR

@@ -46,6 +46,9 @@ specific settings which may make `pillowfight` generate more operations.
   inside the server's CPU cache (which is extremely fast), rather than in main
   memory (slower), or disk (much slower)
 
+The benchmark tool sets up SIGQUIT (CTRL-/) handler and dumps useful diagnostics
+and metrics to STDERR on this signal.
+
 ## OPTIONS
 
 Options may be read either from the command line, or from a configuration file
@@ -109,7 +112,9 @@ The following options control workload generation:
   the items. This is useful to resume a previously cancelled load operation.
 
 * `-T`, `--timings`:
-  Dump a histogram of command timings and latencies to the screen every second.
+  Enabled timing recorded. Timing histogram will be dumped to STDERR on SIGQUIT
+  (CTRL-/). When specified second time, it will dump a histogram of command
+  timings and latencies to the screen every second.
 
 * `-e`, `--expiry`=_SECONDS_:
   Set the expiration time on the document for _SECONDS_ when performing each

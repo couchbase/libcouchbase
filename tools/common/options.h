@@ -64,6 +64,8 @@ public:
     void addToParser(cliopts::Parser& parser);
     lcb_error_t doCtls(lcb_t instance);
     bool useTimings() { return o_timings.result(); }
+    int numTimings() { return o_timings.numSpecified(); }
+    cliopts::BoolOption& getTimings() { return o_timings; }
     void setAdminMode();
     bool shouldDump() { return o_dump.result(); }
     void writeConfig(const std::string& dest = getConfigfileName());

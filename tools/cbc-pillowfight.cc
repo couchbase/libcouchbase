@@ -159,6 +159,7 @@ public:
         o_persist.description("Wait until item is persisted to this number of nodes (-1 for master+replicas)").setDefault(0);
         o_replicate.description("Wait until item is replicated to this number of nodes (-1 for all replicas)").setDefault(0);
         o_lock.description("Lock keys for updates for given time (will not lock when set to zero)").setDefault(0);
+        params.getTimings().description("Enable command timings (second time to dump timings automatically)");
     }
 
     void processOptions() {
@@ -307,7 +308,7 @@ public:
         depr.addOptions(parser);
     }
 
-    int isTimings(void) { return params.useTimings(); }
+    int numTimings(void) { return params.numTimings(); }
 
     bool isLoopDone(size_t niter) {
         if (maxCycles == -1) {
@@ -395,7 +396,7 @@ void log(const char *format, ...)
 
     va_start(args, format);
     vsprintf(buffer, format, args);
-    if (config.isTimings()) {
+    if (config.numTimings() > 0) {
         std::cerr << "[" << std::fixed << lcb_nstime() / 1000000000.0 << "] ";
     }
     std::cerr << buffer << std::endl;
@@ -416,9 +417,14 @@ public:
     InstanceCookie(lcb_t instance) {
         lcb_set_cookie(instance, this);
         lastPrint = 0;
-        if (config.isTimings()) {
+        if (config.numTimings() > 0) {
             hg.install(instance, stdout);
         }
+        stats.total = 0;
+        stats.retried = 0;
+        stats.etmpfail = 0;
+        stats.eexist = 0;
+        stats.etimeout = 0;
     }
 
     static InstanceCookie* get(lcb_t instance) {
@@ -426,7 +432,7 @@ public:
     }
 
 
-    static void dumpTimings(lcb_t instance, const char *header, bool force=false) {
+    static void dumpTimings(lcb_t instance, const char *header = NULL, bool force=false) {
         time_t now = time(NULL);
         InstanceCookie *ic = get(instance);
 
@@ -437,7 +443,9 @@ public:
         }
 
         Histogram &h = ic->hg;
-        printf("[%f %s]\n", lcb_nstime() / 1000000000.0, header);
+        if (header) {
+            printf("[%f %s]\n", lcb_nstime() / 1000000000.0, header);
+        }
         printf("                +---------+---------+---------+---------+\n");
         h.write();
         printf("                +----------------------------------------\n");
@@ -451,6 +459,13 @@ public:
         return m_context;
     }
 
+    struct {
+        size_t total;
+        size_t retried;
+        size_t etmpfail;
+        size_t eexist;
+        size_t etimeout;
+    } stats;
 private:
     time_t lastPrint;
     Histogram hg;
@@ -720,6 +735,7 @@ public:
                 } else {
                     error = lcb_store3(instance, NULL, reinterpret_cast<lcb_CMDSTORE*>(&scmd));
                 }
+                cookie->stats.retried++;
             }
             lcb_sched_leave(instance);
             lcb_wait(instance);
@@ -799,7 +815,7 @@ public:
         do {
             singleLoop();
 
-            if (config.isTimings()) {
+            if (config.numTimings() > 1) {
                 InstanceCookie::dumpTimings(instance, gen->getStageString());
             }
             if (config.params.shouldDump()) {
@@ -811,7 +827,7 @@ public:
 
         } while (!config.isLoopDone(++niter));
 
-        if (config.isTimings()) {
+        if (config.numTimings() > 1) {
             InstanceCookie::dumpTimings(instance, gen->getStageString(), true);
         }
         return true;
@@ -896,11 +912,30 @@ static void updateOpsPerSecDisplay()
 #endif
 }
 
+static void updateStats(InstanceCookie *cookie, lcb_error_t rc)
+{
+    cookie->stats.total++;
+    switch (rc) {
+    case LCB_ETMPFAIL:
+        cookie->stats.etmpfail++;
+        break;
+    case LCB_KEY_EEXISTS:
+        cookie->stats.eexist++;
+        break;
+    case LCB_ETIMEDOUT:
+        cookie->stats.etimeout++;
+        break;
+    default:
+        break;
+    }
+}
+
 static void operationCallback(lcb_t instance, int cbtype, const lcb_RESPBASE *resp)
 {
     InstanceCookie *cookie = InstanceCookie::get(instance);
     ThreadContext *tc = cookie->getContext();
     tc->setError(resp->rc);
+    updateStats(cookie, resp->rc);
 
     uintptr_t flags = 0;
     if (resp->cookie) {
@@ -948,6 +983,7 @@ static void storeCallback(lcb_t instance, int, const lcb_RESPBASE *resp)
     InstanceCookie *cookie = InstanceCookie::get(instance);
     ThreadContext *tc = cookie->getContext();
     tc->setError(resp->rc);
+    updateStats(cookie, resp->rc);
 
     string key((const char*)resp->key, resp->nkey);
     uint32_t seqno = atoi(key.c_str());
@@ -981,11 +1017,19 @@ static void diag_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
         }
 
         {
+            InstanceCookie *cookie = InstanceCookie::get(instance);
             lcb_METRICS* metrics;
             size_t ii;
             lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_METRICS, &metrics);
 
-            fprintf(stderr, "%p: retried: %lu packets\n", (void *)instance, (unsigned long)metrics->packets_retried);
+            fprintf(stderr, "%p: total: %lu, etmpfail: %lu, eexist: %lu, etimeout: %lu, retried: %lu, rq: %lu\n",
+                    (void *)instance,
+                    (unsigned long)cookie->stats.total,
+                    (unsigned long)cookie->stats.etmpfail,
+                    (unsigned long)cookie->stats.eexist,
+                    (unsigned long)cookie->stats.etimeout,
+                    (unsigned long)cookie->stats.retried,
+                    (unsigned long)metrics->packets_retried);
             for (ii = 0; ii < metrics->nservers; ii++) {
                 fprintf(stderr, "  [srv-%d] snt: %lu, rcv: %lu, q: %lu, err: %lu, tmo: %lu, nmv: %lu, orph: %lu\n",
                         (int)ii,
@@ -1009,6 +1053,9 @@ static void sigquit_handler(int)
         lcb_CMDDIAG req = {};
         req.options = LCB_PINGOPT_F_JSONPRETTY;
         lcb_diag(instance, NULL, &req);
+        if (config.numTimings() > 0) {
+            InstanceCookie::dumpTimings(instance);
+        }
     }
     signal(SIGQUIT, sigquit_handler); // Reinstall
 }
