@@ -1,7 +1,7 @@
 .\" generated with Ronn/v0.7.3
 .\" http://github.com/rtomayko/ronn/tree/0.7.3
 .
-.TH "CBC" "1" "December 2017" "" ""
+.TH "CBC" "1" "February 2018" "" ""
 .
 .SH "NAME"
 \fBcbc\fR \- Couchbase Client Commandline Utility
@@ -308,6 +308,12 @@ The statistics are printed to standard output in the form of \fBSERVER STATISTIC
 .
 .P
 See the \fIOPTIONS\fR for accepted options
+.
+.SS "watch"
+Retrieve a list of cluster statistics, select specified sub\-keys and aggregate values across the cluster\. Then continuously poll the stats and display the difference with the previous values\. If the list of stat sub\-keys not specified, the command will use \fBcmd_total_ops\fR, \fBcmd_total_gets\fR, \fBcmd_total_sets\fR\.
+.
+.P
+In addition to the options in the \fIOPTIONS\fR section, the following options are supported: * \fB\-n\fR, \fB\-\-interval\fR=\fIVALUE\fR: Update interval in seconds (default \fB1\fR second)\.
 .
 .SS "version"
 Display information about the underlying version of \fIlibcouchbase\fR to which the \fBcbc\fR binary is linked\.

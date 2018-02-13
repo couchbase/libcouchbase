@@ -306,6 +306,18 @@ value for this statistic.
 
 See the [OPTIONS](#OPTIONS) for accepted options
 
+### watch
+
+Retrieve a list of cluster statistics, select specified sub-keys and aggregate values
+across the cluster. Then continuously poll the stats and display the difference with
+the previous values. If the list of stat sub-keys not specified, the command will use
+`cmd_total_ops`, `cmd_total_gets`, `cmd_total_sets`.
+
+In addition to the options in the [OPTIONS](#OPTIONS) section, the following options are supported:
+* `-n`, `--interval`=_VALUE_:
+  Update interval in seconds (default `1` second).
+
+
 ### version
 
 Display information about the underlying version of _libcouchbase_ to which the

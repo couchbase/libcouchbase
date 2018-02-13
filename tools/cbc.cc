@@ -233,6 +233,34 @@ stats_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
 }
 
 static void
+watch_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
+{
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "ERROR 0x%02X (%s)\n", resp->rc, lcb_strerror(NULL, resp->rc));
+        return;
+    }
+    if (resp->server == NULL || resp->key == NULL) {
+        return;
+    }
+
+    string key = getRespKey((const lcb_RESPBASE *)resp);
+    if (resp->nvalue >  0) {
+        char *nptr = NULL;
+        uint64_t val =
+#ifdef _WIN32
+            _strtoi64
+#else
+            strtoull
+#endif
+            ((const char *)resp->value, &nptr, 10);
+        if (nptr != (const char *)resp->value) {
+            map<string, uint64_t> *entry = (map<string, uint64_t> *)resp->cookie;
+            (*entry)[key] += val;
+        }
+    }
+}
+
+static void
 common_server_callback(lcb_t, int cbtype, const lcb_RESPSERVERBASE *sbase)
 {
     const char *msg;
@@ -921,6 +949,57 @@ StatsHandler::run()
     lcb_sched_leave(instance);
     lcb_wait(instance);
 }
+
+void
+WatchHandler::run()
+{
+    Handler::run();
+    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)watch_callback);
+    vector<string> keys = parser.getRestArgs();
+    if (keys.empty()) {
+        keys.push_back("cmd_total_ops");
+        keys.push_back("cmd_total_gets");
+        keys.push_back("cmd_total_sets");
+    }
+    int interval = o_interval.result();
+
+    map<string, uint64_t> prev;
+
+    bool first = true;
+    while (true) {
+        map<string, uint64_t> entry;
+        lcb_sched_enter(instance);
+        lcb_CMDSTATS cmd = { 0 };
+        lcb_error_t err = lcb_stats3(instance, (void *)&entry, &cmd);
+        if (err != LCB_SUCCESS) {
+            throw LcbError(err);
+        }
+        lcb_sched_leave(instance);
+        lcb_wait(instance);
+        if (first) {
+            for (vector<string>::iterator it = keys.begin(); it != keys.end(); ++it) {
+                fprintf(stderr, "%s: %" PRIu64 "\n", it->c_str(), entry[*it]);
+            }
+            first = false;
+        } else {
+#ifndef _WIN32
+            if (isatty(STDERR_FILENO)) {
+                fprintf(stderr, "\033[%dA", (int)keys.size());
+            }
+#endif
+            for (vector<string>::iterator it = keys.begin(); it != keys.end(); ++it) {
+                fprintf(stderr, "%s: %" PRIu64 "%20s\n", it->c_str(), (entry[*it] - prev[*it]) / interval, "");
+            }
+        }
+        prev = entry;
+#ifdef _WIN32
+        Sleep(interval * 1000);
+#else
+        sleep(interval);
+#endif
+    }
+}
+
 
 void
 VerbosityHandler::run()
@@ -1664,6 +1743,7 @@ setupHandlers()
     handlers_s["rm"] = new RemoveHandler();
     handlers_s["cp"] = new SetHandler("cp");
     handlers_s["stats"] = new StatsHandler();
+    handlers_s["watch"] = new WatchHandler();
     handlers_s["verbosity"] = new VerbosityHandler();
     handlers_s["ping"] = new PingHandler();
     handlers_s["mcflush"] = new McFlushHandler();
