@@ -250,11 +250,11 @@ watch_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
 #ifdef _WIN32
             _strtoi64
 #else
-            strtoull
+            strtoll
 #endif
             ((const char *)resp->value, &nptr, 10);
         if (nptr != (const char *)resp->value) {
-            map<string, uint64_t> *entry = (map<string, uint64_t> *)resp->cookie;
+            map<string, int64_t> *entry = reinterpret_cast< map<string, int64_t> *>(resp->cookie);
             (*entry)[key] += val;
         }
     }
@@ -963,11 +963,11 @@ WatchHandler::run()
     }
     int interval = o_interval.result();
 
-    map<string, uint64_t> prev;
+    map<string, int64_t> prev;
 
     bool first = true;
     while (true) {
-        map<string, uint64_t> entry;
+        map<string, int64_t> entry;
         lcb_sched_enter(instance);
         lcb_CMDSTATS cmd = { 0 };
         lcb_error_t err = lcb_stats3(instance, (void *)&entry, &cmd);
@@ -978,7 +978,7 @@ WatchHandler::run()
         lcb_wait(instance);
         if (first) {
             for (vector<string>::iterator it = keys.begin(); it != keys.end(); ++it) {
-                fprintf(stderr, "%s: %" PRIu64 "\n", it->c_str(), entry[*it]);
+                fprintf(stderr, "%s: %" PRId64 "\n", it->c_str(), entry[*it]);
             }
             first = false;
         } else {
@@ -988,7 +988,7 @@ WatchHandler::run()
             }
 #endif
             for (vector<string>::iterator it = keys.begin(); it != keys.end(); ++it) {
-                fprintf(stderr, "%s: %" PRIu64 "%20s\n", it->c_str(), (entry[*it] - prev[*it]) / interval, "");
+                fprintf(stderr, "%s: %" PRId64 "%20s\n", it->c_str(), (entry[*it] - prev[*it]) / interval, "");
             }
         }
         prev = entry;

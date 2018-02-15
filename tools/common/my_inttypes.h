@@ -13,7 +13,9 @@
 #ifndef PRIX64
 #define PRIX64 "I64x"
 #endif
-
+#ifndef PRId64
+#define PRId64 "I64d"
+#endif
 #ifndef PRIu64
 #define PRIu64 "I64u"
 #endif
