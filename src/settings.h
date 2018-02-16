@@ -113,7 +113,8 @@ struct lcb_METRICS_st;
  * which are intended to be passed around to other objects.
  */
 typedef struct lcb_settings_st {
-    lcb_U16 iid;
+    /* TODO: [SDK3] change to uint64_t as per RFC. logging API exposes it as unsigned int currently */
+    lcb_U32 iid;
     lcb_U8 compressopts;
     lcb_U8 syncmode;
     lcb_U32 read_chunk_size;

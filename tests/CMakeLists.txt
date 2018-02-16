@@ -92,6 +92,7 @@ ENDIF()
 ADD_CUSTOM_TARGET(alltests DEPENDS check-all unit-tests nonio-tests
     rdb-tests sock-tests vbucket-tests mc-tests htparse-tests)
 
+
 ADD_TEST(NAME BUILD-TESTS COMMAND ${CMAKE_COMMAND} --build "${PROJECT_BINARY_DIR}" --target alltests)
 
 MACRO(DEFINE_MOCKTEST plugin test)

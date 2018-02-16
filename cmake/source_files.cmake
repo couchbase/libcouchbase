@@ -91,6 +91,7 @@ SET(LCB_CORE_CXXSRC
     src/metrics.cc
     src/retrychk.cc
     src/retryq.cc
+    src/rnd.cc
     src/views/docreq.cc
     src/views/viewreq.cc
     src/cntl.cc

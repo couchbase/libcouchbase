@@ -1,5 +1,4 @@
 #define NOMINMAX
-#include "common/my_inttypes.h"
 #include <map>
 #include <sstream>
 #include <iostream>

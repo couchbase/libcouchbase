@@ -423,7 +423,7 @@ lcb_diag(lcb_t instance, const void *cookie, const lcb_CMDDIAG *cmd)
         if (ctx) {
             Json::Value endpoint;
             char id[20] = {0};
-            snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
+            snprintf(id, sizeof(id), "%016" PRIx64, ctx->sock ? ctx->sock->id : (lcb_U64)0);
             endpoint["id"] = id;
             if (server->curhost->ipv6) {
                 endpoint["remote"] = "[" + std::string(server->curhost->host) + "]:" + std::string(server->curhost->port);
@@ -449,7 +449,7 @@ lcb_diag(lcb_t instance, const void *cookie, const lcb_CMDDIAG *cmd)
                 if (ctx) {
                     Json::Value endpoint;
                     char id[20] = {0};
-                    snprintf(id, sizeof(id), "%p", (void *)ctx->sock);
+                    snprintf(id, sizeof(id), "%016" PRIx64, ctx->sock ? ctx->sock->id : (lcb_U64)0);
                     endpoint["id"] = id;
                     if (htreq->ipv6) {
                         endpoint["remote"] = "[" + std::string(htreq->host) + "]:" + std::string(htreq->port);

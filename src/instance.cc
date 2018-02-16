@@ -19,13 +19,13 @@
 #include "connspec.h"
 #include "logging.h"
 #include "hostlist.h"
+#include "rnd.h"
 #include "http/http.h"
 #include "bucketconfig/clconfig.h"
 #include <lcbio/iotable.h>
 #include <lcbio/ssl.h>
 #define LOGARGS(obj,lvl) (obj)->settings, "instance", LCB_LOG_##lvl, __FILE__, __LINE__
 
-static volatile unsigned int lcb_instance_index = 0;
 using namespace lcb;
 
 LIBCOUCHBASE_API
@@ -448,7 +448,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     }
 
     settings->logger = lcb_init_console_logger();
-    settings->iid = lcb_instance_index++;
+    settings->iid = lcb_next_rand32();
     if (spec.loglevel()) {
         lcb_U32 val = spec.loglevel();
         lcb_cntl(obj, LCB_CNTL_SET, LCB_CNTL_CONLOGGER_LEVEL, &val);

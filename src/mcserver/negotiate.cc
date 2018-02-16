@@ -67,6 +67,7 @@ public:
         const lcb::Authenticator& auth);
     void start(lcbio_SOCKET *sock);
     void send_list_mechs();
+    std::string generate_agent_json();
     bool send_hello();
     bool send_step(const lcb::MemcachedResponse& packet);
     bool read_hello(const lcb::MemcachedResponse& packet);
@@ -341,7 +342,31 @@ SessionRequestImpl::send_step(const lcb::MemcachedResponse& packet)
 }
 
 #define LCB_HELLO_DEFL_STRING LCB_CLIENT_ID
-#define LCB_HELLO_DEFL_LENGTH (sizeof(LCB_HELLO_DEFL_STRING)-1)
+
+std::string
+SessionRequestImpl::generate_agent_json()
+{
+    std::string client_string(LCB_HELLO_DEFL_STRING);
+    if (settings->client_string) {
+        client_string += " ";
+        client_string += settings->client_string;
+    }
+    if (client_string.size() > 200) {
+        client_string.resize(200);
+    }
+    char id[34] = {};
+    snprintf(id, sizeof(id), "%016" PRIx64 "/%016" PRIx64, (lcb_U64)settings->iid, ctx->sock->id);
+
+    Json::Value ua;
+    ua["a"] = client_string;
+    ua["i"] = id;
+    Json::FastWriter w;
+    std::string res = w.write(ua);
+    if (res[res.size() - 1] == '\n') {
+        res.resize(res.size() - 1);
+    }
+    return res;
+}
 
 bool
 SessionRequestImpl::send_hello()
@@ -369,25 +394,12 @@ SessionRequestImpl::send_hello()
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_COLLECTIONS;
     }
 
-    std::string client_string;
-    const char *clistr = LCB_HELLO_DEFL_STRING;
-    size_t nclistr = LCB_HELLO_DEFL_LENGTH;
-
-    if (settings->client_string) {
-        client_string.assign(LCB_HELLO_DEFL_STRING);
-        client_string += " ";
-        client_string += settings->client_string;
-
-        clistr = client_string.c_str();
-        nclistr = client_string.size();
-    }
-
+    std::string agent = generate_agent_json();
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_HELLO);
-    hdr.sizes(0, nclistr, (sizeof features[0]) * nfeatures);
-
+    hdr.sizes(0, agent.size(), (sizeof features[0]) * nfeatures);
     lcbio_ctx_put(ctx, hdr.data(), hdr.size());
-    lcbio_ctx_put(ctx, clistr, nclistr);
-    lcb_log(LOGARGS(this, DEBUG), LOGFMT "HELLO identificator: \"%.*s\"", LOGID(this), (int)nclistr, clistr);
+    lcbio_ctx_put(ctx, agent.c_str(), agent.size());
+    lcb_log(LOGARGS(this, DEBUG), LOGFMT "HELLO identificator: %.*s", LOGID(this), (int)agent.size(), agent.c_str());
     for (size_t ii = 0; ii < nfeatures; ii++) {
         lcb_U16 tmp = htons(features[ii]);
         lcbio_ctx_put(ctx, &tmp, sizeof tmp);

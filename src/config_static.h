@@ -43,7 +43,20 @@
 #endif
 
 #ifdef HAVE_INTTYPES_H
+#ifdef __cplusplus
+#define __STDC_FORMAT_MACROS 1
+#endif
 #include <inttypes.h>
+#elif _MSC_VER
+#ifndef PRIx64
+#define PRIx64 "I64x"
+#endif
+#ifndef PRId64
+#define PRId64 "I64d"
+#endif
+#ifndef PRIu64
+#define PRIu64 "I64u"
+#endif
 #endif
 
 #ifdef HAVE_NETDB_H

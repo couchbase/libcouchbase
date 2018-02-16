@@ -58,7 +58,7 @@ list2args(LCB_GNUC_C_WARNINGS)
 
 LIST(APPEND LCB_GNUC_CXX_WARNINGS
     ${LCB_GNUC_CPP_WARNINGS}
-    -std=gnu++98 -Woverloaded-virtual -Wnon-virtual-dtor -Wctor-dtor-privacy
+    -std=c++11 -Woverloaded-virtual -Wnon-virtual-dtor -Wctor-dtor-privacy
     -Wno-long-long -Wredundant-decls)
 list2args(LCB_GNUC_CXX_WARNINGS)
 
