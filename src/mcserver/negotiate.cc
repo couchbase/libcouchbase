@@ -359,13 +359,9 @@ SessionRequestImpl::send_hello()
     if (settings->tcp_nodelay) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TCPNODELAY;
     }
-
-#ifndef LCB_NO_SNAPPY
     if (settings->compressopts != LCB_COMPRESS_NONE) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SNAPPY;
     }
-#endif
-
     if (settings->fetch_mutation_tokens) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO;
     }

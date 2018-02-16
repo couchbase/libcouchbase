@@ -772,11 +772,7 @@ int
 lcb_supports_feature(int n)
 {
     if (n == LCB_SUPPORTS_SNAPPY) {
-#ifdef LCB_NO_SNAPPY
-        return 0;
-#else
         return 1;
-#endif
     }
     if (n == LCB_SUPPORTS_SSL) {
         return lcbio_ssl_supported();
