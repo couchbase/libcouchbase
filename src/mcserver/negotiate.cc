@@ -324,8 +324,7 @@ SessionRequestImpl::send_step(const lcb::MemcachedResponse& packet)
     const char *step_data;
     unsigned int ndata;
 
-    saslerr = cbsasl_client_step(sasl_client,
-        packet.body<const char*>(), packet.bodylen(), NULL, &step_data, &ndata);
+    saslerr = cbsasl_client_step(sasl_client, packet.value(), packet.vallen(), NULL, &step_data, &ndata);
 
     if (saslerr != SASL_CONTINUE) {
         set_error(LCB_EINTERNAL, "Unable to perform SASL STEP");
@@ -393,6 +392,9 @@ SessionRequestImpl::send_hello()
     if (settings->use_collections) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_COLLECTIONS;
     }
+    if (settings->use_tracing) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TRACING;
+    }
 
     std::string agent = generate_agent_json();
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_HELLO);
@@ -423,8 +425,8 @@ SessionRequestImpl::read_hello(const lcb::MemcachedResponse& resp)
 {
     /* some caps */
     const char *cur;
-    const char *payload = resp.body<const char*>();
-    const char *limit = payload + resp.bodylen();
+    const char *payload = resp.value();
+    const char *limit = payload + resp.vallen();
     for (cur = payload; cur < limit; cur += 2) {
         lcb_U16 tmp;
         memcpy(&tmp, cur, sizeof(tmp));
@@ -456,8 +458,7 @@ SessionRequestImpl::update_errmap(const lcb::MemcachedResponse& resp)
 
     std::string errmsg;
     ErrorMap& mm = *settings->errmap;
-    ErrorMap::ParseStatus status = mm.parse(
-        resp.body<const char*>(), resp.bodylen(), errmsg);
+    ErrorMap::ParseStatus status = mm.parse(resp.value(), resp.vallen(), errmsg);
 
     if (status != ErrorMap::UPDATED && status != ErrorMap::NOT_UPDATED) {
         errmsg = "Couldn't update error map: " + errmsg;
@@ -521,7 +522,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
     case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS: {
         const char *mechlist_data;
         unsigned int nmechlist_data;
-        std::string mechs(resp.body<const char*>(), resp.bodylen());
+        std::string mechs(resp.value(), resp.vallen());
 
         MechStatus mechrc = set_chosen_mech(mechs, &mechlist_data, &nmechlist_data);
         if (mechrc == MECH_OK) {

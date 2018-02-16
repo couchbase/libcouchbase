@@ -210,6 +210,9 @@ HANDLER(send_hello_handler) {
 HANDLER(log_redaction_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, log_redaction));
 }
+HANDLER(enable_tracing_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, use_tracing));
+}
 HANDLER(config_poll_interval_handler) {
     lcb_U32 *user = reinterpret_cast<lcb_U32*>(arg);
     if (mode == LCB_CNTL_SET && *user > 0 && *user < LCB_CONFIG_POLL_INTERVAL_FLOOR) {
@@ -664,7 +667,8 @@ static ctl_handler handlers[] = {
     collections_handler, /* LCB_CNTL_USE_COLLECTIONS */
     ssl_keypath_handler, /* LCB_CNTL_SSL_KEY */
     log_redaction_handler, /* LCB_CNTL_LOG_REDACTION */
-    ssl_truststorepath_handler /* LCB_CNTL_SSL_TRUSTSTORE */
+    ssl_truststorepath_handler, /* LCB_CNTL_SSL_TRUSTSTORE */
+    enable_tracing_handler, /* LCB_CNTL_ENABLE_TRACING */
 };
 
 /* Union used for conversion to/from string functions */
@@ -836,6 +840,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"ipv6", LCB_CNTL_IP6POLICY, convert_ipv6},
         {"metrics", LCB_CNTL_METRICS, convert_intbool },
         {"log_redaction", LCB_CNTL_LOG_REDACTION, convert_intbool},
+        {"enable_tracing", LCB_CNTL_ENABLE_TRACING, convert_intbool},
         {NULL, -1}
 };
 

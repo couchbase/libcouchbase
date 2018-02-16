@@ -1117,7 +1117,7 @@ typedef const char *lcb_BUCKETCRED[2];
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX                    0x4e
+#define LCB_CNTL__MAX                    0x4f
 /**@}*/
 
 #ifdef __cplusplus

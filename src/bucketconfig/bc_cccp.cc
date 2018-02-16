@@ -387,7 +387,7 @@ CccpProvider::on_io_read()
         return_error(LCB_PROTOCOL_ERROR);
     }
 
-    std::string jsonstr(resp.body<const char*>(), resp.bodylen());
+    std::string jsonstr(resp.value(), resp.vallen());
     std::string hoststr(lcbio_get_host(lcbio_ctx_sock(ioctx))->host);
 
     resp.release(ioctx);

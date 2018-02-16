@@ -169,6 +169,7 @@ typedef struct lcb_settings_st {
     unsigned send_hello : 1;
     unsigned use_collections : 1;
     unsigned log_redaction : 1;
+    unsigned use_tracing : 1;
 
     short max_redir;
     unsigned refcount;

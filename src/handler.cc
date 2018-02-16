@@ -291,7 +291,7 @@ handle_mutation_token(lcb_t instance, const MemcachedResponse *mc_resp,
         }
     }
 
-    sbuf = mc_resp->body<const char*>();
+    sbuf = mc_resp->ext();
     vbid = mcreq_get_vbucket(req);
     stok->vbid_ = vbid;
     memcpy(&stok->uuid_, sbuf, 8);
@@ -382,14 +382,14 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse* response,
     resp.rflags |= LCB_RESP_F_FINAL;
 
     if (resp.rc == LCB_SUCCESS) {
-        const protocol_binary_response_get *get =
-                reinterpret_cast<const protocol_binary_response_get*>(
-                        response->ephemeral_start());
         resp.datatype = response->datatype();
-        resp.itmflags = ntohl(get->message.body.flags);
         resp.value = response->value();
         resp.nvalue = response->vallen();
         resp.bufh = response->bufseg();
+        if (response->extlen() == sizeof(uint32_t)) {
+            memcpy(&resp.itmflags, response->ext(), sizeof(uint32_t));
+            resp.itmflags = ntohl(resp.itmflags);
+        }
     }
 
     void *freeptr = NULL;
@@ -413,14 +413,14 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request,
     handle_error_info(response, &w);
 
     if (resp.rc == LCB_SUCCESS) {
-        const protocol_binary_response_get *get =
-                reinterpret_cast<const protocol_binary_response_get*>(
-                        response->ephemeral_start());
-        resp.itmflags = ntohl(get->message.body.flags);
         resp.datatype = response->datatype();
         resp.value = response->value();
         resp.nvalue = response->vallen();
         resp.bufh = response->bufseg();
+        if (response->extlen() == sizeof(uint32_t)) {
+            memcpy(&resp.itmflags, response->ext(), sizeof(uint32_t));
+            resp.itmflags = ntohl(resp.itmflags);
+        }
     }
 
     maybe_decompress(instance, response, &resp, &freeptr);
@@ -641,8 +641,8 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response
     ttr = ntohl(ttr);
 
     /** Actual payload sequence of (vb, nkey, key). Repeats multiple times */
-    ptr = response->body<const char *>();
-    end = ptr + response->bodylen();
+    ptr = response->value();
+    end = ptr + response->vallen();
     config = pipeline->parent->config;
 
     for (pos = 0; ptr < end; pos++) {
@@ -689,7 +689,7 @@ H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
     resp.server_index = pipeline->index;
 
     if (resp.rc == LCB_SUCCESS) {
-        const uint8_t *data = response->body<const uint8_t*>();
+        const uint8_t *data = reinterpret_cast<const uint8_t *>(response->value());
         bool is_failover = *data != 0;
 
         data++;
@@ -824,9 +824,9 @@ H_version(mc_PIPELINE *pipeline, mc_PACKET *request,
 
     make_error(root, &resp, response, immerr);
 
-    if (response->bodylen()) {
-        resp.mcversion = response->body<const char *>();
-        resp.nversion = response->bodylen();
+    if (response->vallen()) {
+        resp.mcversion = response->value();
+        resp.nversion = response->vallen();
     }
 
 

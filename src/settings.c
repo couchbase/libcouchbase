@@ -64,6 +64,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->use_errmap = 1;
     settings->use_collections = 0;
     settings->log_redaction = 0;
+    settings->use_tracing = 0;
 }
 
 LCB_INTERNAL_API
