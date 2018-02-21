@@ -39,11 +39,11 @@
 #endif
 
 #define TRACE_BEGIN_COMMON(TGT, instance, req, cmd, ...)                                                               \
-    TGT(instance, (req)->request.opaque, ntohs((req)->request.vbucket), (req)->request.opcode,                         \
+    TGT(instance, (req)->request.opaque, lcb_ntohs((req)->request.vbucket), (req)->request.opcode,                         \
         (const char *)((cmd)->key.contig.bytes), (cmd)->key.contig.nbytes, ##__VA_ARGS__)
 
 #define TRACE_BEGIN_SIMPLE(TGT, instance, req, cmd)                                                                    \
-    TGT(instance, (req)->request.opaque, ntohs((req)->request.vbucket), (req)->request.opcode,                         \
+    TGT(instance, (req)->request.opaque, lcb_ntohs((req)->request.vbucket), (req)->request.opcode,                         \
         (const char *)(cmd)->key.contig.bytes, (cmd)->key.contig.nbytes)
 
 #define TRACE_END_COMMON(TGT, instance, pkt, mcresp, resp, ...)                                                        \

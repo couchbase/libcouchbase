@@ -137,12 +137,15 @@
 #else
     #define lcb_ntohll(a) lcb_byteswap64(a)
     #define lcb_htonll(a) lcb_byteswap64(a)
+    #define lcb_ntohs(a) lcb_byteswap64(a)
+    #define lcb_htons(a) lcb_byteswap64(a)
 #endif /* HAVE_HTONLL */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
     extern uint64_t lcb_byteswap64(uint64_t val);
+    extern uint16_t lcb_byteswap16(uint16_t val);
 #ifdef __cplusplus
 }
 #endif
