@@ -99,7 +99,9 @@ public:
     }
 
     void checkin(uint32_t num) {
-        locked[num - offset] = 0;
+        if (num - offset < locked.size()) {
+            locked[num - offset] = 0;
+        }
     }
 
     uint32_t maxItems() const {
