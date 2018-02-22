@@ -172,4 +172,11 @@ provider libcouchbase
                    uint16_t,        /* return code (from libcouchbase) */
                    uint16_t,        /* HTTP status code or zero */
                    uint64_t);       /* latency, ns */
+
+    probe new_config(void *,         /* lcb_t */
+                     int32_t,        /* revid */
+                     const char*,    /* bucket name */
+                     const char*,    /* bucket UUID */
+                     const void*     /* pointer to config */
+                    );
 };

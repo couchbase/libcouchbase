@@ -164,7 +164,7 @@ struct Confmon {
      * remain to be activated you should call lcb_confmon_prepare() once. Then
      * call the rest of the functions.
      */
-    Confmon(lcb_settings*, lcbio_pTABLE iot);
+    Confmon(lcb_settings*, lcbio_pTABLE iot, lcb_t instance);
     void destroy() { delete this; }
     ~Confmon();
 
@@ -387,6 +387,8 @@ struct Confmon {
 
     typedef std::list<Provider*> ProviderList;
     ProviderList active_providers;
+
+    lcb_t instance;
 };
 
 /**

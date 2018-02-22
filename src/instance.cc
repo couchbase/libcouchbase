@@ -487,7 +487,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         obj->http_sockpool->set_options(pool_opts);
     }
 
-    obj->confmon = new clconfig::Confmon(settings, obj->iotable);
+    obj->confmon = new clconfig::Confmon(settings, obj->iotable, obj);
     obj->ht_nodes = new Hostlist();
     obj->mc_nodes = new Hostlist();
     obj->retryq = new RetryQueue(&obj->cmdq, obj->iotable, obj->settings);

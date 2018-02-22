@@ -797,3 +797,33 @@ probe libcouchbase.http.end =
     status = $arg9
     latency_us = $arg10
 }
+
+/**
+ * probe libcouchbase.config.new - new configuration applied to the lcb_t instance
+ *
+ * @lcb: client instance
+ * @revid: configuration revision
+ * @bucket_name: name of the bucket
+ * @bucket_uuid: UUID of the bucket
+ *
+ * Example:
+ *
+ *   probe libcouchbase.config.new {
+ *     printf("[%p] NEW CONFIG revid: %d, bucket: %s, uuid: %s\n",
+ *         lcb, revid, bucket_name, bucket_uuid)
+ *   }
+ *
+ *
+ *   $ stap  test.stp  -c "cbc hash foo"
+ *   foo: [vBucket=115, Index=0] Server: 127.0.0.1:11210, CouchAPI: http://127.0.0.1:8092/default
+ *   Replica #0: Index=-1, Host=N/A
+ *   [0xd2e790] NEW CONFIG revid: 14, bucket: default, uuid: 44bb7edf04fd3aa86d00a644b2794eea
+ */
+probe libcouchbase.config.new =
+    process("${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/libcouchbase.so.${LCB_SONAME_FULL}").mark("new_config")
+{
+    lcb = $arg1
+    revid = $arg2
+    bucket_name = user_string($arg3)
+    bucket_uuid = user_string($arg4)
+}

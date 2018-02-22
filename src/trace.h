@@ -39,11 +39,11 @@
 #endif
 
 #define TRACE_BEGIN_COMMON(TGT, instance, req, cmd, ...)                                                               \
-    TGT(instance, (req)->request.opaque, lcb_ntohs((req)->request.vbucket), (req)->request.opcode,                         \
+    TGT(instance, (req)->request.opaque, lcb_ntohs((req)->request.vbucket), (req)->request.opcode,                     \
         (const char *)((cmd)->key.contig.bytes), (cmd)->key.contig.nbytes, ##__VA_ARGS__)
 
 #define TRACE_BEGIN_SIMPLE(TGT, instance, req, cmd)                                                                    \
-    TGT(instance, (req)->request.opaque, lcb_ntohs((req)->request.vbucket), (req)->request.opcode,                         \
+    TGT(instance, (req)->request.opaque, lcb_ntohs((req)->request.vbucket), (req)->request.opcode,                     \
         (const char *)(cmd)->key.contig.bytes, (cmd)->key.contig.nbytes)
 
 #define TRACE_END_COMMON(TGT, instance, pkt, mcresp, resp, ...)                                                        \
@@ -106,6 +106,10 @@
 #define TRACE_HTTP_END(req, rc, htstatus)                                                                              \
     TRACE(LIBCOUCHBASE_HTTP_END((req)->instance, (req), (req)->reqtype, (req)->method, (req)->url.c_str(),             \
                                 (req)->host.c_str(), (req)->port.c_str(), rc, htstatus, (gethrtime() - (req)->start)))
+
+#define TRACE_NEW_CONFIG(instance, config)                                                                             \
+    TRACE(LIBCOUCHBASE_NEW_CONFIG(instance, (config)->vbc->revid, (config)->vbc->bname, (config)->vbc->buuid, (config)))
+
 #ifdef __clang__
 #pragma GCC diagnostic pop
 #endif /* __clang__ */
