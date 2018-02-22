@@ -1005,6 +1005,20 @@ std::list<ThreadContext *> contexts;
 extern "C" {
 typedef void (*handler_t)(int);
 
+static void dump_metrics(void)
+{
+    std::list<ThreadContext *>::iterator it;
+    for (it = contexts.begin(); it != contexts.end(); ++it) {
+        lcb_t instance = (*it)->getInstance();
+        lcb_CMDDIAG req = {};
+        req.options = LCB_PINGOPT_F_JSONPRETTY;
+        lcb_diag(instance, NULL, &req);
+        if (config.numTimings() > 0) {
+            InstanceCookie::dumpTimings(instance);
+        }
+    }
+}
+
 #ifndef WIN32
 static void diag_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
 {
@@ -1047,16 +1061,7 @@ static void diag_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
 
 static void sigquit_handler(int)
 {
-    std::list<ThreadContext *>::iterator it;
-    for (it = contexts.begin(); it != contexts.end(); ++it) {
-        lcb_t instance = (*it)->getInstance();
-        lcb_CMDDIAG req = {};
-        req.options = LCB_PINGOPT_F_JSONPRETTY;
-        lcb_diag(instance, NULL, &req);
-        if (config.numTimings() > 0) {
-            InstanceCookie::dumpTimings(instance);
-        }
-    }
+    dump_metrics();
     signal(SIGQUIT, sigquit_handler); // Reinstall
 }
 
@@ -1216,6 +1221,9 @@ int main(int argc, char **argv)
     for (std::list<ThreadContext *>::iterator it = contexts.begin();
             it != contexts.end(); ++it) {
         join_worker(*it);
+    }
+    if (config.numTimings() > 0) {
+        dump_metrics();
     }
     return exit_code;
 }
