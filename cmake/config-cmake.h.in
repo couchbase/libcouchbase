@@ -21,6 +21,7 @@
 #cmakedefine HAVE_NETDB_H
 #cmakedefine HAVE_SETITIMER
 #cmakedefine HAVE_STDINT_H
+#cmakedefine HAVE_STDDEF_H
 #cmakedefine HAVE_FCNTL_H
 #cmakedefine HAVE_HTONLL
 #cmakedefine HAVE_STRINGS_H

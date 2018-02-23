@@ -32,10 +32,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include "snappy-lcb-msvc.h" // Added by libcouchbase
 #include "snappy.h"
 #include "snappy-internal.h"
 #include "snappy-sinksource.h"
-#include "snappy-lcb-msvc.h" // Added by libcouchbase
 
 #include <stdio.h>
 
