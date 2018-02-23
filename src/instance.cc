@@ -403,6 +403,10 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_error_t err;
     lcb_settings *settings;
 
+#if !defined(COMPILER_SUPPORTS_CXX11) || _MSC_VER < 1600
+    lcb_rnd_global_init();
+#endif
+
     if (options) {
         io_priv = options->v.v0.io;
         if (options->version > 0) {

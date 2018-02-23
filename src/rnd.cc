@@ -16,9 +16,22 @@
  */
 
 #include "rnd.h"
+#include "internal.h"
 
-#if _MSC_VER < 1600
-/* TODO: remove after 2018-04-10 */
+#if !defined(COMPILER_SUPPORTS_CXX11) || _MSC_VER < 1600
+static volatile int rnd_initialized = 0;
+LCB_INTERNAL_API
+void lcb_rnd_global_init(void)
+{
+    if (rnd_initialized) {
+        return;
+    }
+    rnd_initialized = 1;
+    if (lcb_getenv_boolean("LCB_NO_SRAND")) {
+        return;
+    }
+    srand(time(NULL));
+}
 
 LCB_INTERNAL_API
 lcb_U32 lcb_next_rand32(void)
