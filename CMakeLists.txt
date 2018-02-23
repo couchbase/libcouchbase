@@ -229,6 +229,7 @@ ADD_SUBDIRECTORY(contrib/cbsasl)
 ADD_SUBDIRECTORY(contrib/cliopts)
 ADD_SUBDIRECTORY(src/ssl)
 ADD_SUBDIRECTORY(contrib/lcb-jsoncpp)
+ADD_SUBDIRECTORY(contrib/snappy)
 IF(LCB_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(example)
 ENDIF()
@@ -253,6 +254,8 @@ FILE(GLOB LCB_JSPARSE_SRC src/jsparse/*.cc)
 ADD_LIBRARY(lcb_jsparse OBJECT ${LCB_JSPARSE_SRC})
 LCB_CXXUTIL(lcb_jsparse)
 
+INCLUDE_DIRECTORIES(contrib/snappy)
+
 SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:couchbase_select>
     $<TARGET_OBJECTS:couchbase_utils>
@@ -269,6 +272,7 @@ SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:lcbcore-cxx>
     $<TARGET_OBJECTS:lcb_jsparse>
     $<TARGET_OBJECTS:lcb_jsoncpp>
+    $<TARGET_OBJECTS:lcb_snappy>
     ${LCB_DTRACE_OBJECT}
     ${lcb_plat_objs}
     ${lcb_ssl_objs})
@@ -308,13 +312,9 @@ ELSE()
         DESTINATION ${CMAKE_INSTALL_LIBDIR})
 ENDIF()
 
-ADD_SUBDIRECTORY(contrib/snappy)
-INCLUDE_DIRECTORIES(contrib/snappy)
-SET(LCB_SNAPPY_LINK lcbsnappy)
-
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
 SET_TARGET_PROPERTIES(couchbase PROPERTIES IMPORT_PREFIX "lib")
-SET(LCB_LINK_DEPS ${lcb_plat_libs} ${lcb_ssl_libs} ${LCB_SNAPPY_LINK} ${LCB_HDR_HISTOGRAM_LINK})
+SET(LCB_LINK_DEPS ${lcb_plat_libs} ${lcb_ssl_libs} ${LCB_HDR_HISTOGRAM_LINK})
 IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     SET(LCB_LINK_DEPS ${LCB_LINK_DEPS} rt)
 ENDIF()

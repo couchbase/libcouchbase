@@ -75,9 +75,8 @@ ENDIF(NOT EXISTS ${PROJECT_SOURCE_DIR}/tests/CouchbaseMock.jar AND NOT LCB_NO_MO
 INCLUDE_DIRECTORIES(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 TARGET_LINK_LIBRARIES(unit-tests couchbaseS gtest)
 TARGET_LINK_LIBRARIES(nonio-tests couchbaseS gtest)
-TARGET_LINK_LIBRARIES(mc-tests gtest ${LCB_SNAPPY_LINK})
-TARGET_LINK_LIBRARIES(mc-malloc-tests
-    gtest ${LCB_SNAPPY_LINK})
+TARGET_LINK_LIBRARIES(mc-tests couchbaseS gtest)
+TARGET_LINK_LIBRARIES(mc-malloc-tests couchbaseS gtest)
 TARGET_LINK_LIBRARIES(netbuf-tests gtest)
 TARGET_LINK_LIBRARIES(rdb-tests gtest)
 TARGET_LINK_LIBRARIES(sock-tests couchbaseS gtest)

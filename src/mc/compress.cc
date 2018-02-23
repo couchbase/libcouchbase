@@ -121,9 +121,9 @@ int mcreq_compress_value(mc_PIPELINE *pl, mc_PACKET *pkt, const lcb_VALBUF *vbuf
 int mcreq_inflate_value(const void *compressed, lcb_SIZE ncompressed, const void **bytes, lcb_SIZE *nbytes,
                         void **freeptr)
 {
-    lcb_SIZE compsize = 0;
+    size_t compsize = 0;
 
-    if (!snappy::GetUncompressedLength(static_cast< const char * >(compressed), ncompressed, &compsize)) {
+    if (!snappy::GetUncompressedLength(static_cast< const char * >(compressed), (size_t)ncompressed, &compsize)) {
         return -1;
     }
     *freeptr = malloc(compsize);
