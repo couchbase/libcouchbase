@@ -137,8 +137,6 @@
 #else
     #define lcb_ntohll(a) lcb_byteswap64(a)
     #define lcb_htonll(a) lcb_byteswap64(a)
-    #define lcb_ntohs(a) lcb_byteswap64(a)
-    #define lcb_htons(a) lcb_byteswap64(a)
 #endif /* HAVE_HTONLL */
 
 #ifdef __cplusplus
@@ -149,6 +147,9 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
+
+#define lcb_ntohs(a) lcb_byteswap16(a)
+#define lcb_htons(a) lcb_byteswap16(a)
 
 #ifdef linux
 #undef ntohs
