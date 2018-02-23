@@ -16,6 +16,23 @@
  */
 
 #include "rnd.h"
+
+#if _MSC_VER < 1600
+/* TODO: remove after 2018-04-10 */
+
+LCB_INTERNAL_API
+lcb_U32 lcb_next_rand32(void)
+{
+    return (lcb_U32)rand();
+}
+
+LCB_INTERNAL_API
+lcb_U64 lcb_next_rand64(void)
+{
+    return (lcb_U64)rand();
+}
+#else
+
 #include <random>
 
 LCB_INTERNAL_API
@@ -23,7 +40,7 @@ lcb_U32 lcb_next_rand32(void)
 {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    static std::uniform_int_distribution<lcb_U32> dis;
+    static std::uniform_int_distribution< lcb_U32 > dis;
     return dis(gen);
 }
 
@@ -32,6 +49,7 @@ lcb_U64 lcb_next_rand64(void)
 {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    static std::uniform_int_distribution<lcb_U64> dis;
+    static std::uniform_int_distribution< lcb_U64 > dis;
     return dis(gen);
 }
+#endif
