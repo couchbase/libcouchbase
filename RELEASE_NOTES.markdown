@@ -24,7 +24,7 @@
 * [CCBC-888](https://issues.couchbase.com/browse/CCBC-888): Per operation tracing. When
   compiled with tracing support (`cmake -DLCB_TRACING=ON`), the library will expose the tracing
   API, which allows to measure time of every data operation, and include some extra information.
-  The API is modeled after OpenTracing and allows one to write custom tracers to consume this 
+  The API is modeled after OpenTracing and allows one to write custom tracers to consume this
   information. For more information, see an example in
   [example/tracing/tracing.c](example/tracing/tracing.c).  This is uncommitted API at this time.
 
@@ -104,12 +104,10 @@
         {
             const lcb_RESPDIAG *resp = (const lcb_RESPDIAG *)rb;
             if (resp->rc != LCB_SUCCESS) {
-                fprintf(stderr, "failed: %s
-", lcb_strerror(NULL, resp->rc));
+                fprintf(stderr, "failed: %s ", lcb_strerror(NULL, resp->rc));
             } else {
                 if (resp->njson) {
-                    fprintf(stderr, "
-%.*s", (int)resp->njson, resp->json);
+                    fprintf(stderr, "%.*s", (int)resp->njson, resp->json);
                 }
             }
         }

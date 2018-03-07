@@ -1675,6 +1675,7 @@ static const char* optionsOrder[] = {
         "write-config",
         "strerror",
         "ping",
+        "watch",
         NULL
 };
 
