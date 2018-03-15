@@ -218,6 +218,8 @@ public:
                 m_queries.push_back(curline);
             }
         }
+        std::cerr << "Loaded " << m_queries.size() << " queries "
+                  << "from \"" << o_file.const_result() << "\"" << std::endl;
         if (m_params.useTimings()) {
             GlobalMetrics.prepare_timings();
         }
