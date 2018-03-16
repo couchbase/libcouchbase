@@ -425,6 +425,7 @@ lcb_error_t lcb_create(lcb_t *instance,
         err = LCB_CLIENT_ENOMEM;
         goto GT_DONE;
     }
+    obj->crypto = new std::map<std::string, lcbcrypto_PROVIDER*>();
     if (!(settings = lcb_settings_new())) {
         err = LCB_CLIENT_ENOMEM;
         goto GT_DONE;
@@ -639,6 +640,13 @@ void lcb_destroy(lcb_t instance)
         delete instance->scratch;
         instance->scratch = NULL;
     }
+
+    for (std::map< std::string, lcbcrypto_PROVIDER * >::iterator ii = instance->crypto->begin();
+         ii != instance->crypto->end(); ++ii) {
+        lcbcrypto_unref(ii->second);
+    }
+    delete instance->crypto;
+    instance->crypto = NULL;
 
     delete[] instance->dcpinfo;
     memset(instance, 0xff, sizeof(*instance));
