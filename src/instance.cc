@@ -403,7 +403,7 @@ lcb_error_t lcb_create(lcb_t *instance,
     lcb_error_t err;
     lcb_settings *settings;
 
-#if !defined(COMPILER_SUPPORTS_CXX11) || _MSC_VER < 1600
+#if !defined(COMPILER_SUPPORTS_CXX11) || (defined(_MSC_VER) && _MSC_VER < 1600)
     lcb_rnd_global_init();
 #endif
 
