@@ -72,7 +72,7 @@ void lcbtrace_span_add_tag_bool(lcbtrace_SPAN *span, const char *name, int value
 }
 
 LCB_INTERNAL_API
-void lcbtrace_spann_add_system_tags(lcbtrace_SPAN *span, lcb_settings *settings, const char *service)
+void lcbtrace_span_add_system_tags(lcbtrace_SPAN *span, lcb_settings *settings, const char *service)
 {
     lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_SERVICE, service);
     std::string client_string(LCB_CLIENT_ID);
@@ -91,6 +91,13 @@ lcbtrace_SPAN *lcbtrace_span_get_parent(lcbtrace_SPAN *span)
 {
     return span->m_parent;
 }
+
+LCB_INTERNAL_API
+void lcbtrace_span_set_parent(lcbtrace_SPAN *span, lcbtrace_SPAN *parent)
+{
+    span->m_parent = parent;
+}
+
 
 LIBCOUCHBASE_API
 uint64_t lcbtrace_span_get_start_ts(lcbtrace_SPAN *span)

@@ -52,7 +52,9 @@ class Span
 extern "C" {
 #endif
 LCB_INTERNAL_API
-void lcbtrace_spann_add_system_tags(lcbtrace_SPAN *span, lcb_settings *settings, const char *service);
+void lcbtrace_span_add_system_tags(lcbtrace_SPAN *span, lcb_settings *settings, const char *service);
+LCB_INTERNAL_API
+void lcbtrace_span_set_parent(lcbtrace_SPAN *span, lcbtrace_SPAN *parent);
 
 #define LCBTRACE_KV_START(settings, cmd, opaque, outspan)                                                              \
     if ((settings)->tracer) {                                                                                          \
@@ -61,7 +63,7 @@ void lcbtrace_spann_add_system_tags(lcbtrace_SPAN *span, lcb_settings *settings,
         ref.span = (cmd->_hashkey.type & LCB_KV_TRACESPAN) ? (lcbtrace_SPAN *)cmd->_hashkey.contig.bytes : NULL;       \
         outspan = lcbtrace_span_start((settings)->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, &ref);         \
         lcbtrace_span_add_tag_uint64(outspan, LCBTRACE_TAG_OPERATION_ID, opaque);                                      \
-        lcbtrace_spann_add_system_tags(outspan, (settings), LCBTRACE_TAG_SERVICE_KV);                                  \
+        lcbtrace_span_add_system_tags(outspan, (settings), LCBTRACE_TAG_SERVICE_KV);                                   \
     }
 
 #define LCBTRACE_KV_FINISH(pipeline, request, response)                                                                \
@@ -84,6 +86,7 @@ void lcbtrace_spann_add_system_tags(lcbtrace_SPAN *span, lcb_settings *settings,
                                           lcbio__inet_ntop(&ctx->sock->info->sa_local).c_str());                       \
             }                                                                                                          \
             lcbtrace_span_finish(span, LCBTRACE_NOW);                                                                  \
+            MCREQ_PKT_RDATA(request)->span = NULL;                                                                     \
         }                                                                                                              \
     } while (0);
 
