@@ -80,7 +80,7 @@ lcb_st::add_bs_host(const char *host, int port, unsigned bstype)
         target = ht_nodes;
     }
     bool ipv6 = strchr(host, ':') != NULL;
-    lcb_log(LOGARGS(this, DEBUG), "Adding host " LCB_LOG_SPEC("%s%s%s:%d") "to initial %s bootstrap list",
+    lcb_log(LOGARGS(this, DEBUG), "Adding host " LCB_LOG_SPEC("%s%s%s:%d") " to initial %s bootstrap list",
             this->settings->log_redaction ? LCB_LOG_SD_OTAG : "",
             ipv6 ? "[" : "", host, ipv6 ? "]" : "", port,
             this->settings->log_redaction ? LCB_LOG_SD_CTAG : "", tname);
