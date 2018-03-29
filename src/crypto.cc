@@ -120,7 +120,8 @@ lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd
 
             uint8_t *iv = NULL;
             char *biv = NULL;
-            size_t niv = 0, nbiv = 0;
+            size_t niv = 0;
+            lcb_SIZE nbiv = 0;
             if (PROVIDER_NEED_IV(provider)) {
                 rc = PROVIDER_GENERATE_IV(provider, &iv, &niv);
                 if (rc != 0) {
@@ -145,7 +146,7 @@ lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd
                 continue;
             }
             char *btext = NULL;
-            size_t nbtext = 0;
+            lcb_SIZE nbtext = 0;
             ret = lcb_base64_encode2(reinterpret_cast< char * >(ctext), nctext, &btext, &nbtext);
             PROVIDER_RELEASE_BYTES(provider, ctext);
             if (ret < 0) {
@@ -181,7 +182,7 @@ lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd
                     continue;
                 }
                 char *bsig = NULL;
-                size_t nbsig = 0;
+                lcb_SIZE nbsig = 0;
                 ret = lcb_base64_encode2(reinterpret_cast< char * >(sig), nsig, &bsig, &nbsig);
                 PROVIDER_RELEASE_BYTES(provider, sig);
                 if (ret < 0) {
@@ -279,7 +280,7 @@ lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd
                 continue;
             }
             uint8_t *sig = NULL;
-            size_t nsig = 0;
+            lcb_SIZE nsig = 0;
             const std::string &bsig = jsig.asString();
             ret = lcb_base64_decode2(bsig.c_str(), bsig.size(), reinterpret_cast< char ** >(&sig), &nsig);
             if (ret < 0) {
@@ -313,8 +314,7 @@ lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd
         }
 
         uint8_t *ctext = NULL;
-        size_t nctext = 0;
-
+        lcb_SIZE nctext = 0;
         ret = lcb_base64_decode2(btext.c_str(), btext.size(), reinterpret_cast< char ** >(&ctext), &nctext);
         if (ret < 0) {
             continue;
@@ -330,7 +330,7 @@ lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd
         }
 
         uint8_t *iv = NULL;
-        size_t niv = 0;
+        lcb_SIZE niv = 0;
         if (biv) {
             ret = lcb_base64_decode2(biv, nbiv, reinterpret_cast< char ** >(&iv), &niv);
             if (ret < 0) {

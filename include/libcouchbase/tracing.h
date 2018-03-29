@@ -18,6 +18,12 @@
 #if !defined(LCB_TRACING_H) && defined(LCB_TRACING)
 #define LCB_TRACING_H
 
+#if !defined HAVE_STDINT_H && defined _WIN32 && defined(_MSC_VER)
+# include "win_stdint.h"
+#else
+# include <stdint.h>
+#endif
+
 /**
  * @file
  * End to end tracing

@@ -16,17 +16,27 @@
  */
 
 #include "internal.h"
+#ifdef HAVE__FTIME64_S
+#include <sys/timeb.h>
+#endif
 
 LIBCOUCHBASE_API
 uint64_t lcbtrace_now()
 {
     uint64_t ret;
+#ifdef HAVE__FTIME64_S
+    struct __timeb64 tb;
+    _ftime64_s(&tb);
+    ret = (uint64_t)tb.time * 1000000; /* sec */
+    ret += (uint64_t)tb.millitm * 1000;
+#else
     struct timeval tv;
     if (gettimeofday(&tv, NULL) == -1) {
         return -1;
     }
     ret = (uint64_t)tv.tv_sec * 1000000;
     ret += (uint64_t)tv.tv_usec;
+#endif
     return ret;
 }
 
