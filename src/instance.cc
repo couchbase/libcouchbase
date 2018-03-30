@@ -365,7 +365,6 @@ lcb_reinit3(lcb_t obj, const char *connstr)
     Connspec params;
     lcb_error_t err;
     const char *errmsg = NULL;
-    memset(&params, 0, sizeof params);
     err = params.parse(connstr, &errmsg);
 
     if (err != LCB_SUCCESS) {
