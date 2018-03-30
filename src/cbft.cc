@@ -120,6 +120,9 @@ lcb_FTSREQ::lcb_FTSREQ(lcb_t instance_, const void *cookie_, const lcb_CMDFTS *c
   parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_FTS, this)),
   cookie(cookie_), callback(cmd->callback), instance(instance_), nrows(0),
   lasterr(LCB_SUCCESS)
+#ifdef LCB_TRACING
+    , span(NULL)
+#endif
 {
     lcb_CMDHTTP htcmd = { 0 };
     htcmd.type = LCB_HTTP_TYPE_FTS;

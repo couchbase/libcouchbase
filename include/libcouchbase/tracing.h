@@ -70,7 +70,7 @@ LIBCOUCHBASE_API void lcb_set_tracer(lcb_t instance, lcbtrace_TRACER *tracer);
 /**
  * @uncommitted
  */
-LIBCOUCHBASE_API lcbtrace_TRACER *lcbtrace_new(lcb_U64 flags);
+LIBCOUCHBASE_API lcbtrace_TRACER *lcbtrace_new(lcb_t instance, lcb_U64 flags);
 
 /**
  * @uncommitted
@@ -134,11 +134,39 @@ lcb_U64 lcbtrace_span_get_finish_ts(lcbtrace_SPAN *span);
  * @uncommitted
  */
 LIBCOUCHBASE_API
+int lcbtrace_span_is_orphaned(lcbtrace_SPAN *span);
+
+/**
+ * @uncomitted
+ */
+LIBCOUCHBASE_API
 const char *lcbtrace_span_get_operation(lcbtrace_SPAN *span);
 
 #define LCBTRACE_OP_REQUEST_ENCODING "request_encoding"
 #define LCBTRACE_OP_DISPATCH_TO_SERVER "dispatch_to_server"
 #define LCBTRACE_OP_RESPONSE_DECODING "response_decoding"
+
+#define LCBTRACE_OP_ADD "add"
+#define LCBTRACE_OP_APPEND "append"
+#define LCBTRACE_OP_COUNTER "counter"
+#define LCBTRACE_OP_GET "get"
+#define LCBTRACE_OP_GET_FROM_REPLICA "get_from_replica"
+#define LCBTRACE_OP_INSERT "insert"
+#define LCBTRACE_OP_OBSERVE_CAS "observe_cas"
+#define LCBTRACE_OP_OBSERVE_SEQNO "observe_seqno"
+#define LCBTRACE_OP_PREPEND "prepend"
+#define LCBTRACE_OP_REMOVE "remove"
+#define LCBTRACE_OP_REPLACE "replace"
+#define LCBTRACE_OP_TOUCH "touch"
+#define LCBTRACE_OP_UNLOCK "unlock"
+#define LCBTRACE_OP_UPSERT "upsert"
+#define LCBTRACE_OP_UPSERT "upsert"
+
+#define LCBTRACE_OP_STORE2NAME(code)                \
+    (code == LCB_ADD) ? LCBTRACE_OP_ADD :           \
+    (code == LCB_PREPEND) ? LCBTRACE_OP_PREPEND :   \
+    (code == LCB_APPEND) ? LCBTRACE_OP_APPEND :     \
+    LCBTRACE_OP_UPSERT
 
 #define LCBTRACE_TAG_DB_TYPE "db.type"
 #define LCBTRACE_TAG_SPAN_KIND "span.kind"
@@ -165,6 +193,8 @@ const char *lcbtrace_span_get_operation(lcbtrace_SPAN *span);
 #define LCBTRACE_TAG_SERVICE_N1QL "n1ql"
 #define LCBTRACE_TAG_SERVICE_SEARCH "search"
 #define LCBTRACE_TAG_SERVICE_ANALYTICS "analytics"
+
+#define LCBTRACE_TAG_LOCAL_ID "couchbase.local_id"
 /**
  * The local socket hostname / IP and port, in the format: {hostname}:{port}
  * To be added to dispatch spans when the local socket is available.

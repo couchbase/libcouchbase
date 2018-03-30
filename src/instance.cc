@@ -518,11 +518,11 @@ lcb_error_t lcb_create(lcb_t *instance,
     if ((err = init_providers(obj, spec)) != LCB_SUCCESS) {
         goto GT_DONE;
     }
-
-    if (err != LCB_SUCCESS) {
-        lcb_destroy(obj);
-        return err;
+#ifdef LCB_TRACING
+    if (settings->use_tracing) {
+        settings->tracer = lcbtrace_new(obj, LCBTRACE_F_THRESHOLD);
     }
+#endif
 
     obj->last_error = err;
     GT_DONE:

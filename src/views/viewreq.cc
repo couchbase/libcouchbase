@@ -277,7 +277,11 @@ ViewRequest::ViewRequest(lcb_t instance_, const void *cookie_,
       cookie(cookie_), docq(NULL), callback(cmd->callback),
       instance(instance_), refcount(1),
       cmdflags(cmd->cmdflags),
-      lasterr(LCB_SUCCESS) {
+      lasterr(LCB_SUCCESS)
+#ifdef LCB_TRACING
+    , span(NULL)
+#endif
+    {
 
     // Validate:
     if (cmd->nddoc == 0 || cmd->nview == 0 || callback == NULL) {

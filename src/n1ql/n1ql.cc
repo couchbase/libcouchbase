@@ -651,6 +651,9 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
       cookie(user_cookie), callback(cmd->callback), instance(obj),
       lasterr(LCB_SUCCESS), flags(cmd->cmdflags), timeout(0),
       nrows(0), prepare_req(NULL), was_retried(false), is_cbas(false)
+#ifdef LCB_TRACING
+    , span(NULL)
+#endif
 {
     if (cmd->handle) {
         *cmd->handle = this;

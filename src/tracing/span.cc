@@ -98,7 +98,6 @@ void lcbtrace_span_set_parent(lcbtrace_SPAN *span, lcbtrace_SPAN *parent)
     span->m_parent = parent;
 }
 
-
 LIBCOUCHBASE_API
 uint64_t lcbtrace_span_get_start_ts(lcbtrace_SPAN *span)
 {
@@ -109,6 +108,20 @@ LIBCOUCHBASE_API
 uint64_t lcbtrace_span_get_finish_ts(lcbtrace_SPAN *span)
 {
     return span->m_finish;
+}
+
+LIBCOUCHBASE_API
+int lcbtrace_span_is_orphaned(lcbtrace_SPAN *span)
+{
+    return span && span->m_orphaned;
+}
+
+LCB_INTERNAL_API
+void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val)
+{
+    if (span) {
+        span->m_orphaned = (val != 0);
+    }
 }
 
 LIBCOUCHBASE_API
@@ -195,6 +208,7 @@ Span::Span(lcbtrace_TRACER *tracer, const char *opname, uint64_t start, lcbtrace
 {
     m_start = start ? start : lcbtrace_now();
     m_span_id = lcb_next_rand64();
+    m_orphaned = false;
     add_tag(LCBTRACE_TAG_DB_TYPE, "couchbase");
     add_tag(LCBTRACE_TAG_SPAN_KIND, "client");
 
