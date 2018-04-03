@@ -18,12 +18,6 @@
 #if !defined(LCB_TRACING_H) && defined(LCB_TRACING)
 #define LCB_TRACING_H
 
-#if !defined HAVE_STDINT_H && defined _WIN32 && defined(_MSC_VER)
-# include "win_stdint.h"
-#else
-# include <stdint.h>
-#endif
-
 /**
  * @file
  * End to end tracing
@@ -50,8 +44,8 @@ typedef struct lcbtrace_SPAN_Cdummy lcbtrace_SPAN;
 
 struct lcbtrace_TRACER;
 typedef struct lcbtrace_TRACER {
-    uint16_t version;
-    uint64_t flags;
+    lcb_U16 version;
+    lcb_U64 flags;
     void *cookie;
     void (*destructor)(struct lcbtrace_TRACER *tracer);
     union {
@@ -76,7 +70,7 @@ LIBCOUCHBASE_API void lcb_set_tracer(lcb_t instance, lcbtrace_TRACER *tracer);
 /**
  * @uncommitted
  */
-LIBCOUCHBASE_API lcbtrace_TRACER *lcbtrace_new(uint64_t flags);
+LIBCOUCHBASE_API lcbtrace_TRACER *lcbtrace_new(lcb_U64 flags);
 
 /**
  * @uncommitted
@@ -104,7 +98,7 @@ typedef struct {
  * @return time in microseconds
  */
 LIBCOUCHBASE_API
-uint64_t lcbtrace_now(void);
+lcb_U64 lcbtrace_now(void);
 
 /**
  * @uncomitted
@@ -114,7 +108,7 @@ uint64_t lcbtrace_now(void);
  * @param ctx
  */
 LIBCOUCHBASE_API
-lcbtrace_SPAN *lcbtrace_span_start(lcbtrace_TRACER *tracer, const char *operation, uint64_t now, lcbtrace_REF *ref);
+lcbtrace_SPAN *lcbtrace_span_start(lcbtrace_TRACER *tracer, const char *operation, lcb_U64 now, lcbtrace_REF *ref);
 
 /**
  * @uncomitted
@@ -122,19 +116,19 @@ lcbtrace_SPAN *lcbtrace_span_start(lcbtrace_TRACER *tracer, const char *operatio
  * @param now
  */
 LIBCOUCHBASE_API
-void lcbtrace_span_finish(lcbtrace_SPAN *span, uint64_t now);
+void lcbtrace_span_finish(lcbtrace_SPAN *span, lcb_U64 now);
 
 /**
  * @uncomitted
  */
 LIBCOUCHBASE_API
-uint64_t lcbtrace_span_get_start_ts(lcbtrace_SPAN *span);
+lcb_U64 lcbtrace_span_get_start_ts(lcbtrace_SPAN *span);
 
 /**
  * @uncomitted
  */
 LIBCOUCHBASE_API
-uint64_t lcbtrace_span_get_finish_ts(lcbtrace_SPAN *span);
+lcb_U64 lcbtrace_span_get_finish_ts(lcbtrace_SPAN *span);
 
 /**
  * @uncomitted
@@ -193,13 +187,13 @@ const char *lcbtrace_span_get_operation(lcbtrace_SPAN *span);
  * @uncomitted
  */
 LIBCOUCHBASE_API
-uint64_t lcbtrace_span_get_span_id(lcbtrace_SPAN *span);
+lcb_U64 lcbtrace_span_get_span_id(lcbtrace_SPAN *span);
 
 /**
  * @uncomitted
  */
 LIBCOUCHBASE_API
-uint64_t lcbtrace_span_get_trace_id(lcbtrace_SPAN *span);
+lcb_U64 lcbtrace_span_get_trace_id(lcbtrace_SPAN *span);
 
 /**
  * @uncomitted
@@ -217,7 +211,7 @@ lcb_error_t lcbtrace_span_get_tag_str(lcbtrace_SPAN *span, const char *name, cha
  * @uncomitted
  */
 LIBCOUCHBASE_API
-lcb_error_t lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, const char *name, uint64_t *value);
+lcb_error_t lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, const char *name, lcb_U64 *value);
 
 /**
  * @uncomitted
@@ -247,7 +241,7 @@ void lcbtrace_span_add_tag_str(lcbtrace_SPAN *span, const char *name, const char
  * @param value
  */
 LIBCOUCHBASE_API
-void lcbtrace_span_add_tag_uint64(lcbtrace_SPAN *span, const char *name, uint64_t value);
+void lcbtrace_span_add_tag_uint64(lcbtrace_SPAN *span, const char *name, lcb_U64 value);
 
 /**
  * @uncomitted
