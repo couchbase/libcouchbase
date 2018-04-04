@@ -1915,7 +1915,7 @@ These changes extend existing features with enhanced APIs
 
 * [major] Add interface attributes to all API calls
   This properly documents all API calls with a certain API stability level
-  such as _committed_ (for stable APIs), _uncomitted_ for APIs which may, but
+  such as _committed_ (for stable APIs), _uncommitted_ for APIs which may, but
   are not likely to change, and _volatile_ for APIs which are likely to be
   changed or removed.
 

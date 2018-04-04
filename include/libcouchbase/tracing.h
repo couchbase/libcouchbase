@@ -101,7 +101,7 @@ LIBCOUCHBASE_API
 lcb_U64 lcbtrace_now(void);
 
 /**
- * @uncomitted
+ * @uncommitted
  * @param tracer
  * @param operation
  * @param now
@@ -111,7 +111,7 @@ LIBCOUCHBASE_API
 lcbtrace_SPAN *lcbtrace_span_start(lcbtrace_TRACER *tracer, const char *operation, lcb_U64 now, lcbtrace_REF *ref);
 
 /**
- * @uncomitted
+ * @uncommitted
  * @param span
  * @param now
  */
@@ -119,19 +119,19 @@ LIBCOUCHBASE_API
 void lcbtrace_span_finish(lcbtrace_SPAN *span, lcb_U64 now);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_U64 lcbtrace_span_get_start_ts(lcbtrace_SPAN *span);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_U64 lcbtrace_span_get_finish_ts(lcbtrace_SPAN *span);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 const char *lcbtrace_span_get_operation(lcbtrace_SPAN *span);
@@ -184,49 +184,49 @@ const char *lcbtrace_span_get_operation(lcbtrace_SPAN *span);
 #define LCBTRACE_TAG_PEER_LATENCY "peer.latency"
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_U64 lcbtrace_span_get_span_id(lcbtrace_SPAN *span);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_U64 lcbtrace_span_get_trace_id(lcbtrace_SPAN *span);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcbtrace_SPAN *lcbtrace_span_get_parent(lcbtrace_SPAN *span);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_error_t lcbtrace_span_get_tag_str(lcbtrace_SPAN *span, const char *name, char **value, size_t *nvalue);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_error_t lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, const char *name, lcb_U64 *value);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_error_t lcbtrace_span_get_tag_double(lcbtrace_SPAN *span, const char *name, double *value);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 lcb_error_t lcbtrace_span_get_tag_bool(lcbtrace_SPAN *span, const char *name, int value);
 
 /**
- * @uncomitted
+ * @uncommitted
  * @param span
  * @param name
  * @param value
@@ -235,7 +235,7 @@ LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_str(lcbtrace_SPAN *span, const char *name, const char *value);
 
 /**
- * @uncomitted
+ * @uncommitted
  * @param span
  * @param name
  * @param value
@@ -244,7 +244,7 @@ LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_uint64(lcbtrace_SPAN *span, const char *name, lcb_U64 value);
 
 /**
- * @uncomitted
+ * @uncommitted
  * @param span
  * @param name
  * @param value
@@ -253,7 +253,7 @@ LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_double(lcbtrace_SPAN *span, const char *name, double value);
 
 /**
- * @uncomitted
+ * @uncommitted
  * @param span
  * @param name
  * @param value
@@ -275,7 +275,7 @@ void lcbtrace_span_add_tag_bool(lcbtrace_SPAN *span, const char *name, int value
     } while (0);
 
 /**
- * @uncomitted
+ * @uncommitted
  */
 typedef struct {
     void *state;

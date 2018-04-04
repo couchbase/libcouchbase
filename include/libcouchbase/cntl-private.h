@@ -181,7 +181,7 @@ struct lcb_cntl_iops_info_st {
  * Similar to @ref LCB_CNTL_CONFIG_HTTP_NODES, but affects the CCCP provider
  * instead. Ports should specify the _memcached_ port
  * @cntl_arg_setonly{char** (Array of strings)}
- * @uncomitted
+ * @uncommitted
  */
 #define LCB_CNTL_CONFIG_CCCP_NODES 0x1E
 
