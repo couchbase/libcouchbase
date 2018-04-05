@@ -219,9 +219,9 @@ Span::Span(lcbtrace_TRACER *tracer, const char *opname, uint64_t start, lcbtrace
     }
 }
 
-void Span::finish(uint64_t finish)
+void Span::finish(uint64_t now)
 {
-    m_finish = finish ? finish : lcbtrace_now();
+    m_finish = now ? now : lcbtrace_now();
     if (m_tracer && m_tracer->version == 0 && m_tracer->v.v0.report) {
         m_tracer->v.v0.report(m_tracer, this);
     }

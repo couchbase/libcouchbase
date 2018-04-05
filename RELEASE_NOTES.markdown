@@ -3,7 +3,7 @@
 ## 2.8.6 (April 5 2018)
 
 * [CCBC-888](https://issues.couchbase.com/browse/CCBC-888): Add threshold
-  logging tracer, which tracks and reports above threshold and orphaned operations. 
+  logging tracer, which tracks and reports above threshold and orphaned operations.
   This is beta functionality, which is disabled by default. To enable it, use
   `enable_tracing=on` in the connection string.
 

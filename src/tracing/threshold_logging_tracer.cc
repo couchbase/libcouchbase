@@ -81,7 +81,7 @@ ReportedSpan ThresholdLoggingTracer::convert(lcbtrace_SPAN *span)
 {
     ReportedSpan orphan;
     orphan.duration = span->duration();
-    Json::Value entry(Json::ValueType::objectValue);
+    Json::Value entry;
     entry["operation_name"] = span->m_opname;
     entry["operation_id"] = span->tags[LCBTRACE_TAG_OPERATION_ID];
     entry["last_local_id"] = span->tags[LCBTRACE_TAG_LOCAL_ID];
@@ -108,10 +108,10 @@ void ThresholdLoggingTracer::check_threshold(lcbtrace_SPAN *span)
 void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, const char *message)
 {
     std::vector< ReportedSpan > &slice = queue.get_sorted();
-    Json::Value entries(Json::ValueType::objectValue);
+    Json::Value entries;
     entries["service"] = "kv";
     entries["count"] = (Json::UInt)slice.size();
-    Json::Value top(Json::ValueType::arrayValue);
+    Json::Value top;
     for (size_t ii = 0; ii < slice.size(); ii++) {
         Json::Value entry;
         if (Json::Reader().parse(slice[ii].payload, entry)) {
