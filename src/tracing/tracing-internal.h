@@ -118,12 +118,7 @@ class ThresholdLoggingTracer
     FixedQueue< ReportedSpan > m_threshold;
 
     void flush_queue(FixedQueue< ReportedSpan > &queue, const char *message);
-    void flush_orphans();
-    void flush_threshold();
     ReportedSpan convert(lcbtrace_SPAN *span);
-
-    lcb::io::Timer< ThresholdLoggingTracer, &ThresholdLoggingTracer::flush_orphans > m_oflush;
-    lcb::io::Timer< ThresholdLoggingTracer, &ThresholdLoggingTracer::flush_threshold > m_tflush;
 
   public:
     ThresholdLoggingTracer(lcb_t instance);
@@ -131,6 +126,12 @@ class ThresholdLoggingTracer
     lcbtrace_TRACER *wrap();
     void add_orphan(lcbtrace_SPAN *span);
     void check_threshold(lcbtrace_SPAN *span);
+
+    void flush_orphans();
+    void flush_threshold();
+
+    lcb::io::Timer< ThresholdLoggingTracer, &ThresholdLoggingTracer::flush_orphans > m_oflush;
+    lcb::io::Timer< ThresholdLoggingTracer, &ThresholdLoggingTracer::flush_threshold > m_tflush;
 };
 
 } // namespace trace

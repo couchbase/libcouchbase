@@ -120,7 +120,7 @@ void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, cons
     }
     entries["top"] = top;
     std::string doc = Json::FastWriter().write(entries);
-    if (doc.back() == '\n') {
+    if (doc.size() > 0 && doc[doc.size() - 1] == '\n') {
         doc[doc.size() - 1] = '\0';
     }
     lcb_log(LOGARGS(this, WARN), "%s: %s", message, doc.c_str());
