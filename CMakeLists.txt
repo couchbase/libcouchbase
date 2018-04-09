@@ -23,7 +23,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
 # These variables can be modified as needed
 
 # Couchbase mock path to download
-SET(COUCHBASE_MOCK_VERSION CouchbaseMock-1.5.15.jar)
+SET(COUCHBASE_MOCK_VERSION CouchbaseMock-1.5.19.jar)
 # Maven repository where ${COUCHBASE_MOCK_VERSION} is to be found
 SET(COUCHBASE_MOCK_DLSERVER http://packages.couchbase.com/clients/c/mock)
 project(libcouchbase)
@@ -225,6 +225,26 @@ LCB_UTIL(lcbht)
 LCB_UTIL(lcbcore)
 LCB_CXXUTIL(lcbcore-cxx)
 
+IF(LCB_NO_SSL)
+    MESSAGE(STATUS "SSL support will be disabled")
+    ADD_DEFINITIONS(-DLCB_NO_SSL=1)
+ELSE()
+    IF(APPLE)
+        IF(NOT OpenSSL_DIR)
+            EXECUTE_PROCESS(COMMAND brew --prefix openssl
+                OUTPUT_VARIABLE OPENSSL_ROOT_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+            MESSAGE(STATUS "Found OpenSSL Prefix: ${OPENSSL_ROOT_DIR}")
+        ENDIF()
+    ENDIF()
+    FIND_PACKAGE(OpenSSL)
+    IF(OPENSSL_FOUND)
+        MESSAGE(STATUS "SSL Found")
+    ELSE()
+        MESSAGE(STATUS "SSL Not Found")
+    ENDIF()
+ENDIF()
+
 ADD_SUBDIRECTORY(src/vbucket)
 ADD_SUBDIRECTORY(contrib/cbsasl)
 ADD_SUBDIRECTORY(contrib/cliopts)
@@ -233,11 +253,6 @@ ADD_SUBDIRECTORY(contrib/lcb-jsoncpp)
 ADD_SUBDIRECTORY(contrib/snappy)
 IF(LCB_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(example)
-ENDIF()
-
-IF(LCB_NO_SSL)
-    MESSAGE(STATUS "SSL support will be disabled")
-    ADD_DEFINITIONS(-DLCB_NO_SSL=1)
 ENDIF()
 
 IF(LCB_BUILD_STATIC)
