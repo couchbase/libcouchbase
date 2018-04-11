@@ -260,11 +260,11 @@ INCLUDE_DIRECTORIES(contrib/snappy)
 SET(LCB_CORE_OBJS
     $<TARGET_OBJECTS:couchbase_select>
     $<TARGET_OBJECTS:couchbase_utils>
-    $<TARGET_OBJECTS:vbucket>
+    $<TARGET_OBJECTS:vbucket-lcb>
     $<TARGET_OBJECTS:mcreq>
     $<TARGET_OBJECTS:mcreq-cxx>
     $<TARGET_OBJECTS:netbuf>
-    $<TARGET_OBJECTS:cbsasl>
+    $<TARGET_OBJECTS:cbsasl-lcb>
     $<TARGET_OBJECTS:lcbio>
     $<TARGET_OBJECTS:lcbio-cxx>
     $<TARGET_OBJECTS:rdb>
