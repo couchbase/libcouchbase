@@ -282,7 +282,8 @@ do_store3(lcb_t instance, const void *cookie,
     if (should_compress || (datatype & LCB_VALUE_F_SNAPPYCOMP)) {
         hdr->request.datatype |= PROTOCOL_BINARY_DATATYPE_COMPRESSED;
     }
-    if (datatype & LCB_VALUE_F_JSON) {
+
+    if ((datatype & LCB_VALUE_F_JSON) && static_cast<const lcb::Server*>(pipeline)->supports_json()) {
         hdr->request.datatype |= PROTOCOL_BINARY_DATATYPE_JSON;
     }
 

@@ -649,6 +649,7 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
             sock, settings, default_timeout(), on_connected, this);
         return;
     } else {
+        jsonsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_JSON);
         compsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_SNAPPY);
         mutation_tokens = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO);
     }
