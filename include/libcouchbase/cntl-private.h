@@ -371,7 +371,6 @@ typedef enum {
  */
 #define LCB_CNTL_USE_COLLECTIONS 0x4a
 
-
 /**
  * Activate end-to-end tracing.
  *
@@ -394,5 +393,16 @@ typedef enum {
 
 #define LCB_CNTL_COMPRESSION_MIN_SIZE 0x58
 #define LCB_CNTL_COMPRESSION_MIN_RATIO 0x59
+
+/**
+ * Do not use fast-forward map from cluster configuration.
+ *
+ * Use `vb_noremap` in the connection string
+ *
+ * @cntl_arg_both{int* (as boolean)}
+ * @uncommitted
+ */
+#define LCB_CNTL_VB_NOREMAP 0x5a
+
 
 /**@}*/

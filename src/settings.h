@@ -90,6 +90,7 @@
 #define LCB_DEFAULT_NVM_RETRY_IMM 1
 #define LCB_DEFAULT_RETRY_NMV_INTERVAL LCB_MS2US(100)
 #define LCB_DEFAULT_VB_NOGUESS 1
+#define LCB_DEFAULT_VB_NOREMAP 0
 #define LCB_DEFAULT_TCP_NODELAY 1
 #define LCB_DEFAULT_SELECT_BUCKET 1
 #define LCB_DEFAULT_TCP_KEEPALIVE 1
@@ -189,6 +190,8 @@ typedef struct lcb_settings_st {
     unsigned use_collections : 1;
     unsigned log_redaction : 1;
     unsigned use_tracing : 1;
+    /** Do not use remap vbuckets (do not use fast forward map, or any other heuristics) */
+    unsigned vb_noremap : 1;
 
     short max_redir;
     unsigned refcount;

@@ -183,6 +183,9 @@ HANDLER(schedflush_handler) {
 HANDLER(vbguess_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, keep_guess_vbs))
 }
+HANDLER(vb_noremap_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, vb_noremap))
+}
 HANDLER(fetch_mutation_tokens_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, fetch_mutation_tokens))
 }
@@ -729,6 +732,7 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_TRACING_THRESHOLD_ANALYTICS */
     comp_min_size_handler, /* LCB_CNTL_COMPRESSION_MIN_SIZE */
     comp_min_ratio_handler, /* LCB_CNTL_COMPRESSION_MIN_RATIO */
+    vb_noremap_handler, /* LCB_CNTL_VB_NOREMAP */
 };
 
 /* Union used for conversion to/from string functions */
@@ -913,6 +917,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"tracing_threshold_analytics", LCB_CNTL_TRACING_THRESHOLD_ANALYTICS, convert_timevalue},
         {"compression_min_size", LCB_CNTL_COMPRESSION_MIN_SIZE, convert_u32},
         {"compression_min_ratio", LCB_CNTL_COMPRESSION_MIN_RATIO, convert_float},
+        {"vb_noremap", LCB_CNTL_VB_NOREMAP, convert_intbool },
         {NULL, -1}
 };
 

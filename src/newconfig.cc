@@ -97,6 +97,9 @@ lcb_vbguess_newconfig(lcb_t instance, lcbvb_CONFIG *cfg, lcb_GUESSVB *guesses)
 int
 lcb_vbguess_remap(lcb_t instance, int vbid, int bad)
 {
+    if (LCBT_SETTING(instance, vb_noremap)) {
+        return -1;
+    }
 
     if (LCBT_SETTING(instance, vb_noguess)) {
         int newix = lcbvb_nmv_remap_ex(LCBT_VBCONFIG(instance), vbid, bad, 0);
