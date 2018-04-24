@@ -46,6 +46,8 @@ void lcb_default_settings(lcb_settings *settings)
     settings->retry[LCB_RETRY_ON_MISSINGNODE] = 0;
     settings->bc_http_urltype = LCB_DEFAULT_HTCONFIG_URLTYPE;
     settings->compressopts = LCB_DEFAULT_COMPRESSOPTS;
+    settings->compress_min_size = LCB_DEFAULT_COMPRESS_MIN_SIZE;
+    settings->compress_min_ratio = LCB_DEFAULT_COMPRESS_MIN_RATIO;
     settings->allocator_factory = rdb_bigalloc_new;
     settings->syncmode = LCB_ASYNCHRONOUS;
     settings->detailed_neterr = 0;

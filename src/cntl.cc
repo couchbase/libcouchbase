@@ -613,6 +613,23 @@ HANDLER(collections_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, use_collections));
 }
 
+HANDLER(comp_min_size_handler) {
+    if (mode == LCB_CNTL_SET && *reinterpret_cast<lcb_U32*>(arg) < LCB_DEFAULT_COMPRESS_MIN_SIZE) {
+        return LCB_ECTL_BADARG;
+    }
+    RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, compress_min_size))
+}
+
+HANDLER(comp_min_ratio_handler) {
+    if (mode == LCB_CNTL_SET) {
+        float val = *reinterpret_cast<float*>(arg);
+        if (val > 1 || val < 0) {
+            return LCB_ECTL_BADARG;
+        }
+    }
+    RETURN_GET_SET(float, LCBT_SETTING(instance, compress_min_ratio))
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -702,6 +719,8 @@ static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_TRACING_THRESHOLD_VIEW */
     timeout_common, /* LCB_CNTL_TRACING_THRESHOLD_FTS */
     timeout_common, /* LCB_CNTL_TRACING_THRESHOLD_ANALYTICS */
+    comp_min_size_handler, /* LCB_CNTL_COMPRESSION_MIN_SIZE */
+    comp_min_ratio_handler, /* LCB_CNTL_COMPRESSION_MIN_RATIO */
 };
 
 /* Union used for conversion to/from string functions */
@@ -784,6 +803,7 @@ static lcb_error_t convert_compression(const char *arg, u_STRCONVERT *u) {
         { "on", LCB_COMPRESS_INOUT },
         { "off", LCB_COMPRESS_NONE },
         { "inflate_only", LCB_COMPRESS_IN },
+        { "deflate_only", LCB_COMPRESS_OUT },
         { "force", LCB_COMPRESS_INOUT|LCB_COMPRESS_FORCE },
         { NULL }
     };
@@ -883,6 +903,8 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"tracing_threshold_view", LCB_CNTL_TRACING_THRESHOLD_VIEW, convert_timevalue},
         {"tracing_threshold_fts", LCB_CNTL_TRACING_THRESHOLD_FTS, convert_timevalue},
         {"tracing_threshold_analytics", LCB_CNTL_TRACING_THRESHOLD_ANALYTICS, convert_timevalue},
+        {"compression_min_size", LCB_CNTL_COMPRESSION_MIN_SIZE, convert_u32},
+        {"compression_min_ratio", LCB_CNTL_COMPRESSION_MIN_RATIO, convert_float},
         {NULL, -1}
 };
 

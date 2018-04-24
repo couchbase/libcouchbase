@@ -82,6 +82,11 @@
 #define LCB_DEFAULT_HTCONFIG_URLTYPE LCB_HTCONFIG_URLTYPE_TRYALL
 #define LCB_DEFAULT_COMPRESSOPTS LCB_COMPRESS_INOUT
 
+/* in bytes */
+#define LCB_DEFAULT_COMPRESS_MIN_SIZE 32
+/* compressed_bytes / original_bytes */
+#define LCB_DEFAULT_COMPRESS_MIN_RATIO 0.83
+
 #define LCB_DEFAULT_NVM_RETRY_IMM 1
 #define LCB_DEFAULT_RETRY_NMV_INTERVAL LCB_MS2US(100)
 #define LCB_DEFAULT_VB_NOGUESS 1
@@ -214,6 +219,8 @@ typedef struct lcb_settings_st {
     lcb_U32 tracer_threshold_queue_size;
     lcb_U32 tracer_threshold[LCBTRACE_THRESHOLD__MAX];
 #endif
+    lcb_U32 compress_min_size;
+    float compress_min_ratio;
 } lcb_settings;
 
 LCB_INTERNAL_API

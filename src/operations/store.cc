@@ -237,7 +237,7 @@ do_store3(lcb_t instance, const void *cookie,
 
     should_compress = can_compress(instance, pipeline, datatype);
     if (should_compress) {
-        int rv = mcreq_compress_value(pipeline, packet, vbuf);
+        int rv = mcreq_compress_value(pipeline, packet, vbuf, instance->settings, &should_compress);
         if (rv != 0) {
             mcreq_release_packet(pipeline, packet);
             return LCB_CLIENT_ENOMEM;
