@@ -31,10 +31,10 @@
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
-#ifndef _WIN32
-#include <unistd.h> // for getpid
-#else
+#ifdef _WIN32
 #include <process.h> // for _getpid
+#else
+#include <unistd.h> // for getpid
 #endif
 
 #endif
@@ -55,14 +55,18 @@ void seed_rand(void)
 #else
     time_t current_time = time(NULL);
     clock_t clk;
+#ifdef _WIN32
+    int pid;
+#else
     pid_t pid;
+#endif
     RAND_add(&current_time, sizeof(current_time), 0.0);
     clk = clock();
     RAND_add(&clk, sizeof(clk), 0.0);
-#ifndef _WIN32
-    pid = getpid();
-#else
+#ifdef _WIN32
     pid = _getpid();
+#else
+    pid = getpid();
 #endif // _WIN32
     RAND_add(&pid, sizeof(pid), 0.0);
 #endif // LCB_NO_SSL
@@ -88,7 +92,7 @@ void generate_nonce(char *buffer, int buffer_length)
     {
         int aRandom = 0;
         unsigned int aMaxRandBits = 0,
-                     aMaxRand = RAND_MAX; // we have to compute how many bits the rand() function can return
+                     aMaxRand = RAND_MAX;           // we have to compute how many bits the rand() function can return
         unsigned int aRandRange = aMaxRandBits / 8; // number of bytes we can extract from a rand() value.
         int i;
         while (aMaxRand >>= 1) {
