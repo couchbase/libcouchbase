@@ -16,11 +16,7 @@
 
 #include "scram_utils.h"
 #include "config.h"
-#include <stdlib.h>
 #include <time.h>
-#include <stdint.h>
-#include <sys/types.h>
-#include <string.h>
 #include <ctype.h>
 
 #include "strcodecs/strcodecs.h"
