@@ -158,7 +158,7 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
         lcbtrace_span_add_system_tags(outspan, (settings), LCBTRACE_TAG_SERVICE_KV);                                   \
     }
 
-#define LCBTRACE_KV_FINISH(pipeline, request, response)                                                                \
+#define LCBTRACE_KV_COMPLETE(pipeline, request, response)                                                              \
     do {                                                                                                               \
         lcbtrace_SPAN *span = MCREQ_PKT_RDATA(request)->span;                                                          \
         if (span) {                                                                                                    \
@@ -181,10 +181,21 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
                 lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS,                                            \
                                           lcbio__inet_ntop(&ctx->sock->info->sa_local).c_str());                       \
             }                                                                                                          \
+        }                                                                                                              \
+    } while (0);
+
+#define LCBTRACE_KV_CLOSE(request)                                                                                     \
+    do {                                                                                                               \
+        lcbtrace_SPAN *span = MCREQ_PKT_RDATA(request)->span;                                                          \
+        if (span) {                                                                                                    \
             lcbtrace_span_finish(span, LCBTRACE_NOW);                                                                  \
             MCREQ_PKT_RDATA(request)->span = NULL;                                                                     \
         }                                                                                                              \
     } while (0);
+
+#define LCBTRACE_KV_FINISH(pipeline, request, response)                                                                \
+    LCBTRACE_KV_COMPLETE(pipeline, request, response)                                                                  \
+    LCBTRACE_KV_CLOSE(request)
 
 #ifdef __cplusplus
 }
@@ -193,6 +204,8 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
 #else
 
 #define LCBTRACE_KV_START(settings, cmd, operation_name, opaque, outspan)
+#define LCBTRACE_KV_COMPLETE(pipeline, request, response)
+#define LCBTRACE_KV_CLOSE(request)
 #define LCBTRACE_KV_FINISH(pipeline, request, response)
 
 #endif /* LCB_TRACING */

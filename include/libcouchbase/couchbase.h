@@ -1343,6 +1343,16 @@ typedef struct lcb_MULTICMD_CTX_st {
      * @param ctx
      */
     void (*fail)(struct lcb_MULTICMD_CTX_st *ctx);
+
+#ifdef LCB_TRACING
+    /**
+     * Associate parent tracing span with the group operation
+     *
+     * @param ctx The multi context
+     * @param span Parent span
+     */
+    void (*setspan)(struct lcb_MULTICMD_CTX_st *ctx, lcbtrace_SPAN *span);
+#endif
 } lcb_MULTICMD_CTX;
 /**@}*/
 

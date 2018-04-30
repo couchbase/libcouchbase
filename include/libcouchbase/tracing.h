@@ -153,6 +153,7 @@ const char *lcbtrace_span_get_operation(lcbtrace_SPAN *span);
 #define LCBTRACE_OP_GET_FROM_REPLICA "get_from_replica"
 #define LCBTRACE_OP_INSERT "insert"
 #define LCBTRACE_OP_OBSERVE_CAS "observe_cas"
+#define LCBTRACE_OP_OBSERVE_CAS_ROUND "observe_cas_round"
 #define LCBTRACE_OP_OBSERVE_SEQNO "observe_seqno"
 #define LCBTRACE_OP_PREPEND "prepend"
 #define LCBTRACE_OP_REMOVE "remove"

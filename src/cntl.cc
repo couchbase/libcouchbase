@@ -226,6 +226,10 @@ HANDLER(tracing_orphaned_queue_size_handler) {
 #ifdef LCB_TRACING
     RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, tracer_orphaned_queue_size));
 #else
+    (void)mode;
+    (void)instance;
+    (void)cmd;
+    (void)arg;
     return LCB_ECTL_BADARG;
 #endif
 }
@@ -233,6 +237,10 @@ HANDLER(tracing_threshold_queue_size_handler) {
 #ifdef LCB_TRACING
     RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, tracer_threshold_queue_size));
 #else
+    (void)mode;
+    (void)instance;
+    (void)cmd;
+    (void)arg;
     return LCB_ECTL_BADARG;
 #endif
 }

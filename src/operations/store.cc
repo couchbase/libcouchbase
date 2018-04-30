@@ -73,6 +73,15 @@ handle_dur_storecb(mc_PIPELINE *, mc_PACKET *pkt,
         goto GT_BAIL;
     }
 
+#ifdef LCB_TRACING
+    {
+        lcbtrace_SPAN *span = MCREQ_PKT_RDATA(pkt)->span;
+        if (span) {
+            mctx->setspan(mctx, span);
+        }
+    }
+#endif
+
     lcbdurctx_set_durstore(mctx, 1);
     err = mctx->addcmd(mctx, (lcb_CMDBASE*)&dcmd);
     if (err != LCB_SUCCESS) {
