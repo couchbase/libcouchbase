@@ -691,6 +691,7 @@ Server::Server(lcb_t instance_, int ix)
       instance(instance_),
       settings(lcb_settings_ref2(instance_->settings)),
       compsupport(0),
+      jsonsupport(0),
       mutation_tokens(0),
       connctx(NULL),
       curhost(new lcb_host_t())
@@ -720,7 +721,7 @@ Server::Server(lcb_t instance_, int ix)
 
 Server::Server()
     : state(S_TEMPORARY),
-      io_timer(NULL), instance(NULL), settings(NULL), compsupport(0),
+      io_timer(NULL), instance(NULL), settings(NULL), compsupport(0), jsonsupport(0),
       mutation_tokens(0), connctx(NULL), connreq(NULL), curhost(NULL)
 {
 }
