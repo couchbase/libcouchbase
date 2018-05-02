@@ -1,5 +1,45 @@
 # Release Notes
 
+## 2.8.7 (May 2 2018)
+
+* [CCBC-917](https://issues.couchbase.com/browse/CCBC-917): Add tracing for
+  observe. So now the library will group all CAS-observe operations, and in
+  general will nest observe operations under common parent when
+  `lcb_storedur3` API used.
+
+* [CCBC-918](https://issues.couchbase.com/browse/CCBC-918): Don't ping KV on
+  nodes without DATA service.
+
+* [CCBC-685](https://issues.couchbase.com/browse/CCBC-685): Implementation of
+  SCRAM-SHA{1,256,512} authentication mechanisms for KV service. Support for
+  SCRAM-SHA* SASL auth is disabled by default, because it is not portable, and
+  not every Couchbase service supports it. But if it is necessary, it could be
+  enabled using `lcb_cntl(..., LCB_CNTL_FORCE_SASL_MECH, ...)` operation, or
+  `"force_sasl_mech=SCRAM-SHA512"` option in connection string.
+
+* [CCBC-919](https://issues.couchbase.com/browse/CCBC-919): More granular
+  settings for compression. Now it is possible to specify minimum size of the
+  value to be considered for compression, and also the minimal ratio
+  `(compressed / original)`. See `LCB_CNTL_COMPRESSION_MIN_SIZE` (or
+  `"compression_min_size=100"` in bytes), and `LCB_CNTL_COMPRESSION_MIN_RATIO`
+  (or `"compression=0.9"`).
+
+* [CCBC-916](https://issues.couchbase.com/browse/CCBC-916): Do not set JSON
+  datatype if server didn't ack it. Fixes behavior where old server rejecting
+  commands as invalid when compression is enabled.
+
+* [CCBC-923](https://issues.couchbase.com/browse/CCBC-923): Allow to disable
+  fast-forward map for NMV handler. See `LCB_CNTL_VB_NOREMAP`
+  (`"vb_noremap=true"`). This option is disabled by default.
+
+Build improvements:
+
+* [CCBC-915](https://issues.couchbase.com/browse/CCBC-915): Fix builds
+  where DEBUG macro is defined
+
+* [CBD-2405](https://issues.couchbase.com/browse/CBD-2405): Change
+  target names in conflict with Server targets
+
 ## 2.8.6 (April 5 2018)
 
 * [CCBC-888](https://issues.couchbase.com/browse/CCBC-888): Add threshold
