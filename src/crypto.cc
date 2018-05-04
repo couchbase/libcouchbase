@@ -85,6 +85,13 @@ static bool lcbcrypto_is_valid(lcbcrypto_PROVIDER *provider)
         (provider)->v.v0.release_bytes((provider), (bytes));                                                           \
     }
 
+
+static lcbcrypto_PROVIDER *lcb_get_provider(const lcb_st *instance, const std::string &alg)
+{
+    const lcb_st::lcb_ProviderMap::iterator &iterator = (*instance->crypto).find(alg);
+    return iterator != (*instance->crypto).end() ? iterator->second : NULL;
+}
+
 lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd)
 {
     cmd->out = NULL;
@@ -102,7 +109,7 @@ lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd
         uint8_t *key = NULL;
         size_t nkey = 0;
 
-        lcbcrypto_PROVIDER *provider = (*instance->crypto)[field->alg];
+        lcbcrypto_PROVIDER *provider = lcb_get_provider(instance, field->alg);
         if (!lcbcrypto_is_valid(provider)) {
             continue;
         }
@@ -263,7 +270,7 @@ lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd
         int ret;
         lcb_error_t rc;
 
-        lcbcrypto_PROVIDER *provider = (*instance->crypto)[alg];
+        lcbcrypto_PROVIDER *provider = lcb_get_provider(instance, alg);
         if (!lcbcrypto_is_valid(provider)) {
             continue;
         }
