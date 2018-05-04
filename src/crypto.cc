@@ -88,8 +88,8 @@ static bool lcbcrypto_is_valid(lcbcrypto_PROVIDER *provider)
 
 static lcbcrypto_PROVIDER *lcb_get_provider(const lcb_st *instance, const std::string &alg)
 {
-    const lcb_st::lcb_ProviderMap::iterator &iterator = (*instance->crypto).find(alg);
-    return iterator != (*instance->crypto).end() ? iterator->second : NULL;
+    const lcb_st::lcb_ProviderMap::iterator provider_iterator = (*instance->crypto).find(alg);
+    return provider_iterator != (*instance->crypto).end() ? provider_iterator->second : NULL;
 }
 
 lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd)
