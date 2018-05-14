@@ -50,22 +50,36 @@ typedef struct lcbcrypto_PROVIDER {
     void *cookie;
     void (*destructor)(struct lcbcrypto_PROVIDER *provider);
     union {
+        LCB_DEPRECATED2(
+            struct {
+                void (*release_bytes)(struct lcbcrypto_PROVIDER * provider, void *bytes);
+                lcb_error_t (*load_key)(struct lcbcrypto_PROVIDER * provider, lcbcrypto_KEYTYPE type, const char *keyid,
+                                        uint8_t **key, size_t *key_len);
+                lcb_error_t (*generate_iv)(struct lcbcrypto_PROVIDER * provider, uint8_t * *iv, size_t * iv_len);
+                lcb_error_t (*sign)(struct lcbcrypto_PROVIDER * provider, const lcbcrypto_SIGV *inputs,
+                                    size_t input_num, uint8_t **sig, size_t *sig_len);
+                lcb_error_t (*verify_signature)(struct lcbcrypto_PROVIDER * provider, const lcbcrypto_SIGV *inputs,
+                                                size_t input_num, uint8_t *sig, size_t sig_len);
+                lcb_error_t (*encrypt)(struct lcbcrypto_PROVIDER * provider, const uint8_t *input, size_t input_len,
+                                       const uint8_t *key, size_t key_len, const uint8_t *iv, size_t iv_len,
+                                       uint8_t **output, size_t *output_len);
+                lcb_error_t (*decrypt)(struct lcbcrypto_PROVIDER * provider, const uint8_t *input, size_t input_len,
+                                       const uint8_t *key, size_t key_len, const uint8_t *iv, size_t iv_len,
+                                       uint8_t **output, size_t *output_len);
+            } v0,
+            "v0 crypto API has been deprecated, use v1");
         struct {
             void (*release_bytes)(struct lcbcrypto_PROVIDER *provider, void *bytes);
-            lcb_error_t (*load_key)(struct lcbcrypto_PROVIDER *provider, lcbcrypto_KEYTYPE type, const char *keyid,
-                                    uint8_t **key, size_t *key_len);
             lcb_error_t (*generate_iv)(struct lcbcrypto_PROVIDER *provider, uint8_t **iv, size_t *iv_len);
             lcb_error_t (*sign)(struct lcbcrypto_PROVIDER *provider, const lcbcrypto_SIGV *inputs, size_t input_num,
                                 uint8_t **sig, size_t *sig_len);
             lcb_error_t (*verify_signature)(struct lcbcrypto_PROVIDER *provider, const lcbcrypto_SIGV *inputs,
                                             size_t input_num, uint8_t *sig, size_t sig_len);
             lcb_error_t (*encrypt)(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
-                                   const uint8_t *key, size_t key_len, const uint8_t *iv, size_t iv_len,
-                                   uint8_t **output, size_t *output_len);
+                                   const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
             lcb_error_t (*decrypt)(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
-                                   const uint8_t *key, size_t key_len, const uint8_t *iv, size_t iv_len,
-                                   uint8_t **output, size_t *output_len);
-        } v0;
+                                   const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
+        } v1;
     } v;
 } lcbcrypto_PROVIDER;
 
@@ -93,6 +107,8 @@ typedef struct lcbcrypto_CMDDECRYPT {
     size_t ndoc;
     char *out;
     size_t nout;
+    lcbcrypto_FIELDSPEC *fields;
+    size_t nfields;
 } lcbcrypto_CMDDECRYPT;
 
 /**
@@ -130,9 +146,11 @@ LIBCOUCHBASE_API lcb_error_t lcbcrypto_encrypt_fields(lcb_t instance, lcbcrypto_
 LIBCOUCHBASE_API lcb_error_t lcbcrypto_decrypt_fields(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd);
 
 /** @deprecated Use @ref lcbcrypto_encrypt_fields() */
-LCB_DEPR_API2(lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd), "Use lcbcrypto_encrypt_fields");
+LCB_DEPR_API2(lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd),
+              "Use lcbcrypto_encrypt_fields");
 /** @deprecated Use @ref lcbcrypto_decrypt_fields() */
-LCB_DEPR_API2(lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd), "Use lcbcrypto_decrypt_fields");
+LCB_DEPR_API2(lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd),
+              "Use lcbcrypto_decrypt_fields");
 
 #ifdef __cplusplus
 }
