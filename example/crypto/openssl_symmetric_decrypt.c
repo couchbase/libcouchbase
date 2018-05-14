@@ -48,7 +48,7 @@ static void op_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
         dcmd.ndoc = rg->nvalue;
         dcmd.out = NULL;
         dcmd.nout = 0;
-        err = lcbcrypto_decrypt_document(instance, &dcmd);
+        err = lcbcrypto_decrypt_fields(instance, &dcmd);
         if (err != LCB_SUCCESS) {
             die(instance, "Couldn't decrypt field 'message'", err);
         }

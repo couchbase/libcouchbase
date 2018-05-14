@@ -120,14 +120,19 @@ LIBCOUCHBASE_API void lcbcrypto_unref(lcbcrypto_PROVIDER *provider);
  *
  * encrypt and replace fields specified by JSON paths (zero-terminated) with encrypted contents
  */
-LIBCOUCHBASE_API lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd);
+LIBCOUCHBASE_API lcb_error_t lcbcrypto_encrypt_fields(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd);
 
 /**
  * @uncommitted
  *
  * find and decrypt all fields in the JSON encoded object
  */
-LIBCOUCHBASE_API lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd);
+LIBCOUCHBASE_API lcb_error_t lcbcrypto_decrypt_fields(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd);
+
+/** @deprecated Use @ref lcbcrypto_encrypt_fields() */
+LCB_DEPR_API2(lcb_error_t lcbcrypto_encrypt_document(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd), "Use lcbcrypto_encrypt_fields");
+/** @deprecated Use @ref lcbcrypto_decrypt_fields() */
+LCB_DEPR_API2(lcb_error_t lcbcrypto_decrypt_document(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd), "Use lcbcrypto_decrypt_fields");
 
 #ifdef __cplusplus
 }
