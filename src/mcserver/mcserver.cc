@@ -623,8 +623,8 @@ void Server::purge_single(mc_PACKET *pkt, lcb_error_t err) {
         }
         std::string msg(Json::FastWriter().write(info));
         if (msg.size() > 1) {
-            lcb_log(LOGARGS(instance, WARN), "Failing opcode=0x%x with %s: %.*s",
-                    hdr.request.opcode, lcb_strerror_short(err), (int)(msg.size() - 1), msg.c_str());
+            lcb_log(LOGARGS(instance, WARN), "Failing command with error %s: %.*s",
+                    lcb_strerror_short(err), (int)(msg.size() - 1), msg.c_str());
         }
     } else {
         lcb_log(LOGARGS_T(WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error %s", LOGID_T(), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, lcb_strerror_short(err));

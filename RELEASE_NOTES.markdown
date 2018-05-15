@@ -1,5 +1,29 @@
 # Release Notes
 
+## 2.9.0 (May 21 2018)
+
+This release is mostly about API visibility bump from uncommited to committed,
+but also includes several bug fixes.
+
+* [CCBC-930](https://issues.couchbase.com/browse/CCBC-930): Dump threshold
+  logging tracer queues before destroying the tracer.
+
+* Updates in crypto API as per RFC. This basically change of the API (ABI has
+  preserved compatible, but `v0` crypto API will return runtime error with 2.9.0
+  library. From this release, all encryption key management encapsulated into
+  crypto provider, so it does not need to expose key loader interface. In
+  addition, that user API is changed to conform RFC, and use noun `fields`
+  instead of `document` (e.g. `lcbcrypt_encrypt_fields`).
+
+* [CCBC-925](https://issues.couchbase.com/browse/CCBC-925): Fix existence checks
+  for registered crypto providers.
+
+* [CCBC-924](https://issues.couchbase.com/browse/CCBC-924): Initialize flag for
+  JSON server feature. Otherwise it might be left uninitialized and the library
+  will send JSON datatype to servers, which do not support it.
+
+* [PCBC-543](https://issues.couchbase.com/browse/PCBC-543), [CCBC-932](https://issues.couchbase.com/browse/CCBC-932), [CCBC-933](https://issues.couchbase.com/browse/CCBC-933): Update log levels
+
 ## 2.8.7 (May 2 2018)
 
 * [CCBC-917](https://issues.couchbase.com/browse/CCBC-917): Add tracing for

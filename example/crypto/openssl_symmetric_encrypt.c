@@ -63,7 +63,6 @@ static void store_encrypted(lcb_t instance, const char *key, const char *val)
     ecmd.fields = &field;
     field.name = "message";
     field.alg = "AES-256-HMAC-SHA256";
-    field.kid = "mypublickey";
 
     err = lcbcrypto_encrypt_fields(instance, &ecmd);
     if (err != LCB_SUCCESS) {

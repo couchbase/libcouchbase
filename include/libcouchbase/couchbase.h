@@ -2396,7 +2396,7 @@ typedef lcb_CMDBASE lcb_CMDNOOP;
 typedef lcb_RESPSERVERBASE lcb_RESPNOOP;
 
 /**
- * @uncommitted
+ * @committed
  *
  * Send NOOP to the node
  *
@@ -2467,7 +2467,7 @@ lcb_noop3(lcb_t instance, const void *cookie, const lcb_CMDNOOP *cmd);
 /**
  * Structure for PING requests.
  *
- * @uncommitted
+ * @committed
  */
 typedef struct {
     LCB_CMD_BASE;
@@ -2479,7 +2479,7 @@ typedef struct {
 /**
  * Type of the service. This enumeration is used in PING responses.
  *
- * @uncommitted
+ * @committed
  */
 typedef enum {
     LCB_PINGSVC_KV = 0,
@@ -2492,7 +2492,7 @@ typedef enum {
 /**
  * Status of the service
  *
- * @uncommitted
+ * @committed
  */
 typedef enum {
     LCB_PINGSTATUS_OK = 0,
@@ -2505,7 +2505,7 @@ typedef enum {
  * Entry describing the status of the service in the cluster.
  * It is part of lcb_RESPING structure.
  *
- * @uncommitted
+ * @committed
  */
 typedef struct {
     lcb_PINGSVCTYPE type; /**< type of the service */
@@ -2522,7 +2522,7 @@ typedef struct {
 /**
  * Structure for PING responses.
  *
- * @uncommitted
+ * @committed
  */
 typedef struct {
     LCB_RESP_BASE
@@ -2536,7 +2536,7 @@ typedef struct {
 /**
  * @brief Check connections by sending NOOP-like messages to all services.
  *
- * @uncommitted
+ * @committed
  *
  * When no metrics, required, it is possible to reduce memory overhead
  * by turning off response contents using #LCB_PINGOPT_F_NOMETRICS.
@@ -2590,7 +2590,7 @@ typedef struct {
 /**
  * @brief Returns diagnostics report about network connections.
  *
- * @uncommitted
+ * @committed
  *
  * @par Request
  * @code{.c}

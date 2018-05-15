@@ -106,7 +106,7 @@ lcb_error_t lcbcrypto_encrypt_fields(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd)
         return LCB_EINVAL;
     }
     bool changed = false;
-    std::string prefix = (cmd->prefix == NULL) ? "__crypt_" : cmd->prefix;
+    std::string prefix = (cmd->prefix == NULL) ? LCBCRYPTO_DEFAULT_FIELD_PREFIX : cmd->prefix;
     for (size_t ii = 0; ii < cmd->nfields; ii++) {
         lcbcrypto_FIELDSPEC *field = cmd->fields + ii;
         lcb_error_t rc;
@@ -241,7 +241,7 @@ lcb_error_t lcbcrypto_decrypt_fields(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd)
     }
 
     bool changed = false;
-    std::string prefix = (cmd->prefix == NULL) ? "__crypt_" : cmd->prefix;
+    std::string prefix = (cmd->prefix == NULL) ? LCBCRYPTO_DEFAULT_FIELD_PREFIX : cmd->prefix;
 
     for (size_t ii = 0; ii < cmd->nfields; ii++) {
         lcbcrypto_FIELDSPEC *field = cmd->fields + ii;
