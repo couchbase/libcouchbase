@@ -475,6 +475,100 @@ fail_callback(mc_PIPELINE *pipeline, mc_PACKET *pkt, lcb_error_t err, void *) {
     static_cast<Server*>(pipeline)->purge_single(pkt, err);
 }
 
+static const char *opcode_name(uint8_t code)
+{
+    switch (code) {
+        case PROTOCOL_BINARY_CMD_GET:
+            return "get";
+        case PROTOCOL_BINARY_CMD_SET:
+            return "set";
+        case PROTOCOL_BINARY_CMD_ADD:
+            return "add";
+        case PROTOCOL_BINARY_CMD_REPLACE:
+            return "replace";
+        case PROTOCOL_BINARY_CMD_DELETE:
+            return "delete";
+        case PROTOCOL_BINARY_CMD_INCREMENT:
+            return "incr";
+        case PROTOCOL_BINARY_CMD_DECREMENT:
+            return "decr";
+        case PROTOCOL_BINARY_CMD_FLUSH:
+            return "flush";
+        case PROTOCOL_BINARY_CMD_GETQ:
+            return "getq";
+        case PROTOCOL_BINARY_CMD_NOOP:
+            return "noop";
+        case PROTOCOL_BINARY_CMD_VERSION:
+            return "version";
+        case PROTOCOL_BINARY_CMD_APPEND:
+            return "append";
+        case PROTOCOL_BINARY_CMD_PREPEND:
+            return "prepend";
+        case PROTOCOL_BINARY_CMD_STAT:
+            return "stat";
+        case PROTOCOL_BINARY_CMD_VERBOSITY:
+            return "verbosity";
+        case PROTOCOL_BINARY_CMD_TOUCH:
+            return "touch";
+        case PROTOCOL_BINARY_CMD_GAT:
+            return "gat";
+        case PROTOCOL_BINARY_CMD_HELLO:
+            return "hello";
+        case PROTOCOL_BINARY_CMD_SASL_LIST_MECHS:
+            return "sasl_list_mechs";
+        case PROTOCOL_BINARY_CMD_SASL_AUTH:
+            return "sasl_auth";
+        case PROTOCOL_BINARY_CMD_SASL_STEP:
+            return "sasl_step";
+        case PROTOCOL_BINARY_CMD_GET_REPLICA:
+            return "get_replica";
+        case PROTOCOL_BINARY_CMD_SELECT_BUCKET:
+            return "select_bucket";
+        case PROTOCOL_BINARY_CMD_OBSERVE_SEQNO:
+            return "observe_seqno";
+        case PROTOCOL_BINARY_CMD_OBSERVE:
+            return "observe";
+        case PROTOCOL_BINARY_CMD_GET_LOCKED:
+            return "get_locked";
+        case PROTOCOL_BINARY_CMD_UNLOCK_KEY:
+            return "unlock_key";
+        case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
+            return "get_cluster_config";
+        case PROTOCOL_BINARY_CMD_SUBDOC_GET:
+            return "subdoc_get";
+        case PROTOCOL_BINARY_CMD_SUBDOC_EXISTS:
+            return "subdoc_exists";
+        case PROTOCOL_BINARY_CMD_SUBDOC_DICT_ADD:
+            return "subdoc_dict_add";
+        case PROTOCOL_BINARY_CMD_SUBDOC_DICT_UPSERT:
+            return "subdoc_dict_upsert";
+        case PROTOCOL_BINARY_CMD_SUBDOC_DELETE:
+            return "subdoc_delete";
+        case PROTOCOL_BINARY_CMD_SUBDOC_REPLACE:
+            return "subdoc_replace";
+        case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_LAST:
+            return "subdoc_array_push_last";
+        case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_PUSH_FIRST:
+            return "subdoc_array_push_first";
+        case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_INSERT:
+            return "subdoc_array_insert";
+        case PROTOCOL_BINARY_CMD_SUBDOC_ARRAY_ADD_UNIQUE:
+            return "subdoc_array_add_unique";
+        case PROTOCOL_BINARY_CMD_SUBDOC_COUNTER:
+            return "subdoc_counter";
+        case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP:
+            return "subdoc_multi_lookup";
+        case PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION:
+            return "subdoc_multi_mutation";
+        case PROTOCOL_BINARY_CMD_SUBDOC_GET_COUNT:
+            return "subdoc_get_count";
+        case PROTOCOL_BINARY_CMD_GET_ERROR_MAP:
+            return "get_error_map";
+        default:
+            return "unknown";
+    }
+}
+
 void Server::purge_single(mc_PACKET *pkt, lcb_error_t err) {
     if (maybe_retry_packet(pkt, err)) {
         return;
@@ -502,7 +596,39 @@ void Server::purge_single(mc_PACKET *pkt, lcb_error_t err) {
 #ifdef LCB_TRACING
     lcbtrace_span_set_orphaned(MCREQ_PKT_RDATA(pkt)->span, true);
 #endif
-    lcb_log(LOGARGS_T(WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error %s", LOGID_T(), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, lcb_strerror_short(err));
+    if (err == LCB_ETIMEDOUT && settings->use_tracing) {
+        Json::Value info;
+
+        char opid[30] = {};
+        snprintf(opid, sizeof(opid), "kv:%s", opcode_name(hdr.request.opcode));
+        info["s"] = opid;
+        info["b"] = settings->bucket;
+        info["t"] = settings->operation_timeout;
+
+        const lcb_host_t &remote = get_host();
+        std::string rhost;
+        if (remote.ipv6) {
+            rhost.append("[").append(remote.host).append("]:").append(remote.port);
+        } else {
+            rhost.append(remote.host).append(":").append(remote.port);
+        }
+        info["r"] = rhost.c_str();
+
+        if (connctx) {
+            char local_id[54] = {};
+            snprintf(local_id, sizeof(local_id), "%016" PRIx64 "/%016" PRIx64 "/%x",
+                     (lcb_U64)settings->iid, connctx->sock->id, (int)pkt->opaque);
+            info["i"] = local_id;
+            info["l"] = lcbio__inet_ntop(&connctx->sock->info->sa_local).c_str();
+        }
+        std::string msg(Json::FastWriter().write(info));
+        if (msg.size() > 1) {
+            lcb_log(LOGARGS(instance, WARN), "Failing opcode=0x%x with %s: %.*s",
+                    hdr.request.opcode, lcb_strerror_short(err), (int)(msg.size() - 1), msg.c_str());
+        }
+    } else {
+        lcb_log(LOGARGS_T(WARN), LOGFMT "Failing command (pkt=%p, opaque=%lu, opcode=0x%x) with error %s", LOGID_T(), (void*)pkt, (unsigned long)pkt->opaque, hdr.request.opcode, lcb_strerror_short(err));
+    }
     int rv = mcreq_dispatch_response(this, pkt, &resp, err);
     lcb_assert(rv == 0);
 }
