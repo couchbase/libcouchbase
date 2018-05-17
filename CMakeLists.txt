@@ -25,7 +25,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
 # Couchbase mock path to download
 SET(COUCHBASE_MOCK_VERSION CouchbaseMock-1.5.19.jar)
 # Maven repository where ${COUCHBASE_MOCK_VERSION} is to be found
-SET(COUCHBASE_MOCK_DLSERVER http://packages.couchbase.com/clients/c/mock)
+SET(COUCHBASE_MOCK_DLSERVER https://packages.couchbase.com/clients/c/mock)
 project(libcouchbase)
 
 OPTION(LCB_NO_TESTS "Disable building of tests" OFF)
