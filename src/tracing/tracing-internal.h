@@ -129,6 +129,8 @@ class ThresholdLoggingTracer
 
     void flush_orphans();
     void flush_threshold();
+    void do_flush_orphans();
+    void do_flush_threshold();
 
     lcb::io::Timer< ThresholdLoggingTracer, &ThresholdLoggingTracer::flush_orphans > m_oflush;
     lcb::io::Timer< ThresholdLoggingTracer, &ThresholdLoggingTracer::flush_threshold > m_tflush;

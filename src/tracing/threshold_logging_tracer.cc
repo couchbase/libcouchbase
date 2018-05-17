@@ -40,6 +40,8 @@ static void tlt_destructor(lcbtrace_TRACER *wrapper)
     }
     if (wrapper->cookie) {
         ThresholdLoggingTracer *tracer = reinterpret_cast< ThresholdLoggingTracer * >(wrapper->cookie);
+        tracer->do_flush_orphans();
+        tracer->do_flush_threshold();
         delete tracer;
         wrapper->cookie = NULL;
     }
@@ -127,6 +129,22 @@ void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, cons
     queue.clear();
 }
 
+void ThresholdLoggingTracer::do_flush_orphans()
+{
+    if (m_orphans.empty()) {
+        return;
+    }
+    flush_queue(m_orphans, "Orphan responses observed");
+}
+
+void ThresholdLoggingTracer::do_flush_threshold()
+{
+    if (m_threshold.empty()) {
+        return;
+    }
+    flush_queue(m_threshold, "Operations over threshold");
+}
+
 void ThresholdLoggingTracer::flush_orphans()
 {
     lcb_U32 tv = m_settings->tracer_orphaned_queue_flush_interval;
@@ -135,10 +153,7 @@ void ThresholdLoggingTracer::flush_orphans()
     } else {
         m_oflush.rearm(tv);
     }
-    if (m_orphans.empty()) {
-        return;
-    }
-    flush_queue(m_orphans, "Orphan responses observed");
+    do_flush_orphans();
 }
 
 void ThresholdLoggingTracer::flush_threshold()
@@ -149,10 +164,7 @@ void ThresholdLoggingTracer::flush_threshold()
     } else {
         m_tflush.rearm(tv);
     }
-    if (m_threshold.empty()) {
-        return;
-    }
-    flush_queue(m_threshold, "Operations over threshold");
+    do_flush_threshold();
 }
 
 ThresholdLoggingTracer::ThresholdLoggingTracer(lcb_t instance)
