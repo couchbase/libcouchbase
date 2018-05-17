@@ -79,6 +79,7 @@ typedef struct lcbcrypto_PROVIDER {
                                    const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
             lcb_error_t (*decrypt)(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
                                    const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len);
+            const char *(*get_key_id)(struct lcbcrypto_PROVIDER *provider);
         } v1;
     } v;
 } lcbcrypto_PROVIDER;
@@ -86,7 +87,8 @@ typedef struct lcbcrypto_PROVIDER {
 typedef struct lcbcrypto_FIELDSPEC {
     const char *name;
     const char *alg;
-    const char *kid;
+    LCB_DEPRECATED2(const char *kid,
+                    "Do not use kid field. Encryption keys have to be part of the provider implementation");
 } lcbcrypto_FIELDSPEC;
 
 typedef struct lcbcrypto_CMDENCRYPT {

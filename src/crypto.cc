@@ -66,7 +66,7 @@ static bool lcbcrypto_is_valid(lcbcrypto_PROVIDER *provider)
     if (provider->v.v1.sign && provider->v.v1.verify_signature == NULL) {
         return false;
     }
-    return provider->v.v1.encrypt && provider->v.v1.decrypt;
+    return provider->v.v1.encrypt && provider->v.v1.decrypt && provider->v.v1.get_key_id;
 }
 
 #define PROVIDER_NEED_SIGN(provider) (provider)->v.v1.sign != NULL
@@ -82,6 +82,8 @@ static bool lcbcrypto_is_valid(lcbcrypto_PROVIDER *provider)
     (provider)->v.v1.encrypt((provider), (ptext), (nptext), (iv), (niv), (ctext), (nctext));
 #define PROVIDER_DECRYPT(provider, ctext, nctext, iv, niv, ptext, nptext)                                              \
     (provider)->v.v1.decrypt((provider), (ctext), (nctext), (iv), (niv), (ptext), (nptext));
+
+#define PROVIDER_GET_KEY_ID(provider) (provider)->v.v1.get_key_id((provider));
 
 #define PROVIDER_RELEASE_BYTES(provider, bytes)                                                                        \
     if ((bytes) && (provider)->v.v1.release_bytes) {                                                                   \
@@ -109,10 +111,6 @@ lcb_error_t lcbcrypto_encrypt_fields(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd)
         lcbcrypto_FIELDSPEC *field = cmd->fields + ii;
         lcb_error_t rc;
 
-        if (field->kid != NULL) {
-            lcb_log(LOGARGS(instance, WARN), "kid field of the FIELDSPEC have to be NULL");
-            return LCB_EINVAL;
-        }
         if (field->name == NULL) {
             lcb_log(LOGARGS(instance, WARN), "field name cannot be NULL");
             return LCB_EINVAL;
@@ -170,6 +168,8 @@ lcb_error_t lcbcrypto_encrypt_fields(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd)
                 return LCB_EINVAL;
             }
             encrypted["ciphertext"] = btext;
+            std::string kid = PROVIDER_GET_KEY_ID(provider);
+            encrypted["kid"] = kid;
 
             if (PROVIDER_NEED_SIGN(provider)) {
                 lcbcrypto_SIGV parts[4] = {};
@@ -177,6 +177,9 @@ lcb_error_t lcbcrypto_encrypt_fields(lcb_t instance, lcbcrypto_CMDENCRYPT *cmd)
                 uint8_t *sig = NULL;
                 size_t nsig = 0;
 
+                parts[nparts].data = reinterpret_cast< const uint8_t * >(kid.c_str());
+                parts[nparts].len = kid.size();
+                nparts++;
                 parts[nparts].data = reinterpret_cast< const uint8_t * >(field->alg);
                 parts[nparts].len = strlen(field->alg);
                 nparts++;
@@ -242,25 +245,33 @@ lcb_error_t lcbcrypto_decrypt_fields(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd)
 
     for (size_t ii = 0; ii < cmd->nfields; ii++) {
         lcbcrypto_FIELDSPEC *field = cmd->fields + ii;
-        if (field->kid != NULL) {
-            lcb_log(LOGARGS(instance, WARN), "kid field of the FIELDSPEC have to be NULL");
-            return LCB_EINVAL;
-        }
+
         if (field->name == NULL) {
             lcb_log(LOGARGS(instance, WARN), "field name cannot be NULL");
             return LCB_EINVAL;
         }
-
-        if (jdoc.isMember(field->name)) {
-            continue;
+        lcbcrypto_PROVIDER *provider = lcb_get_provider(instance, field->alg);
+        if (!lcbcrypto_is_valid(provider)) {
+            lcb_log(LOGARGS(instance, WARN), "Invalid crypto provider");
+            return LCB_EINVAL;
         }
 
         std::string name = prefix + field->name;
+        if (!jdoc.isMember(name)) {
+            continue;
+        }
         Json::Value &encrypted = jdoc[name];
         if (!encrypted.isObject()) {
             lcb_log(LOGARGS(instance, WARN), "Expected encrypted field to be an JSON object");
             return LCB_EINVAL;
         }
+
+        Json::Value &jkid = encrypted["kid"];
+        if (!jkid.isString()) {
+            lcb_log(LOGARGS(instance, WARN), "Expected \"kid\" to be a JSON string");
+            return LCB_EINVAL;
+        }
+        const std::string &kid = jkid.asString();
 
         Json::Value &jalg = encrypted["alg"];
         if (!jalg.isString()) {
@@ -280,11 +291,6 @@ lcb_error_t lcbcrypto_decrypt_fields(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd)
         int ret;
         lcb_error_t rc;
 
-        lcbcrypto_PROVIDER *provider = lcb_get_provider(instance, alg);
-        if (!lcbcrypto_is_valid(provider)) {
-            lcb_log(LOGARGS(instance, WARN), "Invalid crypto provider");
-            return LCB_EINVAL;
-        }
         Json::Value &jctext = encrypted["ciphertext"];
         if (!jctext.isString()) {
             lcb_log(LOGARGS(instance, WARN), "Expected encrypted field \"ciphertext\" to be a JSON string");
@@ -311,6 +317,9 @@ lcb_error_t lcbcrypto_decrypt_fields(lcb_t instance, lcbcrypto_CMDDECRYPT *cmd)
             lcbcrypto_SIGV parts[4] = {};
             size_t nparts = 0;
 
+            parts[nparts].data = reinterpret_cast< const uint8_t * >(kid.c_str());
+            parts[nparts].len = kid.size();
+            nparts++;
             parts[nparts].data = reinterpret_cast< const uint8_t * >(alg.c_str());
             parts[nparts].len = alg.size();
             nparts++;

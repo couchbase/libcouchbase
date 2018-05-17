@@ -41,6 +41,11 @@ static void osp_release_bytes(lcbcrypto_PROVIDER *provider, void *bytes)
     (void)provider;
 }
 
+static const char *osp_get_key_id(lcbcrypto_PROVIDER *provider)
+{
+    return common_aes256_key_id;
+}
+
 static lcb_error_t osp_generate_iv(struct lcbcrypto_PROVIDER *provider, uint8_t **iv, size_t *iv_len)
 {
     *iv_len = AES256_IV_SIZE;
@@ -201,8 +206,7 @@ static lcb_error_t osp_encrypt(struct lcbcrypto_PROVIDER *provider, const uint8_
 }
 
 static lcb_error_t osp_decrypt(struct lcbcrypto_PROVIDER *provider, const uint8_t *input, size_t input_len,
-                               const uint8_t *iv, size_t iv_len, uint8_t **output,
-                               size_t *output_len)
+                               const uint8_t *iv, size_t iv_len, uint8_t **output, size_t *output_len)
 {
     EVP_CIPHER_CTX *ctx;
     const EVP_CIPHER *cipher;
@@ -255,6 +259,7 @@ lcbcrypto_PROVIDER *osp_create()
     provider->v.v1.verify_signature = osp_verify_signature;
     provider->v.v1.encrypt = osp_encrypt;
     provider->v.v1.decrypt = osp_decrypt;
+    provider->v.v1.get_key_id = osp_get_key_id;
     return provider;
 }
 
