@@ -125,7 +125,7 @@ void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, cons
     if (doc.size() > 0 && doc[doc.size() - 1] == '\n') {
         doc[doc.size() - 1] = '\0';
     }
-    lcb_log(LOGARGS(this, WARN), "%s: %s", message, doc.c_str());
+    lcb_log(LOGARGS(this, INFO), "%s: %s", message, doc.c_str());
     queue.clear();
 }
 
