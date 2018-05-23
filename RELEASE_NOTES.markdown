@@ -1,6 +1,6 @@
 # Release Notes
 
-## 2.9.0 (May 21 2018)
+## 2.9.0 (May 24 2018)
 
 This release is mostly about API visibility bump from uncommited to committed,
 but also includes several bug fixes.
