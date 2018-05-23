@@ -618,6 +618,13 @@ void lcb_destroy(lcb_t instance)
     mcreq_queue_cleanup(&instance->cmdq);
     lcb_aspend_cleanup(po);
 
+#ifdef LCB_TRACING
+    if (instance->settings && instance->settings->tracer) {
+        lcbtrace_destroy(instance->settings->tracer);
+        instance->settings->tracer = NULL;
+    }
+#endif
+
     if (instance->iotable && instance->iotable->refcount > 1 &&
             instance->settings && instance->settings->syncdtor) {
         /* create an async object */

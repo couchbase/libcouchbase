@@ -67,7 +67,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->use_errmap = 1;
     settings->use_collections = 0;
     settings->log_redaction = 0;
-    settings->use_tracing = 0;
+    settings->use_tracing = 1;
 #ifdef LCB_TRACING
     settings->tracer_orphaned_queue_flush_interval = LCBTRACE_DEFAULT_ORPHANED_QUEUE_FLUSH_INTERVAL;
     settings->tracer_orphaned_queue_size = LCBTRACE_DEFAULT_ORPHANED_QUEUE_SIZE;
@@ -115,12 +115,6 @@ lcb_settings_unref(lcb_settings *settings)
     if (settings->metrics) {
         lcb_metrics_destroy(settings->metrics);
     }
-#ifdef LCB_TRACING
-    if (settings->tracer) {
-        lcbtrace_destroy(settings->tracer);
-        settings->tracer = NULL;
-    }
-#endif
     if (settings->dtorcb) {
         settings->dtorcb(settings->dtorarg);
     }

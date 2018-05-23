@@ -385,7 +385,7 @@ SessionRequestImpl::check_auth(const lcb::MemcachedResponse& packet)
     cbsasl_error_t saslerr;
 
     saslerr = cbsasl_client_check(sasl_client,
-        packet.body<const char*>(), packet.bodylen());
+        packet.value(), packet.vallen());
 
     if (saslerr != SASL_OK) {
         set_error(LCB_AUTH_ERROR, "Invalid SASL check");

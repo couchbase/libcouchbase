@@ -166,14 +166,16 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
         if (span) {                                                                                                    \
             lcbtrace_span_add_tag_uint64(span, LCBTRACE_TAG_PEER_LATENCY, (response)->duration());                     \
             lcb::Server *server = static_cast< lcb::Server * >(pipeline);                                              \
-            const lcb_host_t &remote = server->get_host();                                                             \
-            std::string hh;                                                                                            \
-            if (remote.ipv6) {                                                                                         \
-                hh.append("[").append(remote.host).append("]:").append(remote.port);                                   \
-            } else {                                                                                                   \
-                hh.append(remote.host).append(":").append(remote.port);                                                \
+            const lcb_host_t *remote = server->curhost;                                                                \
+            if (remote) {                                                                                              \
+                std::string hh;                                                                                        \
+                if (remote->ipv6) {                                                                                    \
+                    hh.append("[").append(remote->host).append("]:").append(remote->port);                             \
+                } else {                                                                                               \
+                    hh.append(remote->host).append(":").append(remote->port);                                          \
+                }                                                                                                      \
+                lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_PEER_ADDRESS, hh.c_str());                                \
             }                                                                                                          \
-            lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_PEER_ADDRESS, hh.c_str());                                    \
             lcbio_CTX *ctx = server->connctx;                                                                          \
             if (ctx) {                                                                                                 \
                 char local_id[34] = {};                                                                                \
