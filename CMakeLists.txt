@@ -327,12 +327,14 @@ ELSE()
     SET_TARGET_PROPERTIES(couchbase PROPERTIES
         LINK_FLAGS "-compatibility_version ${LCB_SONAME_MAJOR} -current_version ${LCB_SONAME_FULL}"
         OUTPUT_NAME couchbase.2)
-    ADD_CUSTOM_COMMAND(TARGET couchbase POST_BUILD
-        COMMAND rm -f libcouchbase.dylib
-        COMMAND ln libcouchbase.2.dylib libcouchbase.dylib
-        WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    INSTALL(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libcouchbase.dylib
-        DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    IF(NOT LCB_BUILD_STATIC)
+        ADD_CUSTOM_COMMAND(TARGET couchbase POST_BUILD
+            COMMAND rm -f libcouchbase.dylib
+            COMMAND ln libcouchbase.2.dylib libcouchbase.dylib
+            WORKING_DIRECTORY ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+        INSTALL(FILES ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libcouchbase.dylib
+            DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    ENDIF()
 ENDIF()
 
 SET_TARGET_PROPERTIES(couchbase PROPERTIES PREFIX "lib")
