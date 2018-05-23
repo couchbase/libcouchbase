@@ -231,15 +231,20 @@ IF(LCB_NO_SSL)
     MESSAGE(STATUS "SSL support will be disabled")
     ADD_DEFINITIONS(-DLCB_NO_SSL=1)
 ELSE()
-    IF(APPLE)
-        IF(NOT OpenSSL_DIR)
-            EXECUTE_PROCESS(COMMAND brew --prefix openssl
-                OUTPUT_VARIABLE OPENSSL_ROOT_DIR
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
-            MESSAGE(STATUS "Found OpenSSL Prefix: ${OPENSSL_ROOT_DIR}")
+    IF(NOT OPENSSL_FOUND)
+        # When building under Couchbase Server we've already detected
+        # and set the appropriate OpenSSL variables
+        IF(APPLE)
+            IF(NOT OpenSSL_DIR)
+                EXECUTE_PROCESS(COMMAND brew --prefix openssl
+                    OUTPUT_VARIABLE OPENSSL_ROOT_DIR
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
+                MESSAGE(STATUS "Found OpenSSL Prefix: ${OPENSSL_ROOT_DIR}")
+            ENDIF()
         ENDIF()
-    ENDIF()
-    FIND_PACKAGE(OpenSSL)
+        FIND_PACKAGE(OpenSSL)
+    ENDIF(NOT OPENSSL_FOUND)
+
     IF(OPENSSL_FOUND)
         MESSAGE(STATUS "SSL Found")
     ELSE()
