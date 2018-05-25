@@ -46,6 +46,8 @@ OPTION(LCB_EMBED_PLUGIN_LIBEVENT "Embed the libevent plugin" OFF)
 OPTION(LCB_STATIC_LIBEVENT "Link static libevent (only applicable if EMBED_PLUGIN_LIBEVENT is ON" OFF)
 OPTION(LCB_USE_HDR_HISTOGRAM "Use HdrHistogram for statistics recording" OFF)
 OPTION(LCB_TRACING "Enable builtin tracing" ON)
+OPTION(LCB_INSTALL_HEADERS "Install header files" ON)
+OPTION(LCB_INSTALL_PKGCONFIG "Install pkgconfig/libcouchbase.pc" ON)
 
 ### END CONFIGURABLES ###
 IF(MSVC)
@@ -393,9 +395,11 @@ INSTALL(TARGETS couchbase
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-INSTALL(DIRECTORY include/libcouchbase ${LCB_GENSRCDIR}/libcouchbase
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    FILES_MATCHING PATTERN *.h PATTERN *.c)
+IF(LCB_INSTALL_HEADERS)
+    INSTALL(DIRECTORY include/libcouchbase ${LCB_GENSRCDIR}/libcouchbase
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+            FILES_MATCHING PATTERN *.h PATTERN *.c)
+ENDIF()
 
 INSTALL(DIRECTORY doc/man/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man1 FILES_MATCHING PATTERN *.1)
 INSTALL(DIRECTORY doc/man/ DESTINATION ${CMAKE_INSTALL_MANDIR}/man4  FILES_MATCHING PATTERN *.4)
@@ -408,7 +412,7 @@ SET(_lcb_tarname "libcouchbase-${LCB_VERSION}")
 SET(_lcb_manifest "${LCB_GENINFODIR}/MANIFEST")
 
 # pkg-config stuff goes with installation
-IF(NOT WIN32)
+IF(NOT WIN32 AND LCB_INSTALL_PKGCONFIG)
     CONFIGURE_FILE(packaging/libcouchbase.pc.in packaging/libcouchbase.pc @ONLY)
     INSTALL(FILES ${PROJECT_BINARY_DIR}/packaging/libcouchbase.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 ENDIF()
