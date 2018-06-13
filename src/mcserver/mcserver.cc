@@ -46,7 +46,7 @@ static void
 on_flush_ready(lcbio_CTX *ctx)
 {
     Server *server = Server::get(ctx);
-    nb_IOV iov[MCREQ_MAXIOV];
+    nb_IOV iov[MCREQ_MAXIOV] = {};
     int ready;
 
     do {
@@ -56,6 +56,15 @@ on_flush_ready(lcbio_CTX *ctx)
         if (!nb) {
             return;
         }
+#ifdef LCB_DUMP_PACKETS
+        {
+            char *b64 = NULL;
+            int nb64 = 0;
+            lcb_base64_encode_iov((lcb_IOV *)iov, niov, nb, &b64, &nb64);
+            lcb_log(LOGARGS(server, TRACE), LOGFMT "pkt,snd,fill: size=%d, %.*s", LOGID(server), nb64, nb64, b64);
+            free(b64);
+        }
+#endif
         ready = lcbio_ctx_put_ex(ctx, (lcb_IOV *)iov, niov, nb);
     } while (ready);
     lcbio_ctx_wwant(ctx);
@@ -70,6 +79,9 @@ on_flush_done(lcbio_CTX *ctx, unsigned expected, unsigned actual)
         now = gethrtime();
     }
 
+#ifdef LCB_DUMP_PACKETS
+    lcb_log(LOGARGS(server, TRACE), LOGFMT "pkt,snd,flush: expected=%u, actual=%u", LOGID(server), expected, actual);
+#endif
     mcreq_flush_done_ex(server, actual, expected, now);
     server->check_closed();
 }

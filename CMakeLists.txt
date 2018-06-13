@@ -48,6 +48,7 @@ OPTION(LCB_USE_HDR_HISTOGRAM "Use HdrHistogram for statistics recording" OFF)
 OPTION(LCB_TRACING "Enable builtin tracing" ON)
 OPTION(LCB_INSTALL_HEADERS "Install header files" ON)
 OPTION(LCB_INSTALL_PKGCONFIG "Install pkgconfig/libcouchbase.pc" ON)
+OPTION(LCB_DUMP_PACKETS "Enable dumping network packets on TRACE log level" OFF)
 
 ### END CONFIGURABLES ###
 IF(MSVC)
