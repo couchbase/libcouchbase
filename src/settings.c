@@ -68,6 +68,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->use_collections = 0;
     settings->log_redaction = 0;
     settings->use_tracing = 1;
+    settings->network = NULL;
 #ifdef LCB_TRACING
     settings->tracer_orphaned_queue_flush_interval = LCBTRACE_DEFAULT_ORPHANED_QUEUE_FLUSH_INTERVAL;
     settings->tracer_orphaned_queue_size = LCBTRACE_DEFAULT_ORPHANED_QUEUE_SIZE;
@@ -105,6 +106,7 @@ lcb_settings_unref(lcb_settings *settings)
     free(settings->certpath);
     free(settings->keypath);
     free(settings->client_string);
+    free(settings->network);
 
     lcbauth_unref(settings->auth);
     lcb_errmap_free(settings->errmap);

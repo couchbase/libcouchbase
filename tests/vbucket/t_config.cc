@@ -53,7 +53,7 @@ ConfigTest::testConfig(const char *fname, bool checkNew)
     string testData = getConfigFile(fname);
     lcbvb_CONFIG *vbc = lcbvb_create();
     ASSERT_TRUE(vbc != NULL);
-    int rv = lcbvb_load_json(vbc, testData.c_str());
+    int rv = lcbvb_load_json(vbc, testData.c_str(), NULL, NULL);
     ASSERT_EQ(0, rv);
     ASSERT_GT(vbc->nsrv, (unsigned int)0);
 
@@ -129,7 +129,7 @@ TEST_F(ConfigTest, testGeneration)
     lcbvb_destroy(cfg);
 
     cfg = lcbvb_create();
-    int rv = lcbvb_load_json(cfg, js);
+    int rv = lcbvb_load_json(cfg, js, NULL, NULL);
     ASSERT_EQ(0, rv);
     ASSERT_EQ(4, cfg->nsrv);
     ASSERT_EQ(1, cfg->nrepl);
@@ -196,17 +196,17 @@ TEST_F(ConfigTest, testGetReplicaNode)
 TEST_F(ConfigTest, testBadInput)
 {
     lcbvb_CONFIG *cfg = lcbvb_create();
-    int rc = lcbvb_load_json(cfg, "{}");
+    int rc = lcbvb_load_json(cfg, "{}", NULL, NULL);
     ASSERT_EQ(-1, rc);
     lcbvb_destroy(cfg);
 
     cfg = lcbvb_create();
-    rc = lcbvb_load_json(cfg, "INVALIDJSON");
+    rc = lcbvb_load_json(cfg, "INVALIDJSON", NULL, NULL);
     ASSERT_EQ(-1, rc);
     lcbvb_destroy(cfg);
 
     cfg = lcbvb_create();
-    rc = lcbvb_load_json(cfg, "");
+    rc = lcbvb_load_json(cfg, "", NULL, NULL);
     ASSERT_EQ(-1, rc);
     lcbvb_destroy(cfg);
 
@@ -216,7 +216,7 @@ TEST_F(ConfigTest, testEmptyMap)
 {
     string emptyTxt = getConfigFile("bad.json");
     lcbvb_CONFIG *cfg = lcbvb_create();
-    int rc = lcbvb_load_json(cfg, emptyTxt.c_str());
+    int rc = lcbvb_load_json(cfg, emptyTxt.c_str(), NULL, NULL);
     ASSERT_EQ(-1, rc);
     lcbvb_destroy(cfg);
 }

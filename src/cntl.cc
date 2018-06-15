@@ -508,6 +508,7 @@ HANDLER(client_string_handler) {
     if (mode == LCB_CNTL_SET) {
         const char *val = reinterpret_cast<const char*>(arg);
         free(LCBT_SETTING(instance, client_string));
+        LCBT_SETTING(instance, client_string) = NULL;
         if (val) {
             LCBT_SETTING(instance, client_string) = strdup(val);
         }
@@ -641,6 +642,21 @@ HANDLER(comp_min_ratio_handler) {
     RETURN_GET_SET(float, LCBT_SETTING(instance, compress_min_ratio))
 }
 
+HANDLER(network_handler) {
+    if (mode == LCB_CNTL_SET) {
+        const char *val = reinterpret_cast<const char*>(arg);
+        free(LCBT_SETTING(instance, network));
+        LCBT_SETTING(instance, network) = NULL;
+        if (val) {
+            LCBT_SETTING(instance, network) = strdup(val);
+        }
+    } else {
+        *(const char **)arg = LCBT_SETTING(instance, client_string);
+    }
+    (void)cmd;
+    return LCB_SUCCESS;
+}
+
 static ctl_handler handlers[] = {
     timeout_common, /* LCB_CNTL_OP_TIMEOUT */
     timeout_common, /* LCB_CNTL_VIEW_TIMEOUT */
@@ -733,6 +749,7 @@ static ctl_handler handlers[] = {
     comp_min_size_handler, /* LCB_CNTL_COMPRESSION_MIN_SIZE */
     comp_min_ratio_handler, /* LCB_CNTL_COMPRESSION_MIN_RATIO */
     vb_noremap_handler, /* LCB_CNTL_VB_NOREMAP */
+    network_handler, /* LCB_CNTL_NETWORK */
 };
 
 /* Union used for conversion to/from string functions */
@@ -918,6 +935,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"compression_min_size", LCB_CNTL_COMPRESSION_MIN_SIZE, convert_u32},
         {"compression_min_ratio", LCB_CNTL_COMPRESSION_MIN_RATIO, convert_float},
         {"vb_noremap", LCB_CNTL_VB_NOREMAP, convert_intbool },
+        {"network", LCB_CNTL_NETWORK, convert_passthru },
         {NULL, -1}
 };
 

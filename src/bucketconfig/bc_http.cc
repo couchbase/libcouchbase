@@ -100,6 +100,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
     int rv;
     lcbvb_CONFIG *cfgh;
     unsigned state, oldstate, diff;
+    lcb_host_t *host;
     htp::Response& resp = http->htp->get_cur_response();
 
     oldstate = resp.state;
@@ -146,7 +147,6 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
 
     GT_CHECKDONE:
     if (http->try_nexturi) {
-        lcb_host_t *host;
         if (!(state & htp::Parser::S_DONE)) {
             return LCB_SUCCESS;
         }
@@ -177,7 +177,8 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
     if (!cfgh) {
         return LCB_CLIENT_ENOMEM;
     }
-    rv = lcbvb_load_json(cfgh, resp.body.c_str());
+    host = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
+    rv = lcbvb_load_json(cfgh, resp.body.c_str(), host->host, &LCBT_SETTING(http->parent, network));
     if (rv != 0) {
         lcb_log(LOGARGS(http, ERR), LOGFMT "Failed to parse a valid config from HTTP stream", LOGID(http));
         lcb_log_badconfig(LOGARGS(http, ERR), cfgh, resp.body.c_str());

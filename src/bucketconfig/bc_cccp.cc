@@ -186,7 +186,7 @@ CccpProvider::update(const char *host, const char *data)
     if (!vbc) {
         return LCB_CLIENT_ENOMEM;
     }
-    rv = lcbvb_load_json(vbc, data);
+    rv = lcbvb_load_json(vbc, data, host, &LCBT_SETTING(this->parent, network));
 
     if (rv) {
         lcb_log(LOGARGS(this, ERROR), LOGFMT "Failed to parse config", LOGID(this));

@@ -1380,11 +1380,23 @@ typedef enum {
  */
 #define LCB_CNTL_COMPRESSION_MIN_RATIO 0x59
 
+
+/**
+ * Select type of network (alternative addresses).
+ *
+ * Use `network` in the connection string
+ *
+ * @cntl_arg_get_and_set{`const char**`, `const char*`}
+ *
+ * @uncommitted
+ */
+#define LCB_CNTL_NETWORK 0x5b
+
 /**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX                    0x5b
+#define LCB_CNTL__MAX                    0x5c
 /**@}*/
 
 #ifdef __cplusplus
