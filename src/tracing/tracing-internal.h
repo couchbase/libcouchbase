@@ -117,7 +117,7 @@ class ThresholdLoggingTracer
     FixedQueue< ReportedSpan > m_orphans;
     FixedQueue< ReportedSpan > m_threshold;
 
-    void flush_queue(FixedQueue< ReportedSpan > &queue, const char *message);
+    void flush_queue(FixedQueue< ReportedSpan > &queue, const char *message, bool warn);
     ReportedSpan convert(lcbtrace_SPAN *span);
 
   public:

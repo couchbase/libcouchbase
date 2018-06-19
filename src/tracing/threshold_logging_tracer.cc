@@ -107,7 +107,7 @@ void ThresholdLoggingTracer::check_threshold(lcbtrace_SPAN *span)
     }
 }
 
-void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, const char *message)
+void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, const char *message, bool warn = false)
 {
     std::vector< ReportedSpan > &slice = queue.get_sorted();
     Json::Value entries;
@@ -125,7 +125,11 @@ void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, cons
     if (doc.size() > 0 && doc[doc.size() - 1] == '\n') {
         doc[doc.size() - 1] = '\0';
     }
-    lcb_log(LOGARGS(this, INFO), "%s: %s", message, doc.c_str());
+    if (warn) {
+        lcb_log(LOGARGS(this, WARN), "%s: %s", message, doc.c_str());
+    } else {
+        lcb_log(LOGARGS(this, INFO), "%s: %s", message, doc.c_str());
+    }
     queue.clear();
 }
 
@@ -134,7 +138,7 @@ void ThresholdLoggingTracer::do_flush_orphans()
     if (m_orphans.empty()) {
         return;
     }
-    flush_queue(m_orphans, "Orphan responses observed");
+    flush_queue(m_orphans, "Orphan responses observed", true);
 }
 
 void ThresholdLoggingTracer::do_flush_threshold()
