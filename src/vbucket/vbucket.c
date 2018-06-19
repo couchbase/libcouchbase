@@ -857,6 +857,9 @@ svcs_to_json(lcbvb_SERVICES *svc, cJSON *jsvc, int is_ssl)
     EXTRACT_SERVICE("n1ql", n1ql);
     EXTRACT_SERVICE("indexScan", ixquery);
     EXTRACT_SERVICE("indexAdmin", ixadmin);
+    EXTRACT_SERVICE("fts", fts);
+    EXTRACT_SERVICE("cbas", cbas);
+
     #undef EXTRACT_SERVICE
 }
 
