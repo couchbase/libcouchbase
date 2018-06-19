@@ -852,8 +852,7 @@ Server::Server(lcb_t instance_, int ix)
 
     const char *datahost = lcbvb_get_hostport(
         LCBT_VBCONFIG(instance), ix,
-        LCBVB_SVCTYPE_DATA, settings->sslopts & LCB_SSL_ENABLED ?
-                LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN);
+        LCBVB_SVCTYPE_DATA, LCBT_SETTING_SVCMODE(instance));
     if (datahost) {
         lcb_host_parsez(curhost, datahost, LCB_CONFIG_MCD_PORT);
     }

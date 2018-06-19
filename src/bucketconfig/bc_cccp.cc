@@ -313,17 +313,12 @@ CccpProvider::configure_nodes(const lcb::Hostlist& nodes_)
 void
 CccpProvider::config_updated(lcbvb_CONFIG *vbc)
 {
-    lcbvb_SVCMODE mode;
+    lcbvb_SVCMODE mode = LCBT_SETTING_SVCMODE(parent);
     if (LCBVB_NSERVERS(vbc) < 1) {
         return;
     }
 
     nodes->clear();
-    if (settings().sslopts & LCB_SSL_ENABLED) {
-        mode = LCBVB_SVCMODE_SSL;
-    } else {
-        mode = LCBVB_SVCMODE_PLAIN;
-    }
     for (size_t ii = 0; ii < LCBVB_NSERVERS(vbc); ii++) {
         const char *mcaddr = lcbvb_get_hostport(vbc,
             ii, LCBVB_SVCTYPE_DATA, mode);

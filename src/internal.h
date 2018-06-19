@@ -196,6 +196,7 @@ struct lcb_st {
 #define LCBT_NREPLICAS(instance) LCBVB_NREPLICAS(LCBT_VBCONFIG(instance))
 #define LCBT_GET_SERVER(instance, ix) (instance)->cmdq.pipelines[ix]
 #define LCBT_SETTING(instance, name) (instance)->settings->name
+#define LCBT_SETTING_SVCMODE(instance) (((instance)->settings->sslopts & LCB_SSL_ENABLED) ? LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN)
 
 void lcb_initialize_packet_handlers(lcb_t instance);
 

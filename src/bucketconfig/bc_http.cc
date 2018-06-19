@@ -414,16 +414,8 @@ ConfigInfo* HttpProvider::get_cached() {
 
 void HttpProvider::config_updated(lcbvb_CONFIG *newconfig)
 {
-    unsigned sopts;
-    lcbvb_SVCMODE mode;
+    lcbvb_SVCMODE mode = LCBT_SETTING_SVCMODE(parent);
     nodes->clear();
-
-    sopts = settings().sslopts;
-    if (sopts & LCB_SSL_ENABLED) {
-        mode = LCBVB_SVCMODE_SSL;
-    } else {
-        mode = LCBVB_SVCMODE_PLAIN;
-    }
 
     for (size_t ii = 0; ii < newconfig->nsrv; ++ii) {
         const char *ss;
