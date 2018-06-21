@@ -451,7 +451,10 @@ lcb_error_t lcb_create(lcb_t *instance,
         goto GT_DONE;
     }
 
-    settings->logger = lcb_init_console_logger();
+    settings->logger = spec.logger();
+    if (settings->logger == NULL) {
+        settings->logger = lcb_init_console_logger();
+    }
     settings->iid = lcb_next_rand32();
     if (spec.loglevel()) {
         lcb_U32 val = spec.loglevel();

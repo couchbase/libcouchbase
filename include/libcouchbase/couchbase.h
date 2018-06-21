@@ -57,6 +57,7 @@ typedef struct lcb_http_request_st *lcb_http_request_t;
 #include <libcouchbase/auth.h>
 #include <libcouchbase/tracing.h>
 #include <libcouchbase/_cxxwrap.h>
+#include <libcouchbase/cntl.h>
 
 #ifdef __cplusplus
 extern "C"{
@@ -275,7 +276,7 @@ struct lcb_create_st2 { LCB_CREATE_V2_FIELDS };
 #endif
 
 /**
- * @brief Innser structure for lcb_create().
+ * @brief Inner structure V3 for lcb_create().
  */
 struct lcb_create_st3 {
     const char *connstr; /**< Connection string */
@@ -297,6 +298,30 @@ struct lcb_create_st3 {
 };
 
 /**
+ * @brief Inner structure V4 for lcb_create().
+ *
+ * Same as V3, but allows to supply logger (@see LCB_CNTL_LOGGER).
+ */
+struct lcb_create_st4 {
+    const char *connstr; /**< Connection string */
+
+    /**
+     * Username to use for authentication. This should only be set when
+     * connecting to a server 5.0 or greater.
+     */
+    const char *username;
+
+    /**
+     * Password for bucket. Can also be password for username on servers >= 5.0
+     */
+    const char *passwd;
+
+    lcb_logprocs *logger; /**< Logger */
+    struct lcb_io_opt_st *io; /**< IO Options */
+    lcb_type_t type;
+};
+
+/**
  * @brief Wrapper structure for lcb_create()
  * @see lcb_create_st3
  */
@@ -311,6 +336,7 @@ struct lcb_create_st {
         struct lcb_create_st1 v1;
         struct lcb_create_st2 v2;
         struct lcb_create_st3 v3; /**< Use this field */
+        struct lcb_create_st4 v4;
     } v;
     LCB_DEPR_CTORS_CRST
 };
@@ -4046,7 +4072,6 @@ int lcb_is_redacting_logs(lcb_t instance);
 }
 #endif /* __cplusplus */
 #include <libcouchbase/subdoc.h>
-#include <libcouchbase/cntl.h>
 #include <libcouchbase/deprecated.h>
 #include <libcouchbase/api-legacy.h>
 #endif /* LIBCOUCHBASE_COUCHBASE_H */
