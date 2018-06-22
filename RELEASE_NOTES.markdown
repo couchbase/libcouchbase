@@ -1,5 +1,40 @@
 # Release Notes
 
+## 2.9.1 (June 22 2018)
+
+* [CCBC-942](https://issues.couchbase.com/browse/CCBC-942) Expose new error
+  codes for subdocument operations.
+
+* [CCBC-866](https://issues.couchbase.com/browse/CCBC-866) Check cached
+  provider isn't NULL.
+
+* [CCBC-890](https://issues.couchbase.com/browse/CCBC-890) Always check if SSL
+  used when getting ports.
+
+* [CCBC-945](https://issues.couchbase.com/browse/CCBC-945) Allow to specify
+  logger in lcb_create().
+
+* [CCBC-935](https://issues.couchbase.com/browse/CCBC-935) Display orphan
+  tracer report on WARN log level.
+
+* [CCBC-936](https://issues.couchbase.com/browse/CCBC-936) Update default
+  tracing interval to 10 seconds.
+
+* [CCBC-937](https://issues.couchbase.com/browse/CCBC-937) Implement support
+  for alternate addresses.
+
+* [CCBC-943](https://issues.couchbase.com/browse/CCBC-943) Implement option to
+  dump TCP packets.
+
+  This change introduces new cmake option, which will force library to report
+  all incoming/outgoing TCP packets on TRACE log level. It renders the bytes
+  in Base64 encoding.
+
+  Also there is simple extraction tool, which beautifies packet traces, and
+  could be used like this:
+
+      cbc cat  -vvv foo bar 2>&1 | tools/extract-packets.rb
+
 ## 2.9.0 (May 24 2018)
 
 This release is mostly about API visibility bump from uncommited to committed,
