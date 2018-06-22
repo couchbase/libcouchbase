@@ -111,7 +111,7 @@ FileProvider::Status FileProvider::load_cache()
 
     Status status = CACHE_ERROR;
 
-    if (lcbvb_load_json(vbc, &buf[0], NULL, NULL) != 0) {
+    if (lcbvb_load_json(vbc, &buf[0]) != 0) {
         lcb_log(LOGARGS(this, ERROR), LOGFMT "Couldn't parse configuration", LOGID(this));
         lcb_log_badconfig(LOGARGS(this, ERROR), vbc, &buf[0]);
         maybe_remove_file();

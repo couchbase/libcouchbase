@@ -172,9 +172,7 @@ typedef struct lcbvb_CONFIG_st {
  * optionally retrieving the error code
  * @code{.c}
  * lcbvb_CONFIG *cfg = lcbvb_create();
- * char *source = "127.0.0.1"; // hostname of the config source node
- * char *network = "external"; // alternative addresses
- * if (0 != lcbvb_load_json(cfg, json, source, &network)) {
+ * if (0 != lcbvb_load_json(cfg, json)) {
  *   printf("Got error!", lcbvb_get_error(cfg));
  *   lcbvb_destroy(cfg);
  * }
@@ -213,7 +211,15 @@ lcbvb_parse_json(const char *data);
  */
 LIBCOUCHBASE_API
 int
-lcbvb_load_json(lcbvb_CONFIG *vbc, const char *data, const char *source, char **network);
+lcbvb_load_json(lcbvb_CONFIG *vbc, const char *data);
+
+
+/**
+ * @uncommmitted
+ */
+LIBCOUCHBASE_API
+int
+lcbvb_load_json_ex(lcbvb_CONFIG *vbc, const char *data, const char *source, char **network);
 
 /**@brief Serialize the current config as a JSON string.
  * @volatile

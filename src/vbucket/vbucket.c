@@ -576,7 +576,7 @@ guess_network(cJSON *jnodes, int nsrv, const char *source, char **network)
 }
 
 int
-lcbvb_load_json(lcbvb_CONFIG *cfg, const char *data, const char *source, char **network)
+lcbvb_load_json_ex(lcbvb_CONFIG *cfg, const char *data, const char *source, char **network)
 {
     cJSON *cj = NULL, *jnodes = NULL;
     char *tmp = NULL;
@@ -709,6 +709,12 @@ lcbvb_load_json(lcbvb_CONFIG *cfg, const char *data, const char *source, char **
     return -1;
 }
 
+int
+lcbvb_load_json(lcbvb_CONFIG *cfg, const char *data)
+{
+    return lcbvb_load_json_ex(cfg, data, NULL, NULL);
+}
+
 static void
 replace_hoststr(char **orig, const char *replacement)
 {
@@ -783,7 +789,7 @@ lcbvb_parse_json(const char *js)
 {
     int rv;
     lcbvb_CONFIG *cfg = calloc(1, sizeof(*cfg));
-    rv = lcbvb_load_json(cfg, js, NULL, NULL);
+    rv = lcbvb_load_json(cfg, js);
     if (rv) {
         lcbvb_destroy(cfg);
         return NULL;
@@ -1660,7 +1666,7 @@ LIBCOUCHBASE_API void vbucket_config_destroy(lcbvb_CONFIG*h) {
     lcbvb_destroy(h);
 }
 LIBCOUCHBASE_API int vbucket_config_parse(lcbvb_CONFIG*h, vbucket_source_t src, const char *s) {
-    (void)src; return lcbvb_load_json(h, s, NULL, NULL);
+    (void)src; return lcbvb_load_json(h, s);
 }
 LIBCOUCHBASE_API const char * vbucket_get_error_message(lcbvb_CONFIG*h) {
     return h->errstr;

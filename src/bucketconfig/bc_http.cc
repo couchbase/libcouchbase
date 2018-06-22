@@ -178,7 +178,7 @@ process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
         return LCB_CLIENT_ENOMEM;
     }
     host = lcbio_get_host(lcbio_ctx_sock(http->ioctx));
-    rv = lcbvb_load_json(cfgh, resp.body.c_str(), host->host, &LCBT_SETTING(http->parent, network));
+    rv = lcbvb_load_json_ex(cfgh, resp.body.c_str(), host->host, &LCBT_SETTING(http->parent, network));
     if (rv != 0) {
         lcb_log(LOGARGS(http, ERR), LOGFMT "Failed to parse a valid config from HTTP stream", LOGID(http));
         lcb_log_badconfig(LOGARGS(http, ERR), cfgh, resp.body.c_str());
