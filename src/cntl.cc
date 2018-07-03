@@ -186,6 +186,9 @@ HANDLER(vbguess_handler) {
 HANDLER(vb_noremap_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, vb_noremap))
 }
+HANDLER(wait_for_config_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, wait_for_config))
+}
 HANDLER(fetch_mutation_tokens_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, fetch_mutation_tokens))
 }
@@ -750,6 +753,7 @@ static ctl_handler handlers[] = {
     comp_min_ratio_handler, /* LCB_CNTL_COMPRESSION_MIN_RATIO */
     vb_noremap_handler, /* LCB_CNTL_VB_NOREMAP */
     network_handler, /* LCB_CNTL_NETWORK */
+    wait_for_config_handler /* LCB_CNTL_WAIT_FOR_CONFIG */
 };
 
 /* Union used for conversion to/from string functions */
@@ -936,6 +940,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
         {"compression_min_ratio", LCB_CNTL_COMPRESSION_MIN_RATIO, convert_float},
         {"vb_noremap", LCB_CNTL_VB_NOREMAP, convert_intbool },
         {"network", LCB_CNTL_NETWORK, convert_passthru },
+        {"wait_for_config", LCB_CNTL_WAIT_FOR_CONFIG, convert_intbool },
         {NULL, -1}
 };
 
