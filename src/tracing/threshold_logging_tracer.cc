@@ -58,7 +58,7 @@ static void tlt_report(lcbtrace_TRACER *wrapper, lcbtrace_SPAN *span)
     char *value = NULL;
     size_t nvalue;
     if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_SERVICE, &value, &nvalue) == LCB_SUCCESS) {
-        if (strcmp(value, LCBTRACE_TAG_SERVICE_KV) == 0) {
+        if (memcmp(value, LCBTRACE_TAG_SERVICE_KV, nvalue) == 0) {
             if (lcbtrace_span_is_orphaned(span)) {
                 tracer->add_orphan(span);
             } else {
@@ -88,12 +88,11 @@ ReportedSpan ThresholdLoggingTracer::convert(lcbtrace_SPAN *span)
     ReportedSpan orphan;
     orphan.duration = span->duration();
     Json::Value entry;
-    entry["operation_name"] = span->m_opname;
     char *value;
     size_t nvalue;
 
     if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_OPERATION_ID, &value, &nvalue) == LCB_SUCCESS) {
-        entry["operation_id"] = value;
+        entry["last_operation_id"] = span->m_opname + ":" + value;
     }
     if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_LOCAL_ID, &value, &nvalue) == LCB_SUCCESS) {
         entry["last_local_id"] = value;

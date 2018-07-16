@@ -372,7 +372,7 @@ void Span::add_tag(const char *name, int copy, const char *value, size_t value_l
     } else {
         val->key.p = (char *)name;
     }
-    val->v.s.p = (char *)malloc(value_len);
+    val->v.s.p = (char *)calloc(value_len, sizeof(char));
     val->v.s.l = value_len;
     memcpy(val->v.s.p, value, value_len);
     sllist_append(&m_tags, &val->slnode);
