@@ -812,7 +812,10 @@ static lcb_error_t convert_int(const char *arg, u_STRCONVERT *u) {
 }
 
 static lcb_error_t convert_u32(const char *arg, u_STRCONVERT *u) {
-    return convert_timevalue(arg, u);
+    unsigned int tmp;
+    int rv = sscanf(arg, "%u", &tmp);
+    u->u32 = tmp;
+    return rv == 1 ? LCB_SUCCESS : LCB_ECTL_BADARG;
 }
 static lcb_error_t convert_float(const char *arg, u_STRCONVERT *u) {
     double d;
