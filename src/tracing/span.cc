@@ -74,7 +74,7 @@ void lcbtrace_span_finish(lcbtrace_SPAN *span, uint64_t now)
 LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_str(lcbtrace_SPAN *span, const char *name, const char *value)
 {
-    if (!span) {
+    if (!span || name == NULL || value == NULL) {
         return;
     }
     span->add_tag(name, 1, value);
@@ -83,7 +83,7 @@ void lcbtrace_span_add_tag_str(lcbtrace_SPAN *span, const char *name, const char
 LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_uint64(lcbtrace_SPAN *span, const char *name, uint64_t value)
 {
-    if (!span) {
+    if (!span || name == NULL) {
         return;
     }
     span->add_tag(name, 1, value);
@@ -92,7 +92,7 @@ void lcbtrace_span_add_tag_uint64(lcbtrace_SPAN *span, const char *name, uint64_
 LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_double(lcbtrace_SPAN *span, const char *name, double value)
 {
-    if (!span) {
+    if (!span || name == NULL) {
         return;
     }
     span->add_tag(name, 1, value);
@@ -101,7 +101,7 @@ void lcbtrace_span_add_tag_double(lcbtrace_SPAN *span, const char *name, double 
 LIBCOUCHBASE_API
 void lcbtrace_span_add_tag_bool(lcbtrace_SPAN *span, const char *name, int value)
 {
-    if (!span) {
+    if (!span || name == NULL) {
         return;
     }
     span->add_tag(name, 1, (bool)value);
@@ -209,7 +209,7 @@ uint64_t lcbtrace_span_get_trace_id(lcbtrace_SPAN *span)
 LIBCOUCHBASE_API
 lcb_error_t lcbtrace_span_get_tag_str(lcbtrace_SPAN *span, const char *name, char **value, size_t *nvalue)
 {
-    if (!span) {
+    if (!span || name == NULL || nvalue == NULL || value == NULL) {
         return LCB_EINVAL;
     }
 
@@ -232,7 +232,7 @@ lcb_error_t lcbtrace_span_get_tag_str(lcbtrace_SPAN *span, const char *name, cha
 
 LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, const char *name, uint64_t *value)
 {
-    if (!span) {
+    if (!span || name == NULL || value == NULL) {
         return LCB_EINVAL;
     }
 
@@ -254,7 +254,7 @@ LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, c
 
 LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_double(lcbtrace_SPAN *span, const char *name, double *value)
 {
-    if (!span) {
+    if (!span || name == NULL || value == NULL) {
         return LCB_EINVAL;
     }
 
@@ -276,7 +276,7 @@ LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_double(lcbtrace_SPAN *span, c
 
 LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_bool(lcbtrace_SPAN *span, const char *name, int *value)
 {
-    if (!span) {
+    if (!span || name == NULL || value == NULL) {
         return LCB_EINVAL;
     }
 
@@ -298,7 +298,7 @@ LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_bool(lcbtrace_SPAN *span, con
 
 LIBCOUCHBASE_API int lcbtrace_span_has_tag(lcbtrace_SPAN *span, const char *name)
 {
-    if (!span) {
+    if (!span || name == NULL) {
         return 0;
     }
 
