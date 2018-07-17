@@ -5,11 +5,11 @@
 * [CCBC-955](https://issues.couchbase.com/browse/CCBC-955): Parse uint32 as
   unsigned ints instead of timeouts. Some settings were interpreted as time
   values, while they should not (e.g. console_log_level, compression_min_size
-  etc). This issue forced the library misinterpret user input (converter was
+  etc). This issue forced the library to misinterpret user input (converter was
   multiplying all values to 1000000, e.g. log level was always TRACE).
 
 * [CCBC-957](https://issues.couchbase.com/browse/CCBC-957): Automatically
-  disable SSL support, when OpenSSL missing
+  disable SSL support, when OpenSSL is unavailable.
 
 * [CCBC-954](https://issues.couchbase.com/browse/CCBC-954): Define EFTYPE
   error code if it does not exist. Fixes support of libuv 1.21 and higher.
@@ -18,25 +18,25 @@
   experimental warning from subdoc API.
 
 * [CCBC-948](https://issues.couchbase.com/browse/CCBC-948): Consider retry
-  queue with only 0xb5 as empty. This allows to breakout from lcb_wait earlier
-  (when application operates in synchronous style). Old behaviour, when
-  lcb_wait do not breakout until the library gets first successful
+  queue with only 0xb5 as empty. This allows a breakout from lcb_wait earlier
+  (when application operates in synchronous style). The old behavior, where
+  lcb_wait does not breakout until the library gets the first successful
   configuration, still can be restored with `lcb_cntl(...,
   LCB_CNTL_WAIT_FOR_CONFIG, ...)`.
 
 * [CCBC-939](https://issues.couchbase.com/browse/CCBC-939): Optimize
-  performance of built-in tracer. It now uses sllist for tags container
+  the performance of built-in tracer. It now uses sllist for tags container
   instead of Json::Value.
 
 * [CCBC-958](https://issues.couchbase.com/browse/CCBC-958): Check tracing span
   tags argument more pedantically and return error if arguments are not valid.
 
 * [CCBC-956](https://issues.couchbase.com/browse/CCBC-956): Combine operation
-  id and name into single field in threshold tracer.
+  id and name into single field in the threshold tracer.
 
 * [CCBC-949](https://issues.couchbase.com/browse/CCBC-949): Do not hardcode
   libevent dependencies in DEB packages. Instead let `dh_shlibdeps` script to
-  detect dependencies for each platform. Fixes usless dependency on libevent-1
+  detect dependencies for each platform. This fixes a usless dependency on libevent-1
   for ubuntu 18.04.
 
 * [CCBC-947](https://issues.couchbase.com/browse/CCBC-947): Fix build scripts
