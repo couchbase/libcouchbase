@@ -81,9 +81,15 @@ get_callback(lcb_t, lcb_CALLBACKTYPE cbtype, const lcb_RESPGET *resp)
                 key.c_str(), resp->cas, resp->itmflags, (unsigned long)resp->nvalue,
                 (int)resp->datatype);
         if (resp->datatype) {
+            int nflags = 0;
             fprintf(stderr, "(");
             if (resp->datatype & LCB_VALUE_F_JSON) {
                 fprintf(stderr, "JSON");
+                nflags++;
+            }
+            if (resp->datatype & LCB_VALUE_F_SNAPPYCOMP) {
+                fprintf(stderr, "%sSNAPPY", nflags > 0 ? "," : "");
+                nflags++;
             }
             fprintf(stderr, ")");
         }
