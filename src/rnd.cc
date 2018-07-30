@@ -19,14 +19,9 @@
 #include "internal.h"
 
 #if !defined(COMPILER_SUPPORTS_CXX11) || (defined(_MSC_VER) && _MSC_VER < 1600)
-static volatile int rnd_initialized = 0;
 LCB_INTERNAL_API
 void lcb_rnd_global_init(void)
 {
-    if (rnd_initialized) {
-        return;
-    }
-    rnd_initialized = 1;
     if (lcb_getenv_boolean("LCB_NO_SRAND")) {
         return;
     }
