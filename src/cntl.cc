@@ -654,7 +654,7 @@ HANDLER(network_handler) {
             LCBT_SETTING(instance, network) = strdup(val);
         }
     } else {
-        *(const char **)arg = LCBT_SETTING(instance, client_string);
+        *(const char **)arg = LCBT_SETTING(instance, network);
     }
     (void)cmd;
     return LCB_SUCCESS;
