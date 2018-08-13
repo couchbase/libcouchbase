@@ -83,9 +83,9 @@ lcbtrace_TRACER *ThresholdLoggingTracer::wrap()
     return m_wrapper;
 }
 
-ReportedSpan ThresholdLoggingTracer::convert(lcbtrace_SPAN *span)
+QueueEntry ThresholdLoggingTracer::convert(lcbtrace_SPAN *span)
 {
-    ReportedSpan orphan;
+    QueueEntry orphan;
     orphan.duration = span->duration();
     Json::Value entry;
     char *value;
@@ -124,18 +124,19 @@ void ThresholdLoggingTracer::check_threshold(lcbtrace_SPAN *span)
     }
 }
 
-void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, const char *message, bool warn = false)
+void ThresholdLoggingTracer::flush_queue(FixedSpanQueue &queue, const char *message, bool warn = false)
 {
-    std::vector< ReportedSpan > &slice = queue.get_sorted();
     Json::Value entries;
     entries["service"] = "kv";
-    entries["count"] = (Json::UInt)slice.size();
+    entries["count"] = (Json::UInt)queue.size();
     Json::Value top;
-    for (size_t ii = 0; ii < slice.size(); ii++) {
+    while (!queue.empty())
+    {
         Json::Value entry;
-        if (Json::Reader().parse(slice[ii].payload, entry)) {
+        if (Json::Reader().parse(queue.top().payload, entry)) {
             top.append(entry);
         }
+        queue.pop();
     }
     entries["top"] = top;
     std::string doc = Json::FastWriter().write(entries);
@@ -147,7 +148,6 @@ void ThresholdLoggingTracer::flush_queue(FixedQueue< ReportedSpan > &queue, cons
     } else {
         lcb_log(LOGARGS(this, INFO), "%s: %s", message, doc.c_str());
     }
-    queue.clear();
 }
 
 void ThresholdLoggingTracer::do_flush_orphans()
