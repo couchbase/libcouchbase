@@ -341,9 +341,18 @@ N1QLREQ::has_retriable_error(const Json::Value& root)
         unsigned code = 0;
         if (jcode.isNumeric()) {
             code = jcode.asUInt();
-            if (code == 4050 || code == 4070) {
+            switch (code) {
+                /* n1ql */
+            case 4050:
+            case 4070:
+                /* analytics */
+            case 23000:
+            case 23003:
+            case 23007:
                 lcb_log(LOGARGS(this, TRACE), LOGFMT "Will retry request. code: %d", LOGID(this), code);
                 return true;
+            default:
+                break;
             }
         }
         if (jmsg.isString()) {
