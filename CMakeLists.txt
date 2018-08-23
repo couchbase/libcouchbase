@@ -50,6 +50,7 @@ OPTION(LCB_INSTALL_HEADERS "Install header files" ON)
 OPTION(LCB_INSTALL_PKGCONFIG "Install pkgconfig/libcouchbase.pc" ON)
 OPTION(LCB_DUMP_PACKETS "Enable dumping network packets on TRACE log level" OFF)
 OPTION(LCB_USE_PROFILER "Build with profiler support (from gperftools)" OFF)
+OPTION(LCB_SKIP_GIT_VERSION "Skip version detection using git" OFF)
 
 STRING(TIMESTAMP LCB_BUILD_TIMESTAMP "%Y-%m-%d %H:%M:%S" UTC)
 
