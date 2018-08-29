@@ -1,5 +1,37 @@
 # Release Notes
 
+## 2.9.4 (August 29 2018)
+
+* [CCBC-970](https://issues.couchbase.com/browse/CCBC-970): Update list of retriable errors for
+  analytics
+
+* [CCBC-965](https://issues.couchbase.com/browse/CCBC-965): Update log level in config cache
+  provider
+
+* [CCBC-967](https://issues.couchbase.com/browse/CCBC-967): optimize Threshold Tracer queues/sorting
+
+* [CCBC-963](https://issues.couchbase.com/browse/CCBC-963): remove global state from random
+  generator, and make it thread-safe.
+
+* [CCBC-966](https://issues.couchbase.com/browse/CCBC-966): return current network for
+  LCB_CNTL_NETWORK
+
+* [CCBC-969](https://issues.couchbase.com/browse/CCBC-969): Allow to skip version from git tags
+
+* [CCBC-961](https://issues.couchbase.com/browse/CCBC-961): Add examples for FTS queries
+
+* [CCBC-971](https://issues.couchbase.com/browse/CCBC-971): disable dead socket detection for older
+  libuv (fixes build on platforms, where old libuv-dev package installed).
+
+* Report HELO features to logger in the single line.
+
+* Allow to select compression mode in connection string. This might be useful for debugging
+  purposes. For example, to bypass inflation step when receiving data.
+
+      $ CONNSTRING=couchbase://localhost/default?compression=deflate_only
+      $ cbc cat -U $CONNSTRING 00000000.json > bindoc.dat
+      00000000.json        CAS=0x15431f831dc60000, Flags=0x0, Size=739, Datatype=0x03(JSON,SNAPPY)
+
 ## 2.9.3 (July 18 2018)
 
 * [CCBC-955](https://issues.couchbase.com/browse/CCBC-955): Parse uint32 as
