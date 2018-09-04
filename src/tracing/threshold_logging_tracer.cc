@@ -91,20 +91,29 @@ QueueEntry ThresholdLoggingTracer::convert(lcbtrace_SPAN *span)
     char *value;
     size_t nvalue;
 
-    if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_OPERATION_ID, &value, &nvalue) == LCB_SUCCESS) {
-        entry["last_operation_id"] = span->m_opname + ":" + value;
+    if (lcbtrace_span_get_tag_str(
+                span, LCBTRACE_TAG_OPERATION_ID, &value, &nvalue) ==
+        LCB_SUCCESS) {
+        entry["last_operation_id"] = std::string(span->m_opname) + ":" +
+                                     std::string(value, value + nvalue);
     }
-    if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_LOCAL_ID, &value, &nvalue) == LCB_SUCCESS) {
-        entry["last_local_id"] = value;
+    if (lcbtrace_span_get_tag_str(
+                span, LCBTRACE_TAG_LOCAL_ID, &value, &nvalue) == LCB_SUCCESS) {
+        entry["last_local_id"] = std::string(value, value + nvalue);
     }
-    if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_LOCAL_ADDRESS, &value, &nvalue) == LCB_SUCCESS) {
-        entry["last_local_address"] = value;
+    if (lcbtrace_span_get_tag_str(
+                span, LCBTRACE_TAG_LOCAL_ADDRESS, &value, &nvalue) ==
+        LCB_SUCCESS) {
+        entry["last_local_address"] = std::string(value, value + nvalue);
     }
-    if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_PEER_ADDRESS, &value, &nvalue) == LCB_SUCCESS) {
-        entry["last_remote_address"] = value;
+    if (lcbtrace_span_get_tag_str(
+                span, LCBTRACE_TAG_PEER_ADDRESS, &value, &nvalue) ==
+        LCB_SUCCESS) {
+        entry["last_remote_address"] = std::string(value, value + nvalue);
     }
     uint64_t num;
-    if (lcbtrace_span_get_tag_uint64(span, LCBTRACE_TAG_PEER_LATENCY, &num) == LCB_SUCCESS) {
+    if (lcbtrace_span_get_tag_uint64(span, LCBTRACE_TAG_PEER_LATENCY, &num) ==
+        LCB_SUCCESS) {
         entry["server_us"] = (Json::UInt64)num;
     }
     entry["total_us"] = (Json::UInt64)orphan.duration;
