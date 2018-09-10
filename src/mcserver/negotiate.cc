@@ -290,7 +290,7 @@ SessionRequestImpl::set_chosen_mech(std::string& mechlist,
             return MECH_UNAVAILABLE;
         }
         mechlist.assign(forcemech);
-        if (memcmp(forcemech, "SCRAM-SHA", sizeof("SCRAM-SHA") - 1) == 0) {
+        if (strncmp(forcemech, "SCRAM-SHA", sizeof("SCRAM-SHA") - 1) == 0) {
             allow_scram_sha = 1;
         }
     }

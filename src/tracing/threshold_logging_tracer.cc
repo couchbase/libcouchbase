@@ -58,7 +58,7 @@ static void tlt_report(lcbtrace_TRACER *wrapper, lcbtrace_SPAN *span)
     char *value = NULL;
     size_t nvalue;
     if (lcbtrace_span_get_tag_str(span, LCBTRACE_TAG_SERVICE, &value, &nvalue) == LCB_SUCCESS) {
-        if (memcmp(value, LCBTRACE_TAG_SERVICE_KV, nvalue) == 0) {
+        if (strncmp(value, LCBTRACE_TAG_SERVICE_KV, nvalue) == 0) {
             if (lcbtrace_span_is_orphaned(span)) {
                 tracer->add_orphan(span);
             } else {
