@@ -643,7 +643,7 @@ SessionRequestImpl::handle_read(lcbio_CTX *ioctx)
         if (status == PROTOCOL_BINARY_RESPONSE_SUCCESS) {
             completed = true;
         } else if (status == PROTOCOL_BINARY_RESPONSE_EACCESS) {
-            set_error(LCB_AUTH_ERROR, "Provided credentials not allowed for bucket", &resp);
+            set_error(LCB_AUTH_ERROR, "Provided credentials not allowed for bucket or bucket does not exist", &resp);
         } else {
             lcb_log(LOGARGS(this, ERROR), LOGFMT "Unexpected status 0x%x received for SELECT_BUCKET", LOGID(this), status);
             set_error(LCB_PROTOCOL_ERROR, "Other auth error", &resp);
