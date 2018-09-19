@@ -1270,7 +1270,7 @@ N1qlHandler::run()
         cmd.cmdflags |= LCB_CMDN1QL_F_PREPCACHE;
     }
     if (o_analytics.passed()) {
-        cmd.cmdflags |= LCB_CMDN1QL_F_CBASQUERY;
+        cmd.cmdflags |= LCB_CMDN1QL_F_ANALYTICSQUERY;
     }
     fprintf(stderr, "---> Encoded query: %.*s\n", (int)cmd.nquery, cmd.query);
     cmd.callback = n1qlCallback;

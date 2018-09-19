@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
         lcb_CMDN1QL cmd = {0};
         int idx = 0;
         /* NOTE: with this flag, the request will be issued to Analytics service */
-        cmd.cmdflags = LCB_CMDN1QL_F_CBASQUERY;
+        cmd.cmdflags = LCB_CMDN1QL_F_ANALYTICSQUERY;
         cmd.callback = row_callback;
         cmd.query = queries[ii].query;
         cmd.nquery = queries[ii].query_len;

@@ -185,7 +185,7 @@ typedef struct lcb_N1QLREQ : lcb::jsparse::Parser::Actions {
     /** Whether we're retrying this */
     bool was_retried;
 
-    /** Is this query to Analytics (CBAS) service */
+    /** Is this query to Analytics for N1QL service */
     bool is_cbas;
 
 #ifdef LCB_TRACING
@@ -675,7 +675,7 @@ lcb_N1QLREQ::lcb_N1QLREQ(lcb_t obj,
         return;
     }
 
-    if (flags & LCB_CMDN1QL_F_CBASQUERY) {
+    if (flags & LCB_CMDN1QL_F_ANALYTICSQUERY) {
         is_cbas = true;
     }
     if (is_cbas && (flags & LCB_CMDN1QL_F_PREPCACHE)) {
