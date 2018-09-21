@@ -1,5 +1,29 @@
 # Release Notes
 
+## 2.9.5 (September 21 2018)
+
+* [CCBC-980](https://issues.couchbase.com/browse/CCBC-980): Make idle timeout
+  for HTTP pool tunable
+
+* [CCBC-977](https://issues.couchbase.com/browse/CCBC-977): Update
+  documentation analytics. Add example demonstrating analytics queries
+
+* [CCBC-968](https://issues.couchbase.com/browse/CCBC-968): Improve log message
+  for `SELECT_BUCKET` on `EACCESS`. Add note saying that this error code might
+  be because of missing bucket.
+
+* [CCBC-976](https://issues.couchbase.com/browse/CCBC-976): Keep HTTP
+  connections pooled after `lcb_ping3`
+
+* [CCBC-975](https://issues.couchbase.com/browse/CCBC-975): Make sure kv
+  service is only enabled if in nodes list.
+
+* [CCBC-972](https://issues.couchbase.com/browse/CCBC-972): Fix memory issues
+  reported by valgrind
+
+* [CCBC-973](https://issues.couchbase.com/browse/CCBC-974): Correctly convert
+  non-null terminated tag buffers to `Json::Value`
+
 ## 2.9.4 (August 29 2018)
 
 * [CCBC-970](https://issues.couchbase.com/browse/CCBC-970): Update list of retriable errors for
