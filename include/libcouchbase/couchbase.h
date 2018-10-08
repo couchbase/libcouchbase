@@ -2466,6 +2466,11 @@ lcb_noop3(lcb_t instance, const void *cookie, const lcb_CMDNOOP *cmd);
 #define LCB_PINGSVC_F_FTS 0x08
 
 /**
+ * Ping Analytics for N1QL service. Used in lcb_CMDPING#services
+ */
+#define LCB_PINGSVC_F_ANALYTICS 0x10
+
+/**
  * Do not record any metrics or status codes from ping responses.
  * This might be useful to reduce overhead, when user-space
  * keep-alive mechanism is not interested in actual latencies,
