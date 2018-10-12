@@ -416,11 +416,11 @@ SessionRequestImpl::send_hello()
     if (settings->fetch_mutation_tokens) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO;
     }
-    if (settings->use_collections) {
-        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_COLLECTIONS;
-    }
     if (settings->use_tracing) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_TRACING;
+    }
+    if (settings->use_collections) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_COLLECTIONS;
     }
 
     std::string agent = generate_agent_json();

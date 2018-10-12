@@ -798,6 +798,7 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
         jsonsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_JSON);
         compsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_SNAPPY);
         mutation_tokens = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO);
+        collsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_COLLECTIONS);
     }
 
     lcbio_CTXPROCS procs;
@@ -839,6 +840,7 @@ Server::Server(lcb_t instance_, int ix)
       compsupport(0),
       jsonsupport(0),
       mutation_tokens(0),
+      collsupport(0),
       connctx(NULL),
       curhost(new lcb_host_t())
 {
@@ -1052,4 +1054,9 @@ Server::check_closed()
     lcb_log(LOGARGS_T(INFO), LOGFMT "Got handler after close. Checking pending calls (pending=%u)", LOGID_T(), connctx->npending);
     finalize_errored_ctx();
     return 1;
+}
+
+int mcreq_pipeline_supports_collections(mc_PIPELINE *pipeline)
+{
+    return static_cast<Server*>(pipeline)->supports_collections();
 }

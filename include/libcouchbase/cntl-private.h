@@ -288,13 +288,6 @@ struct lcb_cntl_rdballocfactory {
 #define LCB_CNTL_METRICS 0x49
 
 /**
- *
- * @cntl_arg_both{int (as boolean)}
- * @volatile
- */
-#define LCB_CNTL_USE_COLLECTIONS 0x4a
-
-/**
  * Do not use fast-forward map from cluster configuration.
  *
  * Use `vb_noremap` in the connection string

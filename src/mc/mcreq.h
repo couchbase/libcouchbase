@@ -289,7 +289,12 @@ typedef enum {
      * };
      * @endcode
      */
-    MCREQ_F_PRIVCALLBACK = 1 << 9
+    MCREQ_F_PRIVCALLBACK = 1 << 9,
+
+    /**
+     * Do not encode collection ID for this packet
+     */
+    MCREQ_F_NOCID = 1 << 10
 } mcreq_flags;
 
 /** @brief mask of flags indicating user-allocated buffers */
@@ -576,12 +581,13 @@ mcreq_reserve_header(
  * @param hdrsize the size of the header before the key. This should contain
  *        the header size (i.e. 24 bytes) PLUS any extras therein.
  * @param kreq the user-provided key structure
+ * @param cid the user-provided collection ID
  * @return LCB_SUCCESS on success, LCB_CLIENT_ENOMEM on allocation failure
  */
 lcb_error_t
 mcreq_reserve_key(
-        mc_PIPELINE *pipeline, mc_PACKET *packet,
-        uint8_t hdrsize, const lcb_KEYBUF *kreq);
+        mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize,
+        const lcb_KEYBUF *kreq, uint32_t cid);
 
 
 /**
@@ -660,6 +666,11 @@ mcreq_map_key(mc_CMDQUEUE *queue,
  * and let it be handled by the handler installed via mcreq_set_fallback_handler()
  */
 #define MCREQ_BASICPACKET_F_FALLBACKOK 0x01
+
+/**
+ * Selects random pipeline to schedule the request
+ */
+#define MCREQ_BASICPACKET_F_RANDPIPELINE 0x02
 
 /**
  * Handle the basic requirements of a packet common to all commands

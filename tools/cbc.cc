@@ -32,6 +32,7 @@
 #include "common/histogram.h"
 #include "cbc-handlers.h"
 #include "connspec.h"
+#include "rnd.h"
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 
 #ifndef LCB_NO_SSL
@@ -56,9 +57,8 @@ string getRespKey(const lcb_RESPBASE* resp)
 }
 
 static void
-printKeyError(string& key, int cbtype, const lcb_RESPBASE *resp, const char *additional = NULL)
+printEnhancedError(int cbtype, const lcb_RESPBASE *resp, const char *additional = NULL)
 {
-    fprintf(stderr, "%-20s %s\n", key.c_str(), lcb_strerror_short(resp->rc));
     const char *ctx = lcb_resp_get_error_context(cbtype, resp);
     if (ctx != NULL) {
         fprintf(stderr, "%-20s %s\n", "", ctx);
@@ -70,6 +70,13 @@ printKeyError(string& key, int cbtype, const lcb_RESPBASE *resp, const char *add
     if (additional) {
         fprintf(stderr, "%-20s %s\n", "", additional);
     }
+}
+
+static void
+printKeyError(string& key, int cbtype, const lcb_RESPBASE *resp, const char *additional = NULL)
+{
+    fprintf(stderr, "%-20s %s\n", key.c_str(), lcb_strerror_short(resp->rc));
+    printEnhancedError(cbtype, resp, additional);
 }
 
 static void
@@ -482,6 +489,7 @@ GetHandler::addOptions()
         parser.addOption(o_replica);
     }
     parser.addOption(o_exptime);
+    parser.addOption(o_collection_id);
 }
 
 void
@@ -500,6 +508,9 @@ GetHandler::run()
             lcb_CMDGETREPLICA cmd = { 0 };
             const string& key = keys[ii];
             LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+            if (o_collection_id.passed()) {
+                cmd.cid = o_collection_id.result();
+            }
             if (replica_mode == "first") {
                 cmd.strategy = LCB_REPLICA_FIRST;
             } else if (replica_mode == "all") {
@@ -513,6 +524,9 @@ GetHandler::run()
             lcb_CMDGET cmd = { 0 };
             const string& key = keys[ii];
             LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+            if (o_collection_id.passed()) {
+                cmd.cid = o_collection_id.result();
+            }
             if (o_exptime.passed()) {
                 cmd.exptime = o_exptime.result();
             }
@@ -572,6 +586,7 @@ SetHandler::addOptions()
         parser.addOption(o_value);
     }
     parser.addOption(o_json);
+    parser.addOption(o_collection_id);
 }
 
 lcb_storage_t
@@ -605,6 +620,9 @@ SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
     lcb_error_t err;
     lcb_CMDSTOREDUR cmd = { 0 };
     LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+    if (o_collection_id.passed()) {
+        cmd.cid = o_collection_id.result();
+    }
     cmd.value.vtype = LCB_KV_COPY;
     cmd.value.u_buf.contig.bytes = value;
     cmd.value.u_buf.contig.nbytes = nvalue;
@@ -1072,6 +1090,73 @@ McVersionHandler::run()
     err = lcb_server_versions3(instance, NULL, &cmd);
     if (err != LCB_SUCCESS) {
         throw LcbError(err);
+    }
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+static void collection_dump_manifest_callback(lcb_t, int, const lcb_RESPGETMANIFEST *resp)
+{
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "Failed to get collection manifest: %s\n", lcb_strerror_short(resp->rc));
+    } else {
+        fwrite(resp->value, 1, resp->nvalue, stdout);
+        fflush(stdout);
+        fprintf(stderr, "\n");
+    }
+}
+
+void CollectionGetManifestHandler::run()
+{
+    Handler::run();
+
+    lcb_install_callback3(instance, LCB_CALLBACK_COLLECTIONS_GET_MANIFEST,
+                          (lcb_RESPCALLBACK)collection_dump_manifest_callback);
+
+    lcb_CMDGETMANIFEST cmd = {0};
+    lcb_error_t err;
+
+    lcb_sched_enter(instance);
+    err = lcb_getmanifest(instance, NULL, &cmd);
+    if (err != LCB_SUCCESS) {
+        throw LcbError(err);
+    }
+    lcb_sched_leave(instance);
+    lcb_wait(instance);
+}
+
+static void getcid_callback(lcb_t, int, const lcb_RESPGETCID *resp)
+{
+    if (resp->rc != LCB_SUCCESS) {
+        fprintf(stderr, "%-20.*s Failed to get collection ID: %s\n", (int)resp->nkey, (char *)resp->key, lcb_strerror_short(resp->rc));
+    } else {
+        printf("%-20.*s ManifestId=0x%02" PRIx64 ", CollectionId=0x%02x\n", (int)resp->nkey, (char *)resp->key,
+                resp->manifest_id, (uint32_t)resp->collection_id);
+    }
+}
+
+void CollectionGetCIDHandler::run()
+{
+    Handler::run();
+
+    lcb_install_callback3(instance, LCB_CALLBACK_GETCID, (lcb_RESPCALLBACK)getcid_callback);
+
+    std::string scope = o_scope.result();
+
+    const vector<string>& collections = parser.getRestArgs();
+    lcb_sched_enter(instance);
+    for (size_t ii = 0; ii < collections.size(); ++ii) {
+        lcb_CMDGETCID cmd = {0};
+        lcb_error_t err;
+        const string& collection = collections[ii];
+        cmd.scope = scope.c_str();
+        cmd.nscope = scope.size();
+        cmd.collection = collection.c_str();
+        cmd.ncollection = collection.size();
+        err = lcb_getcid(instance, NULL, &cmd);
+        if (err != LCB_SUCCESS) {
+            throw LcbError(err);
+        }
     }
     lcb_sched_leave(instance);
     lcb_wait(instance);
@@ -1745,7 +1830,6 @@ static const char* optionsOrder[] = {
         "cp",
         "rm",
         "stats",
-        // "verify,
         "version",
         "verbosity",
         "view",
@@ -1764,6 +1848,8 @@ static const char* optionsOrder[] = {
         "ping",
         "watch",
         "keygen",
+        "collection-manifest",
+        "collection-id",
         NULL
 };
 
@@ -1778,7 +1864,7 @@ protected:
         for (const char ** cur = optionsOrder; *cur; cur++) {
             const Handler *handler = handlers[*cur];
             fprintf(stderr, "   %-20s", *cur);
-            fprintf(stderr, "%s\n", handler->description());
+            fprintf(stderr, " %s\n", handler->description());
         }
     }
 };
@@ -1855,6 +1941,8 @@ setupHandlers()
     handlers_s["user-delete"] = new UserDeleteHandler();
     handlers_s["mcversion"] = new McVersionHandler();
     handlers_s["keygen"] = new KeygenHandler();
+    handlers_s["collection-manifest"] = new CollectionGetManifestHandler();
+    handlers_s["collection-id"] = new CollectionGetCIDHandler();
 
     map<string,Handler*>::iterator ii;
     for (ii = handlers_s.begin(); ii != handlers_s.end(); ++ii) {

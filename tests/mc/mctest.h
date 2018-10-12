@@ -1,3 +1,5 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+
 #include "mc/mcreq.h"
 #include "sllist-inl.h"
 #include <gtest/gtest.h>
@@ -16,6 +18,7 @@ struct CQWrap : mc_CMDQUEUE {
             pll[ii] = pipeline;
         }
         lcbvb_genconfig(config, NUM_PIPELINES, 3, 1024);
+        this->cqdata = NULL; /* instance pointer */
         mcreq_queue_init(this);
         this->seq = 100;
         mcreq_queue_add_pipelines(this, pll, NUM_PIPELINES, config);

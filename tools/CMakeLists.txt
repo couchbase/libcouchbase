@@ -66,7 +66,7 @@ IF(NOT WIN32)
         unlock rm stats version verbosity view n1ql admin ping
         bucket-create bucket-delete bucket-flush connstr write-config strerror
         touch role-list user-list user-upsert user-delete watch
-        mcversion keygen
+        mcversion keygen collection-manifest collection-id
         )
 
     FOREACH(subcmd IN ITEMS ${CBC_SUBCOMMANDS})

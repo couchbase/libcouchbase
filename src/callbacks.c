@@ -71,6 +71,7 @@ typedef union {
     lcb_RESPVERBOSITY verbosity;
     lcb_RESPOBSERVE observe;
     lcb_RESPHTTP http;
+    lcb_RESPGETCID getcid;
 } uRESP;
 
 static void

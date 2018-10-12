@@ -164,6 +164,19 @@ extern "C"
          * Operation attempted with an unknown collection.
          */
         PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION = 0x88,
+        /**
+         * Operation attempted and requires that the collections manifest is set.
+         */
+        PROTOCOL_BINARY_RESPONSE_NO_COLLECTIONS_MANIFEST = 0x89,
+        /**
+         * Bucket Manifest update could not be applied to vbucket(s)
+         */
+        PROTOCOL_BINARY_RESPONSE_CANNOT_APPLY_COLLECTIONS_MANIFEST = 0x8a,
+        /**
+         * Client has a collection's manifest which is from the future. This means
+         * they have a uid that is greater than ours.
+         */
+        PROTOCOL_BINARY_RESPONSE_COLLECTIONS_MANIFEST_IS_AHEAD = 0x8b,
 
         /*
          * Sub-document specific responses.
@@ -307,6 +320,11 @@ extern "C"
         PROTOCOL_BINARY_CMD_UNLOCK_KEY = 0x95,
 
         PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG = 0xb5,
+
+
+        PROTOCOL_BINARY_CMD_COLLECTIONS_SET_MANIFEST = 0xb9,
+        PROTOCOL_BINARY_CMD_COLLECTIONS_GET_MANIFEST = 0xba,
+        PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID = 0xbb,
 
         /**
          * Commands for the Sub-document API.
@@ -727,13 +745,14 @@ extern "C"
         PROTOCOL_BINARY_FEATURE_XATTR = 0x06,
         PROTOCOL_BINARY_FEATURE_XERROR = 0x07,
         PROTOCOL_BINARY_FEATURE_SELECT_BUCKET = 0x08,
-        PROTOCOL_BINARY_FEATURE_COLLECTIONS = 0x09,
+        PROTOCOL_BINARY_FEATURE_INVALID2 = 0x09,
         PROTOCOL_BINARY_FEATURE_SNAPPY = 0x0a,
         PROTOCOL_BINARY_FEATURE_JSON = 0x0b,
         PROTOCOL_BINARY_FEATURE_DUPLEX = 0x0c,
         PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION = 0x0d,
         PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION = 0x0e,
-        PROTOCOL_BINARY_FEATURE_TRACING = 0x0f
+        PROTOCOL_BINARY_FEATURE_TRACING = 0x0f,
+        PROTOCOL_BINARY_FEATURE_COLLECTIONS = 0x12
     } protocol_binary_hello_features;
 
 #define MEMCACHED_FIRST_HELLO_FEATURE 0x01
@@ -749,13 +768,14 @@ extern "C"
     (a == PROTOCOL_BINARY_FEATURE_XATTR) ? "XATTR" : \
     (a == PROTOCOL_BINARY_FEATURE_XERROR) ? "XERROR": \
     (a == PROTOCOL_BINARY_FEATURE_SELECT_BUCKET) ? "Select bucket": \
-    (a == PROTOCOL_BINARY_FEATURE_COLLECTIONS) ? "Collections": \
+    (a == PROTOCOL_BINARY_FEATURE_INVALID2) ? "Invalid2": \
     (a == PROTOCOL_BINARY_FEATURE_SNAPPY) ? "Snappy": \
     (a == PROTOCOL_BINARY_FEATURE_JSON) ? "JSON": \
     (a == PROTOCOL_BINARY_FEATURE_DUPLEX) ? "Duplex": \
     (a == PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION) ? "Clustermap change notification": \
     (a == PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION) ? "Unordered execution": \
     (a == PROTOCOL_BINARY_FEATURE_TRACING) ? "Tracing": \
+    (a == PROTOCOL_BINARY_FEATURE_COLLECTIONS) ? "Collections": \
     "Unknown"
     // clang-format on
 

@@ -145,8 +145,9 @@ lcb_stats3(lcb_t instance, const void *cookie, const lcb_CMDSTATS * cmd)
         hdr.request.opcode = PROTOCOL_BINARY_CMD_STAT;
         hdr.request.magic = PROTOCOL_BINARY_REQ;
 
+        pkt->flags |= MCREQ_F_NOCID;
         if (cmd->key.contig.nbytes) {
-            mcreq_reserve_key(pl, pkt, MCREQ_PKT_BASESIZE, &kbuf_out);
+            mcreq_reserve_key(pl, pkt, MCREQ_PKT_BASESIZE, &kbuf_out, 0);
             hdr.request.keylen = ntohs((lcb_U16)kbuf_out.contig.nbytes);
             hdr.request.bodylen = ntohl((lcb_U32)kbuf_out.contig.nbytes);
         } else {

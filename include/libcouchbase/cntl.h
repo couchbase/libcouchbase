@@ -1390,6 +1390,22 @@ typedef enum {
 #define LCB_CNTL_HTTP_POOL_TIMEOUT 0x5d
 
 /**
+ * Modes for handling IPv6 in the IO layer.
+ */
+typedef enum {
+    LCB_COLLECTIONS_DISABLE = 0x00,
+    LCB_COLLECTIONS_ENABLE = 0x01,
+    /**< encode collections ID regardless HELLO feature negotiation */
+    LCB_COLLECTIONS_FORCE = 0x02
+} lcb_CNTL_COLLECTIONS_STATE;
+/**
+ *
+ * @cntl_arg_both{int (as boolean)}
+ * @volatile
+ */
+#define LCB_CNTL_ENABLE_COLLECTIONS 0x4a
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */

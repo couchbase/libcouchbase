@@ -184,7 +184,13 @@ map_error(lcb_t instance, int in)
     case PROTOCOL_BINARY_RESPONSE_EACCESS:
         return LCB_NOT_AUTHORIZED;
     case PROTOCOL_BINARY_RESPONSE_UNKNOWN_COLLECTION:
-        return LCB_EINVAL;
+        return LCB_COLLECTION_UNKNOWN;
+    case PROTOCOL_BINARY_RESPONSE_NO_COLLECTIONS_MANIFEST:
+        return LCB_COLLECTION_NO_MANIFEST;
+    case PROTOCOL_BINARY_RESPONSE_CANNOT_APPLY_COLLECTIONS_MANIFEST:
+        return LCB_COLLECTION_CANNOT_APPLY_MANIFEST;
+    case PROTOCOL_BINARY_RESPONSE_COLLECTIONS_MANIFEST_IS_AHEAD:
+        return LCB_COLLECTION_MANIFEST_IS_AHEAD;
     default:
         if (instance != NULL) {
             return instance->callbacks.errmap(instance, in);
@@ -809,6 +815,42 @@ H_stats(mc_PIPELINE *pipeline, mc_PACKET *request,
 }
 
 static void
+H_collections_get_manifest(mc_PIPELINE *pipeline, mc_PACKET *request,
+        MemcachedResponse *response, lcb_error_t immerr)
+{
+    lcb_t root = get_instance(pipeline);
+    ResponsePack<lcb_RESPGETMANIFEST> w = {{ 0 }};
+    lcb_RESPGETMANIFEST& resp = w.resp;
+    init_resp(root, response, request, immerr, &resp);
+    handle_error_info(response, &w);
+    resp.rflags |= LCB_RESP_F_FINAL;
+    resp.value = response->value();
+    resp.nvalue = response->vallen();
+    invoke_callback(request, root, &resp, LCB_CALLBACK_COLLECTIONS_GET_MANIFEST);
+}
+
+static void
+H_collections_get_cid(mc_PIPELINE *pipeline, mc_PACKET *request,
+        MemcachedResponse *response, lcb_error_t immerr)
+{
+    lcb_t root = get_instance(pipeline);
+    ResponsePack<lcb_RESPGETCID> w = {{ 0 }};
+    lcb_RESPGETCID& resp = w.resp;
+    init_resp(root, response, request, immerr, &resp);
+    handle_error_info(response, &w);
+    resp.rflags |= LCB_RESP_F_FINAL;
+
+    const char *ptr = response->ext();
+    memcpy(&resp.manifest_id, ptr, sizeof(uint64_t));
+    resp.manifest_id = lcb_ntohll(resp.manifest_id);
+    ptr += sizeof(uint64_t);
+    memcpy(&resp.collection_id, ptr, sizeof(uint32_t));
+    resp.collection_id = ntohl(resp.collection_id);
+
+    invoke_callback(request, root, &resp, LCB_CALLBACK_GETCID);
+}
+
+static void
 H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request,
             MemcachedResponse *response, lcb_error_t immerr)
 {
@@ -1019,6 +1061,12 @@ mcreq_dispatch_response(
 
     case PROTOCOL_BINARY_CMD_GET_CLUSTER_CONFIG:
         INVOKE_OP(H_config);
+
+    case PROTOCOL_BINARY_CMD_COLLECTIONS_GET_MANIFEST:
+        INVOKE_OP(H_collections_get_manifest);
+
+    case PROTOCOL_BINARY_CMD_COLLECTIONS_GET_CID:
+        INVOKE_OP(H_collections_get_cid);
 
     default:
         fprintf(stderr, "COUCHBASE: Received unknown opcode=0x%x\n", res->opcode());

@@ -20,11 +20,12 @@
 #include "sllist-inl.h"
 #include "internal.h"
 
+
 #define PKT_HDRSIZE(pkt) (MCREQ_PKT_BASESIZE + (pkt)->extlen)
 
+
 lcb_error_t
-mcreq_reserve_header(
-        mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize)
+mcreq_reserve_header( mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize)
 {
     int rv;
     packet->extlen = hdrsize - MCREQ_PKT_BASESIZE;
@@ -36,37 +37,67 @@ mcreq_reserve_header(
     return LCB_SUCCESS;
 }
 
+
+static int leb128_encode(lcb_U32 value, lcb_U8 *buf)
+{
+    int idx = 0;
+    if (value == 0) {
+        buf[0] = 0;
+        return 1;
+    }
+    while (value > 0) {
+        uint8_t byte = (uint8_t)(value & 0x7f);
+        value >>= 7;
+        if (value > 0) {
+            byte |= 0x80;
+        }
+        buf[idx++] = byte;
+    }
+    return idx;
+}
+
 lcb_error_t
 mcreq_reserve_key(
         mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize,
-        const lcb_KEYBUF *kreq)
+        const lcb_KEYBUF *kreq, uint32_t collection_id)
 {
     const struct lcb_CONTIGBUF *contig = &kreq->contig;
+    lcb_KVBUFTYPE buftype = kreq->type;
+    lcb_t instance = (lcb_t)pipeline->parent->cqdata;
     int rv;
+    uint8_t ncid = 0;
+    uint8_t cid[5] = {0};
 
+    /** encode collection ID */
+
+    if (((packet->flags & MCREQ_F_NOCID) == 0 && mcreq_pipeline_supports_collections(pipeline)) ||
+            (instance && LCBT_SETTING(instance, use_collections) == LCB_COLLECTIONS_FORCE)) {
+        ncid = leb128_encode(collection_id, cid);
+    }
     /** Set the key offset which is the start of the key from the buffer */
     packet->extlen = hdrsize - MCREQ_PKT_BASESIZE;
     packet->kh_span.size = kreq->contig.nbytes;
 
-    if (kreq->type == LCB_KV_COPY) {
+    if (buftype == LCB_KV_COPY) {
         /**
          * If the key is to be copied then just allocate the span size
          * for the key+24+extras
          */
-        packet->kh_span.size += hdrsize;
+        packet->kh_span.size += hdrsize + ncid;
         rv = netbuf_mblock_reserve(&pipeline->nbmgr, &packet->kh_span);
         if (rv != 0) {
             return LCB_CLIENT_ENOMEM;
         }
-
+        /* copy collection ID prefix */
+        if (ncid) {
+            memcpy(SPAN_BUFFER(&packet->kh_span) + hdrsize, cid, ncid);
+        }
         /**
          * Copy the key into the packet starting at the extras end
          */
-        memcpy(SPAN_BUFFER(&packet->kh_span) + hdrsize,
-               contig->bytes,
-               contig->nbytes);
+        memcpy(SPAN_BUFFER(&packet->kh_span) + hdrsize + ncid, contig->bytes, contig->nbytes);
 
-    } else if (kreq->type == LCB_KV_CONTIG) {
+    } else if (buftype == LCB_KV_CONTIG) {
         /**
          * Don't do any copying.
          * Assume the key buffer has enough space for the packet as well.
@@ -475,7 +506,7 @@ mcreq_basic_packet(
     }
 
     mcreq_map_key(queue, &cmd->key, &cmd->_hashkey,
-        sizeof(*req) + extlen, &vb, &srvix);
+            sizeof(*req) + extlen, &vb, &srvix);
     if (srvix > -1 && srvix < (int)queue->npipelines) {
         *pipeline = queue->pipelines[srvix];
 
@@ -492,7 +523,7 @@ mcreq_basic_packet(
         return LCB_CLIENT_ENOMEM;
     }
 
-    mcreq_reserve_key(*pipeline, *packet, sizeof(*req) + extlen, &cmd->key);
+    mcreq_reserve_key(*pipeline, *packet, sizeof(*req) + extlen, &cmd->key, cmd->cid);
 
     req->request.keylen = htons((*packet)->kh_span.size - PKT_HDRSIZE(*packet));
     req->request.vbucket = htons(vb);

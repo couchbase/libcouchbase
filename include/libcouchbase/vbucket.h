@@ -217,7 +217,7 @@ lcbvb_load_json(lcbvb_CONFIG *vbc, const char *data);
 
 
 /**
- * @uncommmitted
+ * @uncommitted
  */
 LIBCOUCHBASE_API
 int

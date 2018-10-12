@@ -731,7 +731,7 @@ static ctl_handler handlers[] = {
     send_hello_handler,                   /* LCB_CNTL_SEND_HELLO */
     buckettype_handler,                   /* LCB_CNTL_BUCKETTYPE */
     metrics_handler,                      /* LCB_CNTL_METRICS */
-    collections_handler,                  /* LCB_CNTL_USE_COLLECTIONS */
+    collections_handler,                  /* LCB_CNTL_ENABLE_COLLECTIONS */
     ssl_keypath_handler,                  /* LCB_CNTL_SSL_KEY */
     log_redaction_handler,                /* LCB_CNTL_LOG_REDACTION */
     ssl_truststorepath_handler,           /* LCB_CNTL_SSL_TRUSTSTORE */
@@ -881,6 +881,20 @@ static lcb_error_t convert_ipv6(const char *arg, u_STRCONVERT *u)
     return LCB_SUCCESS;
 }
 
+static lcb_error_t convert_collections(const char *arg, u_STRCONVERT *u) {
+    static const STR_u32MAP optmap[] = {
+        { "on", LCB_COLLECTIONS_ENABLE },
+        { "off", LCB_COLLECTIONS_DISABLE },
+        { "true", LCB_COLLECTIONS_ENABLE },
+        { "false", LCB_COLLECTIONS_DISABLE },
+        { "force", LCB_COLLECTIONS_FORCE },
+        { NULL }
+    };
+    DO_CONVERT_STR2NUM(arg, optmap, u->i);
+    return LCB_SUCCESS;
+}
+
+
 static cntl_OPCODESTRS stropcode_map[] = {
     {"operation_timeout", LCB_CNTL_OP_TIMEOUT, convert_timevalue},
     {"timeout", LCB_CNTL_OP_TIMEOUT, convert_timevalue},
@@ -943,6 +957,7 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"network", LCB_CNTL_NETWORK, convert_passthru},
     {"wait_for_config", LCB_CNTL_WAIT_FOR_CONFIG, convert_intbool},
     {"http_pool_timeout", LCB_CNTL_HTTP_POOL_TIMEOUT, convert_timevalue},
+    {"enable_collections", LCB_CNTL_ENABLE_COLLECTIONS, convert_collections},
     {NULL, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))

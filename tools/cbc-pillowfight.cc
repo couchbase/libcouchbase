@@ -1213,7 +1213,7 @@ int main(int argc, char **argv)
         cp.doCtls(instance);
         if (config.useCollections()) {
             int use = 1;
-            lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_USE_COLLECTIONS, &use);
+            lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_ENABLE_COLLECTIONS, &use);
         }
 
         InstanceCookie *cookie = new InstanceCookie(instance);

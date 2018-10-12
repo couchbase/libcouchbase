@@ -362,7 +362,7 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
         pkt->u_rdata.exdata = rck;
         pkt->flags |= MCREQ_F_REQEXT;
 
-        mcreq_reserve_key(pl, pkt, sizeof(req.bytes), &cmd->key);
+        mcreq_reserve_key(pl, pkt, sizeof(req.bytes), &cmd->key, cmd->cid);
 
         req.request.opaque = pkt->opaque;
         rck->remaining++;

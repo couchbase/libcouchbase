@@ -106,6 +106,8 @@
 #define LCBTRACE_DEFAULT_THRESHOLD_FTS LCB_MS2US(1000)
 #define LCBTRACE_DEFAULT_THRESHOLD_ANALYTICS LCB_MS2US(1000)
 
+#define LCB_DEFAULT_COLLLECTIONS_STATE LCB_COLLECTIONS_ENABLE
+
 #include "config.h"
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/metrics.h>
@@ -183,7 +185,7 @@ typedef struct lcb_settings_st {
     unsigned select_bucket : 1;
     unsigned tcp_keepalive : 1;
     unsigned send_hello : 1;
-    unsigned use_collections : 1;
+    unsigned use_collections : 2;
     unsigned log_redaction : 1;
     unsigned use_tracing : 1;
     /** Do not use remap vbuckets (do not use fast forward map, or any other heuristics) */

@@ -574,7 +574,19 @@ typedef enum {
     /** According to the spec all xattr commands should come first, followed by the commands for the document body */ \
     X(LCB_SUBDOC_INVALID_XATTR_ORDER, 0x5e,                    \
       LCB_ERRTYPE_INPUT|LCB_ERRTYPE_SRVGEN|LCB_ERRTYPE_SUBDOC, \
-      "According to the spec all xattr commands should come first, followed by the commands for the document body")
+      "According to the spec all xattr commands should come first, followed by the commands for the document body") \
+    X(LCB_COLLECTION_UNKNOWN, 0x5f, LCB_ERRTYPE_INPUT, \
+      "Collection does not exists") \
+    /** Operation attempted and requires that the collections manifest is set.  */ \
+    X(LCB_COLLECTION_NO_MANIFEST, 0x60, LCB_ERRTYPE_INPUT, \
+            "No Collections Manifest") \
+    /** Bucket Manifest update could not be applied to vbucket(s) */ \
+    X(LCB_COLLECTION_CANNOT_APPLY_MANIFEST, 0x61, LCB_ERRTYPE_INPUT, \
+            "Cannot apply collections manifest") \
+    /** Client has a collection's manifest which is from the future. This means \
+     * they have a uid that is greater than ours.  */ \
+    X(LCB_COLLECTION_MANIFEST_IS_AHEAD, 0x62, LCB_ERRTYPE_INPUT, \
+            "Collections manifest of SDK is ahead of Server's") \
 
 /** Error codes returned by the library. */
 typedef enum {

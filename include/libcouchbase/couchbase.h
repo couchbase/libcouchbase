@@ -524,6 +524,8 @@ lcb_set_auth(lcb_t instance, lcb_AUTHENTICATOR *auth);
      of servers with the value specified here. */ \
     lcb_U64 cas; \
     \
+    /**< Collection ID */ \
+    lcb_U32 cid;  \
     /**The key for the document itself. This should be set via LCB_CMD_SET_KEY() */ \
     lcb_KEYBUF key; \
     \
@@ -732,6 +734,9 @@ typedef enum {
     LCB_CALLBACK_NOOP, /**< lcb_noop3() */
     LCB_CALLBACK_PING, /**< lcb_ping3() */
     LCB_CALLBACK_DIAG, /**< lcb_diag() */
+    LCB_CALLBACK_COLLECTIONS_SET_MANIFEST, /**< lcb_c9s_manifest_set() */
+    LCB_CALLBACK_COLLECTIONS_GET_MANIFEST, /**< lcb_c9s_manifest_get() */
+    LCB_CALLBACK_GETCID, /**< lcb_getcid() */
     LCB_CALLBACK__MAX /* Number of callbacks */
 } lcb_CALLBACKTYPE;
 
@@ -4079,6 +4084,66 @@ lcb_resp_get_error_ref(int cbtype, const lcb_RESPBASE *rb);
  */
 LIBCOUCHBASE_API
 int lcb_is_redacting_logs(lcb_t instance);
+
+/**
+ * @defgroup lcb-collections-api Collections Management
+ * @brief Managing collections in the bucket
+ */
+
+/*
+ * @addtogroup lcb-collection-api
+ * @{
+ */
+
+/**
+ * Command to fetch collections manifest
+ * @uncommitted
+ */
+typedef lcb_CMDBASE lcb_CMDGETMANIFEST;
+
+/**
+ * Response structure for collection manifest
+ * @uncommitted
+ */
+typedef struct {
+    LCB_RESP_BASE
+    size_t nvalue;
+    const char *value;
+} lcb_RESPGETMANIFEST;
+
+/**
+ * @uncommitted
+ */
+LIBCOUCHBASE_API
+lcb_error_t lcb_getmanifest(lcb_t instance, const void *cookie, const lcb_CMDGETMANIFEST *cmd);
+
+
+typedef struct {
+    LCB_CMD_BASE;
+    size_t nscope;
+    const char *scope;
+    size_t ncollection;
+    const char *collection;
+} lcb_CMDGETCID;
+
+typedef struct {
+    LCB_RESP_BASE
+    lcb_U64 manifest_id;
+    lcb_U32 collection_id;
+} lcb_RESPGETCID;
+
+/**
+ * Map scope and collection names to collection id.
+ *
+ * @uncommitted
+ * @param instance
+ * @param scope name of scope
+ * @param collection name of collection
+ */
+LIBCOUCHBASE_API
+lcb_error_t lcb_getcid(lcb_t instance, const void *cookie, const lcb_CMDGETCID *cmd);
+
+/** @} */
 
 /* Post-include some other headers */
 #ifdef __cplusplus

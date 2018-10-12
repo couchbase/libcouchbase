@@ -24,6 +24,16 @@
 #include <netbuf/netbuf.h>
 
 #ifdef __cplusplus
+extern "C"{
+#endif
+
+int mcreq_pipeline_supports_collections(mc_PIPELINE *pipeline);
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef __cplusplus
 namespace lcb {
 
 class RetryQueue;
@@ -112,6 +122,10 @@ public:
 
     bool supports_json() const {
         return jsonsupport;
+    }
+
+    bool supports_collections() const {
+        return collsupport;
     }
 
     bool is_connected() const {
@@ -209,6 +223,8 @@ public:
 
     /** Whether extended 'UUID' and 'seqno' are available for each mutation */
     short mutation_tokens;
+
+    short collsupport;
 
     lcbio_CTX *connctx;
     lcb::io::ConnectionRequest *connreq;
