@@ -104,7 +104,7 @@ static string leb128_encode(string in) {
 
     // 00000000 maps to [0]
     if (value == 0) {
-        return "\x01\x00";
+        return string(1, 0);
     }
 
     string rv;
