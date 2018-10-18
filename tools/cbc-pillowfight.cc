@@ -100,7 +100,7 @@ parseTemplateSpec(const string& input)
 // Given a string representing a uint32_t (base16) return a string storing the
 // leb128 encoded representation of that value.
 static string leb128_encode(string in) {
-    auto value = stoul(in, nullptr, 16);
+    unsigned long int value = strtoul(in.c_str(), NULL, 16);
 
     // 00000000 maps to [0]
     if (value == 0) {
@@ -109,7 +109,7 @@ static string leb128_encode(string in) {
 
     string rv;
     while (value > 0) {
-        auto byte = static_cast<char>(value & 0x7full);
+        char byte = static_cast<char>(value & 0x7full);
         value >>= 7;
         // value has more data?
         if (value > 0) {
@@ -286,7 +286,7 @@ public:
 
         if (o_collection.passed()) {
             vector<string> ids = o_collection.result();
-            for (const auto& id : ids) {
+            for (const string& id : ids) {
                 collections.push_back(leb128_encode(id));
             }
         }
