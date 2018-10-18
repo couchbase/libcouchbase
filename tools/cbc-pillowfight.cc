@@ -286,8 +286,8 @@ public:
 
         if (o_collection.passed()) {
             vector<string> ids = o_collection.result();
-            for (const string& id : ids) {
-                collections.push_back(leb128_encode(id));
+            for (vector<string>::iterator it = ids.begin() ; it != ids.end(); ++it) {
+                collections.push_back(leb128_encode(*it));
             }
         }
     }
