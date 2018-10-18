@@ -1,5 +1,21 @@
 # Release Notes
 
+## 2.10.0 (October 18 2018)
+
+* [CCBC-982](https://issues.couchbase.com/browse/CCBC-982): Support analytics
+  for N1QL service in `lcb_ping3`.
+
+* [CCBC-989](https://issues.couchbase.com/browse/CCBC-989): Write bucket
+  capabilities into config cache, so that the client which was bootstrapped
+  from the cache will be able to reason about features availability (e.g. views).
+
+* [CCBC-987](https://issues.couchbase.com/browse/CCBC-987): Document tracing
+  options for cbc tools.
+
+* [CCBC-988](https://issues.couchbase.com/browse/CCBC-988): Update
+  cbc-pillowfight to work with by-id collections. It still does not use any
+  changes in protocol yet. The collection API will be exposed in 3.0 release.
+
 ## 2.9.5 (September 21 2018)
 
 * [CCBC-980](https://issues.couchbase.com/browse/CCBC-980): Make idle timeout
