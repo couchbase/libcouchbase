@@ -22,10 +22,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.9)
 ### BEGIN CONFIGURABLES ###
 # These variables can be modified as needed
 
-# Couchbase mock path to download
-SET(COUCHBASE_MOCK_VERSION 1.5.19)
-SET(COUCHBASE_MOCK_URL "https://github.com/couchbase/CouchbaseMock/releases/download/${COUCHBASE_MOCK_VERSION}/CouchbaseMock-${COUCHBASE_MOCK_VERSION}.jar")
-project(libcouchbase)
 
 OPTION(LCB_NO_TESTS "Disable building of tests" OFF)
 OPTION(LCB_NO_TOOLS "Disable building of additional tools" OFF)
@@ -360,8 +356,13 @@ ENDIF()
 TARGET_LINK_LIBRARIES(couchbase ${LCB_LINK_DEPS})
 TARGET_LINK_LIBRARIES(couchbaseS ${LCB_LINK_DEPS})
 
-ENABLE_TESTING()
 IF(NOT LCB_NO_TESTS)
+ENABLE_TESTING()
+# Couchbase mock path to download
+SET(COUCHBASE_MOCK_VERSION 1.5.19)
+SET(COUCHBASE_MOCK_URL "https://github.com/couchbase/CouchbaseMock/releases/download/${COUCHBASE_MOCK_VERSION}/CouchbaseMock-${COUCHBASE_MOCK_VERSION}.jar")
+project(libcouchbase)
+
     ADD_SUBDIRECTORY(tests tests)
 ELSE()
     ADD_TEST(NAME dummytest COMMAND echo "No Tests!")
