@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2018 Couchbase, Inc.
  *
@@ -69,6 +70,63 @@ lcb_error_t lcb_analytics_setopt(lcb_CMDANALYTICS *cmd, const char *name, size_t
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_analytics_setdeferred(lcb_CMDANALYTICS *cmd, int deferred);
+
+typedef enum {
+    LCB_ANALYTICSINGEST_NONE = 0,
+    LCB_ANALYTICSINGEST_UPSERT,
+    LCB_ANALYTICSINGEST_INSERT,
+    LCB_ANALYTICSINGEST_REPLACE,
+    LCB_ANALYTICSINGEST__METHOD_MAX
+} lcb_ANALYTICSINGESTMETHOD;
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_ingest_setmethod(lcb_CMDANALYTICS *cmd, lcb_ANALYTICSINGESTMETHOD method);
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_ingest_setexptime(lcb_CMDANALYTICS *cmd, lcb_U32 exptime);
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_ingest_ignoreingesterror(lcb_CMDANALYTICS *cmd, int ignore);
+
+typedef enum {
+    LCB_ANALYTICSINGEST_OK = 0,
+    LCB_ANALYTICSINGEST_IGNORE,
+    LCB_ANALYTICSINGEST__STATUS_MAX
+} lcb_ANALYTICSINGESTSTATUS;
+
+typedef struct {
+    /* input */
+    lcb_ANALYTICSINGESTMETHOD method;
+    const char *row;
+    size_t nrow;
+
+    /* output */
+    char *id;
+    size_t nid;
+    void (*id_free)(void *);
+} lcb_ANALYTICSINGESTIDGENERATORPARAM;
+
+typedef lcb_ANALYTICSINGESTSTATUS (*lcb_ANALYTICSINGESTIDGENERATOR)(lcb_t, const void *, lcb_ANALYTICSINGESTIDGENERATORPARAM *);
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_ingest_setidgenerator(lcb_CMDANALYTICS *cmd, lcb_ANALYTICSINGESTIDGENERATOR generator);
+
+typedef struct {
+    /* input */
+    lcb_ANALYTICSINGESTMETHOD method;
+    const char *row;
+    size_t nrow;
+
+    /* output, NULL for passthrough */
+    char *out;
+    size_t nout;
+    void (*out_free)(void *);
+} lcb_ANALYTICSINGESTDATACONVERTERPARAM;
+
+typedef lcb_ANALYTICSINGESTSTATUS (*lcb_ANALYTICSINGESTDATACONVERTER)(lcb_t, const void *, lcb_ANALYTICSINGESTDATACONVERTERPARAM *);
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_ingest_setdataconverter(lcb_CMDANALYTICS *cmd, lcb_ANALYTICSINGESTDATACONVERTER converter);
 
 /**
  * Response for a Analytics query. This is delivered in the @ref lcb_ANALYTICSCALLBACK
