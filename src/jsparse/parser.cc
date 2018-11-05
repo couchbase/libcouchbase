@@ -268,6 +268,7 @@ const char* Parser::jprstr_for_mode(Mode mode) {
     case MODE_VIEWS:
         return "/rows/^";
     case MODE_N1QL:
+    case MODE_ANALYTICS:
         return "/results/^";
     case MODE_FTS:
         return "/hits/^";

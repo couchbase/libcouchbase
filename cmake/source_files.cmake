@@ -51,6 +51,7 @@ ENDIF()
 
 SET(LCB_CORE_CXXSRC
     src/instance.cc
+    src/analytics/analytics.cc
     src/auth.cc
     src/bootstrap.cc
     src/bucketconfig/bc_cccp.cc

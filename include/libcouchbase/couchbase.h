@@ -749,6 +749,8 @@ typedef enum {
 /** Callback type for N1QL index management (cannot be used for lcb_install_callback3()) */
 #define LCB_CALLBACK_IXMGMT -3
 
+/** Callback type for Analytics (cannot be used for lcb_install_callback3()) */
+#define LCB_CALLBACK_ANALYTICS -4
 /**
  * Callback invoked for responses.
  * @param instance The handle
