@@ -40,6 +40,7 @@ struct Queue {
     void unref();
     void ref() {refcount++;}
     void cancel();
+    void check();
     bool has_pending() const {
         return n_awaiting_response || n_awaiting_schedule;
     }
@@ -47,6 +48,11 @@ struct Queue {
     lcb_t instance;
     void *parent;
     lcbio_pTIMER timer;
+
+    /**Called when a operation is ready to be scheduled
+     * @param The queue
+     * @param The document */
+    lcb_error_t (*cb_schedule)(struct Queue*, lcb::docreq::DocRequest *dreq);
 
     /**Called when a document is ready
      * @param The queue

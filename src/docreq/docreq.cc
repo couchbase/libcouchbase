@@ -15,7 +15,7 @@
  *   limitations under the License.
  */
 
-#include "viewreq.h"
+#include "docreq/docreq.h"
 #include "internal.h"
 #include "sllist-inl.h"
 
@@ -23,7 +23,6 @@ using namespace lcb::docreq;
 
 static void docreq_handler(void *arg);
 static void invoke_pending(Queue*);
-static void doc_callback(lcb_t,int, const lcb_RESPBASE *);
 
 #define MAX_PENDING_DOCREQ 10
 #define MIN_SCHED_SIZE 5
@@ -114,21 +113,7 @@ docreq_handler(void *arg)
 
         } else {
             lcb_error_t rc;
-            lcb_CMDGET gcmd = { 0 };
-
-            LCB_CMD_SET_KEY(&gcmd, cont->docid.iov_base, cont->docid.iov_len);
-#ifdef LCB_TRACING
-            if (cont->parent->parent) {
-                lcb::views::ViewRequest *req = reinterpret_cast<lcb::views::ViewRequest *>(cont->parent->parent);
-                if (req->span) {
-                    LCB_CMD_SET_TRACESPAN(&gcmd, req->span);
-                }
-            }
-#endif
-            cont->callback = doc_callback;
-            gcmd.cmdflags |= LCB_CMD_F_INTERNAL_CALLBACK;
-            rc = lcb_get3(instance, &cont->callback, &gcmd);
-
+            rc = q->cb_schedule(q, cont);
             if (rc != LCB_SUCCESS) {
                 cont->docresp.rc = rc;
                 cont->ready = 1;
@@ -184,30 +169,8 @@ invoke_pending(Queue *q)
     q->unref();
 }
 
-static void
-doc_callback(lcb_t, int, const lcb_RESPBASE *rb)
-{
-    const lcb_RESPGET *rg = (const lcb_RESPGET *)rb;
-    DocRequest *dreq = reinterpret_cast<DocRequest*>(rb->cookie);
-    Queue *q = dreq->parent;
-
-    q->ref();
-
-    q->n_awaiting_response--;
-    dreq->docresp = *rg;
-    dreq->ready = 1;
-    dreq->docresp.key = dreq->docid.iov_base;
-    dreq->docresp.nkey = dreq->docid.iov_len;
-
-    /* Reference the response data, since we might not be invoking this right
-     * away */
-    if (rg->rc == LCB_SUCCESS) {
-        lcb_backbuf_ref(reinterpret_cast<lcb_BACKBUF>(dreq->docresp.bufh));
-    }
-
+void Queue::check() {
     /* Ensure the invoke_pending doesn't destroy us */
-    invoke_pending(q);
-    docq_poke(q);
-
-    q->unref();
+    invoke_pending(this);
+    docq_poke(this);
 }
