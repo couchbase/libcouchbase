@@ -52,7 +52,7 @@ lcb_error_t lcb_analytics_setquery(lcb_CMDANALYTICS *cmd, const char *query, siz
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_analytics_setstatement(lcb_CMDANALYTICS *cmd, const char *statement, size_t nstatement);
-#define lcb_analytics_setstatementz(cmd, qstr) lcb_analytics_statement(cmd, sstr, -1)
+#define lcb_analytics_setstatementz(cmd, sstr) lcb_analytics_setstatement(cmd, sstr, -1)
 
 LIBCOUCHBASE_API
 lcb_error_t lcb_analytics_namedparam(lcb_CMDANALYTICS *cmd, const char *name, size_t nname, const char *value,
@@ -66,6 +66,9 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_analytics_setopt(lcb_CMDANALYTICS *cmd, const char *name, size_t nname, const char *value,
                                  size_t nvalue);
 #define lcb_analytics_setoptz(cmd, key, value) lcb_analytics_setopt(cmd, key, -1, value, -1)
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_setdeferred(lcb_CMDANALYTICS *cmd, int deferred);
 
 /**
  * Response for a Analytics query. This is delivered in the @ref lcb_ANALYTICSCALLBACK
@@ -107,6 +110,22 @@ struct lcb_RESPANALYTICS {
 LIBCOUCHBASE_API
 lcb_error_t lcb_analytics_query(lcb_t instance, const void *cookie, lcb_CMDANALYTICS *cmd);
 
+typedef struct lcb_ANALYTICSDEFERREDHANDLE_st lcb_ANALYTICSDEFERREDHANDLE;
+
+LIBCOUCHBASE_API
+lcb_ANALYTICSDEFERREDHANDLE *lcb_analytics_defhnd_extract(const lcb_RESPANALYTICS *response);
+
+LIBCOUCHBASE_API
+void lcb_analytics_defhnd_free(lcb_ANALYTICSDEFERREDHANDLE *handle);
+
+LIBCOUCHBASE_API
+const char *lcb_analytics_defhnd_status(lcb_ANALYTICSDEFERREDHANDLE *handle);
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_defhnd_setcallback(lcb_ANALYTICSDEFERREDHANDLE *handle, lcb_ANALYTICSCALLBACK callback);
+
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_defhnd_poll(lcb_t instance, const void *cookie, lcb_ANALYTICSDEFERREDHANDLE *handle);
 /**
  * Cancels an in-progress request. This will ensure that further callbacks
  * for the given request are not delivered.

@@ -41,7 +41,8 @@ struct Parser {
         MODE_VIEWS,
         MODE_N1QL,
         MODE_FTS,
-        MODE_ANALYTICS
+        MODE_ANALYTICS,
+        MODE_ANALYTICS_DEFERRED
     };
 
     struct Actions {

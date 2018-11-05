@@ -74,8 +74,11 @@ lcb_ANALYTICSHANDLE lcb_analytics_gethandle(lcb_CMDANALYTICS *cmd)
 LIBCOUCHBASE_API
 lcb_error_t lcb_analytics_setcallback(lcb_CMDANALYTICS *cmd, lcb_ANALYTICSCALLBACK callback)
 {
-    cmd->callback = callback;
-    return LCB_SUCCESS;
+    if (cmd) {
+        cmd->callback = callback;
+        return LCB_SUCCESS;
+    }
+    return LCB_EINVAL;
 }
 
 #define fix_strlen(s, n)                                                                                               \
@@ -135,6 +138,71 @@ lcb_error_t lcb_analytics_posparam(lcb_CMDANALYTICS *cmd, const char *value, siz
     return LCB_SUCCESS;
 }
 
+LIBCOUCHBASE_API
+lcb_error_t lcb_analytics_setdeferred(lcb_CMDANALYTICS *cmd, int deferred)
+{
+    if (deferred) {
+        cmd->root["mode"] = std::string("async");
+    } else {
+        cmd->root.removeMember("mode");
+    }
+    return LCB_SUCCESS;
+}
+
+struct lcb_ANALYTICSDEFERREDHANDLE_st {
+    std::string status;
+    std::string handle;
+    lcb_ANALYTICSCALLBACK callback;
+
+    lcb_ANALYTICSDEFERREDHANDLE_st(std::string status_, std::string handle_) : status(status_), handle(handle_) {}
+};
+
+lcb_ANALYTICSDEFERREDHANDLE *lcb_analytics_defhnd_extract(const lcb_RESPANALYTICS *resp)
+{
+    if (resp == NULL || resp->rc != LCB_SUCCESS || ((resp->rflags & (LCB_RESP_F_FINAL | LCB_RESP_F_EXTDATA)) == 0) ||
+        resp->nrow == 0 || resp->row == NULL) {
+        return NULL;
+    }
+    Json::Value payload;
+    if (!Json::Reader().parse(resp->row, resp->row + resp->nrow, payload)) {
+        return NULL;
+    }
+    if (!payload.isObject()) {
+        return NULL;
+    }
+    Json::Value status = payload["status"];
+    Json::Value handle = payload["handle"];
+    if (status.isString() && handle.isString()) {
+        return new lcb_ANALYTICSDEFERREDHANDLE_st(status.asString(), handle.asString());
+    }
+    return NULL;
+}
+
+void lcb_analytics_defhnd_free(lcb_ANALYTICSDEFERREDHANDLE *handle)
+{
+    if (handle == NULL) {
+        return;
+    }
+    delete handle;
+}
+
+const char *lcb_analytics_defhnd_status(lcb_ANALYTICSDEFERREDHANDLE *handle)
+{
+    if (handle == NULL) {
+        return NULL;
+    }
+    return handle->status.c_str();
+}
+
+lcb_error_t lcb_analytics_defhnd_setcallback(lcb_ANALYTICSDEFERREDHANDLE *handle, lcb_ANALYTICSCALLBACK callback)
+{
+    if (handle) {
+        handle->callback = callback;
+        return LCB_SUCCESS;
+    }
+    return LCB_EINVAL;
+}
+
 typedef struct lcb_ANALYTICSREQ : lcb::jsparse::Parser::Actions {
     const lcb_RESPHTTP *cur_htresp;
     struct lcb_http_request_st *htreq;
@@ -160,6 +228,8 @@ typedef struct lcb_ANALYTICSREQ : lcb::jsparse::Parser::Actions {
     /** Whether we're retrying this */
     bool was_retried;
 
+    /** Non-empty if this is deferred query check/fetch */
+    std::string deferred_handle;
 #ifdef LCB_TRACING
     lcbtrace_SPAN *span;
 #endif
@@ -200,6 +270,7 @@ typedef struct lcb_ANALYTICSREQ : lcb::jsparse::Parser::Actions {
     inline void invoke_row(lcb_RESPANALYTICS *resp, bool is_last);
 
     inline lcb_ANALYTICSREQ(lcb_t obj, const void *user_cookie, lcb_CMDANALYTICS *cmd);
+    inline lcb_ANALYTICSREQ(lcb_t obj, const void *user_cookie, lcb_ANALYTICSDEFERREDHANDLE *handle);
     inline ~lcb_ANALYTICSREQ();
 
     // Parser overrides:
@@ -304,6 +375,10 @@ void ANALYTICSREQ::invoke_row(lcb_RESPANALYTICS *resp, bool is_last)
         parser->get_postmortem(meta);
         resp->row = static_cast< const char * >(meta.iov_base);
         resp->nrow = meta.iov_len;
+        if (!deferred_handle.empty()) {
+            /* signal that response might have deferred handle */
+            resp->rflags |= LCB_RESP_F_EXTDATA;
+        }
     }
 
     if (callback) {
@@ -389,7 +464,12 @@ lcb_error_t ANALYTICSREQ::issue_htreq(const std::string &body)
     htcmd.nbody = body.size();
 
     htcmd.content_type = "application/json";
-    htcmd.method = LCB_HTTP_METHOD_POST;
+    if (deferred_handle.empty()) {
+        htcmd.method = LCB_HTTP_METHOD_POST;
+    } else {
+        htcmd.method = LCB_HTTP_METHOD_GET;
+        htcmd.host = deferred_handle.c_str();
+    }
 
     htcmd.type = LCB_HTTP_TYPE_CBAS;
 
@@ -437,7 +517,7 @@ lcb_U32 lcb_analyticsreq_parsetmo(const std::string &s)
 lcb_ANALYTICSREQ::lcb_ANALYTICSREQ(lcb_t obj, const void *user_cookie, lcb_CMDANALYTICS *cmd)
     : cur_htresp(NULL), htreq(NULL), parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_ANALYTICS, this)),
       cookie(user_cookie), callback(cmd->callback), instance(obj), lasterr(LCB_SUCCESS), timeout(0), nrows(0),
-      was_retried(false)
+      was_retried(false), deferred_handle("")
 #ifdef LCB_TRACING
       ,
       span(NULL)
@@ -488,6 +568,30 @@ lcb_ANALYTICSREQ::lcb_ANALYTICSREQ(lcb_t obj, const void *user_cookie, lcb_CMDAN
 #endif
 }
 
+lcb_ANALYTICSREQ::lcb_ANALYTICSREQ(lcb_t obj, const void *user_cookie, lcb_ANALYTICSDEFERREDHANDLE *handle)
+    : cur_htresp(NULL), htreq(NULL),
+      parser(new lcb::jsparse::Parser(lcb::jsparse::Parser::MODE_ANALYTICS_DEFERRED, this)), cookie(user_cookie),
+      callback(handle->callback), instance(obj), lasterr(LCB_SUCCESS), timeout(0), nrows(0), was_retried(false),
+      deferred_handle(handle->handle)
+#ifdef LCB_TRACING
+      ,
+      span(NULL)
+#endif
+{
+    /* FIXME: use separate timeout for analytics */
+    timeout = LCBT_SETTING(obj, n1ql_timeout);
+
+#ifdef LCB_TRACING
+    if (instance->settings->tracer) {
+        char id[20] = {0};
+        snprintf(id, sizeof(id), "%p", (void *)this);
+        span = lcbtrace_span_start(instance->settings->tracer, LCBTRACE_OP_DISPATCH_TO_SERVER, LCBTRACE_NOW, NULL);
+        lcbtrace_span_add_tag_str(span, LCBTRACE_TAG_OPERATION_ID, id);
+        lcbtrace_span_add_system_tags(span, instance->settings, LCBTRACE_TAG_SERVICE_ANALYTICS);
+    }
+#endif
+}
+
 LIBCOUCHBASE_API
 lcb_error_t lcb_analytics_query(lcb_t instance, const void *cookie, lcb_CMDANALYTICS *cmd)
 {
@@ -521,6 +625,38 @@ GT_DESTROY:
         cmd->handle = NULL;
     }
 
+    if (req) {
+        req->callback = NULL;
+        delete req;
+    }
+    return err;
+}
+
+lcb_error_t lcb_analytics_defhnd_poll(lcb_t instance, const void *cookie, lcb_ANALYTICSDEFERREDHANDLE *handle)
+{
+    lcb_error_t err;
+    ANALYTICSREQ *req = NULL;
+
+    if (handle->callback == NULL || handle->handle.empty()) {
+        return LCB_EINVAL;
+    }
+
+    req = new lcb_ANALYTICSREQ(instance, cookie, handle);
+    if (!req) {
+        err = LCB_CLIENT_ENOMEM;
+        goto GT_DESTROY;
+    }
+    if ((err = req->lasterr) != LCB_SUCCESS) {
+        goto GT_DESTROY;
+    }
+
+    if ((err = req->issue_htreq()) != LCB_SUCCESS) {
+        goto GT_DESTROY;
+    }
+
+    return LCB_SUCCESS;
+
+GT_DESTROY:
     if (req) {
         req->callback = NULL;
         delete req;
