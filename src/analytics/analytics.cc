@@ -27,6 +27,7 @@
 #include <string>
 #include <list>
 #include "docreq/docreq.h"
+#include "rnd.h"
 
 #define LOGFMT "(NR=%p) "
 #define LOGID(req) static_cast< const void * >(req)
