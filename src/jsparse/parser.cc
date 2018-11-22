@@ -127,7 +127,7 @@ row_pop_callback(jsonsl_t jsn, jsonsl_action_t,
 
     if (state->data == JOBJ_ROWSET) {
         /** The closing ] of "rows" : [ ... ] */
-        if (ctx->mode == Parser::Mode::MODE_ANALYTICS_DEFERRED) {
+        if (ctx->mode == Parser::MODE_ANALYTICS_DEFERRED) {
             if (ctx->keep_pos > ctx->min_pos) {
                 ctx->current_buf.erase(0, ctx->keep_pos - ctx->min_pos);
                 ctx->min_pos = ctx->keep_pos;
@@ -242,7 +242,7 @@ initial_push_callback(jsonsl_t jsn, jsonsl_action_t,
     }
     ctx->last_hk.clear();
 
-    if (ctx->mode == Parser::Mode::MODE_ANALYTICS_DEFERRED) {
+    if (ctx->mode == Parser::MODE_ANALYTICS_DEFERRED) {
         ctx->initialized = 1;
     }
 
