@@ -1,5 +1,30 @@
 # Release Notes
 
+## 2.10.1 (November 22 2018)
+
+* [CCBC-997](https://issues.couchbase.com/browse/CCBC-997): Extract analytics
+  queries into separate file, and expose new API as set of `lcb_analytics_*`
+  functions.
+
+* [CCBC-992](https://issues.couchbase.com/browse/CCBC-992): KV ingest mode for
+  analytics. Ingestion mode a way to funnel analytics results back into the KV
+  layer through mutation.
+
+* [CCBC-991](https://issues.couchbase.com/browse/CCBC-991): Analytics Deferred
+  Queries. Deferred queries allow to decouple the execution of an analytics
+  query from actually fetching the results. This is very important for queries
+  that take a long time to complete.
+
+* [CCBC-1004](https://issues.couchbase.com/browse/CCBC-1004): Fix request
+  counting for CAS-observe. Incorrect mapping server indexes during scheduling
+  observe requests might lead to crashes on multi-node clusters.
+
+* [CCBC-1005](https://issues.couchbase.com/browse/CCBC-1005): `select(2)`-based
+  IO plugin: always use expiration when using `lcb_tick_nowait` function to
+  avoid waiting for IO events.
+
+* Updates in testing infrastructure
+
 ## 2.10.0 (October 18 2018)
 
 * [CCBC-982](https://issues.couchbase.com/browse/CCBC-982): Support analytics
