@@ -1,5 +1,10 @@
 # Release Notes
 
+## 2.10.2 (November 23 2018)
+
+* Fixed incorrect header-guard for analytics.h, which might affect API
+  visibility (when included before `libcouchbase/n1ql.h`)
+
 ## 2.10.1 (November 22 2018)
 
 * [CCBC-997](https://issues.couchbase.com/browse/CCBC-997): Extract analytics
