@@ -15,10 +15,9 @@
  *   limitations under the License.
  **/
 
-#ifndef LCB_N1QL_API_H
-#define LCB_N1QL_API_H
+#ifndef LCB_ANALYTICS_API_H
+#define LCB_ANALYTICS_API_H
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/n1ql.h>
 
 #ifdef __cplusplus
 extern "C" {
