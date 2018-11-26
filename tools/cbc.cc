@@ -41,7 +41,7 @@ string getRespKey(const lcb_RESPBASE* resp)
 static void
 printKeyError(string& key, int cbtype, const lcb_RESPBASE *resp, const char *additional = NULL)
 {
-    fprintf(stderr, "%-20s %s (0x%x)\n", key.c_str(), lcb_strerror(NULL, resp->rc), resp->rc);
+    fprintf(stderr, "%-20s %s\n", key.c_str(), lcb_strerror_short(resp->rc));
     const char *ctx = lcb_resp_get_error_context(cbtype, resp);
     if (ctx != NULL) {
         fprintf(stderr, "%-20s %s\n", "", ctx);
@@ -182,7 +182,7 @@ obseqno_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPOBSEQNO *resp)
     int ix = resp->server_index;
     if (resp->rc != LCB_SUCCESS) {
         fprintf(stderr,
-            "[%d] ERROR 0x%X (%s)\n", ix, resp->rc, lcb_strerror(NULL, resp->rc));
+            "[%d] ERROR %s\n", ix, lcb_strerror_long(resp->rc));
         return;
     }
     lcb_U64 uuid, seq_disk, seq_mem;
@@ -208,7 +208,7 @@ static void
 stats_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
 {
     if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR 0x%02X (%s)\n", resp->rc, lcb_strerror(NULL, resp->rc));
+        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->rc));
         return;
     }
     if (resp->server == NULL || resp->key == NULL) {
@@ -241,7 +241,7 @@ static void
 watch_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
 {
     if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR 0x%02X (%s)\n", resp->rc, lcb_strerror(NULL, resp->rc));
+        fprintf(stderr, "ERROR %s\n", lcb_strerror_long(resp->rc));
         return;
     }
     if (resp->server == NULL || resp->key == NULL) {
@@ -284,7 +284,7 @@ common_server_callback(lcb_t, int cbtype, const lcb_RESPSERVERBASE *sbase)
     }
     if (sbase->rc != LCB_SUCCESS) {
         fprintf(stderr, "%s failed for server %s: %s\n", msg.c_str(), sbase->server,
-            lcb_strerror(NULL, sbase->rc));
+            lcb_strerror_short(sbase->rc));
     } else {
         fprintf(stderr, "%s: %s\n", msg.c_str(), sbase->server);
     }
@@ -294,7 +294,7 @@ static void
 ping_callback(lcb_t, int, const lcb_RESPPING *resp)
 {
     if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr, "failed: %s\n", lcb_strerror(NULL, resp->rc));
+        fprintf(stderr, "failed: %s\n", lcb_strerror_short(resp->rc));
     } else {
         if (resp->njson) {
             printf("%.*s", (int)resp->njson, resp->json);
@@ -336,8 +336,8 @@ view_callback(lcb_t, int, const lcb_RESPVIEWQUERY *resp)
     }
 
     if (resp->rc != LCB_SUCCESS) {
-        fprintf(stderr, "View query failed: 0x%x (%s)\n",
-            resp->rc, lcb_strerror(NULL, resp->rc));
+        fprintf(stderr, "View query failed: %s\n",
+            lcb_strerror_short(resp->rc));
 
         if (resp->rc == LCB_HTTP_ERROR) {
             if (resp->htresp != NULL) {
@@ -1106,8 +1106,7 @@ static void cbFlushCb(lcb_t, int, const lcb_RESPBASE *resp)
     if (resp->rc == LCB_SUCCESS) {
         fprintf(stderr, "Flush OK\n");
     } else {
-        fprintf(stderr, "Flush failed: %s (0x%x)\n",
-            lcb_strerror(NULL, resp->rc), resp->rc);
+        fprintf(stderr, "Flush failed: %s\n", lcb_strerror_short(resp->rc));
     }
 }
 }
@@ -1211,10 +1210,10 @@ static void n1qlCallback(lcb_t, int, const lcb_RESPN1QL *resp)
     if (resp->rflags & LCB_RESP_F_FINAL) {
         fprintf(stderr, "---> Query response finished\n");
         if (resp->rc != LCB_SUCCESS) {
-            fprintf(stderr, "---> Query failed with library code 0x%x (%s)\n", resp->rc, lcb_strerror(NULL, resp->rc));
+            fprintf(stderr, "---> Query failed with library code %s\n", lcb_strerror_short(resp->rc));
             if (resp->htresp) {
-                fprintf(stderr, "---> Inner HTTP request failed with library code 0x%x and HTTP status %d\n",
-                    resp->htresp->rc, resp->htresp->htstatus);
+                fprintf(stderr, "---> Inner HTTP request failed with library code %s and HTTP status %d\n",
+                    lcb_strerror_short(resp->htresp->rc), resp->htresp->htstatus);
             }
         }
         if (resp->row) {
@@ -1382,7 +1381,7 @@ void
 HttpBaseHandler::handleStatus(lcb_error_t err, int code)
 {
     if (err != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR=0x%x (%s) ", err, lcb_strerror(NULL, err));
+        fprintf(stderr, "ERROR: %s ", err, lcb_strerror_short(err));
     }
     fprintf(stderr, "%d\n", code);
     map<string,string>::const_iterator ii = headers.begin();
@@ -1753,7 +1752,7 @@ protected:
         #undef X
 
         fprintf(stderr, "-- Error code not found in header. Trying runtime..\n");
-        fprintf(stderr, "0x%x: %s\n", errcode, lcb_strerror(NULL, (lcb_error_t)errcode));
+        fprintf(stderr, "%s\n", lcb_strerror_long((lcb_error_t)errcode));
     }
 };
 

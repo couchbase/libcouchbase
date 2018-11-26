@@ -50,7 +50,7 @@ void subdoc_callback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
     if (rb->rc == LCB_SUCCESS || rb->rc == LCB_SUBDOC_MULTI_FAILURE) {
         fprintf(stderr, "%-20s CAS=0x%" PRIx64 "\n", key.c_str(), resp->cas);
     } else {
-        fprintf(stderr, "%-20s %s (0x%x)\n", key.c_str(), lcb_strerror(NULL, rb->rc), rb->rc);
+        fprintf(stderr, "%-20s %s\n", key.c_str(), lcb_strerror_short(rb->rc));
         const char *ctx = lcb_resp_get_error_context(cbtype, rb);
         if (ctx != NULL) {
             fprintf(stderr, "%-20s %s\n", "", ctx);
@@ -67,8 +67,8 @@ void subdoc_callback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
         if (cbtype == LCB_CALLBACK_SDMUTATE) {
             index = cur.index;
         }
-        printf("%d. Size=%lu, RC=0x%02x %s\n", index, (unsigned long)cur.nvalue, cur.status,
-               lcb_strerror(NULL, cur.status));
+        printf("%d. Size=%lu, RC=%s\n", index, (unsigned long)cur.nvalue,
+               lcb_strerror_short(cur.status));
         fflush(stdout);
         if (cur.nvalue > 0) {
             fwrite(cur.value, 1, cur.nvalue, stdout);
@@ -91,7 +91,7 @@ static void do_or_die(lcb_error_t rc, std::string msg = "")
         if (!msg.empty()) {
             ss << msg << ". ";
         }
-        ss << "(0x" << std::hex << rc << ") " << lcb_strerror(NULL, rc);
+        ss << "(0x" << std::hex << rc << ") " << lcb_strerror_short(rc);
         throw std::runtime_error(ss.str());
     }
 }
