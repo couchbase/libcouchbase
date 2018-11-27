@@ -549,7 +549,7 @@ get_sendqe(nb_SENDQ* sq, const nb_IOV *bufinfo)
 }
 
 void
-netbuf_enqueue(nb_MGR *mgr, const nb_IOV *bufinfo)
+netbuf_enqueue(nb_MGR *mgr, const nb_IOV *bufinfo, const void *parent)
 {
     nb_SENDQ *q = &mgr->sendq;
     nb_SNDQELEM *win;
@@ -568,15 +568,16 @@ netbuf_enqueue(nb_MGR *mgr, const nb_IOV *bufinfo)
             sllist_append(&q->pending, &win->slnode);
         }
     }
+    win->parent = parent;
 }
 
 void
-netbuf_enqueue_span(nb_MGR *mgr, nb_SPAN *span)
+netbuf_enqueue_span(nb_MGR *mgr, nb_SPAN *span, const void *parent)
 {
     nb_IOV spinfo;
     spinfo.iov_base = SPAN_BUFFER(span);
     spinfo.iov_len = span->size;
-    netbuf_enqueue(mgr, &spinfo);
+    netbuf_enqueue(mgr, &spinfo, parent);
 }
 
 nb_SIZE

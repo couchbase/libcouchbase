@@ -29,6 +29,7 @@
 #include <sstream>
 #include "common/options.h"
 #include "common/histogram.h"
+#include <libcouchbase/metrics.h>
 
 #include "linenoise/linenoise.h"
 
@@ -67,8 +68,7 @@ void subdoc_callback(lcb_t, int cbtype, const lcb_RESPBASE *rb)
         if (cbtype == LCB_CALLBACK_SDMUTATE) {
             index = cur.index;
         }
-        printf("%d. Size=%lu, RC=%s\n", index, (unsigned long)cur.nvalue,
-               lcb_strerror_short(cur.status));
+        printf("%d. Size=%lu, RC=%s\n", index, (unsigned long)cur.nvalue, lcb_strerror_short(cur.status));
         fflush(stdout);
         if (cur.nvalue > 0) {
             fwrite(cur.value, 1, cur.nvalue, stdout);
@@ -91,7 +91,7 @@ static void do_or_die(lcb_error_t rc, std::string msg = "")
         if (!msg.empty()) {
             ss << msg << ". ";
         }
-        ss << "(0x" << std::hex << rc << ") " << lcb_strerror_short(rc);
+        ss << lcb_strerror_short(rc);
         throw std::runtime_error(ss.str());
     }
 }
@@ -143,6 +143,7 @@ class Configuration
 static Configuration config;
 
 static const char *handlers_sorted[] = {"help",
+                                        "dump",
                                         "get",
                                         "set",
                                         "exists",
@@ -686,11 +687,44 @@ class HelpHandler : public Handler
         }
     }
 };
-}
+
+class DumpHandler : public Handler
+{
+  public:
+    HANDLER_DESCRIPTION("Dump metrics and internal state of library")
+    DumpHandler() : Handler("dump") {}
+
+  protected:
+    void run()
+    {
+        lcb_METRICS *metrics = NULL;
+        size_t ii;
+
+        lcb_dump(instance, stderr, LCB_DUMP_ALL);
+        lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_METRICS, &metrics);
+
+        if (metrics) {
+            fprintf(stderr, "%p: nsrv: %d, retried: %lu\n", (void *)instance, (int)metrics->nservers,
+                    (unsigned long)metrics->packets_retried);
+            for (ii = 0; ii < metrics->nservers; ii++) {
+                fprintf(stderr, "  [srv-%d] snt: %lu, rcv: %lu, q: %lu, err: %lu, tmo: %lu, nmv: %lu, orph: %lu\n",
+                        (int)ii, (unsigned long)metrics->servers[ii]->packets_sent,
+                        (unsigned long)metrics->servers[ii]->packets_read,
+                        (unsigned long)metrics->servers[ii]->packets_queued,
+                        (unsigned long)metrics->servers[ii]->packets_errored,
+                        (unsigned long)metrics->servers[ii]->packets_timeout,
+                        (unsigned long)metrics->servers[ii]->packets_nmv,
+                        (unsigned long)metrics->servers[ii]->packets_ownerless);
+            }
+        }
+    }
+};
+} // namespace subdoc
 
 static void setupHandlers()
 {
     handlers["help"] = new subdoc::HelpHandler();
+    handlers["dump"] = new subdoc::DumpHandler();
     handlers["get"] = new subdoc::LookupHandler("get", LCB_SDCMD_GET, "Retrieve path from the item on the server");
     handlers["exists"] =
         new subdoc::LookupHandler("exists", LCB_SDCMD_EXISTS, "Check if path exists in the item on the server");
@@ -770,6 +804,10 @@ static void real_main(int argc, char **argv)
     do_or_die(lcb_get_bootstrap_status(instance), "Failed to bootstrap");
     if (config.useTimings()) {
         hg.install(instance, stdout);
+    }
+    {
+        int activate = 1;
+        lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_METRICS, &activate);
     }
     setupHandlers();
     std::atexit(cleanup);

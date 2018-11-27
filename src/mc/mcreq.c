@@ -205,7 +205,7 @@ mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
 {
     nb_SPAN *vspan = &packet->u_value.single;
     sllist_append(&pipeline->requests, &packet->slnode);
-    netbuf_enqueue_span(&pipeline->nbmgr, &packet->kh_span);
+    netbuf_enqueue_span(&pipeline->nbmgr, &packet->kh_span, packet);
     MC_INCR_METRIC(pipeline, bytes_queued, packet->kh_span.size);
 
     if (!(packet->flags & MCREQ_F_HASVALUE)) {
@@ -216,13 +216,13 @@ mcreq_enqueue_packet(mc_PIPELINE *pipeline, mc_PACKET *packet)
         unsigned int ii;
         lcb_FRAGBUF *multi = &packet->u_value.multi;
         for (ii = 0; ii < multi->niov; ii++) {
-            netbuf_enqueue(&pipeline->nbmgr, (nb_IOV *)multi->iov + ii);
+            netbuf_enqueue(&pipeline->nbmgr, (nb_IOV *)multi->iov + ii, packet);
             MC_INCR_METRIC(pipeline, bytes_queued, multi->iov[ii].iov_len);
         }
 
     } else if (vspan->size) {
         MC_INCR_METRIC(pipeline, bytes_queued, vspan->size);
-        netbuf_enqueue_span(&pipeline->nbmgr, vspan);
+        netbuf_enqueue_span(&pipeline->nbmgr, vspan, packet);
     }
 
     GT_ENQUEUE_PDU:
