@@ -1,3 +1,5 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+
 #ifndef _WIN32
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -71,19 +73,25 @@ parse_option(struct cliopts_priv *ctx, const char *key);
 static int
 parse_value(struct cliopts_priv *ctx, const char *value);
 
+static void ensure_list_capacity(cliopts_list *l)
+{
+    if (l->nvalues == l->nalloc) {
+        if (l->nalloc == 0) {
+            l->nalloc = 2;
+            l->values = malloc(l->nalloc * sizeof(*l->values));
+        } else {
+            l->nalloc *= 1.5;
+            l->values = realloc(l->values, sizeof(*l->values) * l->nalloc);
+        }
+    }
+}
+
 static void
 add_list_value(const char *src, size_t nsrc, cliopts_list *l)
 {
     char *cp = malloc(nsrc + 1);
 
-    if (!l->nalloc) {
-        l->nalloc = 2;
-        l->values = malloc(l->nalloc * sizeof(*l->values));
-    } else {
-        l->nalloc *= 1.5;
-        l->values = realloc(l->values, sizeof(*l->values) * l->nalloc);
-    }
-
+    ensure_list_capacity(l);
     l->values[l->nvalues++] = cp;
     cp[nsrc] = '\0';
     memcpy(cp, src, nsrc);
@@ -101,6 +109,21 @@ cliopts_list_clear(cliopts_list *l)
     l->values = NULL;
     l->nvalues = 0;
     l->nalloc = 0;
+}
+
+static void ensure_pair_list_capacity(cliopts_pair_list *l)
+{
+    if (l->nvalues == l->nalloc) {
+        if (l->nalloc == 0) {
+            l->nalloc = 2;
+            l->keys = malloc(l->nalloc * sizeof(*l->keys));
+            l->values = malloc(l->nalloc * sizeof(*l->values));
+        } else {
+            l->nalloc *= 1.5;
+            l->keys = realloc(l->keys, sizeof(*l->keys) * l->nalloc);
+            l->values = realloc(l->values, sizeof(*l->values) * l->nalloc);
+        }
+    }
 }
 
 static void
@@ -131,15 +154,7 @@ add_pair_list_value(const char *src, size_t nsrc, cliopts_pair_list *l)
         val[nval] = '\0';
     }
 
-    if (!l->nalloc) {
-        l->nalloc = 2;
-        l->keys = malloc(l->nalloc * sizeof(*l->keys));
-        l->values = malloc(l->nalloc * sizeof(*l->values));
-    } else {
-        l->nalloc *= 1.5;
-        l->keys = realloc(l->keys, sizeof(*l->keys) * l->nalloc);
-        l->values = realloc(l->values, sizeof(*l->values) * l->nalloc);
-    }
+    ensure_pair_list_capacity(l);
 
     l->keys[l->nvalues] = key;
     l->values[l->nvalues] = val;
