@@ -1,3 +1,20 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2011-2018 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #define NOMINMAX
 #include <map>
 #include <sstream>
@@ -1061,6 +1078,50 @@ McVersionHandler::run()
 }
 
 void
+KeygenHandler::run()
+{
+    Handler::run();
+
+    lcbvb_CONFIG *vbc;
+    lcb_error_t err;
+    err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
+    if (err != LCB_SUCCESS) {
+        throw LcbError(err);
+    }
+
+    unsigned num_vbuckets = lcbvb_get_nvbuckets(vbc);
+    if (num_vbuckets == 0) {
+        throw LcbError(LCB_EINVAL, "the configuration does not contain any vBuckets");
+    }
+    unsigned num_keys_per_vbucket = o_keys_per_vbucket.result();
+    vector < vector < string > > keys(num_vbuckets);
+#define MAX_KEY_SIZE 16
+    char buf[MAX_KEY_SIZE] = {0};
+    unsigned i = 0;
+    int left = num_keys_per_vbucket * num_vbuckets;
+    while (left > 0 && i < UINT_MAX) {
+        int nbuf = snprintf(buf, MAX_KEY_SIZE, "key_%010u", i++);
+        if (nbuf <= 0) {
+            throw LcbError(LCB_ERROR, "unable to render new key into buffer");
+        }
+        int vbid, srvix;
+        lcbvb_map_key(vbc, buf, nbuf, &vbid, &srvix);
+        if (keys[vbid].size() < num_keys_per_vbucket) {
+            keys[vbid].push_back(buf);
+            left--;
+        }
+    }
+    for (i = 0; i < num_vbuckets; i++) {
+        for (vector<string>::iterator it = keys[i].begin(); it != keys[i].end(); ++it) {
+            printf("%s %u\n", it->c_str(), i);
+        }
+    }
+    if (left > 0) {
+        fprintf(stderr, "some vBuckets don't have enough keys\n");
+    }
+}
+
+void
 PingHandler::run()
 {
     Handler::run();
@@ -1381,7 +1442,7 @@ void
 HttpBaseHandler::handleStatus(lcb_error_t err, int code)
 {
     if (err != LCB_SUCCESS) {
-        fprintf(stderr, "ERROR: %s ", err, lcb_strerror_short(err));
+        fprintf(stderr, "ERROR: %s ", lcb_strerror_short(err));
     }
     fprintf(stderr, "%d\n", code);
     map<string,string>::const_iterator ii = headers.begin();
@@ -1702,6 +1763,7 @@ static const char* optionsOrder[] = {
         "strerror",
         "ping",
         "watch",
+        "keygen",
         NULL
 };
 
@@ -1792,6 +1854,7 @@ setupHandlers()
     handlers_s["user-upsert"] = new UserUpsertHandler();
     handlers_s["user-delete"] = new UserDeleteHandler();
     handlers_s["mcversion"] = new McVersionHandler();
+    handlers_s["keygen"] = new KeygenHandler();
 
     map<string,Handler*>::iterator ii;
     for (ii = handlers_s.begin(); ii != handlers_s.end(); ++ii) {
