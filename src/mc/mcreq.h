@@ -692,7 +692,7 @@ mcreq_map_key(mc_CMDQUEUE *queue,
 lcb_error_t
 mcreq_basic_packet(
         mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd,
-        protocol_binary_request_header *req, uint8_t extlen,
+        protocol_binary_request_header *req, uint8_t extlen, uint8_t ffextlen,
         mc_PACKET **packet, mc_PIPELINE **pipeline, int options);
 
 /**

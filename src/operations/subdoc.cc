@@ -451,10 +451,20 @@ sd3_single(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     protocol_binary_request_header hdr = {{0}};
     mc_PACKET *packet;
     mc_PIPELINE *pipeline;
+    int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
+    lcb_U8 ffextlen = 0;
 
+    if (cmd->dur_level) {
+        if (new_durability_supported) {
+            hdr.request.magic = PROTOCOL_BINARY_AREQ;
+            ffextlen = 4;
+        } else {
+            return LCB_NOT_SUPPORTED;
+        }
+    }
     rc = mcreq_basic_packet(&instance->cmdq,
         (const lcb_CMDBASE*)cmd,
-        &hdr, extlen, &packet, &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
+        &hdr, extlen, ffextlen, &packet, &pipeline, MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (rc != LCB_SUCCESS) {
         return rc;
@@ -476,12 +486,19 @@ sd3_single(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     hdr.request.opaque = packet->opaque;
     hdr.request.opcode = traits.opcode;
     hdr.request.cas = lcb_htonll(cmd->cas);
-    hdr.request.bodylen = htonl(hdr.request.extlen +
+    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + 
         ntohs(hdr.request.keylen) + get_value_size(packet));
 
     memcpy(SPAN_BUFFER(&packet->kh_span), hdr.bytes, sizeof hdr.bytes);
-
-    char *extras = SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE;
+    if (cmd->dur_level && new_durability_supported) {
+        uint8_t meta = (1 << 4) | 3;
+        uint8_t level = cmd->dur_level;
+        uint16_t timeout = htons(cmd->dur_timeout);
+        memcpy(SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE, &meta, sizeof(meta));
+        memcpy(SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE + 1, &level, sizeof(level));
+        memcpy(SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE + 2, &timeout, sizeof(timeout));
+    }
+    char *extras = SPAN_BUFFER(&packet->kh_span) + MCREQ_PKT_BASESIZE + ffextlen;
     // Path length:
     uint16_t enc_pathlen = htons(spec->path.contig.nbytes);
     memcpy(extras, &enc_pathlen, 2);
@@ -560,6 +577,18 @@ lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     }
 
     protocol_binary_request_header hdr;
+    int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
+    lcb_U8 ffextlen = 0;
+
+    hdr.request.magic = PROTOCOL_BINARY_REQ;
+    if (cmd->dur_level) {
+        if (new_durability_supported) {
+            hdr.request.magic = PROTOCOL_BINARY_AREQ;
+            ffextlen = 4;
+        } else {
+            return LCB_NOT_SUPPORTED;
+        }
+    }
 
     if (cmd->error_index) {
         *cmd->error_index = -1;
@@ -567,7 +596,7 @@ lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
 
     rc = mcreq_basic_packet(
         &instance->cmdq, reinterpret_cast<const lcb_CMDBASE*>(cmd),
-        &hdr, extlen, &pkt, &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
+        &hdr, extlen, ffextlen, &pkt, &pl, MCREQ_BASICPACKET_F_FALLBACKOK);
 
     if (rc != LCB_SUCCESS) {
         return rc;
@@ -586,7 +615,6 @@ lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     }
 
     // Set the header fields.
-    hdr.request.magic = PROTOCOL_BINARY_REQ;
     if (ctx.is_lookup()) {
         hdr.request.opcode = PROTOCOL_BINARY_CMD_SUBDOC_MULTI_LOOKUP;
     } else {
@@ -596,15 +624,23 @@ lcb_subdoc3(lcb_t instance, const void *cookie, const lcb_CMDSUBDOC *cmd)
     hdr.request.extlen = pkt->extlen;
     hdr.request.opaque = pkt->opaque;
     hdr.request.cas = lcb_htonll(cmd->cas);
-    hdr.request.bodylen = htonl(hdr.request.extlen +
+    hdr.request.bodylen = htonl(hdr.request.extlen + ffextlen + 
         ntohs(hdr.request.keylen) + ctx.payload_size);
-    memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof hdr.bytes);
+    memcpy(SPAN_BUFFER(&pkt->kh_span), hdr.bytes, sizeof(hdr.bytes));
+    if (cmd->dur_level && new_durability_supported) {
+        uint8_t meta = (1 << 4) | 3;
+        uint8_t level = cmd->dur_level;
+        uint16_t timeout = htons(cmd->dur_timeout);
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE, &meta, sizeof(meta));
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + 1, &level, sizeof(level));
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + 2, &timeout, sizeof(timeout));
+    }
     if (expiry) {
         expiry = htonl(expiry);
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + 24, &expiry, 4);
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + ffextlen, &expiry, 4);
     }
     if (docflags) {
-        memcpy(SPAN_BUFFER(&pkt->kh_span) + 24 + (extlen -1), &docflags, 1);
+        memcpy(SPAN_BUFFER(&pkt->kh_span) + MCREQ_PKT_BASESIZE + ffextlen + (extlen -1), &docflags, 1);
     }
 
     MCREQ_PKT_RDATA(pkt)->cookie = cookie;

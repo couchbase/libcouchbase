@@ -31,23 +31,34 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
     lcb_uint8_t opcode = PROTOCOL_BINARY_CMD_GET;
     protocol_binary_request_gat gcmd;
     protocol_binary_request_header *hdr = &gcmd.message.header;
+    int new_durability_supported = LCBT_SUPPORT_SYNCREPLICATION(instance);
+    lcb_U8 ffextlen = 0;
 
     if (LCB_KEYBUF_IS_EMPTY(&cmd->key)) {
         return LCB_EMPTY_KEY;
     }
-    if (cmd->cas) {
+    if (cmd->cas || (cmd->dur_level && !cmd->exptime && !cmd->lock)) {
         return LCB_OPTIONS_CONFLICT;
     }
 
+    hdr->request.magic = PROTOCOL_BINARY_REQ;
     if (cmd->lock) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GET_LOCKED;
     } else if (cmd->exptime || (cmd->cmdflags & LCB_CMDGET_F_CLEAREXP)) {
         extlen = 4;
         opcode = PROTOCOL_BINARY_CMD_GAT;
+        if (cmd->dur_level) {
+            if (new_durability_supported) {
+                hdr->request.magic = PROTOCOL_BINARY_AREQ;
+                ffextlen = 4;
+            } else {
+                return LCB_NOT_SUPPORTED;
+            }
+        }
     }
 
-    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, extlen, &pkt, &pl,
+    err = mcreq_basic_packet(q, (const lcb_CMDBASE *)cmd, hdr, extlen, ffextlen, &pkt, &pl,
         MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;
@@ -57,22 +68,28 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
     rdata->cookie = cookie;
     rdata->start = gethrtime();
 
-    hdr->request.magic = PROTOCOL_BINARY_REQ;
     hdr->request.opcode = opcode;
     hdr->request.datatype = PROTOCOL_BINARY_RAW_BYTES;
-    hdr->request.bodylen = htonl(extlen + ntohs(hdr->request.keylen));
+    hdr->request.bodylen = htonl(extlen + ntohs(hdr->request.keylen) + ffextlen);
     hdr->request.opaque = pkt->opaque;
     hdr->request.cas = 0;
 
     if (extlen) {
-        gcmd.message.body.expiration = htonl(cmd->exptime);
+        if (cmd->dur_level && new_durability_supported) {
+            gcmd.message.body.alt.meta = (1 << 4) | 3;
+            gcmd.message.body.alt.level = cmd->dur_level;
+            gcmd.message.body.alt.timeout = htons(cmd->dur_timeout);
+            gcmd.message.body.alt.expiration = htonl(cmd->exptime);
+        } else {
+            gcmd.message.body.norm.expiration = htonl(cmd->exptime);
+        }
     }
 
     if (cmd->cmdflags & LCB_CMD_F_INTERNAL_CALLBACK) {
         pkt->flags |= MCREQ_F_PRIVCALLBACK;
     }
 
-    memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen);
+    memcpy(SPAN_BUFFER(&pkt->kh_span), gcmd.bytes, MCREQ_PKT_BASESIZE + extlen + ffextlen);
     LCB_SCHED_ADD(instance, pl, pkt);
     LCBTRACE_KV_START(instance->settings, cmd, LCBTRACE_OP_GET, pkt->opaque, rdata->span);
     TRACE_GET_BEGIN(instance, hdr, cmd);
@@ -127,7 +144,7 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
         return LCB_EMPTY_KEY;
     }
 
-    err = mcreq_basic_packet(cq, cmd, &hdr, 0, &pkt, &pl,
+    err = mcreq_basic_packet(cq, cmd, &hdr, 0, 0, &pkt, &pl,
         MCREQ_BASICPACKET_F_FALLBACKOK);
     if (err != LCB_SUCCESS) {
         return err;

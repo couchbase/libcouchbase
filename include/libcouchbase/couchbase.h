@@ -532,6 +532,43 @@ lcb_set_auth(lcb_t instance, lcb_AUTHENTICATOR *auth);
     /** \volatile */ \
     lcb_KEYBUF _hashkey
 
+/**
+ * @uncommitted
+ * Durability levels
+ */
+typedef enum {
+    LCB_DURABILITYLEVEL_NONE = 0x00,
+    /**
+     * Mutation must be replicated to (i.e. held in memory of that node) a
+     * majority ((configured_nodes / 2) + 1) of the configured nodes of the
+     * bucket.
+    */
+    LCB_DURABILITYLEVEL_MAJORITY = 0x01,
+    /**
+     * As majority, but additionally persisted to the active node.
+     */
+    LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_ON_MASTER = 0x02,
+    /**
+     * Mutation must be persisted to (i.e. written and fsync'd to disk) a
+     * majority of the configured nodes of the bucket.
+     */
+    LCB_DURABILITYLEVEL_PERSIST_TO_MAJORITY = 0x03
+} lcb_DURABILITYLEVEL;
+
+#define LCB_CMD_DURABILITY \
+    /** \
+     * @uncommitted
+     * The level of durability required. Supported on Couchbase Server 6.5+
+     */ \
+    lcb_DURABILITYLEVEL dur_level; \
+    /**
+     * @uncommitted
+     * The time in milliseconds the durability must be met within, otherwise
+     * the SyncWrite request is aborted. If not specified then a server-defined
+     * default is used.
+     */ \
+    lcb_U32 dur_timeout
+
 /**@brief Common ABI header for all commands. _Any_ command may be safely
  * casted to this type.*/
 typedef struct lcb_CMDBASE {
@@ -867,6 +904,8 @@ typedef struct {
      * operation with a supplied CAS
      */
     int lock;
+    /** only for get with touch (when expiration set and lock is false) */
+    LCB_CMD_DURABILITY;
 } lcb_CMDGET;
 
 /** @brief Response structure when retrieving a single item */
@@ -1098,6 +1137,7 @@ typedef enum {
     LCB_PREPEND = 0x05
 } lcb_storage_t;
 
+
 /**@brief
  *
  * Command for storing an item to the server. This command must contain the
@@ -1132,6 +1172,8 @@ typedef struct {
      * field.
      */
     lcb_storage_t operation;
+
+    LCB_CMD_DURABILITY;
 } lcb_CMDSTORE;
 
 /**
@@ -1257,7 +1299,10 @@ lcb_store3(lcb_t instance, const void *cookie, const lcb_CMDSTORE *cmd);
  * ensure the item is removed only if it has not been mutated since the last
  * retrieval
  */
-typedef lcb_CMDBASE lcb_CMDREMOVE;
+typedef struct {
+    LCB_CMD_BASE;
+    LCB_CMD_DURABILITY;
+} lcb_CMDREMOVE;
 
 /**@brief
  * Response structure for removal operation. The lcb_RESPREMOVE::cas  field
@@ -1720,7 +1765,7 @@ typedef struct {
 } lcb_CMDSTOREDUR;
 
 /**
- * Response structure for `LCB_CALLBACK_STOREDUR.
+ * Response structure for `LCB_CALLBACK_STOREDUR`.
  */
 typedef struct {
     LCB_RESP_BASE
@@ -1779,6 +1824,7 @@ LIBCOUCHBASE_API
 lcb_error_t
 lcb_durability_validate(lcb_t instance,
     lcb_U16 *persist_to, lcb_U16 *replicate_to, int options);
+
 /**@} (NAME) */
 
 
@@ -2061,6 +2107,8 @@ typedef struct {
     /**Boolean value. Create the item and set it to `initial` if it does not
      * already exist */
     int create;
+
+    LCB_CMD_DURABILITY;
 } lcb_CMDCOUNTER;
 
 /**
@@ -2194,7 +2242,11 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd);
  * The #exptime field is always used. If 0 then the expiry on the server is
  * cleared.
  */
-typedef lcb_CMDBASE lcb_CMDTOUCH;
+typedef struct {
+    LCB_CMD_BASE;
+    LCB_CMD_DURABILITY;
+} lcb_CMDTOUCH;
+
 
 /**@brief Response structure for a touch request
  * @note the lcb_RESPTOUCH::cas field contains the current CAS of the item*/

@@ -278,6 +278,8 @@ typedef struct {
      * derived from the _first_ command issued.
      */
     lcb_U32 multimode;
+
+    LCB_CMD_DURABILITY;
 } lcb_CMDSUBDOC;
 
 /**

@@ -110,7 +110,7 @@ TEST_F(McAlloc, testKeyAlloc)
     cmd.key.contig.nbytes = 5;
 
     lcb_error_t ret;
-    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
     ASSERT_TRUE(packet != NULL);
     ASSERT_TRUE(pipeline != NULL);
@@ -159,7 +159,7 @@ TEST_F(McAlloc, testValueAlloc)
     vreq.u_buf.contig.bytes = const_cast<char *>(value);
     vreq.u_buf.contig.nbytes = 5;
 
-    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
     ASSERT_EQ(ret, LCB_SUCCESS);
@@ -171,7 +171,7 @@ TEST_F(McAlloc, testValueAlloc)
     mcreq_release_packet(pipeline, packet);
 
     // Allocate another packet, but this time, use our own reserved value
-    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(ret, LCB_SUCCESS);
     vreq.vtype = LCB_KV_CONTIG;
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
@@ -190,7 +190,7 @@ TEST_F(McAlloc, testValueAlloc)
     vreq.u_buf.multi.iov = (lcb_IOV *)iov;
     vreq.u_buf.multi.niov = 2;
     vreq.vtype = LCB_KV_IOV;
-    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
     ASSERT_EQ(LCB_SUCCESS, ret);
@@ -211,7 +211,7 @@ TEST_F(McAlloc, testValueAlloc)
     vreq.u_buf.multi.total_length = 0;
 
     vreq.vtype = LCB_KV_IOVCOPY;
-    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, &packet, &pipeline, 0);
+    ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
 
     ret = mcreq_reserve_value(pipeline, packet, &vreq);
@@ -257,7 +257,7 @@ TEST_F(McAlloc, testRdataExDtor)
         lcb_error_t err;
         mc_PIPELINE *pl;
         mc_PACKET *pkt;
-        err = mcreq_basic_packet(&q, &basecmd, &hdr, 0, &pkt, &pl, 0);
+        err = mcreq_basic_packet(&q, &basecmd, &hdr, 0, 0, &pkt, &pl, 0);
         ASSERT_EQ(LCB_SUCCESS, err);
         pkt->flags |= MCREQ_F_REQEXT;
         pkt->u_rdata.exdata = &ec;

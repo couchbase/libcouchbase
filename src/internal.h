@@ -196,6 +196,13 @@ struct lcb_st {
 #define LCBT_SETTING(instance, name) (instance)->settings->name
 #define LCBT_SETTING_SVCMODE(instance) (((instance)->settings->sslopts & LCB_SSL_ENABLED) ? LCBVB_SVCMODE_SSL : LCBVB_SVCMODE_PLAIN)
 
+/* FIXME: add something like:
+ *
+ *    LCBVB_CAPS(LCBT_VBCONFIG(instance)) & LCBVB_CAP_SYNCREPLICATION
+ */
+#define LCBT_SUPPORT_SYNCREPLICATION(instance) LCBT_SETTING(instance, synchronous_replication)
+
+
 void lcb_initialize_packet_handlers(lcb_t instance);
 
 LCB_INTERNAL_API

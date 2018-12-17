@@ -128,6 +128,10 @@ public:
         return collsupport;
     }
 
+    bool supports_new_durability() const {
+        return new_durability;
+    }
+
     bool is_connected() const {
         return connctx != NULL;
     }
@@ -225,6 +229,9 @@ public:
     short mutation_tokens;
 
     short collsupport;
+
+    /** Whether new durability is supported */
+    short new_durability;
 
     lcbio_CTX *connctx;
     lcb::io::ConnectionRequest *connreq;

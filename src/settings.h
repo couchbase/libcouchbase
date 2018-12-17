@@ -193,6 +193,7 @@ typedef struct lcb_settings_st {
     /** Do not wait for GET_CLUSTER_CONFIG request to finish in lcb_wait(),
      * when it is the only request in retry queue */
     unsigned wait_for_config : 1;
+    unsigned synchronous_replication : 1;
 
     short max_redir;
     unsigned refcount;

@@ -110,7 +110,7 @@ struct PacketWrap {
 
     bool reservePacket(mc_CMDQUEUE *cq) {
         lcb_error_t err;
-        err = mcreq_basic_packet(cq, &cmd, &hdr, 0, &pkt, &pipeline, 0);
+        err = mcreq_basic_packet(cq, &cmd, &hdr, 0, 0, &pkt, &pipeline, 0);
         return err == LCB_SUCCESS;
     }
 

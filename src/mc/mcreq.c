@@ -493,10 +493,11 @@ mcreq_map_key(mc_CMDQUEUE *queue,
 lcb_error_t
 mcreq_basic_packet(
         mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd,
-        protocol_binary_request_header *req, lcb_uint8_t extlen,
+        protocol_binary_request_header *req, lcb_uint8_t extlen, lcb_uint8_t ffextlen,
         mc_PACKET **packet, mc_PIPELINE **pipeline, int options)
 {
     int vb, srvix;
+    uint16_t nkey;
 
     if (!queue->config) {
         return LCB_CLIENT_ETMPFAIL;
@@ -506,7 +507,7 @@ mcreq_basic_packet(
     }
 
     mcreq_map_key(queue, &cmd->key, &cmd->_hashkey,
-            sizeof(*req) + extlen, &vb, &srvix);
+        sizeof(*req) + extlen + ffextlen, &vb, &srvix);
     if (srvix > -1 && srvix < (int)queue->npipelines) {
         *pipeline = queue->pipelines[srvix];
 
@@ -523,9 +524,17 @@ mcreq_basic_packet(
         return LCB_CLIENT_ENOMEM;
     }
 
-    mcreq_reserve_key(*pipeline, *packet, sizeof(*req) + extlen, &cmd->key, cmd->cid);
+    mcreq_reserve_key(*pipeline, *packet, sizeof(*req) + extlen + ffextlen, &cmd->key, cmd->cid);
 
-    req->request.keylen = htons((*packet)->kh_span.size - PKT_HDRSIZE(*packet));
+    nkey = (*packet)->kh_span.size - PKT_HDRSIZE(*packet);
+
+    if (ffextlen) {
+        req->request.magic = PROTOCOL_BINARY_AREQ;
+        req->request.keylen = ((0xff & nkey) << 8) | ffextlen;
+    } else {
+        req->request.magic = PROTOCOL_BINARY_REQ;
+        req->request.keylen = htons(nkey);
+    }
     req->request.vbucket = htons(vb);
     req->request.extlen = extlen;
     return LCB_SUCCESS;

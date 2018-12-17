@@ -69,12 +69,14 @@ extern "C"
      * See section 3.1 Magic byte
      */
     typedef enum {
+        /* Request packet from client to server containing frame extras */
+        PROTOCOL_BINARY_AREQ = 0x08,
+        /* Response packet from server to client containing frame extras */
+        PROTOCOL_BINARY_ARES = 0x18,
         /* Request packet from client to server */
         PROTOCOL_BINARY_REQ = 0x80,
         /* Response packet from server to client */
         PROTOCOL_BINARY_RES = 0x81,
-        /* Response packet from server to client containing frame extras */
-        PROTOCOL_BINARY_ARES = 0x18,
         /* Request packet from server to client */
         PROTOCOL_BINARY_SREQ = 0x82,
         /* Response packet from client to server */
@@ -177,6 +179,16 @@ extern "C"
          * they have a uid that is greater than ours.
          */
         PROTOCOL_BINARY_RESPONSE_COLLECTIONS_MANIFEST_IS_AHEAD = 0x8b,
+
+        /**
+         * Operation attempted with an unknown scope.
+         */
+        PROTOCOL_BINARY_RESPONSE_UNKNOWN_SCOPE = 0x8c,
+
+        PROTOCOL_BINARY_RESPONSE_DURABILITY_INVALID_LEVEL = 0xa0,
+        PROTOCOL_BINARY_RESPONSE_DURABILITY_IMPOSSIBLE = 0xa1,
+        PROTOCOL_BINARY_RESPONSE_SYNC_WRITE_IN_PROGRESS = 0xa2,
+        PROTOCOL_BINARY_RESPONSE_SYNC_WRITE_AMBIGUOUS = 0xa3,
 
         /*
          * Sub-document specific responses.
@@ -456,7 +468,19 @@ extern "C"
      * Definition of the packet used by the delete command
      * See section 4
      */
-    typedef protocol_binary_request_no_extras protocol_binary_request_delete;
+    typedef union {
+        struct {
+            protocol_binary_request_header header;
+            union {
+                struct {
+                    uint8_t meta;
+                    uint8_t level;
+                    uint16_t timeout;
+                } alt;
+            } body;
+        } message;
+        uint8_t bytes[sizeof(protocol_binary_request_header) + 4];
+    } protocol_binary_request_delete;
 
     /**
      * Definition of the packet returned by the delete command
@@ -471,7 +495,7 @@ extern "C"
      *     Seqno          (32-39): 0x000000000000002D
      */
     typedef protocol_binary_response_no_extras protocol_binary_response_delete;
-
+ 
     /**
      * Definition of the packet used by set, add and replace
      * See section 4
@@ -479,12 +503,21 @@ extern "C"
     typedef union {
         struct {
             protocol_binary_request_header header;
-            struct {
-                uint32_t flags;
-                uint32_t expiration;
+            union {
+                struct {
+                    uint32_t flags;
+                    uint32_t expiration;
+                } norm;
+                struct {
+                    uint8_t meta;
+                    uint8_t level;
+                    uint16_t timeout;
+                    uint32_t flags;
+                    uint32_t expiration;
+                } alt;
             } body;
         } message;
-        uint8_t bytes[sizeof(protocol_binary_request_header) + 8];
+        uint8_t bytes[sizeof(protocol_binary_request_header) + 20];
     } protocol_binary_request_set;
 
     /**
@@ -495,13 +528,23 @@ extern "C"
     typedef union {
         struct {
             protocol_binary_request_header header;
-            struct {
-                uint64_t delta;
-                uint64_t initial;
-                uint32_t expiration;
+            union {
+                struct {
+                    uint64_t delta;
+                    uint64_t initial;
+                    uint32_t expiration;
+                } norm;
+                struct {
+                    uint8_t meta;
+                    uint8_t level;
+                    uint16_t timeout;
+                    uint64_t delta;
+                    uint64_t initial;
+                    uint32_t expiration;
+                } alt;
             } body;
         } message;
-        uint8_t bytes[sizeof(protocol_binary_request_header) + 20];
+        uint8_t bytes[sizeof(protocol_binary_request_header) + 24];
     } protocol_binary_request_incr;
     typedef protocol_binary_request_incr protocol_binary_request_decr;
 
@@ -567,8 +610,16 @@ extern "C"
     typedef union {
         struct {
             protocol_binary_request_header header;
-            struct {
-                uint32_t expiration;
+            union {
+                struct {
+                    uint32_t expiration;
+                } norm;
+                struct {
+                    uint8_t meta;
+                    uint8_t level;
+                    uint16_t timeout;
+                    uint32_t expiration;
+                } alt;
             } body;
         } message;
         uint8_t bytes[sizeof(protocol_binary_request_header) + 4];
@@ -585,8 +636,16 @@ extern "C"
     typedef union {
         struct {
             protocol_binary_request_header header;
-            struct {
-                uint32_t expiration;
+            union {
+                struct {
+                    uint32_t expiration;
+                } norm;
+                struct {
+                    uint8_t meta;
+                    uint8_t level;
+                    uint16_t timeout;
+                    uint32_t expiration;
+                } alt;
             } body;
         } message;
         uint8_t bytes[sizeof(protocol_binary_request_header) + 4];
@@ -752,6 +811,8 @@ extern "C"
         PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION = 0x0d,
         PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION = 0x0e,
         PROTOCOL_BINARY_FEATURE_TRACING = 0x0f,
+        PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT = 0x10,
+        PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION = 0x11,
         PROTOCOL_BINARY_FEATURE_COLLECTIONS = 0x12
     } protocol_binary_hello_features;
 
@@ -775,6 +836,8 @@ extern "C"
     (a == PROTOCOL_BINARY_FEATURE_CLUSTERMAP_CHANGE_NOTIFICATION) ? "Clustermap change notification": \
     (a == PROTOCOL_BINARY_FEATURE_UNORDERED_EXECUTION) ? "Unordered execution": \
     (a == PROTOCOL_BINARY_FEATURE_TRACING) ? "Tracing": \
+    (a == PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT) ? "Alt request support": \
+    (a == PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION) ? "Synchronous Replication": \
     (a == PROTOCOL_BINARY_FEATURE_COLLECTIONS) ? "Collections": \
     "Unknown"
     // clang-format on

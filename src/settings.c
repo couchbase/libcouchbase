@@ -79,6 +79,7 @@ void lcb_default_settings(lcb_settings *settings)
     settings->tracer_threshold[LCBTRACE_THRESHOLD_ANALYTICS] =  LCBTRACE_DEFAULT_THRESHOLD_ANALYTICS;
 #endif
     settings->wait_for_config = 0;
+    settings->synchronous_replication = 1;
 }
 
 LCB_INTERNAL_API

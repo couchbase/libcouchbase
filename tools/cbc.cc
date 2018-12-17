@@ -618,31 +618,37 @@ void
 SetHandler::storeItem(const string& key, const char *value, size_t nvalue)
 {
     lcb_error_t err;
-    lcb_CMDSTOREDUR cmd = { 0 };
-    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+    union {
+        lcb_CMDSTORE reg;
+        lcb_CMDSTOREDUR dur;
+    } cmd = {0};
+    LCB_CMD_SET_KEY(&cmd.reg, key.c_str(), key.size());
     if (o_collection_id.passed()) {
-        cmd.cid = o_collection_id.result();
+        cmd.reg.cid = o_collection_id.result();
     }
-    cmd.value.vtype = LCB_KV_COPY;
-    cmd.value.u_buf.contig.bytes = value;
-    cmd.value.u_buf.contig.nbytes = nvalue;
-    cmd.operation = mode();
+    cmd.reg.value.vtype = LCB_KV_COPY;
+    cmd.reg.value.u_buf.contig.bytes = value;
+    cmd.reg.value.u_buf.contig.nbytes = nvalue;
+    cmd.reg.operation = mode();
 
     if (o_json.result()) {
-        cmd.datatype = LCB_VALUE_F_JSON;
+        cmd.reg.datatype = LCB_VALUE_F_JSON;
     }
     if (o_exp.passed()) {
-        cmd.exptime = o_exp.result();
+        cmd.reg.exptime = o_exp.result();
     }
     if (o_flags.passed()) {
-        cmd.flags = o_flags.result();
+        cmd.reg.flags = o_flags.result();
     }
     if (o_persist.passed() || o_replicate.passed()) {
-        cmd.persist_to = o_persist.result();
-        cmd.replicate_to = o_replicate.result();
-        err = lcb_storedur3(instance, NULL, &cmd);
+        cmd.dur.persist_to = o_persist.result();
+        cmd.dur.replicate_to = o_replicate.result();
+        err = lcb_storedur3(instance, NULL, &cmd.dur);
     } else {
-        err = lcb_store3(instance, NULL, reinterpret_cast<lcb_CMDSTORE*>(&cmd));
+        cmd.reg.dur_level = LCB_DURABILITYLEVEL_MAJORITY;
+        // FIXME: non-zero values are not supported by server
+        cmd.reg.dur_timeout = 0;
+        err = lcb_store3(instance, NULL, &cmd.reg);
     }
     if (err != LCB_SUCCESS) {
         throw LcbError(err);

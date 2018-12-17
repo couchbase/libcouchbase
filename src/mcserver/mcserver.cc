@@ -218,6 +218,10 @@ static bool is_fastpath_error(uint16_t rc) {
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_MULTI_PATH_FAILURE_DELETED:
     case PROTOCOL_BINARY_RESPONSE_SUBDOC_INVALID_XATTR_ORDER:
     case PROTOCOL_BINARY_RESPONSE_EACCESS:
+    case PROTOCOL_BINARY_RESPONSE_DURABILITY_INVALID_LEVEL:
+    case PROTOCOL_BINARY_RESPONSE_DURABILITY_IMPOSSIBLE:
+    case PROTOCOL_BINARY_RESPONSE_SYNC_WRITE_IN_PROGRESS:
+    case PROTOCOL_BINARY_RESPONSE_SYNC_WRITE_AMBIGUOUS:
         return true;
     default:
         if (rc >= 0xc0 && rc <= 0xcc) {
@@ -799,6 +803,8 @@ Server::handle_connected(lcbio_SOCKET *sock, lcb_error_t err, lcbio_OSERR syserr
         compsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_SNAPPY);
         mutation_tokens = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_MUTATION_SEQNO);
         collsupport = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_COLLECTIONS);
+        new_durability = sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION) &&
+            sessinfo->has_feature(PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT);
     }
 
     lcbio_CTXPROCS procs;
@@ -841,6 +847,7 @@ Server::Server(lcb_t instance_, int ix)
       jsonsupport(0),
       mutation_tokens(0),
       collsupport(0),
+      new_durability(-1),
       connctx(NULL),
       curhost(new lcb_host_t())
 {

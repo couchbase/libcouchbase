@@ -422,6 +422,10 @@ SessionRequestImpl::send_hello()
     if (settings->use_collections) {
         features[nfeatures++] = PROTOCOL_BINARY_FEATURE_COLLECTIONS;
     }
+    if (settings->synchronous_replication) {
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_ALT_REQUEST_SUPPORT;
+        features[nfeatures++] = PROTOCOL_BINARY_FEATURE_SYNC_REPLICATION;
+    }
 
     std::string agent = generate_agent_json();
     lcb::MemcachedRequest hdr(PROTOCOL_BINARY_CMD_HELLO);

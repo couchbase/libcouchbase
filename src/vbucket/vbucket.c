@@ -1137,11 +1137,16 @@ lcbvb_map_key(lcbvb_CONFIG *cfg, const void *key, lcb_SIZE nkey,
 {
     if (cfg->dtype == LCBVB_DIST_KETAMA) {
         *srvix = map_ketama(cfg, key, nkey);
-        *vbid = 0;
+        if (vbid) {
+            *vbid = 0;
+        }
         return 0;
     } else {
-        *vbid = lcbvb_k2vb(cfg, key, nkey);
-        *srvix = lcbvb_vbmaster(cfg, *vbid);
+        int vb = lcbvb_k2vb(cfg, key, nkey);
+        *srvix = lcbvb_vbmaster(cfg, vb);
+        if (vbid) {
+            *vbid = vb;
+        }
     }
     return 0;
 }
