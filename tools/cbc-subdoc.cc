@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2017 Couchbase, Inc.
  *
@@ -218,8 +219,9 @@ class Handler
         parser.default_settings.argstring = usagestr();
         parser.default_settings.shortdesc = description();
         addOptions();
-        parser.parse(argc, argv, true);
-        run();
+        if (parser.parse(argc, argv, true)) {
+	  run();
+	}
     }
 
   protected:
@@ -818,8 +820,11 @@ static void real_main(int argc, char **argv)
     linenoiseSetMultiLine(1);
     linenoiseHistoryLoad(history_path.c_str());
 
-    char *line;
-    while ((line = linenoise("subdoc> ")) != NULL) {
+    do {
+        char *line = linenoise("subdoc> ");
+        if (line == NULL) {
+            break;
+        }
         if (line[0] != '\0') {
             linenoiseHistoryAdd(line);
             linenoiseHistorySave(history_path.c_str());
@@ -848,7 +853,7 @@ static void real_main(int argc, char **argv)
             }
         }
         free(line);
-    }
+    } while (true);
 }
 
 int main(int argc, char **argv)

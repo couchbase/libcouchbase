@@ -39,8 +39,9 @@ struct cliopts_priv {
     int argsplit;
     int wanted;
 
-    char current_key[4096];
-    char current_value[4096];
+#define MAX_KEYLEN 4096
+    char current_key[MAX_KEYLEN];
+    char current_value[MAX_KEYLEN];
 };
 
 enum {
@@ -384,6 +385,11 @@ parse_option(struct cliopts_priv *ctx,
         ctx->errnum = CLIOPTS_ERR_BADOPT;
         return MODE_ERROR;
     }
+    if (klen > MAX_KEYLEN) {
+        ctx->errstr = "The key is to big";
+        ctx->errnum = CLIOPTS_ERR_BADOPT;
+        return MODE_ERROR;
+    }
 
     /**
      * figure out what type of option it is..
@@ -406,6 +412,11 @@ parse_option(struct cliopts_priv *ctx,
             klen = ii;
             break;
         }
+    }
+    if (valp && strlen(valp) > MAX_KEYLEN) {
+        ctx->errstr = "The value is to big";
+        ctx->errnum = CLIOPTS_ERR_BAD_VALUE;
+        return MODE_ERROR;
     }
 
     GT_PARSEOPT:
