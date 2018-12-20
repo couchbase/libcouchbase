@@ -1,5 +1,23 @@
 # Release Notes
 
+## 2.10.3 (December 20 2018)
+
+* [CCBC-1008](https://issues.couchbase.com/browse/CCBC-1008): jsoncpp: use
+  `unique_ptr` instead of `auto_ptr`.
+
+* [CCBC-1011](https://issues.couchbase.com/browse/CCBC-1011): Port
+  vbucketkeygen tool to cbc-keygen. The tool generates list of keys, that
+  distributed over all vBuckets in the bucket.
+
+* [CCBC-1006](https://issues.couchbase.com/browse/CCBC-1006): Cleanup pending
+  queue of pipeline on retry
+
+* [CCBC-1007](https://issues.couchbase.com/browse/CCBC-1007): allow using
+  trusted store path without key file
+
+* [MB-31875](https://issues.couchbase.com/browse/MB-31875): cliopts: grow list
+  only if needed
+
 ## 2.10.2 (November 23 2018)
 
 * Fixed incorrect header-guard for analytics.h, which might affect API
