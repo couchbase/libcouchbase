@@ -615,7 +615,7 @@ TEST_F(SubdocUnitTest, testCounter)
     spec.sdcmd = LCB_SDCMD_COUNTER;
     LCB_SDSPEC_SET_VALUE(&spec, "1", 1);
     ASSERT_EQ(LCB_SUCCESS, schedwait(instance, &res, &cmd, lcb_subdoc3));
-    ASSERT_SD_ERR(res, LCB_SUBDOC_BAD_DELTA);
+    ASSERT_SD_ERR(res, LCB_SUBDOC_VALUE_CANTINSERT);
 
     // Try to increment by 0
     spec.sdcmd = LCB_SDCMD_COUNTER;
