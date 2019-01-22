@@ -22,7 +22,7 @@ public:
     bool dumpIfError;
     unsigned cbCount;
 
-    lcb_http_status_t status;
+    short status;
     lcb_error_t err;
     std::string body;
 };
@@ -42,50 +42,44 @@ static const char *view_common =
     "}";
 
 
-static void dumpResponse(const lcb_http_resp_t *resp)
+static void dumpResponse(const lcb_RESPHTTP *resp)
 {
-    if (resp->v.v0.headers) {
-        const char *const *hdr;
-        for (hdr = resp->v.v0.headers; *hdr; hdr++) {
-            std::cout << "Header: " << *hdr << std::endl;
+    if (resp->headers) {
+        for (const char * const *cur = resp->headers; *cur; cur += 2) {
+            std::cout << cur[0] << ": " << cur[1] << std::endl;
         }
     }
-    if (resp->v.v0.bytes) {
+    if (resp->body) {
         std::cout << "Data: " << std::endl;
-        std::cout.write((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
+        std::cout.write((const char *)resp->body, resp->nbody);
         std::cout << std::endl;
     }
 
     std::cout << "Path: " << std::endl;
-    std::cout.write(resp->v.v0.path, resp->v.v0.npath);
+    std::cout.write((const char *)resp->key, resp->nkey);
     std::cout << std::endl;
 
 }
 
 extern "C" {
-
-    static void httpSimpleCallback(lcb_http_request_t request,
-                                   lcb_t instance,
-                                   const void *cookie,
-                                   lcb_error_t error,
-                                   const lcb_http_resp_t *resp)
+    static void httpSimpleCallback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPHTTP *resp)
     {
         HttpCmdContext *htctx;
-        htctx = reinterpret_cast<HttpCmdContext *>((void *)cookie);
-        htctx->err = error;
-        htctx->status = resp->v.v0.status;
+        htctx = reinterpret_cast<HttpCmdContext *>((void *)resp->cookie);
+        htctx->err = resp->rc;
+        htctx->status = resp->htstatus;
         htctx->received = true;
         htctx->cbCount++;
 
-        if (resp->v.v0.bytes) {
-            htctx->body.assign((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
+        if (resp->body) {
+            htctx->body.assign((const char *)resp->body, resp->nbody);
         }
 
-        if ((resp->v.v0.nbytes == 0 && htctx->dumpIfEmpty) ||
-                (error != LCB_SUCCESS && htctx->dumpIfError)) {
+        if ((resp->nbody == 0 && htctx->dumpIfEmpty) ||
+                (resp->rc != LCB_SUCCESS && htctx->dumpIfError)) {
             std::cout << "Count: " << htctx->cbCount << std::endl
-                      << "Code: " << error << std::endl
-                      << "nBytes: " << resp->v.v0.nbytes << std::endl;
+                      << "Code: " << resp->rc << std::endl
+                      << "nBytes: " << resp->nbody << std::endl;
             dumpResponse(resp);
         }
     }
@@ -103,32 +97,29 @@ TEST_F(HttpUnitTest, testPut)
     HandleWrap hw;
     lcb_t instance;
     createConnection(hw, instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)httpSimpleCallback);
 
-    const char *design_doc_path = "/_design/" DESIGN_DOC_NAME;
-    lcb_http_cmd_st cmd;
-    cmd = lcb_http_cmd_st(design_doc_path, strlen(design_doc_path),
-                          view_common, strlen(view_common),
-                          LCB_HTTP_METHOD_PUT, 0,
-                          "application/json");
-
-    lcb_error_t err;
-    lcb_set_http_complete_callback(instance, httpSimpleCallback);
+    std::string design_doc_path("/_design/" DESIGN_DOC_NAME);
+    lcb_CMDHTTP cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, design_doc_path.c_str(), design_doc_path.size());
+    cmd.type = LCB_HTTP_TYPE_VIEW;
+    cmd.method = LCB_HTTP_METHOD_PUT;
+    cmd.body = view_common;
+    cmd.nbody = strlen(view_common);
+    cmd.content_type = "application/json";
 
     lcb_http_request_t htreq;
     HttpCmdContext ctx;
     ctx.dumpIfError = true;
+    cmd.reqhandle = &htreq;
 
-    err = lcb_make_http_request(instance, &ctx, LCB_HTTP_TYPE_VIEW,
-                                &cmd, &htreq);
-
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_http3(instance, &ctx, &cmd));
     lcb_wait(instance);
 
     ASSERT_EQ(true, ctx.received);
     ASSERT_EQ(LCB_SUCCESS, ctx.err);
     ASSERT_EQ(LCB_HTTP_STATUS_CREATED, ctx.status);
     ASSERT_EQ(1, ctx.cbCount);
-
 }
 
 /**
@@ -145,28 +136,29 @@ TEST_F(HttpUnitTest, testGet)
     HandleWrap hw;
     lcb_t instance;
     createConnection(hw, instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)httpSimpleCallback);
 
-    const char *path = "_design/" DESIGN_DOC_NAME "/_view/" VIEW_NAME;
-    lcb_http_cmd_st cmd = lcb_http_cmd_st(path, strlen(path), NULL, 0,
-                                          LCB_HTTP_METHOD_GET, 0,
-                                          "application/json");
+    std::string view_path("/_design/" DESIGN_DOC_NAME "/_view/" VIEW_NAME);
+    lcb_CMDHTTP cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, view_path.c_str(), view_path.size());
+    cmd.type = LCB_HTTP_TYPE_VIEW;
+    cmd.method = LCB_HTTP_METHOD_GET;
+    cmd.body = NULL;
+    cmd.nbody = 0;
+    cmd.content_type = "application/json";
 
+
+    lcb_http_request_t htreq;
     HttpCmdContext ctx;
     ctx.dumpIfEmpty = true;
     ctx.dumpIfError = true;
+    cmd.reqhandle = &htreq;
 
-    lcb_set_http_complete_callback(instance, httpSimpleCallback);
-    lcb_error_t err;
-    lcb_http_request_t htreq;
-
-    err = lcb_make_http_request(instance, &ctx, LCB_HTTP_TYPE_VIEW,
-                                &cmd, &htreq);
-
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_http3(instance, &ctx, &cmd));
     lcb_wait(instance);
 
     ASSERT_EQ(true, ctx.received);
-    ASSERT_EQ(LCB_HTTP_STATUS_OK, ctx.status);
+    ASSERT_EQ(200, ctx.status);
     ASSERT_GT(ctx.body.size(), 0U);
     ASSERT_EQ(ctx.cbCount, 1);
 
@@ -206,33 +198,29 @@ TEST_F(HttpUnitTest, testRefused)
     lcb_t instance;
     HandleWrap hw;
     createConnection(hw, instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_HTTP, (lcb_RESPCALLBACK)httpSimpleCallback);
 
-    const char *path = "non-exist-path";
-    lcb_http_cmd_st cmd = lcb_http_cmd_st();
-
-    cmd.version = 1;
-    cmd.v.v1.host = "localhost:1"; // should not have anything listening on it
-    cmd.v.v1.path = "non-exist";
-    cmd.v.v1.npath = strlen(cmd.v.v1.path);
-    cmd.v.v1.method = LCB_HTTP_METHOD_GET;
-
+    std::string path("non-exist-path");
+    lcb_CMDHTTP cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, path.c_str(), path.size());
+    cmd.host = "localhost:1"; // should not have anything listening on it
+    cmd.type = LCB_HTTP_TYPE_RAW;
+    cmd.method = LCB_HTTP_METHOD_GET;
+    cmd.body = NULL;
+    cmd.nbody = 0;
+    cmd.content_type = "application/json";
 
     HttpCmdContext ctx;
     ctx.dumpIfEmpty = false;
     ctx.dumpIfError = false;
-
-    lcb_set_http_complete_callback(instance, httpSimpleCallback);
-    lcb_error_t err;
     lcb_http_request_t htreq;
+    cmd.reqhandle = &htreq;
 
-    err = lcb_make_http_request(instance, &ctx, LCB_HTTP_TYPE_RAW,
-                                &cmd, &htreq);
-
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_http3(instance, &ctx, &cmd));
     lcb_wait(instance);
+
     ASSERT_EQ(true, ctx.received);
     ASSERT_NE(0, LCB_EIFNET(ctx.err));
-
 }
 
 struct HtResult {

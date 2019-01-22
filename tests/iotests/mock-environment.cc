@@ -321,27 +321,27 @@ void MockEnvironment::createConnection(lcb_t &instance)
 #define STAT_VERSION "version"
 
 extern "C" {
-static void statsCallback(lcb_t instance, const void *cookie, lcb_error_t err, const lcb_server_stat_resp_t *resp)
+static void statsCallback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
 {
-    MockEnvironment *me = (MockEnvironment *)cookie;
-    ASSERT_EQ(LCB_SUCCESS, err);
+    MockEnvironment *me = (MockEnvironment *)resp->cookie;
+    ASSERT_EQ(LCB_SUCCESS, resp->rc);
 
-    if (resp->v.v0.server_endpoint == NULL) {
+    if (resp->server == NULL) {
         return;
     }
 
-    if (!resp->v.v0.nkey) {
+    if (!resp->nkey) {
         return;
     }
 
-    if (resp->v.v0.nkey != sizeof(STAT_VERSION) - 1 ||
-        memcmp(resp->v.v0.key, STAT_VERSION, sizeof(STAT_VERSION) - 1) != 0) {
+    if (resp->nkey != sizeof(STAT_VERSION) - 1 ||
+        memcmp(resp->key, STAT_VERSION, sizeof(STAT_VERSION) - 1) != 0) {
         return;
     }
     MockEnvironment::ServerVersion version = MockEnvironment::VERSION_UNKNOWN;
-    if (resp->v.v0.nbytes > 2) {
-        int major = ((const char *)resp->v.v0.bytes)[0] - '0';
-        int minor = ((const char *)resp->v.v0.bytes)[2] - '0';
+    if (resp->nvalue > 2) {
+        int major = ((const char *)resp->value)[0] - '0';
+        int minor = ((const char *)resp->value)[2] - '0';
         switch (major) {
             case 4:
                 switch (minor) {
@@ -367,12 +367,12 @@ static void statsCallback(lcb_t instance, const void *cookie, lcb_error_t err, c
     }
     if (version == MockEnvironment::VERSION_UNKNOWN) {
         lcb_log(LOGARGS(instance, ERROR), "Unable to determine version from string '%.*s', assuming 4.0",
-                (int)resp->v.v0.nbytes, (const char *)resp->v.v0.bytes);
+                (int)resp->nvalue, (const char *)resp->value);
         version = MockEnvironment::VERSION_40;
     }
     me->setServerVersion(version);
-    lcb_log(LOGARGS(instance, INFO), "Using real cluster version %.*s (id=%d)", (int)resp->v.v0.nbytes,
-            (const char *)resp->v.v0.bytes, version);
+    lcb_log(LOGARGS(instance, INFO), "Using real cluster version %.*s (id=%d)", (int)resp->nvalue,
+            (const char *)resp->value, version);
 }
 }
 
@@ -391,10 +391,9 @@ void MockEnvironment::bootstrapRealCluster()
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(tmphandle));
     lcb_wait(tmphandle);
 
-    lcb_set_stat_callback(tmphandle, statsCallback);
-    lcb_server_stats_cmd_t scmd, *pscmd;
-    pscmd = &scmd;
-    err = lcb_server_stats(tmphandle, this, 1, &pscmd);
+    lcb_install_callback3(tmphandle, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)statsCallback);
+    lcb_CMDSTATS scmd = {0};
+    err = lcb_stats3(tmphandle, this, &scmd);
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_wait(tmphandle);
 

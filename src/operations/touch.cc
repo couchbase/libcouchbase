@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2012 Couchbase, Inc.
+ *     Copyright 2010-2018 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -71,32 +71,5 @@ lcb_error_t lcb_touch3(lcb_t instance, const void *cookie, const lcb_CMDTOUCH *c
     LCB_SCHED_ADD(instance, pl, pkt);
     LCBTRACE_KV_START(instance->settings, cmd, LCBTRACE_OP_TOUCH, pkt->opaque, pkt->u_rdata.reqdata.span);
     TRACE_TOUCH_BEGIN(instance, hdr, cmd);
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_touch(lcb_t instance, const void *cookie, lcb_size_t num, const lcb_touch_cmd_t *const *items)
-{
-    unsigned ii;
-
-    lcb_sched_enter(instance);
-    for (ii = 0; ii < num; ii++) {
-        const lcb_touch_cmd_t *src = items[ii];
-        lcb_CMDTOUCH dst;
-        lcb_error_t err;
-
-        memset(&dst, 0, sizeof(dst));
-        dst.key.contig.bytes = src->v.v0.key;
-        dst.key.contig.nbytes = src->v.v0.nkey;
-        dst._hashkey.contig.bytes = src->v.v0.hashkey;
-        dst._hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.exptime = src->v.v0.exptime;
-        err = lcb_touch3(instance, cookie, &dst);
-        if (err != LCB_SUCCESS) {
-            lcb_sched_fail(instance);
-            return err;
-        }
-    }
-    lcb_sched_leave(instance);
     return LCB_SUCCESS;
 }

@@ -121,36 +121,33 @@ syncWithNodeCount_(lcb_t instance, size_t expCount)
 
 
 extern "C" {
-static void opFromCallback_storeCB(lcb_t, const void *, lcb_storage_t,
-    lcb_error_t error, const lcb_store_resp_t *) {
-    ASSERT_EQ(LCB_SUCCESS, error);
+static void opFromCallback_storeCB(lcb_t, lcb_CALLBACKTYPE, lcb_RESPSTORE *resp)
+{
+    ASSERT_EQ(LCB_SUCCESS, resp->rc);
 }
 
-static void opFromCallback_statsCB(lcb_t instance, const void *,
-    lcb_error_t error, const lcb_server_stat_resp_t *resp)
+static void opFromCallback_statsCB(lcb_t instance, lcb_CALLBACKTYPE, lcb_RESPSTATS *resp)
 {
-    lcb_error_t err;
     char *statkey;
     lcb_size_t nstatkey;
 
-    ASSERT_EQ(0, resp->version);
-    const char *server_endpoint = resp->v.v0.server_endpoint;
-    const void *key = resp->v.v0.key;
-    lcb_size_t nkey = resp->v.v0.nkey;
-    const void *bytes = resp->v.v0.bytes;
-    lcb_size_t nbytes = resp->v.v0.nbytes;
+    const char *server_endpoint = resp->server;
+    const void *key = resp->key;
+    lcb_size_t nkey = resp->nkey;
+    const void *bytes = resp->value;
+    lcb_size_t nbytes = resp->nvalue;
 
-    ASSERT_EQ(LCB_SUCCESS, error);
+    ASSERT_EQ(LCB_SUCCESS, resp->rc);
     if (server_endpoint != NULL) {
         nstatkey = strlen(server_endpoint) + nkey + 2;
         statkey = new char[nstatkey];
         snprintf(statkey, nstatkey, "%s-%.*s", server_endpoint,
                  (int)nkey, (const char *)key);
 
-        lcb_store_cmd_t storecmd(LCB_SET, statkey, nstatkey, bytes, nbytes);
-        lcb_store_cmd_t *storecmds[] = { &storecmd };
-        err = lcb_store(instance, NULL, 1, storecmds);
-        ASSERT_EQ(LCB_SUCCESS, err);
+        lcb_CMDSTORE cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, statkey, nstatkey);
+        LCB_CMD_SET_VALUE(&cmd, bytes, nbytes);
+        ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, NULL, &cmd));
         delete []statkey;
     }
 }
@@ -163,14 +160,12 @@ TEST_F(MockUnitTest, testOpFromCallback)
     HandleWrap hw;
     createConnection(hw, instance);
 
-    lcb_set_stat_callback(instance, opFromCallback_statsCB);
-    lcb_set_store_callback(instance, opFromCallback_storeCB);
+    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)opFromCallback_statsCB);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opFromCallback_storeCB);
 
-    lcb_server_stats_cmd_t stat;
-    lcb_server_stats_cmd_t *commands[] = {&stat };
-
+    lcb_CMDSTATS stat = {0};
     ASSERT_EQ(LCB_SUCCESS, lcb_cntl_string(instance, "operation_timeout", "5.0"));
-    ASSERT_EQ(LCB_SUCCESS, lcb_server_stats(instance, NULL, 1, commands));
+    ASSERT_EQ(LCB_SUCCESS, lcb_stats3(instance, NULL, &stat));
     lcb_wait(instance);
 }
 
@@ -179,15 +174,11 @@ struct timeout_test_cookie {
     lcb_error_t expected;
 };
 extern "C" {
-static void set_callback(lcb_t instance,
-                         const void *cookie,
-                         lcb_storage_t, lcb_error_t err,
-                         const lcb_store_resp_t *)
+static void set_callback(lcb_t instance, lcb_CALLBACKTYPE, lcb_RESPSTORE *resp)
 {
-    timeout_test_cookie *tc = (timeout_test_cookie*)cookie;;
-    lcb_log(LOGARGS(instance, INFO), "Got code 0x%x. Expected 0x%x", err, tc->expected);
-    EXPECT_EQ(tc->expected, err);
-    if (err == LCB_ETIMEDOUT) {
+    timeout_test_cookie *tc = (timeout_test_cookie*)resp->cookie;
+    EXPECT_EQ(tc->expected, resp->rc);
+    if (resp->rc == LCB_ETIMEDOUT) {
         // Remove the hiccup at the first timeout failure
         MockEnvironment::getInstance()->hiccupNodes(0, 0);
     }
@@ -197,7 +188,7 @@ static void set_callback(lcb_t instance,
 struct next_store_st {
     lcb_t instance;
     struct timeout_test_cookie *tc;
-    const lcb_store_cmd_t * const * cmdpp;
+    lcb_CMDSTORE *cmdp;
 };
 
 static void reschedule_callback(void *cookie)
@@ -205,7 +196,7 @@ static void reschedule_callback(void *cookie)
     lcb_error_t err;
     struct next_store_st *ns = (struct next_store_st *)cookie;
     lcb_log(LOGARGS(ns->instance, INFO), "Rescheduling operation..");
-    err = lcb_store(ns->instance, ns->tc, 1, ns->cmdpp);
+    err = lcb_store3(ns->instance, ns->tc, ns->cmdp);
     lcb_loop_unref(ns->instance);
     EXPECT_EQ(LCB_SUCCESS, err);
 }
@@ -227,12 +218,10 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     // Set the timeout
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
 
-    lcb_set_store_callback(instance, set_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)set_callback);
 
-    lcb_store_cmd_t scmd, *cmdp;
     const char *key = "i'm a key";
     const char *value = "a value";
-    cmdp = &scmd;
 
     removeKey(instance, key);
 
@@ -240,22 +229,20 @@ TEST_F(MockUnitTest, testTimeoutOnlyStale)
     mock->hiccupNodes(1500, 1);
 
 
+    lcb_CMDSTORE cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, key, strlen(key));
+    LCB_CMD_SET_VALUE(&cmd, value, strlen(value));
+    cmd.operation = LCB_SET;
 
-    memset(&scmd, 0, sizeof(scmd));
-    scmd.v.v0.key = key;
-    scmd.v.v0.nkey = strlen(key);
-    scmd.v.v0.bytes = value;
-    scmd.v.v0.nbytes = strlen(value);
-    scmd.v.v0.operation = LCB_SET;
     cookies[0].counter = &nremaining;
     cookies[0].expected = LCB_ETIMEDOUT;
-    lcb_store(instance, cookies, 1, &cmdp);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, cookies, &cmd));
 
     cookies[1].counter = &nremaining;
     cookies[1].expected = LCB_SUCCESS;
     struct next_store_st ns;
-    ns.cmdpp = &cmdp;
-    ns.tc = cookies+1;
+    ns.cmdp = &cmd;
+    ns.tc = cookies + 1;
     ns.instance = instance;
     lcbio_pTIMER timer = lcbio_timer_new(instance->iotable, &ns, reschedule_callback);
     lcb_loop_ref(instance);
@@ -287,31 +274,28 @@ extern "C" {
         abort();
     }
 
-    static void store_callback(lcb_t instance, const void *cookie,
-                               lcb_storage_t, lcb_error_t error,
-                               const lcb_store_resp_t *)
+    static void store_callback(lcb_t instance, lcb_CALLBACKTYPE, lcb_RESPSTORE *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)cookie;
+        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
         lcb_log(LOGARGS(instance, INFO),
                 "Got storage callback for cookie %p with err=0x%x",
-                (void *)cookie,
-                (int)error);
+                (void *)resp->cookie,
+                (int)resp->rc);
 
-        rv->error = error;
+        rv->error = resp->rc;
         store_cnt++;
         if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
             lcb_stop_loop(instance);
         }
     }
 
-    static void get_callback(lcb_t instance, const void *cookie,
-                             lcb_error_t error, const lcb_get_resp_t *resp)
+    static void get_callback(lcb_t instance, lcb_CALLBACKTYPE, lcb_RESPGET *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)cookie;
-        rv->error = error;
-        rv->bytes = (char *)malloc(resp->v.v0.nbytes);
-        memcpy((void *)rv->bytes, resp->v.v0.bytes, resp->v.v0.nbytes);
-        rv->nbytes = resp->v.v0.nbytes;
+        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
+        rv->error = resp->rc;
+        rv->bytes = (char *)malloc(resp->nvalue);
+        memcpy((void *)rv->bytes, resp->value, resp->nvalue);
+        rv->nbytes = resp->nvalue;
         if (!instance->wait) { /* do not touch IO if we are using lcb_wait() */
             lcb_stop_loop(instance);
         }
@@ -336,14 +320,13 @@ struct StoreContext {
 };
 
 extern "C" {
-static void ctx_store_callback(lcb_t, const void *cookie, lcb_storage_t,
-                                  lcb_error_t err, const lcb_store_resp_t *resp)
+static void ctx_store_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
 {
     StoreContext *ctx = reinterpret_cast<StoreContext *>(
-            const_cast<void *>(cookie));
+            const_cast<void *>(resp->cookie));
 
-    std::string s((const char *)resp->v.v0.key, resp->v.v0.nkey);
-    ctx->mm[s] = err;
+    std::string s((const char *)resp->key, resp->nkey);
+    ctx->mm[s] = resp->rc;
 }
 }
 
@@ -358,8 +341,7 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     MockEnvironment mock_o(argv), *mock = &mock_o;
 
     std::vector<std::string> keys;
-    std::vector<lcb_store_cmd_t> cmds;
-    std::vector<lcb_store_cmd_t *>ppcmds;
+    std::vector<lcb_CMDSTORE> cmds;
 
     mock->createConnection(hw, instance);
     instance->settings->vb_noguess = 1;
@@ -370,15 +352,16 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     size_t numNodes = mock->getNumNodes();
 
     genDistKeys(LCBT_VBCONFIG(instance), keys);
-    genStoreCommands(keys, cmds, ppcmds);
+    genStoreCommands(keys, cmds);
     StoreContext ctx;
 
     mock->failoverNode(0);
     SYNC_WITH_NODECOUNT(instance, numNodes-1);
 
-    lcb_set_store_callback(instance, ctx_store_callback);
-    err = lcb_store(instance, &ctx, cmds.size(), &ppcmds[0]);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)ctx_store_callback);
+    for (int i = 0; i < cmds.size(); i++) {
+        ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &ctx, &cmds[i]));
+    }
     lcb_wait(instance);
     ctx.check((int)cmds.size());
 
@@ -386,7 +369,9 @@ TEST_F(MockUnitTest, testReconfigurationOnNodeFailover)
     SYNC_WITH_NODECOUNT(instance, numNodes);
 
     ctx.clear();
-    err = lcb_store(instance, &ctx, cmds.size(), &ppcmds[0]);
+    for (int i = 0; i < cmds.size(); i++) {
+        ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &ctx, &cmds[i]));
+    }
     lcb_wait(instance);
     ctx.check((int)cmds.size());
 }
@@ -434,15 +419,17 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     lcb_uint32_t tmoval = 15000000;
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
 
-    lcb_set_store_callback(instance, store_callback);
-    lcb_set_get_callback(instance, get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
 
     // Initialize the nodes first..
     removeKey(instance, key);
 
     /* Schedule SET operation */
-    lcb_store_cmd_t storecmd(LCB_SET, key.c_str(), key.size(),
-                             val.c_str(), val.size());
+    lcb_CMDSTORE storecmd = {0};
+    LCB_CMD_SET_KEY(&storecmd, key.c_str(), key.size());
+    LCB_CMD_SET_VALUE(&storecmd, val.c_str(), val.size());
+    storecmd.operation = LCB_SET;
 
     /* Determine what server should receive that operation */
     int vb, idx;
@@ -455,9 +442,7 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     lcb_loop_ref(instance);
     lcbio_timer_rearm(timer, 500000);
 
-    lcb_store_cmd_t *storecmds[] = { &storecmd };
-    err = lcb_store(instance, &rv, 1, storecmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &rv, &storecmd));
 
     store_cnt = 0;
     lcb_wait(instance);
@@ -465,17 +450,15 @@ TEST_F(MockUnitTest, testBufferRelocationOnNodeFailover)
     ASSERT_EQ(LCB_SUCCESS, rv.error);
 
     memset(&rv, 0, sizeof(rv));
-    err = lcb_store(instance, &rv, 1, storecmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &rv, &storecmd));
     store_cnt = 0;
     lcb_wait(instance);
     ASSERT_EQ(1, store_cnt);
 
     /* Check that value was actually set */
-    lcb_get_cmd_t getcmd(key.c_str(), key.size());
-    lcb_get_cmd_t *getcmds[] = { &getcmd };
-    err = lcb_get(instance, &rv, 1, getcmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_CMDGET getcmd = {0};
+    LCB_CMD_SET_KEY(&getcmd, key.c_str(), key.size());
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &rv, &getcmd));
 
     lcb_wait(instance);
     lcbio_timer_destroy(timer);

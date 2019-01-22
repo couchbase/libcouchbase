@@ -463,6 +463,7 @@ build_server_2x(lcbvb_CONFIG *cfg, lcbvb_SERVER *server, cJSON *js, char **netwo
     char *tmp = NULL, *colon;
     int itmp;
     cJSON *jsports;
+    (void)network;
 
     if (!get_jstr(js, "hostname", &tmp)) {
         SET_ERRSTR(cfg, "Couldn't find hostname");

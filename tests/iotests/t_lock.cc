@@ -23,18 +23,15 @@ class LockUnitTest : public MockUnitTest
 };
 
 extern "C" {
-    static void getLockedCallback(lcb_t, const void *cookie,
-                                  lcb_error_t err,
-                                  const lcb_get_resp_t *resp)
+    static void getLockedCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPGET *resp)
     {
-        Item *itm = (Item *)cookie;
-        itm->assign(resp, err);
+        Item *itm = (Item *)resp->cookie;
+        itm->assign(resp);
     }
-    static void unlockCallback(lcb_t, const void *cookie,
-                               lcb_error_t err,
-                               const lcb_unlock_resp_t *resp)
+
+    static void unlockCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPUNLOCK *resp)
     {
-        *(lcb_error_t *)cookie = err;
+        *(lcb_error_t *)resp->cookie = resp->rc;
     }
 }
 
@@ -66,32 +63,27 @@ TEST_F(LockUnitTest, testSimpleLockAndUnlock)
     removeKey(instance, key);
     storeKey(instance, key, value);
 
-    lcb_get_cmd_st cmd = lcb_get_cmd_st(key.c_str(), key.size(),
-                                        1, 10);
-    lcb_get_cmd_st *cmdlist = &cmd;
+    lcb_CMDGET cmd = {0};
+    LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+    cmd.lock = 1;
+    cmd.exptime = 10;
     Item itm;
-    lcb_error_t err;
 
-    lcb_set_get_callback(instance, getLockedCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getLockedCallback);
 
-    err = lcb_get(instance, &itm, 1, &cmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &itm, &cmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
 
-    lcb_unlock_cmd_st ucmd(key.c_str(), key.size(), itm.cas);
-    lcb_unlock_cmd_st *ucmdlist = &ucmd;
+    lcb_CMDUNLOCK ucmd = {0};
+    LCB_KREQ_SIMPLE(&ucmd.key, key.c_str(), key.size());
+    ucmd.cas = itm.cas;
 
     lcb_error_t reserr = LCB_ERROR;
-
-    lcb_set_unlock_callback(instance, unlockCallback);
-    err = lcb_unlock(instance, &reserr, 1, &ucmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
-
+    lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
+    ASSERT_EQ(LCB_SUCCESS, lcb_unlock3(instance, &reserr, &ucmd));
     lcb_wait(instance);
-
     ASSERT_EQ(LCB_SUCCESS, reserr);
-
 }
 
 /**
@@ -111,16 +103,19 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
     HandleWrap hw;
     createConnection(hw, instance);
 
-    lcb_error_t err, reserr = LCB_ERROR;
+    lcb_error_t reserr = LCB_ERROR;
+    std::string key = "lockKey2";
+    std::string value = "lockValue";
 
-    storeKey(instance, "lockKey", "lockValue");
+    storeKey(instance, key, value);
 
-    lcb_unlock_cmd_t cmd("lockKey", sizeof("lockKey") - 1, 0);
-    lcb_unlock_cmd_t *cmdlist = &cmd;
-    lcb_set_unlock_callback(instance, unlockCallback);
+    lcb_CMDUNLOCK cmd = {0};
+    LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
+    cmd.cas = 0;
 
-    err = lcb_unlock(instance, &reserr, 1, &cmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_unlock3(instance, &reserr, &cmd));
     lcb_wait(instance);
     if (CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_50)) {
         ASSERT_EQ(LCB_EINVAL_MCD, reserr);
@@ -130,14 +125,10 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
 }
 
 extern "C" {
-    static void lockedStorageCallback(lcb_t,
-                                      const void *cookie,
-                                      lcb_storage_t operation,
-                                      lcb_error_t err,
-                                      const lcb_store_resp_t *resp)
+    static void lockedStorageCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPSTORE *resp)
     {
-        Item *itm = (Item *)cookie;
-        itm->assignKC<lcb_store_resp_t>(resp, err);
+        Item *itm = (Item *)resp->cookie;
+        itm->assignKC<lcb_RESPSTORE>(resp);
     }
 }
 /**
@@ -172,26 +163,27 @@ TEST_F(LockUnitTest, testStorageLockContention)
     removeKey(instance, key);
     storeKey(instance, key, value);
 
-    lcb_set_get_callback(instance, getLockedCallback);
-    lcb_set_unlock_callback(instance, unlockCallback);
-    lcb_set_store_callback(instance, lockedStorageCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getLockedCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)lockedStorageCallback);
 
     /* get the key and lock it */
-    lcb_get_cmd_st gcmd(key.c_str(), key.size(), 1, 10);
-    lcb_get_cmd_st *cmdlist = &gcmd;
-    err = lcb_get(instance, &itm, 1, &cmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_CMDGET gcmd = {0};
+    LCB_KREQ_SIMPLE(&gcmd.key, key.c_str(), key.size());
+    gcmd.lock = 1;
+    gcmd.exptime = 10;
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &itm, &gcmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
     ASSERT_GT(itm.cas, 0);
 
     /* now try to set the key, while the lock is still in place */
-    lcb_store_cmd_t scmd(LCB_SET, key.c_str(), key.size(),
-                         newvalue.c_str(), newvalue.size());
-    lcb_store_cmd_t *scmdlist = &scmd;
+    lcb_CMDSTORE scmd = {0};
+    LCB_KREQ_SIMPLE(&scmd.key, key.c_str(), key.size());
+    LCB_CMD_SET_VALUE(&scmd, newvalue.c_str(), newvalue.size());
+    scmd.operation = LCB_SET;
     Item s_itm;
-    err = lcb_store(instance, &s_itm, 1, &scmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &s_itm, &scmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_KEY_EEXISTS, s_itm.err);
 
@@ -201,9 +193,8 @@ TEST_F(LockUnitTest, testStorageLockContention)
     ASSERT_EQ(ritem.val, value);
 
     /* now try to set it with the correct cas, implicitly unlocking the key */
-    scmd.v.v0.cas = itm.cas;
-    err = lcb_store(instance, &s_itm, 1, &scmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    scmd.cas = itm.cas;
+    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &s_itm, &scmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
 
@@ -242,27 +233,29 @@ TEST_F(LockUnitTest, testUnlLockContention)
     storeKey(instance, key, value);
     Item gitm;
 
-    lcb_set_get_callback(instance, getLockedCallback);
-    lcb_set_unlock_callback(instance, unlockCallback);
-    lcb_set_store_callback(instance, lockedStorageCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getLockedCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)lockedStorageCallback);
 
-    lcb_get_cmd_t gcmd(key.c_str(), key.size(), 1, 10);
-    lcb_get_cmd_t *gcmdlist = &gcmd;
+    lcb_CMDGET gcmd = {0};
+    LCB_KREQ_SIMPLE(&gcmd.key, key.c_str(), key.size());
+    gcmd.lock = 1;
+    gcmd.exptime = 10;
 
-    err = lcb_get(instance, &gitm, 1, &gcmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &gitm, &gcmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, gitm.err);
 
     lcb_cas_t validCas = gitm.cas;
-    err = lcb_get(instance, &gitm, 1, &gcmdlist);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &gitm, &gcmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_ETMPFAIL, gitm.err);
 
-    lcb_unlock_cmd_t ucmd(key.c_str(), key.size(), validCas);
-    lcb_unlock_cmd_t *ucmdlist = &ucmd;
-    err = lcb_unlock(instance, &reserr, 1, &ucmdlist);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_CMDUNLOCK ucmd = {0};
+    LCB_KREQ_SIMPLE(&ucmd.key, key.c_str(), key.size());
+    ucmd.cas = validCas;
+
+    ASSERT_EQ(LCB_SUCCESS, lcb_unlock3(instance, &reserr, &ucmd));
     lcb_wait(instance);
     ASSERT_EQ(reserr, LCB_SUCCESS);
 
@@ -270,5 +263,4 @@ TEST_F(LockUnitTest, testUnlLockContention)
     storeKey(instance, key, newval);
     getKey(instance, key, gitm);
     ASSERT_EQ(gitm.val, newval);
-
 }

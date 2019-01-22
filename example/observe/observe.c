@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
     for (ii = 0; ii < obs_info.nresp; ii++) {
         node_info *ni = &obs_info.nodeinfo[ii];
         fprintf(stderr, "Got status from %s node:\n", ni->master ? "master" : "replica");
-        fprintf(stderr, "\tCAS: 0x0%llx\n", ni->cas);
+        fprintf(stderr, "\tCAS: 0x0%llx\n", (unsigned long long)ni->cas);
         fprintf(stderr, "\tStatus (RAW): 0x%02x\n", ni->status);
         fprintf(stderr, "\tExists [CACHE]: %s\n", ni->status & LCB_OBSERVE_NOT_FOUND ? "No" : "Yes");
         fprintf(stderr, "\tExists [DISK]: %s\n", ni->status & LCB_OBSERVE_PERSISTED ? "Yes" : "No");
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
     lcb_wait(instance);
 
     assert(obs_info.nresp == 1 && obs_info.nodeinfo[0].master);
-    fprintf(stderr, "CAS on master is 0x%llx\n", obs_info.nodeinfo[0].cas);
+    fprintf(stderr, "CAS on master is 0x%llx\n", (unsigned long long)obs_info.nodeinfo[0].cas);
 
     lcb_destroy(instance);
     free(obs_info.nodeinfo);

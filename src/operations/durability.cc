@@ -513,51 +513,6 @@ lcb_endure3_ctxnew(lcb_t instance, const lcb_durability_opts_t *options,
     return dset;
 }
 
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_durability_poll(lcb_t instance, const void *cookie,
-    const lcb_durability_opts_t *options, lcb_size_t ncmds,
-    const lcb_durability_cmd_t *const *cmds)
-{
-    lcb_MULTICMD_CTX *mctx;
-    lcb_error_t err;
-
-    if (ncmds == 0) {
-        return LCB_EINVAL;
-    }
-
-    mctx = lcb_endure3_ctxnew(instance, options, &err);
-    if (!mctx) {
-        return err;
-    }
-
-    for (size_t ii = 0; ii < ncmds; ii++) {
-        lcb_CMDENDURE cmd = { 0 };
-        const lcb_DURABILITYCMDv0 *src = &cmds[ii]->v.v0;
-        cmd.key.contig.bytes = src->key;
-        cmd.key.contig.nbytes = src->nkey;
-        cmd._hashkey.contig.bytes = src->hashkey;
-        cmd._hashkey.contig.nbytes = src->nhashkey;
-        cmd.cas = src->cas;
-
-        err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
-        if (err != LCB_SUCCESS) {
-            mctx->fail(mctx);
-            return err;
-        }
-    }
-
-    lcb_sched_enter(instance);
-    err = mctx->done(mctx, cookie);
-    if (err != LCB_SUCCESS) {
-        lcb_sched_fail(instance);
-        return err;
-    } else {
-        lcb_sched_leave(instance);
-        return LCB_SUCCESS;
-    }
-}
-
 /**
  * Actually free the resources allocated by the dset (and all its entries).
  * Called by some other functions in libcouchbase

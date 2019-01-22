@@ -72,20 +72,6 @@ extern "C" {
 
 struct lcb_callback_st {
     lcb_RESPCALLBACK v3callbacks[LCB_CALLBACK__MAX];
-    lcb_get_callback get;
-    lcb_store_callback store;
-    lcb_arithmetic_callback arithmetic;
-    lcb_observe_callback observe;
-    lcb_remove_callback remove;
-    lcb_stat_callback stat;
-    lcb_version_callback version;
-    lcb_touch_callback touch;
-    lcb_flush_callback flush;
-    lcb_http_complete_callback http_complete;
-    lcb_http_data_callback http_data;
-    lcb_unlock_callback unlock;
-    lcb_verbosity_callback verbosity;
-    lcb_durability_callback durability;
     lcb_errmap_callback errmap;
     lcb_bootstrap_callback bootstrap;
     lcb_pktfwd_callback pktfwd;

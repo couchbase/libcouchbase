@@ -113,31 +113,6 @@ lcb_get_node(lcb_t instance, lcb_GETNODETYPE type, unsigned ix)
     }
 }
 
-LIBCOUCHBASE_API const char * lcb_get_host(lcb_t instance) {
-    char *colon;
-    const char *rv = lcb_get_node(instance,
-        static_cast<lcb_GETNODETYPE>(LCB_NODE_HTCONFIG|LCB_NODE_NEVERNULL), 0);
-    if (rv != NULL && (colon = (char *)strstr(rv, ":"))  != NULL) {
-        if (instance->scratch && rv == instance->scratch->c_str()) {
-            // We have a colon
-            size_t colon_pos = instance->scratch->find(':');
-            if (colon_pos != std::string::npos) {
-                instance->scratch->erase(colon_pos);
-            }
-        }
-    }
-    return rv;
-}
-
-LIBCOUCHBASE_API const char * lcb_get_port(lcb_t instance) {
-    const char *rv = lcb_get_node(instance,
-        static_cast<lcb_GETNODETYPE>(LCB_NODE_HTCONFIG|LCB_NODE_NEVERNULL), 0);
-    if (rv && (rv = strstr(rv, ":"))) {
-        rv++;
-    }
-    return rv;
-}
-
 LIBCOUCHBASE_API
 lcb_int32_t lcb_get_num_replicas(lcb_t instance)
 {

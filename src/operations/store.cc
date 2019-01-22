@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2012 Couchbase, Inc.
+ *     Copyright 2010-2018 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -335,37 +335,4 @@ LIBCOUCHBASE_API
 lcb_error_t lcb_storedur3(lcb_t instance, const void *cookie, const lcb_CMDSTOREDUR *cmd)
 {
     return do_store3(instance, cookie, (const lcb_CMDBASE *)cmd, 1);
-}
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_store(lcb_t instance, const void *cookie, lcb_size_t num, const lcb_store_cmd_t *const *items)
-{
-    unsigned ii;
-    lcb_error_t err = LCB_SUCCESS;
-
-    lcb_sched_enter(instance);
-    for (ii = 0; ii < num; ii++) {
-        const lcb_store_cmd_t *src = items[ii];
-        lcb_CMDSTORE dst;
-        memset(&dst, 0, sizeof(dst));
-
-        dst.key.contig.bytes = src->v.v0.key;
-        dst.key.contig.nbytes = src->v.v0.nkey;
-        dst._hashkey.contig.bytes = src->v.v0.hashkey;
-        dst._hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.value.u_buf.contig.bytes = src->v.v0.bytes;
-        dst.value.u_buf.contig.nbytes = src->v.v0.nbytes;
-        dst.operation = src->v.v0.operation;
-        dst.flags = src->v.v0.flags;
-        dst.datatype = src->v.v0.datatype;
-        dst.cas = src->v.v0.cas;
-        dst.exptime = src->v.v0.exptime;
-        err = lcb_store3(instance, cookie, &dst);
-        if (err != LCB_SUCCESS) {
-            lcb_sched_fail(instance);
-            return err;
-        }
-    }
-    lcb_sched_leave(instance);
-    return LCB_SUCCESS;
 }

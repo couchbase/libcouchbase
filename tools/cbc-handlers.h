@@ -286,14 +286,6 @@ private:
     cliopts::BoolOption o_details;
 };
 
-class McFlushHandler : public Handler {
-public:
-    HANDLER_DESCRIPTION("Flush a memcached bucket")
-    McFlushHandler() : Handler("mcflush") {}
-protected:
-    void run();
-};
-
 class ArithmeticHandler : public Handler {
 public:
     HANDLER_USAGE("KEY ... [OPTIONS ...]")

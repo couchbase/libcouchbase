@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2018 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -23,15 +23,13 @@ class ServeropsUnitTest : public MockUnitTest
 };
 
 extern "C" {
-    static void testServerStatsCallback(lcb_t, const void *cookie,
-                                        lcb_error_t error,
-                                        const lcb_server_stat_resp_t *resp)
+    static void testServerStatsCallback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
     {
-        int *counter = (int *)cookie;
-        EXPECT_EQ(LCB_SUCCESS, error);
-        EXPECT_EQ(0, resp->version);
+        int *counter = (int *)resp->cookie;
+        EXPECT_EQ(LCB_SUCCESS, resp->rc);
         ++(*counter);
     }
+
     static void statKey_callback(lcb_t, int, const lcb_RESPBASE *resp_base) {
         const lcb_RESPSTATS *resp = (const lcb_RESPSTATS *)resp_base;
         if (!resp->server) {
@@ -57,11 +55,10 @@ TEST_F(ServeropsUnitTest, testServerStats)
     HandleWrap hw;
     createConnection(hw, instance);
 
-    (void)lcb_set_stat_callback(instance, testServerStatsCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)testServerStatsCallback);
     int numcallbacks = 0;
-    lcb_server_stats_cmd_t cmd;
-    lcb_server_stats_cmd_t *cmds[] = { &cmd };
-    EXPECT_EQ(LCB_SUCCESS, lcb_server_stats(instance, &numcallbacks, 1, cmds));
+    lcb_CMDSTATS cmd = {0};
+    EXPECT_EQ(LCB_SUCCESS, lcb_stats3(instance, &numcallbacks, &cmd));
     lcb_wait(instance);
     EXPECT_LT(1, numcallbacks);
 }
@@ -72,7 +69,7 @@ TEST_F(ServeropsUnitTest, testKeyStats)
     lcb_t instance;
     HandleWrap hw;
     createConnection(hw, instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_STATS, statKey_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)statKey_callback);
     lcb_CMDSTATS cmd = { 0 };
 
     std::string key = "keystats_test";
@@ -97,13 +94,10 @@ TEST_F(ServeropsUnitTest, testKeyStats)
 }
 
 extern "C" {
-    static void testServerVersionsCallback(lcb_t, const void *cookie,
-                                           lcb_error_t error,
-                                           const lcb_server_version_resp_t *resp)
+    static void testServerVersionsCallback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPMCVERSION *resp)
     {
-        int *counter = (int *)cookie;
-        EXPECT_EQ(LCB_SUCCESS, error);
-        EXPECT_EQ(0, resp->version);
+        int *counter = (int *)resp->cookie;
+        EXPECT_EQ(LCB_SUCCESS, resp->rc);
         ++(*counter);
     }
 }
@@ -120,45 +114,10 @@ TEST_F(ServeropsUnitTest, testServerVersion)
     HandleWrap hw;
     createConnection(hw, instance);
 
-    (void)lcb_set_version_callback(instance, testServerVersionsCallback);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)testServerVersionsCallback);
     int numcallbacks = 0;
-    lcb_server_version_cmd_t cmd;
-    lcb_server_version_cmd_t *cmds[] = { &cmd };
-    EXPECT_EQ(LCB_SUCCESS, lcb_server_versions(instance, &numcallbacks, 1, cmds));
-    lcb_wait(instance);
-    EXPECT_LT(1, numcallbacks);
-}
-
-
-extern "C" {
-    static void testFlushCallback(lcb_t, const void *cookie,
-                                  lcb_error_t error,
-                                  const lcb_flush_resp_t *resp)
-    {
-        int *counter = (int *)cookie;
-        EXPECT_TRUE(error == LCB_SUCCESS || error == LCB_NOT_SUPPORTED);
-        EXPECT_EQ(0, resp->version);
-        ++(*counter);
-    }
-}
-
-/**
- * @test Flush
- * @pre Request a flush operation
- * @post Response is either a success or a @c NOT_SUPPORTED return
- */
-TEST_F(ServeropsUnitTest, testFlush)
-{
-    SKIP_UNLESS_MOCK();
-    lcb_t instance;
-    HandleWrap hw;
-    createConnection(hw, instance);
-
-    (void)lcb_set_flush_callback(instance, testFlushCallback);
-    int numcallbacks = 0;
-    lcb_flush_cmd_t cmd;
-    lcb_flush_cmd_t *cmds[] = { &cmd };
-    EXPECT_EQ(LCB_SUCCESS, lcb_flush(instance, &numcallbacks, 1, cmds));
+    lcb_CMDBASE cmd = {0};
+    EXPECT_EQ(LCB_SUCCESS, lcb_server_versions3(instance, &numcallbacks, &cmd));
     lcb_wait(instance);
     EXPECT_LT(1, numcallbacks);
 }
@@ -166,34 +125,26 @@ TEST_F(ServeropsUnitTest, testFlush)
 extern "C" {
     static char *verbosity_endpoint;
 
-    static void verbosity_all_callback(lcb_t instance,
-                                       const void *cookie,
-                                       lcb_error_t error,
-                                       const lcb_verbosity_resp_t *resp)
+    static void verbosity_all_callback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPVERBOSITY *resp)
     {
-        int *counter = (int *)cookie;
-        ASSERT_EQ(0, resp->version);
-        ASSERT_EQ(LCB_SUCCESS, error);
-        if (resp->v.v0.server_endpoint == NULL) {
+        int *counter = (int *)resp->cookie;
+        ASSERT_EQ(LCB_SUCCESS, resp->rc);
+        if (resp->server == NULL) {
             EXPECT_EQ(MockEnvironment::getInstance()->getNumNodes(), *counter);
             return;
         } else if (verbosity_endpoint == NULL) {
-            verbosity_endpoint = strdup(resp->v.v0.server_endpoint);
+            verbosity_endpoint = strdup(resp->server);
         }
         ++(*counter);
     }
 
-    static void verbosity_single_callback(lcb_t instance,
-                                          const void *,
-                                          lcb_error_t error,
-                                          const lcb_verbosity_resp_t *resp)
+    static void verbosity_single_callback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPVERBOSITY *resp)
     {
-        ASSERT_EQ(0, resp->version);
-        ASSERT_EQ(LCB_SUCCESS, error);
-        if (resp->v.v0.server_endpoint == NULL) {
+        ASSERT_EQ(LCB_SUCCESS, resp->rc);
+        if (resp->server == NULL) {
             return;
         } else {
-            EXPECT_STREQ(verbosity_endpoint, resp->v.v0.server_endpoint);
+            EXPECT_STREQ(verbosity_endpoint, resp->server);
         }
     }
 }
@@ -208,23 +159,23 @@ TEST_F(ServeropsUnitTest, testVerbosity)
     HandleWrap hw;
     createConnection(hw, instance);
 
-    (void)lcb_set_verbosity_callback(instance, verbosity_all_callback);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)verbosity_all_callback);
 
     int counter = 0;
 
-    lcb_verbosity_cmd_t cmd(LCB_VERBOSITY_DEBUG);
-    lcb_verbosity_cmd_t *commands[] = { &cmd };
-    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands));
+    lcb_CMDVERBOSITY cmd = {0};
+    cmd.level = LCB_VERBOSITY_DEBUG;
+    EXPECT_EQ(LCB_SUCCESS, lcb_server_verbosity3(instance, &counter, &cmd));
     lcb_wait(instance);
 
     EXPECT_EQ(MockEnvironment::getInstance()->getNumNodes(), counter);
     EXPECT_NE((char *)NULL, verbosity_endpoint);
 
-    (void)lcb_set_verbosity_callback(instance, verbosity_single_callback);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)verbosity_single_callback);
 
-    lcb_verbosity_cmd_t cmd2(LCB_VERBOSITY_DEBUG, verbosity_endpoint);
-    lcb_verbosity_cmd_t *commands2[] = { &cmd2 };
-    EXPECT_EQ(LCB_SUCCESS, lcb_set_verbosity(instance, &counter, 1, commands2));
+    cmd.server = verbosity_endpoint;
+    cmd.level = LCB_VERBOSITY_DEBUG;
+    EXPECT_EQ(LCB_SUCCESS, lcb_server_verbosity3(instance, &counter, &cmd));
     lcb_wait(instance);
     free((void *)verbosity_endpoint);
     verbosity_endpoint = NULL;

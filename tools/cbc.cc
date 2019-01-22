@@ -295,8 +295,6 @@ common_server_callback(lcb_t, int cbtype, const lcb_RESPSERVERBASE *sbase)
     string msg;
     if (cbtype == LCB_CALLBACK_VERBOSITY) {
         msg = "Set verbosity";
-    } else if (cbtype == LCB_CALLBACK_FLUSH) {
-        msg = "Flush";
     } else if (cbtype == LCB_CALLBACK_VERSIONS) {
         const lcb_RESPMCVERSION *resp = (const lcb_RESPMCVERSION *)sbase;
         msg = string(resp->mcversion, resp->nversion);
@@ -437,7 +435,6 @@ void
 Handler::run()
 {
     lcb_create_st cropts;
-    memset(&cropts, 0, sizeof cropts);
     params.fillCropts(cropts);
     lcb_error_t err;
     err = lcb_create(&instance, &cropts);
@@ -1234,24 +1231,6 @@ PingHandler::run()
     lcb_wait(instance);
 }
 
-void
-McFlushHandler::run()
-{
-    Handler::run();
-
-    lcb_CMDFLUSH cmd = { 0 };
-    lcb_error_t err;
-    lcb_install_callback3(instance, LCB_CALLBACK_FLUSH, (lcb_RESPCALLBACK)common_server_callback);
-    lcb_sched_enter(instance);
-    err = lcb_flush3(instance, NULL, &cmd);
-    if (err != LCB_SUCCESS) {
-        throw LcbError(err);
-    }
-    lcb_sched_leave(instance);
-    lcb_wait(instance);
-}
-
-
 extern "C" {
 static void cbFlushCb(lcb_t, int, const lcb_RESPBASE *resp)
 {
@@ -1463,29 +1442,27 @@ HttpBaseHandler::run()
 {
     Handler::run();
     install(instance);
-    lcb_http_cmd_st cmd;
-    memset(&cmd, 0, sizeof cmd);
+    lcb_CMDHTTP cmd;
     string uri = getURI();
     const string& body = getBody();
 
-    cmd.v.v0.method = getMethod();
-    cmd.v.v0.chunked = 1;
-    cmd.v.v0.path = uri.c_str();
-    cmd.v.v0.npath = uri.size();
+    cmd.method = getMethod();
+    LCB_CMD_SET_KEY(&cmd, uri.c_str(), uri.size());
     if (!body.empty()) {
-        cmd.v.v0.body = body.c_str();
-        cmd.v.v0.nbody = body.size();
+        cmd.body = body.c_str();
+        cmd.nbody = body.size();
     }
     string ctype = getContentType();
     if (!ctype.empty()) {
-        cmd.v.v0.content_type = ctype.c_str();
+        cmd.content_type = ctype.c_str();
     }
 
-    lcb_http_request_t dummy;
+    cmd.type = isAdmin() ? LCB_HTTP_TYPE_MANAGEMENT : LCB_HTTP_TYPE_VIEW;
+    cmd.cmdflags |= LCB_CMDHTTP_F_STREAM;
+
     lcb_error_t err;
-    err = lcb_make_http_request(instance, (HttpReceiver*)this,
-        isAdmin() ? LCB_HTTP_TYPE_MANAGEMENT : LCB_HTTP_TYPE_VIEW,
-                &cmd, &dummy);
+    err = lcb_http3(instance, this, &cmd);
+
     if (err != LCB_SUCCESS) {
         throw LcbError(err);
     }
@@ -1829,7 +1806,6 @@ static const char* optionsOrder[] = {
         "observe-seqno",
         "incr",
         "decr",
-        "mcflush",
         "hash",
         "lock",
         "unlock",
@@ -1927,7 +1903,6 @@ setupHandlers()
     handlers_s["watch"] = new WatchHandler();
     handlers_s["verbosity"] = new VerbosityHandler();
     handlers_s["ping"] = new PingHandler();
-    handlers_s["mcflush"] = new McFlushHandler();
     handlers_s["incr"] = new IncrHandler();
     handlers_s["decr"] = new DecrHandler();
     handlers_s["admin"] = new AdminHandler();

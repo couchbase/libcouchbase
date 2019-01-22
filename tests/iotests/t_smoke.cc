@@ -1,3 +1,19 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2012-2018 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
 #include <gtest/gtest.h>
 #include "iotests.h"
 using std::vector;
@@ -19,14 +35,14 @@ struct rvbuf {
 
     template <typename T> void setKey(const T* resp) {
         const char *ktmp, *kend;
-        ktmp = (const char*)resp->v.v0.key;
-        kend = ktmp + resp->v.v0.nkey;
+        ktmp = (const char*)resp->key;
+        kend = ktmp + resp->nkey;
         key.assign(ktmp, kend);
     }
 
-    void setValue(const lcb_get_resp_t *resp) {
-        const char *btmp = (const char*)resp->v.v0.bytes;
-        const char *bend = btmp + resp->v.v0.nbytes;
+    void setValue(const lcb_RESPGET *resp) {
+        const char *btmp = (const char*)resp->value;
+        const char *bend = btmp + resp->nvalue;
         bytes.assign(btmp, bend);
     }
 
@@ -66,64 +82,62 @@ struct rvbuf {
 
 extern "C"
 {
-static void store_callback(lcb_t, const void *cookie, lcb_storage_t op,
-    lcb_error_t err, const lcb_store_resp_t *resp)
+static void store_callback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPSTORE *resp)
 {
-    rvbuf *rv = (rvbuf *)cookie;
-    rv->setError(err);
+    rvbuf *rv = (rvbuf *)resp->cookie;
+    rv->setError(resp->rc);
     rv->setKey(resp);
-    rv->operation = op;
+    rv->operation = resp->op;
 }
-static void get_callback(lcb_t, const void *cookie, lcb_error_t err,
-    const lcb_get_resp_t *resp)
+
+static void get_callback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPGET *resp)
 {
-    rvbuf *rv = (rvbuf*)cookie;
-    rv->setError(err);
+    rvbuf *rv = (rvbuf*)resp->cookie;
+    rv->setError(resp->rc);
     rv->setKey(resp);
-    if (err == LCB_SUCCESS) {
+    if (resp->rc == LCB_SUCCESS) {
         rv->setValue(resp);
     }
 }
-static void touch_callback(lcb_t, const void *cookie, lcb_error_t err,
-    const lcb_touch_resp_t *resp)
+
+static void touch_callback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPTOUCH *resp)
 {
-    rvbuf *rv = (rvbuf *)cookie;
-    rv->setError(err);
+    rvbuf *rv = (rvbuf *)resp->cookie;
+    rv->setError(resp->rc);
     rv->setKey(resp);
-    EXPECT_EQ(LCB_SUCCESS, err);
+    EXPECT_EQ(LCB_SUCCESS, resp->rc);
 }
-static void version_callback(lcb_t, const void *cookie, lcb_error_t err,
-    const lcb_server_version_resp_t *resp)
+
+static void version_callback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPMCVERSION *resp)
 {
-    const char *server_endpoint = (const char *)resp->v.v0.server_endpoint;
-    const char *vstring = (const char *)resp->v.v0.vstring;
-    lcb_size_t nvstring = resp->v.v0.nvstring;
-    rvbuf *rv = (rvbuf *)cookie;
+    const char *server_endpoint = (const char *)resp->server;
+    const char *vstring = (const char *)resp->mcversion;
+    lcb_size_t nvstring = resp->nversion;
+    rvbuf *rv = (rvbuf *)resp->cookie;
     char *str;
-    EXPECT_EQ(LCB_SUCCESS, err);
+    EXPECT_EQ(LCB_SUCCESS, resp->rc);
 
     if (server_endpoint == NULL) {
         assert(rv->counter == 0);
         return;
     }
 
-    rv->setError(err);
+    rv->setError(resp->rc);
     /*copy the key to an allocated buffer and ensure the key read from vstring
      * will not segfault
      */
     str = (char *)malloc(nvstring);
     memcpy(str, vstring, nvstring);
     free(str);
-
 }
 } //extern "C"
 static void
 setupCallbacks(lcb_t instance)
 {
-    lcb_set_store_callback(instance, store_callback);
-    lcb_set_get_callback(instance, get_callback);
-    lcb_set_touch_callback(instance, touch_callback);
-    lcb_set_version_callback(instance, version_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)store_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_TOUCH, (lcb_RESPCALLBACK)touch_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)version_callback);
 }
 
 class SmokeTest : public ::testing::Test
@@ -173,23 +187,17 @@ public:
 void
 SmokeTest::testSet1()
 {
-    lcb_error_t err;
     rvbuf rv;
-    lcb_store_cmd_t cmd;
-    const lcb_store_cmd_t *cmds[] = { &cmd };
-    memset(&cmd, 0, sizeof(cmd));
+    lcb_CMDSTORE cmd = {0};
 
     string key("foo");
     string value("bar");
 
-    cmd.v.v0.key = key.c_str();
-    cmd.v.v0.nkey = key.size();
-    cmd.v.v0.bytes = value.c_str();
-    cmd.v.v0.nbytes = value.size();
-    cmd.v.v0.operation = LCB_SET;
-    err = lcb_store(session, &rv, 1, cmds);
+    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+    LCB_CMD_SET_VALUE(&cmd, value.c_str(), value.size());
+    cmd.operation = LCB_SET;
+    EXPECT_EQ(LCB_SUCCESS, lcb_store3(session, &rv, &cmd));
     rv.incRemaining();
-    EXPECT_EQ(LCB_SUCCESS, err);
     lcb_wait(session);
     EXPECT_EQ(LCB_SUCCESS, rv.error);
     EXPECT_EQ(LCB_SET, rv.operation);
@@ -199,25 +207,19 @@ SmokeTest::testSet1()
 void
 SmokeTest::testSet2()
 {
-    lcb_error_t err;
     struct rvbuf rv;
     lcb_size_t ii;
-    lcb_store_cmd_t cmd;
-    const lcb_store_cmd_t *cmds[] = { &cmd };
+    lcb_CMDSTORE cmd = {0};
     string key("foo"), value("bar");
 
-    memset(&cmd, 0, sizeof(cmd));
-    cmd.v.v0.key = key.c_str();
-    cmd.v.v0.nkey = key.size();
-    cmd.v.v0.bytes = value.c_str();
-    cmd.v.v0.nbytes = value.size();
-    cmd.v.v0.operation = LCB_SET;
+    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+    LCB_CMD_SET_VALUE(&cmd, value.c_str(), value.size());
+    cmd.operation = LCB_SET;
 
     rv.errorCount = 0;
     rv.counter = 0;
     for (ii = 0; ii < 10; ++ii, rv.incRemaining()) {
-        err = lcb_store(session, &rv, 1, cmds);
-        EXPECT_EQ(LCB_SUCCESS, err);
+        EXPECT_EQ(LCB_SUCCESS, lcb_store3(session, &rv, &cmd));
     }
     lcb_wait(session);
     EXPECT_EQ(0, rv.errorCount);
@@ -228,32 +230,26 @@ SmokeTest::testGet1()
 {
     lcb_error_t err;
     struct rvbuf rv;
-    lcb_store_cmd_t storecmd;
-    const lcb_store_cmd_t *storecmds[] = { &storecmd };
-    lcb_get_cmd_t getcmd;
-    const lcb_get_cmd_t *getcmds[] = { &getcmd };
     string key("foo"), value("bar");
 
-    memset(&storecmd, 0, sizeof(storecmd));
-    storecmd.v.v0.key = key.c_str();
-    storecmd.v.v0.nkey = key.size();
-    storecmd.v.v0.bytes = value.c_str();
-    storecmd.v.v0.nbytes = value.size();
-    storecmd.v.v0.operation = LCB_SET;
+    lcb_CMDSTORE storecmd = {0};
+    LCB_CMD_SET_KEY(&storecmd, key.c_str(), key.size());
+    LCB_CMD_SET_VALUE(&storecmd, value.c_str(), value.size());
+    storecmd.operation = LCB_SET;
+    EXPECT_EQ(LCB_SUCCESS, lcb_store3(session, &rv, &storecmd));
     rv.incRemaining();
-    err = lcb_store(session, &rv, 1, storecmds);
-    EXPECT_EQ(LCB_SUCCESS, err);
+
     lcb_wait(session);
     EXPECT_EQ(LCB_SUCCESS, rv.error);
 
     rv.reset();
-    memset(&getcmd, 0, sizeof(getcmd));
-    getcmd.v.v0.key = key.c_str();
-    getcmd.v.v0.nkey = key.size();
+
+    lcb_CMDGET getcmd = {0};
+    LCB_CMD_SET_KEY(&getcmd, key.c_str(), key.size());
+    EXPECT_EQ(LCB_SUCCESS, lcb_get3(session, &rv, &getcmd));
     rv.incRemaining();
-    err = lcb_get(session, &rv, 1, getcmds);
-    EXPECT_EQ(LCB_SUCCESS, err);
     lcb_wait(session);
+
     EXPECT_EQ(rv.error, LCB_SUCCESS);
     EXPECT_EQ(key, rv.getKeyString());
     EXPECT_EQ(value, rv.getValueString());
@@ -272,102 +268,85 @@ genAZString(vector<string>& coll)
 void
 SmokeTest::testGet2()
 {
-    lcb_error_t err;
     struct rvbuf rv;
     string value("bar");
-    lcb_store_cmd_t storecmd;
-    const lcb_store_cmd_t *storecmds[] = { &storecmd };
-    lcb_get_cmd_t *getcmds[26];
     vector<string> coll;
     genAZString(coll);
 
     for (size_t ii = 0; ii < coll.size(); ii++) {
         const string& curKey = coll[ii];
 
-        memset(&storecmd, 0, sizeof(storecmd));
-        storecmd.v.v0.key = curKey.c_str();
-        storecmd.v.v0.nkey = curKey.size();
-        storecmd.v.v0.bytes = value.c_str();
-        storecmd.v.v0.nbytes = value.size();
-        storecmd.v.v0.operation = LCB_SET;
-        err = lcb_store(session, &rv, 1, storecmds);
-        EXPECT_EQ(LCB_SUCCESS, err);
+        lcb_CMDSTORE cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, curKey.c_str(), curKey.size());
+        LCB_CMD_SET_VALUE(&cmd, value.c_str(), value.size());
+        cmd.operation = LCB_SET;
+        EXPECT_EQ(LCB_SUCCESS, lcb_store3(session, &rv, &cmd));
         rv.incRemaining();
         lcb_wait(session);
         EXPECT_EQ(LCB_SUCCESS, rv.error);
 
         rv.reset();
-        getcmds[ii] = (lcb_get_cmd_t *)calloc(1, sizeof(lcb_get_cmd_t));
-        EXPECT_FALSE(NULL == getcmds[ii]);
-        getcmds[ii]->v.v0.key = curKey.c_str();
-        getcmds[ii]->v.v0.nkey = curKey.size();
     }
 
     rv.counter = coll.size();
-    err = lcb_get(session, &rv, coll.size(), (const lcb_get_cmd_t * const *)getcmds);
-    EXPECT_EQ(LCB_SUCCESS, err);
+
+    for (size_t ii = 0; ii < coll.size(); ii++) {
+        const string& curKey = coll[ii];
+
+        lcb_CMDGET cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, curKey.c_str(), curKey.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_get3(session, &rv, &cmd));
+        rv.incRemaining();
+    }
     lcb_wait(session);
     EXPECT_EQ(LCB_SUCCESS, rv.error);
     EXPECT_EQ(value, rv.getValueString());
-
-    for (size_t ii = 0; ii < 26; ii++) {
-        free(getcmds[ii]);
-    }
 }
 
 void
 SmokeTest::testTouch1()
 {
-    lcb_error_t err;
     struct rvbuf rv;
-    lcb_store_cmd_t storecmd;
-    const lcb_store_cmd_t *storecmds[] = { &storecmd };
-    lcb_touch_cmd_t *touchcmds[26];
     vector<string> coll;
     string value("bar");
     genAZString(coll);
+
     for (size_t ii = 0; ii < coll.size(); ii++) {
         const string& curKey = coll[ii];
-        memset(&storecmd, 0, sizeof(storecmd));
-        storecmd.v.v0.key = curKey.c_str();
-        storecmd.v.v0.nkey = curKey.size();
-        storecmd.v.v0.bytes = value.c_str();
-        storecmd.v.v0.nbytes = value.size();
-        storecmd.v.v0.operation = LCB_SET;
-        err = lcb_store(session, &rv, 1, storecmds);
-        EXPECT_EQ(LCB_SUCCESS, err);
+        lcb_CMDSTORE cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, curKey.c_str(), curKey.size());
+        LCB_CMD_SET_VALUE(&cmd, value.c_str(), value.size());
+        cmd.operation = LCB_SET;
+        EXPECT_EQ(LCB_SUCCESS, lcb_store3(session, &rv, &cmd));
+
         rv.incRemaining();
         lcb_wait(session);
         EXPECT_EQ(LCB_SUCCESS, rv.error);
 
         rv.reset();
-        touchcmds[ii] = (lcb_touch_cmd_t*)calloc(1, sizeof(lcb_touch_cmd_t));
-        EXPECT_FALSE(touchcmds[ii] == NULL);
-        touchcmds[ii]->v.v0.key = curKey.c_str();
-        touchcmds[ii]->v.v0.nkey = curKey.size();
     }
 
     rv.counter = coll.size();
-    err = lcb_touch(session, &rv, coll.size(), (const lcb_touch_cmd_t * const *)touchcmds);
-    EXPECT_EQ(LCB_SUCCESS, err);
+    for (size_t ii = 0; ii < coll.size(); ii++) {
+        const string& curKey = coll[ii];
+
+        lcb_CMDTOUCH cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, curKey.c_str(), curKey.size());
+        EXPECT_EQ(LCB_SUCCESS, lcb_touch3(session, &rv, &cmd));
+        rv.incRemaining();
+    }
+
     lcb_wait(session);
     EXPECT_EQ(LCB_SUCCESS, rv.error);
-    for (size_t ii = 0; ii < coll.size(); ii++) {
-        free(touchcmds[ii]);
-    }
 }
 
 void
 SmokeTest::testVersion1()
 {
-    lcb_error_t err;
     struct rvbuf rv;
-    lcb_server_version_cmd_t cmd;
-    const lcb_server_version_cmd_t *cmds[] = { &cmd };
-    memset(&cmd, 0, sizeof(cmd));
+    lcb_CMDBASE cmd = {0};
 
-    err = lcb_server_versions(session, &rv, 1, cmds);
-    EXPECT_EQ(LCB_SUCCESS, err);
+    EXPECT_EQ(LCB_SUCCESS, lcb_server_versions3(session, &rv, &cmd));
     rv.counter = mock->getNumNodes();
     lcb_wait(session);
     EXPECT_EQ(LCB_SUCCESS, rv.error);
@@ -405,20 +384,16 @@ SmokeTest::testSpuriousSaslError()
     int iterations = 50;
     rvbuf rvs[50];
     int i;
-    lcb_error_t err;
-    lcb_store_cmd_t storecmd;
-    const lcb_store_cmd_t *storecmds[] = { &storecmd };
+    string key("KEY");
 
     for (i = 0; i < iterations; i++) {
         rvs[i].counter = 999;
-        memset(&storecmd, 0, sizeof(storecmd));
-        storecmd.v.v0.key = "KEY";
-        storecmd.v.v0.nkey = strlen((const char *)storecmd.v.v0.key);
-        storecmd.v.v0.bytes = "KEY";
-        storecmd.v.v0.nbytes = strlen((const char *)storecmd.v.v0.bytes);
-        storecmd.v.v0.operation = LCB_SET;
-        err = lcb_store(session, rvs + i, 1, storecmds);
-        EXPECT_EQ(LCB_SUCCESS, err);
+
+        lcb_CMDSTORE cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+        LCB_CMD_SET_VALUE(&cmd, key.c_str(), key.size());
+        cmd.operation = LCB_SET;
+        EXPECT_EQ(LCB_SUCCESS, lcb_store3(session, rvs + i, &cmd));
     }
     lcb_wait(session);
 
@@ -428,7 +403,7 @@ SmokeTest::testSpuriousSaslError()
             errinfo = "Did not get success response";
         } else if (rvs[i].key.size() != 3) {
             errinfo = "Did not get expected key length";
-        } else if (rvs[i].getKeyString() != string("KEY")) {
+        } else if (rvs[i].getKeyString() != key) {
             errinfo = "Weird key size";
         }
         if (errinfo) {

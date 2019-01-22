@@ -57,11 +57,6 @@ struct lcb_cached_config_st {
 LCB_DEPR_API2(lcb_error_t lcb_create_compat(lcb_compat_t type, const void *specific, lcb_t *instance, struct lcb_io_opt_st *io),
     "Use memcached:// for legacy memcached. For config cache, use LCB_CNTL_CONFIGCACHE");
 
-LCB_DEPR_API2(const char *lcb_get_host(lcb_t),
-    "Use lcb_get_node(instance, LCB_NODE_HTCONFIG, 0)");
-LCB_DEPR_API2(const char *lcb_get_port(lcb_t),
-    "Use lcb_get_node(instance, LCB_NODE_HTCONFIG, 0)");
-
 /** Deprecated cntls */
 
 /**@deprecated It is currently not possible to adjust buffer sizes */

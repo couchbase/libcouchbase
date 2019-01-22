@@ -24,34 +24,26 @@
  * Helper functions
  */
 extern "C" {
-    static void storeKvoCallback(lcb_t, const void *cookie,
-                                 lcb_storage_t operation,
-                                 lcb_error_t error,
-                                 const lcb_store_resp_t *resp)
+    static void storeKvoCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPSTORE *resp)
     {
-
-        KVOperation *kvo = (KVOperation *)cookie;
-        kvo->cbCommon(error);
-        kvo->result.assignKC(resp, error);
-        ASSERT_EQ(LCB_SET, operation);
+        KVOperation *kvo = (KVOperation *)resp->cookie;
+        kvo->cbCommon(resp->rc);
+        kvo->result.assignKC(resp);
+        ASSERT_EQ(LCB_SET, resp->op);
     }
 
-    static void getKvoCallback(lcb_t, const void *cookie,
-                               lcb_error_t error,
-                               const lcb_get_resp_t *resp)
+    static void getKvoCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPGET *resp)
     {
-        KVOperation *kvo = (KVOperation *)cookie;
-        kvo->cbCommon(error);
-        kvo->result.assign(resp, error);
+        KVOperation *kvo = (KVOperation *)resp->cookie;
+        kvo->cbCommon(resp->rc);
+        kvo->result.assign(resp);
     }
 
-    static void removeKvoCallback(lcb_t, const void *cookie,
-                                  lcb_error_t error,
-                                  const lcb_remove_resp_t *resp)
+    static void removeKvoCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPREMOVE *resp)
     {
-        KVOperation *kvo = (KVOperation *)cookie;
-        kvo->cbCommon(error);
-        kvo->result.assignKC(resp, error);
+        KVOperation *kvo = (KVOperation *)resp->cookie;
+        kvo->cbCommon(resp->rc);
+        kvo->result.assignKC(resp);
     }
 }
 
@@ -66,18 +58,18 @@ void KVOperation::handleInstanceError(lcb_t instance, lcb_error_t err,
 
 void KVOperation::enter(lcb_t instance)
 {
-    callbacks.get = lcb_set_get_callback(instance, getKvoCallback);
-    callbacks.rm = lcb_set_remove_callback(instance, removeKvoCallback);
-    callbacks.store = lcb_set_store_callback(instance, storeKvoCallback);
+    callbacks.get = lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getKvoCallback);
+    callbacks.rm = lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, (lcb_RESPCALLBACK)removeKvoCallback);
+    callbacks.store = lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeKvoCallback);
     oldCookie = lcb_get_cookie(instance);
     lcb_set_cookie(instance, this);
 }
 
 void KVOperation::leave(lcb_t instance)
 {
-    lcb_set_get_callback(instance, callbacks.get);
-    lcb_set_remove_callback(instance, callbacks.rm);
-    lcb_set_store_callback(instance, callbacks.store);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, callbacks.get);
+    lcb_install_callback3(instance, LCB_CALLBACK_REMOVE, callbacks.rm);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, callbacks.store);
     lcb_set_cookie(instance, oldCookie);
 }
 
@@ -97,32 +89,30 @@ void KVOperation::assertOk(lcb_error_t err)
 
 void KVOperation::store(lcb_t instance)
 {
-    lcb_store_cmd_t cmd(LCB_SET,
-                        request->key.data(), request->key.length(),
-                        request->val.data(), request->val.length(),
-                        request->flags,
-                        request->exp,
-                        request->cas,
-                        request->datatype);
-    lcb_store_cmd_t *cmds[] = { &cmd };
+    lcb_CMDSTORE cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, request->key.data(), request->key.length());
+    LCB_CMD_SET_VALUE(&cmd, request->val.data(), request->val.length());
+    cmd.operation = LCB_SET;
+    cmd.flags = request->flags;
+    cmd.exptime = request->exp;
+    cmd.cas = request->cas;
+    cmd.datatype = request->datatype;
 
     enter(instance);
-    EXPECT_EQ(LCB_SUCCESS, lcb_store(instance, this, 1, cmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_store3(instance, this, &cmd));
     EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
     leave(instance);
 
     ASSERT_EQ(1, callCount);
-
 }
 
 void KVOperation::remove(lcb_t instance)
 {
-    lcb_remove_cmd_t cmd(request->key.data(), request->key.length(),
-                         request->cas);
-    lcb_remove_cmd_t *cmds[] = { &cmd };
+    lcb_CMDREMOVE cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, request->key.data(), request->key.length());
 
     enter(instance);
-    EXPECT_EQ(LCB_SUCCESS, lcb_remove(instance, this, 1, cmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_remove3(instance, this, &cmd));
     EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
     leave(instance);
 
@@ -132,11 +122,12 @@ void KVOperation::remove(lcb_t instance)
 
 void KVOperation::get(lcb_t instance)
 {
-    lcb_get_cmd_t cmd(request->key.data(), request->key.length(), request->exp);
-    lcb_get_cmd_t *cmds[] = { &cmd };
+    lcb_CMDGET cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, request->key.data(), request->key.length());
+    cmd.exptime = request->exp;
 
     enter(instance);
-    EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, this, 1, cmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_get3(instance, this, &cmd));
     EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
     leave(instance);
 
@@ -195,22 +186,14 @@ void genDistKeys(lcbvb_CONFIG *vbc, std::vector<std::string> &out)
 }
 
 void genStoreCommands(const std::vector<std::string> &keys,
-                      std::vector<lcb_store_cmd_t> &cmds,
-                      std::vector<lcb_store_cmd_t*> &cmdpp)
+                      std::vector<lcb_CMDSTORE> &cmds)
 {
     for (unsigned int ii = 0; ii < keys.size(); ii++) {
-        lcb_store_cmd_t cmd;
-        memset(&cmd, 0, sizeof(cmd));
-        cmd.v.v0.key = keys[ii].c_str();
-        cmd.v.v0.nkey = keys[ii].size();
-        cmd.v.v0.bytes = cmd.v.v0.key;
-        cmd.v.v0.nbytes = cmd.v.v0.nkey;
-        cmd.v.v0.operation = LCB_SET;
+        lcb_CMDSTORE cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, keys[ii].c_str(), keys[ii].size());
+        LCB_CMD_SET_VALUE(&cmd, keys[ii].c_str(), keys[ii].size());
+        cmd.operation = LCB_SET;
         cmds.push_back(cmd);
-    }
-
-    for (unsigned int ii = 0; ii < keys.size(); ii++) {
-        cmdpp.push_back(&cmds[ii]);
     }
 }
 

@@ -1,6 +1,6 @@
 /* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2012 Couchbase, Inc.
+ *     Copyright 2012-2019 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -25,23 +25,21 @@ class RegressionUnitTest : public MockUnitTest
 static bool callbackInvoked = false;
 
 extern "C" {
-    static void get_callback(lcb_t, const void *cookie,
-                             lcb_error_t err, const lcb_get_resp_t *)
+    static void get_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
     {
-        EXPECT_EQ(err, LCB_KEY_ENOENT);
-        int *counter_p = reinterpret_cast<int *>(const_cast<void *>(cookie));
+        EXPECT_EQ(resp->rc, LCB_KEY_ENOENT);
+        int *counter_p = reinterpret_cast<int *>(const_cast<void *>(resp->cookie));
         EXPECT_TRUE(counter_p != NULL);
         EXPECT_GT(*counter_p, 0);
         *counter_p -= 1;
         callbackInvoked = true;
     }
 
-    static void stats_callback(lcb_t, const void *cookie, lcb_error_t err,
-                               const lcb_server_stat_resp_t *resp)
+    static void stats_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
     {
-        EXPECT_EQ(err, LCB_SUCCESS);
-        if (resp->v.v0.nkey == 0) {
-            int *counter_p = reinterpret_cast<int *>(const_cast<void *>(cookie));
+        EXPECT_EQ(resp->rc, LCB_SUCCESS);
+        if (resp->nkey == 0) {
+            int *counter_p = reinterpret_cast<int *>(const_cast<void *>(resp->cookie));
             *counter_p -= 1;
         }
         callbackInvoked = true;
@@ -55,16 +53,16 @@ TEST_F(RegressionUnitTest, CCBC_150)
     createConnection(hw, instance);
 
     callbackInvoked = false;
-    lcb_set_get_callback(instance, get_callback);
-    lcb_set_stat_callback(instance, stats_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
+    lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)stats_callback);
     lcb_uint32_t tmoval = 15000000;
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
 
-    lcb_get_cmd_t getCmd1("testGetMiss1");
-    lcb_get_cmd_t *getCmds[] = { &getCmd1 };
+    std::string key = "testGetMiss1";
+    lcb_CMDGET getCmd1 = {0};
+    LCB_CMD_SET_KEY(&getCmd1, key.c_str(), key.size());
 
-    lcb_server_stats_cmd_t statCmd;
-    lcb_server_stats_cmd_t *statCmds[] = { &statCmd };
+    lcb_CMDSTATS statCmd = {0};
     int ii;
 
     // Lets spool up a lot of commands in one of the buffers so that we
@@ -73,22 +71,22 @@ TEST_F(RegressionUnitTest, CCBC_150)
     void *ptr = &callbackCounter;
 
     for (ii = 0; ii < 1000; ++ii) {
-        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, ptr, 1, getCmds));
+        EXPECT_EQ(LCB_SUCCESS, lcb_get3(instance, ptr, &getCmd1));
     }
 
     callbackCounter++;
-    EXPECT_EQ(LCB_SUCCESS, lcb_server_stats(instance, ptr, 1, statCmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_stats3(instance, ptr, &statCmd));
 
     callbackCounter += 1000;
     for (ii = 0; ii < 1000; ++ii) {
-        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, ptr, 1, getCmds));
+        EXPECT_EQ(LCB_SUCCESS, lcb_get3(instance, ptr, &getCmd1));
     }
 
     callbackCounter++;
-    EXPECT_EQ(LCB_SUCCESS, lcb_server_stats(instance, ptr, 1, statCmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_stats3(instance, ptr, &statCmd));
 
     callbackCounter++;
-    EXPECT_EQ(LCB_SUCCESS, lcb_server_stats(instance, ptr, 1, statCmds));
+    EXPECT_EQ(LCB_SUCCESS, lcb_stats3(instance, ptr, &statCmd));
 
     EXPECT_EQ(LCB_SUCCESS, lcb_wait(instance));
     ASSERT_TRUE(callbackInvoked);
@@ -101,14 +99,11 @@ struct ccbc_275_info_st {
 };
 
 extern "C" {
-static void get_callback_275(lcb_t instance,
-                             const void *cookie,
-                             lcb_error_t err,
-                             const lcb_get_resp_t *)
+static void get_callback_275(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
 {
-    struct ccbc_275_info_st *info = (struct ccbc_275_info_st *)cookie;
+    struct ccbc_275_info_st *info = (struct ccbc_275_info_st *)resp->cookie;
     info->call_count++;
-    info->last_err = err;
+    info->last_err = resp->rc;
     lcb_breakout(instance);
 }
 
@@ -137,11 +132,8 @@ TEST_F(RegressionUnitTest, CCBC_275)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     std::string key = "key_CCBC_275";
-    lcb_get_cmd_t cmd, *cmdp;
-    memset(&cmd, 0, sizeof(cmd));
-    cmd.v.v0.key = key.c_str();
-    cmd.v.v0.nkey = key.size();
-    cmdp = &cmd;
+    lcb_CMDGET cmd = {0};
+    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
 
     // Set timeout for a short interval
     lcb_uint32_t tmo_usec = 100000;
@@ -153,10 +145,9 @@ TEST_F(RegressionUnitTest, CCBC_275)
     // (3) the subsequent lcb_wait would return immediately.
     // So far I've managed to reproduce (1), not clear on (2) and (3)
     mock->hiccupNodes(1000, 1);
-    lcb_set_get_callback(instance, get_callback_275);
+    lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback_275);
 
-    err = lcb_get(instance, &info, 1, &cmdp);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &info, &cmd));
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
 
@@ -179,8 +170,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
 
     mock->hiccupNodes(0, 0);
     info.call_count = 0;
-    err = lcb_get(instance, &info, 1, &cmdp);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &info, &cmd));
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
 
@@ -218,47 +208,34 @@ extern "C" {
         lcb_int32_t counter;
     };
 
-    static void df_store_callback1(lcb_t instance,
-                                   const void *cookie,
-                                   lcb_storage_t,
-                                   lcb_error_t error,
-                                   const lcb_store_resp_t *)
+    static void df_store_callback1(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)cookie;
-        rv->error = error;
+        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
+        rv->error = resp->rc;
         lcb_stop_loop(instance);
     }
 
-    static void df_store_callback2(lcb_t instance,
-                                   const void *cookie,
-                                   lcb_storage_t,
-                                   lcb_error_t error,
-                                   const lcb_store_resp_t *resp)
+    static void df_store_callback2(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)cookie;
-        rv->error = error;
-        rv->cas2 = resp->v.v0.cas;
+        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
+        rv->error = resp->rc;
+        rv->cas2 = resp->cas;
         lcb_stop_loop(instance);
     }
 
-    static void df_get_callback(lcb_t instance,
-                                const void *cookie,
-                                lcb_error_t error,
-                                const lcb_get_resp_t *resp)
+    static void df_get_callback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)cookie;
+        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
         const char *value = "{\"bar\"=>1, \"baz\"=>2}";
         lcb_size_t nvalue = strlen(value);
-        lcb_error_t err;
-
-        rv->error = error;
-        rv->cas1 = resp->v.v0.cas;
-        lcb_store_cmd_t storecmd(LCB_SET, resp->v.v0.key, resp->v.v0.nkey,
-                                 value, nvalue, 0, 0, resp->v.v0.cas);
-        lcb_store_cmd_t *storecmds[] = { &storecmd };
-
-        err = lcb_store(instance, rv, 1, storecmds);
-        ASSERT_EQ(LCB_SUCCESS, err);
+        rv->error = resp->rc;
+        rv->cas1 = resp->cas;
+        lcb_CMDSTORE storecmd = {0};
+        LCB_CMD_SET_KEY(&storecmd, resp->key, resp->nkey);
+        LCB_CMD_SET_VALUE(&storecmd, value, nvalue);
+        storecmd.operation = LCB_SET;
+        storecmd.cas = resp->cas;
+        ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, rv, &storecmd));
     }
 }
 
@@ -273,13 +250,14 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     createConnection(hw, instance);
 
     /* prefill the bucket */
-    (void)lcb_set_store_callback(instance, df_store_callback1);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)df_store_callback1);
 
-    lcb_store_cmd_t storecmd(LCB_SET, key, nkey, value, nvalue);
-    lcb_store_cmd_t *storecmds[] = { &storecmd };
+    lcb_CMDSTORE storecmd = {0};
+    LCB_CMD_SET_KEY(&storecmd, key, nkey);
+    LCB_CMD_SET_VALUE(&storecmd, value, nvalue);
+    storecmd.operation = LCB_SET;
 
-    err = lcb_store(instance, &rv, 1, storecmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &rv, &storecmd));
     lcb_run_loop(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
 
@@ -288,14 +266,13 @@ TEST_F(MockUnitTest, testDoubleFreeError)
      * 1. get the valueue and its cas
      * 2. atomic set new valueue using old cas
      */
-    (void)lcb_set_store_callback(instance, df_store_callback2);
-    (void)lcb_set_get_callback(instance, df_get_callback);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)df_store_callback2);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)df_get_callback);
 
-    lcb_get_cmd_t getcmd(key, nkey);
-    lcb_get_cmd_t *getcmds[] = { &getcmd };
+    lcb_CMDGET getcmd = {0};
+    LCB_CMD_SET_KEY(&getcmd, key, nkey);
 
-    err = lcb_get(instance, &rv, 1, getcmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &rv, &getcmd));
     rv.cas1 = rv.cas2 = 0;
     lcb_run_loop(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);

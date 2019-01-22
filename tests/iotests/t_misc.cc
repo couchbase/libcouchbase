@@ -45,11 +45,14 @@ TEST_F(MockUnitTest, testTimings)
     createConnection(hw, instance);
 
     lcb_enable_timings(instance);
+    std::string key = "counter";
+    std::string val = "0";
 
-    lcb_store_cmd_t storecmd(LCB_SET, "counter", 7, "0", 1);
-    lcb_store_cmd_t *storecmds[] = { &storecmd };
+    lcb_CMDSTORE storecmd = {0};
+    LCB_KREQ_SIMPLE(&storecmd.key, key.c_str(), key.size());
+    LCB_CMD_SET_VALUE(&storecmd, val.c_str(), val.size());
+    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, NULL, &storecmd));
 
-    lcb_store(instance, NULL, 1, storecmds);
     lcb_wait(instance);
     lcb_get_timings(instance, &called, timings_callback);
     lcb_disable_timings(instance);
@@ -149,13 +152,13 @@ LcbTimings::dump() const
     for (; ii != m_info.end(); ii++) {
         if (ii->ns_end < 1000) {
             printf("[%llu-%llu ns] %lu\n",
-                ii->ns_start, ii->ns_end, ii->count);
+                (unsigned long long)ii->ns_start, (unsigned long long)ii->ns_end, (unsigned long long)ii->count);
         } else if (ii->ns_end < 10000000) {
             printf("[%llu-%llu us] %lu\n",
-                ii->ns_start / 1000, ii->ns_end / 1000, ii->count);
+                (unsigned long long)(ii->ns_start / 1000), (unsigned long long)ii->ns_end / 1000, (unsigned long long)ii->count);
         } else {
             printf("[%llu-%llu ms] %lu\n",
-                ii->ns_start / 1000000, ii->ns_end / 1000000, ii->count);
+                (unsigned long long)(ii->ns_start / 1000000), (unsigned long long)(ii->ns_end / 1000000), (unsigned long long)ii->count);
         }
     }
 }
@@ -310,17 +313,6 @@ TEST_F(MockUnitTest, testGetHostInfo)
 
     hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
     ASSERT_TRUE(NULL == hoststr);
-
-
-
-    // These older API functions are special as they should never return NULL
-    hoststr = lcb_get_host(instance);
-    ASSERT_FALSE(hoststr == NULL);
-    ASSERT_STREQ("localhost", hoststr);
-
-    hoststr = lcb_get_port(instance);
-    ASSERT_FALSE(hoststr == NULL);
-    ASSERT_STREQ("8091", hoststr);
 
     lcb_destroy(instance);
 }

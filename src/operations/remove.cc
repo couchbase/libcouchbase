@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2012 Couchbase, Inc.
+ *     Copyright 2010-2018 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -68,31 +68,5 @@ lcb_error_t lcb_remove3(lcb_t instance, const void *cookie, const lcb_CMDREMOVE 
     LCBTRACE_KV_START(instance->settings, cmd, LCBTRACE_OP_REMOVE, pkt->opaque, pkt->u_rdata.reqdata.span);
     TRACE_REMOVE_BEGIN(instance, hdr, cmd);
     LCB_SCHED_ADD(instance, pl, pkt);
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_remove(lcb_t instance, const void *cookie, lcb_size_t num, const lcb_remove_cmd_t *const *items)
-{
-    unsigned ii;
-    lcb_sched_enter(instance);
-
-    for (ii = 0; ii < num; ii++) {
-        lcb_error_t err;
-        const lcb_remove_cmd_t *src = items[ii];
-        lcb_CMDREMOVE dst;
-        memset(&dst, 0, sizeof(dst));
-        dst.key.contig.bytes = src->v.v0.key;
-        dst.key.contig.nbytes = src->v.v0.nkey;
-        dst._hashkey.contig.bytes = src->v.v0.hashkey;
-        dst._hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.cas = src->v.v0.cas;
-        err = lcb_remove3(instance, cookie, &dst);
-        if (err != LCB_SUCCESS) {
-            lcb_sched_fail(instance);
-            return err;
-        }
-    }
-    lcb_sched_leave(instance);
     return LCB_SUCCESS;
 }

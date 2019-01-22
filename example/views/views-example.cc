@@ -25,7 +25,7 @@ static void viewCallback(lcb_t, int, const lcb_RESPVIEWQUERY *rv)
 
     if (rv->docresp) {
         printf("   Document for response. RC=0x%X. CAS=0x%llx\n",
-            rv->docresp->rc, rv->docresp->cas);
+            rv->docresp->rc, (unsigned long long)rv->docresp->cas);
     }
 
     cbCounter++;

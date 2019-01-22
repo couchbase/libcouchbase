@@ -1,3 +1,19 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2012-2019 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
 #include "config.h"
 #include "iotests.h"
 #include "internal.h"
@@ -246,20 +262,16 @@ TEST_F(DurabilityUnitTest, testInvalidCriteria)
     lcb_t instance = hwrap.getLcb();
 
     lcb_durability_opts_t opts = { 0 };
-    lcb_durability_cmd_t cmd = { 0 }, *cmd_p = &cmd;
-    lcb_error_t err;
-
     defaultOptions(instance, opts);
-
-    err = lcb_durability_poll(instance, NULL, &opts, 0, &cmd_p);
-    ASSERT_EQ(LCB_EINVAL, err);
-
     opts.v.v0.persist_to = 10;
     opts.v.v0.replicate_to = 100;
     opts.v.v0.cap_max = 0;
 
-    err = lcb_durability_poll(instance, NULL, &opts, 1, &cmd_p);
+    lcb_MULTICMD_CTX *mctx;
+    lcb_error_t err = LCB_SUCCESS;
+    mctx = lcb_endure3_ctxnew(instance, &opts, &err);
     ASSERT_EQ(err, LCB_DURABILITY_ETOOMANY);
+    ASSERT_EQ((lcb_MULTICMD_CTX *)NULL, mctx);
 }
 
 /**
@@ -274,14 +286,18 @@ TEST_F(DurabilityUnitTest, testDurabilityCriteria)
     instance = hwrap.getLcb();
 
     lcb_durability_opts_st opts = { 0 };
-    lcb_durability_cmd_st cmd = { 0 };
-    lcb_durability_cmd_st *cmd_p = &cmd;
 
     /** test with no persist/replicate */
     defaultOptions(instance, opts);
 
     opts.v.v0.replicate_to = 0;
     opts.v.v0.persist_to = 0;
+
+    lcb_MULTICMD_CTX *mctx;
+    lcb_error_t err = LCB_SUCCESS;
+    mctx = lcb_endure3_ctxnew(instance, &opts, &err);
+    ASSERT_EQ(err, LCB_EINVAL);
+    ASSERT_EQ((lcb_MULTICMD_CTX *)NULL, mctx);
 }
 
 /**
@@ -620,20 +636,16 @@ struct cb_cookie {
 };
 
 extern "C" {
-    static void dummyObserveCallback(lcb_t, const void *cookie,
-                                     lcb_error_t,
-                                     const lcb_observe_resp_t *)
+    static void dummyObserveCallback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPOBSERVE *resp)
     {
-        struct cb_cookie *c = (struct cb_cookie *)cookie;
+        struct cb_cookie *c = (struct cb_cookie *)resp->cookie;
         ASSERT_EQ(1, c->is_observe);
         c->count++;
     }
 
-    static void dummyDurabilityCallback(lcb_t, const void *cookie,
-                                        lcb_error_t,
-                                        const lcb_durability_resp_t *)
+    static void dummyDurabilityCallback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPENDURE *resp)
     {
-        struct cb_cookie *c = (struct cb_cookie *)cookie;
+        struct cb_cookie *c = (struct cb_cookie *)resp->cookie;
         ASSERT_EQ(0, c->is_observe);
         c->count++;
     }
@@ -658,36 +670,37 @@ TEST_F(DurabilityUnitTest, testObserveSanity)
     instance = handle.getLcb();
     lcb_error_t err;
 
+    lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
 
-    lcb_set_durability_callback(instance, dummyDurabilityCallback);
-    lcb_set_observe_callback(instance, dummyObserveCallback);
-
-    lcb_durability_opts_t opts = { 0 };
-
-    lcb_observe_cmd_t ocmd, *ocmds[] = { &ocmd };
-    lcb_durability_cmd_t dcmd, *dcmds[] = { &dcmd };
-
-    memset(&ocmd, 0, sizeof(ocmd));
-    memset(&dcmd, 0, sizeof(dcmd));
-
-    ocmd.v.v0.key = "key";
-    ocmd.v.v0.nkey = 3;
-
-    dcmd.v.v0.key = "key";
-    dcmd.v.v0.nkey = 3;
 
     storeKey(instance, "key", "value");
 
-    defaultOptions(instance, opts);
-
     struct cb_cookie o_cookie = { 1, 0 };
+    {
+        lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
+        ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
+        lcb_CMDOBSERVE cmd = {0};
+        LCB_CMD_SET_KEY(&cmd, "key", 3);
+        ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd));
+        ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &o_cookie));
+    }
+
+
     struct cb_cookie d_cookie = { 0, 0 };
+    {
+        lcb_durability_opts_t opts = { 0 };
+        defaultOptions(instance, opts);
 
-    err = lcb_observe(instance, &o_cookie, 1, ocmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
-
-    err = lcb_durability_poll(instance, &d_cookie, &opts, 1, dcmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
+        lcb_error_t err = LCB_SUCCESS;
+        lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, &opts, &err);
+        ASSERT_EQ(LCB_SUCCESS, err);
+        ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
+        lcb_CMDENDURE cmd = { 0 };
+        LCB_CMD_SET_KEY(&cmd, "key", 3);
+        ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd));
+        ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &d_cookie));
+    }
 
     ASSERT_EQ(LCB_SUCCESS, lcb_wait(instance));
 
@@ -704,17 +717,16 @@ TEST_F(DurabilityUnitTest, testMasterObserve)
     createConnection(handle);
     lcb_t instance = handle.getLcb();
 
-    lcb_set_observe_callback(instance, dummyObserveCallback);
-    lcb_observe_cmd_t ocmd, *ocmds[] = { &ocmd };
-    memset(&ocmd, 0, sizeof(ocmd));
-    ocmd.version = 1;
-    ocmd.v.v1.key = "key";
-    ocmd.v.v1.options = LCB_OBSERVE_MASTER_ONLY;
-    ocmd.v.v1.nkey = 3;
-    storeKey(instance, "key", "value");
+    lcb_install_callback3(instance, LCB_CALLBACK_OBSERVE, (lcb_RESPCALLBACK)dummyObserveCallback);
+
     struct cb_cookie o_cookie = { 1, 0 };
-    lcb_error_t err = lcb_observe(instance, &o_cookie, 1, ocmds);
-    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_MULTICMD_CTX *mctx = lcb_observe3_ctxnew(instance);
+    ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
+    lcb_CMDOBSERVE cmd = {0};
+    cmd.cmdflags |= LCB_CMDOBSERVE_F_MASTER_ONLY;
+    LCB_CMD_SET_KEY(&cmd, "key", 3);
+    ASSERT_EQ(LCB_SUCCESS, mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd));
+    ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &o_cookie));
     lcb_wait(instance);
 
     // 2 == one for the callback, one for the NULL
@@ -757,12 +769,10 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     createConnection(handle);
     instance = handle.getLcb();
 
-    lcb_set_durability_callback(instance, dummyDurabilityCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_ENDURE, (lcb_RESPCALLBACK)dummyDurabilityCallback);
+
     std::string key = "key";
-
-    lcb_durability_cmd_t dcmd, *dcmds[] = { &dcmd };
     lcb_durability_opts_t opts = { 0 };
-
     opts.v.v0.persist_to = 100;
     opts.v.v0.replicate_to = 100;
     opts.v.v0.cap_max = 1;
@@ -773,11 +783,6 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     mcmd.onMaster = true;
     mcmd.replicaCount = lcb_get_num_replicas(instance);
     doMockTxn(mcmd);
-
-    memset(&dcmd, 0, sizeof(dcmd));
-
-    dcmd.v.v0.key = key.c_str();
-    dcmd.v.v0.nkey = 3;
 
     /**
      * Failover all but one node
@@ -790,15 +795,22 @@ TEST_F(DurabilityUnitTest, testDurabilityRelocation)
     lcbio_timer_rearm(tm, 500000);
     lcb_loop_ref(instance);
 
-    struct cb_cookie cookie = { 0, 0 };
-    lcb_error_t err = lcb_durability_poll(instance, &cookie, &opts, 1, dcmds);
+    lcb_error_t err = LCB_SUCCESS;
+    lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, &opts, &err);
     ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
+    lcb_CMDENDURE cmd = { 0 };
+    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+    err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+
+    struct cb_cookie cookie = { 0, 0 };
+    ASSERT_EQ(LCB_SUCCESS, mctx->done(mctx, &cookie));
 
     lcb_wait(instance);
     lcbio_timer_destroy(tm);
     ASSERT_EQ(1, cookie.count);
 }
-
 
 TEST_F(DurabilityUnitTest, testDuplicateCommands)
 {
@@ -806,24 +818,23 @@ TEST_F(DurabilityUnitTest, testDuplicateCommands)
     lcb_t instance;
     createConnection(hw, instance);
     std::string key("key");
-    std::vector<lcb_durability_cmd_t> cmds;
-    std::vector<lcb_durability_cmd_t *> cmdlist;
     lcb_durability_opts_t options = { 0 };
     options.v.v0.replicate_to = 100;
     options.v.v0.persist_to = 100;
     options.v.v0.cap_max = 1;
 
+    lcb_error_t err = LCB_SUCCESS;
+
+    lcb_MULTICMD_CTX *mctx = lcb_endure3_ctxnew(instance, &options, &err);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    ASSERT_NE((lcb_MULTICMD_CTX *)NULL, mctx);
     for (int ii = 0; ii < 2; ii++) {
-        lcb_durability_cmd_t cmd = { 0 };
-        cmd.v.v0.key = key.c_str();
-        cmd.v.v0.nkey = key.size();
-        cmds.push_back(cmd);
+        lcb_CMDENDURE cmd = { 0 };
+        LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+        err = mctx->addcmd(mctx, (lcb_CMDBASE*)&cmd);
+        ASSERT_EQ(LCB_SUCCESS, err);
     }
-    for (size_t ii = 0; ii < cmds.size(); ii++) {
-        cmdlist.push_back(&cmds[ii]);
-    }
-    lcb_error_t err;
-    err = lcb_durability_poll(instance, NULL, &options, 2, &cmdlist[0]);
+    err = mctx->done(mctx, NULL);
     ASSERT_EQ(LCB_DUPLICATE_COMMANDS, err);
 }
 

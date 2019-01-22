@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2010-2014 Couchbase, Inc.
+ *     Copyright 2010-2018 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -98,38 +98,6 @@ lcb_get3(lcb_t instance, const void *cookie, const lcb_CMDGET *cmd)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_get(lcb_t instance,
-                    const void *command_cookie,
-                    lcb_size_t num,
-                    const lcb_get_cmd_t *const *items)
-{
-    unsigned ii;
-    lcb_sched_enter(instance);
-
-    for (ii = 0; ii < num; ii++) {
-        const lcb_get_cmd_t *src = items[ii];
-        lcb_CMDGET dst;
-        lcb_error_t err;
-
-        memset(&dst, 0, sizeof(dst));
-        dst.key.contig.bytes = src->v.v0.key;
-        dst.key.contig.nbytes = src->v.v0.nkey;
-        dst._hashkey.contig.bytes = src->v.v0.hashkey;
-        dst._hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.lock = src->v.v0.lock;
-        dst.exptime = src->v.v0.exptime;
-
-        err = lcb_get3(instance, command_cookie, &dst);
-        if (err != LCB_SUCCESS) {
-            lcb_sched_fail(instance);
-            return err;
-        }
-    }
-    lcb_sched_leave(instance);
-    return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API
 lcb_error_t
 lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
 {
@@ -166,38 +134,6 @@ lcb_unlock3(lcb_t instance, const void *cookie, const lcb_CMDUNLOCK *cmd)
     LCBTRACE_KV_START(instance->settings, cmd, LCBTRACE_OP_UNLOCK, pkt->opaque, rd->span);
     TRACE_UNLOCK_BEGIN(instance, &hdr, cmd);
     return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_unlock(lcb_t instance, const void *cookie, lcb_size_t num,
-           const lcb_unlock_cmd_t * const * items)
-{
-    unsigned ii;
-    lcb_error_t err = LCB_SUCCESS;
-
-    lcb_sched_enter(instance);
-    for (ii = 0; ii < num; ii++) {
-        const lcb_unlock_cmd_t *src = items[ii];
-        lcb_CMDUNLOCK dst;
-        memset(&dst, 0, sizeof(dst));
-        dst.key.contig.bytes = src->v.v0.key;
-        dst.key.contig.nbytes = src->v.v0.nkey;
-        dst._hashkey.contig.bytes = src->v.v0.hashkey;
-        dst._hashkey.contig.nbytes = src->v.v0.nhashkey;
-        dst.cas = src->v.v0.cas;
-        err = lcb_unlock3(instance, cookie, &dst);
-        if (err != LCB_SUCCESS) {
-            break;
-        }
-    }
-    if (err != LCB_SUCCESS) {
-        lcb_sched_fail(instance);
-        return err;
-    } else {
-        lcb_sched_leave(instance);
-        return LCB_SUCCESS;
-    }
 }
 
 struct RGetCookie : mc_REQDATAEX {
@@ -389,38 +325,4 @@ lcb_rget3(lcb_t instance, const void *cookie, const lcb_CMDGETREPLICA *cmd)
 
     MAYBE_SCHEDLEAVE(instance);
     return LCB_SUCCESS;
-}
-
-LIBCOUCHBASE_API
-lcb_error_t
-lcb_get_replica(lcb_t instance, const void *cookie, lcb_size_t num,
-                const lcb_get_replica_cmd_t * const * items)
-{
-    unsigned ii;
-    lcb_error_t err = LCB_SUCCESS;
-
-    lcb_sched_enter(instance);
-    for (ii = 0; ii < num; ii++) {
-        const lcb_get_replica_cmd_t *src = items[ii];
-        lcb_CMDGETREPLICA dst;
-        memset(&dst, 0, sizeof(dst));
-        dst.key.contig.bytes = src->v.v1.key;
-        dst.key.contig.nbytes = src->v.v1.nkey;
-        dst._hashkey.contig.bytes = src->v.v1.hashkey;
-        dst._hashkey.contig.nbytes = src->v.v1.nhashkey;
-        dst.strategy = src->v.v1.strategy;
-        dst.index = src->v.v1.index;
-        err = lcb_rget3(instance, cookie, &dst);
-        if (err != LCB_SUCCESS) {
-            break;
-        }
-    }
-
-    if (err == LCB_SUCCESS) {
-        lcb_sched_leave(instance);
-        return LCB_SUCCESS;
-    } else {
-        lcb_sched_fail(instance);
-        return err;
-    }
 }

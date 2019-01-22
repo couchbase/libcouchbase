@@ -36,8 +36,8 @@ thrfunc_unlocked(void *arg)
     lcb_create(&instance, NULL);
     lcb_connect(instance);
     lcb_wait(instance);
-    lcb_get_cmd_t cmd = { 0 }, *cmdp = &cmd;
-    lcb_get(instance, NULL, 1, &cmdp);
+    LCB_CMDGET cmd = { 0 };
+    lcb_get3(instance, NULL, &cmd);
     lcb_wait(instance);
     lcb_destroy(instance);
     return NULL;

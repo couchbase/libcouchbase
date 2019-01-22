@@ -287,13 +287,6 @@ Sends NOOP-like request to every service on each cluster node, and report time i
 * `--details`:
   Provide more details about status of the service.
 
-### mcflush
-
-Flush a _memcached_ bucket. This command takes no arguments, and will fail if the
-bucket specified is not a memcached bucket. You may also use [bucket-flush](#bucket-flush)
-to flush any bucket (including a couchbase bucket). The `mcflush` command may be
-quicker for memcached buckets, though.
-
 ### view
 
 Execute an HTTP request against the server's view (CAPI) interface.

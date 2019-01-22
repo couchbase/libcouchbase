@@ -627,34 +627,6 @@ lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd)
     return rc;
 }
 
-LIBCOUCHBASE_API
-lcb_error_t lcb_make_http_request(lcb_t instance,
-    const void *cookie, lcb_http_type_t type, const lcb_http_cmd_t *cmd,
-    lcb_http_request_t *request)
-{
-    lcb_CMDHTTP htcmd = { 0 };
-    const lcb_HTTPCMDv0 *cmdbase = &cmd->v.v0;
-
-    LCB_CMD_SET_KEY(&htcmd, cmdbase->path, cmdbase->npath);
-    htcmd.type = type;
-    htcmd.body = reinterpret_cast<const char*>(cmdbase->body);
-    htcmd.nbody = cmdbase->nbody;
-    htcmd.content_type = cmdbase->content_type;
-    htcmd.method = cmdbase->method;
-    htcmd.reqhandle = request;
-
-    if (cmd->version == 1) {
-        htcmd.username = cmd->v.v1.username;
-        htcmd.password = cmd->v.v1.password;
-        htcmd.host = cmd->v.v1.host;
-    }
-    if (cmdbase->chunked) {
-        htcmd.cmdflags |= LCB_CMDHTTP_F_STREAM;
-    }
-
-    return lcb_http3(instance, cookie, &htcmd);
-}
-
 void
 Request::cancel()
 {

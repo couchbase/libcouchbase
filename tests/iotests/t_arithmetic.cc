@@ -24,36 +24,30 @@ class ArithmeticUnitTest : public MockUnitTest
 static lcb_uint64_t arithm_val;
 
 extern "C" {
-    static void arithmetic_incr_callback(lcb_t, const void *,
-                                         lcb_error_t error,
-                                         const lcb_arithmetic_resp_t *resp)
+    static void arithmetic_incr_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPCOUNTER *resp)
     {
-        ASSERT_EQ(LCB_SUCCESS, error);
-        ASSERT_EQ(7, resp->v.v0.nkey);
-        ASSERT_EQ(0, memcmp(resp->v.v0.key, "counter", 7));
-        ASSERT_EQ(arithm_val + 1, resp->v.v0.value);
-        arithm_val = resp->v.v0.value;
+        ASSERT_EQ(LCB_SUCCESS, resp->rc);
+        ASSERT_EQ(7, resp->nkey);
+        ASSERT_EQ(0, memcmp(resp->key, "counter", 7));
+        ASSERT_EQ(arithm_val + 1, resp->value);
+        arithm_val = resp->value;
     }
 
-    static void arithmetic_decr_callback(lcb_t, const void *,
-                                         lcb_error_t error,
-                                         const lcb_arithmetic_resp_t *resp)
+    static void arithmetic_decr_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPCOUNTER *resp)
     {
-        ASSERT_EQ(LCB_SUCCESS, error);
-        ASSERT_EQ(7, resp->v.v0.nkey);
-        ASSERT_EQ(0, memcmp(resp->v.v0.key, "counter", 7));
-        ASSERT_EQ(arithm_val - 1, resp->v.v0.value);
-        arithm_val = resp->v.v0.value;
+        ASSERT_EQ(LCB_SUCCESS, resp->rc);
+        ASSERT_EQ(7, resp->nkey);
+        ASSERT_EQ(0, memcmp(resp->key, "counter", 7));
+        ASSERT_EQ(arithm_val - 1, resp->value);
+        arithm_val = resp->value;
     }
 
-    static void arithmetic_create_callback(lcb_t, const void *,
-                                           lcb_error_t error,
-                                           const lcb_arithmetic_resp_t *resp)
+    static void arithmetic_create_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPCOUNTER *resp)
     {
-        ASSERT_EQ(LCB_SUCCESS, error);
-        ASSERT_EQ(9, resp->v.v0.nkey);
-        ASSERT_EQ(0, memcmp(resp->v.v0.key, "mycounter", 9));
-        ASSERT_EQ(0xdeadbeef, resp->v.v0.value);
+        ASSERT_EQ(LCB_SUCCESS, resp->rc);
+        ASSERT_EQ(9, resp->nkey);
+        ASSERT_EQ(0, memcmp(resp->key, "mycounter", 9));
+        ASSERT_EQ(0xdeadbeef, resp->value);
     }
 }
 
@@ -84,14 +78,15 @@ TEST_F(ArithmeticUnitTest, testIncr)
     lcb_t instance;
     HandleWrap hw;
     createConnection(hw, instance);
-    (void)lcb_set_arithmetic_callback(instance, arithmetic_incr_callback);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_incr_callback);
 
     initArithmeticKey(instance, "counter", 0);
 
     for (int ii = 0; ii < 10; ++ii) {
-        lcb_arithmetic_cmd_t cmd("counter", 7, 1);
-        lcb_arithmetic_cmd_t *cmds[] = { &cmd };
-        lcb_arithmetic(instance, NULL, 1, cmds);
+        lcb_CMDCOUNTER cmd = {0};
+        LCB_KREQ_SIMPLE(&cmd.key, "counter", 7);
+        cmd.delta = 1;
+        lcb_counter3(instance, NULL, &cmd);
         lcb_wait(instance);
     }
 }
@@ -108,14 +103,15 @@ TEST_F(ArithmeticUnitTest, testDecr)
     lcb_t instance;
     HandleWrap hw;
     createConnection(hw, instance);
-    (void)lcb_set_arithmetic_callback(instance, arithmetic_decr_callback);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_decr_callback);
 
     initArithmeticKey(instance, "counter", 100);
 
     for (int ii = 0; ii < 10; ++ii) {
-        lcb_arithmetic_cmd_t cmd("counter", 7, -1);
-        lcb_arithmetic_cmd_t *cmds[] = { &cmd };
-        lcb_arithmetic(instance, NULL, 1, cmds);
+        lcb_CMDCOUNTER cmd = {0};
+        LCB_KREQ_SIMPLE(&cmd.key, "counter", 7);
+        cmd.delta = -1;
+        lcb_counter3(instance, NULL, &cmd);
         lcb_wait(instance);
     }
 
@@ -135,9 +131,12 @@ TEST_F(ArithmeticUnitTest, testArithmeticCreate)
     createConnection(hw, instance);
 
     removeKey(instance, "mycounter");
-    (void)lcb_set_arithmetic_callback(instance, arithmetic_create_callback);
-    lcb_arithmetic_cmd_t cmd("mycounter", 9, 0x77, 1, 0xdeadbeef);
-    lcb_arithmetic_cmd_t *cmds[] = { &cmd };
-    lcb_arithmetic(instance, NULL, 1, cmds);
+    (void)lcb_install_callback3(instance, LCB_CALLBACK_COUNTER, (lcb_RESPCALLBACK)arithmetic_create_callback);
+    lcb_CMDCOUNTER cmd = {0};
+    LCB_KREQ_SIMPLE(&cmd.key, "mycounter", 9);
+    cmd.create = 1;
+    cmd.initial = 0xdeadbeef;
+    cmd.delta = 0x77;
+    lcb_counter3(instance, NULL, &cmd);
     lcb_wait(instance);
 }

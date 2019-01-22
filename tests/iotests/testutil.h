@@ -21,23 +21,23 @@
 #include <libcouchbase/vbucket.h>
 #include <string.h>
 struct Item {
-    void assign(const lcb_get_resp_t *resp, lcb_error_t e = LCB_SUCCESS) {
-        key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);
-        val.assign((const char *)resp->v.v0.bytes, resp->v.v0.nbytes);
-        flags = resp->v.v0.flags;
-        cas =  resp->v.v0.cas;
-        datatype =  resp->v.v0.datatype;
-        err = e;
+    void assign(const lcb_RESPGET *resp) {
+        key.assign((const char *)resp->key, resp->nkey);
+        val.assign((const char *)resp->value, resp->nvalue);
+        flags = resp->itmflags;
+        cas =  resp->cas;
+        datatype =  resp->datatype;
+        err = resp->rc;
     }
 
     /**
      * Extract the key and CAS from a response.
      */
     template <typename T>
-    void assignKC(const T *resp, lcb_error_t e = LCB_SUCCESS) {
-        key.assign((const char *)resp->v.v0.key, resp->v.v0.nkey);
-        cas = resp->v.v0.cas;
-        err = e;
+    void assignKC(const T *resp) {
+        key.assign((const char *)resp->key, resp->nkey);
+        cas = resp->cas;
+        err = resp->rc;
     }
 
     Item() {
@@ -135,9 +135,9 @@ private:
     const void *oldCookie;
 
     struct {
-        lcb_get_callback get;
-        lcb_store_callback store;
-        lcb_remove_callback rm;
+        lcb_RESPCALLBACK get;
+        lcb_RESPCALLBACK store;
+        lcb_RESPCALLBACK rm;
     } callbacks;
 };
 
@@ -150,9 +150,7 @@ void getKey(lcb_t instance, const std::string &key, Item &item);
  */
 void genDistKeys(lcbvb_CONFIG* vbc, std::vector<std::string> &out);
 void genStoreCommands(const std::vector<std::string> &keys,
-                      std::vector<lcb_store_cmd_t> &cmds,
-                      std::vector<lcb_store_cmd_t*> &cmdpp);
-
+                      std::vector<lcb_CMDSTORE> &cmds);
 /**
  * This doesn't _actually_ attempt to make sense of an operation. It simply
  * will try to keep the event loop alive.

@@ -1,6 +1,6 @@
 /* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- *     Copyright 2011-2012 Couchbase, Inc.
+ *     Copyright 2011-2018 Couchbase, Inc.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -328,40 +328,4 @@ lcb_MULTICMD_CTX *lcb_observe_ctx_dur_new(lcb_t instance)
     ObserveCtx *ctx = new ObserveCtx(instance);
     ctx->oflags |= F_DURABILITY;
     return ctx;
-}
-
-LIBCOUCHBASE_API
-lcb_error_t lcb_observe(lcb_t instance, const void *command_cookie, lcb_size_t num,
-                        const lcb_observe_cmd_t *const *items)
-{
-    unsigned ii;
-    lcb_error_t err;
-    lcb_MULTICMD_CTX *mctx;
-
-    lcb_sched_enter(instance);
-
-    mctx = lcb_observe3_ctxnew(instance);
-    if (mctx == NULL) {
-        return LCB_CLIENT_ENOMEM;
-    }
-
-    for (ii = 0; ii < num; ii++) {
-        lcb_CMDOBSERVE cmd = {0};
-        const lcb_observe_cmd_t *src = items[ii];
-        if (src->version == 1 && (src->v.v1.options & LCB_OBSERVE_MASTER_ONLY)) {
-            cmd.cmdflags |= LCB_CMDOBSERVE_F_MASTER_ONLY;
-        }
-        LCB_KREQ_SIMPLE(&cmd.key, src->v.v0.key, src->v.v0.nkey);
-        LCB_KREQ_SIMPLE(&cmd._hashkey, src->v.v0.hashkey, src->v.v0.nhashkey);
-
-        err = mctx->addcmd(mctx, (lcb_CMDBASE *)&cmd);
-        if (err != LCB_SUCCESS) {
-            mctx->fail(mctx);
-            return err;
-        }
-    }
-    lcb_sched_enter(instance);
-    mctx->done(mctx, command_cookie);
-    lcb_sched_leave(instance);
-    return LCB_SUCCESS;
 }
