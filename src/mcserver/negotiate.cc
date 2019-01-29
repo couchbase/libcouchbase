@@ -219,23 +219,10 @@ bool
 SessionRequestImpl::setup(const lcbio_NAMEINFO& nistrs, const lcb_host_t& host,
     const lcb::Authenticator& auth)
 {
-    cbsasl_callback_t sasl_callbacks[4];
-    sasl_callbacks[0].id = CBSASL_CB_USER;
-    sasl_callbacks[0].proc = (int( *)(void)) &sasl_get_username;
-
-    sasl_callbacks[1].id = CBSASL_CB_AUTHNAME;
-    sasl_callbacks[1].proc = (int( *)(void)) &sasl_get_username;
-
-    sasl_callbacks[2].id = CBSASL_CB_PASS;
-    sasl_callbacks[2].proc = (int( *)(void)) &sasl_get_password;
-
-    sasl_callbacks[3].id = CBSASL_CB_LIST_END;
-    sasl_callbacks[3].proc = NULL;
-    sasl_callbacks[3].context = NULL;
-
-    for (size_t ii = 0; ii < 3; ii++) {
-        sasl_callbacks[ii].context = this;
-    }
+    cbsasl_callbacks_t sasl_callbacks;
+    sasl_callbacks.context = this;
+    sasl_callbacks.username = sasl_get_username;
+    sasl_callbacks.password = sasl_get_password;
 
     // Get the credentials
     username = auth.username_for(host.host, host.port, settings->bucket);
@@ -254,7 +241,7 @@ SessionRequestImpl::setup(const lcbio_NAMEINFO& nistrs, const lcb_host_t& host,
 
     cbsasl_error_t saslerr = cbsasl_client_new(
             "couchbase", host.host, nistrs.local, nistrs.remote,
-            sasl_callbacks, 0, &sasl_client);
+            &sasl_callbacks, 0, &sasl_client);
     return saslerr == SASL_OK;
 }
 
