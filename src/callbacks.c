@@ -18,18 +18,18 @@
 #include "internal.h"
 
 #define DEFINE_DUMMY_CALLBACK(name, resptype) \
-    static void name(lcb_t i, const void *c, lcb_error_t e, const resptype *r) \
+    static void name(lcb_INSTANCE *i, const void *c, lcb_STATUS e, const resptype *r) \
     { (void)i;(void)e;(void)c;(void)r; }
 
-static void dummy_bootstrap_callback(lcb_t instance, lcb_error_t err) {
+static void dummy_bootstrap_callback(lcb_INSTANCE *instance, lcb_STATUS err) {
     (void)instance; (void)err;
 }
 
-static void dummy_pktfwd_callback(lcb_t instance, const void *cookie,
-    lcb_error_t err, lcb_PKTFWDRESP *resp) {
+static void dummy_pktfwd_callback(lcb_INSTANCE *instance, const void *cookie,
+    lcb_STATUS err, lcb_PKTFWDRESP *resp) {
     (void)instance;(void)cookie;(void)err;(void)resp;
 }
-static void dummy_pktflushed_callback(lcb_t instance, const void *cookie) {
+static void dummy_pktflushed_callback(lcb_INSTANCE *instance, const void *cookie) {
     (void)instance;(void)cookie;
 }
 
@@ -51,12 +51,12 @@ typedef union {
 } uRESP;
 
 static void
-nocb_fallback(lcb_t instance, int type, const lcb_RESPBASE *response)
+nocb_fallback(lcb_INSTANCE *instance, int type, const lcb_RESPBASE *response)
 {
     (void)instance; (void)type; (void)response;
 }
 
-void lcb_initialize_packet_handlers(lcb_t instance)
+void lcb_initialize_packet_handlers(lcb_INSTANCE *instance)
 {
     instance->callbacks.errmap = lcb_errmap_default;
     instance->callbacks.bootstrap = dummy_bootstrap_callback;
@@ -67,7 +67,7 @@ void lcb_initialize_packet_handlers(lcb_t instance)
 
 #define CALLBACK_ACCESSOR(name, cbtype, field) \
 LIBCOUCHBASE_API \
-cbtype name(lcb_t instance, cbtype cb) { \
+cbtype name(lcb_INSTANCE *instance, cbtype cb) { \
     cbtype ret = instance->callbacks.field; \
     if (cb != NULL) { \
         instance->callbacks.field = cb; \
@@ -77,7 +77,7 @@ cbtype name(lcb_t instance, cbtype cb) { \
 
 LIBCOUCHBASE_API
 lcb_destroy_callback
-lcb_set_destroy_callback(lcb_t instance, lcb_destroy_callback cb)
+lcb_set_destroy_callback(lcb_INSTANCE *instance, lcb_destroy_callback cb)
 {
     lcb_destroy_callback ret = LCBT_SETTING(instance, dtorcb);
     if (cb) {
@@ -93,7 +93,7 @@ CALLBACK_ACCESSOR(lcb_set_pktflushed_callback, lcb_pktflushed_callback, pktflush
 
 LIBCOUCHBASE_API
 lcb_RESPCALLBACK
-lcb_install_callback3(lcb_t instance, int cbtype, lcb_RESPCALLBACK cb)
+lcb_install_callback3(lcb_INSTANCE *instance, int cbtype, lcb_RESPCALLBACK cb)
 {
     lcb_RESPCALLBACK ret;
     if (cbtype >= LCB_CALLBACK__MAX) {
@@ -107,7 +107,7 @@ lcb_install_callback3(lcb_t instance, int cbtype, lcb_RESPCALLBACK cb)
 
 LIBCOUCHBASE_API
 lcb_RESPCALLBACK
-lcb_get_callback3(lcb_t instance, int cbtype)
+lcb_get_callback3(lcb_INSTANCE *instance, int cbtype)
 {
     if (cbtype >= LCB_CALLBACK__MAX) {
         return NULL;
@@ -164,7 +164,7 @@ lcb_strcbtype(int cbtype)
 }
 
 lcb_RESPCALLBACK
-lcb_find_callback(lcb_t instance, lcb_CALLBACKTYPE cbtype)
+lcb_find_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE cbtype)
 {
     lcb_RESPCALLBACK ret = instance->callbacks.v3callbacks[cbtype];
     if (!ret) {

@@ -22,12 +22,40 @@
 #include <string.h>
 struct Item {
     void assign(const lcb_RESPGET *resp) {
-        key.assign((const char *)resp->key, resp->nkey);
-        val.assign((const char *)resp->value, resp->nvalue);
-        flags = resp->itmflags;
-        cas =  resp->cas;
-        datatype =  resp->datatype;
-        err = resp->rc;
+        err = lcb_respget_status(resp);
+
+        const char *p;
+        size_t n;
+
+        lcb_respget_key(resp, &p, &n);
+        key.assign(p, n);
+        lcb_respget_value(resp, &p, &n);
+        val.assign(p, n);
+        lcb_respget_flags(resp, &flags);
+        lcb_respget_cas(resp, &cas);
+        lcb_respget_datatype(resp, &datatype);
+    }
+
+    void assign(const lcb_RESPSTORE *resp) {
+        err = lcb_respstore_status(resp);
+
+        const char *p;
+        size_t n;
+
+        lcb_respstore_key(resp, &p, &n);
+        key.assign(p, n);
+        lcb_respstore_cas(resp, &cas);
+    }
+
+    void assign(const lcb_RESPREMOVE *resp) {
+        err = lcb_respremove_status(resp);
+
+        const char *p;
+        size_t n;
+
+        lcb_respremove_key(resp, &p, &n);
+        key.assign(p, n);
+        lcb_respremove_cas(resp, &cas);
     }
 
     /**
@@ -79,7 +107,7 @@ struct Item {
     lcb_uint32_t flags;
     lcb_cas_t cas;
     lcb_datatype_t datatype;
-    lcb_error_t err;
+    lcb_STATUS err;
     lcb_time_t exp;
 };
 
@@ -94,12 +122,12 @@ struct KVOperation {
     unsigned callCount;
 
     /** Acceptable errors during callback */
-    std::set<lcb_error_t> allowableErrors;
+    std::set<lcb_STATUS> allowableErrors;
 
     /** Errors received from error handler */
-    std::set<lcb_error_t> globalErrors;
+    std::set<lcb_STATUS> globalErrors;
 
-    void assertOk(lcb_error_t err);
+    void assertOk(lcb_STATUS err);
 
     KVOperation(const Item *request) {
         this->request = request;
@@ -114,11 +142,11 @@ struct KVOperation {
         globalErrors.clear();
     }
 
-    void store(lcb_t instance);
-    void get(lcb_t instance);
-    void remove(lcb_t instance);
+    void store(lcb_INSTANCE *instance);
+    void get(lcb_INSTANCE *instance);
+    void remove(lcb_INSTANCE *instance);
 
-    void cbCommon(lcb_error_t error) {
+    void cbCommon(lcb_STATUS error) {
         callCount++;
         if (error != LCB_SUCCESS) {
             globalErrors.insert(error);
@@ -126,12 +154,12 @@ struct KVOperation {
         assertOk(error);
     }
 
-    static void handleInstanceError(lcb_t, lcb_error_t, const char *);
+    static void handleInstanceError(lcb_INSTANCE *, lcb_STATUS, const char *);
     bool ignoreErrors;
 
 private:
-    void enter(lcb_t);
-    void leave(lcb_t);
+    void enter(lcb_INSTANCE *);
+    void leave(lcb_INSTANCE *);
     const void *oldCookie;
 
     struct {
@@ -141,20 +169,20 @@ private:
     } callbacks;
 };
 
-void storeKey(lcb_t instance, const std::string &key, const std::string &value);
-void removeKey(lcb_t instance, const std::string &key);
-void getKey(lcb_t instance, const std::string &key, Item &item);
+void storeKey(lcb_INSTANCE *instance, const std::string &key, const std::string &value);
+void removeKey(lcb_INSTANCE *instance, const std::string &key);
+void getKey(lcb_INSTANCE *instance, const std::string &key, Item &item);
 
 /**
  * Generate keys which will trigger all the servers in the map.
  */
 void genDistKeys(lcbvb_CONFIG* vbc, std::vector<std::string> &out);
 void genStoreCommands(const std::vector<std::string> &keys,
-                      std::vector<lcb_CMDSTORE> &cmds);
+                      std::vector<lcb_CMDSTORE *> &cmds);
 /**
  * This doesn't _actually_ attempt to make sense of an operation. It simply
  * will try to keep the event loop alive.
  */
-void doDummyOp(lcb_t& instance);
+void doDummyOp(lcb_INSTANCE *instance);
 
 #endif

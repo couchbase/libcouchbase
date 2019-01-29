@@ -127,14 +127,16 @@ typedef enum {
 } lcbvb_DISTMODE;
 
 typedef enum {
-    LCBVB_CAP_XATTR = 0x01,
-    LCBVB_CAP_CBHELLO = 0x02,
-    LCBVB_CAP_CCCP = 0x04,
-    LCBVB_CAP_COUCHAPI = 0x08,
-    LCBVB_CAP_DCP = 0x10,
-    LCBVB_CAP_NODES_EXT = 0x20,
-    LCBVB_CAP_TOUCH = 0x40,
-    LCBVB_CAP_XDCR_CHECKPOINTING = 0x80
+    LCBVB_CAP_XATTR = 1 << 0,
+    LCBVB_CAP_CBHELLO = 1 << 1,
+    LCBVB_CAP_CCCP = 1 << 2,
+    LCBVB_CAP_COUCHAPI = 1 << 3,
+    LCBVB_CAP_DCP = 1 << 4,
+    LCBVB_CAP_NODES_EXT = 1 << 5,
+    LCBVB_CAP_TOUCH = 1 << 6,
+    LCBVB_CAP_XDCR_CHECKPOINTING = 1 << 7,
+    LCBVB_CAP_COLLECTIONS = 1 << 8,
+    LCBVB_CAP_DURABLE_WRITE = 1 << 9
 } lcbvb_BUCKET_CAPABILITIES;
 
 /**@volatile. ABI/API compatibility not guaranteed between versions.

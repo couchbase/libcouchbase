@@ -106,16 +106,12 @@
 #define LCBTRACE_DEFAULT_THRESHOLD_FTS LCB_MS2US(1000)
 #define LCBTRACE_DEFAULT_THRESHOLD_ANALYTICS LCB_MS2US(1000)
 
-#define LCB_DEFAULT_COLLLECTIONS_STATE LCB_COLLECTIONS_ENABLE
-
 #include "config.h"
 #include <libcouchbase/couchbase.h>
 #include <libcouchbase/metrics.h>
 #include "errmap.h"
 
-#ifdef LCB_TRACING
 #include <libcouchbase/tracing.h>
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,8 +128,7 @@ struct lcb_METRICS_st;
  * which are intended to be passed around to other objects.
  */
 typedef struct lcb_settings_st {
-    /* TODO: [SDK3] change to uint64_t as per RFC. logging API exposes it as unsigned int currently */
-    lcb_U32 iid;
+    lcb_U64 iid;
     lcb_U8 compressopts;
     lcb_U32 read_chunk_size;
     lcb_U32 operation_timeout;
@@ -185,7 +180,7 @@ typedef struct lcb_settings_st {
     unsigned select_bucket : 1;
     unsigned tcp_keepalive : 1;
     unsigned send_hello : 1;
-    unsigned use_collections : 2;
+    unsigned use_collections : 1;
     unsigned log_redaction : 1;
     unsigned use_tracing : 1;
     /** Do not use remap vbuckets (do not use fast forward map, or any other heuristics) */
@@ -193,7 +188,7 @@ typedef struct lcb_settings_st {
     /** Do not wait for GET_CLUSTER_CONFIG request to finish in lcb_wait(),
      * when it is the only request in retry queue */
     unsigned wait_for_config : 1;
-    unsigned synchronous_replication : 1;
+    unsigned enable_durable_write : 1;
 
     short max_redir;
     unsigned refcount;
@@ -215,14 +210,12 @@ typedef struct lcb_settings_st {
     lcb_pERRMAP errmap;
     lcb_U32 retry_nmv_interval;
     struct lcb_METRICS_st *metrics;
-#ifdef LCB_TRACING
     lcbtrace_TRACER *tracer;
     lcb_U32 tracer_orphaned_queue_flush_interval;
     lcb_U32 tracer_orphaned_queue_size;
     lcb_U32 tracer_threshold_queue_flush_interval;
     lcb_U32 tracer_threshold_queue_size;
     lcb_U32 tracer_threshold[LCBTRACE_THRESHOLD__MAX];
-#endif
     lcb_U32 compress_min_size;
     float compress_min_ratio;
     char *network; /** network resolution, AKA "Multi Network Configurations" */

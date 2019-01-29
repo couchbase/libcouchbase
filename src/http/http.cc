@@ -22,6 +22,154 @@
 #include "auth-priv.h"
 #include "trace.h"
 
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_status(const lcb_RESPHTTP *resp)
+{
+    return resp->rc;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_cookie(const lcb_RESPHTTP *resp, void **cookie)
+{
+    *cookie = resp->cookie;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_http_status(const lcb_RESPHTTP *resp, uint16_t *status)
+{
+    *status = resp->htstatus;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_path(const lcb_RESPHTTP *resp, const char **path, size_t *path_len)
+{
+    *path = (const char *)resp->key;
+    *path_len = resp->nkey;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_body(const lcb_RESPHTTP *resp, const char **body, size_t *body_len)
+{
+    *body = (const char *)resp->body;
+    *body_len = resp->nbody;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_headers(const lcb_RESPHTTP *resp, const char * const **headers)
+{
+    *headers = resp->headers;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_resphttp_handle(const lcb_RESPHTTP *resp, lcb_HTTP_HANDLE **handle)
+{
+    *handle = resp->_htreq;
+    return LCB_SUCCESS;
+}
+
+
+LIBCOUCHBASE_API int lcb_resphttp_is_final(const lcb_RESPHTTP *resp)
+{
+    return resp->rflags & LCB_RESP_F_FINAL;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_create(lcb_CMDHTTP **cmd, lcb_HTTP_TYPE type)
+{
+    *cmd = (lcb_CMDHTTP *)calloc(1, sizeof(lcb_CMDHTTP));
+    (*cmd)->type = type;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_destroy(lcb_CMDHTTP *cmd)
+{
+    free(cmd);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_parent_span(lcb_CMDHTTP *cmd, lcbtrace_SPAN *span)
+{
+    cmd->pspan = span;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_method(lcb_CMDHTTP *cmd, lcb_HTTP_METHOD method)
+{
+    cmd->method = method;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_path(lcb_CMDHTTP *cmd, const char *path, size_t path_len)
+{
+    LCB_CMD_SET_KEY(cmd, path, path_len);
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_content_type(lcb_CMDHTTP *cmd, const char *content_type, size_t content_type_len)
+{
+    cmd->content_type = content_type;
+    (void)content_type_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_body(lcb_CMDHTTP *cmd, const char *body, size_t body_len)
+{
+    cmd->body = body;
+    cmd->nbody = body_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_handle(lcb_CMDHTTP *cmd, lcb_HTTP_HANDLE **handle)
+{
+    cmd->reqhandle = handle;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_username(lcb_CMDHTTP *cmd, const char *username, size_t username_len)
+{
+    cmd->username = username;
+    (void)username_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_password(lcb_CMDHTTP *cmd, const char *password, size_t password_len)
+{
+    cmd->password = password;
+    (void)password_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_host(lcb_CMDHTTP *cmd, const char *host, size_t host_len)
+{
+    cmd->host = host;
+    (void)host_len;
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_streaming(lcb_CMDHTTP *cmd, int streaming)
+{
+    if (streaming) {
+        cmd->cmdflags |= LCB_CMDHTTP_F_STREAM;
+    } else {
+        cmd->cmdflags &= ~LCB_CMDHTTP_F_STREAM;
+    }
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_skip_auth_header(lcb_CMDHTTP *cmd, int skip_auth)
+{
+    if (skip_auth) {
+        cmd->cmdflags |= LCB_CMDHTTP_F_NOUPASS;
+    } else {
+        cmd->cmdflags &= ~LCB_CMDHTTP_F_NOUPASS;
+    }
+    return LCB_SUCCESS;
+}
+
+LIBCOUCHBASE_API lcb_STATUS lcb_cmdhttp_timeout(lcb_CMDHTTP *cmd, uint32_t timeout)
+{
+    cmd->cmdflags |= LCB_CMDHTTP_F_CASTMO;
+    cmd->cas = timeout;
+    return LCB_SUCCESS;
+}
+
 using namespace lcb::http;
 
 #define LOGFMT "<%s%s%s:%s> "
@@ -59,7 +207,7 @@ Request::decref()
 }
 
 void
-Request::finish_or_retry(lcb_error_t rc)
+Request::finish_or_retry(lcb_STATUS rc)
 {
     if (rc == LCB_ETIMEDOUT) {
         // No point on trying (or even logging) a timeout
@@ -102,7 +250,7 @@ Request::finish_or_retry(lcb_error_t rc)
     url.replace(url_info.field_data[UF_HOST].off, url_info.field_data[UF_HOST].len,
                 nextnode + next_info.field_data[UF_HOST].off, next_info.field_data[UF_HOST].len);
 
-    lcb_error_t newrc;
+    lcb_STATUS newrc;
     newrc = assign_url(NULL, 0, NULL, 0);
     if (newrc != LCB_SUCCESS) {
         lcb_log(LOGARGS(this, ERR), LOGFMT "Failed to assign URL for retry request on next endpoint (%s): 0x%02x (%s)",
@@ -120,7 +268,7 @@ Request::finish_or_retry(lcb_error_t rc)
 }
 
 void
-Request::maybe_refresh_config(lcb_error_t err)
+Request::maybe_refresh_config(lcb_STATUS err)
 {
     int htstatus_ok;
     if (!parser) {
@@ -154,7 +302,7 @@ Request::init_resp(lcb_RESPHTTP *res)
     res->cookie = const_cast<void*>(command_cookie);
     res->key = url.c_str() + url_info.field_data[UF_PATH].off;
     res->nkey = url_info.field_data[UF_PATH].len;
-    res->_htreq = static_cast<lcb_http_request_t>(this);
+    res->_htreq = static_cast<lcb_HTTP_HANDLE *>(this);
     if (!response_headers.empty()) {
         res->headers = &response_headers_clist[0];
     }
@@ -162,7 +310,7 @@ Request::init_resp(lcb_RESPHTTP *res)
 }
 
 void
-Request::finish(lcb_error_t error)
+Request::finish(lcb_STATUS error)
 {
     /* This is always safe to execute */
     if (!(status & NOLCB)) {
@@ -215,10 +363,10 @@ void Request::add_to_preamble(const Header& header) {
     add_to_preamble("\r\n");
 }
 
-lcb_error_t
+lcb_STATUS
 Request::submit()
 {
-    lcb_error_t rc;
+    lcb_STATUS rc;
     lcb_host_t reqhost = {"", "", 0};
 
     // Stop any pending socket/request
@@ -293,7 +441,7 @@ Request::assign_from_urlfield(http_parser_url_fields field, std::string &target)
         url_info.field_data[field].len);
 }
 
-lcb_error_t
+lcb_STATUS
 Request::assign_url(const char *base, size_t nbase, const char *path, size_t npath)
 {
     const char *htscheme;
@@ -358,7 +506,7 @@ Request::assign_url(const char *base, size_t nbase, const char *path, size_t npa
 void
 Request::redirect()
 {
-    lcb_error_t rc;
+    lcb_STATUS rc;
     assert(!pending_redirect.empty());
     if (LCBT_SETTING(instance, max_redir) > -1) {
         if (LCBT_SETTING(instance, max_redir) < ++redircount) {
@@ -400,7 +548,7 @@ httype2svctype(unsigned httype)
 }
 
 const char *
-Request::get_api_node(lcb_error_t &rc)
+Request::get_api_node(lcb_STATUS &rc)
 {
     if (!is_data_request()) {
         return lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
@@ -431,13 +579,13 @@ Request::get_api_node(lcb_error_t &rc)
     return lcbvb_get_resturl(vbc, ix, svc, mode);
 }
 
-lcb_error_t
+lcb_STATUS
 Request::setup_inputs(const lcb_CMDHTTP *cmd)
 {
     std::string username, password;
     const char *base = NULL;
     size_t nbase = 0;
-    lcb_error_t rc = LCB_SUCCESS;
+    lcb_STATUS rc = LCB_SUCCESS;
 
     if (method > LCB_HTTP_METHOD_MAX) {
         return LCB_EINVAL;
@@ -456,8 +604,8 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
         }
     } else {
         if (cmd->host) {
-            if (reqtype == LCB_HTTP_TYPE_CBAS) {
-                /* might be a deferred URL */
+            if (reqtype == LCB_HTTP_TYPE_CBAS || reqtype == LCB_HTTP_TYPE_PING) {
+                /* might be a deferred CBAS URL or PING */
                 base = cmd->host;
             } else {
                 return LCB_EINVAL;
@@ -547,7 +695,7 @@ Request::setup_inputs(const lcb_CMDHTTP *cmd)
     return LCB_SUCCESS;
 }
 
-Request::Request(lcb_t instance_, const void *cookie, const lcb_CMDHTTP* cmd)
+Request::Request(lcb_INSTANCE *instance_, const void *cookie, const lcb_CMDHTTP* cmd)
 : instance(instance_),
   body(cmd->body, cmd->body + cmd->nbody),
   method(cmd->method),
@@ -588,8 +736,8 @@ Request::timeout() const
 }
 
 Request *
-Request::create(lcb_t instance,
-    const void *cookie, const lcb_CMDHTTP *cmd, lcb_error_t *rc)
+Request::create(lcb_INSTANCE *instance,
+    const void *cookie, const lcb_CMDHTTP *cmd, lcb_STATUS *rc)
 {
     Request *req = new Request(instance, cookie, cmd);
     if (!req) {
@@ -607,7 +755,7 @@ Request::create(lcb_t instance,
     *rc = req->submit();
     if (*rc == LCB_SUCCESS) {
         if (cmd->reqhandle) {
-            *cmd->reqhandle = static_cast<lcb_http_request_t>(req);
+            *cmd->reqhandle = static_cast<lcb_HTTP_HANDLE *>(req);
         }
         lcb_aspend_add(&instance->pendops, LCB_PENDTYPE_HTTP, req);
         return req;
@@ -619,10 +767,10 @@ Request::create(lcb_t instance,
 }
 
 LIBCOUCHBASE_API
-lcb_error_t
-lcb_http3(lcb_t instance, const void *cookie, const lcb_CMDHTTP *cmd)
+lcb_STATUS
+lcb_http(lcb_INSTANCE *instance, void *cookie, const lcb_CMDHTTP *cmd)
 {
-    lcb_error_t rc;
+    lcb_STATUS rc;
     Request::create(instance, cookie, cmd, &rc);
     return rc;
 }
@@ -638,9 +786,9 @@ Request::cancel()
     finish(LCB_SUCCESS);
 }
 
-LIBCOUCHBASE_API
-void
-lcb_cancel_http_request(lcb_t, lcb_http_request_t req)
+LIBCOUCHBASE_API lcb_STATUS lcb_http_cancel(lcb_INSTANCE *, lcb_HTTP_HANDLE *handle)
 {
-    req->cancel();
+    handle->cancel();
+    return LCB_SUCCESS;
 }
+

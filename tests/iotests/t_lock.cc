@@ -23,15 +23,18 @@ class LockUnitTest : public MockUnitTest
 };
 
 extern "C" {
-    static void getLockedCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPGET *resp)
+    static void getLockedCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
     {
-        Item *itm = (Item *)resp->cookie;
+        Item *itm;
+        lcb_respget_cookie(resp, (void **)&itm);
         itm->assign(resp);
     }
 
-    static void unlockCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPUNLOCK *resp)
+    static void unlockCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPUNLOCK *resp)
     {
-        *(lcb_error_t *)resp->cookie = resp->rc;
+        lcb_STATUS *rc;
+        lcb_respunlock_cookie(resp, (void **)&rc);
+        *rc = lcb_respunlock_status(resp);
     }
 }
 
@@ -53,9 +56,9 @@ TEST_F(LockUnitTest, testSimpleLockAndUnlock)
 {
     LCB_TEST_REQUIRE_FEATURE("lock")
 
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     std::string key = "lockKey";
     std::string value = "lockValue";
@@ -63,25 +66,28 @@ TEST_F(LockUnitTest, testSimpleLockAndUnlock)
     removeKey(instance, key);
     storeKey(instance, key, value);
 
-    lcb_CMDGET cmd = {0};
-    LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
-    cmd.lock = 1;
-    cmd.exptime = 10;
+    lcb_CMDGET *cmd;
+    lcb_cmdget_create(&cmd);
+    lcb_cmdget_key(cmd, key.c_str(), key.size());
+    lcb_cmdget_locktime(cmd, 10);
     Item itm;
 
     lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)getLockedCallback);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &itm, &cmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &itm, cmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
+    lcb_cmdget_destroy(cmd);
 
-    lcb_CMDUNLOCK ucmd = {0};
-    LCB_KREQ_SIMPLE(&ucmd.key, key.c_str(), key.size());
-    ucmd.cas = itm.cas;
+    lcb_CMDUNLOCK *ucmd;
+    lcb_cmdunlock_create(&ucmd);
+    lcb_cmdunlock_key(ucmd, key.c_str(), key.size());
+    lcb_cmdunlock_cas(ucmd, itm.cas);
 
-    lcb_error_t reserr = LCB_ERROR;
+    lcb_STATUS reserr = LCB_ERROR;
     lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
-    ASSERT_EQ(LCB_SUCCESS, lcb_unlock3(instance, &reserr, &ucmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_unlock(instance, &reserr, ucmd));
+    lcb_cmdunlock_destroy(ucmd);
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, reserr);
 }
@@ -99,23 +105,25 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
 {
     LCB_TEST_REQUIRE_FEATURE("lock")
 
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
-    lcb_error_t reserr = LCB_ERROR;
+    lcb_STATUS reserr = LCB_ERROR;
     std::string key = "lockKey2";
     std::string value = "lockValue";
 
     storeKey(instance, key, value);
 
-    lcb_CMDUNLOCK cmd = {0};
-    LCB_KREQ_SIMPLE(&cmd.key, key.c_str(), key.size());
-    cmd.cas = 0;
+    lcb_CMDUNLOCK *cmd;
+    lcb_cmdunlock_create(&cmd);
+    lcb_cmdunlock_key(cmd, key.c_str(), key.size());
+    lcb_cmdunlock_cas(cmd, 0);
 
     lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_unlock3(instance, &reserr, &cmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_unlock(instance, &reserr, cmd));
+    lcb_cmdunlock_destroy(cmd);
     lcb_wait(instance);
     if (CLUSTER_VERSION_IS_HIGHER_THAN(MockEnvironment::VERSION_50)) {
         ASSERT_EQ(LCB_EINVAL_MCD, reserr);
@@ -125,10 +133,11 @@ TEST_F(LockUnitTest, testUnlockMissingCas)
 }
 
 extern "C" {
-    static void lockedStorageCallback(lcb_t, lcb_CALLBACKTYPE, lcb_RESPSTORE *resp)
+    static void lockedStorageCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
     {
-        Item *itm = (Item *)resp->cookie;
-        itm->assignKC<lcb_RESPSTORE>(resp);
+        Item *itm;
+        lcb_respstore_cookie(resp, (void **)&itm);
+        itm->assign(resp);
     }
 }
 /**
@@ -150,11 +159,11 @@ TEST_F(LockUnitTest, testStorageLockContention)
 {
     LCB_TEST_REQUIRE_FEATURE("lock")
 
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    lcb_error_t err;
+    lcb_STATUS err;
 
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
     Item itm;
     std::string key = "lockedKey", value = "lockedValue",
                 newvalue = "newUnlockedValue";
@@ -168,22 +177,23 @@ TEST_F(LockUnitTest, testStorageLockContention)
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)lockedStorageCallback);
 
     /* get the key and lock it */
-    lcb_CMDGET gcmd = {0};
-    LCB_KREQ_SIMPLE(&gcmd.key, key.c_str(), key.size());
-    gcmd.lock = 1;
-    gcmd.exptime = 10;
-    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &itm, &gcmd));
+    lcb_CMDGET *gcmd;
+    lcb_cmdget_create(&gcmd);
+    lcb_cmdget_key(gcmd, key.c_str(), key.size());
+    lcb_cmdget_locktime(gcmd, 10);
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &itm, gcmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
     ASSERT_GT(itm.cas, 0);
+    lcb_cmdget_destroy(gcmd);
 
     /* now try to set the key, while the lock is still in place */
-    lcb_CMDSTORE scmd = {0};
-    LCB_KREQ_SIMPLE(&scmd.key, key.c_str(), key.size());
-    LCB_CMD_SET_VALUE(&scmd, newvalue.c_str(), newvalue.size());
-    scmd.operation = LCB_SET;
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+    lcb_cmdstore_key(scmd, key.c_str(), key.size());
+    lcb_cmdstore_value(scmd, newvalue.c_str(), newvalue.size());
     Item s_itm;
-    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &s_itm, &scmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &s_itm, scmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_KEY_EEXISTS, s_itm.err);
 
@@ -193,14 +203,15 @@ TEST_F(LockUnitTest, testStorageLockContention)
     ASSERT_EQ(ritem.val, value);
 
     /* now try to set it with the correct cas, implicitly unlocking the key */
-    scmd.cas = itm.cas;
-    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &s_itm, &scmd));
+    lcb_cmdstore_cas(scmd, itm.cas);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &s_itm, scmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, itm.err);
 
     /* verify the value is now the new value */
     getKey(instance, key, ritem);
     ASSERT_EQ(ritem.val, newvalue);
+    lcb_cmdstore_destroy(scmd);
 }
 
 /**
@@ -224,10 +235,10 @@ TEST_F(LockUnitTest, testUnlLockContention)
 {
     LCB_TEST_REQUIRE_FEATURE("lock")
 
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    lcb_error_t err, reserr = LCB_ERROR;
-    createConnection(hw, instance);
+    lcb_STATUS err, reserr = LCB_ERROR;
+    createConnection(hw, &instance);
 
     std::string key = "lockedKey2", value = "lockedValue2";
     storeKey(instance, key, value);
@@ -237,25 +248,28 @@ TEST_F(LockUnitTest, testUnlLockContention)
     lcb_install_callback3(instance, LCB_CALLBACK_UNLOCK, (lcb_RESPCALLBACK)unlockCallback);
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)lockedStorageCallback);
 
-    lcb_CMDGET gcmd = {0};
-    LCB_KREQ_SIMPLE(&gcmd.key, key.c_str(), key.size());
-    gcmd.lock = 1;
-    gcmd.exptime = 10;
+    lcb_CMDGET *gcmd;
+    lcb_cmdget_create(&gcmd);
+    lcb_cmdget_key(gcmd, key.c_str(), key.size());
+    lcb_cmdget_locktime(gcmd, 10);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &gitm, &gcmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &gitm, gcmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, gitm.err);
 
     lcb_cas_t validCas = gitm.cas;
-    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &gitm, &gcmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &gitm, gcmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_ETMPFAIL, gitm.err);
+    lcb_cmdget_destroy(gcmd);
 
-    lcb_CMDUNLOCK ucmd = {0};
-    LCB_KREQ_SIMPLE(&ucmd.key, key.c_str(), key.size());
-    ucmd.cas = validCas;
+    lcb_CMDUNLOCK *ucmd;
+    lcb_cmdunlock_create(&ucmd);
+    lcb_cmdunlock_key(ucmd, key.c_str(), key.size());
+    lcb_cmdunlock_cas(ucmd, validCas);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_unlock3(instance, &reserr, &ucmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_unlock(instance, &reserr, ucmd));
+    lcb_cmdunlock_destroy(ucmd);
     lcb_wait(instance);
     ASSERT_EQ(reserr, LCB_SUCCESS);
 

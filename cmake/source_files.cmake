@@ -40,14 +40,11 @@ SET(LCB_CORE_SRC
     ${LCB_BCONF_SRC}
     ${LCB_N1QL_SRC}
     src/callbacks.c
-    src/legacy.c
     src/iofactory.c
     src/settings.c
     src/utilities.c)
 
-IF (LCB_TRACING)
-  FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
-ENDIF()
+FILE(GLOB LCB_TRACING_SRC src/tracing/*.cc)
 
 SET(LCB_CORE_CXXSRC
     src/instance.cc
@@ -73,7 +70,6 @@ SET(LCB_CORE_CXXSRC
     src/http/http_io.cc
     src/lcbht/lcbht.cc
     src/newconfig.cc
-    src/n1ql/params.cc
     src/n1ql/n1ql.cc
     src/n1ql/ixmgmt.cc
     src/cbft.cc

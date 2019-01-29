@@ -120,7 +120,7 @@ static void
 io_read(lcbio_CTX *ctx, unsigned nr)
 {
     Request *req = reinterpret_cast<Request*>(lcbio_ctx_data(ctx));
-    lcb_t instance = req->instance;
+    lcb_INSTANCE *instance = req->instance;
     /** this variable set to 0 (in progress), -1 (error), 1 (done) */
     int rv = 0;
     lcbio_CTXRDITER iter;
@@ -150,7 +150,7 @@ io_read(lcbio_CTX *ctx, unsigned nr)
 
     if (rv == -1) {
         // parse error or redirect
-        lcb_error_t err;
+        lcb_STATUS err;
         if (req->has_pending_redirect()) {
             instance->bootstrap(lcb::BS_REFRESH_THROTTLE);
             // Transfer control to redirect function()
@@ -201,7 +201,7 @@ Request::resume()
 }
 
 static void
-io_error(lcbio_CTX *ctx, lcb_error_t err)
+io_error(lcbio_CTX *ctx, lcb_STATUS err)
 {
     Request *req = reinterpret_cast<Request*>(lcbio_ctx_data(ctx));
     lcb_log(LOGARGS(req, ERR), LOGFMT "Got error while performing I/O on HTTP stream. Err=0x%x", LOGID(req), err);
@@ -215,7 +215,7 @@ request_timed_out(void *arg)
 }
 
 static void
-on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
+on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OSERR syserr)
 {
     Request *req = reinterpret_cast<Request*>(arg);
     lcbio_CTXPROCS procs;
@@ -260,7 +260,7 @@ on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
     (void)syserr;
 }
 
-lcb_error_t
+lcb_STATUS
 Request::start_io(lcb_host_t& dest)
 {
     lcbio_MGR *pool = instance->http_sockpool;

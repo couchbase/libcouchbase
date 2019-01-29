@@ -276,7 +276,7 @@ public:
         return bufh;
     }
 
-    static lcb_error_t
+    static lcb_STATUS
     parse_enhanced_error(const char *value, lcb_SIZE nvalue, char **err_ref, char **err_ctx)
     {
         if (value == NULL || nvalue == 0) {

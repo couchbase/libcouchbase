@@ -19,7 +19,6 @@
 #define POOL_H
 
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/api3.h>
 #include <pthread.h>
 #include <queue>
 #include <vector>
@@ -38,30 +37,30 @@ public:
 
     /**Get an instance from the pool. You should call #push() when you are
      * done with the instance
-     * @return an lcb_t instance */
-    lcb_t pop();
+     * @return an lcb_INSTANCE *instance */
+    lcb_INSTANCE *pop();
 
     /**Release an instance back into the pool
      * @param instance The instance to release */
-    void push(lcb_t instance);
+    void push(lcb_INSTANCE *instance);
 
     // Connect all the instances in the pool. This should be called once the
     // pool has been constructed
-    lcb_error_t connect();
+    lcb_STATUS connect();
 
 protected:
     /**Function called after the instance is created. You may
      * customize the instance here with e.g. lcb_set_cookie()
      * @param instance the newly created instance */
-    virtual void initialize(lcb_t instance) = 0;
+    virtual void initialize(lcb_INSTANCE *instance) = 0;
 
 private:
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    std::queue<lcb_t> instances;
+    std::queue<lcb_INSTANCE *> instances;
 
     // List of all instances
-    std::vector<lcb_t> all_instances;
+    std::vector<lcb_INSTANCE *> all_instances;
     size_t initial_size;
 };
 } // namespace

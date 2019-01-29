@@ -24,7 +24,7 @@
 
 using namespace lcb::trace;
 
-LIBCOUCHBASE_API lcbtrace_TRACER *lcbtrace_new(lcb_t instance, uint64_t flags)
+LIBCOUCHBASE_API lcbtrace_TRACER *lcbtrace_new(lcb_INSTANCE *instance, uint64_t flags)
 {
     if (instance == NULL || (flags & LCBTRACE_F_THRESHOLD) == 0) {
         return NULL;
@@ -197,7 +197,7 @@ void ThresholdLoggingTracer::flush_threshold()
     do_flush_threshold();
 }
 
-ThresholdLoggingTracer::ThresholdLoggingTracer(lcb_t instance)
+ThresholdLoggingTracer::ThresholdLoggingTracer(lcb_INSTANCE *instance)
     : m_wrapper(NULL), m_settings(instance->settings), m_orphans(LCBT_SETTING(instance, tracer_orphaned_queue_size)),
       m_threshold(LCBT_SETTING(instance, tracer_threshold_queue_size)), m_oflush(instance->iotable, this),
       m_tflush(instance->iotable, this)

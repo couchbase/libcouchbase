@@ -25,17 +25,18 @@ class RegressionUnitTest : public MockUnitTest
 static bool callbackInvoked = false;
 
 extern "C" {
-    static void get_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
+    static void get_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
     {
-        EXPECT_EQ(resp->rc, LCB_KEY_ENOENT);
-        int *counter_p = reinterpret_cast<int *>(const_cast<void *>(resp->cookie));
+        EXPECT_EQ(LCB_KEY_ENOENT, lcb_respget_status(resp));
+        int *counter_p;
+        lcb_respget_cookie(resp, (void **)&counter_p);
         EXPECT_TRUE(counter_p != NULL);
         EXPECT_GT(*counter_p, 0);
         *counter_p -= 1;
         callbackInvoked = true;
     }
 
-    static void stats_callback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
+    static void stats_callback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
     {
         EXPECT_EQ(resp->rc, LCB_SUCCESS);
         if (resp->nkey == 0) {
@@ -48,9 +49,9 @@ extern "C" {
 
 TEST_F(RegressionUnitTest, CCBC_150)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     callbackInvoked = false;
     lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback);
@@ -59,8 +60,9 @@ TEST_F(RegressionUnitTest, CCBC_150)
     lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_OP_TIMEOUT, &tmoval);
 
     std::string key = "testGetMiss1";
-    lcb_CMDGET getCmd1 = {0};
-    LCB_CMD_SET_KEY(&getCmd1, key.c_str(), key.size());
+    lcb_CMDGET *getCmd1;
+    lcb_cmdget_create(&getCmd1);
+    lcb_cmdget_key(getCmd1, key.c_str(), key.size());
 
     lcb_CMDSTATS statCmd = {0};
     int ii;
@@ -71,7 +73,7 @@ TEST_F(RegressionUnitTest, CCBC_150)
     void *ptr = &callbackCounter;
 
     for (ii = 0; ii < 1000; ++ii) {
-        EXPECT_EQ(LCB_SUCCESS, lcb_get3(instance, ptr, &getCmd1));
+        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, ptr, getCmd1));
     }
 
     callbackCounter++;
@@ -79,8 +81,9 @@ TEST_F(RegressionUnitTest, CCBC_150)
 
     callbackCounter += 1000;
     for (ii = 0; ii < 1000; ++ii) {
-        EXPECT_EQ(LCB_SUCCESS, lcb_get3(instance, ptr, &getCmd1));
+        EXPECT_EQ(LCB_SUCCESS, lcb_get(instance, ptr, getCmd1));
     }
+    lcb_cmdget_destroy(getCmd1);
 
     callbackCounter++;
     EXPECT_EQ(LCB_SUCCESS, lcb_stats3(instance, ptr, &statCmd));
@@ -95,15 +98,16 @@ TEST_F(RegressionUnitTest, CCBC_150)
 
 struct ccbc_275_info_st {
     int call_count;
-    lcb_error_t last_err;
+    lcb_STATUS last_err;
 };
 
 extern "C" {
-static void get_callback_275(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPGET *resp)
+static void get_callback_275(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
 {
-    struct ccbc_275_info_st *info = (struct ccbc_275_info_st *)resp->cookie;
+    struct ccbc_275_info_st *info;
+    lcb_respget_cookie(resp, (void **)&info);
     info->call_count++;
-    info->last_err = resp->rc;
+    info->last_err = lcb_respget_status(resp);
     lcb_breakout(instance);
 }
 
@@ -112,8 +116,8 @@ static void get_callback_275(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPGET
 TEST_F(RegressionUnitTest, CCBC_275)
 {
     SKIP_UNLESS_MOCK();
-    lcb_t instance;
-    lcb_error_t err;
+    lcb_INSTANCE *instance;
+    lcb_STATUS err;
     struct lcb_create_st crOpts;
     const char *argv[] = { "--buckets", "protected:secret:couchbase", NULL };
     MockEnvironment mock_o(argv, "protected"), *mock = &mock_o;
@@ -132,8 +136,9 @@ TEST_F(RegressionUnitTest, CCBC_275)
     ASSERT_EQ(LCB_SUCCESS, err);
 
     std::string key = "key_CCBC_275";
-    lcb_CMDGET cmd = {0};
-    LCB_CMD_SET_KEY(&cmd, key.c_str(), key.size());
+    lcb_CMDGET *cmd;
+    lcb_cmdget_create(&cmd);
+    lcb_cmdget_key(cmd, key.c_str(), key.size());
 
     // Set timeout for a short interval
     lcb_uint32_t tmo_usec = 100000;
@@ -147,7 +152,7 @@ TEST_F(RegressionUnitTest, CCBC_275)
     mock->hiccupNodes(1000, 1);
     lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)get_callback_275);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &info, &cmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &info, cmd));
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
 
@@ -170,11 +175,12 @@ TEST_F(RegressionUnitTest, CCBC_275)
 
     mock->hiccupNodes(0, 0);
     info.call_count = 0;
-    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &info, &cmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &info, cmd));
     lcb_wait(instance);
     ASSERT_EQ(1, info.call_count);
 
     ASSERT_EQ(LCB_KEY_ENOENT, info.last_err);
+    lcb_cmdget_destroy(cmd);
 
     lcb_destroy(instance);
 }
@@ -183,9 +189,9 @@ TEST_F(RegressionUnitTest, CCBC_275)
 TEST_F(MockUnitTest, testIssue59)
 {
     // lcb_wait() blocks forever if there is nothing queued
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     lcb_wait(instance);
     lcb_wait(instance);
@@ -200,7 +206,7 @@ TEST_F(MockUnitTest, testIssue59)
 
 extern "C" {
     struct rvbuf {
-        lcb_error_t error;
+        lcb_STATUS error;
         lcb_cas_t cas1;
         lcb_cas_t cas2;
         char *bytes;
@@ -208,56 +214,68 @@ extern "C" {
         lcb_int32_t counter;
     };
 
-    static void df_store_callback1(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
+    static void df_store_callback1(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
-        rv->error = resp->rc;
+        struct rvbuf *rv;
+        lcb_respstore_cookie(resp, (void **)&rv);
+        rv->error = lcb_respstore_status(resp);
         lcb_stop_loop(instance);
     }
 
-    static void df_store_callback2(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
+    static void df_store_callback2(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTORE *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
-        rv->error = resp->rc;
-        rv->cas2 = resp->cas;
+        struct rvbuf *rv;
+        lcb_respstore_cookie(resp, (void **)&rv);
+        rv->error = lcb_respstore_status(resp);
+        lcb_respstore_cas(resp, &rv->cas2);
         lcb_stop_loop(instance);
     }
 
-    static void df_get_callback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTORE *resp)
+    static void df_get_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPGET *resp)
     {
-        struct rvbuf *rv = (struct rvbuf *)resp->cookie;
+        struct rvbuf *rv;
+
+        lcb_respget_cookie(resp, (void **)&rv);
+        rv->error = lcb_respget_status(resp);
+        lcb_respget_cas(resp, &rv->cas1);
+
+        const char *key;
+        size_t nkey;
+        lcb_respget_key(resp, &key, &nkey);
+
         const char *value = "{\"bar\"=>1, \"baz\"=>2}";
         lcb_size_t nvalue = strlen(value);
-        rv->error = resp->rc;
-        rv->cas1 = resp->cas;
-        lcb_CMDSTORE storecmd = {0};
-        LCB_CMD_SET_KEY(&storecmd, resp->key, resp->nkey);
-        LCB_CMD_SET_VALUE(&storecmd, value, nvalue);
-        storecmd.operation = LCB_SET;
-        storecmd.cas = resp->cas;
-        ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, rv, &storecmd));
+
+        lcb_CMDSTORE *storecmd;
+        lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
+        lcb_cmdstore_key(storecmd, key, nkey);
+        lcb_cmdstore_value(storecmd, value, nvalue);
+        lcb_cmdstore_cas(storecmd, rv->cas1);
+        ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, rv, storecmd));
+        lcb_cmdstore_destroy(storecmd);
     }
 }
 
 TEST_F(MockUnitTest, testDoubleFreeError)
 {
-    lcb_error_t err;
+    lcb_STATUS err;
     struct rvbuf rv;
     const char *key = "test_compare_and_swap_async_", *value = "{\"bar\" => 1}";
     lcb_size_t nkey = strlen(key), nvalue = strlen(value);
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     /* prefill the bucket */
     (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)df_store_callback1);
 
-    lcb_CMDSTORE storecmd = {0};
-    LCB_CMD_SET_KEY(&storecmd, key, nkey);
-    LCB_CMD_SET_VALUE(&storecmd, value, nvalue);
-    storecmd.operation = LCB_SET;
+    lcb_CMDSTORE *storecmd;
+    lcb_cmdstore_create(&storecmd, LCB_STORE_SET);
+    lcb_cmdstore_key(storecmd, key, nkey);
+    lcb_cmdstore_value(storecmd, value, nvalue);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &rv, &storecmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &rv, storecmd));
+    lcb_cmdstore_destroy(storecmd);
     lcb_run_loop(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
 
@@ -269,16 +287,18 @@ TEST_F(MockUnitTest, testDoubleFreeError)
     (void)lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)df_store_callback2);
     (void)lcb_install_callback3(instance, LCB_CALLBACK_GET, (lcb_RESPCALLBACK)df_get_callback);
 
-    lcb_CMDGET getcmd = {0};
-    LCB_CMD_SET_KEY(&getcmd, key, nkey);
+    lcb_CMDGET *getcmd;
+    lcb_cmdget_create(&getcmd);
+    lcb_cmdget_key(getcmd, key, nkey);
 
-    ASSERT_EQ(LCB_SUCCESS, lcb_get3(instance, &rv, &getcmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_get(instance, &rv, getcmd));
     rv.cas1 = rv.cas2 = 0;
     lcb_run_loop(instance);
     ASSERT_EQ(LCB_SUCCESS, rv.error);
     ASSERT_GT(rv.cas1, 0);
     ASSERT_GT(rv.cas2, 0);
     ASSERT_NE(rv.cas1, rv.cas2);
+    lcb_cmdget_destroy(getcmd);
 }
 
 TEST_F(MockUnitTest, testBrokenFirstNodeInList)
@@ -291,7 +311,7 @@ TEST_F(MockUnitTest, testBrokenFirstNodeInList)
     nodes = "1.2.3.4:4321;" + nodes;
     options.v.v0.host = nodes.c_str();
 
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     doLcbCreate(&instance, &options, mock);
     lcb_cntl_setu32(instance, LCB_CNTL_OP_TIMEOUT, LCB_MS2US(200));
     ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));

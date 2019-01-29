@@ -371,7 +371,7 @@ static void setPluginEnvironment(std::string &name)
     struct lcb_cntl_iops_info_st ioi;
     memset(&ioi, 0, sizeof(ioi));
 
-    lcb_error_t err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES,
+    lcb_STATUS err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES,
                                &ioi);
     if (err != LCB_SUCCESS) {
         fprintf(stderr, "LCB Error 0x%x\n", err);

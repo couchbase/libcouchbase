@@ -23,7 +23,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-lcb_error_t lcb_urlencode_path(const char *path,
+lcb_STATUS lcb_urlencode_path(const char *path,
                                lcb_size_t npath,
                                char **out,
                                lcb_size_t *nout);

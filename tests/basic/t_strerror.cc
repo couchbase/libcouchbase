@@ -27,22 +27,22 @@ TEST_F(Strerror, testNoCrash)
 {
     for (int ii = -10; ii < 0xffff; ++ii) {
         EXPECT_NE((const char *)NULL,
-                  lcb_strerror(NULL, (lcb_error_t)ii));
+                  lcb_strerror(NULL, (lcb_STATUS)ii));
     }
 }
 
 TEST_F(Strerror, allCodesDocumented)
 {
-    const char *generic = lcb_strerror(NULL, (lcb_error_t)( LCB_MAX_ERROR -1));
+    const char *generic = lcb_strerror(NULL, (lcb_STATUS)( LCB_MAX_ERROR -1));
     ASSERT_NE((const char *)NULL, generic);
     for (int ii = 0; ii < LCB_MAX_ERROR_VAL; ++ii) {
         EXPECT_STRNE(generic,
-                     lcb_strerror(NULL, (lcb_error_t)ii));
+                     lcb_strerror(NULL, (lcb_STATUS)ii));
     }
 
     for (int ii = LCB_MAX_ERROR_VAL; ii < LCB_MAX_ERROR; ++ii) {
         EXPECT_STREQ(generic,
-                     lcb_strerror(NULL, (lcb_error_t)ii));
+                     lcb_strerror(NULL, (lcb_STATUS)ii));
     }
 
 }
@@ -50,7 +50,7 @@ TEST_F(Strerror, allCodesDocumented)
 TEST_F(Strerror, testErrTypes)
 {
     for (int ii = 0; ii < LCB_MAX_ERROR_VAL; ii++) {
-        lcb_error_t err = (lcb_error_t)ii;
+        lcb_STATUS err = (lcb_STATUS)ii;
         ASSERT_NE(-1, LCB_EIFDATA(err));
         ASSERT_NE(-1, LCB_EIFFATAL(err));
         ASSERT_NE(-1, LCB_EIFINPUT(err));
@@ -60,5 +60,5 @@ TEST_F(Strerror, testErrTypes)
     }
 
     ASSERT_EQ(-1, lcb_get_errtype(LCB_MAX_ERROR_VAL));
-    ASSERT_EQ(-1, lcb_get_errtype((lcb_error_t)-1));
+    ASSERT_EQ(-1, lcb_get_errtype((lcb_STATUS)-1));
 }

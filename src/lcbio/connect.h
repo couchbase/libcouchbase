@@ -126,7 +126,7 @@ typedef struct lcbio_SOCKET {
  * @param syserr the raw errno variable received.
  */
 typedef void (*lcbio_CONNDONE_cb)
-        (lcbio_SOCKET *s, void *arg, lcb_error_t err, lcbio_OSERR syserr);
+        (lcbio_SOCKET *s, void *arg, lcb_STATUS err, lcbio_OSERR syserr);
 
 
 /**
@@ -163,7 +163,7 @@ typedef void (*lcbio_CONNDONE_cb)
  * }
  *
  *
- * static void handler(lcbio_SOCKET *s, void *arg, lcb_error_t err) {
+ * static void handler(lcbio_SOCKET *s, void *arg, lcb_STATUS err) {
  *   my_ctx *ctx = arg;
  *   ctx->creq = NULL;
  *   if (!(ctx->sock = s)) {

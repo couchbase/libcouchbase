@@ -26,8 +26,8 @@ Pool::Pool(const lcb_create_st& options, size_t nitems) : initial_size(0)
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init(&cond, NULL);
     for (size_t ii = 0; ii < nitems; ii++) {
-        lcb_t cur;
-        lcb_error_t err = lcb_create(&cur, &options);
+        lcb_INSTANCE *cur;
+        lcb_STATUS err = lcb_create(&cur, &options);
         if (err != LCB_SUCCESS) {
             throw err;
         }
@@ -38,12 +38,12 @@ Pool::Pool(const lcb_create_st& options, size_t nitems) : initial_size(0)
     }
 }
 
-lcb_error_t
+lcb_STATUS
 Pool::connect()
 {
-    vector<lcb_t>::const_iterator ii = all_instances.begin();
+    vector<lcb_INSTANCE *>::const_iterator ii = all_instances.begin();
     for (;  ii != all_instances.end(); ii++) {
-        lcb_error_t err;
+        lcb_STATUS err;
         initialize(*ii);
         if ((err = lcb_connect(*ii)) != LCB_SUCCESS) {
             return err;
@@ -62,7 +62,7 @@ Pool::~Pool()
     while (instances.size() < initial_size) {
         pthread_cond_wait(&cond, &mutex);
     }
-    vector<lcb_t>::const_iterator ii = all_instances.begin();
+    vector<lcb_INSTANCE *>::const_iterator ii = all_instances.begin();
     for (; ii != all_instances.end(); ii++) {
         lcb_destroy(*ii);
     }
@@ -71,10 +71,10 @@ Pool::~Pool()
     pthread_cond_destroy(&cond);
 }
 
-lcb_t
+lcb_INSTANCE *
 Pool::pop()
 {
-    lcb_t ret = NULL;
+    lcb_INSTANCE *ret = NULL;
 
     // Need to lock the mutex to the pool structure itself
     pthread_mutex_lock(&mutex);
@@ -93,7 +93,7 @@ Pool::pop()
 }
 
 void
-Pool::push(lcb_t instance)
+Pool::push(lcb_INSTANCE *instance)
 {
     pthread_mutex_lock(&mutex);
     instances.push(instance);

@@ -43,11 +43,11 @@ class MockUnitTest : public ::testing::Test
 {
 protected:
     virtual void SetUp();
-    virtual void createConnection(lcb_t &instance);
+    virtual void createConnection(lcb_INSTANCE **instance);
     virtual void createConnection(HandleWrap &handle);
-    virtual void createConnection(HandleWrap &handle, lcb_t &instance);
-    virtual lcb_error_t tryCreateConnection(HandleWrap &hw,
-        lcb_t &instance, lcb_create_st &crparams);
+    virtual void createConnection(HandleWrap &handle, lcb_INSTANCE **instance);
+    virtual lcb_STATUS tryCreateConnection(HandleWrap &hw,
+        lcb_INSTANCE **instance, lcb_create_st &crparams);
 
     // A mock "Transaction"
     void doMockTxn(MockCommand &cmd) {

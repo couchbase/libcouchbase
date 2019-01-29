@@ -1,3 +1,20 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2011-2019 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #include "config.h"
 #include "iotests.h"
 #include "internal.h"
@@ -5,12 +22,12 @@
 
 class ErrmapUnitTest : public MockUnitTest {
 protected:
-    virtual void createErrmapConnection(HandleWrap& hw, lcb_t& instance) {
+    virtual void createErrmapConnection(HandleWrap& hw, lcb_INSTANCE **instance) {
         MockEnvironment::getInstance()->createConnection(hw, instance);
-        ASSERT_EQ(LCB_SUCCESS, lcb_cntl_string(instance, "enable_errmap", "true"));
-        ASSERT_EQ(LCB_SUCCESS, lcb_connect(instance));
-        lcb_wait(instance);
-        ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(instance));
+        ASSERT_EQ(LCB_SUCCESS, lcb_cntl_string(*instance, "enable_errmap", "true"));
+        ASSERT_EQ(LCB_SUCCESS, lcb_connect(*instance));
+        lcb_wait(*instance);
+        ASSERT_EQ(LCB_SUCCESS, lcb_get_bootstrap_status(*instance));
     }
 
     void checkRetryVerify(uint16_t errcode);
@@ -25,7 +42,7 @@ protected:
 };
 
 struct ResultCookie {
-    lcb_error_t rc;
+    lcb_STATUS rc;
     bool called;
 
     void reset() {
@@ -37,19 +54,20 @@ struct ResultCookie {
 };
 
 extern "C" {
-static void opcb(lcb_t,int,const lcb_RESPBASE* rb) {
-    ResultCookie *cookie = reinterpret_cast<ResultCookie*>(rb->cookie);
+static void opcb(lcb_INSTANCE *,int,const lcb_RESPSTORE* resp) {
+    ResultCookie *cookie;
+    lcb_respstore_cookie(resp, (void **)&cookie);
     cookie->called = true;
-    cookie->rc = rb->rc;
+    cookie->rc = lcb_respstore_status(resp);
 }
 }
 
 TEST_F(ErrmapUnitTest, hasRecognizedErrors) {
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
-    lcb_t instance;
+    lcb_INSTANCE *instance;
 
-    createErrmapConnection(hw, instance);
+    createErrmapConnection(hw, &instance);
 
     // Test the actual error map..
     using namespace lcb;
@@ -63,17 +81,18 @@ TEST_F(ErrmapUnitTest, closesOnUnrecognizedError) {
     // For now, EINTERNAL is an error code we don't know!
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
-    lcb_t instance;
-    createErrmapConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createErrmapConnection(hw, &instance);
 
     const char *key = "key";
-    lcb_CMDSTORE scmd = { 0 };
-    LCB_CMD_SET_KEY(&scmd, key, strlen(key));
-    LCB_CMD_SET_VALUE(&scmd, "val", 3);
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key, strlen(key));
+    lcb_cmdstore_value(scmd, "val", 3);
 
     ResultCookie cookie;
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, opcb);
-    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &cookie, &scmd));
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opcb);
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, cookie.rc);
 
@@ -88,14 +107,14 @@ TEST_F(ErrmapUnitTest, closesOnUnrecognizedError) {
     doMockTxn(cmd);
 
     cookie.reset();
-    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &cookie, &scmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
     lcb_wait(instance);
 
     ASSERT_TRUE(cookie.called);
     ASSERT_NE(LCB_SUCCESS, cookie.rc);
 
     cookie.reset();
-    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, &cookie, &scmd));
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, &cookie, scmd));
     lcb_wait(instance);
     ASSERT_TRUE(cookie.called);
 
@@ -104,24 +123,26 @@ TEST_F(ErrmapUnitTest, closesOnUnrecognizedError) {
     // detecting a failed connection is better than having no detection at all:
     //
     // ASSERT_EQ(LCB_SUCCESS, cookie.rc);
+    lcb_cmdstore_destroy(scmd);
 }
 
 void ErrmapUnitTest::checkRetryVerify(uint16_t errcode) {
     HandleWrap hw;
-    lcb_t instance;
-    createErrmapConnection(hw, instance);
-    lcb_install_callback3(instance, LCB_CALLBACK_DEFAULT, opcb);
+    lcb_INSTANCE *instance;
+    createErrmapConnection(hw, &instance);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)opcb);
 
     ResultCookie cookie;
 
     std::string key("hello");
-    lcb_CMDSTORE scmd = { 0 };
-    LCB_CMD_SET_KEY(&scmd, key.c_str(), key.size());
-    LCB_CMD_SET_VALUE(&scmd, "Val", 3);
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(scmd, key.c_str(), key.size());
+    lcb_cmdstore_value(scmd, "val", 3);
 
     // Store the item once to ensure the server is actually connected
     // (we don't want opfail to be active during negotiation).
-    lcb_store3(instance, &cookie, &scmd);
+    lcb_store(instance, &cookie, scmd);
     lcb_wait(instance);
     ASSERT_TRUE(cookie.called);
     ASSERT_EQ(LCB_SUCCESS, cookie.rc);
@@ -140,7 +161,7 @@ void ErrmapUnitTest::checkRetryVerify(uint16_t errcode) {
 
     // Run the command!
     cookie.reset();
-    lcb_error_t rc = lcb_store3(instance, &cookie, &scmd);
+    lcb_STATUS rc = lcb_store(instance, &cookie, scmd);
     ASSERT_EQ(LCB_SUCCESS, rc);
     lcb_wait(instance);
 
@@ -159,6 +180,7 @@ void ErrmapUnitTest::checkRetryVerify(uint16_t errcode) {
     verifyCmd.set("fuzz_ms", 20);
 #endif
     doMockTxn(verifyCmd);
+    lcb_cmdstore_destroy(scmd);
 }
 
 static const uint16_t ERRCODE_CONSTANT = 0x7ff0;

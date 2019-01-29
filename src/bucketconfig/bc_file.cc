@@ -48,7 +48,7 @@ struct FileProvider : Provider, Listener {
 
     /* Overrides */
     ConfigInfo *get_cached();
-    lcb_error_t refresh();
+    lcb_STATUS refresh();
     void dump(FILE *) const;
     void clconfig_lsn(EventType, ConfigInfo*);
 
@@ -176,7 +176,7 @@ void FileProvider::reload_cache() {
     }
 }
 
-lcb_error_t FileProvider::refresh() {
+lcb_STATUS FileProvider::refresh() {
     if (!timer.is_armed()) {
         timer.signal();
     }

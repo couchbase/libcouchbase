@@ -23,14 +23,14 @@
 
 LIBCOUCHBASE_API
 void
-lcb_dump(lcb_t instance, FILE *fp, lcb_U32 flags)
+lcb_dump(lcb_INSTANCE *instance, FILE *fp, lcb_U32 flags)
 {
     unsigned ii;
 
     if (!fp) {
         fp = stderr;
     }
-    fprintf(fp, "Dumping state for lcb_t=%p\n", (void*)instance);
+    fprintf(fp, "Dumping state for lcb_INSTANCE=%p\n", (void*)instance);
     if (instance == NULL) {
         return;
     }

@@ -91,7 +91,7 @@ int lcb_getenv_boolean(const char *key)
 }
 
 #ifdef _WIN32
-lcb_error_t lcb_initialize_socket_subsystem(void)
+lcb_STATUS lcb_initialize_socket_subsystem(void)
 {
     static volatile LONG initialized = 0;
     WSADATA wsaData;
@@ -105,7 +105,7 @@ lcb_error_t lcb_initialize_socket_subsystem(void)
     return LCB_SUCCESS;
 }
 #else
-lcb_error_t lcb_initialize_socket_subsystem(void)
+lcb_STATUS lcb_initialize_socket_subsystem(void)
 {
     return LCB_SUCCESS;
 }

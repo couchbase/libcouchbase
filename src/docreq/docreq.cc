@@ -28,7 +28,7 @@ static void invoke_pending(Queue*);
 #define MIN_SCHED_SIZE 5
 #define DOCQ_DELAY_US 200000
 
-Queue::Queue(lcb_t instance_)
+Queue::Queue(lcb_INSTANCE *instance_)
     : instance(instance_),
       parent(NULL),
       timer(lcbio_timer_new(instance->iotable, this, docreq_handler)),
@@ -93,7 +93,7 @@ docreq_handler(void *arg)
 {
     Queue *q = reinterpret_cast<Queue*>(arg);
     sllist_iterator iter;
-    lcb_t instance = q->instance;
+    lcb_INSTANCE *instance = q->instance;
 
     lcb_sched_enter(instance);
     SLLIST_ITERFOR(&q->pending_gets, &iter) {
@@ -112,7 +112,7 @@ docreq_handler(void *arg)
             cont->ready = 1;
 
         } else {
-            lcb_error_t rc;
+            lcb_STATUS rc;
             rc = q->cb_schedule(q, cont);
             if (rc != LCB_SUCCESS) {
                 cont->docresp.rc = rc;

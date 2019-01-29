@@ -61,7 +61,7 @@ typedef struct lcbio_SSLCTX *lcbio_pSSLCTX;
 int
 lcbio_ssl_supported(void);
 
-lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, int, lcb_error_t *, lcb_settings *);
+lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, int, lcb_STATUS *, lcb_settings *);
 
 #ifndef LCB_NO_SSL
 /**
@@ -76,7 +76,7 @@ lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, 
  * @return A new SSL context, or NULL on error.
  */
 lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *keyfile, int noverify,
-                            lcb_error_t *errp, lcb_settings *settings);
+                            lcb_STATUS *errp, lcb_settings *settings);
 #else
 #define lcbio_ssl_new lcbio_ssl_new__fallback
 #endif
@@ -100,7 +100,7 @@ lcbio_ssl_free(lcbio_pSSLCTX ctx);
  * @param sctx The context returned by lcbio_ssl_new()
  * @return
  */
-lcb_error_t
+lcb_STATUS
 lcbio_ssl_apply(lcbio_SOCKET *sock, lcbio_pSSLCTX sctx);
 
 /**
@@ -121,7 +121,7 @@ lcbio_ssl_check(lcbio_SOCKET *sock);
  * error code.
  */
 LCB_INTERNAL_API
-lcb_error_t
+lcb_STATUS
 lcbio_ssl_get_error(lcbio_SOCKET *sock);
 
 /**
@@ -148,7 +148,7 @@ struct lcb_settings_st;
  * derived.
  * @return
  */
-lcb_error_t
+lcb_STATUS
 lcbio_sslify_if_needed(lcbio_SOCKET *sock, struct lcb_settings_st *settings);
 
 /**@}*/

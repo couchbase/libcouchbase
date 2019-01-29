@@ -37,7 +37,7 @@ struct lcb::RetryOp : mc_EPKTDATUM, SchedNode, TmoNode {
     hrtime_t start;
     hrtime_t trytime; /**< Next retry time */
     mc_PACKET *pkt;
-    lcb_error_t origerr;
+    lcb_STATUS origerr;
     errmap::RetrySpec *spec;
     RetryOp(errmap::RetrySpec *spec);
     ~RetryOp() {
@@ -112,7 +112,7 @@ static int cmpfn_retry(lcb_list_t *ll_a, lcb_list_t *ll_b) {
 }
 
 static void
-assign_error(RetryOp *op, lcb_error_t err)
+assign_error(RetryOp *op, lcb_STATUS err)
 {
     if (err == LCB_NOT_MY_VBUCKET) {
         err = LCB_ETIMEDOUT; /* :( */
@@ -142,7 +142,7 @@ RetryQueue::erase(RetryOp *op)
 }
 
 void
-RetryQueue::fail(RetryOp *op, lcb_error_t err)
+RetryQueue::fail(RetryOp *op, lcb_STATUS err)
 {
     protocol_binary_request_header hdr;
 
@@ -305,7 +305,7 @@ RetryOp::RetryOp(errmap::RetrySpec *spec_)
 }
 
 void
-RetryQueue::add(mc_EXPACKET *pkt, const lcb_error_t err,
+RetryQueue::add(mc_EXPACKET *pkt, const lcb_STATUS err,
                 errmap::RetrySpec *spec, int options)
 {
     RetryOp *op;
@@ -413,10 +413,16 @@ RetryQueue::nmvadd(mc_EXPACKET *detchpkt)
     add(detchpkt, LCB_NOT_MY_VBUCKET, NULL, flags);
 }
 
+void
+RetryQueue::ucadd(mc_EXPACKET *pkt)
+{
+    add(pkt, LCB_COLLECTION_UNKNOWN, NULL, RETRY_SCHED_IMM);
+}
+
 static void
 fallback_handler(mc_CMDQUEUE *cq, mc_PACKET *pkt)
 {
-    lcb_t instance = reinterpret_cast<lcb_t>(cq->cqdata);
+    lcb_INSTANCE *instance = reinterpret_cast<lcb_INSTANCE *>(cq->cqdata);
     instance->retryq->add_fallback(pkt);
 }
 
@@ -459,7 +465,7 @@ RetryQueue::~RetryQueue() {
     lcb_settings_unref(settings);
 }
 
-lcb_error_t
+lcb_STATUS
 RetryQueue::error_for(const mc_PACKET *packet)
 {
     if (! (packet->flags & MCREQ_F_DETACHED)) {

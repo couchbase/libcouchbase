@@ -22,15 +22,15 @@
 #include <libcouchbase/plugins/io/bsdio-inl.c>
 
 #ifdef LCB_EMBED_PLUGIN_LIBEVENT
-LIBCOUCHBASE_API lcb_error_t lcb_create_libevent_io_opts(int, lcb_io_opt_t*,void*);
+LIBCOUCHBASE_API lcb_STATUS lcb_create_libevent_io_opts(int, lcb_io_opt_t*,void*);
 #endif
 
-typedef lcb_error_t (*create_func_t)(int version, lcb_io_opt_t *io, void *cookie);
+typedef lcb_STATUS (*create_func_t)(int version, lcb_io_opt_t *io, void *cookie);
 
 
 #ifdef _WIN32
 LIBCOUCHBASE_API
-lcb_error_t lcb_iocp_new_iops(int, lcb_io_opt_t *, void *);
+lcb_STATUS lcb_iocp_new_iops(int, lcb_io_opt_t *, void *);
 #define DEFAULT_IOPS LCB_IO_OPS_WINIOCP
 #else
 #define DEFAULT_IOPS LCB_IO_OPS_LIBEVENT
@@ -188,7 +188,7 @@ static void options_from_info(struct lcb_create_io_ops_st *opts,
     opts->v.v1.cookie = cookie;
 }
 
-static lcb_error_t create_v2(lcb_io_opt_t *io,
+static lcb_STATUS create_v2(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
 
 struct plugin_st {
@@ -200,7 +200,7 @@ struct plugin_st {
 };
 
 #ifndef _WIN32
-static lcb_error_t get_create_func(const char *image,
+static lcb_STATUS get_create_func(const char *image,
                                    const char *symbol,
                                    struct plugin_st *plugin,
                                    int do_warn)
@@ -240,7 +240,7 @@ static void close_dlhandle(void *handle)
     dlclose(handle);
 }
 #else
-static lcb_error_t get_create_func(const char *image,
+static lcb_STATUS get_create_func(const char *image,
                                    const char *symbol,
                                    struct plugin_st *plugin,
                                    int do_warn)
@@ -280,11 +280,11 @@ static void close_dlhandle(void *handle)
 #endif
 
 static int want_dl_debug = 0; /* global variable */
-static lcb_error_t create_v1(lcb_io_opt_t *io,
+static lcb_STATUS create_v1(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options);
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
+lcb_STATUS lcb_destroy_io_ops(lcb_io_opt_t io)
 {
     if (io) {
         void *dlhandle = io->dlhandle;
@@ -303,7 +303,7 @@ lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t io)
  * Note, the 'pi' is just a context variable to ensure the pointers copied
  * to the options are valid. It is *not* meant to be inspected.
  */
-static lcb_error_t generate_options(plugin_info *pi,
+static lcb_STATUS generate_options(plugin_info *pi,
                                     const struct lcb_create_io_ops_st *user,
                                     struct lcb_create_io_ops_st *ours,
                                     lcb_io_ops_type_t *type)
@@ -356,7 +356,7 @@ static lcb_error_t generate_options(plugin_info *pi,
             if (ours->version == 1) {
                 struct plugin_st plugin;
                 int want_debug;
-                lcb_error_t ret;
+                lcb_STATUS ret;
 
                 if (lcb_getenv_boolean_multi("LIBCOUCHBASE_DLOPEN_DEBUG",
                     "LCB_DLOPEN_DEBUG", NULL)) {
@@ -392,12 +392,12 @@ static lcb_error_t generate_options(plugin_info *pi,
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
+lcb_STATUS lcb_create_io_ops(lcb_io_opt_t *io,
                               const struct lcb_create_io_ops_st *io_opts)
 {
 
     struct lcb_create_io_ops_st options;
-    lcb_error_t err;
+    lcb_STATUS err;
     plugin_info pi;
     memset(&options, 0, sizeof(options));
 
@@ -443,12 +443,12 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *io,
     return LCB_SUCCESS;
 }
 
-static lcb_error_t create_v1(lcb_io_opt_t *io,
+static lcb_STATUS create_v1(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options)
 {
     struct plugin_st plugin;
     int want_debug;
-    lcb_error_t ret;
+    lcb_STATUS ret;
 
     if (lcb_getenv_boolean_multi("LIBCOUCHBASE_DLOPEN_DEBUG",
         "LCB_DLOPEN_DEBUG", NULL)) {
@@ -460,7 +460,7 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
                           options->v.v1.symbol, &plugin, want_debug);
     if (ret != LCB_SUCCESS) {
         /* try to look up the symbol in the current image */
-        lcb_error_t ret2 = get_create_func(NULL, options->v.v1.symbol, &plugin, want_debug);
+        lcb_STATUS ret2 = get_create_func(NULL, options->v.v1.symbol, &plugin, want_debug);
         if (ret2 != LCB_SUCCESS) {
 #ifndef _WIN32
             char path[PATH_MAX];
@@ -494,10 +494,10 @@ static lcb_error_t create_v1(lcb_io_opt_t *io,
     return LCB_SUCCESS;
 }
 
-static lcb_error_t create_v2(lcb_io_opt_t *io,
+static lcb_STATUS create_v2(lcb_io_opt_t *io,
                              const struct lcb_create_io_ops_st *options)
 {
-    lcb_error_t ret;
+    lcb_STATUS ret;
 
     ret = options->v.v2.create(0, io, options->v.v2.cookie);
     if (ret != LCB_SUCCESS) {
@@ -514,8 +514,8 @@ static lcb_error_t create_v2(lcb_io_opt_t *io,
     return LCB_SUCCESS;
 }
 
-lcb_error_t lcb_iops_cntl_handler(int mode,
-                                  lcb_t instance, int cmd, void *arg)
+lcb_STATUS lcb_iops_cntl_handler(int mode,
+                                  lcb_INSTANCE *instance, int cmd, void *arg)
 {
     (void)instance;
 
@@ -523,7 +523,7 @@ lcb_error_t lcb_iops_cntl_handler(int mode,
     case LCB_CNTL_IOPS_DEFAULT_TYPES: {
         struct lcb_create_io_ops_st options;
         struct lcb_cntl_iops_info_st *info = arg;
-        lcb_error_t err;
+        lcb_STATUS err;
         plugin_info pi;
 
         memset(&options, 0, sizeof(options));

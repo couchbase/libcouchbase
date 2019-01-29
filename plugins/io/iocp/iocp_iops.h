@@ -197,7 +197,7 @@ lcb_U64 iocp_tmq_next_timeout(lcb_list_t *list, lcb_U64 now);
 iocp_timer_t *iocp_tmq_pop(lcb_list_t *list, lcb_U64 now);
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg);
+lcb_STATUS lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg);
 
 enum { IOCP_TRACE, IOCP_DEBUG, IOCP_INFO, IOCP_WARN, IOCP_ERR, IOCP_FATAL };
 #ifdef IOCP_LOG_VERBOSE

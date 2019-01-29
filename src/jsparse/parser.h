@@ -18,7 +18,6 @@
 #define LCB_VIEWROW_H_
 
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/views.h>
 #include "contrib/jsonsl/jsonsl.h"
 #include "contrib/lcb-jsoncpp/lcb-jsoncpp.h"
 #include <string>

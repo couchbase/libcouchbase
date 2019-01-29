@@ -34,13 +34,13 @@ extern "C" {
  * Called from the OBSERVE codebase to update an item's status for CAS-based
  * observe
  */
-void lcbdur_cas_update(lcb_t, void *dset, lcb_error_t, const lcb_RESPOBSERVE *);
+void lcbdur_cas_update(lcb_INSTANCE *, void *dset, lcb_STATUS, const lcb_RESPOBSERVE *);
 
 /**
  * Called from the OBSERVE codebase to update an item's status for seqno-based
  * observe
  */
-void lcbdur_update_seqno(lcb_t, void *dset, const lcb_RESPOBSEQNO*);
+void lcbdur_update_seqno(lcb_INSTANCE *, void *dset, const lcb_RESPOBSEQNO*);
 
 /** Indicate that this durability command context is for an original storage op */
 void lcbdurctx_set_durstore(lcb_MULTICMD_CTX *ctx, int enabled);
@@ -48,7 +48,7 @@ void lcbdurctx_set_durstore(lcb_MULTICMD_CTX *ctx, int enabled);
 void lcbdur_destroy(void *dset);
 
 /** Called from durability-cas to request an OBSERVE with a special callback */
-lcb_MULTICMD_CTX *lcb_observe_ctx_dur_new(lcb_t instance);
+lcb_MULTICMD_CTX *lcb_observe_ctx_dur_new(lcb_INSTANCE *instance);
 
 /**@}
  *
@@ -181,7 +181,7 @@ struct Item : public CallbackCookie {
      */
     void finish();
 
-    void finish(lcb_error_t err) {
+    void finish(lcb_STATUS err) {
         result.rc = err;
         finish();
     }
@@ -239,7 +239,7 @@ struct Durset : public MultiCmdContext {
      * additional bookeeping, having guaranteed that all items are now
      * added.
      */
-    virtual lcb_error_t prepare_schedule() {
+    virtual lcb_STATUS prepare_schedule() {
         return LCB_SUCCESS;
     }
 
@@ -249,7 +249,7 @@ struct Durset : public MultiCmdContext {
      * @param itm the newly added item
      * @param the original command, for more context
      */
-    virtual lcb_error_t after_add(Item&, const lcb_CMDENDURE*) {
+    virtual lcb_STATUS after_add(Item&, const lcb_CMDENDURE*) {
         return LCB_SUCCESS;
     }
 
@@ -257,18 +257,16 @@ struct Durset : public MultiCmdContext {
      * Called to actually check for persistence/replication. This must be
      * implemented.
      */
-    virtual lcb_error_t poll_impl() = 0;
+    virtual lcb_STATUS poll_impl() = 0;
 
     virtual ~Durset();
-    Durset(lcb_t instance, const lcb_durability_opts_t* options);
+    Durset(lcb_INSTANCE *instance, const lcb_durability_opts_t* options);
 
     // Implementation for MULTICMD_CTX
-    lcb_error_t MCTX_done(const void *cookie);
-    lcb_error_t MCTX_addcmd(const lcb_CMDBASE *cmd);
+    lcb_STATUS MCTX_done(const void *cookie);
+    lcb_STATUS MCTX_addcmd(const lcb_CMDBASE *cmd);
     void MCTX_fail();
-#ifdef LCB_TRACING
     void MCTX_setspan(lcbtrace_SPAN *span);
-#endif
 
     /**
      * This function calls poll_impl(). The implementation should then call
@@ -279,8 +277,8 @@ struct Durset : public MultiCmdContext {
     /** Called after timeouts and intervals. */
     inline void tick();
 
-    static Durset* createCasDurset(lcb_t, const lcb_durability_opts_t*);
-    static Durset* createSeqnoDurset(lcb_t, const lcb_durability_opts_t*);
+    static Durset* createCasDurset(lcb_INSTANCE *, const lcb_durability_opts_t*);
+    static Durset* createSeqnoDurset(lcb_INSTANCE *, const lcb_durability_opts_t*);
 
     lcb_DURABILITYOPTSv0 opts; /**< Sanitized user options */
     std::vector<Item> entries;
@@ -288,16 +286,14 @@ struct Durset : public MultiCmdContext {
     int waiting; /**< Set if currently awaiting an observe callback */
     unsigned refcnt; /**< Reference count */
     State next_state; /**< Internal state */
-    lcb_error_t lasterr;
+    lcb_STATUS lasterr;
     bool is_durstore; /** Whether the callback should be DURSTORE */
     std::string kvbufs; /**< Backing storage for key buffers */
     const void *cookie; /**< User cookie */
     hrtime_t ns_timeout; /**< Timestamp of next timeout */
     void *timer;
-    lcb_t instance;
-#ifdef LCB_TRACING
+    lcb_INSTANCE *instance;
     lcbtrace_SPAN *span;
-#endif
 };
 
 } // namespace durability

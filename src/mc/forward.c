@@ -47,7 +47,7 @@ mc_iovinfo_init(mc_IOVINFO *info, const nb_IOV *iov, unsigned niov)
 #define REQLEN_HDR(req) sizeof(req.bytes)
 #define REQLEN_
 
-lcb_error_t
+lcb_STATUS
 mc_forward_packet(mc_CMDQUEUE *cq,
     mc_IOVINFO *info, mc_PACKET **pkt_p, mc_PIPELINE **pl_p, int options)
 {

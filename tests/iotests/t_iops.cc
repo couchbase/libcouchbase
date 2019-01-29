@@ -27,7 +27,7 @@ class IOPS : public ::testing::Test
 {
 public:
     virtual void SetUp() {
-        lcb_error_t err = lcb_create_io_ops(&io, NULL);
+        lcb_STATUS err = lcb_create_io_ops(&io, NULL);
         ASSERT_EQ(err, LCB_SUCCESS);
         iot = lcbio_table_new(io);
     }

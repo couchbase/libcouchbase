@@ -17,11 +17,10 @@
 #include "config.h"
 #include <gtest/gtest.h>
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/api3.h>
 #include <mocksupport/server.h>
 #include "mock-environment.h"
 #include <sstream>
-#include "internal.h" /* settings from lcb_t for logging */
+#include "internal.h" /* settings from lcb_INSTANCE *for logging */
 
 #define LOGARGS(instance, lvl) instance->settings, "tests-ENV", LCB_LOG_##lvl, __FILE__, __LINE__
 
@@ -264,9 +263,9 @@ void MockEnvironment::getResponse(MockResponse& ret)
     }
 }
 
-void MockEnvironment::postCreate(lcb_t instance)
+void MockEnvironment::postCreate(lcb_INSTANCE *instance)
 {
-    lcb_error_t err;
+    lcb_STATUS err;
     if (!isRealCluster()) {
         lcb_HTCONFIG_URLTYPE urltype = LCB_HTCONFIG_URLTYPE_COMPAT;
         err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_HTCONFIG_URLTYPE, &urltype);
@@ -278,7 +277,7 @@ void MockEnvironment::postCreate(lcb_t instance)
 
 void
 MockEnvironment::createConnection(HandleWrap &handle,
-    lcb_t& instance, const lcb_create_st &user_options)
+    lcb_INSTANCE **instance, const lcb_create_st &user_options)
 {
     lcb_io_opt_t io;
     lcb_create_st options;
@@ -290,24 +289,24 @@ MockEnvironment::createConnection(HandleWrap &handle,
     }
 
     options.v.v2.io = io;
-    lcb_error_t err = lcb_create(&instance, &options);
+    lcb_STATUS err = lcb_create(instance, &options);
     ASSERT_EQ(LCB_SUCCESS, err);
-    postCreate(instance);
+    postCreate(*instance);
 
-    (void)lcb_set_cookie(instance, io);
+    (void)lcb_set_cookie(*instance, io);
 
-    handle.instance = instance;
+    handle.instance = *instance;
     handle.iops = io;
 }
 
-void MockEnvironment::createConnection(HandleWrap &handle, lcb_t &instance)
+void MockEnvironment::createConnection(HandleWrap &handle, lcb_INSTANCE **instance)
 {
     lcb_create_st options;
     makeConnectParams(options, NULL);
     createConnection(handle, instance, options);
 }
 
-void MockEnvironment::createConnection(lcb_t &instance)
+void MockEnvironment::createConnection(lcb_INSTANCE **instance)
 {
     HandleWrap handle;
     createConnection(handle, instance);
@@ -315,13 +314,12 @@ void MockEnvironment::createConnection(lcb_t &instance)
     handle.iops->v.base.need_cleanup = 1;
     handle.instance = NULL;
     handle.iops = NULL;
-
 }
 
 #define STAT_VERSION "version"
 
 extern "C" {
-static void statsCallback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
+static void statsCallback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
 {
     MockEnvironment *me = (MockEnvironment *)resp->cookie;
     ASSERT_EQ(LCB_SUCCESS, resp->rc);
@@ -381,8 +379,8 @@ void MockEnvironment::bootstrapRealCluster()
     serverParams = ServerParams(mock->http, mock->bucket,
                                 mock->username, mock->password);
 
-    lcb_t tmphandle;
-    lcb_error_t err;
+    lcb_INSTANCE *tmphandle;
+    lcb_STATUS err;
     lcb_create_st options;
     serverParams.makeConnectParams(options, NULL);
 
@@ -414,7 +412,7 @@ void MockEnvironment::bootstrapRealCluster()
 }
 
 extern "C" {
-static void mock_flush_callback(lcb_t, int, const lcb_RESPBASE *resp) {
+static void mock_flush_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *resp) {
     ASSERT_EQ(LCB_SUCCESS, resp->rc);
 }
 }
@@ -447,7 +445,7 @@ void MockEnvironment::clearAndReset()
         // Use default I/O here..
         serverParams.makeConnectParams(crParams, NULL);
         crParams.v.v2.transports = transports;
-        lcb_error_t err = lcb_create(&innerClient, &crParams);
+        lcb_STATUS err = lcb_create(&innerClient, &crParams);
         if (err != LCB_SUCCESS) {
             printf("Error on create: 0x%x\n", err);
         }
@@ -460,7 +458,7 @@ void MockEnvironment::clearAndReset()
     }
 
     lcb_CMDCBFLUSH fcmd = { 0 };
-    lcb_error_t err;
+    lcb_STATUS err;
 
     err = lcb_cbflush3(innerClient, NULL, &fcmd);
     ASSERT_EQ(LCB_SUCCESS, err);

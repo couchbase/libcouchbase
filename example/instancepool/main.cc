@@ -22,14 +22,17 @@
 using namespace lcb;
 
 extern "C" {
-static void get_callback(lcb_t instance, int, const lcb_RESPBASE *rb)
+static void get_callback(lcb_INSTANCE *instance, int, const lcb_RESPBASE *rb)
 {
     const lcb_RESPGET *rg = reinterpret_cast<const lcb_RESPGET*>(rb);
-    if (rb->rc != LCB_SUCCESS) {
+    if (lcb_respget_status(rg) != LCB_SUCCESS) {
         fprintf(stderr, "%p: Couldn't get key", instance);
     } else {
-        fprintf(stderr, "%p: Got key %.*s with value %.*s\n", instance,
-            (int)rg->nkey, rg->key, (int)rg->nvalue, rg->value);
+        const char *key, *value;
+        size_t nkey, nvalue;
+        lcb_respget_key(rg, &key, &nkey);
+        lcb_respget_value(rg, &value, &nvalue);
+        fprintf(stderr, "%p: Got key %.*s with value %.*s\n", instance, (int)nkey, key, (int)nvalue, value);
     }
 }
 }
@@ -38,7 +41,7 @@ class MyPool : public Pool {
 public:
     MyPool(const lcb_create_st& opts, size_t items) : Pool(opts, items) {}
 protected:
-    void initialize(lcb_t instance) {
+    void initialize(lcb_INSTANCE *instance) {
         // We override the initialize function to set the proper callback we
         // care about
         fprintf(stderr, "Initializing %p\n", instance);
@@ -50,14 +53,16 @@ extern "C" {
 static void *
 pthr_func(void *arg) {
     Pool *pool = reinterpret_cast<Pool*>(arg);
-    lcb_CMDGET gcmd = { 0 };
-    LCB_CMD_SET_KEY(&gcmd, "foo", 3);
+    lcb_CMDGET *gcmd;
+    lcb_cmdget_create(&gcmd);
+    lcb_cmdget_key(gcmd, "foo", 3);
 
     // Get an instance to use
-    lcb_t instance = pool->pop();
+    lcb_INSTANCE *instance = pool->pop();
 
     // Issue the command
-    lcb_get3(instance, NULL, &gcmd);
+    lcb_get(instance, NULL, gcmd);
+    lcb_cmdget_destroy(gcmd);
 
     // Wait for the command to complete
     lcb_wait(instance);
@@ -74,7 +79,7 @@ int main(int argc, char *argv[]) {
     lcb_create_st options;
     pthread_t workers[NUM_WORKERS];
     Pool *pool;
-    lcb_error_t err;
+    lcb_STATUS err;
 
     // set up the options to represent your cluster (hostname etc)
     memset(&options, 0, sizeof options);

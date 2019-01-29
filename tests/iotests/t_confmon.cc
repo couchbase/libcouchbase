@@ -44,8 +44,8 @@ TEST_F(ConfmonTest, testBasic)
 {
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
-    lcb_t instance;
-    MockEnvironment::getInstance()->createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
 
 
     Confmon *mon = new Confmon(instance->settings, instance->iotable, instance);
@@ -120,7 +120,7 @@ static void runConfmonTest(lcbio_pTABLE io, Confmon *mon)
 TEST_F(ConfmonTest, testCycle)
 {
     HandleWrap hw;
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     lcb_create_st cropts;
     MockEnvironment *mock = MockEnvironment::getInstance();
 
@@ -128,7 +128,7 @@ TEST_F(ConfmonTest, testCycle)
         return;
     }
 
-    mock->createConnection(hw, instance);
+    mock->createConnection(hw, &instance);
     instance->settings->bc_http_stream_time = 100000;
     instance->memd_sockpool->get_options().tmoidle = 100000;
 
@@ -181,10 +181,10 @@ TEST_F(ConfmonTest, testCycle)
 
 TEST_F(ConfmonTest, testBootstrapMethods)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    MockEnvironment::getInstance()->createConnection(hw, instance);
-    lcb_error_t err = lcb_connect(instance);
+    MockEnvironment::getInstance()->createConnection(hw, &instance);
+    lcb_STATUS err = lcb_connect(instance);
     ASSERT_EQ(LCB_SUCCESS, err);
 
     // Try the various bootstrap times

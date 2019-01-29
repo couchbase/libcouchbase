@@ -244,7 +244,7 @@ procs2_lnt_callback(int version, lcb_loop_procs *loop_procs,
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_libevent_io_opts(int version, lcb_io_opt_t *io, void *arg)
+lcb_STATUS lcb_create_libevent_io_opts(int version, lcb_io_opt_t *io, void *arg)
 {
     struct event_base *base = arg;
     struct lcb_io_opt_st *ret;

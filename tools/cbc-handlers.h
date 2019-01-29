@@ -24,6 +24,28 @@
 namespace cbc {
 #define HANDLER_DESCRIPTION(s) const char* description() const { return s; }
 #define HANDLER_USAGE(s) const char* usagestr() const { return s; }
+#define DURABILITY_GETTER()                                                                                            \
+    lcb_DURABILITY_LEVEL durability()                                                                                  \
+    {                                                                                                                  \
+        if (o_durability.passed()) {                                                                                   \
+            std::string s = o_durability.const_result();                                                               \
+            if (s == "none") {                                                                                         \
+                return LCB_DURABILITYLEVEL_NONE;                                                                       \
+            } else if (s == "majority") {                                                                              \
+                return LCB_DURABILITYLEVEL_MAJORITY;                                                                   \
+            } else if (s == "majority_and_persist_on_master") {                                                        \
+                return LCB_DURABILITYLEVEL_MAJORITY_AND_PERSIST_ON_MASTER;                                             \
+            } else if (s == "persist_to_majority") {                                                                   \
+                return LCB_DURABILITYLEVEL_PERSIST_TO_MAJORITY;                                                        \
+            } else {                                                                                                   \
+                throw BadArg(std::string("Mode must be one of \"majority\", \"majority_and_persist_on_master\", or "   \
+                                         "\"persist_to_majority\". Got ") +                                            \
+                             s);                                                                                       \
+            }                                                                                                          \
+        }                                                                                                              \
+        return LCB_DURABILITYLEVEL_NONE;                                                                               \
+    }
+
 class Handler {
 public:
     Handler(const char *name);
@@ -39,7 +61,7 @@ protected:
     virtual void run();
     cliopts::Parser parser;
     ConnParams params;
-    lcb_t instance;
+    lcb_INSTANCE * instance;
     Histogram hg;
     std::string cmdname;
 };
@@ -48,8 +70,12 @@ protected:
 class GetHandler : public Handler {
 public:
     GetHandler(const char *name = "get") :
-        Handler(name), o_replica("replica"), o_exptime("expiry"), o_collection_id("collection-id") {
-	  o_collection_id.description("ID of collection");
+        Handler(name), o_replica("replica"), o_exptime("expiry"), o_durability("durability"), 
+        o_scope("scope"), o_collection("collection") {
+
+        o_scope.description("Name of the collection scope").setDefault("_default");
+        o_collection.description("Name of the collection");
+        o_durability.abbrev('d').description("Durability level").setDefault("none");
 	}
 
     const char* description() const {
@@ -60,6 +86,8 @@ public:
         }
     }
 
+    DURABILITY_GETTER()
+
 protected:
     void addOptions();
     void run();
@@ -67,34 +95,42 @@ protected:
 private:
     cliopts::StringOption o_replica;
     cliopts::UIntOption o_exptime;
-    cliopts::UIntOption o_collection_id;
+    cliopts::StringOption o_durability;
+    cliopts::StringOption o_scope;
+    cliopts::StringOption o_collection;
     bool isLock() const { return cmdname == "lock"; }
 };
 
 class TouchHandler : public Handler {
 public:
     TouchHandler(const char *name = "touch") :
-            Handler(name), o_exptime("expiry") {
+            Handler(name), o_exptime("expiry"), o_durability("durability") {
         o_exptime.abbrev('e').mandatory(true);
+        o_durability.abbrev('d').description("Durability level").setDefault("none");
     }
     HANDLER_DESCRIPTION("Updated expiry times for documents")
+
+    DURABILITY_GETTER()
+
 protected:
     void addOptions();
     void run();
 private:
     cliopts::UIntOption  o_exptime;
+    cliopts::StringOption o_durability;
 };
 
 class SetHandler : public Handler {
 public:
     SetHandler(const char *name = "create") : Handler(name),
         o_flags("flags"), o_exp("expiry"), o_add("add"), o_persist("persist-to"),
-        o_replicate("replicate-to"), o_value("value"), o_json("json"),
-        o_mode("mode"), o_collection_id("collection-id") {
+        o_replicate("replicate-to"), o_durability("durability"), o_value("value"), o_json("json"),
+        o_mode("mode"), o_scope("scope"), o_collection("collection") {
 
         o_flags.abbrev('f').description("Flags for item");
         o_exp.abbrev('e').description("Expiry for item");
         o_add.abbrev('a').description("Fail if item exists").hide();
+        o_durability.abbrev('d').description("Durability level").setDefault("none");
         o_persist.abbrev('p').description("Wait until item is persisted to this number of nodes");
         o_replicate.abbrev('r').description("Wait until item is replicated to this number of nodes");
         o_value.abbrev('V').description("Value to use. If unspecified, read from standard input");
@@ -102,7 +138,8 @@ public:
         o_mode.abbrev('M').description("Mode to use when storing");
         o_mode.argdesc("upsert|insert|replace");
         o_mode.setDefault("upsert");
-        o_collection_id.description("UID of collection");
+        o_scope.description("Name of the collection scope").setDefault("_default");
+        o_collection.description("Name of the collection");
     }
 
     const char* description() const {
@@ -123,7 +160,9 @@ public:
 
     bool hasFileList() const { return cmdname == "cp"; }
 
-    virtual lcb_storage_t mode();
+    virtual lcb_STORE_OPERATION mode();
+
+    DURABILITY_GETTER()
 
 protected:
     void run();
@@ -137,10 +176,12 @@ private:
     cliopts::BoolOption o_add;
     cliopts::IntOption o_persist;
     cliopts::IntOption o_replicate;
+    cliopts::StringOption o_durability;
     cliopts::StringOption o_value;
     cliopts::BoolOption o_json;
     cliopts::StringOption o_mode;
-    cliopts::UIntOption o_collection_id;
+    cliopts::StringOption o_scope;
+    cliopts::StringOption o_collection;
     std::map<std::string, lcb_cas_t> items;
 };
 
@@ -194,9 +235,21 @@ class RemoveHandler : public Handler {
 public:
     HANDLER_DESCRIPTION("Remove items from the cluster")
     HANDLER_USAGE("KEY ... [OPTIONS ...]")
-    RemoveHandler() : Handler("rm") {}
+    RemoveHandler() : Handler("rm"), o_durability("durability")
+    {
+        o_durability.abbrev('d').description("Durability level").setDefault("none");
+    }
+
+    void addOptions() {
+        Handler::addOptions();
+        parser.addOption(o_durability);
+    }
+
+    DURABILITY_GETTER()
 protected:
     void run();
+
+    cliopts::StringOption o_durability;
 };
 
 class StatsHandler : public Handler {
@@ -291,16 +344,21 @@ public:
     HANDLER_USAGE("KEY ... [OPTIONS ...]")
 
     ArithmeticHandler(const char *name) : Handler(name),
-        o_initial("initial"), o_delta("delta"), o_expiry("expiry") {
+        o_initial("initial"), o_delta("delta"), o_expiry("expiry"), o_durability("durability") {
 
         o_initial.description("Initial value if item does not exist");
         o_delta.setDefault(1);
         o_expiry.abbrev('e').description("Expiration time for key");
+        o_durability.abbrev('d').description("Durability level").setDefault("none");
     }
+
+    DURABILITY_GETTER()
+
 protected:
     cliopts::ULongLongOption o_initial;
     cliopts::ULongLongOption o_delta;
     cliopts::UIntOption o_expiry;
+    cliopts::StringOption o_durability;
     void run();
     virtual bool shouldInvert() const = 0;
     void addOptions() {
@@ -308,6 +366,7 @@ protected:
         parser.addOption(o_initial);
         parser.addOption(o_delta);
         parser.addOption(o_expiry);
+        parser.addOption(o_durability);
     }
 };
 
@@ -317,6 +376,7 @@ public:
     IncrHandler() : ArithmeticHandler("incr") {
         o_delta.description("Amount to increment by");
     }
+
 protected:
     bool shouldInvert() const { return false; }
 };
@@ -393,8 +453,8 @@ public:
     HttpReceiver() : statusInvoked(false) {}
     virtual ~HttpReceiver() {}
     void maybeInvokeStatus(const lcb_RESPHTTP*);
-    void install(lcb_t);
-    virtual void handleStatus(lcb_error_t, int) {}
+    void install(lcb_INSTANCE *);
+    virtual void handleStatus(lcb_STATUS, int) {}
     virtual void onDone() {}
     virtual void onChunk(const char *data, size_t size) {
         resbuf.append(data, size);
@@ -418,8 +478,8 @@ protected:
     virtual const std::string& getBody();
     virtual std::string getContentType() { return ""; }
     virtual bool isAdmin() const { return false; }
-    virtual lcb_http_method_t getMethod();
-    virtual void handleStatus(lcb_error_t err, int code);
+    virtual lcb_HTTP_METHOD getMethod();
+    virtual void handleStatus(lcb_STATUS err, int code);
     virtual void addOptions() {
         if (isAdmin()) {
             params.setAdminMode();
@@ -480,7 +540,7 @@ protected:
     }
     std::string getURI() { return "/settings/rbac/roles"; }
     const std::string& getBody() { static std::string e; return e; }
-    lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_GET; }
+    lcb_HTTP_METHOD getMethod() { return LCB_HTTP_METHOD_GET; }
 };
 
 class UserListHandler : public RbacHandler {
@@ -497,7 +557,7 @@ protected:
     }
     std::string getURI() { return "/settings/rbac/users"; }
     const std::string& getBody() { static std::string e; return e; }
-    lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_GET; }
+    lcb_HTTP_METHOD getMethod() { return LCB_HTTP_METHOD_GET; }
 };
 
 class UserDeleteHandler : public AdminHandler {
@@ -525,7 +585,7 @@ protected:
     }
     std::string getURI() { return std::string("/settings/rbac/users/") + domain + "/" + name; }
     const std::string& getBody() { static std::string e; return e; }
-    lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_DELETE; }
+    lcb_HTTP_METHOD getMethod() { return LCB_HTTP_METHOD_DELETE; }
 
 private:
     cliopts::StringOption o_domain;
@@ -561,7 +621,7 @@ protected:
     std::string getURI() { return std::string("/settings/rbac/users/") + domain + "/" + name; }
     const std::string& getBody() { return body; }
     std::string getContentType() { return "application/x-www-form-urlencoded"; }
-    lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_PUT; }
+    lcb_HTTP_METHOD getMethod() { return LCB_HTTP_METHOD_PUT; }
 
 private:
     cliopts::StringOption o_domain;
@@ -607,7 +667,7 @@ protected:
     std::string getURI() { return "/pools/default/buckets"; }
     const std::string& getBody() { return body_s; }
     std::string getContentType() { return "application/x-www-form-urlencoded"; }
-    lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_POST; }
+    lcb_HTTP_METHOD getMethod() { return LCB_HTTP_METHOD_POST; }
 
 private:
     cliopts::StringOption o_btype;
@@ -631,7 +691,7 @@ protected:
         AdminHandler::run();
     }
     std::string getURI() { return std::string("/pools/default/buckets/") + bname; }
-    lcb_http_method_t getMethod() { return LCB_HTTP_METHOD_DELETE; }
+    lcb_HTTP_METHOD getMethod() { return LCB_HTTP_METHOD_DELETE; }
     const std::string& getBody() { static std::string e; return e; }
 private:
     std::string bname;

@@ -421,7 +421,7 @@ get_procs(int version, lcb_loop_procs *loop, lcb_timer_procs *timer,
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg)
+lcb_STATUS lcb_iocp_new_iops(int version, lcb_io_opt_t *ioret, void *arg)
 {
     iocp_t *io;
     lcb_io_opt_t tbl;

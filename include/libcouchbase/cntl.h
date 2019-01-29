@@ -47,7 +47,7 @@ extern "C" {
  *
  * @code{.c}
  * char something;
- * lcb_error_t rv;
+ * lcb_STATUS rv;
  * rv = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_FOO, &something);
  * @endcode
  *
@@ -756,7 +756,7 @@ typedef enum {
  * @code{.c}
  * for (int ii = 0; ii < LCB_RETRY_ON_MAX; ++ii) {
  *   lcb_U32 val = LCB_RETRYOPT_CREATE(ii, LCB_RETRY_CMDS_NONE);
- *   lcb_error_t err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &val);
+ *   lcb_STATUS err = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_RETRYMODE, &val);
  * }
  * @endcode
  *
@@ -1390,15 +1390,6 @@ typedef enum {
 #define LCB_CNTL_HTTP_POOL_TIMEOUT 0x5d
 
 /**
- * Modes for handling IPv6 in the IO layer.
- */
-typedef enum {
-    LCB_COLLECTIONS_DISABLE = 0x00,
-    LCB_COLLECTIONS_ENABLE = 0x01,
-    /**< encode collections ID regardless HELLO feature negotiation */
-    LCB_COLLECTIONS_FORCE = 0x02
-} lcb_CNTL_COLLECTIONS_STATE;
-/**
  *
  * @cntl_arg_both{int (as boolean)}
  * @volatile
@@ -1406,10 +1397,17 @@ typedef enum {
 #define LCB_CNTL_ENABLE_COLLECTIONS 0x4a
 
 /**
+ *
+ * @cntl_arg_both{int (as boolean)}
+ * @volatile
+ */
+#define LCB_CNTL_ENABLE_DURABLE_WRITE 0x5e
+
+/**
  * This is not a command, but rather an indicator of the last item.
  * @internal
  */
-#define LCB_CNTL__MAX                    0x5e
+#define LCB_CNTL__MAX                    0x5f
 /**@}*/
 
 #ifdef __cplusplus

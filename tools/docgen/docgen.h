@@ -43,6 +43,15 @@ public:
     virtual ~GeneratorState() {}
 };
 
+class SubdocSpec {
+    public:
+        std::string path;
+        std::string value;
+        bool mutate;
+
+        SubdocSpec() : path(""), value(""), mutate(false) {}
+};
+
 class SubdocGeneratorState {
 public:
     /**
@@ -51,8 +60,8 @@ public:
      * @param[in,out] specs container to hold the actual spec array.
      *  The spec array must have already been properly pre-sized.
      */
-    virtual void populateLookup(uint32_t seq, std::vector<lcb_SDSPEC>& specs) = 0;
-    virtual void populateMutate(uint32_t seq, std::vector<lcb_SDSPEC>& specs) = 0;
+    virtual void populateLookup(uint32_t seq, std::vector<SubdocSpec>& specs) = 0;
+    virtual void populateMutate(uint32_t seq, std::vector<SubdocSpec>& specs) = 0;
     virtual ~SubdocGeneratorState() {}
 };
 
@@ -305,26 +314,25 @@ private:
         SDGenstate(const std::vector<Doc>& docs) : m_pathix(0), m_docs(docs) {
         }
 
-        void populateLookup(uint32_t seq, std::vector<lcb_SDSPEC>& specs) {
+        void populateLookup(uint32_t seq, std::vector<SubdocSpec>& specs) {
             populate(seq, specs, false);
         }
-        void populateMutate(uint32_t seq, std::vector<lcb_SDSPEC>& specs) {
+        void populateMutate(uint32_t seq, std::vector<SubdocSpec>& specs) {
             populate(seq, specs, true);
         }
 
     private:
-        void populate(uint32_t seq, std::vector<lcb_SDSPEC>& specs, bool mutate) {
+        void populate(uint32_t seq, std::vector<SubdocSpec>& specs, bool mutate) {
             const Doc& d = doc(seq);
             specs.resize(std::min(d.m_fields.size(), specs.size()));
             for (size_t ii = 0; ii < d.m_fields.size() && ii < specs.size(); ++ii) {
                 const Doc::Field& f = d.m_fields[m_pathix++ % d.m_fields.size()];
-                lcb_SDSPEC& cur_spec = specs[ii];
-                LCB_SDSPEC_SET_PATH(&cur_spec, f.name().c_str(), f.name().size());
+                SubdocSpec& cur_spec = specs[ii];
+                cur_spec.path = f.name();
+                cur_spec.mutate = false;
                 if (mutate) {
-                    LCB_SDSPEC_SET_VALUE(&cur_spec, f.value().c_str(), f.value().size());
-                    specs[ii].sdcmd = LCB_SDCMD_DICT_UPSERT;
-                } else {
-                    specs[ii].sdcmd = LCB_SDCMD_GET;
+                    cur_spec.value = f.value();
+                    cur_spec.mutate = true;
                 }
             }
         }

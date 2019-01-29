@@ -1,12 +1,29 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2012-2013 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #include "histogram.h"
 #include <string>
 using namespace cbc;
 using std::string;
 
 void
-Histogram::install(lcb_t inst, FILE *out)
+Histogram::install(lcb_INSTANCE *inst, FILE *out)
 {
-    lcb_error_t rc;
+    lcb_STATUS rc;
     output = out;
     lcb_enable_timings(inst);
     rc = lcb_cntl(inst, LCB_CNTL_GET, LCB_CNTL_KVTIMINGS, &hg);

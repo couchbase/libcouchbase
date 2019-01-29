@@ -78,7 +78,7 @@ lcbio_mksyserr(lcbio_OSERR in, lcbio_OSERR *out)
     }
 }
 
-static lcb_error_t
+static lcb_STATUS
 ioerr2lcberr(lcbio_OSERR in, const lcb_settings *settings)
 {
     switch (in) {
@@ -105,7 +105,7 @@ ioerr2lcberr(lcbio_OSERR in, const lcb_settings *settings)
     }
 }
 
-lcb_error_t
+lcb_STATUS
 lcbio_mklcberr(lcbio_OSERR in, const lcb_settings *settings)
 {
     if (settings->detailed_neterr == 0) {
@@ -257,7 +257,7 @@ lcbio_is_netclosed(lcbio_SOCKET *sock, int flags)
     }
 }
 
-lcb_error_t
+lcb_STATUS
 lcbio_enable_sockopt(lcbio_SOCKET *s, int cntl) {
     lcbio_pTABLE iot = s->io;
     int rv;
@@ -300,7 +300,7 @@ lcbio_ssl_supported(void)
 #endif
 }
 
-lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, int, lcb_error_t *errp, lcb_settings *)
+lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, int, lcb_STATUS *errp, lcb_settings *)
 {
     if (errp) { *errp = LCB_CLIENT_FEATURE_UNAVAILABLE; }
     return NULL;
@@ -310,18 +310,18 @@ lcbio_pSSLCTX lcbio_ssl_new__fallback(const char *, const char *, const char *, 
 #ifdef LCB_NO_SSL
 void lcbio_ssl_free(lcbio_pSSLCTX) {
 }
-lcb_error_t lcbio_ssl_apply(lcbio_SOCKET*, lcbio_pSSLCTX) {
+lcb_STATUS lcbio_ssl_apply(lcbio_SOCKET*, lcbio_pSSLCTX) {
     return LCB_CLIENT_FEATURE_UNAVAILABLE;
 }
 int lcbio_ssl_check(lcbio_SOCKET*) {
     return 0;
 }
-lcb_error_t lcbio_ssl_get_error(lcbio_SOCKET *) {
+lcb_STATUS lcbio_ssl_get_error(lcbio_SOCKET *) {
     return LCB_SUCCESS;
 }
 void lcbio_ssl_global_init(void) {
 }
-lcb_error_t lcbio_sslify_if_needed(lcbio_SOCKET *, lcb_settings *) {
+lcb_STATUS lcbio_sslify_if_needed(lcbio_SOCKET *, lcb_settings *) {
     return LCB_SUCCESS;
 }
 #endif

@@ -102,7 +102,7 @@ typedef struct lcbio_CTX *lcbio_pCTX;
  */
 typedef struct {
     /** Error handler invoked with the context and the received error */
-    void (*cb_err)(lcbio_pCTX, lcb_error_t);
+    void (*cb_err)(lcbio_pCTX, lcb_STATUS);
 
     /** Read handler invoked with the context and the number of bytes read */
     void (*cb_read)(lcbio_pCTX, unsigned total);
@@ -144,7 +144,7 @@ typedef struct lcbio_CTX {
     char entered; /**< inside event handler */
     unsigned npending; /**< reference count on pending I/O */
     unsigned rdwant; /**< number of remaining bytes to read */
-    lcb_error_t err; /**< pending error */
+    lcb_STATUS err; /**< pending error */
     rdb_IOROPE ior; /**< for reads */
     lcbio_pASYNC as_err; /**< async error handler */
     lcbio_CTXPROCS procs; /**< callbacks */
@@ -224,7 +224,7 @@ lcbio_ctx_dump(lcbio_CTX *ctx, FILE *fp);
 
 /** Asynchronously trigger the error callback */
 void
-lcbio_ctx_senderr(lcbio_CTX *ctx, lcb_error_t err);
+lcbio_ctx_senderr(lcbio_CTX *ctx, lcb_STATUS err);
 
 
 /**

@@ -56,7 +56,7 @@ provider_string(Method type) {
     return "";
 }
 
-Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_, lcb_t instance_)
+Confmon::Confmon(lcb_settings *settings_, lcbio_pTABLE iot_, lcb_INSTANCE *instance_)
     : cur_provider(NULL),
       config(NULL),
       settings(settings_),
@@ -156,6 +156,10 @@ int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
             return 0;
         }
     }
+    /* TODO: remove when cluster will merge http://review.couchbase.org/c/105943/ */
+    if (LCBT_SETTING(instance, enable_durable_write)) {
+        LCBVB_CAPS(new_config->vbc) |= LCBVB_CAP_DURABLE_WRITE;
+    }
 
     lcb_log(LOGARGS(this, INFO), "Setting new configuration. Received via %s", provider_string(new_config->get_origin()));
     TRACE_NEW_CONFIG(instance, new_config);
@@ -181,7 +185,7 @@ int Confmon::do_set_next(ConfigInfo *new_config, bool notify_miss)
     return 1;
 }
 
-void Confmon::provider_failed(Provider *provider, lcb_error_t reason) {
+void Confmon::provider_failed(Provider *provider, lcb_STATUS reason) {
     lcb_log(LOGARGS(this, INFO), "Provider '%s' failed", provider_string(provider->type));
 
     if (provider != cur_provider) {

@@ -24,16 +24,6 @@
 #include <netbuf/netbuf.h>
 
 #ifdef __cplusplus
-extern "C"{
-#endif
-
-int mcreq_pipeline_supports_collections(mc_PIPELINE *pipeline);
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef __cplusplus
 namespace lcb {
 
 class RetryQueue;
@@ -50,7 +40,7 @@ public:
      * @param instance the instance to which the server belongs
      * @param ix the server index in the configuration
      */
-    Server(lcb_t, int);
+    Server(lcb_INSTANCE *, int);
 
     /**
      * Close the server. The resources of the server may still continue to persist
@@ -77,12 +67,12 @@ public:
      * @note This function does not modify the server's socket or state in itself,
      * but rather simply wipes the commands from its queue
      */
-    void purge(lcb_error_t err) {
+    void purge(lcb_STATUS err) {
         purge(err, 0, NULL, Server::REFRESH_NEVER);
     }
 
     /** Callback for mc_pipeline_fail_chain */
-    inline void purge_single(mc_PACKET*, lcb_error_t);
+    inline void purge_single(mc_PACKET*, lcb_STATUS);
 
     /**
      * Returns true or false depending on whether there are pending commands on
@@ -96,7 +86,7 @@ public:
         return mc_PIPELINE::index;
     }
 
-    lcb_t get_instance() const {
+    lcb_INSTANCE *get_instance() const {
         return instance;
     }
 
@@ -122,10 +112,6 @@ public:
 
     bool supports_json() const {
         return jsonsupport;
-    }
-
-    bool supports_collections() const {
-        return collsupport;
     }
 
     bool supports_new_durability() const {
@@ -154,7 +140,7 @@ public:
         S_ERRDRAIN,
 
         /* The server object has been closed, either because it has been removed
-         * from the cluster or because the related lcb_t has been destroyed.
+         * from the cluster or because the related lcb_INSTANCE *has been destroyed.
          */
         S_CLOSED,
 
@@ -177,7 +163,7 @@ public:
     bool check_closed();
     void start_errored_ctx(State next_state);
     void finalize_errored_ctx();
-    void socket_failed(lcb_error_t);
+    void socket_failed(lcb_STATUS);
     void io_timeout();
 
     enum RefreshPolicy {
@@ -186,12 +172,12 @@ public:
         REFRESH_NEVER
     };
 
-    int purge(lcb_error_t error, hrtime_t thresh, hrtime_t *next,
+    int purge(lcb_STATUS error, hrtime_t thresh, hrtime_t *next,
               RefreshPolicy policy);
 
     void connect();
 
-    void handle_connected(lcbio_SOCKET *socket, lcb_error_t err, lcbio_OSERR syserr);
+    void handle_connected(lcbio_SOCKET *socket, lcb_STATUS err, lcbio_OSERR syserr);
 
     enum ReadState {
         PKT_READ_COMPLETE,
@@ -201,10 +187,12 @@ public:
 
     ReadState try_read(lcbio_CTX *ctx, rdb_IOROPE *ior);
     int handle_unknown_error(const mc_PACKET *request,
-                             const MemcachedResponse& resinfo, lcb_error_t& newerr);
+                             const MemcachedResponse& resinfo, lcb_STATUS& newerr);
     bool handle_nmv(MemcachedResponse& resinfo, mc_PACKET *oldpkt);
-    bool maybe_retry_packet(mc_PACKET *pkt, lcb_error_t err);
-    bool maybe_reconnect_on_fake_timeout(lcb_error_t received_error);
+    bool handle_unknown_collection(MemcachedResponse& resinfo, mc_PACKET *oldpkt);
+
+    bool maybe_retry_packet(mc_PACKET *pkt, lcb_STATUS err);
+    bool maybe_reconnect_on_fake_timeout(lcb_STATUS received_error);
 
     /** Disable */
     Server(const Server&);
@@ -215,7 +203,7 @@ public:
     lcbio_pTIMER io_timer;
 
     /** Pointer back to the instance */
-    lcb_t instance;
+    lcb_INSTANCE *instance;
 
     lcb_settings *settings;
 
@@ -227,8 +215,6 @@ public:
 
     /** Whether extended 'UUID' and 'seqno' are available for each mutation */
     short mutation_tokens;
-
-    short collsupport;
 
     /** Whether new durability is supported */
     short new_durability;

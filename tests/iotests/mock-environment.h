@@ -30,7 +30,7 @@ class HandleWrap
     friend class MockEnvironment;
 
 public:
-    lcb_t getLcb() const {
+    lcb_INSTANCE *getLcb() const {
         return instance;
     }
 
@@ -48,7 +48,7 @@ public:
 
 
 private:
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     lcb_io_opt_t iops;
 };
 
@@ -368,10 +368,10 @@ public:
      *
      * @param instance the instane to create
      */
-    void createConnection(lcb_t &instance);
+    void createConnection(lcb_INSTANCE **instance);
 
-    void createConnection(HandleWrap &handle, lcb_t &instance);
-    void createConnection(HandleWrap &handle, lcb_t& instance,
+    void createConnection(HandleWrap &handle, lcb_INSTANCE **instance);
+    void createConnection(HandleWrap &handle, lcb_INSTANCE **instance,
         const lcb_create_st &options);
 
     /**
@@ -408,7 +408,7 @@ public:
 
     MockEnvironment(const char **argv, std::string name = "default");
     virtual ~MockEnvironment();
-    void postCreate(lcb_t instance);
+    void postCreate(lcb_INSTANCE *instance);
 
 protected:
     /**
@@ -435,7 +435,7 @@ protected:
     void clearAndReset();
 
 private:
-    lcb_t innerClient;
+    lcb_INSTANCE *innerClient;
     void setupInnerClient();
     void init();
 };

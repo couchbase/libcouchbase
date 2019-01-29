@@ -207,7 +207,7 @@ uint64_t lcbtrace_span_get_trace_id(lcbtrace_SPAN *span)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcbtrace_span_get_tag_str(lcbtrace_SPAN *span, const char *name, char **value, size_t *nvalue)
+lcb_STATUS lcbtrace_span_get_tag_str(lcbtrace_SPAN *span, const char *name, char **value, size_t *nvalue)
 {
     if (!span || name == NULL || nvalue == NULL || value == NULL) {
         return LCB_EINVAL;
@@ -230,7 +230,7 @@ lcb_error_t lcbtrace_span_get_tag_str(lcbtrace_SPAN *span, const char *name, cha
     return LCB_KEY_ENOENT;
 }
 
-LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, const char *name, uint64_t *value)
+LIBCOUCHBASE_API lcb_STATUS lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, const char *name, uint64_t *value)
 {
     if (!span || name == NULL || value == NULL) {
         return LCB_EINVAL;
@@ -252,7 +252,7 @@ LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_uint64(lcbtrace_SPAN *span, c
     return LCB_KEY_ENOENT;
 }
 
-LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_double(lcbtrace_SPAN *span, const char *name, double *value)
+LIBCOUCHBASE_API lcb_STATUS lcbtrace_span_get_tag_double(lcbtrace_SPAN *span, const char *name, double *value)
 {
     if (!span || name == NULL || value == NULL) {
         return LCB_EINVAL;
@@ -274,7 +274,7 @@ LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_double(lcbtrace_SPAN *span, c
     return LCB_KEY_ENOENT;
 }
 
-LIBCOUCHBASE_API lcb_error_t lcbtrace_span_get_tag_bool(lcbtrace_SPAN *span, const char *name, int *value)
+LIBCOUCHBASE_API lcb_STATUS lcbtrace_span_get_tag_bool(lcbtrace_SPAN *span, const char *name, int *value)
 {
     if (!span || name == NULL || value == NULL) {
         return LCB_EINVAL;

@@ -31,7 +31,7 @@ static bool hostEquals(const lcb_host_t &host, const char *addr, const char *por
 TEST_F(Hostlist, testParseBasic)
 {
     lcb_host_t curhost = {0};
-    lcb_error_t err;
+    lcb_STATUS err;
 
     err = lcb_host_parsez(&curhost, "1.2.3.4", 8091);
     ASSERT_EQ(LCB_SUCCESS, err);
@@ -96,7 +96,7 @@ TEST_F(Hostlist, testParseList)
 {
     lcb::Hostlist hosts;
 
-    lcb_error_t err;
+    lcb_STATUS err;
     err = hosts.add("1.1.1.1",  8091);
     ASSERT_EQ(LCB_SUCCESS, err);
     ASSERT_EQ(1, hosts.size());

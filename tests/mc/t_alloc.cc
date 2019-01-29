@@ -1,3 +1,20 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2011-2019 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #include "mctest.h"
 
 class McAlloc : public ::testing::Test {
@@ -109,7 +126,7 @@ TEST_F(McAlloc, testKeyAlloc)
     cmd.key.contig.bytes = const_cast<char *>("Hello");
     cmd.key.contig.nbytes = 5;
 
-    lcb_error_t ret;
+    lcb_STATUS ret;
     ret = mcreq_basic_packet(&q, &cmd, &hdr, 0, 0, &packet, &pipeline, 0);
     ASSERT_EQ(LCB_SUCCESS, ret);
     ASSERT_TRUE(packet != NULL);
@@ -128,7 +145,7 @@ TEST_F(McAlloc, testKeyAlloc)
     const void *key;
     lcb_size_t nkey;
     // Get back the key we just placed inside the header
-    mcreq_get_key(packet, &key, &nkey);
+    mcreq_get_key(NULL, packet, &key, &nkey);
     ASSERT_EQ(5, nkey);
     ASSERT_EQ(0, memcmp(key, "Hello", 5));
 
@@ -153,7 +170,7 @@ TEST_F(McAlloc, testValueAlloc)
     const char *value = "World";
 
 
-    lcb_error_t ret;
+    lcb_STATUS ret;
     cmd.key.contig.bytes = const_cast<char *>(key);
     cmd.key.contig.nbytes = 5;
     vreq.u_buf.contig.bytes = const_cast<char *>(value);
@@ -254,7 +271,7 @@ TEST_F(McAlloc, testRdataExDtor)
 
     mcreq_sched_enter(&q);
     for (unsigned ii = 0; ii < 5; ii++) {
-        lcb_error_t err;
+        lcb_STATUS err;
         mc_PIPELINE *pl;
         mc_PACKET *pkt;
         err = mcreq_basic_packet(&q, &basecmd, &hdr, 0, 0, &pkt, &pl, 0);

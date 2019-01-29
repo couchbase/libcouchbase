@@ -1,9 +1,25 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2017 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #ifndef CBC_OPTIONS_H
 #define CBC_OPTIONS_H
 
 #define CLIOPTS_ENABLE_CXX 1
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/api3.h>
 #include <exception>
 #include <stdexcept>
 #include <sstream>
@@ -37,7 +53,7 @@ namespace cbc {
 
 class LcbError : public std::runtime_error {
 private:
-    static std::string format_err(lcb_error_t err, std::string msg) {
+    static std::string format_err(lcb_STATUS err, std::string msg) {
         std::stringstream ss;
         if (!msg.empty()) {
             ss << msg << ". ";
@@ -47,8 +63,8 @@ private:
     }
 
 public:
-    lcb_error_t rc;
-    LcbError(lcb_error_t code, std::string msg = "") : std::runtime_error(format_err(code, msg)) {}
+    lcb_STATUS rc;
+    LcbError(lcb_STATUS code, std::string msg = "") : std::runtime_error(format_err(code, msg)) {}
 };
 
 class BadArg : public std::runtime_error {
@@ -61,7 +77,7 @@ public:
     ConnParams();
     void fillCropts(lcb_create_st&);
     void addToParser(cliopts::Parser& parser);
-    lcb_error_t doCtls(lcb_t instance);
+    lcb_STATUS doCtls(lcb_INSTANCE *instance);
     bool useTimings() { return o_timings.result(); }
     int numTimings() { return o_timings.numSpecified(); }
     cliopts::BoolOption& getTimings() { return o_timings; }

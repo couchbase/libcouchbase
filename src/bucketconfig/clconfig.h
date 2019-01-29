@@ -165,7 +165,7 @@ struct Confmon {
      * remain to be activated you should call lcb_confmon_prepare() once. Then
      * call the rest of the functions.
      */
-    Confmon(lcb_settings* settings, lcbio_pTABLE iot, lcb_t instance);
+    Confmon(lcb_settings* settings, lcbio_pTABLE iot, lcb_INSTANCE *instance);
     void destroy() { delete this; }
     ~Confmon();
 
@@ -253,7 +253,7 @@ struct Confmon {
      * Get the last error which occurred on this object
      * @return The last error
      */
-    lcb_error_t get_last_error() const {
+    lcb_STATUS get_last_error() const {
         return last_error;
     }
 
@@ -290,7 +290,7 @@ struct Confmon {
      * @param which reference to provider, which has been failed
      * @param why error code
      */
-    void provider_failed(Provider *which, lcb_error_t why);
+    void provider_failed(Provider *which, lcb_STATUS why);
 
     /**
      * @brief Indicate that a provider has successfuly retrieved a configuration.
@@ -364,7 +364,7 @@ struct Confmon {
     ListenerList listeners;
 
     lcb_settings *settings;
-    lcb_error_t last_error;
+    lcb_STATUS last_error;
     lcbio_pTABLE iot;
 
     /** This is the async handle for a reentrant start */
@@ -382,7 +382,7 @@ struct Confmon {
     typedef std::list<Provider*> ProviderList;
     ProviderList active_providers;
 
-    lcb_t instance;
+    lcb_INSTANCE *instance;
 };
 
 /**
@@ -418,7 +418,7 @@ struct Provider {
      * should implement a timeout mechanism of its choice to promptly deliver
      * a success or failure.
      */
-    virtual lcb_error_t refresh() = 0;
+    virtual lcb_STATUS refresh() = 0;
 
     /**
      * Callback invoked to the provider to indicate that it should cease
@@ -672,7 +672,7 @@ static inline const lcb_host_t* http_get_host(Confmon *c) {
  * @return LCB_SUCCESS, or an error code if the configuration could not be
  * set
  */
-lcb_error_t
+lcb_STATUS
 cccp_update(Provider *provider, const char *host, const char *data);
 
 /**
@@ -685,7 +685,7 @@ cccp_update(Provider *provider, const char *host, const char *data);
  * @param nbytes Size of payload
  * @param origin Host object from which the packet was received
  */
-void cccp_update(const void *cookie, lcb_error_t err,
+void cccp_update(const void *cookie, lcb_STATUS err,
     const void *bytes, size_t nbytes, const lcb_host_t *origin);
 
 /**@}*/

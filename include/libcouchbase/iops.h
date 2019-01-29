@@ -841,7 +841,7 @@ typedef enum {
  *
  * int main(void) {
  *     lcb_create_st options;
- *     lcb_t instance;
+ *     lcb_INSTANCE instance;
  *     lcb_io_opt_t io;
  *     lcb_create_iops(&io, NULL);
  *     monkey_patch_io(io);
@@ -926,7 +926,7 @@ struct lcb_io_opt_st {
  * @param cookie a user-defined argument passed to the I/O initializer
  * @return LCB_SUCCESS on success, an error on failure
  */
-typedef lcb_error_t (*lcb_io_create_fn)
+typedef lcb_STATUS (*lcb_io_create_fn)
         (int version, lcb_io_opt_t *io, void *cookie);
 
 
@@ -1033,7 +1033,7 @@ struct lcb_create_io_ops_st {
  * @uncommitted
  */
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_io_ops(lcb_io_opt_t *op, const struct lcb_create_io_ops_st *options);
+lcb_STATUS lcb_create_io_ops(lcb_io_opt_t *op, const struct lcb_create_io_ops_st *options);
 
 /**
  * Destroy the plugin handle created by lcb_create_io_ops()
@@ -1042,7 +1042,7 @@ lcb_error_t lcb_create_io_ops(lcb_io_opt_t *op, const struct lcb_create_io_ops_s
  * @uncommitted
  */
 LIBCOUCHBASE_API
-lcb_error_t lcb_destroy_io_ops(lcb_io_opt_t op);
+lcb_STATUS lcb_destroy_io_ops(lcb_io_opt_t op);
 
 #ifdef __cplusplus
 }

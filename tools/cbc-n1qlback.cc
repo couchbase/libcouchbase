@@ -1,3 +1,4 @@
+/* -*- Mode: C; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
  *     Copyright 2015 Couchbase, Inc.
  *
@@ -19,8 +20,6 @@
 #include "config.h"
 #include <sys/types.h>
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/api3.h>
-#include <libcouchbase/n1ql.h>
 #include <libcouchbase/vbucket.h>
 #include <iostream>
 #include <list>
@@ -52,7 +51,7 @@ static bool use_ansi_codes = true;
 static bool use_ansi_codes = false;
 #endif
 
-static void do_or_die(lcb_error_t rc)
+static void do_or_die(lcb_STATUS rc)
 {
     if (rc != LCB_SUCCESS) {
         throw std::runtime_error(lcb_strerror_long(rc));
@@ -249,7 +248,7 @@ private:
     std::ofstream *m_errlog;
 };
 
-extern "C" { static void n1qlcb(lcb_t, int, const lcb_RESPN1QL *resp); }
+extern "C" { static void n1qlcb(lcb_INSTANCE *, int, const lcb_RESPN1QL *resp); }
 extern "C" { static void* pthrfunc(void*); }
 
 class ThreadContext;
@@ -316,16 +315,22 @@ public:
             ctx->received = true;
         }
 
-        if (resp->rflags & LCB_RESP_F_FINAL) {
-            if (resp->rc != LCB_SUCCESS) {
+        if (lcb_respn1ql_is_final(resp)) {
+            lcb_STATUS rc = lcb_respn1ql_status(resp);
+            if (rc != LCB_SUCCESS) {
                 if (m_errlog != NULL) {
+                    const char *p;
+                    size_t n;
+
+                    lcb_cmdn1ql_payload(m_cmd, &p, &n);
                     std::stringstream ss;
-                    ss.write(m_cmd.query, m_cmd.nquery);
+                    ss.write(p, n);
                     ss << endl;
-                    ss.write(resp->row, resp->nrow);
-                    log_error(resp->rc, ss.str().c_str(), ss.str().size());
+                    lcb_respn1ql_row(resp, &p, &n);
+                    ss.write(p, n);
+                    log_error(rc, ss.str().c_str(), ss.str().size());
                 } else {
-                    log_error(resp->rc, NULL, 0);
+                    log_error(rc, NULL, 0);
                 }
             }
         } else {
@@ -333,14 +338,13 @@ public:
         }
     }
 
-    ThreadContext(lcb_t instance, const vector<string>& initial_queries, std::ofstream *errlog)
+    ThreadContext(lcb_INSTANCE * instance, const vector<string>& initial_queries, std::ofstream *errlog)
     : m_instance(instance), last_nerr(0), last_nrow(0),
       m_metrics(&GlobalMetrics), m_cancelled(false), m_thr(NULL),
       m_errlog(errlog)
     {
-        memset(&m_cmd, 0, sizeof m_cmd);
-        m_cmd.content_type = "application/json";
-        m_cmd.callback = n1qlcb;
+        lcb_cmdn1ql_reset(m_cmd);
+        lcb_cmdn1ql_callback(m_cmd, n1qlcb);
 
         // Shuffle the list
         m_queries = initial_queries;
@@ -349,7 +353,7 @@ public:
 
 private:
 
-    void log_error(lcb_error_t err, const char* info, size_t ninfo)
+    void log_error(lcb_STATUS err, const char* info, size_t ninfo)
     {
         size_t erridx;
         m_metrics->lock();
@@ -375,13 +379,12 @@ private:
         last_nrow = 0;
         last_nerr = 0;
 
-        m_cmd.query = txt.c_str();
-        m_cmd.nquery = txt.size();
+        lcb_cmdn1ql_query(m_cmd, txt.c_str(), txt.size());
 
         // Set up our context
         QueryContext qctx(this);
 
-        lcb_error_t rc = lcb_n1ql_query(m_instance, &qctx, &m_cmd);
+        lcb_STATUS rc = lcb_n1ql(m_instance, &qctx, m_cmd);
         if (rc != LCB_SUCCESS) {
             log_error(rc, txt.c_str(), txt.size());
         } else {
@@ -393,11 +396,11 @@ private:
         }
     }
 
-    lcb_t m_instance;
+    lcb_INSTANCE * m_instance;
     vector<string> m_queries;
     size_t last_nerr;
     size_t last_nrow;
-    lcb_CMDN1QL m_cmd;
+    lcb_CMDN1QL *m_cmd;
     Metrics *m_metrics;
     volatile bool m_cancelled;
     #ifndef _WIN32
@@ -408,9 +411,10 @@ private:
     std::ofstream *m_errlog;
 };
 
-static void n1qlcb(lcb_t, int, const lcb_RESPN1QL *resp)
+static void n1qlcb(lcb_INSTANCE *, int, const lcb_RESPN1QL *resp)
 {
-    QueryContext *qctx = reinterpret_cast<QueryContext*>(resp->cookie);
+    QueryContext *qctx;
+    lcb_respn1ql_cookie(resp, (void **)&qctx);
     qctx->ctx->handle_response(resp, qctx);
 }
 
@@ -421,7 +425,7 @@ static void* pthrfunc(void *arg)
 }
 
 static bool
-instance_has_n1ql(lcb_t instance) {
+instance_has_n1ql(lcb_INSTANCE * instance) {
     // Check that the instance supports N1QL
     lcbvb_CONFIG *vbc;
     do_or_die(lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc));
@@ -446,14 +450,14 @@ static void real_main(int argc, char **argv) {
     parser.parse(argc, argv);
 
     vector<ThreadContext*> threads;
-    vector<lcb_t> instances;
+    vector<lcb_INSTANCE *> instances;
 
     lcb_create_st cropts = { 0 };
     config.set_cropts(cropts);
     config.processOptions();
 
     for (size_t ii = 0; ii < config.nthreads(); ii++) {
-        lcb_t instance;
+        lcb_INSTANCE * instance;
         do_or_die(lcb_create(&instance, &cropts));
         do_or_die(lcb_connect(instance));
         lcb_wait(instance);

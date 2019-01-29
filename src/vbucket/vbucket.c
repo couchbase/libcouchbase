@@ -652,6 +652,10 @@ lcbvb_load_json_ex(lcbvb_CONFIG *cfg, const char *data, const char *source, char
                         cfg->caps |= LCBVB_CAP_XDCR_CHECKPOINTING;
                     } else if (strcmp(jcap->valuestring, "nodesExt") == 0) {
                         cfg->caps |= LCBVB_CAP_NODES_EXT;
+                    } else if (strcmp(jcap->valuestring, "collections") == 0) {
+                        cfg->caps |= LCBVB_CAP_COLLECTIONS;
+                    } else if (strcmp(jcap->valuestring, "durableWrite") == 0) {
+                        cfg->caps |= LCBVB_CAP_DURABLE_WRITE;
                     }
                 }
             }
@@ -970,6 +974,12 @@ lcbvb_save_json(lcbvb_CONFIG *cfg)
         }
         if (cfg->caps & LCBVB_CAP_NODES_EXT) {
             cJSON_AddItemToArray(jcaps, cJSON_CreateString("nodesExt"));
+        }
+        if (cfg->caps & LCBVB_CAP_COLLECTIONS) {
+            cJSON_AddItemToArray(jcaps, cJSON_CreateString("collections"));
+        }
+        if (cfg->caps & LCBVB_CAP_DURABLE_WRITE) {
+            cJSON_AddItemToArray(jcaps, cJSON_CreateString("durableWrite"));
         }
         cJSON_AddItemToObject(root, "bucketCapabilities", jcaps);
     }

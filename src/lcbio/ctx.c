@@ -48,14 +48,14 @@ err_handler(void *cookie)
     ctx->procs.cb_err(ctx, ctx->err);
 }
 
-static lcb_error_t
+static lcb_STATUS
 convert_lcberr(const lcbio_CTX *ctx, lcbio_IOSTATUS status)
 {
     const lcb_settings *settings = ctx->sock->settings;
     lcbio_OSERR oserr = IOT_ERRNO(ctx->sock->io);
 
     if (lcbio_ssl_check(ctx->sock)) {
-        lcb_error_t err = lcbio_ssl_get_error(ctx->sock);
+        lcb_STATUS err = lcbio_ssl_get_error(ctx->sock);
         if (err) {
             return err;
         }
@@ -278,7 +278,7 @@ invoke_read_cb(lcbio_CTX *ctx, unsigned nb)
 static void
 send_io_error(lcbio_CTX *ctx, lcbio_IOSTATUS status)
 {
-    lcb_error_t rc = convert_lcberr(ctx, status);
+    lcb_STATUS rc = convert_lcberr(ctx, status);
     CTX_INCR_METRIC(ctx, io_error, 1);
     if (status == LCBIO_SHUTDOWN) {
         CTX_INCR_METRIC(ctx, io_close, 1);
@@ -333,7 +333,7 @@ E_handler(lcb_socket_t sock, short which, void *arg)
 }
 
 static void
-invoke_entered_errcb(lcbio_CTX *ctx, lcb_error_t err)
+invoke_entered_errcb(lcbio_CTX *ctx, lcb_STATUS err)
 {
     ctx->err = err;
     ctx->entered++;
@@ -403,7 +403,7 @@ Cr_handler(lcb_sockdata_t *sd, lcb_ssize_t nr, void *arg)
             lcbio_ctx_schedule(ctx);
         } else {
             lcbio_IOSTATUS iostatus;
-            lcb_error_t err;
+            lcb_STATUS err;
 
             CTX_INCR_METRIC(ctx, io_error, 1);
             if (nr) {
@@ -626,7 +626,7 @@ lcbio_ctx_wwant(lcbio_CTX *ctx)
 }
 
 void
-lcbio_ctx_senderr(lcbio_CTX *ctx, lcb_error_t err)
+lcbio_ctx_senderr(lcbio_CTX *ctx, lcb_STATUS err)
 {
     if (ctx->err == LCB_SUCCESS) {
         ctx->err = err;

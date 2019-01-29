@@ -42,9 +42,9 @@ namespace lcb {
  */
 class Bootstrap : lcb::clconfig::Listener {
 public:
-    Bootstrap(lcb_t);
+    Bootstrap(lcb_INSTANCE *);
     ~Bootstrap();
-    lcb_error_t bootstrap(unsigned options);
+    lcb_STATUS bootstrap(unsigned options);
 
     hrtime_t get_last_refresh() const {
         return last_refresh;
@@ -66,11 +66,11 @@ private:
     void clconfig_lsn(lcb::clconfig::EventType e, lcb::clconfig::ConfigInfo* i);
 
     inline void config_callback(lcb::clconfig::EventType, lcb::clconfig::ConfigInfo*);
-    inline void initial_error(lcb_error_t, const char *);
+    inline void initial_error(lcb_STATUS, const char *);
     void timer_dispatch();
     void bgpoll();
 
-    lcb_t parent;
+    lcb_INSTANCE *parent;
 
     /**Timer used for initial bootstrap as an interval timer, and for subsequent
      * updates as an asynchronous event (to allow safe updates and avoid
@@ -140,7 +140,7 @@ enum BootstrapOptions {
 };
 
 void
-lcb_bootstrap_destroy(lcb_t instance);
+lcb_bootstrap_destroy(lcb_INSTANCE *instance);
 
 /**@}*/
 

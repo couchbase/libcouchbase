@@ -46,7 +46,7 @@ public:
     size_t refcount() const { return m_refcount; }
     void incref() { ++m_refcount; }
     void decref() { if (!--m_refcount) { delete this; } }
-    lcb_error_t set_mode(lcbauth_MODE mode_) {
+    lcb_STATUS set_mode(lcbauth_MODE mode_) {
         if (mode_ == LCBAUTH_MODE_DYNAMIC && (m_usercb == NULL || m_passcb == NULL)) {
             return LCB_EINVAL;
         }
@@ -58,11 +58,11 @@ public:
         }
     }
     lcbauth_MODE mode() const { return m_mode; }
-    lcb_error_t add(const char *user, const char *pass, int flags);
-    lcb_error_t add(const std::string& user, const std::string& pass, int flags) {
+    lcb_STATUS add(const char *user, const char *pass, int flags);
+    lcb_STATUS add(const std::string& user, const std::string& pass, int flags) {
         return add(user.c_str(), pass.c_str(), flags);
     }
-    lcb_error_t set_callbacks(void *cookie, lcb_AUTHCALLBACK usercb, lcb_AUTHCALLBACK passcb)
+    lcb_STATUS set_callbacks(void *cookie, lcb_AUTHCALLBACK usercb, lcb_AUTHCALLBACK passcb)
     {
         m_usercb = usercb;
         m_passcb = passcb;

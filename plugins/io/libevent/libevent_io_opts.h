@@ -57,7 +57,7 @@ extern "C" {
      * @return status of the operation
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_create_libevent_io_opts(int version, lcb_io_opt_t *io, void *base);
+    lcb_STATUS lcb_create_libevent_io_opts(int version, lcb_io_opt_t *io, void *base);
 
 #ifdef __cplusplus
 }

@@ -44,7 +44,7 @@ extern "C" {
  * @brief Error Categories
  *
  * These error categories are assigned as a series of OR'd bits to each
- * of the error codes in lcb_error_t.
+ * of the error codes in lcb_STATUS.
  *
  * @see lcb_get_errtype
  */
@@ -621,7 +621,7 @@ typedef enum {
 
     /** The errors below this value reserved for libcouchbase usage. */
     LCB_MAX_ERROR = 0x1000
-} lcb_error_t;
+} lcb_STATUS;
 
 /** @deprecated Use new, less ambiguous identifier (@ref LCB_CLIENT_ENOCONF) */
 #define LCB_CLIENT_ETMPFAIL LCB_CLIENT_ENOCONF
@@ -654,7 +654,7 @@ typedef enum {
  * @committed
  */
 LIBCOUCHBASE_API
-int lcb_get_errtype(lcb_error_t err);
+int lcb_get_errtype(lcb_STATUS err);
 
 /**
  * Get a textual descrtiption for the given error code
@@ -666,20 +666,20 @@ int lcb_get_errtype(lcb_error_t err);
  * @committed
  */
 LIBCOUCHBASE_API
-const char *lcb_strerror(lcb_t instance, lcb_error_t error);
+const char *lcb_strerror(lcb_INSTANCE *instance, lcb_STATUS error);
 
 /**
  * Get a shorter textual description of an error message. This is the
  * constant name
  */
 LCB_INTERNAL_API
-const char *lcb_strerror_short(lcb_error_t error);
+const char *lcb_strerror_short(lcb_STATUS error);
 
 /**
  * Get a longer textual description of an error message.
  */
 LCB_INTERNAL_API
-const char *lcb_strerror_long(lcb_error_t error);
+const char *lcb_strerror_long(lcb_STATUS error);
 
 /**
  * This may be used in conjunction with the errmap callback if it wishes
@@ -687,7 +687,7 @@ const char *lcb_strerror_long(lcb_error_t error);
  * @uncommitted
  */
 LIBCOUCHBASE_API
-lcb_error_t lcb_errmap_default(lcb_t instance, lcb_U16 code);
+lcb_STATUS lcb_errmap_default(lcb_INSTANCE *instance, lcb_U16 code);
 
 /**
  * Callback for error mappings. This will be invoked when requesting whether
@@ -697,11 +697,11 @@ lcb_error_t lcb_errmap_default(lcb_t instance, lcb_U16 code);
  * use cases, or in cases where detailed response codes may be mapped to
  * more generic ones.
  */
-typedef lcb_error_t (*lcb_errmap_callback)(lcb_t instance, lcb_U16 bincode);
+typedef lcb_STATUS (*lcb_errmap_callback)(lcb_INSTANCE *instance, lcb_U16 bincode);
 
 /**@uncommitted*/
 LIBCOUCHBASE_API
-lcb_errmap_callback lcb_set_errmap_callback(lcb_t, lcb_errmap_callback);
+lcb_errmap_callback lcb_set_errmap_callback(lcb_INSTANCE *instance, lcb_errmap_callback);
 
 #ifdef __cplusplus
 }

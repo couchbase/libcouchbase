@@ -26,7 +26,7 @@
 #define CNTL__MODE_SETSTRING 0x1000
 
 /* Basic definition/declaration for handlers */
-#define HANDLER(name) static lcb_error_t name(int mode, lcb_t instance, int cmd, void *arg)
+#define HANDLER(name) static lcb_STATUS name(int mode, lcb_INSTANCE *instance, int cmd, void *arg)
 
 /* For handlers which only retrieve values */
 #define RETURN_GET_ONLY(T, acc) \
@@ -51,7 +51,7 @@
             return LCB_ECTL_UNSUPPMODE; \
         }
 
-typedef lcb_error_t (*ctl_handler)(int, lcb_t, int, void *);
+typedef lcb_STATUS (*ctl_handler)(int, lcb_INSTANCE *, int, void *);
 typedef struct { const char *s; lcb_U32 u32; } STR_u32MAP;
 static const STR_u32MAP* u32_from_map(const char *s, const STR_u32MAP *lookup) {
     const STR_u32MAP *ret;
@@ -65,7 +65,7 @@ static const STR_u32MAP* u32_from_map(const char *s, const STR_u32MAP *lookup) {
     const STR_u32MAP *str__rv = u32_from_map(s, lookup); \
     if (str__rv) { v = str__rv->u32; } else { return LCB_ECTL_BADARG; } }
 
-static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
+static lcb_uint32_t *get_timeout_field(lcb_INSTANCE *instance, int cmd)
 {
     lcb_settings *settings = instance->settings;
     switch (cmd) {
@@ -82,7 +82,6 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_RETRY_INTERVAL: return &settings->retry_interval;
     case LCB_CNTL_RETRY_NMV_INTERVAL: return &settings->retry_nmv_interval;
     case LCB_CNTL_CONFIG_POLL_INTERVAL: return &settings->config_poll_interval;
-#ifdef LCB_TRACING
     case LCB_CNTL_TRACING_ORPHANED_QUEUE_FLUSH_INTERVAL: return &settings->tracer_orphaned_queue_flush_interval;
     case LCB_CNTL_TRACING_THRESHOLD_QUEUE_FLUSH_INTERVAL: return &settings->tracer_threshold_queue_flush_interval;
     case LCB_CNTL_TRACING_THRESHOLD_KV: return &settings->tracer_threshold[LCBTRACE_THRESHOLD_KV];
@@ -90,7 +89,6 @@ static lcb_uint32_t *get_timeout_field(lcb_t instance, int cmd)
     case LCB_CNTL_TRACING_THRESHOLD_VIEW: return &settings->tracer_threshold[LCBTRACE_THRESHOLD_VIEW];
     case LCB_CNTL_TRACING_THRESHOLD_FTS: return &settings->tracer_threshold[LCBTRACE_THRESHOLD_FTS];
     case LCB_CNTL_TRACING_THRESHOLD_ANALYTICS: return &settings->tracer_threshold[LCBTRACE_THRESHOLD_ANALYTICS];
-#endif
     default: return NULL;
     }
 }
@@ -226,26 +224,10 @@ HANDLER(enable_tracing_handler) {
     RETURN_GET_SET(int, LCBT_SETTING(instance, use_tracing));
 }
 HANDLER(tracing_orphaned_queue_size_handler) {
-#ifdef LCB_TRACING
     RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, tracer_orphaned_queue_size));
-#else
-    (void)mode;
-    (void)instance;
-    (void)cmd;
-    (void)arg;
-    return LCB_ECTL_BADARG;
-#endif
 }
 HANDLER(tracing_threshold_queue_size_handler) {
-#ifdef LCB_TRACING
     RETURN_GET_SET(lcb_U32, LCBT_SETTING(instance, tracer_threshold_queue_size));
-#else
-    (void)mode;
-    (void)instance;
-    (void)cmd;
-    (void)arg;
-    return LCB_ECTL_BADARG;
-#endif
 }
 
 HANDLER(config_poll_interval_handler) {
@@ -254,7 +236,7 @@ HANDLER(config_poll_interval_handler) {
         lcb_log(LOGARGS(instance, ERROR), "Interval for background poll is too low: %dus (min: %dus)", *user, LCB_CONFIG_POLL_INTERVAL_FLOOR);
         return LCB_ECTL_BADARG;
     }
-    lcb_error_t rv = timeout_common(mode, instance, cmd, arg);
+    lcb_STATUS rv = timeout_common(mode, instance, cmd, arg);
     if (rv == LCB_SUCCESS &&
             (mode == LCB_CNTL_SET || CNTL__MODE_SETSTRING) &&
             // Note: This might be NULL during creation!
@@ -375,7 +357,7 @@ HANDLER(config_nodes) {
     const char *node_strs = reinterpret_cast<const char*>(arg);
     lcb::clconfig::Provider *target;
     lcb::Hostlist hostlist;
-    lcb_error_t err;
+    lcb_STATUS err;
 
     if (mode != LCB_CNTL_SET) {
         return LCB_ECTL_UNSUPPMODE;
@@ -510,7 +492,18 @@ HANDLER(client_string_handler) {
         free(LCBT_SETTING(instance, client_string));
         LCBT_SETTING(instance, client_string) = NULL;
         if (val) {
-            LCBT_SETTING(instance, client_string) = strdup(val);
+            char *p, *buf = strdup(val);
+            for (p = buf; *p != '\0'; p++) {
+                switch (*p) {
+                    case '\n':
+                    case '\r':
+                        *p = ' ';
+                        break;
+                    default:
+                        break;
+                }
+            }
+            LCBT_SETTING(instance, client_string) = buf;
         }
     } else {
         *(const char **)arg = LCBT_SETTING(instance, client_string);
@@ -520,7 +513,7 @@ HANDLER(client_string_handler) {
 }
 
 HANDLER(unsafe_optimize) {
-    lcb_error_t rc;
+    lcb_STATUS rc;
     int val = *(int *)arg;
     if (mode != LCB_CNTL_SET) {
         return LCB_ECTL_UNSUPPMODE;
@@ -656,6 +649,10 @@ HANDLER(network_handler) {
     return LCB_SUCCESS;
 }
 
+HANDLER(durable_write_handler) {
+    RETURN_GET_SET(int, LCBT_SETTING(instance, enable_durable_write));
+}
+
 static ctl_handler handlers[] = {
     timeout_common,                       /* LCB_CNTL_OP_TIMEOUT */
     timeout_common,                       /* LCB_CNTL_VIEW_TIMEOUT */
@@ -750,7 +747,9 @@ static ctl_handler handlers[] = {
     vb_noremap_handler,                   /* LCB_CNTL_VB_NOREMAP */
     network_handler,                      /* LCB_CNTL_NETWORK */
     wait_for_config_handler,              /* LCB_CNTL_WAIT_FOR_CONFIG */
-    http_pooltmo_handler                  /* LCB_CNTL_HTTP_POOL_TIMEOUT */
+    http_pooltmo_handler,                 /* LCB_CNTL_HTTP_POOL_TIMEOUT */
+    durable_write_handler,                /* LCB_CNTL_ENABLE_DURABLE_WRITE */
+    NULL
 };
 
 /* Union used for conversion to/from string functions */
@@ -766,7 +765,7 @@ typedef union {
  * type needed for the actual control handler. It should return an error if the
  * argument is invalid.
  */
-typedef lcb_error_t (*ctl_str_cb)(const char *value, u_STRCONVERT *u);
+typedef lcb_STATUS (*ctl_str_cb)(const char *value, u_STRCONVERT *u);
 
 typedef struct {
     const char *key;
@@ -774,7 +773,7 @@ typedef struct {
     ctl_str_cb converter;
 } cntl_OPCODESTRS;
 
-static lcb_error_t convert_timevalue(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_timevalue(const char *arg, u_STRCONVERT *u) {
     int rv;
     unsigned long tmp;
 
@@ -787,10 +786,10 @@ static lcb_error_t convert_timevalue(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
-static lcb_error_t convert_intbool(const char *arg, u_STRCONVERT *u) {
-    if (!strcmp(arg, "true")) {
+static lcb_STATUS convert_intbool(const char *arg, u_STRCONVERT *u) {
+    if (!strcmp(arg, "true") || !strcmp(arg, "on")) {
         u->i = 1;
-    } else if (!strcmp(arg, "false")) {
+    } else if (!strcmp(arg, "false") || !strcmp(arg, "off")) {
         u->i = 0;
     } else {
         u->i = atoi(arg);
@@ -798,24 +797,24 @@ static lcb_error_t convert_intbool(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
-static lcb_error_t convert_passthru(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_passthru(const char *arg, u_STRCONVERT *u) {
     u->p = (void*)arg;
     return LCB_SUCCESS;
 }
 
-static lcb_error_t convert_int(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_int(const char *arg, u_STRCONVERT *u) {
     int rv = sscanf(arg, "%d", &u->i);
     return rv == 1 ? LCB_SUCCESS : LCB_ECTL_BADARG;
 }
 
-static lcb_error_t convert_u32(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_u32(const char *arg, u_STRCONVERT *u) {
     unsigned int tmp;
     int rv = sscanf(arg, "%u", &tmp);
     u->u32 = tmp;
     return rv == 1 ? LCB_SUCCESS : LCB_ECTL_BADARG;
 }
 
-static lcb_error_t convert_float(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_float(const char *arg, u_STRCONVERT *u) {
     double d;
     int rv = sscanf(arg, "%lf", &d);
     if (rv != 1) { return LCB_ECTL_BADARG; }
@@ -823,7 +822,7 @@ static lcb_error_t convert_float(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
-static lcb_error_t convert_SIZE(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_SIZE(const char *arg, u_STRCONVERT *u) {
     unsigned long lu;
     int rv;
     rv = sscanf(arg, "%lu", &lu);
@@ -832,7 +831,7 @@ static lcb_error_t convert_SIZE(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
-static lcb_error_t convert_compression(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_compression(const char *arg, u_STRCONVERT *u) {
     static const STR_u32MAP optmap[] = {
         { "on", LCB_COMPRESS_INOUT },
         { "off", LCB_COMPRESS_NONE },
@@ -845,7 +844,7 @@ static lcb_error_t convert_compression(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
-static lcb_error_t convert_retrymode(const char *arg, u_STRCONVERT *u) {
+static lcb_STATUS convert_retrymode(const char *arg, u_STRCONVERT *u) {
     static const STR_u32MAP modemap[] = {
         { "topochange", LCB_RETRY_ON_TOPOCHANGE },
         { "sockerr", LCB_RETRY_ON_SOCKERR },
@@ -869,7 +868,7 @@ static lcb_error_t convert_retrymode(const char *arg, u_STRCONVERT *u) {
     return LCB_SUCCESS;
 }
 
-static lcb_error_t convert_ipv6(const char *arg, u_STRCONVERT *u)
+static lcb_STATUS convert_ipv6(const char *arg, u_STRCONVERT *u)
 {
     static const STR_u32MAP optmap[] = {
         {"disabled", LCB_IPV6_DISABLED},
@@ -880,20 +879,6 @@ static lcb_error_t convert_ipv6(const char *arg, u_STRCONVERT *u)
     DO_CONVERT_STR2NUM(arg, optmap, u->i);
     return LCB_SUCCESS;
 }
-
-static lcb_error_t convert_collections(const char *arg, u_STRCONVERT *u) {
-    static const STR_u32MAP optmap[] = {
-        { "on", LCB_COLLECTIONS_ENABLE },
-        { "off", LCB_COLLECTIONS_DISABLE },
-        { "true", LCB_COLLECTIONS_ENABLE },
-        { "false", LCB_COLLECTIONS_DISABLE },
-        { "force", LCB_COLLECTIONS_FORCE },
-        { NULL }
-    };
-    DO_CONVERT_STR2NUM(arg, optmap, u->i);
-    return LCB_SUCCESS;
-}
-
 
 static cntl_OPCODESTRS stropcode_map[] = {
     {"operation_timeout", LCB_CNTL_OP_TIMEOUT, convert_timevalue},
@@ -957,13 +942,14 @@ static cntl_OPCODESTRS stropcode_map[] = {
     {"network", LCB_CNTL_NETWORK, convert_passthru},
     {"wait_for_config", LCB_CNTL_WAIT_FOR_CONFIG, convert_intbool},
     {"http_pool_timeout", LCB_CNTL_HTTP_POOL_TIMEOUT, convert_timevalue},
-    {"enable_collections", LCB_CNTL_ENABLE_COLLECTIONS, convert_collections},
+    {"enable_collections", LCB_CNTL_ENABLE_COLLECTIONS, convert_intbool},
+    {"enable_durable_write", LCB_CNTL_ENABLE_DURABLE_WRITE, convert_intbool},
     {NULL, -1}};
 
 #define CNTL_NUM_HANDLERS (sizeof(handlers) / sizeof(handlers[0]))
 
-static lcb_error_t
-wrap_return(lcb_t instance, lcb_error_t retval)
+static lcb_STATUS
+wrap_return(lcb_INSTANCE *instance, lcb_STATUS retval)
 {
     if (retval == LCB_SUCCESS) {
         return retval;
@@ -985,7 +971,7 @@ wrap_return(lcb_t instance, lcb_error_t retval)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
+lcb_STATUS lcb_cntl(lcb_INSTANCE *instance, int mode, int cmd, void *arg)
 {
     ctl_handler handler;
     if (cmd >= (int)CNTL_NUM_HANDLERS || cmd < 0) {
@@ -1002,12 +988,12 @@ lcb_error_t lcb_cntl(lcb_t instance, int mode, int cmd, void *arg)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t
-lcb_cntl_string(lcb_t instance, const char *key, const char *value)
+lcb_STATUS
+lcb_cntl_string(lcb_INSTANCE *instance, const char *key, const char *value)
 {
     cntl_OPCODESTRS *cur;
     u_STRCONVERT u;
-    lcb_error_t err;
+    lcb_STATUS err;
 
     for (cur = stropcode_map; cur->key; cur++) {
         if (!strcmp(cur->key, key)) {
@@ -1044,13 +1030,13 @@ lcb_cntl_exists(int ctl)
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_cntl_setu32(lcb_t instance, int cmd, lcb_uint32_t arg)
+lcb_STATUS lcb_cntl_setu32(lcb_INSTANCE *instance, int cmd, lcb_uint32_t arg)
 {
     return lcb_cntl(instance, LCB_CNTL_SET, cmd, &arg);
 }
 
 LIBCOUCHBASE_API
-lcb_uint32_t lcb_cntl_getu32(lcb_t instance, int cmd)
+lcb_uint32_t lcb_cntl_getu32(lcb_INSTANCE *instance, int cmd)
 {
     lcb_uint32_t ret = 0;
     lcb_cntl(instance, LCB_CNTL_GET, cmd, &ret);

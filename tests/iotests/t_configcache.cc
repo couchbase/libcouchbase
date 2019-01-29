@@ -25,7 +25,7 @@ class ConfigCacheUnitTest : public MockUnitTest
 };
 
 extern "C" {
-static void bootstrap_callback(lcb_t instance, lcb_error_t err)
+static void bootstrap_callback(lcb_INSTANCE *instance, lcb_STATUS err)
 {
     EXPECT_EQ(LCB_SUCCESS, err);
     int *pp = (int *)lcb_get_cookie(instance);
@@ -35,8 +35,8 @@ static void bootstrap_callback(lcb_t instance, lcb_error_t err)
 
 TEST_F(ConfigCacheUnitTest, testConfigCache)
 {
-    lcb_t instance;
-    lcb_error_t err;
+    lcb_INSTANCE *instance;
+    lcb_STATUS err;
     lcb_create_st cropts;
 
     // Get the filename:

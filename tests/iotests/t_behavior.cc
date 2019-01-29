@@ -93,7 +93,7 @@ public:
     }
 
 protected:
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     std::string origPluginName;
     std::string origPluginSymbol;
 };
@@ -127,7 +127,7 @@ TEST_F(Behavior, CheckIPv6)
 
 TEST_F(Behavior, PluginDefaults)
 {
-    lcb_error_t err;
+    lcb_STATUS err;
     struct lcb_cntl_iops_info_st info;
     memset(&info, 0, sizeof(info));
 
@@ -146,7 +146,7 @@ TEST_F(Behavior, PluginEnvironment)
 
         setPluginEnv(iter->first, "");
 
-        lcb_error_t err;
+        lcb_STATUS err;
         struct lcb_cntl_iops_info_st info;
         memset(&info, 0, sizeof(info));
 
@@ -169,7 +169,7 @@ TEST_F(Behavior, PluginOverrides)
     setPluginEnv("select", "");
     options.version = 0;
     options.v.v0.type = LCB_IO_OPS_LIBEV;
-    lcb_error_t err;
+    lcb_STATUS err;
 
     ioinfo.v.v0.options = &options;
     err = lcb_cntl(NULL, LCB_CNTL_GET, LCB_CNTL_IOPS_DEFAULT_TYPES, &ioinfo);
@@ -194,7 +194,7 @@ TEST_F(Behavior, PluginOverrides)
 
 TEST_F(Behavior, BadPluginEnvironment)
 {
-    lcb_error_t err;
+    lcb_STATUS err;
     struct lcb_cntl_iops_info_st info;
     memset(&info, 0, sizeof(info));
 
@@ -204,7 +204,7 @@ TEST_F(Behavior, BadPluginEnvironment)
     ASSERT_EQ(EXPECTED_DEFAULT, info.v.v0.os_default);
     ASSERT_EQ(0, info.v.v0.effective);
 
-    lcb_t instance2;
+    lcb_INSTANCE *instance2;
     ASSERT_EQ(LCB_DLOPEN_FAILED, lcb_create(&instance2, NULL));
 
     setPluginEnv("foobarbaz", "");

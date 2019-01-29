@@ -48,7 +48,7 @@ struct HttpProvider : Provider {
     void delayed_disconn();
     void delayed_reconnect();
     void on_timeout();
-    lcb_error_t on_io_error(lcb_error_t origerr);
+    lcb_STATUS on_io_error(lcb_STATUS origerr);
 
     /**
      * Closes the current connection and removes the disconn timer along with it
@@ -57,17 +57,17 @@ struct HttpProvider : Provider {
 
     bool is_v220_compat() const;
 
-    lcb_error_t connect_next();
+    lcb_STATUS connect_next();
 
     /* Overrides */
     bool pause();
-    lcb_error_t refresh();
+    lcb_STATUS refresh();
     ConfigInfo* get_cached();
     void config_updated(lcbvb_CONFIG*);
     void configure_nodes(const lcb::Hostlist&);
     const lcb::Hostlist* get_nodes() const;
     void dump(FILE*) const;
-    lcb_error_t setup_request_header(const lcb_host_t& host);
+    lcb_STATUS setup_request_header(const lcb_host_t& host);
     /* END Overrides */
 
     /** Base configuration structure */

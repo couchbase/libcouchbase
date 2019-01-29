@@ -19,7 +19,7 @@
 #include <map>
 #include <climits>
 #include <algorithm>
-#include "internal.h" /* vbucket_* things from lcb_t */
+#include "internal.h" /* vbucket_* things from lcb_INSTANCE * */
 #include "auth-priv.h"
 #include <lcbio/iotable.h>
 #include "bucketconfig/bc_http.h"
@@ -29,7 +29,7 @@
 
 
 extern "C" {
-static void timings_callback(lcb_t, const void *cookie, lcb_timeunit_t,
+static void timings_callback(lcb_INSTANCE *, const void *cookie, lcb_timeunit_t,
     lcb_U32, lcb_U32, lcb_U32, lcb_U32)
 {
     bool *bPtr = (bool *)cookie;
@@ -39,19 +39,21 @@ static void timings_callback(lcb_t, const void *cookie, lcb_timeunit_t,
 
 TEST_F(MockUnitTest, testTimings)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
     bool called = false;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     lcb_enable_timings(instance);
     std::string key = "counter";
     std::string val = "0";
 
-    lcb_CMDSTORE storecmd = {0};
-    LCB_KREQ_SIMPLE(&storecmd.key, key.c_str(), key.size());
-    LCB_CMD_SET_VALUE(&storecmd, val.c_str(), val.size());
-    ASSERT_EQ(LCB_SUCCESS, lcb_store3(instance, NULL, &storecmd));
+    lcb_CMDSTORE *storecmd;
+    lcb_cmdstore_create(&storecmd, LCB_STORE_UPSERT);
+    lcb_cmdstore_key(storecmd, key.c_str(), key.size());
+    lcb_cmdstore_value(storecmd, val.c_str(), val.size());
+    ASSERT_EQ(LCB_SUCCESS, lcb_store(instance, NULL, storecmd));
+    lcb_cmdstore_destroy(storecmd);
 
     lcb_wait(instance);
     lcb_get_timings(instance, &called, timings_callback);
@@ -98,7 +100,7 @@ static lcb_U64 intervalToNsec(lcb_U64 interval, lcb_timeunit_t unit)
 struct LcbTimings {
     LcbTimings() {}
     std::vector<TimingInfo> m_info;
-    void load(lcb_t);
+    void load(lcb_INSTANCE *);
     void clear();
 
     TimingInfo infoAt(hrtime_t duration, lcb_timeunit_t unit = LCB_TIMEUNIT_NSEC);
@@ -110,7 +112,7 @@ struct LcbTimings {
 };
 
 extern "C" {
-static void load_timings_callback(lcb_t, const void *cookie, lcb_timeunit_t unit,
+static void load_timings_callback(lcb_INSTANCE *, const void *cookie, lcb_timeunit_t unit,
     lcb_U32 min, lcb_U32 max, lcb_U32 total, lcb_U32 maxtotal)
 {
     lcb_U64 start = intervalToNsec(min, unit);
@@ -126,7 +128,7 @@ static void load_timings_callback(lcb_t, const void *cookie, lcb_timeunit_t unit
 } // extern "C"
 
 void
-LcbTimings::load(lcb_t instance)
+LcbTimings::load(lcb_INSTANCE *instance)
 {
     lcb_get_timings(instance, this, load_timings_callback);
     std::sort(m_info.begin(), m_info.end());
@@ -171,7 +173,7 @@ struct UnitInterval {
     UnitInterval(lcb_U64 n, lcb_timeunit_t unit) : n(n), unit(unit) {}
 };
 
-static void addTiming(lcb_t instance, const UnitInterval& interval)
+static void addTiming(lcb_INSTANCE *instance, const UnitInterval& interval)
 {
     hrtime_t n = intervalToNsec(interval.n, interval.unit);
     lcb_histogram_record(instance->kv_timings, n);
@@ -180,10 +182,10 @@ static void addTiming(lcb_t instance, const UnitInterval& interval)
 
 TEST_F(MockUnitTest, testTimingsEx)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
 
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
     lcb_disable_timings(instance);
     lcb_enable_timings(instance);
 
@@ -247,8 +249,8 @@ static void dtor_callback(const void *cookie)
 
 TEST_F(MockUnitTest, testAsyncDestroy)
 {
-    lcb_t instance;
-    createConnection(instance);
+    lcb_INSTANCE *instance;
+    createConnection(&instance);
     lcbio_pTABLE iot = instance->iotable;
     lcb_settings *settings = instance->settings;
 
@@ -269,14 +271,14 @@ TEST_F(MockUnitTest, testAsyncDestroy)
 
 TEST_F(MockUnitTest, testGetHostInfo)
 {
-    lcb_t instance;
-    createConnection(instance);
+    lcb_INSTANCE *instance;
+    createConnection(&instance);
     lcb_config_transport_t tx;
     const char *hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG, 0);
     ASSERT_FALSE(hoststr == NULL);
 
     hoststr = lcb_get_node(instance, LCB_NODE_HTCONFIG_CONNECTED, 0);
-    lcb_error_t err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_TRANSPORT, &tx);
+    lcb_STATUS err = lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_CONFIG_TRANSPORT, &tx);
 
     ASSERT_EQ(LCB_SUCCESS, err);
     if (tx == LCB_CONFIG_TRANSPORT_HTTP) {
@@ -319,19 +321,13 @@ TEST_F(MockUnitTest, testGetHostInfo)
 
 TEST_F(MockUnitTest, testEmptyKeys)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     union {
-        lcb_CMDGET get;
-        lcb_CMDSTORE store;
-        lcb_CMDCOUNTER counter;
         lcb_CMDENDURE endure;
         lcb_CMDOBSERVE observe;
-        lcb_CMDTOUCH touch;
-        lcb_CMDUNLOCK unlock;
-        lcb_CMDGETREPLICA rget;
         lcb_CMDBASE base;
         lcb_CMDSTATS stats;
     } u;
@@ -339,12 +335,35 @@ TEST_F(MockUnitTest, testEmptyKeys)
 
     lcb_sched_enter(instance);
 
-    ASSERT_EQ(LCB_EMPTY_KEY, lcb_get3(instance, NULL, &u.get));
-    ASSERT_EQ(LCB_EMPTY_KEY, lcb_store3(instance, NULL, &u.store));
-    ASSERT_EQ(LCB_EMPTY_KEY, lcb_counter3(instance, NULL, &u.counter));
-    ASSERT_EQ(LCB_EMPTY_KEY, lcb_touch3(instance, NULL, &u.touch));
-    ASSERT_EQ(LCB_EMPTY_KEY, lcb_unlock3(instance, NULL, &u.unlock));
-    ASSERT_EQ(LCB_EMPTY_KEY, lcb_rget3(instance, NULL, &u.rget));
+    lcb_CMDGET *get;
+    lcb_cmdget_create(&get);
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_get(instance, NULL, get));
+    lcb_cmdget_destroy(get);
+
+    lcb_CMDGETREPLICA *rget;
+    lcb_cmdgetreplica_create(&rget, LCB_REPLICA_MODE_ANY);
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_getreplica(instance, NULL, rget));
+    lcb_cmdgetreplica_destroy(rget);
+
+    lcb_CMDSTORE *store;
+    lcb_cmdstore_create(&store, LCB_STORE_UPSERT);
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_store(instance, NULL, store));
+    lcb_cmdstore_destroy(store);
+
+    lcb_CMDTOUCH *touch;
+    lcb_cmdtouch_create(&touch);
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_touch(instance, NULL, touch));
+    lcb_cmdtouch_destroy(touch);
+
+    lcb_CMDUNLOCK *unlock;
+    lcb_cmdunlock_create(&unlock);
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_unlock(instance, NULL, unlock));
+    lcb_cmdunlock_destroy(unlock);
+
+    lcb_CMDCOUNTER *counter;
+    lcb_cmdcounter_create(&counter);
+    ASSERT_EQ(LCB_EMPTY_KEY, lcb_counter(instance, NULL, counter));
+    lcb_cmdcounter_destroy(counter);
 
     // Observe and such
     lcb_MULTICMD_CTX *ctx = lcb_observe3_ctxnew(instance);
@@ -365,58 +384,58 @@ TEST_F(MockUnitTest, testEmptyKeys)
 }
 
 template <typename T>
-static bool ctlSet(lcb_t instance, int setting, T val)
+static bool ctlSet(lcb_INSTANCE *instance, int setting, T val)
 {
-    lcb_error_t err = lcb_cntl(instance, LCB_CNTL_SET, setting, &val);
+    lcb_STATUS err = lcb_cntl(instance, LCB_CNTL_SET, setting, &val);
     return err == LCB_SUCCESS;
 }
 
 template<>
-bool ctlSet<const char*>(lcb_t instance, int setting, const char *val)
+bool ctlSet<const char*>(lcb_INSTANCE *instance, int setting, const char *val)
 {
     return lcb_cntl(instance, LCB_CNTL_SET, setting, (void*)val) == LCB_SUCCESS;
 }
 
 template <typename T>
-static T ctlGet(lcb_t instance, int setting)
+static T ctlGet(lcb_INSTANCE *instance, int setting)
 {
     T tmp;
-    lcb_error_t err = lcb_cntl(instance, LCB_CNTL_GET, setting, &tmp);
+    lcb_STATUS err = lcb_cntl(instance, LCB_CNTL_GET, setting, &tmp);
     EXPECT_EQ(LCB_SUCCESS, err);
     return tmp;
 }
 template <typename T>
-static void ctlGetSet(lcb_t instance, int setting, T val) {
+static void ctlGetSet(lcb_INSTANCE *instance, int setting, T val) {
     EXPECT_TRUE(ctlSet<T>(instance, setting, val));
     EXPECT_EQ(val, ctlGet<T>(instance, setting));
 }
 
 template <>
-void ctlGetSet<const char*>(lcb_t instance, int setting, const char *val)
+void ctlGetSet<const char*>(lcb_INSTANCE *instance, int setting, const char *val)
 {
     EXPECT_TRUE(ctlSet<const char*>(instance, setting, val));
     EXPECT_STREQ(val, ctlGet<const char*>(instance, setting));
 }
 
-static bool ctlSetInt(lcb_t instance, int setting, int val) {
+static bool ctlSetInt(lcb_INSTANCE *instance, int setting, int val) {
     return ctlSet<int>(instance, setting, val);
 }
-static int ctlGetInt(lcb_t instance, int setting) {
+static int ctlGetInt(lcb_INSTANCE *instance, int setting) {
     return ctlGet<int>(instance, setting);
 }
-static bool ctlSetU32(lcb_t instance, int setting, lcb_U32 val) {
+static bool ctlSetU32(lcb_INSTANCE *instance, int setting, lcb_U32 val) {
     return ctlSet<lcb_U32>(instance, setting, val);
 }
-static lcb_U32 ctlGetU32(lcb_t instance, int setting) {
+static lcb_U32 ctlGetU32(lcb_INSTANCE *instance, int setting) {
     return ctlGet<lcb_U32>(instance, setting);
 }
 
 TEST_F(MockUnitTest, testCtls)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    lcb_error_t err;
-    createConnection(hw, instance);
+    lcb_STATUS err;
+    createConnection(hw, &instance);
 
     ctlGetSet<lcb_U32>(instance, LCB_CNTL_OP_TIMEOUT, UINT_MAX);
     ctlGetSet<lcb_U32>(instance, LCB_CNTL_VIEW_TIMEOUT, UINT_MAX);
@@ -533,8 +552,8 @@ TEST_F(MockUnitTest, testCtls)
 TEST_F(MockUnitTest, testConflictingOptions)
 {
     HandleWrap hw;
-    lcb_t instance;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
 
     lcb_sched_enter(instance);
     const char *key = "key";
@@ -542,62 +561,50 @@ TEST_F(MockUnitTest, testConflictingOptions)
     const char *value = "value";
     size_t nvalue = 5;
 
-    lcb_CMDSTORE scmd = { 0 };
-    scmd.operation = LCB_APPEND;
-    scmd.exptime = 1;
-    LCB_CMD_SET_KEY(&scmd, key, nkey);
-    LCB_CMD_SET_VALUE(&scmd, value, nvalue);
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_APPEND);
+    lcb_cmdstore_expiration(scmd, 1);
+    lcb_cmdstore_key(scmd, key, nkey);
+    lcb_cmdstore_value(scmd, value, nvalue);
 
-    lcb_error_t err;
-    err = lcb_store3(instance, NULL, &scmd);
+    lcb_STATUS err;
+    err = lcb_store(instance, NULL, scmd);
     ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
-    scmd.exptime = 0;
-    scmd.flags = 99;
-    err = lcb_store3(instance, NULL, &scmd);
+    lcb_cmdstore_expiration(scmd, 0);
+    lcb_cmdstore_flags(scmd, 99);
+    err = lcb_store(instance, NULL, scmd);
     ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
 
-    scmd.flags = 0;
-    scmd.exptime = 0;
-    err = lcb_store3(instance, NULL, &scmd);
+    lcb_cmdstore_expiration(scmd, 0);
+    lcb_cmdstore_flags(scmd, 0);
+    err = lcb_store(instance, NULL, scmd);
+    ASSERT_EQ(LCB_SUCCESS, err);
+    lcb_cmdstore_destroy(scmd);
+
+    lcb_cmdstore_create(&scmd, LCB_STORE_ADD);
+    lcb_cmdstore_key(scmd, key, nkey);
+    lcb_cmdstore_cas(scmd, 0xdeadbeef);
+    err = lcb_store(instance, NULL, scmd);
+    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
+
+    lcb_cmdstore_cas(scmd, 0);
+    err = lcb_store(instance, NULL, scmd);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    scmd.operation = LCB_ADD;
-    scmd.cas = 0xdeadbeef;
-    err = lcb_store3(instance, NULL, &scmd);
+    lcb_CMDCOUNTER *ccmd;
+    lcb_cmdcounter_create(&ccmd);
+
+    lcb_cmdcounter_key(ccmd, key, nkey);
+
+    lcb_cmdcounter_expiration(ccmd, 10);
+    err = lcb_counter(instance, NULL, ccmd);
     ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
 
-    scmd.cas = 0;
-    err = lcb_store3(instance, NULL, &scmd);
+    lcb_cmdcounter_initial(ccmd, 0);
+    err = lcb_counter(instance, NULL, ccmd);
     ASSERT_EQ(LCB_SUCCESS, err);
 
-    lcb_CMDCOUNTER ccmd = { 0 };
-    LCB_CMD_SET_KEY(&ccmd, key, nkey);
-    ccmd.cas = 0xdeadbeef;
-    err = lcb_counter3(instance, NULL, &ccmd);
-    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
-    ccmd.cas = 0;
-    err = lcb_counter3(instance, NULL, &ccmd);
-    ASSERT_EQ(LCB_SUCCESS, err);
-
-    ccmd.exptime = 10;
-    ccmd.initial = 0;
-    ccmd.create = 0;
-    err = lcb_counter3(instance, NULL, &ccmd);
-    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
-    ccmd.create = 1;
-    err = lcb_counter3(instance, NULL, &ccmd);
-    ASSERT_EQ(LCB_SUCCESS, err);
-
-    lcb_CMDGET gcmd = { 0 };
-    LCB_CMD_SET_KEY(&gcmd, key, nkey);
-    gcmd.cas = 0xdeadbeef;
-    err = lcb_get3(instance, NULL, &gcmd);
-    ASSERT_EQ(LCB_OPTIONS_CONFLICT, err);
-
-    gcmd.cas = 0;
-    err = lcb_get3(instance, NULL, &gcmd);
-    ASSERT_EQ(LCB_SUCCESS, err);
-    lcb_sched_fail(instance);
+    lcb_cmdcounter_destroy(ccmd);
 }
 
 TEST_F(MockUnitTest, testDump)
@@ -616,8 +623,8 @@ TEST_F(MockUnitTest, testDump)
 
     // Simply try to dump the instance;
     HandleWrap hw;
-    lcb_t instance;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
     std::vector<std::string> keys;
     genDistKeys(LCBT_VBCONFIG(instance), keys);
     for (size_t ii = 0; ii < keys.size(); ii++) {
@@ -631,14 +638,14 @@ TEST_F(MockUnitTest, testRefreshConfig)
 {
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
-    lcb_t instance;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
     lcb_refresh_config(instance);
     lcb_wait3(instance, LCB_WAIT_NOCHECK);
 }
 
 extern "C" {
-static void tickOpCb(lcb_t, int, const lcb_RESPBASE *rb)
+static void tickOpCb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
     int *p = (int *)rb->cookie;
     *p -= 1;
@@ -649,18 +656,18 @@ static void tickOpCb(lcb_t, int, const lcb_RESPBASE *rb)
 TEST_F(MockUnitTest, testTickLoop)
 {
     HandleWrap hw;
-    lcb_t instance;
-    lcb_error_t err;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    lcb_STATUS err;
+    createConnection(hw, &instance);
 
     const char *key = "tickKey";
     const char *value = "tickValue";
 
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, tickOpCb);
-    lcb_CMDSTORE cmd = { 0 };
-    cmd.operation = LCB_SET;
-    LCB_CMD_SET_KEY(&cmd, key, strlen(key));
-    LCB_CMD_SET_VALUE(&cmd, value, strlen(value));
+    lcb_CMDSTORE *cmd;
+    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_key(cmd, key, strlen(key));
+    lcb_cmdstore_value(cmd, value, strlen(value));
 
     err = lcb_tick_nowait(instance);
     if (err == LCB_CLIENT_FEATURE_UNAVAILABLE) {
@@ -671,10 +678,11 @@ TEST_F(MockUnitTest, testTickLoop)
     lcb_sched_enter(instance);
     int counter = 0;
     for (int ii = 0; ii < 10; ii++) {
-        err = lcb_store3(instance, &counter, &cmd);
+        err = lcb_store(instance, &counter, cmd);
         ASSERT_EQ(LCB_SUCCESS, err);
         counter++;
     }
+    lcb_cmdstore_destroy(cmd);
 
     lcb_sched_leave(instance);
     while (counter) {
@@ -685,9 +693,9 @@ TEST_F(MockUnitTest, testTickLoop)
 TEST_F(MockUnitTest, testEmptyCtx)
 {
     HandleWrap hw;
-    lcb_t instance;
-    lcb_error_t err = LCB_SUCCESS;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    lcb_STATUS err = LCB_SUCCESS;
+    createConnection(hw, &instance);
 
     lcb_MULTICMD_CTX *mctx;
     lcb_durability_opts_t duropts = { 0 };
@@ -711,13 +719,13 @@ TEST_F(MockUnitTest, testMultiCreds)
     using lcb::Authenticator;
 
     HandleWrap hw;
-    lcb_t instance;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
 
     lcb_BUCKETCRED cred;
     cred[0] = "protected";
     cred[1] = "secret";
-    lcb_error_t rc = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_BUCKET_CRED, cred);
+    lcb_STATUS rc = lcb_cntl(instance, LCB_CNTL_SET, LCB_CNTL_BUCKET_CRED, cred);
     ASSERT_EQ(LCB_SUCCESS, rc);
     Authenticator& auth = *instance->settings->auth;
     lcb::Authenticator::Map::const_iterator res = auth.buckets().find("protected");
@@ -726,9 +734,9 @@ TEST_F(MockUnitTest, testMultiCreds)
 }
 
 extern "C" {
-static void appendE2BIGcb(lcb_t, int, const lcb_RESPBASE *rb)
+static void appendE2BIGcb(lcb_INSTANCE *, int, const lcb_RESPBASE *rb)
 {
-    lcb_error_t *e = (lcb_error_t *)rb->cookie;
+    lcb_STATUS *e = (lcb_STATUS *)rb->cookie;
     *e = rb->rc;
 }
 }
@@ -736,33 +744,35 @@ static void appendE2BIGcb(lcb_t, int, const lcb_RESPBASE *rb)
 TEST_F(MockUnitTest, testAppendE2BIG)
 {
     HandleWrap hw;
-    lcb_t instance;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, appendE2BIGcb);
 
-    lcb_error_t err, res;
+    lcb_STATUS err, res;
 
     const char *key = "key";
     size_t nkey = strlen(key);
 
     size_t nvalue1 = 20 * 1024 * 1024;
     void *value1 = calloc(nvalue1, sizeof(char));
-    lcb_CMDSTORE scmd = { 0 };
-    scmd.operation = LCB_SET;
-    LCB_CMD_SET_KEY(&scmd, key, nkey);
-    LCB_CMD_SET_VALUE(&scmd, value1, nvalue1);
-    err = lcb_store3(instance, &res, &scmd);
+    lcb_CMDSTORE *scmd;
+    lcb_cmdstore_create(&scmd, LCB_STORE_SET);
+    lcb_cmdstore_key(scmd, key, nkey);
+    lcb_cmdstore_value(scmd, (const char *)value1, nvalue1);
+    err = lcb_store(instance, &res, scmd);
+    lcb_cmdstore_destroy(scmd);
     lcb_wait(instance);
     ASSERT_EQ(LCB_SUCCESS, res);
     free(value1);
 
     size_t nvalue2 = 1 * 1024 * 1024;
     void *value2 = calloc(nvalue2, sizeof(char));
-    lcb_CMDSTORE acmd = { 0 };
-    acmd.operation = LCB_APPEND;
-    LCB_CMD_SET_KEY(&acmd, key, nkey);
-    LCB_CMD_SET_VALUE(&acmd, value2, nvalue2);
-    err = lcb_store3(instance, &res, &acmd);
+    lcb_CMDSTORE *acmd;
+    lcb_cmdstore_create(&acmd, LCB_STORE_APPEND);
+    lcb_cmdstore_key(acmd, key, nkey);
+    lcb_cmdstore_value(acmd, (const char *)value2, nvalue2);
+    err = lcb_store(instance, &res, acmd);
+    lcb_cmdstore_destroy(acmd);
     lcb_wait(instance);
     ASSERT_EQ(LCB_E2BIG, res);
     free(value2);

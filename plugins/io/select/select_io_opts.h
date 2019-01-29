@@ -31,7 +31,7 @@ extern "C" {
      * @return status of the operation
      */
     LIBCOUCHBASE_API
-    lcb_error_t lcb_create_select_io_opts(int version, lcb_io_opt_t *io, void *loop);
+    lcb_STATUS lcb_create_select_io_opts(int version, lcb_io_opt_t *io, void *loop);
 #ifdef __cplusplus
 }
 #endif

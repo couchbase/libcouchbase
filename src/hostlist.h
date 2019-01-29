@@ -62,8 +62,8 @@ struct Hostlist {
      *        port instead.
      * @return LCB_EINVAL if the host string is not valid
      */
-    lcb_error_t add(const char *s, long len, int deflport);
-    lcb_error_t add(const char *s, int deflport) { return add(s, -1, deflport); }
+    lcb_STATUS add(const char *s, long len, int deflport);
+    lcb_STATUS add(const char *s, int deflport) { return add(s, -1, deflport); }
     void add(const lcb_host_t&);
 
     bool exists(const lcb_host_t&) const;
@@ -135,7 +135,7 @@ extern "C" {
  *
  * @return LCB_EINVAL if the host format is invalid
  */
-lcb_error_t
+lcb_STATUS
 lcb_host_parse(lcb_host_t *host, const char *spec, int speclen, int deflport);
 
 /** Wrapper around lcb_host_parse() which accepts a NUL-terminated string

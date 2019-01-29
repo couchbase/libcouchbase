@@ -242,7 +242,7 @@ procs2_ev_callback(int version, lcb_loop_procs *loop_procs,
 }
 
 LIBCOUCHBASE_API
-lcb_error_t lcb_create_libev_io_opts(int version, lcb_io_opt_t *io, void *arg)
+lcb_STATUS lcb_create_libev_io_opts(int version, lcb_io_opt_t *io, void *arg)
 {
     struct ev_loop *loop = arg;
     struct lcb_io_opt_st *ret;

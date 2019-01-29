@@ -1,3 +1,20 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2011-2019 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #undef NDEBUG
 #include "socktest.h"
 #include <lcbio/ssl.h>
@@ -5,7 +22,7 @@ using std::list;
 
 extern "C" {
 static void
-ctx_error(lcbio_CTX *ctx, lcb_error_t err)
+ctx_error(lcbio_CTX *ctx, lcb_STATUS err)
 {
     ESocket *s = (ESocket *) lcbio_ctx_data(ctx);
     s->lasterr = err;
@@ -21,7 +38,7 @@ ctx_read(lcbio_CTX *ctx, unsigned nr)
 }
 
 static void
-conn_cb(lcbio_SOCKET *sock, void *data, lcb_error_t err, lcbio_OSERR oserr)
+conn_cb(lcbio_SOCKET *sock, void *data, lcb_STATUS err, lcbio_OSERR oserr)
 {
     ESocket *mysock = (ESocket *)data;
     mysock->assign(sock, err);
@@ -65,7 +82,7 @@ IOActions::onRead(ESocket *s, size_t nr)
 IOActions ESocket::defaultActions;
 
 void
-ESocket::assign(lcbio_SOCKET *s, lcb_error_t err)
+ESocket::assign(lcbio_SOCKET *s, lcb_STATUS err)
 {
     creq = NULL;
     if (s == NULL) {
@@ -142,7 +159,7 @@ Loop::Loop()
 {
     io = NULL;
 
-    lcb_error_t rc = lcb_create_io_ops(&io, NULL);
+    lcb_STATUS rc = lcb_create_io_ops(&io, NULL);
     assert(rc == LCB_SUCCESS);
     assert(io != NULL);
     iot = lcbio_table_new(io);

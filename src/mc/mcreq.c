@@ -20,11 +20,9 @@
 #include "sllist-inl.h"
 #include "internal.h"
 
-
 #define PKT_HDRSIZE(pkt) (MCREQ_PKT_BASESIZE + (pkt)->extlen)
 
-
-lcb_error_t
+lcb_STATUS
 mcreq_reserve_header( mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize)
 {
     int rv;
@@ -38,7 +36,7 @@ mcreq_reserve_header( mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize)
 }
 
 
-static int leb128_encode(lcb_U32 value, lcb_U8 *buf)
+static int leb128_encode(uint32_t value, uint8_t *buf)
 {
     int idx = 0;
     if (value == 0) {
@@ -56,22 +54,42 @@ static int leb128_encode(lcb_U32 value, lcb_U8 *buf)
     return idx;
 }
 
-lcb_error_t
+static int leb128_decode(uint8_t *buf, size_t nbuf, uint32_t *result)
+{
+    uint32_t value = buf[0] & 0x7f;
+    size_t idx = 1;
+    if (buf[0] & 0x80) {
+        int shift = 7;
+        for (; idx < nbuf; idx++) {
+            value |= (buf[idx] & 0x7f) << shift;
+            if ((buf[idx] & 0x80) == 0) {
+                break;
+            }
+            shift += 7;
+        }
+        if (idx == nbuf) {
+            *result = 0;
+            return 0;
+        }
+    }
+    *result = value;
+    return (int)idx;
+}
+
+lcb_STATUS
 mcreq_reserve_key(
         mc_PIPELINE *pipeline, mc_PACKET *packet, uint8_t hdrsize,
         const lcb_KEYBUF *kreq, uint32_t collection_id)
 {
     const struct lcb_CONTIGBUF *contig = &kreq->contig;
     lcb_KVBUFTYPE buftype = kreq->type;
-    lcb_t instance = (lcb_t)pipeline->parent->cqdata;
+    lcb_INSTANCE *instance = (lcb_INSTANCE *)pipeline->parent->cqdata;
     int rv;
     uint8_t ncid = 0;
     uint8_t cid[5] = {0};
 
     /** encode collection ID */
-
-    if (((packet->flags & MCREQ_F_NOCID) == 0 && mcreq_pipeline_supports_collections(pipeline)) ||
-            (instance && LCBT_SETTING(instance, use_collections) == LCB_COLLECTIONS_FORCE)) {
+    if ((packet->flags & MCREQ_F_NOCID) == 0 && instance && LCBT_SETTING(instance, use_collections)) {
         ncid = leb128_encode(collection_id, cid);
     }
     /** Set the key offset which is the start of the key from the buffer */
@@ -113,7 +131,7 @@ mcreq_reserve_key(
     return LCB_SUCCESS;
 }
 
-lcb_error_t
+lcb_STATUS
 mcreq_reserve_value2(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_size_t n)
 {
     int rv;
@@ -130,7 +148,7 @@ mcreq_reserve_value2(mc_PIPELINE *pl, mc_PACKET *pkt, lcb_size_t n)
     return LCB_SUCCESS;
 }
 
-lcb_error_t
+lcb_STATUS
 mcreq_reserve_value(
         mc_PIPELINE *pipeline, mc_PACKET *packet, const lcb_VALBUF *vreq)
 {
@@ -310,9 +328,7 @@ mcreq_allocate_packet(mc_PIPELINE *pipeline)
     ret->flags = 0;
     ret->retries = 0;
     ret->opaque = pipeline->parent->seq++;
-#ifdef LCB_TRACING
     ret->u_rdata.reqdata.span = NULL;
-#endif
     return ret;
 }
 
@@ -460,37 +476,30 @@ mcreq_epkt_find(mc_EXPACKET *ep, const char *key)
 }
 
 void
-mcreq_map_key(mc_CMDQUEUE *queue,
-    const lcb_KEYBUF *key, const lcb_KEYBUF *hashkey,
+mcreq_map_key(mc_CMDQUEUE *queue, const lcb_KEYBUF *key,
     unsigned nhdr, int *vbid, int *srvix)
 {
     const void *hk;
     size_t nhk = 0;
-    if (hashkey) {
-        if (hashkey->type == LCB_KV_COPY && hashkey->contig.bytes != NULL) {
-            hk = hashkey->contig.bytes;
-            nhk = hashkey->contig.nbytes;
-        } else if (hashkey->type == LCB_KV_VBID) {
-            *vbid = hashkey->contig.nbytes;
+    switch (key->type) {
+        case LCB_KV_VBID:
+            *vbid = key->vbid;
             *srvix = lcbvb_vbmaster(queue->config, *vbid);
             return;
-        }
-    }
-    if (!nhk) {
-        if (key->type == LCB_KV_COPY) {
+        case LCB_KV_COPY:
             hk = key->contig.bytes;
             nhk = key->contig.nbytes;
-        } else {
-            const char *buf = key->contig.bytes;
-            buf += nhdr;
-            hk = buf;
+            break;
+        case LCB_KV_HEADER_AND_KEY:
+        default:
+            hk = ((const char *)key->contig.bytes) + nhdr;
             nhk = key->contig.nbytes - nhdr;
-        }
+            break;
     }
     lcbvb_map_key(queue->config, hk, nhk, vbid, srvix);
 }
 
-lcb_error_t
+lcb_STATUS
 mcreq_basic_packet(
         mc_CMDQUEUE *queue, const lcb_CMDBASE *cmd,
         protocol_binary_request_header *req, lcb_uint8_t extlen, lcb_uint8_t ffextlen,
@@ -506,7 +515,7 @@ mcreq_basic_packet(
         return LCB_EINVAL;
     }
 
-    mcreq_map_key(queue, &cmd->key, &cmd->_hashkey,
+    mcreq_map_key(queue, &cmd->key,
         sizeof(*req) + extlen + ffextlen, &vb, &srvix);
     if (srvix > -1 && srvix < (int)queue->npipelines) {
         *pipeline = queue->pipelines[srvix];
@@ -541,10 +550,103 @@ mcreq_basic_packet(
 }
 
 void
-mcreq_get_key(const mc_PACKET *packet, const void **key, lcb_size_t *nkey)
+mcreq_set_cid(mc_PACKET *packet, uint32_t cid)
 {
-    *key = SPAN_BUFFER(&packet->kh_span) + PKT_HDRSIZE(packet);
-    *nkey = packet->kh_span.size - PKT_HDRSIZE(packet);
+    uint8_t ffext = 0;
+    uint16_t nk = 0;
+    uint8_t nbuf = 0;
+    uint8_t buf[5] = {0};
+    uint32_t old;
+    int nold;
+    protocol_binary_request_header req;
+    char *kh = SPAN_BUFFER(&packet->kh_span);
+    char *k = NULL;
+
+    memcpy(&req, kh, sizeof(req));
+    if (req.request.magic == PROTOCOL_BINARY_AREQ) {
+        ffext = req.request.keylen & 0xff;
+        nk = req.request.keylen >> 8;
+    } else {
+        nk = ntohs(req.request.keylen);
+    }
+    size_t nhdr = sizeof(req) + req.request.extlen + ffext;
+    k = kh + nhdr;
+    nold = leb128_decode((uint8_t *)k, nk, &old);
+    nbuf = leb128_encode(cid, buf);
+
+    int diff = (int)nbuf - (int)nold;
+    size_t new_size = packet->kh_span.size + diff;
+    req.request.bodylen = htonl(ntohl(req.request.bodylen) + diff);
+    size_t new_klen = nk + diff;
+    if (req.request.magic == PROTOCOL_BINARY_AREQ) {
+        req.request.keylen = (new_klen << 8) | (ffext & 0xff);
+    } else {
+        req.request.keylen = htons(new_klen);
+    }
+    char *kdata = (char *)calloc(new_size, sizeof(char));
+    char *ptr = kh;
+    memcpy(kdata, ptr, nhdr);
+    memcpy(kdata, req.bytes, sizeof(req.bytes));
+    ptr += nhdr + nold;
+    memcpy(kdata + nhdr, buf, nbuf);
+    memcpy(kdata + nhdr + nbuf, ptr, new_size - nbuf - nhdr);
+    CREATE_STANDALONE_SPAN(&packet->kh_span, kdata, new_size);
+    free(kh);
+}
+
+uint32_t
+mcreq_get_cid(lcb_INSTANCE *instance, const mc_PACKET *packet)
+{
+    uint8_t ffext = 0;
+    uint16_t nk = 0;
+    uint8_t ncid = 0;
+    uint32_t cid = 0;
+    protocol_binary_request_header req;
+    char *kh = SPAN_BUFFER(&packet->kh_span);
+    char *k = NULL;
+
+    memcpy(&req, kh, sizeof(req));
+    if (req.request.magic == PROTOCOL_BINARY_AREQ) {
+        ffext = req.request.keylen & 0xff;
+        nk = req.request.keylen >> 8;
+    } else {
+        nk = ntohs(req.request.keylen);
+    }
+    k = kh + sizeof(req) + req.request.extlen + ffext;
+    if ((packet->flags & MCREQ_F_NOCID) == 0 && instance && LCBT_SETTING(instance, use_collections)) {
+        ncid = leb128_decode((uint8_t *)k, nk, &cid);
+        if (ncid) {
+            return cid;
+        }
+    }
+    return 0;
+}
+
+void
+mcreq_get_key(lcb_INSTANCE *instance, const mc_PACKET *packet, const void **key, lcb_size_t *nkey)
+{
+    uint8_t ffext = 0;
+    uint16_t nk = 0;
+    uint8_t ncid = 0;
+    uint32_t cid = 0;
+    protocol_binary_request_header req;
+    char *kh = SPAN_BUFFER(&packet->kh_span);
+    uint8_t *k = NULL;
+
+    memcpy(&req, kh, sizeof(req));
+    if (req.request.magic == PROTOCOL_BINARY_AREQ) {
+        ffext = req.request.keylen & 0xff;
+        nk = req.request.keylen >> 8;
+    } else {
+        nk = ntohs(req.request.keylen);
+    }
+    k = (uint8_t *)kh + sizeof(req) + req.request.extlen + ffext;
+    if ((packet->flags & MCREQ_F_NOCID) == 0 && instance && LCBT_SETTING(instance, use_collections)) {
+        ncid = leb128_decode(k, nk, &cid);
+        (void)cid;
+    }
+    *key = k + ncid;
+    *nkey = nk - ncid;
 }
 
 lcb_uint32_t
@@ -833,7 +935,7 @@ mcreq_reset_timeouts(mc_PIPELINE *pl, lcb_U64 nstime)
 
 unsigned
 mcreq_pipeline_timeout(
-        mc_PIPELINE *pl, lcb_error_t err, mcreq_pktfail_fn failcb, void *cbarg,
+        mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_fn failcb, void *cbarg,
         hrtime_t oldest_valid, hrtime_t *oldest_start)
 {
     sllist_iterator iter;
@@ -865,7 +967,7 @@ mcreq_pipeline_timeout(
 
 unsigned
 mcreq_pipeline_fail(
-        mc_PIPELINE *pl, lcb_error_t err, mcreq_pktfail_fn failcb, void *arg)
+        mc_PIPELINE *pl, lcb_STATUS err, mcreq_pktfail_fn failcb, void *arg)
 {
     return mcreq_pipeline_timeout(pl, err, failcb, arg, 0, NULL);
 }

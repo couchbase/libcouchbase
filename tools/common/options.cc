@@ -399,9 +399,9 @@ ConnParams::fillCropts(lcb_create_st& cropts)
 
 
 template <typename T>
-void doPctl(lcb_t instance, int cmd, T arg)
+void doPctl(lcb_INSTANCE *instance, int cmd, T arg)
 {
-    lcb_error_t err;
+    lcb_STATUS err;
     err = lcb_cntl(instance, LCB_CNTL_SET, cmd, (void*)arg);
     if (err != LCB_SUCCESS) {
         throw LcbError(err);
@@ -409,22 +409,22 @@ void doPctl(lcb_t instance, int cmd, T arg)
 }
 
 template <typename T>
-void doSctl(lcb_t instance, int cmd, T arg)
+void doSctl(lcb_INSTANCE *instance, int cmd, T arg)
 {
     doPctl<T*>(instance, cmd, &arg);
 }
 
-void doStringCtl(lcb_t instance, const char *s, const char *val)
+void doStringCtl(lcb_INSTANCE *instance, const char *s, const char *val)
 {
-    lcb_error_t err;
+    lcb_STATUS err;
     err = lcb_cntl_string(instance, s, val);
     if (err != LCB_SUCCESS) {
         throw LcbError(err);
     }
 }
 
-lcb_error_t
-ConnParams::doCtls(lcb_t instance)
+lcb_STATUS
+ConnParams::doCtls(lcb_INSTANCE *instance)
 {
     try {
         if (o_saslmech.passed()) {
@@ -444,7 +444,7 @@ ConnParams::doCtls(lcb_t instance)
             }
             doPctl(instance, LCB_CNTL_COMPRESSION_OPTS, &opts);
         }
-    } catch (lcb_error_t &err) {
+    } catch (lcb_STATUS &err) {
         return err;
     }
     return LCB_SUCCESS;

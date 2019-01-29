@@ -163,8 +163,8 @@ typedef struct {
  * @see lcb_set_pktfwd_callback lcb_set_pktflushed_callback, mc_forward_packet
  */
 LIBCOUCHBASE_API
-lcb_error_t
-lcb_pktfwd3(lcb_t instance, const void *cookie, const lcb_CMDPKTFWD *cmd);
+lcb_STATUS
+lcb_pktfwd3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDPKTFWD *cmd);
 
 /**
  * Callback invoked when a response packet has arrived for a request
@@ -181,14 +181,14 @@ lcb_pktfwd3(lcb_t instance, const void *cookie, const lcb_CMDPKTFWD *cmd);
  * once they are no longer needed use lcb_backbuf_unref()
  */
 typedef void (*lcb_pktfwd_callback)
-        (lcb_t instance, const void *cookie, lcb_error_t err, lcb_PKTFWDRESP *resp);
+        (lcb_INSTANCE *instance, const void *cookie, lcb_STATUS err, lcb_PKTFWDRESP *resp);
 
 /**
  * Callback invoked when the request buffer for a packet is no longer required.
  * @param instance
  * @param cookie The cookie associated with the request data
  */
-typedef void (*lcb_pktflushed_callback) (lcb_t instance, const void *cookie);
+typedef void (*lcb_pktflushed_callback) (lcb_INSTANCE *instance, const void *cookie);
 
 /**
  * @uncommitted
@@ -202,7 +202,7 @@ typedef void (*lcb_pktflushed_callback) (lcb_t instance, const void *cookie);
  */
 LIBCOUCHBASE_API
 lcb_pktfwd_callback
-lcb_set_pktfwd_callback(lcb_t instance, lcb_pktfwd_callback callback);
+lcb_set_pktfwd_callback(lcb_INSTANCE *instance, lcb_pktfwd_callback callback);
 
 /**
  * @uncommitted
@@ -217,7 +217,7 @@ lcb_set_pktfwd_callback(lcb_t instance, lcb_pktfwd_callback callback);
  */
 LIBCOUCHBASE_API
 lcb_pktflushed_callback
-lcb_set_pktflushed_callback(lcb_t instance, lcb_pktflushed_callback callback);
+lcb_set_pktflushed_callback(lcb_INSTANCE *instance, lcb_pktflushed_callback callback);
 
 
 /**

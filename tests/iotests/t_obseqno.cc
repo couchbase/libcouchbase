@@ -1,33 +1,52 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2011-2019 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 #include "iotests.h"
+#include <libcouchbase/utils.h>
 
 using namespace std;
 class ObseqnoTest : public MockUnitTest {
 };
 
 extern "C" {
-static void storeCb_getstok(lcb_t, int cbtype, const lcb_RESPBASE *rb)
+static void storeCb_getstok(lcb_INSTANCE *, int cbtype, const lcb_RESPSTORE *resp)
 {
-    EXPECT_EQ(LCB_SUCCESS, rb->rc);
-    const lcb_MUTATION_TOKEN *tmp = lcb_resp_get_mutation_token(cbtype, rb);
-    if (tmp) {
-        *(lcb_MUTATION_TOKEN *)rb->cookie = *tmp;
-    }
+    EXPECT_EQ(LCB_SUCCESS, lcb_respstore_status(resp));
+    lcb_MUTATION_TOKEN *res = NULL;
+    lcb_respstore_cookie(resp, (void **)&res);
+    lcb_respstore_mutation_token(resp, res);
 }
 }
 
 static void
-storeGetStok(lcb_t instance, const string& k, const string& v, lcb_MUTATION_TOKEN *st)
+storeGetStok(lcb_INSTANCE *instance, const string& k, const string& v, lcb_MUTATION_TOKEN *res)
 {
     lcb_RESPCALLBACK oldcb = lcb_get_callback3(instance, LCB_CALLBACK_STORE);
-    lcb_install_callback3(instance, LCB_CALLBACK_STORE, storeCb_getstok);
+    lcb_install_callback3(instance, LCB_CALLBACK_STORE, (lcb_RESPCALLBACK)storeCb_getstok);
     lcb_sched_enter(instance);
-    lcb_CMDSTORE cmd = { 0 };
-    LCB_CMD_SET_KEY(&cmd, k.c_str(), k.size());
-    LCB_CMD_SET_VALUE(&cmd, v.c_str(), v.size());
-    cmd.operation = LCB_SET;
 
-    lcb_error_t rc = lcb_store3(instance, st, &cmd);
+    lcb_CMDSTORE *cmd;
+    lcb_cmdstore_create(&cmd, LCB_STORE_SET);
+    lcb_cmdstore_key(cmd, k.c_str(), k.size());
+    lcb_cmdstore_value(cmd, v.c_str(), v.size());
+
+    lcb_STATUS rc = lcb_store(instance, res, cmd);
     EXPECT_EQ(LCB_SUCCESS, rc);
+    lcb_cmdstore_destroy(cmd);
     lcb_sched_leave(instance);
     lcb_wait(instance);
     lcb_install_callback3(instance, LCB_CALLBACK_STORE, oldcb);
@@ -36,9 +55,9 @@ storeGetStok(lcb_t instance, const string& k, const string& v, lcb_MUTATION_TOKE
 TEST_F(ObseqnoTest, testFetchImplicit) {
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
-    lcb_t instance;
-    lcb_error_t rc;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    lcb_STATUS rc;
+    createConnection(hw, &instance);
     const char *key = "obseqBasic";
     const char *value = "value";
 
@@ -55,26 +74,24 @@ TEST_F(ObseqnoTest, testFetchImplicit) {
     const lcb_MUTATION_TOKEN *ss = lcb_get_mutation_token(instance, &kb, &rc);
     ASSERT_EQ(LCB_SUCCESS, rc);
     ASSERT_TRUE(ss != NULL);
-    ASSERT_EQ(ss->uuid_, st_fetched.uuid_);
-    ASSERT_EQ(ss->vbid_, st_fetched.vbid_);
-    ASSERT_EQ(ss->seqno_, st_fetched.seqno_);
+    st_fetched = *ss;
 }
 
 extern "C" {
 static void
-obseqCallback(lcb_t, int, const lcb_RESPBASE *rb) {
+obseqCallback(lcb_INSTANCE *, int, const lcb_RESPOBSEQNO *rb) {
     lcb_RESPOBSEQNO *pp = (lcb_RESPOBSEQNO *)rb->cookie;
-    *pp = *(const lcb_RESPOBSEQNO *)rb;
+    *pp = *rb;
 }
 }
 
 static void
-doObserveSeqno(lcb_t instance, const lcb_MUTATION_TOKEN *ss, int server, lcb_RESPOBSEQNO& resp) {
+doObserveSeqno(lcb_INSTANCE *instance, lcb_MUTATION_TOKEN *ss, int server, lcb_RESPOBSEQNO& resp) {
     lcb_CMDOBSEQNO cmd = { 0 };
     cmd.vbid = ss->vbid_;
     cmd.uuid = ss->uuid_;
     cmd.server_index = server;
-    lcb_error_t rc;
+    lcb_STATUS rc;
 
     lcb_sched_enter(instance);
     rc = lcb_observe_seqno3(instance, &resp, &cmd);
@@ -85,7 +102,7 @@ doObserveSeqno(lcb_t instance, const lcb_MUTATION_TOKEN *ss, int server, lcb_RES
     }
 
     lcb_RESPCALLBACK oldcb = lcb_get_callback3(instance, LCB_CALLBACK_OBSEQNO);
-    lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, obseqCallback);
+    lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, (lcb_RESPCALLBACK)obseqCallback);
     lcb_sched_leave(instance);
     lcb_wait(instance);
     lcb_install_callback3(instance, LCB_CALLBACK_OBSEQNO, oldcb);
@@ -95,8 +112,8 @@ TEST_F(ObseqnoTest, testObserve) {
     SKIP_UNLESS_MOCK();
 
     HandleWrap hw;
-    lcb_t instance;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
     lcbvb_CONFIG *vbc;
 
     lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);
@@ -107,7 +124,9 @@ TEST_F(ObseqnoTest, testObserve) {
 
     // Get the synctoken
     storeGetStok(instance, key, value, &st_fetched);
-    ASSERT_TRUE(LCB_MUTATION_TOKEN_ISVALID(&st_fetched));
+    ASSERT_NE(0, st_fetched.vbid_);
+    ASSERT_NE(0, st_fetched.uuid_);
+    ASSERT_NE(0, st_fetched.seqno_);
 
     for (size_t ii = 0; ii < lcbvb_get_nreplicas(vbc)+1; ii++) {
         int ix = lcbvb_vbserver(vbc, st_fetched.vbid_, ii);
@@ -125,8 +144,8 @@ TEST_F(ObseqnoTest, testObserve) {
 TEST_F(ObseqnoTest, testFailoverFormat) {
     SKIP_UNLESS_MOCK();
     HandleWrap hw;
-    lcb_t instance;
-    createConnection(hw, instance);
+    lcb_INSTANCE *instance;
+    createConnection(hw, &instance);
     lcbvb_CONFIG *vbc;
 
     lcb_cntl(instance, LCB_CNTL_GET, LCB_CNTL_VBCONFIG, &vbc);

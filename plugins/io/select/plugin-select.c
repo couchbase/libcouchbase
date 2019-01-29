@@ -416,7 +416,7 @@ procs2_sel_callback(int version, lcb_loop_procs *loop_procs,
 }
 
 LIBCOUCHBASE_API
-lcb_error_t
+lcb_STATUS
 lcb_create_select_io_opts(int version, lcb_io_opt_t *io, void *arg)
 {
     lcb_io_opt_t ret;

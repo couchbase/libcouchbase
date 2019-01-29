@@ -16,7 +16,6 @@
  */
 
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/api3.h>
 #include <libcouchbase/pktfwd.h>
 #include "mc/mcreq.h"
 #include "mc/forward.h"
@@ -24,8 +23,8 @@
 #include "rdb/rope.h"
 
 LIBCOUCHBASE_API
-lcb_error_t
-lcb_pktfwd3(lcb_t instance, const void *cookie, const lcb_CMDPKTFWD *cmd)
+lcb_STATUS
+lcb_pktfwd3(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDPKTFWD *cmd)
 {
     int fwdopts = 0;
     mc_PIPELINE *pl;
@@ -33,7 +32,7 @@ lcb_pktfwd3(lcb_t instance, const void *cookie, const lcb_CMDPKTFWD *cmd)
     nb_IOV *iov, iov_s;
     unsigned niov;
     mc_IOVINFO ioi = { { 0 } };
-    lcb_error_t err;
+    lcb_STATUS err;
 
     if (cmd->nomap) {
         fwdopts |= MC_FWD_OPT_NOMAP;

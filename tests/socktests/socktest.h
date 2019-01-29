@@ -1,3 +1,20 @@
+/* -*- Mode: C++; tab-width: 4; c-basic-offset: 4; indent-tabs-mode: nil -*- */
+/*
+ *     Copyright 2011-2019 Couchbase, Inc.
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ */
+
 /**
  * @file
  * Core routines and classes for @ref LCBIO tests.
@@ -98,7 +115,7 @@ struct ESocket {
     lcbio_OSERR syserr;
 
     /** Contains the captured library error codes, if applicable */
-    lcb_error_t lasterr;
+    lcb_STATUS lasterr;
     Loop *parent;
 
     /** Actions implementation. The various callbacks in @ref lcbio_CTXPROCS
@@ -182,7 +199,7 @@ struct ESocket {
     }
 
     /** Internal method used to associate the socket (if any) with this object */
-    void assign(lcbio_SOCKET *sock, lcb_error_t err);
+    void assign(lcbio_SOCKET *sock, lcb_STATUS err);
 
     /** Internal buffer to store read data */
     std::vector<char> readbuf;

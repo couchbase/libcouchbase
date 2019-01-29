@@ -18,7 +18,6 @@
 #ifndef LCB_TRACING_INTERNAL_H
 #define LCB_TRACING_INTERNAL_H
 
-#ifdef LCB_TRACING
 #include <libcouchbase/tracing.h>
 #include "rnd.h"
 
@@ -102,7 +101,7 @@ class ThresholdLoggingTracer
     QueueEntry convert(lcbtrace_SPAN *span);
 
   public:
-    ThresholdLoggingTracer(lcb_t instance);
+    ThresholdLoggingTracer(lcb_INSTANCE *instance);
 
     lcbtrace_TRACER *wrap();
     void add_orphan(lcbtrace_SPAN *span);
@@ -135,7 +134,7 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
         char opid[20] = {};                                                                                            \
         snprintf(opid, sizeof(opid), "0x%x", (int)opaque);                                                             \
         ref.type = LCBTRACE_REF_CHILD_OF;                                                                              \
-        ref.span = (cmd->_hashkey.type & LCB_KV_TRACESPAN) ? (lcbtrace_SPAN *)cmd->_hashkey.contig.bytes : NULL;       \
+        ref.span = cmd->pspan;                                                                                         \
         outspan = lcbtrace_span_start((settings)->tracer, operation_name, LCBTRACE_NOW, &ref);                         \
         lcbtrace_span_add_tag_str(outspan, LCBTRACE_TAG_OPERATION_ID, opid);                                           \
         lcbtrace_span_add_system_tags(outspan, (settings), LCBTRACE_TAG_SERVICE_KV);                                   \
@@ -192,7 +191,5 @@ void lcbtrace_span_set_orphaned(lcbtrace_SPAN *span, int val);
 #define LCBTRACE_KV_COMPLETE(pipeline, request, response)
 #define LCBTRACE_KV_CLOSE(request)
 #define LCBTRACE_KV_FINISH(pipeline, request, response)
-
-#endif /* LCB_TRACING */
 
 #endif /* LCB_TRACING_INTERNAL_H */

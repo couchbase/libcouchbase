@@ -122,7 +122,7 @@ static void stop_event_loop(lcb_io_opt_t iobase)
 }
 
 LCBUV_API
-lcb_error_t lcb_create_libuv_io_opts(int version,
+lcb_STATUS lcb_create_libuv_io_opts(int version,
                                      lcb_io_opt_t *io,
                                      lcbuv_options_t *options)
 {

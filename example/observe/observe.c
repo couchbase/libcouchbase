@@ -24,7 +24,7 @@
 #include <string.h>
 #include <assert.h>
 #include <libcouchbase/couchbase.h>
-#include <libcouchbase/api3.h>
+#include <libcouchbase/utils.h>
 
 #define fail(msg) \
     fprintf(stderr, "%s\n", msg); \
@@ -47,20 +47,20 @@ typedef struct {
 } observe_info;
 
 static void
-observe_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
+observe_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPBASE *rb)
 {
     const lcb_RESPOBSERVE *resp = (const lcb_RESPOBSERVE*)rb;
-    observe_info *obs_info = (observe_info *)rb->cookie;
+    observe_info *obs_info = (observe_info *)resp->cookie;
     node_info *ni = &obs_info->nodeinfo[obs_info->nresp];
 
-    if (rb->nkey == 0) {
+    if (resp->nkey == 0) {
         fprintf(stderr, "All nodes have replied\n");
         return;
     }
 
-    if (rb->rc != LCB_SUCCESS) {
+    if (resp->rc != LCB_SUCCESS) {
         fprintf(stderr, "Failed to observe key from node. 0x%x (%s)\n",
-            rb->rc, lcb_strerror(instance, rb->rc));
+            resp->rc, lcb_strerror(instance, resp->rc));
         obs_info->nresp++;
         return;
     }
@@ -76,8 +76,8 @@ observe_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
 
 int main(int argc, char *argv[])
 {
-    lcb_t instance;
-    lcb_error_t err;
+    lcb_INSTANCE *instance;
+    lcb_STATUS err;
     lcb_CMDOBSERVE cmd = { 0 };
     lcb_MULTICMD_CTX *mctx = NULL;
     observe_info obs_info;

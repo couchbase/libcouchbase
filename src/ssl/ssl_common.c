@@ -258,9 +258,9 @@ struct lcbio_SSLCTX {
 #define LOGARGS_S(settings, lvl) settings, "SSL", lvl, __FILE__, __LINE__
 
 lcbio_pSSLCTX lcbio_ssl_new(const char *tsfile, const char *cafile, const char *keyfile, int noverify,
-                            lcb_error_t *errp, lcb_settings *settings)
+                            lcb_STATUS *errp, lcb_settings *settings)
 {
-    lcb_error_t err_s;
+    lcb_STATUS err_s;
     lcbio_pSSLCTX ret;
 
     if (!errp) {
@@ -344,7 +344,7 @@ noop_dtor(lcbio_PROTOCTX *arg) {
     free(arg);
 }
 
-lcb_error_t
+lcb_STATUS
 lcbio_ssl_apply(lcbio_SOCKET *sock, lcbio_pSSLCTX sctx)
 {
     lcbio_pTABLE old_iot = sock->io, new_iot;
@@ -378,7 +378,7 @@ lcbio_ssl_check(lcbio_SOCKET *sock)
     return lcbio_protoctx_get(sock, LCBIO_PROTOCTX_SSL) != NULL;
 }
 
-lcb_error_t
+lcb_STATUS
 lcbio_ssl_get_error(lcbio_SOCKET *sock)
 {
     lcbio_XSSL *xs = (lcbio_XSSL *)sock->io;
@@ -465,7 +465,7 @@ void lcbio_ssl_global_init(void)
     ossl_init_locks();
 }
 
-lcb_error_t
+lcb_STATUS
 lcbio_sslify_if_needed(lcbio_SOCKET *sock, lcb_settings *settings)
 {
     if (!(settings->sslopts & LCB_SSL_ENABLED)) {

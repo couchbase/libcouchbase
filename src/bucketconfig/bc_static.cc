@@ -47,7 +47,7 @@ public:
         return config;
     }
 
-    lcb_error_t refresh() {
+    lcb_STATUS refresh() {
         async.signal();
         return LCB_SUCCESS;
     }

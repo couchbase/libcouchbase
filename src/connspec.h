@@ -63,8 +63,8 @@ public:
     typedef std::vector<std::pair<std::string,std::string> > Options;
     Connspec() : m_sslopts(0), m_implicit_port(0), m_loglevel(0), m_logredact(false), m_transports(), m_flags(0), m_ipv6(LCB_IPV6_DISABLED), m_logger(NULL) {}
 
-    lcb_error_t parse(const char *connstr, const char **errmsg = NULL);
-    lcb_error_t load(const lcb_create_st&);
+    lcb_STATUS parse(const char *connstr, const char **errmsg = NULL);
+    lcb_STATUS load(const lcb_create_st&);
 
     bool has_bsmode(int mode) const {
         return m_transports.find(mode) != m_transports.end();
@@ -119,9 +119,9 @@ private:
     int m_loglevel; /* cached loglevel */
     bool m_logredact;
 
-    inline lcb_error_t parse_options(
+    inline lcb_STATUS parse_options(
         const char *options, const char *optend, const char **errmsg);
-    inline lcb_error_t parse_hosts(
+    inline lcb_STATUS parse_hosts(
         const char *hostbegin, const char *hostend, const char **errmsg);
 
     std::set<int> m_transports;
@@ -140,11 +140,11 @@ private:
 #define LCB_SPECSCHEME_SRV_SSL "couchbases+dnssrv://"
 
 // Standalone functionality:
-lcb_error_t
+lcb_STATUS
 dnssrv_query(const char *name, Hostlist& hostlist);
 
 Hostlist *
-dnssrv_getbslist(const char *addr, bool is_ssl, lcb_error_t& errout);
+dnssrv_getbslist(const char *addr, bool is_ssl, lcb_STATUS& errout);
 
 } // namespace
 

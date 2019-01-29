@@ -39,13 +39,13 @@ lcbtrace_SPAN *lcbtrace_span_start(lcbtrace_TRACER *tracer, const char *opname, 
 }
 
 LIBCOUCHBASE_API
-lcbtrace_TRACER *lcb_get_tracer(lcb_t instance)
+lcbtrace_TRACER *lcb_get_tracer(lcb_INSTANCE *instance)
 {
     return (instance && instance->settings) ? instance->settings->tracer : NULL;
 }
 
 LIBCOUCHBASE_API
-void lcb_set_tracer(lcb_t instance, lcbtrace_TRACER *tracer)
+void lcb_set_tracer(lcb_INSTANCE *instance, lcbtrace_TRACER *tracer)
 {
     if (instance && instance->settings) {
         instance->settings->tracer = tracer;

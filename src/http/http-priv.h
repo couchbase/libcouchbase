@@ -47,11 +47,11 @@ struct Request {
      * body and initializes instance members to their default values. The static
      * ::create() method should be used instead to construct a new object
      */
-    inline Request(lcb_t instance, const void *cookie, const lcb_CMDHTTP* cmd);
+    inline Request(lcb_INSTANCE *instance, const void *cookie, const lcb_CMDHTTP* cmd);
 
     /** Creates a new request object and verifies the input (setup_inputs()) */
-    static Request * create(lcb_t instance, const void *cookie,
-        const lcb_CMDHTTP *cmd, lcb_error_t *rc);
+    static Request * create(lcb_INSTANCE *instance, const void *cookie,
+        const lcb_CMDHTTP *cmd, lcb_STATUS *rc);
 
     /** Pause IO on this request */
     void pause();
@@ -67,7 +67,7 @@ struct Request {
      * called once all inputs have been completed. If successful, I/O operations
      * will begin (this function calls start_io())
      */
-    lcb_error_t submit();
+    lcb_STATUS submit();
 
     bool has_pending_redirect() const { return !pending_redirect.empty(); }
     /**
@@ -95,7 +95,7 @@ struct Request {
      * static method creates a new object and calls this function to verify
      * the inputs
      */
-    inline lcb_error_t setup_inputs(const lcb_CMDHTTP* cmd);
+    inline lcb_STATUS setup_inputs(const lcb_CMDHTTP* cmd);
 
     /**
      * Gets a target node for the destination API in the form of host:port.
@@ -107,8 +107,8 @@ struct Request {
      * @return string if there is a node, or NULL if there is an error. Check rc
      *         for error details
      */
-    const char *get_api_node(lcb_error_t &rc);
-    const char *get_api_node() { lcb_error_t dummy; return get_api_node(dummy); }
+    const char *get_api_node(lcb_STATUS &rc);
+    const char *get_api_node() { lcb_STATUS dummy; return get_api_node(dummy); }
 
     /**
      * Sets the URL for the field
@@ -121,7 +121,7 @@ struct Request {
      * If all parameters are 0 then this function will use the already-contained
      * ::url field and validate/parse the inputs
      */
-    inline lcb_error_t assign_url(const char *base, size_t nbase,
+    inline lcb_STATUS assign_url(const char *base, size_t nbase,
         const char *rest, size_t nrest);
 
     /**
@@ -151,7 +151,7 @@ struct Request {
      * but submit() handles building the request while start_io() sets up
      * the actual connection
      */
-    lcb_error_t start_io(lcb_host_t&);
+    lcb_STATUS start_io(lcb_host_t&);
 
     /**
      * Release any I/O resources attached to this request.
@@ -180,17 +180,17 @@ struct Request {
     void init_resp(lcb_RESPHTTP *resp);
 
     /** Called by finish() to refresh the config, if necessary */
-    void maybe_refresh_config(lcb_error_t rc);
+    void maybe_refresh_config(lcb_STATUS rc);
 
     /** Finish this request, invoking the final callback if necessary */
-    void finish(lcb_error_t rc);
+    void finish(lcb_STATUS rc);
 
     /**
      * Finish or retry this request, depending on the state of the response
      * If the request can be retried, IO will begin again, otherwise it will
      * be finished via a call to finish()
      **/
-    void finish_or_retry(lcb_error_t rc);
+    void finish_or_retry(lcb_STATUS rc);
 
     /**
      * Change the callback for this request. This is used to indicate that
@@ -218,7 +218,7 @@ struct Request {
     /** Increment refcount */
     void incref() { refcount++; }
 
-    lcb_t instance; /**< Library handle */
+    lcb_INSTANCE *instance; /**< Library handle */
     std::string url; /**<Base URL: http://host:port/path?query*/
     std::string host; /**< Host, derived from URL */
     std::string port; /**< Port, derived from URL */
@@ -232,7 +232,7 @@ struct Request {
     std::vector<char> preamble;
 
     struct http_parser_url url_info; /**< Parser info for the URL */
-    const lcb_http_method_t method; /**< Request method constant */
+    const lcb_HTTP_METHOD method; /**< Request method constant */
     const bool chunked; /**< Whether to invoke callback for each data chunk */
     bool paused; /**< See pause() and resume() */
     const void * const command_cookie; /** User context for callback */
@@ -255,7 +255,7 @@ struct Request {
      */
     int last_vbcrev;
 
-    const lcb_http_type_t reqtype; /**< HTTP API type */
+    const lcb_HTTP_TYPE reqtype; /**< HTTP API type */
 
 
     enum State {
@@ -321,6 +321,6 @@ struct Request {
 } // namespace: http
 } // namespace: lcb
 
-struct lcb_http_request_st : public lcb::http::Request {};
+struct lcb_HTTP_HANDLE_ : public lcb::http::Request {};
 
 #endif /* HEADER GUARD */

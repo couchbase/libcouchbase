@@ -28,8 +28,8 @@
 
 using namespace lcb::clconfig;
 
-static void io_error_handler(lcbio_CTX *, lcb_error_t);
-static void on_connected(lcbio_SOCKET *, void *, lcb_error_t, lcbio_OSERR);
+static void io_error_handler(lcbio_CTX *, lcb_STATUS);
+static void on_connected(lcbio_SOCKET *, void *, lcb_STATUS, lcbio_OSERR);
 static void read_common(lcbio_CTX *, unsigned);
 
 /**
@@ -59,7 +59,7 @@ void HttpProvider::close_current()
  * Call when there is an error in I/O. This includes read, write, connect
  * and timeouts.
  */
-lcb_error_t HttpProvider::on_io_error(lcb_error_t origerr)
+lcb_STATUS HttpProvider::on_io_error(lcb_STATUS origerr)
 {
     close_current();
 
@@ -92,11 +92,11 @@ void set_new_config(HttpProvider *http)
     http->parent->provider_got_config(http, http->current_config);
 }
 
-static lcb_error_t
+static lcb_STATUS
 process_chunk(HttpProvider *http, const void *buf, unsigned nbuf)
 {
     namespace htp = lcb::htparse;
-    lcb_error_t err = LCB_SUCCESS;
+    lcb_STATUS err = LCB_SUCCESS;
     int rv;
     lcbvb_CONFIG *cfgh;
     unsigned state, oldstate, diff;
@@ -213,7 +213,7 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     LCBIO_CTX_ITERFOR(ctx, &riter, nr) {
         unsigned nbuf = lcbio_ctx_risize(&riter);
         void *buf = lcbio_ctx_ribuf(&riter);
-        lcb_error_t err = process_chunk(http, buf, nbuf);
+        lcb_STATUS err = process_chunk(http, buf, nbuf);
 
         if (err != LCB_SUCCESS) {
            http->on_io_error(err);
@@ -231,7 +231,7 @@ read_common(lcbio_CTX *ctx, unsigned nr)
     lcbio_ctx_schedule(ctx);
 }
 
-lcb_error_t HttpProvider::setup_request_header(const lcb_host_t &host) {
+lcb_STATUS HttpProvider::setup_request_header(const lcb_host_t &host) {
     request_buf.assign("GET ");
     if (settings().conntype == LCB_TYPE_BUCKET || settings().conntype == LCB_TYPE_CLUSTER) {
         if (uritype == LCB_HTCONFIG_URLTYPE_25PLUS) {
@@ -290,7 +290,7 @@ void HttpProvider::reset_stream_state() {
 }
 
 static void
-on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR syserr)
+on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OSERR syserr)
 {
     HttpProvider *http = reinterpret_cast<HttpProvider*>(arg);
     lcb_host_t *host;
@@ -343,7 +343,7 @@ void HttpProvider::on_timeout() {
 }
 
 
-lcb_error_t HttpProvider::connect_next() {
+lcb_STATUS HttpProvider::connect_next() {
     lcb_log(LOGARGS(this, TRACE), "Starting HTTP Configuration Provider %p", (void*)this);
     close_current();
     as_reconnect.cancel();
@@ -375,7 +375,7 @@ void HttpProvider::delayed_reconnect() {
         /* have a context already */
         return;
     }
-    lcb_error_t err = connect_next();
+    lcb_STATUS err = connect_next();
     if (err != LCB_SUCCESS) {
         on_io_error(err);
     }
@@ -389,7 +389,7 @@ bool HttpProvider::pause() {
     return LCB_SUCCESS;
 }
 
-lcb_error_t HttpProvider::refresh() {
+lcb_STATUS HttpProvider::refresh() {
     /**
      * We want a grace interval here because we might already be fetching a
      * connection. HOWEVER we don't want to indefinitely wait on a socket
@@ -419,7 +419,7 @@ void HttpProvider::config_updated(lcbvb_CONFIG *newconfig)
 
     for (size_t ii = 0; ii < newconfig->nsrv; ++ii) {
         const char *ss;
-        lcb_error_t status;
+        lcb_STATUS status;
         ss = lcbvb_get_hostport(newconfig, ii, LCBVB_SVCTYPE_MGMT, mode);
         if (!ss) {
             /* not supported? */
@@ -498,7 +498,7 @@ HttpProvider::HttpProvider(Confmon *parent_)
 }
 
 static void
-io_error_handler(lcbio_CTX *ctx, lcb_error_t err)
+io_error_handler(lcbio_CTX *ctx, lcb_STATUS err)
 {
     reinterpret_cast<HttpProvider *>(lcbio_ctx_data(ctx))->on_io_error(err);
 }

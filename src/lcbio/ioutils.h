@@ -59,7 +59,7 @@ lcbio_mksyserr(lcbio_OSERR in, lcbio_OSERR *out);
  * @param settings The settings for the library
  * @return An error code.
  */
-lcb_error_t
+lcb_STATUS
 lcbio_mklcberr(lcbio_OSERR in, const lcb_settings *settings);
 
 /**
@@ -98,7 +98,7 @@ lcbio_is_netclosed(lcbio_SOCKET *sock, int flags);
  * @param cntl The option (LCB_IO_CNTL_xxx)
  * @return
  */
-lcb_error_t
+lcb_STATUS
 lcbio_enable_sockopt(lcbio_SOCKET *sock, int cntl);
 
 const char *

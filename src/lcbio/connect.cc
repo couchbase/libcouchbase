@@ -69,9 +69,9 @@ struct Connstart : ConnectionRequest {
         CS_PENDING, CS_CANCELLED, CS_CONNECTED, CS_ERROR
     };
 
-    void state_signal(State next_state, lcb_error_t status);
+    void state_signal(State next_state, lcb_STATUS status);
     void notify_success();
-    void notify_error(lcb_error_t err);
+    void notify_error(lcb_STATUS err);
     bool ensure_sock();
     void clear_sock();
 
@@ -86,7 +86,7 @@ struct Connstart : ConnectionRequest {
     addrinfo *ai_root;
     addrinfo *ai;
     State state;
-    lcb_error_t last_error;
+    lcb_STATUS last_error;
     Timer<Connstart, &Connstart::handler> timer;
 };
 }
@@ -101,7 +101,7 @@ void Connstart::unwatch() {
 }
 
 static void try_enable_sockopt(lcbio_SOCKET *sock, int cntl) {
-    lcb_error_t rv = lcbio_enable_sockopt(sock, cntl);
+    lcb_STATUS rv = lcbio_enable_sockopt(sock, cntl);
     if (rv == LCB_SUCCESS) {
         lcb_log(LOGARGS(sock, DEBUG), CSLOGFMT "Successfully set %s", CSLOGID(sock), lcbio_strsockopt(cntl));
     } else {
@@ -115,7 +115,7 @@ static void try_enable_sockopt(lcbio_SOCKET *sock, int cntl) {
  * cancelled) and then free the CONNSTART object.
  */
 void Connstart::handler() {
-    lcb_error_t err;
+    lcb_STATUS err;
 
     if (sock && event) {
         unwatch();
@@ -176,7 +176,7 @@ Connstart::~Connstart() {
     }
 }
 
-void Connstart::state_signal(State next_state, lcb_error_t err) {
+void Connstart::state_signal(State next_state, lcb_STATUS err) {
     if (state != CS_PENDING) {
         /** State already set */
         return;
@@ -199,7 +199,7 @@ void Connstart::notify_success() {
     state_signal(CS_CONNECTED, LCB_SUCCESS);
 }
 
-void Connstart::notify_error(lcb_error_t err) {
+void Connstart::notify_error(lcb_STATUS err) {
     state_signal(CS_ERROR, err);
 }
 

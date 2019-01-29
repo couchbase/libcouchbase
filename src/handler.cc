@@ -79,7 +79,7 @@ public:
     static void
     parse_enhanced_error(const ResponsePack *rp) {
         ResponsePack *mrp = const_cast<ResponsePack *>(rp);
-        lcb_error_t rc = MemcachedResponse::parse_enhanced_error(mrp->value, mrp->nvalue, &mrp->err_ref, &mrp->err_ctx);
+        lcb_STATUS rc = MemcachedResponse::parse_enhanced_error(mrp->value, mrp->nvalue, &mrp->err_ref, &mrp->err_ctx);
         if (rc != LCB_SUCCESS) {
             mrp->resp.rflags &= ~LCB_RESP_F_ERRINFO;
         }
@@ -87,8 +87,8 @@ public:
 };
 
 LIBCOUCHBASE_API
-lcb_error_t
-lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
+lcb_STATUS
+lcb_errmap_default(lcb_INSTANCE *instance, lcb_uint16_t in)
 {
     switch (in) {
     case PROTOCOL_BINARY_RESPONSE_NOT_MY_VBUCKET:
@@ -111,8 +111,8 @@ lcb_errmap_default(lcb_t instance, lcb_uint16_t in)
     }
 }
 
-static lcb_error_t
-map_error(lcb_t instance, int in)
+static lcb_STATUS
+map_error(lcb_INSTANCE *instance, int in)
 {
     switch (in) {
     case PROTOCOL_BINARY_RESPONSE_SUCCESS:
@@ -209,7 +209,7 @@ map_error(lcb_t instance, int in)
 }
 
 static lcb_RESPCALLBACK
-find_callback(lcb_t instance, lcb_CALLBACKTYPE type)
+find_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE type)
 {
     lcb_RESPCALLBACK cb = instance->callbacks.v3callbacks[type];
     if (!cb) {
@@ -248,8 +248,8 @@ find_callback(lcb_t instance, lcb_CALLBACKTYPE type)
  */
 
 template <typename T>
-void make_error(lcb_t instance, T* resp,
-                const MemcachedResponse *response, lcb_error_t imm) {
+void make_error(lcb_INSTANCE *instance, T* resp,
+                const MemcachedResponse *response, lcb_STATUS imm) {
     if (imm) {
         resp->rc = imm;
         resp->rflags |= LCB_RESP_F_CLIENTGEN;
@@ -273,12 +273,12 @@ void handle_error_info(const MemcachedResponse* mc_resp, ResponsePack<T>* rp)
 }
 
 template <typename T>
-void init_resp(lcb_t instance, const MemcachedResponse* mc_resp,
-               const mc_PACKET *req, lcb_error_t immerr, T *resp) {
+void init_resp(lcb_INSTANCE *instance, const MemcachedResponse* mc_resp,
+               const mc_PACKET *req, lcb_STATUS immerr, T *resp) {
     make_error(instance, resp, mc_resp, immerr);
     resp->cas = mc_resp->cas();
     resp->cookie = const_cast<void*>(MCREQ_PKT_COOKIE(req));
-    mcreq_get_key(req, &resp->key, &resp->nkey);
+    mcreq_get_key(instance, req, &resp->key, &resp->nkey);
 }
 
 /**
@@ -288,7 +288,7 @@ void init_resp(lcb_t instance, const MemcachedResponse* mc_resp,
  * @param tgt Pointer to mutation token which should be populated.
  */
 static void
-handle_mutation_token(lcb_t instance, const MemcachedResponse *mc_resp,
+handle_mutation_token(lcb_INSTANCE *instance, const MemcachedResponse *mc_resp,
     const mc_PACKET *req, lcb_MUTATION_TOKEN *stok)
 {
     const char *sbuf;
@@ -319,13 +319,13 @@ handle_mutation_token(lcb_t instance, const MemcachedResponse *mc_resp,
     }
 }
 
-static lcb_t get_instance(mc_PIPELINE *pipeline) {
-    return reinterpret_cast<lcb_t>(pipeline->parent->cqdata);
+static lcb_INSTANCE *get_instance(mc_PIPELINE *pipeline) {
+    return reinterpret_cast<lcb_INSTANCE *>(pipeline->parent->cqdata);
 }
 
 template <typename T>
 void invoke_callback(const mc_PACKET *pkt,
-    lcb_t instance, T* resp, lcb_CALLBACKTYPE cbtype)
+    lcb_INSTANCE *instance, T* resp, lcb_CALLBACK_TYPE cbtype)
 {
     if (!(pkt->flags & MCREQ_F_INVOKED)) {
         resp->cookie = const_cast<void*>(MCREQ_PKT_COOKIE(pkt));
@@ -340,7 +340,7 @@ void invoke_callback(const mc_PACKET *pkt,
 
 template <typename T>
 void invoke_callback(const mc_PACKET *pkt, mc_PIPELINE *pipeline, T *resp,
-    lcb_CALLBACKTYPE cbtype)
+    lcb_CALLBACK_TYPE cbtype)
 {
     invoke_callback(pkt, get_instance(pipeline), cbtype, resp);
 }
@@ -356,7 +356,7 @@ void invoke_callback(const mc_PACKET *pkt, mc_PIPELINE *pipeline, T *resp,
  * pointer upon return. Otherwise it will be set to NULL. In any case it must
  */
 static void
-maybe_decompress(lcb_t o,
+maybe_decompress(lcb_INSTANCE *o,
     const MemcachedResponse* respkt, lcb_RESPGET *rescmd, void **freeptr)
 {
     lcb_U8 dtype = 0;
@@ -385,12 +385,12 @@ maybe_decompress(lcb_t o,
 
 static void
 H_get(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse* response,
-      lcb_error_t immerr)
+      lcb_STATUS immerr)
 {
     ResponsePack<lcb_RESPGET> w = {{ 0 }};
     lcb_RESPGET& resp = w.resp;
 
-    lcb_t o = get_instance(pipeline);
+    lcb_INSTANCE *o = get_instance(pipeline);
     init_resp(o, response, request, immerr, &resp);
     handle_error_info(response, &w);
     resp.rflags |= LCB_RESP_F_FINAL;
@@ -416,11 +416,11 @@ H_get(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse* response,
 
 static void
 H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request,
-             MemcachedResponse *response, lcb_error_t immerr)
+             MemcachedResponse *response, lcb_STATUS immerr)
 {
     ResponsePack<lcb_RESPGET> w = {{ 0 }};
     lcb_RESPGET& resp = w.resp;
-    lcb_t instance = get_instance(pipeline);
+    lcb_INSTANCE *instance = get_instance(pipeline);
     void *freeptr = NULL;
     mc_REQDATAEX *rd = request->u_rdata.exdata;
 
@@ -443,15 +443,43 @@ H_getreplica(mc_PIPELINE *pipeline, mc_PACKET *request,
     free(freeptr);
 }
 
+static int lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter);
+
+static
+void
+lcb_sdresult_parse(lcb_RESPSUBDOC *resp, lcb_CALLBACK_TYPE type)
+{
+    std::vector<lcb_SDENTRY> results;
+    size_t iter = 0, oix = 0;
+    lcb_SDENTRY ent;
+
+    while (lcb_sdresult_next(resp, &ent, &iter)) {
+        size_t index = oix++;
+        if (type == LCB_CALLBACK_SDMUTATE) {
+            index = ent.index;
+        }
+        results.resize(index + 1);
+        results[index] = ent;
+    }
+    resp->nres = results.size();
+    if (resp->nres) {
+        resp->res = (lcb_SDENTRY *)calloc(resp->nres, sizeof(lcb_SDENTRY));
+        for (size_t ii = 0; ii < resp->nres; ii++) {
+            resp->res[ii] = results[ii];
+        }
+    }
+}
+
 static void
 H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
-         MemcachedResponse *response, lcb_error_t immerr)
+         MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t o = get_instance(pipeline);
+    lcb_INSTANCE *o = get_instance(pipeline);
     ResponsePack<lcb_RESPSUBDOC> w = {{ 0 }};
-    lcb_CALLBACKTYPE cbtype;
+    lcb_CALLBACK_TYPE cbtype;
     init_resp(o, response, request, immerr, &w.resp);
     w.resp.rflags |= LCB_RESP_F_FINAL;
+    w.resp.res = NULL;
 
     /* For mutations, add the mutation token */
     switch (response->opcode()) {
@@ -472,6 +500,7 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
             response->opcode() == PROTOCOL_BINARY_CMD_SUBDOC_MULTI_MUTATION) {
         if (w.resp.rc == LCB_SUCCESS || w.resp.rc == LCB_SUBDOC_MULTI_FAILURE) {
             w.resp.responses = response;
+            lcb_sdresult_parse(&w.resp, cbtype);
         } else {
             handle_error_info(response, &w);
         }
@@ -480,14 +509,17 @@ H_subdoc(mc_PIPELINE *pipeline, mc_PACKET *request,
         w.resp.rflags |= LCB_RESP_F_SDSINGLE;
         if (w.resp.rc == LCB_SUCCESS) {
             w.resp.responses = response;
+            lcb_sdresult_parse(&w.resp, cbtype);
         } else if (LCB_EIFSUBDOC(w.resp.rc)) {
             w.resp.responses = response;
+            lcb_sdresult_parse(&w.resp, cbtype);
             w.resp.rc = LCB_SUBDOC_MULTI_FAILURE;
         } else {
             handle_error_info(response, &w);
         }
     }
     invoke_callback(request, o, &w.resp, cbtype);
+    free(w.resp.res);
 }
 
 static int
@@ -573,14 +605,16 @@ sdmutate_next(const MemcachedResponse *response, lcb_SDENTRY *ent, size_t *iter)
     #undef ADVANCE_BUF
 }
 
-LIBCOUCHBASE_API
+static
 int
 lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
+
 {
     size_t iter_s = 0;
     const MemcachedResponse *response =
                 reinterpret_cast<const MemcachedResponse*>(resp->responses);
     if (!response) {
+        fprintf(stderr, "no response set\n");
         return 0;
     }
     if (!iter) {
@@ -599,23 +633,19 @@ lcb_sdresult_next(const lcb_RESPSUBDOC *resp, lcb_SDENTRY *ent, size_t *iter)
         }
         *iter = 1;
 
-        if (resp->rc == LCB_SUCCESS || resp->rc == LCB_SUBDOC_MULTI_FAILURE) {
-            ent->status = map_error(NULL, response->status());
-            ent->value = response->value();
-            ent->nvalue = response->vallen();
-            ent->index = 0;
-            return 1;
-        } else {
-            return 0;
-        }
+        ent->status = map_error(NULL, response->status());
+        ent->value = response->value();
+        ent->nvalue = response->vallen();
+        ent->index = 0;
+        return 1;
     }
 }
 
 static void
 H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, MemcachedResponse *response,
-         lcb_error_t immerr)
+         lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     ResponsePack<lcb_RESPREMOVE> w = { { 0 } };
     w.resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
     init_resp(root, response, packet, immerr, &w.resp);
@@ -628,9 +658,9 @@ H_delete(mc_PIPELINE *pipeline, mc_PACKET *packet, MemcachedResponse *response,
 
 static void
 H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-          lcb_error_t immerr)
+          lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     uint32_t ttp;
     uint32_t ttr;
     size_t pos;
@@ -697,8 +727,8 @@ H_observe(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response
 
 static void
 H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
-                MemcachedResponse *response, lcb_error_t immerr) {
-    lcb_t root = get_instance(pipeline);
+                MemcachedResponse *response, lcb_STATUS immerr) {
+    lcb_INSTANCE *root = get_instance(pipeline);
     lcb_RESPOBSEQNO resp = { 0 };
     init_resp(root, response, request, immerr, &resp);
 
@@ -733,9 +763,9 @@ H_observe_seqno(mc_PIPELINE *pipeline, mc_PACKET *request,
 
 static void
 H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-        lcb_error_t immerr)
+        lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     ResponsePack<lcb_RESPSTORE> w = { { 0 } };
     uint8_t opcode;
     init_resp(root, response, request, immerr, &w.resp);
@@ -748,15 +778,15 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
         opcode = hdr.request.opcode;
     }
     if (opcode == PROTOCOL_BINARY_CMD_ADD) {
-        w.resp.op = LCB_ADD;
+        w.resp.op = LCB_STORE_ADD;
     } else if (opcode == PROTOCOL_BINARY_CMD_REPLACE) {
-        w.resp.op = LCB_REPLACE;
+        w.resp.op = LCB_STORE_REPLACE;
     } else if (opcode == PROTOCOL_BINARY_CMD_APPEND) {
-        w.resp.op = LCB_APPEND;
+        w.resp.op = LCB_STORE_APPEND;
     } else if (opcode == PROTOCOL_BINARY_CMD_PREPEND) {
-        w.resp.op = LCB_PREPEND;
+        w.resp.op = LCB_STORE_PREPEND;
     } else if (opcode == PROTOCOL_BINARY_CMD_SET) {
-        w.resp.op = LCB_SET;
+        w.resp.op = LCB_STORE_SET;
     }
     w.resp.rflags |= LCB_RESP_F_EXTDATA | LCB_RESP_F_FINAL;
     handle_mutation_token(root, response, request, &w.mt);
@@ -772,9 +802,9 @@ H_store(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
 
 static void
 H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request,
-             MemcachedResponse *response, lcb_error_t immerr)
+             MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     ResponsePack<lcb_RESPCOUNTER> w = { { 0 } };
     init_resp(root, response, request, immerr, &w.resp);
 
@@ -795,9 +825,9 @@ H_arithmetic(mc_PIPELINE *pipeline, mc_PACKET *request,
 
 static void
 H_stats(mc_PIPELINE *pipeline, mc_PACKET *request,
-        MemcachedResponse *response, lcb_error_t immerr)
+        MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     lcb_RESPSTATS resp = { 0 };
     mc_REQDATAEX *exdata;
 
@@ -824,9 +854,9 @@ H_stats(mc_PIPELINE *pipeline, mc_PACKET *request,
 
 static void
 H_collections_get_manifest(mc_PIPELINE *pipeline, mc_PACKET *request,
-        MemcachedResponse *response, lcb_error_t immerr)
+        MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     ResponsePack<lcb_RESPGETMANIFEST> w = {{ 0 }};
     lcb_RESPGETMANIFEST& resp = w.resp;
     init_resp(root, response, request, immerr, &resp);
@@ -839,9 +869,9 @@ H_collections_get_manifest(mc_PIPELINE *pipeline, mc_PACKET *request,
 
 static void
 H_collections_get_cid(mc_PIPELINE *pipeline, mc_PACKET *request,
-        MemcachedResponse *response, lcb_error_t immerr)
+        MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     ResponsePack<lcb_RESPGETCID> w = {{ 0 }};
     lcb_RESPGETCID& resp = w.resp;
     init_resp(root, response, request, immerr, &resp);
@@ -855,14 +885,18 @@ H_collections_get_cid(mc_PIPELINE *pipeline, mc_PACKET *request,
     memcpy(&resp.collection_id, ptr, sizeof(uint32_t));
     resp.collection_id = ntohl(resp.collection_id);
 
-    invoke_callback(request, root, &resp, LCB_CALLBACK_GETCID);
+    if (request->flags & MCREQ_F_REQEXT) {
+        request->u_rdata.exdata->procs->handler(pipeline, request, immerr, &resp);
+    } else {
+        invoke_callback(request, root, &resp, LCB_CALLBACK_GETCID);
+    }
 }
 
 static void
 H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request,
-            MemcachedResponse *response, lcb_error_t immerr)
+            MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     lcb_RESPBASE dummy = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
     make_error(root, &dummy, response, immerr);
@@ -872,9 +906,9 @@ H_verbosity(mc_PIPELINE *pipeline, mc_PACKET *request,
 
 static void
 H_version(mc_PIPELINE *pipeline, mc_PACKET *request,
-          MemcachedResponse *response, lcb_error_t immerr)
+          MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     lcb_RESPMCVERSION resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
 
@@ -891,9 +925,9 @@ H_version(mc_PIPELINE *pipeline, mc_PACKET *request,
 
 static void
 H_noop(mc_PIPELINE *pipeline, mc_PACKET *request,
-       MemcachedResponse *response, lcb_error_t immerr)
+       MemcachedResponse *response, lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     lcb_RESPNOOP resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
 
@@ -904,9 +938,9 @@ H_noop(mc_PIPELINE *pipeline, mc_PACKET *request,
 
 static void
 H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-        lcb_error_t immerr)
+        lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     ResponsePack<lcb_RESPTOUCH> w = {{ 0 }};
     lcb_RESPTOUCH& resp = w.resp;
     init_resp(root, response, request, immerr, &resp);
@@ -919,9 +953,9 @@ H_touch(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
 
 static void
 H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-        lcb_error_t immerr)
+        lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     lcb_RESPFLUSH resp = { 0 };
     mc_REQDATAEX *exdata = request->u_rdata.exdata;
     make_error(root, &resp, response, immerr);
@@ -930,9 +964,9 @@ H_flush(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
 
 static void
 H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-         lcb_error_t immerr)
+         lcb_STATUS immerr)
 {
-    lcb_t root = get_instance(pipeline);
+    lcb_INSTANCE *root = get_instance(pipeline);
     ResponsePack<lcb_RESPUNLOCK> w = {{ 0 }};
     lcb_RESPUNLOCK& resp = w.resp;
     init_resp(root, response, request, immerr, &resp);
@@ -945,7 +979,7 @@ H_unlock(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
 
 static void
 H_config(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
-         lcb_error_t immerr)
+         lcb_STATUS immerr)
 {
     /** We just jump to the normal config handler */
     lcb_RESPBASE dummy = {0};
@@ -958,7 +992,7 @@ H_config(mc_PIPELINE *pipeline, mc_PACKET *request, MemcachedResponse *response,
 static void
 record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *)
 {
-    lcb_t instance = get_instance(pipeline);
+    lcb_INSTANCE *instance = get_instance(pipeline);
     if (
 #ifdef HAVE_DTRACE
         1
@@ -974,10 +1008,10 @@ record_metrics(mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *)
 }
 
 static void
-dispatch_ufwd_error(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t immerr)
+dispatch_ufwd_error(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_STATUS immerr)
 {
     lcb_PKTFWDRESP resp = { 0 };
-    lcb_t instance = static_cast<lcb::Server*>(pipeline)->get_instance();
+    lcb_INSTANCE *instance = static_cast<lcb::Server*>(pipeline)->get_instance();
     assert(immerr != LCB_SUCCESS);
     resp.version = 0;
     instance->callbacks.pktfwd(instance, MCREQ_PKT_COOKIE(req), immerr, &resp);
@@ -986,7 +1020,7 @@ dispatch_ufwd_error(mc_PIPELINE *pipeline, mc_PACKET *req, lcb_error_t immerr)
 int
 mcreq_dispatch_response(
         mc_PIPELINE *pipeline, mc_PACKET *req, MemcachedResponse *res,
-        lcb_error_t immerr)
+        lcb_STATUS immerr)
 {
     record_metrics(pipeline, req, res);
 

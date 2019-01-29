@@ -80,7 +80,7 @@ mc_iovinfo_init(mc_IOVINFO *info, const nb_IOV *iov, unsigned niov);
  * </li>
  * </ol>
  */
-lcb_error_t
+lcb_STATUS
 mc_forward_packet(mc_CMDQUEUE *cq,
     mc_IOVINFO *info, mc_PACKET **pkt, mc_PIPELINE **pl, int options);
 

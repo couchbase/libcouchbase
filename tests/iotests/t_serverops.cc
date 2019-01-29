@@ -17,20 +17,21 @@
 #include "config.h"
 #include "iotests.h"
 #include <map>
+#include <libcouchbase/utils.h>
 
 class ServeropsUnitTest : public MockUnitTest
 {
 };
 
 extern "C" {
-    static void testServerStatsCallback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPSTATS *resp)
+    static void testServerStatsCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPSTATS *resp)
     {
         int *counter = (int *)resp->cookie;
         EXPECT_EQ(LCB_SUCCESS, resp->rc);
         ++(*counter);
     }
 
-    static void statKey_callback(lcb_t, int, const lcb_RESPBASE *resp_base) {
+    static void statKey_callback(lcb_INSTANCE *, int, const lcb_RESPBASE *resp_base) {
         const lcb_RESPSTATS *resp = (const lcb_RESPSTATS *)resp_base;
         if (!resp->server) {
             return;
@@ -51,9 +52,9 @@ extern "C" {
  */
 TEST_F(ServeropsUnitTest, testServerStats)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)testServerStatsCallback);
     int numcallbacks = 0;
@@ -66,9 +67,9 @@ TEST_F(ServeropsUnitTest, testServerStats)
 TEST_F(ServeropsUnitTest, testKeyStats)
 {
     SKIP_UNLESS_MOCK(); // FIXME: works on 5.5.0, fails on 6.0.0
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
     lcb_install_callback3(instance, LCB_CALLBACK_STATS, (lcb_RESPCALLBACK)statKey_callback);
     lcb_CMDSTATS cmd = { 0 };
 
@@ -79,7 +80,7 @@ TEST_F(ServeropsUnitTest, testKeyStats)
     std::map<std::string,bool> mm;
 
     lcb_sched_enter(instance);
-    lcb_error_t err = lcb_stats3(instance, &mm, &cmd);
+    lcb_STATUS err = lcb_stats3(instance, &mm, &cmd);
     ASSERT_EQ(LCB_SUCCESS, err);
     lcb_sched_leave(instance);
 
@@ -94,7 +95,7 @@ TEST_F(ServeropsUnitTest, testKeyStats)
 }
 
 extern "C" {
-    static void testServerVersionsCallback(lcb_t, lcb_CALLBACKTYPE, const lcb_RESPMCVERSION *resp)
+    static void testServerVersionsCallback(lcb_INSTANCE *, lcb_CALLBACK_TYPE, const lcb_RESPMCVERSION *resp)
     {
         int *counter = (int *)resp->cookie;
         EXPECT_EQ(LCB_SUCCESS, resp->rc);
@@ -110,13 +111,13 @@ extern "C" {
  */
 TEST_F(ServeropsUnitTest, testServerVersion)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     (void)lcb_install_callback3(instance, LCB_CALLBACK_VERSIONS, (lcb_RESPCALLBACK)testServerVersionsCallback);
     int numcallbacks = 0;
-    lcb_CMDBASE cmd = {0};
+    lcb_CMDVERSIONS cmd = {0};
     EXPECT_EQ(LCB_SUCCESS, lcb_server_versions3(instance, &numcallbacks, &cmd));
     lcb_wait(instance);
     EXPECT_LT(1, numcallbacks);
@@ -125,7 +126,7 @@ TEST_F(ServeropsUnitTest, testServerVersion)
 extern "C" {
     static char *verbosity_endpoint;
 
-    static void verbosity_all_callback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPVERBOSITY *resp)
+    static void verbosity_all_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPVERBOSITY *resp)
     {
         int *counter = (int *)resp->cookie;
         ASSERT_EQ(LCB_SUCCESS, resp->rc);
@@ -138,7 +139,7 @@ extern "C" {
         ++(*counter);
     }
 
-    static void verbosity_single_callback(lcb_t instance, lcb_CALLBACKTYPE, const lcb_RESPVERBOSITY *resp)
+    static void verbosity_single_callback(lcb_INSTANCE *instance, lcb_CALLBACK_TYPE, const lcb_RESPVERBOSITY *resp)
     {
         ASSERT_EQ(LCB_SUCCESS, resp->rc);
         if (resp->server == NULL) {
@@ -155,9 +156,9 @@ extern "C" {
  */
 TEST_F(ServeropsUnitTest, testVerbosity)
 {
-    lcb_t instance;
+    lcb_INSTANCE *instance;
     HandleWrap hw;
-    createConnection(hw, instance);
+    createConnection(hw, &instance);
 
     (void)lcb_install_callback3(instance, LCB_CALLBACK_VERBOSITY, (lcb_RESPCALLBACK)verbosity_all_callback);
 

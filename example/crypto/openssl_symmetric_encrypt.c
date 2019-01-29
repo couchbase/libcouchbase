@@ -28,13 +28,13 @@
 
 #include "openssl_symmetric_provider.h"
 
-static void die(lcb_t instance, const char *msg, lcb_error_t err)
+static void die(lcb_INSTANCE *instance, const char *msg, lcb_STATUS err)
 {
     fprintf(stderr, "%s. Received code 0x%X (%s)\n", msg, err, lcb_strerror(instance, err));
     exit(EXIT_FAILURE);
 }
 
-static void op_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
+static void op_callback(lcb_INSTANCE *instance, int cbtype, const lcb_RESPBASE *rb)
 {
     if (rb->rc == LCB_SUCCESS) {
         fprintf(stderr, "CAS:    0x%" PRIx64 "\n", rb->cas);
@@ -43,9 +43,9 @@ static void op_callback(lcb_t instance, int cbtype, const lcb_RESPBASE *rb)
     }
 }
 
-static void store_encrypted(lcb_t instance, const char *key, const char *val)
+static void store_encrypted(lcb_INSTANCE *instance, const char *key, const char *val)
 {
-    lcb_error_t err;
+    lcb_STATUS err;
     lcb_CMDSTORE cmd = {};
     lcbcrypto_CMDENCRYPT ecmd = {};
     lcbcrypto_FIELDSPEC field = {};
@@ -76,7 +76,7 @@ static void store_encrypted(lcb_t instance, const char *key, const char *val)
 
     LCB_CMD_SET_KEY(&cmd, key, strlen(key));
     LCB_CMD_SET_VALUE(&cmd, ecmd.out, ecmd.nout);
-    cmd.operation = LCB_SET;
+    cmd.operation = LCB_STORE_SET
     cmd.datatype = LCB_DATATYPE_JSON;
 
     err = lcb_store3(instance, NULL, &cmd);
@@ -89,8 +89,8 @@ static void store_encrypted(lcb_t instance, const char *key, const char *val)
 
 int main(int argc, char *argv[])
 {
-    lcb_error_t err;
-    lcb_t instance;
+    lcb_STATUS err;
+    lcb_INSTANCE *instance;
 
     {
         struct lcb_create_st create_options = {};

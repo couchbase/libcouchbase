@@ -73,7 +73,7 @@ lcb_histogram_read(const lcb_HISTOGRAM *hg,
 }
 
 LCB_INTERNAL_API
-lcb_error_t lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream) {
+lcb_STATUS lcb_histogram_print(lcb_HISTOGRAM* hg, FILE* stream) {
     hdr_percentiles_print(
         hg->hdr_histogram,
         stream,

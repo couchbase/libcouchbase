@@ -34,9 +34,7 @@ typedef enum {
     LCB_KV_COPY = 0, /**< The buffer should be copied */
     LCB_KV_CONTIG, /**< The buffer is contiguous and should not be copied */
     LCB_KV_IOV, /**< The buffer is not contiguous and should not be copied */
-
-    /**For use within the hashkey field, indicates that the _length_
-     * of the hashkey is the vBucket ID, rather than an actual hashkey */
+    /**Indicates that the precomputed vBucket ID should be used */
     LCB_KV_VBID,
 
     /**
@@ -44,11 +42,6 @@ typedef enum {
      * copied. This avoids having to make the buffers contiguous before
      * passing it into the library (only to have the library copy it again) */
     LCB_KV_IOVCOPY,
-
-    /**
-     * For use within the hashkey field, indicates that the _pointer to bytes_
-     * of the hashkey is the tracing span, rather than an actual hashkey */
-    LCB_KV_TRACESPAN
 } lcb_KVBUFTYPE;
 
 #define LCB_KV_HEADER_AND_KEY LCB_KV_CONTIG
@@ -75,6 +68,7 @@ typedef struct lcb_KEYBUF {
      */
     lcb_KVBUFTYPE type;
     lcb_CONTIGBUF contig;
+    lcb_U16 vbid; /**< precomputed vbucket id */
 } lcb_KEYBUF;
 
 /**@private*/

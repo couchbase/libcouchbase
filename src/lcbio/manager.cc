@@ -85,7 +85,7 @@ struct PoolConnInfo : lcbio_PROTOCTX, CinfoNode {
     inline PoolConnInfo(PoolHost *parent, uint32_t timeout);
     inline ~PoolConnInfo();
     inline void on_idle_timeout();
-    inline void on_connected(lcbio_SOCKET *sock, lcb_error_t err);
+    inline void on_connected(lcbio_SOCKET *sock, lcb_STATUS err);
 
     void set_leased() {
         lcb_assert(state == IDLE);
@@ -125,7 +125,7 @@ struct PoolRequest : ReqNode, ConnectionRequest {
     virtual ~PoolRequest() {}
     virtual void cancel();
     inline void invoke();
-    void invoke(lcb_error_t err_) {
+    void invoke(lcb_STATUS err_) {
         err = err_;
         invoke();
     }
@@ -154,7 +154,7 @@ struct PoolRequest : ReqNode, ConnectionRequest {
     enum State { ASSIGNED, PENDING };
     State state;
     lcbio_SOCKET *sock;
-    lcb_error_t err;
+    lcb_STATUS err;
 };
 }
 }
@@ -305,13 +305,13 @@ PoolHost::connection_available() {
  * Connection callback invoked from lcbio_connect() when a result is received
  */
 static void
-on_connected(lcbio_SOCKET *sock, void *arg, lcb_error_t err, lcbio_OSERR)
+on_connected(lcbio_SOCKET *sock, void *arg, lcb_STATUS err, lcbio_OSERR)
 {
     reinterpret_cast<PoolConnInfo*>(arg)->on_connected(sock, err);
 }
 
 
-void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_error_t err) {
+void PoolConnInfo::on_connected(lcbio_SOCKET *sock_, lcb_STATUS err) {
     lcb_assert(state == PENDING);
     cs = NULL;
 
@@ -350,7 +350,7 @@ PoolConnInfo::PoolConnInfo(PoolHost *he, uint32_t timeout)
     dtor = cinfo_protoctx_dtor;
 
     lcb_host_t tmphost = {"", "", 0};
-    lcb_error_t err = lcb_host_parsez(&tmphost, he->key.c_str(), 80);
+    lcb_STATUS err = lcb_host_parsez(&tmphost, he->key.c_str(), 80);
     if (err != LCB_SUCCESS) {
         lcb_log(LOGARGS(he->parent, ERROR), HE_LOGFMT "Could not parse host! Will supply dummy host (I=%p)", HE_LOGID(he), (void*)this);
         strcpy(tmphost.host, "BADHOST");
