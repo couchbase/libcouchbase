@@ -54,3 +54,9 @@ ENDIF()
 IF(HAVE_LIBEVENT2)
     ADD_EXAMPLE(libevent-direct libeventdirect ${LIBEVENT_LIBRARIES} ${LIBEVENT_INCLUDE_DIR})
 ENDIF()
+
+ADD_EXECUTABLE(devguide-cas devguide-examples/cas.cc)
+TARGET_LINK_LIBRARIES(devguide-cas couchbase)
+
+ADD_EXECUTABLE(devguide-cas-single devguide-examples/cas-single.c)
+TARGET_LINK_LIBRARIES(devguide-cas-single couchbase)
