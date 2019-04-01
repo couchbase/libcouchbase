@@ -556,7 +556,14 @@ static bool runSingleCycle(TestConfiguration &config)
             iter++) {
 
         fprintf(stderr, "Testing with plugin '%s'\n", iter->c_str());
-
+#ifdef __linux__
+        {
+            char buf[1024] = {0};
+            sprintf(buf, "ldd %s/libcouchbase_%s.so", config.libDir.c_str(), iter->c_str());
+            fprintf(stderr, "%s\n", buf);
+            system(buf);
+        }
+#endif
         for (strlist::iterator iterbins = config.testnames.begin();
                 iterbins != config.testnames.end();
                 iterbins++) {
