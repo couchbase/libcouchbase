@@ -660,7 +660,7 @@ class MutationHandler : public Handler
                         break;
                     case SUBDOC_COUNTER:
                         lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                              stoll(it->second));
+                                              atoll(it->second.c_str()));
                         break;
                     default:
                         break;
@@ -703,7 +703,7 @@ class MutationHandler : public Handler
                         break;
                     case SUBDOC_COUNTER:
                         lcb_subdocops_counter(specs, idx++, flags, it->first.c_str(), it->first.size(),
-                                              stoll(it->second));
+                                              atoll(it->second.c_str()));
                         break;
                     default:
                         break;
