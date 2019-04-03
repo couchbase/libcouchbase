@@ -1,30 +1,10 @@
 # Release Notes
 
-## 3.0.0 (TBD)
+## 3.0.0-alpha.1 (2019-04-03)
 
-* [CCBC-1017](https://issues.couchbase.com/browse/CCBC-1017): Removed v1 APIs. These functions and structures has been
-  declared as deprecated since second version of the library.
+* [CCBC-1017](https://issues.couchbase.com/browse/CCBC-1017): Removed v1,v2,v3 APIs.
 
-  Migration path: consider the following mapping, check the unit tests and examples:
-
-  | old                      | new                    |
-  |--------------------------|------------------------|
-  | `lcb_get`                | `lcb_get3`             |
-  | `lcb_get_replica`        | `lcb_rget3`            |
-  | `lcb_unlock`             | `lcb_unlock3`          |
-  | `lcb_store`              | `lcb_store3`           |
-  | `lcb_arithmetic`         | `lcb_arithmetic3`      |
-  | `lcb_observe`            | `lcb_observe3_ctxnew`  |
-  | `lcb_remove`             | `lcb_remove3`          |
-  | `lcb_touch`              | `lcb_touch3`           |
-  | `lcb_durability_poll`    | `lcb_endure3_ctxnew`   |
-  | `lcb_server_stats`       | `lcb_stats3`           |
-  | `lcb_server_versions`    | `lcb_server_versions3` |
-  | `lcb_set_verbosity`      | `lcb_server_verbosity3`|
-  | `lcb_flush`              | `lcb_cbflush3`         |
-  | `lcb_flush3`             | `lcb_cbflush3`         |
-  | `lcb_make_http_request`  | `lcb_http3`            |
-  |--------------------------|------------------------|
+  Migration path: New API have to used. Instead open structures, setter-functions available.
 
 * [CCBC-655](https://issues.couchbase.com/browse/CCBC-655): Removed `retry_backoff` setting. This is a redundant
   property, as the wait period is always `retry_interval * retry_backoff * num_attempts`. In this case, `retry_interval`
